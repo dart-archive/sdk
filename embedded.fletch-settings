@@ -2,11 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a",
 // BSD-style license that can be found in the LICENSE.md file."],
 
-// The settings in this file are used during automated testing.
-// If you are considering adding settings to this file in order
-// to change the default behavior of the system you should reconsider.
-// There should only be settings in this file to *overwrite* the
-// defaults.
+// The settings in this file are used during automated testing of embedded
+// device type.
+
 {
 
   // Location of the packages configuration file (a relative URI)
@@ -32,5 +30,5 @@
 
   // Type of device to compile for. Currently the available types are:
   // "mobile" and "embedded".
-  "device_type": "mobile"
+  "device_type": "embedded"
 }

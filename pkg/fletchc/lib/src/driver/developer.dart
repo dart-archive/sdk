@@ -56,6 +56,8 @@ import '../verbs/infrastructure.dart' show
 import '../../incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed;
 
+import '../../fletch_compiler.dart' show fletchDeviceType;
+
 import 'exit_codes.dart' as exit_codes;
 
 import '../../fletch_system.dart' show
@@ -72,6 +74,14 @@ import '../diagnostic.dart' show
 import '../guess_configuration.dart' show
     executable,
     guessFletchVm;
+
+import '../device_type.dart' show
+    DeviceType,
+    parseDeviceType,
+    unParseDeviceType;
+
+import 'package:sdk_library_metadata/libraries.dart' show
+    Category;
 
 import 'package:fletch_agent/agent_connection.dart' show
     AgentConnection,
@@ -311,6 +321,7 @@ Future<Address> readAddressFromUser(
 
       default:
         throwInternalError("Unexpected ${command.code}");
+        return null;
     }
   }
 }
@@ -326,9 +337,18 @@ SessionState createSessionState(String name, Settings settings) {
   if (packageConfig == null) {
     packageConfig = executable.resolve("fletch-sdk.packages");
   }
+
+  DeviceType deviceType = settings.deviceType ??
+      parseDeviceType(fletchDeviceType);
+
+  List<Category> categories = (deviceType == DeviceType.embedded)
+      ? <Category>[Category.embedded]
+      : null;
+
   FletchCompiler compilerHelper = new FletchCompiler(
       options: compilerOptions, packageConfig: packageConfig,
-      environment: settings.constants);
+      environment: settings.constants,
+      categories: categories);
 
   return new SessionState(
       name, compilerHelper, compilerHelper.newIncrementalCompiler(), settings);
@@ -706,6 +726,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
   final List<String> options = <String>[];
   final Map<String, String> constants = <String, String>{};
   Address deviceAddress;
+  DeviceType deviceType;
   userSettings.forEach((String key, value) {
     switch (key) {
       case "packages":
@@ -773,6 +794,20 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         }
         break;
 
+      case "device_type":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(DiagnosticKind.settingsDeviceTypeNotAString,
+                uri: settingsUri, userInput: '$value');
+          }
+          deviceType = parseDeviceType(value);
+          if (deviceType == null) {
+            throwFatalError(DiagnosticKind.settingsDeviceTypeUnrecognized,
+                uri: settingsUri, userInput: '$value');
+          }
+        }
+        break;
+
       default:
         throwFatalError(
             DiagnosticKind.settingsUnrecognizedKey, uri: settingsUri,
@@ -780,7 +815,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
     }
   });
-  return new Settings(packages, options, constants, deviceAddress);
+  return new Settings(packages, options, constants, deviceAddress, deviceType);
 }
 
 class Settings {
@@ -792,17 +827,25 @@ class Settings {
 
   final Address deviceAddress;
 
+  final DeviceType deviceType;
+
   const Settings(
-      this.packages, this.options, this.constants, this.deviceAddress);
+      this.packages,
+      this.options,
+      this.constants,
+      this.deviceAddress,
+      this.deviceType);
 
   const Settings.empty()
-    : this(null, const <String>[], const <String, String>{}, null);
+    : this(null, const <String>[], const <String, String>{}, null, null);
 
   Settings copyWith({
       Uri packages,
       List<String> options,
       Map<String, String> constants,
-      Address deviceAddress}) {
+      Address deviceAddress,
+      DeviceType deviceType}) {
+
     if (packages == null) {
       packages = this.packages;
     }
@@ -815,7 +858,15 @@ class Settings {
     if (deviceAddress == null) {
       deviceAddress = this.deviceAddress;
     }
-    return new Settings(packages, options, constants, deviceAddress);
+    if (deviceType == null) {
+      deviceType = this.deviceType;
+    }
+    return new Settings(
+        packages,
+        options,
+        constants,
+        deviceAddress,
+        deviceType);
   }
 
   String toString() {
@@ -823,7 +874,8 @@ class Settings {
         "packages: $packages, "
         "options: $options, "
         "constants: $constants, "
-        "device_address: $deviceAddress)";
+        "device_address: $deviceAddress, "
+        "device_type: $deviceType)";
   }
 
   Map<String, dynamic> toJson() {
@@ -832,6 +884,9 @@ class Settings {
       "options": options,
       "constants": constants,
       "device_address": deviceAddress,
+      "device_type": (deviceType == null)
+          ? null
+          : unParseDeviceType(deviceType),
     };
   }
 }

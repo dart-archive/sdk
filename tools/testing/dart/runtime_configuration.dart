@@ -48,7 +48,8 @@ class RuntimeConfiguration {
             hostChecked: configuration['host_checked'],
             isIncrementalCompilationEnabled:
                 configuration['enable_incremental_compilation'],
-            useSdk:configuration['use_sdk']);
+            useSdk:configuration['use_sdk'],
+            settingsFileName: configuration['settings_file_name']);
 
       case 'fletchvm':
         return new FletchVMRuntimeConfiguration(configuration);
@@ -135,11 +136,13 @@ class DartVmRuntimeConfiguration extends RuntimeConfiguration {
 class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
   final bool isIncrementalCompilationEnabled;
   final bool useSdk;
+  final String settingsFileName;
 
   FletchcRuntimeConfiguration(
     {bool hostChecked: true,
      this.isIncrementalCompilationEnabled: true,
-     this.useSdk: false}) {
+     this.useSdk: false,
+     this.settingsFileName}) {
     if (!hostChecked) {
       throw "fletch only works with --host-checked option.";
     }
@@ -164,7 +167,8 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     return <Command>[
         new FletchSessionCommand(
             executable, script, basicArguments, environment,
-            isIncrementalCompilationEnabled)];
+            isIncrementalCompilationEnabled,
+            settingsFileName: settingsFileName)];
   }
 }
 

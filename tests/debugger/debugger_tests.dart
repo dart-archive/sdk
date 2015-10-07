@@ -37,6 +37,7 @@ Future runTest(String name, Uri uri) async {
       fileUri(".packages", Uri.base),
       <String>[],
       <String, String>{},
+      null,
       null);
 
   SessionState state = createSessionState("test", settings);

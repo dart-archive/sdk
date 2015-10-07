@@ -49,10 +49,16 @@ import 'src/guess_configuration.dart' show
     executable,
     guessFletchVm;
 
+import 'package:sdk_library_metadata/libraries.dart' show
+    Category;
+
 const String _LIBRARY_ROOT =
     const String.fromEnvironment("fletchc-library-root");
 
 const String _PATCH_ROOT = const String.fromEnvironment("fletch-patch-root");
+
+const String fletchDeviceType =
+    const String.fromEnvironment("fletch.device-type");
 
 const String StringOrUri = "String or Uri";
 
@@ -63,7 +69,9 @@ class FletchCompiler {
 
   final bool verbose;
 
-  FletchCompiler._(this._compiler, this.script, this.verbose);
+  final List<Category> categories;
+
+  FletchCompiler._(this._compiler, this.script, this.verbose, this.categories);
 
   Backdoor get backdoor => new Backdoor(this);
 
@@ -79,7 +87,8 @@ class FletchCompiler {
        @StringOrUri fletchVm,
        @StringOrUri currentDirectory,
        List<String> options,
-       Map<String, dynamic> environment}) {
+       Map<String, dynamic> environment,
+       List<Category> categories}) {
     Uri base = _computeValidatedUri(
         currentDirectory, name: 'currentDirectory', ensureTrailingSlash: true);
     if (base == null) {
@@ -88,6 +97,21 @@ class FletchCompiler {
 
     if (options == null) {
       options = <String>[];
+    } else {
+      options = new List<String>.from(options);
+    }
+    if (categories != null) {
+      String categoriesOptionValue = categories.map((Category category) {
+        switch (category) {
+          case Category.client:
+            return "Client";
+          case Category.server:
+            return "Server";
+          case Category.embedded:
+            return "Embedded";
+        }
+      }).join(",");
+      options.add("--categories=$categoriesOptionValue");
     }
 
     final bool isVerbose = apiimpl.Compiler.hasOption(options, '--verbose');
@@ -179,7 +203,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     compiler.log("Using library root: $libraryRoot");
     compiler.log("Using package config: $packageConfig");
 
-    var helper = new FletchCompiler._(compiler, script, isVerbose);
+    var helper = new FletchCompiler._(compiler, script, isVerbose, categories);
     compiler.helper = helper;
     return helper;
   }
@@ -228,7 +252,8 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
         diagnosticHandler: _compiler.handler,
         options: options,
         outputProvider: _compiler.userOutputProvider,
-        environment: _compiler.environment);
+        environment: _compiler.environment,
+        categories: categories);
   }
 }
 

@@ -17,7 +17,8 @@ Future<Compiler> reuseCompiler(
      Uri packageConfig,
      bool packagesAreImmutable: false,
      Map<String, dynamic> environment,
-     Future<bool> reuseLibrary(LibraryElement library)}) async {
+     Future<bool> reuseLibrary(LibraryElement library),
+     List<Category> categories}) async {
   UserTag oldTag = new UserTag('_reuseCompiler').makeCurrent();
   // if (libraryRoot == null) {
   //   throw 'Missing libraryRoot';
@@ -65,7 +66,8 @@ Future<Compiler> reuseCompiler(
         patchRoot: patchRoot,
         packageConfig: packageConfig,
         options: options,
-        environment: environment).backdoor.compilerImplementation;
+        environment: environment,
+        categories: categories).backdoor.compilerImplementation;
     return compiler;
   } else {
     for (final task in compiler.tasks) {

@@ -197,6 +197,12 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.settingsDeviceAddressNotAString:
       return <Example>[new SettingsExample('{"device_address":1}')];
 
+    case DiagnosticKind.settingsDeviceTypeNotAString:
+      return <Example>[new SettingsExample('{"device_type":1}')];
+
+    case DiagnosticKind.settingsDeviceTypeUnrecognized:
+      return <Example>[new SettingsExample('{"device_type":"fisk"}')];
+
     case DiagnosticKind.unknownAction:
       return <Example>[
           new CommandLineExample(<String>['blah']),

@@ -53,6 +53,9 @@ import '../fletch_system.dart';
 import '../src/fletch_backend.dart' show
     FletchBackend;
 
+import 'package:sdk_library_metadata/libraries.dart' show
+    Category;
+
 part 'caching_compiler.dart';
 
 const List<String> INCREMENTAL_OPTIONS = const <String>[
@@ -71,6 +74,7 @@ class IncrementalCompiler {
   final CompilerOutput outputProvider;
   final Map<String, dynamic> environment;
   final IncrementalCompilerContext _context;
+  final List<Category> categories;
 
   FletchCompilerImplementation _compiler;
 
@@ -82,7 +86,8 @@ class IncrementalCompiler {
        CompilerDiagnostics diagnosticHandler,
        this.options,
        this.outputProvider,
-       this.environment})
+       this.environment,
+       this.categories})
       : _context = new IncrementalCompilerContext(diagnosticHandler) {
     // if (libraryRoot == null) {
     //   throw new ArgumentError('libraryRoot is null.');
@@ -128,7 +133,8 @@ class IncrementalCompiler {
         options: options,
         outputProvider: outputProvider,
         environment: environment,
-        reuseLibrary: reuseLibrary);
+        reuseLibrary: reuseLibrary,
+        categories: categories);
   }
 
   /// Perform an incremental compilation of [updatedFiles]. [compile] must have

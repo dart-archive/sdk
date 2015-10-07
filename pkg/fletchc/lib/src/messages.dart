@@ -33,6 +33,8 @@ enum DiagnosticKind {
   settingsNotAMap,
   settingsNotJson,
   settingsOptionNotAString,
+  settingsDeviceTypeNotAString,
+  settingsDeviceTypeUnrecognized,
   settingsOptionsNotAList,
   settingsPackagesNotAString,
   settingsUnrecognizedConstantValue,
@@ -195,6 +197,15 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.settingsOptionNotAString:
       return "$uri: found 'options' entry '$userInput' which isn't a String";
+
+    case DiagnosticKind.settingsDeviceTypeNotAString:
+      return
+        "$uri: found 'device_type' entry '$userInput' which isn't a String";
+
+    case DiagnosticKind.settingsDeviceTypeUnrecognized:
+      return
+        "$uri: found 'device_type' entry '$userInput' which is not one of"
+        "the recognized device types 'embedded', 'mobile'";
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return "$uri: compile-time constants should be in "

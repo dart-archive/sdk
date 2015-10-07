@@ -504,6 +504,12 @@ Note: currently only implemented for dart2js.''',
               [],
               false,
               type: 'bool'),
+        new _TestOptionSpecification(
+            'settings_file_name',
+            'The fletch settings file to use for testing',
+            ['--fletch-settings-file'],
+            [],
+            '.fletch-settings'),
           ];
   }
 

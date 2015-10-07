@@ -48,6 +48,10 @@ import '../../../pkg/fletchc/lib/fletch_vm.dart' show
 const String isIncrementalCompilationEnabledFlag =
     "test.fletch_session_command.is_incremental_enabled";
 
+const String settingsFileNameFlag = "test.fletch_settings_file_name";
+const String settingsFileName =
+    const String.fromEnvironment(settingsFileNameFlag);
+
 final Queue<FletchSessionMirror> sessions = new Queue<FletchSessionMirror>();
 
 int sessionCount = 0;
@@ -72,6 +76,7 @@ class FletchSessionCommand implements Command {
   final Map<String, String> environmentOverrides;
   final bool isIncrementalCompilationEnabled;
   final String snapshotFileName;
+  final String settingsFileName;
 
   FletchSessionCommand(
       this.executable,
@@ -79,7 +84,8 @@ class FletchSessionCommand implements Command {
       this.arguments,
       this.environmentOverrides,
       this.isIncrementalCompilationEnabled,
-      {this.snapshotFileName});
+      {this.snapshotFileName,
+       this.settingsFileName: ".fletch-settings"});
 
   String get displayName => "fletch_session";
 
@@ -89,6 +95,7 @@ class FletchSessionCommand implements Command {
     var dartVm = Uri.parse(executable).resolve('dart');
     String incrementalFlag = "-D$isIncrementalCompilationEnabledFlag="
         "$isIncrementalCompilationEnabled";
+    String settingsFileFlag = "-D$settingsFileNameFlag=$settingsFileName";
 
     return """
 
@@ -99,7 +106,7 @@ There are three ways to reproduce this error:
   1. Run the test exactly as in this test framework. This is the hardest to
      debug using gdb:
 
-    ${Platform.executable} -c $incrementalFlag \\
+    ${Platform.executable} -c $incrementalFlag $settingsFileFlag \\
        tools/testing/dart/fletch_session_command.dart $executable \\
        ${arguments.join(' ')}
 
@@ -109,7 +116,8 @@ There are three ways to reproduce this error:
      a reproduction command in a loop:
 
     gdb -ex 'follow-fork-mode child' -ex run --args \\
-        $dartVm $incrementalFlag -c tests/fletchc/run.dart $script
+        $dartVm $incrementalFlag $settingsFileFlag -c tests/fletchc/run.dart \\
+        $script
 
   3. Run the `fletch-vm` in gdb and attach to it via the helper program. This
      is the easiest way to debug using both gdb and lldb. You need to start two
@@ -117,7 +125,7 @@ There are three ways to reproduce this error:
 
     gdb -ex run --args $executable-vm --port=54321
 
-    $dartVm $incrementalFlag -c -DattachToVm=54321 \\
+    $dartVm $incrementalFlag $settingsFileFlag -c -DattachToVm=54321 \\
       tests/fletchc/run.dart $script
 
 
@@ -153,6 +161,9 @@ There are three ways to reproduce this error:
       String vmSocketAddress = await fletch.spawnVm();
       Future vmTerminationFuture = fletch.shutdownVm(timeout);
       try {
+        await fletch.run(
+            ["create", "session", fletch.sessionName,
+             "with", settingsFileName]);
         await fletch.runInSession(["show", "log"]);
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
         if (snapshotFileName != null) {
@@ -385,7 +396,7 @@ class FletchSessionHelper {
     return exitCode;
   }
 
-  Future<Null> runInSession(
+  Future<int> runInSession(
       List<String> arguments,
       {bool checkExitCode: true}) {
     return run(
@@ -492,7 +503,8 @@ Future<Null> main(List<String> arguments) async {
       isIncrementalCompilationEnabledFlag);
   FletchSessionCommand command = new FletchSessionCommand(
       executable, script, arguments, environmentOverrides,
-      isIncrementalCompilationEnabled);
+      isIncrementalCompilationEnabled,
+      settingsFileName: settingsFileName);
   FletchTestCommandOutput output =
       await command.run(0, true, superVerbose: true);
   print("Test outcome: ${output.decodeExitCode()}");

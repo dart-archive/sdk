@@ -16,6 +16,8 @@ import 'package:fletchc/src/driver/developer.dart' as developer;
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show fileUri;
 
+import 'package:fletchc/src/device_type.dart' show DeviceType, parseDeviceType;
+
 const String userVmAddress = const String.fromEnvironment("attachToVm");
 
 const String exportTo = const String.fromEnvironment("snapshot");
@@ -23,6 +25,9 @@ const String exportTo = const String.fromEnvironment("snapshot");
 const String userPackages = const String.fromEnvironment("packages");
 
 const String userAgentAddress = const String.fromEnvironment("agent");
+
+const String fletchSettingsFile =
+    const String.fromEnvironment("test.fletch_settings_file_name");
 
 Future<Null> attach(SessionState state) async {
   if (userVmAddress == null) {
@@ -34,16 +39,22 @@ Future<Null> attach(SessionState state) async {
 }
 
 main(List<String> arguments) async {
-  Address agentAddress =
-      userAgentAddress == null ? null : parseAddress(userAgentAddress);
-  Settings settings = new Settings(
-      fileUri(userPackages == null ? ".packages" : userPackages, Uri.base),
-      ["--verbose"],
-      <String, String>{
-        "foo": "1",
-        "bar": "baz",
-      },
-      agentAddress);
+  Settings settings;
+  if (fletchSettingsFile == null) {
+    Address agentAddress =
+        userAgentAddress == null ? null : parseAddress(userAgentAddress);
+    settings = new Settings(
+        fileUri(userPackages == null ? ".packages" : userPackages, Uri.base),
+        ["--verbose"],
+        <String, String>{
+          "foo": "1",
+          "bar": "baz",
+        },
+        agentAddress,
+        DeviceType.mobile);
+  } else {
+    settings = await readSettings(fileUri(fletchSettingsFile, Uri.base));
+  }
   SessionState state = createSessionState("test", settings);
   for (String script in arguments) {
     await compile(fileUri(script, Uri.base), state);
@@ -62,12 +73,21 @@ main(List<String> arguments) async {
 Future<Null> test() => main(<String>['tests/language/application_test.dart']);
 
 Future<Null> export(String script, String snapshot) async {
-    Settings settings = new Settings(
-        fileUri(".packages", Uri.base), <String>[], <String, String>{}, null);
-    SessionState state = createSessionState("test", settings);
-    await compile(fileUri(script, Uri.base), state);
-    await startAndAttachDirectly(state);
-    state.stdoutSink.attachCommandSender(stdout.add);
-    state.stderrSink.attachCommandSender(stderr.add);
-    await developer.export(state, fileUri(snapshot, Uri.base));
+  Settings settings;
+  if (fletchSettingsFile == null) {
+    settings = new Settings(
+        fileUri(".packages", Uri.base),
+        <String>[],
+        <String, String>{},
+        null,
+        null);
+  } else {
+    settings = await readSettings(fileUri(fletchSettingsFile, Uri.base));
+  }
+  SessionState state = createSessionState("test", settings);
+  await compile(fileUri(script, Uri.base), state);
+  await startAndAttachDirectly(state);
+  state.stdoutSink.attachCommandSender(stdout.add);
+  state.stderrSink.attachCommandSender(stderr.add);
+  await developer.export(state, fileUri(snapshot, Uri.base));
 }
