@@ -4,11 +4,11 @@ Starting session. Type 'help' for a list of commands.
 begin
 Uncaught exception: 42
 Stack trace:
-> 0: main    	@42
+> 0: main        @42
 > restart
 begin
 Uncaught exception: 42
 Stack trace:
-> 0: main    	@42
+> 0: main        @42
 > q
 Non-zero exit code from 'fletch-vm' (255).

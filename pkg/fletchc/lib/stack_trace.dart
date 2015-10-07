@@ -59,7 +59,14 @@ class StackFrame {
     String astString = debugInfo.astStringFor(bytecodePointer - 1);
     astString = (astString != null) ? '@$astString' : '';
 
-    return '${name.padRight(namePadding)}\t$astString';
+    String paddedName = name.padRight(namePadding);
+    String spaces = '';
+    if (astString.isNotEmpty) {
+      int missingSpaces = 4 - (paddedName.length % 4);
+      spaces = ' ' * missingSpaces;
+    }
+
+    return '$paddedName$spaces$astString';
   }
 
   SourceLocation sourceLocation() {

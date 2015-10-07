@@ -1,4 +1,4 @@
-main	@new Object()
-main	@print(new Object())
+main    @new Object()
+main    @print(new Object())
 [object Object]
 ### process terminated

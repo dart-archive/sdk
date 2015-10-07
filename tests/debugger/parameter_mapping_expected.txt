@@ -1,8 +1,8 @@
-main	@1
-main	@f(1)
-f	@a
-f	@b
-f	@a+b
-f	@=>a+b;
-main	@f(1)
+main    @1
+main    @f(1)
+f   @a
+f   @b
+f   @a+b
+f   @=>a+b;
+main    @f(1)
 ### process terminated

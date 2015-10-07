@@ -4,16 +4,16 @@ Starting session. Type 'help' for a list of commands.
 breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 > r
 Stack trace:
-> 0: breakHere                     	@void breakHere(){}
+> 0: breakHere                       @void breakHere(){}
 > t internal
 Stack trace:
-> 0: breakHere                     	@void breakHere(){}
-  1: call                          	
-  2: Future.call                   	@computation()
-  3: Object._noSuchMethodTrampoline	
-  4: _FletchTimer.call             	@_callback()
-  5: runToEnd                      	@entry()
-  6: Fiber.call                    	@fletch.runToEnd(entry)
-  7: Coroutine._coroutineStart     	@entry(argument)
+> 0: breakHere                       @void breakHere(){}
+  1: call                          
+  2: Future.call                     @computation()
+  3: Object._noSuchMethodTrampoline
+  4: _FletchTimer.call               @_callback()
+  5: runToEnd                        @entry()
+  6: Fiber.call                      @fletch.runToEnd(entry)
+  7: Coroutine._coroutineStart       @entry(argument)
 > c
 ### process terminated

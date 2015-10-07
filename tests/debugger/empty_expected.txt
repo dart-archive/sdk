@@ -1,2 +1,2 @@
-main	@main(){}
+main    @main(){}
 ### process terminated
