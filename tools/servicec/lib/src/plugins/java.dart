@@ -1256,7 +1256,7 @@ void _generateServiceJniMakeFiles(String path,
   buffer.writeln();
   buffer.writeln('include \$(CLEAR_VARS)');
   buffer.writeln('LOCAL_MODULE := fletch');
-  buffer.writeln('LOCAL_CFLAGS := -DFLETCH32 -DANDROID');
+  buffer.writeln('LOCAL_CFLAGS := -DFLETCH32');
   buffer.writeln('LOCAL_LDLIBS := -llog -ldl -rdynamic');
 
   buffer.writeln();
