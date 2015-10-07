@@ -9,33 +9,34 @@ import 'dart:async' show
 
 import 'dart:io';
 
-import 'errors.dart' show
-    CompilerError;
-
-import 'targets.dart' show
-    Target;
-
 import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
 
-import 'parser.dart' show
-    Parser;
+import 'error_handling_listener.dart' show
+    ErrorHandlingListener;
+
+import 'errors.dart' show
+    CompilationError,
+    UndefinedServiceError;
 
 import 'listener.dart' show
     DebugListener,
     Listener;
 
-import 'validator.dart' show
-    validate;
-
-import 'error_handling_listener.dart' show
-    ErrorHandlingListener;
+import 'parser.dart' show
+    Parser;
 
 import 'scanner.dart' show
     Scanner;
 
+import 'targets.dart' show
+    Target;
+
+import 'validator.dart' show
+    validate;
+
 // Temporary output type
-Future<Iterable<CompilerError>> compile(
+Future<Iterable<CompilationError>> compile(
     String path,
     String outputDirectory,
     {Target target: Target.ALL}) async {
@@ -44,13 +45,13 @@ Future<Iterable<CompilerError>> compile(
 }
 
 // Temporary output type
-Future<Iterable<CompilerError>> compileInput(
+Future<Iterable<CompilationError>> compileInput(
     String input,
     String path,
     String outputDirectory,
     {Target target: Target.ALL}) async {
   if (input.isEmpty) {
-    return [CompilerError.undefinedService];
+    return [new UndefinedServiceError()];
   }
 
   Scanner scanner = new Scanner(input);
@@ -60,15 +61,12 @@ Future<Iterable<CompilerError>> compileInput(
   Parser parser = new Parser(new DebugListener(listener));
   parser.parseUnit(tokens);
 
-  Iterable<CompilerError> errors = validate(listener.parsedUnitNode);
-
-  // TODO(stanm): validate
-
-  // TODO(stanm): generate output
+  Iterable<CompilationError> errors = validate(listener.parsedUnitNode);
+  if (errors.length == 0) {
+    // TODO(stanm): generate output
+  }
 
   createDirectories(outputDirectory, target);
-
-  // TODO(stanm): write files
 
   return errors;
 }

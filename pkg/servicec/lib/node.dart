@@ -4,6 +4,9 @@
 
 library servicec.node;
 
+import 'package:compiler/src/scanner/scannerlib.dart' show
+    Token;
+
 import 'errors.dart' show
     ErrorNode,
     InternalCompilerError;
@@ -149,7 +152,8 @@ class PointerType extends TypeNode {
   TypeNode pointee;
 
   PointerType(TypeNode pointee)
-    : super(new IdentifierNode("${pointee.identifier}*")) {
+    : super(new IdentifierNode(pointee.identifier.token)) {
+    // TODO(stanm): generate a token with a pointer name
     this.pointee = pointee;
   }
 
@@ -188,9 +192,10 @@ class ListType extends TypeNode {
 }
 
 class IdentifierNode extends Node {
-  String value;
+  Token token;
+  String get value => token.value;
 
-  IdentifierNode(this.value);
+  IdentifierNode(this.token);
 
   int get hashCode => value.hashCode;
   bool operator ==(IdentifierNode other) => value == other.value;

@@ -10,7 +10,10 @@ import '../driver/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 import 'package:servicec/compiler.dart' as servicec;
-import 'package:servicec/errors.dart' as errors;
+
+import 'package:servicec/errors.dart' show
+    CompilationError,
+    ErrorReporter;
 
 import 'documentation.dart' show
     servicecDocumentation;
@@ -55,17 +58,14 @@ Future<int> compileTask(Uri targetUri, Uri base) async {
   String outputDirectory = "/tmp/servicec-out";
 
   String fileName = targetUri.toFilePath();
-  Iterable<errors.CompilerError> compilerErrors =
+  Iterable<CompilationError> compilerErrors =
     await servicec.compile(fileName, outputDirectory);
 
   print("Compiled $relativeName to $outputDirectory");
 
   int length = compilerErrors.length;
   if (length > 0) {
-    print("Number of errors: $length");
-    for (errors.CompilerError compilerError in compilerErrors) {
-      print("$compilerError");
-    }
+    new ErrorReporter(fileName, relativeName).report(compilerErrors);
     return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
   }
 

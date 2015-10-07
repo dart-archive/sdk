@@ -16,7 +16,8 @@ import 'dart:math' show
 import 'package:expect/expect.dart';
 import 'package:servicec/compiler.dart' as servicec;
 import 'package:servicec/errors.dart' show
-    CompilerError,
+    CompilationError,
+    ErrorTag,
     compilerErrorTypes;
 
 import 'package:servicec/targets.dart' show
@@ -48,17 +49,17 @@ class FileTest extends Test {
 
   Future perform() async {
     String input = new File("$filesDirectory/$name.idl").readAsStringSync();
-    List<CompilerError> expectedErrors = extractExpectedErrors(input);
-    List<CompilerError> compilerErrors =
+    List<ErrorTag> expectedErrors = extractExpectedErrors(input);
+    List<CompilationError> actualErrors =
       (await servicec.compileInput(input, name, outputDirectory)).toList();
 
-    int length = min(expectedErrors.length, compilerErrors.length);
+    int length = min(expectedErrors.length, actualErrors.length);
     for (int i = 0; i < length; ++i) {
-      Expect.equals(expectedErrors[i], compilerErrors[i]);
+      Expect.equals(expectedErrors[i], actualErrors[i].tag);
     }
-    Expect.equals(expectedErrors.length, compilerErrors.length,
+    Expect.equals(expectedErrors.length, actualErrors.length,
                   "Expected a different amount of errors");
-    if (compilerErrors.length == 0) {
+    if (actualErrors.length == 0) {
       try {
         await checkOutputDirectoryStructure(outputDirectory, target);
       } finally {
@@ -67,8 +68,8 @@ class FileTest extends Test {
     }
   }
 
-  List<CompilerError> extractExpectedErrors(String input) {
-    List<CompilerError> result = <CompilerError>[];
+  List<ErrorTag> extractExpectedErrors(String input) {
+    List<ErrorTag> result = <ErrorTag>[];
 
     List<String> lines = input.split("\n");
     for (String line in lines) {
@@ -84,8 +85,8 @@ class FileTest extends Test {
     return result;
   }
 
-  void addWordIfError(String word, List<CompilerError> errors) {
-    CompilerError error = compilerErrorTypes["CompilerError.$word"];
+  void addWordIfError(String word, List<ErrorTag> errors) {
+    ErrorTag error = compilerErrorTypes["ErrorTag.$word"];
     if (null != error) errors.add(error);
   }
 }

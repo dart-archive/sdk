@@ -18,7 +18,7 @@ import 'scanner.dart' show
     LF_INFO;
 
 import 'errors.dart' show
-    CompilerError,
+    ErrorTag,
     ErrorNode,
     FormalErrorNode,
     FunctionErrorNode,
@@ -169,7 +169,7 @@ class ErrorHandlingListener extends Listener {
   Token handleIdentifier(Token tokens) {
     if (tokens is ErrorToken) return tokens;
 
-    stack.pushNode(new IdentifierNode(tokens.value));
+    stack.pushNode(new IdentifierNode(tokens));
     return tokens.next;
   }
 

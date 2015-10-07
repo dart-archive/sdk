@@ -4,6 +4,9 @@
 
 library servicec.cycle_detection;
 
+import 'dart:collection' show
+    LinkedHashSet;
+
 import 'node.dart' show
     MemberNode,
     FieldNode,
@@ -13,7 +16,9 @@ import 'node.dart' show
     UnionNode;
 
 import 'errors.dart' show
-    CompilerError;
+    CompilationError,
+    CyclicStructError,
+    ErrorTag;
 
 class GraphNode {
   GraphNodeState state = GraphNodeState.UNVISITED;
@@ -42,7 +47,7 @@ class StructGraph {
   Map<GraphNode, Set<GraphNode>> neighbours;
 
   StructGraph()
-    : nodes = new Set<GraphNode>(),
+    : nodes = new LinkedHashSet<GraphNode>(),  // Maintain node order.
       neighbours = new Map<GraphNode, Set<GraphNode>>();
 
   void add(StructNode struct) {
@@ -83,15 +88,10 @@ class StructGraph {
     return result;
   }
 
-  // 1) 0 -> 0 is a trivial cycle
-  // 2) 0 -> 1 -> 0 is (probably) the most common cycle in real code
-  // 3) 0 -> 1 -> 2 -> 1 is a cycle reachable from 0, but not containing 0
-  // 4) 0 -> 1 -> 0 + 1 -> 2 -> 1 are two cycles reachable from 0
-  // 5) 0 -> 1 -> 0 + 1 -> 2 -> 0 are two cycles reachable from 0
-  List<CompilerError> findCycles() {
-    List<CompilerError> errors = <CompilerError>[];
+  List<CompilationError> findCycles() {
+    List<CompilationError> errors = <CompilationError>[];
     List<GraphNode> stack = new List<GraphNode>();
-    stack.addAll(nodes);
+    stack.addAll(nodes.toList().reversed.toList());
     while (stack.isNotEmpty) {
       GraphNode node = stack.last;
       switch (node.state) {
@@ -106,7 +106,7 @@ class StructGraph {
               case GraphNodeState.VISITING:
                 // The `neighbour` is in the current route from the root to the
                 // `node` - there is a cycle.
-                errors.add(CompilerError.cyclicStruct);
+                errors.add(createError(neighbour.struct, stack));
                 break;
               case GraphNodeState.VISITED:
                 // The `neighbour` has already been searched - ignore.
@@ -125,5 +125,18 @@ class StructGraph {
       }
     }
     return errors;
+  }
+
+  CyclicStructError createError(StructNode struct, List<GraphNode> stack) {
+    LinkedHashSet<StructNode> reversedChain = new LinkedHashSet<StructNode>();
+    reversedChain.add(struct);
+    for (int i = stack.length - 1; i >= 0; --i) {
+      if (stack[i].state == GraphNodeState.VISITING) {
+        reversedChain.add(stack[i].struct);
+      }
+      if (stack[i].struct == struct) break;
+    }
+
+    return new CyclicStructError(reversedChain.toList().reversed);
   }
 }
