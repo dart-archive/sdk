@@ -113,7 +113,9 @@ abstract class PosixSystem implements System {
   ForeignFunction get _open;
   ForeignFunction get _lseek;
 
-  int socket() => _socket.icall$3Retry(AF_INET, SOCK_STREAM, 0);
+  int socket(int domain, int type, int protocol) {
+    return _socket.icall$3Retry(domain, type, protocol);
+  }
 
   InternetAddress lookup(String host) {
     ForeignMemory node = new ForeignMemory.fromStringAsUTF8(host);
@@ -223,12 +225,8 @@ abstract class PosixSystem implements System {
     return _listen.icall$2Retry(fd, 128);
   }
 
-  int setsockopt(int fd, int level, int optname, int value) {
-    Struct32 opt = new Struct32(1);
-    opt.setField(0, value);
-    int result = _setsockopt.icall$5Retry(fd, level, optname, opt, opt.length);
-    opt.free();
-    return result;
+  int setsockopt(int fd, int level, int optname, ForeignMemory value) {
+    return _setsockopt.icall$5Retry(fd, level, optname, value, value.length);
   }
 
   int accept(int fd) {
@@ -270,7 +268,11 @@ abstract class PosixSystem implements System {
   }
 
   int setReuseaddr(int fd) {
-    return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1);
+    Struct32 value = new Struct32(1);
+    value.setField(0, 1);
+    int result = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, value);
+    value.free();
+    return result;
   }
 
   int setCloseOnExec(int fd, bool closeOnExec) {

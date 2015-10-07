@@ -54,7 +54,7 @@ class Socket extends _SocketBase {
   Socket.connect(String host, int port) {
     var address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
-    _fd = sys.socket();
+    _fd = sys.socket(AF_INET, SOCK_STREAM, 0);
     if (_fd == -1) _error("Failed to create socket");
     sys.setBlocking(_fd, false);
     sys.setCloseOnExec(_fd, true);
@@ -172,7 +172,7 @@ class ServerSocket extends _SocketBase {
   ServerSocket(String host, int port) {
     var address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
-    _fd = sys.socket();
+    _fd = sys.socket(AF_INET, SOCK_STREAM, 0);
     if (_fd == -1) _error("Failed to create socket");
     if (sys.setReuseaddr(_fd) == -1) {
       _error("Failed to set socket option");

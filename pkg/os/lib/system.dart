@@ -61,7 +61,7 @@ class SystemInformation {
 }
 
 abstract class System {
-  int socket();
+  int socket(int domain, int type, int protocol);
   InternetAddress lookup(String host);
   int open(String path, bool read, bool write, bool append);
   TempFile mkstemp(String path);
@@ -69,7 +69,7 @@ abstract class System {
   int unlink(String path);
   int bind(int fd, InternetAddress address, int port);
   int listen(int fd);
-  int setsockopt(int fd, int level, int optname, int value);
+  int setsockopt(int fd, int level, int optname, ForeignMemory value);
   int accept(int fd);
   int port(int fd);
   int connect(int fd, InternetAddress address, int port);
