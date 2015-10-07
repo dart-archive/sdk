@@ -14,6 +14,7 @@
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
 #include "src/shared/utils.h"
+#include "src/shared/version.h"
 
 #include "src/vm/session.h"
 #include "src/vm/log_print_interceptor.h"
@@ -77,7 +78,12 @@ static void PrintUsage() {
   Print::Out("  --host: specifies which host address to listen on. "
              "Defaults to 127.0.0.1.\n");
   Print::Out("  --help: print out 'fletch-vm' usage.\n");
+  Print::Out("  --version: print the version.\n");
   Print::Out("\n");
+}
+
+static void PrintVersion() {
+  Print::Out("%s\n", GetVersion());
 }
 
 static int Main(int argc, char** argv) {
@@ -113,6 +119,9 @@ static int Main(int argc, char** argv) {
       host = argument + 7;
     } else if (strcmp(argument, "--help") == 0) {
       PrintUsage();
+      exit(0);
+    } else if (strcmp(argument, "--version") == 0) {
+      PrintVersion();
       exit(0);
     } else if (StartsWith(argument, "--log-dir=")) {
       log_dir = argument + 10;
