@@ -6,6 +6,7 @@
 
 #include "src/vm/event_handler.h"
 
+#include <fcntl.h>
 #include <sys/event.h>
 #include <sys/types.h>
 #include <time.h>

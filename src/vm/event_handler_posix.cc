@@ -6,16 +6,7 @@
 
 #include "src/vm/event_handler.h"
 
-#include <fcntl.h>
 #include <unistd.h>
-
-#include "src/shared/flags.h"
-
-#include "src/vm/object.h"
-#include "src/vm/port.h"
-#include "src/vm/process.h"
-#include "src/vm/scheduler.h"
-#include "src/vm/thread.h"
 
 namespace fletch {
 
