@@ -74,6 +74,15 @@ local variable again (with the ```p``` command). You should see ledToEnable
 increment up to the number of LEDs you have, and then you should see it start
 decrementing. Pretty neat right!?
 
+## Fletch security notes
+
+As discussed in [getting started](index.html), the fletch command manages a VM
+Agent on the attached Raspberry Pi. Please be aware that in the current
+experimental implementation this agent runs with full admin privileges. VMs
+spawned by the agent run with similar privileges, and it will listen to all
+incoming network traffic. We recommend you run the Raspberry Pi on an isolated
+network.
+
 ## Resetting Fletch
 
 The Fletch tool maintains a long-running background process on your developer
