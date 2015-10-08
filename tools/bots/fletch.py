@@ -588,9 +588,9 @@ class TemporaryHomeDirectory(object):
 
   def __exit__(self, *_):
     if self._old_home_dir:
-      os.putenv('HOME', self._old_home_dir)
+      os.environ['HOME'] = self._old_home_dir
     else:
-      os.unsetenv('HOME')
+      del os.environ['HOME']
     shutil.rmtree(self._tmp)
 
 class CoredumpEnabler(object):
