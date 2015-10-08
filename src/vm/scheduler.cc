@@ -18,6 +18,7 @@ namespace fletch {
 
 ThreadState* const kEmptyThreadState = reinterpret_cast<ThreadState*>(1);
 ThreadState* const kLockedThreadState = reinterpret_cast<ThreadState*>(2);
+Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
 
 Scheduler::Scheduler()
     : max_threads_(Platform::GetNumberOfHardwareThreads()),
@@ -400,17 +401,28 @@ void Scheduler::RescheduleProcess(Process* process,
 
 void Scheduler::PreemptThreadProcess(int thread_id) {
   Process* process = current_processes_[thread_id];
-  if (process != NULL) {
-    if (current_processes_[thread_id].compare_exchange_strong(process, NULL)) {
-      process->Preempt();
-      current_processes_[thread_id] = process;
+  while (true) {
+    if (process == kPreemptMarker) {
+      break;
+    } else if (process == NULL) {
+      if (current_processes_[thread_id].compare_exchange_strong(
+          process, kPreemptMarker)) {
+        break;
+      }
+    } else {
+      if (current_processes_[thread_id].compare_exchange_strong(
+          process, NULL)) {
+        process->Preempt();
+        current_processes_[thread_id] = process;
+        break;
+      }
     }
   }
 }
 
 void Scheduler::ProfileThreadProcess(int thread_id) {
   Process* process = current_processes_[thread_id];
-  if (process != NULL) {
+  if (process != NULL && process != kPreemptMarker) {
     if (current_processes_[thread_id].compare_exchange_strong(process, NULL)) {
       process->Profile();
       current_processes_[thread_id] = process;
@@ -590,8 +602,19 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
 
 void Scheduler::SetCurrentProcessForThread(int thread_id, Process* process) {
   if (thread_id == -1) return;
-  ASSERT(current_processes_[thread_id] == NULL);
-  current_processes_[thread_id] = process;
+  Process* value = current_processes_[thread_id];
+  while (true) {
+    if (value == kPreemptMarker) {
+      process->Preempt();
+      current_processes_[thread_id] = process;
+      break;
+    } else {
+      // Take value at each attempt, as value will be overriden on failure.
+      if (current_processes_[thread_id].compare_exchange_weak(value, process)) {
+        break;
+      }
+    }
+  }
 }
 
 void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {

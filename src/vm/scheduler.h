@@ -101,6 +101,14 @@ class Scheduler {
   Atomic<int> shutdown_;
   Atomic<Program*> shutdown_program_;
   Atomic<bool> pause_;
+
+  // A list of currently executed processes, indexable by thread id. Upon
+  // preemption, the value may be set to kPreemptMarker if it's NULL (which is
+  // the case when no process is being executed). This means that they'll always
+  // be in either of these 3 cases:
+  //   - NULL
+  //   - A process
+  //   - kPreemptMarker
   Atomic<Process*>* current_processes_;
 
   GCThread* gc_thread_;
