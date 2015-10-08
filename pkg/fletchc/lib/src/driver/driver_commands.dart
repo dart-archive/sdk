@@ -53,9 +53,6 @@ enum DriverCommand {
   /// The the receiver to perform a task.
   PerformTask,
 
-  /// Acknowledge command processed.
-  Acknowledge,
-
   /// Error in connection.
   DriverConnectionError,
 
@@ -96,8 +93,6 @@ abstract class CommandSender {
   void sendClose();
 
   void sendEventLoopStarted();
-
-  void acknowledge(DriverCommand acknowledgedCommand) { }
 }
 
 Function makeErrorHandler(String info) {

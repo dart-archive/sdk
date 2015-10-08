@@ -717,9 +717,6 @@ static DriverConnection::Command HandleCommand(DriverConnection* connection) {
       uint8* bytes = connection->ReadBytes(&size);
       WriteFully(CommandFileDescriptor(command), bytes, size);
       free(bytes);
-      WriteBuffer write_buffer;
-      write_buffer.WriteInt(command);
-      connection->Send(DriverConnection::kAcknowledge, write_buffer);
       return command;
     }
 
