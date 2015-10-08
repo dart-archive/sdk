@@ -27,13 +27,12 @@ packages
 /tests/service_tests/service_tests.xcodeproj/
 /third_party/bin/linux/dart
 /third_party/bin/linux/dart-arm
-/third_party/qemu/linux/qemu.tar.gz
-/third_party/qemu/linux/qemu/
 /third_party/bin/mac/dart
 /third_party/charcode/
 /third_party/crypto/
 /third_party/dart/
 /third_party/gyp/
+/third_party/isolate/
 /third_party/libs/linux/arm/libtcmalloc_minimal.a
 /third_party/libs/linux/arm64/libtcmalloc_minimal.a
 /third_party/libs/linux/x64/libtcmalloc_minimal.a
@@ -43,6 +42,8 @@ packages
 /third_party/package_config/
 /third_party/path/
 /third_party/persistent/
+/third_party/qemu/linux/qemu.tar.gz
+/third_party/qemu/linux/qemu/
 /tools/testing/bin/linux/dart
 /tools/testing/bin/linux/dart-arm
 /tools/testing/bin/mac/dart

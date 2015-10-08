@@ -29,6 +29,8 @@ import '../servicec/servicec_tests.dart' as servicec_tests;
 
 import '../fletchc/run.dart' as run;
 
+import '../fletchc/driver/test_vm_connection.dart' as test_vm_connection;
+
 import '../debugger/debugger_tests.dart' as debugger_tests;
 
 typedef Future NoArgFuture();
@@ -79,4 +81,12 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'message_tests': message_tests.main,
 
   'run': run.test,
+
+  'test_vm_connection/test': test_vm_connection.test,
+  'test_vm_connection/testCloseImmediately':
+      test_vm_connection.testCloseImmediately,
+  'test_vm_connection/testCloseAfterCommitChanges':
+      test_vm_connection.testCloseAfterCommitChanges,
+  'test_vm_connection/testCloseAfterProcessRun':
+      test_vm_connection.testCloseAfterProcessRun,
 };

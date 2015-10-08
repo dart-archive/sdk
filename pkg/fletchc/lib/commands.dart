@@ -582,7 +582,10 @@ class CommitChangesResult extends Command {
       : super(CommandCode.CommitChangesResult);
 
   void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
-    throw new UnimplementedError();
+    buffer
+        ..addBool(successful)
+        ..addAsciiString(message)
+        ..sendOn(sink, code);
   }
 
   int get numberOfResponsesExpected => 0;

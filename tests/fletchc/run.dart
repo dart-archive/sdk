@@ -29,21 +29,24 @@ const String userAgentAddress = const String.fromEnvironment("agent");
 const String fletchSettingsFile =
     const String.fromEnvironment("test.fletch_settings_file_name");
 
-Future<Null> attach(SessionState state) async {
-  if (userVmAddress == null) {
-    await startAndAttachDirectly(state);
-  } else {
-    Address address = parseAddress(userVmAddress);
-    await attachToVm(address.host, address.port, state);
-  }
-}
+class FletchRunner {
+  Future<Null> attach(SessionState state) async {
+    if (userVmAddress == null) {
+      await startAndAttachDirectly(state);
+    } else {
+      Address address = parseAddress(userVmAddress);
+      await attachToVm(address.host, address.port, state);
+    }
 
-main(List<String> arguments) async {
-  Settings settings;
-  if (fletchSettingsFile == null) {
+  }
+
+  Future<Settings> computeSettings() async {
+    if (fletchSettingsFile != null) {
+      return await readSettings(fileUri(fletchSettingsFile, Uri.base));
+    }
     Address agentAddress =
         userAgentAddress == null ? null : parseAddress(userAgentAddress);
-    settings = new Settings(
+    return new Settings(
         fileUri(userPackages == null ? ".packages" : userPackages, Uri.base),
         ["--verbose"],
         <String, String>{
@@ -52,26 +55,34 @@ main(List<String> arguments) async {
         },
         agentAddress,
         DeviceType.mobile);
-  } else {
-    settings = await readSettings(fileUri(fletchSettingsFile, Uri.base));
   }
-  SessionState state = createSessionState("test", settings);
-  for (String script in arguments) {
-    await compile(fileUri(script, Uri.base), state);
-    await attach(state);
-    state.stdoutSink.attachCommandSender(stdout.add);
-    state.stderrSink.attachCommandSender(stderr.add);
 
-    if (exportTo != null) {
-      await developer.export(state, fileUri(exportTo, Uri.base));
-    } else {
-      await run(state);
+  Future<Null> run(List<String> arguments) async {
+    Settings settings = await computeSettings();
+    SessionState state = createSessionState("test", settings);
+    for (String script in arguments) {
+      await compile(fileUri(script, Uri.base), state);
+      await attach(state);
+      state.stdoutSink.attachCommandSender(stdout.add);
+      state.stderrSink.attachCommandSender(stderr.add);
+
+      if (exportTo != null) {
+        await developer.export(state, fileUri(exportTo, Uri.base));
+      } else {
+        await developer.run(state);
+      }
     }
+    print(state.getLog());
   }
+}
+
+main(List<String> arguments) async {
+  await new FletchRunner().run(arguments);
 }
 
 Future<Null> test() => main(<String>['tests/language/application_test.dart']);
 
+// TODO(ahe): Move this method into FletchRunner and use computeSettings.
 Future<Null> export(String script, String snapshot) async {
   Settings settings;
   if (fletchSettingsFile == null) {

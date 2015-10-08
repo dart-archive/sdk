@@ -17,6 +17,9 @@ vars = {
   # Used by pkg/immi_samples.
   "crypto_rev": "@dd0ff8b95269b11f7bd925d2f58e5e938c1f03fc",
 
+  # Used by fletch_tests.
+  "isolate_tag": "@0.2.2",
+
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
@@ -72,6 +75,9 @@ deps = {
 
   "fletch/third_party/lk/lk-downstream":
       (Var("github_url") % "travisg/lk") + Var("lk_rev"),
+
+  "fletch/third_party/isolate":
+      "https://github.com/dart-lang/isolate.git" + Var("isolate_tag"),
 
   "wiki": (Var("github_url") % "dart-lang/fletch.wiki"),
 }
