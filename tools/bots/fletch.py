@@ -181,10 +181,11 @@ def StepsSanityChecking(build_dir):
   version = utils.GetSemanticSDKVersion()
   fletch = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
   fletch_version = subprocess.check_output([fletch, '--version']).strip()
+  subprocess.check_call([fletch, 'quit'])
   if fletch_version != version:
     raise Exception('Version mismatch, VERSION file has %s, fletch has %s' %
                     (version, fletch_version))
-  fletch_vm = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
+  fletch_vm = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch-vm')
   fletch_vm_version = subprocess.check_output([fletch_vm, '--version']).strip()
   if fletch_vm_version != version:
     raise Exception('Version mismatch, VERSION file has %s, fletch vm has %s' %
