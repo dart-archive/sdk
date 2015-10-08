@@ -7,8 +7,7 @@ library fletchc.verbs.debug_verb;
 import 'infrastructure.dart';
 
 import 'dart:async' show
-    StreamController,
-    Zone;
+    StreamController;
 
 import 'dart:convert' show
     UTF8,

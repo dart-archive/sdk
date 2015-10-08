@@ -8,14 +8,16 @@ import 'dart:io' show
     Socket;
 
 import 'dart:async' show
-    StreamSubscription,
-    Zone;
+    StreamSubscription;
 
 import 'dart:typed_data' show
     Uint8List;
 
 import 'dart:convert' show
     UTF8;
+
+import '../console_print.dart' show
+    printToConsole;
 
 enum DriverCommand {
   // Note: if you modify this enum, please modify src/tools/driver/connection.h
@@ -95,7 +97,7 @@ abstract class CommandSender {
 
 Function makeErrorHandler(String info) {
   return (error, StackTrace stackTrace) {
-    Zone.ROOT.print("Error on $info: ${stringifyError(error, stackTrace)}");
+    printToConsole("Error on $info: ${stringifyError(error, stackTrace)}");
   };
 }
 

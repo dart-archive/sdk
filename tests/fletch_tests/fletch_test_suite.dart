@@ -35,6 +35,9 @@ import 'package:fletchc/src/zone_helper.dart' show
 import 'package:fletchc/src/driver/driver_main.dart' show
     IsolatePool;
 
+import 'package:fletchc/src/console_print.dart' show
+    printToConsole;
+
 import 'messages.dart';
 
 import 'all_tests.dart' show
@@ -196,6 +199,7 @@ Future<Message> runTest(String name, NoArgFuture test) async {
       stdout.writeln(line);
     }
   }
+  printToConsole = printLineOnStdout;
   try {
     await runGuarded(
         test,
@@ -213,6 +217,8 @@ Future<Message> runTest(String name, NoArgFuture test) async {
     });
   } catch (error, stackTrace) {
     return new TestFailed(name, '$error', '$stackTrace');
+  } finally {
+    printToConsole = Zone.ROOT.print;
   }
   return new TestPassed(name);
 }

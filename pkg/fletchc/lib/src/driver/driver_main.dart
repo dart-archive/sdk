@@ -20,8 +20,7 @@ import 'dart:async' show
     Stream,
     StreamController,
     StreamSubscription,
-    StreamTransformer,
-    Zone;
+    StreamTransformer;
 
 import 'dart:typed_data' show
     ByteData,
@@ -87,6 +86,9 @@ import '../please_report_crash.dart' show
 
 import '../verbs/options.dart' show
     Options;
+
+import '../console_print.dart' show
+    printToConsole;
 
 Function gracefulShutdown;
 
@@ -765,9 +767,7 @@ class ClientLogger {
   void note(object) {
     String note = "$object";
     notes.add(note);
-    // Print directly to stdout (via Zone.ROOT). We assume that stdout of this
-    // process is piped to a log file.
-    Zone.ROOT.print("$id: $note");
+    printToConsole("$id: $note");
   }
 
   void gotArguments(List<String> arguments) {
