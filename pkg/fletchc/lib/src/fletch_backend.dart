@@ -114,6 +114,9 @@ import 'fletch_registry.dart' show
 import 'fletch_codegen_work_item.dart' show
     FletchCodegenWorkItem;
 
+import 'diagnostic.dart' show
+   throwInternalError;
+
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
@@ -287,96 +290,65 @@ class FletchBackend extends Backend with ResolutionCallbacks
     FletchRegistry registry = incomingRegistry;
     compiler.patchAnnotationClass = patchAnnotationClass;
 
-    FunctionElement findHelper(String name, [LibraryElement library]) {
-      if (library == null) library = fletchSystemLibrary;
+    bool hasMissingHelpers = false;
+    loadHelperMethods((String name) {
+      LibraryElement library = fletchSystemLibrary;
       Element helper = library.findLocal(name);
       // TODO(ahe): Make it cleaner.
-      if (helper.isAbstractField) {
+      if (helper != null && helper.isAbstractField) {
         AbstractFieldElement abstractField = helper;
         helper = abstractField.getter;
       }
       if (helper == null) {
+        hasMissingHelpers = true;
         compiler.reportError(
-            fletchSystemLibrary, MessageKind.GENERIC,
+            library, MessageKind.GENERIC,
             {'text': "Required implementation method '$name' not found."});
       }
       return helper;
+    });
+    if (hasMissingHelpers) {
+      throwInternalError(
+          "Some implementation methods are missing, see details above");
     }
-
-    FunctionElement findExternal(String name, [LibraryElement library]) {
-      FunctionElement helper = findHelper(name);
-      externals.add(helper);
-      return helper;
-    }
-
-    fletchSystemEntry = findHelper('entry');
-    if (fletchSystemEntry != null) {
-      world.registerStaticUse(fletchSystemEntry);
-    }
-    fletchExternalInvokeMain = findExternal('invokeMain');
-    fletchExternalYield = findExternal('yield');
-    fletchExternalCoroutineChange =
-        findExternal('coroutineChange', fletchLibrary);
-    fletchExternalNativeError = findExternal('nativeError');
-    fletchUnresolved = findExternal('unresolved');
-    world.registerStaticUse(fletchUnresolved);
-    fletchCompileError = findExternal('compileError');
     world.registerStaticUse(fletchCompileError);
+    world.registerStaticUse(fletchSystemEntry);
+    world.registerStaticUse(fletchUnresolved);
 
-    FletchClassBuilder loadClass(
+    loadHelperClasses((
         String name,
         LibraryElement library,
-        [bool builtin = false,
-         bool forCodegen = true]) {
+        {bool builtin: false}) {
       var classImpl = library.findLocal(name);
       if (classImpl == null) classImpl = library.implementation.find(name);
       if (classImpl == null) {
-        compiler.internalError(library, "Internal class '$name' not found.");
+        compiler.reportError(
+            library, MessageKind.GENERIC,
+            {'text': "Required implementation class '$name' not found."});
+        hasMissingHelpers = true;
         return null;
       }
+      if (hasMissingHelpers) return null;
       if (builtin) builtinClasses.add(classImpl);
-      // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
-      // not happen at this point in time.
-      classImpl.ensureResolved(compiler);
-      world.registerInstantiatedType(classImpl.rawType, registry.asRegistry);
-      // TODO(ahe): This is a hack to let both the world and the codegen know
-      // about the instantiated type.
-      if (forCodegen) {
+      {
+        // TODO(ahe): Register in ResolutionCallbacks. The lines in this block
+        // should not happen at this point in time.
+        classImpl.ensureResolved(compiler);
+        world.registerInstantiatedType(classImpl.rawType, registry.asRegistry);
+        // TODO(ahe): This is a hack to let both the world and the codegen know
+        // about the instantiated type.
         registry.registerInstantiatedType(classImpl.rawType);
-        return registerClassElement(classImpl);
       }
-      return null;
+      return registerClassElement(classImpl);
+    });
+    if (hasMissingHelpers) {
+      throwInternalError(
+          "Some implementation classes are missing, see details above");
     }
 
-    compiledObjectClass = loadClass("Object", compiler.coreLibrary, true);
-    smiClass = loadClass("_Smi", compiler.coreLibrary, true).element;
-    mintClass = loadClass("_Mint", compiler.coreLibrary, true).element;
-    loadClass("_OneByteString", compiler.coreLibrary, true);
-    loadClass("_TwoByteString", compiler.coreLibrary, true);
-    // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
-    loadClass(constantListName, fletchSystemLibrary, true);
-    loadClass(constantByteListName, fletchSystemLibrary, true);
-    loadClass(constantMapName, fletchSystemLibrary, true);
-    loadClass("_DoubleImpl", compiler.coreLibrary, true);
-    loadClass("Null", compiler.coreLibrary, true);
-    loadClass("bool", compiler.coreLibrary, true);
-    loadClass("Port", fletchLibrary, true);
-    loadClass("ForeignMemory", fletchFFILibrary, true);
-
-    if (context.enableBigint) {
-      bigintClass = loadClass("_Bigint", compiler.coreLibrary).element;
-      uint32DigitsClass =
-          loadClass("_Uint32Digits", compiler.coreLibrary).element;
-    }
-
-    growableListClass =
-        loadClass(growableListName, fletchSystemLibrary).element;
     // Register list constructors to world.
     // TODO(ahe): Register growableListClass through ResolutionCallbacks.
     growableListClass.constructors.forEach(world.registerStaticUse);
-
-    fletchNoSuchMethodErrorClass =
-        loadClass(fletchNoSuchMethodErrorName, fletchSystemLibrary).element;
 
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then
@@ -395,6 +367,56 @@ class FletchBackend extends Backend with ResolutionCallbacks
     for (FunctionElement element in alwaysEnqueue) {
       world.registerStaticUse(element);
     }
+  }
+
+  void loadHelperMethods(
+      FunctionElement findHelper(String name)) {
+
+    FunctionElement findExternal(String name) {
+      FunctionElement helper = findHelper(name);
+      if (helper != null) externals.add(helper);
+      return helper;
+    }
+
+    fletchSystemEntry = findHelper('entry');
+    fletchExternalInvokeMain = findExternal('invokeMain');
+    fletchExternalYield = findExternal('yield');
+    fletchExternalCoroutineChange = findExternal('coroutineChange');
+    fletchExternalNativeError = findExternal('nativeError');
+    fletchUnresolved = findExternal('unresolved');
+    fletchCompileError = findExternal('compileError');
+  }
+
+  void loadHelperClasses(
+      FletchClassBuilder loadClass(
+          String name,
+          LibraryElement library,
+          {bool builtin})) {
+    compiledObjectClass =
+        loadClass("Object", compiler.coreLibrary, builtin: true);
+    smiClass = loadClass("_Smi", compiler.coreLibrary, builtin: true)?.element;
+    mintClass =
+        loadClass("_Mint", compiler.coreLibrary, builtin: true)?.element;
+    loadClass("_OneByteString", compiler.coreLibrary, builtin: true);
+    loadClass("_TwoByteString", compiler.coreLibrary, builtin: true);
+    // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
+    loadClass(constantListName, fletchSystemLibrary, builtin: true);
+    loadClass(constantByteListName, fletchSystemLibrary, builtin: true);
+    loadClass(constantMapName, fletchSystemLibrary, builtin: true);
+    loadClass("_DoubleImpl", compiler.coreLibrary, builtin: true);
+    loadClass("Null", compiler.coreLibrary, builtin: true);
+    loadClass("bool", compiler.coreLibrary, builtin: true);
+    loadClass("Port", fletchLibrary, builtin: true);
+    loadClass("ForeignMemory", fletchFFILibrary, builtin: true);
+    if (context.enableBigint) {
+      bigintClass = loadClass("_Bigint", compiler.coreLibrary)?.element;
+      uint32DigitsClass =
+          loadClass("_Uint32Digits", compiler.coreLibrary)?.element;
+    }
+    growableListClass =
+        loadClass(growableListName, fletchSystemLibrary)?.element;
+    fletchNoSuchMethodErrorClass =
+        loadClass(fletchNoSuchMethodErrorName, fletchSystemLibrary)?.element;
   }
 
   void registerInstantiatedClass(ClassElement cls,
