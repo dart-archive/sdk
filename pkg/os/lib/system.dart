@@ -83,11 +83,10 @@ abstract class System {
   void memcpy(var dest, int destOffset, var src, int srcOffset, int length);
   Errno errno();
   int setBlocking(int fd, bool blocking);
-  int setReuseaddr(int fd);
   int setCloseOnExec(int fd, bool closeOnExec);
   SystemInformation info();
   int get SOL_SOCKET;
-  int get SO_RESUSEADDR;
+  int get SO_REUSEADDR;
 }
 
 class _InternetAddress extends InternetAddress {
