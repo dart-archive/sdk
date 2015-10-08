@@ -7,6 +7,9 @@ library fletchc.driver.session_manager;
 import 'dart:async' show
     Future;
 
+import 'dart:io' show
+    Process;
+
 import 'driver_commands.dart' show
     CommandSender;
 
@@ -149,8 +152,12 @@ class BufferingOutputSink implements Sink<List<int>> {
   }
 }
 
+class SessionStateImplementation {
+  FletchVm fletchVm;
+}
+
 /// The state stored in a worker isolate of a [UserSession].
-class SessionState {
+class SessionState extends SessionStateImplementation {
   final String name;
 
   final BufferingOutputSink stdoutSink = new BufferingOutputSink();
@@ -169,13 +176,20 @@ class SessionState {
 
   Session session;
 
-  FletchVm fletchVm;
-
   int fletchAgentVmId;
 
   Settings settings;
 
+  bool hasSignalledVm = false;
+
   SessionState(this.name, this.compilerHelper, this.compiler, this.settings);
+
+  FletchVm get fletchVm => super.fletchVm;
+
+  void set fletchVm(FletchVm vm) {
+    hasSignalledVm = false;
+    super.fletchVm = vm;
+  }
 
   bool get hasRemoteVm => fletchAgentVmId != null;
 
@@ -202,6 +216,12 @@ class SessionState {
   }
 
   String getLog() => loggedMessages.join("\n");
+
+  void signalFletchVm(signal) {
+    assert(fletchVm.process != null);
+    hasSignalledVm = true;
+    Process.runSync("kill", ["-$signal", "${fletchVm.process.pid}"]);
+  }
 
   static SessionState internalCurrent;
 

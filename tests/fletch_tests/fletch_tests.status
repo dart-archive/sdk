@@ -32,10 +32,6 @@ servicec/bad_list_type_4: Fail
 servicec/bad_list_type_5: Fail
 servicec/multiple_definitions_3: Fail
 
-test_vm_connection/testCloseImmediately: Fail
-test_vm_connection/testCloseAfterCommitChanges: Fail
-test_vm_connection/testCloseAfterProcessRun: Fail
-
 [ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip

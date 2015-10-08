@@ -270,6 +270,10 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.terminatedSession:
       // TODO(ahe): Add test for this.
       return untestable;
+
+    case DiagnosticKind.socketVmConnectionError:
+      // TODO(ahe): Add test for this.
+      return untestable;
   }
 }
 

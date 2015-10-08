@@ -16,7 +16,6 @@ import 'dart:convert' show
 import 'dart:io' show
     File,
     InternetAddress,
-    Process,
     Socket,
     SocketException;
 
@@ -25,7 +24,6 @@ import '../../commands.dart' show
     ProcessBacktrace,
     ProcessBacktraceRequest,
     ProcessRun,
-    ProcessSpawnForMain,
     SessionEnd;
 
 import 'session_manager.dart' show
@@ -34,7 +32,8 @@ import 'session_manager.dart' show
 
 import 'driver_commands.dart' show
     DriverCommand,
-    handleSocketErrors;
+    handleSocketErrors,
+    stringifyError;
 
 import '../../commands.dart' show
     Debugging;
@@ -416,7 +415,11 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
         break;
 
       case CommandCode.ConnectionError:
-        state.log("Error on connection to Fletch VM: ${command.error}");
+        if (state.hasSignalledVm) {
+          state.log("Fletch VM connection: ${command.error}");
+        } else {
+          print("Error on connection to Fletch VM: ${command.error}");
+        }
         exitCode = exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
         break;
 
@@ -434,9 +437,18 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
           session.kill();
         }
       });
-      await session.terminateSession();
-      done = true;
-      timer.cancel();
+      await session.terminateSession().catchError((e) {
+        if (state.hasSignalledVm ||
+            exitCode == exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR) {
+          state.log("Fletch VM connection: $e");
+        } else {
+          print("Error on connection to Fletch VM: ${command.error}");
+          exitCode = exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
+        }
+      }, test: (e) => e is SocketException).whenComplete(() {
+        done = true;
+        timer.cancel();
+      });
     }
   };
 
@@ -498,21 +510,7 @@ Future<int> compileAndAttachToVmThenDeprecated(
 
   state.attachCommandSender(commandSender);
 
-  int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
-  try {
-    exitCode = await action();
-  } catch (error, trace) {
-    print(error);
-    if (trace != null) {
-      print(trace);
-    }
-  } finally {
-    if (startedVmDirectly) {
-      exitCode = await state.fletchVm.exitCode;
-    }
-    state.detachCommandSender();
-  }
-  return exitCode;
+  return performActionGuarded(action, state, startedVmDirectly);
 }
 
 Future<int> compileAndAttachToVmThen(
@@ -562,19 +560,36 @@ Future<int> compileAndAttachToVmThen(
   // will be honored.
   commandSender.sendEventLoopStarted();
 
+  return performActionGuarded(action, state, startedVmDirectly);
+}
+
+Future<int> performActionGuarded(
+    Future<int> action(),
+    SessionState state,
+    bool startedVmDirectly) async {
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
+  bool crashed = true;
   try {
     exitCode = await action();
-  } catch (error, trace) {
-    print(error);
-    if (trace != null) {
-      print(trace);
-    }
+    crashed = false;
   } finally {
-    if (startedVmDirectly) {
-      exitCode = await state.fletchVm.exitCode;
+    try {
+      if (startedVmDirectly) {
+        if (crashed) {
+          state.signalFletchVm("TERM");
+        }
+        exitCode = await state.fletchVm.exitCode;
+      }
+      state.detachCommandSender();
+    } catch (error, trace) {
+      if (crashed) {
+        // If [action] threw, this is a secondary error, so we just print it
+        // and let the other exception propagate.
+        print(stringifyError(error, trace));
+      } else {
+        rethrow;
+      }
     }
-    state.detachCommandSender();
   }
   return exitCode;
 }
@@ -606,9 +621,7 @@ void handleSignal(SessionState state, int signalNumber) {
   if (state.hasRemoteVm) {
     signalAgentVm(state, signalNumber);
   } else {
-    assert(state.fletchVm.process != null);
-    int vmPid = state.fletchVm.process.pid;
-    Process.runSync("kill", ["-$signalNumber", "$vmPid"]);
+    state.signalFletchVm(signalNumber);
   }
 }
 
