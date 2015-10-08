@@ -7,6 +7,7 @@ library socket;
 import 'dart:fletch';
 import 'dart:fletch.os' as os;
 import 'dart:typed_data';
+import 'dart:fletch.ffi' show Struct32;
 
 import 'package:os/os.dart';
 
@@ -174,7 +175,7 @@ class ServerSocket extends _SocketBase {
     if (address == null) _error("Failed to lookup address '$host'");
     _fd = sys.socket(AF_INET, SOCK_STREAM, 0);
     if (_fd == -1) _error("Failed to create socket");
-    if (sys.setReuseaddr(_fd) == -1) {
+    if (_setReuseaddr(_fd) == -1) {
       _error("Failed to set socket option");
     }
     sys.setBlocking(_fd, false);
@@ -184,6 +185,14 @@ class ServerSocket extends _SocketBase {
     }
     if (sys.listen(_fd) == -1) _error("Failed to listen on $host:$port");
     _addSocketToEventHandler();
+  }
+
+  static Struct32 FOREIGN_ONE = new Struct32.finalized(1)..setField(0, 1);
+
+  int _setReuseaddr(int fd) {
+    int result =
+      sys.setsockopt(fd, sys.SOL_SOCKET, sys.SO_REUSEADDR, FOREIGN_ONE);
+    return result;
   }
 
   /**

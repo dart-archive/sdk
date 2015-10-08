@@ -86,6 +86,8 @@ abstract class System {
   int setReuseaddr(int fd);
   int setCloseOnExec(int fd, bool closeOnExec);
   SystemInformation info();
+  int get SOL_SOCKET;
+  int get SO_RESUSEADDR;
 }
 
 class _InternetAddress extends InternetAddress {

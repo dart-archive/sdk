@@ -267,14 +267,6 @@ abstract class PosixSystem implements System {
     return _fcntl.icall$3Retry(fd, F_SETFL, flags);
   }
 
-  int setReuseaddr(int fd) {
-    Struct32 value = new Struct32(1);
-    value.setField(0, 1);
-    int result = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, value);
-    value.free();
-    return result;
-  }
-
   int setCloseOnExec(int fd, bool closeOnExec) {
     int flags = _fcntl.icall$3Retry(fd, F_GETFD, 0);
     if (flags == -1) return -1;
