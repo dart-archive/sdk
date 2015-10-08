@@ -4,10 +4,14 @@
 
 #ifdef FLETCH_ENABLE_LIVE_CODING
 
+#include <ctype.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <sys/param.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "include/fletch_api.h"
 
@@ -67,6 +71,22 @@ static bool EndsWith(const char* s, const char* suffix) {
       : false;
 }
 
+#ifdef DEBUG
+static void WaitForGDB(const char* executable_name) {
+  int fd = open("/dev/tty", O_WRONLY);
+  if (fd >= 0) {
+    FILE* terminal = fdopen(fd, "w");
+    fprintf(terminal, "*** VM paused, debug with:\n");
+    fprintf(
+        terminal,
+        "gdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal SIGCONT'\n",
+        executable_name,
+        getpid());
+    kill(getpid(), SIGSTOP);
+  }
+}
+#endif
+
 static void PrintUsage() {
   Print::Out("fletch-vm - The embedded Dart virtual machine.\n\n");
   Print::Out("  fletch-vm [--port=<port>] [--host=<address>] "
@@ -87,6 +107,11 @@ static void PrintVersion() {
 }
 
 static int Main(int argc, char** argv) {
+#ifdef DEBUG
+  if (getenv("FLETCH_VM_WAIT") != NULL) {
+    WaitForGDB(argv[0]);
+  }
+#endif
   Flags::ExtractFromCommandLine(&argc, argv);
   FletchSetup();
 
