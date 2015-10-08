@@ -27,9 +27,6 @@ import 'package:fletchc/src/driver/developer.dart' show
 import 'package:fletchc/commands.dart' show
     CommandCode;
 
-import 'package:fletchc/src/driver/exit_codes.dart' show
-    COMPILER_EXITCODE_CONNECTION_ERROR;
-
 import '../run.dart' show
     FletchRunner;
 
@@ -50,18 +47,16 @@ class MockVmRunner extends FletchRunner {
     await attachToVm(InternetAddress.LOOPBACK_IP_V4.address, vm.port, state);
   }
 
-  Future run(List<String> arguments) async {
-    int runExit = await super.run(arguments);
+  Future<Null> run(List<String> arguments) async {
+    await super.run(arguments);
     int exitCode = await vm.exitCode;
-    // Mock VM always exits with 0.
-    Expect.equals(0, exitCode);
-    print("Mock VM exited");
-    return runExit;
+    print("Mock VM exit code: $exitCode");
   }
+
 }
 
 main(List<String> arguments) async {
-  Expect.equals(0, await new MockVmRunner().run(arguments));
+  await new MockVmRunner().run(arguments);
 }
 
 Future<Null> test() => main(<String>['tests/language/application_test.dart']);
@@ -69,18 +64,21 @@ Future<Null> test() => main(<String>['tests/language/application_test.dart']);
 Future<Null> testCloseImmediately() async {
   int result = await new MockVmRunner(closeImmediately: true)
       .run(<String>['tests/language/application_test.dart']);
-  Expect.equals(COMPILER_EXITCODE_CONNECTION_ERROR, result);
+  // TODO(ahe): The actual exit code is TBD.
+  Expect.equals(1, result);
 }
 
 Future<Null> testCloseAfterCommitChanges() async {
   int result =
       await new MockVmRunner(closeAfterFirst: CommandCode.CommitChanges)
       .run(<String>['tests/language/application_test.dart']);
-  Expect.equals(COMPILER_EXITCODE_CONNECTION_ERROR, result);
+  // TODO(ahe): The actual exit code is TBD.
+  Expect.equals(1, result);
 }
 
 Future<Null> testCloseAfterProcessRun() async {
   int result = await new MockVmRunner(closeAfterFirst: CommandCode.ProcessRun)
       .run(<String>['tests/language/application_test.dart']);
-  Expect.equals(COMPILER_EXITCODE_CONNECTION_ERROR, result);
+  // TODO(ahe): The actual exit code is TBD.
+  Expect.equals(1, result);
 }

@@ -37,6 +37,7 @@ class FletchRunner {
       Address address = parseAddress(userVmAddress);
       await attachToVm(address.host, address.port, state);
     }
+
   }
 
   Future<Settings> computeSettings() async {
@@ -56,10 +57,9 @@ class FletchRunner {
         DeviceType.mobile);
   }
 
-  Future<int> run(List<String> arguments) async {
+  Future<Null> run(List<String> arguments) async {
     Settings settings = await computeSettings();
     SessionState state = createSessionState("test", settings);
-    int exitCode = -1;
     for (String script in arguments) {
       await compile(fileUri(script, Uri.base), state);
       await attach(state);
@@ -67,13 +67,12 @@ class FletchRunner {
       state.stderrSink.attachCommandSender(stderr.add);
 
       if (exportTo != null) {
-        exitCode = await developer.export(state, fileUri(exportTo, Uri.base));
+        await developer.export(state, fileUri(exportTo, Uri.base));
       } else {
-        exitCode = await developer.run(state);
+        await developer.run(state);
       }
     }
     print(state.getLog());
-    return exitCode;
   }
 }
 

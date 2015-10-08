@@ -35,10 +35,6 @@ import 'src/shared_command_infrastructure.dart' show
     CommandTransformerBuilder,
     toUint8ListView;
 
-import 'src/diagnostic.dart' show
-    DiagnosticKind,
-    throwFatalError;
-
 part 'command_reader.dart';
 part 'input_handler.dart';
 
@@ -65,8 +61,7 @@ class FletchVmSession {
   // TODO(ahe): Get rid of this. See also issue 67.
   bool silent = false;
 
-  ConnectionError connectionError =
-      new ConnectionError("Connection is closed", null);
+  Command connectionError = new ConnectionError("Connection is closed", null);
 
   FletchVmSession(Socket vmSocket,
                   Sink<List<int>> stdoutSink,
@@ -108,8 +103,7 @@ class FletchVmSession {
 
     Command lastResponse;
     for (Command command in commands) {
-      Command status = sendCommandUnchecked(command);
-      if (status != null) return status;
+      await sendCommand(command);
       for (int i = 0; i < command.numberOfResponsesExpected; i++) {
         lastResponse = await readNextCommand();
       }
@@ -120,23 +114,18 @@ class FletchVmSession {
   /// Sends all given [Command]s to a fletch-vm.
   Future sendCommands(List<Command> commands) async {
     for (var command in commands) {
-      ConnectionError status = sendCommand(command);
-      if (status != null) return status;
+      await sendCommand(command);
     }
   }
 
   /// Sends a [Command] to a fletch-vm.
-  ConnectionError sendCommandUnchecked(Command command) {
-    if (_connectionIsDead) return connectionError;
-    command.addTo(_outgoingSink);
-  }
-
-  void sendCommand(Command command) {
-    ConnectionError status = sendCommandUnchecked(command);
-    if (status != null) {
-      throwFatalError(
-          DiagnosticKind.socketVmConnectionError, message: status.error);
+  Future sendCommand(Command command) async {
+    if (_connectionIsDead) {
+      throw new StateError(
+          'Trying to send command ${command} to fletch-vm, but '
+          'the connection is already closed.');
     }
+    command.addTo(_outgoingSink);
   }
 
   /// Will read the next [Command] the fletch-vm sends to us.
@@ -340,8 +329,7 @@ class Session extends FletchVmSession {
   Future debugRun() async {
     assert(!running);
     running = true;
-    Command status = sendCommandUnchecked(const ProcessRun());
-    if (status != null) return status;
+    await sendCommand(const ProcessRun());
     return handleProcessStop(await readNextCommand());
   }
 
@@ -492,7 +480,7 @@ class Session extends FletchVmSession {
         await cont();
         return null;
       }
-      sendCommand(const ProcessStepOut());
+      await sendCommand(const ProcessStepOut());
       ProcessSetBreakpoint setBreakpoint = await readNextCommand();
       assert(setBreakpoint.value != -1);
       Command response = await handleProcessStop(await readNextCommand());
@@ -538,7 +526,7 @@ class Session extends FletchVmSession {
 
   Future stepOverBytecode() async {
     if (!checkRunning()) return null;
-    sendCommand(const ProcessStepOver());
+    await sendCommand(const ProcessStepOver());
     ProcessSetBreakpoint setBreakpoint = await readNextCommand();
     Command response = await handleProcessStop(await readNextCommand());
     bool success =
@@ -606,7 +594,7 @@ class Session extends FletchVmSession {
 
   Future getUncaughtException() async {
     if (debugState.currentUncaughtException == null) {
-      sendCommand(const ProcessUncaughtExceptionRequest());
+      await sendCommand(const ProcessUncaughtExceptionRequest());
       Command response = await readNextCommand();
       if (response is DartValue) {
         debugState.currentUncaughtException = new RemoteValue(response);
@@ -769,7 +757,7 @@ class Session extends FletchVmSession {
 
   Future printLocalStructure(String name, LocalValue local) async {
     var frameNumber = debugState.actualCurrentFrameNumber;
-    sendCommand(new ProcessLocalStructure(frameNumber, local.slot));
+    await sendCommand(new ProcessLocalStructure(frameNumber, local.slot));
     Command response = await readNextCommand();
     if (response is DartValue) {
       writeStdoutLine(dartValueToString(response));

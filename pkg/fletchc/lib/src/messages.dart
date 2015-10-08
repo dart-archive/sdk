@@ -41,7 +41,6 @@ enum DiagnosticKind {
   settingsUnrecognizedKey,
   socketAgentConnectError,
   socketAgentReplyError,
-  socketVmConnectionError,
   socketVmConnectError,
   socketVmReplyError,
   terminatedSession,
@@ -149,9 +148,6 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.socketAgentConnectError:
       return "Unable to establish connection to Fletch Agent on "
           "$address: $message";
-
-    case DiagnosticKind.socketVmConnectionError:
-      return "Error on connection to Fletch VM: $message";
 
     case DiagnosticKind.socketVmConnectError:
       return
