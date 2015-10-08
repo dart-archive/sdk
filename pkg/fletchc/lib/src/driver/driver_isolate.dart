@@ -16,6 +16,9 @@ import 'dart:async' show
     ZoneSpecification,
     runZoned;
 
+import 'dart:collection' show
+    Queue;
+
 import 'dart:isolate' show
     ReceivePort,
     SendPort;
@@ -39,6 +42,10 @@ import 'exit_codes.dart' show
 class PortCommandSender extends CommandSender {
   final SendPort port;
 
+  final Queue<List> pendingStdio = new Queue<List>();
+
+  bool isStdioAcknowledged = true;
+
   PortCommandSender(this.port);
 
   void sendExitCode(int exitCode) {
@@ -46,7 +53,16 @@ class PortCommandSender extends CommandSender {
   }
 
   void sendDataCommand(DriverCommand command, List<int> data) {
-    port.send([command.index, data]);
+    if (command == DriverCommand.Stderr || command == DriverCommand.Stdout) {
+      // Throttle stdout and stderr. This makes sure we don't starve more
+      // urgent commands such as a request for shutdown.
+      pendingStdio.addLast([command.index, data]);
+      if (isStdioAcknowledged) {
+        processPendingStdio();
+      }
+    } else {
+      port.send([command.index, data]);
+    }
   }
 
   void sendClose() {
@@ -55,6 +71,19 @@ class PortCommandSender extends CommandSender {
 
   void sendEventLoopStarted() {
     port.send([DriverCommand.EventLoopStarted.index, null]);
+  }
+
+  void acknowledge(DriverCommand acknowledgedCommand) {
+    assert(acknowledgedCommand == DriverCommand.Stderr ||
+           acknowledgedCommand == DriverCommand.Stdout);
+    isStdioAcknowledged = true;
+    processPendingStdio();
+  }
+
+  void processPendingStdio() {
+    if (pendingStdio.isEmpty) return;
+    isStdioAcknowledged = false;
+    port.send(pendingStdio.removeFirst());
   }
 }
 
@@ -121,10 +150,18 @@ class WorkerSideTask {
   }
 
   void handleIncomingCommand(Command command) {
-    if (command.code == DriverCommand.PerformTask) {
-      performTask(command.data).then(taskCompleter.complete);
-    } else {
-      filteredIncomingCommands.add(command);
+    switch (command.code) {
+      case DriverCommand.PerformTask:
+        performTask(command.data).then(taskCompleter.complete);
+        break;
+
+      case DriverCommand.Acknowledge:
+        commandSender.acknowledge(command.data);
+        break;
+
+      default:
+        filteredIncomingCommands.add(command);
+        break;
     }
   }
 

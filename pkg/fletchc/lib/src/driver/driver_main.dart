@@ -110,6 +110,10 @@ class DriverCommandTransformerBuilder
         int signal = payload.getUint32(0, commandEndianness);
         return new Command(code, signal);
 
+      case DriverCommand.Acknowledge:
+        int acknowledgedCode = payload.getUint32(0, commandEndianness);
+        return new Command(code, DriverCommand.values[acknowledgedCode]);
+
       default:
         return null;
     }

@@ -29,6 +29,7 @@ class DriverConnection {
     kSendPort,  // Not used.
     kPerformTask,  // Not used.
 
+    kAcknowledge,  // Acknowledge command processed.
     kDriverConnectionError,  // Error in connection.
     kDriverConnectionClosed,  // Connection closed.
   };
