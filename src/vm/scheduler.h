@@ -113,7 +113,10 @@ class Scheduler {
 
   GCThread* gc_thread_;
 
-  void ExitWith(Program* program, int exit_code);
+  void DeleteTerminatedProcess(Process* process);
+
+  // Exit the program for the given process with the given exit code.
+  void ExitWith(Process* process, int exit_code);
 
   void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);

@@ -341,18 +341,20 @@ int Scheduler::Run() {
   return 0;
 }
 
-void Scheduler::ExitAtTermination(Process* process) {
+void Scheduler::DeleteTerminatedProcess(Process* process) {
   Program* program = process->program();
   program->DeleteProcess(process);
+  --processes_;
 
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
     gc_thread_->TriggerGC(program);
   }
+}
 
-  if (--processes_ == 0) {
-    NotifyAllThreads();
-  }
+void Scheduler::ExitAtTermination(Process* process) {
+  DeleteTerminatedProcess(process);
+  if (processes_ == 0) NotifyAllThreads();
 }
 
 void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
@@ -364,26 +366,26 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
     exception->Print();
   }
 
-  ExitWith(process->program(), kUncaughtExceptionExitCode);
-  ExitAtTermination(process);
+  ExitWith(process, kUncaughtExceptionExitCode);
 }
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {
   ASSERT(process->state() == Process::kCompileTimeError);
-  ExitWith(process->program(), kCompileTimeErrorExitCode);
-  ExitAtTermination(process);
+  ExitWith(process, kCompileTimeErrorExitCode);
 }
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
   ASSERT(process->state() == Process::kBreakPoint);
-  ExitWith(process->program(), kBreakPointExitCode);
-  ExitAtTermination(process);
+  ExitWith(process, kBreakPointExitCode);
 }
 
-void Scheduler::ExitWith(Program* program, int exit_code) {
+void Scheduler::ExitWith(Process* process, int exit_code) {
+  Program* program = process->program();
+  DeleteTerminatedProcess(process);
+  ScopedMonitorLock scoped_lock(preempt_monitor_);
   shutdown_program_ = program;
   shutdown_ = exit_code;
-  ScopedMonitorLock scoped_lock(preempt_monitor_);
+  if (processes_ == 0) NotifyAllThreads();
   preempt_monitor_->Notify();
 }
 
