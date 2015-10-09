@@ -180,6 +180,7 @@ def StepsSanityChecking(build_dir):
   sdk_dir = os.path.join(build_dir, 'fletch-sdk')
   version = utils.GetSemanticSDKVersion()
   fletch = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
+  # TODO(ricow): we should test this as a normal test, see issue 232.
   fletch_version = subprocess.check_output([fletch, '--version']).strip()
   subprocess.check_call([fletch, 'quit'])
   if fletch_version != version:
