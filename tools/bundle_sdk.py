@@ -19,6 +19,7 @@ from os.path import join, exists, basename
 from shutil import copyfile, copymode, copytree, rmtree
 
 SDK_PACKAGES = ['file', 'gpio', 'http', 'i2c', 'os', 'raspberry_pi', 'socket']
+THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['raspberry_pi', 'general']
 
@@ -93,6 +94,9 @@ def CopyPackages(bundle_dir):
   with open(join(bundle_dir, 'internal', 'fletch-sdk.packages'), 'w') as p:
     for package in SDK_PACKAGES:
       copytree(join('pkg', package), join(target_dir, package))
+      p.write('%s:../pkg/%s/lib\n' % (package, package))
+    for package in THIRD_PARTY_PACKAGES:
+      copytree(join('third_party', package), join(target_dir, package))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
 
 def CopyPlatforms(bundle_dir):
