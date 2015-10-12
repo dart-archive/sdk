@@ -706,6 +706,13 @@ class Address {
   String toString() => "Address($host, $port)";
 
   String toJson() => "$host:$port";
+
+  bool operator ==(other) {
+    if (other is! Address) return false;
+    return other.host == host && other.port == port;
+  }
+
+  int get hashCode => host.hashCode ^ port.hashCode;
 }
 
 /// See ../verbs/documentation.dart for a definition of this format.

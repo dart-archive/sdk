@@ -17,6 +17,8 @@ import '../fletchc/incremental/feature_test.dart' as incremental;
 
 import '../fletchc/driver/test_control_stream.dart' as controlStream;
 
+import '../fletchc/serialize_settings_tests.dart' as serialize_settings_tests;
+
 import 'zone_helper_tests.dart' as zone_helper;
 
 import 'sentence_tests.dart' as sentence_tests;
@@ -79,6 +81,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'sentence_tests': sentence_tests.main,
 
   'message_tests': message_tests.main,
+
+  'serialize_settings_tests': serialize_settings_tests.main,
 
   'run': run.test,
 

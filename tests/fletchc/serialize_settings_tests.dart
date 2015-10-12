@@ -1,0 +1,44 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+/// Tests that [Settings] instances can be serialized and deserialized.
+library fletch_tests.settings_persist;
+
+import 'dart:async' show Future;
+
+import 'dart:convert';
+
+import 'package:fletchc/src/driver/developer.dart' show
+    Address,
+    Settings,
+    parseSettings;
+
+import 'package:fletchc/src/device_type.dart';
+
+import 'package:fletchc/src/verbs/infrastructure.dart' show
+    fileUri;
+
+import 'package:expect/expect.dart';
+
+void testSettingsRoundTrip(Settings settings) {
+  Settings before = settings;
+  Map<String, dynamic> json = before.toJson();
+  Settings after = parseSettings(const JsonCodec().encode(json),
+      Uri.parse("file:///dummy.fletch-settings"));
+  Expect.equals(before.packages, after.packages);
+  Expect.listEquals(before.options, after.options);
+  Expect.mapEquals(before.constants, after.constants);
+  Expect.equals(before.deviceAddress, after.deviceAddress);
+  Expect.equals(before.deviceType, after.deviceType);
+}
+
+Future<Null> main() async {
+  testSettingsRoundTrip(new Settings.empty());
+  testSettingsRoundTrip(new Settings(
+      fileUri(".packages", Uri.base),
+      ["a", "b", "c"],
+      {"a": "A", "b": "b"},
+      new Address("localhost", 8080),
+      DeviceType.embedded));
+}
