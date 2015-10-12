@@ -28,7 +28,6 @@
         }],
       ],
       'sources': [
-        'android_print_interceptor.h',
         'debug_info.cc',
         'debug_info.h',
         'debug_info_no_live_coding.h',

@@ -41,11 +41,18 @@ const FLETCH_API_JAVA = """
 package fletch;
 
 public class FletchApi {
+  public static abstract class PrintInterceptor {
+    public abstract void Out(String message);
+    public abstract void Error(String message);
+    private long nativePtr = 0;
+  }
   public static native void Setup();
   public static native void TearDown();
   public static native void RunSnapshot(byte[] snapshot);
   public static native void WaitForDebuggerConnection(int port);
   public static native void AddDefaultSharedLibrary(String library);
+  public static native void RegisterPrintInterceptor(PrintInterceptor interceptor);
+  public static native void UnregisterPrintInterceptor(PrintInterceptor interceptor);
 }
 """;
 
@@ -60,8 +67,78 @@ public class FletchServiceApi {
 
 const FLETCH_API_JAVA_IMPL = """
 #include <jni.h>
+#include <stdlib.h>
 
 #include "fletch_api.h"
+
+#ifdef ANDROID
+  typedef JNIEnv* AttachEnvType;
+#else
+  typedef void* AttachEnvType;
+#endif
+
+static JNIEnv* AttachCurrentThreadAndGetEnv(JavaVM* vm) {
+  AttachEnvType result = NULL;
+  if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
+    // TODO(zerny): Nicer error recovery?
+    exit(1);
+  }
+  return reinterpret_cast<JNIEnv*>(result);
+}
+
+class JNIPrintInterceptorInfo {
+ public:
+  JNIPrintInterceptorInfo(JavaVM* vm, jobject obj)
+    : vm(vm), obj(obj), interceptor(NULL) {}
+  jobject obj;
+  JavaVM* vm;
+  FletchPrintInterceptor interceptor;
+};
+
+static void JNIPrintInterceptorFunction(
+    const char* message, int out, void* raw) {
+  JNIPrintInterceptorInfo* info =
+      reinterpret_cast<JNIPrintInterceptorInfo*>(raw);
+  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
+  jobject obj = info->obj;
+  jclass clazz = env->GetObjectClass(obj);
+  jmethodID method = NULL;
+  const char* methodName = (out == 2) ? "Out" : (out == 3) ? "Error" : NULL;
+  const char* methodSig = "(Ljava/lang/String;)V";
+  if (methodName == NULL) exit(1);
+  method = env->GetMethodID(clazz, methodName, methodSig);
+  jstring argument = env->NewStringUTF(message);
+  env->CallVoidMethod(obj, method, argument);
+}
+
+static void RegisterPrintInterceptor(JNIEnv* env, jobject obj) {
+  // TODO(zerny): Associate the Java object and native object in a map.
+  jclass clazz = env->GetObjectClass(obj);
+  jfieldID nativePtr = env->GetFieldID(clazz, "nativePtr", "J");
+  jlong nativePtrValue = env->GetLongField(obj, nativePtr);
+  if (nativePtrValue != 0) return;
+  obj = env->NewGlobalRef(obj);
+  JavaVM* vm = NULL;
+  env->GetJavaVM(&vm);
+  JNIPrintInterceptorInfo* info = new JNIPrintInterceptorInfo(vm, obj);
+  info->interceptor = FletchRegisterPrintInterceptor(
+      JNIPrintInterceptorFunction, reinterpret_cast<void*>(info));
+  env->SetLongField(obj, nativePtr, reinterpret_cast<jlong>(info));
+}
+
+static void UnregisterPrintInterceptor(JNIEnv* env, jobject obj) {
+  // TODO(zerny): Retrieve the native object from the Java object via a map.
+  jclass clazz = env->GetObjectClass(obj);
+  jfieldID nativePtr = env->GetFieldID(clazz, "nativePtr", "J");
+  jlong nativePtrValue = env->GetLongField(obj, nativePtr);
+  if (nativePtrValue == 0) return;
+  env->SetLongField(obj, nativePtr, 0);
+  JNIPrintInterceptorInfo* info =
+      reinterpret_cast<JNIPrintInterceptorInfo*>(nativePtrValue);
+  FletchUnregisterPrintInterceptor(info->interceptor);
+  env->DeleteGlobalRef(info->obj);
+  delete info;
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,6 +174,16 @@ JNIEXPORT void JNICALL Java_fletch_FletchApi_AddDefaultSharedLibrary(
   const char* library = env->GetStringUTFChars(str, 0);
   FletchAddDefaultSharedLibrary(library);
   env->ReleaseStringUTFChars(str, library);
+}
+
+JNIEXPORT void JNICALL Java_fletch_FletchApi_RegisterPrintInterceptor(
+    JNIEnv* env, jclass, jobject obj) {
+  RegisterPrintInterceptor(env, obj);
+}
+
+JNIEXPORT void JNICALL Java_fletch_FletchApi_UnregisterPrintInterceptor(
+    JNIEnv* env, jclass, jobject obj) {
+  UnregisterPrintInterceptor(env, obj);
 }
 
 #ifdef __cplusplus

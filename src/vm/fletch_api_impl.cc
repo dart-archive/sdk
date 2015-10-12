@@ -11,7 +11,6 @@
 #include "src/shared/fletch.h"
 #include "src/shared/list.h"
 
-#include "src/vm/android_print_interceptor.h"
 #include "src/vm/ffi.h"
 #include "src/vm/program.h"
 #include "src/vm/program_folder.h"
@@ -21,16 +20,27 @@
 
 namespace fletch {
 
+class PrintInterceptorImpl : public PrintInterceptor {
+ public:
+  typedef void (*PrintFunction)(const char* message, int out, void* data);
+
+  PrintInterceptorImpl(PrintFunction fn, void* data)
+      : fn_(fn), data_(data) {}
+
+  virtual void Out(char* message) { fn_(message, 2, data_); }
+  virtual void Error(char* message) { fn_(message, 3, data_); }
+
+ private:
+  PrintFunction fn_;
+  void* data_;
+};
+
 static bool IsSnapshot(List<uint8> snapshot) {
   return snapshot.length() > 2 && snapshot[0] == 0xbe && snapshot[1] == 0xef;
 }
 
 static Program* LoadSnapshot(List<uint8> bytes) {
   if (IsSnapshot(bytes)) {
-#if defined(__ANDROID__)
-    // TODO(zerny): Consider making print interceptors part of the public API.
-    Print::RegisterPrintInterceptor(new AndroidPrintInterceptor());
-#endif
     SnapshotReader reader(bytes);
     return reader.ReadProgram();
   }
@@ -46,15 +56,7 @@ static void EnqueueProgramInScheduler(Program* program, Scheduler* scheduler) {
 }
 
 static int RunScheduler(Scheduler* scheduler) {
-#if defined(__ANDROID__)
-  // TODO(zerny): Consider making print interceptors part of the public API.
-  Print::RegisterPrintInterceptor(new AndroidPrintInterceptor());
-#endif
-  int result = scheduler->Run();
-#if defined(__ANDROID__)
-  Print::UnregisterPrintInterceptors();
-#endif
-  return result;
+  return scheduler->Run();
 }
 
 static int RunProgram(Program* program) {
@@ -143,4 +145,19 @@ void FletchRunSnapshotFromFile(const char* path) {
 
 void FletchAddDefaultSharedLibrary(const char* library) {
   fletch::ForeignFunctionInterface::AddDefaultSharedLibrary(library);
+}
+
+FletchPrintInterceptor FletchRegisterPrintInterceptor(
+    PrintInterceptionFunction function, void* data) {
+  fletch::PrintInterceptorImpl* impl =
+      new fletch::PrintInterceptorImpl(function, data);
+  fletch::Print::RegisterPrintInterceptor(impl);
+  return reinterpret_cast<void*>(impl);
+}
+
+void FletchUnregisterPrintInterceptor(FletchPrintInterceptor raw_interceptor) {
+  fletch::PrintInterceptorImpl* impl =
+      reinterpret_cast<fletch::PrintInterceptorImpl*>(raw_interceptor);
+  fletch::Print::UnregisterPrintInterceptor(impl);
+  delete impl;
 }

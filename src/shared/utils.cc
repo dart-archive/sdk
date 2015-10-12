@@ -88,6 +88,26 @@ void Print::RegisterPrintInterceptor(PrintInterceptor* interceptor) {
 #endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
+void Print::UnregisterPrintInterceptor(PrintInterceptor* interceptor) {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+  ScopedLock scope(mutex_);
+  if (interceptor == interceptor_) {
+    interceptor_ = interceptor->next_;
+  } else {
+    PrintInterceptor* prev = interceptor_;
+    while (prev != NULL && prev->next_ != interceptor) {
+      prev = prev->next_;
+    }
+    if (prev != NULL) {
+      prev->next_ = interceptor->next_;
+    }
+  }
+  interceptor->next_ = NULL;
+#else
+  UNIMPLEMENTED();
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+}
+
 void Print::UnregisterPrintInterceptors() {
 #ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   ScopedLock scope(mutex_);
