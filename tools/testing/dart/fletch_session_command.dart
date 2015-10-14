@@ -40,7 +40,8 @@ import 'decode_exit_code.dart' show
 import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
     COMPILER_EXITCODE_CONNECTION_ERROR,
     COMPILER_EXITCODE_CRASH,
-    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR,
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 
 import '../../../pkg/fletchc/lib/fletch_vm.dart' show
     FletchVm;
@@ -155,7 +156,7 @@ There are three ways to reproduce this error:
     fletch.sessionMirror.printLoggedCommands(fletch.stdout, executable);
 
     Stopwatch sw = new Stopwatch()..start();
-    int exitCode = COMPILER_EXITCODE_CRASH;
+    int exitCode;
     bool endedSession = false;
     try {
       String vmSocketAddress = await fletch.spawnVm();
@@ -192,7 +193,7 @@ There are three ways to reproduce this error:
       }
     } on UnexpectedExitCode catch (error) {
       fletch.stderr.writeln("$error");
-      exitCode = error.exitCode;
+      exitCode = combineExitCodes(exitCode, error.exitCode);
       try {
         if (!endedSession) {
           // TODO(ahe): Only end if there's a crash.
@@ -204,6 +205,10 @@ There are three ways to reproduce this error:
         // TODO(ahe): Error ignored, long term we should be able to guarantee
         // that shutting down a session never leads to an error.
       }
+    }
+
+    if (exitCode == null) {
+      exitCode = COMPILER_EXITCODE_CRASH;
     }
 
     if (endedSession) {
@@ -231,6 +236,40 @@ There are three ways to reproduce this error:
   set commandLine(_) => throw "not supported";
 
   get outputIsUpToDate => throw "not supported";
+}
+
+/// [compiler] is assumed to be coming from `fletch` in which case
+/// [COMPILER_EXITCODE_CRASH], [DART_VM_EXITCODE_COMPILE_TIME_ERROR], and
+/// [DART_VM_EXITCODE_UNCAUGHT_EXCEPTION] all represent a compiler crash.
+///
+/// [runtime] is assumed to be coming from `fletch-vm` in which case which case
+/// [DART_VM_EXITCODE_COMPILE_TIME_ERROR], and
+/// [DART_VM_EXITCODE_UNCAUGHT_EXCEPTION] is just the result of running a test
+/// that has an error (not a crash).
+int combineExitCodes(int compiler, int runtime) {
+  if (compiler == null) return runtime;
+
+  if (runtime == null) return compiler;
+
+  switch (compiler) {
+    case COMPILER_EXITCODE_CRASH:
+    case DART_VM_EXITCODE_COMPILE_TIME_ERROR:
+    case DART_VM_EXITCODE_UNCAUGHT_EXCEPTION:
+      // If the compiler exits with any of those values above, it crashed. It
+      // should never crash.
+      return COMPILER_EXITCODE_CRASH;
+
+    default:
+      break;
+  }
+
+  if (compiler < 0) {
+    // Normally, this would be a timeout. However, it can also signify that the
+    // Dart VM crashed, with, for example, SIGABRT or SIGSEGV.
+    return compiler;
+  }
+
+  return runtime;
 }
 
 class UnexpectedExitCode extends Error {

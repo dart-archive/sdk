@@ -6,6 +6,13 @@
 # -D option not implemented.
 int_from_environment2_test: CompileTimeError
 
+# Stack trace printing crashes (https://github.com/dart-lang/fletch/issues/241)
+apply3_test: Crash
+
+# FletchBackend.createDebugInfo triggers assertion error
+# (https://github.com/dart-lang/fletch/issues/242)
+expando_test: Crash
+
 [ $compiler == fletchc || $runtime == fletchc ]
 # Function.apply
 apply2_test: RuntimeError

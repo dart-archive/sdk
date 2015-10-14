@@ -30,6 +30,11 @@ class Expectation {
   static Expectation PUB_GET_ERROR = byName('PubGetError');
   static Expectation OUTPUT_MISMATCH = byName('OutputMismatch');
 
+  /// Used when a _negative_test.dart test doesn't report an error. Such a test
+  /// doesn't know if it is supposed to fail with a compile-time error or a
+  /// runtime error.
+  static Expectation MISSING_ERROR = byName('MissingError');
+
   // "meta expectations"
   static Expectation OK = byName('Ok');
   static Expectation SLOW = byName('Slow');
@@ -67,6 +72,7 @@ class Expectation {
       build("MissingRuntimeError", group: fail);
       build("CompileTimeError", group: fail);
       build("RuntimeError", group: fail);
+      build("MissingError", group: fail);
 
       build("MissingStaticWarning", group: fail);
       build("StaticWarning", group: fail);
