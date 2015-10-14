@@ -8,6 +8,7 @@ crypto:third_party/crypto/lib
 expect:third_party/dart/pkg/expect/lib
 file:pkg/file/lib
 fletch_agent:pkg/fletch_agent/lib
+fletch:pkg/fletch/lib
 fletchc:pkg/fletchc/lib
 github_sample:samples/github/lib
 gpio:pkg/gpio/lib
