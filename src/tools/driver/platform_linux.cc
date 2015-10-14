@@ -22,6 +22,9 @@ int SignalFileDescriptor() {
   sigset_t signal_mask;
   sigfillset(&signal_mask);
 
+  // Let Ctrl-Z suspend the client.
+  sigdelset(&signal_mask, SIGTSTP);
+
   if (sigprocmask(SIG_BLOCK, &signal_mask, NULL) == -1) {
     FATAL1("sigprocmask failed: %s", strerror(errno));
   }

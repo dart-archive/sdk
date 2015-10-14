@@ -54,6 +54,10 @@ int SignalFileDescriptor() {
       // These signals cannot be intercepted.
       continue;
     }
+    if (signal_number == SIGTSTP) {
+      // Let Ctrl-Z suspend the client.
+      continue;
+    }
     bzero(action, sizeof(*action));
     action->sa_handler = SignalHandler;
     if (sigaction(signal_number, action, NULL) == -1) {
