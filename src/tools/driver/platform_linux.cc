@@ -22,6 +22,14 @@ int SignalFileDescriptor() {
   sigset_t signal_mask;
   sigfillset(&signal_mask);
 
+  // It isn't possible to block SIGKILL or SIGSTOP, so let's remove them for
+  // consistency:
+  sigdelset(&signal_mask, SIGKILL);
+  sigdelset(&signal_mask, SIGSTOP);
+
+  // Since we can't block SIGSTOP, we shouldn't block SIGCONT.
+  sigdelset(&signal_mask, SIGCONT);
+
   // Let Ctrl-Z suspend the client.
   sigdelset(&signal_mask, SIGTSTP);
 

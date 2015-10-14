@@ -54,6 +54,10 @@ int SignalFileDescriptor() {
       // These signals cannot be intercepted.
       continue;
     }
+    if (signal_number == SIGCONT) {
+      // Since we can't intercept SIGSTOP, we shouldn't intercept SIGCONT.
+      continue;
+    }
     if (signal_number == SIGTSTP) {
       // Let Ctrl-Z suspend the client.
       continue;
