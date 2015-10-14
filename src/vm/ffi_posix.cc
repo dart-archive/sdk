@@ -85,7 +85,7 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
 
 NATIVE(ForeignLibraryLookup) {
   char* library = AsForeignString(arguments[0]);
-  void* result = dlopen(library, RTLD_LOCAL | RTLD_LAZY);
+  void* result = dlopen(library, RTLD_GLOBAL | RTLD_LAZY);
   if (result == NULL) {
     fprintf(stderr, "Failed libary lookup(%s): %s\n", library, dlerror());
   }
