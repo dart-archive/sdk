@@ -35,8 +35,12 @@ class _SocketBase {
    */
   void close() {
     if (_fd != -1) {
-      _port.send(-1);
-      _port = null;
+      // If there is an error before we initialize the event handling,
+      // [_port] and [_channel] are `null`.
+      if (_port != null) {
+        _port.send(-1);
+        _port = null;
+      }
       sys.close(_fd);
       _fd = -1;
     }

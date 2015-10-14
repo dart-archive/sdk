@@ -18,6 +18,9 @@ class Errno {
   static const EINVAL = const Errno(EINVAL_VALUE, "EINVAL");
   static const EPIPE_VALUE = 32;
   static const EPIPE = const Errno(EPIPE_VALUE, "EPIPE");
+  static const EADDRNOTAVAIL_VALUE = 99;
+  static const EADDRNOTAVAIL =
+    const Errno(EADDRNOTAVAIL_VALUE, "EADDRNOTAVAIL");
   static const EAGAIN_VALUE = 115;
   static const EAGAIN = const Errno(EAGAIN_VALUE, "EAGAIN");
 
@@ -36,6 +39,7 @@ class Errno {
       case EEXIST_VALUE: return EEXIST;
       case EINVAL_VALUE: return EINVAL;
       case EPIPE_VALUE: return EPIPE;
+      case EADDRNOTAVAIL_VALUE: return EADDRNOTAVAIL;
       case EAGAIN_VALUE: return EAGAIN;
 
       default:
