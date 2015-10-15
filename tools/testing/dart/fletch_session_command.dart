@@ -53,6 +53,11 @@ const String settingsFileNameFlag = "test.fletch_settings_file_name";
 const String settingsFileName =
     const String.fromEnvironment(settingsFileNameFlag);
 
+/// Default timeout value (in seconds) used for running commands that are
+/// assumed to complete fast.
+// TODO(ahe): Lower this to 5 seconds.
+const int defaultTimeout = 20;
+
 final Queue<FletchSessionMirror> sessions = new Queue<FletchSessionMirror>();
 
 int sessionCount = 0;
@@ -159,23 +164,36 @@ There are three ways to reproduce this error:
     int exitCode;
     bool endedSession = false;
     try {
-      String vmSocketAddress = await fletch.spawnVm();
-      Future vmTerminationFuture = fletch.shutdownVm(timeout);
+      Future vmTerminationFuture;
       try {
         await fletch.run(
             ["create", "session", fletch.sessionName,
              "with", settingsFileName]);
         await fletch.runInSession(["show", "log"]);
+
+        // Now that the session is created, start a Fletch VM.
+        String vmSocketAddress = await fletch.spawnVm();
+        // Timeout of the VM is implemented by shutting down the Fletch VM
+        // after [timeout] seconds. This ensures that compilation+runtime never
+        // exceed [timeout] seconds (plus whatever time is spent in setting up
+        // the session above).
+        vmTerminationFuture = fletch.shutdownVm(timeout);
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
         if (snapshotFileName != null) {
           exitCode = await fletch.runInSession(
               ["export", script, 'to', 'file', snapshotFileName],
-              checkExitCode: false);
+              checkExitCode: false, timeout: timeout);
         } else {
           exitCode =
-              await fletch.runInSession(["run", script], checkExitCode: false);
+              await fletch.runInSession(
+                  ["run", script], checkExitCode: false, timeout: timeout);
         }
       } finally {
+        if (exitCode == COMPILER_EXITCODE_CRASH) {
+          // If the compiler crashes, chances are that it didn't close the
+          // connection to the Fletch VM. So we kill it.
+          fletch.killVmProcess(ProcessSignal.SIGTERM);
+        }
         int vmExitCode = await vmTerminationFuture;
         fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode");
         if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
@@ -406,9 +424,18 @@ class FletchSessionHelper {
     return combined.takeBytes();
   }
 
+  /// Run [executable] with arguments and wait for it to exit.  This method
+  /// uses [exitCodeWithTimeout] to ensure the process exits within [timeout]
+  /// seconds.
+  ///
+  /// If the process times out, UnexpectedExitCode is thrown.
+  ///
+  /// If [checkExitCode] is true (the default), UnexpectedExitCode is thrown
+  /// unless the process' exit code is 0.
   Future<int> run(
       List<String> arguments,
-      {bool checkExitCode: true}) async {
+      {bool checkExitCode: true,
+       int timeout: defaultTimeout}) async {
     sessionMirror.logCommand(arguments);
     Process process = await Process.start(
         "$executable", arguments, environment: environmentOverrides);
@@ -424,23 +451,38 @@ class FletchSessionHelper {
         .listen(stderr.add)
         .asFuture();
     await process.stdin.close();
-    int exitCode = await process.exitCode;
+
+    // Can't reuse [hasTimedOut] as we don't want to throw when calling 'x-end'
+    // in the finally block above.
+    bool thisCommandTimedout = false;
+
+    int exitCode = await exitCodeWithTimeout(process, timeout, () {
+      print("Timed out: $commandDescription");
+      thisCommandTimedout = true;
+      hasTimedOut = true;
+      if (vmProcess != null) {
+        killedVmProcess = vmProcess.kill(ProcessSignal.SIGTERM);
+      }
+    });
     await stdoutFuture;
     await stderrFuture;
 
     stdout.add(UTF8.encode("\n => $exitCode\n"));
-    if (checkExitCode && exitCode != 0) {
+    if (thisCommandTimedout || (checkExitCode && exitCode != 0)) {
       throw new UnexpectedExitCode(exitCode, executable, arguments);
     }
     return exitCode;
   }
 
+  /// Same as [run], except that the arguments "in session $sessionName" are
+  /// implied.
   Future<int> runInSession(
       List<String> arguments,
-      {bool checkExitCode: true}) {
+      {bool checkExitCode: true,
+       int timeout: defaultTimeout}) {
     return run(
         []..addAll(arguments)..addAll(["in", "session", sessionName]),
-        checkExitCode: checkExitCode);
+        checkExitCode: checkExitCode, timeout: timeout);
   }
 
   Future<String> spawnVm() async {
@@ -478,27 +520,61 @@ class FletchSessionHelper {
     return "${fletchVm.host}:${fletchVm.port}";
   }
 
+  /// Returns a future that completes when the fletch VM exits using
+  /// [exitCodeWithTimeout] to ensure termination within [timeout] seconds.
   Future<int> shutdownVm(int timeout) async {
-    if (vmProcess == null) return 0;
-    bool done = false;
-    Timer timer;
-    timer = new Timer(new Duration(seconds: timeout), () {
-      if (!done) {
-        vmProcess.kill(ProcessSignal.SIGTERM);
-        killedVmProcess = true;
-        hasTimedOut = true;
-        timer = new Timer(const Duration(seconds: 5), () {
-          if (!done) {
-            vmProcess.kill(ProcessSignal.SIGKILL);
-          }
-        });
-      }
+    await exitCodeWithTimeout(vmProcess, timeout, () {
+      print("Timed out: $executable-vm");
+      killedVmProcess = true;
+      hasTimedOut = true;
     });
-    int vmExitCode = await vmExitCodeFuture;
-    done = true;
-    timer.cancel();
-    return vmExitCode;
+    return vmExitCodeFuture;
   }
+
+  void killVmProcess(ProcessSignal signal) {
+    if (vmProcess == null) return;
+    killedVmProcess = vmProcess.kill(ProcessSignal.SIGTERM);
+  }
+}
+
+/// Helper method for implementing timing out while waiting for [process] to
+/// exit. [timeout] is in seconds. If the process times out, it will be killed
+/// using SIGTERM and onTimeout will be called.
+///
+/// After SIGTERM, the process has 5 seconds to exit or it will be killed with
+/// SIGKILL.
+///
+/// Note: We treat SIGKILL as a crash, not a timeout. The process is supposed
+/// to exit quickly and gracefully after receiving SIGTERM. See
+/// [DecodeExitCode] in `decode_exit_code.dart`.
+Future<int> exitCodeWithTimeout(
+    Process process,
+    int timeout,
+    void onTimeout()) async {
+  if (process == null) return 0;
+
+  bool done = false;
+  Timer timer;
+
+  void secondTimeout() {
+    if (done) return;
+    process.kill(ProcessSignal.SIGKILL);
+  }
+
+  void firstTimeout() {
+    if (done) return;
+    if (process.kill(ProcessSignal.SIGTERM)) {
+      timer = new Timer(const Duration(seconds: 5), secondTimeout);
+      onTimeout();
+    }
+  }
+
+  timer = new Timer(new Duration(seconds: timeout), firstTimeout);
+
+  int exitCode = await process.exitCode;
+  done = true;
+  timer.cancel();
+  return exitCode;
 }
 
 /// Represents a session in the persistent Fletch driver process.
