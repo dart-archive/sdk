@@ -2,13 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.plugins.java;
+library old_servicec.plugins.java;
 
 import 'dart:core' hide Type;
 import 'dart:io';
 
 import 'package:path/path.dart';
-import 'package:strings/strings.dart' as strings;
+import 'package:servicec/util.dart' as strings;
 
 import 'shared.dart';
 import '../emitter.dart';
@@ -355,14 +355,16 @@ const List<String> JAVA_RESOURCES = const [
   "Segment.java"
 ];
 
-void generate(String path, Unit unit, String outputDirectory) {
+void generate(String path,
+              Unit unit,
+              String resourcesDirectory,
+              String outputDirectory) {
   _generateFletchApis(outputDirectory);
   _generateServiceJava(path, unit, outputDirectory);
   _generateServiceJni(path, unit, outputDirectory);
-  _generateServiceJniMakeFiles(path, unit, outputDirectory);
+  _generateServiceJniMakeFiles(path, unit, resourcesDirectory, outputDirectory);
 
-  String resourcesDirectory = join(dirname(Platform.script.path),
-      '..', 'lib', 'src', 'resources', 'java', 'fletch');
+  resourcesDirectory = join(resourcesDirectory, 'java', 'fletch');
   String fletchDirectory = join(outputDirectory, 'java', 'fletch');
   for (String resource in JAVA_RESOURCES) {
     String resourcePath = join(resourcesDirectory, resource);
@@ -1038,7 +1040,8 @@ class _JniVisitor extends CcVisitor {
 
     String callback;
     if (node.inputKind == InputKind.STRUCT) {
-      StructLayout layout = node.arguments.single.type.resolved.layout;
+      Struct struct = node.arguments.single.type.resolved;
+      StructLayout layout = struct.layout;
       callback = ensureCallback(node.returnType, layout);
     } else {
       callback =
@@ -1316,21 +1319,17 @@ class _JniVisitor extends CcVisitor {
 
 void _generateServiceJniMakeFiles(String path,
                                   Unit unit,
+                                  String resourcesDirectory,
                                   String outputDirectory) {
   String out = join(outputDirectory, 'java');
-  String scriptFile = new File.fromUri(Platform.script).path;
-  String scriptDir = dirname(scriptFile);
-  String fletchLibraryBuildDir = join(scriptDir,
-                                      '..',
-                                      '..',
+  // TODO(stanm): pass fletch root directly
+  String fletchRoot = join(resourcesDirectory, '..', '..', '..', '..', '..');
+  String fletchLibraryBuildDir = join(fletchRoot,
+                                      'tools',
                                       'android_build',
                                       'jni');
 
-  String fletchIncludeDir = join(scriptDir,
-                                 '..',
-                                 '..',
-                                 '..',
-                                 'include');
+  String fletchIncludeDir = join(fletchRoot, 'include');
 
   String modulePath = relative(fletchLibraryBuildDir, from: out);
   String includePath = relative(fletchIncludeDir, from: out);

@@ -2,10 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.compiler;
+library old_servicec.compiler;
 
 import 'dart:io';
-import 'dart:convert';
 
 import 'src/emitter.dart';
 import 'src/parser.dart';
@@ -22,20 +21,17 @@ const List<String> RESOURCES = const [
   "Service.podspec",
 ];
 
-void compile(String path, String outputDirectory) {
-  List<int> bytes = new File(path).readAsBytesSync();
-  String input = UTF8.decode(bytes);
-
-  Unit unit = parseUnit(input);
+void compile(String path,
+             Unit unit,
+             String resourcesDirectory,
+             String outputDirectory) {
   resolve(unit);
   dump(path, unit);
 
-  cc.generate(path, unit, outputDirectory);
-  dart.generate(path, unit, outputDirectory);
-  java.generate(path, unit, outputDirectory);
+  cc.generate(path, unit, resourcesDirectory, outputDirectory);
+  dart.generate(path, unit, resourcesDirectory, outputDirectory);
+  java.generate(path, unit, resourcesDirectory, outputDirectory);
 
-  String resourcesDirectory = join(dirname(Platform.script.path),
-      '..', 'lib', 'src', 'resources');
   for (String resource in RESOURCES) {
     String resourcePath = join(resourcesDirectory, resource);
     File file = new File(resourcePath);

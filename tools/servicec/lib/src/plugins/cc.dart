@@ -2,12 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.plugins.cc;
+library old_servicec.plugins.cc;
 
 import 'dart:core' hide Type;
 import 'dart:io' show Platform, File;
 
 import 'package:path/path.dart' show basenameWithoutExtension, join, dirname;
+import 'package:servicec/util.dart' as strings;
 
 import 'shared.dart';
 
@@ -30,13 +31,15 @@ const List<String> RESOURCES = const [
 
 const int RESPONSE_HEADER_SIZE = 8;
 
-void generate(String path, Unit unit, String outputDirectory) {
+void generate(String path,
+              Unit unit,
+              String resourcesDirectory,
+              String outputDirectory) {
   String directory = join(outputDirectory, "cc");
   _generateHeaderFile(path, unit, directory);
   _generateImplementationFile(path, unit, directory);
 
-  String resourcesDirectory = join(dirname(Platform.script.path),
-      '..', 'lib', 'src', 'resources', 'cc');
+  resourcesDirectory = join(resourcesDirectory, 'cc');
   for (String resource in RESOURCES) {
     String resourcePath = join(resourcesDirectory, resource);
     File file = new File(resourcePath);
@@ -576,7 +579,8 @@ class _ImplementationVisitor extends CcVisitor {
 
     String callback;
     if (node.inputKind == InputKind.STRUCT) {
-      StructLayout layout = node.arguments.single.type.resolved.layout;
+      Struct struct = node.arguments.single.type.resolved;
+      StructLayout layout = struct.layout;
       callback = ensureCallback(node.returnType, layout);
     } else {
       callback =

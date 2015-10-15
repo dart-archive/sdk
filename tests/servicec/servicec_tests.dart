@@ -8,10 +8,13 @@ import 'dart:async' show
 import 'dart:io' show
     Directory,
     File,
-    FileSystemEntity;
+    FileSystemEntity,
+    Platform;
 
 import 'dart:math' show
     min;
+
+import 'package:path/path.dart' show join, dirname;
 
 import 'package:expect/expect.dart';
 import 'package:servicec/compiler.dart' as servicec;
@@ -29,6 +32,9 @@ import 'scanner_tests.dart' show
 import 'test.dart' show
     Test;
 
+import 'camelize_test.dart' show
+    CamelizeTest;
+
 /// Absolute path to the build directory used by test.py.
 const String buildDirectory =
     const String.fromEnvironment('test.dart.build-dir');
@@ -38,6 +44,12 @@ const String filesDirectory = "tests/servicec/input_files";
 
 // TODO(zerny): Provide the below constant via configuration from test.py
 final String generatedDirectory = '$buildDirectory/generated_servicec_tests';
+
+final String servicecDirectory =
+    const String.fromEnvironment('test.dart.servicec-dir');
+
+final String resourcesDirectory = join(servicecDirectory, 'lib', 'src',
+    'resources');
 
 class FileTest extends Test {
   final Target target;
@@ -51,7 +63,10 @@ class FileTest extends Test {
     String input = new File("$filesDirectory/$name.idl").readAsStringSync();
     List<ErrorTag> expectedErrors = extractExpectedErrors(input);
     List<CompilationError> actualErrors =
-      (await servicec.compileInput(input, name, outputDirectory)).toList();
+      (await servicec.compileInput(input,
+                                   name,
+                                   resourcesDirectory,
+                                   outputDirectory)).toList();
 
     int length = min(expectedErrors.length, actualErrors.length);
     for (int i = 0; i < length; ++i) {
@@ -134,5 +149,7 @@ Future<Map<String, NoArgFuture>> listTests() async {
   for (Test test in SCANNER_TESTS) {
     tests['servicec/scanner/${test.name}'] = test.perform;
   }
+
+  tests['servicec/camelize'] = new CamelizeTest().perform;
   return tests;
 }

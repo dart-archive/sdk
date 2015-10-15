@@ -133,7 +133,7 @@ class ErrorHandlingListener extends Listener {
   Node get parsedUnitNode {
     assert(stack.size == 1);
     assert(stack.topNode() is CompilationUnitNode);
-    return stack.popNode();
+    return stack.topNode();
   }
 
   // Top-level nodes.

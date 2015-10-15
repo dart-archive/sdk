@@ -38,8 +38,8 @@ SERVICE_GEN_DIR="$TARGET_GEN_DIR/service"
 
 DART="$FLETCH_DIR/out/ReleaseIA32/dart"
 IMMIC="$DART $FLETCH_DIR/tools/immic/bin/immic.dart"
-SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
 FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
+SERVICEC="$FLETCH x-servicec"
 
 MOCK_SERVER_SNAPSHOT="$TARGET_DIR/github_mock_service.snapshot"
 
@@ -55,7 +55,7 @@ if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
 
     rm -rf "$SERVICE_GEN_DIR"
     mkdir -p "$SERVICE_GEN_DIR"
-    $SERVICEC --out "$SERVICE_GEN_DIR" "$IMMI_GEN_DIR/idl/immi_service.idl"
+    $SERVICEC file "$IMMI_GEN_DIR/idl/immi_service.idl" out "$SERVICE_GEN_DIR"
 
     # Regenerate the mock service after deleting the service-gen directory.
     $DIR/../compile_mock_service.sh service

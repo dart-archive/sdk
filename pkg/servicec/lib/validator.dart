@@ -54,8 +54,6 @@ List<CompilationError> validate(CompilationUnitNode compilationUnit) {
   return validator.errors;
 }
 
-/// Encapsulate the state variables. Use [visitCompilationUnit] as an entry
-/// point.
 class Validator extends RecursiveVisitor {
   List<CompilationError> errors;
   Environment environment;

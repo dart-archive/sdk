@@ -104,6 +104,7 @@ class FletchTestSuite extends TestSuite {
            '-Dtest.dart.build-system=${configuration["system"]}',
            '-Dtest.dart.build-clang=${configuration["clang"]}',
            '-Dtest.dart.build-asan=${configuration["asan"]}',
+           '-Dtest.dart.servicec-dir=tools/servicec/',
            '-c',
            '--packages=.packages',
            '-Dtest.fletch_test_suite.port=${server.port}',

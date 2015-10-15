@@ -35,8 +35,8 @@ JNI_LIBS_DIR=$DIR/$ANDROID_PROJ/app/src/main/jniLibs
 
 DART="$FLETCH_DIR/out/ReleaseIA32/dart"
 IMMIC="$DART $FLETCH_DIR/tools/immic/bin/immic.dart"
-SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
 FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
+SERVICEC="$FLETCH x-servicec"
 
 set -x
 
@@ -50,7 +50,7 @@ if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
 
     rm -rf "$SERVICE_GEN_DIR"
     mkdir -p "$SERVICE_GEN_DIR"
-    $SERVICEC --out "$SERVICE_GEN_DIR" "$IMMI_GEN_DIR/idl/immi_service.idl"
+    $SERVICEC file "$IMMI_GEN_DIR/idl/immi_service.idl" out "$SERVICE_GEN_DIR"
 
     # TODO(zerny): Change the servicec output directory structure to allow easy
     # referencing from Android Studio.

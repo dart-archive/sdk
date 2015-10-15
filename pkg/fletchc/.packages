@@ -12,3 +12,4 @@ path:../../third_party/path/lib
 persistent:../../third_party/persistent/lib
 sdk_library_metadata:../../third_party/dart/sdk/lib/_internal/sdk_library_metadata/lib
 servicec:../servicec/lib
+old_servicec:../../tools/servicec/lib

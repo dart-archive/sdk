@@ -228,7 +228,7 @@ abstract class NodeVisitor {
   void visitService(ServiceNode service);
   void visitStruct(StructNode struct);
   void visitFunction(FunctionNode function);
-  void visitUnion(UnionNode field);
+  void visitUnion(UnionNode union);
   void visitField(FieldNode field);
 
   // Structural/syntactic classification of types.

@@ -21,7 +21,7 @@ PKG_FILE="$DIR/.packages"
 
 DART="$FLETCH_DIR/out/ReleaseIA32/dart"
 FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
-SERVICEC="$DART $FLETCH_DIR/tools/servicec/bin/servicec.dart"
+SERVICEC="$FLETCH x-servicec"
 
 SERVICE_GEN_DIR="$DIR/generated/service"
 
@@ -47,7 +47,7 @@ if [[ $# -eq 0 ]] || [[ "$1" == "service" ]]; then
     # TODO(zerny): This must output service files *in the existing directory*.
     # Find another way of supporting multiple services!
     mkdir -p "$SERVICE_GEN_DIR"
-    $SERVICEC --out "$SERVICE_GEN_DIR" "$IDL_FILE"
+    $SERVICEC file "$IDL_FILE" out "$SERVICE_GEN_DIR"
 fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then

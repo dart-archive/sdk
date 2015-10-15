@@ -17,7 +17,8 @@ import 'error_handling_listener.dart' show
 
 import 'errors.dart' show
     CompilationError,
-    UndefinedServiceError;
+    UndefinedServiceError,
+    InternalCompilerError;
 
 import 'listener.dart' show
     DebugListener,
@@ -35,19 +36,32 @@ import 'targets.dart' show
 import 'validator.dart' show
     validate;
 
+import 'converter.dart' show
+    convert;
+
+import 'package:old_servicec/compiler.dart' as old_servicec;
+import 'package:old_servicec/src/parser.dart' show
+    Unit;
+
 // Temporary output type
 Future<Iterable<CompilationError>> compile(
     String path,
+    String resourcesDirectory,
     String outputDirectory,
     {Target target: Target.ALL}) async {
   String input = new File(path).readAsStringSync();
-  return compileInput(input, path, outputDirectory, target: target);
+  return compileInput(input,
+                      path,
+                      resourcesDirectory,
+                      outputDirectory,
+                      target: target);
 }
 
 // Temporary output type
 Future<Iterable<CompilationError>> compileInput(
     String input,
     String path,
+    String resourcesDirectory,
     String outputDirectory,
     {Target target: Target.ALL}) async {
   if (input.isEmpty) {
@@ -62,11 +76,19 @@ Future<Iterable<CompilationError>> compileInput(
   parser.parseUnit(tokens);
 
   Iterable<CompilationError> errors = validate(listener.parsedUnitNode);
-  if (errors.length == 0) {
-    // TODO(stanm): generate output
-  }
 
-  createDirectories(outputDirectory, target);
+  if (errors.isEmpty) {
+    try {
+      Unit unit = convert(listener.parsedUnitNode);
+      old_servicec.compile(path, unit, resourcesDirectory, outputDirectory);
+    } catch (e) {
+      String message = e.toString();
+      if (e is Error) {
+        message = "Original error:\n$message\n${e.stackTrace}";
+      }
+      throw new InternalCompilerError(message);
+    }
+  }
 
   return errors;
 }

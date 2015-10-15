@@ -36,6 +36,14 @@ test_vm_connection/testCloseImmediately: Fail
 test_vm_connection/testCloseAfterCommitChanges: Fail
 test_vm_connection/testCloseAfterProcessRun: Fail
 
+# Old servicec backend fails on these tests; Issue 234
+servicec/no_multiple_definitions_1: Fail
+servicec/no_multiple_definitions_4: Fail
+servicec/no_multiple_definitions_5: Fail
+servicec/no_multiple_definitions_6: Fail
+servicec/no_multiple_definitions_7: Fail
+servicec/good_type_parameter_1: Fail  # Issue 235
+
 [ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip

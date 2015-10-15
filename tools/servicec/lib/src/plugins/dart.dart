@@ -2,13 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.plugins.dart;
+library old_servicec.plugins.dart;
 
 import 'dart:core' hide Type;
 import 'dart:io' show Platform, File;
 
 import 'package:path/path.dart' show basenameWithoutExtension, join, dirname;
-import 'package:strings/strings.dart' as strings;
+import 'package:servicec/util.dart' as strings;
 
 import 'shared.dart';
 import '../emitter.dart';
@@ -27,15 +27,17 @@ const List<String> RESOURCES = const [
   "struct.dart",
 ];
 
-void generate(String path, Unit unit, String outputDirectory) {
+void generate(String path,
+              Unit unit,
+              String resourcesDirectory,
+              String outputDirectory) {
   _DartVisitor visitor = new _DartVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
   String directory = join(outputDirectory, 'dart');
   writeToFile(directory, path, contents, extension: 'dart');
 
-  String resourcesDirectory = join(dirname(Platform.script.path),
-      '..', 'lib', 'src', 'resources', 'dart');
+  resourcesDirectory = join(resourcesDirectory, 'dart');
   for (String resource in RESOURCES) {
     String resourcePath = join(resourcesDirectory, resource);
     File file = new File(resourcePath);
