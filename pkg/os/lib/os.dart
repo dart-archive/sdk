@@ -16,7 +16,10 @@ part 'system_linux.dart';
 part 'system_macos.dart';
 part 'system_posix.dart';
 
-abstract class InternetAddress { }
+abstract class InternetAddress {
+  factory InternetAddress(List<int> bytes) = _InternetAddress;
+  bool get isIp4;
+}
 
 // TODO(ajohnsen): Take a Duration?
 void sleep(int milliseconds) => sys.sleep(milliseconds);

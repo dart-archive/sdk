@@ -8,6 +8,7 @@ const int AF_INET  = 2;
 const int AF_INET6 = 10;
 
 const int SOCK_STREAM = 1;
+const int SOCK_DGRAM = 2;
 
 const int F_GETFD = 1;
 const int F_SETFD = 2;
@@ -98,6 +99,10 @@ abstract class PosixSystem implements System {
       ForeignLibrary.main.lookup("unlink");
   static final ForeignFunction _write =
       ForeignLibrary.main.lookup("write");
+  static final ForeignFunction _sendto =
+      ForeignLibrary.main.lookup("sendto");
+  static final ForeignFunction _recvfrom =
+      ForeignLibrary.main.lookup("recvfrom");
   static final ForeignFunction _uname =
       ForeignLibrary.main.lookup("uname");
 
@@ -106,6 +111,8 @@ abstract class PosixSystem implements System {
   int get SOL_SOCKET;
 
   int get SO_REUSEADDR;
+
+  int get SOCKADDR_STORAGE_SIZE => 128;
 
   int get UTSNAME_LENGTH;
   int get SIZEOF_UTSNAME;
@@ -287,16 +294,44 @@ abstract class PosixSystem implements System {
     return available;
   }
 
-  int read(int fd, var buffer, int offset, int length) {
+  ForeignMemory getForeign(ByteBuffer buffer) {
+    var b = buffer;
+    return b.getForeign();
+  }
+
+  int read(int fd, ByteBuffer buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
-    var address = buffer.getForeign().address + offset;
+    var address = getForeign(buffer).address + offset;
     return _read.icall$3Retry(fd, address, length);
   }
 
-  int write(int fd, var buffer, int offset, int length) {
+  int write(int fd, ByteBuffer buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
-    var address = buffer.getForeign().address + offset;
+    var address = getForeign(buffer).address + offset;
     return _write.icall$3Retry(fd, address, length);
+  }
+
+  int sendto(int fd, ByteBuffer buffer, InternetAddress target, int port) {
+    ForeignMemory sockAddr = _createSocketAddress(target, port);
+    ForeignMemory memory = getForeign(buffer);
+    try {
+      return _sendto.icall$6Retry(fd, memory, memory.length, 0,
+          sockAddr, sockAddr.length);
+    } finally {
+      sockAddr.free();
+    }
+  }
+
+  int recvfrom(int fd, ByteBuffer buffer, ForeignMemory sockaddr) {
+    Struct32 len = new Struct32(1);
+    len.setUint32(0, sockaddr.length);
+    ForeignMemory memory = getForeign(buffer);
+    try {
+      return _recvfrom.icall$6Retry(fd, memory, memory.length, 0, sockaddr,
+          len);
+    } finally {
+      len.free();
+    }
   }
 
   void memcpy(var dest,
@@ -329,6 +364,7 @@ abstract class PosixSystem implements System {
     }
   }
 
+  // TODO(karlklose): use SockAddr class here, too.
   ForeignMemory _createSocketAddress(_InternetAddress address, int port) {
     var bytes = address._bytes;
     ForeignMemory sockaddr;

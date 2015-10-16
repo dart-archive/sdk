@@ -7,7 +7,7 @@ library socket;
 import 'dart:fletch';
 import 'dart:fletch.os' as os;
 import 'dart:typed_data';
-import 'dart:fletch.ffi' show Struct32;
+import 'dart:fletch.ffi' show Struct32, ForeignMemory;
 
 import 'package:os/os.dart';
 
@@ -46,6 +46,15 @@ class _SocketBase {
     }
   }
 
+  /// Get the number of available bytes.
+  int get available {
+    int value = sys.available(_fd);
+    if (value == -1) {
+      _error("Failed to get the number of available bytes");
+    }
+    return value;
+  }
+
   void _error(String message) {
     close();
     throw new SocketException(message, sys.errno());
@@ -78,17 +87,6 @@ class Socket extends _SocketBase {
     // Be sure it's not in the event handler.
     _fd = fd;
     _addSocketToEventHandler();
-  }
-
-  /**
-   * Get the number of available bytes.
-   */
-  int get available {
-    int value = sys.available(_fd);
-    if (value == -1) {
-      _error("Failed to get the number of available bytes");
-    }
-    return value;
   }
 
   /**
@@ -244,6 +242,52 @@ class ServerSocket extends _SocketBase {
     sys.setBlocking(client, false);
     sys.setCloseOnExec(client, true);
     return client;
+  }
+}
+
+class Datagram {
+  final InternetAddress sender;
+  final int port;
+  final ByteBuffer data;
+  Datagram(this.sender, this.port, this.data);
+}
+
+// TODO(karlklose): support IPv6 datagram sockets.
+class DatagramSocket extends _SocketBase {
+  DatagramSocket.bind(String host, int port) {
+    InternetAddress address = sys.lookup(host);
+    if (address == null) _error("Failed to lookup address '$host'");
+    _fd = sys.socket(AF_INET, SOCK_DGRAM, 0);
+    if (_fd == -1) _error("Failed to create socket");
+    if (sys.bind(_fd, address, port) == -1) {
+      _error("Failed to bind to $host:$port");
+    }
+    _addSocketToEventHandler();
+  }
+
+  int get port => sys.port(_fd);
+
+  Datagram receive() {
+    int events = _waitFor(os.READ_EVENT);
+    int availableBytes = available;
+    ByteBuffer buffer = new Uint8List(availableBytes).buffer;
+    SockAddr sockaddr = new SockAddr.allocate();
+
+    try {
+      int result = sys.recvfrom(_fd, buffer, sockaddr.buffer);
+      if (result == -1) {
+        return null;
+      }
+
+      return new Datagram(sockaddr.address, sockaddr.port, buffer);
+    } finally {
+      sockaddr.free();
+    }
+  }
+
+  int send(InternetAddress target, int port, ByteBuffer data) {
+    _waitFor(os.WRITE_EVENT);
+    return sys.sendto(_fd, data, target, port);
   }
 }
 

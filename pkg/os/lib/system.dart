@@ -76,6 +76,8 @@ abstract class System {
   int available(int fd);
   int read(int fd, ByteBuffer buffer, int offset, int length);
   int write(int fd, ByteBuffer buffer, int offset, int length);
+  int sendto(int fd, ByteBuffer buffer, InternetAddress target, int port);
+  int recvfrom(int fd, ByteBuffer buffer, ForeignMemory sockaddr);
   int shutdown(int fd, int how);
   int close(int fd);
   int lseek(int fd, int offset, int whence);
@@ -87,9 +89,74 @@ abstract class System {
   SystemInformation info();
   int get SOL_SOCKET;
   int get SO_REUSEADDR;
+  int get SOCKADDR_STORAGE_SIZE;
 }
 
-class _InternetAddress extends InternetAddress {
+/// A class that gives access to the components of a sockaddr
+/// structure.
+class SockAddr {
+  final ForeignMemory buffer;
+
+  SockAddr(this.buffer);
+
+  factory SockAddr.allocate() {
+    return new SockAddr(
+        new ForeignMemory.allocated(getSystem().SOCKADDR_STORAGE_SIZE));
+  }
+
+  free() {
+    buffer.free();
+  }
+
+  int get port => buffer.getUint8(2) * 256 + buffer.getUint8(3);
+
+  int get family {
+    if (Foreign.platform == Foreign.MACOS) {
+      return buffer.getUint8(1);
+    } else {
+      return buffer.getUint16(0);
+    }
+  }
+
+  InternetAddress get address {
+    int addressLengthInBytes;
+    if (family == AF_INET) {
+      addressLengthInBytes = 4;
+    } else if (family == AF_INET6) {
+      addressLengthInBytes = 16;
+    } else {
+      throw 'Unsupported protocol';
+    }
+
+    List<int> digits = new List<int>(addressLengthInBytes);
+    buffer.copyBytesToList(digits, 4, 4 + addressLengthInBytes, 0);
+    return new InternetAddress(digits);
+  }
+}
+
+class _InternetAddress implements InternetAddress {
   final List<int> _bytes;
-  _InternetAddress(this._bytes);
+
+  _InternetAddress(this._bytes) {
+    assert(_bytes.length == 4 || _bytes.length == 16);
+  }
+
+  bool get isIp4 => _bytes.length == 4;
+
+  String toString() {
+    if (isIp4) {
+      return _bytes.join('.');
+    } else {
+      List<String> parts = new List<String>(8);
+      for (int i = 0; i < 8; i++) {
+        String first = _bytes[i * 2].toRadixString(16);
+        String second = _bytes[i * 2 + 1].toRadixString(16);
+        if (second.length == 1) {
+          second = "0$second";
+        }
+        parts[i] = "$first$second";
+      }
+      return parts.join(":");
+    }
+  }
 }
