@@ -43,3 +43,31 @@ Please include the following information:
 
 * the entire message you see here (including the full stack trace below)
 """;
+
+void pleaseReportCrash(error, StackTrace trace) {
+  String formattedError = stringifyError(error, trace);
+  if (!crashReportRequested) {
+    crashReportRequested = true;
+    print("$requestBugReportOnOtherCrashMessage$formattedError");
+  } else {
+    print(formattedError);
+  }
+}
+
+String stringifyError(error, StackTrace stackTrace) {
+  String safeToString(object) {
+    try {
+      return '$object';
+    } catch (e) {
+      return Error.safeToString(object);
+    }
+  }
+  StringBuffer buffer = new StringBuffer();
+  buffer.writeln(safeToString(error));
+  if (stackTrace != null) {
+    buffer.writeln(safeToString(stackTrace));
+  } else {
+    buffer.writeln("No stack trace.");
+  }
+  return '$buffer';
+}

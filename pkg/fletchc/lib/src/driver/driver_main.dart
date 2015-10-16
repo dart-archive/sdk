@@ -46,8 +46,7 @@ import 'exit_codes.dart' show
 
 import 'driver_commands.dart' show
     DriverCommand,
-    handleSocketErrors,
-    stringifyError;
+    handleSocketErrors;
 
 import 'driver_isolate.dart' show
     isolateMain;
@@ -89,6 +88,9 @@ import '../verbs/options.dart' show
 
 import '../console_print.dart' show
     printToConsole;
+
+import '../please_report_crash.dart' show
+    stringifyError;
 
 Function gracefulShutdown;
 

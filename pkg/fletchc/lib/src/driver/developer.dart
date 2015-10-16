@@ -20,6 +20,18 @@ import 'dart:io' show
     Socket,
     SocketException;
 
+import 'package:sdk_library_metadata/libraries.dart' show
+    Category;
+
+import 'package:fletch_agent/agent_connection.dart' show
+    AgentConnection,
+    AgentException,
+    VmData;
+
+import 'package:fletch_agent/messages.dart' show
+    AGENT_DEFAULT_PORT,
+    MessageDecodeException;
+
 import '../../commands.dart' show
     CommandCode,
     ProcessBacktrace,
@@ -80,16 +92,8 @@ import '../device_type.dart' show
     parseDeviceType,
     unParseDeviceType;
 
-import 'package:sdk_library_metadata/libraries.dart' show
-    Category;
-
-import 'package:fletch_agent/agent_connection.dart' show
-    AgentConnection,
-    AgentException,
-    VmData;
-import 'package:fletch_agent/messages.dart' show
-    AGENT_DEFAULT_PORT,
-    MessageDecodeException;
+import '../please_report_crash.dart' show
+    pleaseReportCrash;
 
 Uri configFileUri;
 
@@ -210,11 +214,7 @@ Future<int> compile(Uri script, SessionState state) async {
       }
     }
   } catch (error, stackTrace) {
-    // Don't let a compiler crash bring down the session.
-    print(error);
-    if (stackTrace != null) {
-      print(stackTrace);
-    }
+    pleaseReportCrash(error, stackTrace);
     return exit_codes.COMPILER_EXITCODE_CRASH;
   }
   state.addCompilationResult(newResult);

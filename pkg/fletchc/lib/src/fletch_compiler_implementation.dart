@@ -280,6 +280,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
   }
 
   void pleaseReportCrash() {
+    if (crashReportRequested) return;
     crashReportRequested = true;
     print(requestBugReportOnCompilerCrashMessage);
   }

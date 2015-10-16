@@ -19,6 +19,9 @@ import 'dart:convert' show
 import '../console_print.dart' show
     printToConsole;
 
+import '../please_report_crash.dart' show
+    stringifyError;
+
 enum DriverCommand {
   // Note: if you modify this enum, please modify src/tools/driver/connection.h
   // as well.
@@ -117,22 +120,4 @@ Socket handleSocketErrors(Socket socket, String name, {void log(String info)}) {
   }
   socket.done.catchError(makeErrorHandler(info));
   return socket;
-}
-
-String stringifyError(error, StackTrace stackTrace) {
-  String safeToString(object) {
-    try {
-      return '$object';
-    } catch (e) {
-      return Error.safeToString(object);
-    }
-  }
-  StringBuffer buffer = new StringBuffer();
-  buffer.writeln(safeToString(error));
-  if (stackTrace != null) {
-    buffer.writeln(safeToString(stackTrace));
-  } else {
-    buffer.writeln("No stack trace.");
-  }
-  return '$buffer';
 }
