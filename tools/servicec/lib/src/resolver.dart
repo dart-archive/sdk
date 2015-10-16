@@ -13,25 +13,26 @@ import 'struct_layout.dart';
 void resolve(Unit unit) {
   Definer definer = new Definer();
   definer.visit(unit);
-  Resolver resolver = new Resolver(definer.definitions);
+  Resolver resolver = new Resolver(definer.structDefinitions);
   resolver.visit(unit);
   resolver.resolveAllStructs();
 }
 
 class Definer extends ResolutionVisitor {
-  final Map<String, Node> definitions = <String, Node>{};
+  final Map<String, Node> serviceDefinitions = <String, Node>{};
+  final Map<String, Node> structDefinitions = <String, Node>{};
 
   visitService(Service node) {
-    define(node.name, node);
+    define(node.name, node, serviceDefinitions);
     super.visitService(node);
   }
 
   visitStruct(Struct node) {
-    define(node.name, node);
+    define(node.name, node, structDefinitions);
     super.visitStruct(node);
   }
 
-  void define(String name, Node node) {
+  void define(String name, Node node, Map<String, Node> definitions) {
     if (definitions.containsKey(name)) {
       throw "Multiple definitions for $name";
     }
