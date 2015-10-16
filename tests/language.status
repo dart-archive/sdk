@@ -300,11 +300,11 @@ deferred_global_test: RuntimeError
 deferred_in_isolate_test: CompileTimeError
 deferred_inheritance_constraints_test/redirecting_constructor: RuntimeError
 deferred_inlined_test: RuntimeError
-deferred_load_constants_test/01: Crash
-deferred_load_constants_test/02: Crash
-deferred_load_constants_test/03: Crash
-deferred_load_constants_test/04: Crash
-deferred_load_constants_test/05: Crash
+deferred_load_constants_test/01: RuntimeError
+deferred_load_constants_test/02: RuntimeError
+deferred_load_constants_test/03: RuntimeError
+deferred_load_constants_test/04: RuntimeError
+deferred_load_constants_test/05: RuntimeError
 deferred_load_constants_test/none: RuntimeError
 deferred_load_inval_code_test: RuntimeError
 deferred_load_library_wrong_args_test/none: RuntimeError

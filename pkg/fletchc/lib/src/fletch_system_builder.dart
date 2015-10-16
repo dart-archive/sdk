@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     ConstructedConstantValue,
+    DeferredConstantValue,
     FunctionConstantValue,
     IntConstantValue,
     ListConstantValue,
@@ -342,6 +343,14 @@ class FletchSystemBuilder {
         } else {
           commands.add(new PushConstantList(list.length));
         }
+      }
+
+      while (constant is DeferredConstantValue) {
+        assert(context.compiler.compilationFailed);
+        // TODO(ahe): This isn't correct, and only serves to prevent the
+        // compiler from crashing. However, the compiler does print a lot of
+        // errors about not supporting deferred loading, so it should be fine.
+        constant = constant.referenced;
       }
 
       if (constant.isInt) {
