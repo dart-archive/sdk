@@ -229,7 +229,6 @@ class CcRule extends Rule {
 
   void addHostLibraries(List<String> arguments) {
     arguments.addAll([
-      '-ltcmalloc_minimal',
       '-lpthread',
       '-ldl',
       '-rdynamic',

@@ -105,21 +105,6 @@ deps_os = {
 
 hooks = [
   {
-    'name': 'third_party_libs',
-    'pattern': '.',
-    'action': [
-      'download_from_google_storage',
-      '--no_auth',
-      '--no_resume',
-      '--bucket',
-      'dart-dependencies-fletch',
-      '-d',
-      '-r',
-      '--auto_platform',
-      'fletch/third_party/libs',
-    ],
-  },
-  {
     'name': 'third_party_binaries',
     'pattern': '.',
     'action': [
