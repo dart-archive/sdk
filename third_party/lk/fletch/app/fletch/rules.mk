@@ -10,7 +10,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/fletch_runner.c \
 	$(LOCAL_DIR)/missing.c \
 
-MODULE_INCLUDES += $(FLETCH_BASE)/include
+MODULE_INCLUDES += $(FLETCH_BASE)
 
 ifneq ($(DEBUG),)
 EXTRA_OBJS += $(FLETCH_BASE)/out/Debug$(FLETCH_CONFIGURATION)/libfletch.a

@@ -8,25 +8,21 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <app.h>
-#include <fletch_api.h>
+#include <include/fletch_api.h>
+#include <include/static_ffi.h>
 #include <endian.h>
 #include <kernel/thread.h>
 #include <lib/gfx.h>
 #include <dev/display.h>
 
-typedef struct {
-  const char* const name;
-  const void* const ptr;
-} StaticFFISymbol;
-
-int FFITestMagicMeat() { return 0xbeef; }
-int FFITestMagicVeg() { return 0x1eaf; }
+int FFITestMagicMeat(void) { return 0xbeef; }
+int FFITestMagicVeg(void) { return 0x1eaf; }
 
 #if WITH_LIB_GFX
 /*
  * Simple framebuffer stuff.
  */
-gfx_surface* GetFullscreenSurface() {
+gfx_surface* GetFullscreenSurface(void) {
   struct display_info info;
   display_get_info(&info);
 
@@ -41,21 +37,34 @@ int GetHeight(gfx_surface* surface) { return surface->height; }
 #define LIB_GFX_EXPORTS 0
 #endif  // WITH_LIB_GFX
 
-StaticFFISymbol table[] = { {"magic_meat", &FFITestMagicMeat},
-                            {"magic_veg", &FFITestMagicVeg},
+#if 1
+FLETCH_EXPORT_TABLE_BEGIN
+  FLETCH_EXPORT_TABLE_ENTRY("magic_meat", FFITestMagicMeat)
+  FLETCH_EXPORT_TABLE_ENTRY("magic_veg", FFITestMagicVeg)
 #if WITH_LIB_GFX
-                            {"gfx_create", &GetFullscreenSurface},
-                            {"gfx_width", &GetWidth},
-                            {"gfx_height", &GetHeight},
-                            {"gfx_destroy", &gfx_surface_destroy},
-                            {"gfx_pixel", &gfx_putpixel},
-                            {"gfx_clear", &gfx_clear},
-                            {"gfx_flush", &gfx_flush},
+  FLETCH_EXPORT_TABLE_ENTRY("gfx_create", GetFullscreenSurface)
+  FLETCH_EXPORT_TABLE_ENTRY("gfx_width", GetWidth)
+  FLETCH_EXPORT_TABLE_ENTRY("gfx_height", GetHeight)
+  FLETCH_EXPORT_TABLE_ENTRY("gfx_destroy", gfx_surface_destroy)
+  FLETCH_EXPORT_TABLE_ENTRY("gfx_pixel", gfx_putpixel)
+  FLETCH_EXPORT_TABLE_ENTRY("gfx_clear", gfx_clear)
+  FLETCH_EXPORT_TABLE_ENTRY("gfx_flush", gfx_flush)
 #endif  // WITH_LIB_GFX
-};
+FLETCH_EXPORT_TABLE_END
 
-const void* const fletch_ffi_table_start = table;
-const void* const fletch_ffi_table_end = table + 2 + LIB_GFX_EXPORTS;
+#else
+FLETCH_EXPORT_STATIC_RENAME(magic_meat, FFITestMagicMeat);
+FLETCH_EXPORT_STATIC_RENAME(magic_veg, FFITestMagicVeg);
+#ifdef WITH_LIB_GFX
+FLETCH_EXPORT_STATIC_RENAME(gfx_create, GetFullscreenSurface);
+FLETCH_EXPORT_STATIC_RENAME(gfx_width, GetWidth);
+FLETCH_EXPORT_STATIC_RENAME(gfx_height, GetHeight);
+FLETCH_EXPORT_STATIC_RENAME(gfx_destroy, gfx_surface_destroy);
+FLETCH_EXPORT_STATIC_RENAME(gfx_pixel, gfx_putpixel);
+FLETCH_EXPORT_STATIC(gfx_clear);
+FLETCH_EXPORT_STATIC(gfx_flush);
+#endif
+#endif
 
 int ReadSnapshot(unsigned char** snapshot) {
   printf("READY TO READ SNAPSHOT DATA.\n");
