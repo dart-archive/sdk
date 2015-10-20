@@ -14,7 +14,7 @@ import 'dart:io' show
 import 'dart:math' show
     min;
 
-import 'package:path/path.dart' show join, dirname;
+import 'package:path/path.dart' show join;
 
 import 'package:expect/expect.dart';
 import 'package:servicec/compiler.dart' as servicec;

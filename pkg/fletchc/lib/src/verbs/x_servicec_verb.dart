@@ -103,7 +103,7 @@ Future<int> compileTask(Uri targetUri, Uri base, List<String> arguments) async {
   String resourcesDirectory = join(servicecUri.path, 'lib', 'src', 'resources');
   String outputDirectory;
   if (null != arguments && arguments.length == 2 && arguments[0] == "out") {
-    outputDirectory = arguments[1];
+    outputDirectory = base.resolve(arguments[1]).toFilePath();
   } else {
     print("Bad arguments: $arguments; expected 'out <out-dir>'.");
     return DART_VM_EXITCODE_COMPILE_TIME_ERROR;

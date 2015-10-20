@@ -19,6 +19,8 @@ import '../../samples/todomvc/todomvc_service_tests.dart' as todomvc;
 import '../fletchc/run.dart' show
     export;
 
+import 'package:servicec/compiler.dart' as servicec;
+
 List<ServiceTest> SERVICE_TESTS = <ServiceTest>[
     new StandardServiceTest('conformance', ccSources: [
         'conformance_test.cc',
@@ -57,6 +59,13 @@ const String buildSystem =
 /// Use asan as configured by test.py
 const bool buildAsan =
     const bool.fromEnvironment('test.dart.build-asan');
+
+/// servicec directory as configured by test.py.
+final Uri servicecDirectory =
+    new Uri(path: const String.fromEnvironment('test.dart.servicec-dir'));
+
+/// Resources directory for servicec.
+final Uri resourcesDirectory = servicecDirectory.resolve('lib/src/resources');
 
 // TODO(zerny): Provide the below constants via configuration from test.py
 final String generatedDirectory = '$buildDirectory/generated_service_tests';
@@ -100,11 +109,14 @@ class StandardServiceTest extends ServiceTest {
 
   String get inputDirectory => '$thisDirectory/$name';
 
+  String get idlPath => '${inputDirectory}/${name}_service.idl';
   String get servicePath => '${inputDirectory}/${name}_service_impl.dart';
   String get snapshotPath => '${outputDirectory}/${name}.snapshot';
   String get executablePath => '${outputDirectory}/service_${name}_test';
 
   Future<Null> prepare() async {
+    // TODO(zerny): Output generated service code outside the source directory.
+    rules.add(new CompileServiceRule(idlPath, inputDirectory));
     rules.add(new CcRule(
         executable: executablePath,
         sources: ccSources.map((path) => '${inputDirectory}/${path}')));
@@ -292,6 +304,17 @@ class RunSnapshotRule extends RunSnapshotsRule {
 
   RunSnapshotRule(String executable, String snapshot)
       : super(executable, [snapshot]);
+}
+
+class CompileServiceRule extends Rule {
+  final String idlFile;
+  final String outputDirectory;
+
+  CompileServiceRule(this.idlFile, this.outputDirectory);
+
+  Future<Null> build() {
+    servicec.compile(idlFile, resourcesDirectory.path, outputDirectory);
+  }
 }
 
 // Test entry point.

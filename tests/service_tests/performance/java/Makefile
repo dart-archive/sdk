@@ -2,6 +2,8 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+.PHONY: all generate debug test clean
+
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
@@ -26,7 +28,10 @@ JAR=${JAVA_HOME}/bin/jar
 JAVA=${JAVA_HOME}/bin/java
 JAVAC=${JAVA_HOME}/bin/javac
 
-all: PerformanceTest.class SnapshotRunner.class fletch/PerformanceService.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} performance.snapshot
+all: generate PerformanceTest.class SnapshotRunner.class fletch/PerformanceService.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} performance.snapshot
+
+generate:
+	$(FLETCH_BUILD_DIR)/fletch x-servicec file ../performance_service.idl out ..
 
 PerformanceTest.class: PerformanceTest.java
 	$(JAVAC) $<
