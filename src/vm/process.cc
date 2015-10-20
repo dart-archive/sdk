@@ -65,11 +65,14 @@ Process::Process(Program* program)
       queue_(NULL),
       queue_next_(NULL),
       queue_previous_(NULL),
+      process_handle_(NULL),
       ports_(NULL),
       process_list_next_(NULL),
       process_list_prev_(NULL),
       errno_cache_(0),
       debug_info_(NULL) {
+  process_handle_ = new ProcessHandle(this);
+
   // These asserts need to hold when running on the target, but they don't need
   // to hold on the host (the build machine, where the interpreter-generating
   // program runs).  We put these asserts here on the assumption that the
@@ -118,6 +121,10 @@ void Process::Cleanup() {
     ports_->OwnerProcessTerminating();
     ports_ = next;
   }
+
+  // We are going down at this point. If anything else is starting to
+  // link/monitor with this [ProcessHandle], it will fail after this line.
+  ProcessHandle::OwnerProcessTerminating(process_handle_);
 }
 
 void Process::SetupExecutionStack() {
@@ -657,6 +664,16 @@ void Process::FinalizeForeign(HeapObject* foreign, Heap* heap) {
   word length = AsForeignWord(instance->GetInstanceField(1));
   free(reinterpret_cast<void*>(value));
   heap->FreedForeignMemory(length);
+}
+
+void Process::FinalizeProcess(HeapObject* process, Heap* heap) {
+  // TODO(kustermann): Nearly all finalizers are currently grapping
+  // into the objects which are to be finalized. This is not really a good idea.
+  Instance* instance = Instance::cast(process);
+  Object* field = instance->GetInstanceField(0);
+  uword address = AsForeignWord(field);
+  ProcessHandle* handle = reinterpret_cast<ProcessHandle*>(address);
+  ProcessHandle::DecrementRef(handle);
 }
 
 #ifdef DEBUG

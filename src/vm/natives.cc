@@ -870,29 +870,11 @@ static Function* FunctionForClosure(Object* argument, unsigned arity) {
   return closure_class->LookupMethod(selector);
 }
 
-NATIVE(ProcessSpawn) {
-  Program* program = process->program();
-
-  Instance* entrypoint = Instance::cast(arguments[0]);
-  Instance* closure = Instance::cast(arguments[1]);
-  Object* argument = arguments[2];
-
-  if (!closure->IsImmutable()) {
-    // TODO(kasperl): Return a proper failure.
-    return Failure::index_out_of_bounds();
-  }
-
-  bool has_argument = !argument->IsNull();
-  if (has_argument && !argument->IsImmutable()) {
-    // TODO(kasperl): Return a proper failure.
-    return Failure::index_out_of_bounds();
-  }
-
-  if (FunctionForClosure(closure, has_argument ? 1 : 0) == NULL) {
-    // TODO(kasperl): Return a proper failure.
-    return Failure::index_out_of_bounds();
-  }
-
+static Process* SpawnProcessInternal(Program* program,
+                                     Process* process,
+                                     Instance* entrypoint,
+                                     Instance* closure,
+                                     Object* argument) {
   Function* entry = FunctionForClosure(entrypoint, 2);
   ASSERT(entry != NULL);
 
@@ -917,9 +899,51 @@ NATIVE(ProcessSpawn) {
   stack->set(4, reinterpret_cast<Object*>(bcp));
   stack->set_top(4);
 
-  program->scheduler()->EnqueueProcessOnSchedulerWorkerThread(
-      process, child);
-  return process->program()->null_object();
+  return child;
+}
+
+NATIVE(ProcessSpawn) {
+  Program* program = process->program();
+
+  Instance* entrypoint = Instance::cast(arguments[0]);
+  Instance* closure = Instance::cast(arguments[1]);
+  Object* argument = arguments[2];
+
+  if (!closure->IsImmutable()) {
+    // TODO(kasperl): Return a proper failure.
+    return Failure::index_out_of_bounds();
+  }
+
+  bool has_argument = !argument->IsNull();
+  if (has_argument && !argument->IsImmutable()) {
+    // TODO(kasperl): Return a proper failure.
+    return Failure::index_out_of_bounds();
+  }
+
+  if (FunctionForClosure(closure, has_argument ? 1 : 0) == NULL) {
+    // TODO(kasperl): Return a proper failure.
+    return Failure::index_out_of_bounds();
+  }
+
+  // TODO(kustermann): We should not have two allocations in one native.
+  Object* native_handle = process->NewInteger(0);
+  if (native_handle == Failure::retry_after_gc()) return native_handle;
+  Object* dart_process = process->NewInstance(program->process_class(), true);
+  if (dart_process == Failure::retry_after_gc()) return dart_process;
+  Instance::cast(dart_process)->SetInstanceField(0, native_handle);
+
+  Process* child = SpawnProcessInternal(
+      program, process, entrypoint, closure, argument);
+
+  ProcessHandle* handle = child->process_handle();
+  handle->IncrementRef();
+  LargeInteger::cast(native_handle)->set_value(reinterpret_cast<int64>(handle));
+  process->RegisterFinalizer(
+      HeapObject::cast(dart_process), Process::FinalizeProcess);
+
+  program->scheduler()->EnqueueProcessOnSchedulerWorkerThread(process, child);
+
+  return dart_process;
 }
 
 NATIVE(CoroutineCurrent) {

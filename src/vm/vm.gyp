@@ -89,6 +89,7 @@
         'pair.h',
         'port.cc',
         'port.h',
+        'process_handle.h',
         'process.cc',
         'process.h',
         'process_queue.h',

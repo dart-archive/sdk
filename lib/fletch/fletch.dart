@@ -259,10 +259,19 @@ class Coroutine {
 }
 
 class Process {
-  /**
-   * Spawn a top-level function.
-   */
-  static void spawn(Function fn, [argument]) {
+  final int _nativeProcessHandle;
+
+  const Process._(this._nativeProcessHandle);
+
+  bool operator==(other) {
+    return
+        other is Process &&
+        other._nativeProcessHandle == _nativeProcessHandle;
+  }
+
+  int get hashCode => _nativeProcessHandle.hashCode;
+
+  static Process spawn(Function fn, [argument]) {
     if (!isImmutable(fn)) {
       throw new ArgumentError(
           'The closure passed to Process.spawn() must be immutable.');
@@ -273,7 +282,7 @@ class Process {
           'The optional argument passed to Process.spawn() must be immutable.');
     }
 
-    _spawn(_entry, fn, argument);
+    return _spawn(_entry, fn, argument);
   }
 
   /**
@@ -352,7 +361,7 @@ class Process {
   }
 
   // Low-level helper function for spawning.
-  @fletch.native static void _spawn(Function entry, Function fn, argument) {
+  @fletch.native static Process _spawn(Function entry, Function fn, argument) {
     throw new ArgumentError();
   }
 

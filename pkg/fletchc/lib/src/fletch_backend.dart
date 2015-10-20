@@ -407,6 +407,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     loadClass("Null", compiler.coreLibrary, builtin: true);
     loadClass("bool", compiler.coreLibrary, builtin: true);
     loadClass("Port", fletchLibrary, builtin: true);
+    loadClass("Process", fletchLibrary, builtin: true);
     loadClass("ForeignMemory", fletchFFILibrary, builtin: true);
     if (context.enableBigint) {
       bigintClass = loadClass("_Bigint", compiler.coreLibrary)?.element;

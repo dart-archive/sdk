@@ -972,6 +972,8 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->coroutine_class();
   } else if (name == Names::kPort) {
     klass = program()->port_class();
+  } else if (name == Names::kProcess) {
+    klass = program()->process_class();
   } else if (name == Names::kForeignMemory) {
     klass = program()->foreign_memory_class();
   } else {

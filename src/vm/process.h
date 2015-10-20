@@ -12,6 +12,7 @@
 #include "src/vm/heap.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/message_mailbox.h"
+#include "src/vm/process_handle.h"
 #include "src/vm/program.h"
 #include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
@@ -103,6 +104,8 @@ class Process {
 
   Port* ports() const { return ports_; }
   void set_ports(Port* port) { ports_ = port; }
+
+  ProcessHandle* process_handle() const { return process_handle_; }
 
   void SetupExecutionStack();
   StackCheckResult HandleStackOverflow(int addition);
@@ -214,6 +217,7 @@ class Process {
   void UnregisterFinalizer(HeapObject* object);
 
   static void FinalizeForeign(HeapObject* foreign, Heap* heap);
+  static void FinalizeProcess(HeapObject* process, Heap* heap);
 
   // This is used in order to return a retry after gc failure on every other
   // call to the GC native that is used for testing only.
@@ -309,6 +313,8 @@ class Process {
   // head_ is 'locked'.
   Process* queue_next_;
   Process* queue_previous_;
+
+  ProcessHandle* process_handle_;
 
   // Linked list of ports owned by this process.
   Port* ports_;
