@@ -3,3 +3,7 @@ libfletch.so
 libfletch.dylib
 conformance.snapshot
 ConformanceService.jar
+cc/
+dart/
+java/jni/
+java/fletch/

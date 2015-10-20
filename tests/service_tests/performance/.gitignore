@@ -3,3 +3,7 @@ libfletch.so
 libfletch.dylib
 performance.snapshot
 PerformanceService.jar
+cc/
+dart/
+java/jni/
+java/fletch/
