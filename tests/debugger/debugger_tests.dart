@@ -15,6 +15,7 @@ import 'dart:convert' show
 import 'dart:io' show
     Directory,
     FileSystemEntity,
+    FileSystemException,
     File;
 
 import 'package:expect/expect.dart' show
@@ -28,10 +29,11 @@ import 'package:fletchc/src/driver/session_manager.dart';
 import 'package:fletchc/src/driver/developer.dart';
 
 const String testLocation = 'tests/debugger';
+const String generatedTestLocation = 'tests/debugger_generated';
 
 typedef Future NoArgFuture();
 
-Future runTest(String name, Uri uri) async {
+Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
   print("$name: $uri");
   Settings settings = new Settings(
       fileUri(".packages", Uri.base),
@@ -73,15 +75,41 @@ Future runTest(String name, Uri uri) async {
 
   String expectationsFile =
       name.substring(0, name.length - "_test".length) + "_expected.txt";
-  Uri expectationsUri = uri.resolve(expectationsFile);
-  String expectations = await new File.fromUri(expectationsUri).readAsString();
+  if (!writeGoldenFiles) {
+    Uri expectationsUri = uri.resolve(expectationsFile);
+    String expectations =
+        await new File.fromUri(expectationsUri).readAsString();
 
-  Expect.stringEquals(
-      expectations, UTF8.decode(output),
-      "$uri doesn't match expected output $expectationsUri");
+    Expect.stringEquals(
+        expectations, UTF8.decode(output),
+        "$uri doesn't match expected output $expectationsUri");
+  } else {
+    Directory generatedDirectory = new Directory(generatedTestLocation);
+    if (!(await generatedDirectory.exists())) {
+      try {
+        await generatedDirectory.create();
+      } on FileSystemException catch (_) {
+        // Ignored, we assume the directory was created by another process.
+        // Possibly assert that.
+      }
+    }
+
+    Uri sourceTestUri = uri.resolve('$name.dart');
+
+    Uri baseUri = generatedDirectory.uri;
+    Uri destinationTestUri = baseUri.resolve('$name.dart');
+    Uri destinationExpectationUri = baseUri.resolve(expectationsFile);
+
+    await new File.fromUri(sourceTestUri).copy(destinationTestUri.path);
+    await new File.fromUri(destinationExpectationUri).writeAsBytes(output);
+  }
 }
 
-Future<Map<String, NoArgFuture>> listTests() async {
+/// If [writeGoldenFiles] is
+///    * `true` the test closures will generate new golden files.
+///    * `false` the test closures will run tests and assert the result.
+Future<Map<String, NoArgFuture>> listTestsInternal(
+    bool writeGoldenFiles) async {
   Map<String, NoArgFuture> result = <String, NoArgFuture>{};
   Stream<FileSystemEntity> files =
       new Directory(testLocation).list(recursive: true, followLinks: false);
@@ -90,16 +118,21 @@ Future<Map<String, NoArgFuture>> listTests() async {
       String name = entity.uri.path.substring(testLocation.length + 1);
       if (name.endsWith("_test.dart")) {
         name = name.substring(0, name.length - ".dart".length);
-        result["debugger/$name"] = () => runTest(name, entity.uri);
+        result["debugger/$name"] =
+            () => runTest(name, entity.uri, writeGoldenFiles);
       }
     }
   }
-  if (false) main(); // Mark main as used for dart2js.
   return result;
 }
 
+Future<Map<String, NoArgFuture>> listTests() async {
+  if (false) main(); // Mark main as used for dart2js.
+  return listTestsInternal(false);
+}
+
 main() async {
-  Map<String, NoArgFuture> tests = await listTests();
+  Map<String, NoArgFuture> tests = await listTestsInternal(true);
   for (String name in tests.keys) {
     await tests[name]();
   }
