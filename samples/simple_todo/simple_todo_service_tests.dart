@@ -6,6 +6,7 @@ import 'dart:async' show
     Future;
 
 import '../../tests/service_tests/service_tests.dart' show
+    CompileServiceRule,
     ServiceTest,
     CcRule,
     BuildSnapshotRule,
@@ -17,11 +18,13 @@ class TodoServiceTest extends ServiceTest {
   TodoServiceTest()
       : super('simple_todo');
 
+  String get idlPath => '$thisDirectory/simple_todo.idl';
   String get servicePath => '$thisDirectory/simple_todo.dart';
   String get snapshotPath => '$outputDirectory/simple_todo.snapshot';
   String get executablePath => '$outputDirectory/simple_todo_sample';
 
   Future<Null> prepare() async {
+    rules.add(new CompileServiceRule(idlPath, thisDirectory));
     rules.add(new CcRule(
         executable: executablePath,
         sources: [
