@@ -15,6 +15,8 @@ import 'package:expect/expect.dart' show
 
 import 'multiple_services/multiple_services_tests.dart' as multiple;
 import '../../samples/todomvc/todomvc_service_tests.dart' as todomvc;
+import '../../samples/simple_todo/simple_todo_service_tests.dart'
+    as simple_todo;
 
 import '../fletchc/run.dart' show
     export;
@@ -36,6 +38,7 @@ List<ServiceTest> SERVICE_TESTS = <ServiceTest>[
         'cc/unicode.cc',
     ]),
     todomvc.serviceTest,
+    simple_todo.serviceTest
 ]..addAll(multiple.serviceTests);
 
 const String thisDirectory = 'tests/service_tests';

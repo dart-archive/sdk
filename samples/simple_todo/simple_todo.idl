@@ -1,0 +1,31 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+service TodoService {
+
+  void createItem(BoxString* title);
+
+  // toggle the done flag for the item identified by 'id'
+  void toggle(int32 id);
+
+  void deleteItem(int32 id);
+
+  void clearItems();
+
+  TodoItem* getItem(int32 index);
+
+  TodoItem* getItemById(int32 id);
+
+  int32 getNoItems();
+}
+
+struct BoxString {
+  String s;
+}
+
+struct TodoItem {
+  String title;
+  bool done;
+  int32 id; // id is unique to each item.
+}
