@@ -6,7 +6,6 @@ import 'model.dart';
 import 'dart/simple_todo.dart';
 
 class TodoImpl extends TodoService {
-
   Model _model = new Model();
 
   TodoImpl() {
@@ -59,5 +58,4 @@ class TodoImpl extends TodoService {
   void deleteItem(int id) {
     _model.todos.remove(id);
   }
-
 }
