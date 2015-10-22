@@ -31,7 +31,7 @@ vars = {
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
 
-  "lk_rev": "@4895ead73951c1a75c4587e8082926251b3cfebf",
+  "lk_rev": "@88d0001cdc217d7990787bd90a83c201c8567fd0",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.

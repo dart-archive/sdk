@@ -133,7 +133,7 @@ static int FletchRunner(int argc, const cmd_args *argv) {
 }
 
 STATIC_COMMAND_START
-{ "fletch", "fletch vm", &FletchRunner },
+STATIC_COMMAND("fletch", "fletch vm", &FletchRunner)
 STATIC_COMMAND_END(fletchrunner);
 #endif
 
