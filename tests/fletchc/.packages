@@ -11,4 +11,5 @@ package_config:../../third_party/package_config/lib
 path:../../third_party/path/lib
 persistent:../../third_party/persistent/lib/
 sdk_library_metadata:../../third_party/dart/sdk/lib/_internal/sdk_library_metadata/lib/
+old_servicec:../../tools/servicec/lib
 servicec:../../pkg/servicec/lib
