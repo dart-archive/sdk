@@ -47,7 +47,6 @@ abstract class FletchClassBuilder {
   void addIsSelector(int selector);
   void createIsFunctionEntry(FletchBackend backend, int arity);
   void updateImplicitAccessors(FletchBackend backend);
-  void createIsEntries(FletchBackend backend);
 
   FletchClass finalizeClass(
       FletchContext context,
@@ -169,36 +168,6 @@ class FletchNewClassBuilder extends FletchClassBuilder {
 
       fieldIndex++;
     });
-  }
-
-  void createIsEntries(FletchBackend backend) {
-    // TODO(ahe): Remove this method when [useCustomEnqueuer] is the default
-    // behavior.
-    if (element == null) return;
-
-    Set superclasses = new Set();
-    for (FletchClassBuilder current = superclass;
-         current != null;
-         current = current.superclass) {
-      superclasses.add(current.element);
-    }
-
-    void createFor(ClassElement classElement) {
-      if (superclasses.contains(classElement)) return;
-      int fletchSelector = backend.context.toFletchIsSelector(classElement);
-      addIsSelector(fletchSelector);
-    }
-
-    // Create for the current element.
-    createFor(element);
-
-    // Add all types related to 'implements'.
-    for (InterfaceType interfaceType in element.interfaces) {
-      createFor(interfaceType.element);
-      for (DartType type in interfaceType.element.allSupertypes) {
-        createFor(type.element);
-      }
-    }
   }
 
   void createIsFunctionEntry(FletchBackend backend, int arity) {
@@ -333,10 +302,6 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
         _removedAccessors.add(setterSelector);
       }
     }
-  }
-
-  void createIsEntries(FletchBackend backend) {
-    // TODO(ajohnsen): Implement.
   }
 
   PersistentMap<int, int> computeMethodTable() {

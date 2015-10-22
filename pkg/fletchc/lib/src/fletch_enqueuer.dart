@@ -51,21 +51,16 @@ import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
 
 import 'dynamic_call_enqueuer.dart' show
+    Closurization,
     DynamicCallEnqueuer,
     UsageRecorder;
 
-import 'fletch_codegen_work_item.dart' show
-    FletchCodegenWorkItem;
-
 import 'fletch_registry.dart' show
+    ClosureKind,
     FletchRegistry,
     FletchRegistryImplementation;
 
 part 'enqueuer_mixin.dart';
-
-// TODO(ahe): Delete this constant when FletchEnqueuer is complete.
-const bool useCustomEnqueuer = const bool.fromEnvironment(
-    "fletchc.use-custom-enqueuer", defaultValue: false);
 
 /// True if enqueuing of system libraries should be reported in verbose mode.
 const bool logSystemLibraries =
@@ -78,26 +73,17 @@ bool shouldReportEnqueuingOfElement(Compiler compiler, Element element) {
   return compiler.inUserCode(element);
 }
 
-// TODO(ahe): Delete this method when FletchEnqueuer is complete.
-CodegenEnqueuer makeCodegenEnqueuer(FletchCompilerImplementation compiler) {
-  ItemCompilationContextCreator itemCompilationContextCreator =
-      compiler.backend.createItemCompilationContext;
-  return useCustomEnqueuer
-      ? new FletchEnqueuer(compiler, itemCompilationContextCreator)
-      : new TransitionalFletchEnqueuer(compiler, itemCompilationContextCreator);
-}
-
 /// Custom enqueuer for Fletch.
 class FletchEnqueueTask extends CompilerTask implements EnqueueTask {
   final ResolutionEnqueuer resolution;
 
-  // TODO(ahe): Should be typed [FletchEnqueuer].
-  final CodegenEnqueuer codegen;
+  final FletchEnqueuer codegen;
 
   FletchEnqueueTask(FletchCompilerImplementation compiler)
     : resolution = new ResolutionEnqueuer(
           compiler, compiler.backend.createItemCompilationContext),
-      codegen = makeCodegenEnqueuer(compiler),
+      codegen = new FletchEnqueuer(
+          compiler, compiler.backend.createItemCompilationContext),
       super(compiler) {
     codegen.task = this;
     resolution.task = this;
@@ -113,79 +99,6 @@ class FletchEnqueueTask extends CompilerTask implements EnqueueTask {
     resolution.forgetElement(element);
     codegen.forgetElement(element);
   }
-}
-
-// TODO(ahe): Delete this class when FletchEnqueuer is complete.
-class TransitionalFletchEnqueuer extends CodegenEnqueuer
-    implements FletchEnqueuer {
-  final Set<Element> _processedElements = new Set<Element>();
-
-  TransitionalFletchEnqueuer(
-      FletchCompilerImplementation compiler,
-      ItemCompilationContextCreator itemCompilationContextCreator)
-      : super(compiler, itemCompilationContextCreator);
-
-  bool isProcessed(Element member) {
-    return member.isAbstract || _processedElements.contains(member);
-  }
-
-  void applyImpact(Element element, WorldImpact worldImpact) {
-    assert(worldImpact == null);
-    _processedElements.add(element);
-  }
-
-  void forgetElement(Element element) {
-    super.forgetElement(element);
-    _processedElements.remove(element);
-  }
-
-  bool internalAddToWorkList(Element element) {
-    // This is a copy of CodegenEnqueuer.internalAddToWorkList except that it
-    // uses FletchCodegenWorkItem.
-
-    // Don't generate code for foreign elements.
-    if (compiler.backend.isForeign(element)) return false;
-
-    // Codegen inlines field initializers. It only needs to generate
-    // code for checked setters.
-    if (element.isField && element.isInstanceMember) {
-      if (!compiler.enableTypeAssertions
-          || element.enclosingElement.isClosure) {
-        return false;
-      }
-    }
-
-    if (compiler.hasIncrementalSupport && !isProcessed(element)) {
-      newlyEnqueuedElements.add(element);
-    }
-
-    if (queueIsClosed) {
-      throw new SpannableAssertionFailure(element,
-          "Codegen work list is closed. Trying to add $element");
-    }
-    FletchCodegenWorkItem workItem = new FletchCodegenWorkItem(
-        compiler, element, itemCompilationContextCreator());
-    queue.add(workItem);
-    return true;
-  }
-
-  DynamicCallEnqueuer get dynamicCallEnqueuer => notImplemented;
-
-  Set<ElementUsage> get _enqueuedUsages => notImplemented;
-
-  Queue<ElementUsage> get _pendingEnqueuedUsages => notImplemented;
-
-  void _enqueueElement(element, selector, {tearOff}) => notImplemented;
-
-  void processQueue() => notImplemented;
-
-  void recordElementUsage(element, selector, {tearOff}) => notImplemented;
-
-  void recordTypeTest(element, type) => notImplemented;
-
-  Set<TypeTest> get _typeTests => notImplemented;
-
-  Queue<TypeTest> get _pendingTypeTests => notImplemented;
 }
 
 class FletchEnqueuer extends EnqueuerMixin
@@ -208,6 +121,8 @@ class FletchEnqueuer extends EnqueuerMixin
   final Universe universe = new Universe();
 
   final Set<ElementUsage> _enqueuedUsages = new Set<ElementUsage>();
+  final Map<Element, List<ElementUsage>> _enqueuedUsagesByElement =
+      <Element, List<ElementUsage>>{};
 
   final Queue<ElementUsage> _pendingEnqueuedUsages =
       new Queue<ElementUsage>();
@@ -233,7 +148,10 @@ class FletchEnqueuer extends EnqueuerMixin
   QueueFilter get filter => compiler.enqueuerFilter;
 
   void forgetElement(Element element) {
-    _enqueuedUsages.remove(element);
+    List<ElementUsage> usages = _enqueuedUsagesByElement[element];
+    if (usages != null) {
+      _enqueuedUsages.removeAll(usages);
+    }
     dynamicCallEnqueuer.forgetElement(element);
   }
 
@@ -246,12 +164,12 @@ class FletchEnqueuer extends EnqueuerMixin
 
   // TODO(ahe): Remove this method.
   void registerStaticUse(Element element) {
-    _enqueueElement(element, null);
+    _enqueueElement(element, null, null);
   }
 
   // TODO(ahe): Remove this method.
   void addToWorkList(Element element) {
-    _enqueueElement(element, null);
+    _enqueueElement(element, null, null);
   }
 
   // TODO(ahe): Remove this method.
@@ -270,9 +188,9 @@ class FletchEnqueuer extends EnqueuerMixin
             FletchRegistry registry =
                 new FletchRegistryImplementation(compiler, treeElements);
             Selector selector = usage.selector;
-            if (usage.tearOff) {
-              compiler.context.backend.compileFunctionTearOffUsage(
-                  element, selector, treeElements, registry);
+            if (usage.closureKind != null) {
+              compiler.context.backend.compileClosurizationUsage(
+                  element, selector, treeElements, registry, usage.closureKind);
             } else if (selector != null) {
               compiler.context.backend.compileElementUsage(
                   element, selector, treeElements, registry);
@@ -325,14 +243,16 @@ class FletchEnqueuer extends EnqueuerMixin
   void _enqueueElement(
       Element element,
       Selector selector,
-      {bool tearOff: false}) {
+      ClosureKind closureKind) {
     if (selector != null) {
-      _enqueueElement(element, null, tearOff: false);
+      _enqueueElement(element, null, null);
     } else {
-      assert(!tearOff);
+      assert(closureKind == null);
     }
-    ElementUsage usage = new ElementUsage(element, selector, tearOff);
+    ElementUsage usage = new ElementUsage(element, selector, closureKind);
     if (_enqueuedUsages.add(usage)) {
+      _enqueuedUsagesByElement
+          .putIfAbsent(element, () => <ElementUsage>[]).add(usage);
       _pendingEnqueuedUsages.addLast(usage);
       if (shouldReportEnqueuingOfElement(compiler, element)) {
         compiler.reportVerboseInfo(element, "called as $selector");
@@ -340,11 +260,16 @@ class FletchEnqueuer extends EnqueuerMixin
     }
   }
 
-  void recordElementUsage(
-      Element element,
-      Selector selector,
-      {bool tearOff: false}) {
-    _enqueueElement(element, selector, tearOff: tearOff);
+  void recordElementUsage(Element element, Selector selector) {
+    if (!element.isParameter) {
+      _enqueueElement(element, selector, null);
+    }
+  }
+
+  void recordClosurizationUsage(
+      Closurization closurization,
+      Selector selector) {
+    _enqueueElement(closurization.function, selector, closurization.kind);
   }
 
   void recordTypeTest(ClassElement element, InterfaceType type) {
@@ -365,20 +290,22 @@ class ElementUsage {
 
   final int hashCode;
 
-  final bool tearOff;
+  /// Non-null if this is a usage of [element] as a closure, for example, a
+  /// tear-off
+  final ClosureKind closureKind;
 
-  ElementUsage(Element element, Selector selector, bool tearOff)
+  ElementUsage(Element element, Selector selector, ClosureKind closureKind)
       : element = element,
         selector = selector,
-        tearOff = tearOff,
+        closureKind = closureKind,
         hashCode = Hashing.mixHashCodeBits(
             Hashing.mixHashCodeBits(element.hashCode, selector.hashCode),
-            tearOff.hashCode);
+            closureKind.hashCode);
 
   bool operator ==(other) {
     return other is ElementUsage &&
         element == other.element && selector == other.selector &&
-        tearOff == other.tearOff;
+        closureKind == other.closureKind;
   }
 }
 

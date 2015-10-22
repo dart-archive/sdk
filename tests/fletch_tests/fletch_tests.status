@@ -18,6 +18,9 @@ incremental/call_named_arguments_2: Fail
 # Missing support for multiple libraries
 incremental/multiple_libraries: Fail
 
+# Received PushFromMap command which referes to a non-existent map entry
+incremental/same_tokens_variant: Fail
+
 # Incorrectly failing servicec tests
 servicec/bad_field_4: Fail
 servicec/bad_field_8: Fail

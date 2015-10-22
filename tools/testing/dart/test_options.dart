@@ -497,13 +497,6 @@ Note: currently only implemented for dart2js.''',
               [],
               false,
               type: 'bool'),
-          new _TestOptionSpecification(
-              'enable_custom_enqueuer',
-              "Enable custom enqueuer during testing.",
-              ['--enable-custom-enqueuer'],
-              [],
-              false,
-              type: 'bool'),
         new _TestOptionSpecification(
             'settings_file_name',
             'The fletch settings file to use for testing',

@@ -901,6 +901,11 @@ class LibraryUpdater extends FletchFeatures {
       } else {
         ClassElement cls = element;
         cls.ensureResolved(compiler);
+
+        // We've told the enqueuer to forget this class, now tell it that it's
+        // in use again.  TODO(ahe): We only need to do this if [cls] was
+        // already instantiated.
+        enqueuer.codegen.registerInstantiatedType(cls.rawType, null);
       }
     }
     compiler.processQueue(enqueuer.resolution, null);
@@ -933,8 +938,6 @@ class LibraryUpdater extends FletchFeatures {
       throw new IncrementalCompilationFailed(
           "Unable to add static fields:\n  ${newStaticFields.join(',\n  ')}");
     }
-
-    backend.assembleProgram();
 
     List<Command> commands = <Command>[const commands_lib.PrepareForChanges()];
     FletchSystem system =

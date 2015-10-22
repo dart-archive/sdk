@@ -24,17 +24,18 @@ import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
 
-class FunctionCodegen extends CodegenVisitor {
+class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
+  final FletchRegistry registry;
 
   int setterResultSlot;
 
   FunctionCodegen(FletchFunctionBuilder functionBuilder,
                   FletchContext context,
                   TreeElements elements,
-                  FletchRegistry registry,
+                  this.registry,
                   ClosureEnvironment closureEnvironment,
                   FunctionElement function)
-      : super(functionBuilder, context, elements, registry,
+      : super(functionBuilder, context, elements,
               closureEnvironment, function);
 
   FunctionElement get function => element;

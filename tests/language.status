@@ -621,7 +621,6 @@ map_literal4_test: RuntimeError
 map_literal7_test: RuntimeError
 map_literal8_test: RuntimeError
 metadata_test: CompileTimeError
-method_override4_test: RuntimeError
 method_override5_test: RuntimeError
 method_override_test: RuntimeError
 missing_part_of_tag_test/01: MissingCompileTimeError

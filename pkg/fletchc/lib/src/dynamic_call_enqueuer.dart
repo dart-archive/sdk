@@ -22,7 +22,11 @@ import 'package:compiler/src/elements/elements.dart' show
     Element,
     FunctionElement,
     LibraryElement,
+    MemberElement,
     Name;
+
+import 'package:compiler/src/util/util.dart' show
+    Hashing;
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
@@ -30,8 +34,13 @@ import 'fletch_compiler_implementation.dart' show
 import 'fletch_enqueuer.dart' show
     shouldReportEnqueuingOfElement;
 
+import 'fletch_registry.dart' show
+    ClosureKind;
+
 abstract class UsageRecorder {
-  void recordElementUsage(Element element, Selector selector, {bool tearOff});
+  void recordElementUsage(Element element, Selector selector);
+
+  void recordClosurizationUsage(Closurization closurization, Selector selector);
 
   void recordTypeTest(ClassElement element, InterfaceType type);
 }
@@ -52,14 +61,13 @@ class DynamicCallEnqueuer {
 
   final Queue<Selector> pendingSelectors = new Queue<Selector>();
 
-  /// Set of functions that have been implicitly closurized aka tear-off.
-  final Set<FunctionElement> implicitClosurizations =
-      new Set<FunctionElement>();
+  /// Set of functions that have been closurized
+  final Set<Closurization> implicitClosurizations = new Set<Closurization>();
 
-  /// Queue of functions that have been implicitly closurized aka tear-off and
-  /// have yet to be processed.
-  final Queue<FunctionElement> pendingImplicitClosurizations =
-      new Queue<FunctionElement>();
+  /// Queue of functions that have been closurized and have yet to be
+  /// processed
+  final Queue<Closurization> pendingImplicitClosurizations =
+      new Queue<Closurization>();
 
   final Set<InterfaceType> typeTests = new Set<InterfaceType>();
 
@@ -91,7 +99,7 @@ class DynamicCallEnqueuer {
         // told that [member] is used as a getter.
         recorder.recordElementUsage(member, selector);
         // This registers [member] as an instantiated closure class.
-        enqueueTearOff(member);
+        enqueueClosure(member, ClosureKind.tearOff);
       }
     } else if (selector.isSetter) {
       if (member.isField || member.isSetter) {
@@ -99,15 +107,22 @@ class DynamicCallEnqueuer {
       }
     } else if (member.isFunction && selector.signatureApplies(member)) {
       recorder.recordElementUsage(member, selector);
+    } else if (member.isGetter || member.isField) {
+      // A getter/field can be invoked as a method, for example, if the getter
+      // returns a closure.
+      recorder.recordElementUsage(member, selector);
     }
   }
 
-  void enqueueTearOffIfApplicable(
-      FunctionElement function,
+  void enqueueClosureIfApplicable(
+      Closurization closurization,
       Selector selector,
       UsageRecorder recorder) {
-    if (selector.isClosureCall && selector.signatureApplies(function)) {
-      recorder.recordElementUsage(function, selector, tearOff: true);
+    FunctionElement function = closurization.function;
+    if ((selector.isGetter || selector.isCall) &&
+        selector.memberName == Selector.CALL_NAME &&
+        selector.signatureApplies(function)) {
+      recorder.recordClosurizationUsage(closurization, selector);
     }
   }
 
@@ -115,18 +130,15 @@ class DynamicCallEnqueuer {
       ClassElement cls,
       InterfaceType type,
       UsageRecorder recorder) {
-    while (cls != null) {
-      if (cls == type.element) {
+    if (cls == type.element) {
+      recorder.recordTypeTest(cls, type);
+      return;
+    }
+    for (DartType supertype in cls.allSupertypes) {
+      if (supertype.element == type.element) {
         recorder.recordTypeTest(cls, type);
         return;
       }
-      for (DartType supertype in cls.interfaces) {
-        if (supertype.element == type.element) {
-          recorder.recordTypeTest(cls, type);
-          return;
-        }
-      }
-      cls = cls.superclass;
     }
   }
 
@@ -152,12 +164,12 @@ class DynamicCallEnqueuer {
       }
     }
     while (pendingImplicitClosurizations.isNotEmpty) {
-      FunctionElement function = pendingImplicitClosurizations.removeFirst();
-      if (shouldReportEnqueuingOfElement(compiler, function)) {
-        compiler.reportVerboseInfo(function, "was closurized");
+      Closurization closurization = pendingImplicitClosurizations.removeFirst();
+      if (shouldReportEnqueuingOfElement(compiler, closurization.function)) {
+        compiler.reportVerboseInfo(closurization.function, "was closurized");
       }
       for (Selector selector in enqueuedSelectors) {
-        enqueueTearOffIfApplicable(function, selector, recorder);
+        enqueueClosureIfApplicable(closurization, selector, recorder);
       }
       // TODO(ahe): Also enqueue type tests here.
     }
@@ -166,8 +178,8 @@ class DynamicCallEnqueuer {
       for (ClassElement cls in instantiatedClasses) {
         enqueueApplicableMembers(cls, selector, recorder);
       }
-      for (FunctionElement function in implicitClosurizations) {
-        enqueueTearOffIfApplicable(function, selector, recorder);
+      for (Closurization closurization in implicitClosurizations) {
+        enqueueClosureIfApplicable(closurization, selector, recorder);
       }
     }
     while(!pendingTypeTests.isEmpty) {
@@ -187,17 +199,49 @@ class DynamicCallEnqueuer {
     }
   }
 
-  void enqueueTearOff(FunctionElement function) {
-    if (implicitClosurizations.add(function)) {
-      pendingImplicitClosurizations.add(function);
+  void enqueueClosure(FunctionElement function, ClosureKind kind) {
+    Closurization closurization = new Closurization(function, kind);
+    if (implicitClosurizations.add(closurization)) {
+      pendingImplicitClosurizations.add(closurization);
     }
   }
 
   void forgetElement(Element element) {
-    // TODO(ahe): Make sure that the incremental compiler
-    // (library_updater.dart) registers classes with schema changes as having
-    // been instantiated.
-    instantiatedClasses.remove(element);
+    void revisitClass(ClassElement cls) {
+      if (instantiatedClasses.remove(cls)) {
+        // [cls] was already instantiated, now we need to make sure enqueue its
+        // members again in [enqueueInstanceMethods] above.
+        pendingInstantiatedClasses.add(cls);
+      }
+    }
+    if (!instantiatedClasses.remove(element)) {
+      // If a class is removed, the incremental compiler will first forget its
+      // members. This can move the class to pendingInstantiatedClasses.
+      pendingInstantiatedClasses.remove(element);
+    }
+    if (element.isInstanceMember) {
+      ClassElement modifiedClass = element.enclosingClass;
+      revisitClass(modifiedClass);
+      MemberElement member = element;
+      for (ClassElement cls in instantiatedClasses) {
+        // TODO(ahe): Make O(1).
+        if (cls.lookupByName(member.memberName) == member) {
+          revisitClass(cls);
+          // Once we have found one class that implements [member], we're
+          // done. When we later call [enqueueInstanceMethods] (via
+          // [FletchEnqueuer.processQueue]) the method will be enqueued again
+          // (if it exists).
+          break;
+        }
+      }
+    }
+    List<Closurization> toBeRemoved = <Closurization>[];
+    for (Closurization closurization in implicitClosurizations) {
+      if (closurization.function == element) {
+        toBeRemoved.add(closurization);
+      }
+    }
+    implicitClosurizations.removeAll(toBeRemoved);
   }
 
   void enqueueTypeTest(DartType type) {
@@ -219,4 +263,30 @@ class DynamicCallEnqueuer {
       pendingTypeTests.add(type);
     }
   }
+}
+
+/// Track that [function] is used as a closure. This can happen for various
+/// reasons, see [ClosureKind] for more details. In practical terms, this means
+/// that we need a class whose `call` method invokes [function]. For
+/// [ClosureKind.functionLike], the class is a normal class with source
+/// code. For most other kinds, the class is synthetic and doesn't have a
+/// corresponding element.
+class Closurization {
+  final FunctionElement function;
+
+  final ClosureKind kind;
+
+  final int hashCode;
+
+  Closurization(FunctionElement function, ClosureKind kind)
+      : function = function,
+        kind = kind,
+        hashCode = Hashing.mixHashCodeBits(function.hashCode, kind.hashCode);
+
+  bool operator ==(other) {
+    return other is Closurization &&
+        function == other.function && kind == other.kind;
+  }
+
+  String toString() => "Closurization($function, $kind)";
 }

@@ -31,7 +31,9 @@ import 'codegen_visitor.dart';
 import 'fletch_registry.dart' show
     FletchRegistry;
 
-class ConstructorCodegen extends CodegenVisitor {
+class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
+  final FletchRegistry registry;
+
   final FletchClassBuilder classBuilder;
 
   final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
@@ -44,11 +46,11 @@ class ConstructorCodegen extends CodegenVisitor {
   ConstructorCodegen(FletchFunctionBuilder functionBuilder,
                      FletchContext context,
                      TreeElements elements,
-                     FletchRegistry registry,
+                     this.registry,
                      ClosureEnvironment closureEnvironment,
                      ConstructorElement constructor,
                      this.classBuilder)
-      : super(functionBuilder, context, elements, registry,
+      : super(functionBuilder, context, elements,
               closureEnvironment, constructor);
 
   ConstructorElement get constructor => element;

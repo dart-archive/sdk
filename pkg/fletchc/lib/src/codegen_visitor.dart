@@ -59,6 +59,7 @@ import '../incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed; // TODO(ahe): Remove this import.
 
 import 'fletch_registry.dart' show
+    ClosureKind,
     FletchRegistry;
 
 enum VisitState {
@@ -166,8 +167,6 @@ abstract class CodegenVisitor
 
   final FletchContext context;
 
-  final FletchRegistry registry;
-
   final ClosureEnvironment closureEnvironment;
 
   final ExecutableElement element;
@@ -193,10 +192,17 @@ abstract class CodegenVisitor
 
   List<Element> blockLocals = <Element>[];
 
+  /// A FunctionExpression in this set is a named local function declaration.
+  /// Many calls to such functions are statically bound. So if `f` is a named
+  /// local function declaration, `f()` doesn't need to be registered as a
+  /// dynamic send.
+  // TODO(ahe): Get rid of this by refactoring initializeLocal. See TODO there.
+  final Set<FunctionExpression> functionDeclarations =
+      new Set<FunctionExpression>();
+
   CodegenVisitor(FletchFunctionBuilder functionBuilder,
                  this.context,
                  TreeElements elements,
-                 this.registry,
                  this.closureEnvironment,
                  this.element)
       : super(elements),
@@ -296,29 +302,26 @@ abstract class CodegenVisitor
     scope.remove(local);
   }
 
-  void registerDynamicInvocation(Selector selector) {
-    registry.registerDynamicInvocation(new UniverseSelector(selector, null));
-  }
+  void registerDynamicInvocation(Selector selector);
 
-  void registerDynamicGetter(Selector selector) {
-    registry.registerDynamicGetter(new UniverseSelector(selector, null));
-  }
+  void registerDynamicGetter(Selector selector);
 
-  void registerDynamicSetter(Selector selector) {
-    registry.registerDynamicSetter(new UniverseSelector(selector, null));
-  }
+  void registerDynamicSetter(Selector selector);
 
-  void registerStaticInvocation(FunctionElement function) {
-    registry.registerStaticInvocation(function);
-  }
+  void registerStaticInvocation(FunctionElement function);
 
-  void registerInstantiatedClass(ClassElement klass) {
-    registry.registerInstantiatedClass(klass);
-  }
+  void registerInstantiatedClass(ClassElement klass);
 
-  void registerIsCheck(DartType type) {
-    registry.registerIsCheck(type);
-  }
+  void registerIsCheck(DartType type);
+
+  void registerLocalInvoke(LocalElement element, Selector selector);
+
+  /// Register that [element] is a closure. This can happen for a tear-off, or
+  /// for local functions. See [ClosureKind] for more information about the
+  /// various kinds of implicit or explicit closurizations that can occur.
+  void registerClosurization(FunctionElement element, ClosureKind kind);
+
+  int compileLazyFieldInitializer(FieldElement field);
 
   void invokeMethod(Node node, Selector selector) {
     registerDynamicInvocation(selector);
@@ -906,6 +909,7 @@ abstract class CodegenVisitor
       Send node,
       MethodElement function,
       _) {
+    registerClosurization(function, ClosureKind.tearOff);
     FletchFunctionBase target = requireFunction(function);
     FletchClassBuilder classBuilder =
         context.backend.createTearoffClass(target);
@@ -1011,6 +1015,7 @@ abstract class CodegenVisitor
       Send node,
       MethodElement method,
       _) {
+    registerClosurization(method, ClosureKind.superTearOff);
     loadThis();
     FletchFunctionBase target = requireFunction(method);
     FletchClassBuilder classBuilder =
@@ -1373,7 +1378,7 @@ abstract class CodegenVisitor
           elements: field.resolvedAst.elements);
       assembler.loadConst(constId);
     } else {
-      int index = context.backend.compileLazyFieldInitializer(field, registry);
+      int index = compileLazyFieldInitializer(field);
       if (field.initializer != null) {
         assembler.loadStaticInit(index);
       } else {
@@ -1612,6 +1617,11 @@ abstract class CodegenVisitor
     node.expression.accept(this);
   }
 
+  void visitLocalFunctionGet(Send node, LocalFunctionElement function, _) {
+    registerClosurization(function, ClosureKind.localFunction);
+    handleLocalGet(node, function, _);
+  }
+
   void handleLocalGet(
       Send node,
       LocalElement element,
@@ -1628,6 +1638,19 @@ abstract class CodegenVisitor
     visitForValue(rhs);
     scope[element].store(assembler);
     applyVisitState();
+  }
+
+  void visitLocalFunctionInvoke(
+      Send node,
+      LocalFunctionElement function,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    // TODO(ahe): We could use loadPositionalArguments if [element] is a local
+    // function to avoid generating additional stubs and to avoid registering
+    // this as a dynamic call.
+    registerLocalInvoke(function, callStructure.callSelector);
+    handleLocalInvoke(node, function, arguments, callStructure, _);
   }
 
   void handleLocalInvoke(
@@ -2396,7 +2419,9 @@ abstract class CodegenVisitor
       assembler.storeField(thisClosureIndex);
     }
 
-    registerStaticInvocation(function);
+    if (!functionDeclarations.contains(node)) {
+      registerClosurization(function, ClosureKind.localFunction);
+    }
     applyVisitState();
   }
 
@@ -2738,6 +2763,8 @@ abstract class CodegenVisitor
   LocalValue initializeLocal(LocalElement element, Expression initializer) {
     int slot = assembler.stackSize;
     if (initializer != null) {
+      // TODO(ahe): If we can move this to the caller, then we don't need
+      // functionDeclarations.
       visitForValue(initializer);
     } else {
       assembler.loadLiteralNull();
@@ -2758,6 +2785,7 @@ abstract class CodegenVisitor
 
   void visitFunctionDeclaration(FunctionDeclaration node) {
     FunctionExpression function = node.function;
+    functionDeclarations.add(function);
     initializeLocal(elements[function], function);
   }
 
@@ -3072,5 +3100,53 @@ abstract class CodegenVisitor
 
   void applyParameters(NodeList parameters, _) {
     internalError(parameters, "[applyParameters] isn't implemented.");
+  }
+}
+
+abstract class FletchRegistryMixin {
+  FletchRegistry get registry;
+  FletchContext get context;
+
+  void registerDynamicInvocation(Selector selector) {
+    registry.registerDynamicInvocation(new UniverseSelector(selector, null));
+  }
+
+  void registerDynamicGetter(Selector selector) {
+    registry.registerDynamicGetter(new UniverseSelector(selector, null));
+  }
+
+  void registerDynamicSetter(Selector selector) {
+    registry.registerDynamicSetter(new UniverseSelector(selector, null));
+  }
+
+  void registerStaticInvocation(FunctionElement function) {
+    registry.registerStaticInvocation(function);
+  }
+
+  void registerInstantiatedClass(ClassElement klass) {
+    registry.registerInstantiatedClass(klass);
+  }
+
+  void registerIsCheck(DartType type) {
+    registry.registerIsCheck(type);
+  }
+
+  void registerLocalInvoke(LocalElement element, Selector selector) {
+    registry.registerLocalInvoke(element, selector);
+  }
+
+  void registerClosurization(FunctionElement element, ClosureKind kind) {
+    if (kind == ClosureKind.localFunction) {
+      // TODO(ahe): Get rid of the call to [registerStaticInvocation]. It is
+      // currently needed to ensure that local function expression closures are
+      // compiled correctly. For example, `[() {}].last()`, notice that `last`
+      // is a getter. This happens for both named and unnamed.
+      registerStaticInvocation(element);
+    }
+    registry.registerClosurization(element, kind);
+  }
+
+  int compileLazyFieldInitializer(FieldElement field) {
+    return context.backend.compileLazyFieldInitializer(field, registry);
   }
 }

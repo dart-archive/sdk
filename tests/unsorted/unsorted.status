@@ -7,6 +7,8 @@
 3_test: Fail
 5_test: Fail
 
+10_test: RuntimeError, OK # https://github.com/dart-lang/fletch/issues/249
+
 dart2js_hello_world_test: Slow, Pass
 dart2js_deltablue_test: Slow, Pass
 
