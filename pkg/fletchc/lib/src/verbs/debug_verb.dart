@@ -57,6 +57,8 @@ const Action debugAction =
           TargetKind.TOGGLE,
         ]);
 
+const int sigQuit = 3;
+
 Future debug(AnalyzedSentence sentence, VerbContext context) async {
   if (sentence.target == null) {
     context.performTaskInWorker(new InteractiveDebuggerTask());
@@ -152,7 +154,7 @@ Future<Null> readCommands(
 
       case DriverCommand.Signal:
         int signalNumber = command.data;
-        if (signalNumber == 3) {
+        if (signalNumber == sigQuit) {
           await session.interrupt();
         } else {
           handleSignal(state, signalNumber);

@@ -81,9 +81,14 @@ class Process {
   };
 
   enum StackCheckResult {
+    // Stack check handled (most likely by growing the stack) and
+    // execution can continue.
     kStackCheckContinue,
+    // Interrupted for preemption.
     kStackCheckInterrupt,
+    // Interrupted for debugging.
     kStackCheckDebugInterrupt,
+    // Stack overflow.
     kStackCheckOverflow
   };
 

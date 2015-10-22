@@ -211,7 +211,7 @@ void Session::ProcessMessages() {
         break;
       }
 
-      case Connection::kProcessInterrupt: {
+      case Connection::kProcessDebugInterrupt: {
         if (process_ == NULL) break;
         process_->DebugInterrupt();
         break;
