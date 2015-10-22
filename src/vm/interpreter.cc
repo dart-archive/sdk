@@ -98,7 +98,7 @@ class State {
   void Drop(int n) { sp_ -= n; }
 
   bool HasStackSpaceFor(int size) const {
-    return sp_ + size < process_->stack_limit();
+    return (sp_ + size) < reinterpret_cast<Object**>(process_->stack_limit());
   }
 
   Function* ComputeCurrentFunction() {
@@ -169,6 +169,9 @@ class Engine : public State {
     if (result != Process::kStackCheckContinue) {                        \
       if (result == Process::kStackCheckInterrupt) {                     \
         return Interpreter::kInterrupt;                                  \
+      }                                                                  \
+      if (result == Process::kStackCheckDebugInterrupt) {                \
+        return Interpreter::kBreakPoint;                                 \
       }                                                                  \
       if (result == Process::kStackCheckOverflow) {                      \
         Object* exception = program()->raw_stack_overflow();             \
@@ -999,6 +1002,11 @@ bool Engine::IsAtBreakPoint() {
 
 void Interpreter::Run() {
   ASSERT(interruption_ == kReady);
+
+  // TODO(ager): We might want to have a stack guard check here in
+  // order to make sure that all interruptions active at a certain
+  // stack guard check gets handled at the same bcp.
+
   process_->RestoreErrno();
   process_->TakeLookupCache();
 

@@ -729,6 +729,15 @@ class ProcessSpawnForMain extends Command {
   String valuesToString() => "";
 }
 
+class ProcessInterrupt extends Command {
+  const ProcessInterrupt()
+      : super(CommandCode.ProcessInterrupt);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "";
+}
+
 class ProcessRun extends Command {
   const ProcessRun()
       : super(CommandCode.ProcessRun);
@@ -1230,6 +1239,7 @@ enum CommandCode {
   StdoutData,
   StderrData,
 
+  ProcessInterrupt,
   ProcessSpawnForMain,
   ProcessRun,
   ProcessSetBreakpoint,

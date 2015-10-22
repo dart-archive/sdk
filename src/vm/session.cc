@@ -211,6 +211,12 @@ void Session::ProcessMessages() {
         break;
       }
 
+      case Connection::kProcessInterrupt: {
+        if (process_ == NULL) break;
+        process_->DebugInterrupt();
+        break;
+      }
+
       case Connection::kProcessSpawnForMain: {
         // Setup entry point for main thread.
         program()->set_entry(Function::cast(Pop()));
@@ -1223,9 +1229,13 @@ bool Session::BreakPoint(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
     DebugInfo* debug_info = process->debug_info();
-    debug_info->set_is_stepping(false);
+    int breakpoint_id = -1;
+    if (debug_info != NULL) {
+      debug_info->set_is_stepping(false);
+      breakpoint_id = debug_info->current_breakpoint_id();
+    }
     WriteBuffer buffer;
-    buffer.WriteInt(debug_info->current_breakpoint_id());
+    buffer.WriteInt(breakpoint_id);
     PushTopStackFrame(process);
     buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
     // Drop function from session stack.

@@ -23,8 +23,10 @@
 
 namespace fletch {
 
-static Object** kPreemptMarker = reinterpret_cast<Object**>(1);
-static Object** kProfileMarker = reinterpret_cast<Object**>(2);
+static uword kPreemptMarker = 1 << 0;
+static uword kProfileMarker = 1 << 1;
+static uword kDebugInterruptMarker = 1 << 2;
+static uword kMaxStackMarker = (1 << 3) - 1;
 
 ThreadState::ThreadState()
     : thread_id_(-1),
@@ -51,7 +53,7 @@ ThreadState::~ThreadState() {
 
 Process::Process(Program* program)
     : coroutine_(NULL),
-      stack_limit_(NULL),
+      stack_limit_(0),
       program_(program),
       statics_(NULL),
       exception_(program->null_object()),
@@ -145,20 +147,26 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
 }
 
 Process::StackCheckResult Process::HandleStackOverflow(int addition) {
-  Object** current_limit = stack_limit();
+  uword current_limit = stack_limit();
 
-  if (current_limit == kProfileMarker) {
-    stack_limit_ = NULL;
-    UpdateStackLimit();
-    return kStackCheckContinue;
-  }
+  if (current_limit <= kMaxStackMarker) {
+    if ((current_limit & kPreemptMarker) != 0) {
+      ClearStackMarker(kPreemptMarker);
+      UpdateStackLimit();
+      return kStackCheckInterrupt;
+    }
 
-  // When the stack_limit is kPreemptMarker, the process has been explicitly
-  // asked to preempt.
-  if (current_limit == kPreemptMarker) {
-    stack_limit_ = NULL;
-    UpdateStackLimit();
-    return kStackCheckInterrupt;
+    if ((current_limit & kDebugInterruptMarker) != 0) {
+      ClearStackMarker(kDebugInterruptMarker);
+      UpdateStackLimit();
+      return kStackCheckDebugInterrupt;
+    }
+
+    if ((current_limit & kProfileMarker) != 0) {
+      ClearStackMarker(kProfileMarker);
+      UpdateStackLimit();
+      return kStackCheckContinue;
+    }
   }
 
   int size_increase = Utils::RoundUpToPowerOfTwo(addition);
@@ -503,15 +511,34 @@ void Process::TakeLookupCache() {
   primary_lookup_cache_ = cache->primary();
 }
 
+void Process::SetStackMarker(uword marker) {
+  uword stack_limit = stack_limit_;
+  while (true) {
+    uword updated_limit =
+        (stack_limit > kMaxStackMarker) ? marker : stack_limit | marker;
+    if (stack_limit_.compare_exchange_weak(stack_limit, updated_limit)) break;
+  }
+}
+
+void Process::ClearStackMarker(uword marker) {
+  uword stack_limit = stack_limit_;
+  while (true) {
+    ASSERT((stack_limit & marker) != 0);
+    uword updated_limit = stack_limit & (~marker);
+    if (stack_limit_.compare_exchange_weak(stack_limit, updated_limit)) break;
+  }
+}
+
 void Process::Preempt() {
-  stack_limit_ = kPreemptMarker;
+  SetStackMarker(kPreemptMarker);
+}
+
+void Process::DebugInterrupt() {
+  SetStackMarker(kDebugInterruptMarker);
 }
 
 void Process::Profile() {
-  // Don't override preempt marker.
-  Object** stack_limit = stack_limit_;
-  if (stack_limit_ == kPreemptMarker) return;
-  stack_limit_.compare_exchange_strong(stack_limit, kProfileMarker);
+  SetStackMarker(kProfileMarker);
 }
 
 void Process::AttachDebugger() {
@@ -701,9 +728,12 @@ void Process::UpdateStackLimit() {
   // temporary each bytecode can utilize internally.
   Stack* stack = this->stack();
   int frame_size = Bytecode::kGuaranteedFrameSize + 2;
-  Object** current_limit = stack_limit_.load();
-  if (current_limit != kPreemptMarker) {
-    Object** new_stack_limit = stack->Pointer(stack->length() - frame_size);
+  uword current_limit = stack_limit_;
+  // Update the stack limit if the limit is a real limit or if all
+  // interrupts have been handled.
+  if (current_limit > kMaxStackMarker || current_limit == 0) {
+    uword new_stack_limit =
+        reinterpret_cast<uword>(stack->Pointer(stack->length() - frame_size));
     stack_limit_.compare_exchange_strong(current_limit, new_stack_limit);
   }
 }

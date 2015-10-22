@@ -137,7 +137,8 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
 Future<Null> readCommands(
     StreamIterator<Command> commandIterator,
     StreamController stdinController,
-    SessionState state) async {
+    SessionState state,
+    Session session) async {
   while (await commandIterator.moveNext()) {
     Command command = commandIterator.current;
     switch (command.code) {
@@ -151,7 +152,11 @@ Future<Null> readCommands(
 
       case DriverCommand.Signal:
         int signalNumber = command.data;
-        handleSignal(state, signalNumber);
+        if (signalNumber == 3) {
+          await session.interrupt();
+        } else {
+          handleSignal(state, signalNumber);
+        }
         break;
 
       default:
@@ -208,7 +213,7 @@ Future<int> interactiveDebuggerTask(
 
   // Start event loop.
   StreamController stdinController = new StreamController();
-  readCommands(commandIterator, stdinController, state);
+  readCommands(commandIterator, stdinController, state, session);
 
   // Notify controlling isolate (driver_main) that the event loop
   // [readCommands] has been started, and commands like DriverCommand.Signal

@@ -64,6 +64,7 @@ class Connection {
     kStdoutData,
     kStderrData,
 
+    kProcessInterrupt,
     kProcessSpawnForMain,
     kProcessRun,
     kProcessSetBreakpoint,

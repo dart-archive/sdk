@@ -342,7 +342,7 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   Dispatch(0);
 
   // Stack overflow handling (slow case).
-  Label stay_fast, overflow;
+  Label stay_fast, overflow, check_debug_interrupt;
   __ Bind(&check_stack_overflow_0_);
   __ xorl(EAX, EAX);
   __ Bind(&check_stack_overflow_);
@@ -355,8 +355,13 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   ASSERT(Process::kStackCheckContinue == 0);
   __ j(ZERO, &stay_fast);
   __ cmpl(EAX, Immediate(Process::kStackCheckInterrupt));
-  __ j(NOT_EQUAL, &overflow);
+  __ j(NOT_EQUAL, &check_debug_interrupt);
   __ movl(EAX, Immediate(Interpreter::kInterrupt));
+  __ jmp(&undo_padding);
+  __ Bind(&check_debug_interrupt);
+  __ cmpl(EAX, Immediate(Process::kStackCheckDebugInterrupt));
+  __ j(NOT_EQUAL, &overflow);
+  __ movl(EAX, Immediate(Interpreter::kBreakPoint));
   __ jmp(&undo_padding);
 
   __ Bind(&stay_fast);

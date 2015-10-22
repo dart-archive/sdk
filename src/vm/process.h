@@ -83,6 +83,7 @@ class Process {
   enum StackCheckResult {
     kStackCheckContinue,
     kStackCheckInterrupt,
+    kStackCheckDebugInterrupt,
     kStackCheckOverflow
   };
 
@@ -100,7 +101,7 @@ class Process {
   void UpdateCoroutine(Coroutine* coroutine);
 
   Stack* stack() const { return coroutine_->stack(); }
-  Object** stack_limit() const { return stack_limit_.load(); }
+  uword stack_limit() const { return stack_limit_.load(); }
 
   Port* ports() const { return ports_; }
   void set_ports(Port* port) { ports_ = port; }
@@ -169,8 +170,10 @@ class Process {
   // Iterate over, and find pointers in the port queue.
   void IteratePortQueuesPointers(PointerVisitor* visitor);
 
+  void SetStackMarker(uword marker);
+  void ClearStackMarker(uword marker);
   void Preempt();
-
+  void DebugInterrupt();
   void Profile();
 
   // Debugging support.
@@ -280,7 +283,7 @@ class Process {
   // Put these first so they can be accessed from the interpreter without
   // issues around object layout.
   Coroutine* coroutine_;
-  Atomic<Object**> stack_limit_;
+  Atomic<uword> stack_limit_;
   Program* program_;
   Array* statics_;
   Object* exception_;

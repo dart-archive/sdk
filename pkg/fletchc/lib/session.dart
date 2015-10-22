@@ -168,6 +168,10 @@ class FletchVmSession {
     return _done;
   }
 
+  Future interrupt() {
+    return sendCommand(const ProcessInterrupt());
+  }
+
   /// Closes the connection to the fletch-vm. It does not wait until it shuts
   /// down.
   ///
