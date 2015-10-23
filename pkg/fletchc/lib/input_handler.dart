@@ -12,8 +12,10 @@ const String HELP = """
 Commands:
   'help'                                show list of commands
   'r'/'run'                             run main
-  'b <method name> <bytecode index>'    set breakpoint
-  'bf <file> <line> <column>'           set breakpoint
+  'b [method name] [bytecode index]'    set breakpoint
+  'bf <file> [line] [column]'           set breakpoint
+  'bf <file> [line] [pattern]'          set breakpoint on first occurrence of
+                                        the string pattern on the indicated line
   'd <breakpoint id>'                   delete breakpoint
   'lb'                                  list breakpoints
   's'                                   step
