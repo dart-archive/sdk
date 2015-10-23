@@ -206,57 +206,13 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   // Scheduler::StopProgram. We need to fix that before
   // foreign threads can directly interpret dart code.
   // See issue: https://github.com/dart-lang/fletch/issues/73
-  if (Flags::run_on_foreign_thread) {
-    if (!process->ChangeState(Process::kSleeping, Process::kRunning)) {
-      port->Unlock();
-      return false;
-    }
+
+  if (!process->ChangeState(Process::kSleeping, Process::kReady)) {
     port->Unlock();
-
-    foreign_threads_++;
-
-    // TODO(ajohnsen): It's important that the thread state caches are cleared
-    // when any Program changes. I'm not convinced this is the case.
-    ThreadState* thread_state = TakeThreadState();
-
-    // This thread-state moves between threads. Attach thread-state to current
-    // thread.
-    thread_state->AttachToCurrentThread();
-
-    // Use the temp thread state to run the process.
-    Program* program = process->program();
-    ImmutableHeap* immutable_heap = program->immutable_heap();
-    ImmutableHeap::Part* immutable_heap_part = immutable_heap->AcquirePart();
-
-    bool allocation_failure = false;
-    Process* new_process = InterpretProcess(
-        process, immutable_heap_part->heap(), thread_state,
-        &allocation_failure);
-    if (immutable_heap->ReleasePart(immutable_heap_part)) {
-      gc_thread_->TriggerImmutableGC(process->program());
-    }
-    if (new_process != NULL) EnqueueOnAnyThread(new_process);
-
-    ASSERT(thread_state->queue()->is_empty());
-
-    ReturnThreadState(thread_state);
-
-    foreign_threads_--;
-    if (processes_ == 0) {
-      // If the last process was delete by this thread, notify the main thread
-      // that it's safe to terminate.
-      preempt_monitor_->Lock();
-      preempt_monitor_->Notify();
-      preempt_monitor_->Unlock();
-    }
-  } else {
-    if (!process->ChangeState(Process::kSleeping, Process::kReady)) {
-      port->Unlock();
-      return false;
-    }
-    port->Unlock();
-    EnqueueOnAnyThreadSafe(process);
+    return false;
   }
+  port->Unlock();
+  EnqueueOnAnyThreadSafe(process);
 
   return true;
 }
