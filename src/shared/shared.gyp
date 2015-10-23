@@ -33,6 +33,7 @@
         'names.h',
         'native_socket.h',
         'native_socket_linux.cc',
+        'native_socket_lk.cc',
         'native_socket_macos.cc',
         'native_socket_posix.cc',
         'natives.h',

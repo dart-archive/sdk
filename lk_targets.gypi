@@ -72,7 +72,6 @@
       'DebugLKQemuVirt': {
         'inherit_from': [
           'fletch_base', 'fletch_debug', 'fletch_lk_qemu_virt',
-          'fletch_disable_live_coding',
           'fletch_disable_native_processes',
           'fletch_disable_print_interceptors',
         ],
@@ -81,7 +80,6 @@
       'ReleaseLKQemuVirt': {
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_lk_qemu_virt',
-          'fletch_disable_live_coding',
           'fletch_disable_native_processes',
           'fletch_disable_print_interceptors',
         ],

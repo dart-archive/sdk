@@ -427,6 +427,7 @@
               '<(DEPTH)/<(LK_PATH)/include/',
               '<(DEPTH)/<(LK_PATH)/arch/arm/include/',
               '<(DEPTH)/<(LK_PATH)/lib/libm/include/',
+              '<(DEPTH)/<(LK_PATH)/lib/minip/include/',
               '<(DEPTH)/<(LK_PATH)/arch/arm/arm/include',
               '<(DEPTH)/<(LK_PATH)/lib/heap/include/',
             ],

@@ -21,6 +21,9 @@
 namespace fletch {
 
 struct Socket::SocketData {
+  SocketData() : fd(-1) { }
+  explicit SocketData(int fd) : fd(fd) { }
+
   int fd;
 };
 
@@ -35,8 +38,12 @@ Socket::Socket() : data_(new SocketData()) {
   if (status == -1) FATAL("Failed setting socket options.");
 }
 
-Socket::Socket(int fd) : data_(new SocketData()) {
-  data_->fd = fd;
+Socket* Socket::FromFd(int fd) {
+  Socket* socket = new Socket(new SocketData(fd));
+  return socket;
+}
+
+Socket::Socket(SocketData* data) : data_(data) {
   ASSERT(data_->fd >= 0);
   int status = fcntl(data_->fd, F_SETFD, FD_CLOEXEC);
   if (status == -1) FATAL("Failed making socket close on exec.");
@@ -105,7 +112,7 @@ Socket* Socket::Accept() {
   while (true) {
     int socket = TEMP_FAILURE_RETRY(accept(data_->fd, &clientaddr, &addrlen));
     if (socket >= 0) {
-      Socket* child = new Socket(socket);
+      Socket* child = new Socket(new SocketData(socket));
       return child;
     } else {
       int error = errno;

@@ -65,13 +65,17 @@ Session::Session(Connection* connection)
       program_update_error_(NULL),
       main_thread_monitor_(Platform::CreateMonitor()),
       main_thread_resume_kind_(kUnknown) {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   ConnectionPrintInterceptor* interceptor =
       new ConnectionPrintInterceptor(connection_);
   Print::RegisterPrintInterceptor(interceptor);
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
 Session::~Session() {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   Print::UnregisterPrintInterceptors();
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 
   delete connection_;
   delete program_;

@@ -744,7 +744,7 @@ Socket* Connect() {
   if (fd < 0) {
     Die("%s: socket failed: %s", program_name, strerror(errno));
   }
-  Socket* socket = new Socket(fd);
+  Socket* socket = Socket::FromFd(fd);
 
   int connect_result = TEMP_FAILURE_RETRY(connect(
     fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)));

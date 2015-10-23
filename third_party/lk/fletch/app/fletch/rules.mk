@@ -4,7 +4,9 @@ FLETCH_BASE := $(BUILDROOT)/../../../
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_DEPS += lib/libm
+MODULE_DEPS += \
+	lib/libm \
+	lib/minip
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/fletch_runner.c \
