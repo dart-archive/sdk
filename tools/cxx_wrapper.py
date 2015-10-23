@@ -9,6 +9,17 @@ import sys
 import utils
 import subprocess
 
+def is_executable(path):
+  return os.path.isfile(path) and os.access(path, os.X_OK)
+
+def which(program):
+  for path in os.environ["PATH"].split(os.pathsep):
+    path = path.strip('"')
+    program_path = os.path.join(path, program)
+    if is_executable(program_path):
+      return program_path
+
+  return None
 
 def invoke_clang(args):
   fletch_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,8 +53,12 @@ def invoke_gcc_mbed(args):
   subprocess.check_call([path] + args)
 
 def invoke_gcc_lk(args):
-  args.insert(0, "arm-none-eabi-g++")
-  os.execv("/usr/bin/arm-none-eabi-g++", args)
+  if which("arm-eabi-g++") is not None:
+    args.insert(0, "arm-eabi-g++")
+    os.execvp("arm-eabi-g++", args)
+  else:
+    args.insert(0, "arm-none-eabi-g++")
+    os.execvp("arm-none-eabi-g++", args)
 
 def main():
   args = sys.argv[1:]
