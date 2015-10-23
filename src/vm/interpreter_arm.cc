@@ -170,6 +170,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoPop();
   virtual void DoReturn();
   virtual void DoReturnWide();
+  virtual void DoReturnNull();
 
   virtual void DoBranchWide();
   virtual void DoBranchIfTrueWide();
@@ -235,7 +236,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Pop(Register reg);
   void Drop(int n);
 
-  void Return(bool wide);
+  void Return(bool wide, bool is_return_null);
 
   void Allocate(bool unfolded, bool immutable);
 
@@ -870,11 +871,15 @@ void InterpreterGeneratorARM::DoPop() {
 }
 
 void InterpreterGeneratorARM::DoReturn() {
-  Return(false);
+  Return(false, false);
 }
 
 void InterpreterGeneratorARM::DoReturnWide() {
-  Return(true);
+  Return(true, false);
+}
+
+void InterpreterGeneratorARM::DoReturnNull() {
+  Return(false, true);
 }
 
 void InterpreterGeneratorARM::DoBranchWide() {
@@ -1347,9 +1352,13 @@ void InterpreterGeneratorARM::Pop(Register reg) {
   Drop(1);
 }
 
-void InterpreterGeneratorARM::Return(bool wide) {
-  // Get result from stack.
-  LoadLocal(R0, 0);
+void InterpreterGeneratorARM::Return(bool wide, bool is_return_null) {
+  // Materialize the result in register R0.
+  if (is_return_null) {
+    __ mov(R0, R8);
+  } else {
+    LoadLocal(R0, 0);
+  }
 
   // Fetch the number of locals and arguments from the bytecodes.
   // Unfortunately, we have to negate the counts so we can use them

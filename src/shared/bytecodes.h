@@ -85,6 +85,7 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(Pop,                   false,   "",   1,       -1, "pop")                  \
   V(Return,                true,    "BB", 3,       -1, "return %d %d")         \
   V(ReturnWide,            true,    "IB", 6,       -1, "return %d %d")         \
+  V(ReturnNull,            true,    "BB", 3,        0, "return null %d %d")    \
                                                                                \
   V(BranchWide,            true,    "I",  5,        0, "branch +%d")           \
   V(BranchIfTrueWide,      true,    "I",  5,       -1, "branch if true +%d")   \

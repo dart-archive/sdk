@@ -167,6 +167,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoPop();
   virtual void DoReturn();
   virtual void DoReturnWide();
+  virtual void DoReturnNull();
 
   virtual void DoBranchWide();
   virtual void DoBranchIfTrueWide();
@@ -232,7 +233,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   void Pop(Register reg);
   void Drop(int n);
 
-  void Return(bool wide);
+  void Return(bool wide, bool is_return_null);
 
   void Allocate(bool unfolded, bool immutable);
 
@@ -861,11 +862,15 @@ void InterpreterGeneratorX86::DoPop() {
 }
 
 void InterpreterGeneratorX86::DoReturn() {
-  Return(false);
+  Return(false, false);
 }
 
 void InterpreterGeneratorX86::DoReturnWide() {
-  Return(true);
+  Return(true, false);
+}
+
+void InterpreterGeneratorX86::DoReturnNull() {
+  Return(false, true);
 }
 
 void InterpreterGeneratorX86::DoBranchWide() {
@@ -1401,9 +1406,14 @@ void InterpreterGeneratorX86::StoreLocal(Register reg, int index) {
   __ movl(Address(EDI, -index * kWordSize), reg);
 }
 
-void InterpreterGeneratorX86::Return(bool wide) {
-  // Get the result from the stack.
-  LoadLocal(EAX, 0);
+void InterpreterGeneratorX86::Return(bool wide, bool is_return_null) {
+  // Materialize the result in register EAX.
+  if (is_return_null) {
+    __ movl(ECX, Address(EBP, Process::kProgramOffset));
+    __ movl(EAX, Address(ECX, Program::kNullObjectOffset));
+  } else {
+    LoadLocal(EAX, 0);
+  }
 
   // Fetch the number of locals and arguments from the bytecodes.
   // Unfortunately, we have to negate the counts so we can use them

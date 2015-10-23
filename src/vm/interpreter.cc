@@ -618,6 +618,15 @@ Interpreter::InterruptKind Engine::Interpret(
     Push(result);
   OPCODE_END();
 
+  OPCODE_BEGIN(ReturnNull);
+    int locals = ReadByte(1);
+    int arguments = ReadByte(2);
+    Drop(locals);
+    PopReturnAddress();
+    Drop(arguments);
+    Push(program()->null_object());
+  OPCODE_END();
+
   OPCODE_BEGIN(BranchWide);
     int delta = ReadInt32(1);
     Advance(delta);

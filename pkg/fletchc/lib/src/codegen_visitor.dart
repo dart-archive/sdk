@@ -62,6 +62,9 @@ import 'fletch_registry.dart' show
     ClosureKind,
     FletchRegistry;
 
+import 'bytecode_assembler.dart' show
+    RETURN_NARROW_MAX_STACK_SIZE;
+
 enum VisitState {
   Value,
   Effect,
@@ -234,6 +237,12 @@ abstract class CodegenVisitor
     return context.inspectConstant(node, elements, isConst: isConst);
   }
 
+  bool isConstNull(Node node) {
+    ConstantExpression expression = inspectConstant(node, isConst: false);
+    if (expression == null) return false;
+    return context.getConstantValue(expression).isNull;
+  }
+
   int allocateConstantFromNode(Node node, {TreeElements elements}) {
     ConstantExpression expression = compileConstant(
         node,
@@ -366,6 +375,10 @@ abstract class CodegenVisitor
 
   void generateReturn(Node node) {
     assembler.ret();
+  }
+
+  void generateReturnNull(Node node) {
+    assembler.returnNull();
   }
 
   void generateSwitchCaseMatch(CaseMatch caseMatch, BytecodeLabel ifTrue) {
@@ -619,12 +632,6 @@ abstract class CodegenVisitor
       Node left,
       Node right,
       BinaryOperator operator) {
-    bool isConstNull(Node node) {
-      ConstantExpression expression = inspectConstant(node, isConst: false);
-      if (expression == null) return false;
-      return context.getConstantValue(expression).isNull;
-    }
-
     visitForValue(left);
     visitForValue(right);
     // For '==', if either side is a null literal, use identicalNonNumeric.
@@ -2477,20 +2484,34 @@ abstract class CodegenVisitor
   }
 
   // Called before 'return', as an option to replace the already evaluated
-  // return value.
-  // One example is setters.
+  // return value. One example is setters.
+  bool get hasAssignmentSemantics => false;
   void optionalReplaceResultValue() { }
 
   void visitReturn(Return node) {
     Expression expression = node.expression;
-    if (expression == null) {
-      assembler.loadLiteralNull();
-    } else {
+    bool returnNull = true;
+    if (expression != null && !isConstNull(expression)) {
       visitForValue(expression);
+      returnNull = false;
     }
-    callFinallyBlocks(0, true);
-    optionalReplaceResultValue();
-    generateReturn(node);
+
+    // Avoid using the return-null bytecode if the stack size forces
+    // us to use a return-wide bytecode.
+    bool isWide = assembler.stackSize > RETURN_NARROW_MAX_STACK_SIZE;
+    if (returnNull && (isWide || hasAssignmentSemantics)) {
+      assembler.loadLiteralNull();
+      returnNull = false;
+    }
+
+    if (returnNull) {
+      callFinallyBlocks(0, false);
+      generateReturnNull(node);
+    } else {
+      callFinallyBlocks(0, true);
+      optionalReplaceResultValue();
+      generateReturn(node);
+    }
   }
 
   // Find the JumpInfo matching the target of [node].

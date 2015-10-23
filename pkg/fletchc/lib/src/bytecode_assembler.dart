@@ -7,6 +7,7 @@ library fletchc.bytecode_assembler;
 import '../bytecodes.dart';
 
 const int IMPLICIT_STACK_OVERFLOW_LIMIT = 32;
+const int RETURN_NARROW_MAX_STACK_SIZE = 255;
 
 class BytecodeLabel {
   int position = -1;
@@ -321,11 +322,20 @@ class BytecodeAssembler {
     hasBindAfterTerminator = false;
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
     assert(functionArity <= 255);
-    if (stackSize >= 256) {
+    if (stackSize > RETURN_NARROW_MAX_STACK_SIZE) {
       internalAdd(new ReturnWide(stackSize, functionArity));
     } else {
       internalAdd(new Return(stackSize, functionArity));
     }
+  }
+
+  void returnNull() {
+    hasBindAfterTerminator = false;
+    if (stackSize < 0 || stackSize > RETURN_NARROW_MAX_STACK_SIZE) {
+      throw "Bad stackSize for return-null bytecode: $stackSize";
+    }
+    assert(functionArity <= 255);
+    internalAdd(new ReturnNull(stackSize, functionArity));
   }
 
   void identical() {

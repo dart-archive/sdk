@@ -95,6 +95,7 @@ enum Opcode {
   Pop,
   Return,
   ReturnWide,
+  ReturnNull,
   BranchWide,
   BranchIfTrueWide,
   BranchIfFalseWide,
@@ -3698,6 +3699,52 @@ class ReturnWide extends Bytecode {
   int get hashCode {
     int value = super.hashCode;
     value += uint32Argument0;
+    value += uint8Argument1;
+    return value;
+  }
+}
+
+class ReturnNull extends Bytecode {
+  final int uint8Argument0;
+  final int uint8Argument1;
+  const ReturnNull(this.uint8Argument0, this.uint8Argument1)
+      : super();
+
+  Opcode get opcode => Opcode.ReturnNull;
+
+  String get name => 'ReturnNull';
+
+  bool get isBranching => true;
+
+  String get format => 'BB';
+
+  int get size => 3;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'return null %d %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint8(uint8Argument0)
+        ..addUint8(uint8Argument1)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'return null ${uint8Argument0} ${uint8Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    ReturnNull rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    if (uint8Argument1 != rhs.uint8Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
     value += uint8Argument1;
     return value;
   }

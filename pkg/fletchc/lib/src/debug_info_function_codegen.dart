@@ -104,6 +104,11 @@ class DebugInfoFunctionCodegen extends FunctionCodegen with DebugRegistry {
     super.generateReturn(node);
   }
 
+  void generateReturnNull(Node node) {
+    recordDebugInfo(node);
+    super.generateReturnNull(node);
+  }
+
   void generateImplicitReturn(FunctionExpression node) {
     // If the method is empty, generate debug information for the
     // implicit 'return null' that covers the entire method. That was,
