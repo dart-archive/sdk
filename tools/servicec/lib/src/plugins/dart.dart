@@ -93,7 +93,7 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     writeln('import "dart:fletch";');
     writeln('import "dart:fletch.ffi";');
-    writeln('import "dart:service" as service;');
+    writeln('import "dart:fletch.service" as service;');
     if (node.structs.isNotEmpty) {
       writeln('import "struct.dart";');
     }

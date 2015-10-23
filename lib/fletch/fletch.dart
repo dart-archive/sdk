@@ -4,7 +4,7 @@
 
 library dart.fletch;
 
-import 'dart:_fletch_system' as fletch;
+import 'dart:fletch._system' as fletch;
 
 /// Fibers are lightweight co-operative multitask units of execution. They
 /// are scheduled on top of OS-level threads, but they are cheap to create

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.system;
+part of dart.fletch._system;
 
 // TODO(ajohnsen): Temp hack to expose _GrowableList/_FixedList to core.
 List newList(int length) {

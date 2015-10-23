@@ -191,7 +191,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   LibraryElement fletchSystemLibrary;
   LibraryElement fletchFFILibrary;
-  LibraryElement fletchIOSystemLibrary;
   LibraryElement collectionLibrary;
   LibraryElement mathLibrary;
   LibraryElement asyncLibrary;
@@ -1123,7 +1122,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     if (element is FunctionElement) {
       for (var metadata in element.metadata) {
         // TODO(ahe): This code should ensure that @native resolves to precisely
-        // the native variable in fletch:system.
+        // the native variable in dart:fletch._system.
         if (metadata.constant == null) continue;
         ConstantValue value = context.getConstantValue(metadata.constant);
         if (!value.isString) continue;
@@ -1352,12 +1351,10 @@ class FletchBackend extends Backend with ResolutionCallbacks
   bool get supportsReflection => false;
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
-    if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
+    if (Uri.parse('dart:fletch._system') == library.canonicalUri) {
       fletchSystemLibrary = library;
     } else if (Uri.parse('dart:fletch.ffi') == library.canonicalUri) {
       fletchFFILibrary = library;
-    } else if (Uri.parse('dart:system') == library.canonicalUri) {
-      fletchIOSystemLibrary = library;
     } else if (Uri.parse('dart:collection') == library.canonicalUri) {
       collectionLibrary = library;
     } else if (Uri.parse('dart:math') == library.canonicalUri) {

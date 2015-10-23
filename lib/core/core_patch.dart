@@ -4,7 +4,7 @@
 
 library dart.core_patch;
 
-import 'dart:_fletch_system' as fletch;
+import 'dart:fletch._system' as fletch;
 
 part 'bigint.dart';
 part 'case.dart';

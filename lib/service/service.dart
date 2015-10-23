@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// The dart:service library is a low-level communication library that
+// The dart:fletch.service library is a low-level communication library that
 // allows dart code to register services that are accessible through
 // the C API.
-library dart.service;
+library dart.fletch.service;
 
-import 'dart:_fletch_system' as fletch;
+import 'dart:fletch._system' as fletch;
 import 'dart:fletch';
 
 // TODO(ajohnsen): Rename file.

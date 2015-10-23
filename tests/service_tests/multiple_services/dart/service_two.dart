@@ -8,7 +8,7 @@ library service_two;
 
 import "dart:fletch";
 import "dart:fletch.ffi";
-import "dart:service" as service;
+import "dart:fletch.service" as service;
 
 final Channel _channel = new Channel();
 final Port _port = new Port(_channel);

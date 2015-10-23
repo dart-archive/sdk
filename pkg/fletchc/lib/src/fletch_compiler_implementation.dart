@@ -75,7 +75,7 @@ const FLETCH_PATCHES = const <String, String>{
 const FLETCH_PLATFORM = 3;
 
 const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
-  "_fletch_system": const LibraryInfo(
+  "fletch._system": const LibraryInfo(
       "system/system.dart",
       categories: "",
       documented: false,
@@ -99,13 +99,7 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       documented: false,
       platforms: FLETCH_PLATFORM),
 
-  "system": const LibraryInfo(
-      "io/system.dart",
-      categories: "",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "service": const LibraryInfo(
+  "fletch.service": const LibraryInfo(
       "service/service.dart",
       categories: "Client,Server,Embedded",
       documented: false,

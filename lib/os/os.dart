@@ -4,7 +4,7 @@
 
 library dart.fletch.os;
 
-import 'dart:_fletch_system' as fletch;
+import 'dart:fletch._system' as fletch;
 import 'dart:fletch';
 import 'dart:fletch.ffi';
 
