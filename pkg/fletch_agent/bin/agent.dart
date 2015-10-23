@@ -208,8 +208,8 @@ class CommandHandler {
       case RequestHeader.LIST_VMS:
         _listVms();
         break;
-      case RequestHeader.UPGRADE_VM:
-        _upgradeVm();
+      case RequestHeader.UPGRADE_AGENT:
+        _upgradeAgent();
         break;
       case RequestHeader.FLETCH_VERSION:
         _fletchVersion();
@@ -274,7 +274,7 @@ class CommandHandler {
     // have it write the port to the socket. This allows the agent to just
     // wait on the socket and wake up when it is ready.
     int previousPort = -1;
-    var lastException;
+
     for (int retries = 500; retries >= 0; --retries) {
       int port = _tryReadPort(portPath, retries == 0);
       // Check if we read the same port value twice in a row.
@@ -396,27 +396,41 @@ class CommandHandler {
         new ListVmsReply(_requestHeader.id, ReplyHeader.UNKNOWN_COMMAND));
   }
 
-  void _upgradeVm() {
+  void _upgradeAgent() {
+    const String PACKAGE_FILE_NAME = '/tmp/fletch-agent.deb';
     int result;
-    // TODO(wibling): implement this method.
-    var binary = _socket.read(_requestHeader.payloadLength);
+    ByteBuffer binary = _socket.read(_requestHeader.payloadLength);
     if (binary == null) {
-      _context.logger.warn(
-          'Could not read VM binary of length ${_requestHeader.payloadLength}');
+      _context.logger.warn('Could not read fletch-agent package binary'
+          ' of length ${_requestHeader.payloadLength} bytes');
       result = ReplyHeader.INVALID_PAYLOAD;
     } else {
-      // TODO(wibling); stream the bytes from the socket to file and swap with
-      // current vm binary. For now we just return UNKNOWN_COMMAND.
-      _context.logger.warn('Read VM binary of ${binary.lengthInBytes} bytes.');
-      result = ReplyHeader.UNKNOWN_COMMAND;
+      _context.logger.info('Read fletch-agent package binary'
+          ' of length ${binary.lengthInBytes} bytes.');
+      File file = new File.open(PACKAGE_FILE_NAME, mode: File.WRITE);
+      try {
+        file.write(binary);
+      } catch (e) {
+        _context.logger.warn('UpgradeAgent failed: $e');
+        _sendReply(new UpgradeAgentReply(_requestHeader.id,
+                ReplyHeader.UPGRADE_FAILED));
+      } finally {
+        file.close();
+      }
+      _context.logger.info('Package file written successfully.');
+      int pid = NativeProcess.startDetached('/usr/bin/dpkg',
+          ['--install', PACKAGE_FILE_NAME]);
+      _context.logger.info('started package update (PID $pid)');
+      result = ReplyHeader.SUCCESS;
     }
-    _sendReply(new UpgradeVmReply(_requestHeader.id, result));
+    _context.logger.info('sending reply');
+    _sendReply(new UpgradeAgentReply(_requestHeader.id, result));
   }
 
   void _fletchVersion() {
     // TODO(wibling): implement this method, for now version is hardcoded to 1.
-    int version = 1;
-    _context.logger.warn('Returning fletch version $version');
+    int version = 2;
+    _context.logger.info('Returning fletch version $version');
     _sendReply(new FletchVersionReply(
         _requestHeader.id, ReplyHeader.SUCCESS, fletchVersion: version));
   }

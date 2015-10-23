@@ -111,7 +111,7 @@ class RequestHeader {
   static const int START_VM = 0;
   static const int STOP_VM = 1;
   static const int LIST_VMS = 2;
-  static const int UPGRADE_VM = 3;
+  static const int UPGRADE_AGENT = 3;
   static const int FLETCH_VERSION = 4;
   static const int SIGNAL_VM = 5;
 
@@ -254,25 +254,25 @@ class ListVmsRequest extends RequestHeader {
   // A ListVmsRequest has no payload so just use parent's toBuffer method.
 }
 
-class UpgradeVmRequest extends RequestHeader {
-  final List<int> vmBinary;
+class UpgradeAgentRequest extends RequestHeader {
+  final List<int> binary;
 
-  UpgradeVmRequest(List<int> vmBinary)
-      : super(RequestHeader.UPGRADE_VM, payloadLength: vmBinary.length),
-        vmBinary = vmBinary;
+  UpgradeAgentRequest(List<int> binary)
+      : super(RequestHeader.UPGRADE_AGENT, payloadLength: binary.length),
+        binary = binary;
 
-  UpgradeVmRequest.withHeader(RequestHeader header, List<int> vmBinary)
+  UpgradeAgentRequest.withHeader(RequestHeader header, List<int> binary)
       : super(
-            RequestHeader.UPGRADE_VM,
+            RequestHeader.UPGRADE_AGENT,
             version: header.version,
             id: header.id,
             reserved: header.reserved,
-            payloadLength: vmBinary.length),
-        vmBinary = vmBinary;
+            payloadLength: binary.length),
+        binary = binary;
 
-  factory UpgradeVmRequest.fromBuffer(ByteBuffer buffer) {
+  factory UpgradeAgentRequest.fromBuffer(ByteBuffer buffer) {
     var header = new RequestHeader.fromBuffer(buffer);
-    if (header.command != RequestHeader.UPGRADE_VM) {
+    if (header.command != RequestHeader.UPGRADE_AGENT) {
       throw new MessageDecodeException(
           'Invalid UpgradeVmRequest: ${buffer.asUint8List()}');
     }
@@ -280,17 +280,17 @@ class UpgradeVmRequest extends RequestHeader {
     // The below has issues since the list view is offset and hence using
     // the underlying buffer requires the user to know the buffer is not the
     // same length as the list.
-    var vmBinary = buffer.asUint8List(RequestHeader.HEADER_SIZE);
-    return new UpgradeVmRequest.withHeader(header, vmBinary);
+    var binary = buffer.asUint8List(RequestHeader.HEADER_SIZE);
+    return new UpgradeAgentRequest.withHeader(header, binary);
   }
 
   ByteBuffer toBuffer() {
     var bytes =
-        new Uint8List(RequestHeader.HEADER_SIZE + vmBinary.length);
+        new Uint8List(RequestHeader.HEADER_SIZE + binary.length);
     _writeHeader(bytes.buffer);
     // TODO(wibling): This does a copy of the vm binary. Try to avoid that.
-    for (int i = 0; i < vmBinary.length; ++i) {
-      bytes[RequestHeader.HEADER_SIZE + i] = vmBinary[i];
+    for (int i = 0; i < binary.length; ++i) {
+      bytes[RequestHeader.HEADER_SIZE + i] = binary[i];
     }
     return bytes.buffer;
   }
@@ -367,6 +367,7 @@ class ReplyHeader {
   static const int UNSUPPORTED_VERSION = 3;
   static const int START_VM_FAILED = 4;
   static const int UNKNOWN_VM_ID = 5;
+  static const int UPGRADE_FAILED = 6;
 
   // Wire size (bytes) of the ReplyHeader.
   static const int HEADER_SIZE = 8;
@@ -494,20 +495,20 @@ class ListVmsReply extends ReplyHeader {
   }
 }
 
-class UpgradeVmReply extends ReplyHeader {
+class UpgradeAgentReply extends ReplyHeader {
 
-  UpgradeVmReply(int id, int result) : super(id, result);
+  UpgradeAgentReply(int id, int result) : super(id, result);
 
-  factory UpgradeVmReply.fromBuffer(ByteBuffer buffer) {
+  factory UpgradeAgentReply.fromBuffer(ByteBuffer buffer) {
     ReplyHeader header = new ReplyHeader.fromBuffer(buffer);
     if (header.payloadLength != 0) {
       throw new MessageDecodeException(
-          "Invalid payload length in UpgradeVmReply: ${buffer.asUint8List()}");
+          "Invalid payload length in UpgradeAgentReply: ${buffer.asUint8List()}");
     }
-    return new UpgradeVmReply(header.id, header.result);
+    return new UpgradeAgentReply(header.id, header.result);
   }
 
-  // The UPGRADE_VM reply has no payload, so leverage parent's toBuffer method.
+  // The UPGRADE_AGENT reply has no payload, so leverage parent's toBuffer method.
 }
 
 class FletchVersionReply extends ReplyHeader {

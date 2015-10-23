@@ -64,11 +64,18 @@ class AgentConnection {
     throw new AgentException('Not implemented');
   }
 
-  Future UpgradeVm(List<int> vmBinary) async {
-    throw new AgentException('Not implemented');
+  Future upgradeAgent(String version, List<int> binary) async {
+    // TODO(karlklose): also send the version string.
+    var request = new UpgradeAgentRequest(binary);
+    var replyBuffer = await sendRequest(request);
+    var reply = new UpgradeAgentReply.fromBuffer(replyBuffer);
+    if (reply.result != ReplyHeader.SUCCESS) {
+      throw new AgentException('Failed to upgrade fletch-agent package '
+          'with unexpected error: ${reply.result}');
+    }
   }
 
-  Future<int> fletchVesion() async {
+  Future<int> fletchVersion() async {
     var request = new FletchVersionRequest();
     var replyBuffer = await sendRequest(request);
     var reply = new FletchVersionReply.fromBuffer(replyBuffer);
