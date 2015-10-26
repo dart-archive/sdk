@@ -273,7 +273,7 @@ class GSUtil(object):
   def execute(self, gsutil_args):
     self._layzCalculateGSUtilPath()
 
-    env = _botEnv(dict(os.environ))
+    env = self._botEnv()
     if GSUtil.GSUTIL_IS_SHELL_SCRIPT:
       gsutil_command = [GSUtil.GSUTIL_PATH]
     else:
