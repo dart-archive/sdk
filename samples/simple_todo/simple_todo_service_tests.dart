@@ -24,6 +24,7 @@ class TodoServiceTest extends ServiceTest {
   String get executablePath => '$outputDirectory/simple_todo_sample';
 
   Future<Null> prepare() async {
+    // TODO(stanm): Output generated service code outside the source directory.
     rules.add(new CompileServiceRule(idlPath, thisDirectory));
     rules.add(new CcRule(
         executable: executablePath,
