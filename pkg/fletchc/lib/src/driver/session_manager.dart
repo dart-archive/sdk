@@ -91,7 +91,7 @@ UserSession endSession(String name) {
 void endAllSessions() {
   internalSessions.forEach((String name, UserSession session) {
     print("Ending session: $name");
-    session.worker.endSession();
+    session.worker.endWorkerSession();
   });
   internalSessions.clear();
 }

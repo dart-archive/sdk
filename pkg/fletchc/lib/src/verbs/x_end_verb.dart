@@ -15,14 +15,12 @@ import 'documentation.dart' show
 const Action endAction =
     const Action(end, endDocumentation, requiresTargetSession: true);
 
-Future<int> end(AnalyzedSentence sentence, VerbContext context) async {
+Future<int> end(AnalyzedSentence sentence, VerbContext context) {
   String name = sentence.targetName;
   UserSession session = endSession(name);
   context = context.copyWithSession(session);
-  await session.worker.performTask(
+  return session.worker.performTask(
       new EndSessionTask(name), context.client, endSession: true);
-
-  return null;
 }
 
 class EndSessionTask extends SharedTask {

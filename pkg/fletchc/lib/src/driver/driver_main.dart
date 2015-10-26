@@ -318,13 +318,11 @@ class DriverVerbContext extends VerbContext {
       throwFatalError(DiagnosticKind.busySession, sessionName: session.name);
     }
     session.hasActiveWorkerTask = true;
-    int exitCode = await session.worker.performTask(
+    return session.worker.performTask(
         combineTasks(initializer, task), client, userSession: session)
         .whenComplete(() {
           session.hasActiveWorkerTask = false;
         });
-    // We should return [exitCode]. See TODO in [ClientController.exit].
-    return null;
   }
 }
 
@@ -421,7 +419,7 @@ class ClientController {
     }
   }
 
-  void endSession() {
+  void endClientSession() {
     socket.flush().then((_) {
       socket.close();
     });
@@ -437,24 +435,17 @@ class ClientController {
 
   void exit(int exitCode) {
     if (exitCode == null) {
-      // If [exitCode] is null, we assume [IsolateController.performTask] has
-      // been called and it will eventually send an exit code and call
-      // [endSession].
-      //
-      // TODO(ahe): Clean this up, which requires:
-      //
-      //   * [DriverVerbContext.performTaskInWorker] shouldn't return null
-      //
-      //   * detect if an exit code has been transmitted already (we can detect
-      //     that in sendCommand above)
-      //
-      //   * ensure that we only call [endSession] once (it's also called by
-      //     [IsolateController.performTask])
-      return;
+      exitCode = COMPILER_EXITCODE_CRASH;
+      try {
+        throwInternalError("Internal error: exitCode is null");
+      } on InputError catch (error, stackTrace) {
+        // We can't afford to throw an error here as it will take down the
+        // entire process.
+        exitCode = reportErrorToClient(error, stackTrace);
+      }
     }
-
     commandSender.sendExitCode(exitCode);
-    endSession();
+    endClientSession();
   }
 
   AnalyzedSentence parseArguments(List<String> arguments) {
@@ -522,7 +513,7 @@ class IsolateController {
     if (!await workerCommands.moveNext()) {
       // The worker must have been killed, or died in some other way.
       // TODO(ahe): Add this assertion: assert(isolate.wasKilled);
-      endSession();
+      endWorkerSession();
       return;
     }
     Command command = workerCommands.current;
@@ -535,7 +526,7 @@ class IsolateController {
   /// vice versa.  The returned future normally completes when the worker
   /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
   /// DriverCommand.Signal arriving through client.commands.
-  Future<Null> attachClient(
+  Future<int> attachClient(
       ClientController client,
       UserSession userSession) async {
     eventLoopStarted = false;
@@ -574,6 +565,7 @@ class IsolateController {
     // TODO(ahe): Add onDone event handler to detach the client.
     client.commands.listen(handleCommand);
 
+    int exitCode = COMPILER_EXITCODE_CRASH;
     while (await workerCommands.moveNext()) {
       Command command = workerCommands.current;
       switch (command.code) {
@@ -585,17 +577,22 @@ class IsolateController {
           eventLoopStarted = true;
           break;
 
+        case DriverCommand.ExitCode:
+          exitCode = command.data;
+          break;
+
         default:
           client.sendCommand(command);
           break;
       }
     }
     errorSubscription.pause();
+    return exitCode;
   }
 
-  void endSession() {
+  void endWorkerSession() {
     workerReceivePort.close();
-    isolate.endSession();
+    isolate.endIsolateSession();
   }
 
   Future<Null> detachClient() async {
@@ -614,7 +611,7 @@ class IsolateController {
     await beginSession();
   }
 
-  Future<Null> performTask(
+  Future<int> performTask(
       SharedTask task,
       ClientController client,
       {
@@ -623,32 +620,32 @@ class IsolateController {
        bool endSession: false}) async {
     ClientLogger log = client.log;
 
+    client.done.catchError((error, StackTrace stackTrace) {
+      log.error(error, stackTrace);
+    }).then((_) {
+      log.done();
+    });
+
     client.enqueCommandToWorker(new Command(DriverCommand.PerformTask, task));
 
     // Forward commands between the C++ client [client], and the worker isolate
     // `this`.  Also, Intercept the signal command and potentially kill the
     // isolate (the isolate needs to tell if it is interuptible or needs to be
     // killed, an example of the latter is, if compiler is running).
-    await attachClient(client, userSession);
+    int exitCode = await attachClient(client, userSession);
     // The verb (which was performed in the worker) is done.
-    log.note("After attachClient.");
+    log.note("After attachClient (exitCode = $exitCode)");
 
     if (endSession) {
       // Return the isolate to the pool *before* shutting down the client. This
       // ensures that the next client will be able to reuse the isolate instead
       // of spawning a new.
-      this.endSession();
+      this.endWorkerSession();
     } else {
       await detachClient();
     }
-    client.endSession();
 
-    try {
-      await client.done;
-    } catch (error, stackTrace) {
-      log.error(error, stackTrace);
-    }
-    log.done();
+    return exitCode;
   }
 }
 
@@ -671,7 +668,7 @@ class ManagedIsolate {
     return receivePort;
   }
 
-  void endSession() {
+  void endIsolateSession() {
     if (!wasKilled) {
       pool.idleIsolates.addLast(this);
     }
