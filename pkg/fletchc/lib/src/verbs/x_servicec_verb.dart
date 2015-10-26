@@ -39,13 +39,9 @@ const Action servicecAction = const Action(
     requiredTarget: TargetKind.FILE,
     allowsTrailing: true);
 
-Future<int> servicecAct(AnalyzedSentence sentence, VerbContext context) async {
-  // This is asynchronous, but we don't await the result so we can respond to
-  // other requests.
-  context.performTaskInWorker(
+Future<int> servicecAct(AnalyzedSentence sentence, VerbContext context) {
+  return context.performTaskInWorker(
       new CompileTask(sentence.targetUri, sentence.base, sentence.trailing));
-
-  return null;
 }
 
 class CompileTask extends SharedTask {

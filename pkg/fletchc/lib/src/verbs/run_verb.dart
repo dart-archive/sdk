@@ -19,12 +19,8 @@ const Action runAction =
         run, runDocumentation, requiresSession: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
 
-Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
-  // This is asynchronous, but we don't await the result so we can respond to
-  // other requests.
-  context.performTaskInWorker(new RunTask(sentence.targetUri));
-
-  return null;
+Future<int> run(AnalyzedSentence sentence, VerbContext context) {
+  return context.performTaskInWorker(new RunTask(sentence.targetUri));
 }
 
 class RunTask extends SharedTask {

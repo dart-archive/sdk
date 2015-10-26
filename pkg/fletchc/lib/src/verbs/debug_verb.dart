@@ -61,8 +61,7 @@ const int sigQuit = 3;
 
 Future debug(AnalyzedSentence sentence, VerbContext context) async {
   if (sentence.target == null) {
-    context.performTaskInWorker(new InteractiveDebuggerTask());
-    return null;
+    return context.performTaskInWorker(new InteractiveDebuggerTask());
   }
 
   DebuggerTask task;
@@ -132,8 +131,7 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
       throwInternalError("Unimplemented ${sentence.target}");
   }
 
-  context.performTaskInWorker(task);
-  return null;
+  return context.performTaskInWorker(task);
 }
 
 Future<Null> readCommands(

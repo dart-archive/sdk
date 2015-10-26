@@ -13,9 +13,8 @@ const Action showAction = const Action(
     show, showDocumentation, requiresSession: true,
     requiredTarget: TargetKind.LOG);
 
-Future<int> show(AnalyzedSentence sentence, VerbContext context) async {
-  await context.performTaskInWorker(new ShowLogTask());
-  return 0;
+Future<int> show(AnalyzedSentence sentence, VerbContext context) {
+  return context.performTaskInWorker(new ShowLogTask());
 }
 
 class ShowLogTask extends SharedTask {

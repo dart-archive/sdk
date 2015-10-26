@@ -232,15 +232,11 @@ Future main(List<String> arguments) async {
   // connect, and that the socket is ready.
   print(socketFile.path);
 
-  var connectionIterator = new StreamIterator(server);
-
   IsolatePool pool = new IsolatePool(isolateMain);
   try {
-    while (await connectionIterator.moveNext()) {
-      await handleClient(
-          pool,
-          handleSocketErrors(connectionIterator.current, "controlSocket"));
-    }
+    await server.listen((Socket controlSocket) {
+      handleClient(pool, handleSocketErrors(controlSocket, "controlSocket"));
+    }).asFuture();
   } finally {
     gracefulShutdown();
   }
@@ -296,10 +292,7 @@ Future<Null> handleVerb(
         }
         return COMPILER_EXITCODE_CRASH;
       });
-
-  if (exitCode != null) {
-    client.exit(exitCode);
-  }
+  client.exit(exitCode);
 }
 
 class DriverVerbContext extends VerbContext {
@@ -316,7 +309,7 @@ class DriverVerbContext extends VerbContext {
     return new DriverVerbContext(client, pool, session);
   }
 
-  Future<Null> performTaskInWorker(SharedTask task) {
+  Future<int> performTaskInWorker(SharedTask task) async {
     if (session.worker.isolate.wasKilled) {
       throwInternalError(
           "session ${session.name}: worker isolate terminated unexpectedly");
@@ -325,11 +318,13 @@ class DriverVerbContext extends VerbContext {
       throwFatalError(DiagnosticKind.busySession, sessionName: session.name);
     }
     session.hasActiveWorkerTask = true;
-    return session.worker.performTask(
+    int exitCode = await session.worker.performTask(
         combineTasks(initializer, task), client, userSession: session)
         .whenComplete(() {
           session.hasActiveWorkerTask = false;
         });
+    // We should return [exitCode]. See TODO in [ClientController.exit].
+    return null;
   }
 }
 
@@ -441,6 +436,23 @@ class ClientController {
   }
 
   void exit(int exitCode) {
+    if (exitCode == null) {
+      // If [exitCode] is null, we assume [IsolateController.performTask] has
+      // been called and it will eventually send an exit code and call
+      // [endSession].
+      //
+      // TODO(ahe): Clean this up, which requires:
+      //
+      //   * [DriverVerbContext.performTaskInWorker] shouldn't return null
+      //
+      //   * detect if an exit code has been transmitted already (we can detect
+      //     that in sendCommand above)
+      //
+      //   * ensure that we only call [endSession] once (it's also called by
+      //     [IsolateController.performTask])
+      return;
+    }
+
     commandSender.sendExitCode(exitCode);
     endSession();
   }

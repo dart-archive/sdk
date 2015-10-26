@@ -2,6 +2,8 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+message_tests: Skip
+
 self/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expected.
 zone_helper/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expected.
 self/testNeverCompletes: Timeout # This is a test of this suite, timeout is expected.

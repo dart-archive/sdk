@@ -372,7 +372,7 @@ abstract class VerbContext {
 
   VerbContext(this.client, this.pool, this.session);
 
-  Future<Null> performTaskInWorker(SharedTask task);
+  Future<int> performTaskInWorker(SharedTask task);
 
   VerbContext copyWithSession(UserSession session);
 }

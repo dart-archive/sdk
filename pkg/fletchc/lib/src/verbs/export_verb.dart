@@ -20,13 +20,9 @@ const Action exportAction =
         requiresToUri: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
 
-Future<int> export(AnalyzedSentence sentence, VerbContext context) async {
-  // This is asynchronous, but we don't await the result so we can respond to
-  // other requests.
-  context.performTaskInWorker(
+Future<int> export(AnalyzedSentence sentence, VerbContext context) {
+  return context.performTaskInWorker(
       new ExportTask(sentence.targetUri, sentence.toTargetUri));
-
-  return null;
 }
 
 class ExportTask extends SharedTask {
