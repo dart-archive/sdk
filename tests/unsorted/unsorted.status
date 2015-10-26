@@ -35,15 +35,15 @@ dart2js_hello_world_test: Crash
 external_memory_triggers_gc_test: RuntimeError
 immutable_and_mutable_heap_test: Pass, Crash  # TODO(ajohnsen): Why flaky?
 immutable_and_mutable_heap_validate_heaps_test: Fail
-messaging_benchmark_test: Crash
+messaging_benchmark_test: Pass, Crash
 messaging_drop_messages_expose_gc_test: Fail
 messaging_many_process_test: Pass, Crash
 messaging_port_lifetime_expose_gc_test: Fail
 messaging_process_die_early_gc_on_delete_test: Fail
-messaging_process_die_early_test: Crash
+messaging_process_die_early_test: Pass, Crash
 messaging_program_gc_gc_on_delete_test: Fail
 messaging_single_receiver_test: Pass, Crash
 random_test: Pass, Crash
 shared_immutable_data_test: Crash, Slow
-spawn_empty_test: Crash
+spawn_empty_test: Pass, Crash
 spawn_fib_test: Pass, Crash
