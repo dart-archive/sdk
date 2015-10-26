@@ -1169,3 +1169,6 @@ variable_declaration_metadata_test/14: Crash
 variable_declaration_metadata_test/15: Crash
 variable_declaration_metadata_test/16: Crash
 vm/reflect_core_vm_test: Crash
+
+[ $mode == debug && $system == macos && $asan ]
+closure_cycles_test: Slow, Pass
