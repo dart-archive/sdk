@@ -33,7 +33,7 @@ DEBUG_LOG=".debug.log"
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
 FLETCH_REGEXP = (r'fletch-(linux|mac|windows|lk)'
-                 r'(-(debug|release|asan)-(x86|arm))?(-sdk)?')
+                 r'(-(debug|release)(-asan)?-(x86|arm))?(-sdk)?')
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
 TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 
@@ -85,28 +85,21 @@ def Main():
 
         modes = ['debug', 'release']
         archs = ['ia32', 'x64']
-        asans = [False, True]
+        asans = [False]
 
         # Split configurations?
         partial_configuration = fletch_match.group(2)
         if partial_configuration:
-          mode_or_asan = fletch_match.group(3)
-          architecture_match = fletch_match.group(4)
+          mode = fletch_match.group(3)
+          asan = fletch_match.group(4)
+          architecture_match = fletch_match.group(5)
           archs = {
               'x86' : ['ia32', 'x64'],
           }[architecture_match]
 
-          # We split our builders into:
-          #    fletch-linux-debug
-          #    fletch-linux-release
-          #    fletch-linux-asan (includes debug and release)
-          if mode_or_asan == 'asan':
-            modes = ['debug', 'release']
-            asans = [True]
-          else:
-            modes = [mode_or_asan]
-            asans = [False]
-        sdk_build = fletch_match.group(5)
+          modes = [mode]
+          asans = [bool(asan)]
+        sdk_build = fletch_match.group(6)
         if sdk_build:
           StepsSDK(debug_log, system, modes, archs)
         else:
