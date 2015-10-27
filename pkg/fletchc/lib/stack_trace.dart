@@ -131,10 +131,10 @@ class StackTrace {
   String format(int currentFrame) {
     StringBuffer buffer = new StringBuffer();
     assert(framesToGo == 0);
-    buffer.writeln("Stack trace:");
     var frameNumber = 0;
     for (var i = 0; i < stackFrames.length; i++) {
       if (!stackFrames[i].isVisible) continue;
+      if (frameNumber == 0) buffer.writeln("Stack trace:");
       var marker = currentFrame == frameNumber ? '> ' : '  ';
       var line = stackFrames[i].shortString(maxNameLength);
       String frameNumberString = '${frameNumber++}: '.padLeft(3);
@@ -157,7 +157,9 @@ class StackTrace {
   }
 
   StackFrame visibleFrame(int frame) {
-    return stackFrames[actualFrameNumber(frame)];
+    int frameNumber = actualFrameNumber(frame);
+    if (frameNumber == -1) return null;
+    return stackFrames[frameNumber];
   }
 
   void visibilityChanged() {
@@ -165,11 +167,15 @@ class StackTrace {
   }
 
   String list(int frame) {
-    return visibleFrame(frame).list();
+    StackFrame visibleStackFrame = visibleFrame(frame);
+    if (visibleStackFrame == null) return '';
+    return visibleStackFrame.list();
   }
 
   String disasm(int frame) {
-    return visibleFrame(frame).disasm();
+    StackFrame visibleStackFrame = visibleFrame(frame);
+    if (visibleStackFrame == null) return '';
+    return visibleStackFrame.disasm();
   }
 
   SourceLocation sourceLocation() {
@@ -177,7 +183,9 @@ class StackTrace {
   }
 
   ScopeInfo scopeInfo(int frame) {
-    return visibleFrame(frame).scopeInfo();
+    StackFrame visibleStackFrame = visibleFrame(frame);
+    if (visibleStackFrame == null) return null;
+    return visibleStackFrame.scopeInfo();
   }
 
   int stepBytecodePointer(SourceLocation location) {
