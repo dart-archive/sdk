@@ -95,6 +95,21 @@ class ConformanceServiceImpl implements ConformanceService {
     if (flip.flip != expectedFlip) throw new Exception("Unexpected table flip");
     result.flip = expectedFlip;
   }
+
+  void internalize(InternalFields internalFields,
+                   InternalFieldsBuilder result) {
+    int expectedOffset = 1337;
+    var segmentCodes = [ 104, 52, 120, 48, 114 ];
+    String expectedSegment = new String.fromCharCodes(segmentCodes);
+    if (internalFields.offset != expectedOffset) {
+      throw new Exception("Unexpected offset");
+    }
+    if (internalFields.segment != expectedSegment) {
+      throw new Exception("Unexpected segment");
+    }
+    result.offset = expectedOffset;
+    result.segment = expectedSegment;
+  }
 }
 
 main() {

@@ -18,6 +18,7 @@ service ConformanceService {
   int32 ping();
 
   TableFlip* flipTable(TableFlip* flip);
+  InternalFields* internalize(InternalFields* internalFields);
 }
 
 struct Empty { }
@@ -62,4 +63,9 @@ struct Cons {
 
 struct TableFlip {
   String flip;
+}
+
+struct InternalFields {
+  int32 offset;
+  String segment;
 }

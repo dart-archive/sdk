@@ -98,6 +98,17 @@ static void FlipTableCallback(TableFlip flip_result, void* data) {
   flip_result.Delete();
 }
 
+static void InternalFieldsCallback(InternalFields internalFields, void* data) {
+  const int32_t expected_offset = 1337;
+  const char* expected_segment = "h4x0r";
+  int32_t offset = internalFields.getOffset();
+  char* segment = internalFields.getSegment();
+  EXPECT(offset == expected_offset);
+  EXPECT(strcmp(segment, expected_segment) == 0);
+  free(segment);
+  internalFields.Delete();
+}
+
 static void RunPersonTests() {
   {
     MessageBuilder builder(512);
@@ -220,6 +231,17 @@ static void RunPersonTests() {
     TableFlipBuilder flip = builder.initRoot<TableFlipBuilder>();
     flip.setFlip("(╯°□°）╯︵ ┻━┻");
     ConformanceService::flipTableAsync(flip, FlipTableCallback, NULL);
+  }
+
+  {
+    MessageBuilder builder(512);
+    InternalFieldsBuilder internalFields =
+        builder.initRoot<InternalFieldsBuilder>();
+    internalFields.setOffset(1337);
+    internalFields.setSegment("h4x0r");
+    ConformanceService::internalizeAsync(internalFields,
+                                         InternalFieldsCallback,
+                                         NULL);
   }
 }
 
