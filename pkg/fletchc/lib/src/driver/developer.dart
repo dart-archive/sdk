@@ -391,7 +391,7 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
   Future printTrace() async {
     String list = await session.list();
     String stackTrace = session.debugState.formatStackTrace();
-    if (!stackTrace.isEmpty) (stackTrace);
+    if (!stackTrace.isEmpty) print(stackTrace);
     if (!stackTrace.isEmpty) print(list);
   }
 
