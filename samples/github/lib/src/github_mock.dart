@@ -58,7 +58,8 @@ class FileDataStorage implements DataStorage {
   String _dataDir = 'samples/github/lib/src/github_mock_data';
 
   ByteBuffer readResponseFile(String resource) {
-    String path = '$_dataDir/$resource.data';
+    String encoded = Uri.encodeComponent(resource);
+    String path = '$_dataDir/$encoded.data';
     if (File.existsAsFile(path)) {
       File file = new File.open(path);
       return file.read(file.length);

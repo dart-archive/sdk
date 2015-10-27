@@ -33,7 +33,12 @@ if [[ $# -eq 0 ]] || [[ "$1" == "data" ]]; then
     echo "const Map<String, List<int>> resources = const <String, List<int>> {"\
          > $DATA_FILE
     for f in `find . -type f -name *\\\\.data`; do
-        key=`echo $f | cut -b 3- | cut -d . -f 1`
+        str=`echo $f | cut -b 3- | cut -d . -f 1`
+        if [[ "$(dirname $str)" = "." ]]; then
+          key="$str"
+        else
+          key="$(dirname $str | sed 's|/|%2F|g')%2F$(basename $str)"
+        fi
         echo "'$key': const <int>[" >> $DATA_FILE
         od -A n -t d1 $f |\
             sed 's/\([^ ]\) /\1,/g' |\

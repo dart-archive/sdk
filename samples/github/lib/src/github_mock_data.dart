@@ -9,7 +9,8 @@ import 'github_mock.data' as data;
 
 class ByteMapDataStorage implements DataStorage {
   ByteBuffer readResponseFile(String resource) {
-    List<int> bytes = data.resources[resource];
+    String encoded = Uri.encodeComponent(resource);
+    List<int> bytes = data.resources[encoded];
     return (bytes != null) ? new Uint8List.fromList(bytes).buffer : null;
   }
 }

@@ -11,6 +11,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -93,6 +94,7 @@ public class GithubMockServer extends Service {
     FletchApi.Setup();
     FletchServiceApi.Setup();
     FletchApi.AddDefaultSharedLibrary("libfletch.so");
+    FletchApi.RegisterPrintInterceptor(new PrintInterceptor());
     try (InputStream stream = getResources().openRawResource(R.raw.snapshot)) {
       final int bufferSize = 256;
       byte[] buffer = new byte[bufferSize];
@@ -116,6 +118,12 @@ public class GithubMockServer extends Service {
     fletch.GithubMockServer.TearDown();
     FletchServiceApi.TearDown();
     FletchApi.TearDown();
+  }
+
+  private class PrintInterceptor extends FletchApi.PrintInterceptor {
+    @Override public void Out(String message) { Log.i(TAG, message); }
+    @Override public void Error(String message) { Log.e(TAG, message); }
+    private static final String TAG = "Fletch";
   }
 
   private static final String GITHUB_SAMPLE_PACKAGE =
