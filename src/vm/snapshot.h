@@ -95,7 +95,7 @@ class SnapshotWriter {
 
  protected:
   void WriteByte(uint8 value);
-  void WriteBytes(int length, uint8* values);
+  void WriteBytes(int length, const uint8* values);
   void WriteInt64(int64 value);
   void WriteDouble(double value);
   void WriteHeader(InstanceFormat::Type type, int elements = 0);

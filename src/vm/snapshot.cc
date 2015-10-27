@@ -7,9 +7,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "src/shared/assert.h"
 #include "src/shared/utils.h"
+#include "src/shared/version.h"
 
 #include "src/vm/object.h"
 #include "src/vm/program.h"
@@ -233,7 +235,7 @@ void SnapshotReader::ReadBytes(int length, uint8* values) {
   position_ += length;
 }
 
-void SnapshotWriter::WriteBytes(int length, uint8* values) {
+void SnapshotWriter::WriteBytes(int length, const uint8* values) {
   EnsureCapacity(length);
   memcpy(&snapshot_[position_], values, length);
   position_ += length;
@@ -277,8 +279,22 @@ void SnapshotWriter::WriteHeader(InstanceFormat::Type type, int elements) {
 }
 
 Program* SnapshotReader::ReadProgram() {
-  if (ReadByte() != 0xbe) FATAL("Snapshot has wrong magic header!\n");
-  if (ReadByte() != 0xef) FATAL("Snapshot has wrong magic header!\n");
+  if (ReadByte() != 0xbe || ReadByte() != 0xef) {
+    Print::Error("Error: Snapshot has wrong magic header!\n");
+    exit(-1);
+  }
+
+  const char* version = GetVersion();
+  int snapshot_version_length = ReadInt64();
+  uint8* snapshot_version = new uint8[snapshot_version_length];
+  ReadBytes(snapshot_version_length, snapshot_version);
+  if (strncmp(version,
+              reinterpret_cast<char*>(snapshot_version),
+              snapshot_version_length) != 0) {
+    Print::Error("Error: Snapshot and VM versions do not agree.\n");
+    exit(-1);
+  }
+  delete[] snapshot_version;
 
   // Read the required backward reference table size.
   int references = 0;
@@ -329,6 +345,11 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
 
   WriteByte(0xbe);
   WriteByte(0xef);
+
+  const char* version = GetVersion();
+  int version_length = strlen(version);
+  WriteInt64(version_length);
+  WriteBytes(version_length, reinterpret_cast<const uint8*>(version));
 
   // Reserve space for the backward reference table size.
   int reference_count_position = position_;
