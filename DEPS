@@ -151,6 +151,22 @@ hooks = [
     ],
   },
   {
+    'name': 'third_party_openocd',
+    'pattern': '.',
+    'action': [
+      'download_from_google_storage',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dart-dependencies-fletch',
+      '-d',
+      '-r',
+      '-u',
+      '--auto_platform',
+      'fletch/third_party/openocd',
+    ],
+  },
+  {
     'name': 'lazy_update_clang',
     'pattern': '.',
     'action': [
