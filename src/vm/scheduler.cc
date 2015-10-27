@@ -30,7 +30,6 @@ Scheduler::Scheduler()
       idle_threads_(kEmptyThreadState),
       threads_(new Atomic<ThreadState*>[max_threads_]),
       temporary_thread_states_(NULL),
-      foreign_threads_(0),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       shutdown_(-1),
@@ -202,11 +201,6 @@ void Scheduler::ProcessContinue(Process* process) {
 bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   ASSERT(port->IsLocked());
 
-  // TODO(ajohnsen): Foreign threads are not stopped by
-  // Scheduler::StopProgram. We need to fix that before
-  // foreign threads can directly interpret dart code.
-  // See issue: https://github.com/dart-lang/fletch/issues/73
-
   if (!process->ChangeState(Process::kSleeping, Process::kReady)) {
     port->Unlock();
     return false;
@@ -284,13 +278,6 @@ int Scheduler::Run() {
   preempt_monitor_->Unlock();
   thread_pool_.JoinAll();
 
-  // Wait for foreign threads to leave the scheduler.
-  preempt_monitor_->Lock();
-  while (foreign_threads_ != 0) {
-    preempt_monitor_->Wait();
-  }
-  preempt_monitor_->Unlock();
-
   gc_thread_->StopThread();
 
   if (shutdown_ != -1) return shutdown_;
@@ -342,7 +329,6 @@ void Scheduler::ExitWith(Process* process, int exit_code) {
   shutdown_program_ = program;
   shutdown_ = exit_code;
   if (processes_ == 0) NotifyAllThreads();
-  preempt_monitor_->Notify();
 }
 
 void Scheduler::RescheduleProcess(Process* process,
@@ -898,8 +884,7 @@ void Scheduler::EnqueueOnAnyThreadSafe(Process* process, int start_id) {
     ASSERT(process->process_queue() == NULL);
 
     // Only add the process into the paused list if it is not already in
-    // there (this can e.g. happen if a foreign thread is sending several
-    // messages to the port while the program is stopped).
+    // there.
     if (process->next() == NULL) {
       state->AddPausedProcess(process);
     }

@@ -94,7 +94,6 @@ class Scheduler {
   Atomic<ThreadState*> idle_threads_;
   Atomic<ThreadState*>* threads_;
   Atomic<ThreadState*> temporary_thread_states_;
-  Atomic<int> foreign_threads_;
   ProcessQueue* startup_queue_;
 
   Monitor* pause_monitor_;
