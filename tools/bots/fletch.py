@@ -133,6 +133,9 @@ def StepsSDK(debug_log, system, modes, archs):
   cross_mode = 'release'
   cross_arch = 'xarm'
   cross_system = 'linux'
+  #TODO(ricow): remove, testing ability to create raspbian image
+  subprocess.check_call(['sudo', 'ls', '/tmp'])
+
   # We only cross compile on linux
   if system == 'linux':
     StepsCreateDebianPackage()
