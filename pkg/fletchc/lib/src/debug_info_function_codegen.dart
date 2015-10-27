@@ -128,6 +128,11 @@ class DebugInfoFunctionCodegen extends FunctionCodegen with DebugRegistry {
     super.generateSwitchCaseMatch(caseMatch, ifTrue);
   }
 
+  void generateEmptyInitializer(Node node) {
+    recordDebugInfo(node);
+    super.generateEmptyInitializer(node);
+  }
+
   void generateIdentical(Node node) {
     recordDebugInfo(node);
     super.generateIdentical(node);

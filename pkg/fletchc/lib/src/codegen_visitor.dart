@@ -2788,13 +2788,17 @@ abstract class CodegenVisitor
       // functionDeclarations.
       visitForValue(initializer);
     } else {
-      assembler.loadLiteralNull();
+      generateEmptyInitializer(element.node);
     }
     LocalValue value = createLocalValueFor(element, slot);
     value.initialize(assembler);
     pushVariableDeclaration(value);
     blockLocals.add(element);
     return value;
+  }
+
+  void generateEmptyInitializer(Node node) {
+    assembler.loadLiteralNull();
   }
 
   void visitVariableDefinitions(VariableDefinitions node) {

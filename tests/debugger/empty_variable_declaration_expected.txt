@@ -1,0 +1,6 @@
+main    @foo()
+foo @4
+foo @4.isOdd
+foo @var y;
+main    @foo()
+### process terminated
