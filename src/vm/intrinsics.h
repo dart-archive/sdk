@@ -37,11 +37,12 @@ INTRINSICS_DO(PARAMETER_NAME)
 #undef PARAMETER_NAME
   void (*last_member)(void)) :
 #define VALUE_INITIALIZER(name) \
-    intrinsic_##name##_(name),
+      intrinsic_##name##_(name),
 INTRINSICS_DO(VALUE_INITIALIZER)
 #undef PARAMETER_NAME
-    last_member_(last_member)
-  {}
+      last_member_(last_member) {
+    USE(last_member_);
+  }
 
   static IntrinsicsTable *GetDefault();
 
