@@ -281,7 +281,7 @@ void SnapshotWriter::WriteHeader(InstanceFormat::Type type, int elements) {
 Program* SnapshotReader::ReadProgram() {
   if (ReadByte() != 0xbe || ReadByte() != 0xef) {
     Print::Error("Error: Snapshot has wrong magic header!\n");
-    exit(-1);
+    Platform::Exit(-1);
   }
 
   const char* version = GetVersion();
@@ -292,7 +292,7 @@ Program* SnapshotReader::ReadProgram() {
               reinterpret_cast<char*>(snapshot_version),
               snapshot_version_length) != 0) {
     Print::Error("Error: Snapshot and VM versions do not agree.\n");
-    exit(-1);
+    Platform::Exit(-1);
   }
   delete[] snapshot_version;
 
