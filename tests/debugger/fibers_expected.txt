@@ -24,7 +24,6 @@ Stack trace:
   1: call                        @run('b')
 
 fiber 2
-Stack trace:
 
 > t internal
 Stack trace:
@@ -82,7 +81,6 @@ Stack trace:
   1: call                        @run('a')
 
 fiber 1
-Stack trace:
 
 > c
 a 1
