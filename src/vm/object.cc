@@ -144,7 +144,7 @@ Function* Function::FromBytecodePointer(uint8* bcp, int* frame_ranges_offset) {
   return Function::cast(HeapObject::FromAddress(address));
 }
 
-void* Function::ComputeIntrinsic() {
+void* Function::ComputeIntrinsic(IntrinsicsTable* table) {
   int length = bytecode_size();
   uint8* bytecodes = bytecode_address_for(0);
   void* result = NULL;
@@ -152,31 +152,31 @@ void* Function::ComputeIntrinsic() {
       bytecodes[0] == kLoadLocal1 &&
       bytecodes[1] == kLoadField &&
       bytecodes[3] == kReturn) {
-    result = reinterpret_cast<void*>(&Intrinsic_GetField);
+    result = reinterpret_cast<void*>(table->GetField());
   } else if (length >= 4 &&
              bytecodes[0] == kLoadLocal2 &&
              bytecodes[1] == kLoadLocal2 &&
              bytecodes[2] == kIdenticalNonNumeric &&
              bytecodes[3] == kReturn) {
-    result = reinterpret_cast<void*>(&Intrinsic_ObjectEquals);
+    result = reinterpret_cast<void*>(table->ObjectEquals());
   } else if (length >= 5 &&
              bytecodes[0] == kLoadLocal2 &&
              bytecodes[1] == kLoadLocal2 &&
              bytecodes[2] == kStoreField &&
              bytecodes[4] == kReturn) {
-    result = reinterpret_cast<void*>(&Intrinsic_SetField);
+    result = reinterpret_cast<void*>(table->SetField());
   } else if (length >= 3 &&
              bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListIndexGet) {
-    result = reinterpret_cast<void*>(&Intrinsic_ListIndexGet);
+    result = reinterpret_cast<void*>(table->ListIndexGet());
   } else if (length >= 3 &&
              bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListIndexSet) {
-    result = reinterpret_cast<void*>(&Intrinsic_ListIndexSet);
+    result = reinterpret_cast<void*>(table->ListIndexSet());
   } else if (length >= 3 &&
              bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListLength) {
-    result = reinterpret_cast<void*>(&Intrinsic_ListLength);
+    result = reinterpret_cast<void*>(table->ListLength());
   }
   return (reinterpret_cast<Object*>(result)->IsSmi()) ? result : NULL;
 }

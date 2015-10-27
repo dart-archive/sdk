@@ -206,7 +206,8 @@ class Program {
 
   // Dispatch table support.
   void ClearDispatchTableIntrinsics();
-  void SetupDispatchTableIntrinsics();
+  void SetupDispatchTableIntrinsics(
+      IntrinsicsTable *table = IntrinsicsTable::GetDefault());
 
   // Root objects.
  private:

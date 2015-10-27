@@ -758,7 +758,7 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
     static const Names::Id name = Names::kNoSuchMethodTrampoline;
     target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
   } else {
-    void* intrinsic = target->ComputeIntrinsic();
+    void* intrinsic = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
     tag = (intrinsic == NULL) ? 1 : reinterpret_cast<uword>(intrinsic);
   }
 

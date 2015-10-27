@@ -14,6 +14,8 @@
 #include "src/shared/list.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/intrinsics.h"
+
 namespace fletch {
 
 // This is an overview of the object class hierarchy:
@@ -859,7 +861,7 @@ class Function: public HeapObject {
   inline Object* literal_at(int index);
   inline void set_literal_at(int index, Object* value);
 
-  void* ComputeIntrinsic();
+  void* ComputeIntrinsic(IntrinsicsTable *table);
 
   // Sizing.
   int FunctionSize() {

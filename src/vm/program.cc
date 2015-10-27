@@ -820,7 +820,7 @@ void Program::ClearDispatchTableIntrinsics() {
   }
 }
 
-void Program::SetupDispatchTableIntrinsics() {
+void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
   Array* table = dispatch_table();
   if (table == NULL) return;
   int length = table->length();
@@ -831,7 +831,8 @@ void Program::SetupDispatchTableIntrinsics() {
     if (target == NULL) continue;
     hits += 4;
     Function* method = Function::cast(target);
-    Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
+    Object* intrinsic =
+        reinterpret_cast<Object*>(method->ComputeIntrinsic(intrinsics));
     ASSERT(intrinsic->IsSmi());
     table->set(i + 2, intrinsic);
   }
@@ -861,7 +862,8 @@ void Program::SetupDispatchTableIntrinsics() {
     if (target == NULL) continue;
     if (target != trampoline) hits++;
     Function* method = Function::cast(target);
-    Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
+    Object* intrinsic =
+        reinterpret_cast<Object*>(method->ComputeIntrinsic(intrinsics));
     ASSERT(intrinsic->IsSmi());
     entry->set(3, intrinsic);
   }
