@@ -46,15 +46,23 @@ while [ $# -gt 1 ]; do
   esac
 done
 
-if [ -z "$OPENOCDHOME" ]; then
-  echo "Set \$OPENOCDHOME to the path where your openocd lives..."
-  exit 1
-fi
-
 if [ ! -e $1 ]; then
   echo "Image file does not exist: $1."
   exit 1
 fi
 
-$OPENOCDHOME/src/openocd -f interface/${STLINK}.cfg -f board/${BOARD}.cfg --search $OPENOCDHOME/tcl -c "init" -c "reset halt" -c "flash write_image erase $1 0x8000000" -c "reset run" -c "shutdown"
+if [ -z "$OPENOCDHOME" ]; then
+  ROOT="$(dirname $(dirname $(dirname $(readlink -f $0))))"
+  OPENOCDHOME="$ROOT/third_party/openocd/linux/openocd/"
+fi
 
+
+$OPENOCDHOME/bin/openocd                                                  \
+    -f interface/${STLINK}.cfg                                            \
+    -f board/${BOARD}.cfg                                                 \
+    --search $OPENOCDHOME/share/openocd/scripts                           \
+    -c "init"                                                             \
+    -c "reset halt"                                                       \
+    -c "flash write_image erase $1 0x8000000"                             \
+    -c "reset run"                                                        \
+    -c "shutdown"
