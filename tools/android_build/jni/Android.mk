@@ -83,13 +83,15 @@ LOCAL_SRC_FILES := \
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
   LOCAL_CFLAGS += -DFLETCH_TARGET_ARM
   LOCAL_SRC_FILES += \
-    ../../../out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
+    ../../../out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen/generated.S \
+    ../../../out/ReleaseXARMAndroid/gen/version.cc
 endif
 
 ifeq ($(TARGET_ARCH_ABI), x86)
   LOCAL_CFLAGS += -DFLETCH_TARGET_IA32
   LOCAL_SRC_FILES += \
-    ../../../out/ReleaseIA32Android/obj/src/vm/fletch_vm.gen/generated.S
+    ../../../out/ReleaseIA32Android/obj/src/vm/fletch_vm.gen/generated.S \
+    ../../../out/ReleaseIA32Android/gen/version.cc
 endif
 
 include $(BUILD_STATIC_LIBRARY)
