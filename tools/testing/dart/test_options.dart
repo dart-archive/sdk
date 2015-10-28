@@ -720,6 +720,14 @@ Note: currently only implemented for dart2js.''',
       print("fletch requires --host-checked option.");
     }
 
+    if (config['system'] == 'lk' &&
+        (config['compiler'] != 'fletchc' ||
+         config['runtime'] != 'fletchvm')) {
+      isValid = false;
+      print("Running tests on LK works only in the "
+            "--compiler=fletchc --runtime=fletchvm configuration.");
+    }
+
     return isValid;
   }
 
