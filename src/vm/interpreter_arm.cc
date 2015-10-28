@@ -337,19 +337,23 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ pop(RegisterRange(R4, R11) | RegisterRange(LR, LR));
   __ bx(LR);
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   // Handle immutable heap allocation failures.
   Label immutable_alloc_failure;
   __ Bind(&immutable_alloc_failure);
   __ mov(R0, Immediate(Interpreter::kImmutableAllocationFailure));
   __ b(&undo_padding);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState();
   __ mov(R0, R4);
   __ bl("HandleGC");
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   __ tst(R0, R0);
   __ b(NE, &immutable_alloc_failure);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   RestoreState();
   Dispatch(0);
 
@@ -1840,7 +1844,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ ldr(R1, Immediate(mask));
     __ and_(R0, R0, R1);
 
-    // If this is type never immutable we continue the loop.
+    // If this type is never immutable we continue the loop.
     __ cmp(R0, Immediate(never_immutable_mask));
     __ b(EQ, &loop_with_mutable_field);
 
@@ -1909,6 +1913,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
 
 void InterpreterGeneratorARM::AddToStoreBufferSlow(Register object,
                                                    Register value) {
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   if (object != R1) {
     ASSERT(value != R1);
     __ mov(R1, object);
@@ -1918,6 +1923,7 @@ void InterpreterGeneratorARM::AddToStoreBufferSlow(Register object,
   }
   __ mov(R0, R4);
   __ bl("AddToStoreBufferSlow");
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 }
 
 void InterpreterGeneratorARM::InvokeCompare(const char* fallback,

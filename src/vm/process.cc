@@ -59,7 +59,9 @@ Process::Process(Program* program)
       exception_(program->null_object()),
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
       heap_(&random_, 4 * KB),
+#endif
       immutable_heap_(NULL),
       state_(kSleeping),
       thread_state_(NULL),
@@ -107,7 +109,9 @@ Process::~Process() {
   // conditions here.
   ASSERT(ports_ == NULL);
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   heap_.ProcessWeakPointers();
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
   delete debug_info_;
 
@@ -204,7 +208,7 @@ Object* Process::NewByteArray(int length) {
 Object* Process::NewArray(int length) {
   Class* array_class = program()->array_class();
   Object* null = program()->null_object();
-  Object* result = heap_.CreateArray(array_class, length, null);
+  Object* result = heap()->CreateArray(array_class, length, null);
   return result;
 }
 
@@ -271,7 +275,7 @@ Object* Process::NewStringFromAscii(List<const char> value) {
 
 Object* Process::NewBoxed(Object* value) {
   Class* boxed_class = program()->boxed_class();
-  Object* result = heap_.CreateBoxed(boxed_class, value);
+  Object* result = heap()->CreateBoxed(boxed_class, value);
   if (result->IsFailure()) return result;
   return result;
 }
@@ -281,7 +285,7 @@ Object* Process::NewInstance(Class* klass, bool immutable) {
   if (immutable) {
     return immutable_heap_->CreateInstance(klass, null, immutable);
   } else {
-    return heap_.CreateInstance(klass, null, immutable);
+    return heap()->CreateInstance(klass, null, immutable);
   }
 }
 
@@ -293,7 +297,7 @@ Object* Process::ToInteger(int64 value) {
 
 Object* Process::NewStack(int length) {
   Class* stack_class = program()->stack_class();
-  Object* result = heap_.CreateStack(stack_class, length);
+  Object* result = heap()->CreateStack(stack_class, length);
 
   if (result->IsFailure()) return result;
   store_buffer_.Insert(HeapObject::cast(result));
@@ -312,6 +316,8 @@ struct HeapUsage {
   uword TotalUsed() { return process_used + immutable_used + program_used; }
   uword TotalSize() { return process_used + immutable_size + program_size; }
 };
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 static void GetHeapUsage(Process* process, HeapUsage* heap_usage) {
   heap_usage->timestamp = Platform::GetMicroseconds();
@@ -356,6 +362,10 @@ void PrintProcessGCInfo(Process* process, HeapUsage* before, HeapUsage* after) {
       after->TotalSize());
 }
 
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void Process::CollectMutableGarbage() {
   TakeChildHeaps();
 
@@ -364,7 +374,7 @@ void Process::CollectMutableGarbage() {
     GetHeapUsage(this, &usage_before);
   }
 
-  Space* from = heap_.space();
+  Space* from = heap()->space();
   Space* to = new Space(from->Used() / 10);
   StoreBuffer sb;
 
@@ -380,20 +390,30 @@ void Process::CollectMutableGarbage() {
   to->CompleteScavengeMutable(&visitor, program_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
-  heap_.ProcessWeakPointers();
+  heap()->ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
-  heap_.ReplaceSpace(to);
-  UpdateStackLimit();
+  heap()->ReplaceSpace(to);
 
   if (Flags::print_heap_statistics) {
     HeapUsage usage_after;
     GetHeapUsage(this, &usage_after);
     PrintProcessGCInfo(this, &usage_before, &usage_after);
   }
+
+  UpdateStackLimit();
 }
 
+#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Process::CollectMutableGarbage() {
+  program()->CollectSharedGarbage(true);
+  UpdateStackLimit();
+}
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 // Helper class for copying HeapObjects and chaining stacks for a
-// process..
+// process.
 class ScavengeAndChainStacksVisitor: public PointerVisitor {
  public:
   ScavengeAndChainStacksVisitor(Process* process,
@@ -444,7 +464,7 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
 };
 
 int Process::CollectMutableGarbageAndChainStacks() {
-  Space* from = heap_.space();
+  Space* from = heap()->space();
   Space* to = new Space(from->Used() / 10);
   StoreBuffer sb;
 
@@ -461,9 +481,9 @@ int Process::CollectMutableGarbageAndChainStacks() {
   to->CompleteScavengeMutable(&visitor, program_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
-  heap_.ProcessWeakPointers();
+  heap()->ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
-  heap_.ReplaceSpace(to);
+  heap()->ReplaceSpace(to);
   UpdateStackLimit();
   return visitor.number_of_stacks();
 }

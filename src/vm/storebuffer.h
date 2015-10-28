@@ -10,6 +10,8 @@
 
 namespace fletch {
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 class StoreBuffer;
 
 class StoreBufferChunk {
@@ -153,6 +155,34 @@ class FindImmutablePointerVisitor: public PointerVisitor {
   Space* program_space_;
   bool had_immutable_pointer_;
 };
+
+#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+class StoreBuffer {
+ public:
+  explicit StoreBuffer(bool empty = true) {}
+
+  void Insert(HeapObject* object) {}
+  void IteratePointersToImmutableSpace(PointerVisitor* visitor) {}
+  void IterateObjects(HeapObjectVisitor* visitor) {}
+  void ReplaceAfterMutableGC(StoreBuffer* new_store_buffer) {}
+  void Prepend(StoreBuffer* store_buffer) {}
+  void Deduplicate() {}
+  bool ShouldDeduplicate() { return false; }
+  bool is_empty() const { return true; }
+  int Used() const { return 0; }
+};
+
+class FindImmutablePointerVisitor: public PointerVisitor {
+ public:
+  FindImmutablePointerVisitor(Space* mutable_space, Space* program_space) { }
+
+  bool ContainsImmutablePointer(HeapObject* object) { return false; }
+
+  virtual void VisitBlock(Object** start, Object** end) { }
+};
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 }  // namespace fletch
 

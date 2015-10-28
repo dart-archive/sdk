@@ -10,6 +10,8 @@
 
 namespace fletch {
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 class SharedHeap {
  public:
   class Part {
@@ -119,6 +121,29 @@ class SharedHeap {
   int outstanding_parts_allocated_;
   int outstanding_parts_budget_;
 };
+
+#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+class SharedHeap {
+ public:
+  SharedHeap() : heap_(NULL, 4 * KB) { }
+  ~SharedHeap() { }
+
+  void MergeParts() { }
+
+  void IterateProgramPointers(PointerVisitor* visitor);
+
+  Heap* heap() { return &heap_; }
+
+  int EstimatedUsed() { return heap_.space()->Used(); }
+
+  int EstimatedSize() { return heap_.space()->Size(); }
+
+ private:
+  Heap heap_;
+};
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 }  // namespace fletch
 

@@ -326,19 +326,23 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ popl(EBP);
   __ ret();
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   // Handle immutable heap allocation failures.
   Label immutable_alloc_failure;
   __ Bind(&immutable_alloc_failure);
   __ movl(EAX, Immediate(Interpreter::kImmutableAllocationFailure));
   __ jmp(&undo_padding);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState();
   __ movl(Address(ESP, 0 * kWordSize), EBP);
   __ call("HandleGC");
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   __ testl(EAX, EAX);
   __ j(NOT_ZERO, &immutable_alloc_failure);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   RestoreState();
   Dispatch(0);
 
@@ -1579,10 +1583,12 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
 
 void InterpreterGeneratorX86::AddToStoreBufferSlow(Register object,
                                                    Register value) {
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   __ movl(Address(ESP, 0 * kWordSize), EBP);
   __ movl(Address(ESP, 1 * kWordSize), object);
   __ movl(Address(ESP, 2 * kWordSize), value);
   __ call("AddToStoreBufferSlow");
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 }
 
 void InterpreterGeneratorX86::InvokeMethod(bool test) {

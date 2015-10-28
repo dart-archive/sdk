@@ -64,6 +64,7 @@
         'defines': [
           'FLETCH_ENABLE_LIVE_CODING',
           'FLETCH_ENABLE_FFI',
+          'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
           'FLETCH_ENABLE_NATIVE_PROCESSES',
           'FLETCH_ENABLE_PRINT_INTERCEPTORS',
         ],
@@ -76,7 +77,7 @@
           'GCC_WARN_NON_VIRTUAL_DESTRUCTOR': 'NO', # -Wno-non-virtual-dtor
           'GCC_ENABLE_CPP_RTTI': 'NO', # -fno-rtti
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO', # -fno-exceptions
-	  'DEAD_CODE_STRIPPING': 'YES', # -Wl,-dead_strip (mac --gc-sections)
+          'DEAD_CODE_STRIPPING': 'YES', # -Wl,-dead_strip (mac --gc-sections)
 
           'OTHER_CPLUSPLUSFLAGS' : [
             '<@(common_gcc_cflags_cc)',
@@ -592,6 +593,14 @@
 
         'defines!': [
           'FLETCH_ENABLE_FFI',
+        ],
+      },
+
+      'fletch_disable_multiple_process_heaps': {
+        'abstract': 1,
+
+        'defines!': [
+          'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
         ],
       },
 

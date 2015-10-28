@@ -37,6 +37,16 @@ Scheduler::Scheduler()
       pause_(false),
       current_processes_(new Atomic<Process*>[max_threads_]),
       gc_thread_(new GCThread()) {
+
+#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
+  // TODO(kustermann): Find a way to make this a compile-time error instead of a
+  // runtime error (e.g. using static_assert).
+  if (max_threads_ != 1) {
+    FATAL("The number of scheduler worker threads must be 1 if using one "
+          "shared heap for all processes.");
+  }
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
   for (int i = 0; i < max_threads_; i++) {
     threads_[i] = NULL;
     current_processes_[i] = NULL;
@@ -492,6 +502,8 @@ void Scheduler::RunInThread() {
   ThreadExit(thread_state);
 }
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   // We use this heap for allocating new immutable objects.
   Program* program = NULL;
@@ -543,6 +555,36 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
     gc_thread_->TriggerImmutableGC(program);
   }
 }
+
+#else  // FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
+  // We use this heap for allocating new immutable objects.
+  while (!pause_) {
+    Process* process = NULL;
+    DequeueFromThread(thread_state, &process);
+    // No more processes for this state, break.
+    if (process == NULL) break;
+
+    while (process != NULL) {
+      bool allocation_failure = false;
+      Heap* shared_heap = process->program()->shared_heap()->heap();
+
+      Process* new_process = InterpretProcess(
+          process, shared_heap, thread_state, &allocation_failure);
+
+      if (allocation_failure) {
+        // Can never run into an immutable allocation failure.
+        UNREACHABLE();
+      }
+
+      // Possibly switch to a new process.
+      process = new_process;
+    }
+  }
+}
+
+#endif  // FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void Scheduler::SetCurrentProcessForThread(int thread_id, Process* process) {
   if (thread_id == -1) return;
@@ -598,6 +640,9 @@ Process* Scheduler::InterpretProcess(Process* process,
   ClearCurrentProcessForThread(thread_id, process);
 
   if (interpreter.IsImmutableAllocationFailure()) {
+#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
+    UNREACHABLE();
+#endif
     *allocation_failure = true;
     return process;
   }

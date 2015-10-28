@@ -7,6 +7,8 @@
 
 namespace fletch {
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 SharedHeap::SharedHeap()
     : number_of_hw_threads_(Platform::GetNumberOfHardwareThreads()),
       heap_mutex_(Platform::CreateMutex()),
@@ -170,5 +172,14 @@ bool SharedHeap::ReleasePart(Part* part) {
 
   return gc;
 }
+
+#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void SharedHeap::IterateProgramPointers(PointerVisitor* visitor) {
+  HeapObjectPointerVisitor heap_pointer_visitor(visitor);
+  heap_.IterateObjects(&heap_pointer_visitor);
+}
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 }  // namespace fletch

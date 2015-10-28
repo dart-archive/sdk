@@ -195,9 +195,12 @@ class Program {
   Object* CreateInitializer(Function* function);
 
   void ValidateHeapsAreConsistent();
+  void ValidateSharedHeap();
 
   void CollectGarbage();
-  void CollectSharedGarbage();
+  void CollectSharedGarbage(bool program_is_stopped = false);
+  void PerformSharedGarbageCollection();
+  void CompactStorebuffers();
 
   void PrintStatistics();
 

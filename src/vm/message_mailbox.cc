@@ -58,12 +58,24 @@ void MessageMailbox::EnqueueForeign(Port* port,
   EnqueueEntry(entry);
 }
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void MessageMailbox::EnqueueExit(Process* sender, Port* port, Object* message) {
   // TODO(kasperl): Optimize this to avoid merging heaps if copying is cheaper.
   uword address = reinterpret_cast<uword>(new ExitReference(sender, message));
   Message* entry = new Message(port, address, 0, Message::EXIT);
   EnqueueEntry(entry);
 }
+
+#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void MessageMailbox::EnqueueExit(Process* sender, Port* port, Object* message) {
+  uword address = reinterpret_cast<uword>(message);
+  Message* entry = new Message(port, address, 0, Message::IMMUTABLE_OBJECT);
+  EnqueueEntry(entry);
+}
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void MessageMailbox::MergeAllChildHeaps(Process* destination_process) {
   MergeAllChildHeapsFromQueue(current_message_, destination_process);

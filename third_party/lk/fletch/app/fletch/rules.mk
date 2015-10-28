@@ -20,7 +20,7 @@ else
 EXTRA_OBJS += $(FLETCH_BASE)/out/Release$(FLETCH_CONFIGURATION)/libfletch.a
 endif
 
-force_fletch_target: 
+force_fletch_target:
 
 $(FLETCH_BASE)/out/Debug$(FLETCH_CONFIGURATION)/libfletch.a: force_fletch_target
 	ninja -C $(FLETCH_BASE) lk -t clean

@@ -98,7 +98,11 @@ class Process {
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   Heap* heap() { return &heap_; }
+#else
+  Heap* heap() { return program()->shared_heap()->heap(); }
+#endif
   Heap* immutable_heap() { return immutable_heap_; }
   void set_immutable_heap(Heap* heap) { immutable_heap_ = heap; }
 
@@ -300,7 +304,10 @@ class Process {
 
   RandomXorShift random_;
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   Heap heap_;
+#endif
+
   Heap* immutable_heap_;
   StoreBuffer store_buffer_;
 

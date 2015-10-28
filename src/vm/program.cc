@@ -288,19 +288,38 @@ void Program::ValidateHeapsAreConsistent() {
     IterateRoots(&validator);
     heap()->IterateObjects(&object_pointer_visitor);
   }
+
   // Validate the shared heap
-  {
-    SharedHeapPointerValidator validator(heap(), &shared_heap_);
-    HeapObjectPointerVisitor object_pointer_visitor(&validator);
-    shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
-    shared_heap_.heap()->VisitWeakObjectPointers(&validator);
-  }
+  ValidateSharedHeap();
+
   // Validate all process heaps.
   {
     ProcessHeapValidatorVisitor validator(heap(), &shared_heap_);
     VisitProcesses(&validator);
   }
 }
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Program::ValidateSharedHeap() {
+  SharedHeapPointerValidator validator(heap(), &shared_heap_);
+  HeapObjectPointerVisitor object_pointer_visitor(&validator);
+  shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
+  shared_heap_.heap()->VisitWeakObjectPointers(&validator);
+}
+
+#else
+
+void Program::ValidateSharedHeap() {
+  // NOTE: We do nothing in the case of *one* shared heap. The shared heap will
+  // get validated (redundantly) for each process.
+  //
+  // (In order to validate the shared heap separately we would need to know
+  //  whether stacks are cooked or not. This information is only available on a
+  //  per-process basis ATM. So we just do it redundantly for now.)
+}
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void Program::CollectGarbage() {
   if (scheduler() != NULL) {
@@ -375,13 +394,13 @@ static void PrintImmutableGCInfo(SharedHeapUsage* before,
       after->shared_size);
 }
 
-void Program::CollectSharedGarbage() {
+void Program::CollectSharedGarbage(bool program_is_stopped) {
   Scheduler* scheduler = this->scheduler();
   ASSERT(scheduler != NULL);
 
-  // This will make sure all partial immutable heaps got merged into
-  // [program_->shared_heap()].
-  scheduler->StopProgram(this);
+  if (!program_is_stopped) {
+    scheduler->StopProgram(this);
+  }
 
   // All threads are stopped and have given their parts back to the
   // [SharedHeap], so we can merge them now.
@@ -396,45 +415,7 @@ void Program::CollectSharedGarbage() {
     GetSharedHeapUsage(shared_heap()->heap(), &usage_before);
   }
 
-  // Pass 1: Storebuffer compaction.
-  // We do this as a separate pass to ensure the mutable collection can access
-  // all objects (including immutable ones) and for example do
-  // "ASSERT(object->IsImmutable()". If we did everthing in one pass some
-  // immutable objects will contain forwarding pointers and others won't, which
-  // can make the mentioned assert just crash the program.
-  {
-    Process* current = process_list_head_;
-    while (current != NULL) {
-      current->store_buffer()->Deduplicate();
-      current = current->process_list_next();
-    }
-  }
-
-  // Pass 2: Iterate all process roots to immutable heap.
-  {
-    Heap* heap = shared_heap()->heap();
-    Space* from = heap->space();
-    Space* to = new Space(from->Used() / 10);
-    NoAllocationFailureScope alloc(to);
-
-    ScavengeVisitor scavenger(from, to);
-
-    int process_heap_sizes = 0;
-    Process* current = process_list_head_;
-    while (current != NULL) {
-      current->TakeChildHeaps();
-      current->IterateRoots(&scavenger);
-      current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
-      process_heap_sizes += current->heap()->space()->Used();
-      current = current->process_list_next();
-    }
-
-    to->CompleteScavenge(&scavenger);
-    heap->ProcessWeakPointers();
-    heap->ReplaceSpace(to);
-
-    shared_heap()->UpdateLimitAfterGC(process_heap_sizes);
-  }
+  PerformSharedGarbageCollection();
 
   if (Flags::print_heap_statistics) {
     SharedHeapUsage usage_after;
@@ -446,7 +427,83 @@ void Program::CollectSharedGarbage() {
     ValidateHeapsAreConsistent();
   }
 
-  scheduler->ResumeProgram(this);
+  if (!program_is_stopped) {
+    scheduler->ResumeProgram(this);
+  }
+}
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+void Program::PerformSharedGarbageCollection() {
+  // Pass 1: Storebuffer compaction.
+  // We do this as a separate pass to ensure the mutable collection can access
+  // all objects (including immutable ones) and for example do
+  // "ASSERT(object->IsImmutable()". If we did everthing in one pass some
+  // immutable objects will contain forwarding pointers and others won't, which
+  // can make the mentioned assert just crash the program.
+  CompactStorebuffers();
+
+  // Pass 2: Iterate all process roots to the shared heap.
+  Heap* heap = shared_heap()->heap();
+  Space* from = heap->space();
+  Space* to = new Space(from->Used() / 10);
+  NoAllocationFailureScope alloc(to);
+
+  ScavengeVisitor scavenger(from, to);
+
+  int process_heap_sizes = 0;
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->TakeChildHeaps();
+    current->IterateRoots(&scavenger);
+    current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
+    process_heap_sizes += current->heap()->space()->Used();
+    current = current->process_list_next();
+  }
+
+  to->CompleteScavenge(&scavenger);
+  heap->ProcessWeakPointers();
+  heap->ReplaceSpace(to);
+
+  shared_heap()->UpdateLimitAfterGC(process_heap_sizes);
+}
+
+#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Program::PerformSharedGarbageCollection() {
+  Heap* heap = shared_heap()->heap();
+  Space* from = heap->space();
+  Space* to = new Space(from->Used() / 10);
+  NoAllocationFailureScope alloc(to);
+
+  ScavengeVisitor scavenger(from, to);
+
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->TakeChildHeaps();
+    current->IterateRoots(&scavenger);
+    current = current->process_list_next();
+  }
+
+  to->CompleteScavenge(&scavenger);
+  heap->ProcessWeakPointers();
+
+  current = process_list_head_;
+  while (current != NULL) {
+    current->set_ports(Port::CleanupPorts(from, current->ports()));
+    current->UpdateStackLimit();
+    current = current->process_list_next();
+  }
+
+  heap->ReplaceSpace(to);
+}
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Program::CompactStorebuffers() {
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->store_buffer()->Deduplicate();
+    current = current->process_list_next();
+  }
 }
 
 class StatisticsVisitor : public HeapObjectVisitor {
