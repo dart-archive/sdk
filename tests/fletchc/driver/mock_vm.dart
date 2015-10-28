@@ -29,6 +29,7 @@ import 'package:fletchc/commands.dart' show
     Command,
     CommandCode,
     CommitChangesResult,
+    HandShakeResult,
     ProcessTerminated;
 
 import 'package:dart_isolate/ports.dart' show
@@ -163,6 +164,9 @@ Future<Socket> compilerConnection(SendPort port) async {
 Command mockReply(CommandCode code) {
   // Please add more cases as needed.
   switch (code) {
+    case CommandCode.HandShake:
+      return new HandShakeResult(true, "");
+
     case CommandCode.CommitChanges:
       return new CommitChangesResult(
           true, "Successfully applied program update.");

@@ -285,12 +285,15 @@ Program* SnapshotReader::ReadProgram() {
   }
 
   const char* version = GetVersion();
+  int version_length = strlen(version);
   int snapshot_version_length = ReadInt64();
   uint8* snapshot_version = new uint8[snapshot_version_length];
   ReadBytes(snapshot_version_length, snapshot_version);
-  if (strncmp(version,
-              reinterpret_cast<char*>(snapshot_version),
-              snapshot_version_length) != 0) {
+  if ((version_length != snapshot_version_length) ||
+      (strncmp(version,
+               reinterpret_cast<char*>(snapshot_version),
+               snapshot_version_length) != 0)) {
+    delete[] snapshot_version;
     Print::Error("Error: Snapshot and VM versions do not agree.\n");
     Platform::Exit(-1);
   }

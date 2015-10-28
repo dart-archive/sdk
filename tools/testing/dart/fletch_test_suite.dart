@@ -86,17 +86,30 @@ class FletchTestSuite extends TestSuite {
 
     TestExpectations expectations = new TestExpectations();
     String buildDir = TestUtils.buildDir(configuration);
+    String version;
 
     bool helperProgramExited = false;
     io.Process vmProcess;
     ReadTestExpectationsInto(
         expectations, '$testSuiteDir/fletch_tests.status',
         configuration).then((_) {
+      return new io.File('$buildDir/gen/version.cc').readAsLines();
+    }).then((List<String> versionFileLines) {
+      // Search for the 'return "version_string";' line.
+      for (String line in versionFileLines) {
+        if (line.contains('return')) {
+          version = line.substring(
+              line.indexOf('"') + 1, line.lastIndexOf('"'));
+        }
+      }
+      assert(version != null);
+    }).then((_) {
       return io.ServerSocket.bind(io.InternetAddress.LOOPBACK_IP_V4, 0);
     }).then((io.ServerSocket server) {
       return io.Process.start(
           runtimeConfiguration.dartBinary,
           ['-Dfletch-vm=$buildDir/fletch-vm',
+           '-Dfletch.version=$version',
            '-Ddart-sdk=third_party/dart/sdk/',
            '-Dtest.dart.build-dir=$buildDir',
            '-Dtest.dart.build-arch=${configuration["arch"]}',

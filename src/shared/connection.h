@@ -56,6 +56,11 @@ class WriteBuffer : public Buffer {
 class Connection {
  public:
   enum Opcode {
+    // DO NOT MOVE! The handshake opcodes needs to be the first one as
+    // it is used to verify the compiler and vm versions.
+    kHandShake,
+    kHandShakeResult,
+
     kConnectionError,
     kCompilerError,
     kSessionEnd,

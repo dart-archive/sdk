@@ -19,6 +19,7 @@ enum DiagnosticKind {
   expectedAPortNumber,
   expectedTargetButGot,
   extraArguments,
+  handShakeFailed,
   internalError,
   missingRequiredArgument,
   missingToFile,
@@ -57,6 +58,7 @@ enum DiagnosticKind {
   verbRequiresSocketTarget,
   verbRequiresTarget,
   verbRequiresTargetButGot,
+  versionMismatch,
 
   // TODO(ahe): Remove when debug attach implicitly.
   attachToVmBeforeRun,
@@ -269,5 +271,14 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.terminatedSession:
       return "Session '$sessionName' was terminated";
+
+    case DiagnosticKind.handShakeFailed:
+      return "Connection rejected because of invalid handshake reply from "
+          "VM on $address.";
+
+    case DiagnosticKind.versionMismatch:
+      return "Connection rejected because compiler and VM on $address "
+          "have different versions. Compiler version: '$userInput' "
+          "VM version: '$additionalUserInput'.";
   }
 }

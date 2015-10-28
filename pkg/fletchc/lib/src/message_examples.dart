@@ -270,6 +270,14 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.terminatedSession:
       // TODO(ahe): Add test for this.
       return untestable;
+
+    case DiagnosticKind.handShakeFailed:
+      // TODO(ager): We could probably test this with a mock VM.
+      return untestable;
+
+    case DiagnosticKind.versionMismatch:
+      // TODO(ager): We could probably test this with a mock VM.
+      return untestable;
   }
 }
 

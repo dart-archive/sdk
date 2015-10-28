@@ -10,6 +10,7 @@
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
 #include "src/shared/platform.h"
+#include "src/shared/version.h"
 
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
@@ -192,7 +193,42 @@ void Session::SendStackTrace(Stack* stack) {
   connection_->Send(Connection::kProcessBacktrace, buffer);
 }
 
+static void MessageProcessingError(const char* message) {
+  Print::UnregisterPrintInterceptors();
+  Print::Error(message);
+  Platform::Exit(-1);
+}
+
+void Session::HandShake() {
+  Connection::Opcode opcode = connection_->Receive();
+  if (opcode != Connection::kHandShake) {
+    MessageProcessingError("Error: Invalid handshake message from compiler.\n");
+  }
+  int compiler_version_length;
+  uint8* compiler_version = connection_->ReadBytes(&compiler_version_length);
+  const char* version = GetVersion();
+  int version_length = strlen(version);
+  bool version_match =
+      (version_length == compiler_version_length) &&
+      (strncmp(version,
+               reinterpret_cast<char*>(compiler_version),
+               compiler_version_length) == 0);
+  free(compiler_version);
+  WriteBuffer buffer;
+  buffer.WriteBoolean(version_match);
+  buffer.WriteInt(version_length);
+  buffer.WriteString(version);
+  connection_->Send(Connection::kHandShakeResult, buffer);
+  if (!version_match) {
+    MessageProcessingError("Error: Different compiler and VM version.\n");
+  }
+}
+
 void Session::ProcessMessages() {
+  // A session always starts with a handshake verifying that the
+  // compiler and VM have the same version.
+  HandShake();
+
   while (true) {
     Connection::Opcode opcode = connection_->Receive();
 
@@ -200,8 +236,7 @@ void Session::ProcessMessages() {
 
     switch (opcode) {
       case Connection::kConnectionError: {
-        Print::UnregisterPrintInterceptors();
-        FATAL("Compiler crashed. So do we.");
+        MessageProcessingError("Lost connection to compiler.");
       }
 
       case Connection::kCompilerError: {

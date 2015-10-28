@@ -217,6 +217,12 @@ class Session extends FletchVmSession {
     return response;
   }
 
+  Future<HandShakeResult> handShake(String version) async {
+    Command command = await runCommand(new HandShake(version));
+    if (command != null && command is HandShakeResult) return command;
+    return null;
+  }
+
   Future disableVMStandardOutput() async {
     await runCommand(const DisableStandardOutput());
   }

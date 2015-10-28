@@ -158,6 +158,8 @@ class Session {
   Monitor* main_thread_monitor_;
   MainThreadResumeKind main_thread_resume_kind_;
 
+  void HandShake();
+
   void AddToMap(int map_index, int64 id, Object* value);
 
   void SignalMainThread(MainThreadResumeKind);

@@ -34,6 +34,7 @@ import 'package:fletch_agent/messages.dart' show
 
 import '../../commands.dart' show
     CommandCode,
+    HandShakeResult,
     ProcessBacktrace,
     ProcessBacktraceRequest,
     ProcessRun,
@@ -178,7 +179,22 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
   Session session = new Session(socket, state.compiler, state.stdoutSink,
       state.stderrSink, null);
 
-  // Enable debugging as a form of handshake.
+  // Perform handshake with VM which validates that VM and compiler
+  // have the same versions.
+  String version = const String.fromEnvironment('fletch.version');
+  HandShakeResult handShakeResult = await session.handShake(version);
+  if (handShakeResult == null) {
+    throwFatalError(DiagnosticKind.handShakeFailed, address: '$host:$port');
+  }
+  if (!handShakeResult.success) {
+    throwFatalError(DiagnosticKind.versionMismatch,
+                    address: '$host:$port',
+                    userInput: version,
+                    additionalUserInput: handShakeResult.version);
+  }
+
+  // Enable debugging to be able to communicate with VM when there
+  // are errors.
   await session.runCommand(const Debugging());
 
   state.session = session;
