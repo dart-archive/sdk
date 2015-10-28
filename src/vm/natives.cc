@@ -953,6 +953,10 @@ NATIVE(ProcessSpawn) {
   process->RegisterFinalizer(
       HeapObject::cast(dart_process), Process::FinalizeProcess);
 
+  // TODO(kustermann): Allow this to be configured dynamically.
+  process->links()->InsertHandle(child->process_handle());
+  child->links()->InsertHandle(process->process_handle());
+
   program->scheduler()->EnqueueProcessOnSchedulerWorkerThread(process, child);
 
   return dart_process;

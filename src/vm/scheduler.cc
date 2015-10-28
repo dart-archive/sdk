@@ -8,6 +8,7 @@
 
 #include "src/vm/gc_thread.h"
 #include "src/vm/interpreter.h"
+#include "src/vm/links.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 #include "src/vm/process_queue.h"
@@ -199,7 +200,43 @@ void Scheduler::ResumeProcess(Process* process) {
   EnqueueOnAnyThreadSafe(process);
 }
 
-void Scheduler::ProcessContinue(Process* process) {
+void Scheduler::SignalProcess(Process* process) {
+  while (true) {
+    switch (process->state()) {
+      case Process::kSleeping:
+        if (process->ChangeState(Process::kSleeping, Process::kReady)) {
+          // TODO(kustermann): If it is guaranteed that [SignalProcess] is only
+          // called from a scheduler worker thread, we could use the non *Safe*
+          // method here (which doesn't guard against stopped programs).
+          EnqueueOnAnyThreadSafe(process);
+          return;
+        }
+        // If the state changed, we'll try again.
+        break;
+      case Process::kReady:
+      case Process::kBreakPoint:
+      case Process::kCompileTimeError:
+      case Process::kUncaughtException:
+        // Either the scheduler/debugger will signal the process, or it will be
+        // enqueued and the interpreter entry will handle the signal.
+        return;
+      case Process::kRunning:
+        // The process will be signaled when entering/leaving the interpreter.
+        process->Preempt();
+        return;
+      case Process::kYielding:
+        // This is a temporary state and will go either to kReady/kSleeping.
+        // NOTE: Bad that we're busy looping here (liklihood of wasted cycles is
+        // roughly the same as for spinlocks)!
+        break;
+      case Process::kTerminated:
+        // Nothing to do here.
+        return;
+    }
+  }
+}
+
+void Scheduler::ContinueProcess(Process* process) {
   bool success =
       process->ChangeState(Process::kBreakPoint, Process::kReady) ||
       process->ChangeState(Process::kCompileTimeError, Process::kReady) ||
@@ -241,30 +278,6 @@ int Scheduler::Run() {
     // If we didn't time out, we were interrupted. In that case, continue.
     if (!preempt_monitor_->WaitUntil(next_timeout)) continue;
 
-    if (shutdown_ != -1) {
-      // The following code can be viewed as if a separate thread is listening
-      // for shutdown signals and then acts on it (stop program, delete all
-      // processes).
-      //
-      // It is here (in a central place), in order to prevent multiple
-      // scheduler worker threads to race about shutting down at the same time.
-      // Yet we save having another thread just for shutting down.
-      //
-      // Using [StopProgram] will coordinate with scheduler worker threads,
-      // which might use [preempt_monitor_] to signal the main thread. This
-      // requires being able to take the [preempt_monitor_] lock. We therefore
-      // unlock [preempt_monitor_] during this work.
-      ScopedMonitorUnlock unlocker(preempt_monitor_);
-
-      // TODO(ajohnsen): Handle multiple programs.
-      Program* program = shutdown_program_;
-      StopProgram(program);
-      program->program_state()->set_paused_processes_head(NULL);
-      program->DeleteAllProcesses();
-      processes_ = 0;
-      ResumeProgram(program);
-    }
-
     bool is_preempt = next_preempt <= next_profile;
     bool is_profile = next_profile <= next_preempt;
 
@@ -294,9 +307,9 @@ int Scheduler::Run() {
   return 0;
 }
 
-void Scheduler::DeleteTerminatedProcess(Process* process) {
+void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   Program* program = process->program();
-  program->DeleteProcess(process);
+  program->DeleteProcess(process, kind);
   --processes_;
 
   if (Flags::gc_on_delete) {
@@ -305,8 +318,8 @@ void Scheduler::DeleteTerminatedProcess(Process* process) {
   }
 }
 
-void Scheduler::ExitAtTermination(Process* process) {
-  DeleteTerminatedProcess(process);
+void Scheduler::ExitAtTermination(Process* process, Signal::Kind kind) {
+  DeleteTerminatedProcess(process, kind);
   if (processes_ == 0) NotifyAllThreads();
 }
 
@@ -319,22 +332,26 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
     exception->Print();
   }
 
-  ExitWith(process, kUncaughtExceptionExitCode);
+  ExitWith(process, kUncaughtExceptionExitCode, Signal::kUncaughtException);
 }
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {
   ASSERT(process->state() == Process::kCompileTimeError);
-  ExitWith(process, kCompileTimeErrorExitCode);
+  ExitWith(process, kCompileTimeErrorExitCode, Signal::kCompileTimeError);
 }
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
   ASSERT(process->state() == Process::kBreakPoint);
-  ExitWith(process, kBreakPointExitCode);
+  // TODO(kustermann): Maybe we want to make a different constant for this? It
+  // is a very strange case and one could even argue that if the session
+  // detaches after hitting a breakpoint the process should not be killed but
+  // rather resumed.
+  ExitWith(process, kBreakPointExitCode, Signal::kTerminated);
 }
 
-void Scheduler::ExitWith(Process* process, int exit_code) {
+void Scheduler::ExitWith(Process* process, int exit_code, Signal::Kind kind) {
   Program* program = process->program();
-  DeleteTerminatedProcess(process);
+  DeleteTerminatedProcess(process, kind);
   ScopedMonitorLock scoped_lock(preempt_monitor_);
   shutdown_program_ = program;
   shutdown_ = exit_code;
@@ -346,7 +363,7 @@ void Scheduler::RescheduleProcess(Process* process,
                                   bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
-    ExitAtTermination(process);
+    ExitAtTermination(process, Signal::kTerminated);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
     EnqueueOnAnyThread(process, state->thread_id() + 1);
@@ -620,6 +637,13 @@ Process* Scheduler::InterpretProcess(Process* process,
                                      bool* allocation_failure) {
   ASSERT(process->exception()->IsNull());
 
+  // TODO(kustermann): Support signal handlers.
+  Signal* signal = process->signal_mailbox()->CurrentMessage();
+  if (signal != NULL) {
+    ExitAtTermination(process, signal->kind());
+    return NULL;
+  }
+
   int thread_id = thread_state->thread_id();
   SetCurrentProcessForThread(thread_id, process);
 
@@ -649,7 +673,8 @@ Process* Scheduler::InterpretProcess(Process* process,
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
-    if (process->mailbox()->IsEmpty()) {
+    if (process->mailbox()->IsEmpty() &&
+        process->signal_mailbox()->IsEmpty()) {
       process->ChangeState(Process::kYielding, Process::kSleeping);
     } else {
       process->ChangeState(Process::kYielding, Process::kReady);
@@ -704,7 +729,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->ProcessTerminated(process)) {
-      ExitAtTermination(process);
+      ExitAtTermination(process, Signal::kTerminated);
     }
     return NULL;
   }

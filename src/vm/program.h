@@ -10,6 +10,7 @@
 #include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
 #include "src/vm/shared_heap.h"
+#include "src/vm/links.h"
 #include "src/vm/program_folder.h"
 
 namespace fletch {
@@ -170,7 +171,7 @@ class Program {
 
   Process* SpawnProcess();
   Process* ProcessSpawnForMain();
-  void DeleteProcess(Process* process);
+  void DeleteProcess(Process* process, Signal::Kind kind);
   void DeleteAllProcesses();
 
   // This function should only be called once the program has been stopped.

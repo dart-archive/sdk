@@ -119,7 +119,7 @@ Process::~Process() {
   ASSERT(cooked_stack_deltas_.is_empty());
 }
 
-void Process::Cleanup() {
+void Process::Cleanup(Signal::Kind kind) {
   // Clear out the process pointer from all the ports.
   ASSERT(immutable_heap_ == NULL);
   while (ports_ != NULL) {
@@ -131,6 +131,10 @@ void Process::Cleanup() {
   // We are going down at this point. If anything else is starting to
   // link/monitor with this [ProcessHandle], it will fail after this line.
   ProcessHandle::OwnerProcessTerminating(process_handle_);
+
+  // Since nobody can send us messages (or signals) at this point, we can
+  // propagate the exit signal.
+  links()->CleanupWithSignal(process_handle(), kind);
 }
 
 void Process::SetupExecutionStack() {

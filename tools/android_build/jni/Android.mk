@@ -42,6 +42,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/shared_heap.cc \
 	../../../src/vm/interpreter.cc \
 	../../../src/vm/intrinsics.cc \
+	../../../src/vm/links.cc \
 	../../../src/vm/lookup_cache.cc \
 	../../../src/vm/log_print_interceptor.cc \
 	../../../src/vm/message_mailbox.cc \

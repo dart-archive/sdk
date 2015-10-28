@@ -87,9 +87,9 @@ Process* Program::ProcessSpawnForMain() {
   return process;
 }
 
-void Program::DeleteProcess(Process* process) {
+void Program::DeleteProcess(Process* process, Signal::Kind kind) {
   RemoveFromProcessList(process);
-  process->Cleanup();
+  process->Cleanup(kind);
   delete process;
 }
 
@@ -99,7 +99,7 @@ void Program::DeleteAllProcesses() {
   Process* current = process_list_head_;
   while (current != NULL) {
     Process* next = current->process_list_next();
-    current->Cleanup();
+    current->Cleanup(Signal::kTerminated);
     delete current;
     current = next;
   }

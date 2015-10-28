@@ -7,6 +7,7 @@
 
 #include "src/shared/atomic.h"
 
+#include "src/vm/signal_mailbox.h"
 #include "src/vm/thread_pool.h"
 
 namespace fletch {
@@ -63,7 +64,10 @@ class Scheduler {
   void ResumeProcess(Process* process);
 
   // Continue a process that is stopped at a break point.
-  void ProcessContinue(Process* process);
+  void ContinueProcess(Process* process);
+
+  // A signal arrived for the process.
+  void SignalProcess(Process* process);
 
   int Run();
 
@@ -77,7 +81,7 @@ class Scheduler {
   //
   // TODO(kustermann): Once we've made more progress on the design of a
   // multiprocess system, we should consider making an abstraction for these.
-  void ExitAtTermination(Process* process);
+  void ExitAtTermination(Process* process, Signal::Kind kind);
   void ExitAtUncaughtException(Process* process, bool print_stack);
   void ExitAtCompileTimeError(Process* process);
   void ExitAtBreakpoint(Process* process);
@@ -112,10 +116,10 @@ class Scheduler {
 
   GCThread* gc_thread_;
 
-  void DeleteTerminatedProcess(Process* process);
+  void DeleteTerminatedProcess(Process* process, Signal::Kind kind);
 
   // Exit the program for the given process with the given exit code.
-  void ExitWith(Process* process, int exit_code);
+  void ExitWith(Process* process, int exit_code, Signal::Kind kind);
 
   void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);

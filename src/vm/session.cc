@@ -12,6 +12,7 @@
 #include "src/shared/platform.h"
 #include "src/shared/version.h"
 
+#include "src/vm/links.h"
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
@@ -177,7 +178,7 @@ void Session::SendInstanceStructure(Instance* instance) {
 
 void Session::ProcessContinue(Process* process) {
   execution_paused_ = false;
-  process->program()->scheduler()->ProcessContinue(process);
+  process->program()->scheduler()->ContinueProcess(process);
 }
 
 void Session::SendStackTrace(Stack* stack) {
@@ -758,7 +759,7 @@ int Session::ProcessRun() {
         if (!process_started && process_ != NULL) {
           // If the process was spawned but not started, the scheduler does not
           // know about it and we are therefore responsible for deleting it.
-          program()->DeleteProcess(process_);
+          program()->DeleteProcess(process_, Signal::kTerminated);
         }
         Print::UnregisterPrintInterceptors();
         if (!process_started) return 0;
@@ -1292,7 +1293,7 @@ bool Session::ProcessTerminated(Process* process) {
     WriteBuffer buffer;
     connection_->Send(Connection::kProcessTerminated, buffer);
     process_ = NULL;
-    program_->scheduler()->ExitAtTermination(process);
+    program_->scheduler()->ExitAtTermination(process, Signal::kTerminated);
     return true;
   }
   return false;

@@ -10,10 +10,12 @@
 
 #include "src/vm/debug_info.h"
 #include "src/vm/heap.h"
+#include "src/vm/links.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/message_mailbox.h"
 #include "src/vm/process_handle.h"
 #include "src/vm/program.h"
+#include "src/vm/signal_mailbox.h"
 #include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
 
@@ -116,6 +118,7 @@ class Process {
   void set_ports(Port* port) { ports_ = port; }
 
   ProcessHandle* process_handle() const { return process_handle_; }
+  Links* links() { return &links_; }
 
   void SetupExecutionStack();
   StackCheckResult HandleStackOverflow(int addition);
@@ -246,6 +249,8 @@ class Process {
 
   MessageMailbox* mailbox() { return &mailbox_; }
 
+  SignalMailbox* signal_mailbox() { return &signal_mailbox_; }
+
   void RecordStore(HeapObject* object, Object* value) {
     if (value->IsHeapObject() && value->IsImmutable()) {
       ASSERT(!program()->heap()->space()->Includes(
@@ -280,7 +285,7 @@ class Process {
   // process.
   // The process is therefore invisble for anything else and can be safely
   // deleted.
-  void Cleanup();
+  void Cleanup(Signal::Kind kind);
 
   void UpdateStackLimit();
 
@@ -310,6 +315,7 @@ class Process {
 
   Heap* immutable_heap_;
   StoreBuffer store_buffer_;
+  Links links_;
 
   Atomic<State> state_;
   Atomic<ThreadState*> thread_state_;
@@ -329,12 +335,13 @@ class Process {
   Process* queue_next_;
   Process* queue_previous_;
 
+  SignalMailbox signal_mailbox_;
+  MessageMailbox mailbox_;
+
   ProcessHandle* process_handle_;
 
   // Linked list of ports owned by this process.
   Port* ports_;
-
-  MessageMailbox mailbox_;
 
   // Used for chaining all processes of a program. It is protected by a lock
   // in the program.
