@@ -9,7 +9,7 @@
 #include "src/shared/random.h"
 #include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
-#include "src/vm/immutable_heap.h"
+#include "src/vm/shared_heap.h"
 #include "src/vm/program_folder.h"
 
 namespace fletch {
@@ -153,7 +153,7 @@ class Program {
   Session* session() { return session_; }
 
   Heap* heap() { return &heap_; }
-  ImmutableHeap* immutable_heap() { return &immutable_heap_; }
+  SharedHeap* shared_heap() { return &shared_heap_; }
 
   HeapObject* ObjectFromFailure(Failure* failure) {
     if (failure == Failure::wrong_argument_type()) {
@@ -197,7 +197,7 @@ class Program {
   void ValidateHeapsAreConsistent();
 
   void CollectGarbage();
-  void CollectImmutableGarbage();
+  void CollectSharedGarbage();
 
   void PrintStatistics();
 
@@ -253,7 +253,7 @@ class Program {
   RandomXorShift random_;
 
   Heap heap_;
-  ImmutableHeap immutable_heap_;
+  SharedHeap shared_heap_;
 
   Scheduler* scheduler_;
   ProgramState program_state_;

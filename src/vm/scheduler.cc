@@ -495,8 +495,8 @@ void Scheduler::RunInThread() {
 void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   // We use this heap for allocating new immutable objects.
   Program* program = NULL;
-  ImmutableHeap* immutable_heap = NULL;
-  ImmutableHeap::Part* immutable_heap_part = NULL;
+  SharedHeap* shared_heap = NULL;
+  SharedHeap::Part* shared_heap_part = NULL;
 
   while (!pause_) {
     Process* process = NULL;
@@ -508,27 +508,27 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
       // If we changed programs, merge the current part back to it's heap
       // and get a new part from the new program.
       if (process->program() != program) {
-        if (immutable_heap_part != NULL) {
-          if (immutable_heap->ReleasePart(immutable_heap_part)) {
+        if (shared_heap_part != NULL) {
+          if (shared_heap->ReleasePart(shared_heap_part)) {
             gc_thread_->TriggerImmutableGC(program);
           }
         }
         program = process->program();
-        immutable_heap = program->immutable_heap();
-        immutable_heap_part = immutable_heap->AcquirePart();
+        shared_heap = program->shared_heap();
+        shared_heap_part = shared_heap->AcquirePart();
       }
 
       // Interpret and trigger GC if interpretation resulted in immutable
       // allocation failure.
       bool allocation_failure = false;
       Process* new_process = InterpretProcess(
-          process, immutable_heap_part->heap(), thread_state,
+          process, shared_heap_part->heap(), thread_state,
           &allocation_failure);
       if (allocation_failure) {
-        if (immutable_heap->ReleasePart(immutable_heap_part)) {
+        if (shared_heap->ReleasePart(shared_heap_part)) {
           gc_thread_->TriggerImmutableGC(program);
         }
-        immutable_heap_part = immutable_heap->AcquirePart();
+        shared_heap_part = shared_heap->AcquirePart();
       }
 
       // Possibly switch to a new process.
@@ -538,8 +538,8 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
 
   // Always merge remaining immutable heap part back before (possibly) going
   // to sleep.
-  if (immutable_heap != NULL &&
-      immutable_heap->ReleasePart(immutable_heap_part)) {
+  if (shared_heap != NULL &&
+      shared_heap->ReleasePart(shared_heap_part)) {
     gc_thread_->TriggerImmutableGC(program);
   }
 }
@@ -573,7 +573,7 @@ void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {
 }
 
 Process* Scheduler::InterpretProcess(Process* process,
-                                     Heap* immutable_heap,
+                                     Heap* shared_heap,
                                      ThreadState* thread_state,
                                      bool* allocation_failure) {
   ASSERT(process->exception()->IsNull());
@@ -588,11 +588,11 @@ Process* Scheduler::InterpretProcess(Process* process,
   // Warning: These two lines should not be moved, since the code further down
   // will potentially push the process on a queue which is accessed by other
   // threads, which would create a race.
-  immutable_heap->set_random(process->random());
-  process->set_immutable_heap(immutable_heap);
+  shared_heap->set_random(process->random());
+  process->set_immutable_heap(shared_heap);
   interpreter.Run();
   process->set_immutable_heap(NULL);
-  immutable_heap->set_random(NULL);
+  shared_heap->set_random(NULL);
 
   process->set_thread_state(NULL);
   ClearCurrentProcessForThread(thread_id, process);

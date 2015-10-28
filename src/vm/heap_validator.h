@@ -12,14 +12,14 @@
 namespace fletch {
 
 // Validates that all pointers it gets called with lie inside certain spaces -
-// depending on [immutable_heap], [mutable_heap], [program_heap].
+// depending on [shared_heap], [mutable_heap], [program_heap].
 class HeapPointerValidator: public PointerVisitor {
  public:
   HeapPointerValidator(Heap* program_heap,
-                       ImmutableHeap* immutable_heap,
+                       SharedHeap* shared_heap,
                        Heap* mutable_heap)
       : program_heap_(program_heap),
-        immutable_heap_(immutable_heap),
+        shared_heap_(shared_heap),
         mutable_heap_(mutable_heap) {}
   virtual ~HeapPointerValidator() {}
 
@@ -29,18 +29,18 @@ class HeapPointerValidator: public PointerVisitor {
   void ValidatePointer(Object* object);
 
   Heap* program_heap_;
-  ImmutableHeap* immutable_heap_;
+  SharedHeap* shared_heap_;
   Heap* mutable_heap_;
 };
 
 // Validates that all pointers it gets called with lie inside program/immutable
 // heaps.
-class ImmutableHeapPointerValidator: public HeapPointerValidator {
+class SharedHeapPointerValidator: public HeapPointerValidator {
  public:
-  ImmutableHeapPointerValidator(Heap* program_heap,
-                                ImmutableHeap* immutable_heap)
-      : HeapPointerValidator(program_heap, immutable_heap, NULL) {}
-  virtual ~ImmutableHeapPointerValidator() {}
+  SharedHeapPointerValidator(Heap* program_heap,
+                                SharedHeap* shared_heap)
+      : HeapPointerValidator(program_heap, shared_heap, NULL) {}
+  virtual ~SharedHeapPointerValidator() {}
 };
 
 // Validates that all pointers it gets called with lie inside the program heap.
@@ -56,15 +56,15 @@ class ProgramHeapPointerValidator: public HeapPointerValidator {
 class ProcessHeapValidatorVisitor : public ProcessVisitor {
  public:
   explicit ProcessHeapValidatorVisitor(Heap* program_heap,
-                                       ImmutableHeap* immutable_heap)
-      : program_heap_(program_heap), immutable_heap_(immutable_heap) {}
+                                       SharedHeap* shared_heap)
+      : program_heap_(program_heap), shared_heap_(shared_heap) {}
   virtual ~ProcessHeapValidatorVisitor() {}
 
   virtual void VisitProcess(Process* process);
 
  private:
   Heap* program_heap_;
-  ImmutableHeap* immutable_heap_;
+  SharedHeap* shared_heap_;
 };
 
 }  // namespace fletch

@@ -32,7 +32,7 @@ class GCThread {
   Monitor* gc_thread_monitor_;
   Program* program_;
   bool shutting_down_;
-  bool requesting_immutable_gc_;
+  bool requesting_shared_gc_;
   bool requesting_gc_;
   int pause_count_;
 

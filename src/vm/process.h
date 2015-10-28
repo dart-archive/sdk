@@ -21,7 +21,7 @@ namespace fletch {
 
 class Engine;
 class Interpreter;
-class ImmutableHeap;
+class SharedHeap;
 class Port;
 class ProcessQueue;
 class ProcessVisitor;
@@ -163,7 +163,7 @@ class Process {
   int CollectMutableGarbageAndChainStacks();
   int CollectGarbageAndChainStacks();
 
-  void ValidateHeaps(ImmutableHeap* immutable_heap);
+  void ValidateHeaps(SharedHeap* shared_heap);
 
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);

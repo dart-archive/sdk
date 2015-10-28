@@ -2,15 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_VM_IMMUTABLE_HEAP_H_
-#define SRC_VM_IMMUTABLE_HEAP_H_
+#ifndef SRC_VM_SHARED_HEAP_H_
+#define SRC_VM_SHARED_HEAP_H_
 
 #include "src/shared/globals.h"
 #include "src/vm/heap.h"
 
 namespace fletch {
 
-class ImmutableHeap {
+class SharedHeap {
  public:
   class Part {
    public:
@@ -46,8 +46,8 @@ class ImmutableHeap {
     Part* next_;
   };
 
-  ImmutableHeap();
-  ~ImmutableHeap();
+  SharedHeap();
+  ~SharedHeap();
 
   // Will return a [Heap] which will have an allocation budget which is
   // `known_live_memory / number_of_hw_threads_`. This is an approximation of a
@@ -57,13 +57,13 @@ class ImmutableHeap {
   // better by keeping track of the current number of used scheduler threads.
   Part* AcquirePart();
 
-  // Will return `true` if the caller should trigger an immutable GC.
+  // Will return `true` if the caller should trigger a GC.
   //
   // It is assumed that this function is only called on allocation failures.
   bool ReleasePart(Part* part);
 
   // Merges all parts which have been acquired and subsequently released into
-  // the accumulated immutable heap.
+  // the accumulated shared heap.
   //
   // This function assumes that there are no parts outstanding.
   void MergeParts();
@@ -84,13 +84,13 @@ class ImmutableHeap {
   // This method can only be called if
   //   * all acquired parts were released again
   //   * all cached parts were merged via [MergeParts]
-  void UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc);
+  void UpdateLimitAfterGC(int mutable_size_at_last_gc);
 
   // The number of used bytes at the moment. Note that this is an over
   // approximation.
   int EstimatedUsed();
 
-  // The total size of the immutable heap at the moment. Note that this is an
+  // The total size of the shared heap at the moment. Note that this is an
   // over approximation.
   int EstimatedSize();
 
@@ -106,8 +106,8 @@ class ImmutableHeap {
   int outstanding_parts_;
   Part* unmerged_parts_;
 
-  // The limit of bytes we give out before a immutable GC should happen.
-  int immutable_allocation_limit_;
+  // The limit of bytes we give out before a GC should happen.
+  int allocation_limit_;
 
   // The amount of memory consumed by unmerged parts.
   int unmerged_allocated_;
@@ -123,4 +123,4 @@ class ImmutableHeap {
 }  // namespace fletch
 
 
-#endif  // SRC_VM_IMMUTABLE_HEAP_H_
+#endif  // SRC_VM_SHARED_HEAP_H_

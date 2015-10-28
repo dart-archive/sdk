@@ -210,8 +210,8 @@ Object* Program::CreateInitializer(Function* function) {
 
 void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
   // All threads are stopped and have given their parts back to the
-  // [ImmutableHeap], so we can merge them now.
-  immutable_heap()->MergeParts();
+  // [SharedHeap], so we can merge them now.
+  shared_heap()->MergeParts();
 
   if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
     ValidateGlobalHeapsAreConsistent();
@@ -221,7 +221,7 @@ void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
   Process* current = process_list_head_;
   while (current != NULL) {
     if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
-      current->ValidateHeaps(&immutable_heap_);
+      current->ValidateHeaps(&shared_heap_);
     }
 
     int number_of_stacks = current->CollectGarbageAndChainStacks();
@@ -239,7 +239,7 @@ void Program::PerformProgramGC(Space* to, PointerVisitor* visitor) {
 
     // Iterate all immutable objects.
     HeapObjectPointerVisitor object_pointer_visitor(visitor);
-    immutable_heap_.heap()->IterateObjects(&object_pointer_visitor);
+    shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
 
     // Iterate over all process program pointers.
     Process* current = process_list_head_;
@@ -263,7 +263,7 @@ void Program::FinishProgramGC() {
     current->UpdateBreakpoints();
 
     if (Flags::validate_heaps) {
-      current->ValidateHeaps(&immutable_heap_);
+      current->ValidateHeaps(&shared_heap_);
     }
     current = current->process_list_next();
   }
@@ -288,16 +288,16 @@ void Program::ValidateHeapsAreConsistent() {
     IterateRoots(&validator);
     heap()->IterateObjects(&object_pointer_visitor);
   }
-  // Validate the immutable heap
+  // Validate the shared heap
   {
-    ImmutableHeapPointerValidator validator(heap(), &immutable_heap_);
+    SharedHeapPointerValidator validator(heap(), &shared_heap_);
     HeapObjectPointerVisitor object_pointer_visitor(&validator);
-    immutable_heap_.heap()->IterateObjects(&object_pointer_visitor);
-    immutable_heap_.heap()->VisitWeakObjectPointers(&validator);
+    shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
+    shared_heap_.heap()->VisitWeakObjectPointers(&validator);
   }
   // Validate all process heaps.
   {
-    ProcessHeapValidatorVisitor validator(heap(), &immutable_heap_);
+    ProcessHeapValidatorVisitor validator(heap(), &shared_heap_);
     VisitProcesses(&validator);
   }
 }
@@ -348,20 +348,20 @@ void Program::RemoveFromProcessList(Process* process) {
   process->set_process_list_prev(NULL);
 }
 
-struct ImmutableHeapUsage {
+struct SharedHeapUsage {
   uint64 timestamp = 0;
-  uword immutable_used = 0;
-  uword immutable_size = 0;
+  uword shared_used = 0;
+  uword shared_size = 0;
 };
 
-static void GetImmutableHeapUsage(Heap* heap, ImmutableHeapUsage* heap_usage) {
+static void GetSharedHeapUsage(Heap* heap, SharedHeapUsage* heap_usage) {
   heap_usage->timestamp = Platform::GetMicroseconds();
-  heap_usage->immutable_used = heap->space()->Used();
-  heap_usage->immutable_size = heap->space()->Size();
+  heap_usage->shared_used = heap->space()->Used();
+  heap_usage->shared_size = heap->space()->Size();
 }
 
-static void PrintImmutableGCInfo(ImmutableHeapUsage* before,
-                                 ImmutableHeapUsage* after) {
+static void PrintImmutableGCInfo(SharedHeapUsage* before,
+                                 SharedHeapUsage* after) {
   static int count = 0;
   Print::Error(
       "Immutable-GC(%i): "
@@ -369,31 +369,31 @@ static void PrintImmutableGCInfo(ImmutableHeapUsage* before,
       "\t%lu/%lu -> %lu/%lu\n",
       count++,
       after->timestamp - before->timestamp,
-      before->immutable_used,
-      before->immutable_size,
-      after->immutable_used,
-      after->immutable_size);
+      before->shared_used,
+      before->shared_size,
+      after->shared_used,
+      after->shared_size);
 }
 
-void Program::CollectImmutableGarbage() {
+void Program::CollectSharedGarbage() {
   Scheduler* scheduler = this->scheduler();
   ASSERT(scheduler != NULL);
 
   // This will make sure all partial immutable heaps got merged into
-  // [program_->immutable_heap()].
+  // [program_->shared_heap()].
   scheduler->StopProgram(this);
 
   // All threads are stopped and have given their parts back to the
-  // [ImmutableHeap], so we can merge them now.
-  immutable_heap()->MergeParts();
+  // [SharedHeap], so we can merge them now.
+  shared_heap()->MergeParts();
 
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
   }
 
-  ImmutableHeapUsage usage_before;
+  SharedHeapUsage usage_before;
   if (Flags::print_heap_statistics) {
-    GetImmutableHeapUsage(immutable_heap()->heap(), &usage_before);
+    GetSharedHeapUsage(shared_heap()->heap(), &usage_before);
   }
 
   // Pass 1: Storebuffer compaction.
@@ -412,7 +412,7 @@ void Program::CollectImmutableGarbage() {
 
   // Pass 2: Iterate all process roots to immutable heap.
   {
-    Heap* heap = immutable_heap()->heap();
+    Heap* heap = shared_heap()->heap();
     Space* from = heap->space();
     Space* to = new Space(from->Used() / 10);
     NoAllocationFailureScope alloc(to);
@@ -433,12 +433,12 @@ void Program::CollectImmutableGarbage() {
     heap->ProcessWeakPointers();
     heap->ReplaceSpace(to);
 
-    immutable_heap()->UpdateLimitAfterImmutableGC(process_heap_sizes);
+    shared_heap()->UpdateLimitAfterGC(process_heap_sizes);
   }
 
   if (Flags::print_heap_statistics) {
-    ImmutableHeapUsage usage_after;
-    GetImmutableHeapUsage(immutable_heap()->heap(), &usage_after);
+    SharedHeapUsage usage_after;
+    GetSharedHeapUsage(shared_heap()->heap(), &usage_after);
     PrintImmutableGCInfo(&usage_before, &usage_after);
   }
 

@@ -122,7 +122,7 @@ class Heap {
 
  private:
   friend class ExitReference;
-  friend class ImmutableHeap;
+  friend class SharedHeap;
   friend class Scheduler;
   friend class Program;
 

@@ -2,25 +2,25 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "src/vm/immutable_heap.h"
+#include "src/vm/shared_heap.h"
 #include "src/vm/object_memory.h"
 
 namespace fletch {
 
-ImmutableHeap::ImmutableHeap()
+SharedHeap::SharedHeap()
     : number_of_hw_threads_(Platform::GetNumberOfHardwareThreads()),
       heap_mutex_(Platform::CreateMutex()),
       heap_(new Space(), reinterpret_cast<WeakPointer*>(NULL)),
       outstanding_parts_(0),
       unmerged_parts_(NULL),
-      immutable_allocation_limit_(0),
+      allocation_limit_(0),
       unmerged_allocated_(0),
       outstanding_parts_allocated_(0),
       outstanding_parts_budget_(0) {
-  UpdateLimitAfterImmutableGC(0);
+  UpdateLimitAfterGC(0);
 }
 
-ImmutableHeap::~ImmutableHeap() {
+SharedHeap::~SharedHeap() {
   delete heap_mutex_;
 
   while (HasUnmergedParts()) {
@@ -28,12 +28,12 @@ ImmutableHeap::~ImmutableHeap() {
   }
 }
 
-void ImmutableHeap::AddUnmergedPart(Part* part) {
+void SharedHeap::AddUnmergedPart(Part* part) {
   part->set_next(unmerged_parts_);
   unmerged_parts_ = part;
 }
 
-ImmutableHeap::Part* ImmutableHeap::RemoveUnmergedPart() {
+SharedHeap::Part* SharedHeap::RemoveUnmergedPart() {
   Part* part = unmerged_parts_;
   if (part == NULL) return NULL;
 
@@ -42,7 +42,7 @@ ImmutableHeap::Part* ImmutableHeap::RemoveUnmergedPart() {
   return part;
 }
 
-void ImmutableHeap::UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc) {
+void SharedHeap::UpdateLimitAfterGC(int mutable_size_at_last_gc) {
   ASSERT(outstanding_parts_ == 0 && unmerged_parts_ == NULL);
 
   // Without knowing anything, we use the default [Space] size.
@@ -66,11 +66,10 @@ void ImmutableHeap::UpdateLimitAfterImmutableGC(int mutable_size_at_last_gc) {
   // TODO(kustermann): We might want to use a different metric than the mutable
   // heap size (preferable the number of pointers to immutable space - the
   // size of the root set).
-  immutable_allocation_limit_ =
-      Utils::Maximum(limit, mutable_size_at_last_gc / 10);
+  allocation_limit_ = Utils::Maximum(limit, mutable_size_at_last_gc / 10);
 }
 
-int ImmutableHeap::EstimatedUsed() {
+int SharedHeap::EstimatedUsed() {
   ScopedLock locker(heap_mutex_);
 
   int merged_used = heap_.UsedTotal();
@@ -89,7 +88,7 @@ int ImmutableHeap::EstimatedUsed() {
   return merged_used + unmerged_used + outstanding_used;
 }
 
-int ImmutableHeap::EstimatedSize() {
+int SharedHeap::EstimatedSize() {
   ScopedLock locker(heap_mutex_);
 
   int merged_size = heap_.space()->Size();
@@ -108,7 +107,7 @@ int ImmutableHeap::EstimatedSize() {
   return merged_size + unmerged_size + outstanding_size;
 }
 
-void ImmutableHeap::MergeParts() {
+void SharedHeap::MergeParts() {
   ScopedLock locker(heap_mutex_);
 
   ASSERT(outstanding_parts_ == 0);
@@ -122,17 +121,17 @@ void ImmutableHeap::MergeParts() {
   unmerged_allocated_ = 0;
 }
 
-void ImmutableHeap::IterateProgramPointers(PointerVisitor* visitor) {
+void SharedHeap::IterateProgramPointers(PointerVisitor* visitor) {
   ASSERT(outstanding_parts_ == 0 && unmerged_parts_ == NULL);
 
   HeapObjectPointerVisitor heap_pointer_visitor(visitor);
   heap_.IterateObjects(&heap_pointer_visitor);
 }
 
-ImmutableHeap::Part* ImmutableHeap::AcquirePart() {
+SharedHeap::Part* SharedHeap::AcquirePart() {
   ScopedLock locker(heap_mutex_);
 
-  int budget = immutable_allocation_limit_ / number_of_hw_threads_;
+  int budget = allocation_limit_ / number_of_hw_threads_;
 
   Part* part;
   if (HasUnmergedParts()) {
@@ -151,14 +150,14 @@ ImmutableHeap::Part* ImmutableHeap::AcquirePart() {
   return part;
 }
 
-bool ImmutableHeap::ReleasePart(Part* part) {
+bool SharedHeap::ReleasePart(Part* part) {
   ScopedLock locker(heap_mutex_);
   ASSERT(outstanding_parts_ > 0);
   outstanding_parts_--;
 
   part->heap()->Flush();
 
-  int limit = immutable_allocation_limit_;
+  int limit = allocation_limit_;
   int diff = part->NewlyAllocated();
   ASSERT(diff >= 0);
   int new_allocated_memory = unmerged_allocated_ + diff;

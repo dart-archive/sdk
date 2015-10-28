@@ -318,9 +318,9 @@ static void GetHeapUsage(Process* process, HeapUsage* heap_usage) {
   heap_usage->process_used = process->heap()->space()->Used();
   heap_usage->process_size = process->heap()->space()->Size();
   heap_usage->immutable_used =
-      process->program()->immutable_heap()->EstimatedUsed();
+      process->program()->shared_heap()->EstimatedUsed();
   heap_usage->immutable_size =
-      process->program()->immutable_heap()->EstimatedSize();
+      process->program()->shared_heap()->EstimatedSize();
   heap_usage->program_used = process->program()->heap()->space()->Used();
   heap_usage->program_size = process->program()->heap()->space()->Size();
 }
@@ -478,8 +478,8 @@ int Process::CollectGarbageAndChainStacks() {
   return number_of_stacks;
 }
 
-void Process::ValidateHeaps(ImmutableHeap* immutable_heap) {
-  ProcessHeapValidatorVisitor v(program()->heap(), immutable_heap);
+void Process::ValidateHeaps(SharedHeap* shared_heap) {
+  ProcessHeapValidatorVisitor v(program()->heap(), shared_heap);
   v.VisitProcess(this);
 }
 
