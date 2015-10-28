@@ -112,8 +112,10 @@ def CreateSnapshot(fletch_executable, dart_file, snapshot):
   FletchQuit(fletch_executable)
   cmd = [fletch_executable, 'export', dart_file, 'to', snapshot]
   print 'Running %s' % ' '.join(cmd)
-  subprocess.check_call(' '.join(cmd), shell=True)
-  FletchQuit(fletch_executable)
+  try:
+    subprocess.check_call(' '.join(cmd), shell=True)
+  finally:
+    FletchQuit(fletch_executable)
 
 def CreateAgentSnapshot(bundle_dir, build_dir):
   platforms = join(bundle_dir, 'platforms')
