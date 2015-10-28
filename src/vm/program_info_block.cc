@@ -17,7 +17,9 @@ class PointerReadingVisitor : public PointerVisitor {
     for (Object** p = start; p < end; p++) {
       *(target_++) = *p;
     }
+#ifdef DEBUG
     ASSERT(target_ <= info_->end_of_roots());
+#endif
   }
 
  private:
@@ -38,7 +40,9 @@ class PointerWritingVisitor : public PointerVisitor {
     for (Object** p = start; p < end; p++) {
       *p = *(target_++);
     }
+#ifdef DEBUG
     ASSERT(target_ <= info_->end_of_roots());
+#endif
   }
 
  private:
