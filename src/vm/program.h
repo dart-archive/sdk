@@ -48,7 +48,7 @@ class Session;
   V(Class, double_class, DoubleClass)                           \
   V(Class, stack_class, StackClass)                             \
   V(Class, coroutine_class, CoroutineClass)                     \
-  V(Class, process_class, ProcessClass)                                 \
+  V(Class, process_class, ProcessClass)                         \
   V(Class, port_class, PortClass)                               \
   V(Class, foreign_function_class, ForeignFunctionClass)        \
   V(Class, foreign_memory_class, ForeignMemoryClass)            \
@@ -65,6 +65,7 @@ class Session;
   V(Array, classes, Classes)                                    \
   V(Array, constants, Constants)                                \
   V(Array, static_methods, StaticMethods)                       \
+  V(Array, static_fields, StaticFields)                         \
   V(Array, dispatch_table, DispatchTable)                       \
   V(Array, vtable, VTable)                                      \
 
@@ -118,7 +119,6 @@ class Program {
     return Function::cast(static_methods_->get(index));
   }
 
-  Array* static_fields() const { return static_fields_; }
   void set_static_fields(Array* static_fields) {
     static_fields_ = static_fields;
   }
@@ -234,7 +234,7 @@ class Program {
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
-  Object** last_root_address() { return &native_failure_result_; }
+  Object** last_root_address() { return bit_cast<Object**>(&vtable_); }
 
   void ValidateGlobalHeapsAreConsistent();
 
@@ -265,8 +265,6 @@ class Program {
 
   Function* entry_;
   int main_arity_;
-
-  Array* static_fields_;
 
   bool is_compact_;
 };

@@ -16,6 +16,7 @@ class HeapObject;
 class HeapObjectVisitor;
 class PointerVisitor;
 class Process;
+class ProgramHeapRelocator;
 class Space;
 class StoreBuffer;
 
@@ -162,6 +163,7 @@ class Space {
 
  private:
   friend class NoAllocationFailureScope;
+  friend class ProgramHeapRelocator;
 
   uword TryAllocate(int size);
   uword AllocateInNewChunk(int size);
@@ -170,6 +172,7 @@ class Space {
 
   Chunk* first() { return first_; }
   Chunk* last() { return last_; }
+
   uword top() { return top_; }
 
   void IncrementNoAllocationNesting() { ++no_allocation_nesting_; }
@@ -237,6 +240,8 @@ class ObjectMemory {
   // rounded up the page size and the allocated memory is aligned
   // to a page boundary.
   static Chunk* AllocateChunk(Space* space, int size);
+
+  static Chunk* CreateChunk(Space* space, void *heap_space, int size);
 
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);

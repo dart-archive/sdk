@@ -46,7 +46,6 @@ Program::Program()
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
-      static_fields_(NULL),
       is_compact_(false) {
   // These asserts need to hold when running on the target, but they don't need
   // to hold on the host (the build machine, where the interpreter-generating
@@ -792,12 +791,6 @@ void Program::Initialize() {
 void Program::IterateRoots(PointerVisitor* visitor) {
   visitor->VisitBlock(first_root_address(), last_root_address() + 1);
   visitor->Visit(reinterpret_cast<Object**>(&entry_));
-  visitor->Visit(reinterpret_cast<Object**>(&classes_));
-  visitor->Visit(reinterpret_cast<Object**>(&constants_));
-  visitor->Visit(reinterpret_cast<Object**>(&static_methods_));
-  visitor->Visit(reinterpret_cast<Object**>(&static_fields_));
-  visitor->Visit(reinterpret_cast<Object**>(&dispatch_table_));
-  visitor->Visit(reinterpret_cast<Object**>(&vtable_));
   if (session_ != NULL) session_->IteratePointers(visitor);
 }
 

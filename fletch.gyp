@@ -27,6 +27,14 @@
       ],
     },
     {
+      'target_name': 'flashtool',
+      'type': 'none',
+      'toolsets': ['target'],
+      'dependencies': [
+        'src/tools/flashtool/flashtool.gyp:flashtool',
+      ],
+    },
+    {
       'target_name': 'toplevel_fletch',
       'type': 'none',
       'toolsets': ['target'],

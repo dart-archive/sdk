@@ -124,6 +124,7 @@ class Heap {
   friend class ExitReference;
   friend class ImmutableHeap;
   friend class Scheduler;
+  friend class Program;
 
   Heap(Space* existing_space, WeakPointer* weak_pointers);
 

@@ -37,6 +37,12 @@ FLETCH_EXPORT FletchProgram FletchLoadSnapshotFromFile(const char* path);
 // Delete a program.
 FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
 
+// Load a program from the given location. Location should point to a
+// reloacted program heap with appended info block, usually build using
+// the flashtool utility.
+FLETCH_EXPORT FletchProgram FletchLoadProgramFromFlash(void* location,
+                                                       size_t size);
+
 // Start a process at main, from the program.
 FLETCH_EXPORT int FletchRunMain(FletchProgram program);
 

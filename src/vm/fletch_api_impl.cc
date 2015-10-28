@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include <stdlib.h>
+
 #include "src/vm/fletch_api_impl.h"
 
 #include "src/shared/assert.h"
@@ -13,6 +15,7 @@
 
 #include "src/vm/ffi.h"
 #include "src/vm/program.h"
+#include "src/vm/program_info_block.h"
 #include "src/vm/program_folder.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/session.h"
@@ -92,7 +95,6 @@ static void WaitForDebuggerConnection(int port) {
   FATAL("fletch was built without live coding support.");
 #endif
 }
-
 }  // namespace fletch
 
 void FletchSetup() {
@@ -132,6 +134,22 @@ int FletchRunMultipleMain(int count, FletchProgram* programs) {
         reinterpret_cast<fletch::Program*>(programs[i]), &scheduler);
   }
   return fletch::RunScheduler(&scheduler);
+}
+
+FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {
+  fletch::Program* program = new fletch::Program();
+  uword address = reinterpret_cast<uword>(heap);
+  // The info block is appended at the end of the image.
+  size_t heap_size = size - sizeof(fletch::ProgramInfoBlock);
+  uword block_address = address + heap_size;
+  fletch::ProgramInfoBlock* program_info =
+      reinterpret_cast<fletch::ProgramInfoBlock*>(block_address);
+  program_info->WriteToProgram(program);
+  fletch::Chunk *memory = fletch::ObjectMemory::CreateChunk(
+      program->heap()->space(), heap, heap_size);
+  program->heap()->space()->AppendProgramChunk(memory, memory->base());
+  program->set_is_compact(true);
+  return reinterpret_cast<FletchProgram>(program);
 }
 
 void FletchDeleteProgram(FletchProgram raw_program) {

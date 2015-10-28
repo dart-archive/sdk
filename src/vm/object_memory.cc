@@ -376,6 +376,22 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   return chunk;
 }
 
+Chunk* ObjectMemory::CreateChunk(Space* owner, void *memory, int size) {
+  ASSERT(owner != NULL);
+  ASSERT(size == Utils::RoundUp(size, kPageSize));
+
+  uword base = reinterpret_cast<uword>(memory);
+  ASSERT(base % kPageSize == 0);
+
+#ifdef FLETCH_TARGET_OS_MBED
+  Chunk* chunk = new Chunk(owner, base, size, base);
+#else
+  Chunk* chunk = new Chunk(owner, base, size);
+#endif
+  SetSpaceForPages(chunk->base(), chunk->limit(), owner);
+  return chunk;
+}
+
 void ObjectMemory::FreeChunk(Chunk* chunk) {
 #ifdef DEBUG
   chunk->Scramble();
