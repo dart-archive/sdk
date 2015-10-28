@@ -101,6 +101,8 @@ class FletchSessionCommand implements Command {
     var dartVm = Uri.parse(executable).resolve('dart');
     String incrementalFlag = "-D$isIncrementalCompilationEnabledFlag="
         "$isIncrementalCompilationEnabled";
+    String fletchPath = Uri.parse(executable).resolve('fletch-vm').toString();
+    String versionFlag = '-Dfletch.version=`$fletchPath --version`';
     String settingsFileFlag = "-D$settingsFileNameFlag=$settingsFileName";
 
     return """
@@ -113,17 +115,19 @@ There are three ways to reproduce this error:
      debug using gdb:
 
     ${Platform.executable} -c $incrementalFlag $settingsFileFlag \\
+       $versionFlag \\
        tools/testing/dart/fletch_session_command.dart $executable \\
        ${arguments.join(' ')}
 
 
   2. Run the helper program `tests/fletchc/run.dart` under `gdb` using
-     `follow-fork-mode child`. This can be confusing, but makes it easy to run
-     a reproduction command in a loop:
+     `set follow-fork-mode child`. This can be confusing, but makes it
+     easy to run a reproduction command in a loop:
 
-    gdb -ex 'follow-fork-mode child' -ex run --args \\
-        $dartVm $incrementalFlag $settingsFileFlag -c tests/fletchc/run.dart \\
-        $script
+    gdb -ex 'set follow-fork-mode child' -ex run --args \\
+        $dartVm $incrementalFlag $settingsFileFlag \\
+        $versionFlag \\
+        -c tests/fletchc/run.dart $script
 
   3. Run the `fletch-vm` in gdb and attach to it via the helper program. This
      is the easiest way to debug using both gdb and lldb. You need to start two
@@ -131,8 +135,9 @@ There are three ways to reproduce this error:
 
     gdb -ex run --args $executable-vm --port=54321
 
-    $dartVm $incrementalFlag $settingsFileFlag -c -DattachToVm=54321 \\
-      tests/fletchc/run.dart $script
+    $dartVm $incrementalFlag $settingsFileFlag \\
+      $versionFlag \\
+      -c -DattachToVm=54321 tests/fletchc/run.dart $script
 
 
 """;
