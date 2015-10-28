@@ -69,7 +69,6 @@ class AgentContext {
   final int    port;
   final String pidFile;
   final Logger logger;
-  final bool applyUpgrade;
 
   // Fletch-vm path and args.
   final String vmBinPath;
@@ -105,10 +104,6 @@ class AgentContext {
     String vmLogDir = _getEnv('VM_LOG_DIR');
     String vmPidDir = _getEnv('VM_PID_DIR');
 
-    // If the below ENV variable is set the agent will just store the agent
-    // debian package but not apply it.
-    bool applyUpgrade = _getEnv('AGENT_UPGRADE_DRY_RUN') == null;
-
     logger.info('Agent log file: $logFile');
     logger.info('Agent pid file: $pidFile');
     logger.info('Vm path: $vmBinPath');
@@ -131,11 +126,11 @@ class AgentContext {
       Process.exit();
     }
     return new AgentContext._(
-        ip, port, pidFile, logger, vmBinPath, vmLogDir, vmPidDir, applyUpgrade);
+        ip, port, pidFile, logger, vmBinPath, vmLogDir, vmPidDir);
   }
 
   const AgentContext._(this.ip, this.port, this.pidFile, this.logger,
-      this.vmBinPath, this.vmLogDir, this. vmPidDir, this.applyUpgrade);
+      this.vmBinPath, this.vmLogDir, this. vmPidDir);
 }
 
 class Agent {
@@ -402,6 +397,7 @@ class CommandHandler {
   }
 
   void _upgradeAgent() {
+    const String PACKAGE_FILE_NAME = '/tmp/fletch-agent.deb';
     int result;
     ByteBuffer binary = _socket.read(_requestHeader.payloadLength);
     if (binary == null) {
@@ -422,11 +418,9 @@ class CommandHandler {
         file.close();
       }
       _context.logger.info('Package file written successfully.');
-      if (_context.applyUpgrade) {
-        int pid = NativeProcess.startDetached('/usr/bin/dpkg',
-            ['--install', PACKAGE_FILE_NAME]);
-        _context.logger.info('started package update (PID $pid)');
-      }
+      int pid = NativeProcess.startDetached('/usr/bin/dpkg',
+          ['--install', PACKAGE_FILE_NAME]);
+      _context.logger.info('started package update (PID $pid)');
       result = ReplyHeader.SUCCESS;
     }
     _context.logger.info('sending reply');
@@ -434,7 +428,8 @@ class CommandHandler {
   }
 
   void _fletchVersion() {
-    int version = AGENT_VERSION;
+    // TODO(wibling): implement this method, for now version is hardcoded to 1.
+    int version = 2;
     _context.logger.info('Returning fletch version $version');
     _sendReply(new FletchVersionReply(
         _requestHeader.id, ReplyHeader.SUCCESS, fletchVersion: version));
