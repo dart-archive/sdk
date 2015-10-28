@@ -25,7 +25,7 @@ static bool HasSentinelAt(uword address) {
 }
 
 Chunk::~Chunk() {
-#if defined(FLETCH_TARGET_OS_MBED)
+#if defined(FLETCH_TARGET_OS_CMSIS)
   free(reinterpret_cast<void*>(allocated_));
 #else
   free(reinterpret_cast<void*>(base()));
@@ -353,14 +353,14 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   // memalign.
   memory = memalign(kPageSize, size);
   if (memory == NULL) return NULL;
-#elif defined(FLETCH_TARGET_OS_MBED)
+#elif defined(FLETCH_TARGET_OS_CMSIS)
   memory = malloc(size + kPageSize);
   if (memory == NULL) return NULL;
 #else
   if (posix_memalign(&memory, kPageSize, size) != 0) return NULL;
 #endif
 
-#ifdef FLETCH_TARGET_OS_MBED
+#ifdef FLETCH_TARGET_OS_CMSIS
   uword allocated = reinterpret_cast<uword>(memory);
   uword base = (allocated / kPageSize + 1) * kPageSize;
   Chunk* chunk = new Chunk(owner, base, size, allocated);
@@ -383,7 +383,7 @@ Chunk* ObjectMemory::CreateChunk(Space* owner, void *memory, int size) {
   uword base = reinterpret_cast<uword>(memory);
   ASSERT(base % kPageSize == 0);
 
-#ifdef FLETCH_TARGET_OS_MBED
+#ifdef FLETCH_TARGET_OS_CMSIS
   Chunk* chunk = new Chunk(owner, base, size, base);
 #else
   Chunk* chunk = new Chunk(owner, base, size);

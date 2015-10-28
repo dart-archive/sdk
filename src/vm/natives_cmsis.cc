@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_MBED)
+#if defined(FLETCH_TARGET_OS_CMSIS)
 
 #include "src/vm/natives.h"
 
@@ -17,4 +17,4 @@ NATIVE(UriBase) {
 
 }  // namespace fletch
 
-#endif  // defined FLETCH_TARGET_OS_MBED
+#endif  // defined FLETCH_TARGET_OS_CMSIS

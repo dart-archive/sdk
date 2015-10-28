@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_VM_THREAD_MBED_H_
-#define SRC_VM_THREAD_MBED_H_
+#ifndef SRC_VM_THREAD_CMSIS_H_
+#define SRC_VM_THREAD_CMSIS_H_
 
 #ifndef SRC_VM_THREAD_H_
-#error "Don't include thread_mbed.h directly, include thread.h."
+#error "Don't include thread_cmsis.h directly, include thread.h."
 #endif
 
 #include <cmsis_os.h>
@@ -32,7 +32,7 @@ class ThreadIdentifier {
   //
   // A thread can only be joined once.
   void Join() {
-    printf("ThreadIdentifier::Join is not supported on MBED.\n");
+    printf("ThreadIdentifier::Join is not supported on CMSIS.\n");
     fflush(stdout);
   }
 
@@ -47,4 +47,4 @@ class ThreadIdentifier {
 }  // namespace fletch
 
 
-#endif  // SRC_VM_THREAD_MBED_H_
+#endif  // SRC_VM_THREAD_CMSIS_H_

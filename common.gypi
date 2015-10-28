@@ -29,7 +29,7 @@
 
     'LK_PATH%': 'third_party/lk/lk-downstream',
 
-    'mbed_path': '<(DEPTH)/../third_party/mbed/build/',
+    'mbed_path': '<(DEPTH)/third_party/mbed/build/',
 
     'conditions': [
       [ 'OS=="linux"', {
@@ -472,8 +472,8 @@
             'defines': [
               # Fake define intercepted by cc_wrapper.py to change the
               # compiler binary to an ARM cross compiler.
-              'FLETCH_MBED',
-              'FLETCH_TARGET_OS_MBED',
+              'FLETCH_CMSIS',
+              'FLETCH_TARGET_OS_CMSIS',
             ],
 
             'defines!': [
@@ -506,7 +506,7 @@
             'ldflags': [
               '-L<(third_party_libs_path)/arm',
               # Fake define intercepted by cc_wrapper.py.
-              '-L/FLETCH_MBED',
+              '-L/FLETCH_CMSIS',
               '-static-libstdc++',
             ],
           }],

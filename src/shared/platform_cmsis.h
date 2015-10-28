@@ -2,14 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_SHARED_PLATFORM_MBED_H_
-#define SRC_SHARED_PLATFORM_MBED_H_
+#ifndef SRC_SHARED_PLATFORM_CMSIS_H_
+#define SRC_SHARED_PLATFORM_CMSIS_H_
 
 #ifndef SRC_SHARED_PLATFORM_H_
-#error Do not include platform_mbed.h directly; use platform.h instead.
+#error Do not include platform_cmsis.h directly; use platform.h instead.
 #endif
 
-#if defined(FLETCH_TARGET_OS_MBED)
+#if defined(FLETCH_TARGET_OS_CMSIS)
 
 #include <errno.h>
 #include <cmsis_os.h>
@@ -198,6 +198,6 @@ class MonitorImpl {
 
 }  // namespace fletch
 
-#endif  // defined(FLETCH_TARGET_OS_MBED)
+#endif  // defined(FLETCH_TARGET_OS_CMSIS)
 
-#endif  // SRC_SHARED_PLATFORM_MBED_H_
+#endif  // SRC_SHARED_PLATFORM_CMSIS_H_

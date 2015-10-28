@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_MBED)
+#if defined(FLETCH_TARGET_OS_CMSIS)
 
 // We do not include platform_posix.h on purpose. That file
 // should never be directly inported. platform.h is always
@@ -172,4 +172,4 @@ bool VirtualMemory::Uncommit(uword address, int size) {
 
 }  // namespace fletch
 
-#endif  // defined(FLETCH_TARGET_OS_MBED)
+#endif  // defined(FLETCH_TARGET_OS_CMSIS)

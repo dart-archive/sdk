@@ -48,7 +48,7 @@ def invoke_gcc_arm64(args):
   args.insert(0, "aarch64-linux-gnu-gcc-4.8")
   os.execv("/usr/bin/aarch64-linux-gnu-gcc-4.8", args)
 
-def invoke_gcc_mbed(args):
+def invoke_gcc_cmsis(args):
   path = "/usr/local/gcc-arm-none-eabi-4_9-2015q2/bin/arm-none-eabi-gcc"
   subprocess.check_call([path] + args)
 
@@ -82,11 +82,11 @@ def main():
   elif "-L/FLETCH_ARM64" in args:
     args.remove("-L/FLETCH_ARM64")
     invoke_gcc_arm64(args)
-  elif "-DFLETCH_MBED" in args:
-    invoke_gcc_mbed(args)
-  elif "-L/FLETCH_MBED" in args:
-    args.remove("-L/FLETCH_MBED")
-    invoke_gcc_mbed(args)
+  elif "-DFLETCH_CMSIS" in args:
+    invoke_gcc_cmsis(args)
+  elif "-L/FLETCH_CMSIS" in args:
+    args.remove("-L/FLETCH_CMSIS")
+    invoke_gcc_cmsis(args)
   elif "-DFLETCH_LK" in args:
     invoke_gcc_lk(args)
   elif "-L/FLETCH_LK" in args:

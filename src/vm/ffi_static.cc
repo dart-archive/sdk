@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_MBED)
+#if defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_CMSIS)
 
 #ifdef FLETCH_ENABLE_FFI
 
@@ -82,4 +82,4 @@ NATIVE(ForeignErrno) {
 
 #endif  // FLETCH_ENABLE_FFI
 
-#endif  // defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_MBED)
+#endif  // defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_CMSIS)
