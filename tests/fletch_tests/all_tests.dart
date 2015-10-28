@@ -37,6 +37,8 @@ import '../debugger/debugger_tests.dart' as debugger_tests;
 
 import '../mdns_tests/mdns_tests.dart' as mdns_tests;
 
+import '../agent_tests/agent_tests.dart' as agent_tests;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -70,6 +72,9 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   // Slow tests, should run early so we don't wait for them.
   'debugger/*': debugger_tests.listTests,
+
+  // Slow tests, should run early so we don't wait for them.
+  'agent_tests/*': agent_tests.listTests,
 
   'controlStream/testControlStream': controlStream.testControlStream,
 
