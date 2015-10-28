@@ -98,12 +98,7 @@ string_from_environment_test: CompileTimeError
 # Unsorted
 errors_test: RuntimeError
 expando_test: CompileTimeError
-hash_set_test/01: RuntimeError
-hash_set_test/none: RuntimeError
 indexed_list_access_test: RuntimeError
-int_modulo_arith_test/bignum: RuntimeError
-int_modulo_arith_test/modPow: RuntimeError
-int_modulo_arith_test/none: RuntimeError
 int_parse_radix_test/02: RuntimeError
 iterable_empty_test: RuntimeError
 iterable_return_type_test/01: Fail

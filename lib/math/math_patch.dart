@@ -159,9 +159,51 @@ class _Random implements Random {
 @patch double atan2(num a, num b) => _atan2(a.toDouble(), b.toDouble());
 
 @patch double pow(num x, num exponent) {
-  // TODO(ajohnsen): Implement integer pow logic.
-  return _pow(x.toDouble(), exponent.toDouble());
+  if ((x is int) && (exponent is int) && (exponent >= 0)) {
+    return _intPow(x, exponent);
+  }
+  return _doublePow(x.toDouble(), exponent.toDouble());
 }
+
+double _doublePow(double base, double exponent) {
+  if (exponent == 0.0) {
+    return 1.0;  // ECMA-262 15.8.2.13
+  }
+  // Speed up simple cases.
+  if (exponent == 1.0) return base;
+  if (exponent == 2.0) return base * base;
+  if (exponent == 3.0) return base * base * base;
+
+  if (base == 1.0) return 1.0;
+
+  if (base.isNaN || exponent.isNaN) {
+    return double.NAN;
+  }
+  if ((base != -double.INFINITY) && (exponent == 0.5)) {
+    if (base == 0.0) {
+      return 0.0;
+    }
+    return sqrt(base);
+  }
+  return _pow(base, exponent);
+}
+
+int _intPow(int base, int exponent) {
+  // Exponentiation by squaring.
+  int result = 1;
+  while (exponent != 0) {
+    if ((exponent & 1) == 1) {
+      result *= base;
+    }
+    exponent >>= 1;
+    // Skip unnecessary operation (can overflow to Mint or Bigint).
+    if (exponent != 0) {
+      base *= base;
+    }
+  }
+  return result;
+}
+
 
 @fletch.native external double _sin(double x);
 
