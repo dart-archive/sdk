@@ -35,6 +35,8 @@ import '../fletchc/driver/test_vm_connection.dart' as test_vm_connection;
 
 import '../debugger/debugger_tests.dart' as debugger_tests;
 
+import '../mdns_tests/mdns_tests.dart' as mdns_tests;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -93,4 +95,9 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
       test_vm_connection.testCloseAfterCommitChanges,
   'test_vm_connection/testCloseAfterProcessRun':
       test_vm_connection.testCloseAfterProcessRun,
+
+  // Test the mDNS package.
+  // TODO(sgjesse) publish the mDNS package as an ordinary package an pull
+  // it in through third_party.
+  'mdns_tests': mdns_tests.main,
 };
