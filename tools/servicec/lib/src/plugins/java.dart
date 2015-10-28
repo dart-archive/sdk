@@ -90,8 +90,8 @@ class JNIPrintInterceptorInfo {
  public:
   JNIPrintInterceptorInfo(JavaVM* vm, jobject obj)
     : vm(vm), obj(obj), interceptor(NULL) {}
-  jobject obj;
   JavaVM* vm;
+  jobject obj;
   FletchPrintInterceptor interceptor;
 };
 
@@ -109,6 +109,7 @@ static void JNIPrintInterceptorFunction(
   method = env->GetMethodID(clazz, methodName, methodSig);
   jstring argument = env->NewStringUTF(message);
   env->CallVoidMethod(obj, method, argument);
+  info->vm->DetachCurrentThread();
 }
 
 static void RegisterPrintInterceptor(JNIEnv* env, jobject obj) {
