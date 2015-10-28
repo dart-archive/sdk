@@ -2,7 +2,7 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-.PHONY: all generate test clean
+.PHONY: all servicec test clean
 
 UNAME := $(shell uname)
 
@@ -28,70 +28,19 @@ JAR=${JAVA_HOME}/bin/jar
 JAVA=${JAVA_HOME}/bin/java
 JAVAC=${JAVA_HOME}/bin/javac
 
-all: generate SimpleTodo.class SnapshotRunner.class fletch/TodoService.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} simple_todo.snapshot
+JAVA_SOURCES:=$(wildcard *.java fletch/*.java)
 
-SimpleTodo.class: SimpleTodo.java
-	$(JAVAC) $<
+all: servicec SimpleTodo.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} simple_todo.snapshot
 
-SnapshotRunner.class: SnapshotRunner.java
-	$(JAVAC) $<
-
-fletch/TodoService.jar: fletch/BoxString.class fletch/BoxStringBuilder.class fletch/Builder.class fletch/BuilderSegment.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/ListBuilder.class fletch/ListReader.class fletch/MessageBuilder.class fletch/MessageReader.class fletch/Reader.class fletch/Segment.class fletch/TodoItem.class fletch/TodoItemBuilder.class fletch/TodoService.class fletch/Uint16List.class fletch/Uint16ListBuilder.class
-	$(JAR) cvf $@ $^
-
-fletch/BoxString.class: fletch/BoxString.java
-	$(JAVAC) $<
-
-fletch/BoxStringBuilder.class: fletch/BoxStringBuilder.java
-	$(JAVAC) $<
-
-fletch/Builder.class: fletch/Builder.java
-	$(JAVAC) $<
-
-fletch/BuilderSegment.class: fletch/BuilderSegment.java
-	$(JAVAC) $<
-
-fletch/FletchApi.class: fletch/FletchApi.java
-	$(JAVAC) $<
-
-fletch/FletchServiceApi.class: fletch/FletchServiceApi.java
-	$(JAVAC) $<
-
-fletch/ListBuilder.class: fletch/ListBuilder.java
-	$(JAVAC) $<
-
-fletch/ListReader.class: fletch/ListReader.java
-	$(JAVAC) $<
-
-fletch/MessageBuilder.class: fletch/MessageBuilder.java
-	$(JAVAC) $<
-
-fletch/MessageReader.class: fletch/MessageReader.java
-	$(JAVAC) $<
-
-fletch/Reader.class: fletch/Reader.java
-	$(JAVAC) $<
-
-fletch/Segment.class: fletch/Segment.java
-	$(JAVAC) $<
-
-fletch/TodoItem.class: fletch/TodoItem.java
-	$(JAVAC) $<
-
-fletch/TodoItemBuilder.class: fletch/TodoItemBuilder.java
-	$(JAVAC) $<
-
-fletch/TodoService.class: fletch/TodoService.java
-	$(JAVAC) $<
-
-fletch/Uint16List.class: fletch/Uint16List.java
-	$(JAVAC) $<
-
-fletch/Uint16ListBuilder.class: fletch/Uint16ListBuilder.java
-	$(JAVAC) $<
-
-generate:
+servicec:
 	$(FLETCH_BUILD_DIR)/fletch x-servicec file ../simple_todo.idl out ..
+
+SimpleTodo.jar: $(JAVA_SOURCES)
+	rm -rf classes
+	mkdir classes
+	$(JAVAC) -classpath none -d classes -implicit:none -source 8 -target 8 -sourcepath none -Werror $(JAVA_SOURCES)
+	$(JAR) cfe SimpleTodo.jar SimpleTodo -C classes .
+	rm -rf classes
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/todo_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
 	g++ ${CPPFLAGS} -shared -o $@ $^
@@ -104,7 +53,7 @@ simple_todo.snapshot: ../simple_todo.dart
 
 test: all
 	LD_LIBRARY_PATH=jni \
-	$(JAVA) -Djava.library.path=jni -cp fletch/TodoService.jar:. SimpleTodo simple_todo.snapshot
+	$(JAVA) -Djava.library.path=jni -jar SimpleTodo.jar simple_todo.snapshot
 
 clean:
-	rm -f fletch/*.class fletch/TodoService.jar jni/*.o jni/*.so jni/*.jnilib *.class simple_todo.snapshot
+	rm -f SimpleTodo.jar jni/*.o jni/*.$(PLATFORM_LIB_SUFFIX) simple_todo.snapshot
