@@ -18,6 +18,7 @@ namespace fletch {
 
 class Signal : public MailboxMessage<Signal> {
  public:
+  // Please keep these in sync with lib/fletch/fletch.dart:SignalKind.
   enum Kind {
     kCompileTimeError,
     kTerminated,

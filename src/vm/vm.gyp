@@ -92,6 +92,7 @@
         'port.cc',
         'port.h',
         'process_handle.h',
+        'process_handle.cc',
         'process.cc',
         'process.h',
         'process_queue.h',

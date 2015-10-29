@@ -258,6 +258,13 @@ class Coroutine {
   @fletch.native external static _coroutineNewStack(coroutine, entry);
 }
 
+// TODO: Keep these in sync with src/vm/process.h:Signal::Kind
+enum SignalKind {
+  CompileTimeError,
+  Terminated,
+  UncaughtException,
+}
+
 class Process {
   final int _nativeProcessHandle;
 
@@ -271,6 +278,19 @@ class Process {
 
   int get hashCode => _nativeProcessHandle.hashCode;
 
+  @fletch.native bool link() {
+    throw fletch.nativeError;
+  }
+
+  @fletch.native bool monitor(Port exitPort) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new StateError("The argument to monitor must be a Port object.");
+      default:
+        throw fletch.nativeError;
+    }
+  }
+
   static Process spawn(Function fn, [argument]) {
     if (!isImmutable(fn)) {
       throw new ArgumentError(
@@ -282,7 +302,16 @@ class Process {
           'The optional argument passed to Process.spawn() must be immutable.');
     }
 
-    return _spawn(_entry, fn, argument);
+    return _spawn(_entry, fn, argument, true, true, null);
+  }
+
+  static Process spawnDetached(Function fn, {Port monitor}) {
+    if (!isImmutable(fn)) {
+      throw new ArgumentError(
+          'The closure passed to Process.spawnDetached() must be immutable.');
+    }
+
+    return _spawn(_entry, fn, null, true, false, monitor);
   }
 
   /**
@@ -361,7 +390,12 @@ class Process {
   }
 
   // Low-level helper function for spawning.
-  @fletch.native static Process _spawn(Function entry, Function fn, argument) {
+  @fletch.native static Process _spawn(Function entry,
+                                       Function fn,
+                                       argument,
+                                       bool linkToChild,
+                                       bool linkFromChild,
+                                       Port monitor) {
     throw new ArgumentError();
   }
 

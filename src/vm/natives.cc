@@ -920,6 +920,17 @@ NATIVE(ProcessSpawn) {
   Instance* entrypoint = Instance::cast(arguments[0]);
   Instance* closure = Instance::cast(arguments[1]);
   Object* argument = arguments[2];
+  bool link_to_child = arguments[3] == program->true_object();
+  bool link_from_child = arguments[4] == program->true_object();
+  Object* dart_monitor_port = arguments[5];
+  Port* monitor_port = NULL;
+  if (!dart_monitor_port->IsNull()) {
+    if (!dart_monitor_port->IsPort()) {
+      return Failure::wrong_argument_type();
+    }
+    monitor_port = reinterpret_cast<Port*>(
+        AsForeignWord(Instance::cast(dart_monitor_port)->GetInstanceField(0)));
+  }
 
   if (!closure->IsImmutable()) {
     // TODO(kasperl): Return a proper failure.
@@ -953,9 +964,16 @@ NATIVE(ProcessSpawn) {
   process->RegisterFinalizer(
       HeapObject::cast(dart_process), Process::FinalizeProcess);
 
-  // TODO(kustermann): Allow this to be configured dynamically.
-  process->links()->InsertHandle(child->process_handle());
-  child->links()->InsertHandle(process->process_handle());
+  if (link_to_child) {
+    process->links()->InsertHandle(child->process_handle());
+  }
+  if (link_from_child) {
+    child->links()->InsertHandle(process->process_handle());
+  }
+
+  if (monitor_port != NULL) {
+    child->links()->InsertPort(monitor_port);
+  }
 
   program->scheduler()->EnqueueProcessOnSchedulerWorkerThread(process, child);
 

@@ -226,6 +226,9 @@ namespace fletch {
                                                                          \
   N(UriBase,                     "Uri", "_base")                         \
                                                                          \
+  N(ProcessLink,                 "Process", "link")                      \
+  N(ProcessMonitor,              "Process", "monitor")                   \
+                                                                         \
   N(PortCreate,                  "Port", "_create")                      \
   N(PortSend,                    "Port", "send")                         \
   N(PortSendExit,                "Port", "_sendExit")                    \
