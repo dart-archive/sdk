@@ -23,6 +23,7 @@ class Signal : public MailboxMessage<Signal> {
     kCompileTimeError,
     kTerminated,
     kUncaughtException,
+    kUnhandledSignal,
   };
 
   Signal(ProcessHandle* handle, Kind kind)

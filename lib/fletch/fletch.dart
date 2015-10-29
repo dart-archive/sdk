@@ -263,6 +263,7 @@ enum SignalKind {
   CompileTimeError,
   Terminated,
   UncaughtException,
+  UnhandledSignal,
 }
 
 class Process {

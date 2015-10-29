@@ -33,8 +33,7 @@ Scheduler::Scheduler()
       temporary_thread_states_(NULL),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
-      shutdown_(-1),
-      shutdown_program_(NULL),
+      last_process_exit_(Signal::kTerminated),
       pause_(false),
       current_processes_(new Atomic<Process*>[max_threads_]),
       gc_thread_(new GCThread()) {
@@ -303,14 +302,24 @@ int Scheduler::Run() {
 
   gc_thread_->StopThread();
 
-  if (shutdown_ != -1) return shutdown_;
+  switch (last_process_exit_.load()) {
+    case Signal::kTerminated: return 0;
+    case Signal::kCompileTimeError: return kCompileTimeErrorExitCode;
+    case Signal::kUncaughtException: return kUncaughtExceptionExitCode;
+    // TODO(kustermann): We should consider returning a different exitcode if a
+    // process was killed via a signal.
+    case Signal::kUnhandledSignal: return kUncaughtExceptionExitCode;
+  }
+  UNREACHABLE();
   return 0;
 }
 
 void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   Program* program = process->program();
   program->DeleteProcess(process, kind);
-  --processes_;
+  if (--processes_ == 0) {
+    last_process_exit_ = kind;
+  }
 
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
@@ -350,11 +359,8 @@ void Scheduler::ExitAtBreakpoint(Process* process) {
 }
 
 void Scheduler::ExitWith(Process* process, int exit_code, Signal::Kind kind) {
-  Program* program = process->program();
   DeleteTerminatedProcess(process, kind);
   ScopedMonitorLock scoped_lock(preempt_monitor_);
-  shutdown_program_ = program;
-  shutdown_ = exit_code;
   if (processes_ == 0) NotifyAllThreads();
 }
 
@@ -640,7 +646,7 @@ Process* Scheduler::InterpretProcess(Process* process,
   // TODO(kustermann): Support signal handlers.
   Signal* signal = process->signal_mailbox()->CurrentMessage();
   if (signal != NULL) {
-    ExitAtTermination(process, signal->kind());
+    ExitAtTermination(process, Signal::kUnhandledSignal);
     return NULL;
   }
 

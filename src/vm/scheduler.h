@@ -101,8 +101,7 @@ class Scheduler {
   ProcessQueue* startup_queue_;
 
   Monitor* pause_monitor_;
-  Atomic<int> shutdown_;
-  Atomic<Program*> shutdown_program_;
+  Atomic<Signal::Kind> last_process_exit_;
   Atomic<bool> pause_;
 
   // A list of currently executed processes, indexable by thread id. Upon

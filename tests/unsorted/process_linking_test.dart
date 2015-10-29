@@ -3,7 +3,6 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
-import 'dart:fletch.ffi';
 
 import 'package:expect/expect.dart';
 
@@ -27,14 +26,6 @@ main() {
   postMonitorProcessTest(SignalKind.CompileTimeError);
   postMonitorProcessTest(SignalKind.Terminated);
   postMonitorProcessTest(SignalKind.UncaughtException);
-
-  // Currently the VM sets after the first issue an exit code (e.g. compile-time
-  // error or uncaught exception). To make sure this test exists with 0, we exit
-  // manually here.
-  //
-  // Of course this doesn't work if a session is attached, so this only works in
-  // the '--compiler=fletchc --runtime=fletchvm' configuration ATM.
-  ForeignLibrary.main.lookup('exit').icall$1(0);
 }
 
 simpleMonitorTest(SignalKind kind) {
@@ -117,8 +108,10 @@ indirectLinkTest(SignalKind kind) {
       monitor: new Port(monitor));
   if (kind == SignalKind.Terminated) {
     Expect.equals('everything-is-awesome', result.receive());
+    Expect.equals(SignalKind.Terminated.index, monitor.receive());
+  } else {
+    Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
   }
-  Expect.equals(kind.index, monitor.receive());
 }
 
 postLinkProcessTest(SignalKind kind) {
@@ -158,8 +151,10 @@ postLinkProcessTest(SignalKind kind) {
   Process.spawnDetached(() => p1(resultPort), monitor: new Port(monitor));
   if (kind == SignalKind.Terminated) {
     Expect.equals('everything-is-awesome', result.receive());
+    Expect.equals(SignalKind.Terminated.index, monitor.receive());
+  } else {
+    Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
   }
-  Expect.equals(kind.index, monitor.receive());
 }
 
 postMonitorProcessTest(SignalKind kind) {
