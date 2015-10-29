@@ -1,0 +1,13 @@
+Starting session. Type 'help' for a list of commands.
+
+> r
+Compile error
+> bt
+> t internal
+Stack trace:
+> 0: yield       
+  1: compileError    @yield(InterruptKind.compileTimeError.index)
+  2: callMain        @invokeMain(arguments)
+  3: entry           @callMain([] )
+> q
+Non-zero exit code from 'fletch-vm' (254).
