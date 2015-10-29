@@ -147,6 +147,10 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(
               <String>['export'])];
 
+    case DiagnosticKind.missingSessionName:
+      return <Example>[new CommandLineExample(
+            <String>['create', 'session'])];
+
     case DiagnosticKind.unknownOption:
       return <Example>[
           new CommandLineExample(<String>['help', '--fisk']),

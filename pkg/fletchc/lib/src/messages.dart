@@ -23,6 +23,7 @@ enum DiagnosticKind {
   internalError,
   missingRequiredArgument,
   missingToFile,
+  missingSessionName,
   noFileTarget,
   noSuchSession,
   noTcpSocketTarget,
@@ -180,6 +181,10 @@ String getMessage(DiagnosticKind kind) {
       // TODO(lukechurch): Consider a correction message.
       return "Option '${DiagnosticParameter.userInput}' needs an argument";
 
+    case DiagnosticKind.missingSessionName:
+      // TODO(karlklose,ahe): provide support to list choices here.
+      return "Session name missing. Try adding a name after 'session'.";
+
     case DiagnosticKind.unexpectedArgument:
       // TODO(lukechurch): Review UX
       return "Option '${DiagnosticParameter.userInput}' doesn't take an "
@@ -273,10 +278,15 @@ String getMessage(DiagnosticKind kind) {
       return "Session '$sessionName' was terminated";
 
     case DiagnosticKind.handShakeFailed:
+      // TODO(ager): lukechurch: Should this ever happen during normal usage?
+      // Should they report this to us as a bug?
       return "Connection rejected because of invalid handshake reply from "
           "VM on $address.";
 
     case DiagnosticKind.versionMismatch:
+      // TODO(ager): lukechurch: Is there advice we can give here?
+      // E.g. Consider upgrading your compiler? Do we have an easy place they
+      // can go to do that? Are we considering adding a tool to auto-upgrade?
       return "Connection rejected because compiler and VM on $address "
           "have different versions. Compiler version: '$userInput' "
           "VM version: '$additionalUserInput'.";

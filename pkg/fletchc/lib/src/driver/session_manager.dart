@@ -66,6 +66,10 @@ String get currentSession => internalCurrentSession;
 Future<UserSession> createSession(
     String name,
     Future<IsolateController> allocateWorker()) async {
+  if (name == null) {
+    throw new ArgumentError("session name must not be `null`.");
+  }
+
   UserSession session = lookupSession(name);
   if (session != null) {
     throwFatalError(DiagnosticKind.sessionAlreadyExists, sessionName: name);

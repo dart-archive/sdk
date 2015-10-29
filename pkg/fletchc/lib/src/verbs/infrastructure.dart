@@ -341,8 +341,15 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   String sessionName;
   if (inSession != null) {
     sessionName = inSession.name;
+    if (sessionName == null) {
+      throwFatalError(DiagnosticKind.missingSessionName);
+    }
   } else if (action.requiresSession) {
     sessionName = currentSession;
+  } else if (action.requiresTargetSession &&
+      target is NamedTarget &&
+      target.name == null) {
+    throwFatalError(DiagnosticKind.missingSessionName);
   }
 
   String targetName;
