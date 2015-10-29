@@ -13,6 +13,7 @@ LOCAL_CFLAGS := \
   -DFLETCH_ENABLE_FFI \
   -DFLETCH_ENABLE_PRINT_INTERCEPTORS \
   -DFLETCH_ENABLE_LIVE_CODING \
+  -DFLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS \
   -DFLETCH_ENABLE_NATIVE_PROCESSES \
   -DANDROID \
   -I$(LOCAL_PATH)/../../../ -std=gnu++11
@@ -56,6 +57,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/object_memory.cc \
 	../../../src/vm/port.cc \
 	../../../src/vm/process.cc \
+	../../../src/vm/process_handle.cc \
 	../../../src/vm/program.cc \
 	../../../src/vm/program_folder.cc \
 	../../../src/vm/scheduler.cc \
