@@ -41,6 +41,7 @@ IMAGE_FILE=${IMAGE_ROOT_NAME}.img
 
 PI_USER_ID=1000
 PI_GROUP_ID=1000
+PI_HOME=/home/pi
 
 function usage {
   USAGE="Usage: $0 version\n
@@ -59,6 +60,7 @@ then
 fi
 
 VERSION=$1
+TARBALL_FILE=fletch-${VERSION}.tar.gz
 DEB_FILE=fletch-agent_${VERSION}-1_armhf.deb
 
 MOUNT_DIR=out/raspbian
@@ -79,6 +81,11 @@ echo "Preparing for chroot"
 # fdisk -lu out/2015-09-24-raspbian-jessie.img
 mkdir -p $MOUNT_DIR
 sudo mount out/$IMAGE_FILE -o loop,offset=$((122880*512)),rw $MOUNT_DIR
+
+# Copy the tarball to the pi users home directory.
+
+sudo cp out/$TARBALL_FILE $MOUNT_DIR/$PI_HOME
+sudo chown $PI_USER_ID:$PI_GROUP_ID $MOUNT_DIR/$PI_HOME/$TARBALL_FILE
 
 # Copy the QEMU user emulation binary the the chroot.
 sudo cp /usr/bin/qemu-arm-static $MOUNT_DIR/usr/bin
