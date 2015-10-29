@@ -43,6 +43,21 @@ abstract class Bytecode {
   bool operator==(Bytecode other) => other.opcode == opcode;
 
   int get hashCode => opcode.index;
+
+  static void prettyPrint(StringBuffer sb, List<Bytecode> bytecodes) {
+    int offset = 0;
+    for (Bytecode bytecode in bytecodes) {
+      offset += bytecode.size;
+    }
+    int padding = "$offset".length;
+    offset = 0;
+    for (Bytecode bytecode in bytecodes) {
+      String paddedOffset = ("0" * padding) + "$offset";
+      paddedOffset = paddedOffset.substring(paddedOffset.length - padding);
+      sb.writeln(" $paddedOffset: $bytecode");
+      offset += bytecode.size;
+    }
+  }
 }
 
 class BytecodeBuffer {

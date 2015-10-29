@@ -62,7 +62,7 @@ class FletchClass {
 }
 
 // TODO(ajohnsen): Move to separate file.
-class FletchFunctionBase {
+abstract class FletchFunctionBase {
   final int functionId;
   final FletchFunctionKind kind;
   // TODO(ajohnsen): Merge with function signature?
@@ -109,6 +109,8 @@ class FletchFunctionBase {
   }
 
   bool get isConstructor => element != null && element.isConstructor;
+
+  String verboseToString();
 }
 
 // TODO(ajohnsen): Move to separate file.
@@ -156,6 +158,22 @@ class FletchFunction extends FletchFunctionBase {
     }
     buffer.write(")");
     return buffer.toString();
+  }
+
+  String verboseToString() {
+    StringBuffer sb = new StringBuffer();
+
+    sb.writeln("Function $functionId, Arity=$arity");
+    sb.writeln("Constants:");
+    for (int i = 0; i < constants.length; i++) {
+      FletchConstant constant = constants[i];
+      sb.writeln("  #$i: $constant");
+    }
+
+    sb.writeln("Bytecodes:");
+    Bytecode.prettyPrint(sb, bytecodes);
+
+    return '$sb';
   }
 }
 
