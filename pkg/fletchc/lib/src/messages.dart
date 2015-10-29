@@ -41,8 +41,6 @@ enum DiagnosticKind {
   settingsPackagesNotAString,
   settingsUnrecognizedConstantValue,
   settingsUnrecognizedKey,
-  noAgentFound,
-  upgradeInvalidPackageName,
   socketAgentConnectError,
   socketAgentReplyError,
   socketVmConnectError,
@@ -149,14 +147,6 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.expectedAPortNumber:
       return "Expected a port number, but got '$userInput'";
-
-    case DiagnosticKind.noAgentFound:
-      return "No agent found in session";
-
-    case DiagnosticKind.upgradeInvalidPackageName:
-      return "A fletch-agent package must have a name of the form\n"
-        "  fletch-agent_<version>_<platform>.deb.\n"
-        "Try renaming the file to match this pattern";
 
     case DiagnosticKind.socketAgentConnectError:
       return "Unable to establish connection to Fletch Agent on "

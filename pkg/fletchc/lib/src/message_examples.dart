@@ -92,29 +92,13 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['attach', 'in', 'session', 'foo',
                        'tcp_socket', '$invalidIP:fisk'])];
 
-    case DiagnosticKind.noAgentFound:
-      // TODO(karlklose,268): We want to write a test similar to the following,
-      // but it records the error in the wrong isolate. We need a way to
-      // test this.
-      //   return <Example>[new CommandLineExample(
-      //      <String>['create', 'session', 'foo'],
-      //      <String>['x-upgrade', 'agent',
-      //        'with', 'file', 'fletch-agent_v1_platform.deb',
-      //        'in', 'session', 'foo'
-      //      ])];
-      return untestable;
-
-    case DiagnosticKind.upgradeInvalidPackageName:
-      return <Example>[new CommandLineExample(
-          <String>['x-upgrade', 'agent', 'with', 'file', 'invalid-file-name'])];
-
     case DiagnosticKind.socketAgentConnectError:
-      // TODO(wibling,268): figure out how to test fletch agent failures to
+      // TODO(wibling): figure out how to test fletch agent failures to
       // exercise this error.
       return untestable;
 
     case DiagnosticKind.socketAgentReplyError:
-      // TODO(wibling,268): figure out how to test fletch agent failures to
+      // TODO(wibling): figure out how to test fletch agent failures to
       // exercise this error.
       return untestable;
 
@@ -174,7 +158,7 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.missingRequiredArgument:
       return <Example>[new CommandLineExample(
-          <String>['run', '--test-debugger'])];
+            <String>['run', '--test-debugger'])];
 
     case DiagnosticKind.unexpectedArgument:
       return <Example>[new CommandLineExample(
@@ -230,9 +214,7 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.extraArguments:
       return <Example>[
-          new CommandLineExample(<String>['create', 'fisk']),
-          new CommandLineExample(<String>['x-upgrade', 'hest']),
-      ];
+          new CommandLineExample(<String>['create', 'fisk'])];
 
     case DiagnosticKind.cantPerformVerbIn:
       return <Example>[
