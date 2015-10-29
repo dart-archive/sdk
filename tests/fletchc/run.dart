@@ -16,7 +16,9 @@ import 'package:fletchc/src/driver/developer.dart' as developer;
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show fileUri;
 
-import 'package:fletchc/src/device_type.dart' show DeviceType, parseDeviceType;
+import 'package:fletchc/src/device_type.dart' show
+    DeviceType,
+    parseDeviceType;
 
 const String userVmAddress = const String.fromEnvironment("attachToVm");
 
@@ -28,6 +30,9 @@ const String userAgentAddress = const String.fromEnvironment("agent");
 
 const String fletchSettingsFile =
     const String.fromEnvironment("test.fletch_settings_file_name");
+
+/// Enables printing of Compiler/VM protocol commands after each compilation.
+const bool printCommands = const bool.fromEnvironment("printCommands");
 
 class FletchRunner {
   Future<Null> attach(SessionState state) async {
@@ -62,6 +67,17 @@ class FletchRunner {
     SessionState state = createSessionState("test", settings);
     for (String script in arguments) {
       await compile(fileUri(script, Uri.base), state);
+      if (state.compilationResults.isNotEmpty) {
+        if (printCommands) {
+          print("Compiled $script");
+          for (var delta in state.compilationResults) {
+            print("\nDelta:");
+            for (var cmd in delta.commands) {
+              print(cmd);
+            }
+          }
+        }
+      }
       await attach(state);
       state.stdoutSink.attachCommandSender(stdout.add);
       state.stderrSink.attachCommandSender(stderr.add);
