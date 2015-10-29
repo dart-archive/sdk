@@ -27,7 +27,7 @@ Stack trace:
   1: main        @foo()
 > restart
 foo
-Uncaught exception: NoSuchMethodError: Class 'MyObject' has no method named 'bar'
+Uncaught exception: NoSuchMethodError: Class 'MyObject' has no method named 'bar' that takes 0 arguments
 Stack trace:
 > 0: foo                             @object.bar()
   1: main                            @foo()
