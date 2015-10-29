@@ -30,12 +30,6 @@ class Refcounted {
     }
   }
 
- protected:
-  bool DecrementRefWithoutDelete() {
-    ASSERT(ref_count_ > 0);
-    return --ref_count_ == 0;
-  }
-
  private:
   Atomic<int> ref_count_;
 };

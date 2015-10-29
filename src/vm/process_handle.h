@@ -25,15 +25,10 @@ class ProcessHandle : public Refcounted<ProcessHandle> {
  private:
   friend class Process;
 
-  static void OwnerProcessTerminating(ProcessHandle* handle) {
-    handle->lock()->Lock();
-    ASSERT(handle->process_ != NULL);
-    handle->process_ = NULL;
-    if (!handle->DecrementRefWithoutDelete()) {
-      handle->lock()->Unlock();
-    } else {
-      delete handle;
-    }
+  void OwnerProcessTerminating() {
+    ScopedSpinlock locker(&spinlock_);
+    ASSERT(process_ != NULL);
+    process_ = NULL;
   }
 
   Process* process_;

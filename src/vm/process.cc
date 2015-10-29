@@ -109,6 +109,8 @@ Process::~Process() {
   // conditions here.
   ASSERT(ports_ == NULL);
 
+  ProcessHandle::DecrementRef(process_handle_);
+
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   heap_.ProcessWeakPointers();
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
@@ -130,7 +132,7 @@ void Process::Cleanup(Signal::Kind kind) {
 
   // We are going down at this point. If anything else is starting to
   // link/monitor with this [ProcessHandle], it will fail after this line.
-  ProcessHandle::OwnerProcessTerminating(process_handle_);
+  process_handle_->OwnerProcessTerminating();
 
   // Since nobody can send us messages (or signals) at this point, we can
   // propagate the exit signal.
