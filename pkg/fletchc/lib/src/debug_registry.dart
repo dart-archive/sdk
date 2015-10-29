@@ -53,4 +53,9 @@ abstract class DebugRegistry {
     context.compiler.internalError(
         field, "not compiled before use in debugger");
   }
+
+  void generateUnimplementedError(Spannable spannable, String reason) {
+    context.backend.generateUnimplementedError(
+        spannable, reason, functionBuilder, suppressHint: true);
+  }
 }

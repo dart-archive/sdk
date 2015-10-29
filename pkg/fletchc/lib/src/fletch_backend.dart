@@ -1534,9 +1534,12 @@ class FletchBackend extends Backend with ResolutionCallbacks
   void generateUnimplementedError(
       Spannable spannable,
       String reason,
-      FletchFunctionBuilder function) {
-    compiler.reportHint(
-        spannable, MessageKind.GENERIC, {'text': reason});
+      FletchFunctionBuilder function,
+      {bool suppressHint: false}) {
+    if (!suppressHint) {
+      compiler.reportHint(
+          spannable, MessageKind.GENERIC, {'text': reason});
+    }
     var constString = constantSystem.createString(
         new DartString.literal(reason));
     context.markConstantUsed(constString);
