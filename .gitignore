@@ -33,6 +33,7 @@ packages
 /third_party/dart/
 /third_party/gyp/
 /third_party/isolate/
+/third_party/openocd/
 /third_party/package_config/
 /third_party/path/
 /third_party/persistent/
