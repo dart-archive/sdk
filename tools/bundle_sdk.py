@@ -103,26 +103,20 @@ def CopyPlatforms(bundle_dir):
   target_dir = join(bundle_dir, 'platforms')
   copytree('platforms', target_dir)
 
-def FletchQuit(fletch_executable):
-  cmd = [fletch_executable, 'quit']
+def CreateSnapshot(dart_executable, dart_file, snapshot):
+  cmd = [dart_executable, '-c', '--packages=.packages',
+         '-Dsnapshot="%s"' % snapshot,
+         '-Dpackages=".packages"',
+         'tests/fletchc/run.dart', dart_file]
   print 'Running %s' % ' '.join(cmd)
   subprocess.check_call(' '.join(cmd), shell=True)
-
-def CreateSnapshot(fletch_executable, dart_file, snapshot):
-  FletchQuit(fletch_executable)
-  cmd = [fletch_executable, 'export', dart_file, 'to', snapshot]
-  print 'Running %s' % ' '.join(cmd)
-  try:
-    subprocess.check_call(' '.join(cmd), shell=True)
-  finally:
-    FletchQuit(fletch_executable)
 
 def CreateAgentSnapshot(bundle_dir, build_dir):
   platforms = join(bundle_dir, 'platforms')
   data_dir = join(platforms, 'raspberry-pi2', 'data')
-  fletch = join(build_dir, 'fletch')
+  dart = join(build_dir, 'dart')
   snapshot = join(data_dir, 'fletch-agent.snapshot')
-  CreateSnapshot(fletch, 'pkg/fletch_agent/bin/agent.dart', snapshot)
+  CreateSnapshot(dart, 'pkg/fletch_agent/bin/agent.dart', snapshot)
 
 def CopyArmDebPackage(bundle_dir, package):
   target = join(bundle_dir, 'platforms', 'raspberry-pi2')

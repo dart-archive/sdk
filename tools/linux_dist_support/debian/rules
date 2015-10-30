@@ -40,9 +40,7 @@ override_dh_auto_build:
 	cd fletch; \
 	ninja -C out/$(BUILD_TYPE); \
 	ninja -C out/$(XBUILD_TYPE); \
-	out/$(BUILD_TYPE)/fletch quit; \
-	out/$(BUILD_TYPE)/fletch export pkg/fletch_agent/bin/agent.dart to out/$(XBUILD_TYPE)/fletch-agent.snapshot; \
-	out/$(BUILD_TYPE)/fletch quit; \
+	out/$(BUILD_TYPE)/dart -c --packages=.packages -Dsnapshot=out/$(XBUILD_TYPE)/fletch-agent.snapshot -Dpackages=.packages tests/fletchc/run.dart pkg/fletch_agent/bin/agent.dart; \
 	cd ..
 
 # TODO(sgjesse): Make sure the executables are stripped.
