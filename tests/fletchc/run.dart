@@ -8,6 +8,8 @@ import 'dart:async';
 
 import 'dart:io';
 
+import 'dart:io' as io;
+
 import 'package:fletchc/src/driver/session_manager.dart';
 
 import 'package:fletchc/src/driver/developer.dart';
@@ -86,6 +88,14 @@ class FletchRunner {
         await developer.export(state, fileUri(exportTo, Uri.base));
       } else {
         await developer.run(state);
+      }
+      if (state.fletchVm != null) {
+        int exitCode = await state.fletchVm.exitCode;
+        print("$script: Fletch VM exit code: $exitCode");
+        if (exitCode != null) {
+          io.exitCode = exitCode;
+          break;
+        }
       }
     }
     print(state.getLog());
