@@ -16,6 +16,10 @@
 #include "src/vm/storebuffer.h"
 #include "src/vm/stack_walker.h"
 
+#ifdef FLETCH_TARGET_OS_LK
+#include "lib/page_alloc.h"
+#endif
+
 namespace fletch {
 
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
@@ -27,6 +31,8 @@ static bool HasSentinelAt(uword address) {
 Chunk::~Chunk() {
 #if defined(FLETCH_TARGET_OS_CMSIS)
   free(reinterpret_cast<void*>(allocated_));
+#elif defined(FLETCH_TARGET_OS_LK)
+  page_free(reinterpret_cast<void*>(base()), size() >> PAGE_SIZE_SHIFT);
 #else
   free(reinterpret_cast<void*>(base()));
 #endif
@@ -348,17 +354,19 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
 
   size = Utils::RoundUp(size, kPageSize);
   void* memory;
-#if defined(__ANDROID__) || defined(FLETCH_TARGET_OS_LK)
+#if defined(__ANDROID__)
   // posix_memalign doesn't exist on Android. We fallback to
   // memalign.
   memory = memalign(kPageSize, size);
-  if (memory == NULL) return NULL;
+#elif defined(FLETCH_TARGET_OS_LK)
+  size = Utils::RoundUp(size, PAGE_SIZE);
+  memory = page_alloc(size >> PAGE_SIZE_SHIFT);
 #elif defined(FLETCH_TARGET_OS_CMSIS)
   memory = malloc(size + kPageSize);
-  if (memory == NULL) return NULL;
 #else
   if (posix_memalign(&memory, kPageSize, size) != 0) return NULL;
 #endif
+  if (memory == NULL) return NULL;
 
 #ifdef FLETCH_TARGET_OS_CMSIS
   uword allocated = reinterpret_cast<uword>(memory);
@@ -368,6 +376,10 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   uword base = reinterpret_cast<uword>(memory);
   Chunk* chunk = new Chunk(owner, base, size);
 #endif
+
+  ASSERT(base == Utils::RoundUp(base, kPageSize));
+  ASSERT(size == Utils::RoundUp(size, kPageSize));
+
 #ifdef DEBUG
   chunk->Scramble();
 #endif
