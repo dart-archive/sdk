@@ -1,0 +1,7 @@
+The benchmarking_files file is used to described the resources used for
+running our benchmarks on our internal benchmark tracking system.
+When new resources are needed please add them to the file.
+
+Please note that:
+  No trailing whitespace
+  No comments
