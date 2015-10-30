@@ -68,12 +68,12 @@ class Socket extends _SocketBase {
   Socket.connect(String host, int port) {
     var address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
-    _fd = sys.socket(AF_INET, SOCK_STREAM, 0);
+    _fd = sys.socket(sys.AF_INET, sys.SOCK_STREAM, 0);
     if (_fd == -1) _error("Failed to create socket");
     sys.setBlocking(_fd, false);
     sys.setCloseOnExec(_fd, true);
     if (sys.connect(_fd, address, port) == -1 &&
-        sys.errno() != Errno.EAGAIN) {
+        sys.errno() != Errno.EINPROGRESS) {
       _error("Failed to connect to $host:$port");
     }
     _addSocketToEventHandler();
@@ -175,7 +175,7 @@ class ServerSocket extends _SocketBase {
   ServerSocket(String host, int port) {
     var address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
-    _fd = sys.socket(AF_INET, SOCK_STREAM, 0);
+    _fd = sys.socket(sys.AF_INET, sys.SOCK_STREAM, 0);
     if (_fd == -1) _error("Failed to create socket");
     if (_setReuseaddr(_fd) == -1) {
       _error("Failed to set socket option");
@@ -257,7 +257,7 @@ class DatagramSocket extends _SocketBase {
   DatagramSocket.bind(String host, int port) {
     InternetAddress address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
-    _fd = sys.socket(AF_INET, SOCK_DGRAM, 0);
+    _fd = sys.socket(sys.AF_INET, sys.SOCK_DGRAM, 0);
     if (_fd == -1) _error("Failed to create socket");
     if (sys.bind(_fd, address, port) == -1) {
       _error("Failed to bind to $host:$port");

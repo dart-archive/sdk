@@ -4,7 +4,6 @@
 
 part of os;
 
-// TODO(ajohnsen): Errno's are platform dependent. Make them so.
 class Errno {
   static const EOK_VALUE = 0;
   static const EOK = const Errno(EOK_VALUE, "EOK");
@@ -18,11 +17,15 @@ class Errno {
   static const EINVAL = const Errno(EINVAL_VALUE, "EINVAL");
   static const EPIPE_VALUE = 32;
   static const EPIPE = const Errno(EPIPE_VALUE, "EPIPE");
-  static const EADDRNOTAVAIL_VALUE = 99;
-  static const EADDRNOTAVAIL =
-    const Errno(EADDRNOTAVAIL_VALUE, "EADDRNOTAVAIL");
-  static const EAGAIN_VALUE = 115;
-  static const EAGAIN = const Errno(EAGAIN_VALUE, "EAGAIN");
+
+  // TODO(wibling): Find a better crossplatform solution for errno.
+  static int get EADDRNOTAVAIL_VALUE =>
+      Foreign.platform == Foreign.MACOS ? 49 : 99;
+  static Errno EADDRNOTAVAIL =
+    new Errno(EADDRNOTAVAIL_VALUE, "EADDRNOTAVAIL");
+  static int get EINPROGRESS_VALUE =>
+      Foreign.platform == Foreign.MACOS ? 36 : 115;
+  static Errno EINPROGRESS = new Errno(EINPROGRESS_VALUE, "EINPROGRESS");
 
   final int value;
   final String name;
@@ -32,6 +35,12 @@ class Errno {
   String toString() => name;
 
   static Errno from(int value) {
+    // Handle non-const errno.
+    if (value == EADDRNOTAVAIL_VALUE) {
+      return EADDRNOTAVAIL;
+    } else if (value == EINPROGRESS_VALUE) {
+      return EINPROGRESS;
+    }
     switch (value) {
       case EOK_VALUE: return EOK;
       case ENOENT_VALUE: return ENOENT;
@@ -39,9 +48,6 @@ class Errno {
       case EEXIST_VALUE: return EEXIST;
       case EINVAL_VALUE: return EINVAL;
       case EPIPE_VALUE: return EPIPE;
-      case EADDRNOTAVAIL_VALUE: return EADDRNOTAVAIL;
-      case EAGAIN_VALUE: return EAGAIN;
-
       default:
         throw "Unknown errno: $value";
     }

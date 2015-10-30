@@ -4,14 +4,6 @@
 
 part of os;
 
-const int O_RDONLY  = 0;
-const int O_WRONLY  = 1;
-const int O_RDWR    = 2;
-const int O_CREAT   = 64;
-const int O_TRUNC   = 512;
-const int O_APPEND  = 1024;
-const int O_CLOEXEC = 524288;
-
 const int SHUT_RD   = 0;
 const int SHUT_WR   = 1;
 const int SHUT_RDWR = 2;
@@ -87,6 +79,18 @@ abstract class System {
   int setBlocking(int fd, bool blocking);
   int setCloseOnExec(int fd, bool closeOnExec);
   SystemInformation info();
+  int get AF_INET;
+  int get AF_INET6;
+  int get SOCK_STREAM;
+  int get SOCK_DGRAM;
+  int get O_RDONLY;
+  int get O_WRONLY;
+  int get O_RDWR;
+  int get O_CREAT;
+  int get O_TRUNC;
+  int get O_APPEND;
+  int get O_CLOEXEC;
+  int get O_NONBLOCK;
   int get SOL_SOCKET;
   int get SO_REUSEADDR;
   int get SOCKADDR_STORAGE_SIZE;

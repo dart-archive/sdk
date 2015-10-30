@@ -4,18 +4,10 @@
 
 part of os;
 
-const int AF_INET  = 2;
-const int AF_INET6 = 10;
-
-const int SOCK_STREAM = 1;
-const int SOCK_DGRAM = 2;
-
 const int F_GETFD = 1;
 const int F_SETFD = 2;
 const int F_GETFL = 3;
 const int F_SETFL = 4;
-
-const int O_NONBLOCK = 0x800;
 
 const int FD_CLOEXEC = 0x1;
 
@@ -105,6 +97,21 @@ abstract class PosixSystem implements System {
       ForeignLibrary.main.lookup("recvfrom");
   static final ForeignFunction _uname =
       ForeignLibrary.main.lookup("uname");
+
+  int get AF_INET => 2;
+  int get AF_INET6;
+
+  int get SOCK_STREAM => 1;
+  int get SOCK_DGRAM => 2;
+
+  int get O_RDONLY => 0;
+  int get O_WRONLY => 1;
+  int get O_RDWR => 2;
+  int get O_CREAT;
+  int get O_TRUNC;
+  int get O_APPEND;
+  int get O_CLOEXEC;
+  int get O_NONBLOCK;
 
   int get FIONREAD;
 
