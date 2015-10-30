@@ -801,6 +801,8 @@ static int QuitCommand() {
   if (CheckedSystem(command) != 0) {
     // Remove the socket location file.
     unlink(fletch_config_file);
+    free(command);
+    free(vm_path);
 
     printf("Background process wasn't running\n");
 
@@ -828,6 +830,8 @@ static int QuitCommand() {
   // lsof -t -- <Dart VM> > /dev/null
   if (CheckedSystem(command) != 0) {
     printf("Background process exited\n");
+    free(command);
+    free(vm_path);
 
     // lsof returns 0 if it listed processes.
     return 0;
@@ -839,6 +843,8 @@ static int QuitCommand() {
   StrCpy(command, command_length, lsof_repeat, sizeof(lsof_repeat));
   StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
   StrCat(command, command_length, kill9, sizeof(kill9));
+  free(command);
+  free(vm_path);
 
   // lsof -t +r2m%n -- <Dart VM> | xargs -n1 kill -9
   CheckedSystem(command);
