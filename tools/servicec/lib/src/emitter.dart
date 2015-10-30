@@ -8,11 +8,12 @@ import 'dart:io';
 
 import 'package:path/path.dart' show basenameWithoutExtension, join;
 
-void writeToFile(String outputDirectory,
+// Returns the path to the file that was written.
+String writeToFile(String outputDirectory,
                  String path,
                  String contents,
                  {String extension}) {
-  // Create 'cc' output directory if it doesn't already exist.
+  // Create output directory if it doesn't already exist.
   new Directory(outputDirectory).createSync(recursive: true);
   // Write contents of the file.
   String fileName = path;
@@ -22,5 +23,6 @@ void writeToFile(String outputDirectory,
   }
   String filePath = join(outputDirectory, fileName);
   new File(filePath).writeAsStringSync(contents);
+  return filePath;
 }
 

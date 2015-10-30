@@ -1,9 +1,6 @@
 Service.podspec
-libfletch.so
-libfletch.dylib
-performance.snapshot
-PerformanceService.jar
 cc/
 dart/
 java/jni/
 java/fletch/
+java/performance.snapshot

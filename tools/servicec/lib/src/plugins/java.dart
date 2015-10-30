@@ -7,7 +7,10 @@ library old_servicec.plugins.java;
 import 'dart:core' hide Type;
 import 'dart:io';
 
-import 'package:path/path.dart';
+import 'package:path/path.dart' show
+    basenameWithoutExtension,
+    join,
+    relative;
 import 'package:servicec/util.dart' as strings;
 
 import 'shared.dart';
@@ -356,10 +359,13 @@ const List<String> JAVA_RESOURCES = const [
   "Segment.java"
 ];
 
+List<Uri> _filesWritten;
+
 void generate(String path,
               Unit unit,
               String resourcesDirectory,
               String outputDirectory) {
+  _filesWritten = <Uri>[];
   _generateFletchApis(outputDirectory);
   _generateServiceJava(path, unit, outputDirectory);
   _generateServiceJni(path, unit, outputDirectory);
@@ -371,8 +377,11 @@ void generate(String path,
     String resourcePath = join(resourcesDirectory, resource);
     File file = new File(resourcePath);
     String contents = file.readAsStringSync();
-    writeToFile(fletchDirectory, resource, contents);
+    _writeToFileAndNote(fletchDirectory, resource, contents);
   }
+
+  _generateServiceJarFile(path, outputDirectory);
+  _filesWritten = <Uri>[];
 }
 
 void _generateFletchApis(String outputDirectory) {
@@ -382,26 +391,26 @@ void _generateFletchApis(String outputDirectory) {
   StringBuffer buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_API_JAVA);
-  writeToFile(fletchDirectory, 'FletchApi', buffer.toString(),
+  _writeToFileAndNote(fletchDirectory, 'FletchApi', buffer.toString(),
       extension: 'java');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_SERVICE_API_JAVA);
-  writeToFile(fletchDirectory, 'FletchServiceApi', buffer.toString(),
+  _writeToFileAndNote(fletchDirectory, 'FletchServiceApi', buffer.toString(),
       extension: 'java');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_API_JAVA_IMPL);
-  writeToFile(jniDirectory, 'fletch_api_wrapper', buffer.toString(),
+  _writeToFileAndNote(jniDirectory, 'fletch_api_wrapper', buffer.toString(),
       extension: 'cc');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_SERVICE_API_JAVA_IMPL);
-  writeToFile(jniDirectory, 'fletch_service_api_wrapper', buffer.toString(),
-      extension: 'cc');
+  _writeToFileAndNote(jniDirectory, 'fletch_service_api_wrapper',
+      buffer.toString(), extension: 'cc');
 }
 
 void _generateServiceJava(String path, Unit unit, String outputDirectory) {
@@ -414,7 +423,7 @@ void _generateServiceJava(String path, Unit unit, String outputDirectory) {
     print('Java plugin: multiple services in one file is not supported.');
   }
   String serviceName = unit.services.first.name;
-  writeToFile(directory, serviceName, contents, extension: 'java');
+  _writeToFileAndNote(directory, serviceName, contents, extension: 'java');
 }
 
 void _generateServiceJni(String path, Unit unit, String outputDirectory) {
@@ -428,7 +437,7 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
   }
   String serviceName = unit.services.first.name;
   String file = '${strings.underscore(serviceName)}_wrapper';
-  writeToFile(directory, file, contents, extension: 'cc');
+  _writeToFileAndNote(directory, file, contents, extension: 'cc');
 }
 
 class _JavaVisitor extends CodeGenerationVisitor {
@@ -724,8 +733,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.writeln('}');
 
-    writeToFile(fletchDirectory, '$name', buffer.toString(),
-                extension: 'java');
+    _writeToFileAndNote(fletchDirectory, '$name', buffer.toString(),
+        extension: 'java');
   }
 
   void writeBuilder(Struct node) {
@@ -837,8 +846,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.writeln('}');
 
-    writeToFile(fletchDirectory, '$name', buffer.toString(),
-                extension: 'java');
+    _writeToFileAndNote(fletchDirectory, '$name', buffer.toString(),
+        extension: 'java');
   }
 
   void writeListReaderImplementation(Type type) {
@@ -888,8 +897,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.writeln('}');
 
-    writeToFile(fletchDirectory, '$name', buffer.toString(),
-                extension: 'java');
+    _writeToFileAndNote(fletchDirectory, '$name', buffer.toString(),
+        extension: 'java');
   }
 
   void writeListBuilderImplementation(Type type) {
@@ -943,8 +952,8 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.writeln('}');
 
-    writeToFile(fletchDirectory, '$name', buffer.toString(),
-                extension: 'java');
+    _writeToFileAndNote(fletchDirectory, '$name', buffer.toString(),
+        extension: 'java');
   }
 }
 
@@ -1370,7 +1379,7 @@ void _generateServiceJniMakeFiles(String path,
   buffer.writeln();
   buffer.writeln('\$(call import-module, ${modulePath})');
 
-  writeToFile(join(out, 'jni'), 'Android', buffer.toString(),
+  _writeToFileAndNote(join(out, 'jni'), 'Android', buffer.toString(),
       extension: 'mk');
 
   buffer = new StringBuffer(HEADER_MK);
@@ -1378,7 +1387,97 @@ void _generateServiceJniMakeFiles(String path,
   buffer.writeln('APP_ABI := x86 armeabi-v7a');
   // TODO(zerny): Is this the right place and way to ensure ABI >= 8?
   buffer.writeln('APP_PLATFORM := android-8');
-  writeToFile(join(out, 'jni'), 'Application', buffer.toString(),
+  _writeToFileAndNote(join(out, 'jni'), 'Application', buffer.toString(),
       extension: 'mk');
 
+}
+
+void _createClassesDirectory(Directory classesTempDirectory) {
+  if (classesTempDirectory.existsSync()) {
+    classesTempDirectory.deleteSync(recursive: true);
+  }
+  classesTempDirectory.createSync(recursive: true);
+}
+
+int _compileGeneratedJavaFiles(Directory classesTempDirectory) {
+  String executable = "javac";
+  List<String> arguments = [
+    "-classpath", "none",
+    "-d", classesTempDirectory.path,
+    "-implicit:none",
+    "-source", "8",
+    "-target", "8",
+    "-sourcepath", "none",
+    "-Werror"];
+  Iterable<Uri> javaSources =
+    _filesWritten.where((uri) => uri.path.endsWith("java"));
+  for (Uri javaSource in javaSources) {
+    arguments.add(javaSource.path);
+  }
+
+  ProcessResult result = Process.runSync(executable, arguments);
+  if (0 != result.exitCode) {
+    print("FAILURE while generating .java files");
+    print("Command: $executable ${arguments.join(' ')}");
+    print('stdout:');
+    print(result.stdout);
+    print('stderr:');
+    print(result.stderr);
+  }
+
+  return result.exitCode;
+}
+
+int _packageJar(Directory classesTempDirectory,
+                            String jarPath) {
+  String executable = "jar";
+  List<String> arguments = [
+    "cf", jarPath,
+    "-C", classesTempDirectory.path,
+    "."];
+
+  ProcessResult result = Process.runSync(executable, arguments);
+  if (0 != result.exitCode) {
+    print("FAILURE while packaging generated .java files as a .jar");
+    print("Command: $executable ${arguments.join(' ')}");
+    print('stdout:');
+    print(result.stdout);
+    print('stderr:');
+    print(result.stderr);
+  }
+
+  return result.exitCode;
+}
+
+void _removeClassesDirectory(Directory classesTempDirectory) {
+  classesTempDirectory.deleteSync(recursive: true);
+}
+
+void _generateServiceJarFile(String sourceFilePath, String outputDirectory) {
+  Uri javaOutputDirectoryUri =
+    new Uri.directory(outputDirectory).resolve("java/");
+  Directory classesTempDirectory =
+    new Directory(javaOutputDirectoryUri.resolve("classes-tmp/").path);
+
+  _createClassesDirectory(classesTempDirectory);
+  if (0 != _compileGeneratedJavaFiles(classesTempDirectory)) {
+    return;
+  }
+
+  String projectName = basenameWithoutExtension(sourceFilePath);
+  String jarPath =
+    javaOutputDirectoryUri.resolve("fletch/" + projectName + ".jar").path;
+  if (0 != _packageJar(classesTempDirectory, jarPath)) {
+    return;
+  }
+  _removeClassesDirectory(classesTempDirectory);
+}
+
+void _writeToFileAndNote(String outputDirectory,
+                         String path,
+                         String contents,
+                         {String extension}) {
+  String filePath =
+      writeToFile(outputDirectory, path, contents, extension: extension);
+  _filesWritten.add(new Uri.file(filePath));
 }

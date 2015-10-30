@@ -78,36 +78,14 @@ Future<Iterable<CompilationError>> compileInput(
   Iterable<CompilationError> errors = validate(listener.parsedUnitNode);
 
   if (errors.isEmpty) {
+    Unit unit = convert(listener.parsedUnitNode);
     try {
-      Unit unit = convert(listener.parsedUnitNode);
       old_servicec.compile(path, unit, resourcesDirectory, outputDirectory);
-    } catch (e) {
-      String message = e.toString();
-      if (e is Error) {
-        message = "Original error:\n$message\n${e.stackTrace}";
-      }
+    } catch (e, stackTrace) {
+      String message = "Original error:\n$e\n$stackTrace";
       throw new InternalCompilerError(message);
     }
   }
 
   return errors;
-}
-
-void createDirectories(String outputDirectory, Target target) {
-  new Directory(outputDirectory).createSync(recursive: true);
-
-  if (target.includes(Target.JAVA)) {
-    createJavaDirectories(outputDirectory);
-  }
-  if (target.includes(Target.CC)) {
-    createCCDirectories(outputDirectory);
-  }
-}
-
-void createJavaDirectories(String outputDirectory) {
-  new Directory("$outputDirectory/java").createSync(recursive: true);
-}
-
-void createCCDirectories(String outputDirectory) {
-  new Directory("$outputDirectory/cc").createSync(recursive: true);
 }
