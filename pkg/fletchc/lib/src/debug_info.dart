@@ -17,7 +17,8 @@ import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/io/source_file.dart';
 
 import 'package:compiler/src/tree/tree.dart' show
-    Node;
+    Node,
+    unparse;
 
 import 'package:compiler/src/source_file_provider.dart' show
     SourceFileProvider;
@@ -172,7 +173,7 @@ class DebugInfo {
   String astStringFor(int bytecodeIndex) {
     SourceLocation location = locationFor(bytecodeIndex);
     if (location == null || location.node == null) return null;
-    return '${location.node}';
+    return unparse(location.node, minify: false);
   }
 
   // TODO(ager): Should something like this be upstreamed to dart2js?

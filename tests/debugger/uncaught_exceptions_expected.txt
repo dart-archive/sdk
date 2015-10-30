@@ -23,7 +23,7 @@ Uncaught exception: Instance of 'CustomException' {
   CustomException.code: 42
 }
 Stack trace:
-> 0: foo         @new CustomException('foobar',42)
+> 0: foo         @new CustomException('foobar', 42)
   1: main        @foo()
 > restart
 foo

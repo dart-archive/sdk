@@ -2,55 +2,55 @@ main    @42
 main    @new B(42)
 B initializer   @a
 B initializer   @a
-B initializer   @add(a,a)
+B initializer   @add(a, a)
 add @x
 add @y
-add @x+y
-add @=>x+y;
-B initializer   @_a=add(a,a)
+add @x + y
+add @=> x + y;
+B initializer   @_a = add(a, a)
 B initializer   @a
 B initializer   @a
 B initializer   @x
-B initializer   @_x=x
+B initializer   @_x = x
 B initializer   @y
-B initializer   @_y=y
+B initializer   @_y = y
 B initializer   @x
 B initializer   @y
-B initializer   @add(x,y)
+B initializer   @add(x, y)
 add @x
 add @y
-add @x+y
-add @=>x+y;
-B initializer   @_z=add(x,y)
-A   @initA(_x,_y,_z)
+add @x + y
+add @=> x + y;
+B initializer   @_z = add(x, y)
+A   @initA(_x, _y, _z)
 A   @_x
 A   @_y
 A   @_z
-A   @initA(_x,_y,_z)
+A   @initA(_x, _y, _z)
 A.initA @a
 A.initA @b
-A.initA @a==b
-A.initA @_z=a+c
+A.initA @a == b
+A.initA @_z = a + c
 A.initA @a
 A.initA @c
-A.initA @a+c
-A.initA @_z=a+c
-A   @initA(_x,_y,_z)
-B   @initB(_a,_x,_y,_z)
+A.initA @a + c
+A.initA @_z = a + c
+A   @initA(_x, _y, _z)
+B   @initB(_a, _x, _y, _z)
 B   @_a
 B   @_x
 B   @_y
 B   @_z
-B   @initB(_a,_x,_y,_z)
-B.initB @sum=a+b+c+d
+B   @initB(_a, _x, _y, _z)
+B.initB @sum = a + b + c + d
 B.initB @a
 B.initB @b
-B.initB @a+b
+B.initB @a + b
 B.initB @c
-B.initB @a+b+c
+B.initB @a + b + c
 B.initB @d
-B.initB @a+b+c+d
-B.initB @sum=a+b+c+d
-B   @initB(_a,_x,_y,_z)
+B.initB @a + b + c + d
+B.initB @sum = a + b + c + d
+B   @initB(_a, _x, _y, _z)
 main    @new B(42)
 ### process terminated

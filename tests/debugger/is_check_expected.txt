@@ -19,22 +19,22 @@ main    @b
 main    @b.b
 main    @a
 main    @b
-main    @new C(a,b)
+main    @new C(a, b)
 C initializer   @42
 C initializer   @b
 C initializer   @b is B
-C initializer   @isB=b is B
+C initializer   @isB = b is B
 C   @a
 C   @a is B
 C   @a.b
-main    @new C(a,b)
+main    @new C(a, b)
 isB lazy initializer    @globalA
 globalA lazy initializer    @new B()
 B initializer   @42
 B initializer   @32
 globalA lazy initializer    @new B()
 isB lazy initializer    @globalA is B
-main    @new C(a,b)
+main    @new C(a, b)
 main    @globalA
 main    @globalA.a
 ### process terminated

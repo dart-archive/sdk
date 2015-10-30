@@ -3,17 +3,17 @@ main    @a1
 a1 lazy initializer @1
 a1 lazy initializer @new A(1)
 A initializer   @x
-A initializer   @this.x=x
+A initializer   @this.x = x
 a1 lazy initializer @new A(1)
 main    @a1.x
 main    @x
-main    @a1.x+x
+main    @a1.x + x
 main    @a2
 a2 lazy initializer @1
 a2 lazy initializer @new A(1)
 A initializer   @x
-A initializer   @this.x=x
+A initializer   @this.x = x
 a2 lazy initializer @new A(1)
 main    @a2.x
-main    @a1.x+x+a2.x
+main    @a1.x + x + a2.x
 ### process terminated

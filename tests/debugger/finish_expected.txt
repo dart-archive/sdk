@@ -17,7 +17,7 @@ Stack trace:
 > 0: main        @32
 > s
 Stack trace:
-> 0: main        @32+32
+> 0: main        @32 + 32
 > s
 Stack trace:
 > 0: main        @foo()
@@ -27,7 +27,7 @@ Stack trace:
   1: main        @foo()
 > finish
 Stack trace:
-> 0: main        @32+32+foo()
+> 0: main        @32 + 32 + foo()
 > s
 Stack trace:
 > 0: main        @new A()
@@ -61,7 +61,7 @@ Stack trace:
   1: main        @a.y()
 > s
 Stack trace:
-> 0: A.y         @32+32
+> 0: A.y         @32 + 32
   1: main        @a.y()
 > s
 Stack trace:

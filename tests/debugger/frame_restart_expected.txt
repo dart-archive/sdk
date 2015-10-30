@@ -15,18 +15,18 @@ breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 1
 0
 Stack trace:
-> 0: breakHere   @void breakHere(){}
+> 0: breakHere   @void breakHere() {}
   1: foo         @breakHere()
-  2: foo         @foo(i-1)
-  3: foo         @foo(i-1)
-  4: foo         @foo(i-1)
-  5: foo         @foo(i-1)
-  6: foo         @foo(i-1)
-  7: foo         @foo(i-1)
-  8: foo         @foo(i-1)
-  9: foo         @foo(i-1)
-  10: foo         @foo(i-1)
-  11: foo         @foo(i-1)
+  2: foo         @foo(i - 1)
+  3: foo         @foo(i - 1)
+  4: foo         @foo(i - 1)
+  5: foo         @foo(i - 1)
+  6: foo         @foo(i - 1)
+  7: foo         @foo(i - 1)
+  8: foo         @foo(i - 1)
+  9: foo         @foo(i - 1)
+  10: foo         @foo(i - 1)
+  11: foo         @foo(i - 1)
   12: main        @foo(10)
 > f 5
 > restart
@@ -36,18 +36,18 @@ Stack trace:
 1
 0
 Stack trace:
-> 0: breakHere   @void breakHere(){}
+> 0: breakHere   @void breakHere() {}
   1: foo         @breakHere()
-  2: foo         @foo(i-1)
-  3: foo         @foo(i-1)
-  4: foo         @foo(i-1)
-  5: foo         @foo(i-1)
-  6: foo         @foo(i-1)
-  7: foo         @foo(i-1)
-  8: foo         @foo(i-1)
-  9: foo         @foo(i-1)
-  10: foo         @foo(i-1)
-  11: foo         @foo(i-1)
+  2: foo         @foo(i - 1)
+  3: foo         @foo(i - 1)
+  4: foo         @foo(i - 1)
+  5: foo         @foo(i - 1)
+  6: foo         @foo(i - 1)
+  7: foo         @foo(i - 1)
+  8: foo         @foo(i - 1)
+  9: foo         @foo(i - 1)
+  10: foo         @foo(i - 1)
+  11: foo         @foo(i - 1)
   12: main        @foo(10)
 > f 11
 > restart
@@ -63,18 +63,18 @@ Stack trace:
 1
 0
 Stack trace:
-> 0: breakHere   @void breakHere(){}
+> 0: breakHere   @void breakHere() {}
   1: foo         @breakHere()
-  2: foo         @foo(i-1)
-  3: foo         @foo(i-1)
-  4: foo         @foo(i-1)
-  5: foo         @foo(i-1)
-  6: foo         @foo(i-1)
-  7: foo         @foo(i-1)
-  8: foo         @foo(i-1)
-  9: foo         @foo(i-1)
-  10: foo         @foo(i-1)
-  11: foo         @foo(i-1)
+  2: foo         @foo(i - 1)
+  3: foo         @foo(i - 1)
+  4: foo         @foo(i - 1)
+  5: foo         @foo(i - 1)
+  6: foo         @foo(i - 1)
+  7: foo         @foo(i - 1)
+  8: foo         @foo(i - 1)
+  9: foo         @foo(i - 1)
+  10: foo         @foo(i - 1)
+  11: foo         @foo(i - 1)
   12: main        @foo(10)
 > d 0
 deleted breakpoint: id: '0' method: 'breakHere' bytecode index: '0'

@@ -1,20 +1,20 @@
 main    @'${foo()} and ${bar()}'
 main    @foo()
 foo @new A()
-foo @=>new A();
+foo @=> new A();
 main    @foo()
 A.toString  @"A"
-A.toString  @=>"A";
+A.toString  @=> "A";
 main    @foo()
 main    @bar()
 bar @new B()
-bar @=>new B();
+bar @=> new B();
 main    @bar()
 B.toString  @"B"
-B.toString  @=>"B";
+B.toString  @=> "B";
 main    @baz('${foo()} and ${bar()}')
 baz @s
 baz @s.length
-baz @=>s.length;
+baz @=> s.length;
 main    @baz('${foo()} and ${bar()}')
 ### process terminated
