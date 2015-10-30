@@ -53,18 +53,20 @@
 /// Request Payload:
 ///   None.
 /// Reply Payload on success:
-///   -----------------------------------------
-///   | VM ID (16 bits)   | VM Port (16 bits) |
-///   -----------------------------------------
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
+///   | VM Port (32 bits) |
+///   ---------------------
 /// Reply Payload on failure:
 ///   None.
 ///
 /// STOP_VM:
 ///   Stop the VM specified by the given vm id.
 /// Request Payload:
-///   -----------------------------------------
-///   | VM ID (16 bits)   | Unused (16 bits)  |
-///   -----------------------------------------
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
 /// Reply Payload on success:
 ///   None.
 /// Reply Payload on failure:
@@ -75,13 +77,13 @@
 /// Request Payload:
 ///   None.
 /// Reply Payload on success:
-///   ---------------------------------------
-///   | VM ID (16 bits)   | VM ID (16 bits) |
-///   ---------------------------------------
-///   | VM ID (16 bits)   | VM ID (16 bits) |
-///   ---------------------------------------
-///   | VM ID (16 bits)   | VM ID (16 bits) |
-///   ---------------------------------------
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
 ///   ...
 ///
 /// Reply Payload on failure:
@@ -196,12 +198,11 @@ class StartVmRequest extends RequestHeader {
 
 class StopVmRequest extends RequestHeader {
   final int vmPid;
-  final int unused;
 
-  StopVmRequest(this.vmPid, {this.unused: 0})
+  StopVmRequest(this.vmPid)
       : super(RequestHeader.STOP_VM, payloadLength: 4);
 
-  StopVmRequest.withHeader(RequestHeader header, this.vmPid, {this.unused: 0})
+  StopVmRequest.withHeader(RequestHeader header, this.vmPid)
       : super(
             RequestHeader.STOP_VM,
             version: header.version,
@@ -218,16 +219,14 @@ class StopVmRequest extends RequestHeader {
       throw new MessageDecodeException(
           "Invalid StopVmRequest: ${buffer.asUint8List()}");
     }
-    var vmPid = readUint16(buffer, RequestHeader.HEADER_SIZE);
-    var unused = readUint16(buffer, RequestHeader.HEADER_SIZE + 2);
-    return new StopVmRequest.withHeader(header, vmPid, unused: unused);
+    var vmPid = readUint32(buffer, RequestHeader.HEADER_SIZE);
+    return new StopVmRequest.withHeader(header, vmPid);
   }
 
   ByteBuffer toBuffer() {
     var buffer = new Uint8List(RequestHeader.HEADER_SIZE + 4).buffer;
     _writeHeader(buffer);
-    writeUint16(buffer, RequestHeader.HEADER_SIZE, vmPid);
-    writeUint16(buffer, RequestHeader.HEADER_SIZE + 2, unused);
+    writeUint32(buffer, RequestHeader.HEADER_SIZE, vmPid);
     return buffer;
   }
 }
@@ -325,7 +324,7 @@ class SignalVmRequest extends RequestHeader {
   final int signal;
 
   SignalVmRequest(this.vmPid, this.signal)
-      : super(RequestHeader.SIGNAL_VM, payloadLength: 4);
+      : super(RequestHeader.SIGNAL_VM, payloadLength: 8);
 
   SignalVmRequest.withHeader(RequestHeader header, this.vmPid, this.signal)
       : super(
@@ -335,26 +334,26 @@ class SignalVmRequest extends RequestHeader {
             reserved: header.reserved);
 
   factory SignalVmRequest.fromBuffer(ByteBuffer buffer) {
-    if (buffer.lengthInBytes < RequestHeader.HEADER_SIZE + 4) {
+    if (buffer.lengthInBytes < RequestHeader.HEADER_SIZE + 8) {
       throw new MessageDecodeException(
           'Insufficient data for a SignalVmRequest: ${buffer.asUint8List()}');
     }
     RequestHeader header = new RequestHeader.fromBuffer(buffer);
     if (header.command != RequestHeader.SIGNAL_VM ||
-        header.payloadLength != 4) {
+        header.payloadLength != 8) {
       throw new MessageDecodeException(
           "Invalid SignalVmRequest: ${buffer.asUint8List()}");
     }
-    int vmPid = readUint16(buffer, RequestHeader.HEADER_SIZE);
-    int signal = readUint16(buffer, RequestHeader.HEADER_SIZE + 2);
+    int vmPid = readUint32(buffer, RequestHeader.HEADER_SIZE);
+    int signal = readUint32(buffer, RequestHeader.HEADER_SIZE + 4);
     return new SignalVmRequest.withHeader(header, vmPid, signal);
   }
 
   ByteBuffer toBuffer() {
-    var buffer = new Uint8List(RequestHeader.HEADER_SIZE + 4).buffer;
+    var buffer = new Uint8List(RequestHeader.HEADER_SIZE + 8).buffer;
     _writeHeader(buffer);
-    writeUint16(buffer, RequestHeader.HEADER_SIZE, vmPid);
-    writeUint16(buffer, RequestHeader.HEADER_SIZE + 2, signal);
+    writeUint32(buffer, RequestHeader.HEADER_SIZE, vmPid);
+    writeUint32(buffer, RequestHeader.HEADER_SIZE + 4, signal);
     return buffer;
   }
 }
@@ -410,21 +409,21 @@ class StartVmReply extends ReplyHeader {
       : super(
             id,
             result,
-            payloadLength: result == ReplyHeader.SUCCESS ? 4 : 0);
+            payloadLength: result == ReplyHeader.SUCCESS ? 8 : 0);
 
   factory StartVmReply.fromBuffer(ByteBuffer buffer) {
     var header = new ReplyHeader.fromBuffer(buffer);
     int vmId;
     int vmPort;
     if (header.result == ReplyHeader.SUCCESS) {
-      // There must be 4 bytes of payload.
-      if (buffer.lengthInBytes < ReplyHeader.HEADER_SIZE + 4 ||
-          header.payloadLength != 4) {
+      // There must be 8 bytes of payload.
+      if (buffer.lengthInBytes < ReplyHeader.HEADER_SIZE + 8 ||
+          header.payloadLength != 8) {
         throw new MessageDecodeException(
             "Invalid StartVmReply: ${buffer.asUint8List()}");
       }
-      vmId = readUint16(buffer, ReplyHeader.HEADER_SIZE);
-      vmPort = readUint16(buffer, ReplyHeader.HEADER_SIZE + 2);
+      vmId = readUint32(buffer, ReplyHeader.HEADER_SIZE);
+      vmPort = readUint32(buffer, ReplyHeader.HEADER_SIZE + 4);
     }
     return new StartVmReply(
         header.id, header.result, vmId: vmId, vmPort: vmPort);
@@ -433,10 +432,10 @@ class StartVmReply extends ReplyHeader {
   ByteBuffer toBuffer() {
     ByteBuffer buffer;
     if (result == ReplyHeader.SUCCESS) {
-      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + 4).buffer;
+      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + 8).buffer;
       _writeHeader(buffer);
-      writeUint16(buffer, ReplyHeader.HEADER_SIZE, vmId);
-      writeUint16(buffer, ReplyHeader.HEADER_SIZE + 2, vmPort);
+      writeUint32(buffer, ReplyHeader.HEADER_SIZE, vmId);
+      writeUint32(buffer, ReplyHeader.HEADER_SIZE + 4, vmPort);
     } else {
       buffer = new Uint8List(ReplyHeader.HEADER_SIZE).buffer;
       _writeHeader(buffer);
@@ -464,15 +463,15 @@ class ListVmsReply extends ReplyHeader {
   final List<int> vmIds;
 
   ListVmsReply(int id, int result, {List<int> vmIds})
-      : super(id, result, payloadLength: vmIds != null ? vmIds.length * 2 : 0),
+      : super(id, result, payloadLength: vmIds != null ? vmIds.length * 4 : 0),
         vmIds = vmIds;
 
   factory ListVmsReply.fromBuffer(ByteBuffer buffer) {
     var header = new ReplyHeader.fromBuffer(buffer);
     List<int> vmIds = [];
     if (header.result == ReplyHeader.SUCCESS) {
-      for (int i = 0; i < header.payloadLength ~/ 2; ++i) {
-        vmIds.add(readUint16(buffer, ReplyHeader.HEADER_SIZE + (i * 2)));
+      for (int i = 0; i < header.payloadLength ~/ 4; ++i) {
+        vmIds.add(readUint32(buffer, ReplyHeader.HEADER_SIZE + (i * 4)));
       }
     }
     return new ListVmsReply(header.id, header.result, vmIds: vmIds);
@@ -482,10 +481,10 @@ class ListVmsReply extends ReplyHeader {
     ByteBuffer buffer;
     if (result == ReplyHeader.SUCCESS) {
       int numVms = vmIds != null ? vmIds.length : 0;
-      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + (numVms * 2)).buffer;
+      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + (numVms * 4)).buffer;
       _writeHeader(buffer);
       for (int i = 0; i < numVms; ++i) {
-        writeUint16(buffer, ReplyHeader.HEADER_SIZE + (i * 2), vmIds[i]);
+        writeUint32(buffer, ReplyHeader.HEADER_SIZE + (i * 4), vmIds[i]);
       }
     } else {
       buffer = new Uint8List(ReplyHeader.HEADER_SIZE).buffer;

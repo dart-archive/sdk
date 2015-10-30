@@ -20,8 +20,9 @@ mkdir -p ${VM_LOG_DIR} ${VM_PID_DIR}
 touch ${AGENT_PID_FILE} ${AGENT_LOG_FILE}
 
 # Create snapshot
-${BUILD_DIR}/dart -c -Dsnapshot=${FLETCH_AGENT_SNAPSHOT} \
-    tests/fletchc/run.dart pkg/fletch_agent/bin/agent.dart
+${BUILD_DIR}/fletch quit
+${BUILD_DIR}/fletch export pkg/fletch_agent/bin/agent.dart to \
+  $FLETCH_AGENT_SNAPSHOT
 
 # Run the agent
 exec ${FLETCH_VM} ${FLETCH_AGENT_SNAPSHOT}

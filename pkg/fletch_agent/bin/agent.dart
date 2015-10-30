@@ -316,14 +316,13 @@ class CommandHandler {
       return;
     }
     var reply;
-    // Read in the vm id. It is only the first 2 bytes of the data sent.
+    // Read in the vm id.
     var pidBytes = _socket.read(4);
     if (pidBytes == null) {
       reply = new StopVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD);
       _context.logger.warn('Missing pid of the fletch vm to stop.');
     } else {
-      // The vm id (aka. pid) is the first 2 bytes of the data sent.
-      int pid = readUint16(pidBytes, 0);
+      int pid = readUint32(pidBytes, 0);
       int err = _kill.icall$2(pid, SIGTERM);
       if (err != 0) {
         reply = new StopVmReply(_requestHeader.id, ReplyHeader.UNKNOWN_VM_ID);
@@ -340,20 +339,20 @@ class CommandHandler {
   }
 
   void _signalVm() {
-    if (_requestHeader.payloadLength != 4) {
+    if (_requestHeader.payloadLength != 8) {
       _sendReply(
           new SignalVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD));
       return;
     }
     var reply;
     // Read in the vm id and the signal to send.
-    var pidBytes = _socket.read(4);
+    var pidBytes = _socket.read(8);
     if (pidBytes == null) {
       reply = new SignalVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD);
       _context.logger.warn('Missing pid of the fletch vm to signal.');
     } else {
-      int pid = readUint16(pidBytes, 0);
-      int signal = readUint16(pidBytes, 2);
+      int pid = readUint32(pidBytes, 0);
+      int signal = readUint32(pidBytes, 4);
       // TODO(wibling): Hack to make ctrl-c work for stopping spawed vms work
       // on Raspbian wheezy. For some unknown reason SIGINT doesn't work so we
       // map SIGINT to SIGTERM as a workaround.
