@@ -109,6 +109,9 @@ const int AGENT_VERSION = 1;
 /// Default agent port
 const int AGENT_DEFAULT_PORT = 12121;
 
+/// Temporary path for the agent package used during upgrade.
+const String PACKAGE_FILE_NAME = '/tmp/fletch-agent.deb';
+
 class RequestHeader {
   static const int START_VM = 0;
   static const int STOP_VM = 1;
