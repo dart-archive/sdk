@@ -316,10 +316,10 @@ int Scheduler::Run() {
 
 void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   Program* program = process->program();
-  program->DeleteProcess(process, kind);
   if (--processes_ == 0) {
     last_process_exit_ = kind;
   }
+  program->DeleteProcess(process, kind);
 
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
