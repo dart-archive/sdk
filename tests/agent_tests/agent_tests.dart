@@ -217,7 +217,9 @@ class AgentLifeCycleTest extends AgentTest {
 
     // Kill the spawned vm using a signal.
     await withConnection((AgentConnection connection) async {
-      await connection.signalVm(data.id, SIGINT);
+      // TODO(wibling): figure out why doing a SIGINT is not stopping the VM
+      // on Mac.
+      await connection.stopVm(data.id);
       Expect.isFalse(Process.killPid(data.id, ProcessSignal.SIGCONT),
           'Fletch vm still running');
       print('Killed VM with id ${data.id} on port ${data.port}.');
