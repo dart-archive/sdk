@@ -36,6 +36,10 @@ const String fletchSettingsFile =
 /// Enables printing of Compiler/VM protocol commands after each compilation.
 const bool printCommands = const bool.fromEnvironment("printCommands");
 
+/// Enables pretty printing the Fletch system (the compilation result) after
+/// each compilation.
+const bool printSystem = const bool.fromEnvironment("printSystem");
+
 class FletchRunner {
   Future<Null> attach(SessionState state) async {
     if (userVmAddress == null) {
@@ -44,7 +48,6 @@ class FletchRunner {
       Address address = parseAddress(userVmAddress);
       await attachToVm(address.host, address.port, state);
     }
-
   }
 
   Future<Settings> computeSettings() async {
@@ -70,6 +73,13 @@ class FletchRunner {
     for (String script in arguments) {
       await compile(fileUri(script, Uri.base), state);
       if (state.compilationResults.isNotEmpty) {
+        // Always generate the debug string to ensure test coverage.
+        String debugString =
+            state.compilationResults.last.system.toDebugString(Uri.base);
+        if (printSystem) {
+          // But only print the debug string if requested.
+          print(debugString);
+        }
         if (printCommands) {
           print("Compiled $script");
           for (var delta in state.compilationResults) {

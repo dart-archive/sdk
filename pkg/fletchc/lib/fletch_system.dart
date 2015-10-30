@@ -17,8 +17,11 @@ import 'package:persistent/persistent.dart' show
 import 'bytecodes.dart';
 import 'commands.dart';
 
-import 'src/fletch_selector.dart'
-    show FletchSelector;
+import 'src/fletch_selector.dart' show
+    FletchSelector;
+
+import 'src/fletch_system_printer.dart' show
+    FletchSystemPrinter;
 
 enum FletchFunctionKind {
   NORMAL,
@@ -252,6 +255,10 @@ class FletchSystem {
 
   int computeMaxClassId() {
     return classesById.keys.fold(-1, (x, y) => x > y ? x : y);
+  }
+
+  String toDebugString(Uri base) {
+    return new FletchSystemPrinter(this, base).generateDebugString();
   }
 }
 
