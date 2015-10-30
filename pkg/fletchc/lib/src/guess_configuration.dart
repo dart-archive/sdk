@@ -20,6 +20,9 @@ bool _looksLikeFletchVm(Uri uri) {
   return new File.fromUri(uri).existsSync();
 }
 
+// TODO(zerny): Guessing the VM path should only happen once and only if no
+// prior configuration has happend. Make this a private method in
+// fletch_compiler.dart
 Uri guessFletchVm(Uri fletchVm, {bool mustExist: true}) {
   if (fletchVm == null && _FLETCH_VM != null) {
     // Use Uri.base here because _FLETCH_VM is a constant relative to the

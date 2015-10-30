@@ -167,7 +167,7 @@ Future<Null> startAndAttachViaAgent(SessionState state) async {
 }
 
 Future<Null> startAndAttachDirectly(SessionState state) async {
-  String fletchVmPath = guessFletchVm(null).toFilePath();
+  String fletchVmPath = state.compilerHelper.fletchVm.toFilePath();
   state.fletchVm = await FletchVm.start(fletchVmPath);
   await attachToVm(state.fletchVm.host, state.fletchVm.port, state);
   await state.session.disableVMStandardOutput();
@@ -342,7 +342,13 @@ Future<Address> readAddressFromUser(
   }
 }
 
-SessionState createSessionState(String name, Settings settings) {
+SessionState createSessionState(
+    String name,
+    Settings settings,
+    {Uri libraryRoot,
+     Uri patchRoot,
+     Uri fletchVm,
+     Uri nativesJson}) {
   if (settings == null) {
     settings = const Settings.empty();
   }
@@ -362,9 +368,14 @@ SessionState createSessionState(String name, Settings settings) {
       : null;
 
   FletchCompiler compilerHelper = new FletchCompiler(
-      options: compilerOptions, packageConfig: packageConfig,
+      options: compilerOptions,
+      packageConfig: packageConfig,
       environment: settings.constants,
-      categories: categories);
+      categories: categories,
+      libraryRoot: libraryRoot,
+      patchRoot: patchRoot,
+      fletchVm: fletchVm,
+      nativesJson: nativesJson);
 
   return new SessionState(
       name, compilerHelper, compilerHelper.newIncrementalCompiler(), settings);

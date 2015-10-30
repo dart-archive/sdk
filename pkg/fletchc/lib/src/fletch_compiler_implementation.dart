@@ -120,6 +120,8 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
   /// Location of fletch patch files.
   final Uri patchRoot;
 
+  final Uri nativesJson;
+
   Map<Uri, CompilationUnitElementX> compilationUnits;
   FletchContext internalContext;
 
@@ -134,6 +136,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
       Uri libraryRoot,
       Uri packageConfig,
       this.patchRoot,
+      this.nativesJson,
       List<String> options,
       Map<String, dynamic> environment,
       this.fletchVm)

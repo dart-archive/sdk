@@ -223,6 +223,7 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
         libraryRoot,
         packageConfig,
         patchRoot,
+        nativesJson,
         options,
         environment,
         fletchVm);
@@ -275,6 +276,8 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
         libraryRoot: _compiler.libraryRoot,
         patchRoot: _compiler.patchRoot,
         packageConfig: _compiler.packageConfig,
+        fletchVm: _compiler.fletchVm,
+        nativesJson: _compiler.nativesJson,
         inputProvider: _compiler.provider,
         diagnosticHandler: _compiler.handler,
         options: options,

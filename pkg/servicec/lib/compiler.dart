@@ -72,7 +72,7 @@ Future<Iterable<CompilationError>> compileInput(
   Token tokens = scanner.tokenize();
 
   ErrorHandlingListener listener = new ErrorHandlingListener();
-  Parser parser = new Parser(new DebugListener(listener));
+  Parser parser = new Parser(listener);
   parser.parseUnit(tokens);
 
   Iterable<CompilationError> errors = validate(listener.parsedUnitNode);

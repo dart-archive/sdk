@@ -68,7 +68,9 @@ const List<String> INCREMENTAL_OPTIONS = const <String>[
 class IncrementalCompiler {
   final Uri libraryRoot;
   final Uri patchRoot;
+  final Uri nativesJson;
   final Uri packageConfig;
+  final Uri fletchVm;
   final CompilerInput inputProvider;
   final List<String> options;
   final CompilerOutput outputProvider;
@@ -81,7 +83,9 @@ class IncrementalCompiler {
   IncrementalCompiler(
       {this.libraryRoot,
        this.patchRoot,
+       this.nativesJson,
        this.packageConfig,
+       this.fletchVm,
        this.inputProvider,
        CompilerDiagnostics diagnosticHandler,
        this.options,
@@ -128,6 +132,8 @@ class IncrementalCompiler {
         libraryRoot: libraryRoot,
         patchRoot: patchRoot,
         packageConfig: packageConfig,
+        nativesJson: nativesJson,
+        fletchVm: fletchVm,
         inputProvider: inputProvider,
         diagnosticHandler: _context,
         options: options,
