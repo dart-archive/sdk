@@ -145,6 +145,9 @@ class SentenceParser {
       case "file":
         return makeNamedTarget(TargetKind.FILE);
 
+      case "agent":
+        return makeTarget(TargetKind.AGENT);
+
       case "tcp_socket":
         return makeNamedTarget(TargetKind.TCP_SOCKET);
 
@@ -344,6 +347,7 @@ class Target {
 }
 
 enum TargetKind {
+  AGENT,
   ALL,
   BACKTRACE,
   BREAK,

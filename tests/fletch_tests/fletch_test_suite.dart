@@ -36,6 +36,9 @@ import 'package:fletchc/src/driver/driver_main.dart' show
     IsolatePool,
     ManagedIsolate;
 
+import 'package:fletchc/src/driver/developer.dart' show
+    configFileUri;
+
 import 'package:fletchc/src/console_print.dart' show
     printToConsole;
 
@@ -202,9 +205,8 @@ Future<Null> handleClient(SendPort sendPort, ReceivePort receivePort) async {
 }
 
 Future<Message> runTest(String name, NoArgFuture test) async {
-  if (test == null) {
-    throw "No such test: $name";
-  }
+  Directory tmpdir;
+
   printLineOnStdout(String line) {
     if (messageSink != null) {
       messageSink.add(new TestStdoutLine(name, line));
@@ -212,7 +214,26 @@ Future<Message> runTest(String name, NoArgFuture test) async {
       stdout.writeln(line);
     }
   }
-  printToConsole = printLineOnStdout;
+
+  Future setupGlobalStateForTesting() async {
+    tmpdir = await Directory.systemTemp.createTemp("fletch_test_home");
+    configFileUri = tmpdir.uri.resolve('.fletch');
+    printToConsole = printLineOnStdout;
+  }
+
+  Future resetGlobalStateAfterTesting() async {
+    try {
+      await tmpdir.delete(recursive: true);
+    } on FileSystemException catch (e) {
+      printToConsole('Error when deleting $tmpdir: $e');
+    }
+    printToConsole = Zone.ROOT.print;
+  }
+
+  if (test == null) {
+    throw "No such test: $name";
+  }
+  await setupGlobalStateForTesting();
   try {
     await runGuarded(
         test,
@@ -231,7 +252,7 @@ Future<Message> runTest(String name, NoArgFuture test) async {
   } catch (error, stackTrace) {
     return new TestFailed(name, '$error', '$stackTrace');
   } finally {
-    printToConsole = Zone.ROOT.print;
+    await resetGlobalStateAfterTesting();
   }
   return new TestPassed(name);
 }

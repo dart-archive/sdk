@@ -153,3 +153,10 @@ const String showDocumentation = """
    show log [in session <name>]
              Display log for given session
 """;
+
+// TODO(lukechurch): Review UX.
+const String upgradeDocumentation = """
+   x-upgrade agent with <package-file> [in session <session>]
+             Upgrade the agent used in session to the version provided in the
+             .deb package <package-file>
+""";

@@ -652,6 +652,31 @@ Future signalAgentVm(SessionState state, int signalNumber) async {
   }
 }
 
+Future<int> upgradeAgent(
+    SessionState state,
+    Uri packageUri,
+    String version) async {
+  if (state.settings.deviceAddress == null) {
+    throwFatalError(DiagnosticKind.noAgentFound);
+  }
+  AgentConnection connection;
+  try {
+    connection = await connectToAgent(state);
+    List<int> data = await new File.fromUri(packageUri).readAsBytes();
+    print('Sending package to fletch agent');
+    await connection.upgradeAgent(version, data);
+    print('Upgrade complete. Please allow the fletch-agent a few seconds '
+        'to restart');
+  } finally {
+    if (connection != null) {
+      disconnectFromAgent(connection);
+    }
+  }
+  // TODO(karlklose): wait for the agent to come online again and verify
+  // the version.
+  return 0;
+}
+
 Future<IsolateController> allocateWorker(IsolatePool pool) async {
   IsolateController worker =
       new IsolateController(await pool.getIsolate(exitOnError: false));
