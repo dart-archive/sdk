@@ -106,7 +106,7 @@ export 'options.dart' show
 import 'documentation.dart' show
     helpDocumentation;
 
-import '../please_report_crash.dart' show
+import '../guess_configuration.dart' show
     fletchVersion;
 
 void reportErroneousTarget(ErrorTarget target) {

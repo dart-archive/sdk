@@ -68,6 +68,7 @@ import 'package:fletchc/src/fletch_compiler_implementation.dart' show
     OutputProvider;
 
 import 'package:fletchc/src/guess_configuration.dart' show
+    fletchVersion,
     guessFletchVm;
 
 import 'package:fletchc/fletch_system.dart';
@@ -212,8 +213,8 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
 
       if (isFirstProgram) {
         // Perform handshake with VM.
-        String version = const String.fromEnvironment('fletch.version');
-        HandShakeResult handShakeResult = await session.handShake(version);
+        HandShakeResult handShakeResult =
+            await session.handShake(fletchVersion);
         Expect.isTrue(handShakeResult.success, "Fletch VM version mismatch");
       }
 

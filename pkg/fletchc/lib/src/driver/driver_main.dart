@@ -161,6 +161,10 @@ class ByteCommandSender extends CommandSender {
 }
 
 Future main(List<String> arguments) async {
+  // When running this program, -Dfletch.version must be provided on the Dart
+  // VM command line.
+  assert(const String.fromEnvironment('fletch.version') != null);
+
   mainArguments.addAll(arguments);
   configFileUri = Uri.base.resolve(arguments.first);
   File configFile = new File.fromUri(configFileUri);

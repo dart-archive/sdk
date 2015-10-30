@@ -4,12 +4,12 @@
 
 library fletchc.please_report_crash;
 
-const String fletchVersion = const String.fromEnvironment(
-    "fletch.version", defaultValue: "version information not available");
+import 'guess_configuration.dart' show
+    fletchVersion;
 
 bool crashReportRequested = false;
 
-const String requestBugReportOnCompilerCrashMessage = """
+final String requestBugReportOnCompilerCrashMessage = """
 The Fletch compiler is broken.
 
 When compiling the above element, the compiler crashed. It is not
@@ -29,7 +29,7 @@ Please include the following information:
   below as well as the source location above)
 """;
 
-const String requestBugReportOnOtherCrashMessage = """
+final String requestBugReportOnOtherCrashMessage = """
 The Fletch program is broken and has crashed.
 
 The Fletch team would greatly appreciate if you would take a moment to
