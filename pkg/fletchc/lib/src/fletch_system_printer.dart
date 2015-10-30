@@ -100,7 +100,7 @@ class FletchSystemPrinter {
     writeFletchFunctionAsBody(function);
   }
 
-  void writeFletchClass(FletchClass cls) {
+  void writeFletchClass(FletchClass cls, Set<FletchFunction> unseen) {
     // TODO(ahe): Important if class is builtin or not. Information lost in
     // FletchNewClassBuilder.finalizeClass.
     if (cls.element != null) {
@@ -118,7 +118,9 @@ class FletchSystemPrinter {
       }
       List<DecodedFletchSelector> selectors = methodTable.keys.toList()..sort();
       for (DecodedFletchSelector selector in selectors) {
-        writeMethodTableEntry(selector, methodTable[selector]);
+        int methodId = methodTable[selector];
+        unseen.remove(system.lookupFunctionById(methodId));
+        writeMethodTableEntry(selector, methodId);
       }
     });
     writeLine("}");
@@ -128,6 +130,11 @@ class FletchSystemPrinter {
     buffer.clear();
 
     Map<String, List<Element>> elementsByPath = <String, List<Element>>{};
+    Set<FletchFunction> unseenFunctions = new Set<FletchFunction>();
+
+    for (var pair in system.functionsById) {
+      unseenFunctions.add(pair.snd);
+    }
 
     groupByPath(pair) {
       Element element = pair.fst;
@@ -148,8 +155,9 @@ class FletchSystemPrinter {
         elements.sort((a, b) => "$a".compareTo("$b"));
         for (Element element in elements) {
           if (element.isClass) {
-            writeFletchClass(system.classesByElement[element]);
+            writeFletchClass(system.classesByElement[element], unseenFunctions);
           } else if (!element.isInstanceMember) {
+            unseenFunctions.remove(system.functionsByElement[element]);
             // TODO(ahe): It would probably be better to call
             // writeFletchFunctionAsBody here, but we have an element, not an
             // ID.
@@ -164,21 +172,18 @@ class FletchSystemPrinter {
       for (var pair in system.classesById) {
         FletchClass fletchClass = pair.snd;
         if (system.classesByElement[fletchClass.element] != fletchClass) {
-          writeFletchClass(fletchClass);
+          writeFletchClass(fletchClass, unseenFunctions);
         }
       }
     });
 
-    writeLine("Functions without an element:");
+    writeLine("Other functions:");
     indented(() {
       for (var pair in system.functionsById) {
         FletchFunction fletchFunction = pair.snd;
-        if (system.functionsByElement[fletchFunction.element] !=
-            fletchFunction) {
-          // TODO(ahe): This test isn't accurate, we should keep all
-          // fletchFunctions in a set an remove them when they have been
-          // printed above.
-          writeLine("$fletchFunction");
+        if (unseenFunctions.remove(fletchFunction)) {
+          write("$fletchFunction ");
+          writeFletchFunctionAsBody(fletchFunction);
         }
       }
     });
