@@ -112,7 +112,7 @@ abstract class AgentTest {
 
   Future<AgentConnection> connect() async {
     int attempt = 0;
-    Socket socket = await retry(1000, () => Socket.connect(host, port));
+    Socket socket = await retry(5000, () => Socket.connect(host, port));
     Expect.isTrue(socket != null, 'Failed to connect to agent');
     return new AgentConnection(socket);
   }
@@ -187,15 +187,14 @@ class AgentLifeCycleTest extends AgentTest {
       Expect.notEquals(0, data.port, 'Invalid port returned for VM');
       // This will not work on Windows, since the ProcessSignal argument
       // is ignored and the fletch-vm is killed.
-      Expect.isTrue(Process.killPid(data.id, ProcessSignal.SIGCONT),
-          'Fletch vm not running');
+      Expect.isTrue(await checkVmState(data.id, true), 'Fletch vm not running');
       print('Started 1. VM with id ${data.id} on port ${data.port}.');
     });
 
     // Stop the spawned vm.
     await withConnection((AgentConnection connection) async {
       await connection.stopVm(data.id);
-      Expect.isFalse(Process.killPid(data.id, ProcessSignal.SIGCONT),
+      Expect.isFalse(await checkVmState(data.id, false),
           'Fletch vm still running');
       print('Stopped VM with id ${data.id} on port ${data.port}.');
     });
@@ -210,17 +209,14 @@ class AgentLifeCycleTest extends AgentTest {
       Expect.notEquals(0, data.port, 'Invalid port returned for VM');
       // This will not work on Windows, since the ProcessSignal argument
       // is ignored and the fletch-vm is killed.
-      Expect.isTrue(Process.killPid(data.id, ProcessSignal.SIGCONT),
-          'Fletch vm not running');
+      Expect.isTrue(await checkVmState(data.id, true), 'Fletch vm not running');
       print('Started 2. VM with id ${data.id} on port ${data.port}.');
     });
 
     // Kill the spawned vm using a signal.
     await withConnection((AgentConnection connection) async {
-      // TODO(wibling): figure out why doing a SIGINT is not stopping the VM
-      // on Mac.
-      await connection.stopVm(data.id);
-      Expect.isFalse(Process.killPid(data.id, ProcessSignal.SIGCONT),
+      await connection.signalVm(data.id, SIGINT);
+      Expect.isFalse(await checkVmState(data.id, false),
           'Fletch vm still running');
       print('Killed VM with id ${data.id} on port ${data.port}.');
     });
@@ -242,7 +238,7 @@ class AgentUpgradeProtocolTest extends AgentTest {
       List<int> data = [72, 69, 76, 76, 79, 10];
       await connection.upgradeAgent('1-test', data);
       List<int> readData =
-          await retry(20, () => new File(PACKAGE_FILE_NAME).readAsBytes());
+          await retry(100, () => new File(PACKAGE_FILE_NAME).readAsBytes());
       Expect.isTrue(readData != null, 'Failed to open agent upgrade package');
       Expect.equals(data.length, readData.length,
           'Expected exactly ${data.length} bytes of data');
@@ -268,17 +264,33 @@ class AgentUnsupportedCommandsTest extends AgentTest {
   }
 }
 
-Future retry(int retries, Future func()) async {
+Future retry(int milliseconds, Future func()) async {
   var result = null;
-  for (int attempt = 0; result == null && attempt < retries; ++attempt) {
+  bool forever = milliseconds < 0;
+  int sleepTimeMS = 5;
+  int retries = forever ? 0 : milliseconds ~/ sleepTimeMS;
+  for (int attempt = 0;
+      result == null && (attempt < retries || forever);
+      ++attempt) {
     try {
       result = await func();
     } catch(e) {
-      if (attempt < retries) {
-        await new Future.delayed(new Duration(milliseconds: 5));
+      if (forever || attempt < retries) {
+        await new Future.delayed(new Duration(milliseconds: sleepTimeMS));
         continue;
       }
     }
   }
   return result;
+}
+
+Future<bool> checkVmState(int vmId, bool expectRunning) {
+  return retry(-1, () {
+    bool running  = Process.killPid(vmId, ProcessSignal.SIGCONT);
+    if (expectRunning != running)  {
+      throw new Exception(
+          'Vm with id ${data.id} not' + expectRunning ? 'running' : 'stopped');
+    }
+    return running;
+  });
 }
