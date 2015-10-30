@@ -289,7 +289,7 @@ Future<bool> checkVmState(int vmId, bool expectRunning) {
     bool running  = Process.killPid(vmId, ProcessSignal.SIGCONT);
     if (expectRunning != running)  {
       throw new Exception(
-          'Vm with id ${data.id} not' + expectRunning ? 'running' : 'stopped');
+          'Vm with id $vmId not' + (expectRunning ? 'running' : 'stopped'));
     }
     return running;
   });
