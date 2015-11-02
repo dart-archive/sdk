@@ -23,10 +23,10 @@ class Item {
   int get id => _id;
 }
 
-class Model {
+class TodoModel {
   Map<int, Item> todos;
 
-  Model() : todos = new Map<int, Item>();
+  TodoModel() : todos = new Map<int, Item>();
 
   void createItem(String title) {
     assert(title.isNotEmpty);

@@ -6,7 +6,7 @@ import 'model.dart';
 import 'dart/simple_todo.dart';
 
 class TodoImpl extends TodoService {
-  Model _model = new Model();
+  TodoModel _model = new TodoModel();
 
   TodoImpl() {
     _model.createItem("Default todo.");
