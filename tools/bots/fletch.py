@@ -188,11 +188,12 @@ def StepsSanityChecking(build_dir):
                     (version, fletch_vm_version))
 
 def StepsCreateDebianPackage():
-  Run(['python', os.path.join('tools', 'create_tarball.py')])
-  Run(['python', os.path.join('tools', 'create_debian_packages.py')])
+  with bot.BuildStep('Create arm agent deb'):
+    Run(['python', os.path.join('tools', 'create_tarball.py')])
+    Run(['python', os.path.join('tools', 'create_debian_packages.py')])
 
 def StepsArchiveDebianPackage():
-  with bot.BuildStep('Archive arm agent dep'):
+  with bot.BuildStep('Archive arm agent deb'):
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     gsutil = bot_utils.GSUtil()
