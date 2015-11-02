@@ -843,11 +843,11 @@ static int QuitCommand() {
   StrCpy(command, command_length, lsof_repeat, sizeof(lsof_repeat));
   StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
   StrCat(command, command_length, kill9, sizeof(kill9));
-  free(command);
-  free(vm_path);
 
   // lsof -t +r2m%n -- <Dart VM> | xargs -n1 kill -9
   CheckedSystem(command);
+  free(command);
+  free(vm_path);
   printf("Forced quit succeeded\n");
   return 0;
 }
