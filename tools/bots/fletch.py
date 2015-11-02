@@ -33,7 +33,7 @@ DEBUG_LOG=".debug.log"
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
 FLETCH_REGEXP = (r'fletch-(linux|mac|windows|lk)'
-                 r'(-(debug|release)(-asan)?-(x86|arm))?(-sdk)?')
+                 r'(-(debug|release)(-asan)?-(x86|arm|x64|ia32))?(-sdk)?')
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
 TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 
@@ -95,6 +95,8 @@ def Main():
           architecture_match = fletch_match.group(5)
           archs = {
               'x86' : ['ia32', 'x64'],
+              'x64' : ['x64'],
+              'ia32' : ['ia32'],
           }[architecture_match]
 
           modes = [mode]
