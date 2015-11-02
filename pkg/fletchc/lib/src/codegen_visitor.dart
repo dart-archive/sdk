@@ -536,18 +536,34 @@ abstract class CodegenVisitor
     this.trueLabel = trueLabel;
     BytecodeLabel oldFalseLabel = this.falseLabel;
     this.falseLabel = falseLabel;
+
+    assert(trueLabel != null || falseLabel != null);
     node.accept(this);
+
     visitState = oldState;
     this.trueLabel = oldTrueLabel;
     this.falseLabel = oldFalseLabel;
+  }
+
+  void negateTest() {
+    assert(visitState == VisitState.Test);
+    BytecodeLabel temporary = trueLabel;
+    trueLabel = falseLabel;
+    falseLabel = temporary;
   }
 
   void applyVisitState() {
     if (visitState == VisitState.Effect) {
       assembler.pop();
     } else if (visitState == VisitState.Test) {
-      assembler.branchIfTrue(trueLabel);
-      assembler.branch(falseLabel);
+      if (trueLabel == null) {
+        assembler.branchIfFalse(falseLabel);
+      } else if (falseLabel == null) {
+        assembler.branchIfTrue(trueLabel);
+      } else {
+        assembler.branchIfTrue(trueLabel);
+        assembler.branch(falseLabel);
+      }
     }
   }
 
@@ -662,12 +678,11 @@ abstract class CodegenVisitor
       _) {
     doBinaryOperator(node, left, right, BinaryOperator.EQ);
     if (visitState == VisitState.Test) {
-      assembler.branchIfTrue(falseLabel);
-      assembler.branch(trueLabel);
+      negateTest();
     } else {
       assembler.negate();
-      applyVisitState();
     }
+    applyVisitState();
   }
 
   void visitBinary(
@@ -695,9 +710,13 @@ abstract class CodegenVisitor
       Send node,
       Node value,
       _) {
-    visitForValue(value);
-    assembler.negate();
-    applyVisitState();
+    if (visitState == VisitState.Test) {
+      visitForTest(value, falseLabel, trueLabel);
+    } else {
+      visitForValue(value);
+      assembler.negate();
+      applyVisitState();
+    }
   }
 
   void visitIndex(
@@ -732,29 +751,27 @@ abstract class CodegenVisitor
       Node right,
       _) {
     if (visitState == VisitState.Test) {
-      BytecodeLabel isFirstTrue = new BytecodeLabel();
-      visitForTest(left, isFirstTrue, falseLabel);
-      assembler.bind(isFirstTrue);
-      visitForTest(right, trueLabel, falseLabel);
+      if (falseLabel == null) {
+        BytecodeLabel ifFalse = new BytecodeLabel();
+        visitForTest(left, null, ifFalse);
+        visitForTest(right, trueLabel, null);
+        assembler.bind(ifFalse);
+      } else {
+        visitForTest(left, null, falseLabel);
+        visitForTest(right, trueLabel, falseLabel);
+      }
       return;
     }
 
-    BytecodeLabel isFirstTrue = new BytecodeLabel();
-    BytecodeLabel isTrue = new BytecodeLabel();
     BytecodeLabel isFalse = new BytecodeLabel();
-
     assembler.loadLiteralFalse();
 
-    visitForTest(left, isFirstTrue, isFalse);
-
-    assembler.bind(isFirstTrue);
-    visitForTest(right, isTrue, isFalse);
-
-    assembler.bind(isTrue);
+    visitForTest(left, null, isFalse);
+    visitForTest(right, null, isFalse);
     assembler.pop();
     assembler.loadLiteralTrue();
-    assembler.bind(isFalse);
 
+    assembler.bind(isFalse);
     applyVisitState();
   }
 
@@ -764,42 +781,38 @@ abstract class CodegenVisitor
       Node right,
       _) {
     if (visitState == VisitState.Test) {
-      BytecodeLabel isFirstFalse = new BytecodeLabel();
-      visitForTest(left, trueLabel, isFirstFalse);
-      assembler.bind(isFirstFalse);
-      visitForTest(right, trueLabel, falseLabel);
+      if (trueLabel == null) {
+        BytecodeLabel ifTrue = new BytecodeLabel();
+        visitForTest(left, ifTrue, null);
+        visitForTest(right, null, falseLabel);
+        assembler.bind(ifTrue);
+      } else {
+        visitForTest(left, trueLabel, null);
+        visitForTest(right, trueLabel, falseLabel);
+      }
       return;
     }
 
-    BytecodeLabel isFirstFalse = new BytecodeLabel();
     BytecodeLabel isTrue = new BytecodeLabel();
-    BytecodeLabel isFalse = new BytecodeLabel();
-
     assembler.loadLiteralTrue();
 
-    visitForTest(left, isTrue, isFirstFalse);
-
-    assembler.bind(isFirstFalse);
-    visitForTest(right, isTrue, isFalse);
-
-    assembler.bind(isFalse);
+    visitForTest(left, isTrue, null);
+    visitForTest(right, isTrue, null);
     assembler.pop();
     assembler.loadLiteralFalse();
-    assembler.bind(isTrue);
 
+    assembler.bind(isTrue);
     applyVisitState();
   }
 
   void visitConditional(Conditional node) {
-    BytecodeLabel isTrue = new BytecodeLabel();
     BytecodeLabel isFalse = new BytecodeLabel();
     BytecodeLabel done = new BytecodeLabel();
 
     assembler.loadLiteralNull();
 
-    visitForTest(node.condition, isTrue, isFalse);
+    visitForTest(node.condition, null, isFalse);
 
-    assembler.bind(isTrue);
     assembler.pop();
     visitForValue(node.thenExpression);
     assembler.branch(done);
@@ -883,7 +896,11 @@ abstract class CodegenVisitor
       DartType type,
       _) {
     doIs(node, expression, type, node.arguments.first);
-    assembler.negate();
+    if (visitState == VisitState.Test) {
+      negateTest();
+    } else {
+      assembler.negate();
+    }
     applyVisitState();
   }
 
@@ -1501,7 +1518,11 @@ abstract class CodegenVisitor
         assembler.loadLiteralFalse();
       }
     } else if (visitState == VisitState.Test) {
-      assembler.branch(isTrue ? trueLabel : falseLabel);
+      if (isTrue) {
+        if (trueLabel != null) assembler.branch(trueLabel);
+      } else {
+        if (falseLabel != null) assembler.branch(falseLabel);
+      }
     }
   }
 
@@ -1604,7 +1625,7 @@ abstract class CodegenVisitor
       registerInstantiatedClass(
           context.compiler.backend.stringImplementation);
     } else if (visitState == VisitState.Test) {
-      assembler.branch(falseLabel);
+      if (falseLabel != null) assembler.branch(falseLabel);
     }
   }
 
@@ -2421,7 +2442,7 @@ abstract class CodegenVisitor
         classConstant, classBuilder.fields, immutable: immutable);
 
     if (needToStoreThisReference) {
-      assert (!immutable);
+      assert(!immutable);
       assembler.dup();
       assembler.storeField(thisClosureIndex);
     }
@@ -2599,11 +2620,9 @@ abstract class CodegenVisitor
       return;
     }
 
-    BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel ifFalse = new BytecodeLabel();
 
-    visitForTest(node.condition, ifTrue, ifFalse);
-    assembler.bind(ifTrue);
+    visitForTest(node.condition, null, ifFalse);
     if (node.hasElsePart) {
       BytecodeLabel end = new BytecodeLabel();
       jumpInfo[node] = new JumpInfo(assembler.stackSize, null, end);
@@ -2624,7 +2643,6 @@ abstract class CodegenVisitor
     blockLocals = <Element>[];
 
     BytecodeLabel start = new BytecodeLabel();
-    BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
     BytecodeLabel afterBody  = new BytecodeLabel();
 
@@ -2637,8 +2655,7 @@ abstract class CodegenVisitor
 
     Expression condition = node.condition;
     if (condition != null) {
-      visitForTest(condition, ifTrue, end);
-      assembler.bind(ifTrue);
+      visitForTest(condition, null, end);
     }
 
     doScopedStatement(node.body);
@@ -2758,12 +2775,10 @@ abstract class CodegenVisitor
 
   void visitWhile(While node) {
     BytecodeLabel start = new BytecodeLabel();
-    BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
     jumpInfo[node] = new JumpInfo(assembler.stackSize, start, end);
     assembler.bind(start);
-    visitForTest(node.condition, ifTrue, end);
-    assembler.bind(ifTrue);
+    visitForTest(node.condition, null, end);
     doScopedStatement(node.body);
     assembler.branch(start);
     assembler.bind(end);
@@ -2777,7 +2792,7 @@ abstract class CodegenVisitor
     assembler.bind(start);
     doScopedStatement(node.body);
     assembler.bind(skipBody);
-    visitForTest(node.condition, start, end);
+    visitForTest(node.condition, start, null);
     assembler.bind(end);
   }
 
