@@ -375,7 +375,7 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
 
   __ Bind(&overflow);
   __ movl(EBX, Address(EBP, Process::kProgramOffset));
-  __ movl(EBX, Address(EBX, Program::kRawStackOverflowOffset));
+  __ movl(EBX, Address(EBX, Program::kStackOverflowErrorOffset));
   DoThrowAfterSaveState();
 
   // Intrinsic failure: Just invoke the method.

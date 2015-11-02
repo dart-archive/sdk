@@ -57,11 +57,12 @@ class Session;
   V(Class, constant_list_class, ConstantListClass)              \
   V(Class, constant_byte_list_class, ConstantByteListClass)     \
   V(Class, constant_map_class, ConstantMapClass)                \
+  V(Class, stack_overflow_error_class, StackOverflowErrorClass) \
+  V(HeapObject, stack_overflow_error, StackOverflowError)       \
   V(HeapObject, raw_retry_after_gc, RawRetryAfterGc)            \
   V(HeapObject, raw_wrong_argument_type, RawWrongArgumentType)  \
   V(HeapObject, raw_index_out_of_bounds, RawIndexOutOfBounds)   \
   V(HeapObject, raw_illegal_state, RawIllegalState)             \
-  V(HeapObject, raw_stack_overflow, RawStackOverflow)           \
   V(Object, native_failure_result, NativeFailureResult)         \
   V(Array, classes, Classes)                                    \
   V(Array, constants, Constants)                                \

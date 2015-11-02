@@ -26,6 +26,7 @@ namespace fletch {
   N(ForeignMemory,          "ForeignMemory")            \
   N(OneByteString,          "_OneByteString")           \
   N(TwoByteString,          "_TwoByteString")           \
+  N(StackOverflowError,     "StackOverflowError")       \
                                                         \
   N(Equals,                 "==")                       \
   N(LessThan,               "<")                        \

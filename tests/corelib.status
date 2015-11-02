@@ -14,6 +14,10 @@ apply3_test: Crash
 expando_test: Crash
 
 [ $compiler == fletchc || $runtime == fletchc ]
+# Test is wrong, as it expects "Stack overflow" and not "Stack Overflow" on
+# overflows.
+regexp/regexp_test: RuntimeError
+
 # Function.apply
 apply2_test: RuntimeError
 apply3_test: CompileTimeError

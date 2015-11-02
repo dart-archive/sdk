@@ -819,6 +819,14 @@ void Program::Initialize() {
         heap()->CreateInstance(sentinel_class, null_object(), true));
   }
 
+  { // Create stack overflow error object.
+    InstanceFormat format = InstanceFormat::instance_format(0);
+    stack_overflow_error_class_ = Class::cast(
+        heap()->CreateClass(format, meta_class_, null_object_));
+    stack_overflow_error_ = Instance::cast(heap()->CreateInstance(
+        stack_overflow_error_class_, null_object(), true));
+  }
+
   // Create the retry after gc failure object payload.
   raw_retry_after_gc_ =
       OneByteString::cast(
@@ -837,10 +845,6 @@ void Program::Initialize() {
   raw_illegal_state_ =
       OneByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Illegal state.")));
-
-  raw_stack_overflow_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Stack overflow.")));
 
   native_failure_result_ = null_object_;
 }

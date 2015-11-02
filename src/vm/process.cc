@@ -188,8 +188,8 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   if (new_stack_object == Failure::retry_after_gc()) {
     CollectMutableGarbage();
     new_stack_object = NewStack(new_size);
-    if (new_stack_object->IsFailure()) {
-      FATAL("Failed to increase stack size");
+    if (new_stack_object == Failure::retry_after_gc()) {
+      return kStackCheckOverflow;
     }
   }
 

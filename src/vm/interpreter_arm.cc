@@ -386,7 +386,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
 
   __ Bind(&overflow);
   __ ldr(R7, Address(R4, Process::kProgramOffset));
-  __ ldr(R7, Address(R7, Program::kRawStackOverflowOffset));
+  __ ldr(R7, Address(R7, Program::kStackOverflowErrorOffset));
   DoThrowAfterSaveState();
 
   // Intrinsic failure: Just invoke the method.

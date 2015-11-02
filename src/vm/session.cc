@@ -1022,6 +1022,8 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->process_class();
   } else if (name == Names::kForeignMemory) {
     klass = program()->foreign_memory_class();
+  } else if (name == Names::kStackOverflowError) {
+    klass = program()->stack_overflow_error_class();
   } else {
     UNREACHABLE();
   }

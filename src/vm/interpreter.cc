@@ -174,7 +174,7 @@ class Engine : public State {
         return Interpreter::kBreakPoint;                                 \
       }                                                                  \
       if (result == Process::kStackCheckOverflow) {                      \
-        Object* exception = program()->raw_stack_overflow();             \
+        Object* exception = program()->stack_overflow_error();           \
         if (!DoThrow(exception)) return Interpreter::kUncaughtException; \
         DISPATCH();                                                      \
       }                                                                  \
