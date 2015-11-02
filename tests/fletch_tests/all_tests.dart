@@ -39,8 +39,6 @@ import '../mdns_tests/mdns_tests.dart' as mdns_tests;
 
 import '../agent_tests/agent_tests.dart' as agent_tests;
 
-import '../golem/golem_tests.dart' as golem_tests;
-
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -107,9 +105,4 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   // TODO(sgjesse) publish the mDNS package as an ordinary package an pull
   // it in through third_party.
   'mdns_tests': mdns_tests.main,
-
-  // Test for the golem performance tracking infrastructure.
-  // If this test breaks you probably need to update the golem performance
-  // tracking infrastructure as well.
-  'golem_tests': golem_tests.main,
 };
