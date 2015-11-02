@@ -62,8 +62,7 @@ class FletchWarningsRuntimeConfiguration extends RuntimeConfiguration {
                 '--library-root=third_party/dart/sdk/',
                 '--analyze-only',
                 '--show-package-warnings',
-                '--categories=Server',
-                '--allow-native-extensions']..addAll(arguments),
+                '--categories=Server']..addAll(arguments),
             null,
             flavor: 'dart2js')];
   }

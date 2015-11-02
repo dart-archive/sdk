@@ -104,5 +104,5 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   // Test the mDNS package.
   // TODO(sgjesse) publish the mDNS package as an ordinary package an pull
   // it in through third_party.
-  'mdns_tests/*': mdns_tests.listTests,
+  'mdns_tests': mdns_tests.main,
 };

@@ -65,7 +65,6 @@ build $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
         src/vm/vm.gyp $
-        src/pkg/mdns/mdns.gyp $
 
 build gyp: phony$
     out/DebugIA32/build.ninja $
