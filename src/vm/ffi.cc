@@ -5,6 +5,7 @@
 #include "src/vm/ffi.h"
 
 #include "src/shared/asan_helper.h"
+#include "src/shared/version.h"
 #include "src/vm/natives.h"
 #include "src/vm/object.h"
 #include "src/vm/port.h"

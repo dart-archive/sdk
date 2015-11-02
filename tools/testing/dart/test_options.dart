@@ -23,7 +23,10 @@ const List<String> defaultTestSelectors = const [
     'samples',
     'warnings',
     'fletch_tests',
-    'cc_tests'
+    'cc_tests',
+    'os',
+    'lib',
+    'pkg'
 ];
 
 /**

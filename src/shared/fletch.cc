@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/shared/fletch.h"
+#include "src/shared/version.h"
 
 namespace fletch {
 
