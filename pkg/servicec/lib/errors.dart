@@ -45,6 +45,7 @@ enum ErrorTag {
   expectedPrimitiveFormal,
   multipleDefinitions,
   multipleUnions,
+  serviceStructNameClash,
   undefinedService
 }
 
@@ -291,6 +292,21 @@ class MultipleDefinitionsError extends CompilationError {
 
   void report(ErrorReporter reporter) {
     reporter.reportError("Redefined symbol ${redefined.value};",
+                         redefined.token);
+    reporter.reportInfo("Original definition found here.", original.token);
+  }
+}
+
+class ServiceStructNameClashError extends CompilationError {
+  IdentifierNode original;
+  IdentifierNode redefined;
+  ErrorTag get tag => ErrorTag.serviceStructNameClash;
+
+  ServiceStructNameClashError(this.original, this.redefined);
+
+  void report(ErrorReporter reporter) {
+    reporter.reportError("Identifier ${redefined.value} used both as a " +
+                         "service name and as a struct name;",
                          redefined.token);
     reporter.reportInfo("Original definition found here.", original.token);
   }

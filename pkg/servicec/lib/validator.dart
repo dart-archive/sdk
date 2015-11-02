@@ -39,6 +39,7 @@ import 'errors.dart' show
     NotPointerOrPrimitiveError,
     NotPrimitiveFormalError,
     SyntaxError,
+    ServiceStructNameClashError,
     UndefinedServiceError;
 
 import 'dart:collection' show
@@ -267,11 +268,6 @@ class Validator extends RecursiveVisitor {
     function.formals.forEach(removeFormalSymbol);
   }
 
-  // Symbol table management.
-  bool lookupStructSymbol(IdentifierNode identifier) {
-    return environment.structs.contains(identifier);
-  }
-
   void addTopLevelSymbol(TopLevelNode node) {
     if (node is ServiceNode) {
       addServiceSymbol(node);
@@ -281,10 +277,12 @@ class Validator extends RecursiveVisitor {
   }
 
   void addServiceSymbol(ServiceNode service) {
+    checkIsNotNameClash(environment.structs.keys.toSet(), service.identifier);
     addSymbol(environment.services, service.identifier);
   }
 
   void addStructSymbol(StructNode struct) {
+    checkIsNotNameClash(environment.services, struct.identifier);
     environment.structs[struct.identifier] = struct;
   }
 
@@ -344,6 +342,14 @@ class Validator extends RecursiveVisitor {
 
   void removeFormalSymbol(FormalNode formal) {
     removeSymbol(environment.formals, formal.identifier);
+  }
+
+  void checkIsNotNameClash(Set<IdentifierNode> symbols,
+                           IdentifierNode identifier) {
+    IdentifierNode original = symbols.lookup(identifier);
+    if (null != original) {
+      errors.add(new ServiceStructNameClashError(original, identifier));
+    }
   }
 
   void addSymbol(Set<IdentifierNode> symbols, IdentifierNode identifier) {

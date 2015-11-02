@@ -6,6 +6,6 @@ service Foo {
   void Foo(int32 Foo);
 }
 
-struct Foo {
-  Foo* Foo;
+struct Bar {
+  Bar* Bar;
 }

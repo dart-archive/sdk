@@ -3,9 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  void Foo(Bar* Foo);
+  void Foo(int32 Foo);
 }
 
-struct Bar {
-  Bar* Bar;
+struct Foo {  // serviceStructNameClash
 }
