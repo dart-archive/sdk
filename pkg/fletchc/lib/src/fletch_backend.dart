@@ -139,7 +139,9 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, FletchClass>(),
     const PersistentMap<ClassElement, FletchClass>(),
     const <FletchConstant>[],
-    const PersistentMap<int, String>());
+    const PersistentMap<int, String>(),
+    const PersistentMap<int, int>(),
+    const PersistentMap<int, int>());
 
 class FletchBackend extends Backend with ResolutionCallbacks
     implements IncrementalFletchBackend {
@@ -182,9 +184,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
   // TODO(ahe): This should be moved to [FletchSystem].
   final Map<FieldElement, FletchFunctionBuilder> lazyFieldInitializers =
       <FieldElement, FletchFunctionBuilder>{};
-
-  final Map<int, int> getters = <int, int>{};
-  final Map<int, int> setters = <int, int>{};
 
   // TODO(ahe): This should be moved to [FletchSystem].
   Map<FletchClassBuilder, FletchFunctionBuilder> tearoffFunctions;
@@ -1500,36 +1499,14 @@ class FletchBackend extends Backend with ResolutionCallbacks
    * Generate a getter for field [fieldIndex].
    */
   int makeGetter(int fieldIndex) {
-    return getters.putIfAbsent(fieldIndex, () {
-      FletchFunctionBuilder stub = systemBuilder.newFunctionBuilder(
-          FletchFunctionKind.ACCESSOR,
-          1);
-      stub.assembler
-          ..loadParameter(0)
-          ..loadField(fieldIndex)
-          ..ret()
-          ..methodEnd();
-      return stub.functionId;
-    });
+    return systemBuilder.getGetterByFieldIndex(fieldIndex);
   }
 
   /**
    * Generate a setter for field [fieldIndex].
    */
   int makeSetter(int fieldIndex) {
-    return setters.putIfAbsent(fieldIndex, () {
-      FletchFunctionBuilder stub = systemBuilder.newFunctionBuilder(
-          FletchFunctionKind.ACCESSOR,
-          2);
-      stub.assembler
-          ..loadParameter(0)
-          ..loadParameter(1)
-          ..storeField(fieldIndex)
-          // Top is at this point the rhs argument, thus the return value.
-          ..ret()
-          ..methodEnd();
-      return stub.functionId;
-    });
+    return systemBuilder.getSetterByFieldIndex(fieldIndex);
   }
 
   void generateUnimplementedError(

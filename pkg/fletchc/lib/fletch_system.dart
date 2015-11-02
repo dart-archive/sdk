@@ -201,6 +201,10 @@ class FletchSystem {
 
   final PersistentMap<int, String> symbolByFletchSelectorId;
 
+  final PersistentMap<int, int> gettersByFieldIndex;
+
+  final PersistentMap<int, int> settersByFieldIndex;
+
   const FletchSystem(
       this.functionsById,
       this.functionsByElement,
@@ -209,7 +213,9 @@ class FletchSystem {
       this.classesById,
       this.classesByElement,
       this.constants,
-      this.symbolByFletchSelectorId);
+      this.symbolByFletchSelectorId,
+      this.gettersByFieldIndex,
+      this.settersByFieldIndex);
 
   bool get isEmpty => functionsById.isEmpty;
 
@@ -240,6 +246,20 @@ class FletchSystem {
   /// To obtain the tear-off corresponding to an [Element], look up the
   /// function in [functionsByElement].
   int lookupTearOffById(int functionId) => tearoffsById[functionId];
+
+  /// Instance field getters can be reused between classes. This method returns
+  /// a getter that gets the field at [fieldIndex]. Returns `null` if no such
+  /// getter exists.
+  int lookupGetterByFieldIndex(int fieldIndex) {
+    return gettersByFieldIndex[fieldIndex];
+  }
+
+  /// Instance field setters can be reused between classes. This method returns
+  /// a setter that sets the field at [fieldIndex]. Returns `null` if no such
+  /// setter exists.
+  int lookupSetterByFieldIndex(int fieldIndex) {
+    return settersByFieldIndex[fieldIndex];
+  }
 
   FletchClass lookupClassById(int classId) {
     return classesById[classId];
