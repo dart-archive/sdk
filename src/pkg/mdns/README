@@ -1,0 +1,26 @@
+// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+This is a native extension used by the mDNS package (in pkg/mdns) to
+get mDNS support on Mac OS using the C API. When making changes to
+this code the native extension need to be updated namually in the
+package.
+
+When testing changes on Mac OS:
+
+$ ninja -C out/ReleaseX64
+$ src/pkg/mdns/copy_dylib.sh
+
+When the new .dylib file is working upload it to GCS
+
+$ src/pkg/mdns/upload_dylib.sh
+
+The resulting .sha1 file (in pkg/mdns/lib/native) is then updated and
+checked in.
+
+On Linux replace _dylib with _so in the two script names.
+
+The extension is also implemented for Linux, but in a no-operation
+mode with just simple echo testing. The reason for this is that the
+mDNS package can then always load the dynamic library.

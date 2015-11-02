@@ -135,6 +135,19 @@ hooks = [
     ],
   },
   {
+    'name': 'mdns_native_extension_binaries',
+    'pattern': '.',
+    'action': [
+      'download_from_google_storage',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dart-dependencies-fletch',
+      '-d',
+      'fletch/pkg/mdns/lib/native',
+    ],
+  },
+  {
     'name': 'third_party_qemu',
     'pattern': '.',
     'action': [
