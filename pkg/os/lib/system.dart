@@ -124,9 +124,9 @@ class SockAddr {
 
   InternetAddress get address {
     int addressLengthInBytes;
-    if (family == sys.AF_INET) {
+    if (family == AF_INET) {
       addressLengthInBytes = 4;
-    } else if (family == sys.AF_INET6) {
+    } else if (family == AF_INET6) {
       addressLengthInBytes = 16;
     } else {
       throw 'Unsupported protocol';

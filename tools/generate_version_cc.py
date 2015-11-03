@@ -16,7 +16,6 @@ version_cc_template = """\
 
 namespace fletch {
 
-extern "C"
 const char* GetVersion() {
   return "%(version)s";
 }

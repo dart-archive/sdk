@@ -75,7 +75,7 @@ class AgentConnection {
     }
   }
 
-  Future<String> fletchVersion() async {
+  Future<int> fletchVersion() async {
     var request = new FletchVersionRequest();
     var replyBuffer = await sendRequest(request);
     var reply = new FletchVersionReply.fromBuffer(replyBuffer);

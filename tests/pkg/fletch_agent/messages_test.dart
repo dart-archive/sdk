@@ -11,13 +11,13 @@ void main() {
   testStartVmRequest();
   testStopVmRequest();
   testListVmsRequest();
-  testUpgradeAgentRequest();
+  testUpgradeVmRequest();
   testFletchVersionRequest();
 
   testStartVmReply();
   testStopVmReply();
   testListVmsReply();
-  testUpgradeAgentReply();
+  testUpgradeVmReply();
   testFletchVersionReply();
 }
 
@@ -53,15 +53,14 @@ void testListVmsRequest() {
   throwsMessageDecodeException(() => new ListVmsRequest.fromBuffer(buffer));
 }
 
-void testUpgradeAgentRequest() {
-  var request = new UpgradeAgentRequest([1, 2, 3]);
+void testUpgradeVmRequest() {
+  var request = new UpgradeVmRequest([1, 2, 3]);
   var buffer = request.toBuffer();
-  request = new UpgradeAgentRequest.fromBuffer(buffer);
-  Expect.listEquals([1, 2, 3], request.binary);
+  request = new UpgradeVmRequest.fromBuffer(buffer);
+  Expect.listEquals([1, 2, 3], request.vmBinary);
 
   buffer = new Uint8List.fromList([1, 2, 3]).buffer;
-  throwsMessageDecodeException(
-      () => new UpgradeAgentRequest.fromBuffer(buffer));
+  throwsMessageDecodeException(() => new UpgradeVmRequest.fromBuffer(buffer));
 }
 
 void testFletchVersionRequest() {
@@ -112,25 +111,25 @@ testListVmsReply() {
   throwsMessageDecodeException(() => new ListVmsReply.fromBuffer(buffer));
 }
 
-testUpgradeAgentReply() {
-  var reply = new UpgradeAgentReply(123, ReplyHeader.SUCCESS);
+testUpgradeVmReply() {
+  var reply = new UpgradeVmReply(123, ReplyHeader.SUCCESS);
   var buffer = reply.toBuffer();
-  reply = new UpgradeAgentReply.fromBuffer(buffer);
+  reply = new UpgradeVmReply.fromBuffer(buffer);
   Expect.equals(123, reply.id);
   Expect.equals(ReplyHeader.SUCCESS, reply.result);
 
   buffer = new Uint8List.fromList([1, 2, 3]).buffer;
-  throwsMessageDecodeException(() => new UpgradeAgentReply.fromBuffer(buffer));
+  throwsMessageDecodeException(() => new UpgradeVmReply.fromBuffer(buffer));
 }
 
 testFletchVersionReply() {
   var reply =
-      new FletchVersionReply(123, ReplyHeader.SUCCESS, version: "456");
+      new FletchVersionReply(123, ReplyHeader.SUCCESS, fletchVersion: 456);
   var buffer = reply.toBuffer();
   reply = new FletchVersionReply.fromBuffer(buffer);
   Expect.equals(123, reply.id);
   Expect.equals(ReplyHeader.SUCCESS, reply.result);
-  Expect.equals("456", reply.fletchVersion);
+  Expect.equals(456, reply.fletchVersion);
 
   buffer = new Uint8List.fromList([1, 2, 3]).buffer;
   throwsMessageDecodeException(() => new FletchVersionReply.fromBuffer(buffer));
