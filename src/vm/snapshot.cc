@@ -70,7 +70,8 @@ class Header {
       case InstanceFormat::CLASS_TYPE:
         return Class::AllocationSize();
       case InstanceFormat::FUNCTION_TYPE:
-        return Function::AllocationSize(elements());
+        return Function::AllocationSize(
+            Function::BytecodeAllocationSize(elements()));
       case InstanceFormat::DOUBLE_TYPE:
         return Double::AllocationSize();
       case InstanceFormat::INITIALIZER_TYPE:
@@ -704,9 +705,8 @@ void Class::ClassReadFrom(SnapshotReader* reader) {
 
 void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  int rounded_bytecode_size = BytecodeAllocationSize(bytecode_size());
   ASSERT(literals_size() == 0);
-  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, rounded_bytecode_size);
+  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, bytecode_size());
   writer->Forward(this);
   // Body.
   for (int offset = HeapObject::kSize;
@@ -715,10 +715,6 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
     writer->WriteObject(at(offset));
   }
   writer->WriteBytes(bytecode_size(), bytecode_address_for(0));
-  int offset = Function::kSize + rounded_bytecode_size;
-  for (int i = 0; i < literals_size(); ++i) {
-    writer->WriteObject(at(offset + i * kPointerSize));
-  }
 }
 
 void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
@@ -727,12 +723,8 @@ void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
+  ASSERT(literals_size() == 0);
   reader->ReadBytes(bytecode_size(), bytecode_address_for(0));
-  int rounded_bytecode_size = BytecodeAllocationSize(bytecode_size());
-  int offset = Function::kSize + rounded_bytecode_size;
-  for (int i = 0; i < literals_size(); ++i) {
-    at_put(offset + i * kPointerSize, reader->ReadObject());
-  }
 }
 
 void LargeInteger::LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass) {
