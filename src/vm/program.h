@@ -203,6 +203,7 @@ class Program {
 
   // Iterates over all roots in the program.
   void IterateRoots(PointerVisitor* visitor);
+  void IterateRootsIgnoringSession(PointerVisitor* visitor);
 
   // V-table support.
   void ClearVTableTableIntrinsics();

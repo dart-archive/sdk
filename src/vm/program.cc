@@ -850,9 +850,15 @@ void Program::Initialize() {
 }
 
 void Program::IterateRoots(PointerVisitor* visitor) {
+  IterateRootsIgnoringSession(visitor);
+  if (session_ != NULL) {
+    session_->IteratePointers(visitor);
+  }
+}
+
+void Program::IterateRootsIgnoringSession(PointerVisitor* visitor) {
   visitor->VisitBlock(first_root_address(), last_root_address() + 1);
   visitor->Visit(reinterpret_cast<Object**>(&entry_));
-  if (session_ != NULL) session_->IteratePointers(visitor);
 }
 
 void Program::ClearVTableTableIntrinsics() {

@@ -328,7 +328,7 @@ Program* SnapshotReader::ReadProgram() {
 
   // Read the roots.
   ReaderVisitor visitor(this);
-  program->IterateRoots(&visitor);
+  program->IterateRootsIgnoringSession(&visitor);
 
   program->heap()->space()->AppendProgramChunk(memory_, top_);
   backward_references_.Delete();
@@ -375,7 +375,7 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
 
   // Write out all the roots of the program.
   WriterVisitor visitor(this);
-  program->IterateRoots(&visitor);
+  program->IterateRootsIgnoringSession(&visitor);
 
   // TODO(kasperl): Unmark all touched objects. Right now, we
   // only unmark the roots.
