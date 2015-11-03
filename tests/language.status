@@ -169,7 +169,7 @@ class_literal_test/none: RuntimeError
 classes_static_method_clash_test: RuntimeError
 closure_in_constructor_test: RuntimeError
 closure_type_variable_test: RuntimeError
-closures_initializer2_test: Crash, RuntimeError, Pass  # Issue 273, 274
+closures_initializer2_test: RuntimeError
 closures_initializer_test: RuntimeError
 compile_time_constant_i_test: RuntimeError
 compile_time_constant_l_test: RuntimeError
