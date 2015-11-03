@@ -67,7 +67,7 @@ MOUNT_DIR=out/raspbian
 
 # Get and unzip the image.
 echo "Downloading image ZIP file"
-download_from_google_storage.py -b dart-dependencies-fletch \
+download_from_google_storage.py -c -b dart-dependencies-fletch \
     -o out/${IMAGE_ZIP_FILE} -s tools/raspberry-pi2/${IMAGE_SHA_FILE}
 echo "Unzipping image file"
 unzip -q -o -d out out/$IMAGE_ZIP_FILE
@@ -83,7 +83,6 @@ mkdir -p $MOUNT_DIR
 sudo mount out/$IMAGE_FILE -o loop,offset=$((122880*512)),rw $MOUNT_DIR
 
 # Copy the tarball to the pi users home directory.
-
 sudo cp out/$TARBALL_FILE $MOUNT_DIR/$PI_HOME
 sudo chown $PI_USER_ID:$PI_GROUP_ID $MOUNT_DIR/$PI_HOME/$TARBALL_FILE
 
@@ -97,6 +96,10 @@ sudo mv $MOUNT_DIR/etc/ld.so.preload $MOUNT_DIR/tmp
 # Copy the fletch-agent .deb file to the chroot.
 cp out/$DEB_FILE $MOUNT_DIR/tmp
 sudo chown $PI_USER_ID:$PI_GROUP_ID $MOUNT_DIR/tmp/$DEB_FILE
+
+# Copy the fletch-configuration service script to the chroot.
+cp tools/raspberry-pi2/raspbian-scripts/fletch-configuration $MOUNT_DIR/tmp
+sudo chown $PI_USER_ID:$PI_GROUP_ID $MOUNT_DIR/tmp/fletch-configuration
 
 # Create /usr/sbin/policy-rc.d which return 101 to avoid starting the
 # fletch-agent when installing it, see:
@@ -120,7 +123,15 @@ cat << EOF > $MOUNT_DIR/tmp/init_chroot.sh
 
 cd /tmp
 
+# Install the fletch-agent Debian package.
 sudo dpkg -i $DEB_FILE
+
+# Install the fletch-configuration service script.
+sudo cp /tmp/fletch-configuration /etc/init.d
+sudo chown root:root /etc/init.d/fletch-configuration
+sudo chmod 755 /etc/init.d/fletch-configuration
+sudo insserv fletch-configuration
+sudo update-rc.d fletch-configuration enable
 
 EOF
 
