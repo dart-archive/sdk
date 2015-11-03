@@ -161,7 +161,7 @@ class PiMemoryMappedGPIO extends gpio.GPIOBase {
 
   // All alternative functions are mapped to `Mode.other` for now.
   static const _functionToMode =
-      [gpio.Mode.input, gpio.Mode.output,
+      const [gpio.Mode.input, gpio.Mode.output,
        gpio.Mode.other, gpio.Mode.other,
        gpio.Mode.other, gpio.Mode.other, gpio.Mode.other];
 
