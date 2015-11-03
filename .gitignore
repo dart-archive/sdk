@@ -17,6 +17,8 @@ packages
 /fletch.xcodeproj/
 /jniLibs/
 /out/
+/pkg/mdns/lib/native/libmdns_extension_lib.so
+/pkg/mdns/lib/native/libmdns_extension_lib.dylib
 /samples/buildbot/java/
 /samples/github/generated/
 /samples/todomvc/java/

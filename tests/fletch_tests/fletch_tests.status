@@ -49,3 +49,7 @@ service_tests/*: Skip
 [ $system == macos && $arch == x64 ]
 
 service_tests/performance: Fail, Pass # Issue 111
+
+[ $arch == arm ]
+
+mdns/validate_extension: Skip # The native extension is not compiled for ARM.

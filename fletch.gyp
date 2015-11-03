@@ -19,6 +19,13 @@
       ],
     },
     {
+      'target_name': 'mdns_extension_lib',
+      'type': 'none',
+      'dependencies': [
+        'src/pkg/mdns/mdns.gyp:mdns_extension_lib',
+      ],
+    },
+    {
       'target_name': 'natives_json',
       'type': 'none',
       'toolsets': ['host'],
