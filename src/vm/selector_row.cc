@@ -14,10 +14,10 @@
 
 namespace fletch {
 
-SelectorRow::Kind SelectorRow::Finalize() {
+void SelectorRow::Finalize() {
+  ASSERT(IsMatched());
+
   int variants = variants_;
-  ASSERT(variants > 0);
-  if (variants <= kFewVariantsThreshold) return LINEAR;
 
   ASSERT(begin_ == -1 && end_ == -1);
   Class* first = classes_[0];
@@ -48,8 +48,6 @@ SelectorRow::Kind SelectorRow::Finalize() {
   // largest, swap with begin, and then begin-sort.
   ranges_.Sort(RangeSizeCompare);
   ranges_.Sort(RangeBeginCompare, 1, ranges_.size() - 1);
-
-  return TABLE;
 }
 
 void SelectorRow::AddToRanges(Range range) {
@@ -77,7 +75,7 @@ void SelectorRow::AddToRanges(Range range) {
 }
 
 void SelectorRow::FillTable(Program* program, Array* table) {
-  ASSERT(kind() == TABLE);
+  ASSERT(IsMatched());
   int offset = offset_;
   for (int i = 0, length = variants_; i < length; i++) {
     Class* clazz = classes_[i];
@@ -105,39 +103,8 @@ void SelectorRow::FillTable(Program* program, Array* table) {
   }
 }
 
-int SelectorRow::FillLinear(Program* program, Array* table) {
-  ASSERT(kind() == LINEAR);
-  int index = offset_;
-
-  table->set(index++, Smi::FromWord(Selector::ArityField::decode(selector_)));
-  table->set(index++, Smi::FromWord(selector_));
-  table->set(index++, NULL);
-  table->set(index++, NULL);
-
-  for (int i = 0; i < variants_; i++) {
-    Class* clazz = classes_[i];
-    Function* method = methods_[i];
-    table->set(index++, Smi::FromWord(clazz->id()));
-    table->set(index++, Smi::FromWord(clazz->child_id()));
-    table->set(index++, NULL);
-    table->set(index++, method);
-  }
-
-  static const Names::Id name = Names::kNoSuchMethodTrampoline;
-  Function* target = program->object_class()->LookupMethod(
-      Selector::Encode(name, Selector::METHOD, 0));
-
-  table->set(index++, Smi::FromWord(0));
-  table->set(index++, Smi::FromWord(Smi::kMaxPortableValue));
-  table->set(index++, NULL);
-  table->set(index++, target);
-
-  ASSERT(index - offset_ == ComputeLinearSize());
-  return index;
-}
-
 int RowFitter::Fit(SelectorRow* row) {
-  ASSERT(row->kind() == SelectorRow::TABLE);
+  ASSERT(row->IsMatched());
 
   const Range::List& ranges = row->ranges();
 
@@ -151,7 +118,7 @@ int RowFitter::Fit(SelectorRow* row) {
 }
 
 int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
-  ASSERT(row->kind() == SelectorRow::TABLE);
+  ASSERT(row->IsMatched());
   ASSERT(row->ranges().size() == 1);
 
   Range range = row->ranges().Front();

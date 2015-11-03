@@ -32,8 +32,9 @@ enum Opcode {
   LoadLiteral,
   LoadLiteralWide,
   InvokeMethod,
-  InvokeMethodFast,
   InvokeMethodVtable,
+  InvokeNoSuchMethod,
+  InvokeTestNoSuchMethod,
   InvokeStatic,
   InvokeStaticUnfold,
   InvokeFactory,
@@ -42,55 +43,38 @@ enum Opcode {
   InvokeNativeYield,
   InvokeSelector,
   InvokeTest,
-  InvokeTestFast,
   InvokeTestVtable,
   InvokeEq,
-  InvokeEqFast,
   InvokeEqVtable,
   InvokeLt,
-  InvokeLtFast,
   InvokeLtVtable,
   InvokeLe,
-  InvokeLeFast,
   InvokeLeVtable,
   InvokeGt,
-  InvokeGtFast,
   InvokeGtVtable,
   InvokeGe,
-  InvokeGeFast,
   InvokeGeVtable,
   InvokeAdd,
-  InvokeAddFast,
   InvokeAddVtable,
   InvokeSub,
-  InvokeSubFast,
   InvokeSubVtable,
   InvokeMod,
-  InvokeModFast,
   InvokeModVtable,
   InvokeMul,
-  InvokeMulFast,
   InvokeMulVtable,
   InvokeTruncDiv,
-  InvokeTruncDivFast,
   InvokeTruncDivVtable,
   InvokeBitNot,
-  InvokeBitNotFast,
   InvokeBitNotVtable,
   InvokeBitAnd,
-  InvokeBitAndFast,
   InvokeBitAndVtable,
   InvokeBitOr,
-  InvokeBitOrFast,
   InvokeBitOrVtable,
   InvokeBitXor,
-  InvokeBitXorFast,
   InvokeBitXorVtable,
   InvokeBitShr,
-  InvokeBitShrFast,
   InvokeBitShrVtable,
   InvokeBitShl,
-  InvokeBitShlFast,
   InvokeBitShlVtable,
   Pop,
   Return,
@@ -1057,48 +1041,6 @@ class InvokeMethod extends Bytecode {
   }
 }
 
-class InvokeMethodFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeMethodFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeMethodFast;
-
-  String get name => 'InvokeMethodFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'invoke fast %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeMethodFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeMethodVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeMethodVtable(this.uint32Argument0)
@@ -1130,6 +1072,90 @@ class InvokeMethodVtable extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeMethodVtable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeNoSuchMethod extends Bytecode {
+  final int uint32Argument0;
+  const InvokeNoSuchMethod(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeNoSuchMethod;
+
+  String get name => 'InvokeNoSuchMethod';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke no such method %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke no such method ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeNoSuchMethod rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeTestNoSuchMethod extends Bytecode {
+  final int uint32Argument0;
+  const InvokeTestNoSuchMethod(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeTestNoSuchMethod;
+
+  String get name => 'InvokeTestNoSuchMethod';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke test no such method %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke test no such method ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTestNoSuchMethod rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -1485,48 +1511,6 @@ class InvokeTest extends Bytecode {
   }
 }
 
-class InvokeTestFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeTestFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeTestFast;
-
-  String get name => 'InvokeTestFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => 0;
-
-  String get formatString => 'invoke fast test %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast test ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeTestFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeTestVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeTestVtable(this.uint32Argument0)
@@ -1600,48 +1584,6 @@ class InvokeEq extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeEq rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeEqFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeEqFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeEqFast;
-
-  String get name => 'InvokeEqFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast eq %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast eq ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeEqFast rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -1737,48 +1679,6 @@ class InvokeLt extends Bytecode {
   }
 }
 
-class InvokeLtFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeLtFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeLtFast;
-
-  String get name => 'InvokeLtFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast lt %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast lt ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeLtFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeLtVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeLtVtable(this.uint32Argument0)
@@ -1852,48 +1752,6 @@ class InvokeLe extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeLe rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeLeFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeLeFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeLeFast;
-
-  String get name => 'InvokeLeFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast le %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast le ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeLeFast rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -1989,48 +1847,6 @@ class InvokeGt extends Bytecode {
   }
 }
 
-class InvokeGtFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeGtFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeGtFast;
-
-  String get name => 'InvokeGtFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast gt %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast gt ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeGtFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeGtVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeGtVtable(this.uint32Argument0)
@@ -2104,48 +1920,6 @@ class InvokeGe extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeGe rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeGeFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeGeFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeGeFast;
-
-  String get name => 'InvokeGeFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast ge %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast ge ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeGeFast rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -2241,48 +2015,6 @@ class InvokeAdd extends Bytecode {
   }
 }
 
-class InvokeAddFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeAddFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeAddFast;
-
-  String get name => 'InvokeAddFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast add %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast add ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeAddFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeAddVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeAddVtable(this.uint32Argument0)
@@ -2356,48 +2088,6 @@ class InvokeSub extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeSub rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeSubFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeSubFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeSubFast;
-
-  String get name => 'InvokeSubFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast sub %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast sub ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeSubFast rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -2493,48 +2183,6 @@ class InvokeMod extends Bytecode {
   }
 }
 
-class InvokeModFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeModFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeModFast;
-
-  String get name => 'InvokeModFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast mod %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast mod ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeModFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeModVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeModVtable(this.uint32Argument0)
@@ -2608,48 +2256,6 @@ class InvokeMul extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeMul rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeMulFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeMulFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeMulFast;
-
-  String get name => 'InvokeMulFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast mul %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast mul ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeMulFast rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -2745,48 +2351,6 @@ class InvokeTruncDiv extends Bytecode {
   }
 }
 
-class InvokeTruncDivFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeTruncDivFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeTruncDivFast;
-
-  String get name => 'InvokeTruncDivFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast trunc div %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast trunc div ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeTruncDivFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeTruncDivVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeTruncDivVtable(this.uint32Argument0)
@@ -2860,48 +2424,6 @@ class InvokeBitNot extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeBitNot rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitNotFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitNotFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitNotFast;
-
-  String get name => 'InvokeBitNotFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => 0;
-
-  String get formatString => 'invoke fast bit not %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast bit not ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitNotFast rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -2997,48 +2519,6 @@ class InvokeBitAnd extends Bytecode {
   }
 }
 
-class InvokeBitAndFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitAndFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitAndFast;
-
-  String get name => 'InvokeBitAndFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast bit and %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast bit and ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitAndFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeBitAndVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeBitAndVtable(this.uint32Argument0)
@@ -3112,48 +2592,6 @@ class InvokeBitOr extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeBitOr rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitOrFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitOrFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitOrFast;
-
-  String get name => 'InvokeBitOrFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast bit or %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast bit or ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitOrFast rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3249,48 +2687,6 @@ class InvokeBitXor extends Bytecode {
   }
 }
 
-class InvokeBitXorFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitXorFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitXorFast;
-
-  String get name => 'InvokeBitXorFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast bit xor %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast bit xor ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitXorFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeBitXorVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeBitXorVtable(this.uint32Argument0)
@@ -3375,48 +2771,6 @@ class InvokeBitShr extends Bytecode {
   }
 }
 
-class InvokeBitShrFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitShrFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitShrFast;
-
-  String get name => 'InvokeBitShrFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast bit shr %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast bit shr ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitShrFast rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class InvokeBitShrVtable extends Bytecode {
   final int uint32Argument0;
   const InvokeBitShrVtable(this.uint32Argument0)
@@ -3490,48 +2844,6 @@ class InvokeBitShl extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeBitShl rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitShlFast extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitShlFast(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitShlFast;
-
-  String get name => 'InvokeBitShlFast';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke fast bit shl %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke fast bit shl ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitShlFast rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }

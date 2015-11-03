@@ -14,7 +14,6 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
 
 #define INVOKES(V, name, diff, desc)                                           \
   V(Invoke##name,          true, "I", 5, diff, "invoke " desc "%d")            \
-  V(Invoke##name##Fast,    true, "I", 5, diff, "invoke fast " desc "%d")       \
   V(Invoke##name##Vtable,  true, "I", 5, diff, "invoke vtable " desc "%d")     \
 
 
@@ -50,6 +49,9 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(LoadLiteralWide,      false,    "I",  5,        1, "load literal %d")      \
                                                                                \
   INVOKES(V, Method, kVarDiff, "")                                             \
+                                                                               \
+  V(InvokeNoSuchMethod,    true, "I", 5, kVarDiff, "invoke no such method %d") \
+  V(InvokeTestNoSuchMethod,  true, "I", 5, 0, "invoke test no such method %d") \
                                                                                \
   V(InvokeStatic,          true,    "I",  5, kVarDiff, "invoke static %d")     \
   V(InvokeStaticUnfold,    true,    "I",  5, kVarDiff, "invoke static @%d")    \
@@ -173,7 +175,6 @@ class Bytecode {
 
   // Check for invoke variants.
   static bool IsInvokeNormal(Opcode opcode);
-  static bool IsInvokeFast(Opcode opcode);
   static bool IsInvokeVtable(Opcode opcode);
 
   // Compute the previous bytecode. Takes time linear in the number of

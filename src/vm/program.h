@@ -68,7 +68,6 @@ class Session;
   V(Array, constants, Constants)                                \
   V(Array, static_methods, StaticMethods)                       \
   V(Array, static_fields, StaticFields)                         \
-  V(Array, dispatch_table, DispatchTable)                       \
   V(Array, vtable, VTable)                                      \
 
 class ProgramState {
@@ -123,10 +122,6 @@ class Program {
 
   void set_static_fields(Array* static_fields) {
     static_fields_ = static_fields;
-  }
-
-  void set_dispatch_table(Array* dispatch_table) {
-    dispatch_table_ = dispatch_table;
   }
 
   void set_vtable(Array* vtable) {
@@ -209,9 +204,9 @@ class Program {
   // Iterates over all roots in the program.
   void IterateRoots(PointerVisitor* visitor);
 
-  // Dispatch table support.
-  void ClearDispatchTableIntrinsics();
-  void SetupDispatchTableIntrinsics(
+  // V-table support.
+  void ClearVTableTableIntrinsics();
+  void SetupVTableIntrinsics(
       IntrinsicsTable *table = IntrinsicsTable::GetDefault());
 
   // Root objects.

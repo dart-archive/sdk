@@ -90,17 +90,9 @@ int StackWalker::StackDiff(uint8** bcp,
   Opcode opcode = static_cast<Opcode>(**bcp);
   switch (opcode) {
     case kInvokeMethod:
+    case kInvokeNoSuchMethod:
     case kInvokeMethodVtable: {
       int selector = Utils::ReadInt32(*bcp + 1);
-      int arity = Selector::ArityField::decode(selector);
-      stack_diff = -arity;
-      break;
-    }
-
-    case kInvokeMethodFast: {
-      int index = Utils::ReadInt32(*bcp + 1);
-      Array* table = program->dispatch_table();
-      int selector = Smi::cast(table->get(index + 1))->value();
       int arity = Selector::ArityField::decode(selector);
       stack_diff = -arity;
       break;

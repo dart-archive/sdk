@@ -855,53 +855,24 @@ void Program::IterateRoots(PointerVisitor* visitor) {
   if (session_ != NULL) session_->IteratePointers(visitor);
 }
 
-void Program::ClearDispatchTableIntrinsics() {
-  Array* table = dispatch_table();
+void Program::ClearVTableTableIntrinsics() {
+  Array* table = vtable();
   if (table == NULL) return;
-  int length = table->length();
-  for (int i = 0; i < length; i += 4) {
-    table->set(i + 2, NULL);
-  }
 
-  table = vtable();
-  if (table == NULL) return;
-  length = table->length();
+  int length = table->length();
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    if (element == null_object()) continue;
     Array* entry = Array::cast(element);
     entry->set(3, NULL);
   }
 }
 
-void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
-  Array* table = dispatch_table();
+void Program::SetupVTableIntrinsics(IntrinsicsTable* intrinsics) {
+  Array* table = vtable();
   if (table == NULL) return;
+
   int length = table->length();
   int hits = 0;
-  for (int i = 0; i < length; i += 4) {
-    ASSERT(table->get(i + 2) == NULL);
-    Object* target = table->get(i + 3);
-    if (target == NULL) continue;
-    hits += 4;
-    Function* method = Function::cast(target);
-    Object* intrinsic =
-        reinterpret_cast<Object*>(method->ComputeIntrinsic(intrinsics));
-    ASSERT(intrinsic->IsSmi());
-    table->set(i + 2, intrinsic);
-  }
-
-  if (Flags::print_program_statistics) {
-    Print::Out("Dispatch table fill: %F%% (%i of %i)\n",
-               hits * 100.0 / length,
-               hits,
-               length);
-  }
-
-  table = vtable();
-  if (table == NULL) return;
-  length = table->length();
-  hits = 0;
 
   static const Names::Id name = Names::kNoSuchMethodTrampoline;
   Function* trampoline = object_class()->LookupMethod(
@@ -909,12 +880,15 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
 
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    if (element == null_object()) continue;
     Array* entry = Array::cast(element);
-    if (entry->get(3) != NULL) continue;
+    if (entry->get(3) != NULL) {
+      // The intrinsic is already set.
+      hits++;
+      continue;
+    }
     Object* target = entry->get(2);
-    if (target == NULL) continue;
-    if (target != trampoline) hits++;
+    if (target == trampoline) continue;
+    hits++;
     Function* method = Function::cast(target);
     Object* intrinsic =
         reinterpret_cast<Object*>(method->ComputeIntrinsic(intrinsics));

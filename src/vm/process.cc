@@ -591,16 +591,9 @@ int Process::PrepareStepOver() {
     // For invoke bytecodes we set a one-shot breakpoint for the next bytecode
     // with the expected stack height on return.
     case Opcode::kInvokeMethod:
+    case Opcode::kInvokeNoSuchMethod:
     case Opcode::kInvokeMethodVtable: {
       int selector = Utils::ReadInt32(current_bcp + 1);
-      int arity = Selector::ArityField::decode(selector);
-      stack_diff = -arity;
-      break;
-    }
-    case Opcode::kInvokeMethodFast: {
-      int index = Utils::ReadInt32(current_bcp + 1);
-      Array* table = program()->dispatch_table();
-      int selector = Smi::cast(table->get(index + 1))->value();
       int arity = Selector::ArityField::decode(selector);
       stack_diff = -arity;
       break;

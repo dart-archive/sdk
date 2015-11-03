@@ -96,8 +96,6 @@ class Interpreter {
 
 extern "C" const NativeFunction kNativeTable[];
 
-extern "C" bool HandleIsInvokeFast(int opcode);
-
 extern "C" Process::StackCheckResult HandleStackOverflow(Process* process,
                                                          int size);
 

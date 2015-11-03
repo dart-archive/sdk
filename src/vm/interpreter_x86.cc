@@ -115,8 +115,10 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoLoadLiteralWide();
 
   virtual void DoInvokeMethod();
-  virtual void DoInvokeMethodFast();
   virtual void DoInvokeMethodVtable();
+
+  virtual void DoInvokeNoSuchMethod();
+  virtual void DoInvokeTestNoSuchMethod();
 
   virtual void DoInvokeStatic();
   virtual void DoInvokeStaticUnfold();
@@ -129,15 +131,11 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoInvokeSelector();
 
   virtual void DoInvokeTest();
-  virtual void DoInvokeTestFast();
   virtual void DoInvokeTestVtable();
 
 #define INVOKE_BUILTIN(kind)                \
   virtual void DoInvoke##kind() {           \
     Invoke##kind("BC_InvokeMethod");        \
-  }                                         \
-  virtual void DoInvoke##kind##Fast() {     \
-    Invoke##kind("BC_InvokeMethodFast");    \
   }                                         \
   virtual void DoInvoke##kind##Vtable() {   \
     Invoke##kind("BC_InvokeMethodVtable");  \
@@ -243,7 +241,6 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   void AddToStoreBufferSlow(Register object, Register value);
 
   void InvokeMethod(bool test);
-  void InvokeMethodFast(bool test);
   void InvokeMethodVtable(bool test);
 
   void InvokeStatic(bool unfolded);
@@ -611,20 +608,38 @@ void InterpreterGeneratorX86::DoInvokeMethod() {
   InvokeMethod(false);
 }
 
-void InterpreterGeneratorX86::DoInvokeMethodFast() {
-  InvokeMethodFast(false);
-}
-
 void InterpreterGeneratorX86::DoInvokeMethodVtable() {
   InvokeMethodVtable(false);
 }
 
-void InterpreterGeneratorX86::DoInvokeTest() {
-  InvokeMethod(true);
+void InterpreterGeneratorX86::DoInvokeNoSuchMethod() {
+  // Use the noSuchMethod entry from entry zero of the virtual table.
+  __ movl(ECX, Address(EBP, Process::kProgramOffset));
+  __ movl(ECX, Address(ECX, Program::kVTableOffset));
+  __ movl(ECX, Address(ECX, Array::kSize - HeapObject::kTag));
+
+  // Load the function at index 2.
+  __ movl(EAX, Address(ECX, 8 + Array::kSize - HeapObject::kTag));
+
+  // Compute and push the return address on the stack.
+  __ addl(ESI, Immediate(kInvokeNoSuchMethodLength));
+  Push(ESI);
+
+  // Jump to the first bytecode in the target method.
+  __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoInvokeTestFast() {
-  InvokeMethodFast(true);
+void InterpreterGeneratorX86::DoInvokeTestNoSuchMethod() {
+  __ movl(EAX, Address(EBP, Process::kProgramOffset));
+  __ movl(EAX, Address(EAX, Program::kFalseObjectOffset));
+  StoreLocal(EAX, 0);
+  Dispatch(kInvokeTestNoSuchMethodLength);
+}
+
+void InterpreterGeneratorX86::DoInvokeTest() {
+  InvokeMethod(true);
 }
 
 void InterpreterGeneratorX86::DoInvokeTestVtable() {
@@ -1691,93 +1706,6 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
   __ movl(Address(ESP, 3 * kWordSize), EDX);
   __ call("HandleLookupEntry");
   __ jmp(&finish);
-}
-
-void InterpreterGeneratorX86::InvokeMethodFast(bool test) {
-  // Get the dispatch table and form a pointer to the first element
-  // corresponding to this invoke bytecode.
-  __ movl(EDX, Address(ESI, 1));
-  __ movl(ECX, Address(EBP, Process::kProgramOffset));
-  __ movl(EBX, Address(ECX, Program::kDispatchTableOffset));
-  __ leal(EDX, Address(EBX, EDX, TIMES_4, Array::kSize - HeapObject::kTag));
-
-  // Get the receiver from the stack.
-  if (test) {
-    LoadLocal(EBX, 0);
-  } else {
-    __ movl(EBX, Address(EDX));  // Get arity.
-    __ negl(EBX);
-    __ movl(EBX, Address(EDI, EBX, TIMES_2));
-  }
-
-  // Compute the receiver class.
-  Label smi, probe;
-  ASSERT(Smi::kTag == 0);
-  __ testl(EBX, Immediate(Smi::kTagMask));
-  __ j(ZERO, &smi);
-  __ movl(EBX, Address(EBX, HeapObject::kClassOffset - HeapObject::kTag));
-
-  // Fetch the receiver class id and get ready to look at the table entries.
-  int id_offset = Class::kIdOrTransformationTargetOffset - HeapObject::kTag;
-  __ Bind(&probe);
-  __ movl(EBX, Address(EBX, id_offset));
-
-  // Loop through the table.
-  Label loop, next;
-  __ Bind(&loop);
-  __ cmpl(EBX, Address(EDX, 4 * kPointerSize));
-  __ j(LESS, &next);
-  __ cmpl(EBX, Address(EDX, 5 * kPointerSize));
-  __ j(GREATER_EQUAL, &next);
-
-  Label intrinsified;
-  if (test) {
-    Label false_case, done;
-    __ cmpl(Address(EDX, 5 * kPointerSize),
-            Immediate(reinterpret_cast<int32>(
-                Smi::FromWord(Smi::kMaxPortableValue))));
-    __ j(EQUAL, &false_case);
-    __ movl(EAX, Address(EBP, Process::kProgramOffset));
-    __ movl(EAX, Address(EAX, Program::kTrueObjectOffset));
-    __ jmp(&done);
-
-    __ Bind(&false_case);
-    __ movl(EAX, Address(EBP, Process::kProgramOffset));
-    __ movl(EAX, Address(EAX, Program::kFalseObjectOffset));
-
-    __ Bind(&done);
-    StoreLocal(EAX, 0);
-    Dispatch(kInvokeTestLength);
-  } else {
-    // Found the right target method.
-    __ movl(EBX, Address(EDX, 6 * kPointerSize));
-    __ movl(EAX, Address(EDX, 7 * kPointerSize));
-    __ testl(EBX, EBX);
-    __ j(NOT_ZERO, &intrinsified);
-
-    // Compute and push the return address on the stack.
-    __ addl(ESI, Immediate(kInvokeMethodFastLength));
-    Push(ESI);
-
-    // Jump to the first bytecode in the target method.
-    __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
-    CheckStackOverflow(0);
-    Dispatch(0);
-  }
-
-  // Go to the next table entry.
-  __ Bind(&next);
-  __ addl(EDX, Immediate(4 * kPointerSize));
-  __ jmp(&loop);
-
-  if (!test) {
-    __ Bind(&intrinsified);
-    __ jmp(EBX);
-  }
-
-  __ Bind(&smi);
-  __ movl(EBX, Address(ECX, Program::kSmiClassOffset));
-  __ jmp(&probe);
 }
 
 void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {

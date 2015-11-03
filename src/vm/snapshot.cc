@@ -324,7 +324,6 @@ Program* SnapshotReader::ReadProgram() {
   program->set_constants(Array::cast(ReadObject()));
   program->set_static_methods(Array::cast(ReadObject()));
   program->set_static_fields(Array::cast(ReadObject()));
-  program->set_dispatch_table(Array::cast(ReadObject()));
   program->set_vtable(Array::cast(ReadObject()));
 
   // Read the roots.
@@ -336,7 +335,7 @@ Program* SnapshotReader::ReadProgram() {
 
   // Programs read from a snapshot are always compact.
   program->set_is_compact(true);
-  program->SetupDispatchTableIntrinsics();
+  program->SetupVTableIntrinsics();
 
   return program;
 }
@@ -344,7 +343,7 @@ Program* SnapshotReader::ReadProgram() {
 List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   ASSERT(program->is_compact());
 
-  program->ClearDispatchTableIntrinsics();
+  program->ClearVTableTableIntrinsics();
 
   WriteByte(0xbe);
   WriteByte(0xef);
@@ -372,7 +371,6 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   WriteObject(program->constants());
   WriteObject(program->static_methods());
   WriteObject(program->static_fields());
-  WriteObject(program->dispatch_table());
   WriteObject(program->vtable());
 
   // Write out all the roots of the program.

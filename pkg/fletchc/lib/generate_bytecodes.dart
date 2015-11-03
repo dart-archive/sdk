@@ -128,7 +128,6 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
 
   void INVOKES(V, name, diff, desc) {
     V("Invoke${name}",       true, "I", 5, diff, "invoke ${desc}%d");
-    V("Invoke${name}Fast",   true, "I", 5, diff, "invoke fast ${desc}%d");
     V("Invoke${name}Vtable", true, "I", 5, diff, "invoke vtable ${desc}%d");
   }
 
@@ -164,6 +163,9 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("LoadLiteralWide",      false,    "I",  5,        1, "load literal %d");
 
   INVOKES(V, "Method", kVarDiff, "");
+
+  V("InvokeNoSuchMethod",   true, "I", 5, kVarDiff, "invoke no such method %d");
+  V("InvokeTestNoSuchMethod", true, "I", 5, 0, "invoke test no such method %d");
 
   V("InvokeStatic",          true,    "I",  5, kVarDiff, "invoke static %d");
   V("InvokeStaticUnfold",    true,    "I",  5, kVarDiff, "invoke static @%d");

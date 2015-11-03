@@ -100,7 +100,6 @@ int Bytecode::StackDiff(Opcode opcode) {
 enum InvokeKind {
   NONE,
   NORMAL,
-  FAST,
   VTABLE
 };
 
@@ -132,29 +131,6 @@ static InvokeKind ComputeInvokeKind(Opcode opcode) {
     case kInvokeBitShr:
     case kInvokeBitShl:
       return NORMAL;
-
-    case kInvokeMethodFast:
-    case kInvokeTestFast:
-
-    case kInvokeEqFast:
-    case kInvokeLtFast:
-    case kInvokeLeFast:
-    case kInvokeGtFast:
-    case kInvokeGeFast:
-
-    case kInvokeAddFast:
-    case kInvokeSubFast:
-    case kInvokeModFast:
-    case kInvokeMulFast:
-    case kInvokeTruncDivFast:
-
-    case kInvokeBitNotFast:
-    case kInvokeBitAndFast:
-    case kInvokeBitOrFast:
-    case kInvokeBitXorFast:
-    case kInvokeBitShrFast:
-    case kInvokeBitShlFast:
-      return FAST;
 
     case kInvokeMethodVtable:
     case kInvokeTestVtable:
@@ -190,10 +166,6 @@ bool Bytecode::IsInvoke(Opcode opcode) {
 
 bool Bytecode::IsInvokeNormal(Opcode opcode) {
   return ComputeInvokeKind(opcode) == NORMAL;
-}
-
-bool Bytecode::IsInvokeFast(Opcode opcode) {
-  return ComputeInvokeKind(opcode) == FAST;
 }
 
 bool Bytecode::IsInvokeVtable(Opcode opcode) {

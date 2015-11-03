@@ -44,8 +44,6 @@ static Array* MapToArray(ObjectIndexMap* map, Program* program) {
 
 class ProgramTableRewriter {
  public:
-  ProgramTableRewriter() : linear_size_(0) { }
-
   ~ProgramTableRewriter() {
     SelectorRowMap::ConstIterator it = selector_rows_.Begin();
     SelectorRowMap::ConstIterator end = selector_rows_.End();
@@ -58,13 +56,10 @@ class ProgramTableRewriter {
     return class_vector_[index];
   }
 
-  SelectorRow* LookupSelectorRow(int selector, bool nsm) {
+  SelectorRow* LookupSelectorRow(int selector) {
     SelectorRow*& entry = selector_rows_[selector];
     if (entry == NULL) {
       entry = new SelectorRow(selector);
-      if (nsm) {
-        linear_size_ = entry->SetLinearOffset(linear_size_);
-      }
     }
     return entry;
   }
@@ -75,17 +70,13 @@ class ProgramTableRewriter {
 
     // Compute the sizes of the dispatch tables.
     Vector<SelectorRow*> table_rows;
-    int linear_size = 0;
     for (it = selector_rows_.Begin(); it != end; ++it) {
       SelectorRow* row = it->second;
-      SelectorRow::Kind kind = row->Finalize();
-      if (kind == SelectorRow::LINEAR) {
-        linear_size = row->SetLinearOffset(linear_size);
-      } else {
+      if (row->IsMatched()) {
+        row->Finalize();
         table_rows.PushBack(row);
       }
     }
-    linear_size_ = linear_size;
 
     // Sort the table rows according to size.
     if (table_rows.size() == 0) return;
@@ -146,21 +137,6 @@ class ProgramTableRewriter {
     program->set_vtable(table);
   }
 
-  void FinalizeSelectorRows(Program* program) {
-    SelectorRowMap::ConstIterator it;
-    SelectorRowMap::ConstIterator end = selector_rows_.End();
-
-    // Fill in the linear dispatch table entries.
-    Array* linear = Array::cast(program->CreateArray(linear_size_));
-    for (it = selector_rows_.Begin(); it != end; ++it) {
-      SelectorRow* row = it->second;
-      if (row->kind() == SelectorRow::LINEAR) {
-        row->FillLinear(program, linear);
-      }
-    }
-    program->set_dispatch_table(linear);
-  }
-
   void AddMethodAndRewrite(uint8_t* bcp, uint8_t* new_bcp) {
     AddAndRewrite(&static_methods_, bcp, new_bcp);
   }
@@ -209,7 +185,6 @@ class ProgramTableRewriter {
   ObjectIndexMap static_methods_;
 
   SelectorRowMap selector_rows_;
-  int linear_size_;
 };
 
 // After folding, we have to postprocess all functions in the heap to
@@ -259,17 +234,17 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
         case kInvokeTest:
         case kInvokeMethod: {
           int selector = Utils::ReadInt32(bcp + 1);
-          SelectorRow* row = rewriter_->LookupSelectorRow(selector, true);
-          SelectorRow::Kind kind = row->kind();
-          int offset = row->offset();
-          if (kind == SelectorRow::LINEAR) {
-            ASSERT(offset >= 0);
-            Utils::WriteInt32(bcp + 1, offset);
-            *bcp = opcode + (kInvokeMethodFast - kInvokeMethod);
-          } else {
+          SelectorRow* row = rewriter_->LookupSelectorRow(selector);
+          if (row->IsMatched()) {
+            int offset = row->offset();
             int updated = Selector::IdField::update(offset, selector);
             Utils::WriteInt32(bcp + 1, updated);
             *bcp = opcode + (kInvokeMethodVtable - kInvokeMethod);
+          } else if (opcode == kInvokeTest) {
+            *bcp = kInvokeTestNoSuchMethod;
+          } else {
+            ASSERT(opcode == kInvokeMethod);
+            *bcp = kInvokeNoSuchMethod;
           }
           break;
         }
@@ -320,8 +295,7 @@ class FoldingVisitor: public PointerVisitor {
     FunctionPostprocessVisitor visitor(rewriter_);
     program()->heap()->IterateObjects(&visitor);
 
-    rewriter_->FinalizeSelectorRows(program());
-    program()->SetupDispatchTableIntrinsics();
+    program()->SetupVTableIntrinsics();
   }
 
  private:
@@ -421,7 +395,7 @@ class FoldingVisitor: public PointerVisitor {
     for (int i = 0, length = methods->length(); i < length; i += 2) {
       int selector = Smi::cast(methods->get(i))->value();
       Function* method = Function::cast(methods->get(i + 1));
-      SelectorRow* row = rewriter_->LookupSelectorRow(selector, false);
+      SelectorRow* row = rewriter_->LookupSelectorRow(selector);
       row->DefineMethod(clazz, method);
     }
   }
@@ -561,34 +535,13 @@ Object* ProgramFolder::UnfoldFunction(Function* function,
         rewriter.AddLiteralAndRewrite(program_->classes(), bcp);
         break;
 
-      case kInvokeEqFast:
-      case kInvokeLtFast:
-      case kInvokeLeFast:
-      case kInvokeGtFast:
-      case kInvokeGeFast:
-
-      case kInvokeAddFast:
-      case kInvokeSubFast:
-      case kInvokeModFast:
-      case kInvokeMulFast:
-      case kInvokeTruncDivFast:
-
-      case kInvokeBitNotFast:
-      case kInvokeBitAndFast:
-      case kInvokeBitOrFast:
-      case kInvokeBitXorFast:
-      case kInvokeBitShrFast:
-      case kInvokeBitShlFast:
-
-      case kInvokeTestFast:
-      case kInvokeMethodFast: {
-        int index = Utils::ReadInt32(bcp + 1);
-        Array* table = program_->dispatch_table();
-        int selector = Smi::cast(table->get(index + 1))->value();
-        *bcp = opcode + (kInvokeMethod - kInvokeMethodFast);
-        Utils::WriteInt32(bcp + 1, selector);
+      case kInvokeNoSuchMethod:
+        *bcp = kInvokeMethod;
         break;
-      }
+
+      case kInvokeTestNoSuchMethod:
+        *bcp = kInvokeTest;
+        break;
 
       case kInvokeEqVtable:
       case kInvokeLtVtable:
@@ -719,7 +672,6 @@ void ProgramFolder::Unfold() {
   program_->set_classes(NULL);
   program_->set_constants(NULL);
   program_->set_static_methods(NULL);
-  program_->set_dispatch_table(NULL);
   program_->set_vtable(NULL);
   program_->set_is_compact(false);
 
