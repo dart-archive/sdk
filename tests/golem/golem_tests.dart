@@ -25,18 +25,27 @@ Future<Null> main() async {
   Directory tempDir = Directory.systemTemp.createTempSync('golem_tests');
   Uri tarFile = tempDir.uri.resolve('golem.tar.gz');
   String buildDir = const String.fromEnvironment('test.dart.build-dir');
+  bool asanBuild = const bool.fromEnvironment('test.dart.build-asan');
+
+  List<String> tarArguments = [
+      'hczf',
+      tarFile.toFilePath(),
+      '-T',
+      benchmarkingFiles.toFilePath(),
+      '$buildDir/fletch-vm',
+      '$buildDir/dart',
+      '$buildDir/natives.json'];
+
+  // Mac ASan builds need the clang asan runtime library in the bundle.
+  if (Platform.isMacOS && asanBuild) {
+    tarArguments.add('$buildDir/libclang_rt.asan_osx_dynamic.dylib');
+  }
 
   try {
     // Package up the files similar to what Golem does.
     ProcessResult tarResult = Process.runSync(
         'tar',
-        ['hczf',
-         tarFile.toFilePath(),
-         '-T',
-         benchmarkingFiles.toFilePath(),
-         '$buildDir/fletch-vm',
-         '$buildDir/dart',
-         '$buildDir/natives.json'],
+        tarArguments,
         workingDirectory: executable.resolve('../..').toFilePath(),
         runInShell: true);
     Expect.equals(0,
