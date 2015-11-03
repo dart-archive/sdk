@@ -101,6 +101,7 @@
 
 library fletch_agent.messages;
 
+import 'dart:convert' show ASCII;
 import 'dart:typed_data';
 
 /// Current Fletch Agent version
@@ -514,33 +515,46 @@ class UpgradeAgentReply extends ReplyHeader {
 }
 
 class FletchVersionReply extends ReplyHeader {
-  final int fletchVersion;
+  final String fletchVersion;
 
-  FletchVersionReply(int id, int result, {this.fletchVersion})
-      : super(id, result, payloadLength: result == ReplyHeader.SUCCESS ? 4 : 0);
+  FletchVersionReply(int id, int result, {String version})
+      : super(id, result, payloadLength: version != null ? version.length : 0),
+        fletchVersion = version {
+    if (result == ReplyHeader.SUCCESS && version == null) {
+      throw new MessageEncodeException(
+          "Missing version for FletchVersionReply.");
+    }
+  }
 
   factory FletchVersionReply.fromBuffer(ByteBuffer buffer) {
     var header = new ReplyHeader.fromBuffer(buffer);
-    int fletchVersion;
+    String version;
     if (header.result == ReplyHeader.SUCCESS) {
-      // There must be 4 bytes of payload.
-      if (buffer.lengthInBytes < ReplyHeader.HEADER_SIZE + 4 ||
-          header.payloadLength != 4) {
+      int payloadLength = header.payloadLength;
+      if (payloadLength == 0 ||
+          buffer.lengthInBytes < ReplyHeader.HEADER_SIZE + payloadLength) {
         throw new MessageDecodeException(
             "Invalid FletchVersionReply: ${buffer.asUint8List()}");
       }
-      fletchVersion = readUint32(buffer, ReplyHeader.HEADER_SIZE);
+      version = ASCII.decode(buffer.asUint8List(ReplyHeader.HEADER_SIZE));
     }
-    return new FletchVersionReply(
-        header.id, header.result, fletchVersion: fletchVersion);
+    return new FletchVersionReply(header.id, header.result, version: version);
   }
 
   ByteBuffer toBuffer() {
     ByteBuffer buffer;
     if (result == ReplyHeader.SUCCESS) {
-      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + 4).buffer;
-      _writeHeader(buffer);
-      writeUint32(buffer, ReplyHeader.HEADER_SIZE, fletchVersion);
+      Uint8List message = new Uint8List(
+          ReplyHeader.HEADER_SIZE + fletchVersion.length);
+      _writeHeader(message.buffer);
+      List<int> encodedVersion = ASCII.encode(fletchVersion);
+      assert(encodedVersion != null);
+      assert(fletchVersion.length == encodedVersion.length);
+      message.setRange(
+          ReplyHeader.HEADER_SIZE,
+          ReplyHeader.HEADER_SIZE + encodedVersion.length,
+          encodedVersion);
+      buffer = message.buffer;
     } else {
       buffer = new Uint8List(ReplyHeader.HEADER_SIZE).buffer;
       _writeHeader(buffer);
@@ -599,4 +613,10 @@ class MessageDecodeException implements Exception {
   final String message;
   MessageDecodeException(this.message);
   String toString() => 'MessageDecodeException($message)';
+}
+
+class MessageEncodeException implements Exception {
+  final String message;
+  MessageEncodeException(this.message);
+  String toString() => 'MessageEncodeException($message)';
 }

@@ -7,6 +7,8 @@
 
 namespace fletch {
 
+extern "C"
+__attribute__((visibility("default")))
 const char* GetVersion();
 
 }  // namespace fletch

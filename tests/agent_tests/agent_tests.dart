@@ -23,7 +23,6 @@ import 'package:expect/expect.dart' show
     Expect;
 
 import 'package:fletch_agent/messages.dart' show
-    AGENT_VERSION,
     PACKAGE_FILE_NAME;
 
 import 'package:fletch_agent/agent_connection.dart' show
@@ -172,8 +171,8 @@ class AgentLifeCycleTest extends AgentTest {
   Future<Null> execute() async {
     // Check the version.
     await withConnection((AgentConnection connection) async {
-      int version = await connection.fletchVersion();
-      Expect.equals(AGENT_VERSION, version, 'Mismatching agent version');
+      String version = await connection.fletchVersion();
+      Expect.isTrue(version.length > 0, 'No version found.');
     });
 
     // Start a VM.

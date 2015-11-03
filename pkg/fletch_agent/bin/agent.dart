@@ -11,6 +11,7 @@ import 'dart:fletch.os';
 import 'dart:typed_data';
 
 import 'package:file/file.dart';
+import 'package:fletch/fletch.dart' as fletch;
 import 'package:socket/socket.dart';
 
 import '../lib/messages.dart';
@@ -433,10 +434,10 @@ class CommandHandler {
   }
 
   void _fletchVersion() {
-    int version = AGENT_VERSION;
+    String version = fletch.version();
     _context.logger.info('Returning fletch version $version');
     _sendReply(new FletchVersionReply(
-        _requestHeader.id, ReplyHeader.SUCCESS, fletchVersion: version));
+        _requestHeader.id, ReplyHeader.SUCCESS, version: version));
   }
 }
 
