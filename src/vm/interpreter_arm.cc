@@ -646,7 +646,7 @@ void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
 
 void InterpreterGeneratorARM::DoInvokeTestNoSuchMethod() {
   StoreLocal(R11, 0);
-  Dispatch(kLoadLiteralFalseLength);
+  Dispatch(kInvokeTestNoSuchMethodLength);
 }
 
 void InterpreterGeneratorARM::DoInvokeTest() {
