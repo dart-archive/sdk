@@ -12,6 +12,9 @@ packages
 .ninja_log
 .fletch
 .*.swp
+.idea
+*.iml
+.gdb_history
 
 # The following match exact path names starting from the location of this file.
 /fletch.xcodeproj/
