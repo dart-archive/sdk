@@ -40,6 +40,8 @@ import 'marker.dart' show
     BeginFormalMarker,
     BeginFunctionMarker,
     BeginFieldMarker,
+    BeginServiceMarker,
+    BeginStructMarker,
     BeginTypeMarker,
     BeginUnionMarker,
     MarkerNode;
@@ -138,10 +140,12 @@ class ErrorHandlingListener extends Listener {
 
   // Top-level nodes.
   Token beginService(Token tokens) {
+    stack.pushNode(new BeginServiceMarker(tokens));
     return tokens;
   }
 
   Token beginStruct(Token tokens) {
+    stack.pushNode(new BeginStructMarker(tokens));
     return tokens;
   }
 
@@ -264,6 +268,8 @@ class ErrorHandlingListener extends Listener {
 
     List<FunctionNode> functions = functionPopper.popNodes(count);
     IdentifierNode identifier = stack.popNode();
+    MarkerNode marker = stack.popNode();
+    assert(marker is BeginServiceMarker);
     stack.pushNode(new ServiceNode(identifier, functions));
     return tokens;
   }
@@ -273,6 +279,8 @@ class ErrorHandlingListener extends Listener {
 
     List<MemberNode> members = memberPopper.popNodes(count);
     IdentifierNode identifier = stack.popNode();
+    MarkerNode marker = stack.popNode();
+    assert(marker is BeginStructMarker);
     stack.pushNode(new StructNode(identifier, members));
     return tokens;
   }
@@ -378,14 +386,18 @@ class ErrorHandlingListener extends Listener {
   Token recoverService(Token tokens) {
     List<FunctionNode> functions = functionPopper.popNodesWhileMatching();
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
-    stack.pushNode(new ServiceErrorNode(identifier, functions, tokens));
+    MarkerNode marker = stack.popNode();
+    assert(marker is BeginServiceMarker);
+    stack.pushNode(new ServiceErrorNode(identifier, functions, marker.token));
     return consumeTopLevel(tokens);
   }
 
   Token recoverStruct(Token tokens) {
     List<MemberNode> members = memberPopper.popNodesWhileMatching();
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
-    stack.pushNode(new StructErrorNode(identifier, members, tokens));
+    MarkerNode marker = stack.popNode();
+    assert(marker is BeginStructMarker);
+    stack.pushNode(new StructErrorNode(identifier, members, marker.token));
     return consumeTopLevel(tokens);
   }
 
