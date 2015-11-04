@@ -300,6 +300,10 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.versionMismatch:
       // TODO(ager): We could probably test this with a mock VM.
       return untestable;
+
+    case DiagnosticKind.agentVersionMismatch:
+      // TODO(wibling): Add test for this
+      return untestable;
   }
 }
 

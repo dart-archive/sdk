@@ -137,10 +137,32 @@ void disconnectFromAgent(AgentConnection connection) {
   connection.socket.close();
 }
 
+Future<Null> checkAgentVersion(SessionState state) async {
+  AgentConnection connection = await connectToAgent(state);
+  try {
+    String deviceFletchVersion = await connection.fletchVersion();
+    if (fletchVersion != deviceFletchVersion) {
+      throwFatalError(DiagnosticKind.agentVersionMismatch,
+                      userInput: fletchVersion,
+                      additionalUserInput: deviceFletchVersion,
+                      sessionName: state.name);
+    }
+  } on AgentException catch (error) {
+    throwFatalError(
+        DiagnosticKind.socketAgentReplyError,
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
+        message: error.message);
+  } finally {
+    disconnectFromAgent(connection);
+  }
+}
+
 Future<Null> startAndAttachViaAgent(SessionState state) async {
   // TODO(wibling): integrate with the FletchVm class, e.g. have a
   // AgentFletchVm and LocalFletchVm that both share the same interface
   // where the former is interacting with the agent.
+  await checkAgentVersion(state);
   AgentConnection connection = await connectToAgent(state);
   VmData vmData;
   try {

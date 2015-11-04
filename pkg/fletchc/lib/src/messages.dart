@@ -9,6 +9,7 @@ import 'diagnostic.dart' show
     DiagnosticParameter;
 
 enum DiagnosticKind {
+  agentVersionMismatch,
   busySession,
   cantPerformVerbIn,
   cantPerformVerbTo,
@@ -300,5 +301,16 @@ String getMessage(DiagnosticKind kind) {
       return "Connection rejected because compiler and VM on $address "
           "have different versions. Compiler version: '$userInput' "
           "VM version: '$additionalUserInput'.";
+
+    case DiagnosticKind.agentVersionMismatch:
+      // TODO(wibling): lukechurch: Is there advice we can give here?
+      // E.g. Consider upgrading your compiler? Do we have an easy place they
+      // can go to do that? Are we considering adding a tool to auto-upgrade?
+      return "Could not start vm on device because the compiler and the "
+          "session's remote device have different versions.\n"
+          "Compiler version: '$userInput'\n"
+          "Device version: '$additionalUserInput'.\n"
+          "Try running 'fletch x-upgrade agent with file <agent debian "
+          "package> in session $sessionName'";
   }
 }
