@@ -960,8 +960,8 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
   Push(function);
 
   if (Flags::log_decoder) {
-    Print::Out("Method:\n");
     uint8* bytes = function->bytecode_address_for(0);
+    Print::Out("Method: %p\n", bytes);
     Opcode opcode;
     int i = 0;
     do {

@@ -126,7 +126,7 @@ class ProgramHeapRelocator {
 
     // Clear away the intrinsics as they will point to the wrong
     // addresses.
-    program->ClearVTableTableIntrinsics();
+    program->ClearDispatchTableIntrinsics();
 
     // Make sure we only have one chunk in the heap so that we can linearly
     // relocate objects to the new base.

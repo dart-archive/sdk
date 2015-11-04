@@ -82,7 +82,7 @@ class ProgramTableRewriter {
     if (table_rows.size() == 0) return;
     table_rows.Sort(SelectorRow::Compare);
 
-    // We add a fake header entry at the start of the vtable to deal
+    // We add a fake header entry at the start of the dispatch table to deal
     // with noSuchMethod.
     static const int kHeaderSize = 1;
 
@@ -106,14 +106,14 @@ class ProgramTableRewriter {
         fitter.limit() +
         program->classes()->length();
 
-    // Allocate the vtable and fill it in.
+    // Allocate the dispatch table and fill it in.
     Array* table = Array::cast(program->CreateArray(table_size));
     for (unsigned i = 0; i < table_rows.size(); i++) {
       table_rows[i]->FillTable(program, table);
     }
 
     // Simplify how we deal with noSuchMethod in the interpreter
-    // by explicitly replacing all unused entries in the vtable with
+    // by explicitly replacing all unused entries in the dispatch table with
     // an entry that doesn't match any invoke. Also, make sure the
     // first table entry always refers to this noSuchMethod entry.
     static const Names::Id name = Names::kNoSuchMethodTrampoline;
@@ -134,7 +134,7 @@ class ProgramTableRewriter {
     }
     ASSERT(table->get(0) == nsm);
 
-    program->set_vtable(table);
+    program->set_dispatch_table(table);
   }
 
   void AddMethodAndRewrite(uint8_t* bcp, uint8_t* new_bcp) {
@@ -174,7 +174,7 @@ class ProgramTableRewriter {
 
   int AddAndRewrite(ObjectIndexMap* map, Object* literal, uint8_t* new_bcp) {
     int new_index = AddToMap(map, literal);
-    *new_bcp = *new_bcp - 1;
+    *new_bcp = *new_bcp - Bytecode::kUnfoldOffset;
     Utils::WriteInt32(new_bcp + 1, new_index);
     return new_index;
   }
@@ -212,38 +212,38 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
           break;
         }
 
-        case kInvokeEq:
-        case kInvokeLt:
-        case kInvokeLe:
-        case kInvokeGt:
-        case kInvokeGe:
+        case kInvokeEqUnfold:
+        case kInvokeLtUnfold:
+        case kInvokeLeUnfold:
+        case kInvokeGtUnfold:
+        case kInvokeGeUnfold:
 
-        case kInvokeAdd:
-        case kInvokeSub:
-        case kInvokeMod:
-        case kInvokeMul:
-        case kInvokeTruncDiv:
+        case kInvokeAddUnfold:
+        case kInvokeSubUnfold:
+        case kInvokeModUnfold:
+        case kInvokeMulUnfold:
+        case kInvokeTruncDivUnfold:
 
-        case kInvokeBitNot:
-        case kInvokeBitAnd:
-        case kInvokeBitOr:
-        case kInvokeBitXor:
-        case kInvokeBitShr:
-        case kInvokeBitShl:
+        case kInvokeBitNotUnfold:
+        case kInvokeBitAndUnfold:
+        case kInvokeBitOrUnfold:
+        case kInvokeBitXorUnfold:
+        case kInvokeBitShrUnfold:
+        case kInvokeBitShlUnfold:
 
-        case kInvokeTest:
-        case kInvokeMethod: {
+        case kInvokeTestUnfold:
+        case kInvokeMethodUnfold: {
           int selector = Utils::ReadInt32(bcp + 1);
           SelectorRow* row = rewriter_->LookupSelectorRow(selector);
           if (row->IsMatched()) {
             int offset = row->offset();
             int updated = Selector::IdField::update(offset, selector);
             Utils::WriteInt32(bcp + 1, updated);
-            *bcp = opcode + (kInvokeMethodVtable - kInvokeMethod);
-          } else if (opcode == kInvokeTest) {
+            *bcp = opcode - Bytecode::kUnfoldOffset;
+          } else if (opcode == kInvokeTestUnfold) {
             *bcp = kInvokeTestNoSuchMethod;
           } else {
-            ASSERT(opcode == kInvokeMethod);
+            ASSERT(opcode == kInvokeMethodUnfold);
             *bcp = kInvokeNoSuchMethod;
           }
           break;
@@ -295,7 +295,7 @@ class FoldingVisitor: public PointerVisitor {
     FunctionPostprocessVisitor visitor(rewriter_);
     program()->heap()->IterateObjects(&visitor);
 
-    program()->SetupVTableIntrinsics();
+    program()->SetupDispatchTableIntrinsics();
   }
 
  private:
@@ -471,6 +471,7 @@ void ProgramFolder::FoldFunction(Function* old_function,
         // We should only fold unfolded functions.
         UNREACHABLE();
       default:
+        ASSERT(!Bytecode::IsInvoke(opcode));
         ASSERT(opcode < Bytecode::kNumBytecodes);
         break;
     }
@@ -494,7 +495,7 @@ class LiteralsRewriter {
     int literal_index = AddToMap(&literals_index_map_, literal);
     Object** literal_address = function_->literal_address_for(literal_index);
     int offset = reinterpret_cast<uint8_t*>(literal_address) - bcp;
-    *bcp = *bcp + 1;
+    *bcp = *bcp + Bytecode::kUnfoldOffset;
     Utils::WriteInt32(bcp + 1, offset);
   }
 
@@ -536,37 +537,37 @@ Object* ProgramFolder::UnfoldFunction(Function* function,
         break;
 
       case kInvokeNoSuchMethod:
-        *bcp = kInvokeMethod;
+        *bcp = kInvokeMethodUnfold;
         break;
 
       case kInvokeTestNoSuchMethod:
-        *bcp = kInvokeTest;
+        *bcp = kInvokeTestUnfold;
         break;
 
-      case kInvokeEqVtable:
-      case kInvokeLtVtable:
-      case kInvokeLeVtable:
-      case kInvokeGtVtable:
-      case kInvokeGeVtable:
+      case kInvokeEq:
+      case kInvokeLt:
+      case kInvokeLe:
+      case kInvokeGt:
+      case kInvokeGe:
 
-      case kInvokeAddVtable:
-      case kInvokeSubVtable:
-      case kInvokeModVtable:
-      case kInvokeMulVtable:
-      case kInvokeTruncDivVtable:
+      case kInvokeAdd:
+      case kInvokeSub:
+      case kInvokeMod:
+      case kInvokeMul:
+      case kInvokeTruncDiv:
 
-      case kInvokeBitNotVtable:
-      case kInvokeBitAndVtable:
-      case kInvokeBitOrVtable:
-      case kInvokeBitXorVtable:
-      case kInvokeBitShrVtable:
-      case kInvokeBitShlVtable:
+      case kInvokeBitNot:
+      case kInvokeBitAnd:
+      case kInvokeBitOr:
+      case kInvokeBitXor:
+      case kInvokeBitShr:
+      case kInvokeBitShl:
 
-      case kInvokeTestVtable:
-      case kInvokeMethodVtable: {
+      case kInvokeTest:
+      case kInvokeMethod: {
         int offset = Selector::IdField::decode(Utils::ReadInt32(bcp + 1));
         int selector = map->At(offset);
-        *bcp = opcode + (kInvokeMethod - kInvokeMethodVtable);
+        *bcp = opcode + Bytecode::kUnfoldOffset;
         Utils::WriteInt32(bcp + 1, selector);
         break;
       }
@@ -588,10 +589,12 @@ Object* ProgramFolder::UnfoldFunction(Function* function,
         // We should only unfold folded functions.
         UNREACHABLE();
       default:
+        ASSERT(!Bytecode::IsInvokeUnfold(opcode));
         ASSERT(opcode < Bytecode::kNumBytecodes);
         break;
     }
 
+    ASSERT(!Bytecode::IsInvoke(static_cast<Opcode>(*bcp)));
     bcp += Bytecode::Size(opcode);
   }
 
@@ -646,14 +649,14 @@ void ProgramFolder::Unfold() {
   // the program is stopped?
   ASSERT(program_->is_compact());
 
-  // Run through the vtable and compute a map from selector offsets
+  // Run through the dispatch table and compute a map from selector offsets
   // to the original selectors. This is used when rewriting the
   // bytecodes back to the original invoke-method bytecodes.
   SelectorOffsetMap map;
-  Array* vtable = program_->vtable();
-  if (vtable != NULL) {
-    for (int i = 0, length = vtable->length(); i < length; i++) {
-      Object* element = vtable->get(i);
+  Array* dispatch_table = program_->dispatch_table();
+  if (dispatch_table != NULL) {
+    for (int i = 0, length = dispatch_table->length(); i < length; i++) {
+      Object* element = dispatch_table->get(i);
       if (element->IsNull()) continue;
       Array* entry = Array::cast(element);
       int offset = Smi::cast(entry->get(0))->value();
@@ -672,7 +675,7 @@ void ProgramFolder::Unfold() {
   program_->set_classes(NULL);
   program_->set_constants(NULL);
   program_->set_static_methods(NULL);
-  program_->set_vtable(NULL);
+  program_->set_dispatch_table(NULL);
   program_->set_is_compact(false);
 
   program_->FinishProgramGC();

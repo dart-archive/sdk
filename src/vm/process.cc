@@ -578,7 +578,7 @@ int Process::PrepareStepOver() {
   Object** stack_top = pushed_bcp_address - 1;
   Opcode opcode = static_cast<Opcode>(*current_bcp);
 
-  if (!Bytecode::IsInvoke(opcode)) {
+  if (!Bytecode::IsInvokeVariant(opcode)) {
     // For non-invoke bytecodes step over is the same as step.
     debug_info_->set_is_stepping(true);
     return DebugInfo::kNoBreakpointId;
@@ -590,9 +590,9 @@ int Process::PrepareStepOver() {
   switch (opcode) {
     // For invoke bytecodes we set a one-shot breakpoint for the next bytecode
     // with the expected stack height on return.
-    case Opcode::kInvokeMethod:
+    case Opcode::kInvokeMethodUnfold:
     case Opcode::kInvokeNoSuchMethod:
-    case Opcode::kInvokeMethodVtable: {
+    case Opcode::kInvokeMethod: {
       int selector = Utils::ReadInt32(current_bcp + 1);
       int arity = Selector::ArityField::decode(selector);
       stack_diff = -arity;

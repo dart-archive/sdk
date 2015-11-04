@@ -117,8 +117,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoLoadLiteral();
   virtual void DoLoadLiteralWide();
 
+  virtual void DoInvokeMethodUnfold();
   virtual void DoInvokeMethod();
-  virtual void DoInvokeMethodVtable();
 
   virtual void DoInvokeNoSuchMethod();
   virtual void DoInvokeTestNoSuchMethod();
@@ -131,17 +131,17 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoInvokeNative();
   virtual void DoInvokeNativeYield();
 
+  virtual void DoInvokeTestUnfold();
   virtual void DoInvokeTest();
-  virtual void DoInvokeTestVtable();
 
   virtual void DoInvokeSelector();
 
 #define INVOKE_BUILTIN(kind)                \
+  virtual void DoInvoke##kind##Unfold() {   \
+    Invoke##kind("BC_InvokeMethodUnfold");  \
+  }                                         \
   virtual void DoInvoke##kind() {           \
     Invoke##kind("BC_InvokeMethod");        \
-  }                                         \
-  virtual void DoInvoke##kind##Vtable() {   \
-    Invoke##kind("BC_InvokeMethodVtable");  \
   }
 
   INVOKE_BUILTIN(Eq);
@@ -261,8 +261,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void InvokeBitShr(const char* fallback);
   void InvokeBitShl(const char* fallback);
 
+  void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
-  void InvokeMethodVtable(bool test);
 
   void InvokeNative(bool yield);
   void InvokeStatic(bool unfolded);
@@ -617,25 +617,25 @@ void InterpreterGeneratorARM::DoLoadLiteralWide() {
   Dispatch(kLoadLiteralWideLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeMethod() {
-  InvokeMethod(false);
+void InterpreterGeneratorARM::DoInvokeMethodUnfold() {
+  InvokeMethodUnfold(false);
 }
 
-void InterpreterGeneratorARM::DoInvokeMethodVtable() {
-  InvokeMethodVtable(false);
+void InterpreterGeneratorARM::DoInvokeMethod() {
+  InvokeMethod(false);
 }
 
 void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
   // Use the noSuchMethod entry from entry zero of the virtual table.
   __ ldr(R1, Address(R4, Process::kProgramOffset));
-  __ ldr(R1, Address(R1, Program::kVTableOffset));
+  __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
   __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
 
   // Load the function at index 2.
   __ ldr(R0, Address(R1, 8 + Array::kSize - HeapObject::kTag));
 
   // Compute and push the return address on the stack.
-  __ add(R5, R5, Immediate(kInvokeMethodVtableLength));
+  __ add(R5, R5, Immediate(kInvokeNoSuchMethodLength));
   Push(R5);
 
   // Jump to the first bytecode in the target method.
@@ -649,12 +649,12 @@ void InterpreterGeneratorARM::DoInvokeTestNoSuchMethod() {
   Dispatch(kInvokeTestNoSuchMethodLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeTest() {
-  InvokeMethod(true);
+void InterpreterGeneratorARM::DoInvokeTestUnfold() {
+  InvokeMethodUnfold(true);
 }
 
-void InterpreterGeneratorARM::DoInvokeTestVtable() {
-  InvokeMethodVtable(true);
+void InterpreterGeneratorARM::DoInvokeTest() {
+  InvokeMethod(true);
 }
 
 void InterpreterGeneratorARM::DoInvokeStatic() {
@@ -1415,7 +1415,7 @@ void InterpreterGeneratorARM::Drop(int n) {
   __ sub(R6, R6, Immediate(n * kWordSize));
 }
 
-void InterpreterGeneratorARM::InvokeMethod(bool test) {
+void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
   // Get the selector from the bytecodes.
   __ ldr(R7, Address(R5, 1));
 
@@ -1476,10 +1476,10 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     Label found;
     __ tst(R0, R0);
     ConditionalStore(R11, R10, Address(R6, 0));
-    Dispatch(kInvokeTestLength);
+    Dispatch(kInvokeTestUnfoldLength);
   } else {
     // Compute and push the return address on the stack.
-    __ add(R5, R5, Immediate(kInvokeMethodLength));
+    __ add(R5, R5, Immediate(kInvokeMethodUnfoldLength));
     Push(R5);
 
     // Jump to the first bytecode in the target method.
@@ -1512,13 +1512,13 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   __ b(&finish);
 }
 
-void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
+void InterpreterGeneratorARM::InvokeMethod(bool test) {
   // Get the selector from the bytecodes.
   __ ldr(R7, Address(R5, 1));
 
   // Fetch the virtual table from the program.
   __ ldr(R1, Address(R4, Process::kProgramOffset));
-  __ ldr(R1, Address(R1, Program::kVTableOffset));
+  __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
 
   if (!test) {
     // Compute the arity from the selector.
@@ -1581,7 +1581,7 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
     __ b(NE, &intrinsified);
 
     // Compute and push the return address on the stack.
-    __ add(R5, R5, Immediate(kInvokeMethodVtableLength));
+    __ add(R5, R5, Immediate(kInvokeMethodLength));
     Push(R5);
 
     // Jump to the first bytecode in the target method.
@@ -1608,7 +1608,7 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
     // the virtual table.
     __ Bind(&invalid);
     __ ldr(R1, Address(R4, Process::kProgramOffset));
-    __ ldr(R1, Address(R1, Program::kVTableOffset));
+    __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
     __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
     __ b(&validated);
   }

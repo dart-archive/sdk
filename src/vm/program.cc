@@ -861,8 +861,8 @@ void Program::IterateRootsIgnoringSession(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&entry_));
 }
 
-void Program::ClearVTableTableIntrinsics() {
-  Array* table = vtable();
+void Program::ClearDispatchTableIntrinsics() {
+  Array* table = dispatch_table();
   if (table == NULL) return;
 
   int length = table->length();
@@ -873,8 +873,8 @@ void Program::ClearVTableTableIntrinsics() {
   }
 }
 
-void Program::SetupVTableIntrinsics(IntrinsicsTable* intrinsics) {
-  Array* table = vtable();
+void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
+  Array* table = dispatch_table();
   if (table == NULL) return;
 
   int length = table->length();
@@ -903,7 +903,7 @@ void Program::SetupVTableIntrinsics(IntrinsicsTable* intrinsics) {
   }
 
   if (Flags::print_program_statistics) {
-    Print::Out("Vtable fill: %F%% (%i of %i)\n",
+    Print::Out("Dispatch table fill: %F%% (%i of %i)\n",
                hits * 100.0 / length,
                hits,
                length);

@@ -114,8 +114,8 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoLoadLiteral();
   virtual void DoLoadLiteralWide();
 
+  virtual void DoInvokeMethodUnfold();
   virtual void DoInvokeMethod();
-  virtual void DoInvokeMethodVtable();
 
   virtual void DoInvokeNoSuchMethod();
   virtual void DoInvokeTestNoSuchMethod();
@@ -130,15 +130,15 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
 
   virtual void DoInvokeSelector();
 
+  virtual void DoInvokeTestUnfold();
   virtual void DoInvokeTest();
-  virtual void DoInvokeTestVtable();
 
 #define INVOKE_BUILTIN(kind)                \
-  virtual void DoInvoke##kind() {           \
-    Invoke##kind("BC_InvokeMethod");        \
+  virtual void DoInvoke##kind##Unfold() {   \
+    Invoke##kind("BC_InvokeMethodUnfold");  \
   }                                         \
-  virtual void DoInvoke##kind##Vtable() {   \
-    Invoke##kind("BC_InvokeMethodVtable");  \
+  virtual void DoInvoke##kind() {   \
+    Invoke##kind("BC_InvokeMethod");        \
   }
 
   INVOKE_BUILTIN(Eq);
@@ -240,8 +240,8 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   //   * changes caller-saved registers
   void AddToStoreBufferSlow(Register object, Register value);
 
+  void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
-  void InvokeMethodVtable(bool test);
 
   void InvokeStatic(bool unfolded);
 
@@ -604,18 +604,18 @@ void InterpreterGeneratorX86::DoLoadLiteralWide() {
   Dispatch(kLoadLiteralWideLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeMethod() {
-  InvokeMethod(false);
+void InterpreterGeneratorX86::DoInvokeMethodUnfold() {
+  InvokeMethodUnfold(false);
 }
 
-void InterpreterGeneratorX86::DoInvokeMethodVtable() {
-  InvokeMethodVtable(false);
+void InterpreterGeneratorX86::DoInvokeMethod() {
+  InvokeMethod(false);
 }
 
 void InterpreterGeneratorX86::DoInvokeNoSuchMethod() {
   // Use the noSuchMethod entry from entry zero of the virtual table.
   __ movl(ECX, Address(EBP, Process::kProgramOffset));
-  __ movl(ECX, Address(ECX, Program::kVTableOffset));
+  __ movl(ECX, Address(ECX, Program::kDispatchTableOffset));
   __ movl(ECX, Address(ECX, Array::kSize - HeapObject::kTag));
 
   // Load the function at index 2.
@@ -638,12 +638,12 @@ void InterpreterGeneratorX86::DoInvokeTestNoSuchMethod() {
   Dispatch(kInvokeTestNoSuchMethodLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeTest() {
-  InvokeMethod(true);
+void InterpreterGeneratorX86::DoInvokeTestUnfold() {
+  InvokeMethodUnfold(true);
 }
 
-void InterpreterGeneratorX86::DoInvokeTestVtable() {
-  InvokeMethodVtable(true);
+void InterpreterGeneratorX86::DoInvokeTest() {
+  InvokeMethod(true);
 }
 
 void InterpreterGeneratorX86::DoInvokeStatic() {
@@ -1606,7 +1606,7 @@ void InterpreterGeneratorX86::AddToStoreBufferSlow(Register object,
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 }
 
-void InterpreterGeneratorX86::InvokeMethod(bool test) {
+void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
   // Get the selector from the bytecodes.
   __ movl(EDX, Address(ESI, 1));
 
@@ -1671,15 +1671,15 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
 
     __ movl(EAX, Address(EBX, Program::kFalseObjectOffset));
     StoreLocal(EAX, 0);
-    Dispatch(kInvokeTestLength);
+    Dispatch(kInvokeTestUnfoldLength);
 
     __ Bind(&found);
     __ movl(EAX, Address(EBX, Program::kTrueObjectOffset));
     StoreLocal(EAX, 0);
-    Dispatch(kInvokeTestLength);
+    Dispatch(kInvokeTestUnfoldLength);
   } else {
     // Compute and push the return address on the stack.
-    __ addl(ESI, Immediate(kInvokeMethodLength));
+    __ addl(ESI, Immediate(kInvokeMethodUnfoldLength));
     Push(ESI);
 
     // Jump to the first bytecode in the target method.
@@ -1708,13 +1708,13 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
   __ jmp(&finish);
 }
 
-void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
+void InterpreterGeneratorX86::InvokeMethod(bool test) {
   // Get the selector from the bytecodes.
   __ movl(EDX, Address(ESI, 1));
 
-  // Fetch the virtual table from the program.
+  // Fetch the dispatch table from the program.
   __ movl(ECX, Address(EBP, Process::kProgramOffset));
-  __ movl(ECX, Address(ECX, Program::kVTableOffset));
+  __ movl(ECX, Address(ECX, Program::kDispatchTableOffset));
 
   if (!test) {
     // Compute the arity from the selector.
@@ -1777,7 +1777,7 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
     __ j(NOT_ZERO, &intrinsified);
 
     // Compute and push the return address on the stack.
-    __ addl(ESI, Immediate(kInvokeMethodVtableLength));
+    __ addl(ESI, Immediate(kInvokeMethodLength));
     Push(ESI);
 
     // Jump to the first bytecode in the target method.
@@ -1806,7 +1806,7 @@ void InterpreterGeneratorX86::InvokeMethodVtable(bool test) {
     // the virtual table.
     __ Bind(&invalid);
     __ movl(ECX, Address(EBP, Process::kProgramOffset));
-    __ movl(ECX, Address(ECX, Program::kVTableOffset));
+    __ movl(ECX, Address(ECX, Program::kDispatchTableOffset));
     __ movl(ECX, Address(ECX, Array::kSize - HeapObject::kTag));
     __ jmp(&validated);
   }

@@ -335,7 +335,7 @@ Program* SnapshotReader::ReadProgram() {
   program->set_constants(Array::cast(ReadObject()));
   program->set_static_methods(Array::cast(ReadObject()));
   program->set_static_fields(Array::cast(ReadObject()));
-  program->set_vtable(Array::cast(ReadObject()));
+  program->set_dispatch_table(Array::cast(ReadObject()));
 
   // Read the roots.
   ReaderVisitor visitor(this);
@@ -346,7 +346,7 @@ Program* SnapshotReader::ReadProgram() {
 
   // Programs read from a snapshot are always compact.
   program->set_is_compact(true);
-  program->SetupVTableIntrinsics();
+  program->SetupDispatchTableIntrinsics();
 
   // As a sanity check we ensure that the heap size the writer of the snapshot
   // predicted we would have, is in fact *precisely* how much space we needed.
@@ -361,7 +361,7 @@ Program* SnapshotReader::ReadProgram() {
 List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   ASSERT(program->is_compact());
 
-  program->ClearVTableTableIntrinsics();
+  program->ClearDispatchTableIntrinsics();
 
   WriteByte(0xbe);
   WriteByte(0xef);
@@ -389,7 +389,7 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   WriteObject(program->constants());
   WriteObject(program->static_methods());
   WriteObject(program->static_fields());
-  WriteObject(program->vtable());
+  WriteObject(program->dispatch_table());
 
   // Write out all the roots of the program.
   WriterVisitor visitor(this);

@@ -228,79 +228,81 @@ class BytecodeAssembler {
   }
 
   void invokeMethod(int selector, int arity, [String name]) {
+    var bytecode;
     switch (name) {
       case '==':
-        internalAddStackPointerDifference(new InvokeEq(selector), -arity);
+        bytecode = new InvokeEqUnfold(selector);
         break;
 
       case '<':
-        internalAddStackPointerDifference(new InvokeLt(selector), -arity);
+        bytecode = new InvokeLtUnfold(selector);
         break;
 
       case '<=':
-        internalAddStackPointerDifference(new InvokeLe(selector), -arity);
+        bytecode = new InvokeLeUnfold(selector);
         break;
 
       case '>':
-        internalAddStackPointerDifference(new InvokeGt(selector), -arity);
+        bytecode = new InvokeGtUnfold(selector);
         break;
 
       case '>=':
-        internalAddStackPointerDifference(new InvokeGe(selector), -arity);
+        bytecode = new InvokeGeUnfold(selector);
         break;
 
       case '+':
-        internalAddStackPointerDifference(new InvokeAdd(selector), -arity);
+        bytecode = new InvokeAddUnfold(selector);
         break;
 
       case '-':
-        internalAddStackPointerDifference(new InvokeSub(selector), -arity);
+        bytecode = new InvokeSubUnfold(selector);
         break;
 
       case '*':
-        internalAddStackPointerDifference(new InvokeMul(selector), -arity);
+        bytecode = new InvokeMulUnfold(selector);
         break;
 
       case '~/':
-        internalAddStackPointerDifference(new InvokeTruncDiv(selector), -arity);
+        bytecode = new InvokeTruncDivUnfold(selector);
         break;
 
       case '%':
-        internalAddStackPointerDifference(new InvokeMod(selector), -arity);
+        bytecode = new InvokeModUnfold(selector);
         break;
 
       case '~':
-        internalAddStackPointerDifference(new InvokeBitNot(selector), -arity);
+        bytecode = new InvokeBitNotUnfold(selector);
         break;
 
       case '&':
-        internalAddStackPointerDifference(new InvokeBitAnd(selector), -arity);
+        bytecode = new InvokeBitAndUnfold(selector);
         break;
 
       case '|':
-        internalAddStackPointerDifference(new InvokeBitOr(selector), -arity);
+        bytecode = new InvokeBitOrUnfold(selector);
         break;
 
       case '^':
-        internalAddStackPointerDifference(new InvokeBitXor(selector), -arity);
+        bytecode = new InvokeBitXorUnfold(selector);
         break;
 
       case '<<':
-        internalAddStackPointerDifference(new InvokeBitShl(selector), -arity);
+        bytecode = new InvokeBitShlUnfold(selector);
         break;
 
       case '>>':
-        internalAddStackPointerDifference(new InvokeBitShr(selector), -arity);
+        bytecode = new InvokeBitShrUnfold(selector);
         break;
 
       default:
-        internalAddStackPointerDifference(new InvokeMethod(selector), -arity);
+        bytecode = new InvokeMethodUnfold(selector);
         break;
     }
+    internalAddStackPointerDifference(bytecode, -arity);
   }
 
   void invokeTest(int selector, int arity) {
-    internalAddStackPointerDifference(new InvokeTest(selector), -arity);
+    internalAddStackPointerDifference(new InvokeTestUnfold(selector), -arity);
   }
 
   void invokeSelector() {

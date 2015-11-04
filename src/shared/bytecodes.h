@@ -12,9 +12,34 @@ namespace fletch {
 const int kVarDiff = 0x7FFFFFFF;
 const int kLoadLiteralWideLimit = 0x3fffffff;
 
-#define INVOKES(V, name, diff, desc)                                           \
-  V(Invoke##name,          true, "I", 5, diff, "invoke " desc "%d")            \
-  V(Invoke##name##Vtable,  true, "I", 5, diff, "invoke vtable " desc "%d")     \
+#define INVOKE(V, name, diff, desc, suffix, type)                           \
+  V(Invoke##name##suffix,  true, "I", 5, diff, "invoke " type desc "%d")    \
+
+#define INVOKES_DO(V, suffix, type)                                         \
+  INVOKE(V, Method, kVarDiff, "method ", suffix, type)                      \
+  INVOKE(V, Test, 0, "test ", suffix, type)                                 \
+                                                                            \
+  INVOKE(V, Eq, -1, "eq ", suffix, type)                                    \
+  INVOKE(V, Lt, -1, "lt ", suffix, type)                                    \
+  INVOKE(V, Le, -1, "le ", suffix, type)                                    \
+  INVOKE(V, Gt, -1, "gt ", suffix, type)                                    \
+  INVOKE(V, Ge, -1, "ge ", suffix, type)                                    \
+                                                                            \
+  INVOKE(V, Add, -1, "add ", suffix, type)                                  \
+  INVOKE(V, Sub, -1, "sub ", suffix, type)                                  \
+  INVOKE(V, Mod, -1, "mod ", suffix, type)                                  \
+  INVOKE(V, Mul, -1, "mul ", suffix, type)                                  \
+  INVOKE(V, TruncDiv, -1, "trunc div ", suffix, type)                       \
+                                                                            \
+  INVOKE(V, BitNot,  0, "bit not ", suffix, type)                           \
+  INVOKE(V, BitAnd, -1, "bit and ", suffix, type)                           \
+  INVOKE(V, BitOr,  -1, "bit or ", suffix, type)                            \
+  INVOKE(V, BitXor, -1, "bit xor ", suffix, type)                           \
+  INVOKE(V, BitShr, -1, "bit shr ", suffix, type)                           \
+  INVOKE(V, BitShl, -1, "bit shl ", suffix, type)                           \
+                                                                            \
+  INVOKE(V, Static, kVarDiff, "static ", suffix, type)                      \
+  INVOKE(V, Factory, kVarDiff, "factory ", suffix, type)                    \
 
 
 #define BYTECODES_DO(V)                                                        \
@@ -31,9 +56,6 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(LoadField,            false,    "B",  2,        0, "load field %d")        \
   V(LoadFieldWide,        false,    "I",  5,        0, "load field %d")        \
                                                                                \
-  V(LoadConst,            false,    "I",  5,        1, "load const %d")        \
-  V(LoadConstUnfold,      false,    "I",  5,        1, "load const @%d")       \
-                                                                               \
   V(StoreLocal,           false,    "B",  2,        0, "store local %d")       \
   V(StoreBoxed,           false,    "B",  2,        0, "store boxed %d")       \
   V(StoreStatic,          false,    "I",  5,        0, "store static %d")      \
@@ -48,41 +70,18 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(LoadLiteral,          false,    "B",  2,        1, "load literal %d")      \
   V(LoadLiteralWide,      false,    "I",  5,        1, "load literal %d")      \
                                                                                \
-  INVOKES(V, Method, kVarDiff, "")                                             \
+  INVOKES_DO(V, , "")                                                          \
+  V(Allocate,             false,    "I",  5, kVarDiff, "allocate %d")          \
+  V(AllocateImmutable,    false,    "I",  5, kVarDiff, "allocateim %d")        \
+  V(LoadConst,            false,    "I",  5,        1, "load const %d")        \
                                                                                \
   V(InvokeNoSuchMethod,    true, "I", 5, kVarDiff, "invoke no such method %d") \
   V(InvokeTestNoSuchMethod,  true, "I", 5, 0, "invoke test no such method %d") \
-                                                                               \
-  V(InvokeStatic,          true,    "I",  5, kVarDiff, "invoke static %d")     \
-  V(InvokeStaticUnfold,    true,    "I",  5, kVarDiff, "invoke static @%d")    \
-  V(InvokeFactory,         true,    "I",  5, kVarDiff, "invoke factory %d")    \
-  V(InvokeFactoryUnfold,   true,    "I",  5, kVarDiff, "invoke factory @%d")   \
                                                                                \
   V(InvokeNative,          true,    "BB", 3,        1, "invoke native %d %d")  \
   V(InvokeNativeYield,     true,    "BB", 3,   1, "invoke native yield %d %d") \
                                                                                \
   V(InvokeSelector,        true,   "I",   5, kVarDiff, "invoke selector")      \
-                                                                               \
-  INVOKES(V, Test, 0, "test ")                                                 \
-                                                                               \
-  INVOKES(V, Eq, -1, "eq ")                                                    \
-  INVOKES(V, Lt, -1, "lt ")                                                    \
-  INVOKES(V, Le, -1, "le ")                                                    \
-  INVOKES(V, Gt, -1, "gt ")                                                    \
-  INVOKES(V, Ge, -1, "ge ")                                                    \
-                                                                               \
-  INVOKES(V, Add, -1, "add ")                                                  \
-  INVOKES(V, Sub, -1, "sub ")                                                  \
-  INVOKES(V, Mod, -1, "mod ")                                                  \
-  INVOKES(V, Mul, -1, "mul ")                                                  \
-  INVOKES(V, TruncDiv, -1, "trunc div ")                                       \
-                                                                               \
-  INVOKES(V, BitNot,  0, "bit not ")                                           \
-  INVOKES(V, BitAnd, -1, "bit and ")                                           \
-  INVOKES(V, BitOr,  -1, "bit or ")                                            \
-  INVOKES(V, BitXor, -1, "bit xor ")                                           \
-  INVOKES(V, BitShr, -1, "bit shr ")                                           \
-  INVOKES(V, BitShl, -1, "bit shl ")                                           \
                                                                                \
   V(Pop,                   false,   "",   1,       -1, "pop")                  \
   V(Return,                true,    "BB", 3,       -1, "return %d %d")         \
@@ -104,10 +103,6 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(PopAndBranchWide,      true,    "BI", 6,        0, "pop %d and branch +%d")\
   V(PopAndBranchBackWide,  true,    "BI", 6,        0, "pop %d and branch -%d")\
                                                                                \
-  V(Allocate,             false,    "I",  5, kVarDiff, "allocate %d")          \
-  V(AllocateUnfold,       false,    "I",  5, kVarDiff, "allocate @%d")         \
-  V(AllocateImmutable,    false,    "I",  5, kVarDiff, "allocateim %d")        \
-  V(AllocateImmutableUnfold, false, "I",  5, kVarDiff, "allocateim @%d")       \
   V(AllocateBoxed,        false,    "",   1,        0, "allocate boxed")       \
                                                                                \
   V(Negate,               false,    "",   1,        0, "negate")               \
@@ -129,6 +124,11 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
                                                                                \
   V(FrameSize,            false,    "B",  2, kVarDiff, "frame size %d")        \
                                                                                \
+  INVOKES_DO(V, Unfold, "unfold ")                                             \
+  V(AllocateUnfold,       false,    "I",  5, kVarDiff, "allocate @%d")         \
+  V(AllocateImmutableUnfold, false, "I",  5, kVarDiff, "allocateim @%d")       \
+  V(LoadConstUnfold,      false,    "I",  5,        1, "load const @%d")       \
+                                                                               \
   V(MethodEnd,            false,    "I",  5,        0, "method end %d")        \
 
 #define BYTECODE_OPCODE(name, branching, format, length, stack_diff, print) \
@@ -147,15 +147,10 @@ class Bytecode {
  public:
   static const int kNumBytecodes = kMethodEnd + 1;
   static const int kGuaranteedFrameSize = 32;
+  static const int kUnfoldOffset = kInvokeMethodUnfold - kInvokeMethod;
 
-  class Writer {
-   public:
-    virtual ~Writer() {}
-    virtual void Write(const char* format, ...) = 0;
-  };
-
-  // If writer isn't given, the bytecode is printed on stdout.
-  static int Print(uint8* bcp, Writer* writer = NULL);
+  // Print bytecodes on stdout.
+  static int Print(uint8* bcp);
 
   // Get the size of the opcode.
   static int Size(Opcode opcode);
@@ -171,11 +166,11 @@ class Bytecode {
   static const char* BytecodeFormat(Opcode opcode);
 
   // Check if this byte code is an invoke variant.
-  static bool IsInvoke(Opcode opcode);
+  static bool IsInvokeVariant(Opcode opcode);
 
   // Check for invoke variants.
-  static bool IsInvokeNormal(Opcode opcode);
-  static bool IsInvokeVtable(Opcode opcode);
+  static bool IsInvokeUnfold(Opcode opcode);
+  static bool IsInvoke(Opcode opcode);
 
   // Compute the previous bytecode. Takes time linear in the number of
   // bytecodes in the method.

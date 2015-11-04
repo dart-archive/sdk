@@ -68,7 +68,7 @@ class Session;
   V(Array, constants, Constants)                                \
   V(Array, static_methods, StaticMethods)                       \
   V(Array, static_fields, StaticFields)                         \
-  V(Array, vtable, VTable)                                      \
+  V(Array, dispatch_table, DispatchTable)                       \
 
 class ProgramState {
  public:
@@ -124,8 +124,8 @@ class Program {
     static_fields_ = static_fields;
   }
 
-  void set_vtable(Array* vtable) {
-    vtable_ = vtable;
+  void set_dispatch_table(Array* dispatch_table) {
+    dispatch_table_ = dispatch_table;
   }
 
   Scheduler* scheduler() const { return scheduler_; }
@@ -205,9 +205,9 @@ class Program {
   void IterateRoots(PointerVisitor* visitor);
   void IterateRootsIgnoringSession(PointerVisitor* visitor);
 
-  // V-table support.
-  void ClearVTableTableIntrinsics();
-  void SetupVTableIntrinsics(
+  // Dispatch table support.
+  void ClearDispatchTableIntrinsics();
+  void SetupDispatchTableIntrinsics(
       IntrinsicsTable *table = IntrinsicsTable::GetDefault());
 
   // Root objects.
@@ -235,7 +235,7 @@ class Program {
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
-  Object** last_root_address() { return bit_cast<Object**>(&vtable_); }
+  Object** last_root_address() { return bit_cast<Object**>(&dispatch_table_); }
 
   void ValidateGlobalHeapsAreConsistent();
 

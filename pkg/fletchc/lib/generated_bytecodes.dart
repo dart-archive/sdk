@@ -17,8 +17,6 @@ enum Opcode {
   LoadStaticInit,
   LoadField,
   LoadFieldWide,
-  LoadConst,
-  LoadConstUnfold,
   StoreLocal,
   StoreBoxed,
   StoreStatic,
@@ -32,50 +30,33 @@ enum Opcode {
   LoadLiteral,
   LoadLiteralWide,
   InvokeMethod,
-  InvokeMethodVtable,
+  InvokeTest,
+  InvokeEq,
+  InvokeLt,
+  InvokeLe,
+  InvokeGt,
+  InvokeGe,
+  InvokeAdd,
+  InvokeSub,
+  InvokeMod,
+  InvokeMul,
+  InvokeTruncDiv,
+  InvokeBitNot,
+  InvokeBitAnd,
+  InvokeBitOr,
+  InvokeBitXor,
+  InvokeBitShr,
+  InvokeBitShl,
+  InvokeStatic,
+  InvokeFactory,
+  Allocate,
+  AllocateImmutable,
+  LoadConst,
   InvokeNoSuchMethod,
   InvokeTestNoSuchMethod,
-  InvokeStatic,
-  InvokeStaticUnfold,
-  InvokeFactory,
-  InvokeFactoryUnfold,
   InvokeNative,
   InvokeNativeYield,
   InvokeSelector,
-  InvokeTest,
-  InvokeTestVtable,
-  InvokeEq,
-  InvokeEqVtable,
-  InvokeLt,
-  InvokeLtVtable,
-  InvokeLe,
-  InvokeLeVtable,
-  InvokeGt,
-  InvokeGtVtable,
-  InvokeGe,
-  InvokeGeVtable,
-  InvokeAdd,
-  InvokeAddVtable,
-  InvokeSub,
-  InvokeSubVtable,
-  InvokeMod,
-  InvokeModVtable,
-  InvokeMul,
-  InvokeMulVtable,
-  InvokeTruncDiv,
-  InvokeTruncDivVtable,
-  InvokeBitNot,
-  InvokeBitNotVtable,
-  InvokeBitAnd,
-  InvokeBitAndVtable,
-  InvokeBitOr,
-  InvokeBitOrVtable,
-  InvokeBitXor,
-  InvokeBitXorVtable,
-  InvokeBitShr,
-  InvokeBitShrVtable,
-  InvokeBitShl,
-  InvokeBitShlVtable,
   Pop,
   Return,
   ReturnWide,
@@ -91,10 +72,6 @@ enum Opcode {
   BranchBackIfFalseWide,
   PopAndBranchWide,
   PopAndBranchBackWide,
-  Allocate,
-  AllocateUnfold,
-  AllocateImmutable,
-  AllocateImmutableUnfold,
   AllocateBoxed,
   Negate,
   StackOverflowCheck,
@@ -108,6 +85,29 @@ enum Opcode {
   EnterNoSuchMethod,
   ExitNoSuchMethod,
   FrameSize,
+  InvokeMethodUnfold,
+  InvokeTestUnfold,
+  InvokeEqUnfold,
+  InvokeLtUnfold,
+  InvokeLeUnfold,
+  InvokeGtUnfold,
+  InvokeGeUnfold,
+  InvokeAddUnfold,
+  InvokeSubUnfold,
+  InvokeModUnfold,
+  InvokeMulUnfold,
+  InvokeTruncDivUnfold,
+  InvokeBitNotUnfold,
+  InvokeBitAndUnfold,
+  InvokeBitOrUnfold,
+  InvokeBitXorUnfold,
+  InvokeBitShrUnfold,
+  InvokeBitShlUnfold,
+  InvokeStaticUnfold,
+  InvokeFactoryUnfold,
+  AllocateUnfold,
+  AllocateImmutableUnfold,
+  LoadConstUnfold,
   MethodEnd,
 }
 
@@ -475,90 +475,6 @@ class LoadFieldWide extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     LoadFieldWide rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class LoadConst extends Bytecode {
-  final int uint32Argument0;
-  const LoadConst(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.LoadConst;
-
-  String get name => 'LoadConst';
-
-  bool get isBranching => false;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => 1;
-
-  String get formatString => 'load const %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'load const ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    LoadConst rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class LoadConstUnfold extends Bytecode {
-  final int uint32Argument0;
-  const LoadConstUnfold(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.LoadConstUnfold;
-
-  String get name => 'LoadConstUnfold';
-
-  bool get isBranching => false;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => 1;
-
-  String get formatString => 'load const @%d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'load const @${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    LoadConstUnfold rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -1016,7 +932,7 @@ class InvokeMethod extends Bytecode {
 
   int get stackPointerDifference => VAR_DIFF;
 
-  String get formatString => 'invoke %d';
+  String get formatString => 'invoke method %d';
 
   void addTo(Sink<List<int>> sink) {
     new BytecodeBuffer()
@@ -1025,7 +941,7 @@ class InvokeMethod extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke ${uint32Argument0}';
+  String toString() => 'invoke method ${uint32Argument0}';
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
@@ -1041,14 +957,728 @@ class InvokeMethod extends Bytecode {
   }
 }
 
-class InvokeMethodVtable extends Bytecode {
+class InvokeTest extends Bytecode {
   final int uint32Argument0;
-  const InvokeMethodVtable(this.uint32Argument0)
+  const InvokeTest(this.uint32Argument0)
       : super();
 
-  Opcode get opcode => Opcode.InvokeMethodVtable;
+  Opcode get opcode => Opcode.InvokeTest;
 
-  String get name => 'InvokeMethodVtable';
+  String get name => 'InvokeTest';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke test %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke test ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTest rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeEq extends Bytecode {
+  final int uint32Argument0;
+  const InvokeEq(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeEq;
+
+  String get name => 'InvokeEq';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke eq %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke eq ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeEq rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeLt extends Bytecode {
+  final int uint32Argument0;
+  const InvokeLt(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLt;
+
+  String get name => 'InvokeLt';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke lt %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke lt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLt rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeLe extends Bytecode {
+  final int uint32Argument0;
+  const InvokeLe(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLe;
+
+  String get name => 'InvokeLe';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke le %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke le ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLe rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeGt extends Bytecode {
+  final int uint32Argument0;
+  const InvokeGt(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeGt;
+
+  String get name => 'InvokeGt';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke gt %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke gt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGt rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeGe extends Bytecode {
+  final int uint32Argument0;
+  const InvokeGe(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeGe;
+
+  String get name => 'InvokeGe';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke ge %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke ge ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGe rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeAdd extends Bytecode {
+  final int uint32Argument0;
+  const InvokeAdd(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeAdd;
+
+  String get name => 'InvokeAdd';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke add %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke add ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeAdd rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeSub extends Bytecode {
+  final int uint32Argument0;
+  const InvokeSub(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeSub;
+
+  String get name => 'InvokeSub';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke sub %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke sub ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeSub rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeMod extends Bytecode {
+  final int uint32Argument0;
+  const InvokeMod(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeMod;
+
+  String get name => 'InvokeMod';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke mod %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke mod ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMod rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeMul extends Bytecode {
+  final int uint32Argument0;
+  const InvokeMul(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeMul;
+
+  String get name => 'InvokeMul';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke mul %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke mul ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMul rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeTruncDiv extends Bytecode {
+  final int uint32Argument0;
+  const InvokeTruncDiv(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeTruncDiv;
+
+  String get name => 'InvokeTruncDiv';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke trunc div %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke trunc div ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTruncDiv rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitNot extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitNot(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitNot;
+
+  String get name => 'InvokeBitNot';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke bit not %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke bit not ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitNot rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitAnd extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitAnd(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitAnd;
+
+  String get name => 'InvokeBitAnd';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke bit and %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke bit and ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitAnd rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitOr extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitOr(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitOr;
+
+  String get name => 'InvokeBitOr';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke bit or %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke bit or ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitOr rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitXor extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitXor(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitXor;
+
+  String get name => 'InvokeBitXor';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke bit xor %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke bit xor ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitXor rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitShr extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitShr(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitShr;
+
+  String get name => 'InvokeBitShr';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke bit shr %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke bit shr ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShr rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitShl extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitShl(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitShl;
+
+  String get name => 'InvokeBitShl';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke bit shl %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke bit shl ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShl rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeStatic extends Bytecode {
+  final int uint32Argument0;
+  const InvokeStatic(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeStatic;
+
+  String get name => 'InvokeStatic';
 
   bool get isBranching => true;
 
@@ -1058,7 +1688,7 @@ class InvokeMethodVtable extends Bytecode {
 
   int get stackPointerDifference => VAR_DIFF;
 
-  String get formatString => 'invoke vtable %d';
+  String get formatString => 'invoke static %d';
 
   void addTo(Sink<List<int>> sink) {
     new BytecodeBuffer()
@@ -1067,11 +1697,179 @@ class InvokeMethodVtable extends Bytecode {
         ..sendOn(sink);
   }
 
-  String toString() => 'invoke vtable ${uint32Argument0}';
+  String toString() => 'invoke static ${uint32Argument0}';
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    InvokeMethodVtable rhs = other;
+    InvokeStatic rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeFactory extends Bytecode {
+  final int uint32Argument0;
+  const InvokeFactory(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeFactory;
+
+  String get name => 'InvokeFactory';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke factory %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke factory ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeFactory rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class Allocate extends Bytecode {
+  final int uint32Argument0;
+  const Allocate(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.Allocate;
+
+  String get name => 'Allocate';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'allocate %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'allocate ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    Allocate rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class AllocateImmutable extends Bytecode {
+  final int uint32Argument0;
+  const AllocateImmutable(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.AllocateImmutable;
+
+  String get name => 'AllocateImmutable';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'allocateim %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'allocateim ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    AllocateImmutable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class LoadConst extends Bytecode {
+  final int uint32Argument0;
+  const LoadConst(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.LoadConst;
+
+  String get name => 'LoadConst';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'load const %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load const ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadConst rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -1156,174 +1954,6 @@ class InvokeTestNoSuchMethod extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeTestNoSuchMethod rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeStatic extends Bytecode {
-  final int uint32Argument0;
-  const InvokeStatic(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeStatic;
-
-  String get name => 'InvokeStatic';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'invoke static %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke static ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeStatic rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeStaticUnfold extends Bytecode {
-  final int uint32Argument0;
-  const InvokeStaticUnfold(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeStaticUnfold;
-
-  String get name => 'InvokeStaticUnfold';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'invoke static @%d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke static @${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeStaticUnfold rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeFactory extends Bytecode {
-  final int uint32Argument0;
-  const InvokeFactory(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeFactory;
-
-  String get name => 'InvokeFactory';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'invoke factory %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke factory ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeFactory rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeFactoryUnfold extends Bytecode {
-  final int uint32Argument0;
-  const InvokeFactoryUnfold(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeFactoryUnfold;
-
-  String get name => 'InvokeFactoryUnfold';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'invoke factory @%d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke factory @${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeFactoryUnfold rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -1458,1434 +2088,6 @@ class InvokeSelector extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeSelector rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeTest extends Bytecode {
-  final int uint32Argument0;
-  const InvokeTest(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeTest;
-
-  String get name => 'InvokeTest';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => 0;
-
-  String get formatString => 'invoke test %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke test ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeTest rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeTestVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeTestVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeTestVtable;
-
-  String get name => 'InvokeTestVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => 0;
-
-  String get formatString => 'invoke vtable test %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable test ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeTestVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeEq extends Bytecode {
-  final int uint32Argument0;
-  const InvokeEq(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeEq;
-
-  String get name => 'InvokeEq';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke eq %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke eq ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeEq rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeEqVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeEqVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeEqVtable;
-
-  String get name => 'InvokeEqVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable eq %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable eq ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeEqVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeLt extends Bytecode {
-  final int uint32Argument0;
-  const InvokeLt(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeLt;
-
-  String get name => 'InvokeLt';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke lt %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke lt ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeLt rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeLtVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeLtVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeLtVtable;
-
-  String get name => 'InvokeLtVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable lt %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable lt ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeLtVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeLe extends Bytecode {
-  final int uint32Argument0;
-  const InvokeLe(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeLe;
-
-  String get name => 'InvokeLe';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke le %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke le ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeLe rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeLeVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeLeVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeLeVtable;
-
-  String get name => 'InvokeLeVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable le %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable le ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeLeVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeGt extends Bytecode {
-  final int uint32Argument0;
-  const InvokeGt(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeGt;
-
-  String get name => 'InvokeGt';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke gt %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke gt ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeGt rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeGtVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeGtVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeGtVtable;
-
-  String get name => 'InvokeGtVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable gt %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable gt ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeGtVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeGe extends Bytecode {
-  final int uint32Argument0;
-  const InvokeGe(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeGe;
-
-  String get name => 'InvokeGe';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke ge %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke ge ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeGe rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeGeVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeGeVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeGeVtable;
-
-  String get name => 'InvokeGeVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable ge %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable ge ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeGeVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeAdd extends Bytecode {
-  final int uint32Argument0;
-  const InvokeAdd(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeAdd;
-
-  String get name => 'InvokeAdd';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke add %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke add ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeAdd rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeAddVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeAddVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeAddVtable;
-
-  String get name => 'InvokeAddVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable add %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable add ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeAddVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeSub extends Bytecode {
-  final int uint32Argument0;
-  const InvokeSub(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeSub;
-
-  String get name => 'InvokeSub';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke sub %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke sub ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeSub rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeSubVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeSubVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeSubVtable;
-
-  String get name => 'InvokeSubVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable sub %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable sub ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeSubVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeMod extends Bytecode {
-  final int uint32Argument0;
-  const InvokeMod(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeMod;
-
-  String get name => 'InvokeMod';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke mod %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke mod ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeMod rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeModVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeModVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeModVtable;
-
-  String get name => 'InvokeModVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable mod %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable mod ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeModVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeMul extends Bytecode {
-  final int uint32Argument0;
-  const InvokeMul(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeMul;
-
-  String get name => 'InvokeMul';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke mul %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke mul ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeMul rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeMulVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeMulVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeMulVtable;
-
-  String get name => 'InvokeMulVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable mul %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable mul ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeMulVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeTruncDiv extends Bytecode {
-  final int uint32Argument0;
-  const InvokeTruncDiv(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeTruncDiv;
-
-  String get name => 'InvokeTruncDiv';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke trunc div %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke trunc div ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeTruncDiv rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeTruncDivVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeTruncDivVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeTruncDivVtable;
-
-  String get name => 'InvokeTruncDivVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable trunc div %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable trunc div ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeTruncDivVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitNot extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitNot(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitNot;
-
-  String get name => 'InvokeBitNot';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => 0;
-
-  String get formatString => 'invoke bit not %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke bit not ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitNot rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitNotVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitNotVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitNotVtable;
-
-  String get name => 'InvokeBitNotVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => 0;
-
-  String get formatString => 'invoke vtable bit not %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable bit not ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitNotVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitAnd extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitAnd(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitAnd;
-
-  String get name => 'InvokeBitAnd';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke bit and %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke bit and ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitAnd rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitAndVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitAndVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitAndVtable;
-
-  String get name => 'InvokeBitAndVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable bit and %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable bit and ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitAndVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitOr extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitOr(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitOr;
-
-  String get name => 'InvokeBitOr';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke bit or %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke bit or ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitOr rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitOrVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitOrVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitOrVtable;
-
-  String get name => 'InvokeBitOrVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable bit or %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable bit or ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitOrVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitXor extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitXor(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitXor;
-
-  String get name => 'InvokeBitXor';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke bit xor %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke bit xor ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitXor rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitXorVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitXorVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitXorVtable;
-
-  String get name => 'InvokeBitXorVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable bit xor %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable bit xor ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitXorVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitShr extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitShr(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitShr;
-
-  String get name => 'InvokeBitShr';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke bit shr %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke bit shr ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitShr rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitShrVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitShrVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitShrVtable;
-
-  String get name => 'InvokeBitShrVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable bit shr %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable bit shr ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitShrVtable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitShl extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitShl(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitShl;
-
-  String get name => 'InvokeBitShl';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke bit shl %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke bit shl ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitShl rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class InvokeBitShlVtable extends Bytecode {
-  final int uint32Argument0;
-  const InvokeBitShlVtable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeBitShlVtable;
-
-  String get name => 'InvokeBitShlVtable';
-
-  bool get isBranching => true;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => -1;
-
-  String get formatString => 'invoke vtable bit shl %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke vtable bit shl ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeBitShlVtable rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3532,174 +2734,6 @@ class PopAndBranchBackWide extends Bytecode {
   }
 }
 
-class Allocate extends Bytecode {
-  final int uint32Argument0;
-  const Allocate(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.Allocate;
-
-  String get name => 'Allocate';
-
-  bool get isBranching => false;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'allocate %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'allocate ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    Allocate rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class AllocateUnfold extends Bytecode {
-  final int uint32Argument0;
-  const AllocateUnfold(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.AllocateUnfold;
-
-  String get name => 'AllocateUnfold';
-
-  bool get isBranching => false;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'allocate @%d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'allocate @${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    AllocateUnfold rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class AllocateImmutable extends Bytecode {
-  final int uint32Argument0;
-  const AllocateImmutable(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.AllocateImmutable;
-
-  String get name => 'AllocateImmutable';
-
-  bool get isBranching => false;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'allocateim %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'allocateim ${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    AllocateImmutable rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
-class AllocateImmutableUnfold extends Bytecode {
-  final int uint32Argument0;
-  const AllocateImmutableUnfold(this.uint32Argument0)
-      : super();
-
-  Opcode get opcode => Opcode.AllocateImmutableUnfold;
-
-  String get name => 'AllocateImmutableUnfold';
-
-  bool get isBranching => false;
-
-  String get format => 'I';
-
-  int get size => 5;
-
-  int get stackPointerDifference => VAR_DIFF;
-
-  String get formatString => 'allocateim @%d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint32(uint32Argument0)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'allocateim @${uint32Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    AllocateImmutableUnfold rhs = other;
-    if (uint32Argument0 != rhs.uint32Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint32Argument0;
-    return value;
-  }
-}
-
 class AllocateBoxed extends Bytecode {
   const AllocateBoxed()
       : super();
@@ -4111,6 +3145,972 @@ class FrameSize extends Bytecode {
   int get hashCode {
     int value = super.hashCode;
     value += uint8Argument0;
+    return value;
+  }
+}
+
+class InvokeMethodUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeMethodUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeMethodUnfold;
+
+  String get name => 'InvokeMethodUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke unfold method %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold method ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMethodUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeTestUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeTestUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeTestUnfold;
+
+  String get name => 'InvokeTestUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke unfold test %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold test ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTestUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeEqUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeEqUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeEqUnfold;
+
+  String get name => 'InvokeEqUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold eq %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold eq ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeEqUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeLtUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeLtUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLtUnfold;
+
+  String get name => 'InvokeLtUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold lt %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold lt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLtUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeLeUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeLeUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLeUnfold;
+
+  String get name => 'InvokeLeUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold le %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold le ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLeUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeGtUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeGtUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeGtUnfold;
+
+  String get name => 'InvokeGtUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold gt %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold gt ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGtUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeGeUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeGeUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeGeUnfold;
+
+  String get name => 'InvokeGeUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold ge %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold ge ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeGeUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeAddUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeAddUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeAddUnfold;
+
+  String get name => 'InvokeAddUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold add %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold add ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeAddUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeSubUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeSubUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeSubUnfold;
+
+  String get name => 'InvokeSubUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold sub %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold sub ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeSubUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeModUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeModUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeModUnfold;
+
+  String get name => 'InvokeModUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold mod %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold mod ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeModUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeMulUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeMulUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeMulUnfold;
+
+  String get name => 'InvokeMulUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold mul %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold mul ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeMulUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeTruncDivUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeTruncDivUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeTruncDivUnfold;
+
+  String get name => 'InvokeTruncDivUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold trunc div %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold trunc div ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeTruncDivUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitNotUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitNotUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitNotUnfold;
+
+  String get name => 'InvokeBitNotUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 0;
+
+  String get formatString => 'invoke unfold bit not %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold bit not ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitNotUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitAndUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitAndUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitAndUnfold;
+
+  String get name => 'InvokeBitAndUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold bit and %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold bit and ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitAndUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitOrUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitOrUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitOrUnfold;
+
+  String get name => 'InvokeBitOrUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold bit or %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold bit or ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitOrUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitXorUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitXorUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitXorUnfold;
+
+  String get name => 'InvokeBitXorUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold bit xor %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold bit xor ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitXorUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitShrUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitShrUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitShrUnfold;
+
+  String get name => 'InvokeBitShrUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold bit shr %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold bit shr ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShrUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeBitShlUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeBitShlUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeBitShlUnfold;
+
+  String get name => 'InvokeBitShlUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => -1;
+
+  String get formatString => 'invoke unfold bit shl %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold bit shl ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeBitShlUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeStaticUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeStaticUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeStaticUnfold;
+
+  String get name => 'InvokeStaticUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke unfold static %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold static ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeStaticUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeFactoryUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeFactoryUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeFactoryUnfold;
+
+  String get name => 'InvokeFactoryUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke unfold factory %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold factory ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeFactoryUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class AllocateUnfold extends Bytecode {
+  final int uint32Argument0;
+  const AllocateUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.AllocateUnfold;
+
+  String get name => 'AllocateUnfold';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'allocate @%d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'allocate @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    AllocateUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class AllocateImmutableUnfold extends Bytecode {
+  final int uint32Argument0;
+  const AllocateImmutableUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.AllocateImmutableUnfold;
+
+  String get name => 'AllocateImmutableUnfold';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'allocateim @%d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'allocateim @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    AllocateImmutableUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class LoadConstUnfold extends Bytecode {
+  final int uint32Argument0;
+  const LoadConstUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.LoadConstUnfold;
+
+  String get name => 'LoadConstUnfold';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'load const @%d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load const @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadConstUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
     return value;
   }
 }
