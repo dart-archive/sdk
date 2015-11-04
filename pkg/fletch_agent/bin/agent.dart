@@ -12,6 +12,7 @@ import 'dart:typed_data';
 
 import 'package:file/file.dart';
 import 'package:fletch/fletch.dart' as fletch;
+import 'package:os/os.dart' show sys;
 import 'package:socket/socket.dart';
 
 import '../lib/messages.dart';
@@ -250,7 +251,7 @@ class CommandHandler {
       // TODO(wibling): could extend the result with caught error string.
       _context.logger.warn('Failed to start vm with error: $e');
       if (vmPid > 0) {
-        // Kill the vm and remove any pid and port files.
+        // Kill the vm.
         _kill.icall$2(vmPid, SIGTERM);
       }
     } finally {
@@ -351,10 +352,14 @@ class CommandHandler {
     } else {
       int pid = readUint32(pidBytes, 0);
       int signal = readUint32(pidBytes, 4);
-      // TODO(wibling): Hack to make ctrl-c work for stopping spawed vms work
-      // on Raspbian wheezy. For some unknown reason SIGINT doesn't work so we
-      // map SIGINT to SIGTERM as a workaround.
-      int err = _kill.icall$2(pid, signal == 2 ? 15 : signal);
+      // Hack to make ctrl-c work for stopping spawned vms work on Raspbian
+      // wheezy. For some reason SIGINT doesn't work so we map it to SIGTERM as
+      // a workaround.
+      if (signal == SIGINT && sys.info().release.startsWith('3.18')) {
+        _context.logger.info('Remapping SIGINT to SIGTERM on Raspbian wheezy');
+        signal = SIGTERM;
+      }
+      int err = _kill.icall$2(pid, signal);
       if (err != 0) {
         reply = new SignalVmReply(_requestHeader.id, ReplyHeader.UNKNOWN_VM_ID);
         _context.logger.warn('Failed to send signal $signal to  pid $pid with '
