@@ -78,3 +78,15 @@ async/slow_consumer_test: Crash
 async/slow_consumer2_test: Crash
 async/slow_consumer3_test: Crash
 async/catch_errors12_test: RuntimeError
+
+[ $arch == x64 && $asan && $clang ]
+async/catch_errors28_test: Crash # Issue 280
+async/zone_empty_description2_test: Crash # Issue 280
+async/catch_errors18_test: Crash # Issue 280
+async/run_zoned8_test: Crash # Issue 280
+async/run_zoned7_test: Crash # Issue 280
+async/catch_errors14_test: Crash # Issue 280
+
+[ $arch == xarm ]
+async/timer_regress22626_test: RuntimeError # Issue 279
+async/catch_errors12_test: RuntimeError # Issue 279
