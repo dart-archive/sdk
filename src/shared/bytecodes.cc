@@ -46,7 +46,7 @@ uint8 Bytecode::Size(Opcode opcode) {
   BYTECODES_DO(EACH)
 #undef EACH
   };
-  ASSERT(opcode >= 0 && opcode < kNumBytecodes);
+  ASSERT(opcode < kNumBytecodes);
   return sizes[opcode];
 }
 
@@ -59,7 +59,7 @@ const char* Bytecode::PrintFormat(Opcode opcode) {
   BYTECODES_DO(EACH)
 #undef EACH
   };
-  ASSERT(opcode >= 0 && opcode < kNumBytecodes);
+  ASSERT(opcode < kNumBytecodes);
   return print_formats[opcode];
 }
 
@@ -70,7 +70,7 @@ const char* Bytecode::BytecodeFormat(Opcode opcode) {
   BYTECODES_DO(EACH)
 #undef EACH
   };
-  ASSERT(opcode >= 0 && opcode < kNumBytecodes);
+  ASSERT(opcode < kNumBytecodes);
   return bytecode_formats[opcode];
 }
 
@@ -81,7 +81,7 @@ int8 Bytecode::StackDiff(Opcode opcode) {
   BYTECODES_DO(EACH)
 #undef EACH
   };
-  ASSERT(opcode >= 0 && opcode < kNumBytecodes);
+  ASSERT(opcode < kNumBytecodes);
   return stack_diffs[opcode];
 }
 
