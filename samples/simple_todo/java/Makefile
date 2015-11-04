@@ -49,7 +49,7 @@ fletch/simple_todo.jar: ../simple_todo.idl
 	rm -rf $(TEMP_DIR)
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o \
-	jni/todo_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
+	jni/simple_todo_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
 	g++ ${CPPFLAGS} -shared -o $@ $^
 
 jni/libfletch.jnilib: jni/fletch_api_wrapper.o \

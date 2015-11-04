@@ -8,6 +8,7 @@ import 'dart:core' hide Type;
 import 'dart:io';
 
 import 'package:path/path.dart' show
+    basenameWithoutExtension,
     join,
     relative;
 import 'package:servicec/util.dart' as strings;
@@ -428,8 +429,8 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
   if (unit.services.length > 1) {
     print('Java plugin: multiple services in one file is not supported.');
   }
-  String serviceName = unit.services.first.name;
-  String file = '${strings.underscore(serviceName)}_wrapper';
+  String projectName = basenameWithoutExtension(path);
+  String file = '${projectName}_wrapper';
   writeToFile(directory, file, contents, extension: 'cc');
 }
 
@@ -1356,8 +1357,8 @@ void _generateServiceJniMakeFiles(String path,
   if (unit.services.length > 1) {
     print('Java plugin: multiple services in one file is not supported.');
   }
-  String serviceName = unit.services.first.name;
-  String file = '${strings.underscore(serviceName)}_wrapper';
+  String projectName = basenameWithoutExtension(path);
+  String file = '${projectName}_wrapper';
 
   buffer.writeln('\t${file}.cc');
 
