@@ -83,6 +83,11 @@ class BytecodeAssembler {
   }
 
   void loadLocal(int offset) {
+    assert(offset < stackSize);
+    loadLocalHelper(offset);
+  }
+
+  void loadLocalHelper(int offset) {
     assert(offset >= 0);
     Bytecode bytecode;
     switch (offset) {
@@ -107,6 +112,11 @@ class BytecodeAssembler {
   }
 
   void loadBoxed(int offset) {
+    assert(offset < stackSize);
+    loadBoxedHelper(offset);
+  }
+
+  void loadBoxedHelper(int offset) {
     assert(offset >= 0 && offset <= 255);
     internalAdd(new LoadBoxed(offset));
   }
@@ -137,7 +147,13 @@ class BytecodeAssembler {
   void loadParameter(int parameter) {
     assert(parameter >= 0 && parameter < functionArity);
     int offset = stackSize + functionArity - parameter;
-    loadLocal(offset);
+    loadLocalHelper(offset);
+  }
+
+  void loadBoxedParameter(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    int offset = stackSize + functionArity - parameter;
+    loadBoxedHelper(offset);
   }
 
   void loadStatic(int index) {
@@ -181,11 +197,21 @@ class BytecodeAssembler {
   }
 
   void storeLocal(int offset) {
+    assert(offset < stackSize);
+    storeLocalHelper(offset);
+  }
+
+  void storeLocalHelper(int offset) {
     assert(offset >= 0 && offset <= 255);
     internalAdd(new StoreLocal(offset));
   }
 
   void storeBoxed(int offset) {
+    assert(offset < stackSize);
+    storeBoxedHelper(offset);
+  }
+
+  void storeBoxedHelper(int offset) {
     assert(offset >= 0 && offset <= 255);
     internalAdd(new StoreBoxed(offset));
   }
@@ -201,6 +227,18 @@ class BytecodeAssembler {
   void storeBoxedSlot(int slot) {
     int offset = stackSize - slot - 1;
     storeBoxed(offset);
+  }
+
+  void storeParameter(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    int offset = stackSize + functionArity - parameter;
+    storeLocalHelper(offset);
+  }
+
+  void storeBoxedParameter(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    int offset = stackSize + functionArity - parameter;
+    storeBoxedHelper(offset);
   }
 
   void storeStatic(int index) {

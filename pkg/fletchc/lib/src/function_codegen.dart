@@ -50,10 +50,8 @@ class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
 
   void compile() {
     if (checkCompileError(function)) {
-      // TODO(ajohnsen): We can simply emit a MethodEnd here, but for now we
-      // compile the method to stress our CodegenVisitor with erroneous
-      // elements.
-      assembler.pop();
+      assembler.methodEnd();
+      return;
     }
 
     ClassElement enclosing = function.enclosingClass;
@@ -76,21 +74,22 @@ class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
 
     if (hasAssignmentSemantics) {
       setterResultSlot = assembler.stackSize;
-      // The result is always the last argument (-1 for return address, -1 for
-      // last parameter).
-      assembler.loadSlot(-2);
+      // The result is always the last argument.
+      assembler.loadParameter(functionBuilder.arity - 1);
     }
 
-    int i = 0;
+    // Skip 'this' if present.
+    int parameterIndex = functionBuilder.arity - parameterCount;
+
     functionSignature.orderedForEachParameter((ParameterElement parameter) {
-      int slot = i++ - parameterCount - 1;
       // For constructors, the argument is passed as boxed (from the initializer
       // inlining).
       LocalValue value = createLocalValueForParameter(
           parameter,
-          slot,
-          isCapturedArgumentsBoxed: element.isGenerativeConstructor);
+          parameterIndex,
+          isCapturedValueBoxed: element.isGenerativeConstructor);
       pushVariableDeclaration(value);
+      parameterIndex++;
     });
 
     ClosureInfo info = closureEnvironment.closures[function];

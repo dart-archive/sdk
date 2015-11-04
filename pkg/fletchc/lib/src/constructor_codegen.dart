@@ -186,8 +186,15 @@ class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
     // Visit parameters and add them to scope. Note the scope is the scope of
     // locals, in VisitingCodegen.
     signature.orderedForEachParameter((ParameterElement parameter) {
-      int slot = firstParameterSlot + parameterIndex;
-      LocalValue value = createLocalValueForParameter(parameter, slot);
+      LocalValue value = firstParameterSlot < 0
+          ? createLocalValueForParameter(
+              parameter,
+              parameterIndex,
+              isCapturedValueBoxed: false)
+          : createLocalValueFor(
+              parameter,
+              slot: firstParameterSlot + parameterIndex,
+              isCapturedValueBoxed: false);
       scope[parameter] = value;
       if (parameter.isInitializingFormal) {
         // If it's a initializing formal, store the value into initial
@@ -330,7 +337,8 @@ class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
     if (node == null || node.body.asEmptyStatement() != null) return;
 
     int functionId = requireFunction(constructor.declaration).functionId;
-    int constructorId = functionBuilder.allocateConstantFromFunction(functionId);
+    int constructorId =
+        functionBuilder.allocateConstantFromFunction(functionId);
 
     FunctionSignature signature = constructor.functionSignature;
 
@@ -339,7 +347,7 @@ class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
     signature.orderedForEachParameter((FormalElement parameter) {
       // Boxed parameters are passed as boxed objects, not as the values
       // contained within like we do for ordinary invokes
-      assembler.loadSlot(scope[parameter].slot);
+      scope[parameter].loadRaw(assembler);
     });
 
     assembler

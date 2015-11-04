@@ -21,6 +21,10 @@ incremental/multiple_libraries: Fail
 # Received PushFromMap command which referes to a non-existent map entry
 incremental/same_tokens_variant: Fail
 
+# Update to existing class not correctly detected (we end up trying to modify a
+# new class -> should not happen).
+incremental/compile_time_error_hides_field: Fail
+
 # Incorrectly failing servicec tests
 servicec/bad_field_4: Fail
 servicec/bad_field_8: Fail

@@ -1068,8 +1068,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FunctionElement function,
       FunctionCodegen codegen) {
     codegen.assembler
-        ..loadLocal(2)
-        ..loadLocal(2)
+        ..loadParameter(0)
+        ..loadParameter(1)
         ..identical()
         ..ret()
         ..methodEnd();
@@ -1079,7 +1079,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FunctionElement function,
       FunctionCodegen codegen) {
     codegen.assembler
-        ..loadLocal(1)
+        ..loadParameter(0)
         ..processYield()
         ..ret()
         ..methodEnd();
