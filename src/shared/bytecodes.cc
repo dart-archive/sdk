@@ -11,7 +11,7 @@
 
 namespace fletch {
 
-int Bytecode::Print(uint8* bcp) {
+uint8 Bytecode::Print(uint8* bcp) {
   Opcode opcode = static_cast<Opcode>(*bcp);
   const char* bytecode_format = BytecodeFormat(opcode);
   const char* print_format = PrintFormat(opcode);
@@ -30,56 +30,59 @@ int Bytecode::Print(uint8* bcp) {
     Print::Out(print_format, bcp[1], Utils::ReadInt32(bcp + 2));
   } else if (strcmp(bytecode_format, "II") == 0) {
     Print::Out(print_format,
-                  Utils::ReadInt32(bcp + 1),
-                  Utils::ReadInt32(bcp + 5));
+               Utils::ReadInt32(bcp + 1),
+               Utils::ReadInt32(bcp + 5));
   } else {
     FATAL1("Unknown bytecode format %s\n", bytecode_format);
   }
   return Size(opcode);
 }
 
-int Bytecode::sizes_[kNumBytecodes] = {
-#define BYTECODE_SIZE(name, branching, format, size, stack_diff, print) size,
-  BYTECODES_DO(BYTECODE_SIZE)
-#undef BYTECODE_SIZE
-};
 
-int Bytecode::Size(Opcode opcode) {
-  ASSERT(opcode < kNumBytecodes);
-  return sizes_[opcode];
+uint8 Bytecode::Size(Opcode opcode) {
+  const uint8 sizes[kNumBytecodes] = {
+#define EACH(name, branching, format, size, stack_diff, print) \
+    size,
+  BYTECODES_DO(EACH)
+#undef EACH
+  };
+  ASSERT(opcode >= 0 && opcode < kNumBytecodes);
+  return sizes[opcode];
 }
 
 #define STR(string) #string
 
 const char* Bytecode::PrintFormat(Opcode opcode) {
   const char* print_formats[kNumBytecodes] = {
-#define BYTECODE_PRINT_FORMAT(name, branching, format, size, stack_diff, print)\
+#define EACH(name, branching, format, size, stack_diff, print) \
     print,
-  BYTECODES_DO(BYTECODE_PRINT_FORMAT)
-#undef BYTECODE_PRINT_FORMAT
+  BYTECODES_DO(EACH)
+#undef EACH
   };
+  ASSERT(opcode >= 0 && opcode < kNumBytecodes);
   return print_formats[opcode];
 }
 
 const char* Bytecode::BytecodeFormat(Opcode opcode) {
   const char* bytecode_formats[kNumBytecodes] = {
-#define BYTECODE_FORMAT(name, branching, format, size, stack_diff, print) \
+#define EACH(name, branching, format, size, stack_diff, print) \
     format,
-  BYTECODES_DO(BYTECODE_FORMAT)
-#undef BYTECODE_FORMAT
+  BYTECODES_DO(EACH)
+#undef EACH
   };
+  ASSERT(opcode >= 0 && opcode < kNumBytecodes);
   return bytecode_formats[opcode];
 }
 
-int Bytecode::stack_diffs_[kNumBytecodes] = {
-#define BYTECODE_STACK_DIFF(name, branching, format, size, stack_diff, print) \
+int8 Bytecode::StackDiff(Opcode opcode) {
+  const int8 stack_diffs[kNumBytecodes] = {
+#define EACH(name, branching, format, size, stack_diff, print) \
     stack_diff,
-  BYTECODES_DO(BYTECODE_STACK_DIFF)
-#undef BYTECODE_STACK_DIFF
-};
-
-int Bytecode::StackDiff(Opcode opcode) {
-  return stack_diffs_[opcode];
+  BYTECODES_DO(EACH)
+#undef EACH
+  };
+  ASSERT(opcode >= 0 && opcode < kNumBytecodes);
+  return stack_diffs[opcode];
 }
 
 bool Bytecode::IsInvokeVariant(Opcode opcode) {

@@ -9,7 +9,7 @@
 
 namespace fletch {
 
-const int kVarDiff = 0x7FFFFFFF;
+const int8 kVarDiff = 0x7f;
 const int kLoadLiteralWideLimit = 0x3fffffff;
 
 #define INVOKE(V, name, diff, desc, suffix, type)                           \
@@ -150,14 +150,14 @@ class Bytecode {
   static const int kUnfoldOffset = kInvokeMethodUnfold - kInvokeMethod;
 
   // Print bytecodes on stdout.
-  static int Print(uint8* bcp);
+  static uint8 Print(uint8* bcp);
 
   // Get the size of the opcode.
-  static int Size(Opcode opcode);
+  static uint8 Size(Opcode opcode);
 
   // Get the stack diff of the opcode. If the opcode is variable, kVarDiff is
   // returned.
-  static int StackDiff(Opcode opcode);
+  static int8 StackDiff(Opcode opcode);
 
   // Get the print format of the opcode.
   static const char* PrintFormat(Opcode opcode);
@@ -175,10 +175,6 @@ class Bytecode {
   // Compute the previous bytecode. Takes time linear in the number of
   // bytecodes in the method.
   static uint8* PreviousBytecode(uint8* current_bcp);
-
- private:
-  static int sizes_[];
-  static int stack_diffs_[];
 };
 
 }  // namespace fletch
