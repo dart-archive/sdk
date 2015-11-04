@@ -75,7 +75,7 @@ class AgentContext {
   // Fletch-vm path and args.
   final String vmBinPath;
   final String vmLogDir;
-  final String vmPidDir;
+  final String tmpDir;
 
   factory AgentContext() {
     String ip = _getEnv('AGENT_IP');
@@ -104,7 +104,8 @@ class AgentContext {
     }
     String vmBinPath = _getEnv('FLETCH_VM');
     String vmLogDir = _getEnv('VM_LOG_DIR');
-    String vmPidDir = _getEnv('VM_PID_DIR');
+    String tmpDir = _getEnv('TMPDIR');
+    if (tmpDir == null) tmpDir = '/tmp';
 
     // If the below ENV variable is set the agent will just store the agent
     // debian package but not apply it.
@@ -114,7 +115,6 @@ class AgentContext {
     logger.info('Agent pid file: $pidFile');
     logger.info('Vm path: $vmBinPath');
     logger.info('Log path: $vmLogDir');
-    logger.info('Run path: $vmPidDir');
 
     // Make sure we have a fletch-vm binary we can use for launching a vm.
     if (!File.existsAsFile(vmBinPath)) {
@@ -126,17 +126,13 @@ class AgentContext {
       logger.error('Cannot find log directory: $vmLogDir');
       Process.exit();
     }
-    // Make sure we have a valid pid directory.
-    if (!File.existsAsFile(vmPidDir)) {
-      logger.error('Cannot find directory: $vmPidDir in which to write pid');
-      Process.exit();
-    }
     return new AgentContext._(
-        ip, port, pidFile, logger, vmBinPath, vmLogDir, vmPidDir, applyUpgrade);
+        ip, port, pidFile, logger, vmBinPath, vmLogDir, tmpDir, applyUpgrade);
   }
 
-  const AgentContext._(this.ip, this.port, this.pidFile, this.logger,
-      this.vmBinPath, this.vmLogDir, this. vmPidDir, this.applyUpgrade);
+  const AgentContext._(
+      this.ip, this.port, this.pidFile, this.logger, this.vmBinPath,
+      this.vmLogDir, this.tmpDir, this.applyUpgrade);
 }
 
 class Agent {
@@ -175,8 +171,6 @@ class CommandHandler {
   static const int SIGQUIT = 3;
   static const int SIGKILL = 9;
   static const int SIGTERM = 15;
-  static const List<int> TERMINATION_SIGNALS =
-      const [SIGHUB, SIGINT, SIGQUIT, SIGKILL, SIGTERM];
   static final ForeignFunction _kill = ForeignLibrary.main.lookup('kill');
   static final ForeignFunction _unlink = ForeignLibrary.main.lookup('unlink');
 
@@ -239,12 +233,15 @@ class CommandHandler {
   void _startVm() {
     int vmPid = 0;
     var reply;
+    // Create a tmp file for reading the port the vm is listening on.
+    File portFile = new File.temporary("${_context.tmpDir}/vm-port-");
     try {
       List<String> args = ['--log-dir=${_context.vmLogDir}',
-          '--run-dir=${_context.vmPidDir}', '--host=0.0.0.0'];
+          '--port-file=${portFile.path}', '--host=0.0.0.0'];
       vmPid = NativeProcess.startDetached(_context.vmBinPath, args);
       // Find out what port the vm is listening on.
-      int port = _retrieveVmPort(vmPid);
+      _context.logger.info('Reading port from ${portFile.path} for vm $vmPid');
+      int port = _retrieveVmPort(portFile.path);
       reply = new StartVmReply(
           _requestHeader.id, ReplyHeader.SUCCESS, vmId: vmPid, vmPort: port);
       _context.logger.info('Started fletch vm with pid $vmPid on port $port');
@@ -255,16 +252,14 @@ class CommandHandler {
       if (vmPid > 0) {
         // Kill the vm and remove any pid and port files.
         _kill.icall$2(vmPid, SIGTERM);
-        _cleanUpVm(vmPid);
       }
+    } finally {
+      File.delete(portFile.path);
     }
     _sendReply(reply);
   }
 
-  int _retrieveVmPort(int vmPid) {
-    String portPath = '${_context.vmPidDir}/vm-$vmPid.port';
-    _context.logger.info('Reading port from $portPath for vm $vmPid');
-
+  int _retrieveVmPort(String portPath) {
     // The fletch-vm will write the port it is listening on into the file
     // specified by 'portPath' above. The agent waits for the file to be
     // created (retries the File.open until it succeeds) and then reads the
@@ -280,7 +275,6 @@ class CommandHandler {
     // have it write the port to the socket. This allows the agent to just
     // wait on the socket and wake up when it is ready.
     int previousPort = -1;
-
     for (int retries = 500; retries >= 0; --retries) {
       int port = _tryReadPort(portPath, retries == 0);
       // Check if we read the same port value twice in a row.
@@ -288,7 +282,7 @@ class CommandHandler {
       previousPort = port;
       sleep(10);
     }
-    throw 'Failed to read port for vm $vmPid';
+    throw 'Failed to read port from $portPath';
   }
 
   int _tryReadPort(String portPath, bool lastAttempt) {
@@ -338,8 +332,6 @@ class CommandHandler {
         reply = new StopVmReply(_requestHeader.id, ReplyHeader.SUCCESS);
         _context.logger.info('Stopped pid: $pid');
       }
-      // Always clean up independent of errors.
-      _cleanUpVm(pid);
     }
     _sendReply(reply);
   }
@@ -370,29 +362,9 @@ class CommandHandler {
       } else {
         reply = new SignalVmReply(_requestHeader.id, ReplyHeader.SUCCESS);
         _context.logger.info('Sent signal $signal to pid: $pid');
-        // Only cleanup if a termination signal was delivered.
-        if (TERMINATION_SIGNALS.contains(signal)) {
-          _cleanUpVm(pid);
-        }
       }
     }
     _sendReply(reply);
-  }
-
-  void _cleanUpVm(int pid) {
-    var portPath;
-    var pidPath;
-    try {
-      String fileName = '${_context.vmPidDir}/vm-$pid.port';
-      portPath = new ForeignMemory.fromStringAsUTF8(fileName);
-      _unlink.icall$1(portPath);
-      fileName = '${_context.vmPidDir}/vm-$pid.pid';
-      pidPath = new ForeignMemory.fromStringAsUTF8(fileName);
-      _unlink.icall$1(pidPath);
-    } finally {
-      if (portPath != null) portPath.free();
-      if (pidPath != null) pidPath.free();
-    }
   }
 
   void _listVms() {

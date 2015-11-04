@@ -37,9 +37,6 @@ fi
 if [ ! -d $VM_LOG_DIR ]; then
   mkdir -p $VM_LOG_DIR
 fi
-if [ ! -d $VM_PID_DIR ]; then
-  mkdir -p $VM_PID_DIR
-fi
 
 case "$1" in
 start)	log_daemon_msg "Starting" "$NAME"

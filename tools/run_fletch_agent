@@ -13,10 +13,9 @@ export AGENT_PORT=12121
 export AGENT_PID_FILE=${BUILD_DIR}/agent/var/run/fletch-agent.pid
 export AGENT_LOG_FILE=${BUILD_DIR}/agent/var/log/fletch-agent.log
 export VM_LOG_DIR=${BUILD_DIR}/agent/var/log/fletch
-export VM_PID_DIR=${BUILD_DIR}/agent/var/run/fletch
 
 # Create required files.
-mkdir -p ${VM_LOG_DIR} ${VM_PID_DIR}
+mkdir -p ${VM_LOG_DIR}
 touch ${AGENT_PID_FILE} ${AGENT_LOG_FILE}
 
 # Create snapshot
