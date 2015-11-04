@@ -309,8 +309,18 @@ Program* SnapshotReader::ReadProgram() {
   Program* program = new Program();
 
   // Read the heap size and allocate an area for it.
-  int size_position = position_ + ((kPointerSize == 4) ? 0 : kHeapSizeBytes);
-  position_ += 2 * kHeapSizeBytes;
+  int size_position;
+  if (kPointerSize == 8 && sizeof(fletch_double) == 8) {
+    size_position = position_ + 0 * kHeapSizeBytes;
+  } else if (kPointerSize == 8 && sizeof(fletch_double) == 4) {
+    size_position = position_ + 1 * kHeapSizeBytes;
+  } else if (kPointerSize == 4 && sizeof(fletch_double) == 8) {
+    size_position = position_ + 2 * kHeapSizeBytes;
+  } else {
+    ASSERT(kPointerSize == 4 && sizeof(fletch_double) == 4);
+    size_position = position_ + 3 * kHeapSizeBytes;
+  }
+  position_ += 4 * kHeapSizeBytes;
   int heap_size = ReadHeapSizeFrom(size_position);
   memory_ = ObjectMemory::AllocateChunk(program->heap()->space(), heap_size);
   top_ = memory_->base();
@@ -338,6 +348,13 @@ Program* SnapshotReader::ReadProgram() {
   program->set_is_compact(true);
   program->SetupVTableIntrinsics();
 
+  // As a sanity check we ensure that the heap size the writer of the snapshot
+  // predicted we would have, is in fact *precisely* how much space we needed.
+  int consumed_memory = top_ - memory_->base();
+  if (consumed_memory != heap_size) {
+    FATAL("The heap size in the snapshot was incorrect.");
+  }
+
   return program;
 }
 
@@ -359,11 +376,11 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   for (int i = 0; i < kReferenceTableSizeBytes; i++) WriteByte(0);
 
   // Reserve space for the size of the heap.
-  int size_position =
-      position_ + ((kPointerSize == 4) ? 0 : kHeapSizeBytes);
-  int alternative_size_position =
-      position_ + ((kPointerSize == 4) ? kHeapSizeBytes : 0);
-  for (int i = 0; i < 2 * kHeapSizeBytes; i++) WriteByte(0);
+  int size64_double_position = position_ + 0 * kHeapSizeBytes;
+  int size64_float_position = position_ + 1 * kHeapSizeBytes;
+  int size32_double_position = position_ + 2 * kHeapSizeBytes;
+  int size32_float_position = position_ + 3 * kHeapSizeBytes;
+  for (int i = 0; i < 4 * kHeapSizeBytes; i++) WriteByte(0);
 
   // Write all the program state (except roots).
   WriteObject(program->entry());
@@ -393,8 +410,10 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   ASSERT(references == 0);
 
   // Write the size of the heap.
-  WriteHeapSizeTo(size_position, program->heap()->space()->Used());
-  WriteHeapSizeTo(alternative_size_position, alternative_heap_size_);
+  WriteHeapSizeTo(size64_double_position, heap_size_.heap_size_64bits_double);
+  WriteHeapSizeTo(size64_float_position, heap_size_.heap_size_64bits_float);
+  WriteHeapSizeTo(size32_double_position, heap_size_.heap_size_32bits_double);
+  WriteHeapSizeTo(size32_float_position, heap_size_.heap_size_32bits_float);
 
   return snapshot_.Sublist(0, position_);
 }
@@ -482,7 +501,10 @@ void SnapshotWriter::WriteObject(Object* object) {
   if (object->IsSmi()) {
     Smi* smi = Smi::cast(object);
     if (!Smi::IsValidAsPortable(smi->value())) {
-      alternative_heap_size_ += LargeInteger::AllocationSize();
+      int integer_size =
+          LargeInteger::CalculatePortableSize().ComputeSizeInBytes(4, -1);
+      heap_size_.heap_size_32bits_double += integer_size;
+      heap_size_.heap_size_32bits_float += integer_size;
     }
     WriteInt64(Header::FromSmi(smi).as_word());
     return;
@@ -504,61 +526,61 @@ void SnapshotWriter::WriteObject(Object* object) {
   switch (type) {
     case InstanceFormat::ONE_BYTE_STRING_TYPE: {
       OneByteString* str = OneByteString::cast(object);
-      alternative_heap_size_ += str->AlternativeSize();
+      heap_size_ += str->CalculatePortableSize();
       str->OneByteStringWriteTo(this, klass);
       break;
     }
     case InstanceFormat::TWO_BYTE_STRING_TYPE: {
       TwoByteString* str = TwoByteString::cast(object);
-      alternative_heap_size_ += str->AlternativeSize();
+      heap_size_ += str->CalculatePortableSize();
       str->TwoByteStringWriteTo(this, klass);
       break;
     }
     case InstanceFormat::ARRAY_TYPE: {
       Array* array = Array::cast(object);
-      alternative_heap_size_ += array->AlternativeSize();
+      heap_size_ += array->CalculatePortableSize();
       array->ArrayWriteTo(this, klass);
       break;
     }
     case InstanceFormat::BYTE_ARRAY_TYPE: {
       ByteArray* array = ByteArray::cast(object);
-      alternative_heap_size_ += array->AlternativeSize();
+      heap_size_ += array->CalculatePortableSize();
       array->ByteArrayWriteTo(this, klass);
       break;
     }
     case InstanceFormat::LARGE_INTEGER_TYPE: {
       LargeInteger* integer = LargeInteger::cast(object);
-      alternative_heap_size_ += integer->AlternativeSize();
+      heap_size_ += integer->CalculatePortableSize();
       integer->LargeIntegerWriteTo(this, klass);
       break;
     }
     case InstanceFormat::INSTANCE_TYPE: {
       Instance* instance = Instance::cast(object);
-      alternative_heap_size_ += instance->AlternativeSize(klass);
+      heap_size_ += instance->CalculatePortableSize(klass);
       instance->InstanceWriteTo(this, klass);
       break;
     }
     case InstanceFormat::CLASS_TYPE: {
       Class* klass = Class::cast(object);
-      alternative_heap_size_ += klass->AlternativeSize();
+      heap_size_ += klass->CalculatePortableSize();
       klass->ClassWriteTo(this, klass);
       break;
     }
     case InstanceFormat::FUNCTION_TYPE: {
       Function* function = Function::cast(object);
-      alternative_heap_size_ += function->AlternativeSize();
+      heap_size_ += function->CalculatePortableSize();
       function->FunctionWriteTo(this, klass);
       break;
     }
     case InstanceFormat::DOUBLE_TYPE: {
       Double* d = Double::cast(object);
-      alternative_heap_size_ += d->AlternativeSize();
+      heap_size_ += d->CalculatePortableSize();
       d->DoubleWriteTo(this, klass);
       break;
     }
     case InstanceFormat::INITIALIZER_TYPE: {
       Initializer* initializer = Initializer::cast(object);
-      alternative_heap_size_ += initializer->AlternativeSize();
+      heap_size_ += initializer->CalculatePortableSize();
       initializer->InitializerWriteTo(this, klass);
       break;
     }

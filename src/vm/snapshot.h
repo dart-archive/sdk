@@ -15,6 +15,34 @@
 
 namespace fletch {
 
+// Used for calculating the heap size of all supported configurations
+// (i.e. all of {64-bit, 32-bit}x{float,double}).
+//
+// The snapshot will contain heap sizes for all configurations, so the reader
+// knows it before reading any objects().
+class PortableSizeAccumulator {
+ public:
+  PortableSizeAccumulator()
+      : heap_size_64bits_double(0),
+        heap_size_64bits_float(0),
+        heap_size_32bits_double(0),
+        heap_size_32bits_float(0) { }
+
+  PortableSizeAccumulator& operator+=(const PortableSize& size) {
+    heap_size_64bits_double += size.ComputeSizeInBytes(8, 8);
+    heap_size_64bits_float += size.ComputeSizeInBytes(8, 4);
+    heap_size_32bits_double += size.ComputeSizeInBytes(4, 8);
+    heap_size_32bits_float += size.ComputeSizeInBytes(4, 4);
+
+    return *this;
+  }
+
+  int heap_size_64bits_double;
+  int heap_size_64bits_float;
+  int heap_size_32bits_double;
+  int heap_size_32bits_float;
+};
+
 class SnapshotReader {
  public:
   explicit SnapshotReader(List<uint8> snapshot)
@@ -25,7 +53,7 @@ class SnapshotReader {
         top_(0),
         index_(0) {
   }
-  virtual ~SnapshotReader() { }
+  ~SnapshotReader() { }
 
   // Reads an entire program.
   Program* ReadProgram();
@@ -86,9 +114,8 @@ class SnapshotWriter {
   SnapshotWriter()
       : snapshot_(List<uint8>::New(1 * MB)),
         position_(0),
-        index_(1),
-        alternative_heap_size_(0) { }
-  virtual ~SnapshotWriter() { }
+        index_(1) { }
+  ~SnapshotWriter() { }
 
   // Create a snapshot of a program. The program must be folded.
   List<uint8> WriteProgram(Program* program);
@@ -131,7 +158,7 @@ class SnapshotWriter {
   // is the size needed for the snapshot on a 64-bit system. When writing the
   // snapshot from a 64-bit system, the alternative heap size is the size needed
   // for the snapshot on a 32-bit system.
-  int alternative_heap_size_;
+  PortableSizeAccumulator heap_size_;
 
   void WriteHeapSizeTo(int position, int size);
 
