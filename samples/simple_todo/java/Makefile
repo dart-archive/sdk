@@ -31,6 +31,8 @@ JAVAC=${JAVA_HOME}/bin/javac
 JAVA_SOURCES:=$(wildcard *.java)
 JAVA_CLASSES:=$(JAVA_SOURCES:.java=.class)
 
+TEMP_DIR:=$(shell mktemp -u)
+
 all: $(JAVA_CLASSES) fletch/simple_todo.jar \
 	jni/libfletch.${PLATFORM_LIB_SUFFIX} simple_todo.snapshot
 
@@ -40,6 +42,11 @@ $(JAVA_CLASSES): $(JAVA_SOURCES) fletch/simple_todo.jar
 
 fletch/simple_todo.jar: ../simple_todo.idl
 	$(FLETCH) x-servicec file ../simple_todo.idl out ..
+	mkdir -p $(TEMP_DIR)
+	javac -classpath none -d $(TEMP_DIR) -implicit:none -source 8 -target 8 \
+		-sourcepath none -Werror fletch/*.java
+	jar cf $@ -C $(TEMP_DIR) .
+	rm -rf $(TEMP_DIR)
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o \
 	jni/todo_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a

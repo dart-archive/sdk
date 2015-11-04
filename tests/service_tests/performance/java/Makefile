@@ -31,6 +31,8 @@ JAVAC=${JAVA_HOME}/bin/javac
 JAVA_SOURCES:=$(wildcard *.java)
 JAVA_CLASSES:=$(JAVA_SOURCES:.java=.class)
 
+TEMP_DIR:=$(shell mktemp -u)
+
 all: $(JAVA_CLASSES) fletch/performance_service.jar \
 	jni/libfletch.${PLATFORM_LIB_SUFFIX} performance.snapshot
 
@@ -40,6 +42,11 @@ $(JAVA_CLASSES): $(JAVA_SOURCES) fletch/performance_service.jar
 
 fletch/performance_service.jar: ../performance_service.idl
 	$(FLETCH) x-servicec file ../performance_service.idl out ..
+	mkdir -p $(TEMP_DIR)
+	javac -classpath none -d $(TEMP_DIR) -implicit:none -source 8 -target 8 \
+		-sourcepath none -Werror fletch/*.java
+	jar cf $@ -C $(TEMP_DIR) .
+	rm -rf $(TEMP_DIR)
 
 jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o \
 	jni/performance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
