@@ -71,3 +71,10 @@ async/stream_event_transformed_test: Skip
 async/stream_listen_zone_test: Skip
 async/stream_zones_test: Skip
 async/zone_error_callback_test: Skip
+
+[ $system == lk ]
+async/timer_regress22626_test: RuntimeError
+async/slow_consumer_test: Crash
+async/slow_consumer2_test: Crash
+async/slow_consumer3_test: Crash
+async/catch_errors12_test: RuntimeError
