@@ -92,7 +92,8 @@ class QemuSession(object):
     env = os.environ.copy()
     self.process = pexpect.spawn(' '.join(cmd))
     # Put this into a log file, see issue 285
-    self.process.logfile = sys.stdout
+    self.logfile = open('.qemu_log', 'w')
+    self.process.logfile = self.logfile
     # Give the vm some time to bootup.
     time.sleep(50)
     # Try connection multiple times, the time it takes to boot varies a lot.
@@ -122,6 +123,9 @@ class QemuSession(object):
         print 'qemu not up yet'
       time.sleep(10)
     if not self.ssh or not self.ssh.isalive():
+      # Make sure the output of qemu is forced to file
+      self.process.read()
+      self.logfile.close()
       raise Exception('The ssh connection could not be initialized')
     return self
 
@@ -174,6 +178,7 @@ class QemuSession(object):
     print 'Qemu did not shut down nicely, killing it'
     self.process.terminate(force=True)
     self.process.read()
+    self.logfile.close()
     # We should actually throw here, but since we can't nicely shut down we
     # allow this for now, see issue 277
 
