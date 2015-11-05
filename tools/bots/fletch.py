@@ -141,6 +141,7 @@ def StepsSDK(debug_log, system, modes, archs):
     StepsArchiveDebianPackage()
     CrossCompile(cross_system, [cross_mode], cross_arch)
     StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
+    StepsCreateArchiveRaspbianImge()
   elif system == 'mac':
      StepsGetArmBinaries(cross_mode, cross_arch)
      StepsGetArmDeb()
@@ -229,6 +230,37 @@ def CreateZip(directory, target_file):
 def Unzip(zip_file):
   with utils.ChangedWorkingDirectory(os.path.dirname(zip_file)):
     Run(['unzip', os.path.basename(zip_file)])
+
+def EnsureRaspbianBase():
+  with bot.BuildStep('Ensure raspbian base image and kernel'):
+    Run(['download_from_google_storage', '-b', 'dart-dependencies-fletch',
+         '-u', '-d', 'third_party/raspbian/'])
+
+def StepsCreateArchiveRaspbianImge():
+  EnsureRaspbianBase()
+  with bot.BuildStep('Modifying raspbian image'):
+    namer = GetNamer()
+    raspbian_src = os.path.join('third_party', 'raspbian', 'image',
+                                'jessie.img')
+    raspbian_dst = os.path.join('out', namer.raspbian_filename())
+    print 'Copying %s to %s' % (raspbian_src, raspbian_dst)
+    shutil.copyfile(raspbian_src, raspbian_dst)
+    version = utils.GetSemanticSDKVersion()
+    deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    src_file = os.path.join('out', namer.src_tar_name(version))
+    Run(['tools/raspberry-pi2/raspbian_prepare.py',
+         '--image=%s' % raspbian_dst,
+         '--agent=%s' % deb_file,
+         '--src=%s' % src_file])
+    zip_file = os.path.join('out', namer.raspbian_zipfilename())
+    if os.path.exists(zip_file):
+      os.remove(zip_file)
+    CreateZip(raspbian_dst, namer.raspbian_zipfilename())
+    gsutil = bot_utils.GSUtil()
+    gs_path = namer.raspbian_zipfilepath(version)
+    http_path = GetDownloadLink(gs_path)
+    gsutil.upload(zip_file, gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def StepsGetArmBinaries(cross_mode, cross_arch):
   with bot.BuildStep('Get arm binaries %s' % cross_mode):

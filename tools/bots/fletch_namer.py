@@ -33,9 +33,22 @@ class FletchGCSNamer(bot_utils.GCSNamer):
   def arm_agent_filename(self, revision):
     return 'fletch-agent_%s-1_armhf.deb' % revision
 
+  def src_tar_name(self, revision):
+    return 'fletch-%s.tar.gz' % revision
+
   def arm_agent_filepath(self, revision):
     return '/'.join([self.fletch_sdk_directory(revision),
         self.arm_agent_filename(revision)])
+
+  def raspbian_filename(self):
+    return 'fletch_raspbian.img'
+
+  def raspbian_zipfilename(self):
+    return '%s.zip' % self.raspbian_filename()
+
+  def raspbian_zipfilepath(self, revision):
+    return '/'.join([self.fletch_sdk_directory(revision),
+        self.raspbian_zipfilename()])
 
   def version_filepath(self, revision):
     return '/'.join([self.fletch_sdk_directory(revision), 'VERSION'])
