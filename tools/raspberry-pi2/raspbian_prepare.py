@@ -95,7 +95,7 @@ class QemuSession(object):
     self.logfile = open('.qemu_log', 'w')
     self.process.logfile = self.logfile
     # Give the vm some time to bootup.
-    time.sleep(50)
+    time.sleep(150)
     # Try connection multiple times, the time it takes to boot varies a lot.
     for x in xrange(20):
       print 'Connection attempt %s' % x
@@ -111,8 +111,6 @@ class QemuSession(object):
       except pxssh.ExceptionPxssh, e:
         print "pxssh failed on login."
         print str(e)
-      except:
-        print 'qemu not up yet'
       time.sleep(10)
     if not self.ssh or not self.ssh.isalive():
       # Make sure the output of qemu is forced to file
