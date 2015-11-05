@@ -30,13 +30,13 @@ ff02::2		ip6-allrouters
 127.0.1.1	raspberrypi
 ''';
 
-/// Flash a SD card with a Raspbian image.
+/// Flash an SD card with a Raspbian image.
 Future<bool> flashCDCard(List<String> args) async {
   var ctx = new Context(args);
 
   ctx.log('Starting, OS: ${Platform.operatingSystem}');
   ctx.log('Args: $args');
-  ctx.infoln('This program will prepare a SD card for the Raspberry Pi 2');
+  ctx.infoln('This program will prepare an SD card for the Raspberry Pi 2');
 
   // Determine platform.
   PlatformService platformService = new PlatformService(ctx);

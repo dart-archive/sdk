@@ -91,7 +91,7 @@ abstract class PlatformService {
   /// This function will write the image in the file [image] into the device
   /// specified in [device].
   ///
-  /// If the device is a SD card then it must be unmounted before calling this.
+  /// If the device is an SD card then it must be unmounted before calling this.
   Future<bool> ddWithProgress(File source, String device) async {
     StreamTransformer progressTransformer =
         new StreamTransformer<String, String>.fromHandlers(
