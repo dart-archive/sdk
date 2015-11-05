@@ -92,7 +92,7 @@ class QemuSession(object):
     self.process = pexpect.spawn(' '.join(cmd))
     # Give the vm some time to bootup.
     time.sleep(50)
-    # Try connection up to 10 times, the time it takes to boot varies a lot.
+    # Try connection multiple times, the time it takes to boot varies a lot.
     for x in xrange(20):
       print 'Connection attempt %s' % x
       ssh = pxssh.pxssh()
