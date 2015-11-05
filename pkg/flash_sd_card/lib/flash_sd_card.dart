@@ -46,7 +46,14 @@ Future<bool> flashCDCard(List<String> args) async {
   if (sdCardDevice == null) {
     String disk = await platformService.findSDCard();
     if (disk == null) {
-      ctx.infoln('No SD card was found');
+      ctx.infoln('\nNo SD card was found. In some configurations the auto '
+                 'detection mechanism does not work.\nIn that case you can use '
+                 'the option --sd-card to specify the SD card device, e.g.:');
+      if (Platform.isLinux) {
+        ctx.infoln('\n  \$ flash_sd_card --sd-card /dev/sdc\n');
+      } else {
+        ctx.infoln('\n  \$ flash_sd_card --sd-card /dev/rdisk2\n');
+      }
       ctx.done();
       return false;
     }

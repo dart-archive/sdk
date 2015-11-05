@@ -21,7 +21,23 @@ PROG_NAME="$(follow_links "$BASH_SOURCE")"
 # Handle the case where fletch-sdk/bin has been symlinked to.
 SCRIPT_DIR="$(cd "${PROG_NAME%/*}" ; pwd -P)"
 
+# Location of the Dart script and the Dart VM in a Fletch SDK.
 DART_FILE="$SCRIPT_DIR/../../internal/pkg/flash_sd_card/bin/flash_sd_card.dart"
-
 DART_VM="$SCRIPT_DIR/../../internal/dart"
-exec "$DART_VM" "$DART_FILE" "$@"
+
+# If we are not in a Fletch SDK, assume a Fletch Github checkout.
+if [ ! -r $DART_FILE ]; then
+  DART_FILE="$SCRIPT_DIR/../../pkg/flash_sd_card/bin/flash_sd_card.dart"
+fi
+
+# If we are not in a Fletch SDK, assume a Fletch Github checkout.
+if [ ! -r $DART_VM ]; then
+  # Guess Linux, running from platforms/raspberry-pi2.
+  DART_VM="$SCRIPT_DIR/../../third_party/bin/linux/dart"
+  if [ ! -r $DART_VM ]; then
+    # Guess Mac OS, running from platforms/raspberry-pi2.
+    DART_VM="$SCRIPT_DIR/../../third_party/bin/macos/dart"
+  fi
+fi
+
+exec sudo "$DART_VM" "$DART_FILE" "$@"

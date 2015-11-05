@@ -20,7 +20,7 @@ class Context {
   Future<Directory> _tmpDir;
 
   Context(List<String> args) {
-    _installLog = new File('/tmp/fletch-install.log').openWrite();
+    _installLog = new File('flash_sd_card.log').openWrite();
     _stdin = new StreamIterator(stdin.transform(UTF8.decoder));
 
     // Parse the command line arguments.
