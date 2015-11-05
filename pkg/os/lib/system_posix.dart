@@ -401,27 +401,29 @@ abstract class PosixSystem implements System {
           'System information is not supported on this platform');
     }
     var utsname = new ForeignMemory.allocated(SIZEOF_UTSNAME);
-    int status = _uname.icall$1Retry(utsname);
-    if (status < 0) {
-      throw "Failed calling uname";
+    try {
+      int status = _uname.icall$1Retry(utsname);
+      if (status < 0) throw "Failed calling uname";
+      int address = utsname.address;
+      var fp = new ForeignPointer(address);
+      var operatingSystemName =
+          new ForeignCString.fromForeignPointer(fp).toString();
+      address += UTSNAME_LENGTH;
+      fp = new ForeignPointer(address);
+      var nodeName = new ForeignCString.fromForeignPointer(fp).toString();
+      address += UTSNAME_LENGTH;
+      fp = new ForeignPointer(address);
+      var release = new ForeignCString.fromForeignPointer(fp).toString();
+      address += UTSNAME_LENGTH;
+      fp = new ForeignPointer(address);
+      var version = new ForeignCString.fromForeignPointer(fp).toString();
+      address += UTSNAME_LENGTH;
+      fp = new ForeignPointer(address);
+      var machine = new ForeignCString.fromForeignPointer(fp).toString();
+      return new SystemInformation(operatingSystemName, nodeName, release,
+                                   version, machine);
+    } finally {
+      utsname.free();
     }
-    int address = utsname.address;
-    var fp = new ForeignPointer(address);
-    var operatingSystemName =
-        new ForeignCString.fromForeignPointer(fp).toString();
-    address += UTSNAME_LENGTH;
-    fp = new ForeignPointer(address);
-    var nodeName = new ForeignCString.fromForeignPointer(fp).toString();
-    address += UTSNAME_LENGTH;
-    fp = new ForeignPointer(address);
-    var release = new ForeignCString.fromForeignPointer(fp).toString();
-    address += UTSNAME_LENGTH;
-    fp = new ForeignPointer(address);
-    var version = new ForeignCString.fromForeignPointer(fp).toString();
-    address += UTSNAME_LENGTH;
-    fp = new ForeignPointer(address);
-    var machine = new ForeignCString.fromForeignPointer(fp).toString();
-    return new SystemInformation(operatingSystemName, nodeName, release,
-                                 version, machine);
   }
 }
