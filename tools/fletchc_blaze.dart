@@ -6,11 +6,19 @@ library fletchc_blaze;
 
 import 'dart:async';
 
+import 'dart:convert' show
+    LineSplitter,
+    UTF8;
+
 import 'dart:io';
+
+import 'package:fletchc/session.dart' show
+    Session;
 
 import 'package:fletchc/src/driver/session_manager.dart';
 
 import 'package:fletchc/src/driver/developer.dart' show
+    Address,
     Settings,
     SessionState;
 
@@ -25,6 +33,7 @@ import 'package:compiler/src/filenames.dart' show
 class FletchRunner {
 
   Future<int> run(List<String> arguments) async {
+    int debugPort;
     String packages;
     String snapshot;
     String script;
@@ -35,7 +44,10 @@ class FletchRunner {
 
     for (int i = 0; i < arguments.length; ++i) {
       String arg = arguments[i];
-      if (arg == "--packages") {
+      if (arg == "--debug") {
+        if (debugPort != null) throw "Cannot supply multiple debug ports";
+        debugPort = int.parse(arguments[++i]);
+      } else if (arg == "--packages") {
         if (packages != null) throw "Cannot supply multiple package files";
         packages = arguments[++i];
       } else if (arg == "--snapshot") {
@@ -69,8 +81,11 @@ class FletchRunner {
       packages = ".packages";
     }
 
+    Address device =
+        (debugPort != null) ? new Address("localhost", debugPort) : null;
+
     Settings settings = new Settings(
-        fileUri(packages, Uri.base), <String>["--verbose"], null, null, null);
+        fileUri(packages, Uri.base), <String>["--verbose"], null, device, null);
 
     SessionState state = developer.createSessionState(
         "fletchc-blaze",
@@ -81,17 +96,36 @@ class FletchRunner {
         nativesJson: nativesJson);
 
     int result = await developer.compile(fileUri(script, Uri.base), state);
-    await developer.startAndAttachDirectly(state);
-    state.stdoutSink.attachCommandSender(stdout.add);
-    state.stderrSink.attachCommandSender(stderr.add);
 
-    if (snapshot != null) {
-      await developer.export(state, fileUri(snapshot, Uri.base));
-    } else {
-      await developer.run(state);
+    if (result != 0) {
+      print(state.getLog());
+      return result;
     }
 
-    print(state.getLog());
+    if (device != null) {
+      await developer.attachToVm(device.host, device.port, state);
+      state.stdoutSink.attachCommandSender(stdout.add);
+      state.stderrSink.attachCommandSender(stderr.add);
+
+      Session session = state.session;
+      for (FletchDelta delta in state.compilationResults) {
+        await session.applyDelta(delta);
+      }
+
+      var input = stdin.transform(UTF8.decoder).transform(new LineSplitter());
+      await session.debug(input);
+    } else {
+      await developer.startAndAttachDirectly(state);
+      state.stdoutSink.attachCommandSender(stdout.add);
+      state.stderrSink.attachCommandSender(stderr.add);
+
+      if (snapshot != null) {
+        await developer.export(state, fileUri(snapshot, Uri.base));
+      } else {
+        await developer.run(state);
+      }
+    }
+
     return result;
   }
 }
