@@ -30,6 +30,7 @@ packages
 /src/shared/shared.xcodeproj/
 /src/vm/vm.xcodeproj/
 /tests/service_tests/service_tests.xcodeproj/
+/third_party/args
 /third_party/bin/linux/dart
 /third_party/bin/linux/dart-arm
 /third_party/bin/mac/dart

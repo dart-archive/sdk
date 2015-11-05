@@ -30,6 +30,7 @@ vars = {
   "package_config_tag": "@0.1.3",
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
+  "args_tag": "@0.13.0",
 
   "lk_rev": "@e092ff360508c7e7e56f432da3714f0edb8ba365",
 
@@ -60,6 +61,9 @@ deps = {
 
   "fletch/third_party/package_config":
       (Var("github_mirror") % "package_config") + Var("package_config_tag"),
+
+  "fletch/third_party/args":
+      (Var("github_mirror") % "args") + Var("args_tag"),
 
   "fletch/third_party/charcode":
       (Var("github_mirror") % "charcode") + Var("charcode_tag"),
