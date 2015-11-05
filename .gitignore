@@ -45,6 +45,10 @@ packages
 /third_party/persistent/
 /third_party/qemu/linux/qemu.tar.gz
 /third_party/qemu/linux/qemu/
+/third_party/raspbian/image.tar.gz
+/third_party/raspbian/image
+/third_party/raspbian/kernel.tar.gz
+/third_party/raspbian/kernel
 /tools/testing/bin/linux/dart
 /tools/testing/bin/linux/dart-arm
 /tools/testing/bin/mac/dart
