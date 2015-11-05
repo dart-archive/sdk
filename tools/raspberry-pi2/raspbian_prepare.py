@@ -95,13 +95,15 @@ class QemuSession(object):
     self.logfile = open('.qemu_log', 'w')
     self.process.logfile = self.logfile
     # Give the vm some time to bootup.
-    time.sleep(150)
+    time.sleep(50)
     # Try connection multiple times, the time it takes to boot varies a lot.
     for x in xrange(20):
       print 'Connection attempt %s' % x
       ssh = pxssh.pxssh()
-      ssh.SSH_OPTS += " -oStrictHostKeyChecking=no"
-      ssh.SSH_OPTS += " -oUserKnownHostsFile=/dev/null"
+      # See https://github.com/pexpect/pexpect/issues/179
+      ssh.SSH_OPTS = (" -o'StrictHostKeyChecking=no'"
+                      + " -o'UserKnownHostsFile /dev/null'")
+      ssh.force_password = True
       try:
         ssh.login(HOSTNAME, USERNAME, password=PASSWORD, port=PORT)
         self.ssh = ssh
@@ -111,6 +113,8 @@ class QemuSession(object):
       except pxssh.ExceptionPxssh, e:
         print "pxssh failed on login."
         print str(e)
+      except:
+        print "Qemu not up yet"
       time.sleep(10)
     if not self.ssh or not self.ssh.isalive():
       # Make sure the output of qemu is forced to file
