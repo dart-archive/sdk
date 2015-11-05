@@ -32,6 +32,9 @@ static void SignalHandler(int signal) {
 }
 
 int SignalFileDescriptor() {
+  // Temporarily limit signals to a short list of white-listed signals.
+  const bool limit_signals = true;
+
   if (signal_pipe[0] != -1) {
     FATAL("SignalFileDescriptor() can only be called once.");
   }
@@ -60,6 +63,15 @@ int SignalFileDescriptor() {
     }
     if (signal_number == SIGTSTP) {
       // Let Ctrl-Z suspend the client.
+      continue;
+    }
+    if (limit_signals &&
+        // Default signal when running `kill` without specifying a signal.
+        signal_number != SIGTERM &&
+        // Signal from Ctrl-C.
+        signal_number != SIGINT &&
+        // Signal from Ctrl-\.
+        signal_number != SIGQUIT) {
       continue;
     }
     bzero(action, sizeof(*action));
