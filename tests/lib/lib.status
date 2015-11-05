@@ -89,4 +89,4 @@ async/catch_errors14_test: Crash # Issue 280
 
 [ $arch == xarm ]
 async/timer_regress22626_test: RuntimeError # Issue 279
-async/catch_errors12_test: RuntimeError # Issue 279
+async/catch_errors12_test: Pass, RuntimeError # Issue 279
