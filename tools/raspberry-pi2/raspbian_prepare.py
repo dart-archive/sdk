@@ -98,14 +98,6 @@ class QemuSession(object):
     time.sleep(50)
     # Try connection multiple times, the time it takes to boot varies a lot.
     for x in xrange(20):
-      try:
-        # Get any output from qemu to the stdout
-        self.process.read()
-      except:
-        # If nothing is happening, i.e., we are at the login screen, this call
-        # throws
-        pass
-      sys.stdout.flush()
       print 'Connection attempt %s' % x
       ssh = pxssh.pxssh()
       ssh.SSH_OPTS += " -oStrictHostKeyChecking=no"
