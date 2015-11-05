@@ -50,10 +50,10 @@ abstract class PlatformService {
         return diff.first;
       }
 
-      if (retryCount-- == 0) return null;
+      if (--retryCount == 0) return null;
 
       // Wait for one second.
-      await new Future.delayed(new Duration(seconds: 1));
+      await sleep(1000);
     }
   }
 
@@ -157,7 +157,7 @@ abstract class PlatformService {
       if (count++ == 10) {
         await ctx.failure('Failed to sync filesystems', result.stderr);
       }
-      await new Future.delayed(new Duration(seconds: 1));
+      await sleep(1000);
     }
   }
 
@@ -182,6 +182,11 @@ abstract class PlatformService {
   ///
   /// Returns a temp directory created for mounting.
   Future<Directory> mountDisk(String device);
+
+  /// Returns a future which completes after [milliseconds] milliseconds.
+  Future sleep(int milliseconds) {
+    return new Future.delayed(new Duration(milliseconds: milliseconds));
+  }
 }
 
 /// Implementation of [PlatformService] for Mac OS.
@@ -242,11 +247,21 @@ class MacOSPlatformService extends PlatformService {
     //   diskutil mountDisk /dev/diskX
     // which should mount all mountable volumes does not seem to work, so mount
     // the boot partition /dev/diskXs1 explicitly.
-    var result = await ctx.runProcess('diskutil', ['mount', '${device}s1']);
-    if (result.exitCode != 0) {
-      await ctx.failure('Failed to mount $device', result.stderr);
+    //
+    // Retry this operation. When mounting right after running dd and sync
+    // mounting can fail.
+    int retryCount = 10;
+    while (true) {
+      var result = await ctx.runProcess('diskutil', ['mount', '${device}s1']);
+      if (result.exitCode != 0) {
+        if (--retryCount == 0) {
+          await ctx.failure('Failed to mount $device', result.stderr);
+        } else {
+          await sleep(1000);
+        }
+      }
+      return new Directory('/Volumes/boot');
     }
-    return new Directory('/Volumes/boot');
   }
 }
 
