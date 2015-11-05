@@ -12,43 +12,50 @@ import 'package:args/args.dart';
 class Context {
   StreamIterator _stdin;
   IOSink _installLog;
-  ArgResults arguments;
+  ArgResults _arguments;
 
   String _progressPrefix;
-  int previousProgressLength = 0;
+  int _previousProgressLength = 0;
 
   Future<Directory> _tmpDir;
 
   Context(List<String> args) {
-    _installLog = new File('flash_sd_card.log').openWrite();
-    _stdin = new StreamIterator(stdin.transform(UTF8.decoder));
-
     // Parse the command line arguments.
     var parser = new ArgParser();
     parser.addOption('sd-card');
+    parser.addOption('log-file');
     parser.addFlag('skip-download');
     parser.addFlag('skip-decompress');
     parser.addFlag('skip-write');
     parser.addOption('zip-file');
     parser.addOption('tmp-dir');
-    arguments = parser.parse(args);
+    _arguments = parser.parse(args);
+
+    _installLog = new File(logFileName).openWrite();
+    _stdin = new StreamIterator(stdin.transform(UTF8.decoder));
   }
 
-  String get sdCardDevice => arguments['sd-card'];
+  String get sdCardDevice => _arguments['sd-card'];
 
-  bool get skipDownload => arguments['skip-download'];
+  bool get skipDownload => _arguments['skip-download'];
 
-  bool get skipDecompress => arguments['skip-decompress'];
+  bool get skipDecompress => _arguments['skip-decompress'];
 
-  bool get skipWrite => arguments['skip-write'];
+  bool get skipWrite => _arguments['skip-write'];
 
-  String get zipFile => arguments['zip-file'];
+  String get logFileName {
+    var logFileName = _arguments['log-file'];
+    if (logFileName == null) logFileName = 'flash_sd_card.log';
+    return logFileName;
+  }
 
-  String get imgFile => arguments['img-file'];
+  String get zipFileName => _arguments['zip-file'];
+
+  String get imgFileName => _arguments['img-file'];
 
   Future done() async {
     // Remove tmp dir if created.
-    if (arguments['tmp-dir'] == null && _tmpDir != null) {
+    if (_arguments['tmp-dir'] == null && _tmpDir != null) {
       await (await _tmpDir).delete(recursive: true);
     }
     await _installLog.close();
@@ -115,7 +122,7 @@ class Context {
   }
 
   void _clearProgress() {
-    stdout.write('\r$_progressPrefix${' ' * previousProgressLength}');
+    stdout.write('\r$_progressPrefix${' ' * _previousProgressLength}');
   }
 
   /// Update a progress indicator.
@@ -123,7 +130,7 @@ class Context {
     _clearProgress();
     var messageString = '$message';
     stdout.write('\r$_progressPrefix$messageString');
-    previousProgressLength = messageString.length;
+    _previousProgressLength = messageString.length;
   }
 
   /// End a progress indicator.
@@ -164,8 +171,8 @@ class Context {
 
   Future<Directory> get tmpDir async {
     if (_tmpDir == null) {
-      if (arguments['tmp-dir'] != null) {
-        _tmpDir = new Future.value(new Directory(arguments['tmp-dir']));
+      if (_arguments['tmp-dir'] != null) {
+        _tmpDir = new Future.value(new Directory(_arguments['tmp-dir']));
       } else {
         _tmpDir = Directory.systemTemp.create();
       }

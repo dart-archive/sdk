@@ -81,7 +81,7 @@ Future<bool> flashCDCard(List<String> args) async {
       'Leave it blank to have it assigned via DHCP:', '');
 
   Directory tmpDir = await ctx.tmpDir;
-  String zipFileName = ctx.zipFile;
+  String zipFileName = ctx.zipFileName;
   var source = Uri.parse(gcsImageZipPath);
   if (zipFileName == null) {
     zipFileName = '${tmpDir.path}/$imageZipFileName';
