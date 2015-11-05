@@ -85,15 +85,26 @@ class QemuSession(object):
   def __enter__(self):
     cmd = [QEMU, '-kernel', self.kernel, '-cpu', 'arm1176', '-m',
            '256', '-M', 'versatilepb', '-no-reboot', '-nographic', '-append',
-          '"root=/dev/sda2 panic=1 rootfstype=ext4 rw"', '-hda', self.image,
+          '"root=/dev/sda2 panic=1 vga=normal rootfstype=ext4 '
+          'rw console=ttyAMA0"', '-hda', self.image,
           '-net', 'user,hostfwd=tcp::10022-:22', '-net', 'nic']
     print 'Starting qemu with:\n%s' % ' '.join(cmd)
     env = os.environ.copy()
     self.process = pexpect.spawn(' '.join(cmd))
+    # Put this into a log file, see issue 285
+    self.process.logfile = sys.stdout
     # Give the vm some time to bootup.
     time.sleep(50)
     # Try connection multiple times, the time it takes to boot varies a lot.
     for x in xrange(20):
+      try:
+        # Get any output from qemu to the stdout
+        self.process.read()
+      except:
+        # If nothing is happening, i.e., we are at the login screen, this call
+        # throws
+        pass
+      sys.stdout.flush()
       print 'Connection attempt %s' % x
       ssh = pxssh.pxssh()
       ssh.SSH_OPTS += " -oStrictHostKeyChecking=no"
@@ -162,6 +173,7 @@ class QemuSession(object):
     # The process did not shut down, kill it
     print 'Qemu did not shut down nicely, killing it'
     self.process.terminate(force=True)
+    self.process.read()
     # We should actually throw here, but since we can't nicely shut down we
     # allow this for now, see issue 277
 
