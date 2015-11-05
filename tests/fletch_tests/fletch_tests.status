@@ -37,7 +37,6 @@ servicec/bad_list_type_2: Fail
 servicec/bad_list_type_3: Fail
 servicec/bad_list_type_4: Fail
 servicec/bad_list_type_5: Fail
-servicec/multiple_definitions_3: Fail
 
 test_vm_connection/testCloseImmediately: Skip # Fails and prints during run.
 test_vm_connection/testCloseAfterCommitChanges: Fail

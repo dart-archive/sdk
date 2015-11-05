@@ -30,18 +30,19 @@ import 'node.dart' show
 
 enum ErrorTag {
   badField,
+  badFieldType,
   badFormal,
   badFunction,
   badListType,
   badPointerType,
+  badReturnType,
   badServiceDefinition,
-  badSimpleType,
+  badSingleFormal,
   badStructDefinition,
   badTopLevel,
   badTypeParameter,
   badUnion,
   cyclicStruct,
-  expectedPointerOrPrimitive,
   expectedPrimitiveFormal,
   multipleDefinitions,
   multipleUnions,
@@ -149,16 +150,17 @@ class InternalCompilerError extends Error {
 class ErrorReporter {
   String absolutePath;
   String relativePath;
+  String fileContents;
 
   List<int> lineStarts;
 
   ErrorReporter(this.absolutePath, this.relativePath) {
-    String input = new File(absolutePath).readAsStringSync();
+    fileContents = new File(absolutePath).readAsStringSync();
 
-    lineStarts = <int>[0];
+    lineStarts = <int>[-1];
 
-    for (int i = 0; i < input.length; ++i) {
-      if ($LF == input.codeUnitAt(i)) {
+    for (int i = 0; i < fileContents.length; ++i) {
+      if ($LF == fileContents.codeUnitAt(i)) {
         lineStarts.add(i);
       }
     }
@@ -175,9 +177,13 @@ class ErrorReporter {
     if (null != token) {
       int lineNumber = getLineNumber(token);
       int lineOffset = getLineOffset(token, lineNumber);
-      print("$type at $relativePath:$lineNumber:$lineOffset: $message");
+      print("$relativePath:$lineNumber:$lineOffset: $type: $message");
+      int end = lineNumber < lineStarts.length ? lineStarts[lineNumber]
+          : fileContents.length;
+      print(fileContents.substring(lineStarts[lineNumber - 1] + 1, end));
+      print(" " * (lineOffset - 1) + "^");
     } else {
-      print("$type in $relativePath: $message");
+      print("$relativePath: $type: $message");
     }
   }
 
@@ -204,7 +210,6 @@ class ErrorReporter {
 }
 
 // Compilation errors.
-// TODO(stanm): better messages
 abstract class CompilationError {
   ErrorTag get tag;
   void report(ErrorReporter reporter);
@@ -213,7 +218,8 @@ abstract class CompilationError {
 class UndefinedServiceError extends CompilationError {
   ErrorTag get tag => ErrorTag.undefinedService;
   void report(ErrorReporter reporter) {
-    reporter.reportError("No service defined.");
+    reporter.reportError("There should be at least one service per " +
+                         "compilation unit.");
   }
 }
 
@@ -223,8 +229,34 @@ class SyntaxError extends CompilationError {
 
   SyntaxError(this.node);
 
+  Map<ErrorTag, String> errorMessages = {
+    ErrorTag.badField: "Unfinished field declaration.",
+    ErrorTag.badFormal: "Unfinished formal argument declaration.",
+    ErrorTag.badFunction: "Unfinished function declaration.",
+    ErrorTag.badListType: "Unexpected token while parsing type parameter.",
+    ErrorTag.badServiceDefinition: "Unfinished service definition.",
+    ErrorTag.badStructDefinition: "Unfinished struct definition.",
+    ErrorTag.badTopLevel: "Unexpected token while parsing top-level " +
+                          "definition."
+  };
+
+  Map<ErrorTag, String> infoMessages = {
+    ErrorTag.badField: null,
+    ErrorTag.badFormal: null,
+    ErrorTag.badFunction: null,
+    ErrorTag.badListType: "Expected a primitive type, a string, or a " +
+                          "structure as the List type parameter",
+    ErrorTag.badServiceDefinition: null,
+    ErrorTag.badStructDefinition: null,
+    ErrorTag.badTopLevel: "Top-level defintions start with `service` or " +
+                          "`struct`."
+  };
+
   void report(ErrorReporter reporter) {
-    reporter.reportError(node.tag.toString(), node.begin);
+    reporter.reportError(errorMessages[node.tag], node.begin);
+    if (null != infoMessages[node.tag]) {
+      reporter.reportInfo(infoMessages[node.tag]);
+    }
   }
 
 }
@@ -278,8 +310,11 @@ class NotPrimitiveFormalError extends CompilationError {
 
   void report(ErrorReporter reporter) {
     reporter.reportError(
-        "Type of formal ${formal.identifier.value} is not primitive.",
-        formal.identifier.token);
+        "Unexpected type of formal argument '${formal.identifier.value}'.",
+        formal.type.identifier.token);
+    reporter.reportInfo(
+        "All formal arguments should have primitive types when the function " +
+        "has more than one formal argument.");
   }
 }
 
@@ -314,36 +349,56 @@ class ServiceStructNameClashError extends CompilationError {
 
 abstract class BadTypeError extends CompilationError {
   TypeNode type;
-  String get message;
+  String get errorMessage;
+  String get infoMessage;
 
   BadTypeError(this.type);
 
   void report(ErrorReporter reporter) {
-    print(message);
-    reporter.reportError(message, type.identifier.token);
+    reporter.reportError(errorMessage, type.identifier.token);
+    reporter.reportInfo(infoMessage);
   }
 }
 
-class NotPointerOrPrimitiveError extends BadTypeError {
-  ErrorTag get tag => ErrorTag.expectedPointerOrPrimitive;
-  String get message => "Expected a pointer or a primitive.";
+class BadReturnTypeError extends BadTypeError {
+  ErrorTag get tag => ErrorTag.badReturnType;
+  String get errorMessage => "Unexpected return type.";
+  String get infoMessage => "Expected a pointer type or a primitive type as " +
+                            "the return type of a function.";
 
-  NotPointerOrPrimitiveError(TypeNode type)
+  BadReturnTypeError(TypeNode type)
     : super(type);
 }
 
-class BadSimpleTypeError extends BadTypeError {
-  ErrorTag get tag => ErrorTag.badSimpleType;
-  // TODO(stanm): better message here
-  String get message => "Expected a primitive type, a string, or a struct.";
+class BadSingleFormalError extends BadTypeError {
+  ErrorTag get tag => ErrorTag.badSingleFormal;
+  String get errorMessage => "Unexpected type of formal argument.";
+  String get infoMessage => "Expected a primitive type or a pointer type for " +
+                            "a function with just one formal argument.";
 
-  BadSimpleTypeError(TypeNode type)
+  BadSingleFormalError(TypeNode type)
+    : super(type);
+}
+
+class BadFieldTypeError extends BadTypeError {
+  ErrorTag get tag => ErrorTag.badFieldType;
+  String get errorMessage => "Unexpected field type.";
+  String get infoMessage =>
+    "A field type should be one of the following:\n" +
+    "  * a primitive type, e.g. int32;\n" +
+    "  * a String;\n" +
+    "  * a struct type, e.g. Foo.\n" +
+    "  * a pointer to a struct, e.g. Foo*;\n" +
+    "  * a list of structs, e.g. List<Foo>.";
+
+  BadFieldTypeError(TypeNode type)
     : super(type);
 }
 
 class BadPointerTypeError extends BadTypeError {
   ErrorTag get tag => ErrorTag.badPointerType;
-  String get message => "Expected a pointer type.";
+  String get errorMessage => "Undefined struct '${type.identifier.value}'.";
+  String get infoMessage => "Expected a pointer to a known struct type.";
 
   BadPointerTypeError(TypeNode type)
     : super(type);
@@ -351,7 +406,9 @@ class BadPointerTypeError extends BadTypeError {
 
 class BadListTypeError extends BadTypeError {
   ErrorTag get tag => ErrorTag.badListType;
-  String get message => "Expected a list type.";
+  String get errorMessage =>
+    "Unexpected generic type '${type.identifier.value}'.";
+  String get infoMessage => "'List' is the only supported generic type.";
 
   BadListTypeError(TypeNode type)
     : super(type);
@@ -359,8 +416,9 @@ class BadListTypeError extends BadTypeError {
 
 class BadTypeParameterError extends BadTypeError {
   ErrorTag get tag => ErrorTag.badTypeParameter;
-  // TODO(stanm): better message here
-  String get message => "Type cannot be used as type parameter.";
+  String get errorMessage => "Unexpected type parameter.";
+  String get infoMessage => "Expected a primitive type, a string, or a " +
+                            "structure as the List type parameter.";
 
   BadTypeParameterError(TypeNode type)
     : super(type);

@@ -19,16 +19,17 @@ import 'node.dart' show
     PointerType,
     RecursiveVisitor,
     ServiceNode,
-    SimpleType,
     StructNode,
     TopLevelNode,
     TypeNode,
     UnionNode;
 
 import 'errors.dart' show
+    BadFieldTypeError,
     BadListTypeError,
     BadPointerTypeError,
-    BadSimpleTypeError,
+    BadReturnTypeError,
+    BadSingleFormalError,
     BadTypeParameterError,
     CompilationError,
     CyclicStructError,
@@ -36,7 +37,6 @@ import 'errors.dart' show
     ErrorTag,
     MultipleDefinitionsError,
     MultipleUnionsError,
-    NotPointerOrPrimitiveError,
     NotPrimitiveFormalError,
     SyntaxError,
     ServiceStructNameClashError,
@@ -117,7 +117,7 @@ class Validator extends RecursiveVisitor {
   void visitSingleFormal(FormalNode formal) {
     checkIsNotError(formal);
     visitType(formal.type);
-    checkIsPointerOrPrimitive(formal.type);
+    checkSingleFormal(formal.type);
   }
 
   void visitPrimitiveFormal(FormalNode formal) {
@@ -133,12 +133,20 @@ class Validator extends RecursiveVisitor {
 
   void visitField(FieldNode field) {
     checkIsNotError(field);
-    super.visitField(field);
+    visitType(field.type);  // resolve
+    if (field.type.isPointer()) {
+      checkPointeeTypeResolves(field.type);
+    } else if (field.type.isList()) {
+      ListType list = field.type;
+      visitListType(list);
+    } else {
+      checkFieldSimpleType(field.type);
+    }
   }
 
   void visitReturnType(TypeNode type) {
     visitType(type);
-    checkIsPointerOrPrimitive(type);
+    checkReturnType(type);
   }
 
   void visitTypeParameter(TypeNode type) {
@@ -146,20 +154,16 @@ class Validator extends RecursiveVisitor {
     checkTypeParameter(type);
   }
 
-  void visitSimpleType(SimpleType type) {
-    visitType(type);
-    checkIsSimpleType(type);
-  }
-
   void visitPointerType(PointerType type) {
     visitType(type);
-    checkIsPointerType(type);
+    checkPointeeTypeResolves(type);
   }
 
   void visitListType(ListType type) {
     visitType(type);
     checkIsNotError(type);
     checkIsListType(type);
+    super.visitListType(type);
   }
 
   void visitType(TypeNode type) {
@@ -198,10 +202,17 @@ class Validator extends RecursiveVisitor {
     }
   }
 
-  void checkIsPointerOrPrimitive(TypeNode type) {
-    if (!(type.isPointer() || type.isPrimitive())) {
-      errors.add(new NotPointerOrPrimitiveError(type));
+  void checkIsPointerOrPrimitive(TypeNode type, CompilationError error) {
+    if (type.isPrimitive()) return;
+    if (type.isPointer()) {
+      checkPointeeTypeResolves(type);
+    } else {
+      errors.add(error);
     }
+  }
+
+  void checkSingleFormal(TypeNode type) {
+    checkIsPointerOrPrimitive(type, new BadSingleFormalError(type));
   }
 
   void checkIsPrimitiveFormal(FormalNode formal) {
@@ -210,14 +221,8 @@ class Validator extends RecursiveVisitor {
     }
   }
 
-  void checkIsSimpleType(SimpleType type) {
-    if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
-      errors.add(new BadSimpleTypeError(type));
-    }
-  }
-
-  void checkIsPointerType(PointerType type) {
-    if (!type.isPointer()) {
+  void checkPointeeTypeResolves(PointerType type) {
+    if (!type.pointeeResolves()) {
       errors.add(new BadPointerTypeError(type));
     }
   }
@@ -228,9 +233,19 @@ class Validator extends RecursiveVisitor {
     }
   }
 
+  void checkReturnType(TypeNode type) {
+    checkIsPointerOrPrimitive(type, new BadReturnTypeError(type));
+  }
+
   void checkTypeParameter(TypeNode type) {
     if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
       errors.add(new BadTypeParameterError(type));
+    }
+  }
+
+  void checkFieldSimpleType(TypeNode type) {
+    if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
+      errors.add(new BadFieldTypeError(type));
     }
   }
 
@@ -283,7 +298,13 @@ class Validator extends RecursiveVisitor {
 
   void addStructSymbol(StructNode struct) {
     checkIsNotNameClash(environment.services, struct.identifier);
-    environment.structs[struct.identifier] = struct;
+    if (environment.structs.containsKey(struct.identifier)) {
+      IdentifierNode original =
+        environment.structs.keys.toSet().lookup(struct.identifier);
+      errors.add(new MultipleDefinitionsError(original, struct.identifier));
+    } else {
+      environment.structs[struct.identifier] = struct;
+    }
   }
 
   void addFunctionSymbol(FunctionNode function) {

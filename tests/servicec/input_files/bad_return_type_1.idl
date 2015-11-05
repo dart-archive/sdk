@@ -4,5 +4,5 @@
 
 service Foo {
   // String is not a valid return type.
-  String bar();  // expectedPointerOrPrimitive
+  String bar();  // badReturnType
 }

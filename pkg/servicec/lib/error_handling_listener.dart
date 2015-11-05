@@ -328,7 +328,7 @@ class ErrorHandlingListener extends Listener {
   Token recoverType(Token tokens) {
     // A ListType might have put a ListTypeError on the stack.
     TypeNode type = typePopper.popNodeIfMatching();
-    Node marker = stack.popNode();
+    MarkerNode marker = stack.popNode();
     assert(marker is BeginTypeMarker);
     if (type != null) stack.pushNode(type);
 
@@ -338,10 +338,10 @@ class ErrorHandlingListener extends Listener {
   Token recoverFormal(Token tokens) {
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
     TypeNode type = typePopper.popNodeIfMatching();
-    Node marker = stack.popNode();
+    MarkerNode marker = stack.popNode();
     assert(marker is BeginFormalMarker);
     if (identifier != null || type != null) {
-      stack.pushNode(new FormalErrorNode(type, identifier, tokens));
+      stack.pushNode(new FormalErrorNode(type, identifier, marker.token));
     }
     return tokens;
   }
@@ -353,7 +353,8 @@ class ErrorHandlingListener extends Listener {
     MarkerNode marker = stack.popNode();
     assert(marker is BeginFunctionMarker);
     if (formals.isNotEmpty || identifier != null || type != null) {
-      stack.pushNode(new FunctionErrorNode(type, identifier, formals, tokens));
+      stack.pushNode(
+          new FunctionErrorNode(type, identifier, formals, marker.token));
       return consumeDeclarationLine(marker.token);
     } else {
       // Declaration was never started, so don't end it.
@@ -367,7 +368,7 @@ class ErrorHandlingListener extends Listener {
     MarkerNode marker = stack.popNode();
     assert(marker is BeginFieldMarker);
     if (identifier != null || type != null) {
-      stack.pushNode(new FieldErrorNode(type, identifier, tokens));
+      stack.pushNode(new FieldErrorNode(type, identifier, marker.token));
       return consumeDeclarationLine(marker.token);
     } else {
       // Declaration was never started, so don't end it.
@@ -377,9 +378,9 @@ class ErrorHandlingListener extends Listener {
 
   Token recoverUnion(Token tokens) {
     List<FieldNode> fields = fieldPopper.popNodesWhileMatching();
-    Node marker = stack.popNode();
+    MarkerNode marker = stack.popNode();
     assert(marker is BeginUnionMarker);
-    stack.pushNode(new UnionErrorNode(fields, tokens));
+    stack.pushNode(new UnionErrorNode(fields, marker.token));
     return tokens;
   }
 

@@ -4,7 +4,7 @@
 
 service Foo {
   // A struct is not a valid return type.
-  Bar bar();  // expectedPointerOrPrimitive
+  Bar bar();  // badReturnType
 }
 
 struct Bar {

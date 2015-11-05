@@ -148,7 +148,7 @@ class SimpleType extends TypeNode {
 }
 
 class PointerType extends TypeNode {
-  TypeKind _type;
+  final TypeKind _type = TypeKind.POINTER;
   TypeNode pointee;
 
   PointerType(TypeNode pointee)
@@ -157,7 +157,8 @@ class PointerType extends TypeNode {
     this.pointee = pointee;
   }
 
-  bool isPointer() => TypeKind.POINTER == _type;
+  bool isPointer() => true;
+  bool pointeeResolves() => pointee.isStruct();
 
   void accept(NodeVisitor visitor) {
     visitor.visitPointerType(this);
@@ -165,9 +166,6 @@ class PointerType extends TypeNode {
 
   void resolve(Map<IdentifierNode, StructNode> structs) {
     pointee.resolve(structs);
-    if (pointee.isStruct()) {
-      _type = TypeKind.POINTER;
-    }
   }
 }
 
@@ -180,7 +178,6 @@ class ListType extends TypeNode {
 
   void accept(NodeVisitor visitor) {
     visitor.visitListType(this);
-    visitor.visitTypeParameter(typeParameter);
   }
 
   bool isList() => TypeKind.LIST == _type;
@@ -308,7 +305,7 @@ abstract class RecursiveVisitor extends NodeVisitor {
   }
 
   void visitListType(ListType list) {
-    // No op.
+    visitTypeParameter(list.typeParameter);
   }
 
   void visitIdentifier(IdentifierNode identifier) {

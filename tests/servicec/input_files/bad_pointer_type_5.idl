@@ -4,5 +4,5 @@
 
 service Foo {
   // Unresolved pointee type.
-  Bar* bar();  // expectedPointerOrPrimitive
+  void bar(Bar* baz);  // badPointerType
 }
