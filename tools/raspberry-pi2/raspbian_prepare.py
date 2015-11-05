@@ -21,6 +21,7 @@ USERNAME = 'pi'
 PASSWORD = 'raspberry'
 KERNEL = 'third_party/raspbian/kernel/kernel-qemu'
 CONFIG = 'tools/raspberry-pi2/raspbian-scripts/fletch-configuration'
+QEMU = 'third_party/qemu/linux/qemu/qemu-system-arm'
 PORT = 10022
 
 def Options():
@@ -82,7 +83,7 @@ class QemuSession(object):
     self.kernel = kernel
 
   def __enter__(self):
-    cmd = ['qemu-system-arm', '-kernel', self.kernel, '-cpu', 'arm1176', '-m',
+    cmd = [QEMU, '-kernel', self.kernel, '-cpu', 'arm1176', '-m',
            '256', '-M', 'versatilepb', '-no-reboot', '-nographic', '-append',
           '"root=/dev/sda2 panic=1 rootfstype=ext4 rw"', '-hda', self.image,
           '-net', 'user,hostfwd=tcp::10022-:22', '-net', 'nic']
