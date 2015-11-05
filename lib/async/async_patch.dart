@@ -74,7 +74,7 @@ class _FletchTimer implements Timer {
       int value = _channel.receive();
       if (value == 0 && _isActive) {
         _callback();
-        if (_isPeriodic) {
+        if (_isPeriodic && _isActive) {
           _reschedule();
         } else {
           _isActive = false;
