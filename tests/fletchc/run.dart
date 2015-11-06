@@ -43,7 +43,7 @@ const bool printSystem = const bool.fromEnvironment("printSystem");
 class FletchRunner {
   Future<Null> attach(SessionState state) async {
     if (userVmAddress == null) {
-      await startAndAttachDirectly(state);
+      await startAndAttachDirectly(state, Uri.base);
     } else {
       Address address = parseAddress(userVmAddress);
       await attachToVm(address.host, address.port, state);
@@ -133,7 +133,7 @@ Future<Null> export(String script, String snapshot) async {
   }
   SessionState state = createSessionState("test", settings);
   await compile(fileUri(script, Uri.base), state);
-  await startAndAttachDirectly(state);
+  await startAndAttachDirectly(state, Uri.base);
   state.stdoutSink.attachCommandSender(stdout.add);
   state.stderrSink.attachCommandSender(stderr.add);
   await developer.export(state, fileUri(snapshot, Uri.base));

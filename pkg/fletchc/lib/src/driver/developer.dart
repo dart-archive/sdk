@@ -188,9 +188,9 @@ Future<Null> startAndAttachViaAgent(SessionState state) async {
   await state.session.disableVMStandardOutput();
 }
 
-Future<Null> startAndAttachDirectly(SessionState state) async {
+Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
   String fletchVmPath = state.compilerHelper.fletchVm.toFilePath();
-  state.fletchVm = await FletchVm.start(fletchVmPath);
+  state.fletchVm = await FletchVm.start(fletchVmPath, workingDirectory: base);
   await attachToVm(state.fletchVm.host, state.fletchVm.port, state);
   await state.session.disableVMStandardOutput();
 }
@@ -534,7 +534,7 @@ Future<int> compileAndAttachToVmThenDeprecated(
       // TODO(wibling): read stdout from agent.
     } else {
       startedVmDirectly = true;
-      await startAndAttachDirectly(state);
+      await startAndAttachDirectly(state, Uri.base);
       state.fletchVm.stdoutLines.listen((String line) {
           commandSender.sendStdout("$line\n");
         });
@@ -570,6 +570,7 @@ Future<int> compileAndAttachToVmThen(
     StreamIterator<Command> commandIterator,
     SessionState state,
     Uri script,
+    Uri base,
     Future<int> action()) async {
   bool startedVmDirectly = false;
   List<FletchDelta> compilationResults = state.compilationResults;
@@ -590,7 +591,7 @@ Future<int> compileAndAttachToVmThen(
       // TODO(wibling): read stdout from agent.
     } else {
       startedVmDirectly = true;
-      await startAndAttachDirectly(state);
+      await startAndAttachDirectly(state, base);
       state.fletchVm.stdoutLines.listen((String line) {
           commandSender.sendStdout("$line\n");
         });

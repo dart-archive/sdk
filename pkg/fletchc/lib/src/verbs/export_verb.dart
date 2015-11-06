@@ -22,7 +22,7 @@ const Action exportAction =
 
 Future<int> export(AnalyzedSentence sentence, VerbContext context) {
   return context.performTaskInWorker(
-      new ExportTask(sentence.targetUri, sentence.toTargetUri));
+      new ExportTask(sentence.targetUri, sentence.toTargetUri, sentence.base));
 }
 
 class ExportTask extends SharedTask {
@@ -32,13 +32,16 @@ class ExportTask extends SharedTask {
 
   final Uri snapshot;
 
-  const ExportTask(this.script, this.snapshot);
+  final Uri base;
+
+  const ExportTask(this.script, this.snapshot, this.base);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
     return exportTask(
-        commandSender, commandIterator, SessionState.current, script, snapshot);
+        commandSender, commandIterator, SessionState.current, script, snapshot,
+        base);
   }
 }
 
@@ -47,11 +50,13 @@ Future<int> exportTask(
     StreamIterator<Command> commandIterator,
     SessionState state,
     Uri script,
-    Uri snapshot) async {
+    Uri snapshot,
+    Uri base) async {
   return compileAndAttachToVmThen(
       commandSender,
       commandIterator,
       state,
       script,
+      base,
       () => developer.export(state, snapshot));
 }

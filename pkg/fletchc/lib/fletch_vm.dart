@@ -35,10 +35,13 @@ class FletchVm {
 
   static Future<FletchVm> start(
       String vmPath,
-      {List<String> arguments: const <String>[],
+      {Uri workingDirectory,
+       List<String> arguments: const <String>[],
        Map<String, String> environment}) async {
     Process process =
-        await Process.start(vmPath, arguments, environment: environment);
+        await Process.start(
+            vmPath, arguments, environment: environment,
+            workingDirectory: workingDirectory?.toFilePath());
 
     Completer<String> addressCompleter = new Completer<String>();
     Completer stdoutCompleter = new Completer();

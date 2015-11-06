@@ -46,7 +46,7 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
 
   Expect.equals(0, await compile(Uri.base.resolveUri(uri), state), "compile");
 
-  await startAndAttachDirectly(state);
+  await startAndAttachDirectly(state, Uri.base);
   state.session.hideRawIds = true;
 
   List<int> output = <int>[];
