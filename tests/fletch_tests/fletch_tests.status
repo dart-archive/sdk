@@ -28,9 +28,9 @@ incremental/compile_time_error_hides_field: Fail
 # Incorrectly failing servicec tests
 servicec/bad_field_4: Fail  # Issue 293
 servicec/bad_field_8: Fail  # Issue 293
-servicec/bad_formal_1: Fail
-servicec/bad_formal_2: Fail
-servicec/bad_formal_3: Fail
+servicec/bad_formal_1: Fail  # Issue 294
+servicec/bad_formal_2: Fail  # Issue 294
+servicec/bad_formal_3: Fail  # Issue 294
 servicec/bad_function_7: Fail  # Issue 292
 servicec/bad_function_8: Fail  # Issue 292
 servicec/bad_list_type_2: Fail
