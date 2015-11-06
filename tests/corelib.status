@@ -176,7 +176,7 @@ toInt_test: RuntimeError
 uri_base_test: Crash
 uri_parse_test: Pass, Crash
 
-[ $mode == debug ]
+[ $mode == debug || $asan ]
 regexp/global_test: Slow, Pass
 
 [ $mode == debug && $system == macos && $asan ]
