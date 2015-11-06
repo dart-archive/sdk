@@ -424,7 +424,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
     growableListClass =
         loadClass(growableListName, fletchSystemLibrary)?.element;
     fletchNoSuchMethodErrorClass =
-        loadClass(fletchNoSuchMethodErrorName, fletchSystemLibrary)?.element;
+        loadClass(fletchNoSuchMethodErrorName,
+                  fletchSystemLibrary,
+                  builtin: true)?.element;
 
     // This class is optional.
     coroutineClass = fletchSystemLibrary.implementation.find("Coroutine");

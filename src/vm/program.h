@@ -57,6 +57,7 @@ class Session;
   V(Class, constant_list_class, ConstantListClass)              \
   V(Class, constant_byte_list_class, ConstantByteListClass)     \
   V(Class, constant_map_class, ConstantMapClass)                \
+  V(Class, no_such_method_error_class, NoSuchMethodErrorClass)  \
   V(Class, stack_overflow_error_class, StackOverflowErrorClass) \
   V(HeapObject, stack_overflow_error, StackOverflowError)       \
   V(HeapObject, raw_retry_after_gc, RawRetryAfterGc)            \

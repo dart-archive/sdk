@@ -1074,6 +1074,8 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->foreign_memory_class();
   } else if (name == Names::kStackOverflowError) {
     klass = program()->stack_overflow_error_class();
+  } else if (name == Names::kFletchNoSuchMethodError) {
+    klass = program()->no_such_method_error_class();
   } else {
     UNREACHABLE();
   }
