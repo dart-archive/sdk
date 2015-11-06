@@ -8,17 +8,12 @@ import 'dart:io';
 import 'src/context.dart';
 import 'src/platform_service.dart';
 
-// TODO(sgjesse): Point to the right image.
 const String gcsRoot = 'https://storage.googleapis.com';
-const String gcsBucket = 'sgjesse-fletch';
-const String raspbianImageName = '2015-09-24-raspbian-jessie-fletch';
-const String version = '0.1.0-edge.9b6223bf6327d91e42681db8c8a9894d057089d5';
+const String gcsBucket = 'fletch-archive';
 
-const String imageRootFileName = '$raspbianImageName-$version';
-const String imageZipFileName = '$imageRootFileName.zip';
+const String imageRootFileName = 'fletch_raspbian';
 const String imageFileName = '$imageRootFileName.img';
-
-const String gcsImageZipPath = '$gcsRoot/$gcsBucket/$imageZipFileName';
+const String imageZipFileName = '$imageFileName.zip';
 
 // Original /etc/hosts from Raspberry Pi.
 const String originalRaspberryPiHosts = '''
@@ -30,6 +25,12 @@ ff02::2		ip6-allrouters
 127.0.1.1	raspberrypi
 ''';
 
+/// Check if a version is a bleeding edge version.
+bool isEdgeVersion(String version) => version.contains('-edge.');
+
+/// Check if a version is a dev version.
+bool isDevVersion(String version) => version.contains('-dev.');
+
 /// Flash an SD card with a Raspbian image.
 Future<bool> flashCDCard(List<String> args) async {
   var ctx = new Context(args);
@@ -40,6 +41,26 @@ Future<bool> flashCDCard(List<String> args) async {
 
   // Determine platform.
   PlatformService platformService = new PlatformService(ctx);
+
+  // Determine the download URL for the image.
+  String imageUrl = ctx.imageUrl;
+  if (ctx.imageUrl == null) {
+    String version = await ctx.version;
+    String gcsPath;
+    if (isEdgeVersion(version)) {
+      ctx.infoln('WARNING: For bleeding edge a fixed image is used');
+      // For edge versions download a well known version for now.
+      var knownVersion = '0.1.0-edge.d8cabb9332b9a1fb063f55fca18d8b87320e863a';
+      gcsPath =
+          'channels/be/raw/$knownVersion/sdk';
+    } else if (isDevVersion(version)) {
+      // TODO(sgjesse): Change this to channels/dev/release at some point.
+      gcsPath = 'channels/dev/raw/$version/sdk';
+    } else {
+      await ctx.failure('Stable version not supported. Got version $version.');
+    }
+    imageUrl = '$gcsRoot/$gcsBucket/$gcsPath/$imageZipFileName';
+  }
 
   // Find the SD card to flash.
   String sdCardDevice = ctx.sdCardDevice;
@@ -82,7 +103,7 @@ Future<bool> flashCDCard(List<String> args) async {
 
   Directory tmpDir = await ctx.tmpDir;
   String zipFileName = ctx.zipFileName;
-  var source = Uri.parse(gcsImageZipPath);
+  var source = Uri.parse(imageUrl);
   if (zipFileName == null) {
     zipFileName = '${tmpDir.path}/$imageZipFileName';
   }
