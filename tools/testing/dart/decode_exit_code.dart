@@ -71,9 +71,12 @@ abstract class DecodeExitCode {
     }
 
     if (testCase.isNegative) {
+      if (outcome.canBeOutcomeOf(Expectation.PASS)) {
+        return Expectation.MISSING_ERROR;
+      }
       return outcome.canBeOutcomeOf(Expectation.FAIL)
           ? Expectation.PASS
-          : Expectation.FAIL;
+          : outcome;
     }
 
     return outcome;

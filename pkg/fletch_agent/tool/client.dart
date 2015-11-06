@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+library fletch_agent.client;
+
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -9,23 +11,24 @@ import '../lib/messages.dart';
 import '../lib/agent_connection.dart';
 
 void printUsage() {
-  print('Usage:');
-  print('The Fletch agent command line client supports the following flags');
-  print('');
-  print('  --port: specify the port on which to connect, default: 12121');
-  print('  --host: specify the ip address on which to connect, default: '
-      '127.0.0.1');
-  print('  --cmd: specify the command to send to the Fletch agent, default: '
-      'START_VM (0)');
-  print('  --pid: specify the pid of the vm to stop, only used when cmd=1 '
-      '(STOP_VM)');
-  print('  --signal: specify which signal to send to the vm. Requires the '
-      '--pid option to be specified.');
-  print('');
+  print('''
+Usage:
+The Fletch agent command line client supports the following flags:
+
+  --port:   the port on which to connect, default: 12121
+  --host:   the ip address on which to connect, default: 127.0.0.1
+  --cmd:    the command to send to the Fletch agent, default: 0 (START_VM)
+  --pid:    the pid of the vm to stop, only used when --cmd=1 (STOP_VM)
+  --signal: which signal to send to the vm. Requires the --pid option to
+            be specified
+  --pkg:    path to the package file to be used with --cmd=3 (UPGRADE_PKG)
+
+Example: Get the version of the agent running on 192.168.1.1:
+  dart client.dart --cmd=4 --host=192.168.1.1.''');
   exit(1);
 }
 
-// Small dart program to issue commands to the fletch agent.
+/// Small dart program to issue commands to the fletch agent.
 void main(List<String> arguments) async {
   // Startup the agent listening on specified port.
   int port = 12121;
@@ -35,6 +38,7 @@ void main(List<String> arguments) async {
   int pid;
   int signal;
   Socket socket;
+  String packageFile;
 
   void checkSuccess(ReplyHeader header) {
     if (header == null) {
@@ -88,10 +92,22 @@ void main(List<String> arguments) async {
         printUsage();
       }
       signal = int.parse(parts[1]);
+    } else if (parts[0] == '--pkg') {
+      if (parts.length != 2) {
+        printUsage();
+      }
+      packageFile = parts[1];
     }
   }
-  var request;
-  socket = await Socket.connect(host, port);
+
+  try {
+    socket = await Socket.connect(host, port);
+  } on SocketException catch (error) {
+    print('Could not connect to Fletch Agent on \'$host:$port\'. '
+        'Received error: $error');
+    printUsage();
+  }
+
   var connection = new AgentConnection(socket);
   switch (cmd) {
     case RequestHeader.START_VM:
@@ -109,16 +125,28 @@ void main(List<String> arguments) async {
     case RequestHeader.LIST_VMS:
       await connection.listVms();
       break;
-    case RequestHeader.UPGRADE_VM:
-      var vmBinary = new List(128);
-      for (int i = 0; i < vmBinary.length; ++i) {
-        vmBinary[i] = i + 42;
+    case RequestHeader.UPGRADE_AGENT:
+      if (packageFile == null) {
+        print('Please specify the path to the package with --pkg=<path>');
+        exit(1);
       }
-      print('Sending ${vmBinary.length} bytes');
-      await connection.UpgradeVm(vmBinary);
+      Uri packageUri = new Uri.file(packageFile);
+      List<String> nameParts = packageUri.pathSegments.last.split('_');
+      if (nameParts.length != 3 || nameParts[0] != 'fletch-agent') {
+        print('A fletch-agent package must have a name of the form\n'
+            '  fletch-agent_<version>_<platform>');
+        exit(1);
+      }
+      String version = nameParts[1];
+      List<int> data = await new File(packageFile).readAsBytes();
+      print('Sending package for version $version'
+          ' (length: ${data.length} bytes).');
+      await connection.upgradeAgent(version, data);
+      print('Update finished');
       break;
     case RequestHeader.FLETCH_VERSION:
-      await connection.fletchVesion();
+      int version = await connection.fletchVersion();
+      print('Fletch Agent Version $version');
       break;
     case RequestHeader.SIGNAL_VM:
       if (pid == null) {

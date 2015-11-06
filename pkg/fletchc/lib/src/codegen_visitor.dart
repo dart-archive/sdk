@@ -59,7 +59,11 @@ import '../incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed; // TODO(ahe): Remove this import.
 
 import 'fletch_registry.dart' show
+    ClosureKind,
     FletchRegistry;
+
+import 'bytecode_assembler.dart' show
+    RETURN_NARROW_MAX_STACK_SIZE;
 
 enum VisitState {
   Value,
@@ -80,6 +84,10 @@ abstract class LocalValue {
 
   void load(BytecodeAssembler assembler);
 
+  void loadRaw(BytecodeAssembler assembler) {
+    load(assembler);
+  }
+
   void store(BytecodeAssembler assembler);
 }
 
@@ -95,6 +103,10 @@ class BoxedLocalValue extends LocalValue {
 
   void load(BytecodeAssembler assembler) {
     assembler.loadBoxedSlot(slot);
+  }
+
+  void loadRaw(BytecodeAssembler assembler) {
+    assembler.loadSlot(slot);
   }
 
   void store(BytecodeAssembler assembler) {
@@ -121,6 +133,50 @@ class UnboxedLocalValue extends LocalValue {
   }
 
   String toString() => "Local($element, $slot)";
+}
+
+/**
+ * A reference to a local value that is boxed.
+ */
+class BoxedParameterValue extends LocalValue {
+  BoxedParameterValue(int slot, Element element) : super(slot, element);
+
+  void initialize(BytecodeAssembler assembler) {
+    assembler.allocateBoxed();
+  }
+
+  void load(BytecodeAssembler assembler) {
+    assembler.loadBoxedParameter(slot);
+  }
+
+  void loadRaw(BytecodeAssembler assembler) {
+    assembler.loadParameter(slot);
+  }
+
+  void store(BytecodeAssembler assembler) {
+    assembler.storeBoxedParameter(slot);
+  }
+
+  String toString() => "BoxedParameter($element, $slot)";
+}
+
+/**
+ * A reference to a local value that is boxed.
+ */
+class UnboxedParameterValue extends LocalValue {
+  UnboxedParameterValue(int slot, Element element) : super(slot, element);
+
+  void initialize(BytecodeAssembler assembler) {}
+
+  void load(BytecodeAssembler assembler) {
+    assembler.loadParameter(slot);
+  }
+
+  void store(BytecodeAssembler assembler) {
+    assembler.storeParameter(slot);
+  }
+
+  String toString() => "Parameter($element, $slot)";
 }
 
 class JumpInfo {
@@ -166,8 +222,6 @@ abstract class CodegenVisitor
 
   final FletchContext context;
 
-  final FletchRegistry registry;
-
   final ClosureEnvironment closureEnvironment;
 
   final ExecutableElement element;
@@ -193,17 +247,21 @@ abstract class CodegenVisitor
 
   List<Element> blockLocals = <Element>[];
 
-  CodegenVisitor(FletchFunctionBuilder functionBuilder,
+  /// A FunctionExpression in this set is a named local function declaration.
+  /// Many calls to such functions are statically bound. So if `f` is a named
+  /// local function declaration, `f()` doesn't need to be registered as a
+  /// dynamic send.
+  // TODO(ahe): Get rid of this by refactoring initializeLocal. See TODO there.
+  final Set<FunctionExpression> functionDeclarations =
+      new Set<FunctionExpression>();
+
+  CodegenVisitor(this.functionBuilder,
                  this.context,
                  TreeElements elements,
-                 this.registry,
                  this.closureEnvironment,
                  this.element)
       : super(elements),
-        this.functionBuilder = functionBuilder,
-        thisValue = new UnboxedLocalValue(
-            -1 - functionBuilder.assembler.functionArity,
-            null);
+        thisValue = new UnboxedParameterValue(0, null);
 
   BytecodeAssembler get assembler => functionBuilder.assembler;
 
@@ -226,6 +284,12 @@ abstract class CodegenVisitor
        bool isConst}) {
     if (elements == null) elements = this.elements;
     return context.inspectConstant(node, elements, isConst: isConst);
+  }
+
+  bool isConstNull(Node node) {
+    ConstantExpression expression = inspectConstant(node, isConst: false);
+    if (expression == null) return false;
+    return context.getConstantValue(expression).isNull;
   }
 
   int allocateConstantFromNode(Node node, {TreeElements elements}) {
@@ -253,18 +317,26 @@ abstract class CodegenVisitor
 
   LocalValue createLocalValueFor(
       LocalElement element,
-      [int slot]) {
+      {int slot,
+       bool isCapturedValueBoxed: true}) {
     if (slot == null) slot = assembler.stackSize;
     if (closureEnvironment.shouldBeBoxed(element)) {
-      return new BoxedLocalValue(slot, element);
+      if (isCapturedValueBoxed) {
+        return new BoxedLocalValue(slot, element);
+      }
+      LocalValue value = new BoxedLocalValue(assembler.stackSize, element);
+      assembler.loadSlot(slot);
+      value.initialize(assembler);
+      return value;
     }
+
     return new UnboxedLocalValue(slot, element);
   }
 
   LocalValue createLocalValueForParameter(
       ParameterElement parameter,
-      int slot,
-      {bool isCapturedArgumentsBoxed: false}) {
+      int index,
+      {bool isCapturedValueBoxed: true}) {
     // TODO(kasperl): Use [ParameterElement.constant] instead when
     // [ConstantValue] can be computed on-the-fly from a [ConstantExpression].
     Expression initializer = parameter.initializer;
@@ -279,13 +351,15 @@ abstract class CodegenVisitor
     }
 
     if (closureEnvironment.shouldBeBoxed(parameter)) {
-      if (isCapturedArgumentsBoxed) return new BoxedLocalValue(slot, parameter);
+      if (isCapturedValueBoxed) {
+        return new BoxedParameterValue(index, parameter);
+      }
       LocalValue value = new BoxedLocalValue(assembler.stackSize, parameter);
-      assembler.loadSlot(slot);
+      assembler.loadParameter(index);
       value.initialize(assembler);
       return value;
     }
-    return new UnboxedLocalValue(slot, parameter);
+    return new UnboxedParameterValue(index, parameter);
   }
 
   void pushVariableDeclaration(LocalValue value) {
@@ -296,29 +370,26 @@ abstract class CodegenVisitor
     scope.remove(local);
   }
 
-  void registerDynamicInvocation(Selector selector) {
-    registry.registerDynamicInvocation(new UniverseSelector(selector, null));
-  }
+  void registerDynamicInvocation(Selector selector);
 
-  void registerDynamicGetter(Selector selector) {
-    registry.registerDynamicGetter(new UniverseSelector(selector, null));
-  }
+  void registerDynamicGetter(Selector selector);
 
-  void registerDynamicSetter(Selector selector) {
-    registry.registerDynamicSetter(new UniverseSelector(selector, null));
-  }
+  void registerDynamicSetter(Selector selector);
 
-  void registerStaticInvocation(FunctionElement function) {
-    registry.registerStaticInvocation(function);
-  }
+  void registerStaticInvocation(FunctionElement function);
 
-  void registerInstantiatedClass(ClassElement klass) {
-    registry.registerInstantiatedClass(klass);
-  }
+  void registerInstantiatedClass(ClassElement klass);
 
-  void registerIsCheck(DartType type) {
-    registry.registerIsCheck(type);
-  }
+  void registerIsCheck(DartType type);
+
+  void registerLocalInvoke(LocalElement element, Selector selector);
+
+  /// Register that [element] is a closure. This can happen for a tear-off, or
+  /// for local functions. See [ClosureKind] for more information about the
+  /// various kinds of implicit or explicit closurizations that can occur.
+  void registerClosurization(FunctionElement element, ClosureKind kind);
+
+  int compileLazyFieldInitializer(FieldElement field);
 
   void invokeMethod(Node node, Selector selector) {
     registerDynamicInvocation(selector);
@@ -363,6 +434,10 @@ abstract class CodegenVisitor
 
   void generateReturn(Node node) {
     assembler.ret();
+  }
+
+  void generateReturnNull(Node node) {
+    assembler.returnNull();
   }
 
   void generateSwitchCaseMatch(CaseMatch caseMatch, BytecodeLabel ifTrue) {
@@ -520,18 +595,34 @@ abstract class CodegenVisitor
     this.trueLabel = trueLabel;
     BytecodeLabel oldFalseLabel = this.falseLabel;
     this.falseLabel = falseLabel;
+
+    assert(trueLabel != null || falseLabel != null);
     node.accept(this);
+
     visitState = oldState;
     this.trueLabel = oldTrueLabel;
     this.falseLabel = oldFalseLabel;
+  }
+
+  void negateTest() {
+    assert(visitState == VisitState.Test);
+    BytecodeLabel temporary = trueLabel;
+    trueLabel = falseLabel;
+    falseLabel = temporary;
   }
 
   void applyVisitState() {
     if (visitState == VisitState.Effect) {
       assembler.pop();
     } else if (visitState == VisitState.Test) {
-      assembler.branchIfTrue(trueLabel);
-      assembler.branch(falseLabel);
+      if (trueLabel == null) {
+        assembler.branchIfFalse(falseLabel);
+      } else if (falseLabel == null) {
+        assembler.branchIfTrue(trueLabel);
+      } else {
+        assembler.branchIfTrue(trueLabel);
+        assembler.branch(falseLabel);
+      }
     }
   }
 
@@ -616,12 +707,6 @@ abstract class CodegenVisitor
       Node left,
       Node right,
       BinaryOperator operator) {
-    bool isConstNull(Node node) {
-      ConstantExpression expression = inspectConstant(node, isConst: false);
-      if (expression == null) return false;
-      return context.getConstantValue(expression).isNull;
-    }
-
     visitForValue(left);
     visitForValue(right);
     // For '==', if either side is a null literal, use identicalNonNumeric.
@@ -652,12 +737,11 @@ abstract class CodegenVisitor
       _) {
     doBinaryOperator(node, left, right, BinaryOperator.EQ);
     if (visitState == VisitState.Test) {
-      assembler.branchIfTrue(falseLabel);
-      assembler.branch(trueLabel);
+      negateTest();
     } else {
       assembler.negate();
-      applyVisitState();
     }
+    applyVisitState();
   }
 
   void visitBinary(
@@ -685,9 +769,13 @@ abstract class CodegenVisitor
       Send node,
       Node value,
       _) {
-    visitForValue(value);
-    assembler.negate();
-    applyVisitState();
+    if (visitState == VisitState.Test) {
+      visitForTest(value, falseLabel, trueLabel);
+    } else {
+      visitForValue(value);
+      assembler.negate();
+      applyVisitState();
+    }
   }
 
   void visitIndex(
@@ -722,29 +810,27 @@ abstract class CodegenVisitor
       Node right,
       _) {
     if (visitState == VisitState.Test) {
-      BytecodeLabel isFirstTrue = new BytecodeLabel();
-      visitForTest(left, isFirstTrue, falseLabel);
-      assembler.bind(isFirstTrue);
-      visitForTest(right, trueLabel, falseLabel);
+      if (falseLabel == null) {
+        BytecodeLabel ifFalse = new BytecodeLabel();
+        visitForTest(left, null, ifFalse);
+        visitForTest(right, trueLabel, null);
+        assembler.bind(ifFalse);
+      } else {
+        visitForTest(left, null, falseLabel);
+        visitForTest(right, trueLabel, falseLabel);
+      }
       return;
     }
 
-    BytecodeLabel isFirstTrue = new BytecodeLabel();
-    BytecodeLabel isTrue = new BytecodeLabel();
     BytecodeLabel isFalse = new BytecodeLabel();
-
     assembler.loadLiteralFalse();
 
-    visitForTest(left, isFirstTrue, isFalse);
-
-    assembler.bind(isFirstTrue);
-    visitForTest(right, isTrue, isFalse);
-
-    assembler.bind(isTrue);
+    visitForTest(left, null, isFalse);
+    visitForTest(right, null, isFalse);
     assembler.pop();
     assembler.loadLiteralTrue();
-    assembler.bind(isFalse);
 
+    assembler.bind(isFalse);
     applyVisitState();
   }
 
@@ -754,42 +840,38 @@ abstract class CodegenVisitor
       Node right,
       _) {
     if (visitState == VisitState.Test) {
-      BytecodeLabel isFirstFalse = new BytecodeLabel();
-      visitForTest(left, trueLabel, isFirstFalse);
-      assembler.bind(isFirstFalse);
-      visitForTest(right, trueLabel, falseLabel);
+      if (trueLabel == null) {
+        BytecodeLabel ifTrue = new BytecodeLabel();
+        visitForTest(left, ifTrue, null);
+        visitForTest(right, null, falseLabel);
+        assembler.bind(ifTrue);
+      } else {
+        visitForTest(left, trueLabel, null);
+        visitForTest(right, trueLabel, falseLabel);
+      }
       return;
     }
 
-    BytecodeLabel isFirstFalse = new BytecodeLabel();
     BytecodeLabel isTrue = new BytecodeLabel();
-    BytecodeLabel isFalse = new BytecodeLabel();
-
     assembler.loadLiteralTrue();
 
-    visitForTest(left, isTrue, isFirstFalse);
-
-    assembler.bind(isFirstFalse);
-    visitForTest(right, isTrue, isFalse);
-
-    assembler.bind(isFalse);
+    visitForTest(left, isTrue, null);
+    visitForTest(right, isTrue, null);
     assembler.pop();
     assembler.loadLiteralFalse();
-    assembler.bind(isTrue);
 
+    assembler.bind(isTrue);
     applyVisitState();
   }
 
   void visitConditional(Conditional node) {
-    BytecodeLabel isTrue = new BytecodeLabel();
     BytecodeLabel isFalse = new BytecodeLabel();
     BytecodeLabel done = new BytecodeLabel();
 
     assembler.loadLiteralNull();
 
-    visitForTest(node.condition, isTrue, isFalse);
+    visitForTest(node.condition, null, isFalse);
 
-    assembler.bind(isTrue);
     assembler.pop();
     visitForValue(node.thenExpression);
     assembler.branch(done);
@@ -873,7 +955,11 @@ abstract class CodegenVisitor
       DartType type,
       _) {
     doIs(node, expression, type, node.arguments.first);
-    assembler.negate();
+    if (visitState == VisitState.Test) {
+      negateTest();
+    } else {
+      assembler.negate();
+    }
     applyVisitState();
   }
 
@@ -906,6 +992,7 @@ abstract class CodegenVisitor
       Send node,
       MethodElement function,
       _) {
+    registerClosurization(function, ClosureKind.tearOff);
     FletchFunctionBase target = requireFunction(function);
     FletchClassBuilder classBuilder =
         context.backend.createTearoffClass(target);
@@ -1011,6 +1098,7 @@ abstract class CodegenVisitor
       Send node,
       MethodElement method,
       _) {
+    registerClosurization(method, ClosureKind.superTearOff);
     loadThis();
     FletchFunctionBase target = requireFunction(method);
     FletchClassBuilder classBuilder =
@@ -1373,7 +1461,7 @@ abstract class CodegenVisitor
           elements: field.resolvedAst.elements);
       assembler.loadConst(constId);
     } else {
-      int index = context.backend.compileLazyFieldInitializer(field, registry);
+      int index = compileLazyFieldInitializer(field);
       if (field.initializer != null) {
         assembler.loadStaticInit(index);
       } else {
@@ -1489,7 +1577,11 @@ abstract class CodegenVisitor
         assembler.loadLiteralFalse();
       }
     } else if (visitState == VisitState.Test) {
-      assembler.branch(isTrue ? trueLabel : falseLabel);
+      if (isTrue) {
+        if (trueLabel != null) assembler.branch(trueLabel);
+      } else {
+        if (falseLabel != null) assembler.branch(falseLabel);
+      }
     }
   }
 
@@ -1592,7 +1684,7 @@ abstract class CodegenVisitor
       registerInstantiatedClass(
           context.compiler.backend.stringImplementation);
     } else if (visitState == VisitState.Test) {
-      assembler.branch(falseLabel);
+      if (falseLabel != null) assembler.branch(falseLabel);
     }
   }
 
@@ -1612,6 +1704,11 @@ abstract class CodegenVisitor
     node.expression.accept(this);
   }
 
+  void visitLocalFunctionGet(Send node, LocalFunctionElement function, _) {
+    registerClosurization(function, ClosureKind.localFunction);
+    handleLocalGet(node, function, _);
+  }
+
   void handleLocalGet(
       Send node,
       LocalElement element,
@@ -1628,6 +1725,19 @@ abstract class CodegenVisitor
     visitForValue(rhs);
     scope[element].store(assembler);
     applyVisitState();
+  }
+
+  void visitLocalFunctionInvoke(
+      Send node,
+      LocalFunctionElement function,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    // TODO(ahe): We could use loadPositionalArguments if [element] is a local
+    // function to avoid generating additional stubs and to avoid registering
+    // this as a dynamic call.
+    registerLocalInvoke(function, callStructure.callSelector);
+    handleLocalInvoke(node, function, arguments, callStructure, _);
   }
 
   void handleLocalInvoke(
@@ -2359,7 +2469,7 @@ abstract class CodegenVisitor
         thisClosureIndex = index;
       } else {
         // Load the raw value (the 'Box' when by reference).
-        assembler.loadSlot(scope[element].slot);
+        scope[element].loadRaw(assembler);
       }
       index++;
     }
@@ -2391,12 +2501,14 @@ abstract class CodegenVisitor
         classConstant, classBuilder.fields, immutable: immutable);
 
     if (needToStoreThisReference) {
-      assert (!immutable);
+      assert(!immutable);
       assembler.dup();
       assembler.storeField(thisClosureIndex);
     }
 
-    registerStaticInvocation(function);
+    if (!functionDeclarations.contains(node)) {
+      registerClosurization(function, ClosureKind.localFunction);
+    }
     applyVisitState();
   }
 
@@ -2452,20 +2564,34 @@ abstract class CodegenVisitor
   }
 
   // Called before 'return', as an option to replace the already evaluated
-  // return value.
-  // One example is setters.
+  // return value. One example is setters.
+  bool get hasAssignmentSemantics => false;
   void optionalReplaceResultValue() { }
 
   void visitReturn(Return node) {
     Expression expression = node.expression;
-    if (expression == null) {
-      assembler.loadLiteralNull();
-    } else {
+    bool returnNull = true;
+    if (expression != null && !isConstNull(expression)) {
       visitForValue(expression);
+      returnNull = false;
     }
-    callFinallyBlocks(0, true);
-    optionalReplaceResultValue();
-    generateReturn(node);
+
+    // Avoid using the return-null bytecode if the stack size forces
+    // us to use a return-wide bytecode.
+    bool isWide = assembler.stackSize > RETURN_NARROW_MAX_STACK_SIZE;
+    if (returnNull && (isWide || hasAssignmentSemantics)) {
+      assembler.loadLiteralNull();
+      returnNull = false;
+    }
+
+    if (returnNull) {
+      callFinallyBlocks(0, false);
+      generateReturnNull(node);
+    } else {
+      callFinallyBlocks(0, true);
+      optionalReplaceResultValue();
+      generateReturn(node);
+    }
   }
 
   // Find the JumpInfo matching the target of [node].
@@ -2553,11 +2679,9 @@ abstract class CodegenVisitor
       return;
     }
 
-    BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel ifFalse = new BytecodeLabel();
 
-    visitForTest(node.condition, ifTrue, ifFalse);
-    assembler.bind(ifTrue);
+    visitForTest(node.condition, null, ifFalse);
     if (node.hasElsePart) {
       BytecodeLabel end = new BytecodeLabel();
       jumpInfo[node] = new JumpInfo(assembler.stackSize, null, end);
@@ -2578,7 +2702,6 @@ abstract class CodegenVisitor
     blockLocals = <Element>[];
 
     BytecodeLabel start = new BytecodeLabel();
-    BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
     BytecodeLabel afterBody  = new BytecodeLabel();
 
@@ -2591,8 +2714,7 @@ abstract class CodegenVisitor
 
     Expression condition = node.condition;
     if (condition != null) {
-      visitForTest(condition, ifTrue, end);
-      assembler.bind(ifTrue);
+      visitForTest(condition, null, end);
     }
 
     doScopedStatement(node.body);
@@ -2712,12 +2834,10 @@ abstract class CodegenVisitor
 
   void visitWhile(While node) {
     BytecodeLabel start = new BytecodeLabel();
-    BytecodeLabel ifTrue = new BytecodeLabel();
     BytecodeLabel end = new BytecodeLabel();
     jumpInfo[node] = new JumpInfo(assembler.stackSize, start, end);
     assembler.bind(start);
-    visitForTest(node.condition, ifTrue, end);
-    assembler.bind(ifTrue);
+    visitForTest(node.condition, null, end);
     doScopedStatement(node.body);
     assembler.branch(start);
     assembler.bind(end);
@@ -2731,22 +2851,28 @@ abstract class CodegenVisitor
     assembler.bind(start);
     doScopedStatement(node.body);
     assembler.bind(skipBody);
-    visitForTest(node.condition, start, end);
+    visitForTest(node.condition, start, null);
     assembler.bind(end);
   }
 
   LocalValue initializeLocal(LocalElement element, Expression initializer) {
     int slot = assembler.stackSize;
     if (initializer != null) {
+      // TODO(ahe): If we can move this to the caller, then we don't need
+      // functionDeclarations.
       visitForValue(initializer);
     } else {
-      assembler.loadLiteralNull();
+      generateEmptyInitializer(element.node);
     }
-    LocalValue value = createLocalValueFor(element, slot);
+    LocalValue value = createLocalValueFor(element, slot: slot);
     value.initialize(assembler);
     pushVariableDeclaration(value);
     blockLocals.add(element);
     return value;
+  }
+
+  void generateEmptyInitializer(Node node) {
+    assembler.loadLiteralNull();
   }
 
   void visitVariableDefinitions(VariableDefinitions node) {
@@ -2758,6 +2884,7 @@ abstract class CodegenVisitor
 
   void visitFunctionDeclaration(FunctionDeclaration node) {
     FunctionExpression function = node.function;
+    functionDeclarations.add(function);
     initializeLocal(elements[function], function);
   }
 
@@ -3072,5 +3199,53 @@ abstract class CodegenVisitor
 
   void applyParameters(NodeList parameters, _) {
     internalError(parameters, "[applyParameters] isn't implemented.");
+  }
+}
+
+abstract class FletchRegistryMixin {
+  FletchRegistry get registry;
+  FletchContext get context;
+
+  void registerDynamicInvocation(Selector selector) {
+    registry.registerDynamicInvocation(new UniverseSelector(selector, null));
+  }
+
+  void registerDynamicGetter(Selector selector) {
+    registry.registerDynamicGetter(new UniverseSelector(selector, null));
+  }
+
+  void registerDynamicSetter(Selector selector) {
+    registry.registerDynamicSetter(new UniverseSelector(selector, null));
+  }
+
+  void registerStaticInvocation(FunctionElement function) {
+    registry.registerStaticInvocation(function);
+  }
+
+  void registerInstantiatedClass(ClassElement klass) {
+    registry.registerInstantiatedClass(klass);
+  }
+
+  void registerIsCheck(DartType type) {
+    registry.registerIsCheck(type);
+  }
+
+  void registerLocalInvoke(LocalElement element, Selector selector) {
+    registry.registerLocalInvoke(element, selector);
+  }
+
+  void registerClosurization(FunctionElement element, ClosureKind kind) {
+    if (kind == ClosureKind.localFunction) {
+      // TODO(ahe): Get rid of the call to [registerStaticInvocation]. It is
+      // currently needed to ensure that local function expression closures are
+      // compiled correctly. For example, `[() {}].last()`, notice that `last`
+      // is a getter. This happens for both named and unnamed.
+      registerStaticInvocation(element);
+    }
+    registry.registerClosurization(element, kind);
+  }
+
+  int compileLazyFieldInitializer(FieldElement field) {
+    return context.backend.compileLazyFieldInitializer(field, registry);
   }
 }

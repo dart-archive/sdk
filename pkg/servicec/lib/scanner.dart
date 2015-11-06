@@ -36,17 +36,9 @@ class Scanner extends StringScanner {
     if (isServicecKeyword(keyword.syntax)) {
       super.appendKeywordToken(own.Keyword.keywords[keyword.syntax]);
     } else {
-      if (identical(keyword.syntax, "void")) {
-        bool doesNotMatter = true;
-        super.appendSubstringToken(IDENTIFIER_INFO,
-                                   scanOffset - 4,
-                                   doesNotMatter);
-      } else {
-        tail.next = new StringToken.fromString(STRING_INFO,
-                                               keyword.syntax,
-                                               tokenStart);
-        tail = tail.next;
-      }
+      super.appendSubstringToken(IDENTIFIER_INFO,
+                                 scanOffset - keyword.syntax.length,
+                                 true);
     }
   }
 

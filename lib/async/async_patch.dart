@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:_fletch_system' as fletch;
+import 'dart:fletch._system' as fletch;
 import 'dart:fletch';
 import 'dart:fletch.os' as os;
 import 'dart:math';
@@ -74,7 +74,7 @@ class _FletchTimer implements Timer {
       int value = _channel.receive();
       if (value == 0 && _isActive) {
         _callback();
-        if (_isPeriodic) {
+        if (_isPeriodic && _isActive) {
           _reschedule();
         } else {
           _isActive = false;

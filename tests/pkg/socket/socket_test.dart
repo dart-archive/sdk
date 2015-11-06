@@ -16,6 +16,14 @@ void main() {
   testSpawnAccept();
   testLargeChunk();
   testShutdown();
+  testFailingBind();
+}
+
+void testFailingBind() {
+  Expect.throws(() {
+    new ServerSocket("128.0.0.1", 12345);
+    new ServerSocket("128.0.0.1", 12345);
+  }, isSocketException);
 }
 
 void testLookup() {

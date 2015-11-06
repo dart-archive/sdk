@@ -42,11 +42,22 @@ verbose = False
 # Name of the fletch directory when unpacking the tarball.
 versiondir = ''
 
-# Ignore Git/SVN files, checked-in binaries, backup files, etc..
-ignoredPaths = ['fletch/tools/testing/bin',
-                'fletch/third_party/clang', 'fletch/third_party/lk',
-                'fletch/version.gyp',
-                'fletch/out']
+# Ignore Git/SVN files, checked-in binaries, backup files, etc.
+#
+# Remember *not* to ignore scripts (currently in tools) that are used
+# for building the modified Raspbian SD-card image as this tarball is
+# added to that image to have it include all source required to
+# generate it in the first place.
+ignoredPaths = ['fletch/out',
+                'fletch/tools/testing/bin',
+                'fletch/third_party/clang',
+                'fletch/third_party/bin/linux/qemu',
+                'fletch/third_party/bin/linux/qemu.tar.gz',
+                'fletch/third_party/lk',
+                'fletch/third_party/openocd',
+                'fletch/third_party/qemu',
+                'fletch/third_party/raspbian',
+                'fletch/version.gyp']
 ignoredDirs = ['.svn', '.git']
 ignoredEndings = ['.mk', '.pyc', 'Makefile', '~']
 

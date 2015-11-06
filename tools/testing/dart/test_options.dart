@@ -23,7 +23,10 @@ const List<String> defaultTestSelectors = const [
     'samples',
     'warnings',
     'fletch_tests',
-    'cc_tests'
+    'cc_tests',
+    'lib',
+    'os',
+    'pkg'
 ];
 
 /**
@@ -497,13 +500,12 @@ Note: currently only implemented for dart2js.''',
               [],
               false,
               type: 'bool'),
-          new _TestOptionSpecification(
-              'enable_custom_enqueuer',
-              "Enable custom enqueuer during testing.",
-              ['--enable-custom-enqueuer'],
-              [],
-              false,
-              type: 'bool'),
+        new _TestOptionSpecification(
+            'settings_file_name',
+            'The fletch settings file to use for testing',
+            ['--fletch-settings-file'],
+            [],
+            '.fletch-settings'),
           ];
   }
 
@@ -719,6 +721,14 @@ Note: currently only implemented for dart2js.''',
       isValid = false;
       // TODO(ahe): Find a way to make this optional.
       print("fletch requires --host-checked option.");
+    }
+
+    if (config['system'] == 'lk' &&
+        (config['compiler'] != 'fletchc' ||
+         config['runtime'] != 'fletchvm')) {
+      isValid = false;
+      print("Running tests on LK works only in the "
+            "--compiler=fletchc --runtime=fletchvm configuration.");
     }
 
     return isValid;

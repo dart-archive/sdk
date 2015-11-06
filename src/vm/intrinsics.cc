@@ -2,19 +2,43 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if !defined(FLETCH_TARGET_IA32) && !defined(FLETCH_TARGET_ARM)
-
 #include "src/vm/intrinsics.h"
 
 #include "src/shared/assert.h"
 
 namespace fletch {
 
+#if !defined(FLETCH_TARGET_IA32) && !defined(FLETCH_TARGET_ARM)
+
 #define DEFINE_INTRINSIC(name) \
   void __attribute__((aligned(4))) Intrinsic_##name() { UNREACHABLE(); }
 INTRINSICS_DO(DEFINE_INTRINSIC)
 #undef DEFINE_INTRINSIC
 
-}  // namespace fletch
-
 #endif  // !defined(FLETCH_TARGET_IA32) && !defined(FLETCH_TARGET_ARM)
+
+  IntrinsicsTable* IntrinsicsTable::default_table_ = NULL;
+
+  IntrinsicsTable* IntrinsicsTable::GetDefault() {
+    if (default_table_ == NULL) {
+      default_table_ = new IntrinsicsTable(
+#define ADDRESS_GETTER(name) &Intrinsic_##name,
+INTRINSICS_DO(ADDRESS_GETTER)
+#undef ADDRESS_GETTER
+          NULL);
+    }
+    return default_table_;
+  }
+
+  bool IntrinsicsTable::set_from_string(const char *name, void (*ptr)(void)) {
+#define SET_INTRINSIC(name_)           \
+    if (strcmp(#name_, name) == 0) {   \
+      intrinsic_##name_##_ = ptr;      \
+      return true;                     \
+    }
+INTRINSICS_DO(SET_INTRINSIC)
+#undef SET_INTRINSIC
+    return false;
+  }
+
+}  // namespace fletch

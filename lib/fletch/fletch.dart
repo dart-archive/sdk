@@ -4,7 +4,7 @@
 
 library dart.fletch;
 
-import 'dart:_fletch_system' as fletch;
+import 'dart:fletch._system' as fletch;
 
 /// Fibers are lightweight co-operative multitask units of execution. They
 /// are scheduled on top of OS-level threads, but they are cheap to create
@@ -258,11 +258,41 @@ class Coroutine {
   @fletch.native external static _coroutineNewStack(coroutine, entry);
 }
 
+// TODO: Keep these in sync with src/vm/process.h:Signal::Kind
+enum SignalKind {
+  CompileTimeError,
+  Terminated,
+  UncaughtException,
+  UnhandledSignal,
+}
+
 class Process {
-  /**
-   * Spawn a top-level function.
-   */
-  static void spawn(Function fn, [argument]) {
+  final int _nativeProcessHandle;
+
+  const Process._(this._nativeProcessHandle);
+
+  bool operator==(other) {
+    return
+        other is Process &&
+        other._nativeProcessHandle == _nativeProcessHandle;
+  }
+
+  int get hashCode => _nativeProcessHandle.hashCode;
+
+  @fletch.native bool link() {
+    throw fletch.nativeError;
+  }
+
+  @fletch.native bool monitor(Port exitPort) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new StateError("The argument to monitor must be a Port object.");
+      default:
+        throw fletch.nativeError;
+    }
+  }
+
+  static Process spawn(Function fn, [argument]) {
     if (!isImmutable(fn)) {
       throw new ArgumentError(
           'The closure passed to Process.spawn() must be immutable.');
@@ -273,7 +303,16 @@ class Process {
           'The optional argument passed to Process.spawn() must be immutable.');
     }
 
-    _spawn(_entry, fn, argument);
+    return _spawn(_entry, fn, argument, true, true, null);
+  }
+
+  static Process spawnDetached(Function fn, {Port monitor}) {
+    if (!isImmutable(fn)) {
+      throw new ArgumentError(
+          'The closure passed to Process.spawnDetached() must be immutable.');
+    }
+
+    return _spawn(_entry, fn, null, true, false, monitor);
   }
 
   /**
@@ -352,7 +391,12 @@ class Process {
   }
 
   // Low-level helper function for spawning.
-  @fletch.native static void _spawn(Function entry, Function fn, argument) {
+  @fletch.native static Process _spawn(Function entry,
+                                       Function fn,
+                                       argument,
+                                       bool linkToChild,
+                                       bool linkFromChild,
+                                       Port monitor) {
     throw new ArgumentError();
   }
 

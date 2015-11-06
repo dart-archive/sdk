@@ -33,9 +33,28 @@ import 'package:fletchc/src/zone_helper.dart' show
     runGuarded;
 
 import 'package:fletchc/src/driver/driver_main.dart' show
-    IsolatePool;
+    IsolatePool,
+    ManagedIsolate;
 
-import 'messages.dart';
+import 'package:fletchc/src/driver/developer.dart' show
+    configFileUri;
+
+import 'package:fletchc/src/console_print.dart' show
+    printToConsole;
+
+import 'messages.dart' show
+    Info,
+    InternalErrorMessage,
+    ListTests,
+    ListTestsReply,
+    Message,
+    NamedMessage,
+    RunTest,
+    TestFailed,
+    TestPassed,
+    TestStdoutLine,
+    TimedOut,
+    messageTransformer;
 
 import 'all_tests.dart' show
     NoArgFuture,
@@ -53,16 +72,16 @@ main() async {
   Socket socket = await Socket.connect(InternetAddress.LOOPBACK_IP_V4, port);
   messageSink = new SocketSink(socket);
   IsolatePool pool = new IsolatePool(isolateMain);
-  Set isolates = new Set();
+  Set<ManagedIsolate> isolates = new Set<ManagedIsolate>();
   Map<String, RunningTest> runningTests = <String, RunningTest>{};
   try {
-    var messages = utf8Lines(socket).transform(messageTransformer);
+    Stream<Message> messages = utf8Lines(socket).transform(messageTransformer);
     await for (Message message in messages) {
       if (message is TimedOut) {
         handleTimeout(message, runningTests);
         continue;
       }
-      var isolate = await pool.getIsolate();
+      ManagedIsolate isolate = await pool.getIsolate();
       isolates.add(isolate);
       runInIsolate(
           isolate.beginSession(), isolate, message, runningTests);
@@ -70,7 +89,7 @@ main() async {
   } catch (error, stackTrace) {
     new InternalErrorMessage('$error', '$stackTrace').addTo(socket);
   }
-  for (var isolate in isolates) {
+  for (ManagedIsolate isolate in isolates) {
     isolate.port.send(null);
   }
   await socket.close();
@@ -105,8 +124,8 @@ void handleTimeout(TimedOut message, Map<String, RunningTest> runningTests) {
 }
 
 void runInIsolate(
-    port,
-    isolate,
+    ReceivePort port,
+    ManagedIsolate isolate,
     Message message,
     Map<String, RunningTest> runningTests) {
   StreamIterator iterator = new StreamIterator(port);
@@ -144,7 +163,7 @@ void runInIsolate(
       messageSink.add(iterator.current);
     } while (await iterator.moveNext());
     runningTests.remove(name);
-    isolate.endSession();
+    isolate.endIsolateSession();
   }).catchError((error, stackTrace) {
     messageSink.add(new InternalErrorMessage('$error', '$stackTrace'));
   });
@@ -186,9 +205,8 @@ Future<Null> handleClient(SendPort sendPort, ReceivePort receivePort) async {
 }
 
 Future<Message> runTest(String name, NoArgFuture test) async {
-  if (test == null) {
-    throw "No such test: $name";
-  }
+  Directory tmpdir;
+
   printLineOnStdout(String line) {
     if (messageSink != null) {
       messageSink.add(new TestStdoutLine(name, line));
@@ -196,6 +214,26 @@ Future<Message> runTest(String name, NoArgFuture test) async {
       stdout.writeln(line);
     }
   }
+
+  Future setupGlobalStateForTesting() async {
+    tmpdir = await Directory.systemTemp.createTemp("fletch_test_home");
+    configFileUri = tmpdir.uri.resolve('.fletch');
+    printToConsole = printLineOnStdout;
+  }
+
+  Future resetGlobalStateAfterTesting() async {
+    try {
+      await tmpdir.delete(recursive: true);
+    } on FileSystemException catch (e) {
+      printToConsole('Error when deleting $tmpdir: $e');
+    }
+    printToConsole = Zone.ROOT.print;
+  }
+
+  if (test == null) {
+    throw "No such test: $name";
+  }
+  await setupGlobalStateForTesting();
   try {
     await runGuarded(
         test,
@@ -213,6 +251,8 @@ Future<Message> runTest(String name, NoArgFuture test) async {
     });
   } catch (error, stackTrace) {
     return new TestFailed(name, '$error', '$stackTrace');
+  } finally {
+    await resetGlobalStateAfterTesting();
   }
   return new TestPassed(name);
 }

@@ -9,6 +9,7 @@ import 'diagnostic.dart' show
     DiagnosticParameter;
 
 enum DiagnosticKind {
+  agentVersionMismatch,
   busySession,
   cantPerformVerbIn,
   cantPerformVerbTo,
@@ -19,9 +20,11 @@ enum DiagnosticKind {
   expectedAPortNumber,
   expectedTargetButGot,
   extraArguments,
+  handShakeFailed,
   internalError,
   missingRequiredArgument,
   missingToFile,
+  missingSessionName,
   noFileTarget,
   noSuchSession,
   noTcpSocketTarget,
@@ -33,10 +36,14 @@ enum DiagnosticKind {
   settingsNotAMap,
   settingsNotJson,
   settingsOptionNotAString,
+  settingsDeviceTypeNotAString,
+  settingsDeviceTypeUnrecognized,
   settingsOptionsNotAList,
   settingsPackagesNotAString,
   settingsUnrecognizedConstantValue,
   settingsUnrecognizedKey,
+  noAgentFound,
+  upgradeInvalidPackageName,
   socketAgentConnectError,
   socketAgentReplyError,
   socketVmConnectError,
@@ -55,6 +62,7 @@ enum DiagnosticKind {
   verbRequiresSocketTarget,
   verbRequiresTarget,
   verbRequiresTargetButGot,
+  versionMismatch,
 
   // TODO(ahe): Remove when debug attach implicitly.
   attachToVmBeforeRun,
@@ -143,6 +151,14 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.expectedAPortNumber:
       return "Expected a port number, but got '$userInput'";
 
+    case DiagnosticKind.noAgentFound:
+      return "No agent found in session";
+
+    case DiagnosticKind.upgradeInvalidPackageName:
+      return "A fletch-agent package must have a name of the form\n"
+        "  fletch-agent_<version>_<platform>.deb.\n"
+        "Try renaming the file to match this pattern";
+
     case DiagnosticKind.socketAgentConnectError:
       return "Unable to establish connection to Fletch Agent on "
           "$address: $message";
@@ -176,6 +192,10 @@ String getMessage(DiagnosticKind kind) {
       // TODO(lukechurch): Consider a correction message.
       return "Option '${DiagnosticParameter.userInput}' needs an argument";
 
+    case DiagnosticKind.missingSessionName:
+      // TODO(karlklose,ahe): provide support to list choices here.
+      return "Session name missing. Try adding a name after 'session'.";
+
     case DiagnosticKind.unexpectedArgument:
       // TODO(lukechurch): Review UX
       return "Option '${DiagnosticParameter.userInput}' doesn't take an "
@@ -195,6 +215,15 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.settingsOptionNotAString:
       return "$uri: found 'options' entry '$userInput' which isn't a String";
+
+    case DiagnosticKind.settingsDeviceTypeNotAString:
+      return
+        "$uri: found 'device_type' entry '$userInput' which isn't a String";
+
+    case DiagnosticKind.settingsDeviceTypeUnrecognized:
+      return
+        "$uri: found 'device_type' entry '$userInput' which is not one of"
+        "the recognized device types 'embedded', 'mobile'";
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return "$uri: compile-time constants should be in "
@@ -258,5 +287,30 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.terminatedSession:
       return "Session '$sessionName' was terminated";
+
+    case DiagnosticKind.handShakeFailed:
+      // TODO(ager): lukechurch: Should this ever happen during normal usage?
+      // Should they report this to us as a bug?
+      return "Connection rejected because of invalid handshake reply from "
+          "VM on $address.";
+
+    case DiagnosticKind.versionMismatch:
+      // TODO(ager): lukechurch: Is there advice we can give here?
+      // E.g. Consider upgrading your compiler? Do we have an easy place they
+      // can go to do that? Are we considering adding a tool to auto-upgrade?
+      return "Connection rejected because compiler and VM on $address "
+          "have different versions. Compiler version: '$userInput' "
+          "VM version: '$additionalUserInput'.";
+
+    case DiagnosticKind.agentVersionMismatch:
+      // TODO(wibling): lukechurch: Is there advice we can give here?
+      // E.g. Consider upgrading your compiler? Do we have an easy place they
+      // can go to do that? Are we considering adding a tool to auto-upgrade?
+      return "Could not start vm on device because the compiler and the "
+          "session's remote device have different versions.\n"
+          "Compiler version: '$userInput'\n"
+          "Device version: '$additionalUserInput'.\n"
+          "Try running 'fletch x-upgrade agent with file <agent debian "
+          "package> in session $sessionName'";
   }
 }

@@ -7,7 +7,7 @@
 // code defined outside the VM.
 library dart.fletch.ffi;
 
-import 'dart:_fletch_system' as fletch;
+import 'dart:fletch._system' as fletch;
 import 'dart:fletch';
 import 'dart:typed_data';
 

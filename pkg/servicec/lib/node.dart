@@ -4,6 +4,9 @@
 
 library servicec.node;
 
+import 'package:compiler/src/scanner/scannerlib.dart' show
+    Token;
+
 import 'errors.dart' show
     ErrorNode,
     InternalCompilerError;
@@ -120,6 +123,7 @@ abstract class MemberNode extends Node {
 class SimpleType extends TypeNode {
   TypeKind _type;
   StructNode _resolved;
+  StructNode get resolved => _resolved;
 
   SimpleType(IdentifierNode identifier)
     : super(identifier);
@@ -144,15 +148,17 @@ class SimpleType extends TypeNode {
 }
 
 class PointerType extends TypeNode {
-  TypeKind _type;
+  final TypeKind _type = TypeKind.POINTER;
   TypeNode pointee;
 
   PointerType(TypeNode pointee)
-    : super(new IdentifierNode("${pointee.identifier}*")) {
+    : super(new IdentifierNode(pointee.identifier.token)) {
+    // TODO(stanm): generate a token with a pointer name
     this.pointee = pointee;
   }
 
-  bool isPointer() => TypeKind.POINTER == _type;
+  bool isPointer() => true;
+  bool pointeeResolves() => pointee.isStruct();
 
   void accept(NodeVisitor visitor) {
     visitor.visitPointerType(this);
@@ -160,9 +166,6 @@ class PointerType extends TypeNode {
 
   void resolve(Map<IdentifierNode, StructNode> structs) {
     pointee.resolve(structs);
-    if (pointee.isStruct()) {
-      _type = TypeKind.POINTER;
-    }
   }
 }
 
@@ -175,7 +178,6 @@ class ListType extends TypeNode {
 
   void accept(NodeVisitor visitor) {
     visitor.visitListType(this);
-    visitor.visitTypeParameter(typeParameter);
   }
 
   bool isList() => TypeKind.LIST == _type;
@@ -187,9 +189,10 @@ class ListType extends TypeNode {
 }
 
 class IdentifierNode extends Node {
-  String value;
+  Token token;
+  String get value => token.value;
 
-  IdentifierNode(this.value);
+  IdentifierNode(this.token);
 
   int get hashCode => value.hashCode;
   bool operator ==(IdentifierNode other) => value == other.value;
@@ -222,7 +225,7 @@ abstract class NodeVisitor {
   void visitService(ServiceNode service);
   void visitStruct(StructNode struct);
   void visitFunction(FunctionNode function);
-  void visitUnion(UnionNode field);
+  void visitUnion(UnionNode union);
   void visitField(FieldNode field);
 
   // Structural/syntactic classification of types.
@@ -248,14 +251,14 @@ abstract class RecursiveVisitor extends NodeVisitor {
   }
 
   void visitService(ServiceNode service) {
-    service.identifier.accept(this);
+    if (service.identifier != null) service.identifier.accept(this);
     for (FunctionNode function in service.functions) {
       function.accept(this);
     }
   }
 
   void visitStruct(StructNode struct) {
-    struct.identifier.accept(this);
+    if (struct.identifier != null) struct.identifier.accept(this);
     for (MemberNode member in struct.members) {
       member.accept(this);
     }
@@ -302,7 +305,7 @@ abstract class RecursiveVisitor extends NodeVisitor {
   }
 
   void visitListType(ListType list) {
-    // No op.
+    visitTypeParameter(list.typeParameter);
   }
 
   void visitIdentifier(IdentifierNode identifier) {

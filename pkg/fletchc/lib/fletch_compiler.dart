@@ -49,10 +49,19 @@ import 'src/guess_configuration.dart' show
     executable,
     guessFletchVm;
 
+import 'package:sdk_library_metadata/libraries.dart' show
+    Category;
+
 const String _LIBRARY_ROOT =
     const String.fromEnvironment("fletchc-library-root");
 
 const String _PATCH_ROOT = const String.fromEnvironment("fletch-patch-root");
+
+
+const String fletchDeviceType =
+    const String.fromEnvironment("fletch.device-type");
+const String _NATIVES_JSON =
+    const String.fromEnvironment("fletch-natives-json");
 
 const String StringOrUri = "String or Uri";
 
@@ -63,7 +72,12 @@ class FletchCompiler {
 
   final bool verbose;
 
-  FletchCompiler._(this._compiler, this.script, this.verbose);
+  final List<Category> categories;
+
+  final Uri nativesJson;
+
+  FletchCompiler._(this._compiler, this.script, this.verbose, this.categories,
+                   this.nativesJson);
 
   Backdoor get backdoor => new Backdoor(this);
 
@@ -78,8 +92,10 @@ class FletchCompiler {
        @StringOrUri script,
        @StringOrUri fletchVm,
        @StringOrUri currentDirectory,
+       @StringOrUri nativesJson,
        List<String> options,
-       Map<String, dynamic> environment}) {
+       Map<String, dynamic> environment,
+       List<Category> categories}) {
     Uri base = _computeValidatedUri(
         currentDirectory, name: 'currentDirectory', ensureTrailingSlash: true);
     if (base == null) {
@@ -88,6 +104,21 @@ class FletchCompiler {
 
     if (options == null) {
       options = <String>[];
+    } else {
+      options = new List<String>.from(options);
+    }
+    if (categories != null) {
+      String categoriesOptionValue = categories.map((Category category) {
+        switch (category) {
+          case Category.client:
+            return "Client";
+          case Category.server:
+            return "Server";
+          case Category.embedded:
+            return "Embedded";
+        }
+      }).join(",");
+      options.add("--categories=$categoriesOptionValue");
     }
 
     final bool isVerbose = apiimpl.Compiler.hasOption(options, '--verbose');
@@ -165,6 +196,26 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
       environment = <String, dynamic>{};
     }
 
+    if (nativesJson == null  && _NATIVES_JSON != null) {
+      nativesJson = base.resolve(_NATIVES_JSON);
+    }
+    nativesJson = _computeValidatedUri(
+        nativesJson, name: 'nativesJson', base: base);
+
+    if (nativesJson == null) {
+      nativesJson = _guessNativesJson();
+      if (nativesJson == null) {
+        throw new StateError(
+"""
+Unable to guess the location of the 'natives.json' file (nativesJson).
+Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
+);
+      }
+    } else if (!_looksLikeNativesJson(nativesJson)) {
+      throw new ArgumentError(
+          "[nativesJson]: natives.json not found in '$nativesJson'.");
+    }
+
     FletchCompilerImplementation compiler = new FletchCompilerImplementation(
         provider,
         outputProvider,
@@ -172,6 +223,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
         libraryRoot,
         packageConfig,
         patchRoot,
+        nativesJson,
         options,
         environment,
         fletchVm);
@@ -179,7 +231,8 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
     compiler.log("Using library root: $libraryRoot");
     compiler.log("Using package config: $packageConfig");
 
-    var helper = new FletchCompiler._(compiler, script, isVerbose);
+    var helper = new FletchCompiler._(compiler, script, isVerbose, categories,
+                                      nativesJson);
     compiler.helper = helper;
     return helper;
   }
@@ -199,7 +252,6 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
   }
 
   Future _inititalizeContext() async {
-    Uri nativesJson = executable.resolve("natives.json");
     var data = await _compiler.callUserProvider(nativesJson);
     if (data is! String) {
       if (data.last == 0) {
@@ -224,11 +276,14 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
         libraryRoot: _compiler.libraryRoot,
         patchRoot: _compiler.patchRoot,
         packageConfig: _compiler.packageConfig,
+        fletchVm: _compiler.fletchVm,
+        nativesJson: _compiler.nativesJson,
         inputProvider: _compiler.provider,
         diagnosticHandler: _compiler.handler,
         options: options,
         outputProvider: _compiler.userOutputProvider,
-        environment: _compiler.environment);
+        environment: _compiler.environment,
+        categories: categories);
   }
 }
 
@@ -323,4 +378,13 @@ Uri _guessPatchRoot(Uri libraryRoot) {
 
 bool _looksLikePatchRoot(Uri uri) {
   return _containsFile(uri, 'lib/core/core_patch.dart');
+}
+
+bool _looksLikeNativesJson(Uri uri) {
+  return new File.fromUri(uri).existsSync();
+}
+
+Uri _guessNativesJson() {
+  Uri uri = executable.resolve('natives.json');
+  return _looksLikeNativesJson(uri) ? uri : null;
 }

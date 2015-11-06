@@ -744,7 +744,7 @@ Socket* Connect() {
   if (fd < 0) {
     Die("%s: socket failed: %s", program_name, strerror(errno));
   }
-  Socket* socket = new Socket(fd);
+  Socket* socket = Socket::FromFd(fd);
 
   int connect_result = TEMP_FAILURE_RETRY(connect(
     fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)));
@@ -801,6 +801,8 @@ static int QuitCommand() {
   if (CheckedSystem(command) != 0) {
     // Remove the socket location file.
     unlink(fletch_config_file);
+    free(command);
+    free(vm_path);
 
     printf("Background process wasn't running\n");
 
@@ -828,6 +830,8 @@ static int QuitCommand() {
   // lsof -t -- <Dart VM> > /dev/null
   if (CheckedSystem(command) != 0) {
     printf("Background process exited\n");
+    free(command);
+    free(vm_path);
 
     // lsof returns 0 if it listed processes.
     return 0;
@@ -842,6 +846,8 @@ static int QuitCommand() {
 
   // lsof -t +r2m%n -- <Dart VM> | xargs -n1 kill -9
   CheckedSystem(command);
+  free(command);
+  free(vm_path);
   printf("Forced quit succeeded\n");
   return 0;
 }

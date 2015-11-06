@@ -18,10 +18,10 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
   HeapObject* heap_object = HeapObject::cast(object);
   word address = heap_object->address();
 
-  bool is_immutable_heap_obj = false;
-  if (immutable_heap_ != NULL) {
-    is_immutable_heap_obj =
-        immutable_heap_->heap()->space()->Includes(address);
+  bool is_shared_heap_obj = false;
+  if (shared_heap_ != NULL) {
+    is_shared_heap_obj =
+        shared_heap_->heap()->space()->Includes(address);
   }
   bool is_mutable_heap_obj = false;
   if (mutable_heap_ != NULL) {
@@ -30,7 +30,7 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
 
   bool is_program_heap = program_heap_->space()->Includes(address);
 
-  if (!is_immutable_heap_obj && !is_mutable_heap_obj && !is_program_heap) {
+  if (!is_shared_heap_obj && !is_mutable_heap_obj && !is_program_heap) {
     fprintf(stderr,
             "Found pointer %p which lies in neither of "
             "immutable_heap/mutable_heap/program_heap.\n",
@@ -55,7 +55,7 @@ void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
   // Validate pointers in roots, queues, weak pointers and mutable heap.
   {
     HeapPointerValidator validator(
-        program_heap_, immutable_heap_, process_heap);
+        program_heap_, shared_heap_, process_heap);
 
     SafeObjectPointerVisitor pointer_visitor(process, &validator);
     process->IterateRoots(&validator);

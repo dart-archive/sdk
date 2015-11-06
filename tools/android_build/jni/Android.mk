@@ -13,6 +13,7 @@ LOCAL_CFLAGS := \
   -DFLETCH_ENABLE_FFI \
   -DFLETCH_ENABLE_PRINT_INTERCEPTORS \
   -DFLETCH_ENABLE_LIVE_CODING \
+  -DFLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS \
   -DFLETCH_ENABLE_NATIVE_PROCESSES \
   -DANDROID \
   -I$(LOCAL_PATH)/../../../ -std=gnu++11
@@ -27,8 +28,8 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/platform_linux.cc \
 	../../../src/shared/platform_posix.cc \
 	../../../src/shared/utils.cc \
-	../../../src/vm/android_print_interceptor.cc \
 	../../../src/vm/debug_info.cc \
+	../../../src/vm/event_handler.cc \
 	../../../src/vm/event_handler_linux.cc \
 	../../../src/vm/event_handler_posix.cc \
 	../../../src/vm/ffi.cc \
@@ -39,11 +40,13 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/gc_thread.cc \
 	../../../src/vm/heap.cc \
 	../../../src/vm/heap_validator.cc \
-	../../../src/vm/immutable_heap.cc \
+	../../../src/vm/shared_heap.cc \
 	../../../src/vm/interpreter.cc \
 	../../../src/vm/intrinsics.cc \
+	../../../src/vm/links.cc \
 	../../../src/vm/lookup_cache.cc \
 	../../../src/vm/log_print_interceptor.cc \
+	../../../src/vm/message_mailbox.cc \
 	../../../src/vm/native_process.cc \
 	../../../src/vm/native_process_disabled.cc \
 	../../../src/vm/natives.cc \
@@ -54,6 +57,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/object_memory.cc \
 	../../../src/vm/port.cc \
 	../../../src/vm/process.cc \
+	../../../src/vm/process_handle.cc \
 	../../../src/vm/program.cc \
 	../../../src/vm/program_folder.cc \
 	../../../src/vm/scheduler.cc \
@@ -82,13 +86,15 @@ LOCAL_SRC_FILES := \
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
   LOCAL_CFLAGS += -DFLETCH_TARGET_ARM
   LOCAL_SRC_FILES += \
-    ../../../out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen/generated.S
+    ../../../out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen/generated.S \
+    ../../../out/ReleaseXARMAndroid/gen/version.cc
 endif
 
 ifeq ($(TARGET_ARCH_ABI), x86)
   LOCAL_CFLAGS += -DFLETCH_TARGET_IA32
   LOCAL_SRC_FILES += \
-    ../../../out/ReleaseIA32Android/obj/src/vm/fletch_vm.gen/generated.S
+    ../../../out/ReleaseIA32Android/obj/src/vm/fletch_vm.gen/generated.S \
+    ../../../out/ReleaseIA32Android/gen/version.cc
 endif
 
 include $(BUILD_STATIC_LIBRARY)

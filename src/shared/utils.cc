@@ -11,10 +11,11 @@
 
 namespace fletch {
 
+Atomic<bool> Print::standard_output_enabled_ = true;
+
 #ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
 Mutex* Print::mutex_ = Platform::CreateMutex();
 PrintInterceptor* Print::interceptor_ = NULL;
-Atomic<bool> Print::standard_output_enabled_ = true;
 #endif
 
 void Print::Out(const char* format, ...) {
@@ -40,10 +41,12 @@ void Print::Out(const char* format, ...) {
   }
   free(message);
 #else
-  va_list args;
-  va_start(args, format);
-  vfprintf(stdout, format, args);
-  va_end(args);
+  if (standard_output_enabled_) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stdout, format, args);
+    va_end(args);
+  }
 #endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
@@ -70,10 +73,12 @@ void Print::Error(const char* format, ...) {
   }
   free(message);
 #else
-  va_list args;
-  va_start(args, format);
-  vfprintf(stderr, format, args);
-  va_end(args);
+  if (standard_output_enabled_) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+  }
 #endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
@@ -83,6 +88,26 @@ void Print::RegisterPrintInterceptor(PrintInterceptor* interceptor) {
   ASSERT(!interceptor->next_);
   interceptor->next_ = interceptor_;
   interceptor_ = interceptor;
+#else
+  UNIMPLEMENTED();
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+}
+
+void Print::UnregisterPrintInterceptor(PrintInterceptor* interceptor) {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+  ScopedLock scope(mutex_);
+  if (interceptor == interceptor_) {
+    interceptor_ = interceptor->next_;
+  } else {
+    PrintInterceptor* prev = interceptor_;
+    while (prev != NULL && prev->next_ != interceptor) {
+      prev = prev->next_;
+    }
+    if (prev != NULL) {
+      prev->next_ = interceptor->next_;
+    }
+  }
+  interceptor->next_ = NULL;
 #else
   UNIMPLEMENTED();
 #endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS

@@ -1,22 +1,22 @@
-main	@40
-main	@2
-main	@new A(40,2)
-main	@a
-main	@a.x
-main	@a
-main	@a.y
-A.y	@_y
-A.y	@=>_y;
-main	@a.x+a.y
-main	@a
-main	@10
-main	@a.x=10
-main	@a
-main	@32
-main	@a.y=32
-A.y	@_y=value
-A.y	@value
-A.y	@_y=value
-A.y	@=>_y=value;
-main	@a.y=32
+main    @40
+main    @2
+main    @new A(40, 2)
+main    @a
+main    @a.x
+main    @a
+main    @a.y
+A.y @_y
+A.y @=> _y;
+main    @a.x + a.y
+main    @a
+main    @10
+main    @a.x = 10
+main    @a
+main    @32
+main    @a.y = 32
+A.y @_y = value
+A.y @value
+A.y @_y = value
+A.y @=> _y = value;
+main    @a.y = 32
 ### process terminated

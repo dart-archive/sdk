@@ -870,31 +870,25 @@ static Function* FunctionForClosure(Object* argument, unsigned arity) {
   return closure_class->LookupMethod(selector);
 }
 
-NATIVE(ProcessSpawn) {
-  Program* program = process->program();
-
-  Instance* entrypoint = Instance::cast(arguments[0]);
-  Instance* closure = Instance::cast(arguments[1]);
-  Object* argument = arguments[2];
-
-  if (!closure->IsImmutable()) {
-    // TODO(kasperl): Return a proper failure.
-    return Failure::index_out_of_bounds();
-  }
-
-  bool has_argument = !argument->IsNull();
-  if (has_argument && !argument->IsImmutable()) {
-    // TODO(kasperl): Return a proper failure.
-    return Failure::index_out_of_bounds();
-  }
-
-  if (FunctionForClosure(closure, has_argument ? 1 : 0) == NULL) {
-    // TODO(kasperl): Return a proper failure.
-    return Failure::index_out_of_bounds();
-  }
-
+static Process* SpawnProcessInternal(Program* program,
+                                     Process* process,
+                                     Instance* entrypoint,
+                                     Instance* closure,
+                                     Object* argument) {
   Function* entry = FunctionForClosure(entrypoint, 2);
   ASSERT(entry != NULL);
+
+#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
+  // Code in process spawning generally assumes there is enough space for
+  // stacks etc.
+  //
+  // In case of multiple heaps that is always guaranteed because
+  // each process gets it's own heap - which happens to be big enough.
+  //
+  // In case of a shared heap, we use a [NoAllocationFailureScope] to ensure
+  // it.
+  NoAllocationFailureScope scope(program->shared_heap()->heap()->space());
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
   // Spawn a new process and create a copy of the closure in the
   // new process' heap.
@@ -917,9 +911,73 @@ NATIVE(ProcessSpawn) {
   stack->set(4, reinterpret_cast<Object*>(bcp));
   stack->set_top(4);
 
-  program->scheduler()->EnqueueProcessOnSchedulerWorkerThread(
-      process, child);
-  return process->program()->null_object();
+  return child;
+}
+
+NATIVE(ProcessSpawn) {
+  Program* program = process->program();
+
+  Instance* entrypoint = Instance::cast(arguments[0]);
+  Instance* closure = Instance::cast(arguments[1]);
+  Object* argument = arguments[2];
+  bool link_to_child = arguments[3] == program->true_object();
+  bool link_from_child = arguments[4] == program->true_object();
+  Object* dart_monitor_port = arguments[5];
+  Port* monitor_port = NULL;
+  if (!dart_monitor_port->IsNull()) {
+    if (!dart_monitor_port->IsPort()) {
+      return Failure::wrong_argument_type();
+    }
+    monitor_port = reinterpret_cast<Port*>(
+        AsForeignWord(Instance::cast(dart_monitor_port)->GetInstanceField(0)));
+  }
+
+  if (!closure->IsImmutable()) {
+    // TODO(kasperl): Return a proper failure.
+    return Failure::index_out_of_bounds();
+  }
+
+  bool has_argument = !argument->IsNull();
+  if (has_argument && !argument->IsImmutable()) {
+    // TODO(kasperl): Return a proper failure.
+    return Failure::index_out_of_bounds();
+  }
+
+  if (FunctionForClosure(closure, has_argument ? 1 : 0) == NULL) {
+    // TODO(kasperl): Return a proper failure.
+    return Failure::index_out_of_bounds();
+  }
+
+  // TODO(kustermann): We should not have two allocations in one native.
+  Object* native_handle = process->NewInteger(0);
+  if (native_handle == Failure::retry_after_gc()) return native_handle;
+  Object* dart_process = process->NewInstance(program->process_class(), true);
+  if (dart_process == Failure::retry_after_gc()) return dart_process;
+  Instance::cast(dart_process)->SetInstanceField(0, native_handle);
+
+  Process* child = SpawnProcessInternal(
+      program, process, entrypoint, closure, argument);
+
+  ProcessHandle* handle = child->process_handle();
+  handle->IncrementRef();
+  LargeInteger::cast(native_handle)->set_value(reinterpret_cast<int64>(handle));
+  process->RegisterFinalizer(
+      HeapObject::cast(dart_process), Process::FinalizeProcess);
+
+  if (link_to_child) {
+    process->links()->InsertHandle(child->process_handle());
+  }
+  if (link_from_child) {
+    child->links()->InsertHandle(process->process_handle());
+  }
+
+  if (monitor_port != NULL) {
+    child->links()->InsertPort(monitor_port);
+  }
+
+  program->scheduler()->EnqueueProcessOnSchedulerWorkerThread(process, child);
+
+  return dart_process;
 }
 
 NATIVE(CoroutineCurrent) {

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_MBED)
+#if defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_CMSIS)
 
 #ifdef FLETCH_ENABLE_FFI
 
@@ -11,14 +11,9 @@
 #include "src/vm/process.h"
 #include "src/shared/assert.h"
 
-// TODO(herhut): Move to fletch_api.h or similar eventually.
-typedef struct {
-  const char* const name;
-  const void* const ptr;
-} StaticFFISymbol;
+#include "include/static_ffi.h"
 
-extern "C" StaticFFISymbol* fletch_ffi_table_start;
-extern "C" StaticFFISymbol* fletch_ffi_table_end;
+extern "C" FletchStaticFFISymbol fletch_ffi_table;
 
 namespace fletch {
 
@@ -44,8 +39,8 @@ NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   if (address != 0) return Failure::index_out_of_bounds();
   char* name = AsForeignString(arguments[1]);
-  for (StaticFFISymbol* entry = fletch_ffi_table_start;
-       entry < fletch_ffi_table_end;
+  for (FletchStaticFFISymbol* entry = &fletch_ffi_table;
+       entry->name != NULL;
        entry++) {
     if (strcmp(name, entry->name) == 0) {
       free(name);
@@ -87,4 +82,4 @@ NATIVE(ForeignErrno) {
 
 #endif  // FLETCH_ENABLE_FFI
 
-#endif  // defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_MBED)
+#endif  // defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_CMSIS)

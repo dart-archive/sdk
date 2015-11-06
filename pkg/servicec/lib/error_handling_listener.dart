@@ -18,7 +18,7 @@ import 'scanner.dart' show
     LF_INFO;
 
 import 'errors.dart' show
-    CompilerError,
+    ErrorTag,
     ErrorNode,
     FormalErrorNode,
     FunctionErrorNode,
@@ -40,6 +40,8 @@ import 'marker.dart' show
     BeginFormalMarker,
     BeginFunctionMarker,
     BeginFieldMarker,
+    BeginServiceMarker,
+    BeginStructMarker,
     BeginTypeMarker,
     BeginUnionMarker,
     MarkerNode;
@@ -133,15 +135,17 @@ class ErrorHandlingListener extends Listener {
   Node get parsedUnitNode {
     assert(stack.size == 1);
     assert(stack.topNode() is CompilationUnitNode);
-    return stack.popNode();
+    return stack.topNode();
   }
 
   // Top-level nodes.
   Token beginService(Token tokens) {
+    stack.pushNode(new BeginServiceMarker(tokens));
     return tokens;
   }
 
   Token beginStruct(Token tokens) {
+    stack.pushNode(new BeginStructMarker(tokens));
     return tokens;
   }
 
@@ -169,7 +173,7 @@ class ErrorHandlingListener extends Listener {
   Token handleIdentifier(Token tokens) {
     if (tokens is ErrorToken) return tokens;
 
-    stack.pushNode(new IdentifierNode(tokens.value));
+    stack.pushNode(new IdentifierNode(tokens));
     return tokens.next;
   }
 
@@ -264,6 +268,8 @@ class ErrorHandlingListener extends Listener {
 
     List<FunctionNode> functions = functionPopper.popNodes(count);
     IdentifierNode identifier = stack.popNode();
+    MarkerNode marker = stack.popNode();
+    assert(marker is BeginServiceMarker);
     stack.pushNode(new ServiceNode(identifier, functions));
     return tokens;
   }
@@ -273,6 +279,8 @@ class ErrorHandlingListener extends Listener {
 
     List<MemberNode> members = memberPopper.popNodes(count);
     IdentifierNode identifier = stack.popNode();
+    MarkerNode marker = stack.popNode();
+    assert(marker is BeginStructMarker);
     stack.pushNode(new StructNode(identifier, members));
     return tokens;
   }
@@ -320,7 +328,7 @@ class ErrorHandlingListener extends Listener {
   Token recoverType(Token tokens) {
     // A ListType might have put a ListTypeError on the stack.
     TypeNode type = typePopper.popNodeIfMatching();
-    Node marker = stack.popNode();
+    MarkerNode marker = stack.popNode();
     assert(marker is BeginTypeMarker);
     if (type != null) stack.pushNode(type);
 
@@ -330,10 +338,10 @@ class ErrorHandlingListener extends Listener {
   Token recoverFormal(Token tokens) {
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
     TypeNode type = typePopper.popNodeIfMatching();
-    Node marker = stack.popNode();
+    MarkerNode marker = stack.popNode();
     assert(marker is BeginFormalMarker);
     if (identifier != null || type != null) {
-      stack.pushNode(new FormalErrorNode(type, identifier, tokens));
+      stack.pushNode(new FormalErrorNode(type, identifier, marker.token));
     }
     return tokens;
   }
@@ -345,7 +353,8 @@ class ErrorHandlingListener extends Listener {
     MarkerNode marker = stack.popNode();
     assert(marker is BeginFunctionMarker);
     if (formals.isNotEmpty || identifier != null || type != null) {
-      stack.pushNode(new FunctionErrorNode(type, identifier, formals, tokens));
+      stack.pushNode(
+          new FunctionErrorNode(type, identifier, formals, marker.token));
       return consumeDeclarationLine(marker.token);
     } else {
       // Declaration was never started, so don't end it.
@@ -359,7 +368,7 @@ class ErrorHandlingListener extends Listener {
     MarkerNode marker = stack.popNode();
     assert(marker is BeginFieldMarker);
     if (identifier != null || type != null) {
-      stack.pushNode(new FieldErrorNode(type, identifier, tokens));
+      stack.pushNode(new FieldErrorNode(type, identifier, marker.token));
       return consumeDeclarationLine(marker.token);
     } else {
       // Declaration was never started, so don't end it.
@@ -369,23 +378,27 @@ class ErrorHandlingListener extends Listener {
 
   Token recoverUnion(Token tokens) {
     List<FieldNode> fields = fieldPopper.popNodesWhileMatching();
-    Node marker = stack.popNode();
+    MarkerNode marker = stack.popNode();
     assert(marker is BeginUnionMarker);
-    stack.pushNode(new UnionErrorNode(fields, tokens));
+    stack.pushNode(new UnionErrorNode(fields, marker.token));
     return tokens;
   }
 
   Token recoverService(Token tokens) {
     List<FunctionNode> functions = functionPopper.popNodesWhileMatching();
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
-    stack.pushNode(new ServiceErrorNode(identifier, functions, tokens));
+    MarkerNode marker = stack.popNode();
+    assert(marker is BeginServiceMarker);
+    stack.pushNode(new ServiceErrorNode(identifier, functions, marker.token));
     return consumeTopLevel(tokens);
   }
 
   Token recoverStruct(Token tokens) {
     List<MemberNode> members = memberPopper.popNodesWhileMatching();
     IdentifierNode identifier = identifierPopper.popNodeIfMatching();
-    stack.pushNode(new StructErrorNode(identifier, members, tokens));
+    MarkerNode marker = stack.popNode();
+    assert(marker is BeginStructMarker);
+    stack.pushNode(new StructErrorNode(identifier, members, marker.token));
     return consumeTopLevel(tokens);
   }
 

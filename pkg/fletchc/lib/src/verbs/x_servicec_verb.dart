@@ -4,32 +4,44 @@
 
 library fletchc.verbs.servicec_verb;
 
+import 'dart:io' show
+    File,
+    Directory,
+    Platform;
+
+import 'package:path/path.dart' show join, dirname;
+
 import 'infrastructure.dart';
 
 import '../driver/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 import 'package:servicec/compiler.dart' as servicec;
-import 'package:servicec/errors.dart' as errors;
+
+import 'package:servicec/errors.dart' show
+    CompilationError,
+    ErrorReporter;
 
 import 'documentation.dart' show
     servicecDocumentation;
 
 import "package:compiler/src/util/uri_extras.dart" show
-   relativize;
+    relativize;
+
+import "package:fletchc/src/guess_configuration.dart" show
+    executable;
 
 const Action servicecAction = const Action(
     // A session is required for a worker.
-    servicecAct, servicecDocumentation, requiresSession: true,
-    requiredTarget: TargetKind.FILE);
+    servicecAct,
+    servicecDocumentation,
+    requiresSession: true,
+    requiredTarget: TargetKind.FILE,
+    allowsTrailing: true);
 
-Future<int> servicecAct(AnalyzedSentence sentence, VerbContext context) async {
-  // This is asynchronous, but we don't await the result so we can respond to
-  // other requests.
-  context.performTaskInWorker(
-      new CompileTask(sentence.targetUri, sentence.base));
-
-  return null;
+Future<int> servicecAct(AnalyzedSentence sentence, VerbContext context) {
+  return context.performTaskInWorker(
+      new CompileTask(sentence.targetUri, sentence.base, sentence.trailing));
 }
 
 class CompileTask extends SharedTask {
@@ -37,35 +49,74 @@ class CompileTask extends SharedTask {
 
   final Uri base;
   final Uri targetUri;
+  final List<String> trailing;
 
-  const CompileTask(this.targetUri, this.base);
+  const CompileTask(this.targetUri, this.base, this.trailing);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return compileTask(this.targetUri, this.base);
+    return compileTask(targetUri, base, trailing);
   }
 }
 
-Future<int> compileTask(Uri targetUri, Uri base) async {
+// TODO(stanm): test after issue #244 is resolved
+const String _SERVICEC_DIR = const String.fromEnvironment("servicec-dir");
+
+bool _looksLikeServicecDir(Uri uri) {
+  if (!new Directory.fromUri(uri).existsSync()) return false;
+  String expectedDirectory = join(uri.path, 'lib', 'src', 'resources');
+  return new Directory(expectedDirectory).existsSync();
+}
+
+Uri guessServicecDir(Uri base) {
+  Uri servicecDirectory;
+  if (_SERVICEC_DIR != null) {
+    // Use Uri.base here because _SERVICEC_DIR is a constant relative to the
+    // location of where fletch was called from, not relative to the C++
+    // client.
+    servicecDirectory = base.resolve(_SERVICEC_DIR);
+  } else {
+    Uri uri = executable.resolve(join('..', '..', 'tools', 'servicec'));
+    if (new Directory.fromUri(uri).existsSync()) {
+      servicecDirectory = uri;
+    }
+  }
+  if (servicecDirectory == null) {
+    throw new StateError("""
+Unable to guess the location of the service compiler (servicec).
+Try adding command-line option '-Dservicec-dir=<path to service compiler>.""");
+  } else if (!_looksLikeServicecDir(servicecDirectory)) {
+    throw new StateError("""
+No resources directory in '$servicecDirectory'.
+Try adding command-line option '-Dservicec-dir=<path to service compiler>.""");
+  }
+  return servicecDirectory;
+}
+
+Future<int> compileTask(Uri targetUri, Uri base, List<String> arguments) async {
+  Uri servicecUri = guessServicecDir(base);
+  String resourcesDirectory = join(servicecUri.path, 'lib', 'src', 'resources');
+  String outputDirectory;
+  if (null != arguments && arguments.length == 2 && arguments[0] == "out") {
+    outputDirectory = base.resolve(arguments[1]).toFilePath();
+  } else {
+    print("Bad arguments: $arguments; expected 'out <out-dir>'.");
+    return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+  }
+
   String relativeName = relativize(base, targetUri, false);
   print("Compiling $relativeName...");
 
-  // TODO(stanm): take directory as argument
-  String outputDirectory = "/tmp/servicec-out";
-
   String fileName = targetUri.toFilePath();
-  Iterable<errors.CompilerError> compilerErrors =
-    await servicec.compile(fileName, outputDirectory);
+  Iterable<CompilationError> compilerErrors =
+    await servicec.compile(fileName, resourcesDirectory, outputDirectory);
 
   print("Compiled $relativeName to $outputDirectory");
 
   int length = compilerErrors.length;
   if (length > 0) {
-    print("Number of errors: $length");
-    for (errors.CompilerError compilerError in compilerErrors) {
-      print("$compilerError");
-    }
+    new ErrorReporter(fileName, relativeName).report(compilerErrors);
     return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
   }
 

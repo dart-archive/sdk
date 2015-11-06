@@ -16,7 +16,7 @@ namespace fletch {
 class Socket {
  public:
   Socket();
-  explicit Socket(int fd);
+
   virtual ~Socket();
 
   bool Connect(const char* host, int port);
@@ -35,10 +35,15 @@ class Socket {
 
   void SetTCPNoDelay(bool value);
 
+  static Socket* FromFd(int fd);
+
  private:
+  struct SocketData;
+
+  explicit Socket(SocketData* data);
+
   bool ShouldRetryAccept(int error);
 
-  struct SocketData;
   SocketData* data_;
 };
 

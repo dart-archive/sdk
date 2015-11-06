@@ -58,6 +58,7 @@ import 'package:fletchc/commands.dart' show
     Command,
     CommitChanges,
     CommitChangesResult,
+    HandShakeResult,
     MapId;
 
 import 'package:fletchc/fletch_compiler.dart' show
@@ -67,6 +68,7 @@ import 'package:fletchc/src/fletch_compiler_implementation.dart' show
     OutputProvider;
 
 import 'package:fletchc/src/guess_configuration.dart' show
+    fletchVersion,
     guessFletchVm;
 
 import 'package:fletchc/fletch_system.dart';
@@ -207,6 +209,13 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
         for (Command command in fletchDelta.commands) {
           print(command);
         }
+      }
+
+      if (isFirstProgram) {
+        // Perform handshake with VM.
+        HandShakeResult handShakeResult =
+            await session.handShake(fletchVersion);
+        Expect.isTrue(handShakeResult.success, "Fletch VM version mismatch");
       }
 
       CommitChangesResult result = await session.applyDelta(fletchDelta);

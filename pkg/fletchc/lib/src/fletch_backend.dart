@@ -21,7 +21,6 @@ import 'package:compiler/src/dart2jslib.dart' show
     Registry,
     ResolutionCallbacks,
     ResolutionEnqueuer,
-    WorldImpact,
     isPrivateName;
 
 import 'package:compiler/src/dart_types.dart' show
@@ -34,8 +33,8 @@ import 'package:compiler/src/tree/tree.dart' show
     Expression;
 
 import 'package:compiler/src/elements/elements.dart' show
-    AstElement,
     AbstractFieldElement,
+    AstElement,
     ClassElement,
     ConstructorElement,
     Element,
@@ -47,6 +46,7 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionTypedElement,
     LibraryElement,
     MemberElement,
+    Name,
     ParameterElement;
 
 import 'package:compiler/src/universe/universe.dart' show
@@ -105,14 +105,14 @@ import '../incremental_backend.dart' show
 
 import 'fletch_enqueuer.dart' show
     FletchEnqueueTask,
-    shouldReportEnqueuingOfElement,
-    useCustomEnqueuer;
+    shouldReportEnqueuingOfElement;
 
 import 'fletch_registry.dart' show
+    ClosureKind,
     FletchRegistry;
 
-import 'fletch_codegen_work_item.dart' show
-    FletchCodegenWorkItem;
+import 'diagnostic.dart' show
+   throwInternalError;
 
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
@@ -139,7 +139,9 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, FletchClass>(),
     const PersistentMap<ClassElement, FletchClass>(),
     const <FletchConstant>[],
-    const PersistentMap<int, String>());
+    const PersistentMap<int, String>(),
+    const PersistentMap<int, int>(),
+    const PersistentMap<int, int>());
 
 class FletchBackend extends Backend with ResolutionCallbacks
     implements IncrementalFletchBackend {
@@ -166,6 +168,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
   final Map<ClassElement, Set<ClassElement>> directSubclasses =
       <ClassElement, Set<ClassElement>>{};
 
+  /// Set of classes that have special meaning to the Fletch VM. They're
+  /// created using [PushBuiltinClass] instead of [PushNewClass].
+  // TODO(ahe): Move this to FletchSystem?
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
 
   // TODO(ahe): This should be invalidated by a new [FletchSystem].
@@ -180,15 +185,11 @@ class FletchBackend extends Backend with ResolutionCallbacks
   final Map<FieldElement, FletchFunctionBuilder> lazyFieldInitializers =
       <FieldElement, FletchFunctionBuilder>{};
 
-  final Map<int, int> getters = <int, int>{};
-  final Map<int, int> setters = <int, int>{};
-
   // TODO(ahe): This should be moved to [FletchSystem].
   Map<FletchClassBuilder, FletchFunctionBuilder> tearoffFunctions;
 
   LibraryElement fletchSystemLibrary;
   LibraryElement fletchFFILibrary;
-  LibraryElement fletchIOSystemLibrary;
   LibraryElement collectionLibrary;
   LibraryElement mathLibrary;
   LibraryElement asyncLibrary;
@@ -215,6 +216,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
   ClassElement fletchNoSuchMethodErrorClass;
   ClassElement bigintClass;
   ClassElement uint32DigitsClass;
+
+  /// Holds a reference to the class Coroutine if it exists.
+  ClassElement coroutineClass;
 
   FletchSystemBuilder systemBuilder;
 
@@ -287,96 +291,65 @@ class FletchBackend extends Backend with ResolutionCallbacks
     FletchRegistry registry = incomingRegistry;
     compiler.patchAnnotationClass = patchAnnotationClass;
 
-    FunctionElement findHelper(String name, [LibraryElement library]) {
-      if (library == null) library = fletchSystemLibrary;
+    bool hasMissingHelpers = false;
+    loadHelperMethods((String name) {
+      LibraryElement library = fletchSystemLibrary;
       Element helper = library.findLocal(name);
       // TODO(ahe): Make it cleaner.
-      if (helper.isAbstractField) {
+      if (helper != null && helper.isAbstractField) {
         AbstractFieldElement abstractField = helper;
         helper = abstractField.getter;
       }
       if (helper == null) {
+        hasMissingHelpers = true;
         compiler.reportError(
-            fletchSystemLibrary, MessageKind.GENERIC,
+            library, MessageKind.GENERIC,
             {'text': "Required implementation method '$name' not found."});
       }
       return helper;
+    });
+    if (hasMissingHelpers) {
+      throwInternalError(
+          "Some implementation methods are missing, see details above");
     }
-
-    FunctionElement findExternal(String name, [LibraryElement library]) {
-      FunctionElement helper = findHelper(name);
-      externals.add(helper);
-      return helper;
-    }
-
-    fletchSystemEntry = findHelper('entry');
-    if (fletchSystemEntry != null) {
-      world.registerStaticUse(fletchSystemEntry);
-    }
-    fletchExternalInvokeMain = findExternal('invokeMain');
-    fletchExternalYield = findExternal('yield');
-    fletchExternalCoroutineChange =
-        findExternal('coroutineChange', fletchLibrary);
-    fletchExternalNativeError = findExternal('nativeError');
-    fletchUnresolved = findExternal('unresolved');
-    world.registerStaticUse(fletchUnresolved);
-    fletchCompileError = findExternal('compileError');
     world.registerStaticUse(fletchCompileError);
+    world.registerStaticUse(fletchSystemEntry);
+    world.registerStaticUse(fletchUnresolved);
 
-    FletchClassBuilder loadClass(
+    loadHelperClasses((
         String name,
         LibraryElement library,
-        [bool builtin = false,
-         bool forCodegen = true]) {
+        {bool builtin: false}) {
       var classImpl = library.findLocal(name);
       if (classImpl == null) classImpl = library.implementation.find(name);
       if (classImpl == null) {
-        compiler.internalError(library, "Internal class '$name' not found.");
+        compiler.reportError(
+            library, MessageKind.GENERIC,
+            {'text': "Required implementation class '$name' not found."});
+        hasMissingHelpers = true;
         return null;
       }
+      if (hasMissingHelpers) return null;
       if (builtin) builtinClasses.add(classImpl);
-      // TODO(ahe): Register in ResolutionCallbacks. The 3 lines below should
-      // not happen at this point in time.
-      classImpl.ensureResolved(compiler);
-      world.registerInstantiatedType(classImpl.rawType, registry.asRegistry);
-      // TODO(ahe): This is a hack to let both the world and the codegen know
-      // about the instantiated type.
-      if (forCodegen) {
+      {
+        // TODO(ahe): Register in ResolutionCallbacks. The lines in this block
+        // should not happen at this point in time.
+        classImpl.ensureResolved(compiler);
+        world.registerInstantiatedType(classImpl.rawType, registry.asRegistry);
+        // TODO(ahe): This is a hack to let both the world and the codegen know
+        // about the instantiated type.
         registry.registerInstantiatedType(classImpl.rawType);
-        return registerClassElement(classImpl);
       }
-      return null;
+      return registerClassElement(classImpl);
+    });
+    if (hasMissingHelpers) {
+      throwInternalError(
+          "Some implementation classes are missing, see details above");
     }
 
-    compiledObjectClass = loadClass("Object", compiler.coreLibrary, true);
-    smiClass = loadClass("_Smi", compiler.coreLibrary, true).element;
-    mintClass = loadClass("_Mint", compiler.coreLibrary, true).element;
-    loadClass("_OneByteString", compiler.coreLibrary, true);
-    loadClass("_TwoByteString", compiler.coreLibrary, true);
-    // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
-    loadClass(constantListName, fletchSystemLibrary, true);
-    loadClass(constantByteListName, fletchSystemLibrary, true);
-    loadClass(constantMapName, fletchSystemLibrary, true);
-    loadClass("_DoubleImpl", compiler.coreLibrary, true);
-    loadClass("Null", compiler.coreLibrary, true);
-    loadClass("bool", compiler.coreLibrary, true);
-    loadClass("Port", fletchLibrary, true);
-    loadClass("ForeignMemory", fletchFFILibrary, true);
-
-    if (context.enableBigint) {
-      bigintClass = loadClass("_Bigint", compiler.coreLibrary).element;
-      uint32DigitsClass =
-          loadClass("_Uint32Digits", compiler.coreLibrary).element;
-    }
-
-    growableListClass =
-        loadClass(growableListName, fletchSystemLibrary).element;
     // Register list constructors to world.
     // TODO(ahe): Register growableListClass through ResolutionCallbacks.
     growableListClass.constructors.forEach(world.registerStaticUse);
-
-    fletchNoSuchMethodErrorClass =
-        loadClass(fletchNoSuchMethodErrorName, fletchSystemLibrary).element;
 
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then
@@ -392,21 +365,71 @@ class FletchBackend extends Backend with ResolutionCallbacks
     alwaysEnqueue.add(compiler.objectClass.implementation.lookupLocalMember(
         noSuchMethodName));
 
+    if (coroutineClass != null) {
+      builtinClasses.add(coroutineClass);
+      alwaysEnqueue.add(coroutineClass.lookupLocalMember("_coroutineStart"));
+    }
+
     for (FunctionElement element in alwaysEnqueue) {
       world.registerStaticUse(element);
     }
   }
 
-  void registerInstantiatedClass(ClassElement cls,
-                                 Enqueuer enqueuer,
-                                 Registry registry) {
-    if (cls.library == fletchLibrary) {
-      // Always enqueue _coroutineStart if Coroutine is used.
-      if (cls.name == "Coroutine") {
-        builtinClasses.add(cls);
-        Element member = cls.lookupLocalMember('_coroutineStart');
-        enqueuer.registerStaticUse(member);
-      }
+  void loadHelperMethods(
+      FunctionElement findHelper(String name)) {
+
+    FunctionElement findExternal(String name) {
+      FunctionElement helper = findHelper(name);
+      if (helper != null) externals.add(helper);
+      return helper;
+    }
+
+    fletchSystemEntry = findHelper('entry');
+    fletchExternalInvokeMain = findExternal('invokeMain');
+    fletchExternalYield = findExternal('yield');
+    fletchExternalCoroutineChange = findExternal('coroutineChange');
+    fletchExternalNativeError = findExternal('nativeError');
+    fletchUnresolved = findExternal('unresolved');
+    fletchCompileError = findExternal('compileError');
+  }
+
+  void loadHelperClasses(
+      FletchClassBuilder loadClass(
+          String name,
+          LibraryElement library,
+          {bool builtin})) {
+    compiledObjectClass =
+        loadClass("Object", compiler.coreLibrary, builtin: true);
+    smiClass = loadClass("_Smi", compiler.coreLibrary, builtin: true)?.element;
+    mintClass =
+        loadClass("_Mint", compiler.coreLibrary, builtin: true)?.element;
+    loadClass("_OneByteString", compiler.coreLibrary, builtin: true);
+    loadClass("_TwoByteString", compiler.coreLibrary, builtin: true);
+    // TODO(ahe): Register _ConstantList through ResolutionCallbacks.
+    loadClass(constantListName, fletchSystemLibrary, builtin: true);
+    loadClass(constantByteListName, fletchSystemLibrary, builtin: true);
+    loadClass(constantMapName, fletchSystemLibrary, builtin: true);
+    loadClass("_DoubleImpl", compiler.coreLibrary, builtin: true);
+    loadClass("Null", compiler.coreLibrary, builtin: true);
+    loadClass("bool", compiler.coreLibrary, builtin: true);
+    loadClass("StackOverflowError", compiler.coreLibrary, builtin: true);
+    loadClass("Port", fletchLibrary, builtin: true);
+    loadClass("Process", fletchLibrary, builtin: true);
+    loadClass("ForeignMemory", fletchFFILibrary, builtin: true);
+    if (context.enableBigint) {
+      bigintClass = loadClass("_Bigint", compiler.coreLibrary)?.element;
+      uint32DigitsClass =
+          loadClass("_Uint32Digits", compiler.coreLibrary)?.element;
+    }
+    growableListClass =
+        loadClass(growableListName, fletchSystemLibrary)?.element;
+    fletchNoSuchMethodErrorClass =
+        loadClass(fletchNoSuchMethodErrorName, fletchSystemLibrary)?.element;
+
+    // This class is optional.
+    coroutineClass = fletchSystemLibrary.implementation.find("Coroutine");
+    if (coroutineClass != null) {
+      coroutineClass.ensureResolved(compiler);
     }
   }
 
@@ -719,12 +742,9 @@ class FletchBackend extends Backend with ResolutionCallbacks
     return debugInfo;
   }
 
-  WorldImpact codegen(FletchCodegenWorkItem work) {
-    assert(!useCustomEnqueuer);
-    // TODO(ahe): This method should always throw when [useCustomEnqueuer] is
-    // the default behavior.
-    compileElement(work.element, work.resolutionTree, work.fletchRegistry);
-    return null;
+  codegen(_) {
+    new UnsupportedError(
+        "Method [codegen] not supported, use [compileElement] instead");
   }
 
   /// Invoked by [FletchEnqueuer] once per element that needs to be compiled.
@@ -747,7 +767,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
         // how constructor initializers and constructor bodies are compiled.
         codegenFunction(element, treeElements, registry);
       } else if (element.isField) {
-        assert(useCustomEnqueuer);
         context.compiler.reportVerboseInfo(
             element, "Asked to compile a field, but don't know how");
       } else {
@@ -770,29 +789,32 @@ class FletchBackend extends Backend with ResolutionCallbacks
     compiler.withCurrentElement(element, () {
       assert(declaration.isDeclaration);
       context.compiler.reportVerboseInfo(element, 'Compiling $element');
-      if (!element.isInstanceMember) {
+      if (!element.isInstanceMember && !isLocalFunction(element)) {
         // No stub needed. Optional arguments are handled at call-site.
       } else if (element.isFunction) {
-        FletchFunctionBase function = getFunctionForElement(element);
+        FletchFunctionBase function =
+            systemBuilder.lookupFunctionBuilderByElement(element.declaration);
         CallStructure callStructure = selector.callStructure;
         FunctionSignature signature = function.signature;
         if (selector.isGetter) {
           if (shouldReportEnqueuingOfElement(compiler, element)) {
             context.compiler.reportVerboseInfo(
-                element, 'Adding tear-off stub', forceVerbose: true);
+                element, 'Adding tear-off stub');
           }
-          createTearoffGetterForFunction(function);
+          createTearoffGetterForFunction(
+              function, isSpecialCallMethod: element.name == "call");
         } else if (selector.isCall &&
                    callStructure.signatureApplies(signature) &&
                    !isExactParameterMatch(signature, callStructure)) {
           if (shouldReportEnqueuingOfElement(compiler, element)) {
             context.compiler.reportVerboseInfo(
-                element, 'Adding stub for $selector', forceVerbose: true);
+                element, 'Adding stub for $selector');
           }
           createParameterStubFor(function, selector);
         }
       } else if (element.isGetter || element.isSetter) {
-        // No stub needed.
+        // No stub needed. If a getter returns a closure, the VM's
+        // no-such-method handling will do the right thing.
       } else {
         context.compiler.reportVerboseInfo(
             element, "Asked to compile this, but don't know how");
@@ -801,28 +823,82 @@ class FletchBackend extends Backend with ResolutionCallbacks
   }
 
   /// Invoked by [FletchEnqueuer] once per `call` [selector] that may invoke
-  /// [declaration] as an implicit closure aka tear-off.
+  /// [declaration] as an implicit closure (for example, a tear-off).
   ///
-  /// This is used to generate parameter stubs for the tear-off.
-  void compileFunctionTearOffUsage(
+  /// This is used to generate parameter stubs for the closures.
+  void compileClosurizationUsage(
       AstElement declaration,
       Selector selector,
       TreeElements treeElements,
-      FletchRegistry registry) {
+      FletchRegistry registry,
+      ClosureKind kind) {
     AstElement element = declaration.implementation;
     compiler.withCurrentElement(element, () {
       assert(declaration.isDeclaration);
       if (shouldReportEnqueuingOfElement(compiler, element)) {
         context.compiler.reportVerboseInfo(
-            element, 'Need tear-off parameter stub $selector',
-            forceVerbose: true);
+            element, 'Need tear-off parameter stub $selector');
       }
       FletchFunctionBase function =
-          systemBuilder.lookupFunctionByElement(element);
-      int tearOffStubId = systemBuilder.lookupTearOffById(function.functionId);
-      FletchFunctionBase tearOffStub =
-          systemBuilder.lookupFunction(tearOffStubId);
-      createParameterStubFor(tearOffStub, selector);
+          systemBuilder.lookupFunctionByElement(element.declaration);
+      if (function == null) {
+        compiler.internalError(
+            element, "Has no fletch function, but used as tear-off");
+      }
+      if (selector.isGetter) {
+        // This is a special tear-off getter.
+
+        // TODO(ahe): This code should probably use [kind] to detect the
+        // various cases instead of [isLocalFunction] and looking at names.
+
+        assert(selector.memberName == Selector.CALL_NAME);
+        if (isLocalFunction(element) ||
+            memberName(element) == Selector.CALL_NAME) {
+          createTearoffGetterForFunction(
+              function, isSpecialCallMethod: true);
+          return;
+        }
+        int stub = systemBuilder.lookupTearOffById(function.functionId);
+        if (stub == null) {
+          compiler.internalError(
+              element, "No tear-off stub to compile `call` tear-off");
+        } else {
+          function = systemBuilder.lookupFunction(stub);
+          createTearoffGetterForFunction(function, isSpecialCallMethod: true);
+          return;
+        }
+      }
+      switch (kind) {
+        case ClosureKind.tearOff:
+        case ClosureKind.superTearOff:
+          if (memberName(element) == Selector.CALL_NAME) {
+            // This is really a functionLikeTearOff.
+            break;
+          }
+          // A tear-off has a corresponding stub in a closure class. Look up
+          // that stub:
+          int stub = systemBuilder.lookupTearOffById(function.functionId);
+          if (stub == null) {
+            compiler.internalError(element, "Couldn't find tear-off stub");
+          } else {
+            function = systemBuilder.lookupFunction(stub);
+          }
+          break;
+
+        case ClosureKind.localFunction:
+          // A local function already is a member of its closure class, and
+          // doesn't have a stub.
+          break;
+
+        case ClosureKind.functionLike:
+        case ClosureKind.functionLikeTearOff:
+          compiler.internalError(element, "Unimplemented: $kind");
+          break;
+      }
+
+      if (!isExactParameterMatch(function.signature, selector.callStructure)) {
+        createParameterStubFor(function, selector);
+      }
     });
   }
 
@@ -920,6 +996,30 @@ class FletchBackend extends Backend with ResolutionCallbacks
       throw "Unsupported native function: $name";
     }
 
+    if (name == "Coroutine._coroutineNewStack") {
+      // The static native method `Coroutine._coroutineNewStack` will invoke
+      // the instance method `Coroutine._coroutineStart`.
+      if (coroutineClass == null) {
+        compiler.internalError(
+            function, "required class [Coroutine] not found");
+      }
+      FunctionElement coroutineStart =
+          coroutineClass.lookupLocalMember("_coroutineStart");
+      Selector selector = new Selector.fromElement(coroutineStart);
+      new FletchRegistry(compiler, function.resolvedAst.elements)
+          ..registerDynamicInvocation(new UniverseSelector(selector, null));
+    } else if (name == "Process._spawn") {
+      // The native method `Process._spawn` will do a closure invoke with 0, 1,
+      // or 2 arguments.
+      new FletchRegistry(compiler, function.resolvedAst.elements)
+          ..registerDynamicInvocation(
+              new UniverseSelector(new Selector.callClosure(0), null))
+          ..registerDynamicInvocation(
+              new UniverseSelector(new Selector.callClosure(1), null))
+          ..registerDynamicInvocation(
+              new UniverseSelector(new Selector.callClosure(2), null));
+    }
+
     int arity = codegen.assembler.functionArity;
     if (name == "Port.send" ||
         name == "Port._sendList" ||
@@ -968,8 +1068,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FunctionElement function,
       FunctionCodegen codegen) {
     codegen.assembler
-        ..loadLocal(2)
-        ..loadLocal(2)
+        ..loadParameter(0)
+        ..loadParameter(1)
         ..identical()
         ..ret()
         ..methodEnd();
@@ -979,7 +1079,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FunctionElement function,
       FunctionCodegen codegen) {
     codegen.assembler
-        ..loadLocal(1)
+        ..loadParameter(0)
         ..processYield()
         ..ret()
         ..methodEnd();
@@ -1022,7 +1122,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     if (element is FunctionElement) {
       for (var metadata in element.metadata) {
         // TODO(ahe): This code should ensure that @native resolves to precisely
-        // the native variable in fletch:system.
+        // the native variable in dart:fletch._system.
         if (metadata.constant == null) continue;
         ConstantValue value = context.getConstantValue(metadata.constant);
         if (!value.isString) continue;
@@ -1060,29 +1160,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
     FletchRegistry registry =
         new FletchRegistry(compiler, function.resolvedAst.elements);
     registry.registerStaticInvocation(function);
-  }
-
-  void createParameterMatchingStubs() {
-    // TODO(ahe): Remove this method when [useCustomEnqueuer] is the default
-    // behavior.
-    List<FletchFunctionBuilder> functions = systemBuilder.getNewFunctions();
-    int length = functions.length;
-    for (int i = 0; i < length; i++) {
-      FletchFunctionBuilder function = functions[i];
-      if (!function.isInstanceMember || function.isAccessor) continue;
-      Map selectors = compiler.codegenWorld.invocationsByName(function.name);
-      if (selectors == null) continue;
-      for (Selector use in selectors.keys) {
-        CallStructure callStructure = use.callStructure;
-        FunctionSignature signature = function.signature;
-        // TODO(ajohnsen): Somehow filter out private selectors of other
-        // libraries.
-        if (callStructure.signatureApplies(signature) &&
-            !isExactParameterMatch(signature, callStructure)) {
-          createParameterStubFor(function, use);
-        }
-      }
-    }
   }
 
   FletchFunctionBase createParameterStubFor(
@@ -1174,28 +1251,23 @@ class FletchBackend extends Backend with ResolutionCallbacks
     return builder;
   }
 
-  void createTearoffStubs() {
-    // TODO(ahe): Remove this method when [useCustomEnqueuer] is the default
-    // behavior.
-    List<FletchFunctionBuilder> functions = systemBuilder.getNewFunctions();
-    for (int i = 0; i < functions.length; i++) {
-      FletchFunctionBuilder function = functions[i];
-      if (!function.isInstanceMember || function.isAccessor) continue;
-      String name = function.name;
-      if (compiler.codegenWorld.getterInvocationsByName(name) != null) {
-        // Custom enqueuer doesn't provide getterInvocationsByName.
-        assert(!useCustomEnqueuer);
-        createTearoffGetterForFunction(function);
-      }
+  /// Create a tear-off getter for [function].  If [isSpecialCallMethod] is
+  /// `true`, this is the special case for `someClosure.call` which should
+  /// always return `someClosure`. This implies that when [isSpecialCallMethod]
+  /// is true, we assume [function] is already a member of a closure class (or
+  /// a class with a `call` method [ClosureKind.functionLike]) and that the
+  /// getter should be added to that class.
+  void createTearoffGetterForFunction(
+      FletchFunctionBuilder function,
+      {bool isSpecialCallMethod}) {
+    if (isSpecialCallMethod == null) {
+      throw new ArgumentError("isSpecialCallMethod");
     }
-  }
-
-  void createTearoffGetterForFunction(FletchFunctionBuilder function) {
     FletchFunctionBuilder getter = systemBuilder.newFunctionBuilder(
         FletchFunctionKind.ACCESSOR,
         1);
     // If the getter is of 'call', return the instance instead.
-    if (function.name == 'call') {
+    if (isSpecialCallMethod) {
       getter.assembler
           ..loadParameter(0)
           ..ret()
@@ -1236,36 +1308,12 @@ class FletchBackend extends Backend with ResolutionCallbacks
         systemBuilder.lookupClassBuilderByElement(element);
     if (builder != null) {
       context.compiler.reportVerboseInfo(
-          element, 'Adding is-selector for $type', forceVerbose: true);
+          element, 'Adding is-selector for $type');
       builder.addIsSelector(fletchSelector);
     }
   }
 
-  int assembleProgram() {
-    if (useCustomEnqueuer) {
-      assembleProgramWithCustomEnqueuer();
-    } else {
-      assembleProgramWithOldEnqueuer();
-    }
-    return 0;
-  }
-
-  void assembleProgramWithCustomEnqueuer() {
-    // TODO(ahe): Remove method when [useCustomEnqueuer] is the default
-    // behavior.
-    print("Using custom enqueuer");
-  }
-
-  void assembleProgramWithOldEnqueuer() {
-    // TODO(ahe): Remove method when [useCustomEnqueuer] is the default
-    // behavior.
-    createTearoffStubs();
-    createParameterMatchingStubs();
-
-    for (FletchClassBuilder classBuilder in systemBuilder.getNewClasses()) {
-      classBuilder.createIsEntries(this);
-    }
-  }
+  int assembleProgram() => 0;
 
   FletchDelta computeDelta() {
     List<Command> commands = <Command>[
@@ -1303,12 +1351,10 @@ class FletchBackend extends Backend with ResolutionCallbacks
   bool get supportsReflection => false;
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
-    if (Uri.parse('dart:_fletch_system') == library.canonicalUri) {
+    if (Uri.parse('dart:fletch._system') == library.canonicalUri) {
       fletchSystemLibrary = library;
     } else if (Uri.parse('dart:fletch.ffi') == library.canonicalUri) {
       fletchFFILibrary = library;
-    } else if (Uri.parse('dart:system') == library.canonicalUri) {
-      fletchIOSystemLibrary = library;
     } else if (Uri.parse('dart:collection') == library.canonicalUri) {
       collectionLibrary = library;
     } else if (Uri.parse('dart:math') == library.canonicalUri) {
@@ -1453,44 +1499,25 @@ class FletchBackend extends Backend with ResolutionCallbacks
    * Generate a getter for field [fieldIndex].
    */
   int makeGetter(int fieldIndex) {
-    return getters.putIfAbsent(fieldIndex, () {
-      FletchFunctionBuilder stub = systemBuilder.newFunctionBuilder(
-          FletchFunctionKind.ACCESSOR,
-          1);
-      stub.assembler
-          ..loadParameter(0)
-          ..loadField(fieldIndex)
-          ..ret()
-          ..methodEnd();
-      return stub.functionId;
-    });
+    return systemBuilder.getGetterByFieldIndex(fieldIndex);
   }
 
   /**
    * Generate a setter for field [fieldIndex].
    */
   int makeSetter(int fieldIndex) {
-    return setters.putIfAbsent(fieldIndex, () {
-      FletchFunctionBuilder stub = systemBuilder.newFunctionBuilder(
-          FletchFunctionKind.ACCESSOR,
-          2);
-      stub.assembler
-          ..loadParameter(0)
-          ..loadParameter(1)
-          ..storeField(fieldIndex)
-          // Top is at this point the rhs argument, thus the return value.
-          ..ret()
-          ..methodEnd();
-      return stub.functionId;
-    });
+    return systemBuilder.getSetterByFieldIndex(fieldIndex);
   }
 
   void generateUnimplementedError(
       Spannable spannable,
       String reason,
-      FletchFunctionBuilder function) {
-    compiler.reportHint(
-        spannable, MessageKind.GENERIC, {'text': reason});
+      FletchFunctionBuilder function,
+      {bool suppressHint: false}) {
+    if (!suppressHint) {
+      compiler.reportHint(
+          spannable, MessageKind.GENERIC, {'text': reason});
+    }
     var constString = constantSystem.createString(
         new DartString.literal(reason));
     context.markConstantUsed(constString);
@@ -1613,4 +1640,18 @@ class FletchBackend extends Backend with ResolutionCallbacks
   static FletchBackend newInstance(FletchCompilerImplementation compiler) {
     return new FletchBackend(compiler);
   }
+}
+
+bool isLocalFunction(Element element) {
+  if (!element.isFunction) return false;
+  if (element is ExecutableElement) {
+    return element.memberContext != element;
+  }
+  return false;
+}
+
+Name memberName(AstElement element) {
+  if (isLocalFunction(element)) return null;
+  MemberElement member = element;
+  return member.memberName;
 }

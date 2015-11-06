@@ -75,7 +75,7 @@ void StackWalker::RestartCurrentFrame() {
   uint8* return_bcp = reinterpret_cast<uint8*>(stack_->get(bcp_offset));
   uint8* previous_bcp = return_bcp - Bytecode::Size(Opcode::kInvokeStatic);
   ASSERT(previous_bcp == Bytecode::PreviousBytecode(return_bcp));
-  ASSERT(Bytecode::IsInvoke(static_cast<Opcode>(*previous_bcp)));
+  ASSERT(Bytecode::IsInvokeVariant(static_cast<Opcode>(*previous_bcp)));
   stack_->set(bcp_offset, reinterpret_cast<Object*>(previous_bcp));
   stack_->set_top(bcp_offset);
 }
@@ -89,18 +89,10 @@ int StackWalker::StackDiff(uint8** bcp,
 
   Opcode opcode = static_cast<Opcode>(**bcp);
   switch (opcode) {
-    case kInvokeMethod:
-    case kInvokeMethodVtable: {
+    case kInvokeMethodUnfold:
+    case kInvokeNoSuchMethod:
+    case kInvokeMethod: {
       int selector = Utils::ReadInt32(*bcp + 1);
-      int arity = Selector::ArityField::decode(selector);
-      stack_diff = -arity;
-      break;
-    }
-
-    case kInvokeMethodFast: {
-      int index = Utils::ReadInt32(*bcp + 1);
-      Array* table = program->dispatch_table();
-      int selector = Smi::cast(table->get(index + 1))->value();
       int arity = Selector::ArityField::decode(selector);
       stack_diff = -arity;
       break;

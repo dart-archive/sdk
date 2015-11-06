@@ -104,6 +104,11 @@ class DebugInfoFunctionCodegen extends FunctionCodegen with DebugRegistry {
     super.generateReturn(node);
   }
 
+  void generateReturnNull(Node node) {
+    recordDebugInfo(node);
+    super.generateReturnNull(node);
+  }
+
   void generateImplicitReturn(FunctionExpression node) {
     // If the method is empty, generate debug information for the
     // implicit 'return null' that covers the entire method. That was,
@@ -121,6 +126,11 @@ class DebugInfoFunctionCodegen extends FunctionCodegen with DebugRegistry {
     // case equality tests.
     recordDebugInfo(null);
     super.generateSwitchCaseMatch(caseMatch, ifTrue);
+  }
+
+  void generateEmptyInitializer(Node node) {
+    recordDebugInfo(node);
+    super.generateEmptyInitializer(node);
   }
 
   void generateIdentical(Node node) {

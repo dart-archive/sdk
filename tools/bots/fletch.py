@@ -33,7 +33,7 @@ DEBUG_LOG=".debug.log"
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
 FLETCH_REGEXP = (r'fletch-(linux|mac|windows|lk)'
-                 r'(-(debug|release|asan)-(x86|arm))?(-sdk)?')
+                 r'(-(debug|release)(-asan)?-(x86|arm|x64|ia32))?(-sdk)?')
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
 TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 
@@ -85,28 +85,23 @@ def Main():
 
         modes = ['debug', 'release']
         archs = ['ia32', 'x64']
-        asans = [False, True]
+        asans = [False]
 
         # Split configurations?
         partial_configuration = fletch_match.group(2)
         if partial_configuration:
-          mode_or_asan = fletch_match.group(3)
-          architecture_match = fletch_match.group(4)
+          mode = fletch_match.group(3)
+          asan = fletch_match.group(4)
+          architecture_match = fletch_match.group(5)
           archs = {
               'x86' : ['ia32', 'x64'],
+              'x64' : ['x64'],
+              'ia32' : ['ia32'],
           }[architecture_match]
 
-          # We split our builders into:
-          #    fletch-linux-debug
-          #    fletch-linux-release
-          #    fletch-linux-asan (includes debug and release)
-          if mode_or_asan == 'asan':
-            modes = ['debug', 'release']
-            asans = [True]
-          else:
-            modes = [mode_or_asan]
-            asans = [False]
-        sdk_build = fletch_match.group(5)
+          modes = [mode]
+          asans = [bool(asan)]
+        sdk_build = fletch_match.group(6)
         if sdk_build:
           StepsSDK(debug_log, system, modes, archs)
         else:
@@ -146,6 +141,7 @@ def StepsSDK(debug_log, system, modes, archs):
     StepsArchiveDebianPackage()
     CrossCompile(cross_system, [cross_mode], cross_arch)
     StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
+    StepsCreateArchiveRaspbianImge()
   elif system == 'mac':
      StepsGetArmBinaries(cross_mode, cross_arch)
      StepsGetArmDeb()
@@ -156,6 +152,7 @@ def StepsSDK(debug_log, system, modes, archs):
                     configuration['arch'])
   for configuration in configurations:
     StepsTestSDK(debug_log, configuration)
+    StepsSanityChecking(configuration['build_dir'])
 
 def StepsTestSDK(debug_log, configuration):
   build_dir = configuration['build_dir']
@@ -175,12 +172,29 @@ def StepsTestSDK(debug_log, configuration):
     configuration=configuration,
     use_sdk=True)
 
+def StepsSanityChecking(build_dir):
+  sdk_dir = os.path.join(build_dir, 'fletch-sdk')
+  version = utils.GetSemanticSDKVersion()
+  fletch = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
+  # TODO(ricow): we should test this as a normal test, see issue 232.
+  fletch_version = subprocess.check_output([fletch, '--version']).strip()
+  subprocess.check_call([fletch, 'quit'])
+  if fletch_version != version:
+    raise Exception('Version mismatch, VERSION file has %s, fletch has %s' %
+                    (version, fletch_version))
+  fletch_vm = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch-vm')
+  fletch_vm_version = subprocess.check_output([fletch_vm, '--version']).strip()
+  if fletch_vm_version != version:
+    raise Exception('Version mismatch, VERSION file has %s, fletch vm has %s' %
+                    (version, fletch_vm_version))
+
 def StepsCreateDebianPackage():
-  Run(['python', os.path.join('tools', 'create_tarball.py')])
-  Run(['python', os.path.join('tools', 'create_debian_packages.py')])
+  with bot.BuildStep('Create arm agent deb'):
+    Run(['python', os.path.join('tools', 'create_tarball.py')])
+    Run(['python', os.path.join('tools', 'create_debian_packages.py')])
 
 def StepsArchiveDebianPackage():
-  with bot.BuildStep('Archive arm agent dep'):
+  with bot.BuildStep('Archive arm agent deb'):
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     gsutil = bot_utils.GSUtil()
@@ -216,6 +230,37 @@ def CreateZip(directory, target_file):
 def Unzip(zip_file):
   with utils.ChangedWorkingDirectory(os.path.dirname(zip_file)):
     Run(['unzip', os.path.basename(zip_file)])
+
+def EnsureRaspbianBase():
+  with bot.BuildStep('Ensure raspbian base image and kernel'):
+    Run(['download_from_google_storage', '-b', 'dart-dependencies-fletch',
+         '-u', '-d', 'third_party/raspbian/'])
+
+def StepsCreateArchiveRaspbianImge():
+  EnsureRaspbianBase()
+  with bot.BuildStep('Modifying raspbian image'):
+    namer = GetNamer()
+    raspbian_src = os.path.join('third_party', 'raspbian', 'image',
+                                'jessie.img')
+    raspbian_dst = os.path.join('out', namer.raspbian_filename())
+    print 'Copying %s to %s' % (raspbian_src, raspbian_dst)
+    shutil.copyfile(raspbian_src, raspbian_dst)
+    version = utils.GetSemanticSDKVersion()
+    deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    src_file = os.path.join('out', namer.src_tar_name(version))
+    Run(['tools/raspberry-pi2/raspbian_prepare.py',
+         '--image=%s' % raspbian_dst,
+         '--agent=%s' % deb_file,
+         '--src=%s' % src_file])
+    zip_file = os.path.join('out', namer.raspbian_zipfilename())
+    if os.path.exists(zip_file):
+      os.remove(zip_file)
+    CreateZip(raspbian_dst, namer.raspbian_zipfilename())
+    gsutil = bot_utils.GSUtil()
+    gs_path = namer.raspbian_zipfilepath(version)
+    http_path = GetDownloadLink(gs_path)
+    gsutil.upload(zip_file, gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def StepsGetArmBinaries(cross_mode, cross_arch):
   with bot.BuildStep('Get arm binaries %s' % cross_mode):
@@ -573,9 +618,9 @@ class TemporaryHomeDirectory(object):
 
   def __exit__(self, *_):
     if self._old_home_dir:
-      os.putenv('HOME', self._old_home_dir)
+      os.environ['HOME'] = self._old_home_dir
     else:
-      os.unsetenv('HOME')
+      del os.environ['HOME']
     shutil.rmtree(self._tmp)
 
 class CoredumpEnabler(object):

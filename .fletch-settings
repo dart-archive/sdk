@@ -28,5 +28,9 @@
 
   // Address of the target device on which to run the Fletch VMs.
   // If null then vms are started directly on localhost.
-  "device_address": null
+  "device_address": null,
+
+  // Type of device to compile for. Currently the available types are:
+  // "mobile" and "embedded".
+  "device_type": "mobile"
 }

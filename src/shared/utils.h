@@ -34,6 +34,7 @@ class Print {
   static void Out(const char* format, ...);
   static void Error(const char* format, ...);
   static void RegisterPrintInterceptor(PrintInterceptor* interceptor);
+  static void UnregisterPrintInterceptor(PrintInterceptor* interceptor);
   static void UnregisterPrintInterceptors();
 
   // Disable printing to stdout and stderr and only pass output

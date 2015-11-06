@@ -38,6 +38,16 @@ class BeginFormalMarker extends MarkerNode {
     : super(token);
 }
 
+class BeginServiceMarker extends MarkerNode {
+  BeginServiceMarker(Token token)
+    : super(token);
+}
+
+class BeginStructMarker extends MarkerNode {
+  BeginStructMarker(Token token)
+    : super(token);
+}
+
 class BeginTypeMarker extends MarkerNode {
   BeginTypeMarker(Token token)
     : super(token);

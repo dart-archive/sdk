@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+library fletch_agent.agent;
+
 import 'dart:convert' show UTF8;
 import 'dart:fletch';
 import 'dart:fletch.ffi';
@@ -9,6 +11,8 @@ import 'dart:fletch.os';
 import 'dart:typed_data';
 
 import 'package:file/file.dart';
+import 'package:fletch/fletch.dart' as fletch;
+import 'package:os/os.dart' show sys;
 import 'package:socket/socket.dart';
 
 import '../lib/messages.dart';
@@ -29,12 +33,12 @@ class Logger {
   void error(String msg) => _write('$_prefix ERROR: $msg');
 
   void _write(String msg) {
+    msg  = '${new DateTime.now().toString()} $msg';
+    if (_logToStdout) {
+      print(msg);
+    }
     File log;
     try {
-      msg  = '${new DateTime.now().toString()} $msg';
-      if (_logToStdout) {
-        print(msg);
-      }
       log = new File.open(_path, mode: File.APPEND);
       var encoded = UTF8.encode('$msg\n');
       var data = new Uint8List.fromList(encoded);
@@ -67,11 +71,12 @@ class AgentContext {
   final int    port;
   final String pidFile;
   final Logger logger;
+  final bool applyUpgrade;
 
   // Fletch-vm path and args.
   final String vmBinPath;
   final String vmLogDir;
-  final String vmPidDir;
+  final String tmpDir;
 
   factory AgentContext() {
     String ip = _getEnv('AGENT_IP');
@@ -100,13 +105,17 @@ class AgentContext {
     }
     String vmBinPath = _getEnv('FLETCH_VM');
     String vmLogDir = _getEnv('VM_LOG_DIR');
-    String vmPidDir = _getEnv('VM_PID_DIR');
+    String tmpDir = _getEnv('TMPDIR');
+    if (tmpDir == null) tmpDir = '/tmp';
+
+    // If the below ENV variable is set the agent will just store the agent
+    // debian package but not apply it.
+    bool applyUpgrade = _getEnv('AGENT_UPGRADE_DRY_RUN') == null;
 
     logger.info('Agent log file: $logFile');
     logger.info('Agent pid file: $pidFile');
     logger.info('Vm path: $vmBinPath');
     logger.info('Log path: $vmLogDir');
-    logger.info('Run path: $vmPidDir');
 
     // Make sure we have a fletch-vm binary we can use for launching a vm.
     if (!File.existsAsFile(vmBinPath)) {
@@ -118,17 +127,13 @@ class AgentContext {
       logger.error('Cannot find log directory: $vmLogDir');
       Process.exit();
     }
-    // Make sure we have a valid pid directory.
-    if (!File.existsAsFile(vmPidDir)) {
-      logger.error('Cannot find directory: $vmPidDir in which to write pid');
-      Process.exit();
-    }
     return new AgentContext._(
-        ip, port, pidFile, logger, vmBinPath, vmLogDir, vmPidDir);
+        ip, port, pidFile, logger, vmBinPath, vmLogDir, tmpDir, applyUpgrade);
   }
 
-  const AgentContext._(this.ip, this.port, this.pidFile, this.logger,
-      this.vmBinPath, this.vmLogDir, this. vmPidDir);
+  const AgentContext._(
+      this.ip, this.port, this.pidFile, this.logger, this.vmBinPath,
+      this.vmLogDir, this.tmpDir, this.applyUpgrade);
 }
 
 class Agent {
@@ -167,8 +172,6 @@ class CommandHandler {
   static const int SIGQUIT = 3;
   static const int SIGKILL = 9;
   static const int SIGTERM = 15;
-  static const List<int> TERMINATION_SIGNALS =
-      const [SIGHUB, SIGINT, SIGQUIT, SIGKILL, SIGTERM];
   static final ForeignFunction _kill = ForeignLibrary.main.lookup('kill');
   static final ForeignFunction _unlink = ForeignLibrary.main.lookup('unlink');
 
@@ -178,8 +181,10 @@ class CommandHandler {
 
   factory CommandHandler(Socket socket, AgentContext context) {
     var bytes = socket.read(RequestHeader.HEADER_SIZE);
-    if (bytes == null || bytes.lengthInBytes < RequestHeader.HEADER_SIZE) {
-      throw 'Insufficient bytes (${bytes.length}) received in request.';
+    if (bytes == null) {
+      throw 'Connection closed by peer';
+    } else if (bytes.lengthInBytes < RequestHeader.HEADER_SIZE) {
+      throw 'Insufficient bytes ($bytes.lengthInBytes) received in request';
     }
     var header = new RequestHeader.fromBuffer(bytes);
     return new CommandHandler._(socket, context, header);
@@ -204,8 +209,8 @@ class CommandHandler {
       case RequestHeader.LIST_VMS:
         _listVms();
         break;
-      case RequestHeader.UPGRADE_VM:
-        _upgradeVm();
+      case RequestHeader.UPGRADE_AGENT:
+        _upgradeAgent();
         break;
       case RequestHeader.FLETCH_VERSION:
         _fletchVersion();
@@ -229,12 +234,15 @@ class CommandHandler {
   void _startVm() {
     int vmPid = 0;
     var reply;
+    // Create a tmp file for reading the port the vm is listening on.
+    File portFile = new File.temporary("${_context.tmpDir}/vm-port-");
     try {
       List<String> args = ['--log-dir=${_context.vmLogDir}',
-          '--run-dir=${_context.vmPidDir}', '--host=0.0.0.0'];
+          '--port-file=${portFile.path}', '--host=0.0.0.0'];
       vmPid = NativeProcess.startDetached(_context.vmBinPath, args);
       // Find out what port the vm is listening on.
-      int port = _retrieveVmPort(vmPid);
+      _context.logger.info('Reading port from ${portFile.path} for vm $vmPid');
+      int port = _retrieveVmPort(portFile.path);
       reply = new StartVmReply(
           _requestHeader.id, ReplyHeader.SUCCESS, vmId: vmPid, vmPort: port);
       _context.logger.info('Started fletch vm with pid $vmPid on port $port');
@@ -243,18 +251,16 @@ class CommandHandler {
       // TODO(wibling): could extend the result with caught error string.
       _context.logger.warn('Failed to start vm with error: $e');
       if (vmPid > 0) {
-        // Kill the vm and remove any pid and port files.
+        // Kill the vm.
         _kill.icall$2(vmPid, SIGTERM);
-        _cleanUpVm(vmPid);
       }
+    } finally {
+      File.delete(portFile.path);
     }
     _sendReply(reply);
   }
 
-  int _retrieveVmPort(int vmPid) {
-    String portPath = '${_context.vmPidDir}/vm-$vmPid.port';
-    _context.logger.info('Reading port from $portPath for vm $vmPid');
-
+  int _retrieveVmPort(String portPath) {
     // The fletch-vm will write the port it is listening on into the file
     // specified by 'portPath' above. The agent waits for the file to be
     // created (retries the File.open until it succeeds) and then reads the
@@ -270,7 +276,6 @@ class CommandHandler {
     // have it write the port to the socket. This allows the agent to just
     // wait on the socket and wake up when it is ready.
     int previousPort = -1;
-    var lastException;
     for (int retries = 500; retries >= 0; --retries) {
       int port = _tryReadPort(portPath, retries == 0);
       // Check if we read the same port value twice in a row.
@@ -278,7 +283,7 @@ class CommandHandler {
       previousPort = port;
       sleep(10);
     }
-    throw 'Failed to read port for vm $vmPid';
+    throw 'Failed to read port from $portPath';
   }
 
   int _tryReadPort(String portPath, bool lastAttempt) {
@@ -312,14 +317,13 @@ class CommandHandler {
       return;
     }
     var reply;
-    // Read in the vm id. It is only the first 2 bytes of the data sent.
+    // Read in the vm id.
     var pidBytes = _socket.read(4);
     if (pidBytes == null) {
       reply = new StopVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD);
       _context.logger.warn('Missing pid of the fletch vm to stop.');
     } else {
-      // The vm id (aka. pid) is the first 2 bytes of the data sent.
-      int pid = readUint16(pidBytes, 0);
+      int pid = readUint32(pidBytes, 0);
       int err = _kill.icall$2(pid, SIGTERM);
       if (err != 0) {
         reply = new StopVmReply(_requestHeader.id, ReplyHeader.UNKNOWN_VM_ID);
@@ -329,61 +333,43 @@ class CommandHandler {
         reply = new StopVmReply(_requestHeader.id, ReplyHeader.SUCCESS);
         _context.logger.info('Stopped pid: $pid');
       }
-      // Always clean up independent of errors.
-      _cleanUpVm(pid);
     }
     _sendReply(reply);
   }
 
   void _signalVm() {
-    if (_requestHeader.payloadLength != 4) {
+    if (_requestHeader.payloadLength != 8) {
       _sendReply(
           new SignalVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD));
       return;
     }
     var reply;
     // Read in the vm id and the signal to send.
-    var pidBytes = _socket.read(4);
+    var pidBytes = _socket.read(8);
     if (pidBytes == null) {
       reply = new SignalVmReply(_requestHeader.id, ReplyHeader.INVALID_PAYLOAD);
       _context.logger.warn('Missing pid of the fletch vm to signal.');
     } else {
-      int pid = readUint16(pidBytes, 0);
-      int signal = readUint16(pidBytes, 2);
-      // TODO(wibling): Hack to make ctrl-c work for stopping spawed vms work
-      // on Raspbian wheezy. For some unknown reason SIGINT doesn't work so we
-      // map SIGINT to SIGTERM as a workaround.
-      int err = _kill.icall$2(pid, signal == 2 ? 15 : signal);
+      int pid = readUint32(pidBytes, 0);
+      int signal = readUint32(pidBytes, 4);
+      // Hack to make ctrl-c work for stopping spawned vms work on Raspbian
+      // wheezy. For some reason SIGINT doesn't work so we map it to SIGTERM as
+      // a workaround.
+      if (signal == SIGINT && sys.info().release.startsWith('3.18')) {
+        _context.logger.info('Remapping SIGINT to SIGTERM on Raspbian wheezy');
+        signal = SIGTERM;
+      }
+      int err = _kill.icall$2(pid, signal);
       if (err != 0) {
         reply = new SignalVmReply(_requestHeader.id, ReplyHeader.UNKNOWN_VM_ID);
-        _context.logger.warn('Failed to send signal %signal to  pid $pid with '
+        _context.logger.warn('Failed to send signal $signal to  pid $pid with '
             'error: ${Foreign.errno}');
       } else {
         reply = new SignalVmReply(_requestHeader.id, ReplyHeader.SUCCESS);
         _context.logger.info('Sent signal $signal to pid: $pid');
-        // Only cleanup if a termination signal was delivered.
-        if (TERMINATION_SIGNALS.contains(signal)) {
-          _cleanUpVm(pid);
-        }
       }
     }
     _sendReply(reply);
-  }
-
-  void _cleanUpVm(int pid) {
-    var portPath;
-    var pidPath;
-    try {
-      String fileName = '${_context.vmPidDir}/vm-$pid.port';
-      portPath = new ForeignMemory.fromStringAsUTF8(fileName);
-      _unlink.icall$1(portPath);
-      fileName = '${_context.vmPidDir}/vm-$pid.pid';
-      pidPath = new ForeignMemory.fromStringAsUTF8(fileName);
-      _unlink.icall$1(pidPath);
-    } finally {
-      if (portPath != null) portPath.free();
-      if (pidPath != null) pidPath.free();
-    }
   }
 
   void _listVms() {
@@ -392,29 +378,43 @@ class CommandHandler {
         new ListVmsReply(_requestHeader.id, ReplyHeader.UNKNOWN_COMMAND));
   }
 
-  void _upgradeVm() {
+  void _upgradeAgent() {
     int result;
-    // TODO(wibling): implement this method.
-    var binary = _socket.read(_requestHeader.payloadLength);
+    ByteBuffer binary = _socket.read(_requestHeader.payloadLength);
     if (binary == null) {
-      _context.logger.warn(
-          'Could not read VM binary of length ${_requestHeader.payloadLength}');
+      _context.logger.warn('Could not read fletch-agent package binary'
+          ' of length ${_requestHeader.payloadLength} bytes');
       result = ReplyHeader.INVALID_PAYLOAD;
     } else {
-      // TODO(wibling); stream the bytes from the socket to file and swap with
-      // current vm binary. For now we just return UNKNOWN_COMMAND.
-      _context.logger.warn('Read VM binary of ${binary.lengthInBytes} bytes.');
-      result = ReplyHeader.UNKNOWN_COMMAND;
+      _context.logger.info('Read fletch-agent package binary'
+          ' of length ${binary.lengthInBytes} bytes.');
+      File file = new File.open(PACKAGE_FILE_NAME, mode: File.WRITE);
+      try {
+        file.write(binary);
+      } catch (e) {
+        _context.logger.warn('UpgradeAgent failed: $e');
+        _sendReply(new UpgradeAgentReply(_requestHeader.id,
+                ReplyHeader.UPGRADE_FAILED));
+      } finally {
+        file.close();
+      }
+      _context.logger.info('Package file written successfully.');
+      if (_context.applyUpgrade) {
+        int pid = NativeProcess.startDetached('/usr/bin/dpkg',
+            ['--install', PACKAGE_FILE_NAME]);
+        _context.logger.info('started package update (PID $pid)');
+      }
+      result = ReplyHeader.SUCCESS;
     }
-    _sendReply(new UpgradeVmReply(_requestHeader.id, result));
+    _context.logger.info('sending reply');
+    _sendReply(new UpgradeAgentReply(_requestHeader.id, result));
   }
 
   void _fletchVersion() {
-    // TODO(wibling): implement this method, for now version is hardcoded to 1.
-    int version = 1;
-    _context.logger.warn('Returning fletch version $version');
+    String version = fletch.version();
+    _context.logger.info('Returning fletch version $version');
     _sendReply(new FletchVersionReply(
-        _requestHeader.id, ReplyHeader.SUCCESS, fletchVersion: version));
+        _requestHeader.id, ReplyHeader.SUCCESS, version: version));
   }
 }
 

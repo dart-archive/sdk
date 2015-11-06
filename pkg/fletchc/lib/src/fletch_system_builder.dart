@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     ConstructedConstantValue,
+    DeferredConstantValue,
     FunctionConstantValue,
     IntConstantValue,
     ListConstantValue,
@@ -51,6 +52,9 @@ class FletchSystemBuilder {
   final Map<FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>
       _newParameterStubs =
           <FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>{};
+
+  final Map<int, int> _newGettersByFieldIndex = <int, int>{};
+  final Map<int, int> _newSettersByFieldIndex = <int, int>{};
 
   final List<FletchFunction> _removedFunctions = <FletchFunction>[];
 
@@ -185,6 +189,72 @@ class FletchSystemBuilder {
         classId);
     _newTearoffsById[function.functionId] = builder.functionId;
     return builder;
+  }
+
+  /// Return a getter for [fieldIndex] if it already exists, return null
+  /// otherwise.
+  int lookupGetterByFieldIndex(int fieldIndex) {
+    int functionId = _newGettersByFieldIndex[fieldIndex];
+    if (functionId == null) {
+      return predecessorSystem.lookupGetterByFieldIndex(fieldIndex);
+    }
+    return functionId;
+  }
+
+  /// Create a new getter for [fieldIndex].
+  FletchFunctionBuilder newGetter(int fieldIndex) {
+    FletchFunctionBuilder builder =
+        newFunctionBuilder(FletchFunctionKind.ACCESSOR, 1);
+    _newGettersByFieldIndex[fieldIndex] = builder.functionId;
+    return builder;
+  }
+
+  /// Return a getter for [fieldIndex]. If one doesn't already exists, one will
+  /// be created.
+  int getGetterByFieldIndex(int fieldIndex) {
+    int id = lookupGetterByFieldIndex(fieldIndex);
+    if (id != null) return id;
+    FletchFunctionBuilder stub = newGetter(fieldIndex);
+    stub.assembler
+        ..loadParameter(0)
+        ..loadField(fieldIndex)
+        ..ret()
+        ..methodEnd();
+    return stub.functionId;
+  }
+
+  /// Return a setter for [fieldIndex] if it already exists, return null
+  /// otherwise.
+  int lookupSetterByFieldIndex(int fieldIndex) {
+    int functionId = _newSettersByFieldIndex[fieldIndex];
+    if (functionId == null) {
+      return predecessorSystem.lookupSetterByFieldIndex(fieldIndex);
+    }
+    return functionId;
+  }
+
+  /// Create a new setter for [fieldIndex].
+  FletchFunctionBuilder newSetter(int fieldIndex) {
+    FletchFunctionBuilder builder =
+        newFunctionBuilder(FletchFunctionKind.ACCESSOR, 2);
+    _newSettersByFieldIndex[fieldIndex] = builder.functionId;
+    return builder;
+  }
+
+  /// Return a setter for [fieldIndex]. If one doesn't already exists, one will
+  /// be created.
+  int getSetterByFieldIndex(int fieldIndex) {
+    int id = lookupSetterByFieldIndex(fieldIndex);
+    if (id != null) return id;
+    FletchFunctionBuilder stub = newSetter(fieldIndex);
+    stub.assembler
+        ..loadParameter(0)
+        ..loadParameter(1)
+        ..storeField(fieldIndex)
+        // Top is at this point the rhs argument, thus the return value.
+        ..ret()
+        ..methodEnd();
+    return stub.functionId;
   }
 
   void forgetFunction(FletchFunction function) {
@@ -342,6 +412,14 @@ class FletchSystemBuilder {
         } else {
           commands.add(new PushConstantList(list.length));
         }
+      }
+
+      while (constant is DeferredConstantValue) {
+        assert(context.compiler.compilationFailed);
+        // TODO(ahe): This isn't correct, and only serves to prevent the
+        // compiler from crashing. However, the compiler does print a lot of
+        // errors about not supporting deferred loading, so it should be fine.
+        constant = constant.referenced;
       }
 
       if (constant.isInt) {
@@ -572,6 +650,18 @@ class FletchSystemBuilder {
       symbolByFletchSelectorId = symbolByFletchSelectorId.insert(id, name);
     });
 
+    PersistentMap<int, int> gettersByFieldIndex =
+        predecessorSystem.gettersByFieldIndex;
+    _newGettersByFieldIndex.forEach((int fieldIndex, int functionId) {
+      gettersByFieldIndex = gettersByFieldIndex.insert(fieldIndex, functionId);
+    });
+
+    PersistentMap<int, int> settersByFieldIndex =
+        predecessorSystem.settersByFieldIndex;
+    _newSettersByFieldIndex.forEach((int fieldIndex, int functionId) {
+      settersByFieldIndex = settersByFieldIndex.insert(fieldIndex, functionId);
+    });
+
     return new FletchSystem(
         functionsById,
         functionsByElement,
@@ -580,6 +670,8 @@ class FletchSystemBuilder {
         classesById,
         classesByElement,
         constants,
-        symbolByFletchSelectorId);
+        symbolByFletchSelectorId,
+        gettersByFieldIndex,
+        settersByFieldIndex);
   }
 }

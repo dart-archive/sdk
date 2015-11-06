@@ -23,8 +23,10 @@
 
 namespace fletch {
 
-static Object** kPreemptMarker = reinterpret_cast<Object**>(1);
-static Object** kProfileMarker = reinterpret_cast<Object**>(2);
+static uword kPreemptMarker = 1 << 0;
+static uword kProfileMarker = 1 << 1;
+static uword kDebugInterruptMarker = 1 << 2;
+static uword kMaxStackMarker = (1 << 3) - 1;
 
 ThreadState::ThreadState()
     : thread_id_(-1),
@@ -51,13 +53,15 @@ ThreadState::~ThreadState() {
 
 Process::Process(Program* program)
     : coroutine_(NULL),
-      stack_limit_(NULL),
+      stack_limit_(0),
       program_(program),
       statics_(NULL),
       exception_(program->null_object()),
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
       heap_(&random_, 4 * KB),
+#endif
       immutable_heap_(NULL),
       state_(kSleeping),
       thread_state_(NULL),
@@ -65,11 +69,14 @@ Process::Process(Program* program)
       queue_(NULL),
       queue_next_(NULL),
       queue_previous_(NULL),
+      process_handle_(NULL),
       ports_(NULL),
       process_list_next_(NULL),
       process_list_prev_(NULL),
       errno_cache_(0),
       debug_info_(NULL) {
+  process_handle_ = new ProcessHandle(this);
+
   // These asserts need to hold when running on the target, but they don't need
   // to hold on the host (the build machine, where the interpreter-generating
   // program runs).  We put these asserts here on the assumption that the
@@ -102,7 +109,11 @@ Process::~Process() {
   // conditions here.
   ASSERT(ports_ == NULL);
 
+  ProcessHandle::DecrementRef(process_handle_);
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   heap_.ProcessWeakPointers();
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
   delete debug_info_;
 
@@ -110,7 +121,7 @@ Process::~Process() {
   ASSERT(cooked_stack_deltas_.is_empty());
 }
 
-void Process::Cleanup() {
+void Process::Cleanup(Signal::Kind kind) {
   // Clear out the process pointer from all the ports.
   ASSERT(immutable_heap_ == NULL);
   while (ports_ != NULL) {
@@ -118,6 +129,14 @@ void Process::Cleanup() {
     ports_->OwnerProcessTerminating();
     ports_ = next;
   }
+
+  // We are going down at this point. If anything else is starting to
+  // link/monitor with this [ProcessHandle], it will fail after this line.
+  process_handle_->OwnerProcessTerminating();
+
+  // Since nobody can send us messages (or signals) at this point, we can
+  // propagate the exit signal.
+  links()->CleanupWithSignal(process_handle(), kind);
 }
 
 void Process::SetupExecutionStack() {
@@ -138,20 +157,26 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
 }
 
 Process::StackCheckResult Process::HandleStackOverflow(int addition) {
-  Object** current_limit = stack_limit();
+  uword current_limit = stack_limit();
 
-  if (current_limit == kProfileMarker) {
-    stack_limit_ = NULL;
-    UpdateStackLimit();
-    return kStackCheckContinue;
-  }
+  if (current_limit <= kMaxStackMarker) {
+    if ((current_limit & kPreemptMarker) != 0) {
+      ClearStackMarker(kPreemptMarker);
+      UpdateStackLimit();
+      return kStackCheckInterrupt;
+    }
 
-  // When the stack_limit is kPreemptMarker, the process has been explicitly
-  // asked to preempt.
-  if (current_limit == kPreemptMarker) {
-    stack_limit_ = NULL;
-    UpdateStackLimit();
-    return kStackCheckInterrupt;
+    if ((current_limit & kDebugInterruptMarker) != 0) {
+      ClearStackMarker(kDebugInterruptMarker);
+      UpdateStackLimit();
+      return kStackCheckDebugInterrupt;
+    }
+
+    if ((current_limit & kProfileMarker) != 0) {
+      ClearStackMarker(kProfileMarker);
+      UpdateStackLimit();
+      return kStackCheckContinue;
+    }
   }
 
   int size_increase = Utils::RoundUpToPowerOfTwo(addition);
@@ -163,8 +188,8 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   if (new_stack_object == Failure::retry_after_gc()) {
     CollectMutableGarbage();
     new_stack_object = NewStack(new_size);
-    if (new_stack_object->IsFailure()) {
-      FATAL("Failed to increase stack size");
+    if (new_stack_object == Failure::retry_after_gc()) {
+      return kStackCheckOverflow;
     }
   }
 
@@ -189,7 +214,7 @@ Object* Process::NewByteArray(int length) {
 Object* Process::NewArray(int length) {
   Class* array_class = program()->array_class();
   Object* null = program()->null_object();
-  Object* result = heap_.CreateArray(array_class, length, null);
+  Object* result = heap()->CreateArray(array_class, length, null);
   return result;
 }
 
@@ -256,7 +281,7 @@ Object* Process::NewStringFromAscii(List<const char> value) {
 
 Object* Process::NewBoxed(Object* value) {
   Class* boxed_class = program()->boxed_class();
-  Object* result = heap_.CreateBoxed(boxed_class, value);
+  Object* result = heap()->CreateBoxed(boxed_class, value);
   if (result->IsFailure()) return result;
   return result;
 }
@@ -266,7 +291,7 @@ Object* Process::NewInstance(Class* klass, bool immutable) {
   if (immutable) {
     return immutable_heap_->CreateInstance(klass, null, immutable);
   } else {
-    return heap_.CreateInstance(klass, null, immutable);
+    return heap()->CreateInstance(klass, null, immutable);
   }
 }
 
@@ -278,7 +303,7 @@ Object* Process::ToInteger(int64 value) {
 
 Object* Process::NewStack(int length) {
   Class* stack_class = program()->stack_class();
-  Object* result = heap_.CreateStack(stack_class, length);
+  Object* result = heap()->CreateStack(stack_class, length);
 
   if (result->IsFailure()) return result;
   store_buffer_.Insert(HeapObject::cast(result));
@@ -298,14 +323,16 @@ struct HeapUsage {
   uword TotalSize() { return process_used + immutable_size + program_size; }
 };
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 static void GetHeapUsage(Process* process, HeapUsage* heap_usage) {
   heap_usage->timestamp = Platform::GetMicroseconds();
   heap_usage->process_used = process->heap()->space()->Used();
   heap_usage->process_size = process->heap()->space()->Size();
   heap_usage->immutable_used =
-      process->program()->immutable_heap()->EstimatedUsed();
+      process->program()->shared_heap()->EstimatedUsed();
   heap_usage->immutable_size =
-      process->program()->immutable_heap()->EstimatedSize();
+      process->program()->shared_heap()->EstimatedSize();
   heap_usage->program_used = process->program()->heap()->space()->Used();
   heap_usage->program_size = process->program()->heap()->space()->Size();
 }
@@ -341,6 +368,10 @@ void PrintProcessGCInfo(Process* process, HeapUsage* before, HeapUsage* after) {
       after->TotalSize());
 }
 
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void Process::CollectMutableGarbage() {
   TakeChildHeaps();
 
@@ -349,7 +380,7 @@ void Process::CollectMutableGarbage() {
     GetHeapUsage(this, &usage_before);
   }
 
-  Space* from = heap_.space();
+  Space* from = heap()->space();
   Space* to = new Space(from->Used() / 10);
   StoreBuffer sb;
 
@@ -365,20 +396,30 @@ void Process::CollectMutableGarbage() {
   to->CompleteScavengeMutable(&visitor, program_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
-  heap_.ProcessWeakPointers();
+  heap()->ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
-  heap_.ReplaceSpace(to);
-  UpdateStackLimit();
+  heap()->ReplaceSpace(to);
 
   if (Flags::print_heap_statistics) {
     HeapUsage usage_after;
     GetHeapUsage(this, &usage_after);
     PrintProcessGCInfo(this, &usage_before, &usage_after);
   }
+
+  UpdateStackLimit();
 }
 
+#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Process::CollectMutableGarbage() {
+  program()->CollectSharedGarbage(true);
+  UpdateStackLimit();
+}
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 // Helper class for copying HeapObjects and chaining stacks for a
-// process..
+// process.
 class ScavengeAndChainStacksVisitor: public PointerVisitor {
  public:
   ScavengeAndChainStacksVisitor(Process* process,
@@ -429,7 +470,7 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
 };
 
 int Process::CollectMutableGarbageAndChainStacks() {
-  Space* from = heap_.space();
+  Space* from = heap()->space();
   Space* to = new Space(from->Used() / 10);
   StoreBuffer sb;
 
@@ -446,9 +487,9 @@ int Process::CollectMutableGarbageAndChainStacks() {
   to->CompleteScavengeMutable(&visitor, program_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
-  heap_.ProcessWeakPointers();
+  heap()->ProcessWeakPointers();
   set_ports(Port::CleanupPorts(from, ports()));
-  heap_.ReplaceSpace(to);
+  heap()->ReplaceSpace(to);
   UpdateStackLimit();
   return visitor.number_of_stacks();
 }
@@ -463,8 +504,8 @@ int Process::CollectGarbageAndChainStacks() {
   return number_of_stacks;
 }
 
-void Process::ValidateHeaps(ImmutableHeap* immutable_heap) {
-  ProcessHeapValidatorVisitor v(program()->heap(), immutable_heap);
+void Process::ValidateHeaps(SharedHeap* shared_heap) {
+  ProcessHeapValidatorVisitor v(program()->heap(), shared_heap);
   v.VisitProcess(this);
 }
 
@@ -496,15 +537,34 @@ void Process::TakeLookupCache() {
   primary_lookup_cache_ = cache->primary();
 }
 
+void Process::SetStackMarker(uword marker) {
+  uword stack_limit = stack_limit_;
+  while (true) {
+    uword updated_limit =
+        (stack_limit > kMaxStackMarker) ? marker : stack_limit | marker;
+    if (stack_limit_.compare_exchange_weak(stack_limit, updated_limit)) break;
+  }
+}
+
+void Process::ClearStackMarker(uword marker) {
+  uword stack_limit = stack_limit_;
+  while (true) {
+    ASSERT((stack_limit & marker) != 0);
+    uword updated_limit = stack_limit & (~marker);
+    if (stack_limit_.compare_exchange_weak(stack_limit, updated_limit)) break;
+  }
+}
+
 void Process::Preempt() {
-  stack_limit_ = kPreemptMarker;
+  SetStackMarker(kPreemptMarker);
+}
+
+void Process::DebugInterrupt() {
+  SetStackMarker(kDebugInterruptMarker);
 }
 
 void Process::Profile() {
-  // Don't override preempt marker.
-  Object** stack_limit = stack_limit_;
-  if (stack_limit_ == kPreemptMarker) return;
-  stack_limit_.compare_exchange_strong(stack_limit, kProfileMarker);
+  SetStackMarker(kProfileMarker);
 }
 
 void Process::AttachDebugger() {
@@ -518,7 +578,7 @@ int Process::PrepareStepOver() {
   Object** stack_top = pushed_bcp_address - 1;
   Opcode opcode = static_cast<Opcode>(*current_bcp);
 
-  if (!Bytecode::IsInvoke(opcode)) {
+  if (!Bytecode::IsInvokeVariant(opcode)) {
     // For non-invoke bytecodes step over is the same as step.
     debug_info_->set_is_stepping(true);
     return DebugInfo::kNoBreakpointId;
@@ -530,17 +590,10 @@ int Process::PrepareStepOver() {
   switch (opcode) {
     // For invoke bytecodes we set a one-shot breakpoint for the next bytecode
     // with the expected stack height on return.
-    case Opcode::kInvokeMethod:
-    case Opcode::kInvokeMethodVtable: {
+    case Opcode::kInvokeMethodUnfold:
+    case Opcode::kInvokeNoSuchMethod:
+    case Opcode::kInvokeMethod: {
       int selector = Utils::ReadInt32(current_bcp + 1);
-      int arity = Selector::ArityField::decode(selector);
-      stack_diff = -arity;
-      break;
-    }
-    case Opcode::kInvokeMethodFast: {
-      int index = Utils::ReadInt32(current_bcp + 1);
-      Array* table = program()->dispatch_table();
-      int selector = Smi::cast(table->get(index + 1))->value();
       int arity = Selector::ArityField::decode(selector);
       stack_diff = -arity;
       break;
@@ -659,6 +712,16 @@ void Process::FinalizeForeign(HeapObject* foreign, Heap* heap) {
   heap->FreedForeignMemory(length);
 }
 
+void Process::FinalizeProcess(HeapObject* process, Heap* heap) {
+  // TODO(kustermann): Nearly all finalizers are currently grapping
+  // into the objects which are to be finalized. This is not really a good idea.
+  Instance* instance = Instance::cast(process);
+  Object* field = instance->GetInstanceField(0);
+  uword address = AsForeignWord(field);
+  ProcessHandle* handle = reinterpret_cast<ProcessHandle*>(address);
+  ProcessHandle::DecrementRef(handle);
+}
+
 #ifdef DEBUG
 bool Process::TrueThenFalse() {
   bool result = true_then_false_;
@@ -684,9 +747,12 @@ void Process::UpdateStackLimit() {
   // temporary each bytecode can utilize internally.
   Stack* stack = this->stack();
   int frame_size = Bytecode::kGuaranteedFrameSize + 2;
-  Object** current_limit = stack_limit_.load();
-  if (current_limit != kPreemptMarker) {
-    Object** new_stack_limit = stack->Pointer(stack->length() - frame_size);
+  uword current_limit = stack_limit_;
+  // Update the stack limit if the limit is a real limit or if all
+  // interrupts have been handled.
+  if (current_limit > kMaxStackMarker || current_limit == 0) {
+    uword new_stack_limit =
+        reinterpret_cast<uword>(stack->Pointer(stack->length() - frame_size));
     stack_limit_.compare_exchange_strong(current_limit, new_stack_limit);
   }
 }
@@ -711,7 +777,7 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
     static const Names::Id name = Names::kNoSuchMethodTrampoline;
     target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
   } else {
-    void* intrinsic = target->ComputeIntrinsic();
+    void* intrinsic = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
     tag = (intrinsic == NULL) ? 1 : reinterpret_cast<uword>(intrinsic);
   }
 

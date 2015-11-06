@@ -46,7 +46,7 @@ class EnqueuerMixin {
 
   QueueFilter get filter => notImplemented;
 
-  Queue<FletchCodegenWorkItem> get queue => notImplemented;
+  Queue get queue => notImplemented;
 
   get generatedCode => notImplemented;
 

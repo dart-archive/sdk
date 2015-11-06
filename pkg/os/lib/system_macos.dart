@@ -28,6 +28,14 @@ class MacOSSystem extends PosixSystem {
   static final ForeignFunction _lseekMac = ForeignLibrary.main.lookup("lseek");
   static final ForeignFunction _openMac = ForeignLibrary.main.lookup("open");
 
+  int get AF_INET6 => 30;
+
+  int get O_NONBLOCK => 4;
+  int get O_APPEND => 8;
+  int get O_CREAT => 512;
+  int get O_TRUNC => 1024;
+  int get O_CLOEXEC => 16777216;
+
   int get FIONREAD => 0x4004667f;
 
   int get SOL_SOCKET => 0xffff;

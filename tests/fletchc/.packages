@@ -7,8 +7,10 @@ fletch_agent:../../pkg/fletch_agent/lib
 fletchc:../../pkg/fletchc/lib
 js_ast:../../third_party/dart/pkg/js_ast/lib
 js_runtime:../../third_party/dart/sdk/lib/_internal/js_runtime/lib/
+old_servicec:../../tools/servicec/lib
 package_config:../../third_party/package_config/lib
 path:../../third_party/path/lib
 persistent:../../third_party/persistent/lib/
 sdk_library_metadata:../../third_party/dart/sdk/lib/_internal/sdk_library_metadata/lib/
+old_servicec:../../tools/servicec/lib
 servicec:../../pkg/servicec/lib

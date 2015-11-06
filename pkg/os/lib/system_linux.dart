@@ -30,6 +30,14 @@ class LinuxSystem extends PosixSystem {
   static final ForeignFunction _openLinux =
       ForeignLibrary.main.lookup("open64");
 
+  int get AF_INET6 => 10;
+
+  int get O_CREAT => 64;
+  int get O_TRUNC => 512;
+  int get O_APPEND => 1024;
+  int get O_NONBLOCK => 2048;
+  int get O_CLOEXEC => 524288;
+
   int get FIONREAD => 0x541B;
 
   int get SOL_SOCKET => 1;

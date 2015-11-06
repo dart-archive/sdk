@@ -4,6 +4,9 @@
 
 library servicec.validator;
 
+import 'package:compiler/src/scanner/scannerlib.dart' show
+    Token;
+
 import 'node.dart' show
     CompilationUnitNode,
     FormalNode,
@@ -16,40 +19,56 @@ import 'node.dart' show
     PointerType,
     RecursiveVisitor,
     ServiceNode,
-    SimpleType,
     StructNode,
     TopLevelNode,
     TypeNode,
     UnionNode;
 
 import 'errors.dart' show
-    CompilerError,
+    BadFieldTypeError,
+    BadListTypeError,
+    BadPointerTypeError,
+    BadReturnTypeError,
+    BadSingleFormalError,
+    BadTypeParameterError,
+    CompilationError,
+    CyclicStructError,
     ErrorNode,
-    FunctionErrorNode,
-    StructErrorNode,
-    ServiceErrorNode,
-    TopLevelErrorNode;
+    ErrorTag,
+    MultipleDefinitionsError,
+    MultipleUnionsError,
+    NotPrimitiveFormalError,
+    SyntaxError,
+    ServiceStructNameClashError,
+    UndefinedServiceError;
+
+import 'dart:collection' show
+    Queue;
+
+import 'cycle_detection.dart' show
+    StructGraph;
 
 // Validation functions.
-List<CompilerError> validate(CompilationUnitNode compilationUnit) {
+List<CompilationError> validate(CompilationUnitNode compilationUnit) {
   Validator validator = new Validator();
   validator.process(compilationUnit);
   return validator.errors;
 }
 
-/// Encapsulate the state variables. Use [visitCompilationUnit] as an entry
-/// point.
 class Validator extends RecursiveVisitor {
-  List<CompilerError> errors;
+  List<CompilationError> errors;
   Environment environment;
+  StructGraph structGraph;
 
   Validator()
-    : errors = <CompilerError>[],
+    : errors = <CompilationError>[],
       environment = new Environment(),
+      structGraph = new StructGraph(),
       super();
 
   void process(CompilationUnitNode compilationUnit) {
     visitCompilationUnit(compilationUnit);
+    errors.addAll(structGraph.findCycles());
   }
 
   // Visit methods.
@@ -72,6 +91,7 @@ class Validator extends RecursiveVisitor {
     checkIsNotError(struct);
     checkHasAtMostOneUnion(struct);
     super.visitStruct(struct);
+    structGraph.add(struct);
     leaveStructScope(struct);
   }
 
@@ -97,7 +117,7 @@ class Validator extends RecursiveVisitor {
   void visitSingleFormal(FormalNode formal) {
     checkIsNotError(formal);
     visitType(formal.type);
-    checkIsPointerOrPrimitive(formal.type);
+    checkSingleFormal(formal.type);
   }
 
   void visitPrimitiveFormal(FormalNode formal) {
@@ -113,12 +133,20 @@ class Validator extends RecursiveVisitor {
 
   void visitField(FieldNode field) {
     checkIsNotError(field);
-    super.visitField(field);
+    visitType(field.type);  // resolve
+    if (field.type.isPointer()) {
+      checkPointeeTypeResolves(field.type);
+    } else if (field.type.isList()) {
+      ListType list = field.type;
+      visitListType(list);
+    } else {
+      checkFieldSimpleType(field.type);
+    }
   }
 
   void visitReturnType(TypeNode type) {
     visitType(type);
-    checkIsPointerOrPrimitive(type);
+    checkReturnType(type);
   }
 
   void visitTypeParameter(TypeNode type) {
@@ -126,20 +154,16 @@ class Validator extends RecursiveVisitor {
     checkTypeParameter(type);
   }
 
-  void visitSimpleType(SimpleType type) {
-    visitType(type);
-    checkIsSimpleType(type);
-  }
-
   void visitPointerType(PointerType type) {
     visitType(type);
-    checkIsPointerType(type);
+    checkPointeeTypeResolves(type);
   }
 
   void visitListType(ListType type) {
     visitType(type);
     checkIsNotError(type);
     checkIsListType(type);
+    super.visitListType(type);
   }
 
   void visitType(TypeNode type) {
@@ -147,7 +171,7 @@ class Validator extends RecursiveVisitor {
   }
 
   void visitError(ErrorNode error) {
-    errors.add(error.tag);
+    errors.add(new SyntaxError(error));
   }
 
   // Checks.
@@ -163,56 +187,65 @@ class Validator extends RecursiveVisitor {
 
   void checkHasAtLeastOneService(CompilationUnitNode compilationUnit) {
     for (Node node in compilationUnit.topLevels) {
-      if (node is ServiceNode) {
-        return;
-      }
+      if (node is ServiceNode) return;
     }
-    errors.add(CompilerError.undefinedService);
+    errors.add(new UndefinedServiceError());
   }
 
   void checkHasAtMostOneUnion(StructNode struct) {
     int count = 0;
     for (MemberNode member in struct.members) {
       if (member is UnionNode && ++count > 1) {
-        errors.add(CompilerError.multipleUnions);
+        errors.add(new MultipleUnionsError(struct));
         return;
       }
     }
   }
 
-  void checkIsPointerOrPrimitive(TypeNode type) {
-    if (!(type.isPointer() || type.isPrimitive())) {
-      errors.add(CompilerError.expectedPointerOrPrimitive);
+  void checkIsPointerOrPrimitive(TypeNode type, CompilationError error) {
+    if (type.isPrimitive()) return;
+    if (type.isPointer()) {
+      checkPointeeTypeResolves(type);
+    } else {
+      errors.add(error);
     }
+  }
+
+  void checkSingleFormal(TypeNode type) {
+    checkIsPointerOrPrimitive(type, new BadSingleFormalError(type));
   }
 
   void checkIsPrimitiveFormal(FormalNode formal) {
     if (!formal.type.isPrimitive()) {
-      errors.add(CompilerError.expectedPrimitiveFormal);
+      errors.add(new NotPrimitiveFormalError(formal));
     }
   }
 
-  void checkIsSimpleType(SimpleType type) {
-    if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
-      errors.add(CompilerError.badSimpleType);
-    }
-  }
-
-  void checkIsPointerType(PointerType type) {
-    if (!type.isPointer()) {
-      errors.add(CompilerError.badPointerType);
+  void checkPointeeTypeResolves(PointerType type) {
+    if (!type.pointeeResolves()) {
+      errors.add(new BadPointerTypeError(type));
     }
   }
 
   void checkIsListType(ListType type) {
     if (!type.isList()) {
-      errors.add(CompilerError.badListType);
+      errors.add(new BadListTypeError(type));
     }
+  }
+
+  void checkReturnType(TypeNode type) {
+    checkIsPointerOrPrimitive(type, new BadReturnTypeError(type));
   }
 
   void checkTypeParameter(TypeNode type) {
     if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
-      errors.add(CompilerError.badTypeParameter);
+      errors.add(new BadTypeParameterError(type));
+    }
+  }
+
+  void checkFieldSimpleType(TypeNode type) {
+    if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
+      errors.add(new BadFieldTypeError(type));
     }
   }
 
@@ -250,11 +283,6 @@ class Validator extends RecursiveVisitor {
     function.formals.forEach(removeFormalSymbol);
   }
 
-  // Symbol table management.
-  bool lookupStructSymbol(IdentifierNode identifier) {
-    return environment.structs.contains(identifier);
-  }
-
   void addTopLevelSymbol(TopLevelNode node) {
     if (node is ServiceNode) {
       addServiceSymbol(node);
@@ -264,11 +292,19 @@ class Validator extends RecursiveVisitor {
   }
 
   void addServiceSymbol(ServiceNode service) {
+    checkIsNotNameClash(environment.structs.keys.toSet(), service.identifier);
     addSymbol(environment.services, service.identifier);
   }
 
   void addStructSymbol(StructNode struct) {
-    environment.structs[struct.identifier] = struct;
+    checkIsNotNameClash(environment.services, struct.identifier);
+    if (environment.structs.containsKey(struct.identifier)) {
+      IdentifierNode original =
+        environment.structs.keys.toSet().lookup(struct.identifier);
+      errors.add(new MultipleDefinitionsError(original, struct.identifier));
+    } else {
+      environment.structs[struct.identifier] = struct;
+    }
   }
 
   void addFunctionSymbol(FunctionNode function) {
@@ -329,9 +365,18 @@ class Validator extends RecursiveVisitor {
     removeSymbol(environment.formals, formal.identifier);
   }
 
+  void checkIsNotNameClash(Set<IdentifierNode> symbols,
+                           IdentifierNode identifier) {
+    IdentifierNode original = symbols.lookup(identifier);
+    if (null != original) {
+      errors.add(new ServiceStructNameClashError(original, identifier));
+    }
+  }
+
   void addSymbol(Set<IdentifierNode> symbols, IdentifierNode identifier) {
-    if (symbols.contains(identifier)) {
-      errors.add(CompilerError.multipleDefinitions);
+    IdentifierNode original = symbols.lookup(identifier);
+    if (null != original) {
+      errors.add(new MultipleDefinitionsError(original, identifier));
     } else {
       symbols.add(identifier);
     }
@@ -354,4 +399,5 @@ class Environment {
       properties = new Set<IdentifierNode>(),
       formals = new Set<IdentifierNode>();
 }
+
 

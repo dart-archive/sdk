@@ -2,17 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.parser;
+library old_servicec.parser;
 
-import 'package:petitparser/petitparser.dart';
-import 'grammar.dart';
 import 'primitives.dart' as primitives;
 import 'struct_layout.dart';
-
-Unit parseUnit(String input) {
-  Parser parser = new GrammarParser(new _ServiceParserDefinition());
-  return parser.parse(input).value;
-}
 
 abstract class Visitor {
   visitUnit(Unit node);
@@ -173,34 +166,4 @@ class ListType extends Type {
   bool get isString => false;
 
   String get identifier => elementType.identifier;
-}
-
-// --------------------------------------------------------------
-
-class _ServiceParserDefinition extends ServiceGrammarDefinition {
-  final StringType string = new StringType();
-  unit() => super.unit()
-      .map((each) => new Unit(each.where((e) => e is Service).toList(),
-                              each.where((e) => e is Struct).toList()));
-  service() => super.service()
-      .map((each) => new Service(each[1], each[3]));
-  struct() => super.struct()
-      .map((each) => new Struct(each[1],
-          each[3].where((e) => e is Formal).toList(),
-          each[3].where((e) => e is Union).toList()));
-  method() => super.method()
-      .map((each) => new Method(each[1], each[3], each[0]));
-  simpleType() => super.simpleType()
-      .map((each) => new SimpleType(each[0], each[1]));
-  stringType() => super.stringType().map((each) => string);
-  listType() => super.listType()
-      .map((each) => new ListType(each[2]));
-  union() => super.union()
-      .map((each) => new Union(each[2]));
-  slot() => super.slot()
-     .map((each) => each[0]);
-  formal() => super.formal()
-      .map((each) => new Formal(each[0], each[1]));
-  identifier() => super.identifier()
-      .flatten().map((each) => each.trim());
 }

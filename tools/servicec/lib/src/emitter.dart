@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.emitter;
+library old_servicec.emitter;
 
 import 'dart:io';
 
@@ -12,7 +12,7 @@ void writeToFile(String outputDirectory,
                  String path,
                  String contents,
                  {String extension}) {
-  // Create 'cc' output directory if it doesn't already exist.
+  // Create output directory if it doesn't already exist.
   new Directory(outputDirectory).createSync(recursive: true);
   // Write contents of the file.
   String fileName = path;

@@ -16,13 +16,14 @@ if [[ $# -eq 1 ]] && [[ "$1" == "snapshot" ]]; then
     echo "If Fletch or any IMMI files changed re-run compile.sh without arguments."
 else
 
-# Regenerate java and jni sources.
-cd $SERVICEC_DIR
-dart bin/servicec.dart --out=../../samples/todomvc/ ../../samples/todomvc/todomvc_service.idl
 
 # Build the native interpreter src for arm and x86.
 cd $FLETCH_DIR
 ninja
+ninja -C out/ReleaseIA32
+# Regenerate java and jni sources.
+out/ReleaseIA32/fletch x-servicec file samples/todomvc/todomvc_service.idl out samples/todomvc/
+
 ninja -C out/ReleaseXARMAndroid fletch_vm_library_generator
 ninja -C out/ReleaseIA32Android fletch_vm_library_generator
 mkdir -p out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen
@@ -50,7 +51,6 @@ fi
 
 # Build snapshot.
 cd $FLETCH_DIR
-ninja -C out/ReleaseIA32
 mkdir -p $DIR/TodoMVC/app/src/main/res/raw
 
 ./out/ReleaseIA32/dart \

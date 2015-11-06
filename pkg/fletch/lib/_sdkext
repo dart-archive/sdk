@@ -1,0 +1,7 @@
+{
+ "dart:fletch": "../../../lib/fletch/fletch.dart",
+ "dart:fletch.io": "../../../lib/io/io.dart",
+ "dart:fletch.ffi": "../../../lib/ffi/ffi.dart",
+ "dart:fletch.os": "../../../lib/os/os.dart",
+ "dart:fletch.service": "../../../lib/service/service.dart"
+}

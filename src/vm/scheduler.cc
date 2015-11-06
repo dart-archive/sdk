@@ -8,6 +8,7 @@
 
 #include "src/vm/gc_thread.h"
 #include "src/vm/interpreter.h"
+#include "src/vm/links.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 #include "src/vm/process_queue.h"
@@ -18,6 +19,7 @@ namespace fletch {
 
 ThreadState* const kEmptyThreadState = reinterpret_cast<ThreadState*>(1);
 ThreadState* const kLockedThreadState = reinterpret_cast<ThreadState*>(2);
+Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
 
 Scheduler::Scheduler()
     : max_threads_(Platform::GetNumberOfHardwareThreads()),
@@ -29,14 +31,22 @@ Scheduler::Scheduler()
       idle_threads_(kEmptyThreadState),
       threads_(new Atomic<ThreadState*>[max_threads_]),
       temporary_thread_states_(NULL),
-      foreign_threads_(0),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
-      shutdown_(-1),
-      shutdown_program_(NULL),
+      last_process_exit_(Signal::kTerminated),
       pause_(false),
       current_processes_(new Atomic<Process*>[max_threads_]),
       gc_thread_(new GCThread()) {
+
+#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
+  // TODO(kustermann): Find a way to make this a compile-time error instead of a
+  // runtime error (e.g. using static_assert).
+  if (max_threads_ != 1) {
+    FATAL("The number of scheduler worker threads must be 1 if using one "
+          "shared heap for all processes.");
+  }
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
   for (int i = 0; i < max_threads_; i++) {
     threads_[i] = NULL;
     current_processes_[i] = NULL;
@@ -189,7 +199,43 @@ void Scheduler::ResumeProcess(Process* process) {
   EnqueueOnAnyThreadSafe(process);
 }
 
-void Scheduler::ProcessContinue(Process* process) {
+void Scheduler::SignalProcess(Process* process) {
+  while (true) {
+    switch (process->state()) {
+      case Process::kSleeping:
+        if (process->ChangeState(Process::kSleeping, Process::kReady)) {
+          // TODO(kustermann): If it is guaranteed that [SignalProcess] is only
+          // called from a scheduler worker thread, we could use the non *Safe*
+          // method here (which doesn't guard against stopped programs).
+          EnqueueOnAnyThreadSafe(process);
+          return;
+        }
+        // If the state changed, we'll try again.
+        break;
+      case Process::kReady:
+      case Process::kBreakPoint:
+      case Process::kCompileTimeError:
+      case Process::kUncaughtException:
+        // Either the scheduler/debugger will signal the process, or it will be
+        // enqueued and the interpreter entry will handle the signal.
+        return;
+      case Process::kRunning:
+        // The process will be signaled when entering/leaving the interpreter.
+        process->Preempt();
+        return;
+      case Process::kYielding:
+        // This is a temporary state and will go either to kReady/kSleeping.
+        // NOTE: Bad that we're busy looping here (liklihood of wasted cycles is
+        // roughly the same as for spinlocks)!
+        break;
+      case Process::kTerminated:
+        // Nothing to do here.
+        return;
+    }
+  }
+}
+
+void Scheduler::ContinueProcess(Process* process) {
   bool success =
       process->ChangeState(Process::kBreakPoint, Process::kReady) ||
       process->ChangeState(Process::kCompileTimeError, Process::kReady) ||
@@ -201,61 +247,12 @@ void Scheduler::ProcessContinue(Process* process) {
 bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   ASSERT(port->IsLocked());
 
-  // TODO(ajohnsen): Foreign threads are not stopped by
-  // Scheduler::StopProgram. We need to fix that before
-  // foreign threads can directly interpret dart code.
-  // See issue: https://github.com/dart-lang/fletch/issues/73
-  if (Flags::run_on_foreign_thread) {
-    if (!process->ChangeState(Process::kSleeping, Process::kRunning)) {
-      port->Unlock();
-      return false;
-    }
+  if (!process->ChangeState(Process::kSleeping, Process::kReady)) {
     port->Unlock();
-
-    foreign_threads_++;
-
-    // TODO(ajohnsen): It's important that the thread state caches are cleared
-    // when any Program changes. I'm not convinced this is the case.
-    ThreadState* thread_state = TakeThreadState();
-
-    // This thread-state moves between threads. Attach thread-state to current
-    // thread.
-    thread_state->AttachToCurrentThread();
-
-    // Use the temp thread state to run the process.
-    Program* program = process->program();
-    ImmutableHeap* immutable_heap = program->immutable_heap();
-    ImmutableHeap::Part* immutable_heap_part = immutable_heap->AcquirePart();
-
-    bool allocation_failure = false;
-    Process* new_process = InterpretProcess(
-        process, immutable_heap_part->heap(), thread_state,
-        &allocation_failure);
-    if (immutable_heap->ReleasePart(immutable_heap_part)) {
-      gc_thread_->TriggerImmutableGC(process->program());
-    }
-    if (new_process != NULL) EnqueueOnAnyThread(new_process);
-
-    ASSERT(thread_state->queue()->is_empty());
-
-    ReturnThreadState(thread_state);
-
-    foreign_threads_--;
-    if (processes_ == 0) {
-      // If the last process was delete by this thread, notify the main thread
-      // that it's safe to terminate.
-      preempt_monitor_->Lock();
-      preempt_monitor_->Notify();
-      preempt_monitor_->Unlock();
-    }
-  } else {
-    if (!process->ChangeState(Process::kSleeping, Process::kReady)) {
-      port->Unlock();
-      return false;
-    }
-    port->Unlock();
-    EnqueueOnAnyThreadSafe(process);
+    return false;
   }
+  port->Unlock();
+  EnqueueOnAnyThreadSafe(process);
 
   return true;
 }
@@ -280,30 +277,6 @@ int Scheduler::Run() {
     // If we didn't time out, we were interrupted. In that case, continue.
     if (!preempt_monitor_->WaitUntil(next_timeout)) continue;
 
-    if (shutdown_ != -1) {
-      // The following code can be viewed as if a separate thread is listening
-      // for shutdown signals and then acts on it (stop program, delete all
-      // processes).
-      //
-      // It is here (in a central place), in order to prevent multiple
-      // scheduler worker threads to race about shutting down at the same time.
-      // Yet we save having another thread just for shutting down.
-      //
-      // Using [StopProgram] will coordinate with scheduler worker threads,
-      // which might use [preempt_monitor_] to signal the main thread. This
-      // requires being able to take the [preempt_monitor_] lock. We therefore
-      // unlock [preempt_monitor_] during this work.
-      ScopedMonitorUnlock unlocker(preempt_monitor_);
-
-      // TODO(ajohnsen): Handle multiple programs.
-      Program* program = shutdown_program_;
-      StopProgram(program);
-      program->program_state()->set_paused_processes_head(NULL);
-      program->DeleteAllProcesses();
-      processes_ = 0;
-      ResumeProgram(program);
-    }
-
     bool is_preempt = next_preempt <= next_profile;
     bool is_profile = next_profile <= next_preempt;
 
@@ -327,31 +300,36 @@ int Scheduler::Run() {
   preempt_monitor_->Unlock();
   thread_pool_.JoinAll();
 
-  // Wait for foreign threads to leave the scheduler.
-  preempt_monitor_->Lock();
-  while (foreign_threads_ != 0) {
-    preempt_monitor_->Wait();
-  }
-  preempt_monitor_->Unlock();
-
   gc_thread_->StopThread();
 
-  if (shutdown_ != -1) return shutdown_;
+  switch (last_process_exit_.load()) {
+    case Signal::kTerminated: return 0;
+    case Signal::kCompileTimeError: return kCompileTimeErrorExitCode;
+    case Signal::kUncaughtException: return kUncaughtExceptionExitCode;
+    // TODO(kustermann): We should consider returning a different exitcode if a
+    // process was killed via a signal.
+    case Signal::kUnhandledSignal: return kUncaughtExceptionExitCode;
+  }
+  UNREACHABLE();
   return 0;
 }
 
-void Scheduler::ExitAtTermination(Process* process) {
+void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   Program* program = process->program();
-  program->DeleteProcess(process);
+  if (--processes_ == 0) {
+    last_process_exit_ = kind;
+  }
+  program->DeleteProcess(process, kind);
 
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
     gc_thread_->TriggerGC(program);
   }
+}
 
-  if (--processes_ == 0) {
-    NotifyAllThreads();
-  }
+void Scheduler::ExitAtTermination(Process* process, Signal::Kind kind) {
+  DeleteTerminatedProcess(process, kind);
+  if (processes_ == 0) NotifyAllThreads();
 }
 
 void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
@@ -363,27 +341,27 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
     exception->Print();
   }
 
-  ExitWith(process->program(), kUncaughtExceptionExitCode);
-  ExitAtTermination(process);
+  ExitWith(process, kUncaughtExceptionExitCode, Signal::kUncaughtException);
 }
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {
   ASSERT(process->state() == Process::kCompileTimeError);
-  ExitWith(process->program(), kCompileTimeErrorExitCode);
-  ExitAtTermination(process);
+  ExitWith(process, kCompileTimeErrorExitCode, Signal::kCompileTimeError);
 }
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
   ASSERT(process->state() == Process::kBreakPoint);
-  ExitWith(process->program(), kBreakPointExitCode);
-  ExitAtTermination(process);
+  // TODO(kustermann): Maybe we want to make a different constant for this? It
+  // is a very strange case and one could even argue that if the session
+  // detaches after hitting a breakpoint the process should not be killed but
+  // rather resumed.
+  ExitWith(process, kBreakPointExitCode, Signal::kTerminated);
 }
 
-void Scheduler::ExitWith(Program* program, int exit_code) {
-  shutdown_program_ = program;
-  shutdown_ = exit_code;
+void Scheduler::ExitWith(Process* process, int exit_code, Signal::Kind kind) {
+  DeleteTerminatedProcess(process, kind);
   ScopedMonitorLock scoped_lock(preempt_monitor_);
-  preempt_monitor_->Notify();
+  if (processes_ == 0) NotifyAllThreads();
 }
 
 void Scheduler::RescheduleProcess(Process* process,
@@ -391,7 +369,7 @@ void Scheduler::RescheduleProcess(Process* process,
                                   bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
-    ExitAtTermination(process);
+    ExitAtTermination(process, Signal::kTerminated);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
     EnqueueOnAnyThread(process, state->thread_id() + 1);
@@ -400,17 +378,28 @@ void Scheduler::RescheduleProcess(Process* process,
 
 void Scheduler::PreemptThreadProcess(int thread_id) {
   Process* process = current_processes_[thread_id];
-  if (process != NULL) {
-    if (current_processes_[thread_id].compare_exchange_strong(process, NULL)) {
-      process->Preempt();
-      current_processes_[thread_id] = process;
+  while (true) {
+    if (process == kPreemptMarker) {
+      break;
+    } else if (process == NULL) {
+      if (current_processes_[thread_id].compare_exchange_strong(
+          process, kPreemptMarker)) {
+        break;
+      }
+    } else {
+      if (current_processes_[thread_id].compare_exchange_strong(
+          process, NULL)) {
+        process->Preempt();
+        current_processes_[thread_id] = process;
+        break;
+      }
     }
   }
 }
 
 void Scheduler::ProfileThreadProcess(int thread_id) {
   Process* process = current_processes_[thread_id];
-  if (process != NULL) {
+  if (process != NULL && process != kPreemptMarker) {
     if (current_processes_[thread_id].compare_exchange_strong(process, NULL)) {
       process->Profile();
       current_processes_[thread_id] = process;
@@ -536,11 +525,13 @@ void Scheduler::RunInThread() {
   ThreadExit(thread_state);
 }
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   // We use this heap for allocating new immutable objects.
   Program* program = NULL;
-  ImmutableHeap* immutable_heap = NULL;
-  ImmutableHeap::Part* immutable_heap_part = NULL;
+  SharedHeap* shared_heap = NULL;
+  SharedHeap::Part* shared_heap_part = NULL;
 
   while (!pause_) {
     Process* process = NULL;
@@ -552,27 +543,27 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
       // If we changed programs, merge the current part back to it's heap
       // and get a new part from the new program.
       if (process->program() != program) {
-        if (immutable_heap_part != NULL) {
-          if (immutable_heap->ReleasePart(immutable_heap_part)) {
+        if (shared_heap_part != NULL) {
+          if (shared_heap->ReleasePart(shared_heap_part)) {
             gc_thread_->TriggerImmutableGC(program);
           }
         }
         program = process->program();
-        immutable_heap = program->immutable_heap();
-        immutable_heap_part = immutable_heap->AcquirePart();
+        shared_heap = program->shared_heap();
+        shared_heap_part = shared_heap->AcquirePart();
       }
 
       // Interpret and trigger GC if interpretation resulted in immutable
       // allocation failure.
       bool allocation_failure = false;
       Process* new_process = InterpretProcess(
-          process, immutable_heap_part->heap(), thread_state,
+          process, shared_heap_part->heap(), thread_state,
           &allocation_failure);
       if (allocation_failure) {
-        if (immutable_heap->ReleasePart(immutable_heap_part)) {
+        if (shared_heap->ReleasePart(shared_heap_part)) {
           gc_thread_->TriggerImmutableGC(program);
         }
-        immutable_heap_part = immutable_heap->AcquirePart();
+        shared_heap_part = shared_heap->AcquirePart();
       }
 
       // Possibly switch to a new process.
@@ -582,16 +573,57 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
 
   // Always merge remaining immutable heap part back before (possibly) going
   // to sleep.
-  if (immutable_heap != NULL &&
-      immutable_heap->ReleasePart(immutable_heap_part)) {
+  if (shared_heap != NULL &&
+      shared_heap->ReleasePart(shared_heap_part)) {
     gc_thread_->TriggerImmutableGC(program);
   }
 }
 
+#else  // FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
+  // We use this heap for allocating new immutable objects.
+  while (!pause_) {
+    Process* process = NULL;
+    DequeueFromThread(thread_state, &process);
+    // No more processes for this state, break.
+    if (process == NULL) break;
+
+    while (process != NULL) {
+      bool allocation_failure = false;
+      Heap* shared_heap = process->program()->shared_heap()->heap();
+
+      Process* new_process = InterpretProcess(
+          process, shared_heap, thread_state, &allocation_failure);
+
+      if (allocation_failure) {
+        // Can never run into an immutable allocation failure.
+        UNREACHABLE();
+      }
+
+      // Possibly switch to a new process.
+      process = new_process;
+    }
+  }
+}
+
+#endif  // FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void Scheduler::SetCurrentProcessForThread(int thread_id, Process* process) {
   if (thread_id == -1) return;
-  ASSERT(current_processes_[thread_id] == NULL);
-  current_processes_[thread_id] = process;
+  Process* value = current_processes_[thread_id];
+  while (true) {
+    if (value == kPreemptMarker) {
+      process->Preempt();
+      current_processes_[thread_id] = process;
+      break;
+    } else {
+      // Take value at each attempt, as value will be overriden on failure.
+      if (current_processes_[thread_id].compare_exchange_weak(value, process)) {
+        break;
+      }
+    }
+  }
 }
 
 void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {
@@ -606,10 +638,17 @@ void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {
 }
 
 Process* Scheduler::InterpretProcess(Process* process,
-                                     Heap* immutable_heap,
+                                     Heap* shared_heap,
                                      ThreadState* thread_state,
                                      bool* allocation_failure) {
   ASSERT(process->exception()->IsNull());
+
+  // TODO(kustermann): Support signal handlers.
+  Signal* signal = process->signal_mailbox()->CurrentMessage();
+  if (signal != NULL) {
+    ExitAtTermination(process, Signal::kUnhandledSignal);
+    return NULL;
+  }
 
   int thread_id = thread_state->thread_id();
   SetCurrentProcessForThread(thread_id, process);
@@ -621,23 +660,27 @@ Process* Scheduler::InterpretProcess(Process* process,
   // Warning: These two lines should not be moved, since the code further down
   // will potentially push the process on a queue which is accessed by other
   // threads, which would create a race.
-  immutable_heap->set_random(process->random());
-  process->set_immutable_heap(immutable_heap);
+  shared_heap->set_random(process->random());
+  process->set_immutable_heap(shared_heap);
   interpreter.Run();
   process->set_immutable_heap(NULL);
-  immutable_heap->set_random(NULL);
+  shared_heap->set_random(NULL);
 
   process->set_thread_state(NULL);
   ClearCurrentProcessForThread(thread_id, process);
 
   if (interpreter.IsImmutableAllocationFailure()) {
+#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
+    UNREACHABLE();
+#endif
     *allocation_failure = true;
     return process;
   }
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
-    if (process->mailbox()->IsEmpty()) {
+    if (process->mailbox()->IsEmpty() &&
+        process->signal_mailbox()->IsEmpty()) {
       process->ChangeState(Process::kYielding, Process::kSleeping);
     } else {
       process->ChangeState(Process::kYielding, Process::kReady);
@@ -692,7 +735,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     if (session == NULL ||
         !session->is_debugging() ||
         !session->ProcessTerminated(process)) {
-      ExitAtTermination(process);
+      ExitAtTermination(process, Signal::kTerminated);
     }
     return NULL;
   }
@@ -917,8 +960,7 @@ void Scheduler::EnqueueOnAnyThreadSafe(Process* process, int start_id) {
     ASSERT(process->process_queue() == NULL);
 
     // Only add the process into the paused list if it is not already in
-    // there (this can e.g. happen if a foreign thread is sending several
-    // messages to the port while the program is stopped).
+    // there.
     if (process->next() == NULL) {
       state->AddPausedProcess(process);
     }

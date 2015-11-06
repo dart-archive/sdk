@@ -9,7 +9,7 @@ import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
 
 import 'errors.dart' show
-    CompilerError;
+    ErrorTag;
 
 /// Identity listener: methods just propagate the argument.
 abstract class Listener {

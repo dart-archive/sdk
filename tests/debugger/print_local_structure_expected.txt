@@ -4,8 +4,8 @@ Starting session. Type 'help' for a list of commands.
 breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 > r
 Stack trace:
-> 0: breakHere	@breakHere(){}
-  1: main     	@breakHere()
+> 0: breakHere   @breakHere() {}
+  1: main        @breakHere()
 > f 1
 > p *a
 Instance of 'A' {

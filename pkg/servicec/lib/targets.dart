@@ -8,6 +8,8 @@ library servicec.targets;
 class Target {
   static const JAVA = const Target._(1);
   static const CC   = const Target._(2);
+  // When editing: new targets should be a power of 2, and ALL should be the
+  // next power of 2 minus 1.
   static const ALL  = const Target._(3);
 
   static get values => [JAVA, CC, ALL];

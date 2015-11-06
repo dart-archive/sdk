@@ -141,8 +141,8 @@ static void RunDetached(char* path, char* arguments[], int result_pipe) {
         "Failed to double fork when spawning a detached process");
   }
   if (pid > 0) {
-    // Exit cleanly to unblock the waiting parent.
-    exit(0);
+    // Exit cleanly to unblock the waiting parent. Use _exit to silence ASAN.
+    _exit(0);
   }
 
   // In grandchild.

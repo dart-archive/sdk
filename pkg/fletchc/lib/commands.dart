@@ -25,6 +25,12 @@ abstract class Command {
 
   factory Command.fromBuffer(CommandCode code, Uint8List buffer) {
     switch (code) {
+      case CommandCode.HandShakeResult:
+        bool success = CommandBuffer.readBoolFromBuffer(buffer, 0);
+        int versionLength = CommandBuffer.readInt32FromBuffer(buffer, 1);
+        String version =
+            CommandBuffer.readAsciiStringFromBuffer(buffer, 5, versionLength);
+        return new HandShakeResult(success, version);
       case CommandCode.InstanceStructure:
         int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
         int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
@@ -119,6 +125,47 @@ abstract class Command {
   String valuesToString();
 
   String toString() => "$code(${valuesToString()})";
+}
+
+class HandShake extends Command {
+  final String value;
+
+  const HandShake(this.value)
+      : super(CommandCode.HandShake);
+
+  void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
+    List<int> payload = UTF8.encode(value);
+    buffer
+        ..addUint32(payload.length)
+        ..addUint8List(payload)
+        ..sendOn(sink, code);
+  }
+
+  // Expects a HandShakeResult reply.
+  int get numberOfResponsesExpected => 1;
+
+  String valuesToString() => "$value";
+}
+
+class HandShakeResult extends Command {
+  final bool success;
+  final String version;
+
+  const HandShakeResult(this.success, this.version)
+      : super(CommandCode.HandShakeResult);
+
+  void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
+    List<int> payload = UTF8.encode(version);
+    buffer
+        ..addUint8(success ? 1 : 0)
+        ..addUint32(payload.length)
+        ..addUint8List(payload)
+        ..sendOn(sink, code);
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "$success, $version";
 }
 
 class Dup extends Command {
@@ -582,7 +629,10 @@ class CommitChangesResult extends Command {
       : super(CommandCode.CommitChangesResult);
 
   void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
-    throw new UnimplementedError();
+    buffer
+        ..addBool(successful)
+        ..addAsciiString(message)
+        ..sendOn(sink, code);
   }
 
   int get numberOfResponsesExpected => 0;
@@ -720,6 +770,15 @@ class PushNewDouble extends Command {
 class ProcessSpawnForMain extends Command {
   const ProcessSpawnForMain()
       : super(CommandCode.ProcessSpawnForMain);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "";
+}
+
+class ProcessDebugInterrupt extends Command {
+  const ProcessDebugInterrupt()
+      : super(CommandCode.ProcessDebugInterrupt);
 
   int get numberOfResponsesExpected => 0;
 
@@ -1215,6 +1274,11 @@ class ConnectionError extends Command {
 }
 
 enum CommandCode {
+  // DO NOT MOVE! The handshake opcodes needs to be the first one as
+  // it is used to verify the compiler and vm versions.
+  HandShake,
+  HandShakeResult,
+
   // Session opcodes.
   // TODO(ahe): Understand what "Session opcodes" mean and turn it into a
   // proper documentation comment (the comment was copied from
@@ -1227,6 +1291,7 @@ enum CommandCode {
   StdoutData,
   StderrData,
 
+  ProcessDebugInterrupt,
   ProcessSpawnForMain,
   ProcessRun,
   ProcessSetBreakpoint,

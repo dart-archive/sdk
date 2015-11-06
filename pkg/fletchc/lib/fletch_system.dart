@@ -17,8 +17,11 @@ import 'package:persistent/persistent.dart' show
 import 'bytecodes.dart';
 import 'commands.dart';
 
-import 'src/fletch_selector.dart'
-    show FletchSelector;
+import 'src/fletch_selector.dart' show
+    FletchSelector;
+
+import 'src/fletch_system_printer.dart' show
+    FletchSystemPrinter;
 
 enum FletchFunctionKind {
   NORMAL,
@@ -62,7 +65,7 @@ class FletchClass {
 }
 
 // TODO(ajohnsen): Move to separate file.
-class FletchFunctionBase {
+abstract class FletchFunctionBase {
   final int functionId;
   final FletchFunctionKind kind;
   // TODO(ajohnsen): Merge with function signature?
@@ -109,6 +112,8 @@ class FletchFunctionBase {
   }
 
   bool get isConstructor => element != null && element.isConstructor;
+
+  String verboseToString();
 }
 
 // TODO(ajohnsen): Move to separate file.
@@ -157,6 +162,22 @@ class FletchFunction extends FletchFunctionBase {
     buffer.write(")");
     return buffer.toString();
   }
+
+  String verboseToString() {
+    StringBuffer sb = new StringBuffer();
+
+    sb.writeln("Function $functionId, Arity=$arity");
+    sb.writeln("Constants:");
+    for (int i = 0; i < constants.length; i++) {
+      FletchConstant constant = constants[i];
+      sb.writeln("  #$i: $constant");
+    }
+
+    sb.writeln("Bytecodes:");
+    Bytecode.prettyPrint(sb, bytecodes);
+
+    return '$sb';
+  }
 }
 
 class FletchSystem {
@@ -180,6 +201,10 @@ class FletchSystem {
 
   final PersistentMap<int, String> symbolByFletchSelectorId;
 
+  final PersistentMap<int, int> gettersByFieldIndex;
+
+  final PersistentMap<int, int> settersByFieldIndex;
+
   const FletchSystem(
       this.functionsById,
       this.functionsByElement,
@@ -188,7 +213,9 @@ class FletchSystem {
       this.classesById,
       this.classesByElement,
       this.constants,
-      this.symbolByFletchSelectorId);
+      this.symbolByFletchSelectorId,
+      this.gettersByFieldIndex,
+      this.settersByFieldIndex);
 
   bool get isEmpty => functionsById.isEmpty;
 
@@ -220,6 +247,20 @@ class FletchSystem {
   /// function in [functionsByElement].
   int lookupTearOffById(int functionId) => tearoffsById[functionId];
 
+  /// Instance field getters can be reused between classes. This method returns
+  /// a getter that gets the field at [fieldIndex]. Returns `null` if no such
+  /// getter exists.
+  int lookupGetterByFieldIndex(int fieldIndex) {
+    return gettersByFieldIndex[fieldIndex];
+  }
+
+  /// Instance field setters can be reused between classes. This method returns
+  /// a setter that sets the field at [fieldIndex]. Returns `null` if no such
+  /// setter exists.
+  int lookupSetterByFieldIndex(int fieldIndex) {
+    return settersByFieldIndex[fieldIndex];
+  }
+
   FletchClass lookupClassById(int classId) {
     return classesById[classId];
   }
@@ -234,6 +275,10 @@ class FletchSystem {
 
   int computeMaxClassId() {
     return classesById.keys.fold(-1, (x, y) => x > y ? x : y);
+  }
+
+  String toDebugString(Uri base) {
+    return new FletchSystemPrinter(this, base).generateDebugString();
   }
 }
 

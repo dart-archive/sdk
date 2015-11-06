@@ -300,11 +300,11 @@ deferred_global_test: RuntimeError
 deferred_in_isolate_test: CompileTimeError
 deferred_inheritance_constraints_test/redirecting_constructor: RuntimeError
 deferred_inlined_test: RuntimeError
-deferred_load_constants_test/01: Crash
-deferred_load_constants_test/02: Crash
-deferred_load_constants_test/03: Crash
-deferred_load_constants_test/04: Crash
-deferred_load_constants_test/05: Crash
+deferred_load_constants_test/01: RuntimeError
+deferred_load_constants_test/02: RuntimeError
+deferred_load_constants_test/03: RuntimeError
+deferred_load_constants_test/04: RuntimeError
+deferred_load_constants_test/05: RuntimeError
 deferred_load_constants_test/none: RuntimeError
 deferred_load_inval_code_test: RuntimeError
 deferred_load_library_wrong_args_test/none: RuntimeError
@@ -596,7 +596,6 @@ issue13673_test: RuntimeError
 issue14242_test: RuntimeError
 issue18628_1_test/01: RuntimeError
 issue21079_test: CompileTimeError
-issue21159_test: RuntimeError
 issue23244_test: CompileTimeError
 issue_1751477_test: RuntimeError
 issue_23914_test: CompileTimeError
@@ -621,7 +620,6 @@ map_literal4_test: RuntimeError
 map_literal7_test: RuntimeError
 map_literal8_test: RuntimeError
 metadata_test: CompileTimeError
-method_override4_test: RuntimeError
 method_override5_test: RuntimeError
 method_override_test: RuntimeError
 missing_part_of_tag_test/01: MissingCompileTimeError
@@ -730,10 +728,6 @@ scope_variable_test/01: MissingCompileTimeError
 script2_negative_test: Fail
 smi_type_test: RuntimeError
 source_self_negative_test: Fail
-stack_overflow_stacktrace_test: Fail
-stack_overflow_stacktrace_test: RuntimeError
-stack_overflow_test: Fail
-stack_overflow_test: RuntimeError
 stack_trace_test: RuntimeError
 stacktrace_rethrow_error_test/none: RuntimeError
 stacktrace_rethrow_error_test/withtraceparameter: RuntimeError
@@ -946,5 +940,7 @@ large_class_declaration_test: Pass, Crash # TODO(ajohnsen): Flaky?
 nan_identical_test: Crash
 number_identity2_test: Crash
 round_test: RuntimeError
-vm/closure_memory_retention_test: Crash
 vm/typed_data_polymorphic_view_test: Crash
+
+[ $mode == debug && $system == macos && $asan ]
+closure_cycles_test: Slow, Pass

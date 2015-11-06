@@ -18,6 +18,13 @@ incremental/call_named_arguments_2: Fail
 # Missing support for multiple libraries
 incremental/multiple_libraries: Fail
 
+# Received PushFromMap command which referes to a non-existent map entry
+incremental/same_tokens_variant: Fail
+
+# Update to existing class not correctly detected (we end up trying to modify a
+# new class -> should not happen).
+incremental/compile_time_error_hides_field: Fail
+
 # Incorrectly failing servicec tests
 servicec/bad_field_4: Fail
 servicec/bad_field_8: Fail
@@ -30,7 +37,13 @@ servicec/bad_list_type_2: Fail
 servicec/bad_list_type_3: Fail
 servicec/bad_list_type_4: Fail
 servicec/bad_list_type_5: Fail
-servicec/multiple_definitions_3: Fail
+
+test_vm_connection/testCloseImmediately: Skip # Fails and prints during run.
+test_vm_connection/testCloseAfterCommitChanges: Fail
+test_vm_connection/testCloseAfterProcessRun: Fail
+
+# Old servicec backend fails on these tests; Issue 235
+servicec/good_type_parameter_1: Fail
 
 [ $arch != ia32 && $arch != x64 ]
 
@@ -39,3 +52,7 @@ service_tests/*: Skip
 [ $system == macos && $arch == x64 ]
 
 service_tests/performance: Fail, Pass # Issue 111
+
+[ $arch == xarm ]
+
+mdns_tests/*: Skip # The native extension is not compiled for ARM.

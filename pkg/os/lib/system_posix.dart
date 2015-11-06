@@ -4,17 +4,10 @@
 
 part of os;
 
-const int AF_INET  = 2;
-const int AF_INET6 = 10;
-
-const int SOCK_STREAM = 1;
-
 const int F_GETFD = 1;
 const int F_SETFD = 2;
 const int F_GETFL = 3;
 const int F_SETFL = 4;
-
-const int O_NONBLOCK = 0x800;
 
 const int FD_CLOEXEC = 0x1;
 
@@ -98,8 +91,27 @@ abstract class PosixSystem implements System {
       ForeignLibrary.main.lookup("unlink");
   static final ForeignFunction _write =
       ForeignLibrary.main.lookup("write");
+  static final ForeignFunction _sendto =
+      ForeignLibrary.main.lookup("sendto");
+  static final ForeignFunction _recvfrom =
+      ForeignLibrary.main.lookup("recvfrom");
   static final ForeignFunction _uname =
       ForeignLibrary.main.lookup("uname");
+
+  int get AF_INET => 2;
+  int get AF_INET6;
+
+  int get SOCK_STREAM => 1;
+  int get SOCK_DGRAM => 2;
+
+  int get O_RDONLY => 0;
+  int get O_WRONLY => 1;
+  int get O_RDWR => 2;
+  int get O_CREAT;
+  int get O_TRUNC;
+  int get O_APPEND;
+  int get O_CLOEXEC;
+  int get O_NONBLOCK;
 
   int get FIONREAD;
 
@@ -107,13 +119,17 @@ abstract class PosixSystem implements System {
 
   int get SO_REUSEADDR;
 
+  int get SOCKADDR_STORAGE_SIZE => 128;
+
   int get UTSNAME_LENGTH;
   int get SIZEOF_UTSNAME;
 
   ForeignFunction get _open;
   ForeignFunction get _lseek;
 
-  int socket() => _socket.icall$3Retry(AF_INET, SOCK_STREAM, 0);
+  int socket(int domain, int type, int protocol) {
+    return _socket.icall$3Retry(domain, type, protocol);
+  }
 
   InternetAddress lookup(String host) {
     ForeignMemory node = new ForeignMemory.fromStringAsUTF8(host);
@@ -223,12 +239,8 @@ abstract class PosixSystem implements System {
     return _listen.icall$2Retry(fd, 128);
   }
 
-  int setsockopt(int fd, int level, int optname, int value) {
-    Struct32 opt = new Struct32(1);
-    opt.setField(0, value);
-    int result = _setsockopt.icall$5Retry(fd, level, optname, opt, opt.length);
-    opt.free();
-    return result;
+  int setsockopt(int fd, int level, int optname, ForeignMemory value) {
+    return _setsockopt.icall$5Retry(fd, level, optname, value, value.length);
   }
 
   int accept(int fd) {
@@ -269,10 +281,6 @@ abstract class PosixSystem implements System {
     return _fcntl.icall$3Retry(fd, F_SETFL, flags);
   }
 
-  int setReuseaddr(int fd) {
-    return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1);
-  }
-
   int setCloseOnExec(int fd, bool closeOnExec) {
     int flags = _fcntl.icall$3Retry(fd, F_GETFD, 0);
     if (flags == -1) return -1;
@@ -293,16 +301,44 @@ abstract class PosixSystem implements System {
     return available;
   }
 
-  int read(int fd, var buffer, int offset, int length) {
+  ForeignMemory getForeign(ByteBuffer buffer) {
+    var b = buffer;
+    return b.getForeign();
+  }
+
+  int read(int fd, ByteBuffer buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
-    var address = buffer.getForeign().address + offset;
+    var address = getForeign(buffer).address + offset;
     return _read.icall$3Retry(fd, address, length);
   }
 
-  int write(int fd, var buffer, int offset, int length) {
+  int write(int fd, ByteBuffer buffer, int offset, int length) {
     _rangeCheck(buffer, offset, length);
-    var address = buffer.getForeign().address + offset;
+    var address = getForeign(buffer).address + offset;
     return _write.icall$3Retry(fd, address, length);
+  }
+
+  int sendto(int fd, ByteBuffer buffer, InternetAddress target, int port) {
+    ForeignMemory sockAddr = _createSocketAddress(target, port);
+    ForeignMemory memory = getForeign(buffer);
+    try {
+      return _sendto.icall$6Retry(fd, memory, memory.length, 0,
+          sockAddr, sockAddr.length);
+    } finally {
+      sockAddr.free();
+    }
+  }
+
+  int recvfrom(int fd, ByteBuffer buffer, ForeignMemory sockaddr) {
+    Struct32 len = new Struct32(1);
+    len.setUint32(0, sockaddr.length);
+    ForeignMemory memory = getForeign(buffer);
+    try {
+      return _recvfrom.icall$6Retry(fd, memory, memory.length, 0, sockaddr,
+          len);
+    } finally {
+      len.free();
+    }
   }
 
   void memcpy(var dest,
@@ -335,6 +371,7 @@ abstract class PosixSystem implements System {
     }
   }
 
+  // TODO(karlklose): use SockAddr class here, too.
   ForeignMemory _createSocketAddress(_InternetAddress address, int port) {
     var bytes = address._bytes;
     ForeignMemory sockaddr;
@@ -364,27 +401,29 @@ abstract class PosixSystem implements System {
           'System information is not supported on this platform');
     }
     var utsname = new ForeignMemory.allocated(SIZEOF_UTSNAME);
-    int status = _uname.icall$1Retry(utsname);
-    if (status < 0) {
-      throw "Failed calling uname";
+    try {
+      int status = _uname.icall$1Retry(utsname);
+      if (status < 0) throw "Failed calling uname";
+      int address = utsname.address;
+      var fp = new ForeignPointer(address);
+      var operatingSystemName =
+          new ForeignCString.fromForeignPointer(fp).toString();
+      address += UTSNAME_LENGTH;
+      fp = new ForeignPointer(address);
+      var nodeName = new ForeignCString.fromForeignPointer(fp).toString();
+      address += UTSNAME_LENGTH;
+      fp = new ForeignPointer(address);
+      var release = new ForeignCString.fromForeignPointer(fp).toString();
+      address += UTSNAME_LENGTH;
+      fp = new ForeignPointer(address);
+      var version = new ForeignCString.fromForeignPointer(fp).toString();
+      address += UTSNAME_LENGTH;
+      fp = new ForeignPointer(address);
+      var machine = new ForeignCString.fromForeignPointer(fp).toString();
+      return new SystemInformation(operatingSystemName, nodeName, release,
+                                   version, machine);
+    } finally {
+      utsname.free();
     }
-    int address = utsname.address;
-    var fp = new ForeignPointer(address);
-    var operatingSystemName =
-        new ForeignCString.fromForeignPointer(fp).toString();
-    address += UTSNAME_LENGTH;
-    fp = new ForeignPointer(address);
-    var nodeName = new ForeignCString.fromForeignPointer(fp).toString();
-    address += UTSNAME_LENGTH;
-    fp = new ForeignPointer(address);
-    var release = new ForeignCString.fromForeignPointer(fp).toString();
-    address += UTSNAME_LENGTH;
-    fp = new ForeignPointer(address);
-    var version = new ForeignCString.fromForeignPointer(fp).toString();
-    address += UTSNAME_LENGTH;
-    fp = new ForeignPointer(address);
-    var machine = new ForeignCString.fromForeignPointer(fp).toString();
-    return new SystemInformation(operatingSystemName, nodeName, release,
-                                 version, machine);
   }
 }

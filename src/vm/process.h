@@ -10,9 +10,12 @@
 
 #include "src/vm/debug_info.h"
 #include "src/vm/heap.h"
+#include "src/vm/links.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/message_mailbox.h"
+#include "src/vm/process_handle.h"
 #include "src/vm/program.h"
+#include "src/vm/signal_mailbox.h"
 #include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
 
@@ -20,7 +23,7 @@ namespace fletch {
 
 class Engine;
 class Interpreter;
-class ImmutableHeap;
+class SharedHeap;
 class Port;
 class ProcessQueue;
 class ProcessVisitor;
@@ -80,8 +83,14 @@ class Process {
   };
 
   enum StackCheckResult {
+    // Stack check handled (most likely by growing the stack) and
+    // execution can continue.
     kStackCheckContinue,
+    // Interrupted for preemption.
     kStackCheckInterrupt,
+    // Interrupted for debugging.
+    kStackCheckDebugInterrupt,
+    // Stack overflow.
     kStackCheckOverflow
   };
 
@@ -91,7 +100,11 @@ class Process {
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   Heap* heap() { return &heap_; }
+#else
+  Heap* heap() { return program()->shared_heap()->heap(); }
+#endif
   Heap* immutable_heap() { return immutable_heap_; }
   void set_immutable_heap(Heap* heap) { immutable_heap_ = heap; }
 
@@ -99,10 +112,13 @@ class Process {
   void UpdateCoroutine(Coroutine* coroutine);
 
   Stack* stack() const { return coroutine_->stack(); }
-  Object** stack_limit() const { return stack_limit_.load(); }
+  uword stack_limit() const { return stack_limit_.load(); }
 
   Port* ports() const { return ports_; }
   void set_ports(Port* port) { ports_ = port; }
+
+  ProcessHandle* process_handle() const { return process_handle_; }
+  Links* links() { return &links_; }
 
   void SetupExecutionStack();
   StackCheckResult HandleStackOverflow(int addition);
@@ -154,7 +170,7 @@ class Process {
   int CollectMutableGarbageAndChainStacks();
   int CollectGarbageAndChainStacks();
 
-  void ValidateHeaps(ImmutableHeap* immutable_heap);
+  void ValidateHeaps(SharedHeap* shared_heap);
 
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);
@@ -166,8 +182,10 @@ class Process {
   // Iterate over, and find pointers in the port queue.
   void IteratePortQueuesPointers(PointerVisitor* visitor);
 
+  void SetStackMarker(uword marker);
+  void ClearStackMarker(uword marker);
   void Preempt();
-
+  void DebugInterrupt();
   void Profile();
 
   // Debugging support.
@@ -214,6 +232,7 @@ class Process {
   void UnregisterFinalizer(HeapObject* object);
 
   static void FinalizeForeign(HeapObject* foreign, Heap* heap);
+  static void FinalizeProcess(HeapObject* process, Heap* heap);
 
   // This is used in order to return a retry after gc failure on every other
   // call to the GC native that is used for testing only.
@@ -229,6 +248,8 @@ class Process {
   StoreBuffer* store_buffer() { return &store_buffer_; }
 
   MessageMailbox* mailbox() { return &mailbox_; }
+
+  SignalMailbox* signal_mailbox() { return &signal_mailbox_; }
 
   void RecordStore(HeapObject* object, Object* value) {
     if (value->IsHeapObject() && value->IsImmutable()) {
@@ -264,7 +285,7 @@ class Process {
   // process.
   // The process is therefore invisble for anything else and can be safely
   // deleted.
-  void Cleanup();
+  void Cleanup(Signal::Kind kind);
 
   void UpdateStackLimit();
 
@@ -276,7 +297,7 @@ class Process {
   // Put these first so they can be accessed from the interpreter without
   // issues around object layout.
   Coroutine* coroutine_;
-  Atomic<Object**> stack_limit_;
+  Atomic<uword> stack_limit_;
   Program* program_;
   Array* statics_;
   Object* exception_;
@@ -288,9 +309,13 @@ class Process {
 
   RandomXorShift random_;
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   Heap heap_;
+#endif
+
   Heap* immutable_heap_;
   StoreBuffer store_buffer_;
+  Links links_;
 
   Atomic<State> state_;
   Atomic<ThreadState*> thread_state_;
@@ -310,10 +335,13 @@ class Process {
   Process* queue_next_;
   Process* queue_previous_;
 
+  SignalMailbox signal_mailbox_;
+  MessageMailbox mailbox_;
+
+  ProcessHandle* process_handle_;
+
   // Linked list of ports owned by this process.
   Port* ports_;
-
-  MessageMailbox mailbox_;
 
   // Used for chaining all processes of a program. It is protected by a lock
   // in the program.

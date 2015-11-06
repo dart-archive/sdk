@@ -76,11 +76,6 @@ class Range {
 
 class SelectorRow {
  public:
-  enum Kind {
-    LINEAR,
-    TABLE,
-  };
-
   explicit SelectorRow(int selector)
       : selector_(selector),
         offset_(-1),
@@ -97,8 +92,8 @@ class SelectorRow {
     return end_;
   }
 
-  Kind kind() const {
-    return (variants_ <= kFewVariantsThreshold) ? LINEAR : TABLE;
+  bool IsMatched() const {
+    return variants_ > 0;
   }
 
   int offset() const {
@@ -109,25 +104,13 @@ class SelectorRow {
     offset_ = value;
   }
 
-  Kind Finalize();
-
-  int SetLinearOffset(int offset) {
-    ASSERT(kind() == LINEAR);
-    offset_ = offset;
-    return offset + ComputeLinearSize();
-  }
-
-  int ComputeLinearSize() {
-    ASSERT(kind() == LINEAR);
-    return (variants_ + 2) * 4;
-  }
+  void Finalize();
 
   int ComputeTableSize() {
-    ASSERT(kind() == TABLE);
+    ASSERT(IsMatched());
     return end_ - begin_;
   }
 
-  int FillLinear(Program* program, Array* table);
   void FillTable(Program* program, Array* table);
 
   // The bottom up construction order guarantees that more specific methods
@@ -168,8 +151,6 @@ class SelectorRow {
   const Range::List& ranges() const { return ranges_; }
 
  private:
-  static const int kFewVariantsThreshold = 0;
-
   void AddToRanges(Range range);
 
   const int selector_;

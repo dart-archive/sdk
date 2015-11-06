@@ -17,6 +17,8 @@ import '../fletchc/incremental/feature_test.dart' as incremental;
 
 import '../fletchc/driver/test_control_stream.dart' as controlStream;
 
+import '../fletchc/serialize_settings_tests.dart' as serialize_settings_tests;
+
 import 'zone_helper_tests.dart' as zone_helper;
 
 import 'sentence_tests.dart' as sentence_tests;
@@ -29,7 +31,15 @@ import '../servicec/servicec_tests.dart' as servicec_tests;
 
 import '../fletchc/run.dart' as run;
 
+import '../fletchc/driver/test_vm_connection.dart' as test_vm_connection;
+
 import '../debugger/debugger_tests.dart' as debugger_tests;
+
+import '../mdns_tests/mdns_tests.dart' as mdns_tests;
+
+import '../agent_tests/agent_tests.dart' as agent_tests;
+
+import '../golem/golem_tests.dart' as golem_tests;
 
 typedef Future NoArgFuture();
 
@@ -65,6 +75,9 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   // Slow tests, should run early so we don't wait for them.
   'debugger/*': debugger_tests.listTests,
 
+  // Slow tests, should run early so we don't wait for them.
+  'agent_tests/*': agent_tests.listTests,
+
   'controlStream/testControlStream': controlStream.testControlStream,
 
   'zone_helper/testEarlySyncError': zone_helper.testEarlySyncError,
@@ -78,5 +91,25 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   'message_tests': message_tests.main,
 
+  'serialize_settings_tests': serialize_settings_tests.main,
+
   'run': run.test,
+
+  'test_vm_connection/test': test_vm_connection.test,
+  'test_vm_connection/testCloseImmediately':
+      test_vm_connection.testCloseImmediately,
+  'test_vm_connection/testCloseAfterCommitChanges':
+      test_vm_connection.testCloseAfterCommitChanges,
+  'test_vm_connection/testCloseAfterProcessRun':
+      test_vm_connection.testCloseAfterProcessRun,
+
+  // Test the mDNS package.
+  // TODO(sgjesse) publish the mDNS package as an ordinary package an pull
+  // it in through third_party.
+  'mdns_tests/*': mdns_tests.listTests,
+
+  // Test for the golem performance tracking infrastructure.
+  // If this test breaks you probably need to update the golem performance
+  // tracking infrastructure as well.
+  'golem_tests': golem_tests.main,
 };

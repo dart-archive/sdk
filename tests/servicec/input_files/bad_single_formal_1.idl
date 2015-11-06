@@ -4,5 +4,5 @@
 
 service Foo {
   // String is not a valid type for a formal.
-  void bar(String baz);  // expectedPointerOrPrimitive
+  void bar(String baz);  // badSingleFormal
 }

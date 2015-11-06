@@ -9,6 +9,17 @@ import sys
 import utils
 import subprocess
 
+def is_executable(path):
+  return os.path.isfile(path) and os.access(path, os.X_OK)
+
+def which(program):
+  for path in os.environ["PATH"].split(os.pathsep):
+    path = path.strip('"')
+    program_path = os.path.join(path, program)
+    if is_executable(program_path):
+      return program_path
+
+  return None
 
 def invoke_clang(args):
   fletch_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -37,13 +48,17 @@ def invoke_gcc_arm64(args):
   args.insert(0, "aarch64-linux-gnu-g++-4.8")
   os.execv("/usr/bin/aarch64-linux-gnu-g++-4.8", args)
 
-def invoke_gcc_mbed(args):
+def invoke_gcc_cmsis(args):
   path = "/usr/local/gcc-arm-none-eabi-4_9-2015q2/bin/arm-none-eabi-g++"
   subprocess.check_call([path] + args)
 
 def invoke_gcc_lk(args):
-  args.insert(0, "arm-none-eabi-g++")
-  os.execv("/usr/bin/arm-none-eabi-g++", args)
+  if which("arm-eabi-g++") is not None:
+    args.insert(0, "arm-eabi-g++")
+    os.execvp("arm-eabi-g++", args)
+  else:
+    args.insert(0, "arm-none-eabi-g++")
+    os.execvp("arm-none-eabi-g++", args)
 
 def main():
   args = sys.argv[1:]
@@ -67,11 +82,11 @@ def main():
   elif "-L/FLETCH_ARM64" in args:
     args.remove("-L/FLETCH_ARM64")
     invoke_gcc_arm64(args)
-  elif "-DFLETCH_MBED" in args:
-    invoke_gcc_mbed(args)
-  elif "-L/FLETCH_MBED" in args:
-    args.remove("-L/FLETCH_MBED")
-    invoke_gcc_mbed(args)
+  elif "-DFLETCH_CMSIS" in args:
+    invoke_gcc_cmsis(args)
+  elif "-L/FLETCH_CMSIS" in args:
+    args.remove("-L/FLETCH_CMSIS")
+    invoke_gcc_cmsis(args)
   elif "-DFLETCH_LK" in args:
     invoke_gcc_lk(args)
   elif "-L/FLETCH_LK" in args:

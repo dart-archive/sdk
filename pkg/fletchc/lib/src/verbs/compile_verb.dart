@@ -16,13 +16,7 @@ const Action compileAction = const Action(
     requiredTarget: TargetKind.FILE);
 
 Future<int> compile(AnalyzedSentence sentence, VerbContext context) {
-  Uri script = sentence.targetUri;
-
-  // This is asynchronous, but we don't await the result so we can respond to
-  // other requests.
-  context.performTaskInWorker(new CompileTask(script));
-
-  return new Future<int>.value(null);
+  return context.performTaskInWorker(new CompileTask(sentence.targetUri));
 }
 
 class CompileTask extends SharedTask {

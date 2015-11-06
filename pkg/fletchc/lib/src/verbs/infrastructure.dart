@@ -106,7 +106,7 @@ export 'options.dart' show
 import 'documentation.dart' show
     helpDocumentation;
 
-import '../please_report_crash.dart' show
+import '../guess_configuration.dart' show
     fletchVersion;
 
 void reportErroneousTarget(ErrorTarget target) {
@@ -341,8 +341,15 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   String sessionName;
   if (inSession != null) {
     sessionName = inSession.name;
+    if (sessionName == null) {
+      throwFatalError(DiagnosticKind.missingSessionName);
+    }
   } else if (action.requiresSession) {
     sessionName = currentSession;
+  } else if (action.requiresTargetSession &&
+      target is NamedTarget &&
+      target.name == null) {
+    throwFatalError(DiagnosticKind.missingSessionName);
   }
 
   String targetName;
@@ -372,7 +379,7 @@ abstract class VerbContext {
 
   VerbContext(this.client, this.pool, this.session);
 
-  Future<Null> performTaskInWorker(SharedTask task);
+  Future<int> performTaskInWorker(SharedTask task);
 
   VerbContext copyWithSession(UserSession session);
 }

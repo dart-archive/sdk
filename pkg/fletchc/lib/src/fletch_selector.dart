@@ -11,6 +11,16 @@ enum SelectorKind {
 }
 
 class FletchSelector {
+  final int encodedSelector;
+
+  const FletchSelector(this.encodedSelector);
+
+  int get id => decodeId(encodedSelector);
+
+  SelectorKind get kind => SelectorKind.values[encodedSelector >> 8 & 3];
+
+  int get arity => encodedSelector & 255;
+
   static const MAX_ARITY = (1 << 8) - 1;
   static const MAX_UNIQUE_SELECTORS = (1 << 22) - 1;
   static const ID_SHIFT = 10;

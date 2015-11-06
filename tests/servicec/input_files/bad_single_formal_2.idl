@@ -4,5 +4,5 @@
 
 service Foo {
   // List is not a valid type for a formal.
-  void bar(List<int32> baz);  // expectedPointerOrPrimitive
+  void bar(List<int32> baz);  // badSingleFormal
 }

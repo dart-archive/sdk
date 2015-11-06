@@ -4,16 +4,21 @@
 
 #ifdef FLETCH_ENABLE_LIVE_CODING
 
+#include <ctype.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <sys/param.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "include/fletch_api.h"
 
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
 #include "src/shared/utils.h"
+#include "src/shared/version.h"
 
 #include "src/vm/session.h"
 #include "src/vm/log_print_interceptor.h"
@@ -29,23 +34,16 @@ static int RunSession(Connection* connection) {
   return result;
 }
 
-static void WriteIntToFile(const char* dir_path, const char* ext, int value) {
-  char file_path[MAXPATHLEN + 1];
-  snprintf(file_path, sizeof(file_path), "%s/vm-%d.%s",
-      dir_path, Platform::GetPid(), ext);
-  char value_string[20];
-  snprintf(value_string, sizeof(value_string), "%d", value);
-  Platform::WriteText(file_path, value_string, false);
-}
-
 static Connection* WaitForCompilerConnection(
-    const char* host, int port, const char* run_dir) {
+    const char* host, int port, const char* port_file) {
   // Listen for new connections.
   ConnectionListener listener(host, port);
 
   Print::Out("Waiting for compiler on %s:%i\n", host, listener.Port());
-  if (run_dir != NULL) {
-    WriteIntToFile(run_dir, "port", listener.Port());
+  if (port_file != NULL) {
+    char value_string[20];
+    snprintf(value_string, sizeof(value_string), "%d", listener.Port());
+    Platform::WriteText(port_file, value_string, false);
   }
   return listener.Accept();
 }
@@ -66,6 +64,22 @@ static bool EndsWith(const char* s, const char* suffix) {
       : false;
 }
 
+#ifdef DEBUG
+static void WaitForGDB(const char* executable_name) {
+  int fd = open("/dev/tty", O_WRONLY);
+  if (fd >= 0) {
+    FILE* terminal = fdopen(fd, "w");
+    fprintf(terminal, "*** VM paused, debug with:\n");
+    fprintf(
+        terminal,
+        "gdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal SIGCONT'\n",
+        executable_name,
+        getpid());
+    kill(getpid(), SIGSTOP);
+  }
+}
+#endif
+
 static void PrintUsage() {
   Print::Out("fletch-vm - The embedded Dart virtual machine.\n\n");
   Print::Out("  fletch-vm [--port=<port>] [--host=<address>] "
@@ -77,10 +91,20 @@ static void PrintUsage() {
   Print::Out("  --host: specifies which host address to listen on. "
              "Defaults to 127.0.0.1.\n");
   Print::Out("  --help: print out 'fletch-vm' usage.\n");
+  Print::Out("  --version: print the version.\n");
   Print::Out("\n");
 }
 
+static void PrintVersion() {
+  Print::Out("%s\n", GetVersion());
+}
+
 static int Main(int argc, char** argv) {
+#ifdef DEBUG
+  if (getenv("FLETCH_VM_WAIT") != NULL) {
+    WaitForGDB(argv[0]);
+  }
+#endif
   Flags::ExtractFromCommandLine(&argc, argv);
   FletchSetup();
 
@@ -96,8 +120,8 @@ static int Main(int argc, char** argv) {
 
   // Handle the arguments.
   const char* host = "127.0.0.1";
-  const char* run_dir = NULL;
   const char* log_dir = NULL;
+  const char* port_file = NULL;
   int port = 0;
   const char* input = NULL;
 
@@ -114,10 +138,13 @@ static int Main(int argc, char** argv) {
     } else if (strcmp(argument, "--help") == 0) {
       PrintUsage();
       exit(0);
+    } else if (strcmp(argument, "--version") == 0) {
+      PrintVersion();
+      exit(0);
     } else if (StartsWith(argument, "--log-dir=")) {
       log_dir = argument + 10;
-    } else if (StartsWith(argument, "--run-dir=")) {
-      run_dir = argument + 10;
+    } else if (StartsWith(argument, "--port-file=")) {
+      port_file = argument + 12;
     } else if (StartsWith(argument, "-")) {
       Print::Out("Invalid option: %s.\n", argument);
       invalid_option = true;
@@ -144,11 +171,6 @@ static int Main(int argc, char** argv) {
     char log_path[MAXPATHLEN + 1];
     snprintf(log_path, sizeof(log_path), "%s/vm-%d.log", log_dir, pid);
     Print::RegisterPrintInterceptor(new LogPrintInterceptor(log_path));
-  }
-
-  // Write the pid to a file if a run directory (e.g. /var/run/fletch) is set.
-  if (run_dir != NULL) {
-    WriteIntToFile(run_dir, "pid", pid);
   }
 
   // Check if we're passed an snapshot file directly.
@@ -182,7 +204,7 @@ static int Main(int argc, char** argv) {
   if (interactive) {
     // When interactive and a pid directory is specified write the port we are
     // listening on to the file vm-<pid>.port in the pid directory.
-    Connection* connection = WaitForCompilerConnection(host, port, run_dir);
+    Connection* connection = WaitForCompilerConnection(host, port, port_file);
     result = RunSession(connection);
   }
 

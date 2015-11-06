@@ -99,6 +99,7 @@ def BuildDebianPackage(tarball, out_dir, arch, toolchain):
       copyfile(join(temp_dir, name), join(out_dir, name))
     if ('armhf' in arch):
       for name in armhf_package:
+        print "Writing package %s" % join(out_dir, name)
         copyfile(join(temp_dir, name), join(out_dir, name))
 
 def Main():

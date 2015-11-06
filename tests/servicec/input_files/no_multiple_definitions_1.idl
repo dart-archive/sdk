@@ -5,5 +5,5 @@
 service Foo {
 }
 
-struct Foo {
+struct Bar {
 }

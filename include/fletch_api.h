@@ -12,6 +12,9 @@
 #endif
 
 typedef void* FletchProgram;
+typedef void* FletchPrintInterceptor;
+typedef void (*PrintInterceptionFunction)(
+    const char* message, int out, void* data);
 
 // Setup must be called before using any of the other API methods.
 FLETCH_EXPORT void FletchSetup(void);
@@ -34,6 +37,12 @@ FLETCH_EXPORT FletchProgram FletchLoadSnapshotFromFile(const char* path);
 // Delete a program.
 FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
 
+// Load a program from the given location. Location should point to a
+// reloacted program heap with appended info block, usually build using
+// the flashtool utility.
+FLETCH_EXPORT FletchProgram FletchLoadProgramFromFlash(void* location,
+                                                       size_t size);
+
 // Start a process at main, from the program.
 FLETCH_EXPORT int FletchRunMain(FletchProgram program);
 
@@ -52,5 +61,20 @@ FLETCH_EXPORT void FletchRunSnapshotFromFile(const char* path);
 // The library string must be null-terminated and Fletch does not
 // take over ownership of the passed in string.
 FLETCH_EXPORT void FletchAddDefaultSharedLibrary(const char* library);
+
+// Register a print interception function. When a print occurs the passed
+// function will be called with the message, an output id 2 for stdout or output
+// id 3 for stderr, as well as the data associated with this registration.
+// The result of registration is an interceptor instance that can be used to
+// subsequently unregister the interceptor.
+FLETCH_EXPORT FletchPrintInterceptor FletchRegisterPrintInterceptor(
+    PrintInterceptionFunction function,
+    void* data);
+
+// Unregister a print interceptor. This must be called with an interceptor
+// instance that was created using the registration function. The interceptor
+// instance is reclaimed and no longer valid after having called this function.
+FLETCH_EXPORT void FletchUnregisterPrintInterceptor(
+    FletchPrintInterceptor interceptor);
 
 #endif  // INCLUDE_FLETCH_API_H_

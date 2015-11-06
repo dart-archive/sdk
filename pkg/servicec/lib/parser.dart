@@ -60,7 +60,7 @@ class Parser {
   ///
   /// <service> ::= 'service' <identifier> '{' <func-decl>* '}'
   Token parseService(Token tokens) {
-    tokens = listener.beginService(tokens);
+    tokens = listener.beginService(skipNewLines(tokens));
     tokens = parseIdentifier(next(tokens));
     tokens = expect('{', tokens);
     int count = 0;
@@ -81,7 +81,7 @@ class Parser {
   ///
   /// <struct> ::= 'struct' <identifier> '{' <field-decl>* '}'
   Token parseStruct(Token tokens) {
-    tokens = listener.beginStruct(tokens);
+    tokens = listener.beginStruct(skipNewLines(tokens));
     tokens = parseIdentifier(next(tokens));
     tokens = expect('{', tokens);
     int count = 0;

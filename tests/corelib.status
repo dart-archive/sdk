@@ -6,7 +6,18 @@
 # -D option not implemented.
 int_from_environment2_test: CompileTimeError
 
+# Stack trace printing crashes (https://github.com/dart-lang/fletch/issues/241)
+apply3_test: Crash
+
+# FletchBackend.createDebugInfo triggers assertion error
+# (https://github.com/dart-lang/fletch/issues/242)
+expando_test: Crash
+
 [ $compiler == fletchc || $runtime == fletchc ]
+# Test is wrong, as it expects "Stack overflow" and not "Stack Overflow" on
+# overflows.
+regexp/regexp_test: RuntimeError
+
 # Function.apply
 apply2_test: RuntimeError
 apply3_test: CompileTimeError
@@ -91,12 +102,7 @@ string_from_environment_test: CompileTimeError
 # Unsorted
 errors_test: RuntimeError
 expando_test: CompileTimeError
-hash_set_test/01: RuntimeError
-hash_set_test/none: RuntimeError
 indexed_list_access_test: RuntimeError
-int_modulo_arith_test/bignum: RuntimeError
-int_modulo_arith_test/modPow: RuntimeError
-int_modulo_arith_test/none: RuntimeError
 int_parse_radix_test/02: RuntimeError
 iterable_empty_test: RuntimeError
 iterable_return_type_test/01: Fail
@@ -170,5 +176,8 @@ toInt_test: RuntimeError
 uri_base_test: Crash
 uri_parse_test: Pass, Crash
 
-[ $mode == debug ]
+[ $mode == debug || $asan ]
 regexp/global_test: Slow, Pass
+
+[ $mode == debug && $system == macos && $asan ]
+big_integer_huge_mul_vm_test: Slow, Pass

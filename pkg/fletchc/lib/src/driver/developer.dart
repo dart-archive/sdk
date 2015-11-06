@@ -20,8 +20,21 @@ import 'dart:io' show
     Socket,
     SocketException;
 
+import 'package:sdk_library_metadata/libraries.dart' show
+    Category;
+
+import 'package:fletch_agent/agent_connection.dart' show
+    AgentConnection,
+    AgentException,
+    VmData;
+
+import 'package:fletch_agent/messages.dart' show
+    AGENT_DEFAULT_PORT,
+    MessageDecodeException;
+
 import '../../commands.dart' show
     CommandCode,
+    HandShakeResult,
     ProcessBacktrace,
     ProcessBacktraceRequest,
     ProcessRun,
@@ -56,6 +69,8 @@ import '../verbs/infrastructure.dart' show
 import '../../incremental/fletchc_incremental.dart' show
     IncrementalCompilationFailed;
 
+import '../../fletch_compiler.dart' show fletchDeviceType;
+
 import 'exit_codes.dart' as exit_codes;
 
 import '../../fletch_system.dart' show
@@ -71,15 +86,16 @@ import '../diagnostic.dart' show
 
 import '../guess_configuration.dart' show
     executable,
+    fletchVersion,
     guessFletchVm;
 
-import 'package:fletch_agent/agent_connection.dart' show
-    AgentConnection,
-    AgentException,
-    VmData;
-import 'package:fletch_agent/messages.dart' show
-    AGENT_DEFAULT_PORT,
-    MessageDecodeException;
+import '../device_type.dart' show
+    DeviceType,
+    parseDeviceType,
+    unParseDeviceType;
+
+import '../please_report_crash.dart' show
+    pleaseReportCrash;
 
 Uri configFileUri;
 
@@ -121,10 +137,32 @@ void disconnectFromAgent(AgentConnection connection) {
   connection.socket.close();
 }
 
+Future<Null> checkAgentVersion(SessionState state) async {
+  AgentConnection connection = await connectToAgent(state);
+  try {
+    String deviceFletchVersion = await connection.fletchVersion();
+    if (fletchVersion != deviceFletchVersion) {
+      throwFatalError(DiagnosticKind.agentVersionMismatch,
+                      userInput: fletchVersion,
+                      additionalUserInput: deviceFletchVersion,
+                      sessionName: state.name);
+    }
+  } on AgentException catch (error) {
+    throwFatalError(
+        DiagnosticKind.socketAgentReplyError,
+        address: '${connection.socket.remoteAddress.host}:'
+            '${connection.socket.remotePort}',
+        message: error.message);
+  } finally {
+    disconnectFromAgent(connection);
+  }
+}
+
 Future<Null> startAndAttachViaAgent(SessionState state) async {
   // TODO(wibling): integrate with the FletchVm class, e.g. have a
   // AgentFletchVm and LocalFletchVm that both share the same interface
   // where the former is interacting with the agent.
+  await checkAgentVersion(state);
   AgentConnection connection = await connectToAgent(state);
   VmData vmData;
   try {
@@ -150,9 +188,9 @@ Future<Null> startAndAttachViaAgent(SessionState state) async {
   await state.session.disableVMStandardOutput();
 }
 
-Future<Null> startAndAttachDirectly(SessionState state) async {
-  String fletchVmPath = guessFletchVm(null).toFilePath();
-  state.fletchVm = await FletchVm.start(fletchVmPath);
+Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
+  String fletchVmPath = state.compilerHelper.fletchVm.toFilePath();
+  state.fletchVm = await FletchVm.start(fletchVmPath, workingDirectory: base);
   await attachToVm(state.fletchVm.host, state.fletchVm.port, state);
   await state.session.disableVMStandardOutput();
 }
@@ -164,7 +202,21 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
   Session session = new Session(socket, state.compiler, state.stdoutSink,
       state.stderrSink, null);
 
-  // Enable debugging as a form of handshake.
+  // Perform handshake with VM which validates that VM and compiler
+  // have the same versions.
+  HandShakeResult handShakeResult = await session.handShake(fletchVersion);
+  if (handShakeResult == null) {
+    throwFatalError(DiagnosticKind.handShakeFailed, address: '$host:$port');
+  }
+  if (!handShakeResult.success) {
+    throwFatalError(DiagnosticKind.versionMismatch,
+                    address: '$host:$port',
+                    userInput: fletchVersion,
+                    additionalUserInput: handShakeResult.version);
+  }
+
+  // Enable debugging to be able to communicate with VM when there
+  // are errors.
   await session.runCommand(const Debugging());
 
   state.session = session;
@@ -200,11 +252,7 @@ Future<int> compile(Uri script, SessionState state) async {
       }
     }
   } catch (error, stackTrace) {
-    // Don't let a compiler crash bring down the session.
-    print(error);
-    if (stackTrace != null) {
-      print(stackTrace);
-    }
+    pleaseReportCrash(error, stackTrace);
     return exit_codes.COMPILER_EXITCODE_CRASH;
   }
   state.addCompilationResult(newResult);
@@ -311,11 +359,18 @@ Future<Address> readAddressFromUser(
 
       default:
         throwInternalError("Unexpected ${command.code}");
+        return null;
     }
   }
 }
 
-SessionState createSessionState(String name, Settings settings) {
+SessionState createSessionState(
+    String name,
+    Settings settings,
+    {Uri libraryRoot,
+     Uri patchRoot,
+     Uri fletchVm,
+     Uri nativesJson}) {
   if (settings == null) {
     settings = const Settings.empty();
   }
@@ -326,9 +381,23 @@ SessionState createSessionState(String name, Settings settings) {
   if (packageConfig == null) {
     packageConfig = executable.resolve("fletch-sdk.packages");
   }
+
+  DeviceType deviceType = settings.deviceType ??
+      parseDeviceType(fletchDeviceType);
+
+  List<Category> categories = (deviceType == DeviceType.embedded)
+      ? <Category>[Category.embedded]
+      : null;
+
   FletchCompiler compilerHelper = new FletchCompiler(
-      options: compilerOptions, packageConfig: packageConfig,
-      environment: settings.constants);
+      options: compilerOptions,
+      packageConfig: packageConfig,
+      environment: settings.constants,
+      categories: categories,
+      libraryRoot: libraryRoot,
+      patchRoot: patchRoot,
+      fletchVm: fletchVm,
+      nativesJson: nativesJson);
 
   return new SessionState(
       name, compilerHelper, compilerHelper.newIncrementalCompiler(), settings);
@@ -370,8 +439,9 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
 
   Future printTrace() async {
     String list = await session.list();
-    print(session.debugState.formatStackTrace());
-    print(list);
+    String stackTrace = session.debugState.formatStackTrace();
+    if (!stackTrace.isEmpty) print(stackTrace);
+    if (!stackTrace.isEmpty) print(list);
   }
 
   try {
@@ -464,7 +534,7 @@ Future<int> compileAndAttachToVmThenDeprecated(
       // TODO(wibling): read stdout from agent.
     } else {
       startedVmDirectly = true;
-      await startAndAttachDirectly(state);
+      await startAndAttachDirectly(state, Uri.base);
       state.fletchVm.stdoutLines.listen((String line) {
           commandSender.sendStdout("$line\n");
         });
@@ -500,6 +570,7 @@ Future<int> compileAndAttachToVmThen(
     StreamIterator<Command> commandIterator,
     SessionState state,
     Uri script,
+    Uri base,
     Future<int> action()) async {
   bool startedVmDirectly = false;
   List<FletchDelta> compilationResults = state.compilationResults;
@@ -520,7 +591,7 @@ Future<int> compileAndAttachToVmThen(
       // TODO(wibling): read stdout from agent.
     } else {
       startedVmDirectly = true;
-      await startAndAttachDirectly(state);
+      await startAndAttachDirectly(state, base);
       state.fletchVm.stdoutLines.listen((String line) {
           commandSender.sendStdout("$line\n");
         });
@@ -615,6 +686,31 @@ Future signalAgentVm(SessionState state, int signalNumber) async {
   }
 }
 
+Future<int> upgradeAgent(
+    SessionState state,
+    Uri packageUri,
+    String version) async {
+  if (state.settings.deviceAddress == null) {
+    throwFatalError(DiagnosticKind.noAgentFound);
+  }
+  AgentConnection connection;
+  try {
+    connection = await connectToAgent(state);
+    List<int> data = await new File.fromUri(packageUri).readAsBytes();
+    print('Sending package to fletch agent');
+    await connection.upgradeAgent(version, data);
+    print('Upgrade complete. Please allow the fletch-agent a few seconds '
+        'to restart');
+  } finally {
+    if (connection != null) {
+      disconnectFromAgent(connection);
+    }
+  }
+  // TODO(karlklose): wait for the agent to come online again and verify
+  // the version.
+  return 0;
+}
+
 Future<IsolateController> allocateWorker(IsolatePool pool) async {
   IsolateController worker =
       new IsolateController(await pool.getIsolate(exitOnError: false));
@@ -686,6 +782,13 @@ class Address {
   String toString() => "Address($host, $port)";
 
   String toJson() => "$host:$port";
+
+  bool operator ==(other) {
+    if (other is! Address) return false;
+    return other.host == host && other.port == port;
+  }
+
+  int get hashCode => host.hashCode ^ port.hashCode;
 }
 
 /// See ../verbs/documentation.dart for a definition of this format.
@@ -706,6 +809,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
   final List<String> options = <String>[];
   final Map<String, String> constants = <String, String>{};
   Address deviceAddress;
+  DeviceType deviceType;
   userSettings.forEach((String key, value) {
     switch (key) {
       case "packages":
@@ -773,6 +877,20 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         }
         break;
 
+      case "device_type":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(DiagnosticKind.settingsDeviceTypeNotAString,
+                uri: settingsUri, userInput: '$value');
+          }
+          deviceType = parseDeviceType(value);
+          if (deviceType == null) {
+            throwFatalError(DiagnosticKind.settingsDeviceTypeUnrecognized,
+                uri: settingsUri, userInput: '$value');
+          }
+        }
+        break;
+
       default:
         throwFatalError(
             DiagnosticKind.settingsUnrecognizedKey, uri: settingsUri,
@@ -780,7 +898,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
     }
   });
-  return new Settings(packages, options, constants, deviceAddress);
+  return new Settings(packages, options, constants, deviceAddress, deviceType);
 }
 
 class Settings {
@@ -792,17 +910,25 @@ class Settings {
 
   final Address deviceAddress;
 
+  final DeviceType deviceType;
+
   const Settings(
-      this.packages, this.options, this.constants, this.deviceAddress);
+      this.packages,
+      this.options,
+      this.constants,
+      this.deviceAddress,
+      this.deviceType);
 
   const Settings.empty()
-    : this(null, const <String>[], const <String, String>{}, null);
+    : this(null, const <String>[], const <String, String>{}, null, null);
 
   Settings copyWith({
       Uri packages,
       List<String> options,
       Map<String, String> constants,
-      Address deviceAddress}) {
+      Address deviceAddress,
+      DeviceType deviceType}) {
+
     if (packages == null) {
       packages = this.packages;
     }
@@ -815,7 +941,15 @@ class Settings {
     if (deviceAddress == null) {
       deviceAddress = this.deviceAddress;
     }
-    return new Settings(packages, options, constants, deviceAddress);
+    if (deviceType == null) {
+      deviceType = this.deviceType;
+    }
+    return new Settings(
+        packages,
+        options,
+        constants,
+        deviceAddress,
+        deviceType);
   }
 
   String toString() {
@@ -823,7 +957,8 @@ class Settings {
         "packages: $packages, "
         "options: $options, "
         "constants: $constants, "
-        "device_address: $deviceAddress)";
+        "device_address: $deviceAddress, "
+        "device_type: $deviceType)";
   }
 
   Map<String, dynamic> toJson() {
@@ -832,6 +967,9 @@ class Settings {
       "options": options,
       "constants": constants,
       "device_address": deviceAddress,
+      "device_type": (deviceType == null)
+          ? null
+          : unParseDeviceType(deviceType),
     };
   }
 }

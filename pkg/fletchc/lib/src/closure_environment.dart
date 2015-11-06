@@ -88,6 +88,8 @@ class ClosureVisitor
 
   ExecutableElement currentElement;
 
+  bool inInitializers = false;
+
   ClosureVisitor(this.element, TreeElements elements)
       : super(elements);
 
@@ -123,7 +125,9 @@ class ClosureVisitor
       closureEnvironment.closures[currentElement] = info;
     }
     if (currentElement.isConstructor) {
+      inInitializers = true;
       visitInitializers(node, null);
+      inInitializers = false;
     }
     node.body.accept(this);
     currentElement = oldElement;
@@ -191,6 +195,7 @@ class ClosureVisitor
   }
 
   void markThisUsed() {
+    assert(!inInitializers);
     ExecutableElement current = currentElement;
     while (current != element) {
       ClosureInfo info = closureEnvironment.closures[current];
@@ -376,7 +381,8 @@ class ClosureVisitor
       Send node,
       TypeVariableElement element,
       _) {
-    markThisUsed();
+    // TODO(ajohnsen): Visit 'this' for type literal support, except for
+    // closures in initializers.
     super.visitTypeVariableTypeLiteralGet(node, element, null);
   }
 
@@ -386,7 +392,8 @@ class ClosureVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
-    markThisUsed();
+    // TODO(ajohnsen): Visit 'this' for type literal support, except for
+    // closures in initializers.
     super.visitTypeVariableTypeLiteralInvoke(
         node, element, arguments, callStructure, null);
   }

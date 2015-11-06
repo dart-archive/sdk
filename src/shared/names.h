@@ -22,9 +22,11 @@ namespace fletch {
   N(Num,                    "num")                      \
   N(Coroutine,              "Coroutine")                \
   N(Port,                   "Port")                     \
+  N(Process,                "Process")                  \
   N(ForeignMemory,          "ForeignMemory")            \
   N(OneByteString,          "_OneByteString")           \
   N(TwoByteString,          "_TwoByteString")           \
+  N(StackOverflowError,     "StackOverflowError")       \
                                                         \
   N(Equals,                 "==")                       \
   N(LessThan,               "<")                        \

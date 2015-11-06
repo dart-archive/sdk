@@ -2,3 +2,13 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
+[ $system == macos ]
+socket/datagram_socket_test: Fail
+
+[ $system == lk ]
+socket/socket_test: RuntimeError
+socket/datagram_socket_test: RuntimeError
+os/sleep_test: RuntimeError
+os/system_info_test: RuntimeError
+file/file_test: RuntimeError
+http/http_test: RuntimeError

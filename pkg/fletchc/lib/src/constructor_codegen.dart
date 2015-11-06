@@ -31,7 +31,9 @@ import 'codegen_visitor.dart';
 import 'fletch_registry.dart' show
     FletchRegistry;
 
-class ConstructorCodegen extends CodegenVisitor {
+class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
+  final FletchRegistry registry;
+
   final FletchClassBuilder classBuilder;
 
   final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
@@ -44,11 +46,11 @@ class ConstructorCodegen extends CodegenVisitor {
   ConstructorCodegen(FletchFunctionBuilder functionBuilder,
                      FletchContext context,
                      TreeElements elements,
-                     FletchRegistry registry,
+                     this.registry,
                      ClosureEnvironment closureEnvironment,
                      ConstructorElement constructor,
                      this.classBuilder)
-      : super(functionBuilder, context, elements, registry,
+      : super(functionBuilder, context, elements,
               closureEnvironment, constructor);
 
   ConstructorElement get constructor => element;
@@ -184,8 +186,15 @@ class ConstructorCodegen extends CodegenVisitor {
     // Visit parameters and add them to scope. Note the scope is the scope of
     // locals, in VisitingCodegen.
     signature.orderedForEachParameter((ParameterElement parameter) {
-      int slot = firstParameterSlot + parameterIndex;
-      LocalValue value = createLocalValueForParameter(parameter, slot);
+      LocalValue value = firstParameterSlot < 0
+          ? createLocalValueForParameter(
+              parameter,
+              parameterIndex,
+              isCapturedValueBoxed: false)
+          : createLocalValueFor(
+              parameter,
+              slot: firstParameterSlot + parameterIndex,
+              isCapturedValueBoxed: false);
       scope[parameter] = value;
       if (parameter.isInitializingFormal) {
         // If it's a initializing formal, store the value into initial
@@ -328,7 +337,8 @@ class ConstructorCodegen extends CodegenVisitor {
     if (node == null || node.body.asEmptyStatement() != null) return;
 
     int functionId = requireFunction(constructor.declaration).functionId;
-    int constructorId = functionBuilder.allocateConstantFromFunction(functionId);
+    int constructorId =
+        functionBuilder.allocateConstantFromFunction(functionId);
 
     FunctionSignature signature = constructor.functionSignature;
 
@@ -337,7 +347,7 @@ class ConstructorCodegen extends CodegenVisitor {
     signature.orderedForEachParameter((FormalElement parameter) {
       // Boxed parameters are passed as boxed objects, not as the values
       // contained within like we do for ordinary invokes
-      assembler.loadSlot(scope[parameter].slot);
+      scope[parameter].loadRaw(assembler);
     });
 
     assembler

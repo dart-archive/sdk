@@ -86,28 +86,40 @@ class FletchTestSuite extends TestSuite {
 
     TestExpectations expectations = new TestExpectations();
     String buildDir = TestUtils.buildDir(configuration);
+    String version;
 
     bool helperProgramExited = false;
     io.Process vmProcess;
     ReadTestExpectationsInto(
         expectations, '$testSuiteDir/fletch_tests.status',
         configuration).then((_) {
+      return new io.File('$buildDir/gen/version.cc').readAsLines();
+    }).then((List<String> versionFileLines) {
+      // Search for the 'return "version_string";' line.
+      for (String line in versionFileLines) {
+        if (line.contains('return')) {
+          version = line.substring(
+              line.indexOf('"') + 1, line.lastIndexOf('"'));
+        }
+      }
+      assert(version != null);
+    }).then((_) {
       return io.ServerSocket.bind(io.InternetAddress.LOOPBACK_IP_V4, 0);
     }).then((io.ServerSocket server) {
-      bool enableCustomEnqueuer = configuration["enable_custom_enqueuer"];
       return io.Process.start(
           runtimeConfiguration.dartBinary,
           ['-Dfletch-vm=$buildDir/fletch-vm',
+           '-Dfletch.version=$version',
            '-Ddart-sdk=third_party/dart/sdk/',
            '-Dtest.dart.build-dir=$buildDir',
            '-Dtest.dart.build-arch=${configuration["arch"]}',
            '-Dtest.dart.build-system=${configuration["system"]}',
            '-Dtest.dart.build-clang=${configuration["clang"]}',
            '-Dtest.dart.build-asan=${configuration["asan"]}',
+           '-Dtest.dart.servicec-dir=tools/servicec/',
            '-c',
            '--packages=.packages',
            '-Dtest.fletch_test_suite.port=${server.port}',
-           '-Dfletchc.use-custom-enqueuer=$enableCustomEnqueuer',
            '$testSuiteDir/fletch_test_suite.dart']).then((io.Process process) {
              process.exitCode.then((_) {
                helperProgramExited = true;

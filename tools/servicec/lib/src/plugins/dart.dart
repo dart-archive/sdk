@@ -2,13 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.plugins.dart;
+library old_servicec.plugins.dart;
 
 import 'dart:core' hide Type;
 import 'dart:io' show Platform, File;
 
 import 'package:path/path.dart' show basenameWithoutExtension, join, dirname;
-import 'package:strings/strings.dart' as strings;
+import 'package:servicec/util.dart' as strings;
 
 import 'shared.dart';
 import '../emitter.dart';
@@ -27,15 +27,17 @@ const List<String> RESOURCES = const [
   "struct.dart",
 ];
 
-void generate(String path, Unit unit, String outputDirectory) {
+void generate(String path,
+              Unit unit,
+              String resourcesDirectory,
+              String outputDirectory) {
   _DartVisitor visitor = new _DartVisitor(path);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
   String directory = join(outputDirectory, 'dart');
   writeToFile(directory, path, contents, extension: 'dart');
 
-  String resourcesDirectory = join(dirname(Platform.script.path),
-      '..', 'lib', 'src', 'resources', 'dart');
+  resourcesDirectory = join(resourcesDirectory, 'dart');
   for (String resource in RESOURCES) {
     String resourcePath = join(resourcesDirectory, resource);
     File file = new File(resourcePath);
@@ -91,7 +93,7 @@ class _DartVisitor extends CodeGenerationVisitor {
 
     writeln('import "dart:fletch";');
     writeln('import "dart:fletch.ffi";');
-    writeln('import "dart:service" as service;');
+    writeln('import "dart:fletch.service" as service;');
     if (node.structs.isNotEmpty) {
       writeln('import "struct.dart";');
     }
@@ -109,9 +111,9 @@ class _DartVisitor extends CodeGenerationVisitor {
       String name = listType.identifier;
       if (listType.isPrimitive) {
         int elementSize = primitives.size(listType.primitiveType);
-        String getter = 'segment.memory.${_GETTERS[name]}';
-        String setter = 'segment.memory.${_SETTERS[name]}';
-        String offset = 'offset + index * $elementSize';
+        String getter = '\$segment.memory.${_GETTERS[name]}';
+        String setter = '\$segment.memory.${_SETTERS[name]}';
+        String offset = '\$offset + index * $elementSize';
 
         writeln();
         write('class _${name}List extends ListReader<');
@@ -301,14 +303,14 @@ class _DartVisitor extends CodeGenerationVisitor {
                 'readList(new _uint16List(), ${slot.offset});');
       } else if (slotType.isPrimitive) {
         String getter = _GETTERS[slotType.identifier];
-        String offset = 'offset + ${slot.offset}';
+        String offset = '\$offset + ${slot.offset}';
 
         write('  ');
         writeType(slotType);
         if (slotType.isBool) {
-          writeln(' get $slotName => segment.memory.$getter($offset) != 0;');
+          writeln(' get $slotName => \$segment.memory.$getter($offset) != 0;');
         } else {
-          writeln(' get $slotName => segment.memory.$getter($offset);');
+          writeln(' get $slotName => \$segment.memory.$getter($offset);');
         }
       } else {
         write('  ');
@@ -318,8 +320,8 @@ class _DartVisitor extends CodeGenerationVisitor {
           write('new ');
           writeType(slotType);
           writeln('()');
-          writeln('      ..segment = segment');
-          writeln('      ..offset = offset + ${slot.offset};');
+          writeln('      ..\$segment = \$segment');
+          writeln('      ..\$offset = \$offset + ${slot.offset};');
         } else {
           write('readStruct(new ');
           writeType(slotType);
@@ -383,11 +385,11 @@ class _DartVisitor extends CodeGenerationVisitor {
         writeType(slotType);
         writeln(' value) {');
         write(updateTag);
-        String offset = 'offset + ${slot.offset}';
+        String offset = '\$offset + ${slot.offset}';
         if (slotType.isBool) {
-          writeln('    segment.memory.$setter($offset, value ? 1 : 0);');
+          writeln('    \$segment.memory.$setter($offset, value ? 1 : 0);');
         } else {
-          writeln('    segment.memory.$setter($offset, value);');
+          writeln('    \$segment.memory.$setter($offset, value);');
         }
         writeln('  }');
       } else {
@@ -399,8 +401,8 @@ class _DartVisitor extends CodeGenerationVisitor {
           write('    return new ');
           writeReturnType(slotType);
           writeln('()');
-          writeln('        ..segment = segment');
-          writeln('        ..offset = offset + ${slot.offset};');
+          writeln('        ..\$segment = \$segment');
+          writeln('        ..\$offset = \$offset + ${slot.offset};');
         } else {
           Struct element = slotType.resolved;
           StructLayout elementLayout = element.layout;

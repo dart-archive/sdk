@@ -10,7 +10,9 @@
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
 #include "src/shared/platform.h"
+#include "src/shared/version.h"
 
+#include "src/vm/links.h"
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
@@ -65,13 +67,17 @@ Session::Session(Connection* connection)
       program_update_error_(NULL),
       main_thread_monitor_(Platform::CreateMonitor()),
       main_thread_resume_kind_(kUnknown) {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   ConnectionPrintInterceptor* interceptor =
       new ConnectionPrintInterceptor(connection_);
   Print::RegisterPrintInterceptor(interceptor);
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 }
 
 Session::~Session() {
+#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   Print::UnregisterPrintInterceptors();
+#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
 
   delete connection_;
   delete program_;
@@ -172,7 +178,7 @@ void Session::SendInstanceStructure(Instance* instance) {
 
 void Session::ProcessContinue(Process* process) {
   execution_paused_ = false;
-  process->program()->scheduler()->ProcessContinue(process);
+  process->program()->scheduler()->ContinueProcess(process);
 }
 
 void Session::SendStackTrace(Stack* stack) {
@@ -188,7 +194,42 @@ void Session::SendStackTrace(Stack* stack) {
   connection_->Send(Connection::kProcessBacktrace, buffer);
 }
 
+static void MessageProcessingError(const char* message) {
+  Print::UnregisterPrintInterceptors();
+  Print::Error(message);
+  Platform::Exit(-1);
+}
+
+void Session::HandShake() {
+  Connection::Opcode opcode = connection_->Receive();
+  if (opcode != Connection::kHandShake) {
+    MessageProcessingError("Error: Invalid handshake message from compiler.\n");
+  }
+  int compiler_version_length;
+  uint8* compiler_version = connection_->ReadBytes(&compiler_version_length);
+  const char* version = GetVersion();
+  int version_length = strlen(version);
+  bool version_match =
+      (version_length == compiler_version_length) &&
+      (strncmp(version,
+               reinterpret_cast<char*>(compiler_version),
+               compiler_version_length) == 0);
+  free(compiler_version);
+  WriteBuffer buffer;
+  buffer.WriteBoolean(version_match);
+  buffer.WriteInt(version_length);
+  buffer.WriteString(version);
+  connection_->Send(Connection::kHandShakeResult, buffer);
+  if (!version_match) {
+    MessageProcessingError("Error: Different compiler and VM version.\n");
+  }
+}
+
 void Session::ProcessMessages() {
+  // A session always starts with a handshake verifying that the
+  // compiler and VM have the same version.
+  HandShake();
+
   while (true) {
     Connection::Opcode opcode = connection_->Receive();
 
@@ -196,8 +237,7 @@ void Session::ProcessMessages() {
 
     switch (opcode) {
       case Connection::kConnectionError: {
-        Print::UnregisterPrintInterceptors();
-        FATAL("Compiler crashed. So do we.");
+        MessageProcessingError("Lost connection to compiler.");
       }
 
       case Connection::kCompilerError: {
@@ -208,6 +248,12 @@ void Session::ProcessMessages() {
 
       case Connection::kDisableStandardOutput: {
         Print::DisableStandardOutput();
+        break;
+      }
+
+      case Connection::kProcessDebugInterrupt: {
+        if (process_ == NULL) break;
+        process_->DebugInterrupt();
         break;
       }
 
@@ -713,7 +759,7 @@ int Session::ProcessRun() {
         if (!process_started && process_ != NULL) {
           // If the process was spawned but not started, the scheduler does not
           // know about it and we are therefore responsible for deleting it.
-          program()->DeleteProcess(process_);
+          program()->DeleteProcess(process_, Signal::kTerminated);
         }
         Print::UnregisterPrintInterceptors();
         if (!process_started) return 0;
@@ -914,8 +960,8 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
   Push(function);
 
   if (Flags::log_decoder) {
-    Print::Out("Method:\n");
     uint8* bytes = function->bytecode_address_for(0);
+    Print::Out("Method: %p\n", bytes);
     Opcode opcode;
     int i = 0;
     do {
@@ -972,8 +1018,12 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->coroutine_class();
   } else if (name == Names::kPort) {
     klass = program()->port_class();
+  } else if (name == Names::kProcess) {
+    klass = program()->process_class();
   } else if (name == Names::kForeignMemory) {
     klass = program()->foreign_memory_class();
+  } else if (name == Names::kStackOverflowError) {
+    klass = program()->stack_overflow_error_class();
   } else {
     UNREACHABLE();
   }
@@ -1221,9 +1271,13 @@ bool Session::BreakPoint(Process* process) {
   if (process_ == process) {
     execution_paused_ = true;
     DebugInfo* debug_info = process->debug_info();
-    debug_info->set_is_stepping(false);
+    int breakpoint_id = -1;
+    if (debug_info != NULL) {
+      debug_info->set_is_stepping(false);
+      breakpoint_id = debug_info->current_breakpoint_id();
+    }
     WriteBuffer buffer;
-    buffer.WriteInt(debug_info->current_breakpoint_id());
+    buffer.WriteInt(breakpoint_id);
     PushTopStackFrame(process);
     buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
     // Drop function from session stack.
@@ -1241,7 +1295,7 @@ bool Session::ProcessTerminated(Process* process) {
     WriteBuffer buffer;
     connection_->Send(Connection::kProcessTerminated, buffer);
     process_ = NULL;
-    program_->scheduler()->ExitAtTermination(process);
+    program_->scheduler()->ExitAtTermination(process, Signal::kTerminated);
     return true;
   }
   return false;
@@ -1260,8 +1314,8 @@ bool Session::CompileTimeError(Process* process) {
 class TransformInstancesPointerVisitor : public PointerVisitor {
  public:
   explicit TransformInstancesPointerVisitor(Heap* heap,
-                                            ImmutableHeap* immutable_heap)
-      : heap_(heap), immutable_heap_(immutable_heap->heap()) { }
+                                            SharedHeap* shared_heap)
+      : heap_(heap), shared_heap_(shared_heap->heap()) { }
 
   virtual void VisitClass(Object** p) {
     // The class pointer in the header of an object should not
@@ -1286,8 +1340,8 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
           if (heap_->space()->Includes(instance->address())) {
             clone = instance->CloneTransformed(heap_);
           } else {
-            ASSERT(immutable_heap_->space()->Includes(instance->address()));
-            clone = instance->CloneTransformed(immutable_heap_);
+            ASSERT(shared_heap_->space()->Includes(instance->address()));
+            clone = instance->CloneTransformed(shared_heap_);
           }
 
           instance->set_forwarding_address(clone);
@@ -1304,13 +1358,13 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
 
  private:
   Heap* const heap_;
-  Heap* const immutable_heap_;
+  Heap* const shared_heap_;
 };
 
 class TransformInstancesProcessVisitor : public ProcessVisitor {
  public:
-  explicit TransformInstancesProcessVisitor(ImmutableHeap* immutable_heap)
-      : immutable_heap_(immutable_heap) {}
+  explicit TransformInstancesProcessVisitor(SharedHeap* shared_heap)
+      : shared_heap_(shared_heap) {}
 
   virtual void VisitProcess(Process* process) {
     // NOTE: We need to take all spaces which are getting merged into the
@@ -1321,12 +1375,12 @@ class TransformInstancesProcessVisitor : public ProcessVisitor {
     Heap* heap = process->heap();
 
     Space* space = heap->space();
-    Space* immutable_space = immutable_heap_->heap()->space();
+    Space* immutable_space = shared_heap_->heap()->space();
 
     NoAllocationFailureScope scope(space);
     NoAllocationFailureScope scope2(immutable_space);
 
-    TransformInstancesPointerVisitor pointer_visitor(heap, immutable_heap_);
+    TransformInstancesPointerVisitor pointer_visitor(heap, shared_heap_);
 
     process->IterateRoots(&pointer_visitor);
 
@@ -1336,7 +1390,7 @@ class TransformInstancesProcessVisitor : public ProcessVisitor {
   }
 
  private:
-  ImmutableHeap* immutable_heap_;
+  SharedHeap* shared_heap_;
 };
 
 void Session::TransformInstances() {
@@ -1354,12 +1408,12 @@ void Session::TransformInstances() {
   Space* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
   TransformInstancesPointerVisitor pointer_visitor(
-      program()->heap(), program()->immutable_heap());
+      program()->heap(), program()->shared_heap());
   program()->IterateRoots(&pointer_visitor);
   ASSERT(!space->is_empty());
   space->CompleteTransformations(&pointer_visitor, NULL);
 
-  TransformInstancesProcessVisitor process_visitor(program()->immutable_heap());
+  TransformInstancesProcessVisitor process_visitor(program()->shared_heap());
   program()->VisitProcesses(&process_visitor);
 }
 

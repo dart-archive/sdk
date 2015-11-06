@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "src/shared/utils.h"
 #include "src/vm/thread.h"
 
 // Some versions of android sys/epoll does not define
@@ -22,18 +23,30 @@
 
 namespace fletch {
 
-int EventHandler::Create() {
-  int fd = epoll_create(1);
-  int status = fcntl(fd, F_SETFD, FD_CLOEXEC);
+void EventHandler::Create() {
+  int* fds = new int[2];
+  if (pipe(fds) != 0) FATAL("Failed to start the event handler pipe\n");
+  int status = fcntl(fds[0], F_SETFD, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making read pipe close on exec.");
+  status = fcntl(fds[1], F_SETFD, FD_CLOEXEC);
+  if (status == -1) FATAL("Failed making write pipe close on exec.");
+
+  id_ = epoll_create(1);
+  if (id_ == -1) FATAL("Failed creating epoll instance.");
+  status = fcntl(id_, F_SETFD, FD_CLOEXEC);
   if (status == -1) FATAL("Failed making epoll descriptor close on exec.");
-  return fd;
+
+  struct epoll_event event;
+  event.events = EPOLLHUP | EPOLLRDHUP | EPOLLIN;
+  event.data.fd = fds[0];
+  epoll_ctl(id_, EPOLL_CTL_ADD, fds[0], &event);
+
+  data_ = reinterpret_cast<void*>(fds);
 }
 
 void EventHandler::Run() {
-  struct epoll_event event;
-  event.events = EPOLLHUP | EPOLLRDHUP | EPOLLIN;
-  event.data.fd = read_fd_;
-  epoll_ctl(fd_, EPOLL_CTL_ADD, read_fd_, &event);
+  int* fds = reinterpret_cast<int*>(data_);
+
   while (true) {
     int64 next_timeout;
     {
@@ -48,7 +61,8 @@ void EventHandler::Run() {
       if (next_timeout < 0) next_timeout = 0;
     }
 
-    int status = epoll_wait(fd_, &event, 1, next_timeout);
+    struct epoll_event event;
+    int status = epoll_wait(id_, &event, 1, next_timeout);
 
     HandleTimeouts();
 
@@ -56,20 +70,21 @@ void EventHandler::Run() {
 
     int events = event.events;
 
-    if (event.data.fd == read_fd_) {
-      if ((events & EPOLLIN) != 0) {
-        char b;
-        TEMP_FAILURE_RETRY(read(read_fd_, &b, 1));
-        continue;
-      } else {
-        close(read_fd_);
-        close(fd_);
-
+    if (event.data.fd == fds[0]) {
+      if (!running_) {
         ScopedMonitorLock locker(monitor_);
-        fd_ = -1;
+        close(id_);
+        close(fds[0]);
+        close(fds[1]);
+        delete[] fds;
+        data_ = NULL;
         monitor_->Notify();
         return;
       }
+
+      char b;
+      TEMP_FAILURE_RETRY(read(fds[0], &b, 1));
+      continue;
     }
 
     word mask = 0;

@@ -5,6 +5,7 @@
 package com.google.fletch.githubsample;
 
 import android.app.Application;
+import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -44,11 +45,18 @@ public class MainApplication extends Application {
     }
   }
 
+  private class PrintInterceptor extends FletchApi.PrintInterceptor {
+    @Override public void Out(String message) { Log.i(TAG, message); }
+    @Override public void Error(String message) { Log.e(TAG, message); }
+    private static final String TAG = "Fletch";
+  }
+
   private void startFletchService() {
     System.loadLibrary("fletch");
     FletchApi.Setup();
     FletchServiceApi.Setup();
     FletchApi.AddDefaultSharedLibrary("libfletch.so");
+    FletchApi.RegisterPrintInterceptor(new PrintInterceptor());
     startDartServiceThread();
     ImmiServiceLayer.Setup();
   }

@@ -17,18 +17,22 @@ vars = {
   # Used by pkg/immi_samples.
   "crypto_rev": "@dd0ff8b95269b11f7bd925d2f58e5e938c1f03fc",
 
+  # Used by fletch_tests.
+  "isolate_tag": "@0.2.2",
+
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
-  "dart_rev": "@81f7629dc13c232833d181c908a869f01422dd05",
+  "dart_rev": "@f3ca4b2e0acf43b3ac8642cdda5afc10f4e503bb",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:
   "package_config_tag": "@0.1.3",
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
+  "args_tag": "@0.13.0",
 
-  "lk_rev": "@4895ead73951c1a75c4587e8082926251b3cfebf",
+  "lk_rev": "@e092ff360508c7e7e56f432da3714f0edb8ba365",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.
@@ -58,6 +62,9 @@ deps = {
   "fletch/third_party/package_config":
       (Var("github_mirror") % "package_config") + Var("package_config_tag"),
 
+  "fletch/third_party/args":
+      (Var("github_mirror") % "args") + Var("args_tag"),
+
   "fletch/third_party/charcode":
       (Var("github_mirror") % "charcode") + Var("charcode_tag"),
 
@@ -72,6 +79,9 @@ deps = {
 
   "fletch/third_party/lk/lk-downstream":
       (Var("github_url") % "travisg/lk") + Var("lk_rev"),
+
+  "fletch/third_party/isolate":
+      "https://github.com/dart-lang/isolate.git" + Var("isolate_tag"),
 
   "wiki": (Var("github_url") % "dart-lang/fletch.wiki"),
 }
@@ -98,21 +108,6 @@ deps_os = {
 }
 
 hooks = [
-  {
-    'name': 'third_party_libs',
-    'pattern': '.',
-    'action': [
-      'download_from_google_storage',
-      '--no_auth',
-      '--no_resume',
-      '--bucket',
-      'dart-dependencies-fletch',
-      '-d',
-      '-r',
-      '--auto_platform',
-      'fletch/third_party/libs',
-    ],
-  },
   {
     'name': 'third_party_binaries',
     'pattern': '.',
@@ -144,6 +139,19 @@ hooks = [
     ],
   },
   {
+    'name': 'mdns_native_extension_binaries',
+    'pattern': '.',
+    'action': [
+      'download_from_google_storage',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dart-dependencies-fletch',
+      '-d',
+      'fletch/pkg/mdns/lib/native',
+    ],
+  },
+  {
     'name': 'third_party_qemu',
     'pattern': '.',
     'action': [
@@ -157,6 +165,22 @@ hooks = [
       '-u',
       '--auto_platform',
       'fletch/third_party/qemu',
+    ],
+  },
+  {
+    'name': 'third_party_openocd',
+    'pattern': '.',
+    'action': [
+      'download_from_google_storage',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dart-dependencies-fletch',
+      '-d',
+      '-r',
+      '-u',
+      '--auto_platform',
+      'fletch/third_party/openocd',
     ],
   },
   {

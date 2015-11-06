@@ -4,14 +4,6 @@
 
 part of os;
 
-const int O_RDONLY  = 0;
-const int O_WRONLY  = 1;
-const int O_RDWR    = 2;
-const int O_CREAT   = 64;
-const int O_TRUNC   = 512;
-const int O_APPEND  = 1024;
-const int O_CLOEXEC = 524288;
-
 const int SHUT_RD   = 0;
 const int SHUT_WR   = 1;
 const int SHUT_RDWR = 2;
@@ -61,7 +53,7 @@ class SystemInformation {
 }
 
 abstract class System {
-  int socket();
+  int socket(int domain, int type, int protocol);
   InternetAddress lookup(String host);
   int open(String path, bool read, bool write, bool append);
   TempFile mkstemp(String path);
@@ -69,13 +61,15 @@ abstract class System {
   int unlink(String path);
   int bind(int fd, InternetAddress address, int port);
   int listen(int fd);
-  int setsockopt(int fd, int level, int optname, int value);
+  int setsockopt(int fd, int level, int optname, ForeignMemory value);
   int accept(int fd);
   int port(int fd);
   int connect(int fd, InternetAddress address, int port);
   int available(int fd);
   int read(int fd, ByteBuffer buffer, int offset, int length);
   int write(int fd, ByteBuffer buffer, int offset, int length);
+  int sendto(int fd, ByteBuffer buffer, InternetAddress target, int port);
+  int recvfrom(int fd, ByteBuffer buffer, ForeignMemory sockaddr);
   int shutdown(int fd, int how);
   int close(int fd);
   int lseek(int fd, int offset, int whence);
@@ -83,12 +77,90 @@ abstract class System {
   void memcpy(var dest, int destOffset, var src, int srcOffset, int length);
   Errno errno();
   int setBlocking(int fd, bool blocking);
-  int setReuseaddr(int fd);
   int setCloseOnExec(int fd, bool closeOnExec);
   SystemInformation info();
+  int get AF_INET;
+  int get AF_INET6;
+  int get SOCK_STREAM;
+  int get SOCK_DGRAM;
+  int get O_RDONLY;
+  int get O_WRONLY;
+  int get O_RDWR;
+  int get O_CREAT;
+  int get O_TRUNC;
+  int get O_APPEND;
+  int get O_CLOEXEC;
+  int get O_NONBLOCK;
+  int get SOL_SOCKET;
+  int get SO_REUSEADDR;
+  int get SOCKADDR_STORAGE_SIZE;
 }
 
-class _InternetAddress extends InternetAddress {
+/// A class that gives access to the components of a sockaddr
+/// structure.
+class SockAddr {
+  final ForeignMemory buffer;
+
+  SockAddr(this.buffer);
+
+  factory SockAddr.allocate() {
+    return new SockAddr(
+        new ForeignMemory.allocated(getSystem().SOCKADDR_STORAGE_SIZE));
+  }
+
+  free() {
+    buffer.free();
+  }
+
+  int get port => buffer.getUint8(2) * 256 + buffer.getUint8(3);
+
+  int get family {
+    if (Foreign.platform == Foreign.MACOS) {
+      return buffer.getUint8(1);
+    } else {
+      return buffer.getUint16(0);
+    }
+  }
+
+  InternetAddress get address {
+    int addressLengthInBytes;
+    if (family == sys.AF_INET) {
+      addressLengthInBytes = 4;
+    } else if (family == sys.AF_INET6) {
+      addressLengthInBytes = 16;
+    } else {
+      throw 'Unsupported protocol';
+    }
+
+    List<int> digits = new List<int>(addressLengthInBytes);
+    buffer.copyBytesToList(digits, 4, 4 + addressLengthInBytes, 0);
+    return new InternetAddress(digits);
+  }
+}
+
+class _InternetAddress implements InternetAddress {
   final List<int> _bytes;
-  _InternetAddress(this._bytes);
+
+  _InternetAddress(this._bytes) {
+    assert(_bytes.length == 4 || _bytes.length == 16);
+  }
+
+  bool get isIp4 => _bytes.length == 4;
+
+  String toString() {
+    if (isIp4) {
+      return _bytes.join('.');
+    } else {
+      List<String> parts = new List<String>(8);
+      for (int i = 0; i < 8; i++) {
+        String first = _bytes[i * 2].toRadixString(16);
+        String second = _bytes[i * 2 + 1].toRadixString(16);
+        if (second.length == 1) {
+          second = "0$second";
+        }
+        parts[i] = "$first$second";
+      }
+      return parts.join(":");
+    }
+  }
 }

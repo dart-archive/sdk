@@ -8,3 +8,6 @@ github/lib/src/tests/github_api_test: Pass, Crash
 
 [ $system == lk ]
 *: Skip, OK
+
+[ $system != lk ]
+lk/*: Skip

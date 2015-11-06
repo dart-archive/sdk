@@ -210,7 +210,7 @@ class MockClientController implements ClientController {
     }
   }
 
-  endSession() {
+  endClientSession() {
     completer.complete(null);
   }
 
@@ -233,6 +233,9 @@ class MockClientController implements ClientController {
 
   exit(int exitCode) {
     recordedExitCode = exitCode;
+    if (!completer.isCompleted) {
+      endClientSession();
+    }
   }
 
   int reportErrorToClient(InputError error, StackTrace stackTrace) {

@@ -117,9 +117,11 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoLoadLiteral();
   virtual void DoLoadLiteralWide();
 
+  virtual void DoInvokeMethodUnfold();
   virtual void DoInvokeMethod();
-  virtual void DoInvokeMethodFast();
-  virtual void DoInvokeMethodVtable();
+
+  virtual void DoInvokeNoSuchMethod();
+  virtual void DoInvokeTestNoSuchMethod();
 
   virtual void DoInvokeStatic();
   virtual void DoInvokeStaticUnfold();
@@ -129,21 +131,17 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoInvokeNative();
   virtual void DoInvokeNativeYield();
 
+  virtual void DoInvokeTestUnfold();
   virtual void DoInvokeTest();
-  virtual void DoInvokeTestFast();
-  virtual void DoInvokeTestVtable();
 
   virtual void DoInvokeSelector();
 
 #define INVOKE_BUILTIN(kind)                \
+  virtual void DoInvoke##kind##Unfold() {   \
+    Invoke##kind("BC_InvokeMethodUnfold");  \
+  }                                         \
   virtual void DoInvoke##kind() {           \
     Invoke##kind("BC_InvokeMethod");        \
-  }                                         \
-  virtual void DoInvoke##kind##Fast() {     \
-    Invoke##kind("BC_InvokeMethodFast");    \
-  }                                         \
-  virtual void DoInvoke##kind##Vtable() {   \
-    Invoke##kind("BC_InvokeMethodVtable");  \
   }
 
   INVOKE_BUILTIN(Eq);
@@ -170,6 +168,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoPop();
   virtual void DoReturn();
   virtual void DoReturnWide();
+  virtual void DoReturnNull();
 
   virtual void DoBranchWide();
   virtual void DoBranchIfTrueWide();
@@ -235,7 +234,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Pop(Register reg);
   void Drop(int n);
 
-  void Return(bool wide);
+  void Return(bool wide, bool is_return_null);
 
   void Allocate(bool unfolded, bool immutable);
 
@@ -262,9 +261,8 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void InvokeBitShr(const char* fallback);
   void InvokeBitShl(const char* fallback);
 
+  void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
-  void InvokeMethodFast(bool test);
-  void InvokeMethodVtable(bool test);
 
   void InvokeNative(bool yield);
   void InvokeStatic(bool unfolded);
@@ -336,24 +334,28 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ pop(RegisterRange(R4, R11) | RegisterRange(LR, LR));
   __ bx(LR);
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   // Handle immutable heap allocation failures.
   Label immutable_alloc_failure;
   __ Bind(&immutable_alloc_failure);
   __ mov(R0, Immediate(Interpreter::kImmutableAllocationFailure));
   __ b(&undo_padding);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState();
   __ mov(R0, R4);
   __ bl("HandleGC");
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   __ tst(R0, R0);
   __ b(NE, &immutable_alloc_failure);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   RestoreState();
   Dispatch(0);
 
   // Stack overflow handling (slow case).
-  Label stay_fast, overflow;
+  Label stay_fast, overflow, check_debug_interrupt;
   __ Bind(&check_stack_overflow_0_);
   __ mov(R0, Immediate(0));
   __ Bind(&check_stack_overflow_);
@@ -366,8 +368,13 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   ASSERT(Process::kStackCheckContinue == 0);
   __ b(EQ, &stay_fast);
   __ cmp(R0, Immediate(Process::kStackCheckInterrupt));
-  __ b(NE, &overflow);
+  __ b(NE, &check_debug_interrupt);
   __ mov(R0, Immediate(Interpreter::kInterrupt));
+  __ b(&undo_padding);
+  __ Bind(&check_debug_interrupt);
+  __ cmp(R0, Immediate(Process::kStackCheckDebugInterrupt));
+  __ b(NE, &overflow);
+  __ mov(R0, Immediate(Interpreter::kBreakPoint));
   __ b(&undo_padding);
 
   __ Bind(&stay_fast);
@@ -376,7 +383,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
 
   __ Bind(&overflow);
   __ ldr(R7, Address(R4, Process::kProgramOffset));
-  __ ldr(R7, Address(R7, Program::kRawStackOverflowOffset));
+  __ ldr(R7, Address(R7, Program::kStackOverflowErrorOffset));
   DoThrowAfterSaveState();
 
   // Intrinsic failure: Just invoke the method.
@@ -610,28 +617,44 @@ void InterpreterGeneratorARM::DoLoadLiteralWide() {
   Dispatch(kLoadLiteralWideLength);
 }
 
+void InterpreterGeneratorARM::DoInvokeMethodUnfold() {
+  InvokeMethodUnfold(false);
+}
+
 void InterpreterGeneratorARM::DoInvokeMethod() {
   InvokeMethod(false);
 }
 
-void InterpreterGeneratorARM::DoInvokeMethodFast() {
-  InvokeMethodFast(false);
+void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
+  // Use the noSuchMethod entry from entry zero of the virtual table.
+  __ ldr(R1, Address(R4, Process::kProgramOffset));
+  __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
+  __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
+
+  // Load the function at index 2.
+  __ ldr(R0, Address(R1, 8 + Array::kSize - HeapObject::kTag));
+
+  // Compute and push the return address on the stack.
+  __ add(R5, R5, Immediate(kInvokeNoSuchMethodLength));
+  Push(R5);
+
+  // Jump to the first bytecode in the target method.
+  __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoInvokeMethodVtable() {
-  InvokeMethodVtable(false);
+void InterpreterGeneratorARM::DoInvokeTestNoSuchMethod() {
+  StoreLocal(R11, 0);
+  Dispatch(kInvokeTestNoSuchMethodLength);
+}
+
+void InterpreterGeneratorARM::DoInvokeTestUnfold() {
+  InvokeMethodUnfold(true);
 }
 
 void InterpreterGeneratorARM::DoInvokeTest() {
   InvokeMethod(true);
-}
-
-void InterpreterGeneratorARM::DoInvokeTestFast() {
-  InvokeMethodFast(true);
-}
-
-void InterpreterGeneratorARM::DoInvokeTestVtable() {
-  InvokeMethodVtable(true);
 }
 
 void InterpreterGeneratorARM::DoInvokeStatic() {
@@ -865,11 +888,15 @@ void InterpreterGeneratorARM::DoPop() {
 }
 
 void InterpreterGeneratorARM::DoReturn() {
-  Return(false);
+  Return(false, false);
 }
 
 void InterpreterGeneratorARM::DoReturnWide() {
-  Return(true);
+  Return(true, false);
+}
+
+void InterpreterGeneratorARM::DoReturnNull() {
+  Return(false, true);
 }
 
 void InterpreterGeneratorARM::DoBranchWide() {
@@ -1342,9 +1369,13 @@ void InterpreterGeneratorARM::Pop(Register reg) {
   Drop(1);
 }
 
-void InterpreterGeneratorARM::Return(bool wide) {
-  // Get result from stack.
-  LoadLocal(R0, 0);
+void InterpreterGeneratorARM::Return(bool wide, bool is_return_null) {
+  // Materialize the result in register R0.
+  if (is_return_null) {
+    __ mov(R0, R8);
+  } else {
+    LoadLocal(R0, 0);
+  }
 
   // Fetch the number of locals and arguments from the bytecodes.
   // Unfortunately, we have to negate the counts so we can use them
@@ -1384,7 +1415,7 @@ void InterpreterGeneratorARM::Drop(int n) {
   __ sub(R6, R6, Immediate(n * kWordSize));
 }
 
-void InterpreterGeneratorARM::InvokeMethod(bool test) {
+void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
   // Get the selector from the bytecodes.
   __ ldr(R7, Address(R5, 1));
 
@@ -1445,10 +1476,10 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     Label found;
     __ tst(R0, R0);
     ConditionalStore(R11, R10, Address(R6, 0));
-    Dispatch(kInvokeTestLength);
+    Dispatch(kInvokeTestUnfoldLength);
   } else {
     // Compute and push the return address on the stack.
-    __ add(R5, R5, Immediate(kInvokeMethodLength));
+    __ add(R5, R5, Immediate(kInvokeMethodUnfoldLength));
     Push(R5);
 
     // Jump to the first bytecode in the target method.
@@ -1481,93 +1512,13 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   __ b(&finish);
 }
 
-void InterpreterGeneratorARM::InvokeMethodFast(bool test) {
-  // Get the dispatch table and form a pointer to the first element
-  // corresponding to this invoke bytecode.
-  __ ldr(R7, Address(R5, 1));
-  __ ldr(R1, Address(R4, Process::kProgramOffset));
-  __ ldr(R2, Address(R1, Program::kDispatchTableOffset));
-  __ add(R3, R2, Immediate(Array::kSize - HeapObject::kTag));
-  __ add(R7, R3, Operand(R7, TIMES_4));
-
-  // Get the receiver from the stack.
-  if (test) {
-    LoadLocal(R2, 0);
-  } else {
-    __ ldr(R2, Address(R7, 0));
-    __ neg(R2, R2);
-    __ ldr(R2, Address(R6, Operand(R2, TIMES_2)));
-  }
-
-  // Compute the receiver class.
-  Label smi, probe;
-  ASSERT(Smi::kTag == 0);
-  __ tst(R2, Immediate(Smi::kTagMask));
-  __ b(EQ, &smi);
-  __ ldr(R2, Address(R2, HeapObject::kClassOffset - HeapObject::kTag));
-
-  // Fetch the receiver class id and get ready to look at the table entries.
-  int id_offset = Class::kIdOrTransformationTargetOffset - HeapObject::kTag;
-  __ Bind(&probe);
-  __ ldr(R2, Address(R2, id_offset));
-
-  // Loop through the table.
-  Label loop, next;
-  __ Bind(&loop);
-  __ ldr(R9, Address(R7, 4 * kPointerSize));
-  __ cmp(R2, R9);
-  __ b(LT, &next);
-  __ ldr(R9, Address(R7, 5 * kPointerSize));
-  __ cmp(R2, R9);
-  __ b(GE, &next);
-
-  Label intrinsified;
-  if (test) {
-    const int32 kMax = reinterpret_cast<int32>(
-        Smi::FromWord(Smi::kMaxPortableValue));
-    __ ldr(R3, Immediate(kMax));
-    __ cmp(R9, R3);
-    ConditionalStore(R11, R10, Address(R6, 0));  // Store true.
-    Dispatch(kInvokeTestLength);
-  } else {
-    // Found the right target method.
-    __ ldr(R2, Address(R7, 6 * kPointerSize));
-    __ ldr(R0, Address(R7, 7 * kPointerSize));
-    __ tst(R2, R2);
-    __ b(NE, &intrinsified);
-
-    // Compute and push the return address on the stack.
-    __ add(R5, R5, Immediate(kInvokeMethodFastLength));
-    Push(R5);
-
-    // Jump to the first bytecode in the target method.
-    __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
-    CheckStackOverflow(0);
-    Dispatch(0);
-  }
-
-  // Go to the next table entry.
-  __ Bind(&next);
-  __ add(R7, R7, Immediate(4 * kPointerSize));
-  __ b(&loop);
-
-  if (!test) {
-    __ Bind(&intrinsified);
-    __ mov(PC, R2);
-  }
-
-  __ Bind(&smi);
-  __ ldr(R2, Address(R1, Program::kSmiClassOffset));
-  __ b(&probe);
-}
-
-void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
+void InterpreterGeneratorARM::InvokeMethod(bool test) {
   // Get the selector from the bytecodes.
   __ ldr(R7, Address(R5, 1));
 
   // Fetch the virtual table from the program.
   __ ldr(R1, Address(R4, Process::kProgramOffset));
-  __ ldr(R1, Address(R1, Program::kVTableOffset));
+  __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
 
   if (!test) {
     // Compute the arity from the selector.
@@ -1630,7 +1581,7 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
     __ b(NE, &intrinsified);
 
     // Compute and push the return address on the stack.
-    __ add(R5, R5, Immediate(kInvokeMethodVtableLength));
+    __ add(R5, R5, Immediate(kInvokeMethodLength));
     Push(R5);
 
     // Jump to the first bytecode in the target method.
@@ -1657,7 +1608,7 @@ void InterpreterGeneratorARM::InvokeMethodVtable(bool test) {
     // the virtual table.
     __ Bind(&invalid);
     __ ldr(R1, Address(R4, Process::kProgramOffset));
-    __ ldr(R1, Address(R1, Program::kVTableOffset));
+    __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
     __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
     __ b(&validated);
   }
@@ -1826,7 +1777,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ ldr(R1, Immediate(mask));
     __ and_(R0, R0, R1);
 
-    // If this is type never immutable we continue the loop.
+    // If this type is never immutable we continue the loop.
     __ cmp(R0, Immediate(never_immutable_mask));
     __ b(EQ, &loop_with_mutable_field);
 
@@ -1895,6 +1846,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
 
 void InterpreterGeneratorARM::AddToStoreBufferSlow(Register object,
                                                    Register value) {
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   if (object != R1) {
     ASSERT(value != R1);
     __ mov(R1, object);
@@ -1904,6 +1856,7 @@ void InterpreterGeneratorARM::AddToStoreBufferSlow(Register object,
   }
   __ mov(R0, R4);
   __ bl("AddToStoreBufferSlow");
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 }
 
 void InterpreterGeneratorARM::InvokeCompare(const char* fallback,

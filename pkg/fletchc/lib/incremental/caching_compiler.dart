@@ -14,10 +14,13 @@ Future<Compiler> reuseCompiler(
      Compiler cachedCompiler,
      Uri libraryRoot,
      Uri patchRoot,
+     Uri nativesJson,
      Uri packageConfig,
+     Uri fletchVm,
      bool packagesAreImmutable: false,
      Map<String, dynamic> environment,
-     Future<bool> reuseLibrary(LibraryElement library)}) async {
+     Future<bool> reuseLibrary(LibraryElement library),
+     List<Category> categories}) async {
   UserTag oldTag = new UserTag('_reuseCompiler').makeCurrent();
   // if (libraryRoot == null) {
   //   throw 'Missing libraryRoot';
@@ -63,9 +66,12 @@ Future<Compiler> reuseCompiler(
         handler: diagnosticHandler,
         libraryRoot: libraryRoot,
         patchRoot: patchRoot,
+        nativesJson: nativesJson,
         packageConfig: packageConfig,
+        fletchVm: fletchVm,
         options: options,
-        environment: environment).backdoor.compilerImplementation;
+        environment: environment,
+        categories: categories).backdoor.compilerImplementation;
     return compiler;
   } else {
     for (final task in compiler.tasks) {

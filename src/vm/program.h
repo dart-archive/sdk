@@ -9,7 +9,8 @@
 #include "src/shared/random.h"
 #include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
-#include "src/vm/immutable_heap.h"
+#include "src/vm/shared_heap.h"
+#include "src/vm/links.h"
 #include "src/vm/program_folder.h"
 
 namespace fletch {
@@ -48,6 +49,7 @@ class Session;
   V(Class, double_class, DoubleClass)                           \
   V(Class, stack_class, StackClass)                             \
   V(Class, coroutine_class, CoroutineClass)                     \
+  V(Class, process_class, ProcessClass)                         \
   V(Class, port_class, PortClass)                               \
   V(Class, foreign_function_class, ForeignFunctionClass)        \
   V(Class, foreign_memory_class, ForeignMemoryClass)            \
@@ -55,17 +57,18 @@ class Session;
   V(Class, constant_list_class, ConstantListClass)              \
   V(Class, constant_byte_list_class, ConstantByteListClass)     \
   V(Class, constant_map_class, ConstantMapClass)                \
+  V(Class, stack_overflow_error_class, StackOverflowErrorClass) \
+  V(HeapObject, stack_overflow_error, StackOverflowError)       \
   V(HeapObject, raw_retry_after_gc, RawRetryAfterGc)            \
   V(HeapObject, raw_wrong_argument_type, RawWrongArgumentType)  \
   V(HeapObject, raw_index_out_of_bounds, RawIndexOutOfBounds)   \
   V(HeapObject, raw_illegal_state, RawIllegalState)             \
-  V(HeapObject, raw_stack_overflow, RawStackOverflow)           \
   V(Object, native_failure_result, NativeFailureResult)         \
   V(Array, classes, Classes)                                    \
   V(Array, constants, Constants)                                \
   V(Array, static_methods, StaticMethods)                       \
+  V(Array, static_fields, StaticFields)                         \
   V(Array, dispatch_table, DispatchTable)                       \
-  V(Array, vtable, VTable)                                      \
 
 class ProgramState {
  public:
@@ -117,17 +120,12 @@ class Program {
     return Function::cast(static_methods_->get(index));
   }
 
-  Array* static_fields() const { return static_fields_; }
   void set_static_fields(Array* static_fields) {
     static_fields_ = static_fields;
   }
 
   void set_dispatch_table(Array* dispatch_table) {
     dispatch_table_ = dispatch_table;
-  }
-
-  void set_vtable(Array* vtable) {
-    vtable_ = vtable;
   }
 
   Scheduler* scheduler() const { return scheduler_; }
@@ -152,7 +150,7 @@ class Program {
   Session* session() { return session_; }
 
   Heap* heap() { return &heap_; }
-  ImmutableHeap* immutable_heap() { return &immutable_heap_; }
+  SharedHeap* shared_heap() { return &shared_heap_; }
 
   HeapObject* ObjectFromFailure(Failure* failure) {
     if (failure == Failure::wrong_argument_type()) {
@@ -169,7 +167,7 @@ class Program {
 
   Process* SpawnProcess();
   Process* ProcessSpawnForMain();
-  void DeleteProcess(Process* process);
+  void DeleteProcess(Process* process, Signal::Kind kind);
   void DeleteAllProcesses();
 
   // This function should only be called once the program has been stopped.
@@ -194,18 +192,23 @@ class Program {
   Object* CreateInitializer(Function* function);
 
   void ValidateHeapsAreConsistent();
+  void ValidateSharedHeap();
 
   void CollectGarbage();
-  void CollectImmutableGarbage();
+  void CollectSharedGarbage(bool program_is_stopped = false);
+  void PerformSharedGarbageCollection();
+  void CompactStorebuffers();
 
   void PrintStatistics();
 
   // Iterates over all roots in the program.
   void IterateRoots(PointerVisitor* visitor);
+  void IterateRootsIgnoringSession(PointerVisitor* visitor);
 
   // Dispatch table support.
   void ClearDispatchTableIntrinsics();
-  void SetupDispatchTableIntrinsics();
+  void SetupDispatchTableIntrinsics(
+      IntrinsicsTable *table = IntrinsicsTable::GetDefault());
 
   // Root objects.
  private:
@@ -232,7 +235,7 @@ class Program {
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
-  Object** last_root_address() { return &native_failure_result_; }
+  Object** last_root_address() { return bit_cast<Object**>(&dispatch_table_); }
 
   void ValidateGlobalHeapsAreConsistent();
 
@@ -251,7 +254,7 @@ class Program {
   RandomXorShift random_;
 
   Heap heap_;
-  ImmutableHeap immutable_heap_;
+  SharedHeap shared_heap_;
 
   Scheduler* scheduler_;
   ProgramState program_state_;
@@ -263,8 +266,6 @@ class Program {
 
   Function* entry_;
   int main_arity_;
-
-  Array* static_fields_;
 
   bool is_compact_;
 };

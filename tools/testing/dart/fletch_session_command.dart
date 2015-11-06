@@ -40,13 +40,23 @@ import 'decode_exit_code.dart' show
 import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
     COMPILER_EXITCODE_CONNECTION_ERROR,
     COMPILER_EXITCODE_CRASH,
-    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR,
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 
 import '../../../pkg/fletchc/lib/fletch_vm.dart' show
     FletchVm;
 
 const String isIncrementalCompilationEnabledFlag =
     "test.fletch_session_command.is_incremental_enabled";
+
+const String settingsFileNameFlag = "test.fletch_settings_file_name";
+const String settingsFileName =
+    const String.fromEnvironment(settingsFileNameFlag);
+
+/// Default timeout value (in seconds) used for running commands that are
+/// assumed to complete fast.
+// TODO(ahe): Lower this to 5 seconds.
+const int defaultTimeout = 20;
 
 final Queue<FletchSessionMirror> sessions = new Queue<FletchSessionMirror>();
 
@@ -72,6 +82,7 @@ class FletchSessionCommand implements Command {
   final Map<String, String> environmentOverrides;
   final bool isIncrementalCompilationEnabled;
   final String snapshotFileName;
+  final String settingsFileName;
 
   FletchSessionCommand(
       this.executable,
@@ -79,7 +90,8 @@ class FletchSessionCommand implements Command {
       this.arguments,
       this.environmentOverrides,
       this.isIncrementalCompilationEnabled,
-      {this.snapshotFileName});
+      {this.snapshotFileName,
+       this.settingsFileName: ".fletch-settings"});
 
   String get displayName => "fletch_session";
 
@@ -89,6 +101,9 @@ class FletchSessionCommand implements Command {
     var dartVm = Uri.parse(executable).resolve('dart');
     String incrementalFlag = "-D$isIncrementalCompilationEnabledFlag="
         "$isIncrementalCompilationEnabled";
+    String fletchPath = Uri.parse(executable).resolve('fletch-vm').toString();
+    String versionFlag = '-Dfletch.version=`$fletchPath --version`';
+    String settingsFileFlag = "-D$settingsFileNameFlag=$settingsFileName";
 
     return """
 
@@ -99,17 +114,20 @@ There are three ways to reproduce this error:
   1. Run the test exactly as in this test framework. This is the hardest to
      debug using gdb:
 
-    ${Platform.executable} -c $incrementalFlag \\
+    ${Platform.executable} -c $incrementalFlag $settingsFileFlag \\
+       $versionFlag \\
        tools/testing/dart/fletch_session_command.dart $executable \\
        ${arguments.join(' ')}
 
 
   2. Run the helper program `tests/fletchc/run.dart` under `gdb` using
-     `follow-fork-mode child`. This can be confusing, but makes it easy to run
-     a reproduction command in a loop:
+     `set follow-fork-mode child`. This can be confusing, but makes it
+     easy to run a reproduction command in a loop:
 
-    gdb -ex 'follow-fork-mode child' -ex run --args \\
-        $dartVm $incrementalFlag -c tests/fletchc/run.dart $script
+    gdb -ex 'set follow-fork-mode child' -ex run --args \\
+        $dartVm $incrementalFlag $settingsFileFlag \\
+        $versionFlag \\
+        -c tests/fletchc/run.dart $script
 
   3. Run the `fletch-vm` in gdb and attach to it via the helper program. This
      is the easiest way to debug using both gdb and lldb. You need to start two
@@ -117,8 +135,9 @@ There are three ways to reproduce this error:
 
     gdb -ex run --args $executable-vm --port=54321
 
-    $dartVm $incrementalFlag -c -DattachToVm=54321 \\
-      tests/fletchc/run.dart $script
+    $dartVm $incrementalFlag $settingsFileFlag \\
+      $versionFlag \\
+      -c -DattachToVm=54321 tests/fletchc/run.dart $script
 
 
 """;
@@ -147,23 +166,39 @@ There are three ways to reproduce this error:
     fletch.sessionMirror.printLoggedCommands(fletch.stdout, executable);
 
     Stopwatch sw = new Stopwatch()..start();
-    int exitCode = COMPILER_EXITCODE_CRASH;
+    int exitCode;
     bool endedSession = false;
     try {
-      String vmSocketAddress = await fletch.spawnVm();
-      Future vmTerminationFuture = fletch.shutdownVm(timeout);
+      Future vmTerminationFuture;
       try {
+        await fletch.run(
+            ["create", "session", fletch.sessionName,
+             "with", settingsFileName]);
         await fletch.runInSession(["show", "log"]);
+
+        // Now that the session is created, start a Fletch VM.
+        String vmSocketAddress = await fletch.spawnVm();
+        // Timeout of the VM is implemented by shutting down the Fletch VM
+        // after [timeout] seconds. This ensures that compilation+runtime never
+        // exceed [timeout] seconds (plus whatever time is spent in setting up
+        // the session above).
+        vmTerminationFuture = fletch.shutdownVm(timeout);
         await fletch.runInSession(["attach", "tcp_socket", vmSocketAddress]);
         if (snapshotFileName != null) {
           exitCode = await fletch.runInSession(
               ["export", script, 'to', 'file', snapshotFileName],
-              checkExitCode: false);
+              checkExitCode: false, timeout: timeout);
         } else {
           exitCode =
-              await fletch.runInSession(["run", script], checkExitCode: false);
+              await fletch.runInSession(
+                  ["run", script], checkExitCode: false, timeout: timeout);
         }
       } finally {
+        if (exitCode == COMPILER_EXITCODE_CRASH) {
+          // If the compiler crashes, chances are that it didn't close the
+          // connection to the Fletch VM. So we kill it.
+          fletch.killVmProcess(ProcessSignal.SIGTERM);
+        }
         int vmExitCode = await vmTerminationFuture;
         fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode");
         if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
@@ -181,7 +216,7 @@ There are three ways to reproduce this error:
       }
     } on UnexpectedExitCode catch (error) {
       fletch.stderr.writeln("$error");
-      exitCode = error.exitCode;
+      exitCode = combineExitCodes(exitCode, error.exitCode);
       try {
         if (!endedSession) {
           // TODO(ahe): Only end if there's a crash.
@@ -193,6 +228,10 @@ There are three ways to reproduce this error:
         // TODO(ahe): Error ignored, long term we should be able to guarantee
         // that shutting down a session never leads to an error.
       }
+    }
+
+    if (exitCode == null) {
+      exitCode = COMPILER_EXITCODE_CRASH;
     }
 
     if (endedSession) {
@@ -220,6 +259,40 @@ There are three ways to reproduce this error:
   set commandLine(_) => throw "not supported";
 
   get outputIsUpToDate => throw "not supported";
+}
+
+/// [compiler] is assumed to be coming from `fletch` in which case
+/// [COMPILER_EXITCODE_CRASH], [DART_VM_EXITCODE_COMPILE_TIME_ERROR], and
+/// [DART_VM_EXITCODE_UNCAUGHT_EXCEPTION] all represent a compiler crash.
+///
+/// [runtime] is assumed to be coming from `fletch-vm` in which case which case
+/// [DART_VM_EXITCODE_COMPILE_TIME_ERROR], and
+/// [DART_VM_EXITCODE_UNCAUGHT_EXCEPTION] is just the result of running a test
+/// that has an error (not a crash).
+int combineExitCodes(int compiler, int runtime) {
+  if (compiler == null) return runtime;
+
+  if (runtime == null) return compiler;
+
+  switch (compiler) {
+    case COMPILER_EXITCODE_CRASH:
+    case DART_VM_EXITCODE_COMPILE_TIME_ERROR:
+    case DART_VM_EXITCODE_UNCAUGHT_EXCEPTION:
+      // If the compiler exits with any of those values above, it crashed. It
+      // should never crash.
+      return COMPILER_EXITCODE_CRASH;
+
+    default:
+      break;
+  }
+
+  if (compiler < 0) {
+    // Normally, this would be a timeout. However, it can also signify that the
+    // Dart VM crashed, with, for example, SIGABRT or SIGSEGV.
+    return compiler;
+  }
+
+  return runtime;
 }
 
 class UnexpectedExitCode extends Error {
@@ -356,9 +429,18 @@ class FletchSessionHelper {
     return combined.takeBytes();
   }
 
+  /// Run [executable] with arguments and wait for it to exit.  This method
+  /// uses [exitCodeWithTimeout] to ensure the process exits within [timeout]
+  /// seconds.
+  ///
+  /// If the process times out, UnexpectedExitCode is thrown.
+  ///
+  /// If [checkExitCode] is true (the default), UnexpectedExitCode is thrown
+  /// unless the process' exit code is 0.
   Future<int> run(
       List<String> arguments,
-      {bool checkExitCode: true}) async {
+      {bool checkExitCode: true,
+       int timeout: defaultTimeout}) async {
     sessionMirror.logCommand(arguments);
     Process process = await Process.start(
         "$executable", arguments, environment: environmentOverrides);
@@ -374,23 +456,38 @@ class FletchSessionHelper {
         .listen(stderr.add)
         .asFuture();
     await process.stdin.close();
-    int exitCode = await process.exitCode;
+
+    // Can't reuse [hasTimedOut] as we don't want to throw when calling 'x-end'
+    // in the finally block above.
+    bool thisCommandTimedout = false;
+
+    int exitCode = await exitCodeWithTimeout(process, timeout, () {
+      print("Timed out: $commandDescription");
+      thisCommandTimedout = true;
+      hasTimedOut = true;
+      if (vmProcess != null) {
+        killedVmProcess = vmProcess.kill(ProcessSignal.SIGTERM);
+      }
+    });
     await stdoutFuture;
     await stderrFuture;
 
     stdout.add(UTF8.encode("\n => $exitCode\n"));
-    if (checkExitCode && exitCode != 0) {
+    if (checkExitCode && (thisCommandTimedout || exitCode != 0)) {
       throw new UnexpectedExitCode(exitCode, executable, arguments);
     }
     return exitCode;
   }
 
-  Future<Null> runInSession(
+  /// Same as [run], except that the arguments "in session $sessionName" are
+  /// implied.
+  Future<int> runInSession(
       List<String> arguments,
-      {bool checkExitCode: true}) {
+      {bool checkExitCode: true,
+       int timeout: defaultTimeout}) {
     return run(
         []..addAll(arguments)..addAll(["in", "session", sessionName]),
-        checkExitCode: checkExitCode);
+        checkExitCode: checkExitCode, timeout: timeout);
   }
 
   Future<String> spawnVm() async {
@@ -428,27 +525,61 @@ class FletchSessionHelper {
     return "${fletchVm.host}:${fletchVm.port}";
   }
 
+  /// Returns a future that completes when the fletch VM exits using
+  /// [exitCodeWithTimeout] to ensure termination within [timeout] seconds.
   Future<int> shutdownVm(int timeout) async {
-    if (vmProcess == null) return 0;
-    bool done = false;
-    Timer timer;
-    timer = new Timer(new Duration(seconds: timeout), () {
-      if (!done) {
-        vmProcess.kill(ProcessSignal.SIGTERM);
-        killedVmProcess = true;
-        hasTimedOut = true;
-        timer = new Timer(const Duration(seconds: 5), () {
-          if (!done) {
-            vmProcess.kill(ProcessSignal.SIGKILL);
-          }
-        });
-      }
+    await exitCodeWithTimeout(vmProcess, timeout, () {
+      print("Timed out: $executable-vm");
+      killedVmProcess = true;
+      hasTimedOut = true;
     });
-    int vmExitCode = await vmExitCodeFuture;
-    done = true;
-    timer.cancel();
-    return vmExitCode;
+    return vmExitCodeFuture;
   }
+
+  void killVmProcess(ProcessSignal signal) {
+    if (vmProcess == null) return;
+    killedVmProcess = vmProcess.kill(ProcessSignal.SIGTERM);
+  }
+}
+
+/// Helper method for implementing timing out while waiting for [process] to
+/// exit. [timeout] is in seconds. If the process times out, it will be killed
+/// using SIGTERM and onTimeout will be called.
+///
+/// After SIGTERM, the process has 5 seconds to exit or it will be killed with
+/// SIGKILL.
+///
+/// Note: We treat SIGKILL as a crash, not a timeout. The process is supposed
+/// to exit quickly and gracefully after receiving SIGTERM. See
+/// [DecodeExitCode] in `decode_exit_code.dart`.
+Future<int> exitCodeWithTimeout(
+    Process process,
+    int timeout,
+    void onTimeout()) async {
+  if (process == null) return 0;
+
+  bool done = false;
+  Timer timer;
+
+  void secondTimeout() {
+    if (done) return;
+    process.kill(ProcessSignal.SIGKILL);
+  }
+
+  void firstTimeout() {
+    if (done) return;
+    if (process.kill(ProcessSignal.SIGTERM)) {
+      timer = new Timer(const Duration(seconds: 5), secondTimeout);
+      onTimeout();
+    }
+  }
+
+  timer = new Timer(new Duration(seconds: timeout), firstTimeout);
+
+  int exitCode = await process.exitCode;
+  done = true;
+  timer.cancel();
+  return exitCode;
 }
 
 /// Represents a session in the persistent Fletch driver process.
@@ -492,7 +623,8 @@ Future<Null> main(List<String> arguments) async {
       isIncrementalCompilationEnabledFlag);
   FletchSessionCommand command = new FletchSessionCommand(
       executable, script, arguments, environmentOverrides,
-      isIncrementalCompilationEnabled);
+      isIncrementalCompilationEnabled,
+      settingsFileName: settingsFileName);
   FletchTestCommandOutput output =
       await command.run(0, true, superVerbose: true);
   print("Test outcome: ${output.decodeExitCode()}");

@@ -28,11 +28,9 @@ Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
 
   context = context.copyWithSession(session);
 
-  await context.performTaskInWorker(
+  return await context.performTaskInWorker(
       new CreateSessionTask(
           name, sentence.withUri, sentence.base, configFileUri));
-
-  return 0;
 }
 
 class CreateSessionTask extends SharedTask {

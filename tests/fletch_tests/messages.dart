@@ -13,8 +13,9 @@ import 'dart:io' as io show stdout;
 import 'dart:async' show
     StreamTransformer;
 
-StreamTransformer get messageTransformer {
-  return new StreamTransformer.fromHandlers(handleData: (line, sink) {
+StreamTransformer<String, Message> get messageTransformer {
+  return new StreamTransformer<String, Message>
+      .fromHandlers(handleData: (String line, Sink<Message> sink) {
      sink.add(new Message.fromJson(line));
   });
 }

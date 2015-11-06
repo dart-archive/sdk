@@ -24,17 +24,20 @@ import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
 
-class FunctionCodegen extends CodegenVisitor {
+import 'bytecode_assembler.dart' show
+    RETURN_NARROW_MAX_STACK_SIZE;
 
+class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
+  final FletchRegistry registry;
   int setterResultSlot;
 
   FunctionCodegen(FletchFunctionBuilder functionBuilder,
                   FletchContext context,
                   TreeElements elements,
-                  FletchRegistry registry,
+                  this.registry,
                   ClosureEnvironment closureEnvironment,
                   FunctionElement function)
-      : super(functionBuilder, context, elements, registry,
+      : super(functionBuilder, context, elements,
               closureEnvironment, function);
 
   FunctionElement get function => element;
@@ -47,10 +50,8 @@ class FunctionCodegen extends CodegenVisitor {
 
   void compile() {
     if (checkCompileError(function)) {
-      // TODO(ajohnsen): We can simply emit a MethodEnd here, but for now we
-      // compile the method to stress our CodegenVisitor with erroneous
-      // elements.
-      assembler.pop();
+      assembler.methodEnd();
+      return;
     }
 
     ClassElement enclosing = function.enclosingClass;
@@ -73,21 +74,22 @@ class FunctionCodegen extends CodegenVisitor {
 
     if (hasAssignmentSemantics) {
       setterResultSlot = assembler.stackSize;
-      // The result is always the last argument (-1 for return address, -1 for
-      // last parameter).
-      assembler.loadSlot(-2);
+      // The result is always the last argument.
+      assembler.loadParameter(functionBuilder.arity - 1);
     }
 
-    int i = 0;
+    // Skip 'this' if present.
+    int parameterIndex = functionBuilder.arity - parameterCount;
+
     functionSignature.orderedForEachParameter((ParameterElement parameter) {
-      int slot = i++ - parameterCount - 1;
       // For constructors, the argument is passed as boxed (from the initializer
       // inlining).
       LocalValue value = createLocalValueForParameter(
           parameter,
-          slot,
-          isCapturedArgumentsBoxed: element.isGenerativeConstructor);
+          parameterIndex,
+          isCapturedValueBoxed: element.isGenerativeConstructor);
       pushVariableDeclaration(value);
+      parameterIndex++;
     });
 
     ClosureInfo info = closureEnvironment.closures[function];
@@ -120,10 +122,13 @@ class FunctionCodegen extends CodegenVisitor {
   void generateImplicitReturn(FunctionExpression node) {
     if (hasAssignmentSemantics) {
       assembler.loadSlot(setterResultSlot);
+      assembler.ret();
+    } else if (assembler.stackSize <= RETURN_NARROW_MAX_STACK_SIZE) {
+      assembler.returnNull();
     } else {
       assembler.loadLiteralNull();
+      assembler.ret();
     }
-    assembler.ret();
   }
 
   void optionalReplaceResultValue() {

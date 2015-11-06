@@ -7,6 +7,7 @@ library http;
 import 'dart:collection';
 import 'dart:typed_data';
 
+import 'package:charcode/ascii.dart';
 import 'package:socket/socket.dart';
 
 ByteBuffer stringToByteBuffer(String str) {
@@ -99,20 +100,6 @@ class HttpHeaders {
 }
 
 class _HttpParser {
-  static const int _CHAR_LINE_FEED       = 10;
-  static const int _CHAR_CARRIAGE_RETURN = 13;
-  static const int _CHAR_SPACE           = 32;
-  static const int _CHAR_DOT             = 46;
-  static const int _CHAR_SLASH           = 47;
-  static const int _CHAR_0               = 48;
-  static const int _CHAR_1               = 49;
-  static const int _CHAR_9               = 57;
-  static const int _CHAR_COLON           = 58;
-  static const int _CHAR_SEMICOLON       = 59;
-  static const int _CHAR_UPPER_H         = 72;
-  static const int _CHAR_UPPER_T         = 84;
-  static const int _CHAR_UPPER_P         = 80;
-
   final Socket socket;
 
   var _buffer = const [];
@@ -125,51 +112,51 @@ class _HttpParser {
 
     // Parse the first line:
     //  'HTTP/1.1 <3*digit> <*Text>\r\n'
-    _expect(_CHAR_UPPER_H);
-    _expect(_CHAR_UPPER_T);
-    _expect(_CHAR_UPPER_T);
-    _expect(_CHAR_UPPER_P);
-    _expect(_CHAR_SLASH);
-    _expect(_CHAR_1);
-    _expect(_CHAR_DOT);
-    _expect(_CHAR_1);
+    _expect($H);
+    _expect($T);
+    _expect($T);
+    _expect($P);
+    _expect($slash);
+    _expect($1);
+    _expect($dot);
+    _expect($1);
 
-    _expect(_CHAR_SPACE);
+    _expect($space);
 
     int statusCode = 0;
     for (int i = 0; i < 3; i++) {
       int char = _peek();
       if (!_isDigit(char)) throw "Expected status code";
       statusCode *= 10;
-      statusCode += char - _CHAR_0;
+      statusCode += char - $0;
       _consume();
     }
 
-    _expect(_CHAR_SPACE);
+    _expect($space);
 
     List reasonPhrase = [];
     while (true) {
       int char = _peek();
-      if (char == _CHAR_CARRIAGE_RETURN) break;
+      if (char == $cr) break;
       reasonPhrase.add(char);
       _consume();
     }
 
-    _expect(_CHAR_CARRIAGE_RETURN);
-    _expect(_CHAR_LINE_FEED);
+    _expect($cr);
+    _expect($lf);
 
     // We now parse all the headers. They are seperated by '\r\n'. An extra
     // '\r\n' marks the end of headers.
-    while (_peek() != _CHAR_CARRIAGE_RETURN) {
+    while (_peek() != $cr) {
       String fieldName = _parseToken();
-      _expect(_CHAR_COLON);
+      _expect($colon);
 
-      while (_peek() == _CHAR_SPACE) _consume();
+      while (_peek() == $space) _consume();
 
       List data = [];
       while (true) {
         int char = _peek();
-        if (char == _CHAR_CARRIAGE_RETURN) break;
+        if (char == $cr) break;
         data.add(char);
         _consume();
       }
@@ -178,12 +165,12 @@ class _HttpParser {
 
       headers.add(fieldName, fieldValue);
 
-      _expect(_CHAR_CARRIAGE_RETURN);
-      _expect(_CHAR_LINE_FEED);
+      _expect($cr);
+      _expect($lf);
     }
 
-    _expect(_CHAR_CARRIAGE_RETURN);
-    _expect(_CHAR_LINE_FEED);
+    _expect($cr);
+    _expect($lf);
 
     // We are now done with all of the headers; the body begins. There are 3
     // formats for the body
@@ -211,7 +198,7 @@ class _HttpParser {
       while (true) {
         int count = 0;
         int char = _peek();
-        while (char != _CHAR_CARRIAGE_RETURN && char != _CHAR_SEMICOLON) {
+        while (char != $cr && char != $semicolon) {
           _consume();
           ++count;
           char = _peek();
@@ -220,12 +207,12 @@ class _HttpParser {
         int chunkLength = int.parse(new String.fromCharCodes(chars), radix: 16);
 
         // TODO(zerny): support optional extensions.
-        if (char == _CHAR_SEMICOLON) {
-          while (_peek() != _CHAR_CARRIAGE_RETURN) _consume();
+        if (char == $semicolon) {
+          while (_peek() != $cr) _consume();
         }
 
-        _expect(_CHAR_CARRIAGE_RETURN);
-        _expect(_CHAR_LINE_FEED);
+        _expect($cr);
+        _expect($lf);
 
         // A zero-size chunk denotes the last chunk.
         if (chunkLength == 0) break;
@@ -244,14 +231,14 @@ class _HttpParser {
 
         contentLength += chunkLength;
 
-        _expect(_CHAR_CARRIAGE_RETURN);
-        _expect(_CHAR_LINE_FEED);
+        _expect($cr);
+        _expect($lf);
       }
 
       // TODO(zerny): read optional trailer
-      while (_peek() != _CHAR_CARRIAGE_RETURN) _consume();
-      _expect(_CHAR_CARRIAGE_RETURN);
-      _expect(_CHAR_LINE_FEED);
+      while (_peek() != $cr) _consume();
+      _expect($cr);
+      _expect($lf);
 
       body = new Uint8List(contentLength);
       int offset = 0;
@@ -304,13 +291,11 @@ class _HttpParser {
   static bool _isTokenChar(int char) => _isChar(char) && !_isSeparator(char);
 
   static bool _isChar(int char) => char >= 32 && char <= 126;
-  static bool _isDigit(int char) => char >= _CHAR_0 && char <= _CHAR_9;
+  static bool _isDigit(int char) => char >= $0 && char <= $9;
 
   static bool _isSeparator(int char) {
     // TODO(ajohnsen): "(" | ")" | "<" | ">" | "@" | "," | ";" | ":" |
     // "\" | <"> | "/" | "[" | "]" | "?" | "=" | "{" | "}" | SP | HT
-    return char == _CHAR_SPACE ||
-           char == _CHAR_SLASH ||
-           char == _CHAR_COLON;
+    return char == $space || char == $slash || char == $colon;
   }
 }

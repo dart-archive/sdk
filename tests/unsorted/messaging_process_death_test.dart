@@ -2,9 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:async';
 import 'dart:fletch';
-
-import 'package:os/os.dart' as os;
 
 main() {
   var input = new Channel();
@@ -13,6 +12,7 @@ main() {
 }
 
 void sleepAndThenSend(Port port) {
-  os.sleep(100);
-  port.send(42);
+  new Timer(const Duration(milliseconds: 100), () {
+    port.send(42);
+  });
 }

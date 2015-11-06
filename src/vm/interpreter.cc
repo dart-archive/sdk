@@ -98,7 +98,7 @@ class State {
   void Drop(int n) { sp_ -= n; }
 
   bool HasStackSpaceFor(int size) const {
-    return sp_ + size < process_->stack_limit();
+    return (sp_ + size) < reinterpret_cast<Object**>(process_->stack_limit());
   }
 
   Function* ComputeCurrentFunction() {
@@ -170,8 +170,11 @@ class Engine : public State {
       if (result == Process::kStackCheckInterrupt) {                     \
         return Interpreter::kInterrupt;                                  \
       }                                                                  \
+      if (result == Process::kStackCheckDebugInterrupt) {                \
+        return Interpreter::kBreakPoint;                                 \
+      }                                                                  \
       if (result == Process::kStackCheckOverflow) {                      \
-        Object* exception = program()->raw_stack_overflow();             \
+        Object* exception = program()->stack_overflow_error();           \
         if (!DoThrow(exception)) return Interpreter::kUncaughtException; \
         DISPATCH();                                                      \
       }                                                                  \
@@ -386,11 +389,11 @@ Interpreter::InterruptKind Engine::Interpret(
     Advance(kLoadLiteralWideLength);
   OPCODE_END();
 
-  OPCODE_BEGIN(InvokeMethod);
+  OPCODE_BEGIN(InvokeMethodUnfold);
     int selector = ReadInt32(1);
     int arity = Selector::ArityField::decode(selector);
     Object* receiver = Local(arity);
-    PushReturnAddress(kInvokeMethodLength);
+    PushReturnAddress(kInvokeMethodUnfoldLength);
     Function* target = process()->LookupEntry(receiver, selector)->target;
     Goto(target->bytecode_address_for(0));
     STACK_OVERFLOW_CHECK(0);
@@ -403,48 +406,34 @@ Interpreter::InterruptKind Engine::Interpret(
     STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
-  OPCODE_BEGIN(InvokeMethodFast);
-    int index = ReadInt32(1);
-    Array* table = program()->dispatch_table();
-    int selector = Smi::cast(table->get(index + 1))->value();
-    int arity = Selector::ArityField::decode(selector);
-    Object* receiver = Local(arity);
-    PushReturnAddress(kInvokeMethodFastLength);
-
-    Class* clazz = receiver->IsSmi()
-        ? program()->smi_class()
-        : HeapObject::cast(receiver)->get_class();
-    int class_id = clazz->id();
-
-    Function* target = NULL;
-    for (int offset = 4; true; offset += 4) {
-      Smi* lower = Smi::cast(table->get(index + offset));
-      if (class_id < lower->value()) continue;
-      Smi* upper = Smi::cast(table->get(index + offset + 1));
-      if (class_id >= upper->value()) continue;
-      target = Function::cast(table->get(index + offset + 3));
-      break;
-    }
-
+  OPCODE_BEGIN(InvokeNoSuchMethod);
+    Array* entry = Array::cast(program()->dispatch_table()->get(0));
+    Function* target = Function::cast(entry->get(2));
+    PushReturnAddress(kInvokeNoSuchMethodLength);
     Goto(target->bytecode_address_for(0));
     STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
-  OPCODE_BEGIN(InvokeMethodVtable);
+  OPCODE_BEGIN(InvokeTestNoSuchMethod);
+    SetLocal(0, program()->false_object());
+    Advance(kInvokeTestNoSuchMethodLength);
+  OPCODE_END();
+
+  OPCODE_BEGIN(InvokeMethod);
     int selector = ReadInt32(1);
     int arity = Selector::ArityField::decode(selector);
     int offset = Selector::IdField::decode(selector);
     Object* receiver = Local(arity);
-    PushReturnAddress(kInvokeMethodVtableLength);
+    PushReturnAddress(kInvokeMethodLength);
 
     Class* clazz = receiver->IsSmi()
         ? program()->smi_class()
         : HeapObject::cast(receiver)->get_class();
 
     int index = clazz->id() + offset;
-    Array* entry = Array::cast(program()->vtable()->get(index));
+    Array* entry = Array::cast(program()->dispatch_table()->get(index));
     if (Smi::cast(entry->get(0))->value() != offset) {
-      entry = Array::cast(program()->vtable()->get(0));
+      entry = Array::cast(program()->dispatch_table()->get(0));
     }
     Function* target = Function::cast(entry->get(2));
     Goto(target->bytecode_address_for(0));
@@ -491,14 +480,11 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
 #define INVOKE_BUILTIN(kind)           \
+  OPCODE_BEGIN(Invoke##kind##Unfold);  \
+    DISPATCH_TO(InvokeMethodUnfold);   \
+  OPCODE_END();                        \
   OPCODE_BEGIN(Invoke##kind);          \
     DISPATCH_TO(InvokeMethod);         \
-  OPCODE_END();                        \
-  OPCODE_BEGIN(Invoke##kind##Fast);    \
-    DISPATCH_TO(InvokeMethodFast);     \
-  OPCODE_END();                        \
-  OPCODE_BEGIN(Invoke##kind##Vtable);  \
-    DISPATCH_TO(InvokeMethodVtable);   \
   OPCODE_END();
 
   INVOKE_BUILTIN(Eq);
@@ -545,36 +531,14 @@ Interpreter::InterruptKind Engine::Interpret(
     }
   OPCODE_END();
 
-  OPCODE_BEGIN(InvokeTest);
+  OPCODE_BEGIN(InvokeTestUnfold);
     int selector = ReadInt32(1);
     Object* receiver = Local(0);
     SetTop(ToBool(process()->LookupEntry(receiver, selector)->tag != 0));
-    Advance(kInvokeTestLength);
+    Advance(kInvokeTestUnfoldLength);
   OPCODE_END();
 
-  OPCODE_BEGIN(InvokeTestFast);
-    int index = ReadInt32(1);
-    Array* table = program()->dispatch_table();
-    Object* receiver = Local(0);
-
-    Class* clazz = receiver->IsSmi()
-        ? program()->smi_class()
-        : HeapObject::cast(receiver)->get_class();
-    int class_id = clazz->id();
-
-    for (int offset = 4; true; offset += 4) {
-      Smi* lower = Smi::cast(table->get(index + offset));
-      if (class_id < lower->value()) continue;
-      Smi* upper = Smi::cast(table->get(index + offset + 1));
-      if (class_id >= upper->value()) continue;
-      SetTop(ToBool(upper != Smi::FromWord(Smi::kMaxPortableValue)));
-      break;
-    }
-
-    Advance(kInvokeTestFastLength);
-  OPCODE_END();
-
-  OPCODE_BEGIN(InvokeTestVtable);
+  OPCODE_BEGIN(InvokeTest);
     int selector = ReadInt32(1);
     int offset = Selector::IdField::decode(selector);
     Object* receiver = Local(0);
@@ -584,10 +548,10 @@ Interpreter::InterruptKind Engine::Interpret(
         : HeapObject::cast(receiver)->get_class();
 
     int index = clazz->id() + offset;
-    Array* entry = Array::cast(program()->vtable()->get(index));
+    Array* entry = Array::cast(program()->dispatch_table()->get(index));
     SetTop(ToBool(Smi::cast(entry->get(0))->value() == offset));
 
-    Advance(kInvokeTestVtableLength);
+    Advance(kInvokeTestLength);
   OPCODE_END();
 
   OPCODE_BEGIN(Pop);
@@ -613,6 +577,15 @@ Interpreter::InterruptKind Engine::Interpret(
     PopReturnAddress();
     Drop(arguments);
     Push(result);
+  OPCODE_END();
+
+  OPCODE_BEGIN(ReturnNull);
+    int locals = ReadByte(1);
+    int arguments = ReadByte(2);
+    Drop(locals);
+    PopReturnAddress();
+    Drop(arguments);
+    Push(program()->null_object());
   OPCODE_END();
 
   OPCODE_BEGIN(BranchWide);
@@ -999,6 +972,11 @@ bool Engine::IsAtBreakPoint() {
 
 void Interpreter::Run() {
   ASSERT(interruption_ == kReady);
+
+  // TODO(ager): We might want to have a stack guard check here in
+  // order to make sure that all interruptions active at a certain
+  // stack guard check gets handled at the same bcp.
+
   process_->RestoreErrno();
   process_->TakeLookupCache();
 
@@ -1046,10 +1024,6 @@ Interpreter::InterruptKind Interpreter::HandleBailout() {
 
 Process::StackCheckResult HandleStackOverflow(Process* process, int size) {
   return process->HandleStackOverflow(size);
-}
-
-bool HandleIsInvokeFast(int opcode) {
-  return Bytecode::IsInvokeFast(static_cast<Opcode>(opcode));
 }
 
 int HandleGC(Process* process) {
@@ -1193,22 +1167,20 @@ void HandleEnterNoSuchMethod(Process* process) {
     // selector with the same arity (see call_selector below).
     int arity = Selector::ArityField::decode(selector);
     selector = Selector::EncodeMethod(Names::kCall, arity);
-  } else if (Bytecode::IsInvokeFast(opcode)) {
-    int index = Utils::ReadInt32(return_address - 4);
-    Array* table = program->dispatch_table();
-    selector = Smi::cast(table->get(index + 1))->value();
-  } else if (Bytecode::IsInvokeVtable(opcode)) {
+  } else if (opcode == Opcode::kInvokeNoSuchMethod) {
+    selector = Utils::ReadInt32(return_address - 4);
+  } else if (Bytecode::IsInvoke(opcode)) {
     selector = Utils::ReadInt32(return_address - 4);
     int offset = Selector::IdField::decode(selector);
     for (int i = offset; true; i++) {
-      Array* entry = Array::cast(program->vtable()->get(i));
+      Array* entry = Array::cast(program->dispatch_table()->get(i));
       if (Smi::cast(entry->get(0))->value() == offset) {
         selector = Smi::cast(entry->get(1))->value();
         break;
       }
     }
   } else {
-    ASSERT(Bytecode::IsInvokeNormal(opcode));
+    ASSERT(Bytecode::IsInvokeUnfold(opcode));
     selector = Utils::ReadInt32(return_address - 4);
   }
 

@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:async';
 import 'dart:fletch';
 
 import 'package:expect/expect.dart';
-import 'package:os/os.dart' as os;
 
 main(arguments) {
   var forceGC = arguments.length == 1 ? arguments[0] : null;
@@ -33,11 +33,12 @@ otherProcess(Port replyPort) {
   // Give the main process a bit of time to get rid of all its references to
   // the port that is now in the queue so that the only references left to
   // the port are in the queue.
-  os.sleep(10);
-  var forceGC = channel.receive();
-  for (int i = 0; i < 3; i++) {
-    var port = channel.receive();
-    port.send(i);
-  }
-  if (forceGC != null) forceGC();
+  new Timer(const Duration(milliseconds: 10), () {
+    var forceGC = channel.receive();
+    for (int i = 0; i < 3; i++) {
+      var port = channel.receive();
+      port.send(i);
+    }
+    if (forceGC != null) forceGC();
+  });
 }

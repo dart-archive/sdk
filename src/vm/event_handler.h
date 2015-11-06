@@ -32,20 +32,23 @@ class EventHandler {
 
   Monitor* monitor() const { return monitor_; }
 
-  int Create();
-  void Run();
-
  private:
   Monitor* monitor_;
-  int fd_;
+  void* data_;
+  int id_;
+  bool running_;
   ThreadIdentifier thread_;
 
   HashMap<Port*, int64> timeouts_;
   int64 next_timeout_;
 
-  int read_fd_;
-  int write_fd_;
+  static void* RunEventHandler(void* peer);
 
+  void Create();
+
+  void Run();
+
+  void Interrupt();
   void HandleTimeouts();
 
   void Send(Port* port, uword mask);

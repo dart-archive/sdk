@@ -2,6 +2,8 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+.PHONY: all debug test clean
+
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Linux)
@@ -17,130 +19,59 @@ endif
 ARCH=64
 FLETCH_BUILD=ReleaseX64
 
-CPPFLAGS=-fPIC -m${ARCH} -I../../../../include -I${JAVA_HOME}/include ${PLATFORM_INCLUDES}
+CPPFLAGS=-fPIC -m${ARCH} -I../../../../include -I${JAVA_HOME}/include \
+	${PLATFORM_INCLUDES}
 THIS_DIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 FLETCH_DIR=$(abspath ../../../..)
 FLETCH_BUILD_DIR=$(abspath ${FLETCH_DIR}/out/${FLETCH_BUILD})
+FLETCH=${FLETCH_BUILD_DIR}/fletch
 
-JAR=${JAVA_HOME}/bin/jar
 JAVA=${JAVA_HOME}/bin/java
 JAVAC=${JAVA_HOME}/bin/javac
+JAVA_SOURCES:=$(wildcard *.java)
+JAVA_CLASSES:=$(JAVA_SOURCES:.java=.class)
 
-all: ConformanceTest.class SnapshotRunner.class DebugRunner.class fletch/ConformanceService.jar jni/libfletch.${PLATFORM_LIB_SUFFIX} conformance.snapshot
+TEMP_DIR:=$(shell mktemp -u)
 
-ConformanceTest.class: ConformanceTest.java
-	$(JAVAC) $<
+all: $(JAVA_CLASSES) DebugRunner.class fletch/conformance_service.jar \
+	jni/libfletch.${PLATFORM_LIB_SUFFIX} conformance.snapshot
 
-SnapshotRunner.class: SnapshotRunner.java
-	$(JAVAC) $<
+$(JAVA_CLASSES): $(JAVA_SOURCES) fletch/conformance_service.jar
+	$(JAVAC) -classpath fletch/conformance_service.jar -d . -implicit:none \
+	  -source 8 -target 8 -sourcepath none -Werror $(JAVA_SOURCES)
 
-DebugRunner.class: DebugRunner.java
-	$(JAVAC) $<
+fletch/conformance_service.jar: ../conformance_service.idl
+	$(FLETCH) x-servicec file ../conformance_service.idl out ..
+	mkdir -p $(TEMP_DIR)
+	javac -classpath none -d $(TEMP_DIR) -implicit:none -source 8 -target 8 \
+		-sourcepath none -Werror fletch/*.java
+	jar cf $@ -C $(TEMP_DIR) .
+	rm -rf $(TEMP_DIR)
 
-fletch/ConformanceService.jar: fletch/AgeStatsBuilder.class fletch/AgeStats.class fletch/ConformanceService.class fletch/ConsBuilder.class fletch/Cons.class fletch/FletchApi.class fletch/FletchServiceApi.class fletch/LargeBuilder.class fletch/Large.class fletch/NodeBuilder.class fletch/Node.class fletch/PersonBoxBuilder.class fletch/PersonBox.class fletch/PersonBuilder.class fletch/Person.class fletch/PersonList.class fletch/PersonListBuilder.class fletch/Reader.class fletch/ListReader.class fletch/MessageReader.class fletch/Segment.class fletch/SmallBuilder.class fletch/Small.class fletch/Uint8List.class fletch/Uint8ListBuilder.class fletch/BuilderSegment.class fletch/Builder.class fletch/MessageBuilder.class
-	jar cvf $@ fletch/*.class
-
-fletch/Builder.class: fletch/Builder.java
-	$(JAVAC) $<
-
-fletch/BuilderSegment.class: fletch/BuilderSegment.java
-	$(JAVAC) $<
-
-fletch/MessageBuilder.class: fletch/MessageBuilder.java
-	$(JAVAC) $<
-
-fletch/AgeStatsBuilder.class: fletch/AgeStatsBuilder.java
-	$(JAVAC) $<
-
-fletch/AgeStats.class: fletch/AgeStats.java
-	$(JAVAC) $<
-
-fletch/ConformanceService.class: fletch/ConformanceService.java
-	$(JAVAC) $<
-
-fletch/ConsBuilder.class: fletch/ConsBuilder.java
-	$(JAVAC) $<
-
-fletch/Cons.class: fletch/Cons.java
-	$(JAVAC) $<
-
-fletch/FletchApi.class: fletch/FletchApi.java
-	$(JAVAC) $<
-
-fletch/FletchServiceApi.class: fletch/FletchServiceApi.java
-	$(JAVAC) $<
-
-fletch/LargeBuilder.class: fletch/LargeBuilder.java
-	$(JAVAC) $<
-
-fletch/Large.class: fletch/Large.java
-	$(JAVAC) $<
-
-fletch/NodeBuilder.class: fletch/NodeBuilder.java
-	$(JAVAC) $<
-
-fletch/Node.class: fletch/Node.java
-	$(JAVAC) $<
-
-fletch/PersonBoxBuilder.class: fletch/PersonBoxBuilder.java
-	$(JAVAC) $<
-
-fletch/PersonBox.class: fletch/PersonBox.java
-	$(JAVAC) $<
-
-fletch/PersonBuilder.class: fletch/PersonBuilder.java
-	$(JAVAC) $<
-
-fletch/Person.class: fletch/Person.java
-	$(JAVAC) $<
-
-fletch/PersonList.class: fletch/PersonList.java
-	$(JAVAC) $<
-
-fletch/PersonListBuilder.class: fletch/PersonListBuilder.java
-	$(JAVAC) $<
-
-fletch/Reader.class: fletch/Reader.java
-	$(JAVAC) $<
-
-fletch/ListReader.class: fletch/ListReader.java
-	$(JAVAC) $<
-
-fletch/Segment.class: fletch/Segment.java
-	$(JAVAC) $<
-
-fletch/MessageReader.class: fletch/MessageReader.java
-	$(JAVAC) $<
-
-fletch/SmallBuilder.class: fletch/SmallBuilder.java
-	$(JAVAC) $<
-
-fletch/Small.class: fletch/Small.java
-	$(JAVAC) $<
-
-fletch/Uint8List.class: fletch/Uint8List.java
-	$(JAVAC) $<
-
-fletch/Uint8ListBuilder.class: fletch/Uint8ListBuilder.java
-	$(JAVAC) $<
-
-jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
+jni/libfletch.so: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o \
+	jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
 	g++ ${CPPFLAGS} -shared -o $@ $^
 
-jni/libfletch.jnilib: jni/fletch_api_wrapper.o jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o ${FLETCH_BUILD_DIR}/libfletch.a
+jni/libfletch.jnilib: jni/fletch_api_wrapper.o \
+	jni/fletch_service_api_wrapper.o jni/conformance_service_wrapper.o \
+	${FLETCH_BUILD_DIR}/libfletch.a
 	g++ ${CPPFLAGS} -framework CoreFoundation -shared -o $@ $^
 
 conformance.snapshot: ../conformance_service_impl.dart
-	cd ${FLETCH_DIR}; ${FLETCH_BUILD_DIR}/dart -c --packages=.packages -Dsnapshot=${THIS_DIR}$@ tests/fletchc/run.dart ${THIS_DIR}$<
+	cd ${FLETCH_DIR};
+	${FLETCH_BUILD_DIR}/fletch export ${THIS_DIR}$< to ${THIS_DIR}$@
 
 test: all
 	LD_LIBRARY_PATH=jni \
-	$(JAVA) -Djava.library.path=jni -ea -cp fletch/ConformanceService.jar:. ConformanceTest conformance.snapshot
+	$(JAVA) -Djava.library.path=jni -enableassertions -classpath \
+	  fletch/conformance_service.jar:. ConformanceTest conformance.snapshot
 
 PORT=8123
 debug: all
 	LD_LIBRARY_PATH=jni \
-	$(JAVA) -Djava.library.path=jni -ea -cp fletch/ConformanceService.jar:. ConformanceTest $(PORT)
+	$(JAVA) -Djava.library.path=jni -ea -cp fletch/conformance_service.jar:.
+	  ConformanceTest $(PORT)
 
 clean:
-	rm -f fletch/*.class fletch/ConformanceService.jar jni/*.o jni/*.so jni/*.jnilib *.class conformance.snapshot
+	rm -f *.class fletch/*.class fletch/conformance_service.jar
+	rm -f jni/*.o jni/*.$(PLATFORM_LIB_SUFFIX) conformance.snapshot

@@ -1,3 +1,3 @@
-main	@'foo.void'
-main	@new Symbol('foo.void')
+main    @'foo.void'
+main    @new Symbol('foo.void')
 ### process terminated

@@ -14,6 +14,8 @@
 #include "src/shared/list.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/intrinsics.h"
+
 namespace fletch {
 
 // This is an overview of the object class hierarchy:
@@ -43,6 +45,36 @@ class Program;
 class SnapshotReader;
 class SnapshotWriter;
 class Space;
+
+// Used for representing the size of a [HeapObject] in a portable way.
+//
+// It counts the number of pointer-sized values, double/float values and fixed
+// (byte) values.
+//
+// Converting a [PortableSize] to the actual size can be done via the
+// [ComputeSizeInBytes] by passing in the size of pointers/doubles.
+class PortableSize {
+ public:
+  PortableSize(int pointers, int fixed_size, int doubles)
+      : num_pointers_(pointers),
+        fixed_size_(fixed_size),
+        num_doubles_(doubles) { }
+
+  int ComputeSizeInBytes(int pointer_size, int double_size) const {
+    ASSERT(pointer_size == 4 || pointer_size == 8);
+    ASSERT(double_size == 8 || double_size == 4 || num_doubles_ == 0);
+
+    int byte_size =
+        num_pointers_ * pointer_size + num_doubles_ * double_size + fixed_size_;
+
+    return Utils::RoundUp(byte_size, pointer_size);
+  }
+
+ private:
+  int num_pointers_;
+  int fixed_size_;
+  int num_doubles_;
+};
 
 // Abstract super class for all objects in Dart.
 class Object {
@@ -330,13 +362,6 @@ class HeapObject: public Object {
  protected:
   inline void Initialize(int size, Object* init_value);
 
-  int ComputeAlternativeSize(int fixed_size, int variable_size) {
-    ASSERT(Utils::IsAligned(fixed_size, kPointerSize));
-    int pointers_size = (fixed_size / kPointerSize) * kAlternativePointerSize;
-    return Utils::RoundUp(pointers_size + variable_size,
-                          kAlternativePointerSize);
-  }
-
   // Raw field accessors.
   inline void at_put(int offset, Object* value);
   inline Object* at(int offset);
@@ -377,8 +402,12 @@ class LargeInteger : public HeapObject {
 
   int LargeIntegerSize() { return AllocationSize(); }
 
-  int AlternativeSize() {
-    return ComputeAlternativeSize(HeapObject::kSize, sizeof(int64));
+  // As opposed to the other [CalculatePortableSize] functions, this is static
+  // since the [SnapshotWriter] may need to be able to calculate the
+  // [PortableSize] of a [LargeInteger] when serializing a non-portable [Smi]
+  // (i.e. a 64-bit smi which is not a 32-bit smi).
+  static PortableSize CalculatePortableSize() {
+    return PortableSize(HeapObject::kSize / kPointerSize, sizeof(int64), 0);
   }
 
   static const int kValueOffset = HeapObject::kSize;
@@ -413,8 +442,8 @@ class Double : public HeapObject {
 
   int DoubleSize() { return AllocationSize(); }
 
-  int AlternativeSize() {
-    return ComputeAlternativeSize(HeapObject::kSize, sizeof(fletch_double));
+  PortableSize CalculatePortableSize() {
+    return PortableSize(HeapObject::kSize / kPointerSize, 0, 1);
   }
 
   static const int kValueOffset = HeapObject::kSize;
@@ -467,8 +496,8 @@ class Initializer : public HeapObject {
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
-  int AlternativeSize() {
-    return ComputeAlternativeSize(kSize, 0);
+  PortableSize CalculatePortableSize() {
+    return PortableSize(kSize / kPointerSize, 0, 0);
   }
 
   static const int kFunctionOffset = HeapObject::kSize;
@@ -541,11 +570,11 @@ class Array: public BaseArray {
   }
 
   static int AllocationSize(int length) {
-    return kSize + (length * kPointerSize);
+    return Utils::RoundUp(kSize + (length * kPointerSize), kPointerSize);
   }
 
-  int AlternativeSize() {
-    return ComputeAlternativeSize(kSize, length() * kAlternativePointerSize);
+  PortableSize CalculatePortableSize() {
+    return PortableSize(kSize / kPointerSize + length(), 0, 0);
   }
 
   // Casting.
@@ -581,11 +610,11 @@ class ByteArray : public BaseArray {
   }
 
   static int AllocationSize(int length) {
-    return kSize + Utils::RoundUp(length, kPointerSize);
+    return Utils::RoundUp(kSize + length, kPointerSize);
   }
 
-  int AlternativeSize() {
-    return ComputeAlternativeSize(kSize, length());
+  PortableSize CalculatePortableSize() {
+    return PortableSize(kSize / kPointerSize, length(), 0);
   }
 
   // Snapshotting.
@@ -624,14 +653,15 @@ class Instance: public HeapObject {
   // Sizing.
   inline static int AllocationSize(int number_of_fields) {
     ASSERT(number_of_fields >= 0);
-    return kSize + (number_of_fields * kPointerSize);
+    return Utils::RoundUp(
+        kSize + (number_of_fields * kPointerSize), kPointerSize);
   }
 
   inline static int NumberOfFieldsFromAllocationSize(int size) {
     return (size - kSize) / kPointerSize;
   }
 
-  inline int AlternativeSize(Class* klass);
+  inline PortableSize CalculatePortableSize(Class* klass);
 
   // Schema change support.
   Instance* CloneTransformed(Heap* heap);
@@ -698,8 +728,8 @@ class OneByteString: public BaseArray {
     return Utils::RoundUp(kSize + bytes, kPointerSize);
   }
 
-  int AlternativeSize() {
-    return ComputeAlternativeSize(kSize, length() * sizeof(uint8));
+  PortableSize CalculatePortableSize() {
+    return PortableSize(kSize / kPointerSize, length(), 0);
   }
 
   void FillFrom(OneByteString* x, int offset);
@@ -780,8 +810,8 @@ class TwoByteString: public BaseArray {
     return Utils::RoundUp(kSize + bytes, kPointerSize);
   }
 
-  int AlternativeSize() {
-    return ComputeAlternativeSize(kSize, length() * sizeof(uint16_t));
+  PortableSize CalculatePortableSize() {
+    return PortableSize(kSize / kPointerSize, length() * sizeof(uint16_t), 0);
   }
 
   void FillFrom(OneByteString* x, int offset);
@@ -859,7 +889,7 @@ class Function: public HeapObject {
   inline Object* literal_at(int index);
   inline void set_literal_at(int index, Object* value);
 
-  void* ComputeIntrinsic();
+  void* ComputeIntrinsic(IntrinsicsTable *table);
 
   // Sizing.
   int FunctionSize() {
@@ -868,11 +898,14 @@ class Function: public HeapObject {
     return AllocationSize(variable_size);
   }
 
-  int AlternativeSize() {
+  PortableSize CalculatePortableSize() {
     // Only used when writing snapshots. We only write snapshots
     // in folded form where there are no literals.
     ASSERT(literals_size() == 0);
-    return ComputeAlternativeSize(kSize, bytecode_size());
+    return PortableSize(
+        kSize / kPointerSize + literals_size(),
+        bytecode_size(),
+        0);
   }
 
   Function* UnfoldInToSpace(Space* to, int literals_size);
@@ -957,8 +990,8 @@ class Class: public HeapObject {
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
-  int AlternativeSize() {
-    return ComputeAlternativeSize(kSize, 0);
+  PortableSize CalculatePortableSize() {
+    return PortableSize(kSize / kPointerSize, 0, 0);
   }
 
   // Is this class a subclass of the given class?
@@ -1024,7 +1057,7 @@ class Stack: public BaseArray {
     return AllocationSize(length());
   }
   static int AllocationSize(int length) {
-    return kSize + (length * kPointerSize);
+    return Utils::RoundUp(kSize + (length * kPointerSize), kPointerSize);
   }
 
   // Casting.
@@ -1800,9 +1833,9 @@ void Instance::SetInstanceField(int index, Object* object) {
   at_put(Instance::kSize + (index * kPointerSize), object);
 }
 
-int Instance::AlternativeSize(Class* klass) {
+PortableSize Instance::CalculatePortableSize(Class* klass) {
   int fields = klass->NumberOfInstanceFields();
-  return ComputeAlternativeSize(kSize, fields * kAlternativePointerSize);
+  return PortableSize(kSize / kPointerSize + fields, 0, 0);
 }
 
 // Inlined Function functions.

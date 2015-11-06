@@ -72,29 +72,31 @@ public final class CenterPresenter implements AnyNodePresenter, View.OnClickList
     if (patch.is(SlidingWindowPatch.class)) {
       // TODO(zarah): Update SlidingWindow in graph to contain information on selected items.
       SlidingWindowPatch slidingWindowPatch = patch.as(SlidingWindowPatch.class);
-      for (ListPatch.RegionPatch region : slidingWindowPatch.getWindow().getRegions()) {
-        if (region.isUpdate()) {
-          for (NodePatch nodePatch : ((ListPatch.UpdatePatch) region).getUpdates()) {
-            CommitPatch commitPatch = ((AnyNodePatch) nodePatch).as(CommitPatch.class);
-            if (commitPatch.getSelected().hasChanged()) {
-              if (commitPatch.getSelected().getCurrent() == true) {
-                select(commitListPresenter.windowIndexToViewPosition(region.getIndex()));
-                final FragmentManager fm = activity.getFragmentManager();
-                final int stackSize = fm.getBackStackEntryCount();
-                replaceFragment(createDetailsFragment(), true);
-                // TODO(zerny): Drive the deselect via the presentation graph.
-                fm.addOnBackStackChangedListener(new FragmentManager.OnBackStackChangedListener() {
-                  @Override
-                  public void onBackStackChanged() {
-                    if (fm.getBackStackEntryCount() == stackSize) {
-                      if (selectedIndex >= 0) commitListPresenter.toggle(selectedIndex);
-                      fm.removeOnBackStackChangedListener(this);
+      if (slidingWindowPatch.getWindow().hasChanged()) {
+        for (ListPatch.RegionPatch region : slidingWindowPatch.getWindow().getRegions()) {
+          if (region.isUpdate()) {
+            for (NodePatch nodePatch : ((ListPatch.UpdatePatch) region).getUpdates()) {
+              CommitPatch commitPatch = ((AnyNodePatch) nodePatch).as(CommitPatch.class);
+              if (commitPatch.getSelected().hasChanged()) {
+                if (commitPatch.getSelected().getCurrent() == true) {
+                  select(commitListPresenter.windowIndexToViewPosition(region.getIndex()));
+                  final FragmentManager fm = activity.getFragmentManager();
+                  final int stackSize = fm.getBackStackEntryCount();
+                  replaceFragment(createDetailsFragment(), true);
+                  // TODO(zerny): Drive the deselect via the presentation graph.
+                  fm.addOnBackStackChangedListener(new FragmentManager.OnBackStackChangedListener() {
+                    @Override
+                    public void onBackStackChanged() {
+                      if (fm.getBackStackEntryCount() == stackSize) {
+                        if (selectedIndex >= 0) commitListPresenter.toggle(selectedIndex);
+                        fm.removeOnBackStackChangedListener(this);
+                      }
                     }
-                  }
-                });
-              } else {
-                replaceFragment(recyclerViewFragment, false);
-                deselect(selectedIndex);
+                  });
+                } else {
+                  replaceFragment(recyclerViewFragment, false);
+                  deselect(selectedIndex);
+                }
               }
             }
           }

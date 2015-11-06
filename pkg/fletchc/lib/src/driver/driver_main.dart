@@ -20,8 +20,7 @@ import 'dart:async' show
     Stream,
     StreamController,
     StreamSubscription,
-    StreamTransformer,
-    Zone;
+    StreamTransformer;
 
 import 'dart:typed_data' show
     ByteData,
@@ -47,8 +46,7 @@ import 'exit_codes.dart' show
 
 import 'driver_commands.dart' show
     DriverCommand,
-    handleSocketErrors,
-    stringifyError;
+    handleSocketErrors;
 
 import 'driver_isolate.dart' show
     isolateMain;
@@ -87,6 +85,12 @@ import '../please_report_crash.dart' show
 
 import '../verbs/options.dart' show
     Options;
+
+import '../console_print.dart' show
+    printToConsole;
+
+import '../please_report_crash.dart' show
+    stringifyError;
 
 Function gracefulShutdown;
 
@@ -157,6 +161,10 @@ class ByteCommandSender extends CommandSender {
 }
 
 Future main(List<String> arguments) async {
+  // When running this program, -Dfletch.version must be provided on the Dart
+  // VM command line.
+  assert(const String.fromEnvironment('fletch.version') != null);
+
   mainArguments.addAll(arguments);
   configFileUri = Uri.base.resolve(arguments.first);
   File configFile = new File.fromUri(configFileUri);
@@ -228,15 +236,11 @@ Future main(List<String> arguments) async {
   // connect, and that the socket is ready.
   print(socketFile.path);
 
-  var connectionIterator = new StreamIterator(server);
-
   IsolatePool pool = new IsolatePool(isolateMain);
   try {
-    while (await connectionIterator.moveNext()) {
-      await handleClient(
-          pool,
-          handleSocketErrors(connectionIterator.current, "controlSocket"));
-    }
+    await server.listen((Socket controlSocket) {
+      handleClient(pool, handleSocketErrors(controlSocket, "controlSocket"));
+    }).asFuture();
   } finally {
     gracefulShutdown();
   }
@@ -292,10 +296,7 @@ Future<Null> handleVerb(
         }
         return COMPILER_EXITCODE_CRASH;
       });
-
-  if (exitCode != null) {
-    client.exit(exitCode);
-  }
+  client.exit(exitCode);
 }
 
 class DriverVerbContext extends VerbContext {
@@ -312,7 +313,7 @@ class DriverVerbContext extends VerbContext {
     return new DriverVerbContext(client, pool, session);
   }
 
-  Future<Null> performTaskInWorker(SharedTask task) {
+  Future<int> performTaskInWorker(SharedTask task) async {
     if (session.worker.isolate.wasKilled) {
       throwInternalError(
           "session ${session.name}: worker isolate terminated unexpectedly");
@@ -422,7 +423,7 @@ class ClientController {
     }
   }
 
-  void endSession() {
+  void endClientSession() {
     socket.flush().then((_) {
       socket.close();
     });
@@ -437,8 +438,18 @@ class ClientController {
   }
 
   void exit(int exitCode) {
+    if (exitCode == null) {
+      exitCode = COMPILER_EXITCODE_CRASH;
+      try {
+        throwInternalError("Internal error: exitCode is null");
+      } on InputError catch (error, stackTrace) {
+        // We can't afford to throw an error here as it will take down the
+        // entire process.
+        exitCode = reportErrorToClient(error, stackTrace);
+      }
+    }
     commandSender.sendExitCode(exitCode);
-    endSession();
+    endClientSession();
   }
 
   AnalyzedSentence parseArguments(List<String> arguments) {
@@ -506,7 +517,7 @@ class IsolateController {
     if (!await workerCommands.moveNext()) {
       // The worker must have been killed, or died in some other way.
       // TODO(ahe): Add this assertion: assert(isolate.wasKilled);
-      endSession();
+      endWorkerSession();
       return;
     }
     Command command = workerCommands.current;
@@ -519,7 +530,7 @@ class IsolateController {
   /// vice versa.  The returned future normally completes when the worker
   /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
   /// DriverCommand.Signal arriving through client.commands.
-  Future<Null> attachClient(
+  Future<int> attachClient(
       ClientController client,
       UserSession userSession) async {
     eventLoopStarted = false;
@@ -558,6 +569,7 @@ class IsolateController {
     // TODO(ahe): Add onDone event handler to detach the client.
     client.commands.listen(handleCommand);
 
+    int exitCode = COMPILER_EXITCODE_CRASH;
     while (await workerCommands.moveNext()) {
       Command command = workerCommands.current;
       switch (command.code) {
@@ -569,17 +581,22 @@ class IsolateController {
           eventLoopStarted = true;
           break;
 
+        case DriverCommand.ExitCode:
+          exitCode = command.data;
+          break;
+
         default:
           client.sendCommand(command);
           break;
       }
     }
     errorSubscription.pause();
+    return exitCode;
   }
 
-  void endSession() {
+  void endWorkerSession() {
     workerReceivePort.close();
-    isolate.endSession();
+    isolate.endIsolateSession();
   }
 
   Future<Null> detachClient() async {
@@ -598,7 +615,7 @@ class IsolateController {
     await beginSession();
   }
 
-  Future<Null> performTask(
+  Future<int> performTask(
       SharedTask task,
       ClientController client,
       {
@@ -607,32 +624,32 @@ class IsolateController {
        bool endSession: false}) async {
     ClientLogger log = client.log;
 
+    client.done.catchError((error, StackTrace stackTrace) {
+      log.error(error, stackTrace);
+    }).then((_) {
+      log.done();
+    });
+
     client.enqueCommandToWorker(new Command(DriverCommand.PerformTask, task));
 
     // Forward commands between the C++ client [client], and the worker isolate
     // `this`.  Also, Intercept the signal command and potentially kill the
     // isolate (the isolate needs to tell if it is interuptible or needs to be
     // killed, an example of the latter is, if compiler is running).
-    await attachClient(client, userSession);
+    int exitCode = await attachClient(client, userSession);
     // The verb (which was performed in the worker) is done.
-    log.note("After attachClient.");
+    log.note("After attachClient (exitCode = $exitCode)");
 
     if (endSession) {
       // Return the isolate to the pool *before* shutting down the client. This
       // ensures that the next client will be able to reuse the isolate instead
       // of spawning a new.
-      this.endSession();
+      this.endWorkerSession();
     } else {
       await detachClient();
     }
-    client.endSession();
 
-    try {
-      await client.done;
-    } catch (error, stackTrace) {
-      log.error(error, stackTrace);
-    }
-    log.done();
+    return exitCode;
   }
 }
 
@@ -655,7 +672,7 @@ class ManagedIsolate {
     return receivePort;
   }
 
-  void endSession() {
+  void endIsolateSession() {
     if (!wasKilled) {
       pool.idleIsolates.addLast(this);
     }
@@ -765,9 +782,7 @@ class ClientLogger {
   void note(object) {
     String note = "$object";
     notes.add(note);
-    // Print directly to stdout (via Zone.ROOT). We assume that stdout of this
-    // process is piped to a log file.
-    Zone.ROOT.print("$id: $note");
+    printToConsole("$id: $note");
   }
 
   void gotArguments(List<String> arguments) {

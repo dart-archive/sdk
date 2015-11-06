@@ -24,15 +24,17 @@ import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
 
-class LazyFieldInitializerCodegen extends CodegenVisitor {
+class LazyFieldInitializerCodegen
+    extends CodegenVisitor with FletchRegistryMixin {
+  final FletchRegistry registry;
 
   LazyFieldInitializerCodegen(FletchFunctionBuilder functionBuilder,
                               FletchContext context,
                               TreeElements elements,
-                              FletchRegistry registry,
+                              this.registry,
                               ClosureEnvironment closureEnvironment,
                               FieldElement field)
-      : super(functionBuilder, context, elements, registry,
+      : super(functionBuilder, context, elements,
               closureEnvironment, field);
 
   FieldElement get field => element;

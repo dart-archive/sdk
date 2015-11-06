@@ -1,0 +1,14 @@
+.fletch-settings
+.packages
+benchmarks/
+lib/
+pkg/
+tests/fletchc/run.dart
+third_party/charcode
+third_party/crypto
+third_party/dart/pkg
+third_party/dart/sdk
+third_party/package_config
+third_party/path
+third_party/persistent
+tools/servicec/

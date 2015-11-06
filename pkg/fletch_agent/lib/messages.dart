@@ -53,18 +53,20 @@
 /// Request Payload:
 ///   None.
 /// Reply Payload on success:
-///   -----------------------------------------
-///   | VM ID (16 bits)   | VM Port (16 bits) |
-///   -----------------------------------------
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
+///   | VM Port (32 bits) |
+///   ---------------------
 /// Reply Payload on failure:
 ///   None.
 ///
 /// STOP_VM:
 ///   Stop the VM specified by the given vm id.
 /// Request Payload:
-///   -----------------------------------------
-///   | VM ID (16 bits)   | Unused (16 bits)  |
-///   -----------------------------------------
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
 /// Reply Payload on success:
 ///   None.
 /// Reply Payload on failure:
@@ -75,13 +77,13 @@
 /// Request Payload:
 ///   None.
 /// Reply Payload on success:
-///   ---------------------------------------
-///   | VM ID (16 bits)   | VM ID (16 bits) |
-///   ---------------------------------------
-///   | VM ID (16 bits)   | VM ID (16 bits) |
-///   ---------------------------------------
-///   | VM ID (16 bits)   | VM ID (16 bits) |
-///   ---------------------------------------
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
+///   | VM ID (32 bits)   |
+///   ---------------------
 ///   ...
 ///
 /// Reply Payload on failure:
@@ -99,6 +101,7 @@
 
 library fletch_agent.messages;
 
+import 'dart:convert' show ASCII;
 import 'dart:typed_data';
 
 /// Current Fletch Agent version
@@ -107,11 +110,14 @@ const int AGENT_VERSION = 1;
 /// Default agent port
 const int AGENT_DEFAULT_PORT = 12121;
 
+/// Temporary path for the agent package used during upgrade.
+const String PACKAGE_FILE_NAME = '/tmp/fletch-agent.deb';
+
 class RequestHeader {
   static const int START_VM = 0;
   static const int STOP_VM = 1;
   static const int LIST_VMS = 2;
-  static const int UPGRADE_VM = 3;
+  static const int UPGRADE_AGENT = 3;
   static const int FLETCH_VERSION = 4;
   static const int SIGNAL_VM = 5;
 
@@ -196,12 +202,11 @@ class StartVmRequest extends RequestHeader {
 
 class StopVmRequest extends RequestHeader {
   final int vmPid;
-  final int unused;
 
-  StopVmRequest(this.vmPid, {this.unused: 0})
+  StopVmRequest(this.vmPid)
       : super(RequestHeader.STOP_VM, payloadLength: 4);
 
-  StopVmRequest.withHeader(RequestHeader header, this.vmPid, {this.unused: 0})
+  StopVmRequest.withHeader(RequestHeader header, this.vmPid)
       : super(
             RequestHeader.STOP_VM,
             version: header.version,
@@ -218,16 +223,14 @@ class StopVmRequest extends RequestHeader {
       throw new MessageDecodeException(
           "Invalid StopVmRequest: ${buffer.asUint8List()}");
     }
-    var vmPid = readUint16(buffer, RequestHeader.HEADER_SIZE);
-    var unused = readUint16(buffer, RequestHeader.HEADER_SIZE + 2);
-    return new StopVmRequest.withHeader(header, vmPid, unused: unused);
+    var vmPid = readUint32(buffer, RequestHeader.HEADER_SIZE);
+    return new StopVmRequest.withHeader(header, vmPid);
   }
 
   ByteBuffer toBuffer() {
     var buffer = new Uint8List(RequestHeader.HEADER_SIZE + 4).buffer;
     _writeHeader(buffer);
-    writeUint16(buffer, RequestHeader.HEADER_SIZE, vmPid);
-    writeUint16(buffer, RequestHeader.HEADER_SIZE + 2, unused);
+    writeUint32(buffer, RequestHeader.HEADER_SIZE, vmPid);
     return buffer;
   }
 }
@@ -254,25 +257,25 @@ class ListVmsRequest extends RequestHeader {
   // A ListVmsRequest has no payload so just use parent's toBuffer method.
 }
 
-class UpgradeVmRequest extends RequestHeader {
-  final List<int> vmBinary;
+class UpgradeAgentRequest extends RequestHeader {
+  final List<int> binary;
 
-  UpgradeVmRequest(List<int> vmBinary)
-      : super(RequestHeader.UPGRADE_VM, payloadLength: vmBinary.length),
-        vmBinary = vmBinary;
+  UpgradeAgentRequest(List<int> binary)
+      : super(RequestHeader.UPGRADE_AGENT, payloadLength: binary.length),
+        binary = binary;
 
-  UpgradeVmRequest.withHeader(RequestHeader header, List<int> vmBinary)
+  UpgradeAgentRequest.withHeader(RequestHeader header, List<int> binary)
       : super(
-            RequestHeader.UPGRADE_VM,
+            RequestHeader.UPGRADE_AGENT,
             version: header.version,
             id: header.id,
             reserved: header.reserved,
-            payloadLength: vmBinary.length),
-        vmBinary = vmBinary;
+            payloadLength: binary.length),
+        binary = binary;
 
-  factory UpgradeVmRequest.fromBuffer(ByteBuffer buffer) {
+  factory UpgradeAgentRequest.fromBuffer(ByteBuffer buffer) {
     var header = new RequestHeader.fromBuffer(buffer);
-    if (header.command != RequestHeader.UPGRADE_VM) {
+    if (header.command != RequestHeader.UPGRADE_AGENT) {
       throw new MessageDecodeException(
           'Invalid UpgradeVmRequest: ${buffer.asUint8List()}');
     }
@@ -280,17 +283,17 @@ class UpgradeVmRequest extends RequestHeader {
     // The below has issues since the list view is offset and hence using
     // the underlying buffer requires the user to know the buffer is not the
     // same length as the list.
-    var vmBinary = buffer.asUint8List(RequestHeader.HEADER_SIZE);
-    return new UpgradeVmRequest.withHeader(header, vmBinary);
+    var binary = buffer.asUint8List(RequestHeader.HEADER_SIZE);
+    return new UpgradeAgentRequest.withHeader(header, binary);
   }
 
   ByteBuffer toBuffer() {
     var bytes =
-        new Uint8List(RequestHeader.HEADER_SIZE + vmBinary.length);
+        new Uint8List(RequestHeader.HEADER_SIZE + binary.length);
     _writeHeader(bytes.buffer);
     // TODO(wibling): This does a copy of the vm binary. Try to avoid that.
-    for (int i = 0; i < vmBinary.length; ++i) {
-      bytes[RequestHeader.HEADER_SIZE + i] = vmBinary[i];
+    for (int i = 0; i < binary.length; ++i) {
+      bytes[RequestHeader.HEADER_SIZE + i] = binary[i];
     }
     return bytes.buffer;
   }
@@ -325,7 +328,7 @@ class SignalVmRequest extends RequestHeader {
   final int signal;
 
   SignalVmRequest(this.vmPid, this.signal)
-      : super(RequestHeader.SIGNAL_VM, payloadLength: 4);
+      : super(RequestHeader.SIGNAL_VM, payloadLength: 8);
 
   SignalVmRequest.withHeader(RequestHeader header, this.vmPid, this.signal)
       : super(
@@ -335,26 +338,26 @@ class SignalVmRequest extends RequestHeader {
             reserved: header.reserved);
 
   factory SignalVmRequest.fromBuffer(ByteBuffer buffer) {
-    if (buffer.lengthInBytes < RequestHeader.HEADER_SIZE + 4) {
+    if (buffer.lengthInBytes < RequestHeader.HEADER_SIZE + 8) {
       throw new MessageDecodeException(
           'Insufficient data for a SignalVmRequest: ${buffer.asUint8List()}');
     }
     RequestHeader header = new RequestHeader.fromBuffer(buffer);
     if (header.command != RequestHeader.SIGNAL_VM ||
-        header.payloadLength != 4) {
+        header.payloadLength != 8) {
       throw new MessageDecodeException(
           "Invalid SignalVmRequest: ${buffer.asUint8List()}");
     }
-    int vmPid = readUint16(buffer, RequestHeader.HEADER_SIZE);
-    int signal = readUint16(buffer, RequestHeader.HEADER_SIZE + 2);
+    int vmPid = readUint32(buffer, RequestHeader.HEADER_SIZE);
+    int signal = readUint32(buffer, RequestHeader.HEADER_SIZE + 4);
     return new SignalVmRequest.withHeader(header, vmPid, signal);
   }
 
   ByteBuffer toBuffer() {
-    var buffer = new Uint8List(RequestHeader.HEADER_SIZE + 4).buffer;
+    var buffer = new Uint8List(RequestHeader.HEADER_SIZE + 8).buffer;
     _writeHeader(buffer);
-    writeUint16(buffer, RequestHeader.HEADER_SIZE, vmPid);
-    writeUint16(buffer, RequestHeader.HEADER_SIZE + 2, signal);
+    writeUint32(buffer, RequestHeader.HEADER_SIZE, vmPid);
+    writeUint32(buffer, RequestHeader.HEADER_SIZE + 4, signal);
     return buffer;
   }
 }
@@ -367,6 +370,7 @@ class ReplyHeader {
   static const int UNSUPPORTED_VERSION = 3;
   static const int START_VM_FAILED = 4;
   static const int UNKNOWN_VM_ID = 5;
+  static const int UPGRADE_FAILED = 6;
 
   // Wire size (bytes) of the ReplyHeader.
   static const int HEADER_SIZE = 8;
@@ -409,21 +413,21 @@ class StartVmReply extends ReplyHeader {
       : super(
             id,
             result,
-            payloadLength: result == ReplyHeader.SUCCESS ? 4 : 0);
+            payloadLength: result == ReplyHeader.SUCCESS ? 8 : 0);
 
   factory StartVmReply.fromBuffer(ByteBuffer buffer) {
     var header = new ReplyHeader.fromBuffer(buffer);
     int vmId;
     int vmPort;
     if (header.result == ReplyHeader.SUCCESS) {
-      // There must be 4 bytes of payload.
-      if (buffer.lengthInBytes < ReplyHeader.HEADER_SIZE + 4 ||
-          header.payloadLength != 4) {
+      // There must be 8 bytes of payload.
+      if (buffer.lengthInBytes < ReplyHeader.HEADER_SIZE + 8 ||
+          header.payloadLength != 8) {
         throw new MessageDecodeException(
             "Invalid StartVmReply: ${buffer.asUint8List()}");
       }
-      vmId = readUint16(buffer, ReplyHeader.HEADER_SIZE);
-      vmPort = readUint16(buffer, ReplyHeader.HEADER_SIZE + 2);
+      vmId = readUint32(buffer, ReplyHeader.HEADER_SIZE);
+      vmPort = readUint32(buffer, ReplyHeader.HEADER_SIZE + 4);
     }
     return new StartVmReply(
         header.id, header.result, vmId: vmId, vmPort: vmPort);
@@ -432,10 +436,10 @@ class StartVmReply extends ReplyHeader {
   ByteBuffer toBuffer() {
     ByteBuffer buffer;
     if (result == ReplyHeader.SUCCESS) {
-      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + 4).buffer;
+      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + 8).buffer;
       _writeHeader(buffer);
-      writeUint16(buffer, ReplyHeader.HEADER_SIZE, vmId);
-      writeUint16(buffer, ReplyHeader.HEADER_SIZE + 2, vmPort);
+      writeUint32(buffer, ReplyHeader.HEADER_SIZE, vmId);
+      writeUint32(buffer, ReplyHeader.HEADER_SIZE + 4, vmPort);
     } else {
       buffer = new Uint8List(ReplyHeader.HEADER_SIZE).buffer;
       _writeHeader(buffer);
@@ -463,15 +467,15 @@ class ListVmsReply extends ReplyHeader {
   final List<int> vmIds;
 
   ListVmsReply(int id, int result, {List<int> vmIds})
-      : super(id, result, payloadLength: vmIds != null ? vmIds.length * 2 : 0),
+      : super(id, result, payloadLength: vmIds != null ? vmIds.length * 4 : 0),
         vmIds = vmIds;
 
   factory ListVmsReply.fromBuffer(ByteBuffer buffer) {
     var header = new ReplyHeader.fromBuffer(buffer);
     List<int> vmIds = [];
     if (header.result == ReplyHeader.SUCCESS) {
-      for (int i = 0; i < header.payloadLength ~/ 2; ++i) {
-        vmIds.add(readUint16(buffer, ReplyHeader.HEADER_SIZE + (i * 2)));
+      for (int i = 0; i < header.payloadLength ~/ 4; ++i) {
+        vmIds.add(readUint32(buffer, ReplyHeader.HEADER_SIZE + (i * 4)));
       }
     }
     return new ListVmsReply(header.id, header.result, vmIds: vmIds);
@@ -481,10 +485,10 @@ class ListVmsReply extends ReplyHeader {
     ByteBuffer buffer;
     if (result == ReplyHeader.SUCCESS) {
       int numVms = vmIds != null ? vmIds.length : 0;
-      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + (numVms * 2)).buffer;
+      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + (numVms * 4)).buffer;
       _writeHeader(buffer);
       for (int i = 0; i < numVms; ++i) {
-        writeUint16(buffer, ReplyHeader.HEADER_SIZE + (i * 2), vmIds[i]);
+        writeUint32(buffer, ReplyHeader.HEADER_SIZE + (i * 4), vmIds[i]);
       }
     } else {
       buffer = new Uint8List(ReplyHeader.HEADER_SIZE).buffer;
@@ -494,50 +498,63 @@ class ListVmsReply extends ReplyHeader {
   }
 }
 
-class UpgradeVmReply extends ReplyHeader {
+class UpgradeAgentReply extends ReplyHeader {
 
-  UpgradeVmReply(int id, int result) : super(id, result);
+  UpgradeAgentReply(int id, int result) : super(id, result);
 
-  factory UpgradeVmReply.fromBuffer(ByteBuffer buffer) {
+  factory UpgradeAgentReply.fromBuffer(ByteBuffer buffer) {
     ReplyHeader header = new ReplyHeader.fromBuffer(buffer);
     if (header.payloadLength != 0) {
       throw new MessageDecodeException(
-          "Invalid payload length in UpgradeVmReply: ${buffer.asUint8List()}");
+          "Invalid payload length in UpgradeAgentReply: ${buffer.asUint8List()}");
     }
-    return new UpgradeVmReply(header.id, header.result);
+    return new UpgradeAgentReply(header.id, header.result);
   }
 
-  // The UPGRADE_VM reply has no payload, so leverage parent's toBuffer method.
+  // The UPGRADE_AGENT reply has no payload, so leverage parent's toBuffer method.
 }
 
 class FletchVersionReply extends ReplyHeader {
-  final int fletchVersion;
+  final String fletchVersion;
 
-  FletchVersionReply(int id, int result, {this.fletchVersion})
-      : super(id, result, payloadLength: result == ReplyHeader.SUCCESS ? 4 : 0);
+  FletchVersionReply(int id, int result, {String version})
+      : super(id, result, payloadLength: version != null ? version.length : 0),
+        fletchVersion = version {
+    if (result == ReplyHeader.SUCCESS && version == null) {
+      throw new MessageEncodeException(
+          "Missing version for FletchVersionReply.");
+    }
+  }
 
   factory FletchVersionReply.fromBuffer(ByteBuffer buffer) {
     var header = new ReplyHeader.fromBuffer(buffer);
-    int fletchVersion;
+    String version;
     if (header.result == ReplyHeader.SUCCESS) {
-      // There must be 4 bytes of payload.
-      if (buffer.lengthInBytes < ReplyHeader.HEADER_SIZE + 4 ||
-          header.payloadLength != 4) {
+      int payloadLength = header.payloadLength;
+      if (payloadLength == 0 ||
+          buffer.lengthInBytes < ReplyHeader.HEADER_SIZE + payloadLength) {
         throw new MessageDecodeException(
             "Invalid FletchVersionReply: ${buffer.asUint8List()}");
       }
-      fletchVersion = readUint32(buffer, ReplyHeader.HEADER_SIZE);
+      version = ASCII.decode(buffer.asUint8List(ReplyHeader.HEADER_SIZE));
     }
-    return new FletchVersionReply(
-        header.id, header.result, fletchVersion: fletchVersion);
+    return new FletchVersionReply(header.id, header.result, version: version);
   }
 
   ByteBuffer toBuffer() {
     ByteBuffer buffer;
     if (result == ReplyHeader.SUCCESS) {
-      buffer = new Uint8List(ReplyHeader.HEADER_SIZE + 4).buffer;
-      _writeHeader(buffer);
-      writeUint32(buffer, ReplyHeader.HEADER_SIZE, fletchVersion);
+      Uint8List message = new Uint8List(
+          ReplyHeader.HEADER_SIZE + fletchVersion.length);
+      _writeHeader(message.buffer);
+      List<int> encodedVersion = ASCII.encode(fletchVersion);
+      assert(encodedVersion != null);
+      assert(fletchVersion.length == encodedVersion.length);
+      message.setRange(
+          ReplyHeader.HEADER_SIZE,
+          ReplyHeader.HEADER_SIZE + encodedVersion.length,
+          encodedVersion);
+      buffer = message.buffer;
     } else {
       buffer = new Uint8List(ReplyHeader.HEADER_SIZE).buffer;
       _writeHeader(buffer);
@@ -596,4 +613,10 @@ class MessageDecodeException implements Exception {
   final String message;
   MessageDecodeException(this.message);
   String toString() => 'MessageDecodeException($message)';
+}
+
+class MessageEncodeException implements Exception {
+  final String message;
+  MessageEncodeException(this.message);
+  String toString() => 'MessageEncodeException($message)';
 }

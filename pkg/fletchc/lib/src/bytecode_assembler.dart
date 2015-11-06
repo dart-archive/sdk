@@ -7,6 +7,7 @@ library fletchc.bytecode_assembler;
 import '../bytecodes.dart';
 
 const int IMPLICIT_STACK_OVERFLOW_LIMIT = 32;
+const int RETURN_NARROW_MAX_STACK_SIZE = 255;
 
 class BytecodeLabel {
   int position = -1;
@@ -82,6 +83,11 @@ class BytecodeAssembler {
   }
 
   void loadLocal(int offset) {
+    assert(offset < stackSize);
+    loadLocalHelper(offset);
+  }
+
+  void loadLocalHelper(int offset) {
     assert(offset >= 0);
     Bytecode bytecode;
     switch (offset) {
@@ -106,6 +112,11 @@ class BytecodeAssembler {
   }
 
   void loadBoxed(int offset) {
+    assert(offset < stackSize);
+    loadBoxedHelper(offset);
+  }
+
+  void loadBoxedHelper(int offset) {
     assert(offset >= 0 && offset <= 255);
     internalAdd(new LoadBoxed(offset));
   }
@@ -136,7 +147,13 @@ class BytecodeAssembler {
   void loadParameter(int parameter) {
     assert(parameter >= 0 && parameter < functionArity);
     int offset = stackSize + functionArity - parameter;
-    loadLocal(offset);
+    loadLocalHelper(offset);
+  }
+
+  void loadBoxedParameter(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    int offset = stackSize + functionArity - parameter;
+    loadBoxedHelper(offset);
   }
 
   void loadStatic(int index) {
@@ -180,11 +197,21 @@ class BytecodeAssembler {
   }
 
   void storeLocal(int offset) {
+    assert(offset < stackSize);
+    storeLocalHelper(offset);
+  }
+
+  void storeLocalHelper(int offset) {
     assert(offset >= 0 && offset <= 255);
     internalAdd(new StoreLocal(offset));
   }
 
   void storeBoxed(int offset) {
+    assert(offset < stackSize);
+    storeBoxedHelper(offset);
+  }
+
+  void storeBoxedHelper(int offset) {
     assert(offset >= 0 && offset <= 255);
     internalAdd(new StoreBoxed(offset));
   }
@@ -200,6 +227,18 @@ class BytecodeAssembler {
   void storeBoxedSlot(int slot) {
     int offset = stackSize - slot - 1;
     storeBoxed(offset);
+  }
+
+  void storeParameter(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    int offset = stackSize + functionArity - parameter;
+    storeLocalHelper(offset);
+  }
+
+  void storeBoxedParameter(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    int offset = stackSize + functionArity - parameter;
+    storeBoxedHelper(offset);
   }
 
   void storeStatic(int index) {
@@ -227,79 +266,81 @@ class BytecodeAssembler {
   }
 
   void invokeMethod(int selector, int arity, [String name]) {
+    var bytecode;
     switch (name) {
       case '==':
-        internalAddStackPointerDifference(new InvokeEq(selector), -arity);
+        bytecode = new InvokeEqUnfold(selector);
         break;
 
       case '<':
-        internalAddStackPointerDifference(new InvokeLt(selector), -arity);
+        bytecode = new InvokeLtUnfold(selector);
         break;
 
       case '<=':
-        internalAddStackPointerDifference(new InvokeLe(selector), -arity);
+        bytecode = new InvokeLeUnfold(selector);
         break;
 
       case '>':
-        internalAddStackPointerDifference(new InvokeGt(selector), -arity);
+        bytecode = new InvokeGtUnfold(selector);
         break;
 
       case '>=':
-        internalAddStackPointerDifference(new InvokeGe(selector), -arity);
+        bytecode = new InvokeGeUnfold(selector);
         break;
 
       case '+':
-        internalAddStackPointerDifference(new InvokeAdd(selector), -arity);
+        bytecode = new InvokeAddUnfold(selector);
         break;
 
       case '-':
-        internalAddStackPointerDifference(new InvokeSub(selector), -arity);
+        bytecode = new InvokeSubUnfold(selector);
         break;
 
       case '*':
-        internalAddStackPointerDifference(new InvokeMul(selector), -arity);
+        bytecode = new InvokeMulUnfold(selector);
         break;
 
       case '~/':
-        internalAddStackPointerDifference(new InvokeTruncDiv(selector), -arity);
+        bytecode = new InvokeTruncDivUnfold(selector);
         break;
 
       case '%':
-        internalAddStackPointerDifference(new InvokeMod(selector), -arity);
+        bytecode = new InvokeModUnfold(selector);
         break;
 
       case '~':
-        internalAddStackPointerDifference(new InvokeBitNot(selector), -arity);
+        bytecode = new InvokeBitNotUnfold(selector);
         break;
 
       case '&':
-        internalAddStackPointerDifference(new InvokeBitAnd(selector), -arity);
+        bytecode = new InvokeBitAndUnfold(selector);
         break;
 
       case '|':
-        internalAddStackPointerDifference(new InvokeBitOr(selector), -arity);
+        bytecode = new InvokeBitOrUnfold(selector);
         break;
 
       case '^':
-        internalAddStackPointerDifference(new InvokeBitXor(selector), -arity);
+        bytecode = new InvokeBitXorUnfold(selector);
         break;
 
       case '<<':
-        internalAddStackPointerDifference(new InvokeBitShl(selector), -arity);
+        bytecode = new InvokeBitShlUnfold(selector);
         break;
 
       case '>>':
-        internalAddStackPointerDifference(new InvokeBitShr(selector), -arity);
+        bytecode = new InvokeBitShrUnfold(selector);
         break;
 
       default:
-        internalAddStackPointerDifference(new InvokeMethod(selector), -arity);
+        bytecode = new InvokeMethodUnfold(selector);
         break;
     }
+    internalAddStackPointerDifference(bytecode, -arity);
   }
 
   void invokeTest(int selector, int arity) {
-    internalAddStackPointerDifference(new InvokeTest(selector), -arity);
+    internalAddStackPointerDifference(new InvokeTestUnfold(selector), -arity);
   }
 
   void invokeSelector() {
@@ -321,11 +362,20 @@ class BytecodeAssembler {
     hasBindAfterTerminator = false;
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
     assert(functionArity <= 255);
-    if (stackSize >= 256) {
+    if (stackSize > RETURN_NARROW_MAX_STACK_SIZE) {
       internalAdd(new ReturnWide(stackSize, functionArity));
     } else {
       internalAdd(new Return(stackSize, functionArity));
     }
+  }
+
+  void returnNull() {
+    hasBindAfterTerminator = false;
+    if (stackSize < 0 || stackSize > RETURN_NARROW_MAX_STACK_SIZE) {
+      throw "Bad stackSize for return-null bytecode: $stackSize";
+    }
+    assert(functionArity <= 255);
+    internalAdd(new ReturnNull(stackSize, functionArity));
   }
 
   void identical() {

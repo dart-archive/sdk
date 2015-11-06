@@ -2,13 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.plugins.java;
+library old_servicec.plugins.java;
 
 import 'dart:core' hide Type;
 import 'dart:io';
 
-import 'package:path/path.dart';
-import 'package:strings/strings.dart' as strings;
+import 'package:path/path.dart' show
+    basenameWithoutExtension,
+    join,
+    relative;
+import 'package:servicec/util.dart' as strings;
 
 import 'shared.dart';
 import '../emitter.dart';
@@ -41,11 +44,18 @@ const FLETCH_API_JAVA = """
 package fletch;
 
 public class FletchApi {
+  public static abstract class PrintInterceptor {
+    public abstract void Out(String message);
+    public abstract void Error(String message);
+    private long nativePtr = 0;
+  }
   public static native void Setup();
   public static native void TearDown();
   public static native void RunSnapshot(byte[] snapshot);
   public static native void WaitForDebuggerConnection(int port);
   public static native void AddDefaultSharedLibrary(String library);
+  public static native void RegisterPrintInterceptor(PrintInterceptor interceptor);
+  public static native void UnregisterPrintInterceptor(PrintInterceptor interceptor);
 }
 """;
 
@@ -60,8 +70,79 @@ public class FletchServiceApi {
 
 const FLETCH_API_JAVA_IMPL = """
 #include <jni.h>
+#include <stdlib.h>
 
 #include "fletch_api.h"
+
+#ifdef ANDROID
+  typedef JNIEnv* AttachEnvType;
+#else
+  typedef void* AttachEnvType;
+#endif
+
+static JNIEnv* AttachCurrentThreadAndGetEnv(JavaVM* vm) {
+  AttachEnvType result = NULL;
+  if (vm->AttachCurrentThread(&result, NULL) != JNI_OK) {
+    // TODO(zerny): Nicer error recovery?
+    exit(1);
+  }
+  return reinterpret_cast<JNIEnv*>(result);
+}
+
+class JNIPrintInterceptorInfo {
+ public:
+  JNIPrintInterceptorInfo(JavaVM* vm, jobject obj)
+    : vm(vm), obj(obj), interceptor(NULL) {}
+  JavaVM* vm;
+  jobject obj;
+  FletchPrintInterceptor interceptor;
+};
+
+static void JNIPrintInterceptorFunction(
+    const char* message, int out, void* raw) {
+  JNIPrintInterceptorInfo* info =
+      reinterpret_cast<JNIPrintInterceptorInfo*>(raw);
+  JNIEnv* env = AttachCurrentThreadAndGetEnv(info->vm);
+  jobject obj = info->obj;
+  jclass clazz = env->GetObjectClass(obj);
+  jmethodID method = NULL;
+  const char* methodName = (out == 2) ? "Out" : (out == 3) ? "Error" : NULL;
+  const char* methodSig = "(Ljava/lang/String;)V";
+  if (methodName == NULL) exit(1);
+  method = env->GetMethodID(clazz, methodName, methodSig);
+  jstring argument = env->NewStringUTF(message);
+  env->CallVoidMethod(obj, method, argument);
+  info->vm->DetachCurrentThread();
+}
+
+static void RegisterPrintInterceptor(JNIEnv* env, jobject obj) {
+  // TODO(zerny): Associate the Java object and native object in a map.
+  jclass clazz = env->GetObjectClass(obj);
+  jfieldID nativePtr = env->GetFieldID(clazz, "nativePtr", "J");
+  jlong nativePtrValue = env->GetLongField(obj, nativePtr);
+  if (nativePtrValue != 0) return;
+  obj = env->NewGlobalRef(obj);
+  JavaVM* vm = NULL;
+  env->GetJavaVM(&vm);
+  JNIPrintInterceptorInfo* info = new JNIPrintInterceptorInfo(vm, obj);
+  info->interceptor = FletchRegisterPrintInterceptor(
+      JNIPrintInterceptorFunction, reinterpret_cast<void*>(info));
+  env->SetLongField(obj, nativePtr, reinterpret_cast<jlong>(info));
+}
+
+static void UnregisterPrintInterceptor(JNIEnv* env, jobject obj) {
+  // TODO(zerny): Retrieve the native object from the Java object via a map.
+  jclass clazz = env->GetObjectClass(obj);
+  jfieldID nativePtr = env->GetFieldID(clazz, "nativePtr", "J");
+  jlong nativePtrValue = env->GetLongField(obj, nativePtr);
+  if (nativePtrValue == 0) return;
+  env->SetLongField(obj, nativePtr, 0);
+  JNIPrintInterceptorInfo* info =
+      reinterpret_cast<JNIPrintInterceptorInfo*>(nativePtrValue);
+  FletchUnregisterPrintInterceptor(info->interceptor);
+  env->DeleteGlobalRef(info->obj);
+  delete info;
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,6 +178,16 @@ JNIEXPORT void JNICALL Java_fletch_FletchApi_AddDefaultSharedLibrary(
   const char* library = env->GetStringUTFChars(str, 0);
   FletchAddDefaultSharedLibrary(library);
   env->ReleaseStringUTFChars(str, library);
+}
+
+JNIEXPORT void JNICALL Java_fletch_FletchApi_RegisterPrintInterceptor(
+    JNIEnv* env, jclass, jobject obj) {
+  RegisterPrintInterceptor(env, obj);
+}
+
+JNIEXPORT void JNICALL Java_fletch_FletchApi_UnregisterPrintInterceptor(
+    JNIEnv* env, jclass, jobject obj) {
+  UnregisterPrintInterceptor(env, obj);
 }
 
 #ifdef __cplusplus
@@ -268,14 +359,16 @@ const List<String> JAVA_RESOURCES = const [
   "Segment.java"
 ];
 
-void generate(String path, Unit unit, String outputDirectory) {
+void generate(String path,
+              Unit unit,
+              String resourcesDirectory,
+              String outputDirectory) {
   _generateFletchApis(outputDirectory);
   _generateServiceJava(path, unit, outputDirectory);
   _generateServiceJni(path, unit, outputDirectory);
-  _generateServiceJniMakeFiles(path, unit, outputDirectory);
+  _generateServiceJniMakeFiles(path, unit, resourcesDirectory, outputDirectory);
 
-  String resourcesDirectory = join(dirname(Platform.script.path),
-      '..', 'lib', 'src', 'resources', 'java', 'fletch');
+  resourcesDirectory = join(resourcesDirectory, 'java', 'fletch');
   String fletchDirectory = join(outputDirectory, 'java', 'fletch');
   for (String resource in JAVA_RESOURCES) {
     String resourcePath = join(resourcesDirectory, resource);
@@ -310,8 +403,8 @@ void _generateFletchApis(String outputDirectory) {
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
   buffer.write(FLETCH_SERVICE_API_JAVA_IMPL);
-  writeToFile(jniDirectory, 'fletch_service_api_wrapper', buffer.toString(),
-      extension: 'cc');
+  writeToFile(jniDirectory, 'fletch_service_api_wrapper',
+      buffer.toString(), extension: 'cc');
 }
 
 void _generateServiceJava(String path, Unit unit, String outputDirectory) {
@@ -336,8 +429,8 @@ void _generateServiceJni(String path, Unit unit, String outputDirectory) {
   if (unit.services.length > 1) {
     print('Java plugin: multiple services in one file is not supported.');
   }
-  String serviceName = unit.services.first.name;
-  String file = '${strings.underscore(serviceName)}_wrapper';
+  String projectName = basenameWithoutExtension(path);
+  String file = '${projectName}_wrapper';
   writeToFile(directory, file, contents, extension: 'cc');
 }
 
@@ -635,7 +728,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln('}');
 
     writeToFile(fletchDirectory, '$name', buffer.toString(),
-                extension: 'java');
+        extension: 'java');
   }
 
   void writeBuilder(Struct node) {
@@ -748,7 +841,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln('}');
 
     writeToFile(fletchDirectory, '$name', buffer.toString(),
-                extension: 'java');
+        extension: 'java');
   }
 
   void writeListReaderImplementation(Type type) {
@@ -799,7 +892,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln('}');
 
     writeToFile(fletchDirectory, '$name', buffer.toString(),
-                extension: 'java');
+        extension: 'java');
   }
 
   void writeListBuilderImplementation(Type type) {
@@ -854,7 +947,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
     buffer.writeln('}');
 
     writeToFile(fletchDirectory, '$name', buffer.toString(),
-                extension: 'java');
+        extension: 'java');
   }
 }
 
@@ -951,7 +1044,8 @@ class _JniVisitor extends CcVisitor {
 
     String callback;
     if (node.inputKind == InputKind.STRUCT) {
-      StructLayout layout = node.arguments.single.type.resolved.layout;
+      Struct struct = node.arguments.single.type.resolved;
+      StructLayout layout = struct.layout;
       callback = ensureCallback(node.returnType, layout);
     } else {
       callback =
@@ -1229,21 +1323,17 @@ class _JniVisitor extends CcVisitor {
 
 void _generateServiceJniMakeFiles(String path,
                                   Unit unit,
+                                  String resourcesDirectory,
                                   String outputDirectory) {
   String out = join(outputDirectory, 'java');
-  String scriptFile = new File.fromUri(Platform.script).path;
-  String scriptDir = dirname(scriptFile);
-  String fletchLibraryBuildDir = join(scriptDir,
-                                      '..',
-                                      '..',
+  // TODO(stanm): pass fletch root directly
+  String fletchRoot = join(resourcesDirectory, '..', '..', '..', '..', '..');
+  String fletchLibraryBuildDir = join(fletchRoot,
+                                      'tools',
                                       'android_build',
                                       'jni');
 
-  String fletchIncludeDir = join(scriptDir,
-                                 '..',
-                                 '..',
-                                 '..',
-                                 'include');
+  String fletchIncludeDir = join(fletchRoot, 'include');
 
   String modulePath = relative(fletchLibraryBuildDir, from: out);
   String includePath = relative(fletchIncludeDir, from: out);
@@ -1256,7 +1346,7 @@ void _generateServiceJniMakeFiles(String path,
   buffer.writeln();
   buffer.writeln('include \$(CLEAR_VARS)');
   buffer.writeln('LOCAL_MODULE := fletch');
-  buffer.writeln('LOCAL_CFLAGS := -DFLETCH32 -DANDROID');
+  buffer.writeln('LOCAL_CFLAGS := -DFLETCH32');
   buffer.writeln('LOCAL_LDLIBS := -llog -ldl -rdynamic');
 
   buffer.writeln();
@@ -1267,8 +1357,8 @@ void _generateServiceJniMakeFiles(String path,
   if (unit.services.length > 1) {
     print('Java plugin: multiple services in one file is not supported.');
   }
-  String serviceName = unit.services.first.name;
-  String file = '${strings.underscore(serviceName)}_wrapper';
+  String projectName = basenameWithoutExtension(path);
+  String file = '${projectName}_wrapper';
 
   buffer.writeln('\t${file}.cc');
 
@@ -1293,5 +1383,4 @@ void _generateServiceJniMakeFiles(String path,
   buffer.writeln('APP_PLATFORM := android-8');
   writeToFile(join(out, 'jni'), 'Application', buffer.toString(),
       extension: 'mk');
-
 }

@@ -13,15 +13,15 @@ export AGENT_PORT=12121
 export AGENT_PID_FILE=${BUILD_DIR}/agent/var/run/fletch-agent.pid
 export AGENT_LOG_FILE=${BUILD_DIR}/agent/var/log/fletch-agent.log
 export VM_LOG_DIR=${BUILD_DIR}/agent/var/log/fletch
-export VM_PID_DIR=${BUILD_DIR}/agent/var/run/fletch
 
 # Create required files.
-mkdir -p ${VM_LOG_DIR} ${VM_PID_DIR}
+mkdir -p ${VM_LOG_DIR}
 touch ${AGENT_PID_FILE} ${AGENT_LOG_FILE}
 
 # Create snapshot
-${BUILD_DIR}/dart -c -Dsnapshot=${FLETCH_AGENT_SNAPSHOT} \
-    tests/fletchc/run.dart pkg/fletch_agent/bin/agent.dart
+${BUILD_DIR}/fletch quit
+${BUILD_DIR}/fletch export pkg/fletch_agent/bin/agent.dart to \
+  $FLETCH_AGENT_SNAPSHOT
 
 # Run the agent
 exec ${FLETCH_VM} ${FLETCH_AGENT_SNAPSHOT}

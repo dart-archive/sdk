@@ -92,13 +92,29 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['attach', 'in', 'session', 'foo',
                        'tcp_socket', '$invalidIP:fisk'])];
 
+    case DiagnosticKind.noAgentFound:
+      // TODO(karlklose,268): We want to write a test similar to the following,
+      // but it records the error in the wrong isolate. We need a way to
+      // test this.
+      //   return <Example>[new CommandLineExample(
+      //      <String>['create', 'session', 'foo'],
+      //      <String>['x-upgrade', 'agent',
+      //        'with', 'file', 'fletch-agent_v1_platform.deb',
+      //        'in', 'session', 'foo'
+      //      ])];
+      return untestable;
+
+    case DiagnosticKind.upgradeInvalidPackageName:
+      return <Example>[new CommandLineExample(
+          <String>['x-upgrade', 'agent', 'with', 'file', 'invalid-file-name'])];
+
     case DiagnosticKind.socketAgentConnectError:
-      // TODO(wibling): figure out how to test fletch agent failures to
+      // TODO(wibling,268): figure out how to test fletch agent failures to
       // exercise this error.
       return untestable;
 
     case DiagnosticKind.socketAgentReplyError:
-      // TODO(wibling): figure out how to test fletch agent failures to
+      // TODO(wibling,268): figure out how to test fletch agent failures to
       // exercise this error.
       return untestable;
 
@@ -147,6 +163,10 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(
               <String>['export'])];
 
+    case DiagnosticKind.missingSessionName:
+      return <Example>[new CommandLineExample(
+            <String>['create', 'session'])];
+
     case DiagnosticKind.unknownOption:
       return <Example>[
           new CommandLineExample(<String>['help', '--fisk']),
@@ -154,7 +174,7 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.missingRequiredArgument:
       return <Example>[new CommandLineExample(
-            <String>['run', '--test-debugger'])];
+          <String>['run', '--test-debugger'])];
 
     case DiagnosticKind.unexpectedArgument:
       return <Example>[new CommandLineExample(
@@ -197,6 +217,12 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.settingsDeviceAddressNotAString:
       return <Example>[new SettingsExample('{"device_address":1}')];
 
+    case DiagnosticKind.settingsDeviceTypeNotAString:
+      return <Example>[new SettingsExample('{"device_type":1}')];
+
+    case DiagnosticKind.settingsDeviceTypeUnrecognized:
+      return <Example>[new SettingsExample('{"device_type":"fisk"}')];
+
     case DiagnosticKind.unknownAction:
       return <Example>[
           new CommandLineExample(<String>['blah']),
@@ -204,7 +230,9 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.extraArguments:
       return <Example>[
-          new CommandLineExample(<String>['create', 'fisk'])];
+          new CommandLineExample(<String>['create', 'fisk']),
+          new CommandLineExample(<String>['x-upgrade', 'hest']),
+      ];
 
     case DiagnosticKind.cantPerformVerbIn:
       return <Example>[
@@ -263,6 +291,18 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.terminatedSession:
       // TODO(ahe): Add test for this.
+      return untestable;
+
+    case DiagnosticKind.handShakeFailed:
+      // TODO(ager): We could probably test this with a mock VM.
+      return untestable;
+
+    case DiagnosticKind.versionMismatch:
+      // TODO(ager): We could probably test this with a mock VM.
+      return untestable;
+
+    case DiagnosticKind.agentVersionMismatch:
+      // TODO(wibling): Add test for this
       return untestable;
   }
 }

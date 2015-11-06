@@ -3,9 +3,9 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  void Foo(Foo* Foo);
+  void Foo(Bar* Foo);
 }
 
-struct Foo {
-  Foo* Foo;
+struct Bar {
+  Bar* Bar;
 }

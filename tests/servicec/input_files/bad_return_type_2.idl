@@ -4,5 +4,5 @@
 
 service Foo {
   // List is not a valid return type.
-  List<int32> bar();  // expectedPointerOrPrimitive
+  List<int32> bar();  // badReturnType
 }

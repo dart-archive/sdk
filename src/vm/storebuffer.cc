@@ -6,6 +6,8 @@
 
 namespace fletch {
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void StoreBufferChunk::IteratePointersToImmutableSpace(
     PointerVisitor* visitor) {
   for (int i = 0; i < pos_; i++) {
@@ -181,5 +183,7 @@ void StoreBuffer::ReplaceAfterMutableGC(StoreBuffer* new_store_buffer) {
   ASSERT(last_chunk_->next() == NULL);
   current_chunk_ = new_store_buffer->TakeChunks();
 }
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 }  // namespace fletch

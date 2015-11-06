@@ -14,11 +14,13 @@ import subprocess
 import sys
 import utils
 
+from sets import Set
 from os import makedirs
 from os.path import join, exists, basename
 from shutil import copyfile, copymode, copytree, rmtree
 
 SDK_PACKAGES = ['file', 'gpio', 'http', 'i2c', 'os', 'raspberry_pi', 'socket']
+THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['raspberry_pi', 'general']
 
@@ -64,28 +66,34 @@ def CopyLibs(bundle_dir, build_dir):
 def CopyInternalPackages(bundle_dir, build_dir):
   internal_pkg = join(bundle_dir, 'internal', 'pkg')
   makedirs(internal_pkg)
-  for v in ['fletchc']:
-    copytree(join('pkg', v), join(internal_pkg, v))
-  fletchc = 'pkg/fletchc'
-  fixed_packages_file = join(internal_pkg, 'fletchc', '.packages')
-  lines = []
-  with open(join(fletchc, '.packages')) as f:
-    lines = f.read().splitlines()
-  with open(fixed_packages_file, 'w') as generated:
-    for l in lines:
-      if l.startswith('#') or l.startswith('fletchc:lib'):
-        generated.write('%s\n' % l)
-      else:
-        components = l.split(':')
-        name = components[0]
-        relative_path = components[1]
-        source = join(fletchc, relative_path)
-        target = join(internal_pkg, name)
-        print 'copying %s to %s' % (source, target)
-        makedirs(target)
-        assert(source.endswith('lib'))
-        copytree(source, join(target, 'lib'))
-        generated.write('%s:../%s/lib\n' % (name, name))
+  # Copy the pkg dirs for tools and the pkg dirs referred from their
+  # .packages files.
+  copied_pkgs = Set()
+  for tool in ['fletchc', 'flash_sd_card']:
+    copytree(join('pkg', tool), join(internal_pkg, tool))
+    tool_pkg = 'pkg/%s' % tool
+    fixed_packages_file = join(internal_pkg, tool, '.packages')
+    lines = []
+    with open(join(tool_pkg, '.packages')) as f:
+      lines = f.read().splitlines()
+    with open(fixed_packages_file, 'w') as generated:
+      for l in lines:
+        if l.startswith('#') or l.startswith('%s:lib' % tool):
+          generated.write('%s\n' % l)
+        else:
+          components = l.split(':')
+          name = components[0]
+          relative_path = components[1]
+          source = join(tool_pkg, relative_path)
+          target = join(internal_pkg, name)
+          print source
+          if not target in copied_pkgs:
+            print 'copying %s to %s' % (source, target)
+            makedirs(target)
+            assert(source.endswith('lib'))
+            copytree(source, join(target, 'lib'))
+            copied_pkgs.add(target)
+          generated.write('%s:../%s/lib\n' % (name, name))
 
 def CopyPackages(bundle_dir):
   target_dir = join(bundle_dir, 'pkg')
@@ -93,6 +101,9 @@ def CopyPackages(bundle_dir):
   with open(join(bundle_dir, 'internal', 'fletch-sdk.packages'), 'w') as p:
     for package in SDK_PACKAGES:
       copytree(join('pkg', package), join(target_dir, package))
+      p.write('%s:../pkg/%s/lib\n' % (package, package))
+    for package in THIRD_PARTY_PACKAGES:
+      copytree(join('third_party', package), join(target_dir, package))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
 
 def CopyPlatforms(bundle_dir):

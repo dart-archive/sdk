@@ -12,13 +12,13 @@
 #include "src/vm/thread_posix.h"
 #elif defined(FLETCH_TARGET_OS_LK)
 #include "src/vm/thread_lk.h"
-#elif defined(FLETCH_TARGET_OS_MBED)
-#include "src/vm/thread_mbed.h"
+#elif defined(FLETCH_TARGET_OS_CMSIS)
+#include "src/vm/thread_cmsis.h"
 #else
 #warning "OS is lacking thread implementation."
 #endif
-#if defined(FLETCH_TARGET_OS_MBED)
-#include "src/vm/thread_mbed.h"
+#if defined(FLETCH_TARGET_OS_CMSIS)
+#include "src/vm/thread_cmsis.h"
 #endif
 
 namespace fletch {

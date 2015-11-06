@@ -46,7 +46,6 @@ Program::Program()
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
-      static_fields_(NULL),
       is_compact_(false) {
   // These asserts need to hold when running on the target, but they don't need
   // to hold on the host (the build machine, where the interpreter-generating
@@ -88,9 +87,9 @@ Process* Program::ProcessSpawnForMain() {
   return process;
 }
 
-void Program::DeleteProcess(Process* process) {
+void Program::DeleteProcess(Process* process, Signal::Kind kind) {
   RemoveFromProcessList(process);
-  process->Cleanup();
+  process->Cleanup(kind);
   delete process;
 }
 
@@ -100,7 +99,7 @@ void Program::DeleteAllProcesses() {
   Process* current = process_list_head_;
   while (current != NULL) {
     Process* next = current->process_list_next();
-    current->Cleanup();
+    current->Cleanup(Signal::kTerminated);
     delete current;
     current = next;
   }
@@ -211,8 +210,8 @@ Object* Program::CreateInitializer(Function* function) {
 
 void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
   // All threads are stopped and have given their parts back to the
-  // [ImmutableHeap], so we can merge them now.
-  immutable_heap()->MergeParts();
+  // [SharedHeap], so we can merge them now.
+  shared_heap()->MergeParts();
 
   if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
     ValidateGlobalHeapsAreConsistent();
@@ -222,7 +221,7 @@ void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
   Process* current = process_list_head_;
   while (current != NULL) {
     if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
-      current->ValidateHeaps(&immutable_heap_);
+      current->ValidateHeaps(&shared_heap_);
     }
 
     int number_of_stacks = current->CollectGarbageAndChainStacks();
@@ -240,7 +239,7 @@ void Program::PerformProgramGC(Space* to, PointerVisitor* visitor) {
 
     // Iterate all immutable objects.
     HeapObjectPointerVisitor object_pointer_visitor(visitor);
-    immutable_heap_.heap()->IterateObjects(&object_pointer_visitor);
+    shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
 
     // Iterate over all process program pointers.
     Process* current = process_list_head_;
@@ -264,7 +263,7 @@ void Program::FinishProgramGC() {
     current->UpdateBreakpoints();
 
     if (Flags::validate_heaps) {
-      current->ValidateHeaps(&immutable_heap_);
+      current->ValidateHeaps(&shared_heap_);
     }
     current = current->process_list_next();
   }
@@ -289,19 +288,38 @@ void Program::ValidateHeapsAreConsistent() {
     IterateRoots(&validator);
     heap()->IterateObjects(&object_pointer_visitor);
   }
-  // Validate the immutable heap
-  {
-    ImmutableHeapPointerValidator validator(heap(), &immutable_heap_);
-    HeapObjectPointerVisitor object_pointer_visitor(&validator);
-    immutable_heap_.heap()->IterateObjects(&object_pointer_visitor);
-    immutable_heap_.heap()->VisitWeakObjectPointers(&validator);
-  }
+
+  // Validate the shared heap
+  ValidateSharedHeap();
+
   // Validate all process heaps.
   {
-    ProcessHeapValidatorVisitor validator(heap(), &immutable_heap_);
+    ProcessHeapValidatorVisitor validator(heap(), &shared_heap_);
     VisitProcesses(&validator);
   }
 }
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Program::ValidateSharedHeap() {
+  SharedHeapPointerValidator validator(heap(), &shared_heap_);
+  HeapObjectPointerVisitor object_pointer_visitor(&validator);
+  shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
+  shared_heap_.heap()->VisitWeakObjectPointers(&validator);
+}
+
+#else
+
+void Program::ValidateSharedHeap() {
+  // NOTE: We do nothing in the case of *one* shared heap. The shared heap will
+  // get validated (redundantly) for each process.
+  //
+  // (In order to validate the shared heap separately we would need to know
+  //  whether stacks are cooked or not. This information is only available on a
+  //  per-process basis ATM. So we just do it redundantly for now.)
+}
+
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void Program::CollectGarbage() {
   if (scheduler() != NULL) {
@@ -349,67 +367,143 @@ void Program::RemoveFromProcessList(Process* process) {
   process->set_process_list_prev(NULL);
 }
 
-void Program::CollectImmutableGarbage() {
+struct SharedHeapUsage {
+  uint64 timestamp = 0;
+  uword shared_used = 0;
+  uword shared_size = 0;
+};
+
+static void GetSharedHeapUsage(Heap* heap, SharedHeapUsage* heap_usage) {
+  heap_usage->timestamp = Platform::GetMicroseconds();
+  heap_usage->shared_used = heap->space()->Used();
+  heap_usage->shared_size = heap->space()->Size();
+}
+
+static void PrintImmutableGCInfo(SharedHeapUsage* before,
+                                 SharedHeapUsage* after) {
+  static int count = 0;
+  Print::Error(
+      "Immutable-GC(%i): "
+      "\t%lli us, "
+      "\t%lu/%lu -> %lu/%lu\n",
+      count++,
+      after->timestamp - before->timestamp,
+      before->shared_used,
+      before->shared_size,
+      after->shared_used,
+      after->shared_size);
+}
+
+void Program::CollectSharedGarbage(bool program_is_stopped) {
   Scheduler* scheduler = this->scheduler();
   ASSERT(scheduler != NULL);
 
-  // This will make sure all partial immutable heaps got merged into
-  // [program_->immutable_heap()].
-  scheduler->StopProgram(this);
+  if (!program_is_stopped) {
+    scheduler->StopProgram(this);
+  }
 
   // All threads are stopped and have given their parts back to the
-  // [ImmutableHeap], so we can merge them now.
-  immutable_heap()->MergeParts();
+  // [SharedHeap], so we can merge them now.
+  shared_heap()->MergeParts();
 
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
   }
 
+  SharedHeapUsage usage_before;
+  if (Flags::print_heap_statistics) {
+    GetSharedHeapUsage(shared_heap()->heap(), &usage_before);
+  }
+
+  PerformSharedGarbageCollection();
+
+  if (Flags::print_heap_statistics) {
+    SharedHeapUsage usage_after;
+    GetSharedHeapUsage(shared_heap()->heap(), &usage_after);
+    PrintImmutableGCInfo(&usage_before, &usage_after);
+  }
+
+  if (Flags::validate_heaps) {
+    ValidateHeapsAreConsistent();
+  }
+
+  if (!program_is_stopped) {
+    scheduler->ResumeProgram(this);
+  }
+}
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+void Program::PerformSharedGarbageCollection() {
   // Pass 1: Storebuffer compaction.
   // We do this as a separate pass to ensure the mutable collection can access
   // all objects (including immutable ones) and for example do
   // "ASSERT(object->IsImmutable()". If we did everthing in one pass some
   // immutable objects will contain forwarding pointers and others won't, which
   // can make the mentioned assert just crash the program.
-  {
-    Process* current = process_list_head_;
-    while (current != NULL) {
-      current->store_buffer()->Deduplicate();
-      current = current->process_list_next();
-    }
+  CompactStorebuffers();
+
+  // Pass 2: Iterate all process roots to the shared heap.
+  Heap* heap = shared_heap()->heap();
+  Space* from = heap->space();
+  Space* to = new Space(from->Used() / 10);
+  NoAllocationFailureScope alloc(to);
+
+  ScavengeVisitor scavenger(from, to);
+
+  int process_heap_sizes = 0;
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->TakeChildHeaps();
+    current->IterateRoots(&scavenger);
+    current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
+    process_heap_sizes += current->heap()->space()->Used();
+    current = current->process_list_next();
   }
 
-  // Pass 2: Iterate all process roots to immutable heap.
-  {
-    Heap* heap = immutable_heap()->heap();
-    Space* from = heap->space();
-    Space* to = new Space(from->Used() / 10);
-    NoAllocationFailureScope alloc(to);
+  to->CompleteScavenge(&scavenger);
+  heap->ProcessWeakPointers();
+  heap->ReplaceSpace(to);
 
-    ScavengeVisitor scavenger(from, to);
+  shared_heap()->UpdateLimitAfterGC(process_heap_sizes);
+}
 
-    int process_heap_sizes = 0;
-    Process* current = process_list_head_;
-    while (current != NULL) {
-      current->TakeChildHeaps();
-      current->IterateRoots(&scavenger);
-      current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
-      process_heap_sizes += current->heap()->space()->Used();
-      current = current->process_list_next();
-    }
+#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
-    to->CompleteScavenge(&scavenger);
-    heap->ProcessWeakPointers();
-    heap->ReplaceSpace(to);
+void Program::PerformSharedGarbageCollection() {
+  Heap* heap = shared_heap()->heap();
+  Space* from = heap->space();
+  Space* to = new Space(from->Used() / 10);
+  NoAllocationFailureScope alloc(to);
 
-    immutable_heap()->UpdateLimitAfterImmutableGC(process_heap_sizes);
+  ScavengeVisitor scavenger(from, to);
+
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->TakeChildHeaps();
+    current->IterateRoots(&scavenger);
+    current = current->process_list_next();
   }
 
-  if (Flags::validate_heaps) {
-    ValidateHeapsAreConsistent();
+  to->CompleteScavenge(&scavenger);
+  heap->ProcessWeakPointers();
+
+  current = process_list_head_;
+  while (current != NULL) {
+    current->set_ports(Port::CleanupPorts(from, current->ports()));
+    current->UpdateStackLimit();
+    current = current->process_list_next();
   }
 
-  scheduler->ResumeProgram(this);
+  heap->ReplaceSpace(to);
+}
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+void Program::CompactStorebuffers() {
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->store_buffer()->Deduplicate();
+    current = current->process_list_next();
+  }
 }
 
 class StatisticsVisitor : public HeapObjectVisitor {
@@ -611,6 +705,12 @@ void Program::Initialize() {
   }
 
   {
+    InstanceFormat format = InstanceFormat::instance_format(1);
+    process_class_ = Class::cast(
+        heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
     InstanceFormat format = InstanceFormat::instance_format(3);
     foreign_memory_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));
@@ -719,6 +819,14 @@ void Program::Initialize() {
         heap()->CreateInstance(sentinel_class, null_object(), true));
   }
 
+  { // Create stack overflow error object.
+    InstanceFormat format = InstanceFormat::instance_format(0);
+    stack_overflow_error_class_ = Class::cast(
+        heap()->CreateClass(format, meta_class_, null_object_));
+    stack_overflow_error_ = Instance::cast(heap()->CreateInstance(
+        stack_overflow_error_class_, null_object(), true));
+  }
+
   // Create the retry after gc failure object payload.
   raw_retry_after_gc_ =
       OneByteString::cast(
@@ -738,71 +846,39 @@ void Program::Initialize() {
       OneByteString::cast(
           CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
-  raw_stack_overflow_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Stack overflow.")));
-
   native_failure_result_ = null_object_;
 }
 
 void Program::IterateRoots(PointerVisitor* visitor) {
+  IterateRootsIgnoringSession(visitor);
+  if (session_ != NULL) {
+    session_->IteratePointers(visitor);
+  }
+}
+
+void Program::IterateRootsIgnoringSession(PointerVisitor* visitor) {
   visitor->VisitBlock(first_root_address(), last_root_address() + 1);
   visitor->Visit(reinterpret_cast<Object**>(&entry_));
-  visitor->Visit(reinterpret_cast<Object**>(&classes_));
-  visitor->Visit(reinterpret_cast<Object**>(&constants_));
-  visitor->Visit(reinterpret_cast<Object**>(&static_methods_));
-  visitor->Visit(reinterpret_cast<Object**>(&static_fields_));
-  visitor->Visit(reinterpret_cast<Object**>(&dispatch_table_));
-  visitor->Visit(reinterpret_cast<Object**>(&vtable_));
-  if (session_ != NULL) session_->IteratePointers(visitor);
 }
 
 void Program::ClearDispatchTableIntrinsics() {
   Array* table = dispatch_table();
   if (table == NULL) return;
-  int length = table->length();
-  for (int i = 0; i < length; i += 4) {
-    table->set(i + 2, NULL);
-  }
 
-  table = vtable();
-  if (table == NULL) return;
-  length = table->length();
+  int length = table->length();
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    if (element == null_object()) continue;
     Array* entry = Array::cast(element);
     entry->set(3, NULL);
   }
 }
 
-void Program::SetupDispatchTableIntrinsics() {
+void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
   Array* table = dispatch_table();
   if (table == NULL) return;
+
   int length = table->length();
   int hits = 0;
-  for (int i = 0; i < length; i += 4) {
-    ASSERT(table->get(i + 2) == NULL);
-    Object* target = table->get(i + 3);
-    if (target == NULL) continue;
-    hits += 4;
-    Function* method = Function::cast(target);
-    Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
-    ASSERT(intrinsic->IsSmi());
-    table->set(i + 2, intrinsic);
-  }
-
-  if (Flags::print_program_statistics) {
-    Print::Out("Dispatch table fill: %F%% (%i of %i)\n",
-               hits * 100.0 / length,
-               hits,
-               length);
-  }
-
-  table = vtable();
-  if (table == NULL) return;
-  length = table->length();
-  hits = 0;
 
   static const Names::Id name = Names::kNoSuchMethodTrampoline;
   Function* trampoline = object_class()->LookupMethod(
@@ -810,20 +886,24 @@ void Program::SetupDispatchTableIntrinsics() {
 
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    if (element == null_object()) continue;
     Array* entry = Array::cast(element);
-    if (entry->get(3) != NULL) continue;
+    if (entry->get(3) != NULL) {
+      // The intrinsic is already set.
+      hits++;
+      continue;
+    }
     Object* target = entry->get(2);
-    if (target == NULL) continue;
-    if (target != trampoline) hits++;
+    if (target == trampoline) continue;
+    hits++;
     Function* method = Function::cast(target);
-    Object* intrinsic = reinterpret_cast<Object*>(method->ComputeIntrinsic());
+    Object* intrinsic =
+        reinterpret_cast<Object*>(method->ComputeIntrinsic(intrinsics));
     ASSERT(intrinsic->IsSmi());
     entry->set(3, intrinsic);
   }
 
   if (Flags::print_program_statistics) {
-    Print::Out("Vtable fill: %F%% (%i of %i)\n",
+    Print::Out("Dispatch table fill: %F%% (%i of %i)\n",
                hits * 100.0 / length,
                hits,
                length);

@@ -18,12 +18,10 @@ const Action attachAction = const Action(
     attach, attachDocumentation, requiresSession: true,
     requiredTarget: TargetKind.TCP_SOCKET);
 
-Future<int> attach(AnalyzedSentence sentence, VerbContext context) async {
+Future<int> attach(AnalyzedSentence sentence, VerbContext context) {
   Address address = parseAddress(sentence.targetName);
-
-  await context.performTaskInWorker(new AttachTask(address.host, address.port));
-
-  return null;
+  return context.performTaskInWorker(
+      new AttachTask(address.host, address.port));
 }
 
 class AttachTask extends SharedTask {

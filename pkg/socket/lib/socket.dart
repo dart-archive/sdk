@@ -7,6 +7,7 @@ library socket;
 import 'dart:fletch';
 import 'dart:fletch.os' as os;
 import 'dart:typed_data';
+import 'dart:fletch.ffi' show Struct32, ForeignMemory;
 
 import 'package:os/os.dart';
 
@@ -34,11 +35,24 @@ class _SocketBase {
    */
   void close() {
     if (_fd != -1) {
-      _port.send(-1);
-      _port = null;
+      // If there is an error before we initialize the event handling,
+      // [_port] and [_channel] are `null`.
+      if (_port != null) {
+        _port.send(-1);
+        _port = null;
+      }
       sys.close(_fd);
       _fd = -1;
     }
+  }
+
+  /// Get the number of available bytes.
+  int get available {
+    int value = sys.available(_fd);
+    if (value == -1) {
+      _error("Failed to get the number of available bytes");
+    }
+    return value;
   }
 
   void _error(String message) {
@@ -54,12 +68,12 @@ class Socket extends _SocketBase {
   Socket.connect(String host, int port) {
     var address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
-    _fd = sys.socket();
+    _fd = sys.socket(sys.AF_INET, sys.SOCK_STREAM, 0);
     if (_fd == -1) _error("Failed to create socket");
     sys.setBlocking(_fd, false);
     sys.setCloseOnExec(_fd, true);
     if (sys.connect(_fd, address, port) == -1 &&
-        sys.errno() != Errno.EAGAIN) {
+        sys.errno() != Errno.EINPROGRESS) {
       _error("Failed to connect to $host:$port");
     }
     _addSocketToEventHandler();
@@ -73,17 +87,6 @@ class Socket extends _SocketBase {
     // Be sure it's not in the event handler.
     _fd = fd;
     _addSocketToEventHandler();
-  }
-
-  /**
-   * Get the number of available bytes.
-   */
-  int get available {
-    int value = sys.available(_fd);
-    if (value == -1) {
-      _error("Failed to get the number of available bytes");
-    }
-    return value;
   }
 
   /**
@@ -172,9 +175,9 @@ class ServerSocket extends _SocketBase {
   ServerSocket(String host, int port) {
     var address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
-    _fd = sys.socket();
+    _fd = sys.socket(sys.AF_INET, sys.SOCK_STREAM, 0);
     if (_fd == -1) _error("Failed to create socket");
-    if (sys.setReuseaddr(_fd) == -1) {
+    if (_setReuseaddr(_fd) == -1) {
       _error("Failed to set socket option");
     }
     sys.setBlocking(_fd, false);
@@ -184,6 +187,14 @@ class ServerSocket extends _SocketBase {
     }
     if (sys.listen(_fd) == -1) _error("Failed to listen on $host:$port");
     _addSocketToEventHandler();
+  }
+
+  static Struct32 FOREIGN_ONE = new Struct32.finalized(1)..setField(0, 1);
+
+  int _setReuseaddr(int fd) {
+    int result =
+      sys.setsockopt(fd, sys.SOL_SOCKET, sys.SO_REUSEADDR, FOREIGN_ONE);
+    return result;
   }
 
   /**
@@ -231,6 +242,52 @@ class ServerSocket extends _SocketBase {
     sys.setBlocking(client, false);
     sys.setCloseOnExec(client, true);
     return client;
+  }
+}
+
+class Datagram {
+  final InternetAddress sender;
+  final int port;
+  final ByteBuffer data;
+  Datagram(this.sender, this.port, this.data);
+}
+
+// TODO(karlklose): support IPv6 datagram sockets.
+class DatagramSocket extends _SocketBase {
+  DatagramSocket.bind(String host, int port) {
+    InternetAddress address = sys.lookup(host);
+    if (address == null) _error("Failed to lookup address '$host'");
+    _fd = sys.socket(sys.AF_INET, sys.SOCK_DGRAM, 0);
+    if (_fd == -1) _error("Failed to create socket");
+    if (sys.bind(_fd, address, port) == -1) {
+      _error("Failed to bind to $host:$port");
+    }
+    _addSocketToEventHandler();
+  }
+
+  int get port => sys.port(_fd);
+
+  Datagram receive() {
+    int events = _waitFor(os.READ_EVENT);
+    int availableBytes = available;
+    ByteBuffer buffer = new Uint8List(availableBytes).buffer;
+    SockAddr sockaddr = new SockAddr.allocate();
+
+    try {
+      int result = sys.recvfrom(_fd, buffer, sockaddr.buffer);
+      if (result == -1) {
+        return null;
+      }
+
+      return new Datagram(sockaddr.address, sockaddr.port, buffer);
+    } finally {
+      sockaddr.free();
+    }
+  }
+
+  int send(InternetAddress target, int port, ByteBuffer data) {
+    _waitFor(os.WRITE_EVENT);
+    return sys.sendto(_fd, data, target, port);
   }
 }
 

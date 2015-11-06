@@ -52,13 +52,19 @@ class _ConnectionInvertedImpl implements _Connection {
 
 abstract class DataStorage {
   ByteBuffer readResponseFile(String resource);
+
+  String encode(String resource) {
+    List<String> parts = resource.split('/');
+    parts.add(Uri.encodeComponent(parts.removeLast()));
+    return parts.join('/');
+  }
 }
 
-class FileDataStorage implements DataStorage {
+class FileDataStorage extends DataStorage {
   String _dataDir = 'samples/github/lib/src/github_mock_data';
 
   ByteBuffer readResponseFile(String resource) {
-    String path = '$_dataDir/$resource.data';
+    String path = '$_dataDir/${encode(resource)}.data';
     if (File.existsAsFile(path)) {
       File file = new File.open(path);
       return file.read(file.length);

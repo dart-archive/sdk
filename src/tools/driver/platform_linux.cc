@@ -19,8 +19,50 @@
 namespace fletch {
 
 int SignalFileDescriptor() {
+  // Temporarily limit signals to a short list of white-listed signals.
+  const bool limit_signals = true;
+
   sigset_t signal_mask;
-  sigfillset(&signal_mask);
+  if (sigfillset(&signal_mask) == -1) {
+    FATAL1("sigfillset failed: %s", strerror(errno));
+  }
+
+  // It isn't possible to block SIGKILL or SIGSTOP, so let's remove them for
+  // consistency:
+  if (sigdelset(&signal_mask, SIGKILL) == -1) {
+    FATAL1("sigdelset(SIGKILL) failed: %s", strerror(errno));
+  }
+  if (sigdelset(&signal_mask, SIGSTOP) == -1) {
+    FATAL1("sigdelset(SIGSTOP) failed: %s", strerror(errno));
+  }
+
+  // Since we can't block SIGSTOP, we shouldn't block SIGCONT.
+  if (sigdelset(&signal_mask, SIGCONT) == -1) {
+    FATAL1("sigdelset(SIGCONT) failed: %s", strerror(errno));
+  }
+
+  // Let Ctrl-Z suspend the client.
+  if (sigdelset(&signal_mask, SIGTSTP) == -1) {
+    FATAL1("sigdelset(SIGTSTP) failed: %s", strerror(errno));
+  }
+
+  if (limit_signals) {
+    if (sigemptyset(&signal_mask) == -1) {
+      FATAL1("sigemptyset failed: %s", strerror(errno));
+    }
+    // Default signal when running `kill` without specifying a signal.
+    if (sigaddset(&signal_mask, SIGTERM) == -1) {
+      FATAL1("sigaddset(SIGTERM) failed: %s", strerror(errno));
+    }
+    // Signal from Ctrl-C.
+    if (sigaddset(&signal_mask, SIGINT) == -1) {
+      FATAL1("sigaddset(SIGINT) failed: %s", strerror(errno));
+    }
+    // Signal from Ctrl-\.
+    if (sigaddset(&signal_mask, SIGQUIT) == -1) {
+      FATAL1("sigaddset(SIGQUIT) failed: %s", strerror(errno));
+    }
+  }
 
   if (sigprocmask(SIG_BLOCK, &signal_mask, NULL) == -1) {
     FATAL1("sigprocmask failed: %s", strerror(errno));

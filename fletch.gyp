@@ -19,11 +19,26 @@
       ],
     },
     {
+      'target_name': 'mdns_extension_lib',
+      'type': 'none',
+      'dependencies': [
+        'src/pkg/mdns/mdns.gyp:mdns_extension_lib',
+      ],
+    },
+    {
       'target_name': 'natives_json',
       'type': 'none',
       'toolsets': ['host'],
       'dependencies': [
         'src/shared/shared.gyp:natives_json',
+      ],
+    },
+    {
+      'target_name': 'flashtool',
+      'type': 'none',
+      'toolsets': ['target'],
+      'dependencies': [
+        'src/tools/flashtool/flashtool.gyp:flashtool',
       ],
     },
     {

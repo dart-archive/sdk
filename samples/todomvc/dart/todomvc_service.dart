@@ -8,7 +8,7 @@ library todomvc_service;
 
 import "dart:fletch";
 import "dart:fletch.ffi";
-import "dart:service" as service;
+import "dart:fletch.service" as service;
 import "struct.dart";
 
 final Channel _channel = new Channel();

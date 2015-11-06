@@ -260,11 +260,20 @@ class GSUtil(object):
               break
       assert GSUtil.GSUTIL_PATH
 
+  def _botEnv(self):
+    env = dict(os.environ)
+    # Some new gcompute and mac minis don't have the BOTO_CONFIG set
+    if not 'BOTO_CONFIG' in env:
+      bot_path = '/b/build/site_config/.boto'
+      if os.path.exists(bot_path):
+        env['BOTO_CONFIG'] = bot_path
+    return env
+
+
   def execute(self, gsutil_args):
     self._layzCalculateGSUtilPath()
 
-    env = dict(os.environ)
-
+    env = self._botEnv()
     if GSUtil.GSUTIL_IS_SHELL_SCRIPT:
       gsutil_command = [GSUtil.GSUTIL_PATH]
     else:

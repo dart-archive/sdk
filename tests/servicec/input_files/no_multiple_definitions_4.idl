@@ -6,5 +6,5 @@ service Foo {
   void Foo(int32 Foo);
 }
 
-struct Foo {
+struct Bar {
 }

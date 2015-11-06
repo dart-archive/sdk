@@ -7,9 +7,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "src/shared/assert.h"
 #include "src/shared/utils.h"
+#include "src/shared/version.h"
 
 #include "src/vm/object.h"
 #include "src/vm/program.h"
@@ -68,7 +70,8 @@ class Header {
       case InstanceFormat::CLASS_TYPE:
         return Class::AllocationSize();
       case InstanceFormat::FUNCTION_TYPE:
-        return Function::AllocationSize(elements());
+        return Function::AllocationSize(
+            Function::BytecodeAllocationSize(elements()));
       case InstanceFormat::DOUBLE_TYPE:
         return Double::AllocationSize();
       case InstanceFormat::INITIALIZER_TYPE:
@@ -233,7 +236,7 @@ void SnapshotReader::ReadBytes(int length, uint8* values) {
   position_ += length;
 }
 
-void SnapshotWriter::WriteBytes(int length, uint8* values) {
+void SnapshotWriter::WriteBytes(int length, const uint8* values) {
   EnsureCapacity(length);
   memcpy(&snapshot_[position_], values, length);
   position_ += length;
@@ -277,8 +280,25 @@ void SnapshotWriter::WriteHeader(InstanceFormat::Type type, int elements) {
 }
 
 Program* SnapshotReader::ReadProgram() {
-  if (ReadByte() != 0xbe) FATAL("Snapshot has wrong magic header!\n");
-  if (ReadByte() != 0xef) FATAL("Snapshot has wrong magic header!\n");
+  if (ReadByte() != 0xbe || ReadByte() != 0xef) {
+    Print::Error("Error: Snapshot has wrong magic header!\n");
+    Platform::Exit(-1);
+  }
+
+  const char* version = GetVersion();
+  int version_length = strlen(version);
+  int snapshot_version_length = ReadInt64();
+  uint8* snapshot_version = new uint8[snapshot_version_length];
+  ReadBytes(snapshot_version_length, snapshot_version);
+  if ((version_length != snapshot_version_length) ||
+      (strncmp(version,
+               reinterpret_cast<char*>(snapshot_version),
+               snapshot_version_length) != 0)) {
+    delete[] snapshot_version;
+    Print::Error("Error: Snapshot and VM versions do not agree.\n");
+    Platform::Exit(-1);
+  }
+  delete[] snapshot_version;
 
   // Read the required backward reference table size.
   int references = 0;
@@ -289,8 +309,18 @@ Program* SnapshotReader::ReadProgram() {
   Program* program = new Program();
 
   // Read the heap size and allocate an area for it.
-  int size_position = position_ + ((kPointerSize == 4) ? 0 : kHeapSizeBytes);
-  position_ += 2 * kHeapSizeBytes;
+  int size_position;
+  if (kPointerSize == 8 && sizeof(fletch_double) == 8) {
+    size_position = position_ + 0 * kHeapSizeBytes;
+  } else if (kPointerSize == 8 && sizeof(fletch_double) == 4) {
+    size_position = position_ + 1 * kHeapSizeBytes;
+  } else if (kPointerSize == 4 && sizeof(fletch_double) == 8) {
+    size_position = position_ + 2 * kHeapSizeBytes;
+  } else {
+    ASSERT(kPointerSize == 4 && sizeof(fletch_double) == 4);
+    size_position = position_ + 3 * kHeapSizeBytes;
+  }
+  position_ += 4 * kHeapSizeBytes;
   int heap_size = ReadHeapSizeFrom(size_position);
   memory_ = ObjectMemory::AllocateChunk(program->heap()->space(), heap_size);
   top_ = memory_->base();
@@ -306,11 +336,10 @@ Program* SnapshotReader::ReadProgram() {
   program->set_static_methods(Array::cast(ReadObject()));
   program->set_static_fields(Array::cast(ReadObject()));
   program->set_dispatch_table(Array::cast(ReadObject()));
-  program->set_vtable(Array::cast(ReadObject()));
 
   // Read the roots.
   ReaderVisitor visitor(this);
-  program->IterateRoots(&visitor);
+  program->IterateRootsIgnoringSession(&visitor);
 
   program->heap()->space()->AppendProgramChunk(memory_, top_);
   backward_references_.Delete();
@@ -318,6 +347,13 @@ Program* SnapshotReader::ReadProgram() {
   // Programs read from a snapshot are always compact.
   program->set_is_compact(true);
   program->SetupDispatchTableIntrinsics();
+
+  // As a sanity check we ensure that the heap size the writer of the snapshot
+  // predicted we would have, is in fact *precisely* how much space we needed.
+  int consumed_memory = top_ - memory_->base();
+  if (consumed_memory != heap_size) {
+    FATAL("The heap size in the snapshot was incorrect.");
+  }
 
   return program;
 }
@@ -330,16 +366,21 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   WriteByte(0xbe);
   WriteByte(0xef);
 
+  const char* version = GetVersion();
+  int version_length = strlen(version);
+  WriteInt64(version_length);
+  WriteBytes(version_length, reinterpret_cast<const uint8*>(version));
+
   // Reserve space for the backward reference table size.
   int reference_count_position = position_;
   for (int i = 0; i < kReferenceTableSizeBytes; i++) WriteByte(0);
 
   // Reserve space for the size of the heap.
-  int size_position =
-      position_ + ((kPointerSize == 4) ? 0 : kHeapSizeBytes);
-  int alternative_size_position =
-      position_ + ((kPointerSize == 4) ? kHeapSizeBytes : 0);
-  for (int i = 0; i < 2 * kHeapSizeBytes; i++) WriteByte(0);
+  int size64_double_position = position_ + 0 * kHeapSizeBytes;
+  int size64_float_position = position_ + 1 * kHeapSizeBytes;
+  int size32_double_position = position_ + 2 * kHeapSizeBytes;
+  int size32_float_position = position_ + 3 * kHeapSizeBytes;
+  for (int i = 0; i < 4 * kHeapSizeBytes; i++) WriteByte(0);
 
   // Write all the program state (except roots).
   WriteObject(program->entry());
@@ -349,11 +390,10 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   WriteObject(program->static_methods());
   WriteObject(program->static_fields());
   WriteObject(program->dispatch_table());
-  WriteObject(program->vtable());
 
   // Write out all the roots of the program.
   WriterVisitor visitor(this);
-  program->IterateRoots(&visitor);
+  program->IterateRootsIgnoringSession(&visitor);
 
   // TODO(kasperl): Unmark all touched objects. Right now, we
   // only unmark the roots.
@@ -370,8 +410,10 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   ASSERT(references == 0);
 
   // Write the size of the heap.
-  WriteHeapSizeTo(size_position, program->heap()->space()->Used());
-  WriteHeapSizeTo(alternative_size_position, alternative_heap_size_);
+  WriteHeapSizeTo(size64_double_position, heap_size_.heap_size_64bits_double);
+  WriteHeapSizeTo(size64_float_position, heap_size_.heap_size_64bits_float);
+  WriteHeapSizeTo(size32_double_position, heap_size_.heap_size_32bits_double);
+  WriteHeapSizeTo(size32_float_position, heap_size_.heap_size_32bits_float);
 
   return snapshot_.Sublist(0, position_);
 }
@@ -459,7 +501,10 @@ void SnapshotWriter::WriteObject(Object* object) {
   if (object->IsSmi()) {
     Smi* smi = Smi::cast(object);
     if (!Smi::IsValidAsPortable(smi->value())) {
-      alternative_heap_size_ += LargeInteger::AllocationSize();
+      int integer_size =
+          LargeInteger::CalculatePortableSize().ComputeSizeInBytes(4, -1);
+      heap_size_.heap_size_32bits_double += integer_size;
+      heap_size_.heap_size_32bits_float += integer_size;
     }
     WriteInt64(Header::FromSmi(smi).as_word());
     return;
@@ -481,61 +526,61 @@ void SnapshotWriter::WriteObject(Object* object) {
   switch (type) {
     case InstanceFormat::ONE_BYTE_STRING_TYPE: {
       OneByteString* str = OneByteString::cast(object);
-      alternative_heap_size_ += str->AlternativeSize();
+      heap_size_ += str->CalculatePortableSize();
       str->OneByteStringWriteTo(this, klass);
       break;
     }
     case InstanceFormat::TWO_BYTE_STRING_TYPE: {
       TwoByteString* str = TwoByteString::cast(object);
-      alternative_heap_size_ += str->AlternativeSize();
+      heap_size_ += str->CalculatePortableSize();
       str->TwoByteStringWriteTo(this, klass);
       break;
     }
     case InstanceFormat::ARRAY_TYPE: {
       Array* array = Array::cast(object);
-      alternative_heap_size_ += array->AlternativeSize();
+      heap_size_ += array->CalculatePortableSize();
       array->ArrayWriteTo(this, klass);
       break;
     }
     case InstanceFormat::BYTE_ARRAY_TYPE: {
       ByteArray* array = ByteArray::cast(object);
-      alternative_heap_size_ += array->AlternativeSize();
+      heap_size_ += array->CalculatePortableSize();
       array->ByteArrayWriteTo(this, klass);
       break;
     }
     case InstanceFormat::LARGE_INTEGER_TYPE: {
       LargeInteger* integer = LargeInteger::cast(object);
-      alternative_heap_size_ += integer->AlternativeSize();
+      heap_size_ += integer->CalculatePortableSize();
       integer->LargeIntegerWriteTo(this, klass);
       break;
     }
     case InstanceFormat::INSTANCE_TYPE: {
       Instance* instance = Instance::cast(object);
-      alternative_heap_size_ += instance->AlternativeSize(klass);
+      heap_size_ += instance->CalculatePortableSize(klass);
       instance->InstanceWriteTo(this, klass);
       break;
     }
     case InstanceFormat::CLASS_TYPE: {
       Class* klass = Class::cast(object);
-      alternative_heap_size_ += klass->AlternativeSize();
+      heap_size_ += klass->CalculatePortableSize();
       klass->ClassWriteTo(this, klass);
       break;
     }
     case InstanceFormat::FUNCTION_TYPE: {
       Function* function = Function::cast(object);
-      alternative_heap_size_ += function->AlternativeSize();
+      heap_size_ += function->CalculatePortableSize();
       function->FunctionWriteTo(this, klass);
       break;
     }
     case InstanceFormat::DOUBLE_TYPE: {
       Double* d = Double::cast(object);
-      alternative_heap_size_ += d->AlternativeSize();
+      heap_size_ += d->CalculatePortableSize();
       d->DoubleWriteTo(this, klass);
       break;
     }
     case InstanceFormat::INITIALIZER_TYPE: {
       Initializer* initializer = Initializer::cast(object);
-      alternative_heap_size_ += initializer->AlternativeSize();
+      heap_size_ += initializer->CalculatePortableSize();
       initializer->InitializerWriteTo(this, klass);
       break;
     }
@@ -682,9 +727,8 @@ void Class::ClassReadFrom(SnapshotReader* reader) {
 
 void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  int rounded_bytecode_size = BytecodeAllocationSize(bytecode_size());
   ASSERT(literals_size() == 0);
-  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, rounded_bytecode_size);
+  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, bytecode_size());
   writer->Forward(this);
   // Body.
   for (int offset = HeapObject::kSize;
@@ -693,10 +737,6 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
     writer->WriteObject(at(offset));
   }
   writer->WriteBytes(bytecode_size(), bytecode_address_for(0));
-  int offset = Function::kSize + rounded_bytecode_size;
-  for (int i = 0; i < literals_size(); ++i) {
-    writer->WriteObject(at(offset + i * kPointerSize));
-  }
 }
 
 void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
@@ -705,12 +745,8 @@ void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
+  ASSERT(literals_size() == 0);
   reader->ReadBytes(bytecode_size(), bytecode_address_for(0));
-  int rounded_bytecode_size = BytecodeAllocationSize(bytecode_size());
-  int offset = Function::kSize + rounded_bytecode_size;
-  for (int i = 0; i < literals_size(); ++i) {
-    at_put(offset + i * kPointerSize, reader->ReadObject());
-  }
 }
 
 void LargeInteger::LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass) {

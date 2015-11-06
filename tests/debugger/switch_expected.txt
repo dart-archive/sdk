@@ -1,9 +1,9 @@
-main	@32
-main	@x
-main	@42
-main	@y
-main	@foo(y)
-foo	@x
-foo	@=>x;
-main	@foo(y)
+main    @32
+main    @x
+main    @42
+main    @y
+main    @foo(y)
+foo @x
+foo @=> x;
+main    @foo(y)
 ### process terminated

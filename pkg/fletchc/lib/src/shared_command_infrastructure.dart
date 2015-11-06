@@ -20,6 +20,9 @@ import 'dart:async' show
     EventSink,
     StreamTransformer;
 
+import 'dart:convert' show
+    ASCII;
+
 import 'dart:io' show
     BytesBuilder;
 
@@ -154,6 +157,14 @@ class CommandBuffer<E> {
     growBytes(value.length);
     list.setRange(position, position + value.length, value);
     position += value.length;
+  }
+
+  void addAsciiString(String value) {
+    addUint8List(ASCII.encode(value));
+  }
+
+  void addBool(bool value) {
+    addUint8(value ? 1 : 0);
   }
 
   void sendOn(Sink<List<int>> sink, E code) {

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library servicec.pretty_printer;
+library old_servicec.pretty_printer;
 
 import 'parser.dart';
 import 'struct_layout.dart';

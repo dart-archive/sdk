@@ -19,12 +19,9 @@ const Action runAction =
         run, runDocumentation, requiresSession: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
 
-Future<int> run(AnalyzedSentence sentence, VerbContext context) async {
-  // This is asynchronous, but we don't await the result so we can respond to
-  // other requests.
-  context.performTaskInWorker(new RunTask(sentence.targetUri));
-
-  return null;
+Future<int> run(AnalyzedSentence sentence, VerbContext context) {
+  return context.performTaskInWorker(
+      new RunTask(sentence.targetUri, sentence.base));
 }
 
 class RunTask extends SharedTask {
@@ -32,13 +29,15 @@ class RunTask extends SharedTask {
 
   final Uri script;
 
-  const RunTask(this.script);
+  final Uri base;
+
+  const RunTask(this.script, this.base);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
     return runTask(
-        commandSender, commandIterator, SessionState.current, script);
+        commandSender, commandIterator, SessionState.current, script, base);
   }
 }
 
@@ -46,11 +45,13 @@ Future<int> runTask(
     CommandSender commandSender,
     StreamIterator<Command> commandIterator,
     SessionState state,
-    Uri script) {
+    Uri script,
+    Uri base) {
   return compileAndAttachToVmThen(
       commandSender,
       commandIterator,
       state,
       script,
+      base,
       () => developer.run(state));
 }

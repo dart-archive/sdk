@@ -27,9 +27,9 @@
       '<@(common_gcc_cflags_c)',
     ],
 
-    'lk_path': '<(DEPTH)/third_party/lk/lk-downstream',
+    'LK_PATH%': 'third_party/lk/lk-downstream',
 
-    'mbed_path': '<(DEPTH)/../third_party/mbed/build/',
+    'mbed_path': '<(DEPTH)/third_party/mbed/build/',
 
     'conditions': [
       [ 'OS=="linux"', {
@@ -64,6 +64,7 @@
         'defines': [
           'FLETCH_ENABLE_LIVE_CODING',
           'FLETCH_ENABLE_FFI',
+          'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
           'FLETCH_ENABLE_NATIVE_PROCESSES',
           'FLETCH_ENABLE_PRINT_INTERCEPTORS',
         ],
@@ -76,7 +77,7 @@
           'GCC_WARN_NON_VIRTUAL_DESTRUCTOR': 'NO', # -Wno-non-virtual-dtor
           'GCC_ENABLE_CPP_RTTI': 'NO', # -fno-rtti
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO', # -fno-exceptions
-	  'DEAD_CODE_STRIPPING': 'YES', # -Wl,-dead_strip (mac --gc-sections)
+          'DEAD_CODE_STRIPPING': 'YES', # -Wl,-dead_strip (mac --gc-sections)
 
           'OTHER_CPLUSPLUSFLAGS' : [
             '<@(common_gcc_cflags_cc)',
@@ -410,6 +411,7 @@
               '-mfpu=fpv4-sp-d16',
               '-mthumb',
               '-Wno-unused-function',
+              '-Wno-error=multichar',
             ],
 
             'cflags_c': [
@@ -421,11 +423,14 @@
             ],
 
             'include_dirs': [
-              '<(lk_path)/../out',
-              '<(lk_path)/include/',
-              '<(lk_path)/arch/arm/include/',
-              '<(lk_path)/lib/libm/include/',
-              '<(lk_path)/arch/arm/arm/include',
+              '<(DEPTH)/<(LK_PATH)/../out',
+              '<(DEPTH)/<(LK_PATH)/../../out',
+              '<(DEPTH)/<(LK_PATH)/include/',
+              '<(DEPTH)/<(LK_PATH)/arch/arm/include/',
+              '<(DEPTH)/<(LK_PATH)/lib/libm/include/',
+              '<(DEPTH)/<(LK_PATH)/lib/minip/include/',
+              '<(DEPTH)/<(LK_PATH)/arch/arm/arm/include',
+              '<(DEPTH)/<(LK_PATH)/lib/heap/include/',
             ],
 
             'ldflags': [
@@ -467,8 +472,8 @@
             'defines': [
               # Fake define intercepted by cc_wrapper.py to change the
               # compiler binary to an ARM cross compiler.
-              'FLETCH_MBED',
-              'FLETCH_TARGET_OS_MBED',
+              'FLETCH_CMSIS',
+              'FLETCH_TARGET_OS_CMSIS',
             ],
 
             'defines!': [
@@ -501,7 +506,7 @@
             'ldflags': [
               '-L<(third_party_libs_path)/arm',
               # Fake define intercepted by cc_wrapper.py.
-              '-L/FLETCH_MBED',
+              '-L/FLETCH_CMSIS',
               '-static-libstdc++',
             ],
           }],
@@ -588,6 +593,14 @@
 
         'defines!': [
           'FLETCH_ENABLE_FFI',
+        ],
+      },
+
+      'fletch_disable_multiple_process_heaps': {
+        'abstract': 1,
+
+        'defines!': [
+          'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
         ],
       },
 

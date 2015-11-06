@@ -1,0 +1,43 @@
+#!/bin/bash
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# Run internal/pkg/flash_sd_card/bin/flash_sd_card.dart on the Dart VM.
+# This script assumes the Fletch SDK's directory structure.
+
+function follow_links() {
+  file="$1"
+  while [ -h "$file" ]; do
+    # On Mac OS, readlink -f doesn't work.
+    file="$(readlink "$file")"
+  done
+  echo "$file"
+}
+
+# Unlike $0, $BASH_SOURCE points to the absolute path of this file.
+PROG_NAME="$(follow_links "$BASH_SOURCE")"
+
+# Handle the case where fletch-sdk/bin has been symlinked to.
+SCRIPT_DIR="$(cd "${PROG_NAME%/*}" ; pwd -P)"
+
+# Location of the Dart script and the Dart VM in a Fletch SDK.
+DART_FILE="$SCRIPT_DIR/../../internal/pkg/flash_sd_card/bin/flash_sd_card.dart"
+DART_VM="$SCRIPT_DIR/../../internal/dart"
+
+# If we are not in a Fletch SDK, assume a Fletch Github checkout.
+if [ ! -r $DART_FILE ]; then
+  DART_FILE="$SCRIPT_DIR/../../pkg/flash_sd_card/bin/flash_sd_card.dart"
+fi
+
+# If we are not in a Fletch SDK, assume a Fletch Github checkout.
+if [ ! -r $DART_VM ]; then
+  # Guess Linux, running from platforms/raspberry-pi2.
+  DART_VM="$SCRIPT_DIR/../../third_party/bin/linux/dart"
+  if [ ! -r $DART_VM ]; then
+    # Guess Mac OS, running from platforms/raspberry-pi2.
+    DART_VM="$SCRIPT_DIR/../../third_party/bin/macos/dart"
+  fi
+fi
+
+exec sudo "$DART_VM" "$DART_FILE" "$@"

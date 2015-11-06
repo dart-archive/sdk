@@ -32,6 +32,9 @@ static void SignalHandler(int signal) {
 }
 
 int SignalFileDescriptor() {
+  // Temporarily limit signals to a short list of white-listed signals.
+  const bool limit_signals = true;
+
   if (signal_pipe[0] != -1) {
     FATAL("SignalFileDescriptor() can only be called once.");
   }
@@ -52,6 +55,23 @@ int SignalFileDescriptor() {
   for (int signal_number = 1; signal_number <= MAX_SIGNAL; signal_number++) {
     if (signal_number == SIGKILL || signal_number == SIGSTOP) {
       // These signals cannot be intercepted.
+      continue;
+    }
+    if (signal_number == SIGCONT) {
+      // Since we can't intercept SIGSTOP, we shouldn't intercept SIGCONT.
+      continue;
+    }
+    if (signal_number == SIGTSTP) {
+      // Let Ctrl-Z suspend the client.
+      continue;
+    }
+    if (limit_signals &&
+        // Default signal when running `kill` without specifying a signal.
+        signal_number != SIGTERM &&
+        // Signal from Ctrl-C.
+        signal_number != SIGINT &&
+        // Signal from Ctrl-\.
+        signal_number != SIGQUIT) {
       continue;
     }
     bzero(action, sizeof(*action));

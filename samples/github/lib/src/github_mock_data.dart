@@ -7,9 +7,9 @@ import 'dart:typed_data';
 import 'github_mock.dart' show DataStorage;
 import 'github_mock.data' as data;
 
-class ByteMapDataStorage implements DataStorage {
+class ByteMapDataStorage extends DataStorage {
   ByteBuffer readResponseFile(String resource) {
-    List<int> bytes = data.resources[resource];
+    List<int> bytes = data.resources[encode(resource)];
     return (bytes != null) ? new Uint8List.fromList(bytes).buffer : null;
   }
 }

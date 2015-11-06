@@ -9,85 +9,83 @@ import 'dart:async' show
 
 import 'dart:io';
 
-import 'errors.dart' show
-    CompilerError;
-
-import 'targets.dart' show
-    Target;
-
 import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
 
-import 'parser.dart' show
-    Parser;
+import 'error_handling_listener.dart' show
+    ErrorHandlingListener;
+
+import 'errors.dart' show
+    CompilationError,
+    UndefinedServiceError,
+    InternalCompilerError;
 
 import 'listener.dart' show
     DebugListener,
     Listener;
 
-import 'validator.dart' show
-    validate;
-
-import 'error_handling_listener.dart' show
-    ErrorHandlingListener;
+import 'parser.dart' show
+    Parser;
 
 import 'scanner.dart' show
     Scanner;
 
+import 'targets.dart' show
+    Target;
+
+import 'validator.dart' show
+    validate;
+
+import 'converter.dart' show
+    convert;
+
+import 'package:old_servicec/compiler.dart' as old_servicec;
+import 'package:old_servicec/src/parser.dart' show
+    Unit;
+
 // Temporary output type
-Future<Iterable<CompilerError>> compile(
+Future<Iterable<CompilationError>> compile(
     String path,
+    String resourcesDirectory,
     String outputDirectory,
     {Target target: Target.ALL}) async {
   String input = new File(path).readAsStringSync();
-  return compileInput(input, path, outputDirectory, target: target);
+  return compileInput(input,
+                      path,
+                      resourcesDirectory,
+                      outputDirectory,
+                      target: target);
 }
 
 // Temporary output type
-Future<Iterable<CompilerError>> compileInput(
+Future<Iterable<CompilationError>> compileInput(
     String input,
     String path,
+    String resourcesDirectory,
     String outputDirectory,
     {Target target: Target.ALL}) async {
   if (input.isEmpty) {
-    return [CompilerError.undefinedService];
+    return [new UndefinedServiceError()];
   }
 
   Scanner scanner = new Scanner(input);
   Token tokens = scanner.tokenize();
 
   ErrorHandlingListener listener = new ErrorHandlingListener();
-  Parser parser = new Parser(new DebugListener(listener));
+  Parser parser = new Parser(listener);
   parser.parseUnit(tokens);
 
-  Iterable<CompilerError> errors = validate(listener.parsedUnitNode);
+  Iterable<CompilationError> errors = validate(listener.parsedUnitNode);
 
-  // TODO(stanm): validate
-
-  // TODO(stanm): generate output
-
-  createDirectories(outputDirectory, target);
-
-  // TODO(stanm): write files
+  if (errors.isEmpty) {
+    Unit unit = convert(listener.parsedUnitNode);
+    try {
+      old_servicec.compile(path, unit, resourcesDirectory, outputDirectory);
+    } catch (e, stackTrace) {
+      String message = "Original error:\n$e\n$stackTrace";
+      throw new InternalCompilerError(message);
+    }
+  }
 
   return errors;
-}
-
-void createDirectories(String outputDirectory, Target target) {
-  new Directory(outputDirectory).createSync(recursive: true);
-
-  if (target.includes(Target.JAVA)) {
-    createJavaDirectories(outputDirectory);
-  }
-  if (target.includes(Target.CC)) {
-    createCCDirectories(outputDirectory);
-  }
-}
-
-void createJavaDirectories(String outputDirectory) {
-  new Directory("$outputDirectory/java").createSync(recursive: true);
-}
-
-void createCCDirectories(String outputDirectory) {
-  new Directory("$outputDirectory/cc").createSync(recursive: true);
 }
