@@ -238,7 +238,7 @@ class Validator extends RecursiveVisitor {
   }
 
   void checkTypeParameter(TypeNode type) {
-    if (!(type.isPrimitive() || type.isString() || type.isStruct())) {
+    if (!(type.isPrimitive() || type.isStruct())) {
       errors.add(new BadTypeParameterError(type));
     }
   }

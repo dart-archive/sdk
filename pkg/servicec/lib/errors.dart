@@ -417,8 +417,8 @@ class BadListTypeError extends BadTypeError {
 class BadTypeParameterError extends BadTypeError {
   ErrorTag get tag => ErrorTag.badTypeParameter;
   String get errorMessage => "Unexpected type parameter.";
-  String get infoMessage => "Expected a primitive type, a string, or a " +
-                            "structure as the List type parameter.";
+  String get infoMessage => "Expected a primitive type or a structure as " +
+                            "the List type parameter.";
 
   BadTypeParameterError(TypeNode type)
     : super(type);
