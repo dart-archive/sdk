@@ -26,19 +26,18 @@ PORT = 10022
 
 def Options():
   result = optparse.OptionParser()
-  result.add_option("--agent",
+  result.add_option('--agent',
                     default=None,
-                    help="The arm agent deb file.")
+                    help='The arm agent deb file.')
   # We assume that this file has been patched to remove the /etc/ld.so.preload
   # entries and that /etc/fstab entries are also fixed. We will remove the
   # comment markers in these files in this script.
-  result.add_option("--image",
+  result.add_option('--image',
                     default=None,
-                    help="The raspbian image file.")
-  result.add_option("--src",
+                    help='The raspbian image file.')
+  result.add_option('--src',
                     default=None,
-                    help="The source tarball that we ship with the image.")
-
+                    help='The source tarball that we ship with the image.')
   (options, args) = result.parse_args()
   return options
 
@@ -48,6 +47,7 @@ def InstallAgent(qemu, agent):
   qemu.run_command('sudo sudo dpkg -i %s' % deb_dst)
   qemu.run_command('rm %s' % deb_dst)
   # This will fail, but it lets us validate that the binary was installed.
+  # (it fails due to the simulated cpu not being armv7)
   qemu.run_command('fletch-vm --version')
 
 def InstallConfig(qemu):
@@ -85,7 +85,7 @@ class QemuSession(object):
   def __enter__(self):
     cmd = [QEMU, '-kernel', self.kernel, '-cpu', 'arm1176', '-m',
            '256', '-M', 'versatilepb', '-no-reboot', '-nographic', '-append',
-          '"root=/dev/sda2 panic=1 vga=normal rootfstype=ext4 '
+          '"root=/dev/sda2 panic=1 vga=normal rootfstype=ext4 ' # no comma
           'rw console=ttyAMA0"', '-hda', self.image,
           '-net', 'user,hostfwd=tcp::10022-:22', '-net', 'nic']
     print 'Starting qemu with:\n%s' % ' '.join(cmd)
@@ -96,8 +96,9 @@ class QemuSession(object):
     self.process.logfile = self.logfile
     # Give the vm some time to bootup.
     time.sleep(50)
+    self.ssh = None
     # Try connection multiple times, the time it takes to boot varies a lot.
-    for x in xrange(20):
+    for x in xrange(10):
       print 'Connection attempt %s' % x
       ssh = pxssh.pxssh()
       # See https://github.com/pexpect/pexpect/issues/179
@@ -111,10 +112,10 @@ class QemuSession(object):
         self.run_command('uptime')
         break
       except pxssh.ExceptionPxssh, e:
-        print "pxssh failed on login."
+        print 'pxssh failed on login.'
         print str(e)
       except:
-        print "Qemu not up yet"
+        print 'Qemu not up yet'
       time.sleep(10)
     if not self.ssh or not self.ssh.isalive():
       # Make sure the output of qemu is forced to file
