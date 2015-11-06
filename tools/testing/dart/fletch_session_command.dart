@@ -473,7 +473,7 @@ class FletchSessionHelper {
     await stderrFuture;
 
     stdout.add(UTF8.encode("\n => $exitCode\n"));
-    if (thisCommandTimedout || (checkExitCode && exitCode != 0)) {
+    if (checkExitCode && (thisCommandTimedout || exitCode != 0)) {
       throw new UnexpectedExitCode(exitCode, executable, arguments);
     }
     return exitCode;
