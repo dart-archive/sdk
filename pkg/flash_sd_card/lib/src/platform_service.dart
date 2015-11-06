@@ -92,7 +92,7 @@ abstract class PlatformService {
   /// specified in [device].
   ///
   /// If the device is an SD card then it must be unmounted before calling this.
-  Future<bool> ddWithProgress(File source, String device) async {
+  Future ddWithProgress(File source, String device) async {
     StreamTransformer progressTransformer =
         new StreamTransformer<String, String>.fromHandlers(
           handleData: (String value, EventSink<String> sink) {
@@ -136,9 +136,8 @@ abstract class PlatformService {
       ctx.infoln(ddStderr);
       if (ddStderr.contains('Permission denied')) {
         ctx.infoln("Remember to run this command with 'sudo'");
-        await ctx.failure('');
       }
-      return false;
+      await ctx.failure('');
     }
 
     // Sync filesystems before returning.

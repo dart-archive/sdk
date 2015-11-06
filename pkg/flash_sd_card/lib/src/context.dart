@@ -174,7 +174,7 @@ class Context {
       if (_arguments['tmp-dir'] != null) {
         _tmpDir = new Future.value(new Directory(_arguments['tmp-dir']));
       } else {
-        _tmpDir = Directory.systemTemp.create();
+        _tmpDir = Directory.systemTemp.createTemp('flash_sd_card');
       }
     }
     return _tmpDir;
