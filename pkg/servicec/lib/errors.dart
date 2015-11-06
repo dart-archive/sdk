@@ -188,11 +188,15 @@ class ErrorReporter {
   }
 
   void reportError(String message, [Token token]) {
-    _reportMessage(message, token, "ERROR");
+    _reportMessage(message, token, "error");
+  }
+
+  void reportWarning(String message, [Token token]) {
+    _reportMessage(message, token, "warning");
   }
 
   void reportInfo(String message, [Token token]) {
-    _reportMessage(message, token, "INFO");
+    _reportMessage(message, token, "info");
   }
 
   int getLineNumber(Token token) {
@@ -255,7 +259,7 @@ class SyntaxError extends CompilationError {
   void report(ErrorReporter reporter) {
     reporter.reportError(errorMessages[node.tag], node.begin);
     if (null != infoMessages[node.tag]) {
-      reporter.reportInfo(infoMessages[node.tag]);
+      reporter.reportInfo(infoMessages[node.tag], node.begin);
     }
   }
 
@@ -314,7 +318,8 @@ class NotPrimitiveFormalError extends CompilationError {
         formal.type.identifier.token);
     reporter.reportInfo(
         "All formal arguments should have primitive types when the function " +
-        "has more than one formal argument.");
+        "has more than one formal argument.",
+        formal.type.identifier.token);
   }
 }
 
@@ -356,7 +361,7 @@ abstract class BadTypeError extends CompilationError {
 
   void report(ErrorReporter reporter) {
     reporter.reportError(errorMessage, type.identifier.token);
-    reporter.reportInfo(infoMessage);
+    reporter.reportInfo(infoMessage, type.identifier.token);
   }
 }
 
