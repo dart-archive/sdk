@@ -27,35 +27,30 @@ class Fiber {
   Fiber _previous;
   Fiber _next;
 
-  static Fiber _current;
+  static Fiber _current = new Fiber._initial();
   static Fiber _idleFibers;
 
   // This static is initialized as part of creating the
   // initial fiber. This way we can avoid checking for
   // lazy initialization for it.
-  static Coroutine _scheduler;
+  static bool _initialized = false;
 
   Fiber._initial() {
     _previous = this;
     _next = this;
-    _scheduler = new Coroutine(_schedulerLoop);
+    _initialized = true;
   }
 
   Fiber._forked(entry) {
-    current;
+    _current;  // Force initialization of fiber sub-system.
     _coroutine = new Coroutine((ignore) {
       fletch.runToEnd(entry);
     });
   }
 
-  static Fiber get current {
-    var current = _current;
-    if (current != null) return current;
-    return _current = new Fiber._initial();
-  }
+  static Fiber get current => _current;
 
   static Fiber fork(entry) {
-    _current;  // Force initialization of fiber sub-system.
     Fiber fiber = new Fiber._forked(entry);
     _markReady(fiber);
     return fiber;
@@ -66,13 +61,13 @@ class Fiber {
     // messages can wake up.
     Process._handleMessages();
     _current._coroutine = Coroutine._coroutineCurrent();
-    fletch.coroutineChange(_scheduler, _current._next);
+    _schedule(_current._next);
   }
 
   static void exit([value]) {
     // If we never needed the scheduler coroutine, we can just
     // go ahead and halt now.
-    if (_scheduler == null) fletch.halt();
+    if (!_initialized) fletch.halt();
 
     _current._exit(value);
   }
@@ -95,7 +90,7 @@ class Fiber {
     // can go ahead and return the result.
     Fiber next = _suspendFiber(fiber, false);
     fiber._coroutine = Coroutine._coroutineCurrent();
-    fletch.coroutineChange(Fiber._scheduler, next);
+    _schedule(next);
     return _result;
   }
 
@@ -113,7 +108,7 @@ class Fiber {
     // Suspend the current fiber. It will never wake up again.
     Fiber next = _suspendFiber(fiber, true);
     fiber._coroutine = null;
-    fletch.coroutineChange(Fiber._scheduler, next);
+    _schedule(next);
   }
 
   static void _resumeFiber(Fiber fiber) {
@@ -180,7 +175,7 @@ class Fiber {
 
   static void _yieldTo(Fiber from, Fiber to) {
     from._coroutine = Coroutine._coroutineCurrent();
-    fletch.coroutineChange(_scheduler, to);
+    _schedule(to);
   }
 
   // TODO(kasperl): This is temporary debugging support. We
@@ -190,17 +185,9 @@ class Fiber {
   int _index = _count++;
   toString() => "fiber:$_index";
 
-  // TODO(kasperl): Right now, we ignore the events -- and they
-  // are always null -- but it is easy to imagine using the
-  // events to communicate things to the scheduler.
-  static void _schedulerLoop(next) {
-    while (true) {
-      // Update the current fiber to the next one and change to
-      // its coroutine. In return, the scheduled fiber determines
-      // which fiber to schedule next.
-      _current = next;
-      next = fletch.coroutineChange(next._coroutine, null);
-    }
+  static void _schedule(Fiber to) {
+    _current = to;
+    fletch.coroutineChange(to._coroutine, null);
   }
 }
 
