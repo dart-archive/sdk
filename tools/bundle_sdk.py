@@ -19,7 +19,8 @@ from os import makedirs
 from os.path import join, exists, basename
 from shutil import copyfile, copymode, copytree, rmtree
 
-SDK_PACKAGES = ['file', 'gpio', 'http', 'i2c', 'os', 'raspberry_pi', 'socket']
+SDK_PACKAGES = ['file', 'fletch', 'gpio', 'http', 'i2c', 'os',
+                'raspberry_pi', 'socket']
 THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['raspberry_pi', 'general']
