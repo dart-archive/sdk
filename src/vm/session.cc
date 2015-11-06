@@ -176,6 +176,47 @@ void Session::SendInstanceStructure(Instance* instance) {
   }
 }
 
+void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
+                                 FunctionOffsetsType* function_offsets) {
+  WriteBuffer buffer;
+
+  // Class offset table
+  buffer.WriteInt(5 * class_offsets->size());
+  for (auto it = class_offsets->Begin();
+       it != class_offsets->End();
+       ++it) {
+    Class* klass = it->first;
+    PortableOffset* offset = it->second;
+
+    buffer.WriteInt(MapLookupByObject(class_map_id_, klass));
+    buffer.WriteInt(offset->offset_64bits_double);
+    buffer.WriteInt(offset->offset_64bits_float);
+    buffer.WriteInt(offset->offset_32bits_double);
+    buffer.WriteInt(offset->offset_32bits_float);
+
+    delete offset;
+  }
+
+  // Function offset table
+  buffer.WriteInt(5 * function_offsets->size());
+  for (auto it = function_offsets->Begin();
+       it != function_offsets->End();
+       ++it) {
+    Function* function = it->first;
+    PortableOffset* offset = it->second;
+
+    buffer.WriteInt(MapLookupByObject(method_map_id_, function));
+    buffer.WriteInt(offset->offset_64bits_double);
+    buffer.WriteInt(offset->offset_64bits_float);
+    buffer.WriteInt(offset->offset_32bits_double);
+    buffer.WriteInt(offset->offset_32bits_float);
+
+    delete offset;
+  }
+
+  connection_->Send(Connection::kWriteSnapshotResult, buffer);
+}
+
 void Session::ProcessContinue(Process* process) {
   execution_paused_ = false;
   process->program()->scheduler()->ContinueProcess(process);
@@ -456,8 +497,14 @@ void Session::ProcessMessages() {
         uint8* data = connection_->ReadBytes(&length);
         const char* path = reinterpret_cast<const char*>(data);
         ASSERT(static_cast<int>(strlen(path)) == length - 1);
-        bool success = WriteSnapshot(path);
+
+        FunctionOffsetsType function_offsets;
+        ClassOffsetsType class_offsets;
+        bool success = WriteSnapshot(path, &function_offsets, &class_offsets);
         free(data);
+
+        SendSnapshotResult(&class_offsets, &function_offsets);
+
         SignalMainThread(success ? kSnapshotDone : kError);
         return;
       }
@@ -773,7 +820,9 @@ int Session::ProcessRun() {
   return result;
 }
 
-bool Session::WriteSnapshot(const char* path) {
+bool Session::WriteSnapshot(const char* path,
+                            FunctionOffsetsType* function_offsets,
+                            ClassOffsetsType* class_offsets) {
   program()->set_entry(Function::cast(Pop()));
   program()->set_main_arity(Smi::cast(Pop())->value());
   // Make sure that the program is in the compact form before
@@ -782,7 +831,8 @@ bool Session::WriteSnapshot(const char* path) {
     ProgramFolder program_folder(program());
     program_folder.Fold();
   }
-  SnapshotWriter writer;
+
+  SnapshotWriter writer(function_offsets, class_offsets);
   List<uint8> snapshot = writer.WriteProgram(program());
   bool success = Platform::StoreFile(path, snapshot);
   snapshot.Delete();

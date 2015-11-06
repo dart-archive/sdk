@@ -13,6 +13,7 @@
 
 #include "src/vm/object_list.h"
 #include "src/vm/program.h"
+#include "src/vm/snapshot.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -40,7 +41,9 @@ class Session {
 
   // High-level operations.
   int ProcessRun();
-  bool WriteSnapshot(const char* path);
+  bool WriteSnapshot(const char* path,
+                     FunctionOffsetsType* function_offsets,
+                     ClassOffsetsType* class_offsets);
   void CollectGarbage();
 
   // Map operations.
@@ -169,6 +172,8 @@ class Session {
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);
   void SendInstanceStructure(Instance* instance);
+  void SendSnapshotResult(ClassOffsetsType* class_offsets,
+                          FunctionOffsetsType* function_offsets);
 
   void Push(Object* object) { stack_.Add(object); }
   Object* Pop() { return stack_.RemoveLast(); }

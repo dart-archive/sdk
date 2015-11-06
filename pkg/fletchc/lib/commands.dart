@@ -8,6 +8,7 @@ import 'dart:convert' show
     UTF8;
 
 import 'dart:typed_data' show
+    Int32List,
     Uint16List,
     Uint8List;
 
@@ -97,6 +98,33 @@ abstract class Command {
         String message = CommandBuffer.readAsciiStringFromBuffer(
             buffer, 1, buffer.length - 1);
         return new CommitChangesResult(success, message);
+      case CommandCode.WriteSnapshotResult:
+        if ((buffer.offsetInBytes % 4) != 0) {
+          buffer = new Uint8List.fromList(buffer);
+        }
+
+        int offset = 0;
+
+        int readInt() {
+          int number = CommandBuffer.readInt32FromBuffer(buffer, offset);
+          offset += 4;
+          return number;
+        }
+
+        Int32List readArray(int length) {
+          Int32List classTable = new Int32List.view(
+              buffer.buffer, buffer.offsetInBytes + offset, length);
+          offset += 4 * length;
+          return classTable;
+        }
+
+        int classEntries = readInt();
+        Int32List classTable = readArray(classEntries);
+
+        int functionEntries = readInt();
+        Int32List functionTable = readArray(functionEntries);
+
+        return new WriteSnapshotResult(classTable, functionTable);
       default:
         throw 'Unhandled command in Command.fromBuffer: $code';
     }
@@ -1151,9 +1179,47 @@ class WriteSnapshot extends Command {
         ..sendOn(sink, code);
   }
 
-  int get numberOfResponsesExpected => 0;
+  // Response is a [WriteSnapshotResult] message.
+  int get numberOfResponsesExpected => 1;
 
   String valuesToString() => "'$value'";
+}
+
+// Contains two tables with information about function/class offsets in the
+// program heap (when loaded from a snapshot).
+//
+// Both offset tables have the form:
+//   [
+//       [class/function id1, config{1,2,3,4}-offset]
+//       [class/function id2, ...],
+//       ...,
+//   ]
+// Each id/offset is represented as a 4 byte integer (which may be -1).
+//
+// All offsets are relative to the start of the program heap if a snapshot was
+// loaded into memory.
+//
+// The offsets are different for our 4 different configurations:
+//
+//     config1: "64 bit double"
+//     config2: "64 bit float"
+//     config3: "32 bit double"
+//     config4: "32 bit float"
+//
+class WriteSnapshotResult extends Command {
+  final Int32List classOffsetTable;
+  final Int32List functionOffsetTable;
+
+  const WriteSnapshotResult(this.classOffsetTable, this.functionOffsetTable)
+      : super(CommandCode.WriteSnapshotResult);
+
+  void internalAddTo(Sink<List<int>> sink, CommandBuffer<CommandCode> buffer) {
+    throw new UnimplementedError();
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "$classOffsetTable, $functionOffsetTable";
 }
 
 class InstanceStructure extends Command {
@@ -1314,6 +1380,7 @@ enum CommandCode {
   ProcessAddFibersToMap,
   ProcessNumberOfStacks,
   WriteSnapshot,
+  WriteSnapshotResult,
   CollectGarbage,
 
   NewMap,

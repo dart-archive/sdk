@@ -410,10 +410,10 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   ASSERT(references == 0);
 
   // Write the size of the heap.
-  WriteHeapSizeTo(size64_double_position, heap_size_.heap_size_64bits_double);
-  WriteHeapSizeTo(size64_float_position, heap_size_.heap_size_64bits_float);
-  WriteHeapSizeTo(size32_double_position, heap_size_.heap_size_32bits_double);
-  WriteHeapSizeTo(size32_float_position, heap_size_.heap_size_32bits_float);
+  WriteHeapSizeTo(size64_double_position, heap_size_.offset_64bits_double);
+  WriteHeapSizeTo(size64_float_position, heap_size_.offset_64bits_float);
+  WriteHeapSizeTo(size32_double_position, heap_size_.offset_32bits_double);
+  WriteHeapSizeTo(size32_float_position, heap_size_.offset_32bits_float);
 
   return snapshot_.Sublist(0, position_);
 }
@@ -503,8 +503,8 @@ void SnapshotWriter::WriteObject(Object* object) {
     if (!Smi::IsValidAsPortable(smi->value())) {
       int integer_size =
           LargeInteger::CalculatePortableSize().ComputeSizeInBytes(4, -1);
-      heap_size_.heap_size_32bits_double += integer_size;
-      heap_size_.heap_size_32bits_float += integer_size;
+      heap_size_.offset_32bits_double += integer_size;
+      heap_size_.offset_32bits_float += integer_size;
     }
     WriteInt64(Header::FromSmi(smi).as_word());
     return;
@@ -562,12 +562,14 @@ void SnapshotWriter::WriteObject(Object* object) {
     }
     case InstanceFormat::CLASS_TYPE: {
       Class* klass = Class::cast(object);
+      (*class_offsets_)[klass] = new PortableOffset(heap_size_);
       heap_size_ += klass->CalculatePortableSize();
       klass->ClassWriteTo(this, klass);
       break;
     }
     case InstanceFormat::FUNCTION_TYPE: {
       Function* function = Function::cast(object);
+      (*function_offsets_)[function] = new PortableOffset(heap_size_);
       heap_size_ += function->CalculatePortableSize();
       function->FunctionWriteTo(this, klass);
       break;

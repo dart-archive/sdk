@@ -236,9 +236,11 @@ class Session extends FletchVmSession {
     await runCommand(const DisableStandardOutput());
   }
 
-  Future writeSnapshot(String snapshotPath) async {
-    await runCommand(new WriteSnapshot(snapshotPath));
+  // Returns either a [WriteSnapshotResult] or a [ConnectionError].
+  Future<Command> writeSnapshot(String snapshotPath) async {
+    Command result = await runCommand(new WriteSnapshot(snapshotPath));
     await shutdown();
+    return result;
   }
 
   Future enableDebugger() async {
