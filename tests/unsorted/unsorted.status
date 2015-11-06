@@ -47,6 +47,7 @@ random_test: Pass, Crash
 shared_immutable_data_test: Crash, Slow
 spawn_empty_test: Pass, Crash
 spawn_fib_test: Pass, Crash
+uri_base_test: Crash # Uri.base not implemented.
 
 [ $mode == debug && $asan ]
 random_test: Slow, Pass
