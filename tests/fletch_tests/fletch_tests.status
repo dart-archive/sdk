@@ -31,7 +31,8 @@ servicec/bad_field_8: Fail
 servicec/bad_formal_1: Fail
 servicec/bad_formal_2: Fail
 servicec/bad_formal_3: Fail
-servicec/bad_function_7: Fail
+servicec/bad_function_7: Fail  # Issue 292
+servicec/bad_function_8: Fail  # Issue 292
 servicec/bad_list_type_2: Fail
 servicec/bad_list_type_3: Fail
 servicec/bad_list_type_4: Fail
