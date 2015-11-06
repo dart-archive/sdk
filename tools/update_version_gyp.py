@@ -41,10 +41,6 @@ version_gyp_template = """\
 def Main():
   args = sys.argv[1:]
   version_gyp = args[0]
-  current_content = None
-  if os.path.isfile(version_gyp):
-    with open(version_gyp, "r") as f:
-      current_content = f.read()
   if os.path.isfile("tools/GIT_REVISION"):
     ref = "tools/GIT_REVISION"
   else:
@@ -52,9 +48,8 @@ def Main():
       ["git", "rev-parse", "--symbolic-full-name", "HEAD"]).strip()
     ref = ".git/%s" % ref
   updated_content = version_gyp_template % {"ref": ref}
-  if updated_content != current_content:
-    with open(version_gyp, 'w') as f:
-      f.write(updated_content)
+  with open(version_gyp, 'w') as f:
+    f.write(updated_content)
   return 0
 
 
