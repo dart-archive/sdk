@@ -40,7 +40,7 @@ def Main():
       release_type=bot_utils.ReleaseType.RELEASE)
   for target_version in [version, 'latest']:
     for system in ['linux', 'mac']:
-      for arch in ['ia32', 'x64']:
+      for arch in ['x64']:
         src = raw_namer.fletch_sdk_zipfilepath(version, system, arch, 'release')
         target = release_namer.fletch_sdk_zipfilepath(target_version, system,
                                                       arch, 'release')
