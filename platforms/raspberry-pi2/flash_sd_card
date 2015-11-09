@@ -27,12 +27,12 @@ DART_VM="$SCRIPT_DIR/../../internal/dart"
 FLETCH_VM="$SCRIPT_DIR/../../bin/fletch-vm"
 
 # If we are not in a Fletch SDK, assume a Fletch Github checkout.
-if [ ! -r $DART_FILE ]; then
+if [ ! -r "$DART_FILE" ]; then
   DART_FILE="$SCRIPT_DIR/../../pkg/flash_sd_card/bin/flash_sd_card.dart"
 fi
 
 # If we are not in a Fletch SDK, assume a Fletch Github checkout.
-if [ ! -r $DART_VM ]; then
+if [ ! -r "$DART_VM" ]; then
   # Guess Linux, running from platforms/raspberry-pi2.
   DART_VM="$SCRIPT_DIR/../../third_party/bin/linux/dart"
   if [ ! -r $DART_VM ]; then
@@ -42,7 +42,7 @@ if [ ! -r $DART_VM ]; then
 fi
 
 # If we are not in a Fletch SDK, assume a Fletch Github checkout.
-if [ ! -r $FLETCH_VM ]; then
+if [ ! -r "$FLETCH_VM" ]; then
   # Don't point to any Fletch VM in this case.
   FLETCH_VM=
 fi
