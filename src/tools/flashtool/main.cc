@@ -7,6 +7,7 @@
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/intrinsics.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/program.h"
 #include "src/vm/program_info_block.h"
@@ -113,10 +114,12 @@ class RelocationVisitor : public HeapObjectVisitor {
 
 class ProgramHeapRelocator {
  public:
-  ProgramHeapRelocator(char* snapshot, const char* symbol, uword baseaddress)
+  ProgramHeapRelocator(char* snapshot, const char* symbol, uword baseaddress,
+                       IntrinsicsTable* table)
       : snapshot_name_(snapshot),
         output_name_(symbol),
-        baseaddress_(baseaddress) {}
+        baseaddress_(baseaddress),
+        table_(table) {}
 
   int Relocate() {
     ObjectMemory::Setup();
@@ -127,6 +130,8 @@ class ProgramHeapRelocator {
     // Clear away the intrinsics as they will point to the wrong
     // addresses.
     program->ClearDispatchTableIntrinsics();
+    // And then setup fresh ones using our relocation table.
+    program->SetupDispatchTableIntrinsics(table_);
 
     // Make sure we only have one chunk in the heap so that we can linearly
     // relocate objects to the new base.
@@ -189,24 +194,59 @@ class ProgramHeapRelocator {
   const char* snapshot_name_;
   const char* output_name_;
   uword baseaddress_;
+  IntrinsicsTable* table_;
 };
 
+static void printUsage(char* name) {
+  printf("Usage: %s [-i <intrinsic name>=<address>] <snapshot file> "
+         "<base address> <program heap file>\n", name);
+}
+
 static int Main(int argc, char** argv) {
-  if (argc < 4) {
-    printf("Usage: %s <snapshot file> <base address> <program heap file>\n",
-           argv[0]);
+  IntrinsicsTable* table = new IntrinsicsTable();
+
+  char** argp = argv + 1;
+  while (argc > 5) {
+    if (strcmp(*(argp++), "-i") != 0) {
+      printUsage(*argv);
+      return 1;
+    }
+    char* name;
+    char* value;
+    char* safe_ptr = NULL;
+    if ((name = strtok_r(*argp++, "=", &safe_ptr))  == NULL ||
+        (value = strtok_r(NULL, "=", &safe_ptr)) == NULL ||
+         strtok_r(NULL, "=", &safe_ptr) != NULL) {
+      printUsage(*argv);
+      return 1;
+    }
+    char* endptr;
+    int64 address = strtoll(value, &endptr, 0);
+    if (*endptr != '\0' || address < 0) {
+      printf("Illegal address for intrinsic %s: %" PRIx64 "\n", name, address);
+      return 1;
+    }
+    if (!table->set_from_string(name,
+                                reinterpret_cast<void (*)(void)>(address))) {
+      printf("Illegal intrinsic name: %s\n", name);
+    }
+    argc = argc - 2;
+  }
+
+  if (argc < 5) {
+    printUsage(*argv);
     return 1;
   }
 
   char* endptr;
   int64 basevalue;
-  basevalue = strtoll(argv[2], &endptr, 0);
+  basevalue = strtoll(argp[1], &endptr, 0);
   if (*endptr != '\0' || basevalue < 0 || basevalue & 0x3) {
-    printf("Illegal base address: %s [%" PRIx64 "]\n", argv[2], basevalue);
+    printf("Illegal base address: %s [%" PRIx64 "]\n", argp[1], basevalue);
     return 1;
   }
 
-  ProgramHeapRelocator relocator(argv[1], argv[3], basevalue);
+  ProgramHeapRelocator relocator(argp[0], argp[2], basevalue, table);
   return relocator.Relocate();
 }
 
