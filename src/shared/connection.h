@@ -92,6 +92,7 @@ class Connection {
     kProcessAddFibersToMap,
     kProcessNumberOfStacks,
     kWriteSnapshot,
+    kWriteSnapshotResult,
     kCollectGarbage,
 
     kNewMap,

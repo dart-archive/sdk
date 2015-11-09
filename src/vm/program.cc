@@ -741,6 +741,12 @@ void Program::Initialize() {
   }
 
   {
+    InstanceFormat format = InstanceFormat::instance_format(3);
+    no_such_method_error_class_ = Class::cast(
+        heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
     InstanceFormat format = InstanceFormat::one_byte_string_format();
     one_byte_string_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));

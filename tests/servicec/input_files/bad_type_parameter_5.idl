@@ -3,8 +3,8 @@
 // BSD-style license that can be found in the LICENSE file.
 
 service Foo {
-  void bar(int32
-  // This results in two errors one for the formal and one for the function:
-  // badFunction
-  // badFormal
+}
+
+struct Bar {
+  List<String> baz;  // badTypeParameter
 }

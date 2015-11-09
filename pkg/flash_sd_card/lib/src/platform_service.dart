@@ -256,7 +256,7 @@ class MacOSPlatformService extends PlatformService {
         if (--retryCount == 0) {
           await ctx.failure('Failed to mount $device', result.stderr);
         } else {
-          await sleep(1000);
+          await super.sleep(1000);
         }
       }
       return new Directory('/Volumes/boot');

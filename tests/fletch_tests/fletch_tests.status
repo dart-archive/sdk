@@ -26,13 +26,13 @@ incremental/same_tokens_variant: Fail
 incremental/compile_time_error_hides_field: Fail
 
 # Incorrectly failing servicec tests
-servicec/bad_field_4: Fail
-servicec/bad_field_8: Fail
-servicec/bad_formal_1: Fail
-servicec/bad_formal_2: Fail
-servicec/bad_formal_3: Fail
-servicec/bad_function_4: Fail
-servicec/bad_function_7: Fail
+servicec/bad_field_4: Fail  # Issue 293
+servicec/bad_field_8: Fail  # Issue 293
+servicec/bad_formal_1: Fail  # Issue 294
+servicec/bad_formal_2: Fail  # Issue 294
+servicec/bad_formal_3: Fail  # Issue 294
+servicec/bad_function_7: Fail  # Issue 292
+servicec/bad_function_8: Fail  # Issue 292
 servicec/bad_list_type_2: Fail
 servicec/bad_list_type_3: Fail
 servicec/bad_list_type_4: Fail
@@ -48,10 +48,6 @@ servicec/good_type_parameter_1: Fail
 [ $arch != ia32 && $arch != x64 ]
 
 service_tests/*: Skip
-
-[ $system == macos && $arch == x64 ]
-
-service_tests/performance: Fail, Pass # Issue 111
 
 [ $arch == xarm ]
 

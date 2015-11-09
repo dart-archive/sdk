@@ -9,6 +9,7 @@
 #include "src/shared/list.h"
 #include "src/shared/platform.h"
 
+#include "src/vm/hash_map.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 #include "src/vm/program.h"
@@ -20,28 +21,36 @@ namespace fletch {
 //
 // The snapshot will contain heap sizes for all configurations, so the reader
 // knows it before reading any objects().
-class PortableSizeAccumulator {
+class PortableOffset {
  public:
-  PortableSizeAccumulator()
-      : heap_size_64bits_double(0),
-        heap_size_64bits_float(0),
-        heap_size_32bits_double(0),
-        heap_size_32bits_float(0) { }
+  PortableOffset()
+      : offset_64bits_double(0),
+        offset_64bits_float(0),
+        offset_32bits_double(0),
+        offset_32bits_float(0) { }
+  PortableOffset(const PortableOffset& other)
+      : offset_64bits_double(other.offset_64bits_double),
+        offset_64bits_float(other.offset_64bits_float),
+        offset_32bits_double(other.offset_32bits_double),
+        offset_32bits_float(other.offset_32bits_float) {}
 
-  PortableSizeAccumulator& operator+=(const PortableSize& size) {
-    heap_size_64bits_double += size.ComputeSizeInBytes(8, 8);
-    heap_size_64bits_float += size.ComputeSizeInBytes(8, 4);
-    heap_size_32bits_double += size.ComputeSizeInBytes(4, 8);
-    heap_size_32bits_float += size.ComputeSizeInBytes(4, 4);
+  PortableOffset& operator+=(const PortableSize& size) {
+    offset_64bits_double += size.ComputeSizeInBytes(8, 8);
+    offset_64bits_float += size.ComputeSizeInBytes(8, 4);
+    offset_32bits_double += size.ComputeSizeInBytes(4, 8);
+    offset_32bits_float += size.ComputeSizeInBytes(4, 4);
 
     return *this;
   }
 
-  int heap_size_64bits_double;
-  int heap_size_64bits_float;
-  int heap_size_32bits_double;
-  int heap_size_32bits_float;
+  int offset_64bits_double;
+  int offset_64bits_float;
+  int offset_32bits_double;
+  int offset_32bits_float;
 };
+
+typedef HashMap<Function*, PortableOffset*> FunctionOffsetsType;
+typedef HashMap<Class*, PortableOffset*> ClassOffsetsType;
 
 class SnapshotReader {
  public:
@@ -111,10 +120,13 @@ class SnapshotReader {
 
 class SnapshotWriter {
  public:
-  SnapshotWriter()
+  SnapshotWriter(FunctionOffsetsType* function_offsets,
+                 ClassOffsetsType* class_offsets)
       : snapshot_(List<uint8>::New(1 * MB)),
         position_(0),
-        index_(1) { }
+        index_(1),
+        function_offsets_(function_offsets),
+        class_offsets_(class_offsets) { }
   ~SnapshotWriter() { }
 
   // Create a snapshot of a program. The program must be folded.
@@ -158,7 +170,10 @@ class SnapshotWriter {
   // is the size needed for the snapshot on a 64-bit system. When writing the
   // snapshot from a 64-bit system, the alternative heap size is the size needed
   // for the snapshot on a 32-bit system.
-  PortableSizeAccumulator heap_size_;
+  PortableOffset heap_size_;
+
+  FunctionOffsetsType* function_offsets_;
+  ClassOffsetsType* class_offsets_;
 
   void WriteHeapSizeTo(int position, int size);
 

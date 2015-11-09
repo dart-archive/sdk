@@ -27,6 +27,8 @@ class Context {
     parser.addFlag('skip-download');
     parser.addFlag('skip-decompress');
     parser.addFlag('skip-write');
+    parser.addOption('version');
+    parser.addOption('image-url');
     parser.addOption('zip-file');
     parser.addOption('tmp-dir');
     _arguments = parser.parse(args);
@@ -48,6 +50,8 @@ class Context {
     if (logFileName == null) logFileName = 'flash_sd_card.log';
     return logFileName;
   }
+
+  String get imageUrl => _arguments['image-url'];
 
   String get zipFileName => _arguments['zip-file'];
 
@@ -178,6 +182,28 @@ class Context {
       }
     }
     return _tmpDir;
+  }
+
+  Future get version async {
+    if (_arguments['version'] != null) {
+      return _arguments['version'];
+    }
+    const String fletchVm = const String.fromEnvironment("fletch-vm");
+    if (fletchVm == null || fletchVm.isEmpty) {
+      await failure(
+          'Failed to determine SDK version. Please use the --version flag.');
+    }
+    if (!await new File(fletchVm).exists()) {
+      await failure(
+          'Failed to determine SDK version. '
+          "Cannot find the Fletch VM at the expected location '$fletchVm'."
+          'Your SDK might be broken');
+    }
+    var result = await runProcess(fletchVm, ['--version']);
+    if (result.exitCode != 0) {
+      await failure('Failed to determine SDK version');
+    }
+    return result.stdout.trim();
   }
 }
 

@@ -24,6 +24,7 @@ SCRIPT_DIR="$(cd "${PROG_NAME%/*}" ; pwd -P)"
 # Location of the Dart script and the Dart VM in a Fletch SDK.
 DART_FILE="$SCRIPT_DIR/../../internal/pkg/flash_sd_card/bin/flash_sd_card.dart"
 DART_VM="$SCRIPT_DIR/../../internal/dart"
+FLETCH_VM="$SCRIPT_DIR/../../bin/fletch-vm"
 
 # If we are not in a Fletch SDK, assume a Fletch Github checkout.
 if [ ! -r $DART_FILE ]; then
@@ -40,4 +41,10 @@ if [ ! -r $DART_VM ]; then
   fi
 fi
 
-exec sudo "$DART_VM" "$DART_FILE" "$@"
+# If we are not in a Fletch SDK, assume a Fletch Github checkout.
+if [ ! -r $FLETCH_VM ]; then
+  # Don't point to any Fletch VM in this case.
+  FLETCH_VM=
+fi
+
+exec sudo "$DART_VM" -Dfletch-vm="$FLETCH_VM" "$DART_FILE" "$@"

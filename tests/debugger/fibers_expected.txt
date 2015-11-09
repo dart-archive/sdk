@@ -23,8 +23,6 @@ Stack trace:
 > 0: run                         @Fiber.yield()
   1: call                        @run('b')
 
-fiber 2
-
 > t internal
 Stack trace:
 > 0: print                       @"${object}"
@@ -46,18 +44,13 @@ Stack trace:
 
 fiber 1
 Stack trace:
-> 0: Fiber.yield                 @_current._next
-  1: run                         @Fiber.yield()
-  2: call                        @run('b')
-  3: runToEnd                    @entry()
-  4: Fiber.call                  @fletch.runToEnd(entry)
-  5: Coroutine._coroutineStart   @entry(argument)
-
-fiber 2
-Stack trace:
-> 0: Fiber._schedulerLoop        @null
-  1: call                     
-  2: Coroutine._coroutineStart   @entry(argument)
+> 0: Fiber._schedule             @null
+  1: Fiber.yield                 @_schedule(_current._next)
+  2: run                         @Fiber.yield()
+  3: call                        @run('b')
+  4: runToEnd                    @entry()
+  5: Fiber.call                  @fletch.runToEnd(entry)
+  6: Coroutine._coroutineStart   @entry(argument)
 
 > t internal
 Stack trace:
@@ -79,8 +72,6 @@ fiber 0
 Stack trace:
 > 0: run                         @print('${marker} ${i}')
   1: call                        @run('a')
-
-fiber 1
 
 > c
 a 1

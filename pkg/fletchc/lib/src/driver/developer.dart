@@ -39,7 +39,8 @@ import '../../commands.dart' show
     ProcessBacktraceRequest,
     ProcessRun,
     ProcessSpawnForMain,
-    SessionEnd;
+    SessionEnd,
+    WriteSnapshotResult;
 
 import 'session_manager.dart' show
     FletchVm,
