@@ -149,19 +149,19 @@ void* Function::ComputeIntrinsic(IntrinsicsTable* table) {
   uint8* bytecodes = bytecode_address_for(0);
   void* result = NULL;
   if (length >= 4 &&
-      bytecodes[0] == kLoadLocal1 &&
+      bytecodes[0] == kLoadLocal3 &&
       bytecodes[1] == kLoadField &&
       bytecodes[3] == kReturn) {
     result = reinterpret_cast<void*>(table->GetField());
   } else if (length >= 4 &&
-             bytecodes[0] == kLoadLocal2 &&
-             bytecodes[1] == kLoadLocal2 &&
+             bytecodes[0] == kLoadLocal4 &&
+             bytecodes[1] == kLoadLocal4 &&
              bytecodes[2] == kIdenticalNonNumeric &&
              bytecodes[3] == kReturn) {
     result = reinterpret_cast<void*>(table->ObjectEquals());
   } else if (length >= 5 &&
-             bytecodes[0] == kLoadLocal2 &&
-             bytecodes[1] == kLoadLocal2 &&
+             bytecodes[0] == kLoadLocal4 &&
+             bytecodes[1] == kLoadLocal4 &&
              bytecodes[2] == kStoreField &&
              bytecodes[4] == kReturn) {
     result = reinterpret_cast<void*>(table->SetField());

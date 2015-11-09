@@ -80,9 +80,12 @@ Process* Program::ProcessSpawnForMain() {
   Stack* stack = process->stack();
   uint8_t* bcp = entry->bytecode_address_for(0);
   stack->set(0, Smi::FromWord(main_arity));
+  // Return address + 2 empty slots.
   stack->set(1, NULL);
-  stack->set(2, reinterpret_cast<Object*>(bcp));
-  stack->set_top(2);
+  stack->set(2, NULL);
+  stack->set(3, NULL);
+  stack->set(4, reinterpret_cast<Object*>(bcp));
+  stack->set_top(4);
 
   return process;
 }

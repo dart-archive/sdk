@@ -25,6 +25,9 @@ incremental/same_tokens_variant: Fail
 # new class -> should not happen).
 incremental/compile_time_error_hides_field: Fail
 
+# Bad 'field' count on FletchPatchClassBuilder (does not contain new fields).
+incremental/add_field_and_remove_subclass: Fail
+
 # Incorrectly failing servicec tests
 servicec/bad_field_4: Fail  # Issue 293
 servicec/bad_field_8: Fail  # Issue 293

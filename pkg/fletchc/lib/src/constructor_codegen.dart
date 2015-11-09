@@ -378,5 +378,6 @@ class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
         codegen.visitForValue(initializer);
       }
     });
+    assert(fieldIndex <= classBuilder.fields);
   }
 }

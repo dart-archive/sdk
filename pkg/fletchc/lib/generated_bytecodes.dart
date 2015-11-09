@@ -10,6 +10,9 @@ enum Opcode {
   LoadLocal0,
   LoadLocal1,
   LoadLocal2,
+  LoadLocal3,
+  LoadLocal4,
+  LoadLocal5,
   LoadLocal,
   LoadLocalWide,
   LoadBoxed,
@@ -190,6 +193,87 @@ class LoadLocal2 extends Bytecode {
   }
 
   String toString() => 'load local 2';
+}
+
+class LoadLocal3 extends Bytecode {
+  const LoadLocal3()
+      : super();
+
+  Opcode get opcode => Opcode.LoadLocal3;
+
+  String get name => 'LoadLocal3';
+
+  bool get isBranching => false;
+
+  String get format => '';
+
+  int get size => 1;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'load local 3';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load local 3';
+}
+
+class LoadLocal4 extends Bytecode {
+  const LoadLocal4()
+      : super();
+
+  Opcode get opcode => Opcode.LoadLocal4;
+
+  String get name => 'LoadLocal4';
+
+  bool get isBranching => false;
+
+  String get format => '';
+
+  int get size => 1;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'load local 4';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load local 4';
+}
+
+class LoadLocal5 extends Bytecode {
+  const LoadLocal5()
+      : super();
+
+  Opcode get opcode => Opcode.LoadLocal5;
+
+  String get name => 'LoadLocal5';
+
+  bool get isBranching => false;
+
+  String get format => '';
+
+  int get size => 1;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'load local 5';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load local 5';
 }
 
 class LoadLocal extends Bytecode {

@@ -91,6 +91,9 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoLoadLocal0();
   virtual void DoLoadLocal1();
   virtual void DoLoadLocal2();
+  virtual void DoLoadLocal3();
+  virtual void DoLoadLocal4();
+  virtual void DoLoadLocal5();
   virtual void DoLoadLocal();
   virtual void DoLoadLocalWide();
 
@@ -390,6 +393,10 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ Bind(&intrinsic_failure_);
   __ add(R5, R5, Immediate(kInvokeMethodLength));
   Push(R5);
+  // Push two empty slots.
+  __ mov(R2, Immediate(0));
+  Push(R2);
+  Push(R2);
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
   Dispatch(0);
 }
@@ -410,6 +417,24 @@ void InterpreterGeneratorARM::DoLoadLocal2() {
   LoadLocal(R0, 2);
   Push(R0);
   Dispatch(kLoadLocal2Length);
+}
+
+void InterpreterGeneratorARM::DoLoadLocal3() {
+  LoadLocal(R0, 3);
+  Push(R0);
+  Dispatch(kLoadLocal3Length);
+}
+
+void InterpreterGeneratorARM::DoLoadLocal4() {
+  LoadLocal(R0, 4);
+  Push(R0);
+  Dispatch(kLoadLocal4Length);
+}
+
+void InterpreterGeneratorARM::DoLoadLocal5() {
+  LoadLocal(R0, 5);
+  Push(R0);
+  Dispatch(kLoadLocal5Length);
 }
 
 void InterpreterGeneratorARM::DoLoadLocal() {
@@ -468,6 +493,10 @@ void InterpreterGeneratorARM::DoLoadStaticInit() {
   __ ldr(R0, Address(R0, Initializer::kFunctionOffset - HeapObject::kTag));
   __ add(R5, R5, Immediate(kInvokeMethodLength));
   Push(R5);
+  // Push two empty slots.
+  __ mov(R2, Immediate(0));
+  Push(R2);
+  Push(R2);
 
   // Jump to the first bytecode in the initializer function.
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -637,6 +666,10 @@ void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
   // Compute and push the return address on the stack.
   __ add(R5, R5, Immediate(kInvokeNoSuchMethodLength));
   Push(R5);
+  // Push two empty slots.
+  __ mov(R2, Immediate(0));
+  Push(R2);
+  Push(R2);
 
   // Jump to the first bytecode in the target method.
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -1230,7 +1263,7 @@ void InterpreterGeneratorARM::DoExitNoSuchMethod() {
   Pop(R0);  // Result.
   Pop(R1);  // Selector.
   __ lsr(R1, R1, Immediate(Smi::kTagSize));
-  Drop(1);  // Sentinel.
+  Drop(3);  // Sentinel and 2 empty slots.
   Pop(R5);
 
   Label done;
@@ -1389,6 +1422,9 @@ void InterpreterGeneratorARM::Return(bool wide, bool is_return_null) {
   }
   __ neg(R1, R1);
 
+  // Also skip two empty slots.
+  __ sub(R1, R1, Immediate(2));
+
   // Load the return address.
   __ ldr(R5, Address(R6, Operand(R1, TIMES_4)));
 
@@ -1481,6 +1517,10 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
     // Compute and push the return address on the stack.
     __ add(R5, R5, Immediate(kInvokeMethodUnfoldLength));
     Push(R5);
+    // Push two empty slots.
+    __ mov(R2, Immediate(0));
+    Push(R2);
+    Push(R2);
 
     // Jump to the first bytecode in the target method.
     __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -1583,6 +1623,10 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     // Compute and push the return address on the stack.
     __ add(R5, R5, Immediate(kInvokeMethodLength));
     Push(R5);
+    // Push two empty slots.
+    __ mov(R2, Immediate(0));
+    Push(R2);
+    Push(R2);
 
     // Jump to the first bytecode in the target method.
     __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -1616,6 +1660,8 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
 
 void InterpreterGeneratorARM::InvokeNative(bool yield) {
   __ ldrb(R1, Address(R5, 1));
+  // Also skip two empty slots.
+  __ add(R1, R1, Immediate(2));
   __ neg(R1, R1);
   __ ldrb(R0, Address(R5, 2));
 
@@ -1635,7 +1681,7 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   __ b(EQ, &failure);
 
   // Result is in r0. Pointer to first argument is in r7. Load return address.
-  LoadLocal(R5, 0);
+  LoadLocal(R5, 2);
 
   if (yield) {
     // Set the result to null and drop the arguments.
@@ -1695,6 +1741,10 @@ void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
   // Compute and push the return address on the stack.
   __ add(R1, R5, Immediate(kInvokeStaticLength));
   Push(R1);
+  // Push two empty slots.
+  __ mov(R2, Immediate(0));
+  Push(R2);
+  Push(R2);
 
   // Jump to the first bytecode in the target method.
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));

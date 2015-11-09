@@ -32,14 +32,17 @@ bool StackWalker::MoveNext() {
   bool first = function_ == NULL;
   function_ = Function::FromBytecodePointer(bcp, &frame_ranges_offset_);
   frame_size_ = ComputeStackOffset(bcp, first);
-  stack_offset_ -= (frame_size_ + 1);
+  stack_offset_ -= (frame_size_ + 3);
+
+  ASSERT(stack_->get(stack_->top() + stack_offset_ + 1) == NULL);
+  ASSERT(stack_->get(stack_->top() + stack_offset_ + 2) == NULL);
 
   return true;
 }
 
 int StackWalker::CookFrame() {
   uint8* start = function_->bytecode_address_for(0);
-  stack_->set(stack_->top() + stack_offset_ + frame_size_ + 1, function_);
+  stack_->set(stack_->top() + stack_offset_ + frame_size_ + 3, function_);
   return return_address_ - start;
 }
 
@@ -53,11 +56,11 @@ void StackWalker::UncookFrame(int delta) {
 }
 
 Object** StackWalker::PointerToFirstFrameElement() {
-  return stack_->Pointer(stack_->top() + stack_offset_ + 1);
+  return stack_->Pointer(stack_->top() + stack_offset_ + 3);
 }
 
 Object** StackWalker::PointerToLastFrameElement() {
-  return stack_->Pointer(stack_->top() + stack_offset_ + frame_size_);
+  return stack_->Pointer(stack_->top() + stack_offset_ + 2 + frame_size_);
 }
 
 void StackWalker::VisitPointersInFrame(PointerVisitor* visitor) {
@@ -66,7 +69,7 @@ void StackWalker::VisitPointersInFrame(PointerVisitor* visitor) {
 }
 
 Object* StackWalker::GetLocal(int slot) {
-  int stack_index = stack_->top() + stack_offset_ + 1 + slot;
+  int stack_index = stack_->top() + stack_offset_ + 3 + slot;
   return stack_->get(stack_index);
 }
 
@@ -200,11 +203,9 @@ int StackWalker::ComputeStackOffset(uint8* end_bcp, bool include_last) {
 uint8* StackWalker::ComputeCatchBlock(Process* process,
                                       Stack* stack,
                                       int* stack_delta) {
-  int delta = 0;
   StackWalker walker(process, stack);
   while (walker.MoveNext()) {
     Function* function = walker.function();
-    delta += 1 + walker.frame_size();
     int offset = walker.frame_ranges_offset();
 
     // Skip if there are no catch blocks.
@@ -224,7 +225,8 @@ uint8* StackWalker::ComputeCatchBlock(Process* process,
       if (start_address < return_address && end_address > return_address) {
         // The first hit is the one we use (due to the order they are
         // emitted).
-        delta -= walker.ComputeStackOffset(end_address, true);
+        int delta = - walker.stack_offset();
+        delta -= 2 + walker.ComputeStackOffset(end_address, true);
         *stack_delta = delta;
         return end_address;
       }
