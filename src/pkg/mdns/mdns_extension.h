@@ -15,6 +15,6 @@ enum RequestType {
 };
 
 void HandleEcho(Dart_Port reply_port, Dart_CObject* argument);
-void HandleLookup(Dart_Port port_id, char* address);
+void HandleLookup(Dart_Port port_id, int type, char* fullname);
 
 #endif

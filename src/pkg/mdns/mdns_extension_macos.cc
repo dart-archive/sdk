@@ -66,60 +66,76 @@ static int StartThread(DNSServiceRef ref) {
   return 0;
 }
 
-// Callback for results initiated by calling DNSServiceGetAddrInfo.
-static void GetAddrInfoCallback(DNSServiceRef ref,
+
+// Callback for results initiated by calling DNSServiceQueryRecord.
+static void QueryRecordCallback(DNSServiceRef ref,
                                 DNSServiceFlags flags,
                                 uint32_t interfaceIndex,
                                 DNSServiceErrorType errorCode,
-                                const char *hostname,
-                                const struct sockaddr *address,
+                                const char *fullname,
+                                uint16_t rrtype,
+                                uint16_t rrclass,
+                                uint16_t rdlen,
+                                const void* rdata,
                                 uint32_t ttl,
                                 void *context) {
-  if (address->sa_family == AF_INET) {
-    const struct sockaddr_in* address_in = (const struct sockaddr_in*)address;
-    const uint8_t* addr =
-        reinterpret_cast<const uint8_t*>(&address_in->sin_addr.s_addr);
+  if (rrclass != kDNSServiceClass_IN) return;
 
-    struct Context* ctx = reinterpret_cast<struct Context*>(context);
+  struct Context* ctx = reinterpret_cast<struct Context*>(context);
 
-    // Build the response message.
-    Dart_CObject cobject_hostname;
-    cobject_hostname.type = Dart_CObject_kString;
-    cobject_hostname.value.as_string = const_cast<char*>(hostname);
-    Dart_CObject cobject_address;
-    cobject_address.type = Dart_CObject_kTypedData;
-    cobject_address.value.as_typed_data.length = 4;
-    cobject_address.value.as_typed_data.type = Dart_TypedData_kUint8;
-    cobject_address.value.as_typed_data.values = const_cast<uint8_t*>(addr);
-    Dart_CObject cobject_result;
-    cobject_result.type = Dart_CObject_kArray;
-    Dart_CObject* result_array[] = {&cobject_hostname, &cobject_address};
-    cobject_result.value.as_array.length = 2;
-    cobject_result.value.as_array.values = result_array;
-    Dart_PostCObject(ctx->port, &cobject_result);
-
-    // Result received, free allocated data and stop lookup.
-    free(ctx);
-    DNSServiceRefDeallocate(ref);
+  if (rrtype != kDNSServiceType_A &&
+      rrtype != kDNSServiceType_SRV &&
+      rrtype != kDNSServiceType_PTR) {
+    // Ignore unsupported types.
+    return;
   }
+
+  // Build the response message.
+  Dart_CObject cobject_fullname;
+  cobject_fullname.type = Dart_CObject_kString;
+  cobject_fullname.value.as_string = const_cast<char*>(fullname);
+  Dart_CObject cobject_type;
+  cobject_type.type = Dart_CObject_kInt32;
+  cobject_type.value.as_int32 = rrtype;
+  Dart_CObject cobject_ttl;
+  cobject_ttl.type = Dart_CObject_kInt32;
+  cobject_ttl.value.as_int32 = ttl;
+  Dart_CObject cobject_data;
+  cobject_data.type = Dart_CObject_kTypedData;
+  cobject_data.value.as_typed_data.length = rdlen;
+  cobject_data.value.as_typed_data.type = Dart_TypedData_kUint8;
+  cobject_data.value.as_typed_data.values =
+      const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(rdata));
+  Dart_CObject cobject_result;
+  cobject_result.type = Dart_CObject_kArray;
+  Dart_CObject* result_array[] =
+      {&cobject_fullname, &cobject_type, &cobject_ttl, &cobject_data};
+  cobject_result.value.as_array.length = 4;
+  cobject_result.value.as_array.values = result_array;
+  Dart_PostCObject(ctx->port, &cobject_result);
+
+  // Result received, free allocated data and stop lookup.
+  free(ctx);
+  DNSServiceRefDeallocate(ref);
 }
 
 // Lookup request from Dart.
-void HandleLookup(Dart_Port port_id, char* hostname) {
+void HandleLookup(Dart_Port port_id, int type, char* fullname) {
   DNSServiceRef ref;
   DNSServiceErrorType result;
   struct Context* context =
       reinterpret_cast<struct Context*>(malloc(sizeof(struct Context)));
   context->port = port_id;
-  result = DNSServiceGetAddrInfo(&ref,
+  result = DNSServiceQueryRecord(&ref,
                                  0,
                                  0,
-                                 kDNSServiceProtocol_IPv4,
-                                 hostname,
-                                 &GetAddrInfoCallback,
+                                 fullname,
+                                 type,
+                                 kDNSServiceClass_IN,
+                                 &QueryRecordCallback,
                                  context);
   if (result != kDNSServiceErr_NoError) {
-    fprintf(stderr, "Error from DNSServiceProcessResult: %d\n", result);
+    fprintf(stderr, "Error from DNSServiceQueryRecord: %d\n", result);
   } else {
     // Start a thread for retreiving the results.
     // TODO(sgjesse): Add a timeout for killing the thread if there
