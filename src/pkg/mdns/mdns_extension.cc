@@ -33,14 +33,17 @@ void HandleRequest(Dart_Port port_id, Dart_CObject* message) {
           }
 
         case kLookupRequest:
-          if (message->value.as_array.length == 4) {
+          if (message->value.as_array.length == 5) {
             Dart_CObject* type = message->value.as_array.values[2];
             Dart_CObject* name = message->value.as_array.values[3];
+            Dart_CObject* timeout = message->value.as_array.values[4];
             if (type->type == Dart_CObject_kInt32 &&
-                name->type == Dart_CObject_kString) {
+                name->type == Dart_CObject_kString &&
+                timeout->type == Dart_CObject_kInt32) {
               HandleLookup(reply_port->value.as_send_port.id,
                            type->value.as_int32,
-                           name->value.as_string);
+                           name->value.as_string,
+                           timeout->value.as_int32);
             }
             return;
           }

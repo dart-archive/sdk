@@ -15,6 +15,6 @@
 #include "mdns_extension.h"
 
 // Dummy implementation for Linux.
-void HandleLookup(Dart_Port port_id, char* adress) {}
+void HandleLookup(Dart_Port port_id, int type, char* fullname, int timeout) {}
 
 #endif
