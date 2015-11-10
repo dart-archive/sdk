@@ -32,6 +32,11 @@ import 'package:fletch_agent/messages.dart' show
     AGENT_DEFAULT_PORT,
     MessageDecodeException;
 
+import 'package:mdns/mdns.dart' show
+    MDnsClient,
+    ResourceRecord,
+    RRType;
+
 import '../../commands.dart' show
     CommandCode,
     HandShakeResult,
@@ -334,8 +339,10 @@ Future<Settings> createSettings(
 Future<Address> readAddressFromUser(
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
+  String message =
+      "Please enter IP address of remote device (press enter for discovery): ";
   commandSender.sendEventLoopStarted();
-  commandSender.sendStdout("Please enter IP address of remote device: ");
+  commandSender.sendStdout(message);
   while (await commandIterator.moveNext()) {
     Command command = commandIterator.current;
     switch (command.code) {
@@ -350,7 +357,13 @@ Future<Address> readAddressFromUser(
         // session because we use canonical input processing (Unix line
         // buffering), but it doesn't work in general. So we should fix that.
         String line = UTF8.decode(command.data).trim();
-        return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
+        if (line.isEmpty) {
+          await discoverDevices();
+          commandSender.sendStdout(message);
+        } else {
+          return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
+        }
+        break;
 
       case DriverCommand.Signal:
         // Send an empty line as the user didn't hit enter.
@@ -748,6 +761,26 @@ Future<int> invokeCombinedTasks(
     SharedTask task2) async {
   await task1(commandSender, commandIterator);
   return task2(commandSender, commandIterator);
+}
+
+Future discoverDevices() async {
+  print('Looking for Fletch capable devices...');
+  MDnsClient client = new MDnsClient();
+  await client.start();
+  String name = '_fletch_agent._tcp.local';
+  await for (ResourceRecord ptr in client.lookup(RRType.PTR, name)) {
+    String domain = ptr.domainName;
+    await for (ResourceRecord srv in client.lookup(RRType.SRV, domain)) {
+      String target = srv.target;
+      await for (ResourceRecord a in client.lookup(RRType.A, target)) {
+        InternetAddress address = a.address;
+        if (!address.isLinkLocal) {
+          print('Found device $target on address ${address.address}.');
+        }
+      }
+    }
+  }
+  client.stop();
 }
 
 Address parseAddress(String address, {int defaultPort: 0}) {

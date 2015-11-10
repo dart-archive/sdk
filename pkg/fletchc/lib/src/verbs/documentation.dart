@@ -160,3 +160,8 @@ const String upgradeDocumentation = """
              Upgrade the agent used in session to the version provided in the
              .deb package <package-file>
 """;
+
+// TODO(lukechurch): Review UX.
+const String discoverDocumentation = """
+   x-discover Discover Fletch capable devices available
+""";
