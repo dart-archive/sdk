@@ -39,6 +39,8 @@ import 'package:mdns/mdns.dart' show
 
 import '../../commands.dart' show
     CommandCode,
+    ConnectionError,
+    Debugging,
     HandShakeResult,
     ProcessBacktrace,
     ProcessBacktraceRequest,
@@ -47,6 +49,13 @@ import '../../commands.dart' show
     SessionEnd,
     WriteSnapshotResult;
 
+import '../../program_info.dart' show
+    Configuration,
+    ProgramInfo,
+    ProgramInfoBinary,
+    ProgramInfoJson,
+    buildProgramInfo;
+
 import 'session_manager.dart' show
     FletchVm,
     SessionState;
@@ -54,9 +63,6 @@ import 'session_manager.dart' show
 import 'driver_commands.dart' show
     DriverCommand,
     handleSocketErrors;
-
-import '../../commands.dart' show
-    Debugging;
 
 import '../verbs/infrastructure.dart' show
     Command,
@@ -516,10 +522,27 @@ Future<int> export(SessionState state, Uri snapshot) async {
     await session.applyDelta(delta);
   }
 
-  await session.writeSnapshot(snapshot.toFilePath());
-  await session.shutdown();
+  var result = await session.writeSnapshot(snapshot.toFilePath());
+  if (result is WriteSnapshotResult) {
+    WriteSnapshotResult snapshotResult = result;
 
-  return 0;
+    await session.shutdown();
+
+    ProgramInfo info =
+        buildProgramInfo(compilationResults.last.system, snapshotResult);
+
+    File jsonFile = new File('${snapshot.toFilePath()}.info.json');
+    await jsonFile.writeAsString(ProgramInfoJson.encode(info));
+
+    File binFile = new File('${snapshot.toFilePath()}.info.bin');
+    await binFile.writeAsBytes(ProgramInfoBinary.encode(info));
+
+    return 0;
+  } else {
+    assert(result is ConnectionError);
+    print("There was a connection error while writing the snapshot.");
+    return exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
+  }
 }
 
 // TODO(wibling): refactor the debug_verb to not set up its own event handler

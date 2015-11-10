@@ -34,7 +34,7 @@ void ProgramState::AddPausedProcess(Process* process) {
   ASSERT(paused_processes_head_ != paused_processes_head_->next());
 }
 
-Program::Program()
+Program::Program(ProgramSource source)
     :
 #define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
       ROOTS_DO(CONSTRUCTOR_NULL)
@@ -46,7 +46,8 @@ Program::Program()
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
-      is_compact_(false) {
+      is_compact_(false),
+      loaded_from_snapshot_(source == Program::kLoadedFromSnapshot)  {
   // These asserts need to hold when running on the target, but they don't need
   // to hold on the host (the build machine, where the interpreter-generating
   // program runs).  We put these asserts here on the assumption that the
@@ -274,6 +275,11 @@ void Program::FinishProgramGC() {
   if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
   }
+}
+
+uword Program::OffsetOf(HeapObject* object) {
+  ASSERT(is_compact());
+  return heap()->space()->OffsetOf(object);
 }
 
 void Program::ValidateGlobalHeapsAreConsistent() {

@@ -306,7 +306,7 @@ Program* SnapshotReader::ReadProgram() {
     references = (references << 8) | ReadByte();
   }
 
-  Program* program = new Program();
+  Program* program = new Program(Program::kLoadedFromSnapshot);
 
   // Read the heap size and allocate an area for it.
   int size_position;
