@@ -76,8 +76,13 @@ class InputHandler {
         }
         List<Breakpoint> breakpoints =
             await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
-        for (Breakpoint breakpoint in breakpoints) {
-          session.writeStdoutLine("breakpoint set: $breakpoint");
+        if (breakpoints != null) {
+          for (Breakpoint breakpoint in breakpoints) {
+            session.writeStdoutLine("breakpoint set: $breakpoint");
+          }
+        } else {
+          session.writeStdoutLine(
+              "### failed to set breakpoint at method: $method index: $bci");
         }
         break;
       case 'bf':
@@ -127,13 +132,11 @@ class InputHandler {
         }
         break;
       case 'c':
-        if (checkRunning()) {
-          Command response = await session.cont();
-          if (response is UncaughtException) {
-            await session.uncaughtException();
-          } else if (response is! ProcessTerminated) {
-            await session.backtrace();
-          }
+        Command response = await session.cont();
+        if (response is UncaughtException) {
+          await session.uncaughtException();
+        } else if (response is! ProcessTerminated) {
+          await session.backtrace();
         }
         break;
       case 'd':
@@ -175,36 +178,30 @@ class InputHandler {
         break;
       case 'r':
       case 'run':
-        if (checkNotRunning()) {
-          Command response = await session.debugRun();
-          if (response is UncaughtException) {
-            await session.uncaughtException();
-          } else if (response is! ProcessTerminated) {
-            await session.backtrace();
-          }
+        Command response = await session.debugRun();
+        if (response is UncaughtException) {
+          await session.uncaughtException();
+        } else if (response is! ProcessTerminated) {
+          await session.backtrace();
         }
         break;
       case 's':
-        if (checkRunning()) {
-          Command response = await session.step();
-          if (response is UncaughtException) {
-            await session.uncaughtException();
-          } else if (response is! ProcessTerminated) {
-            await session.backtrace();
-          }
+        Command response = await session.step();
+        if (response is UncaughtException) {
+          await session.uncaughtException();
+        } else if (response is! ProcessTerminated) {
+          await session.backtrace();
         }
         break;
       case 'sb':
-        if (checkRunning()) await session.stepBytecode();
+        await session.stepBytecode();
         break;
       case 'so':
-        if (checkRunning()) {
-          Command response = await session.stepOver();
-          if (response is UncaughtException) {
-            await session.uncaughtException();
-          } else if (response is! ProcessTerminated) {
-            await session.backtrace();
-          }
+        Command response = await session.stepOver();
+        if (response is UncaughtException) {
+          await session.uncaughtException();
+        } else if (response is! ProcessTerminated) {
+          await session.backtrace();
         }
         break;
       case 'sob':
@@ -229,18 +226,6 @@ class InputHandler {
         break;
     }
     if (!session.terminated) printPrompt();
-  }
-
-  bool checkNotRunning() {
-    if (!session.running) return true;
-    session.writeStdoutLine('### program already running');
-    return false;
-  }
-
-  bool checkRunning() {
-    if (session.running) return true;
-    session.writeStdoutLine('### program not running');
-    return false;
   }
 
   Future<int> run() async {

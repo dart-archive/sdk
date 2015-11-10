@@ -202,8 +202,6 @@ static int Main(int argc, char** argv) {
   // interactive programming session that talks to a separate
   // compiler process.
   if (interactive) {
-    // When interactive and a pid directory is specified write the port we are
-    // listening on to the file vm-<pid>.port in the pid directory.
     Connection* connection = WaitForCompilerConnection(host, port, port_file);
     result = RunSession(connection);
   }
