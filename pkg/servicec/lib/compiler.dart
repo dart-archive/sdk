@@ -17,6 +17,7 @@ import 'error_handling_listener.dart' show
 
 import 'errors.dart' show
     CompilationError,
+    ErrorReporter,
     UndefinedServiceError,
     InternalCompilerError;
 
@@ -88,4 +89,20 @@ Future<Iterable<CompilationError>> compileInput(
   }
 
   return errors;
+}
+
+Future<bool> compileAndReportErrors(
+    String path,
+    String relativePath,
+    String resourcesDirectory,
+    String outputDirectory,
+    {Target target: Target.ALL}) async {
+  String input = new File(path).readAsStringSync();
+  Iterable<CompilationError> errors = await compileInput(
+      input, path, resourcesDirectory, outputDirectory, target: target);
+  if (errors.isNotEmpty) {
+    new ErrorReporter(path, relativePath).report(errors);
+    return false;
+  }
+  return true;
 }
