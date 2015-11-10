@@ -36,10 +36,10 @@ servicec/bad_formal_2: Fail  # Issue 294
 servicec/bad_formal_3: Fail  # Issue 294
 servicec/bad_function_7: Fail  # Issue 292
 servicec/bad_function_8: Fail  # Issue 292
-servicec/bad_list_type_2: Fail
-servicec/bad_list_type_3: Fail
-servicec/bad_list_type_4: Fail
-servicec/bad_list_type_5: Fail
+servicec/bad_list_type_2: Fail # Issue 295
+servicec/bad_list_type_3: Fail # Issue 295
+servicec/bad_list_type_4: Fail # Issue 295
+servicec/bad_list_type_5: Fail # Issue 295
 
 test_vm_connection/testCloseImmediately: Skip # Fails and prints during run.
 test_vm_connection/testCloseAfterCommitChanges: Fail
