@@ -45,7 +45,7 @@ def Main():
     ref = "tools/GIT_REVISION"
   else:
     ref = subprocess.check_output(
-      ["git", "rev-parse", "--symbolic-full-name", "HEAD"], shell=True).strip()
+      ["git", "rev-parse", "--symbolic-full-name", "HEAD"]).strip()
     ref = ".git/%s" % ref
   updated_content = version_gyp_template % {"ref": ref}
   with open(version_gyp, 'w') as f:
