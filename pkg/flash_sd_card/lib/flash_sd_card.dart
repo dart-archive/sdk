@@ -37,7 +37,13 @@ Future<bool> flashCDCard(List<String> args) async {
 
   ctx.log('Starting, OS: ${Platform.operatingSystem}');
   ctx.log('Args: $args');
-  ctx.infoln('This program will prepare an SD card for the Raspberry Pi 2');
+  if (ctx.configureNetworkOnly) {
+    ctx.infoln('This program will update the network configuration on a '
+               'Fletch Raspberry Pi 2 SD card');
+  } else {
+    ctx.infoln('This program will prepare an SD card for '
+               'Fletch on the Raspberry Pi 2');
+  }
 
   // Determine platform.
   PlatformService platformService = new PlatformService(ctx);
@@ -80,16 +86,30 @@ Future<bool> flashCDCard(List<String> args) async {
     }
     ctx.log('Found SD card $disk');
     sdCardDevice = '/dev/$disk';
-    await ctx.readLine(
-      'Found the SD card $sdCardDevice. '
-      'Press enter to use this card. '
-      'This will delete all contents on the card.');
+    if (ctx.configureNetworkOnly) {
+      await ctx.readLine(
+          'Found the SD card $sdCardDevice. '
+          'This will update the network configuration. '
+          'Press enter to use this card.');
+    } else {
+      await ctx.readLine(
+          'Found the SD card $sdCardDevice. '
+          'This will delete all contents on the card. '
+          'Press enter to use this card.');
+    }
   } else {
     ctx.log('Using SD card from option $sdCardDevice');
-    await ctx.readLine(
-        'Using the SD card $sdCardDevice. '
-        'Press enter to use this card. '
-        'This will delete all contents on the card.');
+    if (ctx.configureNetworkOnly) {
+      await ctx.readLine(
+          'Using the SD card $sdCardDevice. '
+          'This will update the network configuration. '
+          'Press enter to use this card.');
+    } else {
+      await ctx.readLine(
+          'Using the SD card $sdCardDevice. '
+          'This will delete all contents on the card. '
+          'Press enter to use this card. ');
+    }
   }
 
   // Ask for a hostname.
@@ -99,42 +119,48 @@ Future<bool> flashCDCard(List<String> args) async {
   // Ask for a static IP address.
   String ipAddress = await ctx.readIPAddress(
       'Enter the static IP address you would like the device to have. '
-      'Leave it blank to have it assigned via DHCP:', '');
+      'Leave it blank to have it assigned via DHCP: ', '');
 
-  Directory tmpDir = await ctx.tmpDir;
-  String zipFileName = ctx.zipFileName;
-  var source = Uri.parse(imageUrl);
-  if (zipFileName == null) {
-    zipFileName = '${tmpDir.path}/$imageZipFileName';
-  }
-  File zipFile = new File(zipFileName);
-  if (ctx.skipDownload) {
-    ctx.infoln('Skipping download');
+  Directory mountDir;
+  if (ctx.configureNetworkOnly) {
+    // Make sure the SD card is mounted.
+    mountDir = await platformService.mountDisk(sdCardDevice);
   } else {
-    ctx.infoln('Downloading SD card image');
-    await platformService.downloadWithProgress(source, zipFile);
-  }
+    Directory tmpDir = await ctx.tmpDir;
+    String zipFileName = ctx.zipFileName;
+    var source = Uri.parse(imageUrl);
+    if (zipFileName == null) {
+      zipFileName = '${tmpDir.path}/$imageZipFileName';
+    }
+    File zipFile = new File(zipFileName);
+    if (ctx.skipDownload) {
+      ctx.infoln('Skipping download');
+    } else {
+      ctx.infoln('Downloading SD card image');
+      await platformService.downloadWithProgress(source, zipFile);
+    }
 
-  if (ctx.skipDecompress) {
-    ctx.infoln('Skipping decompress.');
-  } else {
-    ctx.infoln('Decompressing SD card image.');
-    await platformService.decompressFile(zipFile, tmpDir);
-  }
+    if (ctx.skipDecompress) {
+      ctx.infoln('Skipping decompress.');
+    } else {
+      ctx.infoln('Decompressing SD card image.');
+      await platformService.decompressFile(zipFile, tmpDir);
+    }
 
-  var decompressedFile = new File('${tmpDir.path}/$imageFileName');
-  ctx.infoln('Unmounting the SD card.');
-  await platformService.unmountDisk(sdCardDevice);
-  if (ctx.skipWrite) {
-    ctx.infoln('Skipping writing image to SD card.');
-  } else {
-    ctx.infoln('Writing image to SD card.');
-    await platformService.ddWithProgress(decompressedFile, sdCardDevice);
-  }
+    var decompressedFile = new File('${tmpDir.path}/$imageFileName');
+    ctx.infoln('Unmounting the SD card.');
+    await platformService.unmountDisk(sdCardDevice);
+    if (ctx.skipWrite) {
+      ctx.infoln('Skipping writing image to SD card.');
+    } else {
+      ctx.infoln('Writing image to SD card.');
+      await platformService.ddWithProgress(decompressedFile, sdCardDevice);
+    }
 
-  // Make sure the SD card is mounted again.
-  ctx.infoln('Mounting the SD card.');
-  Directory mountDir = await platformService.mountDisk(sdCardDevice);
+    // Make sure the SD card is mounted again.
+    ctx.infoln('Mounting the SD card.');
+    mountDir = await platformService.mountDisk(sdCardDevice);
+  }
 
   // Sanity check for Raspbian boot partition.
   var bootFiles = await mountDir.list().map((fse) => fse.path).toList();

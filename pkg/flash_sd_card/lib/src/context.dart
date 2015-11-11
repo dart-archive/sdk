@@ -27,6 +27,7 @@ class Context {
     parser.addFlag('skip-download');
     parser.addFlag('skip-decompress');
     parser.addFlag('skip-write');
+    parser.addFlag('configure-network-only');
     parser.addOption('version');
     parser.addOption('image-url');
     parser.addOption('zip-file');
@@ -44,6 +45,8 @@ class Context {
   bool get skipDecompress => _arguments['skip-decompress'];
 
   bool get skipWrite => _arguments['skip-write'];
+
+  bool get configureNetworkOnly => _arguments['configure-network-only'];
 
   String get logFileName {
     var logFileName = _arguments['log-file'];
