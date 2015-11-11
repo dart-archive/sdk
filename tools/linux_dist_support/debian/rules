@@ -53,5 +53,7 @@ override_dh_auto_install:
 	mkdir -p $(TMP_OUT)/bin
 	cp -R fletch/out/$(XBUILD_TYPE)/fletch-vm $(TMP_OUT)/bin
 	cp -R fletch/out/$(XBUILD_TYPE)/fletch-agent.snapshot $(TMP_OUT)/bin
+	mkdir -p $(TMP_OUT)/avahi
+	cp fletch/platforms/raspberry-pi2/data/fletch-agent.service $(TMP_OUT)/avahi
 	dh_install
 	dh_link
