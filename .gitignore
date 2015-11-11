@@ -37,6 +37,8 @@ packages
 /third_party/charcode/
 /third_party/crypto/
 /third_party/dart/
+/third_party/dartdoc_deps/dart-sdk.tar.gz
+/third_party/dartdoc_deps/dart-sdk
 /third_party/gyp/
 /third_party/isolate/
 /third_party/openocd/
