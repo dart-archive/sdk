@@ -14,6 +14,7 @@ enum DiagnosticKind {
   cantPerformVerbIn,
   cantPerformVerbTo,
   cantPerformVerbWith,
+  compilerVersionMismatch,
   duplicatedIn,
   duplicatedTo,
   duplicatedWith,
@@ -312,5 +313,14 @@ String getMessage(DiagnosticKind kind) {
           "Device version: '$additionalUserInput'.\n"
           "Try running 'fletch x-upgrade agent with file <agent debian "
           "package> in session $sessionName'";
+
+    case DiagnosticKind.compilerVersionMismatch:
+      // TODO(wibling): lukechurch: Is there advice we can give here?
+      // E.g. Consider upgrading your compiler? Do we have an easy place they
+      // can go to do that? Are we considering adding a tool to auto-upgrade?
+      return "Connection rejected because running compiler and SDK have "
+          "different versions.\nCompiler version: '$userInput'\n"
+          "SDK version: '$additionalUserInput'.\n"
+          "Try running 'fletch quit' and retry the command.";
   }
 }

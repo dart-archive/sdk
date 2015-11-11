@@ -125,6 +125,13 @@ AnalyzedSentence helpSentence(String message) {
 }
 
 AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
+  // Check the sentence's version matches the persistent process' version.
+  if (sentence.version != null && sentence.version != fletchVersion) {
+    throwFatalError(
+        DiagnosticKind.compilerVersionMismatch,
+        userInput: fletchVersion,
+        additionalUserInput: sentence.version);
+  }
   if (options != null && options.version) {
     return helpSentence(fletchVersion);
   }

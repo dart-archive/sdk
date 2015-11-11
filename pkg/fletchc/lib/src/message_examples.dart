@@ -310,6 +310,10 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.agentVersionMismatch:
       // TODO(wibling): Add test for this
       return untestable;
+
+    case DiagnosticKind.compilerVersionMismatch:
+      // TODO(wibling): Add test for this
+      return untestable;
   }
 }
 
