@@ -301,7 +301,7 @@ def StepsGetDocs():
     version = utils.GetSemanticSDKVersion()
     gsutil = bot_utils.GSUtil()
     namer = GetNamer()
-    docs_out = os.path.join('out', 'docs')
+    docs_out = os.path.join('out')
     gs_path = namer.docs_filepath(version)
     if os.path.exists(docs_out):
       shutil.rmtree(docs_out)
