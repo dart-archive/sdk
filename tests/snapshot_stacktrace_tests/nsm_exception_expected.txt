@@ -1,0 +1,13 @@
+<STDOUT>:
+NoSuchMethodError: Foo.bar
+   0: Object.noSuchMethod
+   1: Object._noSuchMethod
+   2: Object._noSuchMethodTrampoline
+   3: foo
+   4: main
+   5: callMain
+   6: entry
+
+<STDERR>:
+
+<EXITCODE>:255

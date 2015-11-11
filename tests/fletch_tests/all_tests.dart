@@ -25,6 +25,8 @@ import 'sentence_tests.dart' as sentence_tests;
 
 import 'message_tests.dart' as message_tests;
 
+import 'snapshot_stacktrace_tests.dart' as snapshot_stacktrace_tests;
+
 import '../service_tests/service_tests.dart' as service_tests;
 
 import '../servicec/servicec_tests.dart' as servicec_tests;
@@ -77,6 +79,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   // Slow tests, should run early so we don't wait for them.
   'agent_tests/*': agent_tests.listTests,
+
+  'snapshot_stacktrace_tests/*': snapshot_stacktrace_tests.listTests,
 
   'controlStream/testControlStream': controlStream.testControlStream,
 

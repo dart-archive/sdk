@@ -6,7 +6,8 @@ library fletchc.program_info;
 
 import 'dart:async' show
     Future,
-    Stream;
+    Stream,
+    StreamSink;
 
 import 'dart:io' as io;
 
@@ -550,7 +551,11 @@ Stream<String> decodeStackFrames(Configuration conf,
   }
 }
 
-Future<int> decodeProgramMain(List<String> arguments) async {
+Future<int> decodeProgramMain(
+    List<String> arguments,
+    Stream<List<int>> input,
+    StreamSink<List<int>> output) async {
+
   usage(message) {
     print("Invalid arguments: $message");
     print("Usage: ${io.Platform.script} "
@@ -598,11 +603,11 @@ Future<int> decodeProgramMain(List<String> arguments) async {
   }
 
   Stream<String> inputLines =
-      io.stdin.transform(UTF8.decoder).transform(new LineSplitter());
+      input.transform(UTF8.decoder).transform(new LineSplitter());
 
   Configuration conf = _getConfiguration(bits, floatOrDouble);
   Stream<String> decodedFrames = decodeStackFrames(conf, info, inputLines);
-  await decodedFrames.transform(UTF8.encoder).pipe(io.stdout);
+  await decodedFrames.transform(UTF8.encoder).pipe(output);
 
   return 0;
 }

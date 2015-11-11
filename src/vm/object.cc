@@ -194,7 +194,7 @@ void Object::Print() {
   } else {
     HeapObject::cast(this)->HeapObjectPrint();
   }
-  Print::Out("\n\n");
+  Print::Out("\n");
 }
 
 void Object::ShortPrint() {
