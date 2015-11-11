@@ -259,16 +259,22 @@ List<Example> getExamples(DiagnosticKind kind) {
             <String>['create', 'with', 'foo.txt', 'with', 'foo.txt'])];
 
     case DiagnosticKind.verbDoesntSupportTarget:
+      // Though the quit verb is not a real verb it can still be used to provoke
+      // this failure as part of sentence parsing.
       return <Example>[new CommandLineExample(
-            <String>['shutdown', 'foo.txt'])];
+            <String>['quit', 'foo.txt'])];
 
     case DiagnosticKind.verbRequiresNoToFile:
+      // Though the quit verb is not a real verb it can still be used to provoke
+      // this failure as part of sentence parsing.
       return <Example>[new CommandLineExample(
-            <String>['shutdown', 'to', 'foo.txt'])];
+            <String>['quit', 'to', 'foo.txt'])];
 
     case DiagnosticKind.verbRequiresNoWithFile:
+      // Though the quit verb is not a real verb it can still be used to provoke
+      // this failure as part of sentence parsing.
       return <Example>[new CommandLineExample(
-            <String>['shutdown', 'with', 'foo.txt'])];
+            <String>['quit', 'with', 'foo.txt'])];
 
     case DiagnosticKind.verbRequiresTarget:
       // TODO(ahe): Add test for this.
