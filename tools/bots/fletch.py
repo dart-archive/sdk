@@ -303,8 +303,6 @@ def StepsGetDocs():
     namer = GetNamer()
     docs_out = os.path.join('out')
     gs_path = namer.docs_filepath(version)
-    if os.path.exists(docs_out):
-      shutil.rmtree(docs_out)
     gsutil.execute(['-m', 'cp', '-r', gs_path, docs_out])
 
 def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
