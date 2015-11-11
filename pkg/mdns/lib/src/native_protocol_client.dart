@@ -101,7 +101,7 @@ class NativeProtocolMDnsClient implements MDnsClient {
       _sockets.add(socket);
 
       // Join multicast on this interface.
-      _incoming.joinMulticast(mDnsAddress, interface);
+      (_incoming as dynamic).joinMulticast(mDnsAddress, interface);
     }
     _incoming.listen(_handleIncoming);
 
@@ -132,7 +132,7 @@ class NativeProtocolMDnsClient implements MDnsClient {
     }
 
     // Look for entries in the cache.
-    List<ResourceRecordCache> cached = <ResourceRecord>[];
+    List<ResourceRecord> cached = <ResourceRecord>[];
     cache.lookup(name, type, cached);
     if (cached.isNotEmpty) {
       StreamController controller = new StreamController();

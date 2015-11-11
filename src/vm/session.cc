@@ -87,7 +87,7 @@ Session::~Session() {
 }
 
 void Session::Initialize() {
-  program_ = new Program();
+  program_ = new Program(Program::kBuiltViaSession);
   program()->Initialize();
   program()->AddSession(this);
 }

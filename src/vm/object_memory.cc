@@ -135,6 +135,18 @@ uword Space::Allocate(int size) {
   return AllocateInNewChunk(size);
 }
 
+word Space::OffsetOf(HeapObject* object) {
+  uword address = object->address();
+  uword base = first()->base();
+
+  // Make sure the space consists of exactly one chunk!
+  ASSERT(first() == last());
+  ASSERT(first()->Includes(address));
+  ASSERT(base <= address);
+
+  return address - base;
+}
+
 void Space::TryDealloc(uword location, int size) {
   if (top_ == location) top_ -= size;
 }

@@ -107,9 +107,12 @@ class State {
 
   void PushReturnAddress(int offset) {
     Push(reinterpret_cast<Object*>(ComputeReturnAddress(offset)));
+    Push(NULL);
+    Push(NULL);
   }
 
   void PopReturnAddress() {
+    Drop(2);
     Goto(reinterpret_cast<uint8*>(Pop()));
   }
 
@@ -227,6 +230,24 @@ Interpreter::InterruptKind Engine::Interpret(
     Object* local = Local(2);
     Push(local);
     Advance(kLoadLocal2Length);
+  OPCODE_END();
+
+  OPCODE_BEGIN(LoadLocal3);
+    Object* local = Local(3);
+    Push(local);
+    Advance(kLoadLocal3Length);
+  OPCODE_END();
+
+  OPCODE_BEGIN(LoadLocal4);
+    Object* local = Local(4);
+    Push(local);
+    Advance(kLoadLocal4Length);
+  OPCODE_END();
+
+  OPCODE_BEGIN(LoadLocal5);
+    Object* local = Local(5);
+    Push(local);
+    Advance(kLoadLocal5Length);
   OPCODE_END();
 
   OPCODE_BEGIN(LoadLocal);
@@ -466,7 +487,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(InvokeNative);
     int arity = ReadByte(1);
     Native native = static_cast<Native>(ReadByte(2));
-    Object** arguments = LocalPointer(arity);
+    Object** arguments = LocalPointer(arity + 2);
     GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
         result, kNativeTable[native](process(), arguments));
     if (result->IsFailure()) {
@@ -511,7 +532,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(InvokeNativeYield);
     int arity = ReadByte(1);
     Native native = static_cast<Native>(ReadByte(2));
-    Object** arguments = LocalPointer(arity);
+    Object** arguments = LocalPointer(arity + 2);
     GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
         result, kNativeTable[native](process(), arguments));
     if (result->IsFailure()) {
@@ -936,11 +957,20 @@ void Engine::CollectMutableGarbage() {
 void Engine::ValidateStack() {
   SaveState();
   StackWalker walker(process(), process()->stack());
+  Function::FromBytecodePointer(
+      reinterpret_cast<uint8*>(process()->stack()->get(
+          process()->stack()->top())));
   int computed_stack_size = 0;
   int last_arity = 0;
   while (walker.MoveNext()) {
-    // Return address
-    computed_stack_size += 1;
+    Function::FromBytecodePointer(walker.return_address());
+    int index = process()->stack()->top() + walker.stack_offset();
+    index++;
+    if (process()->stack()->get(index) != NULL) FATAL("Bad frame descriptor");
+    index++;
+    if (process()->stack()->get(index) != NULL) FATAL("Bad frame descriptor");
+    // Return address + 2 empty slots.
+    computed_stack_size += 3;
     computed_stack_size += walker.frame_size();
     last_arity = walker.function()->arity();
   }
@@ -1151,14 +1181,14 @@ void HandleEnterNoSuchMethod(Process* process) {
 
   Program* program = state.program();
 
-  uint8* return_address = reinterpret_cast<uint8*>(state.Local(0));
+  uint8* return_address = reinterpret_cast<uint8*>(state.Local(2));
   Opcode opcode = static_cast<Opcode>(*(return_address - 5));
 
   int selector;
   if (opcode == Opcode::kInvokeSelector) {
     // If we have nested noSuchMethod trampolines, find the sentinel value,
     // and use the selector-smi right above it.
-    int offset = 1;
+    int offset = 3;
     while (state.Local(offset) != program->sentinel_object()) {
       offset++;
     }
@@ -1186,7 +1216,7 @@ void HandleEnterNoSuchMethod(Process* process) {
 
   int arity = Selector::ArityField::decode(selector);
   Smi* selector_smi = Smi::FromWord(selector);
-  Object* receiver = state.Local(arity + 1);
+  Object* receiver = state.Local(arity + 3);
 
   Class* clazz = receiver->IsSmi()
       ? program->smi_class()
@@ -1205,7 +1235,7 @@ void HandleEnterNoSuchMethod(Process* process) {
     int call_selector = Selector::EncodeMethod(Names::kCall, arity);
     state.Push(program->null_object());
     for (int i = 0; i < arity; i++) {
-      state.Push(state.Local(arity + 3));
+      state.Push(state.Local(arity + 5));
     }
     state.Push(Smi::FromWord(call_selector));
     state.Push(program->null_object());

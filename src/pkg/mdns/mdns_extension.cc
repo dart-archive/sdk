@@ -19,31 +19,43 @@ void HandleRequest(Dart_Port port_id, Dart_CObject* message) {
   //  [1]: request type
   //  [2]: request argument
   if (message->type == Dart_CObject_kArray &&
-      message->value.as_array.length == 3) {
+      message->value.as_array.length > 2) {
     Dart_CObject* reply_port = message->value.as_array.values[0];
     Dart_CObject* request_type = message->value.as_array.values[1];
-    Dart_CObject* argument = message->value.as_array.values[2];
-    if (reply_port->type == Dart_CObject_kSendPort) {
-      if (request_type->type == Dart_CObject_kInt32) {
-        switch (request_type->value.as_int32) {
-          case kEchoRequest:
+    if (reply_port->type == Dart_CObject_kSendPort &&
+        request_type->type == Dart_CObject_kInt32) {
+      switch (request_type->value.as_int32) {
+        case kEchoRequest:
+          if (message->value.as_array.length == 3) {
+            Dart_CObject* argument = message->value.as_array.values[2];
             HandleEcho(reply_port->value.as_send_port.id, argument);
             return;
+          }
 
-          case kLookupRequest:
-            HandleLookup(reply_port->value.as_send_port.id,
-                         argument->value.as_string);
+        case kLookupRequest:
+          if (message->value.as_array.length == 5) {
+            Dart_CObject* type = message->value.as_array.values[2];
+            Dart_CObject* name = message->value.as_array.values[3];
+            Dart_CObject* timeout = message->value.as_array.values[4];
+            if (type->type == Dart_CObject_kInt32 &&
+                name->type == Dart_CObject_kString &&
+                timeout->type == Dart_CObject_kInt32) {
+              HandleLookup(reply_port->value.as_send_port.id,
+                           type->value.as_int32,
+                           name->value.as_string,
+                           timeout->value.as_int32);
+            }
             return;
+          }
 
-          default:
-            break;
-            // Ignore invalid requests.
-        }
+        default:
+          break;
+          // Ignore invalid requests.
       }
-      Dart_CObject result;
-      result.type = Dart_CObject_kNull;
-      Dart_PostCObject(reply_port->value.as_send_port.id, &result);
     }
+    Dart_CObject result;
+    result.type = Dart_CObject_kNull;
+    Dart_PostCObject(reply_port->value.as_send_port.id, &result);
   }
 }
 

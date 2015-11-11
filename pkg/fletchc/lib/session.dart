@@ -205,6 +205,7 @@ class Session extends FletchVmSession {
 
   DebugState debugState;
   FletchSystem fletchSystem;
+  bool loaded = false;
   bool running = false;
   bool terminated = false;
 
@@ -253,6 +254,7 @@ class Session extends FletchVmSession {
 
   Future run() async {
     await spawnProcess();
+    loaded = true;
     await runCommand(const ProcessRun());
     // NOTE: The [ProcessRun] command normally results in a
     // [ProcessTerminated] command. But if the compiler emitted a compile time
@@ -260,7 +262,7 @@ class Session extends FletchVmSession {
     // response.
     var command = await readNextCommand(force: false);
     if (command != null && command is! ProcessTerminated) {
-      throw new Exception('Expected program to finish complete with '
+      throw new Exception('Expected process to finish complete with '
                           '[ProcessTerminated] but got [$command]');
     }
 
@@ -315,6 +317,7 @@ class Session extends FletchVmSession {
 
       case CommandCode.ProcessTerminated:
         running = false;
+        loaded = false;
         writeStdoutLine('### process terminated');
         // TODO(ahe): Let the caller terminate the session. See issue 67.
         await terminateSession();
@@ -322,6 +325,7 @@ class Session extends FletchVmSession {
 
       case CommandCode.ConnectionError:
         running = false;
+        loaded = false;
         await shutdown();
         terminated = true;
         break;
@@ -347,8 +351,24 @@ class Session extends FletchVmSession {
     return running;
   }
 
+  bool checkNotRunning() {
+    if (running) writeStdoutLine("### process already running");
+    return !running;
+  }
+
+  bool checkNotTerminated() {
+    if (terminated) writeStdoutLine("### process already terminated");
+    return !terminated;
+  }
+
+  bool checkLoaded() {
+    if (!loaded) writeStdoutLine("### process not loaded");
+    return loaded;
+  }
+
   Future debugRun() async {
-    assert(!running);
+    if (!checkNotRunning()) return null;
+    loaded = true;
     running = true;
     await sendCommand(const ProcessRun());
     return handleProcessStop(await readNextCommand());
@@ -458,11 +478,13 @@ class Session extends FletchVmSession {
   }
 
   Future stepTo(int functionId, int bcp) async {
+    assert(running);
     Command response = await runCommand(new ProcessStepTo(functionId, bcp));
     return await handleProcessStop(response);
   }
 
   Future step() async {
+    if (!checkRunning()) return null;
     Command response;
     SourceLocation previous = debugState.currentLocation;
     do {
@@ -477,6 +499,7 @@ class Session extends FletchVmSession {
   }
 
   Future stepOver() async {
+    if (!checkRunning()) return null;
     Command response;
     SourceLocation previous = debugState.currentLocation;
     do {
@@ -536,12 +559,13 @@ class Session extends FletchVmSession {
         await runCommand(new ProcessRestartFrame(frame)));
     if (response is UncaughtException) {
       await uncaughtException();
-    } else {
+    } else if (!terminated) {
       await backtrace();
     }
   }
 
   Future stepBytecode() async {
+    if (!checkRunning()) return null;
     return await handleProcessStop(await runCommand(const ProcessStep()));
   }
 
@@ -563,10 +587,12 @@ class Session extends FletchVmSession {
   }
 
   Future cont() async {
+    if (!checkRunning()) return null;
     return handleProcessStop(await runCommand(const ProcessContinue()));
   }
 
   Future<String> list() async {
+    if (!checkLoaded()) return null;
     await getStackTrace();
     if (debugState.currentStackTrace == null) return null;
     return debugState.list();
@@ -579,6 +605,7 @@ class Session extends FletchVmSession {
   }
 
   Future<String> disasm() async {
+    if (!checkLoaded()) return null;
     await getStackTrace();
     if (debugState.currentStackTrace == null) return null;
     return debugState.disasm();
@@ -629,6 +656,7 @@ class Session extends FletchVmSession {
   }
 
   Future getStackTrace() async {
+    assert(loaded);
     if (debugState.currentStackTrace == null) {
       ProcessBacktrace backtraceResponse =
           await runCommand(const ProcessBacktraceRequest());
@@ -643,10 +671,8 @@ class Session extends FletchVmSession {
   }
 
   Future exception() async {
-    // TODO(ager): We should refactor this so that we never
-    // call exception from other debugger methods when the
-    // session has been terminated.
-    if (terminated) return null;
+    assert(loaded);
+    assert(!terminated);
     await getUncaughtException();
     writeStdoutLine(
         uncaughtExceptionToString(debugState.currentUncaughtException));
@@ -656,7 +682,7 @@ class Session extends FletchVmSession {
     // TODO(ager): We should refactor this so that we never
     // call backtrace from other debugger methods when the
     // session has been terminated.
-    if (terminated) return null;
+    if (!checkLoaded() || !checkNotTerminated()) return null;
     await getStackTrace();
     String trace = debugState.formatStackTrace();
     writeStdout(trace);
@@ -811,6 +837,7 @@ class Session extends FletchVmSession {
   }
 
   Future printAllVariables() async {
+    if (!checkLoaded()) return null;
     await getStackTrace();
     ScopeInfo info = debugState.currentScopeInfo;
     for (ScopeInfo current = info;
@@ -821,6 +848,7 @@ class Session extends FletchVmSession {
   }
 
   Future printVariable(String name) async {
+    if (!checkLoaded()) return null;
     await getStackTrace();
     ScopeInfo info = debugState.currentScopeInfo;
     LocalValue local = info.lookup(name);
@@ -832,6 +860,7 @@ class Session extends FletchVmSession {
   }
 
   Future printVariableStructure(String name) async {
+    if (!checkLoaded()) return null;
     await getStackTrace();
     ScopeInfo info = debugState.currentScopeInfo;
     LocalValue local = info.lookup(name);

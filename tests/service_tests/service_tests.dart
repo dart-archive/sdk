@@ -315,8 +315,10 @@ class CompileServiceRule extends Rule {
 
   CompileServiceRule(this.idlFile, this.outputDirectory);
 
-  Future<Null> build() {
-    servicec.compile(idlFile, resourcesDirectory.path, outputDirectory);
+  Future<Null> build() async {
+    bool success = await servicec.compileAndReportErrors(
+        idlFile, idlFile, resourcesDirectory.path, outputDirectory);
+    Expect.isTrue(success);
   }
 }
 

@@ -93,7 +93,12 @@ class ProgramState {
 
 class Program {
  public:
-  Program();
+  enum ProgramSource {
+    kLoadedFromSnapshot,
+    kBuiltViaSession,
+  };
+
+  explicit Program(ProgramSource source);
   ~Program();
 
   void Initialize();
@@ -101,6 +106,8 @@ class Program {
   // Is the program in the compact table representation?
   bool is_compact() const { return is_compact_; }
   void set_is_compact(bool value) { is_compact_ = value; }
+
+  bool was_loaded_from_snapshot() { return loaded_from_snapshot_; }
 
   Function* entry() const { return entry_; }
   void set_entry(Function* entry) { entry_ = entry; }
@@ -233,6 +240,10 @@ class Program {
   void PerformProgramGC(Space* to, PointerVisitor* visitor);
   void FinishProgramGC();
 
+  // When the program was loaded from a snapshot, then this function can be used
+  // to get the offset of functions/classes in the program heap.
+  uword OffsetOf(HeapObject* object);
+
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
@@ -269,6 +280,8 @@ class Program {
   int main_arity_;
 
   bool is_compact_;
+
+  bool loaded_from_snapshot_;
 };
 
 }  // namespace fletch

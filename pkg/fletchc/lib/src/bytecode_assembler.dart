@@ -8,6 +8,7 @@ import '../bytecodes.dart';
 
 const int IMPLICIT_STACK_OVERFLOW_LIMIT = 32;
 const int RETURN_NARROW_MAX_STACK_SIZE = 255;
+const int frameDescriptorSize = 3;
 
 class BytecodeLabel {
   int position = -1;
@@ -100,6 +101,15 @@ class BytecodeAssembler {
       case 2:
         bytecode = const LoadLocal2();
         break;
+      case 3:
+        bytecode = const LoadLocal3();
+        break;
+      case 4:
+        bytecode = const LoadLocal4();
+        break;
+      case 5:
+        bytecode = const LoadLocal5();
+        break;
       default:
         if (offset >= 256) {
           bytecode = new LoadLocalWide(offset);
@@ -144,16 +154,18 @@ class BytecodeAssembler {
     loadBoxed(offset);
   }
 
+  int computeParameterOffset(int parameter) {
+    return frameDescriptorSize + stackSize + functionArity - parameter - 1;
+  }
+
   void loadParameter(int parameter) {
     assert(parameter >= 0 && parameter < functionArity);
-    int offset = stackSize + functionArity - parameter;
-    loadLocalHelper(offset);
+    loadLocalHelper(computeParameterOffset(parameter));
   }
 
   void loadBoxedParameter(int parameter) {
     assert(parameter >= 0 && parameter < functionArity);
-    int offset = stackSize + functionArity - parameter;
-    loadBoxedHelper(offset);
+    loadBoxedHelper(computeParameterOffset(parameter));
   }
 
   void loadStatic(int index) {
@@ -231,14 +243,12 @@ class BytecodeAssembler {
 
   void storeParameter(int parameter) {
     assert(parameter >= 0 && parameter < functionArity);
-    int offset = stackSize + functionArity - parameter;
-    storeLocalHelper(offset);
+    storeLocalHelper(computeParameterOffset(parameter));
   }
 
   void storeBoxedParameter(int parameter) {
     assert(parameter >= 0 && parameter < functionArity);
-    int offset = stackSize + functionArity - parameter;
-    storeBoxedHelper(offset);
+    storeBoxedHelper(computeParameterOffset(parameter));
   }
 
   void storeStatic(int index) {

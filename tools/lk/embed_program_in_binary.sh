@@ -68,6 +68,8 @@ if [ -z "$SNAPSHOT" ]; then
   exit 1
 fi
 
+INTRINSICS=$(objdump -t $1 | grep -o -E '^[[:xdigit:]]+ .* Intrinsic_([[:alpha:]])+$' | sed -e 's/^\([[:xdigit:]]*\) .* Intrinsic_\([[:alpha:]]*\)$/-i \2=0x\1/g')
+
 PARTS=($SNAPSHOT)
 ADDRESS=0x${PARTS[3]}
 echo "Found .snapshot section at $ADDRESS..."
@@ -77,7 +79,7 @@ mkdir ${TEMPDIR}/fletch
 
 echo "Generating output in $TEMPDIR..."
 
-${FLETCHHOME}flashtool $2 ${ADDRESS} ${TEMPDIR}/fletch/programheap.bin ${TEMPDIR}/fletch/program.bin
+${FLETCHHOME}flashtool $INTRINSICS $2 ${ADDRESS} ${TEMPDIR}/fletch/programheap.bin ${TEMPDIR}/fletch/program.bin
 
 (cd ${TEMPDIR}; arm-none-eabi-objcopy --rename-section .data=.snapshot --redefine-sym _binary_fletch_programheap_bin_start=__fletch_${3}_heap_start --redefine-sym _binary_fletch_programheap_bin_end=__fletch_${3}_heap_end --redefine-sym _binary_fletch_programheap_bin_size=__fletch_${3}_heap_size -I binary -B armv4t -O elf32-littlearm fletch/programheap.bin fletch/programheap.o)
 

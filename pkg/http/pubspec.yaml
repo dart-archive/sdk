@@ -1,0 +1,8 @@
+name: http
+version: 0.1.0
+
+dependencies:
+  socket:
+    path: ../socket
+  charcode:
+    path: ../../third_party/charcode

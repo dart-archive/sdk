@@ -109,16 +109,10 @@ Future<int> compileTask(Uri targetUri, Uri base, List<String> arguments) async {
   print("Compiling $relativeName...");
 
   String fileName = targetUri.toFilePath();
-  Iterable<CompilationError> compilerErrors =
-    await servicec.compile(fileName, resourcesDirectory, outputDirectory);
+  bool success = await servicec.compileAndReportErrors(
+      fileName, relativeName, resourcesDirectory, outputDirectory);
 
   print("Compiled $relativeName to $outputDirectory");
 
-  int length = compilerErrors.length;
-  if (length > 0) {
-    new ErrorReporter(fileName, relativeName).report(compilerErrors);
-    return DART_VM_EXITCODE_COMPILE_TIME_ERROR;
-  }
-
-  return 0;
+  return success ? 0 : DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 }

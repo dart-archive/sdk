@@ -88,6 +88,9 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoLoadLocal0();
   virtual void DoLoadLocal1();
   virtual void DoLoadLocal2();
+  virtual void DoLoadLocal3();
+  virtual void DoLoadLocal4();
+  virtual void DoLoadLocal5();
   virtual void DoLoadLocal();
   virtual void DoLoadLocalWide();
 
@@ -379,6 +382,10 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ Bind(&intrinsic_failure_);
   __ addl(ESI, Immediate(kInvokeMethodLength));
   Push(ESI);
+  // Push two empty slots.
+  __ movl(EBX, Immediate(0));
+  Push(EBX);
+  Push(EBX);
   __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
   Dispatch(0);
 }
@@ -397,6 +404,24 @@ void InterpreterGeneratorX86::DoLoadLocal1() {
 
 void InterpreterGeneratorX86::DoLoadLocal2() {
   LoadLocal(EAX, 2);
+  Push(EAX);
+  Dispatch(1);
+}
+
+void InterpreterGeneratorX86::DoLoadLocal3() {
+  LoadLocal(EAX, 3);
+  Push(EAX);
+  Dispatch(1);
+}
+
+void InterpreterGeneratorX86::DoLoadLocal4() {
+  LoadLocal(EAX, 4);
+  Push(EAX);
+  Dispatch(1);
+}
+
+void InterpreterGeneratorX86::DoLoadLocal5() {
+  LoadLocal(EAX, 5);
   Push(EAX);
   Dispatch(1);
 }
@@ -455,6 +480,10 @@ void InterpreterGeneratorX86::DoLoadStaticInit() {
   __ movl(EAX, Address(EAX, Initializer::kFunctionOffset - HeapObject::kTag));
   __ addl(ESI, Immediate(kInvokeMethodLength));
   Push(ESI);
+  // Push two empty slots.
+  __ movl(EBX, Immediate(0));
+  Push(EBX);
+  Push(EBX);
 
   // Jump to the first bytecode in the initializer function.
   __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
@@ -624,6 +653,10 @@ void InterpreterGeneratorX86::DoInvokeNoSuchMethod() {
   // Compute and push the return address on the stack.
   __ addl(ESI, Immediate(kInvokeNoSuchMethodLength));
   Push(ESI);
+  // Push two empty slots.
+  __ movl(EBX, Immediate(0));
+  Push(EBX);
+  Push(EBX);
 
   // Jump to the first bytecode in the target method.
   __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
@@ -1262,7 +1295,7 @@ void InterpreterGeneratorX86::DoExitNoSuchMethod() {
   Pop(EAX);  // Result.
   Pop(EBX);  // Selector.
   __ shrl(EBX, Immediate(Smi::kTagSize));
-  Drop(1);   // Sentinel.
+  Drop(3);   // Sentinel and 2 empty slots.
   Pop(ESI);
 
   Label done;
@@ -1446,13 +1479,13 @@ void InterpreterGeneratorX86::Return(bool wide, bool is_return_null) {
   }
   __ negl(ECX);
 
-  // Load the return address.
-  __ movl(ESI, Address(EDI, ECX, TIMES_4));
+  // Load the return address (note we skip two empty slots).
+  __ movl(ESI, Address(EDI, ECX, TIMES_4, -8));
 
   // Drop both locals and arguments except one which we will overwrite
   // with the result (we've left the return address on the stack).
   __ subl(ECX, EBX);
-  __ leal(EDI, Address(EDI, ECX, TIMES_4));
+  __ leal(EDI, Address(EDI, ECX, TIMES_4, -8));
 
   // Overwrite the first argument (or the return address) with the result
   // and dispatch to the next bytecode.
@@ -1681,6 +1714,10 @@ void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
     // Compute and push the return address on the stack.
     __ addl(ESI, Immediate(kInvokeMethodUnfoldLength));
     Push(ESI);
+    // Push two empty slots.
+    __ movl(EBX, Immediate(0));
+    Push(EBX);
+    Push(EBX);
 
     // Jump to the first bytecode in the target method.
     __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
@@ -1779,6 +1816,10 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
     // Compute and push the return address on the stack.
     __ addl(ESI, Immediate(kInvokeMethodLength));
     Push(ESI);
+    // Push two empty slots.
+    __ movl(EBX, Immediate(0));
+    Push(EBX);
+    Push(EBX);
 
     // Jump to the first bytecode in the target method.
     __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
@@ -1826,6 +1867,10 @@ void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {
   // Compute and push the return address on the stack.
   __ addl(ESI, Immediate(kInvokeStaticLength));
   Push(ESI);
+  // Push two empty slots.
+  __ movl(EBX, Immediate(0));
+  Push(EBX);
+  Push(EBX);
 
   // Jump to the first bytecode in the target method.
   __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
@@ -1902,7 +1947,8 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
 
   __ LoadNative(EAX, EAX);
 
-  __ leal(EBX, Address(EDI, EBX, TIMES_4));
+  // Extract address for first argument (note we skip two empty slots).
+  __ leal(EBX, Address(EDI, EBX, TIMES_4, -8));
   __ movl(Address(ESP, 0 * kWordSize), EBP);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
 
@@ -1914,7 +1960,7 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
   __ j(EQUAL, &failure);
 
   // Result is in eax. Pointer to first argument is in ebx.
-  LoadLocal(ESI, 0);
+  LoadLocal(ESI, 2);
 
   if (yield) {
     // Set the result to null and drop the arguments.

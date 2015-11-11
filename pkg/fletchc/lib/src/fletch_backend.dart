@@ -1628,6 +1628,20 @@ class FletchBackend extends Backend with ResolutionCallbacks
     if (!callStructure.signatureApplies(signature)) {
       return false;
     }
+    if (!signature.hasOptionalParameters) {
+      // There are no optional parameters, and the signature applies, so this
+      // is an exact match.
+      return true;
+    }
+    if (!signature.optionalParametersAreNamed) {
+      // The optional parameters aren't named which means that they are
+      // optional positional parameters. So we have an exact match if the
+      // number of parameters matches the number of arguments.
+      return callStructure.argumentCount == signature.parameterCount;
+    }
+    // Otherwise, the optional parameters are named, and we have an exact match
+    // if the named arguments in the call occur in the same order as the
+    // parameters in the signature.
     if (callStructure.namedArguments.length !=
         signature.optionalParameterCount) {
       return false;

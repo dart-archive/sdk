@@ -137,7 +137,8 @@ int FletchRunMultipleMain(int count, FletchProgram* programs) {
 }
 
 FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {
-  fletch::Program* program = new fletch::Program();
+  fletch::Program* program =
+      new fletch::Program(fletch::Program::kLoadedFromSnapshot);
   uword address = reinterpret_cast<uword>(heap);
   // The info block is appended at the end of the image.
   size_t heap_size = size - sizeof(fletch::ProgramInfoBlock);

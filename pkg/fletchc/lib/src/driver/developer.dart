@@ -32,8 +32,15 @@ import 'package:fletch_agent/messages.dart' show
     AGENT_DEFAULT_PORT,
     MessageDecodeException;
 
+import 'package:mdns/mdns.dart' show
+    MDnsClient,
+    ResourceRecord,
+    RRType;
+
 import '../../commands.dart' show
     CommandCode,
+    ConnectionError,
+    Debugging,
     HandShakeResult,
     ProcessBacktrace,
     ProcessBacktraceRequest,
@@ -42,6 +49,13 @@ import '../../commands.dart' show
     SessionEnd,
     WriteSnapshotResult;
 
+import '../../program_info.dart' show
+    Configuration,
+    ProgramInfo,
+    ProgramInfoBinary,
+    ProgramInfoJson,
+    buildProgramInfo;
+
 import 'session_manager.dart' show
     FletchVm,
     SessionState;
@@ -49,9 +63,6 @@ import 'session_manager.dart' show
 import 'driver_commands.dart' show
     DriverCommand,
     handleSocketErrors;
-
-import '../../commands.dart' show
-    Debugging;
 
 import '../verbs/infrastructure.dart' show
     Command,
@@ -334,8 +345,10 @@ Future<Settings> createSettings(
 Future<Address> readAddressFromUser(
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
+  String message =
+      "Please enter IP address of remote device (press enter for discovery): ";
   commandSender.sendEventLoopStarted();
-  commandSender.sendStdout("Please enter IP address of remote device: ");
+  commandSender.sendStdout(message);
   while (await commandIterator.moveNext()) {
     Command command = commandIterator.current;
     switch (command.code) {
@@ -350,7 +363,13 @@ Future<Address> readAddressFromUser(
         // session because we use canonical input processing (Unix line
         // buffering), but it doesn't work in general. So we should fix that.
         String line = UTF8.decode(command.data).trim();
-        return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
+        if (line.isEmpty) {
+          await discoverDevices();
+          commandSender.sendStdout(message);
+        } else {
+          return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
+        }
+        break;
 
       case DriverCommand.Signal:
         // Send an empty line as the user didn't hit enter.
@@ -503,10 +522,27 @@ Future<int> export(SessionState state, Uri snapshot) async {
     await session.applyDelta(delta);
   }
 
-  await session.writeSnapshot(snapshot.toFilePath());
-  await session.shutdown();
+  var result = await session.writeSnapshot(snapshot.toFilePath());
+  if (result is WriteSnapshotResult) {
+    WriteSnapshotResult snapshotResult = result;
 
-  return 0;
+    await session.shutdown();
+
+    ProgramInfo info =
+        buildProgramInfo(compilationResults.last.system, snapshotResult);
+
+    File jsonFile = new File('${snapshot.toFilePath()}.info.json');
+    await jsonFile.writeAsString(ProgramInfoJson.encode(info));
+
+    File binFile = new File('${snapshot.toFilePath()}.info.bin');
+    await binFile.writeAsBytes(ProgramInfoBinary.encode(info));
+
+    return 0;
+  } else {
+    assert(result is ConnectionError);
+    print("There was a connection error while writing the snapshot.");
+    return exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
+  }
 }
 
 // TODO(wibling): refactor the debug_verb to not set up its own event handler
@@ -748,6 +784,26 @@ Future<int> invokeCombinedTasks(
     SharedTask task2) async {
   await task1(commandSender, commandIterator);
   return task2(commandSender, commandIterator);
+}
+
+Future discoverDevices() async {
+  print('Looking for Fletch capable devices...');
+  MDnsClient client = new MDnsClient();
+  await client.start();
+  String name = '_fletch_agent._tcp.local';
+  await for (ResourceRecord ptr in client.lookup(RRType.PTR, name)) {
+    String domain = ptr.domainName;
+    await for (ResourceRecord srv in client.lookup(RRType.SRV, domain)) {
+      String target = srv.target;
+      await for (ResourceRecord a in client.lookup(RRType.A, target)) {
+        InternetAddress address = a.address;
+        if (!address.isLinkLocal) {
+          print('Found device $target on address ${address.address}.');
+        }
+      }
+    }
+  }
+  client.stop();
 }
 
 Address parseAddress(String address, {int defaultPort: 0}) {

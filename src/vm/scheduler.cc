@@ -13,6 +13,7 @@
 #include "src/vm/process.h"
 #include "src/vm/process_queue.h"
 #include "src/vm/session.h"
+#include "src/vm/stack_walker.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -336,9 +337,56 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
   ASSERT(process->state() == Process::kUncaughtException);
 
   if (print_stack) {
+    Program* program = process->program();
+    Class* nsm_class = program->no_such_method_error_class();
     Object* exception = process->exception();
-    Print::Out("Uncaught exception:\n");
-    exception->Print();
+    bool using_snapshots = program->was_loaded_from_snapshot();
+    bool is_compact = program->is_compact();
+
+    if (using_snapshots &&
+        is_compact &&
+        exception->IsInstance() &&
+        Instance::cast(exception)->get_class() == nsm_class) {
+      Instance* nsm_exception = Instance::cast(exception);
+      Object* klass_obj = nsm_exception->GetInstanceField(1);
+      Object* selector_obj = nsm_exception->GetInstanceField(2);
+
+      word class_offset = -1;
+      if (klass_obj->IsClass()) {
+        class_offset = program->OffsetOf(Class::cast(klass_obj));
+      }
+
+      int selector = -1;
+      if (selector_obj->IsSmi()) selector = Smi::cast(selector_obj)->value();
+
+      Print::Out("NoSuchMethodError(%ld, %d)\n", class_offset, selector);
+    } else {
+      Print::Out("Uncaught exception:\n");
+      exception->Print();
+    }
+
+    if (using_snapshots && is_compact) {
+      Coroutine* coroutine = process->coroutine();
+      while (true) {
+        Stack* stack = coroutine->stack();
+
+        StackWalker walker(process, stack);
+        int frame = 0;
+        while (walker.MoveNext()) {
+          Function* function = walker.function();
+          Print::Out("Frame % 2d: Function(%ld)\n",
+              frame, program->OffsetOf(function));
+          frame++;
+        }
+
+        if (coroutine->has_caller()) {
+          Print::Out(" <<called-by-coroutine>>\n");
+          coroutine = coroutine->caller();
+        } else {
+          break;
+        }
+      }
+    }
   }
 
   ExitWith(process, kUncaughtExceptionExitCode, Signal::kUncaughtException);

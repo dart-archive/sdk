@@ -7,6 +7,7 @@ fletch_agent:../fletch_agent/lib
 fletchc:lib
 js_ast:../../third_party/dart/pkg/js_ast/lib
 js_runtime:../../third_party/dart/sdk/lib/_internal/js_runtime/lib
+mdns:../mdns/lib
 package_config:../../third_party/package_config/lib
 path:../../third_party/path/lib
 persistent:../../third_party/persistent/lib
