@@ -42,8 +42,11 @@ const String buildDirectory =
 /// Relative path to the directory containing input files.
 const String filesDirectory = "tests/servicec/input_files";
 
-// TODO(zerny): Provide the below constant via configuration from test.py
-final String generatedDirectory = '$buildDirectory/generated_servicec_tests';
+/// Temporary directory for test output.
+const String tempTestOutputDirectory =
+    const String.fromEnvironment("test.dart.temp-dir");
+
+final String generatedDirectory = '$tempTestOutputDirectory/servicec_tests';
 
 final String servicecDirectory =
     const String.fromEnvironment('test.dart.servicec-dir');

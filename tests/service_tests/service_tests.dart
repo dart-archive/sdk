@@ -70,8 +70,13 @@ final Uri servicecDirectory =
 /// Resources directory for servicec.
 final Uri resourcesDirectory = servicecDirectory.resolve('lib/src/resources');
 
+/// Temporary directory for test output.
+const String tempTestOutputDirectory =
+    const String.fromEnvironment("test.dart.temp-dir");
+
+final String generatedDirectory = '$tempTestOutputDirectory/service_tests';
+
 // TODO(zerny): Provide the below constants via configuration from test.py
-final String generatedDirectory = '$buildDirectory/generated_service_tests';
 final String fletchExecutable = '$buildDirectory/fletch';
 final String fletchLibrary = '${buildDirectory}/libfletch.a';
 

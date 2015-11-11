@@ -88,6 +88,15 @@ class FletchTestSuite extends TestSuite {
     String buildDir = TestUtils.buildDir(configuration);
     String version;
 
+    // Define a path for temporary output generated during tests.
+    String tempDirPath = '$buildDir/temporary_test_output';
+    io.Directory tempDir = new io.Directory(tempDirPath);
+    try {
+      tempDir.deleteSync(recursive: true);
+    } on io.FileSystemException catch (e) {
+      // Ignored, we assume the file did not exist.
+    }
+
     bool helperProgramExited = false;
     io.Process vmProcess;
     ReadTestExpectationsInto(
@@ -116,6 +125,7 @@ class FletchTestSuite extends TestSuite {
            '-Dtest.dart.build-system=${configuration["system"]}',
            '-Dtest.dart.build-clang=${configuration["clang"]}',
            '-Dtest.dart.build-asan=${configuration["asan"]}',
+           '-Dtest.dart.temp-dir=$tempDirPath',
            '-Dtest.dart.servicec-dir=tools/servicec/',
            '-c',
            '--packages=.packages',
