@@ -27,11 +27,16 @@ const char* GetVersion() {
 
 def Main():
   args = sys.argv[1:]
-  version_cc = args[2]
+  version_cc = args[1]
+  current_content = None
+  if os.path.isfile(version_cc):
+    with open(version_cc, "r") as f:
+      current_content = f.read()
   version = utils.GetSemanticSDKVersion()
   updated_content = version_cc_template % {"version": version}
-  with open(version_cc, 'w') as f:
-    f.write(updated_content)
+  if (updated_content != current_content):
+    with open(version_cc, 'w') as f:
+      f.write(updated_content)
   return 0
 
 
