@@ -52,3 +52,6 @@ class FletchGCSNamer(bot_utils.GCSNamer):
 
   def version_filepath(self, revision):
     return '/'.join([self.fletch_sdk_directory(revision), 'VERSION'])
+
+  def docs_filepath(self, revision):
+    return '/'.join([self.fletch_sdk_directory(revision), 'docs'])
