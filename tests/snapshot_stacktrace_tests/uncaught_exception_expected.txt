@@ -1,0 +1,14 @@
+<STDOUT>:
+Uncaught exception:
+a Instance: 
+  - class = class
+  - @0 = normal exception
+
+   0: foo
+   1: main
+   2: callMain
+   3: entry
+
+<STDERR>:
+
+<EXITCODE>:255

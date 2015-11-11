@@ -146,7 +146,7 @@ FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {
   fletch::ProgramInfoBlock* program_info =
       reinterpret_cast<fletch::ProgramInfoBlock*>(block_address);
   program_info->WriteToProgram(program);
-  fletch::Chunk *memory = fletch::ObjectMemory::CreateChunk(
+  fletch::Chunk* memory = fletch::ObjectMemory::CreateChunk(
       program->heap()->space(), heap, heap_size);
   program->heap()->space()->AppendProgramChunk(memory, memory->base());
   program->set_is_compact(true);

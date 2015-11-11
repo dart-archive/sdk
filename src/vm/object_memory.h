@@ -11,6 +11,7 @@
 
 namespace fletch {
 
+class FreeList;
 class Heap;
 class HeapObject;
 class HeapObjectVisitor;
@@ -63,11 +64,17 @@ class Chunk {
 
 #ifdef FLETCH_TARGET_OS_CMSIS
   Chunk(Space* owner, uword base, uword size, uword allocated)
-      : owner_(owner), base_(base), limit_(base + size), allocated_(allocated)
-  { }
+      : owner_(owner),
+        base_(base),
+        limit_(base + size),
+        allocated_(allocated),
+        next_(NULL) { }
 #else
   Chunk(Space* owner, uword base, uword size)
-      : owner_(owner), base_(base), limit_(base + size) { }
+      : owner_(owner),
+        base_(base),
+        limit_(base + size),
+        next_(NULL) { }
 #endif
 
   ~Chunk();
@@ -90,8 +97,15 @@ class Space {
 
   ~Space();
 
-  // Allocate raw object.
-  uword Allocate(int size);
+  // Allocate raw object. Returns 0 if a garbage collection is needed
+  // and causes a fatal error if no garbage collection is needed and
+  // there is no room to allocate the object.
+  uword Allocate(int size) { return AllocateInternal(size, true); }
+
+  // Allocate raw object. Returns 0 if a garbage collection is needed
+  // or if there is no room to allocate the object. Never causes a
+  // fatal error.
+  uword AllocateNonFatal(int size) { return AllocateInternal(size, false); }
 
   // Rewind allocation top by size bytes if location is equal to current
   // allocation top.
@@ -103,9 +117,12 @@ class Space {
   // Returns the total size of allocated objects.
   int Used() {
     int result = used_;
+    if (!using_copying_collector()) return result;
     if (is_empty()) return result;
     return result + (top() - last()->base());
   }
+
+  void set_used(int used) { used_ = used; }
 
   // Returns the total size of allocated chunks.
   int Size();
@@ -152,6 +169,10 @@ class Space {
 
   bool is_empty() const { return first_ == NULL; }
 
+  FreeList* free_list() const { return free_list_; }
+  void set_free_list(FreeList* free_list);
+  bool using_copying_collector() const { return free_list_ == NULL; }
+
   static int DefaultChunkSize(int heap_size) {
     // We return a value between kDefaultMinimumChunkSize and
     // kDefaultMaximumChunkSize - and try to keep the chunks smaller than 20% of
@@ -170,7 +191,9 @@ class Space {
   friend class ProgramHeapRelocator;
 
   uword TryAllocate(int size);
-  uword AllocateInNewChunk(int size);
+  uword AllocateInternal(int size, bool fatal);
+  uword AllocateInNewChunk(int size, bool fatal);
+  uword AllocateFromFreeList(int size, bool fatal);
 
   void Append(Chunk* chunk);
 
@@ -189,6 +212,9 @@ class Space {
   uword limit_;  // Allocation limit in last chunk.
   int allocation_budget_;  // Budget before needing a GC.
   int no_allocation_nesting_;
+  FreeList* free_list_;
+  uword active_freelist_chunk_;
+  int active_freelist_chunk_size_;
 };
 
 class NoAllocationFailureScope {
@@ -245,7 +271,7 @@ class ObjectMemory {
   // to a page boundary.
   static Chunk* AllocateChunk(Space* space, int size);
 
-  static Chunk* CreateChunk(Space* space, void *heap_space, int size);
+  static Chunk* CreateChunk(Space* space, void* heap_space, int size);
 
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);

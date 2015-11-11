@@ -59,7 +59,7 @@ void Port::OwnerProcessTerminating() {
   Unlock();
 }
 
-Port* Port::CleanupPorts(Space* from, Port* head) {
+Port* Port::CleanupPorts(Space* space, Port* head) {
   Port* current = head;
   Port* previous = NULL;
   while (current != NULL) {
@@ -74,16 +74,15 @@ Port* Port::CleanupPorts(Space* from, Port* head) {
       delete current;
     } else {
       HeapObject* channel = current->channel_;
-      if (channel != NULL) {
-        HeapObject* forward = channel->forwarding_address();
-        if (from->Includes(channel->address())) {
-          if (forward != NULL) {
-            current->channel_ = reinterpret_cast<Instance*>(forward);
-          } else {
-            current->channel_ = NULL;
-          }
+      if (channel != NULL && space->Includes(channel->address())) {
+        if (space->using_copying_collector()) {
+          // If the channel is not reachable the forwarding_address will
+          // be NULL. Therefore, we should always update the channel with
+          // the forwarding address.
+          HeapObject* forward = channel->forwarding_address();
+          current->channel_ = reinterpret_cast<Instance*>(forward);
         } else {
-          ASSERT(forward == NULL);
+          if (!channel->IsMarked()) current->channel_ = NULL;
         }
       }
       previous = current;

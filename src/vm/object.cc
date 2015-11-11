@@ -19,6 +19,11 @@
 
 namespace fletch {
 
+uint8 StaticClassStructures::meta_class_storage[Class::kSize];
+uint8 StaticClassStructures::free_list_chunk_class_storage[Class::kSize];
+uint8 StaticClassStructures::one_word_filler_class_storage[Class::kSize];
+uint8 StaticClassStructures::two_word_filler_class_storage[Class::kSize];
+
 static void CopyBlock(Object** dst, Object** src, int byte_size) {
   ASSERT(byte_size > 0);
   ASSERT(Utils::IsAligned(byte_size, kPointerSize));
@@ -61,6 +66,8 @@ int HeapObject::Size() {
       return Double::cast(this)->DoubleSize();
     case InstanceFormat::LARGE_INTEGER_TYPE:
       return LargeInteger::cast(this)->LargeIntegerSize();
+    case InstanceFormat::FREE_LIST_CHUNK_TYPE:
+      return FreeListChunk::cast(this)->size();
   }
   UNREACHABLE();
   return 0;
@@ -187,7 +194,7 @@ void Object::Print() {
   } else {
     HeapObject::cast(this)->HeapObjectPrint();
   }
-  Print::Out("\n\n");
+  Print::Out("\n");
 }
 
 void Object::ShortPrint() {
@@ -509,8 +516,11 @@ void Class::ClassShortPrint() {
 
 void HeapObject::IteratePointers(PointerVisitor* visitor) {
   ASSERT(forwarding_address() == NULL);
+
   visitor->VisitClass(reinterpret_cast<Object**>(address()));
-  InstanceFormat format = raw_class()->instance_format();
+  uword raw = reinterpret_cast<uword>(raw_class());
+  Class* klass = reinterpret_cast<Class*>(raw & ~HeapObject::kMarkBit);
+  InstanceFormat format = klass->instance_format();
   // Fast case for fixed size object with all pointers.
   if (format.only_pointers_in_fixed_part()) {
     visitor->VisitBlock(
@@ -519,14 +529,20 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
     return;
   }
   switch (format.type()) {
-    case InstanceFormat::ARRAY_TYPE:
+    case InstanceFormat::ARRAY_TYPE: {
+      // We do not use cast method because the Array's class pointer is not
+      // valid during marking.
+      Array* array = reinterpret_cast<Array*>(this);
       visitor->VisitBlock(
           reinterpret_cast<Object**>(address() + (2*kPointerSize)),
-          reinterpret_cast<Object**>(address() + Array::cast(this)->Size()));
+          reinterpret_cast<Object**>(address() + array->ArraySize()));
       break;
+    }
 
     case InstanceFormat::STACK_TYPE: {
-      Stack* stack = Stack::cast(this);
+      // We do not use cast method because the Stack's class pointer is not
+      // valid during marking.
+      Stack* stack = reinterpret_cast<Stack*>(this);
       visitor->VisitBlock(
           reinterpret_cast<Object**>(address() + Stack::kSize),
           // Include the top pointer in the block.
@@ -535,7 +551,9 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
     }
 
     case InstanceFormat::FUNCTION_TYPE: {
-      Function* function = Function::cast(this);
+      // We do not use cast method because the Function's class pointer is not
+      // valid during marking.
+      Function* function = reinterpret_cast<Function*>(this);
       Object** first = function->literal_address_for(0);
       visitor->VisitBlock(first, first + function->literals_size());
       break;
@@ -725,7 +743,8 @@ void HeapObject::HeapObjectShortPrint() {
   }
 }
 
-void SafeObjectPointerVisitor::Visit(HeapObject* object) {
+int SafeObjectPointerVisitor::Visit(HeapObject* object) {
+  int size = object->Size();
   if (object->IsStack() && !process_->stacks_are_cooked()) {
     // To avoid visiting raw bytecode pointers lying on the stack we use a
     // stack walker.
@@ -736,6 +755,7 @@ void SafeObjectPointerVisitor::Visit(HeapObject* object) {
   } else {
     object->IteratePointers(visitor_);
   }
+  return size;
 }
 
 }  // namespace fletch

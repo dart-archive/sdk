@@ -285,8 +285,8 @@ class GSUtil(object):
 
   def upload(self, local_path, remote_path, recursive=False, public=False):
     assert remote_path.startswith('gs://')
-
-    args = ['cp']
+    # -m for parallel copying
+    args = ['-m', 'cp']
     if public:
       args += ['-a', 'public-read']
     if recursive:

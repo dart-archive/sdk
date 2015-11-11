@@ -24,6 +24,9 @@ namespace fletch {
 //     Smi
 //     Failure
 //     HeapObject
+//       FreeListChunk
+//       OneWordFiller
+//       TwoWordFiller
 //       Boxed
 //       Class
 //       Double
@@ -99,6 +102,8 @@ class Object {
   inline bool IsTwoByteString();
   inline bool IsFunction();
   inline bool IsLargeInteger();
+  inline bool IsFreeListChunk();
+  inline bool IsFiller();
   inline bool IsByteArray();
   inline bool IsDouble();
   inline bool IsBoxed();
@@ -202,6 +207,9 @@ class InstanceFormat {
     BOXED_TYPE              = 9,
     STACK_TYPE              = 10,
     INITIALIZER_TYPE        = 11,
+    FREE_LIST_CHUNK_TYPE    = 12,
+    ONE_WORD_FILLER_TYPE    = 13,
+    TWO_WORD_FILLER_TYPE    = 14,
     IMMEDIATE_TYPE          = 15  // No instances.
   };
 
@@ -234,6 +242,9 @@ class InstanceFormat {
   inline static const InstanceFormat byte_array_format();
   inline static const InstanceFormat double_format();
   inline static const InstanceFormat boxed_format();
+  inline static const InstanceFormat free_list_chunk_format();
+  inline static const InstanceFormat one_word_filler_format();
+  inline static const InstanceFormat two_word_filler_format();
   inline static const InstanceFormat stack_format();
   inline static const InstanceFormat initializer_format();
   inline static const InstanceFormat null_format();
@@ -318,6 +329,26 @@ class HeapObject: public Object {
     return reinterpret_cast<uword>(this) - kTag;
   }
 
+  // Mark the object as reachable. Used during garbage collection.
+  inline void SetMark() {
+    uword klass = reinterpret_cast<uword>(raw_class());
+    ASSERT((klass & kMarkBit) == 0);
+    set_class(reinterpret_cast<Class*>(klass | kMarkBit));
+  }
+
+  // Clear the mark bit used for garbage collection.
+  inline void ClearMark() {
+    uword klass = reinterpret_cast<uword>(raw_class());
+    ASSERT((klass & HeapObject::kMarkBit) != 0);
+    set_class(reinterpret_cast<Class*>(klass & ~kMarkBit));
+  }
+
+  // Is the mark bit set for this object.
+  inline bool IsMarked() {
+    uword klass = reinterpret_cast<uword>(raw_class());
+    return (klass & kMarkBit) != 0;
+  }
+
   // Retrieve the object format from the class.
   inline InstanceFormat format();
 
@@ -325,6 +356,10 @@ class HeapObject: public Object {
   static const int kTag = 1;
   static const int kTagSize = 2;
   static const uword kTagMask = (1 << kTagSize) - 1;
+
+  // We use the second-least significant bit in the class pointer to
+  // mark heap objects during mark-sweep garbage collection.
+  static const int kMarkBit = 2;
 
   // Casting.
   static inline HeapObject* cast(Object* obj);
@@ -373,6 +408,7 @@ class HeapObject: public Object {
   friend class Program;
   friend class SnapshotWriter;
   friend class StoreBuffer;
+  friend class Object;
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(HeapObject);
@@ -1029,9 +1065,98 @@ class Class: public HeapObject {
 
  private:
   friend class Heap;
+  friend class StaticClassStructures;
   inline void Initialize(InstanceFormat format, int size, Object* null);
   DISALLOW_IMPLICIT_CONSTRUCTORS(Class);
 };
+
+class StaticClassStructures {
+ public:
+  static void Setup() {
+    SetupMetaClass();
+    SetupClass(free_list_chunk_class_storage,
+               InstanceFormat::free_list_chunk_format());
+    SetupClass(one_word_filler_class_storage,
+               InstanceFormat::one_word_filler_format());
+    SetupClass(two_word_filler_class_storage,
+               InstanceFormat::two_word_filler_format());
+  }
+
+  static void TearDown() {}
+
+  static Class* meta_class() {
+    uword address = reinterpret_cast<uword>(meta_class_storage);
+    return Class::cast(HeapObject::FromAddress(address));
+  }
+
+  static Class* free_list_chunk_class() {
+    uword address = reinterpret_cast<uword>(free_list_chunk_class_storage);
+    return Class::cast(HeapObject::FromAddress(address));
+  }
+
+  static Class* one_word_filler_class() {
+    uword address = reinterpret_cast<uword>(one_word_filler_class_storage);
+    return Class::cast(HeapObject::FromAddress(address));
+  }
+
+  static Class* two_word_filler_class() {
+    uword address = reinterpret_cast<uword>(two_word_filler_class_storage);
+    return Class::cast(HeapObject::FromAddress(address));
+  }
+
+  static bool IsStaticClass(HeapObject* object) {
+    return (object == meta_class() ||
+            object == free_list_chunk_class() ||
+            object == one_word_filler_class() ||
+            object == two_word_filler_class());
+  }
+
+ private:
+  static uint8 meta_class_storage[Class::kSize];
+  static uint8 free_list_chunk_class_storage[Class::kSize];
+  static uint8 one_word_filler_class_storage[Class::kSize];
+  static uint8 two_word_filler_class_storage[Class::kSize];
+
+  static void SetupMetaClass() {
+    Class* meta = reinterpret_cast<Class*>(
+        HeapObject::FromAddress(reinterpret_cast<uword>(meta_class_storage)));
+    meta->set_class(meta);
+    InstanceFormat class_format = InstanceFormat::class_format();
+    meta->Initialize(class_format, class_format.fixed_size(), NULL);
+  }
+
+  static void SetupClass(uint8* class_storage, InstanceFormat format) {
+    HeapObject* storage =
+        HeapObject::FromAddress(reinterpret_cast<uword>(class_storage));
+    Class* klass = reinterpret_cast<Class*>(storage);
+    klass->set_class(meta_class());
+    InstanceFormat class_format = InstanceFormat::class_format();
+    klass->Initialize(format, class_format.fixed_size(), NULL);
+  }
+
+  DISALLOW_IMPLICIT_CONSTRUCTORS(StaticClassStructures);
+};
+
+class FreeListChunk : public HeapObject {
+ public:
+  // Field access.
+  inline void set_size(uword size);
+  inline uword size();
+  inline void set_next_chunk(Object* next);
+  inline Object* next_chunk();
+
+  // Casting.
+  static inline FreeListChunk* cast(Object* object);
+
+  // Sizing.
+  static const int kSizeOffset = HeapObject::kSize;
+  static const int kNextChunkOffset = kSizeOffset + kPointerSize;
+  static const int kSize = kNextChunkOffset + kPointerSize;
+};
+
+class OneWordFiller : public HeapObject { };
+
+class TwoWordFiller : public HeapObject { };
 
 // A stack-object that has 0..limit objects alive.
 class Stack: public BaseArray {
@@ -1129,7 +1254,14 @@ class PointerVisitor {
 class HeapObjectVisitor {
  public:
   virtual ~HeapObjectVisitor() {}
-  virtual void Visit(HeapObject* object) = 0;
+  // Visit the heap object. Must return the size of the heap
+  // object.
+  virtual int Visit(HeapObject* object) = 0;
+  // Notification that the end of a chunk has been reached. A heap
+  // object visitor visits all heap objects in a chunk in order
+  // calling Visit on each of them. When it reaches the end of the
+  // chunk it calls ChunkEnd.
+  virtual void ChunkEnd(uword end) { }
 };
 
 // Class for visiting pointers inside heap objects.
@@ -1141,8 +1273,10 @@ class HeapObjectPointerVisitor : public HeapObjectVisitor {
       : visitor_(visitor) {}
   virtual ~HeapObjectPointerVisitor() {}
 
-  virtual void Visit(HeapObject* object) {
+  virtual int Visit(HeapObject* object) {
+    int size = object->Size();
     object->IteratePointers(visitor_);
+    return size;
   }
 
  private:
@@ -1158,7 +1292,7 @@ class SafeObjectPointerVisitor : public HeapObjectVisitor {
       : process_(process), visitor_(visitor) {}
   virtual ~SafeObjectPointerVisitor() {}
 
-  virtual void Visit(HeapObject* object);
+  virtual int Visit(HeapObject* object);
 
  private:
   Process* process_;
@@ -1211,6 +1345,21 @@ const InstanceFormat InstanceFormat::boxed_format() {
 const InstanceFormat InstanceFormat::initializer_format() {
   return InstanceFormat(
       INITIALIZER_TYPE, Initializer::kSize, false, true, NEVER_IMMUTABLE);
+}
+
+const InstanceFormat InstanceFormat::free_list_chunk_format() {
+  return InstanceFormat(
+      FREE_LIST_CHUNK_TYPE, FreeListChunk::kSize, true, true, NEVER_IMMUTABLE);
+}
+
+const InstanceFormat InstanceFormat::one_word_filler_format() {
+  return InstanceFormat(
+      ONE_WORD_FILLER_TYPE, kPointerSize, false, true, NEVER_IMMUTABLE);
+}
+
+const InstanceFormat InstanceFormat::two_word_filler_format() {
+  return InstanceFormat(
+      TWO_WORD_FILLER_TYPE, 2 * kPointerSize, false, true, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::function_format() {
@@ -1338,6 +1487,20 @@ bool Object::IsLargeInteger() {
   if (IsSmi()) return false;
   HeapObject* h = HeapObject::cast(this);
   return h->format().type() == InstanceFormat::LARGE_INTEGER_TYPE;
+}
+
+bool Object::IsFreeListChunk() {
+  if (IsSmi()) return false;
+  HeapObject* h = HeapObject::cast(this);
+  return h->raw_class() == StaticClassStructures::free_list_chunk_class();
+}
+
+bool Object::IsFiller() {
+  if (IsSmi()) return false;
+  HeapObject* h = HeapObject::cast(this);
+  Class* c = h->raw_class();
+  return (c == StaticClassStructures::one_word_filler_class() ||
+          c == StaticClassStructures::two_word_filler_class());
 }
 
 bool Object::IsByteArray() {
@@ -1902,6 +2065,29 @@ Object* Function::ConstantForBytecode(uint8* bcp) {
   int offset = Utils::ReadInt32(bcp + 1);
   uint8* address = bcp + offset;
   return *reinterpret_cast<Object**>(address);
+}
+
+// Inlined FreeListChunk functions.
+
+void FreeListChunk::set_size(uword size) {
+  at_put(kSizeOffset, Smi::FromWord(size));
+}
+
+uword FreeListChunk::size() {
+  return Smi::cast(at(kSizeOffset))->value();
+}
+
+void FreeListChunk::set_next_chunk(Object* next) {
+  at_put(kNextChunkOffset, next);
+}
+
+Object* FreeListChunk::next_chunk() {
+  return at(kNextChunkOffset);
+}
+
+FreeListChunk* FreeListChunk::cast(Object* object) {
+  ASSERT(object->IsFreeListChunk());
+  return reinterpret_cast<FreeListChunk*>(object);
 }
 
 // Inlined LargeInteger functions.

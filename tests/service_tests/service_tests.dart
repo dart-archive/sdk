@@ -4,6 +4,7 @@
 
 import 'dart:io' show
     Directory,
+    File,
     Process,
     ProcessResult;
 
@@ -27,15 +28,9 @@ List<ServiceTest> SERVICE_TESTS = <ServiceTest>[
     new StandardServiceTest('conformance', ccSources: [
         'conformance_test.cc',
         'conformance_test_shared.cc',
-        'cc/conformance_service.cc',
-        'cc/struct.cc',
-        'cc/unicode.cc',
     ]),
     new StandardServiceTest('performance', ccSources: [
         'performance_test.cc',
-        'cc/performance_service.cc',
-        'cc/struct.cc',
-        'cc/unicode.cc',
     ]),
     todomvc.serviceTest,
     simple_todo.serviceTest
@@ -70,8 +65,13 @@ final Uri servicecDirectory =
 /// Resources directory for servicec.
 final Uri resourcesDirectory = servicecDirectory.resolve('lib/src/resources');
 
+/// Temporary directory for test output.
+const String tempTestOutputDirectory =
+    const String.fromEnvironment("test.dart.temp-dir");
+
+final String generatedDirectory = '$tempTestOutputDirectory/service_tests';
+
 // TODO(zerny): Provide the below constants via configuration from test.py
-final String generatedDirectory = '$buildDirectory/generated_service_tests';
 final String fletchExecutable = '$buildDirectory/fletch';
 final String fletchLibrary = '${buildDirectory}/libfletch.a';
 
@@ -112,17 +112,22 @@ class StandardServiceTest extends ServiceTest {
 
   String get inputDirectory => '$thisDirectory/$name';
 
-  String get idlPath => '${inputDirectory}/${name}_service.idl';
-  String get servicePath => '${inputDirectory}/${name}_service_impl.dart';
-  String get snapshotPath => '${outputDirectory}/${name}.snapshot';
-  String get executablePath => '${outputDirectory}/service_${name}_test';
+  String get idlPath => '$inputDirectory/${name}_service.idl';
+  String get serviceImpl => '${name}_service_impl.dart';
+  String get servicePath => '$outputDirectory/$serviceImpl';
+  String get snapshotPath => '$outputDirectory/${name}.snapshot';
+  String get executablePath => '$outputDirectory/service_${name}_test';
 
   Future<Null> prepare() async {
-    // TODO(zerny): Output generated service code outside the source directory.
-    rules.add(new CompileServiceRule(idlPath, inputDirectory));
+    rules.add(new CopyRule(inputDirectory, outputDirectory, [serviceImpl]));
+    rules.add(new CompileServiceRule(idlPath, outputDirectory));
     rules.add(new CcRule(
         executable: executablePath,
-        sources: ccSources.map((path) => '${inputDirectory}/${path}')));
+        includePaths: [outputDirectory],
+        sources: ccSources.map((path) => '$inputDirectory/$path').toList()
+            ..add('$outputDirectory/cc/${name}_service.cc')
+            ..add('$outputDirectory/cc/struct.cc')
+            ..add('$outputDirectory/cc/unicode.cc')));
     rules.add(new BuildSnapshotRule(servicePath, snapshotPath));
     rules.add(new RunSnapshotRule(executablePath, snapshotPath));
   }
@@ -150,6 +155,30 @@ abstract class Rule {
     print(result.stderr);
     Expect.equals(0, result.exitCode);
     return result;
+  }
+}
+
+class CopyRule extends Rule {
+  String src;
+  String dst;
+  Iterable<String> files;
+
+  CopyRule(this.src, this.dst, this.files);
+
+  Future<Null> build() async {
+    Directory dstDir = new Directory(dst);
+    if (!await dstDir.exists()) {
+      await dstDir.create(recursive: true);
+    }
+    Uri srcUri = new Uri.directory(src);
+    for (String file in files) {
+      File srcFile = new File.fromUri(srcUri.resolve(file));
+      if (await srcFile.exists()) {
+        await srcFile.copy(dstDir.uri.resolve(file).toFilePath());
+      } else {
+        throw "Could not find copy-rule source file '$src'.";
+      }
+    }
   }
 }
 

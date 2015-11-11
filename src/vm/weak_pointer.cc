@@ -19,7 +19,7 @@ WeakPointer::WeakPointer(HeapObject* object,
       prev_(NULL),
       next_(next) { }
 
-void WeakPointer::Process(Space* garbage_space,
+void WeakPointer::Process(Space* space,
                           WeakPointer** pointers,
                           Heap* heap) {
   WeakPointer* new_list = NULL;
@@ -28,10 +28,16 @@ void WeakPointer::Process(Space* garbage_space,
   while (current != NULL) {
     WeakPointer* next = current->next_;
     HeapObject* current_object = current->object_;
-    HeapObject* forward = current_object->forwarding_address();
-    if (garbage_space->Includes(current_object->address())) {
-      if (forward != NULL) {
-        current->object_ = forward;
+    if (space->Includes(current_object->address())) {
+      bool alive = false;
+      HeapObject* forward = current_object->forwarding_address();
+      if (space->using_copying_collector()) {
+        alive = forward != NULL;
+        if (alive) current->object_ = forward;
+      } else {
+        alive = current_object->IsMarked();
+      }
+      if (alive) {
         if (new_list == NULL) new_list = current;
         previous = current;
       } else {

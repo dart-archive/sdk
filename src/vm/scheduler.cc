@@ -23,7 +23,11 @@ ThreadState* const kLockedThreadState = reinterpret_cast<ThreadState*>(2);
 Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
 
 Scheduler::Scheduler()
+#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
+    : max_threads_(1),
+#else
     : max_threads_(Platform::GetNumberOfHardwareThreads()),
+#endif
       thread_pool_(max_threads_),
       preempt_monitor_(Platform::CreateMonitor()),
       processes_(0),
@@ -38,16 +42,6 @@ Scheduler::Scheduler()
       pause_(false),
       current_processes_(new Atomic<Process*>[max_threads_]),
       gc_thread_(new GCThread()) {
-
-#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
-  // TODO(kustermann): Find a way to make this a compile-time error instead of a
-  // runtime error (e.g. using static_assert).
-  if (max_threads_ != 1) {
-    FATAL("The number of scheduler worker threads must be 1 if using one "
-          "shared heap for all processes.");
-  }
-#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-
   for (int i = 0; i < max_threads_; i++) {
     threads_[i] = NULL;
     current_processes_[i] = NULL;

@@ -43,7 +43,7 @@ class Port {
   // Cleanup ports. Delete ports with zero ref count and update the channel
   // pointer. The channel pointer is weak and is set to NULL if the channel
   // is not referenced from anywhere else.
-  static Port* CleanupPorts(Space* from, Port* head);
+  static Port* CleanupPorts(Space* space, Port* head);
 
   static void WeakCallback(HeapObject* port, Heap* heap);
 

@@ -16,6 +16,7 @@
 #include "src/shared/utils.h"
 
 #include "src/vm/heap_validator.h"
+#include "src/vm/mark_sweep.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 #include "src/vm/port.h"
@@ -442,6 +443,7 @@ void Program::CollectSharedGarbage(bool program_is_stopped) {
 }
 
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void Program::PerformSharedGarbageCollection() {
   // Pass 1: Storebuffer compaction.
   // We do this as a separate pass to ensure the mutable collection can access
@@ -478,6 +480,47 @@ void Program::PerformSharedGarbageCollection() {
 
 #else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
+#if defined(FLETCH_MARK_SWEEP)
+
+void Program::PerformSharedGarbageCollection() {
+  // Mark all reachable objects.
+  Heap* heap = shared_heap()->heap();
+  Space* space = heap->space();
+  MarkingStack stack;
+  MarkingVisitor marking_visitor(space, &stack);
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->TakeChildHeaps();
+    current->IterateRoots(&marking_visitor);
+    current = current->process_list_next();
+  }
+  stack.Process(&marking_visitor);
+  heap->ProcessWeakPointers();
+
+  current = process_list_head_;
+  while (current != NULL) {
+    current->set_ports(Port::CleanupPorts(space, current->ports()));
+    current = current->process_list_next();
+  }
+
+  // Flush outstanding free_list chunks into the free list. Then sweep
+  // over the heap and rebuild the freelist.
+  space->Flush();
+  SweepingVisitor sweeping_visitor(space->free_list());
+  space->IterateObjects(&sweeping_visitor);
+
+  current = process_list_head_;
+  while (current != NULL) {
+    current->UpdateStackLimit();
+    current = current->process_list_next();
+  }
+
+  space->set_used(sweeping_visitor.used());
+  heap->AdjustAllocationBudget();
+}
+
+#else  // #if defined(FLETCH_MARK_SWEEP)
+
 void Program::PerformSharedGarbageCollection() {
   Heap* heap = shared_heap()->heap();
   Space* from = heap->space();
@@ -505,6 +548,9 @@ void Program::PerformSharedGarbageCollection() {
 
   heap->ReplaceSpace(to);
 }
+
+#endif  // #if defined(FLETCH_MARK_SWEEP)
+
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void Program::CompactStorebuffers() {
@@ -545,7 +591,8 @@ class StatisticsVisitor : public HeapObjectVisitor {
     return function_count_ * Function::kSize;
   }
 
-  void Visit(HeapObject* object) {
+  int Visit(HeapObject* object) {
+    int size = object->Size();
     object_count_++;
     if (object->IsClass()) {
       VisitClass(Class::cast(object));
@@ -558,6 +605,7 @@ class StatisticsVisitor : public HeapObjectVisitor {
     } else if (object->IsFunction()) {
       VisitFunction(Function::cast(object));
     }
+    return size;
   }
 
  private:

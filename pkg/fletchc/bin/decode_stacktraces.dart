@@ -4,9 +4,11 @@
 
 import 'dart:async';
 
+import 'dart:io' as io;
+
 import 'package:fletchc/program_info.dart';
 
 main(List<String> arguments) async {
-  await decodeProgramMain(arguments);
+  await decodeProgramMain(arguments, io.stdin, io.stdout);
 }
 

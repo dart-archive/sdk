@@ -1,0 +1,17 @@
+<STDOUT>:
+NoSuchMethodError: Foo.bar
+   0: Object.noSuchMethod
+   1: Object._noSuchMethod
+   2: Object._noSuchMethodTrampoline
+   3: <internal>.call
+   4: Coroutine._coroutineStart
+ <<called-by-coroutine>>
+   0: Coroutine.call
+   1: foo
+   2: main
+   3: callMain
+   4: entry
+
+<STDERR>:
+
+<EXITCODE>:255

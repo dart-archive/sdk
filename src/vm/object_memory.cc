@@ -12,6 +12,7 @@
 #include "src/shared/utils.h"
 
 #include "src/vm/heap.h"
+#include "src/vm/mark_sweep.h"
 #include "src/vm/object.h"
 #include "src/vm/storebuffer.h"
 #include "src/vm/stack_walker.h"
@@ -44,7 +45,10 @@ Space::Space(int maximum_initial_size)
       used_(0),
       top_(0),
       limit_(0),
-      no_allocation_nesting_(0) {
+      no_allocation_nesting_(0),
+      free_list_(NULL),
+      active_freelist_chunk_(0),
+      active_freelist_chunk_size_(0) {
   if (maximum_initial_size > 0) {
     int size = Utils::Minimum(maximum_initial_size, kDefaultMaximumChunkSize);
     Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
@@ -56,6 +60,7 @@ Space::Space(int maximum_initial_size)
 }
 
 Space::~Space() {
+  delete free_list_;
   Chunk* current = first();
   while (current != NULL) {
     Chunk* next = current->next();
@@ -65,7 +70,14 @@ Space::~Space() {
 }
 
 void Space::Flush() {
-  if (!is_empty()) {
+  if (!using_copying_collector()) {
+    if (active_freelist_chunk_ != 0) {
+      free_list_->AddChunk(active_freelist_chunk_, active_freelist_chunk_size_);
+      active_freelist_chunk_ = 0;
+      active_freelist_chunk_size_ = 0;
+      used_ -= active_freelist_chunk_size_;
+    }
+  } else if (!is_empty()) {
     // Set sentinel at allocation end.
     ASSERT(top_ < limit_);
     *reinterpret_cast<Object**>(top_) = chunk_end_sentinel();
@@ -100,7 +112,7 @@ uword Space::TryAllocate(int size) {
   return 0;
 }
 
-uword Space::AllocateInNewChunk(int size) {
+uword Space::AllocateInNewChunk(int size, bool fatal) {
   // Allocate new chunk that is big enough to fit the object.
   int default_chunk_size = DefaultChunkSize(Used());
   int chunk_size = size >= default_chunk_size
@@ -121,18 +133,77 @@ uword Space::AllocateInNewChunk(int size) {
     uword result = TryAllocate(size);
     if (result != 0) return result;
   }
-
-  FATAL1("Failed to allocate memory of size %d\n", size);
+  if (fatal) FATAL1("Failed to allocate memory of size %d\n", size);
   return 0;
 }
 
-uword Space::Allocate(int size) {
+uword Space::AllocateFromFreeList(int size, bool fatal) {
+  // Flush the active chunk into the free list.
+  Flush();
+
+  FreeListChunk* chunk = free_list_->GetChunk(size);
+  if (chunk != NULL) {
+    active_freelist_chunk_ = chunk->address();
+    active_freelist_chunk_size_ = chunk->size();
+    // Account all of the chunk memory as used for now. When the
+    // rest of the freelist chunk is flushed into the freelist we
+    // decrement used_ by the amount still left unused. used_
+    // therefore reflects actual memory usage after Flush has been
+    // called.
+    used_ += active_freelist_chunk_size_;
+    return Allocate(size);
+  } else {
+    // Allocate new chunk that is big enough to fit the object.
+    int default_chunk_size = DefaultChunkSize(Used());
+    int chunk_size = (size >= default_chunk_size)
+        ? (size + kPointerSize)  // Make sure there is room for sentinel.
+        : default_chunk_size;
+
+    Chunk* chunk = ObjectMemory::AllocateChunk(this, chunk_size);
+    if (chunk != NULL) {
+      // Link it into the space.
+      Append(chunk);
+      uword last_word = chunk->base() + chunk->size() - kPointerSize;
+      *reinterpret_cast<Object**>(last_word) = chunk_end_sentinel();
+      active_freelist_chunk_ = chunk->base();
+      active_freelist_chunk_size_ = chunk->size() - kPointerSize;
+      // Account all of the chunk memory as used for now. When the
+      // rest of the freelist chunk is flushed into the freelist we
+      // decrement used_ by the amount still left unused. used_
+      // therefore reflects actual memory usage after Flush has been
+      // called.
+      used_ += active_freelist_chunk_size_;
+      return Allocate(size);
+    }
+  }
+
+  if (fatal) FATAL1("Failed to allocate memory of size %d\n", size);
+  return 0;
+}
+
+uword Space::AllocateInternal(int size, bool fatal) {
   ASSERT(size >= HeapObject::kSize);
   ASSERT(Utils::IsAligned(size, kPointerSize));
-  if (!in_no_allocation_failure_scope() && needs_garbage_collection()) return 0;
-  uword result = TryAllocate(size);
-  if (result != 0) return result;
-  return AllocateInNewChunk(size);
+  if (!in_no_allocation_failure_scope() && needs_garbage_collection()) {
+    return 0;
+  }
+
+  if (!using_copying_collector()) {
+    // Fast case bump allocation.
+    if (active_freelist_chunk_size_ >= size) {
+      uword result = active_freelist_chunk_;
+      active_freelist_chunk_ += size;
+      active_freelist_chunk_size_ -= size;
+      allocation_budget_ -= size;
+      return result;
+    }
+    // Can't use bump allocation. Allocate from free lists.
+    return AllocateFromFreeList(size, fatal);
+  } else {
+    uword result = TryAllocate(size);
+    if (result != 0) return result;
+    return AllocateInNewChunk(size, fatal);
+  }
 }
 
 word Space::OffsetOf(HeapObject* object) {
@@ -166,6 +237,13 @@ void Space::DecreaseAllocationBudget(int size) {
 
 void Space::SetAllocationBudget(int new_budget) {
   allocation_budget_ = new_budget;
+}
+
+void Space::set_free_list(FreeList* free_list) {
+  free_list_ = free_list;
+  uword last_word = first()->base() + first()->size() - kPointerSize;
+  *reinterpret_cast<Object**>(last_word) = chunk_end_sentinel();
+  free_list->AddChunk(first()->base(), first()->size() - kPointerSize);
 }
 
 void Space::PrependSpace(Space* space) {
@@ -208,7 +286,9 @@ void Space::Append(Chunk* chunk) {
     first_ = last_ = chunk;
   } else {
     // Update the accounting.
-    used_ += top() - last()->base();
+    if (using_copying_collector()) {
+      used_ += top() - last()->base();
+    }
     last_->set_next(chunk);
     last_ = chunk;
   }
@@ -222,9 +302,9 @@ void Space::IterateObjects(HeapObjectVisitor* visitor) {
     uword current = chunk->base();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
-      current += object->Size();
-      visitor->Visit(object);
+      current += visitor->Visit(object);
     }
+    visitor->ChunkEnd(current);
   }
 }
 
@@ -400,7 +480,7 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   return chunk;
 }
 
-Chunk* ObjectMemory::CreateChunk(Space* owner, void *memory, int size) {
+Chunk* ObjectMemory::CreateChunk(Space* owner, void* memory, int size) {
   ASSERT(owner != NULL);
   ASSERT(size == Utils::RoundUp(size, kPageSize));
 

@@ -3,6 +3,8 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 /// Library for the basic Raspberry Pi features.
+///
+/// The class [RaspberryPi] provide access to the Raspberry Pi features.
 library raspberry_pi;
 
 import 'dart:fletch.ffi';

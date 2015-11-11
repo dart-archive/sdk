@@ -81,10 +81,6 @@ const String helpDocumentation = """
    help all  List all commands
 """;
 
-const String shutdownDocumentation = """
-   shutdown  Shut down the background Fletch process
-""";
-
 const String createDocumentation = """
    create session <name> [with <settings file>]
              Create a new session with the given name.  Read settings from

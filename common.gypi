@@ -602,6 +602,10 @@
         'defines!': [
           'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
         ],
+
+        'defines': [
+          'FLETCH_MARK_SWEEP',
+        ],
       },
 
       'fletch_disable_native_processes': {

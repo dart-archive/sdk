@@ -102,6 +102,8 @@
         'program_folder.h',
         'program_info_block.cc',
         'program_info_block.h',
+        'program_relocator.cc',
+        'program_relocator.h',
         'scheduler.cc',
         'scheduler.h',
         'selector_row.cc',

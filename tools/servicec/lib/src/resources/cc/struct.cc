@@ -57,6 +57,7 @@ Builder MessageBuilder::InternalInitRoot(int size) {
   // to have room for the return address.
   if (size == 0) size = 8;
   int offset = first_.Allocate(HEADER_SIZE + size);
+  if (offset < 0) abort();
   return Builder(&first_, offset + HEADER_SIZE);
 }
 

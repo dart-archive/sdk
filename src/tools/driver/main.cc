@@ -657,8 +657,11 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
 
 static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   WriteBuffer buffer;
-  buffer.WriteInt(argc + 2);  // Also current directory, and absolute path to
-                              // program.
+  buffer.WriteInt(argc + 3);  // Also version, current directory, and absolute
+                              // path to program.
+
+  buffer.WriteInt(strlen(GetVersion()));
+  buffer.WriteString(GetVersion());
 
   char* path = StrAlloc(MAXPATHLEN + 1);
 

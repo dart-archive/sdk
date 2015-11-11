@@ -796,7 +796,7 @@ class ClientLogger {
   }
 
   void error(error, StackTrace stackTrace) {
-    // TODO(ahe): Modify shutdown verb to report these errors.
+    // TODO(ahe): Modify quit verb to report these errors.
     erroneousClients.add(this);
     note("Crash (${arguments.join(' ')}).\n"
          "${stringifyError(error, stackTrace)}");

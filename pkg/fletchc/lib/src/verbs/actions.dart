@@ -34,9 +34,6 @@ import 'help_verb.dart' show
 import 'run_verb.dart' show
     runAction;
 
-import 'shutdown_verb.dart' show
-    shutdownAction;
-
 import 'x_end_verb.dart' show
     endAction;
 
@@ -121,7 +118,6 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "create": createAction,
   "debug": debugAction,
   "x-discover": discoverAction,
-  "shutdown": shutdownAction,
   "x-end": endAction,
   "x-servicec": servicecAction,
   "x-upgrade": upgradeAction,

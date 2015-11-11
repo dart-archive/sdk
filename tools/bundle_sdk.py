@@ -16,7 +16,7 @@ import utils
 
 from sets import Set
 from os import makedirs
-from os.path import join, exists, basename
+from os.path import join, exists, basename, abspath
 from shutil import copyfile, copymode, copytree, rmtree
 
 SDK_PACKAGES = ['file', 'fletch', 'gpio', 'http', 'i2c', 'os',
@@ -25,10 +25,38 @@ THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['raspberry_pi', 'general']
 
+DOC_INDEX_HEAD = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fletch API docs</title>
+    <meta name="description" content="API docs, for the fletch packages.">
+</head>
+<body>
+<h2> Fletch package documentation</h2>
+Below you will find links to the documentation for the fletch packages.<br><br>
+"""
+
+DOC_INDEX_TAIL = """
+</body>
+</html>
+"""
+
+DOC_INDEX = '%s%s%s' % (
+    DOC_INDEX_HEAD,
+    '\n<br>'.join(
+        ['<a href="%s/index.html">%s</a>' % (p, p) for p in SDK_PACKAGES]),
+    DOC_INDEX_TAIL)
+
 def ParseOptions():
   parser = optparse.OptionParser()
   parser.add_option("--build_dir")
   parser.add_option("--deb_package")
+  parser.add_option("--create-documentation", default=False,
+                    action="store_true")
   (options, args) = parser.parse_args()
   return options
 
@@ -149,12 +177,62 @@ def CopySamples(bundle_dir):
   for v in SAMPLES:
     copytree(join('samples', v), join(target, v))
 
+def EnsureDartDoc():
+  subprocess.check_call(
+      'download_from_google_storage -b dart-dependencies-fletch '
+      '-u -d third_party/dartdoc_deps/',
+      shell=True)
+
+def CreateDocumentation():
+  EnsureDartDoc()
+  docs_out = join('out', 'docs')
+  sdk = join('third_party', 'dartdoc_deps', 'dart-sdk')
+  sdk_dst = join('out', 'dartdoc-dart-sdk')
+  EnsureDeleted(sdk_dst)
+  copytree(sdk, sdk_dst)
+  copytree('lib', join(sdk_dst, 'lib', 'mobile'))
+  pub = abspath(join(sdk_dst, 'bin', 'pub'))
+  dartdoc = join(sdk_dst, 'bin', 'dartdoc')
+  # We recreate the same structure we have in the repo in a copy to not
+  # polute our workspace
+  with utils.TempDir() as temp:
+    pkg_copy = join(temp, 'pkg')
+    makedirs(pkg_copy)
+    for pkg in SDK_PACKAGES:
+      pkg_path = join('pkg', pkg)
+      pkg_dst = join(pkg_copy, pkg)
+      copytree(pkg_path, pkg_dst)
+      print 'copied %s to %s' %(pkg_path, pkg_dst)
+    third_party_copy = join(temp, 'third_party')
+    makedirs(third_party_copy)
+    for pkg in THIRD_PARTY_PACKAGES:
+      pkg_path = join('third_party', pkg)
+      pkg_dst = join(third_party_copy, pkg)
+      copytree(pkg_path, pkg_dst)
+      print 'copied %s to %s' %(pkg_path, pkg_dst)
+    for pkg in SDK_PACKAGES:
+      pkg_dst = join(pkg_copy, pkg)
+      with utils.ChangedWorkingDirectory(pkg_dst):
+        subprocess.check_call([pub, 'get'])
+        print 'Called pub get in %s' % pkg_dst
+
+    EnsureDeleted(docs_out)
+    for pkg in SDK_PACKAGES:
+      pkg_dst = join(pkg_copy, pkg)
+      pkg_out = join(docs_out, pkg)
+      subprocess.check_call([dartdoc, '--input', pkg_dst,
+                             '--output', pkg_out])
+  with open(join(docs_out, 'index.html'), 'w') as f:
+    f.write(DOC_INDEX)
+
 def Main():
   options = ParseOptions();
   print 'Creating sdk bundle for %s' % options.build_dir
   build_dir = options.build_dir
   deb_package = options.deb_package
   with utils.TempDir() as sdk_temp:
+    if options.create_documentation:
+      CreateDocumentation()
     CopyBinaries(sdk_temp, build_dir)
     CopyInternalPackages(sdk_temp, build_dir)
     CopyLibs(sdk_temp, build_dir)

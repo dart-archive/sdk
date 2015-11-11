@@ -26,16 +26,18 @@ Sentence parseSentence(
 }
 
 class SentenceParser {
+  final String version;
   final String programName;
   final String shortProgramName;
   final String currentDirectory;
   Words tokens;
 
   SentenceParser(Iterable<String> tokens, bool includesProgramName)
-      : currentDirectory = includesProgramName ? tokens.first : null,
-        programName = includesProgramName ? tokens.skip(1).first : null,
-        shortProgramName = includesProgramName ? tokens.skip(2).first : null,
-        tokens = new Words(tokens.skip(includesProgramName ? 3 : 0));
+      : version = includesProgramName ? tokens.first : null,
+        currentDirectory = includesProgramName ? tokens.skip(1).first : null,
+        programName = includesProgramName ? tokens.skip(2).first : null,
+        shortProgramName = includesProgramName ? tokens.skip(3).first : null,
+        tokens = new Words(tokens.skip(includesProgramName ? 4 : 0));
 
   Sentence parseSentence() {
     Verb verb;
@@ -69,9 +71,9 @@ class SentenceParser {
     }
     return new Sentence(
         verb, prepositions, targets, trailing,
-        currentDirectory, programName,
+        version, currentDirectory, programName,
         // TODO(ahe): Get rid of the following argument:
-        tokens.originalInput.skip(1).toList());
+        tokens.originalInput.skip(2).toList());
   }
 
   Verb parseVerb() {
@@ -432,6 +434,8 @@ class Sentence {
   // TODO(ahe): Get rid of this.
   final String programName;
 
+  final String version;
+
   // TODO(ahe): Get rid of this.
   final List<String> arguments;
 
@@ -440,6 +444,7 @@ class Sentence {
       this.prepositions,
       this.targets,
       this.trailing,
+      this.version,
       this.currentDirectory,
       this.programName,
       this.arguments);

@@ -145,9 +145,11 @@ def StepsSDK(debug_log, system, modes, archs):
   elif system == 'mac':
      StepsGetArmBinaries(cross_mode, cross_arch)
      StepsGetArmDeb()
+     # We currently only build documentation on linux.
+     StepsGetDocs()
   for configuration in configurations:
     StepBuild(configuration['build_conf'], configuration['build_dir']);
-    StepsBundleSDK(configuration['build_dir'])
+    StepsBundleSDK(configuration['build_dir'], system)
     StepsArchiveSDK(configuration['build_dir'], system, configuration['mode'],
                     configuration['arch'])
   for configuration in configurations:
@@ -212,13 +214,18 @@ def GetNamer():
   channel = bot_utils.GetChannelFromName(name)
   return fletch_namer.FletchGCSNamer(channel)
 
-def StepsBundleSDK(build_dir):
+def StepsBundleSDK(build_dir, system):
   with bot.BuildStep('Bundle sdk %s' % build_dir):
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     deb_file = os.path.join('out', namer.arm_agent_filename(version))
+    create_docs = '--create-documentation' if system == 'linux' else ''
     Run(['tools/bundle_sdk.py', '--build_dir=%s' % build_dir,
-         '--deb_package=%s' % deb_file])
+         '--deb_package=%s' % deb_file, create_docs])
+    # On linux this is build in the step above, on mac this is fetched from
+    # cloud storage.
+    sdk_docs = os.path.join(build_dir, 'fletch-sdk', 'docs')
+    shutil.copytree(os.path.join('out', 'docs'), sdk_docs)
 
 def CreateZip(directory, target_file):
   with utils.ChangedWorkingDirectory(os.path.dirname(directory)):
@@ -289,6 +296,15 @@ def StepsGetArmDeb():
       os.remove(deb_file)
     gsutil.execute(['cp', gs_path, deb_file])
 
+def StepsGetDocs():
+  with bot.BuildStep('Get docs'):
+    version = utils.GetSemanticSDKVersion()
+    gsutil = bot_utils.GSUtil()
+    namer = GetNamer()
+    docs_out = os.path.join('out')
+    gs_path = namer.docs_filepath(version)
+    gsutil.execute(['-m', 'cp', '-r', gs_path, docs_out])
+
 def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
   with bot.BuildStep('Archive arm binaries %s' % cross_mode):
     build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
@@ -315,6 +331,11 @@ def StepsArchiveSDK(build_dir, system, mode, arch):
     http_path = GetDownloadLink(gs_path)
     gsutil.upload(os.path.join(build_dir, zip_file), gs_path, public=True)
     print '@@@STEP_LINK@download@%s@@@' % http_path
+    docs_gs_path = namer.docs_filepath(version)
+    gsutil.upload(os.path.join('out', 'docs'), docs_gs_path, recursive=True,
+                  public=True)
+    docs_http_path = '%s/%s' % (GetDownloadLink(docs_gs_path), 'index.html')
+    print '@@@STEP_LINK@docs@%s@@@' % docs_http_path
 
 def StepsNormal(debug_log, system, modes, archs, asans):
   configurations = GetBuildConfigurations(system, modes, archs, asans)

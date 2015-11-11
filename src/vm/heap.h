@@ -21,8 +21,15 @@ class Heap {
   explicit Heap(RandomXorShift* random, int maximum_initial_size = 0);
   ~Heap();
 
-  // Allocate raw object.
+  // Allocate raw object. Returns a failure if a garbage collection is
+  // needed and causes a fatal error if no garbage collection is
+  // needed and there is not enough room for the object.
   Object* Allocate(int size);
+
+  // Allocate raw object. Returns a failure if a garbage collection is
+  // needed or if there is not enough room for the object. Never causes
+  // a fatal error.
+  Object* AllocateNonFatal(int size);
 
   // Attempt to deallocate the heap object with the given size. Rewinds the
   // allocation top if the object was the last allocated object.
@@ -62,7 +69,8 @@ class Heap {
   Object* CreateOneByteStringUninitialized(Class* the_class, int length);
   Object* CreateTwoByteStringUninitialized(Class* the_class, int length);
 
-  // Allocate stack.
+  // Allocate stack. Never causes a fatal error in out of memory
+  // situations. The caller must deal with repeated failure results.
   Object* CreateStack(Class* the_class, int length);
 
   // Allocate class.
