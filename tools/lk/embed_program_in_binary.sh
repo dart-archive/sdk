@@ -79,7 +79,7 @@ mkdir ${TEMPDIR}/fletch
 
 echo "Generating output in $TEMPDIR..."
 
-${FLETCHHOME}flashtool $INTRINSICS $2 ${ADDRESS} ${TEMPDIR}/fletch/programheap.bin ${TEMPDIR}/fletch/program.bin
+${FLETCHHOME}flashtool $INTRINSICS $2 ${ADDRESS} ${TEMPDIR}/fletch/programheap.bin
 
 (cd ${TEMPDIR}; arm-none-eabi-objcopy --rename-section .data=.snapshot --redefine-sym _binary_fletch_programheap_bin_start=__fletch_${3}_heap_start --redefine-sym _binary_fletch_programheap_bin_end=__fletch_${3}_heap_end --redefine-sym _binary_fletch_programheap_bin_size=__fletch_${3}_heap_size -I binary -B armv4t -O elf32-littlearm fletch/programheap.bin fletch/programheap.o)
 
