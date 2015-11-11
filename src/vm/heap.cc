@@ -36,6 +36,12 @@ Object* Heap::Allocate(int size) {
   return HeapObject::FromAddress(result);
 }
 
+Object* Heap::AllocateNonFatal(int size) {
+  uword result = space_->AllocateNonFatal(size);
+  if (result == 0) return Failure::retry_after_gc();
+  return HeapObject::FromAddress(result);
+}
+
 void Heap::TryDealloc(Object* object, int size) {
   uword location = reinterpret_cast<uword>(object) + size - HeapObject::kTag;
   space_->TryDealloc(location, size);
@@ -176,7 +182,7 @@ Object* Heap::CreateTwoByteStringUninitialized(Class* the_class, int length) {
 Object* Heap::CreateStack(Class* the_class, int length) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::STACK_TYPE);
   int size = Stack::AllocationSize(length);
-  Object* raw_result = Allocate(size);
+  Object* raw_result = AllocateNonFatal(size);
   if (raw_result->IsFailure()) return raw_result;
   Stack* result = reinterpret_cast<Stack*>(raw_result);
   result->set_class(the_class);

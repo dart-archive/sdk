@@ -44,7 +44,7 @@ messaging_process_die_early_test: Pass, Crash
 messaging_program_gc_gc_on_delete_test: Fail
 messaging_single_receiver_test: Pass, Crash
 random_test: Pass, Crash
-shared_immutable_data_test: Crash, Slow
+shared_immutable_data_test: RuntimeError, Slow # Stack overflow
 spawn_empty_test: Pass, Crash
 spawn_fib_test: Pass, Crash
 uri_base_test: Crash # Uri.base not implemented.

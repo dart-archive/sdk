@@ -112,7 +112,7 @@ uword Space::TryAllocate(int size) {
   return 0;
 }
 
-uword Space::AllocateInNewChunk(int size) {
+uword Space::AllocateInNewChunk(int size, bool fatal) {
   // Allocate new chunk that is big enough to fit the object.
   int default_chunk_size = DefaultChunkSize(Used());
   int chunk_size = size >= default_chunk_size
@@ -133,12 +133,11 @@ uword Space::AllocateInNewChunk(int size) {
     uword result = TryAllocate(size);
     if (result != 0) return result;
   }
-
-  FATAL1("Failed to allocate memory of size %d\n", size);
+  if (fatal) FATAL1("Failed to allocate memory of size %d\n", size);
   return 0;
 }
 
-uword Space::AllocateFromFreeList(int size) {
+uword Space::AllocateFromFreeList(int size, bool fatal) {
   // Flush the active chunk into the free list.
   Flush();
 
@@ -177,11 +176,12 @@ uword Space::AllocateFromFreeList(int size) {
       return Allocate(size);
     }
   }
-  FATAL1("Failed to allocate memory of size %d\n", size);
+
+  if (fatal) FATAL1("Failed to allocate memory of size %d\n", size);
   return 0;
 }
 
-uword Space::Allocate(int size) {
+uword Space::AllocateInternal(int size, bool fatal) {
   ASSERT(size >= HeapObject::kSize);
   ASSERT(Utils::IsAligned(size, kPointerSize));
   if (!in_no_allocation_failure_scope() && needs_garbage_collection()) {
@@ -197,13 +197,12 @@ uword Space::Allocate(int size) {
       allocation_budget_ -= size;
       return result;
     }
-
     // Can't use bump allocation. Allocate from free lists.
-    return AllocateFromFreeList(size);
+    return AllocateFromFreeList(size, fatal);
   } else {
     uword result = TryAllocate(size);
     if (result != 0) return result;
-    return AllocateInNewChunk(size);
+    return AllocateInNewChunk(size, fatal);
   }
 }
 

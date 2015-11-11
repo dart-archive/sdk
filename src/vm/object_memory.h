@@ -97,8 +97,15 @@ class Space {
 
   ~Space();
 
-  // Allocate raw object.
-  uword Allocate(int size);
+  // Allocate raw object. Returns 0 if a garbage collection is needed
+  // and causes a fatal error if no garbage collection is needed and
+  // there is no room to allocate the object.
+  uword Allocate(int size) { return AllocateInternal(size, true); }
+
+  // Allocate raw object. Returns 0 if a garbage collection is needed
+  // or if there is no room to allocate the object. Never causes a
+  // fatal error.
+  uword AllocateNonFatal(int size) { return AllocateInternal(size, false); }
 
   // Rewind allocation top by size bytes if location is equal to current
   // allocation top.
@@ -184,8 +191,9 @@ class Space {
   friend class ProgramHeapRelocator;
 
   uword TryAllocate(int size);
-  uword AllocateInNewChunk(int size);
-  uword AllocateFromFreeList(int size);
+  uword AllocateInternal(int size, bool fatal);
+  uword AllocateInNewChunk(int size, bool fatal);
+  uword AllocateFromFreeList(int size, bool fatal);
 
   void Append(Chunk* chunk);
 

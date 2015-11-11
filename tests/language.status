@@ -941,6 +941,7 @@ nan_identical_test: Crash
 number_identity2_test: Crash
 round_test: RuntimeError
 vm/typed_data_polymorphic_view_test: Crash
+vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
 
 [ $mode == debug && $system == macos && $asan ]
 closure_cycles_test: Slow, Pass
