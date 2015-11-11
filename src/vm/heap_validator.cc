@@ -16,7 +16,7 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
   if (!object->IsHeapObject()) return;
 
   HeapObject* heap_object = HeapObject::cast(object);
-  word address = heap_object->address();
+  uword address = heap_object->address();
 
   bool is_shared_heap_obj = false;
   if (shared_heap_ != NULL) {
@@ -30,7 +30,8 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
 
   bool is_program_heap = program_heap_->space()->Includes(address);
 
-  if (!is_shared_heap_obj && !is_mutable_heap_obj && !is_program_heap) {
+  if (!is_shared_heap_obj && !is_mutable_heap_obj && !is_program_heap &&
+      !StaticClassStructures::IsStaticClass(heap_object)) {
     fprintf(stderr,
             "Found pointer %p which lies in neither of "
             "immutable_heap/mutable_heap/program_heap.\n",
@@ -40,8 +41,9 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
   }
 
   Class* klass = heap_object->get_class();
-  bool valid_class = program_heap_->space()->Includes(
-      klass->address());
+  bool valid_class =
+      program_heap_->space()->Includes(klass->address()) ||
+      StaticClassStructures::IsStaticClass(klass);
   if (!valid_class) {
     fprintf(stderr, "Object %p had an invalid klass pointer %p\n",
         heap_object, klass);

@@ -91,7 +91,7 @@ class RelocationVisitor : public HeapObjectVisitor {
         rebase_base_(rebase_base) {
   }
 
-  void Visit(HeapObject* from) {
+  int Visit(HeapObject* from) {
     uword address = from->address();
     uword target_address = address - space_base_ + target_base_;
 
@@ -102,6 +102,8 @@ class RelocationVisitor : public HeapObjectVisitor {
 
     DEBUG_PRINT("relo %p -> %p [%p]\n", address, target_address,
            address - space_base_ + rebase_base_);
+
+    return from->Size();
   }
 
  private:

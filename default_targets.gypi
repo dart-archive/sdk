@@ -232,6 +232,22 @@
           'fletch_disable_ffi'
         ],
       },
+
+      #TODO(ager): Test configurations - to be removed.
+      'DebugIA32OneProcessHeap': {
+        'inherit_from': [
+          'fletch_base', 'fletch_debug', 'fletch_ia32',
+          'fletch_disable_multiple_process_heaps'
+        ],
+        'defines!': [ 'FLETCH_MARK_SWEEP' ],
+      },
+
+      'DebugIA32OneProcessHeapMarkSweep': {
+        'inherit_from': [
+          'fletch_base', 'fletch_debug', 'fletch_ia32',
+          'fletch_disable_multiple_process_heaps'
+        ],
+      },
     },
   },
 }

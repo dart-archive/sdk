@@ -14,12 +14,14 @@
 #include "src/shared/selectors.h"
 
 #include "src/vm/heap_validator.h"
+#include "src/vm/mark_sweep.h"
 #include "src/vm/natives.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/port.h"
 #include "src/vm/process_queue.h"
 #include "src/vm/session.h"
 #include "src/vm/stack_walker.h"
+#include "src/vm/storebuffer.h"
 
 namespace fletch {
 

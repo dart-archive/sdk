@@ -4,6 +4,7 @@
 
 #include "src/vm/shared_heap.h"
 #include "src/vm/object_memory.h"
+#include "src/vm/mark_sweep.h"
 
 namespace fletch {
 
@@ -174,6 +175,12 @@ bool SharedHeap::ReleasePart(Part* part) {
 }
 
 #else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+SharedHeap::SharedHeap() : heap_(NULL, 4 * KB) {
+#if defined(FLETCH_MARK_SWEEP)
+  heap_.space()->set_free_list(new FreeList());
+#endif
+}
 
 void SharedHeap::IterateProgramPointers(PointerVisitor* visitor) {
   HeapObjectPointerVisitor heap_pointer_visitor(visitor);

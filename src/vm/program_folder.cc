@@ -194,8 +194,10 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
   explicit FunctionPostprocessVisitor(ProgramTableRewriter* rewriter)
       : rewriter_(rewriter) { }
 
-  virtual void Visit(HeapObject* object) {
+  virtual int Visit(HeapObject* object) {
+    int size = object->Size();
     if (object->IsFunction()) Process(Function::cast(object));
+    return size;
   }
 
  private:
