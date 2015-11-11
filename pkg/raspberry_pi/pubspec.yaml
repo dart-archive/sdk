@@ -1,0 +1,10 @@
+name: raspberry_pi
+version: 0.1.0
+
+dependencies:
+  file:
+    path: ../file
+  gpio:
+    path: ../gpio
+  i2c:
+    path: ../i2c
