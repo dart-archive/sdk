@@ -54,5 +54,4 @@ packages
 /tools/testing/bin/linux/dart
 /tools/testing/bin/linux/dart-arm
 /tools/testing/bin/mac/dart
-/version.gyp
 /xcodebuild/
