@@ -2,6 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+/// Fletch Socket package.
+///
+/// This is a preliminary API providing socket access when Fletch is
+/// running on a Posix platform.
 library socket;
 
 import 'dart:fletch';
