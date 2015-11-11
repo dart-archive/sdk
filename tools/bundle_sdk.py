@@ -179,7 +179,7 @@ def CopySamples(bundle_dir):
 
 def EnsureDartDoc():
   subprocess.check_call(
-      'download_from_google_storage -b dart-dependencies-fletch'
+      'download_from_google_storage -b dart-dependencies-fletch '
       '-u -d third_party/dartdoc_deps/',
       shell=True)
 
