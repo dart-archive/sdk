@@ -186,6 +186,10 @@ int Platform::GetPid() {
   return 0;
 }
 
+int Platform::MaxStackSize() {
+  return 16 * KB;
+}
+
 }  // namespace fletch
 
 #endif  // defined(FLETCH_TARGET_OS_LK)

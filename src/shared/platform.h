@@ -96,6 +96,10 @@ namespace Platform {
 
   int GetPid();
 
+  // Platform dependent max Dart stack size.
+  // TODO(ager): Make this configurable through the embedding API?
+  int MaxStackSize();
+
   inline OperatingSystem OS() {
 #if defined(__ANDROID__)
     return kAndroid;

@@ -169,6 +169,10 @@ int Platform::GetPid() {
   return static_cast<int>(getpid());
 }
 
+int Platform::MaxStackSize() {
+  return 128 * KB;
+}
+
 // Constants used for mmap.
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;

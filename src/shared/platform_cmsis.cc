@@ -147,6 +147,10 @@ int Platform::GetPid() {
   return 0;
 }
 
+int Platform::MaxStackSize() {
+  return 16 * KB;
+}
+
 VirtualMemory::VirtualMemory(int size) : size_(size) {
   UNIMPLEMENTED();
 }
