@@ -319,7 +319,7 @@ String getMessage(DiagnosticKind kind) {
           "Fletch Command Line Interface (CLI) have "
           "different versions.\nCompiler version: '$userInput'\n"
           "CLI version: '$additionalUserInput'.\n"
-          "This can happen if you've recently updated you Fletch SDK."
+          "This can happen if you have recently updated you Fletch SDK. "
           "Try running 'fletch quit' and retry the command.";
   }
 }
