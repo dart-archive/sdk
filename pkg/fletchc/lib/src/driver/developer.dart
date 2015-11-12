@@ -347,7 +347,6 @@ Future<Address> readAddressFromUser(
     StreamIterator<Command> commandIterator) async {
   String message =
       "Please enter IP address of remote device (press enter for discovery): ";
-  commandSender.sendEventLoopStarted();
   commandSender.sendStdout(message);
   List<InternetAddress> devices = []; // List of devices from running discovery.
   while (await commandIterator.moveNext()) {
@@ -404,12 +403,6 @@ Future<Address> readAddressFromUser(
           }
         }
         break;
-
-      case DriverCommand.Signal:
-        // Send an empty line as the user didn't hit enter.
-        commandSender.sendStdout("\n");
-        // Assume user aborted data entry.
-        return null;
 
       default:
         throwInternalError("Unexpected ${command.code}");
@@ -820,7 +813,8 @@ Future<int> invokeCombinedTasks(
     StreamIterator<Command> commandIterator,
     SharedTask task1,
     SharedTask task2) async {
-  await task1(commandSender, commandIterator);
+  int result = await task1(commandSender, commandIterator);
+  if (result != 0) return result;
   return task2(commandSender, commandIterator);
 }
 
