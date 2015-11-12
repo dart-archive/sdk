@@ -27,28 +27,28 @@ class Fiber {
   Fiber _previous;
   Fiber _next;
 
-  static Fiber _current = new Fiber._initial();
+  // We do not use an initializer for [_current] to ensure we can treeshake
+  // the [Fiber] class.
+  static Fiber _current;
   static Fiber _idleFibers;
-
-  // This static is initialized as part of creating the
-  // initial fiber. This way we can avoid checking for
-  // lazy initialization for it.
-  static bool _initialized = false;
 
   Fiber._initial() {
     _previous = this;
     _next = this;
-    _initialized = true;
   }
 
   Fiber._forked(entry) {
-    _current;  // Force initialization of fiber sub-system.
+    current;  // Force initialization of fiber sub-system.
     _coroutine = new Coroutine((ignore) {
       fletch.runToEnd(entry);
     });
   }
 
-  static Fiber get current => _current;
+  static Fiber get current {
+    var current = _current;
+    if (current != null) return current;
+    return _current = new Fiber._initial();
+  }
 
   static Fiber fork(entry) {
     Fiber fiber = new Fiber._forked(entry);
@@ -65,9 +65,8 @@ class Fiber {
   }
 
   static void exit([value]) {
-    // If we never needed the scheduler coroutine, we can just
-    // go ahead and halt now.
-    if (!_initialized) fletch.halt();
+    // If we never created a fiber, we can just go ahead and halt now.
+    if (_current == null) fletch.halt();
 
     _current._exit(value);
   }

@@ -60,7 +60,8 @@ Future runTest(String testName, bool write_golden_files) {
     String snapshotFilename = '${temp.absolute.path}/test.snapshot';
 
     // Part 1: Generate snapshot.
-    await export(testFilename(testName), snapshotFilename);
+    await export(
+        testFilename(testName), snapshotFilename, binaryProgramInfo: true);
 
     // Part 2: Run VM.
     ProcessResult result = await Process.run(fletchVM, [snapshotFilename]);

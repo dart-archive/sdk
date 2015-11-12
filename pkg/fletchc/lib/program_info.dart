@@ -177,6 +177,14 @@ abstract class ProgramInfoBinary {
 
     List<int> stringOffsetsInStringTable = [];
 
+    void ensureEncodableAs24Bit(int number) {
+      if (number >= ((1 << 24) - 1)) {
+        throw new Exception(
+            "The binary program information format cannot encode offsets "
+            "larger than 16 MB (24 bits) at the moment.");
+      }
+    }
+
     List<int> buildStringTable() {
       BytesBuilder builder = new BytesBuilder();
       for (int i = 0; i < info._strings.length; i++) {
@@ -200,9 +208,9 @@ abstract class ProgramInfoBinary {
       }
 
       void writeNumber(int number) {
-        // 0xffffff means -1
-        assert(number < ((1 << 24) - 1));
+        ensureEncodableAs24Bit(number);
 
+        // 0xffffff means -1
         if (number == -1) number = _INVALID_INDEX;
 
         writeByte(number & 0xff);
@@ -240,7 +248,7 @@ abstract class ProgramInfoBinary {
 
       void writeNumber(int number) {
         // 0xffffff means -1
-        assert(number < ((1 << 24) - 1));
+        ensureEncodableAs24Bit(number);
 
         if (number == -1) number = _INVALID_INDEX;
 

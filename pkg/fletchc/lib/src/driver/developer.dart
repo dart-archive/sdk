@@ -347,8 +347,8 @@ Future<Address> readAddressFromUser(
     StreamIterator<Command> commandIterator) async {
   String message =
       "Please enter IP address of remote device (press enter for discovery): ";
-  commandSender.sendEventLoopStarted();
   commandSender.sendStdout(message);
+  List<InternetAddress> devices = []; // List of devices from running discovery.
   while (await commandIterator.moveNext()) {
     Command command = commandIterator.current;
     switch (command.code) {
@@ -363,19 +363,46 @@ Future<Address> readAddressFromUser(
         // session because we use canonical input processing (Unix line
         // buffering), but it doesn't work in general. So we should fix that.
         String line = UTF8.decode(command.data).trim();
-        if (line.isEmpty) {
-          await discoverDevices();
-          commandSender.sendStdout(message);
+        if (line.isEmpty && devices.isEmpty) {
+          commandSender.sendStdout("\n");
+          devices = await discoverDevices();
+          if (devices.isEmpty) {
+            commandSender.sendStdout("No Fletch capable devices was found.\n");
+            commandSender.sendStdout(message);
+          } else {
+            String word = (devices.length == 1) ? "device" : "devices";
+            commandSender.sendStdout("\n");
+            commandSender.sendStdout(
+                "${devices.length} Fletch capable $word was found.\n");
+            commandSender.sendStdout(
+                "Please enter the number or the IP address of "
+                "the remote device (press enter for the first device): ");
+          }
         } else {
-          return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
+          bool checkedIndex = false;
+          if (devices.length > 0) {
+            if (line.isEmpty) {
+              return new Address(devices[0].address, AGENT_DEFAULT_PORT);
+            }
+            try {
+              checkedIndex = true;
+              int index = int.parse(line);
+              if (1 <= index  && index <= devices.length) {
+                return new Address(devices[index - 1].address,
+                                   AGENT_DEFAULT_PORT);
+              } else {
+                commandSender.sendStdout("Invalid device index $line\n\n");
+                commandSender.sendStdout(message);
+              }
+            } on FormatException {
+              // Ignore FormatException and fall through to parse as IP address.
+            }
+          }
+          if (!checkedIndex) {
+            return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
+          }
         }
         break;
-
-      case DriverCommand.Signal:
-        // Send an empty line as the user didn't hit enter.
-        commandSender.sendStdout("\n");
-        // Assume user aborted data entry.
-        return null;
 
       default:
         throwInternalError("Unexpected ${command.code}");
@@ -513,7 +540,9 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
   return exitCode;
 }
 
-Future<int> export(SessionState state, Uri snapshot) async {
+Future<int> export(SessionState state,
+                   Uri snapshot,
+                   {bool binaryProgramInfo: false}) async {
   List<FletchDelta> compilationResults = state.compilationResults;
   Session session = state.session;
   state.session = null;
@@ -534,8 +563,10 @@ Future<int> export(SessionState state, Uri snapshot) async {
     File jsonFile = new File('${snapshot.toFilePath()}.info.json');
     await jsonFile.writeAsString(ProgramInfoJson.encode(info));
 
-    File binFile = new File('${snapshot.toFilePath()}.info.bin');
-    await binFile.writeAsBytes(ProgramInfoBinary.encode(info));
+    if (binaryProgramInfo) {
+      File binFile = new File('${snapshot.toFilePath()}.info.bin');
+      await binFile.writeAsBytes(ProgramInfoBinary.encode(info));
+    }
 
     return 0;
   } else {
@@ -782,14 +813,16 @@ Future<int> invokeCombinedTasks(
     StreamIterator<Command> commandIterator,
     SharedTask task1,
     SharedTask task2) async {
-  await task1(commandSender, commandIterator);
+  int result = await task1(commandSender, commandIterator);
+  if (result != 0) return result;
   return task2(commandSender, commandIterator);
 }
 
-Future discoverDevices() async {
-  print('Looking for Fletch capable devices...');
+Future<List<InternetAddress>> discoverDevices() async {
+  print("Looking for Fletch capable devices (will look for 5 seconds)...");
   MDnsClient client = new MDnsClient();
   await client.start();
+  List<InternetAddress> result = [];
   String name = '_fletch_agent._tcp.local';
   await for (ResourceRecord ptr in client.lookup(RRType.PTR, name)) {
     String domain = ptr.domainName;
@@ -798,12 +831,15 @@ Future discoverDevices() async {
       await for (ResourceRecord a in client.lookup(RRType.A, target)) {
         InternetAddress address = a.address;
         if (!address.isLinkLocal) {
-          print('Found device $target on address ${address.address}.');
+          result.add(address);
+          print("${result.length}: "
+                "Device $target on address ${address.address}.");
         }
       }
     }
   }
   client.stop();
+  return result;
 }
 
 Address parseAddress(String address, {int defaultPort: 0}) {

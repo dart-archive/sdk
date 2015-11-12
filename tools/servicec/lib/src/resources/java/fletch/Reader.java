@@ -5,7 +5,7 @@
 package fletch;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 
 class Reader {
   public Reader() { }
@@ -78,7 +78,8 @@ class Reader {
     readList(reader, offset);
     byte[] data = reader.segment.buffer().array();
     int byteLength = reader.length * 2;
-    return new String(data, reader.base, byteLength, StandardCharsets.UTF_16LE);
+    return new String(
+        data, reader.base, byteLength, Charset.forName("UTF_16LE"));
   }
 
   public int computeUsed() {

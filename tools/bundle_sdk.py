@@ -34,21 +34,54 @@ DOC_INDEX_HEAD = """
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Fletch API docs</title>
     <meta name="description" content="API docs, for the fletch packages.">
+    <link rel="stylesheet" href="fletch/static-assets/prettify.css">
+    <link rel="stylesheet" href="fletch/static-assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="fletch/static-assets/styles.css">
 </head>
+
+
 <body>
-<h2> Fletch package documentation</h2>
-Below you will find links to the documentation for the fletch packages.<br><br>
+<header class="container-fluid" id="title">
+    <div class="container masthead">
+      <div class="row">
+        <div class="col-sm-12 contents">
+          <div class="title-description">
+              <h1 class="title">
+                  <div class="kind">API DOCUMENTATION</div>Fletch SDK Packages
+              </h1>
+          </div>
+        </div> <!-- /col -->
+      </div> <!-- /row -->
+    </div> <!-- /container -->
+</header>
+
+<div class="container body">
+  <div class="row"/>
+
+  <div class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left">
+    <ol>
+      <li class="section-title">PACKAGES</li>
 """
 
 DOC_INDEX_TAIL = """
+    </ol>
+  </div>
+
+  <div class="col-xs-12 col-sm-9 col-md-8 main-content">
+    <section class="desc markdown">
+      <br>
+      <p>Please select a package from the list on the left to see the documentation for that package</p>
+    </section>
+  </div>
+</div>
 </body>
 </html>
 """
 
 DOC_INDEX = '%s%s%s' % (
     DOC_INDEX_HEAD,
-    '\n<br>'.join(
-        ['<a href="%s/index.html">%s</a>' % (p, p) for p in SDK_PACKAGES]),
+    '\n'.join(
+        ['<li><a class="" href="%s/index.html">%s</a></li>' % (p, p) for p in SDK_PACKAGES]),
     DOC_INDEX_TAIL)
 
 def ParseOptions():

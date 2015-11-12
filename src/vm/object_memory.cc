@@ -219,7 +219,15 @@ word Space::OffsetOf(HeapObject* object) {
 }
 
 void Space::TryDealloc(uword location, int size) {
-  if (top_ == location) top_ -= size;
+  if (using_copying_collector()) {
+    if (top_ == location) top_ -= size;
+  } else {
+    if (active_freelist_chunk_ == location) {
+      active_freelist_chunk_ -= size;
+      active_freelist_chunk_size_ += size;
+      allocation_budget_ += size;
+    }
+  }
 }
 
 void Space::AdjustAllocationBudget(int used_outside_space) {

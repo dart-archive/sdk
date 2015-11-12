@@ -25,10 +25,14 @@ void testStartDetachedValid() {
   // In debug mode tests can timeout after about 120 secs. Make sure we
   // sleep for a little more to ensure we are not failing the test because
   // sleep process exited.
+  print('${new DateTime.now()} Spawning detached process');
   int pid = NativeProcess.startDetached('/bin/sleep', ['130']);
+  print('${new DateTime.now()} Spawed process with pid $pid');
   Expect.notEquals(-1, pid, "Failed to start '/bin/sleep'");
   // kill fails if the pid is not found, hence it validates it was spawned.
+  print('${new DateTime.now()} Killing process with pid $pid');
   Expect.equals(0, kill(pid), 'Failed to kill test process with pid: $pid');
+  print('${new DateTime.now()} Killed process with pid $pid');
 }
 
 void testStartDetachedNullPath() {
