@@ -186,15 +186,13 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
        it != class_offsets->End();
        ++it) {
     Class* klass = it->first;
-    PortableOffset* offset = it->second;
+    const PortableOffset& offset = it->second;
 
     buffer.WriteInt(MapLookupByObject(class_map_id_, klass));
-    buffer.WriteInt(offset->offset_64bits_double);
-    buffer.WriteInt(offset->offset_64bits_float);
-    buffer.WriteInt(offset->offset_32bits_double);
-    buffer.WriteInt(offset->offset_32bits_float);
-
-    delete offset;
+    buffer.WriteInt(offset.offset_64bits_double);
+    buffer.WriteInt(offset.offset_64bits_float);
+    buffer.WriteInt(offset.offset_32bits_double);
+    buffer.WriteInt(offset.offset_32bits_float);
   }
 
   // Function offset table
@@ -203,15 +201,13 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
        it != function_offsets->End();
        ++it) {
     Function* function = it->first;
-    PortableOffset* offset = it->second;
+    const PortableOffset& offset = it->second;
 
     buffer.WriteInt(MapLookupByObject(method_map_id_, function));
-    buffer.WriteInt(offset->offset_64bits_double);
-    buffer.WriteInt(offset->offset_64bits_float);
-    buffer.WriteInt(offset->offset_32bits_double);
-    buffer.WriteInt(offset->offset_32bits_float);
-
-    delete offset;
+    buffer.WriteInt(offset.offset_64bits_double);
+    buffer.WriteInt(offset.offset_64bits_float);
+    buffer.WriteInt(offset.offset_32bits_double);
+    buffer.WriteInt(offset.offset_32bits_float);
   }
 
   connection_->Send(Connection::kWriteSnapshotResult, buffer);

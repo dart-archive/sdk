@@ -562,14 +562,14 @@ void SnapshotWriter::WriteObject(Object* object) {
     }
     case InstanceFormat::CLASS_TYPE: {
       Class* klass = Class::cast(object);
-      (*class_offsets_)[klass] = new PortableOffset(heap_size_);
+      (*class_offsets_)[klass] = PortableOffset(heap_size_);
       heap_size_ += klass->CalculatePortableSize();
       klass->ClassWriteTo(this, klass);
       break;
     }
     case InstanceFormat::FUNCTION_TYPE: {
       Function* function = Function::cast(object);
-      (*function_offsets_)[function] = new PortableOffset(heap_size_);
+      (*function_offsets_)[function] = PortableOffset(heap_size_);
       heap_size_ += function->CalculatePortableSize();
       function->FunctionWriteTo(this, klass);
       break;

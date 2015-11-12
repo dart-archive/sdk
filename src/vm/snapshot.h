@@ -49,8 +49,8 @@ class PortableOffset {
   int offset_32bits_float;
 };
 
-typedef HashMap<Function*, PortableOffset*> FunctionOffsetsType;
-typedef HashMap<Class*, PortableOffset*> ClassOffsetsType;
+typedef HashMap<Function*, PortableOffset> FunctionOffsetsType;
+typedef HashMap<Class*, PortableOffset> ClassOffsetsType;
 
 class SnapshotReader {
  public:
