@@ -70,7 +70,7 @@ DOC_INDEX_TAIL = """
   <div class="col-xs-12 col-sm-9 col-md-8 main-content">
     <section class="desc markdown">
       <br>
-      <p>Please select a package from the list on the left to see the documentation for that package</p>
+      <p>Please select a package from the list on the left to see the documentation for that package.</p>
     </section>
   </div>
 </div>
