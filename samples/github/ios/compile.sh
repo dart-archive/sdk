@@ -7,8 +7,8 @@
 # Setup
 #  - Install and build fletch.
 #  - Install Cocoapods.
-#  - Run immic (output in packages/immi).
-#  - Run servicec (output in packages/service).
+#  - Run immic (output in generated/packages/immi).
+#  - Run servicec (output in generated/packages/service).
 #  - Generate libfletch.a for your choice of platforms and add it to xcode.
 #  - Generate snapshot of your Dart program and add it to xcode.
 #  - Write Podfile that links to {Fletch,Service,Immi}.podspec.

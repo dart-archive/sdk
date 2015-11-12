@@ -23,3 +23,7 @@ int fputs$UNIX2003(const char* restrict str, FILE* restrict stream) {
 pid_t waitpid$UNIX2003(pid_t pid, int* status, int options) {
   return waitpid(pid, status, options);
 }
+
+char* strerror$UNIX2003(int errnum) {
+  return strerror(errnum);
+}
