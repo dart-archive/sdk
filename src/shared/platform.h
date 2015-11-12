@@ -98,7 +98,7 @@ namespace Platform {
 
   // Platform dependent max Dart stack size.
   // TODO(ager): Make this configurable through the embedding API?
-  int MaxStackSize();
+  int MaxStackSizeInWords();
 
   inline OperatingSystem OS() {
 #if defined(__ANDROID__)

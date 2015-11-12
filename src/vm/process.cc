@@ -184,7 +184,7 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   int size_increase = Utils::RoundUpToPowerOfTwo(addition);
   size_increase = Utils::Maximum(256, size_increase);
   int new_size = stack()->length() + size_increase;
-  if (new_size > Platform::MaxStackSize()) return kStackCheckOverflow;
+  if (new_size > Platform::MaxStackSizeInWords()) return kStackCheckOverflow;
 
   Object* new_stack_object = NewStack(new_size);
   if (new_stack_object == Failure::retry_after_gc()) {

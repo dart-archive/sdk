@@ -169,7 +169,7 @@ int Platform::GetPid() {
   return static_cast<int>(getpid());
 }
 
-int Platform::MaxStackSize() {
+int Platform::MaxStackSizeInWords() {
   return 128 * KB;
 }
 

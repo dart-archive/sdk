@@ -147,7 +147,7 @@ int Platform::GetPid() {
   return 0;
 }
 
-int Platform::MaxStackSize() {
+int Platform::MaxStackSizeInWords() {
   return 16 * KB;
 }
 
