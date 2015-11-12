@@ -311,7 +311,8 @@ void InterpreterGeneratorX86::GeneratePrologue() {
   __ movl(EBP, Address(ESP, (5 + 1) * kWordSize));
 
   // Pad the stack to guarantee the right alignment for calls.
-  spill_size_ = ComputeStackPadding(5 * kWordSize, 6 * kWordSize);
+  // Reserved is 4 registers, 1 return address and 1 fp slot.
+  spill_size_ = ComputeStackPadding(6 * kWordSize, 6 * kWordSize);
   if (spill_size_ > 0) __ subl(ESP, Immediate(spill_size_));
 
   // Restore the register state and dispatch to the first bytecode.

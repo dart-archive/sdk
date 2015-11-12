@@ -1115,11 +1115,12 @@ void InterpreterGeneratorARM::DoThrowAfterSaveState() {
   __ mov(R3, SP);
   __ bl("HandleThrow");
 
-  RestoreState();
-
+  // Load results and restore SP, before restoring state.
   __ ldr(R2, Address(SP, 0));
   __ ldr(R3, Address(SP, kWordSize));
   __ add(SP, SP, Immediate(2 * kWordSize));
+
+  RestoreState();
 
   Label unwind;
   __ tst(R0, R0);
