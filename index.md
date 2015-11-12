@@ -52,10 +52,8 @@ To develop embedded programs with Fletch, you will need the following:
 First download the SDK. This is available as a '.zip' archive; pick the one that
 matches the OS of the PC you will be using for development:
 
-* [MacOS, 32-bit](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-macos-ia32-release.zip)
-* [MacOS, 64-bit](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-macos-x64-release.zip)
-* [Linux, 32-bit](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-linux-ia32-release.zip)
-* [Linux, 64-bit](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-linux-x64-release.zip)
+* [Fletch SDK for MacOS (64-bit)](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-macos-x64-release.zip)
+* [Fletch SDK for Linux (64-bit)](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-linux-x64-release.zip)
 
 Unzip this, and make sure that the Fletch command is in the path by typing the
 below in a terminal window:
