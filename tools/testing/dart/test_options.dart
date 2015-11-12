@@ -494,18 +494,11 @@ Note: currently only implemented for dart2js.''',
               1,
               type: 'int'),
           new _TestOptionSpecification(
-              'enable_incremental_compilation',
-              "Enable incremental compilation during testing.",
-              ['--enable-incremental-compilation'],
+              'settings_file_name',
+              'The fletch settings file to use for testing',
+              ['--fletch-settings-file'],
               [],
-              false,
-              type: 'bool'),
-        new _TestOptionSpecification(
-            'settings_file_name',
-            'The fletch settings file to use for testing',
-            ['--fletch-settings-file'],
-            [],
-            '.fletch-settings'),
+              '.fletch-settings'),
           ];
   }
 

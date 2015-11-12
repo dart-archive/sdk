@@ -68,9 +68,7 @@ abstract class CompilerConfiguration {
       case 'fletchc':
         return new FletchCCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
-            isHostChecked: isHostChecked, useSdk: useSdk,
-            isIncrementalCompilationEnabled:
-                configuration['enable_incremental_compilation']);
+            isHostChecked: isHostChecked, useSdk: useSdk);
       case 'none':
         return new NoneCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
@@ -202,14 +200,12 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
 }
 
 class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
-  final bool isIncrementalCompilationEnabled;
 
   FletchCCompilerConfiguration({
       bool isDebug,
       bool isChecked,
       bool isHostChecked,
-      bool useSdk,
-      this.isIncrementalCompilationEnabled: true})
+      bool useSdk})
       : super(
           'fletchc',
           isDebug: isDebug, isChecked: isChecked,
@@ -236,8 +232,7 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
 
     Command command = new FletchSessionCommand(
         executable, basicArguments.first, basicArguments,
-        environment, isIncrementalCompilationEnabled,
-        snapshotFileName: snapshotFileName);
+        environment, snapshotFileName: snapshotFileName);
 
     return new CommandArtifact(
         <Command>[command], snapshotFileName, 'application/fletch-snapshot');

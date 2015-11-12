@@ -46,9 +46,6 @@ import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
 import '../../../pkg/fletchc/lib/fletch_vm.dart' show
     FletchVm;
 
-const String isIncrementalCompilationEnabledFlag =
-    "test.fletch_session_command.is_incremental_enabled";
-
 const String settingsFileNameFlag = "test.fletch_settings_file_name";
 const String settingsFileName =
     const String.fromEnvironment(settingsFileNameFlag);
@@ -80,7 +77,6 @@ class FletchSessionCommand implements Command {
   final String script;
   final List<String> arguments;
   final Map<String, String> environmentOverrides;
-  final bool isIncrementalCompilationEnabled;
   final String snapshotFileName;
   final String settingsFileName;
 
@@ -89,7 +85,6 @@ class FletchSessionCommand implements Command {
       this.script,
       this.arguments,
       this.environmentOverrides,
-      this.isIncrementalCompilationEnabled,
       {this.snapshotFileName,
        this.settingsFileName: ".fletch-settings"});
 
@@ -99,8 +94,6 @@ class FletchSessionCommand implements Command {
 
   String get reproductionCommand {
     var dartVm = Uri.parse(executable).resolve('dart');
-    String incrementalFlag = "-D$isIncrementalCompilationEnabledFlag="
-        "$isIncrementalCompilationEnabled";
     String fletchPath = Uri.parse(executable).resolve('fletch-vm').toString();
     String versionFlag = '-Dfletch.version=`$fletchPath --version`';
     String settingsFileFlag = "-D$settingsFileNameFlag=$settingsFileName";
@@ -114,7 +107,7 @@ There are three ways to reproduce this error:
   1. Run the test exactly as in this test framework. This is the hardest to
      debug using gdb:
 
-    ${Platform.executable} -c $incrementalFlag $settingsFileFlag \\
+    ${Platform.executable} -c $settingsFileFlag \\
        $versionFlag \\
        tools/testing/dart/fletch_session_command.dart $executable \\
        ${arguments.join(' ')}
@@ -125,7 +118,7 @@ There are three ways to reproduce this error:
      easy to run a reproduction command in a loop:
 
     gdb -ex 'set follow-fork-mode child' -ex run --args \\
-        $dartVm $incrementalFlag $settingsFileFlag \\
+        $dartVm $settingsFileFlag \\
         $versionFlag \\
         -c tests/fletchc/run.dart $script
 
@@ -135,7 +128,7 @@ There are three ways to reproduce this error:
 
     gdb -ex run --args $executable-vm --port=54321
 
-    $dartVm $incrementalFlag $settingsFileFlag \\
+    $dartVm $settingsFileFlag \\
       $versionFlag \\
       -c -DattachToVm=54321 tests/fletchc/run.dart $script
 
@@ -171,9 +164,7 @@ There are three ways to reproduce this error:
     try {
       Future vmTerminationFuture;
       try {
-        await fletch.run(
-            ["create", "session", fletch.sessionName,
-             "with", settingsFileName]);
+        await fletch.createSession(settingsFileName);
         await fletch.runInSession(["show", "log"]);
 
         // Now that the session is created, start a Fletch VM.
@@ -209,10 +200,6 @@ There are three ways to reproduce this error:
                 vmExitCode, "${fletch.executable}-vm", <String>[]);
           }
         }
-      }
-      if (!isIncrementalCompilationEnabled) {
-        endedSession = true;
-        await fletch.run(["x-end", "session", fletch.sessionName]);
       }
     } on UnexpectedExitCode catch (error) {
       fletch.stderr.writeln("$error");
@@ -490,6 +477,16 @@ class FletchSessionHelper {
         checkExitCode: checkExitCode, timeout: timeout);
   }
 
+  Future<int> createSession(String settingsFileName) async {
+    if (sessionMirror.isCreated) {
+      return 0;
+    } else {
+      sessionMirror.isCreated = true;
+      return await run(
+          ["create", "session", sessionName, "with", settingsFileName]);
+    }
+  }
+
   Future<String> spawnVm() async {
     FletchVm fletchVm = await FletchVm.start(
         "$executable-vm", environment: environmentOverrides);
@@ -588,6 +585,8 @@ class FletchSessionMirror {
 
   final List<List<String>> internalLoggedCommands = <List<String>>[];
 
+  bool isCreated = false;
+
   FletchSessionMirror(this.id);
 
   void logCommand(List<String> command) {
@@ -619,11 +618,8 @@ Future<Null> main(List<String> arguments) async {
   String script = arguments[1];
   arguments = arguments.skip(2).toList();
   Map<String, String> environmentOverrides = <String, String>{};
-  bool isIncrementalCompilationEnabled = const bool.fromEnvironment(
-      isIncrementalCompilationEnabledFlag);
   FletchSessionCommand command = new FletchSessionCommand(
       executable, script, arguments, environmentOverrides,
-      isIncrementalCompilationEnabled,
       settingsFileName: settingsFileName);
   FletchTestCommandOutput output =
       await command.run(0, true, superVerbose: true);
