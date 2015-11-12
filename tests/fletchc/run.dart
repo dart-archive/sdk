@@ -119,7 +119,8 @@ main(List<String> arguments) async {
 Future<Null> test() => main(<String>['tests/language/application_test.dart']);
 
 // TODO(ahe): Move this method into FletchRunner and use computeSettings.
-Future<Null> export(String script, String snapshot) async {
+Future<Null> export(
+    String script, String snapshot, {bool binaryProgramInfo: false}) async {
   Settings settings;
   if (fletchSettingsFile == null) {
     settings = new Settings(
@@ -136,5 +137,6 @@ Future<Null> export(String script, String snapshot) async {
   await startAndAttachDirectly(state, Uri.base);
   state.stdoutSink.attachCommandSender(stdout.add);
   state.stderrSink.attachCommandSender(stderr.add);
-  await developer.export(state, fileUri(snapshot, Uri.base));
+  await developer.export(
+      state, fileUri(snapshot, Uri.base), binaryProgramInfo: binaryProgramInfo);
 }

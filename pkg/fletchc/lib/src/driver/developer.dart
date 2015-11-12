@@ -547,7 +547,9 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
   return exitCode;
 }
 
-Future<int> export(SessionState state, Uri snapshot) async {
+Future<int> export(SessionState state,
+                   Uri snapshot,
+                   {bool binaryProgramInfo: false}) async {
   List<FletchDelta> compilationResults = state.compilationResults;
   Session session = state.session;
   state.session = null;
@@ -568,8 +570,10 @@ Future<int> export(SessionState state, Uri snapshot) async {
     File jsonFile = new File('${snapshot.toFilePath()}.info.json');
     await jsonFile.writeAsString(ProgramInfoJson.encode(info));
 
-    File binFile = new File('${snapshot.toFilePath()}.info.bin');
-    await binFile.writeAsBytes(ProgramInfoBinary.encode(info));
+    if (binaryProgramInfo) {
+      File binFile = new File('${snapshot.toFilePath()}.info.bin');
+      await binFile.writeAsBytes(ProgramInfoBinary.encode(info));
+    }
 
     return 0;
   } else {
