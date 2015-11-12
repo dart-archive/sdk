@@ -19,7 +19,9 @@ function follow_links() {
 # Unlike $0, $BASH_SOURCE points to the absolute path of this file.
 PROG_NAME="$(follow_links "$BASH_SOURCE")"
 
-source $(dirname $PROG_NAME)/.common_sh
+source $(dirname $PROG_NAME)/.common.shlib
+
+echo "This program requires superuser to run"
 
 exec sudo "$DART_VM" -Dfletch-vm="$FLETCH_VM" "$DART_FILE" \
     --configure-network-only "$@"
