@@ -936,7 +936,7 @@ double_to_string_as_precision_test: RuntimeError
 double_to_string_test: RuntimeError
 gc_test: Crash
 intrinsified_methods_test: RuntimeError
-large_class_declaration_test: Pass, Crash # TODO(ajohnsen): Flaky?
+large_class_declaration_test: Pass, Slow, RuntimeError # TODO(ajohnsen): Flaky?
 nan_identical_test: Crash
 number_identity2_test: Crash
 round_test: RuntimeError
