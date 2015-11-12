@@ -42,6 +42,7 @@ enum ScaleFactor {
   TIMES_1 = 0,
   TIMES_2 = 1,
   TIMES_4 = 2,
+  TIMES_WORD_SIZE = TIMES_4,
   TIMES_8 = 3
 };
 

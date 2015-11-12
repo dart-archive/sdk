@@ -197,10 +197,10 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
 
   Stack* new_stack = Stack::cast(new_stack_object);
   int top = stack()->top();
+  ASSERT(top >= 0);
   new_stack->set_top(top);
-  for (int i = 0; i <= top; i++) {
-    new_stack->set(i, stack()->get(i));
-  }
+  memcpy(new_stack->Pointer(0), stack()->Pointer(0), (top + 1) * kWordSize);
+  new_stack->UpdateFramePointers(stack());
   ASSERT(coroutine_->has_stack());
   coroutine_->set_stack(new_stack);
   store_buffer_.Insert(coroutine_->stack());
@@ -575,7 +575,7 @@ void Process::AttachDebugger() {
 }
 
 int Process::PrepareStepOver() {
-  Object** pushed_bcp_address = stack()->Pointer(stack()->top());
+  Object** pushed_bcp_address = stack()->Pointer(stack()->top() - 1);
   uint8_t* current_bcp = reinterpret_cast<uint8_t*>(*pushed_bcp_address);
   Object** stack_top = pushed_bcp_address - 1;
   Opcode opcode = static_cast<Opcode>(*current_bcp);

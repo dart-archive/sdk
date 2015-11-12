@@ -144,6 +144,9 @@ void DynamicAssertionHelper::GreaterEqual(const E& left, const A& right) {
 #define FATAL1(format, p1) \
   fletch::Assert(__FILE__, __LINE__).Fail(format, (p1))
 
+#define FATAL2(format, p1, p2) \
+  fletch::Assert(__FILE__, __LINE__).Fail(format, (p1), (p2))
+
 #define UNIMPLEMENTED() \
   FATAL("unimplemented code")
 

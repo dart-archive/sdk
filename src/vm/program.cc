@@ -87,7 +87,9 @@ Process* Program::ProcessSpawnForMain() {
   stack->set(2, NULL);
   stack->set(3, NULL);
   stack->set(4, reinterpret_cast<Object*>(bcp));
-  stack->set_top(4);
+  Object** frame_pointer = stack->Pointer(2);
+  stack->set(5, reinterpret_cast<Object*>(frame_pointer));
+  stack->set_top(5);
 
   return process;
 }

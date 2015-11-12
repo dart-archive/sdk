@@ -586,6 +586,19 @@ void HeapObject::set_forwarding_address(HeapObject* value) {
   at_put(kClassOffset, Smi::cast(reinterpret_cast<Smi*>(value->address())));
 }
 
+void Stack::UpdateFramePointers(const Stack* old_stack) {
+  word diff = (address() - old_stack->address());
+  Object** fp = Pointer(top());
+  while (*fp != NULL) {
+    // Read the fp value and update it.
+    Object* fp_value = *fp + diff;
+    // Store back the updated value.
+    *fp = fp_value;
+    // Continue with the updated value as a new fp.
+    fp = reinterpret_cast<Object**>(fp_value);
+  }
+}
+
 HeapObject* HeapObject::CloneInToSpace(Space* to) {
   ASSERT(!to->Includes(this->address()));
   // If there is a forward pointer return it.
@@ -599,6 +612,9 @@ HeapObject* HeapObject::CloneInToSpace(Space* to) {
   CopyBlock(reinterpret_cast<Object**>(target->address()),
             reinterpret_cast<Object**>(address()),
             object_size);
+  if (target->IsStack()) {
+    Stack::cast(target)->UpdateFramePointers(Stack::cast(this));
+  }
   // Set the forwarding address.
   set_forwarding_address(target);
 

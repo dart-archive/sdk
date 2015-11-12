@@ -11,6 +11,32 @@
 
 namespace fletch {
 
+// General stack layout:
+//
+//   |                |
+//   +----------------+
+//   |    Locals      |
+//   |       .        |
+//   |       .        |
+//   |       .        |
+//   +----------------+
+//   |     Empty      |
+//   |  Frame pointer +----+
+//   |   BCP (return) |    |
+//   +----------------+    |
+//   |   Arguments    |    |
+//   |       .        |    |
+//   |       .        |    |
+//   |       .        |    |
+//   +----------------+    |
+//   |                |    |
+//   |                |    |
+//   +----------------+    |
+//   |                |    |
+//   |  Frame pointer | <--+
+//   |                |
+//
+
 // StackWalker that can walk a stack, under a few assumptions:
 //  - The TOP of the stack is the current bcp.
 //  - The BOTTOM of the stack(last return bcp) is NULL.
@@ -24,7 +50,7 @@ class StackWalker {
       : no_allocation_failure_scope_(process->heap()->space()),
         process_(process),
         stack_(stack),
-        stack_offset_(0),
+        stack_offset_(-1),
         function_(NULL),
         return_address_(NULL),
         frame_size_(-1),
@@ -55,6 +81,9 @@ class StackWalker {
 
   Function* function() const { return function_; }
   uint8* return_address() const { return return_address_; }
+  Object** frame_pointer() const {
+    return stack_->Pointer(stack_->top() + stack_offset_ + 1);
+  }
   int frame_size() const { return frame_size_; }
   int frame_ranges_offset() const { return frame_ranges_offset_; }
   int stack_offset() const { return stack_offset_; }
@@ -65,7 +94,8 @@ class StackWalker {
   // Compute the top catch block.
   static uint8* ComputeCatchBlock(Process* process,
                                   Stack* stack,
-                                  int* stack_delta);
+                                  int* stack_delta_result,
+                                  Object*** frame_pointer_result);
 
   // Manipulate the stack to restart frame |frame| when process continues.
   static void RestartFrame(Process* process, int frame);

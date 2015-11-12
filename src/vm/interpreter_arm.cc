@@ -74,7 +74,8 @@ INTRINSICS_DO(V)
 class InterpreterGeneratorARM: public InterpreterGenerator {
  public:
   explicit InterpreterGeneratorARM(Assembler* assembler)
-      : InterpreterGenerator(assembler) { }
+      : InterpreterGenerator(assembler),
+        spill_size_(-1) { }
 
   // Registers
   // ---------
@@ -229,6 +230,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   Label check_stack_overflow_0_;
   Label gc_;
   Label intrinsic_failure_;
+  int spill_size_;
 
   void LoadLocal(Register reg, int index);
   void StoreLocal(Register reg, int index);
@@ -236,6 +238,12 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Push(Register reg);
   void Pop(Register reg);
   void Drop(int n);
+
+  void LoadFramePointer(Register reg);
+  void StoreFramePointer(Register reg);
+
+  void PushFrameDescriptor(Register return_address, Register scratch);
+  void ReadFrameDescriptor(Register scratch);
 
   void Return(bool wide, bool is_return_null);
 
@@ -306,12 +314,16 @@ void InterpreterGeneratorARM::GeneratePrologue() {
   // Push callee-saved registers.
   __ push(RegisterRange(R4, R11) | RegisterRange(LR, LR));
 
+  // Create room for fp.
+  __ mov(R2, Immediate(0));
+  __ push(R2);
+
   // Setup process pointer in R4.
   __ mov(R4, R0);
 
-  // Pad the stack to gaurantee the right alignment for calls.
-  int padding = ComputeStackPadding(9 * kWordSize, 1 * kWordSize);
-  if (padding > 0) __ sub(SP, SP, Immediate(padding));
+  // Pad the stack to guarantee the right alignment for calls.
+  spill_size_ = ComputeStackPadding(10 * kWordSize, 1 * kWordSize);
+  if (spill_size_ > 0) __ sub(SP, SP, Immediate(spill_size_));
 
   // Store the argument target yield address in the extra slot on the
   // top of the stack.
@@ -330,8 +342,10 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   // Undo stack padding.
   Label undo_padding;
   __ Bind(&undo_padding);
-  int padding = ComputeStackPadding(9 * kWordSize, 1 * kWordSize);
-  if (padding > 0) __ add(SP, SP, Immediate(padding));
+  if (spill_size_ > 0) __ add(SP, SP, Immediate(spill_size_));
+
+  // Skip frame-pointer slot.
+  __ add(SP, SP, Immediate(kWordSize));
 
   // Restore callee-saved registers and return.
   __ pop(RegisterRange(R4, R11) | RegisterRange(LR, LR));
@@ -392,11 +406,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
   __ add(R5, R5, Immediate(kInvokeMethodLength));
-  Push(R5);
-  // Push two empty slots.
-  __ mov(R2, Immediate(0));
-  Push(R2);
-  Push(R2);
+  PushFrameDescriptor(R5, R2);
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
   Dispatch(0);
 }
@@ -440,7 +450,7 @@ void InterpreterGeneratorARM::DoLoadLocal5() {
 void InterpreterGeneratorARM::DoLoadLocal() {
   __ ldrb(R0, Address(R5, 1));
   __ neg(R1, R0);
-  __ ldr(R0, Address(R6, Operand(R1, TIMES_4)));
+  __ ldr(R0, Address(R6, Operand(R1, TIMES_WORD_SIZE)));
   Push(R0);
   Dispatch(kLoadLocalLength);
 }
@@ -448,7 +458,7 @@ void InterpreterGeneratorARM::DoLoadLocal() {
 void InterpreterGeneratorARM::DoLoadLocalWide() {
   __ ldr(R0, Address(R5, 1));
   __ neg(R1, R0);
-  __ ldr(R0, Address(R6, Operand(R1, TIMES_4)));
+  __ ldr(R0, Address(R6, Operand(R1, TIMES_WORD_SIZE)));
   Push(R0);
   Dispatch(kLoadLocalWideLength);
 }
@@ -456,7 +466,7 @@ void InterpreterGeneratorARM::DoLoadLocalWide() {
 void InterpreterGeneratorARM::DoLoadBoxed() {
   __ ldrb(R0, Address(R5, 1));
   __ neg(R0, R0);
-  __ ldr(R1, Address(R6, Operand(R0, TIMES_4)));
+  __ ldr(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   __ ldr(R0, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
   Push(R0);
   Dispatch(kLoadBoxedLength);
@@ -466,7 +476,7 @@ void InterpreterGeneratorARM::DoLoadStatic() {
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::kStaticsOffset));
   __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
-  __ ldr(R0, Address(R1, Operand(R0, TIMES_4)));
+  __ ldr(R0, Address(R1, Operand(R0, TIMES_WORD_SIZE)));
   Push(R0);
   Dispatch(kLoadStaticLength);
 }
@@ -475,7 +485,7 @@ void InterpreterGeneratorARM::DoLoadStaticInit() {
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::kStaticsOffset));
   __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
-  __ ldr(R0, Address(R1, Operand(R0, TIMES_4)));
+  __ ldr(R0, Address(R1, Operand(R0, TIMES_WORD_SIZE)));
 
   Label done;
   ASSERT(Smi::kTag == 0);
@@ -492,11 +502,7 @@ void InterpreterGeneratorARM::DoLoadStaticInit() {
   // Invoke the initializer function.
   __ ldr(R0, Address(R0, Initializer::kFunctionOffset - HeapObject::kTag));
   __ add(R5, R5, Immediate(kInvokeMethodLength));
-  Push(R5);
-  // Push two empty slots.
-  __ mov(R2, Immediate(0));
-  Push(R2);
-  Push(R2);
+  PushFrameDescriptor(R5, R2);
 
   // Jump to the first bytecode in the initializer function.
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -512,7 +518,7 @@ void InterpreterGeneratorARM::DoLoadField() {
   __ ldrb(R1, Address(R5, 1));
   LoadLocal(R0, 0);
   __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
-  __ ldr(R0, Address(R0, Operand(R1, TIMES_4)));
+  __ ldr(R0, Address(R0, Operand(R1, TIMES_WORD_SIZE)));
   StoreLocal(R0, 0);
   Dispatch(kLoadFieldLength);
 }
@@ -521,7 +527,7 @@ void InterpreterGeneratorARM::DoLoadFieldWide() {
   __ ldr(R1, Address(R5, 1));
   LoadLocal(R0, 0);
   __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
-  __ ldr(R0, Address(R0, Operand(R1, TIMES_4)));
+  __ ldr(R0, Address(R0, Operand(R1, TIMES_WORD_SIZE)));
   StoreLocal(R0, 0);
   Dispatch(kLoadFieldWideLength);
 }
@@ -531,7 +537,7 @@ void InterpreterGeneratorARM::DoLoadConst() {
   __ ldr(R1, Address(R4, Process::kProgramOffset));
   __ ldr(R2, Address(R1, Program::kConstantsOffset));
   __ add(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
-  __ ldr(R3, Address(R2, Operand(R0, TIMES_4)));
+  __ ldr(R3, Address(R2, Operand(R0, TIMES_WORD_SIZE)));
   Push(R3);
   Dispatch(kLoadConstLength);
 }
@@ -547,7 +553,7 @@ void InterpreterGeneratorARM::DoStoreLocal() {
   LoadLocal(R1, 0);
   __ ldrb(R0, Address(R5, 1));
   __ neg(R0, R0);
-  __ str(R1, Address(R6, Operand(R0, TIMES_4)));
+  __ str(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   Dispatch(kStoreLocalLength);
 }
 
@@ -555,7 +561,7 @@ void InterpreterGeneratorARM::DoStoreBoxed() {
   LoadLocal(R2, 0);
   __ ldrb(R0, Address(R5, 1));
   __ neg(R0, R0);
-  __ ldr(R1, Address(R6, Operand(R0, TIMES_4)));
+  __ ldr(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   __ str(R2, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
 
   AddToStoreBufferSlow(R1, R2);
@@ -568,7 +574,7 @@ void InterpreterGeneratorARM::DoStoreStatic() {
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::kStaticsOffset));
   __ add(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
-  __ str(R2, Address(R3, Operand(R0, TIMES_4)));
+  __ str(R2, Address(R3, Operand(R0, TIMES_WORD_SIZE)));
 
   AddToStoreBufferSlow(R1, R2);
 
@@ -580,7 +586,7 @@ void InterpreterGeneratorARM::DoStoreField() {
   LoadLocal(R2, 0);
   LoadLocal(R0, 1);
   __ add(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
-  __ str(R2, Address(R3, Operand(R1, TIMES_4)));
+  __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   StoreLocal(R2, 1);
   Drop(1);
 
@@ -594,7 +600,7 @@ void InterpreterGeneratorARM::DoStoreFieldWide() {
   LoadLocal(R2, 0);
   LoadLocal(R0, 1);
   __ add(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
-  __ str(R2, Address(R3, Operand(R1, TIMES_4)));
+  __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   StoreLocal(R2, 1);
   Drop(1);
 
@@ -665,11 +671,7 @@ void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
 
   // Compute and push the return address on the stack.
   __ add(R5, R5, Immediate(kInvokeNoSuchMethodLength));
-  Push(R5);
-  // Push two empty slots.
-  __ mov(R2, Immediate(0));
-  Push(R2);
-  Push(R2);
+  PushFrameDescriptor(R5, R2);
 
   // Jump to the first bytecode in the target method.
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -1040,7 +1042,7 @@ void InterpreterGeneratorARM::DoBranchBackIfFalseWide() {
 
 void InterpreterGeneratorARM::DoPopAndBranchWide() {
   __ ldrb(R0, Address(R5, 1));
-  __ sub(R6, R6, Operand(R0, TIMES_4));
+  __ sub(R6, R6, Operand(R0, TIMES_WORD_SIZE));
 
   __ ldr(R0, Address(R5, 2));
   __ add(R5, R5, R0);
@@ -1051,7 +1053,7 @@ void InterpreterGeneratorARM::DoPopAndBranchBackWide() {
   CheckStackOverflow(0);
 
   __ ldrb(R0, Address(R5, 1));
-  __ sub(R6, R6, Operand(R0, TIMES_4));
+  __ sub(R6, R6, Operand(R0, TIMES_WORD_SIZE));
 
   __ ldr(R0, Address(R5, 2));
   __ sub(R5, R5, R0);
@@ -1094,27 +1096,30 @@ void InterpreterGeneratorARM::DoNegate() {
 void InterpreterGeneratorARM::DoStackOverflowCheck() {
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::kStackLimitOffset));
-  __ add(R3, R6, Operand(R0, TIMES_4));
+  __ add(R3, R6, Operand(R0, TIMES_WORD_SIZE));
   __ cmp(R1, R3);
   __ b(LS, &check_stack_overflow_);
   Dispatch(kStackOverflowCheckLength);
 }
 
 void InterpreterGeneratorARM::DoThrowAfterSaveState() {
-  // Use the stack to store the stack delta initialized to zero.
-  __ sub(SP, SP, Immediate(8));
+  // Use the stack to store the stack delta initialized to zero, and the
+  // frame pointer return value.
+  __ sub(SP, SP, Immediate(2 * kWordSize));
   __ add(R2, SP, Immediate(kWordSize));
   __ mov(R3, Immediate(0));
   __ str(R3, Address(R2, 0));
 
   __ mov(R0, R4);
   __ mov(R1, R7);
+  __ mov(R3, SP);
   __ bl("HandleThrow");
 
   RestoreState();
 
+  __ ldr(R2, Address(SP, 0));
   __ ldr(R3, Address(SP, kWordSize));
-  __ add(SP, SP, Immediate(8));
+  __ add(SP, SP, Immediate(2 * kWordSize));
 
   Label unwind;
   __ tst(R0, R0);
@@ -1123,10 +1128,11 @@ void InterpreterGeneratorARM::DoThrowAfterSaveState() {
   __ b(&done_);
 
   __ Bind(&unwind);
+  StoreFramePointer(R2);
   __ neg(R3, R3);
   __ mov(R5, R0);
-  __ add(R6, R6, Operand(R3, TIMES_4));
-  __ add(R6, R6, Immediate(kWordSize));
+  __ add(R6, R6, Operand(R3, TIMES_WORD_SIZE));
+  __ add(R6, R6, Immediate(2 * kWordSize));
 
   StoreLocal(R7, 0);
   Dispatch(0);
@@ -1263,8 +1269,10 @@ void InterpreterGeneratorARM::DoExitNoSuchMethod() {
   Pop(R0);  // Result.
   Pop(R1);  // Selector.
   __ lsr(R1, R1, Immediate(Smi::kTagSize));
-  Drop(3);  // Sentinel and 2 empty slots.
-  Pop(R5);
+
+  ReadFrameDescriptor(R2);
+  // Drop FP and BCP.
+  Drop(2);
 
   Label done;
   __ and_(R2, R1, Immediate(Selector::KindField::mask()));
@@ -1278,7 +1286,7 @@ void InterpreterGeneratorARM::DoExitNoSuchMethod() {
   __ neg(R1, R1);
 
   // Drop the arguments from the stack, but leave the receiver.
-  __ add(R6, R6, Operand(R1, TIMES_4));
+  __ add(R6, R6, Operand(R1, TIMES_WORD_SIZE));
 
   StoreLocal(R0, 0);
   Dispatch(0);
@@ -1305,7 +1313,7 @@ void InterpreterGeneratorARM::DoIntrinsicGetField() {
   __ ldrb(R1, Address(R0, 2 + Function::kSize - HeapObject::kTag));
   LoadLocal(R0, 0);
   __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
-  __ ldr(R0, Address(R0, Operand(R1, TIMES_4)));
+  __ ldr(R0, Address(R0, Operand(R1, TIMES_WORD_SIZE)));
   StoreLocal(R0, 0);
   Dispatch(kInvokeMethodLength);
 }
@@ -1315,7 +1323,7 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
   LoadLocal(R0, 0);
   LoadLocal(R2, 1);
   __ add(R3, R2, Immediate(Instance::kSize - HeapObject::kTag));
-  __ str(R0, Address(R3, Operand(R1, TIMES_4)));
+  __ str(R0, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   StoreLocal(R0, 1);
   Drop(1);
 
@@ -1414,24 +1422,18 @@ void InterpreterGeneratorARM::Return(bool wide, bool is_return_null) {
   // Unfortunately, we have to negate the counts so we can use them
   // to index into the stack (grows towards higher addresses).
   if (wide) {
-    __ ldr(R1, Address(R5, 1));
     __ ldrb(R2, Address(R5, 5));
   } else {
-    __ ldrb(R1, Address(R5, 1));
     __ ldrb(R2, Address(R5, 2));
   }
-  __ neg(R1, R1);
+  __ neg(R2, R2);
 
-  // Also skip two empty slots.
-  __ sub(R1, R1, Immediate(2));
+  ReadFrameDescriptor(R1);
 
-  // Load the return address.
-  __ ldr(R5, Address(R6, Operand(R1, TIMES_4)));
-
-  // Drop both locals and arguments except one which we will overwrite
-  // with the result (we've left the return address on the stack).
-  __ sub(R1, R1, R2);
-  __ add(R6, R6, Operand(R1, TIMES_4));
+  // Drop arguments except one which we will overwrite with the result
+  // (we've left the return address on the stack).
+  __ sub(R2, R2, Immediate(1));
+  __ add(R6, R6, Operand(R2, TIMES_WORD_SIZE));
 
   // Overwrite the first argument (or the return address) with the result
   // and dispatch to the next bytecode.
@@ -1451,6 +1453,33 @@ void InterpreterGeneratorARM::Drop(int n) {
   __ sub(R6, R6, Immediate(n * kWordSize));
 }
 
+void InterpreterGeneratorARM::LoadFramePointer(Register reg) {
+  __ ldr(reg, Address(SP, spill_size_));
+}
+
+void InterpreterGeneratorARM::StoreFramePointer(Register reg) {
+  __ str(reg, Address(SP, spill_size_));
+}
+
+void InterpreterGeneratorARM::PushFrameDescriptor(Register return_address,
+                                                  Register scratch) {
+  Push(return_address);
+  LoadFramePointer(scratch);
+  Push(scratch);
+  StoreFramePointer(R6);
+  __ ldr(scratch, Immediate(0));
+  Push(scratch);
+}
+
+void InterpreterGeneratorARM::ReadFrameDescriptor(Register scratch) {
+  LoadFramePointer(R6);
+  // Store old frame pointer from stack.
+  LoadLocal(scratch, 0);
+  StoreFramePointer(scratch);
+  // Load return address.
+  LoadLocal(R5, 1);
+}
+
 void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
   // Get the selector from the bytecodes.
   __ ldr(R7, Address(R5, 1));
@@ -1465,7 +1494,7 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
 
     // Get the receiver from the stack.
     __ neg(R3, R2);
-    __ ldr(R1, Address(R6, Operand(R3, TIMES_4)));
+    __ ldr(R1, Address(R6, Operand(R3, TIMES_WORD_SIZE)));
   }
 
   // Compute the receiver class.
@@ -1516,11 +1545,7 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
   } else {
     // Compute and push the return address on the stack.
     __ add(R5, R5, Immediate(kInvokeMethodUnfoldLength));
-    Push(R5);
-    // Push two empty slots.
-    __ mov(R2, Immediate(0));
-    Push(R2);
-    Push(R2);
+    PushFrameDescriptor(R5, R2);
 
     // Jump to the first bytecode in the target method.
     __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -1576,7 +1601,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     LoadLocal(R2, 0);
   } else {
     __ neg(R2, R2);
-    __ ldr(R2, Address(R6, Operand(R2, TIMES_4)));
+    __ ldr(R2, Address(R6, Operand(R2, TIMES_WORD_SIZE)));
   }
 
   // Compute the receiver class.
@@ -1622,11 +1647,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
 
     // Compute and push the return address on the stack.
     __ add(R5, R5, Immediate(kInvokeMethodLength));
-    Push(R5);
-    // Push two empty slots.
-    __ mov(R2, Immediate(0));
-    Push(R2);
-    Push(R2);
+    PushFrameDescriptor(R5, R2);
 
     // Jump to the first bytecode in the target method.
     __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -1667,10 +1688,10 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
 
   // Load native from native table.
   __ ldr(R9, "kNativeTable");
-  __ ldr(R2, Address(R9, Operand(R0, TIMES_4)));
+  __ ldr(R2, Address(R9, Operand(R0, TIMES_WORD_SIZE)));
 
   // Setup argument (process and pointer to first argument).
-  __ add(R7, R6, Operand(R1, TIMES_4));
+  __ add(R7, R6, Operand(R1, TIMES_WORD_SIZE));
   __ mov(R1, R7);
   __ mov(R0, R4);
 
@@ -1680,8 +1701,9 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   __ cmp(R1, Immediate(Failure::kTag));
   __ b(EQ, &failure);
 
-  // Result is in r0. Pointer to first argument is in r7. Load return address.
-  LoadLocal(R5, 2);
+  // Result is now in r0. Pointer to first argument is in r7. Load return
+  // address and fp.
+  ReadFrameDescriptor(R2);
 
   if (yield) {
     // Set the result to null and drop the arguments.
@@ -1735,16 +1757,12 @@ void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
     __ ldr(R2, Address(R4, Process::kProgramOffset));
     __ ldr(R3, Address(R2, Program::kStaticMethodsOffset));
     __ add(R3, R3, Immediate(Array::kSize - HeapObject::kTag));
-    __ ldr(R0, Address(R3, Operand(R1, TIMES_4)));
+    __ ldr(R0, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   }
 
   // Compute and push the return address on the stack.
   __ add(R1, R5, Immediate(kInvokeStaticLength));
-  Push(R1);
-  // Push two empty slots.
-  __ mov(R2, Immediate(0));
-  Push(R2);
-  Push(R2);
+  PushFrameDescriptor(R1, R2);
 
   // Jump to the first bytecode in the target method.
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
@@ -1762,7 +1780,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     __ ldr(R1, Address(R4, Process::kProgramOffset));
     __ ldr(R1, Address(R1, Program::kClassesOffset));
     __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
-    __ ldr(R7, Address(R1, Operand(R0, TIMES_4)));
+    __ ldr(R7, Address(R1, Operand(R0, TIMES_WORD_SIZE)));
   }
 
   const Register kRegisterAllocateImmutable = R9;
@@ -1965,12 +1983,16 @@ void InterpreterGeneratorARM::Dispatch(int size) {
     __ add(R5, R5, Immediate(size));
   }
   __ ldr(R9, "InterpretFast_DispatchTable");
-  __ ldr(PC, Address(R9, Operand(R7, TIMES_4)));
+  __ ldr(PC, Address(R9, Operand(R7, TIMES_WORD_SIZE)));
   __ GenerateConstantPool();
 }
 
 void InterpreterGeneratorARM::SaveState() {
   // Push the bytecode pointer on the stack.
+  Push(R5);
+
+  // Load and push frame pointer.
+  LoadFramePointer(R5);
   Push(R5);
 
   // Update top in the stack. Ugh. Complicated.
@@ -1995,6 +2017,10 @@ void InterpreterGeneratorARM::RestoreState() {
   __ ldr(R11, Address(R10, Program::kFalseObjectOffset));
   __ ldr(R8, Address(R10, Program::kNullObjectOffset));
   __ ldr(R10, Address(R10, Program::kTrueObjectOffset));
+
+  // Pop and store frame pointer.
+  Pop(R5);
+  StoreFramePointer(R5);
 
   // Pop current bytecode pointer from the stack.
   Pop(R5);

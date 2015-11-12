@@ -29,6 +29,7 @@ enum ScaleFactor {
   TIMES_1 = 0,
   TIMES_2 = 1,
   TIMES_4 = 2,
+  TIMES_WORD_SIZE = TIMES_4,
   TIMES_8 = 3
 };
 
@@ -234,6 +235,7 @@ class Assembler {
  public:
   INSTRUCTION_1(pushl, "pushl %rl", Register);
   INSTRUCTION_1(pushl, "pushl %a", const Address&);
+  INSTRUCTION_1(pushl, "pushl %i", const Immediate&);
 
   INSTRUCTION_1(popl, "popl %rl", Register);
   INSTRUCTION_1(popl, "popl %a", const Address&);

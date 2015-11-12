@@ -325,7 +325,7 @@ class HeapObject: public Object {
   inline static HeapObject* FromAddress(uword address);
 
   // Returns the true address of this object.
-  inline uword address() {
+  inline uword address() const {
     return reinterpret_cast<uword>(this) - kTag;
   }
 
@@ -1174,7 +1174,7 @@ class Stack: public BaseArray {
   inline Object* get(int index);
   inline void set(int index, Object* value);
 
-  inline Object** Pointer(int index);
+  inline Object** Pointer(int index) const;
   inline void SetTopFromPointer(Object** value);
 
   // Sizing.
@@ -1187,6 +1187,8 @@ class Stack: public BaseArray {
 
   // Casting.
   static inline Stack* cast(Object* obj);
+
+  void UpdateFramePointers(const Stack* old_stack);
 
   // Printing.
   void StackPrint();
@@ -2184,7 +2186,7 @@ void Stack::set_next(Object* value) {
   at_put(Stack::kNextOffset, value);
 }
 
-inline Object** Stack::Pointer(int index) {
+inline Object** Stack::Pointer(int index) const {
   return reinterpret_cast<Object**>(
       address() + Stack::kSize + (index * kPointerSize));
 }

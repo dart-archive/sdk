@@ -34,7 +34,6 @@ bool StackWalker::MoveNext() {
   frame_size_ = ComputeStackOffset(bcp, first);
   stack_offset_ -= (frame_size_ + 3);
 
-  ASSERT(stack_->get(stack_->top() + stack_offset_ + 1) == NULL);
   ASSERT(stack_->get(stack_->top() + stack_offset_ + 2) == NULL);
 
   return true;
@@ -80,7 +79,8 @@ void StackWalker::RestartCurrentFrame() {
   ASSERT(previous_bcp == Bytecode::PreviousBytecode(return_bcp));
   ASSERT(Bytecode::IsInvokeVariant(static_cast<Opcode>(*previous_bcp)));
   stack_->set(bcp_offset, reinterpret_cast<Object*>(previous_bcp));
-  stack_->set_top(bcp_offset);
+  // Set new top to bcp + 1; the fp.
+  stack_->set_top(bcp_offset + 1);
 }
 
 int StackWalker::StackDiff(uint8** bcp,
@@ -202,7 +202,8 @@ int StackWalker::ComputeStackOffset(uint8* end_bcp, bool include_last) {
 
 uint8* StackWalker::ComputeCatchBlock(Process* process,
                                       Stack* stack,
-                                      int* stack_delta) {
+                                      int* stack_delta_result,
+                                      Object*** frame_pointer_result) {
   StackWalker walker(process, stack);
   while (walker.MoveNext()) {
     Function* function = walker.function();
@@ -227,7 +228,9 @@ uint8* StackWalker::ComputeCatchBlock(Process* process,
         // emitted).
         int delta = - walker.stack_offset();
         delta -= 2 + walker.ComputeStackOffset(end_address, true);
-        *stack_delta = delta;
+        *stack_delta_result = delta;
+        *frame_pointer_result =
+            reinterpret_cast<Object**>(walker.frame_pointer());
         return end_address;
       }
     }

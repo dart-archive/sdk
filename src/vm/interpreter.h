@@ -127,7 +127,8 @@ extern "C" LookupCache::Entry* HandleLookupEntry(Process* process,
 
 extern "C" uint8* HandleThrow(Process* process,
                               Object* exception,
-                              int* stack_delta);
+                              int* stack_delta_result,
+                              Object*** frame_pointer_result);
 
 extern "C" void HandleEnterNoSuchMethod(Process* process);
 

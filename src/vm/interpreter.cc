@@ -51,12 +51,14 @@ class State {
 
   void SaveState() {
     Push(reinterpret_cast<Object*>(bcp_));
+    Push(reinterpret_cast<Object*>(fp_));
     process_->stack()->SetTopFromPointer(sp_);
   }
 
   void RestoreState() {
     Stack* stack = process_->stack();
     sp_ = stack->Pointer(stack->top());
+    fp_ = reinterpret_cast<Object**>(Pop());
     bcp_ = reinterpret_cast<uint8_t*>(Pop());
     ASSERT(bcp_ != NULL);
   }
@@ -85,6 +87,8 @@ class State {
   void Advance(int delta) { bcp_ += delta; }
   uint8* ComputeReturnAddress(int offset) { return bcp_ + offset; }
 
+  void SetFramePointer(Object** fp) { ASSERT(fp != NULL); fp_ = fp; }
+
   // Stack pointer related operations.
   Object* Top() { return *sp_; }
   void SetTop(Object* value) { *sp_ = value; }
@@ -107,12 +111,14 @@ class State {
 
   void PushReturnAddress(int offset) {
     Push(reinterpret_cast<Object*>(ComputeReturnAddress(offset)));
-    Push(NULL);
+    Push(reinterpret_cast<Object*>(fp_));
+    fp_ = sp_;
     Push(NULL);
   }
 
-  void PopReturnAddress() {
-    Drop(2);
+  void PopToReturnAddress() {
+    sp_ = fp_;
+    fp_ = reinterpret_cast<Object**>(Pop());
     Goto(reinterpret_cast<uint8*>(Pop()));
   }
 
@@ -124,6 +130,7 @@ class State {
   Process* const process_;
   Program* const program_;
   Object** sp_;
+  Object** fp_;
   uint8* bcp_;
 };
 
@@ -494,7 +501,7 @@ Interpreter::InterruptKind Engine::Interpret(
       Push(program()->ObjectFromFailure(Failure::cast(result)));
       Advance(kInvokeNativeLength);
     } else {
-      PopReturnAddress();
+      PopToReturnAddress();
       Drop(arity);
       Push(result);
     }
@@ -539,7 +546,7 @@ Interpreter::InterruptKind Engine::Interpret(
       Push(program()->ObjectFromFailure(Failure::cast(result)));
       Advance(kInvokeNativeYieldLength);
     } else {
-      PopReturnAddress();
+      PopToReturnAddress();
       Drop(arity);
       Object* null = program()->null_object();
       Push(null);
@@ -581,30 +588,24 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(Return);
-    int locals = ReadByte(1);
     int arguments = ReadByte(2);
     Object* result = Local(0);
-    Drop(locals);
-    PopReturnAddress();
+    PopToReturnAddress();
     Drop(arguments);
     Push(result);
   OPCODE_END();
 
   OPCODE_BEGIN(ReturnWide);
-    int locals = ReadInt32(1);
     int arguments = ReadByte(5);
     Object* result = Local(0);
-    Drop(locals);
-    PopReturnAddress();
+    PopToReturnAddress();
     Drop(arguments);
     Push(result);
   OPCODE_END();
 
   OPCODE_BEGIN(ReturnNull);
-    int locals = ReadByte(1);
     int arguments = ReadByte(2);
-    Drop(locals);
-    PopReturnAddress();
+    PopToReturnAddress();
     Drop(arguments);
     Push(program()->null_object());
   OPCODE_END();
@@ -861,8 +862,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(ExitNoSuchMethod);
     Object* result = Pop();
     word selector = Smi::cast(Pop())->value();
-    Drop(1);
-    PopReturnAddress();
+    PopToReturnAddress();
 
     // The result of invoking setters must be the assigned value,
     // even in the presence of noSuchMethod.
@@ -921,14 +921,20 @@ Process::StackCheckResult Engine::StackOverflowCheck(int size) {
 bool Engine::DoThrow(Object* exception) {
   // Find the catch block address.
   int stack_delta = 0;
-  uint8* catch_bcp = HandleThrow(process(), exception, &stack_delta);
+  Object** frame_pointer = NULL;
+  uint8* catch_bcp = HandleThrow(process(),
+                                 exception,
+                                 &stack_delta,
+                                 &frame_pointer);
   if (catch_bcp == NULL) return false;
+  ASSERT(frame_pointer != NULL);
   // Restore stack pointer and bcp.
   RestoreState();
+  SetFramePointer(frame_pointer);
   Goto(catch_bcp);
-  // The delta is computed given that bcp is pushed on the
+  // The delta is computed given that bcp and fp is pushed on the
   // stack. We have already pop'ed bcp as part of RestoreState.
-  Drop(stack_delta - 1);
+  Drop(stack_delta - 2);
   SetTop(exception);
   return true;
 }
@@ -959,14 +965,24 @@ void Engine::ValidateStack() {
   StackWalker walker(process(), process()->stack());
   Function::FromBytecodePointer(
       reinterpret_cast<uint8*>(process()->stack()->get(
-          process()->stack()->top())));
-  int computed_stack_size = 0;
+          process()->stack()->top() - 1)));
+  int computed_stack_size = 1;
   int last_arity = 0;
+  Object** fp = process()->stack()->Pointer(process()->stack()->top());
+  int frame_pointer_index = process()->stack()->top();
   while (walker.MoveNext()) {
     Function::FromBytecodePointer(walker.return_address());
     int index = process()->stack()->top() + walker.stack_offset();
     index++;
-    if (process()->stack()->get(index) != NULL) FATAL("Bad frame descriptor");
+    Object** next_fp = reinterpret_cast<Object**>(*fp);
+    if (next_fp != walker.frame_pointer()) {
+      FATAL2("Bad frame pointer, expected %p, got %p",
+             walker.frame_pointer(),
+             fp);
+    }
+    frame_pointer_index -= fp - next_fp;
+    if (frame_pointer_index != index) FATAL("Bad frame pointer");
+    fp = next_fp;
     index++;
     if (process()->stack()->get(index) != NULL) FATAL("Bad frame descriptor");
     // Return address + 2 empty slots.
@@ -974,6 +990,7 @@ void Engine::ValidateStack() {
     computed_stack_size += walker.frame_size();
     last_arity = walker.function()->arity();
   }
+  ASSERT(*fp == NULL);
   if (process()->stack()->top() != computed_stack_size + last_arity) {
     FATAL("Wrong stack height");
   }
@@ -1144,14 +1161,17 @@ LookupCache::Entry* HandleLookupEntry(Process* process,
   return process->LookupEntrySlow(primary, clazz, selector);
 }
 
-uint8* HandleThrow(Process* process, Object* exception, int* stack_delta) {
+uint8* HandleThrow(Process* process,
+                   Object* exception,
+                   int* stack_delta_result,
+                   Object*** frame_pointer_result) {
   Coroutine* current = process->coroutine();
   while (true) {
     // If we find a handler, we do a 2nd pass, unwind all coroutine stacks
     // until the handler, make the unused coroutines/stacks GCable and return
     // the handling bcp.
     uint8* catch_bcp = StackWalker::ComputeCatchBlock(
-        process, current->stack(), stack_delta);
+        process, current->stack(), stack_delta_result, frame_pointer_result);
     if (catch_bcp != NULL) {
       Coroutine* unused = process->coroutine();
       while (current != unused) {

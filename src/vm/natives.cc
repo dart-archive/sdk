@@ -909,9 +909,11 @@ static Process* SpawnProcessInternal(Program* program,
   stack->set(3, NULL);
   stack->set(4, NULL);
   stack->set(5, NULL);
-  // Finally push the bcp.
+  // Finally push the bcp and fp.
   stack->set(6, reinterpret_cast<Object*>(bcp));
-  stack->set_top(6);
+  Object** frame_pointer = stack->Pointer(4);
+  stack->set(7, reinterpret_cast<Object*>(frame_pointer));
+  stack->set_top(7);
 
   return child;
 }
@@ -1014,7 +1016,9 @@ NATIVE(CoroutineNewStack) {
   // Leave bcp at the kChangeStack instruction to make it look like a
   // suspended co-routine. bcp is incremented on resume.
   stack->set(7, reinterpret_cast<Object*>(bcp + 2));
-  stack->set_top(7);
+  Object** frame_pointer = stack->Pointer(3);
+  stack->set(8, reinterpret_cast<Object*>(frame_pointer));
+  stack->set_top(8);
   return stack;
 }
 
