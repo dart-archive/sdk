@@ -23,16 +23,6 @@ rule gyp-mbed
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
-rule update-version-gyp
-  command = $
-    python tools/update_version_gyp.py version.gyp
-
-build $
-    version.gyp: $
-    update-version-gyp $
-        tools/update_version_gyp.py $
-        .git/HEAD $
-
 build $
     out/DebugIA32/build.ninja $
     out/DebugIA32Asan/build.ninja $
