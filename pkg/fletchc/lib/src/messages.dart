@@ -315,12 +315,11 @@ String getMessage(DiagnosticKind kind) {
           "package> in session $sessionName'";
 
     case DiagnosticKind.compilerVersionMismatch:
-      // TODO(wibling): lukechurch: Is there advice we can give here?
-      // E.g. Consider upgrading your compiler? Do we have an easy place they
-      // can go to do that? Are we considering adding a tool to auto-upgrade?
-      return "Connection rejected because running compiler and SDK have "
+      return "Command failed because the running compiler and the "
+          "Fletch Command Line Interface (CLI) have "
           "different versions.\nCompiler version: '$userInput'\n"
-          "SDK version: '$additionalUserInput'.\n"
+          "CLI version: '$additionalUserInput'.\n"
+          "This can happen if you've recently updated you Fletch SDK."
           "Try running 'fletch quit' and retry the command.";
   }
 }
