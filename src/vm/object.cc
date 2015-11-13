@@ -10,11 +10,11 @@
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
 
+#include "src/vm/frame.h"
 #include "src/vm/intrinsics.h"
 #include "src/vm/natives.h"
 #include "src/vm/process.h"
 #include "src/vm/program.h"
-#include "src/vm/stack_walker.h"
 #include "src/vm/unicode.h"
 
 namespace fletch {
@@ -764,9 +764,10 @@ int SafeObjectPointerVisitor::Visit(HeapObject* object) {
   if (object->IsStack() && !process_->stacks_are_cooked()) {
     // To avoid visiting raw bytecode pointers lying on the stack we use a
     // stack walker.
-    StackWalker stack_walker(process_, Stack::cast(object));
-    while (stack_walker.MoveNext()) {
-      stack_walker.VisitPointersInFrame(visitor_);
+    Frame frame(Stack::cast(object));
+    while (frame.MovePrevious()) {
+      visitor_->VisitBlock(frame.FirstLocalAddress(),
+                           frame.LastLocalAddress() + 1);
     }
   } else {
     object->IteratePointers(visitor_);

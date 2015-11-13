@@ -1433,8 +1433,8 @@ class TransformInstancesProcessVisitor : public ProcessVisitor {
     process->IterateRoots(&pointer_visitor);
 
     ASSERT(!space->is_empty());
-    space->CompleteTransformations(&pointer_visitor, process);
-    immutable_space->CompleteTransformations(&pointer_visitor, process);
+    space->CompleteTransformations(&pointer_visitor);
+    immutable_space->CompleteTransformations(&pointer_visitor);
   }
 
  private:
@@ -1459,7 +1459,7 @@ void Session::TransformInstances() {
       program()->heap(), program()->shared_heap());
   program()->IterateRoots(&pointer_visitor);
   ASSERT(!space->is_empty());
-  space->CompleteTransformations(&pointer_visitor, NULL);
+  space->CompleteTransformations(&pointer_visitor);
 
   TransformInstancesProcessVisitor process_visitor(program()->shared_heap());
   program()->VisitProcesses(&process_visitor);

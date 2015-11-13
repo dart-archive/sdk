@@ -11,11 +11,11 @@
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/frame.h"
 #include "src/vm/heap.h"
 #include "src/vm/mark_sweep.h"
 #include "src/vm/object.h"
 #include "src/vm/storebuffer.h"
-#include "src/vm/stack_walker.h"
 
 #ifdef FLETCH_TARGET_OS_LK
 #include "lib/page_alloc.h"
@@ -364,7 +364,7 @@ void Space::CompleteScavengeMutable(PointerVisitor* visitor,
   }
 }
 
-void Space::CompleteTransformations(PointerVisitor* visitor, Process* process) {
+void Space::CompleteTransformations(PointerVisitor* visitor) {
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();
@@ -384,10 +384,10 @@ void Space::CompleteTransformations(PointerVisitor* visitor, Process* process) {
         // Therefore, we cannot simply iterate pointers in the stack because
         // that would look at the raw bytecode pointers as well. Instead we
         // iterate the actual pointers in each frame directly.
-        ASSERT(process != NULL);
-        StackWalker stack_walker(process, Stack::cast(object));
-        while (stack_walker.MoveNext()) {
-          stack_walker.VisitPointersInFrame(visitor);
+        Frame frame(Stack::cast(object));
+        while (frame.MovePrevious()) {
+          visitor->VisitBlock(frame.FirstLocalAddress(),
+                              frame.LastLocalAddress() + 1);
         }
         current += object->Size();
       } else {

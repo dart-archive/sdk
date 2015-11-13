@@ -16,7 +16,6 @@ class Heap;
 class HeapObject;
 class HeapObjectVisitor;
 class PointerVisitor;
-class Process;
 class ProgramHeapRelocator;
 class Space;
 class StoreBuffer;
@@ -137,7 +136,7 @@ class Space {
                                StoreBuffer* store_buffer);
 
   // Schema change support.
-  void CompleteTransformations(PointerVisitor* visitor, Process* process);
+  void CompleteTransformations(PointerVisitor* visitor);
 
   // Returns true if the address is inside this space.
   inline bool Includes(uword address) const;

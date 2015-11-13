@@ -1173,35 +1173,33 @@ static uint8* FindCatchBlock(Process* process,
                              Stack* stack,
                              int* stack_delta_result,
                              Object*** frame_pointer_result) {
-  Frame frame = Frame::FirstFrame(stack);
-  while (true) {
+  Frame frame(stack);
+  while (frame.MovePrevious()) {
     int offset = -1;
     Function* function = frame.FunctionFromByteCodePointer(&offset);
 
     // Skip if there are no catch blocks.
-    if (offset != -1) {
-      uint8* bcp = frame.ByteCodePointer();
-      uint8* range_bcp = function->bytecode_address_for(offset);
-      int count = Utils::ReadInt32(range_bcp);
-      range_bcp += 4;
-      const CatchBlock* block = reinterpret_cast<const CatchBlock*>(range_bcp);
-      for (int i = 0; i < count; i++) {
-        uint8* start_address = function->bytecode_address_for(block->start);
-        uint8* end_address = function->bytecode_address_for(block->end);
-        // The first hit is the one we use (due to the order they are
-        // emitted).
-        if (start_address < bcp && end_address > bcp) {
-          // Read the number of stack slots we need to pop.
-          int index = frame.FirstLocalIndex() + block->frame_size + 1;
-          *stack_delta_result = stack->top() - index;
-          *frame_pointer_result = frame.FramePointer();
-          return end_address;
-        }
-        block++;
+    if (offset == -1) continue;
+
+    uint8* bcp = frame.ByteCodePointer();
+    uint8* catch_block_address = function->bytecode_address_for(offset);
+    int count = Utils::ReadInt32(catch_block_address);
+    const CatchBlock* block =
+        reinterpret_cast<const CatchBlock*>(catch_block_address + 4);
+    for (int i = 0; i < count; i++) {
+      uint8* start_address = function->bytecode_address_for(block->start);
+      uint8* end_address = function->bytecode_address_for(block->end);
+      // The first hit is the one we use (due to the order they are
+      // emitted).
+      if (start_address < bcp && end_address > bcp) {
+        // Read the number of stack slots we need to pop.
+        int index = frame.FirstLocalIndex() + block->frame_size + 1;
+        *stack_delta_result = stack->top() - index;
+        *frame_pointer_result = frame.FramePointer();
+        return end_address;
       }
+      block++;
     }
-    if (frame.IsLastFrame()) break;
-    frame = frame.Previous();
   }
   return NULL;
 }

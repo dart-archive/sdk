@@ -39,24 +39,17 @@ namespace fletch {
 // A frame is used to navigate a stack, frame by frame.
 class Frame {
  public:
-  static Frame FirstFrame(Stack* stack) {
-    Object** top_pointer = stack->Pointer(stack->top());
-    Object** frame_pointer = reinterpret_cast<Object**>(*top_pointer);
-    return Frame(stack, frame_pointer, top_pointer - frame_pointer);
-  }
+  explicit Frame(Stack* stack)
+      : stack_(stack),
+        frame_pointer_(stack->Pointer(stack->top())),
+        size_(-1) { }
 
-  bool IsFirstFrame() const { return size_ == 2; }
-  bool IsLastFrame() const {
-    Object** previous_frame_pointer = PreviousFramePointer();
-    return *previous_frame_pointer == NULL;
-  }
-
-  Frame Previous() {
-    Object** previous_frame_pointer = PreviousFramePointer();
-    if (*previous_frame_pointer == NULL) UNREACHABLE();
-    return Frame(stack_,
-                 previous_frame_pointer,
-                 frame_pointer_ - previous_frame_pointer);
+  bool MovePrevious() {
+    Object** current_frame_pointer = frame_pointer_;
+    frame_pointer_ = PreviousFramePointer();
+    if (frame_pointer_ == NULL) return false;
+    size_ = current_frame_pointer - frame_pointer_;
+    return true;
   }
 
   uint8* ByteCodePointer() const {
@@ -79,7 +72,6 @@ class Frame {
 
   Function* FunctionFromByteCodePointer(
       int* frame_ranges_offset_result = NULL) const {
-    if (IsFirstFrame()) UNREACHABLE();
     uint8* bcp = ByteCodePointer();
     return Function::FromBytecodePointer(bcp, frame_ranges_offset_result);
   }
@@ -88,13 +80,15 @@ class Frame {
     return (frame_pointer_ - stack_->Pointer(0)) + 2;
   }
 
- private:
-  Frame(Stack* stack, Object** frame_pointer, word size)
-      : stack_(stack),
-        frame_pointer_(frame_pointer),
-        size_(size) {
+  Object** FirstLocalAddress() const {
+    return FramePointer() + 2;
   }
 
+  Object** LastLocalAddress() const {
+    return FramePointer() + size_ - 2;
+  }
+
+ private:
   Stack* stack_;
   Object** frame_pointer_;
   word size_;

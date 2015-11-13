@@ -6,6 +6,7 @@
 
 #include "src/shared/flags.h"
 
+#include "src/vm/frame.h"
 #include "src/vm/gc_thread.h"
 #include "src/vm/interpreter.h"
 #include "src/vm/links.h"
@@ -13,7 +14,6 @@
 #include "src/vm/process.h"
 #include "src/vm/process_queue.h"
 #include "src/vm/session.h"
-#include "src/vm/stack_walker.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -364,13 +364,13 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
       while (true) {
         Stack* stack = coroutine->stack();
 
-        StackWalker walker(process, stack);
-        int frame = 0;
-        while (walker.MoveNext()) {
-          Function* function = walker.function();
+        int index = 0;
+        Frame frame(stack);
+        while (frame.MovePrevious()) {
+          Function* function = frame.FunctionFromByteCodePointer();
           Print::Out("Frame % 2d: Function(%ld)\n",
-              frame, program->OffsetOf(function));
-          frame++;
+              index, program->OffsetOf(function));
+          index++;
         }
 
         if (coroutine->has_caller()) {
