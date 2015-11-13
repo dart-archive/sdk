@@ -9,12 +9,26 @@ import 'infrastructure.dart';
 import 'documentation.dart' show
     showDocumentation;
 
+import '../driver/developer.dart' show
+    discoverDevices;
+
 const Action showAction = const Action(
     show, showDocumentation, requiresSession: true,
-    requiredTarget: TargetKind.LOG);
+    supportedTargets: const <TargetKind>[TargetKind.LOG, TargetKind.DEVICES]);
 
 Future<int> show(AnalyzedSentence sentence, VerbContext context) {
-  return context.performTaskInWorker(new ShowLogTask());
+  var task;
+  switch (sentence.target.kind) {
+    case TargetKind.LOG:
+      task = new ShowLogTask();
+      break;
+    case TargetKind.DEVICES:
+      task = new ShowDevicesTask();
+      break;
+    default:
+      throwInternalError("Unexpected ${sentence.target}");
+  }
+  return context.performTaskInWorker(task);
 }
 
 class ShowLogTask extends SharedTask {
@@ -31,5 +45,22 @@ class ShowLogTask extends SharedTask {
 
 Future<int> showLogTask() async {
   print(SessionState.current.getLog());
+  return 0;
+}
+
+class ShowDevicesTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+
+  const ShowDevicesTask();
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<Command> commandIterator) {
+    return showDevicesTask();
+  }
+}
+
+Future<int> showDevicesTask() async {
+  await discoverDevices();
   return 0;
 }
