@@ -96,10 +96,9 @@ final String envJavaHome = Platform.environment['JAVA_HOME'];
 final String envBuildbotJavaHome = Platform.environment['BUILDBOT_JAVA_HOME'];
 
 String get javaHome {
-  if (envJavaHome == null) {
-    throw "Service tests for Java require JAVA_HOME to be set.";
-  }
-  return envJavaHome;
+  if (envJavaHome != null) return envJavaHome;
+  if (envBuildbotJavaHome != null) return envBuildbotJavaHome;
+  throw "Service tests for Java require JAVA_HOME to be set.";
 }
 
 const bool isAsan = buildAsan;

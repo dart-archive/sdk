@@ -48,7 +48,9 @@ test_vm_connection/testCloseAfterProcessRun: Fail
 # Old servicec backend fails on these tests; Issue 235
 servicec/good_type_parameter_1: Fail
 
-# Skip all java service tests.
+# Only run java service tests on x64 linux.
+[ $arch != x64 || $system != linux ]
+
 service_tests/*_java: Skip
 
 [ $arch != ia32 && $arch != x64 ]
