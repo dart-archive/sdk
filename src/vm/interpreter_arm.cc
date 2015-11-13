@@ -1133,7 +1133,6 @@ void InterpreterGeneratorARM::DoThrowAfterSaveState() {
   __ neg(R3, R3);
   __ mov(R5, R0);
   __ add(R6, R6, Operand(R3, TIMES_WORD_SIZE));
-  __ add(R6, R6, Immediate(2 * kWordSize));
 
   StoreLocal(R7, 0);
   Dispatch(0);

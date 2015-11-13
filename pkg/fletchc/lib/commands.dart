@@ -523,7 +523,7 @@ class PushNewFunction extends Command {
         ..addUint32(size)
         ..addUint8List(bytes);
     if (catchRanges.isNotEmpty) {
-      buffer.addUint32(catchRanges.length ~/ 2);
+      buffer.addUint32(catchRanges.length ~/ 3);
       catchRanges.forEach(buffer.addUint32);
     }
     buffer.sendOn(sink, code);

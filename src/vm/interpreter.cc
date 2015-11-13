@@ -17,6 +17,7 @@
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 #include "src/vm/stack_walker.h"
+#include "src/vm/frame.h"
 
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(var, exp) \
   Object* var = (exp);                                                   \
@@ -934,7 +935,7 @@ bool Engine::DoThrow(Object* exception) {
   Goto(catch_bcp);
   // The delta is computed given that bcp and fp is pushed on the
   // stack. We have already pop'ed bcp as part of RestoreState.
-  Drop(stack_delta - 2);
+  Drop(stack_delta);
   SetTop(exception);
   return true;
 }
@@ -1161,6 +1162,51 @@ LookupCache::Entry* HandleLookupEntry(Process* process,
   return process->LookupEntrySlow(primary, clazz, selector);
 }
 
+// Overlay this struct on the catch table to interpret the bytes.
+struct CatchBlock {
+  int start;
+  int end;
+  int frame_size;
+};
+
+static uint8* FindCatchBlock(Process* process,
+                             Stack* stack,
+                             int* stack_delta_result,
+                             Object*** frame_pointer_result) {
+  Frame frame = Frame::FirstFrame(stack);
+  while (true) {
+    int offset = -1;
+    Function* function = frame.FunctionFromByteCodePointer(&offset);
+
+    // Skip if there are no catch blocks.
+    if (offset != -1) {
+      uint8* bcp = frame.ByteCodePointer();
+      uint8* range_bcp = function->bytecode_address_for(offset);
+      int count = Utils::ReadInt32(range_bcp);
+      range_bcp += 4;
+      const CatchBlock* block = reinterpret_cast<const CatchBlock*>(range_bcp);
+      for (int i = 0; i < count; i++) {
+        uint8* start_address = function->bytecode_address_for(block->start);
+        uint8* end_address = function->bytecode_address_for(block->end);
+        // The first hit is the one we use (due to the order they are
+        // emitted).
+        if (start_address < bcp && end_address > bcp) {
+          // Read the number of stack slots we need to pop.
+          int index = frame.FirstLocalIndex() + block->frame_size + 1;
+          *stack_delta_result = stack->top() - index;
+          *frame_pointer_result = frame.FramePointer();
+          return end_address;
+        }
+        block++;
+      }
+    }
+    if (frame.IsLastFrame()) break;
+    frame = frame.Previous();
+  }
+  return NULL;
+}
+
+
 uint8* HandleThrow(Process* process,
                    Object* exception,
                    int* stack_delta_result,
@@ -1170,7 +1216,7 @@ uint8* HandleThrow(Process* process,
     // If we find a handler, we do a 2nd pass, unwind all coroutine stacks
     // until the handler, make the unused coroutines/stacks GCable and return
     // the handling bcp.
-    uint8* catch_bcp = StackWalker::ComputeCatchBlock(
+    uint8* catch_bcp = FindCatchBlock(
         process, current->stack(), stack_delta_result, frame_pointer_result);
     if (catch_bcp != NULL) {
       Coroutine* unused = process->coroutine();

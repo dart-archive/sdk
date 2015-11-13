@@ -76,7 +76,8 @@ class BytecodeAssembler {
   void addCatchFrameRange(int start, int end) {
     catchRanges
         ..add(start)
-        ..add(end);
+        ..add(end)
+        ..add(stackSize);
   }
 
   void loadConst(int id) {

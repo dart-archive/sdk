@@ -1165,7 +1165,7 @@ void InterpreterGeneratorX86::DoThrowAfterSaveState() {
   __ movl(ECX, Address(ESP, 4 * kWordSize));
   __ negl(ECX);
   __ movl(ESI, EAX);
-  __ leal(EDI, Address(EDI, ECX, TIMES_WORD_SIZE, 2 * kWordSize));
+  __ leal(EDI, Address(EDI, ECX, TIMES_WORD_SIZE));
   StoreLocal(EBX, 0);
   Dispatch(0);
 }
