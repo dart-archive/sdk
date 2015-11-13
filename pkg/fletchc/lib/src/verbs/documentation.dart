@@ -119,9 +119,10 @@ const String attachDocumentation = """
 """;
 
 const String runDocumentation = """
-   run [<file>]
-             Run <file> on the Fletch VM. Compile <file> if neeed. If no <file>
-             is given, run the previously compiled file.
+   run [<file>] [in session remote]
+             Run <file> on the Fletch VM. If no <file> is given, run the
+             previous file. Defaults to running on the local PC;
+             use 'in session remote' to run remotely.
 """;
 
 const String endDocumentation = """
@@ -141,8 +142,8 @@ const String exportDocumentation = """
 """;
 
 const String quitDocumentation = """
-   quit      Quits the fletch background process. Warning: will terminate all
-             fletch sessions currently running
+   quit      Quits the Fletch background process, and terminates all
+             Fletch sessions currently running.
 """;
 
 const String showDocumentation = """
