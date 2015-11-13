@@ -29,6 +29,8 @@ override_dh_auto_configure:
 	cd fletch; \
 	mkdir .git; \
 	touch .git/HEAD; \
+	mkdir .git/logs; \
+	touch .git/logs/HEAD; \
 	ninja; \
 	cd ..
 
