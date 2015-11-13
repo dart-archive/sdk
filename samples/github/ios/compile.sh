@@ -66,9 +66,10 @@ if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
 fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
-    ninja -C out/ReleaseXARM libfletch
-    lipo -create -output "$DIR/libfletch.a" \
-         out/ReleaseIA32/libfletch.a \
+    ninja -C out/ReleaseIA32IOS libfletch.a
+    ninja -C out/ReleaseXARM libfletch.a
+    lipo -create -output "$DIR/libfletchvm.a" \
+         out/ReleaseIA32IOS/libfletch.a \
          out/ReleaseXARM/libfletch.a
 fi
 

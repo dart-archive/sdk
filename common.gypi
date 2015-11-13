@@ -41,6 +41,8 @@
         # stderr as a failed command. This should be replaced by a custom script
         # that retains stderr in case the command actually fails.
         'ios_sdk_path%': '<!(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)',
+        'ios_sim_sdk_path%':
+	    '<!(xcrun --sdk iphonesimulator --show-sdk-path 2>/dev/null)',
       }],
       [ 'OS=="win"', {
         'third_party_libs_path%': '<(DEPTH)/third_party/libs/win',
@@ -578,6 +580,26 @@
             '-L/FLETCH_CLANG',
           ],
         },
+      },
+
+      'fletch_ios_sim': {
+        'abstract': 1,
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'xcode_settings': {
+              'OTHER_CPLUSPLUSFLAGS' : [
+                 '-isysroot',
+                 '<(ios_sim_sdk_path)',
+                 '-miphoneos-version-min=7.0',
+              ],
+              'OTHER_CFLAGS' : [
+                 '-isysroot',
+                 '<(ios_sim_sdk_path)',
+                 '-miphoneos-version-min=7.0',
+              ],
+            },
+	  }],
+	],
       },
 
       'fletch_disable_live_coding': {

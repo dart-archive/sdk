@@ -17,6 +17,13 @@
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
       },
 
+      'ReleaseIA32IOS': {
+        'inherit_from': [
+	  'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_ios_sim',
+	  'fletch_clang',
+	],
+      },
+
       'ReleaseIA32Android': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
         'defines': [ 'FLETCH_TARGET_ANDROID' ],
