@@ -22,9 +22,6 @@ import 'create_verb.dart' show
 import 'debug_verb.dart' show
     debugAction;
 
-import 'x_discover_verb.dart' show
-    discoverAction;
-
 import 'export_verb.dart' show
     exportAction;
 
@@ -105,22 +102,21 @@ class Action {
 /// used to print an error message.
 const Map<String, Action> commonActions = const <String, Action>{
   "help": helpAction,
-  "attach": attachAction,
   "run": runAction,
-  "export": exportAction,
+  "show": showAction,
+  "quit": quitAction,
 };
 
 /// Uncommon verbs aren't displayed in the normal help screen.
 ///
 /// These verbs are displayed when running `fletch help all`.
 const Map<String, Action> uncommonActions = const <String, Action>{
+  "attach": attachAction,
   "compile": compileAction,
   "create": createAction,
   "debug": debugAction,
-  "x-discover": discoverAction,
+  "export": exportAction,
   "x-end": endAction,
   "x-servicec": servicecAction,
   "x-upgrade": upgradeAction,
-  "quit": quitAction,
-  "show": showAction,
 };

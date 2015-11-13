@@ -231,6 +231,9 @@ class SentenceParser {
       case "log":
         return makeTarget(TargetKind.LOG);
 
+      case "devices":
+        return makeTarget(TargetKind.DEVICES);
+
       default:
         return new ErrorTarget(DiagnosticKind.expectedTargetButGot, word);
     }
@@ -357,6 +360,7 @@ enum TargetKind {
   CLASSES,
   CONTINUE,
   DELETE_BREAKPOINT,
+  DEVICES,
   DISASM,
   FIBERS,
   FILE,
