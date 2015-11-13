@@ -108,75 +108,77 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.verbRequiresNoSession:
       return "Can't perform '$verb' in a session. "
-          "Try removing 'in session $sessionName'";
+          "Try removing 'in session $sessionName'.";
 
     case DiagnosticKind.cantPerformVerbIn:
-      return "Can't perform '$verb' in '$target'";
+      return "Can't perform '$verb' in '$target'.";
 
     case DiagnosticKind.cantPerformVerbTo:
-      return "Can't perform '$verb' to '$target'";
+      return "Can't perform '$verb' to '$target'.";
 
     case DiagnosticKind.cantPerformVerbWith:
-      return "Can't perform '$verb' with '$target'";
+      return "Can't perform '$verb' with '$target'.";
 
     case DiagnosticKind.verbRequiresSessionTarget:
       return "Can't perform '$verb' without a session "
-          "target. Try adding 'session <SESSION_NAME>' to the commmand line";
+          "target. Try adding 'session <SESSION_NAME>' to the commmand line.";
 
     case DiagnosticKind.verbRequiresFileTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
-      return "Can't perform '$verb' without a file, but got '$target'";
+      return "Can't perform '$verb' without a file, but got '$target', which "
+        "is not a file target. Try adding 'file' in front.";
 
     case DiagnosticKind.verbRequiresSocketTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
-      return "Can't perform '$verb' without a socket, but got '$target'";
+      return "Can't perform '$verb' without a socket, but got '$target', "
+        "which is not a socket. Try adding 'tcp_socket' in front.";
 
     case DiagnosticKind.verbDoesNotSupportTarget:
-      return "'$verb' can't be performed on '$target'";
+      return "'$verb' can't be performed on '$target'.";
 
     case DiagnosticKind.noSuchSession:
       return "Couldn't find a session called '$sessionName'. "
-          "Try running 'fletch create session $sessionName'";
+          "Try running 'fletch create session $sessionName'.";
 
     case DiagnosticKind.sessionAlreadyExists:
       return "Couldn't create session named '$sessionName'; "
           "A session called $sessionName already exists.";
 
     case DiagnosticKind.noFileTarget:
-      return "No file provided. Try adding <FILE_NAME> to the command line";
+      return "No file provided. Try adding <FILE_NAME> to the command line.";
 
     case DiagnosticKind.noTcpSocketTarget:
       return "No TCP socket provided. "
-          "Try adding 'tcp_socket HOST:PORT' to the command line";
+          "Try adding 'tcp_socket HOST:PORT' to the command line.";
 
     case DiagnosticKind.expectedAPortNumber:
-      return "Expected a port number, but got '$userInput'";
+      return "Expected a port number, but got '$userInput'.";
 
     case DiagnosticKind.noAgentFound:
-      return "No agent found in session";
+      return "No agent found in this session.";
 
     case DiagnosticKind.upgradeInvalidPackageName:
       return "A fletch-agent package must have a name of the form\n"
         "  fletch-agent_<version>_<platform>.deb.\n"
-        "Try renaming the file to match this pattern";
+        "Try renaming the file to match this pattern.";
 
     case DiagnosticKind.socketAgentConnectError:
       return "Unable to establish connection to Fletch Agent on "
-          "$address: $message";
+          "$address: $message.";
 
     case DiagnosticKind.socketVmConnectError:
       return
-          "Unable to establish connection to Fletch VM on $address: $message";
+          "Unable to establish connection to Fletch VM on $address: $message.";
 
     case DiagnosticKind.socketAgentReplyError:
-      return "Received invalid reply from Fletch Agent on $address: $message";
+      return "Received invalid reply from Fletch Agent on $address: $message.";
 
     case DiagnosticKind.socketVmReplyError:
-      return "Received invalid reply from Fletch VM on $address: $message";
+      return "Received invalid reply from Fletch VM on $address: $message.";
 
     case DiagnosticKind.attachToVmBeforeRun:
       return "Unable to run program without being attached to a VM. "
-          "Try running 'fletch attach'";
+          "Try running 'fletch attach'.";
 
     case DiagnosticKind.compileBeforeRun:
       return "No program to run. Try running 'fletch compile'";
@@ -187,11 +189,11 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.unknownOption:
       // TODO(lukechurch): Review UX.
-      return "Unknown option: '$userInput'";
+      return "Unknown option: '$userInput'.";
 
     case DiagnosticKind.missingRequiredArgument:
       // TODO(lukechurch): Consider a correction message.
-      return "Option '${DiagnosticParameter.userInput}' needs an argument";
+      return "Option '${DiagnosticParameter.userInput}' needs an argument.";
 
     case DiagnosticKind.missingSessionName:
       // TODO(karlklose,ahe): provide support to list choices here.
@@ -200,94 +202,95 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.unexpectedArgument:
       // TODO(lukechurch): Review UX
       return "Option '${DiagnosticParameter.userInput}' doesn't take an "
-          "argument. Try removing '=' from the command line";
+          "argument. Try removing '=' from the command line.";
 
     case DiagnosticKind.settingsNotAMap:
-      return "$uri: isn't a map";
+      return "$uri: isn't a map.";
 
     case DiagnosticKind.settingsNotJson:
-      return "$uri: unable to decode as JSON: $message";
+      return "$uri: unable to decode as JSON: $message.";
 
     case DiagnosticKind.settingsPackagesNotAString:
-      return "$uri: 'packages' value isn't a String";
+      return "$uri: 'packages' value isn't a String.";
 
     case DiagnosticKind.settingsOptionsNotAList:
-      return "$uri: 'options' value isn't a List";
+      return "$uri: 'options' value isn't a List.";
 
     case DiagnosticKind.settingsOptionNotAString:
-      return "$uri: found 'options' entry '$userInput' which isn't a String";
+      return "$uri: found 'options' entry '$userInput' which isn't a String.";
 
     case DiagnosticKind.settingsDeviceTypeNotAString:
       return
-        "$uri: found 'device_type' entry '$userInput' which isn't a String";
+        "$uri: found 'device_type' entry '$userInput' which isn't a String.";
 
     case DiagnosticKind.settingsDeviceTypeUnrecognized:
       return
         "$uri: found 'device_type' entry '$userInput' which is not one of"
-        "the recognized device types 'embedded', 'mobile'";
+        "the recognized device types 'embedded', 'mobile'.";
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return "$uri: compile-time constants should be in "
-          "the 'constants' map, not in 'options': '$userInput'";
+          "the 'constants' map, not in 'options': '$userInput'.";
 
     case DiagnosticKind.settingsConstantsNotAMap:
       return "$uri: 'constants' value isn't a Map";
 
     case DiagnosticKind.settingsUnrecognizedConstantValue:
       return "$uri: found 'constant[$userInput]' value '$additionalUserInput' "
-          "isn't a bool, int, or String";
+          "isn't a bool, int, or String.";
 
     case DiagnosticKind.settingsUnrecognizedKey:
-      return "$uri: unexpected key '$userInput'";
+      return "$uri: unexpected key '$userInput'.";
 
     case DiagnosticKind.settingsDeviceAddressNotAString:
-      return "$uri: 'device_address' value '$userInput' isn't a String";
+      return "$uri: 'device_address' value '$userInput' isn't a String.";
 
     case DiagnosticKind.unknownAction:
-      return "'$userInput' isn't a supported action. Try running 'fletch help'";
+      return "'$userInput' isn't a supported action. "
+        "Try running 'fletch help'.";
 
     case DiagnosticKind.extraArguments:
-      return "Unrecognized arguments: $userInput";
+      return "Unrecognized arguments: $userInput.";
 
     case DiagnosticKind.duplicatedIn:
-      return "More than one 'in' clause: $preposition";
+      return "More than one 'in' clause: $preposition.";
 
     case DiagnosticKind.duplicatedTo:
       // TODO(ahe): This is getting a bit tedious by now. We really need to
       // figure out if we need to require exact prepostions.
-      return "More than one 'to' clause: $preposition";
+      return "More than one 'to' clause: $preposition.";
 
     case DiagnosticKind.duplicatedWith:
-      return "More than one 'with' clause: $preposition";
+      return "More than one 'with' clause: $preposition.";
 
     case DiagnosticKind.verbDoesntSupportTarget:
-      return "Can't perform '$verb' with '$target'";
+      return "Can't perform '$verb' with '$target'.";
 
     case DiagnosticKind.verbRequiresNoToFile:
-      return "Can't perform '$verb' to '$userInput'";
+      return "Can't perform '$verb' to '$userInput'.";
 
     case DiagnosticKind.verbRequiresNoWithFile:
-      return "Can't perform '$verb' with '$userInput'";
+      return "Can't perform '$verb' with '$userInput'.";
 
     case DiagnosticKind.verbRequiresTarget:
-      return "Can't perform '$verb' without '$requiredTarget'";
+      return "Can't perform '$verb' without a '$requiredTarget'.";
 
     case DiagnosticKind.verbRequiresTargetButGot:
-      return "Can't perform '$verb' without '$requiredTarget', "
-          "but got: '$target'";
+      return "Can't perform '$verb' without a '$requiredTarget', "
+          "but got: '$target'.";
 
     case DiagnosticKind.expectedTargetButGot:
       return "Expected 'session(s)', 'class(s)', 'method(s)', 'file(s)', "
-          "or 'all', but got: '$userInput'. Did you mean 'file $userInput'";
+          "or 'all', but got: '$userInput'. Did you mean 'file $userInput'?";
 
     case DiagnosticKind.quitTakesNoArguments:
-      return "Unexpected arguments. Try running 'fletch quit'";
+      return "Unexpected arguments. Try running 'fletch quit'.";
 
     case DiagnosticKind.busySession:
-      return "Session '$sessionName' is in use, please try again shortly";
+      return "Session '$sessionName' is in use, please try again shortly.";
 
     case DiagnosticKind.terminatedSession:
-      return "Session '$sessionName' was terminated";
+      return "Session '$sessionName' was terminated.";
 
     case DiagnosticKind.handShakeFailed:
       // TODO(ager): lukechurch: Should this ever happen during normal usage?
@@ -312,7 +315,7 @@ String getMessage(DiagnosticKind kind) {
           "Compiler version: '$userInput'\n"
           "Device version: '$additionalUserInput'.\n"
           "Try running 'fletch x-upgrade agent with file <agent debian "
-          "package> in session $sessionName'";
+          "package> in session $sessionName'.";
 
     case DiagnosticKind.compilerVersionMismatch:
       return "Command failed because the running compiler and the "
