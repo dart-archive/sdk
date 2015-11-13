@@ -365,7 +365,7 @@ Future<Address> readAddressFromUser(
         String line = UTF8.decode(command.data).trim();
         if (line.isEmpty && devices.isEmpty) {
           commandSender.sendStdout("\n");
-          devices = await discoverDevices();
+          devices = await discoverDevices(prefixWithNumber: true);
           if (devices.isEmpty) {
             commandSender.sendStdout("No Fletch capable devices was found.\n");
             commandSender.sendStdout(message);
@@ -818,8 +818,10 @@ Future<int> invokeCombinedTasks(
   return task2(commandSender, commandIterator);
 }
 
-Future<List<InternetAddress>> discoverDevices() async {
-  print("Looking for Fletch capable devices (will look for 5 seconds)...");
+Future<List<InternetAddress>> discoverDevices(
+    {bool prefixWithNumber: false}) async {
+  const ipV4AddressLength = 'xxx.xxx.xxx.xxx'.length;
+  print("Looking for Fletch capable devices (will search for 5 seconds)...");
   MDnsClient client = new MDnsClient();
   await client.start();
   List<InternetAddress> result = [];
@@ -832,8 +834,10 @@ Future<List<InternetAddress>> discoverDevices() async {
         InternetAddress address = a.address;
         if (!address.isLinkLocal) {
           result.add(address);
-          print("${result.length}: "
-                "Device $target on address ${address.address}.");
+          var prefix = prefixWithNumber ? "${result.length}: " : "";
+          print("${prefix}Device at "
+                "${address.address.padRight(ipV4AddressLength + 1)} "
+                "$target");
         }
       }
     }

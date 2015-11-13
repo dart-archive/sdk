@@ -146,8 +146,12 @@ const String quitDocumentation = """
 """;
 
 const String showDocumentation = """
+   show devices
+             Show all Fletch capable devices connected
+             directly or available on the network
+
    show log [in session <name>]
-             Display log for given session
+             Show log for given session
 """;
 
 // TODO(lukechurch): Review UX.
