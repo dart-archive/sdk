@@ -45,7 +45,11 @@ MOCK_SERVER_SNAPSHOT="$TARGET_DIR/github_mock_service.snapshot"
 
 set -x
 
+cd $FLETCH_DIR
+
 ninja -C out/ReleaseIA32
+
+./tools/persistent_process_info.sh -k
 
 # Generate dart service file and other immi files with the compiler.
 if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
@@ -62,7 +66,6 @@ if [[ $# -eq 0 ]] || [[ "$1" == "immi" ]]; then
 fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
-    cd $FLETCH_DIR
     ninja -C out/ReleaseXARM libfletch
     lipo -create -output "$DIR/libfletch.a" \
          out/ReleaseIA32/libfletch.a \
@@ -70,7 +73,6 @@ if [[ $# -eq 0 ]] || [[ "$1" == "fletch" ]]; then
 fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
-    cd $FLETCH_DIR
     $DART -c --packages=.packages \
           -Dsnapshot="$DIR/$PROJ.snapshot" \
           -Dpackages="$TARGET_PKG_FILE" \
