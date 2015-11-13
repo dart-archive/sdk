@@ -9,6 +9,9 @@ import 'infrastructure.dart';
 import 'documentation.dart' show
     showDocumentation;
 
+import '../diagnostic.dart' show
+    throwInternalError;
+
 import '../driver/developer.dart' show
     discoverDevices;
 
