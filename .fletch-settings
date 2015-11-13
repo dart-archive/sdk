@@ -32,5 +32,9 @@
 
   // Type of device to compile for. Currently the available types are:
   // "mobile" and "embedded".
-  "device_type": "mobile"
+  "device_type": "mobile",
+
+  // Support for incremental compilation, one of "none", "production", or
+  // "experimental".
+  "incremental_mode": "none"
 }

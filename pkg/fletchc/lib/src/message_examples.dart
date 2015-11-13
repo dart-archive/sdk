@@ -223,6 +223,12 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.settingsDeviceTypeUnrecognized:
       return <Example>[new SettingsExample('{"device_type":"fisk"}')];
 
+    case DiagnosticKind.settingsIncrementalModeNotAString:
+      return <Example>[new SettingsExample('{"incremental_mode":1}')];
+
+    case DiagnosticKind.settingsIncrementalModeUnrecognized:
+      return <Example>[new SettingsExample('{"incremental_mode":"fisk"}')];
+
     case DiagnosticKind.unknownAction:
       return <Example>[
           new CommandLineExample(<String>['blah']),

@@ -65,6 +65,22 @@ const List<String> INCREMENTAL_OPTIONS = const <String>[
     '--no-source-maps', // TODO(ahe): Remove this.
 ];
 
+enum IncrementalMode {
+  /// Incremental compilation is turned off
+  none,
+
+  /// Incremental compilation is turned on for a limited set of features that
+  /// are known to be fully implemented. Initially, this limited set of
+  /// features will be instance methods without signature changes. As other
+  /// features mature, they will be enabled in this mode.
+  production,
+
+  /// All incremental features are turned on even if we know that we don't
+  /// always generate correct code. Initially, this covers features such as
+  /// schema changes.
+  experimental,
+}
+
 class IncrementalCompiler {
   final Uri libraryRoot;
   final Uri patchRoot;
@@ -77,6 +93,7 @@ class IncrementalCompiler {
   final Map<String, dynamic> environment;
   final IncrementalCompilerContext _context;
   final List<Category> categories;
+  final IncrementalMode support;
 
   FletchCompilerImplementation _compiler;
 
@@ -91,7 +108,8 @@ class IncrementalCompiler {
        this.options,
        this.outputProvider,
        this.environment,
-       this.categories})
+       this.categories,
+       this.support: IncrementalMode.none})
       : _context = new IncrementalCompilerContext(diagnosticHandler) {
     // if (libraryRoot == null) {
     //   throw new ArgumentError('libraryRoot is null.');
@@ -106,6 +124,15 @@ class IncrementalCompiler {
       throw new ArgumentError('diagnosticHandler is null.');
     }
     _context.incrementalCompiler = this;
+  }
+
+  bool get isProductionModeEnabled {
+    return support == IncrementalMode.production ||
+        support == IncrementalMode.experimental;
+  }
+
+  bool get isExperimentalModeEnabled {
+    return support == IncrementalMode.experimental;
   }
 
   LibraryElement get mainApp => _compiler.mainApp;
@@ -234,4 +261,33 @@ class IncrementalCompilationFailed {
   const IncrementalCompilationFailed(this.reason);
 
   String toString() => "Can't incrementally compile program.\n\n$reason";
+}
+
+String unparseIncrementalMode(IncrementalMode mode) {
+  switch (mode) {
+    case IncrementalMode.none:
+      return "none";
+
+    case IncrementalMode.production:
+      return "production";
+
+    case IncrementalMode.experimental:
+      return "experimental";
+  }
+  throw "Unhandled $mode";
+}
+
+IncrementalMode parseIncrementalMode(String text) {
+  switch (text) {
+    case "none":
+      return IncrementalMode.none;
+
+    case "production":
+        return IncrementalMode.production;
+
+    case "experimental":
+      return IncrementalMode.experimental;
+
+  }
+  return null;
 }

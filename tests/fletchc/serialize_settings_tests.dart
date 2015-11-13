@@ -11,10 +11,10 @@ import 'dart:convert';
 
 import 'package:fletchc/src/driver/developer.dart' show
     Address,
+    DeviceType,
+    IncrementalMode,
     Settings,
     parseSettings;
-
-import 'package:fletchc/src/device_type.dart';
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show
     fileUri;
@@ -31,6 +31,7 @@ void testSettingsRoundTrip(Settings settings) {
   Expect.mapEquals(before.constants, after.constants);
   Expect.equals(before.deviceAddress, after.deviceAddress);
   Expect.equals(before.deviceType, after.deviceType);
+  Expect.equals(before.incrementalMode, after.incrementalMode);
 }
 
 Future<Null> main() async {
@@ -40,5 +41,6 @@ Future<Null> main() async {
       ["a", "b", "c"],
       {"a": "A", "b": "b"},
       new Address("localhost", 8080),
-      DeviceType.embedded));
+      DeviceType.embedded,
+      IncrementalMode.experimental));
 }

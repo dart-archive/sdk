@@ -64,7 +64,8 @@ class FletchRunner {
           "bar": "baz",
         },
         agentAddress,
-        DeviceType.mobile);
+        DeviceType.mobile,
+        IncrementalMode.none);
   }
 
   Future<Null> run(List<String> arguments) async {
@@ -128,7 +129,8 @@ Future<Null> export(
         <String>[],
         <String, String>{},
         null,
-        null);
+        null,
+        IncrementalMode.none);
   } else {
     settings = await readSettings(fileUri(fletchSettingsFile, Uri.base));
   }

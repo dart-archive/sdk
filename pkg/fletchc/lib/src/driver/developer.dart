@@ -79,7 +79,13 @@ import '../verbs/infrastructure.dart' show
     throwFatalError;
 
 import '../../incremental/fletchc_incremental.dart' show
-    IncrementalCompilationFailed;
+    IncrementalCompilationFailed,
+    IncrementalMode,
+    parseIncrementalMode,
+    unparseIncrementalMode;
+
+export '../../incremental/fletchc_incremental.dart' show
+    IncrementalMode;
 
 import '../../fletch_compiler.dart' show fletchDeviceType;
 
@@ -105,6 +111,9 @@ import '../device_type.dart' show
     DeviceType,
     parseDeviceType,
     unParseDeviceType;
+
+export '../device_type.dart' show
+    DeviceType;
 
 import '../please_report_crash.dart' show
     pleaseReportCrash;
@@ -235,12 +244,12 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
 }
 
 Future<int> compile(Uri script, SessionState state) async {
-  Uri firstScript = state.script;
-  if (!const bool.fromEnvironment("fletchc.enable-incremental-compilation")) {
+  IncrementalCompiler compiler = state.compiler;
+  if (!compiler.isProductionModeEnabled) {
     state.resetCompiler();
   }
+  Uri firstScript = state.script;
   List<FletchDelta> previousResults = state.compilationResults;
-  IncrementalCompiler compiler = state.compiler;
 
   FletchDelta newResult;
   try {
@@ -907,13 +916,15 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
   final Map<String, String> constants = <String, String>{};
   Address deviceAddress;
   DeviceType deviceType;
+  IncrementalMode incrementalMode = IncrementalMode.none;
   userSettings.forEach((String key, value) {
     switch (key) {
       case "packages":
         if (value != null) {
           if (value is! String) {
             throwFatalError(
-                DiagnosticKind.settingsPackagesNotAString, uri: settingsUri);
+                DiagnosticKind.settingsPackagesNotAString, uri: settingsUri,
+                userInput: '$value');
           }
           packages = settingsUri.resolve(value);
         }
@@ -923,7 +934,8 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         if (value != null) {
           if (value is! List) {
             throwFatalError(
-                DiagnosticKind.settingsOptionsNotAList, uri: settingsUri);
+                DiagnosticKind.settingsOptionsNotAList, uri: settingsUri,
+                userInput: "$value");
           }
           for (var option in value) {
             if (option is! String) {
@@ -977,12 +989,30 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
       case "device_type":
         if (value != null) {
           if (value is! String) {
-            throwFatalError(DiagnosticKind.settingsDeviceTypeNotAString,
+            throwFatalError(
+                DiagnosticKind.settingsDeviceTypeNotAString,
                 uri: settingsUri, userInput: '$value');
           }
           deviceType = parseDeviceType(value);
           if (deviceType == null) {
-            throwFatalError(DiagnosticKind.settingsDeviceTypeUnrecognized,
+            throwFatalError(
+                DiagnosticKind.settingsDeviceTypeUnrecognized,
+                uri: settingsUri, userInput: '$value');
+          }
+        }
+        break;
+
+      case "incremental_mode":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(
+                DiagnosticKind.settingsIncrementalModeNotAString,
+                uri: settingsUri, userInput: '$value');
+          }
+          incrementalMode = parseIncrementalMode(value);
+          if (incrementalMode == null) {
+            throwFatalError(
+                DiagnosticKind.settingsIncrementalModeUnrecognized,
                 uri: settingsUri, userInput: '$value');
           }
         }
@@ -995,7 +1025,8 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
     }
   });
-  return new Settings(packages, options, constants, deviceAddress, deviceType);
+  return new Settings(
+      packages, options, constants, deviceAddress, deviceType, incrementalMode);
 }
 
 class Settings {
@@ -1009,22 +1040,27 @@ class Settings {
 
   final DeviceType deviceType;
 
+  final IncrementalMode incrementalMode;
+
   const Settings(
       this.packages,
       this.options,
       this.constants,
       this.deviceAddress,
-      this.deviceType);
+      this.deviceType,
+      this.incrementalMode);
 
   const Settings.empty()
-    : this(null, const <String>[], const <String, String>{}, null, null);
+      : this(null, const <String>[], const <String, String>{}, null, null,
+             IncrementalMode.none);
 
   Settings copyWith({
       Uri packages,
       List<String> options,
       Map<String, String> constants,
       Address deviceAddress,
-      DeviceType deviceType}) {
+      DeviceType deviceType,
+      IncrementalMode incrementalMode}) {
 
     if (packages == null) {
       packages = this.packages;
@@ -1041,12 +1077,16 @@ class Settings {
     if (deviceType == null) {
       deviceType = this.deviceType;
     }
+    if (incrementalMode == null) {
+      incrementalMode = this.incrementalMode;
+    }
     return new Settings(
         packages,
         options,
         constants,
         deviceAddress,
-        deviceType);
+        deviceType,
+        incrementalMode);
   }
 
   String toString() {
@@ -1055,18 +1095,31 @@ class Settings {
         "options: $options, "
         "constants: $constants, "
         "device_address: $deviceAddress, "
-        "device_type: $deviceType)";
+        "device_type: $deviceType, "
+        "incremental_mode: $incrementalMode)";
   }
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      "packages": packages == null ? null : "$packages",
-      "options": options,
-      "constants": constants,
-      "device_address": deviceAddress,
-      "device_type": (deviceType == null)
-          ? null
-          : unParseDeviceType(deviceType),
-    };
+    Map<String, dynamic> result = <String, dynamic>{};
+
+    void addIfNotNull(String name, value) {
+      if (value != null) {
+        result[name] = value;
+      }
+    }
+
+    addIfNotNull("packages", packages == null ? null : "$packages");
+    addIfNotNull("options", options);
+    addIfNotNull("constants", constants);
+    addIfNotNull("device_address", deviceAddress);
+    addIfNotNull(
+        "device_type",
+        deviceType == null ? null : unParseDeviceType(deviceType));
+    addIfNotNull(
+        "incremental_mode",
+        incrementalMode == null
+            ? null : unparseIncrementalMode(incrementalMode));
+
+    return result;
   }
 }

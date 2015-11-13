@@ -40,7 +40,8 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
       <String>[],
       <String, String>{},
       null,
-      null);
+      null,
+      IncrementalMode.none);
 
   SessionState state = createSessionState("test", settings);
 

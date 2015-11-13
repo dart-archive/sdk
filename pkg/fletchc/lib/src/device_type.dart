@@ -28,5 +28,5 @@ String unParseDeviceType(DeviceType deviceType) {
     case DeviceType.embedded: return "embedded";
     case DeviceType.mobile: return "mobile";
   }
-  throw new ArgumentError("Unrecognized device type");
+  throw new ArgumentError("Unrecognized device type '$deviceType'");
 }

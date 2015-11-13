@@ -489,6 +489,10 @@ class LibraryUpdater extends FletchFeatures {
       PartialElement element,
       ScopeContainerElement container,
       ScopeContainerElement syntheticContainer) {
+    if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
+      return cannotReuse(
+          element, "Adding elements requires 'experimental' mode");
+    }
     if (element is PartialFunctionElement) {
       addFunction(element, container);
       return true;
@@ -553,6 +557,10 @@ class LibraryUpdater extends FletchFeatures {
   bool canReuseRemovedElement(
       PartialElement element,
       ScopeContainerElement container) {
+    if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
+      return cannotReuse(
+          element, "Removing elements requires 'experimental' mode");
+    }
     if (element is PartialFunctionElement) {
       removeFunction(element);
       return true;
@@ -777,9 +785,18 @@ class LibraryUpdater extends FletchFeatures {
             after,
             "Unable to handle when signature of '${after.name}' changes");
       }
+      if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
+        return cannotReuse(
+            after, "Signature change requires 'experimental' mode");
+      }
       return true;
     }
     logVerbose('Simple modification of ${after} detected');
+    if (!before.isInstanceMember &&
+        !_context.incrementalCompiler.isExperimentalModeEnabled) {
+      return cannotReuse(
+          after, "Non-instance member requires 'experimental' mode");
+    }
     updates.add(new FunctionUpdate(compiler, before, after));
     return true;
   }
@@ -797,6 +814,11 @@ class LibraryUpdater extends FletchFeatures {
       return cannotReuse(after, "Class has no body.");
     }
     if (isTokenBetween(diffToken, node.beginToken, body.beginToken.next)) {
+      if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
+        return cannotReuse(
+            after,
+            "Changing a class header requires requires 'experimental' mode");
+      }
       logVerbose('Class header modified in ${after}');
       updates.add(new ClassUpdate(compiler, before, after));
       before.forEachLocalMember((ElementX member) {

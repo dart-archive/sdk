@@ -24,8 +24,9 @@ enum DiagnosticKind {
   handShakeFailed,
   internalError,
   missingRequiredArgument,
-  missingToFile,
   missingSessionName,
+  missingToFile,
+  noAgentFound,
   noFileTarget,
   noSuchSession,
   noTcpSocketTarget,
@@ -34,17 +35,17 @@ enum DiagnosticKind {
   settingsCompileTimeConstantAsOption,
   settingsConstantsNotAMap,
   settingsDeviceAddressNotAString,
+  settingsDeviceTypeNotAString,
+  settingsDeviceTypeUnrecognized,
+  settingsIncrementalModeNotAString,
+  settingsIncrementalModeUnrecognized,
   settingsNotAMap,
   settingsNotJson,
   settingsOptionNotAString,
-  settingsDeviceTypeNotAString,
-  settingsDeviceTypeUnrecognized,
   settingsOptionsNotAList,
   settingsPackagesNotAString,
   settingsUnrecognizedConstantValue,
   settingsUnrecognizedKey,
-  noAgentFound,
-  upgradeInvalidPackageName,
   socketAgentConnectError,
   socketAgentReplyError,
   socketVmConnectError,
@@ -53,6 +54,7 @@ enum DiagnosticKind {
   unexpectedArgument,
   unknownAction,
   unknownOption,
+  upgradeInvalidPackageName,
   verbDoesNotSupportTarget,
   verbDoesntSupportTarget,
   verbRequiresFileTarget,
@@ -211,22 +213,32 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: unable to decode as JSON: $message.";
 
     case DiagnosticKind.settingsPackagesNotAString:
-      return "$uri: 'packages' value isn't a String.";
+      return "$uri: 'packages' value '$userInput' isn't a String.";
 
     case DiagnosticKind.settingsOptionsNotAList:
-      return "$uri: 'options' value isn't a List.";
+      return "$uri: 'options' value '$userInput' isn't a List.";
+
+    case DiagnosticKind.settingsDeviceTypeNotAString:
+      return "$uri: 'device_type' value '$userInput' isn't a String.";
+
+    case DiagnosticKind.settingsIncrementalModeNotAString:
+      return "$uri: 'incremental_mode' value '$userInput' isn't a String.";
 
     case DiagnosticKind.settingsOptionNotAString:
       return "$uri: found 'options' entry '$userInput' which isn't a String.";
 
     case DiagnosticKind.settingsDeviceTypeNotAString:
       return
-        "$uri: found 'device_type' entry '$userInput' which isn't a String.";
+          "$uri: found 'device_type' entry '$userInput' which isn't a String.";
 
     case DiagnosticKind.settingsDeviceTypeUnrecognized:
-      return
-        "$uri: found 'device_type' entry '$userInput' which is not one of"
-        "the recognized device types 'embedded', 'mobile'.";
+      return "$uri: found 'device_type' entry '$userInput' which is not one of "
+          "the recognized device types 'embedded', 'mobile'.";
+
+    case DiagnosticKind.settingsIncrementalModeUnrecognized:
+      return "$uri: found 'incremental_mode' entry '$userInput' which is not "
+          "one of the recognized modes 'none', 'production', or "
+          "'experimental'.";
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return "$uri: compile-time constants should be in "

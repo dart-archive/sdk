@@ -51,8 +51,9 @@ import 'package:compiler/src/io/source_file.dart' show
     StringSourceFile;
 
 import 'package:fletchc/incremental/fletchc_incremental.dart' show
+    IncrementalCompilationFailed,
     IncrementalCompiler,
-    IncrementalCompilationFailed;
+    IncrementalMode;
 
 import 'package:fletchc/commands.dart' show
     Command,
@@ -113,14 +114,26 @@ Future<Null> main(List<String> arguments) async {
     testCount += skip;
     skippedCount += skip;
 
-    testNamesToRun = tests.keys.skip(skip);
+    testNamesToRun = tests.keys.skip(skip).expand((String name) {
+      return ["experimental/$name", "production/$name"];
+    });
   } else {
     testNamesToRun = arguments;
   }
-  for (var testName in testNamesToRun) {
+  for (String testName in testNamesToRun) {
+    IncrementalMode incrementalMode;
+    if (testName.startsWith("production/")) {
+      incrementalMode = IncrementalMode.production;
+      testName = testName.substring("production/".length);
+    } else if (testName.startsWith("experimental/")) {
+      incrementalMode = IncrementalMode.experimental;
+      testName = testName.substring("experimental/".length);
+    } else {
+      throw "Unable to compute incremental support level from '$testName'";
+    }
     EncodedResult test = tests[testName];
     try {
-      await compileAndRun(testName, test);
+      await compileAndRun(testName, test, incrementalMode: incrementalMode);
     } catch (e, s) {
       print("Test '$testName' failed");
       rethrow;
@@ -145,9 +158,12 @@ void updateSummary() {
       "($skippedCount skipped, $updateFailedCount failed)\n\n");
 }
 
-compileAndRun(String testName, EncodedResult encodedResult) async {
+compileAndRun(
+    String testName,
+    EncodedResult encodedResult,
+    {IncrementalMode incrementalMode}) async {
   print("Test '$testName'");
-  IncrementalTestHelper helper = new IncrementalTestHelper();
+  IncrementalTestHelper helper = new IncrementalTestHelper(incrementalMode);
   TestSession session =
       await TestSession.spawnVm(helper.compiler, testName: testName);
 
@@ -624,7 +640,9 @@ class BytesSink implements Sink<List<int>> {
 Future<Map<String, NoArgFuture>> listTests() {
   Map<String, NoArgFuture> result = <String, NoArgFuture>{};
   tests.forEach((String name, EncodedResult test) {
-    result['incremental/$name'] = () => main(<String>[name]);
+    for (String testName in ["experimental/$name", "production/$name"]) {
+      result['incremental/$testName'] = () => main(<String>[testName]);
+    }
   });
   return new Future<Map<String, NoArgFuture>>.value(result);
 }
@@ -643,7 +661,7 @@ class IncrementalTestHelper {
       this.inputProvider,
       this.compiler);
 
-  factory IncrementalTestHelper() {
+  factory IncrementalTestHelper(IncrementalMode incrementalMode) {
     Uri packageConfig = Uri.base.resolve('.packages');
     IoInputProvider inputProvider = new IoInputProvider(packageConfig);
     FormattingDiagnosticHandler diagnosticHandler =
@@ -652,7 +670,8 @@ class IncrementalTestHelper {
         packageConfig: packageConfig,
         inputProvider: inputProvider,
         diagnosticHandler: diagnosticHandler,
-        outputProvider: new OutputProvider());
+        outputProvider: new OutputProvider(),
+        support: incrementalMode);
     return new IncrementalTestHelper.internal(
         packageConfig,
         inputProvider,

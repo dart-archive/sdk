@@ -7,26 +7,79 @@ zone_helper/testAlwaysFails: Fail, OK # This is a test of this suite, failure is
 self/testNeverCompletes: Timeout # This is a test of this suite, timeout is expected.
 
 # Stored closures not updated
-incremental/stored_closure: Fail
-incremental/stored_instance_tearoff: Fail
+incremental/*/stored_closure: Fail
+incremental/*/stored_instance_tearoff: Fail
 
 # Missing parameter stub
-incremental/call_instance_tear_off_named: Fail
-incremental/call_named_arguments_1: Fail
-incremental/call_named_arguments_2: Fail
+incremental/*/call_instance_tear_off_named: Fail
+incremental/*/call_named_arguments_1: Fail
+incremental/*/call_named_arguments_2: Fail
 
 # Missing support for multiple libraries
-incremental/multiple_libraries: Fail
+incremental/*/multiple_libraries: Fail
 
 # Received PushFromMap command which referes to a non-existent map entry
-incremental/same_tokens_variant: Fail
+incremental/*/same_tokens_variant: Fail
 
 # Update to existing class not correctly detected (we end up trying to modify a
 # new class -> should not happen).
-incremental/compile_time_error_hides_field: Fail
+incremental/*/compile_time_error_hides_field: Fail
 
 # Bad 'field' count on FletchPatchClassBuilder (does not contain new fields).
-incremental/add_field_and_remove_subclass: Fail
+incremental/*/add_field_and_remove_subclass: Fail
+
+# Most things don't work in production mode yet.
+incremental/production/add_class: Fail
+incremental/production/add_instance_field: Fail
+incremental/production/add_instance_method: Fail
+incremental/production/add_static_method: Fail
+incremental/production/add_top_level_const_field: Fail
+incremental/production/add_top_level_method: Fail
+incremental/production/bad_diagnostics: Fail
+incremental/production/bad_stack_trace_repro: Fail
+incremental/production/change_in_part: Fail
+incremental/production/change_optional_arguments: Fail
+incremental/production/change_supertype: Fail
+incremental/production/closure: Fail
+incremental/production/compile_time_error_002: Fail
+incremental/production/compile_time_error_field_becomes_removed_function: Fail
+incremental/production/compound_constants: Fail
+incremental/production/constants: Fail
+incremental/production/constants_of_new_classes: Fail
+incremental/production/fix_compile_time_error_in_field: Fail
+incremental/production/hello_world: Fail
+incremental/production/instance_field_end: Fail
+incremental/production/instance_field_middle: Fail
+incremental/production/interceptor_classes: Fail
+incremental/production/main_args: Fail
+incremental/production/newly_instantiated_class: Fail
+incremental/production/newly_instantiated_class_X: Fail
+incremental/production/newly_instantiated_class_with_fields: Fail
+incremental/production/newly_instantiated_subclases_two_updates: Fail
+incremental/production/newly_instantiated_superclasses_two_updates: Fail
+incremental/production/no_closure: Fail
+incremental/production/preserving_identity_hashcode: Fail
+incremental/production/remove_class: Fail
+incremental/production/remove_class_with_field_and_subclass: Fail
+incremental/production/remove_class_with_static_method: Fail
+incremental/production/remove_instance_field: Fail
+incremental/production/remove_instance_method: Fail
+incremental/production/remove_instance_method_super_access: Fail
+incremental/production/remove_static_method: Fail
+incremental/production/remove_top_level_method: Fail
+incremental/production/same_tokens: Fail
+incremental/production/signature_change_instance_method: Fail
+incremental/production/signature_change_static_method: Fail
+incremental/production/signature_change_top_level_method: Fail
+incremental/production/source_maps_no_throw: Fail
+incremental/production/subclass_schema_1: Fail
+incremental/production/subclass_schema_2: Fail
+incremental/production/super_classes_of_directly_instantiated: Fail
+incremental/production/super_schema: Fail
+incremental/production/two_updates: Fail
+incremental/production/update_dependencies: Fail
+incremental/production/update_dependencies_recoverable_compile_time_error: Fail
+incremental/production/update_dependencies_unrecoverable_compile_time_error: Fail
 
 # Incorrectly failing servicec tests
 servicec/bad_field_4: Fail  # Issue 293
