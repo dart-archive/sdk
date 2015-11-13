@@ -259,13 +259,13 @@ Future<int> compile(Uri script, SessionState state) async {
       newResult = compiler.computeInitialDelta();
     } else {
       try {
-        print("Compiling difference from $firstScript to $script");
+        state.log("Compiling difference from $firstScript to $script");
         newResult = await compiler.compileUpdates(
             previousResults.last.system, <Uri, Uri>{firstScript: script},
-            logTime: print, logVerbose: print);
+            logTime: state.log, logVerbose: state.log);
       } on IncrementalCompilationFailed catch (error) {
-        print(error);
-        print("Attempting full compile...");
+        state.log(error);
+        state.log("Attempting full compile...");
         state.resetCompiler();
         state.script = script;
         await compiler.compile(script);
@@ -456,7 +456,9 @@ SessionState createSessionState(
       nativesJson: nativesJson);
 
   return new SessionState(
-      name, compilerHelper, compilerHelper.newIncrementalCompiler(), settings);
+      name, compilerHelper,
+      compilerHelper.newIncrementalCompiler(settings.incrementalMode),
+      settings);
 }
 
 Future<int> run(SessionState state, {String testDebuggerCommands}) async {

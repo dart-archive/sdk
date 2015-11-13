@@ -43,7 +43,8 @@ import 'src/fletch_compiler_implementation.dart' show
 import 'fletch_system.dart';
 
 import 'incremental/fletchc_incremental.dart' show
-    IncrementalCompiler;
+    IncrementalCompiler,
+    IncrementalMode;
 
 import 'src/guess_configuration.dart' show
     executable,
@@ -271,6 +272,7 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
 
   /// Create a new instance of [IncrementalCompiler].
   IncrementalCompiler newIncrementalCompiler(
+      IncrementalMode support,
       {List<String> options: const <String>[]}) {
     return new IncrementalCompiler(
         libraryRoot: _compiler.libraryRoot,
@@ -283,7 +285,8 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
         options: options,
         outputProvider: _compiler.userOutputProvider,
         environment: _compiler.environment,
-        categories: categories);
+        categories: categories,
+        support: support);
   }
 }
 
