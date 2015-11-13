@@ -10,20 +10,19 @@ for embedded devices. It is powered by the [Dart
 language](https://www.dartlang.org/docs/dart-up-and-running/ch02.html) and a
 fast, lean runtime.
 
-This page will take you through getting the Fletch platform installed on your
-local developer PC so that you can run and write Fletch programs that target
-embedded devices. Note that the current early version of Fletch only supports a
-single embedded device -- the Raspberry Pi 2 -- and the only supported
-client operating systems supported for development are MacOS and Linux (sorry,
-no Windows support).
+This page walks you through running your first program on Fletch. Note that this
+early version of Fletch only supports a single embedded device -- the Raspberry
+Pi 2 -- and that the only supported client operating systems supported for
+development are MacOS and Linux (sorry, no Windows support).
 
-If you just want to get a look at what Fletch programs look like, take a peek at
-our [samples page](samples.html).
+If you just want to see what Fletch programs look like, take a peek at our
+[samples page](samples.html).
 
 * [What you will need](#what-you-will-need)
 * [Installing the SDK](#installing-the-sdk)
 * [Running your first program](#running-your-first-program)
 * [Preparing your Raspberry Pi 2](#preparing-your-raspberry-pi-2)
+* [Connecting your Raspberry Pi 2 to the network](#connecting-your-raspberry-pi-2-to-the-network)
 * [Running on the Raspberry Pi 2](#running-on-the-raspberry-pi-2)
 * [Next steps](#next-steps)
 
@@ -31,16 +30,14 @@ our [samples page](samples.html).
 
 To develop embedded programs with Fletch, you will need the following:
 
-* A developer PC where you write the programs
+* A developer PC (running MacOS or Linux) where you write the programs
 
-* A Raspberry Pi 2 embedded computer for running the programs
+* A Raspberry Pi 2 embedded device for running the programs
 
-* A MicroSD card and some kind of SD card reader to hold the operating system for
- the Raspberry Pi 2
+* A MicroSD card to hold the operating system for
+ the Raspberry Pi 2, and some kind of SD card reader
 
-* An extra network plug on your developer PC, or a USB network adapter + an
- Ethernet cable you can connect between your developer PC and your Raspberry Pi
- 2
+* A network connection between the developer PC and the Raspberry Pi 2
 
 * Optional: A breadboard and a collection of components for running some of
  the samples (will be discussed later)
@@ -55,7 +52,7 @@ matches the OS of the PC you will be using for development:
 * [Fletch SDK for MacOS (64-bit)](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-macos-x64-release.zip)
 * [Fletch SDK for Linux (64-bit)](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-linux-x64-release.zip)
 
-Unzip this, and make sure that the Fletch command is in the path by typing the
+Unzip the SDK, and add the Fletch command to the path by typing the
 below in a terminal window:
 
 ~~~
@@ -64,7 +61,7 @@ unzip ./Downloads/fletch-sdk-macos-x64-release.zip
 export "PATH=$PATH:$HOME/fletch-sdk/bin"
 ~~~
 
-Test if the Fletch program works; it should print a version number to the
+Test if the Fletch command works; it should print a version number to the
 console:
 
 ~~~
@@ -77,12 +74,13 @@ Let’s go ahead and run our first Fletch program. This is a simple program that
 prints Hello. In your command line type:
 
 ~~~
-cd $HOME/fletch-sdk/samples/general/
-fletch run hello.dart
+cd $HOME/fletch-sdk/
+fletch run ./samples/general/hello.dart
 ~~~
 
-You should see a message that says ```Created settings file...```, and then a
-message like this (the machine name in the end will be different):
+This runs the program in hello.dart on your local machine. You should see a
+message that says ```Created settings file...```, and then output resembling
+this:
 
 ~~~
 Hello from Darwin running on michael-pc2.
@@ -94,114 +92,124 @@ plugin](https://github.com/dart-atom/dartlang/). Pretty easy to read, right?
 (Note: you will get some Analyzer warnings in Atom as we don't fully support it
 yet. You can ignore those.)
 
+### Fletch and sessions
+
 But what actually happened when we asked the ```fletch``` command to run
-`hello.dart`? By default ```fletch``` is connected to a local session,
+`hello.dart`? By default ```fletch``` is connected to a *local session*,
 which is connected to a local VM (Virtual Machine) running on your developer PC.
 When you ask ```fletch``` to run the program, it compiles the program to byte
 code, and then passes it to the local Fletch VM for execution. The VM passes
-back the result, and fletch prints it to your command line.
+back the result, and Fletch prints it to your command line.
 
 ![Fletch architecture diagram](https://storage.googleapis.com/fletch-archive/images/Fletch-architecture.png)
 
-Now let’s get things running on your Raspberry!
+Now let’s get things running in a *remote session* that is connected to your
+Raspberry Pi 2!
 
 ## Preparing your Raspberry Pi 2
 
-*Note*: If you already have a working Raspberry Pi 2 with a recent Raspbian
-image, then you can skip to step 2.
+First we need to prepare an SD card with an image that contains the standard
+Raspbian operating system, and the Fletch binaries for Raspberry Pi 2.
 
-### Step 1: Raspbian operating system
+This step uses a script that automates the download of Raspbian, and performs
+the needed configuration. If you prefer to configure the image manually, see the
+[manual install instructions](manual-install.html).
 
-In this first step we will get a copy of the Raspbian operating system, and get
-it written to your SD card. You can skip this step if you already have Raspbian
-running. Otherwise follow these steps to get the image installed:
-
-* Download the zip file containing 'Raspbian Jessie' from the [Raspbian download
- page](https://www.raspberrypi.org/downloads/raspbian/).
-* Unzip the file by typing this in a termnal window:
-  * On Mac: ```ditto -x -k 2015-09-24-raspbian-jessie.zip .```
-  * On Linux: ```unzip 2015-09-24-raspbian-jessie.zip```
-* Follow the steps to [get the .img file onto your SD
- Card](https://www.raspberrypi.org/documentation/installation/installing-images/README.md).
-
-### Step 2: Configure the IP address for the Raspberry Pi 2
-
-We need to enable IP communication between your developer PC and your Raspberry
-Pi. You can either connect your Raspberry to your router (via a cable or WiFi),
-or you can add a second Ethernet adapter to your developer PC and connect to the
-Raspberry Pi directly via an Ethernet cable.
-
-There are several ways you can configure the IP number of the Raspberry:
-
-* *Option 1*: If you have your Raspberry connected to a monitor, then you can use this approach:
-  * Boot the Raspberry
-  * After boot enter ```sudo ip show addr``` in a terminal prompt on the Raspberry.Note down the IP as we will be using it below.
-  * If it does not have an IP, configure a static IP.
-
-* *Option 2*: If you are on a Linux developer PC, you can also configure the image directly from your developer PC.
-  * Mount the SD card
-  * Enter the following in a console: ```$HOME/fletch-sdk/platforms/raspberry-pi2/setup-ip.sh <path to SD card's boot partition>```
-
-* *Option 3*: If you are on a Mac developer PC, you can connect directly to the Raspberry Pi via an USB Network adapter connected to the Raspberry Pi via a networking cable, and the following configuration steps:
-  * Turn off your Raspberry Pi
-  * Open System Preferences and pick the Network icon
-  * Plug the USB Ethernet adapter into your Mac
-  * Change the IPv4 option to ```Manually```
-  * Enter the IP Address ```192.168.2.1```
-  * Go back to System Preferences and pick the Sharing icon. Enable sharing of Internet for the USB Ethernet Adapter
-  * Turn your Raspberry Pi back on
-  * After a little while you should be able to ping the Raspberry Pi at ```192.168.2.2```
-
-### Step 3: Install Fletch binaries
-
-**Note**: In the steps below, replace ```192.168..``` with whatever IP address you configured above.
-
-The last step is to install the Fletch runtime on the Raspberry Pi (see the
-right-hand side of the architecture diagram above). Use the following commands.
-
-A. Copy the fletch-agent package to the Raspberry Pi 2 (the default password for
-user 'pi' on Raspbian is 'raspberry'):
+Start by opening a terminal window, and enter the following command (*note*: you
+will be prompted to enter your password as the script performs system level
+operations):
 
 ~~~
-cd $HOME/fletch-sdk
-scp ./platforms/raspberry-pi2/fletch-agent*.deb pi@192.168..:/home/pi/
+cd $HOME/fletch-sdk/
+./platforms/raspberry_pi/flash-sd-card
 ~~~
 
-B. Install the package:
+The script will take you through the following steps:
+
+1. *Specify which SD card to use*: You will be asked to remove all SD cards, and
+then insert *just* the one you wish to use for Fletch. ***Important***:
+Everything on this SD card will be erased during the installation process.
+
+1. *Specify device name*: The name your Raspberry Pi 2 device will be given on
+the network.
+
+1. *Specify IP address*: If you are using automatically allocated IP addresses
+assigned by a router with DHCP just press enter. To specify a static IP, for
+example when using a direct connection (see below), enter the desired IP
+address.
+
+1. *Downloading*: Download of the Raspbian base image: This will take 5-10
+minutes.
+
+1. *Flashing*: Flashing of the image onto the SD card. This will also take 5-10
+minutes.
+
+## Connecting your Raspberry Pi 2 to the network
+
+Once the steps in the script are completed, and you see the ```Finished flashing
+the SD card``` message, remove the SD card from your PC and insert it into the
+Raspberry Pi 2.
+
+Next, we need to ensure your PC can communicate with the Raspberry over the
+network.
+
+### Option 1: Router-based connection
+
+In this option, both your PC and Raspberry are connected to the same networking
+router.
+
+1. Connect the Raspberry to your router with an Ethernet cable.
+
+1. Connect your PC to the same router.
+
+### Option 2: Direct connection
+
+If you do not wish to use a router, or if the Raspberry is not permitted to join
+your network, you can connect it directly to your PC.
+
+1. Connect the Raspberry to your PC with an Ethernet cable. If your PC does not
+have an empty Ethernet port, you can use an USB Ethernet adapter.
+
+### Testing the connection
+
+After connecting using option 1 or 2, test the connection by running this
+command:
 
 ~~~
-ssh pi@192.168.. sudo dpkg --install /home/pi/fletch-agent*.deb
+fletch show devices
 ~~~
 
-You should see something like ```Unpacking fletch-agent...``` on your screen.
+If the connection is working, you should see output resembling ```Device at
+192.168.1.2     raspberrypi.local```.
 
 ## Running on the Raspberry Pi 2
 
-The Fletch platform is now available on the Raspberry Pi 2. Let’s make our Hello
-program run again, this time on the Raspberry Pi 2. Type the following command
-on your local developer PC:
+Let’s make our Hello program run again, this time on the Raspberry Pi 2. All we
+need is to specify to the ```fletch run``` command that we want to run in a
+remote session. Type the following on your local developer PC:
 
 ~~~
 cd $HOME/fletch-sdk/
 fletch run ./samples/general/hello.dart in session remote
 ~~~
 
-The first time you run in the remote session you will be asked to enter the IP
-address. Enter the IP you picked in the previous step, e.g. ```192.168.2.2```.
+The first time you run in the remote session you will be asked to specify the IP
+address. Select from the list of devices discovered on the network, or manually
+enter the IP address, e.g. ```192.168.2.2```.
 
-You should then see the following output on your screen:
+You should see output resembling this on your screen:
 
 ~~~
 Hello from Linux running on raspberrypi.
 ~~~
 
-Did you notice the difference? As before Fletch compiled the hello.dart program
-to byte code, but this time rather than passing it to the local VM via the local
-session it passed it to the Raspberry Pi via the remote session. On the
-Raspberry Pi, the Fletch VM Agent made sure that a VM (Virtual Machine) was spun
-up, and the program was executed on it. The result of the program (the printing
-to the console) was passed back by the VM to the Fletch command on the developer
-PC, and it was printed to the local console.
+Did you notice the difference from when we ran in the local session? As before
+Fletch compiled the hello.dart program to byte code, but this time rather than
+passing it to the local VM via the local session it passed it to the Raspberry
+Pi via the remote session. On the Raspberry Pi, the Fletch VM Agent made sure
+that a VM (Virtual Machine) was spun up, and the program was executed on it. The
+result of the program (the printing to the console) was passed back by the VM to
+the Fletch command on the developer PC, and it was printed to the local console.
 
 ## Next steps
 
