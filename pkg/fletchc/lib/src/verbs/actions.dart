@@ -22,9 +22,6 @@ import 'create_verb.dart' show
 import 'debug_verb.dart' show
     debugAction;
 
-import 'x_discover_verb.dart' show
-    discoverAction;
-
 import 'export_verb.dart' show
     exportAction;
 
@@ -117,7 +114,6 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "compile": compileAction,
   "create": createAction,
   "debug": debugAction,
-  "x-discover": discoverAction,
   "x-end": endAction,
   "x-servicec": servicecAction,
   "x-upgrade": upgradeAction,
