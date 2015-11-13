@@ -2352,4 +2352,30 @@ void main() {
 >>>>
 }
 ''',
+
+r'''
+add_unused_enum_class
+==> main.dart.patch <==
+<<<< []
+==== {"messages": [], "compileUpdatesShouldThrow":1}
+// TODO(ahe): Shouldn't throw
+enum E { e0 }
+>>>>
+
+main() {
+}
+''',
+
+r'''
+remove_unused_enum_class
+==> main.dart.patch <==
+<<<< []
+enum E { e0 }
+==== {"messages": [], "compileUpdatesShouldThrow":1}
+// TODO(ahe): Shouldn't throw
+>>>>
+
+main() {
+}
+''',
 ];

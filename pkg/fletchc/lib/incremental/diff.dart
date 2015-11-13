@@ -52,16 +52,30 @@ class Difference {
   }
 }
 
+void checkCanComputeDifference(modelx.ElementX element) {
+  if (element.isMixinApplication) {
+    // TODO(ahe): issue 91
+    throw new IncrementalCompilationFailed(
+        "Mixin applications not supported: $element");
+  }
+  if (element.isClass) {
+    modelx.ClassElementX cls = element;
+    if (cls.isEnumClass) {
+      throw new IncrementalCompilationFailed("Enums not supported: $element");
+    }
+  }
+  if (element.declarationSite == null && !element.isSynthesized) {
+    throw new IncrementalCompilationFailed(
+        "Unable to compute diff for $element");
+  }
+}
+
 List<Difference> computeDifference(
     ScopeContainerElement before,
     ScopeContainerElement after) {
   Map<String, DeclarationSite> beforeMap = <String, DeclarationSite>{};
   before.forEachLocalMember((modelx.ElementX element) {
-    if (element.isMixinApplication) {
-      // TODO(ahe): issue 91
-      throw new IncrementalCompilationFailed(
-          "Mixin applications not supported: $element");
-    }
+    checkCanComputeDifference(element);
     DeclarationSite site = element.declarationSite;
     assert(site != null || element.isSynthesized);
     if (!element.isSynthesized) {
@@ -71,14 +85,12 @@ List<Difference> computeDifference(
   List<Difference> modifications = <Difference>[];
   List<Difference> potentiallyChanged = <Difference>[];
   after.forEachLocalMember((modelx.ElementX element) {
-    if (element.isMixinApplication) {
-      // TODO(ahe): issue 91
-      throw new IncrementalCompilationFailed(
-          "Mixin applications not supported: $element");
-    }
+    checkCanComputeDifference(element);
     DeclarationSite existing = beforeMap.remove(element.name);
     if (existing == null) {
-      modifications.add(new Difference(null, element.declarationSite));
+      if (!element.isSynthesized) {
+        modifications.add(new Difference(null, element.declarationSite));
+      }
     } else {
       potentiallyChanged.add(new Difference(existing, element.declarationSite));
     }
