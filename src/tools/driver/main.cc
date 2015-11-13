@@ -784,41 +784,26 @@ static int CheckedSystem(const char* command) {
 // process hasn't exited after 2 seconds.
 // The process is identified using lsof on the Dart VM binary.
 static int QuitCommand() {
-  char* vm_path = StrAlloc(MAXPATHLEN + 1);
-  int command_length = 2 * MAXPATHLEN + 1;
-  char* command = StrAlloc(command_length);
-  ComputeDartVmPath(vm_path, MAXPATHLEN + 1);
-  // TODO(ahe): pgrep -f package:fletchc/src/driver/driver_main.dart would
-  // probably be better.
-  const char lsof[] = "lsof -t -- ";
-  const char dev_null[] = "> /dev/null";
-  const char kill[] = "| xargs kill";
-  const char lsof_repeat[] = "lsof -t +r2m%n -- ";
-  const char kill9[] = "| xargs -n1 kill -9";
+  const int MAX_COMMAND_LENGTH = 256;
+  char command[MAX_COMMAND_LENGTH];
+  // We used exec to avoid having pkill the /bin/sh parent process it is running
+  // as a child of when redirecting to /dev/null.
+  const char pkill[] = "exec pkill -f ";
+  const char pkill_force[] = "exec pkill -KILL -f ";
+  const char arguments[] = "package:fletchc/src/driver/driver_main > /dev/null";
 
-  StrCpy(command, command_length, lsof, sizeof(lsof));
-  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
-  StrCat(command, command_length, dev_null, sizeof(dev_null));
+  StrCpy(command, MAX_COMMAND_LENGTH, pkill, sizeof(pkill));
+  StrCat(command, MAX_COMMAND_LENGTH, arguments, sizeof(arguments));
 
-  // lsof -t -- <Dart VM> > /dev/null
+  // pkill -f package:fletchc/src/driver/driver_main
   if (CheckedSystem(command) != 0) {
+    // pkill returns 0 if it killed any processes, so in this case it didn't
+    // find/kill any active persistent processes
     // Remove the socket location file.
     unlink(fletch_config_file);
-    free(command);
-    free(vm_path);
-
     printf("Background process wasn't running\n");
-
-    // lsof returns 0 if it listed processes.
     return 0;
   }
-
-  StrCpy(command, command_length, lsof, sizeof(lsof));
-  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
-  StrCat(command, command_length, kill, sizeof(kill));
-
-  // lsof -t -- <Dart VM> | xargs kill
-  CheckedSystem(command);
 
   // Wait two seconds for the process to exit gracefully.
   sleep(2);
@@ -826,32 +811,23 @@ static int QuitCommand() {
   // Remove the socket location file.
   unlink(fletch_config_file);
 
-  StrCpy(command, command_length, lsof, sizeof(lsof));
-  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
-  StrCat(command, command_length, dev_null, sizeof(dev_null));
+  // To check if the process exited gracefully we try to kill it again
+  // (this time with SIGKILL). If that command doesn't find any running
+  // processes it will return 1. If it finds one or more running instance
+  // it returns 0 in which case we know it didn't shutdown gracefully above.
+  // We use the return value to decide what to report to the user.
+  StrCpy(command, MAX_COMMAND_LENGTH, pkill_force, sizeof(pkill_force));
+  StrCat(command, MAX_COMMAND_LENGTH, arguments, sizeof(arguments));
 
-  // lsof -t -- <Dart VM> > /dev/null
+  // pkill -KILL -f package:fletchc/src/driver/driver_main
   if (CheckedSystem(command) != 0) {
+    // We assume it didn't find any processes to kill when returning a
+    // non-zero value and hence just report the process gracefully exited.
     printf("Background process exited\n");
-    free(command);
-    free(vm_path);
-
-    // lsof returns 0 if it listed processes.
-    return 0;
+  } else {
+    printf("The background process didn't exit after 2 seconds. "
+           "Forcefully quit the background process.\n");
   }
-
-  printf("The background process didn't quit after 2 seconds. "
-         "Attempting forced quit.\n");
-
-  StrCpy(command, command_length, lsof_repeat, sizeof(lsof_repeat));
-  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
-  StrCat(command, command_length, kill9, sizeof(kill9));
-
-  // lsof -t +r2m%n -- <Dart VM> | xargs -n1 kill -9
-  CheckedSystem(command);
-  free(command);
-  free(vm_path);
-  printf("Forced quit succeeded\n");
   return 0;
 }
 
