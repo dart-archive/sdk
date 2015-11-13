@@ -59,10 +59,13 @@ class ConformanceTest {
 
     // Run conformance tests.
     ConformanceService.Setup();
-    runPersonTests();
-    runPersonBoxTests();
-    runNodeTests();
-    ConformanceService.TearDown();
+    try {
+      runPersonTests();
+      runPersonBoxTests();
+      runNodeTests();
+    } finally {
+      ConformanceService.TearDown();
+    }
   }
 
   private static void buildPerson(PersonBuilder person, int n) {

@@ -52,6 +52,10 @@ servicec/good_type_parameter_1: Fail
 
 service_tests/*: Skip
 
+# Only run java service tests on x64 linux.
+[ $arch != x64 || $system != linux ]
+service_tests/*_java: Skip
+
 [ $arch == xarm ]
 
 mdns_tests/*: Skip # The native extension is not compiled for ARM.

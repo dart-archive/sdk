@@ -47,10 +47,13 @@ class PerformanceTest {
 
     // Run performance tests.
     PerformanceService.Setup();
-    runEcho();
-    runAsyncEcho();
-    runTreeTests();
-    PerformanceService.TearDown();
+    try {
+      runEcho();
+      runAsyncEcho();
+      runTreeTests();
+    } finally {
+      PerformanceService.TearDown();
+    }
   }
 
   private static void runEcho() {
