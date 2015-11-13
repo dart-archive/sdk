@@ -244,11 +244,6 @@ const patch = "patch";
   }
 }
 
-@patch class Null {
-  // This function is overridden, so we can bypass the 'this == null' check.
-  bool operator ==(other) => other == null;
-}
-
 @patch class int {
   @patch static int parse(
       String source,

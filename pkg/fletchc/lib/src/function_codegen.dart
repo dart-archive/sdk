@@ -55,16 +55,18 @@ class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
     }
 
     ClassElement enclosing = function.enclosingClass;
-    // Generate implicit 'null' check for '==' functions, except for Null.
-    if (enclosing != null &&
-        enclosing.declaration != context.compiler.nullClass &&
-        function.name == '==') {
+    // Generate implicit 'null' check for '==' functions.
+    if (enclosing != null && function.name == '==') {
       BytecodeLabel notNull = new BytecodeLabel();
       assembler.loadParameter(1);
       assembler.loadLiteralNull();
       assembler.identicalNonNumeric();
       assembler.branchIfFalse(notNull);
-      assembler.loadLiteralFalse();
+      // TODO(ajohnsen): Consider creating an injected operator== into 'null',
+      // to avoid this extra check.
+      assembler.loadParameter(0);
+      assembler.loadLiteralNull();
+      assembler.identicalNonNumeric();
       assembler.ret();
       assembler.bind(notNull);
     }
