@@ -67,7 +67,7 @@ static void SendErrorAndDie(int result_pipe, int error, const char* msg) {
   ASSERT(strlen(msg) + 1 <= MAX_MESSAGE_LENGTH);
   TEMP_FAILURE_RETRY(write(result_pipe, &error, sizeof(int)));
   TEMP_FAILURE_RETRY(write(result_pipe, msg, strlen(msg)+1));
-  Platform::ScheduleAbort();
+  Platform::ImmediateAbort();
 }
 
 // This method is used to report back errors sent to the parent process via
