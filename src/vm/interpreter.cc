@@ -12,12 +12,11 @@
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
 
+#include "src/vm/frame.h"
 #include "src/vm/native_interpreter.h"
 #include "src/vm/natives.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
-#include "src/vm/stack_walker.h"
-#include "src/vm/frame.h"
 
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(var, exp) \
   Object* var = (exp);                                                   \
@@ -963,37 +962,12 @@ void Engine::CollectMutableGarbage() {
 
 void Engine::ValidateStack() {
   SaveState();
-  StackWalker walker(process(), process()->stack());
-  Function::FromBytecodePointer(
-      reinterpret_cast<uint8*>(process()->stack()->get(
-          process()->stack()->top() - 1)));
-  int computed_stack_size = 1;
-  int last_arity = 0;
-  Object** fp = process()->stack()->Pointer(process()->stack()->top());
-  int frame_pointer_index = process()->stack()->top();
-  while (walker.MoveNext()) {
-    Function::FromBytecodePointer(walker.return_address());
-    int index = process()->stack()->top() + walker.stack_offset();
-    index++;
-    Object** next_fp = reinterpret_cast<Object**>(*fp);
-    if (next_fp != walker.frame_pointer()) {
-      FATAL2("Bad frame pointer, expected %p, got %p",
-             walker.frame_pointer(),
-             fp);
+  Frame frame(process()->stack());
+  while (frame.MovePrevious()) {
+    frame.FunctionFromByteCodePointer();
+    if (*(frame.FirstLocalAddress() - 1) != NULL) {
+      FATAL("Expected empty slot");
     }
-    frame_pointer_index -= fp - next_fp;
-    if (frame_pointer_index != index) FATAL("Bad frame pointer");
-    fp = next_fp;
-    index++;
-    if (process()->stack()->get(index) != NULL) FATAL("Bad frame descriptor");
-    // Return address + 2 empty slots.
-    computed_stack_size += 3;
-    computed_stack_size += walker.frame_size();
-    last_arity = walker.function()->arity();
-  }
-  ASSERT(*fp == NULL);
-  if (process()->stack()->top() != computed_stack_size + last_arity) {
-    FATAL("Wrong stack height");
   }
   RestoreState();
 }

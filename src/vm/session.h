@@ -19,9 +19,9 @@
 namespace fletch {
 
 class Connection;
+class Frame;
 class ObjectMap;
 class PointerVisitor;
-class StackWalker;
 
 class Session {
  public:
@@ -193,14 +193,16 @@ class Session {
   // therefore not safe to traverse heap objects after calling this method.
   void TransformInstances();
 
-  void PushFrameOnSessionStack(bool is_first_name, StackWalker* stack_walker);
+  void PushFrameOnSessionStack(bool is_first_name, const Frame* frame);
 
   // Compute a stack trace and push it on the session stack.
-  int PushStackFrames(Process* process, Stack* stack);
+  int PushStackFrames(Stack* stack);
 
-  // Compute the function for the top frame on the current process stack
+  // Compute the function for the top frame on the stack
   // and push it on the session stack.
-  void PushTopStackFrame(Process* process);
+  void PushTopStackFrame(Stack* stack);
+
+  void RestartFrame(int index);
 };
 
 }  // namespace fletch

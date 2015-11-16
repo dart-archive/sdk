@@ -118,8 +118,6 @@
         'snapshot.h',
         'sort.h',
         'sort.cc',
-        'stack_walker.cc',
-        'stack_walker.h',
         'storebuffer.cc',
         'storebuffer.h',
         'thread.h',

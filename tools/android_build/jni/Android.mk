@@ -66,7 +66,6 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/session.cc \
 	../../../src/vm/snapshot.cc \
 	../../../src/vm/sort.cc \
-	../../../src/vm/stack_walker.cc \
 	../../../src/vm/storebuffer.cc \
 	../../../src/vm/thread_pool.cc \
 	../../../src/vm/thread_posix.cc \

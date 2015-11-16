@@ -13,6 +13,7 @@
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
 
+#include "src/vm/frame.h"
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
 #include "src/vm/natives.h"
@@ -20,7 +21,6 @@
 #include "src/vm/port.h"
 #include "src/vm/process_queue.h"
 #include "src/vm/session.h"
-#include "src/vm/stack_walker.h"
 #include "src/vm/storebuffer.h"
 
 namespace fletch {
@@ -629,18 +629,17 @@ int Process::PrepareStepOver() {
 }
 
 int Process::PrepareStepOut() {
-  StackWalker stack_walker(this, stack());
-  bool has_top_frame = stack_walker.MoveNext();
+  Frame frame(stack());
+  bool has_top_frame = frame.MovePrevious();
   ASSERT(has_top_frame);
-  int top_frame_size = -stack_walker.stack_offset();
-  Function* callee = stack_walker.function();
-  bool has_frame_below = stack_walker.MoveNext();
+  Object** frame_bottom = frame.FramePointer() - 1;
+  Function* callee = frame.FunctionFromByteCodePointer();
+  bool has_frame_below = frame.MovePrevious();
   ASSERT(has_frame_below);
-  Function* caller = stack_walker.function();
+  Function* caller = frame.FunctionFromByteCodePointer();
   int bytecode_index =
-      stack_walker.return_address() - caller->bytecode_address_for(0);
-  Object** stack_top = stack()->Pointer(stack()->top());
-  Object** expected_sp = stack_top - top_frame_size - callee->arity();
+      frame.ByteCodePointer() - caller->bytecode_address_for(0);
+  Object** expected_sp = frame_bottom - callee->arity();
   int stack_height = expected_sp - stack()->Pointer(0);
   return debug_info_->SetBreakpoint(
       caller, bytecode_index, true, coroutine_, stack_height);
@@ -655,9 +654,14 @@ void Process::CookStacks(int number_of_stacks) {
     Stack* current = Stack::cast(raw_current);
     cooked_stack_deltas_[i] = List<int>::New(stack()->length());
     int index = 0;
-    StackWalker stack_walker(this, current);
-    while (stack_walker.MoveNext()) {
-      cooked_stack_deltas_[i][index++] = stack_walker.CookFrame();
+    Frame frame(current);
+    while (frame.MovePrevious()) {
+      uint8* bcp = frame.ByteCodePointer();
+      Function* function = frame.FunctionFromByteCodePointer();
+      uint8* start = function->bytecode_address_for(0);
+      frame.SetByteCodePointer(reinterpret_cast<uint8*>(function));
+      int delta = bcp - start;
+      cooked_stack_deltas_[i][index++] = delta;
     }
     raw_current = current->next();
   }
@@ -668,11 +672,16 @@ void Process::UncookAndUnchainStacks() {
   Object* raw_current = stack();
   for (int i = 0; i < cooked_stack_deltas_.length(); ++i) {
     Stack* current = Stack::cast(raw_current);
-    StackWalker stack_walker(this, current);
     int index = 0;
-    do {
-      stack_walker.UncookFrame(cooked_stack_deltas_[i][index++]);
-    } while (stack_walker.MoveNext());
+    Frame frame(current);
+    while (frame.MovePrevious()) {
+      Object* value = reinterpret_cast<Object*>(frame.ByteCodePointer());
+      ASSERT(value != NULL);
+      Function* function = Function::cast(value);
+      int delta = cooked_stack_deltas_[i][index++];
+      uint8* bcp = function->bytecode_address_for(0) + delta;
+      frame.SetByteCodePointer(bcp);
+    }
     cooked_stack_deltas_[i].Delete();
     raw_current = current->next();
     current->set_next(Smi::FromWord(0));

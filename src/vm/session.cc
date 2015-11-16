@@ -12,12 +12,12 @@
 #include "src/shared/platform.h"
 #include "src/shared/version.h"
 
+#include "src/vm/frame.h"
 #include "src/vm/links.h"
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/snapshot.h"
-#include "src/vm/stack_walker.h"
 #include "src/vm/thread.h"
 
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)                    \
@@ -219,7 +219,7 @@ void Session::ProcessContinue(Process* process) {
 }
 
 void Session::SendStackTrace(Stack* stack) {
-  int frames = PushStackFrames(process_, stack);
+  int frames = PushStackFrames(stack);
   WriteBuffer buffer;
   buffer.WriteInt(frames);
   for (int i = 0; i < frames; i++) {
@@ -410,9 +410,12 @@ void Session::ProcessMessages() {
       case Connection::kProcessLocalStructure: {
         if (program()->scheduler() == NULL) return;
         StoppedGcThreadScope scope(program()->scheduler());
-        int frame = connection_->ReadInt();
+        int frame_index = connection_->ReadInt();
         int slot = connection_->ReadInt();
-        Object* local = StackWalker::ComputeLocal(process_, frame, slot);
+        Stack* stack = process_->stack();
+        Frame frame(stack);
+        for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
+        Object* local = stack->get(frame.FirstLocalIndex() + slot);
         if (opcode == Connection::kProcessLocalStructure &&
             local->IsInstance()) {
           SendInstanceStructure(Instance::cast(local));
@@ -426,8 +429,8 @@ void Session::ProcessMessages() {
         if (program()->scheduler() == NULL) return;
         {
           StoppedGcThreadScope scope(program()->scheduler());
-          int frame = connection_->ReadInt();
-          StackWalker::RestartFrame(process_, frame);
+          int frame_index = connection_->ReadInt();
+          RestartFrame(frame_index);
           process_->set_exception(process_->program()->null_object());
         }
         ProcessContinue(process_);
@@ -1326,7 +1329,7 @@ bool Session::BreakPoint(Process* process) {
     }
     WriteBuffer buffer;
     buffer.WriteInt(breakpoint_id);
-    PushTopStackFrame(process);
+    PushTopStackFrame(process->stack());
     buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
     // Drop function from session stack.
     Drop(1);
@@ -1465,39 +1468,60 @@ void Session::TransformInstances() {
   program()->VisitProcesses(&process_visitor);
 }
 
-void Session::PushFrameOnSessionStack(bool is_first_name,
-                                      StackWalker* stack_walker) {
-  Function* function = stack_walker->function();
+void Session::PushFrameOnSessionStack(bool is_first_name, const Frame* frame) {
+  Function* function = frame->FunctionFromByteCodePointer();
   uint8* start_bcp = function->bytecode_address_for(0);
 
-  uint8* return_address = stack_walker->return_address();
-  int bytecode_offset = return_address - start_bcp;
+  uint8* bcp = frame->ByteCodePointer();
+  int bytecode_offset = bcp - start_bcp;
   // The first byte-code offset is not a return address but the offset for
   // the current bytecode. Make it look like a return address by adding
   // the current bytecode size to the byte-code offset.
   if (is_first_name) {
-    Opcode current = static_cast<Opcode>(*return_address);
+    Opcode current = static_cast<Opcode>(*bcp);
     bytecode_offset += Bytecode::Size(current);
   }
   PushNewInteger(bytecode_offset);
   PushFunction(function);
 }
 
-int Session::PushStackFrames(Process* process, Stack* stack) {
+int Session::PushStackFrames(Stack* stack) {
   int frames = 0;
-  StackWalker walker(process, stack);
-  while (walker.MoveNext()) {
-    PushFrameOnSessionStack(frames == 0, &walker);
+  Frame frame(stack);
+  while (frame.MovePrevious()) {
+    PushFrameOnSessionStack(frames == 0, &frame);
     ++frames;
   }
   return frames;
 }
 
-void Session::PushTopStackFrame(Process* process) {
-  StackWalker walker(process, process->stack());
-  bool has_top_frame = walker.MoveNext();
+void Session::PushTopStackFrame(Stack* stack) {
+  Frame frame(stack);
+  bool has_top_frame = frame.MovePrevious();
   ASSERT(has_top_frame);
-  PushFrameOnSessionStack(true, &walker);
+  PushFrameOnSessionStack(true, &frame);
+}
+
+void Session::RestartFrame(int frame_index) {
+  Stack* stack = process_->stack();
+
+  // Move down to the frame we want to reset to.
+  Frame frame(stack);
+  for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
+
+  // To be able to reply the activation, we set the top bcp (loaded when
+  // restoring state) to the bytecode before the return address.
+  uint8* return_address = frame.ReturnAddress();
+  uint8* previous = return_address - Bytecode::Size(Opcode::kInvokeStatic);
+
+  ASSERT(previous == Bytecode::PreviousBytecode(return_address));
+  ASSERT(Bytecode::IsInvokeVariant(static_cast<Opcode>(*previous)));
+
+  frame.SetReturnAddress(previous);
+
+  // Now we just need to set the top to the location of the current
+  // frame pointer.
+  stack->set_top(frame.FirstLocalIndex() - 2);
 }
 
 }  // namespace fletch

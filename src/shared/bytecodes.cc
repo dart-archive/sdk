@@ -98,7 +98,7 @@ bool Bytecode::IsInvoke(Opcode opcode) {
 }
 
 // TODO(ager): use branches to skip forward by more than
-// a bytecode at a time as in StackWalker::StackDiff.
+// a bytecode at a time.
 uint8* Bytecode::PreviousBytecode(uint8* current_bcp) {
   uint8* bcp = current_bcp;
   while (*bcp != kMethodEnd) {

@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/vm/heap_validator.h"
+#include "src/vm/process.h"
 
 namespace fletch {
 

@@ -7,9 +7,10 @@
 
 #include "src/vm/heap.h"
 #include "src/vm/scheduler.h"
-#include "src/vm/stack_walker.h"
 
 namespace fletch {
+
+class SharedHeap;
 
 // Validates that all pointers it gets called with lie inside certain spaces -
 // depending on [shared_heap], [mutable_heap], [program_heap].
