@@ -64,10 +64,17 @@ static pid_t Fork() {
 static void SendErrorAndDie(int result_pipe, int error, const char* msg) {
   // We write the negative errno first which allows the parent to determine
   // that a message must follow.
+  // Doing an abort will cause core dumps to be written on machine where
+  // they are enabled. We only do that if the write to send the error back
+  // fails.
   ASSERT(strlen(msg) + 1 <= MAX_MESSAGE_LENGTH);
-  TEMP_FAILURE_RETRY(write(result_pipe, &error, sizeof(int)));
-  TEMP_FAILURE_RETRY(write(result_pipe, msg, strlen(msg)+1));
-  Platform::ImmediateAbort();
+  if (TEMP_FAILURE_RETRY(write(result_pipe, &error, sizeof(int))) < 0) {
+      Platform::ImmediateAbort();
+  }
+  if (TEMP_FAILURE_RETRY(write(result_pipe, msg, strlen(msg)+1)) < 0) {
+      Platform::ImmediateAbort();
+  }
+  exit(1);
 }
 
 // This method is used to report back errors sent to the parent process via
