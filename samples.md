@@ -5,7 +5,7 @@ layout: page
 
 # Fletch project samples
 
-We have a number of sample programs available in the ```/samples/raspberry_pi```
+We have a number of sample programs available in the ```samples/raspberry_pi```
 folder. Let’s take a look at the code, and get familiar with the platform.
 
 
@@ -34,8 +34,8 @@ folder. Let’s take a look at the code, and get familiar with the platform.
 Embedded devices are most commonly used to collect data and perform some kind of
 control task via attached sensors and output devices such as LEDs. Take a look
 at the ```blinky.dart``` program located in the
-```/samples/raspberry_pi/basic/``` folder. This blinks the Raspberry Pi on-board
-LED.
+```samples/raspberry_pi/basic/``` folder. This blinks the Raspberry Pi 2
+on-board LED.
 
 First the program initializes the RaspberryPi helper object:
 
@@ -70,7 +70,7 @@ We will be communicating with the components on the breadboard using a
 [GPIO](https://en.wikipedia.org/wiki/General-purpose_input/output) (general
 purpose input/output) interface. First we need to configure the GPIO pins for
 the components we wired up (full runnable code located in
-```/samples/raspberry_pi/basic/buzzer.dart```):
+```samples/raspberry_pi/basic/buzzer.dart```):
 
 ~~~
 import 'package:gpio/gpio.dart';
@@ -136,7 +136,7 @@ while (true) {
   // Wait for button press.
   gpio.waitFor(button, true, -1);
 
-  ....
+  ...
   }
 }
 ~~~
@@ -144,7 +144,7 @@ while (true) {
 And then we sound the bell:
 
 ~~~
-// Sound bell
+// Sound bell.
 for (var i = 1; i <= 3; i++) {
   gpio.setPin(speaker, true);
   sleep(100);
@@ -167,7 +167,7 @@ Rider show? Let's try to [replicate those
 lights](https://storage.googleapis.com/fletch-archive/images/knight-rider.mp4).
 
 The full program is available in
-```/samples/raspberry_pi/basic/knight-rider.dart```. Let's step through how it's
+```samples/raspberry_pi/basic/knight-rider.dart```. Let's step through how it's
 built.
 
 First we will create a ```Lights``` helper class. This class will contain all
@@ -235,7 +235,7 @@ done!
 
 ~~~
 main() {
-  // Initialize Raspberry Pi
+  // Initialize Raspberry Pi.
   RaspberryPi pi = new RaspberryPi();
 
   // Array constant containing the GPIO pins of the connected LEDs.
@@ -271,7 +271,7 @@ space!](https://www.raspberrypi.org/blog/astro-pi/)
 In this sample we are going to use the accelerometer to sense which direction
 the board is pointing in, and then display that direction using the LED matrix
 display. Full code is in
-```/samples/raspberry_pi/sense_hat/accelerometer/accelerometer.dart```.
+```samples/raspberry_pi/sense_hat/accelerometer/accelerometer.dart```.
 
 We start with a helper function that will draw a color bar on the display. It
 will take a direction argument (north, west, etc.), and a segment number from 0
@@ -315,7 +315,7 @@ void drawSegment(SenseHatLEDArray ledArray,
 
 This function uses ```ledArray.setPixel``` to manage the LED display. This
 method is implemented by the Fletch Sense HAT library (see
-```/pkg/raspberry_pi/lib/sense_hat.dart```), which provides a convenient
+```pkg/raspberry_pi/lib/sense_hat.dart```), which provides a convenient
 interface for the Sense HAT.
 
 We will use the same library to read from the accelerometer:

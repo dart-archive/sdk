@@ -57,7 +57,7 @@ below in a terminal window:
 
 ~~~
 cd $HOME
-unzip ./Downloads/fletch-sdk-macos-x64-release.zip
+unzip Downloads/fletch-sdk-macos-x64-release.zip
 export "PATH=$PATH:$HOME/fletch-sdk/bin"
 ~~~
 
@@ -75,7 +75,7 @@ prints Hello. In your command line type:
 
 ~~~
 cd $HOME/fletch-sdk/
-fletch run ./samples/general/hello.dart
+fletch run samples/general/hello.dart
 ~~~
 
 This runs the program in hello.dart on your local machine. You should see a
@@ -120,8 +120,7 @@ will be prompted to enter your password as the script performs system level
 operations):
 
 ~~~
-cd $HOME/fletch-sdk/
-./platforms/raspberry-pi/flash-sd-card
+platforms/raspberry-pi2/flash-sd-card
 ~~~
 
 The script will take you through the following steps:
@@ -189,8 +188,7 @@ need is to specify to the ```fletch run``` command that we want to run in a
 remote session. Type the following on your local developer PC:
 
 ~~~
-cd $HOME/fletch-sdk/
-fletch run ./samples/general/hello.dart in session remote
+fletch run samples/general/hello.dart in session remote
 ~~~
 
 The first time you run in the remote session you will be asked to specify the IP
