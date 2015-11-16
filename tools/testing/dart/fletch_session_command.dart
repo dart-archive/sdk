@@ -514,8 +514,11 @@ class FletchSessionHelper {
         .asFuture();
 
     vmExitCodeFuture = fletchVm.exitCode.then((int exitCode) async {
+      if (isVerbose) print("Exiting Fletch VM with exit code $exitCode.");
       await stdoutFuture;
+      if (isVerbose) print("Stdout of Fletch VM process closed.");
       await stderrFuture;
+      if (isVerbose) print("Stderr of Fletch VM process closed.");
       return exitCode;
     });
 
