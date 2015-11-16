@@ -121,7 +121,7 @@ operations):
 
 ~~~
 cd $HOME/fletch-sdk/
-./platforms/raspberry_pi/flash-sd-card
+./platforms/raspberry-pi/flash-sd-card
 ~~~
 
 The script will take you through the following steps:
