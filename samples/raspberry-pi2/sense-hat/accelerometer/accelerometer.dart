@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// Sample that runs on a Raspberry Pi with the Sense HAT add-on board.
+// Sample that runs on a Raspberry Pi 2 with the Sense HAT add-on board.
 // See: https://www.raspberrypi.org/products/sense-hat/.
 //
 // The sample will indicate the current pitch and roll from the
@@ -11,11 +11,12 @@ library sample.accelerometer;
 
 import 'package:os/os.dart' as os;
 import 'package:raspberry_pi/sense_hat.dart';
+import 'package:i2c/devices/lsm9ds1.dart';
 
 // Entry point.
 main() {
   // Instantiate the Sense HAT API.
-  var hat = new SenseHat();
+  SenseHat hat = new SenseHat();
 
   // Show the splash screen animation and run the program.
   splashScreen(hat);
@@ -25,11 +26,11 @@ main() {
 // Run the sample which will indicate the current pitch and roll from the
 // accelerometer on the LED array.
 void run(SenseHat hat) {
-  var pitch = 0; // [-3..3]
-  var roll = 0; // [-3..3]
+  int pitch = 0; // [-3..3]
+  int roll = 0; // [-3..3]
 
   int trimValue(double value) {
-    var result = (value / 15.0).toInt();
+    int result = (value / 15.0).toInt();
     if (result < -3) result = -3;
     if (result > 3) result = 3;
     return result;
@@ -62,9 +63,9 @@ void run(SenseHat hat) {
   while (true) {
     // Read the accelerometer and update the display it one of the values
     // changed.
-    var accel = hat.readAccel();
-    var p = trimValue(accel.pitch);
-    var r = trimValue(accel.roll);
+    AccelMeasurement accel = hat.readAccel();
+    int p = trimValue(accel.pitch);
+    int r = trimValue(accel.roll);
     if (p != pitch || r != roll) {
       pitch = p;
       roll = r;
@@ -149,10 +150,10 @@ void drawSegment(SenseHatLEDArray ledArray,
       const <Color>[Color.white, Color.green, Color.blue, Color.red];
 
   if (color == null) color = defaultSegmentColor[segment];
-  var length = (segment + 1) * 2;
-  var info = segmentData[direction];
-  var x = info.origin.x + info.direction.x * segment;
-  var y = info.origin.y + info.direction.y * segment;
+  int length = (segment + 1) * 2;
+  SegmentData info = segmentData[direction];
+  int x = info.origin.x + info.direction.x * segment;
+  int y = info.origin.y + info.direction.y * segment;
   for (int i = 0; i < length; i++) {
     ledArray.setPixel(x, y, color);
     x += info.step.x;
@@ -167,23 +168,23 @@ void splashScreen(SenseHat hat) {
           Direction.north, Direction.east, Direction.south, Direction.west];
 
   for (int s = 0; s < 4; s++) {
-    for (var d in allDirections) {
+    for (Direction d in allDirections) {
       drawSegment(hat.ledArray, d, s);
     }
     os.sleep(200);
   }
   for (int s = 0; s < 4; s++) {
-    for (var d in allDirections) {
+    for (Direction d in allDirections) {
       drawSegment(hat.ledArray, d, s, color: Color.black);
     }
     os.sleep(200);
   }
   for (int s = 0; s < 4; s++) {
-    for (var d in allDirections) {
+    for (Direction d in allDirections) {
       drawSegment(hat.ledArray, d, s);
     }
     os.sleep(200);
-    for (var d in allDirections) {
+    for (Direction d in allDirections) {
       drawSegment(hat.ledArray, d, s, color: Color.black);
     }
   }

@@ -32,7 +32,7 @@ main() {
     // Wait for button press.
     gpio.waitFor(button, true, -1);
 
-    // Sound bell
+    // Sound bell.
     for (var i = 1; i <= 3; i++) {
       gpio.setPin(speaker, true);
       sleep(100);

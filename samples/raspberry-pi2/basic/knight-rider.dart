@@ -16,7 +16,7 @@ import 'package:raspberry_pi/raspberry_pi.dart';
 import 'package:os/os.dart';
 
 main() {
-  // Initialize Raspberry Pi
+  // Initialize Raspberry Pi.
   RaspberryPi pi = new RaspberryPi();
 
   // Array constant containing the GPIO pins of the connected LEDs.
