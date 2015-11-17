@@ -11,6 +11,7 @@ import '../../tests/service_tests/service_tests.dart' show
     CopyRule,
     CcRule,
     BuildSnapshotRule,
+    MakeDirectoryRule,
     RunSnapshotRule;
 
 const String thisDirectory = 'samples/simple_todo';
@@ -23,6 +24,7 @@ class TodoServiceTest extends ServiceTest {
   String get servicePath => '$outputDirectory/simple_todo.dart';
   String get snapshotPath => '$outputDirectory/simple_todo.snapshot';
   String get executablePath => '$outputDirectory/simple_todo_sample';
+  String get generatedDirectory => '$outputDirectory/generated';
 
   Future<Null> prepare() async {
     rules.add(new CopyRule(thisDirectory, outputDirectory, [
@@ -30,15 +32,16 @@ class TodoServiceTest extends ServiceTest {
       'simple_todo_impl.dart',
       'todo_model.dart',
     ]));
-    rules.add(new CompileServiceRule(idlPath, outputDirectory));
+    rules.add(new MakeDirectoryRule(generatedDirectory));
+    rules.add(new CompileServiceRule(idlPath, generatedDirectory));
     rules.add(new CcRule(
         executable: executablePath,
-        includePaths: [outputDirectory],
+        includePaths: [generatedDirectory],
         sources: [
           '$thisDirectory/simple_todo_main.cc',
-          '$outputDirectory/cc/struct.cc',
-          '$outputDirectory/cc/unicode.cc',
-          '$outputDirectory/cc/simple_todo.cc']));
+          '$generatedDirectory/cc/struct.cc',
+          '$generatedDirectory/cc/unicode.cc',
+          '$generatedDirectory/cc/simple_todo.cc']));
     rules.add(new BuildSnapshotRule(servicePath, snapshotPath));
     rules.add(new RunSnapshotRule(executablePath, snapshotPath));
   }

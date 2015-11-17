@@ -210,7 +210,7 @@ class StandardServiceJavaTest extends StandardServiceTest {
           '$javaDirectory/jni/${baseName}_service_wrapper.cc',
         ]..addAll(ccSources)));
 
-    await new Directory(classesDirectory).create();
+    rules.add(new MakeDirectoryRule(classesDirectory));
 
     rules.add(new JavacRule(
         warningAsError: false,
@@ -292,6 +292,17 @@ abstract class Rule {
 
   static void printErr(String message) {
     print("stderr: $message");
+  }
+}
+
+class MakeDirectoryRule extends Rule {
+  final String directory;
+  final bool recursive;
+
+  MakeDirectoryRule(this.directory, {this.recursive: false});
+
+  Future<Null> build() async {
+    await new Directory(directory).create(recursive: recursive);
   }
 }
 

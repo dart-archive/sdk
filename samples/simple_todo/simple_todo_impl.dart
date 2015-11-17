@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'todo_model.dart';
-import 'dart/simple_todo.dart';
+import 'generated/dart/simple_todo.dart';
 
 class TodoImpl extends TodoService {
   TodoModel _model = new TodoModel();

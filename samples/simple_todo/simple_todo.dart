@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'simple_todo_impl.dart';
-import 'dart/simple_todo.dart';
+import 'generated/dart/simple_todo.dart';
 
 main() {
   var impl = new TodoImpl();

@@ -23,6 +23,7 @@ packages
 /pkg/mdns/lib/native/libmdns_extension_lib.so
 /pkg/mdns/lib/native/libmdns_extension_lib.dylib
 /samples/github/generated/
+/samples/simple_todo/generated/
 /samples/todomvc/java/
 /src/compiler/compiler.xcodeproj/
 /src/double_conversion.xcodeproj/
