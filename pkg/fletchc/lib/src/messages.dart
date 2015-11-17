@@ -81,6 +81,12 @@ enum DiagnosticKind {
 ///   2. Why is it wrong?
 ///   3. How do you fix it?
 ///
+/// Where appropriate, we follow the [Google design guidelines](https://www.google.com/design/spec/style/writing.html)
+/// for writing messages to the user. With respect to punctuation, we interpret
+/// error messages as parallel labels, meaning they should use full sentences,
+/// that is, starting with a capital letter and terminated with punctuation
+/// (see [Capitalization & punctuation](https://www.google.com/design/spec/style/writing.html#writing-capitalization-punctuation)).
+///
 /// In addition, make sure to get a review from a UX expert before adding new
 /// diagnostics, or when updating existing diagnostics.
 ///
