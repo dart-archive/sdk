@@ -27,7 +27,7 @@ const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
 
 /// Exit code returned by `compile` verb when `--fatal-incremental-failures` is
 /// used and incremental compilation failed.
-const INCREMENTAL_COMPILER_FAILED = 2;
+const INCREMENTAL_COMPILER_FAILED = 3;
 
 /// Exit code returned by `compile` verb when `--analyze-only` is used and
 /// problems (other than errors) were detected.
