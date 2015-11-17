@@ -10,7 +10,8 @@
 {
   'WATCHLIST_DEFINITIONS': {
     'uxreview': {
-       'filepath': 'pkg/fletchc/lib/src/messages.dart',
+       'filepath': 'pkg/fletchc/lib/src/messages.dart' \
+           '|pkg/fletchc/lib/src/verbs/documentation.dart',
     },
   },
 
