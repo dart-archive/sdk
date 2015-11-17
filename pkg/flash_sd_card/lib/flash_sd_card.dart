@@ -39,10 +39,10 @@ Future<bool> flashCDCard(List<String> args) async {
   ctx.log('Args: $args');
   if (ctx.configureNetworkOnly) {
     ctx.infoln('This program will update the network configuration on a '
-               'Fletch Raspberry Pi 2 SD card');
+               'Fletch Raspberry Pi 2 SD card.');
   } else {
     ctx.infoln('This program will prepare an SD card for '
-               'Fletch on the Raspberry Pi 2');
+               'Fletch on the Raspberry Pi 2.');
   }
 
   // Determine platform.
@@ -54,7 +54,7 @@ Future<bool> flashCDCard(List<String> args) async {
     String version = await ctx.version;
     String gcsPath;
     if (isEdgeVersion(version)) {
-      ctx.infoln('WARNING: For bleeding edge a fixed image is used');
+      ctx.infoln('WARNING: For bleeding edge a fixed image is used.');
       // For edge versions download a well known version for now.
       var knownVersion = '0.1.0-edge.d8cabb9332b9a1fb063f55fca18d8b87320e863a';
       gcsPath =
@@ -86,35 +86,38 @@ Future<bool> flashCDCard(List<String> args) async {
     }
     ctx.log('Found SD card $disk');
     sdCardDevice = '/dev/$disk';
+    String info = await platformService.diskInfo(sdCardDevice);
     if (ctx.configureNetworkOnly) {
       await ctx.readLine(
-          'Found the SD card $sdCardDevice. '
+          '\nFound the SD card $sdCardDevice.\n$info\n'
           'This will update the network configuration. '
-          'Press enter to use this card.');
+          'Press Enter to use this card (Ctrl-C to cancel).');
     } else {
       await ctx.readLine(
-          'Found the SD card $sdCardDevice. '
+          '\nFound the SD card $sdCardDevice.\n$info\n'
           'This will delete all contents on the card. '
-          'Press enter to use this card.');
+          'Press Enter to use this card (Ctrl-C to cancel).');
     }
   } else {
+    String info = await platformService.diskInfo(sdCardDevice);
     ctx.log('Using SD card from option $sdCardDevice');
     if (ctx.configureNetworkOnly) {
       await ctx.readLine(
-          'Using the SD card $sdCardDevice. '
+          '\nUsing the SD card $sdCardDevice.\n$info\n'
           'This will update the network configuration. '
-          'Press enter to use this card.');
+          'Press Enter to use this card (Ctrl-C to cancel).');
     } else {
       await ctx.readLine(
-          'Using the SD card $sdCardDevice. '
+          '\nUsing the SD card $sdCardDevice.\n$info\n'
           'This will delete all contents on the card. '
-          'Press enter to use this card. ');
+          'Press Enter to use this card (Ctrl-C to cancel).');
     }
   }
 
   // Ask for a hostname.
   String hostname = await ctx.readHostname(
-      "Enter the name of the device - default is 'fletch': ", 'fletch');
+      "Enter the name of the device - default is 'fletch' "
+      "(press Enter to accept): ", 'fletch');
 
   // Ask for a static IP address.
   String ipAddress = await ctx.readIPAddress(
@@ -134,9 +137,9 @@ Future<bool> flashCDCard(List<String> args) async {
     }
     File zipFile = new File(zipFileName);
     if (ctx.skipDownload) {
-      ctx.infoln('Skipping download');
+      ctx.infoln('Skipping download.');
     } else {
-      ctx.infoln('Downloading SD card image');
+      ctx.infoln('Downloading SD card image.');
       await platformService.downloadWithProgress(source, zipFile);
     }
 
@@ -166,7 +169,7 @@ Future<bool> flashCDCard(List<String> args) async {
   var bootFiles = await mountDir.list().map((fse) => fse.path).toList();
   ctx.log('Files in ${mountDir.path}: $bootFiles');
   if (!bootFiles.contains('${mountDir.path}/kernel.img')) {
-    ctx.infoln('WARNING: This does not look like a Raspbian SD card');
+    ctx.infoln('WARNING: This does not look like a Raspbian SD card.');
   }
 
   // All configuration files goes into fletch-configuration on the boot
@@ -199,7 +202,7 @@ Future<bool> flashCDCard(List<String> args) async {
   }
 
   // Sync filesystems before unmounting.
-  ctx.infoln('Running sync');
+  ctx.infoln('Running sync.');
   await platformService.sync();
 
   // Unmount again.
@@ -212,7 +215,7 @@ Future<bool> flashCDCard(List<String> args) async {
 
   // Success.
   ctx.infoln('Finished flashing the SD card. '
-             'You can now insert it into the Raspberry Pi');
+             'You can now insert it into the Raspberry Pi 2.');
   ctx.done();
   return true;
 }

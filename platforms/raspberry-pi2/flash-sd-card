@@ -21,6 +21,6 @@ PROG_NAME="$(follow_links "$BASH_SOURCE")"
 
 source $(dirname $PROG_NAME)/.common.shlib
 
-echo "This program requires superuser to run"
+echo "This program requires superuser to run."
 
 exec sudo "$DART_VM" -Dfletch-vm="$FLETCH_VM" "$DART_FILE" "$@"

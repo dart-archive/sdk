@@ -33,14 +33,14 @@ abstract class PlatformService {
   /// device name for the card is determined.
   Future<String> findSDCard() async {
     await ctx.readLine(
-        'Please remove all SD cards from this computer, and then press enter');
+        'Please remove all SD cards from this computer. Then press Enter.');
     Set defaultDisks = new Set.from(await listPossibleSDCards());
     ctx.log('Default disks $defaultDisks');
 
     // Wait for an additional disk.
     await ctx.readLine(
-      'Please insert the SD card you want to use with Fletch, '
-      'and then press enter');
+      'Please insert the SD card you want to use with Fletch. '
+      'Then press Enter.');
     int retryCount = 10;
     while (true) {
       Set disks = new Set.from(await listPossibleSDCards());
@@ -74,7 +74,9 @@ abstract class PlatformService {
         new StreamTransformer<List<int>, List<int>>.fromHandlers(
           handleData: (List<int> value, EventSink<List<int>> sink) {
             bytes += value.length;
-            ctx.updateProgress('received $bytes of $totalBytes');
+            ctx.updateProgress(
+                'received ${bytes ~/ (1024 * 1024)} Mb '
+                'of ${totalBytes ~/ (1024 * 1024)} Mb');
             sink.add(value);
           },
           handleDone: (EventSink<List<int>> sink) {
@@ -132,16 +134,16 @@ abstract class PlatformService {
       ctx.log('stdout: $ddStdout');
       ctx.log('stderr: $ddStderr');
 
-      ctx.infoln('Failed to write SD card');
+      ctx.infoln('Failed to write SD card.');
       ctx.infoln(ddStderr);
       if (ddStderr.contains('Permission denied')) {
-        ctx.infoln("Remember to run this command with 'sudo'");
+        ctx.infoln("Remember to run this command with 'sudo'.");
       }
       await ctx.failure('');
     }
 
     // Sync filesystems before returning.
-    ctx.infoln('Running sync');
+    ctx.infoln('Running sync.');
     await sync();
 
     return true;
@@ -173,6 +175,9 @@ abstract class PlatformService {
 
   /// The signal name to send to 'dd' to get progress information on stderr.
   String get ddProgressSignal;
+
+  /// Provide user-readable information on a disk device.
+  Future<String> diskInfo(String device);
 
   /// Unmount disk device.
   Future unmountDisk(String device);
@@ -233,6 +238,16 @@ class MacOSPlatformService extends PlatformService {
   }
 
   String get ddProgressSignal => 'INFO';
+
+  Future<String> diskInfo(String device) async {
+    var result = await ctx.runProcess('diskutil', ['list', device]);
+    if (result.exitCode != 0) {
+      await ctx.failure(
+          'Failed to get information on $device (failed on running fdisk)',
+          result.stderr);
+    }
+    return result.stdout;
+  }
 
   Future unmountDisk(String device) async {
     var result = await ctx.runProcess('diskutil', ['unmountDisk', device]);
@@ -317,6 +332,16 @@ class LinuxPlatformService extends PlatformService {
   }
 
   String get ddProgressSignal => 'USR1';
+
+  Future<String> diskInfo(String device) async {
+    var result = await ctx.runProcess('fdisk', ['-l', device]);
+    if (result.exitCode != 0) {
+      await ctx.failure(
+          'Failed to get information on $device (failed on running fdisk)',
+          result.stderr);
+    }
+    return result.stdout;
+  }
 
   Future unmountDisk(String device) async {
     // List all mounted devices.
