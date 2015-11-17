@@ -32,20 +32,13 @@
     'mbed_path': '<(DEPTH)/third_party/mbed/build/',
 
     'conditions': [
-      [ 'OS=="linux"', {
-        'third_party_libs_path%': '<(DEPTH)/third_party/libs/linux',
-      }],
       [ 'OS=="mac"', {
-        'third_party_libs_path%': '<(DEPTH)/third_party/libs/mac',
         # TODO(zerny): Redirect stderr to work around gyp regarding a non-empty
         # stderr as a failed command. This should be replaced by a custom script
         # that retains stderr in case the command actually fails.
         'ios_sdk_path%': '<!(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)',
         'ios_sim_sdk_path%':
             '<!(xcrun --sdk iphonesimulator --show-sdk-path 2>/dev/null)',
-      }],
-      [ 'OS=="win"', {
-        'third_party_libs_path%': '<(DEPTH)/third_party/libs/win',
       }],
     ],
   },
@@ -206,15 +199,10 @@
 
         'ldflags': [
           '-m32',
-          '-L<(third_party_libs_path)/x86',
         ],
 
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'i386' ],
-
-          'LIBRARY_SEARCH_PATHS': [
-            '<(third_party_libs_path)/x86',
-          ],
         },
       },
 
@@ -226,10 +214,6 @@
           'FLETCH_TARGET_X64',
         ],
 
-        'ldflags': [
-          '-L<(third_party_libs_path)/x64',
-        ],
-
         # Shared libraries on x64 require compilation with position
         # independent code. Load-time relocation is not supported on
         # x64. For simplicity we compile all x64 libraries with
@@ -238,10 +222,6 @@
 
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'x86_64' ],
-
-          'LIBRARY_SEARCH_PATHS': [
-            '<(third_party_libs_path)/x64',
-          ],
 
           'OTHER_CPLUSPLUSFLAGS': [
             '-fPIC',
@@ -257,16 +237,8 @@
           'FLETCH_TARGET_ARM',
         ],
 
-        'ldflags': [
-          '-L<(third_party_libs_path)/arm',
-        ],
-
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'armv7' ],
-
-          'LIBRARY_SEARCH_PATHS': [
-            '<(third_party_libs_path)/arm',
-          ],
         },
       },
 
@@ -293,10 +265,6 @@
                 'xcode_settings': { # And ninja.
                   'ARCHS': [ 'armv7' ],
 
-                  'LIBRARY_SEARCH_PATHS': [
-                    '<(third_party_libs_path)/arm',
-                  ],
-
                   'OTHER_CPLUSPLUSFLAGS' : [
                     '-isysroot',
                     '<(ios_sdk_path)',
@@ -311,7 +279,6 @@
             ],
 
             'ldflags': [
-              '-L<(third_party_libs_path)/arm',
               # Fake define intercepted by cc_wrapper.py.
               '-L/FLETCH_ARM',
               '-static-libstdc++',
@@ -354,10 +321,6 @@
                 'xcode_settings': { # And ninja.
                   'ARCHS': [ 'arm64' ],
 
-                  'LIBRARY_SEARCH_PATHS': [
-                    '<(third_party_libs_path)/arm64',
-                  ],
-
                   'OTHER_CPLUSPLUSFLAGS' : [
                     '-isysroot',
                     '<(ios_sdk_path)',
@@ -372,7 +335,6 @@
             ],
 
             'ldflags': [
-              '-L<(third_party_libs_path)/arm64',
               # Fake define intercepted by cc_wrapper.py.
               '-L/FLETCH_ARM64',
               '-static-libstdc++',
@@ -506,7 +468,6 @@
             ],
 
             'ldflags': [
-              '-L<(third_party_libs_path)/arm',
               # Fake define intercepted by cc_wrapper.py.
               '-L/FLETCH_CMSIS',
               '-static-libstdc++',
