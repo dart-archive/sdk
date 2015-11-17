@@ -11,31 +11,42 @@
 #include "src/shared/platform.h"
 
 namespace fletch {
+namespace DynamicAssertionHelper {
 
-void DynamicAssertionHelper::Fail(const char* format, ...) {
+static void PrintError(const char* file,
+                       int line,
+                       const char* format,
+                       const va_list& arguments) {
 #ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   // Print out the error.
-  Print::Error("%s:%d: error: ", file_, line_);
-  va_list arguments;
-  va_start(arguments, format);
+  Print::Error("%s:%d: error: ", file, line);
   char buffer[KB];
   vsnprintf(buffer, sizeof(buffer), format, arguments);
-  va_end(arguments);
   Print::Error("%s\n", buffer);
 #else
-  va_list arguments;
-  va_start(arguments, format);
-  fprintf(stderr, "%s:%d: error: ", file_, line_);
+  fprintf(stderr, "%s:%d: error: ", file, line);
   vfprintf(stderr, format, arguments);
   fprintf(stderr, "\n");
-  va_end(arguments);
 #endif  // FLETCH_SUPPORT_PRINT_INTERCEPTORS
+}
 
-  // In case of failed assertions, abort right away. Otherwise, wait
-  // until the program is exiting before producing a non-zero exit
-  // code through abort.
-  if (kind_ == ASSERT) Platform::ImmediateAbort();
+template <>
+void Fail<ASSERT>(const char* file, int line, const char* format, ...) {
+  va_list arguments;
+  va_start(arguments, format);
+  PrintError(file, line, format, arguments);
+  va_end(arguments);
+  Platform::ImmediateAbort();
+}
+
+template <>
+void Fail<EXPECT>(const char* file, int line, const char* format, ...) {
+  va_list arguments;
+  va_start(arguments, format);
+  PrintError(file, line, format, arguments);
+  va_end(arguments);
   Platform::ScheduleAbort();
 }
 
+}  // namespace DynamicAssertionHelper
 }  // namespace fletch
