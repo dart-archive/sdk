@@ -2,6 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async' show
+    Future;
+
+import 'dart:convert' show
+    LineSplitter,
+    UTF8;
+
 import 'dart:io' show
     Directory,
     File,
@@ -9,9 +16,6 @@ import 'dart:io' show
     Platform,
     Process,
     ProcessResult;
-
-import 'dart:async' show
-    Future;
 
 import 'package:expect/expect.dart' show
     Expect;
@@ -242,7 +246,7 @@ abstract class Rule {
 
   Future<Null> build();
 
-  static Future<ProcessResult> runCommand(
+  static Future<int> runCommand(
       String executable,
       List<String> arguments,
       [Map<String,String> environment]) async {
@@ -251,15 +255,43 @@ abstract class Rule {
       environmentString =
           environment.keys.map((k) => '$k=${environment[k]}').join(' ');
     }
-    print("Running: $environmentString $executable ${arguments.join(' ')}");
-    ProcessResult result =
-        await Process.run(executable, arguments, environment: environment);
-    print('stdout:');
-    print(result.stdout);
-    print('stderr:');
-    print(result.stderr);
-    Expect.equals(0, result.exitCode);
-    return result;
+    String cmdString = "$environmentString $executable ${arguments.join(' ')}";
+    print('Running: $cmdString');
+
+    Process process =
+        await Process.start(executable, arguments, environment: environment);
+
+    Future stdout = process.stdout.transform(UTF8.decoder)
+        .transform(new LineSplitter())
+        .listen(printOut)
+        .asFuture()
+        .then((_) => print('stdout done'));
+
+    Future stderr = process.stderr.transform(UTF8.decoder)
+        .transform(new LineSplitter())
+        .listen(printErr)
+        .asFuture()
+        .then((_) => print('stderr done'));
+
+    process.stdin.close();
+    print('stdin closed');
+
+    int exitCode = await process.exitCode;
+    print('$cmdString exited with $exitCode');
+
+    await stdout;
+    await stderr;
+
+    Expect.equals(0, exitCode);
+    return exitCode;
+  }
+
+  static void printOut(String message) {
+    print("stdout: $message");
+  }
+
+  static void printErr(String message) {
+    print("stderr: $message");
   }
 }
 
