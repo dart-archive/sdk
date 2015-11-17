@@ -21,7 +21,7 @@ static void PrintError(const char* file,
   // Print out the error.
   Print::Error("%s:%d: error: ", file, line);
   char buffer[KB];
-  vsnprintf(buffer, sizeof(buffer), format, arguments);
+  vsnprintf(buffer, sizeof(buffer), format, const_cast<va_list&>(arguments));
   Print::Error("%s\n", buffer);
 #else
   fprintf(stderr, "%s:%d: error: ", file, line);
