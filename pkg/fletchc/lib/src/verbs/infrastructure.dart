@@ -121,7 +121,7 @@ AnalyzedSentence helpSentence(String message) {
   Action contextHelp = new Action(printHelp, null);
   return new AnalyzedSentence(
       new Verb("?", contextHelp), null, null, null, null, null, null,
-      null, null, null);
+      null, null, null, null);
 }
 
 AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
@@ -372,7 +372,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
       sentence.programName == null ? null : fileUri(sentence.programName, base);
   return new AnalyzedSentence(
       verb, target, targetName, trailing, sessionName, base, programName,
-      targetUri, toUri, withUri);
+      targetUri, toUri, withUri, options);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
@@ -433,6 +433,8 @@ class AnalyzedSentence {
   /// Value of 'with <URI>' converted to a Uri.
   final Uri withUri;
 
+  final Options options;
+
   AnalyzedSentence(
       this.verb,
       this.target,
@@ -443,7 +445,8 @@ class AnalyzedSentence {
       this.programName,
       this.targetUri,
       this.toTargetUri,
-      this.withUri);
+      this.withUri,
+      this.options);
 
   Future<int> performVerb(VerbContext context) {
     return verb.action.perform(this, context);

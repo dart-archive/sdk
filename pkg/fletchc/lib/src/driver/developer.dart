@@ -243,7 +243,11 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
   state.session = session;
 }
 
-Future<int> compile(Uri script, SessionState state) async {
+Future<int> compile(
+    Uri script,
+    SessionState state,
+    {bool analyzeOnly: false,
+     bool fatalIncrementalFailures: false}) async {
   IncrementalCompiler compiler = state.compiler;
   if (!compiler.isProductionModeEnabled) {
     state.resetCompiler();
@@ -253,7 +257,11 @@ Future<int> compile(Uri script, SessionState state) async {
 
   FletchDelta newResult;
   try {
-    if (previousResults.isEmpty) {
+    if (analyzeOnly) {
+      state.resetCompiler();
+      state.log("Analyzing '$script'");
+      return await compiler.analyze(script);
+    } else if (previousResults.isEmpty) {
       state.script = script;
       await compiler.compile(script);
       newResult = compiler.computeInitialDelta();
@@ -265,8 +273,14 @@ Future<int> compile(Uri script, SessionState state) async {
             logTime: state.log, logVerbose: state.log);
       } on IncrementalCompilationFailed catch (error) {
         state.log(error);
-        state.log("Attempting full compile...");
         state.resetCompiler();
+        if (fatalIncrementalFailures) {
+          print(error);
+          state.log(
+              "Aborting compilation due to --fatal-incremental-failures...");
+          return exit_codes.INCREMENTAL_COMPILER_FAILED;
+        }
+        state.log("Attempting full compile...");
         state.script = script;
         await compiler.compile(script);
         newResult = compiler.computeInitialDelta();

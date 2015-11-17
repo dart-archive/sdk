@@ -146,10 +146,15 @@ abstract class _IncrementalCompilerContext {
 class IncrementalCompilerContext extends _IncrementalCompilerContext
     implements CompilerDiagnostics {
   final CompilerDiagnostics diagnostics;
+  int errorCount = 0;
+  int warningCount = 0;
+  int hintCount = 0;
 
   final Set<Uri> _uriWithUpdates = new Set<Uri>();
 
   IncrementalCompilerContext(this.diagnostics);
+
+  int get problemCount => errorCount + warningCount + hintCount;
 
   void set incrementalCompiler(IncrementalCompiler value) {
     if (super.incrementalCompiler != null) {
@@ -184,6 +189,15 @@ class IncrementalCompilerContext extends _IncrementalCompilerContext
       int end,
       String text,
       Diagnostic kind) {
+    if (kind == Diagnostic.ERROR) {
+      errorCount++;
+    }
+    if (kind == Diagnostic.WARNING) {
+      warningCount++;
+    }
+    if (kind == Diagnostic.HINT) {
+      hintCount++;
+    }
     if (_uriHasUpdate(uri)) {
       // TODO(ahe): Map location to updated source file.
       print("$uri+$begin-$end: $text");

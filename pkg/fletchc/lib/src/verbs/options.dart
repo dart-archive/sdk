@@ -16,6 +16,8 @@ enum OptionKind {
   version,
   testDebugger,
   define,
+  analyzeOnly,
+  fatalIncrementalFailures,
 
   /// Not an option
   none,
@@ -28,6 +30,9 @@ const List<Option> supportedOptions = const <Option>[
   const Option(
       OptionKind.testDebugger, null, 'test-debugger', requiresArgument: true,
       parseArgument: parseCommaSeparatedList),
+  const Option(OptionKind.analyzeOnly, null, 'analyze-only'),
+  const Option(
+      OptionKind.fatalIncrementalFailures, null, 'fatal-incremental-failures'),
 ];
 
 final Map<String, Option> shortOptions = computeShortOptions();
@@ -114,6 +119,8 @@ class Options {
   final List<String> testDebuggerCommands;
   final Map<String, String> defines;
   final List<String> nonOptionArguments;
+  final bool analyzeOnly;
+  final bool fatalIncrementalFailures;
 
   Options(
       this.help,
@@ -121,7 +128,9 @@ class Options {
       this.version,
       this.testDebuggerCommands,
       this.defines,
-      this.nonOptionArguments);
+      this.nonOptionArguments,
+      this.analyzeOnly,
+      this.fatalIncrementalFailures);
 
   /// Parse [options] which is a list of command-line arguments, such as those
   /// passed to `main`.
@@ -132,6 +141,8 @@ class Options {
     List<String> testDebuggerCommands;
     Map<String, String> defines = <String, String>{};
     List<String> nonOptionArguments = <String>[];
+    bool analyzeOnly = false;
+    bool fatalIncrementalFailures = false;
 
     Iterator<String> iterator = options.iterator;
 
@@ -215,6 +226,14 @@ class Options {
           testDebuggerCommands[parsedArgument.name] = parsedArgument.value;
           break;
 
+        case OptionKind.analyzeOnly:
+          analyzeOnly = true;
+          break;
+
+        case OptionKind.fatalIncrementalFailures:
+          fatalIncrementalFailures = true;
+          break;
+
         case OptionKind.none:
           break;
       }
@@ -222,6 +241,6 @@ class Options {
 
     return new Options(
         help, verbose, version, testDebuggerCommands, defines,
-        nonOptionArguments);
+        nonOptionArguments, analyzeOnly, fatalIncrementalFailures);
   }
 }

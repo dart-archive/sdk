@@ -16,7 +16,11 @@ const Action compileAction = const Action(
     requiredTarget: TargetKind.FILE);
 
 Future<int> compile(AnalyzedSentence sentence, VerbContext context) {
-  return context.performTaskInWorker(new CompileTask(sentence.targetUri));
+  bool analyzeOnly = sentence.options.analyzeOnly;
+  bool fatalIncrementalFailures = sentence.options.fatalIncrementalFailures;
+  return context.performTaskInWorker(
+      new CompileTask(
+          sentence.targetUri, analyzeOnly, fatalIncrementalFailures));
 }
 
 class CompileTask extends SharedTask {
@@ -24,15 +28,23 @@ class CompileTask extends SharedTask {
 
   final Uri script;
 
-  const CompileTask(this.script);
+  final bool analyzeOnly;
+
+  final bool fatalIncrementalFailures;
+
+  const CompileTask(
+      this.script, this.analyzeOnly, this.fatalIncrementalFailures);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return compileTask(script);
+    return compileTask(script, analyzeOnly, fatalIncrementalFailures);
   }
 }
 
-Future<int> compileTask(Uri script) {
-  return developer.compile(script, SessionState.current);
+Future<int> compileTask(
+    Uri script, bool analyzeOnly, bool fatalIncrementalFailures) {
+  return developer.compile(
+      script, SessionState.current, analyzeOnly: analyzeOnly,
+      fatalIncrementalFailures: fatalIncrementalFailures);
 }

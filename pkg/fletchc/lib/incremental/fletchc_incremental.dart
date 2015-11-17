@@ -56,6 +56,8 @@ import '../src/fletch_backend.dart' show
 import 'package:sdk_library_metadata/libraries.dart' show
     Category;
 
+import '../src/driver/exit_codes.dart' as exit_codes;
+
 part 'caching_compiler.dart';
 
 const List<String> INCREMENTAL_OPTIONS = const <String>[
@@ -141,6 +143,9 @@ class IncrementalCompiler {
 
   /// Perform a full compile of [script]. This will reset the incremental
   /// compiler.
+  ///
+  /// Notice: a full compile means not incremental. The part of the program
+  /// that is compiled is determined by tree shaking.
   Future<bool> compile(Uri script) {
     _compiler = null;
     return _reuseCompiler(null).then((Compiler compiler) {
@@ -149,11 +154,37 @@ class IncrementalCompiler {
     });
   }
 
+  /// Perform a full analysis of [script]. This will reset the incremental
+  /// compiler.
+  ///
+  /// Notice: a full analysis is analogous to a full compile, that is, full
+  /// analysis not incremental. The part of the program that is analyzed is
+  /// determined by tree shaking.
+  Future<int> analyze(Uri script) {
+    _compiler = null;
+    int initialErrorCount = _context.errorCount;
+    int initialProblemCount = _context.problemCount;
+    return _reuseCompiler(null, analyzeOnly: true).then((Compiler compiler) {
+      // Don't try to reuse the compiler object.
+      return compiler.run(script).then((_) {
+        return _context.problemCount == initialProblemCount
+            ? 0
+            : _context.errorCount == initialErrorCount
+                ? exit_codes.ANALYSIS_HAD_NON_ERROR_PROBLEMS
+                : exit_codes.ANALYSIS_HAD_ERRORS;
+      });
+    });
+  }
+
   Future<Compiler> _reuseCompiler(
-      Future<bool> reuseLibrary(LibraryElement library)) {
+      Future<bool> reuseLibrary(LibraryElement library),
+      {bool analyzeOnly: false}) {
     List<String> options = this.options == null
         ? <String> [] : new List<String>.from(this.options);
     options.addAll(INCREMENTAL_OPTIONS);
+    if (analyzeOnly) {
+      options.add("--analyze-only");
+    }
     return reuseCompiler(
         cachedCompiler: _compiler,
         libraryRoot: libraryRoot,

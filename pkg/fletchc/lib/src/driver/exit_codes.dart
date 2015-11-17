@@ -24,3 +24,15 @@ const DART_VM_EXITCODE_COMPILE_TIME_ERROR = 254;
 /// uncaught exception. This is recognized by out test runner (test.dart) as
 /// status `RuntimeError`.
 const DART_VM_EXITCODE_UNCAUGHT_EXCEPTION = 255;
+
+/// Exit code returned by `compile` verb when `--fatal-incremental-failures` is
+/// used and incremental compilation failed.
+const INCREMENTAL_COMPILER_FAILED = 2;
+
+/// Exit code returned by `compile` verb when `--analyze-only` is used and
+/// problems (other than errors) were detected.
+const ANALYSIS_HAD_NON_ERROR_PROBLEMS = 2;
+
+/// Exit code returned by `compile` verb when `--analyze-only` is used and
+/// errors were detected.
+const ANALYSIS_HAD_ERRORS = 1;
