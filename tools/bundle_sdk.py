@@ -23,7 +23,7 @@ SDK_PACKAGES = ['file', 'fletch', 'gpio', 'http', 'i2c', 'os',
                 'raspberry_pi', 'socket']
 THIRD_PARTY_PACKAGES = ['charcode']
 
-SAMPLES = ['raspberry_pi', 'general']
+SAMPLES = ['raspberry-pi2', 'general']
 
 DOC_INDEX_HEAD = """
 <!DOCTYPE html>
