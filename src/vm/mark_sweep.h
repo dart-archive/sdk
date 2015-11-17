@@ -7,6 +7,7 @@
 
 #include "src/vm/object.h"
 #include "src/vm/program.h"
+#include "src/vm/process.h"
 
 namespace fletch {
 
@@ -132,6 +133,64 @@ class MarkingVisitor : public PointerVisitor {
   MarkingStack* marking_stack_;
 };
 
+class MarkAndChainStacksVisitor : public PointerVisitor {
+ public:
+  MarkAndChainStacksVisitor(Process* process,
+                            Space* space,
+                            MarkingStack* marking_stack)
+      : process_stack_(process->stack()),
+        space_(space),
+        marking_stack_(marking_stack),
+        number_of_stacks_(0) { }
+
+  void Visit(Object** p) { MarkPointer(*p); }
+
+  void VisitClass(Object** p) {
+    // The class pointer is used for the mark bit. Therefore,
+    // the actual class pointer is obtained by clearing the
+    // mark bit.
+    uword klass = reinterpret_cast<uword>(*p);
+    MarkPointer(reinterpret_cast<Object*>(klass & ~HeapObject::kMarkBit));
+  }
+
+  void VisitBlock(Object** start, Object** end) {
+    // Mark live all HeapObjects pointed to by pointers in [start, end)
+    for (Object** p = start; p < end; p++) MarkPointer(*p);
+  }
+
+  int number_of_stacks() const { return number_of_stacks_; }
+
+ private:
+  void ChainStack(Stack* stack) {
+    number_of_stacks_++;
+    if (process_stack_ != stack) {
+      // We rely on the fact that the current coroutine stack is
+      // visited first.
+      ASSERT(process_stack_->IsMarked());
+      stack->set_next(process_stack_->next());
+      process_stack_->set_next(stack);
+    }
+  }
+
+  void MarkPointer(Object* object) {
+    if (!object->IsHeapObject()) return;
+    if (!space_->Includes(reinterpret_cast<uword>(object))) return;
+    HeapObject* heap_object = HeapObject::cast(object);
+    if (!heap_object->IsMarked()) {
+      if (heap_object->IsStack()) {
+        ChainStack(Stack::cast(heap_object));
+      }
+      heap_object->SetMark();
+      marking_stack_->Push(heap_object);
+    }
+  }
+
+  Stack* process_stack_;
+  Space* space_;
+  MarkingStack* marking_stack_;
+  int number_of_stacks_;
+};
+
 class FreeList {
  public:
   void AddChunk(uword free_start, uword free_size) {
@@ -204,6 +263,20 @@ class FreeList {
   void Clear() {
     for (int i = 0; i < kNumberOfBuckets; i++) {
       buckets_[i] = NULL;
+    }
+  }
+
+  void Merge(FreeList* other) {
+    for (int i = 0; i < kNumberOfBuckets; i++) {
+      FreeListChunk* chunk = other->buckets_[i];
+      if (chunk != NULL) {
+        FreeListChunk* last_chunk = chunk;
+        while (last_chunk->next_chunk() != NULL) {
+          last_chunk = FreeListChunk::cast(last_chunk->next_chunk());
+        }
+        last_chunk->set_next_chunk(buckets_[i]);
+        buckets_[i] = chunk;
+      }
     }
   }
 

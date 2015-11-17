@@ -55,6 +55,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/object_list.cc \
 	../../../src/vm/object_map.cc \
 	../../../src/vm/object_memory.cc \
+	../../../src/vm/object_memory_copying.cc \
 	../../../src/vm/port.cc \
 	../../../src/vm/process.cc \
 	../../../src/vm/process_handle.cc \

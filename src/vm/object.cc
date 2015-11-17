@@ -607,7 +607,8 @@ HeapObject* HeapObject::CloneInToSpace(Space* to) {
   // Otherwise, copy the object to the 'to' space
   // and insert a forward pointer.
   int object_size = Size();
-  HeapObject* target = HeapObject::FromAddress(to->Allocate(object_size));
+  HeapObject* target =
+      HeapObject::FromAddress(to->AllocateLinearly(object_size));
   // Copy the content of source to target.
   CopyBlock(reinterpret_cast<Object**>(target->address()),
             reinterpret_cast<Object**>(address()),
@@ -625,7 +626,8 @@ Function* Function::UnfoldInToSpace(Space* to, int number_of_literals) {
   ASSERT(forwarding_address() == NULL);
   int current_object_size = Size();
   int new_object_size = current_object_size + number_of_literals * kPointerSize;
-  HeapObject* target = HeapObject::FromAddress(to->Allocate(new_object_size));
+  HeapObject* target =
+      HeapObject::FromAddress(to->AllocateLinearly(new_object_size));
   // Copy the content of source to target.
   CopyBlock(reinterpret_cast<Object**>(target->address()),
             reinterpret_cast<Object**>(address()),
@@ -642,7 +644,8 @@ Function* Function::FoldInToSpace(Space* to) {
   ASSERT(forwarding_address() == NULL);
   int current_object_size = Size();
   int new_object_size = current_object_size - literals_size() * kPointerSize;
-  HeapObject* target = HeapObject::FromAddress(to->Allocate(new_object_size));
+  HeapObject* target =
+      HeapObject::FromAddress(to->AllocateLinearly(new_object_size));
   // Copy the content of source to target.
   CopyBlock(reinterpret_cast<Object**>(target->address()),
             reinterpret_cast<Object**>(address()),

@@ -126,7 +126,7 @@ class SharedHeap {
 
 class SharedHeap {
  public:
-  SharedHeap();
+  SharedHeap() : heap_(NULL, 4 * KB) { }
   ~SharedHeap() { }
 
   void MergeParts() { }

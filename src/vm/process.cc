@@ -471,6 +471,36 @@ class ScavengeAndChainStacksVisitor: public PointerVisitor {
   int number_of_stacks_;
 };
 
+#ifdef FLETCH_MARK_SWEEP
+
+int Process::CollectMutableGarbageAndChainStacks() {
+  // Mark all reachable objects.
+  Space* space = heap()->space();
+  MarkingStack stack;
+  MarkAndChainStacksVisitor marking_visitor(this, space, &stack);
+
+  // Visit the current coroutine stack first and chain the rest of the
+  // stacks starting from there.
+  marking_visitor.Visit(coroutine_->stack_address());
+  IterateRoots(&marking_visitor);
+  stack.Process(&marking_visitor);
+
+  // Weak processing.
+  heap()->ProcessWeakPointers();
+  set_ports(Port::CleanupPorts(space, ports()));
+
+  // Flush outstanding free_list chunks into the free list. Then sweep
+  // over the heap and rebuild the freelist.
+  space->Flush();
+  SweepingVisitor sweeping_visitor(space->free_list());
+  space->IterateObjects(&sweeping_visitor);
+
+  UpdateStackLimit();
+  return marking_visitor.number_of_stacks();
+}
+
+#else  // #ifdef FLETCH_MARK_SWEEP
+
 int Process::CollectMutableGarbageAndChainStacks() {
   Space* from = heap()->space();
   Space* to = new Space(from->Used() / 10);
@@ -495,6 +525,8 @@ int Process::CollectMutableGarbageAndChainStacks() {
   UpdateStackLimit();
   return visitor.number_of_stacks();
 }
+
+#endif  // #ifdef FLETCH_MARK_SWEEP
 
 int Process::CollectGarbageAndChainStacks() {
   // NOTE: We need to take all spaces which are getting merged into our

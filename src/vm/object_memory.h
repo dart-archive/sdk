@@ -96,6 +96,15 @@ class Space {
 
   ~Space();
 
+  // AllocateLinearly makes sure that all memory allocated is
+  // allocated at the end of the current chunk. When using mark-sweep
+  // garbage collection, that means that the freelist is never
+  // used. It ensures that we can traverse the heap and find all
+  // objects, because the free-list allocator is not creating new
+  // objects behind us. This is used for copying operations (folding,
+  // unfolding, program GC) on the program heap.
+  uword AllocateLinearly(int size);
+
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and
   // there is no room to allocate the object.
@@ -114,12 +123,7 @@ class Space {
   void Flush();
 
   // Returns the total size of allocated objects.
-  int Used() {
-    int result = used_;
-    if (!using_copying_collector()) return result;
-    if (is_empty()) return result;
-    return result + (top() - last()->base());
-  }
+  int Used();
 
   void set_used(int used) { used_ = used; }
 
@@ -168,10 +172,6 @@ class Space {
 
   bool is_empty() const { return first_ == NULL; }
 
-  FreeList* free_list() const { return free_list_; }
-  void set_free_list(FreeList* free_list);
-  bool using_copying_collector() const { return free_list_ == NULL; }
-
   static int DefaultChunkSize(int heap_size) {
     // We return a value between kDefaultMinimumChunkSize and
     // kDefaultMaximumChunkSize - and try to keep the chunks smaller than 20% of
@@ -185,16 +185,32 @@ class Space {
   // there is exactly one chunk in this space and [object] lies within it.
   word OffsetOf(HeapObject* object);
 
+#ifdef FLETCH_MARK_SWEEP
+  FreeList* free_list() const { return free_list_; }
+
+  // Instance transformation leaves garbage in the heap that needs to be
+  // added to freelists when using mark-sweep collection.
+  void RebuildFreeListAfterTransformations();
+#endif
+
  private:
   friend class NoAllocationFailureScope;
   friend class ProgramHeapRelocator;
 
-  uword TryAllocate(int size);
+  void SetAllocationPointForPrepend(Space* space);
+
   uword AllocateInternal(int size, bool fatal);
   uword AllocateInNewChunk(int size, bool fatal);
+
+#ifdef FLETCH_MARK_SWEEP
   uword AllocateFromFreeList(int size, bool fatal);
+#else
+  uword TryAllocate(int size);
+#endif
 
   void Append(Chunk* chunk);
+
+  void FreeAllChunks();
 
   Chunk* first() { return first_; }
   Chunk* last() { return last_; }
@@ -206,14 +222,15 @@ class Space {
 
   Chunk* first_;  // First chunk in this space.
   Chunk* last_;   // Last chunk in this space.
-  int used_;  // Allocated bytes, excluding last chunk.
-  uword top_;  // Allocation top in last chunk.
-  uword limit_;  // Allocation limit in last chunk.
+  int used_;  // Allocated bytes.
+  uword top_;  // Allocation top in current chunk.
+  uword limit_;  // Allocation limit in current chunk.
   int allocation_budget_;  // Budget before needing a GC.
   int no_allocation_nesting_;
-  FreeList* free_list_;
-  uword active_freelist_chunk_;
-  int active_freelist_chunk_size_;
+
+#ifdef FLETCH_MARK_SWEEP
+  FreeList* free_list_;  // Free list structure.
+#endif
 };
 
 class NoAllocationFailureScope {

@@ -176,12 +176,6 @@ bool SharedHeap::ReleasePart(Part* part) {
 
 #else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
-SharedHeap::SharedHeap() : heap_(NULL, 4 * KB) {
-#if defined(FLETCH_MARK_SWEEP)
-  heap_.space()->set_free_list(new FreeList());
-#endif
-}
-
 void SharedHeap::IterateProgramPointers(PointerVisitor* visitor) {
   HeapObjectPointerVisitor heap_pointer_visitor(visitor);
   heap_.IterateObjects(&heap_pointer_visitor);

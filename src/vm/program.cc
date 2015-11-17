@@ -482,7 +482,7 @@ void Program::PerformSharedGarbageCollection() {
 
 #else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
-#if defined(FLETCH_MARK_SWEEP)
+#ifdef FLETCH_MARK_SWEEP
 
 void Program::PerformSharedGarbageCollection() {
   // Mark all reachable objects.
@@ -521,7 +521,7 @@ void Program::PerformSharedGarbageCollection() {
   heap->AdjustAllocationBudget();
 }
 
-#else  // #if defined(FLETCH_MARK_SWEEP)
+#else  // #ifdef FLETCH_MARK_SWEEP
 
 void Program::PerformSharedGarbageCollection() {
   Heap* heap = shared_heap()->heap();
@@ -551,7 +551,7 @@ void Program::PerformSharedGarbageCollection() {
   heap->ReplaceSpace(to);
 }
 
-#endif  // #if defined(FLETCH_MARK_SWEEP)
+#endif  // #ifdef FLETCH_MARK_SWEEP
 
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 

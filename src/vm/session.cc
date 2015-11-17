@@ -13,6 +13,7 @@
 #include "src/shared/version.h"
 
 #include "src/vm/frame.h"
+#include "src/vm/heap_validator.h"
 #include "src/vm/links.h"
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
@@ -1412,6 +1413,22 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
   Heap* const shared_heap_;
 };
 
+#ifdef FLETCH_MARK_SWEEP
+class RebuildFreeListsVisitor : public ProcessVisitor {
+ public:
+  explicit RebuildFreeListsVisitor(SharedHeap* shared_heap)
+      : shared_heap_(shared_heap) {}
+
+  virtual void VisitProcess(Process* process) {
+    process->heap()->space()->RebuildFreeListAfterTransformations();
+    shared_heap_->heap()->space()->RebuildFreeListAfterTransformations();
+  }
+
+ private:
+  SharedHeap* shared_heap_;
+};
+#endif
+
 class TransformInstancesProcessVisitor : public ProcessVisitor {
  public:
   explicit TransformInstancesProcessVisitor(SharedHeap* shared_heap)
@@ -1466,6 +1483,12 @@ void Session::TransformInstances() {
 
   TransformInstancesProcessVisitor process_visitor(program()->shared_heap());
   program()->VisitProcesses(&process_visitor);
+
+#if FLETCH_MARK_SWEEP
+  space->RebuildFreeListAfterTransformations();
+  RebuildFreeListsVisitor rebuilding_visitor(program()->shared_heap());
+  program()->VisitProcesses(&rebuilding_visitor);
+#endif
 }
 
 void Session::PushFrameOnSessionStack(bool is_first_name, const Frame* frame) {

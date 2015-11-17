@@ -87,6 +87,8 @@
         'object_map.cc',
         'object_map.h',
         'object_memory.cc',
+        'object_memory_copying.cc',
+        'object_memory_mark_sweep.cc',
         'object_memory.h',
         'pair.h',
         'port.cc',
