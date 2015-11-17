@@ -170,6 +170,13 @@ class IncrementalCompiler {
         categories: categories);
   }
 
+  void _checkCompilationFailed() {
+    if (!isExperimentalModeEnabled && _compiler.compilationFailed) {
+      throw new IncrementalCompilationFailed(
+          "Unable to reuse compiler due to compile-time errors");
+    }
+  }
+
   /// Perform an incremental compilation of [updatedFiles]. [compile] must have
   /// been called once before calling this method.
   Future<FletchDelta> compileUpdates(
@@ -177,6 +184,7 @@ class IncrementalCompiler {
       Map<Uri, Uri> updatedFiles,
       {Logger logTime,
        Logger logVerbose}) {
+    _checkCompilationFailed();
     if (logTime == null) {
       logTime = (_) {};
     }
@@ -194,9 +202,11 @@ class IncrementalCompiler {
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(updater.reuseLibrary).then((Compiler compiler) {
+    return _reuseCompiler(updater.reuseLibrary).then((Compiler compiler) async {
       _compiler = compiler;
-      return updater.computeUpdateFletch(currentSystem);
+      FletchDelta delta = await updater.computeUpdateFletch(currentSystem);
+      _checkCompilationFailed();
+      return delta;
     });
   }
 
