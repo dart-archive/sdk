@@ -55,6 +55,13 @@ def SetupClangEnvironment(system):
     mac_library_path = "third_party/clang/mac/lib/clang/3.6.0/lib/darwin"
     os.environ['DYLD_LIBRARY_PATH'] = '%s/%s' % (FLETCH_PATH, mac_library_path)
 
+def SetupJavaEnvironment(system):
+  if system == 'macos':
+    os.environ['JAVA_HOME'] = (
+        '/Library/Java/JavaVirtualMachines/jdk1.7.0_71.jdk/Contents/Home')
+  elif system == 'linux':
+    os.environ['JAVA_HOME'] = '/usr/lib/jvm/java-7-openjdk-amd64'
+
 def Main():
   name, _ = bot.GetBotName()
 
@@ -66,6 +73,7 @@ def Main():
     raise Exception('Invalid buildername')
 
   SetupClangEnvironment(utils.GuessOS())
+  SetupJavaEnvironment(utils.GuessOS())
 
   # Clobber build directory if the checkbox was pressed on the BB.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
