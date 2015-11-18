@@ -11,7 +11,7 @@
 
 namespace fletch {
 
-Atomic<bool> Print::standard_output_enabled_ = true;
+Atomic<bool> Print::standard_output_enabled_(true);
 
 #ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
 Mutex* Print::mutex_ = Platform::CreateMutex();

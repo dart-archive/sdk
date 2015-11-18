@@ -20,11 +20,11 @@ class Spinlock {
   }
 
   void Lock() {
-    while (is_locked_.exchange(true, fletch::kAcquire)) { }
+    while (is_locked_.exchange(true, kAcquire)) { }
   }
 
   void Unlock() {
-    is_locked_.store(false, fletch::kRelease);
+    is_locked_.store(false, kRelease);
   }
 
  private:
