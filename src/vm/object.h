@@ -315,9 +315,6 @@ class ContentVisitor;
 
 class HeapObject: public Object {
  public:
-  // Tell whether this is located in new space.
-  inline bool IsNew();
-
   // Convert a raw address to a HeapObject by adding a tag.
   inline static HeapObject* FromAddress(uword address);
 
@@ -1596,11 +1593,6 @@ HeapObject* HeapObject::FromAddress(uword raw_address) {
 
 InstanceFormat HeapObject::format() {
   return raw_class()->instance_format();
-}
-
-bool HeapObject::IsNew() {
-  // A heap object is in new space iff the first bit after the tag bits is 1.
-  return (reinterpret_cast<uword>(this) & (kTagMask + 1)) != 0;
 }
 
 void HeapObject::at_put(int offset, Object* value) {
