@@ -475,22 +475,27 @@ SessionState createSessionState(
       settings);
 }
 
-Future<int> run(SessionState state, {String testDebuggerCommands}) async {
+Future<int> run(
+    SessionState state,
+    {List<String> testDebuggerCommands,
+     bool terminateDebugger: true}) async {
   List<FletchDelta> compilationResults = state.compilationResults;
   Session session = state.session;
-  state.session = null;
-
-  session.silent = true;
 
   for (FletchDelta delta in compilationResults) {
     await session.applyDelta(delta);
   }
 
   if (testDebuggerCommands != null) {
-    session.silent = false;
     await session.testDebugger(testDebuggerCommands);
     await session.shutdown();
     return 0;
+  }
+
+  session.silent = true;
+
+  if (terminateDebugger) {
+    state.session = null;
   }
 
   await session.enableDebugger();
@@ -547,7 +552,10 @@ Future<int> run(SessionState state, {String testDebuggerCommands}) async {
         break;
     }
   } finally {
-    if (!session.terminated) {
+    if (!terminateDebugger) {
+      session.silent = false;
+    }
+    if (terminateDebugger && !session.terminated) {
       // TODO(ahe): Do not shut down the session.
       bool done = false;
       Timer timer = new Timer(const Duration(seconds: 5), () {
@@ -664,6 +672,7 @@ Future<int> compileAndAttachToVmThen(
     SessionState state,
     Uri script,
     Uri base,
+    bool waitForVmExit,
     Future<int> action()) async {
   bool startedVmDirectly = false;
   List<FletchDelta> compilationResults = state.compilationResults;
@@ -715,7 +724,7 @@ Future<int> compileAndAttachToVmThen(
       print(trace);
     }
   } finally {
-    if (startedVmDirectly) {
+    if (waitForVmExit && startedVmDirectly) {
       exitCode = await state.fletchVm.exitCode;
     }
     state.detachCommandSender();

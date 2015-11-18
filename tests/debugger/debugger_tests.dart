@@ -55,11 +55,11 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
   state.stdoutSink.attachCommandSender(output.addAll);
   state.stderrSink.attachCommandSender(output.addAll);
 
-  String debuggerCommands = "";
+  List<String> debuggerCommands = <String>[];
   for (String line in await new File.fromUri(uri).readAsLines()) {
     const String commandsPattern = "// FletchDebuggerCommands=";
     if (line.startsWith(commandsPattern)) {
-      debuggerCommands = line.substring(commandsPattern.length);
+      debuggerCommands = line.substring(commandsPattern.length).split(",");
     }
   }
 

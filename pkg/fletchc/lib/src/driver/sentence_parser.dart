@@ -234,6 +234,9 @@ class SentenceParser {
       case "devices":
         return makeTarget(TargetKind.DEVICES);
 
+      case "apply":
+        return makeTarget(TargetKind.APPLY);
+
       default:
         return new ErrorTarget(DiagnosticKind.expectedTargetButGot, word);
     }
@@ -354,6 +357,7 @@ class Target {
 enum TargetKind {
   AGENT,
   ALL,
+  APPLY,
   BACKTRACE,
   BREAK,
   CLASS,

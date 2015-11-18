@@ -180,9 +180,9 @@ There are three ways to reproduce this error:
               ["export", script, 'to', 'file', snapshotFileName],
               checkExitCode: false, timeout: timeout);
         } else {
-          exitCode =
-              await fletch.runInSession(
-                  ["run", script], checkExitCode: false, timeout: timeout);
+          exitCode = await fletch.runInSession(
+              ["run", "--terminate-debugger", script],
+              checkExitCode: false, timeout: timeout);
         }
       } finally {
         if (exitCode == COMPILER_EXITCODE_CRASH) {

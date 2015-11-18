@@ -284,18 +284,14 @@ class Session extends FletchVmSession {
     }
   }
 
-  Stream<String> debugCommandsFromString(String commandString) {
-    return new Stream<String>.fromIterable(commandString.split(','));
-  }
-
-  Future testDebugger(String commands) async {
+  Future testDebugger(List<String> commands) async {
     await enableDebugger();
     await spawnProcess();
     if (commands.isEmpty) {
       await stepToCompletion();
     } else {
-      InputHandler handler =
-          new InputHandler(this, debugCommandsFromString(commands), true);
+      InputHandler handler = new InputHandler(
+          this, new Stream<String>.fromIterable(commands), true);
       await handler.run();
     }
   }

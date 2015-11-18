@@ -35,25 +35,26 @@ const Action debugAction =
         debugDocumentation,
         requiresSession: true,
         supportedTargets: const [
-          TargetKind.FILE,
-          TargetKind.RUN_TO_MAIN,
+          TargetKind.APPLY,
           TargetKind.BACKTRACE,
           TargetKind.BREAK,
           TargetKind.CONTINUE,
-          TargetKind.LIST,
-          TargetKind.DISASM,
-          TargetKind.FRAME,
           TargetKind.DELETE_BREAKPOINT,
-          TargetKind.LIST_BREAKPOINTS,
-          TargetKind.STEP,
-          TargetKind.STEP_OVER,
+          TargetKind.DISASM,
           TargetKind.FIBERS,
+          TargetKind.FILE,
           TargetKind.FINISH,
-          TargetKind.RESTART,
-          TargetKind.STEP_BYTECODE,
-          TargetKind.STEP_OVER_BYTECODE,
+          TargetKind.FRAME,
+          TargetKind.LIST,
+          TargetKind.LIST_BREAKPOINTS,
           TargetKind.PRINT,
           TargetKind.PRINT_ALL,
+          TargetKind.RESTART,
+          TargetKind.RUN_TO_MAIN,
+          TargetKind.STEP,
+          TargetKind.STEP_BYTECODE,
+          TargetKind.STEP_OVER,
+          TargetKind.STEP_OVER_BYTECODE,
           TargetKind.TOGGLE,
         ]);
 
@@ -66,6 +67,9 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
 
   DebuggerTask task;
   switch (sentence.target.kind) {
+    case TargetKind.APPLY:
+      task = new DebuggerTask(TargetKind.APPLY.index);
+      break;
     case TargetKind.RUN_TO_MAIN:
       task = new DebuggerTask(TargetKind.RUN_TO_MAIN.index);
       break;
@@ -238,6 +242,8 @@ class DebuggerTask extends SharedTask {
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
     switch (TargetKind.values[kind]) {
+      case TargetKind.APPLY:
+        return apply(commandSender, SessionState.current);
       case TargetKind.RUN_TO_MAIN:
         return runToMainDebuggerTask(commandSender, SessionState.current);
       case TargetKind.BACKTRACE:
@@ -529,6 +535,13 @@ Future<int> restartDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
   await session.restart();
+  return 0;
+}
+
+Future<int> apply(
+    CommandSender commandSender, SessionState state) async {
+  Session session = attachToSession(state, commandSender);
+  await session.applyDelta(state.compilationResults.last);
   return 0;
 }
 

@@ -20,8 +20,12 @@ const Action runAction =
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
 
 Future<int> run(AnalyzedSentence sentence, VerbContext context) {
+  bool terminateDebugger = sentence.options.terminateDebugger;
+  List<String> testDebuggerCommands = sentence.options.testDebuggerCommands;
   return context.performTaskInWorker(
-      new RunTask(sentence.targetUri, sentence.base));
+      new RunTask(
+          sentence.targetUri, sentence.base, terminateDebugger,
+          testDebuggerCommands));
 }
 
 class RunTask extends SharedTask {
@@ -31,13 +35,25 @@ class RunTask extends SharedTask {
 
   final Uri base;
 
-  const RunTask(this.script, this.base);
+  /// When true, terminate the debugger session before returning from
+  /// [runTask]. Otherwise, the debugger session will be available after
+  /// [runTask] completes.
+  final bool terminateDebugger;
+
+  final List<String> testDebuggerCommands;
+
+  const RunTask(
+      this.script,
+      this.base,
+      this.terminateDebugger,
+      this.testDebuggerCommands);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
     return runTask(
-        commandSender, commandIterator, SessionState.current, script, base);
+        commandSender, commandIterator, SessionState.current, script, base,
+        terminateDebugger, testDebuggerCommands);
   }
 }
 
@@ -46,12 +62,17 @@ Future<int> runTask(
     StreamIterator<Command> commandIterator,
     SessionState state,
     Uri script,
-    Uri base) {
+    Uri base,
+    bool terminateDebugger,
+    List<String> testDebuggerCommands) {
   return compileAndAttachToVmThen(
       commandSender,
       commandIterator,
       state,
       script,
       base,
-      () => developer.run(state));
+      terminateDebugger,
+      () => developer.run(
+          state, testDebuggerCommands: testDebuggerCommands,
+          terminateDebugger: terminateDebugger));
 }

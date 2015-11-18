@@ -58,5 +58,6 @@ Future<int> exportTask(
       state,
       script,
       base,
+      true,
       () => developer.export(state, snapshot));
 }
