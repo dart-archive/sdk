@@ -195,16 +195,13 @@ class FreeList {
  public:
   void AddChunk(uword free_start, uword free_size) {
     // If the chunk is too small to be turned into an actual
-    // free list chunk we turn it into a filler to be coalesced
+    // free list chunk we turn it into fillers to be coalesced
     // with other free chunks later.
     if (free_size < FreeListChunk::kSize) {
       ASSERT(free_size <= 2 * kPointerSize);
       Object** free_address = reinterpret_cast<Object**>(free_start);
-      if (free_size == kPointerSize) {
-        free_address[0] = StaticClassStructures::one_word_filler_class();
-      } else if (free_size == 2 * kPointerSize) {
-        free_address[0] = StaticClassStructures::two_word_filler_class();
-        free_address[1] = Smi::FromWord(0);
+      for (uword i = 0; i * kPointerSize < free_size; i++) {
+        free_address[i] = StaticClassStructures::one_word_filler_class();
       }
       return;
     }

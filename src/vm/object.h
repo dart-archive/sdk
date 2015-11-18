@@ -26,7 +26,6 @@ namespace fletch {
 //     HeapObject
 //       FreeListChunk
 //       OneWordFiller
-//       TwoWordFiller
 //       Boxed
 //       Class
 //       Double
@@ -209,7 +208,6 @@ class InstanceFormat {
     INITIALIZER_TYPE        = 11,
     FREE_LIST_CHUNK_TYPE    = 12,
     ONE_WORD_FILLER_TYPE    = 13,
-    TWO_WORD_FILLER_TYPE    = 14,
     IMMEDIATE_TYPE          = 15  // No instances.
   };
 
@@ -244,7 +242,6 @@ class InstanceFormat {
   inline static const InstanceFormat boxed_format();
   inline static const InstanceFormat free_list_chunk_format();
   inline static const InstanceFormat one_word_filler_format();
-  inline static const InstanceFormat two_word_filler_format();
   inline static const InstanceFormat stack_format();
   inline static const InstanceFormat initializer_format();
   inline static const InstanceFormat null_format();
@@ -1078,8 +1075,6 @@ class StaticClassStructures {
                InstanceFormat::free_list_chunk_format());
     SetupClass(one_word_filler_class_storage,
                InstanceFormat::one_word_filler_format());
-    SetupClass(two_word_filler_class_storage,
-               InstanceFormat::two_word_filler_format());
   }
 
   static void TearDown() {}
@@ -1099,23 +1094,16 @@ class StaticClassStructures {
     return Class::cast(HeapObject::FromAddress(address));
   }
 
-  static Class* two_word_filler_class() {
-    uword address = reinterpret_cast<uword>(two_word_filler_class_storage);
-    return Class::cast(HeapObject::FromAddress(address));
-  }
-
   static bool IsStaticClass(HeapObject* object) {
     return (object == meta_class() ||
             object == free_list_chunk_class() ||
-            object == one_word_filler_class() ||
-            object == two_word_filler_class());
+            object == one_word_filler_class());
   }
 
  private:
   static uint8 meta_class_storage[Class::kSize];
   static uint8 free_list_chunk_class_storage[Class::kSize];
   static uint8 one_word_filler_class_storage[Class::kSize];
-  static uint8 two_word_filler_class_storage[Class::kSize];
 
   static void SetupMetaClass() {
     Class* meta = reinterpret_cast<Class*>(
@@ -1155,8 +1143,6 @@ class FreeListChunk : public HeapObject {
 };
 
 class OneWordFiller : public HeapObject { };
-
-class TwoWordFiller : public HeapObject { };
 
 // A stack-object that has 0..limit objects alive.
 class Stack: public BaseArray {
@@ -1359,11 +1345,6 @@ const InstanceFormat InstanceFormat::one_word_filler_format() {
       ONE_WORD_FILLER_TYPE, kPointerSize, false, true, NEVER_IMMUTABLE);
 }
 
-const InstanceFormat InstanceFormat::two_word_filler_format() {
-  return InstanceFormat(
-      TWO_WORD_FILLER_TYPE, 2 * kPointerSize, false, true, NEVER_IMMUTABLE);
-}
-
 const InstanceFormat InstanceFormat::function_format() {
   return InstanceFormat(
       FUNCTION_TYPE, Function::kSize, true, false, ALWAYS_IMMUTABLE);
@@ -1501,8 +1482,7 @@ bool Object::IsFiller() {
   if (IsSmi()) return false;
   HeapObject* h = HeapObject::cast(this);
   Class* c = h->raw_class();
-  return (c == StaticClassStructures::one_word_filler_class() ||
-          c == StaticClassStructures::two_word_filler_class());
+  return c == StaticClassStructures::one_word_filler_class();
 }
 
 bool Object::IsByteArray() {

@@ -22,7 +22,6 @@ namespace fletch {
 uint8 StaticClassStructures::meta_class_storage[Class::kSize];
 uint8 StaticClassStructures::free_list_chunk_class_storage[Class::kSize];
 uint8 StaticClassStructures::one_word_filler_class_storage[Class::kSize];
-uint8 StaticClassStructures::two_word_filler_class_storage[Class::kSize];
 
 static void CopyBlock(Object** dst, Object** src, int byte_size) {
   ASSERT(byte_size > 0);
