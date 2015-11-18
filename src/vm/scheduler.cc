@@ -524,18 +524,6 @@ void Scheduler::RunInThread() {
   ThreadState* thread_state = new ThreadState();
   ThreadEnter(thread_state);
   while (true) {
-    thread_state->idle_monitor()->Lock();
-    while (thread_state->queue()->is_empty() &&
-           startup_queue_->is_empty() &&
-           !pause_ &&
-           processes_ > 0) {
-      PushIdleThread(thread_state);
-      // The thread is becoming idle.
-      thread_state->idle_monitor()->Wait();
-      // At this point the thread_state may still be in idle_threads_. That's
-      // okay, as it will just be ignored later on.
-    }
-    thread_state->idle_monitor()->Unlock();
     if (processes_ == 0) {
       preempt_monitor_->Lock();
       preempt_monitor_->Notify();
@@ -562,6 +550,19 @@ void Scheduler::RunInThread() {
       }
     } else {
       RunInterpreterLoop(thread_state);
+    }
+
+    // Sleep until there is something new to execute.
+    ScopedMonitorLock scoped_lock(thread_state->idle_monitor());
+    while (thread_state->queue()->is_empty() &&
+           startup_queue_->is_empty() &&
+           !pause_ &&
+           processes_ > 0) {
+      PushIdleThread(thread_state);
+      // The thread is becoming idle.
+      thread_state->idle_monitor()->Wait();
+      // At this point the thread_state may still be in idle_threads_. That's
+      // okay, as it will just be ignored later on.
     }
   }
   ThreadExit(thread_state);
