@@ -368,10 +368,11 @@ Future<Settings> createSettings(
 Future<Address> readAddressFromUser(
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
-  String message =
-      "Please enter IP address of remote device (press enter for discovery): ";
+  String message = "Please enter IP address of remote device "
+      "(press Enter to search for devices):";
   commandSender.sendStdout(message);
-  List<InternetAddress> devices = []; // List of devices from running discovery.
+  // The list of devices found by running discovery.
+  List<InternetAddress> devices = <InternetAddress>[];
   while (await commandIterator.moveNext()) {
     Command command = commandIterator.current;
     switch (command.code) {
@@ -388,18 +389,26 @@ Future<Address> readAddressFromUser(
         String line = UTF8.decode(command.data).trim();
         if (line.isEmpty && devices.isEmpty) {
           commandSender.sendStdout("\n");
+          // [discoverDevices] will print out the list of device with their
+          // IP address, hostname, and agent version.
           devices = await discoverDevices(prefixWithNumber: true);
           if (devices.isEmpty) {
-            commandSender.sendStdout("No Fletch capable devices was found.\n");
+            commandSender.sendStdout(
+                "Couldn't find Fletch capable devices\n");
             commandSender.sendStdout(message);
           } else {
-            String word = (devices.length == 1) ? "device" : "devices";
-            commandSender.sendStdout("\n");
-            commandSender.sendStdout(
-                "${devices.length} Fletch capable $word was found.\n");
-            commandSender.sendStdout(
-                "Please enter the number or the IP address of "
-                "the remote device (press enter for the first device): ");
+            if (devices.length == 1) {
+              commandSender.sendStdout("\n");
+              commandSender.sendStdout("Press Enter to use this device");
+            } else {
+              commandSender.sendStdout("\n");
+              commandSender.sendStdout(
+                  "Found ${devices.length} Fletch capable devices\n");
+              commandSender.sendStdout(
+                  "Please enter the number or the IP address of "
+                  "the remote device you would like to use "
+                  "(press Enter to use the first device): ");
+            }
           }
         } else {
           bool checkedIndex = false;
