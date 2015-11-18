@@ -1,0 +1,30 @@
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# Helper that tries to discover the serial devices belonging to STM ST-Link
+# debugging interfaces. There are typically /dev/ACMx or /dev/USBx.
+#
+# The device, if found, is returned in $STLINKPORT.
+#
+# On Linux, we use the /dev/serial interface to query available serial ports.
+# Currently, MacOS is not supported.
+discover_devices() {
+  if [ $(uname -s) != "Linux" ]; then
+    echo "Device discovery is not supported on MacOS..."
+    return
+  fi
+  if [ -z "$STLINKPORT" ]; then
+    local DEVICES=(/dev/serial/by-id/*STLink*)
+    if [ ${#DEVICES[@]} -gt 1 ]; then
+      echo "Found multiple ST-Link devices, please set STLINKPORT manually..."
+      local DEV
+      for DEV in $DEVICES; do
+        echo "Discovered STLink at $STLINKPORT..."
+      done
+      exit 1
+    fi
+    STLINKPORT=$(realpath ${DEVICES[0]})
+    echo "Using ST-Link serial port at $STLINKPORT..."
+  fi
+}
