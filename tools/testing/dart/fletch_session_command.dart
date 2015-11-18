@@ -165,7 +165,6 @@ There are three ways to reproduce this error:
       Future vmTerminationFuture;
       try {
         await fletch.createSession(settingsFileName);
-        await fletch.runInSession(["show", "log"]);
 
         // Now that the session is created, start a Fletch VM.
         String vmSocketAddress = await fletch.spawnVm();
@@ -584,9 +583,11 @@ Future<int> exitCodeWithTimeout(
 
 /// Represents a session in the persistent Fletch driver process.
 class FletchSessionMirror {
+  static const int RINGBUFFER_SIZE = 15;
+
   final int id;
 
-  final List<List<String>> internalLoggedCommands = <List<String>>[];
+  final Queue<List<String>> internalLoggedCommands = new Queue<List<String>>();
 
   bool isCreated = false;
 
@@ -594,6 +595,9 @@ class FletchSessionMirror {
 
   void logCommand(List<String> command) {
     internalLoggedCommands.add(command);
+    if (internalLoggedCommands.length >= RINGBUFFER_SIZE) {
+      internalLoggedCommands.removeFirst();
+    }
   }
 
   void printLoggedCommands(BytesOutputSink sink, String executable) {
