@@ -843,13 +843,29 @@ Future<int> invokeCombinedTasks(
   return task2(commandSender, commandIterator);
 }
 
+Future<String> getAgentVersion(InternetAddress host, int port) async {
+  Socket socket;
+  try {
+    socket = await Socket.connect(host, port);
+    handleSocketErrors(socket, "getAgentVersionSocket");
+  } on SocketException catch (e) {
+    return 'Error: no agent: $e';
+  }
+  try {
+    AgentConnection connection = new AgentConnection(socket);
+    return await connection.fletchVersion();
+  } finally {
+    socket.close();
+  }
+}
+
 Future<List<InternetAddress>> discoverDevices(
     {bool prefixWithNumber: false}) async {
   const ipV4AddressLength = 'xxx.xxx.xxx.xxx'.length;
   print("Looking for Fletch capable devices (will search for 5 seconds)...");
   MDnsClient client = new MDnsClient();
   await client.start();
-  List<InternetAddress> result = [];
+  List<InternetAddress> result = <InternetAddress>[];
   String name = '_fletch_agent._tcp.local';
   await for (ResourceRecord ptr in client.lookup(RRType.PTR, name)) {
     String domain = ptr.domainName;
@@ -859,13 +875,17 @@ Future<List<InternetAddress>> discoverDevices(
         InternetAddress address = a.address;
         if (!address.isLinkLocal) {
           result.add(address);
-          var prefix = prefixWithNumber ? "${result.length}: " : "";
+          String version = await getAgentVersion(address, AGENT_DEFAULT_PORT);
+          String prefix = prefixWithNumber ? "${result.length}: " : "";
           print("${prefix}Device at "
                 "${address.address.padRight(ipV4AddressLength + 1)} "
-                "$target");
+                "$target ($version)");
         }
       }
     }
+    // TODO(karlklose): Verify that we got an A/IP4 result for the PTR result.
+    // If not, maybe the cache was flushed before access and we need to query
+    // for the SRV or A type again.
   }
   client.stop();
   return result;

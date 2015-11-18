@@ -145,7 +145,7 @@ void main(List<String> arguments) async {
       print('Update finished');
       break;
     case RequestHeader.FLETCH_VERSION:
-      int version = await connection.fletchVersion();
+      String version = await connection.fletchVersion();
       print('Fletch Agent Version $version');
       break;
     case RequestHeader.SIGNAL_VM:
