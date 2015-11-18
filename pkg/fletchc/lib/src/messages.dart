@@ -64,7 +64,8 @@ enum DiagnosticKind {
   verbRequiresSessionTarget,
   verbRequiresSocketTarget,
   verbRequiresTarget,
-  verbRequiresTargetButGot,
+  verbRequiresSpecificTarget,
+  verbRequiresSpecificTargetButGot,
   versionMismatch,
 
   // TODO(ahe): Remove when debug attach implicitly.
@@ -290,10 +291,13 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.verbRequiresNoWithFile:
       return "Can't perform '$verb' with '$userInput'.";
 
-    case DiagnosticKind.verbRequiresTarget:
+    case DiagnosticKind.verbRequiresSpecificTarget:
       return "Can't perform '$verb' without a '$requiredTarget'.";
 
-    case DiagnosticKind.verbRequiresTargetButGot:
+    case DiagnosticKind.verbRequiresTarget:
+      return "Can't perform '$verb' without a target.";
+
+    case DiagnosticKind.verbRequiresSpecificTargetButGot:
       return "Can't perform '$verb' without a '$requiredTarget', "
           "but got: '$target'.";
 

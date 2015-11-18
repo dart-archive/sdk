@@ -286,16 +286,18 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     }
   }
 
+  TargetKind requiredTarget = action.requiredTarget;
+
   if (target != null &&
-      action.requiredTarget == null &&
+      requiredTarget == null &&
       action.supportedTargets == null) {
     throwFatalError(
         DiagnosticKind.verbDoesntSupportTarget, verb: verb, target: target);
   }
 
-  if (action.requiredTarget != null) {
+  if (action.requiresTarget) {
     if (target == null) {
-      switch (action.requiredTarget) {
+      switch (requiredTarget) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(DiagnosticKind.noTcpSocketTarget);
           break;
@@ -308,15 +310,18 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
           if (action.requiresTargetSession) {
             throwFatalError(
                 DiagnosticKind.verbRequiresSessionTarget, verb: verb);
+          } else if (requiredTarget != null) {
+            throwFatalError(
+                DiagnosticKind.verbRequiresSpecificTarget, verb: verb,
+                requiredTarget: requiredTarget);
           } else {
             throwFatalError(
-                DiagnosticKind.verbRequiresTarget, verb: verb,
-                requiredTarget: action.requiredTarget);
+                DiagnosticKind.verbRequiresTarget, verb: verb);
           }
           break;
       }
-    } else if (target.kind != action.requiredTarget) {
-      switch (action.requiredTarget) {
+    } else if (requiredTarget != null && target.kind != requiredTarget) {
+      switch (requiredTarget) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(
               DiagnosticKind.verbRequiresSocketTarget,
@@ -331,9 +336,9 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
 
         default:
           throwFatalError(
-              DiagnosticKind.verbRequiresTargetButGot,
+              DiagnosticKind.verbRequiresSpecificTargetButGot,
               verb: verb, target: target,
-              requiredTarget: action.requiredTarget);
+              requiredTarget: requiredTarget);
       }
     }
   }

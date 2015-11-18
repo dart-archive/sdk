@@ -286,7 +286,11 @@ List<Example> getExamples(DiagnosticKind kind) {
       // TODO(ahe): Add test for this.
       return untestable;
 
-    case DiagnosticKind.verbRequiresTargetButGot:
+    case DiagnosticKind.verbRequiresSpecificTarget:
+      // TODO(ahe): Add test for this.
+      return untestable;
+
+    case DiagnosticKind.verbRequiresSpecificTargetButGot:
       // TODO(ahe): Add test for this.
       return untestable;
 

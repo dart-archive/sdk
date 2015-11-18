@@ -17,6 +17,7 @@ import '../driver/developer.dart' show
 
 const Action showAction = const Action(
     show, showDocumentation, requiresSession: true,
+    requiresTarget: true,
     supportedTargets: const <TargetKind>[TargetKind.LOG, TargetKind.DEVICES]);
 
 Future<int> show(AnalyzedSentence sentence, VerbContext context) {

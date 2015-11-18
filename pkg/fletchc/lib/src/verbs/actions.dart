@@ -70,6 +70,11 @@ class Action {
   /// Optional kind of target required by this verb.
   final TargetKind requiredTarget;
 
+  /// Indicates whether the action needs a target. If [requiredTarget] is
+  /// non-null, this flag is set to `true`, regardless of the value given
+  /// in the constructor.
+  final bool requiresTarget;
+
   /// Optional list of targets supported (but not required) by this verb.
   final List<TargetKind> supportedTargets;
 
@@ -84,11 +89,15 @@ class Action {
        this.allowsTrailing: false,
        bool requiresTargetSession: false,
        TargetKind requiredTarget,
+       bool requiresTarget: false,
        this.supportedTargets,
        this.supportsWithUri: false})
       : this.requiresTargetSession = requiresTargetSession,
         this.requiredTarget =
-            requiresTargetSession ? TargetKind.SESSION : requiredTarget;
+      requiresTargetSession ? TargetKind.SESSION : requiredTarget,
+        requiresTarget = !identical(requiredTarget, null) ||
+    requiresTarget ||
+    requiresTargetSession;
 }
 
 
