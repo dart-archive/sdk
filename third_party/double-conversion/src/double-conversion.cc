@@ -31,8 +31,13 @@
 #include "double-conversion.h"
 
 #include "bignum-dtoa.h"
-#include "fast-dtoa.h"
-#include "fixed-dtoa.h"
+
+// Remove the double-based fast cases and use big int operations always for
+// Fletch. This cuts more than 8KB off the binary size.
+//
+// #include "fast-dtoa.h"
+// #include "fixed-dtoa.h"
+
 #include "ieee.h"
 #include "strtod.h"
 #include "utils.h"
@@ -385,6 +390,9 @@ void DoubleToStringConverter::DoubleToAscii(double v,
     return;
   }
 
+  // Remove the double-based fast cases and use big int operations always for
+  // Fletch. This cuts more than 8KB off the binary size.
+  /*
   bool fast_worked;
   switch (mode) {
     case SHORTEST:
@@ -406,6 +414,7 @@ void DoubleToStringConverter::DoubleToAscii(double v,
       UNREACHABLE();
   }
   if (fast_worked) return;
+  */
 
   // If the fast dtoa didn't succeed use the slower bignum version.
   BignumDtoaMode bignum_mode = DtoaToBignumDtoaMode(mode);
