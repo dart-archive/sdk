@@ -56,7 +56,8 @@ ignoredPaths = ['fletch/out',
                 'fletch/third_party/lk',
                 'fletch/third_party/openocd',
                 'fletch/third_party/qemu',
-                'fletch/third_party/raspbian']
+                'fletch/third_party/raspbian',
+                'fletch/third_party/stm']
 ignoredDirs = ['.svn', '.git']
 ignoredEndings = ['.mk', '.pyc', 'Makefile', '~']
 
