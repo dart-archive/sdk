@@ -51,6 +51,10 @@ packages
 /third_party/raspbian/image
 /third_party/raspbian/kernel.tar.gz
 /third_party/raspbian/kernel
+/third_party/stm/STM32Cube_FW_F4_V1.9.0.tar.gz
+/third_party/stm/STM32Cube_FW_F4_V1.9.0/
+/third_party/stm/STM32Cube_FW_F7_V1.2.0.tar.gz
+/third_party/stm/STM32Cube_FW_F7_V1.2.0/
 /tools/testing/bin/linux/dart
 /tools/testing/bin/linux/dart-arm
 /tools/testing/bin/mac/dart
