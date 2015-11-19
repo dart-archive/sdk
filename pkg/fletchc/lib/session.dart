@@ -303,6 +303,9 @@ class Session extends FletchVmSession {
     terminated = true;
   }
 
+  // This method handles the various responses a command can return to indicate
+  // the process has stopped running.
+  // The session's state is updated to match the current state of the vm.
   Future<Command> handleProcessStop(Command response) async {
     debugState.reset();
     switch (response.code) {
@@ -506,7 +509,7 @@ class Session extends FletchVmSession {
 
   Future stepOut() async {
     if (!checkRunning()) return null;
-    await getStackTrace();
+    await ensureStackTrace();
     // If last frame, just continue.
     if (debugState.numberOfStackFrames <= 1) {
       await cont();
@@ -574,7 +577,7 @@ class Session extends FletchVmSession {
         response is ProcessBreakpoint &&
         response.breakpointId == setBreakpoint.value;
     if (!success) {
-      writeStdoutLine("### 'step over' cancelled because "
+      writeStdoutLine("### 'next' cancelled because "
                       "another breakpoint was hit");
       if (setBreakpoint.value != -1) {
         await doDeleteBreakpoint(setBreakpoint.value);
@@ -589,20 +592,20 @@ class Session extends FletchVmSession {
 
   Future<String> list() async {
     if (!checkLoaded()) return null;
-    await getStackTrace();
+    await ensureStackTrace();
     if (debugState.currentStackTrace == null) return null;
     return debugState.list();
   }
 
   Future<String> exceptionAsString() async {
-    await getUncaughtException();
+    await ensureUncaughtException();
     if (debugState.currentUncaughtException == null) return null;
     return uncaughtExceptionToString(debugState.currentUncaughtException);
   }
 
   Future<String> disasm() async {
     if (!checkLoaded()) return null;
-    await getStackTrace();
+    await ensureStackTrace();
     if (debugState.currentStackTrace == null) return null;
     return debugState.disasm();
   }
@@ -636,7 +639,7 @@ class Session extends FletchVmSession {
     return stackTrace;
   }
 
-  Future getUncaughtException() async {
+  Future ensureUncaughtException() async {
     if (debugState.currentUncaughtException == null) {
       await sendCommand(const ProcessUncaughtExceptionRequest());
       Command response = await readNextCommand();
@@ -651,7 +654,7 @@ class Session extends FletchVmSession {
     }
   }
 
-  Future getStackTrace() async {
+  Future ensureStackTrace() async {
     assert(loaded);
     if (debugState.currentStackTrace == null) {
       ProcessBacktrace backtraceResponse =
@@ -669,7 +672,7 @@ class Session extends FletchVmSession {
   Future exception() async {
     assert(loaded);
     assert(!terminated);
-    await getUncaughtException();
+    await ensureUncaughtException();
     writeStdoutLine(
         uncaughtExceptionToString(debugState.currentUncaughtException));
   }
@@ -679,7 +682,7 @@ class Session extends FletchVmSession {
     // call backtrace from other debugger methods when the
     // session has been terminated.
     if (!checkLoaded() || !checkNotTerminated()) return null;
-    await getStackTrace();
+    await ensureStackTrace();
     String trace = debugState.formatStackTrace();
     writeStdout(trace);
   }
@@ -810,61 +813,71 @@ class Session extends FletchVmSession {
     return 'Uncaught exception: $message';
   }
 
-  Future printLocal(LocalValue local, [String name]) async {
+  Future<RemoteValue> processVariable(String name) async {
+    LocalValue local = await lookupValue(name);
+    return local != null ? await processLocal(local) : null;
+  }
+
+  Future<RemoteObject> processVariableStructure(String name) async {
+    LocalValue local = await lookupValue(name);
+    return local != null ? await processLocalStructure(local) : null;
+  }
+
+  Future<List<RemoteObject>> processAllVariables() async {
+    assert(loaded);
+    await ensureStackTrace();
+    ScopeInfo info = debugState.currentScopeInfo;
+    List<RemoteObject> variables = [];
+    for (ScopeInfo current = info;
+         current != ScopeInfo.sentinel;
+         current = current.previous) {
+      variables.add(await processLocal(current.local, current.name));
+    }
+    return variables;
+  }
+
+  Future<LocalValue> lookupValue(String name) async {
+    assert(loaded);
+    await ensureStackTrace();
+    ScopeInfo info = debugState.currentScopeInfo;
+    return info.lookup(name);
+  }
+
+  Future<RemoteValue> processLocal(LocalValue local, [String name]) async {
     var actualFrameNumber = debugState.actualCurrentFrameNumber;
     Command response = await runCommand(
         new ProcessLocal(actualFrameNumber, local.slot));
     assert(response is DartValue);
-    String prefix = (name == null) ? '' : '$name: ';
-    writeStdoutLine('$prefix${dartValueToString(response)}');
+    return new RemoteValue(response, name: name);
   }
 
-  Future printLocalStructure(String name, LocalValue local) async {
+  Future<RemoteObject> processLocalStructure(LocalValue local) async {
     var frameNumber = debugState.actualCurrentFrameNumber;
     await sendCommand(new ProcessLocalStructure(frameNumber, local.slot));
     Command response = await readNextCommand();
     if (response is DartValue) {
-      writeStdoutLine(dartValueToString(response));
+      return new RemoteValue(response);
     } else {
       assert(response is InstanceStructure);
       List<DartValue> fields = await readInstanceStructureFields(response);
-      writeStdoutLine(instanceStructureToString(response, fields));
+      return new RemoteInstance(response, fields);
     }
   }
 
-  Future printAllVariables() async {
-    if (!checkLoaded()) return null;
-    await getStackTrace();
-    ScopeInfo info = debugState.currentScopeInfo;
-    for (ScopeInfo current = info;
-         current != ScopeInfo.sentinel;
-         current = current.previous) {
-      await printLocal(current.local, current.name);
+  String remoteObjectToString(RemoteObject object) {
+    String message;
+    if (object is RemoteValue) {
+      message = dartValueToString(object.value);
+    } else if (object is RemoteInstance) {
+      message = instanceStructureToString(object.instance, object.fields);
+    } else {
+      throw new UnimplementedError();
     }
-  }
-
-  Future printVariable(String name) async {
-    if (!checkLoaded()) return null;
-    await getStackTrace();
-    ScopeInfo info = debugState.currentScopeInfo;
-    LocalValue local = info.lookup(name);
-    if (local == null) {
-      writeStdoutLine('### No such variable: $name');
-      return null;
+    if (object.name != null) {
+      // Prefix with name.
+      message = "${object.name}: $message";
     }
-    await printLocal(local);
-  }
-
-  Future printVariableStructure(String name) async {
-    if (!checkLoaded()) return null;
-    await getStackTrace();
-    ScopeInfo info = debugState.currentScopeInfo;
-    LocalValue local = info.lookup(name);
-    if (local == null) {
-      writeStdoutLine('### No such variable: $name');
-      return null;
-    }
-    await printLocalStructure(name, local);
+    return message;
   }
 
   Future toggleInternal() async {

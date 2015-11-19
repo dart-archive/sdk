@@ -5,25 +5,25 @@ breakpoint set: id: '0' method: 'main' bytecode index: '0'
 > r
 Stack trace:
 > 0: main        @foo()
-> so
+> n
 Stack trace:
 > 0: main        @foo()
-> so
+> n
 Stack trace:
 > 0: main        @new A()
-> so
+> n
 Stack trace:
 > 0: main        @a
 > s
 Stack trace:
 > 0: main        @a.x
-> so
+> n
 Stack trace:
 > 0: main        @a
 > s
 Stack trace:
 > 0: main        @a.y()
-> so
+> n
 Stack trace:
 > 0: main        @a
 > b y
@@ -31,8 +31,8 @@ breakpoint set: id: '6' method: 'y' bytecode index: '0'
 > s
 Stack trace:
 > 0: main        @a.y()
-> so
-### 'step over' cancelled because another breakpoint was hit
+> n
+### 'next' cancelled because another breakpoint was hit
 Stack trace:
 > 0: A.y         @_y
   1: main        @a.y()

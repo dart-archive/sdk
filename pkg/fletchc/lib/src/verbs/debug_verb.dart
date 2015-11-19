@@ -29,6 +29,10 @@ import '../driver/driver_commands.dart' show
 import 'package:fletchc/debug_state.dart' show
     Breakpoint;
 
+import '../../debug_state.dart' show
+    RemoteObject,
+    RemoteValue;
+
 const Action debugAction =
     const Action(
         debug,
@@ -563,10 +567,17 @@ Future<int> printDebuggerTask(
     CommandSender commandSender, SessionState state, String name) async {
   Session session = attachToSession(state, commandSender);
 
-  if (name.startsWith('*')) {
-    await session.printVariableStructure(name.substring(1));
+  RemoteObject variable;
+  if (name.startsWith("*")) {
+    name = name.substring(1);
+    variable = await session.processVariableStructure(name);
   } else {
-    await session.printVariable(name);
+    variable = await session.processVariable(name);
+  }
+  if (variable == null) {
+    print('### No such variable: $name');
+  } else {
+    print(session.remoteObjectToString(variable));
   }
 
   return 0;
@@ -575,7 +586,14 @@ Future<int> printDebuggerTask(
 Future<int> printAllDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  await session.printAllVariables();
+  List<RemoteObject> variables = await session.processAllVariables();
+  if (variables.isEmpty) {
+    print('### No variables in scope');
+  } else {
+    for (RemoteObject variable in variables) {
+      print(session.remoteObjectToString(variable));
+    }
+  }
   return 0;
 }
 

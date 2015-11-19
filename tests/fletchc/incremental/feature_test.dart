@@ -277,7 +277,7 @@ compileAndRun(
         await session.stepOut();
 
         // Select the stack frame of callMain.
-        await session.getStackTrace();
+        await session.ensureStackTrace();
         FunctionElement callMainElement =
             backend.fletchSystemLibrary.findLocal("callMain");
         FletchFunction callMain =

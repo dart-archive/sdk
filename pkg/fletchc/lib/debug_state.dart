@@ -18,7 +18,11 @@ import 'commands.dart' show
 part 'stack_trace.dart';
 
 /// A representation of a remote object.
-abstract class RemoteObject { }
+abstract class RemoteObject {
+  String name;
+
+  RemoteObject(this.name);
+}
 
 /// A representation of a remote instance.
 class RemoteInstance extends RemoteObject {
@@ -28,7 +32,7 @@ class RemoteInstance extends RemoteObject {
   /// The fields as [DartValue]s of the remote instance.
   final List<DartValue> fields;
 
-  RemoteInstance(this.instance, this.fields);
+  RemoteInstance(this.instance, this.fields, {String name}) : super(name);
 }
 
 /// A representation of a remote primitive value (i.e. used for non-instances).
@@ -36,7 +40,7 @@ class RemoteValue extends RemoteObject {
   /// A [DartValue] describing the remote object.
   final DartValue value;
 
-  RemoteValue(this.value);
+  RemoteValue(this.value, {String name}) : super(name);
 }
 
 class Breakpoint {

@@ -11,20 +11,22 @@ Starting session. Type 'help' for a list of commands.
 const String HELP = """
 Commands:
   'help'                                show list of commands
-  'r'/'run'                             run main
+  'r'/'run'                             start program
   'b [method name] [bytecode index]'    set breakpoint
   'bf <file> [line] [column]'           set breakpoint
   'bf <file> [line] [pattern]'          set breakpoint on first occurrence of
                                         the string pattern on the indicated line
   'd <breakpoint id>'                   delete breakpoint
   'lb'                                  list breakpoints
-  's'                                   step
-  'so'                                  step over
+  's'                                   step until next source line,
+                                        enters method invocations
+  'n'                                   step until next source line,
+                                        does not enter method invocations
   'fibers'                              list all process fibers
   'finish'                              finish current method (step out)
   'restart'                             restart the selected frame
-  'sb'                                  step bytecode
-  'sob'                                 step over bytecode
+  'sb'                                  step bytecode, enters method invocations
+  'nb'                                  step over bytecode, does not enter method invocations
   'c'                                   continue execution
   'bt'                                  backtrace
   'f <n>'                               select frame
@@ -49,6 +51,8 @@ class InputHandler {
 
   void printPrompt() => session.writeStdout('> ');
 
+  writeStdoutLine(String s) => session.writeStdout("$s\n");
+
   Future handleLine(String line) async {
     if (line.isEmpty) line = previousLine;
     if (line.isEmpty) {
@@ -56,13 +60,13 @@ class InputHandler {
       return;
     }
     previousLine = line;
-    if (echo) session.writeStdoutLine(line);
+    if (echo) writeStdoutLine(line);
     List<String> commandComponents =
         line.split(' ').where((s) => s.isNotEmpty).toList();
     String command = commandComponents[0];
     switch (command) {
       case 'help':
-        session.writeStdoutLine(HELP);
+        writeStdoutLine(HELP);
         break;
       case 'b':
         var method =
@@ -71,17 +75,17 @@ class InputHandler {
             (commandComponents.length > 2) ? commandComponents[2] : '0';
         bci = int.parse(bci, onError: (_) => null);
         if (bci == null) {
-          session.writeStdoutLine('### invalid bytecode index: $bci');
+          writeStdoutLine('### invalid bytecode index: $bci');
           break;
         }
         List<Breakpoint> breakpoints =
             await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
         if (breakpoints != null) {
           for (Breakpoint breakpoint in breakpoints) {
-            session.writeStdoutLine("breakpoint set: $breakpoint");
+            writeStdoutLine("breakpoint set: $breakpoint");
           }
         } else {
-          session.writeStdoutLine(
+          writeStdoutLine(
               "### failed to set breakpoint at method: $method index: $bci");
         }
         break;
@@ -94,7 +98,7 @@ class InputHandler {
             (commandComponents.length > 3) ? commandComponents[3] : '1';
         line = int.parse(line, onError: (_) => null);
         if (line == null) {
-          session.writeStdoutLine('### invalid line number: $line');
+          writeStdoutLine('### invalid line number: $line');
           break;
         }
         int columnNumber = int.parse(column, onError: (_) => null);
@@ -112,23 +116,23 @@ class InputHandler {
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
         frame = int.parse(frame, onError: (_) => null);
         if (frame == null || !session.selectFrame(frame)) {
-          session.writeStdoutLine('### invalid frame number: $frame');
+          writeStdoutLine('### invalid frame number: $frame');
         }
         break;
       case 'l':
         String listing = await session.list();
         if (listing == null) {
-          session.writeStdoutLine("### failed listing source");
+          writeStdoutLine("### failed listing source");
         } else {
-          session.writeStdoutLine(listing);
+          writeStdoutLine(listing);
         }
         break;
       case 'disasm':
         String disassembly = await session.disasm();
         if (disassembly == null) {
-          session.writeStdoutLine("### failed disassembling source");
+          writeStdoutLine("### failed disassembling source");
         } else {
-          session.writeStdoutLine(disassembly);
+          writeStdoutLine(disassembly);
         }
         break;
       case 'c':
@@ -143,7 +147,7 @@ class InputHandler {
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
         id = int.parse(id, onError: (_) => null);
         if (id == null) {
-          session.writeStdoutLine('### invalid breakpoint number: $id');
+          writeStdoutLine('### invalid breakpoint number: $id');
           break;
         }
         await session.deleteBreakpoint(id);
@@ -161,15 +165,34 @@ class InputHandler {
         session.listBreakpoints();
         break;
       case 'p':
+        if (!session.loaded) {
+          // TODO(lukechurch): Please review this for better phrasing.
+          writeStdoutLine('### No code loaded, nothing to print');
+          break;
+        }
         if (commandComponents.length <= 1) {
-          await session.printAllVariables();
+          List<RemoteObject> variables = await session.processAllVariables();
+          if (variables.isEmpty) {
+            writeStdoutLine('### No variables in scope');
+          } else {
+            for (RemoteObject variable in variables) {
+              writeStdoutLine(session.remoteObjectToString(variable));
+            }
+          }
           break;
         }
         String variableName = commandComponents[1];
+        RemoteObject variable;
         if (variableName.startsWith('*')) {
-          await session.printVariableStructure(variableName.substring(1));
+          variableName = variableName.substring(1);
+          variable = await session.processVariableStructure(variableName);
         } else {
-          await session.printVariable(variableName);
+          variable = await session.processVariable(variableName);
+        }
+        if (variable == null) {
+          writeStdoutLine('### No such variable: $variableName');
+        } else {
+          writeStdoutLine(session.remoteObjectToString(variable));
         }
         break;
       case 'q':
@@ -193,10 +216,7 @@ class InputHandler {
           await session.backtrace();
         }
         break;
-      case 'sb':
-        await session.stepBytecode();
-        break;
-      case 'so':
+      case 'n':
         Command response = await session.stepOver();
         if (response is UncaughtException) {
           await session.uncaughtException();
@@ -204,7 +224,10 @@ class InputHandler {
           await session.backtrace();
         }
         break;
-      case 'sob':
+      case 'sb':
+        await session.stepBytecode();
+        break;
+      case 'nb':
         await session.stepOverBytecode();
         break;
       case 't':
@@ -217,19 +240,19 @@ class InputHandler {
             await session.toggleInternal();
             break;
           default:
-            session.writeStdoutLine('### invalid flag $toggle');
+            writeStdoutLine('### invalid flag $toggle');
             break;
         }
         break;
       default:
-        session.writeStdoutLine('### unknown command: $command');
+        writeStdoutLine('### unknown command: $command');
         break;
     }
     if (!session.terminated) printPrompt();
   }
 
   Future<int> run() async {
-    session.writeStdoutLine(BANNER);
+    writeStdoutLine(BANNER);
     printPrompt();
     await for(var line in stream) {
       await handleLine(line);
