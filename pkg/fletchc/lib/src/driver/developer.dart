@@ -153,41 +153,16 @@ Future<AgentConnection> connectToAgent(SessionState state) async {
   return new AgentConnection(socket);
 }
 
-void disconnectFromAgent(AgentConnection connection) {
-  assert(connection.socket != null);
-  connection.socket.close();
-}
-
-Future<Null> checkAgentVersion(SessionState state) async {
+/// Return the result of a function in the context of an open [AgentConnection].
+///
+/// The result is a [Future] of this value.
+/// This function handles [AgentException] and [MessageDecodeException].
+Future withAgentConnection(
+    SessionState state,
+    Future f(AgentConnection connection)) async {
   AgentConnection connection = await connectToAgent(state);
   try {
-    String deviceFletchVersion = await connection.fletchVersion();
-    if (fletchVersion != deviceFletchVersion) {
-      throwFatalError(DiagnosticKind.agentVersionMismatch,
-                      userInput: fletchVersion,
-                      additionalUserInput: deviceFletchVersion,
-                      sessionName: state.name);
-    }
-  } on AgentException catch (error) {
-    throwFatalError(
-        DiagnosticKind.socketAgentReplyError,
-        address: '${connection.socket.remoteAddress.host}:'
-            '${connection.socket.remotePort}',
-        message: error.message);
-  } finally {
-    disconnectFromAgent(connection);
-  }
-}
-
-Future<Null> startAndAttachViaAgent(SessionState state) async {
-  // TODO(wibling): integrate with the FletchVm class, e.g. have a
-  // AgentFletchVm and LocalFletchVm that both share the same interface
-  // where the former is interacting with the agent.
-  await checkAgentVersion(state);
-  AgentConnection connection = await connectToAgent(state);
-  VmData vmData;
-  try {
-    vmData = await connection.startVm();
+    return await f(connection);
   } on AgentException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
@@ -203,6 +178,31 @@ Future<Null> startAndAttachViaAgent(SessionState state) async {
   } finally {
     disconnectFromAgent(connection);
   }
+}
+
+void disconnectFromAgent(AgentConnection connection) {
+  assert(connection.socket != null);
+  connection.socket.close();
+}
+
+Future<Null> checkAgentVersion(SessionState state) async {
+  String deviceFletchVersion = await withAgentConnection(state,
+      (connection) => connection.fletchVersion());
+  if (fletchVersion != deviceFletchVersion) {
+    throwFatalError(DiagnosticKind.agentVersionMismatch,
+        userInput: fletchVersion,
+        additionalUserInput: deviceFletchVersion,
+        sessionName: state.name);
+  }
+}
+
+Future<Null> startAndAttachViaAgent(SessionState state) async {
+  // TODO(wibling): integrate with the FletchVm class, e.g. have a
+  // AgentFletchVm and LocalFletchVm that both share the same interface
+  // where the former is interacting with the agent.
+  await checkAgentVersion(state);
+  VmData vmData = await withAgentConnection(state,
+      (connection) => connection.startVm());
   state.fletchAgentVmId = vmData.id;
   String host = state.settings.deviceAddress.host;
   await attachToVm(host, vmData.port, state);
@@ -775,26 +775,9 @@ void handleSignal(SessionState state, int signalNumber) {
 }
 
 Future signalAgentVm(SessionState state, int signalNumber) async {
-  AgentConnection connection = await connectToAgent(state);
-  try {
-    await connection.signalVm(state.fletchAgentVmId, signalNumber);
-  } on AgentException catch (error) {
-    // Not sure if this is fatal. It happens when the vm is not found, ie.
-    // already dead.
-    throwFatalError(
-        DiagnosticKind.socketAgentReplyError,
-        address: '${connection.socket.remoteAddress.host}:'
-            '${connection.socket.remotePort}',
-        message: error.message);
-  } on MessageDecodeException catch (error) {
-    throwFatalError(
-        DiagnosticKind.socketAgentReplyError,
-        address: '${connection.socket.remoteAddress.host}:'
-            '${connection.socket.remotePort}',
-        message: error.message);
-  } finally {
-    disconnectFromAgent(connection);
-  }
+  await withAgentConnection(state, (connection) {
+    return connection.signalVm(state.fletchAgentVmId, signalNumber);
+  });
 }
 
 Future<int> upgradeAgent(
@@ -804,21 +787,63 @@ Future<int> upgradeAgent(
   if (state.settings.deviceAddress == null) {
     throwFatalError(DiagnosticKind.noAgentFound);
   }
-  AgentConnection connection;
-  try {
-    connection = await connectToAgent(state);
-    List<int> data = await new File.fromUri(packageUri).readAsBytes();
-    print('Sending package to fletch agent');
-    await connection.upgradeAgent(version, data);
-    print('Upgrade complete. Please allow the fletch-agent a few seconds '
-        'to restart');
-  } finally {
-    if (connection != null) {
+
+  String existingVersion = await withAgentConnection(state,
+      (connection) => connection.fletchVersion());
+
+  if (existingVersion == version) {
+    print('Target device is already at $version');
+    return 0;
+  }
+
+  print("Attempting to upgrade device from "
+      "$existingVersion to $version");
+
+  List<int> data = await new File.fromUri(packageUri).readAsBytes();
+  print("Sending package to fletch agent");
+  await withAgentConnection(state,
+      (connection) => connection.upgradeAgent(version, data));
+  print("Transfer complete, waiting for the Fletch agent to restart. "
+      "This can take a few seconds.");
+
+  String newVersion;
+  int remainingTries = 20;
+  // Wait for the agent to come back online to verify the version.
+  while (--remainingTries > 0) {
+    await new Future.delayed(const Duration(seconds: 1));
+    try {
+      // TODO(karlklose): this functionality should be shared with connect.
+      Socket socket = await Socket.connect(
+          state.settings.deviceAddress.host,
+          state.settings.deviceAddress.port);
+      handleSocketErrors(socket, "pollAgentVersion", log: (String info) {
+        state.log("Connected to TCP waitForAgentUpgrade  $info");
+      });
+      AgentConnection connection = new AgentConnection(socket);
+      newVersion = await connection.fletchVersion();
       disconnectFromAgent(connection);
+      if (newVersion != existingVersion) {
+        break;
+      }
+    } on SocketException catch (e) {
+      // Ignore this error and keep waiting.
     }
   }
-  // TODO(karlklose): wait for the agent to come online again and verify
-  // the version.
+
+  if (newVersion == existingVersion) {
+    print("Failed to upgrade: the device is still at the old version.");
+    print("Try running x-upgrade again. "
+        "If the upgrade fails again, try rebooting the device.");
+    return 1;
+  } else if (newVersion == null) {
+    print("Could not connect to Fletch agent after upgrade.");
+    print("Try running 'fletch show devices' later to see if it has been"
+        " restarted. If the device does not show up, try rebooting it.");
+    return 1;
+  } else {
+    print("Upgrade successful.");
+  }
+
   return 0;
 }
 

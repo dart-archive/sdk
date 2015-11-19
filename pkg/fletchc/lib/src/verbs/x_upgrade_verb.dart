@@ -22,6 +22,10 @@ Future upgradeFunction(AnalyzedSentence sentence, VerbContext context) async {
     throwFatalError(DiagnosticKind.upgradeInvalidPackageName);
   }
   String version = nameParts[1];
+  // create_debian_packages.py adds a '-1' after the hash in the package name.
+  if (version.endsWith('-1')) {
+    version = version.substring(0, version.length - 2);
+  }
   return context.performTaskInWorker(new UpgradeTask(packageUri, version));
 }
 

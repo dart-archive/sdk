@@ -401,7 +401,11 @@ class CommandHandler {
       _context.logger.info('Package file written successfully.');
       if (_context.applyUpgrade) {
         int pid = NativeProcess.startDetached('/usr/bin/dpkg',
-            ['--install', PACKAGE_FILE_NAME]);
+            [// Force dpkg to overwrite configuration files installed by
+             // the agent.
+             '--force-confnew',
+             '--install',
+             PACKAGE_FILE_NAME]);
         _context.logger.info('started package update (PID $pid)');
       }
       result = ReplyHeader.SUCCESS;
