@@ -201,7 +201,8 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
 
   V("InvokeSelector",        true,    "I",  5, kVarDiff, "invoke selector");
 
-  V("Pop",                  false,    "",   1,       -1, "pop");
+  V("Pop",                   false,   "",   1,       -1, "pop");
+  V("Drop",                  false,   "B",  2, kVarDiff, "drop %d");
   V("Return",                true,    "BB", 3,       -1, "return %d %d");
   V("ReturnWide",            true,    "IB", 6,       -1, "return %d %d");
   V("ReturnNull",            true,    "BB", 3,        0, "return null %d %d");

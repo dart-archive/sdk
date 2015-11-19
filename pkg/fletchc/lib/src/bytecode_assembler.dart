@@ -51,9 +51,14 @@ class BytecodeAssembler {
   int stackSize = 0;
   int maxStackSize = 0;
 
-  // A bind after a terminator will still look like the last bytecode is a
-  // terminator, however, due to the bind it's not.
+  // A bind after a terminator will still look like the last bytecode
+  // is a terminator, however, due to the bind it's not.
   bool hasBindAfterTerminator = false;
+
+  // A bind after a pop will still look like the last bytecode is a
+  // pop, however, due to the bind we cannot collapse more pops
+  // together.
+  bool hasBindAfterPop = false;
 
   BytecodeAssembler(this.functionArity);
 
@@ -359,14 +364,42 @@ class BytecodeAssembler {
   }
 
   void pop() {
-    internalAdd(new Pop());
+    if (hasBindAfterPop) {
+      internalAdd(new Pop());
+      hasBindAfterPop = false;
+      return;
+    }
+    Bytecode last = bytecodes.last;
+    if (last.opcode == Opcode.Drop) {
+      Drop drop = last;
+      int amount = drop.uint8Argument0 + 1;
+      if (amount <= 255) {
+        bytecodes[bytecodes.length - 1] = new Drop(amount);
+        applyStackSizeFix(-1);
+      } else {
+        internalAdd(new Pop());
+      }
+    } else if (last.opcode == Opcode.Pop) {
+      bytecodes[bytecodes.length - 1] = new Drop(2);
+      byteSize += 1;
+      applyStackSizeFix(-1);
+    } else {
+      internalAdd(new Pop());
+    }
+
   }
 
   void popMany(int count) {
-    // TODO(ajohnsen): Create bytecode for this.
-    for (int i = 0; i < count; i++) {
+    while (count > 255) {
+      internalAddStackPointerDifference(new Drop(255), -255);
+      count -= 255;
+    }
+    if (count > 1) {
+      internalAddStackPointerDifference(new Drop(count), -count);
+    } else if (count == 1) {
       internalAdd(new Pop());
     }
+    hasBindAfterPop = false;
   }
 
   void ret() {
@@ -407,6 +440,7 @@ class BytecodeAssembler {
 
   void internalBind(BytecodeLabel label, bool isSubroutineReturn) {
     if (label.isUsed) hasBindAfterTerminator = true;
+    hasBindAfterPop = true;
     assert(label.position == -1);
     // TODO(ajohnsen): If the previous bytecode is a branch to this label,
     // consider popping it - if no other binds has happened at this bytecode

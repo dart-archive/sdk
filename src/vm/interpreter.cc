@@ -587,6 +587,12 @@ Interpreter::InterruptKind Engine::Interpret(
     Advance(kPopLength);
   OPCODE_END();
 
+  OPCODE_BEGIN(Drop);
+    int argument = ReadByte(1);
+    Drop(argument);
+    Advance(kDropLength);
+  OPCODE_END();
+
   OPCODE_BEGIN(Return);
     int arguments = ReadByte(2);
     Object* result = Local(0);

@@ -1167,8 +1167,7 @@ abstract class CodegenVisitor
     doSuperCall(node, setter);
     // Override 'index' with result value, and pop everything else.
     assembler.storeLocal(2);
-    assembler.pop();
-    assembler.pop();
+    assembler.popMany(2);
     applyVisitState();
   }
 
@@ -2540,9 +2539,9 @@ abstract class CodegenVisitor
           "Unbalanced number of block locals and stack slots used by block.");
     }
 
+    if (blockLocals.length > 0) assembler.popMany(blockLocals.length);
+
     for (int i = blockLocals.length - 1; i >= 0; --i) {
-      // TODO(ajohnsen): Pop range bytecode?
-      assembler.pop();
       popVariableDeclaration(blockLocals[i]);
     }
 
@@ -2626,9 +2625,10 @@ abstract class CodegenVisitor
       }
       // TODO(ajohnsen): Don't pop, but let subroutineCall take a 'pop count'
       // argument, just like popAndBranch.
-      while (assembler.stackSize > block.stackSize) {
-        assembler.pop();
-        popCount++;
+      if (assembler.stackSize > block.stackSize) {
+        int sizeDifference = assembler.stackSize - block.stackSize;
+        popCount += sizeDifference;
+        assembler.popMany(sizeDifference);
       }
       assembler.subroutineCall(block.finallyLabel, block.finallyReturnLabel);
       if (preserveTop) {

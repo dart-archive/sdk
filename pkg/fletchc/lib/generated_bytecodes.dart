@@ -61,6 +61,7 @@ enum Opcode {
   InvokeNativeYield,
   InvokeSelector,
   Pop,
+  Drop,
   Return,
   ReturnWide,
   ReturnNull,
@@ -2208,6 +2209,48 @@ class Pop extends Bytecode {
   }
 
   String toString() => 'pop';
+}
+
+class Drop extends Bytecode {
+  final int uint8Argument0;
+  const Drop(this.uint8Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.Drop;
+
+  String get name => 'Drop';
+
+  bool get isBranching => false;
+
+  String get format => 'B';
+
+  int get size => 2;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'drop %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint8(uint8Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'drop ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    Drop rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class Return extends Bytecode {

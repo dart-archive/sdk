@@ -167,6 +167,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
 #undef INVOKE_BUILTIN
 
   virtual void DoPop();
+  virtual void DoDrop();
   virtual void DoReturn();
   virtual void DoReturnWide();
   virtual void DoReturnNull();
@@ -235,6 +236,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   void Push(Register reg);
   void Pop(Register reg);
   void Drop(int n);
+  void Drop(Register reg);
 
   void LoadFramePointer(Register reg);
   void StoreFramePointer(Register reg);
@@ -928,7 +930,13 @@ void InterpreterGeneratorX86::InvokeBitShl(const char* fallback) {
 
 void InterpreterGeneratorX86::DoPop() {
   Drop(1);
-  Dispatch(1);
+  Dispatch(kPopLength);
+}
+
+void InterpreterGeneratorX86::DoDrop() {
+  __ movzbl(EAX, Address(ESI, 1));
+  Drop(EAX);
+  Dispatch(kDropLength);
 }
 
 void InterpreterGeneratorX86::DoReturn() {
@@ -1477,6 +1485,11 @@ void InterpreterGeneratorX86::Pop(Register reg) {
 
 void InterpreterGeneratorX86::Drop(int n) {
   __ subl(EDI, Immediate(n * kWordSize));
+}
+
+void InterpreterGeneratorX86::Drop(Register reg) {
+  __ negl(reg);
+  __ leal(EDI, Address(EDI, reg, TIMES_WORD_SIZE));
 }
 
 void InterpreterGeneratorX86::LoadFramePointer(Register reg) {

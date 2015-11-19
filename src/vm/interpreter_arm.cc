@@ -170,6 +170,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
 #undef INVOKE_BUILTIN
 
   virtual void DoPop();
+  virtual void DoDrop();
   virtual void DoReturn();
   virtual void DoReturnWide();
   virtual void DoReturnNull();
@@ -238,6 +239,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Push(Register reg);
   void Pop(Register reg);
   void Drop(int n);
+  void Drop(Register reg);
 
   void LoadFramePointer(Register reg);
   void StoreFramePointer(Register reg);
@@ -922,6 +924,12 @@ void InterpreterGeneratorARM::DoPop() {
   Dispatch(kPopLength);
 }
 
+void InterpreterGeneratorARM::DoDrop() {
+  __ ldrb(R0, Address(R5, 1));
+  Drop(R0);
+  Dispatch(kDropLength);
+}
+
 void InterpreterGeneratorARM::DoReturn() {
   Return(false, false);
 }
@@ -1451,6 +1459,10 @@ void InterpreterGeneratorARM::StoreLocal(Register reg, int index) {
 
 void InterpreterGeneratorARM::Drop(int n) {
   __ sub(R6, R6, Immediate(n * kWordSize));
+}
+
+void InterpreterGeneratorARM::Drop(Register reg) {
+  __ sub(R6, R6, Operand(reg, TIMES_WORD_SIZE));
 }
 
 void InterpreterGeneratorARM::LoadFramePointer(Register reg) {
