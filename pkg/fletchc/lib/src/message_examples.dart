@@ -283,16 +283,16 @@ List<Example> getExamples(DiagnosticKind kind) {
             <String>['quit', 'with', 'foo.txt'])];
 
     case DiagnosticKind.verbRequiresTarget:
-      // TODO(ahe): Add test for this.
-      return untestable;
+      return <Example>[new CommandLineExample(
+            <String>['show'])];
 
     case DiagnosticKind.verbRequiresSpecificTarget:
-      // TODO(ahe): Add test for this.
-      return untestable;
+      return <Example>[new CommandLineExample(
+            <String>['x-upgrade'])];
 
     case DiagnosticKind.verbRequiresSpecificTargetButGot:
-      // TODO(ahe): Add test for this.
-      return untestable;
+      return <Example>[new CommandLineExample(
+            <String>['x-upgrade', 'file', 'foo'])];
 
     case DiagnosticKind.expectedTargetButGot:
       return <Example>[new CommandLineExample(

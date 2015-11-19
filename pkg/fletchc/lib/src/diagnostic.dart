@@ -42,7 +42,7 @@ class DiagnosticParameter {
       DiagnosticParameterType.target, 'target');
 
   static const DiagnosticParameter requiredTarget = const DiagnosticParameter(
-      DiagnosticParameterType.target, 'requiredTarget');
+      DiagnosticParameterType.targetKind, 'requiredTarget');
 
   static const DiagnosticParameter userInput = const DiagnosticParameter(
       DiagnosticParameterType.string, 'userInput');
@@ -68,6 +68,7 @@ enum DiagnosticParameterType {
   verb,
   sessionName,
   target,
+  targetKind,
   preposition,
   uri,
 }
@@ -112,15 +113,30 @@ class Diagnostic {
 
         case DiagnosticParameterType.target:
           Target target = value;
-          // TODO(ahe): Improve this conversion.
-          stringValue = target.toString();
+          // TODO(karlklose): Improve this conversion.
+          stringValue = '$target';
+          break;
+
+        case DiagnosticParameterType.targetKind:
+          TargetKind kind = value;
+          // TODO(karlklose): Improve this conversion.
+          stringValue = '$kind';
           break;
 
         case DiagnosticParameterType.preposition:
           Preposition preposition = value;
-          // TODO(ahe): Improve this conversion.
+          // TODO(karlklose): Improve this conversion.
           stringValue =
               preposition.kind.toString().split('.').last.toLowerCase();
+          break;
+
+        default:
+          throwInternalError("""
+Unsupported parameter type '${parameter.type}'
+found for parameter '$parameter'
+when trying to format the following error message:
+
+$formattedMessage""");
           break;
       }
       formattedMessage = formattedMessage.replaceAll('$parameter', stringValue);
@@ -229,6 +245,9 @@ void throwFatalError(
   }
   if (uri != null) {
     arguments[DiagnosticParameter.uri] = uri;
+  }
+  if (requiredTarget != null) {
+    arguments[DiagnosticParameter.requiredTarget] = requiredTarget;
   }
   throw new InputError(kind, arguments);
 }
