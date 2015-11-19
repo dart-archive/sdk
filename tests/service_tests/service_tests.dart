@@ -96,14 +96,8 @@ final String generatedDirectory = '$tempTestOutputDirectory/service_tests';
 final String fletchExecutable = '$buildDirectory/fletch';
 final String fletchLibrary = '$buildDirectory/libfletch.a';
 
-final String envJavaHome = Platform.environment['JAVA_HOME'];
-final String envBuildbotJavaHome = Platform.environment['BUILDBOT_JAVA_HOME'];
-
-String get javaHome {
-  if (envJavaHome != null) return envJavaHome;
-  if (envBuildbotJavaHome != null) return envBuildbotJavaHome;
-  throw "Service tests for Java require JAVA_HOME to be set.";
-}
+/// Location of JDK installation. Empty if no installation was found.
+const String javaHome = const String.fromEnvironment('java-home');
 
 const bool isAsan = buildAsan;
 const bool isClang = buildClang;
@@ -195,6 +189,9 @@ class StandardServiceJavaTest extends StandardServiceTest {
   Future<Null> prepare() async {
     prepareService();
     prepareSnapshot();
+
+    // Complete the test here if Java home is not set.
+    if (javaHome.isEmpty) return;
 
     rules.add(new CcRule(
         sharedLibrary: '$outputDirectory/libfletch',
@@ -331,7 +328,7 @@ class CopyRule extends Rule {
 }
 
 class JarRule extends Rule {
-  final String jar = "jar";
+  final String jar = "$javaHome/bin/jar";
 
   final String jarFile;
   final Iterable<String> sources;
@@ -353,7 +350,7 @@ class JarRule extends Rule {
 }
 
 class JavacRule extends Rule {
-  final String javac = "javac";
+  final String javac = "$javaHome/bin/javac";
 
   final Iterable<String> sources;
   final Iterable<String> classpath;
@@ -407,7 +404,7 @@ class JavacRule extends Rule {
 }
 
 class JavaRule extends Rule {
-  final String java = "java";
+  final String java = "$javaHome/bin/java";
 
   final String mainClass;
   final Iterable<String> arguments;
