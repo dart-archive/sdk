@@ -107,7 +107,8 @@ Install a JDK or set JAVA_PATH to point at an existing installation.
         javaHome = '';
         print("WARNING: $message");
       } else {
-        throw message + "Supply --no-java to continue without a JDK.";
+        // TODO(zerny): Throw an error.
+        print("ERROR: ${message}Supply --no-java to continue without a JDK.");
       }
     }
 
@@ -216,6 +217,8 @@ Install a JDK or set JAVA_PATH to point at an existing installation.
       while (io.FileSystemEntity.isLinkSync(javac)) {
         javac = new io.Link(javac).resolveSymbolicLinksSync();
       }
+      // TODO(zerny): Take into account Mac javac paths can be of the form:
+      // .../Versions/X/Commands/javac
       String javaHome =
           _guessJavaHomeArch(javac.replaceAll('/bin/javac', ''), arch);
       if (javaHome != null) return javaHome;
@@ -228,9 +231,11 @@ Install a JDK or set JAVA_PATH to point at an existing installation.
     if (javaHome == null) return null;
 
     // Check if the java installation supports the requested architecture.
-    int supportsVersion = io.Process.runSync(
-        '$javaHome/bin/java', ['-d$arch', '-version']).exitCode;
-    if (supportsVersion == 0 && _isValidJDK(javaHome)) return javaHome;
+    if (new io.File('$javaHome/bin/java').existsSync()) {
+      int supportsVersion = io.Process.runSync(
+          '$javaHome/bin/java', ['-d$arch', '-version']).exitCode;
+      if (supportsVersion == 0 && _isValidJDK(javaHome)) return javaHome;
+    }
 
     // Check for architecture specific installation by post-fixing arch.
     String archPostfix = '${javaHome}-$arch';
