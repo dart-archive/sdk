@@ -562,7 +562,6 @@ class CcRule extends Rule {
       '-ldl',
       '-rdynamic',
     ]);
-    if (isAsan) arguments.add('-lasan');
   }
 
   void addSources(List<String> arguments) {
