@@ -61,32 +61,62 @@ abstract class PlatformService {
   Future<List<String>> listPossibleSDCards();
 
   /// Download the [url] to [file] and provide progress information.
-  Future downloadWithProgress(Uri url, File destination) async {
-    ctx.log('Downloading $url');
-    var client = new HttpClient();
-    var request = await client.getUrl(url);
-    var response = await request.close();
-    ctx.log('Response headers:\n${response.headers}');
+  Future downloadWithProgress(
+      Uri url,
+      File destination,
+      {int retryCount: 3,
+       Duration retryInterval: const Duration(seconds: 3)}) async {
 
-    int totalBytes = response.headers.contentLength;
-    int bytes = 0;
-    StreamTransformer progressTransformer =
-        new StreamTransformer<List<int>, List<int>>.fromHandlers(
-          handleData: (List<int> value, EventSink<List<int>> sink) {
-            bytes += value.length;
-            ctx.updateProgress(
-                'received ${bytes ~/ (1024 * 1024)} Mb '
-                'of ${totalBytes ~/ (1024 * 1024)} Mb');
-            sink.add(value);
-          },
-          handleDone: (EventSink<List<int>> sink) {
-            ctx.endProgress('DONE');
-            sink.close();
-          });
+    Future doDownload(HttpClient client) async {
+      ctx.log('Downloading $url');
+      var request = await client.getUrl(url);
+      var response = await request.close();
+      ctx.log('Response headers:\n${response.headers}');
 
-    ctx.startProgress('Downloading: ');
-    await response.transform(progressTransformer).pipe(destination.openWrite());
-    await client.close();
+      int totalBytes = response.headers.contentLength;
+      int bytes = 0;
+      StreamTransformer progressTransformer =
+          new StreamTransformer<List<int>, List<int>>.fromHandlers(
+            handleData: (List<int> value, EventSink<List<int>> sink) {
+              bytes += value.length;
+              ctx.updateProgress(
+                  'received ${bytes ~/ (1024 * 1024)} Mb '
+                  'of ${totalBytes ~/ (1024 * 1024)} Mb');
+              sink.add(value);
+            },
+            handleDone: (EventSink<List<int>> sink) {
+              sink.close();
+            });
+      await response
+          .transform(progressTransformer).pipe(destination.openWrite());
+    }
+
+    var client;
+    try {
+      client = new HttpClient();
+      int count = 0;
+      while (true) {
+        count++;
+        ctx.startProgress('Downloading: ');
+        try {
+          await doDownload(client);
+          ctx.endProgress('DONE');
+          break;
+        } catch (e, s) {
+          if (count < retryCount) {
+            ctx.endProgress(
+                'Failed. Retrying in ${retryInterval.inSeconds} seconds.');
+            ctx.log('Download failure: $e\n$s');
+            await sleep(retryInterval.inMilliseconds);
+          } else {
+            await ctx.failure('Download failed after $retryCount retries');
+          }
+        }
+      }
+    } finally {
+      await client.close();
+    }
+
     ctx.log('Finished downloading $url');
   }
 

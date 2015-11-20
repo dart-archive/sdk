@@ -8,6 +8,7 @@ compiler:third_party/dart/pkg/compiler/lib
 crypto:third_party/crypto/lib
 expect:third_party/dart/pkg/expect/lib
 file:pkg/file/lib
+flash_sd_card:pkg/flash_sd_card/lib
 fletch_agent:pkg/fletch_agent/lib
 fletch:pkg/fletch/lib
 fletchc:pkg/fletchc/lib

@@ -37,6 +37,8 @@ import '../fletchc/driver/test_vm_connection.dart' as test_vm_connection;
 
 import '../debugger/debugger_tests.dart' as debugger_tests;
 
+import '../flash_sd_card_tests/flash_sd_card_tests.dart' as flash_sd_card_tests;
+
 import '../mdns_tests/mdns_tests.dart' as mdns_tests;
 
 import '../agent_tests/agent_tests.dart' as agent_tests;
@@ -106,6 +108,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
       test_vm_connection.testCloseAfterCommitChanges,
   'test_vm_connection/testCloseAfterProcessRun':
       test_vm_connection.testCloseAfterProcessRun,
+
+  'flash_sd_card_tests/*': flash_sd_card_tests.listTests,
 
   // Test the mDNS package.
   // TODO(sgjesse) publish the mDNS package as an ordinary package an pull

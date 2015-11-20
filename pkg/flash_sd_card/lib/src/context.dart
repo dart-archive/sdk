@@ -11,6 +11,7 @@ import 'package:args/args.dart';
 /// General context information for running the application.
 class Context {
   StreamIterator _stdin;
+  IOSink _stdout;
   IOSink _installLog;
   ArgResults _arguments;
 
@@ -19,7 +20,8 @@ class Context {
 
   Future<Directory> _tmpDir;
 
-  Context(List<String> args) {
+  Context(List<String> args,
+          {Stream stdinStream, IOSink stdoutSink, bool writeInstallLog: true}) {
     // Parse the command line arguments.
     var parser = new ArgParser();
     parser.addOption('sd-card');
@@ -34,8 +36,13 @@ class Context {
     parser.addOption('tmp-dir');
     _arguments = parser.parse(args);
 
-    _installLog = new File(logFileName).openWrite();
-    _stdin = new StreamIterator(stdin.transform(UTF8.decoder));
+    if (writeInstallLog) {
+      _installLog = new File(logFileName).openWrite();
+    }
+    stdinStream ??= stdin;
+    _stdin = new StreamIterator(stdinStream.transform(UTF8.decoder));
+    stdoutSink ??= stdout;
+    _stdout = stdoutSink;
   }
 
   String get sdCardDevice => _arguments['sd-card'];
@@ -65,13 +72,13 @@ class Context {
     if (_arguments['tmp-dir'] == null && _tmpDir != null) {
       await (await _tmpDir).delete(recursive: true);
     }
-    await _installLog.close();
+    await _installLog?.close();
     await _stdin.cancel();
   }
 
   /// Write a info message to the user.
   void infoln(Object message) {
-    stdout.writeln('$message');
+    _stdout.writeln('$message');
     // Always log user messages.
     log(message);
   }
@@ -79,7 +86,7 @@ class Context {
   /// Ask the user for input.
   Future<String> readLine(String prompt) async {
     if (prompt != null) {
-      stdout.write(prompt);
+      _stdout.write(prompt);
     }
     await _stdin.moveNext();
     return _stdin.current.trim();
@@ -124,31 +131,31 @@ class Context {
     if (_progressPrefix != null) {
       throw new StateError('Progress is already active');
     }
-    stdout.write(prefix);
+    _stdout.write(prefix);
     _progressPrefix = prefix;
   }
 
   void _clearProgress() {
-    stdout.write('\r$_progressPrefix${' ' * _previousProgressLength}');
+    _stdout.write('\r$_progressPrefix${' ' * _previousProgressLength}');
   }
 
   /// Update a progress indicator.
   void updateProgress(Object message) {
     _clearProgress();
     var messageString = '$message';
-    stdout.write('\r$_progressPrefix$messageString');
+    _stdout.write('\r$_progressPrefix$messageString');
     _previousProgressLength = messageString.length;
   }
 
   /// End a progress indicator.
   void endProgress(String message) {
     _clearProgress();
-    stdout.writeln('\r$_progressPrefix$message');
+    _stdout.writeln('\r$_progressPrefix$message');
     _progressPrefix = null;
   }
 
   log(Object message) {
-    _installLog.writeln('${new DateTime.now()}: $message');
+    _installLog?.writeln('${new DateTime.now()}: $message');
   }
 
   Future failure(Object message, [Object additionalMessage]) async {
