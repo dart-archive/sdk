@@ -122,6 +122,8 @@ class State {
     Goto(reinterpret_cast<uint8*>(Pop()));
   }
 
+  Object** fp() { return fp_; }
+
  protected:
   uint8* bcp() { return bcp_; }
   Object** sp() { return sp_; }
@@ -1218,16 +1220,15 @@ void HandleEnterNoSuchMethod(Process* process) {
 
   int selector;
   if (opcode == Opcode::kInvokeSelector) {
-    // If we have nested noSuchMethod trampolines, find the sentinel value,
-    // and use the selector-smi right above it.
-    int offset = 3;
-    while (state.Local(offset) != program->sentinel_object()) {
-      offset++;
-    }
-    selector = Smi::cast(state.Local(offset - 1))->value();
+    // If we have nested noSuchMethod trampolines, the selector is located
+    // in the previous frame, as the first argument (fp + 2).
+    Object** fp = state.fp();
+    fp = reinterpret_cast<Object**>(*fp);
+    int call_selector = Smi::cast(*(fp - 2))->value();
+
     // The selector that was used was not this selector, but instead a 'call'
     // selector with the same arity (see call_selector below).
-    int arity = Selector::ArityField::decode(selector);
+    int arity = Selector::ArityField::decode(call_selector);
     selector = Selector::EncodeMethod(Names::kCall, arity);
   } else if (opcode == Opcode::kInvokeNoSuchMethod) {
     selector = Utils::ReadInt32(return_address - 4);
@@ -1254,7 +1255,6 @@ void HandleEnterNoSuchMethod(Process* process) {
       ? program->smi_class()
       : HeapObject::cast(receiver)->get_class();
 
-  state.Push(program->sentinel_object());
   // This value is used by exitNoSuchMethod to pop arguments and detect if
   // original selector was a setter.
   state.Push(selector_smi);
@@ -1267,7 +1267,7 @@ void HandleEnterNoSuchMethod(Process* process) {
     int call_selector = Selector::EncodeMethod(Names::kCall, arity);
     state.Push(program->null_object());
     for (int i = 0; i < arity; i++) {
-      state.Push(state.Local(arity + 5));
+      state.Push(state.Local(arity + 4));
     }
     state.Push(Smi::FromWord(call_selector));
     state.Push(program->null_object());

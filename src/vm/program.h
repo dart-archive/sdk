@@ -29,7 +29,6 @@ class Session;
   V(Instance, null_object, NullObject)                          \
   V(Instance, false_object, FalseObject)                        \
   V(Instance, true_object, TrueObject)                          \
-  V(Instance, sentinel_object, SentinelObject)                  \
   /* Global literals up to this line */                         \
   V(Array, empty_array, EmptyArray)                             \
   V(OneByteString, empty_string, EmptyString)                   \

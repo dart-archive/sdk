@@ -877,14 +877,6 @@ void Program::Initialize() {
         heap()->CreateInstance(true_class, null_object(), true));
   }
 
-  { // Create sentinel singleton.
-    InstanceFormat format = InstanceFormat::instance_format(0);
-    Class* sentinel_class = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
-    sentinel_object_ = Instance::cast(
-        heap()->CreateInstance(sentinel_class, null_object(), true));
-  }
-
   { // Create stack overflow error object.
     InstanceFormat format = InstanceFormat::instance_format(0);
     stack_overflow_error_class_ = Class::cast(
