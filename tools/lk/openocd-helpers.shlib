@@ -47,5 +47,5 @@ done
 
 if [ -z "$OPENOCDHOME" ]; then
   ROOT="$(dirname $(dirname $(dirname $(readlink -f $0))))"
-  OPENOCDHOME="$ROOT/third_party/openocd/linux/openocd/"
+  OPENOCDHOME="$ROOT/third_party/bin/openocd/linux/openocd/"
 fi
