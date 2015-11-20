@@ -51,6 +51,8 @@ versiondir = ''
 ignoredPaths = ['fletch/out',
                 'fletch/tools/testing/bin',
                 'fletch/third_party/clang',
+                'fletch/third_party/bin/linux/qemu',
+                'fletch/third_party/bin/linux/qemu.tar.gz',
                 'fletch/third_party/lk',
                 'fletch/third_party/openocd',
                 'fletch/third_party/qemu',

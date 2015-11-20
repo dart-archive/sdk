@@ -21,7 +21,7 @@ USERNAME = 'pi'
 PASSWORD = 'raspberry'
 KERNEL = 'third_party/raspbian/kernel/kernel-qemu'
 CONFIG = 'tools/raspberry-pi2/raspbian-scripts/fletch-configuration'
-QEMU = 'third_party/bin/qemu/linux/qemu/qemu-system-arm'
+QEMU = 'third_party/qemu/linux/qemu/qemu-system-arm'
 PORT = 10022
 
 def Options():

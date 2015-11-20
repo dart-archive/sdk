@@ -69,7 +69,7 @@
         {
           'destination': '<(PRODUCT_DIR)',
           'files': [
-            'third_party/bin/dart/<(OS)/dart<(EXECUTABLE_SUFFIX)',
+            'third_party/bin/<(OS)/dart<(EXECUTABLE_SUFFIX)',
           ],
         },
       ],
