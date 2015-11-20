@@ -105,8 +105,13 @@ List<Example> getExamples(DiagnosticKind kind) {
       return untestable;
 
     case DiagnosticKind.upgradeInvalidPackageName:
-      return <Example>[new CommandLineExample(
-          <String>['x-upgrade', 'agent', 'with', 'file', 'invalid-file-name'])];
+      // TODO(karlklose,268): We want to write a test similar to the following,
+      // but it records the error in the wrong isolate. We need a way to
+      // test this.
+      // return <Example>[new CommandLineExample(
+      //     <String>['x-upgrade', 'agent', 'with', 'file',
+      //              'invalid-file-name'])];
+      return untestable;
 
     case DiagnosticKind.socketAgentConnectError:
       // TODO(wibling,268): figure out how to test fletch agent failures to

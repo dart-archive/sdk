@@ -63,9 +63,9 @@ enum DiagnosticKind {
   verbRequiresNoWithFile,
   verbRequiresSessionTarget,
   verbRequiresSocketTarget,
-  verbRequiresTarget,
   verbRequiresSpecificTarget,
   verbRequiresSpecificTargetButGot,
+  verbRequiresTarget,
   versionMismatch,
 
   // TODO(ahe): Remove when debug attach implicitly.

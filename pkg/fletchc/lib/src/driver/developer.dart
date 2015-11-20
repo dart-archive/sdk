@@ -14,7 +14,9 @@ import 'dart:convert' show
     UTF8;
 
 import 'dart:io' show
+    Directory,
     File,
+    FileSystemEntity,
     InternetAddress,
     Process,
     Socket,
@@ -780,13 +782,98 @@ Future signalAgentVm(SessionState state, int signalNumber) async {
   });
 }
 
+String extractVersion(Uri uri) {
+  List<String> nameParts = uri.pathSegments.last.split('_');
+  if (nameParts.length != 3 || nameParts[0] != 'fletch-agent') {
+    throwFatalError(DiagnosticKind.upgradeInvalidPackageName);
+  }
+  String version = nameParts[1];
+  // create_debian_packages.py adds a '-1' after the hash in the package name.
+  if (version.endsWith('-1')) {
+    version = version.substring(0, version.length - 2);
+  }
+  return version;
+}
+
+Future<Uri> readPackagePathFromUser(
+    Uri base,
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator) async {
+  String platform = "raspberry-pi2";
+  Uri platformUri = base.resolve("platforms/$platform");
+  Directory platformDir = new Directory.fromUri(platformUri);
+
+  // Try to locate the agent package in the SDK for the selected platform.
+  Uri sdkAgentPackage;
+  if (await platformDir.exists()) {
+    for (FileSystemEntity entry in platformDir.listSync()) {
+      Uri uri = entry.uri;
+      String name = uri.pathSegments.last;
+      if (name.startsWith('fletch-agent') && name.endsWith('.deb')) {
+        sdkAgentPackage = uri;
+        break;
+      }
+    }
+  }
+
+  if (sdkAgentPackage != null) {
+    String path = sdkAgentPackage.toFilePath();
+    commandSender.sendStdout("Found SDK package: $path\n");
+    commandSender.sendStdout("Press Enter to use this package to upgrade "
+        "or enter the path to another package file:\n");
+  } else {
+    commandSender.sendStdout("Please enter the path to the package file "
+        "you want to use:\n");
+  }
+
+  while (await commandIterator.moveNext()) {
+    Command command = commandIterator.current;
+    switch (command.code) {
+      case DriverCommand.Stdin:
+        if (command.data.length == 0) {
+          throwInternalError("Unexpected end of input");
+        }
+        // TODO(karlklose): This assumes that the user's input arrives as one
+        // message. It is relatively safe to assume this for a normal terminal
+        // session because we use canonical input processing (Unix line
+        // buffering), but it doesn't work in general. So we should fix that.
+        String line = UTF8.decode(command.data).trim();
+        if (line.isEmpty) {
+          return sdkAgentPackage;
+        } else {
+          return base.resolve(line);
+        }
+        break;
+
+      default:
+        throwInternalError("Unexpected ${command.code}");
+        return null;
+    }
+  }
+  return null;
+}
+
 Future<int> upgradeAgent(
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator,
     SessionState state,
-    Uri packageUri,
-    String version) async {
+    Uri base,
+    Uri packageUri) async {
   if (state.settings.deviceAddress == null) {
     throwFatalError(DiagnosticKind.noAgentFound);
   }
+
+  while (packageUri == null) {
+    packageUri =
+      await readPackagePathFromUser(base, commandSender, commandIterator);
+  }
+
+  if (!await new File.fromUri(packageUri).exists()) {
+    print('File not found: $packageUri');
+    return 1;
+  }
+
+  String version = extractVersion(packageUri);
 
   String existingVersion = await withAgentConnection(state,
       (connection) => connection.fletchVersion());
