@@ -21,7 +21,7 @@ class Breakpoint {
              int id,
              bool is_one_shot,
              Coroutine* coroutine = NULL,
-             int stack_height = 0);
+             word stack_height = 0);
 
   Function* function() const { return function_; }
   int bytecode_index() const { return bytecode_index_; }
@@ -31,7 +31,7 @@ class Breakpoint {
     if (coroutine_ == NULL) return NULL;
     return coroutine_->stack();
   }
-  int stack_height() const { return stack_height_; }
+  word stack_height() const { return stack_height_; }
 
   // GC support for process GCs.
   void VisitPointers(PointerVisitor* visitor);
@@ -45,7 +45,7 @@ class Breakpoint {
   int id_;
   bool is_one_shot_;
   Coroutine* coroutine_;
-  int stack_height_;
+  word stack_height_;
 };
 
 class DebugInfo {
@@ -59,7 +59,7 @@ class DebugInfo {
                     int bytecode_index,
                     bool one_shot = false,
                     Coroutine* coroutine = NULL,
-                    int stack_height = 0);
+                    word stack_height = 0);
   bool DeleteBreakpoint(int id);
   bool is_stepping() const { return is_stepping_; }
   void set_is_stepping(bool value) { is_stepping_ = value; }

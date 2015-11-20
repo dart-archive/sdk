@@ -1145,8 +1145,8 @@ class OneWordFiller : public HeapObject { };
 class Stack: public BaseArray {
  public:
   // [top]: top of the stack.
-  inline int top();
-  inline void set_top(int value);
+  inline word top();
+  inline void set_top(word value);
 
   // [next]: stacks are chained in a list through a next pointer
   // during program garbage collection.
@@ -1171,7 +1171,7 @@ class Stack: public BaseArray {
   // Casting.
   static inline Stack* cast(Object* obj);
 
-  void UpdateFramePointers(const Stack* old_stack);
+  void UpdateFramePointers(Stack* old_stack);
 
   // Printing.
   void StackPrint();
@@ -2141,11 +2141,11 @@ void Stack::set(int index, Object* value) {
   at_put(Stack::kSize + (index * kPointerSize), value);
 }
 
-int Stack::top() {
+word Stack::top() {
   return Smi::cast(at(Stack::kTopOffset))->value();
 }
 
-void Stack::set_top(int value) {
+void Stack::set_top(word value) {
   ASSERT(value >= 0 && value < length());
   at_put(Stack::kTopOffset, Smi::FromWord(value));
 }
@@ -2165,7 +2165,7 @@ inline Object** Stack::Pointer(int index) const {
 
 inline void Stack::SetTopFromPointer(Object** value) {
   Object** start = reinterpret_cast<Object**>(address() + Stack::kSize);
-  int new_top = value - start;
+  word new_top = value - start;
   set_top(new_top);
 }
 

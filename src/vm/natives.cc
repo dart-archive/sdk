@@ -901,19 +901,20 @@ static Process* SpawnProcessInternal(Program* program,
   // The entry closure takes three arguments, 'this', the closure, and
   // a single argument. Since the method is a static tear-off, 'this'
   // is not used and simply be 'NULL'.
-  stack->set(0, NULL);
-  stack->set(1, closure);
-  stack->set(2, argument);
+  word top = stack->length();
+  stack->set(--top, NULL);
+  stack->set(--top, closure);
+  stack->set(--top, argument);
   // Push 'NULL' return address. This will tell the stack-walker this is the
   // last function. Also push two empty slots.
-  stack->set(3, NULL);
-  stack->set(4, NULL);
-  stack->set(5, NULL);
+  stack->set(--top, NULL);
+  stack->set(--top, NULL);
+  Object** frame_pointer = stack->Pointer(top);
+  stack->set(--top, NULL);
   // Finally push the bcp and fp.
-  stack->set(6, reinterpret_cast<Object*>(bcp));
-  Object** frame_pointer = stack->Pointer(4);
-  stack->set(7, reinterpret_cast<Object*>(frame_pointer));
-  stack->set_top(7);
+  stack->set(--top, reinterpret_cast<Object*>(bcp));
+  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
+  stack->set_top(top);
 
   return child;
 }
@@ -1006,19 +1007,21 @@ NATIVE(CoroutineNewStack) {
   ASSERT(bcp[2] == kCoroutineChange);
 
   Stack* stack = Stack::cast(object);
-  stack->set(0, coroutine);
-  stack->set(1, entry);
-  stack->set(2, NULL);  // Terminating return address and two empty slots.
-  stack->set(3, NULL);
-  stack->set(4, NULL);
-  stack->set(5, Smi::FromWord(0));  // Fake 'stack' argument.
-  stack->set(6, Smi::FromWord(0));  // Fake 'value' argument.
+  word top = stack->length();
+  stack->set(--top, coroutine);
+  stack->set(--top, entry);
+  // Terminating return address and two empty slots.
+  stack->set(--top, NULL);
+  stack->set(--top, NULL);
+  Object** frame_pointer = stack->Pointer(top);
+  stack->set(--top, NULL);
+  stack->set(--top, Smi::FromWord(0));  // Fake 'stack' argument.
+  stack->set(--top, Smi::FromWord(0));  // Fake 'value' argument.
   // Leave bcp at the kChangeStack instruction to make it look like a
   // suspended co-routine. bcp is incremented on resume.
-  stack->set(7, reinterpret_cast<Object*>(bcp + 2));
-  Object** frame_pointer = stack->Pointer(3);
-  stack->set(8, reinterpret_cast<Object*>(frame_pointer));
-  stack->set_top(8);
+  stack->set(--top, reinterpret_cast<Object*>(bcp + 2));
+  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
+  stack->set_top(top);
   return stack;
 }
 

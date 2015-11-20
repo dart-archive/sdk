@@ -451,23 +451,20 @@ void InterpreterGeneratorARM::DoLoadLocal5() {
 
 void InterpreterGeneratorARM::DoLoadLocal() {
   __ ldrb(R0, Address(R5, 1));
-  __ neg(R1, R0);
-  __ ldr(R0, Address(R6, Operand(R1, TIMES_WORD_SIZE)));
+  __ ldr(R0, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   Push(R0);
   Dispatch(kLoadLocalLength);
 }
 
 void InterpreterGeneratorARM::DoLoadLocalWide() {
   __ ldr(R0, Address(R5, 1));
-  __ neg(R1, R0);
-  __ ldr(R0, Address(R6, Operand(R1, TIMES_WORD_SIZE)));
+  __ ldr(R0, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   Push(R0);
   Dispatch(kLoadLocalWideLength);
 }
 
 void InterpreterGeneratorARM::DoLoadBoxed() {
   __ ldrb(R0, Address(R5, 1));
-  __ neg(R0, R0);
   __ ldr(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   __ ldr(R0, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
   Push(R0);
@@ -554,7 +551,6 @@ void InterpreterGeneratorARM::DoLoadConstUnfold() {
 void InterpreterGeneratorARM::DoStoreLocal() {
   LoadLocal(R1, 0);
   __ ldrb(R0, Address(R5, 1));
-  __ neg(R0, R0);
   __ str(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   Dispatch(kStoreLocalLength);
 }
@@ -562,7 +558,6 @@ void InterpreterGeneratorARM::DoStoreLocal() {
 void InterpreterGeneratorARM::DoStoreBoxed() {
   LoadLocal(R2, 0);
   __ ldrb(R0, Address(R5, 1));
-  __ neg(R0, R0);
   __ ldr(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   __ str(R2, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
 
@@ -1050,7 +1045,7 @@ void InterpreterGeneratorARM::DoBranchBackIfFalseWide() {
 
 void InterpreterGeneratorARM::DoPopAndBranchWide() {
   __ ldrb(R0, Address(R5, 1));
-  __ sub(R6, R6, Operand(R0, TIMES_WORD_SIZE));
+  __ add(R6, R6, Operand(R0, TIMES_WORD_SIZE));
 
   __ ldr(R0, Address(R5, 2));
   __ add(R5, R5, R0);
@@ -1061,7 +1056,7 @@ void InterpreterGeneratorARM::DoPopAndBranchBackWide() {
   CheckStackOverflow(0);
 
   __ ldrb(R0, Address(R5, 1));
-  __ sub(R6, R6, Operand(R0, TIMES_WORD_SIZE));
+  __ add(R6, R6, Operand(R0, TIMES_WORD_SIZE));
 
   __ ldr(R0, Address(R5, 2));
   __ sub(R5, R5, R0);
@@ -1104,8 +1099,8 @@ void InterpreterGeneratorARM::DoNegate() {
 void InterpreterGeneratorARM::DoStackOverflowCheck() {
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::kStackLimitOffset));
-  __ add(R3, R6, Operand(R0, TIMES_WORD_SIZE));
-  __ cmp(R1, R3);
+  __ sub(R3, R6, Operand(R0, TIMES_WORD_SIZE));
+  __ cmp(R3, R1);
   __ b(LS, &check_stack_overflow_);
   Dispatch(kStackOverflowCheckLength);
 }
@@ -1138,7 +1133,6 @@ void InterpreterGeneratorARM::DoThrowAfterSaveState() {
 
   __ Bind(&unwind);
   StoreFramePointer(R2);
-  __ neg(R3, R3);
   __ mov(R5, R0);
   __ add(R6, R6, Operand(R3, TIMES_WORD_SIZE));
 
@@ -1243,7 +1237,7 @@ void InterpreterGeneratorARM::DoIdentical() {
 
   __ Bind(&fast_case);
   __ cmp(R1, R0);
-  ConditionalStore(R10, R11, Address(R6, -kWordSize));
+  ConditionalStore(R10, R11, Address(R6, kWordSize));
   Drop(1);
   Dispatch(kIdenticalLength);
 
@@ -1260,7 +1254,7 @@ void InterpreterGeneratorARM::DoIdenticalNonNumeric() {
   LoadLocal(R0, 0);
   LoadLocal(R1, 1);
   __ cmp(R0, R1);
-  ConditionalStore(R10, R11, Address(R6, -kWordSize));
+  ConditionalStore(R10, R11, Address(R6, kWordSize));
   Drop(1);
   Dispatch(kIdenticalNonNumericLength);
 }
@@ -1291,7 +1285,6 @@ void InterpreterGeneratorARM::DoExitNoSuchMethod() {
   __ Bind(&done);
   ASSERT(Selector::ArityField::shift() == 0);
   __ and_(R1, R1, Immediate(Selector::ArityField::mask()));
-  __ neg(R1, R1);
 
   // Drop the arguments from the stack, but leave the receiver.
   __ add(R6, R6, Operand(R1, TIMES_WORD_SIZE));
@@ -1410,7 +1403,7 @@ void InterpreterGeneratorARM::DoIntrinsicListLength() {
 
 void InterpreterGeneratorARM::Push(Register reg) {
   StoreLocal(reg, -1);
-  __ add(R6, R6, Immediate(1 * kWordSize));
+  __ sub(R6, R6, Immediate(1 * kWordSize));
 }
 
 void InterpreterGeneratorARM::Pop(Register reg) {
@@ -1434,13 +1427,12 @@ void InterpreterGeneratorARM::Return(bool wide, bool is_return_null) {
   } else {
     __ ldrb(R2, Address(R5, 2));
   }
-  __ neg(R2, R2);
 
   ReadFrameDescriptor(R1);
 
   // Drop arguments except one which we will overwrite with the result
   // (we've left the return address on the stack).
-  __ sub(R2, R2, Immediate(1));
+  __ add(R2, R2, Immediate(1));
   __ add(R6, R6, Operand(R2, TIMES_WORD_SIZE));
 
   // Overwrite the first argument (or the return address) with the result
@@ -1450,15 +1442,15 @@ void InterpreterGeneratorARM::Return(bool wide, bool is_return_null) {
 }
 
 void InterpreterGeneratorARM::LoadLocal(Register reg, int index) {
-  __ ldr(reg, Address(R6, -index * kWordSize));
+  __ ldr(reg, Address(R6, index * kWordSize));
 }
 
 void InterpreterGeneratorARM::StoreLocal(Register reg, int index) {
-  __ str(reg, Address(R6, -index * kWordSize));
+  __ str(reg, Address(R6, index * kWordSize));
 }
 
 void InterpreterGeneratorARM::Drop(int n) {
-  __ sub(R6, R6, Immediate(n * kWordSize));
+  __ add(R6, R6, Immediate(n * kWordSize));
 }
 
 void InterpreterGeneratorARM::Drop(Register reg) {
@@ -1505,8 +1497,7 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
     __ and_(R2, R7, Immediate(Selector::ArityField::mask()));
 
     // Get the receiver from the stack.
-    __ neg(R3, R2);
-    __ ldr(R1, Address(R6, Operand(R3, TIMES_WORD_SIZE)));
+    __ ldr(R1, Address(R6, Operand(R2, TIMES_WORD_SIZE)));
   }
 
   // Compute the receiver class.
@@ -1612,7 +1603,6 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   if (test) {
     LoadLocal(R2, 0);
   } else {
-    __ neg(R2, R2);
     __ ldr(R2, Address(R6, Operand(R2, TIMES_WORD_SIZE)));
   }
 
@@ -1695,7 +1685,6 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   __ ldrb(R1, Address(R5, 1));
   // Also skip two empty slots.
   __ add(R1, R1, Immediate(2));
-  __ neg(R1, R1);
   __ ldrb(R0, Address(R5, 2));
 
   // Load native from native table.
@@ -1820,19 +1809,19 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     // R2 = SizeOfEntireObject - Instance::kSize
     __ sub(R2, R2, Immediate(Instance::kSize));
 
-    // R3 = StackPointer(R6) - NumberOfFields*kPointerSize
-    __ sub(R3, R6, R2);
+    // R3 = StackPointer(R6) + NumberOfFields*kPointerSize
+    __ add(R3, R6, R2);
 
     Label loop;
     Label loop_with_immutable_field;
     Label loop_with_mutable_field;
 
-    // Increment pointer to point to next field.
+    // Decrement pointer to point to next field.
     __ Bind(&loop);
-    __ add(R3, R3, Immediate(kPointerSize));
+    __ sub(R3, R3, Immediate(kPointerSize));
 
-    // Test whether R3 > R6. If so we're done and it's immutable.
-    __ cmp(R3, R6);
+    // Test whether R6 > R3. If so we're done and it's immutable.
+    __ cmp(R6, R3);
     __ b(HI, &allocate);
 
     // If Smi, continue the loop.
@@ -1976,7 +1965,7 @@ void InterpreterGeneratorARM::ConditionalStore(Register reg_if_eq,
 
 void InterpreterGeneratorARM::CheckStackOverflow(int size) {
   __ ldr(R1, Address(R4, Process::kStackLimitOffset));
-  __ cmp(R1, R6);
+  __ cmp(R6, R1);
   if (size == 0) {
     __ b(LS, &check_stack_overflow_0_);
   } else {

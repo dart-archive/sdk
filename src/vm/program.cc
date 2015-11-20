@@ -81,15 +81,16 @@ Process* Program::ProcessSpawnForMain() {
   process->SetupExecutionStack();
   Stack* stack = process->stack();
   uint8_t* bcp = entry->bytecode_address_for(0);
-  stack->set(0, Smi::FromWord(main_arity));
+  word top = stack->length();
+  stack->set(--top, Smi::FromWord(main_arity));
   // Return address + 2 empty slots.
-  stack->set(1, NULL);
-  stack->set(2, NULL);
-  stack->set(3, NULL);
-  stack->set(4, reinterpret_cast<Object*>(bcp));
-  Object** frame_pointer = stack->Pointer(2);
-  stack->set(5, reinterpret_cast<Object*>(frame_pointer));
-  stack->set_top(5);
+  stack->set(--top, NULL);
+  stack->set(--top, NULL);
+  Object** frame_pointer = stack->Pointer(top);
+  stack->set(--top, NULL);
+  stack->set(--top, reinterpret_cast<Object*>(bcp));
+  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
+  stack->set_top(top);
 
   return process;
 }

@@ -28,7 +28,7 @@ namespace fletch {
 static uword kPreemptMarker = 1 << 0;
 static uword kProfileMarker = 1 << 1;
 static uword kDebugInterruptMarker = 1 << 2;
-static uword kMaxStackMarker = (1 << 3) - 1;
+static uword kMaxStackMarker = ~static_cast<uword>((1 << 3) - 1);
 
 ThreadState::ThreadState()
     : thread_id_(-1),
@@ -161,7 +161,7 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
 Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   uword current_limit = stack_limit();
 
-  if (current_limit <= kMaxStackMarker) {
+  if (current_limit >= kMaxStackMarker) {
     if ((current_limit & kPreemptMarker) != 0) {
       ClearStackMarker(kPreemptMarker);
       UpdateStackLimit();
@@ -196,10 +196,12 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   }
 
   Stack* new_stack = Stack::cast(new_stack_object);
-  int top = stack()->top();
-  ASSERT(top >= 0);
-  new_stack->set_top(top);
-  memcpy(new_stack->Pointer(0), stack()->Pointer(0), (top + 1) * kWordSize);
+  word height = stack()->length() - stack()->top();
+  ASSERT(height >= 0);
+  new_stack->set_top(new_stack->length() - height);
+  memcpy(new_stack->Pointer(new_stack->top()),
+         stack()->Pointer(stack()->top()),
+         height * kWordSize);
   new_stack->UpdateFramePointers(stack());
   ASSERT(coroutine_->has_stack());
   coroutine_->set_stack(new_stack);
@@ -574,8 +576,10 @@ void Process::TakeLookupCache() {
 void Process::SetStackMarker(uword marker) {
   uword stack_limit = stack_limit_;
   while (true) {
-    uword updated_limit =
-        (stack_limit > kMaxStackMarker) ? marker : stack_limit | marker;
+    uword updated_limit = stack_limit < kMaxStackMarker
+        ? kMaxStackMarker
+        : stack_limit;
+    updated_limit |= marker;
     if (stack_limit_.compare_exchange_weak(stack_limit, updated_limit)) break;
   }
 }
@@ -607,9 +611,8 @@ void Process::AttachDebugger() {
 }
 
 int Process::PrepareStepOver() {
-  Object** pushed_bcp_address = stack()->Pointer(stack()->top() - 1);
+  Object** pushed_bcp_address = stack()->Pointer(stack()->top() + 1);
   uint8_t* current_bcp = reinterpret_cast<uint8_t*>(*pushed_bcp_address);
-  Object** stack_top = pushed_bcp_address - 1;
   Opcode opcode = static_cast<Opcode>(*current_bcp);
 
   if (!Bytecode::IsInvokeVariant(opcode)) {
@@ -651,9 +654,9 @@ int Process::PrepareStepOver() {
       break;
   }
 
-  Object** expected_sp = stack_top + stack_diff;
   Function* function = Function::FromBytecodePointer(current_bcp);
-  int stack_height = expected_sp - stack()->Pointer(0);
+  word frame_end = stack()->top() - stack_diff + 2;
+  word stack_height = stack()->length() - frame_end;
   int bytecode_index =
       current_bcp + Bytecode::Size(opcode) - function->bytecode_address_for(0);
   return debug_info_->SetBreakpoint(
@@ -664,15 +667,16 @@ int Process::PrepareStepOut() {
   Frame frame(stack());
   bool has_top_frame = frame.MovePrevious();
   ASSERT(has_top_frame);
-  Object** frame_bottom = frame.FramePointer() - 1;
+  Object** frame_bottom = frame.FramePointer() + 1;
   Function* callee = frame.FunctionFromByteCodePointer();
   bool has_frame_below = frame.MovePrevious();
   ASSERT(has_frame_below);
   Function* caller = frame.FunctionFromByteCodePointer();
   int bytecode_index =
       frame.ByteCodePointer() - caller->bytecode_address_for(0);
-  Object** expected_sp = frame_bottom - callee->arity();
-  int stack_height = expected_sp - stack()->Pointer(0);
+  Object** expected_sp = frame_bottom + callee->arity();
+  word frame_end = expected_sp - stack()->Pointer(0);
+  word stack_height = stack()->length() - frame_end;
   return debug_info_->SetBreakpoint(
       caller, bytecode_index, true, coroutine_, stack_height);
 }
@@ -793,9 +797,8 @@ void Process::UpdateStackLimit() {
   uword current_limit = stack_limit_;
   // Update the stack limit if the limit is a real limit or if all
   // interrupts have been handled.
-  if (current_limit > kMaxStackMarker || current_limit == 0) {
-    uword new_stack_limit =
-        reinterpret_cast<uword>(stack->Pointer(stack->length() - frame_size));
+  if (current_limit <= kMaxStackMarker) {
+    uword new_stack_limit = reinterpret_cast<uword>(stack->Pointer(frame_size));
     stack_limit_.compare_exchange_strong(current_limit, new_stack_limit);
   }
 }

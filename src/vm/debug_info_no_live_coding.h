@@ -31,7 +31,7 @@ class DebugInfo {
                     int bytecode_index,
                     bool one_shot = false,
                     Coroutine* coroutine = NULL,
-                    int stack_height = 0) {
+                    word stack_height = 0) {
     UNIMPLEMENTED();
     return 0;
   }

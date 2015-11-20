@@ -16,7 +16,7 @@ Breakpoint::Breakpoint(Function* function,
                        int id,
                        bool is_one_shot,
                        Coroutine* coroutine,
-                       int stack_height)
+                       word stack_height)
     : function_(function),
       bytecode_index_(bytecode_index),
       id_(id),
@@ -48,9 +48,9 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
     if (breakpoint_stack != NULL) {
       // Step-over breakpoint that only matches if the stack height
       // is correct.
-      Object** expected_sp =
-          breakpoint_stack->Pointer(0) + breakpoint.stack_height();
-      ASSERT(expected_sp >= sp);
+      word index = breakpoint_stack->length() - breakpoint.stack_height();
+      Object** expected_sp = breakpoint_stack->Pointer(index);
+      ASSERT(sp <= expected_sp);
       if (expected_sp != sp) return false;
     }
     set_current_breakpoint(breakpoint.id());
@@ -68,7 +68,7 @@ int DebugInfo::SetBreakpoint(Function* function,
                              int bytecode_index,
                              bool one_shot,
                              Coroutine* coroutine,
-                             int stack_height) {
+                             word stack_height) {
   Breakpoint breakpoint(function,
                         bytecode_index,
                         next_breakpoint_id(),

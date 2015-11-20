@@ -20,10 +20,22 @@ class TwoByteString;
 // TODO(kasperl): Move this elsewhere.
 char* AsForeignString(Object* object);
 
-typedef Object* (*NativeFunction)(Process*, Object**);
+// Wrapper for arguments to native functions, where argument indexing is
+// growing.
+class Arguments {
+ public:
+  explicit Arguments(Object** raw) : raw_(raw) {}
+
+  Object* operator[](word index) const { return raw_[-index]; }
+
+ private:
+  Object** raw_;
+};
+
+typedef Object* (*NativeFunction)(Process*, Arguments);
 
 #define NATIVE(n) extern "C" \
-  Object* Native_##n(Process* process, Object** arguments)
+  Object* Native_##n(Process* process, Arguments arguments)
 
 #define N(e, c, n) \
   NATIVE(e);

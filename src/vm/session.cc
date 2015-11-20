@@ -416,7 +416,7 @@ void Session::ProcessMessages() {
         Stack* stack = process_->stack();
         Frame frame(stack);
         for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
-        Object* local = stack->get(frame.FirstLocalIndex() + slot);
+        Object* local = stack->get(frame.FirstLocalIndex() - slot);
         if (opcode == Connection::kProcessLocalStructure &&
             local->IsInstance()) {
           SendInstanceStructure(Instance::cast(local));
@@ -1544,7 +1544,7 @@ void Session::RestartFrame(int frame_index) {
 
   // Now we just need to set the top to the location of the current
   // frame pointer.
-  stack->set_top(frame.FirstLocalIndex() - 2);
+  stack->set_top(frame.FirstLocalIndex() + 2);
 }
 
 }  // namespace fletch

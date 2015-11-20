@@ -193,8 +193,8 @@ void Space::CompleteTransformations(PointerVisitor* visitor) {
         // iterate the actual pointers in each frame directly.
         Frame frame(Stack::cast(object));
         while (frame.MovePrevious()) {
-          visitor->VisitBlock(frame.FirstLocalAddress(),
-                              frame.LastLocalAddress() + 1);
+          visitor->VisitBlock(frame.LastLocalAddress(),
+                              frame.FirstLocalAddress() + 1);
         }
         current += object->Size();
       } else {

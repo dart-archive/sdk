@@ -93,16 +93,16 @@ class State {
   Object* Top() { return *sp_; }
   void SetTop(Object* value) { *sp_ = value; }
 
-  Object* Local(int n) { return *(sp_ - n); }
-  void SetLocal(int n, Object* value) { *(sp_ - n)  = value; }
-  Object** LocalPointer(int n) { return sp_ - n; }
+  Object* Local(int n) { return *(sp_ + n); }
+  void SetLocal(int n, Object* value) { *(sp_ + n)  = value; }
+  Object** LocalPointer(int n) { return sp_ + n; }
 
-  Object* Pop() { return *(sp_--); }
-  void Push(Object* value) { *(++sp_) = value; }
-  void Drop(int n) { sp_ -= n; }
+  Object* Pop() { return *(sp_++); }
+  void Push(Object* value) { *(--sp_) = value; }
+  void Drop(int n) { sp_ += n; }
 
   bool HasStackSpaceFor(int size) const {
-    return (sp_ + size) < reinterpret_cast<Object**>(process_->stack_limit());
+    return (sp_ - size) > reinterpret_cast<Object**>(process_->stack_limit());
   }
 
   Function* ComputeCurrentFunction() {
@@ -496,7 +496,7 @@ Interpreter::InterruptKind Engine::Interpret(
     Native native = static_cast<Native>(ReadByte(2));
     Object** arguments = LocalPointer(arity + 2);
     GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
-        result, kNativeTable[native](process(), arguments));
+        result, kNativeTable[native](process(), Arguments(arguments)));
     if (result->IsFailure()) {
       Push(program()->ObjectFromFailure(Failure::cast(result)));
       Advance(kInvokeNativeLength);
@@ -541,7 +541,7 @@ Interpreter::InterruptKind Engine::Interpret(
     Native native = static_cast<Native>(ReadByte(2));
     Object** arguments = LocalPointer(arity + 2);
     GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
-        result, kNativeTable[native](process(), arguments));
+        result, kNativeTable[native](process(), Arguments(arguments)));
     if (result->IsFailure()) {
       Push(program()->ObjectFromFailure(Failure::cast(result)));
       Advance(kInvokeNativeYieldLength);
@@ -971,7 +971,7 @@ void Engine::ValidateStack() {
   Frame frame(process()->stack());
   while (frame.MovePrevious()) {
     frame.FunctionFromByteCodePointer();
-    if (*(frame.FirstLocalAddress() - 1) != NULL) {
+    if (*(frame.FirstLocalAddress() + 1) != NULL) {
       FATAL("Expected empty slot");
     }
   }
@@ -1173,8 +1173,8 @@ static uint8* FindCatchBlock(Process* process,
       // emitted).
       if (start_address < bcp && end_address > bcp) {
         // Read the number of stack slots we need to pop.
-        int index = frame.FirstLocalIndex() + block->frame_size + 1;
-        *stack_delta_result = stack->top() - index;
+        int index = frame.FirstLocalIndex() - block->frame_size - 1;
+        *stack_delta_result = index - stack->top();
         *frame_pointer_result = frame.FramePointer();
         return end_address;
       }

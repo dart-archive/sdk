@@ -543,9 +543,8 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
       // valid during marking.
       Stack* stack = reinterpret_cast<Stack*>(this);
       visitor->VisitBlock(
-          reinterpret_cast<Object**>(address() + Stack::kSize),
-          // Include the top pointer in the block.
-          stack->Pointer(stack->top() + 1));
+          stack->Pointer(stack->top()),
+          stack->Pointer(stack->length()));
       break;
     }
 
@@ -585,9 +584,10 @@ void HeapObject::set_forwarding_address(HeapObject* value) {
   at_put(kClassOffset, Smi::cast(reinterpret_cast<Smi*>(value->address())));
 }
 
-void Stack::UpdateFramePointers(const Stack* old_stack) {
-  word diff = (address() - old_stack->address());
+void Stack::UpdateFramePointers(Stack* old_stack) {
   Object** fp = Pointer(top());
+  Object** old_fp = old_stack->Pointer(old_stack->top());
+  word diff = (fp - old_fp) * kWordSize;
   while (*fp != NULL) {
     // Read the fp value and update it.
     Object* fp_value = *fp + diff;
@@ -768,8 +768,8 @@ int SafeObjectPointerVisitor::Visit(HeapObject* object) {
     // stack walker.
     Frame frame(Stack::cast(object));
     while (frame.MovePrevious()) {
-      visitor_->VisitBlock(frame.FirstLocalAddress(),
-                           frame.LastLocalAddress() + 1);
+      visitor_->VisitBlock(frame.LastLocalAddress(),
+                           frame.FirstLocalAddress() + 1);
     }
   } else {
     object->IteratePointers(visitor_);

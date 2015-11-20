@@ -48,16 +48,16 @@ class Frame {
     Object** current_frame_pointer = frame_pointer_;
     frame_pointer_ = PreviousFramePointer();
     if (frame_pointer_ == NULL) return false;
-    size_ = current_frame_pointer - frame_pointer_;
+    size_ = frame_pointer_ - current_frame_pointer;
     return true;
   }
 
   uint8* ByteCodePointer() const {
-    return reinterpret_cast<uint8*>(*(frame_pointer_ + size_ - 1));
+    return reinterpret_cast<uint8*>(*(frame_pointer_ - size_ + 1));
   }
 
   void SetByteCodePointer(uint8* bcp) {
-    *(frame_pointer_ + size_ - 1) = reinterpret_cast<Object*>(bcp);
+    *(frame_pointer_ - size_ + 1) = reinterpret_cast<Object*>(bcp);
   }
 
   Object** FramePointer() const {
@@ -65,11 +65,11 @@ class Frame {
   }
 
   uint8* ReturnAddress() const {
-    return reinterpret_cast<uint8*>(*(frame_pointer_ - 1));
+    return reinterpret_cast<uint8*>(*(frame_pointer_ + 1));
   }
 
   void SetReturnAddress(uint8* return_address) {
-    *(frame_pointer_ - 1) = reinterpret_cast<Object*>(return_address);
+    *(frame_pointer_ + 1) = reinterpret_cast<Object*>(return_address);
   }
 
   Object** PreviousFramePointer() const {
@@ -85,17 +85,17 @@ class Frame {
     return Function::FromBytecodePointer(bcp, frame_ranges_offset_result);
   }
 
-  int FirstLocalIndex() const {
+  word FirstLocalIndex() const {
     return FirstLocalAddress() - stack_->Pointer(0);
   }
 
-  int LastLocalIndex() const {
+  word LastLocalIndex() const {
     return LastLocalAddress() - stack_->Pointer(0);
   }
 
-  Object** FirstLocalAddress() const { return FramePointer() + 2; }
+  Object** FirstLocalAddress() const { return FramePointer() - 2; }
 
-  Object** LastLocalAddress() const { return FramePointer() + size_ - 2; }
+  Object** LastLocalAddress() const { return FramePointer() - size_ + 2; }
 
  private:
   Stack* stack_;

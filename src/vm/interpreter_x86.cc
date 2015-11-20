@@ -440,7 +440,6 @@ void InterpreterGeneratorX86::DoLoadLocal5() {
 
 void InterpreterGeneratorX86::DoLoadLocal() {
   __ movzbl(EAX, Address(ESI, 1));
-  __ negl(EAX);
   __ movl(EAX, Address(EDI, EAX, TIMES_WORD_SIZE));
   Push(EAX);
   Dispatch(kLoadLocalLength);
@@ -448,7 +447,6 @@ void InterpreterGeneratorX86::DoLoadLocal() {
 
 void InterpreterGeneratorX86::DoLoadLocalWide() {
   __ movl(EAX, Address(ESI, 1));
-  __ negl(EAX);
   __ movl(EAX, Address(EDI, EAX, TIMES_WORD_SIZE));
   Push(EAX);
   Dispatch(kLoadLocalWideLength);
@@ -456,7 +454,6 @@ void InterpreterGeneratorX86::DoLoadLocalWide() {
 
 void InterpreterGeneratorX86::DoLoadBoxed() {
   __ movzbl(EAX, Address(ESI, 1));
-  __ negl(EAX);
   __ movl(EBX, Address(EDI, EAX, TIMES_WORD_SIZE));
   __ movl(EAX, Address(EBX, Boxed::kValueOffset - HeapObject::kTag));
   Push(EAX);
@@ -549,7 +546,6 @@ void InterpreterGeneratorX86::DoLoadConstUnfold() {
 void InterpreterGeneratorX86::DoStoreLocal() {
   LoadLocal(EBX, 0);
   __ movzbl(EAX, Address(ESI, 1));
-  __ negl(EAX);
   __ movl(Address(EDI, EAX, TIMES_WORD_SIZE), EBX);
   Dispatch(2);
 }
@@ -557,7 +553,6 @@ void InterpreterGeneratorX86::DoStoreLocal() {
 void InterpreterGeneratorX86::DoStoreBoxed() {
   LoadLocal(ECX, 0);
   __ movzbl(EAX, Address(ESI, 1));
-  __ negl(EAX);
   __ movl(EBX, Address(EDI, EAX, TIMES_WORD_SIZE));
   __ movl(Address(EBX, Boxed::kValueOffset - HeapObject::kTag), ECX);
 
@@ -1071,7 +1066,6 @@ void InterpreterGeneratorX86::DoBranchBackIfFalseWide() {
 
 void InterpreterGeneratorX86::DoPopAndBranchWide() {
   __ movzbl(EAX, Address(ESI, 1));
-  __ negl(EAX);
   __ leal(EDI, Address(EDI, EAX, TIMES_WORD_SIZE));
 
   __ movl(EAX, Address(ESI, 2));
@@ -1083,7 +1077,6 @@ void InterpreterGeneratorX86::DoPopAndBranchBackWide() {
   CheckStackOverflow(0);
 
   __ movzbl(EAX, Address(ESI, 1));
-  __ negl(EAX);
   __ leal(EDI, Address(EDI, EAX, TIMES_WORD_SIZE));
 
   __ movl(EAX, Address(ESI, 2));
@@ -1134,9 +1127,10 @@ void InterpreterGeneratorX86::DoNegate() {
 void InterpreterGeneratorX86::DoStackOverflowCheck() {
   __ movl(EAX, Address(ESI, 1));
   __ movl(EBX, Address(EBP, Process::kStackLimitOffset));
+  __ negl(EAX);
   __ leal(ECX, Address(EDI, EAX, TIMES_WORD_SIZE));
   __ cmpl(ECX, EBX);
-  __ j(ABOVE_EQUAL, &check_stack_overflow_);
+  __ j(BELOW_EQUAL, &check_stack_overflow_);
   Dispatch(kStackOverflowCheckLength);
 }
 
@@ -1171,7 +1165,6 @@ void InterpreterGeneratorX86::DoThrowAfterSaveState() {
   __ movl(ECX, Address(ESP, 5 * kWordSize));
   StoreFramePointer(ECX);
   __ movl(ECX, Address(ESP, 4 * kWordSize));
-  __ negl(ECX);
   __ movl(ESI, EAX);
   __ leal(EDI, Address(EDI, ECX, TIMES_WORD_SIZE));
   StoreLocal(EBX, 0);
@@ -1341,7 +1334,6 @@ void InterpreterGeneratorX86::DoExitNoSuchMethod() {
   __ Bind(&done);
   ASSERT(Selector::ArityField::shift() == 0);
   __ andl(EBX, Immediate(Selector::ArityField::mask()));
-  __ negl(EBX);
 
   // Drop the arguments from the stack, but leave the receiver.
   __ leal(EDI, Address(EDI, EBX, TIMES_WORD_SIZE));
@@ -1475,7 +1467,7 @@ void InterpreterGeneratorX86::Push(Register reg) {
   // By storing before updating register edi we (try) to avoid stalls
   // due to writing indireclty through a just updated register.
   StoreLocal(reg, -1);
-  __ addl(EDI, Immediate(1 * kWordSize));
+  __ subl(EDI, Immediate(1 * kWordSize));
 }
 
 void InterpreterGeneratorX86::Pop(Register reg) {
@@ -1484,7 +1476,7 @@ void InterpreterGeneratorX86::Pop(Register reg) {
 }
 
 void InterpreterGeneratorX86::Drop(int n) {
-  __ subl(EDI, Immediate(n * kWordSize));
+  __ addl(EDI, Immediate(n * kWordSize));
 }
 
 void InterpreterGeneratorX86::Drop(Register reg) {
@@ -1520,11 +1512,11 @@ void InterpreterGeneratorX86::ReadFrameDescriptor(Register scratch) {
 }
 
 void InterpreterGeneratorX86::LoadLocal(Register reg, int index) {
-  __ movl(reg, Address(EDI, -index * kWordSize));
+  __ movl(reg, Address(EDI, index * kWordSize));
 }
 
 void InterpreterGeneratorX86::StoreLocal(Register reg, int index) {
-  __ movl(Address(EDI, -index * kWordSize), reg);
+  __ movl(Address(EDI, index * kWordSize), reg);
 }
 
 void InterpreterGeneratorX86::Return(bool wide, bool is_return_null) {
@@ -1544,13 +1536,12 @@ void InterpreterGeneratorX86::Return(bool wide, bool is_return_null) {
   } else {
     __ movzbl(EBX, Address(ESI, 2));
   }
-  __ negl(EBX);
 
   ReadFrameDescriptor(ECX);
 
   // Drop arguments except one which we will overwrite with the result
   // (we've left the return address on the stack).
-  __ leal(EDI, Address(EDI, EBX, TIMES_WORD_SIZE, -4));
+  __ leal(EDI, Address(EDI, EBX, TIMES_WORD_SIZE, kWordSize));
 
   // Overwrite the first argument (or the return address) with the result
   // and dispatch to the next bytecode.
@@ -1596,21 +1587,21 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     // ECX = SizeOfEntireObject - Instance::kSize
     __ subl(ECX, Immediate(Instance::kSize));
 
-    // EDX = StackPointer(EDI) - NumberOfFields*kPointerSize
+    // EDX = StackPointer(EDI) + NumberOfFields*kPointerSize
     __ movl(EDX, EDI);
-    __ subl(EDX, ECX);
+    __ addl(EDX, ECX);
 
     Label loop;
     Label loop_with_immutable_field;
     Label loop_with_mutable_field;
 
-    // Increment pointer to point to next field.
+    // Decrement pointer to point to next field.
     __ Bind(&loop);
-    __ addl(EDX, Immediate(kPointerSize));
+    __ subl(EDX, Immediate(kPointerSize));
 
-    // Test whether EDX > EDI. If so we're done and it's immutable.
+    // Test whether EDX < EDI. If so we're done and it's immutable.
     __ cmpl(EDX, EDI);
-    __ j(ABOVE, &allocate);
+    __ j(BELOW, &allocate);
 
     // If Smi, continue the loop.
     __ movl(ECX, Address(EDX));
@@ -1720,7 +1711,6 @@ void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
     __ andl(EBX, Immediate(Selector::ArityField::mask()));
 
     // Get the receiver from the stack.
-    __ negl(EBX);
     __ movl(EBX, Address(EDI, EBX, TIMES_WORD_SIZE));
   }
 
@@ -1831,7 +1821,6 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
   if (test) {
     LoadLocal(EBX, 0);
   } else {
-    __ negl(EBX);
     __ movl(EBX, Address(EDI, EBX, TIMES_WORD_SIZE));
   }
 
@@ -1999,13 +1988,12 @@ void InterpreterGeneratorX86::InvokeDivision(const char* fallback,
 
 void InterpreterGeneratorX86::InvokeNative(bool yield) {
   __ movzbl(EBX, Address(ESI, 1));
-  __ negl(EBX);
   __ movzbl(EAX, Address(ESI, 2));
 
   __ LoadNative(EAX, EAX);
 
   // Extract address for first argument (note we skip two empty slots).
-  __ leal(EBX, Address(EDI, EBX, TIMES_WORD_SIZE, -8));
+  __ leal(EBX, Address(EDI, EBX, TIMES_WORD_SIZE, 2 * kWordSize));
   __ movl(Address(ESP, 0 * kWordSize), EBP);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
 
@@ -2068,7 +2056,7 @@ void InterpreterGeneratorX86::CheckStackOverflow(int size) {
   __ movl(EBX, Address(EBP, Process::kStackLimitOffset));
   __ cmpl(EDI, EBX);
   if (size == 0) {
-    __ j(ABOVE_EQUAL, &check_stack_overflow_0_);
+    __ j(BELOW_EQUAL, &check_stack_overflow_0_);
   } else {
     Label done;
     __ j(BELOW, &done);
