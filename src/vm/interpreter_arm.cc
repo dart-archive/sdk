@@ -1454,7 +1454,7 @@ void InterpreterGeneratorARM::Drop(int n) {
 }
 
 void InterpreterGeneratorARM::Drop(Register reg) {
-  __ sub(R6, R6, Operand(reg, TIMES_WORD_SIZE));
+  __ add(R6, R6, Operand(reg, TIMES_WORD_SIZE));
 }
 
 void InterpreterGeneratorARM::LoadFramePointer(Register reg) {

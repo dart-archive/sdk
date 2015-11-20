@@ -1480,7 +1480,6 @@ void InterpreterGeneratorX86::Drop(int n) {
 }
 
 void InterpreterGeneratorX86::Drop(Register reg) {
-  __ negl(reg);
   __ leal(EDI, Address(EDI, reg, TIMES_WORD_SIZE));
 }
 
