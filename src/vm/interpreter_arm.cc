@@ -172,7 +172,6 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoPop();
   virtual void DoDrop();
   virtual void DoReturn();
-  virtual void DoReturnWide();
   virtual void DoReturnNull();
 
   virtual void DoBranchWide();
@@ -215,7 +214,6 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   virtual void DoEnterNoSuchMethod();
   virtual void DoExitNoSuchMethod();
 
-  virtual void DoFrameSize();
   virtual void DoMethodEnd();
 
   virtual void DoIntrinsicObjectEquals();
@@ -247,7 +245,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void PushFrameDescriptor(Register return_address, Register scratch);
   void ReadFrameDescriptor(Register scratch);
 
-  void Return(bool wide, bool is_return_null);
+  void Return(bool is_return_null);
 
   void Allocate(bool unfolded, bool immutable);
 
@@ -926,15 +924,11 @@ void InterpreterGeneratorARM::DoDrop() {
 }
 
 void InterpreterGeneratorARM::DoReturn() {
-  Return(false, false);
-}
-
-void InterpreterGeneratorARM::DoReturnWide() {
-  Return(true, false);
+  Return(false);
 }
 
 void InterpreterGeneratorARM::DoReturnNull() {
-  Return(false, true);
+  Return(true);
 }
 
 void InterpreterGeneratorARM::DoBranchWide() {
@@ -1293,10 +1287,6 @@ void InterpreterGeneratorARM::DoExitNoSuchMethod() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoFrameSize() {
-  __ bkpt();
-}
-
 void InterpreterGeneratorARM::DoMethodEnd() {
   __ bkpt();
 }
@@ -1411,7 +1401,7 @@ void InterpreterGeneratorARM::Pop(Register reg) {
   Drop(1);
 }
 
-void InterpreterGeneratorARM::Return(bool wide, bool is_return_null) {
+void InterpreterGeneratorARM::Return(bool is_return_null) {
   // Materialize the result in register R0.
   if (is_return_null) {
     __ mov(R0, R8);
@@ -1419,14 +1409,8 @@ void InterpreterGeneratorARM::Return(bool wide, bool is_return_null) {
     LoadLocal(R0, 0);
   }
 
-  // Fetch the number of locals and arguments from the bytecodes.
-  // Unfortunately, we have to negate the counts so we can use them
-  // to index into the stack (grows towards higher addresses).
-  if (wide) {
-    __ ldrb(R2, Address(R5, 5));
-  } else {
-    __ ldrb(R2, Address(R5, 2));
-  }
+  // Fetch the number of arguments from the bytecodes.
+  __ ldrb(R2, Address(R5, 1));
 
   ReadFrameDescriptor(R1);
 

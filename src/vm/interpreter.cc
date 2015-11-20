@@ -594,15 +594,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(Return);
-    int arguments = ReadByte(2);
-    Object* result = Local(0);
-    PopToReturnAddress();
-    Drop(arguments);
-    Push(result);
-  OPCODE_END();
-
-  OPCODE_BEGIN(ReturnWide);
-    int arguments = ReadByte(5);
+    int arguments = ReadByte(1);
     Object* result = Local(0);
     PopToReturnAddress();
     Drop(arguments);
@@ -610,7 +602,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(ReturnNull);
-    int arguments = ReadByte(2);
+    int arguments = ReadByte(1);
     PopToReturnAddress();
     Drop(arguments);
     Push(program()->null_object());
@@ -890,10 +882,6 @@ Interpreter::InterruptKind Engine::Interpret(
 
   OPCODE_BEGIN(SubroutineReturn);
     Advance(-PopDelta());
-  OPCODE_END();
-
-  OPCODE_BEGIN(FrameSize);
-    Advance(kFrameSizeLength);
   OPCODE_END();
 
   OPCODE_BEGIN(MethodEnd);

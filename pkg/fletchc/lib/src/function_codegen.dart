@@ -24,9 +24,6 @@ import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
 
-import 'bytecode_assembler.dart' show
-    RETURN_NARROW_MAX_STACK_SIZE;
-
 class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
   final FletchRegistry registry;
   int setterResultSlot;
@@ -125,11 +122,8 @@ class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
     if (hasAssignmentSemantics) {
       assembler.loadSlot(setterResultSlot);
       assembler.ret();
-    } else if (assembler.stackSize <= RETURN_NARROW_MAX_STACK_SIZE) {
-      assembler.returnNull();
     } else {
-      assembler.loadLiteralNull();
-      assembler.ret();
+      assembler.returnNull();
     }
   }
 

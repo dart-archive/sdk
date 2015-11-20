@@ -169,7 +169,6 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoPop();
   virtual void DoDrop();
   virtual void DoReturn();
-  virtual void DoReturnWide();
   virtual void DoReturnNull();
 
   virtual void DoBranchWide();
@@ -212,7 +211,6 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoEnterNoSuchMethod();
   virtual void DoExitNoSuchMethod();
 
-  virtual void DoFrameSize();
   virtual void DoMethodEnd();
 
   virtual void DoIntrinsicObjectEquals();
@@ -244,7 +242,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   void PushFrameDescriptor(Register return_address, Register scratch);
   void ReadFrameDescriptor(Register scratch);
 
-  void Return(bool wide, bool is_return_null);
+  void Return(bool is_return_null);
 
   void Allocate(bool unfolded, bool immutable);
 
@@ -935,15 +933,11 @@ void InterpreterGeneratorX86::DoDrop() {
 }
 
 void InterpreterGeneratorX86::DoReturn() {
-  Return(false, false);
-}
-
-void InterpreterGeneratorX86::DoReturnWide() {
-  Return(true, false);
+  Return(false);
 }
 
 void InterpreterGeneratorX86::DoReturnNull() {
-  Return(false, true);
+  Return(true);
 }
 
 void InterpreterGeneratorX86::DoBranchWide() {
@@ -1342,10 +1336,6 @@ void InterpreterGeneratorX86::DoExitNoSuchMethod() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoFrameSize() {
-  __ int3();
-}
-
 void InterpreterGeneratorX86::DoMethodEnd() {
   __ int3();
 }
@@ -1518,7 +1508,7 @@ void InterpreterGeneratorX86::StoreLocal(Register reg, int index) {
   __ movl(Address(EDI, index * kWordSize), reg);
 }
 
-void InterpreterGeneratorX86::Return(bool wide, bool is_return_null) {
+void InterpreterGeneratorX86::Return(bool is_return_null) {
   // Materialize the result in register EAX.
   if (is_return_null) {
     __ movl(ECX, Address(EBP, Process::kProgramOffset));
@@ -1527,14 +1517,8 @@ void InterpreterGeneratorX86::Return(bool wide, bool is_return_null) {
     LoadLocal(EAX, 0);
   }
 
-  // Fetch the number of locals and arguments from the bytecodes.
-  // Unfortunately, we have to negate the counts so we can use them
-  // to index into the stack (grows towards higher addresses).
-  if (wide) {
-    __ movzbl(EBX, Address(ESI, 5));
-  } else {
-    __ movzbl(EBX, Address(ESI, 2));
-  }
+  // Fetch the number of arguments from the bytecodes.
+  __ movzbl(EBX, Address(ESI, 1));
 
   ReadFrameDescriptor(ECX);
 

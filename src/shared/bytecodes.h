@@ -88,9 +88,8 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
                                                                                \
   V(Pop,                   false,   "",   1,       -1, "pop")                  \
   V(Drop,                  false,   "B",  2, kVarDiff, "drop %d")              \
-  V(Return,                true,    "BB", 3,       -1, "return %d %d")         \
-  V(ReturnWide,            true,    "IB", 6,       -1, "return %d %d")         \
-  V(ReturnNull,            true,    "BB", 3,        0, "return null %d %d")    \
+  V(Return,                true,    "B",  2,       -1, "return %d")            \
+  V(ReturnNull,            true,    "B",  2,        0, "return null %d")       \
                                                                                \
   V(BranchWide,            true,    "I",  5,        0, "branch +%d")           \
   V(BranchIfTrueWide,      true,    "I",  5,       -1, "branch if true +%d")   \
@@ -125,8 +124,6 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
                                                                                \
   V(EnterNoSuchMethod,     true,   "B",  2, kVarDiff, "enter noSuchMethod +%d")\
   V(ExitNoSuchMethod,      true,    "",   1,       -1, "exit noSuchMethod")    \
-                                                                               \
-  V(FrameSize,            false,    "B",  2, kVarDiff, "frame size %d")        \
                                                                                \
   INVOKES_DO(V, Unfold, "unfold ")                                             \
   V(AllocateUnfold,       false,    "I",  5, kVarDiff, "allocate @%d")         \

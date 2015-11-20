@@ -62,9 +62,6 @@ import 'fletch_registry.dart' show
     ClosureKind,
     FletchRegistry;
 
-import 'bytecode_assembler.dart' show
-    RETURN_NARROW_MAX_STACK_SIZE;
-
 enum VisitState {
   Value,
   Effect,
@@ -2575,10 +2572,8 @@ abstract class CodegenVisitor
       returnNull = false;
     }
 
-    // Avoid using the return-null bytecode if the stack size forces
-    // us to use a return-wide bytecode.
-    bool isWide = assembler.stackSize > RETURN_NARROW_MAX_STACK_SIZE;
-    if (returnNull && (isWide || hasAssignmentSemantics)) {
+    // Avoid using the return-null bytecode if we have assignment semantics.
+    if (returnNull && hasAssignmentSemantics) {
       assembler.loadLiteralNull();
       returnNull = false;
     }
