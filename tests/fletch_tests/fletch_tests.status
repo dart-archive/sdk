@@ -104,8 +104,8 @@ servicec/good_type_parameter_1: Fail
 # Skip slow service performance test
 service_tests/performance_java: Skip
 
-# Only run java service tests on x64 linux.
-[ $arch != x64 || $system != linux ]
+# Only run java service tests on non-asan x64 linux.
+[ $arch != x64 || $system != linux || $asan]
 
 service_tests/*_java: Skip
 

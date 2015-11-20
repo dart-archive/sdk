@@ -163,7 +163,7 @@ JNIEXPORT void JNICALL Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
   unsigned char* copy = new unsigned char[len];
   env->GetByteArrayRegion(snapshot, 0, len, reinterpret_cast<jbyte*>(copy));
   FletchProgram program = FletchLoadSnapshot(copy, len);
-  delete copy;
+  delete[] copy;
   FletchRunMain(program);
   FletchDeleteProgram(program);
 }
