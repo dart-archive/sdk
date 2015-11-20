@@ -1,0 +1,34 @@
+Starting session. Type 'help' for a list of commands.
+
+> b
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
+> r
+Stack trace:
+> 0: main        @10
+> n
+Stack trace:
+> 0: main        @recurse(10)
+> s
+Stack trace:
+> 0: recurse     @i
+  1: main        @recurse(10)
+> n
+Stack trace:
+> 0: recurse     @0
+  1: main        @recurse(10)
+> n
+Stack trace:
+> 0: recurse     @i == 0
+  1: main        @recurse(10)
+> n
+Stack trace:
+> 0: recurse     @--i
+  1: main        @recurse(10)
+> n
+Stack trace:
+> 0: recurse     @recurse(--i)
+  1: main        @recurse(10)
+> n
+Stack trace:
+> 0: main        @recurse(10)
+> q
