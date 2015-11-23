@@ -25,20 +25,19 @@ THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['raspberry-pi2', 'general']
 
-DOC_INDEX_HEAD = """
-<!DOCTYPE html>
+DOC_INDEX_HEAD = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Fletch API docs</title>
-    <meta name="description" content="API docs, for the fletch packages.">
+    <meta name="description" content="API docs for the Fletch packages.">
+    <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Roboto:500,400italic,300,400" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="fletch/static-assets/prettify.css">
     <link rel="stylesheet" href="fletch/static-assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="fletch/static-assets/styles.css">
 </head>
-
 
 <body>
 <header class="container-fluid" id="title">
@@ -59,21 +58,22 @@ DOC_INDEX_HEAD = """
   <div class="row"/>
 
   <div class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left">
-    <ol>
-      <li class="section-title">PACKAGES</li>
-"""
-
-DOC_INDEX_TAIL = """
-    </ol>
+    <ol><li>Please select a package from the list to see the documentation for that package.</li></ol>
   </div>
 
   <div class="col-xs-12 col-sm-9 col-md-8 main-content">
-    <section class="desc markdown">
-      <br>
-      <p>Please select a package from the list on the left to see the documentation for that package.</p>
+
+    <section class="summary">
+      <h2>Packages</h2>
+      <dl>
+"""
+
+DOC_INDEX_TAIL = """
+      </dl>
     </section>
   </div>
 </div>
+
 </body>
 </html>
 """
@@ -81,7 +81,7 @@ DOC_INDEX_TAIL = """
 DOC_INDEX = '%s%s%s' % (
     DOC_INDEX_HEAD,
     '\n'.join(
-        ['<li><a class="" href="%s/index.html">%s</a></li>' % (p, p) for p in SDK_PACKAGES]),
+        ['<dt><span class="name"><a class="" href="%s/index.html">%s</a></span></dt>' % (p, p) for p in SDK_PACKAGES]),
     DOC_INDEX_TAIL)
 
 def ParseOptions():
