@@ -215,7 +215,7 @@ def StepsArchiveDebianPackage():
     print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def GetDownloadLink(gs_path):
-  return gs_path.replace('gs://', 'http://storage.googleapis.com/')
+  return gs_path.replace('gs://', 'https://storage.googleapis.com/')
 
 def GetNamer():
   name, _ = bot.GetBotName()
