@@ -103,11 +103,19 @@ class InputHandler {
           writeStdoutLine('### invalid line number: $line');
           break;
         }
+        Breakpoint breakpoint;
         int columnNumber = int.parse(column, onError: (_) => null);
         if (columnNumber == null) {
-          await session.setFileBreakpointFromPattern(file, line, column);
+          breakpoint =
+              await session.setFileBreakpointFromPattern(file, line, column);
         } else {
-          await session.setFileBreakpoint(file, line, columnNumber);
+          breakpoint =
+              await session.setFileBreakpoint(file, line, columnNumber);
+        }
+        if (breakpoint != null) {
+          writeStdoutLine("breakpoints set: $breakpoint");
+        } else {
+          writeStdoutLine("### failed to set breakpoint: $file:$line:$column");
         }
         break;
       case 'bt':

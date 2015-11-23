@@ -437,6 +437,11 @@ class Session extends FletchVmSession {
   }
 
   Future setFileBreakpoint(String file, int line, int column) async {
+    Uri uri = Uri.base.resolve(file);
+    if (!await new File.fromUri(uri).exists()) {
+      writeStdoutLine("### Invalid file: $file");
+      return null;
+    }
     if (line < 1) {
       writeStdoutLine("### Invalid line number: $line");
       return null;
