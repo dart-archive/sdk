@@ -16,79 +16,34 @@ import utils
 
 from sets import Set
 from os import makedirs
-from os.path import join, exists, basename, abspath
+from os.path import dirname, join, exists, basename, abspath
 from shutil import copyfile, copymode, copytree, rmtree
+
+TOOLS_DIR = abspath(dirname(__file__))
 
 SDK_PACKAGES = ['file', 'fletch', 'gpio', 'http', 'i2c', 'os',
                 'raspberry_pi', 'socket']
 THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['raspberry-pi2', 'general']
+with open(join(TOOLS_DIR, 'docs_html', 'head.html')) as f:
+  DOC_INDEX_HEAD = f.read()
+with open(join(TOOLS_DIR, 'docs_html', 'tail.html')) as f:
+  DOC_INDEX_TAIL = f.read()
 
-DOC_INDEX_HEAD = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fletch API docs</title>
-    <meta name="description" content="API docs for the Fletch packages.">
-    <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Roboto:500,400italic,300,400" rel="stylesheet" type="text/css">
-    <link rel="stylesheet" href="fletch/static-assets/prettify.css">
-    <link rel="stylesheet" href="fletch/static-assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="fletch/static-assets/styles.css">
-</head>
-
-<body>
-<header class="container-fluid" id="title">
-    <div class="container masthead">
-      <div class="row">
-        <div class="col-sm-12 contents">
-          <div class="title-description">
-              <h1 class="title">
-                  <div class="kind">API DOCUMENTATION</div>Fletch SDK Packages
-              </h1>
-          </div>
-        </div> <!-- /col -->
-      </div> <!-- /row -->
-    </div> <!-- /container -->
-</header>
-
-<div class="container body">
-  <div class="row"/>
-
-  <div class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left">
-    <ol><li>Please select a package from the list to see the documentation for that package.</li></ol>
-  </div>
-
-  <div class="col-xs-12 col-sm-9 col-md-8 main-content">
-
-    <section class="summary">
-      <h2>Packages</h2>
-      <dl>
-"""
-
-DOC_INDEX_TAIL = """
-      </dl>
-    </section>
-  </div>
-</div>
-
-</body>
-</html>
-"""
+DOC_ENTRY = ('<dt><span class="name"><a class="" href="%s/index.html">%s</a>'
+             '</span></dt>')
 
 DOC_INDEX = '%s%s%s' % (
     DOC_INDEX_HEAD,
-    '\n'.join(
-        ['<dt><span class="name"><a class="" href="%s/index.html">%s</a></span></dt>' % (p, p) for p in SDK_PACKAGES]),
+    '\n'.join([DOC_ENTRY % (p, p) for p in SDK_PACKAGES]),
     DOC_INDEX_TAIL)
 
 def ParseOptions():
   parser = optparse.OptionParser()
   parser.add_option("--build_dir")
   parser.add_option("--deb_package")
-  parser.add_option("--create-documentation", default=False,
+  parser.add_option("--create_documentation", default=False,
                     action="store_true")
   (options, args) = parser.parse_args()
   return options

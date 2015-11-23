@@ -227,7 +227,7 @@ def StepsBundleSDK(build_dir, system):
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     deb_file = os.path.join('out', namer.arm_agent_filename(version))
-    create_docs = '--create-documentation' if system == 'linux' else ''
+    create_docs = '--create_documentation' if system == 'linux' else ''
     Run(['tools/bundle_sdk.py', '--build_dir=%s' % build_dir,
          '--deb_package=%s' % deb_file, create_docs])
     # On linux this is build in the step above, on mac this is fetched from
