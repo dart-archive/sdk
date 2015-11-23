@@ -86,8 +86,9 @@ import 'package:fletchc/src/fletch_backend.dart' show
 import 'package:fletchc/fletch_vm.dart' show
     FletchVm;
 
-import 'package:fletchc/debug_state.dart' show
-    StackFrame;
+import 'package:fletchc/debug_state.dart' as debug show
+    StackFrame,
+    StackTrace;
 
 import 'program_result.dart';
 
@@ -277,19 +278,18 @@ compileAndRun(
         await session.stepOut();
 
         // Select the stack frame of callMain.
-        await session.ensureStackTrace();
+        debug.StackTrace trace = await session.stackTrace();
         FunctionElement callMainElement =
             backend.fletchSystemLibrary.findLocal("callMain");
         FletchFunction callMain =
             helper.system.lookupFunctionByElement(callMainElement);
-        StackFrame stackFrame =
-            session.debugState.currentStackTrace.stackFrames.firstWhere(
-                (StackFrame frame) => frame.function == callMain);
-        int frame = session.debugState.currentStackTrace.stackFrames.indexOf(
-            stackFrame);
+        debug.StackFrame stackFrame =
+            trace.stackFrames.firstWhere(
+                (debug.StackFrame frame) => frame.function == callMain);
+        int frame = trace.stackFrames.indexOf(stackFrame);
         Expect.notEquals(1, frame);
         session.selectFrame(frame);
-        await session.backtrace();
+        print(trace.format());
 
         List<String> messages = new List<String>.from(program.messages);
         if (program.hasCompileTimeError) {

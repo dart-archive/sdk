@@ -18,9 +18,9 @@ Commands:
                                         the string pattern on the indicated line
   'd <breakpoint id>'                   delete breakpoint
   'lb'                                  list breakpoints
-  's'                                   step until next source line,
+  's'                                   step until next expression,
                                         enters method invocations
-  'n'                                   step until next source line,
+  'n'                                   step until next expression,
                                         does not enter method invocations
   'fibers'                              list all process fibers
   'finish'                              finish current method (step out)
@@ -50,6 +50,8 @@ class InputHandler {
   InputHandler(this.session, this.stream, this.echo);
 
   void printPrompt() => session.writeStdout('> ');
+
+  writeStdout(String s) => session.writeStdout(s);
 
   writeStdoutLine(String s) => session.writeStdout("$s\n");
 
@@ -109,7 +111,15 @@ class InputHandler {
         }
         break;
       case 'bt':
-        await session.backtrace();
+        if (!checkLoaded('cannot print backtrace')) {
+          break;
+        }
+        StackTrace stacktrace = await session.stackTrace();
+        if (stacktrace == null) {
+          writeStdoutLine('### failed to get backtrace for current program');
+        } else {
+          writeStdout(stacktrace.format());
+        }
         break;
       case 'f':
         var frame =
@@ -128,20 +138,19 @@ class InputHandler {
         }
         break;
       case 'disasm':
-        String disassembly = await session.disasm();
-        if (disassembly == null) {
-          writeStdoutLine("### failed disassembling source");
-        } else {
-          writeStdoutLine(disassembly);
+        if (!checkLoaded('cannot show bytecodes')) {
+          break;
         }
+        StackTrace stacktrace = await session.stackTrace();
+        String disassembly = stacktrace != null ? stacktrace.disasm() : null;
+        if (disassembly == null) {
+          writeStdoutLine("### could not disassemble source for current frame");
+          break;
+        }
+        writeStdoutLine(disassembly);
         break;
       case 'c':
-        Command response = await session.cont();
-        if (response is UncaughtException) {
-          await session.uncaughtException();
-        } else if (response is! ProcessTerminated) {
-          await session.backtrace();
-        }
+        await handleCommonProcessResponse(await session.cont());
         break;
       case 'd':
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
@@ -201,28 +210,13 @@ class InputHandler {
         break;
       case 'r':
       case 'run':
-        Command response = await session.debugRun();
-        if (response is UncaughtException) {
-          await session.uncaughtException();
-        } else if (response is! ProcessTerminated) {
-          await session.backtrace();
-        }
+        await handleCommonProcessResponse(await session.debugRun());
         break;
       case 's':
-        Command response = await session.step();
-        if (response is UncaughtException) {
-          await session.uncaughtException();
-        } else if (response is! ProcessTerminated) {
-          await session.backtrace();
-        }
+        await handleCommonProcessResponse(await session.step());
         break;
       case 'n':
-        Command response = await session.stepOver();
-        if (response is UncaughtException) {
-          await session.uncaughtException();
-        } else if (response is! ProcessTerminated) {
-          await session.backtrace();
-        }
+        await handleCommonProcessResponse(await session.stepOver());
         break;
       case 'sb':
         await session.stepBytecode();
@@ -249,6 +243,24 @@ class InputHandler {
         break;
     }
     if (!session.terminated) printPrompt();
+  }
+
+  // This method is used to deal with some of the common command responses
+  // that can be returned when sending the Fletch VM a command request.
+  Future handleCommonProcessResponse(Command response) async {
+    if (response is UncaughtException) {
+      await session.uncaughtException();
+    } else if (response is! ProcessTerminated) {
+      StackTrace trace = await session.stackTrace();
+      writeStdout(trace.format());
+    }
+  }
+
+  bool checkLoaded([String postfix]) {
+    String message = '### program not loaded';
+    message = postfix != null ? '$message, $postfix' : message;
+    if (!session.loaded) writeStdoutLine(message);
+    return session.loaded;
   }
 
   Future<int> run() async {

@@ -110,12 +110,13 @@ class StackFrame {
 
 class StackTrace {
   final List<StackFrame> stackFrames;
+  final DebugState debugState;
 
   List<int> visibleFrameMapping;
   int framesToGo;
   int maxNameLength = 0;
 
-  StackTrace(int framesToGo)
+  StackTrace(int framesToGo, this.debugState)
       : this.framesToGo = framesToGo,
         stackFrames = new List(framesToGo);
 
@@ -128,7 +129,8 @@ class StackTrace {
     if (nameLength > maxNameLength) maxNameLength = nameLength;
   }
 
-  String format(int currentFrame) {
+  String format([int frame]) {
+    int currentFrame = frame != null ? frame : debugState.currentFrame;
     StringBuffer buffer = new StringBuffer();
     assert(framesToGo == 0);
     var frameNumber = 0;
@@ -166,15 +168,17 @@ class StackTrace {
     visibleFrameMapping = null;
   }
 
-  String list(int frame) {
+  String list([int frame]) {
+    if (frame == null) frame = debugState.currentFrame;
     StackFrame visibleStackFrame = visibleFrame(frame);
-    if (visibleStackFrame == null) return '';
+    if (visibleStackFrame == null) return null;
     return visibleStackFrame.list();
   }
 
-  String disasm(int frame) {
+  String disasm([int frame]) {
+    if (frame == null) frame = debugState.currentFrame;
     StackFrame visibleStackFrame = visibleFrame(frame);
-    if (visibleStackFrame == null) return '';
+    if (visibleStackFrame == null) return null;
     return visibleStackFrame.disasm();
   }
 
@@ -187,6 +191,8 @@ class StackTrace {
     if (visibleStackFrame == null) return null;
     return visibleStackFrame.scopeInfo();
   }
+
+  ScopeInfo get scopeInfoForCurrentFrame => scopeInfo(debugState.currentFrame);
 
   int stepBytecodePointer(SourceLocation location) {
     return stackFrames[0].stepBytecodePointer(location);

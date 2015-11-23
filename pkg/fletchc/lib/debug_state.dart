@@ -134,16 +134,4 @@ class DebugState {
   SourceLocation sourceLocationForFrame(int frame) {
     return currentStackTrace.stackFrames[frame].sourceLocation();
   }
-
-  String list() {
-    return currentStackTrace.list(currentFrame);
-  }
-
-  String disasm() {
-    return currentStackTrace.disasm(currentFrame);
-  }
-
-  String formatStackTrace() {
-    return currentStackTrace.format(currentFrame);
-  }
 }

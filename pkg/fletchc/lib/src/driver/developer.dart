@@ -120,6 +120,9 @@ export '../device_type.dart' show
 import '../please_report_crash.dart' show
     pleaseReportCrash;
 
+import '../../debug_state.dart' as debug show
+    StackTrace;
+
 Uri configFileUri;
 
 Future<Socket> connect(
@@ -526,10 +529,15 @@ Future<int> run(
   }
 
   Future printTrace() async {
-    String list = await session.list();
-    String stackTrace = session.debugState.formatStackTrace();
-    if (!stackTrace.isEmpty) print(stackTrace);
-    if (!stackTrace.isEmpty) print(list);
+    if (!session.loaded) {
+      print("### program not loaded, cannot print stacktrace and code");
+      return;
+    }
+    debug.StackTrace stackTrace = await session.stackTrace();
+    if (stackTrace != null) {
+      print(stackTrace.format());
+      print(stackTrace.list());
+    }
   }
 
   try {

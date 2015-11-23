@@ -479,7 +479,7 @@ class Session extends FletchVmSession {
   Future stepTo(int functionId, int bcp) async {
     assert(running);
     Command response = await runCommand(new ProcessStepTo(functionId, bcp));
-    return await handleProcessStop(response);
+    return handleProcessStop(response);
   }
 
   Future step() async {
@@ -509,17 +509,17 @@ class Session extends FletchVmSession {
 
   Future stepOut() async {
     if (!checkRunning()) return null;
-    await ensureStackTrace();
+    StackTrace trace = await stackTrace();
     // If last frame, just continue.
-    if (debugState.numberOfStackFrames <= 1) {
+    if (trace.frames <= 1) {
       await cont();
       return null;
     }
-    // Get source location for call. We only want to break when the location
-    // has changed from the call to something else.
+    // Get source location for call site. We only want to break when the
+    // location has changed from the call site to something else.
     SourceLocation return_location = debugState.sourceLocationForFrame(1);
     do {
-      if (debugState.numberOfStackFrames <= 1) {
+      if (trace.frames <= 1) {
         await cont();
         return null;
       }
@@ -534,14 +534,21 @@ class Session extends FletchVmSession {
         writeStdoutLine("### 'finish' cancelled because "
                         "another breakpoint was hit");
         await doDeleteBreakpoint(setBreakpoint.value);
-        await backtrace();
+        trace = await stackTrace();
+        // TODO(wibling): move this print out of session.dart.
+        writeStdout(trace.format());
         return null;
       }
     } while (!debugState.topFrame.isVisible);
     if (running && debugState.atLocation(return_location)) {
       await step();
     }
-    await backtrace();
+    if (!terminated) {
+      // Get current stacktrace.
+      trace = await stackTrace();
+      // TODO(wibling): move this print out of session.dart.
+      writeStdout(trace.format());
+    }
   }
 
   Future restart() async {
@@ -559,16 +566,18 @@ class Session extends FletchVmSession {
     if (response is UncaughtException) {
       await uncaughtException();
     } else if (!terminated) {
-      await backtrace();
+      StackTrace trace = await stackTrace();
+      // TODO(wibling): move this print out of session.dart.
+      writeStdout(trace.format());
     }
   }
 
   Future stepBytecode() async {
     if (!checkRunning()) return null;
-    return await handleProcessStop(await runCommand(const ProcessStep()));
+    return handleProcessStop(await runCommand(const ProcessStep()));
   }
 
-  Future stepOverBytecode() async {
+  Future<Command> stepOverBytecode() async {
     if (!checkRunning()) return null;
     await sendCommand(const ProcessStepOver());
     ProcessSetBreakpoint setBreakpoint = await readNextCommand();
@@ -576,13 +585,14 @@ class Session extends FletchVmSession {
     bool success =
         response is ProcessBreakpoint &&
         response.breakpointId == setBreakpoint.value;
-    if (!success) {
+    if (!success && !terminated) {
       writeStdoutLine("### 'next' cancelled because "
                       "another breakpoint was hit");
       if (setBreakpoint.value != -1) {
         await doDeleteBreakpoint(setBreakpoint.value);
       }
     }
+    return response;
   }
 
   Future cont() async {
@@ -592,9 +602,9 @@ class Session extends FletchVmSession {
 
   Future<String> list() async {
     if (!checkLoaded()) return null;
-    await ensureStackTrace();
-    if (debugState.currentStackTrace == null) return null;
-    return debugState.list();
+    StackTrace trace = await stackTrace();
+    if (trace == null) return null;
+    return trace.list();
   }
 
   Future<String> exceptionAsString() async {
@@ -605,9 +615,9 @@ class Session extends FletchVmSession {
 
   Future<String> disasm() async {
     if (!checkLoaded()) return null;
-    await ensureStackTrace();
-    if (debugState.currentStackTrace == null) return null;
-    return debugState.disasm();
+    StackTrace trace = await stackTrace();
+    if (trace == null) return null;
+    return trace.disasm();
   }
 
   bool selectFrame(int frame) {
@@ -622,7 +632,7 @@ class Session extends FletchVmSession {
   StackTrace stackTraceFromBacktraceResponse(
       ProcessBacktrace backtraceResponse) {
     int frames = backtraceResponse.frames;
-    StackTrace stackTrace = new StackTrace(frames);
+    StackTrace stackTrace = new StackTrace(frames, debugState);
     for (int i = 0; i < frames; ++i) {
       int functionId = backtraceResponse.functionIds[i];
       FletchFunction function = fletchSystem.lookupFunctionById(functionId);
@@ -654,7 +664,7 @@ class Session extends FletchVmSession {
     }
   }
 
-  Future ensureStackTrace() async {
+  Future<StackTrace> stackTrace() async {
     assert(loaded);
     if (debugState.currentStackTrace == null) {
       ProcessBacktrace backtraceResponse =
@@ -662,11 +672,14 @@ class Session extends FletchVmSession {
       debugState.currentStackTrace =
           stackTraceFromBacktraceResponse(backtraceResponse);
     }
+    return debugState.currentStackTrace;
   }
 
   Future uncaughtException() async {
     await exception();
-    await backtrace();
+    StackTrace trace = await stackTrace();
+    // TODO(wibling): Move this print out of session.
+    writeStdout(trace.format());
   }
 
   Future exception() async {
@@ -675,16 +688,6 @@ class Session extends FletchVmSession {
     await ensureUncaughtException();
     writeStdoutLine(
         uncaughtExceptionToString(debugState.currentUncaughtException));
-  }
-
-  Future backtrace() async {
-    // TODO(ager): We should refactor this so that we never
-    // call backtrace from other debugger methods when the
-    // session has been terminated.
-    if (!checkLoaded() || !checkNotTerminated()) return null;
-    await ensureStackTrace();
-    String trace = debugState.formatStackTrace();
-    writeStdout(trace);
   }
 
   Future backtraceForFiber(int fiber) async {
@@ -814,19 +817,21 @@ class Session extends FletchVmSession {
   }
 
   Future<RemoteValue> processVariable(String name) async {
+    assert(loaded);
     LocalValue local = await lookupValue(name);
     return local != null ? await processLocal(local) : null;
   }
 
   Future<RemoteObject> processVariableStructure(String name) async {
+    assert(loaded);
     LocalValue local = await lookupValue(name);
     return local != null ? await processLocalStructure(local) : null;
   }
 
   Future<List<RemoteObject>> processAllVariables() async {
     assert(loaded);
-    await ensureStackTrace();
-    ScopeInfo info = debugState.currentScopeInfo;
+    StackTrace trace = await stackTrace();
+    ScopeInfo info = trace.scopeInfoForCurrentFrame;
     List<RemoteObject> variables = [];
     for (ScopeInfo current = info;
          current != ScopeInfo.sentinel;
@@ -838,9 +843,8 @@ class Session extends FletchVmSession {
 
   Future<LocalValue> lookupValue(String name) async {
     assert(loaded);
-    await ensureStackTrace();
-    ScopeInfo info = debugState.currentScopeInfo;
-    return info.lookup(name);
+    StackTrace trace = await stackTrace();
+    return trace.scopeInfoForCurrentFrame.lookup(name);
   }
 
   Future<RemoteValue> processLocal(LocalValue local, [String name]) async {
@@ -884,7 +888,9 @@ class Session extends FletchVmSession {
     debugState.showInternalFrames = !debugState.showInternalFrames;
     if (debugState.currentStackTrace != null) {
       debugState.currentStackTrace.visibilityChanged();
-      await backtrace();
+      StackTrace trace = await stackTrace();
+      // TODO(wibling): move this print out of session.dart.
+      writeStdout(trace.format());
     }
   }
 }

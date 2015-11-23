@@ -4,6 +4,9 @@
 
 library fletchc.verbs.debug_verb;
 
+import 'dart:core' hide
+    StackTrace;
+
 import 'infrastructure.dart';
 
 import 'dart:async' show
@@ -31,7 +34,8 @@ import 'package:fletchc/debug_state.dart' show
 
 import '../../debug_state.dart' show
     RemoteObject,
-    RemoteValue;
+    RemoteValue,
+    StackTrace;
 
 const Action debugAction =
     const Action(
@@ -339,11 +343,12 @@ Future<int> backtraceDebuggerTask(
     SessionState state) async {
   Session session = attachToSession(state, commandSender);
 
-  // TODO(ager): change the backtrace command to not do the printing
-  // directly.
-  // TODO(ager): deal gracefully with situations where there is a VM
-  // session, but the VM terminated.
-  await session.backtrace();
+  if (!session.loaded) {
+    print('### program not loaded, cannot show backtrace');
+    return 1;
+  }
+  StackTrace trace = await session.stackTrace();
+  print(trace.format());
 
   return 0;
 }
@@ -439,7 +444,6 @@ Future<int> listDebuggerTask(
   Session session = attachToSession(state, commandSender);
 
   String listing = await session.list();
-
   if (listing == null) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Source listing failed');
@@ -455,7 +459,6 @@ Future<int> disasmDebuggerTask(
   Session session = attachToSession(state, commandSender);
 
   String disasm = await session.disasm();
-
   if (disasm == null) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Bytecode disassembly failed');
