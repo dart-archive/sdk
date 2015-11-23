@@ -549,7 +549,6 @@ Future<int> run(
         await printTrace();
         // TODO(ahe): Need to continue to unwind stack.
         break;
-
       case CommandCode.ProcessCompileTimeError:
         state.log("Compile-time error");
         exitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
@@ -571,21 +570,27 @@ Future<int> run(
         break;
     }
   } finally {
-    if (!terminateDebugger) {
+    if (terminateDebugger) {
+      if (!session.terminated) {
+        // TODO(ahe): Do not shut down the session.
+        bool done = false;
+        Timer timer = new Timer(const Duration(seconds: 5), () {
+            if (!done) {
+              print("Timed out waiting for Fletch VM to shutdown; killing session");
+              session.kill();
+            }
+          });
+        await session.terminateSession();
+        done = true;
+        timer.cancel();
+      }
+    } else {
+      // If the session terminated due to a ConnectionError or the program
+      // finishing don't reuse the state's session.
+      if (session.terminated) {
+        state.session = null;
+      }
       session.silent = false;
-    }
-    if (terminateDebugger && !session.terminated) {
-      // TODO(ahe): Do not shut down the session.
-      bool done = false;
-      Timer timer = new Timer(const Duration(seconds: 5), () {
-        if (!done) {
-          print("Timed out waiting for Fletch VM to shutdown; killing session");
-          session.kill();
-        }
-      });
-      await session.terminateSession();
-      done = true;
-      timer.cancel();
     }
   };
 
