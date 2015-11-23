@@ -58,6 +58,12 @@ async/future_test/01: RuntimeError  # is! Future<String>
 async/future_test/none: RuntimeError  # is! Future<String>
 async/stream_empty_test: RuntimeError  # is Stream<String>
 
+[ $asan && $clang && $arch == x64 ]
+# A couple of the failing tests leak ports (probably as a
+# consequence of terminating due to exceptions).
+async/future_test/01: Crash  # Port leak
+async/future_test/none: Crash  # Port leak.
+
 [ $system == lk ]
 async/timer_regress22626_test: RuntimeError
 async/slow_consumer_test: Crash
