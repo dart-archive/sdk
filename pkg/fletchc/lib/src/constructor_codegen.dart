@@ -4,14 +4,12 @@
 
 library fletchc.constructor_codegen;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    MessageKind,
-    Registry;
-
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/resolution.dart';
+import 'package:compiler/src/resolution/tree_elements.dart' show
+    TreeElements;
 import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/universe.dart';
+import 'package:compiler/src/universe/call_structure.dart' show
+    CallStructure;
 import 'package:compiler/src/dart_types.dart';
 
 import 'fletch_context.dart';

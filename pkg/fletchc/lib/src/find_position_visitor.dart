@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'package:compiler/src/elements/visitor.dart';
-import 'package:compiler/src/scanner/scannerlib.dart';
+import 'package:compiler/src/parser/partial_elements.dart';
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/elements/modelx.dart';
 

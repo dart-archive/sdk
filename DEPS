@@ -23,7 +23,9 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
-  "dart_rev": "@f3ca4b2e0acf43b3ac8642cdda5afc10f4e503bb",
+  # 3. Upload new binaries and update the `third_party/bin` sha-hash-files as
+  #    described in `third_party/bin/README.md`.
+  "dart_rev": "@34357cdad108dcba734949bd13bd28c76ea285e0",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:
@@ -31,6 +33,9 @@ vars = {
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
   "args_tag": "@0.13.0",
+  "dart2js_info_rev" : "@0a221eaf16aec3879c45719de656680ccb80d8a1",
+  "pub_semver_tag": "@1.2.1",
+  "collection_rev": "@1da9a07f32efa2ba0c391b289e2037391e31da0e",
 
   "lk_rev": "@6cdc5cd1daaf22f56422301d3dac67c3573ef290",
 
@@ -82,6 +87,15 @@ deps = {
 
   "fletch/third_party/isolate":
       "https://github.com/dart-lang/isolate.git" + Var("isolate_tag"),
+
+  "fletch/third_party/dart2js_info":
+      "https://github.com/dart-lang/dart2js_info.git" + Var("dart2js_info_rev"),
+
+  "fletch/third_party/pub_semver":
+      (Var("github_mirror") % "pub_semver") + Var("pub_semver_tag"),
+
+  "fletch/third_party/collection":
+      (Var("github_mirror") % "collection") + Var("collection_rev"),
 
   "wiki": (Var("github_url") % "dart-lang/fletch.wiki"),
 }

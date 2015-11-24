@@ -7,10 +7,11 @@ library fletchc.dynamic_call_enqueuer;
 import 'dart:collection' show
     Queue;
 
-import 'package:compiler/src/universe/universe.dart' show
-    CallStructure,
-    Selector,
-    UniverseSelector;
+import 'package:compiler/src/universe/selector.dart' show
+    Selector;
+
+import 'package:compiler/src/universe/use.dart' show
+    DynamicUse;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType,
@@ -24,6 +25,10 @@ import 'package:compiler/src/elements/elements.dart' show
     LibraryElement,
     MemberElement,
     Name;
+
+import 'package:compiler/src/common/names.dart' show
+    Identifiers,
+    Names;
 
 import 'package:compiler/src/util/util.dart' show
     Hashing;
@@ -120,7 +125,7 @@ class DynamicCallEnqueuer {
       UsageRecorder recorder) {
     FunctionElement function = closurization.function;
     if ((selector.isGetter || selector.isCall) &&
-        selector.memberName == Selector.CALL_NAME &&
+        selector.memberName == Names.call &&
         selector.signatureApplies(function)) {
       recorder.recordClosurizationUsage(closurization, selector);
     }
@@ -191,9 +196,9 @@ class DynamicCallEnqueuer {
     }
   }
 
-  void enqueueSelector(UniverseSelector universeSelector) {
-    assert(universeSelector.mask == null);
-    Selector selector = universeSelector.selector;
+  void enqueueSelector(DynamicUse use) {
+    assert(use.mask == null);
+    Selector selector = use.selector;
     if (enqueuedSelectors.add(selector)) {
       pendingSelectors.add(selector);
     }

@@ -23,8 +23,7 @@ import 'dart:isolate' show
 import 'driver_commands.dart' show
     Command,
     CommandSender,
-    DriverCommand,
-    stringifyError;
+    DriverCommand;
 
 import '../diagnostic.dart' show
     DiagnosticKind,

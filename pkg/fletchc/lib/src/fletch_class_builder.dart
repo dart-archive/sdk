@@ -6,7 +6,7 @@ library fletchc.fletch_class_builder;
 
 import 'package:compiler/src/dart_types.dart';
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/universe/universe.dart';
+import 'package:compiler/src/universe/selector.dart';
 import 'package:persistent/persistent.dart';
 
 import 'fletch_function_builder.dart';
@@ -156,12 +156,12 @@ class FletchNewClassBuilder extends FletchClassBuilder {
     // CodegenEnqueuer.
     int fieldIndex = superclassFields;
     element.implementation.forEachInstanceField((enclosing, field) {
-      var getter = new Selector.getter(field.name, field.library);
+      var getter = new Selector.getter(field.memberName);
       int getterSelector = backend.context.toFletchSelector(getter);
       _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
 
       if (!field.isFinal) {
-        var setter = new Selector.setter(field.name, field.library);
+        var setter = new Selector.setter(new Name(field.name, field.library));
         var setterSelector = backend.context.toFletchSelector(setter);
         _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
       }
@@ -172,10 +172,10 @@ class FletchNewClassBuilder extends FletchClassBuilder {
 
   void createIsFunctionEntry(FletchBackend backend, int arity) {
     int fletchSelector = backend.context.toFletchIsSelector(
-        backend.compiler.functionClass);
+        backend.compiler.coreClasses.functionClass);
     addIsSelector(fletchSelector);
     fletchSelector = backend.context.toFletchIsSelector(
-        backend.compiler.functionClass, arity);
+        backend.compiler.coreClasses.functionClass, arity);
     addIsSelector(fletchSelector);
   }
 
@@ -278,12 +278,12 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     // CodegenEnqueuer.
     int fieldIndex = superclassFields + extraFields;
     element.implementation.forEachInstanceField((enclosing, field) {
-      var getter = new Selector.getter(field.name, field.library);
+      var getter = new Selector.getter(new Name(field.name, field.library));
       int getterSelector = backend.context.toFletchSelector(getter);
       _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
 
       if (!field.isFinal) {
-        var setter = new Selector.setter(field.name, field.library);
+        var setter = new Selector.setter(new Name(field.name, field.library));
         var setterSelector = backend.context.toFletchSelector(setter);
         _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
       }
@@ -292,12 +292,14 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     });
 
     for (FieldElement field in _removedFields) {
-      Selector getter = new Selector.getter(field.name, field.library);
+      Selector getter =
+          new Selector.getter(new Name(field.name, field.library));
       int getterSelector = backend.context.toFletchSelector(getter);
       _removedAccessors.add(getterSelector);
 
       if (!field.isFinal) {
-        Selector setter = new Selector.setter(field.name, field.library);
+        Selector setter =
+            new Selector.setter(new Name(field.name, field.library));
         int setterSelector = backend.context.toFletchSelector(setter);
         _removedAccessors.add(setterSelector);
       }

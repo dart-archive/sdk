@@ -3,8 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch._system' as fletch;
-
-const patch = "patch";
+import 'dart:fletch._system' show patch;
 
 @patch @fletch.native external void printToConsole(String line);
 

@@ -9,7 +9,7 @@ import 'dart:math' show
 
 import 'package:compiler/src/colors.dart' as colors;
 
-import 'package:compiler/src/dart2jslib.dart' show
+import 'package:compiler/src/diagnostics/source_span.dart' show
     SourceSpan;
 
 import 'package:compiler/src/elements/elements.dart';
@@ -91,7 +91,7 @@ class DebugInfo {
       FletchCompilerImplementation compiler,
       int bytecodeIndex,
       Node node) {
-    SourceSpan span = compiler.spanFromSpannable(node);
+    SourceSpan span = compiler.reporter.spanFromSpannable(node);
     SourceFile file = null;
     // TODO(ahe): What to do if compiler.provider isn't a SourceFileProvider?
     // Perhaps we can create a new type of diagnostic, see

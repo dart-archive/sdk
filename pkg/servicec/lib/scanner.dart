@@ -4,21 +4,28 @@
 
 library servicec.scanner;
 
-import "package:compiler/src/scanner/scannerlib.dart" show
-    GT_INFO,
-    EOF_INFO,
-    ErrorToken,
-    IDENTIFIER_INFO,
-    KEYWORD_TOKEN,
-    Keyword,
-    KeywordToken,
-    PrecedenceInfo,
-    STRING_INFO,
-    StringScanner,
+import 'package:compiler/src/tokens/token.dart' show
     StringToken,
+    ErrorToken,
+    KeywordToken,
     SymbolToken,
     Token,
     UnmatchedToken;
+
+import 'package:compiler/src/tokens/precedence_constants.dart' show
+    GT_INFO,
+    EOF_INFO,
+    IDENTIFIER_INFO,
+    STRING_INFO;
+
+import 'package:compiler/src/tokens/precedence.dart' show
+    PrecedenceInfo;
+
+import "package:compiler/src/tokens/keyword.dart" show
+    Keyword;
+
+import "package:compiler/src/scanner/string_scanner.dart" show
+    StringScanner;
 
 import "package:compiler/src/util/characters.dart" show
     $LF;
