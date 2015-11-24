@@ -219,11 +219,10 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
   }
 
   DebugInfo debugInfoForPosition(
-      String file,
+      Uri file,
       int position,
       FletchSystem currentSystem) {
-    // TODO(ahe): [file] should be a Uri.
-    Uri uri = Uri.base.resolve(file);
+    Uri uri = Uri.base.resolveUri(file);
     CompilationUnitElementX unit = compilationUnitForUri(uri);
     if (unit == null) return null;
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
@@ -238,9 +237,8 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
     return context.backend.createDebugInfo(function, currentSystem);
   }
 
-  int positionInFileFromPattern(String file, int line, String pattern) {
-    // TODO(ahe): [file] should be a Uri.
-    Uri uri = Uri.base.resolve(file);
+  int positionInFileFromPattern(Uri file, int line, String pattern) {
+    Uri uri = Uri.base.resolveUri(file);
     SourceFile sourceFile = getSourceFile(provider, uri);
     if (sourceFile == null) return null;
     List<int> lineStarts = sourceFile.lineStarts;
@@ -255,9 +253,8 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
     return begin + column;
   }
 
-  int positionInFile(String file, int line, int column) {
-    // TODO(ahe): [file] should be a Uri.
-    Uri uri = Uri.base.resolve(file);
+  int positionInFile(Uri file, int line, int column) {
+    Uri uri = Uri.base.resolveUri(file);
     SourceFile sourceFile = getSourceFile(provider, uri);
     if (sourceFile == null) return null;
     if (line >= sourceFile.lineStarts.length) return null;

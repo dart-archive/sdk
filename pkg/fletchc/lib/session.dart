@@ -269,10 +269,10 @@ class Session extends FletchVmSession {
     await shutdown();
   }
 
-  Future<int> debug(Stream<String> inputLines) async {
+  Future<int> debug(Stream<String> inputLines, Uri base) async {
     await enableDebugger();
     await spawnProcess();
-    return await new InputHandler(this, inputLines, false).run();
+    return await new InputHandler(this, inputLines, false, base).run();
   }
 
   Future stepToCompletion() async {
@@ -291,7 +291,7 @@ class Session extends FletchVmSession {
       await stepToCompletion();
     } else {
       InputHandler handler = new InputHandler(
-          this, new Stream<String>.fromIterable(commands), true);
+          this, new Stream<String>.fromIterable(commands), true, Uri.base);
       await handler.run();
     }
   }
@@ -401,7 +401,7 @@ class Session extends FletchVmSession {
   }
 
   Future setFileBreakpointFromPosition(String name,
-                                       String file,
+                                       Uri file,
                                        int position) async {
     if (position == null) {
       writeStdoutLine("### Failed setting breakpoint for $name");
@@ -425,7 +425,7 @@ class Session extends FletchVmSession {
     return setBreakpointHelper(function.name, function, bytecodeIndex);
   }
 
-  Future setFileBreakpointFromPattern(String file,
+  Future setFileBreakpointFromPattern(Uri file,
                                       int line,
                                       String pattern) async {
     if (line < 1) {
@@ -436,20 +436,8 @@ class Session extends FletchVmSession {
     await setFileBreakpointFromPosition('$file:$line:$pattern', file, position);
   }
 
-  Future setFileBreakpoint(String file, int line, int column) async {
-    Uri uri = Uri.base.resolve(file);
-    if (!await new File.fromUri(uri).exists()) {
-      writeStdoutLine("### Invalid file: $file");
-      return null;
-    }
-    if (line < 1) {
-      writeStdoutLine("### Invalid line number: $line");
-      return null;
-    }
-    if (column < 1) {
-      writeStdoutLine("### Invalid column number: $column");
-      return null;
-    }
+  Future setFileBreakpoint(Uri file, int line, int column) async {
+    assert(line > 0 && column > 0);
     int position = compiler.positionInFile(file, line - 1, column - 1);
     return setFileBreakpointFromPosition('$file:$line:$column', file, position);
   }

@@ -44,10 +44,11 @@ class InputHandler {
   final Session session;
   final Stream<String> stream;
   final bool echo;
+  final Uri base;
 
   String previousLine = '';
 
-  InputHandler(this.session, this.stream, this.echo);
+  InputHandler(this.session, this.stream, this.echo, this.base);
 
   void printPrompt() => session.writeStdout('> ');
 
@@ -96,26 +97,34 @@ class InputHandler {
             (commandComponents.length > 1) ? commandComponents[1] : '';
         var line =
             (commandComponents.length > 2) ? commandComponents[2] : '1';
-        var column =
+        var columnOrPattern =
             (commandComponents.length > 3) ? commandComponents[3] : '1';
+        Uri fileUri = base.resolve(file);
+        if (!await new File.fromUri(fileUri).exists()) {
+          writeStdoutLine('### file not found: $file');
+        }
         line = int.parse(line, onError: (_) => null);
-        if (line == null) {
+        if (line == null || line < 1) {
           writeStdoutLine('### invalid line number: $line');
           break;
         }
         Breakpoint breakpoint;
-        int columnNumber = int.parse(column, onError: (_) => null);
+        int columnNumber = int.parse(columnOrPattern, onError: (_) => null);
         if (columnNumber == null) {
-          breakpoint =
-              await session.setFileBreakpointFromPattern(file, line, column);
+          breakpoint = await session.setFileBreakpointFromPattern(
+              fileUri, line, columnOrPattern);
+        } else if (columnNumber < 1) {
+          writeStdoutLine('### invalid column number: $columnOrPattern');
+          break;
         } else {
           breakpoint =
-              await session.setFileBreakpoint(file, line, columnNumber);
+              await session.setFileBreakpoint(fileUri, line, columnNumber);
         }
         if (breakpoint != null) {
           writeStdoutLine("breakpoints set: $breakpoint");
         } else {
-          writeStdoutLine("### failed to set breakpoint: $file:$line:$column");
+          writeStdoutLine(
+              "### failed to set breakpoint: $file:$line:$columnOrPattern");
         }
         break;
       case 'bt':

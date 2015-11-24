@@ -281,17 +281,17 @@ class IncrementalCompiler {
   }
 
   DebugInfo debugInfoForPosition(
-      String file,
+      Uri file,
       int position,
       FletchSystem currentSystem) {
     return _compiler.debugInfoForPosition(file, position, currentSystem);
   }
 
-  int positionInFileFromPattern(String file, int line, String pattern) {
+  int positionInFileFromPattern(Uri file, int line, String pattern) {
     return _compiler.positionInFileFromPattern(file, line, pattern);
   }
 
-  int positionInFile(String file, int line, int column) {
+  int positionInFile(Uri file, int line, int column) {
     return _compiler.positionInFile(file, line, column);
   }
 }

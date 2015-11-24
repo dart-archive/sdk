@@ -69,12 +69,13 @@ const Action debugAction =
 const int sigQuit = 3;
 
 Future debug(AnalyzedSentence sentence, VerbContext context) async {
+  Uri base = sentence.base;
   if (sentence.target == null) {
-    return context.performTaskInWorker(new InteractiveDebuggerTask());
+    return context.performTaskInWorker(
+        new InteractiveDebuggerTask(base));
   }
 
   DebuggerTask task;
-  Uri base = sentence.base;
   switch (sentence.target.kind) {
     case TargetKind.APPLY:
       task = new DebuggerTask(TargetKind.APPLY.index, base);
@@ -187,7 +188,9 @@ Future<Null> readCommands(
 class InteractiveDebuggerTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
-  const InteractiveDebuggerTask();
+  final Uri base;
+
+  const InteractiveDebuggerTask(this.base);
 
   Future<int> call(
       CommandSender commandSender,
@@ -195,6 +198,7 @@ class InteractiveDebuggerTask extends SharedTask {
     return interactiveDebuggerTask(
         commandSender,
         SessionState.current,
+        base,
         commandIterator);
   }
 }
@@ -210,12 +214,14 @@ Future<int> runInteractiveDebuggerTask(
       state,
       script,
       base,
-      () => interactiveDebuggerTask(commandSender, state, commandIterator));
+      () => interactiveDebuggerTask(
+          commandSender, state, base, commandIterator));
 }
 
 Future<int> interactiveDebuggerTask(
     CommandSender commandSender,
     SessionState state,
+    Uri base,
     StreamIterator<Command> commandIterator) async {
   List<FletchDelta> compilationResult = state.compilationResults;
   Session session = state.session;
@@ -245,7 +251,7 @@ Future<int> interactiveDebuggerTask(
       .transform(UTF8.decoder)
       .transform(new LineSplitter());
 
-  return await session.debug(inputStream);
+  return await session.debug(inputStream, base);
 }
 
 class DebuggerTask extends SharedTask {
@@ -269,7 +275,8 @@ class DebuggerTask extends SharedTask {
       case TargetKind.CONTINUE:
         return continueDebuggerTask(commandSender, SessionState.current);
       case TargetKind.BREAK:
-        return breakDebuggerTask(commandSender, SessionState.current, argument);
+        return breakDebuggerTask(
+            commandSender, SessionState.current, argument, base);
       case TargetKind.LIST:
         return listDebuggerTask(commandSender, SessionState.current);
       case TargetKind.DISASM:
@@ -386,7 +393,8 @@ Future<int> continueDebuggerTask(
 Future<int> breakDebuggerTask(
     CommandSender commandSender,
     SessionState state,
-    String breakpointSpecification) async {
+    String breakpointSpecification,
+    Uri base) async {
   Session session = attachToSession(state, commandSender);
 
   if (breakpointSpecification.contains('@')) {
@@ -425,7 +433,7 @@ Future<int> breakDebuggerTask(
     int line = int.parse(parts[1], onError: (_) => -1);
     int column = int.parse(parts[2], onError: (_) => -1);
 
-    if (line == -1 || column == -1) {
+    if (line < 1 || column < 1) {
       // TODO(ager, lukechurch): Fix error reporting.
       throwInternalError('Invalid line or column number');
     }
@@ -434,9 +442,12 @@ Future<int> breakDebuggerTask(
     // does not print automatically but gives us information about what
     // happened.
     Breakpoint breakpoint =
-        await session.setFileBreakpoint(file, line, column);
+        await session.setFileBreakpoint(base.resolve(file), line, column);
     if (breakpoint != null) {
       print("Breakpoint set: $breakpoint");
+    } else {
+      // TODO(ager, lukechurch): Fix error reporting.
+      throwInternalError('Failed to set breakpoint');
     }
   } else {
     List<Breakpoint> breakpoints =
