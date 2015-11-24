@@ -244,13 +244,13 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   }
   if (secondaryTarget != null) {
     if (secondaryTarget.kind == TargetKind.FILE) {
+      NamedTarget target = secondaryTarget;
       if (action.requiresToUri) {
-        NamedTarget target = secondaryTarget;
         toUri = fileUri(target.name, base);
       } else {
         throwFatalError(
             DiagnosticKind.verbRequiresNoToFile,
-            verb: verb, target: secondaryTarget);
+            verb: verb, userInput: target.name);
       }
     } else {
       throwFatalError(

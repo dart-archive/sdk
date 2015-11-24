@@ -278,8 +278,12 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.verbRequiresNoToFile:
       // Though the quit verb is not a real verb it can still be used to provoke
       // this failure as part of sentence parsing.
-      return <Example>[new CommandLineExample(
-            <String>['quit', 'to', 'foo.txt'])];
+      return <Example>[
+        new CommandLineExample(
+            <String>['quit', 'to', 'foo.txt']),
+        new CommandLineExample(
+            <String>['x-upgrade', 'agent', 'foo.txt']),
+      ];
 
     case DiagnosticKind.verbRequiresNoWithFile:
       // Though the quit verb is not a real verb it can still be used to provoke
