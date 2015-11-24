@@ -888,6 +888,67 @@ Future<Uri> readPackagePathFromUser(
   return null;
 }
 
+class Version {
+  final List<int> version;
+  final String label;
+
+  Version(this.version, this.label) {
+    if (version.length != 3) {
+      throw new ArgumentError("version must have three parts");
+    }
+  }
+
+  /// Returns `true` if this version's digits are greater in lexicographical
+  /// order.
+  ///
+  /// We use a function instead of [operator >] because [label] is not used
+  /// in the comparison, but it is used in [operator ==].
+  bool isGreaterThan(Version other) {
+    for (int part = 0; part < 3; ++part) {
+      if (version[part] < other.version[part]) {
+        return false;
+      }
+      if (version[part] > other.version[part]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool operator ==(other) {
+    return other is Version &&
+        version[0] == other.version[0] &&
+        version[1] == other.version[1] &&
+        version[2] == other.version[2] &&
+        label == other.label;
+  }
+
+  int get hashCode {
+    return 3 * version[0] +
+        5 * version[1] +
+        7 * version[2] +
+        13 * label.hashCode;
+  }
+
+  String toString() {
+    String labelPart = label == null ? '' : '-$label';
+    return '${version[0]}.${version[1]}.${version[2]}$labelPart';
+  }
+}
+
+Version parseVersion(String text) {
+  List<String> labelParts = text.split('-');
+  if (labelParts.length > 2) {
+    throw new ArgumentError('Not a version: $text.');
+  }
+  List<String> digitParts = labelParts[0].split('.');
+  if (digitParts.length != 3) {
+    throw new ArgumentError('Not a version: $text.');
+  }
+  List<int> digits = digitParts.map(int.parse).toList();
+  return new Version(digits, labelParts.length == 2 ? labelParts[1] : null);
+}
+
 Future<int> upgradeAgent(
     CommandSender commandSender,
     StreamIterator<Command> commandIterator,
@@ -908,10 +969,11 @@ Future<int> upgradeAgent(
     return 1;
   }
 
-  String version = extractVersion(packageUri);
+  Version version = parseVersion(extractVersion(packageUri));
 
-  String existingVersion = await withAgentConnection(state,
-      (connection) => connection.fletchVersion());
+  Version existingVersion = parseVersion(
+      await withAgentConnection(state,
+          (connection) => connection.fletchVersion()));
 
   if (existingVersion == version) {
     print('Target device is already at $version');
@@ -921,14 +983,42 @@ Future<int> upgradeAgent(
   print("Attempting to upgrade device from "
       "$existingVersion to $version");
 
+  if (existingVersion.isGreaterThan(version)) {
+    commandSender.sendStdout("The existing version is greater than the "
+            "version you want to use to upgrade.\n"
+        "Please confirm this operation by typing 'yes' "
+        "(press Enter to abort): ");
+    Confirm: while (await commandIterator.moveNext()) {
+      Command command = commandIterator.current;
+      switch (command.code) {
+        case DriverCommand.Stdin:
+        if (command.data.length == 0) {
+          throwInternalError("Unexpected end of input");
+        }
+        String line = UTF8.decode(command.data).trim();
+        if (line.isEmpty) {
+          commandSender.sendStdout("Upgrade aborted\n");
+          return 0;
+        } else if (line.trim().toLowerCase() == "yes") {
+          break Confirm;
+        }
+        break;
+
+      default:
+        throwInternalError("Unexpected ${command.code}");
+        return null;
+      }
+    }
+  }
+
   List<int> data = await new File.fromUri(packageUri).readAsBytes();
   print("Sending package to fletch agent");
   await withAgentConnection(state,
-      (connection) => connection.upgradeAgent(version, data));
+      (connection) => connection.upgradeAgent(version.toString(), data));
   print("Transfer complete, waiting for the Fletch agent to restart. "
       "This can take a few seconds.");
 
-  String newVersion;
+  Version newVersion;
   int remainingTries = 20;
   // Wait for the agent to come back online to verify the version.
   while (--remainingTries > 0) {
@@ -942,7 +1032,7 @@ Future<int> upgradeAgent(
         state.log("Connected to TCP waitForAgentUpgrade  $info");
       });
       AgentConnection connection = new AgentConnection(socket);
-      newVersion = await connection.fletchVersion();
+      newVersion = parseVersion(await connection.fletchVersion());
       disconnectFromAgent(connection);
       if (newVersion != existingVersion) {
         break;
