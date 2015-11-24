@@ -30,6 +30,9 @@ static bool HasSentinelAt(uword address) {
 }
 
 Chunk::~Chunk() {
+  // If the memory for this chunk is external we leave it alone
+  // and let the embedder deallocate it.
+  if (is_external()) return;
 #if defined(FLETCH_TARGET_OS_CMSIS)
   free(reinterpret_cast<void*>(allocated_));
 #elif defined(FLETCH_TARGET_OS_LK)
@@ -296,7 +299,7 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   return chunk;
 }
 
-Chunk* ObjectMemory::CreateChunk(Space* owner, void* memory, int size) {
+Chunk* ObjectMemory::CreateFlashChunk(Space* owner, void* memory, int size) {
   ASSERT(owner != NULL);
   ASSERT(size == Utils::RoundUp(size, kPageSize));
 
@@ -304,9 +307,9 @@ Chunk* ObjectMemory::CreateChunk(Space* owner, void* memory, int size) {
   ASSERT(base % kPageSize == 0);
 
 #ifdef FLETCH_TARGET_OS_CMSIS
-  Chunk* chunk = new Chunk(owner, base, size, base);
+  Chunk* chunk = new Chunk(owner, base, size, base, true);
 #else
-  Chunk* chunk = new Chunk(owner, base, size);
+  Chunk* chunk = new Chunk(owner, base, size, true);
 #endif
   SetSpaceForPages(chunk->base(), chunk->limit(), owner);
   return chunk;
@@ -314,7 +317,8 @@ Chunk* ObjectMemory::CreateChunk(Space* owner, void* memory, int size) {
 
 void ObjectMemory::FreeChunk(Chunk* chunk) {
 #ifdef DEBUG
-  chunk->Scramble();
+  // Do not touch external memory. It might be read-only.
+  if (!chunk->is_external()) chunk->Scramble();
 #endif
   SetSpaceForPages(chunk->base(), chunk->limit(), NULL);
   allocated_ -= chunk->size();

@@ -40,6 +40,9 @@ class Chunk {
   // Returns the size of this chunk in bytes.
   uword size() const { return limit_ - base_; }
 
+  // Is the chunk externally allocated by the embedder.
+  bool is_external() const { return external_; }
+
   // Test for inclusion.
   bool Includes(uword address) const {
     return (address >= base()) && (address < limit());
@@ -57,22 +60,26 @@ class Chunk {
 #ifdef FLETCH_TARGET_OS_CMSIS
   const uword allocated_;
 #endif
+  const bool external_;
 
   Chunk* next_;
 
 
 #ifdef FLETCH_TARGET_OS_CMSIS
-  Chunk(Space* owner, uword base, uword size, uword allocated)
+  Chunk(Space* owner, uword base, uword size, uword allocated,
+        bool external = false)
       : owner_(owner),
         base_(base),
         limit_(base + size),
         allocated_(allocated),
+        external_(external),
         next_(NULL) { }
 #else
-  Chunk(Space* owner, uword base, uword size)
+  Chunk(Space* owner, uword base, uword size, bool external = false)
       : owner_(owner),
         base_(base),
         limit_(base + size),
+        external_(external),
         next_(NULL) { }
 #endif
 
@@ -287,7 +294,10 @@ class ObjectMemory {
   // to a page boundary.
   static Chunk* AllocateChunk(Space* space, int size);
 
-  static Chunk* CreateChunk(Space* space, void* heap_space, int size);
+  // Create a chunk for a piece of external memory (usually in flash). Since
+  // this memory is external and potentially read-only, we will not free
+  // nor write to it when deleting the space it belongs to.
+  static Chunk* CreateFlashChunk(Space* space, void* heap_space, int size);
 
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);
