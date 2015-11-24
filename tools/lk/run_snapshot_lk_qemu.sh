@@ -29,9 +29,10 @@ SIZE=$(cat $1 | wc -c)
 PIPEDIR=$(mktemp -d)
 
 cleanup_file() {
+  echo "Removing '$PIPEDIR'"
   rm -rf "$PIPEDIR"
 }
-trap cleanup_file EXIT INT TERM HUP
+trap cleanup_file EXIT
 
 mkfifo "$PIPEDIR/qemu.in" "$PIPEDIR/qemu.out"
 
@@ -39,11 +40,11 @@ echo "Starting qemu..."
 ./third_party/qemu/linux/qemu/qemu-system-arm -machine virt -cpu cortex-a15 -m 16 -kernel third_party/lk/out/build-qemu-virt-fletch/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
 PID=$!
 cleanup() {
-  cleanup_file
   echo "Killing $PID"
   kill $PID
+  cleanup_file
 }
-trap cleanup EXIT INT TERM HUP
+trap cleanup EXIT
 
 echo "Started with PID $PID"
 
