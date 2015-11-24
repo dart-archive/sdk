@@ -4,7 +4,7 @@
 
 library servicec.keyword;
 
-import "package:compiler/src/scanner/scannerlib.dart" as dart2js;
+import "package:compiler/src/tokens/keyword.dart" as dart2js;
 
 /// Custom Keyword class for the servicec front-end.
 class Keyword extends dart2js.Keyword {

@@ -5,7 +5,9 @@ args:third_party/args/lib
 async_helper:pkg/async_helper/lib
 charcode:third_party/charcode/lib
 compiler:third_party/dart/pkg/compiler/lib
+collection:third_party/collection/lib
 crypto:third_party/crypto/lib
+dart2js_info:third_party/dart2js_info/lib
 expect:third_party/dart/pkg/expect/lib
 file:pkg/file/lib
 flash_sd_card:pkg/flash_sd_card/lib
@@ -27,6 +29,7 @@ os:pkg/os/lib
 package_config:third_party/package_config/lib
 path:third_party/path/lib
 persistent:third_party/persistent/lib/
+pub_semver:third_party/pub_semver/lib
 raspberry_pi:pkg/raspberry_pi/lib
 sdk_library_metadata:third_party/dart/sdk/lib/_internal/sdk_library_metadata/lib/
 servicec:pkg/servicec/lib

@@ -52,6 +52,7 @@ incremental/production/instance_field_end: Fail
 incremental/production/instance_field_middle: Fail
 incremental/production/interceptor_classes: Fail
 incremental/production/main_args: Fail
+incremental/production/modify_static_method: Fail
 incremental/production/newly_instantiated_class: Fail
 incremental/production/newly_instantiated_class_X: Fail
 incremental/production/newly_instantiated_class_with_fields: Fail

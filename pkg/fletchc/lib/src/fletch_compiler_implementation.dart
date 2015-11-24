@@ -8,12 +8,14 @@ import 'dart:async' show
     EventSink;
 
 import 'package:sdk_library_metadata/libraries.dart' show
-    libraries,
     LibraryInfo;
 
 import 'package:compiler/compiler_new.dart' as api;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
+
+import 'package:compiler/src/compiler.dart' show
+    GlobalDependencyRegistry;
 
 import 'package:compiler/src/io/source_file.dart';
 
@@ -27,16 +29,18 @@ import 'package:compiler/src/elements/modelx.dart' show
 import 'package:compiler/compiler_new.dart' show
     CompilerOutput;
 
-import 'package:compiler/src/util/uri_extras.dart' show
-    relativize;
-
-import 'package:compiler/src/dart2jslib.dart' show
-    CodegenRegistry,
+import 'package:compiler/src/diagnostics/messages.dart' show
     Message,
     MessageKind,
     MessageTemplate;
+import 'package:compiler/src/diagnostics/source_span.dart' show
+    SourceSpan;
 
-import 'package:compiler/src/util/util.dart' show
+import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
+    DiagnosticMessage,
+    DiagnosticReporter;
+
+import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
 import 'fletch_registry.dart' show
@@ -51,7 +55,12 @@ import 'debug_info.dart';
 import 'find_position_visitor.dart';
 import 'fletch_context.dart';
 
+import 'fletch_enqueuer.dart' show
+    FletchEnqueueTask;
+
 import '../fletch_system.dart';
+import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
+import 'package:compiler/src/elements/elements.dart';
 
 const EXTRA_DART2JS_OPTIONS = const <String>[
     // TODO(ahe): This doesn't completely disable type inference. Investigate.
@@ -112,7 +121,7 @@ const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
       platforms: FLETCH_PLATFORM),
 };
 
-class FletchCompilerImplementation extends apiimpl.Compiler {
+class FletchCompilerImplementation extends apiimpl.CompilerImpl {
   final Map<String, LibraryInfo> fletchLibraries = <String, LibraryInfo>{};
 
   final Uri fletchVm;
@@ -129,6 +138,11 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
   // TODO(ahe): Clean this up and remove this.
   var helper;
 
+  @override
+  FletchEnqueueTask get enqueuer => super.enqueuer;
+
+  FletchDiagnosticReporter reporter;
+
   FletchCompilerImplementation(
       api.CompilerInput provider,
       api.CompilerOutput outputProvider,
@@ -144,9 +158,7 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
           provider, outputProvider, handler, libraryRoot, null,
           EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
           packageConfig, null, FletchBackend.newInstance) {
-    CodegenRegistry global = globalDependencies;
-    globalDependencies =
-        new FletchRegistry(this, global.treeElements).asRegistry;
+    reporter = new FletchDiagnosticReporter(super.reporter);
   }
 
   bool get showPackageWarnings => true;
@@ -160,50 +172,17 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
 
   String fletchPatchLibraryFor(String name) => FLETCH_PATCHES[name];
 
-  LibraryInfo lookupLibraryInfo(String name) {
-    return fletchLibraries.putIfAbsent(name, () {
-      // Let FLETCH_LIBRARIES shadow libraries.
-      if (FLETCH_LIBRARIES.containsKey(name)) {
-        return computeFletchLibraryInfo(name);
-      }
-      LibraryInfo info = libraries[name];
-      if (info == null) {
-        return computeFletchLibraryInfo(name);
-      }
-      return new LibraryInfo(
-          info.path,
-          categories: info.categoriesString,
-          dart2jsPath: info.dart2jsPath,
-          dart2jsPatchPath: fletchPatchLibraryFor(name),
-          implementation: info.implementation,
-          documented: info.documented,
-          maturity: info.maturity,
-          platforms: info.platforms);
-    });
-  }
-
-  LibraryInfo computeFletchLibraryInfo(String name) {
-    LibraryInfo info = FLETCH_LIBRARIES[name];
-    if (info == null) return null;
-    // Since this LibraryInfo is completely internal to Fletch, there's no need
-    // for dart2js extensions and patches.
-    assert(info.dart2jsPath == null);
-    assert(info.dart2jsPatchPath == null);
-    String path = relativize(
-        libraryRoot, patchRoot.resolve("lib/${info.path}"), false);
-    return new LibraryInfo(
-        '../$path',
-        categories: info.categoriesString,
-        implementation: info.implementation,
-        documented: info.documented,
-        maturity: info.maturity,
-        platforms: info.platforms);
+  @override
+  Uri lookupLibraryUri(String libraryName) {
+    LibraryInfo info = FLETCH_LIBRARIES[libraryName];
+    if (info == null) return super.lookupLibraryUri(libraryName);
+    return patchRoot.resolve("lib/${info.path}");
   }
 
   Uri resolvePatchUri(String dartLibraryPath) {
-    String patchPath = lookupPatchPath(dartLibraryPath);
+    String patchPath = fletchPatchLibraryFor(dartLibraryPath);
     if (patchPath == null) return null;
-    return patchRoot.resolve(patchPath);
+    return patchRoot.resolve("lib/$patchPath");
   }
 
   CompilationUnitElementX compilationUnitForUri(Uri uri) {
@@ -266,13 +245,15 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
 
   void reportVerboseInfo(
       Spannable node,
-      String message,
+      String messageText,
       {bool forceVerbose: false}) {
     // TODO(johnniwinther): Use super.reportVerboseInfo once added.
     if (forceVerbose || verbose) {
       MessageTemplate template = MessageTemplate.TEMPLATES[MessageKind.GENERIC];
-      reportDiagnostic(
-          node, template.message({'text': message}, true), api.Diagnostic.HINT);
+      SourceSpan span = reporter.spanFromSpannable(node);
+      Message message = template.message({'text': messageText});
+      reportDiagnostic(new DiagnosticMessage(span, node, message),
+          [], api.Diagnostic.HINT);
     }
   }
 
@@ -280,19 +261,6 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
     if (crashReportRequested) return;
     crashReportRequested = true;
     print(requestBugReportOnCompilerCrashMessage);
-  }
-
-  void reportError(
-      Spannable node,
-      MessageKind messageKind,
-      [Map arguments = const {}]) {
-    if (messageKind == MessageKind.MIRRORS_LIBRARY_NOT_SUPPORT_BY_BACKEND) {
-      const String noMirrors =
-          "Fletch doesn't support 'dart:mirrors'. See https://goo.gl/Kwrd0O";
-      messageKind = MessageKind.GENERIC;
-      arguments = {'text': noMirrors};
-    }
-    super.reportError(node, messageKind, arguments);
   }
 }
 
@@ -339,5 +307,76 @@ SourceFile getSourceFile(api.CompilerInput provider, Uri uri) {
     return provider.sourceFiles[uri];
   } else {
     return null;
+  }
+}
+
+/// A wrapper around a DiagnosticReporter, that customizes some messages to
+/// Fletch.
+class FletchDiagnosticReporter extends DiagnosticReporter {
+  DiagnosticReporter _internalReporter;
+
+  FletchDiagnosticReporter(this._internalReporter);
+
+  @override
+  DiagnosticMessage createMessage(Spannable spannable,
+      MessageKind messageKind,
+      [Map arguments = const {}]) {
+    return _internalReporter.createMessage(spannable, messageKind, arguments);
+  }
+
+  @override
+  internalError(Spannable spannable, message) {
+    return _internalReporter.internalError(spannable, message);
+  }
+
+  @override
+  void log(message) {
+    _internalReporter.log(message);
+  }
+
+  @override
+  DiagnosticOptions get options => _internalReporter.options;
+
+  @override
+  void reportError(DiagnosticMessage message,
+      [List<DiagnosticMessage> infos = const <DiagnosticMessage> []]) {
+    if (message.message.kind ==
+        MessageKind.MIRRORS_LIBRARY_NOT_SUPPORT_BY_BACKEND) {
+      const String noMirrors =
+          "Fletch doesn't support 'dart:mirrors'. See https://goo.gl/Kwrd0O";
+      message = createMessage(message.spannable,
+          MessageKind.GENERIC,
+          {'text': message});
+    }
+    _internalReporter.reportError(message, infos);
+  }
+
+  @override
+  void reportHint(DiagnosticMessage message,
+      [List<DiagnosticMessage> infos = const <DiagnosticMessage> []]) {
+    _internalReporter.reportHint(message, infos);
+  }
+
+  @override
+  void reportInfo(Spannable node,
+      MessageKind errorCode,
+      [Map arguments = const {}]) {
+    _internalReporter.reportInfo(node, errorCode, arguments);
+  }
+
+  @override
+  void reportWarning(DiagnosticMessage message,
+      [List<DiagnosticMessage> infos = const <DiagnosticMessage> []]) {
+    _internalReporter.reportWarning(message, infos);
+  }
+
+  @override
+  SourceSpan spanFromSpannable(Spannable node) {
+    return _internalReporter.spanFromSpannable(node);
+  }
+
+  @override
+  withCurrentElement(Element element, f()) {
+    return _internalReporter.withCurrentElement(element, f);
   }
 }

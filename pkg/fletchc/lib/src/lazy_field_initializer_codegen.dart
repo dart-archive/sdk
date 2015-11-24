@@ -4,12 +4,10 @@
 
 library fletchc.lazy_field_initializer_codegen;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    MessageKind,
-    Registry;
-
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/resolution.dart';
+import 'package:compiler/src/resolution/tree_elements.dart' show
+    TreeElements;
+
 import 'package:compiler/src/tree/tree.dart';
 
 import 'fletch_context.dart';

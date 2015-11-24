@@ -3,10 +3,9 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch._system' as fletch;
+import 'dart:fletch._system' show patch;
 import 'dart:collection';
 import 'dart:fletch.ffi';
-
-const patch = "patch";
 
 @patch class Uint8List {
   @patch factory Uint8List(int length) {

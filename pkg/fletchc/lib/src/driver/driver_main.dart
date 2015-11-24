@@ -456,8 +456,8 @@ class ClientController {
     Options options = Options.parse(arguments);
     Sentence sentence =
         parseSentence(options.nonOptionArguments, includesProgramName: true);
-    /// [programName] is the canonicalized absolute path to the fletch
-    /// executable (the C++ program).
+    // [programName] is the canonicalized absolute path to the fletch
+    // executable (the C++ program).
     String programName = sentence.programName;
     String fletchVm = "$programName-vm";
     this.sentence = analyzeSentence(sentence, options);

@@ -4,9 +4,6 @@
 
 library servicec.validator;
 
-import 'package:compiler/src/scanner/scannerlib.dart' show
-    Token;
-
 import 'node.dart' show
     CompilationUnitNode,
     FormalNode,

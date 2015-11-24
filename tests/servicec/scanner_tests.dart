@@ -7,12 +7,13 @@ import 'dart:async' show
 
 import 'package:expect/expect.dart';
 
-import 'package:compiler/src/scanner/scannerlib.dart' show
+import 'package:compiler/src/tokens/precedence_constants.dart' show
     EOF_INFO,
     STRING_INFO,
     OPEN_CURLY_BRACKET_INFO,
-    CLOSE_CURLY_BRACKET_INFO,
+    CLOSE_CURLY_BRACKET_INFO;
 
+import 'package:compiler/src/tokens/token.dart' show
     Token,
     KeywordToken,
     StringToken,

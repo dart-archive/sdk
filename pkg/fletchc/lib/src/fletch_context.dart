@@ -7,9 +7,6 @@ library fletchc.fletch_context;
 import 'package:compiler/src/tree/tree.dart' show
     Node;
 
-import 'package:compiler/src/universe/universe.dart' show
-    Selector;
-
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
@@ -17,10 +14,14 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     FunctionSignature,
     LibraryElement,
-    ParameterElement;
+    ParameterElement,
+    Name;
 
-import 'package:compiler/src/resolution/resolution.dart' show
+import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
+
+import 'package:compiler/src/universe/selector.dart' show
+    Selector;
 
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
@@ -29,9 +30,6 @@ import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
     ConstructedConstantValue,
     FunctionConstantValue;
-
-import 'package:compiler/src/dart2jslib.dart' show
-    isPrivateName;
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
@@ -74,6 +72,7 @@ class FletchContext {
   Map<LibraryElement, String> libraryTag = <LibraryElement, String>{};
   List<String> symbols = <String>[];
   Map<String, int> symbolIds = <String, int>{};
+  Map<Name, String> nameToSymbol = <Name, String>{};
   Map<Selector, String> selectorToSymbol = <Selector, String>{};
 
   FletchContext(this.compiler);
@@ -93,10 +92,12 @@ class FletchContext {
     }
   }
 
-  String mangleName(String name, LibraryElement library) {
-    if (!isPrivateName(name)) return name;
-    if (library.isPlatformLibrary && names.contains(name)) return name;
-    return name + getLibraryTag(library);
+  String mangleName(Name name) {
+    if (!name.isPrivate) return name.text;
+    if (name.library.isPlatformLibrary && names.contains(name.text)) {
+      return name.text;
+    }
+    return name.text + getLibraryTag(name.library);
   }
 
   String getLibraryTag(LibraryElement library) {
@@ -116,7 +117,7 @@ class FletchContext {
   String getSymbolFromSelector(Selector selector) {
     return selectorToSymbol.putIfAbsent(selector, () {
       StringBuffer buffer = new StringBuffer();
-      buffer.write(mangleName(selector.name, selector.library));
+      buffer.write(mangleName(selector.memberName));
       for (String namedArgument in selector.namedArguments) {
         buffer.write(":");
         buffer.write(namedArgument);
@@ -139,7 +140,7 @@ class FletchContext {
       FunctionSignature signature,
       LibraryElement library) {
     StringBuffer buffer = new StringBuffer();
-    buffer.write(mangleName(name, library));
+    buffer.write(mangleName(new Name(name, library)));
     writeNamedArguments(buffer, signature);
     return buffer.toString();
   }
@@ -207,8 +208,7 @@ class FletchContext {
     backend.registerClassElement(classElement);
     // TODO(ahe): This should not be required. Also, instantiate type,
     // not class.
-    FletchRegistry registry =
-        new FletchRegistry(compiler, classElement.resolvedAst.elements);
+    FletchRegistry registry = new FletchRegistry(compiler);
     registry.registerInstantiatedClass(classElement);
   }
 

@@ -5,9 +5,6 @@
 # This directory contains tests that are intended to show the
 # current state of the language.
 
-[ ($compiler == fletchc || $runtime == fletchc) && $host_checked ]
-regress_14348_test: Crash
-
 [ $compiler == fletchc || $runtime == fletchc ]
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
@@ -17,6 +14,7 @@ assign_to_type_test/01: RuntimeError
 assign_to_type_test/02: RuntimeError
 assign_to_type_test/03: RuntimeError
 assign_to_type_test/04: RuntimeError
+assign_top_method_test/01: RuntimeError
 async_and_or_test: RuntimeError
 async_await_catch_regression_test: RuntimeError
 async_await_syntax_test/a05a: RuntimeError
@@ -67,6 +65,7 @@ async_control_structures_test: RuntimeError
 async_finally_rethrow_test: RuntimeError
 async_regression_23058_test: RuntimeError
 async_rethrow_test: RuntimeError
+async_return_types_test/return_value_sync_star: RuntimeError
 async_return_types_test/nestedFuture: RuntimeError
 async_return_types_test/none: RuntimeError
 async_return_types_test/tooManyTypeParameters: RuntimeError
@@ -91,7 +90,6 @@ async_switch_test/none: RuntimeError
 async_switch_test/withDefault: RuntimeError
 async_test/constructor2: RuntimeError
 async_test/constructor3: RuntimeError
-async_test/constructor4: RuntimeError
 async_test/none: RuntimeError
 async_test/setter1: RuntimeError
 async_test/type-mismatch1: RuntimeError
@@ -116,6 +114,7 @@ await_for_use_local_test: RuntimeError
 await_future_test: RuntimeError
 await_nonfuture_test: RuntimeError
 await_not_started_immediately_test: RuntimeError
+await_null_aware_test: RuntimeError
 await_postfix_expr_test: RuntimeError
 await_regression_test: RuntimeError
 await_test: RuntimeError
@@ -130,6 +129,7 @@ built_in_identifier_test/01: CompileTimeError
 call_closurization_test: RuntimeError  # Issue 153
 call_function_apply_test: RuntimeError
 call_nonexistent_constructor_test/01: RuntimeError
+call_nonexistent_static_test/09: RuntimeError
 call_nonexistent_static_test/10: RuntimeError
 call_with_no_such_method_test: RuntimeError
 cast_test/01: MissingRuntimeError
@@ -171,63 +171,8 @@ closure_in_constructor_test: RuntimeError
 closure_type_variable_test: RuntimeError
 closures_initializer2_test: RuntimeError
 closures_initializer_test: RuntimeError
-compile_time_constant_i_test: RuntimeError
-compile_time_constant_l_test: RuntimeError
 compile_time_constant_test/01: RuntimeError
 compound_assignment_operator_test: RuntimeError
-conditional_method_invocation_test/12: RuntimeError
-conditional_method_invocation_test/13: RuntimeError
-conditional_method_invocation_test/14: RuntimeError
-conditional_method_invocation_test/15: RuntimeError
-conditional_method_invocation_test/16: RuntimeError
-conditional_method_invocation_test/17: RuntimeError
-conditional_method_invocation_test/18: RuntimeError
-conditional_method_invocation_test/19: RuntimeError
-conditional_property_access_test/10: RuntimeError
-conditional_property_access_test/11: RuntimeError
-conditional_property_access_test/12: RuntimeError
-conditional_property_access_test/13: RuntimeError
-conditional_property_access_test/14: RuntimeError
-conditional_property_access_test/15: RuntimeError
-conditional_property_access_test/16: RuntimeError
-conditional_property_access_test/17: RuntimeError
-conditional_property_assignment_test/23: RuntimeError
-conditional_property_assignment_test/24: RuntimeError
-conditional_property_assignment_test/25: RuntimeError
-conditional_property_assignment_test/26: RuntimeError
-conditional_property_assignment_test/27: RuntimeError
-conditional_property_assignment_test/28: RuntimeError
-conditional_property_assignment_test/29: RuntimeError
-conditional_property_assignment_test/30: RuntimeError
-conditional_property_assignment_test/31: RuntimeError
-conditional_property_assignment_test/32: RuntimeError
-conditional_property_assignment_test/33: RuntimeError
-conditional_property_assignment_test/34: RuntimeError
-conditional_property_assignment_test/35: RuntimeError
-conditional_property_increment_decrement_test/17: RuntimeError
-conditional_property_increment_decrement_test/18: RuntimeError
-conditional_property_increment_decrement_test/19: RuntimeError
-conditional_property_increment_decrement_test/20: RuntimeError
-conditional_property_increment_decrement_test/21: RuntimeError
-conditional_property_increment_decrement_test/22: RuntimeError
-conditional_property_increment_decrement_test/23: RuntimeError
-conditional_property_increment_decrement_test/24: RuntimeError
-conditional_property_increment_decrement_test/25: RuntimeError
-conditional_property_increment_decrement_test/26: RuntimeError
-conditional_property_increment_decrement_test/27: RuntimeError
-conditional_property_increment_decrement_test/28: RuntimeError
-conditional_property_increment_decrement_test/29: RuntimeError
-conditional_property_increment_decrement_test/30: RuntimeError
-conditional_property_increment_decrement_test/31: RuntimeError
-conditional_property_increment_decrement_test/32: RuntimeError
-conditional_property_increment_decrement_test/33: RuntimeError
-conditional_property_increment_decrement_test/34: RuntimeError
-conditional_property_increment_decrement_test/35: RuntimeError
-conditional_property_increment_decrement_test/36: RuntimeError
-conditional_property_increment_decrement_test/37: RuntimeError
-conditional_property_increment_decrement_test/38: RuntimeError
-conditional_property_increment_decrement_test/39: RuntimeError
-conditional_property_increment_decrement_test/40: RuntimeError
 const_constructor_nonconst_field_test/01: MissingCompileTimeError
 const_dynamic_type_literal_test/01: RuntimeError
 const_error_multiply_initialized_test/02: CompileTimeError
@@ -274,7 +219,6 @@ cyclic_typedef_test/11: MissingCompileTimeError
 deferred_call_empty_before_load_test: RuntimeError
 deferred_closurize_load_library_test: RuntimeError
 deferred_constant_list_test: RuntimeError
-deferred_constraints_constants_test/default_argument1: Crash
 deferred_constraints_constants_test/none: CompileTimeError
 deferred_constraints_constants_test/reference_after_load: CompileTimeError
 deferred_constraints_type_annotation_test/as_operation: RuntimeError
@@ -318,6 +262,7 @@ deferred_regression_22995_test: RuntimeError
 deferred_shadow_load_library_test: RuntimeError
 deferred_shared_and_unshared_classes_test: RuntimeError
 deferred_static_seperate_test: RuntimeError
+deferred_super_dependency_test/01: RuntimeError
 deferred_type_dependency_test/as: RuntimeError
 deferred_type_dependency_test/is: RuntimeError
 deferred_type_dependency_test/none: RuntimeError
@@ -348,7 +293,6 @@ external_test/25: MissingCompileTimeError
 factory2_negative_test: Fail
 factory3_test: RuntimeError
 factory_negative_test: Fail
-factory_redirection2_test/01: RuntimeError
 factory_redirection3_cyclic_test/01: RuntimeError
 factory_redirection_test/04: RuntimeError
 factory_redirection_test/07: RuntimeError
@@ -462,7 +406,7 @@ generic_native_test: RuntimeError
 generic_object_type_test: RuntimeError
 generic_parameterized_extends_test: RuntimeError
 generic_test: RuntimeError
-getter_setter_in_lib_test: CompileTimeError
+getter_setter_in_lib_test: RuntimeError
 if_null_assignment_behavior_test/01: RuntimeError
 if_null_assignment_behavior_test/02: RuntimeError
 if_null_assignment_behavior_test/03: RuntimeError
@@ -491,7 +435,6 @@ if_null_assignment_behavior_test/25: RuntimeError
 if_null_assignment_behavior_test/26: RuntimeError
 if_null_assignment_behavior_test/27: RuntimeError
 if_null_assignment_behavior_test/28: RuntimeError
-if_null_assignment_behavior_test/29: RuntimeError
 if_null_assignment_behavior_test/31: RuntimeError
 if_null_assignment_behavior_test/32: RuntimeError
 if_null_assignment_behavior_test/none: RuntimeError
@@ -538,46 +481,17 @@ if_null_assignment_static_test/40: RuntimeError
 if_null_assignment_static_test/41: RuntimeError
 if_null_assignment_static_test/42: RuntimeError
 if_null_assignment_static_test/none: RuntimeError
-if_null_behavior_test/01: RuntimeError
-if_null_behavior_test/02: RuntimeError
-if_null_behavior_test/03: RuntimeError
-if_null_behavior_test/04: RuntimeError
-if_null_behavior_test/05: RuntimeError
-if_null_behavior_test/06: RuntimeError
-if_null_behavior_test/07: RuntimeError
-if_null_behavior_test/08: RuntimeError
-if_null_behavior_test/09: RuntimeError
-if_null_behavior_test/10: RuntimeError
-if_null_behavior_test/11: RuntimeError
-if_null_behavior_test/12: RuntimeError
-if_null_behavior_test/13: RuntimeError
-if_null_behavior_test/14: RuntimeError
-if_null_behavior_test/15: RuntimeError
-if_null_behavior_test/16: RuntimeError
-if_null_behavior_test/none: RuntimeError
-if_null_evaluation_order_test/01: RuntimeError
-if_null_evaluation_order_test/02: RuntimeError
-if_null_evaluation_order_test/none: RuntimeError
-if_null_precedence_test/01: RuntimeError
-if_null_precedence_test/02: RuntimeError
-if_null_precedence_test/03: RuntimeError
-if_null_precedence_test/04: RuntimeError
-if_null_precedence_test/05: RuntimeError
-if_null_precedence_test/06: RuntimeError
-if_null_precedence_test/07: RuntimeError
-if_null_precedence_test/08: RuntimeError
-if_null_precedence_test/none: RuntimeError
 incr_op_test: RuntimeError
 instance_creation_in_function_annotation_test: CompileTimeError
 instanceof2_test: RuntimeError
 instanceof3_test: RuntimeError
 instanceof4_test/01: RuntimeError
 instanceof4_test/none: RuntimeError
-instantiate_type_variable_test/01: CompileTimeError
 interface2_negative_test: Fail
 interface_cycle_test/01: MissingCompileTimeError
 interface_cycle_test/02: MissingCompileTimeError
 invocation_mirror2_test: CompileTimeError
+invocation_mirror_empty_arguments_test: RuntimeError
 invocation_mirror_invoke_on2_test: CompileTimeError
 invocation_mirror_invoke_on_test: CompileTimeError
 invocation_mirror_test: RuntimeError
@@ -598,7 +512,6 @@ issue18628_1_test/01: RuntimeError
 issue21079_test: CompileTimeError
 issue23244_test: CompileTimeError
 issue_1751477_test: RuntimeError
-issue_23914_test: CompileTimeError
 lazy_static3_test: RuntimeError
 list_is_test: RuntimeError
 list_literal4_test: RuntimeError
@@ -637,6 +550,8 @@ mixin_mixin7_test: RuntimeError
 mixin_mixin_bound2_test: RuntimeError
 mixin_mixin_bound_test: RuntimeError
 mixin_only_for_rti_test: RuntimeError
+mixin_super_2_test: CompileTimeError
+mixin_superclass_test: CompileTimeError
 mixin_super_bound2_test: CompileTimeError
 mixin_super_constructor_named_test/01: MissingCompileTimeError
 mixin_super_constructor_positionals_test/01: MissingCompileTimeError
@@ -649,6 +564,7 @@ mixin_type_parameters_mixin_test: RuntimeError
 mixin_type_parameters_simple_test: RuntimeError
 mixin_type_parameters_super_extends_test: RuntimeError
 mixin_type_parameters_super_test: RuntimeError
+mixin_super_use_test: CompileTimeError
 multiline_newline_test/01: CompileTimeError
 multiline_newline_test/02: CompileTimeError
 multiline_newline_test/03: CompileTimeError
@@ -663,8 +579,6 @@ named_parameters_type_test/03: MissingRuntimeError
 named_parameters_with_conversions_test: RuntimeError
 namer2_test: RuntimeError
 nan_identical_test: RuntimeError
-new_expression_type_args_test/00: CompileTimeError
-new_expression_type_args_test/01: CompileTimeError
 no_main_test/01: CompileTimeError
 no_such_method2_test: RuntimeError
 no_such_method_dispatcher_test: RuntimeError
@@ -683,9 +597,6 @@ override_inheritance_mixed_test/09: CompileTimeError
 positional_parameters_type_test/01: MissingRuntimeError
 positional_parameters_type_test/02: MissingRuntimeError
 prefix16_test: RuntimeError
-prefix_assignment_test/01: RuntimeError
-prefix_assignment_test/02: RuntimeError
-prefix_identifier_reference_test/05: RuntimeError
 redirecting_constructor_initializer_test: RuntimeError
 redirecting_factory_default_values_test/01: MissingCompileTimeError
 redirecting_factory_default_values_test/02: MissingCompileTimeError
@@ -701,7 +612,6 @@ ref_before_declaration_test/06: MissingCompileTimeError
 regress_13462_0_test: CompileTimeError
 regress_13462_1_test: CompileTimeError
 regress_13494_test: RuntimeError
-regress_14348_test: CompileTimeError
 regress_17382_test: RuntimeError
 regress_18535_test: CompileTimeError
 regress_20935_test: Fail
@@ -826,6 +736,7 @@ vm/optimized_await_regress_test: RuntimeError
 vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
 vm/reusable_boxes_test: CompileTimeError
+vm/regress_24517_test: RuntimeError
 vm/type_cast_vm_test: RuntimeError
 vm/type_vm_test: RuntimeError
 vm/typed_data_polymorphic_view_test: RuntimeError
@@ -861,7 +772,6 @@ const_types_test/30: MissingCompileTimeError
 const_types_test/41: MissingCompileTimeError
 duplicate_implements_test/03: MissingCompileTimeError
 duplicate_implements_test/04: MissingCompileTimeError
-factory_redirection2_test/01: MissingCompileTimeError
 factory_redirection3_cyclic_test/01: MissingCompileTimeError
 factory_redirection_test/04: MissingCompileTimeError
 factory_redirection_test/07: MissingCompileTimeError
@@ -875,7 +785,6 @@ this_test/07: MissingCompileTimeError
 # Fletch reports runtime error, but should report compile-time error.
 async_test/constructor2: RuntimeError
 async_test/constructor3: RuntimeError
-async_test/constructor4: RuntimeError
 async_test/setter1: RuntimeError
 await_backwards_compatibility_test/await2: RuntimeError
 await_backwards_compatibility_test/await3: RuntimeError
@@ -892,7 +801,6 @@ const_types_test/30: RuntimeError
 const_types_test/41: RuntimeError
 duplicate_implements_test/03: RuntimeError
 duplicate_implements_test/04: RuntimeError
-factory_redirection2_test/01: RuntimeError
 factory_redirection3_cyclic_test/01: RuntimeError
 factory_redirection_test/04: RuntimeError
 factory_redirection_test/07: RuntimeError
@@ -909,11 +817,8 @@ constructor_named_arguments_test/01: CompileTimeError
 external_test/10: CompileTimeError
 external_test/13: CompileTimeError
 external_test/20: CompileTimeError
-instantiate_type_variable_test/01: CompileTimeError
 main_not_a_function_test/01: CompileTimeError
 main_test/03: CompileTimeError
-new_expression_type_args_test/00: CompileTimeError
-new_expression_type_args_test/01: CompileTimeError
 no_main_test/01: CompileTimeError
 not_enough_positional_arguments_test/01: CompileTimeError
 not_enough_positional_arguments_test/05: CompileTimeError

@@ -5,6 +5,10 @@
 # Only meant to test when there is no way to implement Timer.
 async/timer_not_available_test: Fail, OK
 
+# Fail due to missing async-await implementation
+async/async_await_sync_completer_test: RuntimeError
+async/async_await_zones_test: RuntimeError
+
 # Fail because we do not generate stack trace objects.
 async/futures_test: Fail
 async/stack_trace02_test: Fail
@@ -34,6 +38,7 @@ async/stream_periodic2_test: CompileTimeError
 async/stream_periodic3_test: CompileTimeError
 async/stream_periodic4_test: CompileTimeError
 async/stream_periodic5_test: CompileTimeError
+async/stream_periodic6_test: CompileTimeError
 async/stream_periodic_test: CompileTimeError
 async/stream_single_test: CompileTimeError
 async/stream_single_to_multi_subscriber_test: CompileTimeError
@@ -51,6 +56,9 @@ async/timer_cancel_test: CompileTimeError
 async/timer_isActive_test: CompileTimeError
 async/timer_repeat_test: CompileTimeError
 async/timer_test: CompileTimeError
+
+# No dart:js implementation.
+async/dart2js_uncaught_error_test: Skip
 
 # These tests fail because they use is checks requiring reified
 # generics.

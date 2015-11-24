@@ -4,14 +4,15 @@
 
 library servicec.parser;
 
-import 'package:compiler/src/scanner/scannerlib.dart' show
-    EOF_TOKEN,
+import 'package:compiler/src/tokens/token.dart' show
     ErrorToken,
-    IDENTIFIER_TOKEN,
-    KEYWORD_TOKEN,
-    Keyword,
     KeywordToken,
     Token;
+
+import 'package:compiler/src/tokens/token_constants.dart' show
+    EOF_TOKEN,
+    IDENTIFIER_TOKEN,
+    KEYWORD_TOKEN;
 
 import 'listener.dart' show
     Listener;
