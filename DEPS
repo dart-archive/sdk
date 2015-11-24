@@ -32,7 +32,7 @@ vars = {
   "charcode_tag": "@1.1.0",
   "args_tag": "@0.13.0",
 
-  "lk_rev": "@b822b1f64f4a98ad10c9794e8ed20ab8ccba3d4a",
+  "lk_rev": "@6cdc5cd1daaf22f56422301d3dac67c3573ef290",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.
