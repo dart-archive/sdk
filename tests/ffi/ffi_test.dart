@@ -280,6 +280,11 @@ testVAndICall() {
   Expect.equals(1, getcount.icall$0());
   Expect.equals(42, setcount.icall$1(42));
 
+  // Test that reading out the value of the variable directly works
+  var count = fl.lookupVariable('count');
+  var countMemory = new ForeignMemory.fromAddress(count.address, 4);
+  Expect.equals(42, countMemory.getInt32(0));
+
   // Test all the icall wrappers, all c functions returns the sum of the
   // arguments.
   var icall0 = fl.lookup('ifun0');

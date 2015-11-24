@@ -11,7 +11,7 @@
 
 #define EXPORT __attribute__((visibility("default")))
 
-static int count;
+EXPORT int count;
 
 EXPORT void setup();
 

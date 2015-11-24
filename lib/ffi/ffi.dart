@@ -289,6 +289,10 @@ class ForeignLibrary extends ForeignPointer {
     return new ForeignFunction.fromAddress(_lookupFunction(address, name));
   }
 
+  ForeignPointer lookupVariable(String name) {
+    return new ForeignPointer(_lookupFunction(address, name));
+  }
+
   /// Provides a platform specific location for a library relative to the
   /// location of the Fletch vm. Takes the name without lib in front and
   /// returns a platform specific path. Example, on linux, foobar_hash
