@@ -74,70 +74,77 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
   }
 
   DebuggerTask task;
+  Uri base = sentence.base;
   switch (sentence.target.kind) {
     case TargetKind.APPLY:
-      task = new DebuggerTask(TargetKind.APPLY.index);
+      task = new DebuggerTask(TargetKind.APPLY.index, base);
       break;
     case TargetKind.RUN_TO_MAIN:
-      task = new DebuggerTask(TargetKind.RUN_TO_MAIN.index);
+      task = new DebuggerTask(TargetKind.RUN_TO_MAIN.index, base);
       break;
     case TargetKind.BACKTRACE:
-      task = new DebuggerTask(TargetKind.BACKTRACE.index);
+      task = new DebuggerTask(TargetKind.BACKTRACE.index, base);
       break;
     case TargetKind.CONTINUE:
-      task = new DebuggerTask(TargetKind.CONTINUE.index);
+      task = new DebuggerTask(TargetKind.CONTINUE.index, base);
       break;
     case TargetKind.BREAK:
-      task = new DebuggerTask(TargetKind.BREAK.index, sentence.targetName);
+      task = new DebuggerTask(TargetKind.BREAK.index, base,
+          sentence.targetName);
       break;
     case TargetKind.LIST:
-      task = new DebuggerTask(TargetKind.LIST.index);
+      task = new DebuggerTask(TargetKind.LIST.index, base);
       break;
     case TargetKind.DISASM:
-      task = new DebuggerTask(TargetKind.DISASM.index);
+      task = new DebuggerTask(TargetKind.DISASM.index, base);
       break;
     case TargetKind.FRAME:
-      task = new DebuggerTask(TargetKind.FRAME.index, sentence.targetName);
+      task = new DebuggerTask(TargetKind.FRAME.index, base,
+          sentence.targetName);
       break;
     case TargetKind.DELETE_BREAKPOINT:
       task = new DebuggerTask(TargetKind.DELETE_BREAKPOINT.index,
-                              sentence.targetName);
+          base,
+          sentence.targetName);
       break;
     case TargetKind.LIST_BREAKPOINTS:
-      task = new DebuggerTask(TargetKind.LIST_BREAKPOINTS.index);
+      task = new DebuggerTask(TargetKind.LIST_BREAKPOINTS.index, base);
       break;
     case TargetKind.STEP:
-      task = new DebuggerTask(TargetKind.STEP.index);
+      task = new DebuggerTask(TargetKind.STEP.index, base);
       break;
     case TargetKind.STEP_OVER:
-      task = new DebuggerTask(TargetKind.STEP_OVER.index);
+      task = new DebuggerTask(TargetKind.STEP_OVER.index, base);
       break;
     case TargetKind.FIBERS:
-      task = new DebuggerTask(TargetKind.FIBERS.index);
+      task = new DebuggerTask(TargetKind.FIBERS.index, base);
       break;
     case TargetKind.FINISH:
-      task = new DebuggerTask(TargetKind.FINISH.index);
+      task = new DebuggerTask(TargetKind.FINISH.index, base);
       break;
     case TargetKind.RESTART:
-      task = new DebuggerTask(TargetKind.RESTART.index);
+      task = new DebuggerTask(TargetKind.RESTART.index, base);
       break;
     case TargetKind.STEP_BYTECODE:
-      task = new DebuggerTask(TargetKind.STEP_BYTECODE.index);
+      task = new DebuggerTask(TargetKind.STEP_BYTECODE.index, base);
       break;
     case TargetKind.STEP_OVER_BYTECODE:
-      task = new DebuggerTask(TargetKind.STEP_OVER_BYTECODE.index);
+      task = new DebuggerTask(TargetKind.STEP_OVER_BYTECODE.index, base);
       break;
     case TargetKind.PRINT:
-      task = new DebuggerTask(TargetKind.PRINT.index, sentence.targetName);
+      task = new DebuggerTask(TargetKind.PRINT.index, base,
+          sentence.targetName);
       break;
     case TargetKind.PRINT_ALL:
-      task = new DebuggerTask(TargetKind.PRINT_ALL.index);
+      task = new DebuggerTask(TargetKind.PRINT_ALL.index, base);
       break;
     case TargetKind.TOGGLE:
-      task = new DebuggerTask(TargetKind.TOGGLE.index, sentence.targetName);
+      task = new DebuggerTask(TargetKind.TOGGLE.index, base,
+          sentence.targetName);
       break;
     case TargetKind.FILE:
-      task = new DebuggerTask(TargetKind.FILE.index, sentence.targetUri);
+      task = new DebuggerTask(TargetKind.FILE.index, base,
+          sentence.targetUri);
       break;
     default:
       throwInternalError("Unimplemented ${sentence.target}");
@@ -196,11 +203,13 @@ Future<int> runInteractiveDebuggerTask(
     CommandSender commandSender,
     SessionState state,
     Uri script,
+    Uri base,
     StreamIterator<Command> commandIterator) {
   return compileAndAttachToVmThenDeprecated(
       commandSender,
       state,
       script,
+      base,
       () => interactiveDebuggerTask(commandSender, state, commandIterator));
 }
 
@@ -243,8 +252,9 @@ class DebuggerTask extends SharedTask {
   // Keep this class simple, see note in superclass.
   final int kind;
   final argument;
+  final Uri base;
 
-  DebuggerTask(this.kind, [this.argument]);
+  DebuggerTask(this.kind, this.base, [this.argument]);
 
   Future<int> call(
       CommandSender commandSender,
@@ -295,7 +305,8 @@ class DebuggerTask extends SharedTask {
             commandSender, SessionState.current, argument);
       case TargetKind.FILE:
         return runInteractiveDebuggerTask(
-            commandSender, SessionState.current, argument, commandIterator);
+            commandSender, SessionState.current, argument, base,
+            commandIterator);
 
       default:
         throwInternalError("Unimplemented ${TargetKind.values[kind]}");

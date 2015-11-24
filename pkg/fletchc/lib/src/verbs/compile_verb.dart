@@ -19,8 +19,8 @@ Future<int> compile(AnalyzedSentence sentence, VerbContext context) {
   bool analyzeOnly = sentence.options.analyzeOnly;
   bool fatalIncrementalFailures = sentence.options.fatalIncrementalFailures;
   return context.performTaskInWorker(
-      new CompileTask(
-          sentence.targetUri, analyzeOnly, fatalIncrementalFailures));
+      new CompileTask(sentence.targetUri, sentence.base, analyzeOnly,
+          fatalIncrementalFailures));
 }
 
 class CompileTask extends SharedTask {
@@ -28,22 +28,24 @@ class CompileTask extends SharedTask {
 
   final Uri script;
 
+  final Uri base;
+
   final bool analyzeOnly;
 
   final bool fatalIncrementalFailures;
 
   const CompileTask(
-      this.script, this.analyzeOnly, this.fatalIncrementalFailures);
+      this.script, this.base, this.analyzeOnly, this.fatalIncrementalFailures);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<Command> commandIterator) {
-    return compileTask(script, analyzeOnly, fatalIncrementalFailures);
+    return compileTask(script, base, analyzeOnly, fatalIncrementalFailures);
   }
 }
 
 Future<int> compileTask(
-    Uri script, bool analyzeOnly, bool fatalIncrementalFailures) {
+    Uri script, Uri base, bool analyzeOnly, bool fatalIncrementalFailures) {
   return developer.compile(
       script, SessionState.current, analyzeOnly: analyzeOnly,
       fatalIncrementalFailures: fatalIncrementalFailures);

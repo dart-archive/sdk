@@ -190,22 +190,33 @@ void disconnectFromAgent(AgentConnection connection) {
   connection.socket.close();
 }
 
-Future<Null> checkAgentVersion(SessionState state) async {
+Future<Null> checkAgentVersion(Uri base, SessionState state) async {
   String deviceFletchVersion = await withAgentConnection(state,
       (connection) => connection.fletchVersion());
+  Uri packageFile = await lookForAgentPackage(base, version: fletchVersion);
+  String fixit;
+  if (packageFile != null) {
+    fixit = "Try running\n"
+      "  'fletch x-upgrade agent in session ${state.name}'.";
+  } else {
+    fixit = "Try downloading a matching SDK and running\n"
+      "  'fletch x-upgrade agent in session ${state.name}'\n"
+      "from the SDK's root directory.";
+  }
+
   if (fletchVersion != deviceFletchVersion) {
     throwFatalError(DiagnosticKind.agentVersionMismatch,
         userInput: fletchVersion,
         additionalUserInput: deviceFletchVersion,
-        sessionName: state.name);
+        fixit: fixit);
   }
 }
 
-Future<Null> startAndAttachViaAgent(SessionState state) async {
+Future<Null> startAndAttachViaAgent(Uri base, SessionState state) async {
   // TODO(wibling): integrate with the FletchVm class, e.g. have a
   // AgentFletchVm and LocalFletchVm that both share the same interface
   // where the former is interacting with the agent.
-  await checkAgentVersion(state);
+  await checkAgentVersion(base, state);
   VmData vmData = await withAgentConnection(state,
       (connection) => connection.startVm());
   state.fletchAgentVmId = vmData.id;
@@ -639,6 +650,7 @@ Future<int> compileAndAttachToVmThenDeprecated(
     CommandSender commandSender,
     SessionState state,
     Uri script,
+    Uri base,
     Future<int> action()) async {
   bool startedVmDirectly = false;
   List<FletchDelta> compilationResults = state.compilationResults;
@@ -655,7 +667,7 @@ Future<int> compileAndAttachToVmThenDeprecated(
 
   if (session == null) {
     if (state.settings.deviceAddress != null) {
-      await startAndAttachViaAgent(state);
+      await startAndAttachViaAgent(base, state);
       // TODO(wibling): read stdout from agent.
     } else {
       startedVmDirectly = true;
@@ -713,7 +725,7 @@ Future<int> compileAndAttachToVmThen(
 
   if (session == null) {
     if (state.settings.deviceAddress != null) {
-      await startAndAttachViaAgent(state);
+      await startAndAttachViaAgent(base, state);
       // TODO(wibling): read stdout from agent.
     } else {
       startedVmDirectly = true;
@@ -808,10 +820,12 @@ String extractVersion(Uri uri) {
   return version;
 }
 
-Future<Uri> readPackagePathFromUser(
-    Uri base,
-    CommandSender commandSender,
-    StreamIterator<Command> commandIterator) async {
+/// Try to locate an Fletch agent package file assuming the normal SDK layout
+/// with SDK base directory [base].
+///
+/// If the parameter [version] is passed, the Uri is only returned, if
+/// the version matches.
+Future<Uri> lookForAgentPackage(Uri base, {String version}) async {
   String platform = "raspberry-pi2";
   Uri platformUri = base.resolve("platforms/$platform");
   Directory platformDir = new Directory.fromUri(platformUri);
@@ -822,13 +836,21 @@ Future<Uri> readPackagePathFromUser(
     for (FileSystemEntity entry in platformDir.listSync()) {
       Uri uri = entry.uri;
       String name = uri.pathSegments.last;
-      if (name.startsWith('fletch-agent') && name.endsWith('.deb')) {
-        sdkAgentPackage = uri;
-        break;
+      if (name.startsWith('fletch-agent') &&
+          name.endsWith('.deb') &&
+          (version == null || extractVersion(uri) == version)) {
+        return uri;
       }
     }
   }
+  return null;
+}
 
+Future<Uri> readPackagePathFromUser(
+    Uri base,
+    CommandSender commandSender,
+    StreamIterator<Command> commandIterator) async {
+  Uri sdkAgentPackage = await lookForAgentPackage(base);
   if (sdkAgentPackage != null) {
     String path = sdkAgentPackage.toFilePath();
     commandSender.sendStdout("Found SDK package: $path\n");

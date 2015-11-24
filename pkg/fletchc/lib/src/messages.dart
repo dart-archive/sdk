@@ -110,6 +110,7 @@ String getMessage(DiagnosticKind kind) {
   const DiagnosticParameter address = DiagnosticParameter.address;
   const DiagnosticParameter preposition = DiagnosticParameter.preposition;
   const DiagnosticParameter uri = DiagnosticParameter.uri;
+  const DiagnosticParameter fixit = DiagnosticParameter.fixit;
 
   switch (kind) {
     case DiagnosticKind.internalError:
@@ -332,12 +333,12 @@ String getMessage(DiagnosticKind kind) {
       // TODO(wibling): lukechurch: Is there advice we can give here?
       // E.g. Consider upgrading your compiler? Do we have an easy place they
       // can go to do that? Are we considering adding a tool to auto-upgrade?
-      return "Could not start vm on device because the compiler and the "
-          "session's remote device have different versions.\n"
-          "Compiler version: '$userInput'\n"
-          "Device version: '$additionalUserInput'.\n"
-          "Try running 'fletch x-upgrade agent with file <agent debian "
-          "package> in session $sessionName'.";
+      return """
+Could not start vm on device because the compiler and the
+session's remote device have different versions.
+Compiler version: '$userInput'
+Device version: '$additionalUserInput'.
+$fixit""";
 
     case DiagnosticKind.compilerVersionMismatch:
       return "Command failed because the running compiler and the "

@@ -61,6 +61,9 @@ class DiagnosticParameter {
   // example, Spannable from dart2js.
   static const DiagnosticParameter uri = const DiagnosticParameter(
       DiagnosticParameterType.uri, 'uri');
+
+  static const DiagnosticParameter fixit = const DiagnosticParameter(
+      DiagnosticParameterType.string, 'fixit');
 }
 
 enum DiagnosticParameterType {
@@ -216,7 +219,8 @@ void throwFatalError(
      String userInput,
      String additionalUserInput,
      Preposition preposition,
-     Uri uri}) {
+     Uri uri,
+     String fixit}) {
   Map<DiagnosticParameter, dynamic> arguments =
       <DiagnosticParameter, dynamic>{};
   if (message != null) {
@@ -248,6 +252,9 @@ void throwFatalError(
   }
   if (requiredTarget != null) {
     arguments[DiagnosticParameter.requiredTarget] = requiredTarget;
+  }
+  if (fixit != null) {
+    arguments[DiagnosticParameter.fixit] = fixit;
   }
   throw new InputError(kind, arguments);
 }
