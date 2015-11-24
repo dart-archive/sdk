@@ -3,7 +3,8 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch._system' as fletch;
-import 'dart:fletch._system' show patch;
+
+const patch = "patch";
 
 @patch class HashMap<K, V> {
   @patch factory HashMap({ bool equals(K key1, K key2),

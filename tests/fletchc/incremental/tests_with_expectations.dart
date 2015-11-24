@@ -442,7 +442,8 @@ class C {
   static m() {
 <<<< "v1"
   print('v1');
-==== ["v2"]
+==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
+  // TODO(ahe): Shouldn't throw.
   print('v2');
 >>>>
   }
@@ -2036,8 +2037,8 @@ class C {
 ==== {"messages":[],"hasCompileTimeError":1}
   // TODO(ahe): Should just expect [], no compile-time error
   sync();
-==== {"messages":[],"hasCompileTimeError":1}
-  // TODO(ahe): Should just expect [], no compile-time error
+==== {"messages":[],"compileUpdatesShouldThrow":1}
+  // TODO(ahe): Should just expect [], not throw
 >>>>
 }
 main() {

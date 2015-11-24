@@ -41,7 +41,6 @@ double_truncate_test: RuntimeError
 
 # Object.runtimeType / type check
 collection_length_test: RuntimeError
-growable_list_test: RuntimeError
 iterable_fold_test: RuntimeError
 iterable_generate_test: RuntimeError
 iterable_reduce_test: RuntimeError
@@ -75,15 +74,6 @@ error_stack_trace_test: RuntimeError
 # dart:typed_data
 list_test/01: Fail
 list_test/none: Fail
-
-# Missing async/await, and resource implementation
-data_resource_test: RuntimeError
-file_resource_test: RuntimeError
-http_resource_test: RuntimeError
-package_resource_test: RuntimeError
-
-# Missing set-if-null implementation
-data_uri_test: RuntimeError
 
 # Unexpected command line arguments to compiler.
 bool_from_environment_test: CompileTimeError
@@ -120,7 +110,7 @@ iterable_return_type_test/02: Fail
 iterable_return_type_test/none: RuntimeError
 list_test/01: RuntimeError
 list_test/none: RuntimeError
-list_unmodifiable_test: RuntimeError
+list_unmodifiable_test: CompileTimeError
 num_clamp_test: RuntimeError
 num_parse_test/01: RuntimeError
 num_parse_test/none: RuntimeError

@@ -40,7 +40,7 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     LibraryElement;
 
-import 'package:compiler/src/compiler.dart' show
+import 'package:compiler/src/dart2jslib.dart' show
     Compiler;
 
 import 'package:compiler/src/source_file_provider.dart' show
@@ -261,7 +261,7 @@ compileAndRun(
         for (var breakpoint in breakpoints) {
           print("Added breakpoint: $breakpoint");
         }
-        if (!helper.compiler.compiler.mainFunction.isMalformed) {
+        if (!helper.compiler.compiler.mainFunction.isErroneous) {
           // If there's a syntax error in main, we cannot find it to set a
           // breakpoint.
           // TODO(ahe): Consider if this is a problem?
@@ -299,8 +299,7 @@ compileAndRun(
         }
 
         List<String> actualMessages = session.stdoutSink.takeLines();
-        Expect.listEquals(messages, actualMessages,
-            "Expected $messages, got $actualMessages");
+        Expect.listEquals(messages, actualMessages);
 
         // TODO(ahe): Enable SerializeScopeTestCase for multiple parts.
         if (!isFirstProgram && program.code is String) {

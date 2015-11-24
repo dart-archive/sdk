@@ -13,16 +13,10 @@ import 'package:compiler/compiler_new.dart' show
 
 import 'package:compiler/compiler.dart' as api;
 
-import 'package:compiler/src/compiler.dart' show
-    Compiler;
-
-import 'package:compiler/src/enqueue.dart' show
-    EnqueueTask;
-
-import 'package:compiler/src/diagnostics/messages.dart' show
-    MessageKind;
-
-import 'package:compiler/src/script.dart' show
+import 'package:compiler/src/dart2jslib.dart' show
+    Compiler,
+    EnqueueTask,
+    MessageKind,
     Script;
 
 import 'package:compiler/src/elements/elements.dart' show
@@ -37,29 +31,17 @@ import 'package:compiler/src/elements/elements.dart' show
     ScopeContainerElement,
     TypeDeclarationElement;
 
-import 'package:compiler/src/tokens/token_constants.dart' show
-    EOF_TOKEN;
-
-import 'package:compiler/src/tokens/token.dart' show
-    Token;
-
-import 'package:compiler/src/parser/partial_elements.dart' show
+import 'package:compiler/src/scanner/scannerlib.dart' show
+    EOF_TOKEN,
+    Listener,
+    NodeListener,
+    Parser,
     PartialClassElement,
     PartialElement,
     PartialFieldList,
-    PartialFunctionElement;
-
-import 'package:compiler/src/scanner/scanner.dart' show
-    Scanner;
-
-import 'package:compiler/src/parser/parser.dart' show
-    Parser;
-
-import 'package:compiler/src/parser/listener.dart' show
-    Listener;
-
-import 'package:compiler/src/parser/node_listener.dart' show
-    NodeListener;
+    PartialFunctionElement,
+    Scanner,
+    Token;
 
 import 'package:compiler/src/io/source_file.dart' show
     CachingUtf8BytesSourceFile,
@@ -109,6 +91,10 @@ import 'package:compiler/src/elements/modelx.dart' show
     ElementX,
     FieldElementX,
     LibraryElementX;
+
+import 'package:compiler/src/universe/universe.dart' show
+    Selector,
+    UniverseSelector;
 
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
@@ -345,7 +331,7 @@ class LibraryUpdater extends FletchFeatures {
     });
   }
 
-  Future<bool> _haveTagsChanged(LibraryElementX library) {
+  Future<bool> _haveTagsChanged(LibraryElement library) {
     Script before = library.entryCompilationUnit.script;
     if (!_context._uriHasUpdate(before.resourceUri)) {
       // The entry compilation unit hasn't been updated. So the tags aren't
@@ -359,11 +345,8 @@ class LibraryUpdater extends FletchFeatures {
       _entryUnitTokens[library] = token;
       // Using two parsers to only create the nodes we want ([LibraryTag]).
       Parser parser = new Parser(new Listener());
-      Element entryCompilationUnit = library.entryCompilationUnit;
       NodeListener listener = new NodeListener(
-          compiler.resolution.parsing
-              .getScannerOptionsFor(entryCompilationUnit),
-          compiler.reporter, entryCompilationUnit);
+          compiler, library.entryCompilationUnit);
       Parser nodeParser = new Parser(listener);
       Iterator<LibraryTag> tags = library.tags.iterator;
       while (token.kind != EOF_TOKEN) {
@@ -422,18 +405,18 @@ class LibraryUpdater extends FletchFeatures {
     TagState tagState = new TagState();
     for (LibraryTag tag in newLibrary.tags) {
       if (tag.isImport) {
-        tagState.checkTag(TagState.IMPORT_OR_EXPORT, tag, compiler.reporter);
+        tagState.checkTag(TagState.IMPORT_OR_EXPORT, tag, compiler);
       } else if (tag.isExport) {
-        tagState.checkTag(TagState.IMPORT_OR_EXPORT, tag, compiler.reporter);
+        tagState.checkTag(TagState.IMPORT_OR_EXPORT, tag, compiler);
       } else if (tag.isLibraryName) {
-        tagState.checkTag(TagState.LIBRARY, tag, compiler.reporter);
+        tagState.checkTag(TagState.LIBRARY, tag, compiler);
         if (newLibrary.libraryTag == null) {
           // Use the first if there are multiple (which is reported as an
           // error in [TagState.checkTag]).
           newLibrary.libraryTag = tag;
         }
       } else if (tag.isPart) {
-        tagState.checkTag(TagState.PART, tag, compiler.reporter);
+        tagState.checkTag(TagState.PART, tag, compiler);
       }
     }
 
@@ -447,11 +430,10 @@ class LibraryUpdater extends FletchFeatures {
         // TODO(ahe): Copied from library_loader.
         CompilationUnitElement newUnit =
             new CompilationUnitElementX(script, newLibrary);
-        compiler.reporter.withCurrentElement(newUnit, () {
+        compiler.withCurrentElement(newUnit, () {
           compiler.scanner.scan(newUnit);
           if (unit.partTag == null) {
-            compiler.reporter
-                .reportErrorMessage(unit, MessageKind.MISSING_PART_OF_TAG);
+            compiler.reportError(unit, MessageKind.MISSING_PART_OF_TAG);
           }
         });
       }
@@ -671,7 +653,7 @@ class LibraryUpdater extends FletchFeatures {
     if (element is TypeDeclarationElement) {
       if (!element.isResolved) {
         if (element is PartialClassElement) {
-          ClassNode node = element.parseNode(compiler.parsing).asClassNode();
+          ClassNode node = element.parseNode(compiler).asClassNode();
           if (node == null) {
             cannotReuse(
                 element, "Class body isn't a ClassNode on $element");
@@ -778,10 +760,11 @@ class LibraryUpdater extends FletchFeatures {
 
     ClassElement cls = container;
 
-    if (!cls.declaration.isResolved) {
-      // TODO(ahe): This test fails otherwise: experimental/add_static_field.
+    if (!compiler.world.isInstantiated(cls.declaration)) {
+      // dart2js currently only maintain subclasses for classes that are
+      // instantiated.
       throw new IncrementalCompilationFailed(
-          "Unresolved class ${cls.declaration}");
+          "Unable to compute subclasses of ${cls.declaration}");
     }
     var externalSubtypes =
         compiler.world.subclassesOf(cls).where((e) => e.library != library);
@@ -798,7 +781,7 @@ class LibraryUpdater extends FletchFeatures {
       PartialFunctionElement before,
       PartialFunctionElement after) {
     FunctionExpression node =
-        after.parseNode(compiler.parsing).asFunctionExpression();
+        after.parseNode(compiler).asFunctionExpression();
     if (node == null) {
       return cannotReuse(after, "Not a function expression: '$node'");
     }
@@ -806,7 +789,7 @@ class LibraryUpdater extends FletchFeatures {
     if (node.body != null) {
       last = node.body.getBeginToken();
     }
-    if (before.isMalformed ||
+    if (before.isErroneous ||
         compiler.elementsWithCompileTimeErrors.contains(before) ||
         isTokenBetween(diffToken, after.beginToken, last)) {
       removeFunction(before);
@@ -836,7 +819,7 @@ class LibraryUpdater extends FletchFeatures {
       Token diffToken,
       PartialClassElement before,
       PartialClassElement after) {
-    ClassNode node = after.parseNode(compiler.parsing).asClassNode();
+    ClassNode node = after.parseNode(compiler).asClassNode();
     if (node == null) {
       return cannotReuse(after, "Not a ClassNode: '$node'");
     }
@@ -953,12 +936,12 @@ class LibraryUpdater extends FletchFeatures {
         enqueuer.resolution.addToWorkList(element);
       } else {
         ClassElement cls = element;
-        cls.ensureResolved(compiler.resolution);
+        cls.ensureResolved(compiler);
 
         // We've told the enqueuer to forget this class, now tell it that it's
         // in use again.  TODO(ahe): We only need to do this if [cls] was
         // already instantiated.
-        enqueuer.codegen.registerInstantiatedType(cls.rawType);
+        enqueuer.codegen.registerInstantiatedType(cls.rawType, null);
       }
     }
     compiler.processQueue(enqueuer.resolution, null);
@@ -1227,7 +1210,7 @@ class AddedFunctionUpdate extends Update with FletchFeatures {
       enclosing = enclosing.compilationUnit;
     }
     PartialFunctionElement copy = element.copyWithEnclosing(enclosing);
-    container.addMember(copy, compiler.reporter);
+    container.addMember(copy, compiler);
     return copy;
   }
 }
@@ -1248,7 +1231,7 @@ class AddedClassUpdate extends Update with FletchFeatures {
     // TODO(ahe): Reuse compilation unit of element instead?
     CompilationUnitElementX compilationUnit = library.compilationUnit;
     PartialClassElement copy = element.copyWithEnclosing(compilationUnit);
-    compilationUnit.addMember(copy, compiler.reporter);
+    compilationUnit.addMember(copy, compiler);
     return copy;
   }
 }
@@ -1272,7 +1255,7 @@ class AddedFieldUpdate extends Update with FletchFeatures {
       enclosing = enclosing.compilationUnit;
     }
     FieldElementX copy = element.copyWithEnclosing(enclosing);
-    container.addMember(copy, compiler.reporter);
+    container.addMember(copy, compiler);
     return copy;
   }
 }
@@ -1302,6 +1285,7 @@ class ClassUpdate extends Update with FletchFeatures {
   void reuseElement() {
     before.supertype = null;
     before.interfaces = null;
+    before.nativeTagInfo = null;
     before.supertypeLoadState = STATE_NOT_STARTED;
     before.resolutionState = STATE_NOT_STARTED;
     before.isProxy = false;

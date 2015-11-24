@@ -4,6 +4,9 @@
 
 library fletchc.closure_environment;
 
+import 'package:compiler/src/util/util.dart' show
+    SpannableAssertionFailure;
+
 import 'package:compiler/src/resolution/semantic_visitor.dart';
 
 import 'package:compiler/src/resolution/operators.dart' show
@@ -13,14 +16,10 @@ import 'package:compiler/src/resolution/operators.dart' show
     UnaryOperator;
 
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/tree_elements.dart';
-import 'package:compiler/src/resolution/send_resolver.dart';
+import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/selector.dart';
-import 'package:compiler/src/universe/call_structure.dart';
-import 'package:compiler/src/diagnostics/spannable.dart' show
-    Spannable,
-    SpannableAssertionFailure;
+import 'package:compiler/src/universe/universe.dart';
+import 'package:compiler/src/util/util.dart' show Spannable;
 import 'package:compiler/src/dart_types.dart';
 
 enum CaptureMode {
@@ -69,6 +68,7 @@ class ClosureVisitor
     extends SemanticVisitor
     with TraversalSendMixin,
          SemanticSendResolvedMixin,
+         SendResolverMixin,
          BaseImplementationOfLocalsMixin,
          VariableBulkMixin,
          ParameterBulkMixin,
@@ -100,7 +100,7 @@ class ClosureVisitor
     assert(element.memberContext == element);
     assert(currentElement == null);
     currentElement = element;
-    if (element.node != null) element.resolvedAst.node.accept(this);
+    if (element.node != null) element.node.accept(this);
     assert(currentElement == element);
     return closureEnvironment;
   }
@@ -119,7 +119,7 @@ class ClosureVisitor
 
   void visitFunctionExpression(FunctionExpression node) {
     ExecutableElement oldElement = currentElement;
-    currentElement = elements.getFunctionDefinition(node);
+    currentElement = elements[node];
     if (currentElement != element) {
       ClosureInfo info = new ClosureInfo();
       closureEnvironment.closures[currentElement] = info;
@@ -227,9 +227,9 @@ class ClosureVisitor
     arguments.accept(this);
   }
 
-  void visitThisPropertySet(Send node, Name name, Node rhs, _) {
+  void visitThisPropertySet(Send node, Selector selector, Node rhs, _) {
     markThisUsed();
-    super.visitThisPropertySet(node, name, rhs, null);
+    super.visitThisPropertySet(node, selector, rhs, null);
   }
 
   void visitLocalVariablePrefix(
@@ -259,7 +259,7 @@ class ClosureVisitor
 
   void visitThisPropertyGet(
       Send node,
-      Name name,
+      Selector selector,
       _) {
     markThisUsed();
   }
@@ -283,10 +283,9 @@ class ClosureVisitor
     expression.accept(this);
   }
 
-  void visitAssert(Assert node) {
+  void visitAssert(Send node, Node expression, _) {
     // TODO(ajohnsen): Only visit in checked mode.
-    node.condition.accept(this);
-    node.message?.accept(this);
+    expression.accept(this);
   }
 
   void visitLocalVariableCompound(
@@ -468,13 +467,14 @@ class ClosureVisitor
 
   void visitThisPropertyCompound(
       Send node,
-      Name name,
       AssignmentOperator operator,
       Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     markThisUsed();
     super.visitThisPropertyCompound(
-        node, name, operator, rhs, null);
+        node, operator, rhs, getterSelector, setterSelector, null);
   }
 
   void visitParameterCompound(
@@ -569,12 +569,13 @@ class ClosureVisitor
 
   void visitThisPropertyPrefix(
       Send node,
-      Name name,
       IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     markThisUsed();
     super.visitThisPropertyPrefix(
-        node, name, operator, null);
+        node, operator, getterSelector, setterSelector, null);
   }
 
   void visitSuperFieldPrefix(
@@ -657,12 +658,13 @@ class ClosureVisitor
 
   void visitThisPropertyPostfix(
       Send node,
-      Name name,
       IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     markThisUsed();
     super.visitThisPropertyPostfix(
-        node, name, operator, null);
+        node, operator, getterSelector, setterSelector, null);
   }
 
   void visitSuperFieldPostfix(
@@ -744,12 +746,6 @@ class ClosureVisitor
     markThisUsed();
     super.visitSuperIndexPrefix(
         node, indexFunction, indexSetFunction, index, operator, null);
-  }
-
-  @override
-  void visitTypeAnnotation(TypeAnnotation node) {
-  // This is to avoid the inherited implementation that visits children and
-  // throws when encountering anything unresolved.
   }
 
   void handleImmutableLocalSet(

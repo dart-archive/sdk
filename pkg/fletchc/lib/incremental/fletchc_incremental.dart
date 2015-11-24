@@ -12,7 +12,7 @@ import 'dart:developer' show
     UserTag;
 
 import 'package:compiler/src/apiimpl.dart' show
-    CompilerImpl;
+    Compiler;
 
 import 'package:compiler/compiler_new.dart' show
     CompilerDiagnostics,
@@ -148,7 +148,7 @@ class IncrementalCompiler {
   /// that is compiled is determined by tree shaking.
   Future<bool> compile(Uri script) {
     _compiler = null;
-    return _reuseCompiler(null).then((CompilerImpl compiler) {
+    return _reuseCompiler(null).then((Compiler compiler) {
       _compiler = compiler;
       return compiler.run(script);
     });
@@ -164,8 +164,7 @@ class IncrementalCompiler {
     _compiler = null;
     int initialErrorCount = _context.errorCount;
     int initialProblemCount = _context.problemCount;
-    return _reuseCompiler(null, analyzeOnly: true).then(
-        (CompilerImpl compiler) {
+    return _reuseCompiler(null, analyzeOnly: true).then((Compiler compiler) {
       // Don't try to reuse the compiler object.
       return compiler.run(script).then((_) {
         return _context.problemCount == initialProblemCount
@@ -177,7 +176,7 @@ class IncrementalCompiler {
     });
   }
 
-  Future<CompilerImpl> _reuseCompiler(
+  Future<Compiler> _reuseCompiler(
       Future<bool> reuseLibrary(LibraryElement library),
       {bool analyzeOnly: false}) {
     List<String> options = this.options == null
@@ -234,8 +233,7 @@ class IncrementalCompiler {
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(updater.reuseLibrary).then(
-        (CompilerImpl compiler) async {
+    return _reuseCompiler(updater.reuseLibrary).then((Compiler compiler) async {
       _compiler = compiler;
       FletchDelta delta = await updater.computeUpdateFletch(currentSystem);
       _checkCompilationFailed();

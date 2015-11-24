@@ -9,7 +9,7 @@ import 'package:compiler/src/elements/modelx.dart' as modelx;
 import 'package:compiler/src/elements/visitor.dart' show
     ElementVisitor;
 
-import 'package:compiler/src/compiler.dart' show
+import 'package:compiler/src/dart2jslib.dart' show
     Compiler;
 
 import 'package:compiler/src/elements/elements.dart' show
@@ -71,7 +71,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
         // TODO(ahe): We omit the import scope if there is no current
         // class. That's wrong.
         omitEnclosing: ignoreImports || currentClass == null,
-        name: e.libraryName,
+        name: e.getLibraryName(),
         serializeEnclosing: () {
           // The enclosing scope of a library is a scope which contains all the
           // imported names.
@@ -117,7 +117,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
       {bool isStatic: false,
        bool omitEnclosing: false,
        bool includeSuper: false}) {
-    e.ensureResolved(compiler.resolution);
+    e.ensureResolved(compiler);
     bool isFirst = true;
     var serializeEnclosing;
     String kind;

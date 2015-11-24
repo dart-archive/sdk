@@ -4,19 +4,18 @@
 
 library servicec.error_handling_listener;
 
-import 'package:compiler/src/tokens/precedence_constants.dart' show
+import 'package:compiler/src/scanner/scannerlib.dart' show
     CLOSE_CURLY_BRACKET_INFO,
-    SEMICOLON_INFO,
-    EOF_INFO;
-
-import 'package:compiler/src/tokens/token.dart' show
+    EOF_INFO,
     ErrorToken,
-    UnmatchedToken,
     KeywordToken,
-    Token;
-
-import 'package:compiler/src/scanner/scanner.dart' show
+    SEMICOLON_INFO,
+    Token,
+    UnmatchedToken,
     closeBraceInfoFor;
+
+import 'scanner.dart' show
+    LF_INFO;
 
 import 'errors.dart' show
     ErrorTag,
@@ -30,9 +29,6 @@ import 'errors.dart' show
     StructErrorNode,
     TopLevelErrorNode,
     UnionErrorNode;
-
-import 'scanner.dart' show
-    LF_INFO;
 
 import 'keyword.dart' show
     Keyword;
@@ -58,7 +54,9 @@ import 'node.dart' show
     ListType,
     FieldNode,
     MemberNode,
+    NamedNode,
     Node,
+    NodeStack,
     PointerType,
     ServiceNode,
     SimpleType,

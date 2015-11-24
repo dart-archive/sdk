@@ -6,12 +6,12 @@ part of fletchc_incremental;
 
 /// Do not call this method directly. It will be made private.
 // TODO(ahe): Make this method private.
-Future<CompilerImpl> reuseCompiler(
+Future<Compiler> reuseCompiler(
     {CompilerDiagnostics diagnosticHandler,
      CompilerInput inputProvider,
      CompilerOutput outputProvider,
      List<String> options: const [],
-     CompilerImpl cachedCompiler,
+     Compiler cachedCompiler,
      Uri libraryRoot,
      Uri patchRoot,
      Uri nativesJson,
@@ -37,7 +37,7 @@ Future<CompilerImpl> reuseCompiler(
   if (environment == null) {
     environment = {};
   }
-  CompilerImpl compiler = cachedCompiler;
+  Compiler compiler = cachedCompiler;
   if (compiler == null ||
       (libraryRoot != null && compiler.libraryRoot != libraryRoot) ||
       !compiler.hasIncrementalSupport ||

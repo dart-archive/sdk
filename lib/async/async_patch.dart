@@ -3,10 +3,11 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch._system' as fletch;
-import 'dart:fletch._system' show patch;
 import 'dart:fletch';
 import 'dart:fletch.os' as os;
 import 'dart:math';
+
+const patch = "patch";
 
 Channel _eventQueue;
 int _numberOfEvents = 0;
@@ -113,8 +114,4 @@ class _FletchTimer implements Timer {
                                      callback,
                                      milliseconds);
   }
-}
-
-@patch void _rethrow(Object error, StackTrace stackTrace) {
-  throw new AsyncError(error, stackTrace);
 }

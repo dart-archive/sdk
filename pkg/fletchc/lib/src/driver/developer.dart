@@ -457,7 +457,6 @@ Future<Address> readAddressFromUser(
         return null;
     }
   }
-  return null;
 }
 
 SessionState createSessionState(

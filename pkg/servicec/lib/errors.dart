@@ -4,7 +4,7 @@
 
 library servicec.errors;
 
-import 'package:compiler/src/tokens/token.dart' show
+import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
 
 import 'package:compiler/src/util/characters.dart' show

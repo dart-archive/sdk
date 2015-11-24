@@ -122,7 +122,7 @@ class FletchCompiler {
       options.add("--categories=$categoriesOptionValue");
     }
 
-    final bool isVerbose = apiimpl.CompilerImpl.hasOption(options, '--verbose');
+    final bool isVerbose = apiimpl.Compiler.hasOption(options, '--verbose');
 
     if (provider == null) {
       provider = new CompilerSourceFileProvider()
@@ -143,7 +143,7 @@ class FletchCompiler {
       outputProvider = new OutputProvider();
     }
 
-    if (libraryRoot == null && _LIBRARY_ROOT != null) {
+    if (libraryRoot == null  && _LIBRARY_ROOT != null) {
       libraryRoot = executable.resolve(appendSlash(_LIBRARY_ROOT));
     }
     libraryRoot = _computeValidatedUri(
@@ -176,7 +176,7 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
     fletchVm = guessFletchVm(
         _computeValidatedUri(fletchVm, name: 'fletchVm', base: base));
 
-    if (patchRoot == null && _PATCH_ROOT != null) {
+    if (patchRoot == null  && _PATCH_ROOT != null) {
       patchRoot = executable.resolve(appendSlash(_PATCH_ROOT));
     }
     patchRoot = _computeValidatedUri(
@@ -197,7 +197,7 @@ Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
       environment = <String, dynamic>{};
     }
 
-    if (nativesJson == null && _NATIVES_JSON != null) {
+    if (nativesJson == null  && _NATIVES_JSON != null) {
       nativesJson = base.resolve(_NATIVES_JSON);
     }
     nativesJson = _computeValidatedUri(
@@ -274,10 +274,8 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
   IncrementalCompiler newIncrementalCompiler(
       IncrementalMode support,
       {List<String> options: const <String>[]}) {
-    // TODO(sigurdm): Remove this hack.
-    Uri correctedLibraryRoot = _compiler.libraryRoot.resolve("..");
     return new IncrementalCompiler(
-        libraryRoot: correctedLibraryRoot,
+        libraryRoot: _compiler.libraryRoot,
         patchRoot: _compiler.patchRoot,
         packageConfig: _compiler.packageConfig,
         fletchVm: _compiler.fletchVm,

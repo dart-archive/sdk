@@ -4,7 +4,7 @@
 
 library fletchc.debug_registry;
 
-import 'package:compiler/src/universe/selector.dart' show
+import 'package:compiler/src/universe/universe.dart' show
     Selector;
 
 import 'package:compiler/src/elements/elements.dart' show
@@ -16,12 +16,8 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'package:compiler/src/dart_types.dart' show
     DartType;
 
-import 'package:compiler/src/diagnostics/spannable.dart' show
+import 'package:compiler/src/util/util.dart' show
     Spannable;
-
-import 'package:compiler/src/universe/use.dart' show
-    DynamicUse,
-    StaticUse;
 
 import 'fletch_context.dart' show
     FletchContext;
@@ -38,10 +34,10 @@ abstract class DebugRegistry {
   FletchContext get context;
   FletchFunctionBuilder get functionBuilder;
 
-  void registerDynamicUse(Selector selector) { }
+  void registerDynamicInvocation(Selector selector) { }
   void registerDynamicGetter(Selector selector) { }
   void registerDynamicSetter(Selector selector) { }
-  void registerStaticUse(StaticUse use) { }
+  void registerStaticInvocation(FunctionElement function) { }
   void registerInstantiatedClass(ClassElement klass) { }
   void registerIsCheck(DartType type) { }
   void registerLocalInvoke(LocalElement element, Selector selector) { }
@@ -54,9 +50,8 @@ abstract class DebugRegistry {
 
     if (context.backend.lazyFieldInitializers.containsKey(field)) return index;
 
-    context.compiler.reporter.internalError(
+    context.compiler.internalError(
         field, "not compiled before use in debugger");
-    throw null;
   }
 
   void generateUnimplementedError(Spannable spannable, String reason) {

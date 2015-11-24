@@ -19,18 +19,14 @@ import 'package:compiler/src/elements/modelx.dart' as modelx;
 import 'package:compiler/src/elements/modelx.dart' show
     DeclarationSite;
 
-import 'package:compiler/src/tokens/token_constants.dart' show
+import 'package:compiler/src/scanner/scannerlib.dart' show
     EOF_TOKEN,
-    IDENTIFIER_TOKEN,
-    KEYWORD_TOKEN;
-
-import 'package:compiler/src/tokens/token.dart' show
     ErrorToken,
-    Token;
-
-import 'package:compiler/src/parser/partial_elements.dart' show
+    IDENTIFIER_TOKEN,
+    KEYWORD_TOKEN,
     PartialClassElement,
-    PartialElement;
+    PartialElement,
+    Token;
 
 import 'fletchc_incremental.dart' show
     IncrementalCompilationFailed;

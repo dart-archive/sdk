@@ -4,21 +4,16 @@
 
 library fletchc.fletch_codegen_registry;
 
-import 'package:compiler/src/compiler.dart' show
-    GlobalDependencyRegistry;
-
-import 'package:compiler/src/common/codegen.dart' show
-    CodegenRegistry;
-
-import 'package:compiler/src/common/registry.dart' show
+import 'package:compiler/src/dart2jslib.dart' show
+    CodegenRegistry,
     Registry;
 
-import 'package:compiler/src/universe/selector.dart' show
-    Selector;
+import 'package:compiler/src/constants/values.dart' show
+    ConstantValue;
 
-import 'package:compiler/src/universe/use.dart' show
-    DynamicUse,
-    StaticUse;
+import 'package:compiler/src/universe/universe.dart' show
+    Selector,
+    UniverseSelector;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
@@ -26,9 +21,18 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     LocalElement;
 
+import 'package:compiler/src/resolution/resolution.dart' show
+    TreeElements;
+
 import 'package:compiler/src/dart_types.dart' show
     DartType,
     InterfaceType;
+
+import 'package:compiler/src/util/util.dart' show
+    Setlet;
+
+import 'fletch_backend.dart' show
+    FletchBackend;
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
@@ -73,27 +77,42 @@ enum ClosureKind {
   superTearOff,
 }
 
-class FletchRegistry {
+get _notImplemented => throw "not implemented";
+
+abstract class FletchRegistry {
   final FletchEnqueuer world;
 
-  FletchRegistry(FletchCompilerImplementation compiler)
-      : world = compiler.enqueuer.codegen;
+  factory FletchRegistry(
+      FletchCompilerImplementation compiler,
+      TreeElements treeElements) = FletchRegistryImplementation;
 
-  void registerStaticUse(StaticUse staticUse) {
+  FletchRegistry.internal(this.world);
+
+  Registry get asRegistry;
+
+  void registerStaticInvocation(Element element) {
     // TODO(ahe): Call a different method.
-    world.registerStaticUse(staticUse);
+    world.registerStaticUse(element);
   }
 
   void registerInstantiatedClass(ClassElement element) {
-    world.registerInstantiatedType(element.rawType);
+    world.registerInstantiatedType(element.rawType, this.asRegistry);
   }
 
-  void registerDynamicUse(Selector selector) {
-    world.registerDynamicUse(new DynamicUse(selector, null));
+  void registerDynamicSetter(UniverseSelector selector) {
+    world.registerDynamicSetter(selector);
+  }
+
+  void registerDynamicGetter(UniverseSelector selector) {
+    world.registerDynamicGetter(selector);
+  }
+
+  void registerDynamicInvocation(UniverseSelector selector) {
+    world.registerDynamicInvocation(selector);
   }
 
   void registerInstantiatedType(InterfaceType type) {
-    world.registerInstantiatedType(type);
+    world.registerInstantiatedType(type, this.asRegistry);
   }
 
   void registerIsCheck(DartType type) {
@@ -122,5 +141,25 @@ class FletchRegistry {
         assert(function.memberContext != function);
     }
     world.dynamicCallEnqueuer.enqueueClosure(function, kind);
+  }
+}
+
+@proxy
+class FletchRegistryImplementation extends FletchRegistry
+    implements CodegenRegistry {
+  final TreeElements treeElements;
+
+  FletchRegistryImplementation(
+      FletchCompilerImplementation compiler,
+      this.treeElements)
+      : super.internal(compiler.enqueuer.codegen);
+
+  Registry get asRegistry => this;
+
+  noSuchMethod(invocation) => super.noSuchMethod(invocation);
+
+  // TODO(ahe): Remove this method, called by [Enqueuer], not [FletchEnqueuer].
+  void registerDependency(Element element) {
+    treeElements.registerDependency(element);
   }
 }

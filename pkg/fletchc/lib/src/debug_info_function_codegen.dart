@@ -5,14 +5,17 @@
 library fletchc.debug_info_function_codegen;
 
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/tree_elements.dart';
+import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/selector.dart';
+import 'package:compiler/src/universe/universe.dart';
+
+import 'package:compiler/src/dart2jslib.dart' show
+    Registry;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType;
 
-import 'package:compiler/src/diagnostics/spannable.dart' show
+import 'package:compiler/src/util/util.dart' show
     Spannable;
 
 import 'bytecode_assembler.dart';
@@ -21,6 +24,9 @@ import 'codegen_visitor.dart';
 
 import 'fletch_function_builder.dart' show
     FletchFunctionBuilder;
+
+import 'fletch_registry.dart' show
+    FletchRegistry;
 
 import 'debug_registry.dart' show
     DebugRegistry;
@@ -37,10 +43,11 @@ class DebugInfoFunctionCodegen extends FunctionCodegen with DebugRegistry {
                            FletchFunctionBuilder functionBuilder,
                            FletchContext context,
                            TreeElements elements,
+                           FletchRegistry registry,
                            ClosureEnvironment closureEnvironment,
                            FunctionElement function,
                            this.compiler)
-      : super(functionBuilder, context, elements, null,
+      : super(functionBuilder, context, elements, registry,
               closureEnvironment, function) {
     if (functionBuilder.isInstanceMember) pushVariableDeclaration(thisValue);
   }
@@ -72,14 +79,14 @@ class DebugInfoFunctionCodegen extends FunctionCodegen with DebugRegistry {
     super.invokeMethod(node, selector);
   }
 
-  void invokeGetter(Node node, Name name) {
+  void invokeGetter(Node node, Selector selector) {
     recordDebugInfo(node);
-    super.invokeGetter(node, name);
+    super.invokeGetter(node, selector);
   }
 
-  void invokeSetter(Node node, Name name) {
+  void invokeSetter(Node node, Selector selector) {
     recordDebugInfo(node);
-    super.invokeSetter(node, name);
+    super.invokeSetter(node, selector);
   }
 
   void invokeFactory(Node node, int constId, int arity) {

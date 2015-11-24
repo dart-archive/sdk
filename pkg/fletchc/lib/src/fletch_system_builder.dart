@@ -20,12 +20,10 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     ConstructorElement,
     Element,
-    FieldElement,
     FunctionElement,
-    FunctionSignature,
-    MemberElement;
+    FunctionSignature;
 
-import 'package:compiler/src/universe/call_structure.dart' show
+import 'package:compiler/src/universe/universe.dart' show
     CallStructure;
 
 import 'package:persistent/persistent.dart' show
@@ -363,7 +361,7 @@ class FletchSystemBuilder {
     // Create all new FletchFunctions.
     List<FletchFunction> functions = <FletchFunction>[];
     for (FletchFunctionBuilder builder in _newFunctions) {
-      context.compiler.reporter.withCurrentElement(builder.element, () {
+      context.compiler.withCurrentElement(builder.element, () {
         functions.add(builder.finalizeFunction(context, commands));
       });
     }
@@ -487,30 +485,10 @@ class FletchSystemBuilder {
         ClassElement classElement = value.type.element;
         // TODO(ajohnsen): Avoid usage of builders (should be FletchClass).
         FletchClassBuilder classBuilder = _classBuildersByElement[classElement];
-
-        void addIfField(MemberElement member) {
-          if (!member.isField || member.isStatic || member.isPatch) return;
-          FieldElement fieldElement = member;
-          ConstantValue fieldValue = value.fields[fieldElement];
-          int fieldId = context.compiledConstants[fieldValue];
+        for (ConstantValue field in value.fields.values) {
+          int fieldId = context.compiledConstants[field];
           commands.add(new PushFromMap(MapId.constants, fieldId));
         }
-
-        // Adds all the fields of [currentClass] in order starting from the top
-        // of the inheritance chain, and for each class adds non-patch fields
-        // before patch fields.
-        void addFields(ClassElement currentClass) {
-          if (currentClass.superclass != null) {
-            addFields(currentClass.superclass);
-          }
-          currentClass.forEachLocalMember(addIfField);
-          if (currentClass.isPatched) {
-            currentClass.patch.forEachLocalMember(addIfField);
-          }
-        }
-
-        addFields(classElement);
-
         commands
             ..add(new PushFromMap(MapId.classes, classBuilder.classId))
             ..add(const PushNewInstance());

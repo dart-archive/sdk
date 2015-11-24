@@ -9,7 +9,7 @@ import 'dart:async' show
 
 import 'dart:io';
 
-import 'package:compiler/src/tokens/token.dart' show
+import 'package:compiler/src/scanner/scannerlib.dart' show
     Token;
 
 import 'error_handling_listener.dart' show

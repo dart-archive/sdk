@@ -20,26 +20,18 @@ import 'package:compiler/src/constants/expressions.dart' show
     ConstructedConstantExpression,
     TypeConstantExpression;
 
-import 'package:compiler/src/resolution/tree_elements.dart' show
-    TreeElements;
+import 'package:compiler/src/dart2jslib.dart' show
+    MessageKind,
+    Registry;
 
 import 'package:compiler/src/util/util.dart' show
     Link;
 
-import 'package:compiler/src/common/names.dart' show
-    Names,
-    Selectors;
-
-import 'package:compiler/src/universe/use.dart' show DynamicUse, StaticUse;
-
 import 'package:compiler/src/elements/elements.dart';
+import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/call_structure.dart' show
-    CallStructure;
-import 'package:compiler/src/universe/selector.dart' show
-    Selector;
-import 'package:compiler/src/diagnostics/spannable.dart' show
-    Spannable;
+import 'package:compiler/src/universe/universe.dart';
+import 'package:compiler/src/util/util.dart' show Spannable;
 import 'package:compiler/src/dart_types.dart';
 
 import 'fletch_context.dart';
@@ -47,6 +39,7 @@ import 'fletch_context.dart';
 import 'fletch_backend.dart';
 
 import 'fletch_constants.dart' show
+    FletchFunctionBuilderConstant,
     FletchClassConstant,
     FletchClassInstanceConstant;
 
@@ -217,8 +210,7 @@ abstract class CodegenVisitor
          ConstructorBulkMixin,
          InitializerBulkMixin,
          BaseImplementationOfStaticsMixin,
-         BaseImplementationOfLocalsMixin,
-         SetIfNullBulkMixin
+         BaseImplementationOfLocalsMixin
     implements SemanticSendVisitor, SemanticDeclarationVisitor {
   // A literal int can have up to 31 bits of information (32 minus sign).
   static const int LITERAL_INT_MAX = 0x3FFFFFFF;
@@ -230,6 +222,8 @@ abstract class CodegenVisitor
   final ClosureEnvironment closureEnvironment;
 
   final ExecutableElement element;
+
+  final MemberElement member;
 
   final FletchFunctionBuilder functionBuilder;
 
@@ -373,9 +367,13 @@ abstract class CodegenVisitor
     scope.remove(local);
   }
 
-  void registerDynamicUse(Selector selector);
+  void registerDynamicInvocation(Selector selector);
 
-  void registerStaticUse(StaticUse use);
+  void registerDynamicGetter(Selector selector);
+
+  void registerDynamicSetter(Selector selector);
+
+  void registerStaticInvocation(FunctionElement function);
 
   void registerInstantiatedClass(ClassElement klass);
 
@@ -391,7 +389,7 @@ abstract class CodegenVisitor
   int compileLazyFieldInitializer(FieldElement field);
 
   void invokeMethod(Node node, Selector selector) {
-    registerDynamicUse(selector);
+    registerDynamicInvocation(selector);
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int arity = selector.argumentCount;
@@ -399,17 +397,17 @@ abstract class CodegenVisitor
     assembler.invokeMethod(fletchSelector, arity, selector.name);
   }
 
-  void invokeGetter(Node node, Name name) {
-    registerDynamicUse(new Selector.getter(name));
-    String symbol = context.mangleName(name);
+  void invokeGetter(Node node, Selector selector) {
+    registerDynamicGetter(selector);
+    String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int fletchSelector = FletchSelector.encodeGetter(id);
     assembler.invokeMethod(fletchSelector, 0);
   }
 
-  void invokeSetter(Node node, Name name) {
-    registerDynamicUse(new Selector.setter(name));
-    String symbol = context.mangleName(name);
+  void invokeSetter(Node node, Selector selector) {
+    registerDynamicSetter(selector);
+    String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int fletchSelector = FletchSelector.encodeSetter(id);
     assembler.invokeMethod(fletchSelector, 1);
@@ -451,8 +449,7 @@ abstract class CodegenVisitor
   }
 
   FletchFunctionBase requireFunction(FunctionElement element) {
-    // TODO(johnniwinther): More precise use.
-    registerStaticUse(new StaticUse.foreignUse(element));
+    registerStaticInvocation(element);
     return context.backend.getFunctionForElement(element);
   }
 
@@ -460,7 +457,7 @@ abstract class CodegenVisitor
       ConstructorElement constructor) {
     assert(constructor.isGenerativeConstructor);
     registerInstantiatedClass(constructor.enclosingClass);
-    registerStaticUse(new StaticUse.foreignUse(constructor));
+    registerStaticInvocation(constructor);
     return context.backend.getConstructorInitializerFunction(constructor);
   }
 
@@ -912,7 +909,7 @@ abstract class CodegenVisitor
       TypedefType typedefType = type;
       int arity = typedefType.element.functionSignature.parameterCount;
       int fletchSelector = context.toFletchIsSelector(
-          context.backend.compiler.coreClasses.functionClass, arity);
+          context.backend.compiler.functionClass, arity);
       assembler.invokeTest(fletchSelector, 0);
       return;
     }
@@ -1004,7 +1001,7 @@ abstract class CodegenVisitor
 
   void doMainCall(Send node, NodeList arguments) {
     FunctionElement function = context.compiler.mainFunction;
-    if (function.isMalformed) {
+    if (function.isErroneous) {
       doCompileError();
       return;
     }
@@ -1078,7 +1075,7 @@ abstract class CodegenVisitor
   }
 
   void doSuperCall(Node node, FunctionElement function) {
-    registerStaticUse(new StaticUse.foreignUse(function));
+    registerStaticInvocation(function);
     int arity = function.functionSignature.parameterCount + 1;
     FletchFunctionBase base = requireFunction(function);
     int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
@@ -1295,28 +1292,19 @@ abstract class CodegenVisitor
       NodeList arguments,
       Selector selector,
       _) {
+    if (selector == null) {
+      // TODO(ajohnsen): Remove hack - dart2js has a problem with generating
+      // selectors in initializer bodies.
+      selector = new Selector.call(
+          node.selector.asIdentifier().source,
+          element.library,
+          arguments.slowLength());
+    }
     visitForValue(receiver);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
     invokeMethod(node, selector);
-    applyVisitState();
-  }
-
-  void visitIfNull(
-      Send node,
-      Node left,
-      Node right,
-      _) {
-    BytecodeLabel end = new BytecodeLabel();
-    visitForValue(left);
-    assembler.dup();
-    assembler.loadLiteralNull();
-    assembler.identicalNonNumeric();
-    assembler.branchIfFalse(end);
-    assembler.pop();
-    visitForValue(right);
-    assembler.bind(end);
     applyVisitState();
   }
 
@@ -1350,13 +1338,13 @@ abstract class CodegenVisitor
       Send node,
       Expression receiver,
       NodeList arguments,
-      CallStructure callStructure,
+      Selector selector,
       _) {
     visitForValue(receiver);
     for (Node argument in arguments) {
       visitForValue(argument);
     }
-    invokeMethod(node, new Selector.call(Names.call, callStructure));
+    invokeMethod(node, selector);
     applyVisitState();
   }
 
@@ -1373,7 +1361,7 @@ abstract class CodegenVisitor
     // statically known - that is not always the case. Implement VM support?
     Element target = elements[node];
     if (target != null && target.isField) {
-      invokeGetter(node, new Name(target.name, element.library));
+      invokeGetter(node, new Selector.getter(target.name, element.library));
       selector = new Selector.callClosureFrom(selector);
     }
     for (Node argument in arguments) {
@@ -1408,9 +1396,16 @@ abstract class CodegenVisitor
   void visitDynamicPropertyGet(
       Send node,
       Node receiver,
-      Name name,
+      Selector selector,
       _) {
-    if (name.text == "runtimeType") {
+    if (selector == null) {
+      // TODO(ajohnsen): Remove hack - dart2js has a problem with generating
+      // selectors in initializer bodies.
+      selector = new Selector.getter(
+          node.selector.asIdentifier().source,
+          element.library);
+    }
+    if (selector.name == "runtimeType") {
       // TODO(ahe): Implement runtimeType.
       generateUnimplementedError(
           node,
@@ -1419,38 +1414,38 @@ abstract class CodegenVisitor
       return;
     }
     visitForValue(receiver);
-    invokeGetter(node, name);
+    invokeGetter(node, selector);
     applyVisitState();
   }
 
   void visitIfNotNullDynamicPropertyGet(
       Send node,
       Node receiver,
-      Name name,
+      Selector selector,
       _) {
     doIfNotNull(receiver, () {
-      invokeGetter(node, name);
+      invokeGetter(node, selector);
     });
     applyVisitState();
   }
 
   void visitThisPropertyGet(
       Send node,
-      Name name,
+      Selector selector,
       _) {
     loadThis();
-    invokeGetter(node, name);
+    invokeGetter(node, selector);
     applyVisitState();
   }
 
   void visitThisPropertySet(
       Send node,
-      Name name,
+      Selector selector,
       Node rhs,
       _) {
     loadThis();
     visitForValue(rhs);
-    invokeSetter(node, name);
+    invokeSetter(node, selector);
     applyVisitState();
   }
 
@@ -1479,37 +1474,36 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void visitAssert(Assert node) {
+  void visitAssert(Send node, Node expression, _) {
     // TODO(ajohnsen): Emit assert in checked mode.
   }
 
   void visitDynamicPropertySet(
       Send node,
       Node receiver,
-      Name name,
+      Selector selector,
       Node rhs,
       _) {
     visitForValue(receiver);
     visitForValue(rhs);
-    invokeSetter(node, name);
+    invokeSetter(node, selector);
     applyVisitState();
   }
 
   void visitIfNotNullDynamicPropertySet(
       SendSet node,
       Node receiver,
-      Name name,
+      Selector selector,
       Node rhs,
       _) {
     doIfNotNull(receiver, () {
       visitForValue(rhs);
-      invokeSetter(node, name);
+      invokeSetter(node, selector);
     });
     applyVisitState();
   }
 
-  void doStaticFieldSet(
-      FieldElement field) {
+  void doStaticFieldSet(FieldElement field) {
     int index = context.getStaticFieldIndex(field, element);
     assembler.storeStatic(index);
   }
@@ -1536,12 +1530,13 @@ abstract class CodegenVisitor
   }
 
   void visitStringInterpolation(StringInterpolation node) {
-    // TODO(ajohnsen): Cache this in context/backend.
+    // TODO(ajohnsen): Cache these in context/backend.
+    Selector toString = new Selector.call('toString', null, 0);
     Selector concat = new Selector.binaryOperator('+');
     visitForValueNoDebugInfo(node.string);
     for (StringInterpolationPart part in node.parts) {
       visitForValue(part.expression);
-      invokeMethod(part.expression, Selectors.toString_);
+      invokeMethod(part.expression, toString);
       LiteralString string = part.string;
       if (string.dartString.isNotEmpty) {
         visitForValueNoDebugInfo(string);
@@ -1556,7 +1551,7 @@ abstract class CodegenVisitor
     if (visitState == VisitState.Value) {
       assembler.loadLiteralNull();
     } else if (visitState == VisitState.Test) {
-      if (falseLabel != null) assembler.branch(falseLabel);
+      assembler.branch(falseLabel);
     }
   }
 
@@ -1603,7 +1598,7 @@ abstract class CodegenVisitor
         assembler.loadLiteral(value);
       }
     } else if (visitState == VisitState.Test) {
-      if (falseLabel != null) assembler.branch(falseLabel);
+      assembler.branch(falseLabel);
     }
   }
 
@@ -1611,7 +1606,7 @@ abstract class CodegenVisitor
     if (visitState == VisitState.Value) {
       assembler.loadConst(allocateConstantFromNode(node));
     } else if (visitState == VisitState.Test) {
-      if (falseLabel != null) assembler.branch(falseLabel);
+      assembler.branch(falseLabel);
     }
   }
 
@@ -1630,8 +1625,7 @@ abstract class CodegenVisitor
     // Call with empty arguments, as we call the default constructor.
     callConstructor(
         node, constructor, new NodeList.empty(), CallStructure.NO_ARGS);
-    Selector add = new Selector.call(new Name('add', null),
-        CallStructure.ONE_ARG);
+    Selector add = new Selector.call('add', null, 1);
     for (Node element in node.elements) {
       assembler.dup();
       visitForValue(element);
@@ -1648,9 +1642,8 @@ abstract class CodegenVisitor
       applyVisitState();
       return;
     }
-    ClassElement literalClass =
-        context.backend.mapImplementation.implementation;
-    ConstructorElement constructor = literalClass.lookupConstructor("");
+    ClassElement literalClass = context.backend.mapImplementation;
+    ConstructorElement constructor = literalClass.lookupDefaultConstructor();
     if (constructor == null) {
       internalError(literalClass, "Failed to lookup default map constructor");
       return;
@@ -1895,74 +1888,82 @@ abstract class CodegenVisitor
 
   void doDynamicPropertyCompound(
       Node node,
-      Name name,
       AssignmentOperator operator,
-      Node rhs) {
+      Node rhs,
+      Selector getterSelector,
+      Selector setterSelector) {
     // Dup receiver for setter.
     assembler.dup();
-    invokeGetter(node, name);
+    invokeGetter(node, getterSelector);
     visitForValue(rhs);
     invokeMethod(node, getAssignmentSelector(operator));
-    invokeSetter(node, name);
+    invokeSetter(node, setterSelector);
   }
 
   void visitDynamicPropertyCompound(
       Send node,
       Node receiver,
-      Name name,
       AssignmentOperator operator,
       Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     visitForValue(receiver);
     doDynamicPropertyCompound(
         node,
-        name,
         operator,
-        rhs);
+        rhs,
+        getterSelector,
+        setterSelector);
     applyVisitState();
   }
 
   void visitIfNotNullDynamicPropertyCompound(
       Send node,
       Node receiver,
-      Name name,
       AssignmentOperator operator,
       Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     doIfNotNull(receiver, () {
       doDynamicPropertyCompound(
           node,
-          name,
           operator,
-          rhs);
+          rhs,
+          getterSelector,
+          setterSelector);
     });
     applyVisitState();
   }
 
   void visitThisPropertyCompound(
       Send node,
-      Name name,
       AssignmentOperator operator,
       Node rhs,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     loadThis();
     doDynamicPropertyCompound(
         node,
-        name,
         operator,
-        rhs);
+        rhs,
+        getterSelector,
+        setterSelector);
     applyVisitState();
   }
 
   void doDynamicPrefix(
       Node node,
-      Name name,
-      IncDecOperator operator) {
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector) {
     assembler.dup();
-    invokeGetter(node, name);
+    invokeGetter(node, getterSelector);
     assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
-    invokeSetter(node, name);
+    invokeSetter(node, setterSelector);
   }
 
   void doIndexPrefix(
@@ -2043,37 +2044,39 @@ abstract class CodegenVisitor
 
   void visitThisPropertyPrefix(
       Send node,
-      Name name,
       IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     loadThis();
-    doDynamicPrefix(node, name, operator);
+    doDynamicPrefix(node, operator, getterSelector, setterSelector);
     applyVisitState();
   }
 
   void visitThisPropertyPostfix(
       Send node,
-      Name name,
       IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
       loadThis();
-      doDynamicPrefix(node, name, operator);
+      doDynamicPrefix(node, operator, getterSelector, setterSelector);
       applyVisitState();
       return;
     }
 
     loadThis();
-    invokeGetter(node, name);
+    invokeGetter(node, getterSelector);
     // For postfix, keep local, unmodified version, to 'return' after store.
     assembler.dup();
     assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     loadThis();
     assembler.loadLocal(1);
-    invokeSetter(node, name);
+    invokeSetter(node, setterSelector);
     assembler.popMany(2);
     applyVisitState();
   }
@@ -2081,22 +2084,24 @@ abstract class CodegenVisitor
   void visitDynamicPropertyPrefix(
       Send node,
       Node receiver,
-      Name name,
       IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     visitForValue(receiver);
-    doDynamicPrefix(node, name, operator);
+    doDynamicPrefix(node, operator, getterSelector, setterSelector);
     applyVisitState();
   }
 
   void visitIfNotNullDynamicPropertyPrefix(
       Send node,
       Node receiver,
-      Name name,
       IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     doIfNotNull(receiver, () {
-      doDynamicPrefix(node, name, operator);
+      doDynamicPrefix(node, operator, getterSelector, setterSelector);
     });
     applyVisitState();
   }
@@ -2104,18 +2109,19 @@ abstract class CodegenVisitor
   void doDynamicPostfix(
       Send node,
       Node receiver,
-      Name name,
-      IncDecOperator operator) {
+      IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector) {
     int receiverSlot = assembler.stackSize - 1;
     assembler.loadSlot(receiverSlot);
-    invokeGetter(node, name);
+    invokeGetter(node, getterSelector);
     // For postfix, keep local, unmodified version, to 'return' after store.
     assembler.dup();
     assembler.loadLiteral(1);
     invokeMethod(node, getIncDecSelector(operator));
     assembler.loadSlot(receiverSlot);
     assembler.loadLocal(1);
-    invokeSetter(node, name);
+    invokeSetter(node, setterSelector);
     assembler.popMany(2);
     assembler.storeLocal(1);
     // Pop receiver.
@@ -2125,32 +2131,34 @@ abstract class CodegenVisitor
   void visitDynamicPropertyPostfix(
       Send node,
       Node receiver,
-      Name name,
       IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     // If visitState is for effect, we can ignore the return value, thus always
     // generate code for the simpler 'prefix' case.
     if (visitState == VisitState.Effect) {
       visitForValue(receiver);
-      doDynamicPrefix(node, name, operator);
+      doDynamicPrefix(node, operator, getterSelector, setterSelector);
       applyVisitState();
       return;
     }
 
     visitForValue(receiver);
-    doDynamicPostfix(node, receiver, name, operator);
+    doDynamicPostfix(node, receiver, operator, getterSelector, setterSelector);
     applyVisitState();
   }
 
   void visitIfNotNullDynamicPropertyPostfix(
       Send node,
       Node receiver,
-      Name name,
       IncDecOperator operator,
+      Selector getterSelector,
+      Selector setterSelector,
       _) {
     doIfNotNull(receiver, () {
       doDynamicPostfix(
-          node, receiver, name, operator);
+          node,receiver, operator, getterSelector, setterSelector);
     });
     applyVisitState();
   }
@@ -2746,14 +2754,14 @@ abstract class CodegenVisitor
 
     // Evalutate expression and iterator.
     visitForValue(node.expression);
-    invokeGetter(node.expression, Names.iterator);
+    invokeGetter(node.expression, new Selector.getter('iterator', null));
 
     jumpInfo[node] = new JumpInfo(assembler.stackSize, start, end);
 
     assembler.bind(start);
 
     assembler.dup();
-    invokeMethod(node, Selectors.moveNext);
+    invokeMethod(node, new Selector.call('moveNext', null, 0));
     assembler.branchIfFalse(end);
 
     bool isVariableDeclaration = node.declaredIdentifier.asSend() == null;
@@ -2762,24 +2770,24 @@ abstract class CodegenVisitor
       // Create local value and load the current element to it.
       LocalValue value = createLocalValueFor(element);
       assembler.dup();
-      invokeGetter(node, Names.current);
+      invokeGetter(node, new Selector.getter('current', null));
       value.initialize(assembler);
       pushVariableDeclaration(value);
     } else {
       if (element == null || element.isInstanceMember) {
         loadThis();
         assembler.loadLocal(1);
-        invokeGetter(node, Names.current);
+        invokeGetter(node, new Selector.getter('current', null));
         Selector selector = elements.getSelector(node.declaredIdentifier);
-        invokeSetter(node, selector.memberName);
+        invokeSetter(node, selector);
       } else {
         assembler.dup();
-        invokeGetter(node, Names.current);
+        invokeGetter(node, new Selector.getter('current', null));
         if (element.isLocal) {
           scope[element].store(assembler);
         } else if (element.isField) {
           doStaticFieldSet(element);
-        } else if (element.isMalformed) {
+        } else if (element.isErroneous) {
           doUnresolved(element.name);
           assembler.pop();
         } else {
@@ -3091,7 +3099,7 @@ abstract class CodegenVisitor
   }
 
   void internalError(Spannable spannable, String reason) {
-    context.compiler.reporter.internalError(spannable, reason);
+    context.compiler.internalError(spannable, reason);
   }
 
   void generateUnimplementedError(Spannable spannable, String reason) {
@@ -3163,13 +3171,6 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  @override
-  void bulkHandleSetIfNull(Node node, _) {
-    generateUnimplementedError(
-        node, "[bulkHandleSetIfNull] isn't implemented.");
-    applyVisitState();
-  }
-
   void previsitDeferredAccess(Send node, PrefixElement prefix, _) {
     // We don't support deferred access, so nothing to do for now.
   }
@@ -3200,12 +3201,20 @@ abstract class FletchRegistryMixin {
   FletchRegistry get registry;
   FletchContext get context;
 
-  void registerDynamicUse(Selector selector) {
-    registry.registerDynamicUse(selector);
+  void registerDynamicInvocation(Selector selector) {
+    registry.registerDynamicInvocation(new UniverseSelector(selector, null));
   }
 
-  void registerStaticUse(StaticUse staticUse) {
-    registry.registerStaticUse(staticUse);
+  void registerDynamicGetter(Selector selector) {
+    registry.registerDynamicGetter(new UniverseSelector(selector, null));
+  }
+
+  void registerDynamicSetter(Selector selector) {
+    registry.registerDynamicSetter(new UniverseSelector(selector, null));
+  }
+
+  void registerStaticInvocation(FunctionElement function) {
+    registry.registerStaticInvocation(function);
   }
 
   void registerInstantiatedClass(ClassElement klass) {
@@ -3222,11 +3231,11 @@ abstract class FletchRegistryMixin {
 
   void registerClosurization(FunctionElement element, ClosureKind kind) {
     if (kind == ClosureKind.localFunction) {
-      // TODO(ahe): Get rid of the call to [registerStaticUse]. It is
+      // TODO(ahe): Get rid of the call to [registerStaticInvocation]. It is
       // currently needed to ensure that local function expression closures are
       // compiled correctly. For example, `[() {}].last()`, notice that `last`
       // is a getter. This happens for both named and unnamed.
-      registerStaticUse(new StaticUse.foreignUse(element));
+      registerStaticInvocation(element);
     }
     registry.registerClosurization(element, kind);
   }

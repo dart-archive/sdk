@@ -85,5 +85,3 @@ external get nativeError;
 
 // Change execution to [coroutine], passing along [argument].
 external coroutineChange(coroutine, argument);
-
-const patch = "patch";

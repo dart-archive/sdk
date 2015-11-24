@@ -20,11 +20,6 @@ import 'package:fletchc/src/guess_configuration.dart' show
     executable;
 
 Future<Null> main() async {
-  print('*' * 80);
-  print('If this test fails with a load error, you probably have to update');
-  print(' tools/benchmarking_files');
-  print('*' * 80);
-
   // Locate the files that are needed.
   Uri benchmarkingFiles = executable.resolve('../../tools/benchmarking_files');
   Directory tempDir = Directory.systemTemp.createTempSync('golem_tests');

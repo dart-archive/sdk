@@ -92,12 +92,8 @@ arm-linux-gnueabihf-strip out/ReleaseXARM/dart
 ```
 
 The sha1 files need to be checked into the repository at
-  * `third_party/bin/linux/dart.sha1`
-  * `third_party/bin/linux/dart-arm.sha1`
-  * `third_party/bin/mac/dart.sha1`
-  * `tools/testing/bin/linux/dart.sha1`
-  * `tools/testing/bin/linux/dart-arm.sha1`
-  * `tools/testing/bin/mac/dart.sha1`
+  * `third_party/bin/{linux,mac}/...`
+  * `tools/testing/bin/{linux,mac}/...`
 
 It is highly recommended to test that everything worked, by
   * ensuring only sha1 files have been changed
