@@ -611,8 +611,10 @@ void Process::AttachDebugger() {
 }
 
 int Process::PrepareStepOver() {
-  Object** pushed_bcp_address = stack()->Pointer(stack()->top() + 1);
-  uint8_t* current_bcp = reinterpret_cast<uint8_t*>(*pushed_bcp_address);
+  Frame frame(stack());
+  frame.MovePrevious();
+
+  uint8_t* current_bcp = frame.ByteCodePointer();
   Opcode opcode = static_cast<Opcode>(*current_bcp);
 
   if (!Bytecode::IsInvokeVariant(opcode)) {
@@ -621,8 +623,7 @@ int Process::PrepareStepOver() {
     return DebugInfo::kNoBreakpointId;
   }
 
-  // TODO(ager): We should share this code with the stack walker that also
-  // needs to know the stack diff for each bytecode.
+  // TODO(ager): We should consider making this less bytecode-specific.
   int stack_diff = 0;
   switch (opcode) {
     // For invoke bytecodes we set a one-shot breakpoint for the next bytecode

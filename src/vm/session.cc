@@ -1532,19 +1532,22 @@ void Session::RestartFrame(int frame_index) {
   Frame frame(stack);
   for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
 
-  // To be able to reply the activation, we set the top bcp (loaded when
-  // restoring state) to the bytecode before the return address.
-  uint8* return_address = frame.ReturnAddress();
+  // We are now in the frame we want to reply. Navigate to the previous frame
+  // (the caller frame), so we can reply the invocation.
+  frame.MovePrevious();
+
+  // To be able to reply the activation, we set the return address of the
+  // caller frame, to the bytecode before the return address.
+  uint8* return_address = frame.ByteCodePointer();
   uint8* previous = return_address - Bytecode::Size(Opcode::kInvokeStatic);
 
   ASSERT(previous == Bytecode::PreviousBytecode(return_address));
   ASSERT(Bytecode::IsInvokeVariant(static_cast<Opcode>(*previous)));
 
-  frame.SetReturnAddress(previous);
+  frame.SetByteCodePointer(previous);
 
-  // Now we just need to set the top to the location of the current
-  // frame pointer.
-  stack->set_top(frame.FirstLocalIndex() + 2);
+  // Finally resize the stack to the next frame pointer.
+  stack->SetTopFromPointer(frame.NextFramePointer());
 }
 
 }  // namespace fletch

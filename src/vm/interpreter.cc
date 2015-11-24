@@ -50,7 +50,10 @@ class State {
   Program* program() const { return program_; }
 
   void SaveState() {
-    Push(reinterpret_cast<Object*>(bcp_));
+    StoreByteCodePointer(bcp_);
+    // Push empty slot to make the saved state look like it has a bcp,
+    // thus making the top frame indexing as other frames.
+    Push(NULL);
     Push(reinterpret_cast<Object*>(fp_));
     process_->stack()->SetTopFromPointer(sp_);
   }
@@ -59,7 +62,10 @@ class State {
     Stack* stack = process_->stack();
     sp_ = stack->Pointer(stack->top());
     fp_ = reinterpret_cast<Object**>(Pop());
-    bcp_ = reinterpret_cast<uint8_t*>(Pop());
+    // Pop the empty unused value.
+    Pop();
+    bcp_ = LoadByteCodePointer();
+    StoreByteCodePointer(NULL);
     ASSERT(bcp_ != NULL);
   }
 
@@ -85,7 +91,7 @@ class State {
 
   void Goto(uint8* bcp) { ASSERT(bcp != NULL); bcp_ = bcp; }
   void Advance(int delta) { bcp_ += delta; }
-  uint8* ComputeReturnAddress(int offset) { return bcp_ + offset; }
+  uint8* ComputeByteCodePointer(int offset) { return bcp_ + offset; }
 
   void SetFramePointer(Object** fp) { ASSERT(fp != NULL); fp_ = fp; }
 
@@ -109,17 +115,32 @@ class State {
     return Function::FromBytecodePointer(bcp_);
   }
 
-  void PushReturnAddress(int offset) {
-    Push(reinterpret_cast<Object*>(ComputeReturnAddress(offset)));
+  void PushFrameDescriptor(int offset) {
+    // Store the return address in the current frame.
+    ASSERT(LoadByteCodePointer() == NULL);
+    StoreByteCodePointer(ComputeByteCodePointer(offset));
+
+    Push(NULL);
     Push(reinterpret_cast<Object*>(fp_));
     fp_ = sp_;
     Push(NULL);
   }
 
-  void PopToReturnAddress() {
+  void PopFrameDescriptor() {
     sp_ = fp_;
     fp_ = reinterpret_cast<Object**>(Pop());
-    Goto(reinterpret_cast<uint8*>(Pop()));
+    Pop();
+
+    Goto(LoadByteCodePointer());
+    StoreByteCodePointer(NULL);
+  }
+
+  void StoreByteCodePointer(uint8* bcp) {
+    *(fp_ + 1) = reinterpret_cast<Object*>(bcp);
+  }
+
+  uint8* LoadByteCodePointer() {
+    return reinterpret_cast<uint8*>(*(fp_ + 1));
   }
 
   Object** fp() { return fp_; }
@@ -292,7 +313,7 @@ Interpreter::InterruptKind Engine::Interpret(
     Object* value = process()->statics()->get(index);
     if (value->IsInitializer()) {
       Function* target = Initializer::cast(value)->function();
-      PushReturnAddress(kLoadStaticInitLength);
+      PushFrameDescriptor(kLoadStaticInitLength);
       Goto(target->bytecode_address_for(0));
       STACK_OVERFLOW_CHECK(0);
     } else {
@@ -423,7 +444,7 @@ Interpreter::InterruptKind Engine::Interpret(
     int selector = ReadInt32(1);
     int arity = Selector::ArityField::decode(selector);
     Object* receiver = Local(arity);
-    PushReturnAddress(kInvokeMethodUnfoldLength);
+    PushFrameDescriptor(kInvokeMethodUnfoldLength);
     Function* target = process()->LookupEntry(receiver, selector)->target;
     Goto(target->bytecode_address_for(0));
     STACK_OVERFLOW_CHECK(0);
@@ -439,7 +460,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(InvokeNoSuchMethod);
     Array* entry = Array::cast(program()->dispatch_table()->get(0));
     Function* target = Function::cast(entry->get(2));
-    PushReturnAddress(kInvokeNoSuchMethodLength);
+    PushFrameDescriptor(kInvokeNoSuchMethodLength);
     Goto(target->bytecode_address_for(0));
     STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
@@ -454,7 +475,7 @@ Interpreter::InterruptKind Engine::Interpret(
     int arity = Selector::ArityField::decode(selector);
     int offset = Selector::IdField::decode(selector);
     Object* receiver = Local(arity);
-    PushReturnAddress(kInvokeMethodLength);
+    PushFrameDescriptor(kInvokeMethodLength);
 
     Class* clazz = receiver->IsSmi()
         ? program()->smi_class()
@@ -473,7 +494,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(InvokeStatic);
     int index = ReadInt32(1);
     Function* target = program()->static_method_at(index);
-    PushReturnAddress(kInvokeStaticLength);
+    PushFrameDescriptor(kInvokeStaticLength);
     Goto(target->bytecode_address_for(0));
     STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
@@ -484,7 +505,7 @@ Interpreter::InterruptKind Engine::Interpret(
 
   OPCODE_BEGIN(InvokeStaticUnfold);
     Function* target = Function::cast(ReadConstant());
-    PushReturnAddress(kInvokeStaticLength);
+    PushFrameDescriptor(kInvokeStaticLength);
     Goto(target->bytecode_address_for(0));
     STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
@@ -503,7 +524,7 @@ Interpreter::InterruptKind Engine::Interpret(
       Push(program()->ObjectFromFailure(Failure::cast(result)));
       Advance(kInvokeNativeLength);
     } else {
-      PopToReturnAddress();
+      PopFrameDescriptor();
       Drop(arity);
       Push(result);
     }
@@ -548,7 +569,7 @@ Interpreter::InterruptKind Engine::Interpret(
       Push(program()->ObjectFromFailure(Failure::cast(result)));
       Advance(kInvokeNativeYieldLength);
     } else {
-      PopToReturnAddress();
+      PopFrameDescriptor();
       Drop(arity);
       Object* null = program()->null_object();
       Push(null);
@@ -598,14 +619,14 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(Return);
     int arguments = ReadByte(1);
     Object* result = Local(0);
-    PopToReturnAddress();
+    PopFrameDescriptor();
     Drop(arguments);
     Push(result);
   OPCODE_END();
 
   OPCODE_BEGIN(ReturnNull);
     int arguments = ReadByte(1);
-    PopToReturnAddress();
+    PopFrameDescriptor();
     Drop(arguments);
     Push(program()->null_object());
   OPCODE_END();
@@ -862,7 +883,7 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_BEGIN(ExitNoSuchMethod);
     Object* result = Pop();
     word selector = Smi::cast(Pop())->value();
-    PopToReturnAddress();
+    PopFrameDescriptor();
 
     // The result of invoking setters must be the assigned value,
     // even in the presence of noSuchMethod.
@@ -927,6 +948,7 @@ bool Engine::DoThrow(Object* exception) {
   // Restore stack pointer and bcp.
   RestoreState();
   SetFramePointer(frame_pointer);
+  StoreByteCodePointer(NULL);
   Goto(catch_bcp);
   // The delta is computed given that bcp and fp is pushed on the
   // stack. We have already pop'ed bcp as part of RestoreState.
@@ -1139,8 +1161,7 @@ struct CatchBlock {
   int frame_size;
 };
 
-static uint8* FindCatchBlock(Process* process,
-                             Stack* stack,
+static uint8* FindCatchBlock(Stack* stack,
                              int* stack_delta_result,
                              Object*** frame_pointer_result) {
   Frame frame(stack);
@@ -1185,7 +1206,7 @@ uint8* HandleThrow(Process* process,
     // until the handler, make the unused coroutines/stacks GCable and return
     // the handling bcp.
     uint8* catch_bcp = FindCatchBlock(
-        process, current->stack(), stack_delta_result, frame_pointer_result);
+        current->stack(), stack_delta_result, frame_pointer_result);
     if (catch_bcp != NULL) {
       Coroutine* unused = process->coroutine();
       while (current != unused) {
@@ -1211,29 +1232,35 @@ uint8* HandleThrow(Process* process,
 }
 
 void HandleEnterNoSuchMethod(Process* process) {
+  Frame caller_frame(process->stack());
+
+  // Navigate to the the frame that invoked the unresolved call.
+  caller_frame.MovePrevious();
+  caller_frame.MovePrevious();
+
+  // TODO(ajohnsen): Make this work in a non-restored state?
   State state(process);
 
   Program* program = state.program();
 
-  uint8* return_address = reinterpret_cast<uint8*>(state.Local(2));
-  Opcode opcode = static_cast<Opcode>(*(return_address - 5));
+  // Read the bcp address for the frame.
+  uint8* bcp = caller_frame.ByteCodePointer();
+  Opcode opcode = static_cast<Opcode>(*(bcp - 5));
 
   int selector;
   if (opcode == Opcode::kInvokeSelector) {
     // If we have nested noSuchMethod trampolines, the selector is located
-    // in the previous frame, as the first argument (fp + 2).
-    Object** fp = state.fp();
-    fp = reinterpret_cast<Object**>(*fp);
-    int call_selector = Smi::cast(*(fp - 2))->value();
+    // in the caller frame, as the first argument.
+    int call_selector = Smi::cast(*caller_frame.FirstLocalAddress())->value();
 
     // The selector that was used was not this selector, but instead a 'call'
     // selector with the same arity (see call_selector below).
     int arity = Selector::ArityField::decode(call_selector);
     selector = Selector::EncodeMethod(Names::kCall, arity);
   } else if (opcode == Opcode::kInvokeNoSuchMethod) {
-    selector = Utils::ReadInt32(return_address - 4);
+    selector = Utils::ReadInt32(bcp - 4);
   } else if (Bytecode::IsInvoke(opcode)) {
-    selector = Utils::ReadInt32(return_address - 4);
+    selector = Utils::ReadInt32(bcp - 4);
     int offset = Selector::IdField::decode(selector);
     for (int i = offset; true; i++) {
       Array* entry = Array::cast(program->dispatch_table()->get(i));
@@ -1244,7 +1271,7 @@ void HandleEnterNoSuchMethod(Process* process) {
     }
   } else {
     ASSERT(Bytecode::IsInvokeUnfold(opcode));
-    selector = Utils::ReadInt32(return_address - 4);
+    selector = Utils::ReadInt32(bcp- 4);
   }
 
   int arity = Selector::ArityField::decode(selector);
@@ -1302,7 +1329,7 @@ void HandleInvokeSelector(Process* process) {
   int selector = selector_smi->value();
   int arity = Selector::ArityField::decode(selector);
   state.SetLocal(arity, receiver);
-  state.PushReturnAddress(kInvokeSelectorLength);
+  state.PushFrameDescriptor(kInvokeSelectorLength);
 
   Class* clazz = receiver->IsSmi()
       ? state.program()->smi_class()

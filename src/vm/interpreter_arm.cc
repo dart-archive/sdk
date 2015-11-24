@@ -1451,10 +1451,17 @@ void InterpreterGeneratorARM::StoreFramePointer(Register reg) {
 
 void InterpreterGeneratorARM::PushFrameDescriptor(Register return_address,
                                                   Register scratch) {
-  Push(return_address);
+  LoadFramePointer(scratch);
+  __ str(return_address, Address(scratch, kWordSize));
+
+  __ ldr(scratch, Immediate(0));
+  Push(scratch);
+
   LoadFramePointer(scratch);
   Push(scratch);
+
   StoreFramePointer(R6);
+
   __ ldr(scratch, Immediate(0));
   Push(scratch);
 }
@@ -1464,8 +1471,9 @@ void InterpreterGeneratorARM::ReadFrameDescriptor(Register scratch) {
   // Store old frame pointer from stack.
   LoadLocal(scratch, 0);
   StoreFramePointer(scratch);
+
   // Load return address.
-  LoadLocal(R5, 1);
+  __ ldr(R5, Address(scratch, kWordSize));
 }
 
 void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
@@ -1973,12 +1981,16 @@ void InterpreterGeneratorARM::Dispatch(int size) {
 }
 
 void InterpreterGeneratorARM::SaveState() {
-  // Push the bytecode pointer on the stack.
+  // Save the bytecode pointer at the return-address slot.
+  LoadFramePointer(R3);
+  __ str(R5, Address(R3, kWordSize));
+
+  // Push null.
+  __ ldr(R5, Immediate(0));
   Push(R5);
 
-  // Load and push frame pointer.
-  LoadFramePointer(R5);
-  Push(R5);
+  // Push frame pointer.
+  Push(R3);
 
   // Update top in the stack. Ugh. Complicated.
   __ ldr(R5, Address(R4, Process::kCoroutineOffset));
@@ -2007,8 +2019,10 @@ void InterpreterGeneratorARM::RestoreState() {
   Pop(R5);
   StoreFramePointer(R5);
 
-  // Pop current bytecode pointer from the stack.
-  Pop(R5);
+  // Set the bytecode pointer from the stack.
+  __ ldr(R5, Address(R5, kWordSize));
+
+  Drop(1);
 }
 
 }  // namespace fletch

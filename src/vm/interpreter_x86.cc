@@ -230,8 +230,10 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
 
   void LoadLocal(Register reg, int index);
   void StoreLocal(Register reg, int index);
+  void StoreLocal(const Immediate& value, int index);
 
   void Push(Register reg);
+  void Push(const Immediate& value);
   void Pop(Register reg);
   void Drop(int n);
   void Drop(Register reg);
@@ -1460,6 +1462,13 @@ void InterpreterGeneratorX86::Push(Register reg) {
   __ subl(EDI, Immediate(1 * kWordSize));
 }
 
+void InterpreterGeneratorX86::Push(const Immediate& value) {
+  // By storing before updating register edi we (try) to avoid stalls
+  // due to writing indireclty through a just updated register.
+  StoreLocal(value, -1);
+  __ subl(EDI, Immediate(1 * kWordSize));
+}
+
 void InterpreterGeneratorX86::Pop(Register reg) {
   LoadLocal(reg, 0);
   Drop(1);
@@ -1483,12 +1492,16 @@ void InterpreterGeneratorX86::StoreFramePointer(Register reg) {
 
 void InterpreterGeneratorX86::PushFrameDescriptor(Register return_address,
                                                   Register scratch) {
-  Push(return_address);
   LoadFramePointer(scratch);
+  __ movl(Address(scratch, kWordSize), return_address);
+
+  Push(Immediate(0));
+
   Push(scratch);
+
   StoreFramePointer(EDI);
-  __ movl(scratch, Immediate(0));
-  Push(scratch);
+
+  Push(Immediate(0));
 }
 
 void InterpreterGeneratorX86::ReadFrameDescriptor(Register scratch) {
@@ -1496,8 +1509,9 @@ void InterpreterGeneratorX86::ReadFrameDescriptor(Register scratch) {
   // Store old frame pointer from stack.
   LoadLocal(scratch, 0);
   StoreFramePointer(scratch);
+
   // Load return address.
-  LoadLocal(ESI, 1);
+  __ movl(ESI, Address(scratch, kWordSize));
 }
 
 void InterpreterGeneratorX86::LoadLocal(Register reg, int index) {
@@ -1506,6 +1520,10 @@ void InterpreterGeneratorX86::LoadLocal(Register reg, int index) {
 
 void InterpreterGeneratorX86::StoreLocal(Register reg, int index) {
   __ movl(Address(EDI, index * kWordSize), reg);
+}
+
+void InterpreterGeneratorX86::StoreLocal(const Immediate& value, int index) {
+  __ movl(Address(EDI, index * kWordSize), value);
 }
 
 void InterpreterGeneratorX86::Return(bool is_return_null) {
@@ -2060,10 +2078,14 @@ void InterpreterGeneratorX86::Dispatch(int size) {
 }
 
 void InterpreterGeneratorX86::SaveState() {
-  // Push the bytecode pointer on the stack.
-  Push(ESI);
+  // Save the bytecode pointer at the return-address slot.
+  LoadFramePointer(ECX);
+  __ movl(Address(ECX, kWordSize), ESI);
 
-  // Load and push frame pointer.
+  // Push null.
+  Push(Immediate(0));
+
+  // Push frame pointer.
   LoadFramePointer(ECX);
   Push(ECX);
 
@@ -2087,8 +2109,10 @@ void InterpreterGeneratorX86::RestoreState() {
   Pop(ECX);
   StoreFramePointer(ECX);
 
-  // Pop current bytecode pointer from the stack.
-  Pop(ESI);
+  // Set the bytecode pointer from the stack.
+  __ movl(ESI, Address(ECX, kWordSize));
+
+  Drop(1);
 }
 
 }  // namespace fletch

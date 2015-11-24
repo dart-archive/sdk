@@ -907,12 +907,12 @@ static Process* SpawnProcessInternal(Program* program,
   stack->set(--top, argument);
   // Push 'NULL' return address. This will tell the stack-walker this is the
   // last function. Also push two empty slots.
-  stack->set(--top, NULL);
+  stack->set(--top, reinterpret_cast<Object*>(bcp));
   stack->set(--top, NULL);
   Object** frame_pointer = stack->Pointer(top);
   stack->set(--top, NULL);
   // Finally push the bcp and fp.
-  stack->set(--top, reinterpret_cast<Object*>(bcp));
+  stack->set(--top, NULL);
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
 
@@ -1011,7 +1011,7 @@ NATIVE(CoroutineNewStack) {
   stack->set(--top, coroutine);
   stack->set(--top, entry);
   // Terminating return address and two empty slots.
-  stack->set(--top, NULL);
+  stack->set(--top, reinterpret_cast<Object*>(bcp + 2));
   stack->set(--top, NULL);
   Object** frame_pointer = stack->Pointer(top);
   stack->set(--top, NULL);
@@ -1019,7 +1019,7 @@ NATIVE(CoroutineNewStack) {
   stack->set(--top, Smi::FromWord(0));  // Fake 'value' argument.
   // Leave bcp at the kChangeStack instruction to make it look like a
   // suspended co-routine. bcp is incremented on resume.
-  stack->set(--top, reinterpret_cast<Object*>(bcp + 2));
+  stack->set(--top, NULL);
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
   return stack;
