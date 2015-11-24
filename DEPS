@@ -166,6 +166,14 @@ hooks = [
     ],
   },
   {
+    # Update the Windows toolchain if necessary.
+    'name': 'win_toolchain',
+    'pattern': '.',
+    'action': ['python',
+               'fletch/tools/vs_dependency/vs_toolchain.py',
+               'update'],
+  },
+  {
     'name': 'third_party_qemu',
     'pattern': '.',
     'action': [

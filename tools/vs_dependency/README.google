@@ -1,0 +1,17 @@
+URL: "https://chromium.googlesource.com/chromium/src.git"
+Version: 0d5252879339ea582c6b9fd46378733fc137a488
+License: BSD style
+License File: LICENSE
+
+Description:
+Used to download a Visual Studio tool chain from google cloud storage (for
+Google employees only).
+
+Local Modifications:
+Only two files are used:
+
+build/find_depot_tools.py
+build/vs_toolchain.py
+
+Modified to fix relative path lookup due to different location in fletch
+repository.
