@@ -1,10 +1,10 @@
 Starting session. Type 'help' for a list of commands.
 
-> bf tests/debugger/empty_column_test.dart 11 1
-breakpoints set: id: '0' method: 'foo' bytecode index: '0'
+> bf tests/debugger/empty_column_test.dart 12 1
+breakpoints set: id: '0' method: 'foo' bytecode index: '2'
 > r
 Stack trace:
-> 0: foo         @2
+> 0: foo         @3
   1: main        @foo()
 > c
 ### process terminated
