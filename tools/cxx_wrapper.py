@@ -28,7 +28,7 @@ def relative_to_fletch_root(*target):
 def invoke_clang(args):
   os_name = utils.GuessOS()
   clang_bin = relative_to_fletch_root(
-    "third_party", "clang", os_name, "bin", "clang")
+    "third_party", "clang", os_name, "bin", "clang++")
   if os_name == "macos":
     os_name = "mac"
     args.extend([
