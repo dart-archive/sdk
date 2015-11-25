@@ -322,18 +322,35 @@ Future<Settings> readSettings(Uri uri) async {
   }
 }
 
+Future<Uri> findFile(Uri cwd, String fileName) async {
+  Uri uri = cwd.resolve(fileName);
+  while (true) {
+    if (await new File.fromUri(uri).exists()) return uri;
+    if (uri.pathSegments.length <= 1) return null;
+    uri = uri.resolve('../$fileName');
+  }
+}
+
 Future<Settings> createSettings(
     String sessionName,
     Uri uri,
-    Uri base,
+    Uri cwd,
     Uri configFileUri,
     CommandSender commandSender,
     StreamIterator<Command> commandIterator) async {
   bool userProvidedSettings = uri != null;
   if (!userProvidedSettings) {
-    Uri implicitSettingsUri = base.resolve('.fletch-settings');
-    if (await new File.fromUri(implicitSettingsUri).exists()) {
-      uri = implicitSettingsUri;
+    // Try to find a $sessionName.fletch-settings file starting from the current
+    // working directory and walking up its parent directories.
+    uri = await findFile(cwd, '$sessionName.fletch-settings');
+
+    // If no $sessionName.fletch-settings file is found, try to find the
+    // settings template file (in the SDK or git repo) by looking for a
+    // .fletch-settings file starting from the fletch executable's directory
+    // and walking up its parent directory chain.
+    if (uri == null) {
+      uri = await findFile(executable, '.fletch-settings');
+      if (uri != null) print('Using template settings file $uri');
     }
   }
 
@@ -344,6 +361,9 @@ Future<Settings> createSettings(
   }
   if (userProvidedSettings) return settings;
 
+  // TODO(wibling): get rid of below special handling of the sessions 'remote'
+  // and 'local' and come up with a fletch project concept that can contain
+  // these settings.
   Uri packagesUri;
   Address address;
   switch (sessionName) {

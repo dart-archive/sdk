@@ -70,7 +70,7 @@ Future<int> createSessionTask(
   if (settingsUri != null) {
     state.log("created session with $settingsUri $settings");
   } else {
-    state.log("created session");
+    state.log("created session with settings $settings");
   }
   return 0;
 }
