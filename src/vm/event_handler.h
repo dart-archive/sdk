@@ -6,7 +6,7 @@
 #define SRC_VM_EVENT_HANDLER_H_
 
 #include "src/shared/globals.h"
-#include "src/vm/hash_map.h"
+#include "src/vm/priority_heap.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -39,7 +39,7 @@ class EventHandler {
   bool running_;
   ThreadIdentifier thread_;
 
-  HashMap<Port*, int64> timeouts_;
+  PriorityHeapWithValueIndex<int64, Port*> timeouts_;
   int64 next_timeout_;
 
   static void* RunEventHandler(void* peer);
