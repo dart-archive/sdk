@@ -6,9 +6,12 @@ import bot_utils
 
 class FletchGCSNamer(bot_utils.GCSNamer):
   def __init__(self, channel=bot_utils.Channel.BLEEDING_EDGE,
-               release_type=bot_utils.ReleaseType.RAW):
+               release_type=bot_utils.ReleaseType.RAW, temporary=False):
     super(FletchGCSNamer, self).__init__(channel, release_type, False)
-    self.bucket = 'gs://fletch-archive'
+    if temporary:
+      self.bucket = 'gs://fletch-temporary'
+    else:
+      self.bucket = 'gs://fletch-archive'
 
   def fletch_sdk_directory(self, revision):
     return self._variant_directory('sdk', revision)

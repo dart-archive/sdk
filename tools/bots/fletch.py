@@ -217,10 +217,15 @@ def StepsArchiveDebianPackage():
 def GetDownloadLink(gs_path):
   return gs_path.replace('gs://', 'https://storage.googleapis.com/')
 
-def GetNamer():
+def GetNamer(temporary=False):
   name, _ = bot.GetBotName()
   channel = bot_utils.GetChannelFromName(name)
-  return fletch_namer.FletchGCSNamer(channel)
+  return fletch_namer.FletchGCSNamer(channel, temporary=temporary)
+
+def IsBleedingEdge():
+  name, _ = bot.GetBotName()
+  channel = bot_utils.GetChannelFromName(name)
+  return channel == bot_utils.Channel.BLEEDING_EDGE
 
 def StepsBundleSDK(build_dir, system):
   with bot.BuildStep('Bundle sdk %s' % build_dir):
@@ -254,7 +259,7 @@ def EnsureRaspbianBase():
 def StepsCreateArchiveRaspbianImge():
   EnsureRaspbianBase()
   with bot.BuildStep('Modifying raspbian image'):
-    namer = GetNamer()
+    namer = GetNamer(temporary=IsBleedingEdge())
     raspbian_src = os.path.join('third_party', 'raspbian', 'image',
                                 'jessie.img')
     raspbian_dst = os.path.join('out', namer.raspbian_filename())
