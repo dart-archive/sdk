@@ -7,6 +7,7 @@
 #include "src/vm/event_handler.h"
 
 #include <kernel/event.h>
+#include <kernel/port.h>
 
 #include "src/shared/utils.h"
 #include "src/vm/object.h"
@@ -17,18 +18,81 @@
 
 namespace fletch {
 
+const char* kFletchInterruptPortName = "FLETCH_INT";
+
+class PortSet {
+ public:
+  PortSet() : group(0), port_set(NULL) {
+    // Init the port subsystem.
+    port_init();
+
+    // Create and add the interrupt port.
+    port_create(kFletchInterruptPortName, PORT_MODE_UNICAST, &interrupt_port);
+    port_t interrupt_read;
+    port_open(kFletchInterruptPortName, NULL, &interrupt_read);
+    AddReadPort(interrupt_read);
+  }
+
+  ~PortSet() {
+    ASSERT(group != 0);
+
+    // Close the group
+    port_close(group);
+
+    // Close all open read ports.
+    for (size_t i = 0; i < index_map.size(); i++) {
+      port_close(port_set[i]);
+    }
+    free(port_set);
+
+    // Close and destroy the interrupt 'write' end.
+    port_close(interrupt_port);
+    port_destroy(interrupt_port);
+  }
+
+  void AddReadPort(port_t port) {
+    word index = index_map.size();
+    size_t new_size = (index + 1) * sizeof(port_t);
+    port_set = reinterpret_cast<port_t*>(realloc(port_set, new_size));
+    port_set[index] = port;
+    index_map[port] = index;
+
+    UpdateGroupPort();
+  }
+
+  void Interrupt() {
+    port_packet_t p;
+    memset(&p, 0, sizeof(p));
+    port_write(interrupt_port, &p, 1);
+  }
+
+  bool Wait(lk_time_t timeout, port_result_t* result) {
+    return port_read(group, timeout, result) != ERR_TIMED_OUT;
+  }
+
+ private:
+  void UpdateGroupPort() {
+    if (group != 0) port_close(group);
+    port_group(port_set, index_map.size(), &group);
+  }
+
+  port_t group;
+  port_t interrupt_port;
+  port_t* port_set;
+  HashMap<port_t, word> index_map;
+};
+
 void EventHandler::Create() {
   ASSERT(data_ == NULL);
-  event_t* event = new event_t;
-  event_init(event, false, EVENT_FLAG_AUTOUNSIGNAL);
+
+  PortSet* set = new PortSet();
   id_ = -1;
-  data_ = reinterpret_cast<void*>(event);
+  data_ = reinterpret_cast<void*>(set);
 }
 
 void EventHandler::Interrupt() {
-  if (event_signal(reinterpret_cast<event_t*>(data_), false) != NO_ERROR) {
-    FATAL("Failed to signal event in event handler");
-  }
+  PortSet* set = reinterpret_cast<PortSet*>(data_);
+  set->Interrupt();
 }
 
 void EventHandler::Run() {
@@ -46,19 +110,23 @@ void EventHandler::Run() {
       if (next_timeout < 0) next_timeout = 0;
     }
 
-    event_wait_timeout(reinterpret_cast<event_t*>(data_), next_timeout);
+    PortSet* set = reinterpret_cast<PortSet*>(data_);
+    port_result_t result;
+    bool has_result = set->Wait(next_timeout, &result);
 
     {
       ScopedMonitorLock scoped_lock(monitor_);
 
       if (!running_) {
-        event_t* event = reinterpret_cast<event_t*>(data_);
-        event_destroy(event);
-        delete event;
+        delete set;
         data_ = NULL;
         monitor_->Notify();
         return;
       }
+    }
+
+    if (has_result) {
+      // TODO(ajohnsen): Handle result.
     }
 
     HandleTimeouts();
