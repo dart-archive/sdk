@@ -52,6 +52,10 @@ def invoke_gcc_cmsis(args):
   path = "/usr/local/gcc-arm-none-eabi-4_9-2015q2/bin/arm-none-eabi-gcc"
   subprocess.check_call([path] + args)
 
+def invoke_gcc_stm(args):
+  path = "/usr/local/gcc-arm-none-eabi-4_9-2015q3/bin/arm-none-eabi-gcc"
+  subprocess.check_call([path] + args)
+
 def invoke_gcc_lk(args):
   if which("arm-eabi-gcc") is not None:
     args.insert(0, "arm-eabi-gcc")
@@ -84,6 +88,8 @@ def main():
     invoke_gcc_arm64(args)
   elif "-DFLETCH_CMSIS" in args:
     invoke_gcc_cmsis(args)
+  elif "-DFLETCH_STM" in args:
+    invoke_gcc_stm(args)
   elif "-L/FLETCH_CMSIS" in args:
     args.remove("-L/FLETCH_CMSIS")
     invoke_gcc_cmsis(args)

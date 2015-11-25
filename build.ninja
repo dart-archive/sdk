@@ -23,6 +23,13 @@ rule gyp-mbed
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
+rule gyp-stm
+  command = $
+    GYP_CROSSCOMPILE=1 $
+    ./third_party/gyp/gyp --depth=. -Iplatforms/stm/stm_targets.gypi $
+        -Goutput_dir=out $
+        --format=ninja platforms/stm/stm.gyp
+
 build $
     out/DebugIA32/build.ninja $
     out/DebugIA32Asan/build.ninja $
@@ -114,5 +121,23 @@ build $
 build mbed: phony$
     out/DebugMBED/build.ninja $
     out/ReleaseMBED/build.ninja $
+
+build $
+    out/DebugSTM/build.ninja $
+    out/ReleaseSTM/build.ninja: $
+    gyp-stm $
+        common.gypi $
+        version.gyp $
+        platforms/stm/stm_targets.gypi $
+        platforms/stm/stm.gyp $
+        fletch.gyp $
+        src/double_conversion.gyp $
+        src/shared/shared.gyp $
+        src/tools/driver/driver.gyp $
+        src/vm/vm.gyp $
+
+build stm: phony$
+    out/DebugSTM/build.ninja $
+    out/ReleaseSTM/build.ninja $
 
 default gyp
