@@ -509,3 +509,10 @@ class _ChannelEntry {
 bool isImmutable(Object object) => _isImmutable(object);
 
 @fletch.native external bool _isImmutable(String string);
+
+void eventHandlerAdd(Object id, Port port) {
+  if (port is! Port) throw new ArgumentError(port);
+  _eventHandlerAdd(id, port);
+}
+
+@fletch.native external void _eventHandlerAdd(Object id, Port port);

@@ -137,6 +137,8 @@ namespace fletch {
                                                                          \
   N(TimerScheduleTimeout,        "_FletchTimer", "_scheduleTimeout")     \
                                                                          \
+  N(EventHandlerAdd,             "<none>", "_eventHandlerAdd")           \
+                                                                         \
   N(ForeignLibraryLookup,        "ForeignLibrary", "_lookupLibrary")     \
   N(ForeignLibraryClose,         "ForeignLibrary", "_closeLibrary")      \
   N(ForeignLibraryGetFunction,   "ForeignLibrary", "_lookupFunction")    \

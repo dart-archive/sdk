@@ -23,9 +23,6 @@ const char* kFletchInterruptPortName = "FLETCH_INT";
 class PortSet {
  public:
   PortSet() : group(0), port_set(NULL) {
-    // Init the port subsystem.
-    port_init();
-
     // Create and add the interrupt port.
     port_create(kFletchInterruptPortName, PORT_MODE_UNICAST, &interrupt_port);
     port_t interrupt_read;
@@ -95,6 +92,31 @@ void EventHandler::Interrupt() {
   set->Interrupt();
 }
 
+Object* EventHandler::Add(Process* process, Object* id, Port* port) {
+  GetEventHandler();
+
+  if (!id->IsOneByteString()) return Failure::wrong_argument_type();
+
+  char* str = OneByteString::cast(id)->ToCString();
+
+  port_t read_port;
+  int status;
+  if ((status = port_open(str, port, &read_port)) != 0) {
+    free(str);
+    return Failure::index_out_of_bounds();
+  }
+  free(str);
+
+  port->IncrementRef();
+
+  PortSet* set = reinterpret_cast<PortSet*>(data_);
+
+  ScopedMonitorLock locker(monitor_);
+  set->AddReadPort(read_port);
+  set->Interrupt();
+  return process->program()->null_object();
+}
+
 void EventHandler::Run() {
   while (true) {
     int64 next_timeout;
@@ -125,8 +147,10 @@ void EventHandler::Run() {
       }
     }
 
-    if (has_result) {
-      // TODO(ajohnsen): Handle result.
+    if (has_result && result.ctx != NULL) {
+      int64 value = *reinterpret_cast<int64*>(&result.packet.value);
+      // TODO(ajohnsen): This will only send the lower 32bit of the value.
+      Send(reinterpret_cast<Port*>(result.ctx), value);
     }
 
     HandleTimeouts();

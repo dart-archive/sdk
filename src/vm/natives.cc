@@ -1394,4 +1394,14 @@ NATIVE(TimerScheduleTimeout) {
   return process->program()->null_object();
 }
 
+NATIVE(EventHandlerAdd) {
+  Object* id = arguments[0];
+  Instance* instance = Instance::cast(arguments[1]);
+  ASSERT(instance->IsPort());
+  Object* field = instance->GetInstanceField(0);
+  uword address = AsForeignWord(field);
+  Port* port = reinterpret_cast<Port*>(address);
+  return process->program()->event_handler()->Add(process, id, port);
+}
+
 }  // namespace fletch

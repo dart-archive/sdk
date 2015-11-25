@@ -13,6 +13,8 @@ namespace fletch {
 
 class Monitor;
 class Port;
+class Object;
+class Process;
 
 class EventHandler {
  public:
@@ -27,6 +29,8 @@ class EventHandler {
   ~EventHandler();
 
   int GetEventHandler();
+
+  Object* Add(Process* process, Object* id, Port* port);
 
   void ScheduleTimeout(int64 timeout, Port* port);
 
