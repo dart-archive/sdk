@@ -104,6 +104,11 @@ class ForeignFunction extends Foreign {
         _convert(a3), _convert(a4), _convert(a5));
   }
 
+  int icall$7(a0, a1, a2, a3, a4, a5, a6) {
+    return _icall$7(address, _convert(a0), _convert(a1), _convert(a2),
+        _convert(a3), _convert(a4), _convert(a5), _convert(a6));
+  }
+
   // Support for calling foreign functions that return
   // integers. The functions with the suffix `Retry` can be used for calling
   // functions that follow functions that follow the POSIX-convention
@@ -119,6 +124,9 @@ class ForeignFunction extends Foreign {
   }
   int icall$6Retry(a0, a1, a2, a3, a4, a5) {
     return retry(() => icall$6(a0, a1, a2, a3, a4, a5));
+  }
+  int icall$7Retry(a0, a1, a2, a3, a4, a5, a6) {
+    return retry(() => icall$7(a0, a1, a2, a3, a4, a5, a6));
   }
   // Support for calling foreign functions that return
   // machine words -- typically pointers -- encapulated in
@@ -213,6 +221,10 @@ class ForeignFunction extends Foreign {
   }
   @fletch.native static int _icall$6(
       int address, a0, a1, a2, a3, a4, a5) {
+    throw new ArgumentError();
+  }
+  @fletch.native static int _icall$7(
+      int address, a0, a1, a2, a3, a4, a5, a6) {
     throw new ArgumentError();
   }
 

@@ -93,6 +93,7 @@ typedef int (*F3)(word, word, word);
 typedef int (*F4)(word, word, word, word);
 typedef int (*F5)(word, word, word, word, word);
 typedef int (*F6)(word, word, word, word, word, word);
+typedef int (*F7)(word, word, word, word, word, word, word);
 
 NATIVE(ForeignICall0) {
   word address = AsForeignWord(arguments[0]);
@@ -205,6 +206,27 @@ NATIVE(ForeignICall6) {
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
   int value = function(a0, a1, a2, a3, a4, a5);
+  if (Smi::IsValid(value)) {
+    process->TryDeallocInteger(LargeInteger::cast(result));
+    return Smi::FromWord(value);
+  }
+  LargeInteger::cast(result)->set_value(value);
+  return result;
+}
+
+NATIVE(ForeignICall7) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  word a4 = AsForeignWord(arguments[5]);
+  word a5 = AsForeignWord(arguments[6]);
+  word a6 = AsForeignWord(arguments[7]);
+  F7 function = reinterpret_cast<F7>(address);
+  Object* result = process->NewInteger(0);
+  if (result == Failure::retry_after_gc()) return result;
+  int value = function(a0, a1, a2, a3, a4, a5, a6);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
     return Smi::FromWord(value);

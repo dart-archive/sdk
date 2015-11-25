@@ -157,6 +157,7 @@ namespace fletch {
   N(ForeignICall4,               "ForeignFunction", "_icall$4")          \
   N(ForeignICall5,               "ForeignFunction", "_icall$5")          \
   N(ForeignICall6,               "ForeignFunction", "_icall$6")          \
+  N(ForeignICall7,               "ForeignFunction", "_icall$7")          \
                                                                          \
   N(ForeignPCall0,               "ForeignFunction", "_pcall$0")          \
   N(ForeignPCall1,               "ForeignFunction", "_pcall$1")          \

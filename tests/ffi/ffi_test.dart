@@ -294,6 +294,7 @@ testVAndICall() {
   var icall4 = fl.lookup('ifun4');
   var icall5 = fl.lookup('ifun5');
   var icall6 = fl.lookup('ifun6');
+  var icall7 = fl.lookup('ifun7');
   Expect.equals(0, icall0.icall$0());
   Expect.equals(1, icall1.icall$1(1));
   Expect.equals(2, icall2.icall$2(1, 1));
@@ -301,6 +302,7 @@ testVAndICall() {
   Expect.equals(4, icall4.icall$4(1, 1, 1, 1));
   Expect.equals(5, icall5.icall$5(1, 1, 1, 1, 1));
   Expect.equals(6, icall6.icall$6(1, 1, 1, 1, 1, 1));
+  Expect.equals(7, icall7.icall$7(1, 1, 1, 1, 1, 1, 1));
 
   // Some limit tests, this is more of sanity checking of our conversions.
   Expect.equals(-1, icall1.icall$1(-1));
@@ -322,6 +324,7 @@ testVAndICall() {
   var icall4EINTR = fl.lookup('ifun4EINTR');
   var icall5EINTR = fl.lookup('ifun5EINTR');
   var icall6EINTR = fl.lookup('ifun6EINTR');
+  var icall7EINTR = fl.lookup('ifun7EINTR');
   Expect.equals(-1, icall0EINTR.icall$0());
   Expect.equals(4, Foreign.errno);
   Expect.equals(-1, icall1EINTR.icall$1(1));
@@ -335,6 +338,8 @@ testVAndICall() {
   Expect.equals(-1, icall5EINTR.icall$5(1, 1, 1, 1, 1));
   Expect.equals(4, Foreign.errno);
   Expect.equals(-1, icall6EINTR.icall$6(1, 1, 1, 1, 1, 1));
+  Expect.equals(4, Foreign.errno);
+  Expect.equals(-1, icall7EINTR.icall$7(1, 1, 1, 1, 1, 1, 1));
   Expect.equals(4, Foreign.errno);
   Expect.equals(0, icall0EINTR.icall$0Retry());
   Expect.equals(4, Foreign.errno);
@@ -350,6 +355,8 @@ testVAndICall() {
   Expect.equals(4, Foreign.errno);
   Expect.equals(6, icall6EINTR.icall$6Retry(1, 1, 1, 1, 1, 1));
   Expect.equals(4, Foreign.errno);
+  Expect.equals(7, icall7EINTR.icall$7Retry(1, 1, 1, 1, 1, 1, 1));
+  Expect.equals(4, Foreign.errno);
 
   // Test that ForeignFunction.retry is available (note that this will
   // not actually retry as the retry count was exhausted by the calls above).
@@ -363,7 +370,8 @@ testVAndICall() {
       5, ForeignFunction.retry(() => icall5EINTR.icall$5(1, 1, 1, 1, 1)));
   Expect.equals(
       6, ForeignFunction.retry(() => icall6EINTR.icall$6(1, 1, 1, 1, 1, 1)));
-
+  Expect.equals(
+      7, ForeignFunction.retry(() => icall7EINTR.icall$7(1, 1, 1, 1, 1, 1, 1)));
 
   // Test all the void wrappers. The vcall c functions will set the count to
   // the sum of the arguments, testable by running getcount.

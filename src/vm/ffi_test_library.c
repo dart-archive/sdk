@@ -78,6 +78,10 @@ int ifun6(int a, int b, int c, int d, int e, int f) {
   return a + b + c + d + e + f;
 }
 
+int ifun7(int a, int b, int c, int d, int e, int f, int g) {
+  return a + b + c + d + e + f + g;
+}
+
 int ifun0EINTR() {
   static int count = 0;
   if (count++ < 10) {
@@ -139,6 +143,15 @@ int ifun6EINTR(int a, int b, int c, int d, int e, int f) {
     return -1;
   }
   return a + b + c + d + e + f;
+}
+
+int ifun7EINTR(int a, int b, int c, int d, int e, int f, int g) {
+  static int count = 0;
+  if (count++ < 10) {
+    errno = EINTR;
+    return -1;
+  }
+  return a + b + c + d + e + f + g;
 }
 
 void vfun0() {
