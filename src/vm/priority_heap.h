@@ -112,8 +112,8 @@ class PriorityHeapWithValueIndex {
 
     size_--;
 
-    if (size_ == 0) {
-      auto it = hashmap_.Find(backing_[0].value);
+    if (offset == size_) {
+      auto it = hashmap_.Find(backing_[offset].value);
       ASSERT(it != hashmap_.End());
       hashmap_.Erase(it);
     } else {
