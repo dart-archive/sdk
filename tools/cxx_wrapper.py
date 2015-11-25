@@ -21,16 +21,19 @@ def which(program):
 
   return None
 
-def invoke_clang(args):
+def relative_to_fletch_root(*target):
   fletch_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+  return os.path.join(fletch_path, *target)
+
+def invoke_clang(args):
   os_name = utils.GuessOS()
+  clang_bin = relative_to_fletch_root(
+    "third_party", "clang", os_name, "bin", "clang")
   if os_name == "macos":
     os_name = "mac"
     args.extend([
       '-isysroot',
       subprocess.check_output(['xcrun', '--show-sdk-path']).strip()])
-  clang_bin = os.path.join(
-    fletch_path, "third_party", "clang", os_name, "bin", "clang++")
   print clang_bin
   args.insert(0, clang_bin)
   print "'%s'" % "' '".join(args)
@@ -51,6 +54,18 @@ def invoke_gcc_arm64(args):
 def invoke_gcc_cmsis(args):
   path = "/usr/local/gcc-arm-none-eabi-4_9-2015q2/bin/arm-none-eabi-g++"
   subprocess.check_call([path] + args)
+
+def invoke_gcc_arm_embedded(args):
+  os_name = utils.GuessOS()
+  gcc_arm_embedded_bin = relative_to_fletch_root(
+    "third_party", "gcc-arm-embedded", os_name, "gcc-arm-embedded", "bin",
+    "arm-none-eabi-g++")
+  if not os.path.exists(gcc_arm_embedded_bin):
+    gcc_arm_embedded_download = relative_to_fletch_root(
+      "third_party", "gcc-arm-embedded", "download")
+    print "Missing toolchain run %s to download" % gcc_arm_embedded_download
+  args.insert(0, gcc_arm_embedded_bin)
+  os.execv(gcc_arm_embedded_bin, args)
 
 def invoke_gcc_lk(args):
   if which("arm-eabi-g++") is not None:
@@ -87,6 +102,11 @@ def main():
   elif "-L/FLETCH_CMSIS" in args:
     args.remove("-L/FLETCH_CMSIS")
     invoke_gcc_cmsis(args)
+  elif "-DFLETCH_STM" in args:
+    invoke_gcc_arm_embedded(args)
+  elif "-L/FLETCH_STM" in args:
+    args.remove("-L/FLETCH_STM")
+    invoke_gcc_arm_embedded(args)
   elif "-DFLETCH_LK" in args:
     invoke_gcc_lk(args)
   elif "-L/FLETCH_LK" in args:

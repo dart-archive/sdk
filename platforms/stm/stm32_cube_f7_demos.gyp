@@ -4,7 +4,7 @@
 
 {
   'variables': {
-    'discovery_projects': '<(stm32_cube_f7)/Projects/STM32746G-Discovery/',
+    'discovery_projects': '<(stm32_cube_f7)/Projects/STM32746G-Discovery',
   },
   'target_defaults': {
     'include_dirs': [

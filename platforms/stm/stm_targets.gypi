@@ -4,7 +4,7 @@
 
 {
   'variables': {
-    'stm32_cube_f7': '<(DEPTH)/third_party/stm/STM32Cube_FW_F7_V1.2.0/',
+    'stm32_cube_f7': '<(DEPTH)/third_party/stm/STM32Cube_FW_F7_V1.2.0',
     'stm32_cube_f7_bsp_discovery':
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
   },
@@ -61,7 +61,7 @@
               '-mfpu=fpv5-sp-d16',
               '-Wl,-Map=output.map',
               '-Wl,--gc-sections',
-              '-L/FLETCH_CMSIS', # Fake define intercepted by cc_wrapper.py.
+              '-L/FLETCH_STM', # Fake define intercepted by cc_wrapper.py.
             ],
           }],
 
