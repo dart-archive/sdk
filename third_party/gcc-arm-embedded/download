@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+function follow_links() {
+  file="$1"
+  while [ -h "$file" ]; do
+    # On Mac OS, readlink -f doesn't work.
+    file="$(readlink "$file")"
+  done
+  echo "$file"
+}
+
+# Unlike $0, $BASH_SOURCE points to the absolute path of this file.
+PROG_NAME="$(follow_links "$BASH_SOURCE")"
+
+download_from_google_storage \
+  --no_auth --no_resume --bucket dart-dependencies-fletch \
+  -d -r -u --auto_platform \
+  $(dirname $PROG_NAME)
