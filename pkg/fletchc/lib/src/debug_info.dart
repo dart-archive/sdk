@@ -148,7 +148,8 @@ class DebugInfo {
       } else if (!foundContaining) {
         current = current != null ? current : location;
         if (location.span.begin > position &&
-            current.span.begin > location.span.begin) {
+            (current.span.begin > location.span.begin ||
+             current.span.begin < position)) {
           current = location;
         }
       }
