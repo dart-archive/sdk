@@ -7,6 +7,9 @@
     'stm32_cube_f7': '<(DEPTH)/third_party/stm/STM32Cube_FW_F7_V1.2.0',
     'stm32_cube_f7_bsp_discovery':
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
+    'gcc-arm-embedded':
+      '<(DEPTH)/third_party/gcc-arm-embedded/linux/gcc-arm-embedded/bin',
+    'objcopy': '<(gcc-arm-embedded)/arm-none-eabi-objcopy',
   },
 
   'includes': [

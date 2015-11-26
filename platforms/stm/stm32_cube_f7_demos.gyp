@@ -26,7 +26,7 @@
   },
   'targets': [
     {
-      'target_name': 'STemWin_HelloWorld',
+      'target_name': 'STemWin_HelloWorld_elf',
       'variables': {
         'project_name': 'STemWin_HelloWorld',
         'project_path':
@@ -70,7 +70,35 @@
       ],
     },
     {
-      'target_name': 'Audio_playback_and_record',
+      'variables': {
+        'project_name': 'STemWin_HelloWorld',
+      },
+      'type': 'none',
+      'target_name': 'STemWin_HelloWorld',
+      'dependencies' : [
+        'STemWin_HelloWorld_elf'
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_bin',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(project_name)_elf',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+          'action': [
+            '<(objcopy)',
+            '-O',
+            'binary',
+            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+        },
+      ],
+    },
+    {
+      'target_name': 'Audio_playback_and_record_elf',
       'variables': {
         'project_name': 'Audio_playback_and_record',
         'project_path':
@@ -135,7 +163,35 @@
       ],
     },
     {
-      'target_name': 'LwIP_HTTP_Server_Netconn_RTOS',
+      'variables': {
+        'project_name': 'Audio_playback_and_record',
+      },
+      'type': 'none',
+      'target_name': 'Audio_playback_and_record',
+      'dependencies' : [
+        'Audio_playback_and_record_elf'
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_bin',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(project_name)_elf',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+          'action': [
+            '<(objcopy)',
+            '-O',
+            'binary',
+            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+        },
+      ],
+    },
+    {
+      'target_name': 'LwIP_HTTP_Server_Netconn_RTOS_elf',
       'variables': {
         'project_name': 'LwIP_HTTP_Server_Netconn_RTOS',
         'project_path':
@@ -178,7 +234,35 @@
       ],
     },
     {
-      'target_name': 'Demonstration',
+      'variables': {
+        'project_name': 'LwIP_HTTP_Server_Netconn_RTOS',
+      },
+      'type': 'none',
+      'target_name': 'LwIP_HTTP_Server_Netconn_RTOS',
+      'dependencies' : [
+        'LwIP_HTTP_Server_Netconn_RTOS_elf'
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_bin',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(project_name)_elf',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+          'action': [
+            '<(objcopy)',
+            '-O',
+            'binary',
+            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+        },
+      ],
+    },
+    {
+      'target_name': 'Demonstration_elf',
       'variables': {
         'project_name': 'Demonstration',
         'project_path': '<(discovery_projects)/<(project_name)',
@@ -277,6 +361,34 @@
         '-l:STM32746G_Discovery_STemWin_Addons_GCC.a',
         '-l:STemWin528_CM7_GCC.a',
         '-lm',
+      ],
+    },
+    {
+      'variables': {
+        'project_name': 'Demonstration',
+      },
+      'type': 'none',
+      'target_name': 'Demonstration',
+      'dependencies' : [
+        'Demonstration_elf'
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_bin',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(project_name)_elf',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+          'action': [
+            '<(objcopy)',
+            '-O',
+            'binary',
+            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+        },
       ],
     },
   ],
