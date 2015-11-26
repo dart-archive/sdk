@@ -316,12 +316,9 @@ void InterpreterGeneratorX86::GeneratePrologue() {
   // Push the current process.
   __ pushl(Address(ESP, (4 + 1) * kWordSize));
 
-  // Create room for fp.
-  __ pushl(Immediate(0));
-
   // Pad the stack to guarantee the right alignment for calls.
-  // Reserved is 4 registers, 1 return address, 1 process and 1 fp slot.
-  spill_size_ = ComputeStackPadding(7 * kWordSize, 6 * kWordSize);
+  // Reserved is 4 registers, 1 return address and 1 process.
+  spill_size_ = ComputeStackPadding(6 * kWordSize, 6 * kWordSize);
   if (spill_size_ > 0) __ subl(ESP, Immediate(spill_size_));
 
   // Restore the register state and dispatch to the first bytecode.
@@ -339,8 +336,8 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ Bind(&undo_padding);
   if (spill_size_ > 0) __ addl(ESP, Immediate(spill_size_));
 
-  // Skip frame pointer and process slot.
-  __ addl(ESP, Immediate(2 * kWordSize));
+  // Skip the process slot.
+  __ addl(ESP, Immediate(1 * kWordSize));
 
   // Restore callee-saved registers.
   __ popl(ESI);
@@ -1487,7 +1484,7 @@ void InterpreterGeneratorX86::Drop(Register reg) {
 }
 
 void InterpreterGeneratorX86::LoadProcess(Register reg) {
-  __ movl(reg, Address(ESP, spill_size_ + kWordSize));
+  __ movl(reg, Address(ESP, spill_size_));
 }
 
 void InterpreterGeneratorX86::LoadProgram(Register reg) {
@@ -1516,11 +1513,11 @@ void InterpreterGeneratorX86::LoadLiteralFalse(Register reg) {
 }
 
 void InterpreterGeneratorX86::LoadFramePointer(Register reg) {
-  __ movl(reg, Address(ESP, spill_size_));
+  __ movl(reg, EBP);
 }
 
 void InterpreterGeneratorX86::StoreFramePointer(Register reg) {
-  __ movl(Address(ESP, spill_size_), reg);
+  __ movl(EBP, reg);
 }
 
 void InterpreterGeneratorX86::PushFrameDescriptor(Register return_address,
@@ -2054,7 +2051,7 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
     __ j(EQUAL, &dont_yield);
 
     // Yield to the target port.
-    __ movl(ECX, Address(ESP, spill_size_ + 8 * kWordSize));
+    __ movl(ECX, Address(ESP, spill_size_ + 7 * kWordSize));
     __ movl(Address(ECX, 0), EAX);
     __ movl(EAX, Immediate(Interpreter::kTargetYield));
     __ jmp(&done_);
