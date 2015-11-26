@@ -42,6 +42,8 @@ GSUTIL = utils.GetBuildbotGSUtilPath()
 
 GCS_BUCKET = 'gs://fletch-cross-compiled-binaries'
 
+MACOS_NUMBER_OF_FILES = 10000
+
 def Run(args):
   print "Running: %s" % ' '.join(args)
   sys.stdout.flush()
@@ -718,6 +720,21 @@ class CoredumpArchiver(object):
     print '@@@STEP_LOG_END@coredumps@@@'
     MarkCurrentStep(fatal=False)
 
+class IncreasedNumberOfFiles(object):
+  def __init__(self, count):
+    self._old_limits = None
+    self._limits = (count, count)
+
+  def __enter__(self):
+    self._old_limits = resource.getrlimit(resource.RLIMIT_NOFILE)
+    print "IncreasedNumberOfFiles: Old limits were:", self._old_limits
+    print "IncreasedNumberOfFiles: Setting to:", self._limits
+    resource.setrlimit(resource.RLIMIT_NOFILE, self._limits)
+
+  def __exit__(self, *_):
+    print "IncreasedNumberOfFiles: Restoring to:", self._old_limits
+    resource.setrlimit(resource.RLIMIT_CORE, self._old_limits)
+
 class LinuxCoredumpArchiver(CoredumpArchiver):
   def __init__(self, *args):
     super(LinuxCoredumpArchiver, self).__init__(os.getcwd(), *args)
@@ -758,9 +775,10 @@ def RunWithCoreDumpArchiving(run, build_dir, build_conf):
       with LinuxCoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
         run()
   elif guessed_os == 'macos':
-    with CoredumpEnabler():
-      with MacosCoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
-        run()
+    with IncreasedNumberOfFiles(MACOS_NUMBER_OF_FILES):
+      with CoredumpEnabler():
+        with MacosCoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
+          run()
   else:
     run()
 
