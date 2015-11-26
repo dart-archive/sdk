@@ -48,6 +48,9 @@ dart_utils.DartBinary = DartBinary
 # Replace DART_DIR to get the right cwd for git commands.
 dart_utils.DART_DIR = os.path.abspath(os.path.join(__file__, '..', '..', '..'))
 
+# Use the version file in the fletch repo.
+dart_utils.VERSION_FILE = os.path.join(dart_utils.DART_DIR, 'tools', 'VERSION')
+
 # Now that we have patched 'dart_utils', import it into our own scope. This
 # also means that we export everything from that library.
 from dart_utils import *
