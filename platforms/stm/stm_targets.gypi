@@ -22,7 +22,7 @@
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
-              'FLETCH_STM', # Fake define intercepted by cc_wrapper.py.
+              'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
 
               'USE_HAL_DRIVER',
               'STM32F746xx',
@@ -61,7 +61,7 @@
               '-mfpu=fpv5-sp-d16',
               '-Wl,-Map=output.map',
               '-Wl,--gc-sections',
-              '-L/FLETCH_STM', # Fake define intercepted by cc_wrapper.py.
+              '-L/GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
             ],
           }],
 

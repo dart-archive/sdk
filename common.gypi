@@ -366,7 +366,7 @@
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
-              'FLETCH_LK',
+              'GCC_XARM_LOCAL', # Fake define intercepted by cc_wrapper.py.
               'FLETCH_TARGET_OS_LK',
              ],
 
@@ -399,7 +399,7 @@
 
             'ldflags': [
               # Fake define intercepted by cc_wrapper.py.
-              '-L/FLETCH_LK',
+              '-L/GCC_XARM_LOCAL',
             ],
 
             'defines!': [
@@ -434,9 +434,7 @@
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
-              # Fake define intercepted by cc_wrapper.py to change the
-              # compiler binary to an ARM cross compiler.
-              'FLETCH_CMSIS',
+              'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
               'FLETCH_TARGET_OS_CMSIS',
             ],
 
@@ -468,8 +466,7 @@
             ],
 
             'ldflags': [
-              # Fake define intercepted by cc_wrapper.py.
-              '-L/FLETCH_CMSIS',
+              '-L/GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
               '-static-libstdc++',
             ],
           }],

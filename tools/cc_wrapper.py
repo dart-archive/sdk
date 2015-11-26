@@ -66,7 +66,7 @@ def invoke_gcc_arm_embedded(args):
   args.insert(0, gcc_arm_embedded_bin)
   os.execv(gcc_arm_embedded_bin, args)
 
-def invoke_gcc_lk(args):
+def invoke_gcc_local(args):
   if which("arm-eabi-gcc") is not None:
     args.insert(0, "arm-eabi-gcc")
     os.execvp("arm-eabi-gcc", args)
@@ -96,21 +96,16 @@ def main():
   elif "-L/FLETCH_ARM64" in args:
     args.remove("-L/FLETCH_ARM64")
     invoke_gcc_arm64(args)
-  elif "-DFLETCH_CMSIS" in args:
+  elif "-DGCC_XARM_EMBEDDED" in args:
     invoke_gcc_arm_embedded(args)
-  elif "-L/FLETCH_CMSIS" in args:
-    args.remove("-L/FLETCH_CMSIS")
+  elif "-L/GCC_XARM_EMBEDDED" in args:
+    args.remove("-L/GCC_XARM_EMBEDDED")
     invoke_gcc_arm_embedded(args)
-  elif "-DFLETCH_STM" in args:
-    invoke_gcc_arm_embedded(args)
-  elif "-L/FLETCH_STM" in args:
-    args.remove("-L/FLETCH_STM")
-    invoke_gcc_arm_embedded(args)
-  elif "-DFLETCH_LK" in args:
-    invoke_gcc_lk(args)
-  elif "-L/FLETCH_LK" in args:
-    args.remove("-L/FLETCH_LK")
-    invoke_gcc_lk(args)
+  elif "-DGCC_XARM_LOCAL" in args:
+    invoke_gcc_local(args)
+  elif "-L/GCC_XARM_LOCAL" in args:
+    args.remove("-L/GCC_XARM_LOCAL")
+    invoke_gcc_local(args)
   else:
     invoke_gcc(args)
 
