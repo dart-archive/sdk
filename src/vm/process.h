@@ -189,7 +189,7 @@ class Process {
   void Profile();
 
   // Debugging support.
-  void AttachDebugger();
+  void EnsureDebuggerAttached();
   int PrepareStepOver();
   int PrepareStepOut();
 

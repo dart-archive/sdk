@@ -314,10 +314,8 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessSetBreakpoint: {
+        process_->EnsureDebuggerAttached();
         WriteBuffer buffer;
-        if (process_->debug_info() == NULL) {
-          process_->AttachDebugger();
-        }
         int bytecode_index = connection_->ReadInt();
         Function* function = Function::cast(Pop());
         DebugInfo* debug_info = process_->debug_info();
@@ -328,8 +326,8 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessDeleteBreakpoint: {
+        process_->EnsureDebuggerAttached();
         WriteBuffer buffer;
-        ASSERT(process_->debug_info() != NULL);
         int id = connection_->ReadInt();
         bool deleted = process_->debug_info()->DeleteBreakpoint(id);
         ASSERT(deleted);
@@ -339,6 +337,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStep: {
+        process_->EnsureDebuggerAttached();
         process_->debug_info()->set_is_stepping(true);
         ProcessContinue(process_);
         break;
@@ -363,6 +362,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStepTo: {
+        process_->EnsureDebuggerAttached();
         int64 id = connection_->ReadInt64();
         int bcp = connection_->ReadInt();
         Function* function =

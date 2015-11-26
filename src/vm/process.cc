@@ -605,18 +605,18 @@ void Process::Profile() {
   SetStackMarker(kProfileMarker);
 }
 
-void Process::AttachDebugger() {
-  ASSERT(debug_info_ == NULL);
-  debug_info_ = new DebugInfo();
+void Process::EnsureDebuggerAttached() {
+  if (debug_info_ == NULL) debug_info_ = new DebugInfo();
 }
 
 int Process::PrepareStepOver() {
+  EnsureDebuggerAttached();
+
   Frame frame(stack());
   frame.MovePrevious();
 
   uint8_t* current_bcp = frame.ByteCodePointer();
   Opcode opcode = static_cast<Opcode>(*current_bcp);
-
   if (!Bytecode::IsInvokeVariant(opcode)) {
     // For non-invoke bytecodes step over is the same as step.
     debug_info_->set_is_stepping(true);
@@ -665,6 +665,7 @@ int Process::PrepareStepOver() {
 }
 
 int Process::PrepareStepOut() {
+  EnsureDebuggerAttached();
   Frame frame(stack());
   bool has_top_frame = frame.MovePrevious();
   ASSERT(has_top_frame);
