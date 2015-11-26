@@ -51,10 +51,6 @@ def invoke_gcc_arm64(args):
   args.insert(0, "aarch64-linux-gnu-gcc-4.8")
   os.execv("/usr/bin/aarch64-linux-gnu-gcc-4.8", args)
 
-def invoke_gcc_cmsis(args):
-  path = "/usr/local/gcc-arm-none-eabi-4_9-2015q2/bin/arm-none-eabi-gcc"
-  subprocess.check_call([path] + args)
-
 def invoke_gcc_arm_embedded(args):
   os_name = utils.GuessOS()
   gcc_arm_embedded_bin = relative_to_fletch_root(
@@ -101,10 +97,10 @@ def main():
     args.remove("-L/FLETCH_ARM64")
     invoke_gcc_arm64(args)
   elif "-DFLETCH_CMSIS" in args:
-    invoke_gcc_cmsis(args)
+    invoke_gcc_arm_embedded(args)
   elif "-L/FLETCH_CMSIS" in args:
     args.remove("-L/FLETCH_CMSIS")
-    invoke_gcc_cmsis(args)
+    invoke_gcc_arm_embedded(args)
   elif "-DFLETCH_STM" in args:
     invoke_gcc_arm_embedded(args)
   elif "-L/FLETCH_STM" in args:
