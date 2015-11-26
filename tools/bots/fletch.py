@@ -733,7 +733,10 @@ class IncreasedNumberOfFiles(object):
 
   def __exit__(self, *_):
     print "IncreasedNumberOfFiles: Restoring to:", self._old_limits
-    resource.setrlimit(resource.RLIMIT_CORE, self._old_limits)
+    try:
+      resource.setrlimit(resource.RLIMIT_NOFILE, self._old_limits)
+    except ValueError:
+      print "IncreasedNumberOfFiles: Could not restore to:", self._old_limits
 
 class LinuxCoredumpArchiver(CoredumpArchiver):
   def __init__(self, *args):
