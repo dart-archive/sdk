@@ -133,9 +133,10 @@ Future<Map<String, NoArgFuture>> listTests() async {
   return listTestsInternal(false);
 }
 
-main() async {
+main(List<String> args) async {
+  args = args.map((a) => 'debugger/$a');
   Map<String, NoArgFuture> tests = await listTestsInternal(true);
   for (String name in tests.keys) {
-    await tests[name]();
+    if (args.isEmpty || args.contains(name)) await tests[name]();
   }
 }

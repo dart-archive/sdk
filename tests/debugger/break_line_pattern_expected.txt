@@ -1,0 +1,9 @@
+Starting session. Type 'help' for a list of commands.
+
+> bf tests/debugger/break_line_pattern_test.dart 10 x
+breakpoint set: id: '0' method: 'main' bytecode index: '6'
+> r
+Stack trace:
+> 0: main        @x
+> c
+### process terminated

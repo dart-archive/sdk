@@ -433,7 +433,8 @@ class Session extends FletchVmSession {
       return null;
     }
     int position = compiler.positionInFileFromPattern(file, line - 1, pattern);
-    await setFileBreakpointFromPosition('$file:$line:$pattern', file, position);
+    return setFileBreakpointFromPosition(
+        '$file:$line:$pattern', file, position);
   }
 
   Future setFileBreakpoint(Uri file, int line, int column) async {
