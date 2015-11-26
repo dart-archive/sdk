@@ -63,7 +63,10 @@ def invoke_gcc_arm_embedded(args):
   if not os.path.exists(gcc_arm_embedded_bin):
     gcc_arm_embedded_download = relative_to_fletch_root(
       "third_party", "gcc-arm-embedded", "download")
-    print "Missing toolchain run %s to download" % gcc_arm_embedded_download
+    print "\n*************** TOOLCHAIN ERROR ********************"
+    print "%s not found" % gcc_arm_embedded_bin
+    print "Run %s to download\n" % gcc_arm_embedded_download
+    exit(1)
   args.insert(0, gcc_arm_embedded_bin)
   os.execv(gcc_arm_embedded_bin, args)
 
