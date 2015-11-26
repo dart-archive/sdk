@@ -296,6 +296,10 @@ class IncrementalCompiler {
   int positionInFile(Uri file, int line, int column) {
     return _compiler.positionInFile(file, line, column);
   }
+
+  Iterable<Uri> findSourceFiles(Pattern pattern) {
+    return _compiler.findSourceFiles(pattern);
+  }
 }
 
 class IncrementalCompilationFailed {

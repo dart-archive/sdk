@@ -240,6 +240,13 @@ class FletchCompilerImplementation extends apiimpl.CompilerImpl {
     return sourceFile.lineStarts[line] + column;
   }
 
+  Iterable<Uri> findSourceFiles(Pattern pattern) {
+    SourceFileProvider provider = this.provider;
+    return provider.sourceFiles.keys.where((Uri uri) {
+      return pattern.matchAsPrefix(uri.pathSegments.last) != null;
+    });
+  }
+
   void reportVerboseInfo(
       Spannable node,
       String messageText,
@@ -301,7 +308,7 @@ class StringEventSink implements EventSink<String> {
 
 SourceFile getSourceFile(api.CompilerInput provider, Uri uri) {
   if (provider is SourceFileProvider) {
-    return provider.sourceFiles[uri];
+    return provider.getSourceFile(uri);
   } else {
     return null;
   }

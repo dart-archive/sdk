@@ -469,6 +469,10 @@ class Session extends FletchVmSession {
     }
   }
 
+  Iterable<Uri> findSourceFiles(Pattern pattern) {
+    return compiler.findSourceFiles(pattern);
+  }
+
   Future stepTo(int functionId, int bcp) async {
     assert(running);
     Command response = await runCommand(new ProcessStepTo(functionId, bcp));

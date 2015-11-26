@@ -56,7 +56,8 @@ class InputHandler {
 
   writeStdoutLine(String s) => session.writeStdout("$s\n");
 
-  Future handleLine(String line) async {
+  Future handleLine(StreamIterator stream) async {
+    String line = stream.current;
     if (line.isEmpty) line = previousLine;
     if (line.isEmpty) {
       printPrompt();
@@ -99,32 +100,74 @@ class InputHandler {
             (commandComponents.length > 2) ? commandComponents[2] : '1';
         var columnOrPattern =
             (commandComponents.length > 3) ? commandComponents[3] : '1';
-        Uri fileUri = base.resolve(file);
-        if (!await new File.fromUri(fileUri).exists()) {
-          writeStdoutLine('### file not found: $file');
+
+        List<Uri> files = <Uri>[];
+
+        if (await new File.fromUri(base.resolve(file)).exists()) {
+          // If the supplied file resolved directly to a file use it.
+          files.add(base.resolve(file));
+        } else {
+          // Otherwise search for possible matches.
+          List<Uri> matches = session.findSourceFiles(file).toList()..sort(
+              (a, b) => a.toString().compareTo(b.toString()));
+          Iterable<int> selection = await select(
+              stream,
+              "Multiple matches for file pattern $file",
+              matches.map((uri) =>
+                uri.toString().replaceFirst(base.toString(), '')));
+          for (int selected in selection) {
+            files.add(matches.elementAt(selected));
+          }
         }
+
+        if (files.isEmpty) {
+          writeStdoutLine('### no matching file found for: $file');
+          break;
+        }
+
         line = int.parse(line, onError: (_) => null);
         if (line == null || line < 1) {
           writeStdoutLine('### invalid line number: $line');
           break;
         }
-        Breakpoint breakpoint;
+
+        List<Breakpoint> breakpoints = <Breakpoint>[];
         int columnNumber = int.parse(columnOrPattern, onError: (_) => null);
         if (columnNumber == null) {
-          breakpoint = await session.setFileBreakpointFromPattern(
-              fileUri, line, columnOrPattern);
+          for (Uri fileUri in files) {
+            Breakpoint breakpoint = await session.setFileBreakpointFromPattern(
+                fileUri, line, columnOrPattern);
+            if (breakpoint == null) {
+              writeStdoutLine(
+                  '### failed to set breakpoint for pattern $columnOrPattern ' +
+                  'on $fileUri:$line');
+            } else {
+              breakpoints.add(breakpoint);
+            }
+          }
         } else if (columnNumber < 1) {
           writeStdoutLine('### invalid column number: $columnOrPattern');
           break;
         } else {
-          breakpoint =
-              await session.setFileBreakpoint(fileUri, line, columnNumber);
+          for (Uri fileUri in files) {
+            Breakpoint breakpoint =
+                await session.setFileBreakpoint(fileUri, line, columnNumber);
+            if (breakpoint == null) {
+              writeStdoutLine(
+                  '### failed to set breakpoint ' +
+                  'on $fileUri:$line:$columnNumber');
+            } else {
+              breakpoints.add(breakpoint);
+            }
+          }
         }
-        if (breakpoint != null) {
-          writeStdoutLine("breakpoints set: $breakpoint");
+        if (breakpoints.isNotEmpty) {
+          for (Breakpoint breakpoint in breakpoints) {
+            writeStdoutLine("breakpoint set: $breakpoint");
+          }
         } else {
           writeStdoutLine(
-              "### failed to set breakpoint: $file:$line:$columnOrPattern");
+              "### failed to set any breakpoints");
         }
         break;
       case 'bt':
@@ -283,13 +326,60 @@ class InputHandler {
   Future<int> run() async {
     writeStdoutLine(BANNER);
     printPrompt();
-    await for(var line in stream) {
-      await handleLine(line);
-      // Breaking out of the await for closes the input
-      // stream subscription.
-      if (session.terminated) break;
+    StreamIterator streamIterator = new StreamIterator(stream);
+    while (await streamIterator.moveNext()) {
+      await handleLine(streamIterator);
+      if (session.terminated) {
+        await streamIterator.cancel();
+      }
     }
     if (!session.terminated) await session.terminateSession();
     return 0;
+  }
+
+  // Prompt the user to select among a set of choices.
+  // Returns a set of indexes that are the chosen indexes from the input set.
+  // If the size of choices is less then two, then the result is that the full
+  // input set is selected without prompting the user. Otherwise the user is
+  // interactively prompted to choose a selection.
+  Future<Iterable<int>> select(
+      StreamIterator stream,
+      String message,
+      Iterable<String> choices) async {
+    int length = choices.length;
+    if (length == 0) return <int>[];
+    if (length == 1) return <int>[0];
+    writeStdout("$message. ");
+    writeStdoutLine("Please select from the following choices:");
+    int i = 1;
+    int pad = 2 + "$length".length;
+    for (String choice in choices) {
+      writeStdoutLine("${i++}".padLeft(pad) + ": $choice");
+    }
+    writeStdoutLine('a'.padLeft(pad) + ": all of the above");
+    writeStdoutLine('n'.padLeft(pad) + ": none of the above");
+    while (true) {
+      printPrompt();
+      bool hasNext = await stream.moveNext();
+      if (!hasNext) {
+        writeStdoutLine("### failed to read choice input");
+        return <int>[];
+      }
+      String line = stream.current;
+      if (echo) writeStdoutLine(line);
+      if (line == 'n') {
+        return <int>[];
+      }
+      if (line == 'a') {
+        return new List<int>.generate(length, (i) => i);
+      }
+      int choice = int.parse(line, onError: (_) => 0);
+      if (choice > 0 && choice <= length) {
+        return <int>[choice - 1];
+      }
+      writeStdoutLine("Invalid choice: $choice");
+      writeStdoutLine("Please select a number between 1 and $length, " +
+                      "'a' for all, or 'n' for none.");
+    }
   }
 }
