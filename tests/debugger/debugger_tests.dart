@@ -129,7 +129,7 @@ Future<Map<String, NoArgFuture>> listTestsInternal(
 }
 
 Future<Map<String, NoArgFuture>> listTests() async {
-  if (false) main(); // Mark main as used for dart2js.
+  if (false) main([]); // Mark main as used for dart2js.
   return listTestsInternal(false);
 }
 
