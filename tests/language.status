@@ -851,7 +851,7 @@ vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
 # Slow or reporting back wrong exit code because of stack-overflow exception
 # printing.
 issue_22780_test/01: Slow, Pass, Fail # Issue 312
-final_syntax_test/08: Slow, Pass, Fail # Issue 312
+final_syntax_test/08: Slow, Timeout, Pass, Fail # Issue 312
 
 [ $mode == debug && $system == macos && $asan ]
 closure_cycles_test: Slow, Pass
