@@ -42,8 +42,6 @@ random_test: Pass, Slow, Timeout
 shared_immutable_data_test: RuntimeError, Slow # Stack overflow
 uri_base_test: Crash # Uri.base not implemented.
 messaging_process_die_early_test: Crash
-spawn_empty_test: Crash
-
 
 [ $mode == debug && $asan ]
 random_test: Slow, Pass
