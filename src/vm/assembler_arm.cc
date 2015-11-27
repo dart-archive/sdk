@@ -134,6 +134,18 @@ void Assembler::Print(const char* format, ...) {
           break;
         }
 
+        case 'W': {
+#ifdef FLETCH_THUMB_ONLY
+          UNREACHABLE();
+#else
+          WriteBack write_back = static_cast<WriteBack>(va_arg(arguments, int));
+          if (write_back == WRITE_BACK) {
+            putchar('!');
+          }
+#endif
+          break;
+        }
+
         default: {
           UNREACHABLE();
           break;

@@ -69,6 +69,11 @@ enum Condition {
   AL = 14,  // always (unconditional)
 };
 
+enum WriteBack {
+  WRITE_BACK_DISABLED = 0,
+  WRITE_BACK = 1,
+};
+
 typedef uint32_t RegisterList;
 
 class Immediate {
@@ -214,7 +219,9 @@ class Assembler {
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
   INSTRUCTION_2(ldr, "ldr %r, %I", Register, const Immediate&);
   INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);
+  INSTRUCTION_3(ldr, "ldr %r, [%r], %i", Register, Register, const Immediate&);
   INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
+  INSTRUCTION_3(ldrb, "ldrb %r, %a%W", Register, const Address&, WriteBack);
 
   INSTRUCTION_3(lsl, "lsl %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(lsl, "lsl %r, %r, %r", Register, Register, Register);
@@ -240,6 +247,8 @@ class Assembler {
                 Register, Register, Register, Register);
 
   INSTRUCTION_2(str, "str %r, %a", Register, const Address&);
+  INSTRUCTION_3(str, "str %r, %a%W", Register, const Address&, WriteBack);
+  INSTRUCTION_3(str, "str %r, [%r], %i", Register, Register, const Immediate&);
   INSTRUCTION_3(str, "str%c %r, %a", Condition, Register, const Address&);
 
   INSTRUCTION_3(sub, "sub %r, %r, %i", Register, Register, const Immediate&);
@@ -272,6 +281,7 @@ class Assembler {
 
   Condition Wrap(Condition condition) { return condition; }
   Register Wrap(Register reg) { return reg; }
+  WriteBack Wrap(WriteBack wb) { return wb; }
   RegisterList Wrap(RegisterList regs) { return regs; }
   const char* Wrap(const char* label) { return label; }
   Label* Wrap(Label* label) { return label; }
