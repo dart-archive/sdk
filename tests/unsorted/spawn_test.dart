@@ -14,5 +14,5 @@ foo() {
 
 void main() {
   inMain = true;
-  Process.spawn(foo);
+  Process.spawnDetached(foo);
 }
