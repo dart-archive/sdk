@@ -238,6 +238,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void Pop(Register reg);
   void Drop(int n);
   void Drop(Register reg);
+  void DropNAndSetTop(int dropping_slots, Register reg);
 
   void LoadFramePointer(Register reg);
   void StoreFramePointer(Register reg);
@@ -582,8 +583,7 @@ void InterpreterGeneratorARM::DoStoreField() {
   LoadLocal(R0, 1);
   __ add(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
-  StoreLocal(R2, 1);
-  Drop(1);
+  DropNAndSetTop(1, R2);
 
   AddToStoreBufferSlow(R0, R2);
 
@@ -596,8 +596,7 @@ void InterpreterGeneratorARM::DoStoreFieldWide() {
   LoadLocal(R0, 1);
   __ add(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
-  StoreLocal(R2, 1);
-  Drop(1);
+  DropNAndSetTop(1, R2);
 
   AddToStoreBufferSlow(R0, R2);
 
@@ -750,8 +749,7 @@ void InterpreterGeneratorARM::InvokeAdd(const char* fallback) {
 
   __ adds(R0, R0, R1);
   __ b(VS, fallback);
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kInvokeAddLength);
 }
 
@@ -765,8 +763,7 @@ void InterpreterGeneratorARM::InvokeSub(const char* fallback) {
 
   __ subs(R0, R0, R1);
   __ b(VS, fallback);
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kInvokeAddLength);
 }
 
@@ -794,8 +791,7 @@ void InterpreterGeneratorARM::InvokeMul(const char* fallback) {
   __ cmp(IP, Operand(R0, ASR, 31));
   __ b(NE, fallback);
 
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kInvokeMulLength);
 }
 
@@ -827,8 +823,7 @@ void InterpreterGeneratorARM::InvokeBitAnd(const char* fallback) {
   __ b(NE, fallback);
 
   __ and_(R0, R0, R1);
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kInvokeBitAndLength);
 }
 
@@ -841,8 +836,7 @@ void InterpreterGeneratorARM::InvokeBitOr(const char* fallback) {
   __ b(NE, fallback);
 
   __ orr(R0, R0, R1);
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kInvokeBitAndLength);
 }
 
@@ -855,8 +849,7 @@ void InterpreterGeneratorARM::InvokeBitXor(const char* fallback) {
   __ b(NE, fallback);
 
   __ eor(R0, R0, R1);
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kInvokeBitXorLength);
 }
 
@@ -880,8 +873,7 @@ void InterpreterGeneratorARM::InvokeBitShr(const char* fallback) {
 
   // Retag and store.
   __ add(R0, R0, R0);
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kInvokeBitAndLength);
 }
 
@@ -907,8 +899,7 @@ void InterpreterGeneratorARM::InvokeBitShl(const char* fallback) {
   __ cmp(R3, R0);
   __ b(NE, fallback);
 
-  StoreLocal(R2, 1);
-  Drop(1);
+  DropNAndSetTop(1, R2);
   Dispatch(kInvokeBitShlLength);
 }
 
@@ -1188,8 +1179,7 @@ void InterpreterGeneratorARM::DoCoroutineChange() {
   RestoreState();
 
   // Store argument.
-  StoreLocal(R7, 1);
-  Drop(1);
+  DropNAndSetTop(1, R7);
 
   Dispatch(kCoroutineChangeLength);
 }
@@ -1239,8 +1229,7 @@ void InterpreterGeneratorARM::DoIdentical() {
   __ mov(R2, R0);
   __ mov(R0, R4);
   __ bl("HandleIdentical");
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kIdenticalLength);
 }
 
@@ -1315,8 +1304,7 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
   LoadLocal(R2, 1);
   __ add(R3, R2, Immediate(Instance::kSize - HeapObject::kTag));
   __ str(R0, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
 
   AddToStoreBufferSlow(R2, R0);
 
@@ -1346,8 +1334,7 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexGet() {
   ASSERT(Smi::kTagSize == 1);
   __ add(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R2, Operand(R1, TIMES_2)));
-  StoreLocal(R0, 1);
-  Drop(1);
+  DropNAndSetTop(1, R0);
   Dispatch(kInvokeMethodLength);
 }
 
@@ -1374,8 +1361,7 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
   LoadLocal(R0, 0);
   __ add(R12, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R0, Address(R12, Operand(R1, TIMES_2)));
-  StoreLocal(R0, 2);
-  Drop(2);
+  DropNAndSetTop(2, R0);
 
   AddToStoreBufferSlow(R2, R0);
 
@@ -1392,13 +1378,21 @@ void InterpreterGeneratorARM::DoIntrinsicListLength() {
 }
 
 void InterpreterGeneratorARM::Push(Register reg) {
+#ifdef FLETCH_THUMB_ONLY
   StoreLocal(reg, -1);
   __ sub(R6, R6, Immediate(1 * kWordSize));
+#else
+  __ str(reg, Address(R6, -1 * kWordSize), WRITE_BACK);
+#endif
 }
 
 void InterpreterGeneratorARM::Pop(Register reg) {
+#ifdef FLETCH_THUMB_ONLY
   LoadLocal(reg, 0);
   Drop(1);
+#else
+  __ ldr(reg, R6, Immediate(kWordSize));
+#endif
 }
 
 void InterpreterGeneratorARM::Return(bool is_return_null) {
@@ -1439,6 +1433,15 @@ void InterpreterGeneratorARM::Drop(int n) {
 
 void InterpreterGeneratorARM::Drop(Register reg) {
   __ add(R6, R6, Operand(reg, TIMES_WORD_SIZE));
+}
+
+void InterpreterGeneratorARM::DropNAndSetTop(int dropping_slots, Register reg) {
+#ifdef FLETCH_THUMB_ONLY
+  Drop(dropping_slots);
+  StoreLocal(reg, 0);
+#else
+  __ str(reg, Address(R6, dropping_slots * kWordSize), WRITE_BACK);
+#endif
 }
 
 void InterpreterGeneratorARM::LoadFramePointer(Register reg) {
@@ -1895,8 +1898,12 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
   __ cmp(R9, R7);
   __ b(HI, &done);
   Pop(R1);
+#ifdef FLETCH_THUMB_ONLY
   __ str(R1, Address(R7, 0));
   __ sub(R7, R7, Immediate(1 * kWordSize));
+#else
+  __ str(R1, R7, Immediate(-1 * kWordSize));
+#endif
   __ b(&loop);
 
   __ Bind(&done);
@@ -1933,13 +1940,11 @@ void InterpreterGeneratorARM::InvokeCompare(const char* fallback,
   __ cmp(R1, R0);
   __ b(cond, &true_case);
 
-  StoreLocal(R11, 1);
-  Drop(1);
+  DropNAndSetTop(1, R11);
   Dispatch(5);
 
   __ Bind(&true_case);
-  StoreLocal(R10, 1);
-  Drop(1);
+  DropNAndSetTop(1, R10);
   Dispatch(5);
 }
 
@@ -1971,10 +1976,14 @@ void InterpreterGeneratorARM::CheckStackOverflow(int size) {
 
 void InterpreterGeneratorARM::Dispatch(int size) {
   // Load the next bytecode through R5 and dispatch to it.
+#ifdef FLETCH_THUMB_ONLY
   __ ldrb(R7, Address(R5, size));
   if (size > 0) {
     __ add(R5, R5, Immediate(size));
   }
+#else
+  __ ldrb(R7, Address(R5, size), WRITE_BACK);
+#endif
   __ ldr(R9, "InterpretFast_DispatchTable");
   __ ldr(PC, Address(R9, Operand(R7, TIMES_WORD_SIZE)));
   __ GenerateConstantPool();
