@@ -62,7 +62,7 @@ class AgentContext {
       arg.free();
     }
     if (ptr.address == 0) return null;
-    var cstring = new ForeignCString.fromForeignPointer(ptr);
+    var cstring = new ForeignCString.fromNullTerminated(ptr);
     return cstring.toString();
   }
 

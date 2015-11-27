@@ -623,12 +623,19 @@ testForeignCString() {
   memory.setUint8(0, 65);
   memory.setUint8(1, 0);
   Expect.equals(
-      'A', new ForeignCString.fromForeignPointer(memory).toString());
+      'A', new ForeignCString.fromNullTerminated(memory).toString());
+  Expect.equals(
+      '', new ForeignCString(memory, 0).toString());
+  Expect.equals(
+      'A', new ForeignCString(memory, 1).toString());
+  memory.setUint8(1, 42);
+  Expect.equals(
+      'A', new ForeignCString(memory, 1).toString());
   memory.setUint8(0, 0xc3);
   memory.setUint8(1, 0x98);
   memory.setUint8(2, 0);
   Expect.equals(
-      'Ø', new ForeignCString.fromForeignPointer(memory).toString());
+      'Ø', new ForeignCString.fromNullTerminated(memory).toString());
   memory.free();
 
   var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
@@ -636,7 +643,7 @@ testForeignCString() {
   var memstring = fl.lookup('memstring');
   var foreignPointer = memstring.pcall$0();
   Expect.equals(
-      'dart', new ForeignCString.fromForeignPointer(foreignPointer).toString());
+      'dart', new ForeignCString.fromNullTerminated(foreignPointer).toString());
   memory = new ForeignMemory.fromAddress(foreignPointer.address, 5);
   memory.free();
 }

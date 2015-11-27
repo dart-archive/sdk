@@ -407,19 +407,19 @@ abstract class PosixSystem implements System {
       int address = utsname.address;
       var fp = new ForeignPointer(address);
       var operatingSystemName =
-          new ForeignCString.fromForeignPointer(fp).toString();
+          new ForeignCString.fromNullTerminated(fp).toString();
       address += UTSNAME_LENGTH;
       fp = new ForeignPointer(address);
-      var nodeName = new ForeignCString.fromForeignPointer(fp).toString();
+      var nodeName = new ForeignCString.fromNullTerminated(fp).toString();
       address += UTSNAME_LENGTH;
       fp = new ForeignPointer(address);
-      var release = new ForeignCString.fromForeignPointer(fp).toString();
+      var release = new ForeignCString.fromNullTerminated(fp).toString();
       address += UTSNAME_LENGTH;
       fp = new ForeignPointer(address);
-      var version = new ForeignCString.fromForeignPointer(fp).toString();
+      var version = new ForeignCString.fromNullTerminated(fp).toString();
       address += UTSNAME_LENGTH;
       fp = new ForeignPointer(address);
-      var machine = new ForeignCString.fromForeignPointer(fp).toString();
+      var machine = new ForeignCString.fromNullTerminated(fp).toString();
       return new SystemInformation(operatingSystemName, nodeName, release,
                                    version, machine);
     } finally {

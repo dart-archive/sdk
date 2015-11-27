@@ -13,8 +13,7 @@ final ForeignFunction _getVersion = ForeignLibrary.main.lookup('GetVersion');
 
 String version() {
   ForeignCString version =
-      new ForeignCString.fromForeignPointer(_getVersion.pcall$0());
+      new ForeignCString.fromNullTerminated(_getVersion.pcall$0());
   assert(version != null);
   return version.toString();
 }
-
