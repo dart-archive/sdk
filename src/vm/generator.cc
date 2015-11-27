@@ -2,6 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include <stdlib.h>
+
 #include "src/vm/assembler.h"
 #include "src/vm/generator.h"
 
@@ -36,6 +38,15 @@ void Generator::GenerateAll(Assembler* assembler) {
 }
 
 static int Main(int argc, char** argv) {
+  if (argc != 2) {
+    fprintf(stderr, "Usage: %s <output file name>\n", argv[0]);
+    exit(1);
+  }
+  if (freopen(argv[1], "w", stdout) == NULL) {
+    fprintf(stderr, "%s: Cannot open '%s' for writing.\n", argv[0], argv[1]);
+    exit(1);
+  }
+
   Assembler assembler;
   Generator::GenerateAll(&assembler);
   return 0;

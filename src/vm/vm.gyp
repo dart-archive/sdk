@@ -193,9 +193,8 @@
             '<(INTERMEDIATE_DIR)/generated.S',
           ],
           'action': [
-            # TODO(ahe): Change generator to accept command line argument for
-            # output file. Using file redirection may not work well on Windows.
-            'bash', '-c', '<(_inputs) > <(_outputs)',
+            '<@(_inputs)',
+            '<@(_outputs)',
           ],
         },
       ],
