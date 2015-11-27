@@ -57,11 +57,11 @@ class Frame {
   }
 
   uint8* ByteCodePointer() const {
-    return reinterpret_cast<uint8*>(*(frame_pointer_ + 1));
+    return reinterpret_cast<uint8*>(*(frame_pointer_ - 1));
   }
 
   void SetByteCodePointer(uint8* return_address) {
-    *(frame_pointer_ + 1) = reinterpret_cast<Object*>(return_address);
+    *(frame_pointer_ - 1) = reinterpret_cast<Object*>(return_address);
   }
 
   Object** PreviousFramePointer() const {

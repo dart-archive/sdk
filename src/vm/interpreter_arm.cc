@@ -1452,7 +1452,7 @@ void InterpreterGeneratorARM::StoreFramePointer(Register reg) {
 void InterpreterGeneratorARM::PushFrameDescriptor(Register return_address,
                                                   Register scratch) {
   LoadFramePointer(scratch);
-  __ str(return_address, Address(scratch, kWordSize));
+  __ str(return_address, Address(scratch, -kWordSize));
 
   __ ldr(scratch, Immediate(0));
   Push(scratch);
@@ -1473,7 +1473,7 @@ void InterpreterGeneratorARM::ReadFrameDescriptor(Register scratch) {
   StoreFramePointer(scratch);
 
   // Load return address.
-  __ ldr(R5, Address(scratch, kWordSize));
+  __ ldr(R5, Address(scratch, -kWordSize));
 }
 
 void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
@@ -1983,7 +1983,7 @@ void InterpreterGeneratorARM::Dispatch(int size) {
 void InterpreterGeneratorARM::SaveState() {
   // Save the bytecode pointer at the return-address slot.
   LoadFramePointer(R3);
-  __ str(R5, Address(R3, kWordSize));
+  __ str(R5, Address(R3, -kWordSize));
 
   // Push null.
   __ ldr(R5, Immediate(0));
@@ -2020,7 +2020,7 @@ void InterpreterGeneratorARM::RestoreState() {
   StoreFramePointer(R5);
 
   // Set the bytecode pointer from the stack.
-  __ ldr(R5, Address(R5, kWordSize));
+  __ ldr(R5, Address(R5, -kWordSize));
 
   Drop(1);
 }

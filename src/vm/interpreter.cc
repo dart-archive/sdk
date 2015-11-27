@@ -136,11 +136,11 @@ class State {
   }
 
   void StoreByteCodePointer(uint8* bcp) {
-    *(fp_ + 1) = reinterpret_cast<Object*>(bcp);
+    *(fp_ - 1) = reinterpret_cast<Object*>(bcp);
   }
 
   uint8* LoadByteCodePointer() {
-    return reinterpret_cast<uint8*>(*(fp_ + 1));
+    return reinterpret_cast<uint8*>(*(fp_ - 1));
   }
 
   Object** fp() { return fp_; }

@@ -1523,7 +1523,7 @@ void InterpreterGeneratorX86::StoreFramePointer(Register reg) {
 void InterpreterGeneratorX86::PushFrameDescriptor(Register return_address,
                                                   Register scratch) {
   LoadFramePointer(scratch);
-  __ movl(Address(scratch, kWordSize), return_address);
+  __ movl(Address(scratch, -kWordSize), return_address);
 
   Push(Immediate(0));
 
@@ -1541,7 +1541,7 @@ void InterpreterGeneratorX86::ReadFrameDescriptor(Register scratch) {
   StoreFramePointer(scratch);
 
   // Load return address.
-  __ movl(ESI, Address(scratch, kWordSize));
+  __ movl(ESI, Address(scratch, -kWordSize));
 }
 
 void InterpreterGeneratorX86::LoadLocal(Register reg, int index) {
@@ -2112,7 +2112,7 @@ void InterpreterGeneratorX86::Dispatch(int size) {
 void InterpreterGeneratorX86::SaveState() {
   // Save the bytecode pointer at the return-address slot.
   LoadFramePointer(ECX);
-  __ movl(Address(ECX, kWordSize), ESI);
+  __ movl(Address(ECX, -kWordSize), ESI);
 
   // Push null.
   Push(Immediate(0));
@@ -2144,7 +2144,7 @@ void InterpreterGeneratorX86::RestoreState() {
   StoreFramePointer(ECX);
 
   // Set the bytecode pointer from the stack.
-  __ movl(ESI, Address(ECX, kWordSize));
+  __ movl(ESI, Address(ECX, -kWordSize));
 
   Drop(1);
 }
