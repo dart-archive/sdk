@@ -8,8 +8,7 @@ import 'dart:fletch';
 
 class Isolate {
   final Channel _channel;
-  bool _isDone = false;
-  var _result;
+  bool _isJoined = false;
 
   Isolate._internal(this._channel);
 
@@ -18,13 +17,17 @@ class Isolate {
    * calling the spawned function.
    */
   join() {
-    if (!_isDone) {
-      // TODO(kasperl): This doesn't really work if multiple
-      // fibers join the same isolate. Please fix.
-      _result = _channel.receive();
-      _isDone = true;
+    if (_isJoined) {
+      throw new Exception('Cannot join an isolate multiple times.');
     }
-    return _result;
+    _isJoined = true;
+
+    var result = _channel.receive();
+    if (result is _IsolateResult) {
+      return result.value;
+    } else {
+      throw new Exception('Isolate finished without value.');
+    }
   }
 
   /**
@@ -37,9 +40,17 @@ class Isolate {
     }
     final Channel channel = new Channel();
     final Port port = new Port(channel);
-    Process.spawn(() {
-      Process.exit(value: function(), to: port);
-    });
+    Process.spawnDetached(() {
+      Process.exit(value: new _IsolateResult(function()), to: port);
+    }, monitor: port);
     return new Isolate._internal(channel);
   }
+}
+
+// Used to distinguish between the result of executing an isolate and it's
+// termination signal (we reuse the same Port at the moment).
+class _IsolateResult {
+  final Object value;
+
+  const _IsolateResult(this.value);
 }
