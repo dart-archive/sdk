@@ -13,6 +13,10 @@
       'target_name': 'fletch_vm_library_base',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
+      'target_conditions': [
+        ['_toolset == "target"', {
+          'standalone_static_library': 1,
+	}]],
       'dependencies': [
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
@@ -153,6 +157,7 @@
     {
       'target_name': 'fletch_vm_library',
       'type': 'static_library',
+      'standalone_static_library': 1,
       'dependencies': [
         'fletch_vm_library_generator#host',
         'fletch_vm_library_base',
@@ -214,31 +219,18 @@
       'actions': [
         {
           'action_name': 'generate_libfletch',
-          'conditions': [
-            [ 'OS=="linux"', {
-              'inputs': [
-                '../../tools/library_combiner.py',
-                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm_library.a',
-                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm_library_base.a',
-                '<(PRODUCT_DIR)/obj/src/shared/libfletch_shared.a',
-                '<(PRODUCT_DIR)/obj/src/libdouble_conversion.a',
-              ],
-            }],
-            [ 'OS=="mac"', {
-              'inputs': [
-                '../../tools/library_combiner.py',
-                '<(PRODUCT_DIR)/libfletch_vm_library.a',
-                '<(PRODUCT_DIR)/libfletch_vm_library_base.a',
-                '<(PRODUCT_DIR)/libfletch_shared.a',
-                '<(PRODUCT_DIR)/libdouble_conversion.a',
-              ],
-            }],
+          'inputs': [
+            '../../tools/library_combiner.py',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_vm_library<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_vm_library_base<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_shared<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)double_conversion<(STATIC_LIB_SUFFIX)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/libfletch.a',
           ],
           'action': [
-            'bash', '-c', 'python <(_inputs) <(_outputs)',
+            'python', '<@(_inputs)', '<@(_outputs)',
           ]
         },
       ]

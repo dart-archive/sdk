@@ -13,6 +13,10 @@
       'target_name': 'fletch_shared',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
+      'target_conditions': [
+        ['_toolset == "target"', {
+          'standalone_static_library': 1,
+	}]],
       'dependencies': [
         '../../version.gyp:generate_version_cc#host',
       ],

@@ -26,6 +26,14 @@ def invoke_libtool(args):
     command += ' %s' % lib
   os.system(command)
 
+def invoke_lib_exe(args):
+  library_name = args[len(args) - 1]
+  libraries = args[:-1]
+  command = 'lib.exe /out:%s' % library_name
+  for lib in libraries:
+    command += ' %s' % lib
+  os.system(command)
+
 def main():
   args = sys.argv[1:]
   os_name = utils.GuessOS()
@@ -33,6 +41,8 @@ def main():
     invoke_ar(args)
   elif os_name == 'macos':
     invoke_libtool(args)
+  elif os_name == 'windows':
+    invoke_lib_exe(args)
 
 if __name__ == '__main__':
   main()
