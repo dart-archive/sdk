@@ -48,7 +48,8 @@ Program::Program(ProgramSource source)
       session_(NULL),
       entry_(NULL),
       is_compact_(false),
-      loaded_from_snapshot_(source == Program::kLoadedFromSnapshot)  {
+      loaded_from_snapshot_(source == Program::kLoadedFromSnapshot),
+      exit_kind_(Signal::kTerminated) {
   // These asserts need to hold when running on the target, but they don't need
   // to hold on the host (the build machine, where the interpreter-generating
   // program runs).  We put these asserts here on the assumption that the
@@ -64,8 +65,14 @@ Program::~Program() {
   ASSERT(process_list_head_ == NULL);
 }
 
-Process* Program::SpawnProcess() {
-  Process* process = new Process(this);
+Process* Program::SpawnProcess(Process* parent) {
+  Process* process = new Process(this, parent);
+
+  // The counter part of this is in [ScheduleProcessFordeletion].
+  if (parent != NULL) {
+    parent->process_triangle_count_++;
+  }
+
   AddToProcessList(process);
   return process;
 }
@@ -75,7 +82,7 @@ Process* Program::ProcessSpawnForMain() {
     PrintStatistics();
   }
 
-  Process* process = SpawnProcess();
+  Process* process = SpawnProcess(NULL);
   Function* entry = process->entry();
   int main_arity = process->main_arity();
   process->SetupExecutionStack();
@@ -95,23 +102,33 @@ Process* Program::ProcessSpawnForMain() {
   return process;
 }
 
-void Program::DeleteProcess(Process* process, Signal::Kind kind) {
-  RemoveFromProcessList(process);
+bool Program::ScheduleProcessForDeletion(Process* process, Signal::Kind kind) {
+  ASSERT(process->state() == Process::kWaitingForChildren);
+
   process->Cleanup(kind);
-  delete process;
-}
 
-void Program::DeleteAllProcesses() {
-  ScopedLock locker(process_list_mutex_);
-
-  Process* current = process_list_head_;
+  // We are doing this up the process hierarchy.
+  Process* current = process;
   while (current != NULL) {
-    Process* next = current->process_list_next();
-    current->Cleanup(Signal::kTerminated);
+    Process* parent = current->parent_;
+
+    int new_count = --current->process_triangle_count_;
+    ASSERT(new_count >= 0);
+    if (new_count > 0) {
+      return false;
+    }
+
+    // If this is the main process, we will save the exit kind.
+    if (parent == NULL) {
+      exit_kind_ = current->links()->exit_signal();
+    }
+
+    RemoveFromProcessList(current);
     delete current;
-    current = next;
+
+    current = parent;
   }
-  process_list_head_ = NULL;
+  return true;
 }
 
 void Program::VisitProcesses(ProcessVisitor* visitor) {

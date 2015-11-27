@@ -53,7 +53,7 @@ ThreadState::~ThreadState() {
   delete cache_;
 }
 
-Process::Process(Program* program)
+Process::Process(Program* program, Process* parent)
     : coroutine_(NULL),
       stack_limit_(0),
       program_(program),
@@ -75,6 +75,8 @@ Process::Process(Program* program)
       ports_(NULL),
       process_list_next_(NULL),
       process_list_prev_(NULL),
+      process_triangle_count_(1),
+      parent_(parent),
       errno_cache_(0),
       debug_info_(NULL) {
   process_handle_ = new ProcessHandle(this);
@@ -111,6 +113,8 @@ Process::~Process() {
   // conditions here.
   ASSERT(ports_ == NULL);
 
+  links()->NotifyMonitors(process_handle());
+
   ProcessHandle::DecrementRef(process_handle_);
 
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
@@ -136,9 +140,9 @@ void Process::Cleanup(Signal::Kind kind) {
   // link/monitor with this [ProcessHandle], it will fail after this line.
   process_handle_->OwnerProcessTerminating();
 
-  // Since nobody can send us messages (or signals) at this point, we can
-  // propagate the exit signal.
-  links()->CleanupWithSignal(process_handle(), kind);
+  // Since nobody can send us messages (or signals) at this point, we send a
+  // signal to all linked processes.
+  links()->NotifyLinkedProcesses(process_handle(), kind);
 }
 
 void Process::SetupExecutionStack() {

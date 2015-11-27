@@ -12,53 +12,64 @@ namespace fletch {
 
 void Links::InsertPort(Port* port) {
   ScopedSpinlock locker(&lock_);
-  if (objects_.Insert(MarkPort(port)).second) {
+  if (ports_.Insert(port).second) {
     port->IncrementRef();
   }
 }
 
-void Links::InsertHandle(ProcessHandle* handle) {
+bool Links::InsertHandle(ProcessHandle* handle) {
   ScopedSpinlock locker(&lock_);
-  if (objects_.Insert(MarkHandle(handle)).second) {
+  if (half_dead_) return false;
+  if (handles_.Insert(handle).second) {
     handle->IncrementRef();
   }
+  return true;
 }
 
 void Links::RemovePort(Port* port) {
   ScopedSpinlock locker(&lock_);
-  HashSet<PortOrHandle>::ConstIterator it = objects_.Find(MarkPort(port));
-  if (it != objects_.End()) {
-    objects_.Erase(it);
+  HashSet<Port*>::ConstIterator it = ports_.Find(port);
+  if (it != ports_.End()) {
+    ports_.Erase(it);
     port->DecrementRef();
   }
 }
 
 void Links::RemoveHandle(ProcessHandle* handle) {
   ScopedSpinlock locker(&lock_);
-  HashSet<PortOrHandle>::ConstIterator it = objects_.Find(MarkHandle(handle));
-  if (it != objects_.End()) {
-    objects_.Erase(it);
+  HashSet<ProcessHandle*>::ConstIterator it = handles_.Find(handle);
+  if (it != handles_.End()) {
+    handles_.Erase(it);
     ProcessHandle::DecrementRef(handle);
   }
 }
 
-void Links::CleanupWithSignal(ProcessHandle* dying_handle, Signal::Kind kind) {
+void Links::NotifyLinkedProcesses(ProcessHandle* dying_handle,
+                                  Signal::Kind kind) {
   ScopedSpinlock locker(&lock_);
-  for (HashSet<PortOrHandle>::Iterator it = objects_.Begin();
-       it != objects_.End();
-       ++it) {
-    PortOrHandle object = *it;
-    if (IsPort(object)) {
-      Port* port = UnmarkPort(object);
-      EnqueueSignal(port, kind);
-      port->DecrementRef();
-    } else {
-      ProcessHandle* handle = UnmarkHandle(object);
-      SendSignal(handle, dying_handle, kind);
-      ProcessHandle::DecrementRef(handle);
-    }
+  ASSERT(!half_dead_);
+
+  HashSet<ProcessHandle*>::Iterator it = handles_.Begin();
+  while (it != handles_.End()) {
+    ProcessHandle* handle = *it;
+    SendSignal(handle, dying_handle, kind);
+    ProcessHandle::DecrementRef(handle);
+    ++it;
   }
-  objects_.Clear();
+  handles_.Clear();
+  half_dead_ = true;
+  exit_kind_ = kind;
+}
+
+void Links::NotifyMonitors(ProcessHandle* dying_handle) {
+  ScopedSpinlock locker(&lock_);
+  ASSERT(half_dead_);
+  for (HashSet<Port*>::Iterator it = ports_.Begin(); it != ports_.End(); ++it) {
+    Port* port = *it;
+    EnqueueSignal(port, exit_kind_);
+    port->DecrementRef();
+  }
+  ports_.Clear();
 }
 
 void Links::EnqueueSignal(Port* port, Signal::Kind kind) {

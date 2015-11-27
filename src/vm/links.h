@@ -17,48 +17,25 @@ class Process;
 
 class Links {
  public:
+  Links() : half_dead_(false), exit_kind_(Signal::kTerminated) {}
   ~Links() {
-    ASSERT(objects_.Begin() == objects_.End());
+    ASSERT(handles_.size() == 0);
+    ASSERT(ports_.size() == 0);
   }
 
+  Signal::Kind exit_signal() const { return exit_kind_; }
+
   void InsertPort(Port* port);
-  void InsertHandle(ProcessHandle* handle);
+  bool InsertHandle(ProcessHandle* handle);
   void RemovePort(Port* port);
   void RemoveHandle(ProcessHandle* handle);
 
   // TODO(kustermann): Instead of an integer we should really enqueue a
   // sensible message.
-  void CleanupWithSignal(ProcessHandle* handle, Signal::Kind kind);
+  void NotifyLinkedProcesses(ProcessHandle* handle, Signal::Kind kind);
+  void NotifyMonitors(ProcessHandle* handle);
 
  private:
-  // NOTE: This tagging mechanism assumes that all [Port] and [ProcessHandle]
-  // objects are at least 2-byte aligned.
-  static const int kPortTag = 1;
-  typedef void* PortOrHandle;
-
-  bool IsPort(PortOrHandle object) {
-    uword value = reinterpret_cast<uword>(object);
-    return ((value & kPortTag) == kPortTag);
-  }
-
-  PortOrHandle MarkPort(Port* port) {
-    uword value = reinterpret_cast<uword>(port);
-    return reinterpret_cast<PortOrHandle>(value | kPortTag);
-  }
-
-  Port* UnmarkPort(PortOrHandle object) {
-    uword value = reinterpret_cast<uword>(object);
-    return reinterpret_cast<Port*>(value & ~kPortTag);
-  }
-
-  PortOrHandle MarkHandle(ProcessHandle* handle) {
-    return reinterpret_cast<PortOrHandle>(handle);
-  }
-
-  ProcessHandle* UnmarkHandle(PortOrHandle handle) {
-    return reinterpret_cast<ProcessHandle*>(handle);
-  }
-
   void EnqueueSignal(Port* port, Signal::Kind kind);
 
   void SendSignal(ProcessHandle* handle,
@@ -66,7 +43,13 @@ class Links {
                   Signal::Kind kind);
 
   Spinlock lock_;
-  HashSet<PortOrHandle> objects_;
+  // If [half_dead_] is `true` the process will no longer execute any Dart code
+  // and is just waiting for the remaining processes in it's process tree to
+  // die.
+  bool half_dead_;
+  Signal::Kind exit_kind_;
+  HashSet<Port*> ports_;
+  HashSet<ProcessHandle*> handles_;
 };
 
 }  // namespace fletch

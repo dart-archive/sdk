@@ -224,6 +224,7 @@ void Scheduler::SignalProcess(Process* process) {
         // roughly the same as for spinlocks)!
         break;
       case Process::kTerminated:
+      case Process::kWaitingForChildren:
         // Nothing to do here.
         return;
     }
@@ -311,10 +312,10 @@ int Scheduler::Run() {
 
 void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   Program* program = process->program();
-  if (--processes_ == 0) {
-    last_process_exit_ = kind;
+  processes_--;
+  if (program->ScheduleProcessForDeletion(process, kind)) {
+    last_process_exit_ = program->exit_kind();
   }
-  program->DeleteProcess(process, kind);
 
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
@@ -323,12 +324,17 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
 }
 
 void Scheduler::ExitAtTermination(Process* process, Signal::Kind kind) {
+  ASSERT(process->state() == Process::kTerminated);
+  process->ChangeState(Process::kTerminated, Process::kWaitingForChildren);
+
   DeleteTerminatedProcess(process, kind);
   if (processes_ == 0) NotifyAllThreads();
 }
 
 void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
   ASSERT(process->state() == Process::kUncaughtException);
+  process->ChangeState(Process::kUncaughtException,
+                       Process::kWaitingForChildren);
 
   if (print_stack) {
     Program* program = process->program();
@@ -388,11 +394,16 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
 
 void Scheduler::ExitAtCompileTimeError(Process* process) {
   ASSERT(process->state() == Process::kCompileTimeError);
+  process->ChangeState(Process::kCompileTimeError,
+                       Process::kWaitingForChildren);
+
   ExitWith(process, kCompileTimeErrorExitCode, Signal::kCompileTimeError);
 }
 
 void Scheduler::ExitAtBreakpoint(Process* process) {
   ASSERT(process->state() == Process::kBreakPoint);
+  process->ChangeState(Process::kBreakPoint, Process::kWaitingForChildren);
+
   // TODO(kustermann): Maybe we want to make a different constant for this? It
   // is a very strange case and one could even argue that if the session
   // detaches after hitting a breakpoint the process should not be killed but
@@ -411,6 +422,7 @@ void Scheduler::RescheduleProcess(Process* process,
                                   bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
+    process->ChangeState(Process::kRunning, Process::kTerminated);
     ExitAtTermination(process, Signal::kTerminated);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
@@ -686,10 +698,16 @@ Process* Scheduler::InterpretProcess(Process* process,
                                      bool* allocation_failure) {
   ASSERT(process->exception()->IsNull());
 
-  // TODO(kustermann): Support signal handlers.
   Signal* signal = process->signal_mailbox()->CurrentMessage();
   if (signal != NULL) {
-    ExitAtTermination(process, Signal::kUnhandledSignal);
+    process->ChangeState(Process::kRunning, Process::kTerminated);
+
+    Session* session = process->program()->session();
+    if (session == NULL ||
+        !session->is_debugging() ||
+        !session->UncaughtSignal(process)) {
+      ExitAtTermination(process, Signal::kUnhandledSignal);
+    }
     return NULL;
   }
 

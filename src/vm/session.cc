@@ -806,7 +806,9 @@ int Session::ProcessRun() {
         if (!process_started && process_ != NULL) {
           // If the process was spawned but not started, the scheduler does not
           // know about it and we are therefore responsible for deleting it.
-          program()->DeleteProcess(process_, Signal::kTerminated);
+          process_->ChangeState(Process::kSleeping,
+                                Process::kWaitingForChildren);
+          program()->ScheduleProcessForDeletion(process_, Signal::kTerminated);
         }
         Print::UnregisterPrintInterceptors();
         if (!process_started) return 0;
@@ -1317,6 +1319,18 @@ bool Session::UncaughtException(Process* process) {
     return true;
   }
   return false;
+}
+
+bool Session::UncaughtSignal(Process* process) {
+  if (process_ != process) return false;
+
+  // TODO(kustermann): We might want to let a debugger know that the process
+  // didn't normally terminate, but rather was killed due to a linked process.
+  WriteBuffer buffer;
+  connection_->Send(Connection::kProcessTerminated, buffer);
+  process_ = NULL;
+  program_->scheduler()->ExitAtTermination(process, Signal::kUnhandledSignal);
+  return true;
 }
 
 bool Session::BreakPoint(Process* process) {

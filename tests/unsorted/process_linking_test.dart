@@ -7,25 +7,35 @@ import 'dart:fletch';
 import 'package:expect/expect.dart';
 
 main() {
+  print('simpleMonitorTest');
   simpleMonitorTest(SignalKind.CompileTimeError);
   simpleMonitorTest(SignalKind.Terminated);
   simpleMonitorTest(SignalKind.UncaughtException);
 
+  print('multipleMonitorPortsTest');
   multipleMonitorPortsTest(SignalKind.CompileTimeError);
   multipleMonitorPortsTest(SignalKind.Terminated);
   multipleMonitorPortsTest(SignalKind.UncaughtException);
 
+  print('indirectLinkTest');
   indirectLinkTest(SignalKind.CompileTimeError);
   indirectLinkTest(SignalKind.Terminated);
   indirectLinkTest(SignalKind.UncaughtException);
 
-  postLinkProcessTest(SignalKind.CompileTimeError);
-  postLinkProcessTest(SignalKind.Terminated);
-  postLinkProcessTest(SignalKind.UncaughtException);
-
+  print('postMonitorProcessTest');
   postMonitorProcessTest(SignalKind.CompileTimeError);
   postMonitorProcessTest(SignalKind.Terminated);
   postMonitorProcessTest(SignalKind.UncaughtException);
+
+  print('deathOrderTest');
+  // TODO(kustermann): Add a test for [SignalKind.Terminated] as well.
+  deathOrderTest(SignalKind.CompileTimeError);
+  deathOrderTest(SignalKind.UncaughtException);
+
+  print('deathOrderTest2');
+  // TODO(kustermann): Add a test for [SignalKind.Terminated] as well.
+  deathOrderTest2(SignalKind.CompileTimeError);
+  deathOrderTest2(SignalKind.UncaughtException);
 }
 
 simpleMonitorTest(SignalKind kind) {
@@ -114,49 +124,6 @@ indirectLinkTest(SignalKind kind) {
   }
 }
 
-postLinkProcessTest(SignalKind kind) {
-  // This test has the following hierarchy of processes:
-  // [main] ---monitors---> [p1] <--link--> [p2]
-
-  p2(Port killPort, Port reply) {
-    var c = new Channel();
-    killPort.send(new Port(c));
-    var sig = c.receive();
-    failWithSignalKind(sig);
-    reply.send('success');
-  }
-
-  p1(Port replyPort) {
-    var killChannel = new Channel();
-    var killPort = new Port(killChannel);
-
-    var c = new Channel();
-    var port = new Port(c);
-    Process process = Process.spawnDetached(() => p2(killPort, port));
-
-    // NOTE: We link after spawning and then signal the child process to exit
-    // with a specific [kind].
-    Expect.isTrue(process.link());
-    killChannel.receive().send(kind);
-
-    // Either the child died unexpectedly and we die as well or we get a success
-    // message and send it further to our parent.
-    Expect.equals('success', c.receive());
-    replyPort.send('everything-is-awesome');
-  }
-
-  var monitor = new Channel();
-  var result = new Channel();
-  var resultPort = new Port(result);
-  Process.spawnDetached(() => p1(resultPort), monitor: new Port(monitor));
-  if (kind == SignalKind.Terminated) {
-    Expect.equals('everything-is-awesome', result.receive());
-    Expect.equals(SignalKind.Terminated.index, monitor.receive());
-  } else {
-    Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
-  }
-}
-
 postMonitorProcessTest(SignalKind kind) {
   var parentChannel = new Channel();
   final parentPort = new Port(parentChannel);
@@ -179,6 +146,67 @@ postMonitorProcessTest(SignalKind kind) {
   Expect.equals(kind.index, monitor.receive());
 }
 
+deathOrderTest(SignalKind kind) {
+  var monitor = new Channel();
+  var monitorPort = new Port(monitor);
+
+  // The processes are like this:
+  // [main] ---monitors---> [p1] <--link--> [p2]
+  // and [p2] dies.
+
+  Process.spawnDetached(() {
+    var c = new Channel();
+    final grandchildReadyPort = new Port(c);
+    var child = Process.spawn(() {
+      grandchildReadyPort.send(1);
+      blockInfinitly();
+    });
+    child.monitor(monitorPort);
+
+    // Wait for grandchild to be ready.
+    c.receive();
+
+    // And fail.
+    failWithSignalKind(kind);
+  }, monitor: monitorPort);
+
+  Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
+  Expect.equals(kind.index, monitor.receive());
+}
+
+deathOrderTest2(SignalKind kind) {
+  var monitor = new Channel();
+  var monitorPort = new Port(monitor);
+
+  // The processes are like this:
+  // [main] ---monitors---> [p1] <--link--> [p2]
+  // and [p1] dies.
+
+  Process.spawnDetached(() {
+    var c = new Channel();
+    final grandchildReadyPort = new Port(c);
+    var child = Process.spawn(() {
+      var c = new Channel();
+      grandchildReadyPort.send(new Port(c));
+
+      // Wait until parent monitored us.
+      c.receive();
+
+      // And fail.
+      failWithSignalKind(kind);
+    });
+    child.monitor(monitorPort);
+
+    // Tell grandchild it can fail now.
+    c.receive().send(1);
+
+    blockInfinitly();
+  }, monitor: monitorPort);
+
+  Expect.equals(kind.index, monitor.receive());
+  Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
+}
+
 failWithSignalKind(SignalKind kind) {
   if (kind == SignalKind.UncaughtException) throw 'failing';
   if (kind == SignalKind.CompileTimeError) failWithCompileTimeError();
@@ -188,3 +216,5 @@ failWithSignalKind(SignalKind kind) {
 failWithCompileTimeError() {
   a b c;
 }
+
+blockInfinitly() => new Channel().receive();

@@ -114,6 +114,7 @@ class Session {
   // In case the session does not know about [process] these functions will
   // return `false` and the caller is responsible for handling the event.
   bool UncaughtException(Process* process);
+  bool UncaughtSignal(Process* process);
   bool BreakPoint(Process* process);
   bool ProcessTerminated(Process* process);
   bool CompileTimeError(Process* process);

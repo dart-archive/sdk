@@ -19,13 +19,16 @@ NATIVE(ProcessLink) {
   {
     ScopedSpinlock locker(handle->lock());
     Process* handle_process = handle->process();
-    if (handle_process != NULL) {
-      process->links()->InsertHandle(handle);
-      handle_process->links()->InsertHandle(process->process_handle());
-      return process->program()->true_object();
-    } else {
+    if (handle_process == NULL) {
       return process->program()->false_object();
     }
+
+    if (handle_process->links()->InsertHandle(process->process_handle())) {
+      process->links()->InsertHandle(handle);
+      return process->program()->true_object();
+    }
+
+    return process->program()->false_object();
   }
 }
 

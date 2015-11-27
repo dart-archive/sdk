@@ -144,6 +144,9 @@ class Program {
     scheduler_ = scheduler;
   }
 
+  Signal::Kind exit_kind() const { return exit_kind_; }
+  void set_exit_kind(Signal::Kind exit_kind) { exit_kind_ = exit_kind; }
+
   ProgramState* program_state() { return &program_state_; }
 
   EventHandler* event_handler() { return &event_handler_; }
@@ -179,10 +182,10 @@ class Program {
     return NULL;
   }
 
-  Process* SpawnProcess();
+  Process* SpawnProcess(Process* parent);
   Process* ProcessSpawnForMain();
-  void DeleteProcess(Process* process, Signal::Kind kind);
-  void DeleteAllProcesses();
+  // Returns [true] if this was the last process (i.e. main process).
+  bool ScheduleProcessForDeletion(Process* process, Signal::Kind kind);
 
   // This function should only be called once the program has been stopped.
   void VisitProcesses(ProcessVisitor* visitor);
@@ -288,6 +291,8 @@ class Program {
   bool is_compact_;
 
   bool loaded_from_snapshot_;
+
+  Signal::Kind exit_kind_;
 };
 
 }  // namespace fletch

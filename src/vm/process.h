@@ -74,6 +74,7 @@ class Process {
     kCompileTimeError,
     kUncaughtException,
     kTerminated,
+    kWaitingForChildren,
   };
 
   enum ProgramGCState {
@@ -277,7 +278,7 @@ class Process {
   friend class Program;
 
   // Creation and deletion of processes is managed by a [Program].
-  explicit Process(Program* program);
+  Process(Program* program, Process* parent);
   ~Process();
 
   // Must be called before deletion. After this method is done cleaning up,
@@ -347,6 +348,12 @@ class Process {
   // in the program.
   Process* process_list_next_;
   Process* process_list_prev_;
+
+  // The number of direct child processes plus 1.
+  Atomic<int> process_triangle_count_;
+
+  // Valid until this object gets deleted.
+  Process* const parent_;
 
   int errno_cache_;
 

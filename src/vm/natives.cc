@@ -892,7 +892,7 @@ static Process* SpawnProcessInternal(Program* program,
 
   // Spawn a new process and create a copy of the closure in the
   // new process' heap.
-  Process* child = program->SpawnProcess();
+  Process* child = program->SpawnProcess(process);
 
   // Set up the stack as a call of the entry with one argument: closure.
   child->SetupExecutionStack();
