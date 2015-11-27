@@ -984,6 +984,20 @@ NATIVE(ProcessSpawn) {
   return dart_process;
 }
 
+NATIVE(ProcessCurrent) {
+  Program* program = process->program();
+  ProcessHandle* handle = process->process_handle();
+
+  // TODO(kustermann): We should not have two allocations in one native.
+  Object* native_handle = process->NewInteger(reinterpret_cast<int64>(handle));
+  if (native_handle == Failure::retry_after_gc()) return native_handle;
+  Object* dart_process = process->NewInstance(program->process_class(), true);
+  if (dart_process == Failure::retry_after_gc()) return dart_process;
+  Instance::cast(dart_process)->SetInstanceField(0, native_handle);
+
+  return dart_process;
+}
+
 NATIVE(CoroutineCurrent) {
   return process->coroutine();
 }

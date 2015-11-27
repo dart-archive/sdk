@@ -128,6 +128,7 @@ namespace fletch {
   N(ProcessSpawn,                "Process", "_spawn")                    \
   N(ProcessQueueGetMessage,      "Process", "_queueGetMessage")          \
   N(ProcessQueueGetChannel,      "Process", "_queueGetChannel")          \
+  N(ProcessCurrent,              "Process", "current")                   \
                                                                          \
   N(CoroutineCurrent,            "Coroutine", "_coroutineCurrent")       \
   N(CoroutineNewStack,           "Coroutine", "_coroutineNewStack")      \

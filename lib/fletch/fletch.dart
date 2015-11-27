@@ -394,6 +394,7 @@ class Process {
     }
   }
 
+  @fletch.native external static Process get current;
   @fletch.native external static _queueGetMessage();
   @fletch.native external static Channel _queueGetChannel();
 }
