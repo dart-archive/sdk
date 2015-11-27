@@ -17,6 +17,14 @@ bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
 }
 
+void Thread::BlockOSSignals() {
+  // Platform doesn't have signals.
+}
+
+void Thread::UnblockOSSignals() {
+  // Platform doesn't have signals.
+}
+
 ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   // TODO(herhut): lk threads have int return values.
   thread_t* thread = thread_create("Dart thread",

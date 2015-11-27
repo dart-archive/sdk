@@ -824,6 +824,7 @@ Process* Scheduler::InterpretProcess(Process* process,
 }
 
 void Scheduler::ThreadEnter(ThreadState* thread_state) {
+  Thread::BlockOSSignals();
   // TODO(ajohnsen): This only works because we never return threads, unless
   // the scheduler is done.
   int thread_id = thread_count_++;
@@ -843,6 +844,7 @@ void Scheduler::ThreadExit(ThreadState* thread_state) {
   pause_monitor_->Lock();
   pause_monitor_->NotifyAll();
   pause_monitor_->Unlock();
+  Thread::UnblockOSSignals();
 }
 
 static void NotifyThread(ThreadState* thread_state) {

@@ -7,6 +7,7 @@
 #include "src/vm/thread.h"  // NOLINT we don't include thread_posix.h.
 
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 
 #include "src/shared/platform.h"
@@ -17,6 +18,22 @@ namespace fletch {
 
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
+}
+
+void Thread::BlockOSSignals() {
+  sigset_t set;
+  sigfillset(&set);
+  if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
+    FATAL("Failed to block signal on thread");
+  }
+}
+
+void Thread::UnblockOSSignals() {
+  sigset_t set;
+  sigfillset(&set);
+  if (pthread_sigmask(SIG_UNBLOCK, &set, NULL) != 0) {
+    FATAL("Failed to unblock signal on thread");
+  }
 }
 
 ThreadIdentifier Thread::Run(RunSignature run, void* data) {

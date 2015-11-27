@@ -34,6 +34,9 @@ class Thread {
   // Returns true if 'thread' is the current thread.
   static bool IsCurrent(const ThreadIdentifier* thread);
 
+  static void BlockOSSignals();
+  static void UnblockOSSignals();
+
   typedef void* (*RunSignature)(void*);
   static ThreadIdentifier Run(RunSignature run, void* data = NULL);
 
