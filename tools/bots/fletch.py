@@ -173,16 +173,21 @@ def StepsTestSDK(debug_log, configuration):
   if os.path.exists(sdk_dir):
     shutil.rmtree(sdk_dir)
   Unzip(sdk_zip)
-  StepTest(
-    configuration['build_conf'],
-    configuration['mode'],
-    configuration['arch'],
-    clang=configuration['clang'],
-    asan=configuration['asan'],
-    snapshot_run=False,
-    debug_log=debug_log,
-    configuration=configuration,
-    use_sdk=True)
+  build_conf = configuration['build_conf']
+  def run():
+    StepTest(
+      build_conf,
+      configuration['mode'],
+      configuration['arch'],
+      clang=configuration['clang'],
+      asan=configuration['asan'],
+      snapshot_run=False,
+      debug_log=debug_log,
+      configuration=configuration,
+      use_sdk=True)
+
+  RunWithCoreDumpArchiving(run, build_dir, build_conf)
+
 
 def StepsSanityChecking(build_dir):
   sdk_dir = os.path.join(build_dir, 'fletch-sdk')
