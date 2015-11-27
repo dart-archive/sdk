@@ -245,10 +245,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   void LoadLiteralTrue(Register reg);
   void LoadLiteralFalse(Register reg);
 
-  void LoadFramePointer(Register reg);
-  void StoreFramePointer(Register reg);
-
-  void PushFrameDescriptor(Register return_address, Register scratch);
+  void PushFrameDescriptor(Register bcp, Register scratch);
   void ReadFrameDescriptor(Register scratch);
 
   void Return(bool is_return_null);
@@ -672,7 +669,7 @@ void InterpreterGeneratorX86::DoInvokeNoSuchMethod() {
   // Load the function at index 2.
   __ movl(EAX, Address(ECX, 8 + Array::kSize - HeapObject::kTag));
 
-  // Compute and push the return address on the stack.
+  // Compute and push the return bcp on the stack.
   __ addl(ESI, Immediate(kInvokeNoSuchMethodLength));
   PushFrameDescriptor(ESI, EBX);
 
@@ -1158,8 +1155,7 @@ void InterpreterGeneratorX86::DoThrowAfterSaveState() {
   __ jmp(&done_);
 
   __ Bind(&unwind);
-  __ movl(ECX, Address(ESP, 5 * kWordSize));
-  StoreFramePointer(ECX);
+  __ movl(EBP, Address(ESP, 5 * kWordSize));
   __ movl(ECX, Address(ESP, 4 * kWordSize));
   __ movl(ESI, EAX);
   __ leal(EDI, Address(EDI, ECX, TIMES_WORD_SIZE));
@@ -1512,36 +1508,25 @@ void InterpreterGeneratorX86::LoadLiteralFalse(Register reg) {
   __ movl(reg, Address(reg, Program::kFalseObjectOffset));
 }
 
-void InterpreterGeneratorX86::LoadFramePointer(Register reg) {
-  __ movl(reg, EBP);
-}
-
-void InterpreterGeneratorX86::StoreFramePointer(Register reg) {
-  __ movl(EBP, reg);
-}
-
-void InterpreterGeneratorX86::PushFrameDescriptor(Register return_address,
+void InterpreterGeneratorX86::PushFrameDescriptor(Register bcp,
                                                   Register scratch) {
-  LoadFramePointer(scratch);
-  __ movl(Address(scratch, -kWordSize), return_address);
+  __ movl(Address(EBP, -kWordSize), bcp);
 
   Push(Immediate(0));
 
-  Push(scratch);
-
-  StoreFramePointer(EDI);
+  Push(EBP);
+  __ movl(EBP, EDI);
 
   Push(Immediate(0));
 }
 
 void InterpreterGeneratorX86::ReadFrameDescriptor(Register scratch) {
-  LoadFramePointer(EDI);
+  __ movl(EDI, EBP);
   // Store old frame pointer from stack.
-  LoadLocal(scratch, 0);
-  StoreFramePointer(scratch);
+  LoadLocal(EBP, 0);
 
-  // Load return address.
-  __ movl(ESI, Address(scratch, -kWordSize));
+  // Load bcp.
+  __ movl(ESI, Address(EBP, -kWordSize));
 }
 
 void InterpreterGeneratorX86::LoadLocal(Register reg, int index) {
@@ -1802,7 +1787,7 @@ void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
     StoreLocal(EAX, 0);
     Dispatch(kInvokeTestUnfoldLength);
   } else {
-    // Compute and push the return address on the stack.
+    // Compute and push the return bcp on the stack.
     __ addl(ESI, Immediate(kInvokeMethodUnfoldLength));
     PushFrameDescriptor(ESI, EBX);
 
@@ -1899,7 +1884,7 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
     __ testl(EBX, EBX);
     __ j(NOT_ZERO, &intrinsified);
 
-    // Compute and push the return address on the stack.
+    // Compute and push the return bcp on the stack.
     __ addl(ESI, Immediate(kInvokeMethodLength));
     PushFrameDescriptor(ESI, EBX);
 
@@ -1947,7 +1932,7 @@ void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {
         Address(EBX, EAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag));
   }
 
-  // Compute and push the return address on the stack.
+  // Compute and push the return bcp on the stack.
   __ addl(ESI, Immediate(kInvokeStaticLength));
   PushFrameDescriptor(ESI, EBX);
 
@@ -2062,7 +2047,7 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
     __ movl(EDI, EBX);
   }
 
-  // Dispatch to return address.
+  // Dispatch to bcp.
   Dispatch(0);
 
   // Failure: Check if it's a request to garbage collect. If not,
@@ -2110,16 +2095,14 @@ void InterpreterGeneratorX86::Dispatch(int size) {
 }
 
 void InterpreterGeneratorX86::SaveState() {
-  // Save the bytecode pointer at the return-address slot.
-  LoadFramePointer(ECX);
-  __ movl(Address(ECX, -kWordSize), ESI);
+  // Save the bytecode pointer at the bcp slot.
+  __ movl(Address(EBP, -kWordSize), ESI);
 
   // Push null.
   Push(Immediate(0));
 
   // Push frame pointer.
-  LoadFramePointer(ECX);
-  Push(ECX);
+  Push(EBP);
 
   // Update top in the stack. Ugh. Complicated.
   LoadProcess(ECX);
@@ -2139,14 +2122,13 @@ void InterpreterGeneratorX86::RestoreState() {
   __ movl(ECX, Address(EDI, Stack::kTopOffset - HeapObject::kTag));
   __ leal(EDI, Address(EDI, ECX, TIMES_2, Stack::kSize - HeapObject::kTag));
 
-  // Pop and store frame pointer.
-  Pop(ECX);
-  StoreFramePointer(ECX);
+  // Read frame pointer.
+  LoadLocal(EBP, 0);
 
-  // Set the bytecode pointer from the stack.
-  __ movl(ESI, Address(ECX, -kWordSize));
+  // Set the bcp from the stack.
+  __ movl(ESI, Address(EBP, -kWordSize));
 
-  Drop(1);
+  Drop(2);
 }
 
 }  // namespace fletch
