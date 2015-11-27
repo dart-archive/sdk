@@ -39,7 +39,7 @@ FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
 
 // Load a program from the given location. Location should point to a
 // reloacted program heap with appended info block, usually build using
-// the flashtool utility.
+// the flashtool utility or by relocating a loaded program.
 FLETCH_EXPORT FletchProgram FletchLoadProgramFromFlash(void* location,
                                                        size_t size);
 

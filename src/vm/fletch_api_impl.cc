@@ -15,8 +15,8 @@
 
 #include "src/vm/ffi.h"
 #include "src/vm/program.h"
-#include "src/vm/program_info_block.h"
 #include "src/vm/program_folder.h"
+#include "src/vm/program_info_block.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/session.h"
 #include "src/vm/snapshot.h"

@@ -109,8 +109,6 @@
         'program_folder.h',
         'program_info_block.cc',
         'program_info_block.h',
-        'program_relocator.cc',
-        'program_relocator.h',
         'scheduler.cc',
         'scheduler.h',
         'selector_row.cc',
@@ -325,6 +323,18 @@
           '-fPIC',
         ],
       },
+    },
+    {
+      'target_name': 'fletch_relocation_library',
+      'type': 'static_library',
+      'standalone_static_library': 1,
+      'sources': [
+        'fletch_relocation_api_impl.cc',
+        'fletch_relocation_api_impl.h',
+        'program_info_block.h',  # only to detect interface changes
+        'program_relocator.cc',
+        'program_relocator.h',
+      ],
     },
   ],
 }

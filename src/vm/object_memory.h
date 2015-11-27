@@ -203,6 +203,7 @@ class Space {
  private:
   friend class NoAllocationFailureScope;
   friend class ProgramHeapRelocator;
+  friend class Program;
 
   void SetAllocationPointForPrepend(Space* space);
 

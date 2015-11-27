@@ -70,11 +70,14 @@ static int Main(int argc, char** argv) {
   SnapshotReader reader(bytes);
   Program* program = reader.ReadProgram();
 
-  ProgramHeapRelocator relocator(program, basevalue, table);
-  List<uint8> result = relocator.Relocate();
+  int size = program->program_heap_size() + sizeof(ProgramInfoBlock);
+  List<uint8> result = List<uint8>::New(size);
+  ProgramHeapRelocator relocator(program, result.data(), basevalue, table);
+  relocator.Relocate();
 
   Platform::StoreFile(argp[2], result);
 
+  result.Delete();
   return 0;
 }
 

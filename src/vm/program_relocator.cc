@@ -107,7 +107,7 @@ class RelocationVisitor : public HeapObjectVisitor {
   uword rebase_base_;
 };
 
-List<uint8> ProgramHeapRelocator::Relocate() {
+int ProgramHeapRelocator::Relocate() {
   // Clear away the intrinsics as they will point to the wrong
   // addresses.
   program_->ClearDispatchTableIntrinsics();
@@ -128,11 +128,10 @@ List<uint8> ProgramHeapRelocator::Relocate() {
 
   // heap + roots + main_arity
   int total_size = heap_size + sizeof(ProgramInfoBlock);
-  List<uint8> target = List<uint8>::New(total_size);
-  memcpy(reinterpret_cast<void*>(target.data()),
+  memcpy(reinterpret_cast<void*>(target_),
          reinterpret_cast<void*>(chunk->base()),
          heap_size);
-  uword target_base = reinterpret_cast<uword>(target.data());
+  uword target_base = reinterpret_cast<uword>(target_);
 
   RelocationVisitor relocator(chunk->base(), target_base, baseaddress_);
 
@@ -158,14 +157,14 @@ List<uint8> ProgramHeapRelocator::Relocate() {
   // And write them to the end of the blob.
   // TODO(herhut): Use placement new here once supported by all toolchains.
   ProgramInfoBlock* program_info =
-      reinterpret_cast<ProgramInfoBlock*>(target.data() + heap_size);
+      reinterpret_cast<ProgramInfoBlock*>(target_ + heap_size);
   program_info->PopulateFromProgram(target_program);
 
   free(target_program);
 
   DEBUG_PRINT("Relocation complete, result is %d bytes...\n", target.length());
 
-  return target;
+  return total_size;
 }
 
 }  // namespace fletch

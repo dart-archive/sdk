@@ -159,6 +159,13 @@ class Program {
   Heap* heap() { return &heap_; }
   SharedHeap* shared_heap() { return &shared_heap_; }
 
+  int program_heap_size() {
+    ASSERT(is_compact_);
+    Chunk* chunk = heap()->space()->first();
+    ASSERT(chunk->next() == NULL);
+    return chunk->limit() - chunk->base();
+  }
+
   HeapObject* ObjectFromFailure(Failure* failure) {
     if (failure == Failure::wrong_argument_type()) {
       return raw_wrong_argument_type();
