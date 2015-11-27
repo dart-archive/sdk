@@ -51,7 +51,8 @@ void testIntraprocessPort() {
 
 void testInterprocess() {
   Channel channel = new Channel();
-  Process.spawn(portResponder, new Port(channel));
+  Port initPort = new Port(channel);
+  Process.spawnDetached(() => portResponder(initPort));
   Port port = channel.receive();
   int i = MESSAGES;
   Stopwatch watch = new Stopwatch()..start();

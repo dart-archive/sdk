@@ -13,7 +13,7 @@ main() {
 noop() { }
 
 int fib(n) {
-  Process.spawn(noop);
+  Process.spawnDetached(noop);
   if (n <= 2) return 1;
   return new Coroutine(fib)(n - 1)
        + new Coroutine(fib)(n - 2);

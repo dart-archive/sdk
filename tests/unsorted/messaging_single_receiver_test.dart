@@ -14,7 +14,7 @@ void main() {
   var channel = new Channel();
   var port = new Port(channel);
   for (int i = 0; i < PROCESSES; i++) {
-    Process.spawn(processRun, port);
+    Process.spawnDetached(() => processRun(port));
   }
   int done = 0;
   while (done < PROCESSES) {

@@ -15,12 +15,12 @@ void run1() {
   // not quite close enough (~150,000). Note that ASan
   // also introduces quite an overhead.
   for (int i = 0; i < 150; i++) {
-    Process.spawn(run2);
+    Process.spawnDetached(run2);
   }
 }
 
 void main() {
   for (int i = 0; i < 1000; i++) {
-    Process.spawn(run1);
+    Process.spawnDetached(run1);
   }
 }

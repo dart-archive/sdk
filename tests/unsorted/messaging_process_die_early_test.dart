@@ -5,19 +5,23 @@
 import 'dart:fletch';
 
 import 'package:expect/expect.dart';
+import 'package:isolate/process_runner.dart';
 
 const int PROCESSES = 5000;
 const int MESSAGES = 10;
 
 void main() {
-  for (int i = 0; i < PROCESSES; i++) {
-    Process.spawn(processRun);
-  }
+  withProcessRunner((runner) {
+    for (int i = 0; i < PROCESSES; i++) {
+      runner.run(processRun);
+    }
+  });
 }
 
 void processRun() {
   Channel input = new Channel();
-  Process.spawn(portReceiver, new Port(input));
+  Port port = new Port(input);
+  Process.spawnDetached(() => portReceiver(port));
   var output = input.receive();
   for (int i = 0; i < MESSAGES; i++) {
     output.send(i);

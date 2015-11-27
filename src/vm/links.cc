@@ -98,27 +98,24 @@ void Links::EnqueueSignal(Port* port, Signal::Kind kind) {
 void Links::SendSignal(ProcessHandle* handle,
                        ProcessHandle* dying_handle,
                        Signal::Kind kind) {
-  // Everything that was not a normal termination will trigger a signal.
-  if (kind != Signal::kTerminated) {
-    // We do this nested check for `handle->process()` for two reasons:
-    //    * avoid allocating [Signal] if we definitly do not need it
-    //    * avoid allocating [Signal] while holding a [Spinlock]
+  // We do this nested check for `handle->process()` for two reasons:
+  //    * avoid allocating [Signal] if we definitly do not need it
+  //    * avoid allocating [Signal] while holding a [Spinlock]
 
-    if (handle->process() != NULL) {
-      Signal* signal = new Signal(dying_handle, kind);
+  if (handle->process() != NULL) {
+    Signal* signal = new Signal(dying_handle, kind);
 
-      {
-        ScopedSpinlock locker(handle->lock());
-        Process* process = handle->process();
-        if (process != NULL) {
-          process->signal_mailbox()->EnqueueEntry(signal);
-          process->program()->scheduler()->SignalProcess(process);
-          signal = NULL;
-        }
+    {
+      ScopedSpinlock locker(handle->lock());
+      Process* process = handle->process();
+      if (process != NULL) {
+        process->signal_mailbox()->EnqueueEntry(signal);
+        process->program()->scheduler()->SignalProcess(process);
+        signal = NULL;
       }
-
-      if (signal != NULL) delete signal;
     }
+
+    if (signal != NULL) delete signal;
   }
 }
 

@@ -134,7 +134,8 @@ class RpcServer {
 
   static Port spawn(RpcServer create()) {
     Channel channel = new Channel();
-    Process.spawn(_runNewServer, new Port(channel));
+    Port initPort = new Port(channel);
+    Process.spawnDetached(() => _runNewServer(initPort));
     Port port = channel.receive();
     port.send(create);
     return channel.receive();

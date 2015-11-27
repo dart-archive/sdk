@@ -60,7 +60,8 @@ class Transceiver {
 
   factory Transceiver.spawn(void entry(Transceiver parent)) {
     Channel parent = new Channel();
-    Process.spawn(_setupChild, new Port(parent));
+    Port parentPort = new Port(parent);
+    Process.spawnDetached(() => _setupChild(parentPort));
     Port port = parent.receive();
     port.send(entry);
     return new Transceiver._internal(parent, port);

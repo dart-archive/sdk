@@ -13,8 +13,8 @@ void main() {
   var port = new Port(channel);
   Stopwatch watch = new Stopwatch()..start();
   for (int i = 0; i < PROCESSES; i++) {
-    Process.spawn(portResponder, port);
-    channel.receive();
+    Process.spawnDetached(() => portResponder(port));
+    Expect.equals(null, channel.receive());
   }
   print("Took ${watch.elapsedMicroseconds} us to start $PROCESSES process and"
         "sending one message.");

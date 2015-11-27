@@ -28,13 +28,13 @@ main() {
   postMonitorProcessTest(SignalKind.UncaughtException);
 
   print('deathOrderTest');
-  // TODO(kustermann): Add a test for [SignalKind.Terminated] as well.
   deathOrderTest(SignalKind.CompileTimeError);
+  deathOrderTest(SignalKind.Terminated);
   deathOrderTest(SignalKind.UncaughtException);
 
   print('deathOrderTest2');
-  // TODO(kustermann): Add a test for [SignalKind.Terminated] as well.
   deathOrderTest2(SignalKind.CompileTimeError);
+  deathOrderTest2(SignalKind.Terminated);
   deathOrderTest2(SignalKind.UncaughtException);
 }
 
@@ -75,40 +75,18 @@ multipleMonitorPortsTest(SignalKind kind) {
 }
 
 indirectLinkTest(SignalKind kind) {
-  // This test has the following hierarchy of processes:
-  // [main] ---monitors---> [processList] <--link--> [p1] <--link--> [p2]
-  //
-  // Then [main] will send [p2] a [SignalKind] and depending on what this does
-  // it either
-  //    * exists [p2->p1->processList] with CompileTimeError/UncaughtException
-  //    * exists [p2->p1->processList] normally
-
   spawnProcessList(Port replyPort) {
-    p2(Port killPort, Port reply) {
-      var c = new Channel();
-      killPort.send(new Port(c));
-      var sig = c.receive();
-      failWithSignalKind(sig);
-      reply.send('success');
+    p2(Port reply) {
+      failWithSignalKind(kind);
+      reply.send('everything-is-awesome');
     }
-    p1(Port killPort, Port reply) {
-      var c = new Channel();
-      var port = new Port(c);
-      Process.spawn(() => p2(killPort, port));
-      reply.send(c.receive());
+    p1(Port reply) {
+      Process.spawn(() => p2(reply));
+      blockInfinitly();
     }
 
-    var killChannel = new Channel();
-    var killPort = new Port(killChannel);
-
-    var c = new Channel();
-    var port = new Port(c);
-    Process.spawn(() => p1(killPort, port));
-
-    killChannel.receive().send(kind);
-    Expect.equals('success', c.receive());
-
-    replyPort.send('everything-is-awesome');
+    Process.spawn(() => p1(replyPort));
+    blockInfinitly();
   }
 
   var monitor = new Channel();
@@ -118,10 +96,8 @@ indirectLinkTest(SignalKind kind) {
       monitor: new Port(monitor));
   if (kind == SignalKind.Terminated) {
     Expect.equals('everything-is-awesome', result.receive());
-    Expect.equals(SignalKind.Terminated.index, monitor.receive());
-  } else {
-    Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
   }
+  Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
 }
 
 postMonitorProcessTest(SignalKind kind) {

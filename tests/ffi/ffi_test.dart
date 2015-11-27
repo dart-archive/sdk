@@ -5,6 +5,7 @@
 import 'dart:fletch.ffi';
 import 'dart:fletch';
 import "package:expect/expect.dart";
+import "package:isolate/isolate.dart";
 
 bool isRangeError(e) => e is RangeError;
 bool isArgumentError(e) => e is ArgumentError;
@@ -511,9 +512,9 @@ testImmutablePassing(finalized) {
       : new ImmutableForeignMemory.allocated(length);
   memory.setFloat32(0, 42.0);
   if (finalized) {
-    Process.spawn(otherProcess, memory);
+    Isolate.spawn(() => otherProcess(memory)).join();
   } else {
-    Process.spawn(otherProcessNonFinalized, memory);
+    Isolate.spawn(() => otherProcessNonFinalized(memory)).join();
   }
 }
 

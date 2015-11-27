@@ -15,7 +15,8 @@ void main() {
   for (int i = 0; i < PROCESSES; i++) {
     var channel = new Channel();
     channels[i] = channel;
-    Process.spawn(processRun, new Port(channel));
+    var port = new Port(channel);
+    Process.spawnDetached(() => processRun(port));
   }
   for (int i = 0; i < PROCESSES; i++) {
     channels[i].receive();
@@ -26,7 +27,8 @@ void main() {
 
 void processRun(Port result) {
   Channel input = new Channel();
-  Process.spawn(portResponder, new Port(input));
+  Port inputPort = new Port(input);
+  Process.spawnDetached(() => portResponder(inputPort));
   var output = input.receive();
   int i = MESSAGES;
   while (i >= 0) {

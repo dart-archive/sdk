@@ -218,14 +218,14 @@ class ServerSocket extends _SocketBase {
    * A new process will be spawned and the [fn] function called on that process
    * with the new socket as argument.
    */
-  void spawnAccept(void fn(Socket socket)) {
+  Process spawnAccept(void fn(Socket socket)) {
     if (!isImmutable(fn)) {
       throw new ArgumentError(
           'Closure passed to ServerSocket.spawnAccept() must be immutable.');
     }
 
     int client = _accept();
-    Process.spawn(() => fn(new Socket._fromFd(client)));
+    return Process.spawnDetached(() => fn(new Socket._fromFd(client)));
   }
 
   /**

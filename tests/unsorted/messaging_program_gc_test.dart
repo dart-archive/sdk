@@ -14,7 +14,7 @@ noop() { }
 main() {
   var input = new Channel();
   var port = new Port(input);
-  Process.spawn(subProcess, port);
+  Process.spawnDetached(() => subProcess(port));
   // Wait while messages are enqueued and a program GC is forced with
   // messages in the queue.
   new Timer(const Duration(milliseconds: 100), () {
@@ -30,15 +30,15 @@ main() {
 subProcess(Port replyPort) {
   var input = new Channel();
   var port = new Port(input);
-  Process.spawn(noop);
+  Process.spawnDetached(noop);
   // Put two messages in the queue.
   replyPort.send(port);
   replyPort.send(constList);
   // Spin up a process that will die immediately to force a program GC.
-  Process.spawn(noop);
+  Process.spawnDetached(noop);
   Expect.equals(input.receive(), constList);
   for (int i = 0; i < 10; i++) {
-    Process.spawn(noop);
+    Process.spawnDetached(noop);
     replyPort.send(i);
   }
 }

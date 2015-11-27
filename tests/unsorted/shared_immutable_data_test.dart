@@ -31,7 +31,7 @@ stackProcess(Port caller, tree, int process) {
   var channel = new Channel();
   final port = new Port(channel);
   final finalTree = tree;
-  Process.spawn(() => stackProcess(port, finalTree, process - 1));
+  Process.spawnDetached(() => stackProcess(port, finalTree, process - 1));
   var tree2 = channel.receive();
   Expect.isNotNull(tree2, 'Expected partial tree to be non-null.');
 
@@ -44,7 +44,8 @@ stackProcess(Port caller, tree, int process) {
 void main() {
   var channel = new Channel();
   final port = new Port(channel);
-  Process.spawn(() => stackProcess(port, new RedBlackTree(), NUM_PROCESSES));
+  Process.spawnDetached(
+      () => stackProcess(port, new RedBlackTree(), NUM_PROCESSES));
   var modifiedTree = channel.receive();
   Expect.isNotNull(modifiedTree, 'Expected computed tree to be non-null.');
   for (int i = 0; i < NUM_PROCESSES * INSERTS_PER_PROCESS; i++) {

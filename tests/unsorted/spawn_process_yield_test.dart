@@ -10,7 +10,7 @@ import 'package:expect/expect.dart';
 main() {
   Channel channel = new Channel();
   Port port = new Port(channel);
-  Process.spawn(run, port);
+  Process.spawnDetached(() => run(port));
   int id = channel.receive();
   Expect.equals(port.id, id);
 }

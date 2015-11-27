@@ -11,7 +11,7 @@ main(arguments) {
   var forceGC = arguments.length == 1 ? arguments[0] : null;
   var channel = new Channel();
   var port = new Port(channel);
-  Process.spawn(otherProcess, port);
+  Process.spawnDetached(() => otherProcess(port));
   var replyPort = channel.receive();
   replyPort.send(forceGC);
   // Put references to the port into the message queue.

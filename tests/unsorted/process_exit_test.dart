@@ -35,7 +35,8 @@ createFunction() => (x, y) => x - y;
 
 run(fn) {
   Channel channel = new Channel();
-  Process.spawn(helper, new Port(channel));
+  Port port = new Port(channel);
+  Process.spawnDetached(() => helper(port));
   channel.receive().send(fn);
   return channel.receive();
 }

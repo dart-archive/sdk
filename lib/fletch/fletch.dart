@@ -338,7 +338,7 @@ class Process {
 
       final argument = arguments[i];
       final port = new Port(channels[i]);
-      Process.spawn(() {
+      Process.spawnDetached(() {
         try {
           Process.exit(value: fn(argument), to: port);
         } finally {
