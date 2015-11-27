@@ -63,6 +63,7 @@ import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
 import 'package:compiler/src/elements/elements.dart';
 
 const EXTRA_DART2JS_OPTIONS = const <String>[
+    '--show-package-warnings',
     // TODO(ahe): This doesn't completely disable type inference. Investigate.
     '--disable-type-inference',
     '--output-type=dart',
