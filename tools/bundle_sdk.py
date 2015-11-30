@@ -21,7 +21,7 @@ from shutil import copyfile, copymode, copytree, rmtree
 
 TOOLS_DIR = abspath(dirname(__file__))
 
-SDK_PACKAGES = ['file', 'fletch', 'gpio', 'http', 'i2c', 'os',
+SDK_PACKAGES = ['ffi', 'file', 'fletch', 'gpio', 'http', 'i2c', 'os',
                 'raspberry_pi', 'socket']
 THIRD_PARTY_PACKAGES = ['charcode']
 
