@@ -190,7 +190,8 @@ There are three ways to reproduce this error:
           fletch.killVmProcess(ProcessSignal.SIGTERM);
         }
         int vmExitCode = await vmTerminationFuture;
-        fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode");
+        fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode. "
+            "Exit code reported by ${fletch.executable} is $exitCode");
         if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
           exitCode = vmExitCode;
         } else if (exitCode != vmExitCode) {
