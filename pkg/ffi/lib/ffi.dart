@@ -11,12 +11,15 @@ part 'utf.dart';
 final ForeignFunction _strlen = ForeignLibrary.main.lookup('strlen');
 
 /// Converts a c string to a String in the fletch heap.
+/// This call expects a null terminated string. The string will be decoded
+/// using a UTF8 decoder.
 String cStringToString(ForeignPointer ptr) {
   int length = _strlen.icall$1(ptr);
   return memoryToString(ptr, length);
 }
 
-/// Converts a c memory region to a String in the fletch hea.p
+/// Converts a c memory region to a String in the fletch heap. The string 
+/// will be decoded using a UTF8 decoder.
 String memoryToString(ForeignPointer ptr, int length) {
   var memory = new ForeignMemory.fromAddress(ptr.address, length);
   var encodedString = new List(length);
