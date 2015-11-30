@@ -12,3 +12,4 @@ os/sleep_test: RuntimeError
 os/system_info_test: RuntimeError
 file/file_test: RuntimeError
 http/http_test: RuntimeError
+ffi/ffi_test: RuntimeError
