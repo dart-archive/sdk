@@ -13,3 +13,6 @@ os/system_info_test: RuntimeError
 file/file_test: RuntimeError
 http/http_test: RuntimeError
 ffi/ffi_test: RuntimeError
+
+[ $use_sdk ]
+ffi/ffi_test: RuntimeError # We don't copy the ffi testing lib to the sdk
