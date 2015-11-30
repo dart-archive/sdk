@@ -118,7 +118,13 @@ deps_os = {
   },
 
   "win": {
+    'fletch/third_party/cygwin':
+      Var('chromium_git') + '/chromium/deps/cygwin.git' + '@' + 'c89e446b273697fadf3a10ff1007a97c0b7de6df',
+
+    'fletch/third_party/yasm/source/patched-yasm':
+      Var('chromium_git') + '/chromium/deps/yasm/patched-yasm.git' + '@' + '4671120cd8558ce62ee8672ebf3eb6f5216f909b',
   },
+
 }
 
 hooks = [

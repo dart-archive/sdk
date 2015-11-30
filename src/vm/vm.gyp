@@ -10,7 +10,7 @@
   },
   'targets': [
     {
-      'target_name': 'fletch_vm_library_base',
+      'target_name': 'fletch_vm_library',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
       'target_conditions': [
@@ -18,9 +18,18 @@
           'standalone_static_library': 1,
 	}]],
       'dependencies': [
+        'fletch_vm_library_generator#host',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
+      'link_settings': {
+        'libraries': [
+          '-lpthread',
+          '-ldl',
+          # TODO(ahe): Not sure this option works as intended on Mac.
+          '-rdynamic',
+        ],
+      },
       'conditions': [
         [ 'OS=="mac"', {
           'dependencies': [
@@ -31,7 +40,33 @@
           ],
         }],
       ],
+
+      # TODO(kasperl): Now that we no longer use weak symbols, should we remove
+      #                the below conditions?
+      'conditions': [
+        [ 'OS=="linux"', {
+          'link_settings': {
+            'ldflags': [
+              '-Wl,--whole-archive',
+            ],
+            'libraries': [
+              '-Wl,--no-whole-archive',
+            ],
+          },
+        }],
+	[ 'OS=="win"', {
+	  'asm_file_extension': '.asm',
+	}],
+      ],
+      'variables': {
+        'asm_file_extension%': '.S',
+	'yasm_output_path': '<(INTERMEDIATE_DIR)',
+      },
+      'includes': [
+        '../../third_party/yasm/yasm_compile.gypi'
+      ],
       'sources': [
+        '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
         'debug_info.cc',
         'debug_info.h',
         'debug_info_no_live_coding.h',
@@ -143,44 +178,6 @@
         'weak_pointer.cc',
         'weak_pointer.h',
       ],
-      'link_settings': {
-        'libraries': [
-          '-lpthread',
-          '-ldl',
-          # TODO(ahe): Not sure this option works as intended on Mac.
-          '-rdynamic',
-        ],
-      },
-    },
-    {
-      'target_name': 'fletch_vm_library',
-      'type': 'static_library',
-      'standalone_static_library': 1,
-      'dependencies': [
-        'fletch_vm_library_generator#host',
-        'fletch_vm_library_base',
-        '../shared/shared.gyp:fletch_shared',
-        '../double_conversion.gyp:double_conversion',
-      ],
-
-      # TODO(kasperl): Remove the below conditions when we no longer use weak
-      # symbols.
-      'conditions': [
-        [ 'OS=="linux"', {
-          'link_settings': {
-            'ldflags': [
-              '-Wl,--whole-archive',
-            ],
-            'libraries': [
-              '-Wl,--no-whole-archive',
-            ],
-          },
-        }],
-      ],
-
-      'sources': [
-        '<(INTERMEDIATE_DIR)/generated.S',
-      ],
       'actions': [
         {
           'action_name': 'generate_generated_S',
@@ -190,7 +187,7 @@
             '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
-            '<(INTERMEDIATE_DIR)/generated.S',
+            '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
           ],
           'action': [
             '<@(_inputs)',
@@ -204,7 +201,6 @@
       'type': 'none',
       'dependencies': [
         'fletch_vm_library',
-        'fletch_vm_library_base',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
@@ -219,7 +215,6 @@
           'inputs': [
             '../../tools/library_combiner.py',
             '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_vm_library<(STATIC_LIB_SUFFIX)',
-            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_vm_library_base<(STATIC_LIB_SUFFIX)',
             '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_shared<(STATIC_LIB_SUFFIX)',
             '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)double_conversion<(STATIC_LIB_SUFFIX)',
           ],

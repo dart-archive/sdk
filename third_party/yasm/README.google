@@ -1,0 +1,19 @@
+URL: "https://chromium.googlesource.com/chromium/src.git"
+Version: 0d5252879339ea582c6b9fd46378733fc137a488
+License: BSD style
+License File: LICENSE
+
+Description:
+Glue scripts to use yasm to compile assembly files. The sources for yasm are
+downloaded separately and have a different license (see README.chromium).
+
+Local Modifications:
+We only use the gyp glue and windows configuration files in
+
+third_party/yasm/source/config/win/*
+
+third_party/yasm/yasm.gyp
+third_party/yasm/yasm_compile.gypi
+third_party/yasm/README.chromium
+
+Modified to fit the fletch build system and to only operate on windows.
