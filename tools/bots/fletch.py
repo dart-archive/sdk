@@ -688,17 +688,21 @@ class CoredumpArchiver(object):
   def __exit__(self, *_):
     coredumps = self._find_coredumps()
     if coredumps:
+      # If we get a ton of crashes, only archive 10 dumps.
+      coredumps = coredumps[:10]
       print 'Archiving coredumps: %s' % ', '.join(coredumps)
       sys.stdout.flush()
-      self._archive(os.path.join(self._build_dir, 'fletch-vm'), coredumps)
+      self._archive(os.path.join(self._build_dir, 'fletch'),
+                    os.path.join(self._build_dir, 'fletch-vm'),
+                    coredumps)
 
   def _find_coredumps(self):
     # Finds all files named 'core.*' in the search directory.
     return glob.glob(os.path.join(self._search_dir, 'core.*'))
 
-  def _archive(self, fletch_vm, coredumps):
+  def _archive(self, driver, fletch_vm, coredumps):
     assert coredumps
-    files = [fletch_vm] + coredumps
+    files = [driver, fletch_vm] + coredumps
 
     for filename in files:
       assert os.path.exists(filename)
