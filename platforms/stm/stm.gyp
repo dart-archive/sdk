@@ -14,5 +14,12 @@
         'stm32_cube_f7_demos.gyp:Demonstration',
       ],
     },
+    {
+      'target_name': 'disco_fletch',
+      'type': 'none',
+      'dependencies': [
+        'disco_fletch/disco_fletch.gyp:disco_fletch',
+      ],
+    },
   ],
 }

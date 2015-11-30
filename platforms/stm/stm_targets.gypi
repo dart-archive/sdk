@@ -29,7 +29,7 @@
 
               'USE_HAL_DRIVER',
               'STM32F746xx',
-              'USE_STM32746G_DISCOVERY'
+              'USE_STM32746G_DISCOVERY',
               'USE_STM32746G_DISCO',
             ],
 

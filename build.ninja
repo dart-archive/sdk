@@ -130,6 +130,7 @@ build $
         version.gyp $
         platforms/stm/stm_targets.gypi $
         platforms/stm/stm.gyp $
+        platforms/stm/disco_fletch/disco_fletch.gyp $
         fletch.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
