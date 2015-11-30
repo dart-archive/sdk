@@ -630,23 +630,3 @@ class Struct64 extends Struct {
       : super.fromAddressWithWordSize(address, fields, 8);
 }
 
-class ForeignCString extends ForeignMemory {
-  static final ForeignFunction _strlen = ForeignLibrary.main.lookup('strlen');
-
-  factory ForeignCString.fromNullTerminated(ForeignPointer ptr) {
-    int length = _strlen.icall$1(ptr);
-    return new ForeignCString(ptr, length);
-  }
-
-  ForeignCString(Foreign ptr, int length)
-      : super.fromAddress(ptr.address, length);
-
-  String toString() {
-    // Don't include the '\0' character in the encoded string.
-    var encodedString = new List(length);
-    for (int i = 0; i < length; ++i) {
-      encodedString[i] = getUint8(i);
-    }
-    return _decodeUtf8(encodedString);
-  }
-}

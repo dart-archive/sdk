@@ -10,6 +10,7 @@ import 'dart:fletch.ffi';
 import 'dart:fletch.os';
 import 'dart:typed_data';
 
+import 'package:ffi/ffi.dart';
 import 'package:file/file.dart';
 import 'package:fletch/fletch.dart' as fletch;
 import 'package:os/os.dart' show sys;
@@ -62,8 +63,7 @@ class AgentContext {
       arg.free();
     }
     if (ptr.address == 0) return null;
-    var cstring = new ForeignCString.fromNullTerminated(ptr);
-    return cstring.toString();
+    return cStringToString(ptr);
   }
 
   // Agent specific info.

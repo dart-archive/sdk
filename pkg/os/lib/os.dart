@@ -12,6 +12,7 @@ import 'dart:fletch';
 import 'dart:fletch.ffi';
 import 'dart:fletch.os' as os;
 import 'dart:typed_data';
+import 'package:ffi/ffi.dart';
 
 part 'errno.dart';
 part 'system.dart';

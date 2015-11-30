@@ -406,20 +406,19 @@ abstract class PosixSystem implements System {
       if (status < 0) throw "Failed calling uname";
       int address = utsname.address;
       var fp = new ForeignPointer(address);
-      var operatingSystemName =
-          new ForeignCString.fromNullTerminated(fp).toString();
+      var operatingSystemName = cStringToString(fp);
       address += UTSNAME_LENGTH;
       fp = new ForeignPointer(address);
-      var nodeName = new ForeignCString.fromNullTerminated(fp).toString();
+      var nodeName = cStringToString(fp);
       address += UTSNAME_LENGTH;
       fp = new ForeignPointer(address);
-      var release = new ForeignCString.fromNullTerminated(fp).toString();
+      var release = cStringToString(fp);
       address += UTSNAME_LENGTH;
       fp = new ForeignPointer(address);
-      var version = new ForeignCString.fromNullTerminated(fp).toString();
+      var version = cStringToString(fp);
       address += UTSNAME_LENGTH;
       fp = new ForeignPointer(address);
-      var machine = new ForeignCString.fromNullTerminated(fp).toString();
+      var machine = cStringToString(fp);
       return new SystemInformation(operatingSystemName, nodeName, release,
                                    version, machine);
     } finally {

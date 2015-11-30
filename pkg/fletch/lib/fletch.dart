@@ -8,12 +8,8 @@
 library fletch;
 
 import 'dart:fletch.ffi';
+import 'package:ffi/ffi.dart';
 
 final ForeignFunction _getVersion = ForeignLibrary.main.lookup('GetVersion');
 
-String version() {
-  ForeignCString version =
-      new ForeignCString.fromNullTerminated(_getVersion.pcall$0());
-  assert(version != null);
-  return version.toString();
-}
+String version() => cStringToString(_getVersion.pcall$0());

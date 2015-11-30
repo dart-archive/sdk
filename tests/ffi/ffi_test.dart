@@ -28,7 +28,6 @@ main() {
   testPCallAndMemory(true);
   testPCallAndMemory(false);
   testStruct();
-  testForeignCString();
 
   testImmutablePassing(false);
   testImmutablePassing(true);

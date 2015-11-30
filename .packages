@@ -9,6 +9,7 @@ collection:third_party/collection/lib
 crypto:third_party/crypto/lib
 dart2js_info:third_party/dart2js_info/lib
 expect:third_party/dart/pkg/expect/lib
+ffi:pkg/ffi/lib
 file:pkg/file/lib
 flash_sd_card:pkg/flash_sd_card/lib
 fletch_agent:pkg/fletch_agent/lib
