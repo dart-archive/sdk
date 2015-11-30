@@ -3,10 +3,8 @@ Starting session. Type 'help' for a list of commands.
 > bf a.dart 5
 breakpoint set: id: '0' method: 'a' bytecode index: '2'
 > r
-Stack trace:
-> 0: a           @=> 10;
-  1: foo         @a_a.a()
-  2: main        @foo()
+tests/debugger/find_file_test/a/a.dart:5:9
+5    int a() => 10;
 > bf b.dart 5
 Multiple matches for file pattern b.dart. Please select from the following choices:
   1: tests/debugger/find_file_test/a/b.dart
@@ -16,9 +14,7 @@ Multiple matches for file pattern b.dart. Please select from the following choic
 > 2
 breakpoint set: id: '1' method: 'b' bytecode index: '2'
 > c
-Stack trace:
-> 0: b           @=> 30;
-  1: foo         @b_b.b()
-  2: main        @foo()
+tests/debugger/find_file_test/b/b.dart:5:9
+5    int b() => 30;
 > c
 ### process terminated

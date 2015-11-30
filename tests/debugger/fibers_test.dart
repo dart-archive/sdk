@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// FletchDebuggerCommands=b print,r,c,fibers,t internal,fibers,t internal,c,c,fibers,c
+// FletchDebuggerCommands=b print,r,c,fibers,t internal,bt,fibers,t internal,bt,c,c,fibers,c
 
 import 'dart:fletch';
 

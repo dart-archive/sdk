@@ -121,6 +121,7 @@ import '../please_report_crash.dart' show
     pleaseReportCrash;
 
 import '../../debug_state.dart' as debug show
+    RemoteObject,
     StackTrace;
 
 Uri configFileUri;
@@ -556,13 +557,19 @@ Future<int> run(
   }
 
   Future printException() async {
-    String exception = await session.exceptionAsString();
-    print(exception);
+    if (!session.loaded) {
+      print('### process not loaded, cannot print uncaught exception');
+      return;
+    }
+    debug.RemoteObject exception = await session.uncaughtException();
+    if (exception != null) {
+      print(session.exceptionToString(exception));
+    }
   }
 
   Future printTrace() async {
     if (!session.loaded) {
-      print("### program not loaded, cannot print stacktrace and code");
+      print("### process not loaded, cannot print stacktrace and code");
       return;
     }
     debug.StackTrace stackTrace = await session.stackTrace();

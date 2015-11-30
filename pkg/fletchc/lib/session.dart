@@ -70,6 +70,11 @@ class FletchVmSession {
   /// golden files.
   bool hideRawIds = false;
 
+  /// When true, don't use colors to highlight focus when printing code.
+  /// This is currently only true when running tests to avoid having to deal
+  /// with color control characters in the expected files.
+  bool colorsDisabled = false;
+
   Command connectionError = new ConnectionError("Connection is closed", null);
 
   FletchVmSession(Socket vmSocket,
@@ -265,7 +270,6 @@ class Session extends FletchVmSession {
       throw new Exception('Expected process to finish complete with '
                           '[ProcessTerminated] but got [$command]');
     }
-
     await shutdown();
   }
 
@@ -278,10 +282,12 @@ class Session extends FletchVmSession {
   Future stepToCompletion() async {
     await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
     await debugRun();
+    Command response;
     while (!terminated) {
       writeStdoutLine(debugState.topFrame.shortString());
-      await step();
+      response = await step();
     }
+    writeStdout(await processStopResponseToString(response));
   }
 
   Future testDebugger(List<String> commands) async {
@@ -317,7 +323,6 @@ class Session extends FletchVmSession {
       case CommandCode.ProcessTerminated:
         running = false;
         loaded = false;
-        writeStdoutLine('### process terminated');
         // TODO(ahe): Let the caller terminate the session. See issue 67.
         await terminateSession();
         break;
@@ -345,28 +350,9 @@ class Session extends FletchVmSession {
     return response;
   }
 
-  bool checkRunning() {
-    if (!running) writeStdoutLine("### process not running");
-    return running;
-  }
-
-  bool checkNotRunning() {
-    if (running) writeStdoutLine("### process already running");
-    return !running;
-  }
-
-  bool checkNotTerminated() {
-    if (terminated) writeStdoutLine("### process already terminated");
-    return !terminated;
-  }
-
-  bool checkLoaded() {
-    if (!loaded) writeStdoutLine("### process not loaded");
-    return loaded;
-  }
-
-  Future debugRun() async {
-    if (!checkNotRunning()) return null;
+  Future<Command> debugRun() async {
+    assert(!loaded);
+    assert(!running);
     loaded = true;
     running = true;
     await sendCommand(const ProcessRun());
@@ -474,14 +460,14 @@ class Session extends FletchVmSession {
     return compiler.findSourceFiles(pattern);
   }
 
-  Future stepTo(int functionId, int bcp) async {
+  Future<Command> stepTo(int functionId, int bcp) async {
     assert(running);
     Command response = await runCommand(new ProcessStepTo(functionId, bcp));
     return handleProcessStop(response);
   }
 
-  Future step() async {
-    if (!checkRunning()) return null;
+  Future<Command> step() async {
+    assert(running);
     Command response;
     SourceLocation previous = debugState.currentLocation;
     do {
@@ -495,8 +481,8 @@ class Session extends FletchVmSession {
     return response;
   }
 
-  Future stepOver() async {
-    if (!checkRunning()) return null;
+  Future<Command> stepOver() async {
+    assert(running);
     Command response;
     SourceLocation previous = debugState.currentLocation;
     do {
@@ -505,117 +491,72 @@ class Session extends FletchVmSession {
     return response;
   }
 
-  Future stepOut() async {
-    if (!checkRunning()) return null;
+  Future<Command> stepOut() async {
+    assert(running);
     StackTrace trace = await stackTrace();
-    // If last frame, just continue.
-    if (trace.frames <= 1) {
-      await cont();
-      return null;
-    }
-    // Get source location for call site. We only want to break when the
-    // location has changed from the call site to something else.
-    SourceLocation return_location = debugState.sourceLocationForFrame(1);
+    // If we are at the last frame, just continue. This will either terminate
+    // the process or stop at any user configured breakpoints.
+    if (trace.visibleFrames <= 1) return cont();
+
+    // Since we know there is at least two visible frames at this point stepping
+    // out will hit a visible frame before the process terminates, hence we can
+    // step out until we either hit another breakpoint or a visible frame, ie.
+    // we skip internal frame and stop at the next visible frame.
+    SourceLocation return_location = trace.visibleFrame(1).sourceLocation();
+    Command response;
     do {
-      if (trace.frames <= 1) {
-        await cont();
-        return null;
-      }
       await sendCommand(const ProcessStepOut());
       ProcessSetBreakpoint setBreakpoint = await readNextCommand();
       assert(setBreakpoint.value != -1);
-      Command response = await handleProcessStop(await readNextCommand());
+
+      // handleProcessStop resets the debugState and sets the top frame if it
+      // hits either the above setBreakpoint or another breakpoint.
+      response = await handleProcessStop(await readNextCommand());
       bool success =
           response is ProcessBreakpoint &&
           response.breakpointId == setBreakpoint.value;
       if (!success) {
-        writeStdoutLine("### 'finish' cancelled because "
-                        "another breakpoint was hit");
         await doDeleteBreakpoint(setBreakpoint.value);
-        trace = await stackTrace();
-        // TODO(wibling): move this print out of session.dart.
-        writeStdout(trace.format());
-        return null;
+        return response;
       }
     } while (!debugState.topFrame.isVisible);
     if (running && debugState.atLocation(return_location)) {
-      await step();
+      response = await step();
     }
-    if (!terminated) {
-      // Get current stacktrace.
-      trace = await stackTrace();
-      // TODO(wibling): move this print out of session.dart.
-      writeStdout(trace.format());
-    }
+    return response;
   }
 
-  Future restart() async {
-    if (debugState.currentStackTrace == null) {
-      writeStdoutLine("### Cannot restart when nothing is executing.");
-      return null;
-    }
-    if (debugState.numberOfStackFrames <= 1) {
-      writeStdoutLine("### cannot restart entry frame");
-      return null;
-    }
+  Future<Command> restart() async {
+    assert(loaded);
+    assert(debugState.currentStackTrace != null);
+    assert(debugState.currentStackTrace.frames > 1);
     int frame = debugState.actualCurrentFrameNumber;
-    Command response = await handleProcessStop(
-        await runCommand(new ProcessRestartFrame(frame)));
-    if (response is UncaughtException) {
-      await uncaughtException();
-    } else if (!terminated) {
-      StackTrace trace = await stackTrace();
-      // TODO(wibling): move this print out of session.dart.
-      writeStdout(trace.format());
-    }
+    return handleProcessStop(await runCommand(new ProcessRestartFrame(frame)));
   }
 
-  Future stepBytecode() async {
-    if (!checkRunning()) return null;
+  Future<Command> stepBytecode() async {
+    assert(running);
     return handleProcessStop(await runCommand(const ProcessStep()));
   }
 
   Future<Command> stepOverBytecode() async {
-    if (!checkRunning()) return null;
+    assert(running);
     await sendCommand(const ProcessStepOver());
     ProcessSetBreakpoint setBreakpoint = await readNextCommand();
     Command response = await handleProcessStop(await readNextCommand());
     bool success =
         response is ProcessBreakpoint &&
         response.breakpointId == setBreakpoint.value;
-    if (!success && !terminated) {
-      writeStdoutLine("### 'next' cancelled because "
-                      "another breakpoint was hit");
-      if (setBreakpoint.value != -1) {
-        await doDeleteBreakpoint(setBreakpoint.value);
-      }
+    if (!success && !terminated && setBreakpoint.value != -1) {
+      // Delete the initial one-time breakpoint as it wasn't hit.
+      await doDeleteBreakpoint(setBreakpoint.value);
     }
     return response;
   }
 
-  Future cont() async {
-    if (!checkRunning()) return null;
+  Future<Command> cont() async {
+    assert(running);
     return handleProcessStop(await runCommand(const ProcessContinue()));
-  }
-
-  Future<String> list() async {
-    if (!checkLoaded()) return null;
-    StackTrace trace = await stackTrace();
-    if (trace == null) return null;
-    return trace.list();
-  }
-
-  Future<String> exceptionAsString() async {
-    await ensureUncaughtException();
-    if (debugState.currentUncaughtException == null) return null;
-    return uncaughtExceptionToString(debugState.currentUncaughtException);
-  }
-
-  Future<String> disasm() async {
-    if (!checkLoaded()) return null;
-    StackTrace trace = await stackTrace();
-    if (trace == null) return null;
-    return trace.disasm();
   }
 
   bool selectFrame(int frame) {
@@ -645,9 +586,11 @@ class Session extends FletchVmSession {
                          debugState));
     }
     return stackTrace;
-  }
+ }
 
-  Future ensureUncaughtException() async {
+  Future<RemoteObject> uncaughtException() async {
+    assert(loaded);
+    assert(!terminated);
     if (debugState.currentUncaughtException == null) {
       await sendCommand(const ProcessUncaughtExceptionRequest());
       Command response = await readNextCommand();
@@ -660,6 +603,7 @@ class Session extends FletchVmSession {
             new RemoteInstance(response, fields);
       }
     }
+    return debugState.currentUncaughtException;
   }
 
   Future<StackTrace> stackTrace() async {
@@ -673,21 +617,6 @@ class Session extends FletchVmSession {
     return debugState.currentStackTrace;
   }
 
-  Future uncaughtException() async {
-    await exception();
-    StackTrace trace = await stackTrace();
-    // TODO(wibling): Move this print out of session.
-    writeStdout(trace.format());
-  }
-
-  Future exception() async {
-    assert(loaded);
-    assert(!terminated);
-    await ensureUncaughtException();
-    writeStdoutLine(
-        uncaughtExceptionToString(debugState.currentUncaughtException));
-  }
-
   Future backtraceForFiber(int fiber) async {
     ProcessBacktrace backtraceResponse =
         await runCommand(new ProcessFiberBacktraceRequest(fiber));
@@ -698,7 +627,7 @@ class Session extends FletchVmSession {
   }
 
   Future fibers() async {
-    if (!checkRunning()) return null;
+    assert(running);
     await runCommand(const NewMap(MapId.fibers));
     ProcessNumberOfStacks response =
         await runCommand(const ProcessAddFibersToMap());
@@ -789,7 +718,7 @@ class Session extends FletchVmSession {
     return fields;
   }
 
-  String uncaughtExceptionToString(RemoteObject exception) {
+  String exceptionToString(RemoteObject exception) {
     String message;
     if (exception is RemoteValue) {
       message = dartValueToString(exception.value);
@@ -882,13 +811,55 @@ class Session extends FletchVmSession {
     return message;
   }
 
-  Future toggleInternal() async {
+  bool toggleInternal() {
     debugState.showInternalFrames = !debugState.showInternalFrames;
     if (debugState.currentStackTrace != null) {
       debugState.currentStackTrace.visibilityChanged();
-      StackTrace trace = await stackTrace();
-      // TODO(wibling): move this print out of session.dart.
-      writeStdout(trace.format());
     }
+    return debugState.showInternalFrames;
+  }
+
+  // This method is a helper method for computing the default output for one
+  // of the stop command results. There are currently the following stop
+  // responses:
+  //   ProcessTerminated
+  //   ProcessBreakpoint
+  //   UncaughtException
+  //   ProcessCompileError
+  //   ConnectionError
+  Future<String> processStopResponseToString(Command response) async {
+    if (response is UncaughtException) {
+      StringBuffer sb = new StringBuffer();
+      // Print the exception first, followed by a stack trace.
+      RemoteObject exception = await uncaughtException();
+      sb.writeln(exceptionToString(exception));
+      StackTrace trace = await stackTrace();
+      assert(trace != null);
+      sb.write(trace.format());
+      String result = '$sb';
+      if (!result.endsWith('\n')) result = '$result\n';
+      return result;
+
+    } else if (response is ProcessBreakpoint) {
+      // Print the current line of source code.
+      StackTrace trace = await stackTrace();
+      assert(trace != null);
+      StackFrame topFrame = trace.visibleFrame(0);
+      if (topFrame != null) {
+        String result = topFrame.list(contextLines: 0);
+        if (!result.endsWith('\n')) result = '$result\n';
+        return result;
+      }
+    } else if (response is ProcessCompileTimeError) {
+      // TODO(wibling): add information to ProcessCompileTimeError about the
+      // specific error and print here.
+      return '';
+    } else if (response is ProcessTerminated) {
+      return '### process terminated\n';
+
+    } else if (response is ConnectionError) {
+      return '### lost connection to the virtual machine\n';
+    }
+    return '';
   }
 }

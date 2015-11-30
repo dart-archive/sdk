@@ -37,6 +37,9 @@ import '../../debug_state.dart' show
     RemoteValue,
     StackTrace;
 
+import '../../commands.dart' as vm show
+    Command;
+
 const Action debugAction =
     const Action(
         debug,
@@ -362,8 +365,7 @@ Future<int> backtraceDebuggerTask(
   Session session = attachToSession(state, commandSender);
 
   if (!session.loaded) {
-    print('### program not loaded, cannot show backtrace');
-    return 1;
+    throwInternalError('### process not loaded, cannot show backtrace');
   }
   StackTrace trace = await session.stackTrace();
   print(trace.format());
@@ -378,12 +380,10 @@ Future<int> continueDebuggerTask(
 
   if (!session.running) {
     // TODO(ager, lukechurch): Fix error reporting.
-    throwInternalError('Program not running');
+    throwInternalError('### process not running, cannot continue');
   }
-
-  // TODO(ager): Print information about the stop condition. Which breakpoint
-  // was hit? Did the session terminate?
-  await session.cont();
+  vm.Command response = await session.cont();
+  print(session.processStopResponseToString(response));
 
   if (session.terminated) state.session = null;
 
@@ -465,13 +465,15 @@ Future<int> listDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
 
-  String listing = await session.list();
-  if (listing == null) {
+  if (!session.loaded) {
+    throwInternalError('### process not loaded, nothing to list');
+  }
+  StackTrace trace = await session.stackTrace();
+  if (trace == null) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Source listing failed');
   }
-
-  print(listing);
+  print(trace.list());
 
   return 0;
 }
@@ -480,13 +482,15 @@ Future<int> disasmDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
 
-  String disasm = await session.disasm();
-  if (disasm == null) {
+  if (!session.loaded) {
+    throwInternalError('### process not loaded, nothing to disassemble');
+  }
+  StackTrace trace = await session.stackTrace();
+  if (trace == null) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Bytecode disassembly failed');
   }
-
-  print(disasm);
+  print(trace.disasm());
 
   return 0;
 }
@@ -535,35 +539,63 @@ Future<int> listBreakpointsDebuggerTask(
 Future<int> stepDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  await session.step();
+  if (!session.running) {
+    throwInternalError(
+        '### process not running, cannot step to next expression');
+  }
+  vm.Command response = await session.step();
+  print(session.processStopResponseToString(response));
   return 0;
 }
 
 Future<int> stepOverDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  await session.stepOver();
+  if (!session.running) {
+    throwInternalError('### process not running, cannot go to next expression');
+  }
+  vm.Command response = await session.stepOver();
+  print(session.processStopResponseToString(response));
   return 0;
 }
 
 Future<int> fibersDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  await session.fibers();
+  if (!session.running) {
+    throwInternalError('### process not running, cannot show fibers');
+  }
+  vm.Command response =   await session.fibers();
+  print(session.processStopResponseToString(response));
   return 0;
 }
 
 Future<int> finishDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  await session.stepOut();
+  if (!session.running) {
+    throwInternalError('### process not running, cannot finish method');
+  }
+  vm.Command response = await session.stepOut();
+  print(session.processStopResponseToString(response));
   return 0;
 }
 
 Future<int> restartDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  await session.restart();
+  if (!session.loaded) {
+    throwInternalError('### process not loaded, cannot restart');
+  }
+  StackTrace trace = await session.stackTrace();
+  if (trace == null) {
+    throwInternalError("### cannot restart when nothing is executing.");
+  }
+  if (trace.frames <= 1) {
+    throwInternalError("### cannot restart entry frame.");
+  }
+  vm.Command response = await session.restart();
+  print(session.processStopResponseToString(response));
   return 0;
 }
 
@@ -577,14 +609,24 @@ Future<int> apply(
 Future<int> stepBytecodeDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  await session.stepBytecode();
+  if (!session.running) {
+    throwInternalError('### process not running, cannot step bytecode');
+  }
+  vm.Command response = await session.stepBytecode();
+  assert(response != null);  // stepBytecode cannot return null
+  print(session.processStopResponseToString(response));
   return 0;
 }
 
 Future<int> stepOverBytecodeDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  await session.stepOverBytecode();
+  if (!session.running) {
+    throwInternalError('### process not running, cannot step over bytecode');
+  }
+  vm.Command response = await session.stepOverBytecode();
+  assert(response != null);  // stepOverBytecode cannot return null
+  print(session.processStopResponseToString(response));
   return 0;
 }
 
@@ -631,7 +673,6 @@ Future<int> toggleDebuggerTask(
     throwInternalError("Invalid argument to toggle. "
                        "Valid arguments: 'internal'.");
   }
-
   await session.toggleInternal();
 
   return 0;

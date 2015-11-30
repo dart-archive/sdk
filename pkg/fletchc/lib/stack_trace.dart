@@ -30,8 +30,9 @@ class StackFrame {
 
   DebugInfo get debugInfo => debugState.getDebugInfo(function);
 
-  String list() {
-    return debugInfo.sourceListStringFor(bytecodePointer - 1);
+  String list({int contextLines: 5}) {
+    return debugInfo.sourceListStringFor(
+        bytecodePointer - 1, contextLines: contextLines);
   }
 
   String disasm() {
@@ -122,6 +123,11 @@ class StackTrace {
 
   int get frames => stackFrames.length;
 
+  int get visibleFrames {
+    ensureVisibleFrameMap();
+    return visibleFrameMapping.length;
+  }
+
   void addFrame(IncrementalCompiler compiler, StackFrame frame) {
     stackFrames[--framesToGo] = frame;
     String name = compiler.lookupFunctionName(frame.function);
@@ -145,14 +151,18 @@ class StackTrace {
     return buffer.toString();
   }
 
-  // Map user visible frame numbers to actual frame numbers.
-  int actualFrameNumber(int visibleFrameNumber) {
+  void ensureVisibleFrameMap() {
     if (visibleFrameMapping == null) {
       visibleFrameMapping = [];
       for (int i = 0; i < stackFrames.length; i++) {
         if (stackFrames[i].isVisible) visibleFrameMapping.add(i);
       }
     }
+  }
+
+  // Map user visible frame numbers to actual frame numbers.
+  int actualFrameNumber(int visibleFrameNumber) {
+    ensureVisibleFrameMap();
     return (visibleFrameNumber < visibleFrameMapping.length)
         ? visibleFrameMapping[visibleFrameNumber]
         : -1;

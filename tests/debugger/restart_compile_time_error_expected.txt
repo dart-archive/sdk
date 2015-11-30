@@ -3,12 +3,8 @@ Starting session. Type 'help' for a list of commands.
 > r
 begin
 Compile error
-Stack trace:
-> 0: main            @fiskHest()
 > restart
 begin
 Compile error
-Stack trace:
-> 0: main            @fiskHest()
 > q
 Non-zero exit code from 'fletch-vm' (254).

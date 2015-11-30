@@ -183,6 +183,8 @@ class SessionState {
 
   bool get hasRemoteVm => fletchAgentVmId != null;
 
+  bool get colorsDisabled  => session == null ? false : session.colorsDisabled;
+
   void addCompilationResult(FletchDelta delta) {
     compilationResults.add(delta);
   }

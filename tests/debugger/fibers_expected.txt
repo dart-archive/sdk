@@ -3,14 +3,12 @@ Starting session. Type 'help' for a list of commands.
 > b print
 breakpoint set: id: '0' method: 'print' bytecode index: '0'
 > r
-Stack trace:
-> 0: run                         @print('${marker} ${i}')
-  1: call                        @run('b')
+tests/debugger/fibers_test.dart:12:5
+12       print('$marker ${i}');
 > c
 b 0
-Stack trace:
-> 0: run                         @print('${marker} ${i}')
-  1: call                        @run('a')
+tests/debugger/fibers_test.dart:12:5
+12       print('$marker ${i}');
 > fibers
 
 fiber 0
@@ -24,6 +22,8 @@ Stack trace:
   1: call                        @run('b')
 
 > t internal
+### internal frame visibility set to: true
+> bt
 Stack trace:
 > 0: print                       @"${object}"
   1: run                         @print('${marker} ${i}')
@@ -53,19 +53,19 @@ Stack trace:
   6: Coroutine._coroutineStart   @entry(argument)
 
 > t internal
+### internal frame visibility set to: false
+> bt
 Stack trace:
 > 0: run                         @print('${marker} ${i}')
   1: call                        @run('a')
 > c
 a 0
-Stack trace:
-> 0: run                         @print('${marker} ${i}')
-  1: call                        @run('b')
+tests/debugger/fibers_test.dart:12:5
+12       print('$marker ${i}');
 > c
 b 1
-Stack trace:
-> 0: run                         @print('${marker} ${i}')
-  1: call                        @run('a')
+tests/debugger/fibers_test.dart:12:5
+12       print('$marker ${i}');
 > fibers
 
 fiber 0

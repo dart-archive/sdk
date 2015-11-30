@@ -44,11 +44,13 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
       IncrementalMode.none);
 
   SessionState state = createSessionState("test", settings);
+  SessionState.internalCurrent = state;
 
   Expect.equals(0, await compile(Uri.base.resolveUri(uri), state), "compile");
 
   await startAndAttachDirectly(state, Uri.base);
   state.session.hideRawIds = true;
+  state.session.colorsDisabled = true;
 
   List<int> output = <int>[];
 

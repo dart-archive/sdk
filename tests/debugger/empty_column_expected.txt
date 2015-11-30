@@ -3,8 +3,7 @@ Starting session. Type 'help' for a list of commands.
 > bf tests/debugger/empty_column_test.dart 12 1
 breakpoint set: id: '0' method: 'foo' bytecode index: '2'
 > r
-Stack trace:
-> 0: foo         @3
-  1: main        @foo()
+tests/debugger/empty_column_test.dart:12:11
+12     int y = 3; // break here.
 > c
 ### process terminated

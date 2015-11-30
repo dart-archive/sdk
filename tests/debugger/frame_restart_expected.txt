@@ -14,6 +14,9 @@ breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 2
 1
 0
+tests/debugger/frame_restart_test.dart:7:1
+7    void breakHere() {}
+> bt
 Stack trace:
 > 0: breakHere   @void breakHere() {}
   1: foo         @breakHere()
@@ -35,6 +38,9 @@ Stack trace:
 2
 1
 0
+tests/debugger/frame_restart_test.dart:7:1
+7    void breakHere() {}
+> bt
 Stack trace:
 > 0: breakHere   @void breakHere() {}
   1: foo         @breakHere()
@@ -62,6 +68,9 @@ Stack trace:
 2
 1
 0
+tests/debugger/frame_restart_test.dart:7:1
+7    void breakHere() {}
+> bt
 Stack trace:
 > 0: breakHere   @void breakHere() {}
   1: foo         @breakHere()

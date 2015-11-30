@@ -190,27 +190,33 @@ class InputHandler {
         }
         break;
       case 'l':
-        String listing = await session.list();
-        if (listing == null) {
-          writeStdoutLine("### failed listing source");
-        } else {
+        if (!checkLoaded('nothing to list')) {
+          break;
+        }
+        StackTrace trace = await session.stackTrace();
+        String listing = trace != null ? trace.list() : null;
+        if (listing != null) {
           writeStdoutLine(listing);
+        } else {
+          writeStdoutLine("### failed listing source");
         }
         break;
       case 'disasm':
-        if (!checkLoaded('cannot show bytecodes')) {
-          break;
+        if (checkLoaded('cannot show bytecodes')) {
+          StackTrace stacktrace = await session.stackTrace();
+          String disassembly = stacktrace != null ? stacktrace.disasm() : null;
+          if (disassembly != null) {
+            writeStdoutLine(disassembly);
+          } else {
+            writeStdoutLine(
+                "### could not disassemble source for current frame");
+          }
         }
-        StackTrace stacktrace = await session.stackTrace();
-        String disassembly = stacktrace != null ? stacktrace.disasm() : null;
-        if (disassembly == null) {
-          writeStdoutLine("### could not disassemble source for current frame");
-          break;
-        }
-        writeStdoutLine(disassembly);
         break;
       case 'c':
-        await handleCommonProcessResponse(await session.cont());
+        if (checkRunning('cannot continue')) {
+          await handleProcessStopResponse(await session.cont());
+        }
         break;
       case 'd':
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
@@ -222,21 +228,35 @@ class InputHandler {
         await session.deleteBreakpoint(id);
         break;
       case 'fibers':
-        await session.fibers();
+        if (checkRunning('cannot show fibers')) {
+          await handleProcessStopResponse(await session.fibers());
+        }
         break;
       case 'finish':
-        await session.stepOut();
+        if (checkRunning('cannot finish method')) {
+          await handleProcessStopResponse(await session.stepOut());
+        }
         break;
       case 'restart':
-        await session.restart();
+        if (!checkLoaded('cannot restart')) {
+          break;
+        }
+        StackTrace trace = await session.stackTrace();
+        if (trace == null) {
+          writeStdoutLine("### cannot restart when nothing is executing");
+          break;
+        }
+        if (trace.frames <= 1) {
+          writeStdoutLine("### cannot restart entry frame");
+          break;
+        }
+        await handleProcessStopResponse(await session.restart());
         break;
       case 'lb':
         session.listBreakpoints();
         break;
       case 'p':
-        if (!session.loaded) {
-          // TODO(lukechurch): Please review this for better phrasing.
-          writeStdoutLine('### No code loaded, nothing to print');
+        if (!checkLoaded('nothing to print')) {
           break;
         }
         if (commandComponents.length <= 1) {
@@ -259,7 +279,7 @@ class InputHandler {
           variable = await session.processVariable(variableName);
         }
         if (variable == null) {
-          writeStdoutLine('### No such variable: $variableName');
+          writeStdoutLine('### no such variable: $variableName');
         } else {
           writeStdoutLine(session.remoteObjectToString(variable));
         }
@@ -270,19 +290,29 @@ class InputHandler {
         break;
       case 'r':
       case 'run':
-        await handleCommonProcessResponse(await session.debugRun());
+        if (checkNotRunning()) {
+          await handleProcessStopResponse(await session.debugRun());
+        }
         break;
       case 's':
-        await handleCommonProcessResponse(await session.step());
+        if (checkRunning('cannot step to next expression')) {
+          await handleProcessStopResponse(await session.step());
+        }
         break;
       case 'n':
-        await handleCommonProcessResponse(await session.stepOver());
+        if (checkRunning('cannot go to next expression')) {
+          await handleProcessStopResponse(await session.stepOver());
+        }
         break;
       case 'sb':
-        await session.stepBytecode();
+        if (checkRunning('cannot step bytecode')) {
+          await handleProcessStopResponse(await session.stepBytecode());
+        }
         break;
       case 'nb':
-        await session.stepOverBytecode();
+        if (checkRunning('cannot step over bytecode')) {
+          await handleProcessStopResponse(await session.stepOverBytecode());
+        }
         break;
       case 't':
         String toggle;
@@ -291,7 +321,9 @@ class InputHandler {
         }
         switch (toggle) {
           case 'internal':
-            await session.toggleInternal();
+            bool internalVisible = session.toggleInternal();
+            writeStdoutLine(
+                '### internal frame visibility set to: $internalVisible');
             break;
           default:
             writeStdoutLine('### invalid flag $toggle');
@@ -305,22 +337,45 @@ class InputHandler {
     if (!session.terminated) printPrompt();
   }
 
-  // This method is used to deal with some of the common command responses
+  // This method is used to deal with the stopped process command responses
   // that can be returned when sending the Fletch VM a command request.
-  Future handleCommonProcessResponse(Command response) async {
-    if (response is UncaughtException) {
-      await session.uncaughtException();
-    } else if (response is! ProcessTerminated) {
-      StackTrace trace = await session.stackTrace();
-      writeStdout(trace.format());
+  Future handleProcessStopResponse(Command response) async {
+    String output = await session.processStopResponseToString(response);
+    if (output != null && output.isNotEmpty) {
+      writeStdout(output);
     }
   }
 
   bool checkLoaded([String postfix]) {
-    String message = '### program not loaded';
-    message = postfix != null ? '$message, $postfix' : message;
-    if (!session.loaded) writeStdoutLine(message);
+    if (!session.loaded) {
+      String prefix = '### process not loaded';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
     return session.loaded;
+  }
+
+  bool checkNotLoaded([String postfix]) {
+    if (session.loaded) {
+      String prefix = '### process already loaded';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return !session.loaded;
+  }
+
+  bool checkRunning([String postfix]) {
+    if (!session.running) {
+      String prefix = '### process not running';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return session.running;
+  }
+
+  bool checkNotRunning([String postfix]) {
+    if (session.running) {
+      String prefix = '### process already running';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return !session.running;
   }
 
   Future<int> run() async {

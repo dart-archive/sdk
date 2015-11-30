@@ -274,8 +274,10 @@ compileAndRun(
           // Restart the current frame to rerun main.
           await session.restart();
         }
-        // Step out of main to finish execution of main.
-        await session.stepOut();
+        if (session.running) {
+          // Step out of main to finish execution of main.
+          await session.stepOut();
+        }
 
         // Select the stack frame of callMain.
         debug.StackTrace trace = await session.stackTrace();

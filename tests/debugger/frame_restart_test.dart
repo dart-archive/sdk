@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// FletchDebuggerCommands=b breakHere,r,f 5,restart,f 11,restart,d 0,f 3,restart
+// FletchDebuggerCommands=b breakHere,r,bt,f 5,restart,bt,f 11,restart,bt,d 0,f 3,restart
 
 void breakHere() {}
 

@@ -4,6 +4,8 @@ Starting session. Type 'help' for a list of commands.
 Compile error
 > bt
 > t internal
+### internal frame visibility set to: true
+> bt
 Stack trace:
 > 0: yield       
   1: compileError    @yield(InterruptKind.compileTimeError.index)

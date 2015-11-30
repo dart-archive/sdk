@@ -25,6 +25,8 @@ import 'package:compiler/src/source_file_provider.dart' show
 
 import 'codegen_visitor.dart';
 import '../fletch_system.dart';
+import 'driver/session_manager.dart' show
+    SessionState;
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
@@ -202,14 +204,15 @@ class DebugInfo {
     }
 
     // Add the breakpoint line highlighting the actual breakpoint location.
-    var l = file.slowSubstring(file.lineStarts[currentLine],
-                               file.lineStarts[currentLine + 1]);
+    var l = file.slowSubstring(
+        file.lineStarts[currentLine],
+        min(file.lineStarts[currentLine + 1], file.length));
     var toColumn = min(column + (span.end - span.begin), l.length);
     var prefix = l.substring(0, column);
-    var focus = l.substring(column, toColumn);
+    var focus = highlight(l.substring(column, toColumn), colors.red);
     var postfix = l.substring(toColumn);
     buffer.write('${currentLine + 1}'.padRight(5) + prefix);
-    buffer.write(colors.red(focus));
+    buffer.write(focus);
     buffer.write(postfix);
 
     // Add contextLines after the breakpoint line.
@@ -227,6 +230,9 @@ class DebugInfo {
 
     return buffer.toString();
   }
+
+  String highlight(String message, Function color) =>
+      SessionState.current.colorsDisabled ? message : color(message);
 
   SourceLocation sourceLocationFor(int bytecodeIndex) {
     return locationFor(bytecodeIndex);

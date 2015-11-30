@@ -5,7 +5,7 @@
 // Test that we get a meaningful breakpoint when breaking on a non-empty
 // column that does not point to the first sub-expression of the line.
 
-// FletchDebuggerCommands=bf tests/debugger/nonempty_column_test.dart 13 22,r,c
+// FletchDebuggerCommands=bf tests/debugger/nonempty_column_test.dart 13 22,r,bt,c
 
 int foo() {
   int x = 2;

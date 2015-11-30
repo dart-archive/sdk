@@ -3,32 +3,27 @@ Starting session. Type 'help' for a list of commands.
 > b
 breakpoint set: id: '0' method: 'main' bytecode index: '0'
 > r
-Stack trace:
-> 0: main        @10
+tests/debugger/step_over_recursive_test.dart:13:11
+13     recurse(10);
 > n
-Stack trace:
-> 0: main        @recurse(10)
+tests/debugger/step_over_recursive_test.dart:13:3
+13     recurse(10);
 > s
-Stack trace:
-> 0: recurse     @i
-  1: main        @recurse(10)
+tests/debugger/step_over_recursive_test.dart:8:7
+8      if (i == 0) return;
 > n
-Stack trace:
-> 0: recurse     @0
-  1: main        @recurse(10)
+tests/debugger/step_over_recursive_test.dart:8:12
+8      if (i == 0) return;
 > n
-Stack trace:
-> 0: recurse     @i == 0
-  1: main        @recurse(10)
+tests/debugger/step_over_recursive_test.dart:8:7
+8      if (i == 0) return;
 > n
-Stack trace:
-> 0: recurse     @--i
-  1: main        @recurse(10)
+tests/debugger/step_over_recursive_test.dart:9:11
+9      recurse(--i);
 > n
-Stack trace:
-> 0: recurse     @recurse(--i)
-  1: main        @recurse(10)
+tests/debugger/step_over_recursive_test.dart:9:3
+9      recurse(--i);
 > n
-Stack trace:
-> 0: main        @recurse(10)
+tests/debugger/step_over_recursive_test.dart:13:3
+13     recurse(10);
 > q
