@@ -30,7 +30,8 @@ Port::~Port() {
 
 Port* Port::FromDartObject(Object* dart_port) {
   ASSERT(dart_port->IsPort());
-  uword address = Instance::cast(dart_port)->GetConsecutiveSmis(0);
+  Object* p = Instance::cast(dart_port)->GetInstanceField(0);
+  uword address = Smi::cast(p)->value() << 2;
   return reinterpret_cast<Port*>(address);
 }
 
@@ -112,7 +113,9 @@ NATIVE(PortCreate) {
   Instance* port_instance = Instance::cast(dart_port);
 
   Port* port = new Port(process, channel);
-  port_instance->SetConsecutiveSmis(0, reinterpret_cast<uword>(port));
+  ASSERT((reinterpret_cast<uword>(port) & 3) == 0);  // Always aligned.
+  Smi* p = Smi::FromWord(reinterpret_cast<uword>(port) >> 2);
+  port_instance->SetInstanceField(0, p);
   process->RegisterFinalizer(port_instance, Port::WeakCallback);
 
   return port_instance;

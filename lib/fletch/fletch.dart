@@ -411,16 +411,15 @@ class Process {
 // Ports allow you to send messages to a channel. Ports are
 // are transferable and can be sent between processes.
 class Port {
-  // Two consequtive Smis store the pointer to the C++ port object.
-  final int _port0;
-  final int _port1;
+  // A Smi stores the aligned pointer to the C++ port object.
+  final int _port;
 
   factory Port(Channel channel) {
     return Port._create(channel);
   }
 
   // TODO(kasperl): Temporary debugging aid.
-  int get id => _port0;
+  int get id => _port;
 
   // Send a message to the channel. Not blocking.
   @fletch.native void send(message) {
