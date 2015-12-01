@@ -28,6 +28,12 @@ Port::~Port() {
   ASSERT(ref_count_ == 0);
 }
 
+Port* Port::FromDartObject(Object* dart_port) {
+  ASSERT(dart_port->IsPort());
+  uword address = Instance::cast(dart_port)->GetConsecutiveSmis(0);
+  return reinterpret_cast<Port*>(address);
+}
+
 void Port::IncrementRef() {
   ASSERT(ref_count_ > 0);
   ref_count_++;
@@ -93,21 +99,12 @@ Port* Port::CleanupPorts(Space* space, Port* head) {
 }
 
 void Port::WeakCallback(HeapObject* object, Heap* heap) {
-  Instance* instance = Instance::cast(object);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  Port* port = reinterpret_cast<Port*>(address);
+  Port* port = Port::FromDartObject(object);
   port->DecrementRef();
 }
 
 NATIVE(PortCreate) {
   Instance* channel = Instance::cast(arguments[0]);
-
-  // TODO(kustermann): We really shouldn't have two allocations in a native.
-  Object* object = process->NewInteger(0);
-  if (object == Failure::retry_after_gc()) return object;
-  LargeInteger* integer = LargeInteger::cast(object);
 
   Object* dart_port =
       process->NewInstance(process->program()->port_class(), true);
@@ -115,26 +112,20 @@ NATIVE(PortCreate) {
   Instance* port_instance = Instance::cast(dart_port);
 
   Port* port = new Port(process, channel);
+  port_instance->SetConsecutiveSmis(0, reinterpret_cast<uword>(port));
   process->RegisterFinalizer(port_instance, Port::WeakCallback);
-  integer->set_value(reinterpret_cast<uword>(port));
-
-  port_instance->SetInstanceField(0, integer);
 
   return port_instance;
 }
 
 NATIVE(PortSend) {
   Instance* instance = Instance::cast(arguments[0]);
-  ASSERT(instance->IsPort());
 
   Object* message = arguments[1];
   if (!message->IsImmutable()) return Failure::wrong_argument_type();
 
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  if (address == 0) return Failure::illegal_state();
-
-  Port* port = reinterpret_cast<Port*>(address);
+  Port* port = Port::FromDartObject(instance);
+  if (port == NULL) return Failure::illegal_state();
 
   // We want to avoid holding a spinlock while doing an allocation, so:
   //    * we do an early return if the destination process is not there
@@ -165,12 +156,9 @@ NATIVE(PortSend) {
 
 NATIVE(PortSendExit) {
   Instance* instance = Instance::cast(arguments[0]);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  if (address == 0) return Failure::illegal_state();
+  Port* port = Port::FromDartObject(instance);
+  if (port == NULL) return Failure::illegal_state();
 
-  Port* port = reinterpret_cast<Port*>(address);
   port->Lock();
 
   Process* port_process = port->process();
@@ -194,12 +182,8 @@ NATIVE(PortSendExit) {
 }
 
 NATIVE(SystemIncrementPortRef) {
-  Instance* instance = Instance::cast(arguments[0]);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  Port* port = reinterpret_cast<Port*>(address);
-  Object* result = process->ToInteger(address);
+  Port* port = Port::FromDartObject(arguments[0]);
+  Object* result = process->ToInteger(reinterpret_cast<uword>(port));
   if (result == Failure::retry_after_gc()) return result;
   port->IncrementRef();
   return result;

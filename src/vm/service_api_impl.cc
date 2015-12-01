@@ -170,12 +170,10 @@ NATIVE(ServiceRegister) {
   if (!arguments[1]->IsInstance()) return Failure::illegal_state();
   Instance* port_instance = Instance::cast(arguments[1]);
   if (!port_instance->IsPort()) return Failure::illegal_state();
-  Object* field = port_instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  if (address == 0) return Failure::illegal_state();
+  Port* port = Port::FromDartObject(port_instance);
+  if (port == NULL) return Failure::illegal_state();
   char* name = AsForeignString(arguments[0]);
   if (name == NULL) return Failure::illegal_state();
-  Port* port = reinterpret_cast<Port*>(address);
   Service* service = new Service(name, port);
   service_registry->Register(service);
   return process->program()->null_object();

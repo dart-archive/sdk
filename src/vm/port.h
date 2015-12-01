@@ -15,12 +15,15 @@ namespace fletch {
 
 class HeapObject;
 class Instance;
+class Object;
 class PointerVisitor;
 class Process;
 
 class Port {
  public:
   Port(Process* process, Instance* channel);
+
+  static Port* FromDartObject(Object* dart_port);
 
   Process* process() { return process_; }
   void set_process(Process* process) { process_ = process; }

@@ -932,8 +932,7 @@ NATIVE(ProcessSpawn) {
     if (!dart_monitor_port->IsPort()) {
       return Failure::wrong_argument_type();
     }
-    monitor_port = reinterpret_cast<Port*>(
-        AsForeignWord(Instance::cast(dart_monitor_port)->GetInstanceField(0)));
+    monitor_port = Port::FromDartObject(dart_monitor_port);
   }
 
   if (!closure->IsImmutable()) {
@@ -1400,22 +1399,14 @@ NATIVE(Uint32DigitsSet) {
 
 NATIVE(TimerScheduleTimeout) {
   int64 timeout = AsForeignInt64(arguments[0]);
-  Instance* instance = Instance::cast(arguments[1]);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  Port* port = reinterpret_cast<Port*>(address);
+  Port* port = Port::FromDartObject(arguments[1]);
   process->program()->event_handler()->ScheduleTimeout(timeout, port);
   return process->program()->null_object();
 }
 
 NATIVE(EventHandlerAdd) {
   Object* id = arguments[0];
-  Instance* instance = Instance::cast(arguments[1]);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  Port* port = reinterpret_cast<Port*>(address);
+  Port* port = Port::FromDartObject(arguments[1]);
   return process->program()->event_handler()->Add(process, id, port);
 }
 

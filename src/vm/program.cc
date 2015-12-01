@@ -776,7 +776,7 @@ void Program::Initialize() {
 
   {
     InstanceFormat format =
-        InstanceFormat::instance_format(1, InstanceFormat::PORT_MARKER);
+        InstanceFormat::instance_format(2, InstanceFormat::PORT_MARKER);
     port_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));
   }

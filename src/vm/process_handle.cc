@@ -40,8 +40,7 @@ NATIVE(ProcessMonitor) {
   if (!dart_port->IsPort()) {
     return Failure::wrong_argument_type();
   }
-  Port* port = reinterpret_cast<Port*>(
-      AsForeignWord(dart_port->GetInstanceField(0)));
+  Port* port = Port::FromDartObject(dart_port);
 
   {
     ScopedSpinlock locker(handle->lock());

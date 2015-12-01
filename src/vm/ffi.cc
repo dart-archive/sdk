@@ -76,10 +76,8 @@ NATIVE(ForeignConvertPort) {
   if (!arguments[0]->IsInstance()) return Smi::zero();
   Instance* instance = Instance::cast(arguments[0]);
   if (!instance->IsPort()) return Smi::zero();
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  if (address == 0) return Smi::zero();
-  Port* port = reinterpret_cast<Port*>(address);
+  Port* port = Port::FromDartObject(instance);
+  if (port == NULL) return Smi::zero();
   Object* result = process->ToInteger(reinterpret_cast<intptr_t>(port));
   if (result == Failure::retry_after_gc()) return result;
   port->IncrementRef();

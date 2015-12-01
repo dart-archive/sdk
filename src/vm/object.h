@@ -673,6 +673,9 @@ class Instance: public HeapObject {
   inline Object* GetInstanceField(int index);
   inline void SetInstanceField(int index, Object* object);
 
+  inline uword GetConsecutiveSmis(int index);
+  inline void SetConsecutiveSmis(int index, uword word);
+
   // [immutable]: field indicating immutability of an object.
   inline bool get_immutable();
   // NOTE: This method will also initialize the idendity hash code to 0.
@@ -1968,6 +1971,18 @@ Object* Instance::GetInstanceField(int index) {
 
 void Instance::SetInstanceField(int index, Object* object) {
   at_put(Instance::kSize + (index * kPointerSize), object);
+}
+
+void Instance::SetConsecutiveSmis(int index, uword word) {
+  SetInstanceField(index, Smi::FromWord(word >> 2));
+  SetInstanceField(index + 1, Smi::FromWord(word & 3));
+}
+
+uword Instance::GetConsecutiveSmis(int index) {
+  uword answer = Smi::cast(GetInstanceField(index))->value() << 2;
+  uword answer2 = Smi::cast(GetInstanceField(index + 1))->value();
+  ASSERT(answer2 < 4);
+  return answer + answer2;
 }
 
 PortableSize Instance::CalculatePortableSize(Class* klass) {
