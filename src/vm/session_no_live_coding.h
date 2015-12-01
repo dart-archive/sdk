@@ -38,6 +38,11 @@ class Session {
     return false;
   }
 
+  bool UncaughtSignal(Process* process) {
+    UNIMPLEMENTED();
+    return false;
+  }
+
   bool BreakPoint(Process* process) {
     UNIMPLEMENTED();
     return false;
