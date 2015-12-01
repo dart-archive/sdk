@@ -22,6 +22,7 @@ class Connection;
 class Frame;
 class ObjectMap;
 class PointerVisitor;
+class PostponedChange;
 
 class Session {
  public:
@@ -154,13 +155,16 @@ class Session {
   int fibers_map_id_;
 
   ObjectList stack_;
-  ObjectList changes_;
+  PostponedChange* first_change_;
+  PostponedChange* last_change_;
   List<ObjectMap*> maps_;
   bool has_program_update_error_;
   const char* program_update_error_;
 
   Monitor* main_thread_monitor_;
   MainThreadResumeKind main_thread_resume_kind_;
+
+  void IterateChangesPointers(PointerVisitor* visitor);
 
   void HandShake();
 
@@ -183,11 +187,11 @@ class Session {
 
   void PostponeChange(Change change, int count);
 
-  void CommitChangeSuperClass(Array* change);
-  void CommitChangeMethodTable(Array* change);
-  void CommitChangeMethodLiteral(Array* change);
-  void CommitChangeStatics(Array* change);
-  void CommitChangeSchemas(Array* change);
+  void CommitChangeSuperClass(PostponedChange* change);
+  void CommitChangeMethodTable(PostponedChange* change);
+  void CommitChangeMethodLiteral(PostponedChange* change);
+  void CommitChangeStatics(PostponedChange* change);
+  void CommitChangeSchemas(PostponedChange* change);
 
   // This will leave process and program heaps with old and new objects behind.
   // Where the old objects will have a forwarding pointer installed. It is

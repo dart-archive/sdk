@@ -53,6 +53,43 @@ class ConnectionPrintInterceptor : public PrintInterceptor {
   Connection* connection_;
 };
 
+class PostponedChange {
+ public:
+  PostponedChange(Object** description, int size)
+      : description_(description),
+        size_(size),
+        next_(NULL) {
+    ++number_of_changes_;
+  }
+
+  ~PostponedChange() {
+    delete[] description_;
+    --number_of_changes_;
+  }
+
+  PostponedChange* next() const { return next_; }
+  void set_next(PostponedChange* change) { next_ = change; }
+
+  Object* get(int i) const { return description_[i]; }
+  int size() const { return size_; }
+
+  static int number_of_changes() { return number_of_changes_; }
+
+  void IteratePointers(PointerVisitor* visitor) {
+    for (int i = 0; i < size_; i++) {
+      visitor->Visit(description_ + i);
+    }
+  }
+
+ private:
+  static int number_of_changes_;
+  Object** description_;
+  int size_;
+  PostponedChange* next_;
+};
+
+int PostponedChange::number_of_changes_ = 0;
+
 Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
@@ -63,7 +100,8 @@ Session::Session(Connection* connection)
       class_map_id_(-1),
       fibers_map_id_(-1),
       stack_(0),
-      changes_(0),
+      first_change_(NULL),
+      last_change_(NULL),
       has_program_update_error_(false),
       program_update_error_(NULL),
       main_thread_monitor_(Platform::CreateMonitor()),
@@ -755,9 +793,17 @@ void Session::ProcessMessages() {
   }
 }
 
+void Session::IterateChangesPointers(PointerVisitor* visitor) {
+  for (PostponedChange* current = first_change_;
+       current != NULL;
+       current = current->next()) {
+    current->IteratePointers(visitor);
+  }
+}
+
 void Session::IteratePointers(PointerVisitor* visitor) {
   stack_.IteratePointers(visitor);
-  changes_.IteratePointers(visitor);
+  IterateChangesPointers(visitor);
   for (int i = 0; i < maps_.length(); ++i) {
     ObjectMap* map = maps_[i];
     if (map != NULL) {
@@ -1158,7 +1204,7 @@ void Session::ChangeSuperClass() {
   PostponeChange(kChangeSuperClass, 2);
 }
 
-void Session::CommitChangeSuperClass(Array* change) {
+void Session::CommitChangeSuperClass(PostponedChange* change) {
   Class* klass = Class::cast(change->get(1));
   Class* super = Class::cast(change->get(2));
   klass->set_super_class(super);
@@ -1169,7 +1215,7 @@ void Session::ChangeMethodTable(int length) {
   PostponeChange(kChangeMethodTable, 2);
 }
 
-void Session::CommitChangeMethodTable(Array* change) {
+void Session::CommitChangeMethodTable(PostponedChange* change) {
   Class* clazz = Class::cast(change->get(1));
   Array* methods = Array::cast(change->get(2));
   clazz->set_methods(methods);
@@ -1180,7 +1226,7 @@ void Session::ChangeMethodLiteral(int index) {
   PostponeChange(kChangeMethodLiteral, 3);
 }
 
-void Session::CommitChangeMethodLiteral(Array* change) {
+void Session::CommitChangeMethodLiteral(PostponedChange* change) {
   Function* function = Function::cast(change->get(1));
   Object* literal = change->get(2);
   int index = Smi::cast(change->get(3))->value();
@@ -1192,7 +1238,7 @@ void Session::ChangeStatics(int count) {
   PostponeChange(kChangeStatics, 1);
 }
 
-void Session::CommitChangeStatics(Array* change) {
+void Session::CommitChangeStatics(PostponedChange* change) {
   program()->set_static_fields(Array::cast(change->get(1)));
 }
 
@@ -1202,13 +1248,13 @@ void Session::ChangeSchemas(int count, int delta) {
   PostponeChange(kChangeSchemas, count + 2);
 }
 
-void Session::CommitChangeSchemas(Array* change) {
+void Session::CommitChangeSchemas(PostponedChange* change) {
   // TODO(kasperl): Rework this so we can allow allocation failures
   // as part of allocating the new classes.
   Space* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
 
-  int length = change->length();
+  int length = change->size();
   Array* transformation = Array::cast(change->get(length - 2));
   int delta = Smi::cast(change->get(length - 1))->value();
   for (int i = 1; i < length - 2; i++) {
@@ -1230,14 +1276,14 @@ bool Session::CommitChanges(int count) {
 
   ASSERT(!program()->is_compact());
 
-  if (count != changes_.length()) {
+  if (count != PostponedChange::number_of_changes()) {
     if (!has_program_update_error_) {
       has_program_update_error_ = true;
       program_update_error_ =
           "The CommitChanges command had a different count of changes than "
           "the buffered changes.";
     }
-    changes_.Clear();
+    DiscardChanges();
   }
 
   if (!has_program_update_error_) {
@@ -1246,26 +1292,27 @@ bool Session::CommitChanges(int count) {
     // and "return false".
 
     bool schemas_changed = false;
-    for (int i = 0; i < count; i++) {
-      Array* array = Array::cast(changes_[i]);
-      Change change = static_cast<Change>(Smi::cast(array->get(0))->value());
+    for (PostponedChange* current = first_change_;
+         current != NULL;
+         current = current->next()) {
+      Change change = static_cast<Change>(Smi::cast(current->get(0))->value());
       switch (change) {
         case kChangeSuperClass:
           ASSERT(!schemas_changed);
-          CommitChangeSuperClass(array);
+          CommitChangeSuperClass(current);
           break;
         case kChangeMethodTable:
           ASSERT(!schemas_changed);
-          CommitChangeMethodTable(array);
+          CommitChangeMethodTable(current);
           break;
         case kChangeMethodLiteral:
-          CommitChangeMethodLiteral(array);
+          CommitChangeMethodLiteral(current);
           break;
         case kChangeStatics:
-          CommitChangeStatics(array);
+          CommitChangeStatics(current);
           break;
         case kChangeSchemas:
-          CommitChangeSchemas(array);
+          CommitChangeSchemas(current);
           schemas_changed = true;
           break;
         default:
@@ -1273,7 +1320,8 @@ bool Session::CommitChanges(int count) {
           break;
       }
     }
-    changes_.Clear();
+
+    DiscardChanges();
 
     if (schemas_changed) TransformInstances();
 
@@ -1299,18 +1347,30 @@ bool Session::CommitChanges(int count) {
 }
 
 void Session::DiscardChanges() {
-  changes_.Clear();
+  PostponedChange* current = first_change_;
+  while (current != NULL) {
+    PostponedChange* next = current->next();
+    delete current;
+    current = next;
+  }
+  first_change_ = last_change_ = NULL;
+  ASSERT(PostponedChange::number_of_changes() == 0);
 }
 
 void Session::PostponeChange(Change change, int count) {
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
-      program()->CreateArray(count + 1));
-  Array* array = Array::cast(result);
-  array->set(0, Smi::FromWord(change));
+  Object** description = new Object*[count + 1];
+  description[0] = Smi::FromWord(change);
   for (int i = count; i >= 1; i--) {
-    array->set(i, Pop());
+    description[i] = Pop();
   }
-  changes_.Add(array);
+  PostponedChange* postponed_change =
+      new PostponedChange(description, count + 1);
+  if (last_change_ != NULL) {
+    last_change_->set_next(postponed_change);
+    last_change_ = postponed_change;
+  } else {
+    last_change_ = first_change_ = postponed_change;
+  }
 }
 
 bool Session::UncaughtException(Process* process) {
