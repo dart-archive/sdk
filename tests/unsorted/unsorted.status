@@ -45,3 +45,6 @@ messaging_process_die_early_test: Crash
 
 [ $mode == debug && $asan ]
 random_test: Slow, Pass
+
+[ $asan ]
+unsorted/messaging_process_death_test: Pass, Crash # Issue https://github.com/dart-lang/fletch/issues/57
