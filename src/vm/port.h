@@ -33,6 +33,8 @@ class Port {
   void Lock() { spinlock_.Lock(); }
   void Unlock() { spinlock_.Unlock(); }
 
+  Spinlock* spinlock() { return &spinlock_; }
+
   // Increment the ref count. This function is thread safe.
   void IncrementRef();
 

@@ -153,7 +153,7 @@
         'session.cc',
         'session.h',
         'session_no_live_coding.h',
-        'signal_mailbox.h',
+        'signal.h',
         'snapshot.cc',
         'snapshot.h',
         'sort.h',

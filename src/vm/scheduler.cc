@@ -698,7 +698,7 @@ Process* Scheduler::InterpretProcess(Process* process,
                                      bool* allocation_failure) {
   ASSERT(process->exception()->IsNull());
 
-  Signal* signal = process->signal_mailbox()->CurrentMessage();
+  Signal* signal = process->signal();
   if (signal != NULL) {
     process->ChangeState(Process::kRunning, Process::kTerminated);
 
@@ -740,8 +740,7 @@ Process* Scheduler::InterpretProcess(Process* process,
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
-    if (process->mailbox()->IsEmpty() &&
-        process->signal_mailbox()->IsEmpty()) {
+    if (process->mailbox()->IsEmpty() && process->signal() == NULL) {
       process->ChangeState(Process::kYielding, Process::kSleeping);
     } else {
       process->ChangeState(Process::kYielding, Process::kReady);

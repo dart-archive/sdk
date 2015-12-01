@@ -7,7 +7,7 @@
 
 #include "src/shared/atomic.h"
 
-#include "src/vm/signal_mailbox.h"
+#include "src/vm/signal.h"
 #include "src/vm/thread_pool.h"
 
 namespace fletch {

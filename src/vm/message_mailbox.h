@@ -16,6 +16,7 @@
 namespace fletch {
 
 class Process;
+class Signal;
 
 class ExitReference {
  public:
@@ -45,7 +46,8 @@ class Message : public MailboxMessage<Message> {
     LARGE_INTEGER,
     FOREIGN,
     FOREIGN_FINALIZED,
-    EXIT
+    PROCESS_DEATH_SIGNAL,
+    EXIT,
   };
 
   Message(Port* port, uint64 value, int size, Kind kind)
@@ -67,6 +69,11 @@ class Message : public MailboxMessage<Message> {
   Object* ExitReferenceObject() {
     ASSERT(kind() == Message::EXIT);
     return reinterpret_cast<ExitReference*>(value())->message();
+  }
+
+  Signal* ProcessDeathSignal() {
+    ASSERT(kind() == Message::PROCESS_DEATH_SIGNAL);
+    return reinterpret_cast<Signal*>(value());
   }
 
   void VisitPointers(PointerVisitor* visitor) {

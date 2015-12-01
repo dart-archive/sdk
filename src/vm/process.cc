@@ -71,6 +71,7 @@ Process::Process(Program* program, Process* parent)
       queue_(NULL),
       queue_next_(NULL),
       queue_previous_(NULL),
+      signal_(NULL),
       process_handle_(NULL),
       ports_(NULL),
       process_list_next_(NULL),
@@ -116,6 +117,9 @@ Process::~Process() {
   links()->NotifyMonitors(process_handle());
 
   ProcessHandle::DecrementRef(process_handle_);
+
+  Signal* signal = signal_.load();
+  if (signal != NULL) Signal::DecrementRef(signal);
 
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   heap_.ProcessWeakPointers();
@@ -791,6 +795,16 @@ void Process::RestoreErrno() {
   errno = errno_cache_;
 }
 
+void Process::SendSignal(Signal* signal) {
+  while (signal_.load() == NULL) {
+    Signal* expected = NULL;
+    if (signal_.compare_exchange_weak(expected, signal)) {
+      return;
+    }
+  }
+  Signal::DecrementRef(signal);
+}
+
 void Process::TakeChildHeaps() {
   mailbox_.MergeAllChildHeaps(this);
 }
@@ -888,6 +902,13 @@ NATIVE(ProcessQueueGetMessage) {
     case Message::EXIT: {
       queue->MergeChildHeaps(process);
       result = queue->ExitReferenceObject();
+      break;
+    }
+
+    case Message::PROCESS_DEATH_SIGNAL: {
+      Signal* signal = queue->ProcessDeathSignal();
+      // TODO(kustermann): We should make this a real object.
+      result = Smi::FromWord(signal->kind());
       break;
     }
 

@@ -8,7 +8,7 @@
 #include "src/vm/hash_set.h"
 #include "src/vm/port.h"
 #include "src/vm/process_handle.h"
-#include "src/vm/signal_mailbox.h"
+#include "src/vm/signal.h"
 #include "src/vm/spinlock.h"
 
 namespace fletch {
@@ -36,11 +36,29 @@ class Links {
   void NotifyMonitors(ProcessHandle* handle);
 
  private:
-  void EnqueueSignal(Port* port, Signal::Kind kind);
+  // Used to send an exit [Signal] to a given [port] (aka monitoring port).
+  //
+  // The [signal] may be NULL in which case the method may allocate one if it
+  // needs to. If it did, it will return the allocated value, otherwise it
+  // returns what was passed in.
+  // This is an optimization to
+  //   a) avoid unnecessary allocation of [Signal]
+  //   b) share one refcounted [Signal] across all [EnqueueSignal]/[SendSignal]
+  //      calls
+  Signal* EnqueueSignal(Port* port,
+                        ProcessHandle* dying_handle,
+                        Signal::Kind kind,
+                        Signal* signal);
 
-  void SendSignal(ProcessHandle* handle,
-                  ProcessHandle* dying_handle,
-                  Signal::Kind kind);
+  // Used to send a [Signal] to a specific process (aka linked process).
+  // This will make the process [handle] is referring to die if it's not already
+  // dead.
+  //
+  // See above for description of the [signal] argument and return value.
+  Signal* SendSignal(ProcessHandle* handle,
+                     ProcessHandle* dying_handle,
+                     Signal::Kind kind,
+                     Signal* signal);
 
   Spinlock lock_;
   // If [half_dead_] is `true` the process will no longer execute any Dart code

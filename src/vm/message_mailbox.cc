@@ -20,6 +20,9 @@ Message::~Message() {
   if (kind() == EXIT) {
     ExitReference* ref = reinterpret_cast<ExitReference*>(value());
     delete ref;
+  } else if (kind() == PROCESS_DEATH_SIGNAL) {
+    Signal* signal = reinterpret_cast<Signal*>(value());
+    Signal::DecrementRef(signal);
   }
 }
 

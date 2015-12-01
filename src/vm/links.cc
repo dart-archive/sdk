@@ -49,74 +49,88 @@ void Links::NotifyLinkedProcesses(ProcessHandle* dying_handle,
   ScopedSpinlock locker(&lock_);
   ASSERT(!half_dead_);
 
+  Signal* signal = NULL;
+
   HashSet<ProcessHandle*>::Iterator it = handles_.Begin();
   while (it != handles_.End()) {
     ProcessHandle* handle = *it;
-    SendSignal(handle, dying_handle, kind);
+    signal = SendSignal(handle, dying_handle, kind, signal);
     ProcessHandle::DecrementRef(handle);
     ++it;
   }
   handles_.Clear();
   half_dead_ = true;
   exit_kind_ = kind;
+
+  if (signal != NULL) Signal::DecrementRef(signal);
 }
 
 void Links::NotifyMonitors(ProcessHandle* dying_handle) {
   ScopedSpinlock locker(&lock_);
+  Signal* signal = NULL;
   ASSERT(half_dead_);
   for (HashSet<Port*>::Iterator it = ports_.Begin(); it != ports_.End(); ++it) {
     Port* port = *it;
-    EnqueueSignal(port, exit_kind_);
+    signal = EnqueueSignal(port, dying_handle, exit_kind_, signal);
     port->DecrementRef();
   }
   ports_.Clear();
+
+  if (signal != NULL) Signal::DecrementRef(signal);
 }
 
-void Links::EnqueueSignal(Port* port, Signal::Kind kind) {
+Signal* Links::EnqueueSignal(Port* port,
+                             ProcessHandle* dying_handle,
+                             Signal::Kind kind,
+                             Signal* signal) {
   // We do this nested check for `port->process()` for two reasons:
   //    * avoid allocating [Signal] if we definitly do not need it
   //    * avoid allocating [Signal] while holding a [Spinlock]
   if (port->process() != NULL) {
-    uword address = reinterpret_cast<uword>(Smi::FromWord(kind));
-    Message* message = new Message(port, address, 0, Message::IMMEDIATE);
+    if (signal == NULL) signal = new Signal(dying_handle, kind);
+    signal->IncrementRef();
+    uword address = reinterpret_cast<uword>(signal);
+    Message* message =
+        new Message(port, address, 0, Message::PROCESS_DEATH_SIGNAL);
 
     {
-      port->Lock();
+      ScopedSpinlock locker(port->spinlock());
       Process* process = port->process();
       if (process != NULL) {
         process->mailbox()->EnqueueEntry(message);
         process->program()->scheduler()->ResumeProcess(process);
         message = NULL;
       }
-      port->Unlock();
     }
 
     if (message != NULL) delete message;
   }
+
+  return signal;
 }
 
-void Links::SendSignal(ProcessHandle* handle,
-                       ProcessHandle* dying_handle,
-                       Signal::Kind kind) {
+Signal* Links::SendSignal(ProcessHandle* handle,
+                          ProcessHandle* dying_handle,
+                          Signal::Kind kind,
+                          Signal* signal) {
   // We do this nested check for `handle->process()` for two reasons:
   //    * avoid allocating [Signal] if we definitly do not need it
   //    * avoid allocating [Signal] while holding a [Spinlock]
-
   if (handle->process() != NULL) {
-    Signal* signal = new Signal(dying_handle, kind);
+    if (signal == NULL) signal = new Signal(dying_handle, kind);
 
     {
       ScopedSpinlock locker(handle->lock());
       Process* process = handle->process();
       if (process != NULL) {
-        process->signal_mailbox()->EnqueueEntry(signal);
+        signal->IncrementRef();
+        process->SendSignal(signal);
         process->program()->scheduler()->SignalProcess(process);
-        signal = NULL;
       }
     }
-
-    if (signal != NULL) delete signal;
   }
+
+  return signal;
 }
 
 }  // namespace fletch

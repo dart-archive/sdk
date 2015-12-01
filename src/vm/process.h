@@ -15,7 +15,7 @@
 #include "src/vm/message_mailbox.h"
 #include "src/vm/process_handle.h"
 #include "src/vm/program.h"
-#include "src/vm/signal_mailbox.h"
+#include "src/vm/signal.h"
 #include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
 
@@ -250,7 +250,7 @@ class Process {
 
   MessageMailbox* mailbox() { return &mailbox_; }
 
-  SignalMailbox* signal_mailbox() { return &signal_mailbox_; }
+  Signal* signal() { return signal_.load(); }
 
   void RecordStore(HeapObject* object, Object* value) {
     if (value->IsHeapObject() && value->IsImmutable()) {
@@ -261,6 +261,8 @@ class Process {
       store_buffer_.Insert(object);
     }
   }
+
+  void SendSignal(Signal* signal);
 
   // If you add an offset here, remember to add the corresponding static_assert
   // in process.cc.
@@ -336,7 +338,7 @@ class Process {
   Process* queue_next_;
   Process* queue_previous_;
 
-  SignalMailbox signal_mailbox_;
+  Atomic<Signal*> signal_;
   MessageMailbox mailbox_;
 
   ProcessHandle* process_handle_;
