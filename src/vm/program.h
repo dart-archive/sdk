@@ -49,6 +49,7 @@ class Session;
   V(Class, stack_class, StackClass)                             \
   V(Class, coroutine_class, CoroutineClass)                     \
   V(Class, process_class, ProcessClass)                         \
+  V(Class, process_death_class, ProcessDeathClass)              \
   V(Class, port_class, PortClass)                               \
   V(Class, foreign_function_class, ForeignFunctionClass)        \
   V(Class, foreign_memory_class, ForeignMemoryClass)            \

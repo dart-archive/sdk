@@ -244,8 +244,17 @@ class Coroutine {
   @fletch.native external static _coroutineNewStack(coroutine, entry);
 }
 
+class ProcessDeath {
+  final Process process;
+  final int _reason;
+
+  ProcessDeath._(this.process, this._reason);
+
+  DeathReason get reason => DeathReason.values[_reason];
+}
+
 // TODO: Keep these in sync with src/vm/process.h:Signal::Kind
-enum SignalKind {
+enum DeathReason {
   CompileTimeError,
   Terminated,
   UncaughtException,

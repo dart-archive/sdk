@@ -23,6 +23,7 @@ namespace fletch {
   N(Coroutine,               "Coroutine")                \
   N(Port,                    "Port")                     \
   N(Process,                 "Process")                  \
+  N(ProcessDeath,            "ProcessDeath")             \
   N(ForeignMemory,           "ForeignMemory")            \
   N(OneByteString,           "_OneByteString")           \
   N(TwoByteString,           "_TwoByteString")           \

@@ -33,8 +33,8 @@ class ProcessRunner {
 
     int count = _spawnedProcesses;
     while (count > 0) {
-      int signalKind = _monitor.receive();
-      if (signalKind != SignalKind.Terminated.index) {
+      ProcessDeath death = _monitor.receive();
+      if (death.reason != DeathReason.Terminated) {
         failed++;
       }
       count--;

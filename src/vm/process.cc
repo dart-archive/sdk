@@ -906,9 +906,34 @@ NATIVE(ProcessQueueGetMessage) {
     }
 
     case Message::PROCESS_DEATH_SIGNAL: {
+      Program* program = process->program();
+
       Signal* signal = queue->ProcessDeathSignal();
-      // TODO(kustermann): We should make this a real object.
-      result = Smi::FromWord(signal->kind());
+      ProcessHandle* handle = signal->handle();
+
+      uword address = reinterpret_cast<uword>(handle);
+      Object* handle_address = process->NewInteger(address);
+      if (handle_address == Failure::retry_after_gc()) return handle_address;
+
+      Object* dart_process = process->NewInstance(
+          program->process_class(), true);
+      if (dart_process == Failure::retry_after_gc()) return dart_process;
+
+      Object* process_death = process->NewInstance(
+          program->process_death_class(), true);
+      if (process_death == Failure::retry_after_gc()) return process_death;
+
+      handle->IncrementRef();
+
+      Instance::cast(dart_process)->SetInstanceField(0, handle_address);
+      Instance::cast(process_death)->SetInstanceField(0, dart_process);
+      Instance::cast(process_death)->SetInstanceField(
+          1, Smi::FromWord(signal->kind()));
+
+      process->RegisterFinalizer(
+          HeapObject::cast(dart_process), Process::FinalizeProcess);
+
+      result = process_death;
       break;
     }
 

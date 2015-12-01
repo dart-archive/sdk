@@ -964,7 +964,8 @@ NATIVE(ProcessSpawn) {
 
   ProcessHandle* handle = child->process_handle();
   handle->IncrementRef();
-  LargeInteger::cast(native_handle)->set_value(reinterpret_cast<int64>(handle));
+  LargeInteger::cast(native_handle)->set_value(
+      static_cast<int64>(reinterpret_cast<uword>(handle)));
   process->RegisterFinalizer(
       HeapObject::cast(dart_process), Process::FinalizeProcess);
 
@@ -989,7 +990,8 @@ NATIVE(ProcessCurrent) {
   ProcessHandle* handle = process->process_handle();
 
   // TODO(kustermann): We should not have two allocations in one native.
-  Object* native_handle = process->NewInteger(reinterpret_cast<int64>(handle));
+  Object* native_handle = process->NewInteger(
+      static_cast<int64>(reinterpret_cast<uword>(handle)));
   if (native_handle == Failure::retry_after_gc()) return native_handle;
   Object* dart_process = process->NewInstance(program->process_class(), true);
   if (dart_process == Failure::retry_after_gc()) return dart_process;

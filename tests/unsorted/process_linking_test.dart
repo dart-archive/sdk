@@ -8,45 +8,47 @@ import 'package:expect/expect.dart';
 
 main() {
   print('simpleMonitorTest');
-  simpleMonitorTest(SignalKind.CompileTimeError);
-  simpleMonitorTest(SignalKind.Terminated);
-  simpleMonitorTest(SignalKind.UncaughtException);
+  simpleMonitorTest(DeathReason.CompileTimeError);
+  simpleMonitorTest(DeathReason.Terminated);
+  simpleMonitorTest(DeathReason.UncaughtException);
 
   print('multipleMonitorPortsTest');
-  multipleMonitorPortsTest(SignalKind.CompileTimeError);
-  multipleMonitorPortsTest(SignalKind.Terminated);
-  multipleMonitorPortsTest(SignalKind.UncaughtException);
+  multipleMonitorPortsTest(DeathReason.CompileTimeError);
+  multipleMonitorPortsTest(DeathReason.Terminated);
+  multipleMonitorPortsTest(DeathReason.UncaughtException);
 
   print('indirectLinkTest');
-  indirectLinkTest(SignalKind.CompileTimeError);
-  indirectLinkTest(SignalKind.Terminated);
-  indirectLinkTest(SignalKind.UncaughtException);
+  indirectLinkTest(DeathReason.CompileTimeError);
+  indirectLinkTest(DeathReason.Terminated);
+  indirectLinkTest(DeathReason.UncaughtException);
 
   print('postMonitorProcessTest');
-  postMonitorProcessTest(SignalKind.CompileTimeError);
-  postMonitorProcessTest(SignalKind.Terminated);
-  postMonitorProcessTest(SignalKind.UncaughtException);
+  postMonitorProcessTest(DeathReason.CompileTimeError);
+  postMonitorProcessTest(DeathReason.Terminated);
+  postMonitorProcessTest(DeathReason.UncaughtException);
 
   print('deathOrderTest');
-  deathOrderTest(SignalKind.CompileTimeError);
-  deathOrderTest(SignalKind.Terminated);
-  deathOrderTest(SignalKind.UncaughtException);
+  deathOrderTest(DeathReason.CompileTimeError);
+  deathOrderTest(DeathReason.Terminated);
+  deathOrderTest(DeathReason.UncaughtException);
 
   print('deathOrderTest2');
-  deathOrderTest2(SignalKind.CompileTimeError);
-  deathOrderTest2(SignalKind.Terminated);
-  deathOrderTest2(SignalKind.UncaughtException);
+  deathOrderTest2(DeathReason.CompileTimeError);
+  deathOrderTest2(DeathReason.Terminated);
+  deathOrderTest2(DeathReason.UncaughtException);
 }
 
-simpleMonitorTest(SignalKind kind) {
+simpleMonitorTest(DeathReason reason) {
   var monitor = new Channel();
-  Process.spawnDetached(() => failWithSignalKind(kind),
+  var process = Process.spawnDetached(() => failWithDeathReason(reason),
       monitor: new Port(monitor));
 
-  Expect.equals(kind.index, monitor.receive());
+  ProcessDeath death = monitor.receive();
+  Expect.equals(process, death.process);
+  Expect.equals(reason, death.reason);
 }
 
-multipleMonitorPortsTest(SignalKind kind) {
+multipleMonitorPortsTest(DeathReason reason) {
   var paused = new Channel();
   var pausedPort = new Port(paused);
 
@@ -55,7 +57,7 @@ multipleMonitorPortsTest(SignalKind kind) {
     pausedPort.send(new Port(c));
     c.receive();
 
-    failWithSignalKind(kind);
+    failWithDeathReason(reason);
   });
 
   var resumePort = paused.receive();
@@ -69,15 +71,15 @@ multipleMonitorPortsTest(SignalKind kind) {
 
   resumePort.send(null);
 
-  Expect.equals(kind.index, monitor.receive());
-  Expect.equals(kind.index, monitor2.receive());
-  Expect.equals(kind.index, monitor2.receive());
+  Expect.equals(reason, monitor.receive().reason);
+  Expect.equals(reason, monitor2.receive().reason);
+  Expect.equals(reason, monitor2.receive().reason);
 }
 
-indirectLinkTest(SignalKind kind) {
+indirectLinkTest(DeathReason reason) {
   spawnProcessList(Port replyPort) {
     p2(Port reply) {
-      failWithSignalKind(kind);
+      failWithDeathReason(reason);
       reply.send('everything-is-awesome');
     }
     p1(Port reply) {
@@ -92,24 +94,26 @@ indirectLinkTest(SignalKind kind) {
   var monitor = new Channel();
   var result = new Channel();
   var resultPort = new Port(result);
-  Process.spawnDetached(() => spawnProcessList(resultPort),
+  var process = Process.spawnDetached(() => spawnProcessList(resultPort),
       monitor: new Port(monitor));
-  if (kind == SignalKind.Terminated) {
+  if (reason == DeathReason.Terminated) {
     Expect.equals('everything-is-awesome', result.receive());
   }
-  Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
+  ProcessDeath death = monitor.receive();
+  Expect.equals(process, death.process);
+  Expect.equals(DeathReason.UnhandledSignal, death.reason);
 }
 
-postMonitorProcessTest(SignalKind kind) {
+postMonitorProcessTest(DeathReason reason) {
   var parentChannel = new Channel();
   final parentPort = new Port(parentChannel);
   Process process = Process.spawnDetached(() {
     // Wait until parent is ready.
     var c = new Channel();
     parentPort.send(new Port(c));
-    SignalKind kind = c.receive();
+    DeathReason reason = c.receive();
 
-    failWithSignalKind(kind);
+    failWithDeathReason(reason);
   });
 
   // Start montitoring the child.
@@ -117,12 +121,14 @@ postMonitorProcessTest(SignalKind kind) {
   Expect.isTrue(process.monitor(new Port(monitor)));
 
   // Signal the child it can die now.
-  parentChannel.receive().send(kind);
+  parentChannel.receive().send(reason);
 
-  Expect.equals(kind.index, monitor.receive());
+  ProcessDeath death = monitor.receive();
+  Expect.equals(process, death.process);
+  Expect.equals(reason, death.reason);
 }
 
-deathOrderTest(SignalKind kind) {
+deathOrderTest(DeathReason reason) {
   var monitor = new Channel();
   var monitorPort = new Port(monitor);
 
@@ -130,7 +136,7 @@ deathOrderTest(SignalKind kind) {
   // [main] ---monitors---> [p1] <--link--> [p2]
   // and [p2] dies.
 
-  Process.spawnDetached(() {
+  var root = Process.spawnDetached(() {
     var c = new Channel();
     final grandchildReadyPort = new Port(c);
     var child = Process.spawn(() {
@@ -143,14 +149,18 @@ deathOrderTest(SignalKind kind) {
     c.receive();
 
     // And fail.
-    failWithSignalKind(kind);
+    failWithDeathReason(reason);
   }, monitor: monitorPort);
 
-  Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
-  Expect.equals(kind.index, monitor.receive());
+  ProcessDeath death1 = monitor.receive();
+  Expect.equals(DeathReason.UnhandledSignal, death1.reason);
+
+  ProcessDeath death2 = monitor.receive();
+  Expect.equals(root, death2.process);
+  Expect.equals(reason, death2.reason);
 }
 
-deathOrderTest2(SignalKind kind) {
+deathOrderTest2(DeathReason reason) {
   var monitor = new Channel();
   var monitorPort = new Port(monitor);
 
@@ -158,7 +168,7 @@ deathOrderTest2(SignalKind kind) {
   // [main] ---monitors---> [p1] <--link--> [p2]
   // and [p1] dies.
 
-  Process.spawnDetached(() {
+  var root = Process.spawnDetached(() {
     var c = new Channel();
     final grandchildReadyPort = new Port(c);
     var child = Process.spawn(() {
@@ -169,7 +179,7 @@ deathOrderTest2(SignalKind kind) {
       c.receive();
 
       // And fail.
-      failWithSignalKind(kind);
+      failWithDeathReason(reason);
     });
     child.monitor(monitorPort);
 
@@ -179,14 +189,18 @@ deathOrderTest2(SignalKind kind) {
     blockInfinitly();
   }, monitor: monitorPort);
 
-  Expect.equals(kind.index, monitor.receive());
-  Expect.equals(SignalKind.UnhandledSignal.index, monitor.receive());
+  ProcessDeath death1 = monitor.receive();
+  Expect.equals(reason, death1.reason);
+
+  ProcessDeath death2 = monitor.receive();
+  Expect.equals(root, death2.process);
+  Expect.equals(DeathReason.UnhandledSignal, death2.reason);
 }
 
-failWithSignalKind(SignalKind kind) {
-  if (kind == SignalKind.UncaughtException) throw 'failing';
-  if (kind == SignalKind.CompileTimeError) failWithCompileTimeError();
-  assert(kind == SignalKind.Terminated);
+failWithDeathReason(DeathReason reason) {
+  if (reason == DeathReason.UncaughtException) throw 'failing';
+  if (reason == DeathReason.CompileTimeError) failWithCompileTimeError();
+  assert(reason == DeathReason.Terminated);
 }
 
 failWithCompileTimeError() {

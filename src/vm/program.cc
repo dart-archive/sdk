@@ -788,6 +788,12 @@ void Program::Initialize() {
   }
 
   {
+    InstanceFormat format = InstanceFormat::instance_format(2);
+    process_death_class_ = Class::cast(
+        heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
     InstanceFormat format = InstanceFormat::instance_format(3);
     foreign_memory_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));

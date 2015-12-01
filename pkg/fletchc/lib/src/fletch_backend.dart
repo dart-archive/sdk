@@ -443,6 +443,7 @@ class FletchBackend extends Backend
     loadClass("StackOverflowError", compiler.coreLibrary, builtin: true);
     loadClass("Port", fletchLibrary, builtin: true);
     loadClass("Process", fletchLibrary, builtin: true);
+    loadClass("ProcessDeath", fletchLibrary, builtin: true);
     loadClass("ForeignMemory", fletchFFILibrary, builtin: true);
     if (context.enableBigint) {
       bigintClass = loadClass("_Bigint", compiler.coreLibrary)?.element;
