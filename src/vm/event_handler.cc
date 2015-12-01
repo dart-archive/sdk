@@ -99,12 +99,11 @@ void EventHandler::HandleTimeouts() {
   next_timeout_ = next_timeout;
 }
 
-void EventHandler::Send(Port* port, uword mask) {
-  Object* message = Smi::FromWord(mask);
+void EventHandler::Send(Port* port, int64 value) {
   port->Lock();
   Process* port_process = port->process();
   if (port_process != NULL) {
-    port_process->mailbox()->Enqueue(port, message);
+    port_process->mailbox()->EnqueueLargeInteger(port, value);
     port_process->program()->scheduler()->ResumeProcess(port_process);
   }
   port->Unlock();

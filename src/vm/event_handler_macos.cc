@@ -85,7 +85,7 @@ void EventHandler::Run() {
       continue;
     }
 
-    word mask = 0;
+    int64 mask = 0;
     if (filter == EVFILT_READ) {
       mask = READ_EVENT;
       if ((flags & EV_EOF) != 0) {

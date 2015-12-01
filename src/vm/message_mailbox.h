@@ -42,12 +42,13 @@ class Message : public MailboxMessage<Message> {
   enum Kind {
     IMMEDIATE,
     IMMUTABLE_OBJECT,
+    LARGE_INTEGER,
     FOREIGN,
     FOREIGN_FINALIZED,
     EXIT
   };
 
-  Message(Port* port, uword value, int size, Kind kind)
+  Message(Port* port, uint64 value, int size, Kind kind)
       : port_(port),
         value_(value),
         kind_and_size_(KindField::encode(kind) | SizeField::encode(size)) {
@@ -59,13 +60,13 @@ class Message : public MailboxMessage<Message> {
   static Message* NewImmutableMessage(Port* port, Object* message);
 
   Port* port() const { return port_; }
-  uword address() const { return value_; }
+  uint64 value() const { return value_; }
   int size() const { return SizeField::decode(kind_and_size_); }
   Kind kind() const { return KindField::decode(kind_and_size_); }
 
   Object* ExitReferenceObject() {
     ASSERT(kind() == Message::EXIT);
-    return reinterpret_cast<ExitReference*>(address())->message();
+    return reinterpret_cast<ExitReference*>(value())->message();
   }
 
   void VisitPointers(PointerVisitor* visitor) {
@@ -74,7 +75,7 @@ class Message : public MailboxMessage<Message> {
         visitor->Visit(reinterpret_cast<Object**>(&value_));
         break;
       case EXIT: {
-        ExitReference* ref = reinterpret_cast<ExitReference*>(address());
+        ExitReference* ref = reinterpret_cast<ExitReference*>(value());
         ref->VisitPointers(visitor);
         break;
       }
@@ -87,7 +88,7 @@ class Message : public MailboxMessage<Message> {
 
  private:
   Port* port_;
-  uword value_;
+  uint64 value_;
   class KindField: public BitField<Kind, 0, 3> { };
   class SizeField: public BitField<int, 3, 32 - 3> { };
   const int32 kind_and_size_;
@@ -96,6 +97,7 @@ class Message : public MailboxMessage<Message> {
 class MessageMailbox : public Mailbox<Message> {
  public:
   void Enqueue(Port* port, Object* message);
+  void EnqueueLargeInteger(Port* port, int64 value);
   void EnqueueForeign(Port* port, void* foreign, int size, bool finalized);
   void EnqueueExit(Process* sender, Port* port, Object* message);
 

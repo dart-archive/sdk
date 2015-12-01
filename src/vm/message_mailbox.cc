@@ -18,17 +18,17 @@ ExitReference::ExitReference(Process* exiting_process, Object* message)
 Message::~Message() {
   port_->DecrementRef();
   if (kind() == EXIT) {
-    ExitReference* ref = reinterpret_cast<ExitReference*>(address());
+    ExitReference* ref = reinterpret_cast<ExitReference*>(value());
     delete ref;
   }
 }
 
 Message* Message::NewImmutableMessage(Port* port, Object* message) {
   if (!message->IsHeapObject()) {
-    uword address = reinterpret_cast<uword>(message);
+    uint64 address = reinterpret_cast<uint64>(message);
     return new Message(port, address, 0, Message::IMMEDIATE);
   } else if (message->IsImmutable()) {
-    uword address = reinterpret_cast<uword>(message);
+    uint64 address = reinterpret_cast<uint64>(message);
     return new Message(port, address, 0, Message::IMMUTABLE_OBJECT);
   }
   UNREACHABLE();
@@ -37,13 +37,17 @@ Message* Message::NewImmutableMessage(Port* port, Object* message) {
 
 void Message::MergeChildHeaps(Process* destination_process) {
   ASSERT(kind() == Message::EXIT);
-  ExitReference* ref = reinterpret_cast<ExitReference*>(address());
+  ExitReference* ref = reinterpret_cast<ExitReference*>(value());
   destination_process->heap()->MergeInOtherHeap(ref->mutable_heap());
   destination_process->store_buffer()->Prepend(ref->store_buffer());
 }
 
 void MessageMailbox::Enqueue(Port* port, Object* message) {
   EnqueueEntry(Message::NewImmutableMessage(port, message));
+}
+
+void MessageMailbox::EnqueueLargeInteger(Port* port, int64 value) {
+  EnqueueEntry(new Message(port, value, 0, Message::LARGE_INTEGER));
 }
 
 void MessageMailbox::EnqueueForeign(Port* port,
@@ -53,7 +57,7 @@ void MessageMailbox::EnqueueForeign(Port* port,
   Message::Kind kind = finalized
       ? Message::FOREIGN_FINALIZED
       : Message::FOREIGN;
-  uword address = reinterpret_cast<uword>(foreign);
+  uint64 address = reinterpret_cast<uint64>(foreign);
   Message* entry = new Message(port, address, size, kind);
   EnqueueEntry(entry);
 }
@@ -62,7 +66,7 @@ void MessageMailbox::EnqueueForeign(Port* port,
 
 void MessageMailbox::EnqueueExit(Process* sender, Port* port, Object* message) {
   // TODO(kasperl): Optimize this to avoid merging heaps if copying is cheaper.
-  uword address = reinterpret_cast<uword>(new ExitReference(sender, message));
+  uint64 address = reinterpret_cast<uint64>(new ExitReference(sender, message));
   Message* entry = new Message(port, address, 0, Message::EXIT);
   EnqueueEntry(entry);
 }
@@ -70,7 +74,7 @@ void MessageMailbox::EnqueueExit(Process* sender, Port* port, Object* message) {
 #else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void MessageMailbox::EnqueueExit(Process* sender, Port* port, Object* message) {
-  uword address = reinterpret_cast<uword>(message);
+  uint64 address = reinterpret_cast<uint64>(message);
   Message* entry = new Message(port, address, 0, Message::IMMUTABLE_OBJECT);
   EnqueueEntry(entry);
 }

@@ -149,7 +149,6 @@ void EventHandler::Run() {
 
     if (has_result && result.ctx != NULL) {
       int64 value = *reinterpret_cast<int64*>(&result.packet.value);
-      // TODO(ajohnsen): This will only send the lower 32bit of the value.
       Send(reinterpret_cast<Port*>(result.ctx), value);
     }
 

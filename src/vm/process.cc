@@ -852,7 +852,7 @@ NATIVE(ProcessQueueGetMessage) {
   switch (kind) {
     case Message::IMMEDIATE:
     case Message::IMMUTABLE_OBJECT:
-      result = reinterpret_cast<Object*>(queue->address());
+      result = reinterpret_cast<Object*>(queue->value());
       break;
 
     case Message::FOREIGN:
@@ -862,7 +862,7 @@ NATIVE(ProcessQueueGetMessage) {
       Object* object = process->NewInstance(foreign_memory_class);
       if (object == Failure::retry_after_gc()) return object;
       Instance* foreign = Instance::cast(object);
-      uword address = queue->address();
+      uword address = queue->value();
       // TODO(ager): Two allocations in a native doesn't work with
       // the retry after gc strategy. We should restructure.
       object = process->ToInteger(address);
@@ -876,6 +876,12 @@ NATIVE(ProcessQueueGetMessage) {
         process->heap()->AllocatedForeignMemory(size);
       }
       result = foreign;
+      break;
+    }
+
+    case Message::LARGE_INTEGER: {
+      result = process->NewInteger(queue->value());
+      if (result == Failure::retry_after_gc()) return result;
       break;
     }
 

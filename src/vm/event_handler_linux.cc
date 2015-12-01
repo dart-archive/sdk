@@ -87,7 +87,7 @@ void EventHandler::Run() {
       continue;
     }
 
-    word mask = 0;
+    int64 mask = 0;
     if ((events & EPOLLIN) != 0) mask |= READ_EVENT;
     if ((events & EPOLLOUT) != 0) mask |= WRITE_EVENT;
     if ((events & EPOLLRDHUP) != 0) mask |= CLOSE_EVENT;
