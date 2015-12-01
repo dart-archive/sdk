@@ -62,6 +62,7 @@ class DebugState {
       <FletchClass, ClassDebugInfo>{};
 
   bool showInternalFrames = false;
+  bool verbose = true;
   StackFrame _topFrame;
   RemoteObject currentUncaughtException;
   StackTrace _currentStackTrace;

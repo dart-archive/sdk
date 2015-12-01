@@ -6,6 +6,8 @@ library fletchc.driver.developer;
 
 import 'dart:async' show
     Future,
+    Stream,
+    StreamController,
     Timer;
 
 import 'dart:convert' show
@@ -522,6 +524,24 @@ SessionState createSessionState(
       settings);
 }
 
+Future runWithDebugger(List<String> commands, Session session) async {
+
+  // Method used to generate the debugger commands if none are specified.
+  Stream<String> inputGenerator() async* {
+    yield 't verbose';
+    yield 'b main';
+    yield 'r';
+    while (!session.terminated) {
+      yield 's';
+    }
+  }
+
+  return commands.isEmpty ?
+      session.debug(inputGenerator(), Uri.base, echo: true) :
+      session.debug(
+          new Stream<String>.fromIterable(commands), Uri.base, echo: true);
+}
+
 Future<int> run(
     SessionState state,
     {List<String> testDebuggerCommands,
@@ -534,8 +554,7 @@ Future<int> run(
   }
 
   if (testDebuggerCommands != null) {
-    await session.testDebugger(testDebuggerCommands);
-    await session.shutdown();
+    await runWithDebugger(testDebuggerCommands, session);
     return 0;
   }
 

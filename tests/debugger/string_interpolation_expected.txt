@@ -1,20 +1,46 @@
+Starting session. Type 'help' for a list of commands.
+
+> t verbose
+### verbose printing set to: false
+> b main
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
+> r
 main    @'${foo()} and ${bar()}'
+> s
 main    @foo()
+> s
 foo @new A()
+> s
 foo @=> new A();
+> s
 main    @foo()
+> s
 A.toString  @"A"
+> s
 A.toString  @=> "A";
+> s
 main    @foo()
+> s
 main    @bar()
+> s
 bar @new B()
+> s
 bar @=> new B();
+> s
 main    @bar()
+> s
 B.toString  @"B"
+> s
 B.toString  @=> "B";
+> s
 main    @baz('${foo()} and ${bar()}')
+> s
 baz @s
+> s
 baz @s.length
+> s
 baz @=> s.length;
+> s
 main    @baz('${foo()} and ${bar()}')
+> s
 ### process terminated

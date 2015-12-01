@@ -325,6 +325,10 @@ class InputHandler {
             writeStdoutLine(
                 '### internal frame visibility set to: $internalVisible');
             break;
+          case 'verbose':
+            bool verbose = session.toggleVerbose();
+            writeStdoutLine('### verbose printing set to: $verbose');
+            break;
           default:
             writeStdoutLine('### invalid flag $toggle');
             break;

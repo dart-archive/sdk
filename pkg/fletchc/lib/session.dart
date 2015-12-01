@@ -273,33 +273,13 @@ class Session extends FletchVmSession {
     await shutdown();
   }
 
-  Future<int> debug(Stream<String> inputLines, Uri base) async {
+  Future<int> debug(
+      Stream<String> inputLines,
+      Uri base,
+      {bool echo: false}) async {
     await enableDebugger();
     await spawnProcess();
-    return await new InputHandler(this, inputLines, false, base).run();
-  }
-
-  Future stepToCompletion() async {
-    await setBreakpoint(methodName: 'main', bytecodeIndex: 0);
-    await debugRun();
-    Command response;
-    while (!terminated) {
-      writeStdoutLine(debugState.topFrame.shortString());
-      response = await step();
-    }
-    writeStdout(await processStopResponseToString(response));
-  }
-
-  Future testDebugger(List<String> commands) async {
-    await enableDebugger();
-    await spawnProcess();
-    if (commands.isEmpty) {
-      await stepToCompletion();
-    } else {
-      InputHandler handler = new InputHandler(
-          this, new Stream<String>.fromIterable(commands), true, Uri.base);
-      await handler.run();
-    }
+    return new InputHandler(this, inputLines, echo, base).run();
   }
 
   Future terminateSession() async {
@@ -819,6 +799,11 @@ class Session extends FletchVmSession {
     return debugState.showInternalFrames;
   }
 
+  bool toggleVerbose() {
+    debugState.verbose = !debugState.verbose;
+    return debugState.verbose;
+  }
+
   // This method is a helper method for computing the default output for one
   // of the stop command results. There are currently the following stop
   // responses:
@@ -846,7 +831,12 @@ class Session extends FletchVmSession {
       assert(trace != null);
       StackFrame topFrame = trace.visibleFrame(0);
       if (topFrame != null) {
-        String result = topFrame.list(contextLines: 0);
+        String result;
+        if (debugState.verbose) {
+          result = topFrame.list(contextLines: 0);
+        } else {
+          result = topFrame.shortString();
+        }
         if (!result.endsWith('\n')) result = '$result\n';
         return result;
       }

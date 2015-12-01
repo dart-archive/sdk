@@ -1,19 +1,44 @@
+Starting session. Type 'help' for a list of commands.
+
+> t verbose
+### verbose printing set to: false
+> b main
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
+> r
 main    @42
+> s
 main    @a1
+> s
 a1 lazy initializer @1
+> s
 a1 lazy initializer @new A(1)
+> s
 A initializer   @x
+> s
 A initializer   @this.x = x
+> s
 a1 lazy initializer @new A(1)
+> s
 main    @a1.x
+> s
 main    @x
+> s
 main    @a1.x + x
+> s
 main    @a2
+> s
 a2 lazy initializer @1
+> s
 a2 lazy initializer @new A(1)
+> s
 A initializer   @x
+> s
 A initializer   @this.x = x
+> s
 a2 lazy initializer @new A(1)
+> s
 main    @a2.x
+> s
 main    @a1.x + x + a2.x
+> s
 ### process terminated
