@@ -11,7 +11,7 @@
       '<(DEPTH)/third_party/gcc-arm-embedded/<(OS)/gcc-arm-embedded/bin',
     'objcopy': '<(gcc-arm-embedded)/arm-none-eabi-objcopy',
 
-    # Common flags (C and C++for the GCC ARM Embedded toolchain.
+    # Common flags (C and C++) for the GCC ARM Embedded toolchain.
     'common_cross_gcc_cflags': [
       '-mcpu=cortex-m7',
       '-mthumb',
@@ -21,6 +21,16 @@
       '-Wall',
       '-fmessage-length=0',
       '-ffunction-sections',
+    ],
+
+    # Common release mode flags (C and C++) for the GCC ARM Embedded toolchain.
+    'common_cross_gcc_release_cflags': [
+      '-g0',
+    ],
+
+    # Common debug mode flags (C and C++) for the GCC ARM Embedded toolchain.
+    'common_cross_gcc_debug_cflags': [
+      '-g3',
     ],
 
     # Use the gnu language dialect to get math.h constants
@@ -122,8 +132,22 @@
         ],
         'target_conditions': [
           ['_toolset=="target"', {
-            'cflags': [
-              '-g0',
+            'conditions': [
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  'OTHER_CFLAGS': [
+                    '<@(common_cross_gcc_release_cflags)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS' : [
+                  '<@(common_cross_gcc_release_cflags)',
+                  ],
+                },
+              }],
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cross_gcc_release_cflags)',
+                ],
+              }],
             ],
           }],
         ],
@@ -135,8 +159,22 @@
         ],
         'target_conditions': [
           ['_toolset=="target"', {
-            'cflags': [
-              '-g3',
+            'conditions': [
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  'OTHER_CFLAGS': [
+                    '<@(common_cross_gcc_debug_cflags)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS' : [
+                  '<@(common_cross_gcc_debug_cflags)',
+                  ],
+                },
+              }],
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cross_gcc_debug_cflags)',
+                ],
+              }],
             ],
           }],
         ],

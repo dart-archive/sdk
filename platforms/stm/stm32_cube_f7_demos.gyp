@@ -26,7 +26,7 @@
   },
   'targets': [
     {
-      'target_name': 'STemWin_HelloWorld_elf',
+      'target_name': 'STemWin_HelloWorld.elf',
       'variables': {
         'project_name': 'STemWin_HelloWorld',
         'project_path':
@@ -91,13 +91,13 @@
       'type': 'none',
       'target_name': 'STemWin_HelloWorld',
       'dependencies' : [
-        'STemWin_HelloWorld_elf'
+        'STemWin_HelloWorld.elf'
       ],
       'actions': [
         {
           'action_name': 'generate_bin',
           'inputs': [
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/<(project_name).bin',
@@ -106,14 +106,14 @@
             '<(objcopy)',
             '-O',
             'binary',
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
             '<(PRODUCT_DIR)/<(project_name).bin',
           ],
         },
       ],
     },
     {
-      'target_name': 'Audio_playback_and_record_elf',
+      'target_name': 'Audio_playback_and_record.elf',
       'variables': {
         'project_name': 'Audio_playback_and_record',
         'project_path':
@@ -198,13 +198,13 @@
       'type': 'none',
       'target_name': 'Audio_playback_and_record',
       'dependencies' : [
-        'Audio_playback_and_record_elf'
+        'Audio_playback_and_record.elf'
       ],
       'actions': [
         {
           'action_name': 'generate_bin',
           'inputs': [
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/<(project_name).bin',
@@ -213,14 +213,14 @@
             '<(objcopy)',
             '-O',
             'binary',
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
             '<(PRODUCT_DIR)/<(project_name).bin',
           ],
         },
       ],
     },
     {
-      'target_name': 'LwIP_HTTP_Server_Netconn_RTOS_elf',
+      'target_name': 'LwIP_HTTP_Server_Netconn_RTOS.elf',
       'variables': {
         'project_name': 'LwIP_HTTP_Server_Netconn_RTOS',
         'project_path':
@@ -284,13 +284,13 @@
       'type': 'none',
       'target_name': 'LwIP_HTTP_Server_Netconn_RTOS',
       'dependencies' : [
-        'LwIP_HTTP_Server_Netconn_RTOS_elf'
+        'LwIP_HTTP_Server_Netconn_RTOS.elf'
       ],
       'actions': [
         {
           'action_name': 'generate_bin',
           'inputs': [
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/<(project_name).bin',
@@ -299,14 +299,14 @@
             '<(objcopy)',
             '-O',
             'binary',
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
             '<(PRODUCT_DIR)/<(project_name).bin',
           ],
         },
       ],
     },
     {
-      'target_name': 'Demonstration_elf',
+      'target_name': 'Demonstration.elf',
       'variables': {
         'project_name': 'Demonstration',
         'project_path': '<(discovery_projects)/<(project_name)',
@@ -428,13 +428,13 @@
       'type': 'none',
       'target_name': 'Demonstration',
       'dependencies' : [
-        'Demonstration_elf'
+        'Demonstration.elf'
       ],
       'actions': [
         {
           'action_name': 'generate_bin',
           'inputs': [
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/<(project_name).bin',
@@ -443,7 +443,7 @@
             '<(objcopy)',
             '-O',
             'binary',
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
             '<(PRODUCT_DIR)/<(project_name).bin',
           ],
         },

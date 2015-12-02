@@ -23,7 +23,7 @@
   },
   'targets': [
     {
-      'target_name': 'disco_fletch_elf',
+      'target_name': 'disco_fletch.elf',
       'variables': {
         'project_name': 'disco_fletch',
         'project_path': '<(DEPTH)/platforms/stm/<(project_name)',
@@ -100,13 +100,13 @@
       'type': 'none',
       'target_name': 'disco_fletch',
       'dependencies' : [
-        'disco_fletch_elf'
+        'disco_fletch.elf'
       ],
       'actions': [
         {
           'action_name': 'generate_bin',
           'inputs': [
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/<(project_name).bin',
@@ -115,7 +115,7 @@
             '<(objcopy)',
             '-O',
             'binary',
-            '<(PRODUCT_DIR)/<(project_name)_elf',
+            '<(PRODUCT_DIR)/<(project_name).elf',
             '<(PRODUCT_DIR)/<(project_name).bin',
           ],
         },
