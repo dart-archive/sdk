@@ -13,6 +13,7 @@ import optparse
 import subprocess
 import sys
 import utils
+import re
 
 from sets import Set
 from os import makedirs
@@ -147,7 +148,6 @@ def CopyArmDebPackage(bundle_dir, package):
   CopyFile(package, join(target, basename(package)))
 
 def CopyAdditionalFiles(bundle_dir):
-  #TODO(mit): fix README and LICENSE
   for extra in ['README.md', 'LICENSE.md']:
     CopyFile(extra, join(bundle_dir, extra))
 
@@ -171,6 +171,34 @@ def EnsureDartDoc():
       '-u -d third_party/dartdoc_deps/',
       shell=True)
 
+def CreateDocsPubSpec(fileName):
+  print 'Doc-gen: creating %s' %fileName
+  f = open(fileName, 'w')
+  f.write('name: Fletch_SDK\n')
+  f.write('dependencies:\n')
+  for package in SDK_PACKAGES:
+    f.write('  %s:\n' % package)
+    f.write('    path: ../%s\n' % package)
+  f.close()
+
+def CreateDocsLibs(docPkgDir, outDir):
+  for package in SDK_PACKAGES:
+    # Read the original package file and match out the documentation from it.
+    sourceFileName = join(outDir, package, 'lib', '{0}.dart'.format(package))
+    with open(sourceFileName) as f:
+      s = f.read()
+    # Extract the doc comment for the library; this is everything before a line
+    # that starts with 'library' and ends with ';'.
+    match = re.match(r'(.*)^library ([^;]+);', s, re.DOTALL|re.MULTILINE)
+    doc = match.group(1)
+    # Create a new lib dart file with same documentation.
+    destFileName = join(docPkgDir, '%s.dart' % package)
+    print 'Doc-gen: Creating %s from %s' % (destFileName, sourceFileName)
+    with open(destFileName, 'w') as f:
+      f.write(match.group(1))
+      f.write('\nlibrary {0};\n'.format(package))
+      f.write('export \'package:{0}/{0}.dart\';'.format(package))
+
 def CreateDocumentation():
   EnsureDartDoc()
   docs_out = join('out', 'docs')
@@ -184,34 +212,52 @@ def CreateDocumentation():
   # We recreate the same structure we have in the repo in a copy to not
   # polute our workspace
   with utils.TempDir() as temp:
+    # Copy Fletch packages.
     pkg_copy = join(temp, 'pkg')
     makedirs(pkg_copy)
     for pkg in SDK_PACKAGES:
       pkg_path = join('pkg', pkg)
       pkg_dst = join(pkg_copy, pkg)
       copytree(pkg_path, pkg_dst)
-      print 'copied %s to %s' %(pkg_path, pkg_dst)
+      print 'copied %s to %s' % (pkg_path, pkg_dst)
+    # Copy third party packages.
     third_party_copy = join(temp, 'third_party')
     makedirs(third_party_copy)
     for pkg in THIRD_PARTY_PACKAGES:
       pkg_path = join('third_party', pkg)
       pkg_dst = join(third_party_copy, pkg)
       copytree(pkg_path, pkg_dst)
-      print 'copied %s to %s' %(pkg_path, pkg_dst)
-    for pkg in SDK_PACKAGES:
-      pkg_dst = join(pkg_copy, pkg)
-      with utils.ChangedWorkingDirectory(pkg_dst):
-        subprocess.check_call([pub, 'get'])
-        print 'Called pub get in %s' % pkg_dst
-
+      print 'copied %s to %s' % (pkg_path, pkg_dst)
+    # Create fake combined package dir.
+    sdk_pkg_dir = join(pkg_copy, 'fletch_sdk')
+    makedirs(sdk_pkg_dir)
+    # Copy readme.
+    copyfile(join('pkg', 'fletch_sdk_readme.md'),
+             join(sdk_pkg_dir, 'README.md'))
+    # Add pubspec file.
+    CreateDocsPubSpec('%s/pubspec.yaml' % sdk_pkg_dir)
+    # Add lib dir, and a generated file for each package.
+    sdk_pkg_lib_dir = join(sdk_pkg_dir, 'lib')
+    makedirs(sdk_pkg_lib_dir)
+    CreateDocsLibs(sdk_pkg_lib_dir, pkg_copy)
+    # Call pub get.
+    with utils.ChangedWorkingDirectory(sdk_pkg_dir):
+      subprocess.check_call([pub, 'get'])
+      print 'Called pub get in %s' % pkg_dst
+    # Call dartdoc.
     EnsureDeleted(docs_out)
-    for pkg in SDK_PACKAGES:
-      pkg_dst = join(pkg_copy, pkg)
-      pkg_out = join(docs_out, pkg)
-      subprocess.check_call([dartdoc, '--input', pkg_dst,
-                             '--output', pkg_out])
-  with open(join(docs_out, 'index.html'), 'w') as f:
-    f.write(DOC_INDEX)
+    subprocess.check_call([dartdoc, '--input', sdk_pkg_dir,'--output',
+                          docs_out])
+
+    # Patch the generated index.html file to fix a few issues.
+    indexFile = join(docs_out, 'index.html')
+    with open(indexFile, 'r') as fin:
+      s = fin.read()
+      s = s.replace('Fletch_SDK', 'Fletch SDK')
+      s = s.replace('>package<', '><')
+    with open(indexFile, 'w') as fout:
+      fout.write(s)
+
 
 def Main():
   options = ParseOptions();
