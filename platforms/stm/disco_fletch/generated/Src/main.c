@@ -60,10 +60,14 @@ LTDC_HandleTypeDef hltdc;
 
 QSPI_HandleTypeDef hqspi;
 
+SD_HandleTypeDef hsd1;
+HAL_SD_CardInfoTypedef SDCardInfo1;
+
 SPDIFRX_HandleTypeDef hspdif;
 
 UART_HandleTypeDef huart1;
 
+SDRAM_HandleTypeDef hsdram1;
 osThreadId defaultTaskHandle;
 
 /* USER CODE BEGIN PV */
@@ -77,9 +81,11 @@ static void MX_GPIO_Init(void);
 static void MX_DCMI_Init(void);
 static void MX_DMA2D_Init(void);
 static void MX_ETH_Init(void);
+static void MX_FMC_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_LTDC_Init(void);
 static void MX_QUADSPI_Init(void);
+static void MX_SDMMC1_SD_Init(void);
 static void MX_SPDIFRX_Init(void);
 static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
@@ -113,9 +119,11 @@ int main(void)
   MX_DCMI_Init();
   MX_DMA2D_Init();
   MX_ETH_Init();
+  MX_FMC_Init();
   MX_I2C1_Init();
   MX_LTDC_Init();
   MX_QUADSPI_Init();
+  MX_SDMMC1_SD_Init();
   MX_SPDIFRX_Init();
   MX_USART1_UART_Init();
 
@@ -178,18 +186,19 @@ void SystemClock_Config(void)
 
   __PWR_CLK_ENABLE();
 
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = 16;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 10;
-  RCC_OscInitStruct.PLL.PLLN = 210;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 25;
+  RCC_OscInitStruct.PLL.PLLN = 400;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   HAL_RCC_OscConfig(&RCC_OscInitStruct);
+
+  HAL_PWREx_ActivateOverDrive();
 
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -197,23 +206,25 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
-  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
+  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_6);
 
   PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SPDIFRX|RCC_PERIPHCLK_LTDC
-                              |RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_I2C1;
-  PeriphClkInitStruct.PLLI2S.PLLI2SN = 192;
+                              |RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_I2C1
+                              |RCC_PERIPHCLK_SDMMC1;
+  PeriphClkInitStruct.PLLI2S.PLLI2SN = 100;
   PeriphClkInitStruct.PLLI2S.PLLI2SP = 0;
   PeriphClkInitStruct.PLLI2S.PLLI2SR = 2;
   PeriphClkInitStruct.PLLI2S.PLLI2SQ = 2;
-  PeriphClkInitStruct.PLLSAI.PLLSAIN = 192;
+  PeriphClkInitStruct.PLLSAI.PLLSAIN = 384;
   PeriphClkInitStruct.PLLSAI.PLLSAIR = 2;
   PeriphClkInitStruct.PLLSAI.PLLSAIQ = 2;
-  PeriphClkInitStruct.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV2;
+  PeriphClkInitStruct.PLLSAI.PLLSAIP = RCC_PLLSAIP_DIV8;
   PeriphClkInitStruct.PLLI2SDivQ = 1;
   PeriphClkInitStruct.PLLSAIDivQ = 1;
   PeriphClkInitStruct.PLLSAIDivR = RCC_PLLSAIDIVR_2;
   PeriphClkInitStruct.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInitStruct.I2c1ClockSelection = RCC_I2C1CLKSOURCE_PCLK1;
+  PeriphClkInitStruct.Sdmmc1ClockSelection = RCC_SDMMC1CLKSOURCE_SYSCLK;
   HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
 
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
@@ -290,7 +301,7 @@ void MX_I2C1_Init(void)
 {
 
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x00303D5D;
+  hi2c1.Init.Timing = 0x00C0EFFF;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -382,6 +393,23 @@ void MX_QUADSPI_Init(void)
 
 }
 
+/* SDMMC1 init function */
+void MX_SDMMC1_SD_Init(void)
+{
+
+  hsd1.Instance = SDMMC1;
+  hsd1.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+  hsd1.Init.ClockBypass = SDMMC_CLOCK_BYPASS_DISABLE;
+  hsd1.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+  hsd1.Init.BusWide = SDMMC_BUS_WIDE_1B;
+  hsd1.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+  hsd1.Init.ClockDiv = 0;
+  HAL_SD_Init(&hsd1, &SDCardInfo1);
+
+  HAL_SD_WideBusOperation_Config(&hsd1, SDMMC_BUS_WIDE_4B);
+
+}
+
 /* SPDIFRX init function */
 void MX_SPDIFRX_Init(void)
 {
@@ -418,6 +446,37 @@ void MX_USART1_UART_Init(void)
   HAL_UART_Init(&huart1);
 
 }
+/* FMC initialization function */
+void MX_FMC_Init(void)
+{
+  FMC_SDRAM_TimingTypeDef SdramTiming;
+
+  /** Perform the SDRAM1 memory initialization sequence
+  */
+  hsdram1.Instance = FMC_SDRAM_DEVICE;
+  /* hsdram1.Init */
+  hsdram1.Init.SDBank = FMC_SDRAM_BANK1;
+  hsdram1.Init.ColumnBitsNumber = FMC_SDRAM_COLUMN_BITS_NUM_8;
+  hsdram1.Init.RowBitsNumber = FMC_SDRAM_ROW_BITS_NUM_11;
+  hsdram1.Init.MemoryDataWidth = FMC_SDRAM_MEM_BUS_WIDTH_8;
+  hsdram1.Init.InternalBankNumber = FMC_SDRAM_INTERN_BANKS_NUM_2;
+  hsdram1.Init.CASLatency = FMC_SDRAM_CAS_LATENCY_1;
+  hsdram1.Init.WriteProtection = FMC_SDRAM_WRITE_PROTECTION_DISABLE;
+  hsdram1.Init.SDClockPeriod = FMC_SDRAM_CLOCK_DISABLE;
+  hsdram1.Init.ReadBurst = FMC_SDRAM_RBURST_DISABLE;
+  hsdram1.Init.ReadPipeDelay = FMC_SDRAM_RPIPE_DELAY_0;
+  /* SdramTiming */
+  SdramTiming.LoadToActiveDelay = 16;
+  SdramTiming.ExitSelfRefreshDelay = 16;
+  SdramTiming.SelfRefreshTime = 16;
+  SdramTiming.RowCycleDelay = 16;
+  SdramTiming.WriteRecoveryTime = 16;
+  SdramTiming.RPDelay = 16;
+  SdramTiming.RCDDelay = 16;
+
+  HAL_SDRAM_Init(&hsdram1, &SdramTiming);
+
+}
 
 /** Configure pins as
         * Analog
@@ -425,85 +484,41 @@ void MX_USART1_UART_Init(void)
         * Output
         * EVENT_OUT
         * EXTI
-     PE1   ------> FMC_NBL1
-     PE0   ------> FMC_NBL0
      PB5   ------> USB_OTG_HS_ULPI_D7
      PB4   ------> S_TIM3_CH1
-     PC12   ------> SDMMC1_CK
      PA15   ------> S_TIM2_CH1_ETR
-     PG15   ------> FMC_SDNCAS
-     PD0   ------> FMC_D2_DA2
-     PC11   ------> SDMMC1_D3
-     PC10   ------> SDMMC1_D2
      PA12   ------> USB_OTG_FS_DP
      PI4   ------> SAI2_MCLK_A
      PG10   ------> SAI2_SD_B
-     PD1   ------> FMC_D3_DA3
      PA11   ------> USB_OTG_FS_DM
-     PF0   ------> FMC_A0
      PI5   ------> SAI2_SCK_A
      PI7   ------> SAI2_FS_A
      PI6   ------> SAI2_SD_A
-     PD2   ------> SDMMC1_CMD
      PI1   ------> SPI2_SCK
      PA10   ------> USB_OTG_FS_ID
-     PF1   ------> FMC_A1
      PI0   ------> S_TIM5_CH4
-     PC9   ------> SDMMC1_D1
      PA8   ------> S_TIM1_CH1
-     PF2   ------> FMC_A2
-     PC8   ------> SDMMC1_D0
      PC7   ------> USART6_RX
-     PF3   ------> FMC_A3
      PH4   ------> USB_OTG_HS_ULPI_NXT
-     PG8   ------> FMC_SDCLK
      PC6   ------> USART6_TX
-     PF4   ------> FMC_A4
-     PH5   ------> FMC_SDNWE
-     PH3   ------> FMC_SDNE0
      PF7   ------> ADC3_IN5
      PF6   ------> ADC3_IN4
-     PF5   ------> FMC_A5
-     PD15   ------> FMC_D1_DA1
      PB13   ------> USB_OTG_HS_ULPI_D6
-     PD10   ------> FMC_D15_DA15
      PF10   ------> ADC3_IN8
      PF9   ------> ADC3_IN7
      PF8   ------> ADC3_IN6
-     PC3   ------> FMC_SDCKE0
-     PD14   ------> FMC_D0_DA0
      PB12   ------> USB_OTG_HS_ULPI_D5
-     PD9   ------> FMC_D14_DA14
-     PD8   ------> FMC_D13_DA13
      PC0   ------> USB_OTG_HS_ULPI_STP
      PC2   ------> USB_OTG_HS_ULPI_DIR
-     PF12   ------> FMC_A6
-     PG1   ------> FMC_A11
-     PF15   ------> FMC_A9
      PA0/WKUP   ------> ADCx_IN0
-     PF13   ------> FMC_A7
-     PG0   ------> FMC_A10
-     PE8   ------> FMC_D5_DA5
-     PG5   ------> FMC_A15_BA1
-     PG4   ------> FMC_A14_BA0
      PH7   ------> I2C3_SCL
      PA5   ------> USB_OTG_HS_ULPI_CK
-     PF14   ------> FMC_A8
-     PF11   ------> FMC_SDNRAS
-     PE9   ------> FMC_D6_DA6
-     PE11   ------> FMC_D8_DA8
-     PE14   ------> FMC_D11_DA11
      PB10   ------> USB_OTG_HS_ULPI_D3
      PH6   ------> S_TIM12_CH1
      PH8   ------> I2C3_SDA
      PA3   ------> USB_OTG_HS_ULPI_D0
      PB1   ------> USB_OTG_HS_ULPI_D2
      PB0   ------> USB_OTG_HS_ULPI_D1
-     PE7   ------> FMC_D4_DA4
-     PE10   ------> FMC_D7_DA7
-     PE12   ------> FMC_D9_DA9
-     PE15   ------> FMC_D12_DA12
-     PE13   ------> FMC_D10_DA10
      PB11   ------> USB_OTG_HS_ULPI_D4
      PB14   ------> SPI2_MISO
      PB15   ------> SPI2_MOSI
@@ -532,18 +547,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(OTG_HS_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PE1 PE0 FMC_D5_Pin FMC_D6_Pin
-                           FMC_D8_Pin FMC_D11_Pin FMC_D4_Pin FMC_D7_Pin
-                           FMC_D9_Pin FMC_D12_Pin FMC_D10_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_0|FMC_D5_Pin|FMC_D6_Pin
-                          |FMC_D8_Pin|FMC_D11_Pin|FMC_D4_Pin|FMC_D7_Pin
-                          |FMC_D9_Pin|FMC_D12_Pin|FMC_D10_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
   /*Configure GPIO pins : ULPI_D7_Pin ULPI_D6_Pin ULPI_D5_Pin ULPI_D3_Pin
                            ULPI_D2_Pin ULPI_D1_Pin ULPI_D4_Pin */
   GPIO_InitStruct.Pin = ULPI_D7_Pin|ULPI_D6_Pin|ULPI_D5_Pin|ULPI_D3_Pin
@@ -562,16 +565,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
   HAL_GPIO_Init(ARDUINO_PWM_D3_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SDMMC_CK_Pin SDMMC_D3_Pin SDMMC_D2_Pin PC9
-                           PC8 */
-  GPIO_InitStruct.Pin = SDMMC_CK_Pin|SDMMC_D3_Pin|SDMMC_D2_Pin|GPIO_PIN_9
-                          |GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_SDMMC;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
   /*Configure GPIO pin : ARDUINO_PWM_D9_Pin */
   GPIO_InitStruct.Pin = ARDUINO_PWM_D9_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -579,16 +572,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
   HAL_GPIO_Init(ARDUINO_PWM_D9_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PG15 PG8 PG1 PG0
-                           FMC_BA1_Pin FMC_BA0_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_15|GPIO_PIN_8|GPIO_PIN_1|GPIO_PIN_0
-                          |FMC_BA1_Pin|FMC_BA0_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
   /*Configure GPIO pin : OTG_FS_VBUS_Pin */
   GPIO_InitStruct.Pin = OTG_FS_VBUS_Pin;
@@ -601,16 +584,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(Audio_INT_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : FMC_D2_Pin FMC_D3_Pin FMC_D1_Pin FMC_D15_Pin
-                           FMC_D0_Pin FMC_D14_Pin FMC_D13_Pin */
-  GPIO_InitStruct.Pin = FMC_D2_Pin|FMC_D3_Pin|FMC_D1_Pin|FMC_D15_Pin
-                          |FMC_D0_Pin|FMC_D14_Pin|FMC_D13_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pins : OTG_FS_P_Pin OTG_FS_N_Pin OTG_FS_ID_Pin */
   GPIO_InitStruct.Pin = OTG_FS_P_Pin|OTG_FS_N_Pin|OTG_FS_ID_Pin;
@@ -656,18 +629,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(uSD_Detect_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PF0 PF1 PF2 PF3
-                           PF4 PF5 PF12 PF15
-                           PF13 PF14 PF11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_12|GPIO_PIN_15
-                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_11;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
-
   /*Configure GPIO pin : LCD_BL_CTRL_Pin */
   GPIO_InitStruct.Pin = LCD_BL_CTRL_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -680,14 +641,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(OTG_FS_OverCurrent_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : SDMMC_D0_Pin */
-  GPIO_InitStruct.Pin = SDMMC_D0_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_SDMMC;
-  HAL_GPIO_Init(SDMMC_D0_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : TP3_Pin NC2_Pin */
   GPIO_InitStruct.Pin = TP3_Pin|NC2_Pin;
@@ -748,14 +701,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
   HAL_GPIO_Init(ULPI_NXT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : FMC_SDNME_Pin PH3 */
-  GPIO_InitStruct.Pin = FMC_SDNME_Pin|GPIO_PIN_3;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
-
   /*Configure GPIO pins : ARDUINO_D4_Pin ARDUINO_D2_Pin EXT_RST_Pin */
   GPIO_InitStruct.Pin = ARDUINO_D4_Pin|ARDUINO_D2_Pin|EXT_RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -770,14 +715,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PC3 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : ULPI_STP_Pin ULPI_DIR_Pin */
   GPIO_InitStruct.Pin = ULPI_STP_Pin|ULPI_DIR_Pin;
