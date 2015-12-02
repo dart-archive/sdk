@@ -179,9 +179,13 @@ There are three ways to reproduce this error:
               ["export", script, 'to', 'file', snapshotFileName],
               checkExitCode: false, timeout: timeout);
         } else {
-          exitCode = await fletch.runInSession(
-              ["run", "--terminate-debugger", script],
+          exitCode = await fletch.runInSession(["compile", script],
               checkExitCode: false, timeout: timeout);
+          if (exitCode == 0) {
+            exitCode = await fletch.runInSession(
+                ["run", "--terminate-debugger"],
+                checkExitCode: false, timeout: timeout);
+          }
         }
       } finally {
         if (exitCode == COMPILER_EXITCODE_CRASH) {
@@ -190,7 +194,7 @@ There are three ways to reproduce this error:
           fletch.killVmProcess(ProcessSignal.SIGTERM);
         }
         int vmExitCode = await vmTerminationFuture;
-        fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode. "
+        fletch.stdout.writeln("Fletch VM exitcode is $vmExitCode. "
             "Exit code reported by ${fletch.executable} is $exitCode");
         if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
           exitCode = vmExitCode;
@@ -219,6 +223,8 @@ There are three ways to reproduce this error:
 
     if (exitCode == null) {
       exitCode = COMPILER_EXITCODE_CRASH;
+      fletch.stdout.writeln(
+          '**test.py** could not determine a good exitcode, using $exitCode.');
     }
 
     if (endedSession) {
@@ -449,7 +455,8 @@ class FletchSessionHelper {
     bool thisCommandTimedout = false;
 
     int exitCode = await exitCodeWithTimeout(process, timeout, () {
-      print("Timed out: $commandDescription");
+      stdout.writeln(
+          "\n=> Reached command timeout (sent SIGTERM to fletch-vm)");
       thisCommandTimedout = true;
       hasTimedOut = true;
       if (vmProcess != null) {
@@ -459,7 +466,7 @@ class FletchSessionHelper {
     await stdoutFuture;
     await stderrFuture;
 
-    stdout.add(UTF8.encode("\n => $exitCode\n"));
+    stdout.writeln("\n=> $exitCode");
     if (checkExitCode && (thisCommandTimedout || exitCode != 0)) {
       throw new UnexpectedExitCode(exitCode, executable, arguments);
     }
@@ -529,7 +536,8 @@ class FletchSessionHelper {
   /// [exitCodeWithTimeout] to ensure termination within [timeout] seconds.
   Future<int> shutdownVm(int timeout) async {
     await exitCodeWithTimeout(vmProcess, timeout, () {
-      print("Timed out: $executable-vm");
+      stdout.writeln(
+          "\n**fletch-vm** Reached total timeout (sent SIGTERM to fletch-vm)");
       killedVmProcess = true;
       hasTimedOut = true;
     });
