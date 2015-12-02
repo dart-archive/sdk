@@ -24,6 +24,9 @@ import '../fletchc/run.dart' show
 
 import 'package:fletchc/program_info.dart' as program_info;
 
+import 'utils.dart' show
+    withTempDirectory;
+
 const String buildDirectory =
     const String.fromEnvironment('test.dart.build-dir');
 
@@ -116,15 +119,6 @@ String testExpectationFilename(String name, [String generated = ''])
 
 String testDirectory([String generated = ''])
     => 'tests/snapshot_stacktrace_tests$generated';
-
-Future withTempDirectory(Future f(Directory)) async {
-  var directory = await Directory.systemTemp.createTemp();
-  try {
-    return await f(directory);
-  } finally {
-    await directory.delete(recursive: true);
-  }
-}
 
 main() async {
   var tests = await listTests(true);

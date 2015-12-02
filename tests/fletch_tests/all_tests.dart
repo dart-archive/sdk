@@ -25,6 +25,8 @@ import 'sentence_tests.dart' as sentence_tests;
 
 import 'message_tests.dart' as message_tests;
 
+import 'multiprogram_tests.dart' as multiprogram_tests;
+
 import 'snapshot_stacktrace_tests.dart' as snapshot_stacktrace_tests;
 
 import '../service_tests/service_tests.dart' as service_tests;
@@ -96,6 +98,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'sentence_tests': sentence_tests.main,
 
   'message_tests': message_tests.main,
+
+  'multiprogram_tests/*': multiprogram_tests.listTests,
 
   'serialize_settings_tests': serialize_settings_tests.main,
 

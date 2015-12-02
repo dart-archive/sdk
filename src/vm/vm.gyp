@@ -303,6 +303,19 @@
       ],
     },
     {
+      'target_name': 'multiprogram_cc_test',
+      'type': 'executable',
+      'dependencies': [
+        'libfletch',
+      ],
+      'defines': [
+        'TESTING',
+      ],
+      'sources': [
+        'multiprogram_test.cc',
+      ],
+    },
+    {
       'target_name': 'ffi_test_library',
       'type': 'shared_library',
       'dependencies': [

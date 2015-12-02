@@ -62,6 +62,14 @@
       ],
     },
     {
+      'target_name': 'multiprogram_cc_test',
+      'type': 'none',
+      'toolsets': ['target'],
+      'dependencies': [
+        'src/vm/vm.gyp:multiprogram_cc_test',
+      ],
+    },
+    {
       'target_name': 'copy_dart',
       'type': 'none',
       'toolsets': ['host'],
