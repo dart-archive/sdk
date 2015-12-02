@@ -4,6 +4,20 @@
 
 BOARD="stm32756g_eval"
 STLINK="stlink-v2-1"
+ROOT="$(dirname $(dirname $(dirname $(follow_links $0))))"
+OS="`uname`"
+case $OS in
+  'Linux')
+    OS='linux'
+    ;;
+  'Darwin')
+    OS='mac'
+    ;;
+  *)
+    echo "Unsupported OS $OS"
+    exit 1
+    ;;
+esac
 
 while [ $# -gt ${EXPECTED_ARGS} ]; do
   case $1 in
@@ -29,12 +43,23 @@ while [ $# -gt ${EXPECTED_ARGS} ]; do
       OPENOCDHOME=$2
       shift 2
       ;;
+    --gdb-embedded)
+      T=gcc-arm-embedded/bin/arm-none-eabi-gdb
+      GDB="$ROOT/third_party/gcc-arm-embedded/$OS/$T"
+      shift 1
+      ;;
+    --gdb)
+      GDB=$2
+      shift 2
+      ;;
     --help | -h)
       echo "Options: --disco or -d    Use discovery f7 board configuration"
       echo "         --nucleo or -n   Use nucleo F4 board configuration"
       echo "         --board or -b    Manually set board name"
       echo "         --link or -l     Manually set debug link type"
       echo "         --openocd or -o  Set openocd home directory"
+      echo "         --gdb-embedded   Use gdb from third_party/gcc-arm-embedded"
+      echo "         --gdb            Set gdb executable"
       echo "         --help or -h     Print this message"
       exit 0
       ;;
@@ -46,6 +71,9 @@ while [ $# -gt ${EXPECTED_ARGS} ]; do
 done
 
 if [ -z "$OPENOCDHOME" ]; then
-  ROOT="$(dirname $(dirname $(dirname $(readlink -f $0))))"
-  OPENOCDHOME="$ROOT/third_party/openocd/linux/openocd/"
+  OPENOCDHOME="$ROOT/third_party/openocd/$OS/openocd/"
+fi
+
+if [ -z "$GDB" ]; then
+  GDB=arm-none-eabi-gdb
 fi
