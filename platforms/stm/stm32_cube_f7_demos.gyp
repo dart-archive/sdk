@@ -33,6 +33,13 @@
           '<(discovery_projects)/Applications/STemWin/<(project_name)',
         'project_include_path': '<(project_path)/Inc/',
         'project_source_path': '<(project_path)/Src/',
+        'ldflags': [
+          '-specs=nosys.specs',
+          '-specs=nano.specs',
+          '-L<(stm32_cube_f7)/Middlewares/ST/STemWin/Lib/',
+          '-T<(project_path)/SW4STM32/STM32746G_DISCOVERY/'
+              'STM32F746NGHx_FLASH.ld',
+        ],
       },
       'type': 'executable',
       'includes': [
@@ -58,11 +65,19 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
       ],
-      'ldflags': [
-        '-specs=nosys.specs',
-        '-specs=nano.specs',
-        '-L<(stm32_cube_f7)/Middlewares/ST/STemWin/Lib/',
-        '-T<(project_path)/SW4STM32/STM32746G_DISCOVERY/STM32F746NGHx_FLASH.ld',
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '<@(ldflags)',
+            ],
+          },
+        }],
+        ['OS=="linux"', {
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
       ],
       'libraries': [
         '-l:STemWin528_CM7_GCC.a',
@@ -107,6 +122,11 @@
         'project_source_path': '<(project_path)/Src/',
         'usb_host_library':
           '<(stm32_cube_f7)/Middlewares/ST/STM32_USB_Host_Library/',
+        'ldflags': [
+          '-specs=nosys.specs',
+          '-specs=nano.specs',
+          '-T<(project_path)/SW4STM32/STM32F7-DISCO/STM32F746NGHx_FLASH.ld',
+        ],
       },
       'type': 'executable',
       'includes': [
@@ -156,10 +176,19 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_audio.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_ts.c',
       ],
-      'ldflags': [
-        '-specs=nosys.specs',
-        '-specs=nano.specs',
-        '-T<(project_path)/SW4STM32/STM32F7-DISCO/STM32F746NGHx_FLASH.ld',
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '<@(ldflags)',
+            ],
+          },
+        }],
+        ['OS=="linux"', {
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
       ],
     },
     {
@@ -198,6 +227,10 @@
           '<(discovery_projects)/Applications/LwIP/<(project_name)',
         'project_include_path': '<(project_path)/Inc/',
         'project_source_path': '<(project_path)/Src/',
+        'ldflags': [
+          '-T<(project_path)/SW4STM32/STM32746G_DISCOVERY/'
+              'STM32F746NGHx_FLASH.ld',
+        ],
       },
       'type': 'executable',
       'includes': [
@@ -229,8 +262,19 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_lcd.c',
       ],
-      'ldflags': [
-        '-T<(project_path)/SW4STM32/STM32746G_DISCOVERY/STM32F746NGHx_FLASH.ld',
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '<@(ldflags)',
+            ],
+          },
+        }],
+        ['OS=="linux"', {
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
       ],
     },
     {
@@ -269,6 +313,13 @@
         'usb_host_library':
           '<(stm32_cube_f7)/Middlewares/ST/STM32_USB_Host_Library/',
         'fat_fs_library': '<(stm32_cube_f7)/Middlewares/Third_Party/FatFs/',
+        'ldflags': [
+          '-specs=nosys.specs',
+          '-specs=nano.specs',
+          '-L<(stm32_cube_f7)/Middlewares/ST/STemWin/Lib/',
+          '-L<(project_path)/STemWin_Addons/',
+          '-T<(project_path)/SW4STM32/STM32F7-DISCO/STM32F746NGHx_FLASH.ld',
+        ],
       },
       'type': 'executable',
       'includes': [
@@ -350,12 +401,19 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_qspi.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_ts.c',
       ],
-      'ldflags': [
-        '-specs=nosys.specs',
-        '-specs=nano.specs',
-        '-L<(stm32_cube_f7)/Middlewares/ST/STemWin/Lib/',
-        '-L<(project_path)/STemWin_Addons/',
-        '-T<(project_path)/SW4STM32/STM32F7-DISCO/STM32F746NGHx_FLASH.ld',
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '<@(ldflags)',
+            ],
+          },
+        }],
+        ['OS=="linux"', {
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
       ],
       'libraries': [
         '-l:STM32746G_Discovery_STemWin_Addons_GCC.a',

@@ -8,8 +8,41 @@
     'stm32_cube_f7_bsp_discovery':
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
     'gcc-arm-embedded':
-      '<(DEPTH)/third_party/gcc-arm-embedded/linux/gcc-arm-embedded/bin',
+      '<(DEPTH)/third_party/gcc-arm-embedded/<(OS)/gcc-arm-embedded/bin',
     'objcopy': '<(gcc-arm-embedded)/arm-none-eabi-objcopy',
+
+    # Common flags (C and C++for the GCC ARM Embedded toolchain.
+    'common_cross_gcc_cflags': [
+      '-mcpu=cortex-m7',
+      '-mthumb',
+      '-mfloat-abi=hard',
+      '-mfpu=fpv5-sp-d16',
+      '-Os',
+      '-Wall',
+      '-fmessage-length=0',
+      '-ffunction-sections',
+    ],
+
+    # Use the gnu language dialect to get math.h constants
+    'common_cross_gcc_cflags_c': [
+      '--std=gnu99',
+    ],
+
+    # Use the gnu language dialect to get math.h constants
+    'common_cross_gcc_cflags_cc': [
+      '-std=c++11',
+    ],
+
+    # Common linker flags for the GCC ARM Embedded toolchain.
+    'common_cross_gcc_ldflags': [
+      '-mcpu=cortex-m7',
+      '-mthumb',
+      '-mfloat-abi=hard',
+      '-mfpu=fpv5-sp-d16',
+      '-Wl,-Map=output.map',
+      '-Wl,--gc-sections',
+      '-L/GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
+    ],
   },
 
   'includes': [
@@ -17,7 +50,6 @@
   ],
 
   'target_defaults': {
-
     'configurations': {
       'fletch_stm': {
         'abstract': 1,
@@ -32,39 +64,43 @@
               'USE_STM32746G_DISCOVERY',
               'USE_STM32746G_DISCO',
             ],
+            'conditions': [
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  # This removes the option -fasm-blocks that GCC ARM Embedded
+                  # does not support.
+                  'GCC_CW_ASM_SYNTAX': 'NO',
+                  # This removes the option -gdwarf-2'.
+                  # TODO(sgjesse): Revisit debug symbol generation.
+                  'GCC_GENERATE_DEBUGGING_SYMBOLS': 'NO',
+                  'OTHER_CFLAGS': [
+                    '<@(common_cross_gcc_cflags)',
+                    '<@(common_cross_gcc_cflags_c)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS' : [
+                    '<@(common_cross_gcc_cflags)',
+                    '<@(common_cross_gcc_cflags_cc)',
+                  ],
 
-            'cflags': [
-              '-mcpu=cortex-m7',
-              '-mthumb',
-              '-mfloat-abi=hard',
-              '-mfpu=fpv5-sp-d16',
-              '-Os',
-              '-Wall',
-              '-fmessage-length=0',
-              '-ffunction-sections',
-            ],
-
-            # Use the gnu language dialect to get math.h constants
-            'cflags_c': [
-              '--std=gnu99',
-            ],
-
-            # Use the gnu language dialect to get math.h constants
-            'cflags_cc': [
-              '--std=gnu++11',
-            ],
-
-            'include_dirs': [
-            ],
-
-            'ldflags': [
-              '-mcpu=cortex-m7',
-              '-mthumb',
-              '-mfloat-abi=hard',
-              '-mfpu=fpv5-sp-d16',
-              '-Wl,-Map=output.map',
-              '-Wl,--gc-sections',
-              '-L/GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
+                  'OTHER_LDFLAGS': [
+                    '<@(common_cross_gcc_ldflags)',
+                  ],
+                },
+              }],
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cross_gcc_cflags)',
+                ],
+                'cflags_c': [
+                  '<@(common_cross_gcc_cflags_c)',
+                ],
+                'cflags_cc': [
+                  '<@(common_cross_gcc_cflags_cc)',
+                ],
+                'ldflags': [
+                  '<@(common_cross_gcc_ldflags)',
+                ],
+              }],
             ],
           }],
 

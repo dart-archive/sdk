@@ -30,6 +30,18 @@
         'source_path': '<(project_path)/src/',
         'generated_path': '<(project_path)/generated',
         'template_path': '<(project_path)/template/',
+        'ldflags': [
+          '-specs=nosys.specs',
+          '-specs=nano.specs',
+          # TODO(340): Why does this not work???
+          #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
+          # TODO(340): Why is this needed???
+          '-T../../platforms/stm/disco_fletch/generated/SW4STM32/'
+            'configuration/STM32F746NGHx_FLASH.ld'
+        ],
+        'cflags': [
+          '-Wno-write-strings'
+        ],
       },
       'type': 'executable',
       'includes': [
@@ -39,9 +51,6 @@
       'include_dirs': [
         '<(generated_path)/Inc',
         '<(source_path)',
-      ],
-      'cflags': [
-        '-Wno-write-strings'
       ],
       'sources': [
         # Application.
@@ -60,14 +69,28 @@
         # Board support packages.
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
       ],
-      'ldflags': [
-        '-specs=nosys.specs',
-        '-specs=nano.specs',
-        # TODO(340): Why does this not work???
-        #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
-        # TODO(340): Why is this needed???
-        '-T../../platforms/stm/disco_fletch/generated/SW4STM32/'
-          'configuration/STM32F746NGHx_FLASH.ld'
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_CFLAGS': [
+              '<@(cflags)',
+            ],
+            'OTHER_CPLUSPLUSFLAGS' : [
+              '<@(cflags)',
+            ],
+            'OTHER_LDFLAGS': [
+              '<@(ldflags)',
+            ],
+          },
+        }],
+        ['OS=="linux"', {
+          'cflags': [
+            '<@(cflags)',
+          ],
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
       ],
     },
     {
