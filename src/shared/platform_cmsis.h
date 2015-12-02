@@ -94,7 +94,9 @@ namespace Platform {
 class MutexImpl {
  public:
   MutexImpl() {
+#ifdef CMSIS_OS_RTX
     memset((osMutex(mutex_def_))->mutex, 0, kMutexSize);
+#endif
     mutex_ = osMutexCreate(osMutex(mutex_def_));
     ASSERT(mutex_ != NULL);
   }
@@ -112,13 +114,15 @@ class MutexImpl {
 class MonitorImpl {
  public:
   MonitorImpl() {
+#ifdef CMSIS_OS_RTX
     memset((osMutex(mutex_def_))->mutex, 0, kMutexSize);
+    memset((osMutex(internal_def_))->mutex, 0, kMutexSize);
+    memset((osSemaphore(semaphore_def_))->semaphore, 0, kSemaphoreSize);
+#endif
     mutex_ = osMutexCreate(osMutex(mutex_def_));
     ASSERT(mutex_ != NULL);
-    memset((osMutex(internal_def_))->mutex, 0, kMutexSize);
     internal_ = osMutexCreate(osMutex(internal_def_));
     ASSERT(internal_ != NULL);
-    memset((osSemaphore(semaphore_def_))->semaphore, 0, kSemaphoreSize);
     semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_), 0);
     ASSERT(semaphore_ != NULL);
     waiting_ = 0;

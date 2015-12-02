@@ -21,7 +21,9 @@ static const int kFletchStackSizeInWords = kFletchStackSize / sizeof(uint32_t);
 
 static osThreadDef_t cmsis_thread_pool[kNumberOfFletchThreads];
 static char cmsis_thread_no = 0;
+#ifdef CMSIS_OS_RTX
 static uint32_t cmsis_stack[kNumberOfFletchThreads][kFletchStackSizeInWords];
+#endif
 
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
@@ -42,7 +44,9 @@ ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   threadDef->pthread = reinterpret_cast<void (*)(const void*)>(run);
   threadDef->tpriority = osPriorityNormal;
   threadDef->stacksize = kFletchStackSize;
+#ifdef CMSIS_OS_RTX
   threadDef->stack_pointer = cmsis_stack[thread_no];
+#endif
 
   osThreadId thread = osThreadCreate(threadDef, data);
 

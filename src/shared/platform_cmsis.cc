@@ -9,12 +9,10 @@
 // the platform header to include.
 #include "src/shared/platform.h"  // NOLINT
 
-#include <errno.h>
 #include <sys/time.h>
 #include <time.h>
 #include <signal.h>
 #include <unistd.h>
-#include <cmsis_os.h>
 
 #include "src/shared/utils.h"
 
