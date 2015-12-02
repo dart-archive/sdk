@@ -16,6 +16,11 @@ void EventHandler::Interrupt() {
   UNIMPLEMENTED();
 }
 
+Object* EventHandler::Add(Process* process, Object* id, Port* port) {
+  UNIMPLEMENTED();
+  return NULL;
+}
+
 void EventHandler::Run() {
   UNIMPLEMENTED();
 }
