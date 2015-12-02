@@ -6,8 +6,6 @@ self/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expect
 zone_helper/testAlwaysFails: Fail, OK # This is a test of this suite, failure is expected.
 self/testNeverCompletes: Timeout # This is a test of this suite, timeout is expected.
 
-multiprogram_tests/multiprogram_snapshots: Fail
-
 # Stored closures not updated
 incremental/*/stored_closure: Fail
 incremental/*/stored_instance_tearoff: Fail

@@ -4,27 +4,43 @@
 
 #include "src/shared/flags.h"
 #include "src/shared/test_case.h"
+#include "src/shared/platform.h"
 
 #include "include/fletch_api.h"
 
 namespace fletch {
 
-static void Main(int argc, char** argv) {
+static int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
 
   FletchSetup();
 
   if (argc == 1) FATAL("Expected 1 or more snapshots as argument");
 
-  // TODO(kustermann): Implement multiprogram support.
-  UNREACHABLE();
+  int program_count = argc - 1;
+  FletchProgram* programs = new FletchProgram[program_count];
+  for (int i = 0; i < program_count; i++) {
+    List<uint8> bytes = Platform::LoadFile(argv[1 + i]);
+    if (bytes.is_empty()) FATAL("Invalid snapshot");
+    programs[i] = FletchLoadSnapshot(bytes.data(), bytes.length());
+    bytes.Delete();
+  }
+
+  int result = FletchRunMultipleMain(program_count, programs);
+
+  for (int i = 0; i < program_count; i++) {
+    FletchDeleteProgram(programs[i]);
+  }
+
+  delete[] programs;
 
   FletchTearDown();
+
+  return result;
 }
 
 }  // namespace fletch
 
 int main(int argc, char** argv) {
-  fletch::Main(argc, argv);
-  return 0;
+  return fletch::Main(argc, argv);
 }
