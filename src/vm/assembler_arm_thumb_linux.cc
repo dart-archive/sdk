@@ -29,5 +29,5 @@ const char* Assembler::LabelPrefix() {
 
 }  // namespace fletch
 
-#endif  // defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_LINUX) && \
-    defined(FLETCH_THUMB_ONLY)
+#endif  // defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_LINUX) &&
+        // defined(FLETCH_THUMB_ONLY)
