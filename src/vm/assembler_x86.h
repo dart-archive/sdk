@@ -93,12 +93,12 @@ class Operand {
 
   int8 disp8() const {
     ASSERT(length_ >= 2);
-    return *bit_cast<const int8*>(&encoding_[length_ - 1]);
+    return *reinterpret_cast<const int8*>(&encoding_[length_ - 1]);
   }
 
   int32 disp32() const {
     ASSERT(length_ >= 5);
-    return *bit_cast<const int32*>(&encoding_[length_ - 4]);
+    return *reinterpret_cast<const int32*>(&encoding_[length_ - 4]);
   }
 
   bool IsRegister(Register reg) const {
@@ -124,12 +124,12 @@ class Operand {
 
   void SetDisp8(int8 disp) {
     ASSERT(length_ == 1 || length_ == 2);
-    *bit_cast<int8*>(&encoding_[length_++]) = disp;
+    *reinterpret_cast<int8*>(&encoding_[length_++]) = disp;
   }
 
   void SetDisp32(int32 disp) {
     ASSERT(length_ == 1 || length_ == 2);
-    *bit_cast<int32*>(&encoding_[length_]) = disp;
+    *reinterpret_cast<int32*>(&encoding_[length_]) = disp;
     length_ += 4;
   }
 

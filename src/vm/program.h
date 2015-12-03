@@ -256,8 +256,13 @@ class Program {
 
  private:
   // Access to the address of the first and last root.
-  Object** first_root_address() { return bit_cast<Object**>(&null_object_); }
-  Object** last_root_address() { return bit_cast<Object**>(&dispatch_table_); }
+  Object** first_root_address() {
+    return reinterpret_cast<Object**>(&null_object_);
+  }
+
+  Object** last_root_address() {
+    return reinterpret_cast<Object**>(&dispatch_table_);
+  }
 
   void ValidateGlobalHeapsAreConsistent();
 

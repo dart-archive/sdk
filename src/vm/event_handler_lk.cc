@@ -148,7 +148,7 @@ void EventHandler::Run() {
     }
 
     if (has_result && result.ctx != NULL) {
-      int64 value = *bit_cast<int64*>(&result.packet.value);
+      int64 value = *reinterpret_cast<int64*>(&result.packet.value);
       Send(reinterpret_cast<Port*>(result.ctx), value);
     }
 

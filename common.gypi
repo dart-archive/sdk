@@ -134,12 +134,20 @@
           'OTHER_CPLUSPLUSFLAGS' : [
             '-O3',
             '-fomit-frame-pointer',
+            # Strict aliasing optimizations are not safe for the
+            # type of VM code that we write. We operate with
+            # raw memory aliased with a mixture of pointer types.
+            '-fno-strict-aliasing',
           ],
         },
 
         'cflags': [
           '-O3',
           '-fomit-frame-pointer',
+            # Strict aliasing optimizations are not safe for the
+            # type of VM code that we write. We operate with
+            # raw memory aliased with a mixture of pointer types.
+          '-fno-strict-aliasing',
         ],
       },
 
