@@ -17,7 +17,7 @@ class Mailbox {
  public:
   Mailbox() : last_message_(NULL), current_message_(NULL) {}
   ~Mailbox() {
-    while (last_message_ != NULL) {
+    while (last_message_.load() != NULL) {
       MessageType* entry = last_message_;
       last_message_ = entry->next();
       delete entry;
@@ -27,7 +27,7 @@ class Mailbox {
       current_message_ = entry->next();
       delete entry;
     }
-    ASSERT(last_message_ == NULL);
+    ASSERT(last_message_.load() == NULL);
   }
 
   void EnqueueEntry(MessageType* entry) {
@@ -40,7 +40,7 @@ class Mailbox {
   }
 
   // Thread-safe way of asking if the mailbox is empty.
-  bool IsEmpty() const { return last_message_ == NULL; }
+  bool IsEmpty() const { return last_message_.load() == NULL; }
 
   void TakeQueue() {
     ASSERT(current_message_ == NULL);

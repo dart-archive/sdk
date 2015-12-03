@@ -223,7 +223,7 @@ class Process {
 
   ThreadState* thread_state() const { return thread_state_; }
   void set_thread_state(ThreadState* thread_state) {
-    ASSERT(thread_state == NULL || thread_state_ == NULL);
+    ASSERT(thread_state == NULL || thread_state_.load() == NULL);
     thread_state_ = thread_state;
   }
 
@@ -384,7 +384,7 @@ inline LookupCache::Entry* Process::LookupEntry(Object* receiver,
 
 inline bool Process::ChangeState(State from, State to) {
   if (from == kRunning || from == kYielding) {
-    ASSERT(thread_state_ == NULL);
+    ASSERT(thread_state_.load() == NULL);
     ASSERT(state_ == from);
     state_ = to;
     return true;
