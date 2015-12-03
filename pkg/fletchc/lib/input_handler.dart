@@ -225,11 +225,21 @@ class InputHandler {
           writeStdoutLine('### invalid breakpoint number: $id');
           break;
         }
-        await session.deleteBreakpoint(id);
+        Breakpoint breakpoint = await session.deleteBreakpoint(id);
+        if (breakpoint == null) {
+          writeStdoutLine("### invalid breakpoint id: $id");
+          break;
+        }
+        writeStdoutLine("### deleted breakpoint: $breakpoint");
         break;
       case 'fibers':
         if (checkRunning('cannot show fibers')) {
-          await handleProcessStopResponse(await session.fibers());
+          List<StackTrace> traces = await session.fibers();
+          for (int fiber = 0; fiber < traces.length; ++fiber) {
+            writeStdoutLine('\nfiber $fiber');
+            writeStdout(traces[fiber].format());
+          }
+          writeStdoutLine('');
         }
         break;
       case 'finish':
@@ -253,7 +263,15 @@ class InputHandler {
         await handleProcessStopResponse(await session.restart());
         break;
       case 'lb':
-        session.listBreakpoints();
+        List<Breakpoint> breakpoints = session.breakpoints();
+        if (breakpoints == null || breakpoints.isEmpty) {
+          writeStdoutLine('### no breakpoints');
+        } else {
+          writeStdoutLine("### breakpoints:");
+          for (var bp in breakpoints) {
+            writeStdoutLine('$bp');
+          }
+        }
         break;
       case 'p':
         if (!checkLoaded('nothing to print')) {

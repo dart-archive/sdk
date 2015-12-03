@@ -370,7 +370,6 @@ class Session extends FletchVmSession {
                                        Uri file,
                                        int position) async {
     if (position == null) {
-      writeStdoutLine("### Failed setting breakpoint for $name");
       return null;
     }
     DebugInfo debugInfo = compiler.debugInfoForPosition(
@@ -378,12 +377,10 @@ class Session extends FletchVmSession {
         position,
         fletchSystem);
     if (debugInfo == null) {
-      writeStdoutLine("### Failed setting breakpoint for $name");
       return null;
     }
     SourceLocation location = debugInfo.locationForPosition(position);
     if (location == null) {
-      writeStdoutLine("### Failed setting breakpoint for $name");
       return null;
     }
     FletchFunction function = debugInfo.function;
@@ -394,10 +391,7 @@ class Session extends FletchVmSession {
   Future setFileBreakpointFromPattern(Uri file,
                                       int line,
                                       String pattern) async {
-    if (line < 1) {
-      writeStdoutLine("### Invalid line number: $line");
-      return null;
-    }
+    assert(line > 0);
     int position = compiler.positionInFileFromPattern(file, line - 1, pattern);
     return setFileBreakpointFromPosition(
         '$file:$line:$pattern', file, position);
@@ -415,25 +409,17 @@ class Session extends FletchVmSession {
     assert(response.id == id);
   }
 
-  Future deleteBreakpoint(int id) async {
+  Future<Breakpoint> deleteBreakpoint(int id) async {
     if (!debugState.breakpoints.containsKey(id)) {
-      writeStdoutLine("### invalid breakpoint id: $id");
       return null;
     }
     await doDeleteBreakpoint(id);
-    writeStdoutLine("deleted breakpoint: ${debugState.breakpoints[id]}");
-    debugState.breakpoints.remove(id);
+    return debugState.breakpoints.remove(id);
   }
 
-  void listBreakpoints() {
-    if (debugState.breakpoints.isEmpty) {
-      writeStdoutLine('No breakpoints.');
-      return;
-    }
-    writeStdoutLine("Breakpoints:");
-    for (var bp in debugState.breakpoints.values) {
-      writeStdoutLine('$bp');
-    }
+  List<Breakpoint> breakpoints() {
+    assert(debugState.breakpoints != null);
+    return debugState.breakpoints.values.toList();
   }
 
   Iterable<Uri> findSourceFiles(Pattern pattern) {
@@ -597,27 +583,24 @@ class Session extends FletchVmSession {
     return debugState.currentStackTrace;
   }
 
-  Future backtraceForFiber(int fiber) async {
+  Future<StackTrace> backtraceForFiber(int fiber) async {
     ProcessBacktrace backtraceResponse =
         await runCommand(new ProcessFiberBacktraceRequest(fiber));
-    StackTrace stackTrace = stackTraceFromBacktraceResponse(backtraceResponse);
-    writeStdoutLine('fiber $fiber');
-    String trace = stackTrace.format(0);
-    writeStdout(trace);
+    return stackTraceFromBacktraceResponse(backtraceResponse);
   }
 
-  Future fibers() async {
+  Future<List<StackTrace>> fibers() async {
     assert(running);
     await runCommand(const NewMap(MapId.fibers));
     ProcessNumberOfStacks response =
         await runCommand(const ProcessAddFibersToMap());
     int numberOfFibers = response.value;
+    List<StackTrace> stacktraces = new List(numberOfFibers);
     for (int i = 0; i < numberOfFibers; i++) {
-      writeStdoutLine('');
-      await backtraceForFiber(i);
+      stacktraces[i] = await backtraceForFiber(i);
     }
-    writeStdoutLine('');
     await runCommand(const DeleteMap(MapId.fibers));
+    return stacktraces;
   }
 
   String dartValueToString(DartValue value) {

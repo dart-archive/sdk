@@ -524,15 +524,26 @@ Future<int> deleteBreakpointDebuggerTask(
     throwInternalError('Invalid breakpoint id: $breakpoint');
   }
 
-  await session.deleteBreakpoint(id);
-
+  Breakpoint bp = await session.deleteBreakpoint(id);
+  if (bp == null) {
+    throwInternalError('Invalid breakpoint id: $id');
+  }
+  print('Deleted breakpoint: $bp');
   return 0;
 }
 
 Future<int> listBreakpointsDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   Session session = attachToSession(state, commandSender);
-  session.listBreakpoints();
+  List<Breakpoint> breakpoints = session.breakpoints();
+  if (breakpoints == null || breakpoints.isEmpty) {
+    print('No breakpoints');
+  } else {
+    print('Breakpoints:');
+    for (Breakpoint bp in breakpoints) {
+      print(bp);
+    }
+  }
   return 0;
 }
 
@@ -565,8 +576,12 @@ Future<int> fibersDebuggerTask(
   if (!session.running) {
     throwInternalError('### process not running, cannot show fibers');
   }
-  vm.Command response =   await session.fibers();
-  print(session.processStopResponseToString(response));
+  List<StackTrace> traces = await session.fibers();
+  print('');
+  for (int fiber = 0; fiber < traces.length; ++fiber) {
+    print('fiber $fiber');
+    print(traces[fiber].format());
+  }
   return 0;
 }
 

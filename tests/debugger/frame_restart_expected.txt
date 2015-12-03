@@ -86,7 +86,7 @@ Stack trace:
   11: foo         @foo(i - 1)
   12: main        @foo(10)
 > d 0
-deleted breakpoint: id: '0' method: 'breakHere' bytecode index: '0'
+### deleted breakpoint: id: '0' method: 'breakHere' bytecode index: '0'
 > f 3
 > restart
 2
