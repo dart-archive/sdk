@@ -193,6 +193,13 @@ class MarkAndChainStacksVisitor : public PointerVisitor {
 
 class FreeList {
  public:
+#if defined(_MSC_VER)
+  // Work around Visual Studo 2013 bug 802058
+  FreeList(void) {
+    memset(buckets_, 0, kNumberOfBuckets * sizeof (FreeListChunk*));
+  }
+#endif
+
   void AddChunk(uword free_start, uword free_size) {
     // If the chunk is too small to be turned into an actual
     // free list chunk we turn it into fillers to be coalesced
@@ -281,7 +288,12 @@ class FreeList {
   // Buckets of power of two sized free lists chunks. Bucket i
   // contains chunks of size larger than 2 ** (i + 1).
   static const int kNumberOfBuckets = 12;
+#if defined(_MSC_VER)
+  // Work around Visual Studo 2013 bug 802058
+  FreeListChunk* buckets_[kNumberOfBuckets];
+#else
   FreeListChunk* buckets_[kNumberOfBuckets] = { NULL };
+#endif
 };
 
 class SweepingVisitor : public HeapObjectVisitor {
