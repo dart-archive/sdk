@@ -5,10 +5,17 @@
 #ifndef SRC_SHARED_VERSION_H_
 #define SRC_SHARED_VERSION_H_
 
+#ifdef _MSC_VER
+// TODO(herhut): Do we need a __declspec here for Windows?
+#define FLETCH_VISIBILITY_DEFAULT
+#else
+#define FLETCH_VISIBILITY_DEFAULT __attribute__((visibility("default")))
+#endif
+
 namespace fletch {
 
 extern "C"
-__attribute__((visibility("default")))
+FLETCH_VISIBILITY_DEFAULT
 const char* GetVersion();
 
 }  // namespace fletch

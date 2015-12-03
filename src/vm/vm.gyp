@@ -22,14 +22,6 @@
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
-      'link_settings': {
-        'libraries': [
-          '-lpthread',
-          '-ldl',
-          # TODO(ahe): Not sure this option works as intended on Mac.
-          '-rdynamic',
-        ],
-      },
       'conditions': [
         [ 'OS=="mac"', {
           'dependencies': [
@@ -39,11 +31,18 @@
             '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
           ],
         }],
-      ],
-
-      # TODO(kasperl): Now that we no longer use weak symbols, should we remove
-      #                the below conditions?
-      'conditions': [
+        [ 'OS!="win"', { 
+          'link_settings': {
+            'libraries': [
+              '-lpthread',
+              '-ldl',
+              # TODO(ahe): Not sure this option works as intended on Mac.
+              '-rdynamic',
+            ],
+          },
+        }],
+        # TODO(kasperl): Now that we no longer use weak symbols, should we
+        #                remove the below conditions?
         [ 'OS=="linux"', {
           'link_settings': {
             'ldflags': [

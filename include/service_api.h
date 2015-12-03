@@ -5,10 +5,17 @@
 #ifndef INCLUDE_SERVICE_API_H_
 #define INCLUDE_SERVICE_API_H_
 
-#ifdef __cplusplus
-#define FLETCH_EXPORT extern "C" __attribute__((visibility("default")))
+#ifdef _MSC_VER
+// TODO(herhut): Do we need a __declspec here for Windows?
+#define FLETCH_VISIBILITY_DEFAULT
 #else
-#define FLETCH_EXPORT __attribute__((visibility("default")))
+#define FLETCH_VISIBILITY_DEFAULT __attribute__((visibility("default")))
+#endif
+
+#ifdef __cplusplus
+#define FLETCH_EXPORT extern "C" FLETCH_VISIBILITY_DEFAULT
+#else
+#define FLETCH_EXPORT FLETCH_VISIBILITY_DEFAULT
 #endif
 
 #include <stddef.h>

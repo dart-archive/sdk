@@ -17,7 +17,8 @@ struct ServiceRequest;
 // probably post a callback into dart? Fix the service param;
 // for now it is a pointer to a pointer so we can post something
 // into dart that dart can free.
-extern "C" void PostResultToService(char* buffer);
+FLETCH_EXPORT
+void PostResultToService(char* buffer);
 
 class Service {
  public:

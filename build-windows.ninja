@@ -16,14 +16,14 @@ build $
     out\ReleaseX64\build.ninja: $
     gyp $
         common.gypi $
-        default_targets.gypi $
+        windows_targets.gypi $
         fletch.gyp $
         version.gyp $
         src\double_conversion.gyp $
         src\shared\shared.gyp $
         src\tools\driver\driver.gyp $
         src\vm\vm.gyp
-# TODO(herhut): Enable build of mdns once ported to Windows.
+# TODO(346): Enable build of mdns once ported to Windows.
 # src\pkg\mdns\mdns.gyp $
 
 build gyp: phony$
