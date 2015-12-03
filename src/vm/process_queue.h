@@ -29,7 +29,7 @@ class ProcessQueue {
     ASSERT(entry != kSentinel);
     ASSERT(entry->queue_next_ == NULL);
     ASSERT(entry->queue_previous_ == NULL);
-    ASSERT(entry->queue_.load() == NULL);
+    ASSERT(entry->queue_ == NULL);
     Process* head = head_.load(kRelaxed);
     while (true) {
       if (head == kSentinel) return false;

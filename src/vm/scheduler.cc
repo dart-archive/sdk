@@ -107,7 +107,7 @@ void Scheduler::StopProgram(Program* program) {
       // current process. This makes sure we don't preempt while deleting.
       // Loop to ensure we continue to preempt until all threads are sleeping.
       for (int i = 0; i < max_threads_; i++) {
-        if (threads_[i].load() != NULL) count++;
+        if (threads_[i] != NULL) count++;
         PreemptThreadProcess(i);
       }
       if (count == sleeping_threads_) break;
@@ -996,7 +996,7 @@ bool Scheduler::EnqueueOnAnyThread(Process* process, int start_id) {
     bool was_empty = false;
     if (thread_state != NULL &&
         thread_state->queue()->TryEnqueue(process, &was_empty)) {
-      if (was_empty && current_processes_[i].load() == NULL) {
+      if (was_empty && current_processes_[i] == NULL) {
         NotifyThread(thread_state);
       }
       return false;
