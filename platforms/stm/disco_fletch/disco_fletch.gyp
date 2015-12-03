@@ -31,7 +31,6 @@
         'generated_path': '<(project_path)/generated',
         'template_path': '<(project_path)/template/',
         'ldflags': [
-          '-specs=nosys.specs',
           '-specs=nano.specs',
           # TODO(340): Why does this not work???
           #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
@@ -55,6 +54,8 @@
       'sources': [
         # Application.
         '<(source_path)/fletch_entry.cc',
+
+        '<(source_path)/syscalls.c',
 
         # Generated files.
         '<(generated_path)/Src/main.c',
