@@ -794,7 +794,7 @@ void Program::Initialize() {
   }
 
   {
-    InstanceFormat format = InstanceFormat::instance_format(3);
+    InstanceFormat format = InstanceFormat::instance_format(4);
     foreign_memory_class_ = Class::cast(
         heap()->CreateClass(format, meta_class_, null_object_));
   }

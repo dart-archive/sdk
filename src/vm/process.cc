@@ -763,19 +763,14 @@ void Process::UnregisterFinalizer(HeapObject* object) {
 
 void Process::FinalizeForeign(HeapObject* foreign, Heap* heap) {
   Instance* instance = Instance::cast(foreign);
-  word value = AsForeignWord(instance->GetInstanceField(0));
-  word length = AsForeignWord(instance->GetInstanceField(1));
+  uword value = instance->GetConsecutiveSmis(0);
+  uword length = Smi::cast(instance->GetInstanceField(2))->value();
   free(reinterpret_cast<void*>(value));
   heap->FreedForeignMemory(length);
 }
 
 void Process::FinalizeProcess(HeapObject* process, Heap* heap) {
-  // TODO(kustermann): Nearly all finalizers are currently grapping
-  // into the objects which are to be finalized. This is not really a good idea.
-  Instance* instance = Instance::cast(process);
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  ProcessHandle* handle = reinterpret_cast<ProcessHandle*>(address);
+  ProcessHandle* handle = ProcessHandle::FromDartObject(process);
   ProcessHandle::DecrementRef(handle);
 }
 
@@ -872,19 +867,13 @@ NATIVE(ProcessQueueGetMessage) {
     case Message::FOREIGN:
     case Message::FOREIGN_FINALIZED: {
       Class* foreign_memory_class = process->program()->foreign_memory_class();
-      ASSERT(foreign_memory_class->NumberOfInstanceFields() == 3);
+      ASSERT(foreign_memory_class->NumberOfInstanceFields() == 4);
       Object* object = process->NewInstance(foreign_memory_class);
       if (object == Failure::retry_after_gc()) return object;
       Instance* foreign = Instance::cast(object);
-      uword address = queue->value();
-      // TODO(ager): Two allocations in a native doesn't work with
-      // the retry after gc strategy. We should restructure.
-      object = process->ToInteger(address);
-      if (object == Failure::retry_after_gc()) return object;
-      foreign->SetInstanceField(0, object);
+      foreign->SetConsecutiveSmis(0, queue->value());
       int size = queue->size();
-      foreign->SetInstanceField(1, Smi::FromWord(size));
-      process->RecordStore(foreign, object);
+      foreign->SetInstanceField(2, Smi::FromWord(size));
       if (kind == Message::FOREIGN_FINALIZED) {
         process->RegisterFinalizer(foreign, Process::FinalizeForeign);
         process->heap()->AllocatedForeignMemory(size);
@@ -911,10 +900,6 @@ NATIVE(ProcessQueueGetMessage) {
       Signal* signal = queue->ProcessDeathSignal();
       ProcessHandle* handle = signal->handle();
 
-      uword address = reinterpret_cast<uword>(handle);
-      Object* handle_address = process->NewInteger(address);
-      if (handle_address == Failure::retry_after_gc()) return handle_address;
-
       Object* dart_process = process->NewInstance(
           program->process_class(), true);
       if (dart_process == Failure::retry_after_gc()) return dart_process;
@@ -925,7 +910,7 @@ NATIVE(ProcessQueueGetMessage) {
 
       handle->IncrementRef();
 
-      Instance::cast(dart_process)->SetInstanceField(0, handle_address);
+      handle->InitializeDartObject(dart_process);
       Instance::cast(process_death)->SetInstanceField(0, dart_process);
       Instance::cast(process_death)->SetInstanceField(
           1, Smi::FromWord(signal->kind()));

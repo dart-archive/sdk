@@ -262,9 +262,8 @@ enum DeathReason {
 }
 
 class Process {
+  // This is the address of the native process/4 so that it fits in a Smi.
   final int _nativeProcessHandle;
-
-  const Process._(this._nativeProcessHandle);
 
   bool operator==(other) {
     return

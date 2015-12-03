@@ -469,10 +469,19 @@ abstract class UnsafeMemory extends Foreign {
 }
 
 class ImmutableForeignMemory extends UnsafeMemory {
-  final int address;
+  // Address is split into two Smis instead of using one int that might be a
+  // heap number. This makes allocation simpler and ensures that objects can be
+  // finalized individually in the GC without imposing ordering constraints on
+  // the GC.
+  final int _address0;
+  final int _address1;
   final int length;
 
-  const ImmutableForeignMemory.fromAddress(this.address, this.length);
+  int get address => (_address0 << 2) + _address1;
+
+  const ImmutableForeignMemory.fromAddress(int address, this.length)
+      : _address0 = address >> 2,
+        _address1 = address & 3;
 
   factory ImmutableForeignMemory.fromAddressFinalized(int address, int length) {
     var memory = new ImmutableForeignMemory.fromAddress(address, length);
@@ -487,9 +496,11 @@ class ImmutableForeignMemory extends UnsafeMemory {
     return memory;
   }
 
-  const ImmutableForeignMemory.allocated(int length)
-      : address = UnsafeMemory._allocate(length),
-        length = length;
+  factory ImmutableForeignMemory.allocated(int length) {
+    var memory = new ImmutableForeignMemory.fromAddress(
+        UnsafeMemory._allocate(length), length);
+    return memory;
+  }
 
   // We utf8 encode the string first to support non-ascii characters.
   // NOTE: This is not the correct string encoding for Windows.
@@ -504,27 +515,47 @@ class ImmutableForeignMemory extends UnsafeMemory {
   }
 }
 
-class ForeignMemory extends UnsafeMemory {
-  int address;
+// We can't delegate to a constructor in the same class, so we insert a class
+// between UnsafeMemory and ForeignMemory, which has the constructor we need.
+// We can't use factories because subclasses (ie Struct) want to be able to
+// call our constructors
+class _ForeignMemoryHelper extends UnsafeMemory {
+  int _address0;
+  int _address1;
   int length;
+
+  int get address => (_address0 << 2) + _address1;
+
+  int set address(int addr) {
+    _address0 = addr >> 2;
+    _address1 = addr & 3;
+    return addr;
+  }
+
+  _ForeignMemoryHelper.fromAddress(int address, this.length)
+      : _address0 = address >> 2,
+        _address1 = address & 3;
+}
+
+class ForeignMemory extends _ForeignMemoryHelper {
   bool _markedForFinalization = false;
 
-  ForeignMemory.fromAddress(this.address, this.length);
+  ForeignMemory.fromAddress(int address, int length)
+      : super.fromAddress(address, length);
 
-  ForeignMemory.fromAddressFinalized(this.address, this.length) {
+  ForeignMemory.fromAddressFinalized(int address, int length)
+      : super.fromAddress(address, length),
+        _markedForFinalization = true {
     _markForFinalization(length);
-    _markedForFinalization = true;
   }
 
   ForeignMemory.allocated(int length)
-      : address = UnsafeMemory._allocate(length),
-        length = length;
+      : super.fromAddress(UnsafeMemory._allocate(length), length);
 
   ForeignMemory.allocatedFinalized(int length)
-      : address = UnsafeMemory._allocate(length),
-        length = length {
+      : super.fromAddress(UnsafeMemory._allocate(length), length),
+        _markedForFinalization = true {
     _markForFinalization(length);
-    _markedForFinalization = true;
   }
 
   // We utf8 encode the string first to support non-ascii characters.
@@ -544,7 +575,7 @@ class ForeignMemory extends UnsafeMemory {
       if (_markedForFinalization) {
         _decreaseMemoryUsage(length);
       }
-      _free(address);
+      _free();
     }
     address = 0;
     length = 0;
@@ -553,7 +584,7 @@ class ForeignMemory extends UnsafeMemory {
   @fletch.native void _decreaseMemoryUsage(int length) {
     throw new ArgumentError();
   }
-  @fletch.native static void _free(int address) {
+  @fletch.native void _free() {
     throw new ArgumentError();
   }
 }

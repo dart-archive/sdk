@@ -33,7 +33,7 @@ NATIVE(ForeignAllocate) {
 }
 
 NATIVE(ForeignFree) {
-  word address = AsForeignWord(arguments[0]);
+  uword address = Instance::cast(arguments[0])->GetConsecutiveSmis(0);
   free(reinterpret_cast<void*>(address));
   return process->program()->null_object();
 }

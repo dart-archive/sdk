@@ -951,20 +951,16 @@ NATIVE(ProcessSpawn) {
     return Failure::index_out_of_bounds();
   }
 
-  // TODO(kustermann): We should not have two allocations in one native.
-  Object* native_handle = process->NewInteger(0);
-  if (native_handle == Failure::retry_after_gc()) return native_handle;
   Object* dart_process = process->NewInstance(program->process_class(), true);
   if (dart_process == Failure::retry_after_gc()) return dart_process;
-  Instance::cast(dart_process)->SetInstanceField(0, native_handle);
 
   Process* child = SpawnProcessInternal(
       program, process, entrypoint, closure, argument);
 
   ProcessHandle* handle = child->process_handle();
   handle->IncrementRef();
-  LargeInteger::cast(native_handle)->set_value(
-      static_cast<int64>(reinterpret_cast<uword>(handle)));
+
+  handle->InitializeDartObject(dart_process);
   process->RegisterFinalizer(
       HeapObject::cast(dart_process), Process::FinalizeProcess);
 
@@ -988,13 +984,9 @@ NATIVE(ProcessCurrent) {
   Program* program = process->program();
   ProcessHandle* handle = process->process_handle();
 
-  // TODO(kustermann): We should not have two allocations in one native.
-  Object* native_handle = process->NewInteger(
-      static_cast<int64>(reinterpret_cast<uword>(handle)));
-  if (native_handle == Failure::retry_after_gc()) return native_handle;
   Object* dart_process = process->NewInstance(program->process_class(), true);
   if (dart_process == Failure::retry_after_gc()) return dart_process;
-  Instance::cast(dart_process)->SetInstanceField(0, native_handle);
+  handle->InitializeDartObject(dart_process);
 
   return dart_process;
 }

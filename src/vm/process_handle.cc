@@ -12,10 +12,21 @@
 
 namespace fletch {
 
+ProcessHandle* ProcessHandle::FromDartObject(Object* o) {
+  Instance* dart_pid = Instance::cast(o);
+  uword handle_address = Smi::cast(dart_pid->GetInstanceField(0))->value() << 2;
+  return reinterpret_cast<ProcessHandle*>(handle_address);
+}
+
+void ProcessHandle::InitializeDartObject(Object* o) {
+  Instance* dart_pid = Instance::cast(o);
+  uword address = reinterpret_cast<uword>(this);
+  ASSERT((address & 3) == 0);  // Always aligned.
+  dart_pid->SetInstanceField(0, Smi::FromWord(address >> 2));
+}
+
 NATIVE(ProcessLink) {
-  Instance* dart_process = Instance::cast(arguments[0]);
-  ProcessHandle* handle = reinterpret_cast<ProcessHandle*>(
-      AsForeignWord(dart_process->GetInstanceField(0)));
+  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
   {
     ScopedSpinlock locker(handle->lock());
     Process* handle_process = handle->process();
@@ -33,9 +44,7 @@ NATIVE(ProcessLink) {
 }
 
 NATIVE(ProcessMonitor) {
-  Instance* dart_pid = Instance::cast(arguments[0]);
-  ProcessHandle* handle = reinterpret_cast<ProcessHandle*>(
-      AsForeignWord(dart_pid->GetInstanceField(0)));
+  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
   Instance* dart_port = Instance::cast(arguments[1]);
   if (!dart_port->IsPort()) {
     return Failure::wrong_argument_type();
