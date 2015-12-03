@@ -132,6 +132,9 @@ Process::~Process() {
 }
 
 void Process::Cleanup(Signal::Kind kind) {
+  EventHandler* event_handler = program()->event_handler();
+  event_handler->ReceiverForPortsDied(ports_);
+
   // Clear out the process pointer from all the ports.
   ASSERT(immutable_heap_ == NULL);
   while (ports_ != NULL) {

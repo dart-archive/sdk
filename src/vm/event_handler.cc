@@ -28,9 +28,32 @@ EventHandler::~EventHandler() {
     Interrupt();
     while (data_ != NULL) monitor_->Wait();
     thread_.Join();
+
+    // If the [EventHandler] destructor is called, all processes using it should
+    // have already died. Therefore all the ports these processes are using
+    // should've been removed from the [EventHandler].
+    ASSERT(timeouts_.IsEmpty());
+
+    // TODO(ajohnsen/kustermann): The rest of the ports known to the event
+    // handler are not associated with timeouts but rather file descriptors. The
+    // EventHandler needs to deref them as well after the receiver dies.
   }
 
   delete monitor_;
+}
+
+void EventHandler::ReceiverForPortsDied(Port* ports) {
+  ScopedMonitorLock locker(monitor_);
+
+  // If there is an active eventhandler instance we'll try to remove
+  // our refcount on [port] if necessary.
+  if (data_ != NULL) {
+    for (Port* port = ports; port != NULL; port = port->next()) {
+      if (timeouts_.RemoveByValue(port)) {
+        port->DecrementRef();
+      }
+    }
+  }
 }
 
 void* EventHandler::RunEventHandler(void* peer) {

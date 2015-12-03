@@ -32,6 +32,8 @@ class EventHandler {
 
   Object* Add(Process* process, Object* id, Port* port);
 
+  void ReceiverForPortsDied(Port* port_list);
+
   void ScheduleTimeout(int64 timeout, Port* port);
 
   Monitor* monitor() const { return monitor_; }
