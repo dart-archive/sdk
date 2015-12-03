@@ -72,6 +72,44 @@ void returnSession(FletchSessionMirror session) {
   sessions.addLast(session);
 }
 
+String explainExitCode(int code) {
+  String exit_message;
+  if (code == 0) {
+    exit_message = "(success exit code)";
+  } else if (code > 0) {
+    switch (code) {
+      case COMPILER_EXITCODE_CONNECTION_ERROR:
+        exit_message = "(connection error)";
+        break;
+      case COMPILER_EXITCODE_CRASH:
+        exit_message = "(compiler crash)";
+        break;
+      case DART_VM_EXITCODE_COMPILE_TIME_ERROR:
+        exit_message = "(compile-time error)";
+        break;
+      case DART_VM_EXITCODE_UNCAUGHT_EXCEPTION:
+        exit_message = "(uncaught exception)";
+        break;
+      default:
+        exit_message = "(error exit code)";
+        break;
+    }
+  } else {
+    exit_message = "(signal ${-code})";
+    if (code == -15 || code == -9) {
+      exit_message += " (killed by external signal - timeout?)";
+    } else if (code == -7 || code == -11 || code == -4) {
+      // SIGBUS, SIGSEGV, SIGILL
+      exit_message += " (internal error)";
+    } else if (code == -2) {
+      exit_message += " (control-C)";
+    } else {
+      exit_message += " (see man 7 signal)";
+    }
+  }
+  return exit_message;
+}
+
 class FletchSessionCommand implements Command {
   final String executable;
   final String script;
@@ -194,8 +232,10 @@ There are three ways to reproduce this error:
           fletch.killVmProcess(ProcessSignal.SIGTERM);
         }
         int vmExitCode = await vmTerminationFuture;
-        fletch.stdout.writeln("Fletch VM exitcode is $vmExitCode. "
-            "Exit code reported by ${fletch.executable} is $exitCode");
+        fletch.stdout.writeln("Fletch VM exitcode is $vmExitCode "
+            "${explainExitCode(vmExitCode)}\n"
+            "Exit code reported by ${fletch.executable} is $exitCode "
+            "${explainExitCode(exitCode)}\n");
         if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
           exitCode = vmExitCode;
         } else if (exitCode != vmExitCode) {
@@ -466,7 +506,7 @@ class FletchSessionHelper {
     await stdoutFuture;
     await stderrFuture;
 
-    stdout.writeln("\n=> $exitCode");
+    stdout.writeln("\n => $exitCode ${explainExitCode(exitCode)}\n");
     if (checkExitCode && (thisCommandTimedout || exitCode != 0)) {
       throw new UnexpectedExitCode(exitCode, executable, arguments);
     }
