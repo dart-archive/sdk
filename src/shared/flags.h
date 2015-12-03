@@ -19,43 +19,43 @@ namespace fletch {
 // debug means the flag is ONLY available in the debug build.
 // release means the flag is available in both the debug and release build.
 
-#define BOOLEAN(macro, name, value, doc) \
+#define FLAG_BOOLEAN(macro, name, value, doc) \
   macro(bool, Boolean, name, value, doc)
-#define INTEGER(macro, name, value, doc) \
+#define FLAG_INTEGER(macro, name, value, doc) \
   macro(int, Integer, name, value, doc)
-#define CSTRING(macro, name, value, doc) \
+#define FLAG_CSTRING(macro, name, value, doc) \
   macro(const char*, String, name, value, doc)
 
 #define APPLY_TO_FLAGS(debug, release)                 \
-  BOOLEAN(release, expose_gc, false,                   \
+  FLAG_BOOLEAN(release, expose_gc, false,              \
       "Expose invoking GC to native call.")            \
-  BOOLEAN(debug, validate_stack, false,                \
+  FLAG_BOOLEAN(debug, validate_stack, false,           \
       "Validate stack at each interperter step")       \
-  BOOLEAN(release, unfold_program, false,              \
+  FLAG_BOOLEAN(release, unfold_program, false,         \
       "Unfold the program before running")             \
-  BOOLEAN(release, gc_on_delete, false,                \
+  FLAG_BOOLEAN(release, gc_on_delete, false,           \
       "GC the heap at when terminating isolate")       \
-  BOOLEAN(release, validate_heaps, false,              \
+  FLAG_BOOLEAN(release, validate_heaps, false,         \
       "Validate consistency of heaps.")                \
-  BOOLEAN(debug, log_decoder, false,                   \
+  FLAG_BOOLEAN(debug, log_decoder, false,              \
       "Log decoding")                                  \
-  BOOLEAN(debug, print_program_statistics, false,      \
+  FLAG_BOOLEAN(debug, print_program_statistics, false, \
       "Print statistics about the program")            \
-  BOOLEAN(release, print_heap_statistics, false,       \
+  FLAG_BOOLEAN(release, print_heap_statistics, false,  \
       "Print heap statistics before GC")               \
-  BOOLEAN(release, verbose, false,                     \
+  FLAG_BOOLEAN(release, verbose, false,                \
       "Verbose output")                                \
-  BOOLEAN(debug, print_flags, false,                   \
+  FLAG_BOOLEAN(debug, print_flags, false,              \
       "Print flags")                                   \
-  BOOLEAN(release, profile, false,                     \
+  FLAG_BOOLEAN(release, profile, false,                \
       "Profile the execution of the entire VM")        \
-  INTEGER(release, profile_interval, 1000,             \
+  FLAG_INTEGER(release, profile_interval, 1000,        \
       "Profile interval in us")                        \
-  CSTRING(release, filter, NULL,                       \
+  FLAG_CSTRING(release, filter, NULL,                  \
       "Filter string for unit testing")                \
   /* Temporary compiler flags */                       \
-  BOOLEAN(release, trace_compiler, false, "")          \
-  BOOLEAN(release, trace_library, false, "")           \
+  FLAG_BOOLEAN(release, trace_compiler, false, "")     \
+  FLAG_BOOLEAN(release, trace_library, false, "")      \
 
 
 #ifdef DEBUG

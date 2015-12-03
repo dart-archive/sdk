@@ -219,7 +219,7 @@
             '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)double_conversion<(STATIC_LIB_SUFFIX)',
           ],
           'outputs': [
-            '<(PRODUCT_DIR)/libfletch.a',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch<(STATIC_LIB_SUFFIX)',
           ],
           'action': [
             'python', '<@(_inputs)', '<@(_outputs)',

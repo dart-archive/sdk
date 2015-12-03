@@ -5,6 +5,7 @@
 #ifndef SRC_VM_OBJECT_H_
 #define SRC_VM_OBJECT_H_
 
+#define _USE_MATH_DEFINES  // required for Windows
 #include <math.h>
 #include <string.h>
 

@@ -5,7 +5,7 @@
 rule gyp
   command = $
     GYP_CROSSCOMPILE=1 $
-    ./third_party/gyp/gyp --depth=. -Idefault_targets.gypi $
+    third_party/gyp/gyp --depth=. -Idefault_targets.gypi $
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 

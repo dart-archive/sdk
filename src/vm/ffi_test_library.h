@@ -9,7 +9,12 @@
 #ifndef SRC_VM_FFI_TEST_LIBRARY_H_
 #define SRC_VM_FFI_TEST_LIBRARY_H_
 
+#ifdef _MSC_VER
+// TODO(herhut): Do we need a __declspec here for Windows?
+#define EXPORT
+#else
 #define EXPORT __attribute__((visibility("default")))
+#endif
 
 EXPORT int count;
 

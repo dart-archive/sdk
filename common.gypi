@@ -43,13 +43,19 @@
     ],
   },
 
-  'make_global_settings': [
-    [ 'CC', 'tools/cc_wrapper.py' ],
-    [ 'CXX', 'tools/cxx_wrapper.py' ],
-    [ 'LINK', 'tools/cc_wrapper.py' ],
+  'conditions': [
+    [ 'OS!="win"', {
+      'make_global_settings': [
+        [ 'CC', 'tools/cc_wrapper.py' ],
+        [ 'CXX', 'tools/cxx_wrapper.py' ],
+        [ 'LINK', 'tools/cc_wrapper.py' ],
+      ],
+    }],
   ],
 
   'target_defaults': {
+    'msvs_cygwin_dirs': ['<(DEPTH)/third_party/cygwin'],
+    'msvs_cygwin_shell': 0,
 
     'configurations': {
 
@@ -119,6 +125,10 @@
             'defines': [
               'FLETCH_TARGET_OS_LINUX',
               'FLETCH_TARGET_OS_POSIX' ],
+          }],
+          ['OS=="win"', {
+            'defines': [
+              'FLETCH_TARGET_OS_WIN' ],
           }],
         ],
       },

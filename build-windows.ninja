@@ -9,16 +9,6 @@ rule gyp
         --format=ninja fletch.gyp $
         --no-parallel
 
-rule update-version-gyp
-  command = $
-    python tools\update_version_gyp.py version.gyp
-
-build $
-    version.gyp: $
-    update-version-gyp $
-        tools\update_version_gyp.py $
-        .git\HEAD $
-
 build $
     out\DebugIA32\build.ninja $
     out\DebugX64\build.ninja $
@@ -28,11 +18,13 @@ build $
         common.gypi $
         default_targets.gypi $
         fletch.gyp $
+        version.gyp $
         src\double_conversion.gyp $
         src\shared\shared.gyp $
         src\tools\driver\driver.gyp $
-        src\vm\vm.gyp $
-        src\pkg\mdns\mdns.gyp $
+        src\vm\vm.gyp
+# TODO(herhut): Enable build of mdns once ported to Windows.
+# src\pkg\mdns\mdns.gyp $
 
 build gyp: phony$
     out\DebugIA32\build.ninja $
