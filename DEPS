@@ -9,6 +9,8 @@ vars = {
   #   gs://chromium-browser-clang/Linux_x64/clang-<rev>-1.tgz
   "clang_rev": "245965",
 
+  "buildtools_revision": "@818123dac34899ec230840936fc15b8b2b5556f9",
+
   "github_url": "https://github.com/%s.git",
 
   "gyp_rev": "@6ee91ad8659871916f9aa840d42e1513befdf638",
@@ -57,6 +59,11 @@ vars = {
 }
 
 deps = {
+  # Clang format support.
+  "buildtools":
+     Var('chromium_git') + '/chromium/buildtools.git' +
+     Var('buildtools_revision'),
+
   # Stuff needed for GYP to run.
   "fletch/third_party/gyp":
       Var('chromium_git') + '/external/gyp.git' + Var("gyp_rev"),
@@ -119,10 +126,12 @@ deps_os = {
 
   "win": {
     'fletch/third_party/cygwin':
-      Var('chromium_git') + '/chromium/deps/cygwin.git' + '@' + 'c89e446b273697fadf3a10ff1007a97c0b7de6df',
+      Var('chromium_git') + '/chromium/deps/cygwin.git' + '@' +
+      'c89e446b273697fadf3a10ff1007a97c0b7de6df',
 
     'fletch/third_party/yasm/source/patched-yasm':
-      Var('chromium_git') + '/chromium/deps/yasm/patched-yasm.git' + '@' + '4671120cd8558ce62ee8672ebf3eb6f5216f909b',
+      Var('chromium_git') + '/chromium/deps/yasm/patched-yasm.git' + '@' +
+      '4671120cd8558ce62ee8672ebf3eb6f5216f909b',
   },
 
 }
@@ -209,6 +218,40 @@ hooks = [
       '-u',
       '--auto_platform',
       'fletch/third_party/openocd',
+    ],
+  },
+  # Pull clang-format binaries using checked-in hashes.
+  {
+    'name': 'clang_format_win',
+    'pattern': '.',
+    'action': [ 'download_from_google_storage',
+                '--no_resume',
+                '--platform=win32',
+                '--no_auth',
+                '--bucket', 'chromium-clang-format',
+                '-s', 'buildtools/win/clang-format.exe.sha1',
+    ],
+  },
+  {
+    'name': 'clang_format_mac',
+    'pattern': '.',
+    'action': [ 'download_from_google_storage',
+                '--no_resume',
+                '--platform=darwin',
+                '--no_auth',
+                '--bucket', 'chromium-clang-format',
+                '-s', 'buildtools/mac/clang-format.sha1',
+    ],
+  },
+  {
+    'name': 'clang_format_linux',
+    'pattern': '.',
+    'action': [ 'download_from_google_storage',
+                '--no_resume',
+                '--platform=linux*',
+                '--no_auth',
+                '--bucket', 'chromium-clang-format',
+                '-s', 'buildtools/linux64/clang-format.sha1',
     ],
   },
   {
