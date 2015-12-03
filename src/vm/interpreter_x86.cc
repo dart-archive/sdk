@@ -429,7 +429,7 @@ void InterpreterGeneratorX86::GenerateBytecodePrologue(const char* name) {
   __ nop();
   __ Bind("Debug_", name);
   __ call("DebugAtBytecode");
-  __ nop();
+  __ AlignToPowerOfTwo(3);
   __ Bind("", name);
 }
 
