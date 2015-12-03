@@ -242,8 +242,8 @@ def CreateDocumentation():
     CreateDocsLibs(sdk_pkg_lib_dir, pkg_copy)
     # Call pub get.
     with utils.ChangedWorkingDirectory(sdk_pkg_dir):
+      print 'Calling pub get in %s' % sdk_pkg_dir
       subprocess.check_call([pub, 'get'])
-      print 'Called pub get in %s' % pkg_dst
     # Call dartdoc.
     EnsureDeleted(docs_out)
     subprocess.check_call([dartdoc, '--input', sdk_pkg_dir,'--output',
