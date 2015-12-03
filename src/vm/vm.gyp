@@ -111,6 +111,7 @@
         'message_mailbox.h',
         'message_mailbox.cc',
         'native_interpreter.h',
+        'native_interpreter.cc',
         'native_process.cc',
         'native_process_disabled.cc',
         'natives.cc',

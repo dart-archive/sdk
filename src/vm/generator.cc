@@ -25,7 +25,7 @@ Generator::Generator(Function* function, const char* name)
 }
 
 void Generator::Generate(Assembler* assembler) {
-  assembler->Bind(name());
+  assembler->Bind("", name());
   (*function_)(assembler);
 }
 

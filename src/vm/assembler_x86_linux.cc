@@ -22,11 +22,9 @@ void Assembler::jmp(const char* name) {
   printf("\tjmp %s\n", name);
 }
 
-void Assembler::Bind(const char* name) {
-  printf("\n\t.text\n");
-  AlignToPowerOfTwo(4);
-  printf("\t.global %s\n", name);
-  printf("%s:\n", name);
+void Assembler::Bind(const char* prefix, const char* name) {
+  printf("\t.global %s%s\n", prefix, name);
+  printf("%s%s:\n", prefix, name);
 }
 
 void Assembler::DefineLong(const char* name) {

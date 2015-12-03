@@ -89,7 +89,7 @@ static void WaitForDebuggerConnection(int port) {
   Session session(connection);
   session.Initialize();
   session.StartMessageProcessingThread();
-  bool success = session.ProcessRun();
+  bool success = session.ProcessRun() == 0;
   if (!success) FATAL("Failed to run via debugger connection");
 #else
   FATAL("fletch was built without live coding support.");
