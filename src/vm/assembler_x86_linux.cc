@@ -22,6 +22,10 @@ void Assembler::jmp(const char* name) {
   printf("\tjmp %s\n", name);
 }
 
+void Assembler::jmp(const char* name, Register index, ScaleFactor scale) {
+  Print("jmp *%s(,%rl,%d)", name, index, 1 << scale);
+}
+
 void Assembler::Bind(const char* prefix, const char* name) {
   printf("\t.global %s%s\n", prefix, name);
   printf("%s%s:\n", prefix, name);

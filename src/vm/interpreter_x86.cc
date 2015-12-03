@@ -2159,8 +2159,7 @@ void InterpreterGeneratorX86::Dispatch(int size) {
   if (size > 0) {
     __ addl(ESI, Immediate(size));
   }
-  // TODO(kasperl): Let this go through the assembler.
-  printf("\tjmp *InterpretFast_DispatchTable(,%%ebx,4)\n");
+  __ jmp("InterpretFast_DispatchTable", EBX, TIMES_WORD_SIZE);
 }
 
 void InterpreterGeneratorX86::SaveState() {

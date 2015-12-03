@@ -301,6 +301,7 @@ class Assembler {
   void call(const char* name);
 
   void jmp(const char* name);
+  void jmp(const char* name, Register index, ScaleFactor scale);
   void jmp(Label* label);
 
   void Bind(const char* prefix, const char* name);

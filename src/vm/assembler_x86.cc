@@ -98,6 +98,11 @@ void Assembler::Print(const char* format, ...) {
           break;
         }
 
+        case 'd': {
+          printf("%d", va_arg(arguments, int));
+          break;
+        }
+
         default: {
           UNREACHABLE();
           break;
