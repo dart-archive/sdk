@@ -55,31 +55,26 @@ class DebugInfo {
   DebugInfo();
 
   bool ShouldBreak(uint8_t* bcp, Object** sp);
-
   int SetBreakpoint(Function* function,
                     int bytecode_index,
                     bool one_shot = false,
                     Coroutine* coroutine = NULL,
                     word stack_height = 0);
-
   bool DeleteBreakpoint(int id);
+  bool is_stepping() const { return is_stepping_; }
+  void set_is_stepping(bool value) { is_stepping_ = value; }
+  bool is_at_breakpoint() const { return is_at_breakpoint_; }
+  int current_breakpoint_id() const { return current_breakpoint_id_; }
 
-  void SetStepping();
-
-  void ClearStepping();
+  void set_current_breakpoint(int id) {
+    is_at_breakpoint_ = true;
+    current_breakpoint_id_ = id;
+  }
 
   void clear_current_breakpoint() {
     is_at_breakpoint_ = false;
     current_breakpoint_id_ = kNoBreakpointId;
   }
-
-  bool is_stepping() const { return is_stepping_; }
-
-  bool is_at_breakpoint() const { return is_at_breakpoint_; }
-
-  int current_breakpoint_id() const { return current_breakpoint_id_; }
-
-  void ClearBreakpoint();
 
   // GC support for process GCs.
   void VisitPointers(PointerVisitor* visitor);
@@ -89,12 +84,7 @@ class DebugInfo {
   void UpdateBreakpoints();
 
  private:
-  void SetCurrentBreakpoint(int id) {
-    is_at_breakpoint_ = true;
-    current_breakpoint_id_ = id;
-  }
-
-  int NextBreakpointId() { return next_breakpoint_id_++; }
+  int next_breakpoint_id() { return next_breakpoint_id_++; }
 
   bool is_stepping_;
   bool is_at_breakpoint_;

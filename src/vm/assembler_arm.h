@@ -235,8 +235,6 @@ class Assembler {
 
   INSTRUCTION_2(neg, "neg %r, %r", Register, Register);
 
-  INSTRUCTION_0(nop, "nop");
-
   INSTRUCTION_3(orr, "orr %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_1(pop, "pop { %r }", Register);
@@ -262,16 +260,10 @@ class Assembler {
   INSTRUCTION_2(tst, "tst %r, %r", Register, Register);
 
   void BindWithPowerOfTwoAlignment(const char* name, int power);
-  void Bind(const char* prefix, const char* name);
+  void Bind(const char* name);
   void Bind(Label* label);
 
   void DefineLong(const char* name);
-
-  void SwitchToText();
-  void SwitchToData();
-
-  // Align what follows to a 2^power address.
-  void AlignToPowerOfTwo(int power);
 
   void GenerateConstantPool();
 
@@ -281,6 +273,9 @@ class Assembler {
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
   void PrintOperand(const Operand* operand);
+
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
 
   static int NewLabelPosition();
 

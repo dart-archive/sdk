@@ -630,7 +630,7 @@ int Process::PrepareStepOver() {
   Opcode opcode = static_cast<Opcode>(*current_bcp);
   if (!Bytecode::IsInvokeVariant(opcode)) {
     // For non-invoke bytecodes step over is the same as step.
-    debug_info_->SetStepping();
+    debug_info_->set_is_stepping(true);
     return DebugInfo::kNoBreakpointId;
   }
 

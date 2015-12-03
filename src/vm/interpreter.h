@@ -134,8 +134,6 @@ extern "C" void HandleEnterNoSuchMethod(Process* process);
 
 extern "C" void HandleInvokeSelector(Process* process);
 
-extern "C" int HandleAtBytecode(Process* process, uint8* bcp, Object** sp);
-
 }  // namespace fletch
 
 #endif  // SRC_VM_INTERPRETER_H_

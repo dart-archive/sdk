@@ -9,7 +9,7 @@
 
 namespace fletch {
 
-void Assembler::Bind(const char* prefix, const char* name) {
+void Assembler::Bind(const char* name) {
   UNIMPLEMENTED();
 }
 

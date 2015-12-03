@@ -9,11 +9,12 @@
 
 namespace fletch {
 
-void Assembler::Bind(const char* prefix, const char* name) {
+void Assembler::Bind(const char* name) {
   putchar('\n');
   printf("\t.text\n");
-  printf("\t.globl _%s%s\n", prefix, name);
-  printf("_%s%s:\n", prefix, name);
+  AlignToPowerOfTwo(4);
+  printf("\t.globl _%s\n", name);
+  printf("_%s:\n", name);
 }
 
 }  // namespace fletch

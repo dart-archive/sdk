@@ -5,8 +5,6 @@
 #ifndef SRC_VM_NATIVE_INTERPRETER_H_
 #define SRC_VM_NATIVE_INTERPRETER_H_
 
-#include "src/shared/bytecodes.h"
-
 namespace fletch {
 
 class Process;
@@ -21,10 +19,6 @@ class TargetYieldResult;
 extern "C"
 int InterpretFast(Process* process, TargetYieldResult* target_yield_result);
 
-void BreakAtBytecode(Opcode opcode);
-
-void ClearBytecodeBreak(Opcode opcode);
-
 #else
 
 // For the platforms that do not have a native interpreter we bailout
@@ -32,14 +26,9 @@ void ClearBytecodeBreak(Opcode opcode);
 // interpreter. The slower C++ interpreter will then be used for the
 // rest of the interpretation for this process (until it yields or is
 // interrupted).
-inline int InterpretFast(Process* process,
-                         TargetYieldResult* target_yield_result) {
+int InterpretFast(Process* process, TargetYieldResult* target_yield_result) {
   return -1;
 }
-
-inline void BreakAtBytecode(Opcode opcode) { }
-
-inline void ClearBytecodeBreak(Opcode opcode) { }
 
 #endif  // defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM)
 

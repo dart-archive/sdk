@@ -276,9 +276,8 @@ class Assembler {
   INSTRUCTION_2(andl, "andl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(andl, "andl %rl, %rl", Register, Register);
 
-  INSTRUCTION_2(subl, "subl %rl, %rl", Register, Register);
   INSTRUCTION_2(subl, "subl %i, %rl", Register, const Immediate&);
-  INSTRUCTION_2(subl, "subl %i, %a", const Address&, const Immediate&);
+  INSTRUCTION_2(subl, "subl %rl, %rl", Register, Register);
 
   INSTRUCTION_2(sarl, "sarl %i, %rl", Register, const Immediate&);
   INSTRUCTION_1(sarl_cl, "sarl %%cl, %rl", Register);
@@ -301,25 +300,21 @@ class Assembler {
   void call(const char* name);
 
   void jmp(const char* name);
-  void jmp(const char* name, Register index, ScaleFactor scale);
   void jmp(Label* label);
 
-  void Bind(const char* prefix, const char* name);
+  void Bind(const char* name);
   void BindWithPowerOfTwoAlignment(const char* name, int power);
   void Bind(Label* label);
 
   void DefineLong(const char* name);
   void LoadNative(Register reg, Register index);
 
-  void SwitchToText();
-  void SwitchToData();
-
-  // Align what follows to a 2^power address.
-  void AlignToPowerOfTwo(int power);
-
  private:
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
+
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
 
   static const char* ConditionMnemonic(Condition condition);
 

@@ -20,8 +20,9 @@ static const char* ConditionToString(Condition cond) {
 }
 
 void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
+  puts("\n");
   AlignToPowerOfTwo(power);
-  printf("\t.global %s%s\n%s%s:\n", LabelPrefix(), name, LabelPrefix(), name);
+  printf("%s%s:\n", LabelPrefix(), name);
 }
 
 void Assembler::AlignToPowerOfTwo(int power) {
@@ -39,14 +40,6 @@ void Assembler::Bind(Label* label) {
 
 void Assembler::GenerateConstantPool() {
   printf(".ltorg\n");
-}
-
-void Assembler::SwitchToText() {
-  puts("\n\t.text");
-}
-
-void Assembler::SwitchToData() {
-  puts("\n\t.data");
 }
 
 static const char* ToString(Register reg) {

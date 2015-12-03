@@ -30,9 +30,6 @@ class InterpreterGenerator {
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
-  virtual void GenerateBytecodePrologue(const char* name) = 0;
-  virtual void GenerateDebugAtBytecode() = 0;
-
 #define V(name, branching, format, size, stack_diff, print)      \
   virtual void Do##name() = 0;
 BYTECODES_DO(V)
@@ -54,28 +51,23 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
-  GenerateDebugAtBytecode();
-
 #define V(name, branching, format, size, stack_diff, print)      \
-  GenerateBytecodePrologue("BC_" #name);                         \
+  assembler()->Bind("BC_" #name);                                \
   Do##name();
 BYTECODES_DO(V)
 #undef V
 
-#define V(name)                              \
-  assembler()->Bind("", "Intrinsic_" #name); \
+#define V(name)                          \
+  assembler()->Bind("Intrinsic_" #name); \
   DoIntrinsic##name();
 INTRINSICS_DO(V)
 #undef V
 
-  assembler()->SwitchToData();
   assembler()->BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
 #define V(name, branching, format, size, stack_diff, print)      \
   assembler()->DefineLong("BC_" #name);
 BYTECODES_DO(V)
 #undef V
-
-  puts("\n");
 }
 
 class InterpreterGeneratorX86: public InterpreterGenerator {
@@ -93,9 +85,6 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
 
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
-
-  virtual void GenerateBytecodePrologue(const char* name);
-  virtual void GenerateDebugAtBytecode();
 
   virtual void DoLoadLocal0();
   virtual void DoLoadLocal1();
@@ -152,7 +141,7 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoInvoke##kind##Unfold() {   \
     Invoke##kind("BC_InvokeMethodUnfold");  \
   }                                         \
-  virtual void DoInvoke##kind() {           \
+  virtual void DoInvoke##kind() {   \
     Invoke##kind("BC_InvokeMethod");        \
   }
 
@@ -420,37 +409,6 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   PushFrameDescriptor(ESI, EBX);
   __ leal(ESI, Address(EAX, Function::kSize - HeapObject::kTag));
   Dispatch(0);
-}
-
-void InterpreterGeneratorX86::GenerateBytecodePrologue(const char* name) {
-  __ SwitchToText();
-  __ AlignToPowerOfTwo(3);
-  __ nop();
-  __ nop();
-  __ Bind("Debug_", name);
-  __ call("DebugAtBytecode");
-  __ AlignToPowerOfTwo(3);
-  __ Bind("", name);
-}
-
-void InterpreterGeneratorX86::GenerateDebugAtBytecode() {
-  __ SwitchToText();
-  __ AlignToPowerOfTwo(4);
-  __ Bind("", "DebugAtBytecode");
-  // TODO(ajohnsen): Check if the process has debug_info set.
-  __ popl(EBX);
-  LoadProcess(EAX);
-  __ movl(EDX, ESP);
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
-  __ movl(Address(ESP, 1 * kWordSize), ESI);
-  __ movl(Address(ESP, 2 * kWordSize), EDX);
-  __ call("HandleAtBytecode");
-  SwitchToDartStack();
-  __ testl(EAX, EAX);
-  __ j(NOT_ZERO, &done_);
-  __ pushl(EBX);
-  __ ret();
 }
 
 void InterpreterGeneratorX86::DoLoadLocal0() {
@@ -2159,7 +2117,8 @@ void InterpreterGeneratorX86::Dispatch(int size) {
   if (size > 0) {
     __ addl(ESI, Immediate(size));
   }
-  __ jmp("InterpretFast_DispatchTable", EBX, TIMES_WORD_SIZE);
+  // TODO(kasperl): Let this go through the assembler.
+  printf("\tjmp *InterpretFast_DispatchTable(,%%ebx,4)\n");
 }
 
 void InterpreterGeneratorX86::SaveState() {
