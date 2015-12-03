@@ -2,10 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// GPIO support.
+/// GPIO support providing access to controlling GPIO pins.
 ///
-/// Provides access to controlling GPIO pins.
+/// Currently this has only been tested with a Raspberry Pi 2.
 ///
+/// Access types
+/// ------------
 /// The library provide two ways of accessing the GPIO pins: direct access or
 /// access through a Sysfs driver.
 ///
@@ -18,7 +20,31 @@
 /// through udev rules, e.g. by adding a file to ` /etc/udev/rules.d`.
 /// In addition the Sysfs driver supports state change notifications.
 ///
-/// Currently this has only been tested with a Raspberry Pi 2.
+/// Usage
+/// -----
+/// ```dart
+/// import 'package:gpio/gpio.dart';
+/// import 'package:raspberry_pi/raspberry_pi.dart';
+///
+/// main() {
+///   // GPIO pin constants.
+///   const int pin = 16;
+///
+///   // Initialize Raspberry Pi and configure the pins.
+///   RaspberryPi pi = new RaspberryPi();
+///   PiMemoryMappedGPIO gpio = pi.memoryMappedGPIO;
+///   gpio.setMode(pin, Mode.input);
+///
+///   // Access pin
+///   gpio.setPin(pin, true);
+/// ```
+///
+/// See ```/samples/raspberry_pi/``` for additional details.
+///
+/// Reporting issues
+/// ----------------
+/// Please file an issue [in the issue
+/// tracker](https://github.com/dart-lang/fletch/issues/new?title=Add%20title&labels=Area-Package&body=%3Cissue%20description%3E%0A%3Crepro%20steps%3E%0A%3Cexpected%20outcome%3E%0A%3Cactual%20outcome%3E).
 library gpio;
 
 import 'dart:fletch.ffi';
