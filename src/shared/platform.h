@@ -11,6 +11,8 @@
 
 #if defined(FLETCH_TARGET_OS_POSIX)
 #include "src/shared/platform_posix.h"
+#elif defined(FLETCH_TARGET_OS_WIN)
+#include "src/shared/platform_windows.h"
 #elif defined(FLETCH_TARGET_OS_LK)
 #include "src/shared/platform_lk.h"
 #elif defined(FLETCH_TARGET_OS_CMSIS)

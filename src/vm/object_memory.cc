@@ -265,6 +265,8 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   // posix_memalign doesn't exist on Android. We fallback to
   // memalign.
   memory = memalign(kPageSize, size);
+#elif defined(FLETCH_TARGET_OS_WIN)
+  memory = _aligned_malloc(size, kPageSize);
 #elif defined(FLETCH_TARGET_OS_LK)
   size = Utils::RoundUp(size, PAGE_SIZE);
   memory = page_alloc(size >> PAGE_SIZE_SHIFT);

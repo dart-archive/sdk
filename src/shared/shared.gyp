@@ -50,6 +50,8 @@
         'platform_cmsis.h',
         'platform_posix.cc',
         'platform_posix.h',
+        'platform_windows.cc',
+        'platform_windows.h',
         'random.h',
         'selectors.h',
         'utils.cc',

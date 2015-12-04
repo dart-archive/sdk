@@ -87,7 +87,7 @@ struct ServiceRequest {
   void* callback;
 };
 
-__attribute__((visibility("default"))) void PostResultToService(char* buffer) {
+void PostResultToService(char* buffer) {
   ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
   if (request->callback == NULL) {
     request->service->NotifyResult(request);

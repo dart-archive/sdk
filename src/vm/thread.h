@@ -14,11 +14,10 @@
 #include "src/vm/thread_lk.h"
 #elif defined(FLETCH_TARGET_OS_CMSIS)
 #include "src/vm/thread_cmsis.h"
+#elif defined(FLETCH_TARGET_OS_WIN)
+#include "src/vm/thread_windows.h"
 #else
-#warning "OS is lacking thread implementation."
-#endif
-#if defined(FLETCH_TARGET_OS_CMSIS)
-#include "src/vm/thread_cmsis.h"
+#error "OS is lacking thread implementation."
 #endif
 
 namespace fletch {

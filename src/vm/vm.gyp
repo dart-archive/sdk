@@ -170,6 +170,8 @@
         'thread_lk.h',
         'thread_cmsis.cc',
         'thread_cmsis.h',
+        'thread_windows.cc',
+        'thread_windows.h',
         'unicode.cc',
         'unicode.h',
         'vector.cc',
