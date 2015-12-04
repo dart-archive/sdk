@@ -54,6 +54,7 @@
       'sources': [
         # Application.
         '<(source_path)/fletch_entry.cc',
+        '<(source_path)/logger.cc',
 
         '<(source_path)/syscalls.c',
 
@@ -69,6 +70,11 @@
 
         # Board support packages.
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
+        '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_lcd.c',
+        '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
+
+        # Additional utilities.
+        '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
       ],
       'conditions': [
         ['OS=="mac"', {
