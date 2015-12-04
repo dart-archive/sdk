@@ -13,7 +13,7 @@ vars = {
 
   "github_url": "https://github.com/%s.git",
 
-  "gyp_rev": "@6ee91ad8659871916f9aa840d42e1513befdf638",
+  "gyp_rev": "@6fb8bd829f0ca8fd432fd85ede788b6881c4f09f",
   "persistent_rev": "@55daae1a038188c49e36a64e7ef132c4861da3d8",
 
   # Used by pkg/immi_samples.
