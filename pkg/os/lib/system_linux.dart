@@ -4,26 +4,6 @@
 
 part of os;
 
-class LinuxAddrInfo extends AddrInfo {
-  LinuxAddrInfo() : super._();
-  LinuxAddrInfo.fromAddress(int address) : super._fromAddress(address);
-
-  ForeignMemory get ai_addr {
-    int offset = _addrlenOffset + wordSize;
-    return new ForeignMemory.fromAddress(getWord(offset), ai_addrlen);
-  }
-
-  get ai_canonname {
-    int offset = _addrlenOffset + wordSize * 2;
-    return getWord(offset);
-  }
-
-  AddrInfo get ai_next {
-    int offset = _addrlenOffset + wordSize * 3;
-    return new LinuxAddrInfo.fromAddress(getWord(offset));
-  }
-}
-
 class LinuxSystem extends PosixSystem {
   static final ForeignFunction _lseekLinux =
       ForeignLibrary.main.lookup("lseek64");

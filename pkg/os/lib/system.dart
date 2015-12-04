@@ -93,49 +93,10 @@ abstract class System {
   int get O_NONBLOCK;
   int get SOL_SOCKET;
   int get SO_REUSEADDR;
+  int get ADDR_INFO_SIZE;
   int get SOCKADDR_STORAGE_SIZE;
-}
-
-/// A class that gives access to the components of a sockaddr
-/// structure.
-class SockAddr {
-  final ForeignMemory buffer;
-
-  SockAddr(this.buffer);
-
-  factory SockAddr.allocate() {
-    return new SockAddr(
-        new ForeignMemory.allocated(getSystem().SOCKADDR_STORAGE_SIZE));
-  }
-
-  free() {
-    buffer.free();
-  }
-
-  int get port => buffer.getUint8(2) * 256 + buffer.getUint8(3);
-
-  int get family {
-    if (Foreign.platform == Foreign.MACOS) {
-      return buffer.getUint8(1);
-    } else {
-      return buffer.getUint16(0);
-    }
-  }
-
-  InternetAddress get address {
-    int addressLengthInBytes;
-    if (family == sys.AF_INET) {
-      addressLengthInBytes = 4;
-    } else if (family == sys.AF_INET6) {
-      addressLengthInBytes = 16;
-    } else {
-      throw 'Unsupported protocol';
-    }
-
-    List<int> digits = new List<int>(addressLengthInBytes);
-    buffer.copyBytesToList(digits, 4, 4 + addressLengthInBytes, 0);
-    return new InternetAddress(digits);
-  }
+  SockAddrIn allocateSockAddrIn();
+  SockAddrIn6 allocateSockAddrIn6();
 }
 
 class _InternetAddress implements InternetAddress {
@@ -145,10 +106,12 @@ class _InternetAddress implements InternetAddress {
     assert(_bytes.length == 4 || _bytes.length == 16);
   }
 
-  bool get isIp4 => _bytes.length == 4;
+  int get family => isIP4 ? sys.AF_INET : sys.AF_INET6;
+
+  bool get isIP4 => _bytes.length == 4;
 
   String toString() {
-    if (isIp4) {
+    if (isIP4) {
       return _bytes.join('.');
     } else {
       List<String> parts = new List<String>(8);

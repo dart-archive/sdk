@@ -29,15 +29,21 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 part 'errno.dart';
+
+part 'net_structs.dart';
+part 'net_structs_android.dart';
+part 'net_structs_linux.dart';
+part 'net_structs_macos.dart';
+part 'net_structs_posix.dart';
+
 part 'system.dart';
-part 'system_android.dart';
 part 'system_linux.dart';
 part 'system_macos.dart';
 part 'system_posix.dart';
 
 abstract class InternetAddress {
   factory InternetAddress(List<int> bytes) = _InternetAddress;
-  bool get isIp4;
+  bool get isIP4;
 }
 
 // TODO(ajohnsen): Take a Duration?

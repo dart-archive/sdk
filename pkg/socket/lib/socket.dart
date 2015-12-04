@@ -277,7 +277,7 @@ class DatagramSocket extends _SocketBase {
     int events = _waitFor(os.READ_EVENT);
     int availableBytes = available;
     ByteBuffer buffer = new Uint8List(availableBytes).buffer;
-    SockAddr sockaddr = new SockAddr.allocate();
+    PosixSockAddrIn sockaddr = sys.allocateSockAddrIn();
 
     try {
       int result = sys.recvfrom(_fd, buffer, sockaddr.buffer);

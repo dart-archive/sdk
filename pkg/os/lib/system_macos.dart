@@ -4,26 +4,6 @@
 
 part of os;
 
-class MacOSAddrInfo extends AddrInfo {
-  MacOSAddrInfo() : super._();
-  MacOSAddrInfo.fromAddress(int address) : super._fromAddress(address);
-
-  get ai_canonname {
-    int offset = _addrlenOffset + wordSize;
-    return getWord(offset);
-  }
-
-  ForeignMemory get ai_addr {
-    int offset = _addrlenOffset + wordSize * 2;
-    return new ForeignMemory.fromAddress(getWord(offset), ai_addrlen);
-  }
-
-  AddrInfo get ai_next {
-    int offset = _addrlenOffset + wordSize * 3;
-    return new MacOSAddrInfo.fromAddress(getWord(offset));
-  }
-}
-
 class MacOSSystem extends PosixSystem {
   static final ForeignFunction _lseekMac = ForeignLibrary.main.lookup("lseek");
   static final ForeignFunction _openMac = ForeignLibrary.main.lookup("open");
@@ -49,4 +29,17 @@ class MacOSSystem extends PosixSystem {
 
   ForeignFunction get _lseek => _lseekMac;
   ForeignFunction get _open => _openMac;
+
+  int SOCKADDR_IN_SIZE = 16;
+  int SOCKADDR_IN6_SIZE = 28;
+
+  MacOSSockAddrIn allocateSockAddrIn() {
+    ForeignMemory buffer = new ForeignMemory.allocated(SOCKADDR_IN_SIZE);
+    return new MacOSSockAddrIn(buffer, 0);
+  }
+
+  MacOSSockAddrIn6 allocateSockAddrIn6() {
+    ForeignMemory buffer = new ForeignMemory.allocated(SOCKADDR_IN6_SIZE);
+    return new MacOSSockAddrIn6(allocateSockAddrStorageMemory(), 0);
+  }
 }

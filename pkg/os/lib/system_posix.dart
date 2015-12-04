@@ -11,47 +11,6 @@ const int F_SETFL = 4;
 
 const int FD_CLOEXEC = 0x1;
 
-// The AddrInfo class is platform specific. The name and address fields
-// are swapped on MacOS compared to Linux.
-abstract class AddrInfo extends Struct {
-  factory AddrInfo() {
-    switch (Foreign.platform) {
-      case Foreign.LINUX: return new LinuxAddrInfo();
-      case Foreign.MACOS: return new MacOSAddrInfo();
-      case Foreign.ANDROID: return new AndroidAddrInfo();
-      default:
-        throw "Unsupported platform for dart:io";
-    }
-  }
-
-  factory AddrInfo.fromAddress(int address) {
-    switch (Foreign.platform) {
-      case Foreign.LINUX: return new LinuxAddrInfo.fromAddress(address);
-      case Foreign.MACOS: return new MacOSAddrInfo.fromAddress(address);
-      case Foreign.ANDROID: return new AndroidAddrInfo.fromAddress(address);
-      default:
-        throw "Unsupported platform for dart:io";
-    }
-  }
-
-  AddrInfo._() : super(8);
-  AddrInfo._fromAddress(int address) : super.fromAddress(address, 8);
-
-  int get _addrlenOffset => 16;
-
-  int get ai_flags => getInt32(0);
-  int get ai_family => getInt32(4);
-  void set ai_family(int value) { setInt32(4, value); }
-  int get ai_socktype => getInt32(8);
-  int get ai_protocol => getInt32(12);
-
-  int get ai_addrlen => getInt32(_addrlenOffset);
-
-  ForeignMemory get ai_addr;
-  get ai_canonname;
-  AddrInfo get ai_next;
-}
-
 abstract class PosixSystem implements System {
   static final ForeignFunction _accept =
       ForeignLibrary.main.lookup("accept");
@@ -119,6 +78,8 @@ abstract class PosixSystem implements System {
 
   int get SO_REUSEADDR;
 
+  int get ADDR_INFO_SIZE => 8;
+
   int get SOCKADDR_STORAGE_SIZE => 128;
 
   int get UTSNAME_LENGTH;
@@ -136,7 +97,7 @@ abstract class PosixSystem implements System {
     // TODO(ajohnsen): Actually apply hints.
     AddrInfo hints = new AddrInfo();
     // TODO(ajohnsen): Allow IPv6 results.
-    hints.ai_family = AF_INET;
+    hints.family = AF_INET;
     Struct result = new Struct(1);
     int status = _getaddrinfo.icall$4Retry(
         node, ForeignPointer.NULL, hints, result);
@@ -147,17 +108,17 @@ abstract class PosixSystem implements System {
       int length;
       int offset;
       // Loop until we find the right type.
-      if (info.ai_family == AF_INET) {
+      if (info.family == AF_INET) {
         length = 4;
         offset = 4;
-      } else if (info.ai_family == AF_INET6) {
+      } else if (info.family == AF_INET6) {
         length = 16;
         offset = 8;
       } else {
-        info = info.ai_next;
+        info = info.next;
         continue;
       }
-      ForeignMemory addr = info.ai_addr;
+      ForeignMemory addr = info.addr;
       List<int> bytes = new List<int>(length);
       addr.copyBytesToList(bytes, offset, offset + length, 0);
       address = new _InternetAddress(bytes);
@@ -371,28 +332,31 @@ abstract class PosixSystem implements System {
     }
   }
 
-  // TODO(karlklose): use SockAddr class here, too.
+  PosixSockAddrIn allocateSockAddrIn() {
+    return new PosixSockAddrIn(allocateSockAddrStorageMemory(), 0);
+  }
+
+  PosixSockAddrIn6 allocateSockAddrIn6() {
+    return new PosixSockAddrIn6(allocateSockAddrStorageMemory(), 0);
+  }
+
+  ForeignMemory allocateSockAddrStorageMemory() {
+    return new ForeignMemory.allocated(SOCKADDR_STORAGE_SIZE);
+  }
+
   ForeignMemory _createSocketAddress(_InternetAddress address, int port) {
-    var bytes = address._bytes;
-    ForeignMemory sockaddr;
-    int length;
-    if (bytes.length == 4) {
-      length = 16;
-      sockaddr = new ForeignMemory.allocated(length);
-      sockaddr.setUint16(0, AF_INET);
-      sockaddr.copyBytesFromList(bytes, 4, 8, 0);
-    } else if (bytes.length == 16) {
-      length = 28;
-      sockaddr = new ForeignMemory.allocated(length);
-      sockaddr.setUint16(0, AF_INET6);
-      sockaddr.copyBytesFromList(bytes, 8, 24, 0);
+    PosixSockAddrIn sockAddr;
+    if (address.family == AF_INET) {
+      sockAddr = allocateSockAddrIn();
+    } else if (address.family == AF_INET6) {
+      sockAddr = allocateSockAddrIn6();
     } else {
       throw "Invalid InternetAddress";
     }
-    // Set port in Network Byte Order.
-    sockaddr.setUint8(2, port >> 8);
-    sockaddr.setUint8(3, port & 0xFF);
-    return sockaddr;
+    sockAddr.family = address.family;
+    sockAddr.address = address;
+    sockAddr.port = port;
+    return sockAddr.buffer;
   }
 
   SystemInformation info() {
