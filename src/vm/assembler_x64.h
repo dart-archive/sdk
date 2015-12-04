@@ -280,7 +280,7 @@ class Assembler {
   void j(Condition condition, Label* label);
   void jmp(Label* label);
 
-  void Bind(const char* name);
+  void Bind(const char* prefix, const char* name);
   void Bind(Label* label);
 
  private:

@@ -29,6 +29,9 @@ class InterpreterGenerator {
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
+  virtual void GenerateBytecodePrologue(const char* name) = 0;
+  virtual void GenerateDebugAtBytecode() = 0;
+
 #define V(name, branching, format, size, stack_diff, print) \
   virtual void Do##name() = 0;
   BYTECODES_DO(V)
@@ -49,19 +52,23 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
+  GenerateDebugAtBytecode();
+
 #define V(name, branching, format, size, stack_diff, print) \
-  assembler()->Bind("BC_" #name);                           \
+  GenerateBytecodePrologue("BC_" #name);                    \
   Do##name();
   BYTECODES_DO(V)
 #undef V
 
-#define V(name)                          \
-  assembler()->Bind("Intrinsic_" #name); \
+#define V(name)                              \
+  __ AlignToPowerOfTwo(3);                   \
+  __ Bind("", "Intrinsic_" #name); \
   DoIntrinsic##name();
   INTRINSICS_DO(V)
 #undef V
 
-  assembler()->BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
+  __ SwitchToData();
+  __ BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
 #define V(name, branching, format, size, stack_diff, print) \
   assembler()->DefineLong("BC_" #name);
   BYTECODES_DO(V)
@@ -84,6 +91,9 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
+
+  virtual void GenerateBytecodePrologue(const char* name);
+  virtual void GenerateDebugAtBytecode();
 
   virtual void DoLoadLocal0();
   virtual void DoLoadLocal1();
@@ -403,6 +413,31 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   PushFrameDescriptor(R5, R2);
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
   Dispatch(0);
+}
+
+void InterpreterGeneratorARM::GenerateBytecodePrologue(const char* name) {
+  __ SwitchToText();
+  __ AlignToPowerOfTwo(1);
+  __ nop();
+  __ Bind("Debug_", name);
+  __ bl("DebugAtBytecode");
+  __ AlignToPowerOfTwo(3);
+  __ Bind("", name);
+}
+
+void InterpreterGeneratorARM::GenerateDebugAtBytecode() {
+  __ SwitchToText();
+  __ AlignToPowerOfTwo(3);
+  __ Bind("", "DebugAtBytecode");
+  __ str(LR, Address(SP, 0));
+  __ mov(R0, R4);
+  __ mov(R1, R5);
+  __ mov(R2, R6);
+  __ bl("HandleAtBytecode");
+  __ tst(R0, R0);
+  __ b(NE, &done_);
+  __ ldr(LR, Address(SP, 0));
+  __ bx(LR);
 }
 
 void InterpreterGeneratorARM::DoLoadLocal0() {

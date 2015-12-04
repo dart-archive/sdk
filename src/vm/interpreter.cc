@@ -1032,10 +1032,7 @@ void Interpreter::Run() {
   // This is conservative.
   process_->store_buffer()->Insert(process_->stack());
 
-  int result = -1;
-  if (!process_->is_debugging()) {
-    result = InterpretFast(process_, &target_yield_result_);
-  }
+  int result = InterpretFast(process_, &target_yield_result_);
   if (result < 0) {
     interruption_ = HandleBailout();
   } else {
@@ -1331,6 +1328,20 @@ void HandleInvokeSelector(Process* process) {
   state.Goto(target->bytecode_address_for(0));
 
   state.SaveState();
+}
+
+int HandleAtBytecode(Process* process, uint8* bcp, Object** sp) {
+  // TODO(ajohnsen): Support validate stack.
+  DebugInfo* debug_info = process->debug_info();
+  if (debug_info != NULL) {
+    // If we already are at the breakpoint, just clear it (to support stepping).
+    if (debug_info->is_at_breakpoint()) {
+      debug_info->ClearBreakpoint();
+    } else if (debug_info->ShouldBreak(bcp, sp)) {
+      return Interpreter::kBreakPoint;
+    }
+  }
+  return Interpreter::kReady;
 }
 
 }  // namespace fletch

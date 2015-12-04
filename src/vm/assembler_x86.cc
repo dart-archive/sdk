@@ -24,10 +24,17 @@ void Assembler::jmp(Label* label) {
   printf("\tjmp %d%s\n", label->position(), direction);
 }
 
+void Assembler::SwitchToText() {
+  puts("\n\t.text");
+}
+
+void Assembler::SwitchToData() {
+  puts("\n\t.data");
+}
+
 void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
-  puts("\n");
   AlignToPowerOfTwo(power);
-  printf("%s:\n", name);
+  Bind("", name);
 }
 
 void Assembler::AlignToPowerOfTwo(int power) {
@@ -89,6 +96,11 @@ void Assembler::Print(const char* format, ...) {
 
         case 's': {
           printf("%s", va_arg(arguments, const char*));
+          break;
+        }
+
+        case 'd': {
+          printf("%d", va_arg(arguments, int));
           break;
         }
 

@@ -15,11 +15,11 @@ static const char* kPrefix = "";
 static const char* kPrefix = "_";
 #endif
 
-void Assembler::Bind(const char* name) {
+void Assembler::Bind(const char* prefix, const char* name) {
   putchar('\n');
-  AlignToPowerOfTwo(4);
   printf("\t.code 32\n");
-  printf("\t.global %s%s\n%s%s:\n", kPrefix, name, kPrefix, name);
+  printf("\t.global %s%s%s\n", kPrefix, prefix, name);
+  printf("%s%s%s:\n", kPrefix, prefix, name);
 }
 
 void Assembler::DefineLong(const char* name) {

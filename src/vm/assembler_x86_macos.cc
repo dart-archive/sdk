@@ -26,12 +26,14 @@ void Assembler::j(Condition condition, const char* name) {
 
 void Assembler::jmp(const char* name) { printf("\tjmp %s%s\n", kPrefix, name); }
 
-void Assembler::Bind(const char* name) {
+void Assembler::jmp(const char* name, Register index, ScaleFactor scale) {
+  Print("jmp *%s%s(,%rl,%d)", kPrefix, name, index, 1 << scale);
+}
+
+void Assembler::Bind(const char* prefix, const char* name) {
   putchar('\n');
-  printf("\t.text\n");
-  AlignToPowerOfTwo(4);
-  printf("\t.globl %s%s\n", kPrefix, name);
-  printf("%s%s:\n", kPrefix, name);
+  printf("\t.globl %s%s%s\n", kPrefix, prefix, name);
+  printf("%s%s%s:\n", kPrefix, prefix, name);
 }
 
 void Assembler::DefineLong(const char* name) {

@@ -367,7 +367,7 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessStep: {
         process_->EnsureDebuggerAttached();
-        process_->debug_info()->set_is_stepping(true);
+        process_->debug_info()->SetStepping();
         ProcessContinue(process_);
         break;
       }
@@ -462,6 +462,8 @@ void Session::ProcessMessages() {
           int frame_index = connection_->ReadInt();
           RestartFrame(frame_index);
           process_->set_exception(process_->program()->null_object());
+          DebugInfo* debug_info = process_->debug_info();
+          if (debug_info != NULL) debug_info->ClearBreakpoint();
         }
         ProcessContinue(process_);
         break;
@@ -1376,7 +1378,7 @@ bool Session::BreakPoint(Process* process) {
     DebugInfo* debug_info = process->debug_info();
     int breakpoint_id = -1;
     if (debug_info != NULL) {
-      debug_info->set_is_stepping(false);
+      debug_info->ClearStepping();
       breakpoint_id = debug_info->current_breakpoint_id();
     }
     WriteBuffer buffer;
