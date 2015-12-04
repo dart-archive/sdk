@@ -49,6 +49,9 @@ main() {
 
   print('failureOnParentUnlink');
   failureOnParentUnlinkTest();
+
+  print('killProcessTest');
+  killProcessTest();
 }
 
 simpleMonitorTest(DeathReason reason) {
@@ -307,6 +310,20 @@ failureOnParentUnlinkTest() {
   ProcessDeath death = monitor.receive();
   Expect.equals(process, death.process);
   Expect.equals(DeathReason.Terminated, death.reason);
+}
+
+killProcessTest() {
+  var monitor = new Channel();
+
+  var process = Process.spawnDetached(() {
+    blockInfinitly();
+  }, monitor: new Port(monitor));
+
+  process.kill();
+
+  ProcessDeath death = monitor.receive();
+  Expect.equals(process, death.process);
+  Expect.equals(DeathReason.Killed, death.reason);
 }
 
 failWithDeathReason(DeathReason reason) {

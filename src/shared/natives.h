@@ -234,6 +234,7 @@ namespace fletch {
   N(ProcessUnlink, "Process", "unlink")                                   \
   N(ProcessMonitor, "Process", "monitor")                                 \
   N(ProcessUnmonitor, "Process", "unmonitor")                             \
+  N(ProcessKill, "Process", "kill")                                       \
                                                                           \
   N(PortCreate, "Port", "_create")                                        \
   N(PortSend, "Port", "send")                                             \

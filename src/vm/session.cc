@@ -1360,6 +1360,18 @@ bool Session::UncaughtException(Process* process) {
   return false;
 }
 
+bool Session::Killed(Process* process) {
+  if (process_ != process) return false;
+
+  // TODO(kustermann): We might want to let a debugger know that the process
+  // didn't normally terminate, but rather was killed.
+  WriteBuffer buffer;
+  connection_->Send(Connection::kProcessTerminated, buffer);
+  process_ = NULL;
+  program_->scheduler()->ExitAtTermination(process, Signal::kKilled);
+  return true;
+}
+
 bool Session::UncaughtSignal(Process* process) {
   if (process_ != process) return false;
 

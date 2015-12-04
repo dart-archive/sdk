@@ -16,6 +16,15 @@
 #include "src/vm/session.h"
 #include "src/vm/thread.h"
 
+#define HANDLE_BY_SESSION_OR_SELF(session_expression, self_expression) \
+  do {                                                                 \
+    Session* session = process->program()->session();                  \
+    if (session == NULL || !session->is_debugging() ||                 \
+        !(session_expression)) {                                       \
+      self_expression;                                                 \
+    }                                                                  \
+  } while (false);
+
 namespace fletch {
 
 ThreadState* const kEmptyThreadState = reinterpret_cast<ThreadState*>(1);
@@ -305,9 +314,13 @@ int Scheduler::Run() {
     case Signal::kUncaughtException:
       return kUncaughtExceptionExitCode;
     // TODO(kustermann): We should consider returning a different exitcode if a
-    // process was killed via a signal.
+    // process was killed via a signal or killed programmatically.
     case Signal::kUnhandledSignal:
       return kUncaughtExceptionExitCode;
+    case Signal::kKilled:
+      return kUncaughtExceptionExitCode;
+    case Signal::kShouldKill:
+      UNREACHABLE();
   }
   UNREACHABLE();
   return 0;
@@ -698,12 +711,15 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
   Signal* signal = process->signal();
   if (signal != NULL) {
     process->ChangeState(Process::kRunning, Process::kTerminated);
-
-    Session* session = process->program()->session();
-    if (session == NULL || !session->is_debugging() ||
-        !session->UncaughtSignal(process)) {
-      ExitAtTermination(process, Signal::kUnhandledSignal);
+    if (signal->kind() == Signal::kShouldKill) {
+      HANDLE_BY_SESSION_OR_SELF(session->Killed(process),
+                                ExitAtTermination(process, Signal::kKilled));
+    } else {
+      HANDLE_BY_SESSION_OR_SELF(
+          session->UncaughtSignal(process),
+          ExitAtTermination(process, Signal::kUnhandledSignal));
     }
+
     return NULL;
   }
 
@@ -787,45 +803,33 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
 
   if (interpreter.IsTerminated()) {
     process->ChangeState(Process::kRunning, Process::kTerminated);
-    Session* session = process->program()->session();
-    if (session == NULL || !session->is_debugging() ||
-        !session->ProcessTerminated(process)) {
-      ExitAtTermination(process, Signal::kTerminated);
-    }
+    HANDLE_BY_SESSION_OR_SELF(session->ProcessTerminated(process),
+                              ExitAtTermination(process, Signal::kTerminated));
     return NULL;
   }
 
   if (interpreter.IsUncaughtException()) {
     process->ChangeState(Process::kRunning, Process::kUncaughtException);
-    Session* session = process->program()->session();
-    if (session == NULL || !session->is_debugging() ||
-        !session->UncaughtException(process)) {
-      ExitAtUncaughtException(process, true);
-    }
+    HANDLE_BY_SESSION_OR_SELF(session->UncaughtException(process),
+                              ExitAtUncaughtException(process, true));
     return NULL;
   }
 
   if (interpreter.IsCompileTimeError()) {
     process->ChangeState(Process::kRunning, Process::kCompileTimeError);
-    Session* session = process->program()->session();
-    if (session == NULL || !session->is_debugging() ||
-        !session->CompileTimeError(process)) {
-      ExitAtCompileTimeError(process);
-    }
+    HANDLE_BY_SESSION_OR_SELF(session->CompileTimeError(process),
+                              ExitAtCompileTimeError(process));
     return NULL;
   }
 
   if (interpreter.IsAtBreakPoint()) {
     process->ChangeState(Process::kRunning, Process::kBreakPoint);
-    Session* session = process->program()->session();
-    if (session == NULL || !session->is_debugging() ||
-        !session->BreakPoint(process)) {
-      // We should only reach a breakpoint if a session is attached and it can
-      // handle [process].
-      FATAL(
-          "We should never hit a breakpoint without a session being able to "
-          "handle it.");
-    }
+    // We should only reach a breakpoint if a session is attached and it can
+    // handle [process].
+    HANDLE_BY_SESSION_OR_SELF(
+        session->BreakPoint(process),
+        FATAL("We should never hit a breakpoint without a session being able "
+              "to handle it."));
     return NULL;
   }
 

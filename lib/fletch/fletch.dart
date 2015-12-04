@@ -259,6 +259,7 @@ enum DeathReason {
   Terminated,
   UncaughtException,
   UnhandledSignal,
+  Killed,
 }
 
 class Process {
@@ -303,6 +304,10 @@ class Process {
       default:
         throw fletch.nativeError;
     }
+  }
+
+  @fletch.native void kill() {
+    throw fletch.nativeError;
   }
 
   static Process spawn(Function fn, [argument]) {

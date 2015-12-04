@@ -24,6 +24,11 @@ class Signal : public Refcounted<Signal> {
     kTerminated,
     kUncaughtException,
     kUnhandledSignal,
+    kKilled,
+
+    // Dummy entry used for communicating to the scheduler that
+    // that a process should be killed.
+    kShouldKill,
   };
 
   Signal(ProcessHandle* handle, Kind kind)

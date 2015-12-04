@@ -88,4 +88,24 @@ NATIVE(ProcessUnmonitor) {
   return process->program()->null_object();
 }
 
+NATIVE(ProcessKill) {
+  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
+
+  // Avoid allocating [Signal] if destination is already dead, but do allocate
+  // [Signal] outside spinlock.
+  Process* handle_process = handle->process();
+  if (handle_process != NULL) {
+    Signal* signal = new Signal(process->process_handle(), Signal::kShouldKill);
+
+    ScopedSpinlock locker(handle->lock());
+    handle_process = handle->process();
+    if (handle_process != NULL) {
+      handle_process->SendSignal(signal);
+    } else {
+      delete signal;
+    }
+  }
+  return process->program()->null_object();
+}
+
 }  // namespace fletch
