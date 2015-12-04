@@ -129,7 +129,7 @@ int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
     Range& slot = free_slots_[index];
     int offset = slot.begin() - range.begin();
     if (offset >= 0 && range.size() <= slot.size() &&
-        used_offsets_.Count(offset) == 0) {
+        used_offsets_.Find(offset) == used_offsets_.End()) {
       // Simply move the start offset of the slot. If the slot is now full,
       // the next row will detect it and move index accordingly.
       slot.set_begin(slot.begin() + range.size());
@@ -145,7 +145,7 @@ int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
 
   Range& slot = free_slots_[index];
   int offset = Utils::Maximum(0, slot.begin() - range.begin());
-  while (used_offsets_.Count(offset) > 0) {
+  while (used_offsets_.Find(offset) != used_offsets_.End()) {
     offset++;
   }
   slot.set_begin(offset + range.end());
@@ -155,7 +155,7 @@ int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
 }
 
 void RowFitter::MarkOffsetAsUsed(int offset) {
-  ASSERT(used_offsets_.Count(offset) == 0);
+  ASSERT(used_offsets_.Find(offset) == used_offsets_.End());
   used_offsets_.Insert(offset);
   // Keep track of the highest used offset.
   if (offset > limit_) limit_ = offset;
@@ -186,7 +186,7 @@ int RowFitter::FindOffset(const Range::List& ranges, int min_row_index,
       ASSERT(slot.Contains(largest_range.WithOffset(offset)));
 
       // Pad to guarantee unique offsets.
-      if (used_offsets_.Count(offset) > 0) {
+      if (used_offsets_.Find(offset) != used_offsets_.End()) {
         start++;
         continue;
       }
@@ -224,7 +224,7 @@ int RowFitter::FindOffset(const Range::List& ranges, int min_row_index,
   // If we are at end, we know it fits.
   int offset = Utils::Maximum(0, slot.begin() - min_row_index);
   // Pad to guarantee unique offsets.
-  while (used_offsets_.Count(offset) > 0) {
+  while (used_offsets_.Find(offset) != used_offsets_.End()) {
     offset++;
   }
 

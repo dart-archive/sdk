@@ -110,6 +110,7 @@
         'mailbox.h',
         'message_mailbox.h',
         'message_mailbox.cc',
+        'multi_hashset.h',
         'native_interpreter.h',
         'native_interpreter.cc',
         'native_process.cc',

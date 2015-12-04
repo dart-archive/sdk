@@ -11,7 +11,7 @@
 
 namespace fletch {
 
-// Used to implement UnorderedMap and UnorderedMap (see hash_map.h and
+// Used to implement UnorderedMap and UnorderedSet (see hash_map.h and
 // hashset.h).  Most methods have a very similar interface to
 // std::unordered_set and std::unordered_map.
 template <typename K, typename V, typename KeyExtractor>
@@ -104,13 +104,12 @@ class UnorderedHashTable {
     friend class UnorderedHashTable;
   };
 
-  inline ConstIterator Find(const K& key) {
-    return ConstIterator(map_, map_.Find(reinterpret_cast<const void*>(key)));
+  inline Iterator Find(const K& key) {
+    return Iterator(map_, map_.Find(reinterpret_cast<const void*>(key)));
   }
 
-  inline size_t Count(const K& key) {
-    char* entry = map_.At(reinterpret_cast<const void*>(key));
-    return entry == NULL ? 0 : 1;
+  inline ConstIterator Find(const K& key) const {
+    return ConstIterator(map_, map_.Find(reinterpret_cast<const void*>(key)));
   }
 
   inline Pair<Iterator, bool> Insert(const ValueType& value) {

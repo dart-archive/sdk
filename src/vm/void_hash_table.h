@@ -17,6 +17,10 @@ class VoidHashTable {
 
   char* Find(const void* key);
 
+  const char* Find(const void* key) const {
+    return const_cast<VoidHashTable*>(this)->Find(key);
+  }
+
   char* At(const void* key);
 
   char* Insert(const void* key, const char* pair, bool* inserted);
@@ -143,7 +147,7 @@ class VoidHashTable {
   }
 
   static inline char* ValueFromEntry(char* entry) {
-    return reinterpret_cast<char*>(entry + sizeof(hash_t) + sizeof(void*));
+    return entry + sizeof(hash_t) + sizeof(void*);
   }
 
   size_t SizeOfPair() const { return entry_size_ - sizeof(hash_t); }

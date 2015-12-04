@@ -647,7 +647,7 @@ void ProgramFolder::Unfold() {
       Array* entry = Array::cast(element);
       int offset = Smi::cast(entry->get(0))->value();
       int selector = Smi::cast(entry->get(1))->value();
-      ASSERT(map.Count(offset) == 0 || map[offset] == selector);
+      ASSERT(map.Find(offset) == map.End() || map[offset] == selector);
       map[offset] = selector;
     }
   }
