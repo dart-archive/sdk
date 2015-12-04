@@ -12,36 +12,24 @@ namespace fletch {
 
 void Links::InsertPort(Port* port) {
   ScopedSpinlock locker(&lock_);
-  if (ports_.Insert(port).second) {
-    port->IncrementRef();
-  }
+  if (ports_.Add(port)) port->IncrementRef();
 }
 
 bool Links::InsertHandle(ProcessHandle* handle) {
   ScopedSpinlock locker(&lock_);
   if (half_dead_) return false;
-  if (handles_.Insert(handle).second) {
-    handle->IncrementRef();
-  }
+  if (handles_.Add(handle)) handle->IncrementRef();
   return true;
 }
 
 void Links::RemovePort(Port* port) {
   ScopedSpinlock locker(&lock_);
-  HashSet<Port*>::ConstIterator it = ports_.Find(port);
-  if (it != ports_.End()) {
-    ports_.Erase(it);
-    port->DecrementRef();
-  }
+  if (ports_.Remove(port)) port->DecrementRef();
 }
 
 void Links::RemoveHandle(ProcessHandle* handle) {
   ScopedSpinlock locker(&lock_);
-  HashSet<ProcessHandle*>::ConstIterator it = handles_.Find(handle);
-  if (it != handles_.End()) {
-    handles_.Erase(it);
-    ProcessHandle::DecrementRef(handle);
-  }
+  if (handles_.Remove(handle)) ProcessHandle::DecrementRef(handle);
 }
 
 void Links::NotifyLinkedProcesses(ProcessHandle* dying_handle,
@@ -51,12 +39,12 @@ void Links::NotifyLinkedProcesses(ProcessHandle* dying_handle,
 
   Signal* signal = NULL;
 
-  HashSet<ProcessHandle*>::Iterator it = handles_.Begin();
-  while (it != handles_.End()) {
-    ProcessHandle* handle = *it;
+  for (auto it = handles_.Begin(); it != handles_.End(); ++it) {
+    ProcessHandle* handle = it->first;
+    // NOTE: Even though a link might have been setup several times, there is no
+    // reason to send several signals, since the first one is deadly already.
     signal = SendSignal(handle, dying_handle, kind, signal);
     ProcessHandle::DecrementRef(handle);
-    ++it;
   }
   handles_.Clear();
   half_dead_ = true;
@@ -69,9 +57,14 @@ void Links::NotifyMonitors(ProcessHandle* dying_handle) {
   ScopedSpinlock locker(&lock_);
   Signal* signal = NULL;
   ASSERT(half_dead_);
-  for (HashSet<Port*>::Iterator it = ports_.Begin(); it != ports_.End(); ++it) {
-    Port* port = *it;
-    signal = EnqueueSignal(port, dying_handle, exit_kind_, signal);
+  for (auto it = ports_.Begin(); it != ports_.End(); ++it) {
+    Port* port = it->first;
+    int count = it->second;
+    // NOTE: Since one can monitor another process X number of times, we need to
+    // send the exit signal also X times.
+    for (int i = 0; i < count; i++) {
+      signal = EnqueueSignal(port, dying_handle, exit_kind_, signal);
+    }
     port->DecrementRef();
   }
   ports_.Clear();

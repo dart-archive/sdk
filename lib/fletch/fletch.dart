@@ -277,10 +277,29 @@ class Process {
     throw fletch.nativeError;
   }
 
-  @fletch.native bool monitor(Port exitPort) {
+  @fletch.native void unlink() {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new StateError("Cannot unlink from parent process.");
+      default:
+        throw fletch.nativeError;
+    }
+  }
+
+  @fletch.native bool monitor(Port port) {
     switch (fletch.nativeError) {
       case fletch.wrongArgumentType:
         throw new StateError("The argument to monitor must be a Port object.");
+      default:
+        throw fletch.nativeError;
+    }
+  }
+
+  @fletch.native void unmonitor(Port port) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new StateError(
+            "The argument to unmonitor must be a Port object.");
       default:
         throw fletch.nativeError;
     }

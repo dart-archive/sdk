@@ -30,12 +30,8 @@ NATIVE(ProcessLink) {
   {
     ScopedSpinlock locker(handle->lock());
     Process* handle_process = handle->process();
-    if (handle_process == NULL) {
-      return process->program()->false_object();
-    }
-
-    if (handle_process->links()->InsertHandle(process->process_handle())) {
-      process->links()->InsertHandle(handle);
+    if (handle_process != NULL &&
+        handle_process->links()->InsertHandle(process->process_handle())) {
       return process->program()->true_object();
     }
 
@@ -43,12 +39,25 @@ NATIVE(ProcessLink) {
   }
 }
 
+NATIVE(ProcessUnlink) {
+  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
+  {
+    ScopedSpinlock locker(handle->lock());
+    Process* handle_process = handle->process();
+    if (handle_process != NULL) {
+      if (handle_process == process->parent()) {
+        return Failure::wrong_argument_type();
+      }
+      handle_process->links()->RemoveHandle(process->process_handle());
+    }
+  }
+  return process->program()->null_object();
+}
+
 NATIVE(ProcessMonitor) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
   Instance* dart_port = Instance::cast(arguments[1]);
-  if (!dart_port->IsPort()) {
-    return Failure::wrong_argument_type();
-  }
+  if (!dart_port->IsPort()) return Failure::wrong_argument_type();
   Port* port = Port::FromDartObject(dart_port);
 
   {
@@ -61,6 +70,22 @@ NATIVE(ProcessMonitor) {
       return process->program()->false_object();
     }
   }
+}
+
+NATIVE(ProcessUnmonitor) {
+  ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
+  Instance* dart_port = Instance::cast(arguments[1]);
+  if (!dart_port->IsPort()) return Failure::wrong_argument_type();
+  Port* port = Port::FromDartObject(dart_port);
+
+  {
+    ScopedSpinlock locker(handle->lock());
+    Process* handle_process = handle->process();
+    if (handle_process != NULL) {
+      handle_process->links()->RemovePort(port);
+    }
+  }
+  return process->program()->null_object();
 }
 
 }  // namespace fletch

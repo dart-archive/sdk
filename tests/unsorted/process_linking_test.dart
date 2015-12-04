@@ -17,10 +17,20 @@ main() {
   multipleMonitorPortsTest(DeathReason.Terminated);
   multipleMonitorPortsTest(DeathReason.UncaughtException);
 
+  print('monitorDuplicatePorts');
+  monitorDuplicatePorts(DeathReason.CompileTimeError);
+  monitorDuplicatePorts(DeathReason.Terminated);
+  monitorDuplicatePorts(DeathReason.UncaughtException);
+
   print('indirectLinkTest');
   indirectLinkTest(DeathReason.CompileTimeError);
   indirectLinkTest(DeathReason.Terminated);
   indirectLinkTest(DeathReason.UncaughtException);
+
+  print('unlinkTest');
+  unlinkTest(DeathReason.CompileTimeError);
+  unlinkTest(DeathReason.Terminated);
+  unlinkTest(DeathReason.UncaughtException);
 
   print('postMonitorProcessTest');
   postMonitorProcessTest(DeathReason.CompileTimeError);
@@ -36,6 +46,9 @@ main() {
   deathOrderTest2(DeathReason.CompileTimeError);
   deathOrderTest2(DeathReason.Terminated);
   deathOrderTest2(DeathReason.UncaughtException);
+
+  print('failureOnParentUnlink');
+  failureOnParentUnlinkTest();
 }
 
 simpleMonitorTest(DeathReason reason) {
@@ -76,6 +89,56 @@ multipleMonitorPortsTest(DeathReason reason) {
   Expect.equals(reason, monitor2.receive().reason);
 }
 
+monitorDuplicatePorts(DeathReason reason) {
+  var grandChildChannel = new Channel();
+  var grandChildPort = new Port(grandChildChannel);
+
+  Process process = Process.spawnDetached(() {
+    Process grandChild = Process.spawn(() {
+      var c = new Channel();
+      grandChildPort.send(Process.current);
+      grandChildPort.send(new Port(c));
+
+      c.receive();
+      failWithDeathReason(reason);
+    });
+    blockInfinitly();
+  });
+
+  Process grandChild = grandChildChannel.receive();
+
+  // Monitor the grand child 4 times
+  var monitor = new Channel();
+  var monitorPort = new Port(monitor);
+  for (int i = 0; i < 4; i++) {
+    grandChild.monitor(monitorPort);
+  }
+
+  // Unmonitor the grand child 2 times
+  grandChild.unmonitor(monitorPort);
+  grandChild.unmonitor(monitorPort);
+
+  // Use the same port for monitoring the parent (which will die with a uncaught
+  // signal error).
+  process.monitor(monitorPort);
+
+  // Trigger child failure.
+  grandChildChannel.receive().send(null);
+
+  // Ensure we get death 2 times from grand child
+  for (int i = 0; i < 2; i++) {
+    ProcessDeath death = monitor.receive();
+    Expect.equals(grandChild, death.process);
+    Expect.equals(reason, death.reason);
+  }
+
+  // To ensure we don't get more than 2 [ProcessDeath] messages from the grand
+  // child we ensure the next death is the direct child.
+  ProcessDeath death = monitor.receive();
+  Expect.equals(process, death.process);
+  Expect.equals(DeathReason.UnhandledSignal, death.reason);
+}
+
 indirectLinkTest(DeathReason reason) {
   spawnProcessList(Port replyPort) {
     p2(Port reply) {
@@ -102,6 +165,37 @@ indirectLinkTest(DeathReason reason) {
   ProcessDeath death = monitor.receive();
   Expect.equals(process, death.process);
   Expect.equals(DeathReason.UnhandledSignal, death.reason);
+}
+
+unlinkTest(DeathReason reason) {
+  var channel = new Channel();
+  var monitorPort = new Port(channel);
+
+  // We are linked after this call.
+  Process process = Process.spawn(() {
+    var c = new Channel();
+    monitorPort.send(new Port(c));
+
+    c.receive();
+    failWithDeathReason(reason);
+  });
+
+  // Link 1 more time and unlink 2 times (=> we are no longer linked to it).
+  process.link();
+  process.unlink();
+  process.unlink();
+
+  // Monitor child
+  process.monitor(monitorPort);
+
+  // Let child die.
+  channel.receive().send(null);
+
+  // To ensure we don't get more than 2 [ProcessDeath] messages from the grand
+  // child we ensure the next death is the direct child.
+  ProcessDeath death = channel.receive();
+  Expect.equals(process, death.process);
+  Expect.equals(reason, death.reason);
 }
 
 postMonitorProcessTest(DeathReason reason) {
@@ -195,6 +289,24 @@ deathOrderTest2(DeathReason reason) {
   ProcessDeath death2 = monitor.receive();
   Expect.equals(root, death2.process);
   Expect.equals(DeathReason.UnhandledSignal, death2.reason);
+}
+
+failureOnParentUnlinkTest() {
+  var monitor = new Channel();
+  var port = new Port(monitor);
+
+  var parent = Process.current;
+
+  var process = Process.spawnDetached(() {
+    Expect.throws(() => parent.unlink());
+    port.send('success');
+  }, monitor: port);
+
+  Expect.equals('success', monitor.receive());
+
+  ProcessDeath death = monitor.receive();
+  Expect.equals(process, death.process);
+  Expect.equals(DeathReason.Terminated, death.reason);
 }
 
 failWithDeathReason(DeathReason reason) {

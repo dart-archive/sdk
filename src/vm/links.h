@@ -5,7 +5,7 @@
 #ifndef SRC_VM_LINKS_H_
 #define SRC_VM_LINKS_H_
 
-#include "src/vm/hash_set.h"
+#include "src/vm/multi_hashset.h"
 #include "src/vm/port.h"
 #include "src/vm/process_handle.h"
 #include "src/vm/signal.h"
@@ -62,8 +62,8 @@ class Links {
   // die.
   bool half_dead_;
   Signal::Kind exit_kind_;
-  HashSet<Port*> ports_;
-  HashSet<ProcessHandle*> handles_;
+  MultiHashSet<Port*> ports_;
+  MultiHashSet<ProcessHandle*> handles_;
 };
 
 }  // namespace fletch

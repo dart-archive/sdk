@@ -121,6 +121,8 @@ class Process {
   ProcessHandle* process_handle() const { return process_handle_; }
   Links* links() { return &links_; }
 
+  Process* parent() const { return parent_; }
+
   void SetupExecutionStack();
   StackCheckResult HandleStackOverflow(int addition);
 
