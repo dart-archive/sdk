@@ -261,6 +261,7 @@
         'assembler_x86.h',
         'assembler_x86_linux.cc',
         'assembler_x86_macos.cc',
+        'assembler_x86_win.cc',
         'generator.h',
         'generator.cc',
         'interpreter_arm.cc',

@@ -214,6 +214,12 @@ class Engine : public State {
     }                                                                    \
   } while (false);
 
+#ifdef FLETCH_TARGET_OS_WIN
+// TODO(herhut): This compiles but obviously does not work...
+#define DISPATCH()
+#define DISPATCH_NO_BREAK()
+#define DISPATCH_TO(opcode)
+#else
 #define DISPATCH()                                        \
   if (ShouldBreak()) return Interpreter::kBreakPoint;     \
   goto *kDispatchTable[ReadOpcode()]
@@ -221,6 +227,7 @@ class Engine : public State {
   goto *kDispatchTable[ReadOpcode()]
 #define DISPATCH_TO(opcode)                               \
   goto opcode##Label
+#endif
 
 // Opcode definition macros.
 #define OPCODE_BEGIN(opcode)                              \
@@ -231,7 +238,12 @@ class Engine : public State {
 
 Interpreter::InterruptKind Engine::Interpret(
     TargetYieldResult* target_yield_result) {
+#ifdef FLETCH_TARGET_OS_WIN
+// TODO(herhut): This compiles but obviously does not work...
+#define LABEL(name, branching, format, length, stack_diff, print) NULL, // NOLINT
+#else
 #define LABEL(name, branching, format, length, stack_diff, print) &&name##Label, // NOLINT
+#endif
   static void* kDispatchTable[] = {
     BYTECODES_DO(LABEL)
   };
