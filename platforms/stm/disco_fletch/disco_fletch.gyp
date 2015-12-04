@@ -24,6 +24,9 @@
   'targets': [
     {
       'target_name': 'disco_fletch.elf',
+      'dependencies': [
+        '../../../src/vm/vm.gyp:libfletch',
+      ],
       'variables': {
         'project_name': 'disco_fletch',
         'project_path': '<(DEPTH)/platforms/stm/<(project_name)',
@@ -39,7 +42,10 @@
             'configuration/STM32F746NGHx_FLASH.ld'
         ],
         'cflags': [
-          '-Wno-write-strings'
+          # Our target will link in the stm files which do have a few warnings.
+          '-Wno-write-strings',
+          '-Wno-sign-compare',
+          '-Wno-missing-field-initializers',
         ],
       },
       'type': 'executable',
@@ -54,8 +60,7 @@
       'sources': [
         # Application.
         '<(source_path)/fletch_entry.cc',
-        '<(source_path)/logger.cc',
-
+        # TODO(ricow): reenable logger, see issue 348.
         '<(source_path)/syscalls.c',
 
         # Generated files.
@@ -68,13 +73,17 @@
         '<(template_path)/system_stm32f7xx.c',
         '<(template_path)/startup_stm32f746xx.s',
 
-        # Board support packages.
+       # Board support packages.
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_lcd.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
 
         # Additional utilities.
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
+
+        # TODO(ricow): Tool the generation of this, and the final bundle.
+        # This should be a library instead which that tool then links.
+        '<(PRODUCT_DIR)/snapshot.o',
       ],
       'conditions': [
         ['OS=="mac"', {

@@ -23,6 +23,11 @@
       '<(stm32_cube_f7)/Utilities/Fonts',
       '<(stm32_cube_f7)/Utilities/CPU',
     ],
+    'cflags' : [
+      '-Wno-empty-body',
+      '-Wno-missing-field-initializers',
+      '-Wno-sign-compare',
+    ],
   },
   'targets': [
     {
@@ -232,6 +237,11 @@
               'STM32F746NGHx_FLASH.ld',
         ],
       },
+      'cflags' : [
+        '-Wno-format',
+        '-Wno-address',
+        '-Wno-pointer-sign',
+      ],
       'type': 'executable',
       'includes': [
         'hal_sources.gypi',
@@ -330,17 +340,17 @@
       'defines': [
         'DEMO_VERSION="1.0.1"',
       ],
+      'cflags' : [
+        '-Wno-format',
+        '-Wno-address',
+        '-Wno-pointer-sign',
+      ],
       'include_dirs': [
         '<(project_path)/Core/Inc',
         '<(project_path)/Config',
         '<(project_path)/STemWin_Addons',
         '<(project_path)/Modules/audio_player/Addons/SpiritDSP_Equalizer',
         '<(project_path)/Modules/audio_player/Addons/SpiritDSP_LoudnessControl',
-      ],
-      'cflags' : [
-         '-Wno-format',
-         '-Wno-address',
-         '-Wno-pointer-sign',
       ],
       'sources': [
         # Application.

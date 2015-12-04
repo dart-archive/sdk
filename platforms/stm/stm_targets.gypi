@@ -4,9 +4,19 @@
 
 {
   'variables': {
+    'posix': 0,
+
     'stm32_cube_f7': '<(DEPTH)/third_party/stm/STM32Cube_FW_F7_V1.2.0',
+    'stm32_cube_f7_free_rtos':
+      '<(stm32_cube_f7)/Middlewares/Third_Party/FreeRTOS',
     'stm32_cube_f7_bsp_discovery':
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
+
+    'project_name': 'disco_fletch',
+    'project_path': '<(DEPTH)/platforms/stm/<(project_name)',
+    'generated_path': '<(project_path)/generated',
+    'fletch_path': '../..',
+
     'gcc-arm-embedded':
       '<(DEPTH)/third_party/gcc-arm-embedded/<(OS)/gcc-arm-embedded/bin',
     'objcopy': '<(gcc-arm-embedded)/arm-none-eabi-objcopy',
@@ -17,7 +27,6 @@
       '-mthumb',
       '-mfloat-abi=hard',
       '-mfpu=fpv5-sp-d16',
-      '-Os',
       '-Wall',
       '-fmessage-length=0',
       '-ffunction-sections',
@@ -26,11 +35,13 @@
     # Common release mode flags (C and C++) for the GCC ARM Embedded toolchain.
     'common_cross_gcc_release_cflags': [
       '-g0',
+      '-Os',
     ],
 
     # Common debug mode flags (C and C++) for the GCC ARM Embedded toolchain.
     'common_cross_gcc_debug_cflags': [
       '-g3',
+      '-O0',
     ],
 
     # Use the gnu language dialect to get math.h constants
@@ -40,7 +51,7 @@
 
     # Use the gnu language dialect to get math.h constants
     'common_cross_gcc_cflags_cc': [
-      '-std=c++11',
+      '--std=gnu++11',
     ],
 
     # Common linker flags for the GCC ARM Embedded toolchain.
@@ -64,11 +75,16 @@
       'fletch_stm': {
         'abstract': 1,
 
+        'defines': [
+          'FLETCH32',
+          'FLETCH_TARGET_ARM',
+          'FLETCH_THUMB_ONLY',
+        ],
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
               'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
-
+              'FLETCH_TARGET_OS_CMSIS',
               'USE_HAL_DRIVER',
               'STM32F746xx',
               'USE_STM32746G_DISCOVERY',
@@ -91,10 +107,11 @@
                     '<@(common_cross_gcc_cflags)',
                     '<@(common_cross_gcc_cflags_cc)',
                   ],
-
                   'OTHER_LDFLAGS': [
                     '<@(common_cross_gcc_ldflags)',
                   ],
+
+
                 },
               }],
               ['OS=="linux"', {
@@ -112,6 +129,21 @@
                 ],
               }],
             ],
+            'defines!': [
+              'FLETCH_TARGET_OS_POSIX',
+              'FLETCH_TARGET_OS_LINUX',
+              'FLETCH_TARGET_OS_MACOS',
+            ],
+            'include_dirs': [
+              # We need to set these here since the src/shared/platform_cmsis.h
+              # includes cmsis_os.h from here.
+              '<(stm32_cube_f7_free_rtos)/Source/CMSIS_RTOS/',
+              '<(stm32_cube_f7_free_rtos)/Source/include/',
+              '<(stm32_cube_f7_free_rtos)/Source/portable/GCC/ARM_CM7/r0p1/',
+              '<(stm32_cube_f7)/Drivers/CMSIS/Include/',
+              '<(generated_path)/Inc',
+              '<(fletch_path)'
+            ],
           }],
 
           ['_toolset=="host"', {
@@ -128,7 +160,10 @@
 
       'ReleaseSTM': {
         'inherit_from': [
-          'fletch_stm'
+          'fletch_base', 'fletch_release', 'fletch_stm',
+          'fletch_disable_live_coding', 'fletch_disable_ffi',
+          'fletch_disable_native_processes',
+          'fletch_disable_print_interceptors'
         ],
         'target_conditions': [
           ['_toolset=="target"', {
@@ -139,7 +174,7 @@
                     '<@(common_cross_gcc_release_cflags)',
                   ],
                   'OTHER_CPLUSPLUSFLAGS' : [
-                  '<@(common_cross_gcc_release_cflags)',
+                    '<@(common_cross_gcc_release_cflags)',
                   ],
                 },
               }],
@@ -155,7 +190,10 @@
 
       'DebugSTM': {
         'inherit_from': [
-          'fletch_stm'
+          'fletch_base', 'fletch_debug', 'fletch_stm',
+          'fletch_disable_live_coding', 'fletch_disable_ffi',
+          'fletch_disable_native_processes',
+          'fletch_disable_print_interceptors'
         ],
         'target_conditions': [
           ['_toolset=="target"', {

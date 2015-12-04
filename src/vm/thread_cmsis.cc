@@ -25,6 +25,8 @@ static char cmsis_thread_no = 0;
 static uint32_t cmsis_stack[kNumberOfFletchThreads][kFletchStackSizeInWords];
 #endif
 
+static const char* base_name = "cmsis_thread_";
+
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
 }
@@ -38,12 +40,16 @@ void Thread::UnblockOSSignals() {
 }
 
 ThreadIdentifier Thread::Run(RunSignature run, void* data) {
+  char* name = reinterpret_cast<char*>(malloc(strlen(base_name) + 5));
+
+  snprintf(name, strlen(base_name) + 5, "cmsis_thread%d", cmsis_thread_no);
   int thread_no = cmsis_thread_no++;
   ASSERT(thread_no < kNumberOfFletchThreads);
   osThreadDef_t* threadDef = &(cmsis_thread_pool[thread_no]);
   threadDef->pthread = reinterpret_cast<void (*)(const void*)>(run);
   threadDef->tpriority = osPriorityNormal;
   threadDef->stacksize = kFletchStackSize;
+  threadDef->name = const_cast<char*>(name);
 #ifdef CMSIS_OS_RTX
   threadDef->stack_pointer = cmsis_stack[thread_no];
 #endif

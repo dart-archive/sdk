@@ -31,7 +31,7 @@
             '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
           ],
         }],
-        [ 'OS!="win"', { 
+        ['OS!="win" and posix==1', {
           'link_settings': {
             'libraries': [
               '-lpthread',

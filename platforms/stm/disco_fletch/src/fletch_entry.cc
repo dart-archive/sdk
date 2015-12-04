@@ -2,35 +2,30 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include <stdarg.h>
-
-#include "cmsis_os.h"
-#include "stm32746g_discovery.h"
-
 #include "fletch_entry.h"
-#include "logger.h"
 
-// Simple task blinking the green LED.
-void BlinkTask(void const * argument) {
-  int count = 0;
-  for (;;) {
-    LOG(static_cast<Logger::Level>(count % 5), (char *)"%d\n", count);
-    count++;
-    osDelay(500);
-    BSP_LED_Toggle(LED1);
-  }
+#include <cmsis_os.h>
+#include <include/fletch_api.h>
+#include <stdarg.h>
+#include <stm32746g_discovery.h>
+
+extern unsigned char _binary_snapshot_start;
+extern unsigned char _binary_snapshot_end;
+extern unsigned char _binary_snapshot_size;
+
+// Run fletch on the linked in snapshot.
+void StartFletch(void const * argument) {
+  FletchSetup();
+  unsigned char *snapshot = &_binary_snapshot_start;
+  int snapshot_size =  reinterpret_cast<int>(&_binary_snapshot_size);
+  FletchProgram program = FletchLoadSnapshot(snapshot, snapshot_size);
+  FletchRunMain(program);
 }
 
 // Main entry point from FreeRTOS. Running in the default task.
 extern "C" void FletchEntry(void const * argument) {
-  BSP_LED_Init(LED1);
-
-  Logger::Create();
-
-  // Start a task blinking the green LED.
-  osThreadDef(
-      BLINK_TASK, BlinkTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
-  osThreadCreate(osThread(BLINK_TASK), NULL);
+  osThreadDef(START_FLETCH, StartFletch, osPriorityNormal, 0, 1024);
+  osThreadCreate(osThread(START_FLETCH), NULL);
 
   // No more to do right now.
   for (;;) {

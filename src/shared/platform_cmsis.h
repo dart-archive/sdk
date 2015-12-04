@@ -85,6 +85,7 @@ namespace fletch {
 
 static const int kMutexSize = sizeof(int32_t) * 3;
 static const int kSemaphoreSize = sizeof(int32_t) * 2;
+static const int kMaxSemaphoreValue = 1024;
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
@@ -123,7 +124,8 @@ class MonitorImpl {
     ASSERT(mutex_ != NULL);
     internal_ = osMutexCreate(osMutex(internal_def_));
     ASSERT(internal_ != NULL);
-    semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_), 0);
+    semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_),
+                                   kMaxSemaphoreValue);
     ASSERT(semaphore_ != NULL);
     waiting_ = 0;
   }

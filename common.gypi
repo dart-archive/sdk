@@ -31,6 +31,8 @@
 
     'mbed_path': '<(DEPTH)/third_party/mbed/build/',
 
+    'posix%': 1,
+
     'conditions': [
       [ 'OS=="mac"', {
         # TODO(zerny): Redirect stderr to work around gyp regarding a non-empty

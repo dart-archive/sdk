@@ -58,11 +58,6 @@
 
         '<(SHARED_INTERMEDIATE_DIR)/version.cc',
       ],
-      'link_settings': {
-        'libraries': [
-          '-lpthread',
-        ],
-      },
     },
     {
       'target_name': 'cc_test_base',
