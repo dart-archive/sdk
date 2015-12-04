@@ -30,19 +30,19 @@ Logger::Logger() {
 
 void Logger::vlog(Level level, char* format, va_list args) {
   switch (level) {
-    case Logger::DEBUG:
+    case Logger::LDEBUG:
       LCD_LineColor = LCD_COLOR_CYAN;
       break;
-    case Logger::INFO:
+  case Logger::LINFO:
       LCD_LineColor = LCD_COLOR_BLACK;
       break;
-    case Logger::WARNING:
+    case Logger::LWARNING:
       LCD_LineColor = LCD_COLOR_ORANGE;
       break;
-    case Logger::ERROR:
+    case Logger::LERROR:
       LCD_LineColor = LCD_COLOR_RED;
       break;
-    case Logger::FATAL:
+    case Logger::LFATAL:
       LCD_LineColor = LCD_COLOR_DARKRED;
       break;
   }
@@ -60,34 +60,34 @@ void Logger::log(Level level, char *format, ...) {
 void Logger::debug(char *format, ...) {
   va_list args;
   va_start(args, format);
-  vlog(DEBUG, format, args);
+  vlog(LDEBUG, format, args);
   va_end(args);
 }
 
 void Logger::info(char *format, ...) {
   va_list args;
   va_start(args, format);
-  vlog(INFO, format, args);
+  vlog(LINFO, format, args);
   va_end(args);
 }
 
 void Logger::warning(char *format, ...) {
   va_list args;
   va_start(args, format);
-  vlog(WARNING, format, args);
+  vlog(LWARNING, format, args);
   va_end(args);
 }
 
 void Logger::error(char *format, ...) {
   va_list args;
   va_start(args, format);
-  vlog(ERROR, format, args);
+  vlog(LERROR, format, args);
   va_end(args);
 }
 
 void Logger::fatal(char *format, ...) {
   va_list args;
   va_start(args, format);
-  vlog(FATAL, format, args);
+  vlog(LFATAL, format, args);
   va_end(args);
 }

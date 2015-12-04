@@ -14,11 +14,11 @@ class Logger {
 
  public:
   enum Level {
-    DEBUG,
-    INFO,
-    WARNING,
-    ERROR,
-    FATAL,
+    LDEBUG,
+    LINFO,
+    LWARNING,
+    LERROR,
+    LFATAL,
   };
 
   static Logger* Create() {

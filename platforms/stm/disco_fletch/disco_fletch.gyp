@@ -60,7 +60,8 @@
       'sources': [
         # Application.
         '<(source_path)/fletch_entry.cc',
-        # TODO(ricow): reenable logger, see issue 348.
+        '<(source_path)/logger.cc',
+
         '<(source_path)/syscalls.c',
 
         # Generated files.
