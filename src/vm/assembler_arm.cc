@@ -4,7 +4,7 @@
 
 #if defined(FLETCH_TARGET_ARM)
 
-#include "src/vm/assembler.h" // NOLINT we don't include assembler_arm.h.
+#include "src/vm/assembler.h"  // NOLINT we don't include assembler_arm.h.
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -12,10 +12,9 @@
 namespace fletch {
 
 static const char* ConditionToString(Condition cond) {
-  static const char* kConditionNames[] = {
-    "eq", "ne", "cs", "cc", "mi", "pl", "vs", "vc", "hi", "ls",
-    "ge", "lt", "gt", "le", ""
-  };
+  static const char* kConditionNames[] = {"eq", "ne", "cs", "cc", "mi",
+                                          "pl", "vs", "vc", "hi", "ls",
+                                          "ge", "lt", "gt", "le", ""};
   return kConditionNames[cond];
 }
 
@@ -38,15 +37,12 @@ void Assembler::Bind(Label* label) {
   printf(".L%d:\n", label->position());
 }
 
-void Assembler::GenerateConstantPool() {
-  printf(".ltorg\n");
-}
+void Assembler::GenerateConstantPool() { printf(".ltorg\n"); }
 
 static const char* ToString(Register reg) {
-  static const char* kRegisterNames[] = {
-    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8",
-    "r9", "r10", "r11", "ip", "sp", "lr", "pc"
-  };
+  static const char* kRegisterNames[] = {"r0", "r1", "r2", "r3", "r4",  "r5",
+                                         "r6", "r7", "r8", "r9", "r10", "r11",
+                                         "ip", "sp", "lr", "pc"};
   ASSERT(reg >= R0 && reg <= R15);
   return kRegisterNames[reg];
 }
@@ -172,15 +168,13 @@ void Assembler::PrintAddress(const Address* address) {
 }
 
 static const char* ShiftTypeToString(ShiftType type) {
-  static const char* kShiftNames[] = { "lsl", "asr" };
+  static const char* kShiftNames[] = {"lsl", "asr"};
   return kShiftNames[type];
 }
 
 void Assembler::PrintOperand(const Operand* operand) {
-  printf("%s, %s #%d",
-         ToString(operand->reg()),
-         ShiftTypeToString(operand->shift_type()),
-         operand->shift_amount());
+  printf("%s, %s #%d", ToString(operand->reg()),
+         ShiftTypeToString(operand->shift_type()), operand->shift_amount());
 }
 
 int Assembler::NewLabelPosition() {

@@ -10,13 +10,11 @@
 
 namespace fletch {
 
-template<typename T>
+template <typename T>
 class Refcounted {
  public:
-  Refcounted() : ref_count_(1) { }
-  ~Refcounted() {
-    ASSERT(ref_count_ == 0);
-  }
+  Refcounted() : ref_count_(1) {}
+  ~Refcounted() { ASSERT(ref_count_ == 0); }
 
   void IncrementRef() {
     ASSERT(ref_count_ > 0);

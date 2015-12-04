@@ -20,19 +20,14 @@
 
 namespace fletch {
 
-char* ForeignUtils::DirectoryName(char* path) {
-  return dirname(path);
-}
+char* ForeignUtils::DirectoryName(char* path) { return dirname(path); }
 
 class DefaultLibraryEntry {
  public:
   DefaultLibraryEntry(char* library, DefaultLibraryEntry* next)
-      : library_(library), next_(next) {
-  }
+      : library_(library), next_(next) {}
 
-  ~DefaultLibraryEntry() {
-    free(library_);
-  }
+  ~DefaultLibraryEntry() { free(library_); }
 
   const char* library() const { return library_; }
   DefaultLibraryEntry* next() const { return next_; }
@@ -45,9 +40,7 @@ class DefaultLibraryEntry {
 DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
 Mutex* ForeignFunctionInterface::mutex_ = NULL;
 
-void ForeignFunctionInterface::Setup() {
-  mutex_ = Platform::CreateMutex();
-}
+void ForeignFunctionInterface::Setup() { mutex_ = Platform::CreateMutex(); }
 
 void ForeignFunctionInterface::TearDown() {
   DefaultLibraryEntry* current = libraries_;
@@ -74,8 +67,7 @@ static void* PerformForeignLookup(const char* library, const char* name) {
 
 void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
   ScopedLock lock(mutex_);
-  for (DefaultLibraryEntry* current = libraries_;
-       current != NULL;
+  for (DefaultLibraryEntry* current = libraries_; current != NULL;
        current = current->next()) {
     void* result = PerformForeignLookup(current->library(), symbol);
     if (result != NULL) return result;
@@ -90,9 +82,8 @@ NATIVE(ForeignLibraryLookup) {
     fprintf(stderr, "Failed libary lookup(%s): %s\n", library, dlerror());
   }
   free(library);
-  return result != NULL
-      ? process->ToInteger(reinterpret_cast<intptr_t>(result))
-      : Failure::index_out_of_bounds();
+  return result != NULL ? process->ToInteger(reinterpret_cast<intptr_t>(result))
+                        : Failure::index_out_of_bounds();
 }
 
 NATIVE(ForeignLibraryGetFunction) {
@@ -107,9 +98,8 @@ NATIVE(ForeignLibraryGetFunction) {
     result = ForeignFunctionInterface::LookupInDefaultLibraries(name);
   }
   free(name);
-  return result != NULL
-      ? process->ToInteger(reinterpret_cast<intptr_t>(result))
-      : Failure::index_out_of_bounds();
+  return result != NULL ? process->ToInteger(reinterpret_cast<intptr_t>(result))
+                        : Failure::index_out_of_bounds();
 }
 
 NATIVE(ForeignLibraryBundlePath) {
@@ -134,16 +124,14 @@ NATIVE(ForeignLibraryBundlePath) {
 NATIVE(ForeignLibraryClose) {
   word address = AsForeignWord(arguments[0]);
   void* handle = reinterpret_cast<void*>(address);
-  if (dlclose(handle) != 0)  {
+  if (dlclose(handle) != 0) {
     fprintf(stderr, "Failed to close handle: %s\n", dlerror());
     return Failure::index_out_of_bounds();
   }
   return NULL;
 }
 
-NATIVE(ForeignErrno) {
-  return Smi::FromWord(errno);
-}
+NATIVE(ForeignErrno) { return Smi::FromWord(errno); }
 
 }  // namespace fletch
 

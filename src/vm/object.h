@@ -61,7 +61,7 @@ class PortableSize {
   PortableSize(int pointers, int fixed_size, int doubles)
       : num_pointers_(pointers),
         fixed_size_(fixed_size),
-        num_doubles_(doubles) { }
+        num_doubles_(doubles) {}
 
   int ComputeSizeInBytes(int pointer_size, int double_size) const {
     ASSERT(pointer_size == 4 || pointer_size == 8);
@@ -137,7 +137,7 @@ class Object {
 };
 
 // Small integer (immediate).
-class Smi: public Object {
+class Smi : public Object {
  public:
   // Convert an integer into a Smi. Expects IsValid(value);
   inline static Smi* FromWord(word value);
@@ -156,7 +156,7 @@ class Smi: public Object {
 
   // Constant Smi values.
   static Smi* zero() { return FromWord(0); }
-  static Smi* one()  { return FromWord(1); }
+  static Smi* one() { return FromWord(1); }
 
   // Printing.
   void SmiPrint();
@@ -167,10 +167,8 @@ class Smi: public Object {
   static const uword kTagMask = (1 << kTagSize) - 1;
 
   // Min and max limits for Smi values.
-  static const word kMinValue =
-      -(1L << (kBitsPerPointer - (kTagSize + 1)));
-  static const word kMaxValue =
-      (1L << (kBitsPerPointer - (kTagSize + 1))) - 1;
+  static const word kMinValue = -(1L << (kBitsPerPointer - (kTagSize + 1)));
+  static const word kMaxValue = (1L << (kBitsPerPointer - (kTagSize + 1))) - 1;
   // + 2 because of 1 for rounding up, and 1 for the sign.
   static const int kMaxSmiCharacters =
       static_cast<int>((kBitsPerPointer - kTagSize) * (M_LN2 / M_LN10)) + 2;
@@ -195,36 +193,36 @@ class Smi: public Object {
 class InstanceFormat {
  public:
   enum Type {
-    CLASS_TYPE              = 0,
-    INSTANCE_TYPE           = 1,
-    ONE_BYTE_STRING_TYPE    = 2,
-    TWO_BYTE_STRING_TYPE    = 3,
-    ARRAY_TYPE              = 4,
-    FUNCTION_TYPE           = 5,
-    LARGE_INTEGER_TYPE      = 6,
-    BYTE_ARRAY_TYPE         = 7,
-    DOUBLE_TYPE             = 8,
-    BOXED_TYPE              = 9,
-    STACK_TYPE              = 10,
-    INITIALIZER_TYPE        = 11,
-    FREE_LIST_CHUNK_TYPE    = 12,
-    ONE_WORD_FILLER_TYPE    = 13,
-    IMMEDIATE_TYPE          = 15  // No instances.
+    CLASS_TYPE = 0,
+    INSTANCE_TYPE = 1,
+    ONE_BYTE_STRING_TYPE = 2,
+    TWO_BYTE_STRING_TYPE = 3,
+    ARRAY_TYPE = 4,
+    FUNCTION_TYPE = 5,
+    LARGE_INTEGER_TYPE = 6,
+    BYTE_ARRAY_TYPE = 7,
+    DOUBLE_TYPE = 8,
+    BOXED_TYPE = 9,
+    STACK_TYPE = 10,
+    INITIALIZER_TYPE = 11,
+    FREE_LIST_CHUNK_TYPE = 12,
+    ONE_WORD_FILLER_TYPE = 13,
+    IMMEDIATE_TYPE = 15  // No instances.
   };
 
   enum Marker {
-    NULL_MARKER             = 0,
-    TRUE_MARKER             = 1,
-    FALSE_MARKER            = 2,
-    COROUTINE_MARKER        = 3,
-    PORT_MARKER             = 4,
-    NO_MARKER               = 5  // Else marker.
+    NULL_MARKER = 0,
+    TRUE_MARKER = 1,
+    FALSE_MARKER = 2,
+    COROUTINE_MARKER = 3,
+    PORT_MARKER = 4,
+    NO_MARKER = 5  // Else marker.
   };
 
   enum Immutable {
-    ALWAYS_IMMUTABLE        = 0,
-    NEVER_IMMUTABLE         = 1,
-    MAYBE_IMMUTABLE         = 2,
+    ALWAYS_IMMUTABLE = 0,
+    NEVER_IMMUTABLE = 1,
+    MAYBE_IMMUTABLE = 2,
   };
 
   // Factory functions.
@@ -256,51 +254,39 @@ class InstanceFormat {
   }
 
   // Accessors.
-  int fixed_size() {
-    return FixedSizeField::decode(as_uword()) * kPointerSize;
-  }
+  int fixed_size() { return FixedSizeField::decode(as_uword()) * kPointerSize; }
 
-  Type type() {
-    return TypeField::decode(as_uword());
-  }
+  Type type() { return TypeField::decode(as_uword()); }
 
-  bool has_variable_part() {
-    return HasVariablePartField::decode(as_uword());
-  }
+  bool has_variable_part() { return HasVariablePartField::decode(as_uword()); }
 
   bool only_pointers_in_fixed_part() {
     return OnlyPointersInFixedPartField::decode(as_uword());
   }
 
-  Marker marker() {
-    return MarkerField::decode(as_uword());
-  }
+  Marker marker() { return MarkerField::decode(as_uword()); }
 
-  Immutable immutable() {
-    return ImmutableField::decode(as_uword());
-  }
+  Immutable immutable() { return ImmutableField::decode(as_uword()); }
 
   Smi* as_smi() { return value_; }
 
   // Leave LSB for Smi tag.
-  class TypeField: public BitField<Type, 1, 4> {};
-  class HasVariablePartField: public BoolField<5> {};
-  class OnlyPointersInFixedPartField: public BoolField<6> {};
-  class MarkerField: public BitField<Marker, 7, 3>{};
-  class ImmutableField: public BitField<Immutable, 10, 12-10> {};
-  class FixedSizeField: public BitField<int, 12, 31-12> {};
+  class TypeField : public BitField<Type, 1, 4> {};
+  class HasVariablePartField : public BoolField<5> {};
+  class OnlyPointersInFixedPartField : public BoolField<6> {};
+  class MarkerField : public BitField<Marker, 7, 3> {};
+  class ImmutableField : public BitField<Immutable, 10, 12 - 10> {};
+  class FixedSizeField : public BitField<int, 12, 31 - 12> {};
 
  private:
   // Constructor only used by factory functions.
-  inline explicit InstanceFormat(Type type,
-                                 int fixed_size,
+  inline explicit InstanceFormat(Type type, int fixed_size,
                                  bool has_variable_part,
                                  bool only_pointers_in_fixed_part,
-                                 Immutable immutable,
-                                 Marker marker);
+                                 Immutable immutable, Marker marker);
 
   // Exclusive access to Class contructing from Smi.
-  explicit InstanceFormat(Smi* value): value_(value) {}
+  explicit InstanceFormat(Smi* value) : value_(value) {}
   friend class Class;
   friend class InterpreterGeneratorX86;
   friend class InterpreterGeneratorARM;
@@ -314,15 +300,13 @@ class Class;
 class PointerVisitor;
 class ContentVisitor;
 
-class HeapObject: public Object {
+class HeapObject : public Object {
  public:
   // Convert a raw address to a HeapObject by adding a tag.
   inline static HeapObject* FromAddress(uword address);
 
   // Returns the true address of this object.
-  inline uword address() const {
-    return reinterpret_cast<uword>(this) - kTag;
-  }
+  inline uword address() const { return reinterpret_cast<uword>(this) - kTag; }
 
   // Mark the object as reachable. Used during garbage collection.
   inline void SetMark() {
@@ -427,9 +411,7 @@ class LargeInteger : public HeapObject {
   void LargeIntegerPrint();
   void LargeIntegerShortPrint();
 
-  static int AllocationSize() {
-    return Utils::RoundUp(kSize, kPointerSize);
-  }
+  static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
   int LargeIntegerSize() { return AllocationSize(); }
 
@@ -467,9 +449,7 @@ class Double : public HeapObject {
   void DoubleReadFrom(SnapshotReader* reader);
 
   // Sizing.
-  static int AllocationSize() {
-    return Utils::RoundUp(kSize, kPointerSize);
-  }
+  static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
   int DoubleSize() { return AllocationSize(); }
 
@@ -539,7 +519,7 @@ class Initializer : public HeapObject {
 };
 
 // Failure (immediate).
-class Failure: public Object {
+class Failure : public Object {
  public:
   // Converts an error object to a failure.
   static Failure* retry_after_gc() { return Create(RETRY_AFTER_GC); }
@@ -572,7 +552,7 @@ class Failure: public Object {
 };
 
 // Abstract base class for arrays. It provides length behavior.
-class BaseArray: public HeapObject {
+class BaseArray : public HeapObject {
  public:
   // [length]: length of the array.
   inline int length();
@@ -589,16 +569,14 @@ class BaseArray: public HeapObject {
   DISALLOW_IMPLICIT_CONSTRUCTORS(BaseArray);
 };
 
-class Array: public BaseArray {
+class Array : public BaseArray {
  public:
   // Setter and getter for elements.
   inline Object* get(int index);
   inline void set(int index, Object* value);
 
   // Sizing.
-  int ArraySize() {
-    return AllocationSize(length());
-  }
+  int ArraySize() { return AllocationSize(length()); }
 
   static int AllocationSize(int length) {
     return Utils::RoundUp(kSize + (length * kPointerSize), kPointerSize);
@@ -636,9 +614,7 @@ class ByteArray : public BaseArray {
   inline uint8* byte_address_for(int index);
 
   // Sizing.
-  int ByteArraySize() {
-    return AllocationSize(length());
-  }
+  int ByteArraySize() { return AllocationSize(length()); }
 
   static int AllocationSize(int length) {
     return Utils::RoundUp(kSize + length, kPointerSize);
@@ -666,7 +642,7 @@ class ByteArray : public BaseArray {
   DISALLOW_IMPLICIT_CONSTRUCTORS(ByteArray);
 };
 
-class Instance: public HeapObject {
+class Instance : public HeapObject {
  public:
   inline static Instance* cast(Object* value);
 
@@ -687,8 +663,8 @@ class Instance: public HeapObject {
   // Sizing.
   inline static int AllocationSize(int number_of_fields) {
     ASSERT(number_of_fields >= 0);
-    return Utils::RoundUp(
-        kSize + (number_of_fields * kPointerSize), kPointerSize);
+    return Utils::RoundUp(kSize + (number_of_fields * kPointerSize),
+                          kPointerSize);
   }
 
   inline static int NumberOfFieldsFromAllocationSize(int size) {
@@ -713,8 +689,8 @@ class Instance: public HeapObject {
   static const int kSize = kFlagsOffset + kPointerSize;
 
   // Leave LSB for Smi tag.
-  class FlagsImmutabilityField: public BoolField<1> {};
-  class FlagsHashCodeField: public BitField<word, 2, 32 - 2> { };
+  class FlagsImmutabilityField : public BoolField<1> {};
+  class FlagsHashCodeField : public BitField<word, 2, 32 - 2> {};
 
  protected:
   inline void Initialize(int size, Object* init_value);
@@ -735,7 +711,7 @@ class Instance: public HeapObject {
 
 class TwoByteString;
 
-class OneByteString: public BaseArray {
+class OneByteString : public BaseArray {
  public:
   // Access to individual chars.
   inline uint8 get_char_code(int offset);
@@ -804,8 +780,8 @@ class OneByteString: public BaseArray {
   // threads at the same time. They will all compute the same result, so
   // they will all write the same value into the [hash_value] field.
   word SlowHash() {
-    word value = Utils::StringHash(byte_address_for(0), length(), 1)
-        & Smi::kMaxPortableValue;
+    word value = Utils::StringHash(byte_address_for(0), length(), 1) &
+                 Smi::kMaxPortableValue;
     if (value == kNoHashValue) {
       static const int kNoHashValueReplacement = 1;
       ASSERT(kNoHashValueReplacement != kNoHashValue);
@@ -818,7 +794,7 @@ class OneByteString: public BaseArray {
   DISALLOW_IMPLICIT_CONSTRUCTORS(OneByteString);
 };
 
-class TwoByteString: public BaseArray {
+class TwoByteString : public BaseArray {
  public:
   // Access to individual chars.
   inline uint16_t get_code_unit(int offset);
@@ -887,8 +863,8 @@ class TwoByteString: public BaseArray {
   // threads at the same time. They will all compute the same result, so
   // they will all write the same value into the [hash_value] field.
   word SlowHash() {
-    word value = Utils::StringHash(byte_address_for(0), length(), 2)
-        & Smi::kMaxPortableValue;
+    word value = Utils::StringHash(byte_address_for(0), length(), 2) &
+                 Smi::kMaxPortableValue;
     if (value == kNoHashValue) {
       static const int kNoHashValueReplacement = 1;
       ASSERT(kNoHashValueReplacement != kNoHashValue);
@@ -901,7 +877,7 @@ class TwoByteString: public BaseArray {
   DISALLOW_IMPLICIT_CONSTRUCTORS(TwoByteString);
 };
 
-class Function: public HeapObject {
+class Function : public HeapObject {
  public:
   // [bytecode size]: byte size of the bytecodes.
   inline int bytecode_size();
@@ -923,7 +899,7 @@ class Function: public HeapObject {
   inline Object* literal_at(int index);
   inline void set_literal_at(int index, Object* value);
 
-  void* ComputeIntrinsic(IntrinsicsTable *table);
+  void* ComputeIntrinsic(IntrinsicsTable* table);
 
   // Sizing.
   int FunctionSize() {
@@ -936,10 +912,8 @@ class Function: public HeapObject {
     // Only used when writing snapshots. We only write snapshots
     // in folded form where there are no literals.
     ASSERT(literals_size() == 0);
-    return PortableSize(
-        kSize / kPointerSize + literals_size(),
-        bytecode_size(),
-        0);
+    return PortableSize(kSize / kPointerSize + literals_size(), bytecode_size(),
+                        0);
   }
 
   Function* UnfoldInToSpace(Space* to, int literals_size);
@@ -979,7 +953,7 @@ class Function: public HeapObject {
   DISALLOW_IMPLICIT_CONSTRUCTORS(Function);
 };
 
-class Class: public HeapObject {
+class Class : public HeapObject {
  public:
   // [super]: field containing the super class.
   inline bool has_super_class();
@@ -1048,18 +1022,15 @@ class Class: public HeapObject {
   Function* LookupMethod(int selector);
 
   // Layout descriptor.
-  static const int kSuperClassOffset =
-      HeapObject::kSize;
-  static const int kInstanceFormatOffset =
-      kSuperClassOffset + kPointerSize;
+  static const int kSuperClassOffset = HeapObject::kSize;
+  static const int kInstanceFormatOffset = kSuperClassOffset + kPointerSize;
   static const int kIdOrTransformationTargetOffset =
       kInstanceFormatOffset + kPointerSize;
   static const int kChildIdOrTransformationOffset =
       kIdOrTransformationTargetOffset + kPointerSize;
   static const int kMethodsOffset =
       kChildIdOrTransformationOffset + kPointerSize;
-  static const int kSize =
-      kMethodsOffset + kPointerSize;
+  static const int kSize = kMethodsOffset + kPointerSize;
 
  private:
   friend class Heap;
@@ -1096,8 +1067,7 @@ class StaticClassStructures {
   }
 
   static bool IsStaticClass(HeapObject* object) {
-    return (object == meta_class() ||
-            object == free_list_chunk_class() ||
+    return (object == meta_class() || object == free_list_chunk_class() ||
             object == one_word_filler_class());
   }
 
@@ -1143,10 +1113,10 @@ class FreeListChunk : public HeapObject {
   static const int kSize = kNextChunkOffset + kPointerSize;
 };
 
-class OneWordFiller : public HeapObject { };
+class OneWordFiller : public HeapObject {};
 
 // A stack-object that has 0..limit objects alive.
-class Stack: public BaseArray {
+class Stack : public BaseArray {
  public:
   // [top]: top of the stack.
   inline word top();
@@ -1165,9 +1135,7 @@ class Stack: public BaseArray {
   inline void SetTopFromPointer(Object** value);
 
   // Sizing.
-  int StackSize() {
-    return AllocationSize(length());
-  }
+  int StackSize() { return AllocationSize(length()); }
   static int AllocationSize(int length) {
     return Utils::RoundUp(kSize + (length * kPointerSize), kPointerSize);
   }
@@ -1197,7 +1165,7 @@ class Stack: public BaseArray {
   DISALLOW_IMPLICIT_CONSTRUCTORS(Stack);
 };
 
-class Coroutine: public Instance {
+class Coroutine : public Instance {
  public:
   // [stack]: field containing the stack.
   inline bool has_stack();
@@ -1226,7 +1194,7 @@ class Coroutine: public Instance {
 // pointers contained in Objects. Used in GC and serialization/deserialization.
 class PointerVisitor {
  public:
-  virtual ~PointerVisitor() { }
+  virtual ~PointerVisitor() {}
 
   // Visits a contiguous arrays of pointers in the half-open range
   // [start, end). Any or all of the values may be modified on return.
@@ -1250,7 +1218,7 @@ class HeapObjectVisitor {
   // object visitor visits all heap objects in a chunk in order
   // calling Visit on each of them. When it reaches the end of the
   // chunk it calls ChunkEnd.
-  virtual void ChunkEnd(uword end) { }
+  virtual void ChunkEnd(uword end) {}
 };
 
 // Class for visiting pointers inside heap objects.
@@ -1290,19 +1258,16 @@ class SafeObjectPointerVisitor : public HeapObjectVisitor {
 
 // Inlined InstanceFormat functions.
 
-InstanceFormat::InstanceFormat(Type type,
-                               int fixed_size,
+InstanceFormat::InstanceFormat(Type type, int fixed_size,
                                bool has_variable_part,
                                bool only_pointers_in_fixed_part,
-                               Immutable immutable,
-                               Marker marker = NO_MARKER) {
+                               Immutable immutable, Marker marker = NO_MARKER) {
   ASSERT(Utils::IsAligned(fixed_size, kPointerSize));
-  uword v = TypeField::encode(type)
-      | HasVariablePartField::encode(has_variable_part)
-      | OnlyPointersInFixedPartField::encode(only_pointers_in_fixed_part)
-      | MarkerField::encode(marker)
-      | ImmutableField::encode(immutable)
-      | FixedSizeField::encode(fixed_size / kPointerSize);
+  uword v = TypeField::encode(type) |
+            HasVariablePartField::encode(has_variable_part) |
+            OnlyPointersInFixedPartField::encode(only_pointers_in_fixed_part) |
+            MarkerField::encode(marker) | ImmutableField::encode(immutable) |
+            FixedSizeField::encode(fixed_size / kPointerSize);
   value_ = Smi::cast(reinterpret_cast<Smi*>(v));
   ASSERT(type == this->type());
   ASSERT(fixed_size == this->fixed_size());
@@ -1312,58 +1277,54 @@ InstanceFormat::InstanceFormat(Type type,
 }
 
 const InstanceFormat InstanceFormat::heap_integer_format() {
-  return InstanceFormat(
-      LARGE_INTEGER_TYPE, HeapObject::kSize, true, true, ALWAYS_IMMUTABLE);
+  return InstanceFormat(LARGE_INTEGER_TYPE, HeapObject::kSize, true, true,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::byte_array_format() {
-  return InstanceFormat(
-      BYTE_ARRAY_TYPE, ByteArray::kSize, true, true, ALWAYS_IMMUTABLE);
+  return InstanceFormat(BYTE_ARRAY_TYPE, ByteArray::kSize, true, true,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::double_format() {
-  return InstanceFormat(
-      DOUBLE_TYPE, HeapObject::kSize, true, true, ALWAYS_IMMUTABLE);
+  return InstanceFormat(DOUBLE_TYPE, HeapObject::kSize, true, true,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::boxed_format() {
-  return InstanceFormat(
-      BOXED_TYPE, Boxed::kSize, false, true, NEVER_IMMUTABLE);
+  return InstanceFormat(BOXED_TYPE, Boxed::kSize, false, true, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::initializer_format() {
-  return InstanceFormat(
-      INITIALIZER_TYPE, Initializer::kSize, false, true, NEVER_IMMUTABLE);
+  return InstanceFormat(INITIALIZER_TYPE, Initializer::kSize, false, true,
+                        NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::free_list_chunk_format() {
-  return InstanceFormat(
-      FREE_LIST_CHUNK_TYPE, FreeListChunk::kSize, true, true, NEVER_IMMUTABLE);
+  return InstanceFormat(FREE_LIST_CHUNK_TYPE, FreeListChunk::kSize, true, true,
+                        NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::one_word_filler_format() {
-  return InstanceFormat(
-      ONE_WORD_FILLER_TYPE, kPointerSize, false, true, NEVER_IMMUTABLE);
+  return InstanceFormat(ONE_WORD_FILLER_TYPE, kPointerSize, false, true,
+                        NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::function_format() {
-  return InstanceFormat(
-      FUNCTION_TYPE, Function::kSize, true, false, ALWAYS_IMMUTABLE);
+  return InstanceFormat(FUNCTION_TYPE, Function::kSize, true, false,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::instance_format(int number_of_fields,
                                                      Marker marker) {
   return InstanceFormat(INSTANCE_TYPE,
-                        Instance::AllocationSize(number_of_fields),
-                        false,
-                        true,
-                        MAYBE_IMMUTABLE,
-                        marker);
+                        Instance::AllocationSize(number_of_fields), false, true,
+                        MAYBE_IMMUTABLE, marker);
 }
 
 const InstanceFormat InstanceFormat::class_format() {
-  return InstanceFormat(
-      CLASS_TYPE, Class::AllocationSize(), false, true, ALWAYS_IMMUTABLE);
+  return InstanceFormat(CLASS_TYPE, Class::AllocationSize(), false, true,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::smi_format() {
@@ -1373,28 +1334,25 @@ const InstanceFormat InstanceFormat::smi_format() {
 const InstanceFormat InstanceFormat::num_format() {
   // TODO(ager): This is not really an immediate type. It is an
   // abstract class and therefore doesn't have any instances.
-  return InstanceFormat(
-      IMMEDIATE_TYPE, 0, false, false, NEVER_IMMUTABLE);
+  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::one_byte_string_format() {
-  return InstanceFormat(
-      ONE_BYTE_STRING_TYPE, OneByteString::kSize, true, true, ALWAYS_IMMUTABLE);
+  return InstanceFormat(ONE_BYTE_STRING_TYPE, OneByteString::kSize, true, true,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::two_byte_string_format() {
-  return InstanceFormat(
-      TWO_BYTE_STRING_TYPE, TwoByteString::kSize, true, true, ALWAYS_IMMUTABLE);
+  return InstanceFormat(TWO_BYTE_STRING_TYPE, TwoByteString::kSize, true, true,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::array_format() {
-  return InstanceFormat(
-      ARRAY_TYPE, Array::kSize, true, false, NEVER_IMMUTABLE);
+  return InstanceFormat(ARRAY_TYPE, Array::kSize, true, false, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::stack_format() {
-  return InstanceFormat(
-      STACK_TYPE, Stack::kSize, true, false, NEVER_IMMUTABLE);
+  return InstanceFormat(STACK_TYPE, Stack::kSize, true, false, NEVER_IMMUTABLE);
 }
 
 // Inlined Object functions.
@@ -1422,9 +1380,7 @@ bool Object::IsClass() {
   return false;
 }
 
-bool Object::IsString() {
-  return IsOneByteString() || IsTwoByteString();
-}
+bool Object::IsString() { return IsOneByteString() || IsTwoByteString(); }
 
 bool Object::IsOneByteString() {
   if (IsSmi()) return false;
@@ -1443,10 +1399,10 @@ bool Object::IsBaseArray() {
   HeapObject* h = HeapObject::cast(this);
   InstanceFormat::Type type = h->format().type();
   return type == InstanceFormat::ARRAY_TYPE ||
-      type == InstanceFormat::BYTE_ARRAY_TYPE ||
-      type == InstanceFormat::STACK_TYPE ||
-      type == InstanceFormat::ONE_BYTE_STRING_TYPE ||
-      type == InstanceFormat::TWO_BYTE_STRING_TYPE;
+         type == InstanceFormat::BYTE_ARRAY_TYPE ||
+         type == InstanceFormat::STACK_TYPE ||
+         type == InstanceFormat::ONE_BYTE_STRING_TYPE ||
+         type == InstanceFormat::TWO_BYTE_STRING_TYPE;
 }
 
 bool Object::IsArray() {
@@ -1567,9 +1523,7 @@ Smi* Smi::cast(Object* object) {
   return reinterpret_cast<Smi*>(object);
 }
 
-word Smi::value() {
-  return reinterpret_cast<word>(this) >> kTagSize;
-}
+word Smi::value() { return reinterpret_cast<word>(this) >> kTagSize; }
 
 Smi* Smi::FromWord(word value) {
   ASSERT(Smi::IsValid(value));
@@ -1595,9 +1549,7 @@ HeapObject* HeapObject::FromAddress(uword raw_address) {
   return reinterpret_cast<HeapObject*>(raw_address + kTag);
 }
 
-InstanceFormat HeapObject::format() {
-  return raw_class()->instance_format();
-}
+InstanceFormat HeapObject::format() { return raw_class()->instance_format(); }
 
 void HeapObject::at_put(int offset, Object* value) {
   *reinterpret_cast<Object**>(address() + offset) = value;
@@ -1607,17 +1559,13 @@ Object* HeapObject::at(int offset) {
   return *reinterpret_cast<Object**>(address() + offset);
 }
 
-Class* HeapObject::get_class() {
-  return Class::cast(at(kClassOffset));
-}
+Class* HeapObject::get_class() { return Class::cast(at(kClassOffset)); }
 
 Class* HeapObject::raw_class() {
   return reinterpret_cast<Class*>(at(kClassOffset));
 }
 
-void HeapObject::set_class(Class* value) {
-  at_put(kClassOffset, value);
-}
+void HeapObject::set_class(Class* value) { at_put(kClassOffset, value); }
 
 bool Instance::get_immutable() {
   return FlagsImmutabilityField::decode(
@@ -1690,9 +1638,7 @@ void Instance::SetFlagsBits(uint32 bits) {
 
 void HeapObject::Initialize(int size, Object* null) {
   // Initialize the body of the instance.
-  for (int offset = HeapObject::kSize;
-       offset < size;
-       offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, null);
   }
 }
@@ -1706,9 +1652,7 @@ Failure* Failure::cast(Object* object) {
 
 // Inlined BaseArray functions.
 
-int BaseArray::length() {
-  return Smi::cast(at(kLengthOffset))->value();
-}
+int BaseArray::length() { return Smi::cast(at(kLengthOffset))->value(); }
 
 void BaseArray::set_length(int value) {
   at_put(kLengthOffset, Smi::FromWord(value));
@@ -1739,9 +1683,7 @@ void Array::set(int index, Object* value) {
 void Array::Initialize(int length, int size, Object* null) {
   set_length(length);
   // Initialize the body of the instance.
-  for (int offset = BaseArray::kSize;
-       offset < size;
-       offset += kPointerSize) {
+  for (int offset = BaseArray::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, null);
   }
 }
@@ -1776,13 +1718,9 @@ void ByteArray::Initialize(int length) {
 
 // Inlined Class functions.
 
-bool Class::has_super_class() {
-  return at(kSuperClassOffset)->IsClass();
-}
+bool Class::has_super_class() { return at(kSuperClassOffset)->IsClass(); }
 
-Class* Class::super_class() {
-  return Class::cast(at(kSuperClassOffset));
-}
+Class* Class::super_class() { return Class::cast(at(kSuperClassOffset)); }
 
 void Class::set_super_class(Class* value) {
   ASSERT(this != value);  // Don't create cycles.
@@ -1805,9 +1743,7 @@ void Class::set_id(int value) {
   at_put(kIdOrTransformationTargetOffset, Smi::FromWord(value));
 }
 
-Object* Class::link() {
-  return at(kIdOrTransformationTargetOffset);
-}
+Object* Class::link() { return at(kIdOrTransformationTargetOffset); }
 
 void Class::set_link(Object* value) {
   at_put(kIdOrTransformationTargetOffset, value);
@@ -1821,34 +1757,24 @@ void Class::set_child_id(int value) {
   at_put(kChildIdOrTransformationOffset, Smi::FromWord(value));
 }
 
-Object* Class::child_link() {
-  return at(kChildIdOrTransformationOffset);
-}
+Object* Class::child_link() { return at(kChildIdOrTransformationOffset); }
 
 void Class::set_child_link(Object* value) {
   at_put(kChildIdOrTransformationOffset, value);
 }
 
 void Class::Initialize(InstanceFormat format, int size, Object* null) {
-  for (int offset = HeapObject::kSize;
-       offset < size;
-       offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, null);
   }
   set_instance_format(format);
 }
 
-bool Class::has_methods() {
-  return at(kMethodsOffset)->IsArray();
-}
+bool Class::has_methods() { return at(kMethodsOffset)->IsArray(); }
 
-Array* Class::methods() {
-  return Array::cast(at(kMethodsOffset));
-}
+Array* Class::methods() { return Array::cast(at(kMethodsOffset)); }
 
-void Class::set_methods(Array* value) {
-  at_put(kMethodsOffset, value);
-}
+void Class::set_methods(Array* value) { at_put(kMethodsOffset, value); }
 
 bool Class::IsTransformed() {
   return at(kIdOrTransformationTargetOffset)->IsClass();
@@ -1913,7 +1839,7 @@ void OneByteString::Initialize(int size, int length, bool clear) {
 }
 
 word OneByteString::hash_value() {
-  return Smi::cast(at(kHashValueOffset))->value();;
+  return Smi::cast(at(kHashValueOffset))->value();
 }
 
 void OneByteString::set_hash_value(word value) {
@@ -1952,7 +1878,7 @@ void TwoByteString::Initialize(int size, int length, bool clear) {
 }
 
 word TwoByteString::hash_value() {
-  return Smi::cast(at(kHashValueOffset))->value();;
+  return Smi::cast(at(kHashValueOffset))->value();
 }
 
 void TwoByteString::set_hash_value(word value) {
@@ -1993,9 +1919,7 @@ PortableSize Instance::CalculatePortableSize(Class* klass) {
 
 // Inlined Function functions.
 
-uword Function::arity() {
-  return Smi::cast(at(kArityOffset))->value();
-}
+uword Function::arity() { return Smi::cast(at(kArityOffset))->value(); }
 
 void Function::set_arity(uword value) {
   at_put(kArityOffset, Smi::FromWord(value));
@@ -2063,17 +1987,13 @@ void FreeListChunk::set_size(uword size) {
   at_put(kSizeOffset, Smi::FromWord(size));
 }
 
-uword FreeListChunk::size() {
-  return Smi::cast(at(kSizeOffset))->value();
-}
+uword FreeListChunk::size() { return Smi::cast(at(kSizeOffset))->value(); }
 
 void FreeListChunk::set_next_chunk(Object* next) {
   at_put(kNextChunkOffset, next);
 }
 
-Object* FreeListChunk::next_chunk() {
-  return at(kNextChunkOffset);
-}
+Object* FreeListChunk::next_chunk() { return at(kNextChunkOffset); }
 
 FreeListChunk* FreeListChunk::cast(Object* object) {
   ASSERT(object->IsFreeListChunk());
@@ -2112,13 +2032,9 @@ Double* Double::cast(Object* object) {
 
 // Inlined Boxed functions.
 
-Object* Boxed::value() {
-  return at(kValueOffset);
-}
+Object* Boxed::value() { return at(kValueOffset); }
 
-void Boxed::set_value(Object* value) {
-  return at_put(kValueOffset, value);
-}
+void Boxed::set_value(Object* value) { return at_put(kValueOffset, value); }
 
 Boxed* Boxed::cast(Object* object) {
   ASSERT(object->IsBoxed());
@@ -2157,26 +2073,20 @@ void Stack::set(int index, Object* value) {
   at_put(Stack::kSize + (index * kPointerSize), value);
 }
 
-word Stack::top() {
-  return Smi::cast(at(Stack::kTopOffset))->value();
-}
+word Stack::top() { return Smi::cast(at(Stack::kTopOffset))->value(); }
 
 void Stack::set_top(word value) {
   ASSERT(value >= 0 && value < length());
   at_put(Stack::kTopOffset, Smi::FromWord(value));
 }
 
-Object* Stack::next() {
-  return at(Stack::kNextOffset);
-}
+Object* Stack::next() { return at(Stack::kNextOffset); }
 
-void Stack::set_next(Object* value) {
-  at_put(Stack::kNextOffset, value);
-}
+void Stack::set_next(Object* value) { at_put(Stack::kNextOffset, value); }
 
 inline Object** Stack::Pointer(int index) const {
-  return reinterpret_cast<Object**>(
-      address() + Stack::kSize + (index * kPointerSize));
+  return reinterpret_cast<Object**>(address() + Stack::kSize +
+                                    (index * kPointerSize));
 }
 
 inline void Stack::SetTopFromPointer(Object** value) {
@@ -2198,13 +2108,9 @@ inline Coroutine* Coroutine::cast(Object* object) {
   return reinterpret_cast<Coroutine*>(object);
 }
 
-inline bool Coroutine::has_stack() {
-  return !at(kStackOffset)->IsNull();
-}
+inline bool Coroutine::has_stack() { return !at(kStackOffset)->IsNull(); }
 
-inline Stack* Coroutine::stack() {
-  return Stack::cast(at(kStackOffset));
-}
+inline Stack* Coroutine::stack() { return Stack::cast(at(kStackOffset)); }
 
 inline Object** Coroutine::stack_address() {
   return reinterpret_cast<Object**>(address() + kStackOffset);
@@ -2215,9 +2121,7 @@ inline void Coroutine::set_stack(Object* value) {
   at_put(kStackOffset, value);
 }
 
-inline bool Coroutine::has_caller() {
-  return !at(kCallerOffset)->IsNull();
-}
+inline bool Coroutine::has_caller() { return !at(kCallerOffset)->IsNull(); }
 
 inline Coroutine* Coroutine::caller() {
   return Coroutine::cast(at(kCallerOffset));
@@ -2228,6 +2132,5 @@ inline void Coroutine::set_caller(Coroutine* value) {
 }
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_OBJECT_H_

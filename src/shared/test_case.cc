@@ -16,9 +16,7 @@ TestCase* TestCase::first_ = NULL;
 TestCase* TestCase::current_ = NULL;
 
 TestCase::TestCase(RunEntry* run, const char* name)
-    : next_(NULL),
-      run_(run),
-      name_(name) {
+    : next_(NULL), run_(run), name_(name) {
   if (first_ == NULL) {
     first_ = this;
   } else {
@@ -27,9 +25,7 @@ TestCase::TestCase(RunEntry* run, const char* name)
   current_ = this;
 }
 
-void TestCase::Run() {
-  (*run_)();
-}
+void TestCase::Run() { (*run_)(); }
 
 void TestCase::RunAll() {
   TestCase* test_case = first_;

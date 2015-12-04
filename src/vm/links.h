@@ -45,20 +45,16 @@ class Links {
   //   a) avoid unnecessary allocation of [Signal]
   //   b) share one refcounted [Signal] across all [EnqueueSignal]/[SendSignal]
   //      calls
-  Signal* EnqueueSignal(Port* port,
-                        ProcessHandle* dying_handle,
-                        Signal::Kind kind,
-                        Signal* signal);
+  Signal* EnqueueSignal(Port* port, ProcessHandle* dying_handle,
+                        Signal::Kind kind, Signal* signal);
 
   // Used to send a [Signal] to a specific process (aka linked process).
   // This will make the process [handle] is referring to die if it's not already
   // dead.
   //
   // See above for description of the [signal] argument and return value.
-  Signal* SendSignal(ProcessHandle* handle,
-                     ProcessHandle* dying_handle,
-                     Signal::Kind kind,
-                     Signal* signal);
+  Signal* SendSignal(ProcessHandle* handle, ProcessHandle* dying_handle,
+                     Signal::Kind kind, Signal* signal);
 
   Spinlock lock_;
   // If [half_dead_] is `true` the process will no longer execute any Dart code

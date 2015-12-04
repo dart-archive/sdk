@@ -24,9 +24,7 @@ Port::Port(Process* process, Instance* channel)
   process->set_ports(this);
 }
 
-Port::~Port() {
-  ASSERT(ref_count_ == 0);
-}
+Port::~Port() { ASSERT(ref_count_ == 0); }
 
 Port* Port::FromDartObject(Object* dart_port) {
   ASSERT(dart_port->IsPort());

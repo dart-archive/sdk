@@ -42,8 +42,7 @@ class Session {
 
   // High-level operations.
   int ProcessRun();
-  bool WriteSnapshot(const char* path,
-                     FunctionOffsetsType* function_offsets,
+  bool WriteSnapshot(const char* path, FunctionOffsetsType* function_offsets,
                      ClassOffsetsType* class_offsets);
   void CollectGarbage();
 

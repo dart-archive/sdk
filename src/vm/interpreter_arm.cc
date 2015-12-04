@@ -22,22 +22,20 @@ namespace fletch {
 
 class InterpreterGenerator {
  public:
-  explicit InterpreterGenerator(Assembler* assembler)
-      : assembler_(assembler) { }
+  explicit InterpreterGenerator(Assembler* assembler) : assembler_(assembler) {}
 
   void Generate();
 
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
-#define V(name, branching, format, size, stack_diff, print)      \
+#define V(name, branching, format, size, stack_diff, print) \
   virtual void Do##name() = 0;
   BYTECODES_DO(V)
 #undef V
 
-#define V(name) \
-  virtual void DoIntrinsic##name() = 0;
-INTRINSICS_DO(V)
+#define V(name) virtual void DoIntrinsic##name() = 0;
+  INTRINSICS_DO(V)
 #undef V
 
  protected:
@@ -51,8 +49,8 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
-#define V(name, branching, format, size, stack_diff, print)      \
-  assembler()->Bind("BC_" #name);                                \
+#define V(name, branching, format, size, stack_diff, print) \
+  assembler()->Bind("BC_" #name);                           \
   Do##name();
   BYTECODES_DO(V)
 #undef V
@@ -60,22 +58,20 @@ void InterpreterGenerator::Generate() {
 #define V(name)                          \
   assembler()->Bind("Intrinsic_" #name); \
   DoIntrinsic##name();
-INTRINSICS_DO(V)
+  INTRINSICS_DO(V)
 #undef V
 
-
   assembler()->BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
-#define V(name, branching, format, size, stack_diff, print)      \
+#define V(name, branching, format, size, stack_diff, print) \
   assembler()->DefineLong("BC_" #name);
   BYTECODES_DO(V)
 #undef V
 }
 
-class InterpreterGeneratorARM: public InterpreterGenerator {
+class InterpreterGeneratorARM : public InterpreterGenerator {
  public:
   explicit InterpreterGeneratorARM(Assembler* assembler)
-      : InterpreterGenerator(assembler),
-        spill_size_(-1) { }
+      : InterpreterGenerator(assembler), spill_size_(-1) {}
 
   // Registers
   // ---------
@@ -140,13 +136,11 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
 
   virtual void DoInvokeSelector();
 
-#define INVOKE_BUILTIN(kind)                \
-  virtual void DoInvoke##kind##Unfold() {   \
-    Invoke##kind("BC_InvokeMethodUnfold");  \
-  }                                         \
-  virtual void DoInvoke##kind() {           \
-    Invoke##kind("BC_InvokeMethod");        \
-  }
+#define INVOKE_BUILTIN(kind)               \
+  virtual void DoInvoke##kind##Unfold() {  \
+    Invoke##kind("BC_InvokeMethodUnfold"); \
+  }                                        \
+  virtual void DoInvoke##kind() { Invoke##kind("BC_InvokeMethod"); }
 
   INVOKE_BUILTIN(Eq);
   INVOKE_BUILTIN(Lt);
@@ -279,8 +273,7 @@ class InterpreterGeneratorARM: public InterpreterGenerator {
   void InvokeNative(bool yield);
   void InvokeStatic(bool unfolded);
 
-  void ConditionalStore(Register reg_if_eq,
-                        Register reg_if_ne,
+  void ConditionalStore(Register reg_if_eq, Register reg_if_ne,
                         const Address& address);
 
   void CheckStackOverflow(int size);
@@ -650,9 +643,7 @@ void InterpreterGeneratorARM::DoInvokeMethodUnfold() {
   InvokeMethodUnfold(false);
 }
 
-void InterpreterGeneratorARM::DoInvokeMethod() {
-  InvokeMethod(false);
-}
+void InterpreterGeneratorARM::DoInvokeMethod() { InvokeMethod(false); }
 
 void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
   // Use the noSuchMethod entry from entry zero of the virtual table.
@@ -678,37 +669,21 @@ void InterpreterGeneratorARM::DoInvokeTestNoSuchMethod() {
   Dispatch(kInvokeTestNoSuchMethodLength);
 }
 
-void InterpreterGeneratorARM::DoInvokeTestUnfold() {
-  InvokeMethodUnfold(true);
-}
+void InterpreterGeneratorARM::DoInvokeTestUnfold() { InvokeMethodUnfold(true); }
 
-void InterpreterGeneratorARM::DoInvokeTest() {
-  InvokeMethod(true);
-}
+void InterpreterGeneratorARM::DoInvokeTest() { InvokeMethod(true); }
 
-void InterpreterGeneratorARM::DoInvokeStatic() {
-  InvokeStatic(false);
-}
+void InterpreterGeneratorARM::DoInvokeStatic() { InvokeStatic(false); }
 
-void InterpreterGeneratorARM::DoInvokeStaticUnfold() {
-  InvokeStatic(true);
-}
+void InterpreterGeneratorARM::DoInvokeStaticUnfold() { InvokeStatic(true); }
 
-void InterpreterGeneratorARM::DoInvokeFactory() {
-  InvokeStatic(false);
-}
+void InterpreterGeneratorARM::DoInvokeFactory() { InvokeStatic(false); }
 
-void InterpreterGeneratorARM::DoInvokeFactoryUnfold() {
-  InvokeStatic(true);
-}
+void InterpreterGeneratorARM::DoInvokeFactoryUnfold() { InvokeStatic(true); }
 
-void InterpreterGeneratorARM::DoInvokeNative() {
-  InvokeNative(false);
-}
+void InterpreterGeneratorARM::DoInvokeNative() { InvokeNative(false); }
 
-void InterpreterGeneratorARM::DoInvokeNativeYield() {
-  InvokeNative(true);
-}
+void InterpreterGeneratorARM::DoInvokeNativeYield() { InvokeNative(true); }
 
 void InterpreterGeneratorARM::DoInvokeSelector() {
   SaveState();
@@ -914,13 +889,9 @@ void InterpreterGeneratorARM::DoDrop() {
   Dispatch(kDropLength);
 }
 
-void InterpreterGeneratorARM::DoReturn() {
-  Return(false);
-}
+void InterpreterGeneratorARM::DoReturn() { Return(false); }
 
-void InterpreterGeneratorARM::DoReturnNull() {
-  Return(true);
-}
+void InterpreterGeneratorARM::DoReturnNull() { Return(true); }
 
 void InterpreterGeneratorARM::DoBranchWide() {
   __ ldr(R0, Address(R5, 1));
@@ -1048,17 +1019,11 @@ void InterpreterGeneratorARM::DoPopAndBranchBackWide() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoAllocate() {
-  Allocate(false, false);
-}
+void InterpreterGeneratorARM::DoAllocate() { Allocate(false, false); }
 
-void InterpreterGeneratorARM::DoAllocateUnfold() {
-  Allocate(true, false);
-}
+void InterpreterGeneratorARM::DoAllocateUnfold() { Allocate(true, false); }
 
-void InterpreterGeneratorARM::DoAllocateImmutable() {
-  Allocate(false, true);
-}
+void InterpreterGeneratorARM::DoAllocateImmutable() { Allocate(false, true); }
 
 void InterpreterGeneratorARM::DoAllocateImmutableUnfold() {
   Allocate(true, true);
@@ -1276,9 +1241,7 @@ void InterpreterGeneratorARM::DoExitNoSuchMethod() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoMethodEnd() {
-  __ bkpt();
-}
+void InterpreterGeneratorARM::DoMethodEnd() { __ bkpt(); }
 
 void InterpreterGeneratorARM::DoIntrinsicObjectEquals() {
   LoadLocal(R0, 0);
@@ -1792,8 +1755,7 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
   Label allocate;
   {
     // Initialization of [kRegisterAllocateImmutable] depended on [immutable]
-    __ ldr(kRegisterAllocateImmutable,
-           Immediate(immutable ? 1 : 0));
+    __ ldr(kRegisterAllocateImmutable, Immediate(immutable ? 1 : 0));
 
     __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ ldr(R3, Immediate(InstanceFormat::FixedSizeField::mask()));
@@ -1834,8 +1796,8 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
     uword mask = InstanceFormat::ImmutableField::mask();
     uword always_immutable_mask = InstanceFormat::ImmutableField::encode(
         InstanceFormat::ALWAYS_IMMUTABLE);
-    uword never_immutable_mask = InstanceFormat::ImmutableField::encode(
-        InstanceFormat::NEVER_IMMUTABLE);
+    uword never_immutable_mask =
+        InstanceFormat::ImmutableField::encode(InstanceFormat::NEVER_IMMUTABLE);
 
     __ ldr(R0, Address(R0, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ ldr(R1, Immediate(mask));
@@ -1911,7 +1873,6 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-
 void InterpreterGeneratorARM::AddToStoreBufferSlow(Register object,
                                                    Register value) {
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
@@ -1975,7 +1936,7 @@ void InterpreterGeneratorARM::CheckStackOverflow(int size) {
 }
 
 void InterpreterGeneratorARM::Dispatch(int size) {
-  // Load the next bytecode through R5 and dispatch to it.
+// Load the next bytecode through R5 and dispatch to it.
 #ifdef FLETCH_THUMB_ONLY
   __ ldrb(R7, Address(R5, size));
   if (size > 0) {

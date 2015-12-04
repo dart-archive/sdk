@@ -11,9 +11,7 @@ ObjectList::ObjectList(int capacity) {
   length_ = 0;
 }
 
-ObjectList::~ObjectList() {
-  contents_.Delete();
-}
+ObjectList::~ObjectList() { contents_.Delete(); }
 
 void ObjectList::Add(Object* object) {
   int index = length_++;
@@ -23,9 +21,7 @@ void ObjectList::Add(Object* object) {
   contents_[index] = object;
 }
 
-void ObjectList::Clear() {
-  length_ = 0;
-}
+void ObjectList::Clear() { length_ = 0; }
 
 void ObjectList::IteratePointers(PointerVisitor* visitor) {
   Object** stack_start = contents_.data();

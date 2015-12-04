@@ -21,7 +21,7 @@
 
 // Types for native machine words. Guaranteed to be able to hold
 // pointers and integers.
-typedef long word;  // NOLINT
+typedef long word;            // NOLINT
 typedef unsigned long uword;  // NOLINT
 
 // Introduce integer types with specific bit widths.
@@ -34,10 +34,10 @@ typedef unsigned short uint16;  // NOLINT
 typedef unsigned int uint32;
 
 #ifdef FLETCH64
-typedef long int64;  // NOLINT
+typedef long int64;            // NOLINT
 typedef unsigned long uint64;  // NOLINT
 #else
-typedef long long int int64;  // NOLINT
+typedef long long int int64;        // NOLINT
 typedef long long unsigned uint64;  // NOLINT
 #endif
 
@@ -94,22 +94,22 @@ const int GB = KB * KB * KB;
 
 // Macro to disallow allocation in the C++ heap. This should be used
 // in the private section for a class.
-#define DISALLOW_ALLOCATION()         \
-  void* operator new(size_t size);    \
+#define DISALLOW_ALLOCATION()      \
+  void* operator new(size_t size); \
   void operator delete(void* pointer)
 
 // The expression ARRAY_SIZE(array) is a compile-time constant of type
 // size_t which represents the number of elements of the given
 // array. You should only use ARRAY_SIZE on statically allocated
 // arrays.
-#define ARRAY_SIZE(array)                                   \
-  ((sizeof(array) / sizeof(*(array))) /                     \
+#define ARRAY_SIZE(array)               \
+  ((sizeof(array) / sizeof(*(array))) / \
   static_cast<size_t>(!(sizeof(array) % sizeof(*(array)))))
 
 // The USE(x) template is used to silence C++ compiler warnings issued
 // for unused variables.
 template <typename T>
-static inline void USE(T) { }
+static inline void USE(T) {}
 
 // The type-based aliasing rule allows the compiler to assume that
 // pointers of different types (for some definition of different)
@@ -150,11 +150,11 @@ inline D bit_cast(const S& source) {
 
 #ifdef __has_builtin
 #define FLETCH_HAS_BUILTIN_SADDL_OVERFLOW \
-    (__has_builtin(__builtin_saddl_overflow))
+  (__has_builtin(__builtin_saddl_overflow))
 #define FLETCH_HAS_BUILTIN_SSUBL_OVERFLOW \
-    (__has_builtin(__builtin_ssubl_overflow))
+  (__has_builtin(__builtin_ssubl_overflow))
 #define FLETCH_HAS_BUILTIN_SMULL_OVERFLOW \
-    (__has_builtin(__builtin_smull_overflow))
+  (__has_builtin(__builtin_smull_overflow))
 #endif
 
 #ifdef TEMP_FAILURE_RETRY
@@ -163,14 +163,16 @@ inline D bit_cast(const S& source) {
 // The definition below is copied from Linux and adapted to avoid lint
 // errors (type long int changed to intptr_t and do/while split on
 // separate lines with body in {}s) and to also block signals.
-#define TEMP_FAILURE_RETRY(expression)                                         \
-    ({ intptr_t __result;                                                      \
-       do {                                                                    \
-         __result = (expression);                                              \
-       } while ((__result == -1L) && (errno == EINTR));                        \
-       __result; })
+#define TEMP_FAILURE_RETRY(expression)               \
+  ({                                                 \
+    intptr_t __result;                               \
+    do {                                             \
+      __result = (expression);                       \
+    } while ((__result == -1L) && (errno == EINTR)); \
+    __result;                                        \
+  })
 
-#define VOID_TEMP_FAILURE_RETRY(expression)                                    \
-    (static_cast<void>(TEMP_FAILURE_RETRY(expression)))
+#define VOID_TEMP_FAILURE_RETRY(expression) \
+  (static_cast<void>(TEMP_FAILURE_RETRY(expression)))
 
 #endif  // SRC_SHARED_GLOBALS_H_

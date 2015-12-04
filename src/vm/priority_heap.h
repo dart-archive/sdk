@@ -12,7 +12,7 @@
 
 namespace fletch {
 
-template<typename P, typename V>
+template <typename P, typename V>
 class PriorityHeapWithValueIndex {
  public:
   static const int kMinimumSize = 16;
@@ -29,13 +29,9 @@ class PriorityHeapWithValueIndex {
     size_ = 0;
   }
 
-  ~PriorityHeapWithValueIndex() {
-    free(backing_);
-  }
+  ~PriorityHeapWithValueIndex() { free(backing_); }
 
-  bool IsEmpty() {
-    return size_ == 0;
-  }
+  bool IsEmpty() { return size_ == 0; }
 
   void Insert(const P& priority, const V& value) {
     ASSERT(!ContainsValue(value));
@@ -121,8 +117,7 @@ class PriorityHeapWithValueIndex {
       BubbleDown(offset);
     }
 
-    if (size_ <= (backing_size_ >> 2) &&
-        kMinimumSize <= (backing_size_ >> 1)) {
+    if (size_ <= (backing_size_ >> 2) && kMinimumSize <= (backing_size_ >> 1)) {
       Resize(backing_size_ >> 1);
     }
   }

@@ -42,7 +42,7 @@ class Frame {
   explicit Frame(Stack* stack)
       : stack_(stack),
         frame_pointer_(stack->Pointer(stack->top())),
-        size_(-1) { }
+        size_(-1) {}
 
   bool MovePrevious() {
     Object** current_frame_pointer = frame_pointer_;
@@ -52,9 +52,7 @@ class Frame {
     return true;
   }
 
-  Object** FramePointer() const {
-    return frame_pointer_;
-  }
+  Object** FramePointer() const { return frame_pointer_; }
 
   uint8* ByteCodePointer() const {
     return reinterpret_cast<uint8*>(*(frame_pointer_ - 1));
@@ -98,6 +96,5 @@ class Frame {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_FRAME_H_

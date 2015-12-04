@@ -27,7 +27,7 @@ class PortableOffset {
       : offset_64bits_double(0),
         offset_64bits_float(0),
         offset_32bits_double(0),
-        offset_32bits_float(0) { }
+        offset_32bits_float(0) {}
   PortableOffset(const PortableOffset& other)
       : offset_64bits_double(other.offset_64bits_double),
         offset_64bits_float(other.offset_64bits_float),
@@ -60,9 +60,8 @@ class SnapshotReader {
         large_integer_class_(NULL),
         memory_(NULL),
         top_(0),
-        index_(0) {
-  }
-  ~SnapshotReader() { }
+        index_(0) {}
+  ~SnapshotReader() {}
 
   // Reads an entire program.
   Program* ReadProgram();
@@ -126,8 +125,8 @@ class SnapshotWriter {
         position_(0),
         index_(1),
         function_offsets_(function_offsets),
-        class_offsets_(class_offsets) { }
-  ~SnapshotWriter() { }
+        class_offsets_(class_offsets) {}
+  ~SnapshotWriter() {}
 
   // Create a snapshot of a program. The program must be folded.
   List<uint8> WriteProgram(Program* program);
@@ -185,6 +184,5 @@ class SnapshotWriter {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_SNAPSHOT_H_

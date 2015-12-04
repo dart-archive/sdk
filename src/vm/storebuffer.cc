@@ -22,9 +22,8 @@ void StoreBufferChunk::IterateObjects(HeapObjectVisitor* visitor) {
 }
 
 void StoreBufferChunk::Scramble() {
-  memset(static_cast<void*>(objects_),
-         0xbe,
-         kStoreBufferSize * sizeof(HeapObject *));
+  memset(static_cast<void*>(objects_), 0xbe,
+         kStoreBufferSize * sizeof(HeapObject*));
 }
 
 StoreBuffer::~StoreBuffer() {

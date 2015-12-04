@@ -52,9 +52,7 @@ class ProgramTableRewriter {
 
   int ClassCount() const { return class_vector_.size(); }
 
-  Class* LookupClass(int index) {
-    return class_vector_[index];
-  }
+  Class* LookupClass(int index) { return class_vector_[index]; }
 
   SelectorRow* LookupSelectorRow(int selector) {
     SelectorRow*& entry = selector_rows_[selector];
@@ -102,9 +100,8 @@ class ProgramTableRewriter {
     // The combined table size is header plus enough space to guarantee
     // that looking up at the highest offset with any given receiver class
     // isn't going to be out of bounds.
-    int table_size = kHeaderSize +
-        fitter.limit() +
-        program->classes()->length();
+    int table_size =
+        kHeaderSize + fitter.limit() + program->classes()->length();
 
     // Allocate the dispatch table and fill it in.
     Array* table = Array::cast(program->CreateArray(table_size));
@@ -141,9 +138,7 @@ class ProgramTableRewriter {
     AddAndRewrite(&static_methods_, bcp, new_bcp);
   }
 
-  int AddConstant(Object* constant) {
-    return AddToMap(&constants_, constant);
-  }
+  int AddConstant(Object* constant) { return AddToMap(&constants_, constant); }
 
   void AddConstantAndRewrite(uint8_t* bcp, uint8_t* new_bcp) {
     AddAndRewrite(&constants_, bcp, new_bcp);
@@ -189,10 +184,10 @@ class ProgramTableRewriter {
 
 // After folding, we have to postprocess all functions in the heap to
 // adjust the bytecodes to take advantage of class ids.
-class FunctionPostprocessVisitor: public HeapObjectVisitor {
+class FunctionPostprocessVisitor : public HeapObjectVisitor {
  public:
   explicit FunctionPostprocessVisitor(ProgramTableRewriter* rewriter)
-      : rewriter_(rewriter) { }
+      : rewriter_(rewriter) {}
 
   virtual int Visit(HeapObject* object) {
     int size = object->Size();
@@ -265,18 +260,16 @@ class FunctionPostprocessVisitor: public HeapObjectVisitor {
   ProgramTableRewriter* rewriter_;
 };
 
-class FoldingVisitor: public PointerVisitor {
+class FoldingVisitor : public PointerVisitor {
  public:
-  FoldingVisitor(Space* from,
-                 Space* to,
-                 ProgramTableRewriter* rewriter,
+  FoldingVisitor(Space* from, Space* to, ProgramTableRewriter* rewriter,
                  ProgramFolder* program_folder)
       : from_(from),
         to_(to),
         rewriter_(rewriter),
         program_folder_(program_folder),
         classes_(NULL),
-        class_count_(0) { }
+        class_count_(0) {}
 
   void Visit(Object** p) { FoldPointer(p); }
 
@@ -413,7 +406,6 @@ class FoldingVisitor: public PointerVisitor {
   int class_count_;
 };
 
-
 void ProgramFolder::Fold(bool disable_heap_validation_before_gc) {
   // TODO(ager): Can we add an assert that there are no processes running
   // for this program. Either because we haven't enqueued any or because
@@ -439,8 +431,7 @@ void ProgramFolder::Fold(bool disable_heap_validation_before_gc) {
   program_->FinishProgramGC();
 }
 
-void ProgramFolder::FoldFunction(Function* old_function,
-                                 Function* new_function,
+void ProgramFolder::FoldFunction(Function* old_function, Function* new_function,
                                  ProgramTableRewriter* rewriter) {
   uint8_t* start = old_function->bytecode_address_for(0);
   uint8_t* bcp = start;
@@ -486,8 +477,7 @@ void ProgramFolder::FoldFunction(Function* old_function,
 
 class LiteralsRewriter {
  public:
-  LiteralsRewriter(Space* space, Function* function)
-      : function_(function) {
+  LiteralsRewriter(Space* space, Function* function) : function_(function) {
     ASSERT(space->in_no_allocation_failure_scope());
   }
 
@@ -514,8 +504,7 @@ class LiteralsRewriter {
   ObjectIndexMap literals_index_map_;
 };
 
-Object* ProgramFolder::UnfoldFunction(Function* function,
-                                      Space* to,
+Object* ProgramFolder::UnfoldFunction(Function* function, Space* to,
                                       void* raw_map) {
   SelectorOffsetMap* map = static_cast<SelectorOffsetMap*>(raw_map);
   LiteralsRewriter rewriter(to, function);
@@ -604,16 +593,11 @@ Object* ProgramFolder::UnfoldFunction(Function* function,
   return NULL;
 }
 
-class UnfoldingVisitor: public PointerVisitor {
+class UnfoldingVisitor : public PointerVisitor {
  public:
-  UnfoldingVisitor(ProgramFolder* program_folder,
-                   Space* from,
-                   Space* to,
+  UnfoldingVisitor(ProgramFolder* program_folder, Space* from, Space* to,
                    SelectorOffsetMap* map)
-      : program_folder_(program_folder),
-        from_(from),
-        to_(to),
-        map_(map) { }
+      : program_folder_(program_folder), from_(from), to_(to), map_(map) {}
 
   void Visit(Object** p) { UnfoldPointer(p); }
 
@@ -667,7 +651,6 @@ void ProgramFolder::Unfold() {
       map[offset] = selector;
     }
   }
-
 
   program_->PrepareProgramGC();
   Space* to = new Space();

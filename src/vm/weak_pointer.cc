@@ -11,17 +11,11 @@
 
 namespace fletch {
 
-WeakPointer::WeakPointer(HeapObject* object,
-                         WeakPointerCallback callback,
+WeakPointer::WeakPointer(HeapObject* object, WeakPointerCallback callback,
                          WeakPointer* next)
-    : object_(object),
-      callback_(callback),
-      prev_(NULL),
-      next_(next) { }
+    : object_(object), callback_(callback), prev_(NULL), next_(next) {}
 
-void WeakPointer::Process(Space* space,
-                          WeakPointer** pointers,
-                          Heap* heap) {
+void WeakPointer::Process(Space* space, WeakPointer** pointers, Heap* heap) {
   WeakPointer* new_list = NULL;
   WeakPointer* previous = NULL;
   WeakPointer* current = *pointers;

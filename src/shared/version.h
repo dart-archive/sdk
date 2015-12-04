@@ -14,9 +14,7 @@
 
 namespace fletch {
 
-extern "C"
-FLETCH_VISIBILITY_DEFAULT
-const char* GetVersion();
+extern "C" FLETCH_VISIBILITY_DEFAULT const char* GetVersion();
 
 }  // namespace fletch
 

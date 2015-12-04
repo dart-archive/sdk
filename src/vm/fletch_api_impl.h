@@ -8,4 +8,3 @@
 #include "include/fletch_api.h"
 
 #endif  // SRC_VM_FLETCH_API_IMPL_H_
-

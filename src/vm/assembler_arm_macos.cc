@@ -26,9 +26,7 @@ void Assembler::DefineLong(const char* name) {
   printf("\t.long %s%s\n", kPrefix, name);
 }
 
-const char* Assembler::LabelPrefix() {
-  return kPrefix;
-}
+const char* Assembler::LabelPrefix() { return kPrefix; }
 
 }  // namespace fletch
 

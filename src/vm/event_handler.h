@@ -19,10 +19,10 @@ class Process;
 class EventHandler {
  public:
   enum {
-    READ_EVENT        = 1 << 0,
-    WRITE_EVENT       = 1 << 1,
-    CLOSE_EVENT       = 1 << 2,
-    ERROR_EVENT       = 1 << 3,
+    READ_EVENT = 1 << 0,
+    WRITE_EVENT = 1 << 1,
+    CLOSE_EVENT = 1 << 2,
+    ERROR_EVENT = 1 << 3,
   };
 
   EventHandler();

@@ -44,5 +44,4 @@ class ThreadPool {
 
 }  // namespace fletch
 
-
 #endif  // SRC_VM_THREAD_POOL_H_

@@ -21,12 +21,12 @@ namespace fletch {
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
-  uint64 GetMicroseconds();
+uint64 GetMicroseconds();
 }  // namespace Platform
 
 class MutexImpl {
  public:
-  MutexImpl() { mutex_init(&mutex_);  }
+  MutexImpl() { mutex_init(&mutex_); }
   ~MutexImpl() { mutex_destroy(&mutex_); }
 
   int Lock() { return mutex_acquire(&mutex_); }
@@ -34,7 +34,7 @@ class MutexImpl {
   int Unlock() { return mutex_release(&mutex_); }
 
  private:
-  mutex_t mutex_;   // lk kernel mutex.
+  mutex_t mutex_;  // lk kernel mutex.
 };
 
 class MonitorImpl {
@@ -98,7 +98,7 @@ class MonitorImpl {
     waiting_ = 0;
     mutex_release(&internal_);
     while (towake-- > 0) {
-     if (!sem_post(&sem_, false)) return -1;
+      if (!sem_post(&sem_, false)) return -1;
     }
     return 0;
   }

@@ -13,9 +13,7 @@ Generator* Generator::first_ = NULL;
 Generator* Generator::current_ = NULL;
 
 Generator::Generator(Function* function, const char* name)
-    : next_(NULL),
-      function_(function),
-      name_(name) {
+    : next_(NULL), function_(function), name_(name) {
   if (first_ == NULL) {
     first_ = this;
   } else {
@@ -55,6 +53,4 @@ static int Main(int argc, char** argv) {
 }  // namespace fletch
 
 // Forward main calls to fletch::Main.
-int main(int argc, char** argv) {
-  return fletch::Main(argc, argv);
-}
+int main(int argc, char** argv) { return fletch::Main(argc, argv); }

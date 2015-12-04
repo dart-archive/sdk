@@ -18,18 +18,18 @@ class DriverConnection {
   // If you modify this enum, please update
   // pkg/fletchc/lib/src/driver/driver_commands.dart as well.
   enum Command {
-    kStdin,  // Data on stdin.
-    kStdout,  // Data on stdout.
-    kStderr,  // Data on stderr.
-    kArguments,  // Command-line arguments.
-    kSignal,  // Unix process signal received.
-    kExitCode,  // Set process exit code.
+    kStdin,             // Data on stdin.
+    kStdout,            // Data on stdout.
+    kStderr,            // Data on stderr.
+    kArguments,         // Command-line arguments.
+    kSignal,            // Unix process signal received.
+    kExitCode,          // Set process exit code.
     kEventLoopStarted,  // Not used.
-    kClosePort,  // Not used.
-    kSendPort,  // Not used.
-    kPerformTask,  // Not used.
+    kClosePort,         // Not used.
+    kSendPort,          // Not used.
+    kPerformTask,       // Not used.
 
-    kDriverConnectionError,  // Error in connection.
+    kDriverConnectionError,   // Error in connection.
     kDriverConnectionClosed,  // Connection closed.
   };
 

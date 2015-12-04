@@ -10,11 +10,9 @@
 
 namespace fletch {
 
-void ForeignFunctionInterface::Setup() {
-}
+void ForeignFunctionInterface::Setup() {}
 
-void ForeignFunctionInterface::TearDown() {
-}
+void ForeignFunctionInterface::TearDown() {}
 
 void ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
   FATAL("fletch vm was built without FFI support.");
@@ -29,7 +27,7 @@ DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
 Mutex* ForeignFunctionInterface::mutex_ = NULL;
 
 #define UNIMPLEMENTED_NATIVE(name) \
-  NATIVE(name)  {                  \
+  NATIVE(name) {                   \
     UNIMPLEMENTED();               \
     return NULL;                   \
   }

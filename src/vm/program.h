@@ -69,7 +69,7 @@ class Session;
   V(Array, constants, Constants)                                \
   V(Array, static_methods, StaticMethods)                       \
   V(Array, static_fields, StaticFields)                         \
-  V(Array, dispatch_table, DispatchTable)                       \
+  V(Array, dispatch_table, DispatchTable)
 
 class ProgramState {
  public:
@@ -198,9 +198,7 @@ class Program {
   Object* CreateByteArray(int capacity);
   Object* CreateClass(int fields);
   Object* CreateDouble(fletch_double value);
-  Object* CreateFunction(int arity,
-                         List<uint8> bytes,
-                         int number_of_literals);
+  Object* CreateFunction(int arity, List<uint8> bytes, int number_of_literals);
   Object* CreateInteger(int64 value);
   Object* CreateLargeInteger(int64 value);
   Object* CreateStringFromAscii(List<const char> str);
@@ -226,20 +224,17 @@ class Program {
   // Dispatch table support.
   void ClearDispatchTableIntrinsics();
   void SetupDispatchTableIntrinsics(
-      IntrinsicsTable *table = IntrinsicsTable::GetDefault());
+      IntrinsicsTable* table = IntrinsicsTable::GetDefault());
 
   // Root objects.
  private:
-#define DECLARE_ENUM(type, name, CamelName)                     \
-  k##CamelName##Index,
-  enum {
-    ROOTS_DO(DECLARE_ENUM)
-  kNumberOfRoots};
+#define DECLARE_ENUM(type, name, CamelName) k##CamelName##Index,
+  enum { ROOTS_DO(DECLARE_ENUM) kNumberOfRoots };
 #undef DECLARE_ENUM
 
  public:
-#define ROOT_ACCESSOR(type, name, CamelName)                            \
-  type* name() const { return name##_; }                                \
+#define ROOT_ACCESSOR(type, name, CamelName) \
+  type* name() const { return name##_; }     \
   static const int k##CamelName##Offset = sizeof(void*) * k##CamelName##Index;
   ROOTS_DO(ROOT_ACCESSOR)
 #undef ROOT_ACCESSOR

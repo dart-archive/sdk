@@ -14,10 +14,9 @@ class SharedHeap;
 
 // Validates that all pointers it gets called with lie inside certain spaces -
 // depending on [shared_heap], [mutable_heap], [program_heap].
-class HeapPointerValidator: public PointerVisitor {
+class HeapPointerValidator : public PointerVisitor {
  public:
-  HeapPointerValidator(Heap* program_heap,
-                       SharedHeap* shared_heap,
+  HeapPointerValidator(Heap* program_heap, SharedHeap* shared_heap,
                        Heap* mutable_heap)
       : program_heap_(program_heap),
         shared_heap_(shared_heap),
@@ -36,16 +35,15 @@ class HeapPointerValidator: public PointerVisitor {
 
 // Validates that all pointers it gets called with lie inside program/immutable
 // heaps.
-class SharedHeapPointerValidator: public HeapPointerValidator {
+class SharedHeapPointerValidator : public HeapPointerValidator {
  public:
-  SharedHeapPointerValidator(Heap* program_heap,
-                                SharedHeap* shared_heap)
+  SharedHeapPointerValidator(Heap* program_heap, SharedHeap* shared_heap)
       : HeapPointerValidator(program_heap, shared_heap, NULL) {}
   virtual ~SharedHeapPointerValidator() {}
 };
 
 // Validates that all pointers it gets called with lie inside the program heap.
-class ProgramHeapPointerValidator: public HeapPointerValidator {
+class ProgramHeapPointerValidator : public HeapPointerValidator {
  public:
   explicit ProgramHeapPointerValidator(Heap* program_heap)
       : HeapPointerValidator(program_heap, NULL, NULL) {}
@@ -69,6 +67,5 @@ class ProcessHeapValidatorVisitor : public ProcessVisitor {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_HEAP_VALIDATOR_H_

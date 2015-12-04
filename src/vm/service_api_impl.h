@@ -30,10 +30,7 @@ class Service {
 
   void Invoke(int id, void* buffer, int size);
 
-  void InvokeAsync(int id,
-                   ServiceApiCallback callback,
-                   void* buffer,
-                   int size);
+  void InvokeAsync(int id, ServiceApiCallback callback, void* buffer, int size);
 
   char* name() const { return name_; }
 
@@ -56,4 +53,3 @@ class Service {
 }  // namespace fletch
 
 #endif  // SRC_VM_SERVICE_API_IMPL_H_
-

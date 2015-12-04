@@ -19,6 +19,7 @@ class ForeignFunctionInterface {
   static void TearDown();
   static void AddDefaultSharedLibrary(const char* library);
   static void* LookupInDefaultLibraries(const char* symbol);
+
  private:
   static DefaultLibraryEntry* libraries_;
   static Mutex* mutex_;

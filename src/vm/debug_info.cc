@@ -11,18 +11,15 @@
 
 namespace fletch {
 
-Breakpoint::Breakpoint(Function* function,
-                       int bytecode_index,
-                       int id,
-                       bool is_one_shot,
-                       Coroutine* coroutine,
+Breakpoint::Breakpoint(Function* function, int bytecode_index, int id,
+                       bool is_one_shot, Coroutine* coroutine,
                        word stack_height)
     : function_(function),
       bytecode_index_(bytecode_index),
       id_(id),
       is_one_shot_(is_one_shot),
       coroutine_(coroutine),
-      stack_height_(stack_height) { }
+      stack_height_(stack_height) {}
 
 void Breakpoint::VisitPointers(PointerVisitor* visitor) {
   if (coroutine_ != NULL) {
@@ -38,7 +35,7 @@ DebugInfo::DebugInfo()
     : is_stepping_(false),
       is_at_breakpoint_(false),
       current_breakpoint_id_(kNoBreakpointId),
-      next_breakpoint_id_(0) { }
+      next_breakpoint_id_(0) {}
 
 bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
   BreakpointMap::ConstIterator it = breakpoints_.Find(bcp);
@@ -64,17 +61,11 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
   return false;
 }
 
-int DebugInfo::SetBreakpoint(Function* function,
-                             int bytecode_index,
-                             bool one_shot,
-                             Coroutine* coroutine,
+int DebugInfo::SetBreakpoint(Function* function, int bytecode_index,
+                             bool one_shot, Coroutine* coroutine,
                              word stack_height) {
-  Breakpoint breakpoint(function,
-                        bytecode_index,
-                        next_breakpoint_id(),
-                        one_shot,
-                        coroutine,
-                        stack_height);
+  Breakpoint breakpoint(function, bytecode_index, next_breakpoint_id(),
+                        one_shot, coroutine, stack_height);
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
   BreakpointMap::ConstIterator it = breakpoints_.Find(bcp);
   if (it != breakpoints_.End()) return it->second.id();

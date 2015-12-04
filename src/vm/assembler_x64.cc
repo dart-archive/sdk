@@ -9,10 +9,7 @@
 
 namespace fletch {
 
-enum RegisterSize {
-  kLongRegister = 'l',
-  kQuadRegister = 'q'
-};
+enum RegisterSize { kLongRegister = 'l', kQuadRegister = 'q' };
 
 void Assembler::j(Condition condition, Label* label) {
   static const char* kConditionMnemonics[] = {
@@ -51,18 +48,18 @@ void Assembler::Bind(Label* label) {
 }
 
 static const char* ToString(Register reg, RegisterSize size = kQuadRegister) {
-  static const char* kLongRegisterNames[] =
-      { "%eax", "%ecx", "%edx",  "%ebx",  "%esp",  "%ebp",  "%esi",  "%edi",
-        "%r8d", "%r9d", "%r10d", "%r11d", "%r12d", "%r13d", "%r14d", "%r15d"
-      };
-  static const char* kQuadRegisterNames[] =
-      { "%rax", "%rcx", "%rdx", "%rbx", "%rsp", "%rbp", "%rsi", "%rdi",
-        "%r8",  "%r9",  "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"
-      };
+  static const char* kLongRegisterNames[] = {
+      "%eax", "%ecx", "%edx",  "%ebx",  "%esp",  "%ebp",  "%esi",  "%edi",
+      "%r8d", "%r9d", "%r10d", "%r11d", "%r12d", "%r13d", "%r14d", "%r15d"};
+  static const char* kQuadRegisterNames[] = {
+      "%rax", "%rcx", "%rdx", "%rbx", "%rsp", "%rbp", "%rsi", "%rdi",
+      "%r8",  "%r9",  "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"};
   ASSERT(reg >= RAX && reg <= R15);
   switch (size) {
-    case kLongRegister: return kLongRegisterNames[reg];
-    case kQuadRegister: return kQuadRegisterNames[reg];
+    case kLongRegister:
+      return kLongRegisterNames[reg];
+    case kQuadRegister:
+      return kQuadRegisterNames[reg];
   }
   UNREACHABLE();
   return NULL;

@@ -8,4 +8,3 @@
 #include "include/fletch_relocation_api.h"
 
 #endif  // SRC_VM_FLETCH_RELOCATION_API_IMPL_H_
-

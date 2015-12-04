@@ -23,8 +23,8 @@ enum Register {
   RBP = 5,
   RSI = 6,
   RDI = 7,
-  R8  = 8,
-  R9  = 9,
+  R8 = 8,
+  R9 = 9,
   R10 = 10,
   R11 = 11,
   R12 = 12,
@@ -33,40 +33,35 @@ enum Register {
   R15 = 15
 };
 
-enum ScaleFactor {
-  TIMES_1 = 0,
-  TIMES_2 = 1,
-  TIMES_4 = 2,
-  TIMES_8 = 3
-};
+enum ScaleFactor { TIMES_1 = 0, TIMES_2 = 1, TIMES_4 = 2, TIMES_8 = 3 };
 
 enum Condition {
-  OVERFLOW      =  0,
-  NO_OVERFLOW   =  1,
-  BELOW         =  2,
-  ABOVE_EQUAL   =  3,
-  EQUAL         =  4,
-  NOT_EQUAL     =  5,
-  BELOW_EQUAL   =  6,
-  ABOVE         =  7,
-  SIGN          =  8,
-  NOT_SIGN      =  9,
-  PARITY_EVEN   = 10,
-  PARITY_ODD    = 11,
-  LESS          = 12,
+  OVERFLOW = 0,
+  NO_OVERFLOW = 1,
+  BELOW = 2,
+  ABOVE_EQUAL = 3,
+  EQUAL = 4,
+  NOT_EQUAL = 5,
+  BELOW_EQUAL = 6,
+  ABOVE = 7,
+  SIGN = 8,
+  NOT_SIGN = 9,
+  PARITY_EVEN = 10,
+  PARITY_ODD = 11,
+  LESS = 12,
   GREATER_EQUAL = 13,
-  LESS_EQUAL    = 14,
-  GREATER       = 15,
+  LESS_EQUAL = 14,
+  GREATER = 15,
 
-  ZERO          = EQUAL,
-  NOT_ZERO      = NOT_EQUAL,
-  NEGATIVE      = SIGN,
-  POSITIVE      = NOT_SIGN
+  ZERO = EQUAL,
+  NOT_ZERO = NOT_EQUAL,
+  NEGATIVE = SIGN,
+  POSITIVE = NOT_SIGN
 };
 
 class Immediate {
  public:
-  explicit Immediate(int64 value) : value_(value) { }
+  explicit Immediate(int64 value) : value_(value) {}
 
   int64 value() const { return value_; }
 
@@ -78,9 +73,7 @@ class Immediate {
 
 class Operand {
  public:
-  uint8 mod() const {
-    return (EncodingAt(0) >> 6) & 3;
-  }
+  uint8 mod() const { return (EncodingAt(0) >> 6) & 3; }
 
   Register rm() const {
     int rm_rex = (rex_ & 1) << 3;
@@ -112,7 +105,7 @@ class Operand {
   }
 
  protected:
-  Operand() : length_(0), rex_(0) { }
+  Operand() : length_(0), rex_(0) {}
 
   void SetModRM(int mod, Register rm) {
     ASSERT((mod & ~3) == 0);
@@ -137,7 +130,6 @@ class Operand {
     ASSERT(length_ == 1 || length_ == 2);
     *reinterpret_cast<int8*>(&encoding_[length_++]) = disp;
   }
-
 
   void SetDisp32(int32 disp) {
     ASSERT(length_ == 1 || length_ == 2);
@@ -204,7 +196,7 @@ class Address : public Operand {
 
 class Label {
  public:
-  Label() : position_(0) { }
+  Label() : position_(0) {}
 
   // Returns the position for bound and linked labels. Cannot be used
   // for unused labels.
@@ -232,7 +224,6 @@ class Label {
 
   friend class Assembler;
 };
-
 
 #define INSTRUCTION_0(name, format) \
   void name() { Print(format); }

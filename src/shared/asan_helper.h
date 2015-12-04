@@ -26,10 +26,8 @@
 #endif  // __has_feature(address_sanitizer)
 #endif  // defined(__has_feature)
 
-#if defined(FLETCH_ASAN) && \
-    defined(FLETCH_CLANG) && \
-    defined(FLETCH_TARGET_X64) && \
-    !defined(USING_ADDRESS_SANITIZER)
+#if defined(FLETCH_ASAN) && defined(FLETCH_CLANG) && \
+    defined(FLETCH_TARGET_X64) && !defined(USING_ADDRESS_SANITIZER)
 #error "Expected to use ASAN in asan-clang-x64 configuration."
 #endif
 

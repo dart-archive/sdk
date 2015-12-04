@@ -19,7 +19,7 @@
 
 namespace fletch {
 
-static int signal_pipe[] = { -1, -1 };
+static int signal_pipe[] = {-1, -1};
 
 static void SignalHandler(int signal) {
   int old_errno = errno;

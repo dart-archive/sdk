@@ -9,10 +9,10 @@ namespace fletch {
 
 // Basically the same as a std::pair, but we don't want to rely on that
 // being present on a given platform.
-template<typename First, typename Second>
+template <typename First, typename Second>
 class Pair {
  public:
-  Pair(First f, Second s) : first(f), second(s) { }
+  Pair(First f, Second s) : first(f), second(s) {}
 
   First first;
   Second second;

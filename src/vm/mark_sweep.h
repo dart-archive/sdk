@@ -14,14 +14,9 @@ namespace fletch {
 class MarkingStackChunk {
  public:
   MarkingStackChunk()
-      : next_chunk_(NULL),
-        next_(&backing_[0]),
-        limit_(next_ + kChunkSize) {
-  }
+      : next_chunk_(NULL), next_(&backing_[0]), limit_(next_ + kChunkSize) {}
 
-  ~MarkingStackChunk() {
-    ASSERT(next_chunk_ == NULL);
-  }
+  ~MarkingStackChunk() { ASSERT(next_chunk_ == NULL); }
 
   bool IsEmpty() { return next_ == &backing_[0]; }
 
@@ -72,11 +67,9 @@ class MarkingStackChunk {
 
 class MarkingStack {
  public:
-  MarkingStack() : current_chunk_(new MarkingStackChunk()) { }
+  MarkingStack() : current_chunk_(new MarkingStackChunk()) {}
 
-  ~MarkingStack() {
-    delete current_chunk_;
-  }
+  ~MarkingStack() { delete current_chunk_; }
 
   void Push(HeapObject* object) {
     current_chunk_->Push(object, &current_chunk_);
@@ -84,8 +77,7 @@ class MarkingStack {
 
   void Process(PointerVisitor* visitor) {
     for (MarkingStackChunk* chunk = current_chunk_->TakeChunk(&current_chunk_);
-         chunk != NULL;
-         chunk = current_chunk_->TakeChunk(&current_chunk_)) {
+         chunk != NULL; chunk = current_chunk_->TakeChunk(&current_chunk_)) {
       while (!chunk->IsEmpty()) {
         HeapObject* object = chunk->Pop();
         object->IteratePointers(visitor);
@@ -101,7 +93,7 @@ class MarkingStack {
 class MarkingVisitor : public PointerVisitor {
  public:
   MarkingVisitor(Space* space, MarkingStack* marking_stack)
-      : space_(space), marking_stack_(marking_stack) { }
+      : space_(space), marking_stack_(marking_stack) {}
 
   void Visit(Object** p) { MarkPointer(*p); }
 
@@ -135,13 +127,12 @@ class MarkingVisitor : public PointerVisitor {
 
 class MarkAndChainStacksVisitor : public PointerVisitor {
  public:
-  MarkAndChainStacksVisitor(Process* process,
-                            Space* space,
+  MarkAndChainStacksVisitor(Process* process, Space* space,
                             MarkingStack* marking_stack)
       : process_stack_(process->stack()),
         space_(space),
         marking_stack_(marking_stack),
-        number_of_stacks_(0) { }
+        number_of_stacks_(0) {}
 
   void Visit(Object** p) { MarkPointer(*p); }
 
@@ -196,7 +187,7 @@ class FreeList {
 #if defined(_MSC_VER)
   // Work around Visual Studo 2013 bug 802058
   FreeList(void) {
-    memset(buckets_, 0, kNumberOfBuckets * sizeof (FreeListChunk*));
+    memset(buckets_, 0, kNumberOfBuckets * sizeof(FreeListChunk*));
   }
 #endif
 
@@ -292,16 +283,14 @@ class FreeList {
   // Work around Visual Studo 2013 bug 802058
   FreeListChunk* buckets_[kNumberOfBuckets];
 #else
-  FreeListChunk* buckets_[kNumberOfBuckets] = { NULL };
+  FreeListChunk* buckets_[kNumberOfBuckets] = {NULL};
 #endif
 };
 
 class SweepingVisitor : public HeapObjectVisitor {
  public:
   explicit SweepingVisitor(FreeList* free_list)
-      : free_list_(free_list),
-        free_start_(0),
-        used_(0) {
+      : free_list_(free_list), free_start_(0), used_(0) {
     // Clear the free list. It will be rebuilt during sweeping.
     free_list_->Clear();
   }
@@ -327,9 +316,7 @@ class SweepingVisitor : public HeapObjectVisitor {
     return size;
   }
 
-  virtual void ChunkEnd(uword end) {
-    AddFreeListChunk(end);
-  }
+  virtual void ChunkEnd(uword end) { AddFreeListChunk(end); }
 
   int used() const { return used_; }
 

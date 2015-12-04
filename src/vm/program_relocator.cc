@@ -35,8 +35,7 @@ class PointerRebasingVisitor : public PointerVisitor {
       : from_(from),
         target_(target),
         host_base_(host_base),
-        rebase_base_(rebase_base) {
-  }
+        rebase_base_(rebase_base) {}
 
   void VisitBlock(Object** start, Object** end) {
     for (Object** p = start; p < end; p++) {
@@ -82,8 +81,7 @@ class RelocationVisitor : public HeapObjectVisitor {
   RelocationVisitor(uword space_base, uword target_base, uword rebase_base)
       : space_base_(space_base),
         target_base_(target_base),
-        rebase_base_(rebase_base) {
-  }
+        rebase_base_(rebase_base) {}
 
   int Visit(HeapObject* from) {
     uword address = from->address();
@@ -95,7 +93,7 @@ class RelocationVisitor : public HeapObjectVisitor {
     from->IteratePointers(&visitor);
 
     DEBUG_PRINT("relo %p -> %p [%p]\n", address, target_address,
-           address - space_base_ + rebase_base_);
+                address - space_base_ + rebase_base_);
     return from->Size();
   }
 
@@ -129,8 +127,7 @@ int ProgramHeapRelocator::Relocate() {
   // heap + roots + main_arity
   int total_size = heap_size + sizeof(ProgramInfoBlock);
   memcpy(reinterpret_cast<void*>(target_),
-         reinterpret_cast<void*>(chunk->base()),
-         heap_size);
+         reinterpret_cast<void*>(chunk->base()), heap_size);
   uword target_base = reinterpret_cast<uword>(target_);
 
   RelocationVisitor relocator(chunk->base(), target_base, baseaddress_);
@@ -142,8 +139,7 @@ int ProgramHeapRelocator::Relocate() {
   ASSERT(program_->session() == NULL);
 
   // Create a shadow copy of the program.
-  Program* target_program =
-      reinterpret_cast<Program*>(malloc(sizeof(Program)));
+  Program* target_program = reinterpret_cast<Program*>(malloc(sizeof(Program)));
   memcpy(target_program, program_, sizeof(Program));
 
   // Now fix up root pointers in the copy.

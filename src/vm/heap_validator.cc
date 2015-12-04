@@ -21,8 +21,7 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
 
   bool is_shared_heap_obj = false;
   if (shared_heap_ != NULL) {
-    is_shared_heap_obj =
-        shared_heap_->heap()->space()->Includes(address);
+    is_shared_heap_obj = shared_heap_->heap()->space()->Includes(address);
   }
   bool is_mutable_heap_obj = false;
   if (mutable_heap_ != NULL) {
@@ -36,18 +35,17 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
     fprintf(stderr,
             "Found pointer %p which lies in neither of "
             "immutable_heap/mutable_heap/program_heap.\n",
-             heap_object);
+            heap_object);
 
     FATAL("Heap validation failed.");
   }
 
   Class* klass = heap_object->get_class();
-  bool valid_class =
-      program_heap_->space()->Includes(klass->address()) ||
-      StaticClassStructures::IsStaticClass(klass);
+  bool valid_class = program_heap_->space()->Includes(klass->address()) ||
+                     StaticClassStructures::IsStaticClass(klass);
   if (!valid_class) {
-    fprintf(stderr, "Object %p had an invalid klass pointer %p\n",
-        heap_object, klass);
+    fprintf(stderr, "Object %p had an invalid klass pointer %p\n", heap_object,
+            klass);
     FATAL("Heap validation failed.");
   }
 }
@@ -57,8 +55,7 @@ void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
 
   // Validate pointers in roots, queues, weak pointers and mutable heap.
   {
-    HeapPointerValidator validator(
-        program_heap_, shared_heap_, process_heap);
+    HeapPointerValidator validator(program_heap_, shared_heap_, process_heap);
 
     SafeObjectPointerVisitor pointer_visitor(process, &validator);
     process->IterateRoots(&validator);

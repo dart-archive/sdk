@@ -13,9 +13,7 @@
 namespace fletch {
 namespace DynamicAssertionHelper {
 
-static void PrintError(const char* file,
-                       int line,
-                       const char* format,
+static void PrintError(const char* file, int line, const char* format,
                        const va_list& arguments) {
 #ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   // Print out the error.

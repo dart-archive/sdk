@@ -13,13 +13,10 @@
 
 namespace fletch {
 
-static void yield() {
-  usleep(1);
-}
+static void yield() { usleep(1); }
 
 static const int kLockCounterLimit = 50;
 static int busy_lock_counter = 0;
-
 
 static void LoopIncrement(Mutex* mutex, int rem) {
   while (true) {
@@ -52,10 +49,7 @@ static void* RunTestBusyLock(void* arg) {
 TEST_CASE(Mutex) {
   pthread_t other;
   Mutex* mutex = Platform::CreateMutex();
-  int thread_created = pthread_create(&other,
-                                      NULL,
-                                      &RunTestBusyLock,
-                                      mutex);
+  int thread_created = pthread_create(&other, NULL, &RunTestBusyLock, mutex);
   EXPECT_EQ(0, thread_created);
   LoopIncrement(mutex, 1);
   pthread_join(other, NULL);

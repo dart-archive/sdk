@@ -64,7 +64,6 @@ class Chunk {
 
   Chunk* next_;
 
-
 #ifdef FLETCH_TARGET_OS_CMSIS
   Chunk(Space* owner, uword base, uword size, uword allocated,
         bool external = false)
@@ -73,14 +72,14 @@ class Chunk {
         limit_(base + size),
         allocated_(allocated),
         external_(external),
-        next_(NULL) { }
+        next_(NULL) {}
 #else
   Chunk(Space* owner, uword base, uword size, bool external = false)
       : owner_(owner),
         base_(base),
         limit_(base + size),
         external_(external),
-        next_(NULL) { }
+        next_(NULL) {}
 #endif
 
   ~Chunk();
@@ -142,8 +141,7 @@ class Space {
 
   // Scavenge loop.
   void CompleteScavenge(PointerVisitor* visitor);
-  void CompleteScavengeMutable(PointerVisitor* visitor,
-                               Space* program_space,
+  void CompleteScavengeMutable(PointerVisitor* visitor, Space* program_space,
                                StoreBuffer* store_buffer);
 
   // Schema change support.
@@ -228,11 +226,11 @@ class Space {
   void IncrementNoAllocationNesting() { ++no_allocation_nesting_; }
   void DecrementNoAllocationNesting() { --no_allocation_nesting_; }
 
-  Chunk* first_;  // First chunk in this space.
-  Chunk* last_;   // Last chunk in this space.
-  int used_;  // Allocated bytes.
-  uword top_;  // Allocation top in current chunk.
-  uword limit_;  // Allocation limit in current chunk.
+  Chunk* first_;           // First chunk in this space.
+  Chunk* last_;            // Last chunk in this space.
+  int used_;               // Allocated bytes.
+  uword top_;              // Allocation top in current chunk.
+  uword limit_;            // Allocation limit in current chunk.
   int allocation_budget_;  // Budget before needing a GC.
   int no_allocation_nesting_;
 
@@ -247,9 +245,7 @@ class NoAllocationFailureScope {
     space->IncrementNoAllocationNesting();
   }
 
-  ~NoAllocationFailureScope() {
-    space_->DecrementNoAllocationNesting();
-  }
+  ~NoAllocationFailureScope() { space_->DecrementNoAllocationNesting(); }
 
  private:
   Space* space_;
@@ -333,9 +329,7 @@ class ObjectMemory {
   static void Setup();
   static void TearDown();
 
-  static uword Allocated() {
-    return allocated_;
-  }
+  static uword Allocated() { return allocated_; }
 
  private:
   // Low-level access to the page table associated with a given
@@ -351,7 +345,7 @@ class ObjectMemory {
 #else
   static PageDirectory* page_directories_[1 << 13];
 #endif
-  static Mutex* mutex_;    // Mutex used for synchronized chunk allocation.
+  static Mutex* mutex_;  // Mutex used for synchronized chunk allocation.
 
   static Atomic<uword> allocated_;
 

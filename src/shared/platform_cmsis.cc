@@ -20,17 +20,11 @@ namespace fletch {
 
 static uint64 time_launch;
 
-void Platform::Setup() {
-  time_launch = GetMicroseconds();
-}
+void Platform::Setup() { time_launch = GetMicroseconds(); }
 
-void GetPathOfExecutable(char* path, size_t path_length) {
-  path[0] = '\0';
-}
+void GetPathOfExecutable(char* path, size_t path_length) { path[0] = '\0'; }
 
-int Platform::GetLocalTimeZoneOffset() {
-  return 0;
-}
+int Platform::GetLocalTimeZoneOffset() { return 0; }
 
 uint64 Platform::GetMicroseconds() {
   struct timeval tv;
@@ -45,9 +39,7 @@ uint64 Platform::GetProcessMicroseconds() {
   return GetMicroseconds() - time_launch;
 }
 
-int Platform::GetNumberOfHardwareThreads() {
-  return 1;
-}
+int Platform::GetNumberOfHardwareThreads() { return 1; }
 
 // Load file at 'uri'.
 List<uint8> Platform::LoadFile(const char* name) {
@@ -126,9 +118,7 @@ int Platform::GetTimeZoneOffset(int64_t seconds_since_epoch) {
   return 0;
 }
 
-void Platform::Exit(int exit_code) {
-  exit(exit_code);
-}
+void Platform::Exit(int exit_code) { exit(exit_code); }
 
 void Platform::ScheduleAbort() {
   static bool failed = false;
@@ -136,26 +126,18 @@ void Platform::ScheduleAbort() {
   failed = true;
 }
 
-void Platform::ImmediateAbort() {
-  abort();
-}
+void Platform::ImmediateAbort() { abort(); }
 
 int Platform::GetPid() {
   // For now just returning 0 here.
   return 0;
 }
 
-int Platform::MaxStackSizeInWords() {
-  return 16 * KB;
-}
+int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
-VirtualMemory::VirtualMemory(int size) : size_(size) {
-  UNIMPLEMENTED();
-}
+VirtualMemory::VirtualMemory(int size) : size_(size) { UNIMPLEMENTED(); }
 
-VirtualMemory::~VirtualMemory() {
-  UNIMPLEMENTED();
-}
+VirtualMemory::~VirtualMemory() { UNIMPLEMENTED(); }
 
 bool VirtualMemory::IsReserved() const {
   UNIMPLEMENTED();

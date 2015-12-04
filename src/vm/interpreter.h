@@ -21,11 +21,10 @@ class Port;
 class TargetYieldResult {
  public:
   explicit TargetYieldResult(const Object* object)
-      : value_(reinterpret_cast<uword>(object)) { }
+      : value_(reinterpret_cast<uword>(object)) {}
 
   TargetYieldResult(Port* port, bool terminate)
-      : value_(reinterpret_cast<uword>(port) |
-               Terminate::encode(terminate)) { }
+      : value_(reinterpret_cast<uword>(port) | Terminate::encode(terminate)) {}
 
   bool ShouldTerminate() const { return Terminate::decode(value_); }
 
@@ -60,7 +59,7 @@ class Interpreter {
   explicit Interpreter(Process* process)
       : process_(process),
         interruption_(kReady),
-        target_yield_result_(NULL, false) { }
+        target_yield_result_(NULL, false) {}
 
   // Run the Process until interruption.
   void Run();
@@ -88,7 +87,6 @@ class Interpreter {
   TargetYieldResult target_yield_result_;
 };
 
-
 // -------------------- Native interpreter support --------------------
 //
 // TODO(kasperl): Move this elsewhere? This is only here to support the
@@ -101,13 +99,10 @@ extern "C" Process::StackCheckResult HandleStackOverflow(Process* process,
 
 extern "C" int HandleGC(Process* process);
 
-extern "C" Object* HandleAllocate(Process* process,
-                                  Class* clazz,
-                                  int immutable,
+extern "C" Object* HandleAllocate(Process* process, Class* clazz, int immutable,
                                   int has_immutable_heapobject_member);
 
-extern "C" void AddToStoreBufferSlow(Process* process,
-                                     Object* object,
+extern "C" void AddToStoreBufferSlow(Process* process, Object* object,
                                      Object* value);
 
 extern "C" Object* HandleAllocateBoxed(Process* process, Object* value);
@@ -116,17 +111,14 @@ extern "C" Object* HandleObjectFromFailure(Process* process, Failure* failure);
 
 extern "C" void HandleCoroutineChange(Process* process, Coroutine* coroutine);
 
-extern "C" Object* HandleIdentical(Process* process,
-                                   Object* left,
+extern "C" Object* HandleIdentical(Process* process, Object* left,
                                    Object* right);
 
 extern "C" LookupCache::Entry* HandleLookupEntry(Process* process,
                                                  LookupCache::Entry* primary,
-                                                 Class* clazz,
-                                                 int selector);
+                                                 Class* clazz, int selector);
 
-extern "C" uint8* HandleThrow(Process* process,
-                              Object* exception,
+extern "C" uint8* HandleThrow(Process* process, Object* exception,
                               int* stack_delta_result,
                               Object*** frame_pointer_result);
 

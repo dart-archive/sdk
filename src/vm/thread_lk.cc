@@ -27,9 +27,9 @@ void Thread::UnblockOSSignals() {
 
 ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   // TODO(herhut): lk threads have int return values.
-  thread_t* thread = thread_create("Dart thread",
-      reinterpret_cast<thread_start_routine>(run), data,
-      DEFAULT_PRIORITY, 4096 /* stack size */);
+  thread_t* thread =
+      thread_create("Dart thread", reinterpret_cast<thread_start_routine>(run),
+                    data, DEFAULT_PRIORITY, 4096 /* stack size */);
   int result = thread_resume(thread);
   if (result != 0) {
     fprintf(stderr, "Error %d", result);

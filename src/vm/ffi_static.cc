@@ -17,11 +17,9 @@ extern "C" FletchStaticFFISymbol fletch_ffi_table;
 
 namespace fletch {
 
-void ForeignFunctionInterface::Setup() {
-}
+void ForeignFunctionInterface::Setup() {}
 
-void ForeignFunctionInterface::TearDown() {
-}
+void ForeignFunctionInterface::TearDown() {}
 
 void ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
   FATAL("fletch vm was built without dynamic-libary FFI support.");
@@ -39,8 +37,7 @@ NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   if (address != 0) return Failure::index_out_of_bounds();
   char* name = AsForeignString(arguments[1]);
-  for (FletchStaticFFISymbol* entry = &fletch_ffi_table;
-       entry->name != NULL;
+  for (FletchStaticFFISymbol* entry = &fletch_ffi_table; entry->name != NULL;
        entry++) {
     if (strcmp(name, entry->name) == 0) {
       free(name);

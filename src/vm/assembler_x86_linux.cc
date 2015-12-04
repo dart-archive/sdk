@@ -9,18 +9,14 @@
 
 namespace fletch {
 
-void Assembler::call(const char* name) {
-  printf("\tcall %s\n", name);
-}
+void Assembler::call(const char* name) { printf("\tcall %s\n", name); }
 
 void Assembler::j(Condition condition, const char* name) {
   const char* mnemonic = ConditionMnemonic(condition);
   printf("\tj%s %s\n", mnemonic, name);
 }
 
-void Assembler::jmp(const char* name) {
-  printf("\tjmp %s\n", name);
-}
+void Assembler::jmp(const char* name) { printf("\tjmp %s\n", name); }
 
 void Assembler::Bind(const char* name) {
   printf("\n\t.text\n");
@@ -29,9 +25,7 @@ void Assembler::Bind(const char* name) {
   printf("%s:\n", name);
 }
 
-void Assembler::DefineLong(const char* name) {
-  printf("\t.long %s\n", name);
-}
+void Assembler::DefineLong(const char* name) { printf("\t.long %s\n", name); }
 
 void Assembler::LoadNative(Register reg, Register index) {
   Print("movl kNativeTable(,%rl,4), %rl", index, reg);

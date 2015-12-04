@@ -23,18 +23,22 @@ TEST_CASE(TypeSizes) {
 }
 
 TEST_CASE(ArraySize) {
-  static int i1[] = { 1 };
+  static int i1[] = {1};
   EXPECT_EQ(1U, ARRAY_SIZE(i1));
-  static int i2[] = { 1, 2 };
+  static int i2[] = {1, 2};
   EXPECT_EQ(2U, ARRAY_SIZE(i2));
-  static int i3[3] = { 0, };
+  static int i3[3] = {
+      0,
+  };
   EXPECT_EQ(3U, ARRAY_SIZE(i3));
 
-  static char c1[] = { 1 };
+  static char c1[] = {1};
   EXPECT_EQ(1U, ARRAY_SIZE(c1));
-  static char c2[] = { 1, 2 };
+  static char c2[] = {1, 2};
   EXPECT_EQ(2U, ARRAY_SIZE(c2));
-  static char c3[3] = { 0, };
+  static char c3[3] = {
+      0,
+  };
   EXPECT_EQ(3U, ARRAY_SIZE(c3));
 }
 

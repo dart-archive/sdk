@@ -19,9 +19,7 @@ static void CheckValidSmi(word value) {
   EXPECT_EQ(Smi::FromWord(value)->value(), value);
 }
 
-static void CheckInvalidSmi(word value) {
-  EXPECT(!Smi::IsValid(value));
-}
+static void CheckInvalidSmi(word value) { EXPECT(!Smi::IsValid(value)); }
 
 TEST_CASE(Smi) {
   CheckValidSmi(0);

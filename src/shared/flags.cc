@@ -16,8 +16,7 @@ namespace fletch {
 #define MATERIALIZE_DEBUG_FLAG(type, prefix, name, value, doc) \
   type Flags::name = value;
 #else
-#define MATERIALIZE_DEBUG_FLAG(type, prefix, name, value, doc) \
-  /* Do nothing. */
+#define MATERIALIZE_DEBUG_FLAG(type, prefix, name, value, doc)
 #endif
 
 #define MATERIALIZE_RELEASE_FLAG(type, prefix, name, value, doc) \
@@ -32,14 +31,13 @@ static bool IsValidFlag(const char* argument) {
   return (strncmp(argument, "-X", 2) == 0) && (strlen(argument) > 2);
 }
 
-
-static void PrintFlagBoolean(const char* name, bool value,
-                             bool init, const char* doc) {
+static void PrintFlagBoolean(const char* name, bool value, bool init,
+                             const char* doc) {
   Print::Out(" - bool %s = %s\n", name, value ? "true" : "false");
 }
 
-static void PrintFlagInteger(const char* name, int value,
-                             int init, const char* doc) {
+static void PrintFlagInteger(const char* name, int value, int init,
+                             const char* doc) {
   Print::Out(" - int %s = %d\n", name, value);
 }
 
@@ -54,8 +52,7 @@ static void PrintFlagString(const char* name, const char* value,
 #define PRINT_DEBUG_FLAG(type, prefix, name, value, doc) \
   PrintFlag##prefix(XSTR(name), Flags::name, value, doc);
 #else
-#define PRINT_DEBUG_FLAG(type, prefix, name, value, doc) \
-  /* Do nothing. */
+#define PRINT_DEBUG_FLAG(type, prefix, name, value, doc) /* Do nothing. */
 #endif
 
 #define PRINT_RELEASE_FLAG(type, prefix, name, value, doc) \
@@ -126,15 +123,14 @@ static bool ProcessFlagString(const char* name_ptr, const char* value_ptr,
 }
 
 #ifdef DEBUG
-#define PROCESS_DEBUG_FLAG(type, prefix, name, value, doc) \
+#define PROCESS_DEBUG_FLAG(type, prefix, name, value, doc)                \
   if (ProcessFlag##prefix(name_ptr, value_ptr, XSTR(name), &Flags::name)) \
     return;
 #else
-#define PROCESS_DEBUG_FLAG(type, prefix, name, value, doc) \
-  /* Do nothing */
+#define PROCESS_DEBUG_FLAG(type, prefix, name, value, doc) /* Do nothing */
 #endif
 
-#define PROCESS_RELEASE_FLAG(type, prefix, name, value, doc) \
+#define PROCESS_RELEASE_FLAG(type, prefix, name, value, doc)              \
   if (ProcessFlag##prefix(name_ptr, value_ptr, XSTR(name), &Flags::name)) \
     return;
 

@@ -29,9 +29,7 @@ Space::Space(int maximum_initial_size)
   }
 }
 
-Space::~Space() {
-  FreeAllChunks();
-}
+Space::~Space() { FreeAllChunks(); }
 
 void Space::Flush() {
   if (!is_empty()) {
@@ -86,9 +84,10 @@ uword Space::TryAllocate(int size) {
 uword Space::AllocateInNewChunk(int size, bool fatal) {
   // Allocate new chunk that is big enough to fit the object.
   int default_chunk_size = DefaultChunkSize(Used());
-  int chunk_size = size >= default_chunk_size
-      ? (size + kPointerSize)  // Make sure there is room for sentinel.
-      : default_chunk_size;
+  int chunk_size =
+      size >= default_chunk_size
+          ? (size + kPointerSize)  // Make sure there is room for sentinel.
+          : default_chunk_size;
 
   Chunk* chunk = ObjectMemory::AllocateChunk(this, chunk_size);
   if (chunk != NULL) {

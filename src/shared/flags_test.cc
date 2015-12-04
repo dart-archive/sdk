@@ -11,16 +11,14 @@
 
 static const int argc = 3;
 static const char* argv[argc] = {
-    "fletch",
-    "-Xverbose",
-    "nothing",
+    "fletch", "-Xverbose", "nothing",
 };
 
 namespace fletch {
 
 TEST_CASE(Arguments) {
 #ifdef USING_ADDRESS_SANITIZER
-__lsan_disable();
+  __lsan_disable();
 #endif
   // Make a copy of the arguments. This is necessary
   // because Flags::ExtractFromCommandLine modifies the arguments.
@@ -30,7 +28,7 @@ __lsan_disable();
     strcpy(values[i], argv[i]);  // NOLINT
   }
 #ifdef USING_ADDRESS_SANITIZER
-__lsan_enable();
+  __lsan_enable();
 #endif
 
   // Parse the fake arguments

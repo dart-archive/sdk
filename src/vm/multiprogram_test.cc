@@ -41,6 +41,4 @@ static int Main(int argc, char** argv) {
 
 }  // namespace fletch
 
-int main(int argc, char** argv) {
-  return fletch::Main(argc, argv);
-}
+int main(int argc, char** argv) { return fletch::Main(argc, argv); }

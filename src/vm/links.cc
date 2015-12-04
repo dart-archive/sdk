@@ -79,10 +79,8 @@ void Links::NotifyMonitors(ProcessHandle* dying_handle) {
   if (signal != NULL) Signal::DecrementRef(signal);
 }
 
-Signal* Links::EnqueueSignal(Port* port,
-                             ProcessHandle* dying_handle,
-                             Signal::Kind kind,
-                             Signal* signal) {
+Signal* Links::EnqueueSignal(Port* port, ProcessHandle* dying_handle,
+                             Signal::Kind kind, Signal* signal) {
   // We do this nested check for `port->process()` for two reasons:
   //    * avoid allocating [Signal] if we definitly do not need it
   //    * avoid allocating [Signal] while holding a [Spinlock]
@@ -109,10 +107,8 @@ Signal* Links::EnqueueSignal(Port* port,
   return signal;
 }
 
-Signal* Links::SendSignal(ProcessHandle* handle,
-                          ProcessHandle* dying_handle,
-                          Signal::Kind kind,
-                          Signal* signal) {
+Signal* Links::SendSignal(ProcessHandle* handle, ProcessHandle* dying_handle,
+                          Signal::Kind kind, Signal* signal) {
   // We do this nested check for `handle->process()` for two reasons:
   //    * avoid allocating [Signal] if we definitly do not need it
   //    * avoid allocating [Signal] while holding a [Spinlock]

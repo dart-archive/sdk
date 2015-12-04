@@ -16,7 +16,7 @@ namespace fletch {
 
 class ServiceRegistry {
  public:
-  ServiceRegistry() : monitor_(Platform::CreateMonitor()), service_(NULL) { }
+  ServiceRegistry() : monitor_(Platform::CreateMonitor()), service_(NULL) {}
 
   ~ServiceRegistry() {
     while (service_ != NULL) {
@@ -87,8 +87,7 @@ struct ServiceRequest {
   void* callback;
 };
 
-__attribute__((visibility("default")))
-void PostResultToService(char* buffer) {
+__attribute__((visibility("default"))) void PostResultToService(char* buffer) {
   ServiceRequest* request = reinterpret_cast<ServiceRequest*>(buffer);
   if (request->callback == NULL) {
     request->service->NotifyResult(request);
@@ -145,9 +144,7 @@ void Service::Invoke(int id, void* buffer, int size) {
   WaitForResult(request);
 }
 
-void Service::InvokeAsync(int id,
-                          ServiceApiCallback callback,
-                          void* buffer,
+void Service::InvokeAsync(int id, ServiceApiCallback callback, void* buffer,
                           int size) {
   port_->Lock();
   Process* process = port_->process();
@@ -195,19 +192,15 @@ ServiceId ServiceApiLookup(const char* name) {
   return reinterpret_cast<ServiceId>(service);
 }
 
-void ServiceApiInvoke(ServiceId service_id,
-                      MethodId method,
-                      void* buffer,
+void ServiceApiInvoke(ServiceId service_id, MethodId method, void* buffer,
                       int size) {
   fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
   intptr_t method_id = reinterpret_cast<intptr_t>(method);
   service->Invoke(method_id, buffer, size);
 }
 
-void ServiceApiInvokeAsync(ServiceId service_id,
-                           MethodId method,
-                           ServiceApiCallback callback,
-                           void* buffer,
+void ServiceApiInvokeAsync(ServiceId service_id, MethodId method,
+                           ServiceApiCallback callback, void* buffer,
                            int size) {
   fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
   intptr_t method_id = reinterpret_cast<intptr_t>(method);

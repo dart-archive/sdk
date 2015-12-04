@@ -27,14 +27,11 @@ class Signal : public Refcounted<Signal> {
   };
 
   Signal(ProcessHandle* handle, Kind kind)
-      : process_handle_(handle),
-        kind_(kind) {
+      : process_handle_(handle), kind_(kind) {
     process_handle_->IncrementRef();
   }
 
-  ~Signal() {
-    ProcessHandle::DecrementRef(process_handle_);
-  }
+  ~Signal() { ProcessHandle::DecrementRef(process_handle_); }
 
   ProcessHandle* handle() const { return process_handle_; }
   Kind kind() const { return kind_; }
@@ -45,6 +42,5 @@ class Signal : public Refcounted<Signal> {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_SIGNAL_H_

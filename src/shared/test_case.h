@@ -7,22 +7,24 @@
 
 #include "src/shared/globals.h"
 
-#define TEST_CASE(name)                                                  \
-  static void Test##name();                                              \
-  static const fletch::TestCase kRegister##name(Test##name, #name);      \
+#define TEST_CASE(name)                                             \
+  static void Test##name();                                         \
+  static const fletch::TestCase kRegister##name(Test##name, #name); \
   static void Test##name()
 
-#define TEST_EXPORT(method)                                     \
-  extern "C" { __attribute__((visibility("default"))) method }
+#define TEST_EXPORT(method)                     \
+  extern "C" {                                  \
+  __attribute__((visibility("default"))) method \
+  }
 
 namespace fletch {
 
 class TestCase {
  public:
-  typedef void (RunEntry)();
+  typedef void(RunEntry)();
 
   TestCase(RunEntry* run, const char* name);
-  virtual ~TestCase() { }
+  virtual ~TestCase() {}
 
   const char* name() const { return name_; }
 

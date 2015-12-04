@@ -15,27 +15,27 @@
 namespace fletch {
 
 enum Register {
-  R0  =  0,
-  R1  =  1,
-  R2  =  2,
-  R3  =  3,
-  R4  =  4,
-  R5  =  5,
-  R6  =  6,
-  R7  =  7,
-  R8  =  8,
-  R9  =  9,
+  R0 = 0,
+  R1 = 1,
+  R2 = 2,
+  R3 = 3,
+  R4 = 4,
+  R5 = 5,
+  R6 = 6,
+  R7 = 7,
+  R8 = 8,
+  R9 = 9,
   R10 = 10,
   R11 = 11,
   R12 = 12,
   R13 = 13,
   R14 = 14,
   R15 = 15,
-  FP  = 11,
-  IP  = 12,
-  SP  = 13,
-  LR  = 14,
-  PC  = 15,
+  FP = 11,
+  IP = 12,
+  SP = 13,
+  LR = 14,
+  PC = 15,
 };
 
 enum ScaleFactor {
@@ -46,22 +46,19 @@ enum ScaleFactor {
   TIMES_8 = 3
 };
 
-enum ShiftType {
-  LSL,
-  ASR
-};
+enum ShiftType { LSL, ASR };
 
 enum Condition {
-  EQ =  0,  // equal
-  NE =  1,  // not equal
-  CS =  2,  // carry set/unsigned higher or same
-  CC =  3,  // carry clear/unsigned lower
-  MI =  4,  // minus/negative
-  PL =  5,  // plus/positive or zero
-  VS =  6,  // overflow
-  VC =  7,  // no overflow
-  HI =  8,  // unsigned higher
-  LS =  9,  // unsigned lower or same
+  EQ = 0,   // equal
+  NE = 1,   // not equal
+  CS = 2,   // carry set/unsigned higher or same
+  CC = 3,   // carry clear/unsigned lower
+  MI = 4,   // minus/negative
+  PL = 5,   // plus/positive or zero
+  VS = 6,   // overflow
+  VC = 7,   // no overflow
+  HI = 8,   // unsigned higher
+  LS = 9,   // unsigned lower or same
   GE = 10,  // signed greater than or equal
   LT = 11,  // signed less than
   GT = 12,  // signed greater than
@@ -78,7 +75,7 @@ typedef uint32_t RegisterList;
 
 class Immediate {
  public:
-  explicit Immediate(int32_t value) : value_(value) { }
+  explicit Immediate(int32_t value) : value_(value) {}
   int32_t value() const { return value_; }
 
  private:
@@ -88,17 +85,15 @@ class Immediate {
 class Operand {
  public:
   Operand(Register reg, ScaleFactor scale)
-      : reg_(reg), shift_type_(LSL), shift_amount_(scale) { }
+      : reg_(reg), shift_type_(LSL), shift_amount_(scale) {}
 
   Operand(const Operand& other)
       : reg_(other.reg()),
         shift_type_(other.shift_type()),
-        shift_amount_(other.shift_amount()) { }
+        shift_amount_(other.shift_amount()) {}
 
   Operand(Register reg, ShiftType shift_type, int shift_amount)
-      : reg_(reg),
-        shift_type_(shift_type),
-        shift_amount_(shift_amount) { }
+      : reg_(reg), shift_type_(shift_type), shift_amount_(shift_amount) {}
 
   Register reg() const { return reg_; }
   ShiftType shift_type() const { return shift_type_; }
@@ -115,12 +110,10 @@ class Address {
   enum Kind { IMMEDIATE, OPERAND };
 
   Address(Register base, int32_t offset)
-      : base_(base), offset_(offset), operand_(R0, TIMES_1), kind_(IMMEDIATE) {
-  }
+      : base_(base), offset_(offset), operand_(R0, TIMES_1), kind_(IMMEDIATE) {}
 
   Address(Register base, const Operand& operand)
-      : base_(base), offset_(0), operand_(operand), kind_(OPERAND) {
-  }
+      : base_(base), offset_(0), operand_(operand), kind_(OPERAND) {}
 
   Register base() const { return base_; }
   int32_t offset() const { return offset_; }
@@ -136,7 +129,7 @@ class Address {
 
 class Label {
  public:
-  Label() : position_(0) { }
+  Label() : position_(0) {}
 
   // Returns the position for bound and linked labels. Cannot be used
   // for unused labels.
@@ -174,14 +167,14 @@ class Label {
 #define INSTRUCTION_2(name, format, t0, t1) \
   void name(t0 a0, t1 a1) { Print(format, Wrap(a0), Wrap(a1)); }
 
-#define INSTRUCTION_3(name, format, t0, t1, t2)                          \
-  void name(t0 a0, t1 a1, t2 a2) {                                       \
-    Print(format, Wrap(a0), Wrap(a1), Wrap(a2));                         \
+#define INSTRUCTION_3(name, format, t0, t1, t2)  \
+  void name(t0 a0, t1 a1, t2 a2) {               \
+    Print(format, Wrap(a0), Wrap(a1), Wrap(a2)); \
   }
 
-#define INSTRUCTION_4(name, format, t0, t1, t2, t3)                      \
-  void name(t0 a0, t1 a1, t2 a2, t3 a3) {                                \
-    Print(format, Wrap(a0), Wrap(a1), Wrap(a2), Wrap(a3));               \
+#define INSTRUCTION_4(name, format, t0, t1, t2, t3)        \
+  void name(t0 a0, t1 a1, t2 a2, t3 a3) {                  \
+    Print(format, Wrap(a0), Wrap(a1), Wrap(a2), Wrap(a3)); \
   }
 
 class Assembler {
@@ -243,8 +236,8 @@ class Assembler {
   INSTRUCTION_1(push, "push { %r }", Register);
   INSTRUCTION_1(push, "push { %R }", RegisterList);
 
-  INSTRUCTION_4(smull, "smull %r, %r, %r, %r",
-                Register, Register, Register, Register);
+  INSTRUCTION_4(smull, "smull %r, %r, %r, %r", Register, Register, Register,
+                Register);
 
   INSTRUCTION_2(str, "str %r, %a", Register, const Address&);
   INSTRUCTION_3(str, "str %r, %a%W", Register, const Address&, WriteBack);

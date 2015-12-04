@@ -55,10 +55,7 @@ static int Main(int argc, char** argv) {
 
 }  // namespace fletch
 
-
 // Forward main calls to fletch::Main.
-int main(int argc, char** argv) {
-  return fletch::Main(argc, argv);
-}
+int main(int argc, char** argv) { return fletch::Main(argc, argv); }
 
 #endif  // !FLETCH_ENABLE_LIVE_CODING

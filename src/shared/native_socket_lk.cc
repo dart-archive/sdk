@@ -18,23 +18,21 @@ extern "C" {
 namespace fletch {
 
 struct Socket::SocketData {
-  SocketData() : socket(NULL), port(-1) { }
-  SocketData(tcp_socket_t* socket, int port) : socket(socket), port(port) { }
+  SocketData() : socket(NULL), port(-1) {}
+  SocketData(tcp_socket_t* socket, int port) : socket(socket), port(port) {}
 
   tcp_socket_t* socket;
   int port;
 };
 
-Socket::Socket() : data_(new SocketData()) {
-}
+Socket::Socket() : data_(new SocketData()) {}
 
 Socket* Socket::FromFd(int id) {
   UNIMPLEMENTED();
   return NULL;
 }
 
-Socket::Socket(SocketData* data) : data_(data) {
-}
+Socket::Socket(SocketData* data) : data_(data) {}
 
 Socket::~Socket() {
   if (data_->socket != NULL) tcp_close(data_->socket);
@@ -46,9 +44,7 @@ bool Socket::Connect(const char* host, int port) {
   return false;
 }
 
-void Socket::Bind(const char* host, int port) {
-  data_->port = port;
-}
+void Socket::Bind(const char* host, int port) { data_->port = port; }
 
 int Socket::Listen() {
   int port = data_->port;

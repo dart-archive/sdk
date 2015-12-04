@@ -15,17 +15,14 @@ class Spinlock {
  public:
   Spinlock() : is_locked_(false) {}
 
-  bool IsLocked() const {
-    return is_locked_;
-  }
+  bool IsLocked() const { return is_locked_; }
 
   void Lock() {
-    while (is_locked_.exchange(true, kAcquire)) { }
+    while (is_locked_.exchange(true, kAcquire)) {
+    }
   }
 
-  void Unlock() {
-    is_locked_.store(false, kRelease);
-  }
+  void Unlock() { is_locked_.store(false, kRelease); }
 
  private:
   Atomic<bool> is_locked_;
@@ -33,12 +30,8 @@ class Spinlock {
 
 class ScopedSpinlock {
  public:
-  explicit ScopedSpinlock(Spinlock* lock) : lock_(lock) {
-    lock_->Lock();
-  }
-  ~ScopedSpinlock() {
-    lock_->Unlock();
-  }
+  explicit ScopedSpinlock(Spinlock* lock) : lock_(lock) { lock_->Lock(); }
+  ~ScopedSpinlock() { lock_->Unlock(); }
 
  private:
   Spinlock* lock_;

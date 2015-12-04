@@ -24,9 +24,7 @@ void Assembler::j(Condition condition, const char* name) {
   printf("\tj%s %s%s\n", mnemonic, kPrefix, name);
 }
 
-void Assembler::jmp(const char* name) {
-  printf("\tjmp %s%s\n", kPrefix, name);
-}
+void Assembler::jmp(const char* name) { printf("\tjmp %s%s\n", kPrefix, name); }
 
 void Assembler::Bind(const char* name) {
   putchar('\n');

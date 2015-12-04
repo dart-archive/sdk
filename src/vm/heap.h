@@ -75,14 +75,11 @@ class Heap {
 
   // Allocate class.
   Object* CreateMetaClass();
-  Object* CreateClass(InstanceFormat format,
-                      Class* meta_class,
+  Object* CreateClass(InstanceFormat format, Class* meta_class,
                       HeapObject* null);
 
   // Allocate function.
-  Object* CreateFunction(Class* the_class,
-                         int arity,
-                         List<uint8> bytecodes,
+  Object* CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
                          int number_of_literals);
 
   void AllocatedForeignMemory(int size);
@@ -146,9 +143,7 @@ class Heap {
     space()->AdjustAllocationBudget(foreign_memory_);
   }
 
-  void set_random(RandomXorShift* random) {
-    random_ = random;
-  }
+  void set_random(RandomXorShift* random) { random_ = random; }
 
   // Used for initializing identity hash codes for immutable objects.
   RandomXorShift* random_;
@@ -160,7 +155,7 @@ class Heap {
 };
 
 // Helper class for copying HeapObjects.
-class ScavengeVisitor: public PointerVisitor {
+class ScavengeVisitor : public PointerVisitor {
  public:
   ScavengeVisitor(Space* from, Space* to) : from_(from), to_(to) {}
 
@@ -187,22 +182,18 @@ class ScavengeVisitor: public PointerVisitor {
 //
 // [object] must be either a Smi or a LargeInteger.
 inline word AsForeignWord(Object* object) {
-  return object->IsSmi()
-      ? Smi::cast(object)->value()
-      : LargeInteger::cast(object)->value();
+  return object->IsSmi() ? Smi::cast(object)->value()
+                         : LargeInteger::cast(object)->value();
 }
 
 // Read [object] as an integer int64 value.
 //
 // [object] must be either a Smi or a LargeInteger.
 inline int64 AsForeignInt64(Object* object) {
-  return object->IsSmi()
-      ? Smi::cast(object)->value()
-      : LargeInteger::cast(object)->value();
+  return object->IsSmi() ? Smi::cast(object)->value()
+                         : LargeInteger::cast(object)->value();
 }
 
-
 }  // namespace fletch
-
 
 #endif  // SRC_VM_HEAP_H_

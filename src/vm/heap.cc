@@ -22,7 +22,7 @@ Heap::Heap(Space* existing_space, WeakPointer* weak_pointers)
     : random_(NULL),
       space_(existing_space),
       weak_pointers_(weak_pointers),
-      foreign_memory_(0) { }
+      foreign_memory_(0) {}
 
 Heap::~Heap() {
   WeakPointer::ForceCallbacks(&weak_pointers_, this);
@@ -47,8 +47,7 @@ void Heap::TryDealloc(Object* object, int size) {
   space_->TryDealloc(location, size);
 }
 
-Object* Heap::CreateInstance(Class* the_class,
-                             Object* init_value,
+Object* Heap::CreateInstance(Class* the_class, Object* init_value,
                              bool immutable) {
   int size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
@@ -102,8 +101,7 @@ void Heap::TryDeallocInteger(LargeInteger* object) {
 }
 
 Object* Heap::CreateDouble(Class* the_class, fletch_double value) {
-  ASSERT(the_class->instance_format().type() ==
-         InstanceFormat::DOUBLE_TYPE);
+  ASSERT(the_class->instance_format().type() == InstanceFormat::DOUBLE_TYPE);
   int size = Double::AllocationSize();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
@@ -114,8 +112,7 @@ Object* Heap::CreateDouble(Class* the_class, fletch_double value) {
 }
 
 Object* Heap::CreateBoxed(Class* the_class, Object* value) {
-  ASSERT(the_class->instance_format().type() ==
-         InstanceFormat::BOXED_TYPE);
+  ASSERT(the_class->instance_format().type() == InstanceFormat::BOXED_TYPE);
   int size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
@@ -137,8 +134,8 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   return Initializer::cast(result);
 }
 
-Object* Heap::CreateOneByteStringInternal(
-    Class* the_class, int length, bool clear) {
+Object* Heap::CreateOneByteStringInternal(Class* the_class, int length,
+                                          bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::ONE_BYTE_STRING_TYPE);
   int size = OneByteString::AllocationSize(length);
@@ -150,8 +147,8 @@ Object* Heap::CreateOneByteStringInternal(
   return OneByteString::cast(result);
 }
 
-Object* Heap::CreateTwoByteStringInternal(
-    Class* the_class, int length, bool clear) {
+Object* Heap::CreateTwoByteStringInternal(Class* the_class, int length,
+                                          bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::TWO_BYTE_STRING_TYPE);
   int size = TwoByteString::AllocationSize(length);
@@ -190,9 +187,7 @@ Object* Heap::CreateStack(Class* the_class, int length) {
   return Stack::cast(result);
 }
 
-Object* Heap::AllocateRawClass(int size) {
-  return Allocate(size);
-}
+Object* Heap::AllocateRawClass(int size) { return Allocate(size); }
 
 Object* Heap::CreateMetaClass() {
   InstanceFormat format = InstanceFormat::class_format();
@@ -207,11 +202,9 @@ Object* Heap::CreateMetaClass() {
   return meta_class;
 }
 
-Object* Heap::CreateClass(InstanceFormat format,
-                          Class* meta_class,
+Object* Heap::CreateClass(InstanceFormat format, Class* meta_class,
                           HeapObject* null) {
-  ASSERT(meta_class->instance_format().type() ==
-         InstanceFormat::CLASS_TYPE);
+  ASSERT(meta_class->instance_format().type() == InstanceFormat::CLASS_TYPE);
 
   int size = meta_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
@@ -222,12 +215,9 @@ Object* Heap::CreateClass(InstanceFormat format,
   return Class::cast(result);  // Perform a cast to validate type.
 }
 
-Object* Heap::CreateFunction(Class* the_class,
-                             int arity,
-                             List<uint8> bytecodes,
+Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
                              int number_of_literals) {
-  ASSERT(the_class->instance_format().type() ==
-         InstanceFormat::FUNCTION_TYPE);
+  ASSERT(the_class->instance_format().type() == InstanceFormat::FUNCTION_TYPE);
   int literals_size = number_of_literals * kPointerSize;
   int bytecode_size = Function::BytecodeAllocationSize(bytecodes.length());
   int size = Function::AllocationSize(bytecode_size + literals_size);

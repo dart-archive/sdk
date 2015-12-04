@@ -12,7 +12,7 @@
 
 namespace fletch {
 
-template<typename MessageType>
+template <typename MessageType>
 class Mailbox {
  public:
   Mailbox() : last_message_(NULL), current_message_(NULL) {}
@@ -45,7 +45,8 @@ class Mailbox {
   void TakeQueue() {
     ASSERT(current_message_ == NULL);
     MessageType* last = last_message_;
-    while (!last_message_.compare_exchange_weak(last, NULL)) { }
+    while (!last_message_.compare_exchange_weak(last, NULL)) {
+    }
     current_message_ = Reverse(last);
   }
 
@@ -76,10 +77,9 @@ class Mailbox {
 
  private:
   void IterateMailQueuePointers(MessageType* entry, PointerVisitor* visitor) {
-    for (MessageType* current = entry;
-         current != NULL;
+    for (MessageType* current = entry; current != NULL;
          current = current->next()) {
-       current->VisitPointers(visitor);
+      current->VisitPointers(visitor);
     }
   }
 
@@ -95,7 +95,7 @@ class Mailbox {
   }
 };
 
-template<typename MessageType>
+template <typename MessageType>
 class MailboxMessage {
  public:
   MailboxMessage() : next_(NULL) {}
@@ -108,6 +108,5 @@ class MailboxMessage {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_MAILBOX_H_

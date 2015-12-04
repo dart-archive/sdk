@@ -22,22 +22,20 @@ namespace fletch {
 
 class InterpreterGenerator {
  public:
-  explicit InterpreterGenerator(Assembler* assembler)
-      : assembler_(assembler) { }
+  explicit InterpreterGenerator(Assembler* assembler) : assembler_(assembler) {}
 
   void Generate();
 
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
-#define V(name, branching, format, size, stack_diff, print)      \
+#define V(name, branching, format, size, stack_diff, print) \
   virtual void Do##name() = 0;
-BYTECODES_DO(V)
+  BYTECODES_DO(V)
 #undef V
 
-#define V(name) \
-  virtual void DoIntrinsic##name() = 0;
-INTRINSICS_DO(V)
+#define V(name) virtual void DoIntrinsic##name() = 0;
+  INTRINSICS_DO(V)
 #undef V
 
  protected:
@@ -51,30 +49,29 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
-#define V(name, branching, format, size, stack_diff, print)      \
-  assembler()->Bind("BC_" #name);                                \
+#define V(name, branching, format, size, stack_diff, print) \
+  assembler()->Bind("BC_" #name);                           \
   Do##name();
-BYTECODES_DO(V)
+  BYTECODES_DO(V)
 #undef V
 
 #define V(name)                          \
   assembler()->Bind("Intrinsic_" #name); \
   DoIntrinsic##name();
-INTRINSICS_DO(V)
+  INTRINSICS_DO(V)
 #undef V
 
   assembler()->BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
-#define V(name, branching, format, size, stack_diff, print)      \
+#define V(name, branching, format, size, stack_diff, print) \
   assembler()->DefineLong("BC_" #name);
-BYTECODES_DO(V)
+  BYTECODES_DO(V)
 #undef V
 }
 
-class InterpreterGeneratorX86: public InterpreterGenerator {
+class InterpreterGeneratorX86 : public InterpreterGenerator {
  public:
   explicit InterpreterGeneratorX86(Assembler* assembler)
-      : InterpreterGenerator(assembler),
-        spill_size_(-1) { }
+      : InterpreterGenerator(assembler), spill_size_(-1) {}
 
   // Registers
   // ---------
@@ -137,13 +134,11 @@ class InterpreterGeneratorX86: public InterpreterGenerator {
   virtual void DoInvokeTestUnfold();
   virtual void DoInvokeTest();
 
-#define INVOKE_BUILTIN(kind)                \
-  virtual void DoInvoke##kind##Unfold() {   \
-    Invoke##kind("BC_InvokeMethodUnfold");  \
-  }                                         \
-  virtual void DoInvoke##kind() {   \
-    Invoke##kind("BC_InvokeMethod");        \
-  }
+#define INVOKE_BUILTIN(kind)               \
+  virtual void DoInvoke##kind##Unfold() {  \
+    Invoke##kind("BC_InvokeMethodUnfold"); \
+  }                                        \
+  virtual void DoInvoke##kind() { Invoke##kind("BC_InvokeMethod"); }
 
   INVOKE_BUILTIN(Eq);
   INVOKE_BUILTIN(Lt);
@@ -514,9 +509,7 @@ void InterpreterGeneratorX86::DoLoadStaticInit() {
 void InterpreterGeneratorX86::DoLoadField() {
   __ movzbl(EBX, Address(ESI, 1));
   LoadLocal(EAX, 0);
-  __ movl(EAX, Address(EAX,
-                       EBX,
-                       TIMES_WORD_SIZE,
+  __ movl(EAX, Address(EAX, EBX, TIMES_WORD_SIZE,
                        Instance::kSize - HeapObject::kTag));
   StoreLocal(EAX, 0);
   Dispatch(kLoadFieldLength);
@@ -525,9 +518,7 @@ void InterpreterGeneratorX86::DoLoadField() {
 void InterpreterGeneratorX86::DoLoadFieldWide() {
   __ movl(EBX, Address(ESI, 1));
   LoadLocal(EAX, 0);
-  __ movl(EAX, Address(EAX,
-                       EBX,
-                       TIMES_WORD_SIZE,
+  __ movl(EAX, Address(EAX, EBX, TIMES_WORD_SIZE,
                        Instance::kSize - HeapObject::kTag));
   StoreLocal(EAX, 0);
   Dispatch(kLoadFieldWideLength);
@@ -537,10 +528,8 @@ void InterpreterGeneratorX86::DoLoadConst() {
   __ movl(EAX, Address(ESI, 1));
   LoadProgram(EBX);
   __ movl(EBX, Address(EBX, Program::kConstantsOffset));
-  __ movl(EAX, Address(EBX,
-                       EAX,
-                       TIMES_WORD_SIZE,
-                       Array::kSize - HeapObject::kTag));
+  __ movl(EAX,
+          Address(EBX, EAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag));
   Push(EAX);
   Dispatch(kLoadConstLength);
 }
@@ -662,9 +651,7 @@ void InterpreterGeneratorX86::DoInvokeMethodUnfold() {
   InvokeMethodUnfold(false);
 }
 
-void InterpreterGeneratorX86::DoInvokeMethod() {
-  InvokeMethod(false);
-}
+void InterpreterGeneratorX86::DoInvokeMethod() { InvokeMethod(false); }
 
 void InterpreterGeneratorX86::DoInvokeNoSuchMethod() {
   // Use the noSuchMethod entry from entry zero of the virtual table.
@@ -691,37 +678,21 @@ void InterpreterGeneratorX86::DoInvokeTestNoSuchMethod() {
   Dispatch(kInvokeTestNoSuchMethodLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeTestUnfold() {
-  InvokeMethodUnfold(true);
-}
+void InterpreterGeneratorX86::DoInvokeTestUnfold() { InvokeMethodUnfold(true); }
 
-void InterpreterGeneratorX86::DoInvokeTest() {
-  InvokeMethod(true);
-}
+void InterpreterGeneratorX86::DoInvokeTest() { InvokeMethod(true); }
 
-void InterpreterGeneratorX86::DoInvokeStatic() {
-  InvokeStatic(false);
-}
+void InterpreterGeneratorX86::DoInvokeStatic() { InvokeStatic(false); }
 
-void InterpreterGeneratorX86::DoInvokeStaticUnfold() {
-  InvokeStatic(true);
-}
+void InterpreterGeneratorX86::DoInvokeStaticUnfold() { InvokeStatic(true); }
 
-void InterpreterGeneratorX86::DoInvokeFactory() {
-  InvokeStatic(false);
-}
+void InterpreterGeneratorX86::DoInvokeFactory() { InvokeStatic(false); }
 
-void InterpreterGeneratorX86::DoInvokeFactoryUnfold() {
-  InvokeStatic(true);
-}
+void InterpreterGeneratorX86::DoInvokeFactoryUnfold() { InvokeStatic(true); }
 
-void InterpreterGeneratorX86::DoInvokeNative() {
-  InvokeNative(false);
-}
+void InterpreterGeneratorX86::DoInvokeNative() { InvokeNative(false); }
 
-void InterpreterGeneratorX86::DoInvokeNativeYield() {
-  InvokeNative(true);
-}
+void InterpreterGeneratorX86::DoInvokeNativeYield() { InvokeNative(true); }
 
 void InterpreterGeneratorX86::DoInvokeSelector() {
   SaveState();
@@ -940,13 +911,9 @@ void InterpreterGeneratorX86::DoDrop() {
   Dispatch(kDropLength);
 }
 
-void InterpreterGeneratorX86::DoReturn() {
-  Return(false);
-}
+void InterpreterGeneratorX86::DoReturn() { Return(false); }
 
-void InterpreterGeneratorX86::DoReturnNull() {
-  Return(true);
-}
+void InterpreterGeneratorX86::DoReturnNull() { Return(true); }
 
 void InterpreterGeneratorX86::DoBranchWide() {
   __ movl(EAX, Address(ESI, 1));
@@ -1080,17 +1047,11 @@ void InterpreterGeneratorX86::DoPopAndBranchBackWide() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoAllocate() {
-  Allocate(false, false);
-}
+void InterpreterGeneratorX86::DoAllocate() { Allocate(false, false); }
 
-void InterpreterGeneratorX86::DoAllocateUnfold() {
-  Allocate(true, false);
-}
+void InterpreterGeneratorX86::DoAllocateUnfold() { Allocate(true, false); }
 
-void InterpreterGeneratorX86::DoAllocateImmutable() {
-  Allocate(false, true);
-}
+void InterpreterGeneratorX86::DoAllocateImmutable() { Allocate(false, true); }
 
 void InterpreterGeneratorX86::DoAllocateImmutableUnfold() {
   Allocate(true, true);
@@ -1345,9 +1306,7 @@ void InterpreterGeneratorX86::DoExitNoSuchMethod() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoMethodEnd() {
-  __ int3();
-}
+void InterpreterGeneratorX86::DoMethodEnd() { __ int3(); }
 
 void InterpreterGeneratorX86::DoIntrinsicObjectEquals() {
   Label true_case;
@@ -1373,9 +1332,8 @@ void InterpreterGeneratorX86::DoIntrinsicObjectEquals() {
 void InterpreterGeneratorX86::DoIntrinsicGetField() {
   __ movzbl(EBX, Address(EAX, 2 + Function::kSize - HeapObject::kTag));
   LoadLocal(EAX, 0);
-  __ movl(
-      EAX,
-      Address(EAX, EBX, TIMES_WORD_SIZE, Instance::kSize - HeapObject::kTag));
+  __ movl(EAX, Address(EAX, EBX, TIMES_WORD_SIZE,
+                       Instance::kSize - HeapObject::kTag));
   StoreLocal(EAX, 0);
   Dispatch(kInvokeMethodLength);
 }
@@ -1462,17 +1420,11 @@ void InterpreterGeneratorX86::DoIntrinsicListLength() {
   Dispatch(kInvokeMethodLength);
 }
 
-void InterpreterGeneratorX86::Push(Register reg) {
-  __ pushl(reg);
-}
+void InterpreterGeneratorX86::Push(Register reg) { __ pushl(reg); }
 
-void InterpreterGeneratorX86::Push(const Immediate& value) {
-  __ pushl(value);
-}
+void InterpreterGeneratorX86::Push(const Immediate& value) { __ pushl(value); }
 
-void InterpreterGeneratorX86::Pop(Register reg) {
-  __ popl(reg);
-}
+void InterpreterGeneratorX86::Pop(Register reg) { __ popl(reg); }
 
 void InterpreterGeneratorX86::Drop(int n) {
   __ addl(ESP, Immediate(n * kWordSize));
@@ -1589,9 +1541,8 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     __ movl(EAX, Address(ESI, 1));
     LoadProgram(EBX);
     __ movl(EBX, Address(EBX, Program::kClassesOffset));
-    __ movl(
-        EBX,
-        Address(EBX, EAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag));
+    __ movl(EBX, Address(EBX, EAX, TIMES_WORD_SIZE,
+                         Array::kSize - HeapObject::kTag));
   }
 
   const int kStackAllocateImmutable = 2 * kWordSize;
@@ -1649,8 +1600,8 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
     uword mask = InstanceFormat::ImmutableField::mask();
     uword always_immutable_mask = InstanceFormat::ImmutableField::encode(
         InstanceFormat::ALWAYS_IMMUTABLE);
-    uword never_immutable_mask = InstanceFormat::ImmutableField::encode(
-        InstanceFormat::NEVER_IMMUTABLE);
+    uword never_immutable_mask =
+        InstanceFormat::ImmutableField::encode(InstanceFormat::NEVER_IMMUTABLE);
 
     __ movl(EAX, Address(EAX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andl(EAX, Immediate(mask));
@@ -1949,9 +1900,8 @@ void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {
     __ movl(EAX, Address(ESI, 1));
     LoadProgram(EBX);
     __ movl(EBX, Address(EBX, Program::kStaticMethodsOffset));
-    __ movl(
-        EAX,
-        Address(EBX, EAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag));
+    __ movl(EAX, Address(EBX, EAX, TIMES_WORD_SIZE,
+                         Array::kSize - HeapObject::kTag));
   }
 
   // Compute and push the return bcp on the stack.

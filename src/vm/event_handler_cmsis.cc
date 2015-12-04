@@ -8,22 +8,16 @@
 
 namespace fletch {
 
-void EventHandler::Create() {
-  UNIMPLEMENTED();
-}
+void EventHandler::Create() { UNIMPLEMENTED(); }
 
-void EventHandler::Interrupt() {
-  UNIMPLEMENTED();
-}
+void EventHandler::Interrupt() { UNIMPLEMENTED(); }
 
 Object* EventHandler::Add(Process* process, Object* id, Port* port) {
   UNIMPLEMENTED();
   return NULL;
 }
 
-void EventHandler::Run() {
-  UNIMPLEMENTED();
-}
+void EventHandler::Run() { UNIMPLEMENTED(); }
 
 }  // namespace fletch
 

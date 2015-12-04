@@ -45,26 +45,32 @@ class VoidHashTable {
   size_t mutations() const { return mutations_; }
 #endif
 
-  template<typename Pointer>
+  template <typename Pointer>
   class Iterator {
    public:
-    inline Iterator(
-        const VoidHashTable* table, Pointer position, size_t entry_size)
+    inline Iterator(const VoidHashTable* table, Pointer position,
+                    size_t entry_size)
         : position_(position)
 #ifdef DEBUG
-        , table_(table)
-        , mutations_(table == NULL ? 0 : table->mutations())
+          ,
+          table_(table),
+          mutations_(table == NULL ? 0 : table->mutations())
 #endif
-        , entry_size_(entry_size) { }
+          ,
+          entry_size_(entry_size) {
+    }
 
-    template<typename OtherPointer>
+    template <typename OtherPointer>
     inline Iterator(const Iterator<OtherPointer>& other)
         : position_(other.position_)
 #ifdef DEBUG
-        , table_(other.table_)
-        , mutations_(other.mutations_)
+          ,
+          table_(other.table_),
+          mutations_(other.mutations_)
 #endif
-        , entry_size_(other.entry_size_) { }
+          ,
+          entry_size_(other.entry_size_) {
+    }
 
     inline void AdvanceToUsedSlot() {
       while (IsUnused(position_)) {
@@ -89,12 +95,12 @@ class VoidHashTable {
 
     Pointer position() { return position_; }
 
-    template<typename OtherPointer>
+    template <typename OtherPointer>
     bool operator==(const Iterator<OtherPointer>& other) const {
       return other.position_ == position_;
     }
 
-    template<typename OtherPointer>
+    template <typename OtherPointer>
     bool operator!=(const Iterator<OtherPointer>& other) const {
       return !(*this == other);
     }

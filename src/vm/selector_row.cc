@@ -128,8 +128,7 @@ int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
   while (index < free_slots_.size() - 1) {
     Range& slot = free_slots_[index];
     int offset = slot.begin() - range.begin();
-    if (offset >= 0 &&
-        range.size() <= slot.size() &&
+    if (offset >= 0 && range.size() <= slot.size() &&
         used_offsets_.Count(offset) == 0) {
       // Simply move the start offset of the slot. If the slot is now full,
       // the next row will detect it and move index accordingly.
@@ -162,8 +161,7 @@ void RowFitter::MarkOffsetAsUsed(int offset) {
   if (offset > limit_) limit_ = offset;
 }
 
-int RowFitter::FindOffset(const Range::List& ranges,
-                          int min_row_index,
+int RowFitter::FindOffset(const Range::List& ranges, int min_row_index,
                           size_t* result_slot_index) {
   ASSERT(single_range_start_index_ == 0);
   const Range largest_range = ranges.Front();
@@ -176,8 +174,7 @@ int RowFitter::FindOffset(const Range::List& ranges,
     const Range slot = free_slots_[index];
 
     int start = Utils::Maximum(
-        min_start,
-        Utils::Maximum(slot.begin(), largest_range.begin()));
+        min_start, Utils::Maximum(slot.begin(), largest_range.begin()));
     int end = slot.end() - largest_range.size();
 
     while (start < end) {
@@ -235,8 +232,7 @@ int RowFitter::FindOffset(const Range::List& ranges,
   return offset;
 }
 
-int RowFitter::MatchRemaining(int offset,
-                              const Range::List& ranges,
+int RowFitter::MatchRemaining(int offset, const Range::List& ranges,
                               size_t slot_index) {
   size_t index = 1;
   size_t length = ranges.size();
@@ -268,8 +264,7 @@ size_t RowFitter::MoveForwardToCover(const Range range, size_t slot_index) {
   return slot_index;
 }
 
-void RowFitter::UpdateFreeSlots(int offset,
-                                const Range::List& ranges,
+void RowFitter::UpdateFreeSlots(int offset, const Range::List& ranges,
                                 size_t slot_index) {
   for (size_t i = 0; i < ranges.size(); i++) {
     ASSERT(slot_index < free_slots_.size());

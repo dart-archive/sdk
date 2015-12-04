@@ -18,12 +18,10 @@ namespace fletch {
 // Thread handles can be used for referring to threads and testing equality.
 class ThreadIdentifier {
  public:
-  ThreadIdentifier() : thread_(get_current_thread()) { }
+  ThreadIdentifier() : thread_(get_current_thread()) {}
 
   // Test for thread running.
-  bool IsSelf() const {
-    return thread_ == get_current_thread();
-  }
+  bool IsSelf() const { return thread_ == get_current_thread(); }
 
   void Join() {
     int retcode;
@@ -33,12 +31,11 @@ class ThreadIdentifier {
  private:
   friend class Thread;
 
-  explicit ThreadIdentifier(thread_t *thread) : thread_(thread) { }
+  explicit ThreadIdentifier(thread_t* thread) : thread_(thread) {}
 
   thread_t* thread_;
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_THREAD_LK_H_

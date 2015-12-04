@@ -40,9 +40,7 @@ NATIVE(PrintToConsole) {
   return process->program()->null_object();
 }
 
-NATIVE(ExposeGC) {
-  return ToBool(process, Flags::expose_gc);
-}
+NATIVE(ExposeGC) { return ToBool(process, Flags::expose_gc); }
 
 NATIVE(GC) {
 #ifdef DEBUG
@@ -628,7 +626,7 @@ NATIVE(DoubleToString) {
   static const int kBufferSize = 128;
 
   Double* d = Double::cast(arguments[0]);
-  char buffer[kBufferSize] = { '\0' };
+  char buffer[kBufferSize] = {'\0'};
 
   // The output contains the sign, at most kDecimalHigh - 1 digits,
   // the decimal point followed by a 0 plus the \0.
@@ -642,18 +640,15 @@ NATIVE(DoubleToString) {
   ASSERT(kBufferSize >= 1 + 17 + 1 + 1 + 1 + 3 + 1);
 
   static const int kConversionFlags =
-    double_conversion::DoubleToStringConverter::EMIT_POSITIVE_EXPONENT_SIGN |
-    double_conversion::DoubleToStringConverter::EMIT_TRAILING_DECIMAL_POINT |
-    double_conversion::DoubleToStringConverter::EMIT_TRAILING_ZERO_AFTER_POINT;
+      double_conversion::DoubleToStringConverter::EMIT_POSITIVE_EXPONENT_SIGN |
+      double_conversion::DoubleToStringConverter::EMIT_TRAILING_DECIMAL_POINT |
+      double_conversion::DoubleToStringConverter::
+          EMIT_TRAILING_ZERO_AFTER_POINT;
 
   const double_conversion::DoubleToStringConverter converter(
-      kConversionFlags,
-      kDoubleInfinitySymbol,
-      kDoubleNaNSymbol,
-      kDoubleExponentChar,
-      kDecimalLow,
-      kDecimalHigh,
-      0, 0);  // Last two values are ignored in shortest mode.
+      kConversionFlags, kDoubleInfinitySymbol, kDoubleNaNSymbol,
+      kDoubleExponentChar, kDecimalLow, kDecimalHigh, 0,
+      0);  // Last two values are ignored in shortest mode.
 
   double_conversion::StringBuilder builder(buffer, kBufferSize);
   bool status = converter.ToShortest(d->value(), &builder);
@@ -672,12 +667,10 @@ NATIVE(DoubleToStringAsExponential) {
 
   const double_conversion::DoubleToStringConverter converter(
       double_conversion::DoubleToStringConverter::EMIT_POSITIVE_EXPONENT_SIGN,
-      kDoubleInfinitySymbol,
-      kDoubleNaNSymbol,
-      kDoubleExponentChar,
-      0, 0, 0, 0);  // Last four values are ignored in exponential mode.
+      kDoubleInfinitySymbol, kDoubleNaNSymbol, kDoubleExponentChar, 0, 0, 0,
+      0);  // Last four values are ignored in exponential mode.
 
-  char buffer[kBufferSize] = { '\0' };
+  char buffer[kBufferSize] = {'\0'};
   double_conversion::StringBuilder builder(buffer, kBufferSize);
   bool status = converter.ToExponential(d, digits, &builder);
   ASSERT(status);
@@ -696,12 +689,10 @@ NATIVE(DoubleToStringAsFixed) {
 
   const double_conversion::DoubleToStringConverter converter(
       double_conversion::DoubleToStringConverter::NO_FLAGS,
-      kDoubleInfinitySymbol,
-      kDoubleNaNSymbol,
-      kDoubleExponentChar,
-      0, 0, 0, 0);  // Last four values are ignored in fixed mode.
+      kDoubleInfinitySymbol, kDoubleNaNSymbol, kDoubleExponentChar, 0, 0, 0,
+      0);  // Last four values are ignored in fixed mode.
 
-  char buffer[kBufferSize] = { '\0' };
+  char buffer[kBufferSize] = {'\0'};
   double_conversion::StringBuilder builder(buffer, kBufferSize);
   bool status = converter.ToFixed(d, digits, &builder);
   ASSERT(status);
@@ -721,14 +712,11 @@ NATIVE(DoubleToStringAsPrecision) {
 
   const double_conversion::DoubleToStringConverter converter(
       double_conversion::DoubleToStringConverter::EMIT_POSITIVE_EXPONENT_SIGN,
-      kDoubleInfinitySymbol,
-      kDoubleNaNSymbol,
-      kDoubleExponentChar,
-      0, 0,  // Ignored in precision mode.
-      kMaxLeadingPaddingZeroes,
-      kMaxTrailingPaddingZeroes);
+      kDoubleInfinitySymbol, kDoubleNaNSymbol, kDoubleExponentChar, 0,
+      0,  // Ignored in precision mode.
+      kMaxLeadingPaddingZeroes, kMaxTrailingPaddingZeroes);
 
-  char buffer[kBufferSize] = { '\0' };
+  char buffer[kBufferSize] = {'\0'};
   double_conversion::StringBuilder builder(buffer, kBufferSize);
   bool status = converter.ToPrecision(d, digits, &builder);
   ASSERT(status);
@@ -745,11 +733,7 @@ NATIVE(DoubleParse) {
       double_conversion::StringToDoubleConverter::NO_FLAGS;
 
   double_conversion::StringToDoubleConverter converter(
-      kConversionFlags,
-      0.0,
-      0.0,
-      kDoubleInfinitySymbol,
-      kDoubleNaNSymbol);
+      kConversionFlags, 0.0, 0.0, kDoubleInfinitySymbol, kDoubleNaNSymbol);
 
   int length = 0;
   int consumed = 0;
@@ -773,12 +757,12 @@ NATIVE(DoubleParse) {
   return process->NewDouble(result);
 }
 
-#define DOUBLE_MATH_NATIVE(name, method)                        \
-  NATIVE(name) {                                                \
-    Object* x = arguments[0];                                   \
-    if (!x->IsDouble()) return Failure::wrong_argument_type();  \
-    fletch_double d = Double::cast(x)->value();                 \
-    return process->NewDouble(method(d));                       \
+#define DOUBLE_MATH_NATIVE(name, method)                       \
+  NATIVE(name) {                                               \
+    Object* x = arguments[0];                                  \
+    if (!x->IsDouble()) return Failure::wrong_argument_type(); \
+    fletch_double d = Double::cast(x)->value();                \
+    return process->NewDouble(method(d));                      \
   }
 
 DOUBLE_MATH_NATIVE(DoubleSin, sin)
@@ -870,10 +854,8 @@ static Function* FunctionForClosure(Object* argument, unsigned arity) {
   return closure_class->LookupMethod(selector);
 }
 
-static Process* SpawnProcessInternal(Program* program,
-                                     Process* process,
-                                     Instance* entrypoint,
-                                     Instance* closure,
+static Process* SpawnProcessInternal(Program* program, Process* process,
+                                     Instance* entrypoint, Instance* closure,
                                      Object* argument) {
   Function* entry = FunctionForClosure(entrypoint, 2);
   ASSERT(entry != NULL);
@@ -954,15 +936,15 @@ NATIVE(ProcessSpawn) {
   Object* dart_process = process->NewInstance(program->process_class(), true);
   if (dart_process == Failure::retry_after_gc()) return dart_process;
 
-  Process* child = SpawnProcessInternal(
-      program, process, entrypoint, closure, argument);
+  Process* child =
+      SpawnProcessInternal(program, process, entrypoint, closure, argument);
 
   ProcessHandle* handle = child->process_handle();
   handle->IncrementRef();
 
   handle->InitializeDartObject(dart_process);
-  process->RegisterFinalizer(
-      HeapObject::cast(dart_process), Process::FinalizeProcess);
+  process->RegisterFinalizer(HeapObject::cast(dart_process),
+                             Process::FinalizeProcess);
 
   if (link_to_child) {
     process->links()->InsertHandle(child->process_handle());
@@ -991,9 +973,7 @@ NATIVE(ProcessCurrent) {
   return dart_process;
 }
 
-NATIVE(CoroutineCurrent) {
-  return process->coroutine();
-}
+NATIVE(CoroutineCurrent) { return process->coroutine(); }
 
 NATIVE(CoroutineNewStack) {
   Object* object = process->NewStack(256);
@@ -1031,9 +1011,7 @@ NATIVE(CoroutineNewStack) {
   return stack;
 }
 
-NATIVE(StopwatchFrequency) {
-  return Smi::FromWord(1000000);
-}
+NATIVE(StopwatchFrequency) { return Smi::FromWord(1000000); }
 
 NATIVE(StopwatchNow) {
   static uint64 first = 0;
@@ -1382,9 +1360,8 @@ NATIVE(Uint32DigitsSet) {
   ASSERT(byte_index + 4 <= backing->length());
   uint8* byte_address = backing->byte_address_for(byte_index);
   Object* object = arguments[2];
-  uint32 value = object->IsSmi()
-                 ? Smi::cast(object)->value()
-                 : LargeInteger::cast(object)->value();
+  uint32 value = object->IsSmi() ? Smi::cast(object)->value()
+                                 : LargeInteger::cast(object)->value();
   *reinterpret_cast<uint32*>(byte_address) = value;
   return process->program()->null_object();
 }

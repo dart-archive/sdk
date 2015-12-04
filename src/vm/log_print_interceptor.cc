@@ -19,5 +19,4 @@ void LogPrintInterceptor::Error(char* message) {
   Platform::WriteText(logPath_, buf, true);
 }
 
-
 }  // namespace fletch

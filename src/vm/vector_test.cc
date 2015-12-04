@@ -152,9 +152,7 @@ TEST_CASE(VECTOR) {
   EXPECT(vector2.IsEmpty());
 }
 
-static bool IntCompare(const int& a, const int& b) {
-  return a < b;
-}
+static bool IntCompare(const int& a, const int& b) { return a < b; }
 
 TEST_CASE(BASIC_VECTOR_TEST) {
   Vector<int> vector;
@@ -188,34 +186,18 @@ TEST_CASE(BASIC_VECTOR_TEST) {
 }
 
 int flip(int i) {
-  return
-      ((i & 1) << 9) |
-      ((i & 2) << 7) |
-      ((i & 4) << 5) |
-      ((i & 8) << 3) |
-      ((i & 16) << 1) |
-      ((i & 32) >> 1) |
-      ((i & 64) >> 3) |
-      ((i & 128) >> 5) |
-      ((i & 256) >> 7) |
-      ((i & 512) >> 9);
+  return ((i & 1) << 9) | ((i & 2) << 7) | ((i & 4) << 5) | ((i & 8) << 3) |
+         ((i & 16) << 1) | ((i & 32) >> 1) | ((i & 64) >> 3) |
+         ((i & 128) >> 5) | ((i & 256) >> 7) | ((i & 512) >> 9);
 }
 
-bool IntFlipCompare(const int& a, const int& b) {
-  return flip(a) < flip(b);
-}
+bool IntFlipCompare(const int& a, const int& b) { return flip(a) < flip(b); }
 
-bool IntDivCompare(const int& a, const int&b) {
-  return a / 10 < b / 10;
-}
+bool IntDivCompare(const int& a, const int& b) { return a / 10 < b / 10; }
 
-bool FalseCompare(const int& a, const int& b) {
-  return false;
-}
+bool FalseCompare(const int& a, const int& b) { return false; }
 
-bool IntReverseCompare(const int& a, const int& b) {
-  return b < a;
-}
+bool IntReverseCompare(const int& a, const int& b) { return b < a; }
 
 TEST_CASE(SORT_TEST) {
   for (unsigned size = 0; size < 200u; size += (size > 10u ? 13 : 1)) {
@@ -270,7 +252,7 @@ static size_t RandomNumberLessThan(size_t max) {
   max &= 0xffffffffu;
 
   // Smear the bits.
-  max |= max >> 16;;
+  max |= max >> 16;
   max |= max >> 8;
   max |= max >> 4;
   max |= max >> 2;
@@ -295,7 +277,7 @@ TEST_CASE(SORT_SPEED_TEST) {
     vector.Sort(IntCompare);
     vector.Sort(IntReverseCompare);
     for (unsigned i = 1; i < vector.size(); i++) {
-      EXPECT_GE(vector[i-1], vector[i]);
+      EXPECT_GE(vector[i - 1], vector[i]);
     }
     vector.Sort(FalseCompare);
   }

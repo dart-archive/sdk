@@ -127,8 +127,7 @@ class Process {
   inline LookupCache::Entry* LookupEntry(Object* receiver, int selector);
 
   // Lookup and update the primary cache entry.
-  LookupCache::Entry* LookupEntrySlow(LookupCache::Entry* primary,
-                                      Class* clazz,
+  LookupCache::Entry* LookupEntrySlow(LookupCache::Entry* primary, Class* clazz,
                                       int selector);
 
   Object* NewByteArray(int length);
@@ -254,10 +253,8 @@ class Process {
 
   void RecordStore(HeapObject* object, Object* value) {
     if (value->IsHeapObject() && value->IsImmutable()) {
-      ASSERT(!program()->heap()->space()->Includes(
-          object->address()));
-      ASSERT(heap()->space()->Includes(
-          object->address()));
+      ASSERT(!program()->heap()->space()->Includes(object->address()));
+      ASSERT(heap()->space()->Includes(object->address()));
       store_buffer_.Insert(object);
     }
   }
@@ -323,7 +320,7 @@ class Process {
   Atomic<State> state_;
   Atomic<ThreadState*> thread_state_;
 
-  List<List<int> > cooked_stack_deltas_;
+  List<List<int>> cooked_stack_deltas_;
 
   // Next pointer used by the Scheduler.
   Process* next_;
@@ -370,16 +367,15 @@ inline LookupCache::Entry* Process::LookupEntry(Object* receiver,
                                                 int selector) {
   ASSERT(!program()->is_compact());
 
-  Class* clazz = receiver->IsSmi()
-      ? program()->smi_class()
-      : HeapObject::cast(receiver)->get_class();
+  Class* clazz = receiver->IsSmi() ? program()->smi_class()
+                                   : HeapObject::cast(receiver)->get_class();
   ASSERT(primary_lookup_cache_ != NULL);
 
   uword index = LookupCache::ComputePrimaryIndex(clazz, selector);
   LookupCache::Entry* primary = &(primary_lookup_cache_[index]);
   return (primary->clazz == clazz && primary->selector == selector)
-      ? primary
-      : LookupEntrySlow(primary, clazz, selector);
+             ? primary
+             : LookupEntrySlow(primary, clazz, selector);
 }
 
 inline bool Process::ChangeState(State from, State to) {

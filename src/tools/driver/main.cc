@@ -95,44 +95,36 @@ static char* StrAlloc(size_t size) {
   return result;
 }
 
-static void StrCpy(
-    void* destination,
-    size_t destination_size,
-    const void* source,
-    size_t source_size) {
+static void StrCpy(void* destination, size_t destination_size,
+                   const void* source, size_t source_size) {
   const void* source_end = memchr(source, '\0', source_size);
   if (source_end == NULL) {
     Die("%s: source isn't zero-terminated.", program_name);
   }
   size_t source_length = reinterpret_cast<const uint8*>(source_end) -
-      reinterpret_cast<const uint8*>(source);
+                         reinterpret_cast<const uint8*>(source);
   // Increment source_length to include '\0'.
   source_length++;
 
   if (source_length > destination_size) {
-    Die("%s: not enough room in destination (%i) for %i bytes.",
-        program_name, destination_size, source_length);
+    Die("%s: not enough room in destination (%i) for %i bytes.", program_name,
+        destination_size, source_length);
   }
 
   memcpy(destination, source, source_length);
 }
 
-static void StrCat(
-    void* destination,
-    size_t destination_size,
-    const void* source,
-    size_t source_size) {
+static void StrCat(void* destination, size_t destination_size,
+                   const void* source, size_t source_size) {
   void* destination_end = memchr(destination, '\0', destination_size);
   if (destination_end == NULL) {
     Die("%s: destination isn't zero-terminated.", program_name);
   }
-  size_t destination_length =
-    reinterpret_cast<uint8*>(destination_end) -
-    reinterpret_cast<uint8*>(destination);
+  size_t destination_length = reinterpret_cast<uint8*>(destination_end) -
+                              reinterpret_cast<uint8*>(destination);
 
-  StrCpy(
-      destination_end, destination_size - destination_length,
-      source, source_size);
+  StrCpy(destination_end, destination_size - destination_length, source,
+         source_size);
 }
 
 static void Close(int fd) {
@@ -177,8 +169,8 @@ void ParentDir(char* directory) {
   strncpy(copy, directory, MAXPATHLEN);
   char* parent = dirname(copy);
   if (parent == NULL) {
-    Die("%s: Unable to compute parent directory of '%s': %s",
-        program_name, directory, strerror(errno));
+    Die("%s: Unable to compute parent directory of '%s': %s", program_name,
+        directory, strerror(errno));
   }
   // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(directory, parent, MAXPATHLEN);
@@ -200,8 +192,8 @@ static void DetectConfiguration() {
   char* fletch_config_env = getenv(fletch_config_env_name);
   if (fletch_config_env != NULL) {
     fletch_config_location = fletch_config_env_name;
-    StrCpy(fletch_config_file, sizeof(fletch_config_file),
-           fletch_config_env, strlen(fletch_config_env) + 1);
+    StrCpy(fletch_config_file, sizeof(fletch_config_file), fletch_config_env,
+           strlen(fletch_config_env) + 1);
     return;
   }
 
@@ -226,10 +218,10 @@ static void DetectConfiguration() {
   struct passwd pwd;
   struct passwd* result = NULL;
   int error_code =
-    getpwuid_r(getuid(), &pwd, pwd_buffer, pwd_buffer_size, &result);
+      getpwuid_r(getuid(), &pwd, pwd_buffer, pwd_buffer_size, &result);
   if (error_code != 0) {
-    Die("%s: Unable to determine home directory: %s",
-        program_name, strerror(error_code));
+    Die("%s: Unable to determine home directory: %s", program_name,
+        strerror(error_code));
   }
   if (result == NULL) {
     Die("%s: Unable to determine home directory: Entry for user not found.",
@@ -279,8 +271,8 @@ static void ReadDriverConfig() {
     ssize_t bytes = TEMP_FAILURE_RETRY(
         read(fletch_config_fd, fletch_socket_file + offset, length - offset));
     if (bytes < 0) {
-      Die("%s: Unable to read from '%s'. Failed with error: %s",
-          program_name, fletch_config_file, strerror(errno));
+      Die("%s: Unable to read from '%s'. Failed with error: %s", program_name,
+          fletch_config_file, strerror(errno));
     } else if (bytes == 0) {
       break;  // End of file.
     }
@@ -367,12 +359,11 @@ static void ComputeFletchVmPath(char* buffer, size_t buffer_length) {
 
 // Stores the package root in 'buffer'. The value of 'fletch_root' must be the
 // absolute path of '.../fletch-repo/fletch/' (including trailing slash).
-static void ComputePackageSpec(
-    char* buffer, size_t buffer_length,
-    const char* fletch_root, size_t fletch_root_length) {
+static void ComputePackageSpec(char* buffer, size_t buffer_length,
+                               const char* fletch_root,
+                               size_t fletch_root_length) {
   StrCpy(buffer, buffer_length, fletch_root, fletch_root_length);
-  StrCat(buffer, buffer_length,
-         FLETCHC_PKG_FILE, sizeof(FLETCHC_PKG_FILE));
+  StrCat(buffer, buffer_length, FLETCHC_PKG_FILE, sizeof(FLETCHC_PKG_FILE));
   // 'buffer' is now, for example, "fletch-repo/fletch/package/".
 }
 
@@ -396,15 +387,10 @@ pid_t Fork() {
   return pid;
 }
 
-static void WaitForDaemonHandshake(
-    pid_t pid,
-    int parent_stdout,
-    int parent_stderr);
+static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
+                                   int parent_stderr);
 
-static void ExecDaemon(
-    int child_stdout,
-    int child_stderr,
-    const char** argv);
+static void ExecDaemon(int child_stdout, int child_stderr, const char** argv);
 
 static void StartDriverDaemon() {
   const int kMaxArgv = 10;
@@ -420,19 +406,19 @@ static void StartDriverDaemon() {
   ComputeFletchVmPath(fletch_vm_path, sizeof(fletch_vm_path));
 
   char fletch_vm_option[sizeof("-Dfletch-vm=") + MAXPATHLEN + 1];
-  StrCpy(fletch_vm_option, sizeof(fletch_vm_option),
-         "-Dfletch-vm=", sizeof("-Dfletch-vm="));
-  StrCat(fletch_vm_option, sizeof(fletch_vm_option),
-         fletch_vm_path, sizeof(fletch_vm_path));
+  StrCpy(fletch_vm_option, sizeof(fletch_vm_option), "-Dfletch-vm=",
+         sizeof("-Dfletch-vm="));
+  StrCat(fletch_vm_option, sizeof(fletch_vm_option), fletch_vm_path,
+         sizeof(fletch_vm_path));
 
   char package_spec[MAXPATHLEN + 1];
-  ComputePackageSpec(
-      package_spec, sizeof(package_spec), fletch_root, sizeof(fletch_root));
+  ComputePackageSpec(package_spec, sizeof(package_spec), fletch_root,
+                     sizeof(fletch_root));
   char package_option[sizeof("--packages=") + MAXPATHLEN + 1];
-  StrCpy(package_option, sizeof(package_option),
-         "--packages=", sizeof("--packages="));
-  StrCat(package_option, sizeof(package_option),
-         package_spec, sizeof(package_spec));
+  StrCpy(package_option, sizeof(package_option), "--packages=",
+         sizeof("--packages="));
+  StrCat(package_option, sizeof(package_option), package_spec,
+         sizeof(package_spec));
 
   const char library_root[] = "-Dfletchc-library-root=" FLETCHC_LIBRARY_ROOT;
   const char patch_root[] = "-Dfletch-patch-root=" FLETCHC_PATCH_ROOT;
@@ -440,10 +426,9 @@ static void StartDriverDaemon() {
   const char* version = GetVersion();
   int version_option_length = sizeof(define_version) + strlen(version) + 1;
   char* version_option = StrAlloc(version_option_length);
-  StrCpy(version_option, version_option_length,
-         define_version, sizeof(define_version));
-  StrCat(version_option, version_option_length,
-         version, strlen(version) + 1);
+  StrCpy(version_option, version_option_length, define_version,
+         sizeof(define_version));
+  StrCat(version_option, version_option_length, version, strlen(version) + 1);
 
   int argc = 0;
   argv[argc++] = vm_path;
@@ -500,10 +485,7 @@ static void Dup2(int source, int destination) {
   }
 }
 
-static void ExecDaemon(
-    int child_stdout,
-    int child_stderr,
-    const char** argv) {
+static void ExecDaemon(int child_stdout, int child_stderr, const char** argv) {
   Close(STDIN_FILENO);
 
   // Change directory to '/' to ensure that we use the client's working
@@ -537,8 +519,7 @@ static void ExecDaemon(
 }
 
 static ssize_t Read(int fd, char* buffer, size_t buffer_length) {
-  ssize_t bytes_read =
-      TEMP_FAILURE_RETRY(read(fd, buffer, buffer_length));
+  ssize_t bytes_read = TEMP_FAILURE_RETRY(read(fd, buffer, buffer_length));
   if (bytes_read < 0) {
     Die("%s: read failed: %s", program_name, strerror(errno));
   }
@@ -547,11 +528,8 @@ static ssize_t Read(int fd, char* buffer, size_t buffer_length) {
 
 // Forwards data on file descriptor "from" to "to" using the buffer. Errors are
 // fatal. Returns true if "from" was closed.
-static bool ForwardWithBuffer(
-    int from,
-    int to,
-    char* buffer,
-    ssize_t* buffer_length) {
+static bool ForwardWithBuffer(int from, int to, char* buffer,
+                              ssize_t* buffer_length) {
   ssize_t bytes_read = Read(from, buffer, *buffer_length);
   *buffer_length = bytes_read;
   if (bytes_read == 0) return true;
@@ -564,10 +542,8 @@ static bool ForwardWithBuffer(
   return false;
 }
 
-static void WaitForDaemonHandshake(
-    pid_t pid,
-    int parent_stdout,
-    int parent_stderr) {
+static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
+                                   int parent_stderr) {
   int status;
   waitpid(pid, &status, 0);
   if (!WIFEXITED(status)) {
@@ -575,8 +551,8 @@ static void WaitForDaemonHandshake(
   }
   status = WEXITSTATUS(status);
   if (status != 0) {
-    Die("%s: child process exited with non-zero exit code %i.",
-        program_name, status);
+    Die("%s: child process exited with non-zero exit code %i.", program_name,
+        status);
   }
 
   char stdout_buffer[4096];
@@ -606,8 +582,8 @@ static void WaitForDaemonHandshake(
     } else {
       if (FD_ISSET(parent_stderr, &readfds)) {
         ssize_t bytes_read = sizeof(buffer);
-        stderr_is_closed = ForwardWithBuffer(
-            parent_stderr, STDERR_FILENO, buffer, &bytes_read);
+        stderr_is_closed = ForwardWithBuffer(parent_stderr, STDERR_FILENO,
+                                             buffer, &bytes_read);
       }
       if (FD_ISSET(parent_stdout, &readfds)) {
         ssize_t bytes_read = Read(parent_stdout, buffer, sizeof(buffer) - 1);
@@ -625,14 +601,12 @@ static void WaitForDaemonHandshake(
           // debugging easier.
           if (match[1] != '\0') {
             FlushAllStreams();
-            WriteFully(STDOUT_FILENO,
-                       reinterpret_cast<uint8*>(buffer),
+            WriteFully(STDOUT_FILENO, reinterpret_cast<uint8*>(buffer),
                        bytes_read);
           }
           match[0] = '\0';
-          StrCpy(
-              fletch_socket_file, sizeof(fletch_socket_file),
-              stdout_buffer, sizeof(stdout_buffer));
+          StrCpy(fletch_socket_file, sizeof(fletch_socket_file), stdout_buffer,
+                 sizeof(stdout_buffer));
           // We got the server handshake (the socket file). So we break to
           // eventually return from this function.
           break;
@@ -739,9 +713,8 @@ Socket* Connect() {
   struct sockaddr_un address;
 
   address.sun_family = AF_UNIX;
-  StrCpy(
-      address.sun_path, sizeof(address.sun_path),
-      fletch_socket_file, sizeof(fletch_socket_file));
+  StrCpy(address.sun_path, sizeof(address.sun_path), fletch_socket_file,
+         sizeof(fletch_socket_file));
 
   int fd = socket(PF_UNIX, SOCK_STREAM, 0);
   if (fd < 0) {
@@ -750,7 +723,7 @@ Socket* Connect() {
   Socket* socket = Socket::FromFd(fd);
 
   int connect_result = TEMP_FAILURE_RETRY(connect(
-    fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)));
+      fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)));
   if (connect_result != 0) {
     delete socket;
     return NULL;
@@ -769,8 +742,8 @@ static void HandleSignal(int signal_pipe, DriverConnection* connection) {
 static int CheckedSystem(const char* command) {
   int exit_status = system(command);
   if (exit_status == -1) {
-    Die("%s: system(%s) failed with error: %s",
-        program_name, command, strerror(errno));
+    Die("%s: system(%s) failed with error: %s", program_name, command,
+        strerror(errno));
   }
   if (WIFSIGNALED(exit_status)) {
     // command exited due to signal, for example, the user pressed Ctrl-C. In
@@ -825,8 +798,9 @@ static int QuitCommand() {
     // non-zero value and hence just report the process gracefully exited.
     printf("Background process exited\n");
   } else {
-    printf("The background process didn't exit after 2 seconds. "
-           "Forcefully quit the background process.\n");
+    printf(
+        "The background process didn't exit after 2 seconds. "
+        "Forcefully quit the background process.\n");
   }
   return 0;
 }
@@ -901,15 +875,15 @@ static int Main(int argc, char** argv) {
             stdin_closed = true;
           }
         } else if (bytes_count < 0) {
-          Die("%s: Error reading from stdin: %s",
-              program_name, strerror(errno));
+          Die("%s: Error reading from stdin: %s", program_name,
+              strerror(errno));
         }
       }
       if (FD_ISSET(control_socket->FileDescriptor(), &readfds)) {
         DriverConnection::Command command = HandleCommand(connection);
         if (command == DriverConnection::kDriverConnectionError) {
-          Die("%s: lost connection to persistent process: %s",
-              program_name, strerror(errno));
+          Die("%s: lost connection to persistent process: %s", program_name,
+              strerror(errno));
         } else if (command == DriverConnection::kDriverConnectionClosed) {
           // Connection was closed.
           break;
@@ -925,6 +899,4 @@ static int Main(int argc, char** argv) {
 }  // namespace fletch
 
 // Forward main calls to fletch::Main.
-int main(int argc, char** argv) {
-  return fletch::Main(argc, argv);
-}
+int main(int argc, char** argv) { return fletch::Main(argc, argv); }

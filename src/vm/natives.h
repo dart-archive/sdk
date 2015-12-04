@@ -34,11 +34,10 @@ class Arguments {
 
 typedef Object* (*NativeFunction)(Process*, Arguments);
 
-#define NATIVE(n) extern "C" \
-  Object* Native_##n(Process* process, Arguments arguments)
+#define NATIVE(n) \
+  extern "C" Object* Native_##n(Process* process, Arguments arguments)
 
-#define N(e, c, n) \
-  NATIVE(e);
+#define N(e, c, n) NATIVE(e);
 NATIVES_DO(N)
 #undef N
 

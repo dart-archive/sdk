@@ -90,7 +90,7 @@ bool OneByteString::Equals(List<const uint8> str) {
 
 bool OneByteString::Equals(OneByteString* str) {
   if (this == str) return true;
-  int len  = str->length();
+  int len = str->length();
   if (length() != len) return false;
   for (int i = 0; i < len; i++) {
     if (get_char_code(i) != str->get_char_code(i)) return false;
@@ -99,7 +99,7 @@ bool OneByteString::Equals(OneByteString* str) {
 }
 
 bool OneByteString::Equals(TwoByteString* str) {
-  int len  = str->length();
+  int len = str->length();
   if (length() != len) return false;
   for (int i = 0; i < len; i++) {
     if (get_char_code(i) != str->get_code_unit(i)) return false;
@@ -118,7 +118,7 @@ bool TwoByteString::Equals(List<const uint16_t> str) {
 
 bool TwoByteString::Equals(TwoByteString* str) {
   if (this == str) return true;
-  int len  = str->length();
+  int len = str->length();
   if (length() != len) return false;
   for (int i = 0; i < len; i++) {
     if (get_code_unit(i) != str->get_code_unit(i)) return false;
@@ -154,33 +154,24 @@ void* Function::ComputeIntrinsic(IntrinsicsTable* table) {
   int length = bytecode_size();
   uint8* bytecodes = bytecode_address_for(0);
   void* result = NULL;
-  if (length >= 4 &&
-      bytecodes[0] == kLoadLocal3 &&
-      bytecodes[1] == kLoadField &&
-      bytecodes[3] == kReturn) {
+  if (length >= 4 && bytecodes[0] == kLoadLocal3 &&
+      bytecodes[1] == kLoadField && bytecodes[3] == kReturn) {
     result = reinterpret_cast<void*>(table->GetField());
-  } else if (length >= 4 &&
-             bytecodes[0] == kLoadLocal4 &&
+  } else if (length >= 4 && bytecodes[0] == kLoadLocal4 &&
              bytecodes[1] == kLoadLocal4 &&
-             bytecodes[2] == kIdenticalNonNumeric &&
-             bytecodes[3] == kReturn) {
+             bytecodes[2] == kIdenticalNonNumeric && bytecodes[3] == kReturn) {
     result = reinterpret_cast<void*>(table->ObjectEquals());
-  } else if (length >= 5 &&
-             bytecodes[0] == kLoadLocal4 &&
-             bytecodes[1] == kLoadLocal4 &&
-             bytecodes[2] == kStoreField &&
+  } else if (length >= 5 && bytecodes[0] == kLoadLocal4 &&
+             bytecodes[1] == kLoadLocal4 && bytecodes[2] == kStoreField &&
              bytecodes[4] == kReturn) {
     result = reinterpret_cast<void*>(table->SetField());
-  } else if (length >= 3 &&
-             bytecodes[0] == kInvokeNative &&
+  } else if (length >= 3 && bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListIndexGet) {
     result = reinterpret_cast<void*>(table->ListIndexGet());
-  } else if (length >= 3 &&
-             bytecodes[0] == kInvokeNative &&
+  } else if (length >= 3 && bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListIndexSet) {
     result = reinterpret_cast<void*>(table->ListIndexSet());
-  } else if (length >= 3 &&
-             bytecodes[0] == kInvokeNative &&
+  } else if (length >= 3 && bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListLength) {
     result = reinterpret_cast<void*>(table->ListLength());
   }
@@ -204,9 +195,7 @@ void Object::ShortPrint() {
   }
 }
 
-void Smi::SmiPrint() {
-  Print::Out("%ld", value());
-}
+void Smi::SmiPrint() { Print::Out("%ld", value()); }
 
 void OneByteString::FillFrom(OneByteString* x, int offset) {
   int xlen = x->length();
@@ -246,8 +235,7 @@ void TwoByteString::FillFrom(OneByteString* x, int offset) {
 void TwoByteString::FillFrom(TwoByteString* x, int offset) {
   int xlen = x->length();
   ASSERT(offset + xlen <= length());
-  memcpy(byte_address_for(offset),
-         x->byte_address_for(0),
+  memcpy(byte_address_for(offset), x->byte_address_for(0),
          xlen * sizeof(uint16));
 }
 
@@ -295,10 +283,10 @@ Instance* Instance::CloneTransformed(Heap* heap) {
   int old_prefix = new_prefix - (new_fields - old_fields);
   int suffix = new_fields - new_prefix;
 
-  Object** new_fields_pointer = reinterpret_cast<Object**>(
-      target->address() + Instance::kSize);
-  Object** old_fields_pointer = reinterpret_cast<Object**>(
-      address() + Instance::kSize);
+  Object** new_fields_pointer =
+      reinterpret_cast<Object**>(target->address() + Instance::kSize);
+  Object** old_fields_pointer =
+      reinterpret_cast<Object**>(address() + Instance::kSize);
 
   // Transform the prefix.
   for (int i = 0; i < new_prefix; i++) {
@@ -316,8 +304,7 @@ Instance* Instance::CloneTransformed(Heap* heap) {
 
   // Copy the suffix over if it is non-empty.
   if (suffix > 0) {
-    CopyBlock(new_fields_pointer + new_prefix,
-              old_fields_pointer + old_prefix,
+    CopyBlock(new_fields_pointer + new_prefix, old_fields_pointer + old_prefix,
               suffix * sizeof(Object*));
   }
 
@@ -359,7 +346,7 @@ void Array::ArrayPrint() {
   RawPrint("Array");
   Print::Out("\n");
   Print::Out("  - length = %d\n", length());
-  int len  = length();
+  int len = length();
   for (int i = 0; i < len; i++) {
     Print::Out("  - [%d] = ", i);
     get(i)->ShortPrint();
@@ -369,7 +356,7 @@ void Array::ArrayPrint() {
 
 void Array::ArrayShortPrint() {
   Print::Out("[");
-  int len  = length();
+  int len = length();
   for (int i = 0; i < len; i++) {
     get(i)->ShortPrint();
     if (i + 1 < len) Print::Out(", ");
@@ -381,7 +368,7 @@ void ByteArray::ByteArrayPrint() {
   RawPrint("ByteArray");
   Print::Out("\n");
   Print::Out("  - length = %d\n", length());
-  int len  = length();
+  int len = length();
   for (int i = 0; i < len; i++) {
     Print::Out("  - [%d] = %d\n", i, get(i));
   }
@@ -389,7 +376,7 @@ void ByteArray::ByteArrayPrint() {
 
 void ByteArray::ByteArrayShortPrint() {
   Print::Out("[");
-  int len  = length();
+  int len = length();
   for (int i = 0; i < len; i++) {
     Print::Out("%d", get(i));
     if (i + 1 < len) Print::Out(", ");
@@ -423,9 +410,7 @@ void Double::DoublePrint() {
   Print::Out("\n");
 }
 
-void Double::DoubleShortPrint() {
-  Print::Out("%f", value());
-}
+void Double::DoubleShortPrint() { Print::Out("%f", value()); }
 
 void Boxed::BoxedPrint() {
   Print::Out("- boxed: ");
@@ -433,9 +418,7 @@ void Boxed::BoxedPrint() {
   Print::Out("\n");
 }
 
-void Boxed::BoxedShortPrint() {
-  value()->ShortPrint();
-}
+void Boxed::BoxedShortPrint() { value()->ShortPrint(); }
 
 void Initializer::InitializerPrint() {
   Print::Out("- initializer: ");
@@ -485,7 +468,7 @@ Function* Class::LookupMethod(int selector) {
   }
 }
 
-bool Class:: IsSubclassOf(Class* klass) {
+bool Class::IsSubclassOf(Class* klass) {
   Class* current = this;
   while (current != klass) {
     if (!current->has_super_class()) return false;
@@ -500,7 +483,7 @@ void Class::ClassPrint() {
   Print::Out("\n");
   if (instance_format().type() == InstanceFormat::INSTANCE_TYPE) {
     Print::Out("  - number of instance fields = %d\n",
-                 NumberOfInstanceFields());
+               NumberOfInstanceFields());
   }
   int size = instance_format().fixed_size();
   Print::Out("  - instance object size = %d\n", size);
@@ -509,9 +492,7 @@ void Class::ClassPrint() {
   Print::Out("\n");
 }
 
-void Class::ClassShortPrint() {
-  Print::Out("class");
-}
+void Class::ClassShortPrint() { Print::Out("class"); }
 
 void HeapObject::IteratePointers(PointerVisitor* visitor) {
   ASSERT(forwarding_address() == NULL);
@@ -533,7 +514,7 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
       // valid during marking.
       Array* array = reinterpret_cast<Array*>(this);
       visitor->VisitBlock(
-          reinterpret_cast<Object**>(address() + (2*kPointerSize)),
+          reinterpret_cast<Object**>(address() + (2 * kPointerSize)),
           reinterpret_cast<Object**>(address() + array->ArraySize()));
       break;
     }
@@ -542,9 +523,8 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
       // We do not use cast method because the Stack's class pointer is not
       // valid during marking.
       Stack* stack = reinterpret_cast<Stack*>(this);
-      visitor->VisitBlock(
-          stack->Pointer(stack->top()),
-          stack->Pointer(stack->length()));
+      visitor->VisitBlock(stack->Pointer(stack->top()),
+                          stack->Pointer(stack->length()));
       break;
     }
 
@@ -610,8 +590,7 @@ HeapObject* HeapObject::CloneInToSpace(Space* to) {
       HeapObject::FromAddress(to->AllocateLinearly(object_size));
   // Copy the content of source to target.
   CopyBlock(reinterpret_cast<Object**>(target->address()),
-            reinterpret_cast<Object**>(address()),
-            object_size);
+            reinterpret_cast<Object**>(address()), object_size);
   if (target->IsStack()) {
     Stack::cast(target)->UpdateFramePointers(Stack::cast(this));
   }
@@ -629,8 +608,7 @@ Function* Function::UnfoldInToSpace(Space* to, int number_of_literals) {
       HeapObject::FromAddress(to->AllocateLinearly(new_object_size));
   // Copy the content of source to target.
   CopyBlock(reinterpret_cast<Object**>(target->address()),
-            reinterpret_cast<Object**>(address()),
-            current_object_size);
+            reinterpret_cast<Object**>(address()), current_object_size);
   Function* result = Function::cast(target);
   result->set_literals_size(number_of_literals);
   ASSERT(result->Size() == Size() + number_of_literals * kPointerSize);
@@ -647,8 +625,7 @@ Function* Function::FoldInToSpace(Space* to) {
       HeapObject::FromAddress(to->AllocateLinearly(new_object_size));
   // Copy the content of source to target.
   CopyBlock(reinterpret_cast<Object**>(target->address()),
-            reinterpret_cast<Object**>(address()),
-            new_object_size);
+            reinterpret_cast<Object**>(address()), new_object_size);
   // Update literals size.
   Function* result = Function::cast(target);
   result->set_literals_size(0);
@@ -658,13 +635,13 @@ Function* Function::FoldInToSpace(Space* to) {
 }
 
 // Helper class for printing HeapObjects
-class PrintVisitor: public PointerVisitor {
+class PrintVisitor : public PointerVisitor {
  public:
   void VisitBlock(Object** start, Object** end) {
     for (Object** p = start; p < end; p++) PrintPointer(p);
   }
 
-  void VisitClass(Object** p) { }
+  void VisitClass(Object** p) {}
 
  private:
   void PrintPointer(Object** p) {
@@ -678,10 +655,8 @@ void HeapObject::RawPrint(const char* title) {
   if (!Flags::verbose) {
     Print::Out("a %s: ", title);
   } else {
-    Print::Out("0x%lx: [%s] (%d): ",
-                 address(),
-                 title,
-                 static_cast<int>(Size()));
+    Print::Out("0x%lx: [%s] (%d): ", address(), title,
+               static_cast<int>(Size()));
     PrintVisitor v;
     IteratePointers(&v);
   }

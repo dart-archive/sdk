@@ -69,10 +69,10 @@ static void SendErrorAndDie(int result_pipe, int error, const char* msg) {
   // fails.
   ASSERT(strlen(msg) + 1 <= MAX_MESSAGE_LENGTH);
   if (TEMP_FAILURE_RETRY(write(result_pipe, &error, sizeof(int))) < 0) {
-      Platform::ImmediateAbort();
+    Platform::ImmediateAbort();
   }
-  if (TEMP_FAILURE_RETRY(write(result_pipe, msg, strlen(msg)+1)) < 0) {
-      Platform::ImmediateAbort();
+  if (TEMP_FAILURE_RETRY(write(result_pipe, msg, strlen(msg) + 1)) < 0) {
+    Platform::ImmediateAbort();
   }
   exit(1);
 }
@@ -101,8 +101,10 @@ static pid_t WaitForPid(int child_pid, int result_pipe) {
   if (TEMP_FAILURE_RETRY(waitpid(child_pid, &status, 0)) < 0) {
     int tmp_errno = errno;
     TEMP_FAILURE_RETRY(close(result_pipe));
-    Print::Error("Failed when waiting on immediate child process to exit. "
-                 "Error: %d", errno);
+    Print::Error(
+        "Failed when waiting on immediate child process to exit. "
+        "Error: %d",
+        errno);
     errno = tmp_errno;
     return -1;
   }
@@ -128,13 +130,14 @@ static pid_t WaitForPid(int child_pid, int result_pipe) {
 
   // Wait for the pid of the detached process.
   int grandchild_pid;
-  err =
-      TEMP_FAILURE_RETRY(read(result_pipe, &grandchild_pid, sizeof(int)));
+  err = TEMP_FAILURE_RETRY(read(result_pipe, &grandchild_pid, sizeof(int)));
   if (err < 0) {
     int tmp_errno = errno;
     TEMP_FAILURE_RETRY(close(result_pipe));
-    Print::Error("Failed when reading the pid of the detached process with "
-                 "error: %d", errno);
+    Print::Error(
+        "Failed when reading the pid of the detached process with "
+        "error: %d",
+        errno);
     errno = tmp_errno;
     return err;
   }
@@ -158,8 +161,10 @@ static pid_t WaitForPid(int child_pid, int result_pipe) {
     // The read call failed for some unknown reason.
     int tmp_errno = errno;
     TEMP_FAILURE_RETRY(close(result_pipe));
-    Print::Error("Failed when waiting for detached process with pid to execute "
-                 "with error: %d", tmp_errno);
+    Print::Error(
+        "Failed when waiting for detached process with pid to execute "
+        "with error: %d",
+        tmp_errno);
     errno = tmp_errno;
     return -1;
   }
@@ -190,16 +195,16 @@ static void RunDetached(char* path, char* arguments[], int result_pipe) {
     int tmp_errno = errno;
     char msg[MAX_MESSAGE_LENGTH];
     snprintf(msg, MAX_MESSAGE_LENGTH,
-        "Failed opening /dev/null as stdin. Null fd is %d\n", null_fd);
+             "Failed opening /dev/null as stdin. Null fd is %d\n", null_fd);
     SendErrorAndDie(result_pipe, -tmp_errno, msg);
   }
   if (TEMP_FAILURE_RETRY(dup2(null_fd, STDOUT_FILENO)) != STDOUT_FILENO) {
     SendErrorAndDie(result_pipe, -errno,
-        "Failed redirector stdout to /dev/null\n");
+                    "Failed redirector stdout to /dev/null\n");
   }
   if (TEMP_FAILURE_RETRY(dup2(null_fd, STDERR_FILENO)) != STDERR_FILENO) {
     SendErrorAndDie(result_pipe, -errno,
-        "Failed redirector stderr to /dev/null\n");
+                    "Failed redirector stderr to /dev/null\n");
   }
 
   // Set new process group id. This makes this process the session leader.
@@ -208,7 +213,8 @@ static void RunDetached(char* path, char* arguments[], int result_pipe) {
   // http://www.linusakesson.net/programming/tty/index.php if you are really
   // interested.
   if (setsid() < 0) {
-    SendErrorAndDie(result_pipe, -errno,
+    SendErrorAndDie(
+        result_pipe, -errno,
         "Failed to create new session with new group id when spawning a "
         "detached process\n");
   }
@@ -217,7 +223,7 @@ static void RunDetached(char* path, char* arguments[], int result_pipe) {
   pid_t pid = Fork();
   if (pid < 0) {
     SendErrorAndDie(result_pipe, -errno,
-        "Failed to double fork when spawning a detached process\n");
+                    "Failed to double fork when spawning a detached process\n");
   }
   if (pid > 0) {
     // Exit cleanly to unblock the waiting parent. Use _exit to silence ASAN.
@@ -229,7 +235,8 @@ static void RunDetached(char* path, char* arguments[], int result_pipe) {
   // Send back the pid.
   pid = getpid();
   if (TEMP_FAILURE_RETRY(write(result_pipe, &pid, sizeof(pid_t))) < 0) {
-    SendErrorAndDie(result_pipe, -errno,
+    SendErrorAndDie(
+        result_pipe, -errno,
         "Failed to return grandchild pid when spawning a detached process\n");
   }
 

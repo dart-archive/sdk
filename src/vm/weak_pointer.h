@@ -16,8 +16,7 @@ typedef void (*WeakPointerCallback)(HeapObject* object, Heap* heap);
 
 class WeakPointer {
  public:
-  WeakPointer(HeapObject* object,
-              WeakPointerCallback callback,
+  WeakPointer(HeapObject* object, WeakPointerCallback callback,
               WeakPointer* next);
 
   static void Process(Space* garbage_space, WeakPointer** pointers, Heap* heap);

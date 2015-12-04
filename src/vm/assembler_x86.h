@@ -34,32 +34,32 @@ enum ScaleFactor {
 };
 
 enum Condition {
-  OVERFLOW_     =  0,  // TODO(kasperl): Rename this.
-  NO_OVERFLOW   =  1,
-  BELOW         =  2,
-  ABOVE_EQUAL   =  3,
-  EQUAL         =  4,
-  NOT_EQUAL     =  5,
-  BELOW_EQUAL   =  6,
-  ABOVE         =  7,
-  SIGN          =  8,
-  NOT_SIGN      =  9,
-  PARITY_EVEN   = 10,
-  PARITY_ODD    = 11,
-  LESS          = 12,
+  OVERFLOW_ = 0,  // TODO(kasperl): Rename this.
+  NO_OVERFLOW = 1,
+  BELOW = 2,
+  ABOVE_EQUAL = 3,
+  EQUAL = 4,
+  NOT_EQUAL = 5,
+  BELOW_EQUAL = 6,
+  ABOVE = 7,
+  SIGN = 8,
+  NOT_SIGN = 9,
+  PARITY_EVEN = 10,
+  PARITY_ODD = 11,
+  LESS = 12,
   GREATER_EQUAL = 13,
-  LESS_EQUAL    = 14,
-  GREATER       = 15,
+  LESS_EQUAL = 14,
+  GREATER = 15,
 
-  ZERO          = EQUAL,
-  NOT_ZERO      = NOT_EQUAL,
-  NEGATIVE      = SIGN,
-  POSITIVE      = NOT_SIGN
+  ZERO = EQUAL,
+  NOT_ZERO = NOT_EQUAL,
+  NEGATIVE = SIGN,
+  POSITIVE = NOT_SIGN
 };
 
 class Immediate {
  public:
-  explicit Immediate(int32 value) : value_(value) { }
+  explicit Immediate(int32 value) : value_(value) {}
 
   int32 value() const { return value_; }
 
@@ -71,13 +71,9 @@ class Immediate {
 
 class Operand {
  public:
-  uint8 mod() const {
-    return (EncodingAt(0) >> 6) & 3;
-  }
+  uint8 mod() const { return (EncodingAt(0) >> 6) & 3; }
 
-  Register rm() const {
-    return static_cast<Register>(EncodingAt(0) & 7);
-  }
+  Register rm() const { return static_cast<Register>(EncodingAt(0) & 7); }
 
   ScaleFactor scale() const {
     return static_cast<ScaleFactor>((EncodingAt(1) >> 6) & 3);
@@ -87,9 +83,7 @@ class Operand {
     return static_cast<Register>((EncodingAt(1) >> 3) & 7);
   }
 
-  Register base() const {
-    return static_cast<Register>(EncodingAt(1) & 7);
-  }
+  Register base() const { return static_cast<Register>(EncodingAt(1) & 7); }
 
   int8 disp8() const {
     ASSERT(length_ >= 2);
@@ -103,11 +97,11 @@ class Operand {
 
   bool IsRegister(Register reg) const {
     return ((encoding_[0] & 0xF8) == 0xC0)  // Addressing mode is register only.
-        && ((encoding_[0] & 0x07) == reg);  // Register codes match.
+           && ((encoding_[0] & 0x07) == reg);  // Register codes match.
   }
 
  protected:
-  Operand() : length_(0) { }
+  Operand() : length_(0) {}
 
   void SetModRM(int mod, Register rm) {
     ASSERT((mod & ~3) == 0);
@@ -149,7 +143,7 @@ class Operand {
   friend class Assembler;
 };
 
-class Address: public Operand {
+class Address : public Operand {
  public:
   explicit Address(Register base, int32 disp = 0) {
     if (disp == 0 && base != EBP) {
@@ -192,7 +186,7 @@ class Address: public Operand {
 
 class Label {
  public:
-  Label() : position_(0) { }
+  Label() : position_(0) {}
 
   // Returns the position for bound and linked labels. Cannot be used
   // for unused labels.
@@ -220,7 +214,6 @@ class Label {
 
   friend class Assembler;
 };
-
 
 #define INSTRUCTION_0(name, format) \
   void name() { Print(format); }

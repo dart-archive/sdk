@@ -33,13 +33,13 @@ struct Context {
 };
 
 // Print fatal error and exit.
-static void Fatal(const char *message) {
+static void Fatal(const char* message) {
   fprintf(stderr, "%s (errno %d)\n", message, errno);
   exit(-1);
 }
 
 int64_t timeval_to_usec(const struct timeval* tv) {
-  return( (int64_t)tv->tv_sec * kUsecsInSecs + tv->tv_usec ) ;
+  return ((int64_t)tv->tv_sec * kUsecsInSecs + tv->tv_usec);
 }
 
 struct timeval* usec_to_timeval(int64_t usec, struct timeval* tv) {
@@ -78,7 +78,7 @@ static void* ThreadFunction(void* data) {
     if (timeout_usec <= 0) break;
     usec_to_timeval(timeout_usec, &timeout);
     int rc = select(fd + 1, &readfds, NULL, NULL, &timeout);
-    if (rc == -1 && errno  == EINTR) continue;
+    if (rc == -1 && errno == EINTR) continue;
 
     // Terminate the loop if timeout or error.
     if (rc <= 0) break;
@@ -114,25 +114,19 @@ static int StartThread(Context* ctx) {
   return 0;
 }
 
-
 // Callback for results initiated by calling DNSServiceQueryRecord.
-static void QueryRecordCallback(DNSServiceRef ref,
-                                DNSServiceFlags flags,
+static void QueryRecordCallback(DNSServiceRef ref, DNSServiceFlags flags,
                                 uint32_t interfaceIndex,
                                 DNSServiceErrorType errorCode,
-                                const char *fullname,
-                                uint16_t rrtype,
-                                uint16_t rrclass,
-                                uint16_t rdlen,
-                                const void* rdata,
-                                uint32_t ttl,
-                                void *context) {
+                                const char* fullname, uint16_t rrtype,
+                                uint16_t rrclass, uint16_t rdlen,
+                                const void* rdata, uint32_t ttl,
+                                void* context) {
   if (rrclass != kDNSServiceClass_IN) return;
 
   struct Context* ctx = reinterpret_cast<struct Context*>(context);
 
-  if (rrtype != kDNSServiceType_A &&
-      rrtype != kDNSServiceType_SRV &&
+  if (rrtype != kDNSServiceType_A && rrtype != kDNSServiceType_SRV &&
       rrtype != kDNSServiceType_PTR) {
     // Ignore unsupported types.
     return;
@@ -156,8 +150,8 @@ static void QueryRecordCallback(DNSServiceRef ref,
       const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(rdata));
   Dart_CObject cobject_result;
   cobject_result.type = Dart_CObject_kArray;
-  Dart_CObject* result_array[] =
-      {&cobject_fullname, &cobject_type, &cobject_ttl, &cobject_data};
+  Dart_CObject* result_array[] = {&cobject_fullname, &cobject_type,
+                                  &cobject_ttl, &cobject_data};
   cobject_result.value.as_array.length = 4;
   cobject_result.value.as_array.values = result_array;
   Dart_PostCObject(ctx->port, &cobject_result);
@@ -169,14 +163,9 @@ void HandleLookup(Dart_Port port_id, int type, char* fullname, int timeout) {
   DNSServiceErrorType result;
   struct Context* context =
       reinterpret_cast<struct Context*>(malloc(sizeof(struct Context)));
-  result = DNSServiceQueryRecord(&ref,
-                                 0,
-                                 0,
-                                 fullname,
-                                 type,
-                                 kDNSServiceClass_IN,
-                                 &QueryRecordCallback,
-                                 context);
+  result =
+      DNSServiceQueryRecord(&ref, 0, 0, fullname, type, kDNSServiceClass_IN,
+                            &QueryRecordCallback, context);
   if (result != kDNSServiceErr_NoError) {
     fprintf(stderr, "Error from DNSServiceQueryRecord: %d\n", result);
   } else {

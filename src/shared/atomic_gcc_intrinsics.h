@@ -24,45 +24,31 @@ enum MemoryOrder {
 // allow easy port to other compilers.
 // Wrapper for working with atomic values. This implementation follows the
 // names of the C++11 std::atomic interface, to ease portability.
-template<typename T>
+template <typename T>
 class Atomic {
  public:
-  Atomic() : value_(T()) { }
+  Atomic() : value_(T()) {}
 
-  Atomic(T value) : value_(value) { }  // NOLINT
+  Atomic(T value) : value_(value) {}  // NOLINT
 
   T operator=(T other) {
     store(other);
     return other;
   }
 
-  operator T() const {
-    return load();
-  }
+  operator T() const { return load(); }
 
-  T operator++() {
-    return add_fetch(1);
-  }
+  T operator++() { return add_fetch(1); }
 
-  T operator--() {
-    return sub_fetch(1);
-  }
+  T operator--() { return sub_fetch(1); }
 
-  T operator++(int) {
-    return fetch_add(1);
-  }
+  T operator++(int) { return fetch_add(1); }
 
-  T operator--(int) {
-    return fetch_sub(1);
-  }
+  T operator--(int) { return fetch_sub(1); }
 
-  T operator+=(T other) {
-    return add_fetch(other);
-  }
+  T operator+=(T other) { return add_fetch(other); }
 
-  T operator-=(T other) {
-    return sub_fetch(other);
-  }
+  T operator-=(T other) { return sub_fetch(other); }
 
   void store(T other, MemoryOrder order = kSeqCst) {
     __atomic_store(&value_, &other, order);
@@ -81,33 +67,29 @@ class Atomic {
   }
 
   bool compare_exchange_weak(T& expected,  // NOLINT
-                             T other,
-                             MemoryOrder order = kSeqCst) {
-    return __atomic_compare_exchange(
-        &value_, &expected, &other, true, order, order);
+                             T other, MemoryOrder order = kSeqCst) {
+    return __atomic_compare_exchange(&value_, &expected, &other, true, order,
+                                     order);
   }
 
   bool compare_exchange_weak(T& expected,  // NOLINT
-                             T other,
-                             MemoryOrder success,
+                             T other, MemoryOrder success,
                              MemoryOrder failure) {
-    return __atomic_compare_exchange(
-        &value_, &expected, &other, true, success, failure);
+    return __atomic_compare_exchange(&value_, &expected, &other, true, success,
+                                     failure);
   }
 
   bool compare_exchange_strong(T& expected,  // NOLINT
-                               T other,
-                               MemoryOrder order = kSeqCst) {
-    return __atomic_compare_exchange(
-        &value_, &expected, &other, false, order, order);
+                               T other, MemoryOrder order = kSeqCst) {
+    return __atomic_compare_exchange(&value_, &expected, &other, false, order,
+                                     order);
   }
 
   bool compare_exchange_strong(T& expected,  // NOLINT
-                               T other,
-                               MemoryOrder success,
+                               T other, MemoryOrder success,
                                MemoryOrder failure) {
-    return __atomic_compare_exchange(
-        &value_, &expected, &other, false, success, failure);
+    return __atomic_compare_exchange(&value_, &expected, &other, false, success,
+                                     failure);
   }
 
   T add_fetch(T other, MemoryOrder order = kSeqCst) {

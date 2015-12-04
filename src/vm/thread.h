@@ -46,5 +46,4 @@ class Thread {
 
 }  // namespace fletch
 
-
 #endif  // SRC_VM_THREAD_H_

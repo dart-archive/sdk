@@ -40,7 +40,7 @@ Program::Program(ProgramSource source)
 #define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
       ROOTS_DO(CONSTRUCTOR_NULL)
 #undef CONSTRUCTOR_NULL
-      process_list_mutex_(Platform::CreateMutex()),
+          process_list_mutex_(Platform::CreateMutex()),
       process_list_head_(NULL),
       random_(0),
       heap_(&random_),
@@ -50,12 +50,12 @@ Program::Program(ProgramSource source)
       is_compact_(false),
       loaded_from_snapshot_(source == Program::kLoadedFromSnapshot),
       exit_kind_(Signal::kTerminated) {
-  // These asserts need to hold when running on the target, but they don't need
-  // to hold on the host (the build machine, where the interpreter-generating
-  // program runs).  We put these asserts here on the assumption that the
-  // interpreter-generating program will not instantiate this class.
+// These asserts need to hold when running on the target, but they don't need
+// to hold on the host (the build machine, where the interpreter-generating
+// program runs).  We put these asserts here on the assumption that the
+// interpreter-generating program will not instantiate this class.
 #define ASSERT_OFFSET(type, name, CamelName) \
-    static_assert(k##CamelName##Offset == offsetof(Program, name##_), #name);
+  static_assert(k##CamelName##Offset == offsetof(Program, name##_), #name);
   ROOTS_DO(ASSERT_OFFSET)
 #undef ASSERT_OFFSET
 }
@@ -151,8 +151,7 @@ Object* Program::CreateByteArray(int capacity) {
 
 Object* Program::CreateClass(int fields) {
   InstanceFormat format = InstanceFormat::instance_format(fields);
-  Object* raw_class = heap()->CreateClass(
-      format, meta_class(), null_object());
+  Object* raw_class = heap()->CreateClass(format, meta_class(), null_object());
   if (raw_class->IsFailure()) return raw_class;
   Class* klass = Class::cast(raw_class);
   ASSERT(klass->NumberOfInstanceFields() == fields);
@@ -163,12 +162,9 @@ Object* Program::CreateDouble(fletch_double value) {
   return heap()->CreateDouble(double_class(), value);
 }
 
-Object* Program::CreateFunction(int arity,
-                                List<uint8> bytes,
+Object* Program::CreateFunction(int arity, List<uint8> bytes,
                                 int number_of_literals) {
-  return heap()->CreateFunction(function_class(),
-                                arity,
-                                bytes,
+  return heap()->CreateFunction(function_class(), arity, bytes,
                                 number_of_literals);
 }
 
@@ -416,12 +412,8 @@ static void PrintImmutableGCInfo(SharedHeapUsage* before,
       "Immutable-GC(%i): "
       "\t%lli us, "
       "\t%lu/%lu -> %lu/%lu\n",
-      count++,
-      after->timestamp - before->timestamp,
-      before->shared_used,
-      before->shared_size,
-      after->shared_used,
-      after->shared_size);
+      count++, after->timestamp - before->timestamp, before->shared_used,
+      before->shared_size, after->shared_used, after->shared_size);
 }
 
 void Program::CollectSharedGarbage(bool program_is_stopped) {
@@ -592,7 +584,7 @@ class StatisticsVisitor : public HeapObjectVisitor {
         string_size_(0),
         function_count_(0),
         function_size_(0),
-        bytecode_size_(0) { }
+        bytecode_size_(0) {}
 
   int object_count() const { return object_count_; }
   int class_count() const { return class_count_; }
@@ -607,9 +599,7 @@ class StatisticsVisitor : public HeapObjectVisitor {
   int function_size() const { return function_size_; }
   int bytecode_size() const { return bytecode_size_; }
 
-  int function_header_size() const {
-    return function_count_ * Function::kSize;
-  }
+  int function_header_size() const { return function_count_ * Function::kSize; }
 
   int Visit(HeapObject* object) {
     int size = object->Size();
@@ -644,9 +634,7 @@ class StatisticsVisitor : public HeapObjectVisitor {
 
   int bytecode_size_;
 
-  void VisitClass(Class* clazz) {
-    class_count_++;
-  }
+  void VisitClass(Class* clazz) { class_count_++; }
 
   void VisitArray(Array* array) {
     array_count_++;
@@ -701,145 +689,145 @@ void Program::Initialize() {
   // null_object for initial values.
   InstanceFormat null_format =
       InstanceFormat::instance_format(0, InstanceFormat::NULL_MARKER);
-  null_object_ = reinterpret_cast<Instance*>(
-      heap()->Allocate(null_format.fixed_size()));
+  null_object_ =
+      reinterpret_cast<Instance*>(heap()->Allocate(null_format.fixed_size()));
 
   meta_class_ = Class::cast(heap()->CreateMetaClass());
 
   {
     InstanceFormat format = InstanceFormat::array_format();
-    array_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    array_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   empty_array_ = Array::cast(CreateArray(0));
 
   {
     InstanceFormat format = InstanceFormat::instance_format(0);
-    object_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    object_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::num_format();
-    num_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    num_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     num_class_->set_super_class(object_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::num_format();
-    int_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    int_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     int_class_->set_super_class(num_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::smi_format();
-    smi_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    smi_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     smi_class_->set_super_class(int_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::heap_integer_format();
-    large_integer_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    large_integer_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     large_integer_class_->set_super_class(int_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::double_format();
-    double_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    double_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     double_class_->set_super_class(num_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::boxed_format();
-    boxed_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    boxed_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::stack_format();
-    stack_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    stack_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format =
         InstanceFormat::instance_format(2, InstanceFormat::COROUTINE_MARKER);
-    coroutine_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    coroutine_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format =
         InstanceFormat::instance_format(1, InstanceFormat::PORT_MARKER);
-    port_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    port_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(1);
-    process_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    process_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(2);
-    process_death_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    process_death_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(4);
-    foreign_memory_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    foreign_memory_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::initializer_format();
-    initializer_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    initializer_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(1);
-    constant_list_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    constant_list_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(1);
-    constant_byte_list_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    constant_byte_list_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(2);
-    constant_map_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    constant_map_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(3);
-    no_such_method_error_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    no_such_method_error_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::one_byte_string_format();
-    one_byte_string_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    one_byte_string_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     one_byte_string_class_->set_super_class(object_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::two_byte_string_format();
-    two_byte_string_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    two_byte_string_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     two_byte_string_class_->set_super_class(object_class_);
   }
 
@@ -848,84 +836,78 @@ void Program::Initialize() {
 
   {
     InstanceFormat format = InstanceFormat::function_format();
-    function_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    function_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::byte_array_format();
-    byte_array_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    byte_array_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   Class* null_class;
-  { // Create null class and singleton.
-    null_class =
-        Class::cast(heap()->CreateClass(null_format, meta_class_,
-                                        null_object_));
+  {  // Create null class and singleton.
+    null_class = Class::cast(
+        heap()->CreateClass(null_format, meta_class_, null_object_));
     null_class->set_super_class(object_class_);
     null_object_->set_class(null_class);
     null_object_->set_immutable(true);
     null_object_->InitializeIdentityHashCode(random());
-    null_object_->Initialize(null_format.fixed_size(),
-                             null_object_);
+    null_object_->Initialize(null_format.fixed_size(), null_object_);
   }
 
-  { // Create the bool class.
+  {  // Create the bool class.
     InstanceFormat format = InstanceFormat::instance_format(0);
-    bool_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    bool_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     bool_class_->set_super_class(object_class_);
   }
 
-  { // Create False class and the false object.
+  {  // Create False class and the false object.
     InstanceFormat format =
         InstanceFormat::instance_format(0, InstanceFormat::FALSE_MARKER);
-    Class* false_class = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    Class* false_class =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     false_class->set_super_class(bool_class_);
     false_class->set_methods(empty_array_);
     false_object_ = Instance::cast(
         heap()->CreateInstance(false_class, null_object(), true));
   }
 
-  { // Create True class and the true object.
+  {  // Create True class and the true object.
     InstanceFormat format =
         InstanceFormat::instance_format(0, InstanceFormat::TRUE_MARKER);
-    Class* true_class = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    Class* true_class =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     true_class->set_super_class(bool_class_);
     true_class->set_methods(empty_array_);
-    true_object_ = Instance::cast(
-        heap()->CreateInstance(true_class, null_object(), true));
+    true_object_ =
+        Instance::cast(heap()->CreateInstance(true_class, null_object(), true));
   }
 
-  { // Create stack overflow error object.
+  {  // Create stack overflow error object.
     InstanceFormat format = InstanceFormat::instance_format(0);
-    stack_overflow_error_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    stack_overflow_error_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     stack_overflow_error_ = Instance::cast(heap()->CreateInstance(
         stack_overflow_error_class_, null_object(), true));
   }
 
   // Create the retry after gc failure object payload.
-  raw_retry_after_gc_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
+  raw_retry_after_gc_ = OneByteString::cast(
+      CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
 
   // Create the failure object payloads. These need to be kept in sync with the
   // constants in lib/system/system.dart.
-  raw_wrong_argument_type_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Wrong argument type.")));
+  raw_wrong_argument_type_ = OneByteString::cast(
+      CreateStringFromAscii(StringFromCharZ("Wrong argument type.")));
 
-  raw_index_out_of_bounds_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Index out of bounds.")));
+  raw_index_out_of_bounds_ = OneByteString::cast(
+      CreateStringFromAscii(StringFromCharZ("Index out of bounds.")));
 
-  raw_illegal_state_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Illegal state.")));
+  raw_illegal_state_ = OneByteString::cast(
+      CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
   native_failure_result_ = null_object_;
 }
@@ -962,8 +944,8 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
   int hits = 0;
 
   static const Names::Id name = Names::kNoSuchMethodTrampoline;
-  Function* trampoline = object_class()->LookupMethod(
-        Selector::Encode(name, Selector::METHOD, 0));
+  Function* trampoline =
+      object_class()->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
 
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
@@ -984,10 +966,8 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
   }
 
   if (Flags::print_program_statistics) {
-    Print::Out("Dispatch table fill: %F%% (%i of %i)\n",
-               hits * 100.0 / length,
-               hits,
-               length);
+    Print::Out("Dispatch table fill: %F%% (%i of %i)\n", hits * 100.0 / length,
+               hits, length);
   }
 }
 

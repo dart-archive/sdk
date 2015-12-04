@@ -43,5 +43,4 @@ class GCThread {
 
 }  // namespace fletch
 
-
 #endif  // SRC_VM_GC_THREAD_H_

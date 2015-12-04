@@ -28,9 +28,7 @@ void GetPathOfExecutable(char* path, size_t path_length) {
 
 static uint64 time_launch;
 
-void Platform::Setup() {
-  time_launch = GetMicroseconds();
-}
+void Platform::Setup() { time_launch = GetMicroseconds(); }
 
 uint64 Platform::GetMicroseconds() {
   lk_bigtime_t time = current_time_hires();
@@ -148,37 +146,34 @@ int Platform::GetLocalTimeZoneOffset() {
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;
 
-VirtualMemory::VirtualMemory(int size) : size_(size) {
-}
+VirtualMemory::VirtualMemory(int size) : size_(size) {}
 
-VirtualMemory::~VirtualMemory() {
-}
+VirtualMemory::~VirtualMemory() {}
 
-bool VirtualMemory::IsReserved() const {
-  return false;
-}
+bool VirtualMemory::IsReserved() const { return false; }
 
 bool VirtualMemory::Commit(uword address, int size, bool executable) {
   return false;
 }
 
-bool VirtualMemory::Uncommit(uword address, int size) {
-  return false;
-}
+bool VirtualMemory::Uncommit(uword address, int size) { return false; }
 
 void Platform::Exit(int exit_code) {
   printf("Exited with code %d.\n", exit_code);
-  while (true) {}
+  while (true) {
+  }
 }
 
 void Platform::ScheduleAbort() {
   printf("Aborted (scheduled)\n");
-  while (true) {}
+  while (true) {
+  }
 }
 
 void Platform::ImmediateAbort() {
   printf("Aborted (immediate)\n");
-  while (true) {}
+  while (true) {
+  }
 }
 
 int Platform::GetPid() {
@@ -186,9 +181,7 @@ int Platform::GetPid() {
   return 0;
 }
 
-int Platform::MaxStackSizeInWords() {
-  return 16 * KB;
-}
+int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
 }  // namespace fletch
 

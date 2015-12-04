@@ -18,8 +18,7 @@ EventHandler::EventHandler()
       data_(NULL),
       id_(-1),
       running_(true),
-      next_timeout_(INT64_MAX) {
-}
+      next_timeout_(INT64_MAX) {}
 
 EventHandler::~EventHandler() {
   if (data_ != NULL) {

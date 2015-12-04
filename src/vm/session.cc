@@ -21,13 +21,13 @@
 #include "src/vm/snapshot.h"
 #include "src/vm/thread.h"
 
-#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)                    \
-  Object* var = (exp);                                                  \
-  if (var == Failure::retry_after_gc()) {                               \
-    program()->CollectGarbage();                                        \
-    var = (exp);                                                        \
-    ASSERT(!var->IsFailure());                                          \
-  }                                                                     \
+#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp) \
+  Object* var = (exp);                               \
+  if (var == Failure::retry_after_gc()) {            \
+    program()->CollectGarbage();                     \
+    var = (exp);                                     \
+    ASSERT(!var->IsFailure());                       \
+  }
 
 namespace fletch {
 
@@ -56,9 +56,7 @@ class ConnectionPrintInterceptor : public PrintInterceptor {
 class PostponedChange {
  public:
   PostponedChange(Object** description, int size)
-      : description_(description),
-        size_(size),
-        next_(NULL) {
+      : description_(description), size_(size), next_(NULL) {
     ++number_of_changes_;
   }
 
@@ -141,9 +139,7 @@ void Session::StartMessageProcessingThread() {
   message_handling_thread_ = Thread::Run(MessageProcessingThread, this);
 }
 
-void Session::JoinMessageProcessingThread() {
-  message_handling_thread_.Join();
-}
+void Session::JoinMessageProcessingThread() { message_handling_thread_.Join(); }
 
 int64_t Session::PopInteger() {
   Object* top = Pop();
@@ -162,9 +158,8 @@ void Session::SignalMainThread(MainThreadResumeKind kind) {
 void Session::SendDartValue(Object* value) {
   WriteBuffer buffer;
   if (value->IsSmi() || value->IsLargeInteger()) {
-    int64_t int_value = value->IsSmi()
-        ? Smi::cast(value)->value()
-        : LargeInteger::cast(value)->value();
+    int64_t int_value = value->IsSmi() ? Smi::cast(value)->value()
+                                       : LargeInteger::cast(value)->value();
     buffer.WriteInt64(int_value);
     connection_->Send(Connection::kInteger, buffer);
   } else if (value->IsTrue() || value->IsFalse()) {
@@ -221,9 +216,7 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
 
   // Class offset table
   buffer.WriteInt(5 * class_offsets->size());
-  for (auto it = class_offsets->Begin();
-       it != class_offsets->End();
-       ++it) {
+  for (auto it = class_offsets->Begin(); it != class_offsets->End(); ++it) {
     Class* klass = it->first;
     const PortableOffset& offset = it->second;
 
@@ -236,8 +229,7 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
 
   // Function offset table
   buffer.WriteInt(5 * function_offsets->size());
-  for (auto it = function_offsets->Begin();
-       it != function_offsets->End();
+  for (auto it = function_offsets->Begin(); it != function_offsets->End();
        ++it) {
     Function* function = it->first;
     const PortableOffset& offset = it->second;
@@ -287,8 +279,7 @@ void Session::HandShake() {
   int version_length = strlen(version);
   bool version_match =
       (version_length == compiler_version_length) &&
-      (strncmp(version,
-               reinterpret_cast<char*>(compiler_version),
+      (strncmp(version, reinterpret_cast<char*>(compiler_version),
                compiler_version_length) == 0);
   free(compiler_version);
   WriteBuffer buffer;
@@ -786,16 +777,13 @@ void Session::ProcessMessages() {
         break;
       }
 
-      default: {
-        FATAL1("Unknown message opcode %d", opcode);
-      }
+      default: { FATAL1("Unknown message opcode %d", opcode); }
     }
   }
 }
 
 void Session::IterateChangesPointers(PointerVisitor* visitor) {
-  for (PostponedChange* current = first_change_;
-       current != NULL;
+  for (PostponedChange* current = first_change_; current != NULL;
        current = current->next()) {
     current->IteratePointers(visitor);
   }
@@ -942,9 +930,7 @@ Object* Session::MapLookupById(int map_index, int64 id) {
   return maps_[map_index]->LookupById(id);
 }
 
-void Session::PushNull() {
-  Push(program()->null_object());
-}
+void Session::PushNull() { Push(program()->null_object()); }
 
 void Session::PushBoolean(bool value) {
   if (value) {
@@ -969,23 +955,20 @@ void Session::PushNewDouble(double value) {
 }
 
 void Session::PushNewOneByteString(List<uint8> contents) {
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateOneByteString(contents));
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
+                                     program()->CreateOneByteString(contents));
   Push(result);
 }
 
 void Session::PushNewTwoByteString(List<uint16> contents) {
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateTwoByteString(contents));
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
+                                     program()->CreateTwoByteString(contents));
   Push(result);
 }
 
 void Session::PushNewInstance() {
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateInstance(Class::cast(Top())));
+      result, program()->CreateInstance(Class::cast(Top())));
   Class* klass = Class::cast(Pop());
   Instance* instance = Instance::cast(result);
   int fields = klass->NumberOfInstanceFields();
@@ -1017,8 +1000,7 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
       case kAllocateUnfold:
       case kAllocateImmutableUnfold: {
         int literal_index = Utils::ReadInt32(bcp + 1);
-        Object** literal_address =
-            function->literal_address_for(literal_index);
+        Object** literal_address = function->literal_address_for(literal_index);
         int offset = reinterpret_cast<uint8_t*>(literal_address) - bcp;
         Utils::WriteInt32(bcp + 1, offset);
         break;
@@ -1048,8 +1030,7 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
   ASSERT(!program()->is_compact());
 
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateFunction(arity, bytecodes, literals));
+      result, program()->CreateFunction(arity, bytecodes, literals));
   Function* function = Function::cast(result);
   for (int i = literals - 1; i >= 0; --i) {
     function->set_literal_at(i, Pop());
@@ -1073,8 +1054,7 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
 
 void Session::PushNewInitializer() {
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateInitializer(Function::cast(Top())));
+      result, program()->CreateInitializer(Function::cast(Top())));
   Pop();
   Push(result);
 }
@@ -1139,8 +1119,7 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
 void Session::PushConstantList(int length) {
   PushNewArray(length);
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateInstance(program()->constant_list_class()));
+      result, program()->CreateInstance(program()->constant_list_class()));
   Instance* list = Instance::cast(result);
   ASSERT(list->get_class()->NumberOfInstanceFields() == 1);
   list->SetInstanceField(0, Pop());
@@ -1171,8 +1150,7 @@ void Session::PushConstantByteList(int length) {
 
 void Session::PushConstantMap(int length) {
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateInstance(program()->constant_map_class()));
+      result, program()->CreateInstance(program()->constant_map_class()));
   Instance* map = Instance::cast(result);
   ASSERT(map->get_class()->NumberOfInstanceFields() == 2);
   // Values.
@@ -1200,9 +1178,7 @@ void Session::PrepareForChanges() {
   }
 }
 
-void Session::ChangeSuperClass() {
-  PostponeChange(kChangeSuperClass, 2);
-}
+void Session::ChangeSuperClass() { PostponeChange(kChangeSuperClass, 2); }
 
 void Session::CommitChangeSuperClass(PostponedChange* change) {
   Class* klass = Class::cast(change->get(1));
@@ -1292,8 +1268,7 @@ bool Session::CommitChanges(int count) {
     // and "return false".
 
     bool schemas_changed = false;
-    for (PostponedChange* current = first_change_;
-         current != NULL;
+    for (PostponedChange* current = first_change_; current != NULL;
          current = current->next()) {
       Change change = static_cast<Change>(Smi::cast(current->get(0))->value());
       switch (change) {
@@ -1441,9 +1416,8 @@ bool Session::CompileTimeError(Process* process) {
 
 class TransformInstancesPointerVisitor : public PointerVisitor {
  public:
-  explicit TransformInstancesPointerVisitor(Heap* heap,
-                                            SharedHeap* shared_heap)
-      : heap_(heap), shared_heap_(shared_heap->heap()) { }
+  explicit TransformInstancesPointerVisitor(Heap* heap, SharedHeap* shared_heap)
+      : heap_(heap), shared_heap_(shared_heap->heap()) {}
 
   virtual void VisitClass(Object** p) {
     // The class pointer in the header of an object should not
@@ -1551,8 +1525,8 @@ void Session::TransformInstances() {
 
   Space* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
-  TransformInstancesPointerVisitor pointer_visitor(
-      program()->heap(), program()->shared_heap());
+  TransformInstancesPointerVisitor pointer_visitor(program()->heap(),
+                                                   program()->shared_heap());
   program()->IterateRoots(&pointer_visitor);
   ASSERT(!space->is_empty());
   space->CompleteTransformations(&pointer_visitor);

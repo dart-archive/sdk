@@ -24,8 +24,7 @@ GCThread::GCThread()
       pause_count_(0),
       client_monitor_(Platform::CreateMonitor()),
       did_pause_(false),
-      did_shutdown_(false) {
-}
+      did_shutdown_(false) {}
 
 GCThread::~GCThread() {
   delete gc_thread_monitor_;
@@ -114,9 +113,7 @@ void GCThread::MainLoop() {
     {
       {
         ScopedMonitorLock lock(gc_thread_monitor_);
-        while (!requesting_gc_ &&
-               !requesting_shared_gc_ &&
-               pause_count_ == 0 &&
+        while (!requesting_gc_ && !requesting_shared_gc_ && pause_count_ == 0 &&
                !shutting_down_) {
           gc_thread_monitor_->Wait();
         }

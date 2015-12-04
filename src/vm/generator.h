@@ -18,7 +18,7 @@ class Assembler;
 
 class Generator {
  public:
-  typedef void (Function)(Assembler*);
+  typedef void(Function)(Assembler*);
 
   Generator(Function* function, const char* name);
 
@@ -37,7 +37,6 @@ class Generator {
 
   DISALLOW_COPY_AND_ASSIGN(Generator);
 };
-
 
 }  // namespace fletch
 

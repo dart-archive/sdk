@@ -46,9 +46,7 @@ void Equals(const char* file, int line, const E& expected, const A& actual) {
 }
 
 template <typename K, typename E, typename A>
-void StringEquals(const char* file,
-                  int line,
-                  const E& expected,
+void StringEquals(const char* file, int line, const E& expected,
                   const A& actual) {
   std::stringstream ess, ass;
   ess << expected;
@@ -115,11 +113,9 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
 #define FATAL2(format, p1, p2) \
   fletch::Assert(__FILE__, __LINE__).Fail(format, (p1), (p2))
 
-#define UNIMPLEMENTED() \
-  FATAL("unimplemented code")
+#define UNIMPLEMENTED() FATAL("unimplemented code")
 
-#define UNREACHABLE() \
-  FATAL("unreachable code")
+#define UNREACHABLE() FATAL("unreachable code")
 
 #if !defined(TESTING)
 // Only define the minimal set of assertions when not building the test
@@ -147,7 +143,9 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
 // In order to avoid variable unused warnings for code that only uses
 // a variable in an ASSERT or EXPECT, we make sure to use the macro
 // argument.
-#define ASSERT(condition) while (false && (condition)) {}
+#define ASSERT(condition)        \
+  while (false && (condition)) { \
+  }
 
 #endif  // if defined(DEBUG)
 
@@ -233,6 +231,5 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
                                               (right))
 
 #endif  // if !defined(TESTING)
-
 
 #endif  // SRC_SHARED_ASSERT_H_

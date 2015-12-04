@@ -17,21 +17,13 @@ class PointerVisitor;
 
 class Session {
  public:
-  explicit Session(Connection* connection) {
-    UNIMPLEMENTED();
-  }
+  explicit Session(Connection* connection) { UNIMPLEMENTED(); }
 
-  void Initialize() {
-    UNIMPLEMENTED();
-  }
+  void Initialize() { UNIMPLEMENTED(); }
 
-  void StartMessageProcessingThread() {
-    UNIMPLEMENTED();
-  }
+  void StartMessageProcessingThread() { UNIMPLEMENTED(); }
 
-  void JoinMessageProcessingThread() {
-    UNIMPLEMENTED();
-  }
+  void JoinMessageProcessingThread() { UNIMPLEMENTED(); }
 
   bool UncaughtException(Process* process) {
     UNIMPLEMENTED();
@@ -68,9 +60,7 @@ class Session {
     return false;
   }
 
-  void IteratePointers(PointerVisitor* visitor) {
-    UNIMPLEMENTED();
-  }
+  void IteratePointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 };
 
 }  // namespace fletch

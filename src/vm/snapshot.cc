@@ -42,10 +42,8 @@ class Header {
 
   static Header FromTypeAndElements(InstanceFormat::Type type,
                                     int elements = 0) {
-    Header h = Header(
-        TypeField::encode(type) |
-        ElementsField::encode(elements) |
-        kTypeAndElementsTag);
+    Header h = Header(TypeField::encode(type) |
+                      ElementsField::encode(elements) | kTypeAndElementsTag);
     ASSERT(h.is_type());
     ASSERT(type == h.as_type());
     ASSERT(elements == h.elements());
@@ -83,9 +81,7 @@ class Header {
   }
 
   bool is_smi() { return (value_ & kSmiMask) == kSmiTag; }
-  bool is_native_smi() {
-    return is_smi() && Smi::IsValid(value_ >> kSmiShift);
-  }
+  bool is_native_smi() { return is_smi() && Smi::IsValid(value_ >> kSmiShift); }
   Smi* as_smi() {
     ASSERT(is_native_smi());
     return Smi::FromWord(value_ >> kSmiShift);
@@ -132,7 +128,8 @@ class Header {
 
   // Fields in case of Type + Elements encoding.
   class TypeField : public BitField<InstanceFormat::Type, 2, 4> {};
-  class ElementsField: public BitField<word, 6, 26> {};
+  class ElementsField : public BitField<word, 6, 26> {};
+
  private:
   int64 value_;
 };
@@ -140,7 +137,7 @@ class Header {
 class ObjectInfo {
  public:
   ObjectInfo(Class* the_class, int index)
-      : the_class_(the_class), index_(index) { }
+      : the_class_(the_class), index_(index) {}
   Class* the_class() { return the_class_; }
   int index() { return index_; }
 
@@ -149,9 +146,9 @@ class ObjectInfo {
   int index_;
 };
 
-class ReaderVisitor: public PointerVisitor {
+class ReaderVisitor : public PointerVisitor {
  public:
-  explicit ReaderVisitor(SnapshotReader* reader) : reader_(reader) { }
+  explicit ReaderVisitor(SnapshotReader* reader) : reader_(reader) {}
 
   void Visit(Object** p) { *p = reader_->ReadObject(); }
 
@@ -159,13 +156,14 @@ class ReaderVisitor: public PointerVisitor {
     // Copy all HeapObject pointers in [start, end)
     for (Object** p = start; p < end; p++) *p = reader_->ReadObject();
   }
+
  private:
   SnapshotReader* reader_;
 };
 
-class WriterVisitor: public PointerVisitor {
+class WriterVisitor : public PointerVisitor {
  public:
-  explicit WriterVisitor(SnapshotWriter* writer) : writer_(writer) { }
+  explicit WriterVisitor(SnapshotWriter* writer) : writer_(writer) {}
 
   void Visit(Object** p) { writer_->WriteObject(*p); }
 
@@ -173,11 +171,12 @@ class WriterVisitor: public PointerVisitor {
     // Copy all HeapObject pointers in [start, end)
     for (Object** p = start; p < end; p++) writer_->WriteObject(*p);
   }
+
  private:
   SnapshotWriter* writer_;
 };
 
-class UnmarkSnapshotVisitor: public PointerVisitor {
+class UnmarkSnapshotVisitor : public PointerVisitor {
  public:
   void VisitBlock(Object** start, Object** end) {
     for (Object** p = start; p < end; p++) {
@@ -198,9 +197,9 @@ class UnmarkSnapshotVisitor: public PointerVisitor {
   }
 };
 
-class UnmarkVisitor: public PointerVisitor {
+class UnmarkVisitor : public PointerVisitor {
  public:
-  UnmarkVisitor() { }
+  UnmarkVisitor() {}
 
   void Visit(Object** p) { Unmark(*p); }
 
@@ -210,7 +209,7 @@ class UnmarkVisitor: public PointerVisitor {
   }
 
  private:
-  void Unmark(Object* object)  {
+  void Unmark(Object* object) {
     if (object->IsHeapObject()) {
       UnmarkSnapshotVisitor visitor;
       visitor.Unmark(HeapObject::cast(object));
@@ -291,8 +290,7 @@ Program* SnapshotReader::ReadProgram() {
   uint8* snapshot_version = new uint8[snapshot_version_length];
   ReadBytes(snapshot_version_length, snapshot_version);
   if ((version_length != snapshot_version_length) ||
-      (strncmp(version,
-               reinterpret_cast<char*>(snapshot_version),
+      (strncmp(version, reinterpret_cast<char*>(snapshot_version),
                snapshot_version_length) != 0)) {
     delete[] snapshot_version;
     Print::Error("Error: Snapshot and VM versions do not agree.\n");
@@ -450,12 +448,12 @@ Object* SnapshotReader::ReadObject() {
   object->set_class(reinterpret_cast<Class*>(ReadObject()));
   switch (type) {
     case InstanceFormat::ONE_BYTE_STRING_TYPE:
-      reinterpret_cast<OneByteString*>(object)->OneByteStringReadFrom(
-          this, elements);
+      reinterpret_cast<OneByteString*>(object)
+          ->OneByteStringReadFrom(this, elements);
       break;
     case InstanceFormat::TWO_BYTE_STRING_TYPE:
-      reinterpret_cast<TwoByteString*>(object)->TwoByteStringReadFrom(
-          this, elements);
+      reinterpret_cast<TwoByteString*>(object)
+          ->TwoByteStringReadFrom(this, elements);
       break;
     case InstanceFormat::ARRAY_TYPE:
       reinterpret_cast<Array*>(object)->ArrayReadFrom(this, elements);
@@ -711,18 +709,14 @@ void Class::ClassWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->Forward(this);
   // Body.
   int size = AllocationSize();
-  for (int offset = HeapObject::kSize;
-       offset < size;
-       offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
 }
 
 void Class::ClassReadFrom(SnapshotReader* reader) {
   int size = AllocationSize();
-  for (int offset = HeapObject::kSize;
-       offset < size;
-       offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
 }
@@ -733,8 +727,7 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, bytecode_size());
   writer->Forward(this);
   // Body.
-  for (int offset = HeapObject::kSize;
-       offset < Function::kSize;
+  for (int offset = HeapObject::kSize; offset < Function::kSize;
        offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
@@ -742,8 +735,7 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
 }
 
 void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
-  for (int offset = HeapObject::kSize;
-       offset < Function::kSize;
+  for (int offset = HeapObject::kSize; offset < Function::kSize;
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
@@ -780,16 +772,14 @@ void Initializer::InitializerWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::INITIALIZER_TYPE);
   writer->Forward(this);
   // Body.
-  for (int offset = HeapObject::kSize;
-       offset < Initializer::kSize;
+  for (int offset = HeapObject::kSize; offset < Initializer::kSize;
        offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
 }
 
 void Initializer::InitializerReadFrom(SnapshotReader* reader) {
-  for (int offset = HeapObject::kSize;
-       offset < Initializer::kSize;
+  for (int offset = HeapObject::kSize; offset < Initializer::kSize;
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }

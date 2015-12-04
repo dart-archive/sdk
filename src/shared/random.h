@@ -23,10 +23,9 @@ class RandomXorShift {
   // Starting at zero would make it fail, and starting with very few bits set
   // is also not good, so we guard against zero seeds.
   explicit RandomXorShift(uint32 seed)
-    : s0_(seed ^ 314159265)
-    , s1_(271828182) { }
+      : s0_(seed ^ 314159265), s1_(271828182) {}
 
-  RandomXorShift() : s0_(314159265), s1_(271828182) { }
+  RandomXorShift() : s0_(314159265), s1_(271828182) {}
 
   uint32 NextUInt32() {
     uint64 x = s0_;

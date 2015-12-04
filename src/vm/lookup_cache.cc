@@ -7,8 +7,7 @@
 namespace fletch {
 
 LookupCache::LookupCache()
-    : primary_(new Entry[kPrimarySize]),
-      secondary_(new Entry[kSecondarySize]) {
+    : primary_(new Entry[kPrimarySize]), secondary_(new Entry[kSecondarySize]) {
   Clear();
   // These asserts need to hold when running on the target, but they don't need
   // to hold on the host (the build machine, where the interpreter-generating

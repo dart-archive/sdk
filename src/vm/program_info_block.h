@@ -15,13 +15,9 @@ class ProgramInfoBlock {
   void PopulateFromProgram(Program* program);
   void WriteToProgram(Program* program);
 
-  Object** roots() {
-    return &entry_;
-  }
+  Object** roots() { return &entry_; }
 
-  void* end_of_roots() {
-    return &main_arity_;
-  }
+  void* end_of_roots() { return &main_arity_; }
 
   void set_main_arity(int arity) { main_arity_ = arity; }
   int main_arity() { return main_arity_; }

@@ -6,10 +6,8 @@
 
 namespace fletch {
 
-void Fletch::Setup() {
-}
+void Fletch::Setup() {}
 
-void Fletch::TearDown() {
-}
+void Fletch::TearDown() {}
 
 }  // namespace fletch

@@ -12,13 +12,9 @@
 
 namespace fletch {
 
-DriverConnection::DriverConnection(Socket* socket)
-    : socket_(socket) {
-}
+DriverConnection::DriverConnection(Socket* socket) : socket_(socket) {}
 
-DriverConnection::~DriverConnection() {
-  delete socket_;
-}
+DriverConnection::~DriverConnection() { delete socket_; }
 
 DriverConnection::Command DriverConnection::Receive() {
   incoming_.ClearBuffer();

@@ -62,15 +62,14 @@ List<uint8> Platform::LoadFile(const char* name) {
   // Open the file.
   FILE* file = fopen(name, "rb");
   if (file == NULL) {
-    Print::Error("Cannot open file '%s' for reading.\n%s.\n",
-        name, strerror(errno));
+    Print::Error("Cannot open file '%s' for reading.\n%s.\n", name,
+                 strerror(errno));
     return List<uint8>();
   }
 
   // Determine the size of the file.
   if (fseek(file, 0, SEEK_END) != 0) {
-    Print::Error("Cannot seek in file '%s'.\n%s.\n",
-        name, strerror(errno));
+    Print::Error("Cannot seek in file '%s'.\n%s.\n", name, strerror(errno));
     fclose(file);
     return List<uint8>();
   }
@@ -82,8 +81,8 @@ List<uint8> Platform::LoadFile(const char* name) {
   int result = fread(buffer, 1, size, file);
   fclose(file);
   if (result != size) {
-    Print::Error("Unable to read entire file '%s'.\n%s.\n",
-        name, strerror(errno));
+    Print::Error("Unable to read entire file '%s'.\n%s.\n", name,
+                 strerror(errno));
     return List<uint8>();
   }
   return List<uint8>(buffer, size);
@@ -93,16 +92,16 @@ bool Platform::StoreFile(const char* uri, List<uint8> bytes) {
   // Open the file.
   FILE* file = fopen(uri, "wb");
   if (file == NULL) {
-    Print::Error("Cannot open file '%s' for writing.\n%s.\n",
-        uri, strerror(errno));
+    Print::Error("Cannot open file '%s' for writing.\n%s.\n", uri,
+                 strerror(errno));
     return false;
   }
 
   int result = fwrite(bytes.data(), 1, bytes.length(), file);
   fclose(file);
   if (result != bytes.length()) {
-    Print::Error("Unable to write entire file '%s'.\n%s.\n",
-        uri, strerror(errno));
+    Print::Error("Unable to write entire file '%s'.\n%s.\n", uri,
+                 strerror(errno));
     return false;
   }
 
@@ -151,9 +150,7 @@ int Platform::GetTimeZoneOffset(int64_t seconds_since_epoch) {
   return succeeded ? static_cast<int>(decomposed.tm_gmtoff) : 0;
 }
 
-void Platform::Exit(int exit_code) {
-  exit(exit_code);
-}
+void Platform::Exit(int exit_code) { exit(exit_code); }
 
 void Platform::ScheduleAbort() {
   static bool failed = false;
@@ -161,32 +158,25 @@ void Platform::ScheduleAbort() {
   failed = true;
 }
 
-void Platform::ImmediateAbort() {
-  abort();
-}
+void Platform::ImmediateAbort() { abort(); }
 
-int Platform::GetPid() {
-  return static_cast<int>(getpid());
-}
+int Platform::GetPid() { return static_cast<int>(getpid()); }
 
-int Platform::MaxStackSizeInWords() {
-  return 128 * KB;
-}
+int Platform::MaxStackSizeInWords() { return 128 * KB; }
 
 // Constants used for mmap.
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;
 
 VirtualMemory::VirtualMemory(int size) : size_(size) {
-  void* result = mmap(reinterpret_cast<void*>(0xcafe0000), size, PROT_NONE,
-                      MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
-                      kMmapFd, kMmapFdOffset);
+  void* result =
+      mmap(reinterpret_cast<void*>(0xcafe0000), size, PROT_NONE,
+           MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, kMmapFd, kMmapFdOffset);
   address_ = reinterpret_cast<uword>(result);
 }
 
 VirtualMemory::~VirtualMemory() {
-  if (IsReserved() &&
-      munmap(reinterpret_cast<void*>(address()), size()) == 0) {
+  if (IsReserved() && munmap(reinterpret_cast<void*>(address()), size()) == 0) {
     address_ = reinterpret_cast<uword>(MAP_FAILED);
   }
 }
@@ -198,14 +188,14 @@ bool VirtualMemory::IsReserved() const {
 bool VirtualMemory::Commit(uword address, int size, bool executable) {
   int prot = PROT_READ | PROT_WRITE | (executable ? PROT_EXEC : 0);
   return mmap(reinterpret_cast<void*>(address), size, prot,
-              MAP_PRIVATE | MAP_ANON | MAP_FIXED,
-              kMmapFd, kMmapFdOffset) != MAP_FAILED;
+              MAP_PRIVATE | MAP_ANON | MAP_FIXED, kMmapFd,
+              kMmapFdOffset) != MAP_FAILED;
 }
 
 bool VirtualMemory::Uncommit(uword address, int size) {
   return mmap(reinterpret_cast<void*>(address), size, PROT_NONE,
-              MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
-              kMmapFd, kMmapFdOffset) != MAP_FAILED;
+              MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, kMmapFd,
+              kMmapFdOffset) != MAP_FAILED;
 }
 
 }  // namespace fletch

@@ -34,95 +34,95 @@ class Monitor;
 
 // Interface to the underlying platform.
 namespace Platform {
-  enum OperatingSystem {
-    kUnknownOS = 0,
-    kLinux     = 1,
-    kMacOS     = 2,
-    kAndroid   = 3,
-  };
+enum OperatingSystem {
+  kUnknownOS = 0,
+  kLinux = 1,
+  kMacOS = 2,
+  kAndroid = 3,
+};
 
-  enum Architecture {
-    kUnknownArch = 0,
-    kIA32        = 1,
-    kX64         = 2,
-    kARM         = 3,
-  };
+enum Architecture {
+  kUnknownArch = 0,
+  kIA32 = 1,
+  kX64 = 2,
+  kARM = 3,
+};
 
-  // Initialize the Platform class.
-  void Setup();
+// Initialize the Platform class.
+void Setup();
 
-  // Set thread in thread local storage.
-  void SetCurrentThread(Thread* thread);
+// Set thread in thread local storage.
+void SetCurrentThread(Thread* thread);
 
-  // Get thread from thread local storage.
-  Thread* GetCurrentThread();
+// Get thread from thread local storage.
+Thread* GetCurrentThread();
 
-  // Factory method for creating platform dependent Mutex.
-  // Use delete to reclaim the storage for the returned Mutex.
-  Mutex* CreateMutex();
+// Factory method for creating platform dependent Mutex.
+// Use delete to reclaim the storage for the returned Mutex.
+Mutex* CreateMutex();
 
-  // Use delete to reclaim the storage for the returned Monitor.
-  Monitor* CreateMonitor();
+// Use delete to reclaim the storage for the returned Monitor.
+Monitor* CreateMonitor();
 
-  // Returns the number of microseconds since epoch.
-  uint64 GetMicroseconds();
+// Returns the number of microseconds since epoch.
+uint64 GetMicroseconds();
 
-  // Returns the number of microseconds since this process got started.
-  uint64 GetProcessMicroseconds();
+// Returns the number of microseconds since this process got started.
+uint64 GetProcessMicroseconds();
 
-  // Returns the number of available hardware threads.
-  int GetNumberOfHardwareThreads();
+// Returns the number of available hardware threads.
+int GetNumberOfHardwareThreads();
 
-  // Load file at 'uri'.
-  List<uint8> LoadFile(const char* name);
+// Load file at 'uri'.
+List<uint8> LoadFile(const char* name);
 
-  // Store file at 'uri'.
-  bool StoreFile(const char* uri, List<uint8> bytes);
+// Store file at 'uri'.
+bool StoreFile(const char* uri, List<uint8> bytes);
 
-  // Write text to file, append if the bool append is true.
-  bool WriteText(const char* uri, const char* text, bool append);
+// Write text to file, append if the bool append is true.
+bool WriteText(const char* uri, const char* text, bool append);
 
-  const char* GetTimeZoneName(int64_t seconds_since_epoch);
+const char* GetTimeZoneName(int64_t seconds_since_epoch);
 
-  int GetTimeZoneOffset(int64_t seconds_since_epoch);
+int GetTimeZoneOffset(int64_t seconds_since_epoch);
 
-  int GetLocalTimeZoneOffset();
+int GetLocalTimeZoneOffset();
 
-  void Exit(int exit_code);
+void Exit(int exit_code);
 
-  void ScheduleAbort();
+void ScheduleAbort();
 
-  void ImmediateAbort();
+void ImmediateAbort();
 
-  int GetPid();
+int GetPid();
 
-  // Platform dependent max Dart stack size.
-  // TODO(ager): Make this configurable through the embedding API?
-  int MaxStackSizeInWords();
+// Platform dependent max Dart stack size.
+// TODO(ager): Make this configurable through the embedding API?
+int MaxStackSizeInWords();
 
-  inline OperatingSystem OS() {
+inline OperatingSystem OS() {
 #if defined(__ANDROID__)
-    return kAndroid;
+  return kAndroid;
 #elif defined(__linux__)
-    return kLinux;
+  return kLinux;
 #elif defined(__APPLE__)
-    return kMacOS;
+  return kMacOS;
 #else
-    return kUnknownOS;
+  return kUnknownOS;
 #endif
-  }
+}
 
-  inline Architecture Arch() {
+inline Architecture Arch() {
 #if defined(FLETCH_TARGET_IA32)
-    return kIA32;
+  return kIA32;
 #elif defined(FLETCH_TARGET_X64)
-    return kX64;
+  return kX64;
 #elif defined(FLETCH_TARGET_ARM)
-    return kARM;
+  return kARM;
 #else
-    return kUnknownArch;
+  return kUnknownArch;
 #endif
-  }
+}
 }  // namespace Platform
 
 // Interface for manipulating virtual memory.
@@ -187,6 +187,7 @@ class ScopedLock {
  public:
   explicit ScopedLock(Mutex* mutex) : mutex_(mutex) { mutex_->Lock(); }
   ~ScopedLock() { mutex_->Unlock(); }
+
  private:
   Mutex* const mutex_;
   DISALLOW_COPY_AND_ASSIGN(ScopedLock);
@@ -236,15 +237,10 @@ class ScopedMonitorUnlock {
   DISALLOW_COPY_AND_ASSIGN(ScopedMonitorUnlock);
 };
 
-inline Mutex* Platform::CreateMutex() {
-  return new Mutex();
-}
+inline Mutex* Platform::CreateMutex() { return new Mutex(); }
 
-inline Monitor* Platform::CreateMonitor() {
-  return new Monitor();
-}
+inline Monitor* Platform::CreateMonitor() { return new Monitor(); }
 
 }  // namespace fletch
-
 
 #endif  // SRC_SHARED_PLATFORM_H_

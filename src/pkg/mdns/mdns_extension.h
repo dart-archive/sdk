@@ -9,10 +9,7 @@
 #include "include/dart_native_api.h"
 
 // Requests Ids. This should be aligned with the Dart code.
-enum RequestType {
-  kEchoRequest = 0,
-  kLookupRequest = 1
-};
+enum RequestType { kEchoRequest = 0, kLookupRequest = 1 };
 
 void HandleEcho(Dart_Port reply_port, Dart_CObject* argument);
 void HandleLookup(Dart_Port port_id, int type, char* fullname, int timeout);

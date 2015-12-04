@@ -17,68 +17,72 @@
 #include "src/shared/globals.h"
 
 #ifdef DEBUG
-#define CHECK_AND_RETURN(expr) {                                               \
-  int status = expr;                                                           \
-  if (status != osOK) {                                                        \
-    char const *msg;                                                           \
-    switch (status) {                                                          \
-      case osErrorISR:                                                         \
-        msg = "osErrorISR";                                                    \
-        break;                                                                 \
-      case osErrorResource:                                                    \
-        msg = "osErrorResource";                                               \
-        break;                                                                 \
-      case osErrorParameter:                                                   \
-        msg = "osErrorParameter";                                              \
-        break;                                                                 \
-      case osErrorTimeoutResource:                                             \
-        msg = "osErrorTimeoutResource";                                        \
-        break;                                                                 \
-      default:                                                                 \
-        msg = "<other>";                                                       \
-    }                                                                          \
-    printf("System call failed: %s at %s:%d.\n", msg, __FILE__, __LINE__);     \
-    fflush(stdout);                                                            \
-    return status;                                                             \
-  }                                                                            \
-}
+#define CHECK_AND_RETURN(expr)                                               \
+  {                                                                          \
+    int status = expr;                                                       \
+    if (status != osOK) {                                                    \
+      char const *msg;                                                       \
+      switch (status) {                                                      \
+        case osErrorISR:                                                     \
+          msg = "osErrorISR";                                                \
+          break;                                                             \
+        case osErrorResource:                                                \
+          msg = "osErrorResource";                                           \
+          break;                                                             \
+        case osErrorParameter:                                               \
+          msg = "osErrorParameter";                                          \
+          break;                                                             \
+        case osErrorTimeoutResource:                                         \
+          msg = "osErrorTimeoutResource";                                    \
+          break;                                                             \
+        default:                                                             \
+          msg = "<other>";                                                   \
+      }                                                                      \
+      printf("System call failed: %s at %s:%d.\n", msg, __FILE__, __LINE__); \
+      fflush(stdout);                                                        \
+      return status;                                                         \
+    }                                                                        \
+  }
 
-#define CHECK_AND_FAIL(expr) {                                                 \
-  int status = expr;                                                           \
-  if (status != osOK) {                                                        \
-    char const *msg;                                                           \
-    switch (status) {                                                          \
-      case osErrorISR:                                                         \
-        msg = "osErrorISR";                                                    \
-        break;                                                                 \
-      case osErrorResource:                                                    \
-        msg = "osErrorResource";                                               \
-        break;                                                                 \
-      case osErrorParameter:                                                   \
-        msg = "osErrorParameter";                                              \
-        break;                                                                 \
-      case osErrorTimeoutResource:                                             \
-        msg = "osErrorTimeoutResource";                                        \
-        break;                                                                 \
-      default:                                                                 \
-        msg = "<other>";                                                       \
-    }                                                                          \
-    printf("System call failed: %s at %s:%d.\n", msg, __FILE__, __LINE__);     \
-    fflush(stdout);                                                            \
-    abort();                                                                   \
-  }                                                                            \
-}
+#define CHECK_AND_FAIL(expr)                                                 \
+  {                                                                          \
+    int status = expr;                                                       \
+    if (status != osOK) {                                                    \
+      char const *msg;                                                       \
+      switch (status) {                                                      \
+        case osErrorISR:                                                     \
+          msg = "osErrorISR";                                                \
+          break;                                                             \
+        case osErrorResource:                                                \
+          msg = "osErrorResource";                                           \
+          break;                                                             \
+        case osErrorParameter:                                               \
+          msg = "osErrorParameter";                                          \
+          break;                                                             \
+        case osErrorTimeoutResource:                                         \
+          msg = "osErrorTimeoutResource";                                    \
+          break;                                                             \
+        default:                                                             \
+          msg = "<other>";                                                   \
+      }                                                                      \
+      printf("System call failed: %s at %s:%d.\n", msg, __FILE__, __LINE__); \
+      fflush(stdout);                                                        \
+      abort();                                                               \
+    }                                                                        \
+  }
 #else
-#define CHECK_AND_RETURN(expr) {                                               \
-  int status = expr;                                                           \
-  if (status != osOK) return status;                                           \
-}
-#define CHECK_AND_FAIL(expr) {                                                 \
-  int status = expr;                                                           \
-  if (status != osOK) {                                                        \
-    FATAL("System call failed.\n");                                            \
-  }                                                                            \
-}
+#define CHECK_AND_RETURN(expr)         \
+  {                                    \
+    int status = expr;                 \
+    if (status != osOK) return status; \
+  }
+#define CHECK_AND_FAIL(expr)          \
+  {                                   \
+    int status = expr;                \
+    if (status != osOK) {             \
+      FATAL("System call failed.\n"); \
+    }                                 \
+  }
 #endif
 
 namespace fletch {
@@ -89,7 +93,7 @@ static const int kMaxSemaphoreValue = 1024;
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
-  uint64 GetMicroseconds();
+uint64 GetMicroseconds();
 }  // namespace Platform
 
 class MutexImpl {

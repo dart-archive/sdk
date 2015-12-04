@@ -27,7 +27,7 @@ const int kBreakPointExitCode = 0;
 
 class ProcessVisitor {
  public:
-  virtual ~ProcessVisitor() { }
+  virtual ~ProcessVisitor() {}
 
   virtual void VisitProcess(Process* process) = 0;
 };
@@ -138,8 +138,7 @@ class Scheduler {
   void ClearCurrentProcessForThread(int thread_id, Process* process);
   // Interpret [process] as thread [thread] with id [thread_id]. Returns the
   // next Process that should be run on this thraed.
-  Process* InterpretProcess(Process* process,
-                            Heap* immutable_heap,
+  Process* InterpretProcess(Process* process, Heap* immutable_heap,
                             ThreadState* thread_state,
                             bool* allocation_failure);
   void ThreadEnter(ThreadState* thread_state);
@@ -172,14 +171,11 @@ class Scheduler {
 
 class StoppedGcThreadScope {
  public:
-  explicit StoppedGcThreadScope(Scheduler* scheduler)
-      : scheduler_(scheduler) {
+  explicit StoppedGcThreadScope(Scheduler* scheduler) : scheduler_(scheduler) {
     scheduler->PauseGcThread();
   }
 
-  ~StoppedGcThreadScope() {
-    scheduler_->ResumeGcThread();
-  }
+  ~StoppedGcThreadScope() { scheduler_->ResumeGcThread(); }
 
  private:
   Scheduler* scheduler_;

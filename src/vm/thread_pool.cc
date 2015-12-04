@@ -12,12 +12,9 @@ ThreadPool::ThreadPool(int max_threads)
       max_threads_(max_threads),
       threads_(0),
       thread_info_(NULL),
-      started_(false) {
-}
+      started_(false) {}
 
-ThreadPool::~ThreadPool() {
-  delete monitor_;
-}
+ThreadPool::~ThreadPool() { delete monitor_; }
 
 struct ThreadInfo {
   ThreadPool* thread_pool;

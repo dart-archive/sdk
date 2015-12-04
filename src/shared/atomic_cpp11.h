@@ -13,7 +13,8 @@
 
 namespace fletch {
 
-template <typename T> using Atomic = std::atomic<T>;
+template <typename T>
+using Atomic = std::atomic<T>;
 
 static const std::memory_order kRelaxed = std::memory_order_relaxed;
 static const std::memory_order kConsume = std::memory_order_consume;

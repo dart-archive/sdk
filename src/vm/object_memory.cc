@@ -79,13 +79,9 @@ void Space::AdjustAllocationBudget(int used_outside_space) {
   allocation_budget_ = Utils::Maximum(DefaultChunkSize(used), used);
 }
 
-void Space::IncreaseAllocationBudget(int size) {
-  allocation_budget_ += size;
-}
+void Space::IncreaseAllocationBudget(int size) { allocation_budget_ += size; }
 
-void Space::DecreaseAllocationBudget(int size) {
-  allocation_budget_ -= size;
-}
+void Space::DecreaseAllocationBudget(int size) { allocation_budget_ -= size; }
 
 void Space::SetAllocationBudget(int new_budget) {
   allocation_budget_ = new_budget;
@@ -327,9 +323,7 @@ void ObjectMemory::FreeChunk(Chunk* chunk) {
 
 bool ObjectMemory::IsAddressInSpace(uword address, const Space* space) {
   PageTable* table = GetPageTable(address);
-  return (table != NULL)
-      ? table->Get((address >> 12) & 0x3ff) == space
-      : false;
+  return (table != NULL) ? table->Get((address >> 12) & 0x3ff) == space : false;
 }
 
 PageTable* ObjectMemory::GetPageTable(uword address) {

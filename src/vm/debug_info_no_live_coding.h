@@ -27,10 +27,8 @@ class DebugInfo {
     return false;
   }
 
-  int SetBreakpoint(Function* function,
-                    int bytecode_index,
-                    bool one_shot = false,
-                    Coroutine* coroutine = NULL,
+  int SetBreakpoint(Function* function, int bytecode_index,
+                    bool one_shot = false, Coroutine* coroutine = NULL,
                     word stack_height = 0) {
     UNIMPLEMENTED();
     return 0;
@@ -41,30 +39,20 @@ class DebugInfo {
     return false;
   }
 
-  void set_is_stepping(bool value) {
-    UNIMPLEMENTED();
-  }
+  void set_is_stepping(bool value) { UNIMPLEMENTED(); }
 
   bool is_at_breakpoint() const {
     UNIMPLEMENTED();
     return false;
   }
 
-  void clear_current_breakpoint() {
-    UNIMPLEMENTED();
-  }
+  void clear_current_breakpoint() { UNIMPLEMENTED(); }
 
-  void VisitPointers(PointerVisitor* visitor) {
-    UNIMPLEMENTED();
-  }
+  void VisitPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 
-  void VisitProgramPointers(PointerVisitor* visitor) {
-    UNIMPLEMENTED();
-  }
+  void VisitProgramPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 
-  void UpdateBreakpoints() {
-    UNIMPLEMENTED();
-  }
+  void UpdateBreakpoints() { UNIMPLEMENTED(); }
 };
 
 }  // namespace fletch

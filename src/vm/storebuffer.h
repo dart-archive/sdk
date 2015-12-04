@@ -26,7 +26,10 @@ class StoreBufferChunk {
   void IterateObjects(HeapObjectVisitor* visitor);
 
   StoreBufferChunk* next() { return next_; }
-  void set_next(StoreBufferChunk* next) { ASSERT(next_ == NULL); next_ = next; }
+  void set_next(StoreBufferChunk* next) {
+    ASSERT(next_ == NULL);
+    next_ = next;
+  }
 
   bool is_empty() const { return pos_ == 0; }
 
@@ -96,14 +99,11 @@ class StoreBuffer {
 
   bool is_empty() const {
     if (number_of_chunks_ == 0) return true;
-    return number_of_chunks_ == 1 &&
-           current_chunk_->is_empty();
+    return number_of_chunks_ == 1 && current_chunk_->is_empty();
   }
 
   // The number of bytes used by the storebuffer at the moment.
-  int Used() const {
-    return number_of_chunks_ * sizeof(StoreBufferChunk);
-  }
+  int Used() const { return number_of_chunks_ * sizeof(StoreBufferChunk); }
 
  private:
   StoreBufferChunk* TakeChunks() {
@@ -122,7 +122,7 @@ class StoreBuffer {
 };
 
 // Records pointers to an immutable space.
-class FindImmutablePointerVisitor: public PointerVisitor {
+class FindImmutablePointerVisitor : public PointerVisitor {
  public:
   FindImmutablePointerVisitor(Space* mutable_space, Space* program_space)
       : mutable_space_(mutable_space),
@@ -173,13 +173,13 @@ class StoreBuffer {
   int Used() const { return 0; }
 };
 
-class FindImmutablePointerVisitor: public PointerVisitor {
+class FindImmutablePointerVisitor : public PointerVisitor {
  public:
-  FindImmutablePointerVisitor(Space* mutable_space, Space* program_space) { }
+  FindImmutablePointerVisitor(Space* mutable_space, Space* program_space) {}
 
   bool ContainsImmutablePointer(HeapObject* object) { return false; }
 
-  virtual void VisitBlock(Object** start, Object** end) { }
+  virtual void VisitBlock(Object** start, Object** end) {}
 };
 
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS

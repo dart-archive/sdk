@@ -15,6 +15,7 @@ class LogPrintInterceptor : public PrintInterceptor {
   virtual ~LogPrintInterceptor() {}
   virtual void Out(char* message);
   virtual void Error(char* message);
+
  private:
   const char* logPath_;
 };

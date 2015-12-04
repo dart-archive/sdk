@@ -69,7 +69,7 @@ TEST_CASE(PRIORITY_HEAP_WITH_INDEX__DELETE_BY_VALUES) {
 
   for (word i = 0; i < kSize; i++) {
     // Jump over the removed [i]s in the loop.
-    if (i != 0 && i != 5 && i != (kSize -1)) {
+    if (i != 0 && i != 5 && i != (kSize - 1)) {
       EXPECT(!heap.IsEmpty());
       EXPECT_EQ(i, heap.Minimum().priority);
       EXPECT_EQ(10 + i, heap.Minimum().value);

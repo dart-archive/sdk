@@ -27,8 +27,7 @@ class PrintInterceptorImpl : public PrintInterceptor {
  public:
   typedef void (*PrintFunction)(const char* message, int out, void* data);
 
-  PrintInterceptorImpl(PrintFunction fn, void* data)
-      : fn_(fn), data_(data) {}
+  PrintInterceptorImpl(PrintFunction fn, void* data) : fn_(fn), data_(data) {}
 
   virtual void Out(char* message) { fn_(message, 2, data_); }
   virtual void Error(char* message) { fn_(message, 3, data_); }
@@ -58,9 +57,7 @@ static void EnqueueProgramInScheduler(Program* program, Scheduler* scheduler) {
   scheduler->ScheduleProgram(program, process);
 }
 
-static int RunScheduler(Scheduler* scheduler) {
-  return scheduler->Run();
-}
+static int RunScheduler(Scheduler* scheduler) { return scheduler->Run(); }
 
 static int RunProgram(Program* program) {
   Scheduler scheduler;
@@ -97,13 +94,9 @@ static void WaitForDebuggerConnection(int port) {
 }
 }  // namespace fletch
 
-void FletchSetup() {
-  fletch::Fletch::Setup();
-}
+void FletchSetup() { fletch::Fletch::Setup(); }
 
-void FletchTearDown() {
-  fletch::Fletch::TearDown();
-}
+void FletchTearDown() { fletch::Fletch::TearDown(); }
 
 void FletchWaitForDebuggerConnection(int port) {
   fletch::WaitForDebuggerConnection(port);

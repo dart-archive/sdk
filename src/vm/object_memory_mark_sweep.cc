@@ -71,9 +71,10 @@ void Space::SetAllocationPointForPrepend(Space* space) {
 uword Space::AllocateInNewChunk(int size, bool fatal) {
   // Allocate new chunk that is big enough to fit the object.
   int default_chunk_size = DefaultChunkSize(Used());
-  int chunk_size = (size >= default_chunk_size)
-      ? (size + kPointerSize)  // Make sure there is room for sentinel.
-      : default_chunk_size;
+  int chunk_size =
+      (size >= default_chunk_size)
+          ? (size + kPointerSize)  // Make sure there is room for sentinel.
+          : default_chunk_size;
 
   Chunk* chunk = ObjectMemory::AllocateChunk(this, chunk_size);
   if (chunk != NULL) {
@@ -160,9 +161,7 @@ void Space::TryDealloc(uword location, int size) {
   }
 }
 
-int Space::Used() {
-  return used_;
-}
+int Space::Used() { return used_; }
 
 void Space::RebuildFreeListAfterTransformations() {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {

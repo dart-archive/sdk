@@ -8,9 +8,9 @@
 namespace fletch {
 
 ExitReference::ExitReference(Process* exiting_process, Object* message)
-      : mutable_heap_(NULL, reinterpret_cast<WeakPointer*>(NULL)),
-        store_buffer_(true),
-        message_(message) {
+    : mutable_heap_(NULL, reinterpret_cast<WeakPointer*>(NULL)),
+      store_buffer_(true),
+      message_(message) {
   mutable_heap_.MergeInOtherHeap(exiting_process->heap());
   store_buffer_.Prepend(exiting_process->store_buffer());
 }
@@ -53,13 +53,10 @@ void MessageMailbox::EnqueueLargeInteger(Port* port, int64 value) {
   EnqueueEntry(new Message(port, value, 0, Message::LARGE_INTEGER));
 }
 
-void MessageMailbox::EnqueueForeign(Port* port,
-                                    void* foreign,
-                                    int size,
+void MessageMailbox::EnqueueForeign(Port* port, void* foreign, int size,
                                     bool finalized) {
-  Message::Kind kind = finalized
-      ? Message::FOREIGN_FINALIZED
-      : Message::FOREIGN;
+  Message::Kind kind =
+      finalized ? Message::FOREIGN_FINALIZED : Message::FOREIGN;
   uint64 address = reinterpret_cast<uint64>(foreign);
   Message* entry = new Message(port, address, size, kind);
   EnqueueEntry(entry);
@@ -91,9 +88,7 @@ void MessageMailbox::MergeAllChildHeaps(Process* destination_process) {
 
 void MessageMailbox::MergeAllChildHeapsFromQueue(Message* queue,
                                                  Process* destination_process) {
-  for (Message* current = queue;
-       current != NULL;
-       current = current->next()) {
+  for (Message* current = queue; current != NULL; current = current->next()) {
     if (current->kind() == Message::EXIT) {
       current->MergeChildHeaps(destination_process);
     }

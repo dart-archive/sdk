@@ -8,9 +8,7 @@
 
 namespace fletch {
 
-bool Socket::ShouldRetryAccept(int error) {
-  return false;
-}
+bool Socket::ShouldRetryAccept(int error) { return false; }
 
 }  // namespace fletch
 

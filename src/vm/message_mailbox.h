@@ -24,9 +24,7 @@ class ExitReference {
 
   Object* message() const { return message_; }
 
-  void VisitPointers(PointerVisitor* visitor) {
-    visitor->Visit(&message_);
-  }
+  void VisitPointers(PointerVisitor* visitor) { visitor->Visit(&message_); }
 
   Heap* mutable_heap() { return &mutable_heap_; }
 
@@ -96,8 +94,8 @@ class Message : public MailboxMessage<Message> {
  private:
   Port* port_;
   uint64 value_;
-  class KindField: public BitField<Kind, 0, 3> { };
-  class SizeField: public BitField<int, 3, 32 - 3> { };
+  class KindField : public BitField<Kind, 0, 3> {};
+  class SizeField : public BitField<int, 3, 32 - 3> {};
   const int32 kind_and_size_;
 };
 
@@ -116,6 +114,5 @@ class MessageMailbox : public Mailbox<Message> {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_MESSAGE_MAILBOX_H_

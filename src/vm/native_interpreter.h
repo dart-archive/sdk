@@ -16,8 +16,8 @@ class TargetYieldResult;
 // generated as the native interpreter entry point. The native
 // interpreter can bailout to the slower C++ interpreter by returning
 // -1.
-extern "C"
-int InterpretFast(Process* process, TargetYieldResult* target_yield_result);
+extern "C" int InterpretFast(Process* process,
+                             TargetYieldResult* target_yield_result);
 
 #else
 

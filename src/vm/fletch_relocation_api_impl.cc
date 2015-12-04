@@ -16,8 +16,7 @@ size_t FletchGetProgramSize(FletchProgram program) {
 int FletchRelocateProgram(FletchProgram program, void* target, uintptr_t base) {
   if (base % fletch::kPageSize != 0) return -1;
   fletch::Program* fletch_program = reinterpret_cast<fletch::Program*>(program);
-  fletch::ProgramHeapRelocator relocator(fletch_program,
-                                         reinterpret_cast<uint8*>(target),
-                                         base);
+  fletch::ProgramHeapRelocator relocator(
+      fletch_program, reinterpret_cast<uint8*>(target), base);
   return relocator.Relocate();
 }

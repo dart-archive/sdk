@@ -13,7 +13,7 @@ namespace fletch {
 
 extern uint8* DoubleSize(size_t capacity, uint8* backing);
 
-template<typename T>
+template <typename T>
 class Vector {
  public:
   typedef T ValueType;
@@ -22,13 +22,11 @@ class Vector {
   typedef size_t SizeType;
 
   Vector()
-      : backing_(reinterpret_cast<T*>(new uint8[kInitialCapacity * sizeof(T)]))
-      , size_(0)
-      , capacity_(kInitialCapacity) { }
+      : backing_(reinterpret_cast<T*>(new uint8[kInitialCapacity * sizeof(T)])),
+        size_(0),
+        capacity_(kInitialCapacity) {}
 
-  ~Vector() {
-    delete[] backing_;
-  }
+  ~Vector() { delete[] backing_; }
 
   Reference operator[](SizeType index) { return At(index); }
 
@@ -68,8 +66,8 @@ class Vector {
     fletch::Sort<T>(backing_ + start, end, compare);
   }
 
-  void Sort(typename SortType<T>::PointerCompare compare,
-            size_t start, size_t end) {
+  void Sort(typename SortType<T>::PointerCompare compare, size_t start,
+            size_t end) {
     fletch::Sort<T>(backing_ + start, end, compare);
   }
 
@@ -79,7 +77,8 @@ class Vector {
     other.backing_ = t;
     SizeType t2 = size_;
     size_ = other.size_;
-    other.size_ = t2; t2 = capacity_;
+    other.size_ = t2;
+    t2 = capacity_;
     capacity_ = other.capacity_;
     other.capacity_ = t2;
   }

@@ -20,12 +20,12 @@ namespace fletch {
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
-  uint64 GetMicroseconds();
+uint64 GetMicroseconds();
 }  // namespace Platform
 
 class MutexImpl {
  public:
-  MutexImpl() { pthread_mutex_init(&mutex_, NULL);  }
+  MutexImpl() { pthread_mutex_init(&mutex_, NULL); }
   ~MutexImpl() { pthread_mutex_destroy(&mutex_); }
 
   int Lock() { return pthread_mutex_lock(&mutex_); }
@@ -69,8 +69,8 @@ class MonitorImpl {
   int NotifyAll() { return pthread_cond_broadcast(&cond_); }
 
  private:
-  pthread_mutex_t mutex_;   // Pthread mutex for POSIX platforms.
-  pthread_cond_t cond_;   // Pthread condition for POSIX platforms.
+  pthread_mutex_t mutex_;  // Pthread mutex for POSIX platforms.
+  pthread_cond_t cond_;    // Pthread condition for POSIX platforms.
 };
 
 }  // namespace fletch

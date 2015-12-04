@@ -14,10 +14,9 @@ namespace fletch {
 
 class ThreadState;
 
-
 class ProcessQueue {
  public:
-  ProcessQueue() : head_(NULL), tail_(NULL) { }
+  ProcessQueue() : head_(NULL), tail_(NULL) {}
 
   // Try to enqueue [entry].
   // Returns false if it was not possible to modify the queue. The operation

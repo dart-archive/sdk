@@ -265,9 +265,8 @@ int Scheduler::Run() {
   int thread_index = 0;
   uint64 next_preempt = GetNextPreemptTime();
   // If profile is disabled, next_preempt will always be less than next_profile.
-  uint64 next_profile = kProfile
-      ? Platform::GetMicroseconds() + kProfileIntervalUs
-      : UINT64_MAX;
+  uint64 next_profile =
+      kProfile ? Platform::GetMicroseconds() + kProfileIntervalUs : UINT64_MAX;
   uint64 next_timeout = Utils::Minimum(next_preempt, next_profile);
   while (processes_ > 0) {
     // If we didn't time out, we were interrupted. In that case, continue.
@@ -299,12 +298,16 @@ int Scheduler::Run() {
   gc_thread_->StopThread();
 
   switch (last_process_exit_.load()) {
-    case Signal::kTerminated: return 0;
-    case Signal::kCompileTimeError: return kCompileTimeErrorExitCode;
-    case Signal::kUncaughtException: return kUncaughtExceptionExitCode;
+    case Signal::kTerminated:
+      return 0;
+    case Signal::kCompileTimeError:
+      return kCompileTimeErrorExitCode;
+    case Signal::kUncaughtException:
+      return kUncaughtExceptionExitCode;
     // TODO(kustermann): We should consider returning a different exitcode if a
     // process was killed via a signal.
-    case Signal::kUnhandledSignal: return kUncaughtExceptionExitCode;
+    case Signal::kUnhandledSignal:
+      return kUncaughtExceptionExitCode;
   }
   UNREACHABLE();
   return 0;
@@ -343,9 +346,7 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
     bool using_snapshots = program->was_loaded_from_snapshot();
     bool is_compact = program->is_compact();
 
-    if (using_snapshots &&
-        is_compact &&
-        exception->IsInstance() &&
+    if (using_snapshots && is_compact && exception->IsInstance() &&
         Instance::cast(exception)->get_class() == nsm_class) {
       Instance* nsm_exception = Instance::cast(exception);
       Object* klass_obj = nsm_exception->GetInstanceField(1);
@@ -374,8 +375,8 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
         Frame frame(stack);
         while (frame.MovePrevious()) {
           Function* function = frame.FunctionFromByteCodePointer();
-          Print::Out("Frame % 2d: Function(%ld)\n",
-              index, program->OffsetOf(function));
+          Print::Out("Frame % 2d: Function(%ld)\n", index,
+                     program->OffsetOf(function));
           index++;
         }
 
@@ -417,8 +418,7 @@ void Scheduler::ExitWith(Process* process, int exit_code, Signal::Kind kind) {
   if (processes_ == 0) NotifyAllThreads();
 }
 
-void Scheduler::RescheduleProcess(Process* process,
-                                  ThreadState* state,
+void Scheduler::RescheduleProcess(Process* process, ThreadState* state,
                                   bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
@@ -437,12 +437,12 @@ void Scheduler::PreemptThreadProcess(int thread_id) {
       break;
     } else if (process == NULL) {
       if (current_processes_[thread_id].compare_exchange_strong(
-          process, kPreemptMarker)) {
+              process, kPreemptMarker)) {
         break;
       }
     } else {
-      if (current_processes_[thread_id].compare_exchange_strong(
-          process, NULL)) {
+      if (current_processes_[thread_id].compare_exchange_strong(process,
+                                                                NULL)) {
         process->Preempt();
         current_processes_[thread_id] = process;
         break;
@@ -475,7 +475,8 @@ void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
   if (thread_count_ == 0 || thread_state == NULL) {
     // No running threads, use the startup_queue_.
     bool was_empty;
-    while (!startup_queue_->TryEnqueue(process, &was_empty)) { }
+    while (!startup_queue_->TryEnqueue(process, &was_empty)) {
+    }
   } else {
     int thread_id = thread_count_ - 1;
     if (thread_state != NULL) {
@@ -486,7 +487,8 @@ void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
   }
 
   // Start a worker thread, if less than [processes_] threads are running.
-  while (!thread_pool_.TryStartThread(RunThread, this, processes_)) { }
+  while (!thread_pool_.TryStartThread(RunThread, this, processes_)) {
+  }
 }
 
 void Scheduler::PushIdleThread(ThreadState* thread_state) {
@@ -566,10 +568,8 @@ void Scheduler::RunInThread() {
 
     // Sleep until there is something new to execute.
     ScopedMonitorLock scoped_lock(thread_state->idle_monitor());
-    while (thread_state->queue()->is_empty() &&
-           startup_queue_->is_empty() &&
-           !pause_ &&
-           processes_ > 0) {
+    while (thread_state->queue()->is_empty() && startup_queue_->is_empty() &&
+           !pause_ && processes_ > 0) {
       PushIdleThread(thread_state);
       // The thread is becoming idle.
       thread_state->idle_monitor()->Wait();
@@ -612,8 +612,7 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
       // allocation failure.
       bool allocation_failure = false;
       Process* new_process = InterpretProcess(
-          process, shared_heap_part->heap(), thread_state,
-          &allocation_failure);
+          process, shared_heap_part->heap(), thread_state, &allocation_failure);
       if (allocation_failure) {
         if (shared_heap->ReleasePart(shared_heap_part)) {
           gc_thread_->TriggerImmutableGC(program);
@@ -628,8 +627,7 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
 
   // Always merge remaining immutable heap part back before (possibly) going
   // to sleep.
-  if (shared_heap != NULL &&
-      shared_heap->ReleasePart(shared_heap_part)) {
+  if (shared_heap != NULL && shared_heap->ReleasePart(shared_heap_part)) {
     gc_thread_->TriggerImmutableGC(program);
   }
 }
@@ -692,8 +690,7 @@ void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {
   }
 }
 
-Process* Scheduler::InterpretProcess(Process* process,
-                                     Heap* shared_heap,
+Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
                                      ThreadState* thread_state,
                                      bool* allocation_failure) {
   ASSERT(process->exception()->IsNull());
@@ -703,8 +700,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     process->ChangeState(Process::kRunning, Process::kTerminated);
 
     Session* session = process->program()->session();
-    if (session == NULL ||
-        !session->is_debugging() ||
+    if (session == NULL || !session->is_debugging() ||
         !session->UncaughtSignal(process)) {
       ExitAtTermination(process, Signal::kUnhandledSignal);
     }
@@ -792,8 +788,7 @@ Process* Scheduler::InterpretProcess(Process* process,
   if (interpreter.IsTerminated()) {
     process->ChangeState(Process::kRunning, Process::kTerminated);
     Session* session = process->program()->session();
-    if (session == NULL ||
-        !session->is_debugging() ||
+    if (session == NULL || !session->is_debugging() ||
         !session->ProcessTerminated(process)) {
       ExitAtTermination(process, Signal::kTerminated);
     }
@@ -803,8 +798,7 @@ Process* Scheduler::InterpretProcess(Process* process,
   if (interpreter.IsUncaughtException()) {
     process->ChangeState(Process::kRunning, Process::kUncaughtException);
     Session* session = process->program()->session();
-    if (session == NULL ||
-        !session->is_debugging() ||
+    if (session == NULL || !session->is_debugging() ||
         !session->UncaughtException(process)) {
       ExitAtUncaughtException(process, true);
     }
@@ -814,8 +808,7 @@ Process* Scheduler::InterpretProcess(Process* process,
   if (interpreter.IsCompileTimeError()) {
     process->ChangeState(Process::kRunning, Process::kCompileTimeError);
     Session* session = process->program()->session();
-    if (session == NULL ||
-        !session->is_debugging() ||
+    if (session == NULL || !session->is_debugging() ||
         !session->CompileTimeError(process)) {
       ExitAtCompileTimeError(process);
     }
@@ -825,13 +818,13 @@ Process* Scheduler::InterpretProcess(Process* process,
   if (interpreter.IsAtBreakPoint()) {
     process->ChangeState(Process::kRunning, Process::kBreakPoint);
     Session* session = process->program()->session();
-    if (session == NULL ||
-        !session->is_debugging() ||
+    if (session == NULL || !session->is_debugging() ||
         !session->BreakPoint(process)) {
       // We should only reach a breakpoint if a session is attached and it can
       // handle [process].
-      FATAL("We should never hit a breakpoint without a session being able to "
-            "handle it.");
+      FATAL(
+          "We should never hit a breakpoint without a session being able to "
+          "handle it.");
     }
     return NULL;
   }
@@ -916,11 +909,11 @@ void Scheduler::FlushCacheInThreadStates() {
 void Scheduler::DequeueFromThread(ThreadState* thread_state,
                                   Process** process) {
   ASSERT(*process == NULL);
-  while (!TryDequeueFromAnyThread(process, thread_state->thread_id())) { }
+  while (!TryDequeueFromAnyThread(process, thread_state->thread_id())) {
+  }
 }
 
-static bool TryDequeue(ProcessQueue* queue,
-                       Process** process,
+static bool TryDequeue(ProcessQueue* queue, Process** process,
                        bool* should_retry) {
   if (queue->TryDequeue(process)) {
     if (*process != NULL) {

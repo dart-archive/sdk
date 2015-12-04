@@ -18,13 +18,9 @@ void Assembler::Bind(const char* name) {
   printf("\t.global %s\n%s:\n", name, name);
 }
 
-void Assembler::DefineLong(const char* name) {
-  printf("\t.long %s\n", name);
-}
+void Assembler::DefineLong(const char* name) { printf("\t.long %s\n", name); }
 
-const char* Assembler::LabelPrefix() {
-  return "";
-}
+const char* Assembler::LabelPrefix() { return ""; }
 
 }  // namespace fletch
 

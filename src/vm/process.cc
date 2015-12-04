@@ -35,12 +35,9 @@ ThreadState::ThreadState()
       queue_(new ProcessQueue()),
       cache_(NULL),
       idle_monitor_(Platform::CreateMonitor()),
-      next_idle_thread_(NULL) {
-}
+      next_idle_thread_(NULL) {}
 
-void ThreadState::AttachToCurrentThread() {
-  thread_ = ThreadIdentifier();
-}
+void ThreadState::AttachToCurrentThread() { thread_ = ThreadIdentifier(); }
 
 LookupCache* ThreadState::EnsureCache() {
   if (cache_ == NULL) cache_ = new LookupCache();
@@ -87,13 +84,13 @@ Process::Process(Program* program, Process* parent)
   // program runs).  We put these asserts here on the assumption that the
   // interpreter-generating program will not instantiate this class.
   static_assert(kCoroutineOffset == offsetof(Process, coroutine_),
-      "coroutine_");
+                "coroutine_");
   static_assert(kStackLimitOffset == offsetof(Process, stack_limit_),
-      "stack_limit_");
+                "stack_limit_");
   static_assert(kProgramOffset == offsetof(Process, program_), "program_");
   static_assert(kStaticsOffset == offsetof(Process, statics_), "statics_");
   static_assert(kExceptionOffset == offsetof(Process, exception_),
-      "exception_");
+                "exception_");
   static_assert(
       kPrimaryLookupCacheOffset == offsetof(Process, primary_lookup_cache_),
       "primary_lookup_cache_");
@@ -210,8 +207,7 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   word height = stack()->length() - stack()->top();
   ASSERT(height >= 0);
   new_stack->set_top(new_stack->length() - height);
-  memcpy(new_stack->Pointer(new_stack->top()),
-         stack()->Pointer(stack()->top()),
+  memcpy(new_stack->Pointer(new_stack->top()), stack()->Pointer(stack()->top()),
          height * kWordSize);
   new_stack->UpdateFramePointers(stack());
   ASSERT(coroutine_->has_stack());
@@ -241,8 +237,8 @@ Object* Process::NewDouble(fletch_double value) {
 
 Object* Process::NewInteger(int64 value) {
   Class* large_integer_class = program()->large_integer_class();
-  Object* result = immutable_heap_->CreateLargeInteger(
-      large_integer_class, value);
+  Object* result =
+      immutable_heap_->CreateLargeInteger(large_integer_class, value);
   return result;
 }
 
@@ -252,32 +248,32 @@ void Process::TryDeallocInteger(LargeInteger* object) {
 
 Object* Process::NewOneByteString(int length) {
   Class* string_class = program()->one_byte_string_class();
-  Object* raw_result = immutable_heap_->CreateOneByteString(
-      string_class, length);
+  Object* raw_result =
+      immutable_heap_->CreateOneByteString(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return OneByteString::cast(raw_result);
 }
 
 Object* Process::NewTwoByteString(int length) {
   Class* string_class = program()->two_byte_string_class();
-  Object* raw_result = immutable_heap_->CreateTwoByteString(
-      string_class, length);
+  Object* raw_result =
+      immutable_heap_->CreateTwoByteString(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return TwoByteString::cast(raw_result);
 }
 
 Object* Process::NewOneByteStringUninitialized(int length) {
   Class* string_class = program()->one_byte_string_class();
-  Object* raw_result = immutable_heap_->CreateOneByteStringUninitialized(
-      string_class, length);
+  Object* raw_result =
+      immutable_heap_->CreateOneByteStringUninitialized(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return OneByteString::cast(raw_result);
 }
 
 Object* Process::NewTwoByteStringUninitialized(int length) {
   Class* string_class = program()->two_byte_string_class();
-  Object* raw_result = immutable_heap_->CreateTwoByteStringUninitialized(
-      string_class, length);
+  Object* raw_result =
+      immutable_heap_->CreateTwoByteStringUninitialized(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return TwoByteString::cast(raw_result);
 }
@@ -311,9 +307,7 @@ Object* Process::NewInstance(Class* klass, bool immutable) {
 }
 
 Object* Process::ToInteger(int64 value) {
-  return Smi::IsValid(value)
-      ? Smi::FromWord(value)
-      : NewInteger(value);
+  return Smi::IsValid(value) ? Smi::FromWord(value) : NewInteger(value);
 }
 
 Object* Process::NewStack(int length) {
@@ -366,21 +360,11 @@ void PrintProcessGCInfo(Process* process, HeapUsage* before, HeapUsage* after) {
       "\t%lu/%lu, "
       "\t%lu/%lu, "
       "\t%lu/%lu -> %lu/%lu\n",
-      count++,
-      process,
-      after->timestamp - before->timestamp,
-      before->process_used,
-      before->process_size,
-      after->process_used,
-      after->process_size,
-      after->immutable_used,
-      after->immutable_size,
-      after->program_used,
-      after->program_size,
-      before->TotalUsed(),
-      before->TotalSize(),
-      after->TotalUsed(),
-      after->TotalSize());
+      count++, process, after->timestamp - before->timestamp,
+      before->process_used, before->process_size, after->process_used,
+      after->process_size, after->immutable_used, after->immutable_size,
+      after->program_used, after->program_size, before->TotalUsed(),
+      before->TotalSize(), after->TotalUsed(), after->TotalSize());
 }
 
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
@@ -435,15 +419,10 @@ void Process::CollectMutableGarbage() {
 
 // Helper class for copying HeapObjects and chaining stacks for a
 // process.
-class ScavengeAndChainStacksVisitor: public PointerVisitor {
+class ScavengeAndChainStacksVisitor : public PointerVisitor {
  public:
-  ScavengeAndChainStacksVisitor(Process* process,
-                                Space* from,
-                                Space* to)
-      : process_(process),
-        from_(from),
-        to_(to),
-        number_of_stacks_(0) { }
+  ScavengeAndChainStacksVisitor(Process* process, Space* from, Space* to)
+      : process_(process), from_(from), to_(to), number_of_stacks_(0) {}
 
   void VisitBlock(Object** start, Object** end) {
     // Copy all HeapObject pointers in [start, end)
@@ -587,9 +566,8 @@ void Process::TakeLookupCache() {
 void Process::SetStackMarker(uword marker) {
   uword stack_limit = stack_limit_;
   while (true) {
-    uword updated_limit = stack_limit < kMaxStackMarker
-        ? kMaxStackMarker
-        : stack_limit;
+    uword updated_limit =
+        stack_limit < kMaxStackMarker ? kMaxStackMarker : stack_limit;
     updated_limit |= marker;
     if (stack_limit_.compare_exchange_weak(stack_limit, updated_limit)) break;
   }
@@ -604,17 +582,11 @@ void Process::ClearStackMarker(uword marker) {
   }
 }
 
-void Process::Preempt() {
-  SetStackMarker(kPreemptMarker);
-}
+void Process::Preempt() { SetStackMarker(kPreemptMarker); }
 
-void Process::DebugInterrupt() {
-  SetStackMarker(kDebugInterruptMarker);
-}
+void Process::DebugInterrupt() { SetStackMarker(kDebugInterruptMarker); }
 
-void Process::Profile() {
-  SetStackMarker(kProfileMarker);
-}
+void Process::Profile() { SetStackMarker(kProfileMarker); }
 
 void Process::EnsureDebuggerAttached() {
   if (debug_info_ == NULL) debug_info_ = new DebugInfo();
@@ -671,8 +643,8 @@ int Process::PrepareStepOver() {
   word stack_height = stack()->length() - frame_end;
   int bytecode_index =
       current_bcp + Bytecode::Size(opcode) - function->bytecode_address_for(0);
-  return debug_info_->SetBreakpoint(
-    function, bytecode_index, true, coroutine_, stack_height);
+  return debug_info_->SetBreakpoint(function, bytecode_index, true, coroutine_,
+                                    stack_height);
 }
 
 int Process::PrepareStepOut() {
@@ -690,8 +662,8 @@ int Process::PrepareStepOut() {
   Object** expected_sp = frame_bottom + callee->arity();
   word frame_end = expected_sp - stack()->Pointer(0);
   word stack_height = stack()->length() - frame_end;
-  return debug_info_->SetBreakpoint(
-      caller, bytecode_index, true, coroutine_, stack_height);
+  return debug_info_->SetBreakpoint(caller, bytecode_index, true, coroutine_,
+                                    stack_height);
 }
 
 void Process::CookStacks(int number_of_stacks) {
@@ -785,13 +757,9 @@ bool Process::TrueThenFalse() {
 }
 #endif
 
-void Process::StoreErrno() {
-  errno_cache_ = errno;
-}
+void Process::StoreErrno() { errno_cache_ = errno; }
 
-void Process::RestoreErrno() {
-  errno = errno_cache_;
-}
+void Process::RestoreErrno() { errno = errno_cache_; }
 
 void Process::SendSignal(Signal* signal) {
   while (signal_.load() == NULL) {
@@ -803,9 +771,7 @@ void Process::SendSignal(Signal* signal) {
   Signal::DecrementRef(signal);
 }
 
-void Process::TakeChildHeaps() {
-  mailbox_.MergeAllChildHeaps(this);
-}
+void Process::TakeChildHeaps() { mailbox_.MergeAllChildHeaps(this); }
 
 void Process::UpdateStackLimit() {
   // By adding 2, we reserve a slot for a return address and an extra
@@ -822,8 +788,7 @@ void Process::UpdateStackLimit() {
 }
 
 LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
-                                             Class* clazz,
-                                             int selector) {
+                                             Class* clazz, int selector) {
   ASSERT(!program()->is_compact());
   ThreadState* state = thread_state_;
   ASSERT(state != NULL);
@@ -903,23 +868,23 @@ NATIVE(ProcessQueueGetMessage) {
       Signal* signal = queue->ProcessDeathSignal();
       ProcessHandle* handle = signal->handle();
 
-      Object* dart_process = process->NewInstance(
-          program->process_class(), true);
+      Object* dart_process =
+          process->NewInstance(program->process_class(), true);
       if (dart_process == Failure::retry_after_gc()) return dart_process;
 
-      Object* process_death = process->NewInstance(
-          program->process_death_class(), true);
+      Object* process_death =
+          process->NewInstance(program->process_death_class(), true);
       if (process_death == Failure::retry_after_gc()) return process_death;
 
       handle->IncrementRef();
 
       handle->InitializeDartObject(dart_process);
       Instance::cast(process_death)->SetInstanceField(0, dart_process);
-      Instance::cast(process_death)->SetInstanceField(
-          1, Smi::FromWord(signal->kind()));
+      Instance::cast(process_death)
+          ->SetInstanceField(1, Smi::FromWord(signal->kind()));
 
-      process->RegisterFinalizer(
-          HeapObject::cast(dart_process), Process::FinalizeProcess);
+      process->RegisterFinalizer(HeapObject::cast(dart_process),
+                                 Process::FinalizeProcess);
 
       result = process_death;
       break;

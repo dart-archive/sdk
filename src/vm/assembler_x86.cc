@@ -44,11 +44,12 @@ void Assembler::Bind(Label* label) {
 }
 
 static const char* ToString(Register reg, RegisterSize size = kLongRegister) {
-  static const char* kLongRegisterNames[] =
-      { "%eax", "%ecx", "%edx", "%ebx", "%esp", "%ebp", "%esi", "%edi" };
+  static const char* kLongRegisterNames[] = {"%eax", "%ecx", "%edx", "%ebx",
+                                             "%esp", "%ebp", "%esi", "%edi"};
   ASSERT(reg >= EAX && reg <= EDI);
   switch (size) {
-    case kLongRegister: return kLongRegisterNames[reg];
+    case kLongRegister:
+      return kLongRegisterNames[reg];
   }
   UNREACHABLE();
   return NULL;

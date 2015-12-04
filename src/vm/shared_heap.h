@@ -20,8 +20,7 @@ class SharedHeap {
         : heap_(NULL, budget),
           budget_(budget),
           used_original_(0),
-          next_(next) {
-    }
+          next_(next) {}
 
     Heap* heap() { return &heap_; }
 
@@ -30,13 +29,9 @@ class SharedHeap {
 
     int used() { return used_original_; }
 
-    void ResetUsed() {
-      used_original_ = heap_.UsedTotal();
-    }
+    void ResetUsed() { used_original_ = heap_.UsedTotal(); }
 
-    int NewlyAllocated() {
-      return heap_.UsedTotal() - used_original_;
-    }
+    int NewlyAllocated() { return heap_.UsedTotal() - used_original_; }
 
     Part* next() { return next_; }
     void set_next(Part* next) { next_ = next; }
@@ -126,10 +121,10 @@ class SharedHeap {
 
 class SharedHeap {
  public:
-  SharedHeap() : heap_(NULL, 4 * KB) { }
-  ~SharedHeap() { }
+  SharedHeap() : heap_(NULL, 4 * KB) {}
+  ~SharedHeap() {}
 
-  void MergeParts() { }
+  void MergeParts() {}
 
   void IterateProgramPointers(PointerVisitor* visitor);
 
@@ -146,6 +141,5 @@ class SharedHeap {
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_SHARED_HEAP_H_
