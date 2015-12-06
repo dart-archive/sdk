@@ -417,11 +417,11 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
 
 void InterpreterGeneratorARM::GenerateBytecodePrologue(const char* name) {
   __ SwitchToText();
-  __ AlignToPowerOfTwo(1);
+  __ AlignToPowerOfTwo(2);
   __ nop();
   __ Bind("Debug_", name);
   __ bl("DebugAtBytecode");
-  __ AlignToPowerOfTwo(3);
+  __ AlignToPowerOfTwo(2);
   __ Bind("", name);
 }
 
