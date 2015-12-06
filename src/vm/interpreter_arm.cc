@@ -417,11 +417,15 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
 
 void InterpreterGeneratorARM::GenerateBytecodePrologue(const char* name) {
   __ SwitchToText();
-  __ AlignToPowerOfTwo(2);
+  __ AlignToPowerOfTwo(3);
   __ nop();
+#ifdef FLETCH_THUMB_ONLY
+  // Thumb is has 16-bit nop's, not 32-bit.
+  __ nop();
+#endif
   __ Bind("Debug_", name);
   __ bl("DebugAtBytecode");
-  __ AlignToPowerOfTwo(2);
+  __ AlignToPowerOfTwo(3);
   __ Bind("", name);
 }
 
