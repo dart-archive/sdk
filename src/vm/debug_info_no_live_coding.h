@@ -53,6 +53,10 @@ class DebugInfo {
   void VisitProgramPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 
   void UpdateBreakpoints() { UNIMPLEMENTED(); }
+
+  void ClearBreakpoint() { UNIMPLEMENTED(); }
+
+  void SetStepping() { UNIMPLEMENTED(); }
 };
 
 }  // namespace fletch

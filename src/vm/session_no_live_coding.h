@@ -60,6 +60,11 @@ class Session {
     return false;
   }
 
+  bool Killed(Process* process) {
+    UNIMPLEMENTED();
+    return false;
+  }
+
   void IteratePointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 };
 
