@@ -293,8 +293,10 @@ class ForeignLibrary extends ForeignPointer {
 
   const ForeignLibrary.fromAddress(int address) : super(address);
 
-  factory ForeignLibrary.fromName(String name) {
-    return new ForeignLibrary.fromAddress(_lookupLibrary(name));
+  /// Looks up a foreign library by name. If the global flag is set we use
+  /// RTLD_GLOBAL that will enable later lookups to use code from this library.
+  factory ForeignLibrary.fromName(String name, {bool global: false}) {
+    return new ForeignLibrary.fromAddress(_lookupLibrary(name, global));
   }
 
   ForeignFunction lookup(String name) {
@@ -317,7 +319,7 @@ class ForeignLibrary extends ForeignPointer {
     _closeLibrary(address);
   }
 
-  @fletch.native static int _lookupLibrary(String name) {
+  @fletch.native static int _lookupLibrary(String name, bool global) {
     var error = fletch.nativeError;
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
