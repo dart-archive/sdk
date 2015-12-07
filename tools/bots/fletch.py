@@ -713,8 +713,9 @@ class CoredumpArchiver(object):
     http_prefix = 'https://storage.cloud.google.com/%s' % storage_path
 
     for filename in files:
-      gs_url = '%s%s' % (gs_prefix, filename)
-      http_url = '%s%s' % (http_prefix, filename)
+      # Remove / from absolute path to not have // in gs path.
+      gs_url = '%s%s' % (gs_prefix, filename.lstrip('/'))
+      http_url = '%s%s' % (http_prefix, filename.lstrip('/'))
 
       try:
         gsutil.upload(filename, gs_url)
