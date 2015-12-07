@@ -2,6 +2,8 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+process_linking_test: Pass, Timeout # https://github.com/dart-lang/fletch/issues/357
+
 0_test: Fail
 1_test: Fail
 3_test: Fail
