@@ -77,9 +77,7 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
 
 NATIVE(ForeignLibraryLookup) {
   char* library = AsForeignString(arguments[0]);
-  bool global = arguments[1]->IsTrue();
-  int flags = (global ? RTLD_GLOBAL : RTLD_LOCAL) | RTLD_LAZY;
-  void* result = dlopen(library, flags);
+  void* result = dlopen(library, RTLD_GLOBAL | RTLD_LAZY);
   if (result == NULL) {
     fprintf(stderr, "Failed libary lookup(%s): %s\n", library, dlerror());
   }
@@ -93,7 +91,7 @@ NATIVE(ForeignLibraryGetFunction) {
   void* handle = reinterpret_cast<void*>(address);
   char* name = AsForeignString(arguments[1]);
   bool default_lookup = handle == NULL;
-  if (default_lookup) handle = dlopen(NULL, RTLD_GLOBAL | RTLD_LAZY);
+  if (default_lookup) handle = dlopen(NULL, RTLD_LOCAL | RTLD_LAZY);
   void* result = dlsym(handle, name);
   if (default_lookup) dlclose(handle);
   if (result == NULL) {
