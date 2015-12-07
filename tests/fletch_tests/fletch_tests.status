@@ -118,3 +118,5 @@ service_tests/*: Skip
 
 mdns_tests/*: Skip # The native extension is not compiled for ARM.
 
+[ $arch == x64 && $asan]
+service_tests/simple_todo: Pass, Fail # Issue https://github.com/dart-lang/fletch/issues/57
