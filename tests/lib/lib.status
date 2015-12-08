@@ -76,6 +76,3 @@ async/future_test/none: Crash  # Port leak.
 async/slow_consumer_test: Crash
 async/slow_consumer2_test: Crash
 async/slow_consumer3_test: Crash
-
-[ $arch == xarm ]
-async/catch_errors12_test: Pass, RuntimeError # Issue 279
