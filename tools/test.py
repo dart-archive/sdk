@@ -21,6 +21,8 @@ def MaybeRunGclientHooks(arguments):
     if argument.startswith('--run-gclient-hooks'):
       if ToInt(argument.split("=")[1]) == 0:
         return
+    if argument.startswith('--help'):
+      return
 
   # This needs to happen here, before launching the Dart VM, as the hooks
   # may update the Dart binary returned by utils.DartBinary().
