@@ -14,9 +14,6 @@ import 'package:compiler/compiler_new.dart' as api;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
 
-import 'package:compiler/src/compiler.dart' show
-    GlobalDependencyRegistry;
-
 import 'package:compiler/src/io/source_file.dart';
 
 import 'package:compiler/src/source_file_provider.dart' show
@@ -42,9 +39,6 @@ import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
 
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
-
-import 'fletch_registry.dart' show
-    FletchRegistry;
 
 import 'please_report_crash.dart' show
     crashReportRequested,
