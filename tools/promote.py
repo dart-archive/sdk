@@ -68,18 +68,26 @@ def Main():
 
   with utils.TempDir('docs') as temp_dir:
     docs = raw_namer.docs_filepath(version)
+    print 'Downloading docs from %s' % docs
     gsutil_cp(docs, temp_dir, recursive=True, public=False)
     local_docs = os.path.join(temp_dir, 'docs')
     with utils.ChangedWorkingDirectory(temp_dir):
+      print 'Cloning the fletch-api repo'
       Run(['git', 'clone', 'git@github.com:dart-lang/fletch-api.git'])
       with utils.ChangedWorkingDirectory(os.path.join(temp_dir, 'fletch-api')):
+        print 'Checking out gh-pages which serves our documentation'
         Run(['git', 'checkout', 'gh-pages'])
+        print 'Cleaning out old version of docs locally'
         Run(['git', 'rm', '-r', '*'])
         # shell=True to allow us to expand the *.
+        print 'Copying in new docs'
         Run(['cp', '-r', os.path.join(local_docs, '*'), '.'], shell=True)
+        print 'Git adding all new docs'
         Run(['git', 'add', '*'])
+        print 'Commiting docs locally'
         Run(['git', 'commit', '-m',
              'Publish API docs for version %s' % version])
+        print 'Pushing docs to github'
         Run(['git', 'push'])
 
 if __name__ == '__main__':
