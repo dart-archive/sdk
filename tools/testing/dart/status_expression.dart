@@ -59,8 +59,10 @@ class Tokenizer {
 
   // Tokens are : "(", ")", "$", ",", "&&", "||", "==", "!=", and (maximal) \w+.
   static final testRegexp =
-      new RegExp(r"^([()$\w\s,]|(\&\&)|(\|\|)|(\=\=)|(\!\=))+$");
-  static final regexp = new RegExp(r"[()$,]|(\&\&)|(\|\|)|(\=\=)|(\!\=)|\w+");
+      new RegExp(r"^([().$\w\s,-]|(\&\&)|(\|\|)|(\=\=)|(\!\=))+$");
+  static final regexp =
+      new RegExp(r"[()$,]|(\&\&)|(\|\|)|(\=\=)|(\!\=)|[\w.-]+");
+  static final identifier = new RegExp(r"^[\w.-]+$");
 
   List<String> tokenize() {
     if (!testRegexp.hasMatch(expression)) {
@@ -256,7 +258,7 @@ class ExpressionParser {
       scanner.advance();
       return value;
     }
-    if (!new RegExp(r"^\w+$").hasMatch(scanner.current)) {
+    if (!Tokenizer.identifier.hasMatch(scanner.current)) {
       throw new FormatException(
           "Expected identifier in expression, got ${scanner.current}");
     }
@@ -305,7 +307,7 @@ class ExpressionParser {
           "Expected \$ in expression, got ${scanner.current}");
     }
     scanner.advance();
-    if (!new RegExp(r"^\w+$").hasMatch(scanner.current)) {
+    if (!Tokenizer.identifier.hasMatch(scanner.current)) {
       throw new FormatException(
           "Expected identifier in expression, got ${scanner.current}");
     }
@@ -315,7 +317,7 @@ class ExpressionParser {
         scanner.current == Token.NOT_EQUALS) {
       bool negate = scanner.current == Token.NOT_EQUALS;
       scanner.advance();
-      if (!new RegExp(r"^\w+$").hasMatch(scanner.current)) {
+      if (!Tokenizer.identifier.hasMatch(scanner.current)) {
         throw new FormatException(
             "Expected identifier in expression, got ${scanner.current}");
       }
