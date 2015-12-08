@@ -4,10 +4,11 @@
 
 #include "src/vm/process_handle.h"
 
-#include "src/vm/object.h"
-#include "src/vm/natives.h"
 #include "src/vm/heap.h"
+#include "src/vm/natives.h"
+#include "src/vm/object.h"
 #include "src/vm/process.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/spinlock.h"
 
 namespace fletch {
@@ -101,6 +102,7 @@ NATIVE(ProcessKill) {
     handle_process = handle->process();
     if (handle_process != NULL) {
       handle_process->SendSignal(signal);
+      process->program()->scheduler()->SignalProcess(handle_process);
     } else {
       delete signal;
     }
