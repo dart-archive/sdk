@@ -11,7 +11,6 @@ typedef Future NoArgFuture();
 
 Future<Map<String, NoArgFuture>> listTests() async {
   var tests = <String, NoArgFuture>{};
-  tests['power_management_tests/disable_enable'] =
-      () async => disable_enable.main();
+  tests['power_management_tests/disable_enable'] = disable_enable.main;
   return tests;
 }
