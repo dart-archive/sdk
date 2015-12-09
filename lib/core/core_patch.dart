@@ -73,6 +73,13 @@ part 'string.dart';
   }
 }
 
+// Superclass of all compiler generated closures. This is used in the
+// noSuchMethod trampoline to avoid infinite recursion on the call getter.
+class _TearOffClosure {
+  // Tearing off a closure is the identity.
+  get call => this;
+}
+
 @patch class bool {
   @patch factory bool.fromEnvironment(
       String name,

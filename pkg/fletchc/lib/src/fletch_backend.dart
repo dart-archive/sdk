@@ -237,6 +237,8 @@ class FletchBackend extends Backend
   ClassElement bigintClass;
   ClassElement uint32DigitsClass;
 
+  FletchClassBuilder compiledClosureClass;
+
   /// Holds a reference to the class Coroutine if it exists.
   ClassElement coroutineClass;
 
@@ -428,6 +430,8 @@ class FletchBackend extends Backend
           {bool builtin})) {
     compiledObjectClass =
         loadClass("Object", compiler.coreLibrary, builtin: true);
+    compiledClosureClass =
+        loadClass("_TearOffClosure", compiler.coreLibrary, builtin: true);
     smiClass = loadClass("_Smi", compiler.coreLibrary, builtin: true)?.element;
     mintClass =
         loadClass("_Mint", compiler.coreLibrary, builtin: true)?.element;
@@ -498,7 +502,7 @@ class FletchBackend extends Backend
       return createCallableStubClass(
           fields,
           closure.functionSignature.parameterCount,
-          compiledObjectClass);
+          compiledClosureClass);
     });
   }
 
@@ -524,7 +528,7 @@ class FletchBackend extends Backend
     FletchClassBuilder tearoffClass = createCallableStubClass(
         hasThis ? 1 : 0,
         signature.parameterCount,
-        compiledObjectClass);
+        compiledClosureClass);
 
     FletchFunctionBuilder functionBuilder =
         systemBuilder.newTearOff(function, tearoffClass.classId);

@@ -1276,8 +1276,8 @@ void HandleEnterNoSuchMethod(Process* process) {
   int selector_id = Selector::IdField::decode(selector);
   int get_selector = Selector::EncodeGetter(selector_id);
 
-  // TODO(ajohnsen): We need to ensure that the getter is not a tearoff getter.
-  if (clazz->LookupMethod(get_selector) != NULL) {
+  if (clazz->LookupMethod(get_selector) != NULL &&
+      !clazz->IsSubclassOf(program->closure_class())) {
     int call_selector = Selector::EncodeMethod(Names::kCall, arity);
     state.Push(program->null_object());
     for (int i = 0; i < arity; i++) {

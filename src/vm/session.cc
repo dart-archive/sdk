@@ -1070,6 +1070,8 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
   Class* klass = NULL;
   if (name == Names::kObject) {
     klass = program()->object_class();
+  } else if (name == Names::kTearOffClosure) {
+    klass = program()->closure_class();
   } else if (name == Names::kBool) {
     klass = program()->bool_class();
   } else if (name == Names::kNull) {

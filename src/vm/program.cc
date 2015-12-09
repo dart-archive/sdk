@@ -846,6 +846,13 @@ void Program::Initialize() {
         Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
+  // Setup the class for tearoff closures.
+  {
+    InstanceFormat format = InstanceFormat::instance_format(0);
+    closure_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
   Class* null_class;
   {  // Create null class and singleton.
     null_class = Class::cast(

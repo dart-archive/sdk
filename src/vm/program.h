@@ -44,6 +44,7 @@ class Session;
   V(Class, object_class, ObjectClass)                           \
   V(Class, array_class, ArrayClass)                             \
   V(Class, function_class, FunctionClass)                       \
+  V(Class, closure_class, ClosureClass)                         \
   V(Class, byte_array_class, ByteArrayClass)                    \
   V(Class, double_class, DoubleClass)                           \
   V(Class, stack_class, StackClass)                             \

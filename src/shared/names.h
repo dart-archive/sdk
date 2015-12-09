@@ -28,6 +28,7 @@ namespace fletch {
   N(OneByteString, "_OneByteString")                    \
   N(TwoByteString, "_TwoByteString")                    \
   N(StackOverflowError, "StackOverflowError")           \
+  N(TearOffClosure, "_TearOffClosure")                  \
   N(FletchNoSuchMethodError, "FletchNoSuchMethodError") \
                                                         \
   N(Equals, "==")                                       \
