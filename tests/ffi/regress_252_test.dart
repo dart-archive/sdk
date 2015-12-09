@@ -19,5 +19,11 @@ void main() {
   fl.close();
 
   ForeignLibrary flGlobal = new ForeignLibrary.fromName(libPath, global: true);
-  Expect.isTrue(ForeignLibrary.main.lookup('memuint32').address > 0);
+  var memuint32 = ForeignLibrary.main.lookup('memuint32');
+  var memory =
+      new ForeignMemory.fromAddressFinalized(memuint32.pcall$0().address, 16);
+  Expect.equals(memory.getUint32(0), 0);
+  Expect.equals(memory.getUint32(4), 1);
+  Expect.equals(memory.getUint32(8), 65536);
+  Expect.equals(memory.getUint32(12), 4294967295);
 }
