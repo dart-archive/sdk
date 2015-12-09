@@ -43,6 +43,9 @@ import '../flash_sd_card_tests/flash_sd_card_tests.dart' as flash_sd_card_tests;
 
 import '../mdns_tests/mdns_tests.dart' as mdns_tests;
 
+import '../power_management_tests/power_management_tests.dart'
+    as power_management_tests;
+
 import '../agent_tests/agent_tests.dart' as agent_tests;
 
 import '../golem/golem_tests.dart' as golem_tests;
@@ -116,9 +119,14 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'flash_sd_card_tests/*': flash_sd_card_tests.listTests,
 
   // Test the mDNS package.
-  // TODO(sgjesse) publish the mDNS package as an ordinary package an pull
+  // TODO(sgjesse): publish the mDNS package as an ordinary package and pull
   // it in through third_party.
   'mdns_tests/*': mdns_tests.listTests,
+
+  // Test the power management package.
+  // TODO(sgjesse): publish the power management package as an ordinary
+  // package and pull it in through third_party.
+  'power_management_tests/*': power_management_tests.listTests,
 
   // Test for the golem performance tracking infrastructure.
   // If this test breaks you probably need to update the golem performance

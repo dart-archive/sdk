@@ -23,6 +23,8 @@ packages
 /out/
 /pkg/mdns/lib/native/libmdns_extension_lib.so
 /pkg/mdns/lib/native/libmdns_extension_lib.dylib
+/pkg/power_management/lib/native/libpower_management_extension_lib.so
+/pkg/power_management/lib/native/libpower_management_extension_lib.dylib
 /samples/github/generated/
 /samples/simple_todo/generated/
 /samples/todomvc/java/

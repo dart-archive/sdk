@@ -26,6 +26,14 @@
       ],
     },
     {
+      'target_name': 'power_management_extension_lib',
+      'type': 'none',
+      'dependencies': [
+        'src/pkg/power_management/power_management.gyp:'
+            'power_management_extension_lib',
+      ],
+    },
+    {
       'target_name': 'natives_json',
       'type': 'none',
       'toolsets': ['host'],

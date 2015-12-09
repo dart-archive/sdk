@@ -181,6 +181,19 @@ hooks = [
     ],
   },
   {
+    'name': 'power_management_native_extension_binaries',
+    'pattern': '.',
+    'action': [
+      'download_from_google_storage',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dart-dependencies-fletch',
+      '-d',
+      'fletch/pkg/power_management/lib/native',
+    ],
+  },
+  {
     # Update the Windows toolchain if necessary.
     'name': 'win_toolchain',
     'pattern': '.',
