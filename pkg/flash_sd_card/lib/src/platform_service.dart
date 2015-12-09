@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:power_management/power_management.dart' as power_management;
+
 import 'context.dart';
 
 /// The PlaformService class provide the methods which can vary from
@@ -27,6 +29,11 @@ abstract class PlatformService {
   }
 
   PlatformService._(this.ctx);
+
+  /// Perform async initialization on the platform service object.
+  Future initialize() async {
+    await power_management.initPowerManagement();
+  }
 
   /// Find an SD card through user interaction. The user is asked to remove
   /// and insert the SD card and through diffing the content of '/dev' the
@@ -92,6 +99,7 @@ abstract class PlatformService {
     }
 
     var client;
+    int id = power_management.disableSleep('Downloading SD card image');
     try {
       client = new HttpClient();
       int count = 0;
@@ -114,6 +122,7 @@ abstract class PlatformService {
         }
       }
     } finally {
+      power_management.enableSleep(id);
       await client.close();
     }
 
@@ -140,6 +149,7 @@ abstract class PlatformService {
             sink.close();
           });
 
+    int id = power_management.disableSleep('Writing SD card image');
     ctx.startProgress('Writing: ');
     var process = await Process.start('dd', ddFlags(source, device));
     var stdoutFuture = process.stdout
@@ -171,6 +181,7 @@ abstract class PlatformService {
       }
       await ctx.failure('');
     }
+    power_management.enableSleep(id);
 
     // Sync filesystems before returning.
     ctx.infoln('Running sync.');

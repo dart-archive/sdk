@@ -23,7 +23,7 @@ if [ ! -r "$DART_VM" ]; then
   DART_VM="$SCRIPT_DIR/../../third_party/bin/linux/dart"
   if [ ! -r $DART_VM ]; then
     # Guess Mac OS, running from platforms/raspberry-pi2.
-    DART_VM="$SCRIPT_DIR/../../third_party/bin/macos/dart"
+    DART_VM="$SCRIPT_DIR/../../third_party/bin/mac/dart"
   fi
 fi
 

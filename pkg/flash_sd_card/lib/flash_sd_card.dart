@@ -47,6 +47,7 @@ Future<bool> flashCDCard(List<String> args) async {
 
   // Determine platform.
   PlatformService platformService = new PlatformService(ctx);
+  await platformService.initialize();
 
   // Determine the download URL for the image.
   String imageUrl = ctx.imageUrl;

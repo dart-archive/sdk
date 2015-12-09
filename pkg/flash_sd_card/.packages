@@ -6,3 +6,4 @@ args:../../third_party/args/lib
 async_helper:../async_helper/lib
 expect:../../third_party/dart/pkg/expect/lib
 path:../../third_party/path/lib
+power_management:../power_management/lib
