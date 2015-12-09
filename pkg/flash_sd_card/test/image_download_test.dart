@@ -23,6 +23,7 @@ Future testSuccessfullDownload() async {
   TestEnvironment env = new TestEnvironment('image_download_test_1');
   Context ctx = env.ctx;
   var platformService = new PlatformService(ctx);
+  await platformService.initialize();
 
   var tmpFile = await env.createTmpFile('download');
   await platformService.downloadWithProgress(
@@ -45,6 +46,7 @@ Future testSuccessfullDownloadWithFailures() async {
   TestEnvironment env = new TestEnvironment('image_download_test_2');
   Context ctx = env.ctx;
   var platformService = new PlatformService(ctx);
+  await platformService.initialize();
 
   var tmpFile = await env.createTmpFile('download');
   await platformService.downloadWithProgress(
@@ -71,6 +73,7 @@ Future testFailingDownload() async {
   TestEnvironment env = new TestEnvironment('image_download_test_2');
   Context ctx = env.ctx;
   var platformService = new PlatformService(ctx);
+  await platformService.initialize();
 
   var tmpFile = await env.createTmpFile('download');
 
