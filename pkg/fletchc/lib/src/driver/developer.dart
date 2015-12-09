@@ -718,7 +718,7 @@ Future<int> compileAndAttachToVmThenDeprecated(
       // TODO(wibling): read stdout from agent.
     } else {
       startedVmDirectly = true;
-      await startAndAttachDirectly(state, Uri.base);
+      await startAndAttachDirectly(state, base);
       state.fletchVm.stdoutLines.listen((String line) {
           commandSender.sendStdout("$line\n");
         });
