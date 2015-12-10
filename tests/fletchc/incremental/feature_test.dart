@@ -56,7 +56,7 @@ import 'package:fletchc/incremental/fletchc_incremental.dart' show
     IncrementalMode;
 
 import 'package:fletchc/commands.dart' show
-    Command,
+    VmCommand,
     CommitChanges,
     CommitChangesResult,
     HandShakeResult,
@@ -77,7 +77,6 @@ import 'package:fletchc/fletch_system.dart';
 import 'package:fletchc/commands.dart' as commands_lib;
 
 import 'package:fletchc/session.dart' show
-    CommandReader,
     Session;
 
 import 'package:fletchc/src/fletch_backend.dart' show
@@ -223,7 +222,7 @@ compileAndRun(
 
       if (!isFirstProgram ||
           const bool.fromEnvironment("feature_test.print_initial_commands")) {
-        for (Command command in fletchDelta.commands) {
+        for (VmCommand command in fletchDelta.commands) {
           print(command);
         }
       }
@@ -321,7 +320,7 @@ compileAndRun(
       print(continueCommand);
 
       // Wait for process termination.
-      Command response = await session.runCommand(continueCommand);
+      VmCommand response = await session.runCommand(continueCommand);
       if (response is! commands_lib.ProcessTerminated) {
         // TODO(ahe): It's probably an instance of
         // commands_lib.UncaughtException, and if so, we should try to print

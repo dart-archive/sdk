@@ -1346,7 +1346,7 @@ class FletchBackend extends Backend
   int assembleProgram() => 0;
 
   FletchDelta computeDelta() {
-    List<Command> commands = <Command>[
+    List<VmCommand> commands = <VmCommand>[
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
         const NewMap(MapId.constants),

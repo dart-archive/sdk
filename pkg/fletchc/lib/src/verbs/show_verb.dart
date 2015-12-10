@@ -42,7 +42,7 @@ class ShowLogTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return showLogTask();
   }
 }
@@ -59,7 +59,7 @@ class ShowDevicesTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return showDevicesTask();
   }
 }

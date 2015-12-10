@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver_commands;
+library fletchc.client_commands;
 
 import 'dart:io' show
     Socket;
@@ -22,7 +22,7 @@ import '../console_print.dart' show
 import '../please_report_crash.dart' show
     stringifyError;
 
-enum DriverCommand {
+enum ClientCommandCode {
   // Note: if you modify this enum, please modify src/tools/driver/connection.h
   // as well.
 
@@ -57,19 +57,19 @@ enum DriverCommand {
   PerformTask,
 
   /// Error in connection.
-  DriverConnectionError,
+  ClientConnectionError,
 
   /// Connection closed.
-  DriverConnectionClosed,
+  ClientConnectionClosed,
 }
 
-class Command {
-  final DriverCommand code;
+class ClientCommand {
+  final ClientCommandCode code;
   final data;
 
-  Command(this.code, this.data);
+  ClientCommand(this.code, this.data);
 
-  String toString() => 'Command($code, $data)';
+  String toString() => 'ClientCommand($code, $data)';
 }
 
 abstract class CommandSender {
@@ -80,7 +80,7 @@ abstract class CommandSender {
   }
 
   void sendStdoutBytes(List<int> data) {
-    sendDataCommand(DriverCommand.Stdout, data);
+    sendDataCommand(ClientCommandCode.Stdout, data);
   }
 
   void sendStderr(String data) {
@@ -88,10 +88,10 @@ abstract class CommandSender {
   }
 
   void sendStderrBytes(List<int> data) {
-    sendDataCommand(DriverCommand.Stderr, data);
+    sendDataCommand(ClientCommandCode.Stderr, data);
   }
 
-  void sendDataCommand(DriverCommand command, List<int> data);
+  void sendDataCommand(ClientCommandCode code, List<int> data);
 
   void sendClose();
 

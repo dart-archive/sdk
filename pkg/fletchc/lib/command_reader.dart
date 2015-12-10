@@ -5,25 +5,25 @@
 part of fletch.session;
 
 class SessionCommandTransformerBuilder
-    extends CommandTransformerBuilder<Command> {
+    extends CommandTransformerBuilder<VmCommand> {
 
-  Command makeCommand(int code, ByteData payload) {
-    return new Command.fromBuffer(
-        CommandCode.values[code], toUint8ListView(payload));
+  VmCommand makeCommand(int code, ByteData payload) {
+    return new VmCommand.fromBuffer(
+        VmCommandCode.values[code], toUint8ListView(payload));
   }
 }
 
-class CommandReader {
-  final StreamIterator<Command> iterator;
+class VmCommandReader {
+  final StreamIterator<VmCommand> iterator;
 
-  CommandReader(
+  VmCommandReader(
       Stream<List<int>> stream,
       Sink<List<int>> stdoutSink,
       Sink<List<int>> stderrSink)
-      : iterator = new StreamIterator<Command>(
+      : iterator = new StreamIterator<VmCommand>(
           filterCommandStream(stream, stdoutSink, stderrSink));
 
-  static Stream<Command> filterCommandStream(
+  static Stream<VmCommand> filterCommandStream(
       Stream<List<int>> stream,
       Sink<List<int>> stdoutSink,
       Sink<List<int>> stderrSink) async* {
@@ -31,9 +31,9 @@ class CommandReader {
     // stdoutSink and stderrSink. They are usually stdout and stderr
     // and the user will probably want to add more on those streams
     // independently of the messages added here.
-    StreamTransformer<List<int>, Command> transformer =
+    StreamTransformer<List<int>, VmCommand> transformer =
         new SessionCommandTransformerBuilder().build();
-    await for (Command command in stream.transform(transformer)) {
+    await for (VmCommand command in stream.transform(transformer)) {
       if (command is StdoutData) {
         if (stdoutSink != null) stdoutSink.add(command.value);
       } else if (command is StderrData) {

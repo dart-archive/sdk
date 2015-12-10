@@ -2,19 +2,20 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver.session_manager;
+library fletchc.hub.session_manager;
 
 import 'dart:async' show
-    Future;
+    Future,
+    Timer;
 
 import 'driver_commands.dart' show
     CommandSender;
 
 import 'driver_main.dart' show
-    IsolateController;
+    WorkerConnection;
 
 export 'driver_main.dart' show
-    IsolateController;
+    WorkerConnection;
 
 import 'developer.dart' show
     Settings;
@@ -65,7 +66,7 @@ String get currentSession => internalCurrentSession;
 
 Future<UserSession> createSession(
     String name,
-    Future<IsolateController> allocateWorker()) async {
+    Future<WorkerConnection> allocateWorker()) async {
   if (name == null) {
     throw new ArgumentError("session name must not be `null`.");
   }
@@ -95,16 +96,16 @@ UserSession endSession(String name) {
 void endAllSessions() {
   internalSessions.forEach((String name, UserSession session) {
     print("Ending session: $name");
-    session.worker.endWorkerSession();
+    session.worker.endSession();
   });
   internalSessions.clear();
 }
 
-/// A session in the main isolate.
+/// A session in the hub (main isolate).
 class UserSession {
   final String name;
 
-  final IsolateController worker;
+  final WorkerConnection worker;
 
   bool hasActiveWorkerTask = false;
 
@@ -154,6 +155,7 @@ class BufferingOutputSink implements Sink<List<int>> {
 }
 
 /// The state stored in a worker isolate of a [UserSession].
+/// TODO(wibling): This should be moved into a worker specific file.
 class SessionState {
   final String name;
 

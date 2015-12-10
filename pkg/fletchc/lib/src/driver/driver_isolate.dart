@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver_isolate;
+library fletchc.worker_isolate;
 
 import 'dart:async' show
     Completer,
@@ -21,9 +21,9 @@ import 'dart:isolate' show
     SendPort;
 
 import 'driver_commands.dart' show
-    Command,
-    CommandSender,
-    DriverCommand;
+    ClientCommand,
+    ClientCommandCode,
+    CommandSender;
 
 import '../diagnostic.dart' show
     DiagnosticKind,
@@ -33,27 +33,29 @@ import '../diagnostic.dart' show
 import 'exit_codes.dart' show
     COMPILER_EXITCODE_CRASH;
 
-// TODO(ahe): Send DriverCommands directly when they are canonicalized
+// This class is used to send commands from the worker isolate back to the
+// hub (main isolate).
+// TODO(ahe): Send ClientCommands directly when they are canonicalized
 // correctly, see issue 23244.
-class PortCommandSender extends CommandSender {
+class HubCommandSender extends CommandSender {
   final SendPort port;
 
-  PortCommandSender(this.port);
+  HubCommandSender(this.port);
 
   void sendExitCode(int exitCode) {
-    port.send([DriverCommand.ExitCode.index, exitCode]);
+    port.send([ClientCommandCode.ExitCode.index, exitCode]);
   }
 
-  void sendDataCommand(DriverCommand command, List<int> data) {
-    port.send([command.index, data]);
+  void sendDataCommand(ClientCommandCode commandCode, List<int> data) {
+    port.send([commandCode.index, data]);
   }
 
   void sendClose() {
-    port.send([DriverCommand.ClosePort.index, null]);
+    port.send([ClientCommandCode.ClosePort.index, null]);
   }
 
   void sendEventLoopStarted() {
-    port.send([DriverCommand.EventLoopStarted.index, null]);
+    port.send([ClientCommandCode.EventLoopStarted.index, null]);
   }
 }
 
@@ -69,7 +71,7 @@ Future<Null> isolateMain(SendPort port) async {
 
 Future<Null> beginSession(SendPort port) {
   ReceivePort receivePort = new ReceivePort();
-  port.send([DriverCommand.SendPort.index, receivePort.sendPort]);
+  port.send([ClientCommandCode.SendPort.index, receivePort.sendPort]);
   return handleClient(port, receivePort);
 }
 
@@ -81,7 +83,7 @@ Future<int> doInZone(void printLineOnStdout(line), Future<int> f()) {
 
 Future<Null> handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) {
   WorkerSideTask task =
-      new WorkerSideTask(clientIncoming, new PortCommandSender(clientOutgoing));
+      new WorkerSideTask(clientIncoming, new HubCommandSender(clientOutgoing));
 
   return doInZone(task.printLineOnStdout, task.perform).then((int exitCode) {
     task.endTask(exitCode);
@@ -92,10 +94,10 @@ Future<Null> handleClient(SendPort clientOutgoing, ReceivePort clientIncoming) {
 class WorkerSideTask {
   final ReceivePort clientIncoming;
 
-  final CommandSender commandSender;
+  final HubCommandSender commandSender;
 
-  final StreamController<Command> filteredIncomingCommands =
-      new StreamController<Command>();
+  final StreamController<ClientCommand> filteredIncomingCommands =
+      new StreamController<ClientCommand>();
 
   final Completer<int> taskCompleter = new Completer<int>();
 
@@ -107,20 +109,20 @@ class WorkerSideTask {
     commandSender.sendStdout("$line\n");
   }
 
-  Stream<Command> buildIncomingCommandStream() {
-    void handleData(List message, EventSink<Command> sink) {
+  Stream<ClientCommand> buildIncomingCommandStream() {
+    void handleData(List message, EventSink<ClientCommand> sink) {
       int code = message[0];
       var data = message[1];
-      sink.add(new Command(DriverCommand.values[code], data));
+      sink.add(new ClientCommand(ClientCommandCode.values[code], data));
     }
-    StreamTransformer<List, Command> commandDecoder =
-        new StreamTransformer<List, Command>.fromHandlers(
+    StreamTransformer<List, ClientCommand> commandDecoder =
+        new StreamTransformer<List, ClientCommand>.fromHandlers(
             handleData: handleData);
     return clientIncoming.transform(commandDecoder);
   }
 
-  void handleIncomingCommand(Command command) {
-    if (command.code == DriverCommand.PerformTask) {
+  void handleIncomingCommand(ClientCommand command) {
+    if (command.code == ClientCommandCode.PerformTask) {
       performTask(command.data).then(taskCompleter.complete);
     } else {
       filteredIncomingCommands.add(command);
@@ -138,9 +140,9 @@ class WorkerSideTask {
   Future<int> performTask(
       Future<int> task(
           CommandSender commandSender,
-          StreamIterator<Command> commandIterator)) async {
-    StreamIterator<Command> commandIterator =
-        new StreamIterator<Command>(filteredIncomingCommands.stream);
+          StreamIterator<ClientCommand> commandIterator)) async {
+    StreamIterator<ClientCommand> commandIterator =
+        new StreamIterator<ClientCommand>(filteredIncomingCommands.stream);
 
     try {
       return await task(commandSender, commandIterator);
@@ -157,7 +159,7 @@ class WorkerSideTask {
   }
 
   Future<int> perform() {
-    StreamSubscription<Command> subscription =
+    StreamSubscription<ClientCommand> subscription =
         buildIncomingCommandStream().listen(null);
     subscription
         ..onData(handleIncomingCommand)
@@ -168,9 +170,7 @@ class WorkerSideTask {
 
   void endTask(int exitCode) {
     clientIncoming.close();
-
     commandSender.sendExitCode(exitCode);
-
     commandSender.sendClose();
   }
 }

@@ -89,7 +89,7 @@ import '../src/fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
 
 import '../commands.dart' show
-    Command,
+    VmCommand,
     MapId;
 
 import '../commands.dart' as commands_lib;
@@ -967,7 +967,7 @@ class LibraryUpdater extends FletchFeatures {
 
     // TODO(ahe): Clean this up. Don't call this method in analyze-only mode.
     if (compiler.analyzeOnly) {
-      return new FletchDelta(currentSystem, currentSystem, <Command>[]);
+      return new FletchDelta(currentSystem, currentSystem, <VmCommand>[]);
     }
 
     for (AstElement element in updatedElements) {
@@ -992,7 +992,8 @@ class LibraryUpdater extends FletchFeatures {
           "Unable to add static fields:\n  ${newStaticFields.join(',\n  ')}");
     }
 
-    List<Command> commands = <Command>[const commands_lib.PrepareForChanges()];
+    List<VmCommand> commands =
+        <VmCommand>[const commands_lib.PrepareForChanges()];
     FletchSystem system =
         backend.systemBuilder.computeSystem(fletchContext, commands);
     return new FletchDelta(system, currentSystem, commands);
@@ -1065,7 +1066,7 @@ abstract class RemovalUpdate extends Update {
 
   bool get isRemoval => true;
 
-  void writeUpdateFletchOn(List<Command> updates);
+  void writeUpdateFletchOn(List<VmCommand> updates);
 
   void removeFromEnclosing() {
     // TODO(ahe): Need to recompute duplicated elements logic again. Simplest
@@ -1116,7 +1117,7 @@ class RemovedFunctionUpdate extends RemovalUpdate
     return null;
   }
 
-  void writeUpdateFletchOn(List<Command> updates) {
+  void writeUpdateFletchOn(List<VmCommand> updates) {
     throw new IncrementalCompilationFailed("Not implemented yet.");
   }
 }
@@ -1156,7 +1157,7 @@ class RemovedClassUpdate extends RemovalUpdate with FletchFeatures {
     return null;
   }
 
-  void writeUpdateFletchOn(List<Command> updates) {
+  void writeUpdateFletchOn(List<VmCommand> updates) {
     if (!wasStateCaptured) {
       throw new StateError(
           "captureState must be called before writeUpdateFletchOn.");
@@ -1196,7 +1197,7 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
     return element;
   }
 
-  void writeUpdateFletchOn(List<Command> updates) {
+  void writeUpdateFletchOn(List<VmCommand> updates) {
     if (!wasStateCaptured) {
       throw new StateError(
           "captureState must be called before writeUpdateFletchOn.");

@@ -28,7 +28,7 @@ class UpgradeTask extends SharedTask {
 
   Future call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) async {
+      StreamIterator<ClientCommand> commandIterator) async {
         return await upgradeAgent(commandSender, commandIterator,
             SessionState.current, base, package);
   }

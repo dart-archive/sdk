@@ -285,7 +285,7 @@ class FletchSystem {
 class FletchDelta {
   final FletchSystem system;
   final FletchSystem predecessorSystem;
-  final List<Command> commands;
+  final List<VmCommand> commands;
 
   const FletchDelta(this.system, this.predecessorSystem, this.commands);
 }

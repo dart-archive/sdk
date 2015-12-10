@@ -49,7 +49,7 @@ class CreateSessionTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return createSessionTask(
         commandSender, commandIterator, name, settingsUri, base, configFileUri);
   }
@@ -57,7 +57,7 @@ class CreateSessionTask extends SharedTask {
 
 Future<int> createSessionTask(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     String name,
     Uri settingsUri,
     Uri base,

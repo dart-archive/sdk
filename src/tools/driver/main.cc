@@ -293,7 +293,7 @@ static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
 
   // 'buffer' is now the absolute path of this executable (with symlinks
   // resolved). When running from fletch-repo, this executable will be in
-  // "fletch-repo/fletch/out/$CONFIGURATION/fletch_driver".
+  // "fletch-repo/fletch/out/$CONFIGURATION/fletch".
   ParentDir(buffer);
   // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
 
@@ -322,7 +322,7 @@ static void GetExecutableDir(char* buffer, size_t buffer_length) {
 
   // 'buffer' is now the absolute path of this executable (with symlinks
   // resolved). When running from fletch-repo, this executable will be in
-  // "fletch-repo/fletch/out/$CONFIGURATION/fletch_driver".
+  // "fletch-repo/fletch/out/$CONFIGURATION/fletch".
   ParentDir(buffer);
   // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
 

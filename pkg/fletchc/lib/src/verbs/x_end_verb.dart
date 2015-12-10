@@ -20,7 +20,7 @@ Future<int> end(AnalyzedSentence sentence, VerbContext context) {
   UserSession session = endSession(name);
   context = context.copyWithSession(session);
   return session.worker.performTask(
-      new EndSessionTask(name), context.client, endSession: true);
+      new EndSessionTask(name), context.clientConnection, endSession: true);
 }
 
 class EndSessionTask extends SharedTask {
@@ -32,7 +32,7 @@ class EndSessionTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return endSessionTask(name);
   }
 }

@@ -163,7 +163,7 @@ void runInIsolate(
       messageSink.add(iterator.current);
     } while (await iterator.moveNext());
     runningTests.remove(name);
-    isolate.endIsolateSession();
+    isolate.endSession();
   }).catchError((error, stackTrace) {
     messageSink.add(new InternalErrorMessage('$error', '$stackTrace'));
   });

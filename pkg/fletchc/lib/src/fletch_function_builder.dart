@@ -98,7 +98,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
 
   FletchFunction finalizeFunction(
       FletchContext context,
-      List<Command> commands) {
+      List<VmCommand> commands) {
     int constantCount = constants.length;
     for (int i = 0; i < constantCount; i++) {
       commands.add(const PushNull());

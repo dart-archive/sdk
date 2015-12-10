@@ -346,7 +346,7 @@ class FletchSystemBuilder {
     stubs[callStructure] = stub;
   }
 
-  FletchSystem computeSystem(FletchContext context, List<Command> commands) {
+  FletchSystem computeSystem(FletchContext context, List<VmCommand> commands) {
     // TODO(ajohnsen): Consider if the incremental compiler should be aware of
     // callMain, when detecting changes.
     FunctionElement callMain =

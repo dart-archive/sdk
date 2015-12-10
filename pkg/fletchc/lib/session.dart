@@ -43,7 +43,7 @@ part 'command_reader.dart';
 part 'input_handler.dart';
 
 /// Encapsulates a TCP connection to a running fletch-vm and provides a
-/// [Command] based view on top of it.
+/// [VmCommand] based view on top of it.
 class FletchVmSession {
   /// The outgoing connection to the fletch-vm.
   final StreamSink<List<int>> _outgoingSink;
@@ -51,10 +51,13 @@ class FletchVmSession {
   final Sink<List<int>> stdoutSink;
   final Sink<List<int>> stderrSink;
 
-  /// The command reader producing a stream iterator for [Commands]s
-  /// from the fletch-vm as well as a stream for stdout from the VM as
-  /// well as stderr from the VM.
-  final CommandReader _commandReader;
+  /// The VM command reader reads data from the vm, converts the data
+  /// into a [VmCommand], and provides a stream iterator iterating over
+  /// these commands.
+  /// If the [VmCommand] is for stdout or stderr the reader automatically
+  /// forwards them to the stdout/stderr sinks and does not add them to the
+  /// iterator.
+  final VmCommandReader _commandReader;
 
   /// Completes when the underlying TCP connection is terminated.
   final Future _done;
@@ -75,7 +78,7 @@ class FletchVmSession {
   /// with color control characters in the expected files.
   bool colorsDisabled = false;
 
-  Command connectionError = new ConnectionError("Connection is closed", null);
+  VmCommand connectionError = new ConnectionError("Connection is closed", null);
 
   FletchVmSession(Socket vmSocket,
                   Sink<List<int>> stdoutSink,
@@ -84,7 +87,7 @@ class FletchVmSession {
         this.stdoutSink = stdoutSink,
         this.stderrSink = stderrSink,
         _done = vmSocket.done,
-        _commandReader = new CommandReader(vmSocket, stdoutSink, stderrSink) {
+        _commandReader = new VmCommandReader(vmSocket, stdoutSink, stderrSink) {
     _done.catchError((_, __) {}).then((_) {
       _connectionIsDead = true;
     });
@@ -97,7 +100,7 @@ class FletchVmSession {
   void writeStdoutLine(String s) => writeStdout("$s\n");
 
   /// Convenience around [runCommands] for running just a single command.
-  Future<Command> runCommand(Command command) {
+  Future<VmCommand> runCommand(VmCommand command) {
     return runCommands([command]);
   }
 
@@ -105,18 +108,18 @@ class FletchVmSession {
   /// (if necessary).
   ///
   /// If all commands have been successfully applied and responses been awaited,
-  /// this function will complete with the last received [Command] from the
+  /// this function will complete with the last received [VmCommand] from the
   /// remote peer (or `null` if there was none).
-  Future<Command> runCommands(List<Command> commands) async {
-    if (commands.any((Command c) => c.numberOfResponsesExpected == null)) {
+  Future<VmCommand> runCommands(List<VmCommand> commands) async {
+    if (commands.any((VmCommand c) => c.numberOfResponsesExpected == null)) {
       throw new ArgumentError(
           'The runComands() method will read response commands and therefore '
           'needs to know how many to read. One of the given commands does'
           'not specify how many commands the response will have.');
     }
 
-    Command lastResponse;
-    for (Command command in commands) {
+    VmCommand lastResponse;
+    for (VmCommand command in commands) {
       await sendCommand(command);
       for (int i = 0; i < command.numberOfResponsesExpected; i++) {
         lastResponse = await readNextCommand();
@@ -125,15 +128,15 @@ class FletchVmSession {
     return lastResponse;
   }
 
-  /// Sends all given [Command]s to a fletch-vm.
-  Future sendCommands(List<Command> commands) async {
+  /// Sends all given [VmCommand]s to a fletch-vm.
+  Future sendCommands(List<VmCommand> commands) async {
     for (var command in commands) {
       await sendCommand(command);
     }
   }
 
-  /// Sends a [Command] to a fletch-vm.
-  Future sendCommand(Command command) async {
+  /// Sends a [VmCommand] to a fletch-vm.
+  Future sendCommand(VmCommand command) async {
     if (_connectionIsDead) {
       throw new StateError(
           'Trying to send command ${command} to fletch-vm, but '
@@ -142,8 +145,8 @@ class FletchVmSession {
     command.addTo(_outgoingSink);
   }
 
-  /// Will read the next [Command] the fletch-vm sends to us.
-  Future<Command> readNextCommand({bool force: true}) async {
+  /// Will read the next [VmCommand] the fletch-vm sends to us.
+  Future<VmCommand> readNextCommand({bool force: true}) async {
     if (_drainedIncomingCommands) {
       return connectionError;
     }
@@ -170,7 +173,7 @@ class FletchVmSession {
     await _outgoingSink.close().catchError((_) {});
 
     while (!_drainedIncomingCommands) {
-      Command response = await readNextCommand(force: false);
+      VmCommand response = await readNextCommand(force: false);
       if (!ignoreExtraCommands && response != null) {
         await kill();
         throw new StateError(
@@ -227,13 +230,13 @@ class Session extends FletchVmSession {
   }
 
   Future applyDelta(FletchDelta delta) async {
-    Command response = await runCommands(delta.commands);
+    VmCommand response = await runCommands(delta.commands);
     fletchSystem = delta.system;
     return response;
   }
 
   Future<HandShakeResult> handShake(String version) async {
-    Command command = await runCommand(new HandShake(version));
+    VmCommand command = await runCommand(new HandShake(version));
     if (command != null && command is HandShakeResult) return command;
     return null;
   }
@@ -243,8 +246,8 @@ class Session extends FletchVmSession {
   }
 
   // Returns either a [WriteSnapshotResult] or a [ConnectionError].
-  Future<Command> writeSnapshot(String snapshotPath) async {
-    Command result = await runCommand(new WriteSnapshot(snapshotPath));
+  Future<VmCommand> writeSnapshot(String snapshotPath) async {
+    VmCommand result = await runCommand(new WriteSnapshot(snapshotPath));
     await shutdown();
     return result;
   }
@@ -292,29 +295,29 @@ class Session extends FletchVmSession {
   // This method handles the various responses a command can return to indicate
   // the process has stopped running.
   // The session's state is updated to match the current state of the vm.
-  Future<Command> handleProcessStop(Command response) async {
+  Future<VmCommand> handleProcessStop(VmCommand response) async {
     debugState.reset();
     switch (response.code) {
-      case CommandCode.UncaughtException:
-      case CommandCode.ProcessCompileTimeError:
+      case VmCommandCode.UncaughtException:
+      case VmCommandCode.ProcessCompileTimeError:
         running = false;
         break;
 
-      case CommandCode.ProcessTerminated:
+      case VmCommandCode.ProcessTerminated:
         running = false;
         loaded = false;
         // TODO(ahe): Let the caller terminate the session. See issue 67.
         await terminateSession();
         break;
 
-      case CommandCode.ConnectionError:
+      case VmCommandCode.ConnectionError:
         running = false;
         loaded = false;
         await shutdown();
         terminated = true;
         break;
 
-      case CommandCode.ProcessBreakpoint:
+      case VmCommandCode.ProcessBreakpoint:
         ProcessBreakpoint command = response;
         var function = fletchSystem.lookupFunctionById(command.functionId);
         debugState.topFrame = new StackFrame(
@@ -330,7 +333,7 @@ class Session extends FletchVmSession {
     return response;
   }
 
-  Future<Command> debugRun() async {
+  Future<VmCommand> debugRun() async {
     assert(!loaded);
     assert(!running);
     loaded = true;
@@ -426,15 +429,15 @@ class Session extends FletchVmSession {
     return compiler.findSourceFiles(pattern);
   }
 
-  Future<Command> stepTo(int functionId, int bcp) async {
+  Future<VmCommand> stepTo(int functionId, int bcp) async {
     assert(running);
-    Command response = await runCommand(new ProcessStepTo(functionId, bcp));
+    VmCommand response = await runCommand(new ProcessStepTo(functionId, bcp));
     return handleProcessStop(response);
   }
 
-  Future<Command> step() async {
+  Future<VmCommand> step() async {
     assert(running);
-    Command response;
+    VmCommand response;
     SourceLocation previous = debugState.currentLocation;
     do {
       var bcp = debugState.topFrame.stepBytecodePointer(previous);
@@ -447,9 +450,9 @@ class Session extends FletchVmSession {
     return response;
   }
 
-  Future<Command> stepOver() async {
+  Future<VmCommand> stepOver() async {
     assert(running);
-    Command response;
+    VmCommand response;
     SourceLocation previous = debugState.currentLocation;
     do {
       response = await stepOverBytecode();
@@ -457,7 +460,7 @@ class Session extends FletchVmSession {
     return response;
   }
 
-  Future<Command> stepOut() async {
+  Future<VmCommand> stepOut() async {
     assert(running);
     StackTrace trace = await stackTrace();
     // If we are at the last frame, just continue. This will either terminate
@@ -469,7 +472,7 @@ class Session extends FletchVmSession {
     // step out until we either hit another breakpoint or a visible frame, ie.
     // we skip internal frame and stop at the next visible frame.
     SourceLocation return_location = trace.visibleFrame(1).sourceLocation();
-    Command response;
+    VmCommand response;
     do {
       await sendCommand(const ProcessStepOut());
       ProcessSetBreakpoint setBreakpoint = await readNextCommand();
@@ -492,7 +495,7 @@ class Session extends FletchVmSession {
     return response;
   }
 
-  Future<Command> restart() async {
+  Future<VmCommand> restart() async {
     assert(loaded);
     assert(debugState.currentStackTrace != null);
     assert(debugState.currentStackTrace.frames > 1);
@@ -500,16 +503,16 @@ class Session extends FletchVmSession {
     return handleProcessStop(await runCommand(new ProcessRestartFrame(frame)));
   }
 
-  Future<Command> stepBytecode() async {
+  Future<VmCommand> stepBytecode() async {
     assert(running);
     return handleProcessStop(await runCommand(const ProcessStep()));
   }
 
-  Future<Command> stepOverBytecode() async {
+  Future<VmCommand> stepOverBytecode() async {
     assert(running);
     await sendCommand(const ProcessStepOver());
     ProcessSetBreakpoint setBreakpoint = await readNextCommand();
-    Command response = await handleProcessStop(await readNextCommand());
+    VmCommand response = await handleProcessStop(await readNextCommand());
     bool success =
         response is ProcessBreakpoint &&
         response.breakpointId == setBreakpoint.value;
@@ -520,7 +523,7 @@ class Session extends FletchVmSession {
     return response;
   }
 
-  Future<Command> cont() async {
+  Future<VmCommand> cont() async {
     assert(running);
     return handleProcessStop(await runCommand(const ProcessContinue()));
   }
@@ -559,7 +562,7 @@ class Session extends FletchVmSession {
     assert(!terminated);
     if (debugState.currentUncaughtException == null) {
       await sendCommand(const ProcessUncaughtExceptionRequest());
-      Command response = await readNextCommand();
+      VmCommand response = await readNextCommand();
       if (response is DartValue) {
         debugState.currentUncaughtException = new RemoteValue(response);
       } else {
@@ -739,7 +742,7 @@ class Session extends FletchVmSession {
 
   Future<RemoteValue> processLocal(LocalValue local, [String name]) async {
     var actualFrameNumber = debugState.actualCurrentFrameNumber;
-    Command response = await runCommand(
+    VmCommand response = await runCommand(
         new ProcessLocal(actualFrameNumber, local.slot));
     assert(response is DartValue);
     return new RemoteValue(response, name: name);
@@ -748,7 +751,7 @@ class Session extends FletchVmSession {
   Future<RemoteObject> processLocalStructure(LocalValue local) async {
     var frameNumber = debugState.actualCurrentFrameNumber;
     await sendCommand(new ProcessLocalStructure(frameNumber, local.slot));
-    Command response = await readNextCommand();
+    VmCommand response = await readNextCommand();
     if (response is DartValue) {
       return new RemoteValue(response);
     } else {
@@ -795,7 +798,7 @@ class Session extends FletchVmSession {
   //   UncaughtException
   //   ProcessCompileError
   //   ConnectionError
-  Future<String> processStopResponseToString(Command response) async {
+  Future<String> processStopResponseToString(VmCommand response) async {
     if (response is UncaughtException) {
       StringBuffer sb = new StringBuffer();
       // Print the exception first, followed by a stack trace.

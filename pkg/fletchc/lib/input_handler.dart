@@ -361,7 +361,7 @@ class InputHandler {
 
   // This method is used to deal with the stopped process command responses
   // that can be returned when sending the Fletch VM a command request.
-  Future handleProcessStopResponse(Command response) async {
+  Future handleProcessStopResponse(VmCommand response) async {
     String output = await session.processStopResponseToString(response);
     if (output != null && output.isNotEmpty) {
       writeStdout(output);

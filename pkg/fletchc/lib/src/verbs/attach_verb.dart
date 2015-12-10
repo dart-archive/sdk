@@ -35,7 +35,7 @@ class AttachTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return attachTask(host, port);
   }
 }

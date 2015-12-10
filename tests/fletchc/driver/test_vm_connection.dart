@@ -25,7 +25,7 @@ import 'package:fletchc/src/driver/developer.dart' show
     attachToVm;
 
 import 'package:fletchc/commands.dart' show
-    CommandCode;
+    VmCommandCode;
 
 import '../run.dart' show
     FletchRunner;
@@ -35,7 +35,7 @@ import 'mock_vm.dart' show
 
 class MockVmRunner extends FletchRunner {
   final bool closeImmediately;
-  final CommandCode closeAfterFirst;
+  final VmCommandCode closeAfterFirst;
 
   MockVm vm;
 
@@ -70,14 +70,14 @@ Future<Null> testCloseImmediately() async {
 
 Future<Null> testCloseAfterCommitChanges() async {
   int result =
-      await new MockVmRunner(closeAfterFirst: CommandCode.CommitChanges)
+      await new MockVmRunner(closeAfterFirst: VmCommandCode.CommitChanges)
       .run(<String>['tests/language/application_test.dart']);
   // TODO(ahe): The actual exit code is TBD.
   Expect.equals(1, result);
 }
 
 Future<Null> testCloseAfterProcessRun() async {
-  int result = await new MockVmRunner(closeAfterFirst: CommandCode.ProcessRun)
+  int result = await new MockVmRunner(closeAfterFirst: VmCommandCode.ProcessRun)
       .run(<String>['tests/language/application_test.dart']);
   // TODO(ahe): The actual exit code is TBD.
   Expect.equals(1, result);

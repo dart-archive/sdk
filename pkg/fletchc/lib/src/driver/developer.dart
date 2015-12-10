@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver.developer;
+library fletchc.worker.developer;
 
 import 'dart:async' show
     Future,
@@ -42,7 +42,7 @@ import 'package:mdns/mdns.dart' show
     RRType;
 
 import '../../commands.dart' show
-    CommandCode,
+    VmCommandCode,
     ConnectionError,
     Debugging,
     HandShakeResult,
@@ -65,17 +65,17 @@ import 'session_manager.dart' show
     SessionState;
 
 import 'driver_commands.dart' show
-    DriverCommand,
+    ClientCommandCode,
     handleSocketErrors;
 
 import '../verbs/infrastructure.dart' show
-    Command,
+    ClientCommand,
     CommandSender,
     DiagnosticKind,
     FletchCompiler,
     FletchDelta,
     IncrementalCompiler,
-    IsolateController,
+    WorkerConnection,
     IsolatePool,
     Session,
     SharedTask,
@@ -340,7 +340,7 @@ Future<Settings> createSettings(
     Uri cwd,
     Uri configFileUri,
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator) async {
+    StreamIterator<ClientCommand> commandIterator) async {
   bool userProvidedSettings = uri != null;
   if (!userProvidedSettings) {
     // Try to find a $sessionName.fletch-settings file starting from the current
@@ -406,16 +406,16 @@ Future<Settings> createSettings(
 
 Future<Address> readAddressFromUser(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator) async {
+    StreamIterator<ClientCommand> commandIterator) async {
   String message = "Please enter IP address of remote device "
       "(press Enter to search for devices):";
   commandSender.sendStdout(message);
   // The list of devices found by running discovery.
   List<InternetAddress> devices = <InternetAddress>[];
   while (await commandIterator.moveNext()) {
-    Command command = commandIterator.current;
+    ClientCommand command = commandIterator.current;
     switch (command.code) {
-      case DriverCommand.Stdin:
+      case ClientCommandCode.Stdin:
         if (command.data.length == 0) {
           // TODO(ahe): It may be safe to return null here, but we need to
           // check how this interacts with the debugger's InputHandler.
@@ -598,25 +598,25 @@ Future<int> run(
 
   try {
     switch (command.code) {
-      case CommandCode.UncaughtException:
+      case VmCommandCode.UncaughtException:
         state.log("Uncaught error");
         exitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
         await printException();
         await printTrace();
         // TODO(ahe): Need to continue to unwind stack.
         break;
-      case CommandCode.ProcessCompileTimeError:
+      case VmCommandCode.ProcessCompileTimeError:
         state.log("Compile-time error");
         exitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
         await printTrace();
         // TODO(ahe): Continue to unwind stack?
         break;
 
-      case CommandCode.ProcessTerminated:
+      case VmCommandCode.ProcessTerminated:
         exitCode = 0;
         break;
 
-      case CommandCode.ConnectionError:
+      case VmCommandCode.ConnectionError:
         state.log("Error on connection to Fletch VM: ${command.error}");
         exitCode = exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
         break;
@@ -642,7 +642,7 @@ Future<int> run(
       }
     } else {
       // If the session terminated due to a ConnectionError or the program
-      // finishing don't reuse the state's session.
+      // finished don't reuse the state's session.
       if (session.terminated) {
         state.session = null;
       }
@@ -749,7 +749,7 @@ Future<int> compileAndAttachToVmThenDeprecated(
 
 Future<int> compileAndAttachToVmThen(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri script,
     Uri base,
@@ -757,7 +757,6 @@ Future<int> compileAndAttachToVmThen(
     Future<int> action()) async {
   bool startedVmDirectly = false;
   List<FletchDelta> compilationResults = state.compilationResults;
-  Session session = state.session;
   if (compilationResults.isEmpty || script != null) {
     if (script == null) {
       throwFatalError(DiagnosticKind.noFileTarget);
@@ -768,6 +767,7 @@ Future<int> compileAndAttachToVmThen(
     assert(compilationResults != null);
   }
 
+  Session session = state.session;
   if (session == null) {
     if (state.settings.deviceAddress != null) {
       await startAndAttachViaAgent(base, state);
@@ -791,9 +791,8 @@ Future<int> compileAndAttachToVmThen(
   // Setup a handler for incoming commands while the current task is executing.
   readCommands(commandIterator, state);
 
-  // Notify controlling isolate (driver_main) that the event loop
-  // [readCommands] has been started, and commands like DriverCommand.Signal
-  // will be honored.
+  // Notify controlling isolate (hub) that the event loop [readCommands] has
+  // been started, and commands like ClientCommandCode.Signal will be honored.
   commandSender.sendEventLoopStarted();
 
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
@@ -814,11 +813,11 @@ Future<int> compileAndAttachToVmThen(
 }
 
 Future<Null> readCommands(
-    StreamIterator<Command> commandIterator, SessionState state) async {
+    StreamIterator<ClientCommand> commandIterator, SessionState state) async {
   while (await commandIterator.moveNext()) {
-    Command command = commandIterator.current;
+    ClientCommand command = commandIterator.current;
     switch (command.code) {
-      case DriverCommand.Signal:
+      case ClientCommandCode.Signal:
         int signalNumber = command.data;
         handleSignal(state, signalNumber);
         break;
@@ -894,7 +893,7 @@ Future<Uri> lookForAgentPackage(Uri base, {String version}) async {
 Future<Uri> readPackagePathFromUser(
     Uri base,
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator) async {
+    StreamIterator<ClientCommand> commandIterator) async {
   Uri sdkAgentPackage = await lookForAgentPackage(base);
   if (sdkAgentPackage != null) {
     String path = sdkAgentPackage.toFilePath();
@@ -907,9 +906,9 @@ Future<Uri> readPackagePathFromUser(
   }
 
   while (await commandIterator.moveNext()) {
-    Command command = commandIterator.current;
+    ClientCommand command = commandIterator.current;
     switch (command.code) {
-      case DriverCommand.Stdin:
+      case ClientCommandCode.Stdin:
         if (command.data.length == 0) {
           throwInternalError("Unexpected end of input");
         }
@@ -996,7 +995,7 @@ Version parseVersion(String text) {
 
 Future<int> upgradeAgent(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri base,
     Uri packageUri) async {
@@ -1034,9 +1033,9 @@ Future<int> upgradeAgent(
         "Please confirm this operation by typing 'yes' "
         "(press Enter to abort): ");
     Confirm: while (await commandIterator.moveNext()) {
-      Command command = commandIterator.current;
+      ClientCommand command = commandIterator.current;
       switch (command.code) {
-        case DriverCommand.Stdin:
+        case ClientCommandCode.Stdin:
         if (command.data.length == 0) {
           throwInternalError("Unexpected end of input");
         }
@@ -1104,11 +1103,11 @@ Future<int> upgradeAgent(
   return 0;
 }
 
-Future<IsolateController> allocateWorker(IsolatePool pool) async {
-  IsolateController worker =
-      new IsolateController(await pool.getIsolate(exitOnError: false));
-  await worker.beginSession();
-  return worker;
+Future<WorkerConnection> allocateWorker(IsolatePool pool) async {
+  WorkerConnection workerConnection =
+      new WorkerConnection(await pool.getIsolate(exitOnError: false));
+  await workerConnection.beginSession();
+  return workerConnection;
 }
 
 SharedTask combineTasks(SharedTask task1, SharedTask task2) {
@@ -1128,14 +1127,14 @@ class CombinedTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return invokeCombinedTasks(commandSender, commandIterator, task1, task2);
   }
 }
 
 Future<int> invokeCombinedTasks(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     SharedTask task1,
     SharedTask task2) async {
   int result = await task1(commandSender, commandIterator);

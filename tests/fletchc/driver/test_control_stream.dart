@@ -49,16 +49,18 @@ Future<Null> testControlStream() async {
       ..addAll(stdinCommandData);
   controller.add(new Uint8List.fromList(testData));
 
-  StreamTransformer<List<int>, Command> transformer =
-      new DriverCommandTransformerBuilder().build();
-  Future<List<Command>> commandsFuture =
+  StreamTransformer<List<int>, ClientCommand> transformer =
+      new ClientCommandTransformerBuilder().build();
+  Future<List<ClientCommand>> commandsFuture =
       controller.stream.transform(transformer).toList();
 
   await controller.close();
 
-  List<Command> commands = await commandsFuture;
+  List<ClientCommand> commands = await commandsFuture;
   Expect.equals(6, commands.length);
-  for (Command command in commands) {
-    Expect.stringEquals('Command(DriverCommand.Stdin, [])', '$command');
+  for (ClientCommand command in commands) {
+    Expect.stringEquals(
+        'ClientCommand(ClientCommandCode.Stdin, [])',
+        '$command');
   }
 }

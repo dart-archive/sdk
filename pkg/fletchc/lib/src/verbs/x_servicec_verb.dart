@@ -55,7 +55,7 @@ class CompileTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return compileTask(targetUri, base, trailing);
   }
 }

@@ -30,8 +30,8 @@ import 'package:fletchc/src/verbs/actions.dart' show
     Action;
 
 import 'package:fletchc/src/driver/driver_main.dart' show
-    ClientController,
     ClientLogger,
+    ClientConnection,
     IsolatePool,
     handleVerb;
 
@@ -42,8 +42,8 @@ import 'package:fletchc/src/driver/session_manager.dart' show
     endAllSessions;
 
 import 'package:fletchc/src/driver/driver_commands.dart' show
-    Command,
-    DriverCommand;
+    ClientCommand,
+    ClientCommandCode;
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show
     AnalyzedSentence,
@@ -116,12 +116,12 @@ Future<Null> checkCommandLineExample(
   }
   List<String> lastLine = lines.removeLast();
   for (List<String> setup in lines) {
-    MockClientController mock = await mockCommandLine(setup);
+    MockClientConnection mock = await mockCommandLine(setup);
     await mock.done;
     Expect.isNull(mock.recordedError);
     Expect.equals(0, mock.recordedExitCode);
   }
-  MockClientController mock = await mockCommandLine(lastLine);
+  MockClientConnection mock = await mockCommandLine(lastLine);
   if (kind == DiagnosticKind.socketVmConnectError) {
     await mock.done;
     Options options = Options.parse(lastLine);
@@ -149,14 +149,14 @@ Future<Null> checkCommandLineExample(
   Expect.equals(1, mock.recordedExitCode);
 }
 
-Future<MockClientController> mockCommandLine(List<String> arguments) async {
+Future<MockClientConnection> mockCommandLine(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
-  MockClientController client = new MockClientController();
+  MockClientConnection client = new MockClientConnection();
   await handleVerb(arguments, client, pool);
   return client;
 }
 
-class MockClientController implements ClientController {
+class MockClientConnection implements ClientConnection {
   InputError recordedError;
 
   int recordedExitCode;
@@ -167,11 +167,12 @@ class MockClientController implements ClientController {
 
   final List<String> stderrMessages = <String>[];
 
-  final StreamController<Command> controller = new StreamController<Command>();
+  final StreamController<ClientCommand> controller =
+      new StreamController<ClientCommand>();
 
   AnalyzedSentence sentence;
 
-  MockClientController();
+  MockClientConnection();
 
   get completer => mockCompleter;
 
@@ -179,21 +180,21 @@ class MockClientController implements ClientController {
 
   get commands => controller.stream;
 
-  void enqueCommandToWorker(Command command) {
+  void sendCommandToWorker(ClientCommand command) {
     controller.add(command);
   }
 
-  sendCommand(Command command) {
+  sendCommandToClient(ClientCommand command) {
     switch (command.code) {
-      case DriverCommand.ExitCode:
+      case ClientCommandCode.ExitCode:
         exit(command.data);
         break;
 
-      case DriverCommand.Stderr:
+      case ClientCommandCode.Stderr:
         printLineOnStderr(mockStripNewline(UTF8.decode(command.data)));
         break;
 
-      case DriverCommand.Stdout:
+      case ClientCommandCode.Stdout:
         printLineOnStdout(mockStripNewline(UTF8.decode(command.data)));
         break;
 
@@ -210,7 +211,7 @@ class MockClientController implements ClientController {
     }
   }
 
-  endClientSession() {
+  endSession() {
     completer.complete(null);
   }
 
@@ -234,7 +235,7 @@ class MockClientController implements ClientController {
   exit(int exitCode) {
     recordedExitCode = exitCode;
     if (!completer.isCompleted) {
-      endClientSession();
+      endSession();
     }
   }
 
@@ -251,9 +252,9 @@ class MockClientController implements ClientController {
     return this.sentence;
   }
 
-  handleCommand(_) => throw "not supported";
-  handleCommandError(e, s) => throw "not supported";
-  handleCommandsDone() => throw "not supported";
+  handleClientCommand(_) => throw "not supported";
+  handleClientCommandError(e, s) => throw "not supported";
+  handleClientCommandsDone() => throw "not supported";
   start() => throw "not supported";
   get arguments => throw "not supported";
   get argumentsCompleter => throw "not supported";

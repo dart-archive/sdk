@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.driver_main;
+library fletchc.hub_main;
 
 import 'dart:collection' show
     Queue;
@@ -45,7 +45,7 @@ import 'exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 import 'driver_commands.dart' show
-    DriverCommand,
+    ClientCommandCode,
     handleSocketErrors;
 
 import 'driver_isolate.dart' show
@@ -96,21 +96,21 @@ Function gracefulShutdown;
 
 final List<String> mainArguments = <String>[];
 
-class DriverCommandTransformerBuilder
-    extends CommandTransformerBuilder<Command> {
-  Command makeCommand(int commandCode, ByteData payload) {
-    DriverCommand code = DriverCommand.values[commandCode];
+class ClientCommandTransformerBuilder
+    extends CommandTransformerBuilder<ClientCommand> {
+  ClientCommand makeCommand(int commandCode, ByteData payload) {
+    ClientCommandCode code = ClientCommandCode.values[commandCode];
     switch (code) {
-      case DriverCommand.Arguments:
-        return new Command(code, decodeArgumentsCommand(payload));
+      case ClientCommandCode.Arguments:
+        return new ClientCommand(code, decodeArgumentsCommand(payload));
 
-      case DriverCommand.Stdin:
+      case ClientCommandCode.Stdin:
         int length = payload.getUint32(0, commandEndianness);
-        return new Command(code, toUint8ListView(payload, 4, length));
+        return new ClientCommand(code, toUint8ListView(payload, 4, length));
 
-      case DriverCommand.Signal:
+      case ClientCommandCode.Signal:
         int signal = payload.getUint32(0, commandEndianness);
-        return new Command(code, signal);
+        return new ClientCommand(code, signal);
 
       default:
         return null;
@@ -132,31 +132,31 @@ class DriverCommandTransformerBuilder
   }
 }
 
-class ByteCommandSender extends CommandSender {
+class ClientCommandSender extends CommandSender {
   final Sink<List<int>> sink;
 
-  ByteCommandSender(this.sink);
+  ClientCommandSender(this.sink);
 
   void sendExitCode(int exitCode) {
-    new CommandBuffer<DriverCommand>()
+    new CommandBuffer<ClientCommandCode>()
         ..addUint32(exitCode)
-        ..sendOn(sink, DriverCommand.ExitCode);
+        ..sendOn(sink, ClientCommandCode.ExitCode);
   }
 
-  void sendDataCommand(DriverCommand command, List<int> data) {
-    new CommandBuffer<DriverCommand>()
+  void sendDataCommand(ClientCommandCode code, List<int> data) {
+    new CommandBuffer<ClientCommandCode>()
         ..addUint32(data.length)
         ..addUint8List(data)
-        ..sendOn(sink, command);
+        ..sendOn(sink, code);
   }
 
   void sendClose() {
-    throwInternalError("Client (C++) doesn't support DriverCommand.Close.");
+    throwInternalError("Client (C++) doesn't support ClientCommandCode.Close.");
   }
 
   void sendEventLoopStarted() {
     throwInternalError(
-        "Client (C++) doesn't support DriverCommand.EventLoopStarted.");
+        "Client (C++) doesn't support ClientCommandCode.EventLoopStarted.");
   }
 }
 
@@ -168,7 +168,7 @@ Future main(List<String> arguments) async {
   mainArguments.addAll(arguments);
   configFileUri = Uri.base.resolve(arguments.first);
   File configFile = new File.fromUri(configFileUri);
-  Directory tmpdir = Directory.systemTemp.createTempSync("fletch_driver");
+  Directory tmpdir = Directory.systemTemp.createTempSync("fletch_client");
 
   File socketFile = new File("${tmpdir.path}/socket");
   try {
@@ -202,7 +202,6 @@ Future main(List<String> arguments) async {
     }
   };
 
-
   void handleSignal(StreamSubscription<ProcessSignal> subscription) {
     subscription.onData((ProcessSignal signal) {
       // Cancel the subscription to restore default signal handler.
@@ -228,8 +227,8 @@ Future main(List<String> arguments) async {
   server = await ServerSocket.bind(new UnixDomainAddress(socketFile.path), 0);
 
   // Write the socket file to a config file. This lets multiple command line
-  // programs share this persistent driver process, which in turn eliminates
-  // start up overhead.
+  // programs share this persistent process, which in turn eliminates start
+  // up overhead.
   configFile.writeAsStringSync(socketFile.path, flush: true);
 
   // Print the temporary directory so the launching process knows where to
@@ -249,22 +248,23 @@ Future main(List<String> arguments) async {
 Future<Null> handleClient(IsolatePool pool, Socket controlSocket) async {
   ClientLogger log = ClientLogger.allocate();
 
-  ClientController client = new ClientController(controlSocket, log)..start();
-  List<String> arguments = await client.arguments;
+  ClientConnection clientConnection =
+      new ClientConnection(controlSocket, log)..start();
+  List<String> arguments = await clientConnection.arguments;
   log.gotArguments(arguments);
 
-  await handleVerb(arguments, client, pool);
+  await handleVerb(arguments, clientConnection, pool);
 }
 
 Future<Null> handleVerb(
     List<String> arguments,
-    ClientController client,
+    ClientConnection clientConnection,
     IsolatePool pool) async {
   crashReportRequested = false;
 
   Future<int> performVerb() async {
-    client.parseArguments(arguments);
-    String sessionName = client.sentence.sessionName;
+    clientConnection.parseArguments(arguments);
+    String sessionName = clientConnection.sentence.sessionName;
     UserSession session;
     SharedTask initializer;
     if (sessionName != null) {
@@ -272,45 +272,47 @@ Future<Null> handleVerb(
       if (session == null) {
         session = await createSession(sessionName, () => allocateWorker(pool));
         initializer = new CreateSessionTask(
-            sessionName, null, client.sentence.base, configFileUri);
+            sessionName, null, clientConnection.sentence.base, configFileUri);
       }
     }
-    DriverVerbContext context =
-        new DriverVerbContext(client, pool, session, initializer: initializer);
-    return await client.sentence.performVerb(context);
+    ClientVerbContext context = new ClientVerbContext(
+        clientConnection, pool, session, initializer: initializer);
+    return await clientConnection.sentence.performVerb(context);
   }
 
   int exitCode = await runGuarded(
       performVerb,
-      printLineOnStdout: client.printLineOnStdout,
-      handleLateError: client.log.error)
-      .catchError(client.reportErrorToClient, test: (e) => e is InputError)
+      printLineOnStdout: clientConnection.printLineOnStdout,
+      handleLateError: clientConnection.log.error)
+      .catchError(
+          clientConnection.reportErrorToClient, test: (e) => e is InputError)
       .catchError((error, StackTrace stackTrace) {
         if (!crashReportRequested) {
-          client.printLineOnStderr(requestBugReportOnOtherCrashMessage);
+          clientConnection.printLineOnStderr(
+              requestBugReportOnOtherCrashMessage);
           crashReportRequested = true;
         }
-        client.printLineOnStderr('$error');
+        clientConnection.printLineOnStderr('$error');
         if (stackTrace != null) {
-          client.printLineOnStderr('$stackTrace');
+          clientConnection.printLineOnStderr('$stackTrace');
         }
         return COMPILER_EXITCODE_CRASH;
       });
-  client.exit(exitCode);
+  clientConnection.exit(exitCode);
 }
 
-class DriverVerbContext extends VerbContext {
+class ClientVerbContext extends VerbContext {
   SharedTask initializer;
 
-  DriverVerbContext(
-      ClientController client,
+  ClientVerbContext(
+      ClientConnection clientConnection,
       IsolatePool pool,
       UserSession session,
       {this.initializer})
-      : super(client, pool, session);
+      : super(clientConnection, pool, session);
 
-  DriverVerbContext copyWithSession(UserSession session) {
-    return new DriverVerbContext(client, pool, session);
+  ClientVerbContext copyWithSession(UserSession session) {
+    return new ClientVerbContext(clientConnection, pool, session);
   }
 
   Future<int> performTaskInWorker(SharedTask task) async {
@@ -323,39 +325,49 @@ class DriverVerbContext extends VerbContext {
     }
     session.hasActiveWorkerTask = true;
     return session.worker.performTask(
-        combineTasks(initializer, task), client, userSession: session)
+        combineTasks(initializer, task), clientConnection, userSession: session)
         .whenComplete(() {
           session.hasActiveWorkerTask = false;
         });
   }
 }
 
-/// Handles communication with the C++ client.
-class ClientController {
+/// Handles communication with the Fletch C++ client.
+class ClientConnection {
+  /// Socket used for receiving and sending commands from/to the Fletch C++
+  /// client.
   final Socket socket;
 
-  /// Used to implement [commands].
-  final StreamController<Command> controller = new StreamController<Command>();
+  /// Controller used to send commands to the from the ClientConnection to
+  /// anyone listening on ClientConnection.commands (see [commands] below). The
+  /// only listener as of now is the WorkerConnection which typically forwards
+  /// the commands to the worker isolate.
+  final StreamController<ClientCommand> controller =
+      new StreamController<ClientCommand>();
 
   final ClientLogger log;
 
-  CommandSender commandSender;
-  StreamSubscription<Command> subscription;
+  /// The commandSender is used to send commands back to the Fletch C++ client.
+  ClientCommandSender commandSender;
+
+  StreamSubscription<ClientCommand> subscription;
   Completer<Null> completer;
 
   Completer<List<String>> argumentsCompleter = new Completer<List<String>>();
 
-  /// The request from the client. Updated by [parseArguments].
+  /// The analysed version of the request from the client.
+  /// Updated by [parseArguments].
   AnalyzedSentence sentence;
 
   /// Path to the fletch VM. Updated by [parseArguments].
   String fletchVm;
 
-  ClientController(this.socket, this.log);
+  ClientConnection(this.socket, this.log);
 
-  /// A stream of commands from the client that should be forwarded to a worker
-  /// isolate.
-  Stream<Command> get commands => controller.stream;
+  /// Stream of commands from the Fletch C++ client to the hub (main isolate).
+  /// The commands are typically forwarded to a worker isolate, see
+  /// handleClientCommand.
+  Stream<ClientCommand> get commands => controller.stream;
 
   /// Completes when [endSession] is called.
   Future<Null> get done => completer.future;
@@ -365,33 +377,41 @@ class ClientController {
 
   /// Start processing commands from the client.
   void start() {
-    commandSender = new ByteCommandSender(socket);
-    StreamTransformer<List<int>, Command> transformer =
-        new DriverCommandTransformerBuilder().build();
+    // Setup a command sender used to send responses from the hub (main isolate)
+    // back to the Fletch C++ client.
+    commandSender = new ClientCommandSender(socket);
+
+    // Setup a listener for handling commands coming from the Fletch C++
+    // client.
+    StreamTransformer<List<int>, ClientCommand> transformer =
+        new ClientCommandTransformerBuilder().build();
     subscription = socket.transform(transformer).listen(null);
     subscription
-        ..onData(handleCommand)
-        ..onError(handleCommandError)
-        ..onDone(handleCommandsDone);
+        ..onData(handleClientCommand)
+        ..onError(handleClientCommandError)
+        ..onDone(handleClientCommandsDone);
     completer = new Completer<Null>();
   }
 
-  void handleCommand(Command command) {
-    if (command.code == DriverCommand.Arguments) {
+  void handleClientCommand(ClientCommand command) {
+    if (command.code == ClientCommandCode.Arguments) {
       // This intentionally throws if arguments are sent more than once.
       argumentsCompleter.complete(command.data);
     } else {
-      enqueCommandToWorker(command);
+      sendCommandToWorker(command);
     }
   }
 
-  void enqueCommandToWorker(Command command) {
-    // TODO(ahe): It is a bit weird that this method is on the client. Ideally,
-    // this would be a method on IsolateController.
+  void sendCommandToWorker(ClientCommand command) {
+    // TODO(ahe): It is a bit weird that this method is on the client proxy.
+    // Ideally, this would be a method on WorkerConnection. However the client
+    // is created before the WorkerConnection which is not created until/if
+    // needed. The WorkerConnection will start listening to the client's
+    // commands when attaching, see WorkerConnection.attachClient.
     controller.add(command);
   }
 
-  void handleCommandError(error, StackTrace trace) {
+  void handleClientCommandError(error, StackTrace trace) {
     print(stringifyError(error, trace));
     completer.completeError(error, trace);
     // Cancel the subscription if an error occurred, this prevents
@@ -400,21 +420,22 @@ class ClientController {
     subscription.cancel();
   }
 
-  void handleCommandsDone() {
+  void handleClientCommandsDone() {
     completer.complete();
   }
 
-  void sendCommand(Command command) {
+  // Send a command back to the Fletch C++ client.
+  void sendCommandToClient(ClientCommand command) {
     switch (command.code) {
-      case DriverCommand.Stdout:
+      case ClientCommandCode.Stdout:
         commandSender.sendStdoutBytes(command.data);
         break;
 
-      case DriverCommand.Stderr:
+      case ClientCommandCode.Stderr:
         commandSender.sendStderrBytes(command.data);
         break;
 
-      case DriverCommand.ExitCode:
+      case ClientCommandCode.ExitCode:
         commandSender.sendExitCode(command.data);
         break;
 
@@ -423,7 +444,7 @@ class ClientController {
     }
   }
 
-  void endClientSession() {
+  void endSession() {
     socket.flush().then((_) {
       socket.close();
     });
@@ -449,7 +470,7 @@ class ClientController {
       }
     }
     commandSender.sendExitCode(exitCode);
-    endClientSession();
+    endSession();
   }
 
   AnalyzedSentence parseArguments(List<String> arguments) {
@@ -481,22 +502,26 @@ class ClientController {
   }
 }
 
-/// Handles communication with a worker isolate.
-class IsolateController {
+/// The WorkerConnection represents a worker isolate in the hub (main isolate).
+/// Ie. it is the hub's object for communicating with a worker isolate.
+class WorkerConnection {
   /// The worker isolate.
   final ManagedIsolate isolate;
 
-  /// An iterator commands from the worker isolate.
-  StreamIterator<Command> workerCommands;
-
   /// A port used to send commands to the worker isolate.
-  SendPort workerSendPort;
+  SendPort sendPort;
 
   /// A port used to read commands from the worker isolate.
-  ReceivePort workerReceivePort;
+  ReceivePort receivePort;
+
+  /// workerCommands is an iterator over all the commands coming from the
+  /// worker isolate. These are typically the outbound messages destined for
+  /// the Fletch C++ client.
+  /// It iterates over the data coming on the receivePort.
+  StreamIterator<ClientCommand> workerCommands;
 
   /// When true, the worker can be shutdown by sending it a
-  /// DriverCommand.Signal command.  Otherwise, it must be killed.
+  /// ClientCommandCode.Signal command.  Otherwise, it must be killed.
   bool eventLoopStarted = false;
 
   /// Subscription for errors from [isolate].
@@ -504,99 +529,120 @@ class IsolateController {
 
   bool crashReportRequested = false;
 
-  IsolateController(this.isolate);
+  WorkerConnection(this.isolate);
 
   /// Begin a session with the worker isolate.
   Future<Null> beginSession() async {
     errorSubscription = isolate.errors.listen(null);
     errorSubscription.pause();
-    workerReceivePort = isolate.beginSession();
-    Stream<Command> workerCommandStream = workerReceivePort.map(
-        (message) => new Command(DriverCommand.values[message[0]], message[1]));
-    workerCommands = new StreamIterator<Command>(workerCommandStream);
+    receivePort = isolate.beginSession();
+    // Setup the workerCommands iterator using a stream converting the
+    // incoming data to [ClientCommand]s.
+    Stream<ClientCommand> workerCommandStream = receivePort.map(
+        (message) => new ClientCommand(
+            ClientCommandCode.values[message[0]], message[1]));
+    workerCommands = new StreamIterator<ClientCommand>(workerCommandStream);
     if (!await workerCommands.moveNext()) {
       // The worker must have been killed, or died in some other way.
       // TODO(ahe): Add this assertion: assert(isolate.wasKilled);
-      endWorkerSession();
+      endSession();
       return;
     }
-    Command command = workerCommands.current;
-    assert(command.code == DriverCommand.SendPort);
+    ClientCommand command = workerCommands.current;
+    assert(command.code == ClientCommandCode.SendPort);
     assert(command.data != null);
-    workerSendPort = command.data;
+    sendPort = command.data;
   }
 
-  /// Attach to a C++ client and forward commands to the worker isolate, and
-  /// vice versa.  The returned future normally completes when the worker
-  /// isolate sends DriverCommand.ClosePort, or if the isolate is killed due to
-  /// DriverCommand.Signal arriving through client.commands.
+  /// Attach to a fletch C++ client and forward commands to the worker isolate,
+  /// and vice versa.  The returned future normally completes when the worker
+  /// isolate sends ClientCommandCode.ClosePort, or if the isolate is killed due
+  /// to ClientCommandCode.Signal arriving through client.commands.
   Future<int> attachClient(
-      ClientController client,
+      ClientConnection clientConnection,
       UserSession userSession) async {
+
+    // Method for handling commands coming from the client. The commands are
+    // typically forwarded to the worker isolate.
+    handleCommandsFromClient(ClientCommand command) {
+      if (command.code == ClientCommandCode.Signal && !eventLoopStarted) {
+        if (userSession != null) {
+          userSession.kill(clientConnection.printLineOnStderr);
+        } else {
+          isolate.kill();
+        }
+        receivePort.close();
+      } else {
+        sendPort.send([command.code.index, command.data]);
+      }
+    }
+
+    // Method for handling commands coming back from the worker isolate.
+    // It typically forwards them to the Fletch C++ client via the
+    // clientConnection.
+    Future<int> handleCommandsFromWorker(
+        ClientConnection clientConnection) async {
+      int exitCode = COMPILER_EXITCODE_CRASH;
+      while (await workerCommands.moveNext()) {
+        ClientCommand command = workerCommands.current;
+        switch (command.code) {
+          case ClientCommandCode.ClosePort:
+            receivePort.close();
+            break;
+
+          case ClientCommandCode.EventLoopStarted:
+            eventLoopStarted = true;
+            break;
+
+          case ClientCommandCode.ExitCode:
+            exitCode = command.data;
+            break;
+
+          default:
+            clientConnection.sendCommandToClient(command);
+            break;
+        }
+      }
+      return exitCode;
+    }
+
     eventLoopStarted = false;
     crashReportRequested = false;
     errorSubscription.onData((errorList) {
       String error = errorList[0];
       String stackTrace = errorList[1];
       if (!crashReportRequested) {
-        client.printLineOnStderr(requestBugReportOnOtherCrashMessage);
+        clientConnection.printLineOnStderr(requestBugReportOnOtherCrashMessage);
         crashReportRequested = true;
       }
-      client.printLineOnStderr(error);
+      clientConnection.printLineOnStderr(error);
       if (stackTrace != null) {
-        client.printLineOnStderr(stackTrace);
+        clientConnection.printLineOnStderr(stackTrace);
       }
       if (userSession != null) {
-        userSession.kill(client.printLineOnStderr);
+        userSession.kill(clientConnection.printLineOnStderr);
       } else {
         isolate.kill();
       }
-      workerReceivePort.close();
+      receivePort.close();
     });
     errorSubscription.resume();
-    handleCommand(Command command) {
-      if (command.code == DriverCommand.Signal && !eventLoopStarted) {
-        if (userSession != null) {
-          userSession.kill(client.printLineOnStderr);
-        } else {
-          isolate.kill();
-        }
-        workerReceivePort.close();
-      } else {
-        workerSendPort.send([command.code.index, command.data]);
-      }
-    }
+
+    // Start listening for commands coming from the Fletch C++ client (via
+    // clientConnection).
     // TODO(ahe): Add onDone event handler to detach the client.
-    client.commands.listen(handleCommand);
+    clientConnection.commands.listen(handleCommandsFromClient);
 
-    int exitCode = COMPILER_EXITCODE_CRASH;
-    while (await workerCommands.moveNext()) {
-      Command command = workerCommands.current;
-      switch (command.code) {
-        case DriverCommand.ClosePort:
-          workerReceivePort.close();
-          break;
+    // Start processing commands coming from the worker.
+    int exitCode = await handleCommandsFromWorker(clientConnection);
 
-        case DriverCommand.EventLoopStarted:
-          eventLoopStarted = true;
-          break;
-
-        case DriverCommand.ExitCode:
-          exitCode = command.data;
-          break;
-
-        default:
-          client.sendCommand(command);
-          break;
-      }
-    }
     errorSubscription.pause();
     return exitCode;
   }
 
-  void endWorkerSession() {
-    workerReceivePort.close();
-    isolate.endIsolateSession();
+  void endSession() {
+    receivePort.close();
+    isolate.endSession();
   }
 
   Future<Null> detachClient() async {
@@ -604,9 +650,9 @@ class IsolateController {
       // Setting these to null will ensure that [attachClient] causes a crash
       // if called after isolate was killed.
       errorSubscription = null;
-      workerReceivePort = null;
+      receivePort = null;
       workerCommands = null;
-      workerSendPort = null;
+      sendPort = null;
 
       // TODO(ahe): The session is dead. Tell the user about this.
       return null;
@@ -617,26 +663,30 @@ class IsolateController {
 
   Future<int> performTask(
       SharedTask task,
-      ClientController client,
+      ClientConnection clientConnection,
       {
        UserSession userSession,
        /// End this session and return this isolate to the pool.
        bool endSession: false}) async {
-    ClientLogger log = client.log;
+    ClientLogger log = clientConnection.log;
 
-    client.done.catchError((error, StackTrace stackTrace) {
+    clientConnection.done.catchError((error, StackTrace stackTrace) {
       log.error(error, stackTrace);
     }).then((_) {
       log.done();
     });
 
-    client.enqueCommandToWorker(new Command(DriverCommand.PerformTask, task));
+    // Indirectly send the task to be performed to the worker isolate via the
+    // clientConnection.
+    clientConnection.sendCommandToWorker(
+        new ClientCommand(ClientCommandCode.PerformTask, task));
 
-    // Forward commands between the C++ client [client], and the worker isolate
-    // `this`.  Also, Intercept the signal command and potentially kill the
-    // isolate (the isolate needs to tell if it is interuptible or needs to be
-    // killed, an example of the latter is, if compiler is running).
-    int exitCode = await attachClient(client, userSession);
+    // Forward commands between the C++ fletch client [clientConnection], and the
+    // worker isolate `this`.  Also, Intercept the signal command and
+    // potentially kill the isolate (the isolate needs to tell if it is
+    // interuptible or needs to be killed, an example of the latter is, if
+    // compiler is running).
+    int exitCode = await attachClient(clientConnection, userSession);
     // The verb (which was performed in the worker) is done.
     log.note("After attachClient (exitCode = $exitCode)");
 
@@ -644,7 +694,7 @@ class IsolateController {
       // Return the isolate to the pool *before* shutting down the client. This
       // ensures that the next client will be able to reuse the isolate instead
       // of spawning a new.
-      this.endWorkerSession();
+      this.endSession();
     } else {
       await detachClient();
     }
@@ -672,7 +722,7 @@ class ManagedIsolate {
     return receivePort;
   }
 
-  void endIsolateSession() {
+  void endSession() {
     if (!wasKilled) {
       pool.idleIsolates.addLast(this);
     }
@@ -759,16 +809,16 @@ class IsolatePool {
 }
 
 class ClientLogger {
-  static int clientsAllocated = 0;
+  static int clientLoggersAllocated = 0;
 
   static Set<ClientLogger> pendingClients = new Set<ClientLogger>();
 
   static Set<ClientLogger> erroneousClients = new Set<ClientLogger>();
 
   static ClientLogger allocate() {
-    ClientLogger client = new ClientLogger(clientsAllocated++);
-    pendingClients.add(client);
-    return client;
+    ClientLogger clientLogger = new ClientLogger(clientLoggersAllocated++);
+    pendingClients.add(clientLogger);
+    return clientLogger;
   }
 
   final int id;

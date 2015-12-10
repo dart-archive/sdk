@@ -39,18 +39,18 @@ export '../diagnostic.dart' show
     throwFatalError;
 
 import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
+    CommandSender,
+    ClientCommand;
 
 export '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
+    CommandSender,
+    ClientCommand;
 
 import '../driver/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
     IncrementalCompiler,
-    IsolateController,
+    WorkerConnection,
     Session,
     SessionState,
     UserSession,
@@ -60,7 +60,7 @@ export '../driver/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
     IncrementalCompiler,
-    IsolateController,
+    WorkerConnection,
     Session,
     SessionState,
     UserSession,
@@ -81,11 +81,11 @@ export '../driver/session_manager.dart' show
     createSession;
 
 import '../driver/driver_main.dart' show
-    ClientController,
+    ClientConnection,
     IsolatePool;
 
 export '../driver/driver_main.dart' show
-    ClientController,
+    ClientConnection,
     IsolatePool;
 
 import '../driver/session_manager.dart' show
@@ -138,6 +138,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   if (sentence.verb.isErroneous) {
     sentence.verb.action.perform(null, null);
   }
+
   sentence.targets.where((Target t) => t.isErroneous)
       .forEach(reportErroneousTarget);
   sentence.prepositions.map((p) => p.target).where((Target t) => t.isErroneous)
@@ -383,22 +384,22 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
 
 abstract class VerbContext {
-  final ClientController client;
+  final ClientConnection clientConnection;
 
   final IsolatePool pool;
 
   final UserSession session;
 
-  VerbContext(this.client, this.pool, this.session);
+  VerbContext(this.clientConnection, this.pool, this.session);
 
   Future<int> performTaskInWorker(SharedTask task);
 
   VerbContext copyWithSession(UserSession session);
 }
 
-/// Represents a task that is shared between the main isolate and a worker
-/// isolate. Since instances of this class are copied from the main isolate to
-/// a worker isolate, they should be kept simple:
+/// Represents a task that is shared between the hub (main isolate) and a worker
+/// isolate. Since instances of this class are sent from the hub (main isolate)
+/// to a worker isolate, they should be kept simple:
 ///
 /// *   Pay attention to the transitive closure of its fields. The closure
 ///     should be kept as small as possible to avoid too much copying.
@@ -410,7 +411,7 @@ abstract class SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator);
+      StreamIterator<ClientCommand> commandIterator);
 }
 
 class AnalyzedSentence {

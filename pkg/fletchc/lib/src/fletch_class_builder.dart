@@ -50,7 +50,7 @@ abstract class FletchClassBuilder {
 
   FletchClass finalizeClass(
       FletchContext context,
-      List<Command> commands);
+      List<VmCommand> commands);
 
   // The method table for a class is a mapping from Fletch's integer
   // selectors to method ids. It contains all methods defined for a
@@ -58,7 +58,7 @@ abstract class FletchClassBuilder {
   // TODO(ajohnsen): Remove once not used by feature_test anymore.
   PersistentMap<int, int> computeMethodTable();
 
-  bool computeSchemaChange(List<Command> commands) {
+  bool computeSchemaChange(List<VmCommand> commands) {
     return false;
   }
 }
@@ -181,7 +181,7 @@ class FletchNewClassBuilder extends FletchClassBuilder {
 
   FletchClass finalizeClass(
       FletchContext context,
-      List<Command> commands) {
+      List<VmCommand> commands) {
     if (isBuiltin) {
       int nameId = context.getSymbolId(element.name);
       commands.add(new PushBuiltinClass(nameId, fields));
@@ -335,7 +335,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
 
   FletchClass finalizeClass(
       FletchContext context,
-      List<Command> commands) {
+      List<VmCommand> commands) {
     // TODO(ajohnsen): We need to figure out when to do this. It should be after
     // we have updated class fields, but before we hit 'computeSystem'.
     updateImplicitAccessors(context.backend);
@@ -364,7 +364,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
         fieldsList);
   }
 
-  bool computeSchemaChange(List<Command> commands) {
+  bool computeSchemaChange(List<VmCommand> commands) {
     if (!_fieldsChanged) return false;
 
     // TODO(ajohnsen): Don't recompute this list.

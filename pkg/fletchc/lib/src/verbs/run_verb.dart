@@ -50,7 +50,7 @@ class RunTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return runTask(
         commandSender, commandIterator, SessionState.current, script, base,
         terminateDebugger, testDebuggerCommands);
@@ -59,7 +59,7 @@ class RunTask extends SharedTask {
 
 Future<int> runTask(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri script,
     Uri base,

@@ -27,7 +27,7 @@ import '../driver/developer.dart' show
     compileAndAttachToVmThenDeprecated;
 
 import '../driver/driver_commands.dart' show
-    DriverCommand;
+    ClientCommandCode;
 
 import 'package:fletchc/debug_state.dart' show
     Breakpoint;
@@ -37,8 +37,8 @@ import '../../debug_state.dart' show
     RemoteValue,
     StackTrace;
 
-import '../../commands.dart' as vm show
-    Command;
+import '../../commands.dart' show
+    VmCommand;
 
 const Action debugAction =
     const Action(
@@ -158,14 +158,14 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
 }
 
 Future<Null> readCommands(
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     StreamController stdinController,
     SessionState state,
     Session session) async {
   while (await commandIterator.moveNext()) {
-    Command command = commandIterator.current;
+    ClientCommand command = commandIterator.current;
     switch (command.code) {
-      case DriverCommand.Stdin:
+      case ClientCommandCode.Stdin:
         if (command.data.length == 0) {
           await stdinController.close();
         } else {
@@ -173,7 +173,7 @@ Future<Null> readCommands(
         }
         break;
 
-      case DriverCommand.Signal:
+      case ClientCommandCode.Signal:
         int signalNumber = command.data;
         if (signalNumber == sigQuit) {
           await session.interrupt();
@@ -197,7 +197,7 @@ class InteractiveDebuggerTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return interactiveDebuggerTask(
         commandSender,
         SessionState.current,
@@ -211,7 +211,7 @@ Future<int> runInteractiveDebuggerTask(
     SessionState state,
     Uri script,
     Uri base,
-    StreamIterator<Command> commandIterator) {
+    StreamIterator<ClientCommand> commandIterator) {
   return compileAndAttachToVmThenDeprecated(
       commandSender,
       state,
@@ -225,7 +225,7 @@ Future<int> interactiveDebuggerTask(
     CommandSender commandSender,
     SessionState state,
     Uri base,
-    StreamIterator<Command> commandIterator) async {
+    StreamIterator<ClientCommand> commandIterator) async {
   List<FletchDelta> compilationResult = state.compilationResults;
   Session session = state.session;
   if (session == null) {
@@ -245,9 +245,8 @@ Future<int> interactiveDebuggerTask(
   StreamController stdinController = new StreamController();
   readCommands(commandIterator, stdinController, state, session);
 
-  // Notify controlling isolate (driver_main) that the event loop
-  // [readCommands] has been started, and commands like DriverCommand.Signal
-  // will be honored.
+  // Notify main isolate (hub) that the event loop [readCommands] has been
+  // started, and commands like ClientCommandCode.Signal will be honored.
   commandSender.sendEventLoopStarted();
 
   var inputStream = stdinController.stream
@@ -267,7 +266,7 @@ class DebuggerTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     switch (TargetKind.values[kind]) {
       case TargetKind.APPLY:
         return apply(commandSender, SessionState.current);
@@ -382,7 +381,7 @@ Future<int> continueDebuggerTask(
     // TODO(ager, lukechurch): Fix error reporting.
     throwInternalError('### process not running, cannot continue');
   }
-  vm.Command response = await session.cont();
+  VmCommand response = await session.cont();
   print(session.processStopResponseToString(response));
 
   if (session.terminated) state.session = null;
@@ -554,7 +553,7 @@ Future<int> stepDebuggerTask(
     throwInternalError(
         '### process not running, cannot step to next expression');
   }
-  vm.Command response = await session.step();
+  VmCommand response = await session.step();
   print(session.processStopResponseToString(response));
   return 0;
 }
@@ -565,7 +564,7 @@ Future<int> stepOverDebuggerTask(
   if (!session.running) {
     throwInternalError('### process not running, cannot go to next expression');
   }
-  vm.Command response = await session.stepOver();
+  VmCommand response = await session.stepOver();
   print(session.processStopResponseToString(response));
   return 0;
 }
@@ -591,7 +590,7 @@ Future<int> finishDebuggerTask(
   if (!session.running) {
     throwInternalError('### process not running, cannot finish method');
   }
-  vm.Command response = await session.stepOut();
+  VmCommand response = await session.stepOut();
   print(session.processStopResponseToString(response));
   return 0;
 }
@@ -609,7 +608,7 @@ Future<int> restartDebuggerTask(
   if (trace.frames <= 1) {
     throwInternalError("### cannot restart entry frame.");
   }
-  vm.Command response = await session.restart();
+  VmCommand response = await session.restart();
   print(session.processStopResponseToString(response));
   return 0;
 }
@@ -627,7 +626,7 @@ Future<int> stepBytecodeDebuggerTask(
   if (!session.running) {
     throwInternalError('### process not running, cannot step bytecode');
   }
-  vm.Command response = await session.stepBytecode();
+  VmCommand response = await session.stepBytecode();
   assert(response != null);  // stepBytecode cannot return null
   print(session.processStopResponseToString(response));
   return 0;
@@ -639,7 +638,7 @@ Future<int> stepOverBytecodeDebuggerTask(
   if (!session.running) {
     throwInternalError('### process not running, cannot step over bytecode');
   }
-  vm.Command response = await session.stepOverBytecode();
+  VmCommand response = await session.stepOverBytecode();
   assert(response != null);  // stepOverBytecode cannot return null
   print(session.processStopResponseToString(response));
   return 0;

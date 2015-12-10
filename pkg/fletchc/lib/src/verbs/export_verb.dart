@@ -38,7 +38,7 @@ class ExportTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return exportTask(
         commandSender, commandIterator, SessionState.current, script, snapshot,
         base);
@@ -47,7 +47,7 @@ class ExportTask extends SharedTask {
 
 Future<int> exportTask(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri script,
     Uri snapshot,
