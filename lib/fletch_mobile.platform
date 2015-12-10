@@ -29,7 +29,7 @@ typed_data: ../third_party/dart/sdk/lib/typed_data/typed_data.dart
 
 _internal: ../third_party/dart/sdk/lib/internal/internal.dart
 
-# These are unsupported on fletch-embedded.
+# These are unsupported on fletch-mobile.
 isolate: unsupported:
 mirrors: unsupported:
 io: unsupported:
