@@ -33,6 +33,7 @@ class Context {
     parser.addOption('version');
     parser.addOption('image-url');
     parser.addOption('zip-file');
+    parser.addOption('image-file');
     parser.addOption('tmp-dir');
     _arguments = parser.parse(args);
 
@@ -65,7 +66,7 @@ class Context {
 
   String get zipFileName => _arguments['zip-file'];
 
-  String get imgFileName => _arguments['img-file'];
+  String get imageFileName => _arguments['image-file'];
 
   Future done() async {
     // Remove tmp dir if created.

@@ -12,8 +12,8 @@ const String gcsRoot = 'https://storage.googleapis.com';
 const String gcsBucket = 'fletch-archive';
 
 const String imageRootFileName = 'fletch_raspbian';
-const String imageFileName = '$imageRootFileName.img';
-const String imageZipFileName = '$imageFileName.zip';
+const String defaultImageFileName = '$imageRootFileName.img';
+const String defaultImageZipFileName = '$defaultImageFileName.zip';
 
 // Original /etc/hosts from Raspberry Pi.
 const String originalRaspberryPiHosts = '''
@@ -66,7 +66,7 @@ Future<bool> flashCDCard(List<String> args) async {
     } else {
       await ctx.failure('Stable version not supported. Got version $version.');
     }
-    imageUrl = '$gcsRoot/$gcsBucket/$gcsPath/$imageZipFileName';
+    imageUrl = '$gcsRoot/$gcsBucket/$gcsPath/$defaultImageZipFileName';
   }
 
   // Find the SD card to flash.
@@ -134,7 +134,7 @@ Future<bool> flashCDCard(List<String> args) async {
     String zipFileName = ctx.zipFileName;
     var source = Uri.parse(imageUrl);
     if (zipFileName == null) {
-      zipFileName = '${tmpDir.path}/$imageZipFileName';
+      zipFileName = '${tmpDir.path}/$defaultImageZipFileName';
     }
     File zipFile = new File(zipFileName);
     if (ctx.skipDownload) {
@@ -151,14 +151,18 @@ Future<bool> flashCDCard(List<String> args) async {
       await platformService.decompressFile(zipFile, tmpDir);
     }
 
-    var decompressedFile = new File('${tmpDir.path}/$imageFileName');
+    String imageFileName = ctx.imageFileName;
+    if (imageFileName == null) {
+      imageFileName = '${tmpDir.path}/$defaultImageFileName';
+    }
+    var imageFile = new File(imageFileName);
     ctx.infoln('Unmounting the SD card.');
     await platformService.unmountDisk(sdCardDevice);
     if (ctx.skipWrite) {
       ctx.infoln('Skipping writing image to SD card.');
     } else {
       ctx.infoln('Writing image to SD card.');
-      await platformService.ddWithProgress(decompressedFile, sdCardDevice);
+      await platformService.ddWithProgress(imageFile, sdCardDevice);
     }
 
     // Make sure the SD card is mounted again.
@@ -167,10 +171,12 @@ Future<bool> flashCDCard(List<String> args) async {
   }
 
   // Sanity check for Raspbian boot partition.
-  var bootFiles = await mountDir.list().map((fse) => fse.path).toList();
-  ctx.log('Files in ${mountDir.path}: $bootFiles');
-  if (!bootFiles.contains('${mountDir.path}/kernel.img')) {
-    ctx.infoln('WARNING: This does not look like a Raspbian SD card.');
+  if (!(await checkRaspbianBootPartition(ctx, sdCardDevice, mountDir))) {
+    ctx.infoln(
+        'The SD card in $sdCardDevice does not look like Raspbian SD card.');
+    await platformService.unmountDisk(sdCardDevice);
+    ctx.done();
+    return false;
   }
 
   // All configuration files goes into fletch-configuration on the boot
@@ -218,5 +224,41 @@ Future<bool> flashCDCard(List<String> args) async {
   ctx.infoln('Finished flashing the SD card. '
              'You can now insert it into the Raspberry Pi 2.');
   ctx.done();
+  return true;
+}
+
+// Check if [mountDir] looks like a Raspbian boot partition.
+//
+// Returns [true] if the check succeeded.
+Future<bool> checkRaspbianBootPartition(
+    Context ctx, String sdCardDevice, Directory mountDir) async {
+  Future<List<String>> mountDirFiles() async {
+    int retryCount = 10;
+    while (true) {
+      try {
+        var bootFiles = await mountDir.list().map((fse) => fse.path).toList();
+        ctx.log('Files in ${mountDir.path}: $bootFiles');
+        return bootFiles;
+      } catch (e) {
+        ctx.log('Failed to list content of ${sdCardDevice}');
+        ctx.log('$e');
+      }
+      if (--retryCount == 0) return null;
+      await new Future.delayed(new Duration(seconds: 1));
+    }
+  }
+
+  List<String> bootFiles = await mountDirFiles();
+  if (bootFiles == null) {
+    ctx.infoln('Cannot list the content of ${sdCardDevice}. '
+               'Maybe the SD card was not written correctly.\n');
+    return false;
+  }
+  if (!bootFiles.contains('${mountDir.path}/kernel.img')) {
+    await ctx.readLine(
+        'WARNING: The SD card in ${sdCardDevice} does not look like a '
+        'Raspbian SD card.\n\n'
+        'Press Enter to continue anyway (Ctrl-C to cancel).');
+  }
   return true;
 }
