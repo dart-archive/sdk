@@ -393,7 +393,7 @@ static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
 static void ExecDaemon(int child_stdout, int child_stderr, const char** argv);
 
 static void StartDriverDaemon() {
-  const int kMaxArgv = 10;
+  const int kMaxArgv = 9;
   const char* argv[kMaxArgv];
 
   char fletch_root[MAXPATHLEN + 1];
@@ -421,7 +421,6 @@ static void StartDriverDaemon() {
          sizeof(package_spec));
 
   const char library_root[] = "-Dfletchc-library-root=" FLETCHC_LIBRARY_ROOT;
-  const char patch_root[] = "-Dfletch-patch-root=" FLETCHC_PATCH_ROOT;
   const char define_version[] = "-Dfletch.version=";
   const char* version = GetVersion();
   int version_option_length = sizeof(define_version) + strlen(version) + 1;
@@ -437,7 +436,6 @@ static void StartDriverDaemon() {
   argv[argc++] = package_option;
   argv[argc++] = version_option;
   argv[argc++] = library_root;
-  argv[argc++] = patch_root;
   argv[argc++] = "package:fletchc/src/driver/driver_main.dart";
   argv[argc++] = fletch_config_file;
   argv[argc++] = NULL;

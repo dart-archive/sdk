@@ -78,9 +78,11 @@ list_test/none: Fail
 
 # Missing async/await, and resource implementation
 data_resource_test: RuntimeError
-file_resource_test: RuntimeError
-http_resource_test: RuntimeError
 package_resource_test: RuntimeError
+
+# DartVM specific, uses dart:io.
+file_resource_test: CompileTimeError
+http_resource_test: CompileTimeError
 
 # Missing set-if-null implementation
 data_uri_test: RuntimeError

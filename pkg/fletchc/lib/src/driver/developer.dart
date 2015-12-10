@@ -487,7 +487,6 @@ SessionState createSessionState(
     String name,
     Settings settings,
     {Uri libraryRoot,
-     Uri patchRoot,
      Uri fletchVm,
      Uri nativesJson}) {
   if (settings == null) {
@@ -504,17 +503,16 @@ SessionState createSessionState(
   DeviceType deviceType = settings.deviceType ??
       parseDeviceType(fletchDeviceType);
 
-  List<Category> categories = (deviceType == DeviceType.embedded)
-      ? <Category>[Category.embedded]
-      : null;
+  String platform = (deviceType == DeviceType.embedded)
+      ? "fletch_embedded.platform"
+      : "fletch_mobile.platform";
 
   FletchCompiler compilerHelper = new FletchCompiler(
       options: compilerOptions,
       packageConfig: packageConfig,
       environment: settings.constants,
-      categories: categories,
+      platform: platform,
       libraryRoot: libraryRoot,
-      patchRoot: patchRoot,
       fletchVm: fletchVm,
       nativesJson: nativesJson);
 

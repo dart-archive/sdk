@@ -208,11 +208,13 @@ class FletchBackend extends Backend
   // TODO(ahe): This should be moved to [FletchSystem].
   Map<FletchClassBuilder, FletchFunctionBuilder> tearoffFunctions;
 
+  FletchCompilerImplementation get compiler => super.compiler;
+
   LibraryElement fletchSystemLibrary;
   LibraryElement fletchFFILibrary;
   LibraryElement collectionLibrary;
   LibraryElement mathLibrary;
-  LibraryElement asyncLibrary;
+  LibraryElement get asyncLibrary => compiler.asyncLibrary;
   LibraryElement fletchLibrary;
 
   FunctionElement fletchSystemEntry;
@@ -1378,29 +1380,40 @@ class FletchBackend extends Backend
 
   bool get supportsReflection => false;
 
-  Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
-    if (Uri.parse('dart:fletch._system') == library.canonicalUri) {
-      fletchSystemLibrary = library;
-    } else if (Uri.parse('dart:fletch.ffi') == library.canonicalUri) {
-      fletchFFILibrary = library;
-    } else if (Uri.parse('dart:collection') == library.canonicalUri) {
-      collectionLibrary = library;
-    } else if (Uri.parse('dart:math') == library.canonicalUri) {
-      mathLibrary = library;
-    } else if (Uri.parse('dart:async') == library.canonicalUri) {
-      asyncLibrary = library;
-    } else if (Uri.parse('dart:fletch') == library.canonicalUri) {
-      fletchLibrary = library;
-    }
+  // TODO(sigurdm): Support async/await on the mobile platform.
+  bool get supportsAsyncAwait {
+    return !compiler.platformConfigUri.path.contains("embedded");
+  }
 
-    if (library.isPlatformLibrary && !library.isPatched) {
-      // Apply patch, if any.
-      Uri patchUri = compiler.resolvePatchUri(library.canonicalUri.path);
-      if (patchUri != null) {
-        return compiler.patchParser.patchLibrary(loader, patchUri, library);
+  Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
+    if (library.isPlatformLibrary) {
+      String path = library.canonicalUri.path;
+      switch(path) {
+        case 'fletch._system':
+          fletchSystemLibrary = library;
+          break;
+        case 'fletch.ffi':
+          fletchFFILibrary = library;
+          break;
+        case 'fletch.collection':
+          collectionLibrary = library;
+          break;
+        case 'math':
+          mathLibrary = library;
+          break;
+        case 'fletch':
+          fletchLibrary = library;
+          break;
+      }
+
+      if (!library.isPatched) {
+        // Apply patch, if any.
+        Uri patchUri = compiler.resolvePatchUri(library.canonicalUri.path);
+        if (patchUri != null) {
+          return compiler.patchParser.patchLibrary(loader, patchUri, library);
+        }
       }
     }
-
     return null;
   }
 

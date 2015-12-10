@@ -72,14 +72,40 @@ def CopyBinaries(bundle_dir, build_dir):
   # natives.json is read relative to the dart binary
   CopyFile(join(build_dir, 'natives.json'), join(internal, 'natives.json'))
 
+# Copy the platform decriptor, rewriting paths to point to the
+# sdk location at `sdk_dir` instead of `repo_dir`.
+def CopyPlatformDescriptor(bundle_dir, platform_descriptor_name, repo_dir, sdk_dir):
+  platform_path = join('lib', platform_descriptor_name)
+  with open(platform_path) as f:
+    lines = f.read().splitlines()
+  dest = join(bundle_dir, 'internal', 'fletch_lib', platform_descriptor_name)
+  print("Copying from %s to %s adjusting paths." % (platform_path, dest))
+  with open(dest, 'w') as generated:
+    for line in lines:
+      if line.startswith('#') or l.startswith('['):
+        pass
+      else:
+        # The property-lines consist of name:uri. The uri can
+        # contain a ':' so we only split at the first ':'.
+        parts = line.split(':', 1)
+        if len(parts) == 2:
+          name, path = parts
+          path = path.strip()
+          if path.startswith(repo_dir):
+            # Dart-sdk library
+            path = path.replace(repo_dir, sdk_dir)
+          l = "%s: %s" % (name, path)
+      generated.write('%s\n' % l)
+
 # We have two lib dependencies: the libs from the sdk and the libs dir with
 # patch files from the fletch repo.
 def CopyLibs(bundle_dir, build_dir):
   internal = join(bundle_dir, 'internal')
   fletch_lib = join(internal, 'fletch_lib')
   dart_lib = join(internal, 'dart_lib')
-  copytree('lib', join(fletch_lib, 'lib'))
-  copytree('third_party/dart/sdk/lib', join(dart_lib, 'lib'))
+  copytree('lib', fletch_lib)
+  copytree('third_party/dart/sdk/lib', dart_lib)
+  CopyPlatformDescriptor(bundle_dir, 'fletch_mobile.platform')
 
 def CopyInternalPackages(bundle_dir, build_dir):
   internal_pkg = join(bundle_dir, 'internal', 'pkg')

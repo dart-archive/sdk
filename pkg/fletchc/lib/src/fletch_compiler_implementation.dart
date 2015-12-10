@@ -7,9 +7,6 @@ library fletchc.fletch_compiler_implementation;
 import 'dart:async' show
     EventSink;
 
-import 'package:sdk_library_metadata/libraries.dart' show
-    LibraryInfo;
-
 import 'package:compiler/compiler_new.dart' as api;
 
 import 'package:compiler/src/apiimpl.dart' as apiimpl;
@@ -78,51 +75,8 @@ const FLETCH_PATCHES = const <String, String>{
 
 const FLETCH_PLATFORM = 3;
 
-const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
-  "fletch._system": const LibraryInfo(
-      "system/system.dart",
-      categories: "",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch.ffi": const LibraryInfo(
-      "ffi/ffi.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch": const LibraryInfo(
-      "fletch/fletch.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch.io": const LibraryInfo(
-      "io/io.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch.service": const LibraryInfo(
-      "service/service.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch.os": const LibraryInfo(
-      "os/os.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-};
-
 class FletchCompilerImplementation extends apiimpl.CompilerImpl {
-  final Map<String, LibraryInfo> fletchLibraries = <String, LibraryInfo>{};
-
   final Uri fletchVm;
-
-  /// Location of fletch patch files.
-  final Uri patchRoot;
 
   final Uri nativesJson;
 
@@ -144,7 +98,6 @@ class FletchCompilerImplementation extends apiimpl.CompilerImpl {
       api.CompilerDiagnostics handler,
       Uri libraryRoot,
       Uri packageConfig,
-      this.patchRoot,
       this.nativesJson,
       List<String> options,
       Map<String, dynamic> environment,
@@ -167,17 +120,11 @@ class FletchCompilerImplementation extends apiimpl.CompilerImpl {
 
   String fletchPatchLibraryFor(String name) => FLETCH_PATCHES[name];
 
-  @override
-  Uri lookupLibraryUri(String libraryName) {
-    LibraryInfo info = FLETCH_LIBRARIES[libraryName];
-    if (info == null) return super.lookupLibraryUri(libraryName);
-    return patchRoot.resolve("lib/${info.path}");
-  }
-
   Uri resolvePatchUri(String dartLibraryPath) {
-    String patchPath = fletchPatchLibraryFor(dartLibraryPath);
-    if (patchPath == null) return null;
-    return patchRoot.resolve("lib/$patchPath");
+    String path = fletchPatchLibraryFor(dartLibraryPath);
+    if (path == null) return null;
+    // Fletch patches are located relative to [libraryRoot].
+    return libraryRoot.resolve(path);
   }
 
   CompilationUnitElementX compilationUnitForUri(Uri uri) {

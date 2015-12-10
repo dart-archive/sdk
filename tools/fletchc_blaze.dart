@@ -38,7 +38,6 @@ class FletchRunner {
     String snapshot;
     String script;
     Uri libraryRoot;
-    Uri patchRoot;
     Uri fletchVm;
     Uri nativesJson;
 
@@ -57,8 +56,7 @@ class FletchRunner {
         if (libraryRoot != null) throw "Cannot use multiple library roots";
         libraryRoot = Uri.base.resolve(appendSlash(arguments[++i]));
       } else if (arg == "--patch-root") {
-        if (patchRoot != null) throw "Cannot use multiple patch roots";
-        patchRoot = Uri.base.resolve(appendSlash(arguments[++i]));
+        throw "--patch-root not supported anymore";
       } else if (arg == "--fletch-vm") {
         if (fletchVm != null) throw "Cannot use multiple Fletch VMs";
         fletchVm = Uri.base.resolve(arguments[++i]);
@@ -91,7 +89,6 @@ class FletchRunner {
         "fletchc-blaze",
         settings,
         libraryRoot: libraryRoot,
-        patchRoot: patchRoot,
         fletchVm: fletchVm,
         nativesJson: nativesJson);
 

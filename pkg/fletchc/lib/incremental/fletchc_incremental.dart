@@ -53,9 +53,6 @@ import '../fletch_system.dart';
 import '../src/fletch_backend.dart' show
     FletchBackend;
 
-import 'package:sdk_library_metadata/libraries.dart' show
-    Category;
-
 import '../src/driver/exit_codes.dart' as exit_codes;
 
 part 'caching_compiler.dart';
@@ -85,7 +82,6 @@ enum IncrementalMode {
 
 class IncrementalCompiler {
   final Uri libraryRoot;
-  final Uri patchRoot;
   final Uri nativesJson;
   final Uri packageConfig;
   final Uri fletchVm;
@@ -94,14 +90,13 @@ class IncrementalCompiler {
   final CompilerOutput outputProvider;
   final Map<String, dynamic> environment;
   final IncrementalCompilerContext _context;
-  final List<Category> categories;
   final IncrementalMode support;
+  final String platform;
 
   FletchCompilerImplementation _compiler;
 
   IncrementalCompiler(
       {this.libraryRoot,
-       this.patchRoot,
        this.nativesJson,
        this.packageConfig,
        this.fletchVm,
@@ -110,8 +105,8 @@ class IncrementalCompiler {
        this.options,
        this.outputProvider,
        this.environment,
-       this.categories,
-       this.support: IncrementalMode.none})
+       this.support: IncrementalMode.none,
+       this.platform})
       : _context = new IncrementalCompilerContext(diagnosticHandler) {
     // if (libraryRoot == null) {
     //   throw new ArgumentError('libraryRoot is null.');
@@ -124,6 +119,9 @@ class IncrementalCompiler {
     }
     if (diagnosticHandler == null) {
       throw new ArgumentError('diagnosticHandler is null.');
+    }
+    if (platform == null) {
+      throw new ArgumentError('platform is Null.');
     }
     _context.incrementalCompiler = this;
   }
@@ -189,7 +187,6 @@ class IncrementalCompiler {
     return reuseCompiler(
         cachedCompiler: _compiler,
         libraryRoot: libraryRoot,
-        patchRoot: patchRoot,
         packageConfig: packageConfig,
         nativesJson: nativesJson,
         fletchVm: fletchVm,
@@ -199,7 +196,7 @@ class IncrementalCompiler {
         outputProvider: outputProvider,
         environment: environment,
         reuseLibrary: reuseLibrary,
-        categories: categories);
+        platform: platform);
   }
 
   void _checkCompilationFailed() {

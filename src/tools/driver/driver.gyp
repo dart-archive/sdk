@@ -32,8 +32,7 @@
         'driver',
       ],
       'defines': [
-        'FLETCHC_LIBRARY_ROOT="../../third_party/dart/sdk"',
-        'FLETCHC_PATCH_ROOT="../.."',
+        'FLETCHC_LIBRARY_ROOT="../../lib"',
         # How many directories up is the root, used for getting full path to
         # the .packages file for the compiler
         'FLETCH_ROOT_DISTANCE=2',
@@ -54,8 +53,7 @@
         'driver',
       ],
       'defines': [
-        'FLETCHC_LIBRARY_ROOT="../internal/dart_lib"',
-        'FLETCHC_PATCH_ROOT="../internal/fletch_lib"',
+        'FLETCHC_LIBRARY_ROOT="../internal/fletch_lib"',
         # How many directories up is the root, used for getting full path to
         # the .packages file for the compiler
         'FLETCH_ROOT_DISTANCE=1',

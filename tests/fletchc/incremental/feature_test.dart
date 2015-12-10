@@ -674,7 +674,8 @@ class IncrementalTestHelper {
         inputProvider: inputProvider,
         diagnosticHandler: diagnosticHandler,
         outputProvider: new OutputProvider(),
-        support: incrementalMode);
+        support: incrementalMode,
+        platform: "fletch_mobile.platform");
     return new IncrementalTestHelper.internal(
         packageConfig,
         inputProvider,
