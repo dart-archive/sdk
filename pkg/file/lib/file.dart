@@ -26,11 +26,19 @@ import 'dart:typed_data';
 
 import 'package:os/os.dart';
 
+final File _stdin = new File._('/dev/stdin', 0);
+final File _stdout = new File._('/dev/stdout', 1);
+final File _stderr = new File._('/dev/stderr', 2);
+
 class File {
   static const int READ       = 0;
   static const int WRITE      = 1;
   static const int APPEND     = 2;
   static const int WRITE_ONLY = 3;
+
+  static get stdin => _stdin;
+  static get stdout => _stdout;
+  static get stderr => _stderr;
 
   final String path;
   int _fd;
