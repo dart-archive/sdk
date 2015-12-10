@@ -310,6 +310,9 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.quitTakesNoArguments:
       return <Example>[new CommandLineExample(<String>['quit', '-v'])];
 
+    case DiagnosticKind.illegalDefine:
+      return <Example>[new CommandLineExample(<String>['-Dfoo=1=2', 'run'])];
+
     case DiagnosticKind.busySession:
       // TODO(ahe): Add test for this.
       return untestable;

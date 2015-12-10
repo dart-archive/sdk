@@ -159,6 +159,16 @@ class Options {
       if (optionString.startsWith("-D")) {
         // Define.
         kind = OptionKind.define;
+        parsedArgument = optionString.split('=');
+        if (parsedArgument.length > 2) {
+          throwFatalError(DiagnosticKind.illegalDefine,
+                          userInput: optionString,
+                          additionalUserInput:
+                              parsedArgument.sublist(1).join('='));
+        } else if (parsedArgument.length == 1) {
+          // If the user does not provide a value, we use `null`.
+          parsedArgument.add(null);
+        }
       } else if (optionString.startsWith("-")) {
         String name;
         Option option;
@@ -229,7 +239,7 @@ class Options {
           break;
 
         case OptionKind.define:
-          testDebuggerCommands[parsedArgument.name] = parsedArgument.value;
+          defines[parsedArgument[0]] = parsedArgument[1];
           break;
 
         case OptionKind.analyzeOnly:

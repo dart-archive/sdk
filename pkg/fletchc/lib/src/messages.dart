@@ -22,6 +22,7 @@ enum DiagnosticKind {
   expectedTargetButGot,
   extraArguments,
   handShakeFailed,
+  illegalDefine,
   internalError,
   missingRequiredArgument,
   missingSessionName,
@@ -347,5 +348,9 @@ $fixit""";
           "CLI version: '$additionalUserInput'.\n"
           "This can happen if you have recently updated you Fletch SDK. "
           "Try running 'fletch quit' and retry the command.";
+
+    case DiagnosticKind.illegalDefine:
+      return "The define $userInput has an illegal value part: "
+             "$additionalUserInput.";
   }
 }
