@@ -137,11 +137,13 @@ assigned by a router with DHCP just press enter. To specify a static IP, for
 example when using a direct connection (see below), enter the desired IP
 address.
 
-1. *Downloading*: Download of the Raspbian base image: This will take 5-10
-minutes.
+1. *Downloading*: Download of the Raspbian base image. This can take up to 10
+minutes depending on the speed of your Internet connection. A progress indicator
+will be shown.
 
-1. *Flashing*: Flashing of the image onto the SD card. This will also take 5-10
-minutes.
+1. *Flashing*: Flashing of the image onto the SD card. This can take up to 10
+minutes depending on the speed of your SD card. A progress indicator
+will be shown.
 
 ## Connecting your Raspberry Pi 2 to the network
 
