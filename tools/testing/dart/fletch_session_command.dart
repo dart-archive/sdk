@@ -74,7 +74,9 @@ void returnSession(FletchSessionMirror session) {
 
 String explainExitCode(int code) {
   String exit_message;
-  if (code == 0) {
+  if (code == null) {
+    exit_message = "no exit code";
+  } else if (code == 0) {
     exit_message = "(success exit code)";
   } else if (code > 0) {
     switch (code) {
@@ -239,7 +241,8 @@ There are three ways to reproduce this error:
         if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
           exitCode = vmExitCode;
         } else if (exitCode != vmExitCode) {
-          if (!fletch.killedVmProcess || vmExitCode >= 0) {
+          if (!fletch.killedVmProcess || vmExitCode == null ||
+              vmExitCode >= 0) {
             throw new UnexpectedExitCode(
                 vmExitCode, "${fletch.executable}-vm", <String>[]);
           }
