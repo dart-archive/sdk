@@ -32,6 +32,7 @@ import 'compiler_configuration.dart' show
 const Map<String, String> URIS_TO_ANALYZE = const <String, String>{
     "driver_main": "package:fletchc/src/driver/driver_main.dart",
     "fletch_test_suite": "tests/fletch_tests/fletch_test_suite.dart",
+    "test_dart": "tools/test.dart",
 };
 
 class FletchWarningsRuntimeConfiguration extends RuntimeConfiguration {
