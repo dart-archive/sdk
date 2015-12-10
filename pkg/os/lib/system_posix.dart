@@ -46,6 +46,8 @@ abstract class PosixSystem implements System {
       ForeignLibrary.main.lookup("shutdown");
   static final ForeignFunction _socket =
       ForeignLibrary.main.lookup("socket");
+  static final ForeignFunction _strerror_r =
+      ForeignLibrary.main.lookup("strerror_r");
   static final ForeignFunction _unlink =
       ForeignLibrary.main.lookup("unlink");
   static final ForeignFunction _write =
@@ -322,8 +324,16 @@ abstract class PosixSystem implements System {
 
   void sleep(int milliseconds) => os.sleep(milliseconds);
 
-  Errno errno() {
-    return Errno.from(Foreign.errno);
+  int errno() => Foreign.errno;
+
+  String strerror(int errno) {
+    var buffer = new ForeignMemory.allocated(256);
+    try {
+      // strerror_r might not return a pointer to buffer.
+      return cStringToString(_strerror_r.pcall$3(errno, buffer, 256));
+    } finally {
+      buffer.free();
+    }
   }
 
   static void _rangeCheck(ByteBuffer buffer, int offset, int length) {

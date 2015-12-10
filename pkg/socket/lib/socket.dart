@@ -79,7 +79,7 @@ class Socket extends _SocketBase {
     sys.setBlocking(_fd, false);
     sys.setCloseOnExec(_fd, true);
     if (sys.connect(_fd, address, port) == -1 &&
-        sys.errno() != Errno.EINPROGRESS) {
+        sys.errno() != errnos.EINPROGRESS) {
       _error("Failed to connect to $host:$port");
     }
     _addSocketToEventHandler();
@@ -299,7 +299,7 @@ class DatagramSocket extends _SocketBase {
 
 class SocketException implements Exception {
   final String message;
-  final Errno errno;
+  final int errno;
   SocketException(this.message, this.errno);
 
   String toString() => "SocketException: $message, $errno";

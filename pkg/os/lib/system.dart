@@ -75,7 +75,8 @@ abstract class System {
   int lseek(int fd, int offset, int whence);
   void sleep(int milliseconds);
   void memcpy(var dest, int destOffset, var src, int srcOffset, int length);
-  Errno errno();
+  int errno();
+  String strerror(int errno);
   int setBlocking(int fd, bool blocking);
   int setCloseOnExec(int fd, bool closeOnExec);
   SystemInformation info();

@@ -48,4 +48,4 @@ abstract class InternetAddress {
 
 // TODO(ajohnsen): Take a Duration?
 void sleep(int milliseconds) => sys.sleep(milliseconds);
-Errno errno() => sys.errno();
+int errno() => sys.errno();
