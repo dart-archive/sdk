@@ -735,7 +735,6 @@ vm/optimized_await_regress_test: RuntimeError
 vm/optimized_guarded_field_isolates_test: CompileTimeError
 vm/reflect_core_vm_test: CompileTimeError
 vm/reusable_boxes_test: CompileTimeError
-vm/regress_24517_test: Pass, RuntimeError # Issue #333
 vm/type_cast_vm_test: RuntimeError
 vm/type_vm_test: RuntimeError
 vm/typed_data_polymorphic_view_test: RuntimeError

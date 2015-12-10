@@ -215,6 +215,9 @@
 
         'cflags': [
           '-m32',
+          # Forces GCC to not use x87 floating point instructions.
+          '-mfpmath=sse',
+          '-msse2',
         ],
 
         'ldflags': [
