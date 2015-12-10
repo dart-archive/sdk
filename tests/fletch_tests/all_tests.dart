@@ -50,6 +50,8 @@ import '../agent_tests/agent_tests.dart' as agent_tests;
 
 import '../golem/golem_tests.dart' as golem_tests;
 
+import '../version_tests/version_tests.dart' as version_tests;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -132,4 +134,6 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   // If this test breaks you probably need to update the golem performance
   // tracking infrastructure as well.
   'golem_tests': golem_tests.main,
+
+  'version_tests': version_tests.main,
 };
