@@ -558,10 +558,6 @@ Future<int> run(
 
   session.silent = true;
 
-  if (terminateDebugger) {
-    state.session = null;
-  }
-
   await session.enableDebugger();
   await session.spawnProcess();
   var command = await session.debugRun();
@@ -627,19 +623,7 @@ Future<int> run(
     }
   } finally {
     if (terminateDebugger) {
-      if (!session.terminated) {
-        // TODO(ahe): Do not shut down the session.
-        bool done = false;
-        Timer timer = new Timer(const Duration(seconds: 5), () {
-            if (!done) {
-              print("Timed out waiting for Fletch VM to shutdown; killing session");
-              session.kill();
-            }
-          });
-        await session.terminateSession();
-        done = true;
-        timer.cancel();
-      }
+      await state.terminateSession();
     } else {
       // If the session terminated due to a ConnectionError or the program
       // finished don't reuse the state's session.
@@ -699,7 +683,6 @@ Future<int> compileAndAttachToVmThenDeprecated(
     Future<int> action()) async {
   bool startedVmDirectly = false;
   List<FletchDelta> compilationResults = state.compilationResults;
-  Session session = state.session;
   if (compilationResults.isEmpty || script != null) {
     if (script == null) {
       throwFatalError(DiagnosticKind.noFileTarget);
@@ -708,8 +691,16 @@ Future<int> compileAndAttachToVmThenDeprecated(
     if (exitCode != 0) return exitCode;
     compilationResults = state.compilationResults;
     assert(compilationResults != null);
+    // We only get here is there were no previous compilationResults or if the
+    // user specified a dart file (script). In the first case there should be no
+    // session and nothing will be terminated, in the latter case the user
+    // specifying a new script implicitly means run a new VM with the new
+    // script in which case we want to terminate a previous session.
+    state.log('Cannot reuse existing VM session, creating new.');
+    await state.terminateSession();
   }
 
+  Session session = state.session;
   if (session == null) {
     if (state.settings.deviceAddress != null) {
       await startAndAttachViaAgent(base, state);
@@ -765,6 +756,13 @@ Future<int> compileAndAttachToVmThen(
     if (exitCode != 0) return exitCode;
     compilationResults = state.compilationResults;
     assert(compilationResults != null);
+    // We only get here is there were no previous compilationResults or if the
+    // user specified a dart file (script). In the first case there should be no
+    // session and nothing will be terminated, in the latter case the user
+    // specifying a new script implicitly means run a new VM with the new
+    // script in which case we want to terminate a previous session.
+    state.log('Cannot reuse existing VM session, creating new.');
+    await state.terminateSession();
   }
 
   Session session = state.session;
