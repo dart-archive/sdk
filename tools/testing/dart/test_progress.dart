@@ -63,9 +63,17 @@ class ColorFormatter extends Formatter {
 List<String> _buildFailureOutput(TestCase test,
                                  [Formatter formatter = const Formatter()]) {
 
-  List<String> getLinesWithoutCarriageReturn(List<int> output) {
+  List<String> getLines(List<int> output) {
     return decodeUtf8(output).replaceAll('\r\n', '\n')
         .replaceAll('\r', '\n').split('\n');
+  }
+
+  List<String> indentLines(int level, List<String> lines) {
+    String prefix = ' ' * level;
+    for (int i = 0; i < lines.length; i++) {
+      lines[i] = '$prefix ${lines[i]}';
+    }
+    return lines;
   }
 
   List<String> output = new List<String>();
@@ -95,6 +103,7 @@ List<String> _buildFailureOutput(TestCase test,
       }
     }
   }
+
   for (var i = 0; i < test.commands.length; i++) {
     var command = test.commands[i];
     var commandOutput = test.commandOutputs[command];
@@ -108,14 +117,20 @@ List<String> _buildFailureOutput(TestCase test,
         }
       }
       if (!commandOutput.stdout.isEmpty) {
-        output.add('');
-        output.add('stdout:');
-        output.addAll(getLinesWithoutCarriageReturn(commandOutput.stdout));
+        output.add('  stdout:');
+        output.addAll(indentLines(4, getLines(commandOutput.stdout)));
+      } else {
+        output.add('  stdout: Not available');
       }
       if (!commandOutput.stderr.isEmpty) {
-        output.add('');
-        output.add('stderr:');
-        output.addAll(getLinesWithoutCarriageReturn(commandOutput.stderr));
+        output.add('  stderr:');
+        output.addAll(indentLines(4, getLines(commandOutput.stderr)));
+      } else {
+        output.add('  stderr: Not available');
+      }
+
+      if (commandOutput.exitCode != null) {
+        output.add('  exitcode: ${commandOutput.exitCode}');
       }
     }
   }
