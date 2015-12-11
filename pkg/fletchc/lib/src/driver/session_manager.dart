@@ -195,6 +195,25 @@ class SessionState {
     compilationResults.clear();
   }
 
+  Future terminateSession() async {
+    if (session != null) {
+      if (!session.terminated) {
+        bool done = false;
+        Timer timer = new Timer(const Duration(seconds: 5), () {
+            if (!done) {
+              print("Timed out waiting for Fletch VM to shutdown; killing "
+                  "session");
+              session.kill();
+            }
+          });
+        await session.terminateSession();
+        done = true;
+        timer.cancel();
+      }
+    }
+    session = null;
+  }
+
   void attachCommandSender(CommandSender sender) {
     stdoutSink.attachCommandSender((d) => sender.sendStdoutBytes(d));
     stderrSink.attachCommandSender((d) => sender.sendStderrBytes(d));
