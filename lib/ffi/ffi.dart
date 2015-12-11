@@ -662,4 +662,3 @@ class Struct64 extends Struct {
   Struct64.fromAddress(int address, int fields)
       : super.fromAddressWithWordSize(address, fields, 8);
 }
-

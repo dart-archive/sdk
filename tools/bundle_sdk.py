@@ -23,7 +23,7 @@ from shutil import copyfile, copymode, copytree, rmtree
 TOOLS_DIR = abspath(dirname(__file__))
 
 SDK_PACKAGES = ['ffi', 'file', 'fletch', 'gpio', 'http', 'i2c', 'os',
-                'raspberry_pi', 'socket']
+                'raspberry_pi', 'socket', 'mqtt']
 THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['raspberry-pi2', 'general']
