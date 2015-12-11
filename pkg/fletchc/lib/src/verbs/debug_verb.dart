@@ -10,7 +10,9 @@ import 'dart:core' hide
 import 'infrastructure.dart';
 
 import 'dart:async' show
-    StreamController;
+    Stream,
+    StreamController,
+    StreamIterator;
 
 import 'dart:convert' show
     UTF8,
@@ -23,8 +25,10 @@ import '../diagnostic.dart' show
     throwInternalError;
 
 import '../driver/developer.dart' show
+    ClientEventHandler,
     handleSignal,
-    compileAndAttachToVmThenDeprecated;
+    compileAndAttachToVmThen,
+    setupClientInOut;
 
 import '../driver/driver_commands.dart' show
     ClientCommandCode;
@@ -157,35 +161,37 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
   return context.performTaskInWorker(task);
 }
 
-Future<Null> readCommands(
-    StreamIterator<ClientCommand> commandIterator,
-    StreamController stdinController,
+// Returns a debug client event handler that is bound to the current session.
+ClientEventHandler debugClientEventHandler(
     SessionState state,
-    Session session) async {
-  while (await commandIterator.moveNext()) {
-    ClientCommand command = commandIterator.current;
-    switch (command.code) {
-      case ClientCommandCode.Stdin:
-        if (command.data.length == 0) {
-          await stdinController.close();
-        } else {
-          stdinController.add(command.data);
-        }
-        break;
+    StreamIterator<ClientCommand> commandIterator,
+    StreamController stdinController) {
+  return () async {
+    while (await commandIterator.moveNext()) {
+      ClientCommand command = commandIterator.current;
+      switch (command.code) {
+        case ClientCommandCode.Stdin:
+          if (command.data.length == 0) {
+            await stdinController.close();
+          } else {
+            stdinController.add(command.data);
+          }
+          break;
 
-      case ClientCommandCode.Signal:
-        int signalNumber = command.data;
-        if (signalNumber == sigQuit) {
-          await session.interrupt();
-        } else {
-          handleSignal(state, signalNumber);
-        }
-        break;
+        case ClientCommandCode.Signal:
+          int signalNumber = command.data;
+          if (signalNumber == sigQuit) {
+            await state.session.interrupt();
+          } else {
+            handleSignal(state, signalNumber);
+          }
+          break;
 
-      default:
-        throwInternalError("Unexpected command from client: $command");
+        default:
+          throwInternalError("Unexpected command from client: $command");
+      }
     }
-  }
+  };
 }
 
 class InteractiveDebuggerTask extends SharedTask {
@@ -198,58 +204,63 @@ class InteractiveDebuggerTask extends SharedTask {
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<ClientCommand> commandIterator) {
-    return interactiveDebuggerTask(
+
+    // Setup a more advanced client input handler for the interactive debug task
+    // that also handles the input and forwards it to the debug input handler.
+    StreamController stdinController = new StreamController();
+    SessionState state = SessionState.current;
+    setupClientInOut(
+        state,
         commandSender,
-        SessionState.current,
-        base,
-        commandIterator);
+        debugClientEventHandler(state, commandIterator, stdinController));
+
+    return interactiveDebuggerTask(state, base, stdinController);
   }
 }
 
 Future<int> runInteractiveDebuggerTask(
     CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri script,
-    Uri base,
-    StreamIterator<ClientCommand> commandIterator) {
-  return compileAndAttachToVmThenDeprecated(
+    Uri base) {
+
+  // Setup a more advanced client input handler for the interactive debug task
+  // that also handles the input and forwards it to the debug input handler.
+  StreamController stdinController = new StreamController();
+  return compileAndAttachToVmThen(
       commandSender,
+      commandIterator,
       state,
       script,
       base,
-      () => interactiveDebuggerTask(
-          commandSender, state, base, commandIterator));
+      true,
+      () => interactiveDebuggerTask(state, base, stdinController),
+      eventHandler:
+          debugClientEventHandler(state, commandIterator, stdinController));
 }
 
 Future<int> interactiveDebuggerTask(
-    CommandSender commandSender,
     SessionState state,
     Uri base,
-    StreamIterator<ClientCommand> commandIterator) async {
-  List<FletchDelta> compilationResult = state.compilationResults;
+    StreamController stdinController) async {
   Session session = state.session;
   if (session == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
+  List<FletchDelta> compilationResult = state.compilationResults;
   if (compilationResult.isEmpty) {
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
 
-  state.attachCommandSender(commandSender);
+  // Make sure current state's session is not reused if invoked again.
   state.session = null;
+
   for (FletchDelta delta in compilationResult) {
     await session.applyDelta(delta);
   }
 
-  // Start event loop.
-  StreamController stdinController = new StreamController();
-  readCommands(commandIterator, stdinController, state, session);
-
-  // Notify main isolate (hub) that the event loop [readCommands] has been
-  // started, and commands like ClientCommandCode.Signal will be honored.
-  commandSender.sendEventLoopStarted();
-
-  var inputStream = stdinController.stream
+  Stream<String> inputStream = stdinController.stream
       .transform(UTF8.decoder)
       .transform(new LineSplitter());
 
@@ -314,8 +325,8 @@ class DebuggerTask extends SharedTask {
             commandSender, SessionState.current, argument);
       case TargetKind.FILE:
         return runInteractiveDebuggerTask(
-            commandSender, SessionState.current, argument, base,
-            commandIterator);
+            commandSender, commandIterator, SessionState.current, argument,
+            base);
 
       default:
         throwInternalError("Unimplemented ${TargetKind.values[kind]}");

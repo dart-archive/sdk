@@ -127,6 +127,8 @@ import '../../debug_state.dart' as debug show
     RemoteObject,
     StackTrace;
 
+typedef Future<Null> ClientEventHandler();
+
 Uri configFileUri;
 
 Future<Socket> connect(
@@ -674,71 +676,6 @@ Future<int> export(SessionState state,
   }
 }
 
-// TODO(wibling): refactor the debug_verb to not set up its own event handler
-// and get rid of this deprecated compileAndAttachToVmThenDeprecated method.
-Future<int> compileAndAttachToVmThenDeprecated(
-    CommandSender commandSender,
-    SessionState state,
-    Uri script,
-    Uri base,
-    Future<int> action()) async {
-  bool startedVmDirectly = false;
-  List<FletchDelta> compilationResults = state.compilationResults;
-  if (compilationResults.isEmpty || script != null) {
-    if (script == null) {
-      throwFatalError(DiagnosticKind.noFileTarget);
-    }
-    int exitCode = await compile(script, state);
-    if (exitCode != 0) return exitCode;
-    compilationResults = state.compilationResults;
-    assert(compilationResults != null);
-    // We only get here is there were no previous compilationResults or if the
-    // user specified a dart file (script). In the first case there should be no
-    // session and nothing will be terminated, in the latter case the user
-    // specifying a new script implicitly means run a new VM with the new
-    // script in which case we want to terminate a previous session.
-    state.log('Cannot reuse existing VM session, creating new.');
-    await state.terminateSession();
-  }
-
-  Session session = state.session;
-  if (session == null) {
-    if (state.settings.deviceAddress != null) {
-      await startAndAttachViaAgent(base, state);
-      // TODO(wibling): read stdout from agent.
-    } else {
-      startedVmDirectly = true;
-      await startAndAttachDirectly(state, base);
-      state.fletchVm.stdoutLines.listen((String line) {
-          commandSender.sendStdout("$line\n");
-        });
-      state.fletchVm.stderrLines.listen((String line) {
-          commandSender.sendStderr("$line\n");
-        });
-    }
-    session = state.session;
-    assert(session != null);
-  }
-
-  state.attachCommandSender(commandSender);
-
-  int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
-  try {
-    exitCode = await action();
-  } catch (error, trace) {
-    print(error);
-    if (trace != null) {
-      print(trace);
-    }
-  } finally {
-    if (startedVmDirectly) {
-      exitCode = await state.fletchVm.exitCode;
-    }
-    state.detachCommandSender();
-  }
-  return exitCode;
-}
-
 Future<int> compileAndAttachToVmThen(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
@@ -746,7 +683,8 @@ Future<int> compileAndAttachToVmThen(
     Uri script,
     Uri base,
     bool waitForVmExit,
-    Future<int> action()) async {
+    Future<int> action(),
+    {ClientEventHandler eventHandler}) async {
   bool startedVmDirectly = false;
   List<FletchDelta> compilationResults = state.compilationResults;
   if (compilationResults.isEmpty || script != null) {
@@ -785,14 +723,8 @@ Future<int> compileAndAttachToVmThen(
     assert(session != null);
   }
 
-  state.attachCommandSender(commandSender);
-
-  // Setup a handler for incoming commands while the current task is executing.
-  readCommands(commandIterator, state);
-
-  // Notify controlling isolate (hub) that the event loop [readCommands] has
-  // been started, and commands like ClientCommandCode.Signal will be honored.
-  commandSender.sendEventLoopStarted();
+  eventHandler ??= defaultClientEventHandler(state, commandIterator);
+  setupClientInOut(state, commandSender, eventHandler);
 
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
   try {
@@ -811,19 +743,41 @@ Future<int> compileAndAttachToVmThen(
   return exitCode;
 }
 
-Future<Null> readCommands(
-    StreamIterator<ClientCommand> commandIterator, SessionState state) async {
-  while (await commandIterator.moveNext()) {
-    ClientCommand command = commandIterator.current;
-    switch (command.code) {
-      case ClientCommandCode.Signal:
-        int signalNumber = command.data;
-        handleSignal(state, signalNumber);
-        break;
-      default:
-        state.log("Unhandled command from client: $command");
+void setupClientInOut(
+    SessionState state,
+    CommandSender commandSender,
+    ClientEventHandler eventHandler) {
+  // Forward output going into the state's outputSink using the passed in
+  // commandSender. This typically forwards output to the hub (main isolate)
+  // which forwards it on to stdout of the Fletch C++ client.
+  state.attachCommandSender(commandSender);
+
+  // Start event handling for input passed from the Fletch C++ client.
+  eventHandler();
+
+  // Let the hub (main isolate) know that event handling has been started.
+  commandSender.sendEventLoopStarted();
+}
+
+/// Return a default client event handler bound to the current session's
+/// commandIterator and state.
+/// This handler only takes care of signals coming from the client.
+ClientEventHandler defaultClientEventHandler(
+    SessionState state,
+    StreamIterator<ClientCommand> commandIterator) {
+  return () async {
+    while (await commandIterator.moveNext()) {
+      ClientCommand command = commandIterator.current;
+      switch (command.code) {
+        case ClientCommandCode.Signal:
+          int signalNumber = command.data;
+          handleSignal(state, signalNumber);
+          break;
+        default:
+          state.log("Unhandled command from client: $command");
+      }
     }
-  }
+  };
 }
 
 void handleSignal(SessionState state, int signalNumber) {
