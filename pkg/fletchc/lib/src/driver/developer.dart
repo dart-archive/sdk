@@ -62,7 +62,8 @@ import '../../program_info.dart' show
 
 import 'session_manager.dart' show
     FletchVm,
-    SessionState;
+    SessionState,
+    Sessions;
 
 import 'driver_commands.dart' show
     ClientCommandCode,
@@ -1188,6 +1189,24 @@ Future<List<InternetAddress>> discoverDevices(
   return result;
 }
 
+void showSessions() {
+  Sessions.names.forEach(print);
+}
+
+Future<int> showSessionSettings() async {
+  Settings settings = SessionState.current.settings;
+  Uri source = settings.source;
+  if (source != null) {
+    // This should output `source.toFilePath()`, but we do it like this to be
+    // consistent with the format of the [Settings.packages] value.
+    print('Configured from $source}');
+  }
+  settings.toJson().forEach((String key, value) {
+    print('$key: $value');
+  });
+  return 0;
+}
+
 Address parseAddress(String address, {int defaultPort: 0}) {
   String host;
   int port;
@@ -1358,11 +1377,13 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
     }
   });
-  return new Settings(
+  return new Settings.fromSource(settingsUri,
       packages, options, constants, deviceAddress, deviceType, incrementalMode);
 }
 
 class Settings {
+  final Uri source;
+
   final Uri packages;
 
   final List<String> options;
@@ -1376,6 +1397,15 @@ class Settings {
   final IncrementalMode incrementalMode;
 
   const Settings(
+      this.packages,
+      this.options,
+      this.constants,
+      this.deviceAddress,
+      this.deviceType,
+      this.incrementalMode) : source = null;
+
+  const Settings.fromSource(
+      this.source,
       this.packages,
       this.options,
       this.constants,

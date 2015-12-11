@@ -57,6 +57,13 @@ import '../../fletch_vm.dart' show
 export '../../fletch_vm.dart' show
     FletchVm;
 
+// TODO(karlklose): we need a better API for session management.
+class Sessions {
+  static Iterable<String> get names {
+    return internalSessions.keys;
+  }
+}
+
 final Map<String, UserSession> internalSessions = <String, UserSession>{};
 
 // TODO(ahe): We need a command to switch to another session.

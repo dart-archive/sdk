@@ -150,6 +150,9 @@ class SentenceParser {
       case "agent":
         return makeTarget(TargetKind.AGENT);
 
+      case "settings":
+        return makeTarget(TargetKind.SETTINGS);
+
       case "tcp_socket":
         return makeNamedTarget(TargetKind.TCP_SOCKET);
 
@@ -383,6 +386,7 @@ enum TargetKind {
   RUN_TO_MAIN,
   SESSION,
   SESSIONS,
+  SETTINGS,
   STEP,
   STEP_BYTECODE,
   STEP_OVER,
