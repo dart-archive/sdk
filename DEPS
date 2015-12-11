@@ -142,6 +142,7 @@ hooks = [
     'pattern': '.',
     'action': [
       'download_from_google_storage',
+      '-q',
       '--no_auth',
       '--no_resume',
       '--bucket',
@@ -157,6 +158,7 @@ hooks = [
     'pattern': '.',
     'action': [
       'download_from_google_storage',
+      '-q',
       '--no_auth',
       '--no_resume',
       '--bucket',
@@ -172,6 +174,7 @@ hooks = [
     'pattern': '.',
     'action': [
       'download_from_google_storage',
+      '-q',
       '--no_auth',
       '--no_resume',
       '--bucket',
@@ -185,6 +188,7 @@ hooks = [
     'pattern': '.',
     'action': [
       'download_from_google_storage',
+      '-q',
       '--no_auth',
       '--no_resume',
       '--bucket',
@@ -206,6 +210,7 @@ hooks = [
     'pattern': '.',
     'action': [
       'download_from_google_storage',
+      '-q',
       '--no_auth',
       '--no_resume',
       '--bucket',
@@ -222,6 +227,7 @@ hooks = [
     'pattern': '.',
     'action': [
       'download_from_google_storage',
+      '-q',
       '--no_auth',
       '--no_resume',
       '--bucket',
@@ -238,6 +244,7 @@ hooks = [
     'name': 'clang_format_win',
     'pattern': '.',
     'action': [ 'download_from_google_storage',
+                '-q',
                 '--no_resume',
                 '--platform=win32',
                 '--no_auth',
@@ -249,6 +256,7 @@ hooks = [
     'name': 'clang_format_mac',
     'pattern': '.',
     'action': [ 'download_from_google_storage',
+                '-q',
                 '--no_resume',
                 '--platform=darwin',
                 '--no_auth',
@@ -260,6 +268,7 @@ hooks = [
     'name': 'clang_format_linux',
     'pattern': '.',
     'action': [ 'download_from_google_storage',
+                '-q',
                 '--no_resume',
                 '--platform=linux*',
                 '--no_auth',
