@@ -108,7 +108,7 @@ class Client {
   int protocolVersion = protocolVersionNegotiate;
   MQTTClient _mqttClient;
   var _subscribers = {};
-  bool _processingStarted = false;
+  Process _processor;
 
   /// Create a new MQTT Client to MQTT server [_serverURI]. [_clientID] needs to
   /// be a unique ID amoung all client connected to the server.
@@ -141,10 +141,10 @@ class Client {
   void addSubscriber(String topic, onReceived(String msg, String topic)) {
     // Test if we started processing subscriptions already. If so, throw a state
     // error.
-    if (_processingStarted)
+    if (_processor != null)
       throw new StateError("MQTT: State error; subscribers cannot be added "
         "after subscription processing has started");
-    else {
+    } else {
       _subscribers[topic] = onReceived;
     }
   }
@@ -153,11 +153,10 @@ class Client {
   /// topic subscribed to via the [AddSubscriber] event handlers will be called.
   /// The processing happens in a separate process, so this call non-blocking.
   void startSubscriptionProcessing() {
-    if (_processingStarted) {
+    if (_processor != null) {
       throw new StateError("MQTT: State error; subscription processing was "
         "already started");
-    }
-    else {
+    } else {
       // Convert maps to LinkedList as we do not have support for immutable
       // maps.
       LinkedList<String> topics =
@@ -171,9 +170,8 @@ class Client {
       int version = protocolVersion;
 
       // Spawn off the processor.
-      Process.spawn(() => _messageProcessor(server, client, version,
-        topics, handlers));
-      _processingStarted = true;
+      _processor = Process.spawn(() => _messageProcessor(server, client,
+        version, topics, handlers));
     }
   }
 
@@ -184,8 +182,10 @@ class Client {
       _mqttClient.destroy();
     }
 
-    // TODO(343): We should also cleanup the _messageProcessor.
-    // Waiting for an API to kill the spawned process.
+    // If the message processor is running: Kill it's process
+    if (_processor != null) {
+      _processor.kill();
+    }
   }
 }
 
