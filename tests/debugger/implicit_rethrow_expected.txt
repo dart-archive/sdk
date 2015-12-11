@@ -1,14 +1,12 @@
 Starting session. Type 'help' for a list of commands.
 
 > r
-begin
 Uncaught exception: 42
 Stack trace:
-> 0: main        @throw 42
-> restart
-begin
-Uncaught exception: 42
-Stack trace:
-> 0: main        @throw 42
+> 0: main        @try {
+  throw 42;
+}on String  catch (e) {
+  print('not rethrowing from here');
+}
 > q
 Non-zero exit code from 'fletch-vm' (255).

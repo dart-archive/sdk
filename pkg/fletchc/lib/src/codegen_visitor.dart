@@ -439,6 +439,10 @@ abstract class CodegenVisitor
     assembler.returnNull();
   }
 
+  void generateThrow(Node node) {
+    assembler.emitThrow();
+  }
+
   void generateSwitchCaseMatch(CaseMatch caseMatch, BytecodeLabel ifTrue) {
     assembler.dup();
     int constId = allocateConstantFromNode(caseMatch.expression);
@@ -2157,7 +2161,7 @@ abstract class CodegenVisitor
 
   void visitThrow(Throw node) {
     visitForValue(node.expression);
-    assembler.emitThrow();
+    generateThrow(node);
     // TODO(ahe): It seems suboptimal that each throw is followed by a pop.
     applyVisitState();
   }
@@ -2169,7 +2173,7 @@ abstract class CodegenVisitor
       TryBlock block = tryBlockStack.head;
       assembler.loadSlot(block.stackSize - 1);
       // TODO(ahe): It seems suboptimal that each throw is followed by a pop.
-      assembler.emitThrow();
+      generateThrow(node);
     }
     assembler.pop();
   }
@@ -3001,8 +3005,8 @@ abstract class CodegenVisitor
       assembler.subroutineCall(finallyLabel, finallyReturnLabel);
     }
 
-    // The exception was not cought. Rethrow.
-    assembler.emitThrow();
+    // The exception was not caught. Rethrow.
+    generateThrow(node);
 
     assembler.bind(end);
 

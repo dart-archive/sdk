@@ -3,19 +3,19 @@ Starting session. Type 'help' for a list of commands.
 > r
 Uncaught exception: 42
 Stack trace:
-> 0: foo         @42
+> 0: foo         @throw 42
   1: main        @foo()
 > restart
 Uncaught exception: 'foobar'
 Stack trace:
-> 0: foo         @'foobar'
+> 0: foo         @throw 'foobar'
   1: main        @foo()
 > restart
 Uncaught exception: Instance of '_Exception' {
   _Exception.message: 'foobar'
 }
 Stack trace:
-> 0: foo         @new Exception('foobar')
+> 0: foo         @throw new Exception('foobar')
   1: main        @foo()
 > restart
 Uncaught exception: Instance of 'CustomException' {
@@ -23,7 +23,7 @@ Uncaught exception: Instance of 'CustomException' {
   CustomException.code: 42
 }
 Stack trace:
-> 0: foo         @new CustomException('foobar', 42)
+> 0: foo         @throw new CustomException('foobar', 42)
   1: main        @foo()
 > restart
 foo

@@ -151,6 +151,11 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen
     super.generateIdenticalNonNumeric(node);
   }
 
+  void generateThrow(Node node) {
+    recordDebugInfo(node);
+    super.generateThrow(node);
+  }
+
   void visitForValue(Node node) {
     recordDebugInfo(node);
     super.visitForValue(node);
