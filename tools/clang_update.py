@@ -24,6 +24,8 @@ import zipfile
 
 from os.path import dirname, join
 
+import utils
+
 # Path constants. (All of these should be absolute paths.)
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 FLETCH_ROOT_DIR = os.path.abspath(os.path.join(THIS_DIR, '..'))
@@ -92,8 +94,17 @@ def UpdateClang(args):
     print package_version
     return 0
 
+  os_name = utils.GuessOS()
+  if os_name == 'linux':
+    system_and_directory = [('linux', 'Linux_x64')]
+  elif os_name == 'macos':
+    system_and_directory = [('mac', 'Mac')]
+  else:
+    print 'No Clang for %s' % os_name
+    return 0
+
   # clang packages are smaller than 50 MB, small enough to keep in memory.
-  for system, directory in [('linux', 'Linux_x64'), ('mac', 'Mac')]:
+  for system, directory in system_and_directory:
     stamp_filename = GetStampFile(system)
     clang_dir = GetClangDir(system)
 
