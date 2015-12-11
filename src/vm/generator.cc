@@ -4,6 +4,8 @@
 
 #include <stdlib.h>
 
+#include "include/fletch_api.h"
+
 #include "src/vm/assembler.h"
 #include "src/vm/generator.h"
 
@@ -40,6 +42,7 @@ static int Main(int argc, char** argv) {
     fprintf(stderr, "Usage: %s <output file name>\n", argv[0]);
     exit(1);
   }
+
   if (freopen(argv[1], "w", stdout) == NULL) {
     fprintf(stderr, "%s: Cannot open '%s' for writing.\n", argv[0], argv[1]);
     exit(1);

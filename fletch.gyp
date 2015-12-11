@@ -12,6 +12,13 @@
       ],
     },
     {
+      'target_name': 'fletch-codegen',
+      'type': 'none',
+      'dependencies': [
+        'src/vm/vm.gyp:fletch-codegen',
+      ],
+    },
+    {
       'target_name': 'c_test_library',
       'type': 'none',
       'dependencies': [
