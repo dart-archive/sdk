@@ -16,7 +16,7 @@
       'target_conditions': [
         ['_toolset == "target"', {
           'standalone_static_library': 1,
-	}]],
+      }]],
       'dependencies': [
         'fletch_vm_library_generator#host',
         '../shared/shared.gyp:fletch_shared',
@@ -53,13 +53,13 @@
             ],
           },
         }],
-	[ 'OS=="win"', {
-	  'asm_file_extension': '.asm',
-	}],
+        [ 'OS=="win"', {
+        'asm_file_extension': '.asm',
+        }],
       ],
       'variables': {
         'asm_file_extension%': '.S',
-	'yasm_output_path': '<(INTERMEDIATE_DIR)',
+        'yasm_output_path': '<(INTERMEDIATE_DIR)',
       },
       'includes': [
         '../../third_party/yasm/yasm_compile.gypi'
