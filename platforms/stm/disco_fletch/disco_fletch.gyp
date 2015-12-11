@@ -28,12 +28,10 @@
         '../../../src/vm/vm.gyp:libfletch',
       ],
       'variables': {
-        'project_name': 'disco_fletch',
-        'project_path': '<(DEPTH)/platforms/stm/<(project_name)',
-        'source_path': '<(project_path)/src/',
-        'generated_path': '<(project_path)/generated',
-        'template_path': '<(project_path)/template/',
-        'ldflags': [
+        'source_path': 'src',
+        'generated_path': 'generated',
+        'template_path': 'template',
+        'common_ldflags': [
           '-specs=nano.specs',
           # TODO(340): Why does this not work???
           #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
@@ -41,7 +39,7 @@
           '-T../../platforms/stm/disco_fletch/generated/SW4STM32/'
             'configuration/STM32F746NGHx_FLASH.ld'
         ],
-        'cflags': [
+        'common_cflags': [
           # Our target will link in the stm files which do have a few warnings.
           '-Wno-write-strings',
           '-Wno-sign-compare',
@@ -90,22 +88,22 @@
         ['OS=="mac"', {
           'xcode_settings': {
             'OTHER_CFLAGS': [
-              '<@(cflags)',
+              '<@(common_cflags)',
             ],
             'OTHER_CPLUSPLUSFLAGS' : [
-              '<@(cflags)',
+              '<@(common_cflags)',
             ],
             'OTHER_LDFLAGS': [
-              '<@(ldflags)',
+              '<@(common_ldflags)',
             ],
           },
         }],
         ['OS=="linux"', {
           'cflags': [
-            '<@(cflags)',
+            '<@(common_cflags)',
           ],
           'ldflags': [
-            '<@(ldflags)',
+            '<@(common_ldflags)',
           ],
         }],
       ],
