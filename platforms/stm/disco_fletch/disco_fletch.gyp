@@ -23,8 +23,73 @@
   },
   'targets': [
     {
+      'type': 'none',
+      'target_name': 'disco_fletch_dart_snapshot',
+      'variables': {
+        'source_path': 'src',
+      },
+      'actions': [
+        {
+          'action_name': 'snapshot',
+          'inputs': [
+            'src/test.dart',
+          ],
+          'outputs': [
+            # This must be in CWD for the objcopy below to generate the
+            # correct symbol names.
+            '<(PRODUCT_DIR)/snapshot',
+          ],
+          'action': [
+            '<(PRODUCT_DIR)/../ReleaseX64/fletch',
+            'export',
+            '<(source_path)/test.dart',
+            'to',
+            'file',
+            '<(PRODUCT_DIR)/snapshot',
+          ],
+        },
+      ],
+    },
+    {
+      'type': 'none',
+      'target_name': 'disco_fletch_dart_snapshot.o',
+      'dependencies' : [
+        'disco_fletch_dart_snapshot',
+      ],
+      'actions': [
+        {
+          'action_name': 'snapshot',
+          'inputs': [
+            '<(PRODUCT_DIR)/snapshot',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/snapshot.o',
+          ],
+          'action': [
+            'python',
+            '../../../tools/run_with_cwd.py',
+            '<(PRODUCT_DIR)',
+            # As we are messing with CWD we need the path relative to
+            # PRODUCT_DIR (where we cd into) instead of relative to
+            # where this .gyp file is.
+            '../../third_party/gcc-arm-embedded/linux/'
+                'gcc-arm-embedded/bin/arm-none-eabi-objcopy',
+            '-I',
+            'binary',
+            '-O',
+            'elf32-littlearm',
+            '-B',
+            'arm',
+            'snapshot',
+            'snapshot.o',
+          ],
+        },
+      ],
+    },
+    {
       'target_name': 'disco_fletch.elf',
       'dependencies': [
+        'disco_fletch_dart_snapshot.o',
         '../../../src/vm/vm.gyp:libfletch',
       ],
       'variables': {
