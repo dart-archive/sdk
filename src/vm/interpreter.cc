@@ -50,9 +50,7 @@ class State {
 
   void SaveState() {
     StoreByteCodePointer(bcp_);
-    // Push empty slot to make the saved state look like it has a bcp,
-    // thus making the top frame indexing as other frames.
-    Push(NULL);
+    Push(reinterpret_cast<Object*>(resume_address_));
     Push(reinterpret_cast<Object*>(fp_));
     process_->stack()->SetTopFromPointer(sp_);
   }
@@ -61,8 +59,7 @@ class State {
     Stack* stack = process_->stack();
     sp_ = stack->Pointer(stack->top());
     fp_ = reinterpret_cast<Object**>(Pop());
-    // Pop the empty unused value.
-    Pop();
+    resume_address_ = reinterpret_cast<void*>(Pop());
     bcp_ = LoadByteCodePointer();
     StoreByteCodePointer(NULL);
     ASSERT(bcp_ != NULL);
@@ -156,6 +153,7 @@ class State {
   Object** sp_;
   Object** fp_;
   uint8* bcp_;
+  void* resume_address_;
 };
 
 // TODO(kasperl): Should we call this interpreter?
@@ -1188,6 +1186,7 @@ static uint8* FindCatchBlock(Stack* stack, int* stack_delta_result,
 
 uint8* HandleThrow(Process* process, Object* exception, int* stack_delta_result,
                    Object*** frame_pointer_result) {
+  void* resume_address = Frame(process->stack()).ReturnAddress();
   Coroutine* current = process->coroutine();
   while (true) {
     // If we find a handler, we do a 2nd pass, unwind all coroutine stacks
@@ -1204,6 +1203,7 @@ uint8* HandleThrow(Process* process, Object* exception, int* stack_delta_result,
         unused = caller;
       }
       process->UpdateCoroutine(current);
+      Frame(process->stack()).SetReturnAddress(resume_address);
       return catch_bcp;
     }
 

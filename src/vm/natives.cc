@@ -16,6 +16,7 @@
 
 #include "src/vm/event_handler.h"
 #include "src/vm/interpreter.h"
+#include "src/vm/native_interpreter.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
@@ -892,8 +893,8 @@ static Process* SpawnProcessInternal(Program* program, Process* process,
   stack->set(--top, NULL);
   Object** frame_pointer = stack->Pointer(top);
   stack->set(--top, reinterpret_cast<Object*>(bcp));
-  // Finally push the bcp and fp.
-  stack->set(--top, NULL);
+  // Finally push the entry and fp.
+  stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
 
@@ -1005,7 +1006,7 @@ NATIVE(CoroutineNewStack) {
   stack->set(--top, Smi::FromWord(0));  // Fake 'value' argument.
   // Leave bcp at the kChangeStack instruction to make it look like a
   // suspended co-routine. bcp is incremented on resume.
-  stack->set(--top, NULL);
+  stack->set(--top, reinterpret_cast<Object*>(InterpreterCoroutineEntry));
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
   return stack;

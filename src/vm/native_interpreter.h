@@ -21,6 +21,11 @@ class TargetYieldResult;
 extern "C" int InterpretFast(Process* process,
                              TargetYieldResult* target_yield_result);
 
+extern "C" void InterpreterEntry();
+
+extern "C" void InterpreterCoroutineEntry();
+
+
 void SetBytecodeBreak(Opcode opcode);
 
 void ClearBytecodeBreak(Opcode opcode);
@@ -35,6 +40,14 @@ void ClearBytecodeBreak(Opcode opcode);
 inline int InterpretFast(Process* process,
                          TargetYieldResult* target_yield_result) {
   return -1;
+}
+
+inline void __attribute__((aligned(4))) InterpreterEntry() {
+  UNREACHABLE();
+}
+
+inline void __attribute__((aligned(4))) InterpreterCoroutineEntry() {
+  UNREACHABLE();
 }
 
 inline void SetBytecodeBreak(Opcode opcode) { }

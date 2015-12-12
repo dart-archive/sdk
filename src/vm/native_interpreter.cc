@@ -23,8 +23,8 @@ const uword kDebugDiff = reinterpret_cast<uword>(BC_InvokeStatic) -
     reinterpret_cast<uword>(Debug_BC_InvokeStatic);
 
 void SetBytecodeBreak(Opcode opcode) {
-  ASSERT((reinterpret_cast<uword>(Debug_BC_InvokeStatic) & 0x7) == 4);
-  ASSERT((reinterpret_cast<uword>(BC_InvokeStatic) & 0x7) == 0);
+  ASSERT((reinterpret_cast<uword>(Debug_BC_InvokeStatic) & 0x4) == 4);
+  ASSERT((reinterpret_cast<uword>(BC_InvokeStatic) & 0x4) == 0);
 
   uword value = InterpretFast_DispatchTable[opcode];
   if ((value & 4) == 0) {

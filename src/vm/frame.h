@@ -66,6 +66,14 @@ class Frame {
     return reinterpret_cast<Object**>(*frame_pointer_);
   }
 
+  void* ReturnAddress() const {
+    return reinterpret_cast<void*>(*(frame_pointer_ + 1));
+  }
+
+  void SetReturnAddress(void* address) {
+    *(frame_pointer_ + 1) = reinterpret_cast<Object*>(address);
+  }
+
   // Find the function of the bcp, by searching through the bytecodes
   // for the MethodEnd bytecode. This operation is linear to the size of the
   // bytecode; O(n).

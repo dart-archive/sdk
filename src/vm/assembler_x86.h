@@ -288,6 +288,8 @@ class Assembler {
   INSTRUCTION_0(nop, "nop");
   INSTRUCTION_0(int3, "int3");
 
+  void movl(Register reg, Label* label);
+
   void j(Condition condition, const char* name);
   void j(Condition condition, Label* label);
 

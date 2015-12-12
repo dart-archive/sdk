@@ -14,6 +14,7 @@
 
 #include "src/vm/frame.h"
 #include "src/vm/heap_validator.h"
+#include "src/vm/native_interpreter.h"
 #include "src/vm/links.h"
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
@@ -1598,6 +1599,7 @@ void Session::RestartFrame(int frame_index) {
   Frame frame(stack);
   for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
 
+  frame.SetReturnAddress(reinterpret_cast<void*>(InterpreterEntry));
   // We are now in the frame we want to reply. Navigate to the previous frame
   // (the caller frame), so we can reply the invocation.
   frame.MovePrevious();

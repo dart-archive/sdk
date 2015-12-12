@@ -17,9 +17,10 @@
 
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
+#include "src/vm/native_interpreter.h"
 #include "src/vm/object.h"
-#include "src/vm/process.h"
 #include "src/vm/port.h"
+#include "src/vm/process.h"
 #include "src/vm/session.h"
 
 namespace fletch {
@@ -95,7 +96,7 @@ Process* Program::ProcessSpawnForMain() {
   stack->set(--top, NULL);
   Object** frame_pointer = stack->Pointer(top);
   stack->set(--top, reinterpret_cast<Object*>(bcp));
-  stack->set(--top, NULL);
+  stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
 

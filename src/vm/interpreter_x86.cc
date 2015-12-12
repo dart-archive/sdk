@@ -204,7 +204,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
 
   virtual void DoThrow();
   // Expects to be called after SaveState with the exception object in EBX.
-  virtual void DoThrowAfterSaveState();
+  virtual void DoThrowAfterSaveState(Label* resume);
   virtual void DoSubroutineCall();
   virtual void DoSubroutineReturn();
 
@@ -232,6 +232,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   Label check_stack_overflow_;
   Label check_stack_overflow_0_;
   Label intrinsic_failure_;
+  Label interpreter_entry_;
   int spill_size_;
 
   void LoadLocal(Register reg, int index);
@@ -298,7 +299,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
 
   void Dispatch(int size);
 
-  void SaveState();
+  void SaveState(Label* resume);
   void RestoreState();
 
   static int ComputeStackPadding(int reserved, int extra) {
@@ -332,13 +333,12 @@ void InterpreterGeneratorX86::GeneratePrologue() {
 
   // Restore the register state and dispatch to the first bytecode.
   RestoreState();
-  Dispatch(0);
 }
 
 void InterpreterGeneratorX86::GenerateEpilogue() {
   // Done. Start by saving the register state.
   __ Bind(&done_);
-  SaveState();
+  SaveState(&interpreter_entry_);
 
   // Undo stack padding.
   Label undo_padding;
@@ -355,6 +355,11 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ popl(EBP);
   __ ret();
 
+  // Default entrypoint.
+  __ Bind("", "InterpreterEntry");
+  __ Bind(&interpreter_entry_);
+  Dispatch(0);
+
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   // Handle immutable heap allocation failures.
   Label immutable_alloc_failure;
@@ -365,7 +370,7 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
 
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
-  SaveState();
+  SaveState(&interpreter_entry_);
   LoadProcess(EAX);
   __ movl(Address(ESP, 0 * kWordSize), EAX);
   __ call("HandleGC");
@@ -374,40 +379,42 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ j(NOT_ZERO, &immutable_alloc_failure);
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   RestoreState();
-  Dispatch(0);
 
   // Stack overflow handling (slow case).
-  Label stay_fast, overflow, check_debug_interrupt;
+  Label stay_fast, overflow, check_debug_interrupt, overflow_resume;
   __ Bind(&check_stack_overflow_0_);
   __ xorl(EAX, EAX);
   __ Bind(&check_stack_overflow_);
-  SaveState();
+  SaveState(&overflow_resume);
 
   LoadProcess(ECX);
   __ movl(Address(ESP, 0 * kWordSize), ECX);
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ call("HandleStackOverflow");
+  RestoreState();
+  __ Bind(&overflow_resume);
   __ testl(EAX, EAX);
   ASSERT(Process::kStackCheckContinue == 0);
   __ j(ZERO, &stay_fast);
   __ cmpl(EAX, Immediate(Process::kStackCheckInterrupt));
   __ j(NOT_EQUAL, &check_debug_interrupt);
   __ movl(EAX, Immediate(Interpreter::kInterrupt));
-  __ jmp(&undo_padding);
+  __ jmp(&done_);
   __ Bind(&check_debug_interrupt);
   __ cmpl(EAX, Immediate(Process::kStackCheckDebugInterrupt));
   __ j(NOT_EQUAL, &overflow);
   __ movl(EAX, Immediate(Interpreter::kBreakPoint));
-  __ jmp(&undo_padding);
+  __ jmp(&done_);
 
   __ Bind(&stay_fast);
-  RestoreState();
   Dispatch(0);
 
   __ Bind(&overflow);
+  Label throw_resume;
+  SaveState(&throw_resume);
   LoadProgram(EBX);
   __ movl(EBX, Address(EBX, Program::kStackOverflowErrorOffset));
-  DoThrowAfterSaveState();
+  DoThrowAfterSaveState(&throw_resume);
 
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
@@ -739,11 +746,13 @@ void InterpreterGeneratorX86::DoInvokeNative() { InvokeNative(false); }
 void InterpreterGeneratorX86::DoInvokeNativeYield() { InvokeNative(true); }
 
 void InterpreterGeneratorX86::DoInvokeSelector() {
-  SaveState();
+  Label resume;
+  SaveState(&resume);
   LoadProcess(EAX);
   __ movl(Address(ESP, 0 * kWordSize), EAX);
   __ call("HandleInvokeSelector");
   RestoreState();
+  __ Bind(&resume);
   CheckStackOverflow(0);
   Dispatch(0);
 }
@@ -1141,11 +1150,12 @@ void InterpreterGeneratorX86::DoStackOverflowCheck() {
 
 void InterpreterGeneratorX86::DoThrow() {
   LoadLocal(EBX, 0);
-  SaveState();
-  DoThrowAfterSaveState();
+  Label resume;
+  SaveState(&resume);
+  DoThrowAfterSaveState(&resume);
 }
 
-void InterpreterGeneratorX86::DoThrowAfterSaveState() {
+void InterpreterGeneratorX86::DoThrowAfterSaveState(Label* resume) {
   // Use the stack to store the stack delta initialized to zero.
   __ leal(EAX, Address(ESP, 4 * kWordSize));
   __ movl(Address(EAX, 0), Immediate(0));
@@ -1160,6 +1170,7 @@ void InterpreterGeneratorX86::DoThrowAfterSaveState() {
   __ call("HandleThrow");
 
   RestoreState();
+  __ Bind(resume);
 
   Label unwind;
   __ testl(EAX, EAX);
@@ -1214,12 +1225,16 @@ void InterpreterGeneratorX86::DoCoroutineChange() {
   StoreLocal(EAX, 0);
   StoreLocal(EAX, 1);
 
-  SaveState();
+  Label resume;
+  SaveState(&resume);
   LoadProcess(EAX);
   __ movl(Address(ESP, 0 * kWordSize), EAX);
   __ movl(Address(ESP, 1 * kWordSize), EDX);
   __ call("HandleCoroutineChange");
   RestoreState();
+
+  __ Bind(&resume);
+  __ Bind("", "InterpreterCoroutineEntry");
 
   StoreLocal(EBX, 1);
   Drop(1);
@@ -1315,12 +1330,11 @@ void InterpreterGeneratorX86::DoIdenticalNonNumeric() {
 }
 
 void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
-  SaveState();
+  SaveState(&interpreter_entry_);
   LoadProcess(EAX);
   __ movl(Address(ESP, 0 * kWordSize), EAX);
   __ call("HandleEnterNoSuchMethod");
   RestoreState();
-  Dispatch(0);
 }
 
 void InterpreterGeneratorX86::DoExitNoSuchMethod() {
@@ -2114,12 +2128,13 @@ void InterpreterGeneratorX86::Dispatch(int size) {
   __ jmp("InterpretFast_DispatchTable", EBX, TIMES_WORD_SIZE);
 }
 
-void InterpreterGeneratorX86::SaveState() {
+void InterpreterGeneratorX86::SaveState(Label* resume) {
   // Save the bytecode pointer at the bcp slot.
   __ movl(Address(EBP, -kWordSize), ESI);
 
-  // Push null.
-  Push(Immediate(0));
+  // Push resume address.
+  __ movl(ECX, resume);
+  Push(ECX);
 
   // Push frame pointer.
   Push(EBP);
@@ -2149,12 +2164,12 @@ void InterpreterGeneratorX86::RestoreState() {
   __ leal(ESP, Address(ESP, ECX, TIMES_2, Stack::kSize - HeapObject::kTag));
 
   // Read frame pointer.
-  LoadLocal(EBP, 0);
+  __ popl(EBP);
 
   // Set the bcp from the stack.
   __ movl(ESI, Address(EBP, -kWordSize));
 
-  Drop(2);
+  __ ret();
 }
 
 }  // namespace fletch

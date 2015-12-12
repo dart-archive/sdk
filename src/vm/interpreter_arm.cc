@@ -336,6 +336,12 @@ void InterpreterGeneratorARM::GeneratePrologue() {
   // Restore the register state and dispatch to the first bytecode.
   RestoreState();
   Dispatch(0);
+
+  // Define interpreter entries. They are currently unused in the ARM
+  // interpreter.
+  __ Bind("", "InterpreterEntry");
+  __ Bind("", "InterpreterCoroutineEntry");
+  __ bkpt();
 }
 
 void InterpreterGeneratorARM::GenerateEpilogue() {

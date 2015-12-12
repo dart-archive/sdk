@@ -62,6 +62,11 @@ static const char* ToString(Register reg, RegisterSize size = kLongRegister) {
   return NULL;
 }
 
+void Assembler::movl(Register reg, Label* label) {
+  const char* direction = ComputeDirectionForLinking(label);
+  printf("\tmovl $%d%s, %s\n", label->position(), direction, ToString(reg));
+}
+
 void Assembler::Print(const char* format, ...) {
   printf("\t");
   va_list arguments;
