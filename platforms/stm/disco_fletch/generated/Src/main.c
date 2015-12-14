@@ -35,15 +35,7 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */
-
-/*
- * START ADDED TO GENERATED CODE
- */
 #include "fletch_entry.h"
-/*
- * END ADDED TO GENERATED CODE
- */
-
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -435,7 +427,7 @@ void MX_USART1_UART_Init(void)
 
   huart1.Instance = USART1;
   huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_7B;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
   huart1.Init.Mode = UART_MODE_TX_RX;
@@ -779,15 +771,7 @@ void StartDefaultTask(void const * argument)
 {
 
   /* USER CODE BEGIN 5 */
-
-  /*
-   * START ADDED TO GENERATED CODE
-   */
   FletchEntry(argument);
-  /*
-   * END ADDED TO GENERATED CODE
-   */
-
   /* Infinite loop */
   for(;;)
   {
