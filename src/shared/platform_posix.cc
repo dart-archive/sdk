@@ -36,6 +36,8 @@ void Platform::Setup() {
   sigaction(SIGPIPE, &sa, NULL);
 }
 
+void Platform::TearDown() { }
+
 uint64 Platform::GetMicroseconds() {
   struct timeval tv;
   if (gettimeofday(&tv, NULL) < 0) return -1;

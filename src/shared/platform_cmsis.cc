@@ -22,6 +22,8 @@ static uint64 time_launch;
 
 void Platform::Setup() { time_launch = GetMicroseconds(); }
 
+void Platform::TearDown() { }
+
 void GetPathOfExecutable(char* path, size_t path_length) { path[0] = '\0'; }
 
 int Platform::GetLocalTimeZoneOffset() { return 0; }

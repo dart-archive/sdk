@@ -30,6 +30,8 @@ static uint64 time_launch;
 
 void Platform::Setup() { time_launch = GetMicroseconds(); }
 
+void Platform::TearDown() { }
+
 uint64 Platform::GetMicroseconds() {
   lk_bigtime_t time = current_time_hires();
   return time;

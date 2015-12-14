@@ -50,8 +50,11 @@ enum Architecture {
   kARM = 3,
 };
 
-// Initialize the Platform class.
+// Initialize the platform services.
 void Setup();
+
+// Tear down the platform services.
+void TearDown();
 
 // Set thread in thread local storage.
 void SetCurrentThread(Thread* thread);

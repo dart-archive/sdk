@@ -30,6 +30,8 @@ void GetPathOfExecutable(char* path, size_t path_length) {
 
 void Platform::Setup() { time_launch = GetMicroseconds(); }
 
+void Platform::TearDown() { }
+
 uint64 Platform::GetMicroseconds() {
   SYSTEMTIME sys_time;
   FILETIME file_time;

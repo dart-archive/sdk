@@ -24,6 +24,7 @@ void Fletch::TearDown() {
   ForeignFunctionInterface::TearDown();
   StaticClassStructures::TearDown();
   ObjectMemory::TearDown();
+  Platform::TearDown();
 }
 
 }  // namespace fletch
