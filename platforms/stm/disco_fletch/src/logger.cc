@@ -33,7 +33,7 @@ void Logger::vlog(Level level, char* format, va_list args) {
     case Logger::LDEBUG:
       LCD_LineColor = LCD_COLOR_CYAN;
       break;
-  case Logger::LINFO:
+    case Logger::LINFO:
       LCD_LineColor = LCD_COLOR_BLACK;
       break;
     case Logger::LWARNING:

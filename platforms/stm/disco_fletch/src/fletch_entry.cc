@@ -16,15 +16,15 @@ extern unsigned char _binary_snapshot_size;
 
 // Run fletch on the linked in snapshot.
 void StartFletch(void const * argument) {
-  DEBUG_LOG("Setup fletch");
+  LOG_DEBUG("Setup fletch\n");
   FletchSetup();
-  DEBUG_LOG("Read fletch snapshot");
+  LOG_DEBUG("Read fletch snapshot\n");
   unsigned char *snapshot = &_binary_snapshot_start;
   int snapshot_size =  reinterpret_cast<int>(&_binary_snapshot_size);
   FletchProgram program = FletchLoadSnapshot(snapshot, snapshot_size);
-  DEBUG_LOG("Run fletch program");
+  LOG_DEBUG("Run fletch program\n");
   FletchRunMain(program);
-  DEBUG_LOG("Fletch program exited");
+  LOG_DEBUG("Fletch program exited\n");
 }
 
 // Main entry point from FreeRTOS. Running in the default task.

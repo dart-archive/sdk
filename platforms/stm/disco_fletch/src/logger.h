@@ -37,10 +37,10 @@ class Logger {
 };
 
 #define LOG(...) logger->log(__VA_ARGS__)
-#define DEBUG_LOG(...) logger->debug(__VA_ARGS__)
-#define INFO_LOG(...) logger->info(__VA_ARGS__)
-#define WARNING_LOG(...) logger->warning(__VA_ARGS__)
-#define ERROR_LOG(...) logger->error(__VA_ARGS__)
-#define FATAL_LOG(...) logger->fatal(__VA_ARGS__)
+#define LOG_DEBUG(...) logger->debug(__VA_ARGS__)
+#define LOG_INFO(...) logger->info(__VA_ARGS__)
+#define LOG_WARNING(...) logger->warning(__VA_ARGS__)
+#define LOG_ERROR(...) logger->error(__VA_ARGS__)
+#define LOG_FATAL(...) logger->fatal(__VA_ARGS__)
 
 #endif  // SRC_LOGGER_H_
