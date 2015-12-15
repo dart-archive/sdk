@@ -86,8 +86,8 @@ import 'package:fletchc/fletch_vm.dart' show
     FletchVm;
 
 import 'package:fletchc/debug_state.dart' as debug show
-    StackFrame,
-    StackTrace;
+    BackTraceFrame,
+    BackTrace;
 
 import 'program_result.dart';
 
@@ -279,15 +279,15 @@ compileAndRun(
         }
 
         // Select the stack frame of callMain.
-        debug.StackTrace trace = await session.stackTrace();
+        debug.BackTrace trace = await session.backTrace();
         FunctionElement callMainElement =
             backend.fletchSystemLibrary.findLocal("callMain");
         FletchFunction callMain =
             helper.system.lookupFunctionByElement(callMainElement);
-        debug.StackFrame stackFrame =
-            trace.stackFrames.firstWhere(
-                (debug.StackFrame frame) => frame.function == callMain);
-        int frame = trace.stackFrames.indexOf(stackFrame);
+        debug.BackTraceFrame mainFrame =
+            trace.frames.firstWhere(
+                (debug.BackTraceFrame frame) => frame.function == callMain);
+        int frame = trace.frames.indexOf(mainFrame);
         Expect.notEquals(1, frame);
         session.selectFrame(frame);
         print(trace.format());

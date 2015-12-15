@@ -174,11 +174,11 @@ class InputHandler {
         if (!checkLoaded('cannot print backtrace')) {
           break;
         }
-        StackTrace stacktrace = await session.stackTrace();
-        if (stacktrace == null) {
+        BackTrace backtrace = await session.backTrace();
+        if (backtrace == null) {
           writeStdoutLine('### failed to get backtrace for current program');
         } else {
-          writeStdout(stacktrace.format());
+          writeStdout(backtrace.format());
         }
         break;
       case 'f':
@@ -193,7 +193,7 @@ class InputHandler {
         if (!checkLoaded('nothing to list')) {
           break;
         }
-        StackTrace trace = await session.stackTrace();
+        BackTrace trace = await session.backTrace();
         String listing = trace != null ? trace.list() : null;
         if (listing != null) {
           writeStdoutLine(listing);
@@ -203,8 +203,8 @@ class InputHandler {
         break;
       case 'disasm':
         if (checkLoaded('cannot show bytecodes')) {
-          StackTrace stacktrace = await session.stackTrace();
-          String disassembly = stacktrace != null ? stacktrace.disasm() : null;
+          BackTrace backtrace = await session.backTrace();
+          String disassembly = backtrace != null ? backtrace.disasm() : null;
           if (disassembly != null) {
             writeStdoutLine(disassembly);
           } else {
@@ -234,7 +234,7 @@ class InputHandler {
         break;
       case 'fibers':
         if (checkRunning('cannot show fibers')) {
-          List<StackTrace> traces = await session.fibers();
+          List<BackTrace> traces = await session.fibers();
           for (int fiber = 0; fiber < traces.length; ++fiber) {
             writeStdoutLine('\nfiber $fiber');
             writeStdout(traces[fiber].format());
@@ -251,12 +251,12 @@ class InputHandler {
         if (!checkLoaded('cannot restart')) {
           break;
         }
-        StackTrace trace = await session.stackTrace();
+        BackTrace trace = await session.backTrace();
         if (trace == null) {
           writeStdoutLine("### cannot restart when nothing is executing");
           break;
         }
-        if (trace.frames <= 1) {
+        if (trace.length <= 1) {
           writeStdoutLine("### cannot restart entry frame");
           break;
         }

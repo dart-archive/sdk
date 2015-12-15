@@ -63,9 +63,9 @@ class DebugState {
 
   bool showInternalFrames = false;
   bool verbose = true;
-  StackFrame _topFrame;
+  BackTraceFrame _topFrame;
   RemoteObject currentUncaughtException;
-  StackTrace _currentStackTrace;
+  BackTrace _currentBackTrace;
   int currentFrame = 0;
   SourceLocation _currentLocation;
 
@@ -74,32 +74,32 @@ class DebugState {
   void reset() {
     _topFrame = null;
     currentUncaughtException = null;
-    _currentStackTrace = null;
+    _currentBackTrace = null;
     _currentLocation = null;
     currentFrame = 0;
   }
 
   int get actualCurrentFrameNumber {
-    return currentStackTrace.actualFrameNumber(currentFrame);
+    return currentBackTrace.actualFrameNumber(currentFrame);
   }
 
   ScopeInfo get currentScopeInfo {
-    return currentStackTrace.scopeInfo(currentFrame);
+    return currentBackTrace.scopeInfo(currentFrame);
   }
 
   SourceLocation get currentLocation => _currentLocation;
 
-  StackTrace get currentStackTrace => _currentStackTrace;
+  BackTrace get currentBackTrace => _currentBackTrace;
 
-  void set currentStackTrace(StackTrace stackTrace) {
-    _currentLocation = stackTrace.sourceLocation();
-    _topFrame = stackTrace.stackFrames[0];
-    _currentStackTrace = stackTrace;
+  void set currentBackTrace(BackTrace backTrace) {
+    _currentLocation = backTrace.sourceLocation();
+    _topFrame = backTrace.frames[0];
+    _currentBackTrace = backTrace;
   }
 
-  StackFrame get topFrame => _topFrame;
+  BackTraceFrame get topFrame => _topFrame;
 
-  void set topFrame(StackFrame frame) {
+  void set topFrame(BackTraceFrame frame) {
     _currentLocation = frame.sourceLocation();
     _topFrame = frame;
   }
@@ -130,9 +130,9 @@ class DebugState {
             currentLocation.node == null);
   }
 
-  int get numberOfStackFrames => currentStackTrace.stackFrames.length;
+  int get numberOfBackTraceFrames => currentBackTrace.frames.length;
 
   SourceLocation sourceLocationForFrame(int frame) {
-    return currentStackTrace.stackFrames[frame].sourceLocation();
+    return currentBackTrace.frames[frame].sourceLocation();
   }
 }

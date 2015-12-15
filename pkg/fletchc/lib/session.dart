@@ -320,7 +320,7 @@ class Session extends FletchVmSession {
       case VmCommandCode.ProcessBreakpoint:
         ProcessBreakpoint command = response;
         var function = fletchSystem.lookupFunctionById(command.functionId);
-        debugState.topFrame = new StackFrame(
+        debugState.topFrame = new BackTraceFrame(
             function, command.bytecodeIndex, compiler, debugState);
         running = true;
         break;
@@ -462,7 +462,7 @@ class Session extends FletchVmSession {
 
   Future<VmCommand> stepOut() async {
     assert(running);
-    StackTrace trace = await stackTrace();
+    BackTrace trace = await backTrace();
     // If we are at the last frame, just continue. This will either terminate
     // the process or stop at any user configured breakpoints.
     if (trace.visibleFrames <= 1) return cont();
@@ -497,8 +497,8 @@ class Session extends FletchVmSession {
 
   Future<VmCommand> restart() async {
     assert(loaded);
-    assert(debugState.currentStackTrace != null);
-    assert(debugState.currentStackTrace.frames > 1);
+    assert(debugState.currentBackTrace != null);
+    assert(debugState.currentBackTrace.length > 1);
     int frame = debugState.actualCurrentFrameNumber;
     return handleProcessStop(await runCommand(new ProcessRestartFrame(frame)));
   }
@@ -529,18 +529,18 @@ class Session extends FletchVmSession {
   }
 
   bool selectFrame(int frame) {
-    if (debugState.currentStackTrace == null ||
-        debugState.currentStackTrace.actualFrameNumber(frame) == -1) {
+    if (debugState.currentBackTrace == null ||
+        debugState.currentBackTrace.actualFrameNumber(frame) == -1) {
       return false;
     }
     debugState.currentFrame = frame;
     return true;
   }
 
-  StackTrace stackTraceFromBacktraceResponse(
+  BackTrace stackTraceFromBacktraceResponse(
       ProcessBacktrace backtraceResponse) {
     int frames = backtraceResponse.frames;
-    StackTrace stackTrace = new StackTrace(frames, debugState);
+    BackTrace stackTrace = new BackTrace(frames, debugState);
     for (int i = 0; i < frames; ++i) {
       int functionId = backtraceResponse.functionIds[i];
       FletchFunction function = fletchSystem.lookupFunctionById(functionId);
@@ -549,7 +549,7 @@ class Session extends FletchVmSession {
       }
       stackTrace.addFrame(
           compiler,
-          new StackFrame(function,
+          new BackTraceFrame(function,
                          backtraceResponse.bytecodeIndices[i],
                          compiler,
                          debugState));
@@ -575,30 +575,30 @@ class Session extends FletchVmSession {
     return debugState.currentUncaughtException;
   }
 
-  Future<StackTrace> stackTrace() async {
+  Future<BackTrace> backTrace() async {
     assert(loaded);
-    if (debugState.currentStackTrace == null) {
+    if (debugState.currentBackTrace == null) {
       ProcessBacktrace backtraceResponse =
           await runCommand(const ProcessBacktraceRequest());
-      debugState.currentStackTrace =
+      debugState.currentBackTrace =
           stackTraceFromBacktraceResponse(backtraceResponse);
     }
-    return debugState.currentStackTrace;
+    return debugState.currentBackTrace;
   }
 
-  Future<StackTrace> backtraceForFiber(int fiber) async {
+  Future<BackTrace> backtraceForFiber(int fiber) async {
     ProcessBacktrace backtraceResponse =
         await runCommand(new ProcessFiberBacktraceRequest(fiber));
     return stackTraceFromBacktraceResponse(backtraceResponse);
   }
 
-  Future<List<StackTrace>> fibers() async {
+  Future<List<BackTrace>> fibers() async {
     assert(running);
     await runCommand(const NewMap(MapId.fibers));
     ProcessNumberOfStacks response =
         await runCommand(const ProcessAddFibersToMap());
     int numberOfFibers = response.value;
-    List<StackTrace> stacktraces = new List(numberOfFibers);
+    List<BackTrace> stacktraces = new List(numberOfFibers);
     for (int i = 0; i < numberOfFibers; i++) {
       stacktraces[i] = await backtraceForFiber(i);
     }
@@ -723,7 +723,7 @@ class Session extends FletchVmSession {
 
   Future<List<RemoteObject>> processAllVariables() async {
     assert(loaded);
-    StackTrace trace = await stackTrace();
+    BackTrace trace = await backTrace();
     ScopeInfo info = trace.scopeInfoForCurrentFrame;
     List<RemoteObject> variables = [];
     for (ScopeInfo current = info;
@@ -736,7 +736,7 @@ class Session extends FletchVmSession {
 
   Future<LocalValue> lookupValue(String name) async {
     assert(loaded);
-    StackTrace trace = await stackTrace();
+    BackTrace trace = await backTrace();
     return trace.scopeInfoForCurrentFrame.lookup(name);
   }
 
@@ -779,8 +779,8 @@ class Session extends FletchVmSession {
 
   bool toggleInternal() {
     debugState.showInternalFrames = !debugState.showInternalFrames;
-    if (debugState.currentStackTrace != null) {
-      debugState.currentStackTrace.visibilityChanged();
+    if (debugState.currentBackTrace != null) {
+      debugState.currentBackTrace.visibilityChanged();
     }
     return debugState.showInternalFrames;
   }
@@ -804,7 +804,7 @@ class Session extends FletchVmSession {
       // Print the exception first, followed by a stack trace.
       RemoteObject exception = await uncaughtException();
       sb.writeln(exceptionToString(exception));
-      StackTrace trace = await stackTrace();
+      BackTrace trace = await backTrace();
       assert(trace != null);
       sb.write(trace.format());
       String result = '$sb';
@@ -813,9 +813,9 @@ class Session extends FletchVmSession {
 
     } else if (response is ProcessBreakpoint) {
       // Print the current line of source code.
-      StackTrace trace = await stackTrace();
+      BackTrace trace = await backTrace();
       assert(trace != null);
-      StackFrame topFrame = trace.visibleFrame(0);
+      BackTraceFrame topFrame = trace.visibleFrame(0);
       if (topFrame != null) {
         String result;
         if (debugState.verbose) {

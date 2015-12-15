@@ -39,7 +39,7 @@ import 'package:fletchc/debug_state.dart' show
 import '../../debug_state.dart' show
     RemoteObject,
     RemoteValue,
-    StackTrace;
+    BackTrace;
 
 import '../../commands.dart' show
     VmCommand;
@@ -377,7 +377,7 @@ Future<int> backtraceDebuggerTask(
   if (!session.loaded) {
     throwInternalError('### process not loaded, cannot show backtrace');
   }
-  StackTrace trace = await session.stackTrace();
+  BackTrace trace = await session.backTrace();
   print(trace.format());
 
   return 0;
@@ -478,7 +478,7 @@ Future<int> listDebuggerTask(
   if (!session.loaded) {
     throwInternalError('### process not loaded, nothing to list');
   }
-  StackTrace trace = await session.stackTrace();
+  BackTrace trace = await session.backTrace();
   if (trace == null) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Source listing failed');
@@ -495,7 +495,7 @@ Future<int> disasmDebuggerTask(
   if (!session.loaded) {
     throwInternalError('### process not loaded, nothing to disassemble');
   }
-  StackTrace trace = await session.stackTrace();
+  BackTrace trace = await session.backTrace();
   if (trace == null) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Bytecode disassembly failed');
@@ -586,7 +586,7 @@ Future<int> fibersDebuggerTask(
   if (!session.running) {
     throwInternalError('### process not running, cannot show fibers');
   }
-  List<StackTrace> traces = await session.fibers();
+  List<BackTrace> traces = await session.fibers();
   print('');
   for (int fiber = 0; fiber < traces.length; ++fiber) {
     print('fiber $fiber');
@@ -612,11 +612,11 @@ Future<int> restartDebuggerTask(
   if (!session.loaded) {
     throwInternalError('### process not loaded, cannot restart');
   }
-  StackTrace trace = await session.stackTrace();
+  BackTrace trace = await session.backTrace();
   if (trace == null) {
     throwInternalError("### cannot restart when nothing is executing.");
   }
-  if (trace.frames <= 1) {
+  if (trace.length <= 1) {
     throwInternalError("### cannot restart entry frame.");
   }
   VmCommand response = await session.restart();

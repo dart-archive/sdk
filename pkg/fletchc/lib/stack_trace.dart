@@ -4,14 +4,14 @@
 
 part of fletch.debug_state;
 
-class StackFrame {
+class BackTraceFrame {
   final FletchFunction function;
   final int bytecodePointer;
   final IncrementalCompiler compiler;
   final DebugState debugState;
 
-  StackFrame(this.function, this.bytecodePointer, this.compiler,
-             this.debugState);
+  BackTraceFrame(this.function, this.bytecodePointer, this.compiler,
+                 this.debugState);
 
   bool get inPlatformLibrary => function.element.library.isPlatformLibrary;
 
@@ -109,27 +109,27 @@ class StackFrame {
   int get functionId => function.functionId;
 }
 
-class StackTrace {
-  final List<StackFrame> stackFrames;
+class BackTrace {
+  final List<BackTraceFrame> frames;
   final DebugState debugState;
 
   List<int> visibleFrameMapping;
   int framesToGo;
   int maxNameLength = 0;
 
-  StackTrace(int framesToGo, this.debugState)
+  BackTrace(int framesToGo, this.debugState)
       : this.framesToGo = framesToGo,
-        stackFrames = new List(framesToGo);
+        frames = new List(framesToGo);
 
-  int get frames => stackFrames.length;
+  int get length => frames.length;
 
   int get visibleFrames {
     ensureVisibleFrameMap();
     return visibleFrameMapping.length;
   }
 
-  void addFrame(IncrementalCompiler compiler, StackFrame frame) {
-    stackFrames[--framesToGo] = frame;
+  void addFrame(IncrementalCompiler compiler, BackTraceFrame frame) {
+    frames[--framesToGo] = frame;
     String name = compiler.lookupFunctionName(frame.function);
     var nameLength = name == null ? 0 : name.length;
     if (nameLength > maxNameLength) maxNameLength = nameLength;
@@ -140,11 +140,11 @@ class StackTrace {
     StringBuffer buffer = new StringBuffer();
     assert(framesToGo == 0);
     var frameNumber = 0;
-    for (var i = 0; i < stackFrames.length; i++) {
-      if (!stackFrames[i].isVisible) continue;
+    for (var i = 0; i < frames.length; i++) {
+      if (!frames[i].isVisible) continue;
       if (frameNumber == 0) buffer.writeln("Stack trace:");
       var marker = currentFrame == frameNumber ? '> ' : '  ';
-      var line = stackFrames[i].shortString(maxNameLength);
+      var line = frames[i].shortString(maxNameLength);
       String frameNumberString = '${frameNumber++}: '.padLeft(3);
       buffer.writeln('$marker$frameNumberString$line');
     }
@@ -154,8 +154,8 @@ class StackTrace {
   void ensureVisibleFrameMap() {
     if (visibleFrameMapping == null) {
       visibleFrameMapping = [];
-      for (int i = 0; i < stackFrames.length; i++) {
-        if (stackFrames[i].isVisible) visibleFrameMapping.add(i);
+      for (int i = 0; i < frames.length; i++) {
+        if (frames[i].isVisible) visibleFrameMapping.add(i);
       }
     }
   }
@@ -168,10 +168,10 @@ class StackTrace {
         : -1;
   }
 
-  StackFrame visibleFrame(int frame) {
+  BackTraceFrame visibleFrame(int frame) {
     int frameNumber = actualFrameNumber(frame);
     if (frameNumber == -1) return null;
-    return stackFrames[frameNumber];
+    return frames[frameNumber];
   }
 
   void visibilityChanged() {
@@ -180,24 +180,24 @@ class StackTrace {
 
   String list([int frame]) {
     if (frame == null) frame = debugState.currentFrame;
-    StackFrame visibleStackFrame = visibleFrame(frame);
+    BackTraceFrame visibleStackFrame = visibleFrame(frame);
     if (visibleStackFrame == null) return null;
     return visibleStackFrame.list();
   }
 
   String disasm([int frame]) {
     if (frame == null) frame = debugState.currentFrame;
-    StackFrame visibleStackFrame = visibleFrame(frame);
+    BackTraceFrame visibleStackFrame = visibleFrame(frame);
     if (visibleStackFrame == null) return null;
     return visibleStackFrame.disasm();
   }
 
   SourceLocation sourceLocation() {
-    return stackFrames[0].sourceLocation();
+    return frames[0].sourceLocation();
   }
 
   ScopeInfo scopeInfo(int frame) {
-    StackFrame visibleStackFrame = visibleFrame(frame);
+    BackTraceFrame visibleStackFrame = visibleFrame(frame);
     if (visibleStackFrame == null) return null;
     return visibleStackFrame.scopeInfo();
   }
@@ -205,6 +205,6 @@ class StackTrace {
   ScopeInfo get scopeInfoForCurrentFrame => scopeInfo(debugState.currentFrame);
 
   int stepBytecodePointer(SourceLocation location) {
-    return stackFrames[0].stepBytecodePointer(location);
+    return frames[0].stepBytecodePointer(location);
   }
 }

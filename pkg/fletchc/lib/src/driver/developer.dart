@@ -125,7 +125,7 @@ import '../please_report_crash.dart' show
 
 import '../../debug_state.dart' as debug show
     RemoteObject,
-    StackTrace;
+    BackTrace;
 
 typedef Future<Null> ClientEventHandler();
 
@@ -589,7 +589,7 @@ Future<int> run(
       print("### process not loaded, cannot print stacktrace and code");
       return;
     }
-    debug.StackTrace stackTrace = await session.stackTrace();
+    debug.BackTrace stackTrace = await session.backTrace();
     if (stackTrace != null) {
       print(stackTrace.format());
       print(stackTrace.list());
