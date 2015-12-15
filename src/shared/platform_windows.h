@@ -26,46 +26,56 @@ uint64 GetMicroseconds();
 
 class MutexImpl {
  public:
-  MutexImpl() : mutex_(CreateMutex(NULL, FALSE, NULL)) {}
-  ~MutexImpl() { CloseHandle(mutex_); }
+  MutexImpl() : srwlock_(SRWLOCK_INIT) { }
+  ~MutexImpl() { }
 
-  int Lock() { return WaitForSingleObject(mutex_, INFINITE); }
-  int TryLock() { return WaitForSingleObject(mutex_, 0); }
-  int Unlock() { return ReleaseMutex(mutex_); }
+  int Lock() {
+    AcquireSRWLockExclusive(&srwlock_);
+    return 0;
+  }
+
+  int TryLock() {
+    return TryAcquireSRWLockExclusive(&srwlock_) ? 0 : 1;
+  }
+
+  int Unlock() {
+    ReleaseSRWLockExclusive(&srwlock_);
+    return 0;
+  }
 
  private:
-  HANDLE mutex_;
+  SRWLOCK srwlock_;
 };
 
 class MonitorImpl {
  public:
   MonitorImpl() {
-    InitializeCriticalSection(&mutex_);
+    InitializeSRWLock(&srwlock_);
     InitializeConditionVariable(&cond_);
   }
 
-  ~MonitorImpl() { DeleteCriticalSection(&mutex_); }
+  ~MonitorImpl() { }
 
   int Lock() {
-    EnterCriticalSection(&mutex_);
+    AcquireSRWLockExclusive(&srwlock_);
     return 0;
   }
 
   int Unlock() {
-    LeaveCriticalSection(&mutex_);
+    ReleaseSRWLockExclusive(&srwlock_);
     return 0;
   }
 
   int Wait() {
-    EnterCriticalSection(&mutex_);
-    SleepConditionVariableCS(&cond_, &mutex_, INFINITE);
+    AcquireSRWLockExclusive(&srwlock_);
+    SleepConditionVariableSRW(&cond_, &srwlock_, INFINITE, 0);
     return 0;
   }
 
   bool Wait(uint64 microseconds) {
     DWORD miliseconds = microseconds / 1000;
-    EnterCriticalSection(&mutex_);
-    SleepConditionVariableCS(&cond_, &mutex_, miliseconds);
+    AcquireSRWLockExclusive(&srwlock_);
+    SleepConditionVariableSRW(&cond_, &srwlock_, miliseconds, 0);
     return 0;
   }
 
@@ -85,7 +95,7 @@ class MonitorImpl {
   }
 
  private:
-  CRITICAL_SECTION mutex_;
+  SRWLOCK srwlock_;
   CONDITION_VARIABLE cond_;
 };
 

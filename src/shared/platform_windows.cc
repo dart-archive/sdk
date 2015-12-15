@@ -28,7 +28,7 @@ void GetPathOfExecutable(char* path, size_t path_length) {
   }
 }
 
-void Platform::Setup() { time_launch = GetMicroseconds(); }
+void Platform::Setup() { time_launch = GetTickCount64(); }
 
 void Platform::TearDown() { }
 
@@ -48,7 +48,7 @@ uint64 Platform::GetMicroseconds() {
 
 uint64 Platform::GetProcessMicroseconds() {
   // Assume now is past time_launch.
-  return GetMicroseconds() - time_launch;
+  return (GetTickCount64() - time_launch) / 10;
 }
 
 int Platform::GetNumberOfHardwareThreads() {
@@ -103,6 +103,7 @@ List<uint8> Platform::LoadFile(const char* name) {
 
   DWORD read;
   bool result = ReadFile(file, buffer, size.LowPart, &read, NULL);
+  CloseHandle(file);
   if (!result || read != size.LowPart) {
     Print::Error("Unable to read entire file '%s'.\n%s.\n", name,
                  GetLastError());
