@@ -47,6 +47,6 @@ class CompileTask extends SharedTask {
 Future<int> compileTask(
     Uri script, Uri base, bool analyzeOnly, bool fatalIncrementalFailures) {
   return developer.compile(
-      script, SessionState.current, analyzeOnly: analyzeOnly,
+      script, SessionState.current, base, analyzeOnly: analyzeOnly,
       fatalIncrementalFailures: fatalIncrementalFailures);
 }

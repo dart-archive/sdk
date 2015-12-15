@@ -268,6 +268,7 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
 Future<int> compile(
     Uri script,
     SessionState state,
+    Uri base,
     {bool analyzeOnly: false,
      bool fatalIncrementalFailures: false}) async {
   IncrementalCompiler compiler = state.compiler;
@@ -282,10 +283,10 @@ Future<int> compile(
     if (analyzeOnly) {
       state.resetCompiler();
       state.log("Analyzing '$script'");
-      return await compiler.analyze(script);
+      return await compiler.analyze(script, base);
     } else if (previousResults.isEmpty) {
       state.script = script;
-      await compiler.compile(script);
+      await compiler.compile(script, base);
       newResult = compiler.computeInitialDelta();
     } else {
       try {
@@ -304,7 +305,7 @@ Future<int> compile(
         }
         state.log("Attempting full compile...");
         state.script = script;
-        await compiler.compile(script);
+        await compiler.compile(script, base);
         newResult = compiler.computeInitialDelta();
       }
     }
@@ -691,7 +692,7 @@ Future<int> compileAndAttachToVmThen(
     if (script == null) {
       throwFatalError(DiagnosticKind.noFileTarget);
     }
-    int exitCode = await compile(script, state);
+    int exitCode = await compile(script, state, base);
     if (exitCode != 0) return exitCode;
     compilationResults = state.compilationResults;
     assert(compilationResults != null);

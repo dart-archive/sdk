@@ -688,7 +688,7 @@ class IncrementalTestHelper {
       inputProvider.sources[customUriBase.resolve(name)] = code;
     });
 
-    await compiler.compile(customUriBase.resolve('main.dart'));
+    await compiler.compile(customUriBase.resolve('main.dart'), customUriBase);
     FletchDelta delta = compiler.compiler.context.backend.computeDelta();
     system = delta.system;
     return delta;

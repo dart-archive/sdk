@@ -72,7 +72,7 @@ class FletchRunner {
     Settings settings = await computeSettings();
     SessionState state = createSessionState("test", settings);
     for (String script in arguments) {
-      await compile(fileUri(script, Uri.base), state);
+      await compile(fileUri(script, Uri.base), state, Uri.base);
       if (state.compilationResults.isNotEmpty) {
         // Always generate the debug string to ensure test coverage.
         String debugString =
@@ -135,7 +135,7 @@ Future<Null> export(
     settings = await readSettings(fileUri(fletchSettingsFile, Uri.base));
   }
   SessionState state = createSessionState("test", settings);
-  await compile(fileUri(script, Uri.base), state);
+  await compile(fileUri(script, Uri.base), state, Uri.base);
   await startAndAttachDirectly(state, Uri.base);
   state.stdoutSink.attachCommandSender(stdout.add);
   state.stderrSink.attachCommandSender(stderr.add);

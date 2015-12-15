@@ -46,7 +46,8 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
   SessionState state = createSessionState("test", settings);
   SessionState.internalCurrent = state;
 
-  Expect.equals(0, await compile(Uri.base.resolveUri(uri), state), "compile");
+  Expect.equals(0, await compile(Uri.base.resolveUri(uri), state, Uri.base),
+      "compile");
 
   await startAndAttachDirectly(state, Uri.base);
   state.session.hideRawIds = true;

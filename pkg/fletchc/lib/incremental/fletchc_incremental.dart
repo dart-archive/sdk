@@ -55,6 +55,9 @@ import '../src/fletch_backend.dart' show
 
 import '../src/driver/exit_codes.dart' as exit_codes;
 
+import 'package:compiler/src/source_file_provider.dart' show
+    SourceFileProvider;
+
 part 'caching_compiler.dart';
 
 const List<String> INCREMENTAL_OPTIONS = const <String>[
@@ -121,7 +124,7 @@ class IncrementalCompiler {
       throw new ArgumentError('diagnosticHandler is null.');
     }
     if (platform == null) {
-      throw new ArgumentError('platform is Null.');
+      throw new ArgumentError('platform is null.');
     }
     _context.incrementalCompiler = this;
   }
@@ -142,11 +145,13 @@ class IncrementalCompiler {
   /// Perform a full compile of [script]. This will reset the incremental
   /// compiler.
   ///
+  /// Error messages will be reported relative to [base].
+  ///
   /// Notice: a full compile means not incremental. The part of the program
   /// that is compiled is determined by tree shaking.
-  Future<bool> compile(Uri script) {
+  Future<bool> compile(Uri script, Uri base) {
     _compiler = null;
-    return _reuseCompiler(null).then((CompilerImpl compiler) {
+    return _reuseCompiler(null, base: base).then((CompilerImpl compiler) {
       _compiler = compiler;
       return compiler.run(script);
     });
@@ -155,14 +160,16 @@ class IncrementalCompiler {
   /// Perform a full analysis of [script]. This will reset the incremental
   /// compiler.
   ///
+  /// Error messages will be reported relative to [base].
+  ///
   /// Notice: a full analysis is analogous to a full compile, that is, full
   /// analysis not incremental. The part of the program that is analyzed is
   /// determined by tree shaking.
-  Future<int> analyze(Uri script) {
+  Future<int> analyze(Uri script, Uri base) {
     _compiler = null;
     int initialErrorCount = _context.errorCount;
     int initialProblemCount = _context.problemCount;
-    return _reuseCompiler(null, analyzeOnly: true).then(
+    return _reuseCompiler(null, analyzeOnly: true, base: base).then(
         (CompilerImpl compiler) {
       // Don't try to reuse the compiler object.
       return compiler.run(script).then((_) {
@@ -177,7 +184,8 @@ class IncrementalCompiler {
 
   Future<CompilerImpl> _reuseCompiler(
       Future<bool> reuseLibrary(LibraryElement library),
-      {bool analyzeOnly: false}) {
+      {bool analyzeOnly: false,
+       Uri base}) {
     List<String> options = this.options == null
         ? <String> [] : new List<String>.from(this.options);
     options.addAll(INCREMENTAL_OPTIONS);
@@ -196,7 +204,8 @@ class IncrementalCompiler {
         outputProvider: outputProvider,
         environment: environment,
         reuseLibrary: reuseLibrary,
-        platform: platform);
+        platform: platform,
+        base: base);
   }
 
   void _checkCompilationFailed() {
@@ -208,11 +217,15 @@ class IncrementalCompiler {
 
   /// Perform an incremental compilation of [updatedFiles]. [compile] must have
   /// been called once before calling this method.
+  ///
+  /// Error messages will be reported relative to [base], if [base] is not
+  /// provided the previous set [base] will be used.
   Future<FletchDelta> compileUpdates(
       FletchSystem currentSystem,
       Map<Uri, Uri> updatedFiles,
       {Logger logTime,
-       Logger logVerbose}) {
+       Logger logVerbose,
+       Uri base}) {
     _checkCompilationFailed();
     if (logTime == null) {
       logTime = (_) {};
@@ -231,7 +244,7 @@ class IncrementalCompiler {
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(updater.reuseLibrary).then(
+    return _reuseCompiler(updater.reuseLibrary, base: base).then(
         (CompilerImpl compiler) async {
       _compiler = compiler;
       FletchDelta delta = await updater.computeUpdateFletch(currentSystem);

@@ -19,13 +19,17 @@ Future<CompilerImpl> reuseCompiler(
      bool packagesAreImmutable: false,
      Map<String, dynamic> environment,
      Future<bool> reuseLibrary(LibraryElement library),
-     String platform}) async {
+     String platform,
+     Uri base}) async {
   UserTag oldTag = new UserTag('_reuseCompiler').makeCurrent();
   // if (libraryRoot == null) {
   //   throw 'Missing libraryRoot';
   // }
   if (inputProvider == null) {
     throw 'Missing inputProvider';
+  }
+  if (inputProvider is SourceFileProvider && base != null) {
+    inputProvider.cwd = base;
   }
   if (diagnosticHandler == null) {
     throw 'Missing diagnosticHandler';
