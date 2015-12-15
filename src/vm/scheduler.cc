@@ -44,7 +44,6 @@ Scheduler::Scheduler()
       thread_count_(0),
       idle_threads_(kEmptyThreadState),
       threads_(new Atomic<ThreadState*>[max_threads_]),
-      temporary_thread_states_(NULL),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       last_process_exit_(Signal::kTerminated),
@@ -64,12 +63,6 @@ Scheduler::~Scheduler() {
   delete[] threads_;
   delete startup_queue_;
   delete gc_thread_;
-  ThreadState* current = temporary_thread_states_;
-  while (current != NULL) {
-    ThreadState* next = current->next_idle_thread();
-    delete current;
-    current = next;
-  }
 }
 
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
@@ -147,8 +140,6 @@ void Scheduler::StopProgram(Program* program) {
       to_enqueue->set_next(NULL);
       to_enqueue = next;
     }
-
-    FlushCacheInThreadStates();
 
     pause_ = false;
   }
@@ -591,6 +582,7 @@ void Scheduler::RunInThread() {
     }
   }
   ThreadExit(thread_state);
+  delete thread_state;
 }
 
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
@@ -853,7 +845,6 @@ void Scheduler::ThreadEnter(ThreadState* thread_state) {
 
 void Scheduler::ThreadExit(ThreadState* thread_state) {
   threads_[thread_state->thread_id()] = NULL;
-  ReturnThreadState(thread_state);
   // Notify pause_monitor_ when changing threads_.
   pause_monitor_->Lock();
   pause_monitor_->NotifyAll();
@@ -872,26 +863,6 @@ void Scheduler::NotifyAllThreads() {
   for (int i = 0; i < thread_count_; i++) {
     ThreadState* thread_state = threads_[i];
     if (thread_state != NULL) NotifyThread(thread_state);
-  }
-}
-
-void Scheduler::ReturnThreadState(ThreadState* thread_state) {
-  // Return the thread state to the temp pool.
-  ThreadState* next = temporary_thread_states_;
-  while (true) {
-    thread_state->set_next_idle_thread(next);
-    if (temporary_thread_states_.compare_exchange_weak(next, thread_state)) {
-      break;
-    }
-  }
-}
-
-void Scheduler::FlushCacheInThreadStates() {
-  ThreadState* temp = temporary_thread_states_;
-  while (temp != NULL) {
-    LookupCache* cache = temp->cache();
-    if (cache != NULL) cache->Clear();
-    temp = temp->next_idle_thread();
   }
 }
 
