@@ -78,12 +78,6 @@ class Process {
     kWaitingForChildren,
   };
 
-  enum ProgramGCState {
-    kUnknown,
-    kFound,
-    kProcessed,
-  };
-
   enum StackCheckResult {
     // Stack check handled (most likely by growing the stack) and
     // execution can continue.
