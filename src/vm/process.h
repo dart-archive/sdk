@@ -13,6 +13,7 @@
 #include "src/vm/links.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/message_mailbox.h"
+#include "src/vm/natives.h"
 #include "src/vm/process_handle.h"
 #include "src/vm/program.h"
 #include "src/vm/signal.h"
@@ -236,9 +237,23 @@ class Process {
   static void FinalizeForeign(HeapObject* foreign, Heap* heap);
   static void FinalizeProcess(HeapObject* process, Heap* heap);
 
+#ifdef DEBUG
   // This is used in order to return a retry after gc failure on every other
   // call to the GC native that is used for testing only.
   bool TrueThenFalse();
+
+  void set_native_verifier(NativeVerifier* verifier) {
+    native_verifier_ = verifier;
+  }
+
+  void RegisterProcessAllocation() {
+    if (native_verifier_ != NULL) {
+      native_verifier_->RegisterAllocation();
+    }
+  }
+#else
+  void RegisterProcessAllocation() {}
+#endif
 
   ProcessQueue* process_queue() const { return queue_; }
 
@@ -362,6 +377,7 @@ class Process {
 
 #ifdef DEBUG
   bool true_then_false_;
+  NativeVerifier* native_verifier_;
 #endif
 };
 

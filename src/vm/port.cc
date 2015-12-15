@@ -102,7 +102,7 @@ void Port::WeakCallback(HeapObject* object, Heap* heap) {
   port->DecrementRef();
 }
 
-NATIVE(PortCreate) {
+BEGIN_NATIVE(PortCreate) {
   Instance* channel = Instance::cast(arguments[0]);
 
   Object* dart_port =
@@ -118,8 +118,9 @@ NATIVE(PortCreate) {
 
   return port_instance;
 }
+END_NATIVE()
 
-NATIVE(PortSend) {
+BEGIN_NATIVE(PortSend) {
   Instance* instance = Instance::cast(arguments[0]);
 
   Object* message = arguments[1];
@@ -154,8 +155,9 @@ NATIVE(PortSend) {
   }
   return process->program()->null_object();
 }
+END_NATIVE()
 
-NATIVE(PortSendExit) {
+BEGIN_NATIVE(PortSendExit) {
   Instance* instance = Instance::cast(arguments[0]);
   Port* port = Port::FromDartObject(instance);
   if (port == NULL) return Failure::illegal_state();
@@ -181,13 +183,15 @@ NATIVE(PortSendExit) {
   port->Unlock();
   return Failure::illegal_state();
 }
+END_NATIVE()
 
-NATIVE(SystemIncrementPortRef) {
+BEGIN_NATIVE(SystemIncrementPortRef) {
   Port* port = Port::FromDartObject(arguments[0]);
   Object* result = process->ToInteger(reinterpret_cast<uword>(port));
   if (result == Failure::retry_after_gc()) return result;
   port->IncrementRef();
   return result;
 }
+END_NATIVE()
 
 }  // namespace fletch

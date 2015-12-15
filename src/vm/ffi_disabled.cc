@@ -27,10 +27,11 @@ DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
 Mutex* ForeignFunctionInterface::mutex_ = NULL;
 
 #define UNIMPLEMENTED_NATIVE(name) \
-  NATIVE(name) {                   \
+  BEGIN_NATIVE(name) {             \
     UNIMPLEMENTED();               \
     return NULL;                   \
-  }
+  }                                \
+  END_NATIVE()
 
 UNIMPLEMENTED_NATIVE(ForeignLibraryLookup)
 UNIMPLEMENTED_NATIVE(ForeignLibraryGetFunction)

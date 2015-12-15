@@ -9,10 +9,11 @@
 
 namespace fletch {
 
-NATIVE(NativeProcessSpawnDetached) {
+BEGIN_NATIVE(NativeProcessSpawnDetached) {
   UNIMPLEMENTED();
   return NULL;
 }
+END_NATIVE()
 
 }  // namespace fletch
 

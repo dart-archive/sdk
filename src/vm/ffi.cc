@@ -12,7 +12,7 @@
 
 namespace fletch {
 
-NATIVE(ForeignAllocate) {
+BEGIN_NATIVE(ForeignAllocate) {
   word size = AsForeignWord(arguments[0]);
   Object* result = process->NewInteger(0);
   if (result == Failure::retry_after_gc()) return result;
@@ -31,14 +31,16 @@ NATIVE(ForeignAllocate) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignFree) {
+BEGIN_NATIVE(ForeignFree) {
   uword address = Instance::cast(arguments[0])->GetConsecutiveSmis(0);
   free(reinterpret_cast<void*>(address));
   return process->program()->null_object();
 }
+END_NATIVE()
 
-NATIVE(ForeignDecreaseMemoryUsage) {
+BEGIN_NATIVE(ForeignDecreaseMemoryUsage) {
   HeapObject* foreign = HeapObject::cast(arguments[0]);
   int size = static_cast<int>(AsForeignWord(arguments[1]));
   // For immutable objects that have been marked as finalized, we should never
@@ -47,8 +49,9 @@ NATIVE(ForeignDecreaseMemoryUsage) {
   process->heap()->FreedForeignMemory(size);
   return process->program()->null_object();
 }
+END_NATIVE()
 
-NATIVE(ForeignMarkForFinalization) {
+BEGIN_NATIVE(ForeignMarkForFinalization) {
   HeapObject* foreign = HeapObject::cast(arguments[0]);
   int size = static_cast<int>(AsForeignWord(arguments[1]));
   if (foreign->IsImmutable()) {
@@ -59,14 +62,18 @@ NATIVE(ForeignMarkForFinalization) {
   process->RegisterFinalizer(foreign, Process::FinalizeForeign);
   return process->program()->null_object();
 }
+END_NATIVE()
 
-NATIVE(ForeignBitsPerWord) { return Smi::FromWord(kBitsPerWord); }
+BEGIN_NATIVE(ForeignBitsPerWord) { return Smi::FromWord(kBitsPerWord); }
+END_NATIVE()
 
-NATIVE(ForeignPlatform) { return Smi::FromWord(Platform::OS()); }
+BEGIN_NATIVE(ForeignPlatform) { return Smi::FromWord(Platform::OS()); }
+END_NATIVE()
 
-NATIVE(ForeignArchitecture) { return Smi::FromWord(Platform::Arch()); }
+BEGIN_NATIVE(ForeignArchitecture) { return Smi::FromWord(Platform::Arch()); }
+END_NATIVE()
 
-NATIVE(ForeignConvertPort) {
+BEGIN_NATIVE(ForeignConvertPort) {
   if (!arguments[0]->IsInstance()) return Smi::zero();
   Instance* instance = Instance::cast(arguments[0]);
   if (!instance->IsPort()) return Smi::zero();
@@ -77,6 +84,7 @@ NATIVE(ForeignConvertPort) {
   port->IncrementRef();
   return result;
 }
+END_NATIVE()
 
 typedef int (*F0)();
 typedef int (*F1)(word);
@@ -87,7 +95,7 @@ typedef int (*F5)(word, word, word, word, word);
 typedef int (*F6)(word, word, word, word, word, word);
 typedef int (*F7)(word, word, word, word, word, word, word);
 
-NATIVE(ForeignICall0) {
+BEGIN_NATIVE(ForeignICall0) {
   word address = AsForeignWord(arguments[0]);
   F0 function = reinterpret_cast<F0>(address);
   Object* result = process->NewInteger(0);
@@ -100,8 +108,9 @@ NATIVE(ForeignICall0) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignICall1) {
+BEGIN_NATIVE(ForeignICall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   F1 function = reinterpret_cast<F1>(address);
@@ -115,8 +124,9 @@ NATIVE(ForeignICall1) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignICall2) {
+BEGIN_NATIVE(ForeignICall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -131,8 +141,9 @@ NATIVE(ForeignICall2) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignICall3) {
+BEGIN_NATIVE(ForeignICall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -148,8 +159,9 @@ NATIVE(ForeignICall3) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignICall4) {
+BEGIN_NATIVE(ForeignICall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -166,8 +178,9 @@ NATIVE(ForeignICall4) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignICall5) {
+BEGIN_NATIVE(ForeignICall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -185,8 +198,9 @@ NATIVE(ForeignICall5) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignICall6) {
+BEGIN_NATIVE(ForeignICall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -205,8 +219,9 @@ NATIVE(ForeignICall6) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignICall7) {
+BEGIN_NATIVE(ForeignICall7) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -226,6 +241,7 @@ NATIVE(ForeignICall7) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
 typedef word (*PF0)();
 typedef word (*PF1)(word);
@@ -235,7 +251,7 @@ typedef word (*PF4)(word, word, word, word);
 typedef word (*PF5)(word, word, word, word, word);
 typedef word (*PF6)(word, word, word, word, word, word);
 
-NATIVE(ForeignPCall0) {
+BEGIN_NATIVE(ForeignPCall0) {
   word address = AsForeignWord(arguments[0]);
   PF0 function = reinterpret_cast<PF0>(address);
   Object* result = process->NewInteger(0);
@@ -248,8 +264,9 @@ NATIVE(ForeignPCall0) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignPCall1) {
+BEGIN_NATIVE(ForeignPCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   PF1 function = reinterpret_cast<PF1>(address);
@@ -263,8 +280,9 @@ NATIVE(ForeignPCall1) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignPCall2) {
+BEGIN_NATIVE(ForeignPCall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -279,8 +297,9 @@ NATIVE(ForeignPCall2) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignPCall3) {
+BEGIN_NATIVE(ForeignPCall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -296,8 +315,9 @@ NATIVE(ForeignPCall3) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignPCall4) {
+BEGIN_NATIVE(ForeignPCall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -314,8 +334,9 @@ NATIVE(ForeignPCall4) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignPCall5) {
+BEGIN_NATIVE(ForeignPCall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -333,8 +354,9 @@ NATIVE(ForeignPCall5) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
-NATIVE(ForeignPCall6) {
+BEGIN_NATIVE(ForeignPCall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -353,6 +375,7 @@ NATIVE(ForeignPCall6) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
 typedef void (*VF0)();
 typedef void (*VF1)(word);
@@ -362,22 +385,24 @@ typedef void (*VF4)(word, word, word, word);
 typedef void (*VF5)(word, word, word, word, word);
 typedef void (*VF6)(word, word, word, word, word, word);
 
-NATIVE(ForeignVCall0) {
+BEGIN_NATIVE(ForeignVCall0) {
   word address = AsForeignWord(arguments[0]);
   VF0 function = reinterpret_cast<VF0>(address);
   function();
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignVCall1) {
+BEGIN_NATIVE(ForeignVCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   VF1 function = reinterpret_cast<VF1>(address);
   function(a0);
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignVCall2) {
+BEGIN_NATIVE(ForeignVCall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -385,8 +410,9 @@ NATIVE(ForeignVCall2) {
   function(a0, a1);
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignVCall3) {
+BEGIN_NATIVE(ForeignVCall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -395,8 +421,9 @@ NATIVE(ForeignVCall3) {
   function(a0, a1, a2);
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignVCall4) {
+BEGIN_NATIVE(ForeignVCall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -406,8 +433,9 @@ NATIVE(ForeignVCall4) {
   function(a0, a1, a2, a3);
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignVCall5) {
+BEGIN_NATIVE(ForeignVCall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -418,8 +446,9 @@ NATIVE(ForeignVCall5) {
   function(a0, a1, a2, a3, a4);
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignVCall6) {
+BEGIN_NATIVE(ForeignVCall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -431,6 +460,7 @@ NATIVE(ForeignVCall6) {
   function(a0, a1, a2, a3, a4, a5);
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
 typedef int64 (*LwLw)(word, int64, word);
 
@@ -441,7 +471,7 @@ static int64 AsInt64Value(Object* object) {
   return -1;
 }
 
-NATIVE(ForeignLCallwLw) {
+BEGIN_NATIVE(ForeignLCallwLw) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   int64 a1 = AsInt64Value(arguments[2]);
@@ -457,15 +487,17 @@ NATIVE(ForeignLCallwLw) {
   LargeInteger::cast(result)->set_value(value);
   return result;
 }
+END_NATIVE()
 
 #define DEFINE_FOREIGN_ACCESSORS_INTEGER(suffix, type)                    \
                                                                           \
-  NATIVE(ForeignGet##suffix) {                                            \
+  BEGIN_NATIVE(ForeignGet##suffix) {                                      \
     type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0])); \
     return process->ToInteger(*address);                                  \
   }                                                                       \
+  END_NATIVE()                                                            \
                                                                           \
-  NATIVE(ForeignSet##suffix) {                                            \
+  BEGIN_NATIVE(ForeignSet##suffix) {                                      \
     Object* value = arguments[1];                                         \
     type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0])); \
     if (value->IsSmi()) {                                                 \
@@ -476,7 +508,8 @@ NATIVE(ForeignLCallwLw) {
       return Failure::wrong_argument_type();                              \
     }                                                                     \
     return value;                                                         \
-  }
+  }                                                                       \
+  END_NATIVE()
 
 DEFINE_FOREIGN_ACCESSORS_INTEGER(Int8, int8)
 DEFINE_FOREIGN_ACCESSORS_INTEGER(Int16, int16)
@@ -490,18 +523,20 @@ DEFINE_FOREIGN_ACCESSORS_INTEGER(Uint64, uint64)
 
 #define DEFINE_FOREIGN_ACCESSORS_DOUBLE(suffix, type)                     \
                                                                           \
-  NATIVE(ForeignGet##suffix) {                                            \
+  BEGIN_NATIVE(ForeignGet##suffix) {                                      \
     type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0])); \
     return process->NewDouble(static_cast<double>(*address));             \
   }                                                                       \
+  END_NATIVE()                                                            \
                                                                           \
-  NATIVE(ForeignSet##suffix) {                                            \
+  BEGIN_NATIVE(ForeignSet##suffix) {                                      \
     Object* value = arguments[1];                                         \
     if (!value->IsDouble()) return Failure::wrong_argument_type();        \
     type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0])); \
     *address = Double::cast(value)->value();                              \
     return value;                                                         \
-  }
+  }                                                                       \
+  END_NATIVE()
 
 DEFINE_FOREIGN_ACCESSORS_DOUBLE(Float32, float)
 DEFINE_FOREIGN_ACCESSORS_DOUBLE(Float64, double)

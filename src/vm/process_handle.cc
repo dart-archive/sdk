@@ -26,7 +26,7 @@ void ProcessHandle::InitializeDartObject(Object* o) {
   dart_pid->SetInstanceField(0, Smi::FromWord(address >> 2));
 }
 
-NATIVE(ProcessLink) {
+BEGIN_NATIVE(ProcessLink) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
   {
     ScopedSpinlock locker(handle->lock());
@@ -39,8 +39,9 @@ NATIVE(ProcessLink) {
     return process->program()->false_object();
   }
 }
+END_NATIVE()
 
-NATIVE(ProcessUnlink) {
+BEGIN_NATIVE(ProcessUnlink) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
   {
     ScopedSpinlock locker(handle->lock());
@@ -54,8 +55,9 @@ NATIVE(ProcessUnlink) {
   }
   return process->program()->null_object();
 }
+END_NATIVE()
 
-NATIVE(ProcessMonitor) {
+BEGIN_NATIVE(ProcessMonitor) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
   Instance* dart_port = Instance::cast(arguments[1]);
   if (!dart_port->IsPort()) return Failure::wrong_argument_type();
@@ -72,8 +74,9 @@ NATIVE(ProcessMonitor) {
     }
   }
 }
+END_NATIVE()
 
-NATIVE(ProcessUnmonitor) {
+BEGIN_NATIVE(ProcessUnmonitor) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
   Instance* dart_port = Instance::cast(arguments[1]);
   if (!dart_port->IsPort()) return Failure::wrong_argument_type();
@@ -88,8 +91,9 @@ NATIVE(ProcessUnmonitor) {
   }
   return process->program()->null_object();
 }
+END_NATIVE()
 
-NATIVE(ProcessKill) {
+BEGIN_NATIVE(ProcessKill) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(arguments[0]);
 
   // Avoid allocating [Signal] if destination is already dead, but do allocate
@@ -109,5 +113,6 @@ NATIVE(ProcessKill) {
   }
   return process->program()->null_object();
 }
+END_NATIVE()
 
 }  // namespace fletch

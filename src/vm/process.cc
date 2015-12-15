@@ -76,7 +76,12 @@ Process::Process(Program* program, Process* parent)
       process_triangle_count_(1),
       parent_(parent),
       errno_cache_(0),
-      debug_info_(NULL) {
+      debug_info_(NULL)
+#ifdef DEBUG
+      ,
+      native_verifier_(NULL)
+#endif
+{
   process_handle_ = new ProcessHandle(this);
 
   // These asserts need to hold when running on the target, but they don't need
@@ -218,11 +223,13 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
 }
 
 Object* Process::NewByteArray(int length) {
+  RegisterProcessAllocation();
   Class* byte_array_class = program()->byte_array_class();
   return immutable_heap_->CreateByteArray(byte_array_class, length);
 }
 
 Object* Process::NewArray(int length) {
+  RegisterProcessAllocation();
   Class* array_class = program()->array_class();
   Object* null = program()->null_object();
   Object* result = heap()->CreateArray(array_class, length, null);
@@ -230,12 +237,14 @@ Object* Process::NewArray(int length) {
 }
 
 Object* Process::NewDouble(fletch_double value) {
+  RegisterProcessAllocation();
   Class* double_class = program()->double_class();
   Object* result = immutable_heap_->CreateDouble(double_class, value);
   return result;
 }
 
 Object* Process::NewInteger(int64 value) {
+  RegisterProcessAllocation();
   Class* large_integer_class = program()->large_integer_class();
   Object* result =
       immutable_heap_->CreateLargeInteger(large_integer_class, value);
@@ -247,6 +256,7 @@ void Process::TryDeallocInteger(LargeInteger* object) {
 }
 
 Object* Process::NewOneByteString(int length) {
+  RegisterProcessAllocation();
   Class* string_class = program()->one_byte_string_class();
   Object* raw_result =
       immutable_heap_->CreateOneByteString(string_class, length);
@@ -255,6 +265,7 @@ Object* Process::NewOneByteString(int length) {
 }
 
 Object* Process::NewTwoByteString(int length) {
+  RegisterProcessAllocation();
   Class* string_class = program()->two_byte_string_class();
   Object* raw_result =
       immutable_heap_->CreateTwoByteString(string_class, length);
@@ -263,6 +274,7 @@ Object* Process::NewTwoByteString(int length) {
 }
 
 Object* Process::NewOneByteStringUninitialized(int length) {
+  RegisterProcessAllocation();
   Class* string_class = program()->one_byte_string_class();
   Object* raw_result =
       immutable_heap_->CreateOneByteStringUninitialized(string_class, length);
@@ -271,6 +283,7 @@ Object* Process::NewOneByteStringUninitialized(int length) {
 }
 
 Object* Process::NewTwoByteStringUninitialized(int length) {
+  RegisterProcessAllocation();
   Class* string_class = program()->two_byte_string_class();
   Object* raw_result =
       immutable_heap_->CreateTwoByteStringUninitialized(string_class, length);
@@ -279,6 +292,7 @@ Object* Process::NewTwoByteStringUninitialized(int length) {
 }
 
 Object* Process::NewStringFromAscii(List<const char> value) {
+  RegisterProcessAllocation();
   Class* string_class = program()->one_byte_string_class();
   Object* raw_result = immutable_heap_->CreateOneByteStringUninitialized(
       string_class, value.length());
@@ -291,6 +305,7 @@ Object* Process::NewStringFromAscii(List<const char> value) {
 }
 
 Object* Process::NewBoxed(Object* value) {
+  RegisterProcessAllocation();
   Class* boxed_class = program()->boxed_class();
   Object* result = heap()->CreateBoxed(boxed_class, value);
   if (result->IsFailure()) return result;
@@ -298,6 +313,7 @@ Object* Process::NewBoxed(Object* value) {
 }
 
 Object* Process::NewInstance(Class* klass, bool immutable) {
+  RegisterProcessAllocation();
   Object* null = program()->null_object();
   if (immutable) {
     return immutable_heap_->CreateInstance(klass, null, immutable);
@@ -311,6 +327,7 @@ Object* Process::ToInteger(int64 value) {
 }
 
 Object* Process::NewStack(int length) {
+  RegisterProcessAllocation();
   Class* stack_class = program()->stack_class();
   Object* result = heap()->CreateStack(stack_class, length);
 
@@ -819,7 +836,7 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
   return primary;
 }
 
-NATIVE(ProcessQueueGetMessage) {
+BEGIN_NATIVE(ProcessQueueGetMessage) {
   MessageMailbox* mailbox = process->mailbox();
 
   Message* queue = mailbox->CurrentMessage();
@@ -863,31 +880,21 @@ NATIVE(ProcessQueueGetMessage) {
     }
 
     case Message::PROCESS_DEATH_SIGNAL: {
+      // Process death signal creation is a two-step process. The
+      // first step creates the process death object and does not
+      // advance the message queue. The second step initializes the
+      // process death object by calling ProcessQueueSetupProcessDeath
+      // which advances the message queue. This is to get around the
+      // restriction that natives can only perform one allocation.
       Program* program = process->program();
-
       Signal* signal = queue->ProcessDeathSignal();
-      ProcessHandle* handle = signal->handle();
-
-      Object* dart_process =
-          process->NewInstance(program->process_class(), true);
-      if (dart_process == Failure::retry_after_gc()) return dart_process;
-
       Object* process_death =
           process->NewInstance(program->process_death_class(), true);
       if (process_death == Failure::retry_after_gc()) return process_death;
-
-      handle->IncrementRef();
-
-      handle->InitializeDartObject(dart_process);
-      Instance::cast(process_death)->SetInstanceField(0, dart_process);
       Instance::cast(process_death)
           ->SetInstanceField(1, Smi::FromWord(signal->kind()));
-
-      process->RegisterFinalizer(HeapObject::cast(dart_process),
-                                 Process::FinalizeProcess);
-
-      result = process_death;
-      break;
+      // Return without advancing the message queue.
+      return process_death;
     }
 
     default:
@@ -897,8 +904,36 @@ NATIVE(ProcessQueueGetMessage) {
   mailbox->AdvanceCurrentMessage();
   return result;
 }
+END_NATIVE()
 
-NATIVE(ProcessQueueGetChannel) {
+BEGIN_NATIVE(ProcessQueueSetupProcessDeath) {
+  MessageMailbox* mailbox = process->mailbox();
+  Message* queue = mailbox->CurrentMessage();
+  Message::Kind kind = queue->kind();
+
+  if (kind != Message::PROCESS_DEATH_SIGNAL) {
+    FATAL("Process death message creation failed.\n");
+  }
+
+  Program* program = process->program();
+  Object* dart_process = process->NewInstance(program->process_class(), true);
+  if (dart_process == Failure::retry_after_gc()) return dart_process;
+
+  Signal* signal = queue->ProcessDeathSignal();
+  ProcessHandle* handle = signal->handle();
+  handle->IncrementRef();
+  handle->InitializeDartObject(dart_process);
+  Instance::cast(arguments[0])->SetInstanceField(0, dart_process);
+
+  process->RegisterFinalizer(HeapObject::cast(dart_process),
+                             Process::FinalizeProcess);
+
+  mailbox->AdvanceCurrentMessage();
+  return arguments[0];
+}
+END_NATIVE()
+
+BEGIN_NATIVE(ProcessQueueGetChannel) {
   MessageMailbox* mailbox = process->mailbox();
 
   Message* queue = mailbox->CurrentMessage();
@@ -913,5 +948,6 @@ NATIVE(ProcessQueueGetChannel) {
   }
   return process->program()->null_object();
 }
+END_NATIVE()
 
 }  // namespace fletch

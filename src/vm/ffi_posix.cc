@@ -75,7 +75,7 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
   return NULL;
 }
 
-NATIVE(ForeignLibraryLookup) {
+BEGIN_NATIVE(ForeignLibraryLookup) {
   char* library = AsForeignString(arguments[0]);
   bool global = arguments[1]->IsTrue();
   int flags = (global ? RTLD_GLOBAL : RTLD_LOCAL) | RTLD_LAZY;
@@ -87,8 +87,9 @@ NATIVE(ForeignLibraryLookup) {
   return result != NULL ? process->ToInteger(reinterpret_cast<intptr_t>(result))
                         : Failure::index_out_of_bounds();
 }
+END_NATIVE()
 
-NATIVE(ForeignLibraryGetFunction) {
+BEGIN_NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   void* handle = reinterpret_cast<void*>(address);
   char* name = AsForeignString(arguments[1]);
@@ -103,8 +104,9 @@ NATIVE(ForeignLibraryGetFunction) {
   return result != NULL ? process->ToInteger(reinterpret_cast<intptr_t>(result))
                         : Failure::index_out_of_bounds();
 }
+END_NATIVE()
 
-NATIVE(ForeignLibraryBundlePath) {
+BEGIN_NATIVE(ForeignLibraryBundlePath) {
   char* library = AsForeignString(arguments[0]);
   char executable[MAXPATHLEN + 1];
   GetPathOfExecutable(executable, sizeof(executable));
@@ -122,8 +124,9 @@ NATIVE(ForeignLibraryBundlePath) {
   }
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
 }
+END_NATIVE()
 
-NATIVE(ForeignLibraryClose) {
+BEGIN_NATIVE(ForeignLibraryClose) {
   word address = AsForeignWord(arguments[0]);
   void* handle = reinterpret_cast<void*>(address);
   if (dlclose(handle) != 0) {
@@ -132,8 +135,10 @@ NATIVE(ForeignLibraryClose) {
   }
   return NULL;
 }
+END_NATIVE()
 
-NATIVE(ForeignErrno) { return Smi::FromWord(errno); }
+BEGIN_NATIVE(ForeignErrno) { return Smi::FromWord(errno); }
+END_NATIVE()
 
 }  // namespace fletch
 

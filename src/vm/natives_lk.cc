@@ -10,10 +10,11 @@
 
 namespace fletch {
 
-NATIVE(UriBase) {
+BEGIN_NATIVE(UriBase) {
   UNIMPLEMENTED();
   return NULL;
 }
+END_NATIVE()
 
 }  // namespace fletch
 

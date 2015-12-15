@@ -5,6 +5,7 @@
 #ifndef SRC_VM_NATIVES_H_
 #define SRC_VM_NATIVES_H_
 
+#include "src/shared/assert.h"
 #include "src/shared/globals.h"
 #include "src/shared/natives.h"
 
@@ -32,12 +33,42 @@ class Arguments {
   Object** raw_;
 };
 
+// A NativeVerifier is stack allocated at the start of a native and
+// destructed at the end of the native. In debug mode, the verifier
+// tracks allocations and the destructor verifies that the native only
+// performed one allocation.
+#ifdef DEBUG
+class NativeVerifier {
+ public:
+  explicit NativeVerifier(Process* process);
+  ~NativeVerifier();
+
+  void RegisterAllocation() { ++allocation_count_; }
+
+ private:
+  Process* process_;
+  int allocation_count_;
+};
+#else
+class NativeVerifier {
+ public:
+  explicit NativeVerifier(Process* process) {}
+  void RegisterAllocation() { UNREACHABLE(); }
+};
+#endif
+
 typedef Object* (*NativeFunction)(Process*, Arguments);
 
-#define NATIVE(n) \
-  extern "C" Object* Native_##n(Process* process, Arguments arguments)
+#define DECLARE_NATIVE(n) \
+  extern "C" Object* Native_##n(Process* process, Arguments arguments);
 
-#define N(e, c, n) NATIVE(e);
+#define BEGIN_NATIVE(n)                                                  \
+  extern "C" Object* Native_##n(Process* process, Arguments arguments) { \
+    NativeVerifier verifier(process);
+
+#define END_NATIVE() }
+
+#define N(e, c, n) DECLARE_NATIVE(e)
 NATIVES_DO(N)
 #undef N
 

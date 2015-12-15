@@ -251,7 +251,7 @@ static void RunDetached(char* path, char* arguments[], int result_pipe) {
   UNREACHABLE();
 }
 
-NATIVE(NativeProcessSpawnDetached) {
+BEGIN_NATIVE(NativeProcessSpawnDetached) {
   word array = AsForeignWord(arguments[0]);
   if (array == 0) return Failure::illegal_state();
   char** args = reinterpret_cast<char**>(array);
@@ -292,6 +292,7 @@ NATIVE(NativeProcessSpawnDetached) {
   UNREACHABLE();
   exit(1);  // silence compiler
 }
+END_NATIVE()
 
 }  // namespace fletch
 

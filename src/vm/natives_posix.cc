@@ -12,7 +12,7 @@
 
 namespace fletch {
 
-NATIVE(UriBase) {
+BEGIN_NATIVE(UriBase) {
   char* buffer = reinterpret_cast<char*>(malloc(PATH_MAX + 1));
   char* path = getcwd(buffer, PATH_MAX);
   Object* result = Failure::index_out_of_bounds();
@@ -25,6 +25,7 @@ NATIVE(UriBase) {
   free(buffer);
   return result;
 }
+END_NATIVE()
 
 }  // namespace fletch
 

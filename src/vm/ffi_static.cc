@@ -33,7 +33,7 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
 DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
 Mutex* ForeignFunctionInterface::mutex_ = NULL;
 
-NATIVE(ForeignLibraryGetFunction) {
+BEGIN_NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   if (address != 0) return Failure::index_out_of_bounds();
   char* name = AsForeignString(arguments[1]);
@@ -47,8 +47,9 @@ NATIVE(ForeignLibraryGetFunction) {
   free(name);
   return Failure::index_out_of_bounds();
 }
+END_NATIVE()
 
-NATIVE(ForeignLibraryLookup) {
+BEGIN_NATIVE(ForeignLibraryLookup) {
   char* library = AsForeignString(arguments[0]);
   if (library != NULL) {
     free(library);
@@ -56,24 +57,28 @@ NATIVE(ForeignLibraryLookup) {
   }
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignLibraryClose) {
+BEGIN_NATIVE(ForeignLibraryClose) {
   word address = AsForeignWord(arguments[0]);
   if (address != 0) {
     return Failure::index_out_of_bounds();
   }
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignLibraryBundlePath) {
+BEGIN_NATIVE(ForeignLibraryBundlePath) {
   UNIMPLEMENTED();
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignErrno) {
+BEGIN_NATIVE(ForeignErrno) {
   UNIMPLEMENTED();
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
 }  // namespace fletch
 

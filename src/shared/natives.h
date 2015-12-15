@@ -127,6 +127,7 @@ namespace fletch {
                                                                           \
   N(ProcessSpawn, "Process", "_spawn")                                    \
   N(ProcessQueueGetMessage, "Process", "_queueGetMessage")                \
+  N(ProcessQueueSetupProcessDeath, "Process", "_queueSetupProcessDeath")  \
   N(ProcessQueueGetChannel, "Process", "_queueGetChannel")                \
   N(ProcessCurrent, "Process", "current")                                 \
                                                                           \

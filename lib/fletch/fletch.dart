@@ -422,12 +422,16 @@ class Process {
     Channel channel;
     while ((channel = _queueGetChannel()) != null) {
       var message = _queueGetMessage();
+      if (message is ProcessDeath) {
+        message = _queueSetupProcessDeath(message);
+      }
       channel.send(message);
     }
   }
 
   @fletch.native external static Process get current;
   @fletch.native external static _queueGetMessage();
+  @fletch.native external static _queueSetupProcessDeath(ProcessDeath message);
   @fletch.native external static Channel _queueGetChannel();
 }
 

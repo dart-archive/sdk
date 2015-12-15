@@ -163,7 +163,7 @@ void Service::InvokeAsync(int id, ServiceApiCallback callback, void* buffer,
   port_->Unlock();
 }
 
-NATIVE(ServiceRegister) {
+BEGIN_NATIVE(ServiceRegister) {
   if (!arguments[1]->IsInstance()) return Failure::illegal_state();
   Instance* port_instance = Instance::cast(arguments[1]);
   if (!port_instance->IsPort()) return Failure::illegal_state();
@@ -175,6 +175,7 @@ NATIVE(ServiceRegister) {
   service_registry->Register(service);
   return process->program()->null_object();
 }
+END_NATIVE()
 
 }  // namespace fletch
 
