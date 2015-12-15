@@ -145,7 +145,6 @@ class Scheduler {
   void ThreadExit(ThreadState* thread_state);
   void NotifyAllThreads();
 
-  ThreadState* TakeThreadState();
   void ReturnThreadState(ThreadState* thread_state);
   void FlushCacheInThreadStates();
 

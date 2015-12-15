@@ -875,21 +875,6 @@ void Scheduler::NotifyAllThreads() {
   }
 }
 
-ThreadState* Scheduler::TakeThreadState() {
-  // Try to get an existing thread state.
-  ThreadState* thread_state = temporary_thread_states_;
-  while (thread_state != NULL) {
-    ThreadState* next = thread_state->next_idle_thread();
-    if (temporary_thread_states_.compare_exchange_weak(thread_state, next)) {
-      thread_state->set_next_idle_thread(NULL);
-      return thread_state;
-    }
-  }
-
-  // If none was available, create a new one.
-  return new ThreadState();
-}
-
 void Scheduler::ReturnThreadState(ThreadState* thread_state) {
   // Return the thread state to the temp pool.
   ThreadState* next = temporary_thread_states_;
