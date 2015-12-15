@@ -292,14 +292,28 @@ compileAndRun(
         session.selectFrame(frame);
         print(trace.format());
 
+        List<String> actualMessages = session.stdoutSink.takeLines();
+
         List<String> messages = new List<String>.from(program.messages);
         if (program.hasCompileTimeError) {
           print("Compile-time error expected");
-          // TODO(ahe): This message shouldn't be printed by the Fletch VM.
-          messages.add("Compile error");
+          // TODO(ahe): The compile-time error message shouldn't be printed by
+          // the Fletch VM.
+
+          // Find the compile-time error message in the actual output, and
+          // remove all lines after it.
+          int compileTimeErrorIndex = -1;
+          for (int i = 0; i < actualMessages.length; i++) {
+            if (actualMessages[i].startsWith("Compile error:")) {
+              compileTimeErrorIndex = i;
+              break;
+            }
+          }
+          Expect.isTrue(compileTimeErrorIndex != -1);
+          actualMessages.removeRange(compileTimeErrorIndex,
+              actualMessages.length);
         }
 
-        List<String> actualMessages = session.stdoutSink.takeLines();
         Expect.listEquals(messages, actualMessages,
             "Expected $messages, got $actualMessages");
 

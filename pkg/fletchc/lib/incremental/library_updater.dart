@@ -807,7 +807,7 @@ class LibraryUpdater extends FletchFeatures {
       last = node.body.getBeginToken();
     }
     if (before.isMalformed ||
-        compiler.elementsWithCompileTimeErrors.contains(before) ||
+        compiler.elementHasCompileTimeError(before) ||
         isTokenBetween(diffToken, after.beginToken, last)) {
       removeFunction(before);
       addFunction(after, before.enclosingElement);

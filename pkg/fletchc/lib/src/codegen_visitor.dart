@@ -69,6 +69,15 @@ import 'fletch_registry.dart' show
     ClosureKind,
     FletchRegistry;
 
+import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
+    DiagnosticMessage;
+
+import 'package:compiler/src/diagnostics/messages.dart' show
+    MessageKind;
+
+import 'package:compiler/src/constants/values.dart' show
+    ConstantValue;
+
 enum VisitState {
   Value,
   Effect,
@@ -1009,7 +1018,20 @@ abstract class CodegenVisitor
   void doMainCall(Send node, NodeList arguments) {
     FunctionElement function = context.compiler.mainFunction;
     if (function.isMalformed) {
-      doCompileError();
+      DiagnosticMessage message =
+          context.compiler.elementsWithCompileTimeErrors[function];
+      if (message == null) {
+        // TODO(johnniwinther): The error should always be associated with the
+        // element.
+        // Example triggering this:
+        // ```
+        // [
+        // main() {}
+        // ```
+        message = context.compiler.reporter.createMessage(
+            function, MessageKind.GENERIC, {'text': 'main is malformed.'});
+      }
+      doCompileError(message);
       return;
     }
     if (context.compiler.libraryLoader.libraries.any(checkCompileError)) return;
@@ -2168,7 +2190,8 @@ abstract class CodegenVisitor
 
   void visitRethrow(Rethrow node) {
     if (tryBlockStack.isEmpty) {
-      doCompileError();
+      doCompileError(context.compiler.reporter.createMessage(
+          node, MessageKind.GENERIC, {"text": "Rethrow outside try"}));
     } else {
       TryBlock block = tryBlockStack.head;
       assembler.loadSlot(block.stackSize - 1);
@@ -2225,17 +2248,6 @@ abstract class CodegenVisitor
       StringFromEnvironmentConstantExpression constant,
       _) {
     doConstConstructorInvoke(constant);
-    applyVisitState();
-  }
-
-  void errorNonConstantConstructorInvoke(
-      NewExpression node,
-      Element element,
-      DartType type,
-      NodeList arguments,
-      CallStructure callStructure,
-      _) {
-    doCompileError();
     applyVisitState();
   }
 
@@ -3039,18 +3051,33 @@ abstract class CodegenVisitor
   }
 
   bool checkCompileError(Element element) {
-    if (context.compiler.elementsWithCompileTimeErrors.contains(element)) {
-      doCompileError();
+    DiagnosticMessage message =
+        context.compiler.elementsWithCompileTimeErrors[element];
+    if (message != null) {
+      doCompileError(message);
       return true;
     }
     return false;
   }
 
-  void doCompileError() {
+  String formatError(DiagnosticMessage diagnosticMessage) {
+    return diagnosticMessage.message.computeMessage();
+  }
+
+
+  void doCompileError(DiagnosticMessage errorMessage) {
     FunctionElement function = context.backend.fletchCompileError;
     FletchFunctionBase base = requireFunction(function);
     int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
-    assembler.invokeStatic(constId, 0);
+    String errorString = formatError(errorMessage);
+    ConstantValue stringConstant =
+        context.backend.constantSystem.createString(
+            new DartString.literal(errorString));
+    int messageConstId = functionBuilder.allocateConstant(stringConstant);
+    context.markConstantUsed(stringConstant);
+    assembler.loadConst(messageConstId);
+    registerInstantiatedClass(context.backend.stringImplementation);
+    assembler.invokeStatic(constId, 1);
   }
 
   void visitUnresolvedInvoke(

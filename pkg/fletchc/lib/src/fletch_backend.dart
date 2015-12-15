@@ -24,6 +24,9 @@ import 'package:compiler/src/enqueue.dart' show
 import 'package:compiler/src/diagnostics/messages.dart' show
     MessageKind;
 
+import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
+    DiagnosticMessage;
+
 import 'package:compiler/src/common/registry.dart' show
     Registry;
 
@@ -338,7 +341,7 @@ class FletchBackend extends Backend
           "Some implementation methods are missing, see details above");
     }
     world.registerStaticUse(
-        new StaticUse.staticInvoke(fletchCompileError, CallStructure.NO_ARGS));
+        new StaticUse.staticInvoke(fletchCompileError, CallStructure.ONE_ARG));
     world.registerStaticUse(
         new StaticUse.staticInvoke(fletchSystemEntry, CallStructure.ONE_ARG));
     world.registerStaticUse(
@@ -1082,12 +1085,14 @@ class FletchBackend extends Backend
                function.library == compiler.coreLibrary) {
       codegenExternalNoSuchMethodTrampoline(function, codegen);
     } else {
-      compiler.reporter.reportErrorMessage(
-          function.node,
-          MessageKind.GENERIC,
-          {'text': 'External function is not supported'});
+      DiagnosticMessage message = context.compiler.reporter
+          .createMessage(function.node,
+              MessageKind.GENERIC,
+              {'text':
+                  'External function "${function.name}" is not supported'});
+      compiler.reporter.reportError(message);
       codegen
-          ..doCompileError()
+          ..doCompileError(message)
           ..assembler.ret()
           ..assembler.methodEnd();
     }

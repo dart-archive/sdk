@@ -68,8 +68,8 @@ unresolved(name) {
       null);
 }
 
-compileError() {
-  print("Compile error");
+compileError(String message) {
+  print("Compile error: $message");
   yield(InterruptKind.compileTimeError.index);
 }
 

@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > r
-Compile error
+Compile error: main is malformed.
 > bt
 > t internal
 ### internal frame visibility set to: true
