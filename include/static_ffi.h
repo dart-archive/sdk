@@ -47,10 +47,19 @@ typedef struct {
   const void* const ptr;
 } FletchStaticFFISymbol;
 
-#define FLETCH_EXPORT_TABLE_BEGIN                             \
-  FLETCH_EXPORT FletchStaticFFISymbol fletch_ffi_table[] = {
+#ifdef __cplusplus
+#define FLETCH_EXPORT_TABLE_BEGIN \
+  extern "C" { \
+  FLETCH_VISIBILITY_DEFAULT FletchStaticFFISymbol fletch_ffi_table[] = {
+#define FLETCH_EXPORT_TABLE_ENTRY(name, fun) \
+  {name, reinterpret_cast<const void*>(&fun)},
+#define FLETCH_EXPORT_TABLE_END {NULL, NULL}};}
+#else
+#define FLETCH_EXPORT_TABLE_BEGIN \
+  FLETCH_VISIBILITY_DEFAULT FletchStaticFFISymbol fletch_ffi_table[] = {
 #define FLETCH_EXPORT_TABLE_ENTRY(name, fun) {name, &fun},
 #define FLETCH_EXPORT_TABLE_END {NULL, NULL}};
+#endif
 
 #define FLETCH_FUNCTION_NAME(name) #name
 #define FLETCH_EXPORT_FFI FLETCH_EXPORT __attribute__((section(".fletchffi")))
