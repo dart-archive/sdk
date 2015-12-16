@@ -1,5 +1,5 @@
 .fletch-settings
-tests/fletchc/.packages
+.packages
 benchmarks/
 lib/
 pkg/
