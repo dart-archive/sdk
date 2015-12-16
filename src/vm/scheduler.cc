@@ -44,6 +44,7 @@ Scheduler::Scheduler()
       thread_count_(0),
       idle_threads_(kEmptyThreadState),
       threads_(new Atomic<ThreadState*>[max_threads_]),
+      thread_states_to_delete_(NULL),
       startup_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       last_process_exit_(Signal::kTerminated),
@@ -63,6 +64,13 @@ Scheduler::~Scheduler() {
   delete[] threads_;
   delete startup_queue_;
   delete gc_thread_;
+
+  ThreadState* current = thread_states_to_delete_;
+  while (current != NULL) {
+    ThreadState* next = current->next_idle_thread();
+    delete current;
+    current = next;
+  }
 }
 
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
@@ -582,7 +590,6 @@ void Scheduler::RunInThread() {
     }
   }
   ThreadExit(thread_state);
-  delete thread_state;
 }
 
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
@@ -845,6 +852,7 @@ void Scheduler::ThreadEnter(ThreadState* thread_state) {
 
 void Scheduler::ThreadExit(ThreadState* thread_state) {
   threads_[thread_state->thread_id()] = NULL;
+  ReturnThreadState(thread_state);
   // Notify pause_monitor_ when changing threads_.
   pause_monitor_->Lock();
   pause_monitor_->NotifyAll();
@@ -863,6 +871,16 @@ void Scheduler::NotifyAllThreads() {
   for (int i = 0; i < thread_count_; i++) {
     ThreadState* thread_state = threads_[i];
     if (thread_state != NULL) NotifyThread(thread_state);
+  }
+}
+
+void Scheduler::ReturnThreadState(ThreadState* thread_state) {
+  ThreadState* next = thread_states_to_delete_;
+  while (true) {
+    thread_state->set_next_idle_thread(next);
+    if (thread_states_to_delete_.compare_exchange_weak(next, thread_state)) {
+      break;
+    }
   }
 }
 

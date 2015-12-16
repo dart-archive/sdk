@@ -97,6 +97,7 @@ class Scheduler {
   Atomic<int> thread_count_;
   Atomic<ThreadState*> idle_threads_;
   Atomic<ThreadState*>* threads_;
+  Atomic<ThreadState*> thread_states_to_delete_;
   ProcessQueue* startup_queue_;
 
   Monitor* pause_monitor_;
@@ -143,6 +144,8 @@ class Scheduler {
   void ThreadEnter(ThreadState* thread_state);
   void ThreadExit(ThreadState* thread_state);
   void NotifyAllThreads();
+
+  void ReturnThreadState(ThreadState* thread_state);
 
   // Dequeue from [thread_state]. If [process] is [NULL] after a call to
   // DequeueFromThread, the [thread_state] is empty. Note that DequeueFromThread
