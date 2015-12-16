@@ -23,7 +23,7 @@ static void PrintError(const char* file, int line, const char* format,
   Print::Error("%s\n", buffer);
 #else
   fprintf(stderr, "%s:%d: error: ", file, line);
-  vfprintf(stderr, format, arguments);
+  vfprintf(stderr, format, const_cast<va_list&>(arguments));
   fprintf(stderr, "\n");
 #endif  // FLETCH_SUPPORT_PRINT_INTERCEPTORS
 }
