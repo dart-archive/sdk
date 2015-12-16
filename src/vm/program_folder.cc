@@ -406,13 +406,13 @@ class FoldingVisitor : public PointerVisitor {
   int class_count_;
 };
 
-void ProgramFolder::Fold(bool disable_heap_validation_before_gc) {
+void ProgramFolder::Fold() {
   // TODO(ager): Can we add an assert that there are no processes running
   // for this program. Either because we haven't enqueued any or because
   // the program is stopped?
   ASSERT(!program_->is_compact());
 
-  program_->PrepareProgramGC(disable_heap_validation_before_gc);
+  program_->PrepareProgramGC();
 
   ProgramTableRewriter rewriter;
   Space* to = new Space();

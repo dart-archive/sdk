@@ -13,10 +13,6 @@ namespace fletch {
 
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
 
-static bool HasSentinelAt(uword address) {
-  return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
-}
-
 Space::Space(int maximum_initial_size)
     : first_(NULL),
       last_(NULL),
@@ -162,29 +158,6 @@ void Space::TryDealloc(uword location, int size) {
 }
 
 int Space::Used() { return used_; }
-
-void Space::RebuildFreeListAfterTransformations() {
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword free_start = 0;
-    uword current = chunk->base();
-    while (!HasSentinelAt(current)) {
-      HeapObject* object = HeapObject::FromAddress(current);
-      if (object->forwarding_address() != NULL) {
-        if (free_start == 0) free_start = current;
-        current += Instance::kSize;
-        while (*reinterpret_cast<uword*>(current) == HeapObject::kTag) {
-          current += kPointerSize;
-        }
-      } else {
-        if (free_start != 0) {
-          free_list_->AddChunk(free_start, current - free_start);
-          free_start = 0;
-        }
-        current += object->Size();
-      }
-    }
-  }
-}
 
 }  // namespace fletch
 

@@ -192,11 +192,11 @@ class Space {
 
 #ifdef FLETCH_MARK_SWEEP
   FreeList* free_list() const { return free_list_; }
-
-  // Instance transformation leaves garbage in the heap that needs to be
-  // added to freelists when using mark-sweep collection.
-  void RebuildFreeListAfterTransformations();
 #endif
+
+  // Instance transformation leaves garbage in the heap so we rebuild the
+  // space after transformations.
+  void RebuildAfterTransformations();
 
  private:
   friend class NoAllocationFailureScope;

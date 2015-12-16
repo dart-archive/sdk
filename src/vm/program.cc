@@ -230,19 +230,19 @@ Object* Program::CreateInitializer(Function* function) {
   return heap()->CreateInitializer(initializer_class_, function);
 }
 
-void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
+void Program::PrepareProgramGC() {
   // All threads are stopped and have given their parts back to the
   // [SharedHeap], so we can merge them now.
   shared_heap()->MergeParts();
 
-  if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
+  if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
   }
 
   // Loop over all processes and cook all stacks.
   Process* current = process_list_head_;
   while (current != NULL) {
-    if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
+    if (Flags::validate_heaps) {
       current->ValidateHeaps(&shared_heap_);
     }
 

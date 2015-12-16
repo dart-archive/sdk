@@ -182,9 +182,6 @@ void Space::CompleteTransformations(PointerVisitor* visitor) {
       HeapObject* object = HeapObject::FromAddress(current);
       if (object->forwarding_address() != NULL) {
         current += Instance::kSize;
-        while (*reinterpret_cast<uword*>(current) == HeapObject::kTag) {
-          current += kPointerSize;
-        }
       } else if (object->IsStack()) {
         // We haven't cooked stacks when we perform object transformations.
         // Therefore, we cannot simply iterate pointers in the stack because
@@ -370,5 +367,48 @@ void ObjectMemory::SetSpaceForPages(uword base, uword limit, Space* space) {
     table->Set((address >> 12) & 0x3ff, space);
   }
 }
+
+#ifdef FLETCH_MARK_SWEEP
+void Space::RebuildAfterTransformations() {
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uword free_start = 0;
+    uword current = chunk->base();
+    while (!HasSentinelAt(current)) {
+      HeapObject* object = HeapObject::FromAddress(current);
+      if (object->forwarding_address() != NULL) {
+        if (free_start == 0) free_start = current;
+        current += Instance::kSize;
+        while (HeapObject::FromAddress(current)->IsFiller()) {
+          current += kPointerSize;
+        }
+      } else {
+        if (free_start != 0) {
+          free_list_->AddChunk(free_start, current - free_start);
+          free_start = 0;
+        }
+        current += object->Size();
+      }
+    }
+  }
+}
+#else
+void Space::RebuildAfterTransformations() {
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uword current = chunk->base();
+    while (!HasSentinelAt(current)) {
+      HeapObject* object = HeapObject::FromAddress(current);
+      if (object->forwarding_address() != NULL) {
+        for (int i = 0; i < Instance::kSize; i += kPointerSize) {
+          *reinterpret_cast<Object**>(current + i) =
+              StaticClassStructures::one_word_filler_class();
+        }
+        current += Instance::kSize;
+      } else {
+        current += object->Size();
+      }
+    }
+  }
+}
+#endif
 
 }  // namespace fletch

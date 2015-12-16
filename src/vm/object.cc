@@ -308,11 +308,10 @@ Instance* Instance::CloneTransformed(Heap* heap) {
               suffix * sizeof(Object*));
   }
 
-  // Zap old fields. This makes it possible to compute the size of a
-  // transformed instance where it is hard to reach the class because
-  // of the installed forwarding pointer.
+  // Zap old fields with fillers. This makes it possible to iterate the
+  // fields part of the transformed instance.
   for (int i = 0; i < old_fields; i++) {
-    *(old_fields_pointer + i) = reinterpret_cast<Object*>(HeapObject::kTag);
+    *(old_fields_pointer + i) = StaticClassStructures::one_word_filler_class();
   }
 
   return target;

@@ -1307,14 +1307,9 @@ bool Session::CommitChanges(int count) {
 
     // Fold the program after applying changes to continue running in the
     // optimized compact form.
-    //
-    // NOTE: We disable heap validation always if we changed any objects in the
-    // heaps, because [TransformInstances] will install a forwarding pointer and
-    // thereby destroy the class pointer. The heap verification code will
-    // traverse all heaps and doing so requires a valid class pointer.
     {
       ProgramFolder program_folder(program());
-      program_folder.Fold(schemas_changed);
+      program_folder.Fold();
     }
   }
 
@@ -1480,21 +1475,19 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
   Heap* const shared_heap_;
 };
 
-#ifdef FLETCH_MARK_SWEEP
-class RebuildFreeListsVisitor : public ProcessVisitor {
+class RebuildVisitor : public ProcessVisitor {
  public:
-  explicit RebuildFreeListsVisitor(SharedHeap* shared_heap)
+  explicit RebuildVisitor(SharedHeap* shared_heap)
       : shared_heap_(shared_heap) {}
 
   virtual void VisitProcess(Process* process) {
-    process->heap()->space()->RebuildFreeListAfterTransformations();
-    shared_heap_->heap()->space()->RebuildFreeListAfterTransformations();
+    process->heap()->space()->RebuildAfterTransformations();
+    shared_heap_->heap()->space()->RebuildAfterTransformations();
   }
 
  private:
   SharedHeap* shared_heap_;
 };
-#endif
 
 class TransformInstancesProcessVisitor : public ProcessVisitor {
  public:
@@ -1551,11 +1544,9 @@ void Session::TransformInstances() {
   TransformInstancesProcessVisitor process_visitor(program()->shared_heap());
   program()->VisitProcesses(&process_visitor);
 
-#if FLETCH_MARK_SWEEP
-  space->RebuildFreeListAfterTransformations();
-  RebuildFreeListsVisitor rebuilding_visitor(program()->shared_heap());
+  space->RebuildAfterTransformations();
+  RebuildVisitor rebuilding_visitor(program()->shared_heap());
   program()->VisitProcesses(&rebuilding_visitor);
-#endif
 }
 
 void Session::PushFrameOnSessionStack(bool is_first_name, const Frame* frame) {

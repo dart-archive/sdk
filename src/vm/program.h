@@ -242,7 +242,7 @@ class Program {
 
   RandomXorShift* random() { return &random_; }
 
-  void PrepareProgramGC(bool disable_heap_validation_before_gc = false);
+  void PrepareProgramGC();
   void PerformProgramGC(Space* to, PointerVisitor* visitor);
   void FinishProgramGC();
 
