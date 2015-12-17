@@ -60,7 +60,6 @@ incremental/production/newly_instantiated_subclases_two_updates: Fail
 incremental/production/newly_instantiated_superclasses_two_updates: Fail
 incremental/production/no_closure: Fail
 incremental/production/preserving_identity_hashcode: Fail
-incremental/production/program_gc_with_processes: Fail
 incremental/production/remove_class: Fail
 incremental/production/remove_class_with_field_and_subclass: Fail
 incremental/production/remove_class_with_static_method: Fail

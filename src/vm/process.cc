@@ -384,6 +384,10 @@ void PrintProcessGCInfo(Process* process, HeapUsage* before, HeapUsage* after) {
       before->TotalSize(), after->TotalUsed(), after->TotalSize());
 }
 
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
 void Process::CollectMutableGarbage() {
   TakeChildHeaps();
 
@@ -481,29 +485,18 @@ class ScavengeAndChainStacksVisitor : public PointerVisitor {
 int Process::CollectMutableGarbageAndChainStacks() {
   // Mark all reachable objects.
   Space* space = heap()->space();
-  MarkingStack marking_stack;
-  MarkAndChainStacksVisitor marking_visitor(this, space, &marking_stack);
+  MarkingStack stack;
+  MarkAndChainStacksVisitor marking_visitor(this, space, &stack);
 
   // Visit the current coroutine stack first and chain the rest of the
   // stacks starting from there.
   marking_visitor.Visit(coroutine_->stack_address());
   IterateRoots(&marking_visitor);
-
-  // All processes share the same heap, so we need to iterate all roots from
-  // all processes.
-  for (Process* process = program()->process_list_head(); process != NULL;
-       process = process->process_list_next()) {
-    process->IterateRoots(&marking_visitor);
-  }
-
-  marking_stack.Process(&marking_visitor);
+  stack.Process(&marking_visitor);
 
   // Weak processing.
   heap()->ProcessWeakPointers();
-  for (Process* process = program()->process_list_head(); process != NULL;
-       process = process->process_list_next()) {
-    process->set_ports(Port::CleanupPorts(space, process->ports()));
-  }
+  set_ports(Port::CleanupPorts(space, ports()));
 
   // Flush outstanding free_list chunks into the free list. Then sweep
   // over the heap and rebuild the freelist.
@@ -530,23 +523,13 @@ int Process::CollectMutableGarbageAndChainStacks() {
   // Visit the current coroutine stack first and chain the rest of the
   // stacks starting from there.
   visitor.Visit(reinterpret_cast<Object**>(coroutine_->stack_address()));
-
-  for (Process* process = program()->process_list_head(); process != NULL;
-       process = process->process_list_next()) {
-    process->IterateRoots(&visitor);
-  }
-
+  IterateRoots(&visitor);
   Space* program_space = program()->heap()->space();
   to->CompleteScavengeMutable(&visitor, program_space, &sb);
   store_buffer_.ReplaceAfterMutableGC(&sb);
 
-  // Weak processing.
   heap()->ProcessWeakPointers();
-  for (Process* process = program()->process_list_head(); process != NULL;
-       process = process->process_list_next()) {
-    process->set_ports(Port::CleanupPorts(from, process->ports()));
-  }
-
+  set_ports(Port::CleanupPorts(from, ports()));
   heap()->ReplaceSpace(to);
   UpdateStackLimit();
   return visitor.number_of_stacks();
@@ -579,17 +562,13 @@ void Process::IterateRoots(PointerVisitor* visitor) {
 }
 
 void Process::IterateProgramPointers(PointerVisitor* visitor) {
-  // TODO(erikcorry): Somehow assert that the stacks are cooked (there's no
-  // simple way to tell in a multiple-processes-per-heap world).
+  ASSERT(stacks_are_cooked());
+  HeapObjectPointerVisitor program_pointer_visitor(visitor);
+  heap()->IterateObjects(&program_pointer_visitor);
   store_buffer_.IteratePointersToImmutableSpace(visitor);
   if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
   visitor->Visit(&exception_);
   mailbox_.IteratePointers(visitor);
-}
-
-void Process::IterateProgramPointersOnHeap(PointerVisitor* visitor) {
-  HeapObjectPointerVisitor program_pointer_visitor(visitor);
-  heap()->IterateObjects(&program_pointer_visitor);
 }
 
 void Process::TakeLookupCache() {

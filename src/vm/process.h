@@ -160,8 +160,10 @@ class Process {
 
   void CollectMutableGarbage();
 
-  // Perform garbage collection and chain all stack objects.
-  // Returns the number of stacks found in the heap.
+  // Perform garbage collection and chain all stack objects. Additionally,
+  // locate all processes in ports in the heap that are not yet known
+  // by the program GC and link them in the argument list. Returns the
+  // number of stacks found in the heap.
   int CollectMutableGarbageAndChainStacks();
   int CollectGarbageAndChainStacks();
 
@@ -173,7 +175,6 @@ class Process {
   // Iterate all pointers in the process heap and stack. Used for
   // program garbage collection.
   void IterateProgramPointers(PointerVisitor* visitor);
-  void IterateProgramPointersOnHeap(PointerVisitor* visitor);
 
   // Iterate over, and find pointers in the port queue.
   void IteratePortQueuesPointers(PointerVisitor* visitor);
