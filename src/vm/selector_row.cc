@@ -74,7 +74,8 @@ void SelectorRow::AddToRanges(Range range) {
   ranges_.PushBack(range);
 }
 
-void SelectorRow::FillTable(Program* program, Array* table) {
+void SelectorRow::FillTable(Program* program, Vector<Class*>* classes,
+                            Array* table) {
   ASSERT(IsMatched());
   int offset = offset_;
   for (int i = 0, length = variants_; i < length; i++) {
@@ -97,7 +98,7 @@ void SelectorRow::FillTable(Program* program, Array* table) {
         // implementations first, we can skip the entire subclass hierarchy
         // when we find that the method we're currently filling into the table
         // is overridden by an already processed implementation.
-        id = program->class_at(id)->child_id();
+        id = classes->At(id)->child_id();
       }
     }
   }

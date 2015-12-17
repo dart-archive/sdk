@@ -66,9 +66,6 @@ class Session;
   V(HeapObject, raw_index_out_of_bounds, RawIndexOutOfBounds)   \
   V(HeapObject, raw_illegal_state, RawIllegalState)             \
   V(Object, native_failure_result, NativeFailureResult)         \
-  V(Array, classes, Classes)                                    \
-  V(Array, constants, Constants)                                \
-  V(Array, static_methods, StaticMethods)                       \
   V(Array, static_fields, StaticFields)                         \
   V(Array, dispatch_table, DispatchTable)
 
@@ -104,9 +101,8 @@ class Program {
 
   void Initialize();
 
-  // Is the program in the compact table representation?
-  bool is_compact() const { return is_compact_; }
-  void set_is_compact(bool value) { is_compact_ = value; }
+  // Is the program in the optimized form with a dispatch table?
+  bool is_optimized() const { return dispatch_table_ != NULL; }
 
   bool was_loaded_from_snapshot() { return loaded_from_snapshot_; }
 
@@ -115,19 +111,6 @@ class Program {
 
   int main_arity() const { return main_arity_; }
   void set_main_arity(int value) { main_arity_ = value; }
-
-  void set_classes(Array* classes) { classes_ = classes; }
-  Class* class_at(int index) const { return Class::cast(classes_->get(index)); }
-
-  void set_constants(Array* constants) { constants_ = constants; }
-  Object* constant_at(int index) const { return constants_->get(index); }
-
-  void set_static_methods(Array* static_methods) {
-    static_methods_ = static_methods;
-  }
-  Function* static_method_at(int index) const {
-    return Function::cast(static_methods_->get(index));
-  }
 
   void set_static_fields(Array* static_fields) {
     static_fields_ = static_fields;
@@ -165,7 +148,7 @@ class Program {
   SharedHeap* shared_heap() { return &shared_heap_; }
 
   int program_heap_size() {
-    ASSERT(is_compact_);
+    ASSERT(is_optimized());
     Chunk* chunk = heap()->space()->first();
     ASSERT(chunk->next() == NULL);
     return chunk->limit() - chunk->base();
@@ -291,8 +274,6 @@ class Program {
 
   Function* entry_;
   int main_arity_;
-
-  bool is_compact_;
 
   bool loaded_from_snapshot_;
 

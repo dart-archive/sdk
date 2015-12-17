@@ -80,15 +80,19 @@ int8 Bytecode::StackDiff(Opcode opcode) {
 }
 
 bool Bytecode::IsInvokeVariant(Opcode opcode) {
-  return IsInvoke(opcode) || IsInvokeUnfold(opcode);
+  return IsInvoke(opcode) || IsInvokeUnfold(opcode) || IsStaticInvoke(opcode);
 }
 
 bool Bytecode::IsInvokeUnfold(Opcode opcode) {
-  return opcode >= kInvokeMethodUnfold && opcode <= kInvokeFactoryUnfold;
+  return opcode >= kInvokeMethodUnfold && opcode <= kInvokeBitShlUnfold;
 }
 
 bool Bytecode::IsInvoke(Opcode opcode) {
-  return opcode >= kInvokeMethod && opcode <= kInvokeFactory;
+  return opcode >= kInvokeMethod && opcode <= kInvokeBitShl;
+}
+
+bool Bytecode::IsStaticInvoke(Opcode opcode) {
+  return opcode >= kInvokeStatic && opcode <= kInvokeFactory;
 }
 
 // TODO(ager): use branches to skip forward by more than

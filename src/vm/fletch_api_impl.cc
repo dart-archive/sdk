@@ -143,7 +143,6 @@ FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {
       program->heap()->space(), heap, heap_size);
 
   program->heap()->space()->AppendProgramChunk(memory, memory->base());
-  program->set_is_compact(true);
   return reinterpret_cast<FletchProgram>(program);
 }
 

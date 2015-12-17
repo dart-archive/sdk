@@ -329,9 +329,6 @@ Program* SnapshotReader::ReadProgram() {
   // Read all the program state (except roots).
   program->set_entry(Function::cast(ReadObject()));
   program->set_main_arity(ReadInt64());
-  program->set_classes(Array::cast(ReadObject()));
-  program->set_constants(Array::cast(ReadObject()));
-  program->set_static_methods(Array::cast(ReadObject()));
   program->set_static_fields(Array::cast(ReadObject()));
   program->set_dispatch_table(Array::cast(ReadObject()));
 
@@ -343,7 +340,6 @@ Program* SnapshotReader::ReadProgram() {
   backward_references_.Delete();
 
   // Programs read from a snapshot are always compact.
-  program->set_is_compact(true);
   program->SetupDispatchTableIntrinsics();
 
   // As a sanity check we ensure that the heap size the writer of the snapshot
@@ -357,7 +353,7 @@ Program* SnapshotReader::ReadProgram() {
 }
 
 List<uint8> SnapshotWriter::WriteProgram(Program* program) {
-  ASSERT(program->is_compact());
+  ASSERT(program->is_optimized());
 
   program->ClearDispatchTableIntrinsics();
 
@@ -383,9 +379,6 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   // Write all the program state (except roots).
   WriteObject(program->entry());
   WriteInt64(program->main_arity());
-  WriteObject(program->classes());
-  WriteObject(program->constants());
-  WriteObject(program->static_methods());
   WriteObject(program->static_fields());
   WriteObject(program->dispatch_table());
 
@@ -723,8 +716,9 @@ void Class::ClassReadFrom(SnapshotReader* reader) {
 
 void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  ASSERT(literals_size() == 0);
-  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, bytecode_size());
+  writer->WriteHeader(
+      InstanceFormat::FUNCTION_TYPE,
+      BytecodeAllocationSize(bytecode_size()) + literals_size() * kPointerSize);
   writer->Forward(this);
   // Body.
   for (int offset = HeapObject::kSize; offset < Function::kSize;
@@ -732,6 +726,9 @@ void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
     writer->WriteObject(at(offset));
   }
   writer->WriteBytes(bytecode_size(), bytecode_address_for(0));
+  for (int i = 0; i < literals_size(); i++) {
+    writer->WriteObject(literal_at(i));
+  }
 }
 
 void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
@@ -739,8 +736,10 @@ void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
-  ASSERT(literals_size() == 0);
   reader->ReadBytes(bytecode_size(), bytecode_address_for(0));
+  for (int i = 0; i < literals_size(); i++) {
+    set_literal_at(i, reader->ReadObject());
+  }
 }
 
 void LargeInteger::LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass) {
