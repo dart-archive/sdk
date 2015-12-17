@@ -2,7 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "circular_buffer.h"
+#include "platforms/stm/disco_fletch/src/circular_buffer.h"
+
+#include <stdlib.h>
+#include <string.h>
 
 CircularBuffer::CircularBuffer(size_t capacity) {
   monitor_ = fletch::Platform::CreateMonitor();

@@ -2,14 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+#include "platforms/stm/disco_fletch/src/logger.h"
+
 #include <stdarg.h>
 
 extern "C" {
-  #include "lcd_log.h"
+  #include <lcd_log.h>
 }
-#include "stm32746g_discovery_lcd.h"
-
-#include "logger.h"
+#include <stm32746g_discovery_lcd.h>
 
 Logger* logger = NULL;
 
@@ -24,8 +24,9 @@ Logger::Logger() {
   LCD_LOG_Init();
 
   // Show Header and Footer texts.
-  LCD_LOG_SetHeader((uint8_t *)"Fletch");
-  LCD_LOG_SetFooter((uint8_t *)"STM32746G-DISCO board");
+  LCD_LOG_SetHeader(reinterpret_cast<uint8_t*>(const_cast<char*>("Fletch")));
+  LCD_LOG_SetFooter(reinterpret_cast<uint8_t*>(const_cast<char*>(
+      "STM32746G-DISCO board")));
 }
 
 void Logger::vlog(Level level, char* format, va_list args) {

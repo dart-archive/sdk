@@ -15,7 +15,6 @@
     'project_name': 'disco_fletch',
     'project_path': '<(DEPTH)/platforms/stm/<(project_name)',
     'generated_path': '<(project_path)/generated',
-    'fletch_path': '../..',
 
     'gcc-arm-embedded':
       '<(DEPTH)/third_party/gcc-arm-embedded/<(OS)/gcc-arm-embedded/bin',
@@ -142,7 +141,7 @@
               '<(stm32_cube_f7_free_rtos)/Source/portable/GCC/ARM_CM7/r0p1/',
               '<(stm32_cube_f7)/Drivers/CMSIS/Include/',
               '<(generated_path)/Inc',
-              '<(fletch_path)'
+              '../..'
             ],
           }],
 

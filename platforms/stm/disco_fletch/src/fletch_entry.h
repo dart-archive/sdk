@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_FLETCH_ENTRY_H_
-#define SRC_FLETCH_ENTRY_H_
+#ifndef PLATFORMS_STM_DISCO_FLETCH_SRC_FLETCH_ENTRY_H_
+#define PLATFORMS_STM_DISCO_FLETCH_SRC_FLETCH_ENTRY_H_
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
 void FletchEntry(void const * argument);
@@ -15,4 +15,4 @@ void FletchEntry(void const * argument);
 }
 #endif
 
-#endif  // SRC_FLETCH_ENTRY_H_
+#endif  // PLATFORMS_STM_DISCO_FLETCH_SRC_FLETCH_ENTRY_H_

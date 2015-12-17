@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_LOGGER_H_
-#define SRC_LOGGER_H_
+#ifndef PLATFORMS_STM_DISCO_FLETCH_SRC_LOGGER_H_
+#define PLATFORMS_STM_DISCO_FLETCH_SRC_LOGGER_H_
 
 #include <stdarg.h>
 
@@ -45,4 +45,4 @@ class Logger {
 #define LOG_ERROR(...) logger->error(__VA_ARGS__)
 #define LOG_FATAL(...) logger->fatal(__VA_ARGS__)
 
-#endif  // SRC_LOGGER_H_
+#endif  // PLATFORMS_STM_DISCO_FLETCH_SRC_LOGGER_H_

@@ -3,15 +3,16 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include <stdlib.h>
-#include <include/fletch_api.h>
-#include <include/static_ffi.h>
 
-#include "cmsis_os.h"
-#include "stm32746g_discovery.h"
+#include <cmsis_os.h>
+#include <stm32746g_discovery.h>
 
-#include "fletch_entry.h"
-#include "logger.h"
-#include "uart.h"
+#include "include/fletch_api.h"
+#include "include/static_ffi.h"
+
+#include "platforms/stm/disco_fletch/src/fletch_entry.h"
+#include "platforms/stm/disco_fletch/src/logger.h"
+#include "platforms/stm/disco_fletch/src/uart.h"
 
 extern unsigned char _binary_snapshot_start;
 extern unsigned char _binary_snapshot_end;

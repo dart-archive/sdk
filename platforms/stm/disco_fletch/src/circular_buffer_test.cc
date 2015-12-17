@@ -9,7 +9,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/atomic.h"
 
-#include "circular_buffer.h"
+#include "platforms/stm/disco_fletch/src/circular_buffer.h"
 
 void compare_buffers(uint8_t* buffer1, uint8_t* buffer2, int size) {
   for (int i = 0; i < size; i++) {

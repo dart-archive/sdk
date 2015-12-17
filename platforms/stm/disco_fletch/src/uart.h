@@ -2,10 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_UART_H_
-#define SRC_UART_H_
+#ifndef PLATFORMS_STM_DISCO_FLETCH_SRC_UART_H_
+#define PLATFORMS_STM_DISCO_FLETCH_SRC_UART_H_
 
-#include "circular_buffer.h"
+#include <inttypes.h>
+
+#include <cmsis_os.h>
+#include <stm32f7xx_hal.h>
+
+#include "platforms/stm/disco_fletch/src/circular_buffer.h"
 
 // Interface to the universal asynchronous receiver/transmitter
 // (UART).
@@ -55,4 +60,4 @@ class Uart {
   friend void __UartTask(const void*);
 };
 
-#endif  // SRC_UART_H_
+#endif  // PLATFORMS_STM_DISCO_FLETCH_SRC_UART_H_
