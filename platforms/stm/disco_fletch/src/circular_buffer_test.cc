@@ -29,7 +29,7 @@ void write_read_test(int to_write, int to_read) {
   }
 
   const int buffer_size = 100;
-  CircularBuffer* cb = new CircularBuffer(buffer_size + 1);
+  CircularBuffer* cb = new CircularBuffer(buffer_size);
 
   for (int i = 0; i < size; i++) {
     read_data[i] = 0;
@@ -84,7 +84,7 @@ void write_test() {
     read_data[i] = 0;
   }
 
-  CircularBuffer* cb = new CircularBuffer(buffer_size + 1);
+  CircularBuffer* cb = new CircularBuffer(buffer_size);
 
   for (int i = 0; i < buffer_size; i++) {
     EXPECT_EQ(buffer_size,
