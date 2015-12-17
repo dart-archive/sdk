@@ -5,6 +5,8 @@
 #ifndef SRC_LOGGER_H_
 #define SRC_LOGGER_H_
 
+#include <stdarg.h>
+
 class Logger;
 
 extern Logger* logger;

@@ -122,8 +122,12 @@
       ],
       'sources': [
         # Application.
+        '<(source_path)/circular_buffer.cc',
+        '<(source_path)/circular_buffer.h',
         '<(source_path)/fletch_entry.cc',
         '<(source_path)/logger.cc',
+        '<(source_path)/uart.cc',
+        '<(source_path)/uart.h',
 
         '<(source_path)/syscalls.c',
 
