@@ -65,6 +65,7 @@ final TEST_SUITE_DIRECTORIES = [
     new Path('tests/os'),
     new Path('tests/pkg'),
     new Path('samples'),
+    new Path('tests/typed_data'),
 ];
 
 final DART_SDK_TEST_SUITE_DIRECTORIES = [

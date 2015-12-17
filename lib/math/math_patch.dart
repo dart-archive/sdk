@@ -20,9 +20,10 @@ class _Random implements Random {
   static const kBitsPerPart = 23;
   static const kLowMask = (1 << kBitsPerPart) - 1;
   static const kMediumMask = (1 << (kBitsPerPart * 2)) - 1;
+  static final _seeder = new _Random(15485863);
 
   _Random([int seed]) {
-    if (seed == null) seed = 0;
+    if (seed == null) seed = _seeder.nextInt(10000000);
     seed ^= 314159265;
     _s0_0 = seed & kLowMask;
     _s0_1 = (seed >> kBitsPerPart) & kLowMask;

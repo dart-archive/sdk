@@ -128,12 +128,10 @@ num_parse_test/01: RuntimeError
 num_parse_test/none: RuntimeError
 safe_to_string_test: RuntimeError
 set_test: RuntimeError
-shuffle_test: CompileTimeError
 splay_tree_from_iterable_test: RuntimeError
 splay_tree_from_iterables_test: RuntimeError
 splay_tree_test: RuntimeError
 string_buffer_test: RuntimeError
-string_fromcharcodes_test: CompileTimeError
 string_replace_all_test: RuntimeError
 string_replace_test: RuntimeError
 symbol_operator_test/03: Fail

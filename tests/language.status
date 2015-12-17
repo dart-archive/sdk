@@ -728,8 +728,7 @@ vm/allocation_sinking_vm_test: CompileTimeError
 vm/debug_break_enabled_vm_test/01: CompileTimeError
 vm/debug_break_enabled_vm_test/none: CompileTimeError
 vm/issue21220_vm_test: CompileTimeError  # Int32x4 support
-vm/load_to_load_forwarding_vm_test: CompileTimeError
-vm/load_to_load_unaligned_forwarding_vm_test: CompileTimeError
+vm/load_to_load_unaligned_forwarding_vm_test: RuntimeError
 vm/no_such_method_error_message_vm_test: RuntimeError
 vm/optimized_await_regress_test: RuntimeError
 vm/optimized_guarded_field_isolates_test: CompileTimeError

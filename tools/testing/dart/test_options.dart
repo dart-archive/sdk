@@ -26,7 +26,8 @@ const List<String> defaultTestSelectors = const [
     'cc_tests',
     'lib',
     'os',
-    'pkg'
+    'pkg',
+    'typed_data'
 ];
 
 /**
