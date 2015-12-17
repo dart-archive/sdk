@@ -98,7 +98,7 @@ class QemuSession(object):
     time.sleep(50)
     self.ssh = None
     # Try connection multiple times, the time it takes to boot varies a lot.
-    for x in xrange(10):
+    for x in xrange(20):
       print 'Connection attempt %s' % x
       ssh = pxssh.pxssh()
       # See https://github.com/pexpect/pexpect/issues/179
