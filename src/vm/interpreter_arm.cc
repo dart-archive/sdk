@@ -205,7 +205,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   virtual void DoThrow();
   // Expects to be called after SaveState with the exception object in R7.
-  virtual void DoThrowAfterSaveState();
+  virtual void DoThrowAfterSaveState(Label* resume);
   virtual void DoSubroutineCall();
   virtual void DoSubroutineReturn();
 
@@ -233,6 +233,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   Label check_stack_overflow_0_;
   Label gc_;
   Label intrinsic_failure_;
+  Label interpreter_entry_;
   int spill_size_;
 
   void LoadLocal(Register reg, int index);
@@ -290,7 +291,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   void Dispatch(int size);
 
-  void SaveState();
+  void SaveState(Label* resume);
   void RestoreState();
 
   static int ComputeStackPadding(int reserved, int extra) {
@@ -335,19 +336,12 @@ void InterpreterGeneratorARM::GeneratePrologue() {
 
   // Restore the register state and dispatch to the first bytecode.
   RestoreState();
-  Dispatch(0);
-
-  // Define interpreter entries. They are currently unused in the ARM
-  // interpreter.
-  __ Bind("", "InterpreterEntry");
-  __ Bind("", "InterpreterCoroutineEntry");
-  __ bkpt();
 }
 
 void InterpreterGeneratorARM::GenerateEpilogue() {
   // Done. Save the register state.
   __ Bind(&done_);
-  SaveState();
+  SaveState(&interpreter_entry_);
 
   // Undo stack padding.
   Label undo_padding;
@@ -361,6 +355,11 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ pop(RegisterRange(R4, R11) | RegisterRange(LR, LR));
   __ bx(LR);
 
+  // Default entrypoint.
+  __ Bind("", "InterpreterEntry");
+  __ Bind(&interpreter_entry_);
+  Dispatch(0);
+
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   // Handle immutable heap allocation failures.
   Label immutable_alloc_failure;
@@ -371,7 +370,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
 
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
-  SaveState();
+  SaveState(&interpreter_entry_);
   __ mov(R0, R4);
   __ bl("HandleGC");
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
@@ -379,39 +378,41 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ b(NE, &immutable_alloc_failure);
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   RestoreState();
-  Dispatch(0);
 
   // Stack overflow handling (slow case).
-  Label stay_fast, overflow, check_debug_interrupt;
+  Label stay_fast, overflow, check_debug_interrupt, overflow_resume;
   __ Bind(&check_stack_overflow_0_);
   __ mov(R0, Immediate(0));
   __ Bind(&check_stack_overflow_);
-  SaveState();
+  SaveState(&overflow_resume);
 
   __ mov(R1, R0);
   __ mov(R0, R4);
   __ bl("HandleStackOverflow");
+  RestoreState();
+  __ Bind(&overflow_resume);
   __ tst(R0, R0);
   ASSERT(Process::kStackCheckContinue == 0);
   __ b(EQ, &stay_fast);
   __ cmp(R0, Immediate(Process::kStackCheckInterrupt));
   __ b(NE, &check_debug_interrupt);
   __ mov(R0, Immediate(Interpreter::kInterrupt));
-  __ b(&undo_padding);
+  __ b(&done_);
   __ Bind(&check_debug_interrupt);
   __ cmp(R0, Immediate(Process::kStackCheckDebugInterrupt));
   __ b(NE, &overflow);
   __ mov(R0, Immediate(Interpreter::kBreakPoint));
-  __ b(&undo_padding);
+  __ b(&done_);
 
   __ Bind(&stay_fast);
-  RestoreState();
   Dispatch(0);
 
   __ Bind(&overflow);
+  Label throw_resume;
+  SaveState(&throw_resume);
   __ ldr(R7, Address(R4, Process::kProgramOffset));
   __ ldr(R7, Address(R7, Program::kStackOverflowErrorOffset));
-  DoThrowAfterSaveState();
+  DoThrowAfterSaveState(&throw_resume);
 
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
@@ -731,10 +732,12 @@ void InterpreterGeneratorARM::DoInvokeNative() { InvokeNative(false); }
 void InterpreterGeneratorARM::DoInvokeNativeYield() { InvokeNative(true); }
 
 void InterpreterGeneratorARM::DoInvokeSelector() {
-  SaveState();
+  Label resume;
+  SaveState(&resume);
   __ mov(R0, R4);
   __ bl("HandleInvokeSelector");
   RestoreState();
+  __ Bind(&resume);
   CheckStackOverflow(0);
   Dispatch(0);
 }
@@ -1101,7 +1104,7 @@ void InterpreterGeneratorARM::DoStackOverflowCheck() {
   Dispatch(kStackOverflowCheckLength);
 }
 
-void InterpreterGeneratorARM::DoThrowAfterSaveState() {
+void InterpreterGeneratorARM::DoThrowAfterSaveState(Label* resume) {
   // Use the stack to store the stack delta initialized to zero, and the
   // frame pointer return value.
   __ sub(SP, SP, Immediate(2 * kWordSize));
@@ -1120,6 +1123,7 @@ void InterpreterGeneratorARM::DoThrowAfterSaveState() {
   __ add(SP, SP, Immediate(2 * kWordSize));
 
   RestoreState();
+  __ Bind(resume);
 
   Label unwind;
   __ tst(R0, R0);
@@ -1140,8 +1144,9 @@ void InterpreterGeneratorARM::DoThrow() {
   // Load object into callee-save register not touched by
   // save and restore state.
   LoadLocal(R7, 0);
-  SaveState();
-  DoThrowAfterSaveState();
+  Label resume;
+  SaveState(&resume);
+  DoThrowAfterSaveState(&resume);
 }
 
 void InterpreterGeneratorARM::DoSubroutineCall() {
@@ -1184,10 +1189,13 @@ void InterpreterGeneratorARM::DoCoroutineChange() {
   StoreLocal(R8, 1);
 
   // Perform call preserving argument in R7.
-  SaveState();
+  Label resume;
+  SaveState(&resume);
   __ mov(R0, R4);
   __ bl("HandleCoroutineChange");
   RestoreState();
+  __ Bind(&resume);
+  __ Bind("", "InterpreterCoroutineEntry");
 
   // Store argument.
   DropNAndSetTop(1, R7);
@@ -1254,11 +1262,10 @@ void InterpreterGeneratorARM::DoIdenticalNonNumeric() {
 }
 
 void InterpreterGeneratorARM::DoEnterNoSuchMethod() {
-  SaveState();
+  SaveState(&interpreter_entry_);
   __ mov(R0, R4);
   __ bl("HandleEnterNoSuchMethod");
   RestoreState();
-  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoExitNoSuchMethod() {
@@ -1998,13 +2005,13 @@ void InterpreterGeneratorARM::Dispatch(int size) {
   __ GenerateConstantPool();
 }
 
-void InterpreterGeneratorARM::SaveState() {
+void InterpreterGeneratorARM::SaveState(Label* resume) {
   // Save the bytecode pointer at the return-address slot.
   LoadFramePointer(R3);
   __ str(R5, Address(R3, -kWordSize));
 
-  // Push null.
-  __ ldr(R5, Immediate(0));
+  // Push resume address.
+  __ ldr(R5, resume);
   Push(R5);
 
   // Push frame pointer.
@@ -2040,7 +2047,8 @@ void InterpreterGeneratorARM::RestoreState() {
   // Set the bytecode pointer from the stack.
   __ ldr(R5, Address(R5, -kWordSize));
 
-  Drop(1);
+  // Pop and branch to resume address.
+  Pop(PC);
 }
 
 }  // namespace fletch

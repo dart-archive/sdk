@@ -212,6 +212,7 @@ class Assembler {
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
   INSTRUCTION_2(ldr, "ldr %r, %I", Register, const Immediate&);
   INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);
+  INSTRUCTION_2(ldr, "ldr %r, =%l", Register, Label*);
   INSTRUCTION_3(ldr, "ldr %r, [%r], %i", Register, Register, const Immediate&);
   INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
   INSTRUCTION_3(ldrb, "ldrb %r, %a%W", Register, const Address&, WriteBack);
@@ -230,6 +231,7 @@ class Assembler {
 
   INSTRUCTION_0(nop, "nop");
 
+  INSTRUCTION_3(orr, "orr %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(orr, "orr %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_1(pop, "pop { %r }", Register);
