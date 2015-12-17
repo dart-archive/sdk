@@ -2048,7 +2048,8 @@ void InterpreterGeneratorARM::RestoreState() {
   __ ldr(R5, Address(R5, -kWordSize));
 
   // Pop and branch to resume address.
-  Pop(PC);
+  Pop(LR);
+  __ mov(PC, LR);
 }
 
 }  // namespace fletch
