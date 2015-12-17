@@ -46,11 +46,3 @@ messaging_process_die_early_test: Timeout, Crash # Timeout due to infinite loops
 [ $mode == debug && $asan ]
 random_test: Slow, Pass
 
-[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
-dart2js_deltablue_test: CompileTimeError
-dart2js_hello_world_test: CompileTimeError
-messaging_port_lifetime_test: CompileTimeError
-messaging_process_death_test: CompileTimeError
-messaging_program_gc_test: CompileTimeError
-spawn_process_yield_test: CompileTimeError
-uri_base_test: RuntimeError
