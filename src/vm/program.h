@@ -250,6 +250,8 @@ class Program {
   // to get the offset of functions/classes in the program heap.
   uword OffsetOf(HeapObject* object);
 
+  Process* process_list_head() { return process_list_head_; }
+
  private:
   // Access to the address of the first and last root.
   Object** first_root_address() {
