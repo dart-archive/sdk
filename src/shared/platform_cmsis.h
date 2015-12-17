@@ -148,8 +148,7 @@ class MonitorImpl {
     waiting_++;
     CHECK_AND_FAIL(osMutexRelease(internal_));
     CHECK_AND_RETURN(osMutexRelease(mutex_));
-    int tokens = osSemaphoreWait(semaphore_, osWaitForever);
-    ASSERT(tokens > 0);  // There should have been at least one token.
+    CHECK_AND_FAIL(osSemaphoreWait(semaphore_, osWaitForever));
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
     return osOK;
   }
