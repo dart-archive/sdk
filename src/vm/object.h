@@ -91,6 +91,7 @@ class Object {
   inline bool IsSmi();
   inline bool IsHeapObject();
   inline bool IsFailure();
+  inline bool IsRetryAfterGCFailure();
 
   // - based on type field in class.
   inline bool IsClass();
@@ -521,11 +522,28 @@ class Initializer : public HeapObject {
 // Failure (immediate).
 class Failure : public Object {
  public:
-  // Converts an error object to a failure.
-  static Failure* retry_after_gc() { return Create(RETRY_AFTER_GC); }
+  // Construct Failures.
   static Failure* wrong_argument_type() { return Create(WRONG_ARGUMENT_TYPE); }
   static Failure* index_out_of_bounds() { return Create(INDEX_OUT_OF_BOUNDS); }
   static Failure* illegal_state() { return Create(ILLEGAL_STATE); }
+
+  static Failure* retry_after_gc(uword requested) {
+    if (requested > kMaxPayload) {
+      FATAL1("Out of memory attempting to allocate %ul bytes.", requested);
+    }
+    uword encoded =
+        requested << kPayloadShift | RETRY_AFTER_GC << kTypeShift | kTag;
+    Failure* result = reinterpret_cast<Failure*>(encoded);
+    ASSERT(result->IsRetryAfterGCFailure());
+    ASSERT(requested == Failure::RequestedAllocationSize(result));
+    return result;
+  }
+
+  static uword RequestedAllocationSize(Failure* failure) {
+    ASSERT(failure->IsRetryAfterGCFailure());
+    uword encoded = reinterpret_cast<uword>(failure);
+    return (encoded & kPayloadMask) >> kPayloadShift;
+  }
 
   // Casting.
   static inline Failure* cast(Object* object);
@@ -535,13 +553,24 @@ class Failure : public Object {
   static const int kTagSize = 2;
   static const uword kTagMask = (1 << kTagSize) - 1;
 
+  // Type information.
+  static const int kTypeSize = 3;
+  static const int kTypeShift = kTagSize;
+  static const uword kTypeMask = ((1 << kTypeSize) - 1) << kTypeShift;
+
+  // Payload information.
+  static const int kPayloadSize = kBitsPerWord - kTagSize - kTypeSize;
+  static const int kPayloadShift = kTypeShift + kTypeSize;
+  static const uword kMaxPayload = (1ul << kPayloadSize) - 1;
+  static const uword kPayloadMask = kMaxPayload << kPayloadShift;
+
  private:
   enum FailureType {
-    RETRY_AFTER_GC,
-    WRONG_ARGUMENT_TYPE,
-    INDEX_OUT_OF_BOUNDS,
-    ILLEGAL_STATE,
-    SHOULD_PREEMPT
+    RETRY_AFTER_GC = 0,
+    WRONG_ARGUMENT_TYPE = 1,
+    INDEX_OUT_OF_BOUNDS = 2,
+    ILLEGAL_STATE = 3,
+    SHOULD_PREEMPT = 4
   };
 
   static Failure* Create(FailureType type) {
@@ -1369,6 +1398,12 @@ bool Object::IsHeapObject() {
 
 bool Object::IsFailure() {
   int tag = reinterpret_cast<uword>(this) & Failure::kTagMask;
+  return tag == Failure::kTag;
+}
+
+bool Object::IsRetryAfterGCFailure() {
+  int tag =
+      reinterpret_cast<uword>(this) & (Failure::kTagMask | Failure::kTypeMask);
   return tag == Failure::kTag;
 }
 

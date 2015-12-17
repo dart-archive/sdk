@@ -20,7 +20,7 @@
 
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(var, exp) \
   Object* var = (exp);                                                   \
-  if (var == Failure::retry_after_gc()) {                                \
+  if (var->IsRetryAfterGCFailure()) {                                    \
     if (CollectGarbageIfNecessary()) {                                   \
       SaveState();                                                       \
       /* Signal the scheduler that we need an immutable heap GC. */      \

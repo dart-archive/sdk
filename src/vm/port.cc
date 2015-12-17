@@ -107,7 +107,7 @@ BEGIN_NATIVE(PortCreate) {
 
   Object* dart_port =
       process->NewInstance(process->program()->port_class(), true);
-  if (dart_port == Failure::retry_after_gc()) return dart_port;
+  if (dart_port->IsRetryAfterGCFailure()) return dart_port;
   Instance* port_instance = Instance::cast(dart_port);
 
   Port* port = new Port(process, channel);
@@ -188,7 +188,7 @@ END_NATIVE()
 BEGIN_NATIVE(SystemIncrementPortRef) {
   Port* port = Port::FromDartObject(arguments[0]);
   Object* result = process->ToInteger(reinterpret_cast<uword>(port));
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   port->IncrementRef();
   return result;
 }

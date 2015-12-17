@@ -1078,7 +1078,8 @@ void InterpreterGeneratorARM::DoAllocateBoxed() {
   LoadLocal(R1, 0);
   __ mov(R0, R4);
   __ bl("HandleAllocateBoxed");
-  __ cmp(R0, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ and_(R1, R0, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmp(R1, Immediate(Failure::kTag));
   __ b(EQ, &gc_);
   StoreLocal(R0, 0);
   Dispatch(kAllocateBoxedLength);
@@ -1738,7 +1739,8 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   // just continue running the failure block by dispatching to the
   // next bytecode.
   __ Bind(&failure);
-  __ cmp(R0, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ and_(R1, R0, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmp(R1, Immediate(Failure::kTag));
   __ b(EQ, &gc_);
 
   // TODO(kasperl): This should be reworked. We shouldn't be calling
@@ -1882,7 +1884,8 @@ void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
   __ mov(R2, kRegisterAllocateImmutable);
   __ mov(R3, kRegisterImmutableMembers);
   __ bl("HandleAllocate");
-  __ cmp(R0, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ and_(R1, R0, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmp(R1, Immediate(Failure::kTag));
   __ b(EQ, &gc_);
 
   __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));

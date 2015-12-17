@@ -15,7 +15,7 @@ namespace fletch {
 BEGIN_NATIVE(ForeignAllocate) {
   word size = AsForeignWord(arguments[0]);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   void* calloc_value = calloc(1, size);
   uint64 value = reinterpret_cast<uint64>(calloc_value);
 
@@ -80,7 +80,7 @@ BEGIN_NATIVE(ForeignConvertPort) {
   Port* port = Port::FromDartObject(instance);
   if (port == NULL) return Smi::zero();
   Object* result = process->ToInteger(reinterpret_cast<intptr_t>(port));
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   port->IncrementRef();
   return result;
 }
@@ -99,7 +99,7 @@ BEGIN_NATIVE(ForeignICall0) {
   word address = AsForeignWord(arguments[0]);
   F0 function = reinterpret_cast<F0>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int value = function();
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -115,7 +115,7 @@ BEGIN_NATIVE(ForeignICall1) {
   word a0 = AsForeignWord(arguments[1]);
   F1 function = reinterpret_cast<F1>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int value = function(a0);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -132,7 +132,7 @@ BEGIN_NATIVE(ForeignICall2) {
   word a1 = AsForeignWord(arguments[2]);
   F2 function = reinterpret_cast<F2>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int value = function(a0, a1);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -150,7 +150,7 @@ BEGIN_NATIVE(ForeignICall3) {
   word a2 = AsForeignWord(arguments[3]);
   F3 function = reinterpret_cast<F3>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int value = function(a0, a1, a2);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -169,7 +169,7 @@ BEGIN_NATIVE(ForeignICall4) {
   word a3 = AsForeignWord(arguments[4]);
   F4 function = reinterpret_cast<F4>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int value = function(a0, a1, a2, a3);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -189,7 +189,7 @@ BEGIN_NATIVE(ForeignICall5) {
   word a4 = AsForeignWord(arguments[5]);
   F5 function = reinterpret_cast<F5>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int value = function(a0, a1, a2, a3, a4);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -210,7 +210,7 @@ BEGIN_NATIVE(ForeignICall6) {
   word a5 = AsForeignWord(arguments[6]);
   F6 function = reinterpret_cast<F6>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int value = function(a0, a1, a2, a3, a4, a5);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -232,7 +232,7 @@ BEGIN_NATIVE(ForeignICall7) {
   word a6 = AsForeignWord(arguments[7]);
   F7 function = reinterpret_cast<F7>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int value = function(a0, a1, a2, a3, a4, a5, a6);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -255,7 +255,7 @@ BEGIN_NATIVE(ForeignPCall0) {
   word address = AsForeignWord(arguments[0]);
   PF0 function = reinterpret_cast<PF0>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   word value = function();
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -271,7 +271,7 @@ BEGIN_NATIVE(ForeignPCall1) {
   word a0 = AsForeignWord(arguments[1]);
   PF1 function = reinterpret_cast<PF1>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   word value = function(a0);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -288,7 +288,7 @@ BEGIN_NATIVE(ForeignPCall2) {
   word a1 = AsForeignWord(arguments[2]);
   PF2 function = reinterpret_cast<PF2>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   word value = function(a0, a1);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -306,7 +306,7 @@ BEGIN_NATIVE(ForeignPCall3) {
   word a2 = AsForeignWord(arguments[3]);
   PF3 function = reinterpret_cast<PF3>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   word value = function(a0, a1, a2);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -325,7 +325,7 @@ BEGIN_NATIVE(ForeignPCall4) {
   word a3 = AsForeignWord(arguments[4]);
   PF4 function = reinterpret_cast<PF4>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   word value = function(a0, a1, a2, a3);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -345,7 +345,7 @@ BEGIN_NATIVE(ForeignPCall5) {
   word a4 = AsForeignWord(arguments[5]);
   PF5 function = reinterpret_cast<PF5>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   word value = function(a0, a1, a2, a3, a4);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -366,7 +366,7 @@ BEGIN_NATIVE(ForeignPCall6) {
   word a5 = AsForeignWord(arguments[6]);
   PF6 function = reinterpret_cast<PF6>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   word value = function(a0, a1, a2, a3, a4, a5);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));
@@ -478,7 +478,7 @@ BEGIN_NATIVE(ForeignLCallwLw) {
   word a2 = AsForeignWord(arguments[3]);
   LwLw function = reinterpret_cast<LwLw>(address);
   Object* result = process->NewInteger(0);
-  if (result == Failure::retry_after_gc()) return result;
+  if (result->IsRetryAfterGCFailure()) return result;
   int64 value = function(a0, a1, a2);
   if (Smi::IsValid(value)) {
     process->TryDeallocInteger(LargeInteger::cast(result));

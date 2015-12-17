@@ -63,7 +63,7 @@ BEGIN_NATIVE(GC) {
 #ifdef DEBUG
   // Return a retry_after_gc failure to force a process GC. On the retry return
   // null.
-  if (process->TrueThenFalse()) return Failure::retry_after_gc();
+  if (process->TrueThenFalse()) return Failure::retry_after_gc(4);
 #endif
   return process->program()->null_object();
 }
@@ -1031,7 +1031,7 @@ BEGIN_NATIVE(ProcessSpawn) {
   }
 
   Object* dart_process = process->NewInstance(program->process_class(), true);
-  if (dart_process == Failure::retry_after_gc()) return dart_process;
+  if (dart_process->IsRetryAfterGCFailure()) return dart_process;
 
   Process* child =
       SpawnProcessInternal(program, process, entrypoint, closure, argument);
@@ -1065,7 +1065,7 @@ BEGIN_NATIVE(ProcessCurrent) {
   ProcessHandle* handle = process->process_handle();
 
   Object* dart_process = process->NewInstance(program->process_class(), true);
-  if (dart_process == Failure::retry_after_gc()) return dart_process;
+  if (dart_process->IsRetryAfterGCFailure()) return dart_process;
   handle->InitializeDartObject(dart_process);
 
   return dart_process;

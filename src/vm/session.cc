@@ -24,7 +24,7 @@
 
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp) \
   Object* var = (exp);                               \
-  if (var == Failure::retry_after_gc()) {            \
+  if (var->IsRetryAfterGCFailure()) {                \
     program()->CollectGarbage();                     \
     var = (exp);                                     \
     ASSERT(!var->IsFailure());                       \

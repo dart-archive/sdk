@@ -1118,7 +1118,9 @@ void InterpreterGeneratorX86::DoAllocateBoxed() {
   __ movl(Address(ESP, 1 * kWordSize), EBX);
   __ call("HandleAllocateBoxed");
   SwitchToDartStack();
-  __ cmpl(EAX, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ movl(ECX, EAX);
+  __ andl(ECX, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpl(ECX, Immediate(Failure::kTag));
   __ j(EQUAL, &gc_);
   StoreLocal(EAX, 0);
   Dispatch(kAllocateBoxedLength);
@@ -1700,7 +1702,9 @@ void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
   // NOTE: The 4rd argument is already present  ESP + kStackAllocateImmutable
   __ call("HandleAllocate");
   SwitchToDartStack();
-  __ cmpl(EAX, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ movl(ECX, EAX);
+  __ andl(ECX, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpl(ECX, Immediate(Failure::kTag));
   __ j(EQUAL, &gc_);
 
   __ movl(ECX, Address(EBX, Class::kInstanceFormatOffset - HeapObject::kTag));
@@ -2087,7 +2091,9 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
   // just continue running the failure block by dispatching to the
   // next bytecode.
   __ Bind(&failure);
-  __ cmpl(EAX, Immediate(reinterpret_cast<int32>(Failure::retry_after_gc())));
+  __ movl(ECX, EAX);
+  __ andl(ECX, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpl(ECX, Immediate(Failure::kTag));
   __ j(EQUAL, &gc_);
 
   // TODO(kasperl): This should be reworked. We shouldn't be calling

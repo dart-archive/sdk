@@ -32,13 +32,13 @@ Heap::~Heap() {
 
 Object* Heap::Allocate(int size) {
   uword result = space_->Allocate(size);
-  if (result == 0) return Failure::retry_after_gc();
+  if (result == 0) return Failure::retry_after_gc(size);
   return HeapObject::FromAddress(result);
 }
 
 Object* Heap::AllocateNonFatal(int size) {
   uword result = space_->AllocateNonFatal(size);
-  if (result == 0) return Failure::retry_after_gc();
+  if (result == 0) return Failure::retry_after_gc(size);
   return HeapObject::FromAddress(result);
 }
 

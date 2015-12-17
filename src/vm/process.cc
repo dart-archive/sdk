@@ -200,10 +200,10 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   if (new_size > Platform::MaxStackSizeInWords()) return kStackCheckOverflow;
 
   Object* new_stack_object = NewStack(new_size);
-  if (new_stack_object == Failure::retry_after_gc()) {
+  if (new_stack_object->IsRetryAfterGCFailure()) {
     CollectMutableGarbage();
     new_stack_object = NewStack(new_size);
-    if (new_stack_object == Failure::retry_after_gc()) {
+    if (new_stack_object->IsRetryAfterGCFailure()) {
       return kStackCheckOverflow;
     }
   }
@@ -854,7 +854,7 @@ BEGIN_NATIVE(ProcessQueueGetMessage) {
       Class* foreign_memory_class = process->program()->foreign_memory_class();
       ASSERT(foreign_memory_class->NumberOfInstanceFields() == 4);
       Object* object = process->NewInstance(foreign_memory_class);
-      if (object == Failure::retry_after_gc()) return object;
+      if (object->IsRetryAfterGCFailure()) return object;
       Instance* foreign = Instance::cast(object);
       foreign->SetConsecutiveSmis(0, queue->value());
       int size = queue->size();
@@ -869,7 +869,7 @@ BEGIN_NATIVE(ProcessQueueGetMessage) {
 
     case Message::LARGE_INTEGER: {
       result = process->NewInteger(queue->value());
-      if (result == Failure::retry_after_gc()) return result;
+      if (result->IsRetryAfterGCFailure()) return result;
       break;
     }
 
@@ -890,7 +890,7 @@ BEGIN_NATIVE(ProcessQueueGetMessage) {
       Signal* signal = queue->ProcessDeathSignal();
       Object* process_death =
           process->NewInstance(program->process_death_class(), true);
-      if (process_death == Failure::retry_after_gc()) return process_death;
+      if (process_death->IsRetryAfterGCFailure()) return process_death;
       Instance::cast(process_death)
           ->SetInstanceField(1, Smi::FromWord(signal->kind()));
       // Return without advancing the message queue.
@@ -917,7 +917,7 @@ BEGIN_NATIVE(ProcessQueueSetupProcessDeath) {
 
   Program* program = process->program();
   Object* dart_process = process->NewInstance(program->process_class(), true);
-  if (dart_process == Failure::retry_after_gc()) return dart_process;
+  if (dart_process->IsRetryAfterGCFailure()) return dart_process;
 
   Signal* signal = queue->ProcessDeathSignal();
   ProcessHandle* handle = signal->handle();
