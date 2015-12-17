@@ -108,6 +108,8 @@ def CopyLibs(bundle_dir, build_dir):
   copytree('third_party/dart/sdk/lib', dart_lib)
   CopyPlatformDescriptor(bundle_dir, 'fletch_mobile.platform',
                          '../third_party/dart/sdk/lib', '../dart_lib')
+  CopyPlatformDescriptor(bundle_dir, 'fletch_embedded.platform',
+                         '../third_party/dart/sdk/lib', '../dart_lib')
 
 def CopyInternalPackages(bundle_dir, build_dir):
   internal_pkg = join(bundle_dir, 'internal', 'pkg')

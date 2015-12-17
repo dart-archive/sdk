@@ -67,7 +67,6 @@ const FLETCH_PATCHES = const <String, String>{
   "_internal": "internal/internal_patch.dart",
   "collection": "collection/collection_patch.dart",
   "convert": "convert/convert_patch.dart",
-  "core": "core/core_patch.dart",
   "math": "math/math_patch.dart",
   "async": "async/async_patch.dart",
   "typed_data": "typed_data/typed_data_patch.dart",
@@ -118,7 +117,15 @@ class FletchCompilerImplementation extends apiimpl.CompilerImpl {
     return internalContext;
   }
 
-  String fletchPatchLibraryFor(String name) => FLETCH_PATCHES[name];
+  String fletchPatchLibraryFor(String name) {
+    // TODO(sigurdm): Try to remove this special casing.
+    if (name == "core") {
+      return platformConfigUri.path.endsWith("fletch_embedded.platform")
+          ? "core/embedded_core_patch.dart"
+          : "core/core_patch.dart";
+    }
+    return FLETCH_PATCHES[name];
+  }
 
   Uri resolvePatchUri(String dartLibraryPath) {
     String path = fletchPatchLibraryFor(dartLibraryPath);
