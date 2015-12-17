@@ -89,7 +89,7 @@ class SelectorRow {
     return end_ - begin_;
   }
 
-  void FillTable(Program* program, Vector<Class*>* classes, Array* table);
+  void FillTable(Program* program, Array* table);
 
   // The bottom up construction order guarantees that more specific methods
   // always get defined before less specific ones.

@@ -866,7 +866,7 @@ bool Session::WriteSnapshot(const char* path,
   program()->set_main_arity(Smi::cast(Pop())->value());
   // Make sure that the program is in the compact form before
   // snapshotting.
-  if (!program()->is_optimized()) {
+  if (!program()->is_compact()) {
     ProgramFolder program_folder(program());
     program_folder.Fold();
   }
@@ -997,11 +997,11 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
     Opcode opcode = static_cast<Opcode>(*bcp);
 
     switch (opcode) {
-      case kInvokeStatic:
-      case kInvokeFactory:
-      case kLoadConst:
-      case kAllocate:
-      case kAllocateImmutable: {
+      case kLoadConstUnfold:
+      case kInvokeStaticUnfold:
+      case kInvokeFactoryUnfold:
+      case kAllocateUnfold:
+      case kAllocateImmutableUnfold: {
         int literal_index = Utils::ReadInt32(bcp + 1);
         Object** literal_address = function->literal_address_for(literal_index);
         int offset = reinterpret_cast<uint8_t*>(literal_address) - bcp;
@@ -1010,6 +1010,14 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
       }
       case kMethodEnd:
         return;
+      case kLoadConst:
+      case kInvokeStatic:
+      case kInvokeFactory:
+      case kAllocate:
+      case kAllocateImmutable:
+        // We should only be creating unfolded functions via a
+        // session.
+        UNREACHABLE();
       default:
         ASSERT(opcode < Bytecode::kNumBytecodes);
         break;
@@ -1022,7 +1030,7 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
 }
 
 void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
-  ASSERT(!program()->is_optimized());
+  ASSERT(!program()->is_compact());
 
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
       result, program()->CreateFunction(arity, bytecodes, literals));
@@ -1158,7 +1166,7 @@ void Session::PushConstantMap(int length) {
 }
 
 void Session::PrepareForChanges() {
-  if (program()->is_optimized()) {
+  if (program()->is_compact()) {
     Scheduler* scheduler = program()->scheduler();
     if (scheduler != NULL) {
       scheduler->StopProgram(program());
@@ -1167,16 +1175,6 @@ void Session::PrepareForChanges() {
     {
       ProgramFolder program_folder(program());
       program_folder.Unfold();
-      // Changes could include instance rewriting. Make sure to make the
-      // shared heap consistent and clear the TableByObject mappings as
-      // objects are moved during instance rewriting.
-      program()->shared_heap()->MergeParts();
-      for (int i = 0; i < maps_.length(); ++i) {
-        ObjectMap* map = maps_[i];
-        if (map != NULL) {
-          map->ClearTableByObject();
-        }
-      }
     }
     if (scheduler != NULL) {
       scheduler->ResumeGcThread();
@@ -1257,7 +1255,7 @@ bool Session::CommitChanges(int count) {
     scheduler->PauseGcThread();
   }
 
-  ASSERT(!program()->is_optimized());
+  ASSERT(!program()->is_compact());
 
   if (count != PostponedChange::number_of_changes()) {
     if (!has_program_update_error_) {

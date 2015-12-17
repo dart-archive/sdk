@@ -599,6 +599,40 @@ HeapObject* HeapObject::CloneInToSpace(Space* to) {
   return target;
 }
 
+Function* Function::UnfoldInToSpace(Space* to, int number_of_literals) {
+  ASSERT(forwarding_address() == NULL);
+  int current_object_size = Size();
+  int new_object_size = current_object_size + number_of_literals * kPointerSize;
+  HeapObject* target =
+      HeapObject::FromAddress(to->AllocateLinearly(new_object_size));
+  // Copy the content of source to target.
+  CopyBlock(reinterpret_cast<Object**>(target->address()),
+            reinterpret_cast<Object**>(address()), current_object_size);
+  Function* result = Function::cast(target);
+  result->set_literals_size(number_of_literals);
+  ASSERT(result->Size() == Size() + number_of_literals * kPointerSize);
+  // Set the forwarding address.
+  set_forwarding_address(target);
+  return result;
+}
+
+Function* Function::FoldInToSpace(Space* to) {
+  ASSERT(forwarding_address() == NULL);
+  int current_object_size = Size();
+  int new_object_size = current_object_size - literals_size() * kPointerSize;
+  HeapObject* target =
+      HeapObject::FromAddress(to->AllocateLinearly(new_object_size));
+  // Copy the content of source to target.
+  CopyBlock(reinterpret_cast<Object**>(target->address()),
+            reinterpret_cast<Object**>(address()), new_object_size);
+  // Update literals size.
+  Function* result = Function::cast(target);
+  result->set_literals_size(0);
+  // Set the forwarding address.
+  set_forwarding_address(target);
+  return result;
+}
+
 // Helper class for printing HeapObjects
 class PrintVisitor : public PointerVisitor {
  public:

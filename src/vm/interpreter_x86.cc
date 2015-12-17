@@ -110,6 +110,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   virtual void DoLoadFieldWide();
 
   virtual void DoLoadConst();
+  virtual void DoLoadConstUnfold();
 
   virtual void DoStoreLocal();
   virtual void DoStoreBoxed();
@@ -132,7 +133,9 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   virtual void DoInvokeTestNoSuchMethod();
 
   virtual void DoInvokeStatic();
+  virtual void DoInvokeStaticUnfold();
   virtual void DoInvokeFactory();
+  virtual void DoInvokeFactoryUnfold();
 
   virtual void DoInvokeNative();
   virtual void DoInvokeNativeYield();
@@ -190,7 +193,9 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   virtual void DoPopAndBranchBackWide();
 
   virtual void DoAllocate();
+  virtual void DoAllocateUnfold();
   virtual void DoAllocateImmutable();
+  virtual void DoAllocateImmutableUnfold();
   virtual void DoAllocateBoxed();
 
   virtual void DoNegate();
@@ -255,7 +260,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
 
   void Return(bool is_return_null);
 
-  void Allocate(bool immutable);
+  void Allocate(bool unfolded, bool immutable);
 
   // This function
   //   * changes the first three stack slots
@@ -265,7 +270,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
 
-  void InvokeStatic();
+  void InvokeStatic(bool unfolded);
 
   void InvokeEq(const char* fallback);
   void InvokeLt(const char* fallback);
@@ -572,9 +577,19 @@ void InterpreterGeneratorX86::DoLoadFieldWide() {
 
 void InterpreterGeneratorX86::DoLoadConst() {
   __ movl(EAX, Address(ESI, 1));
-  __ movl(EAX, Address(ESI, EAX, TIMES_1));
+  LoadProgram(EBX);
+  __ movl(EBX, Address(EBX, Program::kConstantsOffset));
+  __ movl(EAX,
+          Address(EBX, EAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag));
   Push(EAX);
   Dispatch(kLoadConstLength);
+}
+
+void InterpreterGeneratorX86::DoLoadConstUnfold() {
+  __ movl(EAX, Address(ESI, 1));
+  __ movl(EAX, Address(ESI, EAX, TIMES_1));
+  Push(EAX);
+  Dispatch(kLoadConstUnfoldLength);
 }
 
 void InterpreterGeneratorX86::DoStoreLocal() {
@@ -718,9 +733,13 @@ void InterpreterGeneratorX86::DoInvokeTestUnfold() { InvokeMethodUnfold(true); }
 
 void InterpreterGeneratorX86::DoInvokeTest() { InvokeMethod(true); }
 
-void InterpreterGeneratorX86::DoInvokeStatic() { InvokeStatic(); }
+void InterpreterGeneratorX86::DoInvokeStatic() { InvokeStatic(false); }
 
-void InterpreterGeneratorX86::DoInvokeFactory() { InvokeStatic(); }
+void InterpreterGeneratorX86::DoInvokeStaticUnfold() { InvokeStatic(true); }
+
+void InterpreterGeneratorX86::DoInvokeFactory() { InvokeStatic(false); }
+
+void InterpreterGeneratorX86::DoInvokeFactoryUnfold() { InvokeStatic(true); }
 
 void InterpreterGeneratorX86::DoInvokeNative() { InvokeNative(false); }
 
@@ -1081,9 +1100,15 @@ void InterpreterGeneratorX86::DoPopAndBranchBackWide() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoAllocate() { Allocate(false); }
+void InterpreterGeneratorX86::DoAllocate() { Allocate(false, false); }
 
-void InterpreterGeneratorX86::DoAllocateImmutable() { Allocate(true); }
+void InterpreterGeneratorX86::DoAllocateUnfold() { Allocate(true, false); }
+
+void InterpreterGeneratorX86::DoAllocateImmutable() { Allocate(false, true); }
+
+void InterpreterGeneratorX86::DoAllocateImmutableUnfold() {
+  Allocate(true, true);
+}
 
 void InterpreterGeneratorX86::DoAllocateBoxed() {
   LoadLocal(EBX, 0);
@@ -1567,10 +1592,18 @@ void InterpreterGeneratorX86::Return(bool is_return_null) {
   Dispatch(0);
 }
 
-void InterpreterGeneratorX86::Allocate(bool immutable) {
+void InterpreterGeneratorX86::Allocate(bool unfolded, bool immutable) {
   // Load the class into register ebx.
-  __ movl(EAX, Address(ESI, 1));
-  __ movl(EBX, Address(ESI, EAX, TIMES_1));
+  if (unfolded) {
+    __ movl(EAX, Address(ESI, 1));
+    __ movl(EBX, Address(ESI, EAX, TIMES_1));
+  } else {
+    __ movl(EAX, Address(ESI, 1));
+    LoadProgram(EBX);
+    __ movl(EBX, Address(EBX, Program::kClassesOffset));
+    __ movl(EBX, Address(EBX, EAX, TIMES_WORD_SIZE,
+                         Array::kSize - HeapObject::kTag));
+  }
 
   const int kStackAllocateImmutable = 2 * kWordSize;
   const int kStackImmutableMembers = 3 * kWordSize;
@@ -1921,9 +1954,17 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
   }
 }
 
-void InterpreterGeneratorX86::InvokeStatic() {
-  __ movl(EAX, Address(ESI, 1));
-  __ movl(EAX, Address(ESI, EAX, TIMES_1));
+void InterpreterGeneratorX86::InvokeStatic(bool unfolded) {
+  if (unfolded) {
+    __ movl(EAX, Address(ESI, 1));
+    __ movl(EAX, Address(ESI, EAX, TIMES_1));
+  } else {
+    __ movl(EAX, Address(ESI, 1));
+    LoadProgram(EBX);
+    __ movl(EBX, Address(EBX, Program::kStaticMethodsOffset));
+    __ movl(EAX, Address(EBX, EAX, TIMES_WORD_SIZE,
+                         Array::kSize - HeapObject::kTag));
+  }
 
   // Compute and push the return bcp on the stack.
   __ addl(ESI, Immediate(kInvokeStaticLength));

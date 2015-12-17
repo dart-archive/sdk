@@ -377,7 +377,7 @@ class Process {
 
 inline LookupCache::Entry* Process::LookupEntry(Object* receiver,
                                                 int selector) {
-  ASSERT(!program()->is_optimized());
+  ASSERT(!program()->is_compact());
 
   Class* clazz = receiver->IsSmi() ? program()->smi_class()
                                    : HeapObject::cast(receiver)->get_class();

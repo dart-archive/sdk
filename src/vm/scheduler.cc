@@ -356,9 +356,9 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
     Class* nsm_class = program->no_such_method_error_class();
     Object* exception = process->exception();
     bool using_snapshots = program->was_loaded_from_snapshot();
-    bool is_optimized = program->is_optimized();
+    bool is_compact = program->is_compact();
 
-    if (using_snapshots && is_optimized && exception->IsInstance() &&
+    if (using_snapshots && is_compact && exception->IsInstance() &&
         Instance::cast(exception)->get_class() == nsm_class) {
       Instance* nsm_exception = Instance::cast(exception);
       Object* klass_obj = nsm_exception->GetInstanceField(1);
@@ -378,7 +378,7 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
       exception->Print();
     }
 
-    if (using_snapshots && is_optimized) {
+    if (using_snapshots && is_compact) {
       Coroutine* coroutine = process->coroutine();
       while (true) {
         Stack* stack = coroutine->stack();

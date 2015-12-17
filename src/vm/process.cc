@@ -573,7 +573,7 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
 
 void Process::TakeLookupCache() {
   ASSERT(primary_lookup_cache_ == NULL);
-  if (program()->is_optimized()) return;
+  if (program()->is_compact()) return;
   ThreadState* state = thread_state_;
   ASSERT(state != NULL);
   LookupCache* cache = state->EnsureCache();
@@ -638,6 +638,13 @@ int Process::PrepareStepOver() {
     }
     case Opcode::kInvokeStatic:
     case Opcode::kInvokeFactory: {
+      int method = Utils::ReadInt32(current_bcp + 1);
+      Function* function = program()->static_method_at(method);
+      stack_diff = 1 - function->arity();
+      break;
+    }
+    case Opcode::kInvokeStaticUnfold:
+    case Opcode::kInvokeFactoryUnfold: {
       Function* function =
           Function::cast(Function::ConstantForBytecode(current_bcp));
       stack_diff = 1 - function->arity();
@@ -799,7 +806,7 @@ void Process::UpdateStackLimit() {
 
 LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
                                              Class* clazz, int selector) {
-  ASSERT(!program()->is_optimized());
+  ASSERT(!program()->is_compact());
   ThreadState* state = thread_state_;
   ASSERT(state != NULL);
   LookupCache* cache = state->cache();

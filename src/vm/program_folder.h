@@ -39,6 +39,14 @@ class ProgramFolder {
   static void FoldProgramByDefault(Program* program);
 
  private:
+  friend class FoldingVisitor;
+  friend class UnfoldingVisitor;
+
+  void FoldFunction(Function* old_function, Function* new_function,
+                    ProgramTableRewriter* rewriter);
+
+  Object* UnfoldFunction(Function* function, Space* to, void* map);
+
   Program* const program_;
 };
 

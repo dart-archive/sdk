@@ -111,6 +111,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   virtual void DoLoadFieldWide();
 
   virtual void DoLoadConst();
+  virtual void DoLoadConstUnfold();
 
   virtual void DoStoreLocal();
   virtual void DoStoreBoxed();
@@ -133,7 +134,9 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   virtual void DoInvokeTestNoSuchMethod();
 
   virtual void DoInvokeStatic();
+  virtual void DoInvokeStaticUnfold();
   virtual void DoInvokeFactory();
+  virtual void DoInvokeFactoryUnfold();
 
   virtual void DoInvokeNative();
   virtual void DoInvokeNativeYield();
@@ -191,7 +194,9 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   virtual void DoPopAndBranchBackWide();
 
   virtual void DoAllocate();
+  virtual void DoAllocateUnfold();
   virtual void DoAllocateImmutable();
+  virtual void DoAllocateImmutableUnfold();
   virtual void DoAllocateBoxed();
 
   virtual void DoNegate();
@@ -247,7 +252,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   void Return(bool is_return_null);
 
-  void Allocate(bool immutable);
+  void Allocate(bool unfolded, bool immutable);
 
   // This function changes caller-saved registers.
   void AddToStoreBufferSlow(Register object, Register value);
@@ -276,7 +281,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   void InvokeMethod(bool test);
 
   void InvokeNative(bool yield);
-  void InvokeStatic();
+  void InvokeStatic(bool unfolded);
 
   void ConditionalStore(Register reg_if_eq, Register reg_if_ne,
                         const Address& address);
@@ -565,9 +570,19 @@ void InterpreterGeneratorARM::DoLoadFieldWide() {
 
 void InterpreterGeneratorARM::DoLoadConst() {
   __ ldr(R0, Address(R5, 1));
+  __ ldr(R1, Address(R4, Process::kProgramOffset));
+  __ ldr(R2, Address(R1, Program::kConstantsOffset));
+  __ add(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
+  __ ldr(R3, Address(R2, Operand(R0, TIMES_WORD_SIZE)));
+  Push(R3);
+  Dispatch(kLoadConstLength);
+}
+
+void InterpreterGeneratorARM::DoLoadConstUnfold() {
+  __ ldr(R0, Address(R5, 1));
   __ ldr(R2, Address(R5, Operand(R0, TIMES_1)));
   Push(R2);
-  Dispatch(kLoadConstLength);
+  Dispatch(kLoadConstUnfoldLength);
 }
 
 void InterpreterGeneratorARM::DoStoreLocal() {
@@ -703,9 +718,13 @@ void InterpreterGeneratorARM::DoInvokeTestUnfold() { InvokeMethodUnfold(true); }
 
 void InterpreterGeneratorARM::DoInvokeTest() { InvokeMethod(true); }
 
-void InterpreterGeneratorARM::DoInvokeStatic() { InvokeStatic(); }
+void InterpreterGeneratorARM::DoInvokeStatic() { InvokeStatic(false); }
 
-void InterpreterGeneratorARM::DoInvokeFactory() { InvokeStatic(); }
+void InterpreterGeneratorARM::DoInvokeStaticUnfold() { InvokeStatic(true); }
+
+void InterpreterGeneratorARM::DoInvokeFactory() { InvokeStatic(false); }
+
+void InterpreterGeneratorARM::DoInvokeFactoryUnfold() { InvokeStatic(true); }
 
 void InterpreterGeneratorARM::DoInvokeNative() { InvokeNative(false); }
 
@@ -1045,9 +1064,15 @@ void InterpreterGeneratorARM::DoPopAndBranchBackWide() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::DoAllocate() { Allocate(false); }
+void InterpreterGeneratorARM::DoAllocate() { Allocate(false, false); }
 
-void InterpreterGeneratorARM::DoAllocateImmutable() { Allocate(true); }
+void InterpreterGeneratorARM::DoAllocateUnfold() { Allocate(true, false); }
+
+void InterpreterGeneratorARM::DoAllocateImmutable() { Allocate(false, true); }
+
+void InterpreterGeneratorARM::DoAllocateImmutableUnfold() {
+  Allocate(true, true);
+}
 
 void InterpreterGeneratorARM::DoAllocateBoxed() {
   LoadLocal(R1, 0);
@@ -1729,9 +1754,17 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   Dispatch(kInvokeNativeLength);
 }
 
-void InterpreterGeneratorARM::InvokeStatic() {
-  __ ldr(R1, Address(R5, 1));
-  __ ldr(R0, Address(R5, Operand(R1, TIMES_1)));
+void InterpreterGeneratorARM::InvokeStatic(bool unfolded) {
+  if (unfolded) {
+    __ ldr(R1, Address(R5, 1));
+    __ ldr(R0, Address(R5, Operand(R1, TIMES_1)));
+  } else {
+    __ ldr(R1, Address(R5, 1));
+    __ ldr(R2, Address(R4, Process::kProgramOffset));
+    __ ldr(R3, Address(R2, Program::kStaticMethodsOffset));
+    __ add(R3, R3, Immediate(Array::kSize - HeapObject::kTag));
+    __ ldr(R0, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
+  }
 
   // Compute and push the return address on the stack.
   __ add(R1, R5, Immediate(kInvokeStaticLength));
@@ -1743,9 +1776,18 @@ void InterpreterGeneratorARM::InvokeStatic() {
   Dispatch(0);
 }
 
-void InterpreterGeneratorARM::Allocate(bool immutable) {
-  __ ldr(R0, Address(R5, 1));
-  __ ldr(R7, Address(R5, Operand(R0, TIMES_1)));
+void InterpreterGeneratorARM::Allocate(bool unfolded, bool immutable) {
+  // Load the class into register r7.
+  if (unfolded) {
+    __ ldr(R0, Address(R5, 1));
+    __ ldr(R7, Address(R5, Operand(R0, TIMES_1)));
+  } else {
+    __ ldr(R0, Address(R5, 1));
+    __ ldr(R1, Address(R4, Process::kProgramOffset));
+    __ ldr(R1, Address(R1, Program::kClassesOffset));
+    __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
+    __ ldr(R7, Address(R1, Operand(R0, TIMES_WORD_SIZE)));
+  }
 
   const Register kRegisterAllocateImmutable = R9;
   const Register kRegisterImmutableMembers = R12;

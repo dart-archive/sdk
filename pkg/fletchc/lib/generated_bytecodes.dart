@@ -54,6 +54,7 @@ enum Opcode {
   InvokeFactory,
   Allocate,
   AllocateImmutable,
+  LoadConst,
   InvokeNoSuchMethod,
   InvokeTestNoSuchMethod,
   InvokeNative,
@@ -104,7 +105,11 @@ enum Opcode {
   InvokeBitXorUnfold,
   InvokeBitShrUnfold,
   InvokeBitShlUnfold,
-  LoadConst,
+  InvokeStaticUnfold,
+  InvokeFactoryUnfold,
+  AllocateUnfold,
+  AllocateImmutableUnfold,
+  LoadConstUnfold,
   MethodEnd,
 }
 
@@ -1906,6 +1911,48 @@ class AllocateImmutable extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     AllocateImmutable rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class LoadConst extends Bytecode {
+  final int uint32Argument0;
+  const LoadConst(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.LoadConst;
+
+  String get name => 'LoadConst';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'load const %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load const ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadConst rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }
@@ -3887,14 +3934,182 @@ class InvokeBitShlUnfold extends Bytecode {
   }
 }
 
-class LoadConst extends Bytecode {
+class InvokeStaticUnfold extends Bytecode {
   final int uint32Argument0;
-  const LoadConst(this.uint32Argument0)
+  const InvokeStaticUnfold(this.uint32Argument0)
       : super();
 
-  Opcode get opcode => Opcode.LoadConst;
+  Opcode get opcode => Opcode.InvokeStaticUnfold;
 
-  String get name => 'LoadConst';
+  String get name => 'InvokeStaticUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke unfold static %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold static ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeStaticUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class InvokeFactoryUnfold extends Bytecode {
+  final int uint32Argument0;
+  const InvokeFactoryUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeFactoryUnfold;
+
+  String get name => 'InvokeFactoryUnfold';
+
+  bool get isBranching => true;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'invoke unfold factory %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke unfold factory ${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeFactoryUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class AllocateUnfold extends Bytecode {
+  final int uint32Argument0;
+  const AllocateUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.AllocateUnfold;
+
+  String get name => 'AllocateUnfold';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'allocate @%d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'allocate @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    AllocateUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class AllocateImmutableUnfold extends Bytecode {
+  final int uint32Argument0;
+  const AllocateImmutableUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.AllocateImmutableUnfold;
+
+  String get name => 'AllocateImmutableUnfold';
+
+  bool get isBranching => false;
+
+  String get format => 'I';
+
+  int get size => 5;
+
+  int get stackPointerDifference => VAR_DIFF;
+
+  String get formatString => 'allocateim @%d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint32(uint32Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'allocateim @${uint32Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    AllocateImmutableUnfold rhs = other;
+    if (uint32Argument0 != rhs.uint32Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint32Argument0;
+    return value;
+  }
+}
+
+class LoadConstUnfold extends Bytecode {
+  final int uint32Argument0;
+  const LoadConstUnfold(this.uint32Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.LoadConstUnfold;
+
+  String get name => 'LoadConstUnfold';
 
   bool get isBranching => false;
 
@@ -3917,7 +4132,7 @@ class LoadConst extends Bytecode {
 
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
-    LoadConst rhs = other;
+    LoadConstUnfold rhs = other;
     if (uint32Argument0 != rhs.uint32Argument0) return false;
     return true;
   }

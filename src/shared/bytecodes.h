@@ -36,7 +36,10 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   INVOKE(V, BitOr, -1, "bit or ", suffix, type)        \
   INVOKE(V, BitXor, -1, "bit xor ", suffix, type)      \
   INVOKE(V, BitShr, -1, "bit shr ", suffix, type)      \
-  INVOKE(V, BitShl, -1, "bit shl ", suffix, type)
+  INVOKE(V, BitShl, -1, "bit shl ", suffix, type)      \
+                                                       \
+  INVOKE(V, Static, kVarDiff, "static ", suffix, type) \
+  INVOKE(V, Factory, kVarDiff, "factory ", suffix, type)
 
 #define BYTECODES_DO(V)                                                       \
   /* Name             Branching Format Size   SP-diff  format-string   */     \
@@ -70,11 +73,9 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(LoadLiteralWide, false, "I", 5, 1, "load literal %d")                     \
                                                                               \
   INVOKES_DO(V, , "")                                                         \
-                                                                              \
-  INVOKE(V, Static, kVarDiff, "static ", , "")                                \
-  INVOKE(V, Factory, kVarDiff, "factory ", , "")                              \
   V(Allocate, false, "I", 5, kVarDiff, "allocate %d")                         \
   V(AllocateImmutable, false, "I", 5, kVarDiff, "allocateim %d")              \
+  V(LoadConst, false, "I", 5, 1, "load const %d")                             \
                                                                               \
   V(InvokeNoSuchMethod, true, "I", 5, kVarDiff, "invoke no such method %d")   \
   V(InvokeTestNoSuchMethod, true, "I", 5, 0, "invoke test no such method %d") \
@@ -124,7 +125,9 @@ const int kLoadLiteralWideLimit = 0x3fffffff;
   V(ExitNoSuchMethod, true, "", 1, -1, "exit noSuchMethod")                   \
                                                                               \
   INVOKES_DO(V, Unfold, "unfold ")                                            \
-  V(LoadConst, false, "I", 5, 1, "load const @%d")                            \
+  V(AllocateUnfold, false, "I", 5, kVarDiff, "allocate @%d")                  \
+  V(AllocateImmutableUnfold, false, "I", 5, kVarDiff, "allocateim @%d")       \
+  V(LoadConstUnfold, false, "I", 5, 1, "load const @%d")                      \
                                                                               \
   V(MethodEnd, false, "I", 5, 0, "method end %d")
 
@@ -166,7 +169,6 @@ class Bytecode {
   // Check for invoke variants.
   static bool IsInvokeUnfold(Opcode opcode);
   static bool IsInvoke(Opcode opcode);
-  static bool IsStaticInvoke(Opcode opcode);
 
   // Compute the previous bytecode. Takes time linear in the number of
   // bytecodes in the method.

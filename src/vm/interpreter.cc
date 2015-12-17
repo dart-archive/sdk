@@ -347,8 +347,14 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(LoadConst);
-  Push(ReadConstant());
+  int index = ReadInt32(1);
+  Push(program()->constant_at(index));
   Advance(kLoadConstLength);
+  OPCODE_END();
+
+  OPCODE_BEGIN(LoadConstUnfold);
+  Push(ReadConstant());
+  Advance(kLoadConstUnfoldLength);
   OPCODE_END();
 
   OPCODE_BEGIN(StoreLocal);
@@ -497,7 +503,8 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeStatic);
-  Function* target = Function::cast(ReadConstant());
+  int index = ReadInt32(1);
+  Function* target = program()->static_method_at(index);
   PushFrameDescriptor(kInvokeStaticLength);
   Goto(target->bytecode_address_for(0));
   STACK_OVERFLOW_CHECK(0);
@@ -505,6 +512,17 @@ Interpreter::InterruptKind Engine::Interpret(
 
   OPCODE_BEGIN(InvokeFactory);
   DISPATCH_TO(InvokeStatic);
+  OPCODE_END();
+
+  OPCODE_BEGIN(InvokeStaticUnfold);
+  Function* target = Function::cast(ReadConstant());
+  PushFrameDescriptor(kInvokeStaticLength);
+  Goto(target->bytecode_address_for(0));
+  STACK_OVERFLOW_CHECK(0);
+  OPCODE_END();
+
+  OPCODE_BEGIN(InvokeFactoryUnfold);
+  DISPATCH_TO(InvokeStaticUnfold);
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeNative);
@@ -689,6 +707,27 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(Allocate);
+  int index = ReadInt32(1);
+  Class* klass = program()->class_at(index);
+  ASSERT(klass->id() == index);
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
+      result, process()->NewInstance(klass));
+  Instance* instance = Instance::cast(result);
+  int fields = klass->NumberOfInstanceFields();
+  bool in_store_buffer = false;
+  for (int i = fields - 1; i >= 0; --i) {
+    Object* value = Pop();
+    if (!in_store_buffer && value->IsImmutable() && value->IsHeapObject()) {
+      in_store_buffer = true;
+      process()->store_buffer()->Insert(instance);
+    }
+    instance->SetInstanceField(i, value);
+  }
+  Push(instance);
+  Advance(kAllocateLength);
+  OPCODE_END();
+
+  OPCODE_BEGIN(AllocateUnfold);
   Class* klass = Class::cast(ReadConstant());
   GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
       result, process()->NewInstance(klass));
@@ -708,7 +747,9 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(AllocateImmutable);
-  Class* klass = Class::cast(ReadConstant());
+  int index = ReadInt32(1);
+  Class* klass = program()->class_at(index);
+  ASSERT(klass->id() == index);
   int fields = klass->NumberOfInstanceFields();
   bool immutable = true;
   bool has_immutable_pointers = false;
@@ -734,6 +775,35 @@ Interpreter::InterruptKind Engine::Interpret(
   }
 
   Advance(kAllocateImmutableLength);
+  OPCODE_END();
+
+  OPCODE_BEGIN(AllocateImmutableUnfold);
+  Class* klass = Class::cast(ReadConstant());
+  int fields = klass->NumberOfInstanceFields();
+  bool immutable = true;
+  bool has_immutable_pointers = false;
+  for (int i = 0; i < fields; i++) {
+    Object* local = Local(i);
+    if (!local->IsImmutable()) {
+      immutable = false;
+    } else if (local->IsHeapObject()) {
+      has_immutable_pointers = true;
+    }
+  }
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
+      result, process()->NewInstance(klass, immutable));
+  Instance* instance = Instance::cast(result);
+  for (int i = fields - 1; i >= 0; --i) {
+    Object* value = Pop();
+    instance->SetInstanceField(i, value);
+  }
+  Push(instance);
+
+  if (!immutable && has_immutable_pointers) {
+    process()->store_buffer()->Insert(instance);
+  }
+
+  Advance(kAllocateImmutableUnfoldLength);
   OPCODE_END();
 
   OPCODE_BEGIN(AllocateBoxed);
