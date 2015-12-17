@@ -8,7 +8,6 @@
 Buildbot steps for fletch testing
 """
 
-import datetime
 import glob
 import os
 import re
@@ -24,7 +23,7 @@ import bot
 import bot_utils
 import fletch_namer
 
-from os.path import dirname, join
+from os.path import dirname
 
 utils = bot_utils.GetUtils()
 
@@ -32,8 +31,15 @@ DEBUG_LOG=".debug.log"
 
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
-FLETCH_REGEXP = (r'fletch-(linux|mac|windows|lk)'
-                 r'(-(debug|release)(-asan)?-(x86|arm|x64|ia32))?(-sdk)?')
+FLETCH_REGEXP = (r'fletch-'
+                 r'(?P<system>linux|mac|windows|lk)'
+                 r'(?P<partial_configuration>'
+                   r'(?P<mode>debug|release)'
+                   r'(?P<asan>-asan)?'
+                   r'(?P<embedded_libs>-embedded-libs)?'
+                   r'-(?P<architecture>x86|arm|x64|ia32)'
+                 r')?'
+                 r'(?P<sdk>-sdk)?')
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
 TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 
@@ -87,7 +93,7 @@ def Main():
     with utils.ChangedWorkingDirectory(FLETCH_PATH):
 
       if fletch_match:
-        system = fletch_match.group(1)
+        system = fletch_match.group('system')
 
         if system == 'lk':
           StepsLK(debug_log)
@@ -96,26 +102,28 @@ def Main():
         modes = ['debug', 'release']
         archs = ['ia32', 'x64']
         asans = [False]
+        embedded_libs = [False]
 
         # Split configurations?
-        partial_configuration = fletch_match.group(2)
+        partial_configuration =\
+          fletch_match.group('partial_configuration') != None
         if partial_configuration:
-          mode = fletch_match.group(3)
-          asan = fletch_match.group(4)
-          architecture_match = fletch_match.group(5)
+          architecture_match = fletch_match.group('architecture')
           archs = {
               'x86' : ['ia32', 'x64'],
               'x64' : ['x64'],
               'ia32' : ['ia32'],
           }[architecture_match]
 
-          modes = [mode]
-          asans = [bool(asan)]
-        sdk_build = fletch_match.group(6)
+          modes = [fletch_match.group('mode')]
+          asans = [bool(fletch_match.group('asan'))]
+          embedded_libs =[bool(fletch_match.group('embedded_libs'))]
+
+        sdk_build = fletch_match.group('sdk')
         if sdk_build:
-          StepsSDK(debug_log, system, modes, archs)
+          StepsSDK(debug_log, system, modes, archs, embedded_libs)
         else:
-          StepsNormal(debug_log, system, modes, archs, asans)
+          StepsNormal(debug_log, system, modes, archs, asans, embedded_libs)
       elif cross_match:
         system = cross_match.group(1)
         arch = cross_match.group(2)
@@ -135,10 +143,16 @@ def Main():
 
 #### Buildbot steps
 
-def StepsSDK(debug_log, system, modes, archs):
+def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   no_clang = system == 'linux'
-  configurations = GetBuildConfigurations(system, modes, archs, [False],
-                                          no_clang=no_clang)
+  configurations = GetBuildConfigurations(
+    system=system,
+    modes=modes,
+    archs=archs,
+    asans=[False],
+    no_clang=no_clang,
+    embedded_libs=embedded_libs,
+    use_sdks=[True])
   bot.Clobber(force=True)
   StepGyp()
 
@@ -158,7 +172,7 @@ def StepsSDK(debug_log, system, modes, archs):
      # We currently only build documentation on linux.
      StepsGetDocs()
   for configuration in configurations:
-    StepBuild(configuration['build_conf'], configuration['build_dir']);
+    StepBuild(configuration['build_conf'], configuration['build_dir'])
     StepsBundleSDK(configuration['build_dir'], system)
     StepsArchiveSDK(configuration['build_dir'], system, configuration['mode'],
                     configuration['arch'])
@@ -174,23 +188,15 @@ def StepsTestSDK(debug_log, configuration):
     shutil.rmtree(sdk_dir)
   Unzip(sdk_zip)
   build_conf = configuration['build_conf']
+
   def run():
-    StepTest(
-      build_conf,
-      configuration['mode'],
-      configuration['arch'],
-      clang=configuration['clang'],
-      asan=configuration['asan'],
-      snapshot_run=False,
-      debug_log=debug_log,
-      configuration=configuration,
-      use_sdk=True)
+    StepTest(configuration=configuration,
+        snapshot_run=False,
+        debug_log=debug_log)
 
   RunWithCoreDumpArchiving(run, build_dir, build_conf)
 
-
 def StepsSanityChecking(build_dir):
-  sdk_dir = os.path.join(build_dir, 'fletch-sdk')
   version = utils.GetSemanticSDKVersion()
   fletch = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
   # TODO(ricow): we should test this as a normal test, see issue 232.
@@ -357,15 +363,21 @@ def StepsArchiveSDK(build_dir, system, mode, arch):
     docs_http_path = '%s/%s' % (GetDownloadLink(docs_gs_path), 'index.html')
     print '@@@STEP_LINK@docs@%s@@@' % docs_http_path
 
-def StepsNormal(debug_log, system, modes, archs, asans):
-  configurations = GetBuildConfigurations(system, modes, archs, asans)
+def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
+  configurations = GetBuildConfigurations(
+      system=system,
+      modes=modes,
+      archs=archs,
+      asans=asans,
+      embedded_libs=embedded_libs,
+      use_sdks=[False])
 
   # Generate ninja files.
   StepGyp()
 
   # Build all necessary configurations.
   for configuration in configurations:
-    StepBuild(configuration['build_conf'], configuration['build_dir']);
+    StepBuild(configuration['build_conf'], configuration['build_dir'])
 
   # Run tests on all necessary configurations.
   for snapshot_run in [True, False]:
@@ -376,46 +388,44 @@ def StepsNormal(debug_log, system, modes, archs, asans):
 
         def run():
           StepTest(
-            build_conf,
-            configuration['mode'],
-            configuration['arch'],
-            clang=configuration['clang'],
-            asan=configuration['asan'],
-            snapshot_run=snapshot_run,
-            debug_log=debug_log,
-            configuration=configuration)
+              configuration=configuration,
+              snapshot_run=snapshot_run,
+              debug_log=debug_log)
 
         RunWithCoreDumpArchiving(run, build_dir, build_conf)
 
 def StepsLK(debug_log):
   # We need the fletch daemon process to compile snapshots.
   host_configuration = GetBuildConfigurations(
-      utils.GuessOS(), ['debug'], ['ia32'], [False])[0]
+      system=utils.GuessOS(),
+      modes=['debug'],
+      archs=['ia32'],
+      asans=[False],
+      embedded_libs=[False],
+      use_sdks=[False])[0]
 
   # Generate ninja files.
   StepGyp()
 
-  StepBuild(host_configuration['build_conf'], host_configuration['build_dir']);
+  StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
 
-  build_config = 'DebugLK'
+  device_configuration = host_configuration.copy()
 
-  with bot.BuildStep('Build %s' % build_config):
+  device_configuration['build_conf'] = 'DebugLK'
+  device_configuration['system'] = 'lk'
+
+  with bot.BuildStep('Build %s' % device_configuration['build_conf']):
     Run(['make', '-C', 'third_party/lk', 'clean'])
     Run(['make', '-C', 'third_party/lk', '-j8'])
 
-  with bot.BuildStep('Test %s' % build_config):
+  with bot.BuildStep('Test %s' % device_configuration['build_conf']):
     # TODO(ajohnsen): This is kind of funky, as test.py tries to start the
     # background process using -a and -m flags. We should maybe changed so
     # test.py can have both a host and target configuration.
     StepTest(
-      build_config,
-      'debug',
-      'ia32',
-      clang=False,
-      debug_log=debug_log,
-      system='lk',
-      snapshot_run=True,
-      configuration=host_configuration)
+        configuration=device_configuration,
+        debug_log=debug_log,
+        snapshot_run=True)
 
 def StepsCrossBuilder(debug_log, system, modes, arch):
   """This step builds XARM configurations and archives the results.
@@ -475,11 +485,16 @@ def StepsTargetRunner(debug_log, system, mode, arch):
       Run(['tar', '-xjf', tarball])
 
     # Run tests on all necessary configurations.
-    configurations = GetBuildConfigurations(system, [mode], [arch], [False])
+    configurations = GetBuildConfigurations(
+      system=system,
+      modes=[mode],
+      archs=[arch],
+      asans=[False],
+      embedded_libs=[False],
+      use_sdks=[False])
     for snapshot_run in [True, False]:
       for configuration in configurations:
         if not ShouldSkipConfiguration(snapshot_run, configuration):
-          build_conf = configuration['build_conf']
           build_dir = configuration['build_dir']
 
           # Sanity check we got build artifacts which we expect.
@@ -494,14 +509,9 @@ def StepsTargetRunner(debug_log, system, mode, arch):
 
           def run():
             StepTest(
-              build_conf,
-              configuration['mode'],
-              configuration['arch'],
-              clang=configuration['clang'],
-              asan=configuration['asan'],
+              configuration=configuration,
               snapshot_run=snapshot_run,
-              debug_log=debug_log,
-              configuration=configuration)
+              debug_log=debug_log)
 
           #RunWithCoreDumpArchiving(run, build_dir, build_conf)
           run()
@@ -552,8 +562,18 @@ def StepBuild(build_config, build_dir, args=()):
     Run(['ninja', '-v', '-C', build_dir] + list(args))
 
 def StepTest(
-    name, mode, arch, clang=True, asan=False, snapshot_run=False,
-    debug_log=None, configuration=None, system=None, use_sdk=False):
+    configuration=None,
+    snapshot_run=False,
+    debug_log=None):
+  name = configuration['build_conf']
+  mode = configuration['mode']
+  arch = configuration['arch']
+  asan = configuration['asan']
+  clang = configuration['clang']
+  system = configuration['system']
+  embedded_libs = configuration['embedded_libs']
+  use_sdk = configuration['use_sdk']
+
   step_name = '%s%s' % (name, '-snapshot' if snapshot_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
@@ -582,6 +602,9 @@ def StepTest(
 
     if clang:
       args.append('--clang')
+
+    if embedded_libs:
+      args.append('--fletch-settings-file=embedded.fletch-settings')
 
     with TemporaryHomeDirectory():
       with open(os.path.expanduser("~/.fletch.log"), 'w+') as fletch_log:
@@ -795,23 +818,35 @@ def RunWithCoreDumpArchiving(run, build_dir, build_conf):
   else:
     run()
 
-def GetBuildConfigurations(system, modes, archs, asans, no_clang=False):
+def GetBuildConfigurations(
+        system=None,
+        modes=None,
+        archs=None,
+        asans=None,
+        no_clang=False,
+        embedded_libs=None,
+        use_sdks=None):
   configurations = []
 
   for asan in asans:
     for mode in modes:
       for arch in archs:
         for compiler_variant in GetCompilerVariants(system, arch, no_clang):
-          build_conf = GetConfigurationName(mode, arch, compiler_variant, asan)
-          configurations.append({
-            'build_conf': build_conf,
-            'build_dir': os.path.join('out', build_conf),
-            'clang': bool(compiler_variant),
-            'asan': asan,
-            'mode': mode.lower(),
-            'arch': arch.lower(),
-            'system': system,
-          })
+          for embedded_lib in embedded_libs:
+            for use_sdk in use_sdks:
+              build_conf = GetConfigurationName(
+                  mode, arch, compiler_variant, asan)
+              configurations.append({
+                'build_conf': build_conf,
+                'build_dir': os.path.join('out', build_conf),
+                'clang': bool(compiler_variant),
+                'asan': asan,
+                'mode': mode.lower(),
+                'arch': arch.lower(),
+                'system': system,
+                'embedded_libs': embedded_lib,
+                'use_sdk': use_sdk
+              })
 
   return configurations
 
