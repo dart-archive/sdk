@@ -148,24 +148,42 @@ class MonitorImpl {
     waiting_++;
     CHECK_AND_FAIL(osMutexRelease(internal_));
     CHECK_AND_RETURN(osMutexRelease(mutex_));
+#ifdef CMSIS_OS_RTX
+    int tokens = osSemaphoreWait(semaphore_, osWaitForever);
+    ASSERT(tokens > 0);  // There should have been at least one token.
+#else
+    // The implementation in STM32CubeF7 returns osOK if the
+    // semaphore was acquired.
+    // See https://github.com/dart-lang/fletch/issues/377.
     CHECK_AND_FAIL(osSemaphoreWait(semaphore_, osWaitForever));
+#endif
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
     return osOK;
   }
 
   bool Wait(uint64 microseconds) {
+    bool success = true;
     CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
     waiting_++;
     CHECK_AND_FAIL(osMutexRelease(internal_));
     CHECK_AND_FAIL(osMutexRelease(mutex_));
+#ifdef CMSIS_OS_RTX
     int tokens = osSemaphoreWait(semaphore_, microseconds / 1000);
-    if (tokens == 0) {  // Timeout occured.
+    success = (tokens == 0);
+#else
+    // The implementation in STM32CubeF7 returns osOK if the
+    // semaphore was acquired and osErrorOS if it was not.
+    // See https://github.com/dart-lang/fletch/issues/377.
+    int status = osSemaphoreWait(semaphore_, microseconds / 1000);
+    success = (status == osOK);
+#endif
+    if (!success) {
       CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
       --waiting_;
       CHECK_AND_FAIL(osMutexRelease(internal_));
     }
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
-    return osOK;
+    return success;
   }
 
   bool WaitUntil(uint64 microseconds_since_epoch) {
