@@ -109,12 +109,18 @@
           '-Wno-write-strings',
           '-Wno-sign-compare',
           '-Wno-missing-field-initializers',
+          '-Wno-empty-body',
+          '-Wno-address',
+        ],
+        'common_cflags_c': [
+          '-Wno-pointer-sign',
         ],
       },
       'type': 'executable',
       'includes': [
-        '../hal_sources.gypi',
         '../free_rtos_sources.gypi',
+        '../hal_sources.gypi',
+        '../lwip_sources.gypi',
       ],
       'include_dirs': [
         '<(generated_path)/Inc',
@@ -132,8 +138,17 @@
         '<(source_path)/syscalls.c',
 
         # Generated files.
+        '<(generated_path)/Inc/ethernetif.h',
+        '<(generated_path)/Inc/FreeRTOSConfig.h',
+        '<(generated_path)/Inc/lwip.h',
+        '<(generated_path)/Inc/lwipopts.h',
+        '<(generated_path)/Inc/mxconstants.h',
+        '<(generated_path)/Inc/stm32f7xx_hal_conf.h',
+        '<(generated_path)/Inc/stm32f7xx_it.h',
         '<(generated_path)/Src/main.c',
+        '<(generated_path)/Src/ethernetif.c',
         '<(generated_path)/Src/freertos.c',
+        '<(generated_path)/Src/lwip.c',
         '<(generated_path)/Src/stm32f7xx_hal_msp.c',
         '<(generated_path)/Src/stm32f7xx_it.c',
 
@@ -158,6 +173,7 @@
           'xcode_settings': {
             'OTHER_CFLAGS': [
               '<@(common_cflags)',
+              '<@(common_cflags_c)',
             ],
             'OTHER_CPLUSPLUSFLAGS' : [
               '<@(common_cflags)',
@@ -170,6 +186,9 @@
         ['OS=="linux"', {
           'cflags': [
             '<@(common_cflags)',
+          ],
+          'cflags_c': [
+            '<@(common_cflags_c)',
           ],
           'ldflags': [
             '<@(common_ldflags)',
