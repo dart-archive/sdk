@@ -6,7 +6,7 @@ library fletchc.verbs.create_verb;
 
 import 'infrastructure.dart';
 
-import '../driver/developer.dart' show
+import '../worker/developer.dart' show
     Settings,
     allocateWorker,
     configFileUri,

@@ -17,7 +17,7 @@ import 'package:compiler/src/filenames.dart' show
     appendSlash;
 
 // Don't export most of these.
-import '../driver/sentence_parser.dart' show
+import '../hub/sentence_parser.dart' show
     ErrorTarget,
     NamedTarget,
     Preposition,
@@ -27,7 +27,7 @@ import '../driver/sentence_parser.dart' show
     TargetKind,
     Verb;
 
-export '../driver/sentence_parser.dart' show
+export '../hub/sentence_parser.dart' show
     TargetKind;
 
 import '../diagnostic.dart' show
@@ -38,15 +38,15 @@ export '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
-import '../driver/driver_commands.dart' show
+import '../hub/client_commands.dart' show
     CommandSender,
     ClientCommand;
 
-export '../driver/driver_commands.dart' show
+export '../hub/client_commands.dart' show
     CommandSender,
     ClientCommand;
 
-import '../driver/session_manager.dart' show
+import '../hub/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
     IncrementalCompiler,
@@ -56,7 +56,7 @@ import '../driver/session_manager.dart' show
     UserSession,
     currentSession;
 
-export '../driver/session_manager.dart' show
+export '../hub/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
     IncrementalCompiler,
@@ -70,25 +70,25 @@ export '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
-import '../driver/session_manager.dart' show
+import '../hub/session_manager.dart' show
     SessionState,
     UserSession,
     createSession;
 
-export '../driver/session_manager.dart' show
+export '../hub/session_manager.dart' show
     SessionState,
     UserSession,
     createSession;
 
-import '../driver/driver_main.dart' show
+import '../hub/hub_main.dart' show
     ClientConnection,
     IsolatePool;
 
-export '../driver/driver_main.dart' show
+export '../hub/hub_main.dart' show
     ClientConnection,
     IsolatePool;
 
-import '../driver/session_manager.dart' show
+import '../hub/session_manager.dart' show
     lookupSession; // Don't export this.
 
 import 'actions.dart' show

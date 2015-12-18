@@ -10,7 +10,7 @@ import 'status_file_parser.dart' show
 import 'test_runner.dart' show
     TestCase;
 
-import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
+import '../../../pkg/fletchc/lib/src/hub/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH,
     DART_VM_EXITCODE_COMPILE_TIME_ERROR,
     DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;

@@ -4,7 +4,7 @@
 
 /// Used for testing compiler/debugger session when VM socket is closed
 /// unexpectedly.
-library fletchc.test.driver.test_vm_connection;
+library fletchc.test.client.test_vm_connection;
 
 import 'dart:async' show
     Future;
@@ -18,13 +18,13 @@ import 'dart:isolate' show
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:fletchc/src/driver/session_manager.dart' show
+import 'package:fletchc/src/hub/session_manager.dart' show
     SessionState;
 
-import 'package:fletchc/src/driver/developer.dart' show
+import 'package:fletchc/src/worker/developer.dart' show
     attachToVm;
 
-import 'package:fletchc/commands.dart' show
+import 'package:fletchc/vm_commands.dart' show
     VmCommandCode;
 
 import '../run.dart' show

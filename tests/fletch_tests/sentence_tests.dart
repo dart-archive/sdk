@@ -5,7 +5,7 @@
 import 'dart:async' show
     Future;
 
-import 'package:fletchc/src/driver/sentence_parser.dart';
+import 'package:fletchc/src/hub/sentence_parser.dart';
 
 import 'package:expect/expect.dart';
 

@@ -9,10 +9,10 @@ import 'infrastructure.dart';
 import 'documentation.dart' show
     runDocumentation;
 
-import '../driver/developer.dart' show
+import '../worker/developer.dart' show
     compileAndAttachToVmThen;
 
-import '../driver/developer.dart' as developer;
+import '../worker/developer.dart' as developer;
 
 const Action runAction =
     const Action(

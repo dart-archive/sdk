@@ -88,11 +88,9 @@ import '../src/fletch_context.dart' show
 import '../src/fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
 
-import '../commands.dart' show
-    VmCommand,
-    MapId;
-
-import '../commands.dart' as commands_lib;
+import '../vm_commands.dart' show
+    PrepareForChanges,
+    VmCommand;
 
 import '../fletch_system.dart' show
     FletchDelta,
@@ -993,7 +991,7 @@ class LibraryUpdater extends FletchFeatures {
     }
 
     List<VmCommand> commands =
-        <VmCommand>[const commands_lib.PrepareForChanges()];
+        <VmCommand>[const PrepareForChanges()];
     FletchSystem system =
         backend.systemBuilder.computeSystem(fletchContext, commands);
     return new FletchDelta(system, currentSystem, commands);

@@ -364,7 +364,7 @@ void killDriverMain() {
     // It's important to remove white space as output from ps is padded with
     // whitespace.
     process = process.trim();
-    if (process.contains("package:fletchc/src/driver/driver_main.dart")) {
+    if (process.contains("package:fletchc/src/hub/hub_main.dart")) {
       int index = process.indexOf(" ");
       String pidString = process.substring(0, index);
       String arguments = process.substring(index + 1);

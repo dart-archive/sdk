@@ -7,15 +7,15 @@ library fletch.debug_state;
 import 'bytecodes.dart';
 import 'fletch_system.dart';
 import 'incremental/fletchc_incremental.dart';
-import 'session.dart';
+import 'vm_session.dart';
 import 'src/debug_info.dart';
 import 'src/class_debug_info.dart';
 
-import 'commands.dart' show
+import 'vm_commands.dart' show
     DartValue,
     InstanceStructure;
 
-part 'stack_trace.dart';
+part 'back_trace.dart';
 
 /// A representation of a remote object.
 abstract class RemoteObject {
@@ -129,8 +129,6 @@ class DebugState {
             currentLocation.isSameSourceLevelLocationAs(previous) ||
             currentLocation.node == null);
   }
-
-  int get numberOfBackTraceFrames => currentBackTrace.frames.length;
 
   SourceLocation sourceLocationForFrame(int frame) {
     return currentBackTrace.frames[frame].sourceLocation();

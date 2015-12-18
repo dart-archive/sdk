@@ -15,7 +15,7 @@ import 'package:persistent/persistent.dart' show
     PersistentMap;
 
 import 'bytecodes.dart';
-import 'commands.dart';
+import 'vm_commands.dart';
 
 import 'src/fletch_selector.dart' show
     FletchSelector;

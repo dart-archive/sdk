@@ -25,7 +25,7 @@ import 'package:compiler/src/source_file_provider.dart' show
 
 import 'codegen_visitor.dart';
 import '../fletch_system.dart';
-import 'driver/session_manager.dart' show
+import 'hub/session_manager.dart' show
     SessionState;
 
 import 'fletch_compiler_implementation.dart' show

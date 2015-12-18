@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of fletch.session;
+part of fletch.vm_session;
 
 class SessionCommandTransformerBuilder
     extends CommandTransformerBuilder<VmCommand> {

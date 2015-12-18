@@ -6,7 +6,7 @@ library fletchc.verbs.compile_verb;
 
 import 'infrastructure.dart';
 
-import '../driver/developer.dart' as developer;
+import '../worker/developer.dart' as developer;
 
 import 'documentation.dart' show
     compileDocumentation;

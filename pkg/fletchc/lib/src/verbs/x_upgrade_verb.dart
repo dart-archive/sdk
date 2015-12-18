@@ -5,7 +5,7 @@
 library fletchc.verbs.x_upgrade_verb;
 
 import 'infrastructure.dart';
-import '../driver/developer.dart' show upgradeAgent;
+import '../worker/developer.dart' show upgradeAgent;
 import 'documentation.dart' show upgradeDocumentation;
 
 const Action upgradeAction = const Action(

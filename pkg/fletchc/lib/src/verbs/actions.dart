@@ -103,7 +103,7 @@ class Action {
 
 // TODO(ahe): Support short and long documentation.
 
-/// Common verbs are displayed in the default help screen.
+/// Common actions are displayed in the default help screen.
 ///
 /// Please make sure their combined documentation fit in in 80 columns by 20
 /// lines.  The default terminal size is normally 80x24.  Two lines are used

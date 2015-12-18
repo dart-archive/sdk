@@ -150,7 +150,7 @@ import 'constructor_codegen.dart';
 import 'closure_environment.dart';
 
 import '../bytecodes.dart';
-import '../commands.dart';
+import '../vm_commands.dart';
 import '../fletch_system.dart';
 import 'package:compiler/src/common/resolution.dart';
 

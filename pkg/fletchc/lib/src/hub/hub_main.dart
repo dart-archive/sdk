@@ -44,12 +44,12 @@ import 'exit_codes.dart' show
     COMPILER_EXITCODE_CRASH,
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
-import 'driver_commands.dart' show
+import 'client_commands.dart' show
     ClientCommandCode,
     handleSocketErrors;
 
-import 'driver_isolate.dart' show
-    isolateMain;
+import '../worker/worker_main.dart' show
+    workerMain;
 
 import '../verbs/infrastructure.dart';
 
@@ -68,7 +68,7 @@ import '../shared_command_infrastructure.dart' show
     headerSize,
     toUint8ListView;
 
-import 'developer.dart' show
+import '../worker/developer.dart' show
     allocateWorker,
     combineTasks,
     configFileUri;
@@ -132,6 +132,8 @@ class ClientCommandTransformerBuilder
   }
 }
 
+// Class for sending client commands from the hub (main isolate) to the
+// fletch c++ client.
 class ClientCommandSender extends CommandSender {
   final Sink<List<int>> sink;
 
@@ -235,7 +237,7 @@ Future main(List<String> arguments) async {
   // connect, and that the socket is ready.
   print(socketFile.path);
 
-  IsolatePool pool = new IsolatePool(isolateMain);
+  IsolatePool pool = new IsolatePool(workerMain);
   try {
     await server.listen((Socket controlSocket) {
       handleClient(pool, handleSocketErrors(controlSocket, "controlSocket"));

@@ -15,14 +15,14 @@ import 'dart:io';
 import 'package:fletchc/session.dart' show
     Session;
 
-import 'package:fletchc/src/driver/session_manager.dart';
+import 'package:fletchc/src/hub/session_manager.dart';
 
-import 'package:fletchc/src/driver/developer.dart' show
+import 'package:fletchc/src/worker/developer.dart' show
     Address,
     Settings,
     SessionState;
 
-import 'package:fletchc/src/driver/developer.dart' as developer;
+import 'package:fletchc/src/worker/developer.dart' as developer;
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show
     fileUri;

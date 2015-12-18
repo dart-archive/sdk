@@ -37,7 +37,7 @@ import 'test_runner.dart' show
 import 'decode_exit_code.dart' show
     DecodeExitCode;
 
-import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
+import '../../../pkg/fletchc/lib/src/hub/exit_codes.dart' show
     COMPILER_EXITCODE_CONNECTION_ERROR,
     COMPILER_EXITCODE_CRASH,
     DART_VM_EXITCODE_COMPILE_TIME_ERROR,
@@ -633,7 +633,7 @@ Future<int> exitCodeWithTimeout(
   return exitCode;
 }
 
-/// Represents a session in the persistent Fletch driver process.
+/// Represents a session in the persistent Fletch client process.
 class FletchSessionMirror {
   static const int RINGBUFFER_SIZE = 15;
 

@@ -53,7 +53,7 @@ import '../fletch_system.dart';
 import '../src/fletch_backend.dart' show
     FletchBackend;
 
-import '../src/driver/exit_codes.dart' as exit_codes;
+import '../src/hub/exit_codes.dart' as exit_codes;
 
 import 'package:compiler/src/source_file_provider.dart' show
     SourceFileProvider;

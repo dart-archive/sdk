@@ -8,9 +8,9 @@ import 'dart:typed_data';
 
 import 'package:expect/expect.dart';
 
-import 'package:fletchc/src/driver/driver_commands.dart';
+import 'package:fletchc/src/hub/client_commands.dart';
 
-import 'package:fletchc/src/driver/driver_main.dart';
+import 'package:fletchc/src/hub/hub_main.dart';
 
 const List<int> stdinCommandData = const <int>[4, 0, 0, 0, 0, 0, 0, 0, 0];
 

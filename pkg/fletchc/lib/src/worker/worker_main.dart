@@ -20,7 +20,7 @@ import 'dart:isolate' show
     ReceivePort,
     SendPort;
 
-import 'driver_commands.dart' show
+import '../hub/client_commands.dart' show
     ClientCommand,
     ClientCommandCode,
     CommandSender;
@@ -30,7 +30,7 @@ import '../diagnostic.dart' show
     InputError,
     throwInternalError;
 
-import 'exit_codes.dart' show
+import '../hub/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH;
 
 // This class is used to send commands from the worker isolate back to the
@@ -59,7 +59,7 @@ class HubCommandSender extends CommandSender {
   }
 }
 
-Future<Null> isolateMain(SendPort port) async {
+Future<Null> workerMain(SendPort port) async {
   ReceivePort receivePort = new ReceivePort();
   port.send(receivePort.sendPort);
   port = null;

@@ -38,7 +38,7 @@ import 'fletch_session_command.dart' show
 import 'decode_exit_code.dart' show
     DecodeExitCode;
 
-import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
+import '../../../pkg/fletchc/lib/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR,
     DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 

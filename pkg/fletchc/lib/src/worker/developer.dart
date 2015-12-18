@@ -41,7 +41,7 @@ import 'package:mdns/mdns.dart' show
     ResourceRecord,
     RRType;
 
-import '../../commands.dart' show
+import '../../vm_commands.dart' show
     VmCommandCode,
     ConnectionError,
     Debugging,
@@ -60,12 +60,12 @@ import '../../program_info.dart' show
     ProgramInfoJson,
     buildProgramInfo;
 
-import 'session_manager.dart' show
+import '../hub/session_manager.dart' show
     FletchVm,
     SessionState,
     Sessions;
 
-import 'driver_commands.dart' show
+import '../hub/client_commands.dart' show
     ClientCommandCode,
     handleSocketErrors;
 
@@ -94,7 +94,7 @@ export '../../incremental/fletchc_incremental.dart' show
 
 import '../../fletch_compiler.dart' show fletchDeviceType;
 
-import 'exit_codes.dart' as exit_codes;
+import '../hub/exit_codes.dart' as exit_codes;
 
 import '../../fletch_system.dart' show
     FletchFunction,

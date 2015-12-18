@@ -28,7 +28,7 @@ import 'dart:typed_data' show
 import 'package:persistent/persistent.dart' show
     Pair;
 
-import 'commands.dart' show
+import 'vm_commands.dart' show
     WriteSnapshotResult;
 
 import 'fletch_system.dart' show

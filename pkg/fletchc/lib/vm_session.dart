@@ -2,13 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletch.session;
+library fletch.vm_session;
 
-import 'dart:core' hide StackTrace;
-
-// TODO(ahe): https://github.com/dart-lang/fletch/issues/156
-import 'dart:core' as core show StackTrace;
-
+import 'dart:core';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' hide exit;
@@ -17,7 +13,7 @@ import 'dart:typed_data' show
     ByteData,
     Uint8List;
 
-import 'commands.dart';
+import 'vm_commands.dart';
 import 'fletch_system.dart';
 
 import 'incremental/fletchc_incremental.dart'
@@ -39,7 +35,7 @@ import 'src/shared_command_infrastructure.dart' show
     CommandTransformerBuilder,
     toUint8ListView;
 
-part 'command_reader.dart';
+part 'vm_command_reader.dart';
 part 'input_handler.dart';
 
 /// Encapsulates a TCP connection to a running fletch-vm and provides a
@@ -152,7 +148,7 @@ class FletchVmSession {
     }
 
     _drainedIncomingCommands = !await _commandReader.iterator.moveNext()
-        .catchError((error, core.StackTrace trace) {
+        .catchError((error, StackTrace trace) {
           connectionError = new ConnectionError(error, trace);
           return false;
         });

@@ -8,16 +8,16 @@ import 'dart:async' show
     Future,
     Timer;
 
-import 'driver_commands.dart' show
+import 'client_commands.dart' show
     CommandSender;
 
-import 'driver_main.dart' show
+import 'hub_main.dart' show
     WorkerConnection;
 
-export 'driver_main.dart' show
+export 'hub_main.dart' show
     WorkerConnection;
 
-import 'developer.dart' show
+import '../worker/developer.dart' show
     Settings;
 
 import '../diagnostic.dart' show
@@ -33,10 +33,10 @@ import '../../fletch_system.dart' show
 export '../../fletch_system.dart' show
     FletchDelta;
 
-import '../../session.dart' show
+import '../../vm_session.dart' show
     Session;
 
-export '../../session.dart' show
+export '../../vm_session.dart' show
     Session;
 
 import '../../fletch_compiler.dart' show

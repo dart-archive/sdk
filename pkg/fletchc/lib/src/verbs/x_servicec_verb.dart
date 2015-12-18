@@ -13,7 +13,7 @@ import 'package:path/path.dart' show join, dirname;
 
 import 'infrastructure.dart';
 
-import '../driver/exit_codes.dart' show
+import '../hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 import 'package:servicec/compiler.dart' as servicec;

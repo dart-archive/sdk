@@ -9,7 +9,7 @@ import 'dart:async' show Future;
 
 import 'dart:convert';
 
-import 'package:fletchc/src/driver/developer.dart' show
+import 'package:fletchc/src/worker/developer.dart' show
     Address,
     DeviceType,
     IncrementalMode,

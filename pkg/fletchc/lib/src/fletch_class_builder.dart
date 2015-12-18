@@ -14,7 +14,7 @@ import 'fletch_context.dart';
 import 'fletch_backend.dart';
 
 import '../fletch_system.dart';
-import '../commands.dart';
+import '../vm_commands.dart';
 
 // TODO(ahe): Remove this import.
 import '../incremental/fletchc_incremental.dart' show

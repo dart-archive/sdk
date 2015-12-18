@@ -24,9 +24,9 @@ import 'package:expect/expect.dart' show
 import 'package:fletchc/src/verbs/infrastructure.dart' show
     fileUri;
 
-import 'package:fletchc/src/driver/session_manager.dart';
+import 'package:fletchc/src/hub/session_manager.dart';
 
-import 'package:fletchc/src/driver/developer.dart';
+import 'package:fletchc/src/worker/developer.dart';
 
 const String testLocation = 'tests/debugger';
 const String generatedTestLocation = 'tests/debugger_generated';

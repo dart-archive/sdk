@@ -6,7 +6,7 @@ library fletchc.verbs.end_verb;
 
 import 'infrastructure.dart';
 
-import '../driver/session_manager.dart' show
+import '../hub/session_manager.dart' show
     endSession;
 
 import 'documentation.dart' show

@@ -32,11 +32,11 @@ import 'dart:isolate';
 import 'package:fletchc/src/zone_helper.dart' show
     runGuarded;
 
-import 'package:fletchc/src/driver/driver_main.dart' show
+import 'package:fletchc/src/hub/hub_main.dart' show
     IsolatePool,
     ManagedIsolate;
 
-import 'package:fletchc/src/driver/developer.dart' show
+import 'package:fletchc/src/worker/developer.dart' show
     configFileUri;
 
 import 'package:fletchc/src/console_print.dart' show

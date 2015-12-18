@@ -8,7 +8,7 @@ import 'messages.dart' show
     DiagnosticKind,
     getMessage;
 
-import 'driver/sentence_parser.dart' show
+import 'hub/sentence_parser.dart' show
     Preposition,
     Target,
     TargetKind,

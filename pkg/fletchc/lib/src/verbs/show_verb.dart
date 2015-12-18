@@ -12,7 +12,7 @@ import 'documentation.dart' show
 import '../diagnostic.dart' show
     throwInternalError;
 
-import '../driver/developer.dart' show
+import '../worker/developer.dart' show
   discoverDevices,
   showSessions,
   showSessionSettings;

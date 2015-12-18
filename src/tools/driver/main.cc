@@ -436,7 +436,7 @@ static void StartDriverDaemon() {
   argv[argc++] = package_option;
   argv[argc++] = version_option;
   argv[argc++] = library_root;
-  argv[argc++] = "package:fletchc/src/driver/driver_main.dart";
+  argv[argc++] = "package:fletchc/src/hub/hub_main.dart";
   argv[argc++] = fletch_config_file;
   argv[argc++] = NULL;
   if (argc > kMaxArgv) Die("Internal error: increase argv size");
@@ -761,19 +761,31 @@ static int QuitCommand() {
   // as a child of when redirecting to /dev/null.
   const char pkill[] = "exec pkill -f ";
   const char pkill_force[] = "exec pkill -KILL -f ";
-  const char arguments[] = "package:fletchc/src/driver/driver_main > /dev/null";
+  const char driver_arguments[] =
+      "package:fletchc/src/driver/driver_main > /dev/null";
+  const char hub_arguments[] = "package:fletchc/src/hub/hub_main > /dev/null";
 
   StrCpy(command, MAX_COMMAND_LENGTH, pkill, sizeof(pkill));
-  StrCat(command, MAX_COMMAND_LENGTH, arguments, sizeof(arguments));
+  StrCat(command, MAX_COMMAND_LENGTH, hub_arguments, sizeof(hub_arguments));
 
-  // pkill -f package:fletchc/src/driver/driver_main
+  const char* current_arguments = hub_arguments;
+  // pkill -f package:fletchc/src/hub/hub_main
   if (CheckedSystem(command) != 0) {
     // pkill returns 0 if it killed any processes, so in this case it didn't
     // find/kill any active persistent processes
-    // Remove the socket location file.
-    unlink(fletch_config_file);
-    printf("Background process wasn't running\n");
-    return 0;
+    // Try with the legacy driver_main path to see if an old persistent process
+    // was running.
+    StrCpy(command, MAX_COMMAND_LENGTH, pkill, sizeof(pkill));
+    StrCat(command, MAX_COMMAND_LENGTH, driver_arguments,
+        sizeof(driver_arguments));
+    // pkill -f package:fletchc/src/driver/driver_main
+    if (CheckedSystem(command) != 0) {
+      // No legacy persistent process. Just remove the socket location file.
+      unlink(fletch_config_file);
+      printf("Background process wasn't running\n");
+      return 0;
+    }
+    current_arguments = driver_arguments;
   }
 
   // Wait two seconds for the process to exit gracefully.
@@ -788,9 +800,12 @@ static int QuitCommand() {
   // it returns 0 in which case we know it didn't shutdown gracefully above.
   // We use the return value to decide what to report to the user.
   StrCpy(command, MAX_COMMAND_LENGTH, pkill_force, sizeof(pkill_force));
-  StrCat(command, MAX_COMMAND_LENGTH, arguments, sizeof(arguments));
+  StrCat(command, MAX_COMMAND_LENGTH, current_arguments,
+     strlen(current_arguments) + 1);
 
-  // pkill -KILL -f package:fletchc/src/driver/driver_main
+  // pkill -KILL -f package:fletchc/src/hub/hub_main or
+  // pkill -KILL -f package:fletchc/src/driver/driver_main depending on the
+  // above pkill.
   if (CheckedSystem(command) != 0) {
     // We assume it didn't find any processes to kill when returning a
     // non-zero value and hence just report the process gracefully exited.

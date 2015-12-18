@@ -10,11 +10,11 @@ import 'dart:io';
 
 import 'dart:io' as io;
 
-import 'package:fletchc/src/driver/session_manager.dart';
+import 'package:fletchc/src/hub/session_manager.dart';
 
-import 'package:fletchc/src/driver/developer.dart';
+import 'package:fletchc/src/worker/developer.dart';
 
-import 'package:fletchc/src/driver/developer.dart' as developer;
+import 'package:fletchc/src/worker/developer.dart' as developer;
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show fileUri;
 

@@ -41,7 +41,7 @@ import 'fletch_context.dart';
 import 'fletch_function_builder.dart';
 
 import '../fletch_system.dart';
-import '../commands.dart';
+import '../vm_commands.dart';
 
 class FletchSystemBuilder {
   final FletchSystem predecessorSystem;

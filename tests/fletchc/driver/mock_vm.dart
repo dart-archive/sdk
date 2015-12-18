@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 /// Mock VM implementation used for testing VM connections.
-library fletchc.test.driver.mock_vm;
+library fletchc.test.client.mock_vm;
 
 import 'dart:async' show
     Future,
@@ -25,7 +25,7 @@ import 'package:fletchc/src/shared_command_infrastructure.dart' show
     CommandTransformerBuilder,
     toUint8ListView;
 
-import 'package:fletchc/commands.dart' show
+import 'package:fletchc/vm_commands.dart' show
     VmCommand,
     VmCommandCode,
     CommitChangesResult,

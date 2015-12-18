@@ -9,7 +9,7 @@ import 'infrastructure.dart';
 import 'documentation.dart' show
     attachDocumentation;
 
-import '../driver/developer.dart' show
+import '../worker/developer.dart' show
     Address,
     attachToVm,
     parseAddress;

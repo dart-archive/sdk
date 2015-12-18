@@ -24,13 +24,13 @@ import 'documentation.dart' show
 import '../diagnostic.dart' show
     throwInternalError;
 
-import '../driver/developer.dart' show
+import '../worker/developer.dart' show
     ClientEventHandler,
     handleSignal,
     compileAndAttachToVmThen,
     setupClientInOut;
 
-import '../driver/driver_commands.dart' show
+import '../hub/client_commands.dart' show
     ClientCommandCode;
 
 import 'package:fletchc/debug_state.dart' show
@@ -41,7 +41,7 @@ import '../../debug_state.dart' show
     RemoteValue,
     BackTrace;
 
-import '../../commands.dart' show
+import '../../vm_commands.dart' show
     VmCommand;
 
 const Action debugAction =

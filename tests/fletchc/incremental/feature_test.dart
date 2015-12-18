@@ -55,7 +55,7 @@ import 'package:fletchc/incremental/fletchc_incremental.dart' show
     IncrementalCompiler,
     IncrementalMode;
 
-import 'package:fletchc/commands.dart' show
+import 'package:fletchc/vm_commands.dart' show
     VmCommand,
     CommitChanges,
     CommitChangesResult,
@@ -74,9 +74,9 @@ import 'package:fletchc/src/guess_configuration.dart' show
 
 import 'package:fletchc/fletch_system.dart';
 
-import 'package:fletchc/commands.dart' as commands_lib;
+import 'package:fletchc/vm_commands.dart' as commands_lib;
 
-import 'package:fletchc/session.dart' show
+import 'package:fletchc/vm_session.dart' show
     Session;
 
 import 'package:fletchc/src/fletch_backend.dart' show
@@ -93,7 +93,7 @@ import 'program_result.dart';
 
 import 'tests_with_expectations.dart' as tests_with_expectations;
 
-import 'package:fletchc/src/driver/exit_codes.dart' show
+import 'package:fletchc/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 const String PACKAGE_SCHEME = 'org.dartlang.fletch.packages';

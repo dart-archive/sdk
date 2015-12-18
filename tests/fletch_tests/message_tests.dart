@@ -21,7 +21,7 @@ import 'package:fletchc/src/messages.dart';
 
 import 'package:fletchc/src/message_examples.dart';
 
-import 'package:fletchc/src/driver/sentence_parser.dart' show
+import 'package:fletchc/src/hub/sentence_parser.dart' show
     NamedTarget,
     Sentence,
     parseSentence;
@@ -29,19 +29,19 @@ import 'package:fletchc/src/driver/sentence_parser.dart' show
 import 'package:fletchc/src/verbs/actions.dart' show
     Action;
 
-import 'package:fletchc/src/driver/driver_main.dart' show
+import 'package:fletchc/src/hub/hub_main.dart' show
     ClientLogger,
     ClientConnection,
     IsolatePool,
     handleVerb;
 
-import 'package:fletchc/src/driver/driver_isolate.dart' show
-    isolateMain;
+import 'package:fletchc/src/worker/worker_main.dart' show
+    workerMain;
 
-import 'package:fletchc/src/driver/session_manager.dart' show
+import 'package:fletchc/src/hub/session_manager.dart' show
     endAllSessions;
 
-import 'package:fletchc/src/driver/driver_commands.dart' show
+import 'package:fletchc/src/hub/client_commands.dart' show
     ClientCommand,
     ClientCommandCode;
 
@@ -50,10 +50,10 @@ import 'package:fletchc/src/verbs/infrastructure.dart' show
     Options,
     analyzeSentence;
 
-import 'package:fletchc/src/driver/developer.dart' show
+import 'package:fletchc/src/worker/developer.dart' show
     parseSettings;
 
-final IsolatePool pool = new IsolatePool(isolateMain);
+final IsolatePool pool = new IsolatePool(workerMain);
 
 Future<Null> main() async {
   for (DiagnosticKind kind in DiagnosticKind.values) {
