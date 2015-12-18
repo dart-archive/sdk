@@ -128,8 +128,16 @@ class MonitorImpl {
     ASSERT(mutex_ != NULL);
     internal_ = osMutexCreate(osMutex(internal_def_));
     ASSERT(internal_ != NULL);
+#ifdef CMSIS_OS_RTX
+    // In the KEIL implementation the 'count' argument in interpreted
+    // as the number of resources initially available.
+    semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_), 0);
+#else
+    // In the implementation in STM32CubeF7 the 'count' argument in
+    // interpreted as the maximum of resources available.
     semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_),
                                    kMaxSemaphoreValue);
+#endif
     ASSERT(semaphore_ != NULL);
     waiting_ = 0;
   }
