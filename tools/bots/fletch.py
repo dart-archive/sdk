@@ -530,7 +530,7 @@ def StepGyp():
     Run(['ninja', '-v'])
 
 def AnalyzeLog(log_file):
-  # pkg/fletchc/lib/src/driver/driver_main.dart will, in its log file, print
+  # pkg/fletchc/lib/src/hub/hub_main.dart will, in its log file, print
   # "1234: Crash (..." when an exception is thrown after shutting down a
   # client.  In this case, there's no obvious place to report the exception, so
   # the build bot must look for these crashes.
@@ -636,7 +636,7 @@ class PersistentFletchDaemon(object):
        '-c',
        '--packages=%s' % os.path.abspath('pkg/fletchc/.packages'),
        '-Dfletch.version=%s' % version,
-       'package:fletchc/src/driver/driver_main.dart',
+       'package:fletchc/src/hub/hub_main.dart',
        fletchrc],
       stdout=self._log_file,
       stderr=subprocess.STDOUT,
