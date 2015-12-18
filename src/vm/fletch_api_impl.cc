@@ -14,6 +14,8 @@
 #include "src/shared/list.h"
 
 #include "src/vm/ffi.h"
+#include "src/vm/object.h"
+#include "src/vm/object_memory.h"
 #include "src/vm/program.h"
 #include "src/vm/program_folder.h"
 #include "src/vm/program_info_block.h"
@@ -123,6 +125,132 @@ FletchProgram FletchLoadSnapshot(unsigned char* snapshot, int length) {
   fletch::Program* program = fletch::LoadSnapshot(bytes);
   if (program == NULL) FATAL("Failed to load snapshot.\n");
   return reinterpret_cast<FletchProgram>(program);
+}
+
+namespace fletch {
+
+class DumpVisitor : public HeapObjectVisitor {
+ public:
+  virtual int Visit(HeapObject* object) {
+    printf("O%08x:\n", object->address());
+    DumpReference(object->get_class());
+    if (object->IsClass()) {
+      DumpClass(Class::cast(object));
+    } else if (object->IsFunction()) {
+      DumpFunction(Function::cast(object));
+    } else if (object->IsInstance()) {
+      DumpInstance(Instance::cast(object));
+    } else if (object->IsOneByteString()) {
+      DumpOneByteString(OneByteString::cast(object));
+    } else if (object->IsArray()) {
+      DumpArray(Array::cast(object));
+    } else if (object->IsLargeInteger()) {
+      DumpLargeInteger(LargeInteger::cast(object));
+    } else if (object->IsInitializer()) {
+      DumpInitializer(Initializer::cast(object));
+    } else {
+      printf("\t// not handled yet %d!\n", object->format().type());
+    }
+
+    return object->Size();
+  }
+
+  void DumpReference(Object* object) {
+    if (object->IsHeapObject()) {
+      printf("\t.long O%08x + 1\n", HeapObject::cast(object)->address());
+    } else {
+      printf("\t.long 0x%08x\n", object);
+    }
+  }
+
+ private:
+  void DumpClass(Class* clazz) {
+    int size = clazz->AllocationSize();
+    for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+      DumpReference(clazz->at(offset));
+    }
+  }
+
+  void DumpFunction(Function* function) {
+    int size = Function::kSize;
+    for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+      DumpReference(function->at(offset));
+    }
+
+    for (int o = 0; o < function->bytecode_size(); o += kPointerSize) {
+      printf("\t.long 0x%08x\n", *reinterpret_cast<uword*>(function->bytecode_address_for(o)));
+    }
+  }
+
+  void DumpInstance(Instance* instance) {
+    int size = instance->Size();
+    for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+      DumpReference(instance->at(offset));
+    }
+  }
+
+  void DumpOneByteString(OneByteString* string) {
+    int size = OneByteString::kSize;
+    for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+      DumpReference(string->at(offset));
+    }
+
+    for (int o = size; o < string->StringSize(); o += kPointerSize) {
+      printf("\t.long 0x%08x\n", *reinterpret_cast<uword*>(string->byte_address_for(o - size)));
+    }
+  }
+
+  void DumpArray(Array* array) {
+    int size = array->Size();
+    for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+      DumpReference(array->at(offset));
+    }
+  }
+
+  void DumpLargeInteger(LargeInteger* large) {
+    uword* ptr = reinterpret_cast<uword*>(large->address() + LargeInteger::kValueOffset);
+    printf("\t.long 0x%08x\n", ptr[0]);
+    printf("\t.long 0x%08x\n", ptr[1]);
+  }
+
+  void DumpInitializer(Initializer* initializer) {
+    int size = initializer->Size();
+    for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+      DumpReference(initializer->at(offset));
+    }
+  }
+};
+
+}
+
+void FletchDumpProgram(FletchProgram raw_program, const char* path) {
+  fletch::Program* program = reinterpret_cast<fletch::Program*>(raw_program);
+  fletch::DumpVisitor visitor;
+
+  printf("\t// Program space = %d bytes\n", program->heap()->space()->Used());
+  printf("\t.text\n\n");
+
+  printf("\t.global program_start\n");
+  printf("\t.p2align 12\n");
+  printf("program_start:\n");
+
+  program->heap()->space()->IterateObjects(&visitor);
+
+  printf("\t.global program_end\n");
+  printf("\t.p2align 12\n");
+  printf("program_end:\n\n\n");
+
+  fletch::ProgramInfoBlock* block = new fletch::ProgramInfoBlock();
+  block->PopulateFromProgram(program);
+  printf("\t.global program_info_block\n");
+  printf("program_info_block:\n");
+
+  for (fletch::Object** r = block->roots(); r < block->end_of_roots(); r++) {
+    visitor.DumpReference(*r);
+  }
+  printf("\t.long 0x%08x\n", block->main_arity());
+
+  delete block;
 }
 
 int FletchRunMain(FletchProgram raw_program) {

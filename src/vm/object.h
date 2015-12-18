@@ -406,6 +406,7 @@ class HeapObject : public Object {
   friend class Program;
   friend class SnapshotWriter;
   friend class Object;
+  friend class DumpVisitor;
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(HeapObject);

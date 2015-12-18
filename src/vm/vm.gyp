@@ -343,6 +343,18 @@
       ],
     },
     {
+      'target_name': 'fletch-vm-o',
+      'type': 'executable',
+      'dependencies': [
+        'libfletch',
+      ],
+      'sources': [
+        'main-o.cc',
+        'main_simple.cc',
+        'program.S'
+      ],
+    },
+    {
       'target_name': 'vm_cc_tests',
       'type': 'executable',
       'dependencies': [

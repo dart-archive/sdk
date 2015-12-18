@@ -41,6 +41,9 @@ FLETCH_EXPORT void FletchWaitForDebuggerConnection(int port);
 FLETCH_EXPORT FletchProgram FletchLoadSnapshot(unsigned char* snapshot,
                                                int length);
 
+// Dump a program in .S format.
+FLETCH_EXPORT void FletchDumpProgram(FletchProgram program, const char* path);
+
 // Load the snapshot from the file and load the program from the snapshot.
 FLETCH_EXPORT FletchProgram FletchLoadSnapshotFromFile(const char* path);
 
