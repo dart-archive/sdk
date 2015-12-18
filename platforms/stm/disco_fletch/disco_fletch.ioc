@@ -1,8 +1,10 @@
 #MicroXplorer Configuration settings - do not modify
 ETH.IPParameters=MediaInterface
 ETH.MediaInterface=ETH_MEDIA_INTERFACE_RMII
-FREERTOS.IPParameters=Tasks01
+FREERTOS.HEAP_NUMBER=3
+FREERTOS.IPParameters=Tasks01,configTOTAL_HEAP_SIZE,HEAP_NUMBER
 FREERTOS.Tasks01=defaultTask,0,128,StartDefaultTask
+FREERTOS.configTOTAL_HEAP_SIZE=245760
 File.Version=5
 I2C1.IPParameters=Timing
 I2C1.Timing=0x00C0EFFF
