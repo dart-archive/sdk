@@ -847,7 +847,7 @@ vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
 # These actually overflow the stack because the snapshot reader is
 # recursive.
 large_class_declaration_test: Timeout
-smaller_4_Interface_Types_A11_t01_test: Timeout
+smaller_4_Interface_Types_A11_t01_test: Crash
 
 
 [ $mode == debug && $system == macos && $asan ]

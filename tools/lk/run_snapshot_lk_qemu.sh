@@ -80,6 +80,9 @@ while IFS='' read -r line; do
   if [[ "$line" =~ "HALT: spinning forever..."* ]]; then
     exit 253;
   fi
+  if [[ "$line" =~ "CRASH: starting debug shell..."* ]]; then
+    exit 253;
+  fi
 done < $PIPEDIR/qemu.out
 
 read -r line< $PIPEDIR/qemu.out
