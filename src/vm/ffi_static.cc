@@ -21,8 +21,8 @@ void ForeignFunctionInterface::Setup() {}
 
 void ForeignFunctionInterface::TearDown() {}
 
-void ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
-  FATAL("fletch vm was built without dynamic-libary FFI support.");
+bool ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
+  return false;
 }
 
 void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {

@@ -5,6 +5,8 @@
 #ifndef INCLUDE_FLETCH_API_H_
 #define INCLUDE_FLETCH_API_H_
 
+#include <stdbool.h>
+
 #ifdef _MSC_VER
 // TODO(herhut): Do we need a __declspec here for Windows?
 #define FLETCH_VISIBILITY_DEFAULT
