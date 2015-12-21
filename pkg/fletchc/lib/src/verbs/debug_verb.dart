@@ -352,6 +352,12 @@ Future<int> runToMainDebuggerTask(
   if (session == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
+  if (session.loaded) {
+    // We cannot reuse a session that has already been loaded. Loading
+    // currently implies that some of the code has been run.
+    throwFatalError(DiagnosticKind.sessionInvalidState,
+        sessionName: state.name);
+  }
   if (compilationResults.isEmpty) {
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
@@ -393,7 +399,7 @@ Future<int> continueDebuggerTask(
     throwInternalError('### process not running, cannot continue');
   }
   VmCommand response = await session.cont();
-  print(session.processStopResponseToString(response));
+  print(await session.processStopResponseToString(response));
 
   if (session.terminated) state.session = null;
 
@@ -565,7 +571,7 @@ Future<int> stepDebuggerTask(
         '### process not running, cannot step to next expression');
   }
   VmCommand response = await session.step();
-  print(session.processStopResponseToString(response));
+  print(await session.processStopResponseToString(response));
   return 0;
 }
 
@@ -576,7 +582,7 @@ Future<int> stepOverDebuggerTask(
     throwInternalError('### process not running, cannot go to next expression');
   }
   VmCommand response = await session.stepOver();
-  print(session.processStopResponseToString(response));
+  print(await session.processStopResponseToString(response));
   return 0;
 }
 
@@ -602,7 +608,7 @@ Future<int> finishDebuggerTask(
     throwInternalError('### process not running, cannot finish method');
   }
   VmCommand response = await session.stepOut();
-  print(session.processStopResponseToString(response));
+  print(await session.processStopResponseToString(response));
   return 0;
 }
 
@@ -620,7 +626,7 @@ Future<int> restartDebuggerTask(
     throwInternalError("### cannot restart entry frame.");
   }
   VmCommand response = await session.restart();
-  print(session.processStopResponseToString(response));
+  print(await session.processStopResponseToString(response));
   return 0;
 }
 
@@ -639,7 +645,7 @@ Future<int> stepBytecodeDebuggerTask(
   }
   VmCommand response = await session.stepBytecode();
   assert(response != null);  // stepBytecode cannot return null
-  print(session.processStopResponseToString(response));
+  print(await session.processStopResponseToString(response));
   return 0;
 }
 
@@ -651,7 +657,7 @@ Future<int> stepOverBytecodeDebuggerTask(
   }
   VmCommand response = await session.stepOverBytecode();
   assert(response != null);  // stepOverBytecode cannot return null
-  print(session.processStopResponseToString(response));
+  print(await session.processStopResponseToString(response));
   return 0;
 }
 

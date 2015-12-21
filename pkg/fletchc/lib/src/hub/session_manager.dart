@@ -188,6 +188,8 @@ class SessionState {
 
   Settings settings;
 
+  bool explicitAttach = false;
+
   SessionState(this.name, this.compilerHelper, this.compiler, this.settings);
 
   bool get hasRemoteVm => fletchAgentVmId != null;
@@ -217,6 +219,7 @@ class SessionState {
         done = true;
         timer.cancel();
       }
+      explicitAttach = false;
     }
     session = null;
   }

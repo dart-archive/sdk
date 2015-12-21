@@ -696,16 +696,28 @@ Future<int> compileAndAttachToVmThen(
     if (exitCode != 0) return exitCode;
     compilationResults = state.compilationResults;
     assert(compilationResults != null);
-    // We only get here is there were no previous compilationResults or if the
-    // user specified a dart file (script). In the first case there should be no
-    // session and nothing will be terminated, in the latter case the user
-    // specifying a new script implicitly means run a new VM with the new
-    // script in which case we want to terminate a previous session.
-    state.log('Cannot reuse existing VM session, creating new.');
-    await state.terminateSession();
   }
 
   Session session = state.session;
+  if (session != null && session.loaded) {
+    // We cannot reuse a session that has already been loaded. Loading
+    // currently implies that some of the code has been run.
+    if (state.explicitAttach) {
+      // If the user explicitly called 'fletch attach' we cannot
+      // create a new VM session since we don't know if the vm is
+      // running locally or remotely and if running remotely there
+      // is no guarantee there is an agent to start a new vm.
+      //
+      // The UserSession is invalid in its current state as the
+      // vm session (aka. session in the code here) has already
+      // been loaded and run some code.
+      throwFatalError(DiagnosticKind.sessionInvalidState,
+          sessionName: state.name);
+    }
+    state.log('Cannot reuse existing VM session, creating new.');
+    await state.terminateSession();
+    session = null;
+  }
   if (session == null) {
     if (state.settings.deviceAddress != null) {
       await startAndAttachViaAgent(base, state);
@@ -788,6 +800,8 @@ void handleSignal(SessionState state, int signalNumber) {
     // in which case we don't forward the signal to the vm.
     // TODO(wibling): Determine how to interpret the signal for the persistent
     // process.
+    state.log('Signal $signalNumber ignored. VM was manually attached.');
+    print('Signal $signalNumber ignored. VM was manually attached.');
     return;
   }
   if (state.hasRemoteVm) {
@@ -1027,7 +1041,7 @@ Future<int> upgradeAgent(
           state.settings.deviceAddress.host,
           state.settings.deviceAddress.port);
       handleSocketErrors(socket, "pollAgentVersion", log: (String info) {
-        state.log("Connected to TCP waitForAgentUpgrade  $info");
+        state.log("Connected to TCP waitForAgentUpgrade $info");
       });
       AgentConnection connection = new AgentConnection(socket);
       newVersion = parseVersion(await connection.fletchVersion());

@@ -33,6 +33,7 @@ enum DiagnosticKind {
   noTcpSocketTarget,
   quitTakesNoArguments,
   sessionAlreadyExists,
+  sessionInvalidState,
   settingsCompileTimeConstantAsOption,
   settingsConstantsNotAMap,
   settingsDeviceAddressNotAString,
@@ -154,6 +155,10 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.sessionAlreadyExists:
       return "Couldn't create session named '$sessionName'; "
           "A session called $sessionName already exists.";
+
+    case DiagnosticKind.sessionInvalidState:
+      return "Session '$sessionName' not in a valid state; "
+          "Please stop attached vm, run 'fletch quit' and retry.";
 
     case DiagnosticKind.noFileTarget:
       return "No file provided. Try adding <FILE_NAME> to the command line.";

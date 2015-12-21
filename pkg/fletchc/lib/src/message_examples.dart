@@ -69,6 +69,14 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'],
           <String>['create', 'session', 'foo'])];
 
+    case DiagnosticKind.sessionInvalidState:
+      // TODO(wibling): figure out a way to test this.
+      // Basically we need to have a fletch-vm that is
+      // explicitly attached to via 'fletch attach' and
+      // have it in a state where it has thrown an uncaught
+      // exception and then call e.g. 'fletch run foo.dart'.
+      return untestable;
+
     case DiagnosticKind.noFileTarget:
       return <Example>[
           new CommandLineExample(

@@ -41,6 +41,12 @@ class AttachTask extends SharedTask {
 }
 
 Future<int> attachTask(String host, int port) async {
-  await attachToVm(host, port, SessionState.current);
+  SessionState state = SessionState.current;
+
+  // Cleanup previous session if any.
+  await state.terminateSession();
+
+  state.explicitAttach = true;
+  await attachToVm(host, port, state);
   return 0;
 }
