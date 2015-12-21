@@ -85,7 +85,7 @@ class BytecodeAssembler {
   }
 
   void loadConst(int id) {
-    internalAdd(new LoadConstUnfold(id));
+    internalAdd(new LoadConst(id));
   }
 
   void loadLocal(int offset) {
@@ -270,13 +270,13 @@ class BytecodeAssembler {
 
   void invokeStatic(int id, int arity) {
     internalAddStackPointerDifference(
-        new InvokeStaticUnfold(id),
+        new InvokeStatic(id),
         1 - arity);
   }
 
   void invokeFactory(int id, int arity) {
     internalAddStackPointerDifference(
-        new InvokeFactoryUnfold(id),
+        new InvokeFactory(id),
         1 - arity);
   }
 
@@ -553,7 +553,7 @@ class BytecodeAssembler {
 
   void allocate(int classId, int fields, {bool immutable: false}) {
     var instruction = immutable ?
-        new AllocateImmutableUnfold(classId) : new AllocateUnfold(classId);
+        new AllocateImmutable(classId) : new Allocate(classId);
     internalAddStackPointerDifference(instruction, 1 - fields);
   }
 

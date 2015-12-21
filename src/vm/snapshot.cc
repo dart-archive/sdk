@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "src/shared/assert.h"
+#include "src/shared/bytecodes.h"
 #include "src/shared/utils.h"
 #include "src/shared/version.h"
 
@@ -320,7 +321,9 @@ Program* SnapshotReader::ReadProgram() {
   }
   position_ += 4 * kHeapSizeBytes;
   int heap_size = ReadHeapSizeFrom(size_position);
-  memory_ = ObjectMemory::AllocateChunk(program->heap()->space(), heap_size);
+  // Make sure to make room for the filler at the end of the program space.
+  memory_ =
+      ObjectMemory::AllocateChunk(program->heap()->space(), heap_size + 1);
   top_ = memory_->base();
 
   // Allocate space for the backward references.
@@ -329,9 +332,6 @@ Program* SnapshotReader::ReadProgram() {
   // Read all the program state (except roots).
   program->set_entry(Function::cast(ReadObject()));
   program->set_main_arity(ReadInt64());
-  program->set_classes(Array::cast(ReadObject()));
-  program->set_constants(Array::cast(ReadObject()));
-  program->set_static_methods(Array::cast(ReadObject()));
   program->set_static_fields(Array::cast(ReadObject()));
   program->set_dispatch_table(Array::cast(ReadObject()));
 
@@ -343,7 +343,6 @@ Program* SnapshotReader::ReadProgram() {
   backward_references_.Delete();
 
   // Programs read from a snapshot are always compact.
-  program->set_is_compact(true);
   program->SetupDispatchTableIntrinsics();
 
   // As a sanity check we ensure that the heap size the writer of the snapshot
@@ -357,7 +356,7 @@ Program* SnapshotReader::ReadProgram() {
 }
 
 List<uint8> SnapshotWriter::WriteProgram(Program* program) {
-  ASSERT(program->is_compact());
+  ASSERT(program->is_optimized());
 
   program->ClearDispatchTableIntrinsics();
 
@@ -383,9 +382,6 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   // Write all the program state (except roots).
   WriteObject(program->entry());
   WriteInt64(program->main_arity());
-  WriteObject(program->classes());
-  WriteObject(program->constants());
-  WriteObject(program->static_methods());
   WriteObject(program->static_fields());
   WriteObject(program->dispatch_table());
 
@@ -442,6 +438,9 @@ Object* SnapshotReader::ReadObject() {
   InstanceFormat::Type type = header.as_type();
 
   int size = header.Size();
+  if (type == InstanceFormat::FUNCTION_TYPE) {
+    size += ReadInt64() * kPointerSize;
+  }
   HeapObject* object = Allocate(size);
 
   AddReference(object);
@@ -721,17 +720,134 @@ void Class::ClassReadFrom(SnapshotReader* reader) {
   }
 }
 
+#ifdef FLETCH_TARGET_X64
+void Function::WriteByteCodes(SnapshotWriter* writer) {
+  ASSERT(kPointerSize == 8);
+  uint8* bcp = bytecode_address_for(0);
+  int i = 0;
+  while (i < bytecode_size()) {
+    Opcode opcode = static_cast<Opcode>(bcp[i]);
+    switch (opcode) {
+      case kLoadConst:
+      case kAllocate:
+      case kAllocateImmutable:
+      case kInvokeStatic:
+      case kInvokeFactory: {
+        ASSERT(Bytecode::Size(opcode) == 5);
+        // Read the offset.
+        int32 offset = Utils::ReadInt32(bcp + i + 1);
+        // Rewrite offset from 64 bit format to 32 bit format.
+        int delta_to_bytecode_end = bytecode_size() - i;
+        int padding32 = Utils::RoundUp(bytecode_size(), 4) - bytecode_size();
+        int padding64 =
+            Utils::RoundUp(bytecode_size(), kPointerSize) - bytecode_size();
+        int pointers =
+            (offset - delta_to_bytecode_end - padding64) / kPointerSize;
+        offset = delta_to_bytecode_end + padding32 + pointers * 4;
+        // Write the bytecode.
+        writer->WriteByte(bcp[i++]);
+        uint8* offset_pointer = reinterpret_cast<uint8*>(&offset);
+        for (int j = 0; j < 4; j++) {
+          writer->WriteByte(*(offset_pointer++));
+        }
+        i += 4;
+        break;
+      }
+      case kMethodEnd:
+        // Write the method end bytecode and everything that follows.
+        writer->WriteBytes(bytecode_size() - i, bcp + i);
+        return;
+      default:
+        // TODO(ager): Maybe just collect chunks and copy them with
+        // memcpy when encountering the end or a bytecode we need to
+        // rewrite?
+        for (int j = 0; j < Bytecode::Size(opcode); j++) {
+          writer->WriteByte(bcp[i++]);
+        }
+        break;
+    }
+  }
+}
+#else
+void Function::WriteByteCodes(SnapshotWriter* writer) {
+  ASSERT(kPointerSize == 4);
+  writer->WriteBytes(bytecode_size(), bytecode_address_for(0));
+}
+#endif
+
+#ifdef FLETCH_TARGET_X64
+void Function::ReadByteCodes(SnapshotReader* reader) {
+  ASSERT(kPointerSize == 8);
+  uint8* bcp = bytecode_address_for(0);
+  int i = 0;
+  while (i < bytecode_size()) {
+    uint8 raw_opcode = reader->ReadByte();
+    Opcode opcode = static_cast<Opcode>(raw_opcode);
+    switch (opcode) {
+      case kLoadConst:
+      case kAllocate:
+      case kAllocateImmutable:
+      case kInvokeStatic:
+      case kInvokeFactory: {
+        ASSERT(Bytecode::Size(opcode) == 5);
+        // Read the offset.
+        int32 offset = 0;
+        uint8* offset_pointer = reinterpret_cast<uint8*>(&offset);
+        for (int i = 0; i < 4; i++) {
+          offset_pointer[i] = reader->ReadByte();
+        }
+        // Rewrite offset from 32 bit format to 64 bit format.
+        int delta_to_bytecode_end = bytecode_size() - i;
+        int padding32 = Utils::RoundUp(bytecode_size(), 4) - bytecode_size();
+        int padding64 =
+            Utils::RoundUp(bytecode_size(), kPointerSize) - bytecode_size();
+        int pointers = (offset - delta_to_bytecode_end - padding32) / 4;
+        offset = delta_to_bytecode_end + padding64 + pointers * kPointerSize;
+        // Write the bytecode.
+        bcp[i++] = raw_opcode;
+        Utils::WriteInt32(bcp + i, offset);
+        i += 4;
+        break;
+      }
+      case kMethodEnd:
+        // Read the method end bytecode and everything that follows.
+        bcp[i++] = raw_opcode;
+        while (i < bytecode_size()) {
+          bcp[i++] = reader->ReadByte();
+        }
+        return;
+      default:
+        // TODO(ager): Maybe just collect chunks and copy them with
+        // memcpy when encountering the end or a bytecode we need to
+        // rewrite?
+        bcp[i++] = raw_opcode;
+        for (int j = 1; j < Bytecode::Size(opcode); j++) {
+          bcp[i++] = reader->ReadByte();
+        }
+        break;
+    }
+  }
+}
+#else
+void Function::ReadByteCodes(SnapshotReader* reader) {
+  reader->ReadBytes(bytecode_size(), bytecode_address_for(0));
+}
+#endif
+
 void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  ASSERT(literals_size() == 0);
   writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, bytecode_size());
+  writer->WriteInt64(literals_size());
   writer->Forward(this);
   // Body.
   for (int offset = HeapObject::kSize; offset < Function::kSize;
        offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
-  writer->WriteBytes(bytecode_size(), bytecode_address_for(0));
+  WriteByteCodes(writer);
+  for (int i = 0; i < literals_size(); i++) {
+    writer->WriteObject(literal_at(i));
+  }
 }
 
 void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
@@ -739,8 +855,10 @@ void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
-  ASSERT(literals_size() == 0);
-  reader->ReadBytes(bytecode_size(), bytecode_address_for(0));
+  ReadByteCodes(reader);
+  for (int i = 0; i < literals_size(); i++) {
+    set_literal_at(i, reader->ReadObject());
+  }
 }
 
 void LargeInteger::LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass) {

@@ -938,15 +938,9 @@ class Function : public HeapObject {
   }
 
   PortableSize CalculatePortableSize() {
-    // Only used when writing snapshots. We only write snapshots
-    // in folded form where there are no literals.
-    ASSERT(literals_size() == 0);
     return PortableSize(kSize / kPointerSize + literals_size(), bytecode_size(),
                         0);
   }
-
-  Function* UnfoldInToSpace(Space* to, int literals_size);
-  Function* FoldInToSpace(Space* to);
 
   static int BytecodeAllocationSize(int bytecode_size_in_bytes) {
     return Utils::RoundUp(bytecode_size_in_bytes, kPointerSize);
@@ -963,7 +957,9 @@ class Function : public HeapObject {
 
   // Snapshotting.
   void FunctionWriteTo(SnapshotWriter* writer, Class* klass);
+  void WriteByteCodes(SnapshotWriter* writer);
   void FunctionReadFrom(SnapshotReader* reader, int length);
+  void ReadByteCodes(SnapshotReader* reader);
 
   // Printing.
   void FunctionPrint();

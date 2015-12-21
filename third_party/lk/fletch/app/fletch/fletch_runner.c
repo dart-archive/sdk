@@ -123,7 +123,7 @@ static int FletchRunner(int argc, const cmd_args *argv) {
   // when using the shell thread.
   thread_t* thread = thread_create(
       "Dart main thread", Run, NULL, DEFAULT_PRIORITY,
-      4096 /* stack size */);
+      8 * 1024 /* stack size */);
   thread_resume(thread);
 
   int retcode;
@@ -141,4 +141,3 @@ APP_START(fletchrunner)
 .flags = APP_FLAG_CUSTOM_STACK_SIZE,
 .stack_size = 8192,
 APP_END
-

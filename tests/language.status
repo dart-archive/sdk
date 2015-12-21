@@ -844,6 +844,11 @@ round_test: RuntimeError
 constant_string_interpolation2_test: RuntimeError
 vm/typed_data_polymorphic_view_test: Crash
 vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
+# These actually overflow the stack because the snapshot reader is
+# recursive.
+large_class_declaration_test: Timeout
+smaller_4_Interface_Types_A11_t01_test: Timeout
+
 
 [ $mode == debug && $system == macos && $asan ]
 closure_cycles_test: Slow, Pass

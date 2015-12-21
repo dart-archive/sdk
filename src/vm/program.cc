@@ -48,7 +48,6 @@ Program::Program(ProgramSource source)
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
-      is_compact_(false),
       loaded_from_snapshot_(source == Program::kLoadedFromSnapshot),
       exit_kind_(Signal::kTerminated) {
 // These asserts need to hold when running on the target, but they don't need
@@ -296,7 +295,7 @@ void Program::FinishProgramGC() {
 }
 
 uword Program::OffsetOf(HeapObject* object) {
-  ASSERT(is_compact());
+  ASSERT(is_optimized());
   return heap()->space()->OffsetOf(object);
 }
 
