@@ -14,6 +14,8 @@
 #include <sys/param.h>
 
 #include "src/shared/platform.h"
+#include "src/shared/utils.h"
+
 #include "src/vm/natives.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
@@ -24,16 +26,24 @@ char* ForeignUtils::DirectoryName(char* path) { return dirname(path); }
 
 class DefaultLibraryEntry {
  public:
-  DefaultLibraryEntry(char* library, DefaultLibraryEntry* next)
-      : library_(library), next_(next) {}
+  DefaultLibraryEntry(void* handle, DefaultLibraryEntry* next)
+      : handle_(handle), next_(next) {}
 
-  ~DefaultLibraryEntry() { free(library_); }
+  ~DefaultLibraryEntry() { dlclose(handle_); }
 
-  const char* library() const { return library_; }
+  void* handle() const { return handle_; }
   DefaultLibraryEntry* next() const { return next_; }
 
+  void append(DefaultLibraryEntry* entry) {
+    if (next_ == NULL) {
+      next_ = entry;
+    } else {
+      next_->append(entry);
+    }
+  }
+
  private:
-  char* library_;
+  void* handle_;
   DefaultLibraryEntry* next_;
 };
 
@@ -52,27 +62,38 @@ void ForeignFunctionInterface::TearDown() {
   delete mutex_;
 }
 
-void ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
+bool ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
   ScopedLock lock(mutex_);
-  libraries_ = new DefaultLibraryEntry(strdup(library), libraries_);
-}
-
-static void* PerformForeignLookup(const char* library, const char* name) {
   void* handle = dlopen(library, RTLD_LOCAL | RTLD_LAZY);
-  if (handle == NULL) return NULL;
-  void* result = dlsym(handle, name);
-  if (dlclose(handle) != 0) return NULL;
-  return result;
+  if (handle != NULL) {
+    // We have to maintain the insertion order (see fletch_api.h).
+    if (libraries_ == NULL) {
+      libraries_ = new DefaultLibraryEntry(handle, libraries_);
+    } else {
+      libraries_->append(new DefaultLibraryEntry(handle, libraries_));
+    }
+    return true;
+  }
+  return false;
 }
 
 void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
   ScopedLock lock(mutex_);
   for (DefaultLibraryEntry* current = libraries_; current != NULL;
        current = current->next()) {
-    void* result = PerformForeignLookup(current->library(), symbol);
+    void* result = dlsym(current->handle(), symbol);
     if (result != NULL) return result;
   }
   return NULL;
+}
+
+void FinalizeForeignLibrary(HeapObject* foreign, Heap* heap) {
+  word address = AsForeignWord(foreign);
+  void* handle = reinterpret_cast<void*>(address);
+  ASSERT(handle != NULL);
+  if (dlclose(handle) != 0) {
+    Print::Error("Failed to close handle: %s\n", dlerror());
+  }
 }
 
 BEGIN_NATIVE(ForeignLibraryLookup) {
@@ -81,11 +102,14 @@ BEGIN_NATIVE(ForeignLibraryLookup) {
   int flags = (global ? RTLD_GLOBAL : RTLD_LOCAL) | RTLD_LAZY;
   void* result = dlopen(library, flags);
   if (result == NULL) {
-    fprintf(stderr, "Failed libary lookup(%s): %s\n", library, dlerror());
+    Print::Error("Failed libary lookup(%s): %s\n", library, dlerror());
   }
   free(library);
-  return result != NULL ? process->ToInteger(reinterpret_cast<intptr_t>(result))
-                        : Failure::index_out_of_bounds();
+  if (result == NULL) return Failure::index_out_of_bounds();
+  Object* handle = process->NewInteger(reinterpret_cast<intptr_t>(result));
+  if (handle == Failure::retry_after_gc()) return handle;
+  process->RegisterFinalizer(HeapObject::cast(handle), FinalizeForeignLibrary);
+  return handle;
 }
 END_NATIVE()
 
@@ -123,17 +147,6 @@ BEGIN_NATIVE(ForeignLibraryBundlePath) {
     return Failure::index_out_of_bounds();
   }
   return process->NewStringFromAscii(List<const char>(result, strlen(result)));
-}
-END_NATIVE()
-
-BEGIN_NATIVE(ForeignLibraryClose) {
-  word address = AsForeignWord(arguments[0]);
-  void* handle = reinterpret_cast<void*>(address);
-  if (dlclose(handle) != 0) {
-    fprintf(stderr, "Failed to close handle: %s\n", dlerror());
-    return Failure::index_out_of_bounds();
-  }
-  return NULL;
 }
 END_NATIVE()
 

@@ -155,8 +155,8 @@ void FletchRunSnapshotFromFile(const char* path) {
   fletch::RunSnapshotFromFile(path);
 }
 
-void FletchAddDefaultSharedLibrary(const char* library) {
-  fletch::ForeignFunctionInterface::AddDefaultSharedLibrary(library);
+bool FletchAddDefaultSharedLibrary(const char* library) {
+  return fletch::ForeignFunctionInterface::AddDefaultSharedLibrary(library);
 }
 
 FletchPrintInterceptor FletchRegisterPrintInterceptor(

@@ -320,6 +320,22 @@
       ],
     },
     {
+      'target_name': 'ffi_test_local_library',
+      'type': 'shared_library',
+      'dependencies': [
+      ],
+      'sources': [
+        'ffi_test_library.h',
+        'ffi_test_library.c',
+      ],
+      'cflags': ['-fPIC'],
+      'xcode_settings': {
+        'OTHER_CPLUSPLUSFLAGS': [
+          '-fPIC',
+        ],
+      },
+    },
+    {
       'target_name': 'ffi_test_library',
       'type': 'shared_library',
       'dependencies': [

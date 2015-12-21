@@ -17,7 +17,7 @@ class ForeignFunctionInterface {
  public:
   static void Setup();
   static void TearDown();
-  static void AddDefaultSharedLibrary(const char* library);
+  static bool AddDefaultSharedLibrary(const char* library);
   static void* LookupInDefaultLibraries(const char* symbol);
 
  private:

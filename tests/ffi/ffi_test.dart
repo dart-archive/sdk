@@ -260,8 +260,6 @@ testPCallAndMemory(bool immutable) {
   Expect.approxEquals(memory.getFloat64(24), 1.79769e+308);
   checkOutOfBoundsThrows(() => memory.getFloat64(25));
   freeMem(memory);
-
-  fl.close();
 }
 
 testVAndICall() {
@@ -396,7 +394,6 @@ testVAndICall() {
   Expect.equals(5, getcount.icall$0());
   Expect.equals(null, vcall6.vcall$6(1, 1, 1, 1, 1, 1));
   Expect.equals(6, getcount.icall$0());
-  fl.close();
 }
 
 testFailingLibraryLookups() {
@@ -615,5 +612,4 @@ testStruct() {
   struct.free();
   struct64.free();
   struct32.free();
-  fl.close();
 }

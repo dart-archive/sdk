@@ -16,6 +16,7 @@
       'type': 'none',
       'dependencies': [
         'src/vm/vm.gyp:ffi_test_library',
+        'src/vm/vm.gyp:ffi_test_local_library',
       ],
     },
     {

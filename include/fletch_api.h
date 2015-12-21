@@ -67,7 +67,7 @@ FLETCH_EXPORT void FletchRunSnapshotFromFile(const char* path);
 // The libraries are searched in the order in which they are added.
 // The library string must be null-terminated and Fletch does not
 // take over ownership of the passed in string.
-FLETCH_EXPORT void FletchAddDefaultSharedLibrary(const char* library);
+FLETCH_EXPORT bool FletchAddDefaultSharedLibrary(const char* library);
 
 // Register a print interception function. When a print occurs the passed
 // function will be called with the message, an output id 2 for stdout or output

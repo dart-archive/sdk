@@ -59,15 +59,6 @@ BEGIN_NATIVE(ForeignLibraryLookup) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignLibraryClose) {
-  word address = AsForeignWord(arguments[0]);
-  if (address != 0) {
-    return Failure::index_out_of_bounds();
-  }
-  return Smi::FromWord(0);
-}
-END_NATIVE()
-
 BEGIN_NATIVE(ForeignLibraryBundlePath) {
   UNIMPLEMENTED();
   return Smi::FromWord(0);

@@ -11,12 +11,11 @@ import "package:expect/expect.dart";
 bool isArgumentError(e) => e is ArgumentError;
 
 void main() {
-  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
+  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_local_library');
   ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
   Expect.throws(
       () => ForeignLibrary.main.lookup('memuint32'),
       isArgumentError);
-  fl.close();
 
   ForeignLibrary flGlobal = new ForeignLibrary.fromName(libPath, global: true);
   var memuint32 = ForeignLibrary.main.lookup('memuint32');

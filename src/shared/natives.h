@@ -142,7 +142,6 @@ namespace fletch {
   N(EventHandlerAdd, "<none>", "_eventHandlerAdd")                        \
                                                                           \
   N(ForeignLibraryLookup, "ForeignLibrary", "_lookupLibrary")             \
-  N(ForeignLibraryClose, "ForeignLibrary", "_closeLibrary")               \
   N(ForeignLibraryGetFunction, "ForeignLibrary", "_lookupFunction")       \
   N(ForeignLibraryBundlePath, "ForeignLibrary", "bundleLibraryName")      \
                                                                           \

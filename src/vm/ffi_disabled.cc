@@ -36,7 +36,6 @@ Mutex* ForeignFunctionInterface::mutex_ = NULL;
 UNIMPLEMENTED_NATIVE(ForeignLibraryLookup)
 UNIMPLEMENTED_NATIVE(ForeignLibraryGetFunction)
 UNIMPLEMENTED_NATIVE(ForeignLibraryBundlePath)
-UNIMPLEMENTED_NATIVE(ForeignLibraryClose)
 
 UNIMPLEMENTED_NATIVE(ForeignErrno)
 

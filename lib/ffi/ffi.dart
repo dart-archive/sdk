@@ -63,7 +63,8 @@ abstract class Foreign {
 
 class ForeignFunction extends Foreign {
   final int address;
-  const ForeignFunction.fromAddress(this.address);
+  final ForeignLibrary _library;
+  const ForeignFunction.fromAddress(this.address, [this._library = null]);
 
   /// Helper function for retrying functions that follow the POSIX-convention
   /// of returning `-1` and setting `errno` to `EINTR`.
@@ -286,6 +287,12 @@ class ForeignPointer extends Foreign {
   static const ForeignPointer NULL = const ForeignPointer(0);
 }
 
+class _ForeignValue extends ForeignPointer {
+  final ForeignLibrary _library;
+
+  const _ForeignValue(int address, [this._library = null]) : super(address);
+}
+
 class ForeignLibrary extends ForeignPointer {
   /// The ForeignLibrary main is used for looking up functions in the libraries
   /// linked in to the main Fletch binary.
@@ -300,11 +307,12 @@ class ForeignLibrary extends ForeignPointer {
   }
 
   ForeignFunction lookup(String name) {
-    return new ForeignFunction.fromAddress(_lookupFunction(address, name));
+    return new ForeignFunction.fromAddress(_lookupFunction(address, name),
+        this);
   }
 
   ForeignPointer lookupVariable(String name) {
-    return new ForeignPointer(_lookupFunction(address, name));
+    return new _ForeignValue(_lookupFunction(address, name), this);
   }
 
   /// Provides a platform specific location for a library relative to the
@@ -315,21 +323,12 @@ class ForeignLibrary extends ForeignPointer {
     throw new ArgumentError();
   }
 
-  void close() {
-    _closeLibrary(address);
-  }
-
   @fletch.native static int _lookupLibrary(String name, bool global) {
     var error = fletch.nativeError;
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
 
   @fletch.native static int _lookupFunction(int address, String name) {
-    var error = fletch.nativeError;
-    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
-  }
-
-  @fletch.native static int _closeLibrary(int address) {
     var error = fletch.nativeError;
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
