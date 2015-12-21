@@ -46,6 +46,8 @@ class Scheduler {
   void PauseGcThread();
   void ResumeGcThread();
 
+  void FinishedGC(Program* program, int count);
+
   // This method should only be called from a thread which is currently
   // interpreting a process.
   void EnqueueProcessOnSchedulerWorkerThread(Process* interpreting_process,

@@ -70,9 +70,13 @@ class Session;
   V(Array, static_fields, StaticFields)                         \
   V(Array, dispatch_table, DispatchTable)
 
+// This state information is managed by the scheduler.
 class ProgramState {
  public:
-  ProgramState() : paused_processes_head_(NULL), is_paused_(false) {}
+  ProgramState()
+      : paused_processes_head_(NULL),
+        is_paused_(false),
+        pending_gcs_(0) {}
 
   // The [Scheduler::pause_monitor_] must be locked when calling this method.
   void AddPausedProcess(Process* process);
@@ -86,8 +90,11 @@ class ProgramState {
   }
 
  private:
+  friend class Scheduler;
+
   Process* paused_processes_head_;
   bool is_paused_;
+  int pending_gcs_;
 };
 
 class Program {

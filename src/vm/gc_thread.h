@@ -16,7 +16,7 @@ class GCThread {
   ~GCThread();
 
   void StartThread();
-  void TriggerImmutableGC(Program* program);
+  void TriggerSharedGC(Program* program);
   void TriggerGC(Program* program);
   void Pause();
   void Resume();
@@ -30,10 +30,10 @@ class GCThread {
   ThreadIdentifier thread_;
 
   Monitor* gc_thread_monitor_;
-  Program* program_;
+  // TODO(kustermann): We should use a priority datastructure here.
+  HashMap<Program*, int> program_gc_count_;
+  HashMap<Program*, int> shared_gc_count_;
   bool shutting_down_;
-  bool requesting_shared_gc_;
-  bool requesting_gc_;
   int pause_count_;
 
   Monitor* client_monitor_;

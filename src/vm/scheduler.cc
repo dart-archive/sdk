@@ -188,6 +188,15 @@ void Scheduler::ResumeGcThread() {
   gc_thread_->Resume();
 }
 
+void Scheduler::FinishedGC(Program* program, int count) {
+  ASSERT(count > 0);
+  ScopedMonitorLock locker(pause_monitor_);
+  program->program_state()->pending_gcs_ -= count;
+
+  // TODO(kustermann): Onc we have multi program GC support we might need to
+  // notify the embedder at this point that the program finished.
+}
+
 void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
     Process* interpreting_process, Process* process) {
   ++processes_;
@@ -334,6 +343,9 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
 
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
+
+    ScopedMonitorLock locker(pause_monitor_);
+    program->program_state()->pending_gcs_++;
     gc_thread_->TriggerGC(program);
   }
 }
@@ -612,7 +624,9 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
       if (process->program() != program) {
         if (shared_heap_part != NULL) {
           if (shared_heap->ReleasePart(shared_heap_part)) {
-            gc_thread_->TriggerImmutableGC(program);
+            ScopedMonitorLock locker(pause_monitor_);
+            program->program_state()->pending_gcs_++;
+            gc_thread_->TriggerSharedGC(program);
           }
         }
         program = process->program();
@@ -627,7 +641,9 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
           process, shared_heap_part->heap(), thread_state, &allocation_failure);
       if (allocation_failure) {
         if (shared_heap->ReleasePart(shared_heap_part)) {
-          gc_thread_->TriggerImmutableGC(program);
+          ScopedMonitorLock locker(pause_monitor_);
+          program->program_state()->pending_gcs_++;
+          gc_thread_->TriggerSharedGC(program);
         }
         shared_heap_part = shared_heap->AcquirePart();
       }
@@ -640,7 +656,9 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   // Always merge remaining immutable heap part back before (possibly) going
   // to sleep.
   if (shared_heap != NULL && shared_heap->ReleasePart(shared_heap_part)) {
-    gc_thread_->TriggerImmutableGC(program);
+    ScopedMonitorLock locker(pause_monitor_);
+    program->program_state()->pending_gcs_++;
+    gc_thread_->TriggerSharedGC(program);
   }
 }
 
