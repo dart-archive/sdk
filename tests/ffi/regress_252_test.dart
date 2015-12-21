@@ -17,6 +17,7 @@ void main() {
       () => ForeignLibrary.main.lookup('memuint32'),
       isArgumentError);
 
+  libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
   ForeignLibrary flGlobal = new ForeignLibrary.fromName(libPath, global: true);
   var memuint32 = ForeignLibrary.main.lookup('memuint32');
   var memory =
