@@ -65,6 +65,8 @@ int HeapObject::Size() {
       return Double::cast(this)->DoubleSize();
     case InstanceFormat::LARGE_INTEGER_TYPE:
       return LargeInteger::cast(this)->LargeIntegerSize();
+    case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE:
+      return DispatchTableEntry::cast(this)->DispatchTableEntrySize();
     case InstanceFormat::FREE_LIST_CHUNK_TYPE:
       return FreeListChunk::cast(this)->size();
   }
@@ -175,7 +177,7 @@ void* Function::ComputeIntrinsic(IntrinsicsTable* table) {
              bytecodes[2] == kListLength) {
     result = reinterpret_cast<void*>(table->ListLength());
   }
-  return (reinterpret_cast<Object*>(result)->IsSmi()) ? result : NULL;
+  return result;
 }
 
 void Object::Print() {

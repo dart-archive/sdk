@@ -75,6 +75,8 @@ class Header {
         return Double::AllocationSize();
       case InstanceFormat::INITIALIZER_TYPE:
         return Initializer::AllocationSize();
+      case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE:
+        return DispatchTableEntry::AllocationSize();
       default:
         UNREACHABLE();
         return 0;
@@ -486,6 +488,11 @@ Object* SnapshotReader::ReadObject() {
       initializer->InitializerReadFrom(this);
       break;
     }
+    case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE: {
+      DispatchTableEntry* entry = reinterpret_cast<DispatchTableEntry*>(object);
+      entry->DispatchTableEntryReadFrom(this);
+      break;
+    }
     default:
       UNIMPLEMENTED();
   }
@@ -581,6 +588,12 @@ void SnapshotWriter::WriteObject(Object* object) {
       Initializer* initializer = Initializer::cast(object);
       heap_size_ += initializer->CalculatePortableSize();
       initializer->InitializerWriteTo(this, klass);
+      break;
+    }
+    case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE: {
+      DispatchTableEntry* entry = DispatchTableEntry::cast(object);
+      heap_size_ += entry->CalculatePortableSize();
+      entry->DispatchTableEntryWriteTo(this, klass);
       break;
     }
     default:
@@ -901,6 +914,26 @@ void Initializer::InitializerReadFrom(SnapshotReader* reader) {
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
+}
+
+void DispatchTableEntry::DispatchTableEntryWriteTo(SnapshotWriter* writer,
+                                                   Class* klass) {
+  // Header.
+  writer->WriteHeader(InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE);
+  writer->Forward(this);
+
+  // Body.
+  writer->WriteObject(at(kFunctionOffset));
+  ASSERT(target() == NULL);
+  writer->WriteObject(offset());
+  writer->WriteInt64(selector());
+}
+
+void DispatchTableEntry::DispatchTableEntryReadFrom(SnapshotReader* reader) {
+  set_function(Function::cast(reader->ReadObject()));
+  set_target(NULL);
+  set_offset(Smi::cast(reader->ReadObject()));
+  set_selector(reader->ReadInt64());
 }
 
 }  // namespace fletch

@@ -134,6 +134,18 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   return Initializer::cast(result);
 }
 
+Object* Heap::CreateDispatchTableEntry(Class* the_class) {
+  ASSERT(the_class->instance_format().type() ==
+         InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE);
+  int size = DispatchTableEntry::AllocationSize();
+  Object* raw_result = Allocate(size);
+  if (raw_result->IsFailure()) return raw_result;
+  DispatchTableEntry* result =
+      reinterpret_cast<DispatchTableEntry*>(raw_result);
+  result->set_class(the_class);
+  return DispatchTableEntry::cast(result);
+}
+
 Object* Heap::CreateOneByteStringInternal(Class* the_class, int length,
                                           bool clear) {
   ASSERT(the_class->instance_format().type() ==

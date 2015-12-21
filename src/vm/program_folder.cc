@@ -92,11 +92,12 @@ class ProgramRewriter {
     Function* trampoline = program->object_class()->LookupMethod(
         Selector::Encode(name, Selector::METHOD, 0));
 
-    Array* nsm = Array::cast(program->CreateArray(4));
-    nsm->set(0, Smi::FromWord(0));
-    nsm->set(1, Smi::FromWord(0));
-    nsm->set(2, trampoline);
-    nsm->set(3, NULL);
+    DispatchTableEntry* nsm = DispatchTableEntry::cast(
+        program->CreateDispatchTableEntry());
+    nsm->set_offset(Smi::FromWord(0));
+    nsm->set_selector(0);
+    nsm->set_function(trampoline);
+    nsm->set_target(NULL);
 
     ASSERT(table->get(0)->IsNull());
     for (int i = 0; i < table_size; i++) {
@@ -385,10 +386,9 @@ void ProgramFolder::Unfold() {
   if (dispatch_table != NULL) {
     for (int i = 0, length = dispatch_table->length(); i < length; i++) {
       Object* element = dispatch_table->get(i);
-      if (element->IsNull()) continue;
-      Array* entry = Array::cast(element);
-      int offset = Smi::cast(entry->get(0))->value();
-      int selector = Smi::cast(entry->get(1))->value();
+      DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+      int offset = entry->offset()->value();
+      int selector = entry->selector();
       ASSERT(map.Find(offset) == map.End() || map[offset] == selector);
       map[offset] = selector;
     }

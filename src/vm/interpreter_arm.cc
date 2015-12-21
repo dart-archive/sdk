@@ -682,8 +682,9 @@ void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
   __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
   __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
 
-  // Load the function at index 2.
-  __ ldr(R0, Address(R1, 8 + Array::kSize - HeapObject::kTag));
+  // Load the function.
+  __ ldr(R0,
+         Address(R1, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
 
   // Compute and push the return address on the stack.
   __ add(R5, R5, Immediate(kInvokeNoSuchMethodLength));
@@ -1614,7 +1615,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   // Validate that the offset stored in the entry matches the offset
   // we used to find it.
   Label invalid;
-  __ ldr(R3, Address(R1, Array::kSize - HeapObject::kTag));
+  __ ldr(R3, Address(R1, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
   __ cmp(R7, R3);
   __ b(NE, &invalid);
 
@@ -1626,8 +1627,10 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     Dispatch(kInvokeTestLength);
   } else {
     __ Bind(&validated);
-    __ ldr(R0, Address(R1, 8 + Array::kSize - HeapObject::kTag));
-    __ ldr(R2, Address(R1, 12 + Array::kSize - HeapObject::kTag));
+    __ ldr(R0,
+           Address(R1, DispatchTableEntry::kFunctionOffset- HeapObject::kTag));
+    __ ldr(R2,
+           Address(R1, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
 
     // Check if we have an associated intrinsic.
     __ tst(R2, R2);

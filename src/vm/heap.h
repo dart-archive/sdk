@@ -57,6 +57,9 @@ class Heap {
   // Allocate static variable info.
   Object* CreateInitializer(Class* the_class, Function* function);
 
+  // Allocate dispatch table entry.
+  Object* CreateDispatchTableEntry(Class* the_class);
+
   // Create a string object initialized with zeros. Caller should set
   // the actual contents.
   Object* CreateOneByteString(Class* the_class, int length);

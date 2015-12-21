@@ -229,6 +229,10 @@ Object* Program::CreateInitializer(Function* function) {
   return heap()->CreateInitializer(initializer_class_, function);
 }
 
+Object* Program::CreateDispatchTableEntry() {
+  return heap()->CreateDispatchTableEntry(dispatch_table_entry_class_);
+}
+
 void Program::PrepareProgramGC() {
   // All threads are stopped and have given their parts back to the
   // [SharedHeap], so we can merge them now.
@@ -794,6 +798,12 @@ void Program::Initialize() {
   }
 
   {
+    InstanceFormat format = InstanceFormat::dispatch_table_entry_format();
+    dispatch_table_entry_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
     InstanceFormat format = InstanceFormat::instance_format(1);
     constant_list_class_ =
         Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
@@ -938,8 +948,8 @@ void Program::ClearDispatchTableIntrinsics() {
   int length = table->length();
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    Array* entry = Array::cast(element);
-    entry->set(3, NULL);
+    DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+    entry->set_target(NULL);
   }
 }
 
@@ -956,20 +966,17 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
 
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    Array* entry = Array::cast(element);
-    if (entry->get(3) != NULL) {
+    DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+    if (entry->target() != NULL) {
       // The intrinsic is already set.
       hits++;
       continue;
     }
-    Object* target = entry->get(2);
-    if (target == trampoline) continue;
+    Function* function = entry->function();
+    if (function == trampoline) continue;
     hits++;
-    Function* method = Function::cast(target);
-    Object* intrinsic =
-        reinterpret_cast<Object*>(method->ComputeIntrinsic(intrinsics));
-    ASSERT(intrinsic->IsSmi());
-    entry->set(3, intrinsic);
+    void* intrinsic = function->ComputeIntrinsic(intrinsics);
+    entry->set_target(intrinsic);
   }
 
   if (Flags::print_program_statistics) {

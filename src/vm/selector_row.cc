@@ -81,11 +81,12 @@ void SelectorRow::FillTable(Program* program, Vector<Class*>* classes,
   for (int i = 0, length = variants_; i < length; i++) {
     Class* clazz = classes_[i];
     Function* method = methods_[i];
-    Array* entry = Array::cast(program->CreateArray(4));
-    entry->set(0, Smi::FromWord(offset));
-    entry->set(1, Smi::FromWord(selector_));
-    entry->set(2, method);
-    entry->set(3, NULL);
+    DispatchTableEntry* entry = DispatchTableEntry::cast(
+        program->CreateDispatchTableEntry());
+    entry->set_offset(Smi::FromWord(offset));
+    entry->set_selector(selector_);
+    entry->set_function(method);
+    entry->set_target(NULL);
 
     int id = clazz->id();
     int limit = clazz->child_id();

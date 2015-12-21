@@ -55,6 +55,7 @@ class Session;
   V(Class, foreign_function_class, ForeignFunctionClass)        \
   V(Class, foreign_memory_class, ForeignMemoryClass)            \
   V(Class, initializer_class, InitializerClass)                 \
+  V(Class, dispatch_table_entry_class, DispatchTableEntryClass) \
   V(Class, constant_list_class, ConstantListClass)              \
   V(Class, constant_byte_list_class, ConstantByteListClass)     \
   V(Class, constant_map_class, ConstantMapClass)                \
@@ -190,6 +191,7 @@ class Program {
   Object* CreateTwoByteString(List<uint16> str);
   Object* CreateInstance(Class* klass);
   Object* CreateInitializer(Function* function);
+  Object* CreateDispatchTableEntry();
 
   void ValidateHeapsAreConsistent();
   void ValidateSharedHeap();

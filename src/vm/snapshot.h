@@ -92,6 +92,7 @@ class SnapshotReader {
   friend class LargeInteger;
   friend class Double;
   friend class Initializer;
+  friend class DispatchTableEntry;
   friend class ReaderVisitor;
 
  private:
@@ -155,6 +156,7 @@ class SnapshotWriter {
   friend class LargeInteger;
   friend class Double;
   friend class Initializer;
+  friend class DispatchTableEntry;
   friend class UnmarkSnapshotVisitor;
   friend class WriterVisitor;
 

@@ -695,8 +695,9 @@ void InterpreterGeneratorX86::DoInvokeNoSuchMethod() {
   __ movl(ECX, Address(ECX, Program::kDispatchTableOffset));
   __ movl(ECX, Address(ECX, Array::kSize - HeapObject::kTag));
 
-  // Load the function at index 2.
-  __ movl(EAX, Address(ECX, 2 * kWordSize + Array::kSize - HeapObject::kTag));
+  // Load the function.
+  __ movl(EAX,
+          Address(ECX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
 
   // Compute and push the return bcp on the stack.
   __ addl(ESI, Immediate(kInvokeNoSuchMethodLength));
@@ -1867,7 +1868,8 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
   // Validate that the offset stored in the entry matches the offset
   // we used to find it.
   Label invalid;
-  __ cmpl(EDX, Address(ECX, Array::kSize - HeapObject::kTag));
+  __ cmpl(EDX,
+          Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
   __ j(NOT_EQUAL, &invalid);
 
   Label validated, intrinsified;
@@ -1879,8 +1881,11 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
   } else {
     // Load the target and the intrinsic from the entry.
     __ Bind(&validated);
-    __ movl(EAX, Address(ECX, 8 + Array::kSize - HeapObject::kTag));
-    __ movl(EBX, Address(ECX, 12 + Array::kSize - HeapObject::kTag));
+    __ movl(
+        EAX,
+        Address(ECX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
+    __ movl(EBX,
+            Address(ECX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
 
     // Check if we have an associated intrinsic.
     __ testl(EBX, EBX);

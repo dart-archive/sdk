@@ -464,10 +464,11 @@ Interpreter::InterruptKind Engine::Interpret(
   OPCODE_END();
 
   OPCODE_BEGIN(InvokeNoSuchMethod);
-  Array* entry = Array::cast(program()->dispatch_table()->get(0));
-  Function* target = Function::cast(entry->get(2));
+  DispatchTableEntry* entry = DispatchTableEntry::cast(
+      program()->dispatch_table()->get(0));
+  Function* function = entry->function();
   PushFrameDescriptor(kInvokeNoSuchMethodLength);
-  Goto(target->bytecode_address_for(0));
+  Goto(function->bytecode_address_for(0));
   STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
@@ -487,12 +488,13 @@ Interpreter::InterruptKind Engine::Interpret(
                                    : HeapObject::cast(receiver)->get_class();
 
   int index = clazz->id() + offset;
-  Array* entry = Array::cast(program()->dispatch_table()->get(index));
-  if (Smi::cast(entry->get(0))->value() != offset) {
-    entry = Array::cast(program()->dispatch_table()->get(0));
+  DispatchTableEntry* entry = DispatchTableEntry::cast(
+      program()->dispatch_table()->get(index));
+  if (entry->offset()->value() != offset) {
+    entry = DispatchTableEntry::cast(program()->dispatch_table()->get(0));
   }
-  Function* target = Function::cast(entry->get(2));
-  Goto(target->bytecode_address_for(0));
+  Function* function = entry->function();
+  Goto(function->bytecode_address_for(0));
   STACK_OVERFLOW_CHECK(0);
   OPCODE_END();
 
@@ -591,8 +593,9 @@ Interpreter::InterruptKind Engine::Interpret(
                                    : HeapObject::cast(receiver)->get_class();
 
   int index = clazz->id() + offset;
-  Array* entry = Array::cast(program()->dispatch_table()->get(index));
-  SetTop(ToBool(Smi::cast(entry->get(0))->value() == offset));
+  DispatchTableEntry* entry = DispatchTableEntry::cast(
+      program()->dispatch_table()->get(index));
+  SetTop(ToBool(entry->offset()->value() == offset));
 
   Advance(kInvokeTestLength);
   OPCODE_END();
@@ -1181,9 +1184,10 @@ void HandleEnterNoSuchMethod(Process* process) {
     selector = Utils::ReadInt32(bcp - 4);
     int offset = Selector::IdField::decode(selector);
     for (int i = offset; true; i++) {
-      Array* entry = Array::cast(program->dispatch_table()->get(i));
-      if (Smi::cast(entry->get(0))->value() == offset) {
-        selector = Smi::cast(entry->get(1))->value();
+      DispatchTableEntry* entry = DispatchTableEntry::cast(
+          program->dispatch_table()->get(i));
+      if (entry->offset()->value() == offset) {
+        selector = entry->selector();
         break;
       }
     }

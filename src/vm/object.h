@@ -32,6 +32,7 @@ namespace fletch {
 //       Double
 //       Function
 //       Initializer
+//       DispatchTableEntry
 //       LargeInteger
 //       BaseArray
 //         Array
@@ -109,6 +110,7 @@ class Object {
   inline bool IsDouble();
   inline bool IsBoxed();
   inline bool IsInitializer();
+  inline bool IsDispatchTableEntry();
   inline bool IsStack();
   inline bool IsCoroutine();
   inline bool IsPort();
@@ -206,8 +208,9 @@ class InstanceFormat {
     BOXED_TYPE = 9,
     STACK_TYPE = 10,
     INITIALIZER_TYPE = 11,
-    FREE_LIST_CHUNK_TYPE = 12,
-    ONE_WORD_FILLER_TYPE = 13,
+    DISPATCH_TABLE_ENTRY_TYPE = 12,
+    FREE_LIST_CHUNK_TYPE = 13,
+    ONE_WORD_FILLER_TYPE = 14,
     IMMEDIATE_TYPE = 15  // No instances.
   };
 
@@ -244,6 +247,7 @@ class InstanceFormat {
   inline static const InstanceFormat one_word_filler_format();
   inline static const InstanceFormat stack_format();
   inline static const InstanceFormat initializer_format();
+  inline static const InstanceFormat dispatch_table_entry_format();
   inline static const InstanceFormat null_format();
 
   InstanceFormat set_fixed_size(int value) {
@@ -517,6 +521,46 @@ class Initializer : public HeapObject {
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Initializer);
+};
+
+// Entry in the dispatch table.
+class DispatchTableEntry : public HeapObject {
+ public:
+  inline Function* function();
+  inline void set_function(Function* value);
+
+  inline void* target();
+  inline void set_target(void* value);
+
+  inline Smi* offset();
+  inline void set_offset(Smi* value);
+
+  inline word selector();
+  inline void set_selector(word value);
+
+  // Casting.
+  static inline DispatchTableEntry* cast(Object* object);
+
+  // Snapshotting.
+  void DispatchTableEntryWriteTo(SnapshotWriter* writer, Class* klass);
+  void DispatchTableEntryReadFrom(SnapshotReader* reader);
+
+  static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
+
+  int DispatchTableEntrySize() { return AllocationSize(); }
+
+  PortableSize CalculatePortableSize() {
+    return PortableSize(kSize / kPointerSize, 0, 0);
+  }
+
+  static const int kFunctionOffset = HeapObject::kSize;
+  static const int kTargetOffset = kFunctionOffset + kWordSize;
+  static const int kOffsetOffset = kTargetOffset + kWordSize;
+  static const int kSelectorOffset = kOffsetOffset + kWordSize;
+  static const int kSize = kSelectorOffset + kWordSize;
+
+ private:
+  DISALLOW_IMPLICIT_CONSTRUCTORS(DispatchTableEntry);
 };
 
 // Failure (immediate).
@@ -1325,6 +1369,12 @@ const InstanceFormat InstanceFormat::initializer_format() {
                         NEVER_IMMUTABLE);
 }
 
+const InstanceFormat InstanceFormat::dispatch_table_entry_format() {
+  return InstanceFormat(DISPATCH_TABLE_ENTRY_TYPE,
+                        DispatchTableEntry::kTargetOffset, true, true,
+                        NEVER_IMMUTABLE);
+}
+
 const InstanceFormat InstanceFormat::free_list_chunk_format() {
   return InstanceFormat(FREE_LIST_CHUNK_TYPE, FreeListChunk::kSize, true, true,
                         NEVER_IMMUTABLE);
@@ -1495,6 +1545,12 @@ bool Object::IsInitializer() {
   if (IsSmi()) return false;
   HeapObject* h = HeapObject::cast(this);
   return h->format().type() == InstanceFormat::INITIALIZER_TYPE;
+}
+
+bool Object::IsDispatchTableEntry() {
+  if (IsSmi()) return false;
+  HeapObject* h = HeapObject::cast(this);
+  return h->format().type() == InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE;
 }
 
 bool Object::IsStack() {
@@ -2085,6 +2141,45 @@ void Initializer::set_function(Function* value) {
 Initializer* Initializer::cast(Object* object) {
   ASSERT(object->IsInitializer());
   return reinterpret_cast<Initializer*>(object);
+}
+
+// Inlined DispatchTableEntry functions.
+
+Function* DispatchTableEntry::function() {
+  return Function::cast(at(kFunctionOffset));
+}
+
+void DispatchTableEntry::set_function(Function* value) {
+  at_put(kFunctionOffset, value);
+}
+
+void* DispatchTableEntry::target() {
+  return reinterpret_cast<void*>(at(kTargetOffset));
+}
+
+void DispatchTableEntry::set_target(void* value) {
+  at_put(kTargetOffset, reinterpret_cast<Object*>(value));
+}
+
+Smi* DispatchTableEntry::offset() {
+  return Smi::cast(at(kOffsetOffset));
+}
+
+void DispatchTableEntry::set_offset(Smi* value) {
+  at_put(kOffsetOffset, value);
+}
+
+word DispatchTableEntry::selector() {
+  return reinterpret_cast<word>(at(kSelectorOffset));
+}
+
+void DispatchTableEntry::set_selector(word value) {
+  at_put(kSelectorOffset, reinterpret_cast<Object*>(value));
+}
+
+DispatchTableEntry* DispatchTableEntry::cast(Object* object) {
+  ASSERT(object->IsDispatchTableEntry());
+  return reinterpret_cast<DispatchTableEntry*>(object);
 }
 
 // Inlined Stack functions.
