@@ -107,7 +107,7 @@ BEGIN_NATIVE(ForeignLibraryLookup) {
   free(library);
   if (result == NULL) return Failure::index_out_of_bounds();
   Object* handle = process->NewInteger(reinterpret_cast<intptr_t>(result));
-  if (handle == Failure::retry_after_gc()) return handle;
+  if (handle->IsRetryAfterGCFailure()) return handle;
   process->RegisterFinalizer(HeapObject::cast(handle), FinalizeForeignLibrary);
   return handle;
 }
