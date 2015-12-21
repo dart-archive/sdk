@@ -104,7 +104,7 @@ void EventHandler::Run() {
     }
 
     Port* port = reinterpret_cast<Port*>(event.udata);
-    Send(port, mask);
+    Send(port, mask, true);
   }
 }
 

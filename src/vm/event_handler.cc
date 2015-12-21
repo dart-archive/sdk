@@ -111,7 +111,7 @@ void EventHandler::HandleTimeouts() {
   while (!timeouts_.IsEmpty()) {
     auto minimum = timeouts_.Minimum();
     if (minimum.priority <= current_time) {
-      Send(minimum.value, 0);
+      Send(minimum.value, 0, true);
       timeouts_.RemoveMinimum();
     } else {
       next_timeout = minimum.priority;
@@ -121,7 +121,7 @@ void EventHandler::HandleTimeouts() {
   next_timeout_ = next_timeout;
 }
 
-void EventHandler::Send(Port* port, int64 value) {
+void EventHandler::Send(Port* port, int64 value, bool release_port) {
   port->Lock();
   Process* port_process = port->process();
   if (port_process != NULL) {
@@ -129,7 +129,7 @@ void EventHandler::Send(Port* port, int64 value) {
     port_process->program()->scheduler()->ResumeProcess(port_process);
   }
   port->Unlock();
-  port->DecrementRef();
+  if (release_port) port->DecrementRef();
 }
 
 }  // namespace fletch

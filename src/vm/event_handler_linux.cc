@@ -95,7 +95,7 @@ void EventHandler::Run() {
     if ((events & EPOLLERR) != 0) mask |= ERROR_EVENT;
 
     Port* port = reinterpret_cast<Port*>(event.data.ptr);
-    Send(port, mask);
+    Send(port, mask, true);
   }
 }
 

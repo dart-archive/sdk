@@ -57,7 +57,7 @@ class EventHandler {
   void Interrupt();
   void HandleTimeouts();
 
-  void Send(Port* port, int64 value);
+  void Send(Port* port, int64 value, bool release_port);
 };
 
 }  // namespace fletch

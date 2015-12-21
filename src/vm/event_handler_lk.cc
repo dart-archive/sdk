@@ -149,7 +149,7 @@ void EventHandler::Run() {
 
     if (has_result && result.ctx != NULL) {
       int64 value = *reinterpret_cast<int64*>(&result.packet.value);
-      Send(reinterpret_cast<Port*>(result.ctx), value);
+      Send(reinterpret_cast<Port*>(result.ctx), value, false);
     }
 
     HandleTimeouts();
