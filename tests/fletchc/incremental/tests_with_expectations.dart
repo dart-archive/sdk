@@ -131,6 +131,60 @@ main() {
 }
 ''',
 
+// Test that we can do a program rewrite (which implies a big GC) while there
+// are multiple processes alive that depend on the program.
+  r'''
+program_gc_with_processes
+==> main.dart.patch <==
+import 'dart:fletch';
+
+class Comms {
+<<<< "Setup"
+==== "Hello world"
+  int late_arrival;
+>>>>
+  var paused;
+  var pausedPort;
+  var resumePort;
+  Process process;
+}
+
+Comms comms;
+
+void SubProcess(Port pausedPort) {
+  // This function, used by the spawned processes, does not exist after the
+  // rewrite, but it will be on the stack, so it is kept alive across the GC.
+  var c = new Channel();
+  pausedPort.send(new Port(c));
+  c.receive();
+  print("Hello world");
+}
+
+main() {
+<<<<
+  // The setup takes place before the rewrite.
+  comms = new Comms();
+
+  comms.paused = new Channel();
+  var pausedPort = comms.pausedPort = new Port(comms.paused);
+
+  comms.process = Process.spawnDetached(() => SubProcess(pausedPort));
+
+  print("Setup");
+====
+  // After the rewrite we get the port from the sub-process and send the
+  // data it needs to resume running.
+  comms.resumePort = comms.paused.receive();
+
+  var monitor = new Channel();
+
+  comms.process.monitor(new Port(monitor));
+
+  comms.resumePort.send(null);
+>>>>
+}
+''',
+
   r'''
 instance_field_end
 ==> main.dart.patch <==

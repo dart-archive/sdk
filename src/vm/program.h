@@ -224,6 +224,10 @@ class Program {
   // This function should only be called once the program has been stopped.
   void VisitProcesses(ProcessVisitor* visitor);
 
+  // If we have one heap per process, then this is the same as VisitProcesses,
+  // otherwise it is just called once on one of the processes.
+  void VisitProcessHeaps(ProcessVisitor* visitor);
+
   Object* CreateArray(int capacity) {
     return CreateArrayWith(capacity, null_object());
   }
@@ -282,6 +286,8 @@ class Program {
   // When the program was loaded from a snapshot, then this function can be used
   // to get the offset of functions/classes in the program heap.
   uword OffsetOf(HeapObject* object);
+
+  Process* process_list_head() { return process_list_head_; }
 
  private:
   // Access to the address of the first and last root.

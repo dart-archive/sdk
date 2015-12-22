@@ -134,11 +134,20 @@ bool Program::ScheduleProcessForDeletion(Process* process, Signal::Kind kind) {
 }
 
 void Program::VisitProcesses(ProcessVisitor* visitor) {
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    visitor->VisitProcess(current);
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    visitor->VisitProcess(process);
   }
+}
+
+void Program::VisitProcessHeaps(ProcessVisitor* visitor) {
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  VisitProcesses(visitor);
+#else
+  if (process_list_head_ != NULL) {
+    visitor->VisitProcess(process_list_head_);
+  }
+#endif
 }
 
 Object* Program::CreateArrayWith(int capacity, Object* initial_value) {
@@ -235,6 +244,27 @@ Object* Program::CreateDispatchTableEntry() {
   return heap()->CreateDispatchTableEntry(dispatch_table_entry_class_);
 }
 
+class ValidateProcessHeapVisitor : public ProcessVisitor {
+ public:
+  explicit ValidateProcessHeapVisitor(SharedHeap* shared_heap)
+      : shared_heap_(shared_heap) {}
+
+  virtual void VisitProcess(Process* process) {
+    process->ValidateHeaps(shared_heap_);
+  }
+
+ private:
+  SharedHeap* shared_heap_;
+};
+
+class CollectGarbageAndChainStacksVisitor : public ProcessVisitor {
+ public:
+  virtual void VisitProcess(Process* process) {
+    int number_of_stacks = process->CollectGarbageAndChainStacks();
+    process->CookStacks(number_of_stacks);
+  }
+};
+
 void Program::PrepareProgramGC() {
   // All threads are stopped and have given their parts back to the
   // [SharedHeap], so we can merge them now.
@@ -244,18 +274,41 @@ void Program::PrepareProgramGC() {
     ValidateGlobalHeapsAreConsistent();
   }
 
-  // Loop over all processes and cook all stacks.
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    if (Flags::validate_heaps) {
-      current->ValidateHeaps(&shared_heap_);
-    }
-
-    int number_of_stacks = current->CollectGarbageAndChainStacks();
-    current->CookStacks(number_of_stacks);
-    current = current->process_list_next();
+  if (Flags::validate_heaps) {
+    ValidateProcessHeapVisitor visitor(&shared_heap_);
+    VisitProcesses(&visitor);
   }
+
+  // Cook all stacks.
+  CollectGarbageAndChainStacksVisitor visitor;
+  VisitProcessHeaps(&visitor);
 }
+
+class IterateProgramPointersVisitor : public ProcessVisitor {
+ public:
+  explicit IterateProgramPointersVisitor(PointerVisitor* pointer_visitor)
+      : pointer_visitor_(pointer_visitor) {}
+
+  virtual void VisitProcess(Process* process) {
+    process->IterateProgramPointers(pointer_visitor_);
+  }
+
+ private:
+  PointerVisitor* pointer_visitor_;
+};
+
+class IterateProgramPointersHeapVisitor : public ProcessVisitor {
+ public:
+  explicit IterateProgramPointersHeapVisitor(PointerVisitor* pointer_visitor)
+      : pointer_visitor_(pointer_visitor) {}
+
+  virtual void VisitProcess(Process* process) {
+    process->IterateProgramPointersOnHeap(pointer_visitor_);
+  }
+
+ private:
+  PointerVisitor* pointer_visitor_;
+};
 
 void Program::PerformProgramGC(Space* to, PointerVisitor* visitor) {
   {
@@ -264,16 +317,17 @@ void Program::PerformProgramGC(Space* to, PointerVisitor* visitor) {
     // Iterate program roots.
     IterateRoots(visitor);
 
-    // Iterate all immutable objects.
+    // Iterate all pointers from Immutable space to program space.
     HeapObjectPointerVisitor object_pointer_visitor(visitor);
     shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
 
-    // Iterate over all process program pointers.
-    Process* current = process_list_head_;
-    while (current != NULL) {
-      current->IterateProgramPointers(visitor);
-      current = current->process_list_next();
-    }
+    // Iterate all pointers from processes to program space.
+    IterateProgramPointersVisitor process_visitor(visitor);
+    VisitProcesses(&process_visitor);
+
+    // Iterate all pointers from process heaps to program space.
+    IterateProgramPointersHeapVisitor heap_visitor(visitor);
+    VisitProcessHeaps(&heap_visitor);
 
     // Finish collection.
     ASSERT(!to->is_empty());
@@ -282,18 +336,27 @@ void Program::PerformProgramGC(Space* to, PointerVisitor* visitor) {
   heap_.ReplaceSpace(to);
 }
 
-void Program::FinishProgramGC() {
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    // Uncook process
-    current->UncookAndUnchainStacks();
-    current->UpdateBreakpoints();
+class FinishProgramGCVisitor : public ProcessVisitor {
+ public:
+  explicit FinishProgramGCVisitor(SharedHeap* shared_heap)
+      : shared_heap_(shared_heap) {}
 
+  virtual void VisitProcess(Process* process) {
+    // Uncook process
+    process->UncookAndUnchainStacks();
+    process->UpdateBreakpoints();
     if (Flags::validate_heaps) {
-      current->ValidateHeaps(&shared_heap_);
+      process->ValidateHeaps(shared_heap_);
     }
-    current = current->process_list_next();
   }
+
+ private:
+  SharedHeap* shared_heap_;
+};
+
+void Program::FinishProgramGC() {
+  FinishProgramGCVisitor visitor(&shared_heap_);
+  VisitProcessHeaps(&visitor);
 
   if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
@@ -480,13 +543,12 @@ void Program::PerformSharedGarbageCollection() {
   ScavengeVisitor scavenger(from, to);
 
   int process_heap_sizes = 0;
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->TakeChildHeaps();
-    current->IterateRoots(&scavenger);
-    current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
-    process_heap_sizes += current->heap()->space()->Used();
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->TakeChildHeaps();
+    process->IterateRoots(&scavenger);
+    process->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
+    process_heap_sizes += process->heap()->space()->Used();
   }
 
   to->CompleteScavenge(&scavenger);
@@ -506,19 +568,17 @@ void Program::PerformSharedGarbageCollection() {
   Space* space = heap->space();
   MarkingStack stack;
   MarkingVisitor marking_visitor(space, &stack);
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->TakeChildHeaps();
-    current->IterateRoots(&marking_visitor);
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->TakeChildHeaps();
+    process->IterateRoots(&marking_visitor);
   }
   stack.Process(&marking_visitor);
   heap->ProcessWeakPointers();
 
-  current = process_list_head_;
-  while (current != NULL) {
-    current->set_ports(Port::CleanupPorts(space, current->ports()));
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->set_ports(Port::CleanupPorts(space, process->ports()));
   }
 
   // Flush outstanding free_list chunks into the free list. Then sweep
@@ -527,10 +587,9 @@ void Program::PerformSharedGarbageCollection() {
   SweepingVisitor sweeping_visitor(space->free_list());
   space->IterateObjects(&sweeping_visitor);
 
-  current = process_list_head_;
-  while (current != NULL) {
-    current->UpdateStackLimit();
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->UpdateStackLimit();
   }
 
   space->set_used(sweeping_visitor.used());
@@ -547,21 +606,19 @@ void Program::PerformSharedGarbageCollection() {
 
   ScavengeVisitor scavenger(from, to);
 
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->TakeChildHeaps();
-    current->IterateRoots(&scavenger);
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->TakeChildHeaps();
+    process->IterateRoots(&scavenger);
   }
 
   to->CompleteScavenge(&scavenger);
   heap->ProcessWeakPointers();
 
-  current = process_list_head_;
-  while (current != NULL) {
-    current->set_ports(Port::CleanupPorts(from, current->ports()));
-    current->UpdateStackLimit();
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->set_ports(Port::CleanupPorts(from, process->ports()));
+    process->UpdateStackLimit();
   }
 
   heap->ReplaceSpace(to);
@@ -572,10 +629,9 @@ void Program::PerformSharedGarbageCollection() {
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void Program::CompactStorebuffers() {
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->store_buffer()->Deduplicate();
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->store_buffer()->Deduplicate();
   }
 }
 
