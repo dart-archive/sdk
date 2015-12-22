@@ -166,7 +166,9 @@ ClientEventHandler debugClientEventHandler(
     SessionState state,
     StreamIterator<ClientCommand> commandIterator,
     StreamController stdinController) {
-  return () async {
+  // TODO(zerny): Take the correct session explicitly because it will be cleared
+  // later to ensure against possible reuse. Restructure the code to avoid this.
+  return (Session session) async {
     while (await commandIterator.moveNext()) {
       ClientCommand command = commandIterator.current;
       switch (command.code) {
@@ -181,7 +183,7 @@ ClientEventHandler debugClientEventHandler(
         case ClientCommandCode.Signal:
           int signalNumber = command.data;
           if (signalNumber == sigQuit) {
-            await state.session.interrupt();
+            await session.interrupt();
           } else {
             handleSignal(state, signalNumber);
           }

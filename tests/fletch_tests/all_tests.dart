@@ -52,6 +52,8 @@ import '../golem/golem_tests.dart' as golem_tests;
 
 import '../version_tests/version_tests.dart' as version_tests;
 
+import '../cli_tests/cli_tests.dart' as cli_tests;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -88,6 +90,9 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   // Slow tests, should run early so we don't wait for them.
   'agent_tests/*': agent_tests.listTests,
+
+  // Slow tests, should run early so we don't wait for them.
+  'cli_tests/*': cli_tests.listTests,
 
   'snapshot_stacktrace_tests/*': snapshot_stacktrace_tests.listTests,
 

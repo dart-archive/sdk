@@ -127,7 +127,7 @@ import '../../debug_state.dart' as debug show
     RemoteObject,
     BackTrace;
 
-typedef Future<Null> ClientEventHandler();
+typedef Future<Null> ClientEventHandler(Session session);
 
 Uri configFileUri;
 
@@ -766,7 +766,7 @@ void setupClientInOut(
   state.attachCommandSender(commandSender);
 
   // Start event handling for input passed from the Fletch C++ client.
-  eventHandler();
+  eventHandler(state.session);
 
   // Let the hub (main isolate) know that event handling has been started.
   commandSender.sendEventLoopStarted();
@@ -778,7 +778,7 @@ void setupClientInOut(
 ClientEventHandler defaultClientEventHandler(
     SessionState state,
     StreamIterator<ClientCommand> commandIterator) {
-  return () async {
+  return (Session session) async {
     while (await commandIterator.moveNext()) {
       ClientCommand command = commandIterator.current;
       switch (command.code) {
