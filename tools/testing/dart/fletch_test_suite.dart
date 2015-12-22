@@ -99,17 +99,13 @@ class FletchTestSuite extends TestSuite {
 
     String javaHome = _guessJavaHome(configuration["arch"]);
     if (javaHome == null) {
-      String message = """
-Unable to find a JDK installation for architecture ${configuration["arch"]}.
-Install a JDK or set JAVA_PATH to point at an existing installation.
-""";
-      if (configuration['no_java']) {
-        javaHome = '';
-        print("WARNING: $message");
-      } else {
-        // TODO(zerny): Throw an error.
-        print("ERROR: ${message}Supply --no-java to continue without a JDK.");
-      }
+      String arch = configuration["arch"];
+      print("Notice: Java tests are disabled");
+      print("Unable to find a JDK installation for architecture $arch");
+      print("Install a JDK or set JAVA_PATH to an existing installation.");
+      // TODO(zerny): Throw an error if no-java is not supplied.
+    } else {
+      print("Notice: Enabled Java tests using JDK at $javaHome");
     }
 
     bool helperProgramExited = false;
