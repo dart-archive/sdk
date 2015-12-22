@@ -238,7 +238,7 @@ void Scheduler::ResumeGcThread() {
 void Scheduler::FinishedGC(Program* program, int count) {
   ASSERT(count > 0);
   ProgramState* state = program->program_state();
-  if (state->Release()) program->NotifyExitListener();
+  if (state->Release(count)) program->NotifyExitListener();
 }
 
 void Scheduler::EnqueueProcessOnSchedulerWorkerThread(

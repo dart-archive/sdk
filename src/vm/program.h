@@ -96,8 +96,8 @@ class ProgramState {
     refcount_++;
   }
 
-  bool Release() {
-    bool last_reference = --refcount_ == 0;
+  bool Release(int count = 1) {
+    bool last_reference = (refcount_ -= count) == 0;
     ASSERT(refcount_ >= 0);
     return last_reference;
   }
