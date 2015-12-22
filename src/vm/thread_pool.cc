@@ -25,11 +25,10 @@ struct ThreadInfo {
   ThreadInfo* next;
 };
 
-bool ThreadPool::TryStartThread(Runable run, void* data, int threads_limit) {
+bool ThreadPool::TryStartThread(Runable run, void* data) {
   // Start with inexpensive check.
   int value = threads_;
-  if (max_threads_ < threads_limit) threads_limit = max_threads_;
-  if (value >= threads_limit) return true;
+  if (value >= max_threads_) return true;
   if (!threads_.compare_exchange_weak(value, value + 1)) return false;
 
   // NOTE: This will create a new [ThreadInfo] object. All of the objects will

@@ -15,6 +15,8 @@
 
 namespace fletch {
 
+typedef void (*ProgramExitListener)(Program*, void* data);
+
 class Class;
 class Function;
 class Method;
@@ -74,9 +76,10 @@ class Session;
 class ProgramState {
  public:
   ProgramState()
-      : paused_processes_head_(NULL),
+      : processes_(0),
+        paused_processes_head_(NULL),
         is_paused_(false),
-        pending_gcs_(0) {}
+        refcount_(0) {}
 
   // The [Scheduler::pause_monitor_] must be locked when calling this method.
   void AddPausedProcess(Process* process);
@@ -89,12 +92,39 @@ class ProgramState {
     paused_processes_head_ = value;
   }
 
+  void Retain() {
+    refcount_++;
+  }
+
+  bool Release() {
+    bool last_reference = --refcount_ == 0;
+    ASSERT(refcount_ >= 0);
+    return last_reference;
+  }
+
+  void IncreaseProcessCount() {
+    processes_++;
+  }
+
+  bool DecreaseProcessCount() {
+    bool last_process = --processes_ == 0;
+    ASSERT(processes_ >= 0);
+    return last_process;
+  }
+
  private:
-  friend class Scheduler;
+  // As long as `processes_ > 0`, `refcount_` will have one increment. Whoever
+  // is decrementing it to zero must also decrement `refcount_`.
+  Atomic<int> processes_;
 
   Process* paused_processes_head_;
   bool is_paused_;
-  int pending_gcs_;
+
+  // All components of the scheduler (including the gc thread) use this
+  // refcounter. Whoever is decrementing it to zero must call the
+  // `Program->NotifyExitListener()` (i.e. notify the embedder) that the program
+  // is now done.
+  Atomic<int> refcount_;
 };
 
 class Program {
@@ -135,6 +165,17 @@ class Program {
     ASSERT(program_state_.paused_processes_head() == NULL);
     ASSERT(!program_state_.is_paused());
     scheduler_ = scheduler;
+  }
+
+  void SetProgramExitListener(ProgramExitListener listener, void* data) {
+    program_exit_listener_ = listener;
+    program_exit_listener_data_ = data;
+  }
+
+  void NotifyExitListener() {
+    if (program_exit_listener_ != NULL) {
+      program_exit_listener_(this, program_exit_listener_data_);
+    }
   }
 
   Signal::Kind exit_kind() const { return exit_kind_; }
@@ -283,6 +324,9 @@ class Program {
   int main_arity_;
 
   bool loaded_from_snapshot_;
+
+  ProgramExitListener program_exit_listener_;
+  void* program_exit_listener_data_;
 
   Signal::Kind exit_kind_;
 };

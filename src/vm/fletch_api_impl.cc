@@ -49,20 +49,18 @@ static Program* LoadSnapshot(List<uint8> bytes) {
   return NULL;
 }
 
-static void EnqueueProgramInScheduler(Program* program, Scheduler* scheduler) {
+static int RunProgram(Program* program) {
 #ifdef FLETCH_ENABLE_LIVE_CODING
   ProgramFolder::FoldProgramByDefault(program);
 #endif  // FLETCH_ENABLE_LIVE_CODING
-  Process* process = program->ProcessSpawnForMain();
-  scheduler->ScheduleProgram(program, process);
-}
 
-static int RunScheduler(Scheduler* scheduler) { return scheduler->Run(); }
+  SimpleProgramRunner runner;
 
-static int RunProgram(Program* program) {
-  Scheduler scheduler;
-  EnqueueProgramInScheduler(program, &scheduler);
-  return RunScheduler(&scheduler);
+  int exitcodes[1] = { -1 };
+  Program* programs[1] = { program };
+  runner.Run(1, exitcodes, programs);
+
+  return exitcodes[0];
 }
 
 static Program* LoadSnapshotFromFile(const char* path) {
@@ -120,13 +118,27 @@ int FletchRunMain(FletchProgram raw_program) {
   return fletch::RunProgram(program);
 }
 
-int FletchRunMultipleMain(int count, FletchProgram* programs) {
-  fletch::Scheduler scheduler;
+int FletchRunMultipleMain(int count, FletchProgram* fletch_programs) {
+  fletch::SimpleProgramRunner runner;
+
+  auto programs = reinterpret_cast<fletch::Program**>(fletch_programs);
+  int* exitcodes = new int[count];
   for (int i = 0; i < count; i++) {
-    fletch::EnqueueProgramInScheduler(
-        reinterpret_cast<fletch::Program*>(programs[i]), &scheduler);
+    exitcodes[i] = -1;
+#ifdef FLETCH_ENABLE_LIVE_CODING
+    fletch::ProgramFolder::FoldProgramByDefault(programs[i]);
+#endif  // FLETCH_ENABLE_LIVE_CODING
   }
-  return fletch::RunScheduler(&scheduler);
+
+  runner.Run(count, exitcodes, programs);
+
+  int exitcode = 0;
+  for (int i = 0; i < count; i++) {
+    exitcode = exitcodes[i];
+    if (exitcode != 0) break;
+  }
+  delete[] exitcodes;
+  return exitcode;
 }
 
 FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {

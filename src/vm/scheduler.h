@@ -9,6 +9,7 @@
 
 #include "src/vm/signal.h"
 #include "src/vm/thread_pool.h"
+#include "src/vm/thread.h"
 
 namespace fletch {
 
@@ -34,8 +35,22 @@ class ProcessVisitor {
 
 class Scheduler {
  public:
+  enum State {
+    kAllocated,
+    kInitialized,
+    kFinishing,
+    kFinished,
+  };
+
+  static void Setup();
+  static void TearDown();
+  static Scheduler* GlobalInstance() { return scheduler_; }
+
   Scheduler();
   ~Scheduler();
+
+  void WaitUntilReady();
+  void WaitUntilFinished();
 
   void ScheduleProgram(Program* program, Process* main_process);
   void UnscheduleProgram(Program* program);
@@ -71,7 +86,7 @@ class Scheduler {
   // A signal arrived for the process.
   void SignalProcess(Process* process);
 
-  int Run();
+  void Run();
 
   // There are 4 reasons for the interpretation of a process to be interrupted:
   //   * termination
@@ -88,22 +103,24 @@ class Scheduler {
   void ExitAtCompileTimeError(Process* process);
   void ExitAtBreakpoint(Process* process);
 
-  size_t process_count() const { return processes_; }
-
  private:
+  friend class Fletch;
+  // Global scheduler instance.
+  static Scheduler* scheduler_;
+  static ThreadIdentifier scheduler_thread_;
+
   const int max_threads_;
   ThreadPool thread_pool_;
   Monitor* preempt_monitor_;
-  Atomic<int> processes_;
   Atomic<int> sleeping_threads_;
   Atomic<int> thread_count_;
   Atomic<ThreadState*> idle_threads_;
   Atomic<ThreadState*>* threads_;
   Atomic<ThreadState*> thread_states_to_delete_;
   ProcessQueue* startup_queue_;
+  Atomic<State> state_;
 
   Monitor* pause_monitor_;
-  Atomic<Signal::Kind> last_process_exit_;
   Atomic<bool> pause_;
 
   // A list of currently executed processes, indexable by thread id. Upon
@@ -180,6 +197,29 @@ class StoppedGcThreadScope {
  private:
   Scheduler* scheduler_;
 };
+
+// Used for running one or more programs and waiting for their exit codes.
+class SimpleProgramRunner {
+ public:
+  SimpleProgramRunner();
+  ~SimpleProgramRunner();
+
+  void Run(int count,
+           int* exitcodes,
+           Program** programs,
+           Process** main_processes = NULL);
+
+ private:
+  Monitor* monitor_;
+  Program** programs_;
+  int* exitcodes_;
+  int count_;
+  int remaining_;
+
+  static void CaptureExitCode(Program* program, void* data);
+  static int GetExitCode(Program* program);
+};
+
 
 }  // namespace fletch
 

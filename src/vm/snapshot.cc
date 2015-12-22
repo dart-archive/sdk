@@ -292,6 +292,7 @@ Program* SnapshotReader::ReadProgram() {
   int snapshot_version_length = ReadInt64();
   uint8* snapshot_version = new uint8[snapshot_version_length];
   ReadBytes(snapshot_version_length, snapshot_version);
+
   if ((version_length != snapshot_version_length) ||
       (strncmp(version, reinterpret_cast<char*>(snapshot_version),
                snapshot_version_length) != 0)) {

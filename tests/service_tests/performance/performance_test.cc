@@ -129,8 +129,7 @@ static void RunThreadTests() {
   thread_pool.Start();
   for (int i = 0; i < kThreadCount; i++) {
     while (!thread_pool.TryStartThread(EchoInThread,
-                                       reinterpret_cast<void*>(i),
-                                       kThreadCount)) {
+                                       reinterpret_cast<void*>(i))) {
     }
   }
   thread_pool.JoinAll();

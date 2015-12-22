@@ -31,6 +31,30 @@ ThreadState* const kEmptyThreadState = reinterpret_cast<ThreadState*>(1);
 ThreadState* const kLockedThreadState = reinterpret_cast<ThreadState*>(2);
 Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
 
+// Global instance of scheduler.
+Scheduler* Scheduler::scheduler_ = NULL;
+ThreadIdentifier Scheduler::scheduler_thread_;
+
+static void *RunSchedulerEntry(void *data) {
+  Scheduler* scheduler = reinterpret_cast<Scheduler*>(data);
+  scheduler->Run();
+  return NULL;
+}
+
+void Scheduler::Setup() {
+  ASSERT(scheduler_ == NULL);
+  Scheduler::scheduler_ = new Scheduler();
+  Scheduler::scheduler_thread_ = Thread::Run(RunSchedulerEntry, scheduler_);
+  scheduler_->WaitUntilReady();
+}
+
+void Scheduler::TearDown() {
+  scheduler_->WaitUntilFinished();
+  scheduler_thread_.Join();
+  delete scheduler_;
+  scheduler_ = NULL;
+}
+
 Scheduler::Scheduler()
 #if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
     : max_threads_(1),
@@ -39,15 +63,14 @@ Scheduler::Scheduler()
 #endif
       thread_pool_(max_threads_),
       preempt_monitor_(Platform::CreateMonitor()),
-      processes_(0),
       sleeping_threads_(0),
       thread_count_(0),
       idle_threads_(kEmptyThreadState),
       threads_(new Atomic<ThreadState*>[max_threads_]),
       thread_states_to_delete_(NULL),
       startup_queue_(new ProcessQueue()),
+      state_(Scheduler::kAllocated),
       pause_monitor_(Platform::CreateMonitor()),
-      last_process_exit_(Signal::kTerminated),
       pause_(false),
       current_processes_(new Atomic<Process*>[max_threads_]),
       gc_thread_(new GCThread()) {
@@ -73,6 +96,29 @@ Scheduler::~Scheduler() {
   }
 }
 
+void Scheduler::WaitUntilReady() {
+  ScopedMonitorLock scoped_lock(preempt_monitor_);
+
+  // Wait until the scheduler thread signals it's ready.
+  while (state_ != Scheduler::kInitialized) {
+    preempt_monitor_->Wait();
+  }
+}
+
+void Scheduler::WaitUntilFinished() {
+  ScopedMonitorLock scoped_lock(preempt_monitor_);
+  ASSERT(state_ == Scheduler::kInitialized);
+
+  // Signal the scheduler thread to shut down
+  state_ = Scheduler::kFinishing;
+  preempt_monitor_->NotifyAll();
+
+  // Wait until it did shut down.
+  while (state_ != Scheduler::kFinished) {
+    preempt_monitor_->Wait();
+  }
+}
+
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
   program->set_scheduler(this);
 
@@ -81,7 +127,8 @@ void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
   // NOTE: Even though this method might be run on any thread, we don't need to
   // guard against the program being stopped, since we insert it the very first
   // time.
-  ++processes_;
+  program->program_state()->IncreaseProcessCount();
+  program->program_state()->Retain();
   if (!main_process->ChangeState(Process::kSleeping, Process::kReady)) {
     UNREACHABLE();
   }
@@ -190,16 +237,13 @@ void Scheduler::ResumeGcThread() {
 
 void Scheduler::FinishedGC(Program* program, int count) {
   ASSERT(count > 0);
-  ScopedMonitorLock locker(pause_monitor_);
-  program->program_state()->pending_gcs_ -= count;
-
-  // TODO(kustermann): Onc we have multi program GC support we might need to
-  // notify the embedder at this point that the program finished.
+  ProgramState* state = program->program_state();
+  if (state->Release()) program->NotifyExitListener();
 }
 
 void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
     Process* interpreting_process, Process* process) {
-  ++processes_;
+  process->program()->program_state()->IncreaseProcessCount();
   if (!process->ChangeState(Process::kSleeping, Process::kReady)) UNREACHABLE();
 
   ThreadState* thread_state = interpreting_process->thread_state();
@@ -270,8 +314,8 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   return true;
 }
 
-int Scheduler::Run() {
-  preempt_monitor_->Lock();
+void Scheduler::Run() {
+  ScopedMonitorLock locker(preempt_monitor_);
 
   thread_pool_.Start();
   gc_thread_->StartThread();
@@ -285,7 +329,11 @@ int Scheduler::Run() {
   uint64 next_profile =
       kProfile ? Platform::GetMicroseconds() + kProfileIntervalUs : UINT64_MAX;
   uint64 next_timeout = Utils::Minimum(next_preempt, next_profile);
-  while (processes_ > 0) {
+
+  // As long as we're not told to finish, we stay alive.
+  state_ = Scheduler::kInitialized;
+  preempt_monitor_->NotifyAll();
+  while (state_ != Scheduler::kFinishing) {
     // If we didn't time out, we were interrupted. In that case, continue.
     if (!preempt_monitor_->WaitUntil(next_timeout)) continue;
 
@@ -309,44 +357,30 @@ int Scheduler::Run() {
       next_timeout = Utils::Minimum(next_preempt, next_profile);
     }
   }
-  preempt_monitor_->Unlock();
-  thread_pool_.JoinAll();
+  NotifyAllThreads();
 
+  thread_pool_.JoinAll();
   gc_thread_->StopThread();
 
-  switch (last_process_exit_.load()) {
-    case Signal::kTerminated:
-      return 0;
-    case Signal::kCompileTimeError:
-      return kCompileTimeErrorExitCode;
-    case Signal::kUncaughtException:
-      return kUncaughtExceptionExitCode;
-    // TODO(kustermann): We should consider returning a different exitcode if a
-    // process was killed via a signal or killed programmatically.
-    case Signal::kUnhandledSignal:
-      return kUncaughtExceptionExitCode;
-    case Signal::kKilled:
-      return kUncaughtExceptionExitCode;
-    case Signal::kShouldKill:
-      UNREACHABLE();
-  }
-  UNREACHABLE();
-  return 0;
+  state_ = Scheduler::kFinished;
+  preempt_monitor_->NotifyAll();
 }
 
 void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   Program* program = process->program();
-  processes_--;
-  if (program->ScheduleProcessForDeletion(process, kind)) {
-    last_process_exit_ = program->exit_kind();
-  }
+  ProgramState* state = program->program_state();
+
+  program->ScheduleProcessForDeletion(process, kind);
 
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
 
-    ScopedMonitorLock locker(pause_monitor_);
-    program->program_state()->pending_gcs_++;
+    program->program_state()->Retain();
     gc_thread_->TriggerGC(program);
+  }
+
+  if (state->DecreaseProcessCount()) {
+    if (state->Release()) program->NotifyExitListener();
   }
 }
 
@@ -355,7 +389,6 @@ void Scheduler::ExitAtTermination(Process* process, Signal::Kind kind) {
   process->ChangeState(Process::kTerminated, Process::kWaitingForChildren);
 
   DeleteTerminatedProcess(process, kind);
-  if (processes_ == 0) NotifyAllThreads();
 }
 
 void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
@@ -438,8 +471,6 @@ void Scheduler::ExitAtBreakpoint(Process* process) {
 
 void Scheduler::ExitWith(Process* process, int exit_code, Signal::Kind kind) {
   DeleteTerminatedProcess(process, kind);
-  ScopedMonitorLock scoped_lock(preempt_monitor_);
-  if (processes_ == 0) NotifyAllThreads();
 }
 
 void Scheduler::RescheduleProcess(Process* process, ThreadState* state,
@@ -510,8 +541,10 @@ void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
     if (EnqueueOnAnyThread(process, thread_id)) return;
   }
 
-  // Start a worker thread, if less than [processes_] threads are running.
-  while (!thread_pool_.TryStartThread(RunThread, this, processes_)) {
+  // Start a worker thread if we haven't reached the limit (the process is
+  // already enqueued and the potentially new thread will steal work from other
+  // threads).
+  while (!thread_pool_.TryStartThread(RunThread, this)) {
   }
 }
 
@@ -562,12 +595,7 @@ void Scheduler::RunInThread() {
   ThreadState* thread_state = new ThreadState();
   ThreadEnter(thread_state);
   while (true) {
-    if (processes_ == 0) {
-      preempt_monitor_->Lock();
-      preempt_monitor_->Notify();
-      preempt_monitor_->Unlock();
-      break;
-    } else if (pause_) {
+    if (pause_) {
       LookupCache* cache = thread_state->cache();
       if (cache != NULL) cache->Clear();
 
@@ -593,13 +621,15 @@ void Scheduler::RunInThread() {
     // Sleep until there is something new to execute.
     ScopedMonitorLock scoped_lock(thread_state->idle_monitor());
     while (thread_state->queue()->is_empty() && startup_queue_->is_empty() &&
-           !pause_ && processes_ > 0) {
+           !pause_ &&
+           state_ == Scheduler::kInitialized) {
       PushIdleThread(thread_state);
       // The thread is becoming idle.
       thread_state->idle_monitor()->Wait();
       // At this point the thread_state may still be in idle_threads_. That's
       // okay, as it will just be ignored later on.
     }
+    if (state_ != Scheduler::kInitialized) break;
   }
   ThreadExit(thread_state);
 }
@@ -624,12 +654,17 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
       if (process->program() != program) {
         if (shared_heap_part != NULL) {
           if (shared_heap->ReleasePart(shared_heap_part)) {
-            ScopedMonitorLock locker(pause_monitor_);
-            program->program_state()->pending_gcs_++;
+            program->program_state()->Retain();
             gc_thread_->TriggerSharedGC(program);
           }
         }
+        if (program != NULL) {
+          if (program->program_state()->Release()) {
+            program->NotifyExitListener();
+          }
+        }
         program = process->program();
+        program->program_state()->Retain();
         shared_heap = program->shared_heap();
         shared_heap_part = shared_heap->AcquirePart();
       }
@@ -641,8 +676,7 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
           process, shared_heap_part->heap(), thread_state, &allocation_failure);
       if (allocation_failure) {
         if (shared_heap->ReleasePart(shared_heap_part)) {
-          ScopedMonitorLock locker(pause_monitor_);
-          program->program_state()->pending_gcs_++;
+          program->program_state()->Retain();
           gc_thread_->TriggerSharedGC(program);
         }
         shared_heap_part = shared_heap->AcquirePart();
@@ -655,10 +689,14 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
 
   // Always merge remaining immutable heap part back before (possibly) going
   // to sleep.
-  if (shared_heap != NULL && shared_heap->ReleasePart(shared_heap_part)) {
-    ScopedMonitorLock locker(pause_monitor_);
-    program->program_state()->pending_gcs_++;
-    gc_thread_->TriggerSharedGC(program);
+  if (shared_heap != NULL) {
+    ProgramState* state = program->program_state();
+    if (shared_heap->ReleasePart(shared_heap_part)) {
+      state->Retain();
+      gc_thread_->TriggerSharedGC(program);
+    }
+
+    if (state->Release()) program->NotifyExitListener();
   }
 }
 
@@ -1024,5 +1062,85 @@ void Scheduler::RunThread(void* data) {
   Scheduler* scheduler = reinterpret_cast<Scheduler*>(data);
   scheduler->RunInThread();
 }
+
+SimpleProgramRunner::SimpleProgramRunner()
+    : monitor_(new Monitor()),
+      programs_(NULL),
+      exitcodes_(NULL),
+      count_(0),
+      remaining_(0) {
+}
+
+SimpleProgramRunner::~SimpleProgramRunner() {
+  delete monitor_;
+}
+
+void SimpleProgramRunner::Run(int count,
+                              int* exitcodes,
+                              Program** programs,
+                              Process** processes) {
+  programs_ = programs;
+  exitcodes_ = exitcodes;
+  count_ = count;
+  remaining_ = count;
+
+  Scheduler* scheduler = Scheduler::GlobalInstance();
+  for (int i = 0; i < count; i++) {
+    Program* program = programs[i];
+    Process* process = processes != NULL ? processes[i] : NULL;
+
+    program->SetProgramExitListener(
+        &SimpleProgramRunner::CaptureExitCode, this);
+    if (process == NULL) process = program->ProcessSpawnForMain();
+    scheduler->ScheduleProgram(program, process);
+  }
+
+  {
+    ScopedMonitorLock locker(monitor_);
+    while (remaining_ > 0) {
+      monitor_->Wait();
+    }
+  }
+
+  for (int i = 0; i < count; i++) {
+    scheduler->UnscheduleProgram(programs[i]);
+  }
+}
+
+void SimpleProgramRunner::CaptureExitCode(Program* program, void* data) {
+  SimpleProgramRunner* runner = reinterpret_cast<SimpleProgramRunner*>(data);
+  ScopedMonitorLock locker(runner->monitor_);
+  for (int i = 0; i < runner->count_; i++) {
+    if (runner->programs_[i] == program) {
+      runner->exitcodes_[i] = GetExitCode(program);
+      runner->remaining_--;
+      runner->monitor_->NotifyAll();
+      return;
+    }
+  }
+  UNREACHABLE();
+}
+
+int SimpleProgramRunner::GetExitCode(Program* program) {
+  switch (program->exit_kind()) {
+    case Signal::kTerminated:
+      return 0;
+    case Signal::kCompileTimeError:
+      return kCompileTimeErrorExitCode;
+    case Signal::kUncaughtException:
+      return kUncaughtExceptionExitCode;
+    // TODO(kustermann): We should consider returning a different exitcode if a
+    // process was killed via a signal or killed programmatically.
+    case Signal::kUnhandledSignal:
+      return kUncaughtExceptionExitCode;
+    case Signal::kKilled:
+      return kUncaughtExceptionExitCode;
+    case Signal::kShouldKill:
+      UNREACHABLE();
+  }
+  UNREACHABLE();
+  return 0;
+}
+
 
 }  // namespace fletch

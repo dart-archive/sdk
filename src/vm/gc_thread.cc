@@ -197,12 +197,15 @@ void GCThread::MainLoop() {
     Program* program = it->first;
     program->scheduler()->FinishedGC(program, it->second);
   }
+  shared_gc_count_.Clear();
+
   for (auto it = program_gc_count_.Begin();
        it != program_gc_count_.End();
        ++it) {
     Program* program = it->first;
     program->scheduler()->FinishedGC(program, it->second);
   }
+  program_gc_count_.Clear();
 
   // Tell caller of GCThread.Shutdown() we're done.
   {

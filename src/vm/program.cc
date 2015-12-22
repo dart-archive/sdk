@@ -49,6 +49,8 @@ Program::Program(ProgramSource source)
       session_(NULL),
       entry_(NULL),
       loaded_from_snapshot_(source == Program::kLoadedFromSnapshot),
+      program_exit_listener_(NULL),
+      program_exit_listener_data_(NULL),
       exit_kind_(Signal::kTerminated) {
 // These asserts need to hold when running on the target, but they don't need
 // to hold on the host (the build machine, where the interpreter-generating

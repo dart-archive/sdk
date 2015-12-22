@@ -826,13 +826,17 @@ int Session::ProcessRun() {
         process_started = true;
 
         {
-          Scheduler scheduler;
-          scheduler.ScheduleProgram(program_, process_);
-          {
-            ScopedMonitorUnlock scoped_unlock(main_thread_monitor_);
-            result = scheduler.Run();
-          }
-          scheduler.UnscheduleProgram(program_);
+          SimpleProgramRunner runner;
+
+          Program* programs[1] = { program_ };
+          Process* processes[1] = { process_ };
+          int exitcodes[1] = { -1 };
+
+          ScopedMonitorUnlock scoped_unlock(main_thread_monitor_);
+          runner.Run(1, exitcodes, programs, processes);
+
+          result = exitcodes[0];
+          ASSERT(result != -1);
         }
 
         has_result = true;

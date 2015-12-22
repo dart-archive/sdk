@@ -9,6 +9,7 @@
 #include "src/vm/ffi.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/object.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -18,9 +19,11 @@ void Fletch::Setup() {
   ObjectMemory::Setup();
   StaticClassStructures::Setup();
   ForeignFunctionInterface::Setup();
+  Scheduler::Setup();
 }
 
 void Fletch::TearDown() {
+  Scheduler::TearDown();
   ForeignFunctionInterface::TearDown();
   StaticClassStructures::TearDown();
   ObjectMemory::TearDown();
