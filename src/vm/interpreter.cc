@@ -561,14 +561,20 @@ Interpreter::InterruptKind Engine::Interpret(
   GC_AND_RETRY_ON_ALLOCATION_FAILURE_OR_SIGNAL_SCHEDULER(
       result, kNativeTable[native](process(), Arguments(arguments)));
   if (result->IsFailure()) {
+    // Non-GC failure.  Run the actual function, eg. Port.send in
+    // lib/fletch/fletch.dart, which handles the error.
     Push(program()->ObjectFromFailure(Failure::cast(result)));
     Advance(kInvokeNativeYieldLength);
   } else {
+    // No error.  Return null.
     PopFrameDescriptor();
     Drop(arity);
     Object* null = program()->null_object();
     Push(null);
     if (result != null) {
+      // The function returned a Smi, which is actually a pointer to a C++ Port
+      // object.  We store the port in the return-argument.  Then we return
+      // from the interpreter, yielding to a different coroutine.
       SaveState();
       *target_yield_result = TargetYieldResult(result);
       ASSERT((*target_yield_result).port()->IsLocked());

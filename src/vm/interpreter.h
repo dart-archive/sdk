@@ -32,10 +32,14 @@ class TargetYieldResult {
     return reinterpret_cast<Port*>(value_ & ~Terminate::mask());
   }
 
-  Object* AsObject() const { return reinterpret_cast<Object*>(value_); }
+  Object* AsObject() const {
+    Object* result = reinterpret_cast<Object*>(value_);
+    ASSERT(result->IsSmi());
+    return result;
+  }
 
  private:
-  class Terminate : public BoolField<0> {};
+  class Terminate : public BoolField<1> {};
 
   uword value_;
 };
