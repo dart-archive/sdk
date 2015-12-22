@@ -16,6 +16,10 @@ void Assembler::Bind(const char* prefix, const char* name) {
   printf("_%s%s:\n", prefix, name);
 }
 
+void Assembler::call(const char* name) { printf("\tcall _%s\n", name); }
+
+void Assembler::DefineLong(const char* name) { printf("\t.quad _%s\n", name); }
+
 }  // namespace fletch
 
 #endif  // defined(FLETCH_TARGET_X64) && defined(FLETCH_TARGET_OS_MACOS)

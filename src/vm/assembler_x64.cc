@@ -35,6 +35,10 @@ void Assembler::j(Condition condition, Label* label) {
   printf("\tj%s L%d\n", mnemonic, ComputeLabelPosition(label));
 }
 
+void Assembler::SwitchToText() { puts("\n\t.text"); }
+
+void Assembler::SwitchToData() { puts("\n\t.data"); }
+
 void Assembler::AlignToPowerOfTwo(int power) {
   printf("\t.p2align %d,0x90\n", power);
 }
@@ -45,6 +49,11 @@ void Assembler::jmp(Label* label) {
 
 void Assembler::Bind(Label* label) {
   printf("L%d:\n", ComputeLabelPosition(label));
+}
+
+void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
+  AlignToPowerOfTwo(power);
+  Bind("", name);
 }
 
 static const char* ToString(Register reg, RegisterSize size = kQuadRegister) {

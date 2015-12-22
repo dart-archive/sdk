@@ -242,6 +242,8 @@ class Assembler {
   INSTRUCTION_1(popq, "popq %rq", Register);
   INSTRUCTION_1(popq, "popq %a", const Address&);
 
+  INSTRUCTION_1(call, "call *%rl", Register);
+
   INSTRUCTION_1(incq, "incq %rq", Register);
   INSTRUCTION_1(negq, "negq %rq", Register);
 
@@ -280,15 +282,24 @@ class Assembler {
   void j(Condition condition, Label* label);
   void jmp(Label* label);
 
+  void call(const char* name);
+
+  void SwitchToData();
+  void SwitchToText();
+
   void Bind(const char* prefix, const char* name);
   void Bind(Label* label);
+
+  void BindWithPowerOfTwoAlignment(const char* name, int power);
+
+  void DefineLong(const char* name);
+
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
 
  private:
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
-
-  // Align what follows to a 2^power address.
-  void AlignToPowerOfTwo(int power);
 
   static int ComputeLabelPosition(Label* label);
 
