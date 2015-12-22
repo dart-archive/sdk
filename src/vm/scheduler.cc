@@ -527,7 +527,7 @@ void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
                                                Process* process) {
   ASSERT(process != NULL);
 
-  if (thread_count_ == 0 || thread_state == NULL) {
+  if (thread_count_ == 0) {
     // No running threads, use the startup_queue_.
     bool was_empty;
     while (!startup_queue_->TryEnqueue(process, &was_empty)) {
