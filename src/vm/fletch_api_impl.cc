@@ -118,11 +118,12 @@ int FletchRunMain(FletchProgram raw_program) {
   return fletch::RunProgram(program);
 }
 
-int FletchRunMultipleMain(int count, FletchProgram* fletch_programs) {
+void FletchRunMultipleMain(int count,
+                           FletchProgram* fletch_programs,
+                           int* exitcodes) {
   fletch::SimpleProgramRunner runner;
 
   auto programs = reinterpret_cast<fletch::Program**>(fletch_programs);
-  int* exitcodes = new int[count];
   for (int i = 0; i < count; i++) {
     exitcodes[i] = -1;
 #ifdef FLETCH_ENABLE_LIVE_CODING
@@ -131,14 +132,6 @@ int FletchRunMultipleMain(int count, FletchProgram* fletch_programs) {
   }
 
   runner.Run(count, exitcodes, programs);
-
-  int exitcode = 0;
-  for (int i = 0; i < count; i++) {
-    exitcode = exitcodes[i];
-    if (exitcode != 0) break;
-  }
-  delete[] exitcodes;
-  return exitcode;
 }
 
 FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {

@@ -38,9 +38,10 @@ static void* DartThreadEntry(void* argv) {
   const char** paths = static_cast<const char**>(argv);
   FletchSetup();
   FletchProgram programs[2];
+  int exitcodes[2];
   programs[0] = FletchLoadSnapshotFromFile(paths[1]);
   programs[1] = FletchLoadSnapshotFromFile(paths[2]);
-  FletchRunMultipleMain(2, programs);
+  FletchRunMultipleMain(2, programs, exitcodes);
   FletchDeleteProgram(programs[0]);
   FletchDeleteProgram(programs[1]);
   FletchTearDown();

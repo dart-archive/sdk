@@ -28,8 +28,22 @@ typedef Future NoArgFuture();
 
 Future<Map<String, NoArgFuture>> listTests() async {
   var tests = <String, NoArgFuture>{
-    'multiprogram_tests/multiprogram_snapshots':
-        () => runTest(['process_links']),
+    'multiprogram_tests/should_fail':
+        () => runTest('sequence', {'compiletime_error': 0}),
+    'multiprogram_tests/parallel':
+        () => runTest('parallel', {
+            'process_links': 0,
+            'compiletime_error': 254,
+            'runtime_error': 255,
+            'unhandled_signal': 255,
+        }),
+    'multiprogram_tests/sequence':
+        () => runTest('sequence', {
+            'process_links': 0,
+            'compiletime_error': 254,
+            'runtime_error': 255,
+            'unhandled_signal': 255,
+        }),
   };
 
   // Dummy use of [main] to make analyzer happy.
@@ -38,19 +52,24 @@ Future<Map<String, NoArgFuture>> listTests() async {
   return tests;
 }
 
-Future runTest(List<String> testNames) {
+Future runTest(String mode, Map<String, int> testNamesWithExitCodes) {
   return withTempDirectory((Directory temp) async {
-    List<String> snapshots = <String>[];
+    List<List<String>> snapshotsExitcodeTuples = <List<String>>[];
 
     // Generate snapshots.
-    for (var testName in testNames) {
+    for (var testName in testNamesWithExitCodes.keys) {
+      int exitcode = testNamesWithExitCodes[testName];
       String snapshotFilename = '${temp.absolute.path}/$testName.snapshot';
-      snapshots.add(snapshotFilename);
+      snapshotsExitcodeTuples.add([snapshotFilename, '$exitcode']);
       await export(testFilename(testName), snapshotFilename);
     }
 
+    var arguments = []
+        ..add(mode)
+        ..addAll(snapshotsExitcodeTuples.expand((tuple) => tuple));
+
     // Run all the snapshots inside one fletch vm.
-    ProcessResult result = await Process.run(multiprogramRunner, snapshots);
+    ProcessResult result = await Process.run(multiprogramRunner, arguments);
     print("$multiprogramRunner result:");
     print("<STDOUT>:\n${result.stdout}\n");
     print("<STDERR>:\n${result.stderr}\n");
