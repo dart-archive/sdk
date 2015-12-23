@@ -378,6 +378,9 @@ void ProgramFolder::Unfold() {
   // the program is stopped?
   ASSERT(program_->is_optimized());
 
+  // Ensure the tick sampler knows the program has changed.
+  program_->set_hashtag(0);
+
   // Run through the dispatch table and compute a map from selector offsets
   // to the original selectors. This is used when rewriting the
   // bytecodes back to the original invoke-method bytecodes.

@@ -48,6 +48,10 @@ namespace fletch {
                "Profile the execution of the entire VM")                  \
   FLAG_INTEGER(release, profile_interval, 1000, "Profile interval in us") \
   FLAG_CSTRING(release, filter, NULL, "Filter string for unit testing")   \
+  FLAG_BOOLEAN(release, tick_sampler, false,                              \
+               "Collect execution time sampels of the entire VM")         \
+  FLAG_CSTRING(release, tick_file, "fletch.ticks",                        \
+               "Write tick samples in this file")                         \
   /* Temporary compiler flags */                                          \
   FLAG_BOOLEAN(release, trace_compiler, false, "")                        \
   FLAG_BOOLEAN(release, trace_library, false, "")
