@@ -14,6 +14,8 @@ import 'package:expect/expect.dart' show
 
 import 'interactive_debugger_tests.dart' as
     interactiveDebuggerTests;
+import 'rerun_throwing_program_test.dart' as
+    rerunThrowingProgramTest;
 
 /// Absolute path to the build directory used by test.py.
 const String buildDirectory =
@@ -24,7 +26,8 @@ final String fletchBinary = "$buildDirectory/fletch";
 final Uri thisDirectory = new Uri.directory("tests/cli_tests");
 
 final List<CliTest> CLI_TESTS = <CliTest>[]
-    ..addAll(interactiveDebuggerTests.tests);
+    ..addAll(interactiveDebuggerTests.tests)
+    ..addAll(rerunThrowingProgramTest.tests);
 
 abstract class CliTest {
   final String name;

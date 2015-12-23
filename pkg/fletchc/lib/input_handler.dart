@@ -308,7 +308,7 @@ class InputHandler {
         break;
       case 'r':
       case 'run':
-        if (checkNotRunning()) {
+        if (checkNotLoaded("use 'restart' to run again")) {
           await handleProcessStopResponse(await session.debugRun());
         }
         break;
