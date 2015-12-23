@@ -215,6 +215,9 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
                                  FunctionOffsetsType* function_offsets) {
   WriteBuffer buffer;
 
+  // Write the hashtag for the program.
+  buffer.WriteInt(program()->hashtag());
+
   // Class offset table
   buffer.WriteInt(5 * class_offsets->size());
   for (auto it = class_offsets->Begin(); it != class_offsets->End(); ++it) {

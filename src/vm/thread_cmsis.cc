@@ -27,15 +27,24 @@ static uint32_t cmsis_stack[kNumberOfFletchThreads][kFletchStackSizeInWords];
 
 static const char* base_name = "cmsis_thread_";
 
+void Thread::SetProcess(Process* process) {
+  // Unused since tick sample is not available on cmsis.
+}
+
+Process* Thread::GetProcess() {
+  // Unused since tick sample is not available on cmsis.
+  return NULL;
+}
+
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
 }
 
-void Thread::BlockOSSignals() {
+void Thread::SetupOSSignals() {
   // Platform doesn't have signals.
 }
 
-void Thread::UnblockOSSignals() {
+void Thread::TeardownOSSignals() {
   // Platform doesn't have signals.
 }
 

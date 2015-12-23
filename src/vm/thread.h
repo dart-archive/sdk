@@ -27,14 +27,21 @@ namespace fletch {
 // Thread handles can be used for referring to threads and testing equality.
 class ThreadIdentifier;
 
+// Forward declaration.
+class Process;
+
 // Thread are started using the static Thread::Run method.
 class Thread {
  public:
   // Returns true if 'thread' is the current thread.
   static bool IsCurrent(const ThreadIdentifier* thread);
 
-  static void BlockOSSignals();
-  static void UnblockOSSignals();
+  static void SetupOSSignals();
+  static void TeardownOSSignals();
+
+  // TLS accessors for process (used for extracting process at profiler tick).
+  static void SetProcess(Process* process);
+  static Process* GetProcess();
 
   typedef void* (*RunSignature)(void*);
   static ThreadIdentifier Run(RunSignature run, void* data = NULL);
