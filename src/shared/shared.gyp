@@ -40,6 +40,7 @@
         'native_socket_lk.cc',
         'native_socket_macos.cc',
         'native_socket_posix.cc',
+        'native_socket_windows.cc',
         'natives.h',
         'platform.h',
         'platform_linux.cc',

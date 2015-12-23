@@ -99,4 +99,4 @@ void Socket::SetTCPNoDelay(bool value) {
 
 }  // namespace fletch
 
-#endif  // def'd(FLETCH_TARGET_OS_POSIX) && def'd(FLETCH_ENABLE_LIVE_CODING)
+#endif  // def'd(FLETCH_TARGET_OS_LK) && def'd(FLETCH_ENABLE_LIVE_CODING)

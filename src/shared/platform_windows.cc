@@ -6,7 +6,7 @@
 
 #include "src/shared/platform.h"  // NOLINT
 
-#include <windows.h>
+#include <winsock2.h>
 #include <stdlib.h>
 #include <malloc.h>
 
@@ -28,9 +28,22 @@ void GetPathOfExecutable(char* path, size_t path_length) {
   }
 }
 
-void Platform::Setup() { time_launch = GetTickCount64(); }
+void Platform::Setup() {
+  time_launch = GetTickCount64();
+#if defined(FLETCH_ENABLE_LIVE_CODING)
+  WSADATA wsa_data;
+  int status = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+  if (status != 0) {
+    FATAL1("Unable to initialize Windows Sockets [error #%d].", status);
+  }
+#endif
+}
 
-void Platform::TearDown() { }
+void Platform::TearDown() {
+#if defined(FLETCH_ENABLE_LIVE_CODING)
+  WSACleanup();
+#endif
+}
 
 uint64 Platform::GetMicroseconds() {
   SYSTEMTIME sys_time;

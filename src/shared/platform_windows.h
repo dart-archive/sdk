@@ -11,6 +11,11 @@
 
 #if defined(FLETCH_TARGET_OS_WIN)
 
+// Prevent the windows.h header from including winsock.h and others.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <windows.h>
 
 #include "src/shared/globals.h"
