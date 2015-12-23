@@ -90,6 +90,7 @@
         'ffi_linux.cc',
         'ffi_macos.cc',
         'ffi_posix.cc',
+        'ffi_windows.cc',
         'fletch_api_impl.cc',
         'fletch_api_impl.h',
         'fletch.cc',

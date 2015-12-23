@@ -2,40 +2,48 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(FLETCH_TARGET_OS_WIN)
 
 #ifdef FLETCH_ENABLE_FFI
 
 #include "src/vm/ffi.h"
 
-#include <dlfcn.h>
-#include <errno.h>
-#include <libgen.h>
-#include <sys/param.h>
+#include <Windows.h>
 
 #include "src/shared/platform.h"
-#include "src/shared/utils.h"
-
 #include "src/vm/natives.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 
 namespace fletch {
 
-char* ForeignUtils::DirectoryName(char* path, char* buffer, size_t len) {
-  strncpy(buffer, path, len);
-  buffer[len - 1] = '\0';
-  return dirname(buffer);
+const char* ForeignUtils::kLibBundlePrefix = "\\lib\\";
+const char* ForeignUtils::kLibBundlePostfix = ".dll";
+
+char* ForeignUtils::DirectoryName(char* path, char *buffer, size_t len) {
+  TCHAR *file_name_ptr;
+  if (GetFullPathName(path, len, buffer, &file_name_ptr) == 0) {
+    buffer[0] = '\0';
+    return buffer;
+  }
+  if (file_name_ptr != NULL) {
+    // If file_name_ptr is not NULL, it points to the beginning of the
+    // non-directory part of path, which always is preceded by an '\'.
+    // So we need to terminate the string one character earlier to get to
+    // the directory part.
+    *(file_name_ptr - 1) = '\0';
+  }
+  return buffer;
 }
 
 class DefaultLibraryEntry {
  public:
-  DefaultLibraryEntry(void* handle, DefaultLibraryEntry* next)
+  DefaultLibraryEntry(HMODULE handle, DefaultLibraryEntry* next)
       : handle_(handle), next_(next) {}
 
-  ~DefaultLibraryEntry() { dlclose(handle_); }
+  ~DefaultLibraryEntry() { FreeLibrary(handle_); }
 
-  void* handle() const { return handle_; }
+  HMODULE handle() const { return handle_; }
   DefaultLibraryEntry* next() const { return next_; }
 
   void append(DefaultLibraryEntry* entry) {
@@ -47,7 +55,7 @@ class DefaultLibraryEntry {
   }
 
  private:
-  void* handle_;
+  HMODULE handle_;
   DefaultLibraryEntry* next_;
 };
 
@@ -68,7 +76,9 @@ void ForeignFunctionInterface::TearDown() {
 
 bool ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
   ScopedLock lock(mutex_);
-  void* handle = dlopen(library, RTLD_LOCAL | RTLD_LAZY);
+
+  HMODULE handle = LoadLibrary(library);
+
   if (handle != NULL) {
     // We have to maintain the insertion order (see fletch_api.h).
     if (libraries_ == NULL) {
@@ -78,6 +88,7 @@ bool ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
     }
     return true;
   }
+
   return false;
 }
 
@@ -85,46 +96,43 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
   ScopedLock lock(mutex_);
   for (DefaultLibraryEntry* current = libraries_; current != NULL;
        current = current->next()) {
-    void* result = dlsym(current->handle(), symbol);
-    if (result != NULL) return result;
+    FARPROC result = GetProcAddress(current->handle(), symbol);
+    if (result != NULL) return static_cast<void*>(result);
   }
   return NULL;
 }
 
 void FinalizeForeignLibrary(HeapObject* foreign, Heap* heap) {
   word address = AsForeignWord(foreign);
-  void* handle = reinterpret_cast<void*>(address);
+  HMODULE handle = reinterpret_cast<HMODULE>(address);
   ASSERT(handle != NULL);
-  if (dlclose(handle) != 0) {
-    Print::Error("Failed to close handle: %s\n", dlerror());
+  if (!FreeLibrary(handle) == 0) {
+    Print::Error("Failed to close handle: %d\n", GetLastError());
   }
 }
 
 BEGIN_NATIVE(ForeignLibraryLookup) {
   char* library = AsForeignString(arguments[0]);
-  bool global = arguments[1]->IsTrue();
-  int flags = (global ? RTLD_GLOBAL : RTLD_LOCAL) | RTLD_LAZY;
-  void* result = dlopen(library, flags);
-  if (result == NULL) {
-    Print::Error("Failed libary lookup(%s): %s\n", library, dlerror());
+  HMODULE handle = LoadLibrary(library);
+  if (handle == NULL) {
+    Print::Error("Failed libary lookup(%s): %d\n", library, GetLastError());
   }
   free(library);
-  if (result == NULL) return Failure::index_out_of_bounds();
-  Object* handle = process->NewInteger(reinterpret_cast<intptr_t>(result));
-  if (handle->IsRetryAfterGCFailure()) return handle;
-  process->RegisterFinalizer(HeapObject::cast(handle), FinalizeForeignLibrary);
-  return handle;
+  if (handle == NULL) return Failure::index_out_of_bounds();
+  Object* result = process->NewInteger(reinterpret_cast<intptr_t>(handle));
+  if (result->IsRetryAfterGCFailure()) return result;
+  process->RegisterFinalizer(HeapObject::cast(result), FinalizeForeignLibrary);
+  return result;
 }
 END_NATIVE()
 
 BEGIN_NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
-  void* handle = reinterpret_cast<void*>(address);
+  HMODULE handle = reinterpret_cast<HMODULE>(address);
   char* name = AsForeignString(arguments[1]);
   bool default_lookup = handle == NULL;
-  if (default_lookup) handle = dlopen(NULL, RTLD_LOCAL | RTLD_LAZY);
-  void* result = dlsym(handle, name);
-  if (default_lookup) dlclose(handle);
+  if (default_lookup) handle = GetModuleHandle(NULL);
+  void* result = static_cast<void*>(GetProcAddress(handle, name));
   if (result == NULL) {
     result = ForeignFunctionInterface::LookupInDefaultLibraries(name);
   }
@@ -141,9 +149,6 @@ BEGIN_NATIVE(ForeignLibraryBundlePath) {
   char buffer[MAXPATHLEN + 1];
   char* directory =
       ForeignUtils::DirectoryName(executable, buffer, sizeof(buffer));
-  // dirname on linux may mess with the content of the buffer, so we use a fresh
-  // buffer for the result. If anybody cares this can be optimized by manually
-  // writing the strings other than dirname to the executable buffer.
   char result[MAXPATHLEN + 1];
   int wrote = snprintf(result, MAXPATHLEN + 1, "%s%s%s%s", directory,
                        ForeignUtils::kLibBundlePrefix, library,
@@ -156,11 +161,11 @@ BEGIN_NATIVE(ForeignLibraryBundlePath) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignErrno) { return Smi::FromWord(errno); }
+BEGIN_NATIVE(ForeignErrno) { return Smi::FromWord(GetLastError()); }
 END_NATIVE()
 
 }  // namespace fletch
 
 #endif  // FLETCH_ENABLE_FFI
 
-#endif  // defined(FLETCH_TARGET_OS_POSIX)
+#endif  // defined(FLETCH_TARGET_OS_WIN)

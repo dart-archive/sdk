@@ -21,6 +21,7 @@
 #include "src/shared/globals.h"
 
 #define snprintf _snprintf
+#define MAXPATHLEN MAX_PATH
 
 namespace fletch {
 

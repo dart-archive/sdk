@@ -34,7 +34,11 @@ class ForeignUtils {
   static const char* kLibBundlePostfix;
 
   // In preparation of supporting windows we have a function for this.
-  static char* DirectoryName(char* path);
+  // [buffer] may be modified by DirectoryName. In particular, the result of
+  // DirectoryName may use [buffer] for storage but is not necessarily
+  // identical to [buffer].
+  // [len] is the size of [buffer], typically MAXPATHLEN + 1.
+  static char* DirectoryName(char* path, char* buffer, size_t len);
 };
 
 #endif  // FLETCH_ENABLE_FFI
