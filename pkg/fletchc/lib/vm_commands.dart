@@ -118,15 +118,13 @@ abstract class VmCommand {
           return classTable;
         }
 
-        int hashtag = readInt();
-
         int classEntries = readInt();
         Int32List classTable = readArray(classEntries);
 
         int functionEntries = readInt();
         Int32List functionTable = readArray(functionEntries);
 
-        return new WriteSnapshotResult(classTable, functionTable, hashtag);
+        return new WriteSnapshotResult(classTable, functionTable);
       default:
         throw 'Unhandled command in VmCommand.fromBuffer: $code';
     }
@@ -1252,11 +1250,8 @@ class WriteSnapshot extends VmCommand {
 class WriteSnapshotResult extends VmCommand {
   final Int32List classOffsetTable;
   final Int32List functionOffsetTable;
-  final int hashtag;
 
-  const WriteSnapshotResult(this.classOffsetTable,
-                            this.functionOffsetTable,
-                            this.hashtag)
+  const WriteSnapshotResult(this.classOffsetTable, this.functionOffsetTable)
       : super(VmCommandCode.WriteSnapshotResult);
 
   void internalAddTo(

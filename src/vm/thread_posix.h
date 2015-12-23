@@ -10,7 +10,6 @@
 #endif
 
 #include <pthread.h>
-#include <signal.h>
 #include <errno.h>
 
 #include "src/shared/assert.h"

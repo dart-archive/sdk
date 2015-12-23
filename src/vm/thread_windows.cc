@@ -13,15 +13,6 @@ namespace fletch {
 
 static const int kFletchStackSize = 4096;
 
-void Thread::SetProcess(Process* process) {
-  // Unused since tick sample is not available on Windows.
-}
-
-Process* Thread::GetProcess() {
-  // Unused since tick sample is not available on Windows.
-  return NULL;
-}
-
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
 }

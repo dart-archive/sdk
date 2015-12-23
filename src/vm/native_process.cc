@@ -282,7 +282,7 @@ BEGIN_NATIVE(NativeProcessSpawnDetached) {
     return process->ToInteger(pid);
   }
 
-  Thread::TeardownOSSignals();
+  Thread::UnblockOSSignals();
 
   // In child, fork again and call exec from grandchild, should not return;
   RunDetached(path, args, pipes[1]);

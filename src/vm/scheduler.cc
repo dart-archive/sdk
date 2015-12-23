@@ -783,7 +783,6 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
 
   // Mark the process as owned by the current thread while interpreting.
   process->set_thread_state(thread_state);
-  Thread::SetProcess(process);
   Interpreter interpreter(process);
 
   // Warning: These two lines should not be moved, since the code further down
@@ -796,7 +795,6 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
   shared_heap->set_random(NULL);
 
   process->set_thread_state(NULL);
-  Thread::SetProcess(NULL);
   ClearCurrentProcessForThread(thread_id, process);
 
   if (interpreter.IsImmutableAllocationFailure()) {
@@ -895,7 +893,7 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
 }
 
 void Scheduler::ThreadEnter(ThreadState* thread_state) {
-  Thread::SetupOSSignals();
+  Thread::BlockOSSignals();
   // TODO(ajohnsen): This only works because we never return threads, unless
   // the scheduler is done.
   int thread_id = thread_count_++;
@@ -915,7 +913,7 @@ void Scheduler::ThreadExit(ThreadState* thread_state) {
   pause_monitor_->Lock();
   pause_monitor_->NotifyAll();
   pause_monitor_->Unlock();
-  Thread::TeardownOSSignals();
+  Thread::UnblockOSSignals();
 }
 
 static void NotifyThread(ThreadState* thread_state) {

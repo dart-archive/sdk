@@ -36,7 +36,7 @@ void ProgramState::AddPausedProcess(Process* process) {
   ASSERT(paused_processes_head_ != paused_processes_head_->next());
 }
 
-Program::Program(ProgramSource source, int hashtag)
+Program::Program(ProgramSource source)
     :
 #define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
       ROOTS_DO(CONSTRUCTOR_NULL)
@@ -51,8 +51,7 @@ Program::Program(ProgramSource source, int hashtag)
       loaded_from_snapshot_(source == Program::kLoadedFromSnapshot),
       program_exit_listener_(NULL),
       program_exit_listener_data_(NULL),
-      exit_kind_(Signal::kTerminated),
-      hashtag_(hashtag) {
+      exit_kind_(Signal::kTerminated) {
 // These asserts need to hold when running on the target, but they don't need
 // to hold on the host (the build machine, where the interpreter-generating
 // program runs).  We put these asserts here on the assumption that the

@@ -134,7 +134,7 @@ class Program {
     kBuiltViaSession,
   };
 
-  explicit Program(ProgramSource source, int hashtag = 0);
+  explicit Program(ProgramSource source);
   ~Program();
 
   void Initialize();
@@ -186,9 +186,6 @@ class Program {
 
   EventHandler* event_handler() { return &event_handler_; }
 
-  int hashtag() const { return hashtag_; }
-  void set_hashtag(int value) { hashtag_ = value; }
-
   // TODO(ager): Support more than one active session at a time.
   void AddSession(Session* session) {
     ASSERT(session_ == NULL);
@@ -205,15 +202,6 @@ class Program {
     Chunk* chunk = heap()->space()->first();
     ASSERT(chunk->next() == NULL);
     return chunk->limit() - chunk->base();
-  }
-
-  // Computes the offset in the program space.
-  // If address is outside the program space, 0 is returned.
-  // Please note the first address in the heap is not a valid bcp.
-  int ComputeBcpOffset(uword address) {
-    ASSERT(is_optimized());
-    Chunk* chunk = heap()->space()->first();
-    return  chunk->Includes(address) ? address - chunk->base() : 0;
   }
 
   HeapObject* ObjectFromFailure(Failure* failure) {
@@ -348,9 +336,6 @@ class Program {
   void* program_exit_listener_data_;
 
   Signal::Kind exit_kind_;
-
-  // Tag used to identified snapshot program when profiling.
-  int hashtag_;
 };
 
 }  // namespace fletch

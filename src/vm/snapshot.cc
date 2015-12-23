@@ -302,15 +302,13 @@ Program* SnapshotReader::ReadProgram() {
   }
   delete[] snapshot_version;
 
-  int hashtag = ReadInt64();
-
   // Read the required backward reference table size.
   int references = 0;
   for (int i = 0; i < kReferenceTableSizeBytes; i++) {
     references = (references << 8) | ReadByte();
   }
 
-  Program* program = new Program(Program::kLoadedFromSnapshot, hashtag);
+  Program* program = new Program(Program::kLoadedFromSnapshot);
 
   // Read the heap size and allocate an area for it.
   int size_position;
@@ -365,20 +363,13 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
 
   program->ClearDispatchTableIntrinsics();
 
-  // Emit recognizable header.
   WriteByte(0xbe);
   WriteByte(0xef);
 
-  // Emit version of the VM.
   const char* version = GetVersion();
   int version_length = strlen(version);
   WriteInt64(version_length);
   WriteBytes(version_length, reinterpret_cast<const uint8*>(version));
-
-  // Emit a tag that can be used to match profiler ticks with a program.
-  int hashtag = 0xcafe + (Platform::GetMicroseconds() % 0x10000);
-  program->set_hashtag(hashtag);
-  WriteInt64(hashtag);
 
   // Reserve space for the backward reference table size.
   int reference_count_position = position_;

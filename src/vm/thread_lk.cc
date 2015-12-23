@@ -13,24 +13,15 @@
 
 namespace fletch {
 
-void Thread::SetProcess(Process* process) {
-  // Unused since tick sample is not available on LK.
-}
-
-Process* Thread::GetProcess() {
-  // Unused since tick sample is not available on LK.
-  return NULL;
-}
-
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
 }
 
-void Thread::SetupOSSignals() {
+void Thread::BlockOSSignals() {
   // Platform doesn't have signals.
 }
 
-void Thread::TeardownOSSignals() {
+void Thread::UnblockOSSignals() {
   // Platform doesn't have signals.
 }
 
