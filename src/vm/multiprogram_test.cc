@@ -10,25 +10,103 @@
 
 namespace fletch {
 
+// This multiprogram runner uses only the FletchStartMain() API function.
+class Runner {
+ public:
+  Runner(int count, FletchProgram* programs, int* exitcodes)
+      : monitor_(Platform::CreateMonitor()),
+        programs_(programs),
+        exitcodes_(exitcodes),
+        count_(count),
+        started_(0),
+        awaited_(0),
+        finished_(0) {}
+  ~Runner() { delete monitor_; }
+
+  // Starts all programs and then waits for all of them.
+  void RunInParallel() { RunInBatches(count_); }
+
+  // Starts one program, waits for it to complete and repeat until no more
+  // programs need to be run.
+  void RunInSequence() { RunInBatches(1); }
+
+  // Starts [batch_size] programs, waits for them to complete and reapeat
+  // until no more programs need to be run.
+  void RunInBatches(int batch_size) {
+    ASSERT((count_ % batch_size) == 0);
+
+    int batches = count_ / batch_size;
+    for (int batch_nr = 1; batch_nr <= batches; batch_nr++) {
+      Start(batch_size);
+      Wait(batch_size);
+    }
+  }
+
+  // Starts [max_parallel] programs. As soon as one program finishes a new one
+  // will be started.
+  void RunOverlapped(int max_parallel) {
+    if (count_ < max_parallel) max_parallel = count_;
+
+    Start(max_parallel);
+    int remaining = count_ - max_parallel;
+    for (int i = 0; i < remaining; i++) {
+      Wait(1);
+      Start(1);
+    }
+    Wait(max_parallel);
+  }
+
+ private:
+  Monitor* monitor_;
+  FletchProgram* programs_;
+  int* exitcodes_;
+  int count_;
+  int started_;
+  int awaited_;
+  int finished_;
+
+  static void CaptureExitCode(FletchProgram* program,
+                              int exitcode,
+                              void* data) {
+    Runner* runner = reinterpret_cast<Runner*>(data);
+    ScopedMonitorLock locker(runner->monitor_);
+    for (int i = 0; i < runner->count_; i++) {
+      if (runner->programs_[i] == program) {
+        runner->exitcodes_[i] = exitcode;
+        runner->finished_++;
+        runner->monitor_->NotifyAll();
+
+        FletchDeleteProgram(program);
+
+        return;
+      }
+    }
+    UNREACHABLE();
+  }
+
+  void Start(int count) {
+    ScopedMonitorLock locker(monitor_);
+    for (int i = started_; i < started_ + count; i++) {
+      FletchStartMain(programs_[i], &Runner::CaptureExitCode, this);
+    }
+    started_ += count;
+  }
+
+  void Wait(int count) {
+    ScopedMonitorLock locker(monitor_);
+    int finished = awaited_ + count;
+    while (finished_ < finished) {
+      monitor_->Wait();
+    }
+    awaited_ += count;
+  }
+};
+
 static void PrintAndDie(char **argv) {
   FATAL1("Usage: %0 "
-        "<parallel|sequence> [[<snapshot> <expected-exitcode>] ...]",
-        argv[0]);
-}
-
-static void RunInParallel(int count, FletchProgram* programs, int* exitcodes) {
-  FletchRunMultipleMain(count, programs, exitcodes);
-
-  for (int i = 0; i < count; i++) {
-    FletchDeleteProgram(programs[i]);
-  }
-}
-
-static void RunInSequence(int count, FletchProgram* programs, int* exitcodes) {
-  for (int i = 0; i < count; i++) {
-    exitcodes[i] = FletchRunMain(programs[i]);
-    FletchDeleteProgram(programs[i]);
-  }
+         "<parallel|sequence|batch=NUM|overlapped=NUM> "
+         "[[<snapshot> <expected-exitcode>] ...]",
+         argv[0]);
 }
 
 static int Main(int argc, char** argv) {
@@ -40,7 +118,9 @@ static int Main(int argc, char** argv) {
 
   bool parallel = strcmp(argv[1], "parallel") == 0;
   bool sequence = strcmp(argv[1], "sequence") == 0;
-  if (!parallel && !sequence) PrintAndDie(argv);
+  bool batch = strncmp(argv[1], "batch=", strlen("batch=")) == 0;
+  bool overlapped = strncmp(argv[1], "overlapped=", strlen("overlapped=")) == 0;
+  if (!parallel && !sequence && !batch && !overlapped) PrintAndDie(argv);
 
   int program_count = (argc - 2) / 2;
   FletchProgram* programs = new FletchProgram[program_count];
@@ -54,10 +134,17 @@ static int Main(int argc, char** argv) {
   }
 
   int* actual_exitcodes = new int[program_count];
+  Runner runner(program_count, programs, actual_exitcodes);
   if (parallel) {
-    RunInParallel(program_count, programs, actual_exitcodes);
+    runner.RunInParallel();
   } else if (sequence) {
-    RunInSequence(program_count, programs, actual_exitcodes);
+    runner.RunInSequence();
+  } else if (batch) {
+    int batch_size = atoi(argv[1] + strlen("batch="));
+    runner.RunInBatches(batch_size);
+  } else if (overlapped) {
+    int overlapped = atoi(argv[1] + strlen("overlapped="));
+    runner.RunOverlapped(overlapped);
   } else {
     UNREACHABLE();
   }

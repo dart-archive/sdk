@@ -26,24 +26,67 @@ final String multiprogramRunner = '$buildDirectory/multiprogram_cc_test';
 
 typedef Future NoArgFuture();
 
+List duplicateList(List a, int n) {
+  var result = new List(n * a.length);
+  for (int i = 0; i < n; i++) {
+    result.setRange(i * a.length, (i + 1) * a.length, a);
+  }
+  return result;
+}
+
 Future<Map<String, NoArgFuture>> listTests() async {
   var tests = <String, NoArgFuture>{
     'multiprogram_tests/should_fail':
-        () => runTest('sequence', {'compiletime_error': 0}),
+        () => runTest('sequence', ['compiletime_error', 0]),
+
     'multiprogram_tests/parallel':
-        () => runTest('parallel', {
-            'process_links': 0,
-            'compiletime_error': 254,
-            'runtime_error': 255,
-            'unhandled_signal': 255,
-        }),
+        () => runTest('parallel', [
+            'process_links', 0,
+            'compiletime_error', 254,
+            'runtime_error', 255,
+            'unhandled_signal', 255,
+        ]),
+
     'multiprogram_tests/sequence':
-        () => runTest('sequence', {
-            'process_links': 0,
-            'compiletime_error': 254,
-            'runtime_error': 255,
-            'unhandled_signal': 255,
-        }),
+        () => runTest('sequence', [
+            'process_links', 0,
+            'compiletime_error', 254,
+            'runtime_error', 255,
+            'unhandled_signal', 255,
+        ]),
+
+    'multiprogram_tests/many_programs':
+        () => runTest('batch=50', [
+            'process_links', 0,
+            'compiletime_error', 254,
+            'runtime_error', 255,
+            'unhandled_signal', 255,
+        ], duplicate: 200),
+
+    'multiprogram_tests/immutable_gc':
+        () => runTest('overlapped=11', [
+            'immutable_gc', 0,
+            'process_links', 0,
+            'compiletime_error', 254,
+            'runtime_error', 255,
+            'unhandled_signal', 255,
+        ], duplicate: 3),
+
+    'multiprogram_tests/mutable_gc':
+        () => runTest('overlapped=11', [
+            'mutable_gc', 0,
+            'process_links', 0,
+            'compiletime_error', 254,
+            'runtime_error', 255,
+            'unhandled_signal', 255,
+        ], duplicate: 3),
+
+    'multiprogram_tests/stress_test':
+        () => runTest('overlapped=3', [
+            'mutable_gc', 0,
+            'compute', 0,
+            'immutable_gc', 0,
+        ], duplicate: 2),
   };
 
   // Dummy use of [main] to make analyzer happy.
@@ -52,25 +95,34 @@ Future<Map<String, NoArgFuture>> listTests() async {
   return tests;
 }
 
-Future runTest(String mode, Map<String, int> testNamesWithExitCodes) {
+Future runTest(String mode, List testNamesWithExitCodes, {int duplicate}) {
   return withTempDirectory((Directory temp) async {
-    List<List<String>> snapshotsExitcodeTuples = <List<String>>[];
+    List<String> snapshotsExitcodeTuples = <String>[];
 
     // Generate snapshots.
-    for (var testName in testNamesWithExitCodes.keys) {
-      int exitcode = testNamesWithExitCodes[testName];
+    for (int i = 0; i < testNamesWithExitCodes.length ~/2; i++) {
+      String testName = testNamesWithExitCodes[2 * i];
+      int exitcode = testNamesWithExitCodes[2 * i + 1];
       String snapshotFilename = '${temp.absolute.path}/$testName.snapshot';
-      snapshotsExitcodeTuples.add([snapshotFilename, '$exitcode']);
+      snapshotsExitcodeTuples.addAll([snapshotFilename, '$exitcode']);
+      print('Making snapshot $snapshotFilename');
       await export(testFilename(testName), snapshotFilename);
+      print('Making snapshot $snapshotFilename - done');
+    }
+
+    if (duplicate != null) {
+      snapshotsExitcodeTuples = duplicateList(
+          snapshotsExitcodeTuples, duplicate);
     }
 
     var arguments = []
         ..add(mode)
-        ..addAll(snapshotsExitcodeTuples.expand((tuple) => tuple));
+        ..addAll(snapshotsExitcodeTuples);
 
     // Run all the snapshots inside one fletch vm.
+    print("Running $multiprogramRunner ${arguments.join(' ')}");
     ProcessResult result = await Process.run(multiprogramRunner, arguments);
-    print("$multiprogramRunner result:");
+    print("Done running $multiprogramRunner ${arguments.join(' ')}:");
     print("<STDOUT>:\n${result.stdout}\n");
     print("<STDERR>:\n${result.stderr}\n");
     print("<EXITCODE>:\n${result.exitCode}\n");

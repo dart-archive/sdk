@@ -15,7 +15,7 @@
 
 namespace fletch {
 
-typedef void (*ProgramExitListener)(Program*, void* data);
+typedef void (*ProgramExitListener)(Program*, int exitcode, void* data);
 
 class Class;
 class Function;
@@ -174,12 +174,13 @@ class Program {
 
   void NotifyExitListener() {
     if (program_exit_listener_ != NULL) {
-      program_exit_listener_(this, program_exit_listener_data_);
+      program_exit_listener_(this, ExitCode(), program_exit_listener_data_);
     }
   }
 
   Signal::Kind exit_kind() const { return exit_kind_; }
   void set_exit_kind(Signal::Kind exit_kind) { exit_kind_ = exit_kind; }
+  int ExitCode();
 
   ProgramState* program_state() { return &program_state_; }
 

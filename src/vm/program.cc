@@ -68,6 +68,27 @@ Program::~Program() {
   ASSERT(process_list_head_ == NULL);
 }
 
+int Program::ExitCode() {
+  switch (exit_kind()) {
+    case Signal::kTerminated:
+      return 0;
+    case Signal::kCompileTimeError:
+      return kCompileTimeErrorExitCode;
+    case Signal::kUncaughtException:
+      return kUncaughtExceptionExitCode;
+    // TODO(kustermann): We should consider returning a different exitcode if a
+    // process was killed via a signal or killed programmatically.
+    case Signal::kUnhandledSignal:
+      return kUncaughtExceptionExitCode;
+    case Signal::kKilled:
+      return kUncaughtExceptionExitCode;
+    case Signal::kShouldKill:
+      UNREACHABLE();
+  }
+  UNREACHABLE();
+  return 0;
+}
+
 Process* Program::SpawnProcess(Process* parent) {
   Process* process = new Process(this, parent);
 

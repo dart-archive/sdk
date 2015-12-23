@@ -1109,12 +1109,14 @@ void SimpleProgramRunner::Run(int count,
   }
 }
 
-void SimpleProgramRunner::CaptureExitCode(Program* program, void* data) {
+void SimpleProgramRunner::CaptureExitCode(Program* program,
+                                          int exitcode,
+                                          void* data) {
   SimpleProgramRunner* runner = reinterpret_cast<SimpleProgramRunner*>(data);
   ScopedMonitorLock locker(runner->monitor_);
   for (int i = 0; i < runner->count_; i++) {
     if (runner->programs_[i] == program) {
-      runner->exitcodes_[i] = GetExitCode(program);
+      runner->exitcodes_[i] = exitcode;
       runner->remaining_--;
       runner->monitor_->NotifyAll();
       return;
@@ -1122,27 +1124,5 @@ void SimpleProgramRunner::CaptureExitCode(Program* program, void* data) {
   }
   UNREACHABLE();
 }
-
-int SimpleProgramRunner::GetExitCode(Program* program) {
-  switch (program->exit_kind()) {
-    case Signal::kTerminated:
-      return 0;
-    case Signal::kCompileTimeError:
-      return kCompileTimeErrorExitCode;
-    case Signal::kUncaughtException:
-      return kUncaughtExceptionExitCode;
-    // TODO(kustermann): We should consider returning a different exitcode if a
-    // process was killed via a signal or killed programmatically.
-    case Signal::kUnhandledSignal:
-      return kUncaughtExceptionExitCode;
-    case Signal::kKilled:
-      return kUncaughtExceptionExitCode;
-    case Signal::kShouldKill:
-      UNREACHABLE();
-  }
-  UNREACHABLE();
-  return 0;
-}
-
 
 }  // namespace fletch

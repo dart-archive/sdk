@@ -24,6 +24,7 @@ typedef void* FletchProgram;
 typedef void* FletchPrintInterceptor;
 typedef void (*PrintInterceptionFunction)(
     const char* message, int out, void* data);
+typedef void (*ProgramExitCallback)(FletchProgram*, int exitcode, void* data);
 
 // Setup must be called before using any of the other API methods.
 FLETCH_EXPORT void FletchSetup(void);
@@ -52,17 +53,31 @@ FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
 FLETCH_EXPORT FletchProgram FletchLoadProgramFromFlash(void* location,
                                                        size_t size);
 
-// Start a process at main, from the program.
+// Starts the main method of the program. The given callback will be called once
+// all processes of the program have terminated.
+//
+// The [callback] might be called on FletchVM internal threads and is not
+// allowed to use the Fletch API.
+// TODO(kustermann/herhut): We should
+//   * make clear what the callback can do and what not (e.g.
+//     FletchDeleteProgram)
+//   * use thread-local storage - at least in debug mode - which ensures this.
+FLETCH_EXPORT void FletchStartMain(FletchProgram program,
+                                   ProgramExitCallback callback,
+                                   void* callback_data);
+
+// Run the main method of the program and wait until it is done executing.
 FLETCH_EXPORT int FletchRunMain(FletchProgram program);
 
-// Start multiple processes at main, from the programs.
+// Run the main method of multiple programs and wait until all of them are done
+// executing.
 FLETCH_EXPORT void FletchRunMultipleMain(int count,
                                          FletchProgram* programs,
                                          int* exitcodes);
 
 // Load the snapshot from the file, load the program from the
-// snapshot, start a process from that program, and run main in that
-// process.
+// snapshot, run the main process of that program and wait until it is done
+// executing.
 FLETCH_EXPORT void FletchRunSnapshotFromFile(const char* path);
 
 // Add a default shared library for the dart:ffi foreign lookups.

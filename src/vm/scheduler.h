@@ -216,8 +216,7 @@ class SimpleProgramRunner {
   int count_;
   int remaining_;
 
-  static void CaptureExitCode(Program* program, void* data);
-  static int GetExitCode(Program* program);
+  static void CaptureExitCode(Program* program, int exitcode, void* data);
 };
 
 

@@ -63,6 +63,18 @@ static int RunProgram(Program* program) {
   return exitcodes[0];
 }
 
+static void StartProgram(Program* program,
+                         ProgramExitListener listener,
+                         void* data) {
+#ifdef FLETCH_ENABLE_LIVE_CODING
+  ProgramFolder::FoldProgramByDefault(program);
+#endif  // FLETCH_ENABLE_LIVE_CODING
+
+  program->SetProgramExitListener(listener, data);
+  Process* process = program->ProcessSpawnForMain();
+  Scheduler::GlobalInstance()->ScheduleProgram(program, process);
+}
+
 static Program* LoadSnapshotFromFile(const char* path) {
   List<uint8> bytes = Platform::LoadFile(path);
   Program* program = LoadSnapshot(bytes);
@@ -149,6 +161,15 @@ FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {
 
   program->heap()->space()->AppendProgramChunk(memory, memory->base());
   return reinterpret_cast<FletchProgram>(program);
+}
+
+FLETCH_EXPORT void FletchStartMain(FletchProgram raw_program,
+                                   ProgramExitCallback callback,
+                                   void* callback_data) {
+  fletch::Program* program = reinterpret_cast<fletch::Program*>(raw_program);
+  fletch::ProgramExitListener listener =
+      reinterpret_cast<fletch::ProgramExitListener>(callback);
+  fletch::StartProgram(program, listener, callback_data);
 }
 
 void FletchDeleteProgram(FletchProgram raw_program) {
