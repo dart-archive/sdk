@@ -26,11 +26,11 @@ bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
 }
 
-void Thread::BlockOSSignals() {
+void Thread::SetupOSSignals() {
   // Platform doesn't have signals.
 }
 
-void Thread::UnblockOSSignals() {
+void Thread::TeardownOSSignals() {
   // Platform doesn't have signals.
 }
 
