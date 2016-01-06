@@ -107,4 +107,8 @@ EXPORT void* memfloat64();
 
 EXPORT void* memstring();
 
+EXPORT int bufferRead(void* buffer, int size);
+
+EXPORT int bufferWrite(void* buffer, int size, int value);
+
 #endif  // SRC_VM_FFI_TEST_LIBRARY_H_

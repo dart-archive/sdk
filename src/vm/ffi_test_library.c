@@ -324,3 +324,26 @@ void* memfloat64() {
 void* memstring() {
   return strdup("dart");
 }
+
+// Used for testing our circular buffer, we just read or write one byte here
+// and return it back to dart for validation.
+// The buffer has the head as a 4 byte integer in the first 4 bytes, and the
+// tail as the next 4 bytes, data is following that.
+// We don't do overflow checks here.
+int bufferRead(void* buffer, int size) {
+  int* tail_pointer = (int*)buffer + 1;
+  int tail = *tail_pointer;
+  char* value_pointer = (char*)buffer + 8 + tail;
+  int value = *value_pointer;
+  *tail_pointer = (tail + 1) % (size + 1);
+  return value;
+}
+
+int bufferWrite(void* buffer, int size, int value) {
+  int* head_pointer = (int*)buffer;
+  int head = *head_pointer;
+  char* value_pointer = (char*)buffer + 8 + head;
+  *value_pointer = value;
+  *head_pointer = (head + 1) % (size + 1);
+  return value;
+}
