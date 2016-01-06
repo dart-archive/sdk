@@ -122,6 +122,9 @@
         '../hal_sources.gypi',
         '../lwip_sources.gypi',
       ],
+      'defines': [
+        'LWIP_TIMEVAL_PRIVATE=0',
+      ],
       'include_dirs': [
         '<(generated_path)/Inc',
         '<(source_path)',

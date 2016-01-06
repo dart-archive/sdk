@@ -338,6 +338,7 @@
         'free_rtos_sources.gypi',
       ],
       'defines': [
+        'LWIP_TIMEVAL_PRIVATE=0',
         'DEMO_VERSION="1.0.1"',
       ],
       'cflags' : [
