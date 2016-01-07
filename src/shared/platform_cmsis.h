@@ -17,12 +17,12 @@
 #include "src/shared/globals.h"
 
 #ifdef DEBUG
-#define CHECK_AND_RETURN(expr)                                               \
-  {                                                                          \
-    int status = expr;                                                       \
-    if (status != osOK) {                                                    \
+#define LOG_STATUS_MESSAGE                                                   \
       char const *msg;                                                       \
       switch (status) {                                                      \
+        case osErrorOS:                                                      \
+          msg = "osErrorOS";                                                 \
+          break;                                                             \
         case osErrorISR:                                                     \
           msg = "osErrorISR";                                                \
           break;                                                             \
@@ -38,8 +38,15 @@
         default:                                                             \
           msg = "<other>";                                                   \
       }                                                                      \
-      printf("System call failed: %s at %s:%d.\n", msg, __FILE__, __LINE__); \
+      printf("System call failed: %s (%d) at %s:%d.\n",                      \
+             msg, status, __FILE__, __LINE__);                               \
       fflush(stdout);                                                        \
+
+#define CHECK_AND_RETURN(expr)                                               \
+  {                                                                          \
+    int status = expr;                                                       \
+    if (status != osOK) {                                                    \
+      LOG_STATUS_MESSAGE                                                     \
       return status;                                                         \
     }                                                                        \
   }
@@ -48,25 +55,7 @@
   {                                                                          \
     int status = expr;                                                       \
     if (status != osOK) {                                                    \
-      char const *msg;                                                       \
-      switch (status) {                                                      \
-        case osErrorISR:                                                     \
-          msg = "osErrorISR";                                                \
-          break;                                                             \
-        case osErrorResource:                                                \
-          msg = "osErrorResource";                                           \
-          break;                                                             \
-        case osErrorParameter:                                               \
-          msg = "osErrorParameter";                                          \
-          break;                                                             \
-        case osErrorTimeoutResource:                                         \
-          msg = "osErrorTimeoutResource";                                    \
-          break;                                                             \
-        default:                                                             \
-          msg = "<other>";                                                   \
-      }                                                                      \
-      printf("System call failed: %s at %s:%d.\n", msg, __FILE__, __LINE__); \
-      fflush(stdout);                                                        \
+      LOG_STATUS_MESSAGE                                                     \
       abort();                                                               \
     }                                                                        \
   }
@@ -89,7 +78,6 @@ namespace fletch {
 
 static const int kMutexSize = sizeof(int32_t) * 3;
 static const int kSemaphoreSize = sizeof(int32_t) * 2;
-static const int kMaxSemaphoreValue = 1024;
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
@@ -122,30 +110,18 @@ class MonitorImpl {
 #ifdef CMSIS_OS_RTX
     memset((osMutex(mutex_def_))->mutex, 0, kMutexSize);
     memset((osMutex(internal_def_))->mutex, 0, kMutexSize);
-    memset((osSemaphore(semaphore_def_))->semaphore, 0, kSemaphoreSize);
 #endif
     mutex_ = osMutexCreate(osMutex(mutex_def_));
     ASSERT(mutex_ != NULL);
     internal_ = osMutexCreate(osMutex(internal_def_));
     ASSERT(internal_ != NULL);
-#ifdef CMSIS_OS_RTX
-    // In the KEIL implementation the 'count' argument in interpreted
-    // as the number of resources initially available.
-    semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_), 0);
-#else
-    // In the implementation in STM32CubeF7 the 'count' argument in
-    // interpreted as the maximum of resources available.
-    semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_),
-                                   kMaxSemaphoreValue);
-#endif
-    ASSERT(semaphore_ != NULL);
-    waiting_ = 0;
+    first_waiting_ = NULL;
+    last_waiting_ = NULL;
   }
 
   ~MonitorImpl() {
     osMutexDelete(mutex_);
     osMutexDelete(internal_);
-    osSemaphoreDelete(semaphore_);
   }
 
   int Lock() { return osMutexWait(mutex_, osWaitForever); }
@@ -153,17 +129,18 @@ class MonitorImpl {
 
   int Wait() {
     CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
-    waiting_++;
+    WaitListEntry wait_entry;
+    AddToWaitList(&wait_entry);
     CHECK_AND_FAIL(osMutexRelease(internal_));
     CHECK_AND_RETURN(osMutexRelease(mutex_));
 #ifdef CMSIS_OS_RTX
-    int tokens = osSemaphoreWait(semaphore_, osWaitForever);
+    int tokens = osSemaphoreWait(wait_entry.semaphore_, osWaitForever);
     ASSERT(tokens > 0);  // There should have been at least one token.
 #else
     // The implementation in STM32CubeF7 returns osOK if the
     // semaphore was acquired.
     // See https://github.com/dart-lang/fletch/issues/377.
-    CHECK_AND_FAIL(osSemaphoreWait(semaphore_, osWaitForever));
+    CHECK_AND_FAIL(osSemaphoreWait(wait_entry.semaphore_, osWaitForever));
 #endif
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
     return osOK;
@@ -172,24 +149,20 @@ class MonitorImpl {
   bool Wait(uint64 microseconds) {
     bool success = true;
     CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
-    waiting_++;
+    WaitListEntry wait_entry;
+    AddToWaitList(&wait_entry);
     CHECK_AND_FAIL(osMutexRelease(internal_));
     CHECK_AND_FAIL(osMutexRelease(mutex_));
 #ifdef CMSIS_OS_RTX
-    int tokens = osSemaphoreWait(semaphore_, microseconds / 1000);
+    int tokens = osSemaphoreWait(wait_entry.semaphore_, microseconds / 1000);
     success = (tokens == 0);
 #else
     // The implementation in STM32CubeF7 returns osOK if the
     // semaphore was acquired and osErrorOS if it was not.
     // See https://github.com/dart-lang/fletch/issues/377.
-    int status = osSemaphoreWait(semaphore_, microseconds / 1000);
+    int status = osSemaphoreWait(wait_entry.semaphore_, microseconds / 1000);
     success = (status == osOK);
 #endif
-    if (!success) {
-      CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
-      --waiting_;
-      CHECK_AND_FAIL(osMutexRelease(internal_));
-    }
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
     return success;
   }
@@ -201,34 +174,89 @@ class MonitorImpl {
 
   int Notify() {
     CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
-    bool hasWaiting = waiting_ > 0;
-    if (hasWaiting) --waiting_;
+    WaitListEntry* to_notify = first_waiting_;
+    if (to_notify != NULL) {
+      if (first_waiting_ == last_waiting_) last_waiting_ = NULL;
+      first_waiting_ = first_waiting_->next_;
+    }
     CHECK_AND_FAIL(osMutexRelease(internal_));
-    if (hasWaiting) {
-      CHECK_AND_FAIL(osSemaphoreRelease(semaphore_));
+    if (to_notify != NULL) {
+      CHECK_AND_FAIL(osSemaphoreRelease(to_notify->semaphore_));
     }
     return osOK;
   }
 
   int NotifyAll() {
     CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
-    int towake = waiting_;
-    waiting_ = 0;
+    WaitListEntry* wake_list = first_waiting_;
+    first_waiting_ = NULL;
+    last_waiting_ = NULL;
     CHECK_AND_FAIL(osMutexRelease(internal_));
-    while (towake-- > 0) {
-      CHECK_AND_FAIL(osSemaphoreRelease(semaphore_));
+    while (wake_list != NULL) {
+      // Grab the next value here. Releasing the semaphore can cause
+      // the waiting thread to start running, which will cause the
+      // stack allocated WaitListEntry to become invalid.
+      WaitListEntry* next = wake_list->next_;
+      CHECK_AND_FAIL(osSemaphoreRelease(wake_list->semaphore_));
+      wake_list = next;
     }
     return osOK;
   }
 
  private:
+  class WaitListEntry {
+   public:
+    WaitListEntry() {
+  #ifdef CMSIS_OS_RTX
+      memset((osSemaphore(semaphore_def_))->semaphore, 0, kSemaphoreSize);
+      // In the KEIL implementation the 'count' argument in interpreted
+      // as the number of resources initially available.
+      semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_), 0);
+  #else
+      // In the STM32CubeF7 FreeRTOS port of CMSIS-RTOS the 'count'
+      // argument in interpreted as the maximum of resources
+      // available, and therefore the second argument should be one
+      // (1) here. However if the value is *exactly* one (1) it is
+      // actually the number of resources initially available. The
+      // reason for that is that when 'count' is one a binary
+      // semaphore is created using the FreeRTOS macro
+      // vSemaphoreCreateBinary which creates the semahopre as
+      // available. The function xSemaphoreCreateBinary should have
+      // been used, as that creates a binary semaphore which is not
+      // initially available.
+      semaphore_ = osSemaphoreCreate(osSemaphore(semaphore_def_), 2);
+  #endif
+      ASSERT(semaphore_ != NULL);
+      next_ = NULL;
+    }
+
+    ~WaitListEntry() {
+      osSemaphoreDelete(semaphore_);
+    }
+
+    osSemaphoreDef(semaphore_def_);
+    osSemaphoreId(semaphore_);
+    WaitListEntry* next_;
+  };
+
+  void AddToWaitList(WaitListEntry* wait_entry) {
+    if (first_waiting_ == NULL) {
+      ASSERT(last_waiting_ == NULL);
+      first_waiting_ = wait_entry;
+    } else {
+      ASSERT(last_waiting_ != NULL);
+      last_waiting_->next_ = wait_entry;
+    }
+    last_waiting_ = wait_entry;
+  }
+
   osMutexDef(mutex_def_);
   osMutexId mutex_;
   osMutexDef(internal_def_);
   osMutexId internal_;
-  osSemaphoreDef(semaphore_def_);
-  osSemaphoreId(semaphore_);
-  int waiting_;
+
+  WaitListEntry* first_waiting_;
+  WaitListEntry* last_waiting_;
 };
 
 }  // namespace fletch
