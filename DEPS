@@ -289,7 +289,10 @@ hooks = [
     'name': 'GYP',
     'pattern': '.',
     'action': [
-      'ninja', '-C', 'fletch',
+      'python',
+      'fletch/tools/run-ninja.py',
+      '-C',
+      'fletch',
     ],
   },
 ]
