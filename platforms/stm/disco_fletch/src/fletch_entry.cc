@@ -57,7 +57,7 @@ extern "C" void FletchEntry(void const * argument) {
   uart->Start();
 
   osThreadDef(START_FLETCH, StartFletch, osPriorityNormal, 0,
-              8 * 1024 /* stack size */);
+              4 * 1024 /* stack size */);
   osThreadCreate(osThread(START_FLETCH), NULL);
 
   // No more to do right now.

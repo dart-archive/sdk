@@ -133,6 +133,7 @@
         # Application.
         '<(source_path)/circular_buffer.cc',
         '<(source_path)/circular_buffer.h',
+        '<(source_path)/freertos.cc',
         '<(source_path)/fletch_entry.cc',
         '<(source_path)/logger.cc',
         '<(source_path)/uart.cc',
@@ -150,7 +151,6 @@
         '<(generated_path)/Inc/stm32f7xx_it.h',
         '<(generated_path)/Src/main.c',
         '<(generated_path)/Src/ethernetif.c',
-        '<(generated_path)/Src/freertos.c',
         '<(generated_path)/Src/lwip.c',
         '<(generated_path)/Src/stm32f7xx_hal_msp.c',
         '<(generated_path)/Src/stm32f7xx_it.c',
