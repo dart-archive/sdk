@@ -71,7 +71,6 @@ incremental/production/remove_instance_method_super_access: Fail
 incremental/production/remove_static_method: Fail
 incremental/production/remove_top_level_method: Fail
 incremental/production/same_tokens: Fail
-incremental/production/signature_change_instance_method: Fail
 incremental/production/signature_change_static_method: Fail
 incremental/production/signature_change_top_level_method: Fail
 incremental/production/source_maps_no_throw: Fail

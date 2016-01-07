@@ -814,9 +814,10 @@ class LibraryUpdater extends FletchFeatures {
             after,
             "Unable to handle when signature of '${after.name}' changes");
       }
-      if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
-        return cannotReuse(
-            after, "Signature change requires 'experimental' mode");
+      if ((!before.isInstanceMember || !after.isInstanceMember) &&
+          !_context.incrementalCompiler.isExperimentalModeEnabled) {
+        return cannotReuse(after, "Signature change on non-instance member "
+                                  "requires 'experimental' mode");
       }
       return true;
     }

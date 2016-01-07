@@ -970,6 +970,37 @@ main() {
 ''',
 
   r'''
+signature_change_parameter_instance_method
+==> main.dart.patch <==
+// Test that instance methods can have signature changed
+
+class C {
+<<<< ["instance is null","v1"]
+  foo() {
+    print('v1');
+  }
+==== "v2"
+  foo(int i) {
+    print('v2');
+  }
+>>>>>
+}
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+    instance.foo();
+  } else {
+    instance.foo(1);
+  }
+}
+
+
+''',
+
+  r'''
 add_class
 ==> main.dart.patch <==
 // Test that adding a class is supported
