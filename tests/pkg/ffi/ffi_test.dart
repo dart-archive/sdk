@@ -102,7 +102,7 @@ testCircularBuffer() {
   for (int i = 0; i < size; i++) {
     Expect.isFalse(buffer.isEmpty);
     Expect.equals(buffer.available, size - i);
-    var value = bufferRead.icall$2(buffer.foreign, size);
+    var value = bufferRead.icall$1(buffer.foreign);
     Expect.equals(value, i);
   }
   Expect.isTrue(buffer.isEmpty);
@@ -110,14 +110,13 @@ testCircularBuffer() {
   var bufferWrite = fl.lookup('bufferWrite');
   for (int i = 0; i < size; i++) {
     Expect.equals(buffer.available, i);
-    var value = bufferWrite.icall$3(buffer.foreign, size, i);
+    var value = bufferWrite.icall$2(buffer.foreign, i);
     Expect.equals(i, value);
   }
   Expect.equals(buffer.available, size);
   Expect.isTrue(buffer.isFull);
   Expect.equals(buffer.read(back.buffer), size);
   Expect.listEquals(back, data);
-  
 }
 
 testStringFunctions() {

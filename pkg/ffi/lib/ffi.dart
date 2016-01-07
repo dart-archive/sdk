@@ -37,36 +37,38 @@ String memoryToString(ForeignPointer ptr, int length) {
 /**
  * A circular buffer used from both dart and c. The buffer has the start index
  * and the end index as the first two 4 byte integers in the underlying foreign
- * memory. This is _not_ thread safe, only access this from either c or dart
- * at any point in time.
- *
+ * memory, and the size as the next 4.
+ * This is _not_ thread safe, only access this from either c or dart at any
+ * point in time.
  */
 class CircularByteBuffer {
   static const int HEAD_INDEX = 0;
   static const int TAIL_INDEX = 4;
-  static const int DATA_START = 8;
-  static const int HEADER_SIZE = 8;
+  static const int SIZE_INDEX = 8;
+  static const int DATA_START = 12;
+  static const int HEADER_SIZE = 12;
 
-  final int _size;
   final ForeignMemory _buffer;
 
   int get _head => _buffer.getInt32(HEAD_INDEX);
   int set _head(value) => _buffer.setInt32(HEAD_INDEX, value);
   int get _tail => _buffer.getInt32(TAIL_INDEX);
   int set _tail(value) => _buffer.setInt32(TAIL_INDEX, value);
+  int get _size => _buffer.getInt32(SIZE_INDEX);
+  int set _size(value) => _buffer.setInt32(SIZE_INDEX, value);
   ForeignMemory get foreign => _buffer;
 
   /**
    * Creates a new buffer capable of holding size bytes. The underlying memory
-   * has 8 additional bytes for holding the head and tail, and one more byte
-   * to destinguesh empty from full.
+   * has 8 additional bytes for holding the head, tail and size, and one more
+   * byte to distinguish empty from full.
    */
   CircularByteBuffer(int size) :
       // + DATA_START for the indexes, +1 to distinguesh between full and empty
-      _buffer = new ForeignMemory.allocatedFinalized(size + HEADER_SIZE + 1),
-      _size = size + 1 {
+      _buffer = new ForeignMemory.allocatedFinalized(size + HEADER_SIZE + 1) {
     this._head = 0;
     this._tail = 0;
+    this._size = size + 1;
   }
 
   bool get isFull => ((_head + 1) % _size) == _tail;

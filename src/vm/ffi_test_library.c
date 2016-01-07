@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -327,23 +328,32 @@ void* memstring() {
 
 // Used for testing our circular buffer, we just read or write one byte here
 // and return it back to dart for validation.
-// The buffer has the head as a 4 byte integer in the first 4 bytes, and the
-// tail as the next 4 bytes, data is following that.
+// The buffer has the head as a 4 byte integer in the first 4 bytes, the
+// tail as the next 4 bytes, and the size as the next 4 bytes.
+// Data is following that.
 // We don't do overflow checks here.
-int bufferRead(void* buffer, int size) {
-  int* tail_pointer = (int*)buffer + 1;
+const int kHeadIndex = 0;  // Must be consistent with the dart implementation.
+const int kTailIndex = 4;  // Must be consistent with the dart implementation.
+const int kSizeIndex = 8;  // Must be consistent with the dart implementation.
+const int kDataIndex = 12; // Must be consistent with the dart implementation.
+int bufferRead(char* buffer) {
+  uint32_t* size_pointer = (uint32_t*)(buffer + kSizeIndex);
+  uint32_t size = *size_pointer;
+  int* tail_pointer = (int*)(buffer + kTailIndex);
   int tail = *tail_pointer;
-  char* value_pointer = (char*)buffer + 8 + tail;
+  char* value_pointer = buffer + kDataIndex + tail;
   int value = *value_pointer;
-  *tail_pointer = (tail + 1) % (size + 1);
+  *tail_pointer = (tail + 1) % size;
   return value;
 }
 
-int bufferWrite(void* buffer, int size, int value) {
+int bufferWrite(char* buffer, int value) {
+  uint32_t* size_pointer = (uint32_t*)(buffer + kSizeIndex);
+  uint32_t size = *size_pointer;
   int* head_pointer = (int*)buffer;
   int head = *head_pointer;
-  char* value_pointer = (char*)buffer + 8 + head;
+  char* value_pointer = buffer + kDataIndex + head;
   *value_pointer = value;
-  *head_pointer = (head + 1) % (size + 1);
+  *head_pointer = (head + 1) % size;
   return value;
 }
