@@ -111,11 +111,11 @@ class Utils {
 
 #ifdef FLETCH64
   static bool IsInt32(word value) {
-    return (-(1L << 31) <= value) && (value < (1L << 31));
+    return (-(WORD_C(1) << 31) <= value) && (value < (WORD_C(1) << 31));
   }
 
   static bool IsUint32(word value) {
-    return (0 <= value) && (value < (1L << 32));
+    return (0 <= value) && (value < (WORD_C(1) << 32));
   }
 #endif
 
@@ -125,7 +125,8 @@ class Utils {
 #else
     uword res = static_cast<uword>(lhs) + static_cast<uword>(rhs);
     *val = bit_cast<uword>(res);
-    return ((res ^ lhs) & (res ^ rhs) & (1UL << (kBitsPerWord - 1))) != 0;
+    word bit = (res ^ lhs) & (res ^ rhs) & (UWORD_C(1) << (kBitsPerWord - 1));
+    return bit != 0;
 #endif
   }
 
@@ -135,7 +136,8 @@ class Utils {
 #else
     uword res = static_cast<uword>(lhs) - static_cast<uword>(rhs);
     *val = bit_cast<word>(res);
-    return ((res ^ lhs) & (res ^ ~rhs) & (1UL << (kBitsPerWord - 1))) != 0;
+    uword bit = (res ^ lhs) & (res ^ ~rhs) & (UWORD_C(1) << (kBitsPerWord - 1));
+    return bit != 0;
 #endif
   }
 

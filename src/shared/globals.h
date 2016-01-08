@@ -21,8 +21,17 @@
 
 // Types for native machine words. Guaranteed to be able to hold
 // pointers and integers.
+#if defined(FLETCH64) && defined(FLETCH_TARGET_OS_WIN)
+typedef long long word;            // NOLINT
+typedef unsigned long long uword;  // NOLINT
+#define WORD_C(n) n##LL
+#define UWORD_C(n) n##LL
+#else
 typedef long word;            // NOLINT
 typedef unsigned long uword;  // NOLINT
+#define WORD_C(n) n##L
+#define UWORD_C(n) n##UL
+#endif
 
 // Introduce integer types with specific bit widths.
 typedef signed char int8;
@@ -33,7 +42,8 @@ typedef unsigned char uint8;
 typedef unsigned short uint16;  // NOLINT
 typedef unsigned int uint32;
 
-#ifdef FLETCH64
+// On Windows platforms, long is always 32 bit.
+#if defined(FLETCH64) && !defined(FLETCH_TARGET_OS_WIN)
 typedef long int64;            // NOLINT
 typedef unsigned long uint64;  // NOLINT
 #else
