@@ -13,6 +13,7 @@ void main() {
   testBindListen();
   testConnect();
   testReadWrite();
+  testReadNext();
   testSpawnAccept();
   testLargeChunk();
   testShutdown();
@@ -65,6 +66,8 @@ void validateBuffer(buffer, int length) {
 }
 
 const CHUNK_SIZE = 256;
+const SMALL_READ_BUFFER = CHUNK_SIZE ~/ 8;
+
 
 void testReadWrite() {
   var server = new ServerSocket("127.0.0.1", 0);
@@ -79,6 +82,45 @@ void testReadWrite() {
 
   Expect.equals(0, socket.available);
   Expect.equals(0, client.available);
+
+  client.close();
+  socket.close();
+  server.close();
+}
+
+writeTo(bufferFrom, bufferTo, index) {
+  var listFrom = bufferFrom.asUint8List();
+  var listTo = bufferTo.asUint8List();
+  listTo.setRange(index, index + listFrom.length, listFrom);
+}
+
+void testReadNext() {
+  var server = new ServerSocket("127.0.0.1", 0);
+  var socket = new Socket.connect("127.0.0.1", server.port);
+  var client = server.accept();
+
+  socket.write(createBuffer(CHUNK_SIZE));
+  var combined = new Uint8List(CHUNK_SIZE).buffer;
+  int read = 0;
+  while (read < CHUNK_SIZE) {
+    var back = client.readNext();
+    writeTo(back, combined, read);
+    read += back.lengthInBytes;
+  }
+  Expect.equals(read, CHUNK_SIZE);
+  Expect.equals(client.available, 0);
+  validateBuffer(combined, CHUNK_SIZE);
+
+  socket.write(createBuffer(CHUNK_SIZE));
+  read = 0;
+  while(read < CHUNK_SIZE) {
+    var back = client.readNext(SMALL_READ_BUFFER);
+    writeTo(back, combined, read);
+    read += back.lengthInBytes;
+  }
+  Expect.equals(read, CHUNK_SIZE);
+  Expect.equals(client.available, 0);
+  validateBuffer(combined, CHUNK_SIZE);
 
   client.close();
   socket.close();

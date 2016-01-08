@@ -125,14 +125,18 @@ class Socket extends _SocketBase {
    * Will block until some bytes are available.
    * Returns `null` if the socket was closed for reading.
    */
-  ByteBuffer readNext() {
+  ByteBuffer readNext([int max]) {
     int events = _waitFor(os.READ_EVENT);
     int read = 0;
     ByteBuffer buffer;
     if ((events & os.READ_EVENT) != 0) {
       int available = this.available;
-      buffer = new Uint8List(available).buffer;
-      read = sys.read(_fd, buffer, 0, available);
+      int maxRead = available;
+      if (max != null) {
+        maxRead = max < available ? max : available;
+      }
+      buffer = new Uint8List(maxRead).buffer;
+      read = sys.read(_fd, buffer, 0, maxRead);
     }
     if (read == 0 && (events & os.CLOSE_EVENT) != 0) return null;
     if (read < 0 || (events & os.ERROR_EVENT) != 0) {
