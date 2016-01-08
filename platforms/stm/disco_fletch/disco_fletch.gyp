@@ -87,23 +87,11 @@
       ],
     },
     {
-      'target_name': 'disco_fletch.elf',
-      'dependencies': [
-        'disco_fletch_dart_snapshot.o',
-        '../../../src/vm/vm.gyp:libfletch',
-      ],
+      'target_name': 'libdisco_fletch',
       'variables': {
         'source_path': 'src',
         'generated_path': 'generated',
         'template_path': 'template',
-        'common_ldflags': [
-          '-specs=nano.specs',
-          # TODO(340): Why does this not work???
-          #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
-          # TODO(340): Why is this needed???
-          '-T../../platforms/stm/disco_fletch/generated/SW4STM32/'
-            'configuration/STM32F746NGHx_FLASH.ld'
-        ],
         'common_cflags': [
           # Our target will link in the stm files which do have a few warnings.
           '-Wno-write-strings',
@@ -116,7 +104,7 @@
           '-Wno-pointer-sign',
         ],
       },
-      'type': 'executable',
+      'type': 'static_library',
       'includes': [
         '../free_rtos_sources.gypi',
         '../hal_sources.gypi',
@@ -166,10 +154,6 @@
 
         # Additional utilities.
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
-
-        # TODO(ricow): Tool the generation of this, and the final bundle.
-        # This should be a library instead which that tool then links.
-        '<(PRODUCT_DIR)/snapshot.o',
       ],
       'conditions': [
         ['OS=="mac"', {
@@ -181,9 +165,6 @@
             'OTHER_CPLUSPLUSFLAGS' : [
               '<@(common_cflags)',
             ],
-            'OTHER_LDFLAGS': [
-              '<@(common_ldflags)',
-            ],
           },
         }],
         ['OS=="linux"', {
@@ -193,10 +174,46 @@
           'cflags_c': [
             '<@(common_cflags_c)',
           ],
+        }],
+      ],
+    },
+    {
+      'target_name': 'disco_fletch.elf',
+      'dependencies': [
+        'libdisco_fletch',
+        'disco_fletch_dart_snapshot.o',
+        '../../../src/vm/vm.gyp:libfletch',
+      ],
+      'variables': {
+        'common_ldflags': [
+          '-specs=nano.specs',
+          # TODO(340): Why does this not work???
+          #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
+          # TODO(340): Why is this needed???
+          '-T../../platforms/stm/disco_fletch/generated/SW4STM32/'
+            'configuration/STM32F746NGHx_FLASH.ld'
+        ],
+      },
+      'type': 'executable',
+      'sources': [
+        '<(PRODUCT_DIR)/snapshot.o',
+      ],
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '<@(common_ldflags)',
+            ],
+          },
+        }],
+        ['OS=="linux"', {
           'ldflags': [
             '<@(common_ldflags)',
           ],
         }],
+      ],
+      'libraries': [
+        '-lstdc++',
       ],
     },
     {
