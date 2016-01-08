@@ -12,13 +12,18 @@ To add new version(s) do the following:
 2. Make local modifications and add an approiate README.google file (start
    with the one in the previous version and update it).
 
-3. Tar and upload to Google Cloud Storage (change the version(s) appropiately)
+3. Upload to Google Cloud Storage (change the version(s) appropiately)
 
-   $ tar caf STM32Cube_FW_F4_VX.Y.Z.tar.gz STM32Cube_FW_F4_VX.Y.Z
    $ upload_to_google_storage.py \
-       -b dart-dependencies-fletch STM32Cube_FW_F4_VX.Y.Z.tar.gz
-   $ tar caf STM32Cube_FW_F7_VX.Y.Z.tar.gz STM32Cube_FW_F7_VX.Y.Z
+       -b dart-dependencies-fletch -a STM32Cube_FW_F4_VX.Y.Z
    $ upload_to_google_storage.py \
-       -b dart-dependencies-fletch STM32Cube_FW_F7_VX.Y.Z.tar.gz
+       -b dart-dependencies-fletch -a STM32Cube_FW_F7_VX.Y.Z
 
-4. Create a CL updating the .sha1 files.
+4. Create the unversioned copy (change the version(s) appropiately)
+   and upload to Google Cloud Storage
+
+   $ mv STM32Cube_FW_F7_VX.Y.Z stm32cube_fw_f7
+   $ upload_to_google_storage.py \
+       -b dart-dependencies-fletch -a stm32cube_fw_f7
+
+5. Create a CL updating the .sha1 files.

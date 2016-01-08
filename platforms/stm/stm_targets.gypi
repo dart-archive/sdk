@@ -6,7 +6,7 @@
   'variables': {
     'posix': 0,
 
-    'stm32_cube_f7': '<(DEPTH)/third_party/stm/STM32Cube_FW_F7_V1.3.1',
+    'stm32_cube_f7': '<(DEPTH)/third_party/stm/stm32cube_fw_f7',
     'stm32_cube_f7_free_rtos':
       '<(stm32_cube_f7)/Middlewares/Third_Party/FreeRTOS',
     'stm32_cube_f7_bsp_discovery':

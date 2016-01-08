@@ -16,5 +16,5 @@ function follow_links() {
 PROG_NAME="$(follow_links "$BASH_SOURCE")"
 
 download_from_google_storage \
-  --no_auth --no_resume --bucket dart-dependencies-fletch -u -s \
-  $(dirname $PROG_NAME)/stm32cube_fw_f7.tar.gz.sha1
+  --no_auth --no_resume --bucket dart-dependencies-fletch -d -u \
+  $(dirname $PROG_NAME)
