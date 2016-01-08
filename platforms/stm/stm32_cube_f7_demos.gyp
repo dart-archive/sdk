@@ -31,6 +31,164 @@
   },
   'targets': [
     {
+      'target_name': 'FMC_SDRAM.elf',
+      'variables': {
+        'project_name': 'FMC_SDRAM',
+        'project_path':
+          '<(discovery_projects)/Examples/FMC/<(project_name)',
+        'project_include_path': '<(project_path)/Inc/',
+        'project_source_path': '<(project_path)/Src/',
+        'ldflags': [
+          '-specs=nosys.specs',
+          '-specs=nano.specs',
+          '-L<(stm32_cube_f7)/Middlewares/ST/STemWin/Lib/',
+          '-T<(project_path)/SW4STM32/STM32746G_DISCOVERY/'
+              'STM32F746NGHx_FLASH.ld',
+        ],
+      },
+      'type': 'executable',
+      'includes': [
+        'hal_sources.gypi',
+      ],
+      'include_dirs': [
+        '<(project_include_path)',
+      ],
+      'sources': [
+        # Application.
+        '<(project_source_path)/main.c',
+        '<(project_source_path)/stm32f7xx_hal_msp.c',
+
+        # Board initialization and interrupt service routines.
+        '<(project_source_path)/stm32f7xx_it.c',
+        '<(project_source_path)/system_stm32f7xx.c',
+        '<(project_path)/SW4STM32/startup_stm32f746xx.s',
+
+        # Board support packages.
+        '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
+      ],
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '<@(ldflags)',
+            ],
+          },
+        }],
+        ['OS=="linux"', {
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
+      ],
+    },
+    {
+      'variables': {
+        'project_name': 'FMC_SDRAM',
+      },
+      'type': 'none',
+      'target_name': 'FMC_SDRAM',
+      'dependencies' : [
+        'FMC_SDRAM.elf'
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_bin',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(project_name).elf',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+          'action': [
+            '<(objcopy)',
+            '-O',
+            'binary',
+            '<(PRODUCT_DIR)/<(project_name).elf',
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+        },
+      ],
+    },
+    {
+      'target_name': 'FMC_SDRAM_DataMemory.elf',
+      'variables': {
+        'project_name': 'FMC_SDRAM_DataMemory',
+        'project_path':
+          '<(discovery_projects)/Examples/FMC/<(project_name)',
+        'project_include_path': '<(project_path)/Inc/',
+        'project_source_path': '<(project_path)/Src/',
+        'ldflags': [
+          '-specs=nosys.specs',
+          '-specs=nano.specs',
+          '-L<(stm32_cube_f7)/Middlewares/ST/STemWin/Lib/',
+          '-T<(project_path)/SW4STM32/STM32746G_DISCOVERY/'
+              'STM32F746NGHx_FLASH.ld',
+        ],
+      },
+      'type': 'executable',
+      'includes': [
+        'hal_sources.gypi',
+      ],
+      'include_dirs': [
+        '<(project_include_path)',
+      ],
+      'sources': [
+        # Application.
+        '<(project_source_path)/main.c',
+        #'<(project_source_path)/stm32f7xx_hal_msp.c',
+
+        # Board initialization and interrupt service routines.
+        '<(project_source_path)/stm32f7xx_it.c',
+        '<(project_source_path)/system_stm32f7xx.c',
+        '<(project_path)/SW4STM32/startup_stm32f746xx.s',
+
+        # Board support packages.
+        '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
+      ],
+      'conditions': [
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_LDFLAGS': [
+              '<@(ldflags)',
+            ],
+          },
+        }],
+        ['OS=="linux"', {
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
+      ],
+    },
+    {
+      'variables': {
+        'project_name': 'FMC_SDRAM_DataMemory',
+      },
+      'type': 'none',
+      'target_name': 'FMC_SDRAM_DataMemory',
+      'dependencies' : [
+        'FMC_SDRAM_DataMemory.elf'
+      ],
+      'actions': [
+        {
+          'action_name': 'generate_bin',
+          'inputs': [
+            '<(PRODUCT_DIR)/<(project_name).elf',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+          'action': [
+            '<(objcopy)',
+            '-O',
+            'binary',
+            '<(PRODUCT_DIR)/<(project_name).elf',
+            '<(PRODUCT_DIR)/<(project_name).bin',
+          ],
+        },
+      ],
+    },
+    {
       'target_name': 'STemWin_HelloWorld.elf',
       'variables': {
         'project_name': 'STemWin_HelloWorld',
