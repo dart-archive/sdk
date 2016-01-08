@@ -13,6 +13,9 @@
 namespace fletch {
 
 BEGIN_NATIVE(ForeignAllocate) {
+  if (!arguments[0]->IsSmi() && !arguments[0]->IsLargeInteger()) {
+    return Failure::wrong_argument_type();
+  }
   word size = AsForeignWord(arguments[0]);
   Object* result = process->NewInteger(0);
   if (result->IsRetryAfterGCFailure()) return result;
