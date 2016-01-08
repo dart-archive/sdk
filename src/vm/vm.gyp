@@ -179,7 +179,7 @@
         'thread_cmsis.cc',
         'thread_cmsis.h',
         'tick_queue.h',
-	'tick_sampler.h',
+        'tick_sampler.h',
         'tick_sampler_posix.cc',
         'tick_sampler_other.cc',
         'thread_windows.cc',

@@ -370,6 +370,9 @@ def StepsArchiveSDK(build_dir, system, mode, arch):
     print '@@@STEP_LINK@docs@%s@@@' % docs_http_path
 
 def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
+  # TODO(herhut): Remove once Windows port is complete.
+  archs = ['ia32'] if system == 'win' else archs
+
   configurations = GetBuildConfigurations(
       system=system,
       modes=modes,
