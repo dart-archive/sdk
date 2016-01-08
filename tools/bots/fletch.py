@@ -11,13 +11,19 @@ Buildbot steps for fletch testing
 import glob
 import os
 import re
-import resource
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
 import uuid
+
+# The resource package does not exist on Windows but its functionality is not
+# used there, either.
+try:
+  import resource
+except ImportError:
+  resource = None;
 
 import bot
 import bot_utils
@@ -32,7 +38,7 @@ DEBUG_LOG=".debug.log"
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
 FLETCH_REGEXP = (r'fletch-'
-                 r'(?P<system>linux|mac|windows|lk)'
+                 r'(?P<system>linux|mac|win|lk)'
                  r'(?P<partial_configuration>'
                    r'-(?P<mode>debug|release)'
                    r'(?P<asan>-asan)?'
@@ -375,9 +381,16 @@ def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
   # Generate ninja files.
   StepGyp()
 
+  # TODO(herhut): Remove once Windows port is complete.
+  args = ['libfletch'] if system == 'win' else ()
+
   # Build all necessary configurations.
   for configuration in configurations:
-    StepBuild(configuration['build_conf'], configuration['build_dir'])
+    StepBuild(configuration['build_conf'], configuration['build_dir'], args)
+
+  # TODO(herhut): Remove once Windows port is complete.
+  if system == 'win':
+    return
 
   # Run tests on all necessary configurations.
   for snapshot_run in [True, False]:
@@ -527,7 +540,7 @@ def StepsTargetRunner(debug_log, system, mode, arch):
 
 def StepGyp():
   with bot.BuildStep('GYP'):
-    Run(['ninja', '-v'])
+    Run(['python', 'tools/run-ninja.py', '-v'])
 
 def AnalyzeLog(log_file):
   # pkg/fletchc/lib/src/hub/hub_main.dart will, in its log file, print
@@ -880,6 +893,7 @@ def ShouldSkipConfiguration(snapshot_run, configuration):
 def GetCompilerVariants(system, arch, no_clang=False):
   is_mac = system == 'mac'
   is_arm = arch in ['arm', 'xarm']
+  is_windows = system == 'win'
   if no_clang:
     return ['']
   elif is_mac:
@@ -887,6 +901,9 @@ def GetCompilerVariants(system, arch, no_clang=False):
     return ['Clang']
   elif is_arm:
     # We don't support cross compiling to arm with clang ATM.
+    return ['']
+  elif is_windows:
+    # On windows we always use VC++.
     return ['']
   else:
     return ['', 'Clang']
