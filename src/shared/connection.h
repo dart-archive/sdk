@@ -55,6 +55,8 @@ class WriteBuffer : public Buffer {
 
 class Connection {
  public:
+  // Any change in [Opcode] must also be done in [VMCommandCode] in
+  // pkg/fletchc/lib/vm_commands.dart.
   enum Opcode {
     // DO NOT MOVE! The handshake opcodes needs to be the first one as
     // it is used to verify the compiler and vm versions.

@@ -1389,6 +1389,8 @@ class ConnectionError extends VmCommand {
   String valuesToString() => "$error, $trace";
 }
 
+// Any change in [VmCommandCode] must also be done in [Opcode] in
+// src/shared/connection.h.
 enum VmCommandCode {
   // DO NOT MOVE! The handshake opcodes needs to be the first one as
   // it is used to verify the compiler and vm versions.
