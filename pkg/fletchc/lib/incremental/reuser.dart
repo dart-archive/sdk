@@ -7,17 +7,10 @@ library fletchc_incremental.reuser;
 import 'dart:async' show
     Future;
 
-import 'package:compiler/compiler_new.dart' show
-    CompilerDiagnostics,
-    Diagnostic;
-
 import 'package:compiler/compiler.dart' as api;
 
 import 'package:compiler/src/compiler.dart' show
     Compiler;
-
-import 'package:compiler/src/enqueue.dart' show
-    EnqueueTask;
 
 import 'package:compiler/src/diagnostics/messages.dart' show
     MessageKind;
@@ -26,12 +19,9 @@ import 'package:compiler/src/script.dart' show
     Script;
 
 import 'package:compiler/src/elements/elements.dart' show
-    AstElement,
     ClassElement,
     CompilationUnitElement,
     Element,
-    FieldElement,
-    FunctionElement,
     LibraryElement,
     STATE_NOT_STARTED,
     ScopeContainerElement,
@@ -71,34 +61,10 @@ import 'package:compiler/src/tree/tree.dart' show
     FunctionExpression,
     LibraryTag,
     NodeList,
-    Part,
-    StringNode,
     unparse;
 
-import '../incremental_backend.dart' show
-    IncrementalBackend,
-    IncrementalFletchBackend;
-
-import '../src/fletch_class_builder.dart' show
-    FletchClassBuilder;
-
-import '../src/fletch_context.dart' show
-    FletchContext;
-
-import '../src/fletch_compiler_implementation.dart' show
-    FletchCompilerImplementation;
-
-import '../vm_commands.dart' show
-    PrepareForChanges,
-    VmCommand;
-
-import '../fletch_system.dart' show
-    FletchDelta,
-    FletchSystem;
-
 import 'package:compiler/src/util/util.dart' show
-    Link,
-    LinkBuilder;
+    Link;
 
 import 'package:compiler/src/elements/modelx.dart' show
     ClassElementX,
@@ -114,16 +80,15 @@ import 'package:compiler/src/constants/values.dart' show
 import 'package:compiler/src/library_loader.dart' show
     TagState;
 
+import '../incremental_backend.dart' show
+    IncrementalBackend;
+
 import 'diff.dart' show
     Difference,
     computeDifference;
 
 import 'fletchc_incremental.dart' show
-    IncrementalCompilationFailed,
-    IncrementalCompiler;
-
-import '../src/fletch_function_builder.dart' show
-    FletchFunctionBuilder;
+    IncrementalCompilationFailed;
 
 typedef void Logger(message);
 
@@ -145,81 +110,7 @@ class FailedUpdate {
   }
 }
 
-abstract class _IncrementalCompilerContext {
-  IncrementalCompiler incrementalCompiler;
-
-  Set<ClassElementX> _emittedClasses;
-
-  Set<ClassElementX> _directlyInstantiatedClasses;
-
-  Set<ConstantValue> _compiledConstants;
-}
-
-class IncrementalCompilerContext extends _IncrementalCompilerContext
-    implements CompilerDiagnostics {
-  final CompilerDiagnostics diagnostics;
-  int errorCount = 0;
-  int warningCount = 0;
-  int hintCount = 0;
-
-  final Set<Uri> _uriWithUpdates = new Set<Uri>();
-
-  IncrementalCompilerContext(this.diagnostics);
-
-  int get problemCount => errorCount + warningCount + hintCount;
-
-  void set incrementalCompiler(IncrementalCompiler value) {
-    if (super.incrementalCompiler != null) {
-      throw new StateError("Can't set [incrementalCompiler] more than once");
-    }
-    super.incrementalCompiler = value;
-  }
-
-  void registerUriWithUpdates(Iterable<Uri> uris) {
-    _uriWithUpdates.addAll(uris);
-  }
-
-  void _captureState(Compiler compiler) {
-    // TODO(ahe): Compute this.
-    _emittedClasses = new Set();
-
-    _directlyInstantiatedClasses =
-        new Set.from(compiler.codegenWorld.directlyInstantiatedClasses);
-
-    // TODO(ahe): Compute this.
-    List<ConstantValue> constants = [];
-    if (constants == null) constants = <ConstantValue>[];
-    _compiledConstants = new Set<ConstantValue>.identity()..addAll(constants);
-  }
-
-  bool _uriHasUpdate(Uri uri) => _uriWithUpdates.contains(uri);
-
-  void report(
-      var code,
-      Uri uri,
-      int begin,
-      int end,
-      String text,
-      Diagnostic kind) {
-    if (kind == Diagnostic.ERROR) {
-      errorCount++;
-    }
-    if (kind == Diagnostic.WARNING) {
-      warningCount++;
-    }
-    if (kind == Diagnostic.HINT) {
-      hintCount++;
-    }
-    if (_uriHasUpdate(uri)) {
-      // TODO(ahe): Map location to updated source file.
-      print("$uri+$begin-$end: $text");
-    } else {
-      diagnostics.report(code, uri, begin, end, text, kind);
-    }
-  }
-}
-
-class Reuser extends FletchFeatures {
+abstract class Reuser {
   final Compiler compiler;
 
   final api.CompilerInputProvider inputProvider;
@@ -236,8 +127,6 @@ class Reuser extends FletchFeatures {
 
   final Set<ElementX> _removedElements = new Set<ElementX>();
 
-  final IncrementalCompilerContext _context;
-
   final Map<Uri, Future> _sources = <Uri, Future>{};
 
   /// Cached tokens of entry compilation units.
@@ -248,33 +137,13 @@ class Reuser extends FletchFeatures {
   final Map<LibraryElementX, SourceFile> _entrySourceFiles =
       <LibraryElementX, SourceFile>{};
 
-  bool _hasCapturedCompilerState = false;
-
   Reuser(
       this.compiler,
       this.inputProvider,
       this.logTime,
-      this.logVerbose,
-      this._context) {
-    // TODO(ahe): Would like to remove this from the constructor. However, the
-    // state must be captured before calling [reuseCompiler].
-    // Proper solution might be: [reuseCompiler] should not clear the sets that
-    // are captured in [IncrementalCompilerContext._captureState].
-    _ensureCompilerStateCaptured();
-  }
+      this.logVerbose);
 
-  /// Returns the classes emitted by [compiler].
-  Set<ClassElementX> get _emittedClasses => _context._emittedClasses;
-
-  /// Returns the directly instantantiated classes seen by [compiler] (this
-  /// includes interfaces and may be different from [_emittedClasses] that only
-  /// includes interfaces used in type tests).
-  Set<ClassElementX> get _directlyInstantiatedClasses {
-    return _context._directlyInstantiatedClasses;
-  }
-
-  /// Returns the constants emitted by [compiler].
-  Set<ConstantValue> get _compiledConstants => _context._compiledConstants;
+  IncrementalBackend get backend;
 
   /// When [true], updates must be applied (using [applyUpdates]) before the
   /// [compiler]'s state correctly reflects the updated program.
@@ -295,7 +164,6 @@ class Reuser extends FletchFeatures {
   }
 
   Future<bool> _reuseLibrary(LibraryElement library) async {
-    _ensureCompilerStateCaptured();
     assert(compiler != null);
     if (library.isPlatformLibrary) {
       logTime('Reusing $library (assumed read-only).');
@@ -317,7 +185,7 @@ class Reuser extends FletchFeatures {
 
       for (CompilationUnitElementX unit in library.compilationUnits) {
         Uri uri = unit.script.resourceUri;
-        if (_context._uriHasUpdate(uri)) {
+        if (uriHasUpdate(uri)) {
           isChanged = true;
           scripts.add(await _updatedScript(unit.script, library));
         } else {
@@ -359,7 +227,7 @@ class Reuser extends FletchFeatures {
 
   Future<bool> _haveTagsChanged(LibraryElementX library) {
     Script before = library.entryCompilationUnit.script;
-    if (!_context._uriHasUpdate(before.resourceUri)) {
+    if (!uriHasUpdate(before.resourceUri)) {
       // The entry compilation unit hasn't been updated. So the tags aren't
       // changed.
       return new Future<bool>.value(false);
@@ -401,15 +269,6 @@ class Reuser extends FletchFeatures {
 
   Future _readUri(Uri uri) {
     return _sources.putIfAbsent(uri, () => inputProvider(uri));
-  }
-
-  void _ensureCompilerStateCaptured() {
-    // TODO(ahe): [compiler] shouldn't be null, remove the following line.
-    if (compiler == null) return;
-
-    if (_hasCapturedCompilerState) return;
-    _context._captureState(compiler);
-    _hasCapturedCompilerState = true;
   }
 
   /// Returns true if [library] can be reused.
@@ -533,10 +392,7 @@ class Reuser extends FletchFeatures {
       PartialElement element,
       ScopeContainerElement container,
       ScopeContainerElement syntheticContainer) {
-    if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
-      return cannotReuse(
-          element, "Adding elements requires 'experimental' mode");
-    }
+    if (!allowAddedElement(element)) return false;
     if (element is PartialFunctionElement) {
       addFunction(element, container);
       return true;
@@ -555,7 +411,7 @@ class Reuser extends FletchFeatures {
       /* ScopeContainerElement */ container) {
     invalidateScopesAffectedBy(element, container);
 
-    updates.add(new AddedFunctionUpdate(compiler, element, container));
+    addAddedFunctionUpdate(compiler, element, container);
   }
 
   void addClass(
@@ -563,7 +419,7 @@ class Reuser extends FletchFeatures {
       LibraryElementX library) {
     invalidateScopesAffectedBy(element, library);
 
-    updates.add(new AddedClassUpdate(compiler, element, library));
+    addAddedClassUpdate(compiler, element, library);
   }
 
   /// Called when a field in [definition] has changed.
@@ -595,16 +451,13 @@ class Reuser extends FletchFeatures {
   void addField(FieldElementX element, ScopeContainerElement container) {
     logVerbose("Add field $element to $container.");
     invalidateScopesAffectedBy(element, container);
-    updates.add(new AddedFieldUpdate(compiler, element, container));
+    addAddedFieldUpdate(compiler, element, container);
   }
 
   bool canReuseRemovedElement(
       PartialElement element,
       ScopeContainerElement container) {
-    if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
-      return cannotReuse(
-          element, "Removing elements requires 'experimental' mode");
-    }
+    if (!allowRemovedElement(element)) return false;
     if (element is PartialFunctionElement) {
       removeFunction(element);
       return true;
@@ -626,7 +479,7 @@ class Reuser extends FletchFeatures {
 
     _removedElements.add(element);
 
-    updates.add(new RemovedFunctionUpdate(compiler, element));
+    addRemovedFunctionUpdate(compiler, element);
   }
 
   void removeClass(PartialClassElement element) {
@@ -639,7 +492,7 @@ class Reuser extends FletchFeatures {
       _removedElements.add(member);
     });
 
-    updates.add(new RemovedClassUpdate(compiler, element));
+    addRemovedClassUpdate(compiler, element);
   }
 
   void removeFields(
@@ -674,7 +527,7 @@ class Reuser extends FletchFeatures {
 
     _removedElements.add(element);
 
-    updates.add(new RemovedFieldUpdate(compiler, element));
+    addRemovedFieldUpdate(compiler, element);
   }
 
   /// Returns true if [element] has generic types (or if we cannot rule out
@@ -828,18 +681,11 @@ class Reuser extends FletchFeatures {
             after,
             "Unable to handle when signature of '${after.name}' changes");
       }
-      if ((!before.isInstanceMember || !after.isInstanceMember) &&
-          !_context.incrementalCompiler.isExperimentalModeEnabled) {
-        return cannotReuse(after, "Signature change on non-instance member "
-                                  "requires 'experimental' mode");
-      }
-      return true;
+      return allowSignatureChanged(before, after);
     }
     logVerbose('Simple modification of ${after} detected');
-    if (!before.isInstanceMember &&
-        !_context.incrementalCompiler.isExperimentalModeEnabled) {
-      return cannotReuse(
-          after, "Non-instance member requires 'experimental' mode");
+    if (!before.isInstanceMember) {
+      if (!allowNonInstanceMemberModified(after)) return false;
     }
     updates.add(new FunctionUpdate(compiler, before, after));
     return true;
@@ -858,13 +704,9 @@ class Reuser extends FletchFeatures {
       return cannotReuse(after, "Class has no body.");
     }
     if (isTokenBetween(diffToken, node.beginToken, body.beginToken.next)) {
-      if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
-        return cannotReuse(
-            after,
-            "Changing a class header requires requires 'experimental' mode");
-      }
+      if (!allowClassHeaderModified(after)) return false;
       logVerbose('Class header modified in ${after}');
-      updates.add(new ClassUpdate(compiler, before, after));
+      addClassUpdate(compiler, before, after);
       before.forEachLocalMember((ElementX member) {
         // TODO(ahe): Quadratic.
         invalidateScopesAffectedBy(member, before);
@@ -932,85 +774,51 @@ class Reuser extends FletchFeatures {
     return elementsToInvalidate;
   }
 
-  static void forEachField(ClassElement c, void action(FieldElement field)) {
-    List classes = [];
-    while (c != null) {
-      if (!c.isResolved) {
-        throw new IncrementalCompilationFailed("Class not resolved: $c");
-      }
-      classes.add(c);
-      c = c.superclass;
-    }
-    for (int i = classes.length - 1; i >= 0; i--) {
-      classes[i].implementation.forEachInstanceField((_, FieldElement field) {
-        action(field);
-      });
-    }
-  }
+  void addClassUpdate(
+      Compiler compiler,
+      PartialClassElement before,
+      PartialClassElement after);
 
-  FletchDelta computeUpdateFletch(FletchSystem currentSystem) {
-    // TODO(ahe): Remove this when we support adding static fields.
-    Set<Element> existingStaticFields =
-        new Set<Element>.from(fletchContext.staticIndices.keys);
+  void addAddedFunctionUpdate(
+      Compiler compiler,
+      PartialFunctionElement element,
+      /* ScopeContainerElement */ container);
 
-    backend.newSystemBuilder(currentSystem);
+  void addRemovedFunctionUpdate(
+      Compiler compiler,
+      PartialFunctionElement element);
 
-    List<Element> updatedElements = applyUpdates();
+  void addRemovedFieldUpdate(
+      Compiler compiler,
+      FieldElementX element);
 
-    if (compiler.progress != null) {
-      compiler.progress.reset();
-    }
+  void addRemovedClassUpdate(
+      Compiler compiler,
+      PartialClassElement element);
 
-    for (Element element in updatedElements) {
-      if (!element.isClass) {
-        enqueuer.resolution.addToWorkList(element);
-      } else {
-        ClassElement cls = element;
-        cls.ensureResolved(compiler.resolution);
+  void addAddedFieldUpdate(
+      Compiler compiler,
+      FieldElementX element,
+      /* ScopeContainerElement */ container);
 
-        // We've told the enqueuer to forget this class, now tell it that it's
-        // in use again.  TODO(ahe): We only need to do this if [cls] was
-        // already instantiated.
-        enqueuer.codegen.registerInstantiatedType(cls.rawType);
-      }
-    }
-    compiler.processQueue(enqueuer.resolution, null);
+  void addAddedClassUpdate(
+      Compiler compiler,
+      PartialClassElement element,
+      LibraryElementX library);
 
-    compiler.phase = Compiler.PHASE_DONE_RESOLVING;
+  bool uriHasUpdate(Uri uri);
 
-    // TODO(ahe): Clean this up. Don't call this method in analyze-only mode.
-    if (compiler.analyzeOnly) {
-      return new FletchDelta(currentSystem, currentSystem, <VmCommand>[]);
-    }
+  bool allowClassHeaderModified(PartialClassElement after);
 
-    for (AstElement element in updatedElements) {
-      if (element.node.isErroneous) {
-        throw new IncrementalCompilationFailed(
-            "Unable to incrementally compile $element with syntax error");
-      }
-      if (element.isField) {
-        backend.newElement(element);
-      } else if (!element.isClass) {
-        enqueuer.codegen.addToWorkList(element);
-      }
-    }
-    compiler.processQueue(enqueuer.codegen, null);
+  bool allowSignatureChanged(
+      PartialFunctionElement before,
+      PartialFunctionElement after);
 
-    // TODO(ahe): Remove this when we support adding static fields.
-    Set<Element> newStaticFields =
-        new Set<Element>.from(fletchContext.staticIndices.keys).difference(
-            existingStaticFields);
-    if (newStaticFields.isNotEmpty) {
-      throw new IncrementalCompilationFailed(
-          "Unable to add static fields:\n  ${newStaticFields.join(',\n  ')}");
-    }
+  bool allowNonInstanceMemberModified(PartialFunctionElement after);
 
-    List<VmCommand> commands =
-        <VmCommand>[const PrepareForChanges()];
-    FletchSystem system =
-        backend.systemBuilder.computeSystem(fletchContext, commands);
-    return new FletchDelta(system, currentSystem, commands);
-  }
+  bool allowRemovedElement(PartialElement element);
+
+  bool allowAddedElement(PartialElement element);
 }
 
 /// Represents an update (aka patch) of [before] to [after]. We use the word
@@ -1079,8 +887,6 @@ abstract class RemovalUpdate extends Update {
 
   bool get isRemoval => true;
 
-  void writeUpdateFletchOn(List<VmCommand> updates);
-
   void removeFromEnclosing() {
     // TODO(ahe): Need to recompute duplicated elements logic again. Simplest
     // solution is probably to remove all elements from enclosing scope and add
@@ -1104,8 +910,8 @@ abstract class RemovalUpdate extends Update {
   }
 }
 
-class RemovedFunctionUpdate extends RemovalUpdate
-    with FletchFeatures, ReuseFunctionElement {
+abstract class RemovedFunctionUpdate extends RemovalUpdate
+    with ReuseFunctionElement {
   final PartialFunctionElement element;
 
   bool wasStateCaptured = false;
@@ -1129,13 +935,9 @@ class RemovedFunctionUpdate extends RemovalUpdate
     reuseElement();
     return null;
   }
-
-  void writeUpdateFletchOn(List<VmCommand> updates) {
-    throw new IncrementalCompilationFailed("Not implemented yet.");
-  }
 }
 
-class RemovedClassUpdate extends RemovalUpdate with FletchFeatures {
+abstract class RemovedClassUpdate extends RemovalUpdate {
   final PartialClassElement element;
 
   bool wasStateCaptured = false;
@@ -1169,23 +971,12 @@ class RemovedClassUpdate extends RemovalUpdate with FletchFeatures {
 
     return null;
   }
-
-  void writeUpdateFletchOn(List<VmCommand> updates) {
-    if (!wasStateCaptured) {
-      throw new StateError(
-          "captureState must be called before writeUpdateFletchOn.");
-    }
-
-    throw new IncrementalCompilationFailed("Not implemented yet.");
-  }
 }
 
-class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
+abstract class RemovedFieldUpdate extends RemovalUpdate {
   final FieldElementX element;
 
   bool wasStateCaptured = false;
-
-  FletchClassBuilder beforeFletchClassBuilder;
 
   RemovedFieldUpdate(Compiler compiler, this.element)
       : super(compiler);
@@ -1209,16 +1000,9 @@ class RemovedFieldUpdate extends RemovalUpdate with FletchFeatures {
 
     return element;
   }
-
-  void writeUpdateFletchOn(List<VmCommand> updates) {
-    if (!wasStateCaptured) {
-      throw new StateError(
-          "captureState must be called before writeUpdateFletchOn.");
-    }
-  }
 }
 
-class AddedFunctionUpdate extends Update with FletchFeatures {
+abstract class AddedFunctionUpdate extends Update {
   final PartialFunctionElement element;
 
   final /* ScopeContainerElement */ container;
@@ -1246,7 +1030,7 @@ class AddedFunctionUpdate extends Update with FletchFeatures {
   }
 }
 
-class AddedClassUpdate extends Update with FletchFeatures {
+abstract class AddedClassUpdate extends Update {
   final PartialClassElement element;
 
   final LibraryElementX library;
@@ -1267,7 +1051,7 @@ class AddedClassUpdate extends Update with FletchFeatures {
   }
 }
 
-class AddedFieldUpdate extends Update with FletchFeatures {
+abstract class AddedFieldUpdate extends Update {
   final FieldElementX element;
 
   final /* ScopeContainerElement */ container;
@@ -1291,8 +1075,7 @@ class AddedFieldUpdate extends Update with FletchFeatures {
   }
 }
 
-
-class ClassUpdate extends Update with FletchFeatures {
+abstract class ClassUpdate extends Update {
   final PartialClassElement before;
 
   final PartialClassElement after;
@@ -1399,20 +1182,4 @@ bool canNamesResolveStaticallyTo(
 
 DeclarationSite declarationSite(Element element) {
   return element is ElementX ? element.declarationSite : null;
-}
-
-abstract class FletchFeatures {
-  FletchCompilerImplementation get compiler;
-
-  IncrementalFletchBackend get backend {
-    return compiler.backend as IncrementalFletchBackend;
-  }
-
-  EnqueueTask get enqueuer => compiler.enqueuer;
-
-  FletchContext get fletchContext => compiler.context;
-
-  FletchFunctionBuilder lookupFletchFunctionBuilder(FunctionElement function) {
-    return backend.systemBuilder.lookupFunctionBuilderByElement(function);
-  }
 }
