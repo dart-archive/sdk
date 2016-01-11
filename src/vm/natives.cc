@@ -982,16 +982,12 @@ static Process* SpawnProcessInternal(Program* program, Process* process,
   // is not used and simply be 'NULL'.
   word top = stack->length();
   stack->set(--top, NULL);
-  stack->set(--top, NULL);
-  Object** frame_pointer = stack->Pointer(top);
-  stack->set(--top, NULL);
-  stack->set(--top, NULL);
   stack->set(--top, closure);
   stack->set(--top, argument);
   // Push empty slot, fp and bcp.
   stack->set(--top, NULL);
-  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
-  frame_pointer = stack->Pointer(top);
+  stack->set(--top, NULL);
+  Object** frame_pointer = stack->Pointer(top);
   stack->set(--top, reinterpret_cast<Object*>(bcp));
   // Finally push the entry and fp.
   stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
@@ -1098,16 +1094,12 @@ BEGIN_NATIVE(CoroutineNewStack) {
 
   Stack* stack = Stack::cast(object);
   word top = stack->length();
-  stack->set(--top, NULL);
-  stack->set(--top, NULL);
-  Object** frame_pointer = stack->Pointer(top);
-  stack->set(--top, NULL);
   stack->set(--top, coroutine);
   stack->set(--top, entry);
   // Push empty slot, fp and bcp.
   stack->set(--top, NULL);
-  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
-  frame_pointer = stack->Pointer(top);
+  stack->set(--top, NULL);
+  Object** frame_pointer = stack->Pointer(top);
   stack->set(--top, reinterpret_cast<Object*>(bcp + 2));
   stack->set(--top, Smi::FromWord(0));  // Fake 'stack' argument.
   stack->set(--top, Smi::FromWord(0));  // Fake 'value' argument.

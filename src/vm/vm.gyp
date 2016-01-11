@@ -290,7 +290,6 @@
         'generator.cc',
         'interpreter_arm.cc',
         'interpreter_x86.cc',
-        'interpreter_x64.cc',
       ],
     },
     {

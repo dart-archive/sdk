@@ -113,15 +113,11 @@ Process* Program::ProcessSpawnForMain() {
   Stack* stack = process->stack();
   uint8_t* bcp = entry->bytecode_address_for(0);
   word top = stack->length();
-  stack->set(--top, NULL);
-  stack->set(--top, NULL);
-  Object** frame_pointer = stack->Pointer(top);
-  stack->set(--top, NULL);
   stack->set(--top, Smi::FromWord(main_arity));
   // Push empty slot, fp and bcp.
   stack->set(--top, NULL);
-  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
-  frame_pointer = stack->Pointer(top);
+  stack->set(--top, NULL);
+  Object** frame_pointer = stack->Pointer(top);
   stack->set(--top, reinterpret_cast<Object*>(bcp));
   stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
@@ -1044,8 +1040,9 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
   int length = table->length();
   int hits = 0;
 
-  DispatchTableEntry* entry = DispatchTableEntry::cast(table->get(0));
-  Function* trampoline = entry->function();
+  static const Names::Id name = Names::kNoSuchMethodTrampoline;
+  Function* trampoline =
+      object_class()->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
 
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
@@ -1056,12 +1053,10 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
       continue;
     }
     Function* function = entry->function();
-    if (function != trampoline) hits++;
-    void* target = function->ComputeIntrinsic(intrinsics);
-    if (target == NULL) {
-      target = reinterpret_cast<void*>(InterpreterDispatchTableEntry);
-    }
-    entry->set_target(target);
+    if (function == trampoline) continue;
+    hits++;
+    void* intrinsic = function->ComputeIntrinsic(intrinsics);
+    entry->set_target(intrinsic);
   }
 
   if (Flags::print_program_statistics) {

@@ -77,12 +77,9 @@ class Frame {
   // Find the function of the bcp, by searching through the bytecodes
   // for the MethodEnd bytecode. This operation is linear to the size of the
   // bytecode; O(n).
-  //
-  // Returns `NULL` if the bcp is `NULL`.
   Function* FunctionFromByteCodePointer(
       int* frame_ranges_offset_result = NULL) const {
     uint8* bcp = ByteCodePointer();
-    if (bcp == NULL) return NULL;
     return Function::FromBytecodePointer(bcp, frame_ranges_offset_result);
   }
 

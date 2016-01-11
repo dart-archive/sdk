@@ -1564,12 +1564,13 @@ void Session::PushFrameOnSessionStack(bool is_first_name, const Frame* frame) {
 
   uint8* bcp = frame->ByteCodePointer();
   int bytecode_offset = bcp - start_bcp;
-  // The byte-code offset is not a return address but the offset for
-  // the invoke bytecode. Make it look like a return address by adding
+  // The first byte-code offset is not a return address but the offset for
+  // the current bytecode. Make it look like a return address by adding
   // the current bytecode size to the byte-code offset.
-  Opcode current = static_cast<Opcode>(*bcp);
-  bytecode_offset += Bytecode::Size(current);
-
+  if (is_first_name) {
+    Opcode current = static_cast<Opcode>(*bcp);
+    bytecode_offset += Bytecode::Size(current);
+  }
   PushNewInteger(bytecode_offset);
   PushFunction(function);
 }
@@ -1578,7 +1579,6 @@ int Session::PushStackFrames(Stack* stack) {
   int frames = 0;
   Frame frame(stack);
   while (frame.MovePrevious()) {
-    if (frame.ByteCodePointer() == NULL) continue;
     PushFrameOnSessionStack(frames == 0, &frame);
     ++frames;
   }
@@ -1599,11 +1599,23 @@ void Session::RestartFrame(int frame_index) {
   Frame frame(stack);
   for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
 
-  // Reset the return address to the entry function.
   frame.SetReturnAddress(reinterpret_cast<void*>(InterpreterEntry));
+  // We are now in the frame we want to reply. Navigate to the previous frame
+  // (the caller frame), so we can reply the invocation.
+  frame.MovePrevious();
+
+  // To be able to reply the activation, we set the return address of the
+  // caller frame, to the bytecode before the return address.
+  uint8* return_address = frame.ByteCodePointer();
+  uint8* previous = return_address - Bytecode::Size(Opcode::kInvokeStatic);
+
+  ASSERT(previous == Bytecode::PreviousBytecode(return_address));
+  ASSERT(Bytecode::IsInvokeVariant(static_cast<Opcode>(*previous)));
+
+  frame.SetByteCodePointer(previous);
 
   // Finally resize the stack to the next frame pointer.
-  stack->SetTopFromPointer(frame.FramePointer());
+  stack->SetTopFromPointer(frame.NextFramePointer());
 }
 
 }  // namespace fletch

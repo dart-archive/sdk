@@ -1141,10 +1141,10 @@ class FletchBackend extends Backend
     codegen.assembler
         ..enterNoSuchMethod(skipGetter)
         // First invoke the getter.
-        ..invokeSelector(2)
+        ..invokeSelector()
         // Then invoke 'call', with the receiver being the result of the
         // previous invokeSelector.
-        ..invokeSelector(1)
+        ..invokeSelector()
         ..exitNoSuchMethod()
         ..bind(skipGetter)
         ..invokeMethod(fletchSelector, 1)

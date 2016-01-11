@@ -8,6 +8,15 @@
 
 namespace fletch {
 
+#if !defined(FLETCH_TARGET_IA32) && !defined(FLETCH_TARGET_ARM)
+
+#define DEFINE_INTRINSIC(name) \
+  void __attribute__((aligned(4))) Intrinsic_##name() { UNREACHABLE(); }
+INTRINSICS_DO(DEFINE_INTRINSIC)
+#undef DEFINE_INTRINSIC
+
+#endif  // !defined(FLETCH_TARGET_IA32) && !defined(FLETCH_TARGET_ARM)
+
 IntrinsicsTable* IntrinsicsTable::default_table_ = NULL;
 
 IntrinsicsTable* IntrinsicsTable::GetDefault() {

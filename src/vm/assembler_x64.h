@@ -30,20 +30,13 @@ enum Register {
   R12 = 12,
   R13 = 13,
   R14 = 14,
-  R15 = 15,
-  RIP = 16
+  R15 = 15
 };
 
-enum ScaleFactor {
-  TIMES_1 = 0,
-  TIMES_2 = 1,
-  TIMES_4 = 2,
-  TIMES_8 = 3,
-  TIMES_WORD_SIZE = TIMES_8
-};
+enum ScaleFactor { TIMES_1 = 0, TIMES_2 = 1, TIMES_4 = 2, TIMES_8 = 3 };
 
 enum Condition {
-  OVERFLOW_ = 0,
+  OVERFLOW = 0,
   NO_OVERFLOW = 1,
   BELOW = 2,
   ABOVE_EQUAL = 3,
@@ -245,16 +238,14 @@ class Assembler {
  public:
   INSTRUCTION_1(pushq, "pushq %rq", Register);
   INSTRUCTION_1(pushq, "pushq %a", const Address&);
-  INSTRUCTION_1(pushq, "pushq %i", const Immediate&);
 
   INSTRUCTION_1(popq, "popq %rq", Register);
   INSTRUCTION_1(popq, "popq %a", const Address&);
 
-  INSTRUCTION_1(negq, "negq %rq", Register);
-  INSTRUCTION_1(notq, "notq %rq", Register);
-  INSTRUCTION_1(imul, "imul %rq", Register);
+  INSTRUCTION_1(call, "call *%rl", Register);
 
-  INSTRUCTION_1(call, "call *%rq", Register);
+  INSTRUCTION_1(incq, "incq %rq", Register);
+  INSTRUCTION_1(negq, "negq %rq", Register);
 
   INSTRUCTION_2(movl, "movl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(movl, "movl %a, %rl", Register, const Address&);
@@ -264,67 +255,32 @@ class Assembler {
   INSTRUCTION_2(movq, "movq %rq, %rq", Register, Register);
   INSTRUCTION_2(movq, "movq %a, %rq", Register, const Address&);
   INSTRUCTION_2(movq, "movq %rq, %a", const Address&, Register);
-  INSTRUCTION_2(movq, "movq %l, %a", const Address&, const Immediate&);
 
-  INSTRUCTION_2(movzbq, "movzbq %a, %rq", Register, const Address&);
-
-  INSTRUCTION_2(leaq, "leaq %a, %rq", Register, const Address&);
-
-  INSTRUCTION_1(call, "call *%a", const Address&);
-
-  INSTRUCTION_1(jmp, "jmp *%rq", Register);
+  INSTRUCTION_2(movsxl, "movsxl %a, %rq", Register, const Address&);
 
   INSTRUCTION_2(cmpl, "cmpl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(cmpl, "cmpl %rl, %rl", Register, Register);
 
-  INSTRUCTION_2(cmpq, "cmpq %l, %rq", Register, const Immediate&);
+  INSTRUCTION_2(cmpq, "cmpq %i, %rq", Register, const Immediate&);
   INSTRUCTION_2(cmpq, "cmpq %rq, %rq", Register, Register);
-  INSTRUCTION_2(cmpq, "cmpq %a, %rq", Register, const Address&);
-
-  INSTRUCTION_2(testl, "testl %rl, %rl", Register, Register);
-  INSTRUCTION_2(testl, "testl %i, %rl", Register, const Immediate&);
-
-  INSTRUCTION_2(testq, "testq %rq, %rq", Register, Register);
-  INSTRUCTION_2(testq, "testq %i, %rq", Register, const Immediate&);
 
   INSTRUCTION_2(addl, "addl %rl, %rl", Register, Register);
   INSTRUCTION_2(addl, "addl %i, %a", const Address&, const Immediate&);
 
-  INSTRUCTION_2(addq, "addq %rq, %rq", Register, Register);
-  INSTRUCTION_2(addq, "addq %l, %rq", Register, const Immediate&);
-  INSTRUCTION_2(addq, "addq %l, %a", const Address&, const Immediate&);
+  INSTRUCTION_2(addq, "addq %i, %rq", Register, const Immediate&);
+  INSTRUCTION_2(addq, "addq %i, %a", const Address&, const Immediate&);
 
-  INSTRUCTION_2(andq, "andq %l, %rq", Register, const Immediate&);
+  INSTRUCTION_2(andq, "andq %i, %rq", Register, const Immediate&);
   INSTRUCTION_2(andq, "andq %rq, %rq", Register, Register);
 
-  INSTRUCTION_2(orq, "orq %rq, %rq", Register, Register);
-
-  INSTRUCTION_2(shrq, "shrq %l, %rq", Register, const Immediate&);
-  INSTRUCTION_2(sarq, "sarq %l, %rq", Register, const Immediate&);
-  INSTRUCTION_1(sarq_cl, "sarq %%cl, %rq", Register);
-
-  INSTRUCTION_2(shll, "shll %i, %rl", Register, const Immediate&);
-  INSTRUCTION_2(shlq, "shlq %i, %rq", Register, const Immediate&);
-  INSTRUCTION_1(shlq_cl, "shlq %%cl, %rq", Register);
-
-  INSTRUCTION_2(subq, "subq %l, %rq", Register, const Immediate&);
-  INSTRUCTION_2(subq, "subq %rq, %rq", Register, Register);
-
-  INSTRUCTION_2(xorq, "xorq %rq, %rq", Register, Register);
+  INSTRUCTION_2(subq, "subq %i, %rq", Register, const Immediate&);
 
   INSTRUCTION_0(ret, "ret");
   INSTRUCTION_0(nop, "nop");
   INSTRUCTION_0(int3, "int3");
 
-  void movq(Register reg, Label* label);
-
   void j(Condition condition, Label* label);
-  void j(Condition condition, const char* name);
-
   void jmp(Label* label);
-  void jmp(const char* name);
-  void jmp(const char* name, Register index, ScaleFactor scale,
-           Register scratch);
 
   void call(const char* name);
 
@@ -337,21 +293,13 @@ class Assembler {
   void BindWithPowerOfTwoAlignment(const char* name, int power);
 
   void DefineLong(const char* name);
-  void LoadNative(Register destination, Register index);
 
   // Align what follows to a 2^power address.
   void AlignToPowerOfTwo(int power);
 
-  void LoadLabel(Label* label, Register reg);
-
  private:
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
-
-  static const char* ConditionMnemonic(Condition condition);
-
-  static const char* ComputeDirectionForLinking(Label* label);
-  static int NewLabelPosition();
 
   static int ComputeLabelPosition(Label* label);
 

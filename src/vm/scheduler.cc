@@ -432,8 +432,6 @@ void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
         Frame frame(stack);
         while (frame.MovePrevious()) {
           Function* function = frame.FunctionFromByteCodePointer();
-          if (function == NULL) continue;
-
           Print::Out("Frame % 2d: Function(%ld)\n", index,
                      program->OffsetOf(function));
           index++;

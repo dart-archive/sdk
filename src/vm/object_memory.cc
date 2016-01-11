@@ -182,6 +182,17 @@ void Space::CompleteTransformations(PointerVisitor* visitor) {
       HeapObject* object = HeapObject::FromAddress(current);
       if (object->forwarding_address() != NULL) {
         current += Instance::kSize;
+      } else if (object->IsStack()) {
+        // We haven't cooked stacks when we perform object transformations.
+        // Therefore, we cannot simply iterate pointers in the stack because
+        // that would look at the raw bytecode pointers as well. Instead we
+        // iterate the actual pointers in each frame directly.
+        Frame frame(Stack::cast(object));
+        while (frame.MovePrevious()) {
+          visitor->VisitBlock(frame.LastLocalAddress(),
+                              frame.FirstLocalAddress() + 1);
+        }
+        current += object->Size();
       } else {
         object->IteratePointers(visitor);
         current += object->Size();

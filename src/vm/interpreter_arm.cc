@@ -29,8 +29,6 @@ class InterpreterGenerator {
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
-  virtual void GenerateMethodCall() = 0;
-
   virtual void GenerateBytecodePrologue(const char* name) = 0;
   virtual void GenerateDebugAtBytecode() = 0;
 
@@ -54,8 +52,6 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
-  GenerateMethodCall();
-
   GenerateDebugAtBytecode();
 
 #define V(name, branching, format, size, stack_diff, print) \
@@ -72,7 +68,7 @@ void InterpreterGenerator::Generate() {
 #undef V
 
   __ SwitchToData();
-  __ BindWithPowerOfTwoAlignment("Interpret_DispatchTable", 4);
+  __ BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
 #define V(name, branching, format, size, stack_diff, print) \
   assembler()->DefineLong("BC_" #name);
   BYTECODES_DO(V)
@@ -95,8 +91,6 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
-
-  virtual void GenerateMethodCall();
 
   virtual void GenerateBytecodePrologue(const char* name);
   virtual void GenerateDebugAtBytecode();
@@ -230,7 +224,6 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
  private:
   Label done_;
-  Label done_state_saved_;
   Label check_stack_overflow_;
   Label check_stack_overflow_0_;
   Label gc_;
@@ -249,9 +242,6 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   void LoadFramePointer(Register reg);
   void StoreFramePointer(Register reg);
-
-  void SaveByteCodePointer(Register scratch);
-  void RestoreByteCodePointer(Register scratch);
 
   void PushFrameDescriptor(Register return_address, Register scratch);
   void ReadFrameDescriptor(Register scratch);
@@ -315,7 +305,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   }
 };
 
-GENERATE(, Interpret) {
+GENERATE(, InterpretFast) {
   InterpreterGeneratorARM generator(assembler);
   generator.Generate();
 }
@@ -349,7 +339,8 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   SaveState(&interpreter_entry_);
 
   // Undo stack padding.
-  __ Bind(&done_state_saved_);
+  Label undo_padding;
+  __ Bind(&undo_padding);
   if (spill_size_ > 0) __ add(SP, SP, Immediate(spill_size_));
 
   // Skip frame-pointer slot.
@@ -369,7 +360,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   Label immutable_alloc_failure;
   __ Bind(&immutable_alloc_failure);
   __ mov(R0, Immediate(Interpreter::kImmutableAllocationFailure));
-  __ b(&done_state_saved_);
+  __ b(&undo_padding);
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
   // Handle GC and re-interpret current bytecode.
@@ -420,25 +411,9 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
 
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
-  __ b("InterpreterDispatchTableEntry");
-}
-
-void InterpreterGeneratorARM::GenerateMethodCall() {
-  __ SwitchToText();
-  __ AlignToPowerOfTwo(4);
-  __ Bind("", "InterpreterDispatchTableEntry");
-  __ ldr(R0,
-         Address(R0, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
-  __ AlignToPowerOfTwo(4);
-  __ Bind("", "InterpreterMethodCall");
-  Push(LR);
-  LoadFramePointer(R2);
-  Push(R2);
-  StoreFramePointer(R6);
-  __ ldr(R2, Immediate(0));
-  Push(R2);
+  __ add(R5, R5, Immediate(kInvokeMethodLength));
+  PushFrameDescriptor(R5, R2);
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
-  CheckStackOverflow(0);
   Dispatch(0);
 }
 
@@ -558,10 +533,13 @@ void InterpreterGeneratorARM::DoLoadStaticInit() {
 
   // Invoke the initializer function.
   __ ldr(R0, Address(R0, Initializer::kFunctionOffset - HeapObject::kTag));
+  __ add(R5, R5, Immediate(kInvokeMethodLength));
+  PushFrameDescriptor(R5, R2);
 
-  SaveByteCodePointer(R2);
-  __ bl("InterpreterMethodCall");
-  RestoreByteCodePointer(R2);
+  // Jump to the first bytecode in the initializer function.
+  __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
+  Dispatch(0);
 
   __ Bind(&done);
   Push(R0);
@@ -708,19 +686,14 @@ void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
   __ ldr(R0,
          Address(R1, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
 
-  SaveByteCodePointer(R2);
-  __ bl("InterpreterMethodCall");
-  RestoreByteCodePointer(R2);
+  // Compute and push the return address on the stack.
+  __ add(R5, R5, Immediate(kInvokeNoSuchMethodLength));
+  PushFrameDescriptor(R5, R2);
 
-  __ ldr(R7, Address(R5, 1));
-  // Compute the arity from the selector.
-  ASSERT(Selector::ArityField::shift() == 0);
-  __ and_(R2, R7, Immediate(Selector::ArityField::mask()));
-
-  Drop(R2);
-
-  StoreLocal(R0, 0);
-  Dispatch(kInvokeNoSuchMethodLength);
+  // Jump to the first bytecode in the target method.
+  __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoInvokeTestNoSuchMethod() {
@@ -747,25 +720,8 @@ void InterpreterGeneratorARM::DoInvokeSelector() {
   __ bl("HandleInvokeSelector");
   RestoreState();
   __ Bind(&resume);
-
-  SaveByteCodePointer(R2);
-  __ bl("InterpreterMethodCall");
-  RestoreByteCodePointer(R2);
-
-  __ ldr(R7, Immediate(-2));
-  __ ldr(R2, Address(R5, 1));
-  __ sub(R7, R7, R2);
-  LoadFramePointer(R2);
-  __ ldr(R2, Address(R2, Operand(R7, TIMES_WORD_SIZE)));
-
-  __ asr(R2, R2, Immediate(1));
-  ASSERT(Selector::ArityField::shift() == 0);
-  __ and_(R2, R2, Immediate(Selector::ArityField::mask()));
-
-  Drop(R2);
-
-  StoreLocal(R0, 0);
-  Dispatch(kInvokeSelectorLength);
+  CheckStackOverflow(0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::InvokeEq(const char* fallback) {
@@ -1293,23 +1249,25 @@ void InterpreterGeneratorARM::DoExitNoSuchMethod() {
   Pop(R1);  // Selector.
   __ lsr(R1, R1, Immediate(Smi::kTagSize));
 
-  LoadFramePointer(R6);
-
-  Pop(R2);
-  StoreFramePointer(R2);
+  ReadFrameDescriptor(R2);
+  // Drop FP and BCP.
+  Drop(2);
 
   Label done;
   __ and_(R2, R1, Immediate(Selector::KindField::mask()));
   __ cmp(R2, Immediate(Selector::SETTER << Selector::KindField::shift()));
   __ b(NE, &done);
-
-  // Setter argument is at offset 1, as we still have the return address on the
-  // stack.
-  LoadLocal(R0, 1);
+  LoadLocal(R0, 0);
 
   __ Bind(&done);
-  Pop(LR);
-  __ mov(PC, LR);
+  ASSERT(Selector::ArityField::shift() == 0);
+  __ and_(R1, R1, Immediate(Selector::ArityField::mask()));
+
+  // Drop the arguments from the stack, but leave the receiver.
+  __ add(R6, R6, Operand(R1, TIMES_WORD_SIZE));
+
+  StoreLocal(R0, 0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoMethodEnd() { __ bkpt(); }
@@ -1324,29 +1282,25 @@ void InterpreterGeneratorARM::DoIntrinsicObjectEquals() {
 }
 
 void InterpreterGeneratorARM::DoIntrinsicGetField() {
-  __ ldr(R0,
-         Address(R0, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
   __ ldrb(R1, Address(R0, 2 + Function::kSize - HeapObject::kTag));
   LoadLocal(R0, 0);
   __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R0, Operand(R1, TIMES_WORD_SIZE)));
-
-  __ mov(PC, LR);
+  StoreLocal(R0, 0);
+  Dispatch(kInvokeMethodLength);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicSetField() {
-  __ ldr(R0,
-         Address(R0, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
   __ ldrb(R1, Address(R0, 3 + Function::kSize - HeapObject::kTag));
-  LoadLocal(R7, 0);
+  LoadLocal(R0, 0);
   LoadLocal(R2, 1);
   __ add(R3, R2, Immediate(Instance::kSize - HeapObject::kTag));
-  __ str(R7, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
+  __ str(R0, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
+  DropNAndSetTop(1, R0);
 
-  AddToStoreBufferSlow(R2, R7);
+  AddToStoreBufferSlow(R2, R0);
 
-  __ mov(R0, R7);
-  __ mov(PC, LR);
+  Dispatch(kInvokeMethodLength);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicListIndexGet() {
@@ -1372,8 +1326,8 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexGet() {
   ASSERT(Smi::kTagSize == 1);
   __ add(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R2, Operand(R1, TIMES_2)));
-
-  __ mov(PC, LR);
+  DropNAndSetTop(1, R0);
+  Dispatch(kInvokeMethodLength);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
@@ -1396,23 +1350,23 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
 
   // Store to the array and continue.
   ASSERT(Smi::kTagSize == 1);
-  LoadLocal(R7, 0);
+  LoadLocal(R0, 0);
   __ add(R12, R2, Immediate(Array::kSize - HeapObject::kTag));
-  __ str(R7, Address(R12, Operand(R1, TIMES_2)));
+  __ str(R0, Address(R12, Operand(R1, TIMES_2)));
+  DropNAndSetTop(2, R0);
 
-  AddToStoreBufferSlow(R2, R7);
+  AddToStoreBufferSlow(R2, R0);
 
-  __ mov(R0, R7);
-  __ mov(PC, LR);
+  Dispatch(kInvokeMethodLength);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicListLength() {
   // Load the backing store (array) from the first instance field of the list.
   LoadLocal(R2, 0);  // List.
   __ ldr(R2, Address(R2, Instance::kSize - HeapObject::kTag));
-  __ ldr(R0, Address(R2, Array::kLengthOffset - HeapObject::kTag));
-
-  __ mov(PC, LR);
+  __ ldr(R3, Address(R2, Array::kLengthOffset - HeapObject::kTag));
+  StoreLocal(R3, 0);
+  Dispatch(kInvokeMethodLength);
 }
 
 void InterpreterGeneratorARM::Push(Register reg) {
@@ -1441,13 +1395,20 @@ void InterpreterGeneratorARM::Return(bool is_return_null) {
     LoadLocal(R0, 0);
   }
 
-  LoadFramePointer(R6);
+  // Fetch the number of arguments from the bytecodes.
+  __ ldrb(R2, Address(R5, 1));
 
-  Pop(R2);
-  StoreFramePointer(R2);
+  ReadFrameDescriptor(R1);
 
-  Pop(LR);
-  __ mov(PC, LR);
+  // Drop arguments except one which we will overwrite with the result
+  // (we've left the return address on the stack).
+  __ add(R2, R2, Immediate(1));
+  __ add(R6, R6, Operand(R2, TIMES_WORD_SIZE));
+
+  // Overwrite the first argument (or the return address) with the result
+  // and dispatch to the next bytecode.
+  StoreLocal(R0, 0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::LoadLocal(Register reg, int index) {
@@ -1481,16 +1442,6 @@ void InterpreterGeneratorARM::LoadFramePointer(Register reg) {
 
 void InterpreterGeneratorARM::StoreFramePointer(Register reg) {
   __ str(reg, Address(SP, spill_size_));
-}
-
-void InterpreterGeneratorARM::SaveByteCodePointer(Register scratch) {
-  LoadFramePointer(scratch);
-  __ str(R5, Address(scratch, -kWordSize));
-}
-
-void InterpreterGeneratorARM::RestoreByteCodePointer(Register scratch) {
-  LoadFramePointer(scratch);
-  __ ldr(R5, Address(scratch, -kWordSize));
 }
 
 void InterpreterGeneratorARM::PushFrameDescriptor(Register return_address,
@@ -1563,12 +1514,15 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
   __ b(NE, &miss);
 
   // At this point, we've got our hands on a valid lookup cache entry.
+  Label intrinsified;
   __ Bind(&finish);
   if (test) {
     __ ldr(R0, Address(R0, LookupCache::kTagOffset));
   } else {
-    // TODO(ajohnsen): Handle intrinsics.
+    __ ldr(R7, Address(R0, LookupCache::kTagOffset));
     __ ldr(R0, Address(R0, LookupCache::kTargetOffset));
+    __ cmp(R7, Immediate(1));
+    __ b(HI, &intrinsified);
   }
 
   if (test) {
@@ -1579,25 +1533,25 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
     ConditionalStore(R11, R10, Address(R6, 0));
     Dispatch(kInvokeTestUnfoldLength);
   } else {
-    SaveByteCodePointer(R2);
-    __ bl("InterpreterMethodCall");
-    RestoreByteCodePointer(R2);
+    // Compute and push the return address on the stack.
+    __ add(R5, R5, Immediate(kInvokeMethodUnfoldLength));
+    PushFrameDescriptor(R5, R2);
 
-    __ ldr(R7, Address(R5, 1));
-    // Compute the arity from the selector.
-    ASSERT(Selector::ArityField::shift() == 0);
-    __ and_(R2, R7, Immediate(Selector::ArityField::mask()));
-
-    Drop(R2);
-
-    StoreLocal(R0, 0);
-    Dispatch(kInvokeMethodUnfoldLength);
+    // Jump to the first bytecode in the target method.
+    __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+    CheckStackOverflow(0);
+    Dispatch(0);
   }
 
   __ Bind(&smi);
   __ ldr(R3, Address(R4, Process::kProgramOffset));
   __ ldr(R2, Address(R3, Program::kSmiClassOffset));
   __ b(&probe);
+
+  if (!test) {
+    __ Bind(&intrinsified);
+    __ mov(PC, R7);
+  }
 
   // We didn't find a valid entry in primary lookup cache.
   __ Bind(&miss);
@@ -1673,24 +1627,23 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     Dispatch(kInvokeTestLength);
   } else {
     __ Bind(&validated);
-
-    __ mov(R0, R1);
-
-    SaveByteCodePointer(R2);
-    __ ldr(R1,
+    __ ldr(R0,
+           Address(R1, DispatchTableEntry::kFunctionOffset- HeapObject::kTag));
+    __ ldr(R2,
            Address(R1, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
-    __ blx(R1);
-    RestoreByteCodePointer(R2);
 
-    __ ldr(R7, Address(R5, 1));
-    // Compute the arity from the selector.
-    ASSERT(Selector::ArityField::shift() == 0);
-    __ and_(R2, R7, Immediate(Selector::ArityField::mask()));
+    // Check if we have an associated intrinsic.
+    __ tst(R2, R2);
+    __ b(NE, &intrinsified);
 
-    Drop(R2);
+    // Compute and push the return address on the stack.
+    __ add(R5, R5, Immediate(kInvokeMethodLength));
+    PushFrameDescriptor(R5, R2);
 
-    StoreLocal(R0, 0);
-    Dispatch(kInvokeMethodLength);
+    // Jump to the first bytecode in the target method.
+    __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+    CheckStackOverflow(0);
+    Dispatch(0);
   }
 
   __ Bind(&smi);
@@ -1738,8 +1691,15 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   __ cmp(R1, Immediate(Failure::kTag));
   __ b(EQ, &failure);
 
-  // Result is now in r0.
+  // Result is now in r0. Pointer to first argument is in r7. Load return
+  // address and fp.
+  ReadFrameDescriptor(R2);
+
   if (yield) {
+    // Set the result to null and drop the arguments.
+    __ str(R8, Address(R7, 0));
+    __ mov(R6, R7);
+
     // If the result of calling the native is null, we don't yield.
     Label dont_yield;
     __ cmp(R0, R8);
@@ -1749,20 +1709,16 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
     __ ldr(R3, Address(SP, 0));
     __ str(R0, Address(R3, 0));
     __ mov(R0, Immediate(Interpreter::kTargetYield));
-
-    SaveState(&dont_yield);
-    __ b(&done_state_saved_);
-
+    __ b(&done_);
     __ Bind(&dont_yield);
+  } else {
+    // Store the result in the stack and drop the arguments.
+    __ str(R0, Address(R7, 0));
+    __ mov(R6, R7);
   }
 
-  LoadFramePointer(R6);
-
-  Pop(R2);
-  StoreFramePointer(R2);
-
-  Pop(LR);
-  __ mov(PC, LR);
+  // Dispatch to return address.
+  Dispatch(0);
 
   // Failure: Check if it's a request to garbage collect. If not,
   // just continue running the failure block by dispatching to the
@@ -1788,21 +1744,13 @@ void InterpreterGeneratorARM::InvokeStatic() {
   __ ldr(R0, Address(R5, Operand(R1, TIMES_1)));
 
   // Compute and push the return address on the stack.
-  SaveByteCodePointer(R2);
-  __ bl("InterpreterMethodCall");
-  RestoreByteCodePointer(R2);
+  __ add(R1, R5, Immediate(kInvokeStaticLength));
+  PushFrameDescriptor(R1, R2);
 
-  __ ldr(R1, Address(R5, 1));
-  __ ldr(R1, Address(R5, Operand(R1, TIMES_1)));
-
-  // Read the arity from the function. Note that the arity is smi tagged.
-  __ ldr(R1, Address(R1, Function::kArityOffset - HeapObject::kTag));
-  __ asr(R1, R1, Immediate(Smi::kTagSize));
-
-  Drop(R1);
-
-  Push(R0);
-  Dispatch(kInvokeStaticLength);
+  // Jump to the first bytecode in the target method.
+  __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorARM::Allocate(bool immutable) {
@@ -2013,7 +1961,7 @@ void InterpreterGeneratorARM::Dispatch(int size) {
 #else
   __ ldrb(R7, Address(R5, size), WRITE_BACK);
 #endif
-  __ ldr(R9, "Interpret_DispatchTable");
+  __ ldr(R9, "InterpretFast_DispatchTable");
   __ ldr(PC, Address(R9, Operand(R7, TIMES_WORD_SIZE)));
   __ GenerateConstantPool();
 }

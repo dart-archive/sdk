@@ -1309,16 +1309,19 @@ class HeapObjectPointerVisitor : public HeapObjectVisitor {
   PointerVisitor* visitor_;
 };
 
-// Class for visiting the function pointer in cooked stacks.
-class CookedHeapObjectPointerVisitor : public HeapObjectVisitor {
+// Class for vising pointers inside heap objects.
+//
+// NOTE: This class protects against raw bytecode pointers on the stack.
+class SafeObjectPointerVisitor : public HeapObjectVisitor {
  public:
-  explicit CookedHeapObjectPointerVisitor(PointerVisitor* visitor)
-      : visitor_(visitor) {}
-  virtual ~CookedHeapObjectPointerVisitor() {}
+  SafeObjectPointerVisitor(Process* process, PointerVisitor* visitor)
+      : process_(process), visitor_(visitor) {}
+  virtual ~SafeObjectPointerVisitor() {}
 
   virtual int Visit(HeapObject* object);
 
  private:
+  Process* process_;
   PointerVisitor* visitor_;
 };
 

@@ -240,7 +240,6 @@ class Assembler {
   INSTRUCTION_1(imul, "imul %rl", Register);
 
   INSTRUCTION_1(call, "call *%rl", Register);
-  INSTRUCTION_1(call, "call *%a", const Address&);
 
   INSTRUCTION_1(jmp, "jmp *%rl", Register);
   INSTRUCTION_1(jmp, "jmp *%a", const Address&);
@@ -269,7 +268,6 @@ class Assembler {
 
   INSTRUCTION_2(andl, "andl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(andl, "andl %rl, %rl", Register, Register);
-  INSTRUCTION_2(andl, "andl %a, %rl", Register, const Address&);
 
   INSTRUCTION_2(subl, "subl %rl, %rl", Register, Register);
   INSTRUCTION_2(subl, "subl %i, %rl", Register, const Immediate&);
@@ -306,7 +304,7 @@ class Assembler {
   void Bind(Label* label);
 
   void DefineLong(const char* name);
-  void LoadNative(Register destination, Register index);
+  void LoadNative(Register reg, Register index);
 
   void SwitchToText();
   void SwitchToData();

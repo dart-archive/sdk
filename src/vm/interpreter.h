@@ -84,6 +84,8 @@ class Interpreter {
   TargetYieldResult target_yield_result() const { return target_yield_result_; }
 
  private:
+  InterruptKind HandleBailout();
+
   Process* const process_;
   InterruptKind interruption_;
   TargetYieldResult target_yield_result_;
@@ -126,7 +128,7 @@ extern "C" uint8* HandleThrow(Process* process, Object* exception,
 
 extern "C" void HandleEnterNoSuchMethod(Process* process);
 
-extern "C" Function* HandleInvokeSelector(Process* process);
+extern "C" void HandleInvokeSelector(Process* process);
 
 extern "C" int HandleAtBytecode(Process* process, uint8* bcp, Object** sp);
 
