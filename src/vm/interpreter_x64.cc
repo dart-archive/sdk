@@ -29,6 +29,8 @@ class InterpreterGenerator {
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
+  virtual void GenerateMethodCall() = 0;
+
   virtual void GenerateBytecodePrologue(const char* name) = 0;
   virtual void GenerateDebugAtBytecode() = 0;
 
@@ -52,6 +54,8 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
+  GenerateMethodCall();
+
   GenerateDebugAtBytecode();
 
 #define V(name, branching, format, size, stack_diff, print) \
@@ -66,30 +70,40 @@ void InterpreterGenerator::Generate() {
   INTRINSICS_DO(V)
 #undef V
 
-  assembler()->SwitchToData();
-  assembler()->BindWithPowerOfTwoAlignment("InterpretFast_DispatchTable", 4);
+  // Define the relative addresses, used in the dispatch table.
 #define V(name, branching, format, size, stack_diff, print) \
-  assembler()->DefineLong("BC_" #name);
+  printf("\nRel_BC_%s = BC_%s-LocalInterpret", ""#name, ""#name);
+  BYTECODES_DO(V)
+#undef V
+  puts("\n");
+
+  assembler()->SwitchToData();
+  assembler()->BindWithPowerOfTwoAlignment("Interpret_DispatchTable", 4);
+  printf("LocalInterpret_DispatchTable:\n");
+#define V(name, branching, format, size, stack_diff, print) \
+  assembler()->DefineLong("Rel_BC_" #name);
   BYTECODES_DO(V)
 #undef V
 
   puts("\n");
 }
 
-class InterpreterGeneratorX86 : public InterpreterGenerator {
+class InterpreterGeneratorX64 : public InterpreterGenerator {
  public:
-  explicit InterpreterGeneratorX86(Assembler* assembler)
+  explicit InterpreterGeneratorX64(Assembler* assembler)
       : InterpreterGenerator(assembler), spill_size_(-1) {}
 
   // Registers
   // ---------
-  //   edi: stack pointer (top)
-  //   esi: bytecode pointer
-  //   ebp: <reserved>
-  //
+  //   r8: stack pointer (C)
+  //   r13: bytecode pointer (callee saved)
+  //   rsp: stack pointer (Dart)
+  //   rbp: frame pointer
 
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
+
+  virtual void GenerateMethodCall();
 
   virtual void GenerateBytecodePrologue(const char* name);
   virtual void GenerateDebugAtBytecode();
@@ -223,6 +237,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
 
  private:
   Label done_;
+  Label done_state_saved_;
   Label gc_;
   Label check_stack_overflow_;
   Label check_stack_overflow_0_;
@@ -235,7 +250,6 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   void StoreLocal(const Immediate& value, int index);
 
   void Push(Register reg);
-  void Push(const Immediate& value);
   void Pop(Register reg);
   void Drop(int n);
   void Drop(Register reg);
@@ -250,8 +264,8 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   void SwitchToDartStack();
   void SwitchToCStack();
 
-  void PushFrameDescriptor(Register bcp, Register scratch);
-  void ReadFrameDescriptor(Register scratch);
+  void StoreByteCodePointer();
+  void RestoreByteCodePointer();
 
   void Return(bool is_return_null);
 
@@ -260,7 +274,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   // This function
   //   * changes the first three stack slots
   //   * changes caller-saved registers
-  void AddToStoreBufferSlow(Register object, Register value, Register scratch);
+  void AddToStoreBufferSlow(Register object, Register value);
 
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
@@ -304,21 +318,142 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   }
 };
 
-GENERATE(, InterpretFast) {
-  InterpreterGeneratorX86 generator(assembler);
+GENERATE(, Interpret) {
+  InterpreterGeneratorX64 generator(assembler);
+  printf("LocalInterpret:\n");
   generator.Generate();
 }
 
-void InterpreterGeneratorX86::GeneratePrologue() {
-  __ int3();
+void InterpreterGeneratorX64::GeneratePrologue() {
+  // Save callee-saved registers.
+  __ pushq(RBP);
+  __ pushq(RBX);
+  __ pushq(R12);
+  __ pushq(R13);
+  __ pushq(R14);
+  __ pushq(R15);
+
+  // Push the target port address.
+  __ pushq(RSI);
+
+  // Push the current process.
+  __ pushq(RDI);
+
+  // Create room for Dart stack, when doing native calls.
+  __ pushq(Immediate(0));
+
+  // Pad the stack to guarantee the right alignment for calls.
+  // Reserved is 6 registers, 1 return address, 1 process, 1 target port and 1
+  // Dart stack slot.
+  // We reserve two extra slots on the stack for use in DoThrowAfterSaveState.
+  spill_size_ = ComputeStackPadding(10 * kWordSize, 2 * kWordSize);
+  if (spill_size_ > 0) __ subq(RSP, Immediate(spill_size_));
+
+  // Restore the register state and dispatch to the first bytecode.
+  RestoreState();
 }
 
-void InterpreterGeneratorX86::GenerateEpilogue() {
+void InterpreterGeneratorX64::GenerateEpilogue() {
+  __ Bind(&done_);
+  SaveState(&interpreter_entry_);
+
+  // Undo stack padding.
+  __ Bind(&done_state_saved_);
+  if (spill_size_ > 0) __ addq(RSP, Immediate(spill_size_));
+
+  // Skip Dart stack slot, target port address and process slot.
+  __ addq(RSP, Immediate(3 * kWordSize));
+
+  // Restore callee-saved registers.
+  __ popq(R15);
+  __ popq(R14);
+  __ popq(R13);
+  __ popq(R12);
+  __ popq(RBX);
+  __ popq(RBP);
+  __ ret();
+
+  // Default entrypoint.
   __ Bind("", "InterpreterEntry");
-  __ int3();
+  __ Bind(&interpreter_entry_);
+  Dispatch(0);
+
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  // Handle immutable heap allocation failures.
+  Label immutable_alloc_failure;
+  __ Bind(&immutable_alloc_failure);
+  __ movq(RAX, Immediate(Interpreter::kImmutableAllocationFailure));
+  __ jmp(&done_state_saved_);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
+  // Handle GC and re-interpret current bytecode.
+  __ Bind(&gc_);
+  SaveState(&interpreter_entry_);
+  LoadProcess(RDI);
+  __ call("HandleGC");
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  __ testq(RAX, RAX);
+  __ j(NOT_ZERO, &immutable_alloc_failure);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  RestoreState();
+
+  // Stack overflow handling (slow case).
+  Label stay_fast, overflow, check_debug_interrupt, overflow_resume;
+  __ Bind(&check_stack_overflow_0_);
+  __ xorq(RAX, RAX);
+  __ Bind(&check_stack_overflow_);
+  SaveState(&overflow_resume);
+
+  LoadProcess(RDI);
+  __ movq(RSI, RAX);
+  __ call("HandleStackOverflow");
+  RestoreState();
+  __ Bind(&overflow_resume);
+  __ testq(RAX, RAX);
+  ASSERT(Process::kStackCheckContinue == 0);
+  __ j(ZERO, &stay_fast);
+  __ cmpq(RAX, Immediate(Process::kStackCheckInterrupt));
+  __ j(NOT_EQUAL, &check_debug_interrupt);
+  __ movq(RAX, Immediate(Interpreter::kInterrupt));
+  __ jmp(&done_);
+  __ Bind(&check_debug_interrupt);
+  __ cmpq(RAX, Immediate(Process::kStackCheckDebugInterrupt));
+  __ j(NOT_EQUAL, &overflow);
+  __ movq(RAX, Immediate(Interpreter::kBreakPoint));
+  __ jmp(&done_);
+
+  __ Bind(&stay_fast);
+  Dispatch(0);
+
+  __ Bind(&overflow);
+  Label throw_resume;
+  SaveState(&throw_resume);
+  LoadProgram(RBX);
+  __ movq(RBX, Address(RBX, Program::kStackOverflowErrorOffset));
+  DoThrowAfterSaveState(&throw_resume);
+
+  // Intrinsic failure: Just invoke the method.
+  __ Bind(&intrinsic_failure_);
+  __ jmp("InterpreterDispatchTableEntry");
 }
 
-void InterpreterGeneratorX86::GenerateBytecodePrologue(const char* name) {
+void InterpreterGeneratorX64::GenerateMethodCall() {
+  __ SwitchToText();
+  __ AlignToPowerOfTwo(4);
+  __ Bind("", "InterpreterDispatchTableEntry");
+  __ movq(RAX,
+          Address(RAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
+  __ AlignToPowerOfTwo(4);
+  __ Bind("", "InterpreterMethodCall");
+  __ pushq(RBP);
+  __ movq(RBP, RSP);
+  __ pushq(Immediate(0));
+  __ leaq(R13, Address(RAX, Function::kSize - HeapObject::kTag));
+  CheckStackOverflow(0);
+  Dispatch(0);
+}
+
+void InterpreterGeneratorX64::GenerateBytecodePrologue(const char* name) {
   __ SwitchToText();
   __ AlignToPowerOfTwo(3);
   __ nop();
@@ -331,475 +466,1639 @@ void InterpreterGeneratorX86::GenerateBytecodePrologue(const char* name) {
   __ Bind("", name);
 }
 
-void InterpreterGeneratorX86::GenerateDebugAtBytecode() {
+void InterpreterGeneratorX64::GenerateDebugAtBytecode() {
   __ SwitchToText();
   __ AlignToPowerOfTwo(4);
   __ Bind("", "DebugAtBytecode");
-  __ int3();
+  // TODO(ajohnsen): Check if the process has debug_info set.
+  __ popq(RBX);
+  LoadProcess(RDI);
+  __ movq(RDX, RSP);
+  SwitchToCStack();
+  __ movq(RSI, R13);
+  __ call("HandleAtBytecode");
+  SwitchToDartStack();
+  __ testq(RAX, RAX);
+  __ j(NOT_ZERO, &done_);
+  __ pushq(RBX);
+  __ ret();
 }
 
-void InterpreterGeneratorX86::DoLoadLocal0() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLocal0() {
+  LoadLocal(RAX, 0);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLocal1() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLocal1() {
+  LoadLocal(RAX, 1);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLocal2() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLocal2() {
+  LoadLocal(RAX, 2);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLocal3() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLocal3() {
+  LoadLocal(RAX, 3);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLocal4() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLocal4() {
+  LoadLocal(RAX, 4);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLocal5() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLocal5() {
+  LoadLocal(RAX, 5);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLocal() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLocal() {
+  __ movzbq(RAX, Address(R13, 1));
+  __ movq(RAX, Address(RSP, RAX, TIMES_WORD_SIZE));
+  Push(RAX);
+  Dispatch(kLoadLocalLength);
 }
 
-void InterpreterGeneratorX86::DoLoadLocalWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLocalWide() {
+  __ movl(RAX, Address(R13, 1));
+  __ movq(RAX, Address(RSP, RAX, TIMES_WORD_SIZE));
+  Push(RAX);
+  Dispatch(kLoadLocalWideLength);
 }
 
-void InterpreterGeneratorX86::DoLoadBoxed() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadBoxed() {
+  __ movzbq(RAX, Address(R13, 1));
+  __ movq(RBX, Address(RSP, RAX, TIMES_WORD_SIZE));
+  __ movq(RAX, Address(RBX, Boxed::kValueOffset - HeapObject::kTag));
+  Push(RAX);
+  Dispatch(kLoadBoxedLength);
 }
 
-void InterpreterGeneratorX86::DoLoadStatic() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadStatic() {
+  __ movl(RAX, Address(R13, 1));
+  LoadStaticsArray(RBX);
+  __ movq(RAX,
+          Address(RBX, RAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag));
+  Push(RAX);
+  Dispatch(kLoadStaticLength);
 }
 
-void InterpreterGeneratorX86::DoLoadStaticInit() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadStaticInit() {
+  __ movl(RAX, Address(R13, 1));
+  LoadStaticsArray(RBX);
+  __ movq(RAX,
+          Address(RBX, RAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag));
+
+  Label done;
+  ASSERT(Smi::kTag == 0);
+  __ testl(RAX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &done);
+  __ movq(RBX, Address(RAX, HeapObject::kClassOffset - HeapObject::kTag));
+  __ movq(RBX, Address(RBX, Class::kInstanceFormatOffset - HeapObject::kTag));
+
+  int type = InstanceFormat::INITIALIZER_TYPE;
+  __ andq(RBX, Immediate(InstanceFormat::TypeField::mask()));
+  __ cmpq(RBX, Immediate(type << InstanceFormat::TypeField::shift()));
+  __ j(NOT_EQUAL, &done);
+
+  // Invoke the initializer function.
+  __ movq(RAX, Address(RAX, Initializer::kFunctionOffset - HeapObject::kTag));
+
+  StoreByteCodePointer();
+  __ call("InterpreterMethodCall");
+  RestoreByteCodePointer();
+
+  __ Bind(&done);
+  Push(RAX);
+  Dispatch(kLoadStaticInitLength);
 }
 
-void InterpreterGeneratorX86::DoLoadField() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadField() {
+  __ movzbq(RBX, Address(R13, 1));
+  LoadLocal(RAX, 0);
+  __ movq(RAX, Address(RAX, RBX, TIMES_WORD_SIZE,
+                       Instance::kSize - HeapObject::kTag));
+  StoreLocal(RAX, 0);
+  Dispatch(kLoadFieldLength);
 }
 
-void InterpreterGeneratorX86::DoLoadFieldWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadFieldWide() {
+  __ movl(RBX, Address(R13, 1));
+  LoadLocal(RAX, 0);
+  __ movq(RAX, Address(RAX, RBX, TIMES_WORD_SIZE,
+                       Instance::kSize - HeapObject::kTag));
+  StoreLocal(RAX, 0);
+  Dispatch(kLoadFieldWideLength);
 }
 
-void InterpreterGeneratorX86::DoLoadConst() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadConst() {
+  __ movl(RAX, Address(R13, 1));
+  __ movq(RAX, Address(R13, RAX, TIMES_1));
+  Push(RAX);
+  Dispatch(kLoadConstLength);
 }
 
-void InterpreterGeneratorX86::DoStoreLocal() {
-  __ int3();
+void InterpreterGeneratorX64::DoStoreLocal() {
+  LoadLocal(RBX, 0);
+  __ movzbq(RAX, Address(R13, 1));
+  __ movq(Address(RSP, RAX, TIMES_WORD_SIZE), RBX);
+  Dispatch(2);
 }
 
-void InterpreterGeneratorX86::DoStoreBoxed() {
-  __ int3();
+void InterpreterGeneratorX64::DoStoreBoxed() {
+  LoadLocal(RCX, 0);
+  __ movzbq(RAX, Address(R13, 1));
+  __ movq(RBX, Address(RSP, RAX, TIMES_WORD_SIZE));
+  __ movq(Address(RBX, Boxed::kValueOffset - HeapObject::kTag), RCX);
+
+  AddToStoreBufferSlow(RBX, RCX);
+
+  Dispatch(kStoreBoxedLength);
 }
 
-void InterpreterGeneratorX86::DoStoreStatic() {
-  __ int3();
+void InterpreterGeneratorX64::DoStoreStatic() {
+  LoadLocal(RCX, 0);
+  __ movl(RAX, Address(R13, 1));
+  LoadStaticsArray(RBX);
+  __ movq(Address(RBX, RAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag),
+          RCX);
+
+  AddToStoreBufferSlow(RBX, RCX);
+
+  Dispatch(kStoreStaticLength);
 }
 
-void InterpreterGeneratorX86::DoStoreField() {
-  __ int3();
+void InterpreterGeneratorX64::DoStoreField() {
+  __ movzbq(RBX, Address(R13, 1));
+  LoadLocal(RCX, 0);
+  LoadLocal(RAX, 1);
+  __ movq(
+      Address(RAX, RBX, TIMES_WORD_SIZE, Instance::kSize - HeapObject::kTag),
+      RCX);
+  StoreLocal(RCX, 1);
+  Drop(1);
+
+  AddToStoreBufferSlow(RAX, RCX);
+
+  Dispatch(kStoreFieldLength);
 }
 
-void InterpreterGeneratorX86::DoStoreFieldWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoStoreFieldWide() {
+  __ movl(RBX, Address(R13, 1));
+  LoadLocal(RCX, 0);
+  LoadLocal(RAX, 1);
+  __ movq(
+      Address(RAX, RBX, TIMES_WORD_SIZE, Instance::kSize - HeapObject::kTag),
+      RCX);
+  StoreLocal(RCX, 1);
+  Drop(1);
+
+  AddToStoreBufferSlow(RAX, RCX);
+
+  Dispatch(kStoreFieldWideLength);
 }
 
-void InterpreterGeneratorX86::DoLoadLiteralNull() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLiteralNull() {
+  LoadLiteralNull(RAX);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLiteralTrue() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLiteralTrue() {
+  LoadLiteralTrue(RAX);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLiteralFalse() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLiteralFalse() {
+  LoadLiteralFalse(RAX);
+  Push(RAX);
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLiteral0() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLiteral0() {
+  __ pushq(Immediate(reinterpret_cast<word>(Smi::FromWord(0))));
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLiteral1() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLiteral1() {
+  __ pushq(Immediate(reinterpret_cast<word>(Smi::FromWord(1))));
+  Dispatch(1);
 }
 
-void InterpreterGeneratorX86::DoLoadLiteral() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLiteral() {
+  __ movzbq(RAX, Address(R13, 1));
+  __ shll(RAX, Immediate(Smi::kTagSize));
+  ASSERT(Smi::kTag == 0);
+  Push(RAX);
+  Dispatch(2);
 }
 
-void InterpreterGeneratorX86::DoLoadLiteralWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoLoadLiteralWide() {
+  ASSERT(Smi::kTag == 0);
+  __ movl(RAX, Address(R13, 1));
+  __ shlq(RAX, Immediate(Smi::kTagSize));
+  Push(RAX);
+  Dispatch(kLoadLiteralWideLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeMethodUnfold() {
+void InterpreterGeneratorX64::DoInvokeMethodUnfold() {
   InvokeMethodUnfold(false);
 }
 
-void InterpreterGeneratorX86::DoInvokeMethod() { InvokeMethod(false); }
+void InterpreterGeneratorX64::DoInvokeMethod() { InvokeMethod(false); }
 
-void InterpreterGeneratorX86::DoInvokeNoSuchMethod() {
-  __ int3();
+void InterpreterGeneratorX64::DoInvokeNoSuchMethod() {
+  // Use the noSuchMethod entry from entry zero of the virtual table.
+  LoadProgram(RCX);
+  __ movq(RCX, Address(RCX, Program::kDispatchTableOffset));
+  __ movq(RCX, Address(RCX, Array::kSize - HeapObject::kTag));
+
+  // Load the function.
+  __ movq(RAX,
+          Address(RCX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
+
+  StoreByteCodePointer();
+  __ call("InterpreterMethodCall");
+  RestoreByteCodePointer();
+
+  __ movq(RDX, Address(R13, 1));
+  ASSERT(Selector::ArityField::shift() == 0);
+  __ andq(RDX, Immediate(Selector::ArityField::mask()));
+
+  Drop(RDX);
+
+  StoreLocal(RAX, 0);
+  Dispatch(kInvokeNoSuchMethodLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeTestNoSuchMethod() {
-  __ int3();
+void InterpreterGeneratorX64::DoInvokeTestNoSuchMethod() {
+  LoadLiteralFalse(RAX);
+  StoreLocal(RAX, 0);
+  Dispatch(kInvokeTestNoSuchMethodLength);
 }
 
-void InterpreterGeneratorX86::DoInvokeTestUnfold() { InvokeMethodUnfold(true); }
+void InterpreterGeneratorX64::DoInvokeTestUnfold() { InvokeMethodUnfold(true); }
 
-void InterpreterGeneratorX86::DoInvokeTest() { InvokeMethod(true); }
+void InterpreterGeneratorX64::DoInvokeTest() { InvokeMethod(true); }
 
-void InterpreterGeneratorX86::DoInvokeStatic() { InvokeStatic(); }
+void InterpreterGeneratorX64::DoInvokeStatic() { InvokeStatic(); }
 
-void InterpreterGeneratorX86::DoInvokeFactory() { InvokeStatic(); }
+void InterpreterGeneratorX64::DoInvokeFactory() { InvokeStatic(); }
 
-void InterpreterGeneratorX86::DoInvokeNative() { InvokeNative(false); }
+void InterpreterGeneratorX64::DoInvokeNative() { InvokeNative(false); }
 
-void InterpreterGeneratorX86::DoInvokeNativeYield() { InvokeNative(true); }
+void InterpreterGeneratorX64::DoInvokeNativeYield() { InvokeNative(true); }
 
-void InterpreterGeneratorX86::DoInvokeSelector() {
-  __ int3();
+void InterpreterGeneratorX64::DoInvokeSelector() {
+  Label resume;
+  SaveState(&resume);
+  LoadProcess(RDI);
+  __ call("HandleInvokeSelector");
+  RestoreState();
+  __ Bind(&resume);
+
+  StoreByteCodePointer();
+  __ call("InterpreterMethodCall");
+  RestoreByteCodePointer();
+
+  __ movl(RDX, Address(R13, 1));
+  __ negq(RDX);
+  __ movq(RDX, Address(RBP, RDX, TIMES_WORD_SIZE, -2 * kWordSize));
+  // The selector is smi tagged.
+  __ shrq(RDX, Immediate(1));
+  ASSERT(Selector::ArityField::shift() == 0);
+  __ andq(RDX, Immediate(Selector::ArityField::mask()));
+
+  Drop(RDX);
+
+  StoreLocal(RAX, 0);
+  Dispatch(kInvokeSelectorLength);
 }
 
-void InterpreterGeneratorX86::InvokeEq(const char* fallback) {
+void InterpreterGeneratorX64::InvokeEq(const char* fallback) {
   InvokeCompare(fallback, EQUAL);
 }
 
-void InterpreterGeneratorX86::InvokeLt(const char* fallback) {
+void InterpreterGeneratorX64::InvokeLt(const char* fallback) {
   InvokeCompare(fallback, LESS);
 }
 
-void InterpreterGeneratorX86::InvokeLe(const char* fallback) {
+void InterpreterGeneratorX64::InvokeLe(const char* fallback) {
   InvokeCompare(fallback, LESS_EQUAL);
 }
 
-void InterpreterGeneratorX86::InvokeGt(const char* fallback) {
+void InterpreterGeneratorX64::InvokeGt(const char* fallback) {
   InvokeCompare(fallback, GREATER);
 }
 
-void InterpreterGeneratorX86::InvokeGe(const char* fallback) {
+void InterpreterGeneratorX64::InvokeGe(const char* fallback) {
   InvokeCompare(fallback, GREATER_EQUAL);
 }
 
-void InterpreterGeneratorX86::InvokeAdd(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeAdd(const char* fallback) {
+  LoadLocal(RAX, 1);
+  __ testl(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RBX, 0);
+  __ testl(RBX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  __ addq(RAX, RBX);
+  __ j(OVERFLOW_, fallback);
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kInvokeAddLength);
 }
 
-void InterpreterGeneratorX86::InvokeSub(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeSub(const char* fallback) {
+  LoadLocal(RAX, 1);
+  __ testq(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RBX, 0);
+  __ testq(RBX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  __ subq(RAX, RBX);
+  __ j(OVERFLOW_, fallback);
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kInvokeSubLength);
 }
 
-void InterpreterGeneratorX86::InvokeMod(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeMod(const char* fallback) {
+  // TODO(ajohnsen): idiv may yield a negative remainder.
+  __ jmp(fallback);
 }
 
-void InterpreterGeneratorX86::InvokeMul(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeMul(const char* fallback) {
+  LoadLocal(RAX, 1);
+  __ testl(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RBX, 0);
+  __ testl(RBX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  // Untag and multiply.
+  __ sarq(RAX, Immediate(1));
+  __ sarq(RBX, Immediate(1));
+  __ imul(RBX);
+  __ j(OVERFLOW_, fallback);
+
+  // Re-tag. We need to check for overflow to handle the case
+  // where the top two bits are 01 after the multiplication.
+  ASSERT(Smi::kTagSize == 1 && Smi::kTag == 0);
+  __ addq(RAX, RAX);
+  __ j(OVERFLOW_, fallback);
+
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kInvokeMulLength);
 }
 
-void InterpreterGeneratorX86::InvokeTruncDiv(const char* fallback) {
+void InterpreterGeneratorX64::InvokeTruncDiv(const char* fallback) {
   InvokeDivision(fallback, true);
 }
 
-void InterpreterGeneratorX86::InvokeBitNot(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeBitNot(const char* fallback) {
+  LoadLocal(RAX, 0);
+  __ testl(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  __ notq(RAX);
+  __ andq(RAX, Immediate(~Smi::kTagMask));
+  StoreLocal(RAX, 0);
+  Dispatch(kInvokeBitNotLength);
 }
 
-void InterpreterGeneratorX86::InvokeBitAnd(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeBitAnd(const char* fallback) {
+  LoadLocal(RAX, 1);
+  __ testq(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RBX, 0);
+  __ testq(RBX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  __ andq(RAX, RBX);
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kInvokeBitAndLength);
 }
 
-void InterpreterGeneratorX86::InvokeBitOr(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeBitOr(const char* fallback) {
+  LoadLocal(RAX, 1);
+  __ testq(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RBX, 0);
+  __ testq(RBX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  __ orq(RAX, RBX);
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kInvokeBitOrLength);
 }
 
-void InterpreterGeneratorX86::InvokeBitXor(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeBitXor(const char* fallback) {
+  LoadLocal(RAX, 1);
+  __ testq(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RBX, 0);
+  __ testq(RBX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  __ xorq(RAX, RBX);
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kInvokeBitXorLength);
 }
 
-void InterpreterGeneratorX86::InvokeBitShr(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeBitShr(const char* fallback) {
+  LoadLocal(RAX, 1);
+  __ testq(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RCX, 0);
+  __ testq(RCX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  // Untag the smis and do the shift.
+  __ sarq(RAX, Immediate(1));
+  __ sarq(RCX, Immediate(1));
+  __ cmpq(RCX, Immediate(64));
+  Label shift;
+  __ j(LESS, &shift);
+  __ movq(RCX, Immediate(63));
+  __ Bind(&shift);
+  __ sarq_cl(RAX);
+
+  // Re-tag the resulting smi. No need to check for overflow
+  // here, because the top two bits of eax are either 00 or 11
+  // because we've shifted eax arithmetically at least one
+  // position to the right.
+  ASSERT(Smi::kTagSize == 1 && Smi::kTag == 0);
+  __ addq(RAX, RAX);
+
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kInvokeBitShrLength);
 }
 
-void InterpreterGeneratorX86::InvokeBitShl(const char* fallback) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeBitShl(const char* fallback) {
+  LoadLocal(RAX, 1);
+  __ testq(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RCX, 0);
+  __ testq(RCX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  // Untag the shift count, but not the value. If the shift
+  // count is greater than 31 (or negative), the shift is going
+  // to misbehave so we have to guard against that.
+  __ sarq(RCX, Immediate(1));
+  __ cmpq(RCX, Immediate(64));
+  __ j(ABOVE_EQUAL, fallback);
+
+  // Only allow to shift out "sign bits". If we shift
+  // out any other bit, it's an overflow.
+  __ movq(RBX, RAX);
+  __ shlq_cl(RAX);
+  __ movq(RDX, RAX);
+  __ sarq_cl(RDX);
+  __ cmpq(RBX, RDX);
+  __ j(NOT_EQUAL, fallback);
+
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kInvokeBitShlLength);
 }
 
-void InterpreterGeneratorX86::DoPop() {
+void InterpreterGeneratorX64::DoPop() {
   Drop(1);
   Dispatch(kPopLength);
 }
 
-void InterpreterGeneratorX86::DoDrop() {
-  __ int3();
+void InterpreterGeneratorX64::DoDrop() {
+  __ movzbq(RAX, Address(R13, 1));
+  Drop(RAX);
+  Dispatch(kDropLength);
 }
 
-void InterpreterGeneratorX86::DoReturn() { Return(false); }
+void InterpreterGeneratorX64::DoReturn() { Return(false); }
 
-void InterpreterGeneratorX86::DoReturnNull() { Return(true); }
+void InterpreterGeneratorX64::DoReturnNull() { Return(true); }
 
-void InterpreterGeneratorX86::DoBranchWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchWide() {
+  __ movl(RAX, Address(R13, 1));
+  __ addq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchIfTrueWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchIfTrueWide() {
+  Label branch;
+  Pop(RBX);
+  LoadLiteralTrue(RAX);
+  __ cmpq(RBX, RAX);
+  __ j(EQUAL, &branch);
+  Dispatch(kBranchIfTrueWideLength);
+
+  __ Bind(&branch);
+  __ movl(RAX, Address(R13, 1));
+  __ addq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchIfFalseWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchIfFalseWide() {
+  Label branch;
+  Pop(RBX);
+  LoadLiteralTrue(RAX);
+  __ cmpq(RBX, RAX);
+  __ j(NOT_EQUAL, &branch);
+  Dispatch(kBranchIfFalseWideLength);
+
+  __ Bind(&branch);
+  __ movl(RAX, Address(R13, 1));
+  __ addq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBack() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchBack() {
+  CheckStackOverflow(0);
+  __ movzbq(RAX, Address(R13, 1));
+  __ subq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBackIfTrue() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchBackIfTrue() {
+  CheckStackOverflow(0);
+
+  Label branch;
+  Pop(RBX);
+  LoadLiteralTrue(RAX);
+  __ cmpq(RBX, RAX);
+  __ j(EQUAL, &branch);
+  Dispatch(kBranchBackIfTrueLength);
+
+  __ Bind(&branch);
+  __ movzbq(RAX, Address(R13, 1));
+  __ subq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBackIfFalse() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchBackIfFalse() {
+  CheckStackOverflow(0);
+
+  Label branch;
+  Pop(RBX);
+  LoadLiteralTrue(RAX);
+  __ cmpq(RBX, RAX);
+  __ j(NOT_EQUAL, &branch);
+  Dispatch(kBranchBackIfFalseLength);
+
+  __ Bind(&branch);
+  __ movzbq(RAX, Address(R13, 1));
+  __ subq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBackWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchBackWide() {
+  CheckStackOverflow(0);
+  __ movl(RAX, Address(R13, 1));
+  __ subq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBackIfTrueWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchBackIfTrueWide() {
+  CheckStackOverflow(0);
+
+  Label branch;
+  Pop(RBX);
+  LoadLiteralTrue(RAX);
+  __ cmpl(RBX, RAX);
+  __ j(EQUAL, &branch);
+  Dispatch(kBranchBackIfTrueWideLength);
+
+  __ Bind(&branch);
+  __ movl(RAX, Address(R13, 1));
+  __ subq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoBranchBackIfFalseWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoBranchBackIfFalseWide() {
+  CheckStackOverflow(0);
+
+  Label branch;
+  Pop(RBX);
+  LoadLiteralTrue(RAX);
+  __ cmpq(RBX, RAX);
+  __ j(NOT_EQUAL, &branch);
+  Dispatch(kBranchBackIfFalseWideLength);
+
+  __ Bind(&branch);
+  __ movl(RAX, Address(R13, 1));
+  __ subq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoPopAndBranchWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoPopAndBranchWide() {
+  __ movzbq(RAX, Address(R13, 1));
+  __ leaq(RSP, Address(RSP, RAX, TIMES_WORD_SIZE));
+
+  __ movl(RAX, Address(R13, 2));
+  __ addq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoPopAndBranchBackWide() {
-  __ int3();
+void InterpreterGeneratorX64::DoPopAndBranchBackWide() {
+  CheckStackOverflow(0);
+
+  __ movzbq(RAX, Address(R13, 1));
+  __ leaq(RSP, Address(RSP, RAX, TIMES_WORD_SIZE));
+
+  __ movl(RAX, Address(R13, 2));
+  __ subq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoAllocate() { Allocate(false); }
+void InterpreterGeneratorX64::DoAllocate() { Allocate(false); }
 
-void InterpreterGeneratorX86::DoAllocateImmutable() { Allocate(true); }
+void InterpreterGeneratorX64::DoAllocateImmutable() { Allocate(true); }
 
-void InterpreterGeneratorX86::DoAllocateBoxed() {
-  __ int3();
+void InterpreterGeneratorX64::DoAllocateBoxed() {
+  LoadLocal(RSI, 0);
+  LoadProcess(RDI);
+  SwitchToCStack();
+  __ call("HandleAllocateBoxed");
+  SwitchToDartStack();
+  __ movq(RCX, RAX);
+  __ andq(RCX, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpq(RCX, Immediate(Failure::kTag));
+  __ j(EQUAL, &gc_);
+  StoreLocal(RAX, 0);
+  Dispatch(kAllocateBoxedLength);
 }
 
-void InterpreterGeneratorX86::DoNegate() {
-  __ int3();
+void InterpreterGeneratorX64::DoNegate() {
+  Label store;
+  LoadLocal(RBX, 0);
+  LoadProgram(RCX);
+  __ movq(RAX, Address(RCX, Program::kTrueObjectOffset));
+  __ cmpq(RBX, RAX);
+  __ j(NOT_EQUAL, &store);
+  __ movq(RAX, Address(RCX, Program::kFalseObjectOffset));
+  __ Bind(&store);
+  StoreLocal(RAX, 0);
+  Dispatch(kNegateLength);
 }
 
-void InterpreterGeneratorX86::DoStackOverflowCheck() {
-  __ int3();
+void InterpreterGeneratorX64::DoStackOverflowCheck() {
+  __ movl(RAX, Address(R13, 1));
+  LoadProcess(RBX);
+  __ movq(RBX, Address(RBX, Process::kStackLimitOffset));
+  __ negq(RAX);
+  __ leaq(RCX, Address(RSP, RAX, TIMES_WORD_SIZE));
+  __ cmpq(RCX, RBX);
+  __ j(BELOW_EQUAL, &check_stack_overflow_);
+  Dispatch(kStackOverflowCheckLength);
 }
 
-void InterpreterGeneratorX86::DoThrow() {
-  __ int3();
+void InterpreterGeneratorX64::DoThrow() {
+  LoadLocal(RBX, 0);
+  Label resume;
+  SaveState(&resume);
+  DoThrowAfterSaveState(&resume);
 }
 
-void InterpreterGeneratorX86::DoThrowAfterSaveState(Label* resume) {
-  __ int3();
+void InterpreterGeneratorX64::DoThrowAfterSaveState(Label* resume) {
+  LoadProcess(RDI);
+  __ movq(RSI, RBX);
+  // Use the stack to store the stack delta initialized to zero.
+  __ leaq(RDX, Address(RSP, 0 * kWordSize));
+  __ movq(Address(RDX, 0), Immediate(0));
+  // Use the stack to store the frame pointer of the target frame.
+  __ leaq(RCX, Address(RSP, 1 * kWordSize));
+  __ call("HandleThrow");
+
+  RestoreState();
+  __ Bind(resume);
+
+  Label unwind;
+  __ testq(RAX, RAX);
+  __ j(NOT_ZERO, &unwind);
+  __ movq(RAX, Immediate(Interpreter::kUncaughtException));
+  __ jmp(&done_);
+
+  __ Bind(&unwind);
+  __ movq(RBP, Address(R8, 1 * kWordSize));
+  __ movq(RCX, Address(R8, 0 * kWordSize));
+  __ movq(R13, RAX);
+  __ leaq(RSP, Address(RSP, RCX, TIMES_WORD_SIZE));
+  StoreLocal(RBX, 0);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoSubroutineCall() {
-  __ int3();
+void InterpreterGeneratorX64::DoSubroutineCall() {
+  __ movl(RAX, Address(R13, 1));
+  __ movl(RBX, Address(R13, 5));
+
+  // Push the return delta as a tagged smi.
+  ASSERT(Smi::kTag == 0);
+  __ shlq(RBX, Immediate(Smi::kTagSize));
+  Push(RBX);
+
+  __ addq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoSubroutineReturn() {
-  __ int3();
+void InterpreterGeneratorX64::DoSubroutineReturn() {
+  Pop(RAX);
+  __ shrq(RAX, Immediate(Smi::kTagSize));
+  __ subq(R13, RAX);
+  Dispatch(0);
 }
 
-void InterpreterGeneratorX86::DoProcessYield() {
-  __ int3();
+void InterpreterGeneratorX64::DoProcessYield() {
+  LoadLiteralNull(RBX);
+  LoadLocal(RAX, 0);
+  __ sarq(RAX, Immediate(1));
+  __ addq(R13, Immediate(kProcessYieldLength));
+  StoreLocal(RBX, 0);
+  __ jmp(&done_);
 }
 
-void InterpreterGeneratorX86::DoCoroutineChange() {
+void InterpreterGeneratorX64::DoCoroutineChange() {
+  LoadLiteralNull(RAX);
+
+  LoadLocal(RBX, 0);  // Load argument.
+  LoadLocal(RSI, 1);  // Load coroutine.
+
+  StoreLocal(RAX, 0);
+  StoreLocal(RAX, 1);
+
+  Label resume;
+  SaveState(&resume);
+  LoadProcess(RDI);
+  // RSI already loaded with coroutine.
+  __ call("HandleCoroutineChange");
+  RestoreState();
+
+  __ Bind(&resume);
   __ Bind("", "InterpreterCoroutineEntry");
+
+  StoreLocal(RBX, 1);
+  Drop(1);
+
+  Dispatch(kCoroutineChangeLength);
+}
+
+void InterpreterGeneratorX64::DoIdentical() {
+  LoadLocal(RAX, 0);
+  LoadLocal(RBX, 1);
+
+  // TODO(ager): For now we bail out if we have two doubles or two
+  // large integers and let the slow interpreter deal with it. These
+  // cases could be dealt with directly here instead.
+  Label fast_case;
+  Label bail_out;
+
+  // If either is a smi they are not both doubles or large integers.
+  __ testq(RAX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &fast_case);
+  __ testq(RBX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &fast_case);
+
+  // If they do not have the same type they are not both double or
+  // large integers.
+  __ movq(RCX, Address(RAX, HeapObject::kClassOffset - HeapObject::kTag));
+  __ movq(RCX, Address(RCX, Class::kInstanceFormatOffset - HeapObject::kTag));
+  __ movq(RDX, Address(RBX, HeapObject::kClassOffset - HeapObject::kTag));
+  __ cmpq(RCX, Address(RDX, Class::kInstanceFormatOffset - HeapObject::kTag));
+  __ j(NOT_EQUAL, &fast_case);
+
+  int double_type = InstanceFormat::DOUBLE_TYPE;
+  int large_integer_type = InstanceFormat::LARGE_INTEGER_TYPE;
+  int type_field_shift = InstanceFormat::TypeField::shift();
+
+  __ andq(RCX, Immediate(InstanceFormat::TypeField::mask()));
+  __ cmpq(RCX, Immediate(double_type << type_field_shift));
+  __ j(EQUAL, &bail_out);
+  __ cmpq(RCX, Immediate(large_integer_type << type_field_shift));
+  __ j(EQUAL, &bail_out);
+
+  __ Bind(&fast_case);
+  LoadProgram(RCX);
+
+  Label true_case;
+  __ cmpq(RBX, RAX);
+  __ j(EQUAL, &true_case);
+
+  __ movq(RAX, Address(RCX, Program::kFalseObjectOffset));
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kIdenticalLength);
+
+  __ Bind(&true_case);
+  __ movq(RAX, Address(RCX, Program::kTrueObjectOffset));
+
+  Label done;
+  __ Bind(&done);
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kIdenticalLength);
+
+  __ Bind(&bail_out);
+  LoadProcess(RDI);
+  SwitchToCStack();
+  __ movq(RSI, RBX);
+  __ movq(RDX, RAX);
+  __ call("HandleIdentical");
+  SwitchToDartStack();
+  __ jmp(&done);
+}
+
+void InterpreterGeneratorX64::DoIdenticalNonNumeric() {
+  LoadLocal(RAX, 0);
+  LoadLocal(RBX, 1);
+  LoadProgram(RCX);
+
+  Label true_case;
+  __ cmpq(RAX, RBX);
+  __ j(EQUAL, &true_case);
+
+  __ movq(RAX, Address(RCX, Program::kFalseObjectOffset));
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kIdenticalNonNumericLength);
+
+  __ Bind(&true_case);
+  __ movq(RAX, Address(RCX, Program::kTrueObjectOffset));
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(kIdenticalNonNumericLength);
+}
+
+void InterpreterGeneratorX64::DoEnterNoSuchMethod() {
+  SaveState(&interpreter_entry_);
+  LoadProcess(RDI);
+  __ call("HandleEnterNoSuchMethod");
+  RestoreState();
+}
+
+void InterpreterGeneratorX64::DoExitNoSuchMethod() {
+  Pop(RAX);  // Result.
+  Pop(RBX);  // Selector.
+  __ shrq(RBX, Immediate(Smi::kTagSize));
+
+  __ movq(RSP, RBP);
+  __ popq(RBP);
+
+  Label done;
+  __ movq(RCX, RBX);
+  __ andq(RCX, Immediate(Selector::KindField::mask()));
+  __ cmpq(RCX, Immediate(Selector::SETTER << Selector::KindField::shift()));
+  __ j(NOT_EQUAL, &done);
+
+  // Setter argument is at offset 1, as we still have the return address on the
+  // stack.
+  LoadLocal(RAX, 1);
+
+  __ Bind(&done);
+  __ ret();
+}
+
+void InterpreterGeneratorX64::DoMethodEnd() { __ int3(); }
+
+void InterpreterGeneratorX64::DoIntrinsicObjectEquals() {
+  // TODO(ajohnsen): Should be enabled again.
   __ int3();
 }
 
-void InterpreterGeneratorX86::DoIdentical() {
-  __ int3();
+void InterpreterGeneratorX64::DoIntrinsicGetField() {
+  __ movq(RAX,
+          Address(RAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
+  __ movzbq(RBX, Address(RAX, 2 + Function::kSize - HeapObject::kTag));
+  LoadLocal(RAX, 1);
+  __ movq(RAX, Address(RAX, RBX, TIMES_WORD_SIZE,
+                       Instance::kSize - HeapObject::kTag));
+  __ ret();
 }
 
-void InterpreterGeneratorX86::DoIdenticalNonNumeric() {
-  __ int3();
+void InterpreterGeneratorX64::DoIntrinsicSetField() {
+  __ movq(RAX,
+          Address(RAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
+  __ movzbq(RAX, Address(RAX, 3 + Function::kSize - HeapObject::kTag));
+  LoadLocal(RBX, 1);
+  LoadLocal(RCX, 2);
+  __ movq(
+      Address(RCX, RAX, TIMES_WORD_SIZE, Instance::kSize - HeapObject::kTag),
+      RBX);
+
+  // We have put the result in EBX to be sure it's kept by the preserved by the
+  // store-buffer call.
+  AddToStoreBufferSlow(RCX, RBX);
+
+  __ movq(RAX, RBX);
+  __ ret();
 }
 
-void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
-  __ int3();
+void InterpreterGeneratorX64::DoIntrinsicListIndexGet() {
+  LoadLocal(RBX, 1);  // Index.
+  LoadLocal(RCX, 2);  // List.
+
+  Label failure;
+  ASSERT(Smi::kTag == 0);
+  __ testl(RBX, Immediate(Smi::kTagMask));
+  __ j(NOT_ZERO, &intrinsic_failure_);
+  __ cmpq(RBX, Immediate(0));
+  __ j(LESS, &intrinsic_failure_);
+
+  // Load the backing store (array) from the first instance field of the list.
+  __ movq(RCX, Address(RCX, Instance::kSize - HeapObject::kTag));
+  __ movq(RDX, Address(RCX, Array::kLengthOffset - HeapObject::kTag));
+
+  // Check the index against the length.
+  __ cmpq(RBX, RDX);
+  __ j(GREATER_EQUAL, &intrinsic_failure_);
+
+  // Load from the array and continue.
+  ASSERT(Smi::kTagSize == 1);
+  __ movq(RAX, Address(RCX, RBX, TIMES_4, Array::kSize - HeapObject::kTag));
+
+  __ ret();
 }
 
-void InterpreterGeneratorX86::DoExitNoSuchMethod() {
-  __ int3();
+void InterpreterGeneratorX64::DoIntrinsicListIndexSet() {
+  LoadLocal(RBX, 2);  // Index.
+  LoadLocal(RCX, 3);  // List.
+
+  ASSERT(Smi::kTag == 0);
+  __ testl(RBX, Immediate(Smi::kTagMask));
+  __ j(NOT_ZERO, &intrinsic_failure_);
+  __ cmpq(RBX, Immediate(0));
+  __ j(LESS, &intrinsic_failure_);
+
+  // Load the backing store (array) from the first instance field of the list.
+  __ movq(RCX, Address(RCX, Instance::kSize - HeapObject::kTag));
+  __ movq(RDX, Address(RCX, Array::kLengthOffset - HeapObject::kTag));
+
+  // Check the index against the length.
+  __ cmpq(RBX, RDX);
+  __ j(GREATER_EQUAL, &intrinsic_failure_);
+
+  // Free up EBX, as we need the result (setter value) there.
+  __ movq(RAX, RBX);
+
+  // Store to the array and continue.
+  ASSERT(Smi::kTagSize == 1);
+  LoadLocal(RBX, 1);
+  // Index (in RAX) is already smi-taged, so only scale by TIMES_4.
+  __ movq(Address(RCX, RAX, TIMES_4, Array::kSize - HeapObject::kTag), RBX);
+
+  AddToStoreBufferSlow(RCX, RBX);
+
+  __ movq(RAX, RBX);
+  __ ret();
 }
 
-void InterpreterGeneratorX86::DoMethodEnd() { __ int3(); }
+void InterpreterGeneratorX64::DoIntrinsicListLength() {
+  // Load the backing store (array) from the first instance field of the list.
+  LoadLocal(RCX, 1);  // List.
+  __ movq(RCX, Address(RCX, Instance::kSize - HeapObject::kTag));
+  __ movq(RAX, Address(RCX, Array::kLengthOffset - HeapObject::kTag));
 
-void InterpreterGeneratorX86::DoIntrinsicObjectEquals() {
-  __ int3();
+  __ ret();
 }
 
-void InterpreterGeneratorX86::DoIntrinsicGetField() {
-  __ int3();
+void InterpreterGeneratorX64::Push(Register reg) { __ pushq(reg); }
+
+void InterpreterGeneratorX64::Pop(Register reg) { __ popq(reg); }
+
+void InterpreterGeneratorX64::Drop(int n) {
+  __ addq(RSP, Immediate(n * kWordSize));
 }
 
-void InterpreterGeneratorX86::DoIntrinsicSetField() {
-  __ int3();
+void InterpreterGeneratorX64::Drop(Register reg) {
+  __ leaq(RSP, Address(RSP, reg, TIMES_WORD_SIZE));
 }
 
-void InterpreterGeneratorX86::DoIntrinsicListIndexGet() {
-  __ int3();
+void InterpreterGeneratorX64::LoadProcess(Register reg) {
+  __ movq(reg, Address(R8, spill_size_ + kWordSize));
 }
 
-void InterpreterGeneratorX86::DoIntrinsicListIndexSet() {
-  __ int3();
+void InterpreterGeneratorX64::LoadProgram(Register reg) {
+  LoadProcess(reg);
+  __ movq(reg, Address(reg, Process::kProgramOffset));
 }
 
-void InterpreterGeneratorX86::DoIntrinsicListLength() {
-  __ int3();
+void InterpreterGeneratorX64::LoadStaticsArray(Register reg) {
+  LoadProcess(reg);
+  __ movq(reg, Address(reg, Process::kStaticsOffset));
 }
 
-void InterpreterGeneratorX86::Push(Register reg) { __ int3(); }
-
-void InterpreterGeneratorX86::Push(const Immediate& value) { __ int3(); }
-
-void InterpreterGeneratorX86::Pop(Register reg) { __ int3(); }
-
-void InterpreterGeneratorX86::Drop(int n) {
-  __ int3();
+void InterpreterGeneratorX64::LoadLiteralNull(Register reg) {
+  LoadProgram(reg);
+  __ movq(reg, Address(reg, Program::kNullObjectOffset));
 }
 
-void InterpreterGeneratorX86::Drop(Register reg) {
-  __ int3();
+void InterpreterGeneratorX64::LoadLiteralTrue(Register reg) {
+  LoadProgram(reg);
+  __ movq(reg, Address(reg, Program::kTrueObjectOffset));
 }
 
-void InterpreterGeneratorX86::LoadProcess(Register reg) {
-  __ int3();
+void InterpreterGeneratorX64::LoadLiteralFalse(Register reg) {
+  LoadProgram(reg);
+  __ movq(reg, Address(reg, Program::kFalseObjectOffset));
 }
 
-void InterpreterGeneratorX86::LoadProgram(Register reg) {
-  __ int3();
+void InterpreterGeneratorX64::SwitchToDartStack() {
+  __ movq(R8, RSP);
+  __ movq(RSP, Address(R8, spill_size_));
 }
 
-void InterpreterGeneratorX86::LoadStaticsArray(Register reg) {
-  __ int3();
+void InterpreterGeneratorX64::SwitchToCStack() {
+  __ movq(Address(R8, spill_size_), RSP);
+  __ movq(RSP, R8);
 }
 
-void InterpreterGeneratorX86::LoadLiteralNull(Register reg) {
-  __ int3();
+void InterpreterGeneratorX64::StoreByteCodePointer() {
+  __ movq(Address(RBP, -kWordSize), R13);
 }
 
-void InterpreterGeneratorX86::LoadLiteralTrue(Register reg) {
-  __ int3();
+void InterpreterGeneratorX64::RestoreByteCodePointer() {
+  __ movq(R13, Address(RBP, -kWordSize));
 }
 
-void InterpreterGeneratorX86::LoadLiteralFalse(Register reg) {
-  __ int3();
+void InterpreterGeneratorX64::LoadLocal(Register reg, int index) {
+  __ movq(reg, Address(RSP, index * kWordSize));
 }
 
-void InterpreterGeneratorX86::SwitchToDartStack() {
-  __ int3();
+void InterpreterGeneratorX64::StoreLocal(Register reg, int index) {
+  __ movq(Address(RSP, index * kWordSize), reg);
 }
 
-void InterpreterGeneratorX86::SwitchToCStack() {
-  __ int3();
+void InterpreterGeneratorX64::StoreLocal(const Immediate& value, int index) {
+  __ movq(Address(RSP, index * kWordSize), value);
 }
 
-void InterpreterGeneratorX86::PushFrameDescriptor(Register bcp,
-                                                  Register scratch) {
-  __ int3();
+void InterpreterGeneratorX64::Return(bool is_return_null) {
+  // Materialize the result in register RAX.
+  if (is_return_null) {
+    LoadLiteralNull(RAX);
+  } else {
+    LoadLocal(RAX, 0);
+  }
+  __ movq(RSP, RBP);
+  __ popq(RBP);
+  __ ret();
 }
 
-void InterpreterGeneratorX86::ReadFrameDescriptor(Register scratch) {
-  __ int3();
+void InterpreterGeneratorX64::Allocate(bool immutable) {
+  // Load the class into register rbx.
+  __ movl(RAX, Address(R13, 1));
+  __ movq(RBX, Address(R13, RAX, TIMES_1));
+
+  // We initialize the 4rd argument to "HandleAllocate" to 0, meaning the object
+  // we're allocating will not be initialized with pointers to immutable space.
+  __ movq(RCX, Immediate(0));
+
+  // Loop over all arguments and find out if
+  //   * all of them are immutable
+  //   * there is at least one immutable member
+  Label allocate;
+  {
+    // Initialization of 'allocate immutable' argument
+    // depends on [immutable]
+    __ movq(RDX, Immediate(immutable ? 1 : 0));
+
+    __ movq(R11, Address(RBX, Class::kInstanceFormatOffset - HeapObject::kTag));
+    __ andq(R11, Immediate(InstanceFormat::FixedSizeField::mask()));
+    int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
+    __ shrq(R11, Immediate(size_shift));
+
+    // R11 = SizeOfEntireObject - Instance::kSize
+    __ subq(R11, Immediate(Instance::kSize));
+
+    // R10 = StackPointer(RSP) + NumberOfFields*kPointerSize
+    __ movq(R10, RSP);
+    __ addq(R10, R11);
+
+    Label loop;
+    Label loop_with_immutable_field;
+    Label loop_with_mutable_field;
+
+    // Decrement pointer to point to next field.
+    __ Bind(&loop);
+    __ subq(R10, Immediate(kPointerSize));
+
+    // Test whether R10 < RSP. If so we're done and it's immutable.
+    __ cmpq(R10, RSP);
+    __ j(BELOW, &allocate);
+
+    // If Smi, continue the loop.
+    __ movq(R11, Address(R10));
+    __ testl(R11, Immediate(Smi::kTagMask));
+    __ j(ZERO, &loop);
+
+    // Load class of object we want to test immutability of.
+    __ movq(RAX, Address(R11, HeapObject::kClassOffset - HeapObject::kTag));
+
+    // Load instance format & handle the three cases:
+    //  - never immutable (based on instance format) => not immutable
+    //  - always immutable (based on instance format) => immutable
+    //  - else (only instances) => check runtime-tracked bit
+    uword mask = InstanceFormat::ImmutableField::mask();
+    uword always_immutable_mask = InstanceFormat::ImmutableField::encode(
+        InstanceFormat::ALWAYS_IMMUTABLE);
+    uword never_immutable_mask =
+        InstanceFormat::ImmutableField::encode(InstanceFormat::NEVER_IMMUTABLE);
+
+    __ movq(RAX, Address(RAX, Class::kInstanceFormatOffset - HeapObject::kTag));
+    __ andq(RAX, Immediate(mask));
+
+    // If this is type never immutable we continue the loop.
+    __ cmpq(RAX, Immediate(never_immutable_mask));
+    __ j(EQUAL, &loop_with_mutable_field);
+
+    // If this is type is always immutable we continue the loop.
+    __ cmpq(RAX, Immediate(always_immutable_mask));
+    __ j(EQUAL, &loop_with_immutable_field);
+
+    // Else, we must have a Instance and check the runtime-tracked
+    // immutable bit.
+    uword im_mask = Instance::FlagsImmutabilityField::encode(true);
+    __ movq(R11, Address(R11, Instance::kFlagsOffset - HeapObject::kTag));
+    __ testq(R11, Immediate(im_mask));
+    __ j(NOT_ZERO, &loop_with_immutable_field);
+
+    __ jmp(&loop_with_mutable_field);
+
+    __ Bind(&loop_with_immutable_field);
+    __ movl(RCX, Immediate(1));
+    __ jmp(&loop);
+
+    __ Bind(&loop_with_mutable_field);
+    __ movl(RDX, Immediate(0));
+    __ jmp(&loop);
+  }
+
+  // TODO(kasperl): Consider inlining this in the interpreter.
+  __ Bind(&allocate);
+  LoadProcess(RDI);
+  SwitchToCStack();
+  __ movq(RSI, RBX);
+  // NOTE: The 3nd argument is already present in RDX
+  // NOTE: The 4rd argument is already present in RCX
+  __ call("HandleAllocate");
+  SwitchToDartStack();
+  __ movq(R11, RAX);
+  __ andq(R11, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpq(R11, Immediate(Failure::kTag));
+  __ j(EQUAL, &gc_);
+
+  __ movq(R11, Address(RBX, Class::kInstanceFormatOffset - HeapObject::kTag));
+  __ andq(R11, Immediate(InstanceFormat::FixedSizeField::mask()));
+  // The fixed size is recorded as the number of pointers. Therefore, the
+  // size in bytes is the recorded size multiplied by kPointerSize. Instead
+  // of doing the multiplication we shift by kPointerSizeLog2 less.
+  ASSERT(InstanceFormat::FixedSizeField::shift() >= kPointerSizeLog2);
+  int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
+  __ shrq(R11, Immediate(size_shift));
+
+  // Compute the address of the first and last instance field.
+  __ leaq(R10, Address(RAX, R11, TIMES_1, -1 * kWordSize - HeapObject::kTag));
+  __ leaq(R11, Address(RAX, Instance::kSize - HeapObject::kTag));
+
+  Label loop, done;
+  __ Bind(&loop);
+  __ cmpq(R10, R11);
+  __ j(BELOW, &done);
+  Pop(RBX);
+  __ movq(Address(R10, 0), RBX);
+  __ subq(R10, Immediate(1 * kWordSize));
+  __ jmp(&loop);
+
+  __ Bind(&done);
+  Push(RAX);
+  Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorX86::LoadLocal(Register reg, int index) {
-  __ int3();
+void InterpreterGeneratorX64::AddToStoreBufferSlow(Register object,
+                                                   Register value) {
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  LoadProcess(RDI);
+  SwitchToCStack();
+  __ movq(RSI, object);
+  __ movq(RDX, value);
+  __ call("AddToStoreBufferSlow");
+  SwitchToDartStack();
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 }
 
-void InterpreterGeneratorX86::StoreLocal(Register reg, int index) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeMethodUnfold(bool test) {
+  // Get the selector from the bytecodes.
+  __ movl(RDX, Address(R13, 1));
+
+  if (test) {
+    // Get the receiver from the stack.
+    LoadLocal(RBX, 0);
+  } else {
+    // Compute the arity from the selector.
+    ASSERT(Selector::ArityField::shift() == 0);
+    __ movq(RBX, RDX);
+    __ andq(RBX, Immediate(Selector::ArityField::mask()));
+
+    // Get the receiver from the stack.
+    __ movq(RBX, Address(RSP, RBX, TIMES_WORD_SIZE));
+  }
+
+  // Compute the receiver class.
+  Label smi, probe;
+  ASSERT(Smi::kTag == 0);
+  __ testq(RBX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &smi);
+  __ movq(RBX, Address(RBX, HeapObject::kClassOffset - HeapObject::kTag));
+
+  // Find the entry in the primary lookup cache.
+  Label miss, finish;
+  ASSERT(Utils::IsPowerOfTwo(LookupCache::kPrimarySize));
+  ASSERT(sizeof(LookupCache::Entry) == 1 << 5);
+  __ Bind(&probe);
+  __ movq(RAX, RBX);
+  __ xorq(RAX, RDX);
+  __ andq(RAX, Immediate(LookupCache::kPrimarySize - 1));
+  __ shlq(RAX, Immediate(5));
+  LoadProcess(RCX);
+  __ movq(RCX, Address(RCX, Process::kPrimaryLookupCacheOffset));
+  __ addq(RAX, RCX);
+
+  // Validate the primary entry.
+  __ cmpq(RBX, Address(RAX, LookupCache::kClassOffset));
+  __ j(NOT_EQUAL, &miss);
+  __ cmpq(RDX, Address(RAX, LookupCache::kSelectorOffset));
+  __ j(NOT_EQUAL, &miss);
+
+  // At this point, we've got our hands on a valid lookup cache entry.
+  __ Bind(&finish);
+  if (test) {
+    __ movq(RAX, Address(RAX, LookupCache::kTagOffset));
+  } else {
+    // TODO(ajohnsen): Handle intrinsics.
+    __ movq(RAX, Address(RAX, LookupCache::kTargetOffset));
+  }
+
+  if (test) {
+    // Materialize either true or false depending on whether or not
+    // we've found a target method.
+    Label found;
+    LoadProgram(RBX);
+    __ testq(RAX, RAX);
+    __ j(NOT_ZERO, &found);
+
+    __ movq(RAX, Address(RBX, Program::kFalseObjectOffset));
+    StoreLocal(RAX, 0);
+    Dispatch(kInvokeTestUnfoldLength);
+
+    __ Bind(&found);
+    __ movq(RAX, Address(RBX, Program::kTrueObjectOffset));
+    StoreLocal(RAX, 0);
+    Dispatch(kInvokeTestUnfoldLength);
+  } else {
+    StoreByteCodePointer();
+    __ call("InterpreterMethodCall");
+    RestoreByteCodePointer();
+
+    __ movq(RDX, Address(R13, 1));
+    ASSERT(Selector::ArityField::shift() == 0);
+    __ andq(RDX, Immediate(Selector::ArityField::mask()));
+
+    Drop(RDX);
+
+    StoreLocal(RAX, 0);
+    Dispatch(kInvokeMethodUnfoldLength);
+  }
+
+  __ Bind(&smi);
+  LoadProgram(RBX);
+  __ movq(RBX, Address(RBX, Program::kSmiClassOffset));
+  __ jmp(&probe);
+
+  // We didn't find a valid entry in primary lookup cache.
+  __ Bind(&miss);
+  LoadProcess(RDI);
+  SwitchToCStack();
+  __ movq(RSI, RAX);
+  // TODO(ajohnsen): Swap RCX with RDX and RDX with RBX.
+  __ movq(RCX, RDX);  // Argument 4
+  __ movq(RDX, RBX);  // Argument 3
+  __ call("HandleLookupEntry");
+  SwitchToDartStack();
+  __ jmp(&finish);
 }
 
-void InterpreterGeneratorX86::StoreLocal(const Immediate& value, int index) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeMethod(bool test) {
+  // Get the selector from the bytecodes.
+  __ movl(RDX, Address(R13, 1));
+
+  // Fetch the dispatch table from the program.
+  LoadProgram(RCX);
+  __ movq(RCX, Address(RCX, Program::kDispatchTableOffset));
+
+  if (!test) {
+    // Compute the arity from the selector.
+    ASSERT(Selector::ArityField::shift() == 0);
+    __ movq(RBX, RDX);
+    __ andq(RBX, Immediate(Selector::ArityField::mask()));
+  }
+
+  // Compute the selector offset (smi tagged) from the selector.
+  __ movq(R12, Immediate(Selector::IdField::mask()));
+  __ andq(RDX, R12);
+  __ shrq(RDX, Immediate(Selector::IdField::shift() - Smi::kTagSize));
+
+  // Get the receiver from the stack.
+  if (test) {
+    LoadLocal(RBX, 0);
+  } else {
+    __ movq(RBX, Address(RSP, RBX, TIMES_WORD_SIZE));
+  }
+
+  // Compute the receiver class.
+  Label smi, dispatch;
+  ASSERT(Smi::kTag == 0);
+  __ testl(RBX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &smi);
+  __ movq(RBX, Address(RBX, HeapObject::kClassOffset - HeapObject::kTag));
+
+  // Compute entry index: class id + selector offset.
+  int id_offset = Class::kIdOrTransformationTargetOffset - HeapObject::kTag;
+  __ Bind(&dispatch);
+  __ movq(RBX, Address(RBX, id_offset));
+  __ addq(RBX, RDX);
+
+  // Fetch the entry from the table. Because the index is smi tagged
+  // we only multiply by four -- not eight -- when indexing.
+  ASSERT(Smi::kTagSize == 1);
+  __ movq(RCX, Address(RCX, RBX, TIMES_4, Array::kSize - HeapObject::kTag));
+
+  // Validate that the offset stored in the entry matches the offset
+  // we used to find it.
+  Label invalid;
+  __ cmpq(RDX,
+          Address(RCX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
+  __ j(NOT_EQUAL, &invalid);
+
+  Label validated, intrinsified;
+  if (test) {
+    // Valid entry: The answer is true.
+    LoadLiteralTrue(RAX);
+    StoreLocal(RAX, 0);
+    Dispatch(kInvokeTestLength);
+  } else {
+    // Load the target and the intrinsic from the entry.
+    __ Bind(&validated);
+
+    __ movq(RAX, RCX);
+
+    StoreByteCodePointer();
+    __ call(Address(RAX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
+    RestoreByteCodePointer();
+
+    __ movq(RDX, Address(R13, 1));
+    ASSERT(Selector::ArityField::shift() == 0);
+    __ andq(RDX, Immediate(Selector::ArityField::mask()));
+
+    Drop(RDX);
+
+    StoreLocal(RAX, 0);
+    Dispatch(kInvokeMethodLength);
+  }
+
+  __ Bind(&smi);
+  LoadProgram(RBX);
+  __ movq(RBX, Address(RBX, Program::kSmiClassOffset));
+  __ jmp(&dispatch);
+
+  if (test) {
+    // Invalid entry: The answer is false.
+    __ Bind(&invalid);
+    LoadLiteralFalse(RAX);
+    StoreLocal(RAX, 0);
+    Dispatch(kInvokeTestLength);
+  } else {
+    __ Bind(&intrinsified);
+    __ jmp(RBX);
+
+    // Invalid entry: Use the noSuchMethod entry from entry zero of
+    // the virtual table.
+    __ Bind(&invalid);
+    LoadProgram(RCX);
+    __ movq(RCX, Address(RCX, Program::kDispatchTableOffset));
+    __ movq(RCX, Address(RCX, Array::kSize - HeapObject::kTag));
+    __ jmp(&validated);
+  }
 }
 
-void InterpreterGeneratorX86::Return(bool is_return_null) {
-  __ int3();
+void InterpreterGeneratorX64::InvokeStatic() {
+  __ movl(RAX, Address(R13, 1));
+  __ movq(RAX, Address(R13, RAX, TIMES_1));
+
+  StoreByteCodePointer();
+  __ call("InterpreterMethodCall");
+  RestoreByteCodePointer();
+
+  __ movl(RDX, Address(R13, 1));
+  __ movq(RDX, Address(R13, RDX, TIMES_1));
+
+  // Read the arity from the function. Note that the arity is smi tagged.
+  __ movq(RDX, Address(RDX, Function::kArityOffset - HeapObject::kTag));
+  __ shrq(RDX, Immediate(Smi::kTagSize));
+
+  Drop(RDX);
+
+  Push(RAX);
+  Dispatch(kInvokeStaticLength);
 }
 
-void InterpreterGeneratorX86::Allocate(bool immutable) {
-  __ int3();
-}
-
-void InterpreterGeneratorX86::AddToStoreBufferSlow(Register object,
-                                                   Register value,
-                                                   Register scratch) {
-  __ int3();
-}
-
-void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
-  __ int3();
-}
-
-void InterpreterGeneratorX86::InvokeMethod(bool test) {
-  __ int3();
-}
-
-void InterpreterGeneratorX86::InvokeStatic() {
-  __ int3();
-}
-
-void InterpreterGeneratorX86::InvokeCompare(const char* fallback,
+void InterpreterGeneratorX64::InvokeCompare(const char* fallback,
                                             Condition condition) {
-  __ int3();
+  LoadLocal(RAX, 0);
+  __ testl(RAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+  LoadLocal(RBX, 1);
+  __ testl(RBX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, fallback);
+
+  Label true_case;
+  __ cmpq(RBX, RAX);
+  __ j(condition, &true_case);
+
+  LoadLiteralFalse(RAX);
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(5);
+
+  __ Bind(&true_case);
+  LoadLiteralTrue(RAX);
+  StoreLocal(RAX, 1);
+  Drop(1);
+  Dispatch(5);
 }
 
-void InterpreterGeneratorX86::InvokeDivision(const char* fallback,
+void InterpreterGeneratorX64::InvokeDivision(const char* fallback,
                                              bool quotient) {
-  __ int3();
+  // TODO(ager): Implement.
+  __ jmp(fallback);
 }
 
-void InterpreterGeneratorX86::InvokeNative(bool yield) {
-  // TODO(ager): Get rid of this, used to silence compiler until we actually use
-  // spill_size_.
-  USE(spill_size_);
-  __ int3();
+void InterpreterGeneratorX64::InvokeNative(bool yield) {
+  __ movzbq(RBX, Address(R13, 1));
+  __ movzbq(RCX, Address(R13, 2));
+
+  __ LoadNative(RAX, RCX);
+
+  // Extract address for first argument (note we skip two empty slots).
+  __ leaq(RSI, Address(RSP, RBX, TIMES_WORD_SIZE, 2 * kWordSize));
+  LoadProcess(RDI);
+
+  SwitchToCStack();
+  Label failure;
+  __ call(RAX);
+  SwitchToDartStack();
+  __ movq(RCX, RAX);
+  __ andq(RCX, Immediate(Failure::kTagMask));
+  __ cmpq(RCX, Immediate(Failure::kTag));
+  __ j(EQUAL, &failure);
+
+  // Result is now in eax.
+  if (yield) {
+    // If the result of calling the native is null, we don't yield.
+    LoadLiteralNull(RCX);
+    Label dont_yield;
+    __ cmpq(RAX, RCX);
+    __ j(EQUAL, &dont_yield);
+
+    // Yield to the target port.
+    __ movq(RCX, Address(R8, spill_size_ + 2 * kWordSize));
+    __ movq(Address(RCX, 0), RAX);
+    __ movq(RAX, Immediate(Interpreter::kTargetYield));
+
+    SaveState(&dont_yield);
+    __ jmp(&done_state_saved_);
+
+    __ Bind(&dont_yield);
+
+    LoadLiteralNull(RAX);
+  }
+
+  __ movq(RSP, RBP);
+  __ popq(RBP);
+
+  __ ret();
+
+  // Failure: Check if it's a request to garbage collect. If not,
+  // just continue running the failure block by dispatching to the
+  // next bytecode.
+  __ Bind(&failure);
+  __ movq(RCX, RAX);
+  __ andq(RCX, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpq(RCX, Immediate(Failure::kTag));
+  __ j(EQUAL, &gc_);
+
+  // TODO(kasperl): This should be reworked. We shouldn't be calling
+  // through the runtime system for something as simple as converting
+  // a failure object to the corresponding heap object.
+  LoadProcess(RDI);
+  SwitchToCStack();
+  __ movq(RSI, RAX);
+  __ call("HandleObjectFromFailure");
+  SwitchToDartStack();
+
+  Push(RAX);
+  Dispatch(kInvokeNativeLength);
 }
 
-void InterpreterGeneratorX86::CheckStackOverflow(int size) {
-  __ int3();
+void InterpreterGeneratorX64::CheckStackOverflow(int size) {
+  LoadProcess(RBX);
+  __ movq(RBX, Address(RBX, Process::kStackLimitOffset));
+  __ cmpq(RSP, RBX);
+  if (size == 0) {
+    __ j(BELOW_EQUAL, &check_stack_overflow_0_);
+  } else {
+    Label done;
+    __ j(BELOW, &done);
+    __ movq(RAX, Immediate(size));
+    __ jmp(&check_stack_overflow_);
+    __ Bind(&done);
+  }
 }
 
-void InterpreterGeneratorX86::Dispatch(int size) {
-  __ int3();
+void InterpreterGeneratorX64::Dispatch(int size) {
+  __ movzbq(RBX, Address(R13, size));
+  if (size > 0) {
+    __ addq(R13, Immediate(size));
+  }
+  __ jmp("LocalInterpret_DispatchTable", RBX, TIMES_WORD_SIZE, RAX);
 }
 
-void InterpreterGeneratorX86::SaveState(Label* resume) {
-  __ int3();
+void InterpreterGeneratorX64::SaveState(Label* resume) {
+  // Save the bytecode pointer at the bcp slot.
+  StoreByteCodePointer();
+
+  // Push resume address.
+  __ movq(RCX, resume);
+  Push(RCX);
+
+  // Push frame pointer.
+  Push(RBP);
+
+  // Update top in the stack. Ugh. Complicated.
+  // First load the current coroutine's stack.
+  LoadProcess(RCX);
+  __ movq(RCX, Address(RCX, Process::kCoroutineOffset));
+  __ movq(RCX, Address(RCX, Coroutine::kStackOffset - HeapObject::kTag));
+  // Calculate the index of the stack.
+  __ subq(RSP, RCX);
+  __ subq(RSP, Immediate(Stack::kSize - HeapObject::kTag));
+  // We now have the distance to the top pointer in bytes. We need to
+  // store the index, measured in words, as a Smi-tagged integer.  To do so,
+  // shift by two.
+  __ shrq(RSP, Immediate(2));
+  // And finally store it in the stack object.
+  __ movq(Address(RCX, Stack::kTopOffset - HeapObject::kTag), RSP);
+
+  // Restore the C stack in RSP.
+  __ movq(RSP, R8);
 }
 
-void InterpreterGeneratorX86::RestoreState() {
-  __ int3();
+void InterpreterGeneratorX64::RestoreState() {
+  // Store the C stack in R8.
+  __ movq(R8, RSP);
+
+  // First load the current coroutine's stack.
+  // Load the Dart stack pointer into RSP.
+  LoadProcess(RSP);
+  __ movq(RSP, Address(RSP, Process::kCoroutineOffset));
+  __ movq(RSP, Address(RSP, Coroutine::kStackOffset - HeapObject::kTag));
+  // Load the top index.
+  __ movq(RCX, Address(RSP, Stack::kTopOffset - HeapObject::kTag));
+  // Load the address of the top position. Note top is a Smi-tagged count of
+  // pointers, so we only need to multiply with 4 to get the offset in bytes.
+  __ leaq(RSP, Address(RSP, RCX, TIMES_4, Stack::kSize - HeapObject::kTag));
+
+  // Read frame pointer.
+  __ popq(RBP);
+
+  // Set the bcp from the stack.
+  RestoreByteCodePointer();
+
+  __ ret();
 }
 
 }  // namespace fletch

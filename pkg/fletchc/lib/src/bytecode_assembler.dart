@@ -358,8 +358,8 @@ class BytecodeAssembler {
     internalAddStackPointerDifference(new InvokeTestUnfold(selector), -arity);
   }
 
-  void invokeSelector() {
-    internalAddStackPointerDifference(const InvokeSelector(0), 0);
+  void invokeSelector(int slot) {
+    internalAddStackPointerDifference(new InvokeSelector(slot), 0);
   }
 
   void pop() {
@@ -404,14 +404,12 @@ class BytecodeAssembler {
   void ret() {
     hasBindAfterTerminator = false;
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
-    assert(functionArity <= 255);
-    internalAdd(new Return(functionArity));
+    internalAdd(const Return());
   }
 
   void returnNull() {
     hasBindAfterTerminator = false;
-    assert(functionArity <= 255);
-    internalAdd(new ReturnNull(functionArity));
+    internalAdd(const ReturnNull());
   }
 
   void identical() {

@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM)
-
 #include "src/shared/assert.h"
 
 #include "src/vm/native_interpreter.h"
@@ -11,7 +9,7 @@
 namespace fletch {
 
 extern "C"
-uword InterpretFast_DispatchTable[];
+uword Interpret_DispatchTable[];
 
 extern "C"
 void BC_InvokeStatic();
@@ -26,19 +24,17 @@ void SetBytecodeBreak(Opcode opcode) {
   ASSERT((reinterpret_cast<uword>(Debug_BC_InvokeStatic) & 0x4) == 4);
   ASSERT((reinterpret_cast<uword>(BC_InvokeStatic) & 0x4) == 0);
 
-  uword value = InterpretFast_DispatchTable[opcode];
+  uword value = Interpret_DispatchTable[opcode];
   if ((value & 4) == 0) {
-    InterpretFast_DispatchTable[opcode] = value - kDebugDiff;
+    Interpret_DispatchTable[opcode] = value - kDebugDiff;
   }
 }
 
 void ClearBytecodeBreak(Opcode opcode) {
-  uword value = InterpretFast_DispatchTable[opcode];
+  uword value = Interpret_DispatchTable[opcode];
   if ((value & 4) != 0) {
-    InterpretFast_DispatchTable[opcode] = value + kDebugDiff;
+    Interpret_DispatchTable[opcode] = value + kDebugDiff;
   }
 }
 
 }  // namespace fletch
-
-#endif  // defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM)
