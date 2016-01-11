@@ -30,9 +30,9 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'package:compiler/src/library_loader.dart' show
     ReuseLibrariesFunction;
 
-import 'library_updater.dart' show
+import 'reuser.dart' show
     IncrementalCompilerContext,
-    LibraryUpdater,
+    Reuser,
     Logger;
 
 import '../fletch_compiler.dart' show
@@ -240,17 +240,17 @@ class IncrementalCompiler {
       Uri updatedFile = updatedFiles[uri];
       return inputProvider.readFromUri(updatedFile == null ? uri : updatedFile);
     }
-    LibraryUpdater updater = new LibraryUpdater(
+    Reuser reuser = new Reuser(
         _compiler,
         mappingInputProvider,
         logTime,
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(updater.reuseLibraries, base: base).then(
+    return _reuseCompiler(reuser.reuseLibraries, base: base).then(
         (CompilerImpl compiler) async {
           _compiler = compiler;
-          FletchDelta delta = await updater.computeUpdateFletch(currentSystem);
+          FletchDelta delta = await reuser.computeUpdateFletch(currentSystem);
           _checkCompilationFailed();
           return delta;
         });

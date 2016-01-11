@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library fletchc_incremental.library_updater;
+library fletchc_incremental.reuser;
 
 import 'dart:async' show
     Future;
@@ -127,7 +127,7 @@ import '../src/fletch_function_builder.dart' show
 
 typedef void Logger(message);
 
-typedef bool Reuser(
+typedef bool ReuseFunction(
     Token diffToken,
     PartialElement before,
     PartialElement after);
@@ -219,7 +219,7 @@ class IncrementalCompilerContext extends _IncrementalCompilerContext
   }
 }
 
-class LibraryUpdater extends FletchFeatures {
+class Reuser extends FletchFeatures {
   final Compiler compiler;
 
   final api.CompilerInputProvider inputProvider;
@@ -250,7 +250,7 @@ class LibraryUpdater extends FletchFeatures {
 
   bool _hasCapturedCompilerState = false;
 
-  LibraryUpdater(
+  Reuser(
       this.compiler,
       this.inputProvider,
       this.logTime,
@@ -510,7 +510,7 @@ class LibraryUpdater extends FletchFeatures {
       PartialElement before = difference.before;
       PartialElement after = difference.after;
 
-      Reuser reuser;
+      ReuseFunction reuser;
 
       if (before is PartialFunctionElement && after is PartialFunctionElement) {
         reuser = canReuseFunction;
@@ -1036,7 +1036,7 @@ abstract class Update {
 }
 
 /// Represents an update of a function element.
-class FunctionUpdate extends Update with ReuseFunction {
+class FunctionUpdate extends Update with ReuseFunctionElement {
   final PartialFunctionElement before;
 
   final PartialFunctionElement after;
@@ -1058,7 +1058,7 @@ class FunctionUpdate extends Update with ReuseFunction {
   }
 }
 
-abstract class ReuseFunction {
+abstract class ReuseFunctionElement {
   Compiler get compiler;
 
   PartialFunctionElement get before;
@@ -1105,7 +1105,7 @@ abstract class RemovalUpdate extends Update {
 }
 
 class RemovedFunctionUpdate extends RemovalUpdate
-    with FletchFeatures, ReuseFunction {
+    with FletchFeatures, ReuseFunctionElement {
   final PartialFunctionElement element;
 
   bool wasStateCaptured = false;
