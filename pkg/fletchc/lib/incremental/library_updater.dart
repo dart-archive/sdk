@@ -282,33 +282,46 @@ class LibraryUpdater extends FletchFeatures {
 
   bool get failed => _failedUpdates.isNotEmpty;
 
-  /// Used as tear-off passed to [LibraryLoaderTask.resetAsync].
-  Future<bool> reuseLibrary(LibraryElement library) {
+  /// Used as tear-off passed to [LibraryLoaderTask.resetLibraries].
+  Future<Iterable<LibraryElement>> reuseLibraries(
+      Iterable<LibraryElement> libraries) async {
+    List<LibraryElement> reusedLibraries = <LibraryElement>[];
+    for (LibraryElement library in libraries) {
+      if (await _reuseLibrary(library)) {
+        reusedLibraries.add(library);
+      }
+    }
+    return reusedLibraries;
+  }
+
+  Future<bool> _reuseLibrary(LibraryElement library) async {
     _ensureCompilerStateCaptured();
     assert(compiler != null);
     if (library.isPlatformLibrary) {
       logTime('Reusing $library (assumed read-only).');
-      return new Future.value(true);
+      return true;
     }
-    return _haveTagsChanged(library).then((bool haveTagsChanged) {
-      if (haveTagsChanged) {
+    try {
+      if (await _haveTagsChanged(library)) {
         cannotReuse(
             library,
             "Changes to library, import, export, or part declarations not"
             " supported.");
+        // We return true to here to avoid that the library loader tries to
+        // load a different version of this library.
         return true;
       }
 
       bool isChanged = false;
-      List<Future<Script>> futureScripts = <Future<Script>>[];
+      List<Script> scripts = <Script>[];
 
       for (CompilationUnitElementX unit in library.compilationUnits) {
         Uri uri = unit.script.resourceUri;
         if (_context._uriHasUpdate(uri)) {
           isChanged = true;
-          futureScripts.add(_updatedScript(unit.script, library));
+          scripts.add(await _updatedScript(unit.script, library));
         } else {
-          futureScripts.add(new Future.value(unit.script));
+          scripts.add(unit.script);
         }
       }
 
@@ -317,9 +330,10 @@ class LibraryUpdater extends FletchFeatures {
         return true;
       }
 
-      return Future.wait(futureScripts).then(
-          (List<Script> scripts) => canReuseLibrary(library, scripts));
-    }).whenComplete(() => _cleanUp(library));
+      return canReuseLibrary(library, scripts);
+    } finally {
+      _cleanUp(library);
+    }
   }
 
   void _cleanUp(LibraryElementX library) {

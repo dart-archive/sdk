@@ -27,6 +27,9 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     LibraryElement;
 
+import 'package:compiler/src/library_loader.dart' show
+    ReuseLibrariesFunction;
+
 import 'library_updater.dart' show
     IncrementalCompilerContext,
     LibraryUpdater,
@@ -183,7 +186,7 @@ class IncrementalCompiler {
   }
 
   Future<CompilerImpl> _reuseCompiler(
-      Future<bool> reuseLibrary(LibraryElement library),
+      ReuseLibrariesFunction reuseLibraries,
       {bool analyzeOnly: false,
        Uri base}) {
     List<String> options = this.options == null
@@ -203,7 +206,7 @@ class IncrementalCompiler {
         options: options,
         outputProvider: outputProvider,
         environment: environment,
-        reuseLibrary: reuseLibrary,
+        reuseLibraries: reuseLibraries,
         platform: platform,
         base: base);
   }
@@ -244,13 +247,13 @@ class IncrementalCompiler {
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(updater.reuseLibrary, base: base).then(
+    return _reuseCompiler(updater.reuseLibraries, base: base).then(
         (CompilerImpl compiler) async {
-      _compiler = compiler;
-      FletchDelta delta = await updater.computeUpdateFletch(currentSystem);
-      _checkCompilationFailed();
-      return delta;
-    });
+          _compiler = compiler;
+          FletchDelta delta = await updater.computeUpdateFletch(currentSystem);
+          _checkCompilationFailed();
+          return delta;
+        });
   }
 
   FletchDelta computeInitialDelta() {

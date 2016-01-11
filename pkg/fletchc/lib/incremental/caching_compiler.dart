@@ -18,7 +18,7 @@ Future<CompilerImpl> reuseCompiler(
      Uri fletchVm,
      bool packagesAreImmutable: false,
      Map<String, dynamic> environment,
-     Future<bool> reuseLibrary(LibraryElement library),
+     ReuseLibrariesFunction reuseLibraries,
      String platform,
      Uri base}) async {
   UserTag oldTag = new UserTag('_reuseCompiler').makeCurrent();
@@ -93,14 +93,15 @@ Future<CompilerImpl> reuseCompiler(
         ..enqueuer.codegen.hasEnqueuedReflectiveStaticFields = false
         ..compilationFailed = false;
 
-    if (reuseLibrary == null) {
-      reuseLibrary = (LibraryElement library) {
-        return new Future.value(
-            library.isPlatformLibrary ||
-            (packagesAreImmutable && library.isPackageLibrary));
+    if (reuseLibraries == null) {
+      reuseLibraries = (Iterable<LibraryElement> libraries) async {
+        return libraries.where((LibraryElement library) {
+          return library.isPlatformLibrary ||
+              (packagesAreImmutable && library.isPackageLibrary);
+        });
       };
     }
-    return compiler.libraryLoader.resetAsync(reuseLibrary).then((_) {
+    return compiler.libraryLoader.resetLibraries(reuseLibraries).then((_) {
       oldTag.makeCurrent();
       return compiler;
     });
