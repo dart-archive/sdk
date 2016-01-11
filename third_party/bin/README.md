@@ -86,9 +86,9 @@ upload_to_google_storage.py -b dart-dependencies-fletch \
 
 # On Linux - arm
 chmod +x out/ReleaseXARM/dart
+arm-linux-gnueabihf-strip out/ReleaseXARM/dart
 upload_to_google_storage.py -b dart-dependencies-fletch \
    out/ReleaseXARM/dart
-arm-linux-gnueabihf-strip out/ReleaseXARM/dart
 ```
 
 The sha1 files need to be checked into the repository at
