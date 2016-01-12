@@ -58,7 +58,7 @@ void StartFletch(void const * argument) {
 }
 
 // Main entry point from FreeRTOS. Running in the default task.
-extern "C" void FletchEntry(void const * argument) {
+void FletchEntry(void const * argument) {
   BSP_LED_Init(LED1);
 
   Logger::Create();

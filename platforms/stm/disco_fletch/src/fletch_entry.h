@@ -5,14 +5,6 @@
 #ifndef PLATFORMS_STM_DISCO_FLETCH_SRC_FLETCH_ENTRY_H_
 #define PLATFORMS_STM_DISCO_FLETCH_SRC_FLETCH_ENTRY_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void FletchEntry(void const * argument);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // PLATFORMS_STM_DISCO_FLETCH_SRC_FLETCH_ENTRY_H_

@@ -68,16 +68,16 @@ osThreadId defaultTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_DCMI_Init(void);
-static void MX_DMA2D_Init(void);
-static void MX_FMC_Init(void);
-static void MX_I2C1_Init(void);
-static void MX_LTDC_Init(void);
-static void MX_QUADSPI_Init(void);
-static void MX_SDMMC1_SD_Init(void);
-static void MX_SPDIFRX_Init(void);
-static void MX_USART1_UART_Init(void);
+void MX_GPIO_Init(void);
+void MX_DCMI_Init(void);
+void MX_DMA2D_Init(void);
+void MX_FMC_Init(void);
+void MX_I2C1_Init(void);
+void MX_LTDC_Init(void);
+void MX_QUADSPI_Init(void);
+void MX_SDMMC1_SD_Init(void);
+void MX_SPDIFRX_Init(void);
+void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
@@ -89,7 +89,7 @@ void StartDefaultTask(void const * argument);
 
 /* USER CODE END 0 */
 
-int main(void)
+int _not_using_this_main(void)
 {
 
   /* USER CODE BEGIN 1 */
@@ -134,7 +134,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */

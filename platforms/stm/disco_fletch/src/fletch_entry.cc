@@ -48,8 +48,8 @@ void StartFletch(void const * argument) {
   LOG_DEBUG("Fletch program exited\n");
 }
 
-// Main entry point from FreeRTOS. Running in the default task.
-extern "C" __weak void FletchEntry(void const * argument) {
+// Main task entry point from FreeRTOS.
+void FletchEntry(void const * argument) {
   BSP_LED_Init(LED1);
 
   Logger::Create();
@@ -58,9 +58,7 @@ extern "C" __weak void FletchEntry(void const * argument) {
   uart = new Uart();
   uart->Start();
 
-  osThreadDef(START_FLETCH, StartFletch, osPriorityNormal, 0,
-              4 * 1024 /* stack size */);
-  osThreadCreate(osThread(START_FLETCH), NULL);
+  StartFletch(argument);
 
   // No more to do right now.
   for (;;) {

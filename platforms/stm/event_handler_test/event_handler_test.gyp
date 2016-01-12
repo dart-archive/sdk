@@ -104,6 +104,9 @@
         'common_cflags_c': [
           '-Wno-pointer-sign',
         ],
+        'common_cflags_cc': [
+          '-Wno-literal-suffix',
+        ],
       },
       'type': 'static_library',
       'includes': [
@@ -123,6 +126,7 @@
         '<(source_path)/freertos.cc',
         '<(app_source_path)/fletch_entry.cc',
         '<(source_path)/logger.cc',
+        '<(source_path)/main.cc',
 
         '<(source_path)/syscalls.c',
 
@@ -134,8 +138,8 @@
         '<(generated_path)/Inc/mxconstants.h',
         '<(generated_path)/Inc/stm32f7xx_hal_conf.h',
         '<(generated_path)/Inc/stm32f7xx_it.h',
-        '<(generated_path)/Src/main.c',
         '<(generated_path)/Src/ethernetif.c',
+        '<(generated_path)/Src/mx_init.c',  # Derived from generated main.c.
         '<(generated_path)/Src/lwip.c',
         '<(generated_path)/Src/stm32f7xx_hal_msp.c',
         '<(generated_path)/Src/stm32f7xx_it.c',
@@ -161,6 +165,7 @@
             ],
             'OTHER_CPLUSPLUSFLAGS' : [
               '<@(common_cflags)',
+              '<@(common_cflags_cc)',
             ],
           },
         }],
@@ -170,6 +175,9 @@
           ],
           'cflags_c': [
             '<@(common_cflags_c)',
+          ],
+          'cflags_cc': [
+            '<@(common_cflags_cc)',
           ],
         }],
       ],

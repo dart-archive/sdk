@@ -37,6 +37,12 @@ do
   fi
 done
 
+# Modify generated main.c to expose the MX_ initialization functions
+# and not implement main.
+sed -i 's/static void MX_/void MX_/' generated/Src/main.c
+sed -i 's/int main/int _not_using_this_main/' generated/Src/main.c
+mv generated/Src/main.c generated/Src/mx_init.c
+
 SRC="disco_fletch/SW4STM32/disco_fletch Configuration/STM32F746NGHx_FLASH.ld"
 echo "$SRC"
 cp  "$SRC" generated/SW4STM32/configuration/STM32F746NGHx_FLASH.ld
