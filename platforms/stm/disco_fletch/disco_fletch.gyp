@@ -115,6 +115,7 @@
       ],
       'defines': [
         'LWIP_TIMEVAL_PRIVATE=0',
+        'DATA_IN_ExtSDRAM',  # Avoid BSP_LDC_Init initializing SDRAM.
       ],
       'include_dirs': [
         '<(generated_path)/Inc',

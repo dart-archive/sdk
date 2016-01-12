@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include <stm32f7xx_hal.h>
+#include <stm32746g_discovery_sdram.h>
 #include <cmsis_os.h>
 
 extern "C" {
@@ -38,11 +39,12 @@ int main(void) {
   SystemClock_Config();
 
   // Initialize all configured peripherals. These functions are
-  // defined in generated/Src/mx_main.c.
+  // defined in generated/Src/mx_main.c. We are not calling
+  // MX_FMC_Init, as BSP_SDRAM_Init will do all initialization of the
+  // FMC.
   MX_GPIO_Init();
   MX_DCMI_Init();
   MX_DMA2D_Init();
-  MX_FMC_Init();
   MX_I2C1_Init();
   MX_LTDC_Init();
   MX_QUADSPI_Init();
@@ -50,9 +52,12 @@ int main(void) {
   MX_SPDIFRX_Init();
   MX_USART1_UART_Init();
 
-  // init code for LWIP. This function is defined in
+  // Initialization code for LWIP. This function is defined in
   // generated/Src/lwip.c.
   MX_LWIP_Init();
+
+  // Initialize the SDRAM (including FMC).
+  BSP_SDRAM_Init();
 
   osThreadDef(mainTask, FletchEntry, osPriorityNormal, 0, 4 * 1024);
   osThreadId mainTaskHandle = osThreadCreate(osThread(mainTask), NULL);

@@ -92,7 +92,8 @@
 /************************* Miscellaneous Configuration ************************/
 /*!< Uncomment the following line if you need to use external SDRAM mounted
      on DK as data memory  */
-/* #define DATA_IN_ExtSDRAM */
+// Always undefine this as SDRAM is initialized later.
+#undef DATA_IN_ExtSDRAM
 
 /*!< Uncomment the following line if you need to relocate your vector Table in
      Internal SRAM. */
@@ -286,6 +287,7 @@ void SystemCoreClockUpdate(void)
   */
 void SystemInit_ExtMemCtl(void)
 {
+  #error "SystemInit_ExtMemCtl should not be used!"
   register uint32_t tmpreg = 0, timeout = 0xFFFF;
   register __IO uint32_t index;
 
@@ -368,7 +370,7 @@ void SystemInit_ExtMemCtl(void)
   /* Enable the FMC interface clock */
   RCC->AHB3ENR |= 0x00000001;
   
-	/* Configure and enable SDRAM bank1 */
+  /* Configure and enable SDRAM bank1 */
   FMC_Bank5_6->SDCR[0]  = 0x00001954;
   FMC_Bank5_6->SDTR[0]  = 0x01115351;
   
