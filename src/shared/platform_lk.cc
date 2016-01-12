@@ -144,6 +144,10 @@ int Platform::GetLocalTimeZoneOffset() {
   return 0;
 }
 
+// Do nothing for errno handling for now.
+int Platform::GetLastError() { return 0; }
+void Platform::SetLastError(int value) { }
+
 // Constants used for mmap.
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;

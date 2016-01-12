@@ -101,6 +101,9 @@ void ImmediateAbort();
 
 int GetPid();
 
+int GetLastError();
+void SetLastError(int value);
+
 // Platform dependent max Dart stack size.
 // TODO(ager): Make this configurable through the embedding API?
 int MaxStackSizeInWords();

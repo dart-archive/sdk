@@ -135,6 +135,10 @@ int Platform::GetPid() {
   return 0;
 }
 
+// Do nothing for errno handling for now.
+int Platform::GetLastError() { return 0; }
+void Platform::SetLastError(int value) { }
+
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
 VirtualMemory::VirtualMemory(int size) : size_(size) { UNIMPLEMENTED(); }

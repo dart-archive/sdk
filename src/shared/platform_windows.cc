@@ -225,6 +225,9 @@ void Platform::ImmediateAbort() { abort(); }
 
 int Platform::GetPid() { return static_cast<int>(GetCurrentProcessId()); }
 
+int Platform::GetLastError() { return GetLastError(); }
+void Platform::SetLastError(int value) { SetLastError(value); }
+
 VirtualMemory::VirtualMemory(int size) : size_(size) { UNIMPLEMENTED(); }
 
 VirtualMemory::~VirtualMemory() { UNIMPLEMENTED(); }

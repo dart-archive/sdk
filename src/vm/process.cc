@@ -4,7 +4,6 @@
 
 #include "src/vm/process.h"
 
-#include <errno.h>
 #include <stdlib.h>
 
 #include "src/shared/assert.h"
@@ -788,9 +787,9 @@ bool Process::TrueThenFalse() {
 }
 #endif
 
-void Process::StoreErrno() { errno_cache_ = errno; }
+void Process::StoreErrno() { errno_cache_ = Platform::GetLastError(); }
 
-void Process::RestoreErrno() { errno = errno_cache_; }
+void Process::RestoreErrno() { Platform::SetLastError(errno_cache_); }
 
 void Process::SendSignal(Signal* signal) {
   while (signal_.load() == NULL) {
