@@ -35,13 +35,6 @@
       ],
     },
     {
-      'target_name': 'mbedtls_lib',
-      'type': 'none',
-      'dependencies': [
-        'src/pkg/mbedtls/mbedtls.gyp:mbedtls',
-      ],
-    },
-    {
       'target_name': 'natives_json',
       'type': 'none',
       'toolsets': ['host'],
