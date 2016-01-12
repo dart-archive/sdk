@@ -277,6 +277,18 @@ hooks = [
     ],
   },
   {
+    'name': 'mbedtls',
+    'pattern': '.',
+    'action': [ 'download_from_google_storage',
+                '-q',
+                '--no_resume',
+                '--no_auth',
+                '--bucket', 'dart-dependencies-fletch',
+                '-u',
+                '-s', 'fletch/third_party/mbedtls/mbedtls.tar.gz.sha1',
+    ],
+  },
+  {
     'name': 'lazy_update_clang',
     'pattern': '.',
     'action': [
