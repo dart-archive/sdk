@@ -5,6 +5,7 @@
 #if defined(FLETCH_TARGET_OS_CMSIS)
 
 #include "src/vm/event_handler.h"
+#include "src/vm/object.h"
 
 namespace fletch {
 
