@@ -10,8 +10,6 @@ import 'dart:fletch.ffi';
 
 part 'native_process.dart';
 part 'event_handler.dart';
-part 'event_handler_linux.dart';
-part 'event_handler_macos.dart';
 
 final ForeignFunction _nanosleep = ForeignLibrary.main.lookup("nanosleep");
 

@@ -12,9 +12,11 @@ void EventHandler::Create() { UNIMPLEMENTED(); }
 
 void EventHandler::Interrupt() { UNIMPLEMENTED(); }
 
-Object* EventHandler::Add(Process* process, Object* id, Port* port) {
-  UNIMPLEMENTED();
-  return NULL;
+Object* EventHandler::Add(Process* process, Object* id, Port* port,
+                          int flags) {
+  EnsureInitialized();
+
+  return Failure::illegal_state();
 }
 
 void EventHandler::Run() { UNIMPLEMENTED(); }

@@ -22,16 +22,13 @@ class _SocketBase {
   Channel _channel;
   Port _port;
 
-  void _addSocketToEventHandler() {
-    if (os.eventHandler.addToEventHandler(_fd) == -1) {
-      _error("Failed to assign socket to event handler");
-    }
+  _SocketBase() {
     _channel = new Channel();
     _port = new Port(_channel);
   }
 
   int _waitFor(int mask) {
-    os.eventHandler.setPortForNextEvent(_fd, _port, mask);
+    os.eventHandler.registerPortForNextEvent(_fd, _port, mask);
     return _channel.receive();
   }
 
@@ -82,7 +79,6 @@ class Socket extends _SocketBase {
         sys.errno() != errnos.EINPROGRESS) {
       _error("Failed to connect to $host:$port");
     }
-    _addSocketToEventHandler();
     int events = _waitFor(os.WRITE_EVENT);
     if (events != os.WRITE_EVENT) {
       _error("Failed to connect to $host:$port");
@@ -92,7 +88,6 @@ class Socket extends _SocketBase {
   Socket._fromFd(fd) {
     // Be sure it's not in the event handler.
     _fd = fd;
-    _addSocketToEventHandler();
   }
 
   /**
@@ -196,7 +191,6 @@ class ServerSocket extends _SocketBase {
       _error("Failed to bind to $host:$port");
     }
     if (sys.listen(_fd) == -1) _error("Failed to listen on $host:$port");
-    _addSocketToEventHandler();
   }
 
   static Struct32 FOREIGN_ONE = new Struct32.finalized(1)..setField(0, 1);
@@ -272,7 +266,6 @@ class DatagramSocket extends _SocketBase {
     if (sys.bind(_fd, address, port) == -1) {
       _error("Failed to bind to $host:$port");
     }
-    _addSocketToEventHandler();
   }
 
   int get port => sys.port(_fd);

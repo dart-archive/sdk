@@ -13,6 +13,8 @@
 
 #include "src/shared/utils.h"
 #include "src/vm/thread.h"
+#include "src/vm/object.h"
+#include "src/vm/process.h"
 
 // Some versions of android sys/epoll does not define
 // EPOLLRDHUP. However, it works as intended, so we just
@@ -97,6 +99,39 @@ void EventHandler::Run() {
     Port* port = reinterpret_cast<Port*>(event.data.ptr);
     Send(port, mask, true);
   }
+}
+
+Object* EventHandler::Add(Process* process, Object* id, Port* port,
+                          int flags) {
+  EnsureInitialized();
+
+  int fd;
+  if (id->IsSmi()) {
+    fd = Smi::cast(id)->value();
+  } else if (id->IsLargeInteger()) {
+    fd = LargeInteger::cast(id)->value();
+  } else {
+    return Failure::wrong_argument_type();
+  }
+
+  struct epoll_event event;
+  event.events = EPOLLRDHUP | EPOLLHUP | EPOLLONESHOT;
+  if ((flags & ~(READ_EVENT | WRITE_EVENT)) != 0) {
+    return Failure::illegal_state();
+  }
+  if ((flags & READ_EVENT) != 0) event.events |= EPOLLIN;
+  if ((flags & WRITE_EVENT) != 0) event.events |= EPOLLOUT;
+  event.data.ptr = port;
+  int result = epoll_ctl(id_, EPOLL_CTL_MOD, fd, &event);
+  if (result == -1 && errno == ENOENT) {
+    // This is the first time we register the fd, so use ADD.
+    result = epoll_ctl(id_, EPOLL_CTL_ADD, fd, &event);
+  }
+  if (result == -1) return Failure::index_out_of_bounds();
+  // Only if the call to epoll_ctl succeeded do we actually have a reference to
+  // the port.
+  port->IncrementRef();
+  return process->program()->null_object();
 }
 
 }  // namespace fletch

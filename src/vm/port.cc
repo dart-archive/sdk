@@ -185,13 +185,4 @@ BEGIN_NATIVE(PortSendExit) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(SystemIncrementPortRef) {
-  Port* port = Port::FromDartObject(arguments[0]);
-  Object* result = process->ToInteger(reinterpret_cast<uword>(port));
-  if (result->IsRetryAfterGCFailure()) return result;
-  port->IncrementRef();
-  return result;
-}
-END_NATIVE()
-
 }  // namespace fletch

@@ -28,9 +28,7 @@ class EventHandler {
   EventHandler();
   ~EventHandler();
 
-  int GetEventHandler();
-
-  Object* Add(Process* process, Object* id, Port* port);
+  Object* Add(Process* process, Object* id, Port* port, int flags);
 
   void ReceiverForPortsDied(Port* port_list);
 
@@ -41,7 +39,7 @@ class EventHandler {
  private:
   Monitor* monitor_;
   void* data_;
-  int id_;
+  intptr_t id_;
   bool running_;
   ThreadIdentifier thread_;
 
@@ -49,6 +47,8 @@ class EventHandler {
   int64 next_timeout_;
 
   static void* RunEventHandler(void* peer);
+  void EnsureInitialized();
+
 
   void Create();
 

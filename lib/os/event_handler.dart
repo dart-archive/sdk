@@ -9,30 +9,34 @@ const int WRITE_EVENT       = 1 << 1;
 const int CLOSE_EVENT       = 1 << 2;
 const int ERROR_EVENT       = 1 << 3;
 
-abstract class EventHandler {
-  int addToEventHandler(int fd);
-  int removeFromEventHandler(int fd);
-  int setPortForNextEvent(int fd, Port port, int mask);
-
-  static int eventHandler = _getEventHandler();
-  @fletch.native static int _getEventHandler() {
-    throw new UnsupportedError('_getEventHandler');
+class EventHandler {
+  EventHandler._internal() {
+    // The actual initialization is done in the VM.
   }
-  @fletch.native static int _incrementPortRef(Port port) {
-    throw new ArgumentError();
+
+  void registerPortForNextEvent(Object id, Port port, int mask) {
+    if (port is! Port) throw new ArgumentError(port);
+    if (mask is! int) throw new ArgumentError(mask);
+    _eventHandlerAdd(id, port, mask);
+  }
+
+  @fletch.native static void _eventHandlerAdd(Object id, Port port,
+      int flags) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        // We check the other arguments in [registerPortForNextEvent], so it
+        // must be the id that is wrong.
+        throw new ArgumentError(id);
+      case fletch.indexOutOfBounds:
+        // We get index out of bounds when we could not register the port.
+        throw new StateError("The port could not be registered.");
+      case fletch.illegalState:
+        // We get an illegal state when the flags were not supported.
+        throw new StateError("Operation not supported.");
+      default:
+        throw fletch.nativeError;
+    }
   }
 }
 
-final EventHandler eventHandler = getEventHandler();
-
-EventHandler getEventHandler() {
-  switch (Foreign.platform) {
-    case Foreign.ANDROID:
-    case Foreign.LINUX:
-      return new LinuxEventHandler();
-    case Foreign.MACOS:
-      return new MacOSEventHandler();
-    default:
-      throw "Event handler not supported for ${Foreign.platform}";
-  }
-}
+final EventHandler eventHandler = new EventHandler._internal();

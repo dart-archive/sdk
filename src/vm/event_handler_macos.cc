@@ -12,6 +12,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "src/vm/object.h"
+#include "src/vm/process.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -106,6 +108,40 @@ void EventHandler::Run() {
     Port* port = reinterpret_cast<Port*>(event.udata);
     Send(port, mask, true);
   }
+}
+
+Object* EventHandler::Add(Process* process, Object* id, Port* port,
+                          int flags) {
+  EnsureInitialized();
+
+  int fd;
+  if (id->IsSmi()) {
+    fd = Smi::cast(id)->value();
+  } else if (id->IsLargeInteger()) {
+    fd = LargeInteger::cast(id)->value();
+  } else {
+    return Failure::wrong_argument_type();
+  }
+
+  struct kevent event;
+  event.ident = fd;
+  event.flags = EV_ADD | EV_ONESHOT;
+  event.udata = port;
+  if (flags == READ_EVENT) {
+    event.filter = EVFILT_READ;
+  } else if (flags == WRITE_EVENT) {
+    event.filter = EVFILT_WRITE;
+  } else {
+    Print::Error("Listening for both READ_EVENT and WRITE_EVENT is currently"
+                 " unsupported on mac os.");
+    return Failure::illegal_state();
+  }
+  int result = kevent(id_, &event, 1, NULL, 0, NULL);
+  if (result == -1) return Failure::index_out_of_bounds();
+  // Only if the call to kevent succeeded do we actually have a reference to the
+  // port.
+  port->IncrementRef();
+  return process->program()->null_object();
 }
 
 }  // namespace fletch

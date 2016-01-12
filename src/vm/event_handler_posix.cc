@@ -16,13 +16,6 @@ void EventHandler::Interrupt() {
   TEMP_FAILURE_RETRY(write(fds[1], &b, 1));
 }
 
-Object* EventHandler::Add(Process* process, Object* id, Port* port) {
-  // TODO(ajohnsen): Use this for enqueuing fd's in the event handler.
-  // TODO(ajohnsen): Take an option mask for options (one-shot, etc)?
-  UNIMPLEMENTED();
-  return NULL;
-}
-
 }  // namespace fletch
 
 #endif  // FLETCH_TARGET_OS_POSIX

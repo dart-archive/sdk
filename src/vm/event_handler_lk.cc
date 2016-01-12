@@ -92,15 +92,21 @@ void EventHandler::Interrupt() {
   set->Interrupt();
 }
 
-Object* EventHandler::Add(Process* process, Object* id, Port* port) {
-  GetEventHandler();
+Object* EventHandler::Add(Process* process, Object* id, Port* port,
+                          int flags) {
+  EnsureInitialized();
 
   if (!id->IsOneByteString()) return Failure::wrong_argument_type();
 
   char* str = OneByteString::cast(id)->ToCString();
 
+  if (flags != READ_EVENT) {
+    Print::Error("Only READ_EVENT is current supported on LK");
+    return Failure::illegal_state();
+  }
   port_t read_port;
   int status;
+  // TODO(ajohnsen): Implement one-shot semantics.
   if ((status = port_open(str, port, &read_port)) != 0) {
     free(str);
     return Failure::index_out_of_bounds();

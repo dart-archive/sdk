@@ -61,22 +61,20 @@ void* EventHandler::RunEventHandler(void* peer) {
   return NULL;
 }
 
-int EventHandler::GetEventHandler() {
+void EventHandler::EnsureInitialized() {
   ScopedMonitorLock locker(monitor_);
 
   if (data_ == NULL) {
     Create();
     thread_ = Thread::Run(RunEventHandler, reinterpret_cast<void*>(this));
   }
-
-  return id_;
 }
 
 void EventHandler::ScheduleTimeout(int64 timeout, Port* port) {
   ASSERT(timeout != INT64_MAX);
 
   // Be sure it's running.
-  GetEventHandler();
+  EnsureInitialized();
 
   ScopedMonitorLock scoped_lock(monitor_);
 

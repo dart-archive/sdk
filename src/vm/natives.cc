@@ -1452,9 +1452,17 @@ BEGIN_NATIVE(DateTimeLocalTimeZoneOffset) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(SystemGetEventHandler) {
-  int fd = process->program()->event_handler()->GetEventHandler();
-  return process->ToInteger(fd);
+BEGIN_NATIVE(SystemEventHandlerAdd) {
+  Object* id = arguments[0];
+  Object* port_arg = arguments[1];
+  if (!port_arg->IsPort()) {
+    return Failure::wrong_argument_type();
+  }
+  Port* port = Port::FromDartObject(port_arg);
+  Object* flags_arg = arguments[2];
+  if (!flags_arg->IsSmi()) return Failure::wrong_argument_type();
+  int flags = Smi::cast(flags_arg)->value();
+  return process->program()->event_handler()->Add(process, id, port, flags);
 }
 END_NATIVE()
 
@@ -1500,13 +1508,6 @@ BEGIN_NATIVE(TimerScheduleTimeout) {
   Port* port = Port::FromDartObject(arguments[1]);
   process->program()->event_handler()->ScheduleTimeout(timeout, port);
   return process->program()->null_object();
-}
-END_NATIVE()
-
-BEGIN_NATIVE(EventHandlerAdd) {
-  Object* id = arguments[0];
-  Port* port = Port::FromDartObject(arguments[1]);
-  return process->program()->event_handler()->Add(process, id, port);
 }
 END_NATIVE()
 
