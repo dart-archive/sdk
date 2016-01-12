@@ -1511,4 +1511,13 @@ BEGIN_NATIVE(TimerScheduleTimeout) {
 }
 END_NATIVE()
 
+BEGIN_NATIVE(EventHandlerSleep) {
+  int64 timeout =
+      AsForeignInt64(arguments[0]) + Platform::GetMicroseconds() / 1000;
+  Port* port = Port::FromDartObject(arguments[1]);
+  process->program()->event_handler()->ScheduleTimeout(timeout, port);
+  return process->program()->null_object();
+}
+END_NATIVE()
+
 }  // namespace fletch

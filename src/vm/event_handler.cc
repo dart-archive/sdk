@@ -70,6 +70,8 @@ void EventHandler::EnsureInitialized() {
   }
 }
 
+// `timeout` is the absolute millisecond that the timeout should fire in terms
+// of `Platform::GetMicroseconds / 1000`.
 void EventHandler::ScheduleTimeout(int64 timeout, Port* port) {
   ASSERT(timeout != INT64_MAX);
 

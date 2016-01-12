@@ -544,3 +544,16 @@ class _ChannelEntry {
 bool isImmutable(Object object) => _isImmutable(object);
 
 @fletch.native external bool _isImmutable(String string);
+
+/// Returns a channel that will receive a message in [milliseconds]
+/// milliseconds.
+// TODO(sigurdm): Move this function?
+Channel sleep(int milliseconds) {
+  if (milliseconds is! int) throw new ArgumentError(milliseconds);
+  Channel channel = new Channel();
+  Port port = new Port(channel);
+  _sleep(milliseconds, port);
+  return channel;
+}
+
+@fletch.native external void _sleep(int milliseconds, Port port);

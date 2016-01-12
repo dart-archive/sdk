@@ -18,9 +18,31 @@
 
 namespace fletch {
 
+osMailQId fletchMailQ;
+
+osMailQId GetFletchMailQ() {
+  return fletchMailQ;
+}
+
+// Sends a message on the fletch osMailQ used by the event handler.
+int SendMessageCmsis(uint32_t port_id, int64_t message) {
+  CmsisMessage *cmsisMessage =
+      reinterpret_cast<CmsisMessage*>(osMailAlloc(fletchMailQ, 0));
+  cmsisMessage->port_id = port_id;
+  cmsisMessage->message = message;
+  return osMailPut(GetFletchMailQ(), reinterpret_cast<void*>(cmsisMessage));
+}
+
 static uint64 time_launch;
 
-void Platform::Setup() { time_launch = GetMicroseconds(); }
+// The size of the queue used by the event handler.
+const uint32_t kMailQSize = 50;
+
+void Platform::Setup() {
+  time_launch = GetMicroseconds();
+  osMailQDef(fletch_queue, kMailQSize, CmsisMessage);
+  fletchMailQ = osMailCreate(osMailQ(fletch_queue), NULL);
+}
 
 void Platform::TearDown() { }
 

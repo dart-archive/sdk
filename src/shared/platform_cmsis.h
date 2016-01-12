@@ -79,6 +79,15 @@ namespace fletch {
 static const int kMutexSize = sizeof(int32_t) * 3;
 static const int kSemaphoreSize = sizeof(int32_t) * 2;
 
+osMailQId GetFletchMailQ();
+
+struct CmsisMessage {
+  uint32_t port_id;
+  int64 message;
+};
+
+int SendMessageCmsis(uint32_t port_id, int64_t message);
+
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
 uint64 GetMicroseconds();

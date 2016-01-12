@@ -4,7 +4,8 @@
 
 // Support file for GNU libc. Most of this is noops or always
 // returning an error. The read and write functions can be hooked into
-// through weak functions.
+// through weak functions. `gettimeofday` is implemented in terms of cmsis_os
+// osKernelSysTick.
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -16,6 +17,8 @@
 #include <sys/times.h>
 #include <errno.h>
 #include <sys/wait.h>
+
+#include <cmsis_os.h>
 
 #define MAX_STACK_SIZE 0x2000
 
@@ -51,11 +54,14 @@ void* _sbrk(int incr) {
 }
 
 int _gettimeofday (struct timeval * tp, struct timezone * tzp) {
+  uint64_t microseconds =
+      ((uint64_t)osKernelSysTick()) * osKernelSysTickFrequency;
+  tp->tv_sec = microseconds / 1000000;
+  tp->tv_usec = microseconds % 1000000;
   if (tzp) {
     tzp->tz_minuteswest = 0;
     tzp->tz_dsttime = 0;
   }
-
   return 0;
 }
 

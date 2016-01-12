@@ -7,7 +7,7 @@ library fletch_agent.agent;
 import 'dart:convert' show UTF8;
 import 'dart:fletch';
 import 'dart:fletch.ffi';
-import 'dart:fletch.os';
+import 'dart:fletch.os' as os;
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -239,7 +239,7 @@ class CommandHandler {
     try {
       List<String> args = ['--log-dir=${_context.vmLogDir}',
           '--port-file=${portFile.path}', '--host=0.0.0.0'];
-      vmPid = NativeProcess.startDetached(_context.vmBinPath, args);
+      vmPid = os.NativeProcess.startDetached(_context.vmBinPath, args);
       // Find out what port the vm is listening on.
       _context.logger.info('Reading port from ${portFile.path} for vm $vmPid');
       int port = _retrieveVmPort(portFile.path);
@@ -281,7 +281,7 @@ class CommandHandler {
       // Check if we read the same port value twice in a row.
       if (previousPort != -1 && previousPort == port) return port;
       previousPort = port;
-      sleep(10);
+      os.sleep(10);
     }
     throw 'Failed to read port from $portPath';
   }
@@ -400,7 +400,7 @@ class CommandHandler {
       }
       _context.logger.info('Package file written successfully.');
       if (_context.applyUpgrade) {
-        int pid = NativeProcess.startDetached('/usr/bin/dpkg',
+        int pid = os.NativeProcess.startDetached('/usr/bin/dpkg',
             [// Force dpkg to overwrite configuration files installed by
              // the agent.
              '--force-confnew',
