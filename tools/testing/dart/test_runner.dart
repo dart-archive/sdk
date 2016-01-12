@@ -833,7 +833,11 @@ class TestCase extends UniqueObject {
     final checked = configuration['checked'] ? '-checked' : '';
     final clang = configuration['clang'] ? '_clang' : '';
     final asan = configuration['asan'] ? '_asan' : '';
-    return "$compiler-$runtime$checked ${mode}_$arch$clang$asan";
+    final one_process_heap =
+        configuration['one-process-heap'] ? '_one-process-heap' : '';
+    final mark_sweep = configuration['mark-sweep'] ? '_mark-sweep' : '';
+    return "$compiler-$runtime$checked "
+           "${mode}_$arch$clang$asan$one_process_heap$mark_sweep";
   }
 
   List<String> get batchTestArguments {

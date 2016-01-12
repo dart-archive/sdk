@@ -136,6 +136,8 @@ void testConfigurations(List<Map> configurations) {
       if (conf['checked']) settings.add('checked');
       if (conf['clang']) settings.add('clang');
       if (conf['asan']) settings.add('asan');
+      if (conf['one-process-heap']) settings.add('one-process-heap');
+      if (conf['mark-sweep']) settings.add('mark-sweep');
       output_words.add(settings.join('_'));
     }
     print(output_words.join(' '));
