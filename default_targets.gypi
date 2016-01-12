@@ -224,57 +224,6 @@
         'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm64' ],
       },
 
-      # Test with the --one-process-heap option to test.py
-      'DevelopIA32OneProcessHeap': {
-        'inherit_from': [
-          'fletch_base', 'fletch_develop', 'fletch_ia32',
-          'fletch_disable_multiple_process_heaps'
-        ],
-        'defines!': [ 'FLETCH_MARK_SWEEP' ],
-      },
-
-      # Test with the --one-process-heap --mark-sweep options.
-      'DevelopIA32OneProcessHeapMarkSweep': {
-        'inherit_from': [
-          'fletch_base', 'fletch_develop', 'fletch_ia32',
-          'fletch_disable_multiple_process_heaps'
-        ],
-      },
-
-      # Test with the --one-process-heap option to test.py
-      'DebugIA32OneProcessHeap': {
-        'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32',
-          'fletch_disable_multiple_process_heaps'
-        ],
-        'defines!': [ 'FLETCH_MARK_SWEEP' ],
-      },
-
-      # Test with the --one-process-heap --mark-sweep options.
-      'DebugIA32OneProcessHeapMarkSweep': {
-        'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32',
-          'fletch_disable_multiple_process_heaps'
-        ],
-      },
-
-      # Test with the --one-process-heap option to test.py
-      'ReleaseIA32OneProcessHeap': {
-        'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32',
-          'fletch_disable_multiple_process_heaps'
-        ],
-        'defines!': [ 'FLETCH_MARK_SWEEP' ],
-      },
-
-      # Test with the --one-process-heap --mark-sweep options.
-      'ReleaseIA32OneProcessHeapMarkSweep': {
-        'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32',
-          'fletch_disable_multiple_process_heaps'
-        ],
-      },
-
       # TODO(ajohnsen): Test configuration - to be removed.
       'ReleaseIA32DisableLiveCoding': {
         'inherit_from': [
