@@ -123,7 +123,7 @@ Object* EventHandler::Add(Process* process, Object* id, Port* port,
     return Failure::wrong_argument_type();
   }
 
-  struct kevent event;
+  struct kevent event = {};
   event.ident = fd;
   event.flags = EV_ADD | EV_ONESHOT;
   event.udata = port;
