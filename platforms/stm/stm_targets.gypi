@@ -12,10 +12,6 @@
     'stm32_cube_f7_bsp_discovery':
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
 
-    'project_name': 'disco_fletch',
-    'project_path': '<(DEPTH)/platforms/stm/<(project_name)',
-    'generated_path': '<(project_path)/generated',
-
     'gcc-arm-embedded':
       '<(DEPTH)/third_party/gcc-arm-embedded/<(OS)/gcc-arm-embedded/bin',
     'objcopy': '<(gcc-arm-embedded)/arm-none-eabi-objcopy',
@@ -140,7 +136,7 @@
               '<(stm32_cube_f7_free_rtos)/Source/include/',
               '<(stm32_cube_f7_free_rtos)/Source/portable/GCC/ARM_CM7/r0p1/',
               '<(stm32_cube_f7)/Drivers/CMSIS/Include/',
-              '<(generated_path)/Inc',
+              'disco_fletch/src',
               '../..'
             ],
           }],

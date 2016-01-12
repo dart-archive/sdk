@@ -122,6 +122,7 @@
         '<(source_path)/circular_buffer.cc',
         '<(source_path)/circular_buffer.h',
         '<(source_path)/freertos.cc',
+        '<(source_path)/FreeRTOSConfig.h',
         '<(source_path)/fletch_entry.cc',
         '<(source_path)/logger.cc',
         '<(source_path)/uart.cc',
@@ -131,7 +132,6 @@
 
         # Generated files.
         '<(generated_path)/Inc/ethernetif.h',
-        '<(generated_path)/Inc/FreeRTOSConfig.h',
         '<(generated_path)/Inc/lwip.h',
         '<(generated_path)/Inc/lwipopts.h',
         '<(generated_path)/Inc/mxconstants.h',
