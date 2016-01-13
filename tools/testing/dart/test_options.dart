@@ -64,7 +64,7 @@ class TestOptionsParser {
               'mode',
               'Mode in which to run the tests',
               ['-m', '--mode'],
-              ['all', 'debug', 'release', 'develop'],
+              ['all', 'debug', 'release'],
               'debug'),
           new _TestOptionSpecification(
               'compiler',
@@ -761,7 +761,7 @@ Note: currently only implemented for dart2js.''',
       configuration['arch'] = 'ia32,x64,simarm,simarm64,simmips';
     }
     if (configuration['mode'] == 'all') {
-      configuration['mode'] = 'debug,release,develop';
+      configuration['mode'] = 'debug,release';
     }
 
     // Use verbose progress indication for verbose output unless buildbot
@@ -878,7 +878,7 @@ Note: currently only implemented for dart2js.''',
           new CompilerConfiguration(configuration).computeTimeoutMultiplier();
       int runtimeMultiplier =
           new RuntimeConfiguration(configuration).computeTimeoutMultiplier(
-              isDebug: ['debug', 'develop'].contains(configuration['mode']),
+              isDebug: configuration['mode'] == 'debug',
               isChecked: configuration['checked'],
               arch: configuration['arch']);
       configuration['timeout'] = 60 * compilerMulitiplier * runtimeMultiplier;

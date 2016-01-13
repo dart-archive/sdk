@@ -171,27 +171,6 @@
         ],
 
         'xcode_settings': { # And ninja.
-          'GCC_OPTIMIZATION_LEVEL': '1',
-
-          'OTHER_CPLUSPLUSFLAGS': [
-            '-g',
-          ],
-        },
-
-        'cflags': [
-          '-g',
-          '-O1',
-        ],
-      },
-
-      'fletch_develop': {
-        'abstract': 1,
-
-        'defines': [
-          'DEBUG',
-        ],
-
-        'xcode_settings': { # And ninja.
           'GCC_OPTIMIZATION_LEVEL': '0',
 
           'OTHER_CPLUSPLUSFLAGS': [
