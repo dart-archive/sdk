@@ -25,6 +25,7 @@
         ['OS=="linux"', {
           'cflags': [
             '-fPIC',
+            '-fomit-frame-pointer',
           ],
         }],
       ],
