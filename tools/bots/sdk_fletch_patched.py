@@ -31,12 +31,12 @@ def BuildConfig(name, is_buildbot):
   return None
 
 
-def Archive(gcs_name, vm_path):
+def Archive(gcs_name, vm_path, link_name):
   download_link = 'https://storage.googleapis.com/%s' % gcs_name
   gcs_path = 'gs://%s' % gcs_name
   gsutil = bot_utils.GSUtil()
   gsutil.upload(vm_path, gcs_path)
-  print '@@@STEP_LINK@download@%s@@@' % download_link
+  print '@@@STEP_LINK@download %s@%s@@@' % (link_name, download_link)
   sys.stdout.flush()
   
 
@@ -60,8 +60,8 @@ def BuildSteps(build_info):
 
     unstripped_vm = os.path.join(build_root, 'dart')
     stripped_vm = os.path.join(sdk_bin_path, 'dart')
-    Archive(stripped_name, stripped_vm)
-    Archive(unstripped_name, unstripped_vm)
+    Archive(stripped_name, stripped_vm, 'stripped')
+    Archive(unstripped_name, unstripped_vm, 'unstripped')
 
 if __name__ == '__main__':
   bot.RunBot(BuildConfig, BuildSteps)
