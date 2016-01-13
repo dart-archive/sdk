@@ -1343,10 +1343,13 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
   __ add(R3, R2, Immediate(Instance::kSize - HeapObject::kTag));
   __ str(R7, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
 
+  __ mov(R9, LR);
+
+  // R7 and R9 are both callee-saved, so they will survive the call.
   AddToStoreBufferSlow(R2, R7);
 
   __ mov(R0, R7);
-  __ mov(PC, LR);
+  __ mov(PC, R9);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicListIndexGet() {
@@ -1399,11 +1402,13 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
   LoadLocal(R7, 0);
   __ add(R12, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R7, Address(R12, Operand(R1, TIMES_2)));
+  __ mov(R9, LR);
 
+  // R7 and R9 are both callee-saved, so they will survive the call.
   AddToStoreBufferSlow(R2, R7);
 
   __ mov(R0, R7);
-  __ mov(PC, LR);
+  __ mov(PC, R9);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicListLength() {
