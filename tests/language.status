@@ -849,9 +849,8 @@ vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
 large_class_declaration_test: Timeout
 smaller_4_Interface_Types_A11_t01_test: Crash
 
-
-[ $mode == debug && $asan ]
-closure_cycles_test: Slow, Pass
+[ $mode == debug ]
+closure_cycles_test: Slow, Pass, Timeout
 
 [ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
 # No async on embedded.
