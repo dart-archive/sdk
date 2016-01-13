@@ -46,6 +46,8 @@ packages
 /third_party/dartdoc_deps/dart-sdk
 /third_party/gyp/
 /third_party/isolate/
+/third_party/mbedtls/mbedtls.tar.gz
+/third_party/mbedtls/mbedtls/
 /third_party/openocd/
 /third_party/package_config/
 /third_party/path/
