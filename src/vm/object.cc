@@ -162,7 +162,8 @@ void* Function::ComputeIntrinsic(IntrinsicsTable* table) {
   } else if (length >= 4 && bytecodes[0] == kLoadLocal4 &&
              bytecodes[1] == kLoadLocal4 &&
              bytecodes[2] == kIdenticalNonNumeric && bytecodes[3] == kReturn) {
-    result = reinterpret_cast<void*>(table->ObjectEquals());
+    // TODO(ajohnsen): Investigate what pattern we generate for this now.
+    UNIMPLEMENTED();
   } else if (length >= 5 && bytecodes[0] == kLoadLocal4 &&
              bytecodes[1] == kLoadLocal4 && bytecodes[2] == kStoreField &&
              bytecodes[4] == kReturn) {
@@ -524,8 +525,11 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
       // We do not use cast method because the Stack's class pointer is not
       // valid during marking.
       Stack* stack = reinterpret_cast<Stack*>(this);
-      visitor->VisitBlock(stack->Pointer(stack->top()),
-                          stack->Pointer(stack->length()));
+      Frame frame(stack);
+      while (frame.MovePrevious()) {
+        visitor->VisitBlock(frame.LastLocalAddress(),
+                            frame.FirstLocalAddress() + 1);
+      }
       break;
     }
 
@@ -703,15 +707,16 @@ void HeapObject::HeapObjectShortPrint() {
   }
 }
 
-int SafeObjectPointerVisitor::Visit(HeapObject* object) {
+int CookedHeapObjectPointerVisitor::Visit(HeapObject* object) {
   int size = object->Size();
-  if (object->IsStack() && !process_->stacks_are_cooked()) {
+  if (object->IsStack()) {
+    visitor_->VisitClass(reinterpret_cast<Object**>(object->address()));
     // To avoid visiting raw bytecode pointers lying on the stack we use a
     // stack walker.
-    Frame frame(Stack::cast(object));
+    Frame frame(reinterpret_cast<Stack*>(object));
     while (frame.MovePrevious()) {
       visitor_->VisitBlock(frame.LastLocalAddress(),
-                           frame.FirstLocalAddress() + 1);
+                           frame.FirstLocalAddress() + 2);
     }
   } else {
     object->IteratePointers(visitor_);

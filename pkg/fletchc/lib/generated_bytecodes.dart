@@ -2205,8 +2205,7 @@ class Drop extends Bytecode {
 }
 
 class Return extends Bytecode {
-  final int uint8Argument0;
-  const Return(this.uint8Argument0)
+  const Return()
       : super();
 
   Opcode get opcode => Opcode.Return;
@@ -2215,40 +2214,25 @@ class Return extends Bytecode {
 
   bool get isBranching => true;
 
-  String get format => 'B';
+  String get format => '';
 
-  int get size => 2;
+  int get size => 1;
 
   int get stackPointerDifference => -1;
 
-  String get formatString => 'return %d';
+  String get formatString => 'return';
 
   void addTo(Sink<List<int>> sink) {
     new BytecodeBuffer()
         ..addUint8(opcode.index)
-        ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
 
-  String toString() => 'return ${uint8Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    Return rhs = other;
-    if (uint8Argument0 != rhs.uint8Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint8Argument0;
-    return value;
-  }
+  String toString() => 'return';
 }
 
 class ReturnNull extends Bytecode {
-  final int uint8Argument0;
-  const ReturnNull(this.uint8Argument0)
+  const ReturnNull()
       : super();
 
   Opcode get opcode => Opcode.ReturnNull;
@@ -2257,35 +2241,21 @@ class ReturnNull extends Bytecode {
 
   bool get isBranching => true;
 
-  String get format => 'B';
+  String get format => '';
 
-  int get size => 2;
+  int get size => 1;
 
   int get stackPointerDifference => 0;
 
-  String get formatString => 'return null %d';
+  String get formatString => 'return null';
 
   void addTo(Sink<List<int>> sink) {
     new BytecodeBuffer()
         ..addUint8(opcode.index)
-        ..addUint8(uint8Argument0)
         ..sendOn(sink);
   }
 
-  String toString() => 'return null ${uint8Argument0}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    ReturnNull rhs = other;
-    if (uint8Argument0 != rhs.uint8Argument0) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint8Argument0;
-    return value;
-  }
+  String toString() => 'return null';
 }
 
 class BranchWide extends Bytecode {

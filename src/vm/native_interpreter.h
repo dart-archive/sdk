@@ -12,49 +12,23 @@ namespace fletch {
 class Process;
 class TargetYieldResult;
 
-#if defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM)
-
 // For the platforms that have a native interpreter this function is
 // generated as the native interpreter entry point. The native
 // interpreter can bailout to the slower C++ interpreter by returning
 // -1.
-extern "C" int InterpretFast(Process* process,
-                             TargetYieldResult* target_yield_result);
+extern "C" int Interpret(Process* process,
+                         TargetYieldResult* target_yield_result);
 
 extern "C" void InterpreterEntry();
 
 extern "C" void InterpreterCoroutineEntry();
 
+extern "C" void InterpreterDispatchTableEntry();
+
 
 void SetBytecodeBreak(Opcode opcode);
 
 void ClearBytecodeBreak(Opcode opcode);
-
-#else
-
-// For the platforms that do not have a native interpreter we bailout
-// by returning -1 whenever we attempt to use the native
-// interpreter. The slower C++ interpreter will then be used for the
-// rest of the interpretation for this process (until it yields or is
-// interrupted).
-inline int InterpretFast(Process* process,
-                         TargetYieldResult* target_yield_result) {
-  return -1;
-}
-
-inline void __attribute__((aligned(4))) InterpreterEntry() {
-  UNREACHABLE();
-}
-
-inline void __attribute__((aligned(4))) InterpreterCoroutineEntry() {
-  UNREACHABLE();
-}
-
-inline void SetBytecodeBreak(Opcode opcode) { }
-
-inline void ClearBytecodeBreak(Opcode opcode) { }
-
-#endif  // defined(FLETCH_TARGET_IA32) || defined(FLETCH_TARGET_ARM)
 
 }  // namespace fletch
 

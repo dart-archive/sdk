@@ -201,8 +201,8 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
 
   V("Pop",                   false,   "",   1,       -1, "pop");
   V("Drop",                  false,   "B",  2, kVarDiff, "drop %d");
-  V("Return",                true,    "B",  2,       -1, "return %d");
-  V("ReturnNull",            true,    "B",  2,        0, "return null %d");
+  V("Return",                true,    "",   1,       -1, "return");
+  V("ReturnNull",            true,    "",   1,        0, "return null");
 
   V("BranchWide",            true,    "I",  5,        0, "branch +%d");
   V("BranchIfTrueWide",      true,    "I",  5,       -1, "branch if true +%d");

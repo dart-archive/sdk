@@ -587,7 +587,9 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
 }
 
 void Process::IterateProgramPointersOnHeap(PointerVisitor* visitor) {
-  HeapObjectPointerVisitor program_pointer_visitor(visitor);
+  // TODO(erikcorry): Somehow assert that the stacks are cooked (there's no
+  // simple way to tell in a multiple-processes-per-heap world).
+  CookedHeapObjectPointerVisitor program_pointer_visitor(visitor);
   heap()->IterateObjects(&program_pointer_visitor);
 }
 
@@ -687,8 +689,9 @@ int Process::PrepareStepOut() {
   bool has_frame_below = frame.MovePrevious();
   ASSERT(has_frame_below);
   Function* caller = frame.FunctionFromByteCodePointer();
-  int bytecode_index =
-      frame.ByteCodePointer() - caller->bytecode_address_for(0);
+  uint8* bcp = frame.ByteCodePointer();
+  bcp += Bytecode::Size(static_cast<Opcode>(*bcp));
+  int bytecode_index = bcp - caller->bytecode_address_for(0);
   Object** expected_sp = frame_bottom + callee->arity();
   word frame_end = expected_sp - stack()->Pointer(0);
   word stack_height = stack()->length() - frame_end;
@@ -707,12 +710,12 @@ void Process::CookStacks(int number_of_stacks) {
     int index = 0;
     Frame frame(current);
     while (frame.MovePrevious()) {
-      uint8* bcp = frame.ByteCodePointer();
       Function* function = frame.FunctionFromByteCodePointer();
+      if (function == NULL) continue;
       uint8* start = function->bytecode_address_for(0);
-      frame.SetByteCodePointer(reinterpret_cast<uint8*>(function));
-      int delta = bcp - start;
+      int delta = frame.ByteCodePointer() - start;
       cooked_stack_deltas_[i][index++] = delta;
+      frame.SetByteCodePointer(reinterpret_cast<uint8*>(function));
     }
     raw_current = current->next();
   }
@@ -727,9 +730,9 @@ void Process::UncookAndUnchainStacks() {
     Frame frame(current);
     while (frame.MovePrevious()) {
       Object* value = reinterpret_cast<Object*>(frame.ByteCodePointer());
-      ASSERT(value != NULL);
-      Function* function = Function::cast(value);
+      if (value == NULL) continue;
       int delta = cooked_stack_deltas_[i][index++];
+      Function* function = Function::cast(value);
       uint8* bcp = function->bytecode_address_for(0) + delta;
       frame.SetByteCodePointer(bcp);
     }

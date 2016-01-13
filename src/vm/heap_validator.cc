@@ -57,7 +57,7 @@ void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
   {
     HeapPointerValidator validator(program_heap_, shared_heap_, process_heap);
 
-    SafeObjectPointerVisitor pointer_visitor(process, &validator);
+    HeapObjectPointerVisitor pointer_visitor(&validator);
     process->IterateRoots(&validator);
     process_heap->IterateObjects(&pointer_visitor);
     process_heap->VisitWeakObjectPointers(&validator);
