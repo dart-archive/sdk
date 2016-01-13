@@ -321,8 +321,8 @@ abstract class Reuser {
         compiler.reporter.withCurrentElement(newUnit, () {
           compiler.scanner.scan(newUnit);
           if (unit.partTag == null) {
-            compiler.reporter
-                .reportErrorMessage(unit, MessageKind.MISSING_PART_OF_TAG);
+            compiler.reporter.reportErrorMessage(
+                unit, MessageKind.MISSING_PART_OF_TAG);
           }
         });
       }

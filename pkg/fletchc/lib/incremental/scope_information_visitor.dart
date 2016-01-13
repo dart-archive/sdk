@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library trydart.poi.scope_information_visitor;
+library fletchc.incremental.scope_information_visitor;
 
 import 'package:compiler/src/elements/modelx.dart' as modelx;
 
