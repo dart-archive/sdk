@@ -24,71 +24,40 @@ We built the Dart VM for the following configurations
   * linux-release-x64
   * linux-release-arm
 
-The machine where we build the binaries should be
-  * Version 10.8.5 for MacOS
-  * Version 12.04.3 for Ubuntu Linux
+We don't build these locally, but rely on 3 buildbots for building them in
+a controlled environment.
 
-This allows us to run these binaries also on older versions of MacOS/Ubuntu and
-avoids issues (e.g. too recent version of libc).
+There are download links on the 3 sdk patched bots, to update the checked in
+versions download the 3 binaries and put them in the platform specific binaries
+under third_party/bin/linux/{dart,dart-arm} and third_party/bin/mac/dart.
 
-Compiling the Dart VM should roughly follow the following procedure:
-
-```bash
-mkdir dart-build
-cd dart-build
-
-gclient config https://github.com/dart-lang/sdk.git
-
-gclient sync --with_branch_heads --revision origin/_temporary_fletch_patches
-
-# On MacOS
-./tools/build.py -mrelease -ax64 create_sdk
-./tools/test.py -mrelease -ax64
-
-# On Linux - intel
-./tools/build.py -mrelease -ax64 create_sdk
-./tools/test.py -mrelease -ax64
-
-# On Linux - arm
-./tools/build.py -mrelease -aarm runtime
-```
-
-After building the binaries they need to be uploaded to GoogleCloudStorage and
+The binaries then need to be uploaded to GoogleCloudStorage and
 their sha1 file needs to be checked into the repository.
 
 Before uploading one needs to ensure one has setup the correct
-`BOTO_CONFIG` environment variable pointing to a valid boto file which has
-permission to write to the GCS bucket.
-Please note there might be issues about which version of gsutil is used -
-from `PATH` or `depot_tools`. Also note that you most likely will have to
-use `gsutil.py config` (with the `gsutil.py` from `depot_tools`) and neither
+`BOTO_CONFIG` environment variable pointing to a valid boto file which
+has permission to write to the GCS bucket.  To ensure that you have
+the right permissions you should run '`gsutil.py config` (with the
+`gsutil.py` from `depot_tools`) and neither
 `gcloud auth login` nor `gsutil config` to make authentication work with
-`upload_to_google_storage.py`.
+`upload_to_google_storage.py`. If you don't have access to upload ask ricow@
+to change the acl.
 
 Then one needs to mark the binaries as executable (this executable bit will be
 preserved when downloading the binaries again -- it is stored via metadata on
-the GCS objects).
+the GCS objects). 'chmod +x' on the files before uploading.
 
 Afterwards the binaries can be uploaded.
 
-The last two steps are described here:
-
 ```
-# On MacOS
-chmod +x xcodebuild/ReleaseX64/dart-sdk/bin/dart
-upload_to_google_storage.py -b dart-dependencies-fletch \
-  xcodebuild/ReleaseX64/dart-sdk/bin/dart
-
-# On Linux - intel
-chmod +x out/ReleaseX64/dart-sdk/bin/dart
-upload_to_google_storage.py -b dart-dependencies-fletch \
-  out/ReleaseX64/dart-sdk/bin/dart
-
-# On Linux - arm
-chmod +x out/ReleaseXARM/dart
-arm-linux-gnueabihf-strip out/ReleaseXARM/dart
-upload_to_google_storage.py -b dart-dependencies-fletch \
-   out/ReleaseXARM/dart
+cd  third_party/bin/linux
+upload_to_google_storage.py -b dart-dependencies-fletch dart
+cp dart.sha1 ../../../tools/testing/bin/linux/dart.sha1
+upload_to_google_storage.py -b dart-dependencies-fletch dart-arm
+cp dart-arm.sha1 ../../../tools/testing/bin/linux/dart-arm.sha1
+cd ../mac
+upload_to_google_storage.py -b dart-dependencies-fletch dart
+cp dart.sha1 ../../../tools/testing/bin/mac/dart.sha1
 ```
 
 The sha1 files need to be checked into the repository at
