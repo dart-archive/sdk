@@ -14,23 +14,19 @@
     'configurations': {
 
       'ReleaseIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32',
-                          'fletch_disable_native_processes' ],
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32'],
       },
 
       'ReleaseX64': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_x64',
-                          'fletch_disable_native_processes' ],
+        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_x64'],
       },
 
       'DebugIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32',
-                          'fletch_disable_native_processes' ],
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32'],
       },
 
       'DebugX64': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_x64',
-                          'fletch_disable_native_processes' ],
+        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_x64'],
       },
     },
   },

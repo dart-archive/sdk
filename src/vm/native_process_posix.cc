@@ -4,6 +4,8 @@
 
 #ifdef FLETCH_ENABLE_NATIVE_PROCESSES
 
+#ifdef FLETCH_TARGET_OS_POSIX
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -295,5 +297,7 @@ BEGIN_NATIVE(NativeProcessSpawnDetached) {
 END_NATIVE()
 
 }  // namespace fletch
+
+#endif  // FLETCH_TARGET_OS_POSIX
 
 #endif  // FLETCH_ENABLE_NATIVE_PROCESSES
