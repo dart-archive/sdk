@@ -36,7 +36,7 @@
     # Common debug mode flags (C and C++) for the GCC ARM Embedded toolchain.
     'common_cross_gcc_debug_cflags': [
       '-g3',
-      '-O0',
+      '-Og',
     ],
 
     # Use the gnu language dialect to get math.h constants
