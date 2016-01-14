@@ -65,13 +65,14 @@ class FletchRunner {
         },
         agentAddress,
         DeviceType.mobile,
-        IncrementalMode.none);
+        IncrementalMode.production);
   }
 
   Future<Null> run(List<String> arguments) async {
     Settings settings = await computeSettings();
     SessionState state = createSessionState("test", settings);
     for (String script in arguments) {
+      print("Compiling $script");
       await compile(fileUri(script, Uri.base), state, Uri.base);
       if (state.compilationResults.isNotEmpty) {
         // Always generate the debug string to ensure test coverage.
@@ -103,7 +104,7 @@ class FletchRunner {
       if (state.fletchVm != null) {
         int exitCode = await state.fletchVm.exitCode;
         print("$script: Fletch VM exit code: $exitCode");
-        if (exitCode != null) {
+        if (exitCode != 0) {
           io.exitCode = exitCode;
           break;
         }
