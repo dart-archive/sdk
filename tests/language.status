@@ -850,7 +850,7 @@ large_class_declaration_test: Timeout
 smaller_4_Interface_Types_A11_t01_test: Crash
 
 [ $mode == debug ]
-closure_cycles_test: Slow, Pass, Timeout
+closure_cycles_test: Slow, Pass
 
 [ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
 # No async on embedded.
