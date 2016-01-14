@@ -285,10 +285,9 @@ class FletchReuser extends Reuser with FletchFeatures {
   bool allowSignatureChanged(
       PartialFunctionElement before,
       PartialFunctionElement after) {
-    if ((!before.isInstanceMember || !after.isInstanceMember) &&
-        !_context.incrementalCompiler.isExperimentalModeEnabled) {
-      return cannotReuse(after, "Signature change on non-instance member "
-                         "requires 'experimental' mode");
+    if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
+      return cannotReuse(
+          after, "Signature change requires 'experimental' mode");
     }
     return true;
   }
