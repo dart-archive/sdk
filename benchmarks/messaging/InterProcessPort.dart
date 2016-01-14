@@ -20,7 +20,7 @@ class InterProcessPortBenchmark extends BenchmarkBase {
   void setup() {
     input = new Channel();
     var port = new Port(input);
-    Process.spawn(portResponder, port);
+    Process.spawnDetached(() => portResponder(port));
     output = input.receive();
   }
 

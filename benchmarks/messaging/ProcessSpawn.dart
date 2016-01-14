@@ -25,9 +25,10 @@ class ProcessSpawnBenchmark extends BenchmarkBase {
   void exercise() => run();
 
   void run() {
+    var localInputPort = inputPort;
     int i = DEFAULT_MESSAGES;
     for (int i = 0; i < DEFAULT_MESSAGES; i++) {
-      Process.spawn(processEntry, inputPort);
+      Process.spawnDetached(() => processEntry(localInputPort));
     }
     for (int i = 0; i < DEFAULT_MESSAGES; i++) {
       input.receive();

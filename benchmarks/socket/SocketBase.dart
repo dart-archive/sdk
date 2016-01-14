@@ -52,7 +52,8 @@ class SocketBenchmark extends BenchmarkBase {
 
   void setup() {
     port = new Port(channel);
-    Process.spawn(serverProcess, port);
+    var localPort = port;
+    Process.spawnDetached(() => serverProcess(localPort));
     serverPort = channel.receive();
     serverSocketPort = channel.receive();
   }
@@ -67,7 +68,8 @@ class SocketBenchmark extends BenchmarkBase {
     serverPort.send(clients);
     for (int i = 0; i < clients; i++) {
       var channel = new Channel();
-      Process.spawn(clientProcess, new Port(channel));
+      var handshakePort = new Port(channel);
+      Process.spawnDetached(() => clientProcess(handshakePort));
       var clientPort = channel.receive();
       clientPort.send(serverSocketPort);
       clientPort.send(port);
