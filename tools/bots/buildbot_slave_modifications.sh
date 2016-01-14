@@ -20,10 +20,10 @@ sysctl -p
 
 echo "Updating apt repository & install ARM software"
 dpkg --add-architecture i386 && sudo apt-get update
-apt-get install linux-libc-dev:i386 gcc-4.8-arm-linux-gnueabihf g++-4.8-arm-linux-gnueabihf
+apt-get -y install linux-libc-dev:i386 gcc-4.8-arm-linux-gnueabihf g++-4.8-arm-linux-gnueabihf
 
 echo "Installing libfdt"
-apt-get install libfdt1
+apt-get -y install libfdt1
 
 
 ### END manual steps
