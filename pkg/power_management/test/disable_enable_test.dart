@@ -4,11 +4,10 @@
 
 import 'dart:async';
 
-import 'package:expect/expect.dart';
 import 'package:power_management/power_management.dart';
 
-main() {
-  testDisableEnable();
+main() async {
+  await testDisableEnable();
 }
 
 Future testDisableEnable() async {
