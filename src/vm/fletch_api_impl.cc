@@ -148,6 +148,8 @@ class DumpVisitor : public HeapObjectVisitor {
       DumpLargeInteger(LargeInteger::cast(object));
     } else if (object->IsInitializer()) {
       DumpInitializer(Initializer::cast(object));
+    } else if (object->IsDispatchTableEntry()) {
+      DumpDispatchTableEntry(DispatchTableEntry::cast(object));
     } else {
       printf("\t// not handled yet %d!\n", object->format().type());
     }
@@ -179,6 +181,10 @@ class DumpVisitor : public HeapObjectVisitor {
 
     for (int o = 0; o < function->bytecode_size(); o += kPointerSize) {
       printf("\t.long 0x%08x\n", *reinterpret_cast<uword*>(function->bytecode_address_for(o)));
+    }
+
+    for (int i = 0; i < function->literals_size(); i++) {
+      DumpReference(function->literal_at(i));
     }
   }
 
@@ -219,6 +225,13 @@ class DumpVisitor : public HeapObjectVisitor {
       DumpReference(initializer->at(offset));
     }
   }
+
+  void DumpDispatchTableEntry(DispatchTableEntry* entry) {
+    DumpReference(entry->function());
+    printf("\t.long InterpreterDispatchTableEntry\n");
+    DumpReference(entry->offset());
+    printf("\t.long 0x%08x\n", entry->selector());
+  }
 };
 
 }
@@ -228,7 +241,7 @@ void FletchDumpProgram(FletchProgram raw_program, const char* path) {
   fletch::DumpVisitor visitor;
 
   printf("\t// Program space = %d bytes\n", program->heap()->space()->Used());
-  printf("\t.text\n\n");
+  printf("\t.section .rodata\n\n");
 
   printf("\t.global program_start\n");
   printf("\t.p2align 12\n");

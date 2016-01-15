@@ -19,6 +19,13 @@
       ],
     },
     {
+      'target_name': 'fletch-vm-o',
+      'type': 'none',
+      'dependencies': [
+        'src/vm/vm.gyp:fletch-vm-o',
+      ],
+    },
+    {
       'target_name': 'c_test_library',
       'type': 'none',
       'dependencies': [
