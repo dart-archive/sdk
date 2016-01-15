@@ -29,7 +29,7 @@ class InterpreterGenerator {
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
-  virtual void GenerateMethodCall() = 0;
+  virtual void GenerateMethodEntry() = 0;
 
   virtual void GenerateBytecodePrologue(const char* name) = 0;
   virtual void GenerateDebugAtBytecode() = 0;
@@ -54,7 +54,7 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
-  GenerateMethodCall();
+  GenerateMethodEntry();
 
   GenerateDebugAtBytecode();
 
@@ -103,7 +103,7 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
 
-  virtual void GenerateMethodCall();
+  virtual void GenerateMethodEntry();
 
   virtual void GenerateBytecodePrologue(const char* name);
   virtual void GenerateDebugAtBytecode();
@@ -434,17 +434,14 @@ void InterpreterGeneratorX64::GenerateEpilogue() {
 
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
-  __ jmp("InterpreterDispatchTableEntry");
+  __ jmp("LocalInterpreterMethodEntry");
 }
 
-void InterpreterGeneratorX64::GenerateMethodCall() {
+void InterpreterGeneratorX64::GenerateMethodEntry() {
   __ SwitchToText();
-  __ AlignToPowerOfTwo(4);
-  __ Bind("", "InterpreterDispatchTableEntry");
-  __ movq(RAX,
-          Address(RAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
-  __ AlignToPowerOfTwo(4);
+  __ AlignToPowerOfTwo(3);
   __ Bind("", "InterpreterMethodEntry");
+  __ LocalBind("LocalInterpreterMethodEntry");
   __ pushq(RBP);
   __ movq(RBP, RSP);
   __ pushq(Immediate(0));
@@ -573,7 +570,7 @@ void InterpreterGeneratorX64::DoLoadStaticInit() {
   __ movq(RAX, Address(RAX, Initializer::kFunctionOffset - HeapObject::kTag));
 
   StoreByteCodePointer();
-  __ call("InterpreterMethodEntry");
+  __ call("LocalInterpreterMethodEntry");
   RestoreByteCodePointer();
 
   __ Bind(&done);
@@ -726,10 +723,10 @@ void InterpreterGeneratorX64::DoInvokeNoSuchMethod() {
 
   // Load the function.
   __ movq(RAX,
-          Address(RCX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
+          Address(RCX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
 
   StoreByteCodePointer();
-  __ call("InterpreterMethodEntry");
+  __ call("LocalInterpreterMethodEntry");
   RestoreByteCodePointer();
 
   __ movq(RDX, Address(R13, 1));
@@ -781,7 +778,7 @@ void InterpreterGeneratorX64::DoInvokeSelector() {
   __ Bind(&resume);
 
   StoreByteCodePointer();
-  __ call("InterpreterMethodEntry");
+  __ call("LocalInterpreterMethodEntry");
   RestoreByteCodePointer();
 
   __ movl(RDX, Address(R13, 1));
@@ -1395,8 +1392,6 @@ void InterpreterGeneratorX64::DoIntrinsicObjectEquals() {
 }
 
 void InterpreterGeneratorX64::DoIntrinsicGetField() {
-  __ movq(RAX,
-          Address(RAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
   __ movzbq(RBX, Address(RAX, 2 + Function::kSize - HeapObject::kTag));
   LoadLocal(RAX, 1);
   __ movq(RAX, Address(RAX, RBX, TIMES_WORD_SIZE,
@@ -1405,8 +1400,6 @@ void InterpreterGeneratorX64::DoIntrinsicGetField() {
 }
 
 void InterpreterGeneratorX64::DoIntrinsicSetField() {
-  __ movq(RAX,
-          Address(RAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
   __ movzbq(RAX, Address(RAX, 3 + Function::kSize - HeapObject::kTag));
   LoadLocal(RBX, 1);
   LoadLocal(RCX, 2);
@@ -1761,10 +1754,15 @@ void InterpreterGeneratorX64::InvokeMethodUnfold(bool test) {
   // At this point, we've got our hands on a valid lookup cache entry.
   __ Bind(&finish);
   if (test) {
-    __ movq(RAX, Address(RAX, LookupCache::kTagOffset));
+    __ movq(RAX, Address(RAX, LookupCache::kCodeOffset));
   } else {
-    // TODO(ajohnsen): Handle intrinsics.
+    __ movq(RBX, Address(RAX, LookupCache::kCodeOffset));
     __ movq(RAX, Address(RAX, LookupCache::kTargetOffset));
+
+    __ testq(RBX, RBX);
+
+    __ LoadLabel(RCX, "LocalInterpreterMethodEntry");
+    __ cmove(RBX, RCX);
   }
 
   if (test) {
@@ -1785,7 +1783,7 @@ void InterpreterGeneratorX64::InvokeMethodUnfold(bool test) {
     Dispatch(kInvokeTestUnfoldLength);
   } else {
     StoreByteCodePointer();
-    __ call("InterpreterMethodEntry");
+    __ call(RBX);
     RestoreByteCodePointer();
 
     __ movq(RDX, Address(R13, 1));
@@ -1878,10 +1876,12 @@ void InterpreterGeneratorX64::InvokeMethod(bool test) {
     // Load the target from the entry.
     __ Bind(&validated);
 
-    __ movq(RAX, RCX);
+    __ movq(
+        RAX,
+        Address(RCX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
 
     StoreByteCodePointer();
-    __ call(Address(RAX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
+    __ call(Address(RCX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
     RestoreByteCodePointer();
 
     __ movq(RDX, Address(R13, 1));
@@ -1921,7 +1921,7 @@ void InterpreterGeneratorX64::InvokeStatic() {
   __ movq(RAX, Address(R13, RAX, TIMES_1));
 
   StoreByteCodePointer();
-  __ call("InterpreterMethodEntry");
+  __ call("LocalInterpreterMethodEntry");
   RestoreByteCodePointer();
 
   __ movl(RDX, Address(R13, 1));

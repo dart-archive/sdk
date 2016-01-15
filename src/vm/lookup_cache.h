@@ -23,13 +23,13 @@ class LookupCache {
   static const int kClassOffset = 0;
   static const int kSelectorOffset = kClassOffset + sizeof(word);
   static const int kTargetOffset = kSelectorOffset + sizeof(word);
-  static const int kTagOffset = kTargetOffset + sizeof(word);
+  static const int kCodeOffset = kTargetOffset + sizeof(word);
 
   struct Entry {
     Class* clazz;
     word selector;
     Function* target;
-    word tag;
+    void* code;
   };
 
   LookupCache();

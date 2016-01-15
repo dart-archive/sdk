@@ -1033,7 +1033,7 @@ void Program::ClearDispatchTableIntrinsics() {
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
     DispatchTableEntry* entry = DispatchTableEntry::cast(element);
-    entry->set_target(NULL);
+    entry->set_code(NULL);
   }
 }
 
@@ -1045,23 +1045,23 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
   int hits = 0;
 
   DispatchTableEntry* entry = DispatchTableEntry::cast(table->get(0));
-  Function* trampoline = entry->function();
+  Function* trampoline = entry->target();
 
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
     DispatchTableEntry* entry = DispatchTableEntry::cast(element);
-    if (entry->target() != NULL) {
+    if (entry->code() != NULL) {
       // The intrinsic is already set.
       hits++;
       continue;
     }
-    Function* function = entry->function();
-    if (function != trampoline) hits++;
-    void* target = function->ComputeIntrinsic(intrinsics);
-    if (target == NULL) {
-      target = reinterpret_cast<void*>(InterpreterDispatchTableEntry);
+    Function* target = entry->target();
+    if (target != trampoline) hits++;
+    void* code = target->ComputeIntrinsic(intrinsics);
+    if (code == NULL) {
+      code = reinterpret_cast<void*>(InterpreterMethodEntry);
     }
-    entry->set_target(target);
+    entry->set_code(code);
   }
 
   if (Flags::print_program_statistics) {

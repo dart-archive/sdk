@@ -933,15 +933,15 @@ void DispatchTableEntry::DispatchTableEntryWriteTo(SnapshotWriter* writer,
   writer->Forward(this);
 
   // Body.
-  writer->WriteObject(at(kFunctionOffset));
-  ASSERT(target() == NULL);
+  writer->WriteObject(at(kTargetOffset));
+  ASSERT(code() == NULL);
   writer->WriteObject(offset());
   writer->WriteInt64(selector());
 }
 
 void DispatchTableEntry::DispatchTableEntryReadFrom(SnapshotReader* reader) {
-  set_function(Function::cast(reader->ReadObject()));
-  set_target(NULL);
+  set_target(Function::cast(reader->ReadObject()));
+  set_code(NULL);
   set_offset(Smi::cast(reader->ReadObject()));
   set_selector(reader->ReadInt64());
 }

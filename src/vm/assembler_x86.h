@@ -252,6 +252,8 @@ class Assembler {
   INSTRUCTION_2(movl, "movl %a, %rl", Register, const Address&);
   INSTRUCTION_2(movl, "movl %rl, %a", const Address&, Register);
 
+  INSTRUCTION_2(cmove, "cmove %rl, %rl", Register, Register);
+
   INSTRUCTION_2(leal, "leal %a, %rl", Register, const Address&);
   INSTRUCTION_2(movzbl, "movzbl %a, %rl", Register, const Address&);
 
@@ -307,6 +309,8 @@ class Assembler {
 
   void DefineLong(const char* name);
   void LoadNative(Register destination, Register index);
+
+  void LoadLabel(Register reg, const char*);
 
   void SwitchToText();
   void SwitchToData();

@@ -85,8 +85,8 @@ void SelectorRow::FillTable(Program* program, Vector<Class*>* classes,
         program->CreateDispatchTableEntry());
     entry->set_offset(Smi::FromWord(offset));
     entry->set_selector(selector_);
-    entry->set_function(method);
-    entry->set_target(NULL);
+    entry->set_target(method);
+    entry->set_code(NULL);
 
     int id = clazz->id();
     int limit = clazz->child_id();

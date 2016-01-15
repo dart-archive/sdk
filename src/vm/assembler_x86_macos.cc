@@ -44,6 +44,10 @@ void Assembler::LoadNative(Register destination, Register index) {
   Print("movl %skNativeTable(,%rl,4), %rl", kPrefix, index, destination);
 }
 
+void Assembler::LoadLabel(Register reg, const char* name) {
+  Print("leal %s%s, %rl", kPrefix, name, reg);
+}
+
 }  // namespace fletch
 
 #endif  // defined FLETCH_TARGET_IA32 && defined(FLETCH_TARGET_OS_MACOS)

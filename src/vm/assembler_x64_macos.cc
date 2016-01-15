@@ -58,6 +58,9 @@ void Assembler::LoadNative(Register destination, Register index) {
   Print("movq (%rq,%rq,8), %rq", destination, index, destination);
 }
 
+void Assembler::LoadLabel(Register reg, const char* name) {
+  Print("leaq _%s(%%rip), %rq", name, reg);
+}
 
 }  // namespace fletch
 

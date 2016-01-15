@@ -29,7 +29,7 @@ class InterpreterGenerator {
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
-  virtual void GenerateMethodCall() = 0;
+  virtual void GenerateMethodEntry() = 0;
 
   virtual void GenerateBytecodePrologue(const char* name) = 0;
   virtual void GenerateDebugAtBytecode() = 0;
@@ -54,7 +54,7 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
-  GenerateMethodCall();
+  GenerateMethodEntry();
 
   GenerateDebugAtBytecode();
 
@@ -98,7 +98,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
 
-  virtual void GenerateMethodCall();
+  virtual void GenerateMethodEntry();
 
   virtual void GenerateBytecodePrologue(const char* name);
   virtual void GenerateDebugAtBytecode();
@@ -421,16 +421,12 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
 
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
-  __ jmp("InterpreterDispatchTableEntry");
+  __ jmp("InterpreterMethodEntry");
 }
 
-void InterpreterGeneratorX86::GenerateMethodCall() {
+void InterpreterGeneratorX86::GenerateMethodEntry() {
   __ SwitchToText();
-  __ AlignToPowerOfTwo(4);
-  __ Bind("", "InterpreterDispatchTableEntry");
-  __ movl(EAX,
-          Address(EAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
-  __ AlignToPowerOfTwo(4);
+  __ AlignToPowerOfTwo(3);
   __ Bind("", "InterpreterMethodEntry");
   __ pushl(EBP);
   __ movl(EBP, ESP);
@@ -717,7 +713,7 @@ void InterpreterGeneratorX86::DoInvokeNoSuchMethod() {
 
   // Load the function.
   __ movl(EAX,
-          Address(ECX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
+          Address(ECX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
 
   StoreByteCodePointer();
   __ call("InterpreterMethodEntry");
@@ -1396,8 +1392,6 @@ void InterpreterGeneratorX86::DoIntrinsicObjectEquals() {
 }
 
 void InterpreterGeneratorX86::DoIntrinsicGetField() {
-  __ movl(EAX,
-          Address(EAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
   __ movzbl(EBX, Address(EAX, 2 + Function::kSize - HeapObject::kTag));
   LoadLocal(EAX, 1);
   __ movl(EAX, Address(EAX, EBX, TIMES_WORD_SIZE,
@@ -1406,8 +1400,6 @@ void InterpreterGeneratorX86::DoIntrinsicGetField() {
 }
 
 void InterpreterGeneratorX86::DoIntrinsicSetField() {
-  __ movl(EAX,
-          Address(EAX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
   __ movzbl(EAX, Address(EAX, 3 + Function::kSize - HeapObject::kTag));
   LoadLocal(EBX, 1);
   LoadLocal(ECX, 2);
@@ -1769,11 +1761,17 @@ void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
 
   // At this point, we've got our hands on a valid lookup cache entry.
   __ Bind(&finish);
+
   if (test) {
-    __ movl(EAX, Address(EAX, LookupCache::kTagOffset));
+    __ movl(EAX, Address(EAX, LookupCache::kCodeOffset));
   } else {
-    // TODO(ajohnsen): Handle intrinsics.
+    __ movl(EBX, Address(EAX, LookupCache::kCodeOffset));
     __ movl(EAX, Address(EAX, LookupCache::kTargetOffset));
+
+    __ testl(EBX, EBX);
+
+    __ LoadLabel(ECX, "InterpreterMethodEntry");
+    __ cmove(EBX, ECX);
   }
 
   if (test) {
@@ -1794,7 +1792,7 @@ void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
     Dispatch(kInvokeTestUnfoldLength);
   } else {
     StoreByteCodePointer();
-    __ call("InterpreterMethodEntry");
+    __ call(EBX);
     RestoreByteCodePointer();
 
     __ movl(EDX, Address(ESI, 1));
@@ -1886,10 +1884,12 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
     // Load the target from the entry.
     __ Bind(&validated);
 
-    __ movl(EAX, ECX);
+    __ movl(
+        EAX,
+        Address(ECX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
 
     StoreByteCodePointer();
-    __ call(Address(EAX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
+    __ call(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
     RestoreByteCodePointer();
 
     __ movl(EDX, Address(ESI, 1));

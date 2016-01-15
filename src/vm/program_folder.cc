@@ -96,8 +96,8 @@ class ProgramRewriter {
         program->CreateDispatchTableEntry());
     nsm->set_offset(Smi::FromWord(0));
     nsm->set_selector(0);
-    nsm->set_function(trampoline);
-    nsm->set_target(NULL);
+    nsm->set_target(trampoline);
+    nsm->set_code(NULL);
 
     ASSERT(table->get(0)->IsNull());
     for (int i = 0; i < table_size; i++) {

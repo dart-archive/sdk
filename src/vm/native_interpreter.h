@@ -23,7 +23,7 @@ extern "C" void InterpreterEntry();
 
 extern "C" void InterpreterCoroutineEntry();
 
-extern "C" void InterpreterDispatchTableEntry();
+extern "C" void InterpreterMethodEntry();
 
 
 void SetBytecodeBreak(Opcode opcode);

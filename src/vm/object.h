@@ -526,11 +526,11 @@ class Initializer : public HeapObject {
 // Entry in the dispatch table.
 class DispatchTableEntry : public HeapObject {
  public:
-  inline Function* function();
-  inline void set_function(Function* value);
+  inline Function* target();
+  inline void set_target(Function* value);
 
-  inline void* target();
-  inline void set_target(void* value);
+  inline void* code();
+  inline void set_code(void* value);
 
   inline Smi* offset();
   inline void set_offset(Smi* value);
@@ -553,9 +553,9 @@ class DispatchTableEntry : public HeapObject {
     return PortableSize(kSize / kPointerSize, 0, 0);
   }
 
-  static const int kFunctionOffset = HeapObject::kSize;
-  static const int kTargetOffset = kFunctionOffset + kWordSize;
-  static const int kOffsetOffset = kTargetOffset + kWordSize;
+  static const int kTargetOffset = HeapObject::kSize;
+  static const int kCodeOffset = kTargetOffset + kWordSize;
+  static const int kOffsetOffset = kCodeOffset + kWordSize;
   static const int kSelectorOffset = kOffsetOffset + kWordSize;
   static const int kSize = kSelectorOffset + kWordSize;
 
@@ -2142,20 +2142,20 @@ Initializer* Initializer::cast(Object* object) {
 
 // Inlined DispatchTableEntry functions.
 
-Function* DispatchTableEntry::function() {
-  return Function::cast(at(kFunctionOffset));
+Function* DispatchTableEntry::target() {
+  return Function::cast(at(kTargetOffset));
 }
 
-void DispatchTableEntry::set_function(Function* value) {
-  at_put(kFunctionOffset, value);
+void DispatchTableEntry::set_target(Function* value) {
+  at_put(kTargetOffset, value);
 }
 
-void* DispatchTableEntry::target() {
-  return reinterpret_cast<void*>(at(kTargetOffset));
+void* DispatchTableEntry::code() {
+  return reinterpret_cast<void*>(at(kCodeOffset));
 }
 
-void DispatchTableEntry::set_target(void* value) {
-  at_put(kTargetOffset, reinterpret_cast<Object*>(value));
+void DispatchTableEntry::set_code(void* value) {
+  at_put(kCodeOffset, reinterpret_cast<Object*>(value));
 }
 
 Smi* DispatchTableEntry::offset() {

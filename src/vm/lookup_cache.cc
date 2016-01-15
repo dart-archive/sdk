@@ -16,7 +16,7 @@ LookupCache::LookupCache()
   static_assert(kClassOffset == offsetof(Entry, clazz), "clazz");
   static_assert(kSelectorOffset == offsetof(Entry, selector), "selector");
   static_assert(kTargetOffset == offsetof(Entry, target), "target");
-  static_assert(kTagOffset == offsetof(Entry, tag), "tag");
+  static_assert(kCodeOffset == offsetof(Entry, code), "code");
 }
 
 LookupCache::~LookupCache() {

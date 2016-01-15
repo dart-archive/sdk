@@ -29,7 +29,7 @@ class InterpreterGenerator {
   virtual void GeneratePrologue() = 0;
   virtual void GenerateEpilogue() = 0;
 
-  virtual void GenerateMethodCall() = 0;
+  virtual void GenerateMethodEntry() = 0;
 
   virtual void GenerateBytecodePrologue(const char* name) = 0;
   virtual void GenerateDebugAtBytecode() = 0;
@@ -54,7 +54,7 @@ void InterpreterGenerator::Generate() {
   GeneratePrologue();
   GenerateEpilogue();
 
-  GenerateMethodCall();
+  GenerateMethodEntry();
 
   GenerateDebugAtBytecode();
 
@@ -96,7 +96,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
 
-  virtual void GenerateMethodCall();
+  virtual void GenerateMethodEntry();
 
   virtual void GenerateBytecodePrologue(const char* name);
   virtual void GenerateDebugAtBytecode();
@@ -420,16 +420,12 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
 
   // Intrinsic failure: Just invoke the method.
   __ Bind(&intrinsic_failure_);
-  __ b("InterpreterDispatchTableEntry");
+  __ b("InterpreterMethodEntry");
 }
 
-void InterpreterGeneratorARM::GenerateMethodCall() {
+void InterpreterGeneratorARM::GenerateMethodEntry() {
   __ SwitchToText();
-  __ AlignToPowerOfTwo(4);
-  __ Bind("", "InterpreterDispatchTableEntry");
-  __ ldr(R0,
-         Address(R0, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
-  __ AlignToPowerOfTwo(4);
+  __ AlignToPowerOfTwo(3);
   __ Bind("", "InterpreterMethodEntry");
   Push(LR);
   LoadFramePointer(R2);
@@ -706,7 +702,7 @@ void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
 
   // Load the function.
   __ ldr(R0,
-         Address(R1, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
+         Address(R1, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
 
   SaveByteCodePointer(R2);
   __ bl("InterpreterMethodEntry");
@@ -1324,8 +1320,6 @@ void InterpreterGeneratorARM::DoIntrinsicObjectEquals() {
 }
 
 void InterpreterGeneratorARM::DoIntrinsicGetField() {
-  __ ldr(R0,
-         Address(R0, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
   __ ldrb(R1, Address(R0, 2 + Function::kSize - HeapObject::kTag));
   LoadLocal(R0, 0);
   __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
@@ -1335,8 +1329,6 @@ void InterpreterGeneratorARM::DoIntrinsicGetField() {
 }
 
 void InterpreterGeneratorARM::DoIntrinsicSetField() {
-  __ ldr(R0,
-         Address(R0, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
   __ ldrb(R1, Address(R0, 3 + Function::kSize - HeapObject::kTag));
   LoadLocal(R7, 0);
   LoadLocal(R2, 1);
@@ -1570,10 +1562,17 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
   // At this point, we've got our hands on a valid lookup cache entry.
   __ Bind(&finish);
   if (test) {
-    __ ldr(R0, Address(R0, LookupCache::kTagOffset));
+    __ ldr(R0, Address(R0, LookupCache::kCodeOffset));
   } else {
+    Label hit;
     // TODO(ajohnsen): Handle intrinsics.
+    __ ldr(R1, Address(R0, LookupCache::kCodeOffset));
     __ ldr(R0, Address(R0, LookupCache::kTargetOffset));
+
+    __ tst(R0, R0);
+    __ b(NE, &hit);
+    __ ldr(R0, "InterpreterMethodEntry");
+    __ Bind(&hit);
   }
 
   if (test) {
@@ -1679,11 +1678,12 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   } else {
     __ Bind(&validated);
 
-    __ mov(R0, R1);
+    __ ldr(R0,
+           Address(R1, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
 
     SaveByteCodePointer(R2);
     __ ldr(R1,
-           Address(R1, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
+           Address(R1, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
     __ blx(R1);
     RestoreByteCodePointer(R2);
 

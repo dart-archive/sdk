@@ -268,6 +268,8 @@ class Assembler {
 
   INSTRUCTION_2(movzbq, "movzbq %a, %rq", Register, const Address&);
 
+  INSTRUCTION_2(cmove, "cmove %rq, %rq", Register, Register);
+
   INSTRUCTION_2(leaq, "leaq %a, %rq", Register, const Address&);
 
   INSTRUCTION_1(call, "call *%a", const Address&);
@@ -342,11 +344,10 @@ class Assembler {
 
   void DefineLong(const char* name);
   void LoadNative(Register destination, Register index);
+  void LoadLabel(Register reg, const char* name);
 
   // Align what follows to a 2^power address.
   void AlignToPowerOfTwo(int power);
-
-  void LoadLabel(Label* label, Register reg);
 
  private:
   void Print(const char* format, ...);

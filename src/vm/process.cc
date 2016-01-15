@@ -15,6 +15,7 @@
 #include "src/vm/frame.h"
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
+#include "src/vm/native_interpreter.h"
 #include "src/vm/natives.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/port.h"
@@ -833,14 +834,14 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
     return secondary;
   }
 
-  uword tag = 0;
+  void* code = NULL;
   Function* target = clazz->LookupMethod(selector);
   if (target == NULL) {
     static const Names::Id name = Names::kNoSuchMethodTrampoline;
     target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
   } else {
-    void* intrinsic = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
-    tag = (intrinsic == NULL) ? 1 : reinterpret_cast<uword>(intrinsic);
+    code = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
+    if (code == NULL) code = reinterpret_cast<void*>(InterpreterMethodEntry);
   }
 
   ASSERT(target != NULL);
@@ -848,7 +849,7 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
   primary->clazz = clazz;
   primary->selector = selector;
   primary->target = target;
-  primary->tag = tag;
+  primary->code = code;
   return primary;
 }
 
