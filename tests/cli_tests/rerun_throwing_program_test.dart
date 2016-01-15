@@ -52,7 +52,6 @@ class RerunThrowingProgramTest extends CliTest {
 
     // Expect the program throws an uncaught exception.
     Expect.isTrue(await out.moveNext(), "No uncaught exception");
-    Expect.isTrue(await out.moveNext(), "Stacktrace of uncaught exception");
 
     // Try running again and check valid error message.
     process.stdin.writeln("r");

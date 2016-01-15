@@ -206,7 +206,7 @@ class InputHandler {
           BackTrace backtrace = await session.backTrace();
           String disassembly = backtrace != null ? backtrace.disasm() : null;
           if (disassembly != null) {
-            writeStdoutLine(disassembly);
+            writeStdout(disassembly);
           } else {
             writeStdoutLine(
                 "### could not disassemble source for current frame");

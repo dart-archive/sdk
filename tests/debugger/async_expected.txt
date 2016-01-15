@@ -6,13 +6,11 @@ breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 tests/debugger/async_test.dart:12:1
 12   void breakHere() { }
 > bt
-Stack trace:
-> 0: breakHere                       @void breakHere() {}
+* 0: breakHere                       @void breakHere() {}
 > t internal
 ### internal frame visibility set to: true
 > bt
-Stack trace:
-> 0: breakHere                       @void breakHere() {}
+* 0: breakHere                       @void breakHere() {}
   1: call                          
   2: Future.call                     @computation()
   3: Object._noSuchMethodTrampoline

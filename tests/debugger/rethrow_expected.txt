@@ -3,7 +3,6 @@ Starting session. Type 'help' for a list of commands.
 > r
 rethrow!
 Uncaught exception: 42
-Stack trace:
-> 0: main        @rethrow;
+* 0: main        @rethrow;
 > q
 Non-zero exit code from 'fletch-vm' (255).

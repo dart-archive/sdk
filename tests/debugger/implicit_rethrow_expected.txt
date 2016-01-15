@@ -2,8 +2,7 @@ Starting session. Type 'help' for a list of commands.
 
 > r
 Uncaught exception: 42
-Stack trace:
-> 0: main        @try {
+* 0: main        @try {
   throw 42;
 }on String  catch (e) {
   print('not rethrowing from here');
