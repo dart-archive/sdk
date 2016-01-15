@@ -405,7 +405,16 @@ class InputHandler {
     printPrompt();
     StreamIterator streamIterator = new StreamIterator(stream);
     while (await streamIterator.moveNext()) {
-      await handleLine(streamIterator);
+      try {
+        await handleLine(streamIterator);
+      } catch (e, s) {
+        Future cancel = streamIterator.cancel()?.catchError((_) {});
+        if (!session.terminated) {
+          await session.terminateSession().catchError((_) {});
+        }
+        await cancel;
+        return new Future.error(e, s);
+      }
       if (session.terminated) {
         await streamIterator.cancel();
       }
