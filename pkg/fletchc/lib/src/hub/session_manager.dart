@@ -242,5 +242,15 @@ class SessionState {
 
   static SessionState internalCurrent;
 
+  /// Don't use this as a shortcut to get a [SessionState] object. Generally, a
+  /// [SessionState] object should be passed as a parameter to any user of it,
+  /// otherwise API that takes a [SessionState] object doesn't work correctly
+  /// and testing becomes hard.
+  ///
+  /// TODO(ahe): Perhaps we can remove this getter, and [internalCurrent] by
+  /// storing this object in ../worker/worker_main.dart. For example,
+  /// [workerMain] holds a reference to an instance of [SessionState] and
+  /// passes this reference to [WorkerSideTask] which can in turn pass it on to
+  /// the verb/task in [WorkerSideTask.performTask].
   static SessionState get current => internalCurrent;
 }

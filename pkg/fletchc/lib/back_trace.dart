@@ -30,9 +30,9 @@ class BackTraceFrame {
 
   DebugInfo get debugInfo => debugState.getDebugInfo(function);
 
-  String list({int contextLines: 5}) {
+  String list(SessionState state, {int contextLines: 5}) {
     return debugInfo.sourceListStringFor(
-        bytecodePointer - 1, contextLines: contextLines);
+        bytecodePointer - 1, state, contextLines: contextLines);
   }
 
   String disasm() {
@@ -180,11 +180,11 @@ class BackTrace {
     visibleFrameMapping = null;
   }
 
-  String list([int frame]) {
+  String list(SessionState state, [int frame]) {
     if (frame == null) frame = debugState.currentFrame;
     BackTraceFrame visibleStackFrame = visibleFrame(frame);
     if (visibleStackFrame == null) return null;
-    return visibleStackFrame.list();
+    return visibleStackFrame.list(state);
   }
 
   String disasm([int frame]) {

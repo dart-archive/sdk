@@ -56,7 +56,7 @@ class InputHandler {
 
   writeStdoutLine(String s) => session.writeStdout("$s\n");
 
-  Future handleLine(StreamIterator stream) async {
+  Future handleLine(StreamIterator stream, SessionState state) async {
     String line = stream.current;
     if (line.isEmpty) line = previousLine;
     if (line.isEmpty) {
@@ -194,7 +194,7 @@ class InputHandler {
           break;
         }
         BackTrace trace = await session.backTrace();
-        String listing = trace != null ? trace.list() : null;
+        String listing = trace != null ? trace.list(state) : null;
         if (listing != null) {
           writeStdoutLine(listing);
         } else {
@@ -215,7 +215,7 @@ class InputHandler {
         break;
       case 'c':
         if (checkRunning('cannot continue')) {
-          await handleProcessStopResponse(await session.cont());
+          await handleProcessStopResponse(await session.cont(), state);
         }
         break;
       case 'd':
@@ -244,7 +244,7 @@ class InputHandler {
         break;
       case 'finish':
         if (checkRunning('cannot finish method')) {
-          await handleProcessStopResponse(await session.stepOut());
+          await handleProcessStopResponse(await session.stepOut(), state);
         }
         break;
       case 'restart':
@@ -260,7 +260,7 @@ class InputHandler {
           writeStdoutLine("### cannot restart entry frame");
           break;
         }
-        await handleProcessStopResponse(await session.restart());
+        await handleProcessStopResponse(await session.restart(), state);
         break;
       case 'lb':
         List<Breakpoint> breakpoints = session.breakpoints();
@@ -309,27 +309,28 @@ class InputHandler {
       case 'r':
       case 'run':
         if (checkNotLoaded("use 'restart' to run again")) {
-          await handleProcessStopResponse(await session.debugRun());
+          await handleProcessStopResponse(await session.debugRun(), state);
         }
         break;
       case 's':
         if (checkRunning('cannot step to next expression')) {
-          await handleProcessStopResponse(await session.step());
+          await handleProcessStopResponse(await session.step(), state);
         }
         break;
       case 'n':
         if (checkRunning('cannot go to next expression')) {
-          await handleProcessStopResponse(await session.stepOver());
+          await handleProcessStopResponse(await session.stepOver(), state);
         }
         break;
       case 'sb':
         if (checkRunning('cannot step bytecode')) {
-          await handleProcessStopResponse(await session.stepBytecode());
+          await handleProcessStopResponse(await session.stepBytecode(), state);
         }
         break;
       case 'nb':
         if (checkRunning('cannot step over bytecode')) {
-          await handleProcessStopResponse(await session.stepOverBytecode());
+          await handleProcessStopResponse(
+              await session.stepOverBytecode(), state);
         }
         break;
       case 't':
@@ -361,8 +362,10 @@ class InputHandler {
 
   // This method is used to deal with the stopped process command responses
   // that can be returned when sending the Fletch VM a command request.
-  Future handleProcessStopResponse(VmCommand response) async {
-    String output = await session.processStopResponseToString(response);
+  Future handleProcessStopResponse(
+      VmCommand response,
+      SessionState state) async {
+    String output = await session.processStopResponseToString(response, state);
     if (output != null && output.isNotEmpty) {
       writeStdout(output);
     }
@@ -400,13 +403,13 @@ class InputHandler {
     return !session.running;
   }
 
-  Future<int> run() async {
+  Future<int> run(SessionState state) async {
     writeStdoutLine(BANNER);
     printPrompt();
     StreamIterator streamIterator = new StreamIterator(stream);
     while (await streamIterator.moveNext()) {
       try {
-        await handleLine(streamIterator);
+        await handleLine(streamIterator, state);
       } catch (e, s) {
         Future cancel = streamIterator.cancel()?.catchError((_) {});
         if (!session.terminated) {

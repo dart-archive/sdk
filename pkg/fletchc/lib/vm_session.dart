@@ -35,6 +35,9 @@ import 'src/shared_command_infrastructure.dart' show
     CommandTransformerBuilder,
     toUint8ListView;
 
+import 'src/hub/session_manager.dart' show
+    SessionState;
+
 part 'vm_command_reader.dart';
 part 'input_handler.dart';
 
@@ -275,10 +278,11 @@ class Session extends FletchVmSession {
   Future<int> debug(
       Stream<String> inputLines,
       Uri base,
+      SessionState state,
       {bool echo: false}) async {
     await enableDebugger();
     await spawnProcess();
-    return new InputHandler(this, inputLines, echo, base).run();
+    return new InputHandler(this, inputLines, echo, base).run(state);
   }
 
   Future terminateSession() async {
@@ -794,7 +798,9 @@ class Session extends FletchVmSession {
   //   UncaughtException
   //   ProcessCompileError
   //   ConnectionError
-  Future<String> processStopResponseToString(VmCommand response) async {
+  Future<String> processStopResponseToString(
+      VmCommand response,
+      SessionState state) async {
     if (response is UncaughtException) {
       StringBuffer sb = new StringBuffer();
       // Print the exception first, followed by a stack trace.
@@ -815,7 +821,7 @@ class Session extends FletchVmSession {
       if (topFrame != null) {
         String result;
         if (debugState.verbose) {
-          result = topFrame.list(contextLines: 0);
+          result = topFrame.list(state, contextLines: 0);
         } else {
           result = topFrame.shortString();
         }

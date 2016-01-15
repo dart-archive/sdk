@@ -15,6 +15,9 @@ import 'vm_commands.dart' show
     DartValue,
     InstanceStructure;
 
+import 'src/hub/session_manager.dart' show
+    SessionState;
+
 part 'back_trace.dart';
 
 /// A representation of a remote object.

@@ -526,7 +526,10 @@ SessionState createSessionState(
       settings);
 }
 
-Future runWithDebugger(List<String> commands, Session session) async {
+Future runWithDebugger(
+    List<String> commands,
+    Session session,
+    SessionState state) async {
 
   // Method used to generate the debugger commands if none are specified.
   Stream<String> inputGenerator() async* {
@@ -539,9 +542,10 @@ Future runWithDebugger(List<String> commands, Session session) async {
   }
 
   return commands.isEmpty ?
-      session.debug(inputGenerator(), Uri.base, echo: true) :
+      session.debug(inputGenerator(), Uri.base, state, echo: true) :
       session.debug(
-          new Stream<String>.fromIterable(commands), Uri.base, echo: true);
+          new Stream<String>.fromIterable(commands), Uri.base, state,
+          echo: true);
 }
 
 Future<int> run(
@@ -556,7 +560,7 @@ Future<int> run(
   }
 
   if (testDebuggerCommands != null) {
-    await runWithDebugger(testDebuggerCommands, session);
+    await runWithDebugger(testDebuggerCommands, session, state);
     return 0;
   }
 
@@ -592,7 +596,7 @@ Future<int> run(
     debug.BackTrace stackTrace = await session.backTrace();
     if (stackTrace != null) {
       print(stackTrace.format());
-      print(stackTrace.list());
+      print(stackTrace.list(state));
     }
   }
 
