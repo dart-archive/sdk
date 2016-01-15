@@ -1368,7 +1368,7 @@ const InstanceFormat InstanceFormat::initializer_format() {
 
 const InstanceFormat InstanceFormat::dispatch_table_entry_format() {
   return InstanceFormat(DISPATCH_TABLE_ENTRY_TYPE,
-                        DispatchTableEntry::kTargetOffset, true, true,
+                        DispatchTableEntry::kCodeOffset, true, true,
                         NEVER_IMMUTABLE);
 }
 
