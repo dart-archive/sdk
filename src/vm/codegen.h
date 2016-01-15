@@ -25,6 +25,12 @@ class Codegen {
   Function* const function_;
   Assembler* const assembler_;
 
+  enum BranchCondition {
+    BRANCH_ALWAYS,
+    BRANCH_IF_TRUE,
+    BRANCH_IF_FALSE,
+  };
+
   Program* program() const { return program_; }
   Assembler* assembler() const { return assembler_; }
 
@@ -34,11 +40,16 @@ class Codegen {
   void DoStoreLocal(int index);
 
   void DoLoadProgramRoot(int offset);
-  void DoLoadProgramConstant(int index);
 
+  void DoLoadConstant(int bci, int offset);
   void DoLoadInteger(int value);
 
+  void DoBranch(BranchCondition condition, int target);
+
   void DoInvokeMethod(int arity, int offset);
+  void DoInvokeStatic(int bci, int offset, Function* target);
+
+  void DoInvokeAdd();
 
   void DoDrop(int n);
 

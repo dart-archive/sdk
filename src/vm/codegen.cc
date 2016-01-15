@@ -14,6 +14,24 @@
 
 namespace fletch {
 
+class CodegenVisitor : public HeapObjectVisitor {
+ public:
+  CodegenVisitor(Program* program, Assembler* assembler)
+      : program_(program), assembler_(assembler) { }
+
+  virtual int Visit(HeapObject* object) {
+    if (object->IsFunction()) {
+      Codegen codegen(program_, Function::cast(object), assembler_);
+      codegen.Generate();
+    }
+    return object->Size();
+  }
+
+ private:
+  Program* const program_;
+  Assembler* const assembler_;
+};
+
 static int Main(int argc, char** argv) {
   if (argc != 3) {
     fprintf(stderr, "Usage: %s <snapshot> <output file name>\n", argv[0]);
@@ -30,11 +48,8 @@ static int Main(int argc, char** argv) {
 
   Assembler assembler;
   Program* program = reinterpret_cast<Program*>(api_program);
-  Array* methods = program->static_methods();
-  for (int i = 0; i < methods->length(); i++) {
-    Codegen codegen(program, Function::cast(methods->get(i)), &assembler);
-    codegen.Generate();
-  }
+  CodegenVisitor visitor(program, &assembler);
+  program->heap()->IterateObjects(&visitor);
 
   FletchDeleteProgram(api_program);
   FletchTearDown();
@@ -48,6 +63,11 @@ void Codegen::Generate() {
   while (bci < function_->bytecode_size()) {
     uint8* bcp = function_->bytecode_address_for(bci);
     Opcode opcode = static_cast<Opcode>(*bcp);
+    if (opcode == kMethodEnd) return;
+
+    printf("Function_%p_%d: // ", function_, bci);
+    Bytecode::Print(bcp);
+    printf("\n");
 
     switch (opcode) {
       case kLoadLocal0:
@@ -107,15 +127,103 @@ void Codegen::Generate() {
       }
 
       case kLoadConst: {
-        DoLoadProgramConstant(Utils::ReadInt32(bcp + 1));
+        DoLoadConstant(bci, Utils::ReadInt32(bcp + 1));
         break;
       }
+
+      case kBranchWide: {
+        DoBranch(BRANCH_ALWAYS, bci + Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
+      case kBranchIfTrueWide: {
+        DoBranch(BRANCH_IF_TRUE, bci + Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
+      case kBranchIfFalseWide: {
+        DoBranch(BRANCH_IF_FALSE, bci + Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
+      case kBranchBack: {
+        DoBranch(BRANCH_ALWAYS, bci - *(bcp + 1));
+        break;
+      }
+
+      case kBranchBackIfTrue: {
+        DoBranch(BRANCH_IF_TRUE, bci - *(bcp + 1));
+        break;
+      }
+
+      case kBranchBackIfFalse: {
+        DoBranch(BRANCH_IF_FALSE, bci - *(bcp + 1));
+        break;
+      }
+
+      case kBranchBackWide: {
+        DoBranch(BRANCH_ALWAYS, bci - Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
+      case kBranchBackIfTrueWide: {
+        DoBranch(BRANCH_IF_TRUE, bci - Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
+      case kBranchBackIfFalseWide: {
+        DoBranch(BRANCH_IF_FALSE, bci - Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
+      case kPopAndBranchWide: {
+        DoDrop(*(bcp + 1));
+        DoBranch(BRANCH_ALWAYS, bci + Utils::ReadInt32(bcp + 2));
+        break;
+      }
+
+      case kPopAndBranchBackWide: {
+        DoDrop(*(bcp + 1));
+        DoBranch(BRANCH_ALWAYS, bci - Utils::ReadInt32(bcp + 2));
+        break;
+      }
+
+      case kInvokeEq:
+      case kInvokeLt:
+      case kInvokeLe:
+      case kInvokeGt:
+      case kInvokeGe:
+
+      case kInvokeSub:
+      case kInvokeMod:
+      case kInvokeMul:
+      case kInvokeTruncDiv:
+
+      case kInvokeBitNot:
+      case kInvokeBitAnd:
+      case kInvokeBitOr:
+      case kInvokeBitXor:
+      case kInvokeBitShr:
+      case kInvokeBitShl:
 
       case kInvokeMethod: {
         int selector = Utils::ReadInt32(bcp + 1);
         int arity = Selector::ArityField::decode(selector);
         int offset = Selector::IdField::decode(selector);
         DoInvokeMethod(arity, offset);
+        break;
+      }
+
+      case kInvokeAdd: {
+        DoInvokeAdd();
+        break;
+      }
+
+      case kInvokeStatic:
+      case kInvokeFactory: {
+        int offset = Utils::ReadInt32(bcp + 1);
+        Function* target = Function::cast(Function::ConstantForBytecode(bcp));
+        DoInvokeStatic(bci, offset, target);
         break;
       }
 
@@ -140,14 +248,8 @@ void Codegen::Generate() {
         break;
       }
 
-      case kMethodEnd: {
-        return;
-      }
-
       default: {
-        printf("\t// Unhandled: ");
-        Bytecode::Print(bcp);
-        printf("\n");
+        printf("\tint3\n");
         break;
       }
     }
