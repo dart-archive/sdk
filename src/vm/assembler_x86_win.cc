@@ -35,8 +35,12 @@ void Assembler::DefineLong(const char* name) {
   printf("\t.long %s\n", name);
 }
 
-void Assembler::LoadNative(Register reg, Register index) {
-  Print("movl kNativeTable(,%rl,4), %rl", index, reg);
+void Assembler::LoadNative(Register destination, Register index) {
+  Print("movl kNativeTable(,%rl,4), %rl", index, destination);
+}
+
+void Assembler::LoadLabel(Register reg, const char* name) {
+  Print("leal %s, %rl", name, reg);
 }
 
 }  // namespace fletch
