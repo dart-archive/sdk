@@ -1884,12 +1884,20 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
     // Load the target from the entry.
     __ Bind(&validated);
 
-    __ movl(
-        EAX,
-        Address(ECX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
+    __ movl(EAX,
+            Address(ECX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
+    __ movl(ECX,
+            Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
 
     StoreByteCodePointer();
-    __ call(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
+    // Test if the branch is a "default" call to InterpreterMethodEntry. If it
+    // is, we use another call point, to help branch prediction.
+    __ LoadLabel(EBX, "InterpreterMethodEntry");
+    __ cmpl(ECX, EBX);
+    Label default_call, resume;
+    __ j(EQUAL, &default_call);
+    __ call(ECX);
+    __ Bind(&resume);
     RestoreByteCodePointer();
 
     __ movl(EDX, Address(ESI, 1));
@@ -1900,6 +1908,10 @@ void InterpreterGeneratorX86::InvokeMethod(bool test) {
 
     StoreLocal(EAX, 0);
     Dispatch(kInvokeMethodLength);
+
+    __ Bind(&default_call);
+    __ call(EBX);
+    __ jmp(&resume);
   }
 
   __ Bind(&smi);
