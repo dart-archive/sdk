@@ -127,6 +127,7 @@ power_management_tests/*: Skip # The native extension is not compiled for ARM.
 flash_sd_card_tests/*: Skip # The native extension is not compiled for ARM.
 
 incremental/experimental/program_gc_with_processes: Pass, Fail # Issue 389.
+incremental/experimental/super_call_signature_change: Fail
 
 [ $arch == x64 && $asan]
 service_tests/simple_todo: Pass, Fail # Issue https://github.com/dart-lang/fletch/issues/57
