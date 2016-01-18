@@ -239,6 +239,23 @@ hooks = [
       'fletch/third_party/openocd',
     ],
   },
+  {
+    'name': 'third_party_gcc_arm_embedded',
+    'pattern': '.',
+    'action': [
+      'download_from_google_storage',
+      '-q',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dart-dependencies-fletch',
+      '-d',
+      '-r',
+      '-u',
+      '--auto_platform',
+      'fletch/third_party/gcc-arm-embedded',
+    ],
+  },
   # Pull clang-format binaries using checked-in hashes.
   {
     'name': 'clang_format_win',
