@@ -449,7 +449,9 @@ void Session::ProcessMessages() {
         Stack* stack = process_->stack();
         Frame frame(stack);
         for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
-        Object* local = stack->get(frame.FirstLocalIndex() - slot);
+        word index = frame.FirstLocalIndex() - slot;
+        if (index < frame.LastLocalIndex()) FATAL("Illegal slot offset");
+        Object* local = stack->get(index);
         if (opcode == Connection::kProcessLocalStructure &&
             local->IsInstance()) {
           SendInstanceStructure(Instance::cast(local));
@@ -1558,7 +1560,7 @@ void Session::TransformInstances() {
   program()->VisitProcesses(&rebuilding_visitor);
 }
 
-void Session::PushFrameOnSessionStack(bool is_first_name, const Frame* frame) {
+void Session::PushFrameOnSessionStack(const Frame* frame) {
   Function* function = frame->FunctionFromByteCodePointer();
   uint8* start_bcp = function->bytecode_address_for(0);
 
@@ -1579,7 +1581,7 @@ int Session::PushStackFrames(Stack* stack) {
   Frame frame(stack);
   while (frame.MovePrevious()) {
     if (frame.ByteCodePointer() == NULL) continue;
-    PushFrameOnSessionStack(frames == 0, &frame);
+    PushFrameOnSessionStack(&frame);
     ++frames;
   }
   return frames;
@@ -1589,7 +1591,7 @@ void Session::PushTopStackFrame(Stack* stack) {
   Frame frame(stack);
   bool has_top_frame = frame.MovePrevious();
   ASSERT(has_top_frame);
-  PushFrameOnSessionStack(true, &frame);
+  PushFrameOnSessionStack(&frame);
 }
 
 void Session::RestartFrame(int frame_index) {

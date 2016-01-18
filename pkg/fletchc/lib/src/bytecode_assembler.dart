@@ -61,6 +61,11 @@ class BytecodeAssembler {
 
   BytecodeAssembler(this.functionArity);
 
+  int computeParameterSlot(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    return parameter - frameDescriptorSize - functionArity;
+  }
+
   void reuse() {
     bytecodes.clear();
     catchRanges.clear();
@@ -173,6 +178,16 @@ class BytecodeAssembler {
     loadBoxedHelper(computeParameterOffset(parameter));
   }
 
+  void loadParameterSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    loadLocalHelper(offset);
+  }
+
+  void loadBoxedParameterSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    loadBoxedHelper(offset);
+  }
+
   void loadStatic(int index) {
     internalAdd(new LoadStatic(index));
   }
@@ -254,6 +269,16 @@ class BytecodeAssembler {
   void storeBoxedParameter(int parameter) {
     assert(parameter >= 0 && parameter < functionArity);
     storeBoxedHelper(computeParameterOffset(parameter));
+  }
+
+  void storeParameterSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    storeLocalHelper(offset);
+  }
+
+  void storeBoxedParameterSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    storeBoxedHelper(offset);
   }
 
   void storeStatic(int index) {

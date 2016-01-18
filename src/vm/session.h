@@ -198,7 +198,7 @@ class Session {
   // therefore not safe to traverse heap objects after calling this method.
   void TransformInstances();
 
-  void PushFrameOnSessionStack(bool is_first_name, const Frame* frame);
+  void PushFrameOnSessionStack(const Frame* frame);
 
   // Compute a stack trace and push it on the session stack.
   int PushStackFrames(Stack* stack);

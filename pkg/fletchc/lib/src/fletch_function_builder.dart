@@ -57,7 +57,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
       : super(functionId, kind, arity, name, element, signature, memberOf),
         assembler = new BytecodeAssembler(arity) {
     assert(signature == null ||
-        arity == (signature.parameterCount + (memberOf != null ? 1 : 0)));
+        arity == (signature.parameterCount + (isInstanceMember ? 1 : 0)));
   }
 
   void reuse() {

@@ -152,22 +152,26 @@ class UnboxedLocalValue extends LocalValue {
  * A reference to a local value that is boxed.
  */
 class BoxedParameterValue extends LocalValue {
-  BoxedParameterValue(int slot, Element element) : super(slot, element);
+  BoxedParameterValue(
+      int parameter,
+      Element element,
+      BytecodeAssembler assembler)
+      : super(assembler.computeParameterSlot(parameter), element);
 
   void initialize(BytecodeAssembler assembler) {
     assembler.allocateBoxed();
   }
 
   void load(BytecodeAssembler assembler) {
-    assembler.loadBoxedParameter(slot);
+    assembler.loadBoxedParameterSlot(slot);
   }
 
   void loadRaw(BytecodeAssembler assembler) {
-    assembler.loadParameter(slot);
+    assembler.loadParameterSlot(slot);
   }
 
   void store(BytecodeAssembler assembler) {
-    assembler.storeBoxedParameter(slot);
+    assembler.storeBoxedParameterSlot(slot);
   }
 
   String toString() => "BoxedParameter($element, $slot)";
@@ -177,16 +181,20 @@ class BoxedParameterValue extends LocalValue {
  * A reference to a local value that is boxed.
  */
 class UnboxedParameterValue extends LocalValue {
-  UnboxedParameterValue(int slot, Element element) : super(slot, element);
+  UnboxedParameterValue(
+      int parameter,
+      Element element,
+      BytecodeAssembler assembler)
+      : super(assembler.computeParameterSlot(parameter), element);
 
   void initialize(BytecodeAssembler assembler) {}
 
   void load(BytecodeAssembler assembler) {
-    assembler.loadParameter(slot);
+    assembler.loadParameterSlot(slot);
   }
 
   void store(BytecodeAssembler assembler) {
-    assembler.storeParameter(slot);
+    assembler.storeParameterSlot(slot);
   }
 
   String toString() => "Parameter($element, $slot)";
@@ -272,8 +280,11 @@ abstract class CodegenVisitor
                  TreeElements elements,
                  this.closureEnvironment,
                  this.element)
-      : super(elements),
-        thisValue = new UnboxedParameterValue(0, null);
+      : super(elements) {
+    if (functionBuilder.isInstanceMember) {
+      thisValue = new UnboxedParameterValue(0, null, assembler);
+    }
+  }
 
   BytecodeAssembler get assembler => functionBuilder.assembler;
 
@@ -364,14 +375,14 @@ abstract class CodegenVisitor
 
     if (closureEnvironment.shouldBeBoxed(parameter)) {
       if (isCapturedValueBoxed) {
-        return new BoxedParameterValue(index, parameter);
+        return new BoxedParameterValue(index, parameter, assembler);
       }
       LocalValue value = new BoxedLocalValue(assembler.stackSize, parameter);
       assembler.loadParameter(index);
       value.initialize(assembler);
       return value;
     }
-    return new UnboxedParameterValue(index, parameter);
+    return new UnboxedParameterValue(index, parameter, assembler);
   }
 
   void pushVariableDeclaration(LocalValue value) {
