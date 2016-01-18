@@ -81,6 +81,7 @@
         'event_handler_posix.cc',
         'event_handler_linux.cc',
         'event_handler_macos.cc',
+        'event_handler_windows.cc',
         'event_handler_lk.cc',
         'event_handler_cmsis.cc',
         'ffi.cc',

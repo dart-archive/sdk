@@ -16,6 +16,10 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
+#if _WIN32_WINNT < _WIN32_WINNT_WIN7
+#error "Required version of windows headers is at least Windows 7."
+#endif
+
 #include <windows.h>
 
 #include "src/shared/globals.h"
