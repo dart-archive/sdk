@@ -265,6 +265,28 @@ class FletchSystemBuilder {
 
   List<FletchFunctionBuilder> getNewFunctions() => _newFunctions;
 
+  FletchClassBuilder getTearoffClassBuilder(
+      FletchFunctionBase function,
+      FletchClassBuilder superclass) {
+    int functionId = lookupTearOffById(function.functionId);
+    if (functionId == null) return null;
+    FletchFunctionBase functionBuilder = lookupFunction(functionId);
+    FletchClassBuilder classBuilder =
+        lookupClassBuilder(functionBuilder.memberOf);
+    if (classBuilder != null) return classBuilder;
+    FletchClass cls = lookupClass(functionBuilder.memberOf);
+    return newClassBuilderInternal(cls, superclass);
+  }
+
+  FletchClassBuilder newClassBuilderInternal(
+      FletchClass klass,
+      FletchClassBuilder superclass) {
+    FletchClassBuilder builder = new FletchPatchClassBuilder(
+        klass, superclass);
+    _newClasses[klass.classId] = builder;
+    return builder;
+  }
+
   FletchClassBuilder newClassBuilder(
       ClassElement element,
       FletchClassBuilder superclass,
@@ -273,9 +295,7 @@ class FletchSystemBuilder {
     if (element != null) {
       FletchClass klass = predecessorSystem.lookupClassByElement(element);
       if (klass != null) {
-        FletchClassBuilder builder = new FletchPatchClassBuilder(
-            klass, superclass);
-        _newClasses[klass.classId] = builder;
+        FletchClassBuilder builder = newClassBuilderInternal(klass, superclass);
         _classBuildersByElement[element] = builder;
         return builder;
       }

@@ -47,12 +47,12 @@ class MockVmRunner extends FletchRunner {
     await attachToVm(InternetAddress.LOOPBACK_IP_V4.address, vm.port, state);
   }
 
-  Future<Null> run(List<String> arguments) async {
+  Future<int> run(List<String> arguments, {int expectedExitCode: 0}) async {
     await super.run(arguments);
     int exitCode = await vm.exitCode;
     print("Mock VM exit code: $exitCode");
+    return exitCode;
   }
-
 }
 
 main(List<String> arguments) async {

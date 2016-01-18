@@ -113,7 +113,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   'serialize_settings_tests': serialize_settings_tests.main,
 
-  'run': run.test,
+  'run/application_test': run.test,
+  'run/incremental_debug_info': run.testIncrementalDebugInfo,
 
   'test_vm_connection/test': test_vm_connection.test,
   'test_vm_connection/testCloseImmediately':

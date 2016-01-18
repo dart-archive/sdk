@@ -68,7 +68,7 @@ class FletchRunner {
         IncrementalMode.production);
   }
 
-  Future<Null> run(List<String> arguments) async {
+  Future<int> run(List<String> arguments, {int expectedExitCode: 0}) async {
     Settings settings = await computeSettings();
     SessionState state = createSessionState("test", settings);
     for (String script in arguments) {
@@ -104,21 +104,39 @@ class FletchRunner {
       if (state.fletchVm != null) {
         int exitCode = await state.fletchVm.exitCode;
         print("$script: Fletch VM exit code: $exitCode");
-        if (exitCode != 0) {
-          io.exitCode = exitCode;
-          break;
+        if (exitCode != expectedExitCode) {
+          return exitCode;
         }
       }
     }
     print(state.getLog());
+    return 0;
   }
 }
 
 main(List<String> arguments) async {
-  await new FletchRunner().run(arguments);
+  io.exitCode = await new FletchRunner().run(arguments);
 }
 
-Future<Null> test() => main(<String>['tests/language/application_test.dart']);
+void checkExitCode(int expected, int actual) {
+  if (expected != actual) {
+    throw "Unexpected exit code: $expected != $actual";
+  }
+}
+
+Future<Null> test() async {
+  checkExitCode(
+      0, await new FletchRunner().run(
+          <String>['tests/language/application_test.dart']));
+}
+
+Future<Null> testIncrementalDebugInfo() async {
+  checkExitCode(
+      0, await new FletchRunner().run(
+          <String>['tests/fletchc/test_incremental_debug_info.dart',
+                   'tests/fletchc/test_incremental_debug_info.dart'],
+          expectedExitCode: 255));
+}
 
 // TODO(ahe): Move this method into FletchRunner and use computeSettings.
 Future<Null> export(

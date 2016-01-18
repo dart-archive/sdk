@@ -522,15 +522,12 @@ class FletchBackend extends Backend
    * instance.
    */
   FletchClassBuilder createTearoffClass(FletchFunctionBase function) {
-    int functionId = systemBuilder.lookupTearOffById(function.functionId);
-    if (functionId != null) {
-      FletchFunctionBuilder functionBuilder =
-          systemBuilder.lookupFunction(functionId);
-      return systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
-    }
+    FletchClassBuilder tearoffClass =
+        systemBuilder.getTearoffClassBuilder(function, compiledClosureClass);
+    if (tearoffClass != null) return tearoffClass;
     FunctionSignature signature = function.signature;
     bool hasThis = function.isInstanceMember;
-    FletchClassBuilder tearoffClass = createCallableStubClass(
+    tearoffClass = createCallableStubClass(
         hasThis ? 1 : 0,
         signature.parameterCount,
         compiledClosureClass);
