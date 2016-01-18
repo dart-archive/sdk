@@ -7,13 +7,23 @@
 #include "src/vm/assembler.h"
 #include "src/vm/process.h"
 
+#include "src/shared/flags.h"
+#include "src/shared/natives.h"
+
 #define __ assembler()->
 
 namespace fletch {
 
+const char* kNativeNames[] = {
+#define N(e, c, n) "Native_" #e,
+  NATIVES_DO(N)
+#undef N
+};
+
 void Codegen::DoEntry() {
   char name[256];
-  sprintf(name, "%p", function_);
+  sprintf(name, "%08x", function_);
+  __ AlignToPowerOfTwo(4);
   __ Bind("Function_", name);
 
   // Calling convention
@@ -23,15 +33,28 @@ void Codegen::DoEntry() {
 
   __ pushl(EBP);
   __ movl(EBP, ESP);
-  __ pushl(EAX);  // Store the function on the stack.
+  __ pushl(Immediate(0));
 }
 
 void Codegen::DoLoadLocal(int index) {
   __ pushl(Address(ESP, index * kWordSize));
 }
 
+void Codegen::DoLoadField(int index) {
+  __ popl(EAX);
+  __ pushl(Address(EAX, index * kWordSize + Instance::kSize - HeapObject::kTag));
+}
+
 void Codegen::DoStoreLocal(int index) {
-  __ popl(Address(ESP, index * kWordSize));
+  __ movl(EAX, Address(ESP, 0));
+  __ movl(Address(ESP, index * kWordSize), EAX);
+}
+
+void Codegen::DoStoreField(int index) {
+  __ popl(EAX);  // Value.
+  __ popl(ECX);
+  __ movl(Address(ECX, index * kWordSize + Instance::kSize - HeapObject::kTag), EAX);
+  __ pushl(EAX);
 }
 
 void Codegen::DoLoadInteger(int value) {
@@ -39,27 +62,37 @@ void Codegen::DoLoadInteger(int value) {
 }
 
 void Codegen::DoLoadProgramRoot(int offset) {
-  __ movl(EAX, Address(EDI, Process::kProgramOffset));
-  __ pushl(Address(EAX, offset));
+  Object* root = *reinterpret_cast<Object**>(
+      reinterpret_cast<uint8*>(program_) + offset);
+  if (root->IsHeapObject()) {
+    printf("\tpushl O%08x + 1\n", HeapObject::cast(root)->address());
+  } else {
+    printf("\tpushl 0x%08x\n", root);
+  }
 }
 
 void Codegen::DoLoadConstant(int bci, int offset) {
-  __ movl(EAX, Address(EBP, -1 * kWordSize));
-  __ pushl(Address(EAX, Function::kSize - HeapObject::kTag + bci + offset));
+  Object* constant = Function::ConstantForBytecode(function_->bytecode_address_for(bci));
+  if (constant->IsHeapObject()) {
+    printf("\tpushl O%08x + 1\n", HeapObject::cast(constant)->address());
+  } else {
+    printf("\tpushl 0x%08x\n", constant);
+  }
 }
 
-void Codegen::DoBranch(BranchCondition condition, int target) {
+void Codegen::DoBranch(BranchCondition condition, int from, int to) {
   Label skip;
   if (condition == BRANCH_ALWAYS) {
     // Do nothing.
   } else {
     __ popl(EBX);
-    __ movl(EAX, Address(EDI, Process::kProgramOffset));
-    __ cmpl(EBX, Address(EAX, Program::kTrueObjectOffset));
+    printf("\tcmpl %%ebx, O%08x + 1\n", program_->true_object()->address());
     Condition cc = (condition == BRANCH_IF_TRUE) ? NOT_EQUAL : EQUAL;
     __ j(cc, &skip);
   }
-  printf("\tjmp Function_%p_%d\n", function_, target);
+  printf("\tjmp %d%s\n",
+      reinterpret_cast<int32>(function_->bytecode_address_for(to)),
+      from >= to ? "b" : "f");
   if (condition != BRANCH_ALWAYS) {
     __ Bind(&skip);
   }
@@ -67,42 +100,14 @@ void Codegen::DoBranch(BranchCondition condition, int target) {
 
 void Codegen::DoInvokeMethod(int arity, int offset) {
   __ movl(EAX, Address(ESP, arity * kWordSize));
-  __ movl(EDX, Immediate(offset));
+  __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
   printf("\tcall InvokeMethod\n");
-
-  /*
-  Label done;
-  __ movl(EAX, Address(ESP, arity * kWordSize));
-  __ movl(EDX, Immediate(program()->smi_class()->id()));  // Smi tag?
-  __ testl(EAX, Immediate(Smi::kTagMask));
-  __ j(ZERO, &done);
-
-  // TODO(kasperl): Use class id in objects? Less indirection.
-  __ movl(EDX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
-  __ movl(EDX, Address(EDX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
-  __ Bind(&done);
-
-  // TODO(kasperl): Avoid having to load the dispatch table all the time.
-  __ movl(ESI, Address(EDI, Process::kProgramOffset));
-  __ movl(ESI, Address(ESI, Program::kDispatchTableOffset));
-  __ movl(ECX, Address(ESI, EDX, TIMES_2, Array::kSize - HeapObject::kTag + offset * kWordSize));
-
-  __ cmpl(Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag), Immediate(offset));
-  __ j(NOT_EQUAL, &done);  // TODO(kasperl): Deal with noSuchMethod.
-
-  __ movl(EAX, Address(ECX, DispatchTableEntry::kFunctionOffset - HeapObject::kTag));
-  __ call(Address(ECX, DispatchTableEntry::kTargetOffset - HeapObject::kTag));
-  */
-
-  DoDrop(arity);
+  DoDrop(arity + 1);
   __ pushl(EAX);
 }
 
 void Codegen::DoInvokeStatic(int bci, int offset, Function* target) {
-  __ movl(EAX, Address(EBP, -1 * kWordSize));
-  __ movl(EAX, Address(EAX, Function::kSize - HeapObject::kTag + bci + offset));
-
-  printf("\tcall Function_%p\n", target);
+  printf("\tcall Function_%08x\n", target);
   DoDrop(target->arity());
   __ pushl(EAX);
 }
@@ -128,12 +133,59 @@ void Codegen::DoInvokeAdd() {
   __ movl(Address(ESP, 0 * kWordSize), EAX);
 }
 
+void Codegen::DoInvokeLt() {
+  Label done, slow;
+  __ movl(EAX, Address(ESP, 1 * kWordSize));
+  __ popl(EDX);
+
+  __ testl(EAX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, &slow);
+
+  __ testl(EDX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, &slow);
+
+  __ cmpl(EAX, EDX);
+  printf("\tmovl O%08x + 1, %%eax\n", program_->true_object()->address());
+  __ j(LESS, &done);
+
+  printf("\tmovl O%08x + 1, %%eax\n", program_->false_object()->address());
+  __ jmp(&done);
+
+  __ Bind(&slow);
+  printf("\tcall InvokeLt\n");
+
+  __ Bind(&done);
+  __ movl(Address(ESP, 0 * kWordSize), EAX);
+}
+
+void Codegen::DoInvokeNative(Native native, int arity) {
+  // Compute the address for the first argument (we skip two empty slots).
+  __ leal(EBX, Address(ESP, (arity + 2) * kWordSize));
+
+  // TODO: switch to C stack.
+
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ movl(Address(ESP, 1 * kWordSize), EBX);
+  printf("\tcall %s\n", kNativeNames[native]);
+  __ int3();
+
+  // TODO: switch to Dart stack.
+
+  // TODO: check for failure.
+
+  // Success!
+  __ movl(ESP, EBP);
+  __ popl(EBP);
+
+  __ ret();
+}
+
 void Codegen::DoDrop(int n) {
   ASSERT(n >= 0);
   if (n == 0) {
   	// Do nothing.
   } else if (n == 1) {
-    __ popl(EAX);
+    __ popl(EDX);
   } else {
   	__ addl(ESP, Immediate(n * kWordSize));
   }

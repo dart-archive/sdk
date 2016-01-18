@@ -164,12 +164,7 @@ static int Main(int argc, char** argv) {
     }
     if (IsSnapshot(bytes)) {
       FletchProgram program = FletchLoadSnapshot(bytes.data(), bytes.length());
-
-      if (Flags::funky) {
-        FletchDumpProgram(program, "program.S");
-      } else {
-        result = FletchRunMain(program);
-      }
+      result = FletchRunMain(program);
       FletchDeleteProgram(program);
       interactive = false;
     } else {

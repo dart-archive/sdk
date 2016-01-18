@@ -8,6 +8,8 @@
 #include "src/vm/assembler.h"
 #include "src/vm/program.h"
 
+#include "src/shared/natives.h"
+
 namespace fletch {
 
 class Codegen {
@@ -37,19 +39,25 @@ class Codegen {
   void DoEntry();
 
   void DoLoadLocal(int index);
+  void DoLoadField(int index);
+
   void DoStoreLocal(int index);
+  void DoStoreField(int index);
 
   void DoLoadProgramRoot(int offset);
 
   void DoLoadConstant(int bci, int offset);
   void DoLoadInteger(int value);
 
-  void DoBranch(BranchCondition condition, int target);
+  void DoBranch(BranchCondition condition, int from, int to);
 
   void DoInvokeMethod(int arity, int offset);
   void DoInvokeStatic(int bci, int offset, Function* target);
 
   void DoInvokeAdd();
+  void DoInvokeLt();
+
+  void DoInvokeNative(Native native, int arity);
 
   void DoDrop(int n);
 

@@ -256,7 +256,7 @@ enum Native {
 #define N(e, c, n) k##e,
   NATIVES_DO(N)
 #undef N
-      kNumberOfNatives
+  kNumberOfNatives
 };
 
 }  // namespace fletch

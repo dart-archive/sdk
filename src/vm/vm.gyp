@@ -349,9 +349,10 @@
         'libfletch',
       ],
       'sources': [
+        'code_stubs.S',
         'main-o.cc',
         'main_simple.cc',
-        'program.S'
+        'program.S',
       ],
     },
     {
