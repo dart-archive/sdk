@@ -140,13 +140,14 @@ Future<Null> testIncrementalDebugInfo() async {
 
 // TODO(ahe): Move this method into FletchRunner and use computeSettings.
 Future<Null> export(
-    String script, String snapshot, {bool binaryProgramInfo: false}) async {
+    String script, String snapshot, {bool binaryProgramInfo: false,
+        Map<String, String> constants: const <String, String> {}}) async {
   Settings settings;
   if (fletchSettingsFile == null) {
     settings = new Settings(
         fileUri(".packages", Uri.base),
         <String>[],
-        <String, String>{},
+        constants,
         null,
         null,
         IncrementalMode.none);
