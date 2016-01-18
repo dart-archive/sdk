@@ -273,13 +273,13 @@ class Process {
 
   // If you add an offset here, remember to add the corresponding static_assert
   // in process.cc.
-  static const uword kCoroutineOffset = 0;
-  static const uword kStackLimitOffset = kCoroutineOffset + sizeof(void*);
-  static const uword kProgramOffset = kStackLimitOffset + sizeof(void*);
-  static const uword kStaticsOffset = kProgramOffset + sizeof(void*);
-  static const uword kExceptionOffset = kStaticsOffset + sizeof(void*);
-  static const uword kPrimaryLookupCacheOffset =
-      kExceptionOffset + sizeof(void*);
+  static const uword kNativeStackOffset = 0;
+  static const uword kCoroutineOffset = kNativeStackOffset + kWordSize;
+  static const uword kStackLimitOffset = kCoroutineOffset + kWordSize;
+  static const uword kProgramOffset = kStackLimitOffset + kWordSize;
+  static const uword kStaticsOffset = kProgramOffset + kWordSize;
+  static const uword kExceptionOffset = kStaticsOffset + kWordSize;
+  static const uword kPrimaryLookupCacheOffset = kExceptionOffset + kWordSize;
 
  private:
   friend class Interpreter;
@@ -306,6 +306,7 @@ class Process {
 
   // Put these first so they can be accessed from the interpreter without
   // issues around object layout.
+  void* native_stack_;
   Coroutine* coroutine_;
   Atomic<uword> stack_limit_;
   Program* program_;

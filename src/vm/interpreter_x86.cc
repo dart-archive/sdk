@@ -89,7 +89,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
 
   // Registers
   // ---------
-  //   edi: stack pointer (C)
+  //   edi: process pointer
   //   esi: bytecode pointer
   //   esp: stack pointer (Dart)
   //   ebp: frame pointer
@@ -249,15 +249,17 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   void Drop(int n);
   void Drop(Register reg);
 
-  void LoadProcess(Register reg);
   void LoadProgram(Register reg);
   void LoadStaticsArray(Register reg);
   void LoadLiteralNull(Register reg);
   void LoadLiteralTrue(Register reg);
   void LoadLiteralFalse(Register reg);
 
+  void LoadNativeStack(Register reg);
+  void StoreNativeStack(Register reg);
+
   void SwitchToDartStack();
-  void SwitchToCStack();
+  void SwitchToCStack(Register scratch);
 
   void StoreByteCodePointer();
   void RestoreByteCodePointer();
@@ -324,15 +326,15 @@ void InterpreterGeneratorX86::GeneratePrologue() {
   __ pushl(EDI);
   __ pushl(ESI);
 
-  // Push the current process.
-  __ pushl(Address(ESP, (4 + 1) * kWordSize));
+  // Store the current process.
+  __ movl(EDI, Address(ESP, (4 + 1) * kWordSize));
 
   // Create room for Dart stack, when doing native calls.
   __ pushl(Immediate(0));
 
   // Pad the stack to guarantee the right alignment for calls.
-  // Reserved is 4 registers, 1 return address, 1 process and 1 Dart stack slot.
-  spill_size_ = ComputeStackPadding(7 * kWordSize, 6 * kWordSize);
+  // Reserved is 4 registers, 1 return address and 1 Dart stack slot.
+  spill_size_ = ComputeStackPadding(6 * kWordSize, 6 * kWordSize);
   if (spill_size_ > 0) __ subl(ESP, Immediate(spill_size_));
 
   // Restore the register state and dispatch to the first bytecode.
@@ -348,8 +350,8 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ Bind(&done_state_saved_);
   if (spill_size_ > 0) __ addl(ESP, Immediate(spill_size_));
 
-  // Skip Dart stack slot and process slot.
-  __ addl(ESP, Immediate(2 * kWordSize));
+  // Skip Dart stack slot.
+  __ addl(ESP, Immediate(1 * kWordSize));
 
   // Restore callee-saved registers.
   __ popl(ESI);
@@ -374,8 +376,7 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState(&interpreter_entry_);
-  LoadProcess(EAX);
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ call("HandleGC");
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   __ testl(EAX, EAX);
@@ -390,8 +391,7 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ Bind(&check_stack_overflow_);
   SaveState(&overflow_resume);
 
-  LoadProcess(ECX);
-  __ movl(Address(ESP, 0 * kWordSize), ECX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ call("HandleStackOverflow");
   RestoreState();
@@ -455,10 +455,9 @@ void InterpreterGeneratorX86::GenerateDebugAtBytecode() {
   __ Bind("", "DebugAtBytecode");
   // TODO(ajohnsen): Check if the process has debug_info set.
   __ popl(EBX);
-  LoadProcess(EAX);
   __ movl(EDX, ESP);
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  SwitchToCStack(EAX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), ESI);
   __ movl(Address(ESP, 2 * kWordSize), EDX);
   __ call("HandleAtBytecode");
@@ -762,8 +761,7 @@ void InterpreterGeneratorX86::DoInvokeNativeYield() {
 void InterpreterGeneratorX86::DoInvokeSelector() {
   Label resume;
   SaveState(&resume);
-  LoadProcess(EAX);
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ call("HandleInvokeSelector");
   RestoreState();
   __ Bind(&resume);
@@ -1135,9 +1133,8 @@ void InterpreterGeneratorX86::DoAllocateImmutable() { Allocate(true); }
 
 void InterpreterGeneratorX86::DoAllocateBoxed() {
   LoadLocal(EBX, 0);
-  LoadProcess(EAX);
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  SwitchToCStack(EAX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
   __ call("HandleAllocateBoxed");
   SwitchToDartStack();
@@ -1164,8 +1161,7 @@ void InterpreterGeneratorX86::DoNegate() {
 
 void InterpreterGeneratorX86::DoStackOverflowCheck() {
   __ movl(EAX, Address(ESI, 1));
-  LoadProcess(EBX);
-  __ movl(EBX, Address(EBX, Process::kStackLimitOffset));
+  __ movl(EBX, Address(EDI, Process::kStackLimitOffset));
   __ negl(EAX);
   __ leal(ECX, Address(ESP, EAX, TIMES_WORD_SIZE));
   __ cmpl(ECX, EBX);
@@ -1187,8 +1183,7 @@ void InterpreterGeneratorX86::DoThrowAfterSaveState(Label* resume) {
   // Use the stack to store the frame pointer of the target frame.
   __ leal(ECX, Address(ESP, 5 * kWordSize));
 
-  LoadProcess(EDX);
-  __ movl(Address(ESP, 0 * kWordSize), EDX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
   __ movl(Address(ESP, 2 * kWordSize), EAX);
   __ movl(Address(ESP, 3 * kWordSize), ECX);
@@ -1204,8 +1199,9 @@ void InterpreterGeneratorX86::DoThrowAfterSaveState(Label* resume) {
   __ jmp(&done_);
 
   __ Bind(&unwind);
-  __ movl(EBP, Address(EDI, 5 * kWordSize));
-  __ movl(ECX, Address(EDI, 4 * kWordSize));
+  LoadNativeStack(ECX);
+  __ movl(EBP, Address(ECX, 5 * kWordSize));
+  __ movl(ECX, Address(ECX, 4 * kWordSize));
   __ movl(ESI, EAX);
   __ leal(ESP, Address(ESP, ECX, TIMES_WORD_SIZE));
   StoreLocal(EBX, 0);
@@ -1252,8 +1248,7 @@ void InterpreterGeneratorX86::DoCoroutineChange() {
 
   Label resume;
   SaveState(&resume);
-  LoadProcess(EAX);
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EDX);
   __ call("HandleCoroutineChange");
   RestoreState();
@@ -1323,9 +1318,8 @@ void InterpreterGeneratorX86::DoIdentical() {
   Dispatch(kIdenticalLength);
 
   __ Bind(&bail_out);
-  LoadProcess(ECX);
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), ECX);
+  SwitchToCStack(ECX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
   __ movl(Address(ESP, 2 * kWordSize), EAX);
   __ call("HandleIdentical");
@@ -1356,8 +1350,7 @@ void InterpreterGeneratorX86::DoIdenticalNonNumeric() {
 
 void InterpreterGeneratorX86::DoEnterNoSuchMethod() {
   SaveState(&interpreter_entry_);
-  LoadProcess(EAX);
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ call("HandleEnterNoSuchMethod");
   RestoreState();
 }
@@ -1495,18 +1488,12 @@ void InterpreterGeneratorX86::Drop(Register reg) {
   __ leal(ESP, Address(ESP, reg, TIMES_WORD_SIZE));
 }
 
-void InterpreterGeneratorX86::LoadProcess(Register reg) {
-  __ movl(reg, Address(EDI, spill_size_ + kWordSize));
-}
-
 void InterpreterGeneratorX86::LoadProgram(Register reg) {
-  LoadProcess(reg);
-  __ movl(reg, Address(reg, Process::kProgramOffset));
+  __ movl(reg, Address(EDI, Process::kProgramOffset));
 }
 
 void InterpreterGeneratorX86::LoadStaticsArray(Register reg) {
-  LoadProcess(reg);
-  __ movl(reg, Address(reg, Process::kStaticsOffset));
+  __ movl(reg, Address(EDI, Process::kStaticsOffset));
 }
 
 void InterpreterGeneratorX86::LoadLiteralNull(Register reg) {
@@ -1524,14 +1511,31 @@ void InterpreterGeneratorX86::LoadLiteralFalse(Register reg) {
   __ movl(reg, Address(reg, Program::kFalseObjectOffset));
 }
 
-void InterpreterGeneratorX86::SwitchToDartStack() {
-  __ movl(EDI, ESP);
-  __ movl(ESP, Address(EDI, spill_size_));
+void InterpreterGeneratorX86::LoadNativeStack(Register reg) {
+  __ movl(reg, Address(EDI, Process::kNativeStackOffset));
 }
 
-void InterpreterGeneratorX86::SwitchToCStack() {
-  __ movl(Address(EDI, spill_size_), ESP);
-  __ movl(ESP, EDI);
+void InterpreterGeneratorX86::StoreNativeStack(Register reg) {
+#ifdef DEBUG
+  Label is_null;
+  __ cmpl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+  __ j(EQUAL, &is_null);
+  __ int3();
+  __ Bind(&is_null);
+#endif
+  __ movl(Address(EDI, Process::kNativeStackOffset), reg);
+}
+
+void InterpreterGeneratorX86::SwitchToDartStack() {
+  StoreNativeStack(ESP);
+  __ movl(ESP, Address(ESP, spill_size_));
+}
+
+void InterpreterGeneratorX86::SwitchToCStack(Register scratch) {
+  __ movl(scratch, ESP);
+  LoadNativeStack(ESP);
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+  __ movl(Address(ESP, spill_size_), scratch);
 }
 
 void InterpreterGeneratorX86::StoreByteCodePointer() {
@@ -1578,7 +1582,8 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
 
   // We initialize the 4rd argument to "HandleAllocate" to 0, meaning the object
   // we're allocating will not be initialized with pointers to immutable space.
-  __ movl(Address(EDI, kStackImmutableMembers), Immediate(0));
+  LoadNativeStack(ECX);
+  __ movl(Address(ECX, kStackImmutableMembers), Immediate(0));
 
   // Loop over all arguments and find out if
   //   * all of them are immutable
@@ -1586,7 +1591,8 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   Label allocate;
   {
     // Initialization of [kStackAllocateImmutable] depended on [immutable]
-    __ movl(Address(EDI, kStackAllocateImmutable),
+    LoadNativeStack(ECX);
+    __ movl(Address(ECX, kStackAllocateImmutable),
             Immediate(immutable ? 1 : 0));
 
     __ movl(ECX, Address(EBX, Class::kInstanceFormatOffset - HeapObject::kTag));
@@ -1652,19 +1658,20 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
     __ jmp(&loop_with_mutable_field);
 
     __ Bind(&loop_with_immutable_field);
-    __ movl(Address(EDI, kStackImmutableMembers), Immediate(1));
+    LoadNativeStack(EAX);
+    __ movl(Address(EAX, kStackImmutableMembers), Immediate(1));
     __ jmp(&loop);
 
     __ Bind(&loop_with_mutable_field);
-    __ movl(Address(EDI, kStackAllocateImmutable), Immediate(0));
+    LoadNativeStack(EAX);
+    __ movl(Address(EAX, kStackAllocateImmutable), Immediate(0));
     __ jmp(&loop);
   }
 
   // TODO(kasperl): Consider inlining this in the interpreter.
   __ Bind(&allocate);
-  LoadProcess(EAX);
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  SwitchToCStack(EAX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
   // NOTE: The 3nd argument is already present ESP + kStackAllocateImmutable
   // NOTE: The 4rd argument is already present ESP + kStackImmutableMembers
@@ -1706,9 +1713,8 @@ void InterpreterGeneratorX86::AddToStoreBufferSlow(Register object,
                                                    Register value,
                                                    Register scratch) {
 #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-  LoadProcess(scratch);
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), scratch);
+  SwitchToCStack(scratch);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), object);
   __ movl(Address(ESP, 2 * kWordSize), value);
   __ call("AddToStoreBufferSlow");
@@ -1749,8 +1755,7 @@ void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
   __ xorl(EAX, EDX);
   __ andl(EAX, Immediate(LookupCache::kPrimarySize - 1));
   __ shll(EAX, Immediate(4));
-  LoadProcess(ECX);
-  __ movl(ECX, Address(ECX, Process::kPrimaryLookupCacheOffset));
+  __ movl(ECX, Address(EDI, Process::kPrimaryLookupCacheOffset));
   __ addl(EAX, ECX);
 
   // Validate the primary entry.
@@ -1812,9 +1817,8 @@ void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
 
   // We didn't find a valid entry in primary lookup cache.
   __ Bind(&miss);
-  LoadProcess(ECX);
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), ECX);
+  SwitchToCStack(ECX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ movl(Address(ESP, 2 * kWordSize), EBX);
   __ movl(Address(ESP, 3 * kWordSize), EDX);
@@ -2025,10 +2029,9 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
 
   // Extract address for first argument (note we skip two empty slots).
   __ leal(EBX, Address(ESP, EBX, TIMES_WORD_SIZE, 2 * kWordSize));
-  LoadProcess(ECX);
 
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), ECX);
+  SwitchToCStack(ECX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
 
   Label failure;
@@ -2048,7 +2051,8 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
     __ j(EQUAL, &dont_yield);
 
     // Yield to the target port.
-    __ movl(ECX, Address(EDI, spill_size_ + 8 * kWordSize));
+    LoadNativeStack(EBX);
+    __ movl(ECX, Address(EBX, spill_size_ + 7 * kWordSize));
     __ movl(Address(ECX, 0), EAX);
     __ movl(EAX, Immediate(Interpreter::kTargetYield));
 
@@ -2077,9 +2081,8 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
   // TODO(kasperl): This should be reworked. We shouldn't be calling
   // through the runtime system for something as simple as converting
   // a failure object to the corresponding heap object.
-  LoadProcess(ECX);
-  SwitchToCStack();
-  __ movl(Address(ESP, 0 * kWordSize), ECX);
+  SwitchToCStack(ECX);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ call("HandleObjectFromFailure");
   SwitchToDartStack();
@@ -2089,8 +2092,7 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
 }
 
 void InterpreterGeneratorX86::CheckStackOverflow(int size) {
-  LoadProcess(EBX);
-  __ movl(EBX, Address(EBX, Process::kStackLimitOffset));
+  __ movl(EBX, Address(EDI, Process::kStackLimitOffset));
   __ cmpl(ESP, EBX);
   if (size == 0) {
     __ j(BELOW_EQUAL, &check_stack_overflow_0_);
@@ -2125,8 +2127,7 @@ void InterpreterGeneratorX86::SaveState(Label* resume) {
 
   // Update top in the stack. Ugh. Complicated.
   // First load the current coroutine's stack.
-  LoadProcess(ECX);
-  __ movl(ECX, Address(ECX, Process::kCoroutineOffset));
+  __ movl(ECX, Address(EDI, Process::kCoroutineOffset));
   __ movl(ECX, Address(ECX, Coroutine::kStackOffset - HeapObject::kTag));
   // Calculate the index of the stack.
   __ subl(ESP, ECX);
@@ -2139,17 +2140,16 @@ void InterpreterGeneratorX86::SaveState(Label* resume) {
   __ movl(Address(ECX, Stack::kTopOffset - HeapObject::kTag), ESP);
 
   // Restore the C stack in ESP.
-  __ movl(ESP, EDI);
+  LoadNativeStack(ESP);
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
 }
 
 void InterpreterGeneratorX86::RestoreState() {
-  // Store the C stack in EDI.
-  __ movl(EDI, ESP);
+  StoreNativeStack(ESP);
 
   // First load the current coroutine's stack.
   // Load the Dart stack pointer into ESP.
-  LoadProcess(ESP);
-  __ movl(ESP, Address(ESP, Process::kCoroutineOffset));
+  __ movl(ESP, Address(EDI, Process::kCoroutineOffset));
   __ movl(ESP, Address(ESP, Coroutine::kStackOffset - HeapObject::kTag));
   // Load the top index.
   __ movl(ECX, Address(ESP, Stack::kTopOffset - HeapObject::kTag));

@@ -51,7 +51,8 @@ ThreadState::~ThreadState() {
 }
 
 Process::Process(Program* program, Process* parent)
-    : coroutine_(NULL),
+    : native_stack_(NULL),
+      coroutine_(NULL),
       stack_limit_(0),
       program_(program),
       statics_(NULL),
@@ -88,6 +89,8 @@ Process::Process(Program* program, Process* parent)
   // to hold on the host (the build machine, where the interpreter-generating
   // program runs).  We put these asserts here on the assumption that the
   // interpreter-generating program will not instantiate this class.
+  static_assert(kNativeStackOffset == offsetof(Process, native_stack_),
+                "native_stack_");
   static_assert(kCoroutineOffset == offsetof(Process, coroutine_),
                 "coroutine_");
   static_assert(kStackLimitOffset == offsetof(Process, stack_limit_),
