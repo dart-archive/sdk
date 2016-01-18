@@ -29,6 +29,8 @@
 
     'LK_PATH%': 'third_party/lk/lk-downstream',
 
+    'LK_USE_DEPS_ARM_GCC%': '1',
+
     'mbed_path': '<(DEPTH)/third_party/mbed/build/',
 
     'posix%': 1,
@@ -380,10 +382,27 @@
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
-              'GCC_XARM_LOCAL', # Fake define intercepted by cc_wrapper.py.
               'FLETCH_TARGET_OS_LK',
              ],
-
+            'conditions': [
+              ['LK_USE_DEPS_ARM_GCC==1', {
+                'defines': [
+                  'GCC_XARM_EMBEDDED', # Fake define for cc_wrapper.py.
+                ],
+                'ldflags': [
+                  # Fake define intercepted by cc_wrapper.py.
+                  '-L/GCC_XARM_EMBEDDED',
+                ],
+              }, { # 'LK_USE_DEPS_ARM_GCC!=1'
+                'defines': [
+                  'GCC_XARM_LOCAL', # Fake define for cc_wrapper.py.
+                ],
+                'ldflags': [
+                  # Fake define intercepted by cc_wrapper.py.
+                  '-L/GCC_XARM_LOCAL',
+                ],
+              }],
+            ],
             'cflags': [
               '-mfloat-abi=softfp',
               '-mfpu=fpv4-sp-d16',
@@ -409,11 +428,6 @@
               '<(DEPTH)/<(LK_PATH)/lib/minip/include/',
               '<(DEPTH)/<(LK_PATH)/arch/arm/arm/include',
               '<(DEPTH)/<(LK_PATH)/lib/heap/include/',
-            ],
-
-            'ldflags': [
-              # Fake define intercepted by cc_wrapper.py.
-              '-L/GCC_XARM_LOCAL',
             ],
 
             'defines!': [
