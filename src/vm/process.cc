@@ -126,7 +126,6 @@ Process::~Process() {
   delete debug_info_;
 
   ASSERT(next_ == NULL);
-  ASSERT(cooked_stack_deltas_.is_empty());
 }
 
 void Process::Cleanup(Signal::Kind kind) {
@@ -197,10 +196,14 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
 
   Object* new_stack_object = NewStack(new_size);
   if (new_stack_object->IsRetryAfterGCFailure()) {
-    CollectMutableGarbage();
+    program()->CollectNewSpace();
     new_stack_object = NewStack(new_size);
     if (new_stack_object->IsRetryAfterGCFailure()) {
-      return kStackCheckOverflow;
+      program()->CollectSharedGarbage();
+      new_stack_object = NewStack(new_size);
+      if (new_stack_object->IsRetryAfterGCFailure()) {
+        return kStackCheckOverflow;
+      }
     }
   }
 
@@ -372,24 +375,25 @@ void PrintProcessGCInfo(HeapUsage* before, HeapUsage* after) {
       after->program_size);
 }
 
-void Process::CollectMutableGarbage() { program()->CollectNewSpace(); }
-
-// Somewhat misnamed - it does a scavenge of the process area, not the program
-// area.
+// Somewhat misnamed - it does a scavenge of the data area used by the
+// processes, not the code area used by the program.
 void Program::CollectNewSpace() {
   HeapUsage usage_before;
 
-  Heap* process_heap = process_list_head_->heap();
-  ASSERT(process_list_head_->next_ == NULL ||
-         process_list_head_->next_->heap() == process_heap);
+  Heap* data_heap = shared_heap()->heap();
 
-  SemiSpace* from = process_heap->space();
-  OldSpace* old = process_heap->old_space();
+  SemiSpace* from = data_heap->space();
+  OldSpace* old = data_heap->old_space();
+
+  if (!data_heap->allocations_have_taken_place()) {
+    return;
+  }
+
   old->Flush();
   from->Flush();
 
   if (Flags::print_heap_statistics) {
-    GetHeapUsage(process_heap, &usage_before);
+    GetHeapUsage(data_heap, &usage_before);
   }
 
   SemiSpace* to = new SemiSpace(from->Used() / 10);
@@ -405,14 +409,12 @@ void Program::CollectNewSpace() {
 
   Process* current = process_list_head_;
   while (current != NULL) {
-    current->TakeChildHeaps();
     current->IterateRoots(&visitor);
     current = current->process_list_next();
   }
 
   old->VisitRememberedSet(&visitor);
 
-  ASSERT(!to->is_empty() || !old->is_empty());
   bool work_found = true;
   while (work_found) {
     work_found = to->CompleteScavengeGenerational(&visitor);
@@ -420,7 +422,7 @@ void Program::CollectNewSpace() {
   }
   old->EndScavenge();
 
-  process_heap->ProcessWeakPointers(from);
+  data_heap->ProcessWeakPointers(from);
 
   current = process_list_head_;
   while (current != NULL) {
@@ -429,11 +431,11 @@ void Program::CollectNewSpace() {
   }
 
   // Second space argument is used to size the new-space.
-  process_heap->ReplaceSpace(to, old);
+  data_heap->ReplaceSpace(to, old);
 
   if (Flags::print_heap_statistics) {
     HeapUsage usage_after;
-    GetHeapUsage(process_heap, &usage_after);
+    GetHeapUsage(data_heap, &usage_after);
     PrintProcessGCInfo(&usage_before, &usage_after);
   }
 
@@ -441,29 +443,29 @@ void Program::CollectNewSpace() {
     CollectSharedGarbage(true);
   }
 
-  current = process_list_head_;
+  UpdateStackLimits();
+}
+
+void Program::UpdateStackLimits() {
+  Process* current = process_list_head_;
   while (current != NULL) {
     current->UpdateStackLimit();
     current = current->process_list_next();
   }
 }
 
-int Process::CollectMutableGarbageAndChainStacks() {
+int Program::CollectMutableGarbageAndChainStacks() {
   // Mark all reachable objects.
-  OldSpace* old_space = heap()->old_space();
-  SemiSpace* new_space = heap()->space();
+  OldSpace* old_space = shared_heap()->heap()->old_space();
+  SemiSpace* new_space = shared_heap()->heap()->space();
   MarkingStack marking_stack;
-  MarkingVisitor marking_visitor(heap()->space(), heap()->old_space(),
-                                 &marking_stack, stack());
-
-  // Visit the current coroutine stack first and chain the rest of the
-  // stacks starting from there.
-  IterateRoots(&marking_visitor);
-  marking_stack.Process(&marking_visitor);
+  ASSERT(stack_chain_ == NULL);
+  MarkingVisitor marking_visitor(new_space, old_space, &marking_stack,
+                                 &stack_chain_);
 
   // All processes share the same heap, so we need to iterate all roots from
   // all processes.
-  for (Process* process = program()->process_list_head(); process != NULL;
+  for (Process* process = process_list_head_; process != NULL;
        process = process->process_list_next()) {
     process->IterateRoots(&marking_visitor);
   }
@@ -471,8 +473,8 @@ int Process::CollectMutableGarbageAndChainStacks() {
   marking_stack.Process(&marking_visitor);
 
   // Weak processing.
-  heap()->ProcessWeakPointers(old_space);
-  for (Process* process = program()->process_list_head(); process != NULL;
+  shared_heap()->heap()->ProcessWeakPointers(old_space);
+  for (Process* process = process_list_head_; process != NULL;
        process = process->process_list_next()) {
     process->set_ports(Port::CleanupPorts(old_space, process->ports()));
   }
@@ -488,18 +490,8 @@ int Process::CollectMutableGarbageAndChainStacks() {
   SweepingVisitor new_space_sweeper(NULL);
   new_space->IterateObjects(&new_space_sweeper);
 
-  UpdateStackLimit();
+  UpdateStackLimits();
   return marking_visitor.number_of_stacks();
-}
-
-int Process::CollectGarbageAndChainStacks() {
-  // NOTE: We need to take all spaces which are getting merged into our
-  // heap, because otherwise we'll not update the pointers it has to the
-  // program space / to the process heap.
-  TakeChildHeaps();
-
-  int number_of_stacks = CollectMutableGarbageAndChainStacks();
-  return number_of_stacks;
 }
 
 void Process::ValidateHeaps(SharedHeap* shared_heap) {
@@ -637,17 +629,18 @@ int Process::PrepareStepOut() {
                                     stack_height);
 }
 
-void Process::CookStacks(int number_of_stacks) {
+void Program::CookStacks(int number_of_stacks) {
   cooked_stack_deltas_ = List<List<int>>::New(number_of_stacks);
-  Object* raw_current = stack();
+  Object* raw_current = stack_chain_;
   for (int i = 0; i < number_of_stacks; ++i) {
-    // TODO(ager): Space/time trade-off. Should we iterate the stack first
-    // to count the number of frames to reduce memory pressure?
     Stack* current = Stack::cast(raw_current);
-    cooked_stack_deltas_[i] = List<int>::New(stack()->length());
+    int number_of_frames = 0;
+    for (Frame count_frames(current); count_frames.MovePrevious();) {
+      number_of_frames++;
+    }
+    cooked_stack_deltas_[i] = List<int>::New(number_of_frames);
     int index = 0;
-    Frame frame(current);
-    while (frame.MovePrevious()) {
+    for (Frame frame(current); frame.MovePrevious();) {
       Function* function = frame.FunctionFromByteCodePointer();
       if (function == NULL) continue;
       uint8* start = function->bytecode_address_for(0);
@@ -660,8 +653,8 @@ void Process::CookStacks(int number_of_stacks) {
   ASSERT(raw_current == Smi::zero());
 }
 
-void Process::UncookAndUnchainStacks() {
-  Object* raw_current = stack();
+void Program::UncookAndUnchainStacks() {
+  Object* raw_current = stack_chain_;
   for (int i = 0; i < cooked_stack_deltas_.length(); ++i) {
     Stack* current = Stack::cast(raw_current);
     int index = 0;
@@ -680,6 +673,7 @@ void Process::UncookAndUnchainStacks() {
   }
   ASSERT(raw_current == Smi::zero());
   cooked_stack_deltas_.Delete();
+  stack_chain_ = NULL;
 }
 
 void Process::UpdateBreakpoints() {
@@ -741,8 +735,6 @@ void Process::SendSignal(Signal* signal) {
   }
   Signal::DecrementRef(signal);
 }
-
-void Process::TakeChildHeaps() { mailbox_.MergeAllChildHeaps(this); }
 
 void Process::UpdateStackLimit() {
   // By adding 2, we reserve a slot for a return address and an extra
@@ -828,7 +820,6 @@ BEGIN_NATIVE(ProcessQueueGetMessage) {
     }
 
     case Message::EXIT: {
-      queue->MergeChildHeaps(process);
       result = queue->ExitReferenceObject();
       break;
     }

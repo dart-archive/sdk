@@ -19,16 +19,13 @@ class Signal;
 
 class ExitReference {
  public:
-  ExitReference(Process* exiting_process, Object* message);
+  explicit ExitReference(Object* message);
 
   Object* message() const { return message_; }
 
   void VisitPointers(PointerVisitor* visitor) { visitor->Visit(&message_); }
 
-  Heap* mutable_heap() { return &mutable_heap_; }
-
  private:
-  Heap mutable_heap_;
   Object* message_;
 };
 

@@ -126,7 +126,7 @@ Process::StackCheckResult HandleStackOverflow(Process* process, int size) {
 
 void HandleGC(Process* process) {
   if (process->heap()->needs_garbage_collection()) {
-    process->CollectMutableGarbage();
+    process->program()->CollectNewSpace();
 
     // After a mutable GC a lot of stacks might no longer have pointers to
     // new space on them. If so, the remembered set will no longer contain such

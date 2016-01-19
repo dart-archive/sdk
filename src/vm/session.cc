@@ -513,8 +513,8 @@ void Session::ProcessMessages() {
         StoppedGcThreadScope scope(program()->scheduler());
         // TODO(ager): Potentially optimize this to not require a full
         // process GC to locate the live stacks?
-        int number_of_stacks = process_->CollectGarbageAndChainStacks();
-        Object* current = process_->stack();
+        int number_of_stacks = program()->CollectMutableGarbageAndChainStacks();
+        Object* current = program()->stack_chain();
         for (int i = 0; i < number_of_stacks; i++) {
           Stack* stack = Stack::cast(current);
           AddToMap(fibers_map_id_, i, stack);
@@ -523,6 +523,7 @@ void Session::ProcessMessages() {
           stack->set_next(Smi::FromWord(0));
         }
         ASSERT(current == NULL);
+        program()->ClearStackChain();
         WriteBuffer buffer;
         buffer.WriteInt(number_of_stacks);
         connection_->Send(Connection::kProcessNumberOfStacks, buffer);
@@ -1506,11 +1507,6 @@ class TransformInstancesProcessVisitor : public ProcessVisitor {
       : shared_heap_(shared_heap) {}
 
   virtual void VisitProcess(Process* process) {
-    // NOTE: We need to take all spaces which are getting merged into the
-    // process heap, because otherwise we'll not update the pointers it has to
-    // the program space / to the process heap objects which were transformed.
-    process->TakeChildHeaps();
-
     Heap* heap = process->heap();
 
     SemiSpace* space = heap->space();

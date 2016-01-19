@@ -19,13 +19,15 @@ Heap::Heap(RandomXorShift* random, int maximum_initial_size)
       weak_pointers_(NULL),
       foreign_memory_(0) {
   AdjustAllocationBudget();
+  AdjustOldAllocationBudget();
 }
 
 Heap::Heap(SemiSpace* existing_space, WeakPointer* weak_pointers)
     : random_(NULL),
       space_(existing_space),
       weak_pointers_(weak_pointers),
-      foreign_memory_(0) {}
+      foreign_memory_(0),
+      allocations_have_taken_place_(false) {}
 
 Heap::~Heap() {
   WeakPointer::ForceCallbacks(&weak_pointers_, this);
@@ -35,12 +37,14 @@ Heap::~Heap() {
 }
 
 Object* Heap::Allocate(int size) {
+  allocations_have_taken_place_ = true;
   uword result = space_->Allocate(size);
   if (result == 0) return Failure::retry_after_gc(size);
   return HeapObject::FromAddress(result);
 }
 
 Object* Heap::AllocateNonFatal(int size) {
+  allocations_have_taken_place_ = true;
   uword result = space_->AllocateNonFatal(size);
   if (result == 0) return Failure::retry_after_gc(size);
   return HeapObject::FromAddress(result);
@@ -248,6 +252,7 @@ Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
 }
 
 void Heap::AllocatedForeignMemory(int size) {
+  ASSERT(foreign_memory_ >= 0);
   foreign_memory_ += size;
   old_space()->DecreaseAllocationBudget(size);
 }
@@ -282,21 +287,6 @@ WeakPointer* Heap::TakeWeakPointers() {
   WeakPointer* weak_pointers = weak_pointers_;
   weak_pointers_ = NULL;
   return weak_pointers;
-}
-
-void Heap::MergeInOtherHeap(Heap* heap) {
-  SemiSpace* other_space = heap->TakeSpace();
-  if (space_ == NULL) {
-    space_ = other_space;
-  } else {
-    space_->PrependSpace(other_space);
-  }
-
-  WeakPointer* other_weak_pointers = heap->TakeWeakPointers();
-  WeakPointer::PrependWeakPointers(&weak_pointers_, other_weak_pointers);
-
-  foreign_memory_ += heap->foreign_memory_;
-  heap->foreign_memory_ = 0;
 }
 
 void Heap::AddWeakPointer(HeapObject* object, WeakPointerCallback callback) {

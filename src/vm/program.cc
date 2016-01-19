@@ -52,7 +52,8 @@ Program::Program(ProgramSource source, int hashtag)
       program_exit_listener_(NULL),
       program_exit_listener_data_(NULL),
       exit_kind_(Signal::kTerminated),
-      hashtag_(hashtag) {
+      hashtag_(hashtag),
+      stack_chain_(NULL) {
 // These asserts need to hold when running on the target, but they don't need
 // to hold on the host (the build machine, where the interpreter-generating
 // program runs).  We put these asserts here on the assumption that the
@@ -280,31 +281,6 @@ class ValidateProcessHeapVisitor : public ProcessVisitor {
   SharedHeap* shared_heap_;
 };
 
-class CollectGarbageAndChainStacksVisitor : public ProcessVisitor {
- public:
-  virtual void VisitProcess(Process* process) {
-    // We need to perform a precise GC to get rid of floating garbage stacks.
-    // This is done by:
-    // 1) An old-space GC, which is precise for global reachability.
-    process->program()->PerformSharedGarbageCollection();
-    //    Old-space GC ignores the liveness information it has gathered in
-    //    new-space, so this doesn't actually clean up the dead objects in
-    //    new-space, so we do:
-    // 2) A new-space GC, which will be precise, due to the old-space GC.
-    //    (No floating garbage with pointers from old- to new-space.)
-    process->CollectMutableGarbage();
-    //    Now we have no floating garbage stacks.  We do:
-    // 3) An old-space GC which (in the generational config) will find no
-    //    garbage, but as a side effect it will chain up all the stacks (also
-    //    the ones in new-space).  This does not move new-space objects.
-    // TODO(erikcorry): An future simplification is to cook the stacks as we
-    // find them during the program GC, instead of chaining them up beforehand
-    // during a GC that is not needed in the generational config.
-    int number_of_stacks = process->CollectGarbageAndChainStacks();
-    process->CookStacks(number_of_stacks);
-  }
-};
-
 void Program::PrepareProgramGC() {
   // All threads are stopped and have given their parts back to the
   // [SharedHeap], so we can merge them now.
@@ -319,9 +295,25 @@ void Program::PrepareProgramGC() {
     VisitProcesses(&visitor);
   }
 
-  // Cook all stacks.
-  CollectGarbageAndChainStacksVisitor visitor;
-  VisitProcessHeaps(&visitor);
+  // We need to perform a precise GC to get rid of floating garbage stacks.
+  // This is done by:
+  // 1) An old-space GC, which is precise for global reachability.
+  PerformSharedGarbageCollection();
+  //    Old-space GC ignores the liveness information it has gathered in
+  //    new-space, so this doesn't actually clean up the dead objects in
+  //    new-space, so we do:
+  // 2) A new-space GC, which will be precise, due to the old-space GC.
+  //    (No floating garbage with pointers from old- to new-space.)
+  CollectNewSpace();
+  //    Now we have no floating garbage stacks.  We do:
+  // 3) An old-space GC which (in the generational config) will find no
+  //    garbage, but as a side effect it will chain up all the stacks (also
+  //    the ones in new-space).  This does not move new-space objects.
+  // TODO(erikcorry): An future simplification is to cook the stacks as we
+  // find them during the program GC, instead of chaining them up beforehand
+  // during a GC that is not needed in the generational config.
+  int number_of_stacks = CollectMutableGarbageAndChainStacks();
+  CookStacks(number_of_stacks);
 }
 
 class IterateProgramPointersVisitor : public ProcessVisitor {
@@ -382,8 +374,6 @@ class FinishProgramGCVisitor : public ProcessVisitor {
       : shared_heap_(shared_heap) {}
 
   virtual void VisitProcess(Process* process) {
-    // Uncook process
-    process->UncookAndUnchainStacks();
     process->UpdateBreakpoints();
     if (Flags::validate_heaps) {
       process->ValidateHeaps(shared_heap_);
@@ -395,6 +385,8 @@ class FinishProgramGCVisitor : public ProcessVisitor {
 };
 
 void Program::FinishProgramGC() {
+  // Uncook process
+  UncookAndUnchainStacks();
   FinishProgramGCVisitor visitor(&shared_heap_);
   VisitProcessHeaps(&visitor);
 
@@ -566,7 +558,6 @@ void Program::PerformSharedGarbageCollection() {
   MarkingVisitor marking_visitor(new_space, old_space, &stack);
   for (Process* process = process_list_head_; process != NULL;
        process = process->process_list_next()) {
-    process->TakeChildHeaps();
     process->IterateRoots(&marking_visitor);
   }
   stack.Process(&marking_visitor);

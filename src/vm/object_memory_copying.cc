@@ -126,6 +126,7 @@ uword SemiSpace::AllocateInternal(int size, bool fatal) {
 
   uword result = TryAllocate(size);
   if (result != 0) return result;
+
   return AllocateInNewChunk(size, fatal);
 }
 

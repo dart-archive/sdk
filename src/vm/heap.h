@@ -115,12 +115,12 @@ class Heap {
   SemiSpace* TakeSpace();
   WeakPointer* TakeWeakPointers();
 
-  void MergeInOtherHeap(Heap* heap);
-
   // Tells whether garbage collection is needed.
   bool needs_garbage_collection() {
     return space()->needs_garbage_collection();
   }
+
+  bool allocations_have_taken_place() { return allocations_have_taken_place_; }
 
   RandomXorShift* random() { return random_; }
 
@@ -173,6 +173,7 @@ class Heap {
   WeakPointer* weak_pointers_;
   // The number of bytes of foreign memory heap objects are holding on to.
   int foreign_memory_;
+  bool allocations_have_taken_place_;
 };
 
 // Helper class for copying HeapObjects.

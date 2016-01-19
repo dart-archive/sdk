@@ -154,13 +154,6 @@ class Process {
   // Returns either a Smi or a LargeInteger.
   Object* ToInteger(int64 value);
 
-  void CollectMutableGarbage();
-
-  // Perform garbage collection and chain all stack objects.
-  // Returns the number of stacks found in the heap.
-  int CollectMutableGarbageAndChainStacks();
-  int CollectGarbageAndChainStacks();
-
   void ValidateHeaps(SharedHeap* shared_heap);
 
   // Iterate all pointers reachable from this process object.
@@ -194,15 +187,6 @@ class Process {
   void TakeLookupCache();
   void ReleaseLookupCache() { primary_lookup_cache_ = NULL; }
 
-  // Program GC support. Cook the stack to rewrite bytecode pointers
-  // to a pair of a function pointer and a delta. Uncook the stack to
-  // rewriting the (now potentially moved) function pointer and the
-  // delta into a direct bytecode pointer again.
-  void CookStacks(int number_of_stacks);
-  void UncookAndUnchainStacks();
-
-  bool stacks_are_cooked() { return !cooked_stack_deltas_.is_empty(); }
-
   // Program GC support. Update breakpoints after having moved function.
   // Bytecode pointers need to be updated.
   void UpdateBreakpoints();
@@ -217,8 +201,6 @@ class Process {
     ASSERT(thread_state == NULL || thread_state_.load() == NULL);
     thread_state_ = thread_state;
   }
-
-  void TakeChildHeaps();
 
   void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback);
   void UnregisterFinalizer(HeapObject* object);
@@ -321,8 +303,6 @@ class Process {
 
   Atomic<State> state_;
   Atomic<ThreadState*> thread_state_;
-
-  List<List<int>> cooked_stack_deltas_;
 
   // Next pointer used by the Scheduler.
   Process* next_;

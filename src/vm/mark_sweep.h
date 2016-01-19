@@ -93,8 +93,8 @@ class MarkingStack {
 class MarkingVisitor : public PointerVisitor {
  public:
   MarkingVisitor(SemiSpace* new_space, OldSpace* old_space,
-                 MarkingStack* marking_stack, Stack* process_stack = NULL)
-      : process_stack_(process_stack),
+                 MarkingStack* marking_stack, Stack** stack_chain = NULL)
+      : stack_chain_(stack_chain),
         new_space_(new_space),
         old_space_(old_space),
         marking_stack_(marking_stack),
@@ -120,13 +120,8 @@ class MarkingVisitor : public PointerVisitor {
  private:
   void ChainStack(Stack* stack) {
     number_of_stacks_++;
-    if (process_stack_ != stack) {
-      // We rely on the fact that the current coroutine stack is
-      // visited first.
-      ASSERT(process_stack_->IsMarked());
-      stack->set_next(process_stack_->next());
-      process_stack_->set_next(stack);
-    }
+    stack->set_next(*stack_chain_);
+    *stack_chain_ = stack;
   }
 
   void MarkPointer(Object* object) {
@@ -138,7 +133,7 @@ class MarkingVisitor : public PointerVisitor {
     }
     HeapObject* heap_object = HeapObject::cast(object);
     if (!heap_object->IsMarked()) {
-      if (process_stack_ != NULL && heap_object->IsStack()) {
+      if (stack_chain_ != NULL && heap_object->IsStack()) {
         ChainStack(Stack::cast(heap_object));
       }
       heap_object->SetMark();
@@ -146,7 +141,7 @@ class MarkingVisitor : public PointerVisitor {
     }
   }
 
-  Stack* process_stack_;
+  Stack** stack_chain_;
   SemiSpace* new_space_;
   OldSpace* old_space_;
   MarkingStack* marking_stack_;
