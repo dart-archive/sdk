@@ -65,8 +65,7 @@ void Codegen::DoLoadProgramRoot(int offset) {
   Object* root = *reinterpret_cast<Object**>(
       reinterpret_cast<uint8*>(program_) + offset);
   if (root->IsHeapObject()) {
-    printf("\tleal O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
-    __ pushl(EAX);
+    printf("\tpushl $O%08x + 1\n", HeapObject::cast(root)->address());
   } else {
     printf("\tpushl $0x%08x\n", root);
   }
@@ -75,8 +74,7 @@ void Codegen::DoLoadProgramRoot(int offset) {
 void Codegen::DoLoadConstant(int bci, int offset) {
   Object* constant = Function::ConstantForBytecode(function_->bytecode_address_for(bci));
   if (constant->IsHeapObject()) {
-    printf("\tleal O%08x + 1, %%eax\n", HeapObject::cast(constant)->address());
-    __ pushl(EAX);
+    printf("\tpushl $O%08x + 1\n", HeapObject::cast(constant)->address());
   } else {
     printf("\tpushl $0x%08x\n", constant);
   }
@@ -88,13 +86,12 @@ void Codegen::DoBranch(BranchCondition condition, int from, int to) {
     // Do nothing.
   } else {
     __ popl(EBX);
-    printf("\tleal O%08x + 1, %%eax\n", program_->true_object()->address());
-    __ cmpl(EAX, EBX);
+    printf("\tcmpl $O%08x + 1, %%ebx\n", program_->true_object()->address());
     Condition cc = (condition == BRANCH_IF_TRUE) ? NOT_EQUAL : EQUAL;
     __ j(cc, &skip);
   }
-  printf("\tjmp %d%s\n",
-      reinterpret_cast<int32>(function_->bytecode_address_for(to)),
+  printf("\tjmp %u%s\n",
+      reinterpret_cast<uint32>(function_->bytecode_address_for(to)),
       from >= to ? "b" : "f");
   if (condition != BRANCH_ALWAYS) {
     __ Bind(&skip);
@@ -149,10 +146,10 @@ void Codegen::DoInvokeLt() {
   __ j(NOT_ZERO, &slow);
 
   __ cmpl(EAX, EDX);
-  printf("\tleal O%08x + 1, %%eax\n", program_->true_object()->address());
+  printf("\tmovl $O%08x + 1, %%eax\n", program_->true_object()->address());
   __ j(LESS, &done);
 
-  printf("\tleal O%08x + 1, %%eax\n", program_->false_object()->address());
+  printf("\tmovl $O%08x + 1, %%eax\n", program_->false_object()->address());
   __ jmp(&done);
 
   __ Bind(&slow);

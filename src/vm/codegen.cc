@@ -199,7 +199,7 @@ static int Main(int argc, char** argv) {
 
 #define __ assembler.
   __ BindWithPowerOfTwoAlignment("program_entry", 4);
-  printf("\tjmp %db\n", reinterpret_cast<int32>(program->entry()->bytecode_address_for(0)));
+  printf("\tjmp %ub\n", reinterpret_cast<uint32>(program->entry()->bytecode_address_for(0)));
 
   printf("\n");
   __ BindWithPowerOfTwoAlignment("InvokeMethod", 4);
@@ -255,7 +255,7 @@ void Codegen::Generate() {
       return;
     }
 
-    printf("%d: // ", reinterpret_cast<int32>(bcp));
+    printf("%u: // ", reinterpret_cast<uint32>(bcp));
     Bytecode::Print(bcp);
     printf("\n");
 
