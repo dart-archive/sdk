@@ -154,19 +154,24 @@ void DumpProgram(Program* program) {
 class CodegenVisitor : public HeapObjectVisitor {
  public:
   CodegenVisitor(Program* program, Assembler* assembler)
-      : program_(program), assembler_(assembler) { }
+      : program_(program), assembler_(assembler), add_offset_(-1) { }
 
   virtual int Visit(HeapObject* object) {
     if (object->IsFunction()) {
       Codegen codegen(program_, Function::cast(object), assembler_);
       codegen.Generate();
+      add_offset_ = codegen.UpdateAddOffset(add_offset_);
     }
     return object->Size();
   }
 
+  int add_offset() const { return add_offset_; }
+
  private:
   Program* const program_;
   Assembler* const assembler_;
+
+  int add_offset_;
 };
 
 static int Main(int argc, char** argv) {
@@ -220,6 +225,14 @@ static int Main(int argc, char** argv) {
   __ Bind(&nsm);
   __ int3();
 
+  if (visitor.add_offset() >= 0) {
+    printf("\t.global InvokeAdd\n");
+    printf("\t.p2align 4\n");
+    printf("InvokeAdd:\n");
+    __ movl(EAX, Address(ESP, 2 * kWordSize));
+    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(visitor.add_offset()))));
+    __ jmp("InvokeMethod");
+  }
 #undef __
 
   DumpProgram(program);
@@ -410,6 +423,10 @@ void Codegen::Generate() {
       }
 
       case kInvokeAdd: {
+        int selector = Utils::ReadInt32(bcp + 1);
+        int offset = Selector::IdField::decode(selector);
+        ASSERT(add_offset_ == -1 || add_offset_ == offset);
+        add_offset_ = offset;
         DoInvokeAdd();
         break;
       }

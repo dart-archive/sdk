@@ -65,18 +65,20 @@ void Codegen::DoLoadProgramRoot(int offset) {
   Object* root = *reinterpret_cast<Object**>(
       reinterpret_cast<uint8*>(program_) + offset);
   if (root->IsHeapObject()) {
-    printf("\tpushl O%08x + 1\n", HeapObject::cast(root)->address());
+    printf("\tleal O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
+    __ pushl(EAX);
   } else {
-    printf("\tpushl 0x%08x\n", root);
+    printf("\tpushl $0x%08x\n", root);
   }
 }
 
 void Codegen::DoLoadConstant(int bci, int offset) {
   Object* constant = Function::ConstantForBytecode(function_->bytecode_address_for(bci));
   if (constant->IsHeapObject()) {
-    printf("\tpushl O%08x + 1\n", HeapObject::cast(constant)->address());
+    printf("\tleal O%08x + 1, %%eax\n", HeapObject::cast(constant)->address());
+    __ pushl(EAX);
   } else {
-    printf("\tpushl 0x%08x\n", constant);
+    printf("\tpushl $0x%08x\n", constant);
   }
 }
 
@@ -86,7 +88,8 @@ void Codegen::DoBranch(BranchCondition condition, int from, int to) {
     // Do nothing.
   } else {
     __ popl(EBX);
-    printf("\tcmpl %%ebx, O%08x + 1\n", program_->true_object()->address());
+    printf("\tleal O%08x + 1, %%eax\n", program_->true_object()->address());
+    __ cmpl(EAX, EBX);
     Condition cc = (condition == BRANCH_IF_TRUE) ? NOT_EQUAL : EQUAL;
     __ j(cc, &skip);
   }
@@ -114,8 +117,8 @@ void Codegen::DoInvokeStatic(int bci, int offset, Function* target) {
 
 void Codegen::DoInvokeAdd() {
   Label done, slow;
+  __ movl(EDX, Address(ESP, 0 * kWordSize));
   __ movl(EAX, Address(ESP, 1 * kWordSize));
-  __ popl(EDX);
 
   __ testl(EAX, Immediate(Smi::kTagSize));
   __ j(NOT_ZERO, &slow);
@@ -130,7 +133,8 @@ void Codegen::DoInvokeAdd() {
   printf("\tcall InvokeAdd\n");
 
   __ Bind(&done);
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ popl(EAX);
 }
 
 void Codegen::DoInvokeLt() {
@@ -145,10 +149,10 @@ void Codegen::DoInvokeLt() {
   __ j(NOT_ZERO, &slow);
 
   __ cmpl(EAX, EDX);
-  printf("\tmovl O%08x + 1, %%eax\n", program_->true_object()->address());
+  printf("\tleal O%08x + 1, %%eax\n", program_->true_object()->address());
   __ j(LESS, &done);
 
-  printf("\tmovl O%08x + 1, %%eax\n", program_->false_object()->address());
+  printf("\tleal O%08x + 1, %%eax\n", program_->false_object()->address());
   __ jmp(&done);
 
   __ Bind(&slow);
@@ -159,25 +163,51 @@ void Codegen::DoInvokeLt() {
 }
 
 void Codegen::DoInvokeNative(Native native, int arity) {
+  Label retry;
+  __ Bind(&retry);
+
   // Compute the address for the first argument (we skip two empty slots).
   __ leal(EBX, Address(ESP, (arity + 2) * kWordSize));
 
-  // TODO: switch to C stack.
+  __ movl(ECX, ESP);
+  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
 
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
+  __ movl(Address(ESP, 2 * kWordSize), ECX);
+
   printf("\tcall %s\n", kNativeNames[native]);
-  __ int3();
 
-  // TODO: switch to Dart stack.
+  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
+  __ movl(ESP, Address(ESP, 2 * kWordSize));
 
-  // TODO: check for failure.
+  // TODO(kasperl): Clear out spill slot for ESP?
 
-  // Success!
+  Label failure;
+  __ movl(ECX, EAX);
+  __ andl(ECX, Immediate(Failure::kTagMask));
+  __ cmpl(ECX, Immediate(Failure::kTag));
+  __ j(EQUAL, &failure);
+
   __ movl(ESP, EBP);
   __ popl(EBP);
 
   __ ret();
+
+  Label non_gc_failure;
+  __ Bind(&failure);
+  __ movl(ECX, EAX);
+  __ andl(ECX, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpl(ECX, Immediate(Failure::kTag));
+  __ j(NOT_EQUAL, &non_gc_failure);
+
+  // Call the collector!
+  __ int3();
+
+  // TODO(kasperl): Deal with non-GC failures.
+  __ Bind(&non_gc_failure);
+  __ int3();
 }
 
 void Codegen::DoDrop(int n) {

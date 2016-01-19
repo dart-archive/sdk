@@ -17,15 +17,22 @@ class Codegen {
   Codegen(Program* program, Function* function, Assembler* assembler)
       : program_(program),
         function_(function),
-        assembler_(assembler) {
+        assembler_(assembler),
+        add_offset_(-1) {
   }
 
   void Generate();
+
+  int UpdateAddOffset(int original) {
+    return add_offset_ >= 0 ? add_offset_ : original;
+  }
 
  private:
   Program* const program_;
   Function* const function_;
   Assembler* const assembler_;
+
+  int add_offset_;
 
   enum BranchCondition {
     BRANCH_ALWAYS,
