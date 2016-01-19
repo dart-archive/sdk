@@ -12,10 +12,8 @@
 dart2js_hello_world_test: Slow, Pass
 dart2js_deltablue_test: Slow, Pass
 
-# https://github.com/dart-lang/fletch/issues/395
-external_memory_triggers_gc_test: Skip
-
 [ $compiler == none && $runtime == fletchc ]
+immutable_and_mutable_heap_validate_heaps_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 messaging_drop_messages_expose_gc_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 messaging_port_lifetime_expose_gc_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 messaging_process_die_early_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
@@ -35,6 +33,8 @@ static_ffi_test: Skip
 [ $system == lk ]
 dart2js_deltablue_test: Crash
 dart2js_hello_world_test: Crash
+external_memory_triggers_gc_test: RuntimeError
+immutable_and_mutable_heap_validate_heaps_test: Fail
 # These tests have -X flags, which we don't know how to pass through qemu.
 messaging_drop_messages_expose_gc_test: Fail
 messaging_port_lifetime_expose_gc_test: Fail

@@ -12,12 +12,12 @@ tests/debugger/fibers_test.dart:12:5
 > fibers
 
 fiber 0
-* 0: run                         @Fiber.yield()
-  1: call                        @run('b')
-
-fiber 1
 * 0: run                         @print('${marker} ${i}')
   1: call                        @run('a')
+
+fiber 1
+* 0: run                         @Fiber.yield()
+  1: call                        @run('b')
 
 > t internal
 ### internal frame visibility set to: true
@@ -31,6 +31,14 @@ fiber 1
 > fibers
 
 fiber 0
+* 0: print                       @"${object}"
+  1: run                         @print('${marker} ${i}')
+  2: call                        @run('a')
+  3: runToEnd                    @entry()
+  4: Fiber.call                  @fletch.runToEnd(entry)
+  5: Coroutine._coroutineStart   @entry(argument)
+
+fiber 1
 * 0: Fiber._schedule             @null
   1: Fiber.yield                 @_schedule(_current._next)
   2: run                         @Fiber.yield()
@@ -38,14 +46,6 @@ fiber 0
   4: runToEnd                    @entry()
   5: Fiber.call                  @fletch.runToEnd(entry)
   6: Coroutine._coroutineStart   @entry(argument)
-
-fiber 1
-* 0: print                       @"${object}"
-  1: run                         @print('${marker} ${i}')
-  2: call                        @run('a')
-  3: runToEnd                    @entry()
-  4: Fiber.call                  @fletch.runToEnd(entry)
-  5: Coroutine._coroutineStart   @entry(argument)
 
 > t internal
 ### internal frame visibility set to: false

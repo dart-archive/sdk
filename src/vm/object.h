@@ -27,7 +27,6 @@ namespace fletch {
 //     HeapObject
 //       FreeListChunk
 //       OneWordFiller
-//       PromotedTrack
 //       Boxed
 //       Class
 //       Double
@@ -49,8 +48,7 @@ class Process;
 class Program;
 class SnapshotReader;
 class SnapshotWriter;
-class SemiSpace;
-class OldSpace;
+class Space;
 
 // Used for representing the size of a [HeapObject] in a portable way.
 //
@@ -116,7 +114,6 @@ class Object {
   inline bool IsStack();
   inline bool IsCoroutine();
   inline bool IsPort();
-  inline bool IsPromotedTrack();
 
   // - based on marker field in class.
   inline bool IsNull();
@@ -189,12 +186,12 @@ class Smi : public Object {
 
 // The instance format describes how an instance of a class looks.
 // The bit format of the word is as follows:
-//   [MSB...13] Contains the non variable size of the instance.
-//   [12-11]    Whether it is always/never/maybe immutable.
-//   [10-8]      The marker of the instance.
-//   [7]        Tells whether all pointers are in the non variable part.
-//   [6]        Tells whether the object has a variable part.
-//   [5-1]      The type of the instance.
+//   [MSB...12] Contains the non variable size of the instance.
+//   [11-10]    Whether it is always/never/maybe immutable.
+//   [9-7]      The marker of the instance.
+//   [6]        Tells whether all pointers are in the non variable part.
+//   [5]        Tells whether the object has a variable part.
+//   [4-1]      The type of the instance.
 //   [LSB]      Smi tag.
 class InstanceFormat {
  public:
@@ -214,8 +211,7 @@ class InstanceFormat {
     DISPATCH_TABLE_ENTRY_TYPE = 12,
     FREE_LIST_CHUNK_TYPE = 13,
     ONE_WORD_FILLER_TYPE = 14,
-    PROMOTED_TRACK_TYPE = 15,
-    IMMEDIATE_TYPE = 31  // No instances.
+    IMMEDIATE_TYPE = 15  // No instances.
   };
 
   enum Marker {
@@ -233,13 +229,6 @@ class InstanceFormat {
     MAYBE_IMMUTABLE = 2,
   };
 
-  enum WhereArePointers {
-    ONLY_POINTERS_IN_FIXED_PART,
-    MAY_HAVE_POINTERS_IN_VARIABLE_PART
-  };
-
-  enum DoesItHaveVariablePart { HAS_VARIABLE_PART, HAS_NO_VARIABLE_PARTS };
-
   // Factory functions.
   inline static const InstanceFormat instance_format(int number_of_fields,
                                                      Marker marker = NO_MARKER);
@@ -256,7 +245,6 @@ class InstanceFormat {
   inline static const InstanceFormat boxed_format();
   inline static const InstanceFormat free_list_chunk_format();
   inline static const InstanceFormat one_word_filler_format();
-  inline static const InstanceFormat promoted_track_format();
   inline static const InstanceFormat stack_format();
   inline static const InstanceFormat initializer_format();
   inline static const InstanceFormat dispatch_table_entry_format();
@@ -288,18 +276,18 @@ class InstanceFormat {
   Smi* as_smi() { return value_; }
 
   // Leave LSB for Smi tag.
-  class TypeField : public BitField<Type, 1, 5> {};
-  class HasVariablePartField : public BoolField<6> {};
-  class OnlyPointersInFixedPartField : public BoolField<7> {};
-  class MarkerField : public BitField<Marker, 8, 3> {};
-  class ImmutableField : public BitField<Immutable, 11, 13 - 11> {};
-  class FixedSizeField : public BitField<int, 13, 31 - 13> {};
+  class TypeField : public BitField<Type, 1, 4> {};
+  class HasVariablePartField : public BoolField<5> {};
+  class OnlyPointersInFixedPartField : public BoolField<6> {};
+  class MarkerField : public BitField<Marker, 7, 3> {};
+  class ImmutableField : public BitField<Immutable, 10, 12 - 10> {};
+  class FixedSizeField : public BitField<int, 12, 31 - 12> {};
 
  private:
   // Constructor only used by factory functions.
   inline explicit InstanceFormat(Type type, int fixed_size,
-                                 DoesItHaveVariablePart has_variable_part,
-                                 WhereArePointers where_are_pointers,
+                                 bool has_variable_part,
+                                 bool only_pointers_in_fixed_part,
                                  Immutable immutable, Marker marker);
 
   // Exclusive access to Class contructing from Smi.
@@ -365,20 +353,18 @@ class HeapObject : public Object {
   inline void set_class(Class* value);
 
   // Scavenge support.
-  inline bool HasForwardingAddress();
-  inline HeapObject* forwarding_address();
+  HeapObject* forwarding_address();
   void set_forwarding_address(HeapObject* value);
 
   // Snapshot support.
   word forwarding_word();
   void set_forwarding_word(word value);
 
-  InstanceFormat IteratePointers(PointerVisitor* visitor);
+  void IteratePointers(PointerVisitor* visitor);
 
   // Returns the clone allocated in to space.
   // Uses a forwarding_address to ensure only one clone.
-  template <class SomeSpace>
-  HeapObject* CloneInToSpace(SomeSpace* to);
+  HeapObject* CloneInToSpace(Space* to);
 
   // Sizing.
   int FixedSize();
@@ -405,6 +391,7 @@ class HeapObject : public Object {
   friend class Heap;
   friend class Program;
   friend class SnapshotWriter;
+  friend class StoreBuffer;
   friend class Object;
 
  private:
@@ -1129,8 +1116,6 @@ class StaticClassStructures {
                InstanceFormat::free_list_chunk_format());
     SetupClass(one_word_filler_class_storage,
                InstanceFormat::one_word_filler_format());
-    SetupClass(promoted_track_class_storage,
-               InstanceFormat::promoted_track_format());
   }
 
   static void TearDown() {}
@@ -1150,11 +1135,6 @@ class StaticClassStructures {
     return Class::cast(HeapObject::FromAddress(address));
   }
 
-  static Class* promoted_track_class() {
-    uword address = reinterpret_cast<uword>(promoted_track_class_storage);
-    return Class::cast(HeapObject::FromAddress(address));
-  }
-
   static bool IsStaticClass(HeapObject* object) {
     return (object == meta_class() || object == free_list_chunk_class() ||
             object == one_word_filler_class());
@@ -1164,7 +1144,6 @@ class StaticClassStructures {
   static uint8 meta_class_storage[Class::kSize];
   static uint8 free_list_chunk_class_storage[Class::kSize];
   static uint8 one_word_filler_class_storage[Class::kSize];
-  static uint8 promoted_track_class_storage[Class::kSize];
 
   static void SetupMetaClass() {
     Class* meta = reinterpret_cast<Class*>(
@@ -1343,163 +1322,109 @@ class CookedHeapObjectPointerVisitor : public HeapObjectVisitor {
   PointerVisitor* visitor_;
 };
 
-// These are chained up to track the areas where we have allocated objects for
-// promoted objects that we found while scavenging.  Only used for 2-generation
-// configurations.
-class PromotedTrack : public HeapObject {
- public:
-  // Returns newly initialized PromotedTrack object.
-  // Writes the class field too.
-  static PromotedTrack* Initialize(PromotedTrack* next, uword location,
-                                   uword end);
-
-  // Field access.
-  inline void set_next(PromotedTrack* next);
-  inline PromotedTrack* next();
-  inline void set_end(uword end);
-  inline uword end();
-
-  static inline PromotedTrack* cast(Object* o);
-
-  inline uword size();
-
-  uword start() { return address() + kHeaderSize; }
-
-  void Zap(Class* filler) {
-    set_class(filler);
-    set_next(reinterpret_cast<PromotedTrack*>(filler));
-    set_end(reinterpret_cast<uword>(filler));
-  }
-
-  static const int kNextPromotedTrackOffset = HeapObject::kSize;
-  static const int kEndOffset = kNextPromotedTrackOffset + kPointerSize;
-  static const int kHeaderSize = kEndOffset + kPointerSize;
-};
-
 // Inlined InstanceFormat functions.
 
 InstanceFormat::InstanceFormat(Type type, int fixed_size,
-                               DoesItHaveVariablePart has_variable_part,
-                               WhereArePointers where_are_pointers,
+                               bool has_variable_part,
+                               bool only_pointers_in_fixed_part,
                                Immutable immutable, Marker marker = NO_MARKER) {
   ASSERT(Utils::IsAligned(fixed_size, kPointerSize));
-  uword v =
-      TypeField::encode(type) |
-      HasVariablePartField::encode(has_variable_part == HAS_VARIABLE_PART) |
-      OnlyPointersInFixedPartField::encode(where_are_pointers ==
-                                           ONLY_POINTERS_IN_FIXED_PART) |
-      MarkerField::encode(marker) | ImmutableField::encode(immutable) |
-      FixedSizeField::encode(fixed_size / kPointerSize);
+  uword v = TypeField::encode(type) |
+            HasVariablePartField::encode(has_variable_part) |
+            OnlyPointersInFixedPartField::encode(only_pointers_in_fixed_part) |
+            MarkerField::encode(marker) | ImmutableField::encode(immutable) |
+            FixedSizeField::encode(fixed_size / kPointerSize);
   value_ = Smi::cast(reinterpret_cast<Smi*>(v));
   ASSERT(type == this->type());
   ASSERT(fixed_size == this->fixed_size());
-  ASSERT((where_are_pointers == ONLY_POINTERS_IN_FIXED_PART) ==
-         this->only_pointers_in_fixed_part());
+  ASSERT(only_pointers_in_fixed_part == this->only_pointers_in_fixed_part());
   ASSERT(immutable == this->immutable());
-  ASSERT((has_variable_part == HAS_VARIABLE_PART) == this->has_variable_part());
+  ASSERT(has_variable_part == this->has_variable_part());
 }
 
 const InstanceFormat InstanceFormat::heap_integer_format() {
-  return InstanceFormat(LARGE_INTEGER_TYPE, HeapObject::kSize,
-                        HAS_VARIABLE_PART, ONLY_POINTERS_IN_FIXED_PART,
+  return InstanceFormat(LARGE_INTEGER_TYPE, HeapObject::kSize, true, true,
                         ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::byte_array_format() {
-  return InstanceFormat(BYTE_ARRAY_TYPE, ByteArray::kSize, HAS_VARIABLE_PART,
-                        ONLY_POINTERS_IN_FIXED_PART, ALWAYS_IMMUTABLE);
+  return InstanceFormat(BYTE_ARRAY_TYPE, ByteArray::kSize, true, true,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::double_format() {
-  return InstanceFormat(DOUBLE_TYPE, HeapObject::kSize, HAS_VARIABLE_PART,
-                        ONLY_POINTERS_IN_FIXED_PART, ALWAYS_IMMUTABLE);
+  return InstanceFormat(DOUBLE_TYPE, HeapObject::kSize, true, true,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::boxed_format() {
-  return InstanceFormat(BOXED_TYPE, Boxed::kSize, HAS_NO_VARIABLE_PARTS,
-                        ONLY_POINTERS_IN_FIXED_PART, NEVER_IMMUTABLE);
+  return InstanceFormat(BOXED_TYPE, Boxed::kSize, false, true, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::initializer_format() {
-  return InstanceFormat(INITIALIZER_TYPE, Initializer::kSize,
-                        HAS_NO_VARIABLE_PARTS, ONLY_POINTERS_IN_FIXED_PART,
+  return InstanceFormat(INITIALIZER_TYPE, Initializer::kSize, false, true,
                         NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::dispatch_table_entry_format() {
   return InstanceFormat(DISPATCH_TABLE_ENTRY_TYPE,
-                        DispatchTableEntry::kCodeOffset, HAS_VARIABLE_PART,
-                        ONLY_POINTERS_IN_FIXED_PART, NEVER_IMMUTABLE);
+                        DispatchTableEntry::kCodeOffset, true, true,
+                        NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::free_list_chunk_format() {
-  return InstanceFormat(FREE_LIST_CHUNK_TYPE, FreeListChunk::kSize,
-                        HAS_VARIABLE_PART, ONLY_POINTERS_IN_FIXED_PART,
+  return InstanceFormat(FREE_LIST_CHUNK_TYPE, FreeListChunk::kSize, true, true,
                         NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::one_word_filler_format() {
-  return InstanceFormat(ONE_WORD_FILLER_TYPE, kPointerSize,
-                        HAS_NO_VARIABLE_PARTS, ONLY_POINTERS_IN_FIXED_PART,
+  return InstanceFormat(ONE_WORD_FILLER_TYPE, kPointerSize, false, true,
                         NEVER_IMMUTABLE);
 }
 
-const InstanceFormat InstanceFormat::promoted_track_format() {
-  return InstanceFormat(PROMOTED_TRACK_TYPE, kPointerSize, HAS_VARIABLE_PART,
-                        ONLY_POINTERS_IN_FIXED_PART, NEVER_IMMUTABLE);
-}
-
 const InstanceFormat InstanceFormat::function_format() {
-  return InstanceFormat(FUNCTION_TYPE, Function::kSize, HAS_VARIABLE_PART,
-                        MAY_HAVE_POINTERS_IN_VARIABLE_PART, ALWAYS_IMMUTABLE);
+  return InstanceFormat(FUNCTION_TYPE, Function::kSize, true, false,
+                        ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::instance_format(int number_of_fields,
                                                      Marker marker) {
   return InstanceFormat(INSTANCE_TYPE,
-                        Instance::AllocationSize(number_of_fields),
-                        HAS_NO_VARIABLE_PARTS, ONLY_POINTERS_IN_FIXED_PART,
+                        Instance::AllocationSize(number_of_fields), false, true,
                         MAYBE_IMMUTABLE, marker);
 }
 
 const InstanceFormat InstanceFormat::class_format() {
-  return InstanceFormat(CLASS_TYPE, Class::AllocationSize(),
-                        HAS_NO_VARIABLE_PARTS, ONLY_POINTERS_IN_FIXED_PART,
+  return InstanceFormat(CLASS_TYPE, Class::AllocationSize(), false, true,
                         ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::smi_format() {
-  return InstanceFormat(IMMEDIATE_TYPE, 0, HAS_NO_VARIABLE_PARTS,
-                        MAY_HAVE_POINTERS_IN_VARIABLE_PART, ALWAYS_IMMUTABLE);
+  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false, ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::num_format() {
   // TODO(ager): This is not really an immediate type. It is an
   // abstract class and therefore doesn't have any instances.
-  return InstanceFormat(IMMEDIATE_TYPE, 0, HAS_NO_VARIABLE_PARTS,
-                        MAY_HAVE_POINTERS_IN_VARIABLE_PART, NEVER_IMMUTABLE);
+  return InstanceFormat(IMMEDIATE_TYPE, 0, false, false, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::one_byte_string_format() {
-  return InstanceFormat(ONE_BYTE_STRING_TYPE, OneByteString::kSize,
-                        HAS_VARIABLE_PART, ONLY_POINTERS_IN_FIXED_PART,
+  return InstanceFormat(ONE_BYTE_STRING_TYPE, OneByteString::kSize, true, true,
                         ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::two_byte_string_format() {
-  return InstanceFormat(TWO_BYTE_STRING_TYPE, TwoByteString::kSize,
-                        HAS_VARIABLE_PART, ONLY_POINTERS_IN_FIXED_PART,
+  return InstanceFormat(TWO_BYTE_STRING_TYPE, TwoByteString::kSize, true, true,
                         ALWAYS_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::array_format() {
-  return InstanceFormat(ARRAY_TYPE, Array::kSize, HAS_VARIABLE_PART,
-                        MAY_HAVE_POINTERS_IN_VARIABLE_PART, NEVER_IMMUTABLE);
+  return InstanceFormat(ARRAY_TYPE, Array::kSize, true, false, NEVER_IMMUTABLE);
 }
 
 const InstanceFormat InstanceFormat::stack_format() {
-  return InstanceFormat(STACK_TYPE, Stack::kSize, HAS_VARIABLE_PART,
-                        MAY_HAVE_POINTERS_IN_VARIABLE_PART, NEVER_IMMUTABLE);
+  return InstanceFormat(STACK_TYPE, Stack::kSize, true, false, NEVER_IMMUTABLE);
 }
 
 // Inlined Object functions.
@@ -1593,13 +1518,6 @@ bool Object::IsFiller() {
   HeapObject* h = HeapObject::cast(this);
   Class* c = h->raw_class();
   return c == StaticClassStructures::one_word_filler_class();
-}
-
-bool Object::IsPromotedTrack() {
-  if (IsSmi()) return false;
-  HeapObject* h = HeapObject::cast(this);
-  Class* c = h->raw_class();
-  return c == StaticClassStructures::promoted_track_class();
 }
 
 bool Object::IsByteArray() {
@@ -1725,15 +1643,6 @@ Object* HeapObject::at(int offset) {
   return *reinterpret_cast<Object**>(address() + offset);
 }
 
-bool HeapObject::HasForwardingAddress() { return at(kClassOffset)->IsSmi(); }
-
-HeapObject* HeapObject::forwarding_address() {
-  ASSERT(HasForwardingAddress());
-  Object* header = at(kClassOffset);
-  ASSERT(header->IsSmi());
-  return HeapObject::FromAddress(reinterpret_cast<word>(header));
-}
-
 Class* HeapObject::get_class() { return Class::cast(at(kClassOffset)); }
 
 Class* HeapObject::raw_class() {
@@ -1801,7 +1710,6 @@ uint32 Instance::FlagsBits() {
   // bits. This is important on 32-bit systems where the conversion to
   // integral types otherwise performs a sign extension first.
   uint64 bits = reinterpret_cast<uword>(at(kFlagsOffset));
-  ASSERT(reinterpret_cast<Object*>(bits)->IsSmi());
   ASSERT((bits >> 32) == 0);
   return static_cast<uint32>(bits);
 }
@@ -2175,28 +2083,6 @@ FreeListChunk* FreeListChunk::cast(Object* object) {
   ASSERT(object->IsFreeListChunk());
   return reinterpret_cast<FreeListChunk*>(object);
 }
-
-// Inlined PromotedTrack functions.
-void PromotedTrack::set_next(PromotedTrack* next) {
-  at_put(kNextPromotedTrackOffset, next);
-}
-
-PromotedTrack* PromotedTrack::next() {
-  return reinterpret_cast<PromotedTrack*>(at(kNextPromotedTrackOffset));
-}
-
-void PromotedTrack::set_end(uword end) {
-  at_put(kEndOffset, reinterpret_cast<Object*>(end));
-}
-
-uword PromotedTrack::end() { return reinterpret_cast<uword>(at(kEndOffset)); }
-
-PromotedTrack* PromotedTrack::cast(Object* object) {
-  ASSERT(object->IsPromotedTrack());
-  return reinterpret_cast<PromotedTrack*>(object);
-}
-
-uword PromotedTrack::size() { return end() - address(); }
 
 // Inlined LargeInteger functions.
 

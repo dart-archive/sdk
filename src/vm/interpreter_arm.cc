@@ -261,7 +261,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   void Allocate(bool immutable);
 
   // This function changes caller-saved registers.
-  void AddToRememberedSetSlow(Register object, Register value);
+  void AddToStoreBufferSlow(Register object, Register value);
 
   void InvokeEq(const char* fallback);
   void InvokeLt(const char* fallback);
@@ -364,11 +364,23 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ Bind(&interpreter_entry_);
   Dispatch(0);
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  // Handle immutable heap allocation failures.
+  Label immutable_alloc_failure;
+  __ Bind(&immutable_alloc_failure);
+  __ mov(R0, Immediate(Interpreter::kImmutableAllocationFailure));
+  __ b(&done_state_saved_);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState(&interpreter_entry_);
   __ mov(R0, R4);
   __ bl("HandleGC");
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  __ tst(R0, R0);
+  __ b(NE, &immutable_alloc_failure);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   RestoreState();
 
   // Stack overflow handling (slow case).
@@ -590,7 +602,7 @@ void InterpreterGeneratorARM::DoStoreBoxed() {
   __ ldr(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   __ str(R2, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
 
-  AddToRememberedSetSlow(R1, R2);
+  AddToStoreBufferSlow(R1, R2);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -602,7 +614,7 @@ void InterpreterGeneratorARM::DoStoreStatic() {
   __ add(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R0, TIMES_WORD_SIZE)));
 
-  AddToRememberedSetSlow(R1, R2);
+  AddToStoreBufferSlow(R1, R2);
 
   Dispatch(kStoreStaticLength);
 }
@@ -615,7 +627,7 @@ void InterpreterGeneratorARM::DoStoreField() {
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   DropNAndSetTop(1, R2);
 
-  AddToRememberedSetSlow(R0, R2);
+  AddToStoreBufferSlow(R0, R2);
 
   Dispatch(kStoreFieldLength);
 }
@@ -628,7 +640,7 @@ void InterpreterGeneratorARM::DoStoreFieldWide() {
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   DropNAndSetTop(1, R2);
 
-  AddToRememberedSetSlow(R0, R2);
+  AddToStoreBufferSlow(R0, R2);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -1326,7 +1338,7 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
   __ mov(R9, LR);
 
   // R7 and R9 are both callee-saved, so they will survive the call.
-  AddToRememberedSetSlow(R2, R7);
+  AddToStoreBufferSlow(R2, R7);
 
   __ mov(R0, R7);
   __ mov(PC, R9);
@@ -1385,7 +1397,7 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
   __ mov(R9, LR);
 
   // R7 and R9 are both callee-saved, so they will survive the call.
-  AddToRememberedSetSlow(R2, R7);
+  AddToStoreBufferSlow(R2, R7);
 
   __ mov(R0, R7);
   __ mov(PC, R9);
@@ -1803,7 +1815,6 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ ldr(R7, Address(R5, Operand(R0, TIMES_1)));
 
   const Register kRegisterAllocateImmutable = R9;
-  // TODO(erikcorry): Get rid of this immutable tracking.
   const Register kRegisterImmutableMembers = R12;
 
   // We initialize the 3rd argument to "HandleAllocate" to 0, meaning the object
@@ -1935,9 +1946,19 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorARM::AddToRememberedSetSlow(Register object,
-                                                     Register value) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorARM::AddToStoreBufferSlow(Register object,
+                                                   Register value) {
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  if (object != R1) {
+    ASSERT(value != R1);
+    __ mov(R1, object);
+  }
+  if (value != R2) {
+    __ mov(R2, value);
+  }
+  __ mov(R0, R4);
+  __ bl("AddToStoreBufferSlow");
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 }
 
 void InterpreterGeneratorARM::InvokeCompare(const char* fallback,

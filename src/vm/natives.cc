@@ -957,9 +957,17 @@ static Process* SpawnProcessInternal(Program* program, Process* process,
   Function* entry = FunctionForClosure(entrypoint, 2);
   ASSERT(entry != NULL);
 
+#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
   // Code in process spawning generally assumes there is enough space for
-  // stacks etc.  We use a [NoAllocationFailureScope] to ensure it.
+  // stacks etc.
+  //
+  // In case of multiple heaps that is always guaranteed because
+  // each process gets it's own heap - which happens to be big enough.
+  //
+  // In case of a shared heap, we use a [NoAllocationFailureScope] to ensure
+  // it.
   NoAllocationFailureScope scope(program->shared_heap()->heap()->space());
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
   // Spawn a new process and create a copy of the closure in the
   // new process' heap.

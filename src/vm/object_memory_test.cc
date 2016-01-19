@@ -9,7 +9,7 @@
 
 namespace fletch {
 
-static Chunk* AllocateChunkAndTestIt(SemiSpace* space) {
+static Chunk* AllocateChunkAndTestIt(Space* space) {
   // Allocate chunk.
   Chunk* chunk = ObjectMemory::AllocateChunk(space, 4 * KB);
   EXPECT(chunk->base() != 0);
@@ -24,7 +24,7 @@ static Chunk* AllocateChunkAndTestIt(SemiSpace* space) {
 }
 
 TEST_CASE(ObjectMemory) {
-  SemiSpace space;
+  Space space;
 
   // Allocate.
   Chunk* first = AllocateChunkAndTestIt(&space);
@@ -41,8 +41,8 @@ TEST_CASE(ObjectMemory) {
 TEST_CASE(Space_PrependSpace) {
   // Test prepending onto non-empty space.
   {
-    SemiSpace* space = new SemiSpace(32);
-    SemiSpace* space2 = new SemiSpace(32);
+    Space* space = new Space(32);
+    Space* space2 = new Space(32);
 
     space->AdjustAllocationBudget(0);
     space2->AdjustAllocationBudget(0);
@@ -58,8 +58,8 @@ TEST_CASE(Space_PrependSpace) {
   }
   // Test prepending onto empty space.
   {
-    SemiSpace* space = new SemiSpace(32);
-    SemiSpace* space2 = new SemiSpace();
+    Space* space = new Space(32);
+    Space* space2 = new Space();
 
     space->AdjustAllocationBudget(0);
     space2->AdjustAllocationBudget(0);

@@ -271,8 +271,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   // This function
   //   * changes the first three stack slots
   //   * changes caller-saved registers
-  void AddToRememberedSetSlow(Register object, Register value,
-                              Register scratch);
+  void AddToStoreBufferSlow(Register object, Register value, Register scratch);
 
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
@@ -366,11 +365,23 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ Bind(&interpreter_entry_);
   Dispatch(0);
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  // Handle immutable heap allocation failures.
+  Label immutable_alloc_failure;
+  __ Bind(&immutable_alloc_failure);
+  __ movl(EAX, Immediate(Interpreter::kImmutableAllocationFailure));
+  __ jmp(&done_state_saved_);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState(&interpreter_entry_);
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ call("HandleGC");
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  __ testl(EAX, EAX);
+  __ j(NOT_ZERO, &immutable_alloc_failure);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   RestoreState();
 
   // Stack overflow handling (slow case).
@@ -592,7 +603,7 @@ void InterpreterGeneratorX86::DoStoreBoxed() {
   __ movl(EBX, Address(ESP, EAX, TIMES_WORD_SIZE));
   __ movl(Address(EBX, Boxed::kValueOffset - HeapObject::kTag), ECX);
 
-  AddToRememberedSetSlow(EBX, ECX, EAX);
+  AddToStoreBufferSlow(EBX, ECX, EAX);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -604,7 +615,7 @@ void InterpreterGeneratorX86::DoStoreStatic() {
   __ movl(Address(EBX, EAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag),
           ECX);
 
-  AddToRememberedSetSlow(EBX, ECX, EAX);
+  AddToStoreBufferSlow(EBX, ECX, EAX);
 
   Dispatch(kStoreStaticLength);
 }
@@ -619,7 +630,7 @@ void InterpreterGeneratorX86::DoStoreField() {
   StoreLocal(ECX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(EAX, ECX, EBX);
+  AddToStoreBufferSlow(EAX, ECX, EBX);
 
   Dispatch(kStoreFieldLength);
 }
@@ -634,7 +645,7 @@ void InterpreterGeneratorX86::DoStoreFieldWide() {
   StoreLocal(ECX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(EAX, ECX, EBX);
+  AddToStoreBufferSlow(EAX, ECX, EBX);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -1391,7 +1402,7 @@ void InterpreterGeneratorX86::DoIntrinsicSetField() {
 
   // We have put the result in EBX to be sure it's kept by the preserved by the
   // store-buffer call.
-  AddToRememberedSetSlow(ECX, EBX, EAX);
+  AddToStoreBufferSlow(ECX, EBX, EAX);
 
   __ movl(EAX, EBX);
   __ ret();
@@ -1450,7 +1461,7 @@ void InterpreterGeneratorX86::DoIntrinsicListIndexSet() {
   // Index (in EAX) is already smi-taged, so only scale by TIMES_2.
   __ movl(Address(ECX, EAX, TIMES_2, Array::kSize - HeapObject::kTag), EBX);
 
-  AddToRememberedSetSlow(ECX, EBX, EAX);
+  AddToStoreBufferSlow(ECX, EBX, EAX);
 
   __ movl(EAX, EBX);
   __ ret();
@@ -1571,7 +1582,6 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
 
   // We initialize the 4rd argument to "HandleAllocate" to 0, meaning the object
   // we're allocating will not be initialized with pointers to immutable space.
-  // TODO(erikcorry): Simplify now that we don't have an immutable space.
   LoadNativeStack(ECX);
   __ movl(Address(ECX, kStackImmutableMembers), Immediate(0));
 
@@ -1699,10 +1709,17 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorX86::AddToRememberedSetSlow(Register object,
-                                                     Register value,
-                                                     Register scratch) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorX86::AddToStoreBufferSlow(Register object,
+                                                   Register value,
+                                                   Register scratch) {
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  SwitchToCStack(scratch);
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ movl(Address(ESP, 1 * kWordSize), object);
+  __ movl(Address(ESP, 2 * kWordSize), value);
+  __ call("AddToStoreBufferSlow");
+  SwitchToDartStack();
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 }
 
 void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {

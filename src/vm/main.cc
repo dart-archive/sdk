@@ -74,10 +74,6 @@ static void WaitForGDB(const char* executable_name) {
         terminal,
         "gdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal SIGCONT'\n",
         executable_name, getpid());
-    fprintf(stderr,
-            "\ngdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal "
-            "SIGCONT'\n",
-            executable_name, getpid());
     kill(getpid(), SIGSTOP);
   }
 }
@@ -106,11 +102,6 @@ static void PrintVersion() { Print::Out("%s\n", GetVersion()); }
 static int Main(int argc, char** argv) {
 #ifdef DEBUG
   if (getenv("FLETCH_VM_WAIT") != NULL) {
-    const char* tty = getenv("FLETCH_VM_TTY");
-    if (tty) {
-      close(2);             // Stderr.
-      open(tty, O_WRONLY);  // Replace stderr with terminal.
-    }
     WaitForGDB(argv[0]);
   }
 #endif
