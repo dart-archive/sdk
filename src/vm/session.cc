@@ -571,6 +571,8 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessGetProcessIds: {
+        if (program()->scheduler() == NULL) return;
+        StoppedGcThreadScope scope(program()->scheduler());
         int count = 0;
         for (Process* process = program()->process_list_head();
              process != NULL;
