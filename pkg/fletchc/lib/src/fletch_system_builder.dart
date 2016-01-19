@@ -51,9 +51,8 @@ class FletchSystemBuilder {
   final List<FletchFunctionBuilder> _newFunctions = <FletchFunctionBuilder>[];
   final Map<int, FletchClassBuilder> _newClasses = <int, FletchClassBuilder>{};
   final Map<ConstantValue, int> _newConstants = <ConstantValue, int>{};
-  final Map<FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>
-      _newParameterStubs =
-          <FletchFunctionBase, Map<CallStructure, FletchFunctionBuilder>>{};
+  final Map<ParameterStubSignature, FletchFunctionBuilder> _newParameterStubs =
+      <ParameterStubSignature, FletchFunctionBuilder>{};
 
   final Map<int, int> _newGettersByFieldIndex = <int, int>{};
   final Map<int, int> _newSettersByFieldIndex = <int, int>{};
@@ -351,24 +350,17 @@ class FletchSystemBuilder {
     _symbolByFletchSelectorId[fletchSelectorId] = symbol;
   }
 
-  FletchFunctionBase parameterStubFor(
-      FletchFunctionBase function,
-      CallStructure callStructure) {
-    // TODO(ajohnsen): Look in predecessorSystem.
-    var stubs = _newParameterStubs[function];
-    if (stubs == null) return null;
-    return stubs[callStructure];
+  FletchFunctionBase lookupParameterStub(ParameterStubSignature signature) {
+    FletchFunctionBuilder stub = _newParameterStubs[signature];
+    if (stub != null) return stub;
+    return predecessorSystem.lookupParameterStub(signature);
   }
 
-  void registerParameterStubFor(
-      FletchFunctionBase function,
-      CallStructure callStructure,
+  void registerParameterStub(
+      ParameterStubSignature signature,
       FletchFunctionBuilder stub) {
-    var stubs = _newParameterStubs.putIfAbsent(
-        function,
-        () => <CallStructure, FletchFunctionBuilder>{});
-    assert(!stubs.containsKey(callStructure));
-    stubs[callStructure] = stub;
+    assert(lookupParameterStub(signature) == null);
+    _newParameterStubs[signature] = stub;
   }
 
   FletchSystem computeSystem(FletchContext context, List<VmCommand> commands) {
@@ -714,6 +706,13 @@ class FletchSystemBuilder {
       settersByFieldIndex = settersByFieldIndex.insert(fieldIndex, functionId);
     });
 
+    PersistentMap<ParameterStubSignature, FletchFunction> parameterStubs =
+        predecessorSystem.parameterStubs;
+    _newParameterStubs.forEach((signature, functionBuilder) {
+      FletchFunction function = functionsById[functionBuilder.functionId];
+      parameterStubs = parameterStubs.insert(signature, function);
+    });
+
     return new FletchSystem(
         functionsById,
         functionsByElement,
@@ -725,6 +724,7 @@ class FletchSystemBuilder {
         constantsByValue,
         symbolByFletchSelectorId,
         gettersByFieldIndex,
-        settersByFieldIndex);
+        settersByFieldIndex,
+        parameterStubs);
   }
 }

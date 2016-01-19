@@ -504,7 +504,7 @@ abstract class CodegenVisitor
         functionId = function.functionId;
       } else if (callStructure.signatureApplies(signature)) {
         // TODO(ajohnsen): Inline parameter stub?
-        FletchFunctionBase stub = context.backend.createParameterStubFor(
+        FletchFunctionBase stub = context.backend.createParameterStub(
             function,
             callStructure.callSelector);
         functionId = stub.functionId;

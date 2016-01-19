@@ -165,7 +165,8 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<ConstantValue, FletchConstant>(),
     const PersistentMap<int, String>(),
     const PersistentMap<int, int>(),
-    const PersistentMap<int, int>());
+    const PersistentMap<int, int>(),
+    const PersistentMap<ParameterStubSignature, FletchFunction>());
 
 class FletchBackend extends Backend
     implements IncrementalFletchBackend {
@@ -842,7 +843,7 @@ class FletchBackend extends Backend
             context.compiler.reportVerboseInfo(
                 element, 'Adding stub for $selector');
           }
-          createParameterStubFor(function, selector);
+          createParameterStub(function, selector);
         }
       } else if (element.isGetter || element.isSetter) {
         // No stub needed. If a getter returns a closure, the VM's
@@ -930,7 +931,7 @@ class FletchBackend extends Backend
       }
 
       if (!isExactParameterMatch(function.signature, selector.callStructure)) {
-        createParameterStubFor(function, selector);
+        createParameterStub(function, selector);
       }
     });
   }
@@ -1193,14 +1194,14 @@ class FletchBackend extends Backend
     registry.registerStaticUse(new StaticUse.foreignUse(function));
   }
 
-  FletchFunctionBase createParameterStubFor(
+  FletchFunctionBase createParameterStub(
       FletchFunctionBase function,
       Selector selector) {
     CallStructure callStructure = selector.callStructure;
     assert(callStructure.signatureApplies(function.signature));
-    FletchFunctionBase stub = systemBuilder.parameterStubFor(
-        function,
-        callStructure);
+    ParameterStubSignature signature = new ParameterStubSignature(
+        function.functionId, callStructure);
+    FletchFunctionBase stub = systemBuilder.lookupParameterStub(signature);
     if (stub != null) return stub;
 
     int arity = selector.argumentCount;
@@ -1277,7 +1278,7 @@ class FletchBackend extends Backend
       });
     }
 
-    systemBuilder.registerParameterStubFor(function, callStructure, builder);
+    systemBuilder.registerParameterStub(signature, builder);
 
     return builder;
   }
