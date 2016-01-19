@@ -149,9 +149,10 @@ void Scheduler::StopProgram(Program* program) {
     ScopedMonitorLock pause_locker(pause_monitor_);
 
     ProgramState* program_state = program->program_state();
-    bool already_paused = program_state->is_paused();
-    program_state->increment_paused_count();
-    if (already_paused) return;
+    while (program_state->is_paused()) {
+      pause_monitor_->Wait();
+    }
+    program_state->set_is_paused(true);
 
     pause_ = true;
 
@@ -209,8 +210,6 @@ void Scheduler::ResumeProgram(Program* program) {
 
     ProgramState* program_state = program->program_state();
     ASSERT(program_state->is_paused());
-    program_state->decrement_paused_count();
-    if (program_state->is_paused()) return;
 
     Process* process = program_state->paused_processes_head();
     while (process != NULL) {
@@ -220,6 +219,7 @@ void Scheduler::ResumeProgram(Program* program) {
       process = next;
     }
     program_state->set_paused_processes_head(NULL);
+    program_state->set_is_paused(false);
     pause_monitor_->NotifyAll();
   }
   NotifyAllThreads();

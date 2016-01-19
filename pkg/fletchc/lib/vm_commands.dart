@@ -91,13 +91,6 @@ abstract class VmCommand {
       case VmCommandCode.ProcessNumberOfStacks:
         int value = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessNumberOfStacks(value);
-      case VmCommandCode.ProcessGetProcessIdsResult:
-        int count = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        List<int> ids = new List(count);
-        for (int i = 0; i < count; ++i) {
-          ids[i] = CommandBuffer.readInt32FromBuffer(buffer, (i + 1) * 4);
-        }
-        return new ProcessGetProcessIdsResult(ids);
       case VmCommandCode.UncaughtException:
         return const UncaughtException();
       case VmCommandCode.CommitChangesResult:
@@ -924,22 +917,13 @@ class ProcessBacktrace extends VmCommand {
 }
 
 class ProcessBacktraceRequest extends VmCommand {
-  final int processId;
-
-  // TODO(zerny): Make the process id non-optional and non-negative.
-  const ProcessBacktraceRequest([this.processId = -1])
+  const ProcessBacktraceRequest()
       : super(VmCommandCode.ProcessBacktraceRequest);
 
-  void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
-    buffer
-        ..addUint32(processId + 1)
-        ..sendOn(sink, code);
-  }
   /// Peer will respond with [ProcessBacktrace]
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$processId";
+  String valuesToString() => "";
 }
 
 class ProcessFiberBacktraceRequest extends VmCommand {
@@ -1163,27 +1147,6 @@ class ProcessNumberOfStacks extends VmCommand {
   int get numberOfResponsesExpected => 0;
 
   String valuesToString() => "$value";
-}
-
-class ProcessGetProcessIds extends VmCommand {
-  const ProcessGetProcessIds()
-      : super(VmCommandCode.ProcessGetProcessIds);
-
-  /// The peer will respond with [ProcessGetProcessIdsResult].
-  int get numberOfResponsesExpected => 1;
-
-  String valuesToString() => "";
-}
-
-class ProcessGetProcessIdsResult extends VmCommand {
-  final List<int> ids;
-
-  const ProcessGetProcessIdsResult(this.ids)
-      : super(VmCommandCode.ProcessGetProcessIdsResult);
-
-  int get numberOfResponsesExpected => 0;
-
-  String valuesToString() => "$ids";
 }
 
 class SessionEnd extends VmCommand {
@@ -1468,10 +1431,6 @@ enum VmCommandCode {
   ProcessCompileTimeError,
   ProcessAddFibersToMap,
   ProcessNumberOfStacks,
-
-  ProcessGetProcessIds,
-  ProcessGetProcessIdsResult,
-
   WriteSnapshot,
   WriteSnapshotResult,
   CollectGarbage,
@@ -1532,5 +1491,4 @@ enum MapId {
   classes,
   constants,
   fibers,
-  processes,
 }

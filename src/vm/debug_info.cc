@@ -35,9 +35,8 @@ void Breakpoint::VisitProgramPointers(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&function_));
 }
 
-DebugInfo::DebugInfo(int process_id)
-    : process_id_(process_id),
-      is_stepping_(false),
+DebugInfo::DebugInfo()
+    : is_stepping_(false),
       is_at_breakpoint_(false),
       current_breakpoint_id_(kNoBreakpointId),
       next_breakpoint_id_(0) {}
