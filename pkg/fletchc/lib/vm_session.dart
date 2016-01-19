@@ -41,6 +41,14 @@ import 'src/hub/session_manager.dart' show
 part 'vm_command_reader.dart';
 part 'input_handler.dart';
 
+class ProcessInfo implements Comparable<ProcessInfo> {
+  int id;
+  BackTrace stack;
+  ProcessInfo(this.id, this.stack);
+
+  int compareTo(ProcessInfo other) => id.compareTo(other.id);
+}
+
 /// Encapsulates a TCP connection to a running fletch-vm and provides a
 /// [VmCommand] based view on top of it.
 class FletchVmSession {
@@ -604,6 +612,27 @@ class Session extends FletchVmSession {
     }
     await runCommand(const DeleteMap(MapId.fibers));
     return stacktraces;
+  }
+
+  Future<List<ProcessInfo>> processes() async {
+    assert(running);
+
+    ProcessGetProcessIdsResult response =
+      await runCommand(const ProcessGetProcessIds());
+
+    int processCount = response.ids.length;
+    List<ProcessInfo> processInfo = new List(processCount);
+
+    for (int i = 0; i < processCount; ++i) {
+      int processId = response.ids[i];
+      ProcessBacktrace backtraceResponse =
+          await runCommand(new ProcessBacktraceRequest(processId));
+      processInfo[i] = new ProcessInfo(
+          processId,
+          stackTraceFromBacktraceResponse(backtraceResponse));
+    }
+
+    return processInfo;
   }
 
   String dartValueToString(DartValue value) {

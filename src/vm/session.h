@@ -33,6 +33,8 @@ class Session {
 
   bool is_debugging() const { return debugging_; }
 
+  int FreshProcessId() { return next_process_id_++; }
+
   void Initialize();
   void StartMessageProcessingThread();
   void JoinMessageProcessingThread();
@@ -146,8 +148,11 @@ class Session {
   // ids to processes. For now we just keep a reference to the main
   // process (with implicit id 0).
   Process* process_;
+  int next_process_id_;
+  Process* GetProcess(int process_id);
 
   bool execution_paused_;
+  bool request_execution_pause_;
   bool debugging_;
 
   int method_map_id_;
@@ -172,7 +177,11 @@ class Session {
 
   void SignalMainThread(MainThreadResumeKind);
 
+  void RequestExecutionPause();
   void ProcessContinue(Process* process);
+
+  void StopProgramAndGcThread();
+  void ResumeProgramAndGcThread();
 
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);

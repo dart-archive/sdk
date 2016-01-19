@@ -9,6 +9,7 @@
 #include "src/shared/bytecodes.h"
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
+#include "src/shared/list.h"
 #include "src/shared/platform.h"
 #include "src/shared/version.h"
 
@@ -22,12 +23,12 @@
 #include "src/vm/snapshot.h"
 #include "src/vm/thread.h"
 
-#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp) \
-  Object* var = (exp);                               \
-  if (var->IsRetryAfterGCFailure()) {                \
-    program()->CollectGarbage();                     \
-    var = (exp);                                     \
-    ASSERT(!var->IsFailure());                       \
+#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)    \
+  Object* var = (exp);                                  \
+  if (var->IsRetryAfterGCFailure()) {                   \
+    program()->CollectGarbage();                        \
+    var = (exp);                                        \
+    ASSERT(!var->IsFailure());                          \
   }
 
 namespace fletch {
@@ -93,7 +94,9 @@ Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
       process_(NULL),
+      next_process_id_(0),
       execution_paused_(false),
+      request_execution_pause_(false),
       debugging_(false),
       method_map_id_(-1),
       class_map_id_(-1),
@@ -248,9 +251,36 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
   connection_->Send(Connection::kWriteSnapshotResult, buffer);
 }
 
+void Session::RequestExecutionPause() {
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
+  if (!execution_paused_) {
+    request_execution_pause_ = true;
+  }
+}
+
+// Caller thread must have a lock on main_thread_monitor_, ie,
+// ProcessContinue should only be called from within ProcessMessage's
+// main loop.
 void Session::ProcessContinue(Process* process) {
+  ASSERT(execution_paused_);
+  ASSERT(process->program()->program_state()->is_paused());
   execution_paused_ = false;
+  process->program()->scheduler()->ResumeProgram(process->program());
   process->program()->scheduler()->ContinueProcess(process);
+}
+
+void Session::StopProgramAndGcThread() {
+  Scheduler* scheduler = program()->scheduler();
+  if (scheduler == NULL) return;
+  scheduler->StopProgram(program());
+  scheduler->PauseGcThread();
+}
+
+void Session::ResumeProgramAndGcThread() {
+  Scheduler* scheduler = program()->scheduler();
+  if (scheduler == NULL) return;
+  scheduler->ResumeGcThread();
+  scheduler->ResumeProgram(program());
 }
 
 void Session::SendStackTrace(Stack* stack) {
@@ -305,6 +335,11 @@ void Session::ProcessMessages() {
     Connection::Opcode opcode = connection_->Receive();
 
     ScopedMonitorLock scoped_lock(main_thread_monitor_);
+    if (request_execution_pause_) {
+      request_execution_pause_ = false;
+      execution_paused_ = true;
+      program()->scheduler()->StopProgram(program());
+    }
 
     switch (opcode) {
       case Connection::kConnectionError: {
@@ -347,7 +382,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessSetBreakpoint: {
-        process_->EnsureDebuggerAttached();
+        process_->EnsureDebuggerAttached(this);
         WriteBuffer buffer;
         int bytecode_index = connection_->ReadInt();
         Function* function = Function::cast(Pop());
@@ -359,7 +394,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessDeleteBreakpoint: {
-        process_->EnsureDebuggerAttached();
+        process_->EnsureDebuggerAttached(this);
         WriteBuffer buffer;
         int id = connection_->ReadInt();
         bool deleted = process_->debug_info()->DeleteBreakpoint(id);
@@ -370,13 +405,14 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStep: {
-        process_->EnsureDebuggerAttached();
+        process_->EnsureDebuggerAttached(this);
         process_->debug_info()->SetStepping();
         ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessStepOver: {
+        process_->EnsureDebuggerAttached(this);
         int breakpoint_id = process_->PrepareStepOver();
         WriteBuffer buffer;
         buffer.WriteInt(breakpoint_id);
@@ -386,6 +422,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStepOut: {
+        process_->EnsureDebuggerAttached(this);
         int breakpoint_id = process_->PrepareStepOut();
         WriteBuffer buffer;
         buffer.WriteInt(breakpoint_id);
@@ -395,7 +432,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStepTo: {
-        process_->EnsureDebuggerAttached();
+        process_->EnsureDebuggerAttached(this);
         int64 id = connection_->ReadInt64();
         int bcp = connection_->ReadInt();
         Function* function =
@@ -414,7 +451,9 @@ void Session::ProcessMessages() {
       case Connection::kProcessBacktraceRequest: {
         if (program()->scheduler() == NULL) return;
         StoppedGcThreadScope scope(program()->scheduler());
-        Stack* stack = process_->stack();
+        int process_id = connection_->ReadInt() - 1;
+        Process* process = GetProcess(process_id);
+        Stack* stack = process->stack();
         SendStackTrace(stack);
         break;
       }
@@ -480,7 +519,9 @@ void Session::ProcessMessages() {
         // If execution is paused we delete the process to allow the
         // VM to terminate.
         if (execution_paused_) {
+          execution_paused_ = false;
           Scheduler* scheduler = program()->scheduler();
+          scheduler->ResumeProgram(program());
           switch (process_->state()) {
             case Process::kBreakPoint:
               scheduler->ExitAtBreakpoint(process_);
@@ -526,6 +567,27 @@ void Session::ProcessMessages() {
         WriteBuffer buffer;
         buffer.WriteInt(number_of_stacks);
         connection_->Send(Connection::kProcessNumberOfStacks, buffer);
+        break;
+      }
+
+      case Connection::kProcessGetProcessIds: {
+        int count = 0;
+        for (Process* process = program()->process_list_head();
+             process != NULL;
+             process = process->process_list_next()) {
+          ++count;
+        }
+
+        WriteBuffer buffer;
+        buffer.WriteInt(count);
+        for (Process* process = program()->process_list_head();
+             process != NULL;
+             process = process->process_list_next()) {
+          process->EnsureDebuggerAttached(this);
+          buffer.WriteInt(process->debug_info()->process_id());
+        }
+
+        connection_->Send(Connection::kProcessGetProcessIdsResult, buffer);
         break;
       }
 
@@ -1168,11 +1230,7 @@ void Session::PushConstantMap(int length) {
 
 void Session::PrepareForChanges() {
   if (program()->is_optimized()) {
-    Scheduler* scheduler = program()->scheduler();
-    if (scheduler != NULL) {
-      scheduler->StopProgram(program());
-      scheduler->PauseGcThread();
-    }
+    StopProgramAndGcThread();
     {
       ProgramFolder program_folder(program());
       program_folder.Unfold();
@@ -1187,10 +1245,7 @@ void Session::PrepareForChanges() {
         }
       }
     }
-    if (scheduler != NULL) {
-      scheduler->ResumeGcThread();
-      scheduler->ResumeProgram(program());
-    }
+    ResumeProgramAndGcThread();
   }
 }
 
@@ -1260,11 +1315,7 @@ void Session::CommitChangeSchemas(PostponedChange* change) {
 }
 
 bool Session::CommitChanges(int count) {
-  Scheduler* scheduler = program()->scheduler();
-  if (scheduler != NULL) {
-    scheduler->StopProgram(program());
-    scheduler->PauseGcThread();
-  }
+  StopProgramAndGcThread();
 
   ASSERT(!program()->is_optimized());
 
@@ -1324,10 +1375,7 @@ bool Session::CommitChanges(int count) {
     }
   }
 
-  if (scheduler != NULL) {
-    scheduler->ResumeGcThread();
-    scheduler->ResumeProgram(program());
-  }
+  ResumeProgramAndGcThread();
 
   return !has_program_update_error_;
 }
@@ -1361,7 +1409,7 @@ void Session::PostponeChange(Change change, int count) {
 
 bool Session::UncaughtException(Process* process) {
   if (process_ == process) {
-    execution_paused_ = true;
+    RequestExecutionPause();
     WriteBuffer buffer;
     connection_->Send(Connection::kUncaughtException, buffer);
     return true;
@@ -1395,7 +1443,7 @@ bool Session::UncaughtSignal(Process* process) {
 
 bool Session::BreakPoint(Process* process) {
   if (process_ == process) {
-    execution_paused_ = true;
+    RequestExecutionPause();
     DebugInfo* debug_info = process->debug_info();
     int breakpoint_id = -1;
     if (debug_info != NULL) {
@@ -1416,6 +1464,21 @@ bool Session::BreakPoint(Process* process) {
   return false;
 }
 
+Process* Session::GetProcess(int process_id) {
+  // TODO(zerny): Assert here and eliminate the default process.
+  if (process_id < 0) return process_;
+  for (Process* process = program()->process_list_head();
+       process != NULL;
+       process = process->process_list_next()) {
+    process->EnsureDebuggerAttached(this);
+    if (process->debug_info()->process_id() == process_id) {
+      return process;
+    }
+  }
+  UNREACHABLE();
+  return NULL;
+}
+
 bool Session::ProcessTerminated(Process* process) {
   if (process_ == process) {
     WriteBuffer buffer;
@@ -1429,7 +1492,7 @@ bool Session::ProcessTerminated(Process* process) {
 
 bool Session::CompileTimeError(Process* process) {
   if (process_ == process) {
-    execution_paused_ = true;
+    RequestExecutionPause();
     WriteBuffer buffer;
     connection_->Send(Connection::kProcessCompileTimeError, buffer);
     return true;

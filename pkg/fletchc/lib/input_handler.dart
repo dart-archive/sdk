@@ -22,7 +22,7 @@ Commands:
                                         enters method invocations
   'n'                                   step until next expression,
                                         does not enter method invocations
-  'fibers'                              list all process fibers
+  'fibers', 'lb'                        list all process fibers
   'finish'                              finish current method (step out)
   'restart'                             restart the selected frame
   'sb'                                  step bytecode, enters method invocations
@@ -34,6 +34,7 @@ Commands:
   'p <name>'                            print the value of local variable
   'p *<name>'                           print the structure of local variable
   'p'                                   print the values of all locals
+  'processes', 'lp'                     list all processes
   'disasm'                              disassemble code for frame
   't <flag>'                            toggle one of the flags:
                                           - 'internal' : show internal frames
@@ -232,7 +233,20 @@ class InputHandler {
         }
         writeStdoutLine("### deleted breakpoint: $breakpoint");
         break;
+      case 'processes':
+      case 'lp':
+        if (checkRunning('cannot list processes')) {
+          List<ProcessInfo> processes = await session.processes();
+          processes.sort();
+          for (ProcessInfo process in processes) {
+            writeStdoutLine('\nprocess ${process.id}');
+            writeStdout(process.stack.format());
+          }
+          writeStdoutLine('');
+        }
+        break;
       case 'fibers':
+      case 'lf':
         if (checkRunning('cannot show fibers')) {
           List<BackTrace> traces = await session.fibers();
           for (int fiber = 0; fiber < traces.length; ++fiber) {

@@ -78,14 +78,15 @@ class ProgramState {
   ProgramState()
       : processes_(0),
         paused_processes_head_(NULL),
-        is_paused_(false),
+        paused_count_(0),
         refcount_(0) {}
 
   // The [Scheduler::pause_monitor_] must be locked when calling this method.
   void AddPausedProcess(Process* process);
 
-  bool is_paused() const { return is_paused_; }
-  void set_is_paused(bool value) { is_paused_ = value; }
+  bool is_paused() const { return paused_count_ > 0; }
+  void increment_paused_count() { ++paused_count_; }
+  void decrement_paused_count() { --paused_count_; }
 
   Process* paused_processes_head() const { return paused_processes_head_; }
   void set_paused_processes_head(Process* value) {
@@ -118,7 +119,7 @@ class ProgramState {
   Atomic<int> processes_;
 
   Process* paused_processes_head_;
-  bool is_paused_;
+  int paused_count_;
 
   // All components of the scheduler (including the gc thread) use this
   // refcounter. Whoever is decrementing it to zero must call the
