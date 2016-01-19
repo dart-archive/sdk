@@ -473,6 +473,13 @@ void Codegen::Generate() {
         break;
       }
 
+      case kAllocate:
+      case kAllocateImmutable: {
+        Class* klass = Class::cast(Function::ConstantForBytecode(bcp));
+        DoAllocate(klass);
+        break;
+      }
+
       default: {
         printf("\tint3\n");
         break;

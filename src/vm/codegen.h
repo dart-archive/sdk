@@ -66,6 +66,8 @@ class Codegen {
 
   void DoInvokeNative(Native native, int arity);
 
+  void DoAllocate(Class* klass);
+
   void DoDrop(int n);
 
   void DoReturn();

@@ -207,6 +207,45 @@ void Codegen::DoInvokeNative(Native native, int arity) {
   __ int3();
 }
 
+void Codegen::DoAllocate(Class* klass) {
+  int fields = klass->NumberOfInstanceFields();
+
+  // TODO(ajohnsen): Handle immutable fields.
+
+  __ movl(EBX, ESP);
+  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  printf("\tleal O%08x + 1, %%eax\n", klass->address());
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ movl(Address(ESP, 2 * kWordSize), Immediate(0));
+  __ movl(Address(ESP, 3 * kWordSize), Immediate(0));
+  __ call("HandleAllocate");
+
+  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
+  __ movl(ESP, EBX);
+
+  Label gc;
+  __ movl(ECX, EAX);
+  __ andl(ECX, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpl(ECX, Immediate(Failure::kTag));
+  Label no_gc;
+  __ j(NOT_EQUAL, &no_gc);
+  __ int3();
+  __ Bind(&no_gc);
+
+  int last_index = (fields - 1) * kWordSize;
+  __ leal(ECX, Address(EAX, last_index + Instance::kSize - HeapObject::kTag));
+  for (int i = 0; i < fields; i++) {
+    __ popl(EBX);
+    __ movl(Address(ECX, last_index), EBX);
+    __ subl(EBX, Immediate(kWordSize));
+  }
+
+  __ pushl(EAX);
+}
+
 void Codegen::DoDrop(int n) {
   ASSERT(n >= 0);
   if (n == 0) {
