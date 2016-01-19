@@ -267,7 +267,6 @@ hooks = [
       '--bucket',
       'dart-dependencies-fletch',
       '-d',
-      '-r',
       '-u',
       'fletch/third_party/stm',
     ],
