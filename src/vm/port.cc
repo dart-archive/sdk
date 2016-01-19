@@ -80,15 +80,12 @@ Port* Port::CleanupPorts(Space* space, Port* head) {
     } else {
       HeapObject* channel = current->channel_;
       if (channel != NULL && space->Includes(channel->address())) {
-#ifdef FLETCH_MARK_SWEEP
-        if (!channel->IsMarked()) current->channel_ = NULL;
-#else
-        // If the channel is not reachable the forwarding_address will
-        // be NULL. Therefore, we should always update the channel with
-        // the forwarding address.
-        HeapObject* forward = channel->forwarding_address();
-        current->channel_ = reinterpret_cast<Instance*>(forward);
-#endif
+        if (space->IsAlive(channel)) {
+          current->channel_ =
+              reinterpret_cast<Instance*>(space->NewLocation(channel));
+        } else {
+          current->channel_ = NULL;
+        }
       }
       previous = current;
     }

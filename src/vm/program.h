@@ -263,8 +263,8 @@ class Program {
 
   void CollectGarbage();
   void CollectSharedGarbage(bool program_is_stopped = false);
+  void CollectNewSpace();
   void PerformSharedGarbageCollection();
-  void CompactStorebuffers();
 
   void PrintStatistics();
 
@@ -293,7 +293,7 @@ class Program {
   RandomXorShift* random() { return &random_; }
 
   void PrepareProgramGC();
-  void PerformProgramGC(Space* to, PointerVisitor* visitor);
+  void PerformProgramGC(SemiSpace* to, PointerVisitor* visitor);
   void FinishProgramGC();
 
   // When the program was loaded from a snapshot, then this function can be used
@@ -302,7 +302,23 @@ class Program {
 
   Process* process_list_head() { return process_list_head_; }
 
+  Stack* stack_chain() { return stack_chain_; }
+  void ClearStackChain() { stack_chain_ = NULL; }
+
+  // Perform garbage collection of objects and chain all stack objects.
+  // Returns the number of stacks found in the heap.
+  int CollectMutableGarbageAndChainStacks();
+
  private:
+  // Program GC support. Cook the stack to rewrite bytecode pointers
+  // to a pair of a function pointer and a delta. Uncook the stack to
+  // rewriting the (now potentially moved) function pointer and the
+  // delta into a direct bytecode pointer again.
+  void CookStacks(int number_of_stacks);
+  void UncookAndUnchainStacks();
+  bool stacks_are_cooked() { return !cooked_stack_deltas_.is_empty(); }
+  void UpdateStackLimits();
+
   // Access to the address of the first and last root.
   Object** first_root_address() {
     return reinterpret_cast<Object**>(&null_object_);
@@ -351,6 +367,10 @@ class Program {
 
   // Tag used to identified snapshot program when profiling.
   int hashtag_;
+
+  // Used during GC and debugging to traverse the stacks.
+  Stack* stack_chain_;
+  List<List<int>> cooked_stack_deltas_;
 };
 
 }  // namespace fletch

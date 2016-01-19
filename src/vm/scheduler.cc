@@ -56,11 +56,7 @@ void Scheduler::TearDown() {
 }
 
 Scheduler::Scheduler()
-#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
     : max_threads_(1),
-#else
-    : max_threads_(Platform::GetNumberOfHardwareThreads()),
-#endif
       thread_pool_(max_threads_),
       preempt_monitor_(Platform::CreateMonitor()),
       sleeping_threads_(0),
@@ -636,74 +632,6 @@ void Scheduler::RunInThread() {
   ThreadExit(thread_state);
 }
 
-#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-
-void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
-  // We use this heap for allocating new immutable objects.
-  Program* program = NULL;
-  SharedHeap* shared_heap = NULL;
-  SharedHeap::Part* shared_heap_part = NULL;
-
-  while (!pause_) {
-    Process* process = NULL;
-    DequeueFromThread(thread_state, &process);
-    // No more processes for this state, break.
-    if (process == NULL) break;
-
-    while (process != NULL) {
-      // If we changed programs, merge the current part back to it's heap
-      // and get a new part from the new program.
-      if (process->program() != program) {
-        if (shared_heap_part != NULL) {
-          if (shared_heap->ReleasePart(shared_heap_part)) {
-            program->program_state()->Retain();
-            gc_thread_->TriggerSharedGC(program);
-          }
-        }
-        if (program != NULL) {
-          if (program->program_state()->Release()) {
-            program->NotifyExitListener();
-          }
-        }
-        program = process->program();
-        program->program_state()->Retain();
-        shared_heap = program->shared_heap();
-        shared_heap_part = shared_heap->AcquirePart();
-      }
-
-      // Interpret and trigger GC if interpretation resulted in immutable
-      // allocation failure.
-      bool allocation_failure = false;
-      Process* new_process = InterpretProcess(
-          process, shared_heap_part->heap(), thread_state, &allocation_failure);
-      if (allocation_failure) {
-        if (shared_heap->ReleasePart(shared_heap_part)) {
-          program->program_state()->Retain();
-          gc_thread_->TriggerSharedGC(program);
-        }
-        shared_heap_part = shared_heap->AcquirePart();
-      }
-
-      // Possibly switch to a new process.
-      process = new_process;
-    }
-  }
-
-  // Always merge remaining immutable heap part back before (possibly) going
-  // to sleep.
-  if (shared_heap != NULL) {
-    ProgramState* state = program->program_state();
-    if (shared_heap->ReleasePart(shared_heap_part)) {
-      state->Retain();
-      gc_thread_->TriggerSharedGC(program);
-    }
-
-    if (state->Release()) program->NotifyExitListener();
-  }
-}
-
-#else  // FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-
 void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   // We use this heap for allocating new immutable objects.
   while (!pause_) {
@@ -713,24 +641,16 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
     if (process == NULL) break;
 
     while (process != NULL) {
-      bool allocation_failure = false;
       Heap* shared_heap = process->program()->shared_heap()->heap();
 
-      Process* new_process = InterpretProcess(
-          process, shared_heap, thread_state, &allocation_failure);
-
-      if (allocation_failure) {
-        // Can never run into an immutable allocation failure.
-        UNREACHABLE();
-      }
+      Process* new_process =
+          InterpretProcess(process, shared_heap, thread_state);
 
       // Possibly switch to a new process.
       process = new_process;
     }
   }
 }
-
-#endif  // FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void Scheduler::SetCurrentProcessForThread(int thread_id, Process* process) {
   if (thread_id == -1) return;
@@ -761,8 +681,7 @@ void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {
 }
 
 Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
-                                     ThreadState* thread_state,
-                                     bool* allocation_failure) {
+                                     ThreadState* thread_state) {
   ASSERT(process->exception()->IsNull());
 
   Signal* signal = process->signal();
@@ -800,14 +719,6 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
   process->set_thread_state(NULL);
   Thread::SetProcess(NULL);
   ClearCurrentProcessForThread(thread_id, process);
-
-  if (interpreter.IsImmutableAllocationFailure()) {
-#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
-    UNREACHABLE();
-#endif
-    *allocation_failure = true;
-    return process;
-  }
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
