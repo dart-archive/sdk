@@ -263,8 +263,8 @@ class Program {
 
   void CollectGarbage();
   void CollectSharedGarbage(bool program_is_stopped = false);
+  void CollectNewSpace();
   void PerformSharedGarbageCollection();
-  void CompactStorebuffers();
 
   void PrintStatistics();
 
@@ -293,7 +293,7 @@ class Program {
   RandomXorShift* random() { return &random_; }
 
   void PrepareProgramGC();
-  void PerformProgramGC(Space* to, PointerVisitor* visitor);
+  void PerformProgramGC(SemiSpace* to, PointerVisitor* visitor);
   void FinishProgramGC();
 
   // When the program was loaded from a snapshot, then this function can be used

@@ -114,7 +114,7 @@ int ProgramHeapRelocator::Relocate() {
 
   // Make sure we only have one chunk in the heap so that we can linearly
   // relocate objects to the new base.
-  Space* space = program_->heap()->space();
+  SemiSpace* space = program_->heap()->space();
   if (space->first() == NULL || space->first() != space->last()) {
     FATAL("We have more chunks than supported. Go fix the runtime!\n");
   }

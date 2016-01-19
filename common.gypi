@@ -69,7 +69,6 @@
         'defines': [
           'FLETCH_ENABLE_LIVE_CODING',
           'FLETCH_ENABLE_FFI',
-          'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
           'FLETCH_ENABLE_NATIVE_PROCESSES',
           'FLETCH_ENABLE_PRINT_INTERCEPTORS',
         ],
@@ -605,18 +604,6 @@
 
         'defines!': [
           'FLETCH_ENABLE_FFI',
-        ],
-      },
-
-      'fletch_disable_multiple_process_heaps': {
-        'abstract': 1,
-
-        'defines!': [
-          'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
-        ],
-
-        'defines': [
-          'FLETCH_MARK_SWEEP',
         ],
       },
 

@@ -92,51 +92,17 @@ class MarkingStack {
 
 class MarkingVisitor : public PointerVisitor {
  public:
-  MarkingVisitor(Space* space, MarkingStack* marking_stack)
-      : space_(space), marking_stack_(marking_stack) {}
-
-  void Visit(Object** p) { MarkPointer(*p); }
-
-  void VisitClass(Object** p) {
-    // The class pointer is used for the mark bit. Therefore,
-    // the actual class pointer is obtained by clearing the
-    // mark bit.
-    uword klass = reinterpret_cast<uword>(*p);
-    MarkPointer(reinterpret_cast<Object*>(klass & ~HeapObject::kMarkBit));
-  }
-
-  void VisitBlock(Object** start, Object** end) {
-    // Mark live all HeapObjects pointed to by pointers in [start, end)
-    for (Object** p = start; p < end; p++) MarkPointer(*p);
-  }
-
- private:
-  void MarkPointer(Object* object) {
-    if (!object->IsHeapObject()) return;
-    if (!space_->Includes(reinterpret_cast<uword>(object))) return;
-    HeapObject* heap_object = HeapObject::cast(object);
-    if (!heap_object->IsMarked()) {
-      heap_object->SetMark();
-      marking_stack_->Push(heap_object);
-    }
-  }
-
-  Space* space_;
-  MarkingStack* marking_stack_;
-};
-
-class MarkAndChainStacksVisitor : public PointerVisitor {
- public:
-  MarkAndChainStacksVisitor(Process* process, Space* space,
-                            MarkingStack* marking_stack)
-      : process_stack_(process->stack()),
-        space_(space),
+  MarkingVisitor(SemiSpace* new_space, OldSpace* old_space,
+                 MarkingStack* marking_stack, Stack* process_stack = NULL)
+      : process_stack_(process_stack),
+        new_space_(new_space),
+        old_space_(old_space),
         marking_stack_(marking_stack),
         number_of_stacks_(0) {}
 
-  void Visit(Object** p) { MarkPointer(*p); }
+  virtual void Visit(Object** p) { MarkPointer(*p); }
 
-  void VisitClass(Object** p) {
+  virtual void VisitClass(Object** p) {
     // The class pointer is used for the mark bit. Therefore,
     // the actual class pointer is obtained by clearing the
     // mark bit.
@@ -144,7 +110,7 @@ class MarkAndChainStacksVisitor : public PointerVisitor {
     MarkPointer(reinterpret_cast<Object*>(klass & ~HeapObject::kMarkBit));
   }
 
-  void VisitBlock(Object** start, Object** end) {
+  virtual void VisitBlock(Object** start, Object** end) {
     // Mark live all HeapObjects pointed to by pointers in [start, end)
     for (Object** p = start; p < end; p++) MarkPointer(*p);
   }
@@ -165,10 +131,14 @@ class MarkAndChainStacksVisitor : public PointerVisitor {
 
   void MarkPointer(Object* object) {
     if (!object->IsHeapObject()) return;
-    if (!space_->Includes(reinterpret_cast<uword>(object))) return;
+    uword address = reinterpret_cast<uword>(object);
+    if (!new_space_->Includes(address) &&
+        (old_space_ == NULL || !old_space_->Includes(address))) {
+      return;
+    }
     HeapObject* heap_object = HeapObject::cast(object);
     if (!heap_object->IsMarked()) {
-      if (heap_object->IsStack()) {
+      if (process_stack_ != NULL && heap_object->IsStack()) {
         ChainStack(Stack::cast(heap_object));
       }
       heap_object->SetMark();
@@ -177,7 +147,8 @@ class MarkAndChainStacksVisitor : public PointerVisitor {
   }
 
   Stack* process_stack_;
-  Space* space_;
+  SemiSpace* new_space_;
+  OldSpace* old_space_;
   MarkingStack* marking_stack_;
   int number_of_stacks_;
 };
@@ -292,13 +263,15 @@ class SweepingVisitor : public HeapObjectVisitor {
   explicit SweepingVisitor(FreeList* free_list)
       : free_list_(free_list), free_start_(0), used_(0) {
     // Clear the free list. It will be rebuilt during sweeping.
-    free_list_->Clear();
+    if (free_list_ != NULL) free_list_->Clear();
   }
 
   void AddFreeListChunk(uword free_end_) {
     if (free_start_ != 0) {
       uword free_size = free_end_ - free_start_;
-      free_list_->AddChunk(free_start_, free_size);
+      // When sweeping the new space we just remove mark bits, but don't build
+      // free lists, since it is GCed by scavenge instead.
+      if (free_list_ != NULL) free_list_->AddChunk(free_start_, free_size);
       free_start_ = 0;
     }
   }

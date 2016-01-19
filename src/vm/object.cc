@@ -22,6 +22,7 @@ namespace fletch {
 uint8 StaticClassStructures::meta_class_storage[Class::kSize];
 uint8 StaticClassStructures::free_list_chunk_class_storage[Class::kSize];
 uint8 StaticClassStructures::one_word_filler_class_storage[Class::kSize];
+uint8 StaticClassStructures::promoted_track_class_storage[Class::kSize];
 
 static void CopyBlock(Object** dst, Object** src, int byte_size) {
   ASSERT(byte_size > 0);
@@ -44,7 +45,7 @@ static void CopyBlock(Object** dst, Object** src, int byte_size) {
 
 int HeapObject::Size() {
   // Fast check for non-variable length types.
-  ASSERT(forwarding_address() == NULL);
+  ASSERT(!HasForwardingAddress());
   InstanceFormat format = raw_class()->instance_format();
   if (!format.has_variable_part()) return format.fixed_size();
   int type = format.type();
@@ -69,6 +70,8 @@ int HeapObject::Size() {
       return DispatchTableEntry::cast(this)->DispatchTableEntrySize();
     case InstanceFormat::FREE_LIST_CHUNK_TYPE:
       return FreeListChunk::cast(this)->size();
+    case InstanceFormat::PROMOTED_TRACK_TYPE:
+      return PromotedTrack::cast(this)->size();
   }
   UNREACHABLE();
   return 0;
@@ -76,7 +79,7 @@ int HeapObject::Size() {
 
 int HeapObject::FixedSize() {
   // Fast check for non variable length types.
-  ASSERT(forwarding_address() == NULL);
+  ASSERT(!HasForwardingAddress());
   InstanceFormat format = raw_class()->instance_format();
   return format.fixed_size();
 }
@@ -264,7 +267,7 @@ char* TwoByteString::ToCString() {
 }
 
 Instance* Instance::CloneTransformed(Heap* heap) {
-  ASSERT(forwarding_address() == NULL);
+  ASSERT(!HasForwardingAddress());
   Class* old_class = get_class();
   Class* new_class = old_class->TransformationTarget();
   Array* transformation = old_class->Transformation();
@@ -496,8 +499,8 @@ void Class::ClassPrint() {
 
 void Class::ClassShortPrint() { Print::Out("class"); }
 
-void HeapObject::IteratePointers(PointerVisitor* visitor) {
-  ASSERT(forwarding_address() == NULL);
+InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
+  ASSERT(!HasForwardingAddress());
 
   visitor->VisitClass(reinterpret_cast<Object**>(address()));
   uword raw = reinterpret_cast<uword>(raw_class());
@@ -508,7 +511,7 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
     visitor->VisitBlock(
         reinterpret_cast<Object**>(address() + kPointerSize),
         reinterpret_cast<Object**>(address() + format.fixed_size()));
-    return;
+    return format;
   }
   switch (format.type()) {
     case InstanceFormat::ARRAY_TYPE: {
@@ -545,6 +548,7 @@ void HeapObject::IteratePointers(PointerVisitor* visitor) {
     default:
       UNREACHABLE();
   }
+  return format;
 }
 
 word HeapObject::forwarding_word() {
@@ -558,14 +562,8 @@ void HeapObject::set_forwarding_word(word value) {
   at_put(kClassOffset, Smi::cast(reinterpret_cast<Smi*>(value)));
 }
 
-HeapObject* HeapObject::forwarding_address() {
-  Object* header = at(kClassOffset);
-  if (!header->IsSmi()) return NULL;
-  return HeapObject::FromAddress(reinterpret_cast<word>(header));
-}
-
 void HeapObject::set_forwarding_address(HeapObject* value) {
-  ASSERT(forwarding_address() == NULL);
+  ASSERT(!HasForwardingAddress());
   at_put(kClassOffset, Smi::cast(reinterpret_cast<Smi*>(value->address())));
 }
 
@@ -583,16 +581,19 @@ void Stack::UpdateFramePointers(Stack* old_stack) {
   }
 }
 
-HeapObject* HeapObject::CloneInToSpace(Space* to) {
+// Explicit instantiation of just these two types.
+template HeapObject* HeapObject::CloneInToSpace<SemiSpace>(SemiSpace* s);
+template HeapObject* HeapObject::CloneInToSpace<OldSpace>(OldSpace* s);
+
+template <class SomeSpace>
+HeapObject* HeapObject::CloneInToSpace(SomeSpace* to) {
   ASSERT(!to->Includes(this->address()));
   // If there is a forward pointer return it.
-  HeapObject* f = forwarding_address();
-  if (f != NULL) return f;
+  if (HasForwardingAddress()) return forwarding_address();
   // Otherwise, copy the object to the 'to' space
   // and insert a forward pointer.
   int object_size = Size();
-  HeapObject* target =
-      HeapObject::FromAddress(to->AllocateLinearly(object_size));
+  HeapObject* target = HeapObject::FromAddress(to->Allocate(object_size));
   // Copy the content of source to target.
   CopyBlock(reinterpret_cast<Object**>(target->address()),
             reinterpret_cast<Object**>(address()), object_size);
@@ -722,6 +723,16 @@ int CookedHeapObjectPointerVisitor::Visit(HeapObject* object) {
     object->IteratePointers(visitor_);
   }
   return size;
+}
+
+PromotedTrack* PromotedTrack::Initialize(PromotedTrack* next, uword location,
+                                         uword end) {
+  PromotedTrack* self =
+      reinterpret_cast<PromotedTrack*>(HeapObject::FromAddress(location));
+  self->set_class(StaticClassStructures::promoted_track_class());
+  self->set_next(next);
+  self->set_end(end);
+  return self;
 }
 
 }  // namespace fletch

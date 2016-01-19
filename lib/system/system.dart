@@ -29,7 +29,6 @@ const illegalState = "Illegal state.";
 enum InterruptKind {
   ready,
   terminate,
-  immutableAllocationFailure,
   interrupt,
   yield,
   targetYield,

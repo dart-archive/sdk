@@ -16,8 +16,8 @@
 #include "src/vm/natives.h"
 #include "src/vm/process_handle.h"
 #include "src/vm/program.h"
+#include "src/vm/remembered_set.h"
 #include "src/vm/signal.h"
-#include "src/vm/storebuffer.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -96,11 +96,7 @@ class Process {
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
-#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-  Heap* heap() { return &heap_; }
-#else
   Heap* heap() { return program()->shared_heap()->heap(); }
-#endif
   Heap* immutable_heap() { return immutable_heap_; }
   void set_immutable_heap(Heap* heap) { immutable_heap_ = heap; }
 
@@ -255,17 +251,16 @@ class Process {
 
   RandomXorShift* random() { return &random_; }
 
-  StoreBuffer* store_buffer() { return &store_buffer_; }
+  RememberedSet* remembered_set() { return &remembered_set_; }
 
   MessageMailbox* mailbox() { return &mailbox_; }
 
   Signal* signal() { return signal_.load(); }
 
   void RecordStore(HeapObject* object, Object* value) {
-    if (value->IsHeapObject() && value->IsImmutable()) {
+    if (value->IsHeapObject()) {
       ASSERT(!program()->heap()->space()->Includes(object->address()));
-      ASSERT(heap()->space()->Includes(object->address()));
-      store_buffer_.Insert(object);
+      remembered_set_.Insert(object);
     }
   }
 
@@ -320,12 +315,8 @@ class Process {
 
   RandomXorShift random_;
 
-#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-  Heap heap_;
-#endif
-
   Heap* immutable_heap_;
-  StoreBuffer store_buffer_;
+  RememberedSet remembered_set_;
   Links links_;
 
   Atomic<State> state_;
