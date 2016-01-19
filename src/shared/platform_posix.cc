@@ -18,6 +18,9 @@
 #include <time.h>
 #include <signal.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <stdarg.h>
 
 #include "src/shared/utils.h"
 
@@ -162,7 +165,33 @@ void Platform::ScheduleAbort() {
 
 void Platform::ImmediateAbort() { abort(); }
 
+#ifdef DEBUG
+void Platform::WaitForDebugger(const char* executable_name) {
+  int fd = open("/dev/tty", O_WRONLY);
+  if (fd >= 0) {
+    FILE* terminal = fdopen(fd, "w");
+    fprintf(terminal, "*** VM paused, debug with:\n");
+    fprintf(
+        terminal,
+        "gdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal SIGCONT'\n",
+        executable_name, getpid());
+    kill(getpid(), SIGSTOP);
+  }
+}
+#endif
+
 int Platform::GetPid() { return static_cast<int>(getpid()); }
+
+char* Platform::GetEnv(const char* name) { return getenv(name); }
+
+int Platform::FormatString(char* buffer, size_t length, const char* format,
+                           ...) {
+  va_list args;
+  va_start(args, format);
+  int result = vsnprintf(buffer, length, format, args);
+  va_end(args);
+  return result;
+}
 
 int Platform::MaxStackSizeInWords() { return 128 * KB; }
 

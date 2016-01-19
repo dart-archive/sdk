@@ -4,14 +4,7 @@
 
 #ifdef FLETCH_ENABLE_LIVE_CODING
 
-#include <ctype.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/param.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <stddef.h>  // for size_t
 
 #include "include/fletch_api.h"
 
@@ -19,6 +12,8 @@
 #include "src/shared/flags.h"
 #include "src/shared/utils.h"
 #include "src/shared/version.h"
+#include "src/shared/platform.h"
+#include "src/shared/globals.h"
 
 #include "src/vm/session.h"
 #include "src/vm/log_print_interceptor.h"
@@ -64,21 +59,6 @@ static bool EndsWith(const char* s, const char* suffix) {
              : false;
 }
 
-#ifdef DEBUG
-static void WaitForGDB(const char* executable_name) {
-  int fd = open("/dev/tty", O_WRONLY);
-  if (fd >= 0) {
-    FILE* terminal = fdopen(fd, "w");
-    fprintf(terminal, "*** VM paused, debug with:\n");
-    fprintf(
-        terminal,
-        "gdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal SIGCONT'\n",
-        executable_name, getpid());
-    kill(getpid(), SIGSTOP);
-  }
-}
-#endif
-
 static void PrintUsage() {
   Print::Out("fletch-vm - The embedded Dart virtual machine.\n\n");
   Print::Out(
@@ -101,8 +81,8 @@ static void PrintVersion() { Print::Out("%s\n", GetVersion()); }
 
 static int Main(int argc, char** argv) {
 #ifdef DEBUG
-  if (getenv("FLETCH_VM_WAIT") != NULL) {
-    WaitForGDB(argv[0]);
+  if (Platform::GetEnv("FLETCH_VM_WAIT") != NULL) {
+    Platform::WaitForDebugger(argv[0]);
   }
 #endif
   Flags::ExtractFromCommandLine(&argc, argv);
@@ -165,11 +145,12 @@ static int Main(int argc, char** argv) {
   int result = 0;
 
   // Check if we should add a log print interceptor.
-  int pid = Platform::GetPid();
   if (log_dir != NULL) {
+    int pid = Platform::GetPid();
     // Generate a vm specific log name with the given path.
     char log_path[MAXPATHLEN + 1];
-    snprintf(log_path, sizeof(log_path), "%s/vm-%d.log", log_dir, pid);
+    Platform::FormatString(log_path, sizeof(log_path), "%s/vm-%d.log",
+                           log_dir, pid);
     Print::RegisterPrintInterceptor(new LogPrintInterceptor(log_path));
   }
 

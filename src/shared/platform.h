@@ -41,6 +41,7 @@ enum OperatingSystem {
   kLinux = 1,
   kMacOS = 2,
   kAndroid = 3,
+  kWindows = 4,
 };
 
 enum Architecture {
@@ -87,6 +88,10 @@ bool StoreFile(const char* uri, List<uint8> bytes);
 // Write text to file, append if the bool append is true.
 bool WriteText(const char* uri, const char* text, bool append);
 
+#if DEBUG
+void WaitForDebugger(const char* executable_name);
+#endif
+
 const char* GetTimeZoneName(int64_t seconds_since_epoch);
 
 int GetTimeZoneOffset(int64_t seconds_since_epoch);
@@ -100,6 +105,10 @@ void ScheduleAbort();
 void ImmediateAbort();
 
 int GetPid();
+
+char* GetEnv(const char* name);
+
+int FormatString(char* buffer, size_t length, const char* format, ...);
 
 int GetLastError();
 void SetLastError(int value);
@@ -115,6 +124,8 @@ inline OperatingSystem OS() {
   return kLinux;
 #elif defined(__APPLE__)
   return kMacOS;
+#elif defined(_WINNT)
+  return kWindows;
 #else
   return kUnknownOS;
 #endif

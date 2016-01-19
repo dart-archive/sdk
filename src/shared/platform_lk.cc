@@ -187,6 +187,19 @@ int Platform::GetPid() {
   return 0;
 }
 
+#ifdef DEBUG
+void Platform::WaitForDebugger(const char* executable_name) {
+  UNIMPLEMENTED();
+}
+#endif
+
+int Platform::FormatString(char* buffer, size_t length, const char* format,
+                           ...) {
+  UNIMPLEMENTED();
+}
+
+char* Platform::GetEnv(const char* name) { return NULL: }
+
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
 }  // namespace fletch

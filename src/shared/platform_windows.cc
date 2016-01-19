@@ -9,6 +9,8 @@
 #include <winsock2.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "src/shared/utils.h"
 
@@ -225,8 +227,28 @@ void Platform::ImmediateAbort() { abort(); }
 
 int Platform::GetPid() { return static_cast<int>(GetCurrentProcessId()); }
 
-int Platform::GetLastError() { return GetLastError(); }
-void Platform::SetLastError(int value) { SetLastError(value); }
+#ifdef DEBUG
+void Platform::WaitForDebugger(const char* executable_name) {
+  UNIMPLEMENTED();
+}
+#endif
+
+char* Platform::GetEnv(const char* name) {
+  // TODO(herhut): Implement GetEnv on Windows.
+  return NULL;
+}
+
+int Platform::FormatString(char* buffer, size_t length, const char* format,
+                           ...) {
+  va_list args;
+  va_start(args, format);
+  int result = _vsnprintf(buffer, length, format, args);
+  va_end(args);
+  return result;
+}
+
+int Platform::GetLastError() { return ::GetLastError(); }
+void Platform::SetLastError(int value) { ::SetLastError(value); }
 
 VirtualMemory::VirtualMemory(int size) : size_(size) { UNIMPLEMENTED(); }
 

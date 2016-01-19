@@ -16,6 +16,10 @@
 
 #include "src/shared/globals.h"
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN PATH_MAX
+#endif
+
 namespace fletch {
 
 // Forward declare [Platform::GetMicroseconds].
