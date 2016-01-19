@@ -17,8 +17,8 @@ class HeapObject;
 class HeapObjectVisitor;
 class PointerVisitor;
 class ProgramHeapRelocator;
-class PromotedTrack;
 class Space;
+class StoreBuffer;
 
 const int kPageSize = 4 * KB;
 
@@ -48,19 +48,9 @@ class Chunk {
     return (address >= base()) && (address < limit());
   }
 
-  void set_scavenge_pointer(uword p) {
-    ASSERT(p >= base_);
-    ASSERT(p <= limit_);
-    scavenge_pointer_ = p;
-  }
-  uword scavenge_pointer() const { return scavenge_pointer_; }
-
 #ifdef DEBUG
   // Fill the space with garbage.
   void Scramble();
-
-  // Support for the heap Find method, used when debugging.
-  void Find(uword word, const char* name);
 #endif
 
  private:
@@ -71,19 +61,17 @@ class Chunk {
   const uword allocated_;
 #endif
   const bool external_;
-  uword scavenge_pointer_;
 
   Chunk* next_;
 
 #ifdef FLETCH_TARGET_OS_CMSIS
   Chunk(Space* owner, uword base, uword size, uword allocated,
-        bool external = false);
+        bool external = false)
       : owner_(owner),
         base_(base),
         limit_(base + size),
         allocated_(allocated),
         external_(external),
-        scavenge_pointer_(base_),
         next_(NULL) {}
 #else
   Chunk(Space* owner, uword base, uword size, bool external = false)
@@ -91,7 +79,6 @@ class Chunk {
         base_(base),
         limit_(base + size),
         external_(external),
-        scavenge_pointer_(base_),
         next_(NULL) {}
 #endif
 
@@ -103,7 +90,6 @@ class Chunk {
   friend class ObjectMemory;
   friend class PageTable;
   friend class Space;
-  friend class SemiSpace;
 };
 
 // Space is a chain of chunks. It supports allocation and traversal.
@@ -114,29 +100,36 @@ class Space {
 
   explicit Space(int maximum_initial_size = 0);
 
-  virtual ~Space();
+  ~Space();
 
-  // Returns the total size of allocated objects.
-  virtual int Used() = 0;
+  // AllocateLinearly makes sure that all memory allocated is
+  // allocated at the end of the current chunk. When using mark-sweep
+  // garbage collection, that means that the freelist is never
+  // used. It ensures that we can traverse the heap and find all
+  // objects, because the free-list allocator is not creating new
+  // objects behind us. This is used for copying operations (folding,
+  // unfolding, program GC) on the program heap.
+  uword AllocateLinearly(int size);
+
+  // Allocate raw object. Returns 0 if a garbage collection is needed
+  // and causes a fatal error if no garbage collection is needed and
+  // there is no room to allocate the object.
+  uword Allocate(int size) { return AllocateInternal(size, true); }
+
+  // Allocate raw object. Returns 0 if a garbage collection is needed
+  // or if there is no room to allocate the object. Never causes a
+  // fatal error.
+  uword AllocateNonFatal(int size) { return AllocateInternal(size, false); }
+
+  // Rewind allocation top by size bytes if location is equal to current
+  // allocation top.
+  void TryDealloc(uword location, int size);
 
   // Flush will make the current chunk consistent for iteration.
-  virtual void Flush() = 0;
+  void Flush();
 
-  // Used for weak processing.  Can only be called:
-  // 1) For copying collections: right after copying but before you delete the
-  //    from-space.  Only for heap objects originally in the from-space.
-  // 2) For mark-sweep collections: Between marking and sweeping.  Only makes
-  //    sense for the mark-sweep space, since objects in the semispace will
-  //    survive regardless of their mark bit.
-  virtual bool IsAlive(HeapObject* old_location) = 0;
-
-  // Do not call if the object died in the current GC.  Used for weak
-  // processing.
-  virtual HeapObject* NewLocation(HeapObject* old_location) = 0;
-
-  // Instance transformation leaves garbage in the heap so we rebuild the
-  // space after transformations.
-  virtual void RebuildAfterTransformations() = 0;
+  // Returns the total size of allocated objects.
+  int Used();
 
   void set_used(int used) { used_ = used; }
 
@@ -145,6 +138,11 @@ class Space {
 
   // Iterate over all objects in this space.
   void IterateObjects(HeapObjectVisitor* visitor);
+
+  // Scavenge loop.
+  void CompleteScavenge(PointerVisitor* visitor);
+  void CompleteScavengeMutable(PointerVisitor* visitor, Space* program_space,
+                               StoreBuffer* store_buffer);
 
   // Schema change support.
   void CompleteTransformations(PointerVisitor* visitor);
@@ -173,6 +171,10 @@ class Space {
     limit_ = chunk->limit_;
   }
 
+  // Takes all chunks inside [space] and prepends it to this space.
+  // The given [space] will be deleted.
+  void PrependSpace(Space* space);
+
   bool is_empty() const { return first_ == NULL; }
 
   static int DefaultChunkSize(int heap_size) {
@@ -188,16 +190,31 @@ class Space {
   // there is exactly one chunk in this space and [object] lies within it.
   word OffsetOf(HeapObject* object);
 
-#ifdef DEBUG
-  void Find(uword word, const char* name);
+#ifdef FLETCH_MARK_SWEEP
+  FreeList* free_list() const { return free_list_; }
 #endif
 
- protected:
+  // Instance transformation leaves garbage in the heap so we rebuild the
+  // space after transformations.
+  void RebuildAfterTransformations();
+
+ private:
   friend class NoAllocationFailureScope;
   friend class ProgramHeapRelocator;
   friend class Program;
 
-  virtual void Append(Chunk* chunk);
+  void SetAllocationPointForPrepend(Space* space);
+
+  uword AllocateInternal(int size, bool fatal);
+  uword AllocateInNewChunk(int size, bool fatal);
+
+#ifdef FLETCH_MARK_SWEEP
+  uword AllocateFromFreeList(int size, bool fatal);
+#else
+  uword TryAllocate(int size);
+#endif
+
+  void Append(Chunk* chunk);
 
   void FreeAllChunks();
 
@@ -216,111 +233,10 @@ class Space {
   uword limit_;            // Allocation limit in current chunk.
   int allocation_budget_;  // Budget before needing a GC.
   int no_allocation_nesting_;
-};
 
-class SemiSpace : public Space {
- public:
-  explicit SemiSpace(int maximum_initial_size = 0)
-      : Space(maximum_initial_size) {}
-
-  // Returns the total size of allocated objects.
-  virtual int Used();
-
-  virtual bool IsAlive(HeapObject* old_location);
-  virtual HeapObject* NewLocation(HeapObject* old_location);
-
-  // Instance transformation leaves garbage in the heap that needs to be
-  // added to freelists when using mark-sweep collection.
-  virtual void RebuildAfterTransformations();
-
-  // Flush will make the current chunk consistent for iteration.
-  virtual void Flush();
-
-  // Allocate raw object. Returns 0 if a garbage collection is needed
-  // and causes a fatal error if no garbage collection is needed and
-  // there is no room to allocate the object.
-  uword Allocate(int size) { return AllocateInternal(size, true); }
-
-  // Allocate raw object. Returns 0 if a garbage collection is needed
-  // or if there is no room to allocate the object. Never causes a
-  // fatal error.
-  uword AllocateNonFatal(int size) { return AllocateInternal(size, false); }
-
-  // Rewind allocation top by size bytes if location is equal to current
-  // allocation top.
-  void TryDealloc(uword location, int size);
-
-  // Takes all chunks inside [space] and prepends it to this space.
-  // The given [space] will be deleted.
-  void PrependSpace(SemiSpace* space);
-
-  // For the program semispaces.  There is no other space into which we
-  // promote, so it does all work in one go.
-  void CompleteScavenge(PointerVisitor* visitor);
-
-  // For the mutable heap.
-  void StartScavenge();
-  bool CompleteScavengeGenerational(PointerVisitor* visitor);
-
- protected:
-  virtual void Append(Chunk* chunk);
-
- private:
-  uword AllocateInternal(int size, bool fatal);
-
-  void SetAllocationPointForPrepend(SemiSpace* space);
-
-  uword AllocateInNewChunk(int size, bool fatal);
-  uword TryAllocate(int size);
-};
-
-class OldSpace : public Space {
- public:
-  explicit OldSpace(int maximum_initial_size = 0);
-
-  virtual ~OldSpace();
-
-  virtual bool IsAlive(HeapObject* old_location);
-
-  // OldSpace is currently non-moving, so it returns old_location.
-  virtual HeapObject* NewLocation(HeapObject* old_location);
-
-  virtual int Used();
-
-  // Instance transformation leaves garbage in the heap that needs to be
-  // added to freelists when using mark-sweep collection.
-  virtual void RebuildAfterTransformations();
-
-  // Flush will make the current chunk consistent for iteration.
-  virtual void Flush();
-
-  void TryDealloc(uword location, int size);
-
-  // Allocate raw object. Returns 0 if a garbage collection is needed
-  // and causes a fatal error if no garbage collection is needed and
-  // there is no room to allocate the object.
-  uword Allocate(int size);
-
-  FreeList* free_list() const { return free_list_; }
-
-  // Find pointers to young-space.
-  void VisitRememberedSet(PointerVisitor* visitor);
-
-  // For the objects promoted to the old space during scavenge.
-  void StartScavenge();
-  bool CompleteScavengeGenerational(PointerVisitor* visitor);
-  void EndScavenge();
-
- private:
-  void SetAllocationPointForPrepend(SemiSpace* space);
-
-  uword AllocateInNewChunk(int size);
-
-  uword AllocateFromFreeList(int size);
-
+#ifdef FLETCH_MARK_SWEEP
   FreeList* free_list_;  // Free list structure.
-  bool tracking_allocations_;
-  PromotedTrack* promoted_track_;
+#endif
 };
 
 class NoAllocationFailureScope {
@@ -380,8 +296,6 @@ class ObjectMemory {
   // nor write to it when deleting the space it belongs to.
   static Chunk* CreateFlashChunk(Space* space, void* heap_space, int size);
 
-  static Chunk* CreateChunk(Space* space, void* heap_space, int size);
-
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);
 
@@ -436,7 +350,6 @@ class ObjectMemory {
   static Atomic<uword> allocated_;
 
   friend class Space;
-  friend class SemiSpace;
 };
 
 inline bool Space::Includes(uword address) const {

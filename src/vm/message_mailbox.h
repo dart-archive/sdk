@@ -11,6 +11,7 @@
 #include "src/vm/heap.h"
 #include "src/vm/mailbox.h"
 #include "src/vm/port.h"
+#include "src/vm/storebuffer.h"
 
 namespace fletch {
 
@@ -19,13 +20,19 @@ class Signal;
 
 class ExitReference {
  public:
-  explicit ExitReference(Object* message);
+  ExitReference(Process* exiting_process, Object* message);
 
   Object* message() const { return message_; }
 
   void VisitPointers(PointerVisitor* visitor) { visitor->Visit(&message_); }
 
+  Heap* mutable_heap() { return &mutable_heap_; }
+
+  StoreBuffer* store_buffer() { return &store_buffer_; }
+
  private:
+  Heap mutable_heap_;
+  StoreBuffer store_buffer_;
   Object* message_;
 };
 

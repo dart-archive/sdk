@@ -274,7 +274,7 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
   // This function
   //   * changes the first three stack slots
   //   * changes caller-saved registers
-  void AddToRememberedSetSlow(Register object, Register value);
+  void AddToStoreBufferSlow(Register object, Register value);
 
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
@@ -378,11 +378,23 @@ void InterpreterGeneratorX64::GenerateEpilogue() {
   __ Bind(&interpreter_entry_);
   Dispatch(0);
 
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  // Handle immutable heap allocation failures.
+  Label immutable_alloc_failure;
+  __ Bind(&immutable_alloc_failure);
+  __ movq(RAX, Immediate(Interpreter::kImmutableAllocationFailure));
+  __ jmp(&done_state_saved_);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+
   // Handle GC and re-interpret current bytecode.
   __ Bind(&gc_);
   SaveState(&interpreter_entry_);
   LoadProcess(RDI);
   __ call("HandleGC");
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  __ testq(RAX, RAX);
+  __ j(NOT_ZERO, &immutable_alloc_failure);
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
   RestoreState();
 
   // Stack overflow handling (slow case).
@@ -604,7 +616,7 @@ void InterpreterGeneratorX64::DoStoreBoxed() {
   __ movq(RBX, Address(RSP, RAX, TIMES_WORD_SIZE));
   __ movq(Address(RBX, Boxed::kValueOffset - HeapObject::kTag), RCX);
 
-  AddToRememberedSetSlow(RBX, RCX);
+  AddToStoreBufferSlow(RBX, RCX);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -616,7 +628,7 @@ void InterpreterGeneratorX64::DoStoreStatic() {
   __ movq(Address(RBX, RAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag),
           RCX);
 
-  AddToRememberedSetSlow(RBX, RCX);
+  AddToStoreBufferSlow(RBX, RCX);
 
   Dispatch(kStoreStaticLength);
 }
@@ -631,7 +643,7 @@ void InterpreterGeneratorX64::DoStoreField() {
   StoreLocal(RCX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(RAX, RCX);
+  AddToStoreBufferSlow(RAX, RCX);
 
   Dispatch(kStoreFieldLength);
 }
@@ -646,7 +658,7 @@ void InterpreterGeneratorX64::DoStoreFieldWide() {
   StoreLocal(RCX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(RAX, RCX);
+  AddToStoreBufferSlow(RAX, RCX);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -1397,7 +1409,7 @@ void InterpreterGeneratorX64::DoIntrinsicSetField() {
 
   // We have put the result in EBX to be sure it's kept by the preserved by the
   // store-buffer call.
-  AddToRememberedSetSlow(RCX, RBX);
+  AddToStoreBufferSlow(RCX, RBX);
 
   __ movq(RAX, RBX);
   __ ret();
@@ -1456,7 +1468,7 @@ void InterpreterGeneratorX64::DoIntrinsicListIndexSet() {
   // Index (in RAX) is already smi-taged, so only scale by TIMES_4.
   __ movq(Address(RCX, RAX, TIMES_4, Array::kSize - HeapObject::kTag), RBX);
 
-  AddToRememberedSetSlow(RCX, RBX);
+  AddToStoreBufferSlow(RCX, RBX);
 
   __ movq(RAX, RBX);
   __ ret();
@@ -1569,8 +1581,7 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   Label allocate;
   {
     // Initialization of 'allocate immutable' argument
-    // depends on [immutable].  TODO(erikcorry): Simplify, now we don't have
-    // an immutable space.
+    // depends on [immutable]
     __ movq(RDX, Immediate(immutable ? 1 : 0));
 
     __ movq(R11, Address(RBX, Class::kInstanceFormatOffset - HeapObject::kTag));
@@ -1685,9 +1696,16 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorX64::AddToRememberedSetSlow(Register object,
-                                                     Register value) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorX64::AddToStoreBufferSlow(Register object,
+                                                   Register value) {
+#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
+  LoadProcess(RDI);
+  SwitchToCStack();
+  __ movq(RSI, object);
+  __ movq(RDX, value);
+  __ call("AddToStoreBufferSlow");
+  SwitchToDartStack();
+#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 }
 
 void InterpreterGeneratorX64::InvokeMethodUnfold(bool test) {

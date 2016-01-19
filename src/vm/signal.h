@@ -12,6 +12,7 @@
 #include "src/vm/refcounted.h"
 #include "src/vm/port.h"
 #include "src/vm/process_handle.h"
+#include "src/vm/storebuffer.h"
 
 namespace fletch {
 

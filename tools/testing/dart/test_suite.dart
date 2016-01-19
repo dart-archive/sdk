@@ -2168,6 +2168,12 @@ class TestUtils {
     if (configuration['asan']) {
       dir = '${dir}Asan';
     }
+    if (configuration['one-process-heap']) {
+      dir = '${dir}OneProcessHeap';
+    }
+    if (configuration['mark-sweep']) {
+      dir = '${dir}MarkSweep';
+    }
     return dir;
   }
 

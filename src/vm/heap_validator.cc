@@ -25,8 +25,7 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
   }
   bool is_mutable_heap_obj = false;
   if (mutable_heap_ != NULL) {
-    is_mutable_heap_obj = (mutable_heap_->space()->Includes(address) ||
-                           mutable_heap_->old_space()->Includes(address));
+    is_mutable_heap_obj = mutable_heap_->space()->Includes(address);
   }
 
   bool is_program_heap = program_heap_->space()->Includes(address);
@@ -62,6 +61,7 @@ void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
     process->IterateRoots(&validator);
     process_heap->IterateObjects(&pointer_visitor);
     process_heap->VisitWeakObjectPointers(&validator);
+    process->store_buffer()->IterateObjects(&pointer_visitor);
     process->mailbox()->IteratePointers(&validator);
   }
 }

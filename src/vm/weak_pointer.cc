@@ -23,8 +23,14 @@ void WeakPointer::Process(Space* space, WeakPointer** pointers, Heap* heap) {
     WeakPointer* next = current->next_;
     HeapObject* current_object = current->object_;
     if (space->Includes(current_object->address())) {
-      if (space->IsAlive(current_object)) {
-        current->object_ = space->NewLocation(current_object);
+#ifdef FLETCH_MARK_SWEEP
+      bool alive = current_object->IsMarked();
+#else
+      HeapObject* forward = current_object->forwarding_address();
+      bool alive = forward != NULL;
+      if (alive) current->object_ = forward;
+#endif
+      if (alive) {
         if (new_list == NULL) new_list = current;
         previous = current;
       } else {

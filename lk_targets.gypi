@@ -38,6 +38,7 @@
       'DebugLK': {
         'inherit_from': [
           'fletch_base', 'fletch_debug', 'fletch_lk_flags',
+          'fletch_disable_multiple_process_heaps',
           'fletch_disable_live_coding',
           'fletch_disable_native_processes',
           'fletch_disable_print_interceptors',
@@ -47,6 +48,7 @@
       'ReleaseLK': {
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_lk_flags',
+          'fletch_disable_multiple_process_heaps',
           'fletch_disable_live_coding',
           'fletch_disable_native_processes',
           'fletch_disable_print_interceptors',
@@ -56,6 +58,7 @@
       'DebugLKFull': {
         'inherit_from': [
           'fletch_base', 'fletch_debug', 'fletch_lk_flags',
+          'fletch_disable_multiple_process_heaps',
           'fletch_disable_native_processes',
           'fletch_disable_print_interceptors',
         ],
@@ -64,6 +67,7 @@
       'ReleaseLKFull': {
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_lk_flags',
+          'fletch_disable_multiple_process_heaps',
           'fletch_disable_native_processes',
           'fletch_disable_print_interceptors',
         ],
