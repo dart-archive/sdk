@@ -343,6 +343,8 @@ void InterpreterGeneratorX86::GeneratePrologue() {
 }
 
 void InterpreterGeneratorX86::GenerateEpilogue() {
+  // TODO(ajohnsen): This is not sufficient.
+  __ BindWithPowerOfTwoAlignment("Return", 4);
   // Done. Start by saving the register state.
   __ Bind(&done_);
   SaveState(&interpreter_entry_);

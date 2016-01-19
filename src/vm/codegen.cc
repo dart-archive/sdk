@@ -290,6 +290,16 @@ void Codegen::Generate() {
         break;
       }
 
+      case kLoadStatic: {
+        DoLoadStatic(Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
+      case kLoadStaticInit: {
+        DoLoadStaticInit(Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
       case kStoreLocal: {
         DoStoreLocal(*(bcp + 1));
         break;
@@ -302,6 +312,11 @@ void Codegen::Generate() {
 
       case kStoreFieldWide: {
         DoStoreField(Utils::ReadInt32(bcp + 1));
+        break;
+      }
+
+      case kStoreStatic: {
+        DoStoreStatic(Utils::ReadInt32(bcp + 1));
         break;
       }
 
@@ -423,6 +438,13 @@ void Codegen::Generate() {
         break;
       }
 
+      case kInvokeTest: {
+        int selector = Utils::ReadInt32(bcp + 1);
+        int offset = Selector::IdField::decode(selector);
+        DoInvokeTest(offset);
+        break;
+      }
+
       case kInvokeAdd: {
         int selector = Utils::ReadInt32(bcp + 1);
         int offset = Selector::IdField::decode(selector);
@@ -477,6 +499,26 @@ void Codegen::Generate() {
       case kAllocateImmutable: {
         Class* klass = Class::cast(Function::ConstantForBytecode(bcp));
         DoAllocate(klass);
+        break;
+      }
+
+      case kNegate: {
+        DoNegate();
+        break;
+      }
+
+      case kIdentical: {
+        DoIdenticalNonNumeric();
+        break;
+      }
+
+      case kIdenticalNonNumeric: {
+        DoIdenticalNonNumeric();
+        break;
+      }
+
+      case kProcessYield: {
+        DoProcessYield();
         break;
       }
 

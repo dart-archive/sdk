@@ -47,9 +47,12 @@ class Codegen {
 
   void DoLoadLocal(int index);
   void DoLoadField(int index);
+  void DoLoadStatic(int index);
+  void DoLoadStaticInit(int index);
 
   void DoStoreLocal(int index);
   void DoStoreField(int index);
+  void DoStoreStatic(int index);
 
   void DoLoadProgramRoot(int offset);
 
@@ -61,6 +64,8 @@ class Codegen {
   void DoInvokeMethod(int arity, int offset);
   void DoInvokeStatic(int bci, int offset, Function* target);
 
+  void DoInvokeTest(int offset);
+
   void DoInvokeAdd();
   void DoInvokeLt();
 
@@ -68,9 +73,18 @@ class Codegen {
 
   void DoAllocate(Class* klass);
 
+  void DoNegate();
+  void DoIdentical();
+  void DoIdenticalNonNumeric();
+
+  void DoProcessYield();
+
   void DoDrop(int n);
 
   void DoReturn();
+
+  void DoSaveState(Label* label);
+  void DoRestoreState();
 };
 
 }  // namespace fletch
