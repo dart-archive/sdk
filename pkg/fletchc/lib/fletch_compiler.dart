@@ -71,8 +71,12 @@ class FletchCompiler {
 
   final Uri nativesJson;
 
-  FletchCompiler._(this._compiler, this.script, this.verbose, this.platform,
-                   this.nativesJson);
+  FletchCompiler._(
+      this._compiler,
+      this.script,
+      this.verbose,
+      this.platform,
+      this.nativesJson);
 
   Backdoor get backdoor => new Backdoor(this);
 
@@ -88,7 +92,8 @@ class FletchCompiler {
        @StringOrUri nativesJson,
        List<String> options,
        Map<String, dynamic> environment,
-       String platform}) {
+       String platform,
+       IncrementalCompiler incrementalCompiler}) {
 
     Uri base = _computeValidatedUri(
         currentDirectory, name: 'currentDirectory', ensureTrailingSlash: true);
@@ -191,13 +196,14 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
         nativesJson,
         options,
         environment,
-        fletchVm);
+        fletchVm,
+        incrementalCompiler);
 
     compiler.log("Using library root: $libraryRoot");
     compiler.log("Using package config: $packageConfig");
 
-    var helper = new FletchCompiler._(compiler, script, isVerbose, platform,
-                                      nativesJson);
+    var helper = new FletchCompiler._(
+        compiler, script, isVerbose, platform, nativesJson);
     compiler.helper = helper;
     return helper;
   }

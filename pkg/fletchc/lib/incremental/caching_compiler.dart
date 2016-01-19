@@ -20,7 +20,8 @@ Future<CompilerImpl> reuseCompiler(
      Map<String, dynamic> environment,
      ReuseLibrariesFunction reuseLibraries,
      String platform,
-     Uri base}) async {
+     Uri base,
+     IncrementalCompiler incrementalCompiler}) async {
   UserTag oldTag = new UserTag('_reuseCompiler').makeCurrent();
   // if (libraryRoot == null) {
   //   throw 'Missing libraryRoot';
@@ -63,7 +64,7 @@ Future<CompilerImpl> reuseCompiler(
       }
     }
     oldTag.makeCurrent();
-    compiler = await new FletchCompiler(
+    FletchCompiler fletchCompiler = new FletchCompiler(
         provider: inputProvider,
         outputProvider: outputProvider,
         handler: diagnosticHandler,
@@ -73,7 +74,9 @@ Future<CompilerImpl> reuseCompiler(
         fletchVm: fletchVm,
         options: options,
         environment: environment,
-        platform: platform).backdoor.compilerImplementation;
+        platform: platform,
+        incrementalCompiler: incrementalCompiler);
+    compiler = await fletchCompiler.backdoor.compilerImplementation;
     return compiler;
   } else {
     for (final task in compiler.tasks) {

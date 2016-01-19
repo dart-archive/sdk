@@ -123,12 +123,7 @@ class IncrementalCompilerContext extends _IncrementalCompilerContext
     if (kind == Diagnostic.HINT) {
       hintCount++;
     }
-    if (_uriHasUpdate(uri)) {
-      // TODO(ahe): Map location to updated source file.
-      print("$uri+$begin-$end: $text");
-    } else {
-      diagnostics.report(code, uri, begin, end, text, kind);
-    }
+    diagnostics.report(code, uri, begin, end, text, kind);
   }
 }
 

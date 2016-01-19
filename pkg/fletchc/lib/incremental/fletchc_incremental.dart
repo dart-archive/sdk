@@ -61,6 +61,12 @@ import '../src/hub/exit_codes.dart' as exit_codes;
 import 'package:compiler/src/source_file_provider.dart' show
     SourceFileProvider;
 
+import 'package:compiler/src/tokens/token.dart' show
+    Token;
+
+import 'package:compiler/src/diagnostics/source_span.dart' show
+    SourceSpan;
+
 part 'caching_compiler.dart';
 
 const List<String> INCREMENTAL_OPTIONS = const <String>[
@@ -98,6 +104,7 @@ class IncrementalCompiler {
   final IncrementalCompilerContext _context;
   final IncrementalMode support;
   final String platform;
+  final Map<Uri, Uri> _updatedFiles = new Map<Uri, Uri>();
 
   FletchCompilerImplementation _compiler;
 
@@ -154,6 +161,7 @@ class IncrementalCompiler {
   /// that is compiled is determined by tree shaking.
   Future<bool> compile(Uri script, Uri base) {
     _compiler = null;
+    _updatedFiles.clear();
     return _reuseCompiler(null, base: base).then((CompilerImpl compiler) {
       _compiler = compiler;
       return compiler.run(script);
@@ -208,7 +216,8 @@ class IncrementalCompiler {
         environment: environment,
         reuseLibraries: reuseLibraries,
         platform: platform,
-        base: base);
+        base: base,
+        incrementalCompiler: this);
   }
 
   void _checkCompilationFailed() {
@@ -236,8 +245,11 @@ class IncrementalCompiler {
     if (logVerbose == null) {
       logVerbose = (_) {};
     }
+    updatedFiles.forEach((Uri from, Uri to) {
+      _updatedFiles[from] = to;
+    });
     Future mappingInputProvider(Uri uri) {
-      Uri updatedFile = updatedFiles[uri];
+      Uri updatedFile = _updatedFiles[uri];
       return inputProvider.readFromUri(updatedFile == null ? uri : updatedFile);
     }
     FletchReuser reuser = new FletchReuser(
@@ -312,6 +324,19 @@ class IncrementalCompiler {
 
   Iterable<Uri> findSourceFiles(Pattern pattern) {
     return _compiler.findSourceFiles(pattern);
+  }
+
+  SourceSpan createSourceSpan(
+      Token begin,
+      Token end,
+      Uri uri,
+      Element element) {
+    Uri update = _updatedFiles[uri];
+    if (update != null) {
+      // TODO(ahe): Compute updated position.
+      return new SourceSpan(update, 0, 0);
+    }
+    return new SourceSpan.fromTokens(uri, begin, end);
   }
 }
 

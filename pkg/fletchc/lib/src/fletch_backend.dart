@@ -1697,7 +1697,7 @@ class FletchBackend extends Backend
     return true;
   }
 
-  static FletchBackend newInstance(FletchCompilerImplementation compiler) {
+  static FletchBackend createInstance(FletchCompilerImplementation compiler) {
     return new FletchBackend(compiler);
   }
 

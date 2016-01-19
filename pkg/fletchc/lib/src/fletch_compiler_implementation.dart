@@ -9,7 +9,9 @@ import 'dart:async' show
 
 import 'package:compiler/compiler_new.dart' as api;
 
-import 'package:compiler/src/apiimpl.dart' as apiimpl;
+import 'package:compiler/src/apiimpl.dart' show
+    CompilerImpl,
+    makeDiagnosticOptions;
 
 import 'package:compiler/src/io/source_file.dart';
 
@@ -27,6 +29,7 @@ import 'package:compiler/src/diagnostics/messages.dart' show
     Message,
     MessageKind,
     MessageTemplate;
+
 import 'package:compiler/src/diagnostics/source_span.dart' show
     SourceSpan;
 
@@ -53,8 +56,13 @@ import '../fletch_system.dart';
 import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
 import 'package:compiler/src/elements/elements.dart';
 
+import '../incremental/fletchc_incremental.dart' show
+    IncrementalCompiler;
+
+import 'fletch_diagnostic_reporter.dart' show
+    FletchDiagnosticReporter;
+
 const EXTRA_DART2JS_OPTIONS = const <String>[
-    '--show-package-warnings',
     // TODO(ahe): This doesn't completely disable type inference. Investigate.
     '--disable-type-inference',
     '--output-type=dart',
@@ -74,10 +82,26 @@ const FLETCH_PATCHES = const <String, String>{
 
 const FLETCH_PLATFORM = 3;
 
-class FletchCompilerImplementation extends apiimpl.CompilerImpl {
+DiagnosticOptions makeFletchDiagnosticOptions(
+    {bool suppressWarnings: false,
+     bool fatalWarnings: false,
+     bool suppressHints: false,
+     bool terseDiagnostics: false,
+     bool showPackageWarnings: true}) {
+  return makeDiagnosticOptions(
+      suppressWarnings: suppressWarnings,
+      fatalWarnings: fatalWarnings,
+      suppressHints: suppressHints,
+      terseDiagnostics: terseDiagnostics,
+      showPackageWarnings: true);
+}
+
+class FletchCompilerImplementation extends CompilerImpl {
   final Uri fletchVm;
 
   final Uri nativesJson;
+
+  final IncrementalCompiler incrementalCompiler;
 
   Map<Uri, CompilationUnitElementX> compilationUnits;
   FletchContext internalContext;
@@ -89,8 +113,6 @@ class FletchCompilerImplementation extends apiimpl.CompilerImpl {
   @override
   FletchEnqueueTask get enqueuer => super.enqueuer;
 
-  FletchDiagnosticReporter reporter;
-
   FletchCompilerImplementation(
       api.CompilerInput provider,
       api.CompilerOutput outputProvider,
@@ -100,15 +122,14 @@ class FletchCompilerImplementation extends apiimpl.CompilerImpl {
       this.nativesJson,
       List<String> options,
       Map<String, dynamic> environment,
-      this.fletchVm)
+      this.fletchVm,
+      this.incrementalCompiler)
       : super(
           provider, outputProvider, handler, libraryRoot, null,
           EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
-          packageConfig, null, FletchBackend.newInstance) {
-    reporter = new FletchDiagnosticReporter(super.reporter);
-  }
-
-  bool get showPackageWarnings => true;
+          packageConfig, null, FletchBackend.createInstance,
+          FletchDiagnosticReporter.createInstance,
+          makeFletchDiagnosticOptions);
 
   FletchContext get context {
     if (internalContext == null) {
@@ -260,76 +281,5 @@ SourceFile getSourceFile(api.CompilerInput provider, Uri uri) {
     return provider.getSourceFile(uri);
   } else {
     return null;
-  }
-}
-
-/// A wrapper around a DiagnosticReporter, that customizes some messages to
-/// Fletch.
-class FletchDiagnosticReporter extends DiagnosticReporter {
-  DiagnosticReporter _internalReporter;
-
-  FletchDiagnosticReporter(this._internalReporter);
-
-  @override
-  DiagnosticMessage createMessage(Spannable spannable,
-      MessageKind messageKind,
-      [Map arguments = const {}]) {
-    return _internalReporter.createMessage(spannable, messageKind, arguments);
-  }
-
-  @override
-  internalError(Spannable spannable, message) {
-    return _internalReporter.internalError(spannable, message);
-  }
-
-  @override
-  void log(message) {
-    _internalReporter.log(message);
-  }
-
-  @override
-  DiagnosticOptions get options => _internalReporter.options;
-
-  @override
-  void reportError(DiagnosticMessage message,
-      [List<DiagnosticMessage> infos = const <DiagnosticMessage> []]) {
-    if (message.message.kind ==
-        MessageKind.MIRRORS_LIBRARY_NOT_SUPPORT_BY_BACKEND) {
-      const String noMirrors =
-          "Fletch doesn't support 'dart:mirrors'. See https://goo.gl/Kwrd0O";
-      message = createMessage(message.spannable,
-          MessageKind.GENERIC,
-          {'text': message});
-    }
-    _internalReporter.reportError(message, infos);
-  }
-
-  @override
-  void reportHint(DiagnosticMessage message,
-      [List<DiagnosticMessage> infos = const <DiagnosticMessage> []]) {
-    _internalReporter.reportHint(message, infos);
-  }
-
-  @override
-  void reportInfo(Spannable node,
-      MessageKind errorCode,
-      [Map arguments = const {}]) {
-    _internalReporter.reportInfo(node, errorCode, arguments);
-  }
-
-  @override
-  void reportWarning(DiagnosticMessage message,
-      [List<DiagnosticMessage> infos = const <DiagnosticMessage> []]) {
-    _internalReporter.reportWarning(message, infos);
-  }
-
-  @override
-  SourceSpan spanFromSpannable(Spannable node) {
-    return _internalReporter.spanFromSpannable(node);
-  }
-
-  @override
-  withCurrentElement(Element element, f()) {
-    return _internalReporter.withCurrentElement(element, f);
   }
 }
