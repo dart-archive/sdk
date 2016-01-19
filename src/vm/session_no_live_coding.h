@@ -19,11 +19,6 @@ class Session {
  public:
   explicit Session(Connection* connection) { UNIMPLEMENTED(); }
 
-  int FreshProcessId() {
-    UNIMPLEMENTED();
-    return -1;
-  }
-
   void Initialize() { UNIMPLEMENTED(); }
 
   void StartMessageProcessingThread() { UNIMPLEMENTED(); }
