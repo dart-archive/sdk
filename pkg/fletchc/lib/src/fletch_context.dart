@@ -216,14 +216,14 @@ class FletchContext {
     backend.markFunctionConstantAsUsed(value);
   }
 
+  // TODO(zarah): Remove this and use the FletchSystemBuilder
   void markConstantUsed(ConstantValue constant) {
     backend.systemBuilder.registerConstant(constant, this);
   }
 
-  // TODO(ajohnsen): Remove this getter and use the systemBuilder in backend
-  // directly.
-  Map<ConstantValue, int> get compiledConstants =>
-      backend.systemBuilder.getCompiledConstants();
+  // TODO(zarah): Remove this and use the FletchSystemBuilder
+  int lookupConstantIdByValue(ConstantValue value) =>
+      backend.systemBuilder.lookupConstantIdByValue(value);
 
   /// If [isConst] is true, a compile-time error is reported.
   ConstantExpression compileConstant(

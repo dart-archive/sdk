@@ -139,7 +139,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
           fletchConstants.add(
               new FletchConstant(constant.classId, MapId.classes));
         } else {
-          int id = context.compiledConstants[constant];
+          int id = context.lookupConstantIdByValue(constant);
           if (id == null) {
             throw "Unsupported constant: ${constant.toStructuredString()}";
           }

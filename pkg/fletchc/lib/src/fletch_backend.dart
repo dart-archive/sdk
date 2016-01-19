@@ -161,7 +161,8 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, int>(),
     const PersistentMap<int, FletchClass>(),
     const PersistentMap<ClassElement, FletchClass>(),
-    const <FletchConstant>[],
+    const PersistentMap<int, FletchConstant>(),
+    const PersistentMap<ConstantValue, FletchConstant>(),
     const PersistentMap<int, String>(),
     const PersistentMap<int, int>(),
     const PersistentMap<int, int>());

@@ -86,8 +86,11 @@ class FletchSystemBuilder {
         this.functionIdStart = predecessorSystem.computeMaxFunctionId() + 1,
         this.classIdStart = predecessorSystem.computeMaxClassId() + 1;
 
-  // TODO(ajohnsen): Remove and add a lookupConstant.
-  Map<ConstantValue, int> getCompiledConstants() => _newConstants;
+  int lookupConstantIdByValue(ConstantValue value) {
+    FletchConstant constant = predecessorSystem.lookupConstantByValue(value);
+    if (constant != null) return constant.id;
+    return _newConstants[value];
+  }
 
   void replaceUsage(Element element, FunctionElement usage) {
     _replaceUsage.putIfAbsent(element, () => []).add(usage);
@@ -328,7 +331,7 @@ class FletchSystemBuilder {
   Iterable<FletchClassBuilder> getNewClasses() => _newClasses.values;
 
   void registerConstant(ConstantValue constant, FletchContext context) {
-    // TODO(ajohnsen): Look in predecessorSystem.
+    if (predecessorSystem.lookupConstantByValue(constant) != null) return;
     _newConstants.putIfAbsent(constant, () {
       if (constant.isConstructedObject) {
         context.registerConstructedConstantValue(constant);
@@ -338,7 +341,9 @@ class FletchSystemBuilder {
       for (ConstantValue value in constant.getDependencies()) {
         registerConstant(value, context);
       }
-      return predecessorSystem.constants.length + _newConstants.length;
+      // TODO(zarah): Compute max constant id (as for functions an classes)
+      // instead of using constantsById.length
+      return predecessorSystem.constantsById.length + _newConstants.length;
     });
   }
 
@@ -414,11 +419,14 @@ class FletchSystemBuilder {
     }
 
     // Create all FletchConstants.
-    List<FletchConstant> constants = <FletchConstant>[];
+    PersistentMap<int, FletchConstant> constantsById =
+        predecessorSystem.constantsById;
+    PersistentMap<ConstantValue, FletchConstant> constantsByValue =
+        predecessorSystem.constantsByValue;
     _newConstants.forEach((constant, int id) {
       void addList(List<ConstantValue> list, bool isByteList) {
         for (ConstantValue entry in list) {
-          int entryId = context.compiledConstants[entry];
+          int entryId = lookupConstantIdByValue(entry);
           commands.add(new PushFromMap(MapId.constants, entryId));
           if (entry.isInt) {
             IntConstantValue constant = entry;
@@ -512,7 +520,7 @@ class FletchSystemBuilder {
           if (!member.isField || member.isStatic || member.isPatch) return;
           FieldElement fieldElement = member;
           ConstantValue fieldValue = value.fields[fieldElement];
-          int fieldId = context.compiledConstants[fieldValue];
+          int fieldId = lookupConstantIdByValue(fieldValue);
           commands.add(new PushFromMap(MapId.constants, fieldId));
         }
 
@@ -547,7 +555,9 @@ class FletchSystemBuilder {
       } else {
         throw "Unsupported constant: ${constant.toStructuredString()}";
       }
-      constants.add(new FletchConstant(id, MapId.constants));
+      FletchConstant fletchConstant = new FletchConstant(id, MapId.constants);
+      constantsByValue = constantsByValue.insert(constant, fletchConstant);
+      constantsById = constantsById.insert(id, fletchConstant);
       commands.add(new PopToMap(MapId.constants, id));
     });
 
@@ -711,7 +721,8 @@ class FletchSystemBuilder {
         tearoffsById,
         classesById,
         classesByElement,
-        constants,
+        constantsById,
+        constantsByValue,
         symbolByFletchSelectorId,
         gettersByFieldIndex,
         settersByFieldIndex);

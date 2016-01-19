@@ -1434,6 +1434,44 @@ main() {
 ''',
 
   r'''
+constant_retaining
+==> main.dart.patch <==
+// Test that constants are retained
+class Foo {
+  const Foo();
+}
+
+class Bar {
+  final f = const Foo();
+  const Bar();
+}
+
+class Baz {
+  final f = const Foo();
+  const Baz();
+}
+
+class C {
+  foo() {
+<<<< ["true"]
+    return const Foo();
+==== ["true"]
+    return const Bar().f;
+==== ["true"]
+    return const Baz().f;
+>>>>
+  }
+}
+
+void main() {
+  var c = new C();
+  print(identical(c.foo(), const Foo()));
+}
+
+
+''',
+
+  r'''
 add_compound_instance_field
 ==> main.dart.patch <==
 // Test that an instance field can be added to a compound declaration

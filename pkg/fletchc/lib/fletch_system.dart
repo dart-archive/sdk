@@ -4,6 +4,9 @@
 
 library fletchc.fletch_system;
 
+import 'package:compiler/src/constants/values.dart' show
+    ConstantValue;
+
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     ConstructorElement,
@@ -196,8 +199,8 @@ class FletchSystem {
   final PersistentMap<int, FletchClass> classesById;
   final PersistentMap<ClassElement, FletchClass> classesByElement;
 
-  // TODO(ajohnsen): Should it be a map?
-  final List<FletchConstant> constants;
+  final PersistentMap<int, FletchConstant> constantsById;
+  final PersistentMap<ConstantValue, FletchConstant> constantsByValue;
 
   final PersistentMap<int, String> symbolByFletchSelectorId;
 
@@ -212,7 +215,8 @@ class FletchSystem {
       this.tearoffsById,
       this.classesById,
       this.classesByElement,
-      this.constants,
+      this.constantsById,
+      this.constantsByValue,
       this.symbolByFletchSelectorId,
       this.gettersByFieldIndex,
       this.settersByFieldIndex);
@@ -233,6 +237,14 @@ class FletchSystem {
 
   Iterable<FletchFunction> functionsWhere(bool f(FletchFunction function)) {
     return functionsById.values.where(f);
+  }
+
+  FletchConstant lookupConstantById(int constantId) {
+    return constantsById[constantId];
+  }
+
+  FletchConstant lookupConstantByValue(ConstantValue value) {
+    return constantsByValue[value];
   }
 
   FletchFunction lookupConstructorInitializerByElement(
