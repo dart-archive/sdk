@@ -769,8 +769,10 @@ class FletchBackend extends Backend
     }
     // The debug codegen should generate the same bytecodes as the original
     // codegen. If that is not the case debug information will be useless.
-    assert(Bytecode.identicalBytecodes(expectedBytecodes,
-                                       codegen.assembler.bytecodes));
+    if (!Bytecode.identicalBytecodes(expectedBytecodes,
+                                     codegen.assembler.bytecodes)) {
+      throw 'Debug info code different from running code.';
+    }
     return debugInfo;
   }
 
