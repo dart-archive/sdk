@@ -198,9 +198,11 @@ static int Main(int argc, char** argv) {
   program->heap()->IterateObjects(&visitor);
 
 #define __ assembler.
-  printf("\t.global InvokeMethod\n");
-  printf("\t.p2align 4\n");
-  printf("InvokeMethod:\n");
+  __ BindWithPowerOfTwoAlignment("program_entry", 4);
+  printf("\tjmp %db\n", reinterpret_cast<int32>(program->entry()->bytecode_address_for(0)));
+
+  printf("\n");
+  __ BindWithPowerOfTwoAlignment("InvokeMethod", 4);
   Label done;
   __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program->smi_class()->id()))));
   __ testl(EAX, Immediate(Smi::kTagMask));
@@ -226,9 +228,8 @@ static int Main(int argc, char** argv) {
   __ int3();
 
   if (visitor.add_offset() >= 0) {
-    printf("\t.global InvokeAdd\n");
-    printf("\t.p2align 4\n");
-    printf("InvokeAdd:\n");
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeAdd", 4);
     __ movl(EAX, Address(ESP, 2 * kWordSize));
     __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(visitor.add_offset()))));
     __ jmp("InvokeMethod");

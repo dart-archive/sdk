@@ -106,10 +106,16 @@ Process* Program::SpawnProcess(Process* parent) {
   return process;
 }
 
+extern "C" void program_entry() __attribute((weak));
+
 Process* Program::ProcessSpawnForMain() {
   if (Flags::print_program_statistics) {
     PrintStatistics();
   }
+
+  // If code isn't NULL, we'll try to run directly from there
+  // and never actually interpreter any bytecodes.
+  void* code = reinterpret_cast<void*>(&program_entry);
 
   Process* process = SpawnProcess(NULL);
   Function* entry = process->entry();
@@ -127,8 +133,13 @@ Process* Program::ProcessSpawnForMain() {
   stack->set(--top, NULL);
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   frame_pointer = stack->Pointer(top);
-  stack->set(--top, reinterpret_cast<Object*>(bcp));
-  stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
+  if (code == NULL) {
+    stack->set(--top, reinterpret_cast<Object*>(bcp));
+    stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
+  } else {
+    stack->set(--top, reinterpret_cast<Object*>(NULL));
+    stack->set(--top, reinterpret_cast<Object*>(code));
+  }
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
 
