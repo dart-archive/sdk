@@ -196,9 +196,10 @@ void Platform::WaitForDebugger(const char* executable_name) {
 int Platform::FormatString(char* buffer, size_t length, const char* format,
                            ...) {
   UNIMPLEMENTED();
+  return 0;
 }
 
-char* Platform::GetEnv(const char* name) { return NULL: }
+char* Platform::GetEnv(const char* name) { return NULL; }
 
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
