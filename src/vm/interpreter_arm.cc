@@ -431,7 +431,7 @@ void InterpreterGeneratorARM::GenerateMethodEntry() {
   LoadFramePointer(R2);
   Push(R2);
   StoreFramePointer(R6);
-  __ ldr(R2, Immediate(0));
+  __ LoadInt(R2, 0);
   Push(R2);
   __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
   CheckStackOverflow(0);
@@ -748,7 +748,7 @@ void InterpreterGeneratorARM::DoInvokeSelector() {
   __ bl("InterpreterMethodEntry");
   RestoreByteCodePointer(R2);
 
-  __ ldr(R7, Immediate(-2));
+  __ LoadInt(R7, -2);
   __ ldr(R2, Address(R5, 1));
   __ sub(R7, R7, R2);
   LoadFramePointer(R2);
@@ -912,7 +912,7 @@ void InterpreterGeneratorARM::InvokeBitShr(const char* fallback) {
   __ cmp(R1, Immediate(32));
   Label shift;
   __ b(LT, &shift);
-  __ ldr(R1, Immediate(31));
+  __ LoadInt(R1, 31);
   __ Bind(&shift);
   __ asr(R0, R0, R1);
 
@@ -1495,7 +1495,7 @@ void InterpreterGeneratorARM::PushFrameDescriptor(Register return_address,
   LoadFramePointer(scratch);
   __ str(return_address, Address(scratch, -kWordSize));
 
-  __ ldr(scratch, Immediate(0));
+  __ LoadInt(scratch, 0);
   Push(scratch);
 
   LoadFramePointer(scratch);
@@ -1503,7 +1503,7 @@ void InterpreterGeneratorARM::PushFrameDescriptor(Register return_address,
 
   StoreFramePointer(R6);
 
-  __ ldr(scratch, Immediate(0));
+  __ LoadInt(scratch, 0);
   Push(scratch);
 }
 
@@ -1546,7 +1546,7 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
   ASSERT(sizeof(LookupCache::Entry) == 1 << 4);
   __ Bind(&probe);
   __ eor(R3, R2, R7);
-  __ ldr(R0, Immediate(LookupCache::kPrimarySize - 1));
+  __ LoadInt(R0, LookupCache::kPrimarySize - 1);
   __ and_(R0, R3, R0);
   __ ldr(R3, Address(R4, Process::kPrimaryLookupCacheOffset));
   __ add(R0, R3, Operand(R0, LSL, 4));
@@ -1632,7 +1632,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   }
 
   // Compute the selector offset (smi tagged) from the selector.
-  __ ldr(R9, Immediate(Selector::IdField::mask()));
+  __ LoadInt(R9, Selector::IdField::mask());
   __ and_(R7, R7, R9);
   __ lsr(R7, R7, Immediate(Selector::IdField::shift() - Smi::kTagSize));
 
@@ -1819,7 +1819,7 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
 
   // We initialize the 3rd argument to "HandleAllocate" to 0, meaning the object
   // we're allocating will not be initialized with pointers to immutable space.
-  __ ldr(kRegisterImmutableMembers, Immediate(0));
+  __ LoadInt(kRegisterImmutableMembers, 0);
 
   // Loop over all arguments and find out if
   //   * all of them are immutable
@@ -1827,10 +1827,10 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   Label allocate;
   {
     // Initialization of [kRegisterAllocateImmutable] depended on [immutable]
-    __ ldr(kRegisterAllocateImmutable, Immediate(immutable ? 1 : 0));
+    __ LoadInt(kRegisterAllocateImmutable, immutable ? 1 : 0);
 
     __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
-    __ ldr(R3, Immediate(InstanceFormat::FixedSizeField::mask()));
+    __ LoadInt(R3, InstanceFormat::FixedSizeField::mask());
     __ and_(R2, R2, R3);
     int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
     __ asr(R2, R2, Immediate(size_shift));
@@ -1872,7 +1872,7 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
         InstanceFormat::ImmutableField::encode(InstanceFormat::NEVER_IMMUTABLE);
 
     __ ldr(R0, Address(R0, Class::kInstanceFormatOffset - HeapObject::kTag));
-    __ ldr(R1, Immediate(mask));
+    __ LoadInt(R1, mask);
     __ and_(R0, R0, R1);
 
     // If this type is never immutable we continue the loop.
@@ -1894,11 +1894,11 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
     __ b(&loop_with_mutable_field);
 
     __ Bind(&loop_with_immutable_field);
-    __ ldr(kRegisterImmutableMembers, Immediate(1));
+    __ LoadInt(kRegisterImmutableMembers, 1);
     __ b(&loop);
 
     __ Bind(&loop_with_mutable_field);
-    __ ldr(kRegisterAllocateImmutable, Immediate(0));
+    __ LoadInt(kRegisterAllocateImmutable, 0);
     __ b(&loop);
   }
 
@@ -1914,7 +1914,7 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ b(EQ, &gc_);
 
   __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
-  __ ldr(R3, Immediate(InstanceFormat::FixedSizeField::mask()));
+  __ LoadInt(R3, InstanceFormat::FixedSizeField::mask());
   __ and_(R2, R2, R3);
   // The fixed size is recorded as the number of pointers. Therefore, the
   // size in bytes is the recorded size multiplied by kPointerSize. Instead

@@ -210,7 +210,6 @@ class Assembler {
   INSTRUCTION_3(eor, "eor %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
-  INSTRUCTION_2(ldr, "ldr %r, %I", Register, const Immediate&);
   INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);
   INSTRUCTION_2(ldr, "ldr %r, =%l", Register, Label*);
   INSTRUCTION_3(ldr, "ldr %r, [%r], %i", Register, Register, const Immediate&);
@@ -226,6 +225,7 @@ class Assembler {
   INSTRUCTION_3(mov, "mov%c %r, %i", Condition, Register, const Immediate&);
 
   INSTRUCTION_2(mvn, "mvn %r, %r", Register, Register);
+  INSTRUCTION_2(mvn, "mvn %r, %i", Register, const Immediate&);
 
   INSTRUCTION_2(neg, "neg %r, %r", Register, Register);
 
@@ -256,6 +256,8 @@ class Assembler {
   INSTRUCTION_2(tst, "tst %r, %i", Register, const Immediate&);
   INSTRUCTION_2(tst, "tst %r, %r", Register, Register);
 
+  void LoadInt(Register reg, int value);
+
   void BindWithPowerOfTwoAlignment(const char* name, int power);
   void Bind(const char* prefix, const char* name);
   void Bind(Label* label);
@@ -273,6 +275,9 @@ class Assembler {
   const char* LabelPrefix();
 
  private:
+  // Do not use this one directly. Use LoadInt instead.
+  INSTRUCTION_2(ldr, "ldr %r, %I", Register, const Immediate&);
+
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
   void PrintOperand(const Operand* operand);

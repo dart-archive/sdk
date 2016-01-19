@@ -18,6 +18,16 @@ static const char* ConditionToString(Condition cond) {
   return kConditionNames[cond];
 }
 
+void Assembler::LoadInt(Register reg, int value) {
+  if (value >= 0 && value <= 255) {
+    mov(reg, Immediate(value));
+  } else if (value < 0 && value >= -256) {
+    mvn(reg, Immediate(-(value + 1)));
+  } else {
+    ldr(reg, Immediate(value));
+  }
+}
+
 void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
   AlignToPowerOfTwo(power);
   printf("\t.global %s%s\n%s%s:\n", LabelPrefix(), name, LabelPrefix(), name);
