@@ -86,8 +86,6 @@ incremental/production/update_dependencies: Fail
 incremental/production/update_dependencies_recoverable_compile_time_error: Fail
 incremental/production/update_dependencies_unrecoverable_compile_time_error: Fail
 
-incremental/experimental/super_call_signature_change: Fail
-
 # Incorrectly failing servicec tests
 servicec/bad_field_4: Fail  # Issue 293
 servicec/bad_field_8: Fail  # Issue 293

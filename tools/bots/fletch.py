@@ -650,6 +650,7 @@ class PersistentFletchDaemon(object):
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
+       '--enable-dumpcore',
        '--packages=%s' % os.path.abspath('pkg/fletchc/.packages'),
        '-Dfletch.version=%s' % version,
        'package:fletchc/src/hub/hub_main.dart',
