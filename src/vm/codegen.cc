@@ -234,6 +234,15 @@ static int Main(int argc, char** argv) {
     __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(visitor.add_offset()))));
     __ jmp("InvokeMethod");
   }
+
+  printf("\n");
+  __ BindWithPowerOfTwoAlignment("CollectGarbage", 4);
+  Codegen codegen(program, NULL, &assembler);
+  codegen.DoSaveState();
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ call("HandleGC");
+  codegen.DoRestoreState();
+  __ ret();
 #undef __
 
   DumpProgram(program);

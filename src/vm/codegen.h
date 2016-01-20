@@ -27,6 +27,10 @@ class Codegen {
     return add_offset_ >= 0 ? add_offset_ : original;
   }
 
+  // The resume address should be in ECX.
+  void DoSaveState();
+  void DoRestoreState();
+
  private:
   Program* const program_;
   Function* const function_;
@@ -82,9 +86,6 @@ class Codegen {
   void DoDrop(int n);
 
   void DoReturn();
-
-  void DoSaveState(Label* label);
-  void DoRestoreState();
 };
 
 }  // namespace fletch

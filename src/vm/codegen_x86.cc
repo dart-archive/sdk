@@ -270,10 +270,8 @@ void Codegen::DoInvokeNative(Native native, int arity) {
   __ j(NOT_EQUAL, &non_gc_failure);
 
   // Call the collector!
-  DoSaveState(&retry);
-  __ movl(Address(ESP, 0 * kWordSize), EDI);
-  __ call("HandleGC");
-  DoRestoreState();
+  __ call("CollectGarbage");
+  __ jmp(&retry);
 
   __ Bind(&non_gc_failure);
   __ movl(EBX, ESP);
@@ -316,10 +314,8 @@ void Codegen::DoAllocate(Class* klass) {
   Label no_gc;
   __ j(NOT_EQUAL, &no_gc);
 
-  DoSaveState(&retry);
-  __ movl(Address(ESP, 0 * kWordSize), EDI);
-  __ call("HandleGC");
-  DoRestoreState();
+  __ call("CollectGarbage");
+  __ jmp(&retry);
 
   __ Bind(&no_gc);
 
@@ -461,11 +457,7 @@ void Codegen::DoReturn() {
   __ ret();
 }
 
-void Codegen::DoSaveState(Label* label) {
-  // Push resume address.
-  __ movl(ECX, label);
-  __ pushl(ECX);
-
+void Codegen::DoSaveState() {
   // Push frame pointer.
   __ pushl(EBP);
 
@@ -503,8 +495,6 @@ void Codegen::DoRestoreState() {
 
   // Read frame pointer.
   __ popl(EBP);
-
-  __ ret();
 }
 
 }  // namespace fletch
