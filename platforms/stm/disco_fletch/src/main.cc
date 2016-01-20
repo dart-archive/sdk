@@ -6,10 +6,6 @@
 #include <stm32746g_discovery_sdram.h>
 #include <cmsis_os.h>
 
-extern "C" {
-#include "platforms/stm/disco_fletch/generated/Inc/lwip.h"
-}
-
 #include "src/shared/assert.h"
 
 #include "platforms/stm/disco_fletch/src/page_allocator.h"
@@ -23,6 +19,7 @@ void MX_GPIO_Init(void);
 void MX_DCMI_Init(void);
 void MX_DMA2D_Init(void);
 void MX_FMC_Init(void);
+void MX_ETH_Init(void);
 void MX_I2C1_Init(void);
 void MX_LTDC_Init(void);
 void MX_QUADSPI_Init(void);
@@ -119,16 +116,13 @@ int main() {
   MX_GPIO_Init();
   MX_DCMI_Init();
   MX_DMA2D_Init();
+  MX_ETH_Init();
   MX_I2C1_Init();
   MX_LTDC_Init();
   MX_QUADSPI_Init();
   MX_SDMMC1_SD_Init();
   MX_SPDIFRX_Init();
   MX_USART1_UART_Init();
-
-  // Initialization code for LWIP. This function is defined in
-  // generated/Src/lwip.c.
-  MX_LWIP_Init();
 
   // Initialize the SDRAM (including FMC).
   BSP_SDRAM_Init();
