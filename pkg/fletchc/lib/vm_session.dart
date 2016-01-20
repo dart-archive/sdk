@@ -606,6 +606,20 @@ class Session extends FletchVmSession {
     return stacktraces;
   }
 
+  Future<List<int>> processes() async {
+    assert(running);
+    ProcessGetProcessIdsResult response =
+      await runCommand(const ProcessGetProcessIds());
+    return response.ids;
+  }
+
+  Future<BackTrace> processStack(int processId) async {
+    assert(running);
+    ProcessBacktrace backtraceResponse =
+      await runCommand(new ProcessBacktraceRequest(processId));
+    return stackTraceFromBacktraceResponse(backtraceResponse);
+  }
+
   String dartValueToString(DartValue value) {
     if (value is Instance) {
       Instance i = value;

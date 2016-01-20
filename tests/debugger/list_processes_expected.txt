@@ -1,0 +1,33 @@
+Starting session. Type 'help' for a list of commands.
+
+> b resume
+breakpoint set: id: '0' method: 'resume' bytecode index: '0'
+> r
+tests/debugger/list_processes_test.dart:23:3
+23     port.send(42);
+> lp
+
+process 0
+* 0: resume      @port
+  1: main        @resume(channel, p2)
+
+process 1
+* 0: call                @c.receive()
+
+process 2
+* 0: call                @c.receive()
+
+> c
+tests/debugger/list_processes_test.dart:23:3
+23     port.send(42);
+> lp
+
+process 0
+* 0: resume      @port
+  1: main        @resume(channel, p1)
+
+process 2
+* 0: call                @c.receive()
+
+> c
+### process terminated

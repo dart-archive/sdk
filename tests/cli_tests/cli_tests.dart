@@ -41,7 +41,7 @@ abstract class CliTest {
 
   Future<ProcessResult> createSession() {
     assert(!sessionCreated);
-    sessionName = "clitest-$name";
+    sessionName = "clitest-$name-$hashCode";
     return Process.run(fletchBinary, ["create", "session", sessionName]);
   }
 

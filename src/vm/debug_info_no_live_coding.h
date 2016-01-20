@@ -22,6 +22,10 @@ class DebugInfo {
  public:
   static const int kNoBreakpointId = -1;
 
+  explicit DebugInfo(int process_id) {
+    UNIMPLEMENTED();
+  }
+
   bool ShouldBreak(uint8* bcp, Object** sp) {
     UNIMPLEMENTED();
     return false;

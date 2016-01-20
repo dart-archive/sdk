@@ -26,41 +26,106 @@ import 'prompt_splitter.dart' show
 
 final List<CliTest> tests = <CliTest>[
   new DebuggerInterruptTest(),
+  new DebuggerListProcessesTest(),
 ];
 
-class DebuggerInterruptTest extends CliTest {
+abstract class InteractiveDebuggerTest extends CliTest {
+  final String testFilePath;
+  Process process;
+  StreamIterator out;
+  StreamIterator err;
 
-  final Uri testFile = thisDirectory.resolve("debugger_interrupt.dart");
+  InteractiveDebuggerTest(String name)
+      : super(name),
+        testFilePath = thisDirectory.resolve("$name.dart").toFilePath();
+
+  Future<Null> internalRun();
+
+  Future<Null> run() async {
+    process = await fletch(["debug", testFilePath]);
+    out = new StreamIterator(
+      process.stdout.transform(UTF8.decoder).transform(new PromptSplitter()));
+    err = new StreamIterator(
+      process.stderr.transform(UTF8.decoder).transform(new LineSplitter()));
+    try {
+      await expectPrompt("Debug header");
+      await internalRun();
+    } finally {
+      process.stdin.close();
+      await out.cancel();
+      await err.cancel();
+    }
+  }
+
+  Future<Null> runCommand(String command) async {
+    print("> $command");
+    process.stdin.writeln(command);
+  }
+
+  Future<Null> interrupt() async {
+    print("C-\\");
+    Expect.isTrue(process.kill(ProcessSignal.SIGQUIT), "Sent quit to process");
+  }
+
+  Future<Null> quitWithoutError() async {
+    await quit();
+    await expectExitCode(0);
+    await expectClosed(out);
+    await expectClosed(err);
+  }
+
+  Future<Null> quit() async {
+    process.stdin.writeln("q");
+    process.stdin.close();
+  }
+
+  Future<Null> expectExitCode(int exitCode) async {
+    Expect.equals(exitCode, await process.exitCode,
+        "Did not exit as expected");
+  }
+
+  Future<Null> expectPrompt(String message) async {
+    Expect.isTrue(await out.moveNext(), message);
+    print(out.current);
+  }
+
+  Future<Null> expectClosed(StreamIterator iterator) async {
+    Expect.isFalse(await iterator.moveNext());
+  }
+
+  Future<Null> runCommandAndExpectPrompt(String command) async {
+    await runCommand(command);
+    await expectPrompt("Expected prompt for '$command'");
+  }
+}
+
+class DebuggerInterruptTest extends InteractiveDebuggerTest {
 
   DebuggerInterruptTest()
       : super("debugger_interrupt");
 
-  Future<Null> run() async {
-    Process process = await fletch(["debug", testFile.toFilePath()]);
+  Future<Null> internalRun() async {
+    await runCommand("r");
+    await interrupt();
+    await expectPrompt("Interrupt returns prompt");
+    await quitWithoutError();
+  }
+}
 
-    StreamIterator out = new StreamIterator(
-        process.stdout.transform(UTF8.decoder).transform(new PromptSplitter()));
+class DebuggerListProcessesTest extends InteractiveDebuggerTest {
 
-    StreamIterator err = new StreamIterator(
-        process.stderr.transform(UTF8.decoder).transform(new LineSplitter()));
+  DebuggerListProcessesTest()
+      : super("debugger_list_processes");
 
-    // Consume debug-shell header.
-    Expect.isTrue(await out.moveNext(), "Debug header");
-
-    // Invoke run. This does not return the prompt.
-    process.stdin.writeln("r");
-
-    // Send interrupt signal and check the prompt returned.
-    Expect.isTrue(process.kill(ProcessSignal.SIGQUIT), "Sent quit to process");
-    Expect.isTrue(await out.moveNext(), "Interrupt returns prompt");
-
-    // Exit to shell.
-    process.stdin.writeln("q");
-    process.stdin.close();
-    Expect.equals(0, await process.exitCode, "Failed to exit");
-
-    // Check out and err are empty and closed.
-    Expect.isFalse(await out.moveNext());
-    Expect.isFalse(await err.moveNext());
+  Future<Null> internalRun() async {
+    await runCommandAndExpectPrompt("b resumeChild");
+    await runCommandAndExpectPrompt("r");
+    await runCommandAndExpectPrompt("lp");
+    await runCommandAndExpectPrompt("c");
+    await runCommandAndExpectPrompt("lp");
+    await runCommandAndExpectPrompt("c");
+    await expectExitCode(0);
+    await expectClosed(out);
+    await expectClosed(err);
   }
 }
