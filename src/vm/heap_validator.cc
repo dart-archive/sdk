@@ -35,7 +35,7 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
       !StaticClassStructures::IsStaticClass(heap_object)) {
     fprintf(stderr,
             "Found pointer %p which lies in neither of "
-            "immutable_heap/mutable_heap/program_heap.\n",
+            "mutable_heap/program_heap.\n",
             heap_object);
 
     FATAL("Heap validation failed.");

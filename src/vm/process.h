@@ -97,8 +97,6 @@ class Process {
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
   Heap* heap() { return program()->shared_heap()->heap(); }
-  Heap* immutable_heap() { return immutable_heap_; }
-  void set_immutable_heap(Heap* heap) { immutable_heap_ = heap; }
 
   Coroutine* coroutine() const { return coroutine_; }
   void UpdateCoroutine(Coroutine* coroutine);
@@ -297,7 +295,6 @@ class Process {
 
   RandomXorShift random_;
 
-  Heap* immutable_heap_;
   RememberedSet remembered_set_;
   Links links_;
 

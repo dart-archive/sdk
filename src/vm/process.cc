@@ -59,7 +59,6 @@ Process::Process(Program* program, Process* parent)
       exception_(program->null_object()),
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
-      immutable_heap_(NULL),
       state_(kSleeping),
       thread_state_(NULL),
       next_(NULL),
@@ -133,7 +132,6 @@ void Process::Cleanup(Signal::Kind kind) {
   event_handler->ReceiverForPortsDied(ports_);
 
   // Clear out the process pointer from all the ports.
-  ASSERT(immutable_heap_ == NULL);
   while (ports_ != NULL) {
     Port* next = ports_->next();
     ports_->OwnerProcessTerminating();
@@ -224,7 +222,7 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
 Object* Process::NewByteArray(int length) {
   RegisterProcessAllocation();
   Class* byte_array_class = program()->byte_array_class();
-  return immutable_heap_->CreateByteArray(byte_array_class, length);
+  return heap()->CreateByteArray(byte_array_class, length);
 }
 
 Object* Process::NewArray(int length) {
@@ -238,7 +236,7 @@ Object* Process::NewArray(int length) {
 Object* Process::NewDouble(fletch_double value) {
   RegisterProcessAllocation();
   Class* double_class = program()->double_class();
-  Object* result = immutable_heap_->CreateDouble(double_class, value);
+  Object* result = heap()->CreateDouble(double_class, value);
   return result;
 }
 
@@ -246,19 +244,19 @@ Object* Process::NewInteger(int64 value) {
   RegisterProcessAllocation();
   Class* large_integer_class = program()->large_integer_class();
   Object* result =
-      immutable_heap_->CreateLargeInteger(large_integer_class, value);
+      heap()->CreateLargeInteger(large_integer_class, value);
   return result;
 }
 
 void Process::TryDeallocInteger(LargeInteger* object) {
-  immutable_heap_->TryDeallocInteger(object);
+  heap()->TryDeallocInteger(object);
 }
 
 Object* Process::NewOneByteString(int length) {
   RegisterProcessAllocation();
   Class* string_class = program()->one_byte_string_class();
   Object* raw_result =
-      immutable_heap_->CreateOneByteString(string_class, length);
+      heap()->CreateOneByteString(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return OneByteString::cast(raw_result);
 }
@@ -267,7 +265,7 @@ Object* Process::NewTwoByteString(int length) {
   RegisterProcessAllocation();
   Class* string_class = program()->two_byte_string_class();
   Object* raw_result =
-      immutable_heap_->CreateTwoByteString(string_class, length);
+      heap()->CreateTwoByteString(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return TwoByteString::cast(raw_result);
 }
@@ -276,7 +274,7 @@ Object* Process::NewOneByteStringUninitialized(int length) {
   RegisterProcessAllocation();
   Class* string_class = program()->one_byte_string_class();
   Object* raw_result =
-      immutable_heap_->CreateOneByteStringUninitialized(string_class, length);
+      heap()->CreateOneByteStringUninitialized(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return OneByteString::cast(raw_result);
 }
@@ -285,7 +283,7 @@ Object* Process::NewTwoByteStringUninitialized(int length) {
   RegisterProcessAllocation();
   Class* string_class = program()->two_byte_string_class();
   Object* raw_result =
-      immutable_heap_->CreateTwoByteStringUninitialized(string_class, length);
+      heap()->CreateTwoByteStringUninitialized(string_class, length);
   if (raw_result->IsFailure()) return raw_result;
   return TwoByteString::cast(raw_result);
 }
@@ -293,7 +291,7 @@ Object* Process::NewTwoByteStringUninitialized(int length) {
 Object* Process::NewStringFromAscii(List<const char> value) {
   RegisterProcessAllocation();
   Class* string_class = program()->one_byte_string_class();
-  Object* raw_result = immutable_heap_->CreateOneByteStringUninitialized(
+  Object* raw_result = heap()->CreateOneByteStringUninitialized(
       string_class, value.length());
   if (raw_result->IsFailure()) return raw_result;
   OneByteString* result = OneByteString::cast(raw_result);
@@ -314,11 +312,7 @@ Object* Process::NewBoxed(Object* value) {
 Object* Process::NewInstance(Class* klass, bool immutable) {
   RegisterProcessAllocation();
   Object* null = program()->null_object();
-  if (immutable) {
-    return immutable_heap_->CreateInstance(klass, null, immutable);
-  } else {
-    return heap()->CreateInstance(klass, null, immutable);
-  }
+  return heap()->CreateInstance(klass, null, immutable);
 }
 
 Object* Process::ToInteger(int64 value) {
@@ -479,12 +473,8 @@ void Process::UpdateBreakpoints() {
 void Process::RegisterFinalizer(HeapObject* object,
                                 WeakPointerCallback callback) {
   uword address = object->address();
-  if (heap()->space()->Includes(address)) {
-    heap()->AddWeakPointer(object, callback);
-  } else {
-    ASSERT(immutable_heap()->space()->Includes(address));
-    immutable_heap()->AddWeakPointer(object, callback);
-  }
+  ASSERT(heap()->space()->Includes(address));
+  heap()->AddWeakPointer(object, callback);
 }
 
 void Process::UnregisterFinalizer(HeapObject* object) {

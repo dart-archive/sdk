@@ -640,9 +640,7 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
   // will potentially push the process on a queue which is accessed by other
   // threads, which would create a race.
   shared_heap->set_random(process->random());
-  process->set_immutable_heap(shared_heap);
   interpreter.Run();
-  process->set_immutable_heap(NULL);
   shared_heap->set_random(NULL);
 
   process->set_thread_state(NULL);
