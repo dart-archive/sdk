@@ -155,33 +155,33 @@ Function* Function::FromBytecodePointer(uint8* bcp, int* frame_ranges_offset) {
   return Function::cast(HeapObject::FromAddress(address));
 }
 
-void* Function::ComputeIntrinsic(IntrinsicsTable* table) {
+Intrinsic Function::ComputeIntrinsic(IntrinsicsTable* table) {
   int length = bytecode_size();
   uint8* bytecodes = bytecode_address_for(0);
-  void* result = NULL;
   if (length >= 4 && bytecodes[0] == kLoadLocal3 &&
       bytecodes[1] == kLoadField && bytecodes[3] == kReturn) {
-    result = reinterpret_cast<void*>(table->GetField());
+    return kIntrinsicGetField;
   } else if (length >= 4 && bytecodes[0] == kLoadLocal4 &&
              bytecodes[1] == kLoadLocal4 &&
              bytecodes[2] == kIdenticalNonNumeric && bytecodes[3] == kReturn) {
     // TODO(ajohnsen): Investigate what pattern we generate for this now.
     UNIMPLEMENTED();
+    return kIntrinsicObjectEquals;
   } else if (length >= 5 && bytecodes[0] == kLoadLocal4 &&
              bytecodes[1] == kLoadLocal4 && bytecodes[2] == kStoreField &&
              bytecodes[4] == kReturn) {
-    result = reinterpret_cast<void*>(table->SetField());
+    return kIntrinsicSetField;
   } else if (length >= 3 && bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListIndexGet) {
-    result = reinterpret_cast<void*>(table->ListIndexGet());
+    return kIntrinsicListIndexGet;
   } else if (length >= 3 && bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListIndexSet) {
-    result = reinterpret_cast<void*>(table->ListIndexSet());
+    return kIntrinsicListIndexSet;
   } else if (length >= 3 && bytecodes[0] == kInvokeNative &&
              bytecodes[2] == kListLength) {
-    result = reinterpret_cast<void*>(table->ListLength());
+    return kIntrinsicListLength;
   }
-  return result;
+  return kIntrinsicNotFound;
 }
 
 void Object::Print() {

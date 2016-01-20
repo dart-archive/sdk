@@ -5,6 +5,7 @@
 #ifndef SRC_VM_INTRINSICS_H_
 #define SRC_VM_INTRINSICS_H_
 
+#include "src/shared/assert.h"
 #include "src/shared/globals.h"
 
 namespace fletch {
@@ -16,6 +17,13 @@ namespace fletch {
   V(ListIndexGet)        \
   V(ListIndexSet)        \
   V(ListLength)
+
+enum Intrinsic {
+  kIntrinsicNotFound,
+#define DECLARE_EXTERN(name) kIntrinsic##name,
+INTRINSICS_DO(DECLARE_EXTERN)
+#undef DECLARE_EXTERN
+};
 
 #define DECLARE_EXTERN(name) extern "C" void Intrinsic_##name();
 INTRINSICS_DO(DECLARE_EXTERN)
@@ -54,6 +62,17 @@ class IntrinsicsTable {
   void set_##name(void (*ptr)(void)) { intrinsic_##name##_ = ptr; }
   INTRINSICS_DO(DEFINE_SETTER)
 #undef DEFINE_SETTER
+
+  void* GetCode(Intrinsic intrinsic) {
+    switch (intrinsic) {
+      case kIntrinsicNotFound: return NULL;
+#define DECLARE_EXTERN(name) \
+      case kIntrinsic##name: return reinterpret_cast<void*>(name());
+INTRINSICS_DO(DECLARE_EXTERN)
+#undef DECLARE_EXTERN
+    }
+    UNREACHABLE();
+  }
 
   bool set_from_string(const char *name, void (*ptr)(void));
 

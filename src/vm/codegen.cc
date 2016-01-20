@@ -259,6 +259,41 @@ static int Main(int argc, char** argv) {
 void Codegen::Generate() {
   DoEntry();
 
+  IntrinsicsTable* intrinsics = IntrinsicsTable::GetDefault();
+  Intrinsic intrinsic = function_->ComputeIntrinsic(intrinsics);
+  switch (intrinsic) {
+    case kIntrinsicGetField: {
+      uint8* bcp = function_->bytecode_address_for(2);
+      DoIntrinsicGetField(*bcp);
+      return;
+    }
+
+    case kIntrinsicSetField: {
+      uint8* bcp = function_->bytecode_address_for(3);
+      DoIntrinsicSetField(*bcp);
+      return;
+    }
+
+    case kIntrinsicListLength: {
+      DoIntrinsicListLength();
+      return;
+    }
+
+    case kIntrinsicListIndexGet: {
+      DoIntrinsicListIndexGet();
+      break;
+    }
+
+    case kIntrinsicListIndexSet: {
+      DoIntrinsicListIndexSet();
+      break;
+    }
+
+    default: break;
+  }
+
+  DoSetupFrame();
+
   int bci = 0;
   while (bci < function_->bytecode_size()) {
     uint8* bcp = function_->bytecode_address_for(bci);

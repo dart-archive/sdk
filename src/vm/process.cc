@@ -514,7 +514,9 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
     static const Names::Id name = Names::kNoSuchMethodTrampoline;
     target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
   } else {
-    code = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
+    IntrinsicsTable* intrinsics = IntrinsicsTable::GetDefault();
+    Intrinsic intrinsic = target->ComputeIntrinsic(intrinsics);
+    code = intrinsics->GetCode(intrinsic);
     if (code == NULL) code = reinterpret_cast<void*>(InterpreterMethodEntry);
   }
 

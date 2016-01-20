@@ -25,7 +25,9 @@ void Codegen::DoEntry() {
   sprintf(name, "%08x", function_);
   __ AlignToPowerOfTwo(4);
   __ Bind("Function_", name);
+}
 
+void Codegen::DoSetupFrame() {
   // Calling convention
   // ------------------
   //  - EAX: function
@@ -510,6 +512,88 @@ void Codegen::DoStackOverflowCheck(int size) {
     __ jmp("StackOverflow");
     __ Bind(&done);
   }
+}
+
+void Codegen::DoIntrinsicGetField(int field) {
+  __ movl(EAX, Address(ESP, 1 * kWordSize));
+  int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
+  __ movl(EAX, Address(EAX, offset));
+  __ ret();
+  printf("\n");
+}
+
+void Codegen::DoIntrinsicSetField(int field) {
+  __ movl(EAX, Address(ESP, 1 * kWordSize));
+  __ movl(ECX, Address(ESP, 2 * kWordSize));
+  int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
+  __ movl(Address(ECX, offset), EAX);
+  __ ret();
+  printf("\n");
+}
+
+void Codegen::DoIntrinsicListLength() {
+  // Load the backing store (array) from the first instance field of the list.
+  __ movl(ECX, Address(ESP, 1 * kWordSize));  // List
+  __ movl(ECX, Address(ECX, Instance::kSize - HeapObject::kTag));
+  __ movl(EAX, Address(ECX, Array::kLengthOffset - HeapObject::kTag));
+
+  __ ret();
+}
+
+void Codegen::DoIntrinsicListIndexGet() {
+  __ movl(EBX, Address(ESP, 1 * kWordSize));  // Index
+  __ movl(ECX, Address(ESP, 2 * kWordSize));  // List
+
+  Label failure;
+  ASSERT(Smi::kTag == 0);
+  __ testl(EBX, Immediate(Smi::kTagMask));
+  __ j(NOT_ZERO, &failure);
+  __ cmpl(EBX, Immediate(0));
+  __ j(LESS, &failure);
+
+  // Load the backing store (array) from the first instance field of the list.
+  __ movl(ECX, Address(ECX, Instance::kSize - HeapObject::kTag));
+  __ movl(EDX, Address(ECX, Array::kLengthOffset - HeapObject::kTag));
+
+  // Check the index against the length.
+  __ cmpl(EBX, EDX);
+  __ j(GREATER_EQUAL, &failure);
+
+  // Load from the array and continue.
+  ASSERT(Smi::kTagSize == 1);
+  __ movl(EAX, Address(ECX, EBX, TIMES_2, Array::kSize - HeapObject::kTag));
+  __ ret();
+
+  __ Bind(&failure);
+}
+
+void Codegen::DoIntrinsicListIndexSet() {
+  __ movl(EBX, Address(ESP, 2 * kWordSize));  // Index
+  __ movl(ECX, Address(ESP, 3 * kWordSize));  // List
+
+  Label failure;
+  ASSERT(Smi::kTag == 0);
+  __ testl(EBX, Immediate(Smi::kTagMask));
+  __ j(NOT_ZERO, &failure);
+  __ cmpl(EBX, Immediate(0));
+  __ j(LESS, &failure);
+
+  // Load the backing store (array) from the first instance field of the list.
+  __ movl(ECX, Address(ECX, Instance::kSize - HeapObject::kTag));
+  __ movl(EDX, Address(ECX, Array::kLengthOffset - HeapObject::kTag));
+
+  // Check the index against the length.
+  __ cmpl(EBX, EDX);
+  __ j(GREATER_EQUAL, &failure);
+
+  // Store to the array and continue.
+  ASSERT(Smi::kTagSize == 1);
+  __ movl(EAX, Address(ESP, 1 * kWordSize));
+  // Index (in EBX) is already smi-taged, so only scale by TIMES_2.
+  __ movl(Address(ECX, EBX, TIMES_2, Array::kSize - HeapObject::kTag), EAX);
+  __ ret();
+
+  __ Bind(&failure);
 }
 
 }  // namespace fletch

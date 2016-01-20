@@ -986,7 +986,7 @@ class Function : public HeapObject {
   inline Object* literal_at(int index);
   inline void set_literal_at(int index, Object* value);
 
-  void* ComputeIntrinsic(IntrinsicsTable* table);
+  Intrinsic ComputeIntrinsic(IntrinsicsTable* table);
 
   // Sizing.
   int FunctionSize() {

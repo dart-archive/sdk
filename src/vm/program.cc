@@ -943,7 +943,8 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
     }
     Function* target = entry->target();
     if (target != trampoline) hits++;
-    void* code = target->ComputeIntrinsic(intrinsics);
+    Intrinsic intrinsic = target->ComputeIntrinsic(intrinsics);
+    void* code = intrinsics->GetCode(intrinsic);
     if (code == NULL) {
       code = reinterpret_cast<void*>(InterpreterMethodEntry);
     }

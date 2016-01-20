@@ -49,6 +49,8 @@ class Codegen {
 
   void DoEntry();
 
+  void DoSetupFrame();
+
   void DoLoadLocal(int index);
   void DoLoadField(int index);
   void DoLoadStatic(int index);
@@ -88,6 +90,12 @@ class Codegen {
   void DoReturn();
 
   void DoStackOverflowCheck(int size);
+
+  void DoIntrinsicGetField(int field);
+  void DoIntrinsicSetField(int field);
+  void DoIntrinsicListLength();
+  void DoIntrinsicListIndexGet();
+  void DoIntrinsicListIndexSet();
 };
 
 }  // namespace fletch
