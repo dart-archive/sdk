@@ -443,20 +443,12 @@ void Program::ValidateSharedHeap() {
 #endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void Program::CollectGarbage() {
-  if (scheduler() != NULL) {
-    scheduler()->StopProgram(this);
-  }
-
   Space* to = new Space(heap_.space()->Used() / 10);
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
   PerformProgramGC(to, &scavenger);
   FinishProgramGC();
-
-  if (scheduler() != NULL) {
-    scheduler()->ResumeProgram(this);
-  }
 }
 
 void Program::AddToProcessList(Process* process) {
@@ -511,14 +503,7 @@ static void PrintImmutableGCInfo(SharedHeapUsage* before,
       before->shared_size, after->shared_used, after->shared_size);
 }
 
-void Program::CollectSharedGarbage(bool program_is_stopped) {
-  Scheduler* scheduler = this->scheduler();
-  ASSERT(scheduler != NULL);
-
-  if (!program_is_stopped) {
-    scheduler->StopProgram(this);
-  }
-
+void Program::CollectSharedGarbage() {
   // All threads are stopped and have given their parts back to the
   // [SharedHeap], so we can merge them now.
   shared_heap()->MergeParts();
@@ -542,10 +527,6 @@ void Program::CollectSharedGarbage(bool program_is_stopped) {
 
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
-  }
-
-  if (!program_is_stopped) {
-    scheduler->ResumeProgram(this);
   }
 }
 

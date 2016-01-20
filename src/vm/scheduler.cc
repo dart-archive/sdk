@@ -56,11 +56,7 @@ void Scheduler::TearDown() {
 }
 
 Scheduler::Scheduler()
-#if !defined(FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS)
     : max_threads_(1),
-#else
-    : max_threads_(Platform::GetNumberOfHardwareThreads()),
-#endif
       thread_pool_(max_threads_),
       preempt_monitor_(Platform::CreateMonitor()),
       sleeping_threads_(0),
@@ -373,10 +369,7 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   program->ScheduleProcessForDeletion(process, kind);
 
   if (Flags::gc_on_delete) {
-    ASSERT(gc_thread_ != NULL);
-
-    program->program_state()->Retain();
-    gc_thread_->TriggerGC(program);
+    program->CollectGarbage();
   }
 
   if (state->DecreaseProcessCount()) {
@@ -656,8 +649,7 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
       if (process->program() != program) {
         if (shared_heap_part != NULL) {
           if (shared_heap->ReleasePart(shared_heap_part)) {
-            program->program_state()->Retain();
-            gc_thread_->TriggerSharedGC(program);
+            program->CollectSharedGarbage();
           }
         }
         if (program != NULL) {
@@ -671,15 +663,14 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
         shared_heap_part = shared_heap->AcquirePart();
       }
 
-      // Interpret and trigger GC if interpretation resulted in immutable
+      // Interpret and GC shared heap if interpretation resulted in immutable
       // allocation failure.
       bool allocation_failure = false;
       Process* new_process = InterpretProcess(
           process, shared_heap_part->heap(), thread_state, &allocation_failure);
       if (allocation_failure) {
         if (shared_heap->ReleasePart(shared_heap_part)) {
-          program->program_state()->Retain();
-          gc_thread_->TriggerSharedGC(program);
+          program->CollectSharedGarbage();
         }
         shared_heap_part = shared_heap->AcquirePart();
       }
@@ -694,8 +685,7 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   if (shared_heap != NULL) {
     ProgramState* state = program->program_state();
     if (shared_heap->ReleasePart(shared_heap_part)) {
-      state->Retain();
-      gc_thread_->TriggerSharedGC(program);
+      program->CollectSharedGarbage();
     }
 
     if (state->Release()) program->NotifyExitListener();
