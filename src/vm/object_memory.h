@@ -57,30 +57,16 @@ class Chunk {
   Space* owner_;
   const uword base_;
   const uword limit_;
-#ifdef FLETCH_TARGET_OS_CMSIS
-  const uword allocated_;
-#endif
   const bool external_;
 
   Chunk* next_;
 
-#ifdef FLETCH_TARGET_OS_CMSIS
-  Chunk(Space* owner, uword base, uword size, uword allocated,
-        bool external = false)
-      : owner_(owner),
-        base_(base),
-        limit_(base + size),
-        allocated_(allocated),
-        external_(external),
-        next_(NULL) {}
-#else
   Chunk(Space* owner, uword base, uword size, bool external = false)
       : owner_(owner),
         base_(base),
         limit_(base + size),
         external_(external),
         next_(NULL) {}
-#endif
 
   ~Chunk();
 

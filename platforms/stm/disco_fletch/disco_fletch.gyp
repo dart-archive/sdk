@@ -125,11 +125,15 @@
         # Application.
         '<(source_path)/circular_buffer.cc',
         '<(source_path)/circular_buffer.h',
+        '<(source_path)/cmpctmalloc.c',
+        '<(source_path)/cmpctmalloc.h',
         '<(source_path)/freertos.cc',
         '<(source_path)/FreeRTOSConfig.h',
         '<(source_path)/fletch_entry.cc',
         '<(source_path)/logger.cc',
         '<(source_path)/main.cc',
+        '<(source_path)/page_allocator.cc',
+        '<(source_path)/page_allocator.h',
         '<(source_path)/uart.cc',
         '<(source_path)/uart.h',
 
@@ -200,7 +204,13 @@
           #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???
           '-T../../platforms/stm/disco_fletch/generated/SW4STM32/'
-            'configuration/STM32F746NGHx_FLASH.ld'
+            'configuration/STM32F746NGHx_FLASH.ld',
+          '-Wl,--wrap=__libc_init_array',
+          '-Wl,--wrap=_malloc_r',
+          '-Wl,--wrap=_malloc_r',
+          '-Wl,--wrap=_realloc_r',
+          '-Wl,--wrap=_calloc_r',
+          '-Wl,--wrap=_free_r',
         ],
       },
       'type': 'executable',

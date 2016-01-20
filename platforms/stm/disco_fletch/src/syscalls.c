@@ -27,30 +27,11 @@ extern int __io_putchar(int ch) __attribute__((weak));
 extern int __io_getchar(void) __attribute__((weak));
 
 void* _sbrk(int incr) {
-  extern char end asm("end");
-  static char* heap_end = NULL;
-  char* prev_heap_end;
-  char* min_stack_ptr;
-
-  if (heap_end == NULL) {
-    heap_end = &end;
-  }
-
-  prev_heap_end = heap_end;
-
-  // Use the NVIC offset register to locate the main stack pointer.
-  min_stack_ptr = (char*) (*(unsigned int*) *(unsigned int*) 0xE000ED08);
-  // Locate the stack bottom address.
-  min_stack_ptr -= MAX_STACK_SIZE;
-
-  if (heap_end + incr > min_stack_ptr)  {
-    errno = ENOMEM;
-    return (void *) -1;
-  }
-
-  heap_end += incr;
-
-  return (void*) prev_heap_end;
+  // We don't use the newlib C-heap implementation (which use _sbrk to
+  // get system memory). The cmpctmalloc C-heap implementation we use
+  // does not use _sbrk (uses the page allocator) to get system memory.
+  // So we don't expect any calls to _sbrk at the moment.
+  UNREACHABLE();
 }
 
 int _gettimeofday (struct timeval * tp, struct timezone * tzp) {

@@ -21,6 +21,14 @@
 #include "lib/page_alloc.h"
 #endif
 
+#ifdef FLETCH_TARGET_OS_CMSIS
+// TODO(sgjesse): Put this into an .h file
+#define PAGE_SIZE_SHIFT 12
+#define PAGE_SIZE (1 << PAGE_SIZE_SHIFT)
+extern "C" void* page_alloc(size_t pages);
+extern "C" void page_free(void* start, size_t pages);
+#endif
+
 namespace fletch {
 
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
@@ -33,9 +41,7 @@ Chunk::~Chunk() {
   // If the memory for this chunk is external we leave it alone
   // and let the embedder deallocate it.
   if (is_external()) return;
-#if defined(FLETCH_TARGET_OS_CMSIS)
-  free(reinterpret_cast<void*>(allocated_));
-#elif defined(FLETCH_TARGET_OS_LK)
+#if defined(FLETCH_TARGET_OS_CMSIS) || defined(FLETCH_TARGET_OS_LK)
   page_free(reinterpret_cast<void*>(base()), size() >> PAGE_SIZE_SHIFT);
 #else
   free(reinterpret_cast<void*>(base()));
@@ -253,24 +259,16 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   memory = memalign(kPageSize, size);
 #elif defined(FLETCH_TARGET_OS_WIN)
   memory = _aligned_malloc(size, kPageSize);
-#elif defined(FLETCH_TARGET_OS_LK)
+#elif defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_CMSIS)
   size = Utils::RoundUp(size, PAGE_SIZE);
   memory = page_alloc(size >> PAGE_SIZE_SHIFT);
-#elif defined(FLETCH_TARGET_OS_CMSIS)
-  memory = malloc(size + kPageSize);
 #else
   if (posix_memalign(&memory, kPageSize, size) != 0) return NULL;
 #endif
   if (memory == NULL) return NULL;
 
-#ifdef FLETCH_TARGET_OS_CMSIS
-  uword allocated = reinterpret_cast<uword>(memory);
-  uword base = (allocated / kPageSize + 1) * kPageSize;
-  Chunk* chunk = new Chunk(owner, base, size, allocated);
-#else
   uword base = reinterpret_cast<uword>(memory);
   Chunk* chunk = new Chunk(owner, base, size);
-#endif
 
   ASSERT(base == Utils::RoundUp(base, kPageSize));
   ASSERT(size == Utils::RoundUp(size, kPageSize));
@@ -290,11 +288,7 @@ Chunk* ObjectMemory::CreateFlashChunk(Space* owner, void* memory, int size) {
   uword base = reinterpret_cast<uword>(memory);
   ASSERT(base % kPageSize == 0);
 
-#ifdef FLETCH_TARGET_OS_CMSIS
-  Chunk* chunk = new Chunk(owner, base, size, base, true);
-#else
   Chunk* chunk = new Chunk(owner, base, size, true);
-#endif
   SetSpaceForPages(chunk->base(), chunk->limit(), owner);
   return chunk;
 }

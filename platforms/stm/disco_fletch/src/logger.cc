@@ -14,12 +14,6 @@ extern "C" {
 Logger* logger = NULL;
 
 Logger::Logger() {
-  // Initialize the LCD.
-  BSP_LCD_Init();
-  BSP_LCD_LayerDefaultInit(1, LCD_FB_START_ADDRESS);
-  BSP_LCD_SelectLayer(1);
-  BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
-
   /* Initialize LCD Log module */
   LCD_LOG_Init();
 
