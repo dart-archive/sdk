@@ -334,15 +334,15 @@ Program* SnapshotReader::ReadProgram() {
   // Allocate space for the backward references.
   backward_references_ = List<HeapObject*>::New(references);
 
+  // Read the roots.
+  ReaderVisitor visitor(this);
+  program->IterateRootsIgnoringSession(&visitor);
+
   // Read all the program state (except roots).
   program->set_entry(Function::cast(ReadObject()));
   program->set_main_arity(ReadInt64());
   program->set_static_fields(Array::cast(ReadObject()));
   program->set_dispatch_table(Array::cast(ReadObject()));
-
-  // Read the roots.
-  ReaderVisitor visitor(this);
-  program->IterateRootsIgnoringSession(&visitor);
 
   program->heap()->space()->AppendProgramChunk(memory_, top_);
   backward_references_.Delete();
@@ -391,15 +391,15 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   int size32_float_position = position_ + 3 * kHeapSizeBytes;
   for (int i = 0; i < 4 * kHeapSizeBytes; i++) WriteByte(0);
 
+  // Write out all the roots of the program.
+  WriterVisitor visitor(this);
+  program->IterateRootsIgnoringSession(&visitor);
+
   // Write all the program state (except roots).
   WriteObject(program->entry());
   WriteInt64(program->main_arity());
   WriteObject(program->static_fields());
   WriteObject(program->dispatch_table());
-
-  // Write out all the roots of the program.
-  WriterVisitor visitor(this);
-  program->IterateRootsIgnoringSession(&visitor);
 
   // TODO(kasperl): Unmark all touched objects. Right now, we
   // only unmark the roots.
