@@ -43,8 +43,6 @@ OBJCOPY=${TOOLCHAIN_PREFIX}objcopy
 
 BUILDDIR=out/DebugSTM
 
-echo "Generating snapshot"
-out/ReleaseX64/fletch export $1 to file snapshot
 
 # Get the dart file relative to out/DebugSTM.
 OUT_RELATIVE_DART_FILE=$DART_FILE
@@ -54,12 +52,11 @@ fi
 
 cd out/DebugSTM
 
+echo "Generating snapshot"
 ../../out/ReleaseX64/fletch export $OUT_RELATIVE_DART_FILE to file snapshot
+echo "Converting snapshot to object file"
 ../../$OBJCOPY -I binary -O elf32-littlearm -B arm snapshot snapshot.o
 cd ../..
-
-echo "Converting snapshot to object file"
-$OBJCOPY -I binary -O elf32-littlearm -B arm snapshot snapshot.o
 
 echo "Linking application"
 $CC \
@@ -79,9 +76,9 @@ $CC \
 -Wl,--wrap=_realloc_r \
 -Wl,--wrap=_calloc_r \
 -Wl,--wrap=_free_r \
--o disco_fletch.elf \
+-o $BUILDDIR/disco_fletch.elf \
 -Wl,--start-group \
-snapshot.o \
+$BUILDDIR/snapshot.o \
 $BUILDDIR/obj/platforms/stm/disco_fletch/libdisco_fletch.a \
 $BUILDDIR/libfletch_vm_library.a \
 $BUILDDIR/libfletch_shared.a \
@@ -91,7 +88,7 @@ $BUILDDIR/libdouble_conversion.a \
 -Wl,--no-whole-archive
 
 echo "Generating flashable image"
-$OBJCOPY -O binary disco_fletch.elf disco_fletch.bin
+$OBJCOPY -O binary $BUILDDIR/disco_fletch.elf $BUILDDIR/disco_fletch.bin
 
 echo "Flashing image"
-tools/lk/flash-image.sh --disco disco_fletch.bin
+tools/lk/flash-image.sh --disco $BUILDDIR/disco_fletch.bin
