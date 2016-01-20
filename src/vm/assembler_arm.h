@@ -129,33 +129,17 @@ class Address {
 
 class Label {
  public:
-  Label() : position_(0) {}
+  Label() : position_(-1) {}
 
-  // Returns the position for bound and linked labels. Cannot be used
-  // for unused labels.
-  int position() const {
-    ASSERT(!IsUnused());
-    return IsBound() ? -position_ - 1 : position_ - 1;
+  // Returns the position for a label. Positions are assigned on first use.
+  int position() {
+    if (position_ == -1) position_ = position_counter_++;
+    return position_;
   }
-
-  bool IsBound() const { return position_ < 0; }
-  bool IsUnused() const { return position_ == 0; }
-  bool IsLinked() const { return position_ > 0; }
 
  private:
   int position_;
-
-  void BindTo(int position) {
-    position_ = -position - 1;
-    ASSERT(IsBound());
-  }
-
-  void LinkTo(int position) {
-    position_ = position + 1;
-    ASSERT(IsLinked());
-  }
-
-  friend class Assembler;
+  static int position_counter_;
 };
 
 #define INSTRUCTION_0(name, format) \
@@ -281,8 +265,6 @@ class Assembler {
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
   void PrintOperand(const Operand* operand);
-
-  static int NewLabelPosition();
 
   Condition Wrap(Condition condition) { return condition; }
   Register Wrap(Register reg) { return reg; }

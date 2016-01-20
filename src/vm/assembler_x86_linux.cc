@@ -9,6 +9,8 @@
 
 namespace fletch {
 
+const char* kLocalLabelPrefix = ".L";
+
 void Assembler::call(const char* name) { printf("\tcall %s\n", name); }
 
 void Assembler::j(Condition condition, const char* name) {

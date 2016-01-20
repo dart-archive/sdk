@@ -8,42 +8,44 @@
 #include "src/vm/assembler.h"
 
 namespace fletch {
-  static const char* kPrefix = "_";
+static const char* kLocalLabelPrefix = "L";
 
-  void Assembler::call(const char* name) {
-    printf("\tcall %s%s\n", kPrefix, name);
-  }
+static const char* kPrefix = "_";
 
-  void Assembler::j(Condition condition, const char* name) {
-    const char* mnemonic = ConditionMnemonic(condition);
-    printf("\tj%s %s%s\n", mnemonic, kPrefix, name);
-  }
+void Assembler::call(const char* name) {
+  printf("\tcall %s%s\n", kPrefix, name);
+}
 
-  void Assembler::jmp(const char* name) {
-    printf("\tjmp %s%s\n", kPrefix, name);
-  }
+void Assembler::j(Condition condition, const char* name) {
+  const char* mnemonic = ConditionMnemonic(condition);
+  printf("\tj%s %s%s\n", mnemonic, kPrefix, name);
+}
 
-  void Assembler::jmp(const char* name, Register index, ScaleFactor scale) {
-    Print("jmp *%s%s(,%rl,%d)", kPrefix, name, index, 1 << scale);
-  }
+void Assembler::jmp(const char* name) {
+  printf("\tjmp %s%s\n", kPrefix, name);
+}
 
-  void Assembler::Bind(const char* prefix, const char* name) {
-    putchar('\n');
-    printf("\t.global %s%s%s\n", kPrefix, prefix, name);
-    printf("%s%s%s:\n", kPrefix, prefix, name);
-  }
+void Assembler::jmp(const char* name, Register index, ScaleFactor scale) {
+  Print("jmp *%s%s(,%rl,%d)", kPrefix, name, index, 1 << scale);
+}
 
-  void Assembler::DefineLong(const char* name) {
-    printf("\t.long %s%s\n", kPrefix, name);
-  }
+void Assembler::Bind(const char* prefix, const char* name) {
+  putchar('\n');
+  printf("\t.global %s%s%s\n", kPrefix, prefix, name);
+  printf("%s%s%s:\n", kPrefix, prefix, name);
+}
 
-  void Assembler::LoadNative(Register destination, Register index) {
-    Print("movl %skNativeTable(,%rl,4), %rl", kPrefix, index, destination);
-  }
+void Assembler::DefineLong(const char* name) {
+  printf("\t.long %s%s\n", kPrefix, name);
+}
 
-  void Assembler::LoadLabel(Register reg, const char* name) {
-    Print("leal %s%s, %rl", kPrefix, name, reg);
-  }
+void Assembler::LoadNative(Register destination, Register index) {
+  Print("movl %skNativeTable(,%rl,4), %rl", kPrefix, index, destination);
+}
+
+void Assembler::LoadLabel(Register reg, const char* name) {
+  Print("leal %s%s, %rl", kPrefix, name, reg);
+}
 
 }  // namespace fletch
 

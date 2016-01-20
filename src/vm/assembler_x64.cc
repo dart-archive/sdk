@@ -11,6 +11,8 @@ namespace fletch {
 
 enum RegisterSize { kLongRegister = 'l', kQuadRegister = 'q' };
 
+int Label::position_counter_ = 0;
+
 void Assembler::j(Condition condition, Label* label) {
   static const char* kConditionMnemonics[] = {
       "o",   // OVERFLOW
@@ -32,8 +34,7 @@ void Assembler::j(Condition condition, Label* label) {
   };
   ASSERT(static_cast<unsigned>(condition) < ARRAY_SIZE(kConditionMnemonics));
   const char* mnemonic = kConditionMnemonics[condition];
-  const char* direction = ComputeDirectionForLinking(label);
-  printf("\tj%s %d%s\n", mnemonic, label->position(), direction);
+  printf("\tj%s %s%d\n", mnemonic, kLocalLabelPrefix, label->position());
 }
 
 void Assembler::SwitchToText() { puts("\n\t.text"); }
@@ -45,17 +46,11 @@ void Assembler::AlignToPowerOfTwo(int power) {
 }
 
 void Assembler::jmp(Label* label) {
-  const char* direction = ComputeDirectionForLinking(label);
-  printf("\tjmp %d%s\n", label->position(), direction);
+  printf("\tjmp %s%d\n", kLocalLabelPrefix, label->position());
 }
 
 void Assembler::Bind(Label* label) {
-  if (label->IsUnused()) {
-    label->BindTo(NewLabelPosition());
-  } else {
-    label->BindTo(label->position());
-  }
-  printf("%d:\n", label->position());
+  printf("%s%d:\n", kLocalLabelPrefix, label->position());
 }
 
 void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
@@ -83,8 +78,7 @@ static const char* ToString(Register reg, RegisterSize size = kQuadRegister) {
 }
 
 void Assembler::movq(Register reg, Label* label) {
-  const char* direction = ComputeDirectionForLinking(label);
-  Print("leaq %d%s(%%rip), %rq", label->position(), direction, reg);
+  Print("leaq %s%d(%%rip), %rq", kLocalLabelPrefix, label->position(), reg);
 }
 
 void Assembler::Print(const char* format, ...) {
@@ -223,16 +217,6 @@ const char* Assembler::ConditionMnemonic(Condition condition) {
   };
   ASSERT(static_cast<unsigned>(condition) < ARRAY_SIZE(kConditionMnemonics));
   return kConditionMnemonics[condition];
-}
-
-const char* Assembler::ComputeDirectionForLinking(Label* label) {
-  if (label->IsUnused()) label->LinkTo(NewLabelPosition());
-  return label->IsBound() ? "b" : "f";
-}
-
-int Assembler::NewLabelPosition() {
-  static int labels = 0;
-  return labels++;
 }
 
 }  // namespace fletch

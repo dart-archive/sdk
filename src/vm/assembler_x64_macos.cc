@@ -9,6 +9,8 @@
 
 namespace fletch {
 
+const char* kLocalLabelPrefix = "L";
+
 void Assembler::Bind(const char* prefix, const char* name) {
   printf("\t.globl _%s%s\n", prefix, name);
   printf("_%s%s:\n", prefix, name);

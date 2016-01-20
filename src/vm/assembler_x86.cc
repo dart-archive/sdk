@@ -13,15 +13,15 @@ enum RegisterSize {
   kLongRegister = 'l',
 };
 
+int Label::position_counter_ = 0;
+
 void Assembler::j(Condition condition, Label* label) {
   const char* mnemonic = ConditionMnemonic(condition);
-  const char* direction = ComputeDirectionForLinking(label);
-  printf("\tj%s %d%s\n", mnemonic, label->position(), direction);
+  printf("\tj%s %s%d\n", mnemonic, kLocalLabelPrefix, label->position());
 }
 
 void Assembler::jmp(Label* label) {
-  const char* direction = ComputeDirectionForLinking(label);
-  printf("\tjmp %d%s\n", label->position(), direction);
+  printf("\tjmp %s%d\n", kLocalLabelPrefix, label->position());
 }
 
 void Assembler::SwitchToText() {
@@ -42,12 +42,7 @@ void Assembler::AlignToPowerOfTwo(int power) {
 }
 
 void Assembler::Bind(Label* label) {
-  if (label->IsUnused()) {
-    label->BindTo(NewLabelPosition());
-  } else {
-    label->BindTo(label->position());
-  }
-  printf("%d:\n", label->position());
+  printf("%s%d:\n", kLocalLabelPrefix, label->position());
 }
 
 static const char* ToString(Register reg, RegisterSize size = kLongRegister) {
@@ -63,8 +58,8 @@ static const char* ToString(Register reg, RegisterSize size = kLongRegister) {
 }
 
 void Assembler::movl(Register reg, Label* label) {
-  const char* direction = ComputeDirectionForLinking(label);
-  printf("\tmovl $%d%s, %s\n", label->position(), direction, ToString(reg));
+  printf("\tmovl $%s%d, %s\n", kLocalLabelPrefix, label->position(),
+         ToString(reg));
 }
 
 void Assembler::Print(const char* format, ...) {
@@ -194,16 +189,6 @@ const char* Assembler::ConditionMnemonic(Condition condition) {
   };
   ASSERT(static_cast<unsigned>(condition) < ARRAY_SIZE(kConditionMnemonics));
   return kConditionMnemonics[condition];
-}
-
-const char* Assembler::ComputeDirectionForLinking(Label* label) {
-  if (label->IsUnused()) label->LinkTo(NewLabelPosition());
-  return label->IsBound() ? "b" : "f";
-}
-
-int Assembler::NewLabelPosition() {
-  static int labels = 0;
-  return labels++;
 }
 
 }  // namespace fletch
