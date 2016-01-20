@@ -143,6 +143,8 @@
         'pair.h',
         'port.cc',
         'port.h',
+        'preempter.h',
+        'preempter.cc',
         'priority_heap.h',
         'process_handle.h',
         'process_handle.cc',

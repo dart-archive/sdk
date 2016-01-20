@@ -35,22 +35,12 @@ class ProcessVisitor {
 
 class Scheduler {
  public:
-  enum State {
-    kAllocated,
-    kInitialized,
-    kFinishing,
-    kFinished,
-  };
-
   static void Setup();
   static void TearDown();
   static Scheduler* GlobalInstance() { return scheduler_; }
 
   Scheduler();
   ~Scheduler();
-
-  void WaitUntilReady();
-  void WaitUntilFinished();
 
   void ScheduleProgram(Program* program, Process* main_process);
   void UnscheduleProgram(Program* program);
@@ -60,6 +50,9 @@ class Scheduler {
 
   void PauseGcThread();
   void ResumeGcThread();
+
+  void PreemptionTick();
+  void ProfileTick();
 
   void FinishedGC(Program* program, int count);
 
@@ -105,23 +98,23 @@ class Scheduler {
 
  private:
   friend class Fletch;
+
   // Global scheduler instance.
   static Scheduler* scheduler_;
-  static ThreadIdentifier scheduler_thread_;
 
   const int max_threads_;
   ThreadPool thread_pool_;
-  Monitor* preempt_monitor_;
+
   Atomic<int> sleeping_threads_;
   Atomic<int> thread_count_;
   Atomic<ThreadState*> idle_threads_;
   Atomic<ThreadState*>* threads_;
   Atomic<ThreadState*> thread_states_to_delete_;
   ProcessQueue* startup_queue_;
-  Atomic<State> state_;
 
   Monitor* pause_monitor_;
   Atomic<bool> pause_;
+  Atomic<bool> shutdown_;
 
   // A list of currently executed processes, indexable by thread id. Upon
   // preemption, the value may be set to kPreemptMarker if it's NULL (which is
@@ -144,7 +137,6 @@ class Scheduler {
 
   void PreemptThreadProcess(int thread_id);
   void ProfileThreadProcess(int thread_id);
-  uint64 GetNextPreemptTime();
   void EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
                                       Process* process);
 

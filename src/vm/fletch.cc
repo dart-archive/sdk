@@ -9,6 +9,7 @@
 #include "src/vm/ffi.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/object.h"
+#include "src/vm/preempter.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/thread.h"
 
@@ -20,9 +21,11 @@ void Fletch::Setup() {
   StaticClassStructures::Setup();
   ForeignFunctionInterface::Setup();
   Scheduler::Setup();
+  Preempter::Setup();
 }
 
 void Fletch::TearDown() {
+  Preempter::TearDown();
   Scheduler::TearDown();
   ForeignFunctionInterface::TearDown();
   StaticClassStructures::TearDown();
