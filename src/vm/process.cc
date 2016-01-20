@@ -440,7 +440,7 @@ void Program::CollectNewSpace() {
   }
 
   if (old->needs_garbage_collection()) {
-    CollectSharedGarbage(true);
+    CollectSharedGarbage();
   }
 
   UpdateStackLimits();

@@ -371,7 +371,7 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   if (Flags::gc_on_delete) {
     ASSERT(gc_thread_ != NULL);
 
-    program->program_state()->Retain();
+    state->Retain();
     gc_thread_->TriggerGC(program);
   }
 

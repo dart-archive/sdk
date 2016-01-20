@@ -262,7 +262,7 @@ class Program {
   void ValidateSharedHeap();
 
   void CollectGarbage();
-  void CollectSharedGarbage(bool program_is_stopped = false);
+  void CollectSharedGarbage();
   void CollectNewSpace();
   void PerformSharedGarbageCollection();
 
