@@ -467,22 +467,6 @@ Note: currently only implemented for dart2js.''',
               false,
               type: 'bool'),
           new _TestOptionSpecification(
-              'one-process-heap',
-              'Extra option to tell the test scripts that we are running'
-              ' a binary build with one heap for all processes',
-              ['--one-process-heap'],
-              [],
-              false,
-              type: 'bool'),
-          new _TestOptionSpecification(
-              'mark-sweep',
-              'Extra option to tell the test scripts that we are running'
-              ' a binary build with the mark-sweep GC',
-              ['--mark-sweep'],
-              [],
-              false,
-              type: 'bool'),
-          new _TestOptionSpecification(
               'clang',
               'Use clang build instead of gcc.',
               ['--clang'],

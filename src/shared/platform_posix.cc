@@ -167,6 +167,11 @@ void Platform::ImmediateAbort() { abort(); }
 
 #ifdef DEBUG
 void Platform::WaitForDebugger(const char* executable_name) {
+  const char* tty = Platform::GetEnv("FLETCH_VM_TTY");
+  if (tty) {
+    close(2);             // Stderr.
+    open(tty, O_WRONLY);  // Replace stderr with terminal.
+  }
   int fd = open("/dev/tty", O_WRONLY);
   if (fd >= 0) {
     FILE* terminal = fdopen(fd, "w");
@@ -175,6 +180,10 @@ void Platform::WaitForDebugger(const char* executable_name) {
         terminal,
         "gdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal SIGCONT'\n",
         executable_name, getpid());
+    fprintf(stderr,
+            "\ngdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal "
+            "SIGCONT'\n",
+            executable_name, getpid());
     kill(getpid(), SIGSTOP);
   }
 }

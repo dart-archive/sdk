@@ -13,7 +13,7 @@ class Function;
 class Object;
 class Program;
 class ProgramTableRewriter;
-class Space;
+class SemiSpace;
 
 // ProgramFolder used for folding and unfolding a Program.
 class ProgramFolder {

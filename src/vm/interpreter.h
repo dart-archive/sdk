@@ -51,7 +51,6 @@ class Interpreter {
   enum InterruptKind {
     kReady,
     kTerminate,
-    kImmutableAllocationFailure,
     kInterrupt,
     kYield,
     kTargetYield,
@@ -69,9 +68,6 @@ class Interpreter {
   void Run();
 
   bool IsTerminated() const { return interruption_ == kTerminate; }
-  bool IsImmutableAllocationFailure() const {
-    return interruption_ == kImmutableAllocationFailure;
-  }
   bool IsInterrupted() const { return interruption_ == kInterrupt; }
   bool IsYielded() const { return interruption_ == kYield; }
   bool IsTargetYielded() const { return interruption_ == kTargetYield; }
@@ -99,13 +95,13 @@ extern "C" const NativeFunction kNativeTable[];
 extern "C" Process::StackCheckResult HandleStackOverflow(Process* process,
                                                          int size);
 
-extern "C" int HandleGC(Process* process);
+extern "C" void HandleGC(Process* process);
 
-extern "C" Object* HandleAllocate(Process* process, Class* clazz, int immutable,
-                                  int has_immutable_heapobject_member);
+extern "C" Object* HandleAllocate(Process* process, Class* clazz,
+                                  int immutable);
 
-extern "C" void AddToStoreBufferSlow(Process* process, Object* object,
-                                     Object* value);
+extern "C" void AddToRememberedSetSlow(Process* process, Object* object,
+                                       Object* value);
 
 extern "C" Object* HandleAllocateBoxed(Process* process, Object* value);
 

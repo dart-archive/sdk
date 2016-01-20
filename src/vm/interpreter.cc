@@ -98,16 +98,16 @@ void Interpreter::Run() {
   process_->TakeLookupCache();
 
   // Whenever we enter the interpreter, we might operate on a stack which
-  // doesn't contain any references to immutable space. This means the
-  // storebuffer might *NOT* contain the stack.
+  // doesn't contain any references to new space. This means the remembered set
+  // might *NOT* contain the stack.
   //
-  // Since we don't update the store buffer on every mutating operation - e.g.
+  // Since we don't update the remembered set on every mutating operation - e.g.
   // SetLocal() - we add it as soon as the interpreter uses it:
   //   * once we enter the interpreter
   //   * once we we're done with mutable GC
   //   * once we we've done a coroutine change
   // This is conservative.
-  process_->store_buffer()->Insert(process_->stack());
+  process_->remembered_set()->Insert(process_->stack());
 
   int result = Interpret(process_, &target_yield_result_);
   if (result < 0) FATAL("Fatal error in native interpreter");
@@ -124,34 +124,27 @@ Process::StackCheckResult HandleStackOverflow(Process* process, int size) {
   return process->HandleStackOverflow(size);
 }
 
-int HandleGC(Process* process) {
+void HandleGC(Process* process) {
   if (process->heap()->needs_garbage_collection()) {
-    process->CollectMutableGarbage();
+    process->program()->CollectNewSpace();
 
     // After a mutable GC a lot of stacks might no longer have pointers to
-    // immutable space on them. If so, the store buffer will no longer contain
-    // such a stack.
+    // new space on them. If so, the remembered set will no longer contain such
+    // a stack.
     //
-    // Since we don't update the store buffer on every mutating operation
+    // Since we don't update the remembered set on every mutating operation
     // - e.g. SetLocal() - we add it before we start using it.
-    process->store_buffer()->Insert(process->stack());
+    process->remembered_set()->Insert(process->stack());
   }
-
-  return process->immutable_heap()->needs_garbage_collection() ? 1 : 0;
 }
 
 Object* HandleObjectFromFailure(Process* process, Failure* failure) {
   return process->program()->ObjectFromFailure(failure);
 }
 
-Object* HandleAllocate(Process* process, Class* clazz, int immutable,
-                       int immutable_heapobject_member) {
+Object* HandleAllocate(Process* process, Class* clazz, int immutable) {
   Object* result = process->NewInstance(clazz, immutable == 1);
   if (result->IsFailure()) return result;
-
-  if (immutable != 1 && immutable_heapobject_member == 1) {
-    process->store_buffer()->Insert(HeapObject::cast(result));
-  }
   return result;
 }
 
@@ -159,8 +152,8 @@ void AddToStoreBufferSlow(Process* process, Object* object, Object* value) {
   ASSERT(object->IsHeapObject());
   ASSERT(
       process->heap()->space()->Includes(HeapObject::cast(object)->address()));
-  if (value->IsHeapObject() && value->IsImmutable()) {
-    process->store_buffer()->Insert(HeapObject::cast(object));
+  if (value->IsHeapObject()) {
+    process->remembered_set()->Insert(HeapObject::cast(object));
   }
 }
 
@@ -168,8 +161,8 @@ Object* HandleAllocateBoxed(Process* process, Object* value) {
   Object* boxed = process->NewBoxed(value);
   if (boxed->IsFailure()) return boxed;
 
-  if (value->IsHeapObject() && !value->IsNull() && value->IsImmutable()) {
-    process->store_buffer()->Insert(HeapObject::cast(boxed));
+  if (value->IsHeapObject() && !value->IsNull()) {
+    process->remembered_set()->Insert(HeapObject::cast(boxed));
   }
   return boxed;
 }

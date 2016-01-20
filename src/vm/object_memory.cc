@@ -15,7 +15,6 @@
 #include "src/vm/heap.h"
 #include "src/vm/mark_sweep.h"
 #include "src/vm/object.h"
-#include "src/vm/storebuffer.h"
 
 #ifdef FLETCH_TARGET_OS_LK
 #include "lib/page_alloc.h"
@@ -47,6 +46,8 @@ Chunk::~Chunk() {
   free(reinterpret_cast<void*>(base()));
 #endif
 }
+
+Space::~Space() { FreeAllChunks(); }
 
 void Space::FreeAllChunks() {
   Chunk* current = first();
@@ -90,10 +91,10 @@ void Space::IncreaseAllocationBudget(int size) { allocation_budget_ += size; }
 void Space::DecreaseAllocationBudget(int size) { allocation_budget_ -= size; }
 
 void Space::SetAllocationBudget(int new_budget) {
-  allocation_budget_ = new_budget;
+  allocation_budget_ = Utils::Maximum(DefaultChunkSize(new_budget), new_budget);
 }
 
-void Space::PrependSpace(Space* space) {
+void SemiSpace::PrependSpace(SemiSpace* space) {
   if (space->is_empty()) return;
 
   space->Flush();
@@ -112,7 +113,7 @@ void Space::PrependSpace(Space* space) {
   first_ = first;
   used_ += space->Used();
 
-  // NOTE: The destructor of [Space] will use some of the fields, so we just
+  // NOTE: The destructor of [SemiSpace] will use some of the fields, so we just
   // reset all of them.
   space->first_ = NULL;
   space->last_ = NULL;
@@ -135,7 +136,7 @@ void Space::IterateObjects(HeapObjectVisitor* visitor) {
   }
 }
 
-void Space::CompleteScavenge(PointerVisitor* visitor) {
+void SemiSpace::CompleteScavenge(PointerVisitor* visitor) {
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();
@@ -148,37 +149,13 @@ void Space::CompleteScavenge(PointerVisitor* visitor) {
   }
 }
 
-void Space::CompleteScavengeMutable(PointerVisitor* visitor,
-                                    Space* program_space,
-                                    StoreBuffer* store_buffer) {
-  ASSERT(store_buffer->is_empty());
-
-  Flush();
-
-  // NOTE: This finder is only called on objects which have been forwarded and
-  // whos fields have been forwarded.
-  FindImmutablePointerVisitor finder(this, program_space);
-
+#ifdef DEBUG
+void Space::Find(uword w, const char* name) {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword current = chunk->base();
-    // TODO(kasperl): I don't like the repeated checks to see if p is
-    // the last chunk. Can't we just make sure to write the sentinel
-    // whenever we've copied over an object, so this check becomes
-    // simpler like in IterateObjects?
-    while ((chunk == last()) ? (current < top()) : !HasSentinelAt(current)) {
-      HeapObject* object = HeapObject::FromAddress(current);
-      object->IteratePointers(visitor);
-
-      // We build up a new StoreBuffer, containing all mutable heap objects
-      // pointing to the immutable space.
-      if (finder.ContainsImmutablePointer(object)) {
-        store_buffer->Insert(object);
-      }
-
-      current += object->Size();
-    }
+    chunk->Find(w, name);
   }
 }
+#endif
 
 void Space::CompleteTransformations(PointerVisitor* visitor) {
   Flush();
@@ -186,7 +163,7 @@ void Space::CompleteTransformations(PointerVisitor* visitor) {
     uword current = chunk->base();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
-      if (object->forwarding_address() != NULL) {
+      if (object->HasForwardingAddress()) {
         current += Instance::kSize;
       } else {
         object->IteratePointers(visitor);
@@ -245,6 +222,20 @@ void ObjectMemory::TearDown() {
 void Chunk::Scramble() {
   void* p = reinterpret_cast<void*>(base());
   memset(p, 0xab, limit() - base());
+}
+
+void Chunk::Find(uword word, const char* name) {
+  if (word >= base() && word < limit()) {
+    fprintf(stderr, "0x%08zx is inside the 0x%08zx-0x%08zx chunk in %s\n",
+            static_cast<size_t>(word), static_cast<size_t>(base()),
+            static_cast<size_t>(limit()), name);
+  }
+  for (uword current = base(); current < limit(); current += 4) {
+    if (*reinterpret_cast<unsigned*>(current) == (unsigned)word) {
+      fprintf(stderr, "Found 0x%08zx in %s at 0x%08zx\n",
+              static_cast<size_t>(word), name, static_cast<size_t>(current));
+    }
+  }
 }
 #endif
 
@@ -351,14 +342,13 @@ void ObjectMemory::SetSpaceForPages(uword base, uword limit, Space* space) {
   }
 }
 
-#ifdef FLETCH_MARK_SWEEP
-void Space::RebuildAfterTransformations() {
+void OldSpace::RebuildAfterTransformations() {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword free_start = 0;
     uword current = chunk->base();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
-      if (object->forwarding_address() != NULL) {
+      if (object->HasForwardingAddress()) {
         if (free_start == 0) free_start = current;
         current += Instance::kSize;
         while (HeapObject::FromAddress(current)->IsFiller()) {
@@ -374,13 +364,13 @@ void Space::RebuildAfterTransformations() {
     }
   }
 }
-#else
-void Space::RebuildAfterTransformations() {
+
+void SemiSpace::RebuildAfterTransformations() {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
-      if (object->forwarding_address() != NULL) {
+      if (object->HasForwardingAddress()) {
         for (int i = 0; i < Instance::kSize; i += kPointerSize) {
           *reinterpret_cast<Object**>(current + i) =
               StaticClassStructures::one_word_filler_class();
@@ -392,6 +382,5 @@ void Space::RebuildAfterTransformations() {
     }
   }
 }
-#endif
 
 }  // namespace fletch

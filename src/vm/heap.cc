@@ -13,30 +13,39 @@
 namespace fletch {
 
 Heap::Heap(RandomXorShift* random, int maximum_initial_size)
-    : random_(random), space_(NULL), weak_pointers_(NULL), foreign_memory_(0) {
-  space_ = new Space(maximum_initial_size);
+    : random_(random),
+      space_(new SemiSpace(maximum_initial_size)),
+      old_space_(new OldSpace(0)),
+      weak_pointers_(NULL),
+      foreign_memory_(0),
+      allocations_have_taken_place_(false) {
   AdjustAllocationBudget();
+  AdjustOldAllocationBudget();
 }
 
-Heap::Heap(Space* existing_space, WeakPointer* weak_pointers)
+Heap::Heap(SemiSpace* existing_space, WeakPointer* weak_pointers)
     : random_(NULL),
       space_(existing_space),
       weak_pointers_(weak_pointers),
-      foreign_memory_(0) {}
+      foreign_memory_(0),
+      allocations_have_taken_place_(false) {}
 
 Heap::~Heap() {
   WeakPointer::ForceCallbacks(&weak_pointers_, this);
   ASSERT(foreign_memory_ == 0);
+  delete old_space_;
   delete space_;
 }
 
 Object* Heap::Allocate(int size) {
+  allocations_have_taken_place_ = true;
   uword result = space_->Allocate(size);
   if (result == 0) return Failure::retry_after_gc(size);
   return HeapObject::FromAddress(result);
 }
 
 Object* Heap::AllocateNonFatal(int size) {
+  allocations_have_taken_place_ = true;
   uword result = space_->AllocateNonFatal(size);
   if (result == 0) return Failure::retry_after_gc(size);
   return HeapObject::FromAddress(result);
@@ -244,24 +253,33 @@ Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
 }
 
 void Heap::AllocatedForeignMemory(int size) {
+  ASSERT(foreign_memory_ >= 0);
   foreign_memory_ += size;
-  space()->DecreaseAllocationBudget(size);
+  old_space()->DecreaseAllocationBudget(size);
 }
 
 void Heap::FreedForeignMemory(int size) {
   foreign_memory_ -= size;
   ASSERT(foreign_memory_ >= 0);
-  space()->IncreaseAllocationBudget(size);
+  old_space()->IncreaseAllocationBudget(size);
 }
 
-void Heap::ReplaceSpace(Space* space) {
+void Heap::ReplaceSpace(SemiSpace* space, OldSpace* old_space) {
   delete space_;
   space_ = space;
-  AdjustAllocationBudget();
+  if (old_space != NULL) {
+    // TODO(erikcorry): Fix this heuristic.
+    // Currently the new-space GC time is dependent on the size of old space
+    // because we have no remembered set.  Therefore we have to grow the new
+    // space as the old space grows to avoid going quadratic.
+    space->SetAllocationBudget(old_space->Used() >> 3);
+  } else {
+    AdjustAllocationBudget();
+  }
 }
 
-Space* Heap::TakeSpace() {
-  Space* result = space_;
+SemiSpace* Heap::TakeSpace() {
+  SemiSpace* result = space_;
   space_ = NULL;
   return result;
 }
@@ -272,21 +290,6 @@ WeakPointer* Heap::TakeWeakPointers() {
   return weak_pointers;
 }
 
-void Heap::MergeInOtherHeap(Heap* heap) {
-  Space* other_space = heap->TakeSpace();
-  if (space_ == NULL) {
-    space_ = other_space;
-  } else {
-    space_->PrependSpace(other_space);
-  }
-
-  WeakPointer* other_weak_pointers = heap->TakeWeakPointers();
-  WeakPointer::PrependWeakPointers(&weak_pointers_, other_weak_pointers);
-
-  foreign_memory_ += heap->foreign_memory_;
-  heap->foreign_memory_ = 0;
-}
-
 void Heap::AddWeakPointer(HeapObject* object, WeakPointerCallback callback) {
   weak_pointers_ = new WeakPointer(object, callback, weak_pointers_);
 }
@@ -295,8 +298,50 @@ void Heap::RemoveWeakPointer(HeapObject* object) {
   WeakPointer::Remove(&weak_pointers_, object);
 }
 
-void Heap::ProcessWeakPointers() {
-  WeakPointer::Process(space(), &weak_pointers_, this);
+void Heap::ProcessWeakPointers(Space* space) {
+  WeakPointer::Process(space, &weak_pointers_, this);
 }
+
+#ifdef DEBUG
+void Heap::Find(uword word) {
+  space_->Find(word, "Fletch heap");
+  old_space_->Find(word, "oldspace");
+#ifdef FLETCH_TARGET_OS_LINUX
+  FILE* fp = fopen("/proc/self/maps", "r");
+  if (fp == NULL) return;
+  size_t length;
+  char* line = NULL;
+  while (getline(&line, &length, fp) > 0) {
+    char* start;
+    char* end;
+    char r, w, x, p;  // Permissions.
+    char filename[1000];
+    memset(filename, 0, 1000);
+    sscanf(line, "%p-%p %c%c%c%c %*x %*5c %*d %999c", &start, &end, &r, &w, &x,
+           &p, &(filename[0]));
+    // Don't search in mapped files.
+    if (filename[0] != 0 && filename[0] != '[') continue;
+    if (filename[0] == 0) {
+      snprintf(filename, sizeof(filename), "anonymous: %p-%p %c%c%c%c", start,
+               end, r, w, x, p);
+    } else {
+      if (filename[strlen(filename) - 1] == '\n') {
+        filename[strlen(filename) - 1] = 0;
+      }
+    }
+    // If we can't read it, skip.
+    if (r != 'r') continue;
+    for (char* current = start; current < end; current += 4) {
+      uword w = *reinterpret_cast<uword*>(current);
+      if (w == word) {
+        fprintf(stderr, "Found %p in %s at %p\n", reinterpret_cast<void*>(w),
+                filename, current);
+      }
+    }
+  }
+  fclose(fp);
+#endif  // __linux
+}
+#endif  // DEBUG
 
 }  // namespace fletch
