@@ -978,4 +978,170 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
   }
 }
 
+// Somewhat misnamed - it does a scavenge of the data area used by the
+// processes, not the code area used by the program.
+void Program::CollectNewSpace() {
+  HeapUsage usage_before;
+
+  Heap* data_heap = shared_heap()->heap();
+
+  SemiSpace* from = data_heap->space();
+  OldSpace* old = data_heap->old_space();
+
+  if (!data_heap->allocations_have_taken_place()) {
+    return;
+  }
+
+  old->Flush();
+  from->Flush();
+
+  if (Flags::print_heap_statistics) {
+    GetHeapUsage(data_heap, &usage_before);
+  }
+
+  SemiSpace* to = new SemiSpace(from->Used() / 10);
+
+  // While garbage collecting, do not fail allocations. Instead grow
+  // the to-space as needed.
+  NoAllocationFailureScope scope(to);
+  NoAllocationFailureScope scope2(old);
+
+  GenerationalScavengeVisitor visitor(from, to, old);
+  to->StartScavenge();
+  old->StartScavenge();
+
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->IterateRoots(&visitor);
+    current = current->process_list_next();
+  }
+
+  old->VisitRememberedSet(&visitor);
+
+  bool work_found = true;
+  while (work_found) {
+    work_found = to->CompleteScavengeGenerational(&visitor);
+    work_found |= old->CompleteScavengeGenerational(&visitor);
+  }
+  old->EndScavenge();
+
+  data_heap->ProcessWeakPointers(from);
+
+  current = process_list_head_;
+  while (current != NULL) {
+    current->set_ports(Port::CleanupPorts(from, current->ports()));
+    current = current->process_list_next();
+  }
+
+  // Second space argument is used to size the new-space.
+  data_heap->ReplaceSpace(to, old);
+
+  if (Flags::print_heap_statistics) {
+    HeapUsage usage_after;
+    GetHeapUsage(data_heap, &usage_after);
+    PrintProcessGCInfo(&usage_before, &usage_after);
+  }
+
+  if (old->needs_garbage_collection()) {
+    CollectSharedGarbage();
+  }
+
+  UpdateStackLimits();
+}
+
+void Program::UpdateStackLimits() {
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->UpdateStackLimit();
+    current = current->process_list_next();
+  }
+}
+
+int Program::CollectMutableGarbageAndChainStacks() {
+  // Mark all reachable objects.
+  OldSpace* old_space = shared_heap()->heap()->old_space();
+  SemiSpace* new_space = shared_heap()->heap()->space();
+  MarkingStack marking_stack;
+  ASSERT(stack_chain_ == NULL);
+  MarkingVisitor marking_visitor(new_space, old_space, &marking_stack,
+                                 &stack_chain_);
+
+  // All processes share the same heap, so we need to iterate all roots from
+  // all processes.
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->IterateRoots(&marking_visitor);
+  }
+
+  marking_stack.Process(&marking_visitor);
+
+  // Weak processing.
+  shared_heap()->heap()->ProcessWeakPointers(old_space);
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
+  }
+
+  // Flush outstanding free_list chunks into the free list. Then sweep
+  // over the heap and rebuild the freelist.
+  old_space->Flush();
+  SweepingVisitor sweeping_visitor(old_space->free_list());
+  old_space->IterateObjects(&sweeping_visitor);
+
+  // TODO(erikcorry): Find a better way to delete the mark bits on the new
+  // space.
+  SweepingVisitor new_space_sweeper(NULL);
+  new_space->IterateObjects(&new_space_sweeper);
+
+  UpdateStackLimits();
+  return marking_visitor.number_of_stacks();
+}
+
+void Program::CookStacks(int number_of_stacks) {
+  cooked_stack_deltas_ = List<List<int>>::New(number_of_stacks);
+  Object* raw_current = stack_chain_;
+  for (int i = 0; i < number_of_stacks; ++i) {
+    Stack* current = Stack::cast(raw_current);
+    int number_of_frames = 0;
+    for (Frame count_frames(current); count_frames.MovePrevious();) {
+      number_of_frames++;
+    }
+    cooked_stack_deltas_[i] = List<int>::New(number_of_frames);
+    int index = 0;
+    for (Frame frame(current); frame.MovePrevious();) {
+      Function* function = frame.FunctionFromByteCodePointer();
+      if (function == NULL) continue;
+      uint8* start = function->bytecode_address_for(0);
+      int delta = frame.ByteCodePointer() - start;
+      cooked_stack_deltas_[i][index++] = delta;
+      frame.SetByteCodePointer(reinterpret_cast<uint8*>(function));
+    }
+    raw_current = current->next();
+  }
+  ASSERT(raw_current == Smi::zero());
+}
+
+void Program::UncookAndUnchainStacks() {
+  Object* raw_current = stack_chain_;
+  for (int i = 0; i < cooked_stack_deltas_.length(); ++i) {
+    Stack* current = Stack::cast(raw_current);
+    int index = 0;
+    Frame frame(current);
+    while (frame.MovePrevious()) {
+      Object* value = reinterpret_cast<Object*>(frame.ByteCodePointer());
+      if (value == NULL) continue;
+      int delta = cooked_stack_deltas_[i][index++];
+      Function* function = Function::cast(value);
+      uint8* bcp = function->bytecode_address_for(0) + delta;
+      frame.SetByteCodePointer(bcp);
+    }
+    cooked_stack_deltas_[i].Delete();
+    raw_current = current->next();
+    current->set_next(Smi::FromWord(0));
+  }
+  ASSERT(raw_current == Smi::zero());
+  cooked_stack_deltas_.Delete();
+  stack_chain_ = NULL;
+}
+
 }  // namespace fletch
