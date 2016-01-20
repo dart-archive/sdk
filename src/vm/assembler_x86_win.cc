@@ -8,40 +8,42 @@
 #include "src/vm/assembler.h"
 
 namespace fletch {
+  static const char* kPrefix = "_";
 
-void Assembler::call(const char* name) {
-  printf("\tcall %s\n", name);
-}
+  void Assembler::call(const char* name) {
+    printf("\tcall %s%s\n", kPrefix, name);
+  }
 
-void Assembler::j(Condition condition, const char* name) {
-  const char* mnemonic = ConditionMnemonic(condition);
-  printf("\tj%s %s\n", mnemonic, name);
-}
+  void Assembler::j(Condition condition, const char* name) {
+    const char* mnemonic = ConditionMnemonic(condition);
+    printf("\tj%s %s%s\n", mnemonic, kPrefix, name);
+  }
 
-void Assembler::jmp(const char* name) {
-  printf("\tjmp %s\n", name);
-}
+  void Assembler::jmp(const char* name) {
+    printf("\tjmp %s%s\n", kPrefix, name);
+  }
 
-void Assembler::jmp(const char* name, Register index, ScaleFactor scale) {
-  Print("jmp *%s(,%rl,%d)", name, index, 1 << scale);
-}
+  void Assembler::jmp(const char* name, Register index, ScaleFactor scale) {
+    Print("jmp *%s%s(,%rl,%d)", kPrefix, name, index, 1 << scale);
+  }
 
-void Assembler::Bind(const char* prefix, const char* name) {
-  printf("\t.global %s%s\n", prefix, name);
-  printf("%s%s:\n", prefix, name);
-}
+  void Assembler::Bind(const char* prefix, const char* name) {
+    putchar('\n');
+    printf("\t.global %s%s%s\n", kPrefix, prefix, name);
+    printf("%s%s%s:\n", kPrefix, prefix, name);
+  }
 
-void Assembler::DefineLong(const char* name) {
-  printf("\t.long %s\n", name);
-}
+  void Assembler::DefineLong(const char* name) {
+    printf("\t.long %s%s\n", kPrefix, name);
+  }
 
-void Assembler::LoadNative(Register destination, Register index) {
-  Print("movl kNativeTable(,%rl,4), %rl", index, destination);
-}
+  void Assembler::LoadNative(Register destination, Register index) {
+    Print("movl %skNativeTable(,%rl,4), %rl", kPrefix, index, destination);
+  }
 
-void Assembler::LoadLabel(Register reg, const char* name) {
-  Print("leal %s, %rl", name, reg);
-}
+  void Assembler::LoadLabel(Register reg, const char* name) {
+    Print("leal %s%s, %rl", kPrefix, name, reg);
+  }
 
 }  // namespace fletch
 

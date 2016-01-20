@@ -208,11 +208,12 @@
           'ARCHS': [ 'i386' ],
         },
 
-        'yasm_flags': [
-          '-fwin32',
-          '-m', 'x86',
-          '-p', 'gas',
-        ],
+        'variables': {
+          'yasm_arch_flags': [
+            '-f', 'win32',
+            '-m', 'x86',
+          ],
+        },
       },
 
       'fletch_x64': {
@@ -237,11 +238,12 @@
           ],
         },
 
-        'yasm_flags': [
-          '-fwin64',
-          '-m', 'amd64',
-          '-p', 'gas',
-        ],
+        'variables': {
+          'yasm_arch_flags': [
+            '-f', 'win64',
+            '-m', 'amd64',
+          ],
+        },
       },
 
       'fletch_arm': {

@@ -61,12 +61,22 @@
           },
         }],
         [ 'OS=="win"', {
-        'asm_file_extension': '.asm',
+          'variables': {
+            'asm_file_extension': '.asm',
+          },
         }],
       ],
       'variables': {
+        'variables': {
+          'yasm_arch_flags%': [],
+        },
         'asm_file_extension%': '.S',
         'yasm_output_path': '<(INTERMEDIATE_DIR)',
+        'yasm_flags': [
+          '<@(yasm_arch_flags)',
+          '-p', 'gas',
+          '-r', 'raw',
+        ],
       },
       'includes': [
         '../../third_party/yasm/yasm_compile.gypi'
