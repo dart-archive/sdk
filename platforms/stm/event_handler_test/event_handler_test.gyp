@@ -123,10 +123,14 @@
       ],
       'sources': [
         # Application.
+        '<(source_path)/cmpctmalloc.c',
+        '<(source_path)/cmpctmalloc.h',
         '<(source_path)/freertos.cc',
         '<(app_source_path)/fletch_entry.cc',
         '<(source_path)/logger.cc',
         '<(source_path)/main.cc',
+        '<(source_path)/page_allocator.cc',
+        '<(source_path)/page_allocator.h',
 
         '<(source_path)/syscalls.c',
 
@@ -196,7 +200,13 @@
           #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???
           '-T../../platforms/stm/disco_fletch/generated/SW4STM32/'
-            'configuration/STM32F746NGHx_FLASH.ld'
+            'configuration/STM32F746NGHx_FLASH.ld',
+          '-Wl,--wrap=__libc_init_array',
+          '-Wl,--wrap=_malloc_r',
+          '-Wl,--wrap=_malloc_r',
+          '-Wl,--wrap=_realloc_r',
+          '-Wl,--wrap=_calloc_r',
+          '-Wl,--wrap=_free_r',
         ],
       },
       'type': 'executable',
