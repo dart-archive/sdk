@@ -411,12 +411,6 @@ void Codegen::Generate(Function* function) {
         break;
       }
 
-      case kInvokeEq:
-      case kInvokeLe:
-      case kInvokeGt:
-      case kInvokeGe:
-
-      case kInvokeSub:
       case kInvokeMod:
       case kInvokeMul:
       case kInvokeTruncDiv:
@@ -452,8 +446,57 @@ void Codegen::Generate(Function* function) {
         break;
       }
 
+      case kInvokeSub: {
+        int selector = Utils::ReadInt32(bcp + 1);
+        int offset = Selector::IdField::decode(selector);
+        ASSERT(sub_offset_ == -1 || sub_offset_ == offset);
+        sub_offset_ = offset;
+        DoInvokeSub();
+        break;
+      }
+
+      case kInvokeEq: {
+        int selector = Utils::ReadInt32(bcp + 1);
+        int offset = Selector::IdField::decode(selector);
+        ASSERT(eq_offset_ == -1 || eq_offset_ == offset);
+        eq_offset_ = offset;
+        DoInvokeCompare(EQUAL, "InvokeEq");
+        break;
+      }
+
+      case kInvokeGe: {
+        int selector = Utils::ReadInt32(bcp + 1);
+        int offset = Selector::IdField::decode(selector);
+        ASSERT(ge_offset_ == -1 || ge_offset_ == offset);
+        ge_offset_ = offset;
+        DoInvokeCompare(GREATER_EQUAL, "InvokeGe");
+        break;
+      }
+
+      case kInvokeGt: {
+        int selector = Utils::ReadInt32(bcp + 1);
+        int offset = Selector::IdField::decode(selector);
+        ASSERT(gt_offset_ == -1 || gt_offset_ == offset);
+        gt_offset_ = offset;
+        DoInvokeCompare(GREATER, "InvokeGt");
+        break;
+      }
+
+      case kInvokeLe: {
+        int selector = Utils::ReadInt32(bcp + 1);
+        int offset = Selector::IdField::decode(selector);
+        ASSERT(le_offset_ == -1 || le_offset_ == offset);
+        le_offset_ = offset;
+        DoInvokeCompare(LESS_EQUAL, "InvokeLe");
+        break;
+      }
+
       case kInvokeLt: {
-        DoInvokeLt();
+        int selector = Utils::ReadInt32(bcp + 1);
+        int offset = Selector::IdField::decode(selector);
+        ASSERT(lt_offset_ == -1 || lt_offset_ == offset);
+        lt_offset_ = offset;
+        DoInvokeCompare(LESS, "InvokeLt");
         break;
       }
 

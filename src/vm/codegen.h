@@ -18,7 +18,13 @@ class Codegen {
       : program_(program),
         function_(NULL),
         assembler_(assembler),
-        add_offset_(-1) {
+        add_offset_(-1),
+        sub_offset_(-1),
+        eq_offset_(-1),
+        ge_offset_(-1),
+        gt_offset_(-1),
+        le_offset_(-1),
+        lt_offset_(-1) {
   }
 
   void Generate(Function* function);
@@ -39,6 +45,12 @@ class Codegen {
   Assembler* const assembler_;
 
   int add_offset_;
+  int sub_offset_;
+  int eq_offset_;
+  int ge_offset_;
+  int gt_offset_;
+  int le_offset_;
+  int lt_offset_;
 
   enum BranchCondition {
     BRANCH_ALWAYS,
@@ -75,7 +87,9 @@ class Codegen {
   void DoInvokeTest(int offset);
 
   void DoInvokeAdd();
-  void DoInvokeLt();
+  void DoInvokeSub();
+
+  void DoInvokeCompare(Condition condition, const char* suffix);
 
   void DoInvokeNative(Native native, int arity);
 

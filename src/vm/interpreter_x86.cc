@@ -1761,7 +1761,7 @@ void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
     __ testl(EBX, EBX);
 
     __ LoadLabel(ECX, "InterpreterMethodEntry");
-    __ cmove(EBX, ECX);
+    __ cmov(EQUAL, EBX, ECX);
   }
 
   if (test) {

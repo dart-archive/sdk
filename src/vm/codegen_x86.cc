@@ -59,6 +59,54 @@ void Codegen::GenerateHelpers() {
     __ jmp("InvokeMethod");
   }
 
+  if (sub_offset_ >= 0) {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeSub", 4);
+    __ movl(EAX, Address(ESP, 2 * kWordSize));
+    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(sub_offset_))));
+    __ jmp("InvokeMethod");
+  }
+
+  if (eq_offset_ >= 0) {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeEq", 4);
+    __ movl(EAX, Address(ESP, 2 * kWordSize));
+    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(eq_offset_))));
+    __ jmp("InvokeMethod");
+  }
+
+  if (ge_offset_ >= 0) {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeGe", 4);
+    __ movl(EAX, Address(ESP, 2 * kWordSize));
+    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(ge_offset_))));
+    __ jmp("InvokeMethod");
+  }
+
+  if (gt_offset_ >= 0) {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeGt", 4);
+    __ movl(EAX, Address(ESP, 2 * kWordSize));
+    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(gt_offset_))));
+    __ jmp("InvokeMethod");
+  }
+
+  if (le_offset_ >= 0) {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeLe", 4);
+    __ movl(EAX, Address(ESP, 2 * kWordSize));
+    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(le_offset_))));
+    __ jmp("InvokeMethod");
+  }
+
+  if (lt_offset_ >= 0) {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeLt", 4);
+    __ movl(EAX, Address(ESP, 2 * kWordSize));
+    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(lt_offset_))));
+    __ jmp("InvokeMethod");
+  }
+
   printf("\n");
   __ BindWithPowerOfTwoAlignment("CollectGarbage", 4);
   DoSaveState();
@@ -262,10 +310,10 @@ void Codegen::DoInvokeAdd() {
   __ popl(EAX);
 }
 
-void Codegen::DoInvokeLt() {
+void Codegen::DoInvokeSub() {
   Label done, slow;
+  __ movl(EDX, Address(ESP, 0 * kWordSize));
   __ movl(EAX, Address(ESP, 1 * kWordSize));
-  __ popl(EDX);
 
   __ testl(EAX, Immediate(Smi::kTagSize));
   __ j(NOT_ZERO, &slow);
@@ -273,18 +321,41 @@ void Codegen::DoInvokeLt() {
   __ testl(EDX, Immediate(Smi::kTagSize));
   __ j(NOT_ZERO, &slow);
 
-  __ cmpl(EAX, EDX);
-  printf("\tmovl $O%08x + 1, %%eax\n", program_->true_object()->address());
-  __ j(LESS, &done);
+  __ subl(EAX, EDX);
+  __ j(NO_OVERFLOW, &done);
 
+  __ Bind(&slow);
+  printf("\tcall InvokeSub\n");
+
+  __ Bind(&done);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ popl(EAX);
+}
+
+void Codegen::DoInvokeCompare(Condition condition, const char* bailout) {
+  Label done, slow;
+  __ movl(EBX, Address(ESP, 1 * kWordSize));
+  __ movl(EDX, Address(ESP, 0 * kWordSize));
+
+  __ testl(EBX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, &slow);
+
+  __ testl(EDX, Immediate(Smi::kTagSize));
+  __ j(NOT_ZERO, &slow);
+
+  __ cmpl(EBX, EDX);
   printf("\tmovl $O%08x + 1, %%eax\n", program_->false_object()->address());
+  printf("\tmovl $O%08x + 1, %%ecx\n", program_->true_object()->address());
+  __ cmov(condition, EAX, ECX);
+
   __ jmp(&done);
 
   __ Bind(&slow);
-  printf("\tcall InvokeLt\n");
+  printf("\tcall %s\n", bailout);
 
   __ Bind(&done);
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ popl(EAX);
 }
 
 void Codegen::DoInvokeNative(Native native, int arity) {

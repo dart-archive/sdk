@@ -20,6 +20,11 @@ void Assembler::j(Condition condition, Label* label) {
   printf("\tj%s %s%d\n", mnemonic, kLocalLabelPrefix, label->position());
 }
 
+void Assembler::cmov(Condition condition, Register dst, Register src) {
+  const char* mnemonic = ConditionMnemonic(condition);
+  Print("cmov%sl %rl, %rl", mnemonic, src, dst);
+}
+
 void Assembler::jmp(Label* label) {
   printf("\tjmp %s%d\n", kLocalLabelPrefix, label->position());
 }
