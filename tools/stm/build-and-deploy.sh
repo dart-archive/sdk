@@ -62,13 +62,6 @@ echo "Converting snapshot to object file"
 $OBJCOPY -I binary -O elf32-littlearm -B arm snapshot snapshot.o
 
 echo "Linking application"
-# Linker options required with https://codereview.chromium.org/1607793003/.
-#-Wl,--wrap=__libc_init_array \
-#-Wl,--wrap=_malloc_r \
-#-Wl,--wrap=_malloc_r \
-#-Wl,--wrap=_realloc_r \
-#-Wl,--wrap=_calloc_r \
-#-Wl,--wrap=_free_r \
 $CC \
 -specs=nano.specs \
 -Tplatforms/stm/disco_fletch/generated/SW4STM32/configuration/STM32F746NGHx_FLASH.ld \
@@ -80,6 +73,12 @@ $CC \
 -mfpu=fpv5-sp-d16 \
 -Wl,-Map=output.map \
 -Wl,--gc-sections \
+-Wl,--wrap=__libc_init_array \
+-Wl,--wrap=_malloc_r \
+-Wl,--wrap=_malloc_r \
+-Wl,--wrap=_realloc_r \
+-Wl,--wrap=_calloc_r \
+-Wl,--wrap=_free_r \
 -o disco_fletch.elf \
 -Wl,--start-group \
 snapshot.o \
