@@ -303,11 +303,17 @@ class Assembler {
   // Align what follows to a 2^power address.
   void AlignToPowerOfTwo(int power);
 
+  static const char* ConditionMnemonic(Condition condition);
+  static Condition InvertCondition(Condition condition);
+
  private:
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
 
   static const char* ConditionMnemonic(Condition condition);
+
+  static const char* ComputeDirectionForLinking(Label* label);
+  static int NewLabelPosition();
 
   // Helper functions for wrapping operand types before passing them
   // through the va_args processing of Print(format, ...). The values

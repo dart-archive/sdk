@@ -237,6 +237,30 @@ void Codegen::Generate(Function* function) {
 
   DoSetupFrame();
 
+  HashMap<word, int> labels;
+  {
+    int bci = 0;
+    while (bci < function_->bytecode_size()) {
+      uint8* bcp = function_->bytecode_address_for(bci);
+      Opcode opcode = static_cast<Opcode>(*bcp);
+      switch (opcode) {
+        case kBranchWide: labels[bci + Utils::ReadInt32(bcp + 1)]++; break;
+        case kBranchIfTrueWide: labels[bci + Utils::ReadInt32(bcp + 1)]++; break;
+        case kBranchIfFalseWide: labels[bci + Utils::ReadInt32(bcp + 1)]++; break;
+        case kBranchBack: labels[bci - *(bcp + 1)]++; break;
+        case kBranchBackIfTrue: labels[bci - *(bcp + 1)]++; break;
+        case kBranchBackIfFalse: labels[bci - *(bcp + 1)]++; break;
+        case kBranchBackWide: labels[bci - Utils::ReadInt32(bcp + 1)]++; break;
+        case kBranchBackIfTrueWide: labels[bci - Utils::ReadInt32(bcp + 1)]++; break;
+        case kBranchBackIfFalseWide: labels[bci - Utils::ReadInt32(bcp + 1)]++; break;
+        case kPopAndBranchWide: labels[bci + Utils::ReadInt32(bcp + 2)]++; break;
+        case kPopAndBranchBackWide: labels[bci - Utils::ReadInt32(bcp + 2)]++; break;
+        default: break;
+      }
+      bci += Bytecode::Size(opcode);
+    }
+  }
+
   int bci = 0;
   while (bci < function_->bytecode_size()) {
     uint8* bcp = function_->bytecode_address_for(bci);
@@ -246,7 +270,11 @@ void Codegen::Generate(Function* function) {
       return;
     }
 
-    printf("%u: // ", reinterpret_cast<uint32>(bcp));
+    if (bci == 0 || labels[bci] > 0) {
+      Materialize();
+      printf("%u: ", reinterpret_cast<uint32>(bcp));
+    }
+    printf("// ");
     Bytecode::Print(bcp);
     printf("\n");
 

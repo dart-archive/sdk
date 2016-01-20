@@ -196,6 +196,26 @@ const char* Assembler::ConditionMnemonic(Condition condition) {
   return kConditionMnemonics[condition];
 }
 
+Condition Assembler::InvertCondition(Condition condition) {
+  int value = static_cast<int>(condition);
+  if ((value & 1) == 0) {
+    value++;
+  } else {
+    value--;
+  }
+  return static_cast<Condition>(value);
+}
+
+const char* Assembler::ComputeDirectionForLinking(Label* label) {
+  if (label->IsUnused()) label->LinkTo(NewLabelPosition());
+  return label->IsBound() ? "b" : "f";
+}
+
+int Assembler::NewLabelPosition() {
+  static int labels = 0;
+  return labels++;
+}
+
 }  // namespace fletch
 
 #endif  // defined FLETCH_TARGET_IA32

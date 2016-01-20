@@ -24,7 +24,8 @@ class Codegen {
         ge_offset_(-1),
         gt_offset_(-1),
         le_offset_(-1),
-        lt_offset_(-1) {
+        lt_offset_(-1),
+        cc_(kMaterialized) {
   }
 
   void Generate(Function* function);
@@ -40,6 +41,8 @@ class Codegen {
   void DoRestoreState();
 
  private:
+  static const Condition kMaterialized = static_cast<Condition>(-1);
+
   Program* const program_;
   Function* function_;
   Assembler* const assembler_;
@@ -51,6 +54,8 @@ class Codegen {
   int gt_offset_;
   int le_offset_;
   int lt_offset_;
+
+  Condition cc_;
 
   enum BranchCondition {
     BRANCH_ALWAYS,
@@ -112,6 +117,8 @@ class Codegen {
   void DoIntrinsicListLength();
   void DoIntrinsicListIndexGet();
   void DoIntrinsicListIndexSet();
+
+  void Materialize();
 };
 
 }  // namespace fletch
