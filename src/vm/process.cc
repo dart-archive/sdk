@@ -335,46 +335,6 @@ Object* Process::NewStack(int length) {
   return result;
 }
 
-struct HeapUsage {
-  uint64 timestamp = 0;
-  uword process_used = 0;
-  uword process_size = 0;
-  uword immutable_used = 0;
-  uword immutable_size = 0;
-  uword program_used = 0;
-  uword program_size = 0;
-
-  uword TotalUsed() { return process_used + immutable_used + program_used; }
-  uword TotalSize() { return process_used + immutable_size + program_size; }
-};
-
-static void GetHeapUsage(Heap* heap, HeapUsage* heap_usage) {
-  heap_usage->timestamp = Platform::GetMicroseconds();
-  heap_usage->process_used = heap->space()->Used();
-  heap_usage->process_size = heap->space()->Size();
-  heap_usage->program_used = heap->old_space()->Used();
-  heap_usage->program_size = heap->old_space()->Size();
-}
-
-void PrintProcessGCInfo(HeapUsage* before, HeapUsage* after) {
-  static int count = 0;
-  if ((count & 0xF) == 0) {
-    Print::Error(
-        "New-space-GC,\t\tElapsed, "
-        "\tNew-space use/sizeu,"
-        "\t\tOld-space use/size\n");
-  }
-  Print::Error(
-      "New-space-GC(%i): "
-      "\t%lli us,   "
-      "\t%lu/%lu -> %lu/%lu,   "
-      "\t%lu/%lu -> %lu/%lu\n",
-      count++, after->timestamp - before->timestamp, before->process_used,
-      before->process_size, after->process_used, after->process_size,
-      before->program_used, before->program_size, after->program_used,
-      after->program_size);
-}
-
 void Process::ValidateHeaps(SharedHeap* shared_heap) {
   ProcessHeapValidatorVisitor v(program()->heap(), shared_heap);
   v.VisitProcess(this);
