@@ -237,14 +237,14 @@ void Codegen::DoInvokeNative(Native native, int arity) {
   __ Bind(&retry);
 
   // Compute the address for the first argument (we skip two empty slots).
-  __ leal(EBX, Address(ESP, (arity + 2) * kWordSize));
+  __ leal(ECX, Address(ESP, (arity + 2) * kWordSize));
 
   __ movl(EBX, ESP);
   __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
   __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
 
   __ movl(Address(ESP, 0 * kWordSize), EDI);
-  __ movl(Address(ESP, 1 * kWordSize), EBX);
+  __ movl(Address(ESP, 1 * kWordSize), ECX);
 
   printf("\tcall %s\n", kNativeNames[native]);
 
