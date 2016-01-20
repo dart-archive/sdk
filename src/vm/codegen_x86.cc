@@ -34,6 +34,7 @@ void Codegen::DoEntry() {
   __ pushl(EBP);
   __ movl(EBP, ESP);
   __ pushl(Immediate(0));
+  DoStackOverflowCheck(0);
 }
 
 void Codegen::DoLoadLocal(int index) {
@@ -495,6 +496,20 @@ void Codegen::DoRestoreState() {
 
   // Read frame pointer.
   __ popl(EBP);
+}
+
+void Codegen::DoStackOverflowCheck(int size) {
+  __ movl(EBX, Address(EDI, Process::kStackLimitOffset));
+  __ cmpl(ESP, EBX);
+  if (size == 0) {
+    __ j(BELOW_EQUAL, "StackOverflow");
+  } else {
+    Label done;
+    __ j(BELOW, &done);
+    __ movl(EAX, Immediate(size));
+    __ jmp("StackOverflow");
+    __ Bind(&done);
+  }
 }
 
 }  // namespace fletch

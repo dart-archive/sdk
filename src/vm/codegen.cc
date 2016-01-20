@@ -243,6 +243,10 @@ static int Main(int argc, char** argv) {
   __ call("HandleGC");
   codegen.DoRestoreState();
   __ ret();
+
+  printf("\n");
+  __ BindWithPowerOfTwoAlignment("StackOverflow", 4);
+  __ int3();
 #undef __
 
   DumpProgram(program);
@@ -381,31 +385,37 @@ void Codegen::Generate() {
       }
 
       case kBranchBack: {
+        DoStackOverflowCheck(0);
         DoBranch(BRANCH_ALWAYS, bci, bci - *(bcp + 1));
         break;
       }
 
       case kBranchBackIfTrue: {
+        DoStackOverflowCheck(0);
         DoBranch(BRANCH_IF_TRUE, bci, bci - *(bcp + 1));
         break;
       }
 
       case kBranchBackIfFalse: {
+        DoStackOverflowCheck(0);
         DoBranch(BRANCH_IF_FALSE, bci, bci - *(bcp + 1));
         break;
       }
 
       case kBranchBackWide: {
+        DoStackOverflowCheck(0);
         DoBranch(BRANCH_ALWAYS, bci, bci - Utils::ReadInt32(bcp + 1));
         break;
       }
 
       case kBranchBackIfTrueWide: {
+        DoStackOverflowCheck(0);
         DoBranch(BRANCH_IF_TRUE, bci, bci - Utils::ReadInt32(bcp + 1));
         break;
       }
 
       case kBranchBackIfFalseWide: {
+        DoStackOverflowCheck(0);
         DoBranch(BRANCH_IF_FALSE, bci, bci - Utils::ReadInt32(bcp + 1));
         break;
       }
@@ -417,6 +427,7 @@ void Codegen::Generate() {
       }
 
       case kPopAndBranchBackWide: {
+        DoStackOverflowCheck(0);
         DoDrop(*(bcp + 1));
         DoBranch(BRANCH_ALWAYS, bci, bci - Utils::ReadInt32(bcp + 2));
         break;

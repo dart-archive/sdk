@@ -86,6 +86,8 @@ class Codegen {
   void DoDrop(int n);
 
   void DoReturn();
+
+  void DoStackOverflowCheck(int size);
 };
 
 }  // namespace fletch
