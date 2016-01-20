@@ -160,10 +160,7 @@ void GCThread::MainLoop() {
     }
 
     if (shared_heap_to_gc != NULL) {
-      Scheduler* scheduler = shared_heap_to_gc->scheduler();
-      if (scheduler != NULL) scheduler->StopProgram(shared_heap_to_gc);
       shared_heap_to_gc->CollectSharedGarbage();
-      if (scheduler != NULL) scheduler->ResumeProgram(shared_heap_to_gc);
 
       int count = 0;
       {
@@ -176,10 +173,7 @@ void GCThread::MainLoop() {
     }
 
     if (program_to_gc != NULL) {
-      Scheduler* scheduler = program_to_gc->scheduler();
-      if (scheduler != NULL) scheduler->StopProgram(program_to_gc);
       program_to_gc->CollectGarbage();
-      if (scheduler != NULL) scheduler->ResumeProgram(program_to_gc);
 
       int count = 0;
       {

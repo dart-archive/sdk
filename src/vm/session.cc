@@ -22,15 +22,12 @@
 #include "src/vm/snapshot.h"
 #include "src/vm/thread.h"
 
-#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)            \
-  Object* var = (exp);                                          \
-  if (var->IsRetryAfterGCFailure()) {                           \
-    Scheduler* scheduler = program()->scheduler();              \
-    if (scheduler != NULL) scheduler->StopProgram(program());   \
-    program()->CollectGarbage();                                \
-    if (scheduler != NULL) scheduler->ResumeProgram(program()); \
-    var = (exp);                                                \
-    ASSERT(!var->IsFailure());                                  \
+#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp) \
+  Object* var = (exp);                               \
+  if (var->IsRetryAfterGCFailure()) {                \
+    program()->CollectGarbage();                     \
+    var = (exp);                                     \
+    ASSERT(!var->IsFailure());                       \
   }
 
 namespace fletch {
@@ -550,10 +547,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kCollectGarbage: {
-        Scheduler* scheduler = program()->scheduler();
-        if (scheduler != NULL) scheduler->StopProgram(program());
         program()->CollectGarbage();
-        if (scheduler != NULL) scheduler->ResumeProgram(program());
         break;
       }
 

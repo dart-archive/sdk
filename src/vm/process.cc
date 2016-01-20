@@ -427,7 +427,7 @@ void Process::CollectMutableGarbage() {
 #else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
 
 void Process::CollectMutableGarbage() {
-  program()->CollectSharedGarbage();
+  program()->CollectSharedGarbage(true);
   UpdateStackLimit();
 }
 
