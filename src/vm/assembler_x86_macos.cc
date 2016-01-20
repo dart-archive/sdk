@@ -9,7 +9,7 @@
 
 namespace fletch {
 
-static const char* kLocalLabelPrefix = "L";
+const char* kLocalLabelPrefix = "L";
 
 #if defined(FLETCH_TARGET_ANDROID)
 static const char* kPrefix = "";

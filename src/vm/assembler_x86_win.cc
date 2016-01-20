@@ -8,7 +8,8 @@
 #include "src/vm/assembler.h"
 
 namespace fletch {
-static const char* kLocalLabelPrefix = "L";
+
+const char* kLocalLabelPrefix = "L";
 
 static const char* kPrefix = "_";
 
