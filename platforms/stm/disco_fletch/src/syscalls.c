@@ -31,7 +31,7 @@ void* _sbrk(int incr) {
   // get system memory). The cmpctmalloc C-heap implementation we use
   // does not use _sbrk (uses the page allocator) to get system memory.
   // So we don't expect any calls to _sbrk at the moment.
-  UNREACHABLE();
+  for (;;) {}
 }
 
 int _gettimeofday (struct timeval * tp, struct timezone * tzp) {
