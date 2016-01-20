@@ -677,6 +677,7 @@ class PersistentFletchDaemon(object):
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
+       # TODO(kustermann): Issue(396): Remove this --enable-dumpcore flag again.
        '--enable-dumpcore',
        '--packages=%s' % os.path.abspath('pkg/fletchc/.packages'),
        '-Dfletch.version=%s' % version,
@@ -689,11 +690,13 @@ class PersistentFletchDaemon(object):
       # down in response to a signal, the persistent process will kill its
       # process group to ensure that any processes it has spawned also exit. If
       # we don't use a new process group, that will also kill this process.
-      preexec_fn=os.setsid,
-      # We change the current directory of the persistent process to ensure
-      # that we read files relative to the C++ client's current directory, not
-      # the persistent process'.
-      cwd='/')
+      preexec_fn=os.setsid
+      # TODO(kustermann): Issue(396): Make the cwd=/ again.
+      ## We change the current directory of the persistent process to ensure
+      ## that we read files relative to the C++ client's current directory, not
+      ## the persistent process'.
+      #, cwd='/')
+      )
 
     while not self._log_file.tell():
       # We're waiting for the persistent process to write a line on stdout. It
