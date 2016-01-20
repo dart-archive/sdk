@@ -38,7 +38,7 @@ DEBUG_LOG=".debug.log"
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
 FLETCH_REGEXP = (r'fletch-'
-                 r'(?P<system>linux|mac|win|lk)'
+                 r'(?P<system>linux|mac|win|lk|free-rtos)'
                  r'(?P<partial_configuration>'
                    r'-(?P<mode>debug|release)'
                    r'(?P<asan>-asan)?'
@@ -103,6 +103,10 @@ def Main():
 
         if system == 'lk':
           StepsLK(debug_log)
+          return
+
+        if system == 'free-rtos':
+          StepsFreeRtos(debug_log)
           return
 
         modes = ['debug', 'release']
@@ -409,6 +413,29 @@ def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
               debug_log=debug_log)
 
         RunWithCoreDumpArchiving(run, build_dir, build_conf)
+
+def StepsFreeRtos(debug_log):
+  StepGyp()
+
+  # We need the fletch daemon process to compile snapshots.
+  host_configuration = GetBuildConfigurations(
+      system=utils.GuessOS(),
+      modes=['release'],
+      archs=['x64'],
+      asans=[False],
+      embedded_libs=[False],
+      use_sdks=[False])[0]
+  StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
+
+  configuration = GetBuildConfigurations(
+      system=utils.GuessOS(),
+      modes=['debug'],
+      archs=['STM'],
+      asans=[False],
+      embedded_libs=[False],
+      use_sdks=[False])[0]
+  StepBuild(configuration['build_conf'], configuration['build_dir'])
+
 
 def StepsLK(debug_log):
   # We need the fletch daemon process to compile snapshots.

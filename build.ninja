@@ -143,4 +143,4 @@ build stm: phony$
     out/DebugSTM/build.ninja $
     out/ReleaseSTM/build.ninja $
 
-default gyp
+default gyp stm
