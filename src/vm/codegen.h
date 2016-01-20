@@ -14,14 +14,16 @@ namespace fletch {
 
 class Codegen {
  public:
-  Codegen(Program* program, Function* function, Assembler* assembler)
+  Codegen(Program* program, Assembler* assembler)
       : program_(program),
-        function_(function),
+        function_(NULL),
         assembler_(assembler),
         add_offset_(-1) {
   }
 
-  void Generate();
+  void Generate(Function* function);
+
+  void GenerateHelpers();
 
   int UpdateAddOffset(int original) {
     return add_offset_ >= 0 ? add_offset_ : original;
@@ -33,7 +35,7 @@ class Codegen {
 
  private:
   Program* const program_;
-  Function* const function_;
+  Function* function_;
   Assembler* const assembler_;
 
   int add_offset_;

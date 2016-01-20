@@ -153,25 +153,17 @@ void DumpProgram(Program* program) {
 
 class CodegenVisitor : public HeapObjectVisitor {
  public:
-  CodegenVisitor(Program* program, Assembler* assembler)
-      : program_(program), assembler_(assembler), add_offset_(-1) { }
+  CodegenVisitor(Codegen* codegen) : codegen_(codegen) { }
 
   virtual int Visit(HeapObject* object) {
     if (object->IsFunction()) {
-      Codegen codegen(program_, Function::cast(object), assembler_);
-      codegen.Generate();
-      add_offset_ = codegen.UpdateAddOffset(add_offset_);
+      codegen_->Generate(Function::cast(object));
     }
     return object->Size();
   }
 
-  int add_offset() const { return add_offset_; }
-
  private:
-  Program* const program_;
-  Assembler* const assembler_;
-
-  int add_offset_;
+  Codegen* const codegen_;
 };
 
 static int Main(int argc, char** argv) {
@@ -194,60 +186,10 @@ static int Main(int argc, char** argv) {
 
   Assembler assembler;
   Program* program = reinterpret_cast<Program*>(api_program);
-  CodegenVisitor visitor(program, &assembler);
+  Codegen codegen(program, &assembler);
+  CodegenVisitor visitor(&codegen);
   program->heap()->IterateObjects(&visitor);
-
-#define __ assembler.
-  __ BindWithPowerOfTwoAlignment("program_entry", 4);
-  printf("\tjmp %ub\n", reinterpret_cast<uint32>(program->entry()->bytecode_address_for(0)));
-
-  printf("\n");
-  __ BindWithPowerOfTwoAlignment("InvokeMethod", 4);
-  Label done;
-  __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program->smi_class()->id()))));
-  __ testl(EAX, Immediate(Smi::kTagMask));
-  __ j(ZERO, &done);
-
-  // TODO(kasperl): Use class id in objects? Less indirection.
-  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
-  __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
-  __ Bind(&done);
-
-  __ addl(ECX, EDX);
-
-  printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
-      program->dispatch_table()->address(),
-      Array::kSize);
-
-  Label nsm;
-  __ cmpl(EDX, Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
-  __ j(NOT_EQUAL, &nsm);
-  __ jmp(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
-
-  __ Bind(&nsm);
-  __ int3();
-
-  if (visitor.add_offset() >= 0) {
-    printf("\n");
-    __ BindWithPowerOfTwoAlignment("InvokeAdd", 4);
-    __ movl(EAX, Address(ESP, 2 * kWordSize));
-    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(visitor.add_offset()))));
-    __ jmp("InvokeMethod");
-  }
-
-  printf("\n");
-  __ BindWithPowerOfTwoAlignment("CollectGarbage", 4);
-  Codegen codegen(program, NULL, &assembler);
-  codegen.DoSaveState();
-  __ movl(Address(ESP, 0 * kWordSize), EDI);
-  __ call("HandleGC");
-  codegen.DoRestoreState();
-  __ ret();
-
-  printf("\n");
-  __ BindWithPowerOfTwoAlignment("StackOverflow", 4);
-  __ int3();
-#undef __
+  codegen.GenerateHelpers();
 
   DumpProgram(program);
 
@@ -256,7 +198,8 @@ static int Main(int argc, char** argv) {
   return 0;
 }
 
-void Codegen::Generate() {
+void Codegen::Generate(Function* function) {
+  function_ = function;
   DoEntry();
 
   IntrinsicsTable* intrinsics = IntrinsicsTable::GetDefault();

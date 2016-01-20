@@ -20,6 +20,58 @@ const char* kNativeNames[] = {
 #undef N
 };
 
+
+void Codegen::GenerateHelpers() {
+  __ BindWithPowerOfTwoAlignment("program_entry", 4);
+  printf("\tjmp %ub\n", reinterpret_cast<uint32>(program()->entry()->bytecode_address_for(0)));
+
+  printf("\n");
+  __ BindWithPowerOfTwoAlignment("InvokeMethod", 4);
+  Label done;
+  __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
+  __ testl(EAX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &done);
+
+  // TODO(kasperl): Use class id in objects? Less indirection.
+  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
+  __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
+  __ Bind(&done);
+
+  __ addl(ECX, EDX);
+
+  printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
+      program()->dispatch_table()->address(),
+      Array::kSize);
+
+  Label nsm;
+  __ cmpl(EDX, Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
+  __ j(NOT_EQUAL, &nsm);
+  __ jmp(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
+
+  __ Bind(&nsm);
+  __ int3();
+
+  if (add_offset_ >= 0) {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeAdd", 4);
+    __ movl(EAX, Address(ESP, 2 * kWordSize));
+    __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(add_offset_))));
+    __ jmp("InvokeMethod");
+  }
+
+  printf("\n");
+  __ BindWithPowerOfTwoAlignment("CollectGarbage", 4);
+  DoSaveState();
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ call("HandleGC");
+  DoRestoreState();
+  __ ret();
+
+  printf("\n");
+  __ BindWithPowerOfTwoAlignment("StackOverflow", 4);
+  __ int3();
+}
+
 void Codegen::DoEntry() {
   char name[256];
   sprintf(name, "%08x", function_);
