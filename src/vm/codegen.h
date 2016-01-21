@@ -28,7 +28,8 @@ class Codegen {
         gt_offset_(-1),
         le_offset_(-1),
         lt_offset_(-1),
-        cc_(kMaterialized) {
+        cc_(kMaterialized),
+        top_in_eax_(false) {
   }
 
   void Generate(Function* function);
@@ -61,6 +62,7 @@ class Codegen {
   int lt_offset_;
 
   Condition cc_;
+  bool top_in_eax_;
 
   enum BranchCondition {
     BRANCH_ALWAYS,
@@ -128,6 +130,8 @@ class Codegen {
   bool DoDirectInvokeMethod(int this_index, Class* klass, int selector);
 
   void Materialize();
+  void MaterializeTop();
+  void MaterializeCondition();
 };
 
 }  // namespace fletch

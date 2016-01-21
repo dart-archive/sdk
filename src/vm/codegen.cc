@@ -631,7 +631,7 @@ void Codegen::Generate(Function* function) {
       }
 
       case kIdentical: {
-        DoIdenticalNonNumeric();
+        DoIdentical();
         break;
       }
 

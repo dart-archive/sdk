@@ -123,6 +123,123 @@ void Codegen::GenerateHelpers() {
   printf("\n");
   __ BindWithPowerOfTwoAlignment("Throw", 4);
   __ int3();
+
+  printf("\n");
+  __ BindWithPowerOfTwoAlignment("NativeFailure", 4);
+  __ movl(EBX, ESP);
+  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ call("HandleObjectFromFailure");
+  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
+  __ movl(ESP, EBX);
+  __ ret();
+
+  {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("Identical", 4);
+    // TODO(ager): For now we bail out if we have two doubles or two
+    // large integers and let the slow interpreter deal with it. These
+    // cases could be dealt with directly here instead.
+    Label fast_case;
+    Label bail_out;
+
+    // If either is a smi they are not both doubles or large integers.
+    __ testl(EAX, Immediate(Smi::kTagMask));
+    __ j(ZERO, &fast_case);
+    __ testl(EBX, Immediate(Smi::kTagMask));
+    __ j(ZERO, &fast_case);
+
+    // If they do not have the same type they are not both double or
+    // large integers.
+    __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
+    __ movl(ECX, Address(ECX, Class::kInstanceFormatOffset - HeapObject::kTag));
+    __ movl(EDX, Address(EBX, HeapObject::kClassOffset - HeapObject::kTag));
+    __ cmpl(ECX, Address(EDX, Class::kInstanceFormatOffset - HeapObject::kTag));
+    __ j(NOT_EQUAL, &fast_case);
+
+    int double_type = InstanceFormat::DOUBLE_TYPE;
+    int large_integer_type = InstanceFormat::LARGE_INTEGER_TYPE;
+    int type_field_shift = InstanceFormat::TypeField::shift();
+
+    __ andl(ECX, Immediate(InstanceFormat::TypeField::mask()));
+    __ cmpl(ECX, Immediate(double_type << type_field_shift));
+    __ j(EQUAL, &bail_out);
+    __ cmpl(ECX, Immediate(large_integer_type << type_field_shift));
+    __ j(EQUAL, &bail_out);
+
+    __ Bind(&fast_case);
+
+    Label true_case, done;
+    __ cmpl(EBX, EAX);
+    __ j(EQUAL, &true_case);
+
+    Object* root = *reinterpret_cast<Object**>(
+        reinterpret_cast<uint8*>(program_) + Program::kFalseObjectOffset);
+    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
+    __ jmp(&done);
+
+    __ Bind(&true_case);
+    root = *reinterpret_cast<Object**>(
+        reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
+    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
+    __ jmp(&done);
+
+
+    __ Bind(&bail_out);
+    __ movl(EBX, ESP);
+    __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
+    __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+
+    __ movl(Address(ESP, 0 * kWordSize), EDI);
+    __ movl(Address(ESP, 1 * kWordSize), EBX);
+    __ movl(Address(ESP, 2 * kWordSize), EAX);
+    __ call("HandleIdentical");
+
+    __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
+    __ movl(ESP, EBX);
+
+    __ Bind(&done);
+    __ ret();
+  }
+
+  {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("InvokeTest", 4);
+
+    Label done;
+    __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
+    __ testl(EAX, Immediate(Smi::kTagMask));
+    __ j(ZERO, &done);
+
+    // TODO(kasperl): Use class id in objects? Less indirection.
+    __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
+    __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
+    __ Bind(&done);
+
+    __ addl(ECX, EDX);
+
+    printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
+           program()->dispatch_table()->address(),
+           Array::kSize);
+
+    Label nsm, end;
+    __ cmpl(EDX, Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
+    __ j(NOT_EQUAL, &nsm);
+    Object* root = *reinterpret_cast<Object**>(
+        reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
+    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
+    __ jmp(&end);
+
+    __ Bind(&nsm);
+    root = *reinterpret_cast<Object**>(
+        reinterpret_cast<uint8*>(program_) + Program::kFalseObjectOffset);
+    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
+
+    __ Bind(&end);
+    __ ret();
+  }
 }
 
 void Codegen::DoEntry() {
@@ -144,24 +261,31 @@ void Codegen::DoSetupFrame() {
   DoStackOverflowCheck(0);
 
   cc_ = kMaterialized;
+  top_in_eax_ = false;
 }
 
 void Codegen::DoLoadLocal(int index) {
   Materialize();
-  __ pushl(Address(ESP, index * kWordSize));
+  __ movl(EAX, Address(ESP, index * kWordSize));
+  top_in_eax_ = true;
 }
 
 void Codegen::DoLoadField(int index) {
-  Materialize();
-  __ popl(EAX);
-  __ pushl(Address(EAX, index * kWordSize + Instance::kSize - HeapObject::kTag));
+  MaterializeCondition();
+  if (!top_in_eax_) {
+    __ popl(EAX);
+  }
+  __ movl(EAX,
+          Address(EAX, index * kWordSize + Instance::kSize - HeapObject::kTag));
+  top_in_eax_ = true;
 }
 
 void Codegen::DoLoadStatic(int index) {
   Materialize();
   __ movl(ECX, Address(EDI, Process::kStaticsOffset));
   int index_offset = index * kWordSize;
-  __ pushl(Address(ECX, index_offset + Array::kSize - HeapObject::kTag));
+  __ movl(EAX, Address(ECX, index_offset + Array::kSize - HeapObject::kTag));
+  top_in_eax_ = true;
 }
 
 void Codegen::DoLoadStaticInit(int index) {
@@ -186,33 +310,45 @@ void Codegen::DoLoadStaticInit(int index) {
          Initializer::cast(program_->static_fields()->get(index))->function());
 
   __ Bind(&done);
-  __ pushl(EAX);
+  top_in_eax_ = true;
 }
 
 void Codegen::DoStoreLocal(int index) {
-  Materialize();
-  __ movl(EAX, Address(ESP, 0));
+  MaterializeCondition();
+  if (top_in_eax_) {
+    index--;
+  } else {
+    __ movl(EAX, Address(ESP, 0));
+  }
   __ movl(Address(ESP, index * kWordSize), EAX);
 }
 
 void Codegen::DoStoreField(int index) {
-  Materialize();
-  __ popl(EAX);  // Value.
+  MaterializeCondition();
+  if (top_in_eax_) {
+    index--;
+  } else {
+    __ popl(EAX);  // Value.
+  }
   __ popl(ECX);
   __ movl(Address(ECX, index * kWordSize + Instance::kSize - HeapObject::kTag), EAX);
-  __ pushl(EAX);
+  top_in_eax_ = true;
 }
 
 void Codegen::DoStoreStatic(int index) {
-  Materialize();
-  __ movl(EAX, Address(ESP, 0));
+  MaterializeCondition();
+  if (!top_in_eax_) {
+    __ movl(EAX, Address(ESP, 0));
+  }
   __ movl(ECX, Address(EDI, Process::kStaticsOffset));
   int index_offset = index * kWordSize;
   __ movl(Address(ECX, index_offset + Array::kSize - HeapObject::kTag), EAX);
 }
 
 void Codegen::DoLoadInteger(int value) {
-  __ pushl(Immediate(reinterpret_cast<int32>(Smi::FromWord(value))));
+  Materialize();
+  __ movl(EAX, Immediate(reinterpret_cast<int32>(Smi::FromWord(value))));
+  top_in_eax_ = true;
 }
 
 void Codegen::DoLoadProgramRoot(int offset) {
@@ -220,20 +356,22 @@ void Codegen::DoLoadProgramRoot(int offset) {
   Object* root = *reinterpret_cast<Object**>(
       reinterpret_cast<uint8*>(program_) + offset);
   if (root->IsHeapObject()) {
-    printf("\tpushl $O%08x + 1\n", HeapObject::cast(root)->address());
+    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
   } else {
-    printf("\tpushl $0x%08x\n", root);
+    printf("\tmovl $0x%08x, %%eax\n", root);
   }
+  top_in_eax_ = true;
 }
 
 void Codegen::DoLoadConstant(int bci, int offset) {
   Materialize();
   Object* constant = Function::ConstantForBytecode(function_->bytecode_address_for(bci));
   if (constant->IsHeapObject()) {
-    printf("\tpushl $O%08x + 1\n", HeapObject::cast(constant)->address());
+    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(constant)->address());
   } else {
-    printf("\tpushl $0x%08x\n", constant);
+    printf("\tmovl $0x%08x, %%eax\n", constant);
   }
+  top_in_eax_ = true;
 }
 
 void Codegen::DoBranch(BranchCondition condition, int from, int to) {
@@ -246,9 +384,12 @@ void Codegen::DoBranch(BranchCondition condition, int from, int to) {
            from >= to ? "b" : "f");
   } else {
     if (cc_ == kMaterialized) {
-      __ popl(EBX);
+      if (!top_in_eax_) {
+        __ popl(EAX);
+      }
+      top_in_eax_ = false;
       cc_ = EQUAL;
-      printf("\tcmpl $O%08x + 1, %%ebx\n", program_->true_object()->address());
+      printf("\tcmpl $O%08x + 1, %%eax\n", program_->true_object()->address());
     }
     if (condition == BRANCH_IF_FALSE) cc_ = Assembler::InvertCondition(cc_);
     printf("\tj%s %u%s\n",
@@ -260,68 +401,47 @@ void Codegen::DoBranch(BranchCondition condition, int from, int to) {
 }
 
 void Codegen::DoInvokeMethod(int arity, int offset) {
+  bool receiver_in_eax = top_in_eax_ && arity == 0;
   Materialize();
-  __ movl(EAX, Address(ESP, arity * kWordSize));
+  if (!receiver_in_eax) {
+    __ movl(EAX, Address(ESP, arity * kWordSize));
+  }
   __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
   printf("\tcall InvokeMethod\n");
   DoDrop(arity + 1);
-  __ pushl(EAX);
+  top_in_eax_ = true;
 }
 
 void Codegen::DoInvokeStatic(int bci, int offset, Function* target) {
   Materialize();
   printf("\tcall Function_%08x\n", target);
-  int arity = target->arity();
-  if (arity == 1) {
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
-  } else {
-    DoDrop(target->arity());
-    __ pushl(EAX);
-  }
+  DoDrop(target->arity());
+  top_in_eax_ = true;
 }
 
 void Codegen::DoInvokeTest(int offset) {
-  Materialize();
-  __ movl(EAX, Address(ESP, 0 * kWordSize));
+  MaterializeCondition();
+  if (!top_in_eax_) {
+    __ movl(EAX, Address(ESP, 0 * kWordSize));
+  }
   __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
 
-  Label done;
-  __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
-  __ testl(EAX, Immediate(Smi::kTagMask));
-  __ j(ZERO, &done);
+  __ call("InvokeTest");
 
-  // TODO(kasperl): Use class id in objects? Less indirection.
-  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
-  __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
-  __ Bind(&done);
+  DoDrop(1);
 
-  __ addl(ECX, EDX);
-
-  printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
-      program()->dispatch_table()->address(),
-      Array::kSize);
-
-  Label nsm, end;
-  __ cmpl(EDX, Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
-  __ j(NOT_EQUAL, &nsm);
-  Object* root = *reinterpret_cast<Object**>(
-      reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
-  printf("\tmovl $O%08x + 1, (%%esp)\n", HeapObject::cast(root)->address());
-  __ jmp(&end);
-
-  __ Bind(&nsm);
-  root = *reinterpret_cast<Object**>(
-      reinterpret_cast<uint8*>(program_) + Program::kFalseObjectOffset);
-  printf("\tmovl $O%08x + 1, (%%esp)\n", HeapObject::cast(root)->address());
-
-  __ Bind(&end);
+  top_in_eax_ = true;
 }
 
 void Codegen::DoInvokeAdd() {
-  Materialize();
+  MaterializeCondition();
   Label done, slow;
-  __ movl(EDX, Address(ESP, 0 * kWordSize));
-  __ movl(EAX, Address(ESP, 1 * kWordSize));
+  if (top_in_eax_) {
+    __ movl(EDX, Address(ESP, 0 * kWordSize));
+  } else {
+    __ movl(EAX, Address(ESP, 0 * kWordSize));
+    __ movl(EDX, Address(ESP, 1 * kWordSize));
+  }
 
   __ testl(EAX, Immediate(Smi::kTagSize));
   __ j(NOT_ZERO, &slow);
@@ -329,15 +449,19 @@ void Codegen::DoInvokeAdd() {
   __ testl(EDX, Immediate(Smi::kTagSize));
   __ j(NOT_ZERO, &slow);
 
-  __ addl(EAX, EDX);
-  __ j(NO_OVERFLOW, &done);
+  __ addl(EDX, EAX);
+  __ j(OVERFLOW_, &slow);
+  __ movl(EAX, EDX);
+  __ jmp(&done);
 
   __ Bind(&slow);
+  if (top_in_eax_) __ pushl(EAX);
   printf("\tcall InvokeAdd\n");
+  if (top_in_eax_) __ popl(EDX);
 
   __ Bind(&done);
-  __ movl(Address(ESP, 1 * kWordSize), EAX);
-  __ popl(EAX);
+  DoDrop(2);
+  top_in_eax_ = true;
 }
 
 void Codegen::DoInvokeSub() {
@@ -359,8 +483,8 @@ void Codegen::DoInvokeSub() {
   printf("\tcall InvokeSub\n");
 
   __ Bind(&done);
-  __ movl(Address(ESP, 1 * kWordSize), EAX);
-  __ popl(EAX);
+  DoDrop(2);
+  top_in_eax_ = true;
 }
 
 void Codegen::DoInvokeCompare(Condition condition, const char* bailout) {
@@ -450,14 +574,7 @@ void Codegen::DoInvokeNative(Native native, int arity) {
   __ jmp(&retry);
 
   __ Bind(&non_gc_failure);
-  __ movl(EBX, ESP);
-  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
-  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
-  __ movl(Address(ESP, 0 * kWordSize), EDI);
-  __ movl(Address(ESP, 1 * kWordSize), EAX);
-  __ call("HandleObjectFromFailure");
-  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
-  __ movl(ESP, EBX);
+  __ call("NativeFailure");
   __ pushl(EAX);
 }
 
@@ -502,7 +619,7 @@ void Codegen::DoAllocate(Class* klass) {
     __ movl(Address(EAX, (fields - (i + 1)) * kWordSize + offset), EBX);
   }
 
-  __ pushl(EAX);
+  top_in_eax_ = true;
 }
 
 void Codegen::DoNegate() {
@@ -524,44 +641,37 @@ void Codegen::DoNegate() {
 }
 
 void Codegen::DoIdentical() {
-  Materialize();
-  __ movl(EAX, Address(ESP, 0 * kWordSize));
-  __ movl(EBX, Address(ESP, 1 * kWordSize));
+  MaterializeCondition();
+  if (top_in_eax_) {
+    __ popl(EBX);
+  } else {
+    __ movl(EAX, Address(ESP, 0 * kWordSize));
+    __ movl(EBX, Address(ESP, 1 * kWordSize));
+  }
 
-  // TODO(ager): For now we bail out if we have two doubles or two
-  // large integers and let the slow interpreter deal with it. These
-  // cases could be dealt with directly here instead.
-  Label fast_case;
-  Label bail_out;
+  __ call("Identical");
 
-  // If either is a smi they are not both doubles or large integers.
-  __ testl(EAX, Immediate(Smi::kTagMask));
-  __ j(ZERO, &fast_case);
-  __ testl(EBX, Immediate(Smi::kTagMask));
-  __ j(ZERO, &fast_case);
+  if (!top_in_eax_) {
+    DoDrop(2);
+  }
 
-  // If they do not have the same type they are not both double or
-  // large integers.
-  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
-  __ movl(ECX, Address(ECX, Class::kInstanceFormatOffset - HeapObject::kTag));
-  __ movl(EDX, Address(EBX, HeapObject::kClassOffset - HeapObject::kTag));
-  __ cmpl(ECX, Address(EDX, Class::kInstanceFormatOffset - HeapObject::kTag));
-  __ j(NOT_EQUAL, &fast_case);
+  top_in_eax_ = true;
+}
 
-  int double_type = InstanceFormat::DOUBLE_TYPE;
-  int large_integer_type = InstanceFormat::LARGE_INTEGER_TYPE;
-  int type_field_shift = InstanceFormat::TypeField::shift();
+void Codegen::DoIdenticalNonNumeric() {
+  MaterializeCondition();
+  if (top_in_eax_) {
+    __ popl(EBX);
+  } else {
+    __ movl(EAX, Address(ESP, 0 * kWordSize));
+    __ movl(EBX, Address(ESP, 1 * kWordSize));
 
-  __ andl(ECX, Immediate(InstanceFormat::TypeField::mask()));
-  __ cmpl(ECX, Immediate(double_type << type_field_shift));
-  __ j(EQUAL, &bail_out);
-  __ cmpl(ECX, Immediate(large_integer_type << type_field_shift));
-  __ j(EQUAL, &bail_out);
+    __ addl(ESP, Immediate(2 * kWordSize));
+  }
 
-  __ Bind(&fast_case);
 
   Label true_case, done;
-  __ cmpl(EBX, EAX);
+  __ cmpl(EAX, EBX);
   __ j(EQUAL, &true_case);
 
   Object* root = *reinterpret_cast<Object**>(
@@ -573,44 +683,8 @@ void Codegen::DoIdentical() {
   root = *reinterpret_cast<Object**>(
       reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
   printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
-  __ jmp(&done);
-
-
-  __ Bind(&bail_out);
-  __ movl(EBX, ESP);
-  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
-  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
-
-  __ movl(Address(ESP, 0 * kWordSize), EDI);
-  __ movl(Address(ESP, 1 * kWordSize), EBX);
-  __ movl(Address(ESP, 2 * kWordSize), EAX);
-  __ call("HandleIdentical");
-
-  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
-  __ movl(ESP, EBX);
-
   __ Bind(&done);
-  DoDrop(1);
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
-}
-
-void Codegen::DoIdenticalNonNumeric() {
-  Materialize();
-  __ movl(EAX, Address(ESP, 0 * kWordSize));
-  __ movl(EBX, Address(ESP, 1 * kWordSize));
-
-  __ addl(ESP, Immediate(2 * kWordSize));
-
-  Label true_case, done;
-  __ cmpl(EAX, EBX);
-  __ j(EQUAL, &true_case);
-
-  DoLoadProgramRoot(Program::kFalseObjectOffset);
-  __ jmp(&done);
-
-  __ Bind(&true_case);
-  DoLoadProgramRoot(Program::kTrueObjectOffset);
-  __ Bind(&done);
+  top_in_eax_ = true;
 }
 
 void Codegen::DoProcessYield() {
@@ -621,20 +695,28 @@ void Codegen::DoProcessYield() {
 }
 
 void Codegen::DoDrop(int n) {
-  Materialize();
+  MaterializeCondition();
   ASSERT(n >= 0);
   if (n == 0) {
     // Do nothing.
   } else if (n == 1) {
-    __ popl(EDX);
+    if (!top_in_eax_) {
+      __ popl(EDX);
+    }
+    top_in_eax_ = false;
   } else {
+    if (top_in_eax_) n--;
+    top_in_eax_ = false;
     __ addl(ESP, Immediate(n * kWordSize));
   }
 }
 
 void Codegen::DoReturn() {
-  Materialize();
-  __ popl(EAX);
+  MaterializeCondition();
+  if (!top_in_eax_) {
+    __ popl(EAX);
+  }
+  top_in_eax_ = false;
   __ movl(ESP, EBP);
   __ popl(EBP);
   __ ret();
@@ -802,11 +884,13 @@ bool Codegen::DoDirectInvokeMethod(int this_index, Class* klass, int selector) {
   Intrinsic intrinsic = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
   switch (intrinsic) {
     case kIntrinsicGetField: {
+      printf("// -> inlined getter\n");
       Materialize();
       __ movl(EAX, Address(ESP, this_index * kWordSize));
       int field = *target->bytecode_address_for(2);
       int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
-      __ pushl(Address(EAX, offset));
+      __ movl(EAX, Address(EAX, offset));
+      top_in_eax_ = true;
       break;
     }
 
@@ -821,12 +905,28 @@ bool Codegen::DoDirectInvokeMethod(int this_index, Class* klass, int selector) {
 }
 
 void Codegen::Materialize() {
-  if (cc_ == kMaterialized) return;
-  printf("\tmovl $O%08x + 1, %%eax\n", program_->false_object()->address());
-  printf("\tmovl $O%08x + 1, %%ecx\n", program_->true_object()->address());
-  __ cmov(cc_, EAX, ECX);
-  __ pushl(EAX);
-  cc_ = kMaterialized;
+  ASSERT(cc_ == kMaterialized || !top_in_eax_);
+  MaterializeTop();
+  MaterializeCondition();
+}
+
+void Codegen::MaterializeTop() {
+  if (top_in_eax_) {
+    ASSERT(cc_ == kMaterialized);
+    __ pushl(EAX);
+    top_in_eax_ = false;
+  }
+}
+
+void Codegen::MaterializeCondition() {
+  if (cc_ != kMaterialized) {
+    ASSERT(!top_in_eax_);
+    printf("\tmovl $O%08x + 1, %%eax\n", program_->false_object()->address());
+    printf("\tmovl $O%08x + 1, %%ecx\n", program_->true_object()->address());
+    __ cmov(cc_, EAX, ECX);
+    __ pushl(EAX);
+    cc_ = kMaterialized;
+  }
 }
 
 }  // namespace fletch
