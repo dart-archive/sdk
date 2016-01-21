@@ -1,0 +1,9 @@
+Starting session. Type 'help' for a list of commands.
+
+> b resume
+breakpoint set: id: '0' method: 'resume' bytecode index: '0'
+> r
+tests/debugger/break_after_spawn_test.dart:22:3
+22     port.send(null);
+> c
+### process terminated
