@@ -444,14 +444,14 @@ void InterpreterGeneratorARM::GenerateDebugAtBytecode() {
   __ SwitchToText();
   __ AlignToPowerOfTwo(3);
   __ Bind("", "DebugAtBytecode");
-  __ str(LR, Address(SP, 0));
+  __ mov(R7, LR);
   __ mov(R0, R4);
   __ mov(R1, R5);
   __ mov(R2, R6);
   __ bl("HandleAtBytecode");
   __ tst(R0, R0);
   __ b(NE, &done_);
-  __ ldr(LR, Address(SP, 0));
+  __ mov(LR, R7);
   __ bx(LR);
 }
 
