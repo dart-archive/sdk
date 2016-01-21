@@ -123,6 +123,7 @@ service_tests/*: Skip
 mdns_tests/*: Skip # The native extension is not compiled for ARM.
 power_management_tests/*: Skip # The native extension is not compiled for ARM.
 flash_sd_card_tests/*: Skip # The native extension is not compiled for ARM.
+sdk_service_tests/*: Skip # The native extension is not compiled for ARM.
 
 incremental/experimental/program_gc_with_processes: Pass, Fail # Issue 389.
 
