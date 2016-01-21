@@ -27,25 +27,23 @@
 
 namespace fletch {
 
-ThreadState* const kEmptyThreadState = reinterpret_cast<ThreadState*>(1);
-ThreadState* const kLockedThreadState = reinterpret_cast<ThreadState*>(2);
 Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
 
 // Global instance of scheduler.
 Scheduler* Scheduler::scheduler_ = NULL;
-
 
 void Scheduler::Setup() {
   ASSERT(scheduler_ == NULL);
   scheduler_ = new Scheduler();
   scheduler_->gc_thread_->StartThread();
   scheduler_->thread_pool_.Start();
+  while (!scheduler_->thread_pool_.TryStartThread(RunThread, scheduler_)) {}
 }
 
 void Scheduler::TearDown() {
   ASSERT(scheduler_ != NULL);
   scheduler_->shutdown_ = true;
-  scheduler_->NotifyAllThreads();
+  scheduler_->NotifyInterpreterThread();
   scheduler_->thread_pool_.JoinAll();
   scheduler_->gc_thread_->StopThread();
   delete scheduler_;
@@ -53,38 +51,23 @@ void Scheduler::TearDown() {
 }
 
 Scheduler::Scheduler()
-    : max_threads_(1),
-      thread_pool_(max_threads_),
+    : thread_pool_(1),
       sleeping_threads_(0),
       thread_count_(0),
-      idle_threads_(kEmptyThreadState),
-      threads_(new Atomic<ThreadState*>[max_threads_]),
-      thread_states_to_delete_(NULL),
-      startup_queue_(new ProcessQueue()),
+      interpreting_thread_(new ThreadState()),
+      ready_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       pause_(false),
       shutdown_(false),
-      current_processes_(new Atomic<Process*>[max_threads_]),
+      current_processes_(NULL),
       gc_thread_(new GCThread()) {
-  for (int i = 0; i < max_threads_; i++) {
-    threads_[i] = NULL;
-    current_processes_[i] = NULL;
-  }
 }
 
 Scheduler::~Scheduler() {
   delete pause_monitor_;
-  delete[] current_processes_;
-  delete[] threads_;
-  delete startup_queue_;
+  delete ready_queue_;
   delete gc_thread_;
-
-  ThreadState* current = thread_states_to_delete_;
-  while (current != NULL) {
-    ThreadState* next = current->next_idle_thread();
-    delete current;
-    current = next;
-  }
+  delete interpreting_thread_.load();
 }
 
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
@@ -100,7 +83,7 @@ void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
   if (!main_process->ChangeState(Process::kSleeping, Process::kReady)) {
     UNREACHABLE();
   }
-  EnqueueProcessAndNotifyThreads(NULL, main_process);
+  EnqueueProcess(main_process);
 }
 
 void Scheduler::UnscheduleProgram(Program* program) {
@@ -124,17 +107,15 @@ void Scheduler::StopProgram(Program* program) {
 
     pause_ = true;
 
-    NotifyAllThreads();
+    NotifyInterpreterThread();
 
     while (true) {
       int count = 0;
       // Preempt running processes, only if it was possibly to 'take' the
       // current process. This makes sure we don't preempt while deleting.
       // Loop to ensure we continue to preempt until all threads are sleeping.
-      for (int i = 0; i < max_threads_; i++) {
-        if (threads_[i].load() != NULL) count++;
-        PreemptThreadProcess(i);
-      }
+      if (interpreting_thread_.load() != NULL) count++;
+      PreemptInterpreterThread();
       if (count == sleeping_threads_) break;
       pause_monitor_->Wait();
     }
@@ -144,7 +125,8 @@ void Scheduler::StopProgram(Program* program) {
     while (true) {
       Process* process = NULL;
       // All processes dequeued are marked as Running.
-      if (!TryDequeueFromAnyThread(&process)) continue;  // Retry.
+      DequeueProcess(&process);
+
       if (process == NULL) break;
 
       if (process->program() == program) {
@@ -158,7 +140,7 @@ void Scheduler::StopProgram(Program* program) {
 
     while (to_enqueue != NULL) {
       to_enqueue->ChangeState(Process::kRunning, Process::kReady);
-      EnqueueOnAnyThread(to_enqueue);
+      EnqueueProcess(to_enqueue);
       Process* next = to_enqueue->next();
       to_enqueue->set_next(NULL);
       to_enqueue = next;
@@ -167,7 +149,7 @@ void Scheduler::StopProgram(Program* program) {
     pause_ = false;
   }
 
-  NotifyAllThreads();
+  NotifyInterpreterThread();
 }
 
 void Scheduler::ResumeProgram(Program* program) {
@@ -183,14 +165,14 @@ void Scheduler::ResumeProgram(Program* program) {
     while (process != NULL) {
       Process* next = process->next();
       process->set_next(NULL);
-      EnqueueOnAnyThread(process);
+      EnqueueProcess(process);
       process = next;
     }
     program_state->set_paused_processes_head(NULL);
     program_state->set_is_paused(false);
     pause_monitor_->NotifyAll();
   }
-  NotifyAllThreads();
+  NotifyInterpreterThread();
 }
 
 void Scheduler::PauseGcThread() {
@@ -207,7 +189,7 @@ void Scheduler::PreemptionTick() {
   // We have at most one scheduler thread.
   if (thread_count_ > 0) {
     ASSERT(thread_count_ <= 1);
-    PreemptThreadProcess(0);
+    PreemptInterpreterThread();
   }
 }
 
@@ -215,7 +197,7 @@ void Scheduler::ProfileTick() {
   // We have at most one scheduler thread.
   if (thread_count_ > 0) {
     ASSERT(thread_count_ <= 1);
-    scheduler_->ProfileThreadProcess(0);
+    scheduler_->ProfileInterpreterThread();
   }
 }
 
@@ -230,8 +212,7 @@ void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
   process->program()->program_state()->IncreaseProcessCount();
   if (!process->ChangeState(Process::kSleeping, Process::kReady)) UNREACHABLE();
 
-  ThreadState* thread_state = interpreting_process->thread_state();
-  EnqueueProcessAndNotifyThreads(thread_state, process);
+  EnqueueProcess(process);
 }
 
 void Scheduler::ResumeProcess(Process* process) {
@@ -296,6 +277,10 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   EnqueueOnAnyThreadSafe(process);
 
   return true;
+}
+
+void Scheduler::DequeueProcess(Process** process) {
+  while (!ready_queue_->TryDequeue(process)) {}
 }
 
 void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
@@ -415,112 +400,42 @@ void Scheduler::RescheduleProcess(Process* process, ThreadState* state,
     ExitAtTermination(process, Signal::kTerminated);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
-    EnqueueOnAnyThread(process, state->thread_id() + 1);
+    EnqueueProcess(process);
   }
 }
 
-void Scheduler::PreemptThreadProcess(int thread_id) {
-  Process* process = current_processes_[thread_id];
+void Scheduler::PreemptInterpreterThread() {
+  Process* process = current_processes_;
   while (true) {
     if (process == kPreemptMarker) {
       break;
     } else if (process == NULL) {
-      if (current_processes_[thread_id].compare_exchange_strong(
-              process, kPreemptMarker)) {
+      if (current_processes_.compare_exchange_strong(process, kPreemptMarker)) {
         break;
       }
     } else {
-      if (current_processes_[thread_id].compare_exchange_strong(process,
-                                                                NULL)) {
+      if (current_processes_.compare_exchange_strong(process, NULL)) {
         process->Preempt();
-        current_processes_[thread_id] = process;
+        current_processes_ = process;
         break;
       }
     }
   }
 }
 
-void Scheduler::ProfileThreadProcess(int thread_id) {
-  Process* process = current_processes_[thread_id];
+void Scheduler::ProfileInterpreterThread() {
+  Process* process = current_processes_;
   if (process != NULL && process != kPreemptMarker) {
-    if (current_processes_[thread_id].compare_exchange_strong(process, NULL)) {
+    if (current_processes_.compare_exchange_strong(process, NULL)) {
       process->Profile();
-      current_processes_[thread_id] = process;
+      current_processes_ = process;
     }
   }
-}
-
-void Scheduler::EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
-                                               Process* process) {
-  ASSERT(process != NULL);
-
-  if (thread_count_ == 0) {
-    // No running threads, use the startup_queue_.
-    bool was_empty;
-    while (!startup_queue_->TryEnqueue(process, &was_empty)) {
-    }
-  } else {
-    int thread_id = thread_count_ - 1;
-    if (thread_state != NULL) {
-      thread_id = thread_state->thread_id() + 1;
-    }
-    // If we were able to enqueue on an idle thread, no need to spawn a new one.
-    if (EnqueueOnAnyThread(process, thread_id)) return;
-  }
-
-  // Start a worker thread if we haven't reached the limit (the process is
-  // already enqueued and the potentially new thread will steal work from other
-  // threads).
-  while (!thread_pool_.TryStartThread(RunThread, this)) {
-  }
-}
-
-void Scheduler::PushIdleThread(ThreadState* thread_state) {
-  ThreadState* idle_threads = idle_threads_;
-  while (true) {
-    if (idle_threads == kLockedThreadState) {
-      idle_threads = idle_threads_;
-    } else if (idle_threads_.compare_exchange_weak(idle_threads,
-                                                   kLockedThreadState)) {
-      break;
-    }
-  }
-
-  ASSERT(idle_threads != NULL);
-
-  // Add thread_state to idle_threads_, if it is not already in it.
-  if (thread_state->next_idle_thread() == NULL) {
-    thread_state->set_next_idle_thread(idle_threads);
-    idle_threads = thread_state;
-  }
-
-  idle_threads_ = idle_threads;
-}
-
-ThreadState* Scheduler::PopIdleThread() {
-  ThreadState* idle_threads = idle_threads_;
-  while (true) {
-    if (idle_threads == kEmptyThreadState) {
-      return NULL;
-    } else if (idle_threads == kLockedThreadState) {
-      idle_threads = idle_threads_;
-    } else if (idle_threads_.compare_exchange_weak(idle_threads,
-                                                   kLockedThreadState)) {
-      break;
-    }
-  }
-
-  ThreadState* next = idle_threads->next_idle_thread();
-  idle_threads->set_next_idle_thread(NULL);
-
-  idle_threads_ = next;
-
-  return idle_threads;
 }
 
 void Scheduler::RunInThread() {
-  ThreadState* thread_state = new ThreadState();
-  ThreadEnter(thread_state);
+  ThreadState* thread_state = interpreting_thread_;
+  ThreadEnter();
   while (true) {
     if (pause_) {
       LookupCache* cache = thread_state->cache();
@@ -547,25 +462,22 @@ void Scheduler::RunInThread() {
 
     // Sleep until there is something new to execute.
     ScopedMonitorLock scoped_lock(thread_state->idle_monitor());
-    while (thread_state->queue()->is_empty() && startup_queue_->is_empty() &&
+    while (ready_queue_->is_empty() &&
            !pause_ &&
            !shutdown_) {
-      PushIdleThread(thread_state);
-      // The thread is becoming idle.
       thread_state->idle_monitor()->Wait();
-      // At this point the thread_state may still be in idle_threads_. That's
-      // okay, as it will just be ignored later on.
     }
     if (shutdown_) break;
   }
-  ThreadExit(thread_state);
+  ThreadExit();
 }
 
 void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   // We use this heap for allocating new immutable objects.
   while (!pause_) {
     Process* process = NULL;
-    DequeueFromThread(thread_state, &process);
+    DequeueProcess(&process);
+
     // No more processes for this state, break.
     if (process == NULL) break;
 
@@ -581,29 +493,27 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   }
 }
 
-void Scheduler::SetCurrentProcessForThread(int thread_id, Process* process) {
-  if (thread_id == -1) return;
-  Process* value = current_processes_[thread_id];
+void Scheduler::SetCurrentProcessForThread(Process* process) {
+  Process* value = current_processes_;
   while (true) {
     if (value == kPreemptMarker) {
       process->Preempt();
-      current_processes_[thread_id] = process;
+      current_processes_ = process;
       break;
     } else {
       // Take value at each attempt, as value will be overriden on failure.
-      if (current_processes_[thread_id].compare_exchange_weak(value, process)) {
+      if (current_processes_.compare_exchange_weak(value, process)) {
         break;
       }
     }
   }
 }
 
-void Scheduler::ClearCurrentProcessForThread(int thread_id, Process* process) {
-  if (thread_id == -1) return;
+void Scheduler::ClearCurrentProcessForThread(Process* process) {
   while (true) {
     // Take value at each attempt, as value will be overriden on failure.
     Process* value = process;
-    if (current_processes_[thread_id].compare_exchange_weak(value, NULL)) {
+    if (current_processes_.compare_exchange_weak(value, NULL)) {
       break;
     }
   }
@@ -628,8 +538,7 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
     return NULL;
   }
 
-  int thread_id = thread_state->thread_id();
-  SetCurrentProcessForThread(thread_id, process);
+  SetCurrentProcessForThread(process);
 
   // Mark the process as owned by the current thread while interpreting.
   process->set_thread_state(thread_state);
@@ -645,7 +554,7 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
 
   process->set_thread_state(NULL);
   Thread::SetProcess(NULL);
-  ClearCurrentProcessForThread(thread_id, process);
+  ClearCurrentProcessForThread(process);
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
@@ -653,7 +562,7 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
       process->ChangeState(Process::kYielding, Process::kSleeping);
     } else {
       process->ChangeState(Process::kYielding, Process::kReady);
-      EnqueueOnThread(thread_state, process);
+      EnqueueProcess(process);
     }
     return NULL;
   }
@@ -678,8 +587,7 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
       RescheduleProcess(process, thread_state, terminate);
       return target;
     } else {
-      ProcessQueue* target_queue = target->process_queue();
-      if (target_queue != NULL && target_queue->TryDequeueEntry(target)) {
+      if (ready_queue_->TryDequeueEntry(target)) {
         port->Unlock();
         ASSERT(target->state() == Process::kRunning);
         RescheduleProcess(process, thread_state, terminate);
@@ -694,7 +602,7 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
   if (interpreter.IsInterrupted()) {
     // No need to notify threads, as 'this' is now available.
     process->ChangeState(Process::kRunning, Process::kReady);
-    EnqueueOnThread(thread_state, process);
+    EnqueueProcess(process);
     return NULL;
   }
 
@@ -734,24 +642,23 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
   return NULL;
 }
 
-void Scheduler::ThreadEnter(ThreadState* thread_state) {
+void Scheduler::ThreadEnter() {
+  ThreadState* thread_state = interpreting_thread_;
+  thread_state->AttachToCurrentThread();
   Thread::SetupOSSignals();
   // TODO(ajohnsen): This only works because we never return threads, unless
   // the scheduler is done.
   int thread_id = thread_count_++;
-  ASSERT(thread_id < max_threads_);
+  ASSERT(thread_id < 1);
   thread_state->set_thread_id(thread_id);
-  threads_[thread_id] = thread_state;
-  // Notify pause_monitor_ when changing threads_.
+  // Notify pause_monitor_ when changing interpreting_thread_.
   pause_monitor_->Lock();
   pause_monitor_->NotifyAll();
   pause_monitor_->Unlock();
 }
 
-void Scheduler::ThreadExit(ThreadState* thread_state) {
-  threads_[thread_state->thread_id()] = NULL;
-  ReturnThreadState(thread_state);
-  // Notify pause_monitor_ when changing threads_.
+void Scheduler::ThreadExit() {
+  // Notify pause_monitor_.
   pause_monitor_->Lock();
   pause_monitor_->NotifyAll();
   pause_monitor_->Unlock();
@@ -765,115 +672,21 @@ static void NotifyThread(ThreadState* thread_state) {
   monitor->Unlock();
 }
 
-void Scheduler::NotifyAllThreads() {
-  for (int i = 0; i < thread_count_; i++) {
-    ThreadState* thread_state = threads_[i];
-    if (thread_state != NULL) NotifyThread(thread_state);
-  }
+void Scheduler::NotifyInterpreterThread() {
+  ThreadState* thread_state = interpreting_thread_;
+  if (thread_state != NULL) NotifyThread(thread_state);
 }
 
-void Scheduler::ReturnThreadState(ThreadState* thread_state) {
-  ThreadState* next = thread_states_to_delete_;
-  while (true) {
-    thread_state->set_next_idle_thread(next);
-    if (thread_states_to_delete_.compare_exchange_weak(next, thread_state)) {
-      break;
-    }
-  }
-}
-
-void Scheduler::DequeueFromThread(ThreadState* thread_state,
-                                  Process** process) {
-  ASSERT(*process == NULL);
-  while (!TryDequeueFromAnyThread(process, thread_state->thread_id())) {
-  }
-}
-
-static bool TryDequeue(ProcessQueue* queue, Process** process,
-                       bool* should_retry) {
-  if (queue->TryDequeue(process)) {
-    if (*process != NULL) {
-      return true;
-    }
-  } else {
-    *should_retry = true;
-  }
-  return false;
-}
-
-bool Scheduler::TryDequeueFromAnyThread(Process** process, int start_id) {
-  ASSERT(*process == NULL);
-  int count = thread_count_;
-  bool should_retry = false;
-  for (int i = start_id; i < count; i++) {
-    ThreadState* thread_state = threads_[i];
-    if (thread_state == NULL) continue;
-    if (TryDequeue(thread_state->queue(), process, &should_retry)) return true;
-  }
-  for (int i = 0; i < start_id; i++) {
-    ThreadState* thread_state = threads_[i];
-    if (thread_state == NULL) continue;
-    if (TryDequeue(thread_state->queue(), process, &should_retry)) return true;
-  }
-  // TODO(ajohnsen): Merge startup_queue_ into the first thread we start, or
-  // use it for queing other proceses as well?
-  if (TryDequeue(startup_queue_, process, &should_retry)) return true;
-  return !should_retry;
-}
-
-void Scheduler::EnqueueOnThread(ThreadState* thread_state, Process* process) {
-  if (thread_state->thread_id() == -1) {
-    EnqueueOnAnyThread(process);
-    return;
-  }
-  while (!thread_state->queue()->TryEnqueue(process)) {
-    int count = thread_count_;
-    for (int i = 0; i < count; i++) {
-      ThreadState* thread_state = threads_[i];
-      if (thread_state != NULL && thread_state->queue()->TryEnqueue(process)) {
-        return;
-      }
-    }
-  }
-}
-
-bool Scheduler::TryEnqueueOnIdleThread(Process* process) {
-  while (true) {
-    ThreadState* thread_state = PopIdleThread();
-    if (thread_state == NULL) return false;
-    bool was_empty = false;
-    bool enqueued = thread_state->queue()->TryEnqueue(process, &was_empty);
-    // Always notify the idle thread, so it can be re-inserted into the idle
-    // thread pool.
-    NotifyThread(thread_state);
-    // We enqueued, we are done. Otherwise, try another.
-    if (enqueued) return true;
-  }
-  UNREACHABLE();
-  return false;
-}
-
-bool Scheduler::EnqueueOnAnyThread(Process* process, int start_id) {
+void Scheduler::EnqueueProcess(Process* process) {
   ASSERT(process->state() == Process::kReady);
-  // First try to resume an idle thread.
-  if (TryEnqueueOnIdleThread(process)) return true;
-  // Loop threads until enqueued.
-  int i = start_id;
-  while (true) {
-    if (i >= thread_count_) i = 0;
-    ThreadState* thread_state = threads_[i];
-    bool was_empty = false;
-    if (thread_state != NULL &&
-        thread_state->queue()->TryEnqueue(process, &was_empty)) {
-      if (was_empty && current_processes_[i].load() == NULL) {
-        NotifyThread(thread_state);
-      }
-      return false;
-    }
-    i++;
+
+  bool was_empty = false;
+  while (!ready_queue_->TryEnqueue(process, &was_empty)) {}
+
+  // Maybe we need to wake one up.
+  if (was_empty) {
+    NotifyThread(interpreting_thread_);
   }
-  UNREACHABLE();
-  return false;
 }
 
 void Scheduler::EnqueueOnAnyThreadSafe(Process* process, int start_id) {
@@ -896,7 +709,7 @@ void Scheduler::EnqueueOnAnyThreadSafe(Process* process, int start_id) {
       state->AddPausedProcess(process);
     }
   } else {
-    EnqueueOnAnyThread(process, start_id);
+    EnqueueProcess(process);
   }
 }
 

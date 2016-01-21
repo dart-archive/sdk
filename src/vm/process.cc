@@ -32,7 +32,6 @@ static uword kMaxStackMarker = ~static_cast<uword>((1 << 3) - 1);
 
 ThreadState::ThreadState()
     : thread_id_(-1),
-      queue_(new ProcessQueue()),
       cache_(NULL),
       idle_monitor_(Platform::CreateMonitor()),
       next_idle_thread_(NULL) {}
@@ -46,7 +45,6 @@ LookupCache* ThreadState::EnsureCache() {
 
 ThreadState::~ThreadState() {
   delete idle_monitor_;
-  delete queue_;
   delete cache_;
 }
 

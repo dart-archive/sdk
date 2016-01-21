@@ -102,28 +102,24 @@ class Scheduler {
   // Global scheduler instance.
   static Scheduler* scheduler_;
 
-  const int max_threads_;
   ThreadPool thread_pool_;
 
   Atomic<int> sleeping_threads_;
   Atomic<int> thread_count_;
-  Atomic<ThreadState*> idle_threads_;
-  Atomic<ThreadState*>* threads_;
-  Atomic<ThreadState*> thread_states_to_delete_;
-  ProcessQueue* startup_queue_;
+  Atomic<ThreadState*> interpreting_thread_;
+  ProcessQueue* ready_queue_;
 
   Monitor* pause_monitor_;
   Atomic<bool> pause_;
   Atomic<bool> shutdown_;
 
-  // A list of currently executed processes, indexable by thread id. Upon
-  // preemption, the value may be set to kPreemptMarker if it's NULL (which is
-  // the case when no process is being executed). This means that they'll always
-  // be in either of these 3 cases:
+  // The currently executing process. Upon preemption, the value may be set to
+  // kPreemptMarker if it's NULL (which is the case when no process is being
+  // executed). This means that it will always be in either of these 3 cases:
   //   - NULL
   //   - A process
   //   - kPreemptMarker
-  Atomic<Process*>* current_processes_;
+  Atomic<Process*> current_processes_;
 
   GCThread* gc_thread_;
 
@@ -132,43 +128,26 @@ class Scheduler {
   // Exit the program for the given process with the given exit code.
   void ExitWith(Process* process, int exit_code, Signal::Kind kind);
 
-  void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);
 
-  void PreemptThreadProcess(int thread_id);
-  void ProfileThreadProcess(int thread_id);
-  void EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
-                                      Process* process);
+  void PreemptInterpreterThread();
+  void ProfileInterpreterThread();
 
-  void PushIdleThread(ThreadState* thread_state);
-  ThreadState* PopIdleThread();
   void RunInThread();
   void RunInterpreterLoop(ThreadState* thread_state);
 
-  void SetCurrentProcessForThread(int thread_id, Process* process);
-  void ClearCurrentProcessForThread(int thread_id, Process* process);
+  void SetCurrentProcessForThread(Process* process);
+  void ClearCurrentProcessForThread(Process* process);
   // Interpret [process] as thread [thread] with id [thread_id]. Returns the
   // next Process that should be run on this thraed.
   Process* InterpretProcess(Process* process, Heap* immutable_heap,
                             ThreadState* thread_state);
-  void ThreadEnter(ThreadState* thread_state);
-  void ThreadExit(ThreadState* thread_state);
-  void NotifyAllThreads();
+  void ThreadEnter();
+  void ThreadExit();
+  void NotifyInterpreterThread();
 
-  void ReturnThreadState(ThreadState* thread_state);
-
-  // Dequeue from [thread_state]. If [process] is [NULL] after a call to
-  // DequeueFromThread, the [thread_state] is empty. Note that DequeueFromThread
-  // may dequeue a process from another ThreadState.
-  void DequeueFromThread(ThreadState* thread_state, Process** process);
-  // Returns true if it was able to dequeue a process, or all thread_states were
-  // empty. Returns false if the operation should be retried.
-  bool TryDequeueFromAnyThread(Process** process, int start_id = 0);
-  void EnqueueOnThread(ThreadState* thread_state, Process* process);
-  // Returns true if it was able to enqueue the process on an idle thread.
-  bool TryEnqueueOnIdleThread(Process* process);
-  // Returns true if it was able to enqueue the process on an idle thread.
-  bool EnqueueOnAnyThread(Process* process, int start_id = 0);
+  void EnqueueProcess(Process* process);
+  void DequeueProcess(Process** process);
 
   // The [process] will be enqueued on any thread. In case the program is paused
   // the process will be enqueued once the program is resumed.

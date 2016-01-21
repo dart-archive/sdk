@@ -45,8 +45,6 @@ class ThreadState {
   // Update the thread field to point to the current thread.
   void AttachToCurrentThread();
 
-  ProcessQueue* queue() { return queue_; }
-
   LookupCache* cache() const { return cache_; }
   LookupCache* EnsureCache();
 
@@ -58,7 +56,6 @@ class ThreadState {
  private:
   int thread_id_;
   ThreadIdentifier thread_;
-  ProcessQueue* const queue_;
   LookupCache* cache_;
   Monitor* idle_monitor_;
   Atomic<ThreadState*> next_idle_thread_;
