@@ -183,6 +183,11 @@ class BytecodeAssembler {
     loadLocalHelper(offset);
   }
 
+  void loadThisSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    internalAdd(new LoadThis(offset));
+  }
+
   void loadBoxedParameterSlot(int parameterSlot) {
     int offset = stackSize - parameterSlot - 1;
     loadBoxedHelper(offset);

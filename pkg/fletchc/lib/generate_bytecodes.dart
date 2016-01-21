@@ -161,6 +161,7 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("LoadLocal3",           false,    "",   1,        1, "load local 3");
   V("LoadLocal4",           false,    "",   1,        1, "load local 4");
   V("LoadLocal5",           false,    "",   1,        1, "load local 5");
+  V("LoadThis",             false,    "B",  2,        1, "load this %d");
   V("LoadLocal",            false,    "B",  2,        1, "load local %d");
   V("LoadLocalWide",        false,    "I",  5,        1, "load local %d");
 

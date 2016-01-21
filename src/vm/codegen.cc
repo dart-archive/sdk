@@ -150,6 +150,34 @@ void DumpProgram(Program* program) {
   delete block;
 }
 
+// Visitor to find the class a method is a member of, if the solution is unique.
+class FunctionOwnerVisitor : public HeapObjectVisitor {
+ public:
+  FunctionOwnerVisitor(HashMap<Function*, Class*>* function_owners)
+      : function_owners_(function_owners) { }
+
+  virtual int Visit(HeapObject* object) {
+    if (object->IsClass()) {
+      Class* klass = Class::cast(object);
+      if (klass->has_methods()) {
+        Array* methods = klass->methods();
+        for (int i = 0; i < methods->length(); i+=2) {
+          Function* function = Function::cast(methods->get(i + 1));
+          if (function_owners_->Find(function) != function_owners_->End()) {
+            (*function_owners_)[function] = NULL;
+          } else {
+            (*function_owners_)[function] = klass;
+          }
+        }
+      }
+    }
+    return object->Size();
+  }
+
+ private:
+  HashMap<Function*, Class*>* function_owners_;
+};
+
 
 class CodegenVisitor : public HeapObjectVisitor {
  public:
@@ -184,9 +212,14 @@ static int Main(int argc, char** argv) {
   FletchSetup();
   FletchProgram api_program = FletchLoadSnapshotFromFile(argv[1]);
 
-  Assembler assembler;
   Program* program = reinterpret_cast<Program*>(api_program);
-  Codegen codegen(program, &assembler);
+
+  HashMap<Function*, Class*> function_owners;
+  FunctionOwnerVisitor function_owners_visitor(&function_owners);
+  program->heap()->IterateObjects(&function_owners_visitor);
+
+  Assembler assembler;
+  Codegen codegen(program, &assembler, &function_owners);
   CodegenVisitor visitor(&codegen);
   program->heap()->IterateObjects(&visitor);
   codegen.GenerateHelpers();
@@ -200,6 +233,9 @@ static int Main(int argc, char** argv) {
 
 void Codegen::Generate(Function* function) {
   function_ = function;
+  Class* klass = (*function_owners_)[function];
+  printf("// class: %p\n", klass);
+
   DoEntry();
 
   IntrinsicsTable* intrinsics = IntrinsicsTable::GetDefault();
@@ -286,6 +322,19 @@ void Codegen::Generate(Function* function) {
       case kLoadLocal4:
       case kLoadLocal5: {
         DoLoadLocal(opcode - kLoadLocal0);
+        break;
+      }
+
+      case kLoadThis: {
+        int this_index = bcp[1];
+        if (klass != NULL && bcp[2] == kInvokeMethod) {
+          int selector = Utils::ReadInt32(bcp + 3);
+          if (DoDirectInvokeMethod(this_index, klass, selector)) {
+            bci += Bytecode::Size(kInvokeMethod);
+            break;
+          }
+        }
+        DoLoadLocal(this_index);
         break;
       }
 

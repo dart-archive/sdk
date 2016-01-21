@@ -9,6 +9,7 @@
 
 #include "src/shared/flags.h"
 #include "src/shared/natives.h"
+#include "src/shared/selectors.h"
 
 #define __ assembler()->
 
@@ -765,6 +766,45 @@ void Codegen::DoIntrinsicListIndexSet() {
   __ ret();
 
   __ Bind(&failure);
+}
+
+bool Codegen::DoDirectInvokeMethod(int this_index, Class* klass, int selector) {
+  int arity = Selector::ArityField::decode(selector);
+  if (arity != 0) return false;
+  int offset = Selector::IdField::decode(selector);
+  Function* target = NULL;
+  for (int i = klass->id(); i < klass->child_id(); i++) {
+    DispatchTableEntry* entry = DispatchTableEntry::cast(
+        program()->dispatch_table()->get(i + offset));
+    if (i == klass->id()) target = entry->target();
+    if (entry->offset()->value() != offset || target != entry->target()) {
+      return false;
+    }
+  }
+
+  ASSERT(target != NULL);
+  ASSERT(target->arity() == 1);
+
+
+  Intrinsic intrinsic = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
+  switch (intrinsic) {
+    case kIntrinsicGetField: {
+      Materialize();
+      __ movl(EAX, Address(ESP, this_index * kWordSize));
+      int field = *target->bytecode_address_for(2);
+      int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
+      __ pushl(Address(EAX, offset));
+      break;
+    }
+
+    default: {
+      DoLoadLocal(this_index);
+      DoInvokeStatic(0, 0, target);
+      break;
+    }
+  }
+
+  return true;
 }
 
 void Codegen::Materialize() {

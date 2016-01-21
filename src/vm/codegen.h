@@ -14,10 +14,13 @@ namespace fletch {
 
 class Codegen {
  public:
-  Codegen(Program* program, Assembler* assembler)
+  Codegen(Program* program,
+          Assembler* assembler,
+          HashMap<Function*, Class*>* function_owners)
       : program_(program),
-        function_(NULL),
         assembler_(assembler),
+        function_owners_(function_owners),
+        function_(NULL),
         add_offset_(-1),
         sub_offset_(-1),
         eq_offset_(-1),
@@ -44,8 +47,10 @@ class Codegen {
   static const Condition kMaterialized = static_cast<Condition>(-1);
 
   Program* const program_;
-  Function* function_;
   Assembler* const assembler_;
+  HashMap<Function*, Class*>* const function_owners_;
+
+  Function* function_;
 
   int add_offset_;
   int sub_offset_;
@@ -117,6 +122,8 @@ class Codegen {
   void DoIntrinsicListLength();
   void DoIntrinsicListIndexGet();
   void DoIntrinsicListIndexSet();
+
+  bool DoDirectInvokeMethod(int this_index, Class* klass, int selector);
 
   void Materialize();
 };

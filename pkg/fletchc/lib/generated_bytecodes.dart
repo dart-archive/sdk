@@ -13,6 +13,7 @@ enum Opcode {
   LoadLocal3,
   LoadLocal4,
   LoadLocal5,
+  LoadThis,
   LoadLocal,
   LoadLocalWide,
   LoadBoxed,
@@ -268,6 +269,48 @@ class LoadLocal5 extends Bytecode {
   }
 
   String toString() => 'load local 5';
+}
+
+class LoadThis extends Bytecode {
+  final int uint8Argument0;
+  const LoadThis(this.uint8Argument0)
+      : super();
+
+  Opcode get opcode => Opcode.LoadThis;
+
+  String get name => 'LoadThis';
+
+  bool get isBranching => false;
+
+  String get format => 'B';
+
+  int get size => 2;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'load this %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint8(uint8Argument0)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'load this ${uint8Argument0}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    LoadThis rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    return value;
+  }
 }
 
 class LoadLocal extends Bytecode {

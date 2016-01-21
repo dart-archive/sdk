@@ -109,6 +109,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   virtual void DoLoadLocal3();
   virtual void DoLoadLocal4();
   virtual void DoLoadLocal5();
+  virtual void DoLoadThis();
   virtual void DoLoadLocal();
   virtual void DoLoadLocalWide();
 
@@ -493,6 +494,10 @@ void InterpreterGeneratorX86::DoLoadLocal5() {
   LoadLocal(EAX, 5);
   Push(EAX);
   Dispatch(1);
+}
+
+void InterpreterGeneratorX86::DoLoadThis() {
+  DoLoadLocal();
 }
 
 void InterpreterGeneratorX86::DoLoadLocal() {

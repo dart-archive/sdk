@@ -200,6 +200,26 @@ class UnboxedParameterValue extends LocalValue {
   String toString() => "Parameter($element, $slot)";
 }
 
+class UnboxedThisParameterValue extends LocalValue {
+  UnboxedThisParameterValue(
+      int parameter,
+      Element element,
+      BytecodeAssembler assembler)
+      : super(assembler.computeParameterSlot(parameter), element);
+
+  void initialize(BytecodeAssembler assembler) {}
+
+  void load(BytecodeAssembler assembler) {
+    assembler.loadThisSlot(slot);
+  }
+
+  void store(BytecodeAssembler assembler) {
+    throw StateError("Cannot store to this");
+  }
+
+  String toString() => "Parameter($element, $slot)";
+}
+
 class JumpInfo {
   final int stackSize;
   final BytecodeLabel continueLabel;
@@ -284,7 +304,7 @@ abstract class CodegenVisitor
                  this.element)
       : super(elements) {
     if (functionBuilder.isInstanceMember) {
-      thisValue = new UnboxedParameterValue(0, null, assembler);
+      thisValue = new UnboxedThisParameterValue(0, null, assembler);
     }
   }
 
