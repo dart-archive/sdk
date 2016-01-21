@@ -32,11 +32,24 @@ extern "C" size_t UartWrite(uint8_t* buffer, size_t count) {
   return uart->Write(buffer, count);
 }
 
+extern "C" void LCDDrawLine(
+    uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2) {
+  // BSP_LCD_DrawLine takes uint16_t arguments.
+  BSP_LCD_DrawLine(x1, y1, x2, y2);
+}
+
 FLETCH_EXPORT_TABLE_BEGIN
   FLETCH_EXPORT_TABLE_ENTRY("uart_read", UartRead)
   FLETCH_EXPORT_TABLE_ENTRY("uart_write", UartWrite)
   FLETCH_EXPORT_TABLE_ENTRY("BSP_LED_On", BSP_LED_On)
   FLETCH_EXPORT_TABLE_ENTRY("BSP_LED_Off", BSP_LED_Off)
+  FLETCH_EXPORT_TABLE_ENTRY("lcd_height", BSP_LCD_GetYSize)
+  FLETCH_EXPORT_TABLE_ENTRY("lcd_width", BSP_LCD_GetXSize)
+  FLETCH_EXPORT_TABLE_ENTRY("lcd_clear", BSP_LCD_Clear)
+  FLETCH_EXPORT_TABLE_ENTRY("lcd_draw_line", LCDDrawLine)
+  FLETCH_EXPORT_TABLE_ENTRY("lcd_set_foreground_color", BSP_LCD_SetTextColor)
+  FLETCH_EXPORT_TABLE_ENTRY("lcd_set_background_color", BSP_LCD_SetBackColor)
+  FLETCH_EXPORT_TABLE_ENTRY("lcd_display_string", BSP_LCD_DisplayStringAt)
 FLETCH_EXPORT_TABLE_END
 
 // Run fletch on the linked in snapshot.
