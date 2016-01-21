@@ -145,7 +145,6 @@ class Heap {
 
  private:
   friend class ExitReference;
-  friend class SharedHeap;
   friend class Scheduler;
   friend class Program;
 

@@ -959,7 +959,7 @@ static Process* SpawnProcessInternal(Program* program, Process* process,
 
   // Code in process spawning generally assumes there is enough space for
   // stacks etc.  We use a [NoAllocationFailureScope] to ensure it.
-  NoAllocationFailureScope scope(program->shared_heap()->heap()->space());
+  NoAllocationFailureScope scope(program->process_heap()->space());
 
   // Spawn a new process and create a copy of the closure in the
   // new process' heap.

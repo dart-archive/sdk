@@ -46,6 +46,7 @@ Program::Program(ProgramSource source, int hashtag)
       process_list_head_(NULL),
       random_(0),
       heap_(&random_),
+      process_heap_(NULL, 4 * KB),
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
@@ -271,28 +272,18 @@ Object* Program::CreateDispatchTableEntry() {
 
 class ValidateProcessHeapVisitor : public ProcessVisitor {
  public:
-  explicit ValidateProcessHeapVisitor(SharedHeap* shared_heap)
-      : shared_heap_(shared_heap) {}
-
   virtual void VisitProcess(Process* process) {
-    process->ValidateHeaps(shared_heap_);
+    process->ValidateHeaps();
   }
-
- private:
-  SharedHeap* shared_heap_;
 };
 
 void Program::PrepareProgramGC() {
-  // All threads are stopped and have given their parts back to the
-  // [SharedHeap], so we can merge them now.
-  shared_heap()->MergeParts();
-
   if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
   }
 
   if (Flags::validate_heaps) {
-    ValidateProcessHeapVisitor visitor(&shared_heap_);
+    ValidateProcessHeapVisitor visitor;
     VisitProcesses(&visitor);
   }
 
@@ -330,19 +321,6 @@ class IterateProgramPointersVisitor : public ProcessVisitor {
   PointerVisitor* pointer_visitor_;
 };
 
-class IterateProgramPointersHeapVisitor : public ProcessVisitor {
- public:
-  explicit IterateProgramPointersHeapVisitor(PointerVisitor* pointer_visitor)
-      : pointer_visitor_(pointer_visitor) {}
-
-  virtual void VisitProcess(Process* process) {
-    process->IterateProgramPointersOnHeap(pointer_visitor_);
-  }
-
- private:
-  PointerVisitor* pointer_visitor_;
-};
-
 void Program::PerformProgramGC(SemiSpace* to, PointerVisitor* visitor) {
   {
     NoAllocationFailureScope scope(to);
@@ -350,17 +328,13 @@ void Program::PerformProgramGC(SemiSpace* to, PointerVisitor* visitor) {
     // Iterate program roots.
     IterateRoots(visitor);
 
-    // Iterate all pointers from Immutable space to program space.
-    HeapObjectPointerVisitor object_pointer_visitor(visitor);
-    shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
-
     // Iterate all pointers from processes to program space.
     IterateProgramPointersVisitor process_visitor(visitor);
     VisitProcesses(&process_visitor);
 
-    // Iterate all pointers from process heaps to program space.
-    IterateProgramPointersHeapVisitor heap_visitor(visitor);
-    VisitProcessHeaps(&heap_visitor);
+    // Iterate all pointers from the process heap to program space.
+    CookedHeapObjectPointerVisitor flaf(visitor);
+    process_heap()->IterateObjects(&flaf);
 
     // Finish collection.
     ASSERT(!to->is_empty());
@@ -371,25 +345,19 @@ void Program::PerformProgramGC(SemiSpace* to, PointerVisitor* visitor) {
 
 class FinishProgramGCVisitor : public ProcessVisitor {
  public:
-  explicit FinishProgramGCVisitor(SharedHeap* shared_heap)
-      : shared_heap_(shared_heap) {}
-
   virtual void VisitProcess(Process* process) {
     process->UpdateBreakpoints();
     if (Flags::validate_heaps) {
       // TODO(erikcorry): This should not be on the process.
-      process->ValidateHeaps(shared_heap_);
+      process->ValidateHeaps();
     }
   }
-
- private:
-  SharedHeap* shared_heap_;
 };
 
 void Program::FinishProgramGC() {
   // Uncook process
   UncookAndUnchainStacks();
-  FinishProgramGCVisitor visitor(&shared_heap_);
+  FinishProgramGCVisitor visitor;
   VisitProcesses(&visitor);
 
   if (Flags::validate_heaps) {
@@ -423,7 +391,7 @@ void Program::ValidateHeapsAreConsistent() {
 
   // Validate all process heaps.
   {
-    ProcessHeapValidatorVisitor validator(heap(), &shared_heap_);
+    ProcessHeapValidatorVisitor validator(heap());
     VisitProcesses(&validator);
   }
 }
@@ -503,24 +471,20 @@ static void PrintProgramGCInfo(SharedHeapUsage* before,
 }
 
 void Program::CollectSharedGarbage() {
-  // All threads are stopped and have given their parts back to the
-  // [SharedHeap], so we can merge them now.
-  shared_heap()->MergeParts();
-
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
   }
 
   SharedHeapUsage usage_before;
   if (Flags::print_heap_statistics) {
-    GetSharedHeapUsage(shared_heap()->heap(), &usage_before);
+    GetSharedHeapUsage(process_heap(), &usage_before);
   }
 
   PerformSharedGarbageCollection();
 
   if (Flags::print_heap_statistics) {
     SharedHeapUsage usage_after;
-    GetSharedHeapUsage(shared_heap()->heap(), &usage_after);
+    GetSharedHeapUsage(process_heap(), &usage_after);
     PrintProgramGCInfo(&usage_before, &usage_after);
   }
 
@@ -534,7 +498,7 @@ void Program::PerformSharedGarbageCollection() {
   // detect liveness paths that go through new-space, but we just clear the
   // mark bits afterwards.  Dead objects in new-space are only cleared in a
   // new-space GC (scavenge).
-  Heap* heap = shared_heap()->heap();
+  Heap* heap = process_heap();
   OldSpace* old_space = heap->old_space();
   SemiSpace* new_space = heap->space();
   MarkingStack stack;
@@ -1024,7 +988,7 @@ void PrintProcessGCInfo(HeapUsage* before, HeapUsage* after) {
 void Program::CollectNewSpace() {
   HeapUsage usage_before;
 
-  Heap* data_heap = shared_heap()->heap();
+  Heap* data_heap = process_heap();
 
   SemiSpace* from = data_heap->space();
   OldSpace* old = data_heap->old_space();
@@ -1100,8 +1064,8 @@ void Program::UpdateStackLimits() {
 
 int Program::CollectMutableGarbageAndChainStacks() {
   // Mark all reachable objects.
-  OldSpace* old_space = shared_heap()->heap()->old_space();
-  SemiSpace* new_space = shared_heap()->heap()->space();
+  OldSpace* old_space = process_heap()->old_space();
+  SemiSpace* new_space = process_heap()->space();
   MarkingStack marking_stack;
   ASSERT(stack_chain_ == NULL);
   MarkingVisitor marking_visitor(new_space, old_space, &marking_stack,
@@ -1117,7 +1081,7 @@ int Program::CollectMutableGarbageAndChainStacks() {
   marking_stack.Process(&marking_visitor);
 
   // Weak processing.
-  shared_heap()->heap()->ProcessWeakPointers(old_space);
+  process_heap()->ProcessWeakPointers(old_space);
   for (Process* process = process_list_head_; process != NULL;
        process = process->process_list_next()) {
     process->set_ports(Port::CleanupPorts(old_space, process->ports()));

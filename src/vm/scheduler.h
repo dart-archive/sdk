@@ -140,8 +140,7 @@ class Scheduler {
   void ClearCurrentProcessForThread(Process* process);
   // Interpret [process] as thread [thread] with id [thread_id]. Returns the
   // next Process that should be run on this thraed.
-  Process* InterpretProcess(Process* process, Heap* immutable_heap,
-                            ThreadState* thread_state);
+  Process* InterpretProcess(Process* process, ThreadState* thread_state);
   void ThreadEnter();
   void ThreadExit();
   void NotifyInterpreterThread();

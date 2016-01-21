@@ -1313,7 +1313,7 @@ class HeapObjectVisitor {
 
 // Class for visiting pointers inside heap objects.
 //
-// NOTE: This class does not protect against raw bytecode pointers on the stack.
+// NOTE: This class does not visit the raw bytecode pointers on the stack.
 class HeapObjectPointerVisitor : public HeapObjectVisitor {
  public:
   explicit HeapObjectPointerVisitor(PointerVisitor* visitor)

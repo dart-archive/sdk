@@ -9,7 +9,6 @@
 #include "src/shared/random.h"
 #include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
-#include "src/vm/shared_heap.h"
 #include "src/vm/links.h"
 #include "src/vm/program_folder.h"
 
@@ -198,7 +197,7 @@ class Program {
   Session* session() { return session_; }
 
   Heap* heap() { return &heap_; }
-  SharedHeap* shared_heap() { return &shared_heap_; }
+  Heap* process_heap() { return &process_heap_; }
 
   int program_heap_size() {
     ASSERT(is_optimized());
@@ -345,7 +344,7 @@ class Program {
   RandomXorShift random_;
 
   Heap heap_;
-  SharedHeap shared_heap_;
+  Heap process_heap_;
 
   Scheduler* scheduler_;
   ProgramState program_state_;

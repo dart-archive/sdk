@@ -1183,10 +1183,6 @@ void Session::PrepareForChanges() {
     {
       ProgramFolder program_folder(program());
       program_folder.Unfold();
-      // Changes could include instance rewriting. Make sure to make the
-      // shared heap consistent and clear the TableByObject mappings as
-      // objects are moved during instance rewriting.
-      program()->shared_heap()->MergeParts();
       for (int i = 0; i < maps_.length(); ++i) {
         ObjectMap* map = maps_[i];
         if (map != NULL) {
@@ -1446,8 +1442,8 @@ bool Session::CompileTimeError(Process* process) {
 
 class TransformInstancesPointerVisitor : public PointerVisitor {
  public:
-  explicit TransformInstancesPointerVisitor(Heap* heap, SharedHeap* shared_heap)
-      : heap_(heap), shared_heap_(shared_heap->heap()) {}
+  explicit TransformInstancesPointerVisitor(Heap* heap)
+      : heap_(heap) {}
 
   virtual void VisitClass(Object** p) {
     // The class pointer in the header of an object should not
@@ -1467,14 +1463,8 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
         Instance* instance = Instance::cast(heap_object);
         if (instance->get_class()->IsTransformed()) {
           Instance* clone;
-
-          if (heap_->space()->Includes(instance->address())) {
-            clone = instance->CloneTransformed(heap_);
-          } else {
-            ASSERT(shared_heap_->space()->Includes(instance->address()));
-            clone = instance->CloneTransformed(shared_heap_);
-          }
-
+          ASSERT(heap_->space()->Includes(instance->address()));
+          clone = instance->CloneTransformed(heap_);
           instance->set_forwarding_address(clone);
           *p = clone;
         }
@@ -1489,49 +1479,27 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
 
  private:
   Heap* const heap_;
-  Heap* const shared_heap_;
 };
 
 class RebuildVisitor : public ProcessVisitor {
  public:
-  explicit RebuildVisitor(SharedHeap* shared_heap)
-      : shared_heap_(shared_heap) {}
-
   virtual void VisitProcess(Process* process) {
     process->heap()->space()->RebuildAfterTransformations();
-    shared_heap_->heap()->space()->RebuildAfterTransformations();
     process->heap()->old_space()->RebuildAfterTransformations();
   }
-
- private:
-  SharedHeap* shared_heap_;
 };
 
 class TransformInstancesProcessVisitor : public ProcessVisitor {
  public:
-  explicit TransformInstancesProcessVisitor(SharedHeap* shared_heap)
-      : shared_heap_(shared_heap) {}
-
   virtual void VisitProcess(Process* process) {
     Heap* heap = process->heap();
-
     SemiSpace* space = heap->space();
-    SemiSpace* immutable_space = shared_heap_->heap()->space();
-
     NoAllocationFailureScope scope(space);
-    NoAllocationFailureScope scope2(immutable_space);
-
-    TransformInstancesPointerVisitor pointer_visitor(heap, shared_heap_);
-
+    TransformInstancesPointerVisitor pointer_visitor(heap);
     process->IterateRoots(&pointer_visitor);
-
     ASSERT(!space->is_empty());
     space->CompleteTransformations(&pointer_visitor);
-    immutable_space->CompleteTransformations(&pointer_visitor);
   }
-
- private:
-  SharedHeap* shared_heap_;
 };
 
 void Session::TransformInstances() {
@@ -1548,17 +1516,16 @@ void Session::TransformInstances() {
 
   SemiSpace* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
-  TransformInstancesPointerVisitor pointer_visitor(program()->heap(),
-                                                   program()->shared_heap());
+  TransformInstancesPointerVisitor pointer_visitor(program()->heap());
   program()->IterateRoots(&pointer_visitor);
   ASSERT(!space->is_empty());
   space->CompleteTransformations(&pointer_visitor);
 
-  TransformInstancesProcessVisitor process_visitor(program()->shared_heap());
+  TransformInstancesProcessVisitor process_visitor;
   program()->VisitProcesses(&process_visitor);
 
   space->RebuildAfterTransformations();
-  RebuildVisitor rebuilding_visitor(program()->shared_heap());
+  RebuildVisitor rebuilding_visitor;
   program()->VisitProcesses(&rebuilding_visitor);
 }
 

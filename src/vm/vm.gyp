@@ -114,8 +114,6 @@
         'heap.h',
         'heap_validator.cc',
         'heap_validator.h',
-        'shared_heap.cc',
-        'shared_heap.h',
         'interpreter.cc',
         'interpreter.h',
         'intrinsics.cc',

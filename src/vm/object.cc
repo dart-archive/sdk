@@ -712,8 +712,8 @@ int CookedHeapObjectPointerVisitor::Visit(HeapObject* object) {
   int size = object->Size();
   if (object->IsStack()) {
     visitor_->VisitClass(reinterpret_cast<Object**>(object->address()));
-    // To avoid visiting raw bytecode pointers lying on the stack we use a
-    // stack walker.
+    // We make sure to visit one extra slot which is now the function
+    // pointer when stacks are cooked.
     Frame frame(reinterpret_cast<Stack*>(object));
     while (frame.MovePrevious()) {
       visitor_->VisitBlock(frame.LastLocalAddress(),

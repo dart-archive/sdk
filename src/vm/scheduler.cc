@@ -482,11 +482,7 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
     if (process == NULL) break;
 
     while (process != NULL) {
-      Heap* shared_heap = process->program()->shared_heap()->heap();
-
-      Process* new_process =
-          InterpretProcess(process, shared_heap, thread_state);
-
+      Process* new_process = InterpretProcess(process, thread_state);
       // Possibly switch to a new process.
       process = new_process;
     }
@@ -519,7 +515,7 @@ void Scheduler::ClearCurrentProcessForThread(Process* process) {
   }
 }
 
-Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
+Process* Scheduler::InterpretProcess(Process* process,
                                      ThreadState* thread_state) {
   ASSERT(process->exception()->IsNull());
 
@@ -548,9 +544,9 @@ Process* Scheduler::InterpretProcess(Process* process, Heap* shared_heap,
   // Warning: These two lines should not be moved, since the code further down
   // will potentially push the process on a queue which is accessed by other
   // threads, which would create a race.
-  shared_heap->set_random(process->random());
+  process->heap()->set_random(process->random());
   interpreter.Run();
-  shared_heap->set_random(NULL);
+  process->heap()->set_random(NULL);
 
   process->set_thread_state(NULL);
   Thread::SetProcess(NULL);

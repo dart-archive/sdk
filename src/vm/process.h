@@ -24,7 +24,6 @@ namespace fletch {
 
 class Engine;
 class Interpreter;
-class SharedHeap;
 class Port;
 class ProcessQueue;
 class ProcessVisitor;
@@ -93,7 +92,7 @@ class Process {
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
-  Heap* heap() { return program()->shared_heap()->heap(); }
+  Heap* heap() { return program()->process_heap(); }
 
   Coroutine* coroutine() const { return coroutine_; }
   void UpdateCoroutine(Coroutine* coroutine);
@@ -149,7 +148,7 @@ class Process {
   // Returns either a Smi or a LargeInteger.
   Object* ToInteger(int64 value);
 
-  void ValidateHeaps(SharedHeap* shared_heap);
+  void ValidateHeaps();
 
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);

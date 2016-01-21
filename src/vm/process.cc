@@ -327,8 +327,8 @@ Object* Process::NewStack(int length) {
   return result;
 }
 
-void Process::ValidateHeaps(SharedHeap* shared_heap) {
-  ProcessHeapValidatorVisitor v(program()->heap(), shared_heap);
+void Process::ValidateHeaps() {
+  ProcessHeapValidatorVisitor v(program()->heap());
   v.VisitProcess(this);
 }
 
@@ -347,13 +347,6 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
   if (debug_info_ != NULL) debug_info_->VisitProgramPointers(visitor);
   visitor->Visit(&exception_);
   mailbox_.IteratePointers(visitor);
-}
-
-void Process::IterateProgramPointersOnHeap(PointerVisitor* visitor) {
-  // TODO(erikcorry): Somehow assert that the stacks are cooked (there's no
-  // simple way to tell in a multiple-processes-per-heap world).
-  CookedHeapObjectPointerVisitor program_pointer_visitor(visitor);
-  heap()->IterateObjects(&program_pointer_visitor);
 }
 
 void Process::TakeLookupCache() {
