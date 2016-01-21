@@ -777,18 +777,24 @@ class CoredumpArchiver(object):
     self._conf = conf
 
   def __enter__(self):
-    pass
+    coredumps = self._find_coredumps()
+    assert not coredumps
 
   def __exit__(self, *_):
     coredumps = self._find_coredumps()
     if coredumps:
       # If we get a ton of crashes, only archive 10 dumps.
-      coredumps = coredumps[:10]
-      print 'Archiving coredumps: %s' % ', '.join(coredumps)
+      archive_coredumps = coredumps[:10]
+      print 'Archiving coredumps: %s' % ', '.join(archive_coredumps)
       sys.stdout.flush()
       self._archive(os.path.join(self._build_dir, 'fletch'),
                     os.path.join(self._build_dir, 'fletch-vm'),
-                    coredumps)
+                    archive_coredumps)
+      for filename in coredumps:
+        print 'Removing core: %s' % filename
+        os.remove(filename)
+    coredumps = self._find_coredumps()
+    assert not coredumps
 
   def _find_coredumps(self):
     # Finds all files named 'core.*' in the search directory.
@@ -817,9 +823,6 @@ class CoredumpArchiver(object):
       except Exception as error:
         message = "Failed to upload coredump %s, error: %s" % (filename, error)
         print '@@@STEP_LOG_LINE@coredumps@%s@@@' % message
-
-    for filename in coredumps:
-      os.remove(filename)
 
     print '@@@STEP_LOG_END@coredumps@@@'
     MarkCurrentStep(fatal=False)
