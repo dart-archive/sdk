@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:power_management/power_management.dart' as power_management;
-
+import 'package:sdk_services/sdk_services.dart';
 import 'context.dart';
 
 /// The PlaformService class provide the methods which can vary from
@@ -73,60 +73,10 @@ abstract class PlatformService {
       File destination,
       {int retryCount: 3,
        Duration retryInterval: const Duration(seconds: 3)}) async {
-
-    Future doDownload(HttpClient client) async {
-      ctx.log('Downloading $url');
-      var request = await client.getUrl(url);
-      var response = await request.close();
-      ctx.log('Response headers:\n${response.headers}');
-
-      int totalBytes = response.headers.contentLength;
-      int bytes = 0;
-      StreamTransformer progressTransformer =
-          new StreamTransformer<List<int>, List<int>>.fromHandlers(
-            handleData: (List<int> value, EventSink<List<int>> sink) {
-              bytes += value.length;
-              ctx.updateProgress(
-                  'received ${bytes ~/ (1024 * 1024)} Mb '
-                  'of ${totalBytes ~/ (1024 * 1024)} Mb');
-              sink.add(value);
-            },
-            handleDone: (EventSink<List<int>> sink) {
-              sink.close();
-            });
-      await response
-          .transform(progressTransformer).pipe(destination.openWrite());
-    }
-
-    var client;
-    int id = power_management.disableSleep('Downloading SD card image');
-    try {
-      client = new HttpClient();
-      int count = 0;
-      while (true) {
-        count++;
-        ctx.startProgress('Downloading: ');
-        try {
-          await doDownload(client);
-          ctx.endProgress('DONE');
-          break;
-        } catch (e, s) {
-          if (count < retryCount) {
-            ctx.endProgress(
-                'Failed. Retrying in ${retryInterval.inSeconds} seconds.');
-            ctx.log('Download failure: $e\n$s');
-            await sleep(retryInterval.inMilliseconds);
-          } else {
-            await ctx.failure('Download failed after $retryCount retries');
-          }
-        }
-      }
-    } finally {
-      power_management.enableSleep(id);
-      await client.close();
-    }
-
-    ctx.log('Finished downloading $url');
+    SDKServices service = new SDKServices(ctx);
+    return service.downloadWithProgress(url, destination,
+                                        retryCount: retryCount,
+                                        retryInterval: retryInterval);
   }
 
   /// This function will write the image in the file [image] into the device

@@ -35,6 +35,7 @@ power_management:pkg/power_management/lib
 pub_semver:third_party/pub_semver/lib
 raspberry_pi:pkg/raspberry_pi/lib
 sdk_library_metadata:third_party/dart/sdk/lib/_internal/sdk_library_metadata/lib/
+sdk_services:pkg/sdk_services/lib
 servicec:pkg/servicec/lib
 stm32f746g_disco:pkg/stm32f746g_disco/lib
 old_servicec:tools/servicec/lib

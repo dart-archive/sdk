@@ -7,9 +7,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:sdk_services/sdk_services.dart';
 
 /// General context information for running the application.
-class Context {
+class Context implements OutputService {
   StreamIterator _stdin;
   IOSink _stdout;
   IOSink _installLog;
