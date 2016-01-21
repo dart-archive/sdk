@@ -56,5 +56,12 @@ class FletchGCSNamer(bot_utils.GCSNamer):
   def version_filepath(self, revision):
     return '/'.join([self.fletch_sdk_directory(revision), 'VERSION'])
 
+  def gcc_embedded_bundle_zipfilename(self, system):
+    return 'gcc-arm-embedded-%s.zip' % system
+
+  def gcc_embedded_bundle_filepath(self, revision, system):
+    return '/'.join([self.fletch_sdk_directory(revision),
+                     self.gcc_bundle_zipfilename(system)])
+
   def docs_filepath(self, revision):
     return '/'.join([self.fletch_sdk_directory(revision), 'docs'])

@@ -189,6 +189,7 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   for configuration in configurations:
     StepsTestSDK(debug_log, configuration)
     StepsSanityChecking(configuration['build_dir'])
+  StepsArchiveGCCArmNoneEabi(system)
 
 def StepsTestSDK(debug_log, configuration):
   build_dir = configuration['build_dir']
@@ -303,6 +304,28 @@ def StepsCreateArchiveRaspbianImge():
     gs_path = namer.raspbian_zipfilepath(version)
     http_path = GetDownloadLink(gs_path)
     gsutil.upload(zip_file, gs_path, public=True)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
+
+def StepsArchiveGCCArmNoneEabi(system):
+  with bot.BuildStep('Archive cross compiler'):
+    # TODO(ricow): Early return on bleeding edge when this is validated.
+    namer = GetNamer(temporary=IsBleedingEdge())
+    zip_file = os.path.join('out',
+                            namer.gcc_embedded_bundle_zipfilename(system))
+    if os.path.exists(zip_file):
+      os.remove(zip_file)
+    gcc_copy = os.path.join('out', 'gcc-arm-embedded')
+    if os.path.exists(gcc_copy):
+      shutil.rmtree(gcc_copy)
+    gcc_src = os.path.join('third_party', 'gcc-arm-embedded', system,
+                           'gcc-arm-embedded')
+    shutil.copytree(gcc_src, gcc_copy)
+    CreateZip(gcc_copy, namer.gcc_embedded_bundle_zipfilename(system))
+    version = utils.GetSemanticSDKVersion()
+    gsutil = bot_utils.GSUtil()
+    gs_path = namer.gcc_bundle_filepath(version, system)
+    gsutil.upload(zip_file, gs_path, public=True)
+    http_path = GetDownloadLink(gs_path)
     print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def StepsGetArmBinaries(cross_mode, cross_arch):
