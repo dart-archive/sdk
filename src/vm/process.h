@@ -28,38 +28,6 @@ class Port;
 class ProcessQueue;
 class ProcessVisitor;
 
-class ThreadState {
- public:
-  ThreadState();
-  ~ThreadState();
-
-  int thread_id() const { return thread_id_; }
-  void set_thread_id(int thread_id) {
-    ASSERT(thread_id_ == -1);
-    thread_id_ = thread_id;
-  }
-
-  const ThreadIdentifier* thread() const { return &thread_; }
-
-  // Update the thread field to point to the current thread.
-  void AttachToCurrentThread();
-
-  LookupCache* cache() const { return cache_; }
-  LookupCache* EnsureCache();
-
-  Monitor* idle_monitor() const { return idle_monitor_; }
-
-  ThreadState* next_idle_thread() const { return next_idle_thread_; }
-  void set_next_idle_thread(ThreadState* value) { next_idle_thread_ = value; }
-
- private:
-  int thread_id_;
-  ThreadIdentifier thread_;
-  LookupCache* cache_;
-  Monitor* idle_monitor_;
-  Atomic<ThreadState*> next_idle_thread_;
-};
-
 class Process {
  public:
   enum State {
@@ -190,12 +158,6 @@ class Process {
   inline bool ChangeState(State from, State to);
   State state() const { return state_; }
 
-  ThreadState* thread_state() const { return thread_state_; }
-  void set_thread_state(ThreadState* thread_state) {
-    ASSERT(thread_state == NULL || thread_state_.load() == NULL);
-    thread_state_ = thread_state;
-  }
-
   void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback);
   void UnregisterFinalizer(HeapObject* object);
 
@@ -295,7 +257,6 @@ class Process {
   Links links_;
 
   Atomic<State> state_;
-  Atomic<ThreadState*> thread_state_;
 
   // Next pointer used by the Scheduler.
   Process* next_;
@@ -356,7 +317,6 @@ inline LookupCache::Entry* Process::LookupEntry(Object* receiver,
 
 inline bool Process::ChangeState(State from, State to) {
   if (from == kRunning || from == kYielding) {
-    ASSERT(thread_state_.load() == NULL);
     ASSERT(state_ == from);
     state_ = to;
     return true;

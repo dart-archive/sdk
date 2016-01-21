@@ -32,6 +32,16 @@ Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
 // Global instance of scheduler.
 Scheduler* Scheduler::scheduler_ = NULL;
 
+ThreadState::ThreadState()
+    : thread_id_(-1),
+      idle_monitor_(Platform::CreateMonitor()) {}
+
+void ThreadState::AttachToCurrentThread() { thread_ = ThreadIdentifier(); }
+
+ThreadState::~ThreadState() {
+  delete idle_monitor_;
+}
+
 void Scheduler::Setup() {
   ASSERT(scheduler_ == NULL);
   scheduler_ = new Scheduler();
@@ -140,11 +150,21 @@ void Scheduler::StopProgram(Program* program) {
 
     while (to_enqueue != NULL) {
       to_enqueue->ChangeState(Process::kRunning, Process::kReady);
-      EnqueueProcess(to_enqueue);
       Process* next = to_enqueue->next();
       to_enqueue->set_next(NULL);
+      EnqueueProcess(to_enqueue);
       to_enqueue = next;
     }
+
+    // TODO(kustermann): Stopping a program should not always clear the lookup
+    // cache. But if we don't do, then other code might decide to do a
+    // ProgramGC (e.g. gc thread) or rewrite instances (e.g. session) and the
+    // lookup cache entries are broken.
+    //
+    // => We should move the responsibility of clearing the cache to the caller
+    //    of StopProgram().
+    LookupCache* cache = program->cache();
+    if (cache != NULL) cache->Clear();
 
     pause_ = false;
   }
@@ -438,9 +458,6 @@ void Scheduler::RunInThread() {
   ThreadEnter();
   while (true) {
     if (pause_) {
-      LookupCache* cache = thread_state->cache();
-      if (cache != NULL) cache->Clear();
-
       // Take lock to be sure StopProgram is waiting.
       {
         ScopedMonitorLock locker(pause_monitor_);
@@ -537,7 +554,6 @@ Process* Scheduler::InterpretProcess(Process* process,
   SetCurrentProcessForThread(process);
 
   // Mark the process as owned by the current thread while interpreting.
-  process->set_thread_state(thread_state);
   Thread::SetProcess(process);
   Interpreter interpreter(process);
 
@@ -548,7 +564,6 @@ Process* Scheduler::InterpretProcess(Process* process,
   interpreter.Run();
   process->heap()->set_random(NULL);
 
-  process->set_thread_state(NULL);
   Thread::SetProcess(NULL);
   ClearCurrentProcessForThread(process);
 

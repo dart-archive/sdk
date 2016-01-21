@@ -9,6 +9,7 @@
 #include "src/shared/random.h"
 #include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
+#include "src/vm/lookup_cache.h"
 #include "src/vm/links.h"
 #include "src/vm/program_folder.h"
 
@@ -308,6 +309,9 @@ class Program {
   // Returns the number of stacks found in the heap.
   int CollectMutableGarbageAndChainStacks();
 
+  LookupCache* cache() const { return cache_; }
+  LookupCache* EnsureCache();
+
  private:
   // Program GC support. Cook the stack to rewrite bytecode pointers
   // to a pair of a function pointer and a delta. Uncook the stack to
@@ -370,6 +374,8 @@ class Program {
   // Used during GC and debugging to traverse the stacks.
   Stack* stack_chain_;
   List<List<int>> cooked_stack_deltas_;
+
+  LookupCache* cache_;
 };
 
 }  // namespace fletch

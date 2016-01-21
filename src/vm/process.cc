@@ -30,24 +30,6 @@ static uword kProfileMarker = 1 << 1;
 static uword kDebugInterruptMarker = 1 << 2;
 static uword kMaxStackMarker = ~static_cast<uword>((1 << 3) - 1);
 
-ThreadState::ThreadState()
-    : thread_id_(-1),
-      cache_(NULL),
-      idle_monitor_(Platform::CreateMonitor()),
-      next_idle_thread_(NULL) {}
-
-void ThreadState::AttachToCurrentThread() { thread_ = ThreadIdentifier(); }
-
-LookupCache* ThreadState::EnsureCache() {
-  if (cache_ == NULL) cache_ = new LookupCache();
-  return cache_;
-}
-
-ThreadState::~ThreadState() {
-  delete idle_monitor_;
-  delete cache_;
-}
-
 Process::Process(Program* program, Process* parent)
     : native_stack_(NULL),
       coroutine_(NULL),
@@ -58,7 +40,6 @@ Process::Process(Program* program, Process* parent)
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
-      thread_state_(NULL),
       next_(NULL),
       queue_(NULL),
       queue_next_(NULL),
@@ -352,9 +333,7 @@ void Process::IterateProgramPointers(PointerVisitor* visitor) {
 void Process::TakeLookupCache() {
   ASSERT(primary_lookup_cache_ == NULL);
   if (program()->is_optimized()) return;
-  ThreadState* state = thread_state_;
-  ASSERT(state != NULL);
-  LookupCache* cache = state->EnsureCache();
+  LookupCache* cache = program()->EnsureCache();
   primary_lookup_cache_ = cache->primary();
 }
 
@@ -528,9 +507,7 @@ void Process::UpdateStackLimit() {
 LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
                                              Class* clazz, int selector) {
   ASSERT(!program()->is_optimized());
-  ThreadState* state = thread_state_;
-  ASSERT(state != NULL);
-  LookupCache* cache = state->cache();
+  LookupCache* cache = program()->cache();
 
   uword index = LookupCache::ComputeSecondaryIndex(clazz, selector);
   LookupCache::Entry* secondary = &(cache->secondary()[index]);

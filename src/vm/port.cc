@@ -20,7 +20,7 @@ Port::Port(Process* process, Instance* channel)
       spinlock_(),
       next_(process->ports()) {
   ASSERT(process != NULL);
-  ASSERT(Thread::IsCurrent(process->thread_state()->thread()));
+  ASSERT(Thread::GetProcess() == process);
   process->set_ports(this);
 }
 

@@ -20,11 +20,34 @@ class Port;
 class ProcessQueue;
 class Process;
 class Program;
-class ThreadState;
 
 const int kCompileTimeErrorExitCode = 254;
 const int kUncaughtExceptionExitCode = 255;
 const int kBreakPointExitCode = 0;
+
+class ThreadState {
+ public:
+  ThreadState();
+  ~ThreadState();
+
+  int thread_id() const { return thread_id_; }
+  void set_thread_id(int thread_id) {
+    ASSERT(thread_id_ == -1);
+    thread_id_ = thread_id;
+  }
+
+  const ThreadIdentifier* thread() const { return &thread_; }
+
+  // Update the thread field to point to the current thread.
+  void AttachToCurrentThread();
+
+  Monitor* idle_monitor() const { return idle_monitor_; }
+
+ private:
+  int thread_id_;
+  ThreadIdentifier thread_;
+  Monitor* idle_monitor_;
+};
 
 class ProcessVisitor {
  public:

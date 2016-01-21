@@ -55,7 +55,8 @@ Program::Program(ProgramSource source, int hashtag)
       program_exit_listener_data_(NULL),
       exit_kind_(Signal::kTerminated),
       hashtag_(hashtag),
-      stack_chain_(NULL) {
+      stack_chain_(NULL),
+      cache_(NULL) {
 // These asserts need to hold when running on the target, but they don't need
 // to hold on the host (the build machine, where the interpreter-generating
 // program runs).  We put these asserts here on the assumption that the
@@ -68,6 +69,7 @@ Program::Program(ProgramSource source, int hashtag)
 
 Program::~Program() {
   delete process_list_mutex_;
+  delete cache_;
   ASSERT(process_list_head_ == NULL);
 }
 
@@ -1148,5 +1150,11 @@ void Program::UncookAndUnchainStacks() {
   cooked_stack_deltas_.Delete();
   stack_chain_ = NULL;
 }
+
+LookupCache* Program::EnsureCache() {
+  if (cache_ == NULL) cache_ = new LookupCache();
+  return cache_;
+}
+
 
 }  // namespace fletch
