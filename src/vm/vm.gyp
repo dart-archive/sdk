@@ -67,13 +67,11 @@
         }],
       ],
       'variables': {
-        'variables': {
-          'yasm_arch_flags%': [],
-        },
         'asm_file_extension%': '.S',
         'yasm_output_path': '<(INTERMEDIATE_DIR)',
         'yasm_flags': [
-          '<@(yasm_arch_flags)',
+          '-f', 'win32',
+          '-m', 'x86',
           '-p', 'gas',
           '-r', 'raw',
         ],

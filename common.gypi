@@ -207,13 +207,6 @@
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'i386' ],
         },
-
-        'variables': {
-          'yasm_arch_flags': [
-            '-f', 'win32',
-            '-m', 'x86',
-          ],
-        },
       },
 
       'fletch_x64': {
@@ -235,13 +228,6 @@
 
           'OTHER_CPLUSPLUSFLAGS': [
             '-fPIC',
-          ],
-        },
-
-        'variables': {
-          'yasm_arch_flags': [
-            '-f', 'win64',
-            '-m', 'amd64',
           ],
         },
       },
