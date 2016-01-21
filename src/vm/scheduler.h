@@ -56,6 +56,31 @@ class ProcessVisitor {
   virtual void VisitProcess(Process* process) = 0;
 };
 
+class InterpretationBarrier {
+ public:
+  InterpretationBarrier() : current_process(NULL) {}
+  ~InterpretationBarrier() {
+    ASSERT(current_process == NULL || current_process == kPreemptMarker);
+  }
+
+  void ProfileProcess();
+  void PreemptProcess();
+
+  void Enter(Process* process);
+  void Leave(Process* process);
+
+ private:
+  Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
+
+  // The currently executing process. Upon preemption, the value may be set to
+  // kPreemptMarker if it's NULL (which is the case when no process is being
+  // executed). This means that it will always be in either of these 3 cases:
+  //   - NULL
+  //   - A process
+  //   - kPreemptMarker
+  Atomic<Process*> current_process;
+};
+
 class Scheduler {
  public:
   static void Setup();
@@ -136,13 +161,7 @@ class Scheduler {
   Atomic<bool> pause_;
   Atomic<bool> shutdown_;
 
-  // The currently executing process. Upon preemption, the value may be set to
-  // kPreemptMarker if it's NULL (which is the case when no process is being
-  // executed). This means that it will always be in either of these 3 cases:
-  //   - NULL
-  //   - A process
-  //   - kPreemptMarker
-  Atomic<Process*> current_processes_;
+  InterpretationBarrier interpretation_barrier_;
 
   GCThread* gc_thread_;
 
@@ -153,14 +172,9 @@ class Scheduler {
 
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);
 
-  void PreemptInterpreterThread();
-  void ProfileInterpreterThread();
-
   void RunInThread();
   void RunInterpreterLoop(ThreadState* thread_state);
 
-  void SetCurrentProcessForThread(Process* process);
-  void ClearCurrentProcessForThread(Process* process);
   // Interpret [process] as thread [thread] with id [thread_id]. Returns the
   // next Process that should be run on this thraed.
   Process* InterpretProcess(Process* process, ThreadState* thread_state);

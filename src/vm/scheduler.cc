@@ -27,8 +27,6 @@
 
 namespace fletch {
 
-Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
-
 // Global instance of scheduler.
 Scheduler* Scheduler::scheduler_ = NULL;
 
@@ -40,6 +38,64 @@ void ThreadState::AttachToCurrentThread() { thread_ = ThreadIdentifier(); }
 
 ThreadState::~ThreadState() {
   delete idle_monitor_;
+}
+
+void InterpretationBarrier::ProfileProcess() {
+  Process* process = current_process;
+  if (process != NULL && process != kPreemptMarker) {
+    if (current_process.compare_exchange_strong(process, NULL)) {
+      process->Profile();
+      current_process = process;
+    }
+  }
+}
+
+void InterpretationBarrier::PreemptProcess() {
+  Process* process = current_process;
+  while (true) {
+    if (process == kPreemptMarker) {
+      break;
+    } else if (process == NULL) {
+      if (current_process.compare_exchange_weak(process, kPreemptMarker)) {
+        break;
+      }
+    } else {
+      if (current_process.compare_exchange_weak(process, NULL)) {
+        process->Preempt();
+        current_process = process;
+        break;
+      }
+    }
+  }
+}
+
+void InterpretationBarrier::Enter(Process* process) {
+  Process* value = current_process;
+  while (true) {
+    if (value == kPreemptMarker) {
+      process->Preempt();
+      current_process = process;
+      break;
+    } else {
+      if (current_process.compare_exchange_weak(value, process)) {
+        break;
+      }
+    }
+  }
+}
+
+void InterpretationBarrier::Leave(Process* process) {
+  // NOTE: This method will ensure we wait until [ProfileProcess] or
+  // [PreemptProcess] calls (on other threads) are done before we
+  // go out of this function.
+
+  while (true) {
+    // Take value at each attempt, as value will be overriden on failure.
+    Process* value = process;
+    if (current_process.compare_exchange_weak(value, NULL)) {
+      break;
+    }
+  }
 }
 
 void Scheduler::Setup() {
@@ -69,7 +125,6 @@ Scheduler::Scheduler()
       pause_monitor_(Platform::CreateMonitor()),
       pause_(false),
       shutdown_(false),
-      current_processes_(NULL),
       gc_thread_(new GCThread()) {
 }
 
@@ -125,7 +180,7 @@ void Scheduler::StopProgram(Program* program) {
       // current process. This makes sure we don't preempt while deleting.
       // Loop to ensure we continue to preempt until all threads are sleeping.
       if (interpreting_thread_.load() != NULL) count++;
-      PreemptInterpreterThread();
+      interpretation_barrier_.PreemptProcess();
       if (count == sleeping_threads_) break;
       pause_monitor_->Wait();
     }
@@ -206,19 +261,11 @@ void Scheduler::ResumeGcThread() {
 }
 
 void Scheduler::PreemptionTick() {
-  // We have at most one scheduler thread.
-  if (thread_count_ > 0) {
-    ASSERT(thread_count_ <= 1);
-    PreemptInterpreterThread();
-  }
+  interpretation_barrier_.PreemptProcess();
 }
 
 void Scheduler::ProfileTick() {
-  // We have at most one scheduler thread.
-  if (thread_count_ > 0) {
-    ASSERT(thread_count_ <= 1);
-    scheduler_->ProfileInterpreterThread();
-  }
+  interpretation_barrier_.ProfileProcess();
 }
 
 void Scheduler::FinishedGC(Program* program, int count) {
@@ -424,35 +471,6 @@ void Scheduler::RescheduleProcess(Process* process, ThreadState* state,
   }
 }
 
-void Scheduler::PreemptInterpreterThread() {
-  Process* process = current_processes_;
-  while (true) {
-    if (process == kPreemptMarker) {
-      break;
-    } else if (process == NULL) {
-      if (current_processes_.compare_exchange_strong(process, kPreemptMarker)) {
-        break;
-      }
-    } else {
-      if (current_processes_.compare_exchange_strong(process, NULL)) {
-        process->Preempt();
-        current_processes_ = process;
-        break;
-      }
-    }
-  }
-}
-
-void Scheduler::ProfileInterpreterThread() {
-  Process* process = current_processes_;
-  if (process != NULL && process != kPreemptMarker) {
-    if (current_processes_.compare_exchange_strong(process, NULL)) {
-      process->Profile();
-      current_processes_ = process;
-    }
-  }
-}
-
 void Scheduler::RunInThread() {
   ThreadState* thread_state = interpreting_thread_;
   ThreadEnter();
@@ -506,32 +524,6 @@ void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
   }
 }
 
-void Scheduler::SetCurrentProcessForThread(Process* process) {
-  Process* value = current_processes_;
-  while (true) {
-    if (value == kPreemptMarker) {
-      process->Preempt();
-      current_processes_ = process;
-      break;
-    } else {
-      // Take value at each attempt, as value will be overriden on failure.
-      if (current_processes_.compare_exchange_weak(value, process)) {
-        break;
-      }
-    }
-  }
-}
-
-void Scheduler::ClearCurrentProcessForThread(Process* process) {
-  while (true) {
-    // Take value at each attempt, as value will be overriden on failure.
-    Process* value = process;
-    if (current_processes_.compare_exchange_weak(value, NULL)) {
-      break;
-    }
-  }
-}
-
 Process* Scheduler::InterpretProcess(Process* process,
                                      ThreadState* thread_state) {
   ASSERT(process->exception()->IsNull());
@@ -551,7 +543,7 @@ Process* Scheduler::InterpretProcess(Process* process,
     return NULL;
   }
 
-  SetCurrentProcessForThread(process);
+  interpretation_barrier_.Enter(process);
 
   // Mark the process as owned by the current thread while interpreting.
   Thread::SetProcess(process);
@@ -565,7 +557,8 @@ Process* Scheduler::InterpretProcess(Process* process,
   process->heap()->set_random(NULL);
 
   Thread::SetProcess(NULL);
-  ClearCurrentProcessForThread(process);
+
+  interpretation_barrier_.Leave(process);
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
