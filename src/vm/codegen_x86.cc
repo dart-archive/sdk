@@ -119,6 +119,10 @@ void Codegen::GenerateHelpers() {
   printf("\n");
   __ BindWithPowerOfTwoAlignment("StackOverflow", 4);
   __ int3();
+
+  printf("\n");
+  __ BindWithPowerOfTwoAlignment("Throw", 4);
+  __ int3();
 }
 
 void Codegen::DoEntry() {
@@ -267,8 +271,13 @@ void Codegen::DoInvokeMethod(int arity, int offset) {
 void Codegen::DoInvokeStatic(int bci, int offset, Function* target) {
   Materialize();
   printf("\tcall Function_%08x\n", target);
-  DoDrop(target->arity());
-  __ pushl(EAX);
+  int arity = target->arity();
+  if (arity == 1) {
+  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  } else {
+    DoDrop(target->arity());
+    __ pushl(EAX);
+  }
 }
 
 void Codegen::DoInvokeTest(int offset) {
@@ -629,6 +638,10 @@ void Codegen::DoReturn() {
   __ movl(ESP, EBP);
   __ popl(EBP);
   __ ret();
+}
+
+void Codegen::DoThrow() {
+  __ call("Throw");
 }
 
 void Codegen::DoSaveState() {

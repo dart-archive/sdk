@@ -115,6 +115,8 @@ class Codegen {
 
   void DoReturn();
 
+  void DoThrow();
+
   void DoStackOverflowCheck(int size);
 
   void DoIntrinsicGetField(int field);

@@ -613,6 +613,11 @@ void Codegen::Generate(Function* function) {
         break;
       }
 
+      case kThrow: {
+        DoThrow();
+        break;
+      }
+
       case kAllocate:
       case kAllocateImmutable: {
         Class* klass = Class::cast(Function::ConstantForBytecode(bcp));
