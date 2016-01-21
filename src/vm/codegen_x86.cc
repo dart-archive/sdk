@@ -50,7 +50,8 @@ void Codegen::GenerateHelpers() {
   __ jmp(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
 
   __ Bind(&nsm);
-  __ int3();
+  // TODO(ajohnsen): Do NSM!
+  __ call("Throw");
 
   if (add_offset_ >= 0) {
     printf("\n");
@@ -224,20 +225,7 @@ void Codegen::GenerateHelpers() {
            program()->dispatch_table()->address(),
            Array::kSize);
 
-    Label nsm, end;
     __ cmpl(EDX, Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
-    __ j(NOT_EQUAL, &nsm);
-    Object* root = *reinterpret_cast<Object**>(
-        reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
-    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
-    __ jmp(&end);
-
-    __ Bind(&nsm);
-    root = *reinterpret_cast<Object**>(
-        reinterpret_cast<uint8*>(program_) + Program::kFalseObjectOffset);
-    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
-
-    __ Bind(&end);
     __ ret();
   }
 }
@@ -265,8 +253,17 @@ void Codegen::DoSetupFrame() {
 }
 
 void Codegen::DoLoadLocal(int index) {
-  Materialize();
-  __ movl(EAX, Address(ESP, index * kWordSize));
+  MaterializeCondition();
+  if (top_in_eax_) {
+    if (index == 0) {
+      __ pushl(EAX);
+    } else {
+      MaterializeTop();
+    }
+  }
+  if (!top_in_eax_) {
+    __ movl(EAX, Address(ESP, index * kWordSize));
+  }
   top_in_eax_ = true;
 }
 
@@ -430,7 +427,7 @@ void Codegen::DoInvokeTest(int offset) {
 
   DoDrop(1);
 
-  top_in_eax_ = true;
+  cc_ = EQUAL;
 }
 
 void Codegen::DoInvokeAdd() {
