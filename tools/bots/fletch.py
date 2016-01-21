@@ -323,7 +323,7 @@ def StepsArchiveGCCArmNoneEabi(system):
     CreateZip(gcc_copy, namer.gcc_embedded_bundle_zipfilename(system))
     version = utils.GetSemanticSDKVersion()
     gsutil = bot_utils.GSUtil()
-    gs_path = namer.gcc_bundle_filepath(version, system)
+    gs_path = namer.gcc_embedded_bundle_filepath(version, system)
     gsutil.upload(zip_file, gs_path, public=True)
     http_path = GetDownloadLink(gs_path)
     print '@@@STEP_LINK@download@%s@@@' % http_path
