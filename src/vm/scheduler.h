@@ -60,7 +60,8 @@ class InterpretationBarrier {
  public:
   InterpretationBarrier() : current_process(NULL) {}
   ~InterpretationBarrier() {
-    ASSERT(current_process == NULL || current_process == kPreemptMarker);
+    ASSERT(current_process.load() == NULL ||
+           current_process.load() == kPreemptMarker);
   }
 
   void ProfileProcess();
