@@ -20,7 +20,12 @@ Port::Port(Process* process, Instance* channel)
       spinlock_(),
       next_(process->ports()) {
   ASSERT(process != NULL);
+#if defined(FLETCH_TARGET_OS_POSIX)
   ASSERT(Thread::GetProcess() == process);
+#else
+  // Other platforms do not have Thread Local Storage support and just return
+  // `NULL` here.
+#endif
   process->set_ports(this);
 }
 
