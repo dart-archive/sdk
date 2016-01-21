@@ -388,9 +388,62 @@ void Codegen::DoBranch(BranchCondition condition, int from, int to) {
   }
 }
 
-void Codegen::DoInvokeMethod(int arity, int offset) {
+void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
+  printf("// Invoke: %i, %i (%p)\n", offset, arity, klass);
+  MaterializeCondition();
   bool receiver_in_eax = top_in_eax_ && arity == 0;
+  Slot receiver = GetStackIndex(arity);
+  if (receiver == kThisSlot && klass != NULL) {
+    Function* target = NULL;
+    for (int i = klass->id(); i < klass->child_id(); i++) {
+      DispatchTableEntry* entry = DispatchTableEntry::cast(
+          program()->dispatch_table()->get(i + offset));
+      if (i == klass->id()) target = entry->target();
+      if (entry->offset()->value() != offset || target != entry->target()) {
+        target = NULL;
+        break;
+      }
+    }
+
+    printf("// Target: %p\n", target);
+    if (target != NULL) {
+      Intrinsic intrinsic = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
+      switch (intrinsic) {
+        case kIntrinsicGetField: {
+          ASSERT(arity == 0);
+          if (!top_in_eax_) __ popl(EAX);
+          int field = *target->bytecode_address_for(2);
+          printf("// Inlined getter, field %i\n", field);
+          int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
+          __ movl(EAX, Address(EAX, offset));
+          top_in_eax_ = true;
+          break;
+        }
+
+        case kIntrinsicSetField: {
+          ASSERT(arity == 1);
+          if (!top_in_eax_) __ popl(EAX);
+          __ popl(ECX);
+          int field = *target->bytecode_address_for(3);
+          printf("// Inlined setter, field %i\n", field);
+          int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
+          __ movl(Address(ECX, offset), EAX);
+          top_in_eax_ = true;
+          break;
+        }
+
+        default: {
+          DoInvokeStatic(0, 0, target);
+          break;
+        }
+      }
+      stack_.Clear();
+      return;
+    }
+  }
+
   Materialize();
+
   if (!receiver_in_eax) {
     __ movl(EAX, Address(ESP, arity * kWordSize));
   }
@@ -670,6 +723,7 @@ void Codegen::DoProcessYield() {
 }
 
 void Codegen::DoDrop(int n) {
+  for (int i = 0; i < n && stack_.size() > 0; i++) stack_.PopBack();
   MaterializeCondition();
   ASSERT(n >= 0);
   if (n == 0) {
@@ -836,47 +890,6 @@ void Codegen::DoIntrinsicListIndexSet() {
   __ ret();
 
   __ Bind(&failure);
-}
-
-bool Codegen::DoDirectInvokeMethod(int this_index, Class* klass, int selector) {
-  int arity = Selector::ArityField::decode(selector);
-  if (arity != 0) return false;
-  int offset = Selector::IdField::decode(selector);
-  Function* target = NULL;
-  for (int i = klass->id(); i < klass->child_id(); i++) {
-    DispatchTableEntry* entry = DispatchTableEntry::cast(
-        program()->dispatch_table()->get(i + offset));
-    if (i == klass->id()) target = entry->target();
-    if (entry->offset()->value() != offset || target != entry->target()) {
-      return false;
-    }
-  }
-
-  ASSERT(target != NULL);
-  ASSERT(target->arity() == 1);
-
-
-  Intrinsic intrinsic = target->ComputeIntrinsic(IntrinsicsTable::GetDefault());
-  switch (intrinsic) {
-    case kIntrinsicGetField: {
-      printf("// -> inlined getter\n");
-      Materialize();
-      __ movl(EAX, Address(ESP, this_index * kWordSize));
-      int field = *target->bytecode_address_for(2);
-      int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
-      __ movl(EAX, Address(EAX, offset));
-      top_in_eax_ = true;
-      break;
-    }
-
-    default: {
-      DoLoadLocal(this_index);
-      DoInvokeStatic(0, 0, target);
-      break;
-    }
-  }
-
-  return true;
 }
 
 void Codegen::Materialize() {

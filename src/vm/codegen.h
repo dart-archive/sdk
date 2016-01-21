@@ -7,6 +7,7 @@
 
 #include "src/vm/assembler.h"
 #include "src/vm/program.h"
+#include "src/vm/vector.h"
 
 #include "src/shared/natives.h"
 
@@ -47,6 +48,11 @@ class Codegen {
  private:
   static const Condition kMaterialized = static_cast<Condition>(-1);
 
+  enum Slot {
+    kUnknownSlot,
+    kThisSlot,
+  };
+
   Program* const program_;
   Assembler* const assembler_;
   HashMap<Function*, Class*>* const function_owners_;
@@ -64,11 +70,35 @@ class Codegen {
   Condition cc_;
   bool top_in_eax_;
 
+  Vector<Slot> stack_;
+
   enum BranchCondition {
     BRANCH_ALWAYS,
     BRANCH_IF_TRUE,
     BRANCH_IF_FALSE,
   };
+
+  void SetStackIndex(size_t index, Slot kUnknownSlot) {
+    if (index >= stack_.size()) return;
+    stack_[stack_.size() - (index + 1)] = kUnknownSlot;
+  }
+
+  Slot GetStackIndex(size_t index) {
+    if (index >= stack_.size()) return kUnknownSlot;
+    return stack_[stack_.size() - (index + 1)];
+  }
+
+  void PrintStack() {
+    printf("// stack: [");
+    for (size_t i = 0; i < stack_.size(); i++) {
+      if (i != 0) printf(", ");
+      switch (stack_[i]) {
+        case kThisSlot: printf("this"); break;
+        case kUnknownSlot: printf("unknown"); break;
+      }
+    }
+    printf("]\n");
+  }
 
   Program* program() const { return program_; }
   Assembler* assembler() const { return assembler_; }
@@ -93,7 +123,7 @@ class Codegen {
 
   void DoBranch(BranchCondition condition, int from, int to);
 
-  void DoInvokeMethod(int arity, int offset);
+  void DoInvokeMethod(Class* klass, int arity, int offset);
   void DoInvokeStatic(int bci, int offset, Function* target);
 
   void DoInvokeTest(int offset);
@@ -126,8 +156,6 @@ class Codegen {
   void DoIntrinsicListLength();
   void DoIntrinsicListIndexGet();
   void DoIntrinsicListIndexSet();
-
-  bool DoDirectInvokeMethod(int this_index, Class* klass, int selector);
 
   void Materialize();
   void MaterializeTop();

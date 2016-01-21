@@ -236,6 +236,8 @@ void Codegen::Generate(Function* function) {
   Class* klass = (*function_owners_)[function];
   printf("// class: %p\n", klass);
 
+  stack_.Clear();
+
   DoEntry();
 
   IntrinsicsTable* intrinsics = IntrinsicsTable::GetDefault();
@@ -306,6 +308,7 @@ void Codegen::Generate(Function* function) {
       return;
     }
 
+    PrintStack();
     if (bci == 0 || labels[bci] > 0) {
       Materialize();
       printf("%u: ", reinterpret_cast<uint32>(bcp));
@@ -322,54 +325,57 @@ void Codegen::Generate(Function* function) {
       case kLoadLocal4:
       case kLoadLocal5: {
         DoLoadLocal(opcode - kLoadLocal0);
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadThis: {
         int this_index = bcp[1];
-        if (klass != NULL && bcp[2] == kInvokeMethod) {
-          int selector = Utils::ReadInt32(bcp + 3);
-          if (DoDirectInvokeMethod(this_index, klass, selector)) {
-            bci += Bytecode::Size(kInvokeMethod);
-            break;
-          }
-        }
         DoLoadLocal(this_index);
+        stack_.PushBack(kThisSlot);
         break;
       }
 
       case kLoadLocal: {
         DoLoadLocal(*(bcp + 1));
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadLocalWide: {
         DoLoadLocal(Utils::ReadInt32(bcp + 1));
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadField: {
         DoLoadField(*(bcp + 1));
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadFieldWide: {
         DoLoadField(Utils::ReadInt32(bcp + 1));
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadStatic: {
         DoLoadStatic(Utils::ReadInt32(bcp + 1));
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadStaticInit: {
         DoLoadStaticInit(Utils::ReadInt32(bcp + 1));
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kStoreLocal: {
-        DoStoreLocal(*(bcp + 1));
+        int index = *(bcp + 1);
+        DoStoreLocal(index);
+        SetStackIndex(index, kUnknownSlot);
         break;
       }
 
@@ -390,98 +396,116 @@ void Codegen::Generate(Function* function) {
 
       case kLoadLiteralNull: {
         DoLoadProgramRoot(Program::kNullObjectOffset);
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadLiteralTrue: {
         DoLoadProgramRoot(Program::kTrueObjectOffset);
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadLiteralFalse: {
         DoLoadProgramRoot(Program::kFalseObjectOffset);
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadLiteral0:
       case kLoadLiteral1: {
         DoLoadInteger(opcode - kLoadLiteral0);
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadLiteral: {
         DoLoadInteger(*(bcp + 1));
+        stack_.Clear();
         break;
       }
 
       case kLoadLiteralWide: {
         DoLoadInteger(Utils::ReadInt32(bcp + 1));
+        stack_.Clear();
         break;
       }
 
       case kLoadConst: {
         DoLoadConstant(bci, Utils::ReadInt32(bcp + 1));
+        stack_.Clear();
         break;
       }
 
       case kBranchWide: {
+        stack_.Clear();
         DoBranch(BRANCH_ALWAYS, bci, bci + Utils::ReadInt32(bcp + 1));
         break;
       }
 
       case kBranchIfTrueWide: {
+        stack_.Clear();
         DoBranch(BRANCH_IF_TRUE, bci, bci + Utils::ReadInt32(bcp + 1));
         break;
       }
 
       case kBranchIfFalseWide: {
+        stack_.Clear();
         DoBranch(BRANCH_IF_FALSE, bci, bci + Utils::ReadInt32(bcp + 1));
         break;
       }
 
       case kBranchBack: {
+        stack_.Clear();
         DoStackOverflowCheck(0);
         DoBranch(BRANCH_ALWAYS, bci, bci - *(bcp + 1));
         break;
       }
 
       case kBranchBackIfTrue: {
+        stack_.Clear();
         DoStackOverflowCheck(0);
         DoBranch(BRANCH_IF_TRUE, bci, bci - *(bcp + 1));
         break;
       }
 
       case kBranchBackIfFalse: {
+        stack_.Clear();
         DoStackOverflowCheck(0);
         DoBranch(BRANCH_IF_FALSE, bci, bci - *(bcp + 1));
         break;
       }
 
       case kBranchBackWide: {
+        stack_.Clear();
         DoStackOverflowCheck(0);
         DoBranch(BRANCH_ALWAYS, bci, bci - Utils::ReadInt32(bcp + 1));
         break;
       }
 
       case kBranchBackIfTrueWide: {
+        stack_.Clear();
         DoStackOverflowCheck(0);
         DoBranch(BRANCH_IF_TRUE, bci, bci - Utils::ReadInt32(bcp + 1));
         break;
       }
 
       case kBranchBackIfFalseWide: {
+        stack_.Clear();
         DoStackOverflowCheck(0);
         DoBranch(BRANCH_IF_FALSE, bci, bci - Utils::ReadInt32(bcp + 1));
         break;
       }
 
       case kPopAndBranchWide: {
+        stack_.Clear();
         DoDrop(*(bcp + 1));
         DoBranch(BRANCH_ALWAYS, bci, bci + Utils::ReadInt32(bcp + 2));
         break;
       }
 
       case kPopAndBranchBackWide: {
+        stack_.Clear();
         DoStackOverflowCheck(0);
         DoDrop(*(bcp + 1));
         DoBranch(BRANCH_ALWAYS, bci, bci - Utils::ReadInt32(bcp + 2));
@@ -503,7 +527,8 @@ void Codegen::Generate(Function* function) {
         int selector = Utils::ReadInt32(bcp + 1);
         int arity = Selector::ArityField::decode(selector);
         int offset = Selector::IdField::decode(selector);
-        DoInvokeMethod(arity, offset);
+        DoInvokeMethod(klass, arity, offset);
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -520,6 +545,7 @@ void Codegen::Generate(Function* function) {
         ASSERT(add_offset_ == -1 || add_offset_ == offset);
         add_offset_ = offset;
         DoInvokeAdd();
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -529,6 +555,7 @@ void Codegen::Generate(Function* function) {
         ASSERT(sub_offset_ == -1 || sub_offset_ == offset);
         sub_offset_ = offset;
         DoInvokeSub();
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -538,6 +565,7 @@ void Codegen::Generate(Function* function) {
         ASSERT(eq_offset_ == -1 || eq_offset_ == offset);
         eq_offset_ = offset;
         DoInvokeCompare(EQUAL, "InvokeEq");
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -547,6 +575,7 @@ void Codegen::Generate(Function* function) {
         ASSERT(ge_offset_ == -1 || ge_offset_ == offset);
         ge_offset_ = offset;
         DoInvokeCompare(GREATER_EQUAL, "InvokeGe");
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -556,6 +585,7 @@ void Codegen::Generate(Function* function) {
         ASSERT(gt_offset_ == -1 || gt_offset_ == offset);
         gt_offset_ = offset;
         DoInvokeCompare(GREATER, "InvokeGt");
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -565,6 +595,7 @@ void Codegen::Generate(Function* function) {
         ASSERT(le_offset_ == -1 || le_offset_ == offset);
         le_offset_ = offset;
         DoInvokeCompare(LESS_EQUAL, "InvokeLe");
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -574,6 +605,7 @@ void Codegen::Generate(Function* function) {
         ASSERT(lt_offset_ == -1 || lt_offset_ == offset);
         lt_offset_ = offset;
         DoInvokeCompare(LESS, "InvokeLt");
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -582,6 +614,7 @@ void Codegen::Generate(Function* function) {
         int offset = Utils::ReadInt32(bcp + 1);
         Function* target = Function::cast(Function::ConstantForBytecode(bcp));
         DoInvokeStatic(bci, offset, target);
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
@@ -589,6 +622,7 @@ void Codegen::Generate(Function* function) {
         int arity = *(bcp + 1);
         Native native = static_cast<Native>(*(bcp + 2));
         DoInvokeNative(native, arity);
+        stack_.Clear();
         break;
       }
 
@@ -604,17 +638,20 @@ void Codegen::Generate(Function* function) {
 
       case kReturn: {
         DoReturn();
+        stack_.Clear();
         break;
       }
 
       case kReturnNull: {
         DoLoadProgramRoot(Program::kNullObjectOffset);
         DoReturn();
+        stack_.Clear();
         break;
       }
 
       case kThrow: {
         DoThrow();
+        stack_.Clear();
         break;
       }
 
@@ -622,6 +659,7 @@ void Codegen::Generate(Function* function) {
       case kAllocateImmutable: {
         Class* klass = Class::cast(Function::ConstantForBytecode(bcp));
         DoAllocate(klass);
+        stack_.Clear();
         break;
       }
 
@@ -632,16 +670,19 @@ void Codegen::Generate(Function* function) {
 
       case kIdentical: {
         DoIdentical();
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kIdenticalNonNumeric: {
         DoIdenticalNonNumeric();
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kProcessYield: {
         DoProcessYield();
+        stack_.Clear();
         break;
       }
 
