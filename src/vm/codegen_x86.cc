@@ -172,21 +172,9 @@ void Codegen::GenerateHelpers() {
 
     __ Bind(&fast_case);
 
-    Label true_case, done;
+    Label true_case;
     __ cmpl(EBX, EAX);
-    __ j(EQUAL, &true_case);
-
-    Object* root = *reinterpret_cast<Object**>(
-        reinterpret_cast<uint8*>(program_) + Program::kFalseObjectOffset);
-    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
-    __ jmp(&done);
-
-    __ Bind(&true_case);
-    root = *reinterpret_cast<Object**>(
-        reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
-    printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
-    __ jmp(&done);
-
+    __ ret();
 
     __ Bind(&bail_out);
     __ movl(EBX, ESP);
@@ -201,7 +189,10 @@ void Codegen::GenerateHelpers() {
     __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
     __ movl(ESP, EBX);
 
-    __ Bind(&done);
+    Object* root = *reinterpret_cast<Object**>(
+        reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
+    printf("\tcmpl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
+
     __ ret();
   }
 
@@ -644,15 +635,14 @@ void Codegen::DoIdentical() {
   } else {
     __ movl(EAX, Address(ESP, 0 * kWordSize));
     __ movl(EBX, Address(ESP, 1 * kWordSize));
+
+    __ addl(ESP, Immediate(2 * kWordSize));
   }
 
   __ call("Identical");
 
-  if (!top_in_eax_) {
-    DoDrop(2);
-  }
-
-  top_in_eax_ = true;
+  top_in_eax_ = false;
+  cc_ = EQUAL;
 }
 
 void Codegen::DoIdenticalNonNumeric() {
@@ -666,22 +656,10 @@ void Codegen::DoIdenticalNonNumeric() {
     __ addl(ESP, Immediate(2 * kWordSize));
   }
 
-
-  Label true_case, done;
   __ cmpl(EAX, EBX);
-  __ j(EQUAL, &true_case);
 
-  Object* root = *reinterpret_cast<Object**>(
-      reinterpret_cast<uint8*>(program_) + Program::kFalseObjectOffset);
-  printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
-  __ jmp(&done);
-
-  __ Bind(&true_case);
-  root = *reinterpret_cast<Object**>(
-      reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
-  printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
-  __ Bind(&done);
-  top_in_eax_ = true;
+  top_in_eax_ = false;
+  cc_ = EQUAL;
 }
 
 void Codegen::DoProcessYield() {
