@@ -22,7 +22,7 @@ Commands:
                                         enters method invocations
   'n'                                   step until next expression,
                                         does not enter method invocations
-  'fibers', 'lf'                        list all process fibers
+  'fibers'                              list all process fibers
   'finish'                              finish current method (step out)
   'restart'                             restart the selected frame
   'sb'                                  step bytecode, enters method invocations
@@ -34,7 +34,6 @@ Commands:
   'p <name>'                            print the value of local variable
   'p *<name>'                           print the structure of local variable
   'p'                                   print the values of all locals
-  'processes', 'lp'                     list all processes
   'disasm'                              disassemble code for frame
   't <flag>'                            toggle one of the flags:
                                           - 'internal' : show internal frames
@@ -48,9 +47,6 @@ class InputHandler {
   final Uri base;
 
   String previousLine = '';
-
-  int processPagingCount = 10;
-  int processPagingCurrent = 0;
 
   InputHandler(this.session, this.stream, this.echo, this.base);
 
@@ -67,6 +63,7 @@ class InputHandler {
       printPrompt();
       return;
     }
+    previousLine = line;
     if (echo) writeStdoutLine(line);
     List<String> commandComponents =
         line.split(' ').where((s) => s.isNotEmpty).toList();
@@ -235,43 +232,7 @@ class InputHandler {
         }
         writeStdoutLine("### deleted breakpoint: $breakpoint");
         break;
-      case 'processes':
-      case 'lp':
-        if (checkRunning('cannot list processes')) {
-	  // Reset current paging point if not continuing from an 'lp' command.
-	  if (previousLine != 'lp' && previousLine != 'processes') {
-	    processPagingCurrent = 0;
-	  }
-
-          List<int> processes = await session.processes();
-	  processes.sort();
-
-	  int count = processes.length;
-	  int start = processPagingCurrent;
-	  int end;
-	  if (start + processPagingCount < count) {
-	    processPagingCurrent += processPagingCount;
-	    end = processPagingCurrent;
-	  } else {
-	    processPagingCurrent = 0;
-	    end = count;
-	  }
-
-	  if (processPagingCount < count) {
-	    writeStdout("displaying range [$start;${end-1}] ");
-	    writeStdoutLine("of $count processes");
-	  }
-	  for (int i = start; i < end; ++i) {
-	    int processId = processes[i];
-	    BackTrace stack = await session.processStack(processId);
-	    writeStdoutLine('\nprocess ${processId}');
-	    writeStdout(stack.format());
-	  }
-          writeStdoutLine('');
-        }
-        break;
       case 'fibers':
-      case 'lf':
         if (checkRunning('cannot show fibers')) {
           List<BackTrace> traces = await session.fibers();
           for (int fiber = 0; fiber < traces.length; ++fiber) {
@@ -396,7 +357,6 @@ class InputHandler {
         writeStdoutLine('### unknown command: $command');
         break;
     }
-    previousLine = line;
     if (!session.terminated) printPrompt();
   }
 

@@ -48,7 +48,7 @@ class DebugInfo {
  public:
   static const int kNoBreakpointId = -1;
 
-  explicit DebugInfo(int process_id);
+  DebugInfo();
 
   bool ShouldBreak(uint8_t* bcp, Object** sp);
   int SetBreakpoint(Function* function, int bytecode_index,
@@ -65,8 +65,6 @@ class DebugInfo {
     is_at_breakpoint_ = false;
     current_breakpoint_id_ = kNoBreakpointId;
   }
-
-  int process_id() const { return process_id_; }
 
   bool is_stepping() const { return is_stepping_; }
 
@@ -90,8 +88,6 @@ class DebugInfo {
   }
 
   int NextBreakpointId() { return next_breakpoint_id_++; }
-
-  int process_id_;
 
   bool is_stepping_;
   bool is_at_breakpoint_;

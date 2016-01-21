@@ -28,7 +28,6 @@ class SharedHeap;
 class Port;
 class ProcessQueue;
 class ProcessVisitor;
-class Session;
 
 class ThreadState {
  public:
@@ -173,7 +172,7 @@ class Process {
   void Profile();
 
   // Debugging support.
-  void EnsureDebuggerAttached(Session* session);
+  void EnsureDebuggerAttached();
   int PrepareStepOver();
   int PrepareStepOut();
 
@@ -182,9 +181,6 @@ class Process {
 
   Process* next() const { return next_; }
   void set_next(Process* process) { next_ = process; }
-
-  Process* process_list_next() { return process_list_next_; }
-  Process* process_list_prev() { return process_list_prev_; }
 
   void TakeLookupCache();
   void ReleaseLookupCache() { primary_lookup_cache_ = NULL; }
@@ -279,7 +275,9 @@ class Process {
   void UpdateStackLimit();
 
   void set_process_list_next(Process* process) { process_list_next_ = process; }
+  Process* process_list_next() { return process_list_next_; }
   void set_process_list_prev(Process* process) { process_list_prev_ = process; }
+  Process* process_list_prev() { return process_list_prev_; }
 
   // Put these first so they can be accessed from the interpreter without
   // issues around object layout.

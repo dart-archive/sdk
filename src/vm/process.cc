@@ -392,14 +392,13 @@ void Process::DebugInterrupt() { SetStackMarker(kDebugInterruptMarker); }
 
 void Process::Profile() { SetStackMarker(kProfileMarker); }
 
-void Process::EnsureDebuggerAttached(Session* session) {
-  if (debug_info_ == NULL) {
-    debug_info_ = new DebugInfo(session->FreshProcessId());
-  }
+void Process::EnsureDebuggerAttached() {
+  if (debug_info_ == NULL) debug_info_ = new DebugInfo();
 }
 
 int Process::PrepareStepOver() {
-  ASSERT(debug_info_ != NULL);
+  EnsureDebuggerAttached();
+
   Frame frame(stack());
   frame.MovePrevious();
 
@@ -446,7 +445,7 @@ int Process::PrepareStepOver() {
 }
 
 int Process::PrepareStepOut() {
-  ASSERT(debug_info_ != NULL);
+  EnsureDebuggerAttached();
   Frame frame(stack());
   bool has_top_frame = frame.MovePrevious();
   ASSERT(has_top_frame);

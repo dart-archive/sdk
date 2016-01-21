@@ -93,10 +93,6 @@ class Connection {
     kProcessCompileTimeError,
     kProcessAddFibersToMap,
     kProcessNumberOfStacks,
-
-    kProcessGetProcessIds,
-    kProcessGetProcessIdsResult,
-
     kWriteSnapshot,
     kWriteSnapshotResult,
     kCollectGarbage,
