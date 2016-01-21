@@ -61,7 +61,7 @@ class FletchGCSNamer(bot_utils.GCSNamer):
 
   def gcc_embedded_bundle_filepath(self, revision, system):
     return '/'.join([self.fletch_sdk_directory(revision),
-                     self.gcc_bundle_zipfilename(system)])
+                     self.gcc_embedded_bundle_zipfilename(system)])
 
   def docs_filepath(self, revision):
     return '/'.join([self.fletch_sdk_directory(revision), 'docs'])
