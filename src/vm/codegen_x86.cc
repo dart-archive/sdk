@@ -448,7 +448,35 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
     __ movl(EAX, Address(ESP, arity * kWordSize));
   }
   __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
-  printf("\tcall InvokeMethod\n");
+
+  Label done;
+  __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
+  __ testl(EAX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &done);
+
+  // TODO(kasperl): Use class id in objects? Less indirection.
+  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
+  __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
+  __ Bind(&done);
+
+  __ addl(ECX, EDX);
+
+  printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
+      program()->dispatch_table()->address(),
+      Array::kSize);
+
+  Label nsm;
+  __ cmpl(EDX, Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
+  __ j(NOT_EQUAL, &nsm);
+  __ call(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
+  Label end;
+  __ jmp(&end);
+
+  __ Bind(&nsm);
+  // TODO(ajohnsen): Do NSM!
+  __ call("Throw");
+  __ Bind(&end);
+
   DoDrop(arity + 1);
   top_in_eax_ = true;
 }
