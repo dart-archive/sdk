@@ -13,6 +13,19 @@
 
 namespace fletch {
 
+EventHandler* EventHandler::event_handler_ = NULL;
+
+void EventHandler::Setup() {
+  ASSERT(event_handler_ == NULL);
+  event_handler_ = new EventHandler();
+}
+
+void EventHandler::TearDown() {
+  ASSERT(event_handler_ != NULL);
+  delete event_handler_;
+  event_handler_ = NULL;
+}
+
 EventHandler::EventHandler()
     : monitor_(Platform::CreateMonitor()),
       data_(NULL),

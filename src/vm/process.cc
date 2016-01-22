@@ -12,6 +12,7 @@
 #include "src/shared/names.h"
 #include "src/shared/selectors.h"
 
+#include "src/vm/event_handler.h"
 #include "src/vm/frame.h"
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
@@ -106,7 +107,7 @@ Process::~Process() {
 }
 
 void Process::Cleanup(Signal::Kind kind) {
-  EventHandler* event_handler = program()->event_handler();
+  EventHandler* event_handler = EventHandler::GlobalInstance();
   event_handler->ReceiverForPortsDied(ports_);
 
   // Clear out the process pointer from all the ports.

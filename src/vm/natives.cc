@@ -1462,7 +1462,7 @@ BEGIN_NATIVE(SystemEventHandlerAdd) {
   Object* flags_arg = arguments[2];
   if (!flags_arg->IsSmi()) return Failure::wrong_argument_type();
   int flags = Smi::cast(flags_arg)->value();
-  return process->program()->event_handler()->Add(process, id, port, flags);
+  return EventHandler::GlobalInstance()->Add(process, id, port, flags);
 }
 END_NATIVE()
 
@@ -1506,7 +1506,7 @@ END_NATIVE()
 BEGIN_NATIVE(TimerScheduleTimeout) {
   int64 timeout = AsForeignInt64(arguments[0]);
   Port* port = Port::FromDartObject(arguments[1]);
-  process->program()->event_handler()->ScheduleTimeout(timeout, port);
+  EventHandler::GlobalInstance()->ScheduleTimeout(timeout, port);
   return process->program()->null_object();
 }
 END_NATIVE()
@@ -1515,7 +1515,7 @@ BEGIN_NATIVE(EventHandlerSleep) {
   int64 timeout =
       AsForeignInt64(arguments[0]) + Platform::GetMicroseconds() / 1000;
   Port* port = Port::FromDartObject(arguments[1]);
-  process->program()->event_handler()->ScheduleTimeout(timeout, port);
+  EventHandler::GlobalInstance()->ScheduleTimeout(timeout, port);
   return process->program()->null_object();
 }
 END_NATIVE()

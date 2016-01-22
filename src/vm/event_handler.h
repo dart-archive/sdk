@@ -25,6 +25,10 @@ class EventHandler {
     ERROR_EVENT = 1 << 3,
   };
 
+  static void Setup();
+  static void TearDown();
+  static EventHandler* GlobalInstance() { return event_handler_; }
+
   EventHandler();
   ~EventHandler();
 
@@ -37,6 +41,9 @@ class EventHandler {
   Monitor* monitor() const { return monitor_; }
 
  private:
+  // Global EventHandler instance.
+  static EventHandler* event_handler_;
+
   Monitor* monitor_;
   void* data_;
   intptr_t id_;
@@ -49,11 +56,8 @@ class EventHandler {
   static void* RunEventHandler(void* peer);
   void EnsureInitialized();
 
-
   void Create();
-
   void Run();
-
   void Interrupt();
   void HandleTimeouts();
 

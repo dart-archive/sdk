@@ -6,6 +6,7 @@
 
 #include "src/shared/platform.h"
 
+#include "src/vm/event_handler.h"
 #include "src/vm/ffi.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/object.h"
@@ -20,6 +21,7 @@ void Fletch::Setup() {
   ObjectMemory::Setup();
   StaticClassStructures::Setup();
   ForeignFunctionInterface::Setup();
+  EventHandler::Setup();
   Scheduler::Setup();
   Preempter::Setup();
 }
@@ -27,6 +29,7 @@ void Fletch::Setup() {
 void Fletch::TearDown() {
   Preempter::TearDown();
   Scheduler::TearDown();
+  EventHandler::TearDown();
   ForeignFunctionInterface::TearDown();
   StaticClassStructures::TearDown();
   ObjectMemory::TearDown();

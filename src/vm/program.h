@@ -7,7 +7,6 @@
 
 #include "src/shared/globals.h"
 #include "src/shared/random.h"
-#include "src/vm/event_handler.h"
 #include "src/vm/heap.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/links.h"
@@ -184,8 +183,6 @@ class Program {
 
   ProgramState* program_state() { return &program_state_; }
 
-  EventHandler* event_handler() { return &event_handler_; }
-
   int hashtag() const { return hashtag_; }
   void set_hashtag(int value) { hashtag_ = value; }
 
@@ -352,8 +349,6 @@ class Program {
 
   Scheduler* scheduler_;
   ProgramState program_state_;
-
-  EventHandler event_handler_;
 
   // Session operating on this program.
   Session* session_;
