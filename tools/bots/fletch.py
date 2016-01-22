@@ -412,7 +412,7 @@ def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
   StepGyp()
 
   # TODO(herhut): Remove once Windows port is complete.
-  args = ['libfletch'] if system == 'win' else ()
+  args = ['fletch-vm'] if system == 'win' else ()
 
   # Build all necessary configurations.
   for configuration in configurations:
