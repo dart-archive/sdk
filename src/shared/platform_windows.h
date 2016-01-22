@@ -77,14 +77,12 @@ class MonitorImpl {
   }
 
   int Wait() {
-    AcquireSRWLockExclusive(&srwlock_);
     SleepConditionVariableSRW(&cond_, &srwlock_, INFINITE, 0);
     return 0;
   }
 
   bool Wait(uint64 microseconds) {
     DWORD miliseconds = microseconds / 1000;
-    AcquireSRWLockExclusive(&srwlock_);
     SleepConditionVariableSRW(&cond_, &srwlock_, miliseconds, 0);
     return 0;
   }

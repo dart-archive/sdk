@@ -42,6 +42,8 @@ Chunk::~Chunk() {
   if (is_external()) return;
 #if defined(FLETCH_TARGET_OS_CMSIS) || defined(FLETCH_TARGET_OS_LK)
   page_free(reinterpret_cast<void*>(base()), size() >> PAGE_SIZE_SHIFT);
+#elif defined(FLETCH_TARGET_OS_WIN)
+  _aligned_free(reinterpret_cast<void*>(base()));
 #else
   free(reinterpret_cast<void*>(base()));
 #endif
