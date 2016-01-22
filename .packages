@@ -25,6 +25,7 @@ isolate:pkg/isolate/lib
 js_ast:third_party/dart/pkg/js_ast/lib
 js_runtime:third_party/dart/sdk/lib/_internal/js_runtime/lib/
 lk:pkg/lk/lib
+mbedtls:pkg/mbedtls/lib
 mdns:pkg/mdns/lib
 mqtt:pkg/mqtt/lib
 os:pkg/os/lib
