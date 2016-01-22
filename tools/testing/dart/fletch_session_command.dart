@@ -221,6 +221,7 @@ There are three ways to reproduce this error:
         } else {
           exitCode = await fletch.runInSession(["compile", script],
               checkExitCode: false, timeout: timeout);
+          fletch.stderr.writeln("Compilation took: ${sw.elapsed}");
           if (exitCode == 0) {
             exitCode = await fletch.runInSession(
                 ["run", "--terminate-debugger"],
@@ -239,6 +240,7 @@ There are three ways to reproduce this error:
             "Exit code reported by ${fletch.executable} is $exitCode "
             "${explainExitCode(exitCode)}\n");
         if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
+          fletch.stderr.writeln("Connection error from compiler");
           exitCode = vmExitCode;
         } else if (exitCode != vmExitCode) {
           if (!fletch.killedVmProcess || vmExitCode == null ||
