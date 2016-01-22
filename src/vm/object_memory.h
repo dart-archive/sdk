@@ -235,10 +235,6 @@ class SemiSpace : public Space {
   // allocation top.
   void TryDealloc(uword location, int size);
 
-  // Takes all chunks inside [space] and prepends it to this space.
-  // The given [space] will be deleted.
-  void PrependSpace(SemiSpace* space);
-
   // For the program semispaces.  There is no other space into which we
   // promote, so it does all work in one go.
   void CompleteScavenge(PointerVisitor* visitor);

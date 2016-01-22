@@ -96,35 +96,6 @@ void Space::SetAllocationBudget(int new_budget) {
   allocation_budget_ = Utils::Maximum(DefaultChunkSize(new_budget), new_budget);
 }
 
-void SemiSpace::PrependSpace(SemiSpace* space) {
-  if (space->is_empty()) return;
-
-  space->Flush();
-
-  SetAllocationPointForPrepend(space);
-
-  Chunk* first = space->first();
-  Chunk* chunk = first;
-  while (chunk != NULL) {
-    ObjectMemory::SetSpaceForPages(chunk->base(), chunk->limit(), this);
-    chunk->set_owner(this);
-    chunk = chunk->next();
-  }
-
-  space->last()->set_next(first_);
-  first_ = first;
-  used_ += space->Used();
-
-  // NOTE: The destructor of [SemiSpace] will use some of the fields, so we just
-  // reset all of them.
-  space->first_ = NULL;
-  space->last_ = NULL;
-  space->used_ = 0;
-  space->top_ = 0;
-  space->limit_ = 0;
-  delete space;
-}
-
 void Space::IterateObjects(HeapObjectVisitor* visitor) {
   if (is_empty()) return;
   Flush();

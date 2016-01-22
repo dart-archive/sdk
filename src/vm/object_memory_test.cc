@@ -38,40 +38,4 @@ TEST_CASE(ObjectMemory) {
   ObjectMemory::FreeChunk(second);
 }
 
-TEST_CASE(Space_PrependSpace) {
-  // Test prepending onto non-empty space.
-  {
-    SemiSpace* space = new SemiSpace(32);
-    SemiSpace* space2 = new SemiSpace(32);
-
-    space->AdjustAllocationBudget(0);
-    space2->AdjustAllocationBudget(0);
-
-    space->Allocate(8);
-    uword space2_object = space2->Allocate(8);
-    space2->PrependSpace(space);
-    uword space2_object2 = space2->Allocate(8);
-
-    ASSERT(space2_object2 == (space2_object + 8));
-
-    delete space2;
-  }
-  // Test prepending onto empty space.
-  {
-    SemiSpace* space = new SemiSpace(32);
-    SemiSpace* space2 = new SemiSpace();
-
-    space->AdjustAllocationBudget(0);
-    space2->AdjustAllocationBudget(0);
-
-    uword space_object = space->Allocate(8);
-    space2->PrependSpace(space);
-    uword space_object2 = space2->Allocate(8);
-
-    ASSERT(space_object2 == (space_object + 8));
-
-    delete space2;
-  }
-}
-
 }  // namespace fletch
