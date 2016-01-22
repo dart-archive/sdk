@@ -4,8 +4,6 @@
 
 #include "src/vm/preempter.h"
 
-#include "src/shared/flags.h"
-
 namespace fletch {
 
 // Global instance of preempter & preempter thread.
@@ -69,35 +67,17 @@ void Preempter::WaitUntilFinished() {
 void Preempter::Run() {
   ScopedMonitorLock locker(preempt_monitor_);
 
-  static const bool kProfile = Flags::profile;
-  static const uint64 kProfileIntervalUs = Flags::profile_interval;
-
-  uint64 next_preempt = GetNextPreemptTime();
-  // If profile is disabled, next_preempt will always be less than next_profile.
-  uint64 next_profile =
-      kProfile ? Platform::GetMicroseconds() + kProfileIntervalUs : UINT64_MAX;
-  uint64 next_timeout = Utils::Minimum(next_preempt, next_profile);
-
   // As long as we're not told to finish, we stay alive.
   state_ = Preempter::kInitialized;
   preempt_monitor_->NotifyAll();
+
+  uint64 next_timeout = GetNextPreemptTime();
   while (state_ != Preempter::kFinishing) {
     // If we didn't time out, we were interrupted. In that case, continue.
     if (!preempt_monitor_->WaitUntil(next_timeout)) continue;
 
-    bool is_preempt = next_preempt <= next_profile;
-    bool is_profile = next_profile <= next_preempt;
-
-    if (is_preempt) {
-      scheduler_->PreemptionTick();
-      next_preempt = GetNextPreemptTime();
-    }
-    if (is_profile) {
-      scheduler_->ProfileTick();
-      next_profile += kProfileIntervalUs;
-    }
-
-    next_timeout = Utils::Minimum(next_preempt, next_profile);
+    scheduler_->PreemptionTick();
+    next_timeout = GetNextPreemptTime();
   }
 
   state_ = Preempter::kFinished;

@@ -26,9 +26,8 @@
 namespace fletch {
 
 static uword kPreemptMarker = 1 << 0;
-static uword kProfileMarker = 1 << 1;
-static uword kDebugInterruptMarker = 1 << 2;
-static uword kMaxStackMarker = ~static_cast<uword>((1 << 3) - 1);
+static uword kDebugInterruptMarker = 1 << 1;
+static uword kMaxStackMarker = ~static_cast<uword>((1 << 2) - 1);
 
 Process::Process(Program* program, Process* parent)
     : native_stack_(NULL),
@@ -157,12 +156,6 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
       ClearStackMarker(kDebugInterruptMarker);
       UpdateStackLimit();
       return kStackCheckDebugInterrupt;
-    }
-
-    if ((current_limit & kProfileMarker) != 0) {
-      ClearStackMarker(kProfileMarker);
-      UpdateStackLimit();
-      return kStackCheckContinue;
     }
   }
 
@@ -359,8 +352,6 @@ void Process::ClearStackMarker(uword marker) {
 void Process::Preempt() { SetStackMarker(kPreemptMarker); }
 
 void Process::DebugInterrupt() { SetStackMarker(kDebugInterruptMarker); }
-
-void Process::Profile() { SetStackMarker(kProfileMarker); }
 
 void Process::EnsureDebuggerAttached() {
   if (debug_info_ == NULL) debug_info_ = new DebugInfo();

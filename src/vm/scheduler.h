@@ -64,7 +64,6 @@ class InterpretationBarrier {
            current_process.load() == kPreemptMarker);
   }
 
-  void ProfileProcess();
   void PreemptProcess();
 
   void Enter(Process* process);
@@ -101,7 +100,6 @@ class Scheduler {
   void ResumeGcThread();
 
   void PreemptionTick();
-  void ProfileTick();
 
   void FinishedGC(Program* program, int count);
 

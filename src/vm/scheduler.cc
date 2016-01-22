@@ -40,16 +40,6 @@ ThreadState::~ThreadState() {
   delete idle_monitor_;
 }
 
-void InterpretationBarrier::ProfileProcess() {
-  Process* process = current_process;
-  if (process != NULL && process != kPreemptMarker) {
-    if (current_process.compare_exchange_strong(process, NULL)) {
-      process->Profile();
-      current_process = process;
-    }
-  }
-}
-
 void InterpretationBarrier::PreemptProcess() {
   Process* process = current_process;
   while (true) {
@@ -85,9 +75,8 @@ void InterpretationBarrier::Enter(Process* process) {
 }
 
 void InterpretationBarrier::Leave(Process* process) {
-  // NOTE: This method will ensure we wait until [ProfileProcess] or
-  // [PreemptProcess] calls (on other threads) are done before we
-  // go out of this function.
+  // NOTE: This method will ensure we wait until [PreemptProcess] calls
+  // (on other threads) are done before we go out of this function.
 
   while (true) {
     // Take value at each attempt, as value will be overriden on failure.
@@ -262,10 +251,6 @@ void Scheduler::ResumeGcThread() {
 
 void Scheduler::PreemptionTick() {
   interpretation_barrier_.PreemptProcess();
-}
-
-void Scheduler::ProfileTick() {
-  interpretation_barrier_.ProfileProcess();
 }
 
 void Scheduler::FinishedGC(Program* program, int count) {

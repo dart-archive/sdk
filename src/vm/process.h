@@ -133,7 +133,6 @@ class Process {
   void ClearStackMarker(uword marker);
   void Preempt();
   void DebugInterrupt();
-  void Profile();
 
   // Debugging support.
   void EnsureDebuggerAttached();
