@@ -30,12 +30,6 @@ class ThreadState {
   ThreadState();
   ~ThreadState();
 
-  int thread_id() const { return thread_id_; }
-  void set_thread_id(int thread_id) {
-    ASSERT(thread_id_ == -1);
-    thread_id_ = thread_id;
-  }
-
   const ThreadIdentifier* thread() const { return &thread_; }
 
   // Update the thread field to point to the current thread.
@@ -44,7 +38,6 @@ class ThreadState {
   Monitor* idle_monitor() const { return idle_monitor_; }
 
  private:
-  int thread_id_;
   ThreadIdentifier thread_;
   Monitor* idle_monitor_;
 };
@@ -151,8 +144,7 @@ class Scheduler {
 
   ThreadPool thread_pool_;
 
-  Atomic<int> sleeping_threads_;
-  Atomic<int> thread_count_;
+  Atomic<bool> interpreter_is_paused_;
   Atomic<ThreadState*> interpreting_thread_;
   ProcessQueue* ready_queue_;
 
@@ -174,8 +166,8 @@ class Scheduler {
   void RunInThread();
   void RunInterpreterLoop(ThreadState* thread_state);
 
-  // Interpret [process] as thread [thread] with id [thread_id]. Returns the
-  // next Process that should be run on this thraed.
+  // Interpret [process] as thread [thread]. Returns the next Process that
+  // should be run.
   Process* InterpretProcess(Process* process, ThreadState* thread_state);
   void ThreadEnter();
   void ThreadExit();

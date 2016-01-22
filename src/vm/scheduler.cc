@@ -31,8 +31,7 @@ namespace fletch {
 Scheduler* Scheduler::scheduler_ = NULL;
 
 ThreadState::ThreadState()
-    : thread_id_(-1),
-      idle_monitor_(Platform::CreateMonitor()) {}
+    : idle_monitor_(Platform::CreateMonitor()) {}
 
 void ThreadState::AttachToCurrentThread() { thread_ = ThreadIdentifier(); }
 
@@ -107,8 +106,7 @@ void Scheduler::TearDown() {
 
 Scheduler::Scheduler()
     : thread_pool_(1),
-      sleeping_threads_(0),
-      thread_count_(0),
+      interpreter_is_paused_(false),
       interpreting_thread_(new ThreadState()),
       ready_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
@@ -160,17 +158,11 @@ void Scheduler::StopProgram(Program* program) {
     program_state->set_is_paused(true);
 
     pause_ = true;
-
     NotifyInterpreterThread();
 
     while (true) {
-      int count = 0;
-      // Preempt running processes, only if it was possibly to 'take' the
-      // current process. This makes sure we don't preempt while deleting.
-      // Loop to ensure we continue to preempt until all threads are sleeping.
-      if (interpreting_thread_.load() != NULL) count++;
       interpretation_barrier_.PreemptProcess();
-      if (count == sleeping_threads_) break;
+      if (interpreter_is_paused_) break;
       pause_monitor_->Wait();
     }
 
@@ -464,7 +456,7 @@ void Scheduler::RunInThread() {
       // Take lock to be sure StopProgram is waiting.
       {
         ScopedMonitorLock locker(pause_monitor_);
-        sleeping_threads_++;
+        interpreter_is_paused_ = true;
         pause_monitor_->NotifyAll();
       }
       {
@@ -473,7 +465,7 @@ void Scheduler::RunInThread() {
       }
       {
         ScopedMonitorLock locker(pause_monitor_);
-        sleeping_threads_--;
+        interpreter_is_paused_ = false;
         pause_monitor_->NotifyAll();
       }
     } else {
@@ -482,9 +474,7 @@ void Scheduler::RunInThread() {
 
     // Sleep until there is something new to execute.
     ScopedMonitorLock scoped_lock(thread_state->idle_monitor());
-    while (ready_queue_->is_empty() &&
-           !pause_ &&
-           !shutdown_) {
+    while (ready_queue_->is_empty() && !pause_ && !shutdown_) {
       thread_state->idle_monitor()->Wait();
     }
     if (shutdown_) break;
@@ -635,11 +625,6 @@ void Scheduler::ThreadEnter() {
   ThreadState* thread_state = interpreting_thread_;
   thread_state->AttachToCurrentThread();
   Thread::SetupOSSignals();
-  // TODO(ajohnsen): This only works because we never return threads, unless
-  // the scheduler is done.
-  int thread_id = thread_count_++;
-  ASSERT(thread_id < 1);
-  thread_state->set_thread_id(thread_id);
   // Notify pause_monitor_ when changing interpreting_thread_.
   pause_monitor_->Lock();
   pause_monitor_->NotifyAll();
@@ -654,16 +639,12 @@ void Scheduler::ThreadExit() {
   Thread::TeardownOSSignals();
 }
 
-static void NotifyThread(ThreadState* thread_state) {
+void Scheduler::NotifyInterpreterThread() {
+  ThreadState* thread_state = interpreting_thread_;
   Monitor* monitor = thread_state->idle_monitor();
   monitor->Lock();
   monitor->Notify();
   monitor->Unlock();
-}
-
-void Scheduler::NotifyInterpreterThread() {
-  ThreadState* thread_state = interpreting_thread_;
-  if (thread_state != NULL) NotifyThread(thread_state);
 }
 
 void Scheduler::EnqueueProcess(Process* process) {
@@ -673,9 +654,7 @@ void Scheduler::EnqueueProcess(Process* process) {
   while (!ready_queue_->TryEnqueue(process, &was_empty)) {}
 
   // Maybe we need to wake one up.
-  if (was_empty) {
-    NotifyThread(interpreting_thread_);
-  }
+  if (was_empty) NotifyInterpreterThread();
 }
 
 void Scheduler::EnqueueOnAnyThreadSafe(Process* process, int start_id) {
