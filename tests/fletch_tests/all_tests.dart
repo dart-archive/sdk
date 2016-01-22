@@ -41,8 +41,6 @@ import '../debugger/debugger_tests.dart' as debugger_tests;
 
 import '../flash_sd_card_tests/flash_sd_card_tests.dart' as flash_sd_card_tests;
 
-import '../mbedtls_tests/ssl_tests.dart' as ssl_tests;
-
 import '../../pkg/sdk_services/test/service_tests.dart' as sdk_service_tests;
 
 import '../mdns_tests/mdns_tests.dart' as mdns_tests;
@@ -129,8 +127,6 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
       test_vm_connection.testCloseAfterProcessRun,
 
   'flash_sd_card_tests/*': flash_sd_card_tests.listTests,
-
-  'ssl_tests/ssl_tests': ssl_tests.main,
 
   'sdk_service_tests/sdk_service_tests': sdk_service_tests.main,
 

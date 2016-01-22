@@ -131,7 +131,6 @@ class FletchTestSuite extends TestSuite {
           ['-Dfletch-vm=$buildDir/fletch-vm',
            '-Dfletch.version=$version',
            '-Ddart-sdk=third_party/dart/sdk/',
-           '-Dtests-dir=tests/',
            '-Djava-home=$javaHome',
            '-Dtest.dart.build-dir=$buildDir',
            '-Dtest.dart.build-arch=${configuration["arch"]}',
