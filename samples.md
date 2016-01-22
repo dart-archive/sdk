@@ -29,6 +29,10 @@ folder. Let’s take a look at the code, and get familiar with the platform.
   * Communicating with a 'Sense HAT shield'
   * Requires a Raspberry Pi 2 and a [Sense HAT](https://www.raspberrypi.org/products/sense-hat/)
 
+* [ticker.dart](#ticker)
+  * Outputing text messages via a running "news ticker"
+  * Requires a Raspberry Pi 2 and a [Sense HAT](https://www.raspberrypi.org/products/sense-hat/)
+
 ## Blinky ##
 
 Embedded devices are most commonly used to collect data and perform some kind of
@@ -360,3 +364,55 @@ void draw() {
   }
 }
 ~~~
+
+## Ticker
+
+An effective and iconic way to output an arbitrary text message from an embedded
+device is the classic "ticker". It runs the message through the screen (in this
+case, the Sense HAT's LED matrix) from right to left, thus working around the
+very limited screen estate.
+
+<iframe width="560" height="315"
+  src="https://www.youtube.com/embed/tg27sAVNx8U?rel=0"
+  frameborder="0" allowfullscreen></iframe>
+
+The code is in ```samples/raspberry_pi/sense_hat/ticker/```, split into two
+separate files.
+
+In `font.dart` we find the Font class. This represents a bitmap font that can
+render itself on the Sense HAT LED matrix. The bulk of the code is in the
+`display()` function which uses simple arithmetic and bitwise operations to
+extract the font pixel data from a binary representation. The function takes
+the SenseHatLEDArray object (which it redraws), the message string, and the
+offset in pixels.
+
+The same file also provides `defaultFont`, an instance of the Font class and
+a 6x5 font specially crafted for Fletch. You can use it in your own projects.
+
+In `ticker.dart`, all we need to do is the animation. We increment the
+offset once every 70 milliseconds and re-render. This gives the impression of
+a sliding text message.
+
+~~~
+main() {
+  // Instantiate the Sense HAT API.
+  var hat = new SenseHat();
+
+  // Start the ticker with negative offset so that the text starts
+  // from off to the right.
+  var offset = -hat.ledArray.width;
+  var message = "Hello World!";
+  while (true) {
+    defaultFont.display(hat.ledArray, message, offset);
+    offset += 1;
+    if (offset > message.length * defaultFont.width) {
+      // Reset.
+      offset = -hat.ledArray.width;
+    }
+    os.sleep(70);
+  }
+}
+~~~
+
+We could update the message text with readings from sensors, current time, or
+anything else we needed to convey to the user.
