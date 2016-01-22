@@ -135,6 +135,7 @@
         'natives_posix.cc',
         'natives_lk.cc',
         'natives_cmsis.cc',
+        'natives_windows.cc',
         'natives.h',
         'object.cc',
         'object.h',

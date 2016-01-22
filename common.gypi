@@ -154,6 +154,28 @@
           ],
         },
 
+        'msvs_settings': {
+          'VCCLCompilerTool': {
+            'Optimization': '2',
+            'InlineFunctionExpansion': '2',
+            'EnableIntrinsicFunctions': 'true',
+            'FavorSizeOrSpeed': '0',
+            'ExceptionHandling': '0',
+            'RuntimeTypeInfo': 'false',
+            'StringPooling': 'true',
+            'RuntimeLibrary': '0',  # /MT - Multi-threaded, static
+          },
+          'VCLinkerTool': {
+            'LinkIncremental': '1',
+            'GenerateDebugInformation': 'true',
+            'OptimizeReferences': '2',
+            'EnableCOMDATFolding': '2',
+            'AdditionalDependencies': [
+              'dbghelp.lib',
+            ],
+          },
+        },
+
         'cflags': [
           '-O3',
           '-fomit-frame-pointer',
@@ -177,6 +199,22 @@
           'OTHER_CPLUSPLUSFLAGS': [
             '-g',
           ],
+        },
+
+        'msvs_settings': {
+          'VCCLCompilerTool': {
+            'Optimization': '0',
+            'DebugInformationFormat': '3',
+            'ExceptionHandling': '0',
+            'RuntimeTypeInfo': 'false',
+            'RuntimeLibrary': '1',  # /MTd - Multi-threaded, static (debug)
+          },
+          'VCLinkerTool': {
+            'GenerateDebugInformation': 'true',
+            'AdditionalDependencies': [
+              'dbghelp.lib',
+            ],
+          },
         },
 
         'cflags': [

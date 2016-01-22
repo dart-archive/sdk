@@ -247,6 +247,8 @@ int Platform::FormatString(char* buffer, size_t length, const char* format,
   return result;
 }
 
+int Platform::MaxStackSizeInWords() { return 128 * KB; }
+
 int Platform::GetLastError() { return ::GetLastError(); }
 void Platform::SetLastError(int value) { ::SetLastError(value); }
 
