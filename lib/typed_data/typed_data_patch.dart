@@ -513,6 +513,170 @@ abstract class _TypedList<E> extends _TypedData with ListMixin<E> {
       "Cannot modify the size of a typed data list");
 }
 
+@patch class ByteData {
+  @patch factory ByteData(int length) {
+    return new _ByteData(length);
+  }
+}
+
+class _ByteData extends _TypedData implements ByteData {
+  _ByteData(int length) : super._create(length);
+
+  _ByteData._view(ByteBuffer buffer, int offsetInBytes, int length)
+      : super._wrap(buffer, offsetInBytes, length);
+
+  int get elementSizeInBytes => 1;
+
+  int getInt8(int byteOffset) => _foreign.getInt8(offsetInBytes + byteOffset);
+
+  void setInt8(int byteOffset, int value) {
+    _foreign.setInt8(offsetInBytes + byteOffset, value);
+  }
+
+  int getUint8(int byteOffset) => _foreign.getUint8(offsetInBytes + byteOffset);
+
+  void setUint8(int byteOffset, int value) {
+    _foreign.setUint8(offsetInBytes + byteOffset, value);
+  }
+
+  int getInt16(int byteOffset, [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    return _foreign.getInt16(offsetInBytes + byteOffset);
+  }
+
+
+  void setInt16(int byteOffset,
+                int value,
+                [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    _foreign.setInt16(offsetInBytes + byteOffset, value);
+  }
+
+  int getUint16(int byteOffset, [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    return _foreign.getUint16(offsetInBytes + byteOffset);
+  }
+
+
+  void setUint16(int byteOffset,
+                 int value,
+                 [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    _foreign.setUint16(offsetInBytes + byteOffset, value);
+  }
+
+  int getInt32(int byteOffset, [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    return _foreign.getInt32(offsetInBytes + byteOffset);
+  }
+
+
+  void setInt32(int byteOffset,
+                int value,
+                [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    _foreign.setInt32(offsetInBytes + byteOffset, value);
+  }
+
+  int getUint32(int byteOffset, [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    return _foreign.getUint32(offsetInBytes + byteOffset);
+  }
+
+
+  void setUint32(int byteOffset,
+                 int value,
+                 [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    _foreign.setUint32(offsetInBytes + byteOffset, value);
+  }
+
+  int getInt64(int byteOffset, [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    return _foreign.getInt64(offsetInBytes + byteOffset);
+  }
+
+
+  void setInt64(int byteOffset,
+                int value,
+                [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    _foreign.setInt64(offsetInBytes + byteOffset, value);
+  }
+
+  int getUint64(int byteOffset, [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    return _foreign.getUint64(offsetInBytes + byteOffset);
+  }
+
+
+  void setUint64(int byteOffset,
+                 int value,
+                 [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    _foreign.setUint64(offsetInBytes + byteOffset, value);
+  }
+
+  double getFloat32(int byteOffset,
+                    [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    return _foreign.getFloat32(offsetInBytes + byteOffset);
+  }
+
+
+  void setFloat32(int byteOffset,
+                  double value,
+                  [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    _foreign.setFloat32(offsetInBytes + byteOffset, value);
+  }
+
+  double getFloat64(int byteOffset,
+                    [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    return _foreign.getFloat64(offsetInBytes + byteOffset);
+  }
+
+  void setFloat64(int byteOffset,
+                  double value,
+                  [Endianness endian = Endianness.BIG_ENDIAN]) {
+    if (endian != Endianness.HOST_ENDIAN) {
+      throw new UnimplementedError("Only host endianness is supported");
+    }
+    _foreign.setFloat64(offsetInBytes + byteOffset, value);
+  }
+}
+
 class _ByteBuffer implements ByteBuffer {
   final ForeignMemory _foreign;
 
@@ -530,11 +694,11 @@ class _ByteBuffer implements ByteBuffer {
     return new _Uint8List._view(this, offsetInBytes, length);
   }
 
-  asInt8List([offsetInBytes, length]) {
+  Int8List asInt8List([offsetInBytes = 0, length]) {
     return new _Int8List._view(this, offsetInBytes, length);
   }
 
-  asUint8ClampedList([offsetInBytes, length]) {
+  Uint8ClampedList asUint8ClampedList([offsetInBytes = 0, length]) {
     return new _Uint8ClampedList._view(this, offsetInBytes, length);
   }
 
@@ -542,7 +706,7 @@ class _ByteBuffer implements ByteBuffer {
     return new _Uint16List._view(this, offsetInBytes, length);
   }
 
-  asInt16List([offsetInBytes, length]) {
+  Int16List asInt16List([offsetInBytes = 0, length]) {
     return new _Int16List._view(this, offsetInBytes, length);
   }
 
@@ -550,39 +714,39 @@ class _ByteBuffer implements ByteBuffer {
     return new _Uint32List._view(this, offsetInBytes, length);
   }
 
-  asInt32List([offsetInBytes, length]) {
+  Int32List asInt32List([offsetInBytes = 0, length]) {
     return new _Int32List._view(this, offsetInBytes, length);
   }
 
-  asUint64List([offsetInBytes, length]) {
+  Uint64List asUint64List([offsetInBytes = 0, length]) {
     return new _Uint64List._view(this, offsetInBytes, length);
   }
 
-  asInt64List([offsetInBytes, length]) {
+  Int64List asInt64List([offsetInBytes = 0, length]) {
     return new _Int64List._view(this, offsetInBytes, length);
   }
 
-  asInt32x4List([offsetInBytes, length]) {
+  asInt32x4List([offsetInBytes = 0, length]) {
     throw "asInt32x4List([offsetInBytes, length]) isn't implemented";
   }
 
-  asFloat32List([offsetInBytes, length]) {
+  Float32List asFloat32List([offsetInBytes = 0, length]) {
     return new _Float32List._view(this, offsetInBytes, length);
   }
 
-  asFloat64List([offsetInBytes, length]) {
+  Float64List asFloat64List([offsetInBytes = 0, length]) {
     return new _Float64List._view(this, offsetInBytes, length);
   }
 
-  asFloat32x4List([offsetInBytes, length]) {
+  asFloat32x4List([offsetInBytes = 0, length]) {
     throw "asFloat32x4List([offsetInBytes, length]) isn't implemented";
   }
 
-  asFloat64x2List([offsetInBytes, length]) {
+  asFloat64x2List([offsetInBytes = 0, length]) {
     throw "asFloat64x2List([offsetInBytes, length]) isn't implemented";
   }
 
-  asByteData([offsetInBytes, length]) {
-    throw "asByteData([offsetInBytes, length]) isn't implemented";
+  ByteData asByteData([offsetInBytes = 0, length]) {
+    return new _ByteData._view(this, offsetInBytes, length);
   }
 }
