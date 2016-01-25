@@ -33,7 +33,7 @@ class Uart {
   // UART.
   //
   // This will block until at least one byte can be written.
-  size_t Write(uint8_t* buffer, size_t count);
+  size_t Write(const uint8_t* buffer, size_t count);
 
  private:
   static const int kTxBlockSize = 10;

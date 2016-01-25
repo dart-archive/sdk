@@ -37,7 +37,7 @@ class CircularBuffer {
 
   // Write up to count bytes from buffer. If block is kBlock the call
   // will not return until at least one byte is written.
-  size_t Write(uint8_t* buffer, size_t count, Blocking block);
+  size_t Write(const uint8_t* buffer, size_t count, Blocking block);
 
  private:
   fletch::Monitor* monitor_;

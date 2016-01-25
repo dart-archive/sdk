@@ -61,7 +61,8 @@ size_t CircularBuffer::Read(uint8_t* data, size_t count, Blocking block) {
   return read;
 }
 
-size_t CircularBuffer::Write(uint8_t* data, size_t count, Blocking block) {
+size_t CircularBuffer::Write(
+    const uint8_t* data, size_t count, Blocking block) {
   fletch::ScopedMonitorLock locker(monitor_);
 
   // If buffer is full wait for room.

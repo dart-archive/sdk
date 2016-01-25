@@ -64,7 +64,7 @@ size_t Uart::Read(uint8_t* buffer, size_t count) {
   return rx_buffer_->Read(buffer, count, CircularBuffer::kBlock);
 }
 
-size_t Uart::Write(uint8_t* buffer, size_t count) {
+size_t Uart::Write(const uint8_t* buffer, size_t count) {
   size_t written = tx_buffer_->Write(buffer, count, CircularBuffer::kBlock);
 
   fletch::ScopedLock lock(tx_mutex_);
