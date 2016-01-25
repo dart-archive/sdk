@@ -23,7 +23,7 @@ Logger::Logger() {
       "STM32746G-DISCO board")));
 }
 
-void Logger::vlog(Level level, char* format, va_list args) {
+void Logger::vlog(Level level, const char* format, va_list args) {
   switch (level) {
     case Logger::LDEBUG:
       LCD_LineColor = LCD_COLOR_CYAN;
@@ -45,42 +45,42 @@ void Logger::vlog(Level level, char* format, va_list args) {
   LCD_LineColor = LCD_COLOR_BLACK;
 }
 
-void Logger::log(Level level, char *format, ...) {
+void Logger::log(Level level, const char *format, ...) {
   va_list args;
   va_start(args, format);
   vlog(level, format, args);
   va_end(args);
 }
 
-void Logger::debug(char *format, ...) {
+void Logger::debug(const char *format, ...) {
   va_list args;
   va_start(args, format);
   vlog(LDEBUG, format, args);
   va_end(args);
 }
 
-void Logger::info(char *format, ...) {
+void Logger::info(const char *format, ...) {
   va_list args;
   va_start(args, format);
   vlog(LINFO, format, args);
   va_end(args);
 }
 
-void Logger::warning(char *format, ...) {
+void Logger::warning(const char *format, ...) {
   va_list args;
   va_start(args, format);
   vlog(LWARNING, format, args);
   va_end(args);
 }
 
-void Logger::error(char *format, ...) {
+void Logger::error(const char *format, ...) {
   va_list args;
   va_start(args, format);
   vlog(LERROR, format, args);
   va_end(args);
 }
 
-void Logger::fatal(char *format, ...) {
+void Logger::fatal(const char *format, ...) {
   va_list args;
   va_start(args, format);
   vlog(LFATAL, format, args);

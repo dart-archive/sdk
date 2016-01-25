@@ -28,14 +28,14 @@ class Logger {
     return logger;
   }
 
-  void vlog(Level level, char* format, va_list args);
+  void vlog(Level level, const char* format, va_list args);
 
-  void log(Level level, char* format, ...);
-  void debug(char *format, ...);
-  void info(char *format, ...);
-  void warning(char *format, ...);
-  void error(char *format, ...);
-  void fatal(char *format, ...);
+  void log(Level level, const char* format, ...);
+  void debug(const char *format, ...);
+  void info(const char *format, ...);
+  void warning(const char *format, ...);
+  void error(const char *format, ...);
+  void fatal(const char *format, ...);
 };
 
 #define LOG(...) logger->log(__VA_ARGS__)
