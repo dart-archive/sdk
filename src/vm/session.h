@@ -33,6 +33,8 @@ class Session {
 
   bool is_debugging() const { return debugging_; }
 
+  int FreshProcessId() { return next_process_id_++; }
+
   void Initialize();
   void StartMessageProcessingThread();
   void JoinMessageProcessingThread();
@@ -44,8 +46,19 @@ class Session {
   int ProcessRun();
   bool WriteSnapshot(const char* path, FunctionOffsetsType* function_offsets,
                      ClassOffsetsType* class_offsets);
-  void CollectGarbage();
 
+  // These functions return `true` if the session knows about [process] and was
+  // able to take action on the event.
+  // In case the session does not know about [process] these functions will
+  // return `false` and the caller is responsible for handling the event.
+  bool UncaughtException(Process* process);
+  bool Killed(Process* process);
+  bool UncaughtSignal(Process* process);
+  bool BreakPoint(Process* process);
+  bool ProcessTerminated(Process* process);
+  bool CompileTimeError(Process* process);
+
+ private:
   // Map operations.
   void NewMap(int map_index);
   void DeleteMap(int map_index);
@@ -109,18 +122,6 @@ class Session {
   bool CommitChanges(int count);
   void DiscardChanges();
 
-  // These functions return `true` if the session knows about [process] and was
-  // able to take action on the event.
-  // In case the session does not know about [process] these functions will
-  // return `false` and the caller is responsible for handling the event.
-  bool UncaughtException(Process* process);
-  bool Killed(Process* process);
-  bool UncaughtSignal(Process* process);
-  bool BreakPoint(Process* process);
-  bool ProcessTerminated(Process* process);
-  bool CompileTimeError(Process* process);
-
- private:
   enum Change {
     kChangeSuperClass,
     kChangeMethodTable,
@@ -146,8 +147,15 @@ class Session {
   // ids to processes. For now we just keep a reference to the main
   // process (with implicit id 0).
   Process* process_;
+  int next_process_id_;
 
+  // When true execution_paused_ implies that the program is not
+  // running in the scheduler. Either it has not yet been scheduled
+  // (in which case program()->scheduler() == NULL) or the program
+  // is stopped and the GC thread is paused.
   bool execution_paused_;
+  bool request_execution_pause_;
+
   bool debugging_;
 
   int method_map_id_;
@@ -172,7 +180,14 @@ class Session {
 
   void SignalMainThread(MainThreadResumeKind);
 
+  void RequestExecutionPause();
+  void PauseExecution();
+  void ResumeExecution();
   void ProcessContinue(Process* process);
+
+  bool IsScheduledAndPaused() const {
+    return execution_paused_ && program()->scheduler() != NULL;
+  }
 
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);
@@ -208,6 +223,8 @@ class Session {
   void PushTopStackFrame(Stack* stack);
 
   void RestartFrame(int index);
+
+  Process* GetProcess(int process_id);
 };
 
 }  // namespace fletch
