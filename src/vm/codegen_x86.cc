@@ -558,22 +558,9 @@ void Codegen::DoInvokeTest(int offset) {
     __ movl(EAX, Address(ESP, 0 * kWordSize));
   }
 
-  Label done;
-  __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
-  __ testl(EAX, Immediate(Smi::kTagMask));
-  __ j(ZERO, &done);
+  __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
 
-  // TODO(kasperl): Use class id in objects? Less indirection.
-  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
-  __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
-  __ Bind(&done);
-
-  printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
-         program()->dispatch_table()->address(),
-         Array::kSize + offset * kWordSize);
-
-  __ cmpl(Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag),
-          Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
+  __ call("InvokeTest");
 
   DoDrop(1);
 
