@@ -828,7 +828,7 @@ class FletchBackend extends Backend
         // No stub needed. Optional arguments are handled at call-site.
       } else if (element.isFunction) {
         FletchFunctionBase function =
-            systemBuilder.lookupFunctionBuilderByElement(element.declaration);
+            systemBuilder.lookupFunctionByElement(element.declaration);
         CallStructure callStructure = selector.callStructure;
         FunctionSignature signature = function.signature;
         if (selector.isGetter) {

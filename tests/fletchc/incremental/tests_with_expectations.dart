@@ -1246,6 +1246,40 @@ main() {
 ''',
 
   r'''
+call_named_arguments_from_instance_method
+==> main.dart.patch <==
+// Similiar to call_named_arguments_2 but where the change in the way the method
+// with named parameters is called happens in an instance method belonging to
+// the same class.
+
+class C {
+  foo({a: 'v2'}) {
+    print(a);
+  }
+
+  bar() {
+<<<< ["instance is null", "v1"]
+    foo(a: 'v1');
+==== "v2"
+    foo();
+>>>>
+  }
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+  }
+  instance.bar();
+}
+
+
+''',
+
+  r'''
 call_instance_tear_off_named
 ==> main.dart.patch <==
 // Test that an instance tear-off with named parameters can be called
