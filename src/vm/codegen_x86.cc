@@ -390,8 +390,8 @@ void Codegen::DoBranch(BranchCondition condition, int from, int to) {
 
 void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
   printf("// Invoke: %i, %i (%p)\n", offset, arity, klass);
-  MaterializeCondition();
   bool receiver_in_eax = top_in_eax_ && arity == 0;
+  MaterializeCondition();
   Slot receiver = GetStackIndex(arity);
   if (receiver == kThisSlot && klass != NULL) {
     Function* target = NULL;
@@ -447,7 +447,8 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
   if (!receiver_in_eax) {
     __ movl(EAX, Address(ESP, arity * kWordSize));
   }
-  __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
+
+  Label end;
 
   Label done;
   __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
@@ -457,20 +458,53 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
   // TODO(kasperl): Use class id in objects? Less indirection.
   __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
   __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
+
+  // Class ID is now in EDX.
   __ Bind(&done);
 
-  __ addl(ECX, EDX);
+  // See if we can find a unique function for the call.
+  Function* target = NULL;
+  Array* table = program()->dispatch_table();
 
-  printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
-      program()->dispatch_table()->address(),
-      Array::kSize);
+  for (int i = 0; i < table->length(); i++) {
+    DispatchTableEntry* entry = DispatchTableEntry::cast(table->get(i));
+    if (entry->offset()->value() == offset) {
+      if (target == NULL) {
+        target = entry->target();
+      } else if (target != entry->target()) {
+        target = NULL;
+        break;
+      }
+    }
+  }
 
   Label nsm;
-  __ cmpl(EDX, Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
-  __ j(NOT_EQUAL, &nsm);
-  __ call(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
-  Label end;
-  __ jmp(&end);
+  Class* target_class = (*function_owners_)[target];
+  if (target_class != NULL) {
+    // There is only one function we can end up calling, and it has a distinct
+    // owner. We can simple test the class range, and fall back to NSM.
+    printf("// Unique target: %p(%p)\n", target, target_class);
+    __ cmpl(ECX,
+            Immediate(reinterpret_cast<int32>(Smi::FromWord(target_class->id()))));
+    __ j(LESS, &nsm);
+    __ cmpl(ECX,
+            Immediate(reinterpret_cast<int32>(Smi::FromWord(target_class->child_id()))));
+    __ j(GREATER_EQUAL, &nsm);
+
+    printf("\tcall Function_%08x\n", target);
+
+    __ jmp(&end);
+  } else {
+    printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
+           table->address(),
+           Array::kSize + offset * kWordSize);
+
+    __ cmpl(Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag),
+            Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
+    __ j(NOT_EQUAL, &nsm);
+    __ call(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
+    __ jmp(&end);
+  }
 
   __ Bind(&nsm);
   // TODO(ajohnsen): Do NSM!
