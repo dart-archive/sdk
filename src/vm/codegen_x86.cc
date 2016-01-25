@@ -450,18 +450,6 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
 
   Label end;
 
-  Label done;
-  __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
-  __ testl(EAX, Immediate(Smi::kTagMask));
-  __ j(ZERO, &done);
-
-  // TODO(kasperl): Use class id in objects? Less indirection.
-  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
-  __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
-
-  // Class ID is now in EDX.
-  __ Bind(&done);
-
   // See if we can find a unique function for the call.
   Function* target = NULL;
   Array* table = program()->dispatch_table();
@@ -484,17 +472,59 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
     // There is only one function we can end up calling, and it has a distinct
     // owner. We can simple test the class range, and fall back to NSM.
     printf("// Unique target: %p(%p)\n", target, target_class);
-    __ cmpl(ECX,
-            Immediate(reinterpret_cast<int32>(Smi::FromWord(target_class->id()))));
-    __ j(LESS, &nsm);
-    __ cmpl(ECX,
-            Immediate(reinterpret_cast<int32>(Smi::FromWord(target_class->child_id()))));
-    __ j(GREATER_EQUAL, &nsm);
+
+    int lower_id = target_class->id();
+    int upper_id = target_class->child_id();
+
+    Label done;
+    int smi_class_id = program()->smi_class()->id();
+    if (smi_class_id < lower_id || smi_class_id >= upper_id) {
+      __ testl(EAX, Immediate(Smi::kTagMask));
+      __ j(ZERO, &nsm);
+    } else {
+      __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
+      __ testl(EAX, Immediate(Smi::kTagMask));
+      __ j(ZERO, &done);
+    }
+
+    // TODO(kasperl): Use class id in objects? Less indirection.
+    __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
+    __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
+
+    // Class ID is now in EDX.
+    __ Bind(&done);
+
+    if (lower_id + 1 == upper_id) {
+      printf("// - precise test\n");
+      __ cmpl(ECX,
+              Immediate(reinterpret_cast<int32>(Smi::FromWord(lower_id))));
+      __ j(NOT_EQUAL, &nsm);
+    } else {
+      printf("// - range test\n");
+      __ cmpl(ECX,
+              Immediate(reinterpret_cast<int32>(Smi::FromWord(lower_id))));
+      __ j(LESS, &nsm);
+      __ cmpl(ECX,
+              Immediate(reinterpret_cast<int32>(Smi::FromWord(upper_id))));
+      __ j(GREATER_EQUAL, &nsm);
+    }
+
 
     printf("\tcall Function_%08x\n", target);
 
     __ jmp(&end);
   } else {
+    Label done;
+    __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
+    __ testl(EAX, Immediate(Smi::kTagMask));
+    __ j(ZERO, &done);
+
+    // TODO(kasperl): Use class id in objects? Less indirection.
+    __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
+    __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
+
+  // Class ID is now in EDX.
+  __ Bind(&done);
     printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
            table->address(),
            Array::kSize + offset * kWordSize);
@@ -527,9 +557,23 @@ void Codegen::DoInvokeTest(int offset) {
   if (!top_in_eax_) {
     __ movl(EAX, Address(ESP, 0 * kWordSize));
   }
-  __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
 
-  __ call("InvokeTest");
+  Label done;
+  __ movl(ECX, Immediate(reinterpret_cast<int32>(Smi::FromWord(program()->smi_class()->id()))));
+  __ testl(EAX, Immediate(Smi::kTagMask));
+  __ j(ZERO, &done);
+
+  // TODO(kasperl): Use class id in objects? Less indirection.
+  __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
+  __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
+  __ Bind(&done);
+
+  printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
+         program()->dispatch_table()->address(),
+         Array::kSize + offset * kWordSize);
+
+  __ cmpl(Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag),
+          Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
 
   DoDrop(1);
 

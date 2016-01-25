@@ -421,19 +421,19 @@ void Codegen::Generate(Function* function) {
 
       case kLoadLiteral: {
         DoLoadInteger(*(bcp + 1));
-        stack_.Clear();
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadLiteralWide: {
         DoLoadInteger(Utils::ReadInt32(bcp + 1));
-        stack_.Clear();
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
       case kLoadConst: {
         DoLoadConstant(bci, Utils::ReadInt32(bcp + 1));
-        stack_.Clear();
+        stack_.PushBack(kUnknownSlot);
         break;
       }
 
