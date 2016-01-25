@@ -9,10 +9,10 @@
 #include "platforms/stm/disco_fletch/src/logger.h"
 
 uint32_t PageAllocator::AddArena(const char* name, uintptr_t start,
-                                 size_t size) {
+                                 size_t size, uint8_t* map, size_t map_size) {
   for (int i = 0; i < kMaxArenas; i++) {
     if (arenas_[i].IsFree()) {
-      arenas_[i].Initialize(name, start, size);
+      arenas_[i].Initialize(name, start, size, map, map_size);
       return 1 << i;
     }
   }
@@ -42,7 +42,8 @@ void PageAllocator::FreePages(void* start, size_t pages) {
 }
 
 void PageAllocator::Arena::Initialize(const char* name, uintptr_t arena_start,
-                                      size_t arena_size) {
+                                      size_t arena_size,
+                                      uint8_t* map, size_t map_size) {
   uintptr_t start = ROUNDUP(arena_start, PAGE_SIZE);
   size_t size = ROUNDDOWN(arena_start + arena_size, PAGE_SIZE) - start;
   ASSERT(IS_PAGE_ALIGNED(start));
@@ -50,11 +51,17 @@ void PageAllocator::Arena::Initialize(const char* name, uintptr_t arena_start,
   name_ = name;
   pages_ = size >> PAGE_SIZE_SHIFT;
 
-  // Allocate a map with one byte per page from the beginning of the arena.
-  map_ = reinterpret_cast<uint8_t*>(start);
+  if (map != NULL && map_size >= pages_) {
+    // There is a supplied map that can hold the state of all the pages.
+    map_ = map;
+    base_ = reinterpret_cast<uint8_t*>(start);
+  } else {
+    // Allocate a map with one byte per page from the beginning of the arena.
+    map_ = reinterpret_cast<uint8_t*>(start);
+    pages_ -= ROUNDUP(pages_, PAGE_SIZE) / PAGE_SIZE;
+    base_ = reinterpret_cast<uint8_t*>(PAGE_ALIGN(start + pages_));
+  }
   memset(map_, 0, pages_);
-  pages_ -= ROUNDUP(pages_, PAGE_SIZE) / PAGE_SIZE;
-  base_ = reinterpret_cast<uint8_t*>(PAGE_ALIGN(start + pages_));
 }
 
 void* PageAllocator::Arena::AllocatePages(size_t pages) {

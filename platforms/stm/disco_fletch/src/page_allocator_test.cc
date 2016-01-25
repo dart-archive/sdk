@@ -11,14 +11,14 @@
 
 #include "platforms/stm/disco_fletch/src/page_allocator.h"
 
-void test() {
+void Test() {
   PageAllocator *allocator = new PageAllocator();
   void* arena1;
   int rc = posix_memalign(&arena1, PAGE_SIZE, 10);
   EXPECT_EQ(0, rc);
   uintptr_t start = reinterpret_cast<uintptr_t>(arena1);
-  int arena1_bitmap = allocator->AddArena("test", start, PAGE_SIZE * 10);
-  EXPECT_EQ(1, arena1_bitmap);
+  int arena1_bit = allocator->AddArena("test", start, PAGE_SIZE * 10);
+  EXPECT_EQ(1, arena1_bit);
 
   void* allocated[9];
   for (int i = 0; i < 9; i++) {
@@ -42,8 +42,65 @@ void test() {
     EXPECT_EQ(start + PAGE_SIZE, reinterpret_cast<uintptr_t>(result));
     allocator->FreePages(result, 9);
   }
+
+  free(arena1);
+}
+
+void TestExternalMap() {
+  const int kMapSize = 10;
+
+  // Allocate memory for an arena.
+  void* arena;
+  int rc = posix_memalign(&arena, PAGE_SIZE, kMapSize);
+  EXPECT_EQ(0, rc);
+  uintptr_t start = reinterpret_cast<uintptr_t>(arena);
+
+  uint8_t map[kMapSize + 1];
+  memset(map, 0xaa, kMapSize + 1);
+
+  void* page;
+  PageAllocator *allocator;
+  allocator = new PageAllocator();
+  allocator->AddArena("test", start, PAGE_SIZE * kMapSize, map, kMapSize);
+  page = allocator->AllocatePages(1);
+  EXPECT_EQ(arena, page);
+  // This tests that the implementation actually uses the external
+  // map. However the way the implementation uses the external map is
+  // *not* part if the API contract, and if the implementation is
+  // changed this test should be as well.
+  EXPECT_EQ(1, map[0]);
+  EXPECT_EQ(0, map[1]);
+  allocator->FreePages(page, 1);
+  EXPECT_EQ(0, map[0]);
+  EXPECT_EQ(0, map[1]);
+
+  page = allocator->AllocatePages(kMapSize);
+  EXPECT_EQ(arena, page);
+  for (int i = 0; i < kMapSize; i++) {
+    EXPECT_EQ(1, map[i]);
+  }
+  EXPECT_EQ(0xaa, map[kMapSize]);
+
+  allocator = new PageAllocator();
+  allocator->AddArena("test", start, PAGE_SIZE * kMapSize, map, kMapSize - 1);
+
+  memset(map, 0xaa, kMapSize + 1);
+  page = allocator->AllocatePages(1);
+  EXPECT_EQ(reinterpret_cast<uint8_t*>(arena) + PAGE_SIZE, page);
+  for (int i = 0; i < kMapSize + 1; i++) {
+    EXPECT_EQ(0xaa, map[i]);
+  }
+  allocator->FreePages(page, 1);
+  page = allocator->AllocatePages(kMapSize);
+  EXPECT(page == NULL);
+  for (int i = 0; i < kMapSize + 1; i++) {
+    EXPECT_EQ(0xaa, map[i]);
+  }
+
+  free(arena);
 }
 
 int main(int argc, char** argv) {
-  test();
+  Test();
+  TestExternalMap();
 }

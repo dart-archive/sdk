@@ -23,9 +23,16 @@ class PageAllocator {
 
   // Add a section of memory to the allocator.
   //
+  // The arguments map and map_size can be used to pass a memory area
+  // for the map of allocated/un-allocated pages. This memory area
+  // uses one byte per page. If this memory area is not passed or is
+  // to small for the number of pages in the area this map will be
+  // allocated in the first page in the area.
+  //
   // Returns the bit in the arenas bitmap representing this
   // arena. This bit can be used in the call to AllocatePages.
-  uint32_t AddArena(const char* name, uintptr_t start, size_t size);
+  uint32_t AddArena(const char* name, uintptr_t start, size_t size,
+                    uint8_t* map = NULL, size_t map_size = 0);
 
   // Allocate pages from an arena. The arenas_bitmap specifies the
   // arenas to try. The default is to only allocate in the initial
@@ -40,7 +47,8 @@ class PageAllocator {
  private:
   class Arena {
    public:
-    void Initialize(const char* name, uintptr_t start, size_t size);
+    void Initialize(const char* name, uintptr_t start, size_t size,
+                    uint8_t* map, size_t map_size);
     void* AllocatePages(size_t pages);
     void FreePages(void* start, size_t pages);
 

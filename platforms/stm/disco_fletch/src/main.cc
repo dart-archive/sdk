@@ -74,6 +74,9 @@ void EarlyInit() {
   extern char end asm("end");
   uintptr_t heap_start = reinterpret_cast<uintptr_t>(&end);
 
+  // Reserve a map for 72 pages (256k + 16k + 16k) in .bss.
+  const size_t kDefaultPageMapSize = 72;
+  static uint8_t default_page_map[kDefaultPageMapSize];
   // Allocate a PageAllocator in system RAM.
   page_allocator = reinterpret_cast<PageAllocator*>(heap_start);
   page_allocator->Initialize();
@@ -85,7 +88,8 @@ void EarlyInit() {
   min_stack_ptr -= MAX_STACK_SIZE;
   // Add the system RAM as the initial arena.
   uint32_t arena_id = page_allocator->AddArena(
-      "System RAM", heap_start, min_stack_ptr - heap_start);
+      "System RAM", heap_start, min_stack_ptr - heap_start,
+      default_page_map, kDefaultPageMapSize);
   ASSERT(arena_id == 1);
 
   // Initialize the compact C/C++ heap implementation.
