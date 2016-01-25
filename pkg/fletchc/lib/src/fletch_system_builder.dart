@@ -86,9 +86,10 @@ class FletchSystemBuilder {
         this.classIdStart = predecessorSystem.computeMaxClassId() + 1;
 
   int lookupConstantIdByValue(ConstantValue value) {
+    int id = _newConstants[value];
+    if (id != null) return id;
     FletchConstant constant = predecessorSystem.lookupConstantByValue(value);
-    if (constant != null) return constant.id;
-    return _newConstants[value];
+    return constant?.id;
   }
 
   void replaceUsage(Element element, FunctionElement usage) {
