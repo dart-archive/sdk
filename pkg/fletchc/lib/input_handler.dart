@@ -238,35 +238,35 @@ class InputHandler {
       case 'processes':
       case 'lp':
         if (checkRunning('cannot list processes')) {
-	  // Reset current paging point if not continuing from an 'lp' command.
-	  if (previousLine != 'lp' && previousLine != 'processes') {
-	    processPagingCurrent = 0;
-	  }
+          // Reset current paging point if not continuing from an 'lp' command.
+          if (previousLine != 'lp' && previousLine != 'processes') {
+            processPagingCurrent = 0;
+          }
 
           List<int> processes = await session.processes();
-	  processes.sort();
+          processes.sort();
 
-	  int count = processes.length;
-	  int start = processPagingCurrent;
-	  int end;
-	  if (start + processPagingCount < count) {
-	    processPagingCurrent += processPagingCount;
-	    end = processPagingCurrent;
-	  } else {
-	    processPagingCurrent = 0;
-	    end = count;
-	  }
+          int count = processes.length;
+          int start = processPagingCurrent;
+          int end;
+          if (start + processPagingCount < count) {
+            processPagingCurrent += processPagingCount;
+            end = processPagingCurrent;
+          } else {
+            processPagingCurrent = 0;
+            end = count;
+          }
 
-	  if (processPagingCount < count) {
-	    writeStdout("displaying range [$start;${end-1}] ");
-	    writeStdoutLine("of $count processes");
-	  }
-	  for (int i = start; i < end; ++i) {
-	    int processId = processes[i];
-	    BackTrace stack = await session.processStack(processId);
-	    writeStdoutLine('\nprocess ${processId}');
-	    writeStdout(stack.format());
-	  }
+          if (processPagingCount < count) {
+            writeStdout("displaying range [$start;${end-1}] ");
+            writeStdoutLine("of $count processes");
+          }
+          for (int i = start; i < end; ++i) {
+            int processId = processes[i];
+            BackTrace stack = await session.processStack(processId);
+            writeStdoutLine('\nprocess ${processId}');
+            writeStdout(stack.format());
+          }
           writeStdoutLine('');
         }
         break;
