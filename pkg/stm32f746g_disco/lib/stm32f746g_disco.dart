@@ -11,9 +11,9 @@ import 'package:stm32f746g_disco/src/stm32f7_constants.dart';
 
 class STM32F746GDiscovery {
   /// GPIO pin for on-board green LED.
-  static const Pin LED1 = _STM32F7Pin.PI1;
+  static const Pin LED1 = STM32F7Pin.PI1;
   /// GPIO pin for on-board blue button.
-  static const Pin Button1 = _STM32F7Pin.PI11;
+  static const Pin Button1 = STM32F7Pin.PI11;
 
   /// GPIO pins on the Arduino connector.
   static const Pin A0 = STM32F7Pin.PA0;
