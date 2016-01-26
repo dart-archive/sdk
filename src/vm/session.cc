@@ -363,7 +363,6 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessDebugInterrupt: {
         if (process_ == NULL) break;
-        if (execution_paused_) break;
         // TODO(zerny): This can race with ProcessTerminated etc.
         process_->DebugInterrupt();
         break;
