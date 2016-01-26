@@ -27,7 +27,7 @@ vars = {
   # 2. update package revisions below.
   # 3. Upload new binaries and update the `third_party/bin` sha-hash-files as
   #    described in `third_party/bin/README.md`.
-  "dart_rev": "@57d1236a9c1d4bcdd3984461cabfcc464b3c0055",
+  "dart_rev": "@0cc4be4b0462635dc198d96974e152abbd86ff6f",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:
