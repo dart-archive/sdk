@@ -7,3 +7,4 @@ async_helper:../async_helper/lib
 expect:../../third_party/dart/pkg/expect/lib
 path:../../third_party/path/lib
 power_management:../power_management/lib
+sdk_services:../sdk_services/lib
