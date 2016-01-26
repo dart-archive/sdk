@@ -238,46 +238,46 @@ void Codegen::DoSetupFrame() {
   __ movl(EBP, ESP);
   __ pushl(Immediate(0));
   DoStackOverflowCheck(0);
-
-  cc_ = kMaterialized;
-  top_in_eax_ = false;
 }
 
 void Codegen::DoLoadLocal(int index) {
-  MaterializeCondition();
-  if (top_in_eax_) {
+  basic_block_.MaterializeKeepRegister();
+  if (basic_block_.IsTopRegister()) {
     if (index == 0) {
       __ pushl(EAX);
     } else {
-      MaterializeTop();
+      basic_block_.Materialize();
     }
   }
-  if (!top_in_eax_) {
+  if (!basic_block_.IsTopRegister()) {
     __ movl(EAX, Address(ESP, index * kWordSize));
+  } else {
+    basic_block_.SetTop(Slot::Unknown());
   }
-  top_in_eax_ = true;
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoLoadField(int index) {
-  MaterializeCondition();
-  if (!top_in_eax_) {
+  basic_block_.MaterializeKeepRegister();
+  if (!basic_block_.IsTopRegister()) {
     __ popl(EAX);
   }
+  basic_block_.Pop();
   __ movl(EAX,
           Address(EAX, index * kWordSize + Instance::kSize - HeapObject::kTag));
-  top_in_eax_ = true;
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoLoadStatic(int index) {
-  Materialize();
+  basic_block_.Materialize();
   __ movl(ECX, Address(EDI, Process::kStaticsOffset));
   int index_offset = index * kWordSize;
   __ movl(EAX, Address(ECX, index_offset + Array::kSize - HeapObject::kTag));
-  top_in_eax_ = true;
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoLoadStaticInit(int index) {
-  Materialize();
+  basic_block_.Materialize();
   __ movl(ECX, Address(EDI, Process::kStaticsOffset));
   int index_offset = index * kWordSize;
   __ movl(EAX, Address(ECX, index_offset + Array::kSize - HeapObject::kTag));
@@ -298,12 +298,13 @@ void Codegen::DoLoadStaticInit(int index) {
          Initializer::cast(program_->static_fields()->get(index))->function());
 
   __ Bind(&done);
-  top_in_eax_ = true;
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoStoreLocal(int index) {
-  MaterializeCondition();
-  if (top_in_eax_) {
+  basic_block_.SetAtOffset(index, Slot::Unknown());
+  basic_block_.MaterializeKeepRegister();
+  if (basic_block_.IsTopRegister()) {
     index--;
   } else {
     __ movl(EAX, Address(ESP, 0));
@@ -312,20 +313,19 @@ void Codegen::DoStoreLocal(int index) {
 }
 
 void Codegen::DoStoreField(int index) {
-  MaterializeCondition();
-  if (top_in_eax_) {
+  basic_block_.MaterializeKeepRegister();
+  if (basic_block_.IsTopRegister()) {
     index--;
   } else {
     __ popl(EAX);  // Value.
   }
   __ popl(ECX);
   __ movl(Address(ECX, index * kWordSize + Instance::kSize - HeapObject::kTag), EAX);
-  top_in_eax_ = true;
 }
 
 void Codegen::DoStoreStatic(int index) {
-  MaterializeCondition();
-  if (!top_in_eax_) {
+  basic_block_.MaterializeKeepRegister();
+  if (!basic_block_.IsTopRegister()) {
     __ movl(EAX, Address(ESP, 0));
   }
   __ movl(ECX, Address(EDI, Process::kStaticsOffset));
@@ -334,13 +334,13 @@ void Codegen::DoStoreStatic(int index) {
 }
 
 void Codegen::DoLoadInteger(int value) {
-  Materialize();
+  basic_block_.Materialize();
   __ movl(EAX, Immediate(reinterpret_cast<int32>(Smi::FromWord(value))));
-  top_in_eax_ = true;
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoLoadProgramRoot(int offset) {
-  Materialize();
+  basic_block_.Materialize();
   Object* root = *reinterpret_cast<Object**>(
       reinterpret_cast<uint8*>(program_) + offset);
   if (root->IsHeapObject()) {
@@ -348,52 +348,51 @@ void Codegen::DoLoadProgramRoot(int offset) {
   } else {
     printf("\tmovl $0x%08x, %%eax\n", root);
   }
-  top_in_eax_ = true;
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoLoadConstant(int bci, int offset) {
-  Materialize();
+  basic_block_.Materialize();
   Object* constant = Function::ConstantForBytecode(function_->bytecode_address_for(bci));
   if (constant->IsHeapObject()) {
     printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(constant)->address());
   } else {
     printf("\tmovl $0x%08x, %%eax\n", constant);
   }
-  top_in_eax_ = true;
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoBranch(BranchCondition condition, int from, int to) {
   Label skip;
   if (condition == BRANCH_ALWAYS) {
-    Materialize();
+    basic_block_.Materialize();
     // Do nothing.
     printf("\tjmp %u%s\n",
            reinterpret_cast<uint32>(function_->bytecode_address_for(to)),
            from >= to ? "b" : "f");
   } else {
-    if (cc_ == kMaterialized) {
-      if (!top_in_eax_) {
+    if (!basic_block_.IsTopCondition()) {
+      if (!basic_block_.IsTopRegister()) {
+        basic_block_.Materialize();
         __ popl(EAX);
       }
-      top_in_eax_ = false;
-      cc_ = EQUAL;
+      basic_block_.SetTop(Slot(EQUAL));
       printf("\tcmpl $O%08x + 1, %%eax\n", program_->true_object()->address());
     }
-    if (condition == BRANCH_IF_FALSE) cc_ = Assembler::InvertCondition(cc_);
+    Condition cc = basic_block_.Pop().condition();
+    if (condition == BRANCH_IF_FALSE) cc = Assembler::InvertCondition(cc);
     printf("\tj%s %u%s\n",
-      Assembler::ConditionMnemonic(cc_),
+      Assembler::ConditionMnemonic(cc),
       reinterpret_cast<uint32>(function_->bytecode_address_for(to)),
       from >= to ? "b" : "f");
-    cc_ = kMaterialized;
   }
 }
 
 void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
   printf("// Invoke: %i, %i (%p)\n", offset, arity, klass);
-  bool receiver_in_eax = top_in_eax_ && arity == 0;
-  MaterializeCondition();
-  Slot receiver = GetStackIndex(arity);
-  if (receiver == kThisSlot && klass != NULL) {
+  bool receiver_in_eax = basic_block_.IsTopRegister() && arity == 0;
+  Slot receiver = basic_block_.GetAtOffset(arity);
+  if (receiver.IsThis() && klass != NULL) {
     Function* target = NULL;
     for (int i = klass->id(); i < klass->child_id(); i++) {
       DispatchTableEntry* entry = DispatchTableEntry::cast(
@@ -411,24 +410,25 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
       switch (intrinsic) {
         case kIntrinsicGetField: {
           ASSERT(arity == 0);
-          if (!top_in_eax_) __ popl(EAX);
+          if (!basic_block_.IsTopRegister()) __ popl(EAX);
           int field = *target->bytecode_address_for(2);
           printf("// Inlined getter, field %i\n", field);
           int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
           __ movl(EAX, Address(EAX, offset));
-          top_in_eax_ = true;
+          basic_block_.SetTop(Slot::Register());
           break;
         }
 
         case kIntrinsicSetField: {
           ASSERT(arity == 1);
-          if (!top_in_eax_) __ popl(EAX);
+          if (!basic_block_.IsTopRegister()) __ popl(EAX);
           __ popl(ECX);
           int field = *target->bytecode_address_for(3);
           printf("// Inlined setter, field %i\n", field);
           int offset = field * kWordSize + Instance::kSize - HeapObject::kTag;
           __ movl(Address(ECX, offset), EAX);
-          top_in_eax_ = true;
+          basic_block_.Drop(2);
+          basic_block_.Push(Slot::Register());
           break;
         }
 
@@ -437,12 +437,10 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
           break;
         }
       }
-      stack_.Clear();
       return;
     }
   }
-
-  Materialize();
+  basic_block_.Materialize();
 
   if (!receiver_in_eax) {
     __ movl(EAX, Address(ESP, arity * kWordSize));
@@ -541,36 +539,37 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
   __ call("Throw");
   __ Bind(&end);
 
-  DoDrop(arity + 1);
-  top_in_eax_ = true;
+  DoDropMaterialized(arity + 1);
+  basic_block_.Drop(arity + 1);
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoInvokeStatic(int bci, int offset, Function* target) {
-  Materialize();
+  basic_block_.Materialize();
   printf("\tcall Function_%08x\n", target);
-  DoDrop(target->arity());
-  top_in_eax_ = true;
+  int arity = target->arity();
+  DoDropMaterialized(arity);
+  basic_block_.Drop(arity);
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoInvokeTest(int offset) {
-  MaterializeCondition();
-  if (!top_in_eax_) {
-    __ movl(EAX, Address(ESP, 0 * kWordSize));
+  basic_block_.MaterializeKeepRegister();
+  if (!basic_block_.IsTopRegister()) {
+    __ popl(EAX);
   }
 
   __ movl(EDX, Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
 
   __ call("InvokeTest");
 
-  DoDrop(1);
-
-  cc_ = EQUAL;
+  basic_block_.SetTop(Slot(EQUAL));
 }
 
 void Codegen::DoInvokeAdd() {
-  MaterializeCondition();
+  basic_block_.MaterializeKeepRegister();
   Label done, slow;
-  if (top_in_eax_) {
+  if (basic_block_.IsTopRegister()) {
     __ movl(EDX, Address(ESP, 0 * kWordSize));
   } else {
     __ movl(EAX, Address(ESP, 0 * kWordSize));
@@ -589,17 +588,23 @@ void Codegen::DoInvokeAdd() {
   __ jmp(&done);
 
   __ Bind(&slow);
-  if (top_in_eax_) __ pushl(EAX);
+  if (basic_block_.IsTopRegister()) __ pushl(EAX);
   printf("\tcall InvokeAdd\n");
-  if (top_in_eax_) __ popl(EDX);
+  if (basic_block_.IsTopRegister()) __ popl(EDX);
 
   __ Bind(&done);
-  DoDrop(2);
-  top_in_eax_ = true;
+  if (basic_block_.IsTopRegister()) {
+    __ popl(EDX);
+  } else {
+    DoDropMaterialized(2);
+  }
+
+  basic_block_.Drop(2);
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoInvokeSub() {
-  Materialize();
+  basic_block_.Materialize();
   Label done, slow;
   __ movl(EDX, Address(ESP, 0 * kWordSize));
   __ movl(EAX, Address(ESP, 1 * kWordSize));
@@ -617,12 +622,13 @@ void Codegen::DoInvokeSub() {
   printf("\tcall InvokeSub\n");
 
   __ Bind(&done);
-  DoDrop(2);
-  top_in_eax_ = true;
+  DoDropMaterialized(2);
+  basic_block_.Drop(2);
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoInvokeCompare(Condition condition, const char* bailout) {
-  Materialize();
+  basic_block_.Materialize();
   Label done, slow;
   __ movl(EBX, Address(ESP, 1 * kWordSize));
   __ movl(EDX, Address(ESP, 0 * kWordSize));
@@ -635,15 +641,10 @@ void Codegen::DoInvokeCompare(Condition condition, const char* bailout) {
 
   __ cmpl(EBX, EDX);
 
-  __ popl(EAX);
-  __ popl(EAX);
-
   __ jmp(&done);
 
   __ Bind(&slow);
   printf("\tcall %s\n", bailout);
-  __ popl(ECX);
-  __ popl(ECX);
   ASSERT(program_->true_object()->address() > program_->false_object()->address());
   if (condition == EQUAL) {
     printf("\tcmpl $O%08x + 1, %%eax\n", program_->true_object()->address());
@@ -662,11 +663,14 @@ void Codegen::DoInvokeCompare(Condition condition, const char* bailout) {
   }
   __ Bind(&done);
 
-  cc_ = condition;
+  __ popl(EAX);
+  __ popl(EAX);
+  basic_block_.Drop(2);
+  basic_block_.Push(Slot(condition));
 }
 
 void Codegen::DoInvokeNative(Native native, int arity) {
-  Materialize();
+  basic_block_.Materialize();
   Label retry;
   __ Bind(&retry);
 
@@ -713,7 +717,7 @@ void Codegen::DoInvokeNative(Native native, int arity) {
 }
 
 void Codegen::DoAllocate(Class* klass) {
-  Materialize();
+  basic_block_.Materialize();
   Label retry;
   __ Bind(&retry);
 
@@ -753,14 +757,25 @@ void Codegen::DoAllocate(Class* klass) {
     __ movl(Address(EAX, (fields - (i + 1)) * kWordSize + offset), EBX);
   }
 
-  top_in_eax_ = true;
+  basic_block_.Drop(fields);
+  basic_block_.Push(Slot::Register());
 }
 
 void Codegen::DoNegate() {
-  Materialize();
+  if (basic_block_.IsTopCondition()) {
+    Condition condition = basic_block_.Pop().condition();
+    basic_block_.Push(Slot(Assembler::InvertCondition(condition)));
+    return;
+  }
+
+  basic_block_.MaterializeKeepRegister();
   Label store;
 
-  __ movl(EBX, Address(ESP, 0 * kWordSize));
+  if (basic_block_.IsTopRegister()) {
+    __ movl(EBX, EAX);
+  } else {
+    __ movl(EBX, Address(ESP, 0 * kWordSize));
+  }
 
   Object* root = *reinterpret_cast<Object**>(
       reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
@@ -771,74 +786,97 @@ void Codegen::DoNegate() {
       reinterpret_cast<uint8*>(program_) + Program::kFalseObjectOffset);
   printf("\tmovl $O%08x + 1, %%eax\n", HeapObject::cast(root)->address());
   __ Bind(&store);
-  __ movl(Address(ESP, 0 * kWordSize), EAX);
+
+  if (!basic_block_.IsTopRegister()) {
+    __ movl(Address(ESP, 0 * kWordSize), EAX);
+  }
 }
 
 void Codegen::DoIdentical() {
-  MaterializeCondition();
-  if (top_in_eax_) {
+  basic_block_.MaterializeKeepRegister();
+  if (basic_block_.IsTopRegister()) {
     __ popl(EBX);
   } else {
     __ movl(EAX, Address(ESP, 0 * kWordSize));
     __ movl(EBX, Address(ESP, 1 * kWordSize));
-
-    __ addl(ESP, Immediate(2 * kWordSize));
+    DoDrop(2);
   }
 
   __ call("Identical");
 
-  top_in_eax_ = false;
-  cc_ = EQUAL;
+  basic_block_.Drop(2);
+  basic_block_.Push(Slot(EQUAL));
 }
 
 void Codegen::DoIdenticalNonNumeric() {
-  MaterializeCondition();
-  if (top_in_eax_) {
+  basic_block_.MaterializeKeepRegister();
+  if (basic_block_.IsTopRegister()) {
     __ popl(EBX);
   } else {
     __ movl(EAX, Address(ESP, 0 * kWordSize));
     __ movl(EBX, Address(ESP, 1 * kWordSize));
-
-    __ addl(ESP, Immediate(2 * kWordSize));
+    DoDrop(2);
   }
 
   __ cmpl(EAX, EBX);
 
-  top_in_eax_ = false;
-  cc_ = EQUAL;
+  basic_block_.Drop(2);
+  basic_block_.Push(Slot(EQUAL));
 }
 
 void Codegen::DoProcessYield() {
-  Materialize();
+  basic_block_.Materialize();
   __ movl(EAX, Immediate(1));
   // TODO(ajohnsen): Do better!
   __ jmp("Return");
 }
 
 void Codegen::DoDrop(int n) {
-  for (int i = 0; i < n && stack_.size() > 0; i++) stack_.PopBack();
-  MaterializeCondition();
   ASSERT(n >= 0);
+  while (n > 0) {
+    switch (basic_block_.Top().kind()) {
+      case Slot::kRegisterSlot:
+      case Slot::kConditionSlot:
+        basic_block_.Drop(1);
+        n--;
+        continue;
+
+      default:
+        basic_block_.Materialize();
+        break;
+    }
+    break;
+  }
   if (n == 0) {
     // Do nothing.
   } else if (n == 1) {
-    if (!top_in_eax_) {
-      __ popl(EDX);
-    }
-    top_in_eax_ = false;
+    __ popl(EDX);
   } else {
-    if (top_in_eax_) n--;
-    top_in_eax_ = false;
+    __ addl(ESP, Immediate(n * kWordSize));
+  }
+  basic_block_.Drop(n);
+}
+
+void Codegen::DoDropMaterialized(int n) {
+  ASSERT(n >= 0);
+  ASSERT(basic_block_.Top().IsMaterialized());
+  if (n == 0) {
+    // Do nothing.
+  } else if (n == 1) {
+    __ popl(EDX);
+  } else {
     __ addl(ESP, Immediate(n * kWordSize));
   }
 }
 
 void Codegen::DoReturn() {
-  MaterializeCondition();
-  if (!top_in_eax_) {
+  if (basic_block_.IsTopCondition()) {
+    basic_block_.ConditionToRegister();
+  }
+  basic_block_.MaterializeKeepRegister();
+  if (!basic_block_.IsTopRegister()) {
     __ popl(EAX);
   }
-  top_in_eax_ = false;
   __ movl(ESP, EBP);
   __ popl(EBP);
   __ ret();
@@ -889,7 +927,7 @@ void Codegen::DoRestoreState() {
 }
 
 void Codegen::DoStackOverflowCheck(int size) {
-  Materialize();
+  basic_block_.Materialize();
   __ movl(EBX, Address(EDI, Process::kStackLimitOffset));
   __ cmpl(ESP, EBX);
   if (size == 0) {
@@ -985,28 +1023,49 @@ void Codegen::DoIntrinsicListIndexSet() {
   __ Bind(&failure);
 }
 
-void Codegen::Materialize() {
-  ASSERT(cc_ == kMaterialized || !top_in_eax_);
-  MaterializeTop();
-  MaterializeCondition();
+Program* BasicBlock::program() const {
+  return codegen_->program();
 }
 
-void Codegen::MaterializeTop() {
-  if (top_in_eax_) {
-    ASSERT(cc_ == kMaterialized);
-    __ pushl(EAX);
-    top_in_eax_ = false;
-  }
+Assembler* BasicBlock::assembler() const {
+  return codegen_->assembler();
 }
 
-void Codegen::MaterializeCondition() {
-  if (cc_ != kMaterialized) {
-    ASSERT(!top_in_eax_);
-    printf("\tmovl $O%08x + 1, %%eax\n", program_->false_object()->address());
-    printf("\tmovl $O%08x + 1, %%ecx\n", program_->true_object()->address());
-    __ cmov(cc_, EAX, ECX);
-    __ pushl(EAX);
-    cc_ = kMaterialized;
+void BasicBlock::ConditionToRegister() {
+  Slot slot = Pop();
+  printf("\tmovl $O%08x + 1, %%eax\n", program()->false_object()->address());
+  printf("\tmovl $O%08x + 1, %%ecx\n", program()->true_object()->address());
+  __ cmov(slot.condition(), EAX, ECX);
+  Push(Slot::Register());
+}
+
+void BasicBlock::Materialize() {
+  switch (Top().kind()) {
+    case Slot::kConditionSlot: {
+      ConditionToRegister();
+      __ pushl(EAX);
+      SetTop(Slot::Unknown());
+      break;
+    }
+
+    case Slot::kRegisterSlot: {
+      __ pushl(EAX);
+      SetTop(Slot::Unknown());
+      break;
+    }
+
+    case Slot::kThisRegisterSlot: {
+      __ pushl(EAX);
+      SetTop(Slot::This());
+      break;
+    }
+
+    case Slot::kUnknownSlot:
+    case Slot::kThisSlot:
+      break;
+
+    default:
+      ASSERT(false);
   }
 }
 
