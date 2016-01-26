@@ -52,16 +52,23 @@ class Slot {
     return kind_ == kRegisterSlot || kind_ == kThisRegisterSlot;
   }
 
+  bool IsSmi() const { return kind_ == kSmiSlot; }
+
   bool IsMaterialized() const {
     return kind_ == kUnknownSlot || kind_ == kThisSlot;
   }
 
   Condition condition() const {
-    assert(condition_ != kInvalidCondition);
+    ASSERT(condition_ != kInvalidCondition);
     return condition_;
   }
 
   SlotKind kind() const { return kind_; }
+
+  const Smi* smi() const {
+    ASSERT(smi_ != kInvalidSmi);
+    return smi_;
+  }
 
  private:
   Slot(SlotKind kind)
@@ -141,16 +148,24 @@ class BasicBlock {
     return stack_.Back().IsRegister();
   }
 
-  bool IsMaterialized() {
+  bool IsTopSmi() {
     if (stack_.IsEmpty()) return false;
-    return stack_.Back().IsUnknown();
+    return stack_.Back().IsSmi();
+  }
+
+  bool IsTopMaterialized() {
+    if (stack_.IsEmpty()) return false;
+    return stack_.Back().IsMaterialized();
   }
 
   void MaterializeKeepRegister() {
+    if (IsTopSmi()) SmiToRegister();
+    if (IsTopCondition()) ConditionToRegister();
     if (IsTopRegister()) return;
     Materialize();
   }
 
+  void SmiToRegister();
   void ConditionToRegister();
 
   void Materialize();
@@ -165,7 +180,7 @@ class BasicBlock {
         case Slot::kConditionSlot: printf("condition"); break;
         case Slot::kRegisterSlot: printf("register"); break;
         case Slot::kThisRegisterSlot: printf("this-register"); break;
-        case Slot::kSmiSlot: printf("smi"); break;
+        case Slot::kSmiSlot: printf("smi(%i)", stack_[i].smi()->value()); break;
       }
     }
     printf("]\n");

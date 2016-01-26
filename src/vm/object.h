@@ -155,7 +155,7 @@ class Smi : public Object {
   inline static bool IsValidAsPortable(int64 value);
 
   // Retrieve the integer value from this Smi.
-  inline word value();
+  inline word value() const;
 
   // Casting.
   static inline Smi* cast(Object* object);
@@ -1690,7 +1690,7 @@ Smi* Smi::cast(Object* object) {
   return reinterpret_cast<Smi*>(object);
 }
 
-word Smi::value() { return reinterpret_cast<word>(this) >> kTagSize; }
+word Smi::value() const { return reinterpret_cast<word>(this) >> kTagSize; }
 
 Smi* Smi::FromWord(word value) {
   ASSERT(Smi::IsValid(value));
