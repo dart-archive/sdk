@@ -363,6 +363,8 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessDebugInterrupt: {
         if (process_ == NULL) break;
+        if (execution_paused_) break;
+        // TODO(zerny): This can race with ProcessTerminated etc.
         process_->DebugInterrupt();
         break;
       }
@@ -619,16 +621,19 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kNewMap: {
+        ASSERT(execution_paused_);
         NewMap(connection_->ReadInt());
         break;
       }
 
       case Connection::kDeleteMap: {
+        ASSERT(execution_paused_);
         DeleteMap(connection_->ReadInt());
         break;
       }
 
       case Connection::kPushFromMap: {
+        ASSERT(execution_paused_);
         int index = connection_->ReadInt();
         int64 id = connection_->ReadInt64();
         PushFromMap(index, id);
@@ -636,6 +641,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPopToMap: {
+        ASSERT(execution_paused_);
         int index = connection_->ReadInt();
         int64 id = connection_->ReadInt64();
         PopToMap(index, id);
@@ -643,6 +649,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kRemoveFromMap: {
+        ASSERT(execution_paused_);
         int index = connection_->ReadInt();
         int64 id = connection_->ReadInt64();
         RemoveFromMap(index, id);
@@ -650,31 +657,37 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kDup: {
+        ASSERT(execution_paused_);
         Dup();
         break;
       }
 
       case Connection::kDrop: {
+        ASSERT(execution_paused_);
         Drop(connection_->ReadInt());
         break;
       }
 
       case Connection::kPushNull: {
+        ASSERT(execution_paused_);
         PushNull();
         break;
       }
 
       case Connection::kPushBoolean: {
+        ASSERT(execution_paused_);
         PushBoolean(connection_->ReadBoolean());
         break;
       }
 
       case Connection::kPushNewInteger: {
+        ASSERT(execution_paused_);
         PushNewInteger(connection_->ReadInt64());
         break;
       }
 
       case Connection::kPushNewBigInteger: {
+        ASSERT(execution_paused_);
         bool negative = connection_->ReadBoolean();
         int used = connection_->ReadInt();
         int class_map = connection_->ReadInt();
@@ -710,11 +723,13 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushNewDouble: {
+        ASSERT(execution_paused_);
         PushNewDouble(connection_->ReadDouble());
         break;
       }
 
       case Connection::kPushNewOneByteString: {
+        ASSERT(execution_paused_);
         int length;
         uint8* bytes = connection_->ReadBytes(&length);
         List<uint8> contents(bytes, length);
@@ -724,6 +739,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushNewTwoByteString: {
+        ASSERT(execution_paused_);
         int length;
         uint8* bytes = connection_->ReadBytes(&length);
         ASSERT((length & 1) == 0);
@@ -734,16 +750,19 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushNewInstance: {
+        ASSERT(execution_paused_);
         PushNewInstance();
         break;
       }
 
       case Connection::kPushNewArray: {
+        ASSERT(execution_paused_);
         PushNewArray(connection_->ReadInt());
         break;
       }
 
       case Connection::kPushNewFunction: {
+        ASSERT(execution_paused_);
         int arity = connection_->ReadInt();
         int literals = connection_->ReadInt();
         int length;
@@ -755,16 +774,19 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushNewInitializer: {
+        ASSERT(execution_paused_);
         PushNewInitializer();
         break;
       }
 
       case Connection::kPushNewClass: {
+        ASSERT(execution_paused_);
         PushNewClass(connection_->ReadInt());
         break;
       }
 
       case Connection::kPushBuiltinClass: {
+        ASSERT(execution_paused_);
         Names::Id name = static_cast<Names::Id>(connection_->ReadInt());
         int fields = connection_->ReadInt();
         PushBuiltinClass(name, fields);
@@ -772,18 +794,21 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushConstantList: {
+        ASSERT(execution_paused_);
         int length = connection_->ReadInt();
         PushConstantList(length);
         break;
       }
 
       case Connection::kPushConstantByteList: {
+        ASSERT(execution_paused_);
         int length = connection_->ReadInt();
         PushConstantByteList(length);
         break;
       }
 
       case Connection::kPushConstantMap: {
+        ASSERT(execution_paused_);
         int length = connection_->ReadInt();
         PushConstantMap(length);
         break;
@@ -845,6 +870,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kMapLookup: {
+        ASSERT(execution_paused_);
         int map_index = connection_->ReadInt();
         WriteBuffer buffer;
         buffer.WriteInt64(MapLookupByObject(map_index, Top()));
@@ -1010,7 +1036,9 @@ Object* Session::MapLookupById(int map_index, int64 id) {
   return maps_[map_index]->LookupById(id);
 }
 
-void Session::PushNull() { Push(program()->null_object()); }
+void Session::PushNull() {
+  Push(program()->null_object());
+}
 
 void Session::PushBoolean(bool value) {
   if (value) {
@@ -1125,6 +1153,7 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
 }
 
 void Session::PushNewInitializer() {
+  ASSERT(execution_paused_);
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
       result, program()->CreateInitializer(Function::cast(Top())));
   Pop();
@@ -1132,6 +1161,7 @@ void Session::PushNewInitializer() {
 }
 
 void Session::PushNewClass(int fields) {
+  ASSERT(execution_paused_);
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(result, program()->CreateClass(fields));
   Push(result);
 }
@@ -1235,8 +1265,8 @@ void Session::PushConstantMap(int length) {
 }
 
 void Session::PrepareForChanges() {
+  ASSERT(execution_paused_);
   if (program()->is_optimized()) {
-    ASSERT(execution_paused_);
     ProgramFolder program_folder(program());
     program_folder.Unfold();
     for (int i = 0; i < maps_.length(); ++i) {
@@ -1248,9 +1278,12 @@ void Session::PrepareForChanges() {
   }
 }
 
-void Session::ChangeSuperClass() { PostponeChange(kChangeSuperClass, 2); }
+void Session::ChangeSuperClass() {
+  PostponeChange(kChangeSuperClass, 2);
+}
 
 void Session::CommitChangeSuperClass(PostponedChange* change) {
+  ASSERT(execution_paused_);
   Class* klass = Class::cast(change->get(1));
   Class* super = Class::cast(change->get(2));
   klass->set_super_class(super);
@@ -1262,6 +1295,7 @@ void Session::ChangeMethodTable(int length) {
 }
 
 void Session::CommitChangeMethodTable(PostponedChange* change) {
+  ASSERT(execution_paused_);
   Class* clazz = Class::cast(change->get(1));
   Array* methods = Array::cast(change->get(2));
   clazz->set_methods(methods);
@@ -1273,6 +1307,7 @@ void Session::ChangeMethodLiteral(int index) {
 }
 
 void Session::CommitChangeMethodLiteral(PostponedChange* change) {
+  ASSERT(execution_paused_);
   Function* function = Function::cast(change->get(1));
   Object* literal = change->get(2);
   int index = Smi::cast(change->get(3))->value();
@@ -1285,6 +1320,7 @@ void Session::ChangeStatics(int count) {
 }
 
 void Session::CommitChangeStatics(PostponedChange* change) {
+  ASSERT(execution_paused_);
   program()->set_static_fields(Array::cast(change->get(1)));
 }
 
@@ -1295,6 +1331,7 @@ void Session::ChangeSchemas(int count, int delta) {
 }
 
 void Session::CommitChangeSchemas(PostponedChange* change) {
+  ASSERT(execution_paused_);
   // TODO(kasperl): Rework this so we can allow allocation failures
   // as part of allocating the new classes.
   SemiSpace* space = program()->heap()->space();
@@ -1377,6 +1414,7 @@ bool Session::CommitChanges(int count) {
 }
 
 void Session::DiscardChanges() {
+  ASSERT(execution_paused_);
   PostponedChange* current = first_change_;
   while (current != NULL) {
     PostponedChange* next = current->next();
@@ -1388,6 +1426,7 @@ void Session::DiscardChanges() {
 }
 
 void Session::PostponeChange(Change change, int count) {
+  ASSERT(execution_paused_);
   Object** description = new Object*[count + 1];
   description[0] = Smi::FromWord(change);
   for (int i = count; i >= 1; i--) {
@@ -1439,6 +1478,7 @@ bool Session::UncaughtSignal(Process* process) {
 
 bool Session::BreakPoint(Process* process) {
   if (process_ == process) {
+    ASSERT(!execution_paused_);
     RequestExecutionPause();
     DebugInfo* debug_info = process->debug_info();
     int breakpoint_id = -1;
@@ -1461,6 +1501,7 @@ bool Session::BreakPoint(Process* process) {
 }
 
 Process* Session::GetProcess(int process_id) {
+  ASSERT(execution_paused_);
   // TODO(zerny): Assert here and eliminate the default process.
   if (process_id < 0) return process_;
   for (Process* process = program()->process_list_head();
@@ -1602,6 +1643,7 @@ void Session::PushFrameOnSessionStack(const Frame* frame) {
 }
 
 int Session::PushStackFrames(Stack* stack) {
+  ASSERT(execution_paused_);
   int frames = 0;
   Frame frame(stack);
   while (frame.MovePrevious()) {
@@ -1620,6 +1662,7 @@ void Session::PushTopStackFrame(Stack* stack) {
 }
 
 void Session::RestartFrame(int frame_index) {
+  ASSERT(execution_paused_);
   Stack* stack = process_->stack();
 
   // Move down to the frame we want to reset to.
