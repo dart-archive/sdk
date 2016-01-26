@@ -158,7 +158,7 @@ class _Random implements Random {
 
 @patch double atan2(num a, num b) => _atan2(a.toDouble(), b.toDouble());
 
-@patch double pow(num x, num exponent) {
+@patch num pow(num x, num exponent) {
   if ((x is int) && (exponent is int) && (exponent >= 0)) {
     return _intPow(x, exponent);
   }
