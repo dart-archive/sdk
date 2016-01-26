@@ -8,7 +8,18 @@
 
 namespace fletch {
 
+// In the semispaces, the sentinel marks the allocation limit in each chunk.
+// It is written when we flush, and when we allocate during GC, but it is not
+// necessarily maintained when allocating between GCs.
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
+
+static bool HasSentinelAt(uword address) {
+  return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
+}
+
+static void WriteSentinelAt(uword address) {
+  *reinterpret_cast<Object**>(address) = chunk_end_sentinel();
+}
 
 Space::Space(int maximum_initial_size)
     : first_(NULL),
@@ -16,22 +27,39 @@ Space::Space(int maximum_initial_size)
       used_(0),
       top_(0),
       limit_(0),
-      no_allocation_nesting_(0) {
+      no_allocation_nesting_(0) {}
+
+SemiSpace::SemiSpace(int maximum_initial_size) : Space(maximum_initial_size) {
   if (maximum_initial_size > 0) {
     int size = Utils::Minimum(maximum_initial_size, kDefaultMaximumChunkSize);
     Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
     if (chunk == NULL) FATAL1("Failed to allocate %d bytes.\n", size);
     Append(chunk);
-    top_ = chunk->base();
-    limit_ = chunk->limit();
+    UpdateBaseAndLimit(chunk, chunk->base());
   }
+}
+
+bool SemiSpace::IsFlushed() {
+  if (top_ == 0 && limit_ == 0) return true;
+  return HasSentinelAt(top_);
+}
+
+void SemiSpace::UpdateBaseAndLimit(Chunk* chunk, uword top) {
+  ASSERT(IsFlushed());
+  ASSERT(top >= chunk->base());
+  ASSERT(top < chunk->limit());
+
+  top_ = top;
+  // Always write a sentinel so the scavenger knows where to stop.
+  WriteSentinelAt(top_);
+  limit_ = chunk->limit();
 }
 
 void SemiSpace::Flush() {
   if (!is_empty()) {
     // Set sentinel at allocation end.
     ASSERT(top_ < limit_);
-    *reinterpret_cast<Object**>(top_) = chunk_end_sentinel();
+    WriteSentinelAt(top_);
   }
 }
 
@@ -64,22 +92,14 @@ void SemiSpace::Append(Chunk* chunk) {
   Space::Append(chunk);
 }
 
-void SemiSpace::SetAllocationPointForPrepend(SemiSpace* space) {
-  // If the current space is empty, continue allocation in the
-  // last chunk of the prepended space.
-  if (is_empty()) {
-    last_ = space->last();
-    top_ = space->top_;
-    limit_ = space->limit_;
-  }
-}
-
 uword SemiSpace::TryAllocate(int size) {
   uword new_top = top_ + size;
   // Make sure there is room for chunk end sentinel.
   if (new_top < limit_) {
     uword result = top_;
     top_ = new_top;
+    // Always write a sentinel so the scavenger knows where to stop.
+    WriteSentinelAt(top_);
     return result;
   }
 
@@ -106,8 +126,7 @@ uword SemiSpace::AllocateInNewChunk(int size, bool fatal) {
 
     // Update limits.
     allocation_budget_ -= chunk->size();
-    top_ = chunk->base();
-    limit_ = chunk->limit();
+    UpdateBaseAndLimit(chunk, chunk->base());
 
     // Allocate.
     uword result = TryAllocate(size);
@@ -137,6 +156,27 @@ void SemiSpace::TryDealloc(uword location, int size) {
 int SemiSpace::Used() {
   if (is_empty()) return used_;
   return used_ + (top() - last()->base());
+}
+
+// Called multiple times until there is no more work.  Finds objects moved to
+// the to-space and traverses them to find and fix more new-space pointers.
+bool SemiSpace::CompleteScavengeGenerational(PointerVisitor* visitor) {
+  bool found_work = false;
+
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uword current = chunk->scavenge_pointer();
+    while (!HasSentinelAt(current)) {
+      found_work = true;
+      HeapObject* object = HeapObject::FromAddress(current);
+      object->IteratePointers(visitor);
+
+      current += object->Size();
+    }
+    // Set up the already-scanned pointer for next round.
+    chunk->set_scavenge_pointer(current);
+  }
+
+  return found_work;
 }
 
 }  // namespace fletch

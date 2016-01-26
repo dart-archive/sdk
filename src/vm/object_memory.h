@@ -151,13 +151,6 @@ class Space {
 
   bool in_no_allocation_failure_scope() { return no_allocation_nesting_ != 0; }
 
-  // TODO(kasperl): This seems like a bad interface.
-  void AppendProgramChunk(Chunk* chunk, uword top) {
-    Append(chunk);
-    top_ = top;
-    limit_ = chunk->limit_;
-  }
-
   bool is_empty() const { return first_ == NULL; }
 
   static int DefaultChunkSize(int heap_size) {
@@ -205,8 +198,7 @@ class Space {
 
 class SemiSpace : public Space {
  public:
-  explicit SemiSpace(int maximum_initial_size = 0)
-      : Space(maximum_initial_size) {}
+  explicit SemiSpace(int maximum_initial_size = 0);
 
   // Returns the total size of allocated objects.
   virtual int Used();
@@ -220,6 +212,8 @@ class SemiSpace : public Space {
 
   // Flush will make the current chunk consistent for iteration.
   virtual void Flush();
+
+  bool IsFlushed();
 
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and
@@ -243,15 +237,17 @@ class SemiSpace : public Space {
   void StartScavenge();
   bool CompleteScavengeGenerational(PointerVisitor* visitor);
 
- protected:
+  void UpdateBaseAndLimit(Chunk* chunk, uword top);
+
   virtual void Append(Chunk* chunk);
+
+  void SetReadOnly() { top_ = limit_ = 0; }
 
  private:
   uword AllocateInternal(int size, bool fatal);
 
-  void SetAllocationPointForPrepend(SemiSpace* space);
-
   uword AllocateInNewChunk(int size, bool fatal);
+
   uword TryAllocate(int size);
 };
 
@@ -293,6 +289,8 @@ class OldSpace : public Space {
   void EndScavenge();
 
  private:
+  Chunk* AllocateAndUseChunk(size_t size);
+
   void SetAllocationPointForPrepend(SemiSpace* space);
 
   uword AllocateInNewChunk(int size);

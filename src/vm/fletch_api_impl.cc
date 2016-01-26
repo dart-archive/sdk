@@ -159,7 +159,8 @@ FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {
   fletch::Chunk* memory = fletch::ObjectMemory::CreateFlashChunk(
       program->heap()->space(), heap, heap_size);
 
-  program->heap()->space()->AppendProgramChunk(memory, memory->base());
+  program->heap()->space()->Append(memory);
+  program->heap()->space()->SetReadOnly();
   return reinterpret_cast<FletchProgram>(program);
 }
 

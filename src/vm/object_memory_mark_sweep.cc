@@ -1,7 +1,6 @@
 // Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
-
 // Mark-sweep old-space.
 // * Uses worst-fit free-list allocation to get big chunks for fast bump
 //   allocation.
@@ -18,6 +17,8 @@
 
 namespace fletch {
 
+// In oldspace, the sentinel marks the end of each chunk, and never moves or is
+// overwritten.
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
 
 static bool HasSentinelAt(uword address) {
@@ -28,7 +29,13 @@ OldSpace::OldSpace(int maximum_initial_size)
     : Space(maximum_initial_size),
       free_list_(new FreeList()),
       tracking_allocations_(false),
-      promoted_track_(NULL) {}
+      promoted_track_(NULL) {
+  if (maximum_initial_size > 0) {
+    int size = Utils::Minimum(maximum_initial_size, kDefaultMaximumChunkSize);
+    Chunk* chunk = AllocateAndUseChunk(size);
+    ASSERT(chunk);
+  }
+}
 
 OldSpace::~OldSpace() { delete free_list_; }
 
@@ -62,17 +69,8 @@ bool OldSpace::IsAlive(HeapObject* old_location) {
   return old_location->IsMarked();
 }
 
-uword OldSpace::AllocateInNewChunk(int size) {
-  ASSERT(top_ == 0);  // Space is flushed.
-  // Allocate new chunk that is big enough to fit the object.
-  int tracking_size = tracking_allocations_ ? 0 : sizeof(PromotedTrack);
-  int default_chunk_size = DefaultChunkSize(Used());
-  int chunk_size =
-      (size + tracking_size + kPointerSize >= default_chunk_size)
-          ? (size + tracking_size + kPointerSize)  // Make room for sentinel.
-          : default_chunk_size;
-
-  Chunk* chunk = ObjectMemory::AllocateChunk(this, chunk_size);
+Chunk* OldSpace::AllocateAndUseChunk(size_t size) {
+  Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
   if (chunk != NULL) {
     // Link it into the space.
     Append(chunk);
@@ -90,6 +88,22 @@ uword OldSpace::AllocateInNewChunk(int size) {
     // therefore reflects actual memory usage after Flush has been
     // called.
     used_ += chunk->size() - kPointerSize;
+  }
+  return chunk;
+}
+
+uword OldSpace::AllocateInNewChunk(int size) {
+  ASSERT(top_ == 0);  // Space is flushed.
+  // Allocate new chunk that is big enough to fit the object.
+  int tracking_size = tracking_allocations_ ? 0 : sizeof(PromotedTrack);
+  int default_chunk_size = DefaultChunkSize(Used());
+  int chunk_size =
+      (size + tracking_size + kPointerSize >= default_chunk_size)
+          ? (size + tracking_size + kPointerSize)  // Make room for sentinel.
+          : default_chunk_size;
+
+  Chunk* chunk = AllocateAndUseChunk(chunk_size);
+  if (chunk != NULL) {
     return Allocate(size);
   }
 
@@ -167,8 +181,7 @@ void OldSpace::VisitRememberedSet(PointerVisitor* visitor) {
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();
-    uword end = chunk->limit() - kPointerSize;  // Subtract sentinel.
-    while (current < end) {
+    while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
       // Newly promoted objects are automatically skipped, because they
       // are protected by a PromotedTrack object.
@@ -217,31 +230,6 @@ void SemiSpace::StartScavenge() {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     chunk->set_scavenge_pointer(chunk->base());
   }
-}
-
-// Called multiple times until there is no more work.  Finds objects moved to
-// the to-space and traverses them to find and fix more new-space pointers.
-bool SemiSpace::CompleteScavengeGenerational(PointerVisitor* visitor) {
-  bool found_work = false;
-
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword current = chunk->scavenge_pointer();
-    // TODO(kasperl): I don't like the repeated checks to see if p is
-    // the last chunk. Can't we just make sure to write the sentinel
-    // whenever we've copied over an object, so this check becomes
-    // simpler like in IterateObjects?
-    while ((chunk == last()) ? (current < top()) : !HasSentinelAt(current)) {
-      found_work = true;
-      HeapObject* object = HeapObject::FromAddress(current);
-      object->IteratePointers(visitor);
-
-      current += object->Size();
-    }
-    // Set up the already-scanned pointer for next round.
-    chunk->set_scavenge_pointer(current);
-  }
-
-  return found_work;
 }
 
 }  // namespace fletch

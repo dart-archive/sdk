@@ -344,7 +344,8 @@ Program* SnapshotReader::ReadProgram() {
   program->set_static_fields(Array::cast(ReadObject()));
   program->set_dispatch_table(Array::cast(ReadObject()));
 
-  program->heap()->space()->AppendProgramChunk(memory_, top_);
+  program->heap()->space()->Append(memory_);
+  program->heap()->space()->UpdateBaseAndLimit(memory_, top_);
   backward_references_.Delete();
 
   // Programs read from a snapshot are always compact.
