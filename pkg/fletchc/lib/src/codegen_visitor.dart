@@ -265,6 +265,8 @@ abstract class CodegenVisitor
   // The slot at which 'this' is stored. In closures, this is overwritten.
   LocalValue thisValue;
 
+  TreeElements initializerElements;
+
   List<Element> blockLocals = <Element>[];
 
   /// A FunctionExpression in this set is a named local function declaration.
@@ -284,6 +286,11 @@ abstract class CodegenVisitor
     if (functionBuilder.isInstanceMember) {
       thisValue = new UnboxedParameterValue(0, null, assembler);
     }
+  }
+
+  TreeElements get elements {
+    if (initializerElements != null) return initializerElements;
+    return super.elements;
   }
 
   BytecodeAssembler get assembler => functionBuilder.assembler;
@@ -570,10 +577,10 @@ abstract class CodegenVisitor
     if (initializer == null) {
       assembler.loadLiteralNull();
     } else {
-      int constId = allocateConstantFromNode(
-          initializer,
-          elements: parameter.resolvedAst.elements);
-      assembler.loadConst(constId);
+      var previousElements = initializerElements;
+      initializerElements = parameter.resolvedAst.elements;
+      visitForValue(initializer);
+      initializerElements = previousElements;
     }
   }
 

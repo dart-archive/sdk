@@ -38,7 +38,6 @@ class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
 
   final List<ConstructorElement> constructors = <ConstructorElement>[];
 
-  TreeElements initializerElements;
   ClosureEnvironment initializerClosureEnvironment;
 
   ConstructorCodegen(FletchFunctionBuilder functionBuilder,
@@ -54,11 +53,6 @@ class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
   ConstructorElement get constructor => element;
 
   BytecodeAssembler get assembler => functionBuilder.assembler;
-
-  TreeElements get elements {
-    if (initializerElements != null) return initializerElements;
-    return super.elements;
-  }
 
   ClosureEnvironment get closureEnvironment {
     if (initializerClosureEnvironment != null) {
