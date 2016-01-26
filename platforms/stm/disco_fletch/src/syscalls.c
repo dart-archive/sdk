@@ -22,9 +22,7 @@
 
 #define MAX_STACK_SIZE 0x2000
 
-// Weak symbols for hooking into the read/write.
-extern int __io_putchar(int ch) __attribute__((weak));
-extern int __io_getchar(void) __attribute__((weak));
+extern int Write(int file, char *ptr, int len);
 
 void* _sbrk(int incr) {
   // We don't use the newlib C-heap implementation (which use _sbrk to
@@ -61,10 +59,7 @@ void _exit (int status) {
 }
 
 int _write(int file, char *ptr, int len) {
-  for (int i = 0; i < len; i++) {
-    __io_putchar( *ptr++ );
-  }
-  return len;
+  return Write(file, ptr, len);
 }
 
 int _close(int file) {
@@ -85,10 +80,9 @@ int _lseek(int file, int ptr, int dir) {
 }
 
 int _read(int file, char *ptr, int len) {
-  for (int i = 0; i < len; i++) {
-    *ptr++ = __io_getchar();
-  }
-  return len;
+  // Nothing to read anywhere.
+  errno = EINVAL;
+  return -1;
 }
 
 int _open(char *path, int flags, ...) {

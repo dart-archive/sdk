@@ -6,8 +6,6 @@
 
 #include "src/shared/assert.h"
 
-#include "platforms/stm/disco_fletch/src/logger.h"
-
 uint32_t PageAllocator::AddArena(const char* name, uintptr_t start,
                                  size_t size, uint8_t* map, size_t map_size) {
   for (int i = 0; i < kMaxArenas; i++) {

@@ -5,6 +5,9 @@
 #include <stdlib.h>
 
 #include <cmsis_os.h>
+extern "C" {
+  #include <lcd_log.h>
+}
 #include <stm32746g_discovery.h>
 #include <stm32746g_discovery_lcd.h>
 
@@ -12,9 +15,9 @@
 #include "include/static_ffi.h"
 
 #include "platforms/stm/disco_fletch/src/fletch_entry.h"
-#include "platforms/stm/disco_fletch/src/logger.h"
 #include "platforms/stm/disco_fletch/src/page_allocator.h"
 #include "platforms/stm/disco_fletch/src/uart.h"
+#include "src/shared/utils.h"
 
 extern unsigned char _binary_snapshot_start;
 extern unsigned char _binary_snapshot_end;
@@ -38,11 +41,22 @@ extern "C" void LCDDrawLine(
   BSP_LCD_DrawLine(x1, y1, x2, y2);
 }
 
+// Implementation of write used from syscalls.c to redirect all printf
+// calls to the print interceptors.
+extern "C" int Write(int file, char *ptr, int len) {
+  for (int i = 0; i < len; i++) {
+    if (file == 2) {
+      fletch::Print::Error("%c", *ptr++);
+    } else {
+      fletch::Print::Out("%c", *ptr++);
+    }
+  }
+  return len;
+}
+
 FLETCH_EXPORT_TABLE_BEGIN
   FLETCH_EXPORT_TABLE_ENTRY("uart_read", UartRead)
   FLETCH_EXPORT_TABLE_ENTRY("uart_write", UartWrite)
-  FLETCH_EXPORT_TABLE_ENTRY("BSP_LED_On", BSP_LED_On)
-  FLETCH_EXPORT_TABLE_ENTRY("BSP_LED_Off", BSP_LED_Off)
   FLETCH_EXPORT_TABLE_ENTRY("lcd_height", BSP_LCD_GetYSize)
   FLETCH_EXPORT_TABLE_ENTRY("lcd_width", BSP_LCD_GetXSize)
   FLETCH_EXPORT_TABLE_ENTRY("lcd_clear", BSP_LCD_Clear)
@@ -54,15 +68,41 @@ FLETCH_EXPORT_TABLE_END
 
 // Run fletch on the linked in snapshot.
 void StartFletch(void const * argument) {
-  LOG_DEBUG("Setup fletch\n");
+  fletch::Print::Out("Setup fletch\n");
   FletchSetup();
-  LOG_DEBUG("Read fletch snapshot\n");
+  fletch::Print::Out("Reading fletch snapshot\n");
   unsigned char *snapshot = &_binary_snapshot_start;
   int snapshot_size =  reinterpret_cast<int>(&_binary_snapshot_size);
   FletchProgram program = FletchLoadSnapshot(snapshot, snapshot_size);
-  LOG_DEBUG("Run fletch program\n");
+  fletch::Print::Out("Run fletch program\n");
   FletchRunMain(program);
-  LOG_DEBUG("Fletch program exited\n");
+  fletch::Print::Out("Fletch program exited\n");
+}
+
+void UartPrintIntercepter(const char* message, int out, void* data) {
+  int len = strlen(message);
+  for (int i = 0; i < len; i++) {
+    if (message[i] == '\n') {
+      uart->Write(reinterpret_cast<const uint8_t*>("\r"), 1);
+    }
+    uart->Write(reinterpret_cast<const uint8_t*>(message + i), 1);
+  }
+}
+
+// LCDLogPutchar is defined by the STM LCD log utility
+// (Utilities/Log/lcd_log.c) by means of the macro definitions of
+// LCD_LOG_PUTCHAR in lcd_log_conf.h.
+extern "C" int LCDLogPutchar(int ch);
+void LCDPrintIntercepter(const char* message, int out, void* data) {
+  int len = strlen(message);
+  if (out == 3) {
+    LCD_LineColor = LCD_COLOR_RED;
+  } else {
+    LCD_LineColor = LCD_COLOR_BLACK;
+  }
+  for (int i = 0; i < len; i++) {
+    LCDLogPutchar(message[i]);
+  }
 }
 
 // Main task entry point from FreeRTOS.
@@ -70,23 +110,33 @@ void FletchEntry(void const * argument) {
   // Add an arena of the 8Mb of external memory.
   uint32_t ext_mem_arena =
       page_allocator->AddArena("ExtMem", 0xc0000000, 0x800000);
-  BSP_LED_Init(LED1);
 
   // Initialize the LCD.
   size_t fb_bytes = (RK043FN48H_WIDTH * RK043FN48H_HEIGHT * 2);
   size_t fb_pages = page_allocator->PagesForBytes(fb_bytes);
   void* fb = page_allocator->AllocatePages(fb_pages, ext_mem_arena);
-  LOG_DEBUG("fb: %08x %08x %p\n", fb_bytes, fb_pages, fb);
   BSP_LCD_Init();
   BSP_LCD_LayerDefaultInit(1, reinterpret_cast<uint32_t>(fb));
   BSP_LCD_SelectLayer(1);
   BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
 
-  Logger::Create();
+  // Initialize LCD Log module.
+  LCD_LOG_Init();
+  LCD_LOG_SetHeader(reinterpret_cast<uint8_t*>(const_cast<char*>("Fletch")));
+  LCD_LOG_SetFooter(reinterpret_cast<uint8_t*>(const_cast<char*>(
+      "STM32746G-Discovery")));
+  FletchRegisterPrintInterceptor(LCDPrintIntercepter, NULL);
 
   // For now always start the UART.
   uart = new Uart();
   uart->Start();
+
+  FletchRegisterPrintInterceptor(UartPrintIntercepter, NULL);
+
+  // Always disable standard out, as this will cause infinite
+  // recursion in the syscalls.c handling of write.
+  fletch::Print::DisableStandardOutput();
+
   StartFletch(argument);
 
   // No more to do right now.

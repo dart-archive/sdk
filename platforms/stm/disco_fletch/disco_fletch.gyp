@@ -123,7 +123,6 @@
         '<(source_path)/freertos.cc',
         '<(source_path)/FreeRTOSConfig.h',
         '<(source_path)/fletch_entry.cc',
-        '<(source_path)/logger.cc',
         '<(source_path)/main.cc',
         '<(source_path)/page_allocator.cc',
         '<(source_path)/page_allocator.h',
