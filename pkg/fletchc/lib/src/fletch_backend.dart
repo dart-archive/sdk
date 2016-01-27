@@ -267,6 +267,16 @@ class FletchBackend extends Backend
     systemBuilder = new FletchSystemBuilder(predecessorSystem);
   }
 
+  // TODO(zarah): Move to FletchSystemBuilder.
+  FletchClassBuilder getClassBuilderOfExistingClass(int id) {
+    FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(id);
+    if (classBuilder != null) return classBuilder;
+    FletchClass klass = systemBuilder.lookupClass(id);
+    if (klass.element != null) return registerClassElement(klass.element);
+    // [klass] is a tearoff class
+    return systemBuilder.newPatchClassBuilder(id, compiledClosureClass);
+  }
+
   FletchClassBuilder registerClassElement(ClassElement element) {
     if (element == null) return null;
     assert(element.isDeclaration);
@@ -1268,8 +1278,7 @@ class FletchBackend extends Backend
 
     if (function.isInstanceMember) {
       int fletchSelector = context.toFletchSelector(selector);
-      FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(
-          function.memberOf);
+      FletchClassBuilder classBuilder = getClassBuilderOfExistingClass(function.memberOf);
       classBuilder.addToMethodTable(fletchSelector, builder);
 
       // Inject parameter stub into all mixin usages.

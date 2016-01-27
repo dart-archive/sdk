@@ -286,8 +286,16 @@ class FletchSystemBuilder {
       FletchClassBuilder superclass) {
     FletchClassBuilder builder = new FletchPatchClassBuilder(
         klass, superclass);
+    assert(_newClasses[klass.classId] == null);
     _newClasses[klass.classId] = builder;
     return builder;
+  }
+
+  FletchClassBuilder newPatchClassBuilder(
+      int classId,
+      FletchClassBuilder superclass) {
+    FletchClass klass = lookupClass(classId);
+    return newClassBuilderInternal(klass, superclass);
   }
 
   FletchClassBuilder newClassBuilder(
