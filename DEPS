@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -19,7 +19,7 @@ vars = {
   # Used by pkg/immi_samples.
   "crypto_rev": "@dd0ff8b95269b11f7bd925d2f58e5e938c1f03fc",
 
-  # Used by fletch_tests.
+  # Used by dartino_tests.
   "isolate_tag": "@0.2.2",
 
   # When updating this, please remember:
@@ -65,46 +65,46 @@ deps = {
      Var('buildtools_revision'),
 
   # Stuff needed for GYP to run.
-  "fletch/third_party/gyp":
+  "sdk/third_party/gyp":
       Var('chromium_git') + '/external/gyp.git' + Var("gyp_rev"),
 
-  "fletch/third_party/dart":
+  "sdk/third_party/dart":
       (Var("github_mirror") % "sdk") + Var("dart_rev"),
 
-  "fletch/third_party/package_config":
+  "sdk/third_party/package_config":
       (Var("github_mirror") % "package_config") + Var("package_config_tag"),
 
-  "fletch/third_party/args":
+  "sdk/third_party/args":
       (Var("github_mirror") % "args") + Var("args_tag"),
 
-  "fletch/third_party/charcode":
+  "sdk/third_party/charcode":
       (Var("github_mirror") % "charcode") + Var("charcode_tag"),
 
-  "fletch/third_party/path":
+  "sdk/third_party/path":
       (Var("github_mirror") % "path") + Var("path_tag"),
 
-  "fletch/third_party/persistent":
+  "sdk/third_party/persistent":
       (Var("github_url") % "polux/persistent") + Var("persistent_rev"),
 
-  "fletch/third_party/crypto":
+  "sdk/third_party/crypto":
       (Var("github_mirror") % "crypto") + Var("crypto_rev"),
 
-  "fletch/third_party/lk/lk-downstream":
+  "sdk/third_party/lk/lk-downstream":
       (Var("github_url") % "travisg/lk") + Var("lk_rev"),
 
-  "fletch/third_party/isolate":
+  "sdk/third_party/isolate":
       "https://github.com/dart-lang/isolate.git" + Var("isolate_tag"),
 
-  "fletch/third_party/dart2js_info":
+  "sdk/third_party/dart2js_info":
       "https://github.com/dart-lang/dart2js_info.git" + Var("dart2js_info_rev"),
 
-  "fletch/third_party/pub_semver":
+  "sdk/third_party/pub_semver":
       (Var("github_mirror") % "pub_semver") + Var("pub_semver_tag"),
 
-  "fletch/third_party/collection":
+  "sdk/third_party/collection":
       (Var("github_mirror") % "collection") + Var("collection_rev"),
 
-  "wiki": (Var("github_url") % "dart-lang/fletch.wiki"),
+  "wiki": (Var("github_url") % "dartino/sdk.wiki"),
 }
 
 # To include Mac deps on other OSes, add this to your .gclient file:
@@ -125,11 +125,11 @@ deps_os = {
   },
 
   "win": {
-    'fletch/third_party/cygwin':
+    'sdk/third_party/cygwin':
       Var('chromium_git') + '/chromium/deps/cygwin.git' + '@' +
       'c89e446b273697fadf3a10ff1007a97c0b7de6df',
 
-    'fletch/third_party/yasm/source/patched-yasm':
+    'sdk/third_party/yasm/source/patched-yasm':
       Var('chromium_git') + '/chromium/deps/yasm/patched-yasm.git' + '@' +
       '4671120cd8558ce62ee8672ebf3eb6f5216f909b',
   },
@@ -150,7 +150,7 @@ hooks = [
       '-d',
       '-r',
       '--auto_platform',
-      'fletch/third_party/bin',
+      'sdk/third_party/bin',
     ],
   },
   {
@@ -166,7 +166,7 @@ hooks = [
       '-d',
       '-r',
       '--auto_platform',
-      'fletch/tools/testing/bin',
+      'sdk/tools/testing/bin',
     ],
   },
   {
@@ -180,7 +180,7 @@ hooks = [
       '--bucket',
       'dart-dependencies-fletch',
       '-d',
-      'fletch/pkg/mdns/lib/native',
+      'sdk/pkg/mdns/lib/native',
     ],
   },
   {
@@ -194,17 +194,17 @@ hooks = [
       '--bucket',
       'dart-dependencies-fletch',
       '-d',
-      'fletch/pkg/power_management/lib/native',
+      'sdk/pkg/power_management/lib/native',
     ],
   },
-  {
+#  {
     # Update the Windows toolchain if necessary.
-    'name': 'win_toolchain',
-    'pattern': '.',
-    'action': ['python',
-               'fletch/tools/vs_dependency/vs_toolchain.py',
-               'update'],
-  },
+#    'name': 'win_toolchain',
+#    'pattern': '.',
+#    'action': ['python',
+#               'sdk/tools/vs_dependency/vs_toolchain.py',
+#               'update'],
+#  },
   {
     'name': 'third_party_qemu',
     'pattern': '.',
@@ -219,7 +219,7 @@ hooks = [
       '-r',
       '-u',
       '--auto_platform',
-      'fletch/third_party/qemu',
+      'sdk/third_party/qemu',
     ],
   },
   {
@@ -236,7 +236,7 @@ hooks = [
       '-r',
       '-u',
       '--auto_platform',
-      'fletch/third_party/openocd',
+      'sdk/third_party/openocd',
     ],
   },
   {
@@ -253,7 +253,7 @@ hooks = [
       '-r',
       '-u',
       '--auto_platform',
-      'fletch/third_party/gcc-arm-embedded',
+      'sdk/third_party/gcc-arm-embedded',
     ],
   },
   {
@@ -268,7 +268,7 @@ hooks = [
       'dart-dependencies-fletch',
       '-d',
       '-u',
-      'fletch/third_party/stm',
+      'sdk/third_party/stm',
     ],
   },
   # Pull clang-format binaries using checked-in hashes.
@@ -317,7 +317,7 @@ hooks = [
                 '--no_auth',
                 '--bucket', 'dart-dependencies-fletch',
                 '-u',
-                '-s', 'fletch/third_party/mbedtls/mbedtls.tar.gz.sha1',
+                '-s', 'sdk/third_party/mbedtls/mbedtls.tar.gz.sha1',
     ],
   },
   {
@@ -325,7 +325,7 @@ hooks = [
     'pattern': '.',
     'action': [
       'python',
-      'fletch/tools/clang_update.py',
+      'sdk/tools/clang_update.py',
       '--revision=' + Var("clang_rev"),
     ],
   },
@@ -334,9 +334,9 @@ hooks = [
     'pattern': '.',
     'action': [
       'python',
-      'fletch/tools/run-ninja.py',
+      'sdk/tools/run-ninja.py',
       '-C',
-      'fletch',
+      'sdk',
     ],
   },
 ]
