@@ -19,7 +19,7 @@ To try out Dartino for embedded device development, please see the
 To give us feedback, please
 [file issues on GitHub](https://github.com/dartino/sdk/issues)
 or join our
-[discussion group](https://groups.google.com/forum/#!forum/fletch-discuss)
+[discussion group](https://groups.google.com/forum/#!forum/dartino-discuss)
 and post there.
 
 For code contributions, please see the [Contributing page](https://github.com/dartino/sdk/wiki/Contributing).
