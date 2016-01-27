@@ -33,6 +33,8 @@ class DumpVisitor : public HeapObjectVisitor {
       DumpArray(Array::cast(object));
     } else if (object->IsLargeInteger()) {
       DumpLargeInteger(LargeInteger::cast(object));
+    } else if (object->IsDouble()) {
+      DumpDouble(Double::cast(object));
     } else if (object->IsInitializer()) {
       DumpInitializer(Initializer::cast(object));
     } else if (object->IsDispatchTableEntry()) {
@@ -102,6 +104,12 @@ class DumpVisitor : public HeapObjectVisitor {
 
   void DumpLargeInteger(LargeInteger* large) {
     uword* ptr = reinterpret_cast<uword*>(large->address() + LargeInteger::kValueOffset);
+    printf("\t.long 0x%08x\n", ptr[0]);
+    printf("\t.long 0x%08x\n", ptr[1]);
+  }
+
+  void DumpDouble(Double* d) {
+    uword* ptr = reinterpret_cast<uword*>(d->address() + Double::kValueOffset);
     printf("\t.long 0x%08x\n", ptr[0]);
     printf("\t.long 0x%08x\n", ptr[1]);
   }
@@ -281,6 +289,7 @@ void Codegen::Generate(Function* function) {
     while (bci < function_->bytecode_size()) {
       uint8* bcp = function_->bytecode_address_for(bci);
       Opcode opcode = static_cast<Opcode>(*bcp);
+      if (opcode == kMethodEnd) break;
       switch (opcode) {
         case kBranchWide: labels[bci + Utils::ReadInt32(bcp + 1)]++; break;
         case kBranchIfTrueWide: labels[bci + Utils::ReadInt32(bcp + 1)]++; break;

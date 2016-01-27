@@ -466,6 +466,8 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
     }
   }
 
+  // TODO(ajohnsen): Is target an intrinsic???
+
   Label nsm;
   Class* target_class = (*function_owners_)[target];
   if (target_class != NULL) {
