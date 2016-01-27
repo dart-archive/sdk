@@ -206,16 +206,6 @@ Condition Assembler::InvertCondition(Condition condition) {
   return static_cast<Condition>(value);
 }
 
-const char* Assembler::ComputeDirectionForLinking(Label* label) {
-  if (label->IsUnused()) label->LinkTo(NewLabelPosition());
-  return label->IsBound() ? "b" : "f";
-}
-
-int Assembler::NewLabelPosition() {
-  static int labels = 0;
-  return labels++;
-}
-
 }  // namespace fletch
 
 #endif  // defined FLETCH_TARGET_IA32

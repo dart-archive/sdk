@@ -242,7 +242,7 @@ void Scheduler::ResumeGcThread() {
 }
 
 void Scheduler::PreemptionTick() {
-  interpretation_barrier_.PreemptProcess();
+  // interpretation_barrier_.PreemptProcess();
 }
 
 void Scheduler::FinishedGC(Program* program, int count) {

@@ -310,11 +310,6 @@ class Assembler {
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
 
-  static const char* ConditionMnemonic(Condition condition);
-
-  static const char* ComputeDirectionForLinking(Label* label);
-  static int NewLabelPosition();
-
   // Helper functions for wrapping operand types before passing them
   // through the va_args processing of Print(format, ...). The values
   // passed by reference are the problematic ones, but to make the
