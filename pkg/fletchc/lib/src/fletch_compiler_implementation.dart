@@ -40,10 +40,6 @@ import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
-import 'please_report_crash.dart' show
-    crashReportRequested,
-    requestBugReportOnCompilerCrashMessage;
-
 import 'fletch_function_builder.dart';
 import 'debug_info.dart';
 import 'find_position_visitor.dart';
@@ -148,6 +144,7 @@ class FletchCompilerImplementation extends CompilerImpl {
     return FLETCH_PATCHES[name];
   }
 
+  @override
   Uri resolvePatchUri(String dartLibraryPath) {
     String path = fletchPatchLibraryFor(dartLibraryPath);
     if (path == null) return null;
@@ -231,10 +228,14 @@ class FletchCompilerImplementation extends CompilerImpl {
     }
   }
 
-  void pleaseReportCrash() {
-    if (crashReportRequested) return;
-    crashReportRequested = true;
-    print(requestBugReportOnCompilerCrashMessage);
+  @override
+  void compileLoadedLibraries() {
+    // TODO(ahe): Ensure fletchSystemLibrary is not null
+    // (also when mainApp is null).
+    if (mainApp == null) {
+      return;
+    }
+    super.compileLoadedLibraries();
   }
 }
 

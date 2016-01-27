@@ -313,6 +313,10 @@ Future<int> compile(
     pleaseReportCrash(error, stackTrace);
     return exit_codes.COMPILER_EXITCODE_CRASH;
   }
+  if (newResult == null) {
+    return exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+  }
+
   state.addCompilationResult(newResult);
 
   state.log("Compiled '$script' to ${newResult.commands.length} commands");

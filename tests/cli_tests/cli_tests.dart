@@ -14,8 +14,12 @@ import 'package:expect/expect.dart' show
 
 import 'interactive_debugger_tests.dart' as
     interactiveDebuggerTests;
+
 import 'rerun_throwing_program_test.dart' as
     rerunThrowingProgramTest;
+
+import 'package:fletchc/src/hub/exit_codes.dart' show
+    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 /// Absolute path to the build directory used by test.py.
 const String buildDirectory =
@@ -27,7 +31,8 @@ final Uri thisDirectory = new Uri.directory("tests/cli_tests");
 
 final List<CliTest> CLI_TESTS = <CliTest>[]
     ..addAll(interactiveDebuggerTests.tests)
-    ..addAll(rerunThrowingProgramTest.tests);
+    ..addAll(rerunThrowingProgramTest.tests)
+    ..add(new NoSuchFile());
 
 abstract class CliTest {
   final String name;
@@ -55,6 +60,20 @@ abstract class CliTest {
 
   Iterable<String> inSession(List<String> arguments) {
     return arguments..addAll(["in", "session", sessionName]);
+  }
+}
+
+class NoSuchFile extends CliTest {
+  NoSuchFile()
+      : super("no_such_file");
+
+  Future<Null> run() async {
+    Process process = await fletch(["run", "no-such-file.dart"]);
+    process.stdin.close();
+    Future outClosed = process.stdout.listen(null).asFuture();
+    await process.stderr.listen(null).asFuture();
+    await outClosed;
+    Expect.equals(DART_VM_EXITCODE_COMPILE_TIME_ERROR, await process.exitCode);
   }
 }
 

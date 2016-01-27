@@ -70,8 +70,6 @@ abstract class InteractiveDebuggerTest extends CliTest {
   Future<Null> quitWithoutError() async {
     await quit();
     await expectExitCode(0);
-    await expectClosed(out);
-    await expectClosed(err);
   }
 
   Future<Null> quit() async {
@@ -80,6 +78,9 @@ abstract class InteractiveDebuggerTest extends CliTest {
   }
 
   Future<Null> expectExitCode(int exitCode) async {
+    Future expectOutClosed = expectClosed(out, 'stdout');
+    await expectClosed(err, 'stderr');
+    await expectOutClosed;
     Expect.equals(exitCode, await process.exitCode,
         "Did not exit as expected");
   }
@@ -89,8 +90,13 @@ abstract class InteractiveDebuggerTest extends CliTest {
     print(out.current);
   }
 
-  Future<Null> expectClosed(StreamIterator iterator) async {
-    Expect.isFalse(await iterator.moveNext());
+  Future<Null> expectClosed(StreamIterator iterator, String name) async {
+    if (await iterator.moveNext()) {
+      do {
+        print("Unexpected content on $name: ${iterator.current}");
+      } while (await iterator.moveNext());
+      Expect.fail('Expected $name stream to be empty');
+    }
   }
 
   Future<Null> runCommandAndExpectPrompt(String command) async {
@@ -125,7 +131,5 @@ class DebuggerListProcessesTest extends InteractiveDebuggerTest {
     await runCommandAndExpectPrompt("lp");
     await runCommandAndExpectPrompt("c");
     await expectExitCode(0);
-    await expectClosed(out);
-    await expectClosed(err);
   }
 }

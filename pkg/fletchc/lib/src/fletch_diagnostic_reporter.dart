@@ -25,6 +25,10 @@ import 'fletch_compiler_implementation.dart' show
 import 'package:compiler/src/diagnostics/messages.dart' show
     MessageKind;
 
+import 'please_report_crash.dart' show
+    crashReportRequested,
+    requestBugReportOnCompilerCrashMessage;
+
 class FletchDiagnosticReporter extends CompilerDiagnosticReporter {
   FletchDiagnosticReporter(
       FletchCompilerImplementation compiler,
@@ -62,6 +66,13 @@ class FletchDiagnosticReporter extends CompilerDiagnosticReporter {
           {'text': message});
     }
     super.reportError(message, infos);
+  }
+
+  @override
+  void pleaseReportCrash() {
+    if (crashReportRequested) return;
+    crashReportRequested = true;
+    print(requestBugReportOnCompilerCrashMessage);
   }
 
   static FletchDiagnosticReporter createInstance(

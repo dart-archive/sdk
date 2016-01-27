@@ -1361,6 +1361,12 @@ class FletchBackend extends Backend
   int assembleProgram() => 0;
 
   FletchDelta computeDelta() {
+
+    if (fletchSystemLibrary == null && compiler.compilationFailed) {
+      // TODO(ahe): Ensure fletchSystemLibrary is not null.
+      return null;
+    }
+
     List<VmCommand> commands = <VmCommand>[
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
