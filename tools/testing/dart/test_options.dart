@@ -113,7 +113,7 @@ class TestOptionsParser {
     none: No runtime, compile only (for example, used for dartanalyzer static
           analysis tests).''',
               ['-r', '--runtime'],
-              ['none', 'fletchc', 'fletchvm', 'fletch_warnings',
+              ['none', 'fletchc', 'fletchvm', 'codegen', 'fletch_warnings',
                'fletch_tests', 'fletch_cc_tests'],
                'fletch_warnings,fletch_tests,fletchc,'
                'fletch_cc_tests'),
@@ -687,7 +687,7 @@ Note: currently only implemented for dart2js.''',
     List<String> validRuntimes;
     switch (config['compiler']) {
       case 'fletchc':
-        validRuntimes = const ['none', 'fletchvm'];
+        validRuntimes = const ['none', 'fletchvm', 'codegen'];
         break;
       case 'none':
         validRuntimes = const [

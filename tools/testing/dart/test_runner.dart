@@ -645,7 +645,7 @@ class CommandBuilder {
                          List<String> arguments,
                          Map<String, String> environmentOverrides) {
     var command = new VmCommand._(executable, arguments, environmentOverrides);
-    return _getUniqueCommand(command);
+    return command;
   }
 
   Command getJSCommandlineCommand(String displayName, executable, arguments,

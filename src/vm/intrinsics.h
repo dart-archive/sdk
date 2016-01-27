@@ -72,6 +72,7 @@ INTRINSICS_DO(DECLARE_EXTERN)
 #undef DECLARE_EXTERN
     }
     UNREACHABLE();
+    return NULL;
   }
 
   bool set_from_string(const char *name, void (*ptr)(void));

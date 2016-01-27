@@ -52,6 +52,9 @@ class RuntimeConfiguration {
       case 'fletchvm':
         return new FletchVMRuntimeConfiguration(configuration);
 
+      case 'codegen':
+        return new CodegenVMRuntimeConfiguration(configuration);
+
       case 'fletch_warnings':
         return new FletchWarningsRuntimeConfiguration(configuration);
 
@@ -203,6 +206,39 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
         commandBuilder.getVmCommand(fletchVM, arguments, environmentOverrides),
         commandBuilder.getVmCommand(
            fletchVM, argumentsUnfold, environmentOverrides)];
+  }
+}
+
+class CodegenVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
+  Map configuration;
+
+  CodegenVMRuntimeConfiguration(this.configuration);
+
+  List<Command> computeRuntimeCommands(
+      TestSuite suite,
+      CommandBuilder commandBuilder,
+      CommandArtifact artifact,
+      String script,
+      List<String> arguments,
+      Map<String, String> environmentOverrides) {
+    String script = artifact.filename;
+    String type = artifact.mimeType;
+    if (script != null && type != 'application/fletch-snapshot') {
+      throw "Fletch VM cannot run files of type '$type'.";
+    }
+
+    var codegen = "${suite.buildDir}/fletch-codegen";
+    var codegenArguments = [script, "${suite.buildDir}/../../src/vm/program.S"];
+    // NOTE: We assume that `fletch-vm` behaves the same as invoking
+    // the DartVM in terms of exit codes.
+    environmentOverrides["foo"] = script;
+    return <Command>[
+      commandBuilder.getVmCommand(
+          codegen, codegenArguments, environmentOverrides),
+      commandBuilder.getVmCommand(
+          'ninja', ["-C", suite.buildDir], environmentOverrides),
+      commandBuilder.getVmCommand(
+          "${suite.buildDir}/fletch-vm-o", [], environmentOverrides)];
   }
 }
 
