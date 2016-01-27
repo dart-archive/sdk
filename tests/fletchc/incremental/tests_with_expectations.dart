@@ -1506,6 +1506,43 @@ void main() {
 ''',
 
   r'''
+constant_retaining_2
+==> main.dart.patch <==
+// Test that constants are handled correctly when stored in a top-level
+// variable, also if an unrelated constant is introduced and removed again.
+var constant;
+
+class Foo {
+  const Foo();
+}
+
+class Bar {
+  const Bar();
+}
+
+class C {
+  foo() {
+<<<< ["v1", "true"]
+    print("v1");
+    constant = const Foo();
+==== ["v2", "false", "true"]
+    print("v2");
+    print(constant == const Bar());
+==== ["v3", "true"]
+    print("v3");
+>>>>
+    print(constant == const Foo());
+  }
+}
+
+main() {
+  new C().foo();
+}
+
+
+''',
+
+  r'''
 add_compound_instance_field
 ==> main.dart.patch <==
 // Test that an instance field can be added to a compound declaration
