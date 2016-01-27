@@ -1,9 +1,9 @@
 ---
-title: Fletch tool details
+title: Dartino tool details
 layout: page
 ---
 
-# Fletch tool details
+# Dartino tool details
 
 ## Running code locally and remotely
 
@@ -37,7 +37,7 @@ tag. If the value is omitted or set to null, Fletch will run locally.
 
 ## Debugging
 
-Fletch also supports debugging. Let's try to debug the Knight Rider sample.
+Dartino also supports debugging. Let's try to debug the Knight Rider sample.
 Start by running the following command in your terminal:
 
 ~~~
@@ -74,21 +74,21 @@ local variable again (with the ```p``` command). You should see ledToEnable
 increment up to the number of LEDs you have, and then you should see it start
 decrementing. Pretty neat right!?
 
-## Fletch security notes
+## Dartino security notes
 
-As discussed in [getting started](index.html), the fletch command manages a VM
+As discussed in [getting started](index.html), the 'fletch' command manages a VM
 Agent on the attached Raspberry Pi. Please be aware that in the current
 experimental implementation this agent runs with full admin privileges. VMs
 spawned by the agent run with similar privileges, and it will listen to all
 incoming network traffic. We recommend you run the Raspberry Pi on an isolated
 network.
 
-## Resetting Fletch
+## Resetting Dartino
 
-The Fletch tool maintains a long-running background process on your developer
+The 'fletch' tool maintains a long-running background process on your developer
 PC. This manages the sessions, and the local VM.
 
-If the Fletch process state gets corrupted, you can shut it down using this
+If the process state gets corrupted, you can shut it down using this
 command:
 
 ```

@@ -44,11 +44,11 @@ There are several ways you can configure the IP number of the Raspberry:
   * Turn your Raspberry Pi back on
   * After a little while you should be able to ping the Raspberry Pi at ```192.168.2.2```
 
-### Step 3: Install Fletch binaries
+### Step 3: Install Dartino binaries
 
 **Note**: In the steps below, replace ```192.168..``` with whatever IP address you configured above.
 
-The last step is to install the Fletch runtime on the Raspberry Pi (see the
+The last step is to install the Dartino runtime on the Raspberry Pi (see the
 right-hand side of the architecture diagram above). Use the following commands.
 
 A. Copy the fletch-agent package to the Raspberry Pi 2 (the default password for

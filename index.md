@@ -1,21 +1,21 @@
 ---
-title: Fletch project
+title: Dartino project
 layout: page
 ---
 
-# The Fletch project
+# The Dartino project
 
-Fletch is an **experimental** project to enable highly productive development
+Dartino is an **experimental** project to enable highly productive development
 for embedded devices. It is powered by the [Dart
 language](https://www.dartlang.org/docs/dart-up-and-running/ch02.html) and a
 fast, lean runtime.
 
-This page walks you through running your first program on Fletch. Note that this
-early version of Fletch only supports a single embedded device -- the Raspberry
+This page walks you through running your first program on Dartino. Note that this
+early version of Dartino only supports a single embedded device -- the Raspberry
 Pi 2 -- and that the only supported client operating systems supported for
 development are MacOS and Linux (sorry, no Windows support).
 
-If you just want to see what Fletch programs look like, take a peek at our
+If you just want to see what Dartino programs look like, take a peek at our
 [samples page](samples.html).
 
 * [What you will need](#what-you-will-need)
@@ -28,7 +28,7 @@ If you just want to see what Fletch programs look like, take a peek at our
 
 ## What you will need
 
-To develop embedded programs with Fletch, you will need the following:
+To develop embedded programs with Dartino, you will need the following:
 
 * A developer PC (running MacOS or Linux) where you write the programs
 
@@ -49,10 +49,10 @@ To develop embedded programs with Fletch, you will need the following:
 First download the SDK. This is available as a '.zip' archive; pick the one that
 matches the OS of the PC you will be using for development:
 
-* [Fletch SDK for MacOS (64-bit)](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-macos-x64-release.zip)
-* [Fletch SDK for Linux (64-bit)](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-linux-x64-release.zip)
+* [Dartino SDK for MacOS (64-bit)](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-macos-x64-release.zip)
+* [Dartino SDK for Linux (64-bit)](https://storage.googleapis.com/fletch-archive/channels/dev/release/latest/sdk/fletch-sdk-linux-x64-release.zip)
 
-Unzip the SDK, and add the Fletch command to the path by typing the
+Unzip the SDK, and add the 'fletch' command to the path by typing the
 below in a terminal window:
 
 ~~~
@@ -61,7 +61,7 @@ unzip Downloads/fletch-sdk-macos-x64-release.zip
 export "PATH=$PATH:$HOME/fletch-sdk/bin"
 ~~~
 
-Test if the Fletch command works; it should print a version number to the
+Test if the 'fletch' command works; it should print a version number to the
 console:
 
 ~~~
@@ -70,7 +70,7 @@ fletch --version
 
 ## Running your first program
 
-Let’s go ahead and run our first Fletch program. This is a simple program that
+Let’s go ahead and run our first Dartino program. This is a simple program that
 prints Hello. In your command line type:
 
 ~~~
@@ -92,16 +92,16 @@ plugin](https://github.com/dart-atom/dartlang/). Pretty easy to read, right?
 (Note: you will get some Analyzer warnings in Atom as we don't fully support it
 yet. You can ignore those.)
 
-### Fletch and sessions
+### Dartino and sessions
 
 But what actually happened when we asked the ```fletch``` command to run
 `hello.dart`? By default ```fletch``` is connected to a *local session*,
 which is connected to a local VM (Virtual Machine) running on your developer PC.
 When you ask ```fletch``` to run the program, it compiles the program to byte
-code, and then passes it to the local Fletch VM for execution. The VM passes
-back the result, and Fletch prints it to your command line.
+code, and then passes it to the local Dartino VM for execution. The VM passes
+back the result, and Dartino prints it to your command line.
 
-![Fletch architecture diagram](https://storage.googleapis.com/fletch-archive/images/Fletch-architecture.png)
+![Dartino architecture diagram](https://storage.googleapis.com/fletch-archive/images/Fletch-architecture.png)
 
 Now let’s get things running in a *remote session* that is connected to your
 Raspberry Pi 2!
@@ -109,7 +109,7 @@ Raspberry Pi 2!
 ## Preparing your Raspberry Pi 2
 
 First we need to prepare an SD card with an image that contains the standard
-Raspbian operating system, and the Fletch binaries for Raspberry Pi 2.
+Raspbian operating system, and the Dartino binaries for Raspberry Pi 2.
 
 This step uses a script that automates the download of Raspbian, and performs
 the needed configuration. If you prefer to configure the image manually, see the
@@ -126,7 +126,7 @@ platforms/raspberry-pi2/flash-sd-card
 The script will take you through the following steps:
 
 1. *Specify which SD card to use*: You will be asked to remove all SD cards, and
-then insert *just* the one you wish to use for Fletch. ***Important***:
+then insert *just* the one you wish to use for Dartino. ***Important***:
 Everything on this SD card will be erased during the installation process.
 
 1. *Specify device name*: The name your Raspberry Pi 2 device will be given on
@@ -204,17 +204,18 @@ Hello from Linux running on raspberrypi.
 ~~~
 
 Did you notice the difference from when we ran in the local session? As before
-Fletch compiled the hello.dart program to byte code, but this time rather than
+Dartino compiled the hello.dart program to byte code, but this time rather than
 passing it to the local VM via the local session it passed it to the Raspberry
-Pi via the remote session. On the Raspberry Pi, the Fletch VM Agent made sure
+Pi via the remote session. On the Raspberry Pi, the Dartino VM Agent made sure
 that a VM (Virtual Machine) was spun up, and the program was executed on it. The
 result of the program (the printing to the console) was passed back by the VM to
-the Fletch command on the developer PC, and it was printed to the local console.
+the 'fletch' command on the developer PC, and it was printed to the local
+console.
 
 ## Next steps
 
 Ready for some more fun? Take a look at our [samples](samples.html), and read
-more about the [Fletch tool](tool.html).
+more about the [fletch command](tool.html).
 
 And don’t forget to send us some [feedback](feedback.html), and ask some
 [questions](faq.html).
