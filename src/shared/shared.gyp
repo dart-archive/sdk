@@ -13,6 +13,17 @@
       'target_name': 'fletch_shared',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
+      'conditions': [
+        ['OS=="win"', {
+          'all_dependent_settings': {
+	    'link_settings': {
+	      'libraries': [
+		'-lws2_32.lib',
+	      ],
+	    },
+	  },
+	}],
+      ],
       'target_conditions': [
         ['_toolset == "target"', {
           'standalone_static_library': 1,

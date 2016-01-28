@@ -41,13 +41,6 @@
             ],
           },
         }],
-        ['OS=="win"', {
-          'link_settings': {
-            'libraries': [
-              '-lws2_32.lib',
-            ],
-          },
-        }],
         # TODO(kasperl): Now that we no longer use weak symbols, should we
         #                remove the below conditions?
         [ 'OS=="linux"', {
@@ -258,7 +251,6 @@
       'toolsets': ['host'],
       'dependencies': [
         '../shared/shared.gyp:fletch_shared',
-        '../double_conversion.gyp:double_conversion',
       ],
       'conditions': [
         [ 'OS=="mac"', {
@@ -268,14 +260,6 @@
           'sources': [
             '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
           ],
-        }],
-        # TODO(herhut): Find a way to declare dependencies for the vm library.
-        ['OS=="win"', {
-          'link_settings': {
-            'libraries': [
-              '-lws2_32.lib',
-            ],
-          },
         }],
       ],
       'sources': [
