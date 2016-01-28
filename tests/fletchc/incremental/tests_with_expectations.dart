@@ -1509,7 +1509,39 @@ void main() {
 constant_retaining_2
 ==> main.dart.patch <==
 // Test that constants are handled correctly when stored in a top-level
-// variable, also if an unrelated constant is introduced and removed again.
+// variable.
+var constant;
+
+class Foo {
+  const Foo();
+}
+
+class C {
+  foo() {
+<<<< ["v1", "true"]
+    print("v1");
+    constant = const Foo();
+==== ["v2", "true"]
+    print("v2");
+==== ["v3", "true"]
+    print("v3");
+>>>>
+    print(constant == const Foo());
+  }
+}
+
+main() {
+  new C().foo();
+}
+
+
+''',
+
+  r'''
+constant_retaining_3
+==> main.dart.patch <==
+// Similiar to constant_retaining_2, but tests that constant handling is still
+// correct even if an unrelated constant is introduced and removed again.
 var constant;
 
 class Foo {
