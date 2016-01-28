@@ -48,12 +48,18 @@ class FletchVm {
     Stream<String> stdoutLines = convertStream(
         process.stdout, stdoutCompleter,
         (String line) {
-          if (!addressCompleter.isCompleted) {
-            addressCompleter.complete(
-                line.substring("Waiting for compiler on ".length));
+          const String prefix = "Waiting for compiler on ";
+          if (!addressCompleter.isCompleted && line.startsWith(prefix)) {
+            addressCompleter.complete(line.substring(prefix.length));
             return false;
           }
           return true;
+        }, () {
+          if (!addressCompleter.isCompleted) {
+            addressCompleter.completeError(
+                new StateError('The fletch-vm did not print an address on '
+                               'which it is listening on.'));
+          }
         });
 
     Completer stderrCompleter = new Completer();
@@ -81,7 +87,7 @@ class FletchVm {
   static Stream<String> convertStream(
       Stream<List<int>> stream,
       Completer doneCompleter,
-      [bool onData(String line)]) {
+      [bool onData(String line), void onDone()]) {
     StreamController<String> controller = new StreamController<String>();
     Function handleData;
     if (onData == null) {
@@ -100,6 +106,7 @@ class FletchVm {
             handleData,
             onError: controller.addError,
             onDone: () {
+              if (onDone != null) onDone();
               controller.close();
               doneCompleter.complete();
             });
