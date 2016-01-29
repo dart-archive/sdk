@@ -429,6 +429,11 @@ class Session extends FletchVmSession {
     return compiler.findSourceFiles(pattern);
   }
 
+  bool stepMadeProgress(BackTraceFrame frame) {
+    return frame.functionId != debugState.topFrame.functionId ||
+        frame.bytecodePointer != debugState.topFrame.bytecodePointer;
+  }
+
   Future<VmCommand> stepTo(int functionId, int bcp) async {
     assert(running);
     VmCommand response = await runCommand(new ProcessStepTo(functionId, bcp));
@@ -437,26 +442,32 @@ class Session extends FletchVmSession {
 
   Future<VmCommand> step() async {
     assert(running);
+    final SourceLocation previous = debugState.currentLocation;
+    final BackTraceFrame initialFrame = debugState.topFrame;
     VmCommand response;
-    SourceLocation previous = debugState.currentLocation;
     do {
-      var bcp = debugState.topFrame.stepBytecodePointer(previous);
+      int bcp = debugState.topFrame.stepBytecodePointer(previous);
       if (bcp != -1) {
         response = await stepTo(debugState.topFrame.functionId, bcp);
       } else {
         response = await stepBytecode();
       }
-    } while (running && debugState.atLocation(previous));
+    } while (running &&
+             debugState.atLocation(previous) &&
+             stepMadeProgress(initialFrame));
     return response;
   }
 
   Future<VmCommand> stepOver() async {
     assert(running);
     VmCommand response;
-    SourceLocation previous = debugState.currentLocation;
+    final SourceLocation previous = debugState.currentLocation;
+    final BackTraceFrame initialFrame = debugState.topFrame;
     do {
       response = await stepOverBytecode();
-    } while (running && debugState.atLocation(previous));
+    } while (running &&
+             debugState.atLocation(previous) &&
+             stepMadeProgress(initialFrame));
     return response;
   }
 

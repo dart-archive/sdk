@@ -28,6 +28,7 @@ final List<CliTest> tests = <CliTest>[
   new DebuggerInterruptTest(),
   new DebuggerListProcessesTest(),
   new DebuggerRelativeFileReferenceTest(),
+  new DebuggerStepInLoopTest(),
 ];
 
 abstract class InteractiveDebuggerTest extends CliTest {
@@ -81,8 +82,8 @@ abstract class InteractiveDebuggerTest extends CliTest {
   }
 
   Future<Null> expectExitCode(int exitCode) async {
-    Future expectOutClosed = expectClosed(out, 'stdout');
-    await expectClosed(err, 'stderr');
+    Future expectOutClosed = expectClosed(out, "stdout");
+    await expectClosed(err, "stderr");
     await expectOutClosed;
     Expect.equals(exitCode, await process.exitCode,
         "Did not exit as expected");
@@ -90,7 +91,7 @@ abstract class InteractiveDebuggerTest extends CliTest {
 
   Future<Null> expectPrompt(String message) async {
     Expect.isTrue(await out.moveNext(), message);
-    print(out.current);
+    if (out.current.isNotEmpty) print(out.current);
   }
 
   Future<Null> expectOut(String message) async {
@@ -106,7 +107,7 @@ abstract class InteractiveDebuggerTest extends CliTest {
       do {
         print("Unexpected content on $name: ${iterator.current}");
       } while (await iterator.moveNext());
-      Expect.fail('Expected $name stream to be empty');
+      Expect.fail("Expected $name stream to be empty");
     }
   }
 
@@ -148,10 +149,10 @@ class DebuggerListProcessesTest extends InteractiveDebuggerTest {
 class DebuggerRelativeFileReferenceTest extends InteractiveDebuggerTest {
 
   // Working directory that is not the fletch-root directory.
-  final String workingDirectory = '$thisDirectory/../';
+  final String workingDirectory = "$thisDirectory/../";
 
   // Relative reference to the test file.
-  final String testFilePath = 'cli_tests/debugger_relative_file_reference.dart';
+  final String testFilePath = "cli_tests/debugger_relative_file_reference.dart";
 
   DebuggerRelativeFileReferenceTest()
       : super("debugger_relative_file_reference");
@@ -161,6 +162,23 @@ class DebuggerRelativeFileReferenceTest extends InteractiveDebuggerTest {
     await expectOut(
         "breakpoint set: id: '0' method: 'main' bytecode index: '0'");
     await runCommandAndExpectPrompt("r");
+    await quitWithoutError();
+  }
+}
+
+class DebuggerStepInLoopTest extends InteractiveDebuggerTest {
+
+  DebuggerStepInLoopTest()
+      : super("debugger_step_in_loop");
+
+  Future<Null> internalRun() async {
+    await runCommand("r");
+    await interrupt();
+    await expectPrompt("Interrupt returns prompt");
+    await runCommandAndExpectPrompt("sb");
+    await runCommandAndExpectPrompt("nb");
+    await runCommandAndExpectPrompt("s");
+    await runCommandAndExpectPrompt("n");
     await quitWithoutError();
   }
 }
