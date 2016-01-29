@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -32,11 +32,11 @@ import 'dart:isolate';
 import 'package:fletchc/src/zone_helper.dart' show
     runGuarded;
 
-import 'package:fletchc/src/driver/driver_main.dart' show
+import 'package:fletchc/src/hub/hub_main.dart' show
     IsolatePool,
     ManagedIsolate;
 
-import 'package:fletchc/src/driver/developer.dart' show
+import 'package:fletchc/src/worker/developer.dart' show
     configFileUri;
 
 import 'package:fletchc/src/console_print.dart' show
@@ -163,7 +163,7 @@ void runInIsolate(
       messageSink.add(iterator.current);
     } while (await iterator.moveNext());
     runningTests.remove(name);
-    isolate.endIsolateSession();
+    isolate.endSession();
   }).catchError((error, stackTrace) {
     messageSink.add(new InternalErrorMessage('$error', '$stackTrace'));
   });

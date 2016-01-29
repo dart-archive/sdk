@@ -65,6 +65,7 @@ final TEST_SUITE_DIRECTORIES = [
     new Path('tests/os'),
     new Path('tests/pkg'),
     new Path('samples'),
+    new Path('tests/typed_data'),
 ];
 
 final DART_SDK_TEST_SUITE_DIRECTORIES = [
@@ -361,7 +362,7 @@ void killDriverMain() {
     // It's important to remove white space as output from ps is padded with
     // whitespace.
     process = process.trim();
-    if (process.contains("package:fletchc/src/driver/driver_main.dart")) {
+    if (process.contains("package:fletchc/src/hub/hub_main.dart")) {
       int index = process.indexOf(" ");
       String pidString = process.substring(0, index);
       String arguments = process.substring(index + 1);

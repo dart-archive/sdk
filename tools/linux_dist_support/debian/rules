@@ -11,7 +11,7 @@ BUILD_TYPE += ReleaseX64
 XBUILD_TYPE += ReleaseXARM
 
 # Temporary directory for collecting the files for the package.
-TMP_OUT = debian/tmp/out/fletch-agent
+TMP_OUT = debian/tmp/out/dartino-agent
 
 # Used default for the steps which are not overridden below.
 %:
@@ -19,14 +19,14 @@ TMP_OUT = debian/tmp/out/fletch-agent
 
 override_dh_auto_clean:
 	echo $(DEB_BUILD_OPTIONS)
-	rm -fr fletch/out
+	rm -fr sdk/out
 	find . -name *.tmp -execdir rm -f {} \;
 	find . -name *.pyc -execdir rm -f {} \;
 	find . -name *.mk -execdir rm -f {} \;
 	find . -name *.Makefile -execdir rm -f {} \;
 
 override_dh_auto_configure:
-	cd fletch; \
+	cd sdk; \
 	mkdir .git; \
 	touch .git/HEAD; \
 	mkdir .git/logs; \
@@ -34,12 +34,12 @@ override_dh_auto_configure:
 	ninja; \
 	cd ..
 
-# This will build Fletch for the build machine and cross-build Fletch
-# for the host machine. It will then build the fletch-agent snapshot
+# This will build Dartino for the build machine and cross-build Dartino
+# for the host machine. It will then build the dartino-agent snapshot
 # on the build machine and place it in the build directory for the
 # host machine.
 override_dh_auto_build:
-	cd fletch; \
+	cd sdk; \
 	ninja -C out/$(BUILD_TYPE); \
 	ninja -C out/$(XBUILD_TYPE); \
 	out/$(BUILD_TYPE)/dart -c --packages=.packages -Dsnapshot=out/$(XBUILD_TYPE)/fletch-agent.snapshot -Dpackages=.packages tests/fletchc/run.dart pkg/fletch_agent/bin/agent.dart; \
@@ -53,9 +53,9 @@ override_dh_shlibdeps:
 
 override_dh_auto_install:
 	mkdir -p $(TMP_OUT)/bin
-	cp -R fletch/out/$(XBUILD_TYPE)/fletch-vm $(TMP_OUT)/bin
-	cp -R fletch/out/$(XBUILD_TYPE)/fletch-agent.snapshot $(TMP_OUT)/bin
+	cp -R sdk/out/$(XBUILD_TYPE)/fletch-vm $(TMP_OUT)/bin
+	cp -R sdk/out/$(XBUILD_TYPE)/fletch-agent.snapshot $(TMP_OUT)/bin
 	mkdir -p $(TMP_OUT)/avahi
-	cp fletch/platforms/raspberry-pi2/data/fletch-agent.service $(TMP_OUT)/avahi
+	cp sdk/platforms/raspberry-pi2/data/fletch-agent.service $(TMP_OUT)/avahi
 	dh_install
 	dh_link

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -19,7 +19,7 @@
 
 namespace fletch {
 
-static int signal_pipe[] = { -1, -1 };
+static int signal_pipe[] = {-1, -1};
 
 static void SignalHandler(int signal) {
   int old_errno = errno;

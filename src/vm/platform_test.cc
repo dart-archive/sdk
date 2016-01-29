@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -13,13 +13,10 @@
 
 namespace fletch {
 
-static void yield() {
-  usleep(1);
-}
+static void yield() { usleep(1); }
 
 static const int kLockCounterLimit = 50;
 static int busy_lock_counter = 0;
-
 
 static void LoopIncrement(Mutex* mutex, int rem) {
   while (true) {
@@ -52,10 +49,7 @@ static void* RunTestBusyLock(void* arg) {
 TEST_CASE(Mutex) {
   pthread_t other;
   Mutex* mutex = Platform::CreateMutex();
-  int thread_created = pthread_create(&other,
-                                      NULL,
-                                      &RunTestBusyLock,
-                                      mutex);
+  int thread_created = pthread_create(&other, NULL, &RunTestBusyLock, mutex);
   EXPECT_EQ(0, thread_created);
   LoopIncrement(mutex, 1);
   pthread_join(other, NULL);

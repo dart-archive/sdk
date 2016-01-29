@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -13,8 +13,8 @@ void main() {
   var port = new Port(channel);
   Stopwatch watch = new Stopwatch()..start();
   for (int i = 0; i < PROCESSES; i++) {
-    Process.spawn(portResponder, port);
-    channel.receive();
+    Process.spawnDetached(() => portResponder(port));
+    Expect.equals(null, channel.receive());
   }
   print("Took ${watch.elapsedMicroseconds} us to start $PROCESSES process and"
         "sending one message.");

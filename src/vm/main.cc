@@ -1,17 +1,10 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 #ifdef FLETCH_ENABLE_LIVE_CODING
 
-#include <ctype.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/param.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <stddef.h>  // for size_t
 
 #include "include/fletch_api.h"
 
@@ -19,6 +12,8 @@
 #include "src/shared/flags.h"
 #include "src/shared/utils.h"
 #include "src/shared/version.h"
+#include "src/shared/platform.h"
+#include "src/shared/globals.h"
 
 #include "src/vm/session.h"
 #include "src/vm/log_print_interceptor.h"
@@ -34,8 +29,8 @@ static int RunSession(Connection* connection) {
   return result;
 }
 
-static Connection* WaitForCompilerConnection(
-    const char* host, int port, const char* port_file) {
+static Connection* WaitForCompilerConnection(const char* host, int port,
+                                             const char* port_file) {
   // Listen for new connections.
   ConnectionListener listener(host, port);
 
@@ -60,49 +55,34 @@ static bool EndsWith(const char* s, const char* suffix) {
   int s_length = strlen(s);
   int suffix_length = strlen(suffix);
   return (suffix_length <= s_length)
-      ? strncmp(s + s_length - suffix_length, suffix, suffix_length) == 0
-      : false;
+             ? strncmp(s + s_length - suffix_length, suffix, suffix_length) == 0
+             : false;
 }
-
-#ifdef DEBUG
-static void WaitForGDB(const char* executable_name) {
-  int fd = open("/dev/tty", O_WRONLY);
-  if (fd >= 0) {
-    FILE* terminal = fdopen(fd, "w");
-    fprintf(terminal, "*** VM paused, debug with:\n");
-    fprintf(
-        terminal,
-        "gdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal SIGCONT'\n",
-        executable_name,
-        getpid());
-    kill(getpid(), SIGSTOP);
-  }
-}
-#endif
 
 static void PrintUsage() {
   Print::Out("fletch-vm - The embedded Dart virtual machine.\n\n");
-  Print::Out("  fletch-vm [--port=<port>] [--host=<address>] "
-             "[snapshot file]\n\n");
+  Print::Out(
+      "  fletch-vm [--port=<port>] [--host=<address>] "
+      "[snapshot file]\n\n");
   Print::Out("When specifying a snapshot other options are ignored.\n\n");
   Print::Out("Options:\n");
-  Print::Out("  --port: specifies which port to listen on. Defaults "
-             "to random port.\n");
-  Print::Out("  --host: specifies which host address to listen on. "
-             "Defaults to 127.0.0.1.\n");
+  Print::Out(
+      "  --port: specifies which port to listen on. Defaults "
+      "to random port.\n");
+  Print::Out(
+      "  --host: specifies which host address to listen on. "
+      "Defaults to 127.0.0.1.\n");
   Print::Out("  --help: print out 'fletch-vm' usage.\n");
   Print::Out("  --version: print the version.\n");
   Print::Out("\n");
 }
 
-static void PrintVersion() {
-  Print::Out("%s\n", GetVersion());
-}
+static void PrintVersion() { Print::Out("%s\n", GetVersion()); }
 
 static int Main(int argc, char** argv) {
 #ifdef DEBUG
-  if (getenv("FLETCH_VM_WAIT") != NULL) {
-    WaitForGDB(argv[0]);
+  if (Platform::GetEnv("FLETCH_VM_WAIT") != NULL) {
+    Platform::WaitForDebugger(argv[0]);
   }
 #endif
   Flags::ExtractFromCommandLine(&argc, argv);
@@ -165,11 +145,12 @@ static int Main(int argc, char** argv) {
   int result = 0;
 
   // Check if we should add a log print interceptor.
-  int pid = Platform::GetPid();
   if (log_dir != NULL) {
+    int pid = Platform::GetPid();
     // Generate a vm specific log name with the given path.
     char log_path[MAXPATHLEN + 1];
-    snprintf(log_path, sizeof(log_path), "%s/vm-%d.log", log_dir, pid);
+    Platform::FormatString(log_path, sizeof(log_path), "%s/vm-%d.log",
+                           log_dir, pid);
     Print::RegisterPrintInterceptor(new LogPrintInterceptor(log_path));
   }
 
@@ -212,10 +193,7 @@ static int Main(int argc, char** argv) {
 
 }  // namespace fletch
 
-
 // Forward main calls to fletch::Main.
-int main(int argc, char** argv) {
-  return fletch::Main(argc, argv);
-}
+int main(int argc, char** argv) { return fletch::Main(argc, argv); }
 
 #endif  // FLETCH_ENABLE_LIVE_CODING

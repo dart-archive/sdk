@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,11 +15,13 @@
 #include "src/shared/selectors.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/frame.h"
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
+#include "src/vm/native_interpreter.h"
 #include "src/vm/object.h"
-#include "src/vm/process.h"
 #include "src/vm/port.h"
+#include "src/vm/process.h"
 #include "src/vm/session.h"
 
 namespace fletch {
@@ -35,37 +37,71 @@ void ProgramState::AddPausedProcess(Process* process) {
   ASSERT(paused_processes_head_ != paused_processes_head_->next());
 }
 
-Program::Program(ProgramSource source)
+Program::Program(ProgramSource source, int hashtag)
     :
 #define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
       ROOTS_DO(CONSTRUCTOR_NULL)
 #undef CONSTRUCTOR_NULL
-      process_list_mutex_(Platform::CreateMutex()),
+          process_list_mutex_(Platform::CreateMutex()),
       process_list_head_(NULL),
       random_(0),
       heap_(&random_),
+      process_heap_(NULL, 4 * KB),
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
-      is_compact_(false),
-      loaded_from_snapshot_(source == Program::kLoadedFromSnapshot)  {
-  // These asserts need to hold when running on the target, but they don't need
-  // to hold on the host (the build machine, where the interpreter-generating
-  // program runs).  We put these asserts here on the assumption that the
-  // interpreter-generating program will not instantiate this class.
+      loaded_from_snapshot_(source == Program::kLoadedFromSnapshot),
+      program_exit_listener_(NULL),
+      program_exit_listener_data_(NULL),
+      exit_kind_(Signal::kTerminated),
+      hashtag_(hashtag),
+      stack_chain_(NULL),
+      cache_(NULL) {
+// These asserts need to hold when running on the target, but they don't need
+// to hold on the host (the build machine, where the interpreter-generating
+// program runs).  We put these asserts here on the assumption that the
+// interpreter-generating program will not instantiate this class.
 #define ASSERT_OFFSET(type, name, CamelName) \
-    static_assert(k##CamelName##Offset == offsetof(Program, name##_), #name);
+  static_assert(k##CamelName##Offset == offsetof(Program, name##_), #name);
   ROOTS_DO(ASSERT_OFFSET)
 #undef ASSERT_OFFSET
 }
 
 Program::~Program() {
   delete process_list_mutex_;
+  delete cache_;
   ASSERT(process_list_head_ == NULL);
 }
 
-Process* Program::SpawnProcess() {
-  Process* process = new Process(this);
+int Program::ExitCode() {
+  switch (exit_kind()) {
+    case Signal::kTerminated:
+      return 0;
+    case Signal::kCompileTimeError:
+      return kCompileTimeErrorExitCode;
+    case Signal::kUncaughtException:
+      return kUncaughtExceptionExitCode;
+    // TODO(kustermann): We should consider returning a different exitcode if a
+    // process was killed via a signal or killed programmatically.
+    case Signal::kUnhandledSignal:
+      return kUncaughtExceptionExitCode;
+    case Signal::kKilled:
+      return kUncaughtExceptionExitCode;
+    case Signal::kShouldKill:
+      UNREACHABLE();
+  }
+  UNREACHABLE();
+  return 0;
+}
+
+Process* Program::SpawnProcess(Process* parent) {
+  Process* process = new Process(this, parent);
+
+  // The counter part of this is in [ScheduleProcessFordeletion].
+  if (parent != NULL) {
+    parent->process_triangle_count_++;
+  }
+
   AddToProcessList(process);
   return process;
 }
@@ -75,47 +111,70 @@ Process* Program::ProcessSpawnForMain() {
     PrintStatistics();
   }
 
-  Process* process = SpawnProcess();
+  Process* process = SpawnProcess(NULL);
   Function* entry = process->entry();
   int main_arity = process->main_arity();
   process->SetupExecutionStack();
   Stack* stack = process->stack();
   uint8_t* bcp = entry->bytecode_address_for(0);
-  stack->set(0, Smi::FromWord(main_arity));
-  // Return address + 2 empty slots.
-  stack->set(1, NULL);
-  stack->set(2, NULL);
-  stack->set(3, NULL);
-  stack->set(4, reinterpret_cast<Object*>(bcp));
-  stack->set_top(4);
+  word top = stack->length();
+  stack->set(--top, NULL);
+  stack->set(--top, NULL);
+  Object** frame_pointer = stack->Pointer(top);
+  stack->set(--top, NULL);
+  stack->set(--top, Smi::FromWord(main_arity));
+  // Push empty slot, fp and bcp.
+  stack->set(--top, NULL);
+  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
+  frame_pointer = stack->Pointer(top);
+  stack->set(--top, reinterpret_cast<Object*>(bcp));
+  stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
+  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
+  stack->set_top(top);
 
   return process;
 }
 
-void Program::DeleteProcess(Process* process, Signal::Kind kind) {
-  RemoveFromProcessList(process);
+bool Program::ScheduleProcessForDeletion(Process* process, Signal::Kind kind) {
+  ASSERT(process->state() == Process::kWaitingForChildren);
+
   process->Cleanup(kind);
-  delete process;
-}
 
-void Program::DeleteAllProcesses() {
-  ScopedLock locker(process_list_mutex_);
-
-  Process* current = process_list_head_;
+  // We are doing this up the process hierarchy.
+  Process* current = process;
   while (current != NULL) {
-    Process* next = current->process_list_next();
-    current->Cleanup(Signal::kTerminated);
+    Process* parent = current->parent_;
+
+    int new_count = --current->process_triangle_count_;
+    ASSERT(new_count >= 0);
+    if (new_count > 0) {
+      return false;
+    }
+
+    // If this is the main process, we will save the exit kind.
+    if (parent == NULL) {
+      exit_kind_ = current->links()->exit_signal();
+    }
+
+    RemoveFromProcessList(current);
     delete current;
-    current = next;
+
+    current = parent;
   }
-  process_list_head_ = NULL;
+  return true;
 }
 
 void Program::VisitProcesses(ProcessVisitor* visitor) {
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    visitor->VisitProcess(current);
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    visitor->VisitProcess(process);
+  }
+}
+
+// TODO(erikcorry): Remove.
+void Program::VisitProcessHeaps(ProcessVisitor* visitor) {
+  if (process_list_head_ != NULL) {
+    visitor->VisitProcess(process_list_head_);
   }
 }
 
@@ -131,8 +190,7 @@ Object* Program::CreateByteArray(int capacity) {
 
 Object* Program::CreateClass(int fields) {
   InstanceFormat format = InstanceFormat::instance_format(fields);
-  Object* raw_class = heap()->CreateClass(
-      format, meta_class(), null_object());
+  Object* raw_class = heap()->CreateClass(format, meta_class(), null_object());
   if (raw_class->IsFailure()) return raw_class;
   Class* klass = Class::cast(raw_class);
   ASSERT(klass->NumberOfInstanceFields() == fields);
@@ -143,12 +201,9 @@ Object* Program::CreateDouble(fletch_double value) {
   return heap()->CreateDouble(double_class(), value);
 }
 
-Object* Program::CreateFunction(int arity,
-                                List<uint8> bytes,
+Object* Program::CreateFunction(int arity, List<uint8> bytes,
                                 int number_of_literals) {
-  return heap()->CreateFunction(function_class(),
-                                arity,
-                                bytes,
+  return heap()->CreateFunction(function_class(), arity, bytes,
                                 number_of_literals);
 }
 
@@ -213,45 +268,75 @@ Object* Program::CreateInitializer(Function* function) {
   return heap()->CreateInitializer(initializer_class_, function);
 }
 
-void Program::PrepareProgramGC(bool disable_heap_validation_before_gc) {
-  // All threads are stopped and have given their parts back to the
-  // [SharedHeap], so we can merge them now.
-  shared_heap()->MergeParts();
+Object* Program::CreateDispatchTableEntry() {
+  return heap()->CreateDispatchTableEntry(dispatch_table_entry_class_);
+}
 
-  if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
+class ValidateProcessHeapVisitor : public ProcessVisitor {
+ public:
+  virtual void VisitProcess(Process* process) {
+    process->ValidateHeaps();
+  }
+};
+
+void Program::PrepareProgramGC() {
+  if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
   }
 
-  // Loop over all processes and cook all stacks.
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    if (Flags::validate_heaps && !disable_heap_validation_before_gc) {
-      current->ValidateHeaps(&shared_heap_);
-    }
-
-    int number_of_stacks = current->CollectGarbageAndChainStacks();
-    current->CookStacks(number_of_stacks);
-    current = current->process_list_next();
+  if (Flags::validate_heaps) {
+    ValidateProcessHeapVisitor visitor;
+    VisitProcesses(&visitor);
   }
+
+  // We need to perform a precise GC to get rid of floating garbage stacks.
+  // This is done by:
+  // 1) An old-space GC, which is precise for global reachability.
+  PerformSharedGarbageCollection();
+  //    Old-space GC ignores the liveness information it has gathered in
+  //    new-space, so this doesn't actually clean up the dead objects in
+  //    new-space, so we do:
+  // 2) A new-space GC, which will be precise, due to the old-space GC.
+  //    (No floating garbage with pointers from old- to new-space.)
+  CollectNewSpace();
+  //    Now we have no floating garbage stacks.  We do:
+  // 3) An old-space GC which (in the generational config) will find no
+  //    garbage, but as a side effect it will chain up all the stacks (also
+  //    the ones in new-space).  This does not move new-space objects.
+  // TODO(erikcorry): An future simplification is to cook the stacks as we
+  // find them during the program GC, instead of chaining them up beforehand
+  // during a GC that is not needed in the generational config.
+  int number_of_stacks = CollectMutableGarbageAndChainStacks();
+  CookStacks(number_of_stacks);
 }
 
-void Program::PerformProgramGC(Space* to, PointerVisitor* visitor) {
+class IterateProgramPointersVisitor : public ProcessVisitor {
+ public:
+  explicit IterateProgramPointersVisitor(PointerVisitor* pointer_visitor)
+      : pointer_visitor_(pointer_visitor) {}
+
+  virtual void VisitProcess(Process* process) {
+    process->IterateProgramPointers(pointer_visitor_);
+  }
+
+ private:
+  PointerVisitor* pointer_visitor_;
+};
+
+void Program::PerformProgramGC(SemiSpace* to, PointerVisitor* visitor) {
   {
     NoAllocationFailureScope scope(to);
 
     // Iterate program roots.
     IterateRoots(visitor);
 
-    // Iterate all immutable objects.
-    HeapObjectPointerVisitor object_pointer_visitor(visitor);
-    shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
+    // Iterate all pointers from processes to program space.
+    IterateProgramPointersVisitor process_visitor(visitor);
+    VisitProcesses(&process_visitor);
 
-    // Iterate over all process program pointers.
-    Process* current = process_list_head_;
-    while (current != NULL) {
-      current->IterateProgramPointers(visitor);
-      current = current->process_list_next();
-    }
+    // Iterate all pointers from the process heap to program space.
+    CookedHeapObjectPointerVisitor flaf(visitor);
+    process_heap()->IterateObjects(&flaf);
 
     // Finish collection.
     ASSERT(!to->is_empty());
@@ -260,18 +345,22 @@ void Program::PerformProgramGC(Space* to, PointerVisitor* visitor) {
   heap_.ReplaceSpace(to);
 }
 
-void Program::FinishProgramGC() {
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    // Uncook process
-    current->UncookAndUnchainStacks();
-    current->UpdateBreakpoints();
-
+class FinishProgramGCVisitor : public ProcessVisitor {
+ public:
+  virtual void VisitProcess(Process* process) {
+    process->UpdateBreakpoints();
     if (Flags::validate_heaps) {
-      current->ValidateHeaps(&shared_heap_);
+      // TODO(erikcorry): This should not be on the process.
+      process->ValidateHeaps();
     }
-    current = current->process_list_next();
   }
+};
+
+void Program::FinishProgramGC() {
+  // Uncook process
+  UncookAndUnchainStacks();
+  FinishProgramGCVisitor visitor;
+  VisitProcesses(&visitor);
 
   if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
@@ -279,7 +368,7 @@ void Program::FinishProgramGC() {
 }
 
 uword Program::OffsetOf(HeapObject* object) {
-  ASSERT(is_compact());
+  ASSERT(is_optimized());
   return heap()->space()->OffsetOf(object);
 }
 
@@ -304,21 +393,10 @@ void Program::ValidateHeapsAreConsistent() {
 
   // Validate all process heaps.
   {
-    ProcessHeapValidatorVisitor validator(heap(), &shared_heap_);
+    ProcessHeapValidatorVisitor validator(heap());
     VisitProcesses(&validator);
   }
 }
-
-#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-
-void Program::ValidateSharedHeap() {
-  SharedHeapPointerValidator validator(heap(), &shared_heap_);
-  HeapObjectPointerVisitor object_pointer_visitor(&validator);
-  shared_heap_.heap()->IterateObjects(&object_pointer_visitor);
-  shared_heap_.heap()->VisitWeakObjectPointers(&validator);
-}
-
-#else
 
 void Program::ValidateSharedHeap() {
   // NOTE: We do nothing in the case of *one* shared heap. The shared heap will
@@ -329,23 +407,13 @@ void Program::ValidateSharedHeap() {
   //  per-process basis ATM. So we just do it redundantly for now.)
 }
 
-#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-
 void Program::CollectGarbage() {
-  if (scheduler() != NULL) {
-    scheduler()->StopProgram(this);
-  }
-
-  Space* to = new Space(heap_.space()->Used() / 10);
+  SemiSpace* to = new SemiSpace(heap_.space()->Used() / 10);
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
   PerformProgramGC(to, &scavenger);
   FinishProgramGC();
-
-  if (scheduler() != NULL) {
-    scheduler()->ResumeProgram(this);
-  }
 }
 
 void Program::AddToProcessList(Process* process) {
@@ -381,184 +449,91 @@ struct SharedHeapUsage {
   uint64 timestamp = 0;
   uword shared_used = 0;
   uword shared_size = 0;
+  uword shared_used_2 = 0;
+  uword shared_size_2 = 0;
 };
 
 static void GetSharedHeapUsage(Heap* heap, SharedHeapUsage* heap_usage) {
   heap_usage->timestamp = Platform::GetMicroseconds();
   heap_usage->shared_used = heap->space()->Used();
   heap_usage->shared_size = heap->space()->Size();
+  heap_usage->shared_used_2 = heap->old_space()->Used();
+  heap_usage->shared_size_2 = heap->old_space()->Size();
 }
 
-static void PrintImmutableGCInfo(SharedHeapUsage* before,
-                                 SharedHeapUsage* after) {
+static void PrintProgramGCInfo(SharedHeapUsage* before,
+                               SharedHeapUsage* after) {
   static int count = 0;
   Print::Error(
-      "Immutable-GC(%i): "
-      "\t%lli us, "
-      "\t%lu/%lu -> %lu/%lu\n",
-      count++,
-      after->timestamp - before->timestamp,
-      before->shared_used,
-      before->shared_size,
-      after->shared_used,
-      after->shared_size);
+      "Old-space-GC(%i):   "
+      "\t%lli us,   "
+      "\t\t\t\t\t%lu/%lu -> %lu/%lu\n",
+      count++, after->timestamp - before->timestamp, before->shared_used_2,
+      before->shared_size_2, after->shared_used_2, after->shared_size_2);
 }
 
-void Program::CollectSharedGarbage(bool program_is_stopped) {
-  Scheduler* scheduler = this->scheduler();
-  ASSERT(scheduler != NULL);
-
-  if (!program_is_stopped) {
-    scheduler->StopProgram(this);
-  }
-
-  // All threads are stopped and have given their parts back to the
-  // [SharedHeap], so we can merge them now.
-  shared_heap()->MergeParts();
-
+void Program::CollectSharedGarbage() {
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
   }
 
   SharedHeapUsage usage_before;
   if (Flags::print_heap_statistics) {
-    GetSharedHeapUsage(shared_heap()->heap(), &usage_before);
+    GetSharedHeapUsage(process_heap(), &usage_before);
   }
 
   PerformSharedGarbageCollection();
 
   if (Flags::print_heap_statistics) {
     SharedHeapUsage usage_after;
-    GetSharedHeapUsage(shared_heap()->heap(), &usage_after);
-    PrintImmutableGCInfo(&usage_before, &usage_after);
+    GetSharedHeapUsage(process_heap(), &usage_after);
+    PrintProgramGCInfo(&usage_before, &usage_after);
   }
 
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
   }
-
-  if (!program_is_stopped) {
-    scheduler->ResumeProgram(this);
-  }
 }
 
-#ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-
 void Program::PerformSharedGarbageCollection() {
-  // Pass 1: Storebuffer compaction.
-  // We do this as a separate pass to ensure the mutable collection can access
-  // all objects (including immutable ones) and for example do
-  // "ASSERT(object->IsImmutable()". If we did everthing in one pass some
-  // immutable objects will contain forwarding pointers and others won't, which
-  // can make the mentioned assert just crash the program.
-  CompactStorebuffers();
-
-  // Pass 2: Iterate all process roots to the shared heap.
-  Heap* heap = shared_heap()->heap();
-  Space* from = heap->space();
-  Space* to = new Space(from->Used() / 10);
-  NoAllocationFailureScope alloc(to);
-
-  ScavengeVisitor scavenger(from, to);
-
-  int process_heap_sizes = 0;
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->TakeChildHeaps();
-    current->IterateRoots(&scavenger);
-    current->store_buffer()->IteratePointersToImmutableSpace(&scavenger);
-    process_heap_sizes += current->heap()->space()->Used();
-    current = current->process_list_next();
-  }
-
-  to->CompleteScavenge(&scavenger);
-  heap->ProcessWeakPointers();
-  heap->ReplaceSpace(to);
-
-  shared_heap()->UpdateLimitAfterGC(process_heap_sizes);
-}
-
-#else  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-
-#if defined(FLETCH_MARK_SWEEP)
-
-void Program::PerformSharedGarbageCollection() {
-  // Mark all reachable objects.
-  Heap* heap = shared_heap()->heap();
-  Space* space = heap->space();
+  // Mark all reachable objects.  We mark all live objects in new-space too, to
+  // detect liveness paths that go through new-space, but we just clear the
+  // mark bits afterwards.  Dead objects in new-space are only cleared in a
+  // new-space GC (scavenge).
+  Heap* heap = process_heap();
+  OldSpace* old_space = heap->old_space();
+  SemiSpace* new_space = heap->space();
   MarkingStack stack;
-  MarkingVisitor marking_visitor(space, &stack);
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->TakeChildHeaps();
-    current->IterateRoots(&marking_visitor);
-    current = current->process_list_next();
+  MarkingVisitor marking_visitor(new_space, old_space, &stack);
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->IterateRoots(&marking_visitor);
   }
   stack.Process(&marking_visitor);
-  heap->ProcessWeakPointers();
+  heap->ProcessWeakPointers(old_space);
 
-  current = process_list_head_;
-  while (current != NULL) {
-    current->set_ports(Port::CleanupPorts(space, current->ports()));
-    current = current->process_list_next();
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
   }
 
-  // Flush outstanding free_list chunks into the free list. Then sweep
-  // over the heap and rebuild the freelist.
-  space->Flush();
-  SweepingVisitor sweeping_visitor(space->free_list());
-  space->IterateObjects(&sweeping_visitor);
+  // Sweep over the old-space and rebuild the freelist.
+  SweepingVisitor sweeping_visitor(old_space->free_list());
+  old_space->IterateObjects(&sweeping_visitor);
 
-  current = process_list_head_;
-  while (current != NULL) {
-    current->UpdateStackLimit();
-    current = current->process_list_next();
+  new_space->Flush();
+  // We don't pass a free list so this visitor just clears the mark bits
+  // without making free list entries.
+  SweepingVisitor newspace_visitor(NULL);
+  new_space->IterateObjects(&newspace_visitor);
+
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->UpdateStackLimit();
   }
 
-  space->set_used(sweeping_visitor.used());
-  heap->AdjustAllocationBudget();
-}
-
-#else  // #if defined(FLETCH_MARK_SWEEP)
-
-void Program::PerformSharedGarbageCollection() {
-  Heap* heap = shared_heap()->heap();
-  Space* from = heap->space();
-  Space* to = new Space(from->Used() / 10);
-  NoAllocationFailureScope alloc(to);
-
-  ScavengeVisitor scavenger(from, to);
-
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->TakeChildHeaps();
-    current->IterateRoots(&scavenger);
-    current = current->process_list_next();
-  }
-
-  to->CompleteScavenge(&scavenger);
-  heap->ProcessWeakPointers();
-
-  current = process_list_head_;
-  while (current != NULL) {
-    current->set_ports(Port::CleanupPorts(from, current->ports()));
-    current->UpdateStackLimit();
-    current = current->process_list_next();
-  }
-
-  heap->ReplaceSpace(to);
-}
-
-#endif  // #if defined(FLETCH_MARK_SWEEP)
-
-#endif  // #ifdef FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS
-
-void Program::CompactStorebuffers() {
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->store_buffer()->Deduplicate();
-    current = current->process_list_next();
-  }
+  old_space->set_used(sweeping_visitor.used());
+  heap->AdjustOldAllocationBudget();
 }
 
 class StatisticsVisitor : public HeapObjectVisitor {
@@ -572,7 +547,7 @@ class StatisticsVisitor : public HeapObjectVisitor {
         string_size_(0),
         function_count_(0),
         function_size_(0),
-        bytecode_size_(0) { }
+        bytecode_size_(0) {}
 
   int object_count() const { return object_count_; }
   int class_count() const { return class_count_; }
@@ -587,9 +562,7 @@ class StatisticsVisitor : public HeapObjectVisitor {
   int function_size() const { return function_size_; }
   int bytecode_size() const { return bytecode_size_; }
 
-  int function_header_size() const {
-    return function_count_ * Function::kSize;
-  }
+  int function_header_size() const { return function_count_ * Function::kSize; }
 
   int Visit(HeapObject* object) {
     int size = object->Size();
@@ -624,9 +597,7 @@ class StatisticsVisitor : public HeapObjectVisitor {
 
   int bytecode_size_;
 
-  void VisitClass(Class* clazz) {
-    class_count_++;
-  }
+  void VisitClass(Class* clazz) { class_count_++; }
 
   void VisitArray(Array* array) {
     array_count_++;
@@ -681,139 +652,151 @@ void Program::Initialize() {
   // null_object for initial values.
   InstanceFormat null_format =
       InstanceFormat::instance_format(0, InstanceFormat::NULL_MARKER);
-  null_object_ = reinterpret_cast<Instance*>(
-      heap()->Allocate(null_format.fixed_size()));
+  null_object_ =
+      reinterpret_cast<Instance*>(heap()->Allocate(null_format.fixed_size()));
 
   meta_class_ = Class::cast(heap()->CreateMetaClass());
 
   {
     InstanceFormat format = InstanceFormat::array_format();
-    array_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    array_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   empty_array_ = Array::cast(CreateArray(0));
 
   {
     InstanceFormat format = InstanceFormat::instance_format(0);
-    object_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    object_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::num_format();
-    num_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    num_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     num_class_->set_super_class(object_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::num_format();
-    int_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    int_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     int_class_->set_super_class(num_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::smi_format();
-    smi_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    smi_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     smi_class_->set_super_class(int_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::heap_integer_format();
-    large_integer_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    large_integer_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     large_integer_class_->set_super_class(int_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::double_format();
-    double_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    double_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     double_class_->set_super_class(num_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::boxed_format();
-    boxed_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    boxed_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::stack_format();
-    stack_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    stack_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format =
         InstanceFormat::instance_format(2, InstanceFormat::COROUTINE_MARKER);
-    coroutine_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    coroutine_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format =
         InstanceFormat::instance_format(1, InstanceFormat::PORT_MARKER);
-    port_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    port_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(1);
-    process_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
-  }
-
-  {
-    InstanceFormat format = InstanceFormat::instance_format(3);
-    foreign_memory_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
-  }
-
-  {
-    InstanceFormat format = InstanceFormat::initializer_format();
-    initializer_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
-  }
-
-  {
-    InstanceFormat format = InstanceFormat::instance_format(1);
-    constant_list_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
-  }
-
-  {
-    InstanceFormat format = InstanceFormat::instance_format(1);
-    constant_byte_list_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    process_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(2);
-    constant_map_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    process_death_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
+    InstanceFormat format = InstanceFormat::instance_format(4);
+    foreign_memory_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
+    InstanceFormat format = InstanceFormat::initializer_format();
+    initializer_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
+    InstanceFormat format = InstanceFormat::dispatch_table_entry_format();
+    dispatch_table_entry_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
+    InstanceFormat format = InstanceFormat::instance_format(1);
+    constant_list_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
+    InstanceFormat format = InstanceFormat::instance_format(1);
+    constant_byte_list_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  {
+    InstanceFormat format = InstanceFormat::instance_format(2);
+    constant_map_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::instance_format(3);
-    no_such_method_error_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    no_such_method_error_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::one_byte_string_format();
-    one_byte_string_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    one_byte_string_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     one_byte_string_class_->set_super_class(object_class_);
   }
 
   {
     InstanceFormat format = InstanceFormat::two_byte_string_format();
-    two_byte_string_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    two_byte_string_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     two_byte_string_class_->set_super_class(object_class_);
   }
 
@@ -822,92 +805,85 @@ void Program::Initialize() {
 
   {
     InstanceFormat format = InstanceFormat::function_format();
-    function_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    function_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   {
     InstanceFormat format = InstanceFormat::byte_array_format();
-    byte_array_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    byte_array_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+  }
+
+  // Setup the class for tearoff closures.
+  {
+    InstanceFormat format = InstanceFormat::instance_format(0);
+    closure_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
   }
 
   Class* null_class;
-  { // Create null class and singleton.
-    null_class =
-        Class::cast(heap()->CreateClass(null_format, meta_class_,
-                                        null_object_));
+  {  // Create null class and singleton.
+    null_class = Class::cast(
+        heap()->CreateClass(null_format, meta_class_, null_object_));
     null_class->set_super_class(object_class_);
     null_object_->set_class(null_class);
     null_object_->set_immutable(true);
     null_object_->InitializeIdentityHashCode(random());
-    null_object_->Initialize(null_format.fixed_size(),
-                             null_object_);
+    null_object_->Initialize(null_format.fixed_size(), null_object_);
   }
 
-  { // Create the bool class.
+  {  // Create the bool class.
     InstanceFormat format = InstanceFormat::instance_format(0);
-    bool_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    bool_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     bool_class_->set_super_class(object_class_);
   }
 
-  { // Create False class and the false object.
+  {  // Create False class and the false object.
     InstanceFormat format =
         InstanceFormat::instance_format(0, InstanceFormat::FALSE_MARKER);
-    Class* false_class = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    Class* false_class =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     false_class->set_super_class(bool_class_);
     false_class->set_methods(empty_array_);
     false_object_ = Instance::cast(
         heap()->CreateInstance(false_class, null_object(), true));
   }
 
-  { // Create True class and the true object.
+  {  // Create True class and the true object.
     InstanceFormat format =
         InstanceFormat::instance_format(0, InstanceFormat::TRUE_MARKER);
-    Class* true_class = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    Class* true_class =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     true_class->set_super_class(bool_class_);
     true_class->set_methods(empty_array_);
-    true_object_ = Instance::cast(
-        heap()->CreateInstance(true_class, null_object(), true));
+    true_object_ =
+        Instance::cast(heap()->CreateInstance(true_class, null_object(), true));
   }
 
-  { // Create sentinel singleton.
+  {  // Create stack overflow error object.
     InstanceFormat format = InstanceFormat::instance_format(0);
-    Class* sentinel_class = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
-    sentinel_object_ = Instance::cast(
-        heap()->CreateInstance(sentinel_class, null_object(), true));
-  }
-
-  { // Create stack overflow error object.
-    InstanceFormat format = InstanceFormat::instance_format(0);
-    stack_overflow_error_class_ = Class::cast(
-        heap()->CreateClass(format, meta_class_, null_object_));
+    stack_overflow_error_class_ =
+        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
     stack_overflow_error_ = Instance::cast(heap()->CreateInstance(
         stack_overflow_error_class_, null_object(), true));
   }
 
   // Create the retry after gc failure object payload.
-  raw_retry_after_gc_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
+  raw_retry_after_gc_ = OneByteString::cast(
+      CreateStringFromAscii(StringFromCharZ("Retry after GC.")));
 
   // Create the failure object payloads. These need to be kept in sync with the
   // constants in lib/system/system.dart.
-  raw_wrong_argument_type_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Wrong argument type.")));
+  raw_wrong_argument_type_ = OneByteString::cast(
+      CreateStringFromAscii(StringFromCharZ("Wrong argument type.")));
 
-  raw_index_out_of_bounds_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Index out of bounds.")));
+  raw_index_out_of_bounds_ = OneByteString::cast(
+      CreateStringFromAscii(StringFromCharZ("Index out of bounds.")));
 
-  raw_illegal_state_ =
-      OneByteString::cast(
-          CreateStringFromAscii(StringFromCharZ("Illegal state.")));
+  raw_illegal_state_ = OneByteString::cast(
+      CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
   native_failure_result_ = null_object_;
 }
@@ -931,8 +907,8 @@ void Program::ClearDispatchTableIntrinsics() {
   int length = table->length();
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    Array* entry = Array::cast(element);
-    entry->set(3, NULL);
+    DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+    entry->set_code(NULL);
   }
 }
 
@@ -943,34 +919,242 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
   int length = table->length();
   int hits = 0;
 
-  static const Names::Id name = Names::kNoSuchMethodTrampoline;
-  Function* trampoline = object_class()->LookupMethod(
-        Selector::Encode(name, Selector::METHOD, 0));
+  DispatchTableEntry* entry = DispatchTableEntry::cast(table->get(0));
+  Function* trampoline = entry->target();
 
   for (int i = 0; i < length; i++) {
     Object* element = table->get(i);
-    Array* entry = Array::cast(element);
-    if (entry->get(3) != NULL) {
+    DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+    if (entry->code() != NULL) {
       // The intrinsic is already set.
       hits++;
       continue;
     }
-    Object* target = entry->get(2);
-    if (target == trampoline) continue;
-    hits++;
-    Function* method = Function::cast(target);
-    Object* intrinsic =
-        reinterpret_cast<Object*>(method->ComputeIntrinsic(intrinsics));
-    ASSERT(intrinsic->IsSmi());
-    entry->set(3, intrinsic);
+    Function* target = entry->target();
+    if (target != trampoline) hits++;
+    void* code = target->ComputeIntrinsic(intrinsics);
+    if (code == NULL) {
+      code = reinterpret_cast<void*>(InterpreterMethodEntry);
+    }
+    entry->set_code(code);
   }
 
   if (Flags::print_program_statistics) {
-    Print::Out("Dispatch table fill: %F%% (%i of %i)\n",
-               hits * 100.0 / length,
-               hits,
-               length);
+    Print::Out("Dispatch table fill: %F%% (%i of %i)\n", hits * 100.0 / length,
+               hits, length);
   }
 }
+
+struct HeapUsage {
+  uint64 timestamp = 0;
+  uword process_used = 0;
+  uword process_size = 0;
+  uword immutable_used = 0;
+  uword immutable_size = 0;
+  uword program_used = 0;
+  uword program_size = 0;
+
+  uword TotalUsed() { return process_used + immutable_used + program_used; }
+  uword TotalSize() { return process_used + immutable_size + program_size; }
+};
+
+static void GetHeapUsage(Heap* heap, HeapUsage* heap_usage) {
+  heap_usage->timestamp = Platform::GetMicroseconds();
+  heap_usage->process_used = heap->space()->Used();
+  heap_usage->process_size = heap->space()->Size();
+  heap_usage->program_used = heap->old_space()->Used();
+  heap_usage->program_size = heap->old_space()->Size();
+}
+
+void PrintProcessGCInfo(HeapUsage* before, HeapUsage* after) {
+  static int count = 0;
+  if ((count & 0xF) == 0) {
+    Print::Error(
+        "New-space-GC,\t\tElapsed, "
+        "\tNew-space use/sizeu,"
+        "\t\tOld-space use/size\n");
+  }
+  Print::Error(
+      "New-space-GC(%i): "
+      "\t%lli us,   "
+      "\t%lu/%lu -> %lu/%lu,   "
+      "\t%lu/%lu -> %lu/%lu\n",
+      count++, after->timestamp - before->timestamp, before->process_used,
+      before->process_size, after->process_used, after->process_size,
+      before->program_used, before->program_size, after->program_used,
+      after->program_size);
+}
+
+// Somewhat misnamed - it does a scavenge of the data area used by the
+// processes, not the code area used by the program.
+void Program::CollectNewSpace() {
+  HeapUsage usage_before;
+
+  Heap* data_heap = process_heap();
+
+  SemiSpace* from = data_heap->space();
+  OldSpace* old = data_heap->old_space();
+
+  if (!data_heap->allocations_have_taken_place()) {
+    return;
+  }
+
+  old->Flush();
+  from->Flush();
+
+  if (Flags::print_heap_statistics) {
+    GetHeapUsage(data_heap, &usage_before);
+  }
+
+  SemiSpace* to = new SemiSpace(from->Used() / 10);
+
+  // While garbage collecting, do not fail allocations. Instead grow
+  // the to-space as needed.
+  NoAllocationFailureScope scope(to);
+  NoAllocationFailureScope scope2(old);
+
+  GenerationalScavengeVisitor visitor(from, to, old);
+  to->StartScavenge();
+  old->StartScavenge();
+
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->IterateRoots(&visitor);
+    current = current->process_list_next();
+  }
+
+  old->VisitRememberedSet(&visitor);
+
+  bool work_found = true;
+  while (work_found) {
+    work_found = to->CompleteScavengeGenerational(&visitor);
+    work_found |= old->CompleteScavengeGenerational(&visitor);
+  }
+  old->EndScavenge();
+
+  data_heap->ProcessWeakPointers(from);
+
+  current = process_list_head_;
+  while (current != NULL) {
+    current->set_ports(Port::CleanupPorts(from, current->ports()));
+    current = current->process_list_next();
+  }
+
+  // Second space argument is used to size the new-space.
+  data_heap->ReplaceSpace(to, old);
+
+  if (Flags::print_heap_statistics) {
+    HeapUsage usage_after;
+    GetHeapUsage(data_heap, &usage_after);
+    PrintProcessGCInfo(&usage_before, &usage_after);
+  }
+
+  if (old->needs_garbage_collection()) {
+    CollectSharedGarbage();
+  }
+
+  UpdateStackLimits();
+}
+
+void Program::UpdateStackLimits() {
+  Process* current = process_list_head_;
+  while (current != NULL) {
+    current->UpdateStackLimit();
+    current = current->process_list_next();
+  }
+}
+
+int Program::CollectMutableGarbageAndChainStacks() {
+  // Mark all reachable objects.
+  OldSpace* old_space = process_heap()->old_space();
+  SemiSpace* new_space = process_heap()->space();
+  MarkingStack marking_stack;
+  ASSERT(stack_chain_ == NULL);
+  MarkingVisitor marking_visitor(new_space, old_space, &marking_stack,
+                                 &stack_chain_);
+
+  // All processes share the same heap, so we need to iterate all roots from
+  // all processes.
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->IterateRoots(&marking_visitor);
+  }
+
+  marking_stack.Process(&marking_visitor);
+
+  // Weak processing.
+  process_heap()->ProcessWeakPointers(old_space);
+  for (Process* process = process_list_head_; process != NULL;
+       process = process->process_list_next()) {
+    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
+  }
+
+  // Flush outstanding free_list chunks into the free list. Then sweep
+  // over the heap and rebuild the freelist.
+  old_space->Flush();
+  SweepingVisitor sweeping_visitor(old_space->free_list());
+  old_space->IterateObjects(&sweeping_visitor);
+
+  // TODO(erikcorry): Find a better way to delete the mark bits on the new
+  // space.
+  SweepingVisitor new_space_sweeper(NULL);
+  new_space->IterateObjects(&new_space_sweeper);
+
+  UpdateStackLimits();
+  return marking_visitor.number_of_stacks();
+}
+
+void Program::CookStacks(int number_of_stacks) {
+  cooked_stack_deltas_ = List<List<int>>::New(number_of_stacks);
+  Object* raw_current = stack_chain_;
+  for (int i = 0; i < number_of_stacks; ++i) {
+    Stack* current = Stack::cast(raw_current);
+    int number_of_frames = 0;
+    for (Frame count_frames(current); count_frames.MovePrevious();) {
+      number_of_frames++;
+    }
+    cooked_stack_deltas_[i] = List<int>::New(number_of_frames);
+    int index = 0;
+    for (Frame frame(current); frame.MovePrevious();) {
+      Function* function = frame.FunctionFromByteCodePointer();
+      if (function == NULL) continue;
+      uint8* start = function->bytecode_address_for(0);
+      int delta = frame.ByteCodePointer() - start;
+      cooked_stack_deltas_[i][index++] = delta;
+      frame.SetByteCodePointer(reinterpret_cast<uint8*>(function));
+    }
+    raw_current = current->next();
+  }
+  ASSERT(raw_current == Smi::zero());
+}
+
+void Program::UncookAndUnchainStacks() {
+  Object* raw_current = stack_chain_;
+  for (int i = 0; i < cooked_stack_deltas_.length(); ++i) {
+    Stack* current = Stack::cast(raw_current);
+    int index = 0;
+    Frame frame(current);
+    while (frame.MovePrevious()) {
+      Object* value = reinterpret_cast<Object*>(frame.ByteCodePointer());
+      if (value == NULL) continue;
+      int delta = cooked_stack_deltas_[i][index++];
+      Function* function = Function::cast(value);
+      uint8* bcp = function->bytecode_address_for(0) + delta;
+      frame.SetByteCodePointer(bcp);
+    }
+    cooked_stack_deltas_[i].Delete();
+    raw_current = current->next();
+    current->set_next(Smi::FromWord(0));
+  }
+  ASSERT(raw_current == Smi::zero());
+  cooked_stack_deltas_.Delete();
+  stack_chain_ = NULL;
+}
+
+LookupCache* Program::EnsureCache() {
+  if (cache_ == NULL) cache_ = new LookupCache();
+  return cache_;
+}
+
 
 }  // namespace fletch

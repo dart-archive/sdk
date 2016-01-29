@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,6 +15,13 @@
 
       'ReleaseIA32': {
         'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
+      },
+
+      'ReleaseIA32IOS': {
+        'inherit_from': [
+          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_ios_sim',
+          'fletch_clang',
+        ],
       },
 
       'ReleaseIA32Android': {
@@ -149,74 +156,6 @@
         'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm64' ],
       },
 
-      'DevelopIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_ia32', ],
-      },
-
-      'DevelopIA32Android': {
-        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_ia32', ],
-        'defines': [ 'FLETCH_TARGET_ANDROID' ],
-      },
-
-      'DevelopIA32Asan': {
-        'inherit_from': [
-          'fletch_base', 'fletch_develop', 'fletch_ia32', 'fletch_asan',
-        ],
-      },
-
-      'DevelopX64': {
-        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_x64' ],
-      },
-
-      'DevelopX64Asan': {
-        'inherit_from': [
-          'fletch_base', 'fletch_develop', 'fletch_x64', 'fletch_asan',
-        ],
-      },
-
-      'DevelopIA32Clang': {
-        'inherit_from': [
-          'fletch_base', 'fletch_develop', 'fletch_ia32', 'fletch_clang',
-        ],
-      },
-
-      'DevelopIA32ClangAsan': {
-        'inherit_from': [
-          'fletch_base', 'fletch_develop', 'fletch_ia32', 'fletch_asan',
-          'fletch_clang',
-        ],
-      },
-
-      'DevelopX64Clang': {
-        'inherit_from': [
-          'fletch_base', 'fletch_develop', 'fletch_x64', 'fletch_clang',
-        ],
-      },
-
-      'DevelopX64ClangAsan': {
-        'inherit_from': [
-          'fletch_base', 'fletch_develop', 'fletch_x64', 'fletch_asan',
-          'fletch_clang',
-        ],
-      },
-
-      'DevelopARM': {
-        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_arm' ],
-      },
-
-      'DevelopXARM': {
-        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm' ],
-      },
-
-      'DevelopXARMAndroid': {
-        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm' ],
-        'defines': [ 'FLETCH_TARGET_ANDROID' ],
-      },
-
-      'DevelopXARM64': {
-        'inherit_from': [ 'fletch_base', 'fletch_develop', 'fletch_xarm64' ],
-      },
-
       # TODO(ajohnsen): Test configuration - to be removed.
       'ReleaseIA32DisableLiveCoding': {
         'inherit_from': [
@@ -230,22 +169,6 @@
         'inherit_from': [
           'fletch_base', 'fletch_release', 'fletch_ia32',
           'fletch_disable_ffi'
-        ],
-      },
-
-      #TODO(ager): Test configurations - to be removed.
-      'DebugIA32OneProcessHeap': {
-        'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32',
-          'fletch_disable_multiple_process_heaps'
-        ],
-        'defines!': [ 'FLETCH_MARK_SWEEP' ],
-      },
-
-      'DebugIA32OneProcessHeapMarkSweep': {
-        'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32',
-          'fletch_disable_multiple_process_heaps'
         ],
       },
     },

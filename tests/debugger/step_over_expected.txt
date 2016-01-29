@@ -3,40 +3,38 @@ Starting session. Type 'help' for a list of commands.
 > b
 breakpoint set: id: '0' method: 'main' bytecode index: '0'
 > r
-Stack trace:
-> 0: main        @foo()
-> so
-Stack trace:
-> 0: main        @foo()
-> so
-Stack trace:
-> 0: main        @new A()
-> so
-Stack trace:
-> 0: main        @a
+tests/debugger/step_over_test.dart:17:3
+17     foo();
+> n
+tests/debugger/step_over_test.dart:18:3
+18     foo();
+> n
+tests/debugger/step_over_test.dart:19:11
+19     var a = new A();
+> n
+tests/debugger/step_over_test.dart:20:3
+20     a.x;
 > s
-Stack trace:
-> 0: main        @a.x
-> so
-Stack trace:
-> 0: main        @a
+tests/debugger/step_over_test.dart:20:3
+20     a.x;
+> n
+tests/debugger/step_over_test.dart:21:3
+21     a.y();
 > s
-Stack trace:
-> 0: main        @a.y()
-> so
-Stack trace:
-> 0: main        @a
+tests/debugger/step_over_test.dart:21:3
+21     a.y();
+> n
+tests/debugger/step_over_test.dart:22:3
+22     a.y();
 > b y
 breakpoint set: id: '6' method: 'y' bytecode index: '0'
 > s
-Stack trace:
-> 0: main        @a.y()
-> so
-### 'step over' cancelled because another breakpoint was hit
-Stack trace:
-> 0: A.y         @_y
-  1: main        @a.y()
+tests/debugger/step_over_test.dart:22:3
+22     a.y();
+> n
+tests/debugger/step_over_test.dart:11:14
+11     int y() => _y;
 > finish
-Stack trace:
-> 0: main        @1
+tests/debugger/step_over_test.dart:23:3
+23     1;
 > q

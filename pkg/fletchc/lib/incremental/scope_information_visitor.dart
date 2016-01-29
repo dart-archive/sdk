@@ -2,14 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library trydart.poi.scope_information_visitor;
+library fletchc.incremental.scope_information_visitor;
 
 import 'package:compiler/src/elements/modelx.dart' as modelx;
 
 import 'package:compiler/src/elements/visitor.dart' show
     ElementVisitor;
 
-import 'package:compiler/src/dart2jslib.dart' show
+import 'package:compiler/src/compiler.dart' show
     Compiler;
 
 import 'package:compiler/src/elements/elements.dart' show
@@ -71,7 +71,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
         // TODO(ahe): We omit the import scope if there is no current
         // class. That's wrong.
         omitEnclosing: ignoreImports || currentClass == null,
-        name: e.getLibraryName(),
+        name: e.libraryName,
         serializeEnclosing: () {
           // The enclosing scope of a library is a scope which contains all the
           // imported names.
@@ -117,7 +117,7 @@ class ScopeInformationVisitor extends ElementVisitor/* <void> */ {
       {bool isStatic: false,
        bool omitEnclosing: false,
        bool includeSuper: false}) {
-    e.ensureResolved(compiler);
+    e.ensureResolved(compiler.resolution);
     bool isFirst = true;
     var serializeEnclosing;
     String kind;

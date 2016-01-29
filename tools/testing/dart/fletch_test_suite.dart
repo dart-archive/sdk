@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -97,6 +97,17 @@ class FletchTestSuite extends TestSuite {
       // Ignored, we assume the file did not exist.
     }
 
+    String javaHome = _guessJavaHome(configuration["arch"]);
+    if (javaHome == null) {
+      String arch = configuration["arch"];
+      print("Notice: Java tests are disabled");
+      print("Unable to find a JDK installation for architecture $arch");
+      print("Install a JDK or set JAVA_PATH to an existing installation.");
+      // TODO(zerny): Throw an error if no-java is not supplied.
+    } else {
+      print("Notice: Enabled Java tests using JDK at $javaHome");
+    }
+
     bool helperProgramExited = false;
     io.Process vmProcess;
     ReadTestExpectationsInto(
@@ -120,6 +131,7 @@ class FletchTestSuite extends TestSuite {
           ['-Dfletch-vm=$buildDir/fletch-vm',
            '-Dfletch.version=$version',
            '-Ddart-sdk=third_party/dart/sdk/',
+           '-Djava-home=$javaHome',
            '-Dtest.dart.build-dir=$buildDir',
            '-Dtest.dart.build-arch=${configuration["arch"]}',
            '-Dtest.dart.build-system=${configuration["system"]}',
@@ -171,6 +183,75 @@ class FletchTestSuite extends TestSuite {
 
   void cleanup() {
     completer.allDone();
+  }
+
+  String _guessJavaHome(String buildArchitecture) {
+    String arch = buildArchitecture == 'ia32' ? '32' : '64';
+
+    // Try to locate a valid installation based on JAVA_HOME.
+    String javaHome =
+        _guessJavaHomeArch(io.Platform.environment['JAVA_HOME'], arch);
+    if (javaHome != null) return javaHome;
+
+    // Try to locate a valid installation using the java_home utility.
+    String javaHomeUtil = '/usr/libexec/java_home';
+    if (new io.File(javaHomeUtil).existsSync()) {
+      List<String> args = <String>['-v', '1.6+', '-d', arch];
+      io.ProcessResult result =
+          io.Process.runSync(javaHomeUtil, args);
+      if (result.exitCode == 0) {
+        String javaHome = result.stdout.trim();
+        if (_isValidJDK(javaHome)) return javaHome;
+      }
+    }
+
+    // Try to locate a valid installation using the path to javac.
+    io.ProcessResult result =
+        io.Process.runSync('command', ['-v', 'javac'], runInShell: true);
+    if (result.exitCode == 0) {
+      String javac = result.stdout.trim();
+      while (io.FileSystemEntity.isLinkSync(javac)) {
+        javac = new io.Link(javac).resolveSymbolicLinksSync();
+      }
+      // TODO(zerny): Take into account Mac javac paths can be of the form:
+      // .../Versions/X/Commands/javac
+      String javaHome =
+          _guessJavaHomeArch(javac.replaceAll('/bin/javac', ''), arch);
+      if (javaHome != null) return javaHome;
+    }
+
+    return null;
+  }
+
+  String _guessJavaHomeArch(String javaHome, String arch) {
+    if (javaHome == null) return null;
+
+    // Check if the java installation supports the requested architecture.
+    if (new io.File('$javaHome/bin/java').existsSync()) {
+      int supportsVersion = io.Process.runSync(
+          '$javaHome/bin/java', ['-d$arch', '-version']).exitCode;
+      if (supportsVersion == 0 && _isValidJDK(javaHome)) return javaHome;
+    }
+
+    // Check for architecture specific installation by post-fixing arch.
+    String archPostfix = '${javaHome}-$arch';
+    if (_isValidJDK(archPostfix)) return archPostfix;
+
+    // Check for architecture specific installation by replacing amd64 and i386.
+    String archReplace;
+    if (arch == '32' && javaHome.contains('amd64')) {
+      archReplace = javaHome.replaceAll('amd64', 'i386');
+    } else if (arch == '64' && javaHome.contains('i386')) {
+      archReplace = javaHome.replaceAll('i386', 'amd64');
+    }
+    if (_isValidJDK(archReplace)) return archReplace;
+
+    return null;
+  }
+
+  bool _isValidJDK(String javaHome) {
+    if (javaHome == null) return false;
+    return new io.File('$javaHome/include/jni.h').existsSync();
   }
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,26 +12,35 @@ import 'documentation.dart' show
 import '../diagnostic.dart' show
     throwInternalError;
 
-import '../driver/developer.dart' show
-    discoverDevices;
+import '../worker/developer.dart' show
+  discoverDevices,
+  showSessions,
+  showSessionSettings;
 
 const Action showAction = const Action(
     show, showDocumentation, requiresSession: true,
-    supportedTargets: const <TargetKind>[TargetKind.LOG, TargetKind.DEVICES]);
+    requiresTarget: true,
+    supportedTargets: const <TargetKind>[
+        TargetKind.DEVICES,
+        TargetKind.LOG,
+        TargetKind.SESSIONS,
+        TargetKind.SETTINGS,
+    ]);
 
 Future<int> show(AnalyzedSentence sentence, VerbContext context) {
-  var task;
   switch (sentence.target.kind) {
     case TargetKind.LOG:
-      task = new ShowLogTask();
-      break;
+      return context.performTaskInWorker(const ShowLogTask());
     case TargetKind.DEVICES:
-      task = new ShowDevicesTask();
-      break;
+      return context.performTaskInWorker(const ShowDevicesTask());
+    case TargetKind.SESSIONS:
+      showSessions();
+      return new Future.value(0);
+    case TargetKind.SETTINGS:
+      return context.performTaskInWorker(const ShowSettingsTask());
     default:
       throwInternalError("Unexpected ${sentence.target}");
   }
-  return context.performTaskInWorker(task);
 }
 
 class ShowLogTask extends SharedTask {
@@ -41,7 +50,7 @@ class ShowLogTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return showLogTask();
   }
 }
@@ -58,7 +67,7 @@ class ShowDevicesTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return showDevicesTask();
   }
 }
@@ -66,4 +75,16 @@ class ShowDevicesTask extends SharedTask {
 Future<int> showDevicesTask() async {
   await discoverDevices();
   return 0;
+}
+
+class ShowSettingsTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+
+  const ShowSettingsTask();
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<ClientCommand> commandIterator) async {
+    return await showSessionSettings();
+  }
 }

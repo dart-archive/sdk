@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,7 +7,6 @@ library fletchc.bytecode_assembler;
 import '../bytecodes.dart';
 
 const int IMPLICIT_STACK_OVERFLOW_LIMIT = 32;
-const int RETURN_NARROW_MAX_STACK_SIZE = 255;
 const int frameDescriptorSize = 3;
 
 class BytecodeLabel {
@@ -51,11 +50,21 @@ class BytecodeAssembler {
   int stackSize = 0;
   int maxStackSize = 0;
 
-  // A bind after a terminator will still look like the last bytecode is a
-  // terminator, however, due to the bind it's not.
+  // A bind after a terminator will still look like the last bytecode
+  // is a terminator, however, due to the bind it's not.
   bool hasBindAfterTerminator = false;
 
+  // A bind after a pop will still look like the last bytecode is a
+  // pop, however, due to the bind we cannot collapse more pops
+  // together.
+  bool hasBindAfterPop = false;
+
   BytecodeAssembler(this.functionArity);
+
+  int computeParameterSlot(int parameter) {
+    assert(parameter >= 0 && parameter < functionArity);
+    return parameter - frameDescriptorSize - functionArity;
+  }
 
   void reuse() {
     bytecodes.clear();
@@ -76,11 +85,12 @@ class BytecodeAssembler {
   void addCatchFrameRange(int start, int end) {
     catchRanges
         ..add(start)
-        ..add(end);
+        ..add(end)
+        ..add(stackSize);
   }
 
   void loadConst(int id) {
-    internalAdd(new LoadConstUnfold(id));
+    internalAdd(new LoadConst(id));
   }
 
   void loadLocal(int offset) {
@@ -168,6 +178,16 @@ class BytecodeAssembler {
     loadBoxedHelper(computeParameterOffset(parameter));
   }
 
+  void loadParameterSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    loadLocalHelper(offset);
+  }
+
+  void loadBoxedParameterSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    loadBoxedHelper(offset);
+  }
+
   void loadStatic(int index) {
     internalAdd(new LoadStatic(index));
   }
@@ -251,6 +271,16 @@ class BytecodeAssembler {
     storeBoxedHelper(computeParameterOffset(parameter));
   }
 
+  void storeParameterSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    storeLocalHelper(offset);
+  }
+
+  void storeBoxedParameterSlot(int parameterSlot) {
+    int offset = stackSize - parameterSlot - 1;
+    storeBoxedHelper(offset);
+  }
+
   void storeStatic(int index) {
     internalAdd(new StoreStatic(index));
   }
@@ -265,13 +295,13 @@ class BytecodeAssembler {
 
   void invokeStatic(int id, int arity) {
     internalAddStackPointerDifference(
-        new InvokeStaticUnfold(id),
+        new InvokeStatic(id),
         1 - arity);
   }
 
   void invokeFactory(int id, int arity) {
     internalAddStackPointerDifference(
-        new InvokeFactoryUnfold(id),
+        new InvokeFactory(id),
         1 - arity);
   }
 
@@ -353,39 +383,58 @@ class BytecodeAssembler {
     internalAddStackPointerDifference(new InvokeTestUnfold(selector), -arity);
   }
 
-  void invokeSelector() {
-    internalAddStackPointerDifference(const InvokeSelector(0), 0);
+  void invokeSelector(int slot) {
+    internalAddStackPointerDifference(new InvokeSelector(slot), 0);
   }
 
   void pop() {
-    internalAdd(new Pop());
+    if (hasBindAfterPop) {
+      internalAdd(new Pop());
+      hasBindAfterPop = false;
+      return;
+    }
+    Bytecode last = bytecodes.last;
+    if (last.opcode == Opcode.Drop) {
+      Drop drop = last;
+      int amount = drop.uint8Argument0 + 1;
+      if (amount <= 255) {
+        bytecodes[bytecodes.length - 1] = new Drop(amount);
+        applyStackSizeFix(-1);
+      } else {
+        internalAdd(new Pop());
+      }
+    } else if (last.opcode == Opcode.Pop) {
+      bytecodes[bytecodes.length - 1] = new Drop(2);
+      byteSize += 1;
+      applyStackSizeFix(-1);
+    } else {
+      internalAdd(new Pop());
+    }
+
   }
 
   void popMany(int count) {
-    // TODO(ajohnsen): Create bytecode for this.
-    for (int i = 0; i < count; i++) {
+    while (count > 255) {
+      internalAddStackPointerDifference(new Drop(255), -255);
+      count -= 255;
+    }
+    if (count > 1) {
+      internalAddStackPointerDifference(new Drop(count), -count);
+    } else if (count == 1) {
       internalAdd(new Pop());
     }
+    hasBindAfterPop = false;
   }
 
   void ret() {
     hasBindAfterTerminator = false;
     if (stackSize <= 0) throw "Bad stackSize for return bytecode: $stackSize";
-    assert(functionArity <= 255);
-    if (stackSize > RETURN_NARROW_MAX_STACK_SIZE) {
-      internalAdd(new ReturnWide(stackSize, functionArity));
-    } else {
-      internalAdd(new Return(stackSize, functionArity));
-    }
+    internalAdd(const Return());
   }
 
   void returnNull() {
     hasBindAfterTerminator = false;
-    if (stackSize < 0 || stackSize > RETURN_NARROW_MAX_STACK_SIZE) {
-      throw "Bad stackSize for return-null bytecode: $stackSize";
-    }
-    assert(functionArity <= 255);
-    internalAdd(new ReturnNull(stackSize, functionArity));
+    internalAdd(const ReturnNull());
   }
 
   void identical() {
@@ -406,6 +455,7 @@ class BytecodeAssembler {
 
   void internalBind(BytecodeLabel label, bool isSubroutineReturn) {
     if (label.isUsed) hasBindAfterTerminator = true;
+    hasBindAfterPop = true;
     assert(label.position == -1);
     // TODO(ajohnsen): If the previous bytecode is a branch to this label,
     // consider popping it - if no other binds has happened at this bytecode
@@ -526,7 +576,7 @@ class BytecodeAssembler {
 
   void allocate(int classId, int fields, {bool immutable: false}) {
     var instruction = immutable ?
-        new AllocateImmutableUnfold(classId) : new AllocateUnfold(classId);
+        new AllocateImmutable(classId) : new Allocate(classId);
     internalAddStackPointerDifference(instruction, 1 - fields);
   }
 

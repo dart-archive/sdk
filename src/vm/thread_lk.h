@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -18,12 +18,10 @@ namespace fletch {
 // Thread handles can be used for referring to threads and testing equality.
 class ThreadIdentifier {
  public:
-  ThreadIdentifier() : thread_(get_current_thread()) { }
+  ThreadIdentifier() : thread_(get_current_thread()) {}
 
   // Test for thread running.
-  bool IsSelf() const {
-    return thread_ == get_current_thread();
-  }
+  bool IsSelf() const { return thread_ == get_current_thread(); }
 
   void Join() {
     int retcode;
@@ -33,12 +31,11 @@ class ThreadIdentifier {
  private:
   friend class Thread;
 
-  explicit ThreadIdentifier(thread_t *thread) : thread_(thread) { }
+  explicit ThreadIdentifier(thread_t* thread) : thread_(thread) {}
 
   thread_t* thread_;
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_THREAD_LK_H_

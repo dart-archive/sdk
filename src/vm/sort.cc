@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,8 +11,8 @@
 
 namespace fletch {
 
-void InsertionSort(uint8* array, size_t elements,
-                   size_t element_size, VoidCompare compare) {
+void InsertionSort(uint8* array, size_t elements, size_t element_size,
+                   VoidCompare compare) {
   uint8 temp_buffer[128];
   ASSERT(element_size <= 128);
   uint8* end = array + elements * element_size;
@@ -46,7 +46,7 @@ static size_t MaskLessThan(size_t max) {
   max &= 0xffffffffu;
 
   // Smear the bits.
-  max |= max >> 16;;
+  max |= max >> 16;
   max |= max >> 8;
   max |= max >> 4;
   max |= max >> 2;
@@ -79,8 +79,8 @@ void ChoosePivot(uint8* left, uint8* pivot, size_t element_size,
   if (compare(right, pivot)) Swap(right, pivot, element_size);
 }
 
-void VoidSort(uint8* start, size_t elements,
-              size_t element_size, VoidCompare compare) {
+void VoidSort(uint8* start, size_t elements, size_t element_size,
+              VoidCompare compare) {
   while (elements >= kMinElementsForQuickSort) {
     size_t mask = MaskLessThan(elements - 3);
     uint8* pivot = start + (elements - 1) * element_size;
@@ -117,8 +117,7 @@ void VoidSort(uint8* start, size_t elements,
 
     // Recurse on short interval to limit recursion depth.
     if (pivot - partition < partition - start) {
-      VoidSort(partition, elements - partition_index,
-               element_size, compare);
+      VoidSort(partition, elements - partition_index, element_size, compare);
       elements = partition_index;
     } else {
       VoidSort(start, partition_index, element_size, compare);

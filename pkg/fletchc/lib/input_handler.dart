@@ -1,8 +1,8 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of fletch.session;
+part of fletch.vm_session;
 
 const String BANNER = """
 Starting session. Type 'help' for a list of commands.
@@ -11,20 +11,22 @@ Starting session. Type 'help' for a list of commands.
 const String HELP = """
 Commands:
   'help'                                show list of commands
-  'r'/'run'                             run main
+  'r'/'run'                             start program
   'b [method name] [bytecode index]'    set breakpoint
   'bf <file> [line] [column]'           set breakpoint
   'bf <file> [line] [pattern]'          set breakpoint on first occurrence of
                                         the string pattern on the indicated line
   'd <breakpoint id>'                   delete breakpoint
   'lb'                                  list breakpoints
-  's'                                   step
-  'so'                                  step over
-  'fibers'                              list all process fibers
+  's'                                   step until next expression,
+                                        enters method invocations
+  'n'                                   step until next expression,
+                                        does not enter method invocations
+  'fibers', 'lf'                        list all process fibers
   'finish'                              finish current method (step out)
   'restart'                             restart the selected frame
-  'sb'                                  step bytecode
-  'sob'                                 step over bytecode
+  'sb'                                  step bytecode, enters method invocations
+  'nb'                                  step over bytecode, does not enter method invocations
   'c'                                   continue execution
   'bt'                                  backtrace
   'f <n>'                               select frame
@@ -32,6 +34,7 @@ Commands:
   'p <name>'                            print the value of local variable
   'p *<name>'                           print the structure of local variable
   'p'                                   print the values of all locals
+  'processes', 'lp'                     list all processes
   'disasm'                              disassemble code for frame
   't <flag>'                            toggle one of the flags:
                                           - 'internal' : show internal frames
@@ -42,27 +45,35 @@ class InputHandler {
   final Session session;
   final Stream<String> stream;
   final bool echo;
+  final Uri base;
 
   String previousLine = '';
 
-  InputHandler(this.session, this.stream, this.echo);
+  int processPagingCount = 10;
+  int processPagingCurrent = 0;
+
+  InputHandler(this.session, this.stream, this.echo, this.base);
 
   void printPrompt() => session.writeStdout('> ');
 
-  Future handleLine(String line) async {
+  writeStdout(String s) => session.writeStdout(s);
+
+  writeStdoutLine(String s) => session.writeStdout("$s\n");
+
+  Future handleLine(StreamIterator stream, SessionState state) async {
+    String line = stream.current;
     if (line.isEmpty) line = previousLine;
     if (line.isEmpty) {
       printPrompt();
       return;
     }
-    previousLine = line;
-    if (echo) session.writeStdoutLine(line);
+    if (echo) writeStdoutLine(line);
     List<String> commandComponents =
         line.split(' ').where((s) => s.isNotEmpty).toList();
     String command = commandComponents[0];
     switch (command) {
       case 'help':
-        session.writeStdoutLine(HELP);
+        writeStdoutLine(HELP);
         break;
       case 'b':
         var method =
@@ -71,17 +82,17 @@ class InputHandler {
             (commandComponents.length > 2) ? commandComponents[2] : '0';
         bci = int.parse(bci, onError: (_) => null);
         if (bci == null) {
-          session.writeStdoutLine('### invalid bytecode index: $bci');
+          writeStdoutLine('### invalid bytecode index: $bci');
           break;
         }
         List<Breakpoint> breakpoints =
             await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
         if (breakpoints != null) {
           for (Breakpoint breakpoint in breakpoints) {
-            session.writeStdoutLine("breakpoint set: $breakpoint");
+            writeStdoutLine("breakpoint set: $breakpoint");
           }
         } else {
-          session.writeStdoutLine(
+          writeStdoutLine(
               "### failed to set breakpoint at method: $method index: $bci");
         }
         break;
@@ -90,86 +101,244 @@ class InputHandler {
             (commandComponents.length > 1) ? commandComponents[1] : '';
         var line =
             (commandComponents.length > 2) ? commandComponents[2] : '1';
-        var column =
+        var columnOrPattern =
             (commandComponents.length > 3) ? commandComponents[3] : '1';
-        line = int.parse(line, onError: (_) => null);
-        if (line == null) {
-          session.writeStdoutLine('### invalid line number: $line');
+
+        List<Uri> files = <Uri>[];
+
+        if (await new File.fromUri(base.resolve(file)).exists()) {
+          // If the supplied file resolved directly to a file use it.
+          files.add(base.resolve(file));
+        } else {
+          // Otherwise search for possible matches.
+          List<Uri> matches = session.findSourceFiles(file).toList()..sort(
+              (a, b) => a.toString().compareTo(b.toString()));
+          Iterable<int> selection = await select(
+              stream,
+              "Multiple matches for file pattern $file",
+              matches.map((uri) =>
+                uri.toString().replaceFirst(base.toString(), '')));
+          for (int selected in selection) {
+            files.add(matches.elementAt(selected));
+          }
+        }
+
+        if (files.isEmpty) {
+          writeStdoutLine('### no matching file found for: $file');
           break;
         }
-        int columnNumber = int.parse(column, onError: (_) => null);
+
+        line = int.parse(line, onError: (_) => null);
+        if (line == null || line < 1) {
+          writeStdoutLine('### invalid line number: $line');
+          break;
+        }
+
+        List<Breakpoint> breakpoints = <Breakpoint>[];
+        int columnNumber = int.parse(columnOrPattern, onError: (_) => null);
         if (columnNumber == null) {
-          await session.setFileBreakpointFromPattern(file, line, column);
+          for (Uri fileUri in files) {
+            Breakpoint breakpoint = await session.setFileBreakpointFromPattern(
+                fileUri, line, columnOrPattern);
+            if (breakpoint == null) {
+              writeStdoutLine(
+                  '### failed to set breakpoint for pattern $columnOrPattern ' +
+                  'on $fileUri:$line');
+            } else {
+              breakpoints.add(breakpoint);
+            }
+          }
+        } else if (columnNumber < 1) {
+          writeStdoutLine('### invalid column number: $columnOrPattern');
+          break;
         } else {
-          await session.setFileBreakpoint(file, line, columnNumber);
+          for (Uri fileUri in files) {
+            Breakpoint breakpoint =
+                await session.setFileBreakpoint(fileUri, line, columnNumber);
+            if (breakpoint == null) {
+              writeStdoutLine(
+                  '### failed to set breakpoint ' +
+                  'on $fileUri:$line:$columnNumber');
+            } else {
+              breakpoints.add(breakpoint);
+            }
+          }
+        }
+        if (breakpoints.isNotEmpty) {
+          for (Breakpoint breakpoint in breakpoints) {
+            writeStdoutLine("breakpoint set: $breakpoint");
+          }
+        } else {
+          writeStdoutLine(
+              "### failed to set any breakpoints");
         }
         break;
       case 'bt':
-        await session.backtrace();
+        if (!checkLoaded('cannot print backtrace')) {
+          break;
+        }
+        BackTrace backtrace = await session.backTrace();
+        if (backtrace == null) {
+          writeStdoutLine('### failed to get backtrace for current program');
+        } else {
+          writeStdout(backtrace.format());
+        }
         break;
       case 'f':
         var frame =
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
         frame = int.parse(frame, onError: (_) => null);
         if (frame == null || !session.selectFrame(frame)) {
-          session.writeStdoutLine('### invalid frame number: $frame');
+          writeStdoutLine('### invalid frame number: $frame');
         }
         break;
       case 'l':
-        String listing = await session.list();
-        if (listing == null) {
-          session.writeStdoutLine("### failed listing source");
+        if (!checkLoaded('nothing to list')) {
+          break;
+        }
+        BackTrace trace = await session.backTrace();
+        String listing = trace != null ? trace.list(state) : null;
+        if (listing != null) {
+          writeStdoutLine(listing);
         } else {
-          session.writeStdoutLine(listing);
+          writeStdoutLine("### failed listing source");
         }
         break;
       case 'disasm':
-        String disassembly = await session.disasm();
-        if (disassembly == null) {
-          session.writeStdoutLine("### failed disassembling source");
-        } else {
-          session.writeStdoutLine(disassembly);
+        if (checkLoaded('cannot show bytecodes')) {
+          BackTrace backtrace = await session.backTrace();
+          String disassembly = backtrace != null ? backtrace.disasm() : null;
+          if (disassembly != null) {
+            writeStdout(disassembly);
+          } else {
+            writeStdoutLine(
+                "### could not disassemble source for current frame");
+          }
         }
         break;
       case 'c':
-        Command response = await session.cont();
-        if (response is UncaughtException) {
-          await session.uncaughtException();
-        } else if (response is! ProcessTerminated) {
-          await session.backtrace();
+        if (checkRunning('cannot continue')) {
+          await handleProcessStopResponse(await session.cont(), state);
         }
         break;
       case 'd':
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
         id = int.parse(id, onError: (_) => null);
         if (id == null) {
-          session.writeStdoutLine('### invalid breakpoint number: $id');
+          writeStdoutLine('### invalid breakpoint number: $id');
           break;
         }
-        await session.deleteBreakpoint(id);
+        Breakpoint breakpoint = await session.deleteBreakpoint(id);
+        if (breakpoint == null) {
+          writeStdoutLine("### invalid breakpoint id: $id");
+          break;
+        }
+        writeStdoutLine("### deleted breakpoint: $breakpoint");
+        break;
+      case 'processes':
+      case 'lp':
+        if (checkRunning('cannot list processes')) {
+          // Reset current paging point if not continuing from an 'lp' command.
+          if (previousLine != 'lp' && previousLine != 'processes') {
+            processPagingCurrent = 0;
+          }
+
+          List<int> processes = await session.processes();
+          processes.sort();
+
+          int count = processes.length;
+          int start = processPagingCurrent;
+          int end;
+          if (start + processPagingCount < count) {
+            processPagingCurrent += processPagingCount;
+            end = processPagingCurrent;
+          } else {
+            processPagingCurrent = 0;
+            end = count;
+          }
+
+          if (processPagingCount < count) {
+            writeStdout("displaying range [$start;${end-1}] ");
+            writeStdoutLine("of $count processes");
+          }
+          for (int i = start; i < end; ++i) {
+            int processId = processes[i];
+            BackTrace stack = await session.processStack(processId);
+            writeStdoutLine('\nprocess ${processId}');
+            writeStdout(stack.format());
+          }
+          writeStdoutLine('');
+        }
         break;
       case 'fibers':
-        await session.fibers();
+      case 'lf':
+        if (checkRunning('cannot show fibers')) {
+          List<BackTrace> traces = await session.fibers();
+          for (int fiber = 0; fiber < traces.length; ++fiber) {
+            writeStdoutLine('\nfiber $fiber');
+            writeStdout(traces[fiber].format());
+          }
+          writeStdoutLine('');
+        }
         break;
       case 'finish':
-        await session.stepOut();
+        if (checkRunning('cannot finish method')) {
+          await handleProcessStopResponse(await session.stepOut(), state);
+        }
         break;
       case 'restart':
-        await session.restart();
+        if (!checkLoaded('cannot restart')) {
+          break;
+        }
+        BackTrace trace = await session.backTrace();
+        if (trace == null) {
+          writeStdoutLine("### cannot restart when nothing is executing");
+          break;
+        }
+        if (trace.length <= 1) {
+          writeStdoutLine("### cannot restart entry frame");
+          break;
+        }
+        await handleProcessStopResponse(await session.restart(), state);
         break;
       case 'lb':
-        session.listBreakpoints();
+        List<Breakpoint> breakpoints = session.breakpoints();
+        if (breakpoints == null || breakpoints.isEmpty) {
+          writeStdoutLine('### no breakpoints');
+        } else {
+          writeStdoutLine("### breakpoints:");
+          for (var bp in breakpoints) {
+            writeStdoutLine('$bp');
+          }
+        }
         break;
       case 'p':
+        if (!checkLoaded('nothing to print')) {
+          break;
+        }
         if (commandComponents.length <= 1) {
-          await session.printAllVariables();
+          List<RemoteObject> variables = await session.processAllVariables();
+          if (variables.isEmpty) {
+            writeStdoutLine('### No variables in scope');
+          } else {
+            for (RemoteObject variable in variables) {
+              writeStdoutLine(session.remoteObjectToString(variable));
+            }
+          }
           break;
         }
         String variableName = commandComponents[1];
+        RemoteObject variable;
         if (variableName.startsWith('*')) {
-          await session.printVariableStructure(variableName.substring(1));
+          variableName = variableName.substring(1);
+          variable = await session.processVariableStructure(variableName);
         } else {
-          await session.printVariable(variableName);
+          variable = await session.processVariable(variableName);
+        }
+        if (variable == null) {
+          writeStdoutLine('### no such variable: $variableName');
+        } else {
+          writeStdoutLine(session.remoteObjectToString(variable));
         }
         break;
       case 'q':
@@ -178,34 +347,30 @@ class InputHandler {
         break;
       case 'r':
       case 'run':
-        Command response = await session.debugRun();
-        if (response is UncaughtException) {
-          await session.uncaughtException();
-        } else if (response is! ProcessTerminated) {
-          await session.backtrace();
+        if (checkNotLoaded("use 'restart' to run again")) {
+          await handleProcessStopResponse(await session.debugRun(), state);
         }
         break;
       case 's':
-        Command response = await session.step();
-        if (response is UncaughtException) {
-          await session.uncaughtException();
-        } else if (response is! ProcessTerminated) {
-          await session.backtrace();
+        if (checkRunning('cannot step to next expression')) {
+          await handleProcessStopResponse(await session.step(), state);
+        }
+        break;
+      case 'n':
+        if (checkRunning('cannot go to next expression')) {
+          await handleProcessStopResponse(await session.stepOver(), state);
         }
         break;
       case 'sb':
-        await session.stepBytecode();
-        break;
-      case 'so':
-        Command response = await session.stepOver();
-        if (response is UncaughtException) {
-          await session.uncaughtException();
-        } else if (response is! ProcessTerminated) {
-          await session.backtrace();
+        if (checkRunning('cannot step bytecode')) {
+          await handleProcessStopResponse(await session.stepBytecode(), state);
         }
         break;
-      case 'sob':
-        await session.stepOverBytecode();
+      case 'nb':
+        if (checkRunning('cannot step over bytecode')) {
+          await handleProcessStopResponse(
+              await session.stepOverBytecode(), state);
+        }
         break;
       case 't':
         String toggle;
@@ -214,30 +379,136 @@ class InputHandler {
         }
         switch (toggle) {
           case 'internal':
-            await session.toggleInternal();
+            bool internalVisible = session.toggleInternal();
+            writeStdoutLine(
+                '### internal frame visibility set to: $internalVisible');
+            break;
+          case 'verbose':
+            bool verbose = session.toggleVerbose();
+            writeStdoutLine('### verbose printing set to: $verbose');
             break;
           default:
-            session.writeStdoutLine('### invalid flag $toggle');
+            writeStdoutLine('### invalid flag $toggle');
             break;
         }
         break;
       default:
-        session.writeStdoutLine('### unknown command: $command');
+        writeStdoutLine('### unknown command: $command');
         break;
     }
+    previousLine = line;
     if (!session.terminated) printPrompt();
   }
 
-  Future<int> run() async {
-    session.writeStdoutLine(BANNER);
+  // This method is used to deal with the stopped process command responses
+  // that can be returned when sending the Fletch VM a command request.
+  Future handleProcessStopResponse(
+      VmCommand response,
+      SessionState state) async {
+    String output = await session.processStopResponseToString(response, state);
+    if (output != null && output.isNotEmpty) {
+      writeStdout(output);
+    }
+  }
+
+  bool checkLoaded([String postfix]) {
+    if (!session.loaded) {
+      String prefix = '### process not loaded';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return session.loaded;
+  }
+
+  bool checkNotLoaded([String postfix]) {
+    if (session.loaded) {
+      String prefix = '### process already loaded';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return !session.loaded;
+  }
+
+  bool checkRunning([String postfix]) {
+    if (!session.running) {
+      String prefix = '### process not running';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return session.running;
+  }
+
+  bool checkNotRunning([String postfix]) {
+    if (session.running) {
+      String prefix = '### process already running';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return !session.running;
+  }
+
+  Future<int> run(SessionState state) async {
+    writeStdoutLine(BANNER);
     printPrompt();
-    await for(var line in stream) {
-      await handleLine(line);
-      // Breaking out of the await for closes the input
-      // stream subscription.
-      if (session.terminated) break;
+    StreamIterator streamIterator = new StreamIterator(stream);
+    while (await streamIterator.moveNext()) {
+      try {
+        await handleLine(streamIterator, state);
+      } catch (e, s) {
+        Future cancel = streamIterator.cancel()?.catchError((_) {});
+        if (!session.terminated) {
+          await session.terminateSession().catchError((_) {});
+        }
+        await cancel;
+        return new Future.error(e, s);
+      }
+      if (session.terminated) {
+        await streamIterator.cancel();
+      }
     }
     if (!session.terminated) await session.terminateSession();
     return 0;
+  }
+
+  // Prompt the user to select among a set of choices.
+  // Returns a set of indexes that are the chosen indexes from the input set.
+  // If the size of choices is less then two, then the result is that the full
+  // input set is selected without prompting the user. Otherwise the user is
+  // interactively prompted to choose a selection.
+  Future<Iterable<int>> select(
+      StreamIterator stream,
+      String message,
+      Iterable<String> choices) async {
+    int length = choices.length;
+    if (length == 0) return <int>[];
+    if (length == 1) return <int>[0];
+    writeStdout("$message. ");
+    writeStdoutLine("Please select from the following choices:");
+    int i = 1;
+    int pad = 2 + "$length".length;
+    for (String choice in choices) {
+      writeStdoutLine("${i++}".padLeft(pad) + ": $choice");
+    }
+    writeStdoutLine('a'.padLeft(pad) + ": all of the above");
+    writeStdoutLine('n'.padLeft(pad) + ": none of the above");
+    while (true) {
+      printPrompt();
+      bool hasNext = await stream.moveNext();
+      if (!hasNext) {
+        writeStdoutLine("### failed to read choice input");
+        return <int>[];
+      }
+      String line = stream.current;
+      if (echo) writeStdoutLine(line);
+      if (line == 'n') {
+        return <int>[];
+      }
+      if (line == 'a') {
+        return new List<int>.generate(length, (i) => i);
+      }
+      int choice = int.parse(line, onError: (_) => 0);
+      if (choice > 0 && choice <= length) {
+        return <int>[choice - 1];
+      }
+      writeStdoutLine("Invalid choice: $choice");
+      writeStdoutLine("Please select a number between 1 and $length, " +
+                      "'a' for all, or 'n' for none.");
+    }
   }
 }

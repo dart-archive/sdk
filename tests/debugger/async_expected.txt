@@ -3,11 +3,14 @@ Starting session. Type 'help' for a list of commands.
 > b breakHere
 breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 > r
-Stack trace:
-> 0: breakHere                       @void breakHere() {}
+tests/debugger/async_test.dart:12:1
+12   void breakHere() { }
+> bt
+* 0: breakHere                       @void breakHere() {}
 > t internal
-Stack trace:
-> 0: breakHere                       @void breakHere() {}
+### internal frame visibility set to: true
+> bt
+* 0: breakHere                       @void breakHere() {}
   1: call                          
   2: Future.call                     @computation()
   3: Object._noSuchMethodTrampoline

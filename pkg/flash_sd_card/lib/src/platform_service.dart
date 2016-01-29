@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:power_management/power_management.dart' as power_management;
+import 'package:sdk_services/sdk_services.dart';
 import 'context.dart';
 
 /// The PlaformService class provide the methods which can vary from
@@ -28,19 +30,24 @@ abstract class PlatformService {
 
   PlatformService._(this.ctx);
 
+  /// Perform async initialization on the platform service object.
+  Future initialize() async {
+    await power_management.initPowerManagement();
+  }
+
   /// Find an SD card through user interaction. The user is asked to remove
   /// and insert the SD card and through diffing the content of '/dev' the
   /// device name for the card is determined.
   Future<String> findSDCard() async {
     await ctx.readLine(
-        'Please remove all SD cards from this computer, and then press enter');
+        'Please remove all SD cards from this computer. Then press Enter.');
     Set defaultDisks = new Set.from(await listPossibleSDCards());
     ctx.log('Default disks $defaultDisks');
 
     // Wait for an additional disk.
     await ctx.readLine(
-      'Please insert the SD card you want to use with Fletch, '
-      'and then press enter');
+      'Please insert the SD card you want to use with Fletch. '
+      'Then press Enter.');
     int retryCount = 10;
     while (true) {
       Set disks = new Set.from(await listPossibleSDCards());
@@ -61,31 +68,15 @@ abstract class PlatformService {
   Future<List<String>> listPossibleSDCards();
 
   /// Download the [url] to [file] and provide progress information.
-  Future downloadWithProgress(Uri url, File destination) async {
-    ctx.log('Downloading $url');
-    var client = new HttpClient();
-    var request = await client.getUrl(url);
-    var response = await request.close();
-    ctx.log('Response headers:\n${response.headers}');
-
-    int totalBytes = response.headers.contentLength;
-    int bytes = 0;
-    StreamTransformer progressTransformer =
-        new StreamTransformer<List<int>, List<int>>.fromHandlers(
-          handleData: (List<int> value, EventSink<List<int>> sink) {
-            bytes += value.length;
-            ctx.updateProgress('received $bytes of $totalBytes');
-            sink.add(value);
-          },
-          handleDone: (EventSink<List<int>> sink) {
-            ctx.endProgress('DONE');
-            sink.close();
-          });
-
-    ctx.startProgress('Downloading: ');
-    await response.transform(progressTransformer).pipe(destination.openWrite());
-    await client.close();
-    ctx.log('Finished downloading $url');
+  Future downloadWithProgress(
+      Uri url,
+      File destination,
+      {int retryCount: 3,
+       Duration retryInterval: const Duration(seconds: 3)}) async {
+    SDKServices service = new SDKServices(ctx);
+    return service.downloadWithProgress(url, destination,
+                                        retryCount: retryCount,
+                                        retryInterval: retryInterval);
   }
 
   /// This function will write the image in the file [image] into the device
@@ -108,6 +99,7 @@ abstract class PlatformService {
             sink.close();
           });
 
+    int id = power_management.disableSleep('Writing SD card image');
     ctx.startProgress('Writing: ');
     var process = await Process.start('dd', ddFlags(source, device));
     var stdoutFuture = process.stdout
@@ -132,16 +124,17 @@ abstract class PlatformService {
       ctx.log('stdout: $ddStdout');
       ctx.log('stderr: $ddStderr');
 
-      ctx.infoln('Failed to write SD card');
+      ctx.infoln('Failed to write SD card.');
       ctx.infoln(ddStderr);
       if (ddStderr.contains('Permission denied')) {
-        ctx.infoln("Remember to run this command with 'sudo'");
+        ctx.infoln("Remember to run this command with 'sudo'.");
       }
       await ctx.failure('');
     }
+    power_management.enableSleep(id);
 
     // Sync filesystems before returning.
-    ctx.infoln('Running sync');
+    ctx.infoln('Running sync.');
     await sync();
 
     return true;
@@ -173,6 +166,9 @@ abstract class PlatformService {
 
   /// The signal name to send to 'dd' to get progress information on stderr.
   String get ddProgressSignal;
+
+  /// Provide user-readable information on a disk device.
+  Future<String> diskInfo(String device);
 
   /// Unmount disk device.
   Future unmountDisk(String device);
@@ -233,6 +229,16 @@ class MacOSPlatformService extends PlatformService {
   }
 
   String get ddProgressSignal => 'INFO';
+
+  Future<String> diskInfo(String device) async {
+    var result = await ctx.runProcess('diskutil', ['list', device]);
+    if (result.exitCode != 0) {
+      await ctx.failure(
+          'Failed to get information on $device (failed on running fdisk)',
+          result.stderr);
+    }
+    return result.stdout;
+  }
 
   Future unmountDisk(String device) async {
     var result = await ctx.runProcess('diskutil', ['unmountDisk', device]);
@@ -317,6 +323,16 @@ class LinuxPlatformService extends PlatformService {
   }
 
   String get ddProgressSignal => 'USR1';
+
+  Future<String> diskInfo(String device) async {
+    var result = await ctx.runProcess('fdisk', ['-l', device]);
+    if (result.exitCode != 0) {
+      await ctx.failure(
+          'Failed to get information on $device (failed on running fdisk)',
+          result.stderr);
+    }
+    return result.stdout;
+  }
 
   Future unmountDisk(String device) async {
     // List all mounted devices.

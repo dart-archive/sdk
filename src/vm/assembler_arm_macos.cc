@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,20 +15,18 @@ static const char* kPrefix = "";
 static const char* kPrefix = "_";
 #endif
 
-void Assembler::Bind(const char* name) {
+void Assembler::Bind(const char* prefix, const char* name) {
   putchar('\n');
-  AlignToPowerOfTwo(4);
   printf("\t.code 32\n");
-  printf("\t.global %s%s\n%s%s:\n", kPrefix, name, kPrefix, name);
+  printf("\t.global %s%s%s\n", kPrefix, prefix, name);
+  printf("%s%s%s:\n", kPrefix, prefix, name);
 }
 
 void Assembler::DefineLong(const char* name) {
   printf("\t.long %s%s\n", kPrefix, name);
 }
 
-const char* Assembler::LabelPrefix() {
-  return kPrefix;
-}
+const char* Assembler::LabelPrefix() { return kPrefix; }
 
 }  // namespace fletch
 

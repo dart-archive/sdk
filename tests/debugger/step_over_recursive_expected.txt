@@ -1,0 +1,29 @@
+Starting session. Type 'help' for a list of commands.
+
+> b
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
+> r
+tests/debugger/step_over_recursive_test.dart:13:11
+13     recurse(10);
+> n
+tests/debugger/step_over_recursive_test.dart:13:3
+13     recurse(10);
+> s
+tests/debugger/step_over_recursive_test.dart:8:7
+8      if (i == 0) return;
+> n
+tests/debugger/step_over_recursive_test.dart:8:12
+8      if (i == 0) return;
+> n
+tests/debugger/step_over_recursive_test.dart:8:7
+8      if (i == 0) return;
+> n
+tests/debugger/step_over_recursive_test.dart:9:11
+9      recurse(--i);
+> n
+tests/debugger/step_over_recursive_test.dart:9:3
+9      recurse(--i);
+> n
+tests/debugger/step_over_recursive_test.dart:13:3
+13     recurse(10);
+> q

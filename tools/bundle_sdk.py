@@ -1,95 +1,53 @@
 #!/usr/bin/env python
-# Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
 # This script is creating a self contained directory with all the tools,
-# libraries, packages and samples needed for running fletch.
+# libraries, packages and samples needed for running Dartino.
 
-# This script assumes that the target arg has been build in the passed in
-# --build_dir. It also assumes that out/ReleaseXARM/fletch-vm has been build.
+# This script assumes that the target arg has been build in the passed
+# in --build_dir. It also assumes that out/ReleaseXARM/fletch-vm and
+# out/ReleaseSTM have been build.
 
 import optparse
 import subprocess
 import sys
 import utils
+import re
 
 from sets import Set
 from os import makedirs
-from os.path import join, exists, basename, abspath
+from os.path import dirname, join, exists, basename, abspath
 from shutil import copyfile, copymode, copytree, rmtree
 
-SDK_PACKAGES = ['file', 'fletch', 'gpio', 'http', 'i2c', 'os',
-                'raspberry_pi', 'socket']
+TOOLS_DIR = abspath(dirname(__file__))
+
+SDK_PACKAGES = ['ffi', 'file', 'fletch', 'gpio', 'http', 'i2c', 'os',
+                'raspberry_pi', 'stm32f746g_disco', 'socket', 'mqtt']
 THIRD_PARTY_PACKAGES = ['charcode']
 
-SAMPLES = ['raspberry_pi', 'general']
+SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery']
+with open(join(TOOLS_DIR, 'docs_html', 'head.html')) as f:
+  DOC_INDEX_HEAD = f.read()
+with open(join(TOOLS_DIR, 'docs_html', 'tail.html')) as f:
+  DOC_INDEX_TAIL = f.read()
 
-DOC_INDEX_HEAD = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fletch API docs</title>
-    <meta name="description" content="API docs, for the fletch packages.">
-    <link rel="stylesheet" href="fletch/static-assets/prettify.css">
-    <link rel="stylesheet" href="fletch/static-assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="fletch/static-assets/styles.css">
-</head>
-
-
-<body>
-<header class="container-fluid" id="title">
-    <div class="container masthead">
-      <div class="row">
-        <div class="col-sm-12 contents">
-          <div class="title-description">
-              <h1 class="title">
-                  <div class="kind">API DOCUMENTATION</div>Fletch SDK Packages
-              </h1>
-          </div>
-        </div> <!-- /col -->
-      </div> <!-- /row -->
-    </div> <!-- /container -->
-</header>
-
-<div class="container body">
-  <div class="row"/>
-
-  <div class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left">
-    <ol>
-      <li class="section-title">PACKAGES</li>
-"""
-
-DOC_INDEX_TAIL = """
-    </ol>
-  </div>
-
-  <div class="col-xs-12 col-sm-9 col-md-8 main-content">
-    <section class="desc markdown">
-      <br>
-      <p>Please select a package from the list on the left to see the documentation for that package.</p>
-    </section>
-  </div>
-</div>
-</body>
-</html>
-"""
+DOC_ENTRY = ('<dt><span class="name"><a class="" href="%s/index.html">%s</a>'
+             '</span></dt>')
 
 DOC_INDEX = '%s%s%s' % (
     DOC_INDEX_HEAD,
-    '\n'.join(
-        ['<li><a class="" href="%s/index.html">%s</a></li>' % (p, p) for p in SDK_PACKAGES]),
+    '\n'.join([DOC_ENTRY % (p, p) for p in SDK_PACKAGES]),
     DOC_INDEX_TAIL)
 
 def ParseOptions():
   parser = optparse.OptionParser()
   parser.add_option("--build_dir")
   parser.add_option("--deb_package")
-  parser.add_option("--create-documentation", default=False,
+  parser.add_option("--create_documentation", default=False,
                     action="store_true")
+  parser.add_option("--include_tools", default=False, action="store_true")
   (options, args) = parser.parse_args()
   return options
 
@@ -116,14 +74,44 @@ def CopyBinaries(bundle_dir, build_dir):
   # natives.json is read relative to the dart binary
   CopyFile(join(build_dir, 'natives.json'), join(internal, 'natives.json'))
 
+# Copy the platform decriptor, rewriting paths to point to the
+# sdk location at `sdk_dir` instead of `repo_dir`.
+def CopyPlatformDescriptor(bundle_dir, platform_descriptor_name, repo_dir,
+                           sdk_dir):
+  platform_path = join('lib', platform_descriptor_name)
+  with open(platform_path) as f:
+    lines = f.read().splitlines()
+  dest = join(bundle_dir, 'internal', 'fletch_lib', platform_descriptor_name)
+  print("Copying from %s to %s adjusting paths." % (platform_path, dest))
+  with open(dest, 'w') as generated:
+    for line in lines:
+      if line.startswith('#') or line.startswith('['):
+        pass
+      else:
+        # The property-lines consist of name:uri. The uri can
+        # contain a ':' so we only split at the first ':'.
+        parts = line.split(':', 1)
+        if len(parts) == 2:
+          name, path = parts
+          path = path.strip()
+          if path.startswith(repo_dir):
+            # Dart-sdk library
+            path = path.replace(repo_dir, sdk_dir)
+          line = "%s: %s" % (name, path)
+      generated.write('%s\n' % line)
+
 # We have two lib dependencies: the libs from the sdk and the libs dir with
 # patch files from the fletch repo.
 def CopyLibs(bundle_dir, build_dir):
   internal = join(bundle_dir, 'internal')
   fletch_lib = join(internal, 'fletch_lib')
   dart_lib = join(internal, 'dart_lib')
-  copytree('lib', join(fletch_lib, 'lib'))
-  copytree('third_party/dart/sdk/lib', join(dart_lib, 'lib'))
+  copytree('lib', fletch_lib)
+  copytree('third_party/dart/sdk/lib', dart_lib)
+  CopyPlatformDescriptor(bundle_dir, 'fletch_mobile.platform',
+                         '../third_party/dart/sdk/lib', '../dart_lib')
+  CopyPlatformDescriptor(bundle_dir, 'fletch_embedded.platform',
+                         '../third_party/dart/sdk/lib', '../dart_lib')
 
 def CopyInternalPackages(bundle_dir, build_dir):
   internal_pkg = join(bundle_dir, 'internal', 'pkg')
@@ -169,8 +157,12 @@ def CopyPackages(bundle_dir):
       p.write('%s:../pkg/%s/lib\n' % (package, package))
 
 def CopyPlatforms(bundle_dir):
-  target_dir = join(bundle_dir, 'platforms')
-  copytree('platforms', target_dir)
+  # Only copy parts of the platform directory. We also have source
+  # code there at the moment.
+  target_dir = join(bundle_dir, 'platforms/raspberry-pi2')
+  copytree('platforms/raspberry-pi2', target_dir)
+  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/bin')
+  copytree('platforms/stm/bin', target_dir)
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
   cmd = [dart_executable, '-c', '--packages=.packages',
@@ -192,7 +184,6 @@ def CopyArmDebPackage(bundle_dir, package):
   CopyFile(package, join(target, basename(package)))
 
 def CopyAdditionalFiles(bundle_dir):
-  #TODO(mit): fix README and LICENSE
   for extra in ['README.md', 'LICENSE.md']:
     CopyFile(extra, join(bundle_dir, extra))
 
@@ -205,6 +196,24 @@ def CopyArm(bundle_dir):
   for v in binaries:
     CopyFile(join(build_dir, v), join(bin_dir, v))
 
+def CopySTM(bundle_dir):
+  libraries = [
+      'libfletch_vm_library.a',
+      'libfletch_shared.a',
+      'libdouble_conversion.a',
+      'libdisco_fletch.a']
+  disco = join(bundle_dir, 'platforms', 'stm32f746g-discovery')
+  lib_dir = join(disco, 'lib')
+  makedirs(lib_dir)
+  build_dir = 'out/ReleaseSTM'
+  for v in libraries:
+    CopyFile(join(build_dir, v), join(lib_dir, basename(v)))
+
+  config_dir = join(disco, 'config')
+  makedirs(config_dir)
+  CopyFile('platforms/stm/disco_fletch/generated/SW4STM32/'
+           'configuration/STM32F746NGHx_FLASH.ld',
+           join(config_dir, 'stm32f746g-discovery.ld'))
 def CopySamples(bundle_dir):
   target = join(bundle_dir, 'samples')
   for v in SAMPLES:
@@ -215,6 +224,34 @@ def EnsureDartDoc():
       'download_from_google_storage -b dart-dependencies-fletch '
       '-u -d third_party/dartdoc_deps/',
       shell=True)
+
+def CreateDocsPubSpec(fileName):
+  print 'Doc-gen: creating %s' %fileName
+  f = open(fileName, 'w')
+  f.write('name: Dartino_SDK\n')
+  f.write('dependencies:\n')
+  for package in SDK_PACKAGES:
+    f.write('  %s:\n' % package)
+    f.write('    path: ../%s\n' % package)
+  f.close()
+
+def CreateDocsLibs(docPkgDir, outDir):
+  for package in SDK_PACKAGES:
+    # Read the original package file and match out the documentation from it.
+    sourceFileName = join(outDir, package, 'lib', '{0}.dart'.format(package))
+    with open(sourceFileName) as f:
+      s = f.read()
+    # Extract the doc comment for the library; this is everything before a line
+    # that starts with 'library' and ends with ';'.
+    match = re.match(r'(.*)^library ([^;]+);', s, re.DOTALL|re.MULTILINE)
+    doc = match.group(1)
+    # Create a new lib dart file with same documentation.
+    destFileName = join(docPkgDir, '%s.dart' % package)
+    print 'Doc-gen: Creating %s from %s' % (destFileName, sourceFileName)
+    with open(destFileName, 'w') as f:
+      f.write(match.group(1))
+      f.write('\nlibrary {0};\n'.format(package))
+      f.write('export \'package:{0}/{0}.dart\';'.format(package))
 
 def CreateDocumentation():
   EnsureDartDoc()
@@ -229,34 +266,58 @@ def CreateDocumentation():
   # We recreate the same structure we have in the repo in a copy to not
   # polute our workspace
   with utils.TempDir() as temp:
+    # Copy Fletch packages.
     pkg_copy = join(temp, 'pkg')
     makedirs(pkg_copy)
     for pkg in SDK_PACKAGES:
       pkg_path = join('pkg', pkg)
       pkg_dst = join(pkg_copy, pkg)
       copytree(pkg_path, pkg_dst)
-      print 'copied %s to %s' %(pkg_path, pkg_dst)
+      print 'copied %s to %s' % (pkg_path, pkg_dst)
+    # Copy third party packages.
     third_party_copy = join(temp, 'third_party')
     makedirs(third_party_copy)
     for pkg in THIRD_PARTY_PACKAGES:
       pkg_path = join('third_party', pkg)
       pkg_dst = join(third_party_copy, pkg)
       copytree(pkg_path, pkg_dst)
-      print 'copied %s to %s' %(pkg_path, pkg_dst)
-    for pkg in SDK_PACKAGES:
-      pkg_dst = join(pkg_copy, pkg)
-      with utils.ChangedWorkingDirectory(pkg_dst):
-        subprocess.check_call([pub, 'get'])
-        print 'Called pub get in %s' % pkg_dst
-
+      print 'copied %s to %s' % (pkg_path, pkg_dst)
+    # Create fake combined package dir.
+    sdk_pkg_dir = join(pkg_copy, 'fletch_sdk')
+    makedirs(sdk_pkg_dir)
+    # Copy readme.
+    copyfile(join('pkg', 'fletch_sdk_readme.md'),
+             join(sdk_pkg_dir, 'README.md'))
+    # Add pubspec file.
+    CreateDocsPubSpec('%s/pubspec.yaml' % sdk_pkg_dir)
+    # Add lib dir, and a generated file for each package.
+    sdk_pkg_lib_dir = join(sdk_pkg_dir, 'lib')
+    makedirs(sdk_pkg_lib_dir)
+    CreateDocsLibs(sdk_pkg_lib_dir, pkg_copy)
+    # Call pub get.
+    with utils.ChangedWorkingDirectory(sdk_pkg_dir):
+      print 'Calling pub get in %s' % sdk_pkg_dir
+      subprocess.check_call([pub, 'get'])
+    # Call dartdoc.
     EnsureDeleted(docs_out)
-    for pkg in SDK_PACKAGES:
-      pkg_dst = join(pkg_copy, pkg)
-      pkg_out = join(docs_out, pkg)
-      subprocess.check_call([dartdoc, '--input', pkg_dst,
-                             '--output', pkg_out])
-  with open(join(docs_out, 'index.html'), 'w') as f:
-    f.write(DOC_INDEX)
+    subprocess.check_call([dartdoc, '--input', sdk_pkg_dir,'--output',
+                          docs_out])
+
+    # Patch the generated index.html file to fix a few issues.
+    indexFile = join(docs_out, 'index.html')
+    with open(indexFile, 'r') as fin:
+      s = fin.read()
+      s = s.replace('Dartino_SDK', 'Dartino SDK')
+      s = s.replace('>package<', '><')
+    with open(indexFile, 'w') as fout:
+      fout.write(s)
+
+def CopyTools(bundle_dir):
+  tools_dir = join(bundle_dir, 'tools')
+  makedirs(tools_dir)
+  gcc_arm_embedded_dir = join(tools_dir, 'gcc-arm-embedded')
+  copytree('third_party/gcc-arm-embedded/linux/gcc-arm-embedded',
+           gcc_arm_embedded_dir)
 
 def Main():
   options = ParseOptions();
@@ -273,12 +334,15 @@ def Main():
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
+    CopySTM(sdk_temp)
     CopySamples(sdk_temp)
     CopyAdditionalFiles(sdk_temp)
     if deb_package:
       CopyArmDebPackage(sdk_temp, deb_package)
-    sdk_dir = join(build_dir, 'fletch-sdk')
+    sdk_dir = join(build_dir, 'dartino-sdk')
     EnsureDeleted(sdk_dir)
+    if options.include_tools:
+      CopyTools(sdk_temp)
     copytree(sdk_temp, sdk_dir)
 
 if __name__ == '__main__':

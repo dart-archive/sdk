@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -10,18 +10,25 @@ import 'dart:async' show
 import 'dart:collection' show
     Queue;
 
-import 'package:compiler/src/dart2jslib.dart' show
+import 'package:compiler/src/common/backend_api.dart' show
     Backend,
-    BackendConstantEnvironment,
-    Compiler,
-    CompilerTask,
-    ConstantCompilerTask,
+    ImpactTransformer;
+
+import 'package:compiler/src/common/tasks.dart' show
+    CompilerTask;
+
+import 'package:compiler/src/enqueue.dart' show
     Enqueuer,
-    MessageKind,
-    Registry,
-    ResolutionCallbacks,
-    ResolutionEnqueuer,
-    isPrivateName;
+    ResolutionEnqueuer;
+
+import 'package:compiler/src/diagnostics/messages.dart' show
+    MessageKind;
+
+import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
+    DiagnosticMessage;
+
+import 'package:compiler/src/common/registry.dart' show
+    Registry;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType,
@@ -47,14 +54,22 @@ import 'package:compiler/src/elements/elements.dart' show
     LibraryElement,
     MemberElement,
     Name,
-    ParameterElement;
+    ParameterElement,
+    PublicName;
 
-import 'package:compiler/src/universe/universe.dart' show
-    CallStructure,
-    Selector,
-    UniverseSelector;
+import 'package:compiler/src/universe/selector.dart' show
+    Selector;
 
-import 'package:compiler/src/util/util.dart' show
+import 'package:compiler/src/universe/use.dart' show
+    DynamicUse,
+    StaticUse,
+    TypeUse,
+    TypeUseKind;
+
+import 'package:compiler/src/universe/call_structure.dart' show
+    CallStructure;
+
+import 'package:compiler/src/common.dart' show
     Spannable;
 
 import 'package:compiler/src/elements/modelx.dart' show
@@ -80,7 +95,7 @@ import 'package:compiler/src/constants/values.dart' show
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
-import 'package:compiler/src/resolution/resolution.dart' show
+import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
 
 import 'package:compiler/src/library_loader.dart' show
@@ -90,9 +105,7 @@ import 'package:persistent/persistent.dart' show
     PersistentMap;
 
 import 'fletch_function_builder.dart' show
-    FletchFunctionKind,
-    FletchFunctionBuilder,
-    DebugInfo;
+    FletchFunctionBuilder;
 
 import 'fletch_class_builder.dart' show
     FletchClassBuilder;
@@ -114,6 +127,15 @@ import 'fletch_registry.dart' show
 import 'diagnostic.dart' show
    throwInternalError;
 
+import 'package:compiler/src/common/names.dart' show
+    Identifiers,
+    Names;
+
+import 'package:compiler/src/universe/world_impact.dart' show
+    TransformedWorldImpact,
+    WorldImpact,
+    WorldImpactBuilder;
+
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
 import 'debug_info.dart';
@@ -128,8 +150,9 @@ import 'constructor_codegen.dart';
 import 'closure_environment.dart';
 
 import '../bytecodes.dart';
-import '../commands.dart';
+import '../vm_commands.dart';
 import '../fletch_system.dart';
+import 'package:compiler/src/common/resolution.dart';
 
 const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, FletchFunction>(),
@@ -138,12 +161,14 @@ const FletchSystem BASE_FLETCH_SYSTEM = const FletchSystem(
     const PersistentMap<int, int>(),
     const PersistentMap<int, FletchClass>(),
     const PersistentMap<ClassElement, FletchClass>(),
-    const <FletchConstant>[],
+    const PersistentMap<int, FletchConstant>(),
+    const PersistentMap<ConstantValue, FletchConstant>(),
     const PersistentMap<int, String>(),
     const PersistentMap<int, int>(),
-    const PersistentMap<int, int>());
+    const PersistentMap<int, int>(),
+    const PersistentMap<ParameterStubSignature, FletchFunction>());
 
-class FletchBackend extends Backend with ResolutionCallbacks
+class FletchBackend extends Backend
     implements IncrementalFletchBackend {
   static const String growableListName = '_GrowableList';
   static const String constantListName = '_ConstantList';
@@ -188,11 +213,13 @@ class FletchBackend extends Backend with ResolutionCallbacks
   // TODO(ahe): This should be moved to [FletchSystem].
   Map<FletchClassBuilder, FletchFunctionBuilder> tearoffFunctions;
 
+  FletchCompilerImplementation get compiler => super.compiler;
+
   LibraryElement fletchSystemLibrary;
   LibraryElement fletchFFILibrary;
   LibraryElement collectionLibrary;
   LibraryElement mathLibrary;
-  LibraryElement asyncLibrary;
+  LibraryElement get asyncLibrary => compiler.asyncLibrary;
   LibraryElement fletchLibrary;
 
   FunctionElement fletchSystemEntry;
@@ -217,6 +244,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
   ClassElement bigintClass;
   ClassElement uint32DigitsClass;
 
+  FletchClassBuilder compiledClosureClass;
+
   /// Holds a reference to the class Coroutine if it exists.
   ClassElement coroutineClass;
 
@@ -224,14 +253,28 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   final Set<FunctionElement> alwaysEnqueue = new Set<FunctionElement>();
 
+  FletchImpactTransformer impactTransformer;
+
   FletchBackend(FletchCompilerImplementation compiler)
       : this.context = compiler.context,
         this.constantCompilerTask = new DartConstantTask(compiler),
         this.systemBuilder = new FletchSystemBuilder(BASE_FLETCH_SYSTEM),
-        super(compiler);
+        super(compiler) {
+    this.impactTransformer = new FletchImpactTransformer(this);
+  }
 
   void newSystemBuilder(FletchSystem predecessorSystem) {
     systemBuilder = new FletchSystemBuilder(predecessorSystem);
+  }
+
+  // TODO(zarah): Move to FletchSystemBuilder.
+  FletchClassBuilder getClassBuilderOfExistingClass(int id) {
+    FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(id);
+    if (classBuilder != null) return classBuilder;
+    FletchClass klass = systemBuilder.lookupClass(id);
+    if (klass.element != null) return registerClassElement(klass.element);
+    // [klass] is a tearoff class
+    return systemBuilder.newPatchClassBuilder(id, compiledClosureClass);
   }
 
   FletchClassBuilder registerClassElement(ClassElement element) {
@@ -255,8 +298,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     // This is a workaround, where we basically add getters for all fields.
     classBuilder.updateImplicitAccessors(this);
 
-    Element callMember = element.lookupLocalMember(
-        Compiler.CALL_OPERATOR_NAME);
+    Element callMember = element.lookupLocalMember(Identifiers.call);
     if (callMember != null && callMember.isFunction) {
       FunctionElement function = callMember;
       classBuilder.createIsFunctionEntry(
@@ -273,8 +315,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
     return classBuilder;
   }
 
-  ResolutionCallbacks get resolutionCallbacks => this;
-
   List<CompilerTask> get tasks => <CompilerTask>[];
 
   ConstantSystem get constantSystem {
@@ -287,8 +327,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   bool methodNeedsRti(FunctionElement function) => false;
 
-  void enqueueHelpers(ResolutionEnqueuer world, incomingRegistry) {
-    FletchRegistry registry = incomingRegistry;
+  void enqueueHelpers(ResolutionEnqueuer world, Registry incomingRegistry) {
+    FletchRegistry registry = new FletchRegistry(compiler);
     compiler.patchAnnotationClass = patchAnnotationClass;
 
     bool hasMissingHelpers = false;
@@ -302,7 +342,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       }
       if (helper == null) {
         hasMissingHelpers = true;
-        compiler.reportError(
+        compiler.reporter.reportErrorMessage(
             library, MessageKind.GENERIC,
             {'text': "Required implementation method '$name' not found."});
       }
@@ -312,9 +352,12 @@ class FletchBackend extends Backend with ResolutionCallbacks
       throwInternalError(
           "Some implementation methods are missing, see details above");
     }
-    world.registerStaticUse(fletchCompileError);
-    world.registerStaticUse(fletchSystemEntry);
-    world.registerStaticUse(fletchUnresolved);
+    world.registerStaticUse(
+        new StaticUse.staticInvoke(fletchCompileError, CallStructure.ONE_ARG));
+    world.registerStaticUse(
+        new StaticUse.staticInvoke(fletchSystemEntry, CallStructure.ONE_ARG));
+    world.registerStaticUse(
+        new StaticUse.staticInvoke(fletchUnresolved, CallStructure.ONE_ARG));
 
     loadHelperClasses((
         String name,
@@ -323,7 +366,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       var classImpl = library.findLocal(name);
       if (classImpl == null) classImpl = library.implementation.find(name);
       if (classImpl == null) {
-        compiler.reportError(
+        compiler.reporter.reportErrorMessage(
             library, MessageKind.GENERIC,
             {'text': "Required implementation class '$name' not found."});
         hasMissingHelpers = true;
@@ -334,8 +377,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
       {
         // TODO(ahe): Register in ResolutionCallbacks. The lines in this block
         // should not happen at this point in time.
-        classImpl.ensureResolved(compiler);
-        world.registerInstantiatedType(classImpl.rawType, registry.asRegistry);
+        classImpl.ensureResolved(compiler.resolution);
+        world.registerInstantiatedType(classImpl.rawType);
         // TODO(ahe): This is a hack to let both the world and the codegen know
         // about the instantiated type.
         registry.registerInstantiatedType(classImpl.rawType);
@@ -349,21 +392,25 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
     // Register list constructors to world.
     // TODO(ahe): Register growableListClass through ResolutionCallbacks.
-    growableListClass.constructors.forEach(world.registerStaticUse);
+    growableListClass.constructors.forEach((Element element) {
+      world.registerStaticUse(new StaticUse.constructorInvoke(element, null));
+    });
 
     // TODO(ajohnsen): Remove? String interpolation does not enqueue '+'.
     // Investigate what else it may enqueue, could be StringBuilder, and then
     // consider using that instead.
-    var selector = new UniverseSelector(new Selector.binaryOperator('+'), null);
-    world.registerDynamicInvocation(selector);
+    world.registerDynamicUse(
+        new DynamicUse(new Selector.binaryOperator('+'), null));
 
-    selector = new UniverseSelector(new Selector.call('add', null, 1), null);
-    world.registerDynamicInvocation(selector);
+    world.registerDynamicUse(new DynamicUse(
+        new Selector.call(new PublicName('add'), CallStructure.ONE_ARG), null));
 
-    alwaysEnqueue.add(compiler.objectClass.implementation.lookupLocalMember(
-        noSuchMethodTrampolineName));
-    alwaysEnqueue.add(compiler.objectClass.implementation.lookupLocalMember(
-        noSuchMethodName));
+    alwaysEnqueue.add(
+        compiler.coreClasses.objectClass.implementation.lookupLocalMember(
+            noSuchMethodTrampolineName));
+    alwaysEnqueue.add(
+        compiler.coreClasses.objectClass.implementation.lookupLocalMember(
+            noSuchMethodName));
 
     if (coroutineClass != null) {
       builtinClasses.add(coroutineClass);
@@ -371,7 +418,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     }
 
     for (FunctionElement element in alwaysEnqueue) {
-      world.registerStaticUse(element);
+      world.registerStaticUse(new StaticUse.foreignUse(element));
     }
   }
 
@@ -400,6 +447,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
           {bool builtin})) {
     compiledObjectClass =
         loadClass("Object", compiler.coreLibrary, builtin: true);
+    compiledClosureClass =
+        loadClass("_TearOffClosure", compiler.coreLibrary, builtin: true);
     smiClass = loadClass("_Smi", compiler.coreLibrary, builtin: true)?.element;
     mintClass =
         loadClass("_Mint", compiler.coreLibrary, builtin: true)?.element;
@@ -415,6 +464,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     loadClass("StackOverflowError", compiler.coreLibrary, builtin: true);
     loadClass("Port", fletchLibrary, builtin: true);
     loadClass("Process", fletchLibrary, builtin: true);
+    loadClass("ProcessDeath", fletchLibrary, builtin: true);
     loadClass("ForeignMemory", fletchFFILibrary, builtin: true);
     if (context.enableBigint) {
       bigintClass = loadClass("_Bigint", compiler.coreLibrary)?.element;
@@ -431,22 +481,19 @@ class FletchBackend extends Backend with ResolutionCallbacks
     // This class is optional.
     coroutineClass = fletchSystemLibrary.implementation.find("Coroutine");
     if (coroutineClass != null) {
-      coroutineClass.ensureResolved(compiler);
+      coroutineClass.ensureResolved(compiler.resolution);
     }
   }
 
   void onElementResolved(Element element, TreeElements elements) {
     if (alwaysEnqueue.contains(element)) {
-      var registry = new FletchRegistry(compiler, elements);
-      registry.registerStaticInvocation(element);
+      var registry = new FletchRegistry(compiler);
+      if (element.isStatic || element.isTopLevel) {
+        registry.registerStaticUse(new StaticUse.foreignUse(element));
+      } else {
+        registry.registerDynamicUse(new Selector.fromElement(element));
+      }
     }
-  }
-
-  void onMapLiteral(Registry registry, DartType type, bool isConstant) {
-    if (isConstant) return;
-    ClassElement classImpl = mapImplementation;
-    registry.registerInstantiation(classImpl.rawType);
-    registry.registerStaticInvocation(classImpl.lookupDefaultConstructor());
   }
 
   ClassElement get intImplementation => smiClass;
@@ -458,8 +505,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
   /// compile-time constant instance of [patchAnnotationClass].
   ClassElement get patchAnnotationClass {
     // TODO(ahe): Introduce a proper constant class to identify constants. For
-    // now, we simply put "const patch = "patch";" in the beginning of patch
-    // files.
+    // now, we simply put "const patch = "patch";" in fletch._system.
     return super.stringImplementation;
   }
 
@@ -473,7 +519,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       return createCallableStubClass(
           fields,
           closure.functionSignature.parameterCount,
-          compiledObjectClass);
+          compiledClosureClass);
     });
   }
 
@@ -488,18 +534,15 @@ class FletchBackend extends Backend with ResolutionCallbacks
    * instance.
    */
   FletchClassBuilder createTearoffClass(FletchFunctionBase function) {
-    int functionId = systemBuilder.lookupTearOffById(function.functionId);
-    if (functionId != null) {
-      FletchFunctionBuilder functionBuilder =
-          systemBuilder.lookupFunction(functionId);
-      return systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
-    }
+    FletchClassBuilder tearoffClass =
+        systemBuilder.getTearoffClassBuilder(function, compiledClosureClass);
+    if (tearoffClass != null) return tearoffClass;
     FunctionSignature signature = function.signature;
     bool hasThis = function.isInstanceMember;
-    FletchClassBuilder tearoffClass = createCallableStubClass(
+    tearoffClass = createCallableStubClass(
         hasThis ? 1 : 0,
         signature.parameterCount,
-        compiledObjectClass);
+        compiledClosureClass);
 
     FletchFunctionBuilder functionBuilder =
         systemBuilder.newTearOff(function, tearoffClass.classId);
@@ -696,7 +739,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
           builder,
           context,
           elements,
-          null,
           closureEnvironment,
           element,
           compiler);
@@ -710,7 +752,6 @@ class FletchBackend extends Backend with ResolutionCallbacks
           builder,
           context,
           elements,
-          null,
           closureEnvironment,
           element,
           classBuilder,
@@ -721,26 +762,27 @@ class FletchBackend extends Backend with ResolutionCallbacks
           builder,
           context,
           elements,
-          null,
           closureEnvironment,
           element,
           compiler);
     }
     if (isNative(element)) {
-      compiler.withCurrentElement(element, () {
+      compiler.reporter.withCurrentElement(element, () {
         codegenNativeFunction(element, codegen);
       });
     } else if (isExternal(element)) {
-      compiler.withCurrentElement(element, () {
+      compiler.reporter.withCurrentElement(element, () {
         codegenExternalFunction(element, codegen);
       });
     } else {
-      compiler.withCurrentElement(element, () { codegen.compile(); });
+      compiler.reporter.withCurrentElement(element, () { codegen.compile(); });
     }
     // The debug codegen should generate the same bytecodes as the original
     // codegen. If that is not the case debug information will be useless.
-    assert(Bytecode.identicalBytecodes(expectedBytecodes,
-                                       codegen.assembler.bytecodes));
+    if (!Bytecode.identicalBytecodes(expectedBytecodes,
+                                     codegen.assembler.bytecodes)) {
+      throw 'Debug info code different from running code.';
+    }
     return debugInfo;
   }
 
@@ -757,13 +799,14 @@ class FletchBackend extends Backend with ResolutionCallbacks
       TreeElements treeElements,
       FletchRegistry registry) {
     AstElement element = declaration.implementation;
-    compiler.withCurrentElement(element, () {
+    compiler.reporter.withCurrentElement(element, () {
       assert(declaration.isDeclaration);
       context.compiler.reportVerboseInfo(element, 'Compiling $element');
       if (element.isFunction ||
           element.isGetter ||
           element.isSetter ||
-          element.isGenerativeConstructor) {
+          element.isGenerativeConstructor ||
+          element.isFactoryConstructor) {
         // For a generative constructor, this means compile the constructor
         // body. See [compilePendingConstructorInitializers] for an overview of
         // how constructor initializers and constructor bodies are compiled.
@@ -772,7 +815,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
         context.compiler.reportVerboseInfo(
             element, "Asked to compile a field, but don't know how");
       } else {
-        compiler.internalError(
+        compiler.reporter.internalError(
             element, "Uninimplemented element kind: ${element.kind}");
       }
     });
@@ -788,14 +831,14 @@ class FletchBackend extends Backend with ResolutionCallbacks
       TreeElements treeElements,
       FletchRegistry registry) {
     AstElement element = declaration.implementation;
-    compiler.withCurrentElement(element, () {
+    compiler.reporter.withCurrentElement(element, () {
       assert(declaration.isDeclaration);
       context.compiler.reportVerboseInfo(element, 'Compiling $element');
       if (!element.isInstanceMember && !isLocalFunction(element)) {
         // No stub needed. Optional arguments are handled at call-site.
       } else if (element.isFunction) {
         FletchFunctionBase function =
-            systemBuilder.lookupFunctionBuilderByElement(element.declaration);
+            systemBuilder.lookupFunctionByElement(element.declaration);
         CallStructure callStructure = selector.callStructure;
         FunctionSignature signature = function.signature;
         if (selector.isGetter) {
@@ -812,7 +855,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
             context.compiler.reportVerboseInfo(
                 element, 'Adding stub for $selector');
           }
-          createParameterStubFor(function, selector);
+          createParameterStub(function, selector);
         }
       } else if (element.isGetter || element.isSetter) {
         // No stub needed. If a getter returns a closure, the VM's
@@ -835,7 +878,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FletchRegistry registry,
       ClosureKind kind) {
     AstElement element = declaration.implementation;
-    compiler.withCurrentElement(element, () {
+    compiler.reporter.withCurrentElement(element, () {
       assert(declaration.isDeclaration);
       if (shouldReportEnqueuingOfElement(compiler, element)) {
         context.compiler.reportVerboseInfo(
@@ -844,7 +887,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FletchFunctionBase function =
           systemBuilder.lookupFunctionByElement(element.declaration);
       if (function == null) {
-        compiler.internalError(
+        compiler.reporter.internalError(
             element, "Has no fletch function, but used as tear-off");
       }
       if (selector.isGetter) {
@@ -853,16 +896,16 @@ class FletchBackend extends Backend with ResolutionCallbacks
         // TODO(ahe): This code should probably use [kind] to detect the
         // various cases instead of [isLocalFunction] and looking at names.
 
-        assert(selector.memberName == Selector.CALL_NAME);
+        assert(selector.memberName == Names.CALL_NAME);
         if (isLocalFunction(element) ||
-            memberName(element) == Selector.CALL_NAME) {
+            memberName(element) == Names.CALL_NAME) {
           createTearoffGetterForFunction(
               function, isSpecialCallMethod: true);
           return;
         }
         int stub = systemBuilder.lookupTearOffById(function.functionId);
         if (stub == null) {
-          compiler.internalError(
+          compiler.reporter.internalError(
               element, "No tear-off stub to compile `call` tear-off");
         } else {
           function = systemBuilder.lookupFunction(stub);
@@ -873,7 +916,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       switch (kind) {
         case ClosureKind.tearOff:
         case ClosureKind.superTearOff:
-          if (memberName(element) == Selector.CALL_NAME) {
+          if (memberName(element) == Names.CALL_NAME) {
             // This is really a functionLikeTearOff.
             break;
           }
@@ -881,7 +924,8 @@ class FletchBackend extends Backend with ResolutionCallbacks
           // that stub:
           int stub = systemBuilder.lookupTearOffById(function.functionId);
           if (stub == null) {
-            compiler.internalError(element, "Couldn't find tear-off stub");
+            compiler.reporter
+                .internalError(element, "Couldn't find tear-off stub");
           } else {
             function = systemBuilder.lookupFunction(stub);
           }
@@ -894,12 +938,12 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
         case ClosureKind.functionLike:
         case ClosureKind.functionLikeTearOff:
-          compiler.internalError(element, "Unimplemented: $kind");
+          compiler.reporter.internalError(element, "Unimplemented: $kind");
           break;
       }
 
       if (!isExactParameterMatch(function.signature, selector.callStructure)) {
-        createParameterStubFor(function, selector);
+        createParameterStub(function, selector);
       }
     });
   }
@@ -908,7 +952,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FunctionElement function,
       TreeElements elements,
       FletchRegistry registry) {
-    registry.registerStaticInvocation(fletchSystemEntry);
+    registry.registerStaticUse(new StaticUse.foreignUse(fletchSystemEntry));
 
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
         function,
@@ -919,7 +963,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     if (function.memberContext != function) {
       functionBuilder = internalCreateFletchFunctionBuilder(
           function,
-          Compiler.CALL_OPERATOR_NAME,
+          Identifiers.call,
           createClosureClass(function, closureEnvironment));
     } else {
       functionBuilder = createFletchFunctionBuilder(function);
@@ -1002,24 +1046,21 @@ class FletchBackend extends Backend with ResolutionCallbacks
       // The static native method `Coroutine._coroutineNewStack` will invoke
       // the instance method `Coroutine._coroutineStart`.
       if (coroutineClass == null) {
-        compiler.internalError(
+        compiler.reporter.internalError(
             function, "required class [Coroutine] not found");
       }
       FunctionElement coroutineStart =
           coroutineClass.lookupLocalMember("_coroutineStart");
       Selector selector = new Selector.fromElement(coroutineStart);
-      new FletchRegistry(compiler, function.resolvedAst.elements)
-          ..registerDynamicInvocation(new UniverseSelector(selector, null));
+      new FletchRegistry(compiler)
+          ..registerDynamicUse(selector);
     } else if (name == "Process._spawn") {
       // The native method `Process._spawn` will do a closure invoke with 0, 1,
       // or 2 arguments.
-      new FletchRegistry(compiler, function.resolvedAst.elements)
-          ..registerDynamicInvocation(
-              new UniverseSelector(new Selector.callClosure(0), null))
-          ..registerDynamicInvocation(
-              new UniverseSelector(new Selector.callClosure(1), null))
-          ..registerDynamicInvocation(
-              new UniverseSelector(new Selector.callClosure(2), null));
+      new FletchRegistry(compiler)
+          ..registerDynamicUse(new Selector.callClosure(0))
+          ..registerDynamicUse(new Selector.callClosure(1))
+          ..registerDynamicUse(new Selector.callClosure(2));
     }
 
     int arity = codegen.assembler.functionArity;
@@ -1055,12 +1096,14 @@ class FletchBackend extends Backend with ResolutionCallbacks
                function.library == compiler.coreLibrary) {
       codegenExternalNoSuchMethodTrampoline(function, codegen);
     } else {
-      compiler.reportError(
-          function.node,
-          MessageKind.GENERIC,
-          {'text': 'External function is not supported'});
+      DiagnosticMessage message = context.compiler.reporter
+          .createMessage(function.node,
+              MessageKind.GENERIC,
+              {'text':
+                  'External function "${function.name}" is not supported'});
+      compiler.reporter.reportError(message);
       codegen
-          ..doCompileError()
+          ..doCompileError(message)
           ..assembler.ret()
           ..assembler.methodEnd();
     }
@@ -1090,7 +1133,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
   void codegenExternalInvokeMain(
       FunctionElement function,
       FunctionCodegen codegen) {
-    compiler.internalError(
+    compiler.reporter.internalError(
         function, "[codegenExternalInvokeMain] not implemented.");
     // TODO(ahe): This code shouldn't normally be called, only if invokeMain is
     // torn off. Perhaps we should just say we don't support that.
@@ -1103,16 +1146,16 @@ class FletchBackend extends Backend with ResolutionCallbacks
     // kept in sync with:
     //     src/vm/interpreter.cc:HandleEnterNoSuchMethod
     int id = context.getSymbolId(
-        context.mangleName(noSuchMethodName, compiler.coreLibrary));
+        context.mangleName(new Name(noSuchMethodName, compiler.coreLibrary)));
     int fletchSelector = FletchSelector.encodeMethod(id, 3);
     BytecodeLabel skipGetter = new BytecodeLabel();
     codegen.assembler
         ..enterNoSuchMethod(skipGetter)
         // First invoke the getter.
-        ..invokeSelector()
+        ..invokeSelector(2)
         // Then invoke 'call', with the receiver being the result of the
         // previous invokeSelector.
-        ..invokeSelector()
+        ..invokeSelector(1)
         ..exitNoSuchMethod()
         ..bind(skipGetter)
         ..invokeMethod(fletchSelector, 1)
@@ -1159,19 +1202,18 @@ class FletchBackend extends Backend with ResolutionCallbacks
     FunctionElement function = value.element;
     createTearoffClass(createFletchFunctionBuilder(function));
     // Be sure to actually enqueue the function for compilation.
-    FletchRegistry registry =
-        new FletchRegistry(compiler, function.resolvedAst.elements);
-    registry.registerStaticInvocation(function);
+    FletchRegistry registry = new FletchRegistry(compiler);
+    registry.registerStaticUse(new StaticUse.foreignUse(function));
   }
 
-  FletchFunctionBase createParameterStubFor(
+  FletchFunctionBase createParameterStub(
       FletchFunctionBase function,
       Selector selector) {
     CallStructure callStructure = selector.callStructure;
     assert(callStructure.signatureApplies(function.signature));
-    FletchFunctionBase stub = systemBuilder.parameterStubFor(
-        function,
-        callStructure);
+    ParameterStubSignature signature = new ParameterStubSignature(
+        function.functionId, callStructure);
+    FletchFunctionBase stub = systemBuilder.lookupParameterStub(signature);
     if (stub != null) return stub;
 
     int arity = selector.argumentCount;
@@ -1236,8 +1278,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
     if (function.isInstanceMember) {
       int fletchSelector = context.toFletchSelector(selector);
-      FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(
-          function.memberOf);
+      FletchClassBuilder classBuilder = getClassBuilderOfExistingClass(function.memberOf);
       classBuilder.addToMethodTable(fletchSelector, builder);
 
       // Inject parameter stub into all mixin usages.
@@ -1248,7 +1289,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       });
     }
 
-    systemBuilder.registerParameterStubFor(function, callStructure, builder);
+    systemBuilder.registerParameterStub(signature, builder);
 
     return builder;
   }
@@ -1289,8 +1330,10 @@ class FletchBackend extends Backend with ResolutionCallbacks
     if (function.element != null) {
       library = function.element.library;
     }
+    // TODO(sigurdm): Avoid allocating new name here.
+    Name name = new Name(function.name, library);
     int fletchSelector = context.toFletchSelector(
-        new Selector.getter(function.name, library));
+        new Selector.getter(name));
     FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(
         function.memberOf);
     classBuilder.addToMethodTable(fletchSelector, getter);
@@ -1318,7 +1361,13 @@ class FletchBackend extends Backend with ResolutionCallbacks
   int assembleProgram() => 0;
 
   FletchDelta computeDelta() {
-    List<Command> commands = <Command>[
+
+    if (fletchSystemLibrary == null && compiler.compilationFailed) {
+      // TODO(ahe): Ensure fletchSystemLibrary is not null.
+      return null;
+    }
+
+    List<VmCommand> commands = <VmCommand>[
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
         const NewMap(MapId.constants),
@@ -1343,7 +1392,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
   }
 
   bool registerDeferredLoading(Spannable node, Registry registry) {
-    compiler.reportWarning(
+    compiler.reporter.reportWarningMessage(
         node,
         MessageKind.GENERIC,
         {'text': "Deferred loading is not supported."});
@@ -1352,29 +1401,40 @@ class FletchBackend extends Backend with ResolutionCallbacks
 
   bool get supportsReflection => false;
 
-  Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
-    if (Uri.parse('dart:fletch._system') == library.canonicalUri) {
-      fletchSystemLibrary = library;
-    } else if (Uri.parse('dart:fletch.ffi') == library.canonicalUri) {
-      fletchFFILibrary = library;
-    } else if (Uri.parse('dart:collection') == library.canonicalUri) {
-      collectionLibrary = library;
-    } else if (Uri.parse('dart:math') == library.canonicalUri) {
-      mathLibrary = library;
-    } else if (Uri.parse('dart:async') == library.canonicalUri) {
-      asyncLibrary = library;
-    } else if (Uri.parse('dart:fletch') == library.canonicalUri) {
-      fletchLibrary = library;
-    }
+  // TODO(sigurdm): Support async/await on the mobile platform.
+  bool get supportsAsyncAwait {
+    return !compiler.platformConfigUri.path.contains("embedded");
+  }
 
-    if (library.isPlatformLibrary && !library.isPatched) {
-      // Apply patch, if any.
-      Uri patchUri = compiler.resolvePatchUri(library.canonicalUri.path);
-      if (patchUri != null) {
-        return compiler.patchParser.patchLibrary(loader, patchUri, library);
+  Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
+    if (library.isPlatformLibrary) {
+      String path = library.canonicalUri.path;
+      switch(path) {
+        case 'fletch._system':
+          fletchSystemLibrary = library;
+          break;
+        case 'fletch.ffi':
+          fletchFFILibrary = library;
+          break;
+        case 'fletch.collection':
+          collectionLibrary = library;
+          break;
+        case 'math':
+          mathLibrary = library;
+          break;
+        case 'fletch':
+          fletchLibrary = library;
+          break;
+      }
+
+      if (!library.isPatched) {
+        // Apply patch, if any.
+        Uri patchUri = compiler.resolvePatchUri(library.canonicalUri.path);
+        if (patchUri != null) {
+          return compiler.patchParser.patchLibrary(loader, patchUri, library);
+        }
       }
     }
-
     return null;
   }
 
@@ -1391,13 +1451,13 @@ class FletchBackend extends Backend with ResolutionCallbacks
   FunctionElement resolveExternalFunction(FunctionElement element) {
     if (element.isPatched) {
       FunctionElementX patch = element.patch;
-      compiler.withCurrentElement(patch, () {
-        patch.parseNode(compiler);
-        patch.computeType(compiler);
+      compiler.reporter.withCurrentElement(patch, () {
+        patch.parseNode(compiler.parsing);
+        patch.computeType(compiler.resolution);
       });
       element = patch;
       // TODO(ahe): Don't use ensureResolved (fix TODO in isNative instead).
-      element.metadata.forEach((m) => m.ensureResolved(compiler));
+      element.metadata.forEach((m) => m.ensureResolved(compiler.resolution));
     } else if (element.library == fletchSystemLibrary) {
       // Nothing needed for now.
     } else if (element.library == compiler.coreLibrary) {
@@ -1411,7 +1471,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
     } else if (externals.contains(element)) {
       // Nothing needed for now.
     } else {
-      compiler.reportError(
+      compiler.reporter.reportErrorMessage(
           element, MessageKind.PATCH_EXTERNAL_WITHOUT_IMPLEMENTATION);
     }
     return element;
@@ -1459,7 +1519,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
   void compileConstructorInitializer(FletchFunctionBuilder functionBuilder) {
     ConstructorElement constructor = functionBuilder.element;
     assert(constructor.isImplementation);
-    compiler.withCurrentElement(constructor, () {
+    compiler.reporter.withCurrentElement(constructor, () {
       assert(functionBuilder ==
           systemBuilder.lookupConstructorInitializerByElement(constructor));
       context.compiler.reportVerboseInfo(
@@ -1470,8 +1530,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       // TODO(ahe): We shouldn't create a registry, but we have to as long as
       // the enqueuer doesn't support elements with more than one compilation
       // artifact.
-      FletchRegistry registry =
-          new FletchRegistry(compiler, elements);
+      FletchRegistry registry = new FletchRegistry(compiler);
 
       FletchClassBuilder classBuilder =
           registerClassElement(constructor.enclosingClass.declaration);
@@ -1517,7 +1576,7 @@ class FletchBackend extends Backend with ResolutionCallbacks
       FletchFunctionBuilder function,
       {bool suppressHint: false}) {
     if (!suppressHint) {
-      compiler.reportHint(
+      compiler.reporter.reportHintMessage(
           spannable, MessageKind.GENERIC, {'text': reason});
     }
     var constString = constantSystem.createString(
@@ -1614,10 +1673,10 @@ class FletchBackend extends Backend with ResolutionCallbacks
   }
 
   bool onQueueEmpty(Enqueuer enqueuer, Iterable<ClassElement> recentClasses) {
-    if (!enqueuer.isResolutionQueue) {
+    if (enqueuer is! ResolutionEnqueuer) {
       compilePendingConstructorInitializers();
     }
-    return super.onQueueEmpty(enqueuer, recentClasses);
+    return true;
   }
 
   FletchEnqueueTask makeEnqueuer() => new FletchEnqueueTask(compiler);
@@ -1653,9 +1712,54 @@ class FletchBackend extends Backend with ResolutionCallbacks
     return true;
   }
 
-  static FletchBackend newInstance(FletchCompilerImplementation compiler) {
+  static FletchBackend createInstance(FletchCompilerImplementation compiler) {
     return new FletchBackend(compiler);
   }
+
+  Uri resolvePatchUri(String libraryName, Uri libraryRoot) {
+    throw "Not implemented";
+  }
+
+}
+
+class FletchImpactTransformer extends ImpactTransformer {
+  final FletchBackend backend;
+
+  FletchImpactTransformer(this.backend);
+
+  @override
+  WorldImpact transformResolutionImpact(ResolutionImpact worldImpact) {
+    TransformedWorldImpact transformed =
+        new TransformedWorldImpact(worldImpact);
+
+    bool anyChange = false;
+
+    if (worldImpact.constSymbolNames.isNotEmpty) {
+      ClassElement symbolClass =
+          backend.compiler.coreClasses.symbolClass.declaration;
+      transformed.registerTypeUse(
+          new TypeUse.instantiation(symbolClass.rawType));
+      transformed.registerStaticUse(
+          new StaticUse.foreignUse(
+              symbolClass.lookupConstructor("")));
+      anyChange = true;
+    }
+
+    for (MapLiteralUse mapLiteralUse in worldImpact.mapLiterals) {
+      if (mapLiteralUse.isConstant) continue;
+      transformed.registerTypeUse(
+          new TypeUse.instantiation(backend.mapImplementation.rawType));
+      transformed.registerStaticUse(
+          new StaticUse.constructorInvoke(
+              backend.mapImplementation.lookupConstructor(""),
+              CallStructure.NO_ARGS));
+      anyChange = true;
+    }
+    return anyChange ? transformed : worldImpact;
+  }
+
+  @override
+  transformCodegenImpact(impact) => throw "unimplemented";
 }
 
 bool isLocalFunction(Element element) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. all rights reserved. use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -10,6 +10,7 @@
 
 #include "src/vm/hash_map.h"
 #include "src/vm/hash_set.h"
+#include "src/vm/multi_hashset.h"
 #include "src/vm/pair.h"
 
 namespace fletch {
@@ -197,12 +198,8 @@ TEST_CASE(INT_MAP_STRANGE_ORDER) {
   IntInt map1;
 
   for (int i = 0; i < 32; i++) {
-    int j =
-      ((i & 1) << 4) |
-      ((i & 2) << 2) |
-      ((i & 4) << 0) |
-      ((i & 8) >> 2) |
-      ((i & 16) >> 4);
+    int j = ((i & 1) << 4) | ((i & 2) << 2) | ((i & 4) << 0) | ((i & 8) >> 2) |
+            ((i & 16) >> 4);
     map1[j] = i;
   }
 
@@ -262,6 +259,38 @@ TEST_CASE(INT_MAP_SPEED_TEST) {
       total += map1[42] + map1[7] + map1[53] + map1[87];
     }
     EXPECT_EQ(51390u, total);
+  }
+}
+
+typedef MultiHashSet<intptr_t> IntMultiSet;
+
+TEST_CASE(INT_MULTI_HASH_SET) {
+  IntMultiSet set;
+
+  for (int i = 1; i <= 10; i++) {
+    for (int j = -10; j < 10; j++) {
+      EXPECT_EQ(i - 1, set.Count(j));
+      bool first = set.Add(j);
+      EXPECT_EQ(first, (i == 1));
+      EXPECT_EQ(i, set.Count(j));
+    }
+  }
+
+  EXPECT_EQ(20u, set.size());
+
+  for (int i = 10; i > 0; i--) {
+    for (int j = -10; j < 10; j++) {
+      EXPECT_EQ(i, set.Count(j));
+      bool last = set.Remove(j);
+      EXPECT_EQ(last, (i == 1));
+      EXPECT_EQ(i - 1, set.Count(j));
+    }
+  }
+
+  EXPECT_EQ(0u, set.size());
+
+  for (int j = -10; j < 10; j++) {
+    EXPECT_EQ(false, set.Remove(j));
   }
 }
 

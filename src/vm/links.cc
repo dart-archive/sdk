@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,103 +12,114 @@ namespace fletch {
 
 void Links::InsertPort(Port* port) {
   ScopedSpinlock locker(&lock_);
-  if (objects_.Insert(MarkPort(port)).second) {
-    port->IncrementRef();
-  }
+  if (ports_.Add(port)) port->IncrementRef();
 }
 
-void Links::InsertHandle(ProcessHandle* handle) {
+bool Links::InsertHandle(ProcessHandle* handle) {
   ScopedSpinlock locker(&lock_);
-  if (objects_.Insert(MarkHandle(handle)).second) {
-    handle->IncrementRef();
-  }
+  if (half_dead_) return false;
+  if (handles_.Add(handle)) handle->IncrementRef();
+  return true;
 }
 
 void Links::RemovePort(Port* port) {
   ScopedSpinlock locker(&lock_);
-  HashSet<PortOrHandle>::ConstIterator it = objects_.Find(MarkPort(port));
-  if (it != objects_.End()) {
-    objects_.Erase(it);
-    port->DecrementRef();
-  }
+  if (ports_.Remove(port)) port->DecrementRef();
 }
 
 void Links::RemoveHandle(ProcessHandle* handle) {
   ScopedSpinlock locker(&lock_);
-  HashSet<PortOrHandle>::ConstIterator it = objects_.Find(MarkHandle(handle));
-  if (it != objects_.End()) {
-    objects_.Erase(it);
+  if (handles_.Remove(handle)) ProcessHandle::DecrementRef(handle);
+}
+
+void Links::NotifyLinkedProcesses(ProcessHandle* dying_handle,
+                                  Signal::Kind kind) {
+  ScopedSpinlock locker(&lock_);
+  ASSERT(!half_dead_);
+
+  Signal* signal = NULL;
+
+  for (auto it = handles_.Begin(); it != handles_.End(); ++it) {
+    ProcessHandle* handle = it->first;
+    // NOTE: Even though a link might have been setup several times, there is no
+    // reason to send several signals, since the first one is deadly already.
+    signal = SendSignal(handle, dying_handle, kind, signal);
     ProcessHandle::DecrementRef(handle);
   }
+  handles_.Clear();
+  half_dead_ = true;
+  exit_kind_ = kind;
+
+  if (signal != NULL) Signal::DecrementRef(signal);
 }
 
-void Links::CleanupWithSignal(ProcessHandle* dying_handle, Signal::Kind kind) {
+void Links::NotifyMonitors(ProcessHandle* dying_handle) {
   ScopedSpinlock locker(&lock_);
-  for (HashSet<PortOrHandle>::Iterator it = objects_.Begin();
-       it != objects_.End();
-       ++it) {
-    PortOrHandle object = *it;
-    if (IsPort(object)) {
-      Port* port = UnmarkPort(object);
-      EnqueueSignal(port, kind);
-      port->DecrementRef();
-    } else {
-      ProcessHandle* handle = UnmarkHandle(object);
-      SendSignal(handle, dying_handle, kind);
-      ProcessHandle::DecrementRef(handle);
+  Signal* signal = NULL;
+  ASSERT(half_dead_);
+  for (auto it = ports_.Begin(); it != ports_.End(); ++it) {
+    Port* port = it->first;
+    int count = it->second;
+    // NOTE: Since one can monitor another process X number of times, we need to
+    // send the exit signal also X times.
+    for (int i = 0; i < count; i++) {
+      signal = EnqueueSignal(port, dying_handle, exit_kind_, signal);
     }
+    port->DecrementRef();
   }
-  objects_.Clear();
+  ports_.Clear();
+
+  if (signal != NULL) Signal::DecrementRef(signal);
 }
 
-void Links::EnqueueSignal(Port* port, Signal::Kind kind) {
+Signal* Links::EnqueueSignal(Port* port, ProcessHandle* dying_handle,
+                             Signal::Kind kind, Signal* signal) {
   // We do this nested check for `port->process()` for two reasons:
   //    * avoid allocating [Signal] if we definitly do not need it
   //    * avoid allocating [Signal] while holding a [Spinlock]
   if (port->process() != NULL) {
-    uword address = reinterpret_cast<uword>(Smi::FromWord(kind));
-    Message* message = new Message(port, address, 0, Message::IMMEDIATE);
+    if (signal == NULL) signal = new Signal(dying_handle, kind);
+    signal->IncrementRef();
+    uword address = reinterpret_cast<uword>(signal);
+    Message* message =
+        new Message(port, address, 0, Message::PROCESS_DEATH_SIGNAL);
 
     {
-      port->Lock();
+      ScopedSpinlock locker(port->spinlock());
       Process* process = port->process();
       if (process != NULL) {
         process->mailbox()->EnqueueEntry(message);
         process->program()->scheduler()->ResumeProcess(process);
         message = NULL;
       }
-      port->Unlock();
     }
 
     if (message != NULL) delete message;
   }
+
+  return signal;
 }
 
-void Links::SendSignal(ProcessHandle* handle,
-                       ProcessHandle* dying_handle,
-                       Signal::Kind kind) {
-  // Everything that was not a normal termination will trigger a signal.
-  if (kind != Signal::kTerminated) {
-    // We do this nested check for `handle->process()` for two reasons:
-    //    * avoid allocating [Signal] if we definitly do not need it
-    //    * avoid allocating [Signal] while holding a [Spinlock]
+Signal* Links::SendSignal(ProcessHandle* handle, ProcessHandle* dying_handle,
+                          Signal::Kind kind, Signal* signal) {
+  // We do this nested check for `handle->process()` for two reasons:
+  //    * avoid allocating [Signal] if we definitly do not need it
+  //    * avoid allocating [Signal] while holding a [Spinlock]
+  if (handle->process() != NULL) {
+    if (signal == NULL) signal = new Signal(dying_handle, kind);
 
-    if (handle->process() != NULL) {
-      Signal* signal = new Signal(dying_handle, kind);
-
-      {
-        ScopedSpinlock locker(handle->lock());
-        Process* process = handle->process();
-        if (process != NULL) {
-          process->signal_mailbox()->EnqueueEntry(signal);
-          process->program()->scheduler()->SignalProcess(process);
-          signal = NULL;
-        }
+    {
+      ScopedSpinlock locker(handle->lock());
+      Process* process = handle->process();
+      if (process != NULL) {
+        signal->IncrementRef();
+        process->SendSignal(signal);
+        process->program()->scheduler()->SignalProcess(process);
       }
-
-      if (signal != NULL) delete signal;
     }
   }
+
+  return signal;
 }
 
 }  // namespace fletch

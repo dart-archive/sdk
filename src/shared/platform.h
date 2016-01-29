@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,6 +11,8 @@
 
 #if defined(FLETCH_TARGET_OS_POSIX)
 #include "src/shared/platform_posix.h"
+#elif defined(FLETCH_TARGET_OS_WIN)
+#include "src/shared/platform_windows.h"
 #elif defined(FLETCH_TARGET_OS_LK)
 #include "src/shared/platform_lk.h"
 #elif defined(FLETCH_TARGET_OS_CMSIS)
@@ -34,91 +36,112 @@ class Monitor;
 
 // Interface to the underlying platform.
 namespace Platform {
-  enum OperatingSystem {
-    kUnknownOS = 0,
-    kLinux     = 1,
-    kMacOS     = 2,
-    kAndroid   = 3,
-  };
+enum OperatingSystem {
+  kUnknownOS = 0,
+  kLinux = 1,
+  kMacOS = 2,
+  kAndroid = 3,
+  kWindows = 4,
+};
 
-  enum Architecture {
-    kUnknownArch = 0,
-    kIA32        = 1,
-    kX64         = 2,
-    kARM         = 3,
-  };
+enum Architecture {
+  kUnknownArch = 0,
+  kIA32 = 1,
+  kX64 = 2,
+  kARM = 3,
+};
 
-  // Initialize the Platform class.
-  void Setup();
+// Initialize the platform services.
+void Setup();
 
-  // Set thread in thread local storage.
-  void SetCurrentThread(Thread* thread);
+// Tear down the platform services.
+void TearDown();
 
-  // Get thread from thread local storage.
-  Thread* GetCurrentThread();
+// Set thread in thread local storage.
+void SetCurrentThread(Thread* thread);
 
-  // Factory method for creating platform dependent Mutex.
-  // Use delete to reclaim the storage for the returned Mutex.
-  Mutex* CreateMutex();
+// Get thread from thread local storage.
+Thread* GetCurrentThread();
 
-  // Use delete to reclaim the storage for the returned Monitor.
-  Monitor* CreateMonitor();
+// Factory method for creating platform dependent Mutex.
+// Use delete to reclaim the storage for the returned Mutex.
+Mutex* CreateMutex();
 
-  // Returns the number of microseconds since epoch.
-  uint64 GetMicroseconds();
+// Use delete to reclaim the storage for the returned Monitor.
+Monitor* CreateMonitor();
 
-  // Returns the number of microseconds since this process got started.
-  uint64 GetProcessMicroseconds();
+// Returns the number of microseconds since epoch.
+uint64 GetMicroseconds();
 
-  // Returns the number of available hardware threads.
-  int GetNumberOfHardwareThreads();
+// Returns the number of microseconds since this process got started.
+uint64 GetProcessMicroseconds();
 
-  // Load file at 'uri'.
-  List<uint8> LoadFile(const char* name);
+// Returns the number of available hardware threads.
+int GetNumberOfHardwareThreads();
 
-  // Store file at 'uri'.
-  bool StoreFile(const char* uri, List<uint8> bytes);
+// Load file at 'uri'.
+List<uint8> LoadFile(const char* name);
 
-  // Write text to file, append if the bool append is true.
-  bool WriteText(const char* uri, const char* text, bool append);
+// Store file at 'uri'.
+bool StoreFile(const char* uri, List<uint8> bytes);
 
-  const char* GetTimeZoneName(int64_t seconds_since_epoch);
+// Write text to file, append if the bool append is true.
+bool WriteText(const char* uri, const char* text, bool append);
 
-  int GetTimeZoneOffset(int64_t seconds_since_epoch);
+#if DEBUG
+void WaitForDebugger(const char* executable_name);
+#endif
 
-  int GetLocalTimeZoneOffset();
+const char* GetTimeZoneName(int64_t seconds_since_epoch);
 
-  void Exit(int exit_code);
+int GetTimeZoneOffset(int64_t seconds_since_epoch);
 
-  void ScheduleAbort();
+int GetLocalTimeZoneOffset();
 
-  void ImmediateAbort();
+void Exit(int exit_code);
 
-  int GetPid();
+void ScheduleAbort();
 
-  inline OperatingSystem OS() {
+void ImmediateAbort();
+
+int GetPid();
+
+char* GetEnv(const char* name);
+
+int FormatString(char* buffer, size_t length, const char* format, ...);
+
+int GetLastError();
+void SetLastError(int value);
+
+// Platform dependent max Dart stack size.
+// TODO(ager): Make this configurable through the embedding API?
+int MaxStackSizeInWords();
+
+inline OperatingSystem OS() {
 #if defined(__ANDROID__)
-    return kAndroid;
+  return kAndroid;
 #elif defined(__linux__)
-    return kLinux;
+  return kLinux;
 #elif defined(__APPLE__)
-    return kMacOS;
+  return kMacOS;
+#elif defined(_WINNT)
+  return kWindows;
 #else
-    return kUnknownOS;
+  return kUnknownOS;
 #endif
-  }
+}
 
-  inline Architecture Arch() {
+inline Architecture Arch() {
 #if defined(FLETCH_TARGET_IA32)
-    return kIA32;
+  return kIA32;
 #elif defined(FLETCH_TARGET_X64)
-    return kX64;
+  return kX64;
 #elif defined(FLETCH_TARGET_ARM)
-    return kARM;
+  return kARM;
 #else
-    return kUnknownArch;
+  return kUnknownArch;
 #endif
-  }
+}
 }  // namespace Platform
 
 // Interface for manipulating virtual memory.
@@ -183,6 +206,7 @@ class ScopedLock {
  public:
   explicit ScopedLock(Mutex* mutex) : mutex_(mutex) { mutex_->Lock(); }
   ~ScopedLock() { mutex_->Unlock(); }
+
  private:
   Mutex* const mutex_;
   DISALLOW_COPY_AND_ASSIGN(ScopedLock);
@@ -232,15 +256,10 @@ class ScopedMonitorUnlock {
   DISALLOW_COPY_AND_ASSIGN(ScopedMonitorUnlock);
 };
 
-inline Mutex* Platform::CreateMutex() {
-  return new Mutex();
-}
+inline Mutex* Platform::CreateMutex() { return new Mutex(); }
 
-inline Monitor* Platform::CreateMonitor() {
-  return new Monitor();
-}
+inline Monitor* Platform::CreateMonitor() { return new Monitor(); }
 
 }  // namespace fletch
-
 
 #endif  // SRC_SHARED_PLATFORM_H_

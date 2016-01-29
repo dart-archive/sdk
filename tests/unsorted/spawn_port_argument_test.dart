@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -9,7 +9,7 @@ import 'package:expect/expect.dart';
 main() {
   Channel channel = new Channel();
   final Port port = new Port(channel);
-  Process.spawn(run, port);
+  Process.spawnDetached(() => run(port));
   int id = channel.receive();
   Expect.equals(port.id, id);
   Expect.equals(port.id, channel.receive().id);

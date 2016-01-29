@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -6,6 +6,7 @@
 #include "src/vm/gc_thread.h"
 #include "src/vm/program.h"
 #include "src/vm/process.h"
+#include "src/vm/scheduler.h"
 
 namespace fletch {
 
@@ -17,15 +18,11 @@ void* GCThread::GCThreadEntryPoint(void* data) {
 
 GCThread::GCThread()
     : gc_thread_monitor_(Platform::CreateMonitor()),
-      program_(NULL),
       shutting_down_(false),
-      requesting_shared_gc_(false),
-      requesting_gc_(false),
       pause_count_(0),
       client_monitor_(Platform::CreateMonitor()),
       did_pause_(false),
-      did_shutdown_(false) {
-}
+      did_shutdown_(false) {}
 
 GCThread::~GCThread() {
   delete gc_thread_monitor_;
@@ -36,21 +33,28 @@ void GCThread::StartThread() {
   thread_ = Thread::Run(&GCThread::GCThreadEntryPoint, this);
 }
 
-void GCThread::TriggerImmutableGC(Program* program) {
+void GCThread::TriggerSharedGC(Program* program) {
   ScopedMonitorLock lock(gc_thread_monitor_);
-  // NOTE: We don't support multiple programs ATM.
-  ASSERT(program_ == NULL || program_ == program);
-  program_ = program;
-  requesting_shared_gc_ = true;
+
+  auto it = shared_gc_count_.Find(program);
+  if (it == shared_gc_count_.End()) {
+    shared_gc_count_[program] = 1;
+  } else {
+    it->second++;
+  }
+
   gc_thread_monitor_->Notify();
 }
 
 void GCThread::TriggerGC(Program* program) {
   ScopedMonitorLock lock(gc_thread_monitor_);
-  // NOTE: We don't support multiple programs ATM.
-  ASSERT(program_ == NULL || program_ == program);
-  program_ = program;
-  requesting_gc_ = true;
+  auto it = program_gc_count_.Find(program);
+  if (it == program_gc_count_.End()) {
+    program_gc_count_[program] = 1;
+  } else {
+    it->second++;
+  }
+
   gc_thread_monitor_->Notify();
 }
 
@@ -107,27 +111,31 @@ void GCThread::StopThread() {
 void GCThread::MainLoop() {
   // Handle gc and shutdown messages.
   while (true) {
-    bool do_gc = false;
-    bool do_shared_gc = false;
+    Program* program_to_gc = NULL;
+    Program* shared_heap_to_gc = NULL;
     bool do_pause = false;
     bool do_shutdown = false;
     {
       {
         ScopedMonitorLock lock(gc_thread_monitor_);
-        while (!requesting_gc_ &&
-               !requesting_shared_gc_ &&
+        while (program_gc_count_.size() == 0 &&
+               shared_gc_count_.size() == 0 &&
                pause_count_ == 0 &&
                !shutting_down_) {
           gc_thread_monitor_->Wait();
         }
 
-        do_gc = requesting_gc_;
-        do_shared_gc = requesting_shared_gc_;
+        if (shared_gc_count_.size() > 0) {
+          shared_heap_to_gc = shared_gc_count_.Begin()->first;
+        }
+
+        if (program_gc_count_.size() > 0) {
+          program_to_gc = program_gc_count_.Begin()->first;
+        }
+
         do_shutdown = shutting_down_;
         do_pause = pause_count_ > 0;
 
-        requesting_shared_gc_ = false;
-        requesting_gc_ = false;
         shutting_down_ = false;
       }
 
@@ -151,18 +159,59 @@ void GCThread::MainLoop() {
       }
     }
 
-    if (do_shared_gc) {
-      program_->CollectSharedGarbage();
+    if (shared_heap_to_gc != NULL) {
+      Scheduler* scheduler = shared_heap_to_gc->scheduler();
+      if (scheduler != NULL) scheduler->StopProgram(shared_heap_to_gc);
+      shared_heap_to_gc->CollectSharedGarbage();
+      if (scheduler != NULL) scheduler->ResumeProgram(shared_heap_to_gc);
+
+      int count = 0;
+      {
+        ScopedMonitorLock lock(gc_thread_monitor_);
+        auto it = shared_gc_count_.Find(shared_heap_to_gc);
+        count = it->second;
+        shared_gc_count_.Erase(it);
+      }
+      shared_heap_to_gc->scheduler()->FinishedGC(shared_heap_to_gc, count);
     }
 
-    if (do_gc) {
-      program_->CollectGarbage();
+    if (program_to_gc != NULL) {
+      Scheduler* scheduler = program_to_gc->scheduler();
+      if (scheduler != NULL) scheduler->StopProgram(program_to_gc);
+      program_to_gc->CollectGarbage();
+      if (scheduler != NULL) scheduler->ResumeProgram(program_to_gc);
+
+      int count = 0;
+      {
+        ScopedMonitorLock lock(gc_thread_monitor_);
+        auto it = program_gc_count_.Find(program_to_gc);
+        count = it->second;
+        program_gc_count_.Erase(it);
+      }
+      program_to_gc->scheduler()->FinishedGC(program_to_gc, count);
     }
 
     if (do_shutdown) {
       break;
     }
   }
+
+  // Tell scheduler that we're done with all programs.
+  for (auto it = shared_gc_count_.Begin();
+       it != shared_gc_count_.End();
+       ++it) {
+    Program* program = it->first;
+    program->scheduler()->FinishedGC(program, it->second);
+  }
+  shared_gc_count_.Clear();
+
+  for (auto it = program_gc_count_.Begin();
+       it != program_gc_count_.End();
+       ++it) {
+    Program* program = it->first;
+    program->scheduler()->FinishedGC(program, it->second);
+  }
+  program_gc_count_.Clear();
 
   // Tell caller of GCThread.Shutdown() we're done.
   {

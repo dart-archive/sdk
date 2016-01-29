@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -17,14 +17,12 @@ extern "C" FletchStaticFFISymbol fletch_ffi_table;
 
 namespace fletch {
 
-void ForeignFunctionInterface::Setup() {
-}
+void ForeignFunctionInterface::Setup() {}
 
-void ForeignFunctionInterface::TearDown() {
-}
+void ForeignFunctionInterface::TearDown() {}
 
-void ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
-  FATAL("fletch vm was built without dynamic-libary FFI support.");
+bool ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
+  return false;
 }
 
 void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
@@ -35,12 +33,11 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
 DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
 Mutex* ForeignFunctionInterface::mutex_ = NULL;
 
-NATIVE(ForeignLibraryGetFunction) {
+BEGIN_NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   if (address != 0) return Failure::index_out_of_bounds();
   char* name = AsForeignString(arguments[1]);
-  for (FletchStaticFFISymbol* entry = &fletch_ffi_table;
-       entry->name != NULL;
+  for (FletchStaticFFISymbol* entry = &fletch_ffi_table; entry->name != NULL;
        entry++) {
     if (strcmp(name, entry->name) == 0) {
       free(name);
@@ -50,8 +47,9 @@ NATIVE(ForeignLibraryGetFunction) {
   free(name);
   return Failure::index_out_of_bounds();
 }
+END_NATIVE()
 
-NATIVE(ForeignLibraryLookup) {
+BEGIN_NATIVE(ForeignLibraryLookup) {
   char* library = AsForeignString(arguments[0]);
   if (library != NULL) {
     free(library);
@@ -59,24 +57,19 @@ NATIVE(ForeignLibraryLookup) {
   }
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignLibraryClose) {
-  word address = AsForeignWord(arguments[0]);
-  if (address != 0) {
-    return Failure::index_out_of_bounds();
-  }
-  return Smi::FromWord(0);
-}
-
-NATIVE(ForeignLibraryBundlePath) {
+BEGIN_NATIVE(ForeignLibraryBundlePath) {
   UNIMPLEMENTED();
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
-NATIVE(ForeignErrno) {
+BEGIN_NATIVE(ForeignErrno) {
   UNIMPLEMENTED();
   return Smi::FromWord(0);
 }
+END_NATIVE()
 
 }  // namespace fletch
 

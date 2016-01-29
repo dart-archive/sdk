@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -9,30 +9,46 @@
 // the platform header to include.
 #include "src/shared/platform.h"  // NOLINT
 
-#include <errno.h>
 #include <sys/time.h>
 #include <time.h>
 #include <signal.h>
 #include <unistd.h>
-#include <cmsis_os.h>
 
 #include "src/shared/utils.h"
 
 namespace fletch {
 
+osMailQId fletchMailQ;
+
+osMailQId GetFletchMailQ() {
+  return fletchMailQ;
+}
+
+// Sends a message on the fletch osMailQ used by the event handler.
+int SendMessageCmsis(uint32_t port_id, int64_t message) {
+  CmsisMessage *cmsisMessage =
+      reinterpret_cast<CmsisMessage*>(osMailAlloc(fletchMailQ, 0));
+  cmsisMessage->port_id = port_id;
+  cmsisMessage->message = message;
+  return osMailPut(GetFletchMailQ(), reinterpret_cast<void*>(cmsisMessage));
+}
+
 static uint64 time_launch;
+
+// The size of the queue used by the event handler.
+const uint32_t kMailQSize = 50;
 
 void Platform::Setup() {
   time_launch = GetMicroseconds();
+  osMailQDef(fletch_queue, kMailQSize, CmsisMessage);
+  fletchMailQ = osMailCreate(osMailQ(fletch_queue), NULL);
 }
 
-void GetPathOfExecutable(char* path, size_t path_length) {
-  path[0] = '\0';
-}
+void Platform::TearDown() { }
 
-int Platform::GetLocalTimeZoneOffset() {
-  return 0;
-}
+void GetPathOfExecutable(char* path, size_t path_length) { path[0] = '\0'; }
+
+int Platform::GetLocalTimeZoneOffset() { return 0; }
 
 uint64 Platform::GetMicroseconds() {
   struct timeval tv;
@@ -47,9 +63,7 @@ uint64 Platform::GetProcessMicroseconds() {
   return GetMicroseconds() - time_launch;
 }
 
-int Platform::GetNumberOfHardwareThreads() {
-  return 1;
-}
+int Platform::GetNumberOfHardwareThreads() { return 1; }
 
 // Load file at 'uri'.
 List<uint8> Platform::LoadFile(const char* name) {
@@ -128,9 +142,7 @@ int Platform::GetTimeZoneOffset(int64_t seconds_since_epoch) {
   return 0;
 }
 
-void Platform::Exit(int exit_code) {
-  exit(exit_code);
-}
+void Platform::Exit(int exit_code) { exit(exit_code); }
 
 void Platform::ScheduleAbort() {
   static bool failed = false;
@@ -138,22 +150,36 @@ void Platform::ScheduleAbort() {
   failed = true;
 }
 
-void Platform::ImmediateAbort() {
-  abort();
-}
+void Platform::ImmediateAbort() { abort(); }
 
 int Platform::GetPid() {
   // For now just returning 0 here.
   return 0;
 }
 
-VirtualMemory::VirtualMemory(int size) : size_(size) {
+#ifdef DEBUG
+void Platform::WaitForDebugger(const char* executable_name) {
   UNIMPLEMENTED();
+}
+#endif
+
+char* Platform::GetEnv(const char* name) { return NULL; }
+
+int Platform::FormatString(char* buffer, size_t length, const char* format,
+                           ...) {
+  UNIMPLEMENTED();
+  return 0;
 }
 
-VirtualMemory::~VirtualMemory() {
-  UNIMPLEMENTED();
-}
+// Do nothing for errno handling for now.
+int Platform::GetLastError() { return 0; }
+void Platform::SetLastError(int value) { }
+
+int Platform::MaxStackSizeInWords() { return 16 * KB; }
+
+VirtualMemory::VirtualMemory(int size) : size_(size) { UNIMPLEMENTED(); }
+
+VirtualMemory::~VirtualMemory() { UNIMPLEMENTED(); }
 
 bool VirtualMemory::IsReserved() const {
   UNIMPLEMENTED();

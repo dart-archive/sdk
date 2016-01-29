@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "src/shared/assert.h"
+#include "src/shared/bytecodes.h"
 #include "src/shared/utils.h"
 #include "src/shared/version.h"
 
@@ -42,10 +43,8 @@ class Header {
 
   static Header FromTypeAndElements(InstanceFormat::Type type,
                                     int elements = 0) {
-    Header h = Header(
-        TypeField::encode(type) |
-        ElementsField::encode(elements) |
-        kTypeAndElementsTag);
+    Header h = Header(TypeField::encode(type) |
+                      ElementsField::encode(elements) | kTypeAndElementsTag);
     ASSERT(h.is_type());
     ASSERT(type == h.as_type());
     ASSERT(elements == h.elements());
@@ -76,6 +75,8 @@ class Header {
         return Double::AllocationSize();
       case InstanceFormat::INITIALIZER_TYPE:
         return Initializer::AllocationSize();
+      case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE:
+        return DispatchTableEntry::AllocationSize();
       default:
         UNREACHABLE();
         return 0;
@@ -83,9 +84,7 @@ class Header {
   }
 
   bool is_smi() { return (value_ & kSmiMask) == kSmiTag; }
-  bool is_native_smi() {
-    return is_smi() && Smi::IsValid(value_ >> kSmiShift);
-  }
+  bool is_native_smi() { return is_smi() && Smi::IsValid(value_ >> kSmiShift); }
   Smi* as_smi() {
     ASSERT(is_native_smi());
     return Smi::FromWord(value_ >> kSmiShift);
@@ -132,7 +131,8 @@ class Header {
 
   // Fields in case of Type + Elements encoding.
   class TypeField : public BitField<InstanceFormat::Type, 2, 4> {};
-  class ElementsField: public BitField<word, 6, 26> {};
+  class ElementsField : public BitField<word, 6, 26> {};
+
  private:
   int64 value_;
 };
@@ -140,7 +140,7 @@ class Header {
 class ObjectInfo {
  public:
   ObjectInfo(Class* the_class, int index)
-      : the_class_(the_class), index_(index) { }
+      : the_class_(the_class), index_(index) {}
   Class* the_class() { return the_class_; }
   int index() { return index_; }
 
@@ -149,9 +149,9 @@ class ObjectInfo {
   int index_;
 };
 
-class ReaderVisitor: public PointerVisitor {
+class ReaderVisitor : public PointerVisitor {
  public:
-  explicit ReaderVisitor(SnapshotReader* reader) : reader_(reader) { }
+  explicit ReaderVisitor(SnapshotReader* reader) : reader_(reader) {}
 
   void Visit(Object** p) { *p = reader_->ReadObject(); }
 
@@ -159,13 +159,14 @@ class ReaderVisitor: public PointerVisitor {
     // Copy all HeapObject pointers in [start, end)
     for (Object** p = start; p < end; p++) *p = reader_->ReadObject();
   }
+
  private:
   SnapshotReader* reader_;
 };
 
-class WriterVisitor: public PointerVisitor {
+class WriterVisitor : public PointerVisitor {
  public:
-  explicit WriterVisitor(SnapshotWriter* writer) : writer_(writer) { }
+  explicit WriterVisitor(SnapshotWriter* writer) : writer_(writer) {}
 
   void Visit(Object** p) { writer_->WriteObject(*p); }
 
@@ -173,11 +174,12 @@ class WriterVisitor: public PointerVisitor {
     // Copy all HeapObject pointers in [start, end)
     for (Object** p = start; p < end; p++) writer_->WriteObject(*p);
   }
+
  private:
   SnapshotWriter* writer_;
 };
 
-class UnmarkSnapshotVisitor: public PointerVisitor {
+class UnmarkSnapshotVisitor : public PointerVisitor {
  public:
   void VisitBlock(Object** start, Object** end) {
     for (Object** p = start; p < end; p++) {
@@ -198,9 +200,9 @@ class UnmarkSnapshotVisitor: public PointerVisitor {
   }
 };
 
-class UnmarkVisitor: public PointerVisitor {
+class UnmarkVisitor : public PointerVisitor {
  public:
-  UnmarkVisitor() { }
+  UnmarkVisitor() {}
 
   void Visit(Object** p) { Unmark(*p); }
 
@@ -210,7 +212,7 @@ class UnmarkVisitor: public PointerVisitor {
   }
 
  private:
-  void Unmark(Object* object)  {
+  void Unmark(Object* object) {
     if (object->IsHeapObject()) {
       UnmarkSnapshotVisitor visitor;
       visitor.Unmark(HeapObject::cast(object));
@@ -290,9 +292,9 @@ Program* SnapshotReader::ReadProgram() {
   int snapshot_version_length = ReadInt64();
   uint8* snapshot_version = new uint8[snapshot_version_length];
   ReadBytes(snapshot_version_length, snapshot_version);
+
   if ((version_length != snapshot_version_length) ||
-      (strncmp(version,
-               reinterpret_cast<char*>(snapshot_version),
+      (strncmp(version, reinterpret_cast<char*>(snapshot_version),
                snapshot_version_length) != 0)) {
     delete[] snapshot_version;
     Print::Error("Error: Snapshot and VM versions do not agree.\n");
@@ -300,13 +302,15 @@ Program* SnapshotReader::ReadProgram() {
   }
   delete[] snapshot_version;
 
+  int hashtag = ReadInt64();
+
   // Read the required backward reference table size.
   int references = 0;
   for (int i = 0; i < kReferenceTableSizeBytes; i++) {
     references = (references << 8) | ReadByte();
   }
 
-  Program* program = new Program(Program::kLoadedFromSnapshot);
+  Program* program = new Program(Program::kLoadedFromSnapshot, hashtag);
 
   // Read the heap size and allocate an area for it.
   int size_position;
@@ -322,30 +326,29 @@ Program* SnapshotReader::ReadProgram() {
   }
   position_ += 4 * kHeapSizeBytes;
   int heap_size = ReadHeapSizeFrom(size_position);
-  memory_ = ObjectMemory::AllocateChunk(program->heap()->space(), heap_size);
+  // Make sure to make room for the filler at the end of the program space.
+  memory_ =
+      ObjectMemory::AllocateChunk(program->heap()->space(), heap_size + 1);
   top_ = memory_->base();
 
   // Allocate space for the backward references.
   backward_references_ = List<HeapObject*>::New(references);
 
-  // Read all the program state (except roots).
-  program->set_entry(Function::cast(ReadObject()));
-  program->set_main_arity(ReadInt64());
-  program->set_classes(Array::cast(ReadObject()));
-  program->set_constants(Array::cast(ReadObject()));
-  program->set_static_methods(Array::cast(ReadObject()));
-  program->set_static_fields(Array::cast(ReadObject()));
-  program->set_dispatch_table(Array::cast(ReadObject()));
-
   // Read the roots.
   ReaderVisitor visitor(this);
   program->IterateRootsIgnoringSession(&visitor);
 
-  program->heap()->space()->AppendProgramChunk(memory_, top_);
+  // Read all the program state (except roots).
+  program->set_entry(Function::cast(ReadObject()));
+  program->set_main_arity(ReadInt64());
+  program->set_static_fields(Array::cast(ReadObject()));
+  program->set_dispatch_table(Array::cast(ReadObject()));
+
+  program->heap()->space()->Append(memory_);
+  program->heap()->space()->UpdateBaseAndLimit(memory_, top_);
   backward_references_.Delete();
 
   // Programs read from a snapshot are always compact.
-  program->set_is_compact(true);
   program->SetupDispatchTableIntrinsics();
 
   // As a sanity check we ensure that the heap size the writer of the snapshot
@@ -359,17 +362,24 @@ Program* SnapshotReader::ReadProgram() {
 }
 
 List<uint8> SnapshotWriter::WriteProgram(Program* program) {
-  ASSERT(program->is_compact());
+  ASSERT(program->is_optimized());
 
   program->ClearDispatchTableIntrinsics();
 
+  // Emit recognizable header.
   WriteByte(0xbe);
   WriteByte(0xef);
 
+  // Emit version of the VM.
   const char* version = GetVersion();
   int version_length = strlen(version);
   WriteInt64(version_length);
   WriteBytes(version_length, reinterpret_cast<const uint8*>(version));
+
+  // Emit a tag that can be used to match profiler ticks with a program.
+  int hashtag = 0xcafe + (Platform::GetMicroseconds() % 0x10000);
+  program->set_hashtag(hashtag);
+  WriteInt64(hashtag);
 
   // Reserve space for the backward reference table size.
   int reference_count_position = position_;
@@ -382,18 +392,15 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   int size32_float_position = position_ + 3 * kHeapSizeBytes;
   for (int i = 0; i < 4 * kHeapSizeBytes; i++) WriteByte(0);
 
-  // Write all the program state (except roots).
-  WriteObject(program->entry());
-  WriteInt64(program->main_arity());
-  WriteObject(program->classes());
-  WriteObject(program->constants());
-  WriteObject(program->static_methods());
-  WriteObject(program->static_fields());
-  WriteObject(program->dispatch_table());
-
   // Write out all the roots of the program.
   WriterVisitor visitor(this);
   program->IterateRootsIgnoringSession(&visitor);
+
+  // Write all the program state (except roots).
+  WriteObject(program->entry());
+  WriteInt64(program->main_arity());
+  WriteObject(program->static_fields());
+  WriteObject(program->dispatch_table());
 
   // TODO(kasperl): Unmark all touched objects. Right now, we
   // only unmark the roots.
@@ -444,18 +451,21 @@ Object* SnapshotReader::ReadObject() {
   InstanceFormat::Type type = header.as_type();
 
   int size = header.Size();
+  if (type == InstanceFormat::FUNCTION_TYPE) {
+    size += ReadInt64() * kPointerSize;
+  }
   HeapObject* object = Allocate(size);
 
   AddReference(object);
   object->set_class(reinterpret_cast<Class*>(ReadObject()));
   switch (type) {
     case InstanceFormat::ONE_BYTE_STRING_TYPE:
-      reinterpret_cast<OneByteString*>(object)->OneByteStringReadFrom(
-          this, elements);
+      reinterpret_cast<OneByteString*>(object)
+          ->OneByteStringReadFrom(this, elements);
       break;
     case InstanceFormat::TWO_BYTE_STRING_TYPE:
-      reinterpret_cast<TwoByteString*>(object)->TwoByteStringReadFrom(
-          this, elements);
+      reinterpret_cast<TwoByteString*>(object)
+          ->TwoByteStringReadFrom(this, elements);
       break;
     case InstanceFormat::ARRAY_TYPE:
       reinterpret_cast<Array*>(object)->ArrayReadFrom(this, elements);
@@ -487,6 +497,11 @@ Object* SnapshotReader::ReadObject() {
     case InstanceFormat::INITIALIZER_TYPE: {
       Initializer* initializer = reinterpret_cast<Initializer*>(object);
       initializer->InitializerReadFrom(this);
+      break;
+    }
+    case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE: {
+      DispatchTableEntry* entry = reinterpret_cast<DispatchTableEntry*>(object);
+      entry->DispatchTableEntryReadFrom(this);
       break;
     }
     default:
@@ -562,14 +577,14 @@ void SnapshotWriter::WriteObject(Object* object) {
     }
     case InstanceFormat::CLASS_TYPE: {
       Class* klass = Class::cast(object);
-      (*class_offsets_)[klass] = new PortableOffset(heap_size_);
+      (*class_offsets_)[klass] = PortableOffset(heap_size_);
       heap_size_ += klass->CalculatePortableSize();
       klass->ClassWriteTo(this, klass);
       break;
     }
     case InstanceFormat::FUNCTION_TYPE: {
       Function* function = Function::cast(object);
-      (*function_offsets_)[function] = new PortableOffset(heap_size_);
+      (*function_offsets_)[function] = PortableOffset(heap_size_);
       heap_size_ += function->CalculatePortableSize();
       function->FunctionWriteTo(this, klass);
       break;
@@ -584,6 +599,12 @@ void SnapshotWriter::WriteObject(Object* object) {
       Initializer* initializer = Initializer::cast(object);
       heap_size_ += initializer->CalculatePortableSize();
       initializer->InitializerWriteTo(this, klass);
+      break;
+    }
+    case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE: {
+      DispatchTableEntry* entry = DispatchTableEntry::cast(object);
+      heap_size_ += entry->CalculatePortableSize();
+      entry->DispatchTableEntryWriteTo(this, klass);
       break;
     }
     default:
@@ -711,44 +732,157 @@ void Class::ClassWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->Forward(this);
   // Body.
   int size = AllocationSize();
-  for (int offset = HeapObject::kSize;
-       offset < size;
-       offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
 }
 
 void Class::ClassReadFrom(SnapshotReader* reader) {
   int size = AllocationSize();
-  for (int offset = HeapObject::kSize;
-       offset < size;
-       offset += kPointerSize) {
+  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
 }
+
+#ifdef FLETCH_TARGET_X64
+void Function::WriteByteCodes(SnapshotWriter* writer) {
+  ASSERT(kPointerSize == 8);
+  uint8* bcp = bytecode_address_for(0);
+  int i = 0;
+  while (i < bytecode_size()) {
+    Opcode opcode = static_cast<Opcode>(bcp[i]);
+    switch (opcode) {
+      case kLoadConst:
+      case kAllocate:
+      case kAllocateImmutable:
+      case kInvokeStatic:
+      case kInvokeFactory: {
+        ASSERT(Bytecode::Size(opcode) == 5);
+        // Read the offset.
+        int32 offset = Utils::ReadInt32(bcp + i + 1);
+        // Rewrite offset from 64 bit format to 32 bit format.
+        int delta_to_bytecode_end = bytecode_size() - i;
+        int padding32 = Utils::RoundUp(bytecode_size(), 4) - bytecode_size();
+        int padding64 =
+            Utils::RoundUp(bytecode_size(), kPointerSize) - bytecode_size();
+        int pointers =
+            (offset - delta_to_bytecode_end - padding64) / kPointerSize;
+        offset = delta_to_bytecode_end + padding32 + pointers * 4;
+        // Write the bytecode.
+        writer->WriteByte(bcp[i++]);
+        uint8* offset_pointer = reinterpret_cast<uint8*>(&offset);
+        for (int j = 0; j < 4; j++) {
+          writer->WriteByte(*(offset_pointer++));
+        }
+        i += 4;
+        break;
+      }
+      case kMethodEnd:
+        // Write the method end bytecode and everything that follows.
+        writer->WriteBytes(bytecode_size() - i, bcp + i);
+        return;
+      default:
+        // TODO(ager): Maybe just collect chunks and copy them with
+        // memcpy when encountering the end or a bytecode we need to
+        // rewrite?
+        for (int j = 0; j < Bytecode::Size(opcode); j++) {
+          writer->WriteByte(bcp[i++]);
+        }
+        break;
+    }
+  }
+}
+#else
+void Function::WriteByteCodes(SnapshotWriter* writer) {
+  ASSERT(kPointerSize == 4);
+  writer->WriteBytes(bytecode_size(), bytecode_address_for(0));
+}
+#endif
+
+#ifdef FLETCH_TARGET_X64
+void Function::ReadByteCodes(SnapshotReader* reader) {
+  ASSERT(kPointerSize == 8);
+  uint8* bcp = bytecode_address_for(0);
+  int i = 0;
+  while (i < bytecode_size()) {
+    uint8 raw_opcode = reader->ReadByte();
+    Opcode opcode = static_cast<Opcode>(raw_opcode);
+    switch (opcode) {
+      case kLoadConst:
+      case kAllocate:
+      case kAllocateImmutable:
+      case kInvokeStatic:
+      case kInvokeFactory: {
+        ASSERT(Bytecode::Size(opcode) == 5);
+        // Read the offset.
+        int32 offset = 0;
+        uint8* offset_pointer = reinterpret_cast<uint8*>(&offset);
+        for (int i = 0; i < 4; i++) {
+          offset_pointer[i] = reader->ReadByte();
+        }
+        // Rewrite offset from 32 bit format to 64 bit format.
+        int delta_to_bytecode_end = bytecode_size() - i;
+        int padding32 = Utils::RoundUp(bytecode_size(), 4) - bytecode_size();
+        int padding64 =
+            Utils::RoundUp(bytecode_size(), kPointerSize) - bytecode_size();
+        int pointers = (offset - delta_to_bytecode_end - padding32) / 4;
+        offset = delta_to_bytecode_end + padding64 + pointers * kPointerSize;
+        // Write the bytecode.
+        bcp[i++] = raw_opcode;
+        Utils::WriteInt32(bcp + i, offset);
+        i += 4;
+        break;
+      }
+      case kMethodEnd:
+        // Read the method end bytecode and everything that follows.
+        bcp[i++] = raw_opcode;
+        while (i < bytecode_size()) {
+          bcp[i++] = reader->ReadByte();
+        }
+        return;
+      default:
+        // TODO(ager): Maybe just collect chunks and copy them with
+        // memcpy when encountering the end or a bytecode we need to
+        // rewrite?
+        bcp[i++] = raw_opcode;
+        for (int j = 1; j < Bytecode::Size(opcode); j++) {
+          bcp[i++] = reader->ReadByte();
+        }
+        break;
+    }
+  }
+}
+#else
+void Function::ReadByteCodes(SnapshotReader* reader) {
+  reader->ReadBytes(bytecode_size(), bytecode_address_for(0));
+}
+#endif
 
 void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
   // Header.
-  ASSERT(literals_size() == 0);
   writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, bytecode_size());
+  writer->WriteInt64(literals_size());
   writer->Forward(this);
   // Body.
-  for (int offset = HeapObject::kSize;
-       offset < Function::kSize;
+  for (int offset = HeapObject::kSize; offset < Function::kSize;
        offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
-  writer->WriteBytes(bytecode_size(), bytecode_address_for(0));
+  WriteByteCodes(writer);
+  for (int i = 0; i < literals_size(); i++) {
+    writer->WriteObject(literal_at(i));
+  }
 }
 
 void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
-  for (int offset = HeapObject::kSize;
-       offset < Function::kSize;
+  for (int offset = HeapObject::kSize; offset < Function::kSize;
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
-  ASSERT(literals_size() == 0);
-  reader->ReadBytes(bytecode_size(), bytecode_address_for(0));
+  ReadByteCodes(reader);
+  for (int i = 0; i < literals_size(); i++) {
+    set_literal_at(i, reader->ReadObject());
+  }
 }
 
 void LargeInteger::LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass) {
@@ -780,19 +914,37 @@ void Initializer::InitializerWriteTo(SnapshotWriter* writer, Class* klass) {
   writer->WriteHeader(InstanceFormat::INITIALIZER_TYPE);
   writer->Forward(this);
   // Body.
-  for (int offset = HeapObject::kSize;
-       offset < Initializer::kSize;
+  for (int offset = HeapObject::kSize; offset < Initializer::kSize;
        offset += kPointerSize) {
     writer->WriteObject(at(offset));
   }
 }
 
 void Initializer::InitializerReadFrom(SnapshotReader* reader) {
-  for (int offset = HeapObject::kSize;
-       offset < Initializer::kSize;
+  for (int offset = HeapObject::kSize; offset < Initializer::kSize;
        offset += kPointerSize) {
     at_put(offset, reader->ReadObject());
   }
+}
+
+void DispatchTableEntry::DispatchTableEntryWriteTo(SnapshotWriter* writer,
+                                                   Class* klass) {
+  // Header.
+  writer->WriteHeader(InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE);
+  writer->Forward(this);
+
+  // Body.
+  writer->WriteObject(at(kTargetOffset));
+  ASSERT(code() == NULL);
+  writer->WriteObject(offset());
+  writer->WriteInt64(selector());
+}
+
+void DispatchTableEntry::DispatchTableEntryReadFrom(SnapshotReader* reader) {
+  set_target(Function::cast(reader->ReadObject()));
+  set_code(NULL);
+  set_offset(Smi::cast(reader->ReadObject()));
+  set_selector(reader->ReadInt64());
 }
 
 }  // namespace fletch

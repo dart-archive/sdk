@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -26,10 +26,8 @@
 #endif  // __has_feature(address_sanitizer)
 #endif  // defined(__has_feature)
 
-#if defined(FLETCH_ASAN) && \
-    defined(FLETCH_CLANG) && \
-    defined(FLETCH_TARGET_X64) && \
-    !defined(USING_ADDRESS_SANITIZER)
+#if defined(FLETCH_ASAN) && defined(FLETCH_CLANG) && \
+    defined(FLETCH_TARGET_X64) && !defined(USING_ADDRESS_SANITIZER)
 #error "Expected to use ASAN in asan-clang-x64 configuration."
 #endif
 

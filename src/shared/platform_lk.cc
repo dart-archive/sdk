@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -28,9 +28,9 @@ void GetPathOfExecutable(char* path, size_t path_length) {
 
 static uint64 time_launch;
 
-void Platform::Setup() {
-  time_launch = GetMicroseconds();
-}
+void Platform::Setup() { time_launch = GetMicroseconds(); }
+
+void Platform::TearDown() { }
 
 uint64 Platform::GetMicroseconds() {
   lk_bigtime_t time = current_time_hires();
@@ -144,47 +144,64 @@ int Platform::GetLocalTimeZoneOffset() {
   return 0;
 }
 
+// Do nothing for errno handling for now.
+int Platform::GetLastError() { return 0; }
+void Platform::SetLastError(int value) { }
+
 // Constants used for mmap.
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;
 
-VirtualMemory::VirtualMemory(int size) : size_(size) {
-}
+VirtualMemory::VirtualMemory(int size) : size_(size) {}
 
-VirtualMemory::~VirtualMemory() {
-}
+VirtualMemory::~VirtualMemory() {}
 
-bool VirtualMemory::IsReserved() const {
-  return false;
-}
+bool VirtualMemory::IsReserved() const { return false; }
 
 bool VirtualMemory::Commit(uword address, int size, bool executable) {
   return false;
 }
 
-bool VirtualMemory::Uncommit(uword address, int size) {
-  return false;
-}
+bool VirtualMemory::Uncommit(uword address, int size) { return false; }
 
 void Platform::Exit(int exit_code) {
   printf("Exited with code %d.\n", exit_code);
-  while (true) {}
+  while (true) {
+  }
 }
 
 void Platform::ScheduleAbort() {
   printf("Aborted (scheduled)\n");
-  while (true) {}
+  while (true) {
+  }
 }
 
 void Platform::ImmediateAbort() {
   printf("Aborted (immediate)\n");
-  while (true) {}
+  while (true) {
+  }
 }
 
 int Platform::GetPid() {
   // For now just returning 0 here.
   return 0;
 }
+
+#ifdef DEBUG
+void Platform::WaitForDebugger(const char* executable_name) {
+  UNIMPLEMENTED();
+}
+#endif
+
+int Platform::FormatString(char* buffer, size_t length, const char* format,
+                           ...) {
+  UNIMPLEMENTED();
+  return 0;
+}
+
+char* Platform::GetEnv(const char* name) { return NULL; }
+
+int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
 }  // namespace fletch
 

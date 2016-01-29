@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,13 +12,9 @@
 
 namespace fletch {
 
-DriverConnection::DriverConnection(Socket* socket)
-    : socket_(socket) {
-}
+DriverConnection::DriverConnection(Socket* socket) : socket_(socket) {}
 
-DriverConnection::~DriverConnection() {
-  delete socket_;
-}
+DriverConnection::~DriverConnection() { delete socket_; }
 
 DriverConnection::Command DriverConnection::Receive() {
   incoming_.ClearBuffer();

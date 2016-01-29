@@ -9,7 +9,7 @@ library status_expression;
  * There are set expressions and Boolean expressions in a .status file.
  * The grammar is:
  *   BooleanExpression := $variableName == value | $variableName != value |
- *                        $variableName | (BooleanExpression) |
+ *                        $variableName | !$variableName | (BooleanExpression) |
  *                        BooleanExpression && BooleanExpression |
  *                        BooleanExpression || BooleanExpression
  *
@@ -22,7 +22,7 @@ library status_expression;
  *  both evaluate to set union, but with different precedence.
  *
  *  Values and variableNames are non-empty strings of word characters, matching
- *  the RegExp \w+.
+ *  the RegExp [\w.-]+.
  *
  *  Expressions evaluate as expected, with values of variables found in
  *  an environment passed to the evaluator.  The SetExpression "value"
@@ -47,6 +47,7 @@ class Token {
   static const String NOT_EQUALS = "!=";
   static const String AND = "&&";
   static const String OR = "||";
+  static const String NOT = "!";
 }
 
 
@@ -57,10 +58,13 @@ class Tokenizer {
   Tokenizer(String this.expression)
     : tokens = new List<String>();
 
-  // Tokens are : "(", ")", "$", ",", "&&", "||", "==", "!=", and (maximal) \w+.
+  // Tokens are : "(", ")", "$", ",", "&&", "||", "==", "!", "!=", and
+  // (maximal) [\w.-]+.
   static final testRegexp =
-      new RegExp(r"^([()$\w\s,]|(\&\&)|(\|\|)|(\=\=)|(\!\=))+$");
-  static final regexp = new RegExp(r"[()$,]|(\&\&)|(\|\|)|(\=\=)|(\!\=)|\w+");
+      new RegExp(r"^([().$\w\s,-]|(\&\&)|(\|\|)|(\=\=)|(\!\=?))+$");
+  static final regexp =
+      new RegExp(r"[()$,]|(\&\&)|(\|\|)|(\=\=)|(\!\=?)|[\w.-]+");
+  static final identifier = new RegExp(r"^[\w.-]+$");
 
   List<String> tokenize() {
     if (!testRegexp.hasMatch(expression)) {
@@ -127,11 +131,13 @@ class TermConstant {
 
 class BooleanVariable implements BooleanExpression {
   TermVariable variable;
+  bool sense;
 
-  BooleanVariable(this.variable);
+  BooleanVariable(this.variable, this.sense);
 
-  bool evaluate(environment) => variable.termValue(environment) == 'true';
-  String toString() => "(bool \$${variable.name})";
+  bool evaluate(environment) =>
+      variable.termValue(environment) == (sense ? 'true' : 'false');
+  String toString() => "(bool ${sense ? "" : "!"}\$${variable.name})";
 }
 
 
@@ -256,7 +262,7 @@ class ExpressionParser {
       scanner.advance();
       return value;
     }
-    if (!new RegExp(r"^\w+$").hasMatch(scanner.current)) {
+    if (!Tokenizer.identifier.hasMatch(scanner.current)) {
       throw new FormatException(
           "Expected identifier in expression, got ${scanner.current}");
     }
@@ -298,6 +304,12 @@ class ExpressionParser {
       return value;
     }
 
+    bool sense = true;
+    if (scanner.current == Token.NOT) {
+      scanner.advance();
+      sense = false;
+    }
+
     // The only atomic booleans are of the form $variable == value or the
     // form $variable.
     if (scanner.current != Token.DOLLAR_SYMBOL) {
@@ -305,7 +317,7 @@ class ExpressionParser {
           "Expected \$ in expression, got ${scanner.current}");
     }
     scanner.advance();
-    if (!new RegExp(r"^\w+$").hasMatch(scanner.current)) {
+    if (!Tokenizer.identifier.hasMatch(scanner.current)) {
       throw new FormatException(
           "Expected identifier in expression, got ${scanner.current}");
     }
@@ -314,8 +326,9 @@ class ExpressionParser {
     if (scanner.current == Token.EQUALS ||
         scanner.current == Token.NOT_EQUALS) {
       bool negate = scanner.current == Token.NOT_EQUALS;
+      if (!sense) negate = !negate;
       scanner.advance();
-      if (!new RegExp(r"^\w+$").hasMatch(scanner.current)) {
+      if (!Tokenizer.identifier.hasMatch(scanner.current)) {
         throw new FormatException(
             "Expected identifier in expression, got ${scanner.current}");
       }
@@ -323,7 +336,7 @@ class ExpressionParser {
       scanner.advance();
       return new Comparison(left, right, negate);
     } else {
-      return new BooleanVariable(left);
+      return new BooleanVariable(left, sense);
     }
   }
 }

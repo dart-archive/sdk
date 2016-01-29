@@ -1,9 +1,9 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 /// Mock VM implementation used for testing VM connections.
-library fletchc.test.driver.mock_vm;
+library fletchc.test.client.mock_vm;
 
 import 'dart:async' show
     Future,
@@ -25,9 +25,9 @@ import 'package:fletchc/src/shared_command_infrastructure.dart' show
     CommandTransformerBuilder,
     toUint8ListView;
 
-import 'package:fletchc/commands.dart' show
-    Command,
-    CommandCode,
+import 'package:fletchc/vm_commands.dart' show
+    VmCommand,
+    VmCommandCode,
     CommitChangesResult,
     HandShakeResult,
     ProcessTerminated;
@@ -62,7 +62,7 @@ class MockVm {
   /// [closeImmediately] and [closeAfterFirst] can't be used together.
   static Future<MockVm> spawn(
       {bool closeImmediately: false,
-       CommandCode closeAfterFirst}) async {
+       VmCommandCode closeAfterFirst}) async {
     if (closeImmediately && closeAfterFirst != null) {
       throw new ArgumentError(
           "[closeImmediately] and [closeAfterFirst] can't be used together");
@@ -99,9 +99,9 @@ class MockVmArguments {
       this.closeAfterFirstIndex,
       this.stdout);
 
-  CommandCode get closeAfterFirst {
+  VmCommandCode get closeAfterFirst {
     return closeAfterFirstIndex == -1
-        ? null : CommandCode.values[closeAfterFirstIndex];
+        ? null : VmCommandCode.values[closeAfterFirstIndex];
   }
 }
 
@@ -117,9 +117,9 @@ Future<int> mockVm(MockVmArguments arguments) async {
     }
     var transformer = new MockCommandTransformerBuilder().build();
     await for (var command in socket.transform(transformer)) {
-      CommandCode code = command[0];
+      VmCommandCode code = command[0];
       if (arguments.closeAfterFirst == code) break;
-      Command reply = mockReply(code);
+      VmCommand reply = mockReply(code);
       if (reply == null) {
         print(command);
       } else {
@@ -133,10 +133,10 @@ Future<int> mockVm(MockVmArguments arguments) async {
 }
 
 /// Transform List<int> (socket datagrams) to a two-element list of
-/// `[CommandCode, payload]`.
+/// `[VmCommandCode, payload]`.
 class MockCommandTransformerBuilder extends CommandTransformerBuilder<List> {
   List makeCommand(int code, ByteData payload) {
-    return [CommandCode.values[code], toUint8ListView(payload)];
+    return [VmCommandCode.values[code], toUint8ListView(payload)];
   }
 }
 
@@ -161,17 +161,17 @@ Future<Socket> compilerConnection(SendPort port) async {
 
 /// Mock a reply if [code] requires a response for the compiler/debugger to
 /// make progress.
-Command mockReply(CommandCode code) {
+VmCommand mockReply(VmCommandCode code) {
   // Please add more cases as needed.
   switch (code) {
-    case CommandCode.HandShake:
+    case VmCommandCode.HandShake:
       return new HandShakeResult(true, "");
 
-    case CommandCode.CommitChanges:
+    case VmCommandCode.CommitChanges:
       return new CommitChangesResult(
           true, "Successfully applied program update.");
 
-    case CommandCode.ProcessRun:
+    case VmCommandCode.ProcessRun:
       return const ProcessTerminated();
 
     default:

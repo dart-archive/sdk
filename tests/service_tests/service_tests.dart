@@ -2,14 +2,20 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:async' show
+    Future;
+
+import 'dart:convert' show
+    LineSplitter,
+    UTF8;
+
 import 'dart:io' show
     Directory,
     File,
+    FileSystemEntity,
+    Platform,
     Process,
     ProcessResult;
-
-import 'dart:async' show
-    Future;
 
 import 'package:expect/expect.dart' show
     Expect;
@@ -24,17 +30,32 @@ import '../fletchc/run.dart' show
 
 import 'package:servicec/compiler.dart' as servicec;
 
-List<ServiceTest> SERVICE_TESTS = <ServiceTest>[
-    new StandardServiceTest('conformance', ccSources: [
-        'conformance_test.cc',
-        'conformance_test_shared.cc',
-    ]),
-    new StandardServiceTest('performance', ccSources: [
-        'performance_test.cc',
-    ]),
-    todomvc.serviceTest,
-    simple_todo.serviceTest
-]..addAll(multiple.serviceTests);
+List<ServiceTest> SERVICE_TESTS = <ServiceTest>[]
+    ..add(todomvc.serviceTest)
+    ..add(simple_todo.serviceTest)
+    ..addAll(multiple.serviceTests)
+    ..addAll(buildStandardServiceTests(
+        'conformance',
+        ccSources: [
+          'conformance_test.cc',
+          'conformance_test_shared.cc',
+        ],
+        javaSources: [
+          'java/ConformanceTest.java',
+          'java/DebugRunner.java',
+          'java/SnapshotRunner.java',
+        ],
+        javaMainClass: 'ConformanceTest'))
+    ..addAll(buildStandardServiceTests(
+        'performance',
+        ccSources: [
+          'performance_test.cc',
+        ],
+        javaSources: [
+          'java/PerformanceTest.java',
+          'java/SnapshotRunner.java',
+        ],
+        javaMainClass: 'PerformanceTest'));
 
 const String thisDirectory = 'tests/service_tests';
 
@@ -73,7 +94,10 @@ final String generatedDirectory = '$tempTestOutputDirectory/service_tests';
 
 // TODO(zerny): Provide the below constants via configuration from test.py
 final String fletchExecutable = '$buildDirectory/fletch';
-final String fletchLibrary = '${buildDirectory}/libfletch.a';
+final String fletchLibrary = '$buildDirectory/libfletch.a';
+
+/// Location of JDK installation. Empty if no installation was found.
+const String javaHome = const String.fromEnvironment('java-home');
 
 const bool isAsan = buildAsan;
 const bool isClang = buildClang;
@@ -104,40 +128,122 @@ abstract class ServiceTest {
   }
 }
 
-class StandardServiceTest extends ServiceTest {
+abstract class StandardServiceTest extends ServiceTest {
+  final String baseName;
+
   Iterable<String> ccSources;
 
-  StandardServiceTest(name, {this.ccSources})
-      : super(name);
+  StandardServiceTest(name, type, ccSources)
+      : super('${name}_${type}'),
+        baseName = name {
+    this.ccSources = ccSources.map((path) => '$inputDirectory/$path').toList()
+        ..add('$outputDirectory/cc/${baseName}_service.cc')
+        ..add('$outputDirectory/cc/struct.cc')
+        ..add('$outputDirectory/cc/unicode.cc');
+  }
 
-  String get inputDirectory => '$thisDirectory/$name';
+  String get inputDirectory => '$thisDirectory/$baseName';
 
-  String get idlPath => '$inputDirectory/${name}_service.idl';
-  String get serviceImpl => '${name}_service_impl.dart';
+  String get idlPath => '$inputDirectory/${baseName}_service.idl';
+  String get serviceImpl => '${baseName}_service_impl.dart';
   String get servicePath => '$outputDirectory/$serviceImpl';
-  String get snapshotPath => '$outputDirectory/${name}.snapshot';
-  String get executablePath => '$outputDirectory/service_${name}_test';
+  String get snapshotPath => '$outputDirectory/${baseName}.snapshot';
+  String get executablePath => '$outputDirectory/service_${baseName}_test';
+
+  void prepareService() {
+    rules.add(new CompileServiceRule(idlPath, outputDirectory));
+  }
+
+  void prepareSnapshot() {
+    rules.add(new CopyRule(inputDirectory, outputDirectory, [serviceImpl]));
+    rules.add(new BuildSnapshotRule(servicePath, snapshotPath));
+  }
+}
+
+class StandardServiceCcTest extends StandardServiceTest {
+  StandardServiceCcTest(name, ccSources)
+      : super(name, 'cc', ccSources);
 
   Future<Null> prepare() async {
-    rules.add(new CopyRule(inputDirectory, outputDirectory, [serviceImpl]));
-    rules.add(new CompileServiceRule(idlPath, outputDirectory));
+    prepareService();
+    prepareSnapshot();
     rules.add(new CcRule(
         executable: executablePath,
         includePaths: [outputDirectory],
-        sources: ccSources.map((path) => '$inputDirectory/$path').toList()
-            ..add('$outputDirectory/cc/${name}_service.cc')
-            ..add('$outputDirectory/cc/struct.cc')
-            ..add('$outputDirectory/cc/unicode.cc')));
-    rules.add(new BuildSnapshotRule(servicePath, snapshotPath));
+        sources: ccSources));
     rules.add(new RunSnapshotRule(executablePath, snapshotPath));
   }
+}
+
+class StandardServiceJavaTest extends StandardServiceTest {
+  final String mainClass;
+  Iterable<String> javaSources;
+
+  StandardServiceJavaTest(name, this.mainClass, this.javaSources, ccSources)
+      : super(name, 'java', ccSources);
+
+  String get javaDirectory => '$outputDirectory/java';
+  String get classesDirectory => '$outputDirectory/classes';
+  String get jarFile => '$outputDirectory/$baseName.jar';
+
+  Future<Null> prepare() async {
+    prepareService();
+    prepareSnapshot();
+
+    // Complete the test here if Java home is not set.
+    if (javaHome.isEmpty) return;
+
+    rules.add(new CcRule(
+        sharedLibrary: '$outputDirectory/libfletch',
+        includePaths: [
+          'include',
+          '$javaHome/include',
+          '$javaHome/include/${isMacOS ? "darwin" : "linux"}',
+          outputDirectory,
+        ],
+        sources: [
+          '$javaDirectory/jni/fletch_api_wrapper.cc',
+          '$javaDirectory/jni/fletch_service_api_wrapper.cc',
+          '$javaDirectory/jni/${baseName}_service_wrapper.cc',
+        ]..addAll(ccSources)));
+
+    rules.add(new MakeDirectoryRule(classesDirectory));
+
+    rules.add(new JavacRule(
+        warningAsError: false,
+        sources: ['$javaDirectory/fletch']
+          ..addAll(javaSources.map((path) => '$inputDirectory/$path')),
+        outputDirectory: classesDirectory));
+
+    rules.add(new JarRule(
+        jarFile,
+        sources: ['.'],
+        baseDirectory: classesDirectory));
+
+    rules.add(new JavaRule(
+        mainClass,
+        arguments: [snapshotPath],
+        classpath: [jarFile],
+        libraryPath: outputDirectory));
+  }
+}
+
+List<ServiceTest> buildStandardServiceTests(
+    name,
+    {ccSources: const <String>[],
+     javaSources: const <String>[],
+     javaMainClass}) {
+  return <ServiceTest>[
+    new StandardServiceCcTest(name, ccSources),
+    new StandardServiceJavaTest(name, javaMainClass, javaSources, ccSources),
+  ];
 }
 
 abstract class Rule {
 
   Future<Null> build();
 
-  static Future<ProcessResult> runCommand(
+  static Future<int> runCommand(
       String executable,
       List<String> arguments,
       [Map<String,String> environment]) async {
@@ -146,15 +252,54 @@ abstract class Rule {
       environmentString =
           environment.keys.map((k) => '$k=${environment[k]}').join(' ');
     }
-    print("Running: $environmentString $executable ${arguments.join(' ')}");
-    ProcessResult result =
-        await Process.run(executable, arguments, environment: environment);
-    print('stdout:');
-    print(result.stdout);
-    print('stderr:');
-    print(result.stderr);
-    Expect.equals(0, result.exitCode);
-    return result;
+    String cmdString = "$environmentString $executable ${arguments.join(' ')}";
+    print('Running: $cmdString');
+
+    Process process =
+        await Process.start(executable, arguments, environment: environment);
+
+    Future stdout = process.stdout.transform(UTF8.decoder)
+        .transform(new LineSplitter())
+        .listen(printOut)
+        .asFuture()
+        .then((_) => print('stdout done'));
+
+    Future stderr = process.stderr.transform(UTF8.decoder)
+        .transform(new LineSplitter())
+        .listen(printErr)
+        .asFuture()
+        .then((_) => print('stderr done'));
+
+    process.stdin.close();
+    print('stdin closed');
+
+    int exitCode = await process.exitCode;
+    print('$cmdString exited with $exitCode');
+
+    await stdout;
+    await stderr;
+
+    Expect.equals(0, exitCode);
+    return exitCode;
+  }
+
+  static void printOut(String message) {
+    print("stdout: $message");
+  }
+
+  static void printErr(String message) {
+    print("stderr: $message");
+  }
+}
+
+class MakeDirectoryRule extends Rule {
+  final String directory;
+  final bool recursive;
+
+  MakeDirectoryRule(this.directory, {this.recursive: false});
+
+  Future<Null> build() async {
+    await new Directory(directory).create(recursive: recursive);
   }
 }
 
@@ -182,11 +327,139 @@ class CopyRule extends Rule {
   }
 }
 
+class JarRule extends Rule {
+  final String jar = "$javaHome/bin/jar";
+
+  final String jarFile;
+  final Iterable<String> sources;
+  final String baseDirectory;
+
+  JarRule(this.jarFile, {
+    this.sources: const <String>[],
+    this.baseDirectory
+  });
+
+  Future<Null> build() async {
+    List<String> arguments = <String>["cf", jarFile];
+    if (baseDirectory != null) {
+      arguments.addAll(['-C', baseDirectory]);
+    }
+    arguments.addAll(sources);
+    await Rule.runCommand(jar, arguments);
+  }
+}
+
+class JavacRule extends Rule {
+  final String javac = "$javaHome/bin/javac";
+
+  final Iterable<String> sources;
+  final Iterable<String> classpath;
+  final Iterable<String> sourcepath;
+  final String outputDirectory;
+  final bool warningAsError;
+  final bool lint;
+
+  JavacRule({
+    this.sources: const <String>[],
+    this.classpath,
+    this.sourcepath,
+    this.outputDirectory,
+    this.warningAsError: true,
+    this.lint: true
+  });
+
+  Future<Null> build() async {
+    List<String> arguments = <String>[];
+
+    if (classpath != null) {
+      arguments.addAll(['-classpath', classpath.join(':')]);
+    }
+
+    if (sourcepath != null) {
+      arguments.addAll(['-sourcepath', sourcepath.join(':')]);
+    }
+
+    if (outputDirectory != null) {
+      arguments.addAll(['-d', outputDirectory]);
+    }
+
+    if (warningAsError) arguments.add('-Werror');
+
+    if (lint) arguments.add('-Xlint:all');
+
+    for (String src in sources) {
+      if (await FileSystemEntity.isDirectory(src)) {
+        arguments.addAll(await new Directory(src)
+            .list(recursive: true, followLinks: false)
+            .where((entity) => entity is File && entity.path.endsWith('.java'))
+            .map((entity) => entity.path)
+            .toList());
+      } else {
+        arguments.add(src);
+      }
+    }
+
+    await Rule.runCommand(javac, arguments);
+  }
+}
+
+class JavaRule extends Rule {
+  final String java = "$javaHome/bin/java";
+
+  final String mainClass;
+  final Iterable<String> arguments;
+  final Iterable<String> classpath;
+  final bool enableAssertions;
+  final String libraryPath;
+
+  JavaRule(this.mainClass, {
+    this.arguments: const <String>[],
+    this.classpath,
+    this.enableAssertions: true,
+    this.libraryPath
+  });
+
+  Future<Null> build() async {
+    List<String> javaArguments = <String>[];
+    Map<String, String> javaEnvironment;
+
+    if (buildArchitecture == 'ia32') {
+      javaArguments.add('-d32');
+    } else if (buildArchitecture == 'x64') {
+      javaArguments.add('-d64');
+    } else {
+      throw "Unsupported architecture $buildArchitecture";
+    }
+
+    if (enableAssertions) {
+      javaArguments.add('-enableassertions');
+    }
+
+    if (classpath != null) {
+      javaArguments.addAll(['-classpath', classpath.join(':')]);
+    }
+
+    if (libraryPath != null) {
+      javaArguments.add('-Djava.library.path=$libraryPath');
+      javaEnvironment = <String, String>{ 'LD_LIBRARY_PATH': libraryPath };
+    }
+
+    javaArguments.add(mainClass);
+
+    if (arguments != null) {
+      javaArguments.addAll(arguments);
+    }
+
+    await Rule.runCommand(java, javaArguments, javaEnvironment);
+  }
+}
+
 // TODO(zerny): Consider refactoring fletch specifics into a derived class.
 // TODO(zerny): Find a way to obtain the fletch build configuration from gyp.
 class CcRule extends Rule {
   final String language;
   final String executable;
+  final String sharedLibrary;
   final Iterable<String> flags;
   final Iterable<String> sources;
   final Iterable<String> libraries;
@@ -195,6 +468,7 @@ class CcRule extends Rule {
 
   CcRule({
     this.executable,
+    this.sharedLibrary,
     this.language: 'c++11',
     this.flags: const <String>[],
     this.sources: const <String>[],
@@ -202,12 +476,21 @@ class CcRule extends Rule {
     this.includePaths: const <String>[],
     this.libraryPaths: const <String>[]
   }) {
-    if (executable == null) {
-      throw "CcRule expects a valid output path for the executable";
+    if (executable == null && sharedLibrary == null) {
+      throw "CcRule expects a valid output path for an executable or library";
+    }
+    if (executable != null && sharedLibrary != null) {
+      throw "CcRule expects either an executable or a library, not both";
     }
   }
 
   String get compiler => 'tools/cxx_wrapper.py';
+
+  String get output {
+    if (executable != null) return executable;
+    String suffix = isMacOS ? 'jnilib' : 'so';
+    return '$sharedLibrary.$suffix';
+  }
 
   void addBuildFlags(List<String> arguments) {
     arguments.add('-std=${language}');
@@ -215,6 +498,7 @@ class CcRule extends Rule {
     arguments.add('-DFLETCH_ENABLE_LIVE_CODING');
     arguments.add('-DFLETCH_ENABLE_PRINT_INTERCEPTORS');
     arguments.add('-DFLETCH_ENABLE_NATIVE_PROCESSES');
+    if (sharedLibrary != null) arguments.add('-shared');
     if (buildArchitecture == 'ia32') {
       arguments.add('-m32');
       arguments.add('-DFLETCH32');
@@ -223,6 +507,7 @@ class CcRule extends Rule {
       arguments.add('-m64');
       arguments.add('-DFLETCH64');
       arguments.add('-DFLETCH_TARGET_X64');
+      if (sharedLibrary != null) arguments.add('-fPIC');
     } else {
       throw "Unsupported architecture ${buildArchitecture}";
     }
@@ -232,7 +517,7 @@ class CcRule extends Rule {
     if (isMacOS) {
       arguments.add('-DFLETCH_TARGET_OS_MACOS');
       arguments.add('-DFLETCH_TARGET_OS_POSIX');
-      arguments..add('-framework')..add('CoreFoundation');
+      arguments.addAll(['-framework', 'CoreFoundation']);
     } else if (isLinux) {
       arguments.add('-DFLETCH_TARGET_OS_LINUX');
       arguments.add('-DFLETCH_TARGET_OS_POSIX');
@@ -295,7 +580,7 @@ class CcRule extends Rule {
     addUserFlags(arguments);
     addIncludePaths(arguments);
     addLibraryPaths(arguments);
-    arguments..add('-o')..add(executable);
+    arguments.addAll(['-o', output]);
     if (isGNU) arguments.add('-Wl,--start-group');
     addSources(arguments);
     addLibraries(arguments);

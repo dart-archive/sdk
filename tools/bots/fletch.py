@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2014, the Fletch project authors.  Please see the AUTHORS file
+# Copyright (c) 2014, the Dartino project authors.  Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
@@ -8,11 +8,9 @@
 Buildbot steps for fletch testing
 """
 
-import datetime
 import glob
 import os
 import re
-import resource
 import shutil
 import subprocess
 import sys
@@ -20,11 +18,18 @@ import tempfile
 import time
 import uuid
 
+# The resource package does not exist on Windows but its functionality is not
+# used there, either.
+try:
+  import resource
+except ImportError:
+  resource = None;
+
 import bot
 import bot_utils
 import fletch_namer
 
-from os.path import dirname, join
+from os.path import dirname
 
 utils = bot_utils.GetUtils()
 
@@ -32,8 +37,15 @@ DEBUG_LOG=".debug.log"
 
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
-FLETCH_REGEXP = (r'fletch-(linux|mac|windows|lk)'
-                 r'(-(debug|release)(-asan)?-(x86|arm|x64|ia32))?(-sdk)?')
+FLETCH_REGEXP = (r'fletch-'
+                 r'(?P<system>linux|mac|win|lk|free-rtos)'
+                 r'(?P<partial_configuration>'
+                   r'-(?P<mode>debug|release)'
+                   r'(?P<asan>-asan)?'
+                   r'(?P<embedded_libs>-embedded-libs)?'
+                   r'-(?P<architecture>x86|arm|x64|ia32)'
+                 r')?'
+                 r'(?P<sdk>-sdk)?')
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
 TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 
@@ -41,6 +53,8 @@ FLETCH_PATH = dirname(dirname(dirname(os.path.abspath(__file__))))
 GSUTIL = utils.GetBuildbotGSUtilPath()
 
 GCS_BUCKET = 'gs://fletch-cross-compiled-binaries'
+
+MACOS_NUMBER_OF_FILES = 10000
 
 def Run(args):
   print "Running: %s" % ' '.join(args)
@@ -55,6 +69,13 @@ def SetupClangEnvironment(system):
     mac_library_path = "third_party/clang/mac/lib/clang/3.6.0/lib/darwin"
     os.environ['DYLD_LIBRARY_PATH'] = '%s/%s' % (FLETCH_PATH, mac_library_path)
 
+def SetupJavaEnvironment(system):
+  if system == 'macos':
+    os.environ['JAVA_HOME'] = (
+        '/Library/Java/JavaVirtualMachines/jdk1.7.0_71.jdk/Contents/Home')
+  elif system == 'linux':
+    os.environ['JAVA_HOME'] = '/usr/lib/jvm/java-7-openjdk-amd64'
+
 def Main():
   name, _ = bot.GetBotName()
 
@@ -66,6 +87,7 @@ def Main():
     raise Exception('Invalid buildername')
 
   SetupClangEnvironment(utils.GuessOS())
+  SetupJavaEnvironment(utils.GuessOS())
 
   # Clobber build directory if the checkbox was pressed on the BB.
   with utils.ChangedWorkingDirectory(FLETCH_PATH):
@@ -77,35 +99,41 @@ def Main():
     with utils.ChangedWorkingDirectory(FLETCH_PATH):
 
       if fletch_match:
-        system = fletch_match.group(1)
+        system = fletch_match.group('system')
 
         if system == 'lk':
           StepsLK(debug_log)
           return
 
+        if system == 'free-rtos':
+          StepsFreeRtos(debug_log)
+          return
+
         modes = ['debug', 'release']
         archs = ['ia32', 'x64']
         asans = [False]
+        embedded_libs = [False]
 
         # Split configurations?
-        partial_configuration = fletch_match.group(2)
+        partial_configuration =\
+          fletch_match.group('partial_configuration') != None
         if partial_configuration:
-          mode = fletch_match.group(3)
-          asan = fletch_match.group(4)
-          architecture_match = fletch_match.group(5)
+          architecture_match = fletch_match.group('architecture')
           archs = {
               'x86' : ['ia32', 'x64'],
               'x64' : ['x64'],
               'ia32' : ['ia32'],
           }[architecture_match]
 
-          modes = [mode]
-          asans = [bool(asan)]
-        sdk_build = fletch_match.group(6)
+          modes = [fletch_match.group('mode')]
+          asans = [bool(fletch_match.group('asan'))]
+          embedded_libs =[bool(fletch_match.group('embedded_libs'))]
+
+        sdk_build = fletch_match.group('sdk')
         if sdk_build:
-          StepsSDK(debug_log, system, modes, archs)
+          StepsSDK(debug_log, system, modes, archs, embedded_libs)
         else:
-          StepsNormal(debug_log, system, modes, archs, asans)
+          StepsNormal(debug_log, system, modes, archs, asans, embedded_libs)
       elif cross_match:
         system = cross_match.group(1)
         arch = cross_match.group(2)
@@ -125,66 +153,82 @@ def Main():
 
 #### Buildbot steps
 
-def StepsSDK(debug_log, system, modes, archs):
+def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   no_clang = system == 'linux'
-  configurations = GetBuildConfigurations(system, modes, archs, [False],
-                                          no_clang=no_clang)
+  configurations = GetBuildConfigurations(
+    system=system,
+    modes=modes,
+    archs=archs,
+    asans=[False],
+    no_clang=no_clang,
+    embedded_libs=embedded_libs,
+    use_sdks=[True])
   bot.Clobber(force=True)
   StepGyp()
 
   cross_mode = 'release'
-  cross_arch = 'xarm'
+  cross_archs = ['xarm', 'stm']
   cross_system = 'linux'
   # We only cross compile on linux
   if system == 'linux':
     StepsCreateDebianPackage()
     StepsArchiveDebianPackage()
-    CrossCompile(cross_system, [cross_mode], cross_arch)
-    StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
+    # We need the fletch daemon process to compile snapshots.
+    host_configuration = GetBuildConfigurations(
+        system=utils.GuessOS(),
+        modes=['release'],
+        archs=['x64'],
+        asans=[False],
+        embedded_libs=[False],
+        use_sdks=[False])[0]
+    StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
+
+    for cross_arch in cross_archs:
+      CrossCompile(cross_system, [cross_mode], cross_arch)
+      StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
     StepsCreateArchiveRaspbianImge()
   elif system == 'mac':
-     StepsGetArmBinaries(cross_mode, cross_arch)
-     StepsGetArmDeb()
-     # We currently only build documentation on linux.
-     StepsGetDocs()
+    for cross_arch in cross_archs:
+       StepsGetCrossBinaries(cross_mode, cross_arch)
+    StepsGetArmDeb()
+    # We currently only build documentation on linux.
+    StepsGetDocs()
   for configuration in configurations:
-    StepBuild(configuration['build_conf'], configuration['build_dir']);
+    StepBuild(configuration['build_conf'], configuration['build_dir'])
     StepsBundleSDK(configuration['build_dir'], system)
     StepsArchiveSDK(configuration['build_dir'], system, configuration['mode'],
                     configuration['arch'])
   for configuration in configurations:
     StepsTestSDK(debug_log, configuration)
     StepsSanityChecking(configuration['build_dir'])
+  StepsArchiveGCCArmNoneEabi(system)
 
 def StepsTestSDK(debug_log, configuration):
   build_dir = configuration['build_dir']
-  sdk_dir = os.path.join(build_dir, 'fletch-sdk')
-  sdk_zip = os.path.join(build_dir, 'fletch-sdk.zip')
+  sdk_dir = os.path.join(build_dir, 'dartino-sdk')
+  sdk_zip = os.path.join(build_dir, 'dartino-sdk.zip')
   if os.path.exists(sdk_dir):
     shutil.rmtree(sdk_dir)
   Unzip(sdk_zip)
-  StepTest(
-    configuration['build_conf'],
-    configuration['mode'],
-    configuration['arch'],
-    clang=configuration['clang'],
-    asan=configuration['asan'],
-    snapshot_run=False,
-    debug_log=debug_log,
-    configuration=configuration,
-    use_sdk=True)
+  build_conf = configuration['build_conf']
+
+  def run():
+    StepTest(configuration=configuration,
+        snapshot_run=False,
+        debug_log=debug_log)
+
+  RunWithCoreDumpArchiving(run, build_dir, build_conf)
 
 def StepsSanityChecking(build_dir):
-  sdk_dir = os.path.join(build_dir, 'fletch-sdk')
   version = utils.GetSemanticSDKVersion()
-  fletch = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
+  fletch = os.path.join(build_dir, 'dartino-sdk', 'bin', 'fletch')
   # TODO(ricow): we should test this as a normal test, see issue 232.
   fletch_version = subprocess.check_output([fletch, '--version']).strip()
   subprocess.check_call([fletch, 'quit'])
   if fletch_version != version:
     raise Exception('Version mismatch, VERSION file has %s, fletch has %s' %
                     (version, fletch_version))
-  fletch_vm = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch-vm')
+  fletch_vm = os.path.join(build_dir, 'dartino-sdk', 'bin', 'fletch-vm')
   fletch_vm_version = subprocess.check_output([fletch_vm, '--version']).strip()
   if fletch_vm_version != version:
     raise Exception('Version mismatch, VERSION file has %s, fletch vm has %s' %
@@ -207,24 +251,29 @@ def StepsArchiveDebianPackage():
     print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def GetDownloadLink(gs_path):
-  return gs_path.replace('gs://', 'http://storage.googleapis.com/')
+  return gs_path.replace('gs://', 'https://storage.googleapis.com/')
 
-def GetNamer():
+def GetNamer(temporary=False):
   name, _ = bot.GetBotName()
   channel = bot_utils.GetChannelFromName(name)
-  return fletch_namer.FletchGCSNamer(channel)
+  return fletch_namer.FletchGCSNamer(channel, temporary=temporary)
+
+def IsBleedingEdge():
+  name, _ = bot.GetBotName()
+  channel = bot_utils.GetChannelFromName(name)
+  return channel == bot_utils.Channel.BLEEDING_EDGE
 
 def StepsBundleSDK(build_dir, system):
   with bot.BuildStep('Bundle sdk %s' % build_dir):
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     deb_file = os.path.join('out', namer.arm_agent_filename(version))
-    create_docs = '--create-documentation' if system == 'linux' else ''
+    create_docs = '--create_documentation' if system == 'linux' else ''
     Run(['tools/bundle_sdk.py', '--build_dir=%s' % build_dir,
          '--deb_package=%s' % deb_file, create_docs])
     # On linux this is build in the step above, on mac this is fetched from
     # cloud storage.
-    sdk_docs = os.path.join(build_dir, 'fletch-sdk', 'docs')
+    sdk_docs = os.path.join(build_dir, 'dartino-sdk', 'docs')
     shutil.copytree(os.path.join('out', 'docs'), sdk_docs)
 
 def CreateZip(directory, target_file):
@@ -246,7 +295,7 @@ def EnsureRaspbianBase():
 def StepsCreateArchiveRaspbianImge():
   EnsureRaspbianBase()
   with bot.BuildStep('Modifying raspbian image'):
-    namer = GetNamer()
+    namer = GetNamer(temporary=IsBleedingEdge())
     raspbian_src = os.path.join('third_party', 'raspbian', 'image',
                                 'jessie.img')
     raspbian_dst = os.path.join('out', namer.raspbian_filename())
@@ -269,19 +318,42 @@ def StepsCreateArchiveRaspbianImge():
     gsutil.upload(zip_file, gs_path, public=True)
     print '@@@STEP_LINK@download@%s@@@' % http_path
 
-def StepsGetArmBinaries(cross_mode, cross_arch):
-  with bot.BuildStep('Get arm binaries %s' % cross_mode):
+def StepsArchiveGCCArmNoneEabi(system):
+  with bot.BuildStep('Archive cross compiler'):
+    # TODO(ricow): Early return on bleeding edge when this is validated.
+    namer = GetNamer(temporary=IsBleedingEdge())
+    zip_file = os.path.join('out',
+                            namer.gcc_embedded_bundle_zipfilename(system))
+    if os.path.exists(zip_file):
+      os.remove(zip_file)
+    gcc_copy = os.path.join('out', 'gcc-arm-embedded')
+    if os.path.exists(gcc_copy):
+      shutil.rmtree(gcc_copy)
+    gcc_src = os.path.join('third_party', 'gcc-arm-embedded', system,
+                           'gcc-arm-embedded')
+    shutil.copytree(gcc_src, gcc_copy)
+    CreateZip(gcc_copy, namer.gcc_embedded_bundle_zipfilename(system))
+    version = utils.GetSemanticSDKVersion()
+    gsutil = bot_utils.GSUtil()
+    gs_path = namer.gcc_embedded_bundle_filepath(version, system)
+    gsutil.upload(zip_file, gs_path, public=True)
+    http_path = GetDownloadLink(gs_path)
+    print '@@@STEP_LINK@download@%s@@@' % http_path
+
+def StepsGetCrossBinaries(cross_mode, cross_arch):
+  with bot.BuildStep('Get %s binaries %s' % (cross_arch, cross_mode)):
     build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
     build_dir = os.path.join('out', build_conf)
     version = utils.GetSemanticSDKVersion()
     gsutil = bot_utils.GSUtil()
     namer = GetNamer()
-    zip_file = os.path.join('out', namer.arm_binaries_zipfilename(cross_mode))
+    zip_file = os.path.join(
+      'out', namer.cross_binaries_zipfilename(cross_mode, cross_arch))
     if os.path.exists(zip_file):
       os.remove(zip_file)
     if os.path.exists(build_dir):
       shutil.rmtree(build_dir)
-    gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
+    gs_path = namer.cross_binaries_zipfilepath(version, cross_mode, cross_arch)
     gsutil.execute(['cp', gs_path, zip_file])
     Unzip(zip_file)
 
@@ -306,14 +378,14 @@ def StepsGetDocs():
     gsutil.execute(['-m', 'cp', '-r', gs_path, docs_out])
 
 def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
-  with bot.BuildStep('Archive arm binaries %s' % cross_mode):
+  with bot.BuildStep('Archive %s binaries %s' % (cross_arch, cross_mode)):
     build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     gsutil = bot_utils.GSUtil()
-    zip_file = namer.arm_binaries_zipfilename(cross_mode)
+    zip_file = namer.cross_binaries_zipfilename(cross_mode, cross_arch)
     CreateZip(os.path.join('out', build_conf), zip_file)
-    gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
+    gs_path = namer.cross_binaries_zipfilepath(version, cross_mode, cross_arch)
     http_path = GetDownloadLink(gs_path)
     gsutil.upload(os.path.join('out', zip_file), gs_path, public=True)
     print '@@@STEP_LINK@download@%s@@@' % http_path
@@ -321,13 +393,13 @@ def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
 
 def StepsArchiveSDK(build_dir, system, mode, arch):
   with bot.BuildStep('Archive bundle %s' % build_dir):
-    sdk = os.path.join(build_dir, 'fletch-sdk')
-    zip_file = 'fletch-sdk.zip'
+    sdk = os.path.join(build_dir, 'dartino-sdk')
+    zip_file = 'dartino-sdk.zip'
     CreateZip(sdk, zip_file)
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     gsutil = bot_utils.GSUtil()
-    gs_path = namer.fletch_sdk_zipfilepath(version, system, arch, mode)
+    gs_path = namer.dartino_sdk_zipfilepath(version, system, arch, mode)
     http_path = GetDownloadLink(gs_path)
     gsutil.upload(os.path.join(build_dir, zip_file), gs_path, public=True)
     print '@@@STEP_LINK@download@%s@@@' % http_path
@@ -337,15 +409,31 @@ def StepsArchiveSDK(build_dir, system, mode, arch):
     docs_http_path = '%s/%s' % (GetDownloadLink(docs_gs_path), 'index.html')
     print '@@@STEP_LINK@docs@%s@@@' % docs_http_path
 
-def StepsNormal(debug_log, system, modes, archs, asans):
-  configurations = GetBuildConfigurations(system, modes, archs, asans)
+def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
+  # TODO(herhut): Remove once Windows port is complete.
+  archs = ['ia32'] if system == 'win' else archs
+
+  configurations = GetBuildConfigurations(
+      system=system,
+      modes=modes,
+      archs=archs,
+      asans=asans,
+      embedded_libs=embedded_libs,
+      use_sdks=[False])
 
   # Generate ninja files.
   StepGyp()
 
+  # TODO(herhut): Remove once Windows port is complete.
+  args = ['fletch-vm'] if system == 'win' else ()
+
   # Build all necessary configurations.
   for configuration in configurations:
-    StepBuild(configuration['build_conf'], configuration['build_dir']);
+    StepBuild(configuration['build_conf'], configuration['build_dir'], args)
+
+  # TODO(herhut): Remove once Windows port is complete.
+  if system == 'win':
+    return
 
   # Run tests on all necessary configurations.
   for snapshot_run in [True, False]:
@@ -356,46 +444,67 @@ def StepsNormal(debug_log, system, modes, archs, asans):
 
         def run():
           StepTest(
-            build_conf,
-            configuration['mode'],
-            configuration['arch'],
-            clang=configuration['clang'],
-            asan=configuration['asan'],
-            snapshot_run=snapshot_run,
-            debug_log=debug_log,
-            configuration=configuration)
+              configuration=configuration,
+              snapshot_run=snapshot_run,
+              debug_log=debug_log)
 
         RunWithCoreDumpArchiving(run, build_dir, build_conf)
+
+def StepsFreeRtos(debug_log):
+  StepGyp()
+
+  # We need the fletch daemon process to compile snapshots.
+  host_configuration = GetBuildConfigurations(
+      system=utils.GuessOS(),
+      modes=['release'],
+      archs=['x64'],
+      asans=[False],
+      embedded_libs=[False],
+      use_sdks=[False])[0]
+  StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
+
+  configuration = GetBuildConfigurations(
+      system=utils.GuessOS(),
+      modes=['debug'],
+      archs=['STM'],
+      asans=[False],
+      embedded_libs=[False],
+      use_sdks=[False])[0]
+  StepBuild(configuration['build_conf'], configuration['build_dir'])
+
 
 def StepsLK(debug_log):
   # We need the fletch daemon process to compile snapshots.
   host_configuration = GetBuildConfigurations(
-      utils.GuessOS(), ['debug'], ['ia32'], [False])[0]
+      system=utils.GuessOS(),
+      modes=['debug'],
+      archs=['ia32'],
+      asans=[False],
+      embedded_libs=[False],
+      use_sdks=[False])[0]
 
   # Generate ninja files.
   StepGyp()
 
-  StepBuild(host_configuration['build_conf'], host_configuration['build_dir']);
+  StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
 
-  build_config = 'DebugLK'
+  device_configuration = host_configuration.copy()
 
-  with bot.BuildStep('Build %s' % build_config):
+  device_configuration['build_conf'] = 'DebugLK'
+  device_configuration['system'] = 'lk'
+
+  with bot.BuildStep('Build %s' % device_configuration['build_conf']):
     Run(['make', '-C', 'third_party/lk', 'clean'])
     Run(['make', '-C', 'third_party/lk', '-j8'])
 
-  with bot.BuildStep('Test %s' % build_config):
+  with bot.BuildStep('Test %s' % device_configuration['build_conf']):
     # TODO(ajohnsen): This is kind of funky, as test.py tries to start the
     # background process using -a and -m flags. We should maybe changed so
     # test.py can have both a host and target configuration.
     StepTest(
-      build_config,
-      'debug',
-      'ia32',
-      clang=False,
-      debug_log=debug_log,
-      system='lk',
-      snapshot_run=True,
-      configuration=host_configuration)
+        configuration=device_configuration,
+        debug_log=debug_log,
+        snapshot_run=True)
 
 def StepsCrossBuilder(debug_log, system, modes, arch):
   """This step builds XARM configurations and archives the results.
@@ -455,11 +564,16 @@ def StepsTargetRunner(debug_log, system, mode, arch):
       Run(['tar', '-xjf', tarball])
 
     # Run tests on all necessary configurations.
-    configurations = GetBuildConfigurations(system, [mode], [arch], [False])
+    configurations = GetBuildConfigurations(
+      system=system,
+      modes=[mode],
+      archs=[arch],
+      asans=[False],
+      embedded_libs=[False],
+      use_sdks=[False])
     for snapshot_run in [True, False]:
       for configuration in configurations:
         if not ShouldSkipConfiguration(snapshot_run, configuration):
-          build_conf = configuration['build_conf']
           build_dir = configuration['build_dir']
 
           # Sanity check we got build artifacts which we expect.
@@ -474,14 +588,9 @@ def StepsTargetRunner(debug_log, system, mode, arch):
 
           def run():
             StepTest(
-              build_conf,
-              configuration['mode'],
-              configuration['arch'],
-              clang=configuration['clang'],
-              asan=configuration['asan'],
+              configuration=configuration,
               snapshot_run=snapshot_run,
-              debug_log=debug_log,
-              configuration=configuration)
+              debug_log=debug_log)
 
           #RunWithCoreDumpArchiving(run, build_dir, build_conf)
           run()
@@ -497,10 +606,10 @@ def StepsTargetRunner(debug_log, system, mode, arch):
 
 def StepGyp():
   with bot.BuildStep('GYP'):
-    Run(['ninja', '-v'])
+    Run(['python', 'tools/run-ninja.py', '-v'])
 
 def AnalyzeLog(log_file):
-  # pkg/fletchc/lib/src/driver/driver_main.dart will, in its log file, print
+  # pkg/fletchc/lib/src/hub/hub_main.dart will, in its log file, print
   # "1234: Crash (..." when an exception is thrown after shutting down a
   # client.  In this case, there's no obvious place to report the exception, so
   # the build bot must look for these crashes.
@@ -532,8 +641,18 @@ def StepBuild(build_config, build_dir, args=()):
     Run(['ninja', '-v', '-C', build_dir] + list(args))
 
 def StepTest(
-    name, mode, arch, clang=True, asan=False, snapshot_run=False,
-    debug_log=None, configuration=None, system=None, use_sdk=False):
+    configuration=None,
+    snapshot_run=False,
+    debug_log=None):
+  name = configuration['build_conf']
+  mode = configuration['mode']
+  arch = configuration['arch']
+  asan = configuration['asan']
+  clang = configuration['clang']
+  system = configuration['system']
+  embedded_libs = configuration['embedded_libs']
+  use_sdk = configuration['use_sdk']
+
   step_name = '%s%s' % (name, '-snapshot' if snapshot_run else '')
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
@@ -545,7 +664,8 @@ def StepTest(
             '--host-checked']
 
     if system:
-      args.append('-s%s' % system)
+      system_argument = 'macos' if system == 'mac' else system
+      args.append('-s%s' % system_argument)
 
     if snapshot_run:
       # We let the fletch compiler compile tests to snapshots.
@@ -562,6 +682,9 @@ def StepTest(
 
     if clang:
       args.append('--clang')
+
+    if embedded_libs:
+      args.append('--fletch-settings-file=embedded.fletch-settings')
 
     with TemporaryHomeDirectory():
       with open(os.path.expanduser("~/.fletch.log"), 'w+') as fletch_log:
@@ -590,9 +713,11 @@ class PersistentFletchDaemon(object):
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
+       # TODO(kustermann): Issue(396): Remove this --enable-dumpcore flag again.
+       '--enable-dumpcore',
        '--packages=%s' % os.path.abspath('pkg/fletchc/.packages'),
        '-Dfletch.version=%s' % version,
-       'package:fletchc/src/driver/driver_main.dart',
+       'package:fletchc/src/hub/hub_main.dart',
        fletchrc],
       stdout=self._log_file,
       stderr=subprocess.STDOUT,
@@ -601,11 +726,13 @@ class PersistentFletchDaemon(object):
       # down in response to a signal, the persistent process will kill its
       # process group to ensure that any processes it has spawned also exit. If
       # we don't use a new process group, that will also kill this process.
-      preexec_fn=os.setsid,
-      # We change the current directory of the persistent process to ensure
-      # that we read files relative to the C++ client's current directory, not
-      # the persistent process'.
-      cwd='/')
+      preexec_fn=os.setsid
+      # TODO(kustermann): Issue(396): Make the cwd=/ again.
+      ## We change the current directory of the persistent process to ensure
+      ## that we read files relative to the C++ client's current directory, not
+      ## the persistent process'.
+      #, cwd='/')
+      )
 
     while not self._log_file.tell():
       # We're waiting for the persistent process to write a line on stdout. It
@@ -663,22 +790,32 @@ class CoredumpArchiver(object):
     self._conf = conf
 
   def __enter__(self):
-    pass
+    coredumps = self._find_coredumps()
+    assert not coredumps
 
   def __exit__(self, *_):
     coredumps = self._find_coredumps()
     if coredumps:
-      print 'Archiving coredumps: %s' % ', '.join(coredumps)
+      # If we get a ton of crashes, only archive 10 dumps.
+      archive_coredumps = coredumps[:10]
+      print 'Archiving coredumps: %s' % ', '.join(archive_coredumps)
       sys.stdout.flush()
-      self._archive(os.path.join(self._build_dir, 'fletch-vm'), coredumps)
+      self._archive(os.path.join(self._build_dir, 'fletch'),
+                    os.path.join(self._build_dir, 'fletch-vm'),
+                    archive_coredumps)
+      for filename in coredumps:
+        print 'Removing core: %s' % filename
+        os.remove(filename)
+    coredumps = self._find_coredumps()
+    assert not coredumps
 
   def _find_coredumps(self):
     # Finds all files named 'core.*' in the search directory.
     return glob.glob(os.path.join(self._search_dir, 'core.*'))
 
-  def _archive(self, fletch_vm, coredumps):
+  def _archive(self, driver, fletch_vm, coredumps):
     assert coredumps
-    files = [fletch_vm] + coredumps
+    files = [driver, fletch_vm] + coredumps
 
     for filename in files:
       assert os.path.exists(filename)
@@ -689,8 +826,9 @@ class CoredumpArchiver(object):
     http_prefix = 'https://storage.cloud.google.com/%s' % storage_path
 
     for filename in files:
-      gs_url = '%s%s' % (gs_prefix, filename)
-      http_url = '%s%s' % (http_prefix, filename)
+      # Remove / from absolute path to not have // in gs path.
+      gs_url = '%s%s' % (gs_prefix, filename.lstrip('/'))
+      http_url = '%s%s' % (http_prefix, filename.lstrip('/'))
 
       try:
         gsutil.upload(filename, gs_url)
@@ -699,11 +837,26 @@ class CoredumpArchiver(object):
         message = "Failed to upload coredump %s, error: %s" % (filename, error)
         print '@@@STEP_LOG_LINE@coredumps@%s@@@' % message
 
-    for filename in coredumps:
-      os.remove(filename)
-
     print '@@@STEP_LOG_END@coredumps@@@'
     MarkCurrentStep(fatal=False)
+
+class IncreasedNumberOfFiles(object):
+  def __init__(self, count):
+    self._old_limits = None
+    self._limits = (count, count)
+
+  def __enter__(self):
+    self._old_limits = resource.getrlimit(resource.RLIMIT_NOFILE)
+    print "IncreasedNumberOfFiles: Old limits were:", self._old_limits
+    print "IncreasedNumberOfFiles: Setting to:", self._limits
+    resource.setrlimit(resource.RLIMIT_NOFILE, self._limits)
+
+  def __exit__(self, *_):
+    print "IncreasedNumberOfFiles: Restoring to:", self._old_limits
+    try:
+      resource.setrlimit(resource.RLIMIT_NOFILE, self._old_limits)
+    except ValueError:
+      print "IncreasedNumberOfFiles: Could not restore to:", self._old_limits
 
 class LinuxCoredumpArchiver(CoredumpArchiver):
   def __init__(self, *args):
@@ -745,29 +898,42 @@ def RunWithCoreDumpArchiving(run, build_dir, build_conf):
       with LinuxCoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
         run()
   elif guessed_os == 'macos':
-    with CoredumpEnabler():
-      with MacosCoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
-        run()
+    with IncreasedNumberOfFiles(MACOS_NUMBER_OF_FILES):
+      with CoredumpEnabler():
+        with MacosCoredumpArchiver(GCS_COREDUMP_BUCKET, build_dir, build_conf):
+          run()
   else:
     run()
 
-def GetBuildConfigurations(system, modes, archs, asans, no_clang=False):
+def GetBuildConfigurations(
+        system=None,
+        modes=None,
+        archs=None,
+        asans=None,
+        no_clang=False,
+        embedded_libs=None,
+        use_sdks=None):
   configurations = []
 
   for asan in asans:
     for mode in modes:
       for arch in archs:
         for compiler_variant in GetCompilerVariants(system, arch, no_clang):
-          build_conf = GetConfigurationName(mode, arch, compiler_variant, asan)
-          configurations.append({
-            'build_conf': build_conf,
-            'build_dir': os.path.join('out', build_conf),
-            'clang': bool(compiler_variant),
-            'asan': asan,
-            'mode': mode.lower(),
-            'arch': arch.lower(),
-            'system': system,
-          })
+          for embedded_lib in embedded_libs:
+            for use_sdk in use_sdks:
+              build_conf = GetConfigurationName(
+                  mode, arch, compiler_variant, asan)
+              configurations.append({
+                'build_conf': build_conf,
+                'build_dir': os.path.join('out', build_conf),
+                'clang': bool(compiler_variant),
+                'asan': asan,
+                'mode': mode.lower(),
+                'arch': arch.lower(),
+                'system': system,
+                'embedded_libs': embedded_lib,
+                'use_sdk': use_sdk
+              })
 
   return configurations
 
@@ -800,6 +966,8 @@ def ShouldSkipConfiguration(snapshot_run, configuration):
 def GetCompilerVariants(system, arch, no_clang=False):
   is_mac = system == 'mac'
   is_arm = arch in ['arm', 'xarm']
+  is_stm = arch == 'stm'
+  is_windows = system == 'win'
   if no_clang:
     return ['']
   elif is_mac:
@@ -807,6 +975,12 @@ def GetCompilerVariants(system, arch, no_clang=False):
     return ['Clang']
   elif is_arm:
     # We don't support cross compiling to arm with clang ATM.
+    return ['']
+  elif is_stm:
+    # We don't support cross compiling to STM boards (Cortex-M7) with clang ATM.
+    return ['']
+  elif is_windows:
+    # On windows we always use VC++.
     return ['']
   else:
     return ['', 'Clang']

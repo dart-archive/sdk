@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -9,7 +9,7 @@ import 'infrastructure.dart';
 import 'documentation.dart' show
     attachDocumentation;
 
-import '../driver/developer.dart' show
+import '../worker/developer.dart' show
     Address,
     attachToVm,
     parseAddress;
@@ -35,12 +35,18 @@ class AttachTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return attachTask(host, port);
   }
 }
 
 Future<int> attachTask(String host, int port) async {
-  await attachToVm(host, port, SessionState.current);
+  SessionState state = SessionState.current;
+
+  // Cleanup previous session if any.
+  await state.terminateSession();
+
+  state.explicitAttach = true;
+  await attachToVm(host, port, state);
   return 0;
 }

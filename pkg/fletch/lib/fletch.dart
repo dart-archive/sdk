@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -8,13 +8,8 @@
 library fletch;
 
 import 'dart:fletch.ffi';
+import 'package:ffi/ffi.dart';
 
 final ForeignFunction _getVersion = ForeignLibrary.main.lookup('GetVersion');
 
-String version() {
-  ForeignCString version =
-      new ForeignCString.fromForeignPointer(_getVersion.pcall$0());
-  assert(version != null);
-  return version.toString();
-}
-
+String version() => cStringToString(_getVersion.pcall$0());

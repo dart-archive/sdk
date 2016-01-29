@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -29,32 +29,37 @@
 
     'LK_PATH%': 'third_party/lk/lk-downstream',
 
+    'LK_USE_DEPS_ARM_GCC%': '1',
+
     'mbed_path': '<(DEPTH)/third_party/mbed/build/',
 
+    'posix%': 1,
+
     'conditions': [
-      [ 'OS=="linux"', {
-        'third_party_libs_path%': '<(DEPTH)/third_party/libs/linux',
-      }],
       [ 'OS=="mac"', {
-        'third_party_libs_path%': '<(DEPTH)/third_party/libs/mac',
         # TODO(zerny): Redirect stderr to work around gyp regarding a non-empty
         # stderr as a failed command. This should be replaced by a custom script
         # that retains stderr in case the command actually fails.
         'ios_sdk_path%': '<!(xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)',
-      }],
-      [ 'OS=="win"', {
-        'third_party_libs_path%': '<(DEPTH)/third_party/libs/win',
+        'ios_sim_sdk_path%':
+            '<!(xcrun --sdk iphonesimulator --show-sdk-path 2>/dev/null)',
       }],
     ],
   },
 
-  'make_global_settings': [
-    [ 'CC', 'tools/cc_wrapper.py' ],
-    [ 'CXX', 'tools/cxx_wrapper.py' ],
-    [ 'LINK', 'tools/cc_wrapper.py' ],
+  'conditions': [
+    [ 'OS!="win"', {
+      'make_global_settings': [
+        [ 'CC', 'tools/cc_wrapper.py' ],
+        [ 'CXX', 'tools/cxx_wrapper.py' ],
+        [ 'LINK', 'tools/cc_wrapper.py' ],
+      ],
+    }],
   ],
 
   'target_defaults': {
+    'msvs_cygwin_dirs': ['<(DEPTH)/third_party/cygwin'],
+    'msvs_cygwin_shell': 0,
 
     'configurations': {
 
@@ -64,7 +69,6 @@
         'defines': [
           'FLETCH_ENABLE_LIVE_CODING',
           'FLETCH_ENABLE_FFI',
-          'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
           'FLETCH_ENABLE_NATIVE_PROCESSES',
           'FLETCH_ENABLE_PRINT_INTERCEPTORS',
         ],
@@ -125,6 +129,10 @@
               'FLETCH_TARGET_OS_LINUX',
               'FLETCH_TARGET_OS_POSIX' ],
           }],
+          ['OS=="win"', {
+            'defines': [
+              'FLETCH_TARGET_OS_WIN' ],
+          }],
         ],
       },
 
@@ -139,37 +147,46 @@
           'OTHER_CPLUSPLUSFLAGS' : [
             '-O3',
             '-fomit-frame-pointer',
+            # Strict aliasing optimizations are not safe for the
+            # type of VM code that we write. We operate with
+            # raw memory aliased with a mixture of pointer types.
+            '-fno-strict-aliasing',
           ],
+        },
+
+        'msvs_settings': {
+          'VCCLCompilerTool': {
+            'Optimization': '2',
+            'InlineFunctionExpansion': '2',
+            'EnableIntrinsicFunctions': 'true',
+            'FavorSizeOrSpeed': '0',
+            'ExceptionHandling': '0',
+            'RuntimeTypeInfo': 'false',
+            'StringPooling': 'true',
+            'RuntimeLibrary': '0',  # /MT - Multi-threaded, static
+          },
+          'VCLinkerTool': {
+            'LinkIncremental': '1',
+            'GenerateDebugInformation': 'true',
+            'OptimizeReferences': '2',
+            'EnableCOMDATFolding': '2',
+            'AdditionalDependencies': [
+              'dbghelp.lib',
+            ],
+          },
         },
 
         'cflags': [
           '-O3',
           '-fomit-frame-pointer',
+            # Strict aliasing optimizations are not safe for the
+            # type of VM code that we write. We operate with
+            # raw memory aliased with a mixture of pointer types.
+          '-fno-strict-aliasing',
         ],
       },
 
       'fletch_debug': {
-        'abstract': 1,
-
-        'defines': [
-          'DEBUG',
-        ],
-
-        'xcode_settings': { # And ninja.
-          'GCC_OPTIMIZATION_LEVEL': '1',
-
-          'OTHER_CPLUSPLUSFLAGS': [
-            '-g',
-          ],
-        },
-
-        'cflags': [
-          '-g',
-          '-O1',
-        ],
-      },
-
-      'fletch_develop': {
         'abstract': 1,
 
         'defines': [
@@ -182,6 +199,22 @@
           'OTHER_CPLUSPLUSFLAGS': [
             '-g',
           ],
+        },
+
+        'msvs_settings': {
+          'VCCLCompilerTool': {
+            'Optimization': '0',
+            'DebugInformationFormat': '3',
+            'ExceptionHandling': '0',
+            'RuntimeTypeInfo': 'false',
+            'RuntimeLibrary': '1',  # /MTd - Multi-threaded, static (debug)
+          },
+          'VCLinkerTool': {
+            'GenerateDebugInformation': 'true',
+            'AdditionalDependencies': [
+              'dbghelp.lib',
+            ],
+          },
         },
 
         'cflags': [
@@ -200,19 +233,17 @@
 
         'cflags': [
           '-m32',
+          # Forces GCC to not use x87 floating point instructions.
+          '-mfpmath=sse',
+          '-msse2',
         ],
 
         'ldflags': [
           '-m32',
-          '-L<(third_party_libs_path)/x86',
         ],
 
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'i386' ],
-
-          'LIBRARY_SEARCH_PATHS': [
-            '<(third_party_libs_path)/x86',
-          ],
         },
       },
 
@@ -224,10 +255,6 @@
           'FLETCH_TARGET_X64',
         ],
 
-        'ldflags': [
-          '-L<(third_party_libs_path)/x64',
-        ],
-
         # Shared libraries on x64 require compilation with position
         # independent code. Load-time relocation is not supported on
         # x64. For simplicity we compile all x64 libraries with
@@ -236,10 +263,6 @@
 
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'x86_64' ],
-
-          'LIBRARY_SEARCH_PATHS': [
-            '<(third_party_libs_path)/x64',
-          ],
 
           'OTHER_CPLUSPLUSFLAGS': [
             '-fPIC',
@@ -255,16 +278,8 @@
           'FLETCH_TARGET_ARM',
         ],
 
-        'ldflags': [
-          '-L<(third_party_libs_path)/arm',
-        ],
-
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'armv7' ],
-
-          'LIBRARY_SEARCH_PATHS': [
-            '<(third_party_libs_path)/arm',
-          ],
         },
       },
 
@@ -291,10 +306,6 @@
                 'xcode_settings': { # And ninja.
                   'ARCHS': [ 'armv7' ],
 
-                  'LIBRARY_SEARCH_PATHS': [
-                    '<(third_party_libs_path)/arm',
-                  ],
-
                   'OTHER_CPLUSPLUSFLAGS' : [
                     '-isysroot',
                     '<(ios_sdk_path)',
@@ -309,7 +320,6 @@
             ],
 
             'ldflags': [
-              '-L<(third_party_libs_path)/arm',
               # Fake define intercepted by cc_wrapper.py.
               '-L/FLETCH_ARM',
               '-static-libstdc++',
@@ -352,10 +362,6 @@
                 'xcode_settings': { # And ninja.
                   'ARCHS': [ 'arm64' ],
 
-                  'LIBRARY_SEARCH_PATHS': [
-                    '<(third_party_libs_path)/arm64',
-                  ],
-
                   'OTHER_CPLUSPLUSFLAGS' : [
                     '-isysroot',
                     '<(ios_sdk_path)',
@@ -370,7 +376,6 @@
             ],
 
             'ldflags': [
-              '-L<(third_party_libs_path)/arm64',
               # Fake define intercepted by cc_wrapper.py.
               '-L/FLETCH_ARM64',
               '-static-libstdc++',
@@ -402,10 +407,27 @@
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
-              'FLETCH_LK',
               'FLETCH_TARGET_OS_LK',
              ],
-
+            'conditions': [
+              ['LK_USE_DEPS_ARM_GCC==1', {
+                'defines': [
+                  'GCC_XARM_EMBEDDED', # Fake define for cc_wrapper.py.
+                ],
+                'ldflags': [
+                  # Fake define intercepted by cc_wrapper.py.
+                  '-L/GCC_XARM_EMBEDDED',
+                ],
+              }, { # 'LK_USE_DEPS_ARM_GCC!=1'
+                'defines': [
+                  'GCC_XARM_LOCAL', # Fake define for cc_wrapper.py.
+                ],
+                'ldflags': [
+                  # Fake define intercepted by cc_wrapper.py.
+                  '-L/GCC_XARM_LOCAL',
+                ],
+              }],
+            ],
             'cflags': [
               '-mfloat-abi=softfp',
               '-mfpu=fpv4-sp-d16',
@@ -431,11 +453,6 @@
               '<(DEPTH)/<(LK_PATH)/lib/minip/include/',
               '<(DEPTH)/<(LK_PATH)/arch/arm/arm/include',
               '<(DEPTH)/<(LK_PATH)/lib/heap/include/',
-            ],
-
-            'ldflags': [
-              # Fake define intercepted by cc_wrapper.py.
-              '-L/FLETCH_LK',
             ],
 
             'defines!': [
@@ -470,9 +487,7 @@
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
-              # Fake define intercepted by cc_wrapper.py to change the
-              # compiler binary to an ARM cross compiler.
-              'FLETCH_CMSIS',
+              'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
               'FLETCH_TARGET_OS_CMSIS',
             ],
 
@@ -504,9 +519,7 @@
             ],
 
             'ldflags': [
-              '-L<(third_party_libs_path)/arm',
-              # Fake define intercepted by cc_wrapper.py.
-              '-L/FLETCH_CMSIS',
+              '-L/GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
               '-static-libstdc++',
             ],
           }],
@@ -580,6 +593,30 @@
         },
       },
 
+      'fletch_ios_sim': {
+        'abstract': 1,
+        'conditions': [
+          [ 'OS=="mac"', {
+            'target_conditions': [
+              ['_toolset=="target"', {
+                'xcode_settings': {
+                  'OTHER_CPLUSPLUSFLAGS' : [
+                    '-isysroot',
+                    '<(ios_sim_sdk_path)',
+                    '-miphoneos-version-min=7.0',
+                  ],
+                  'OTHER_CFLAGS' : [
+                    '-isysroot',
+                    '<(ios_sim_sdk_path)',
+                    '-miphoneos-version-min=7.0',
+                  ],
+                },
+              }],
+            ],
+          }],
+        ],
+      },
+
       'fletch_disable_live_coding': {
         'abstract': 1,
 
@@ -593,18 +630,6 @@
 
         'defines!': [
           'FLETCH_ENABLE_FFI',
-        ],
-      },
-
-      'fletch_disable_multiple_process_heaps': {
-        'abstract': 1,
-
-        'defines!': [
-          'FLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS',
-        ],
-
-        'defines': [
-          'FLETCH_MARK_SWEEP',
         ],
       },
 

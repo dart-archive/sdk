@@ -68,9 +68,7 @@ abstract class CompilerConfiguration {
       case 'fletchc':
         return new FletchCCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
-            isHostChecked: isHostChecked, useSdk: useSdk,
-            isIncrementalCompilationEnabled:
-                configuration['enable_incremental_compilation']);
+            isHostChecked: isHostChecked, useSdk: useSdk);
       case 'none':
         return new NoneCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
@@ -172,7 +170,7 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
           isHostChecked: isHostChecked, useSdk: useSdk);
 
   String computeCompilerPath(String buildDir) {
-    return useSdk ? '$buildDir/fletch-sdk/bin/fletch-vm'
+    return useSdk ? '$buildDir/dartino-sdk/bin/fletch-vm'
                   : '$buildDir/fletch-vm';
   }
 
@@ -202,14 +200,12 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
 }
 
 class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
-  final bool isIncrementalCompilationEnabled;
 
   FletchCCompilerConfiguration({
       bool isDebug,
       bool isChecked,
       bool isHostChecked,
-      bool useSdk,
-      this.isIncrementalCompilationEnabled: true})
+      bool useSdk})
       : super(
           'fletchc',
           isDebug: isDebug, isChecked: isChecked,
@@ -226,9 +222,9 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
       List basicArguments,
       Map<String, String> environmentOverrides) {
     String snapshotFileName = '$tempDir/fletch.snapshot';
-    String executable = useSdk ? '$buildDir/fletch-sdk/bin/fletch'
+    String executable = useSdk ? '$buildDir/dartino-sdk/bin/fletch'
                                : '$buildDir/fletch';
-    String dart = useSdk ? '$buildDir/fletch-sdk/internal/dart'
+    String dart = useSdk ? '$buildDir/dartino-sdk/internal/dart'
                          : '$buildDir/dart';
     Map<String, String> environment = {
       'DART_VM' : dart,
@@ -236,8 +232,7 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
 
     Command command = new FletchSessionCommand(
         executable, basicArguments.first, basicArguments,
-        environment, isIncrementalCompilationEnabled,
-        snapshotFileName: snapshotFileName);
+        environment, snapshotFileName: snapshotFileName);
 
     return new CommandArtifact(
         <Command>[command], snapshotFileName, 'application/fletch-snapshot');

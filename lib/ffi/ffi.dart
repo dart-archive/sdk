@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -63,7 +63,8 @@ abstract class Foreign {
 
 class ForeignFunction extends Foreign {
   final int address;
-  const ForeignFunction.fromAddress(this.address);
+  final ForeignLibrary _library;
+  const ForeignFunction.fromAddress(this.address, [this._library = null]);
 
   /// Helper function for retrying functions that follow the POSIX-convention
   /// of returning `-1` and setting `errno` to `EINTR`.
@@ -104,6 +105,11 @@ class ForeignFunction extends Foreign {
         _convert(a3), _convert(a4), _convert(a5));
   }
 
+  int icall$7(a0, a1, a2, a3, a4, a5, a6) {
+    return _icall$7(address, _convert(a0), _convert(a1), _convert(a2),
+        _convert(a3), _convert(a4), _convert(a5), _convert(a6));
+  }
+
   // Support for calling foreign functions that return
   // integers. The functions with the suffix `Retry` can be used for calling
   // functions that follow functions that follow the POSIX-convention
@@ -119,6 +125,9 @@ class ForeignFunction extends Foreign {
   }
   int icall$6Retry(a0, a1, a2, a3, a4, a5) {
     return retry(() => icall$6(a0, a1, a2, a3, a4, a5));
+  }
+  int icall$7Retry(a0, a1, a2, a3, a4, a5, a6) {
+    return retry(() => icall$7(a0, a1, a2, a3, a4, a5, a6));
   }
   // Support for calling foreign functions that return
   // machine words -- typically pointers -- encapulated in
@@ -215,6 +224,10 @@ class ForeignFunction extends Foreign {
       int address, a0, a1, a2, a3, a4, a5) {
     throw new ArgumentError();
   }
+  @fletch.native static int _icall$7(
+      int address, a0, a1, a2, a3, a4, a5, a6) {
+    throw new ArgumentError();
+  }
 
   @fletch.native static int _pcall$0(int address) {
     throw new ArgumentError();
@@ -274,6 +287,12 @@ class ForeignPointer extends Foreign {
   static const ForeignPointer NULL = const ForeignPointer(0);
 }
 
+class _ForeignValue extends ForeignPointer {
+  final ForeignLibrary _library;
+
+  const _ForeignValue(int address, [this._library = null]) : super(address);
+}
+
 class ForeignLibrary extends ForeignPointer {
   /// The ForeignLibrary main is used for looking up functions in the libraries
   /// linked in to the main Fletch binary.
@@ -281,12 +300,19 @@ class ForeignLibrary extends ForeignPointer {
 
   const ForeignLibrary.fromAddress(int address) : super(address);
 
-  factory ForeignLibrary.fromName(String name) {
-    return new ForeignLibrary.fromAddress(_lookupLibrary(name));
+  /// Looks up a foreign library by name. If the global flag is set we use
+  /// RTLD_GLOBAL that will enable later lookups to use code from this library.
+  factory ForeignLibrary.fromName(String name, {bool global: false}) {
+    return new ForeignLibrary.fromAddress(_lookupLibrary(name, global));
   }
 
   ForeignFunction lookup(String name) {
-    return new ForeignFunction.fromAddress(_lookupFunction(address, name));
+    return new ForeignFunction.fromAddress(_lookupFunction(address, name),
+        this);
+  }
+
+  ForeignPointer lookupVariable(String name) {
+    return new _ForeignValue(_lookupFunction(address, name), this);
   }
 
   /// Provides a platform specific location for a library relative to the
@@ -297,21 +323,12 @@ class ForeignLibrary extends ForeignPointer {
     throw new ArgumentError();
   }
 
-  void close() {
-    _closeLibrary(address);
-  }
-
-  @fletch.native static int _lookupLibrary(String name) {
+  @fletch.native static int _lookupLibrary(String name, bool global) {
     var error = fletch.nativeError;
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
 
   @fletch.native static int _lookupFunction(int address, String name) {
-    var error = fletch.nativeError;
-    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
-  }
-
-  @fletch.native static int _closeLibrary(int address) {
     var error = fletch.nativeError;
     throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
   }
@@ -453,10 +470,19 @@ abstract class UnsafeMemory extends Foreign {
 }
 
 class ImmutableForeignMemory extends UnsafeMemory {
-  final int address;
+  // Address is split into two Smis instead of using one int that might be a
+  // heap number. This makes allocation simpler and ensures that objects can be
+  // finalized individually in the GC without imposing ordering constraints on
+  // the GC.
+  final int _address0;
+  final int _address1;
   final int length;
 
-  const ImmutableForeignMemory.fromAddress(this.address, this.length);
+  int get address => (_address0 << 2) + _address1;
+
+  const ImmutableForeignMemory.fromAddress(int address, this.length)
+      : _address0 = address >> 2,
+        _address1 = address & 3;
 
   factory ImmutableForeignMemory.fromAddressFinalized(int address, int length) {
     var memory = new ImmutableForeignMemory.fromAddress(address, length);
@@ -471,9 +497,11 @@ class ImmutableForeignMemory extends UnsafeMemory {
     return memory;
   }
 
-  const ImmutableForeignMemory.allocated(int length)
-      : address = UnsafeMemory._allocate(length),
-        length = length;
+  factory ImmutableForeignMemory.allocated(int length) {
+    var memory = new ImmutableForeignMemory.fromAddress(
+        UnsafeMemory._allocate(length), length);
+    return memory;
+  }
 
   // We utf8 encode the string first to support non-ascii characters.
   // NOTE: This is not the correct string encoding for Windows.
@@ -488,27 +516,47 @@ class ImmutableForeignMemory extends UnsafeMemory {
   }
 }
 
-class ForeignMemory extends UnsafeMemory {
-  int address;
+// We can't delegate to a constructor in the same class, so we insert a class
+// between UnsafeMemory and ForeignMemory, which has the constructor we need.
+// We can't use factories because subclasses (ie Struct) want to be able to
+// call our constructors
+class _ForeignMemoryHelper extends UnsafeMemory {
+  int _address0;
+  int _address1;
   int length;
+
+  int get address => (_address0 << 2) + _address1;
+
+  int set address(int addr) {
+    _address0 = addr >> 2;
+    _address1 = addr & 3;
+    return addr;
+  }
+
+  _ForeignMemoryHelper.fromAddress(int address, this.length)
+      : _address0 = address >> 2,
+        _address1 = address & 3;
+}
+
+class ForeignMemory extends _ForeignMemoryHelper {
   bool _markedForFinalization = false;
 
-  ForeignMemory.fromAddress(this.address, this.length);
+  ForeignMemory.fromAddress(int address, int length)
+      : super.fromAddress(address, length);
 
-  ForeignMemory.fromAddressFinalized(this.address, this.length) {
+  ForeignMemory.fromAddressFinalized(int address, int length)
+      : super.fromAddress(address, length),
+        _markedForFinalization = true {
     _markForFinalization(length);
-    _markedForFinalization = true;
   }
 
   ForeignMemory.allocated(int length)
-      : address = UnsafeMemory._allocate(length),
-        length = length;
+      : super.fromAddress(UnsafeMemory._allocate(length), length);
 
   ForeignMemory.allocatedFinalized(int length)
-      : address = UnsafeMemory._allocate(length),
-        length = length {
+      : super.fromAddress(UnsafeMemory._allocate(length), length),
+        _markedForFinalization = true {
     _markForFinalization(length);
-    _markedForFinalization = true;
   }
 
   // We utf8 encode the string first to support non-ascii characters.
@@ -528,7 +576,7 @@ class ForeignMemory extends UnsafeMemory {
       if (_markedForFinalization) {
         _decreaseMemoryUsage(length);
       }
-      _free(address);
+      _free();
     }
     address = 0;
     length = 0;
@@ -537,7 +585,7 @@ class ForeignMemory extends UnsafeMemory {
   @fletch.native void _decreaseMemoryUsage(int length) {
     throw new ArgumentError();
   }
-  @fletch.native static void _free(int address) {
+  @fletch.native void _free() {
     throw new ArgumentError();
   }
 }
@@ -612,25 +660,4 @@ class Struct64 extends Struct {
   Struct64.finalized(int fields) : super.withWordSizeFinalized(fields, 8);
   Struct64.fromAddress(int address, int fields)
       : super.fromAddressWithWordSize(address, fields, 8);
-}
-
-class ForeignCString extends ForeignMemory {
-  static final ForeignFunction _strlen = ForeignLibrary.main.lookup('strlen');
-
-  factory ForeignCString.fromForeignPointer(ForeignPointer ptr) {
-    int length = _strlen.icall$1(ptr);
-    return new ForeignCString._(ptr, length + 1);
-  }
-
-  ForeignCString._(Foreign ptr, int length)
-      : super.fromAddress(ptr.address, length);
-
-  String toString() {
-    // Don't include the '\0' character in the encoded string.
-    var encodedString = new List(length - 1);
-    for (int i = 0; i < length - 1; ++i) {
-      encodedString[i] = getUint8(i);
-    }
-    return _decodeUtf8(encodedString);
-  }
 }

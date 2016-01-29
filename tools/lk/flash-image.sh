@@ -1,7 +1,16 @@
 #!/bin/bash
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
+
+function follow_links() {
+  file="$1"
+  while [ -h "$file" ]; do
+    # On Mac OS, readlink -f doesn't work.
+    file="$(readlink "$file")"
+  done
+  echo "$file"
+}
 
 if [ -z "$1" ]; then
   echo "Usage: $0 [options] <image file>"
@@ -10,7 +19,7 @@ fi
 
 EXPECTED_ARGS=1
 
-source $(dirname $(readlink -f $0))/openocd-helpers.shlib
+source $(dirname $(follow_links $0))/openocd-helpers.shlib
 
 if [ ! -e $1 ]; then
   echo "Image file does not exist: $1."

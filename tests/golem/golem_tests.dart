@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -20,6 +20,11 @@ import 'package:fletchc/src/guess_configuration.dart' show
     executable;
 
 Future<Null> main() async {
+  print('*' * 80);
+  print('If this test fails with a load error, you probably have to update');
+  print(' tools/benchmarking_files');
+  print('*' * 80);
+
   // Locate the files that are needed.
   Uri benchmarkingFiles = executable.resolve('../../tools/benchmarking_files');
   Directory tempDir = Directory.systemTemp.createTempSync('golem_tests');

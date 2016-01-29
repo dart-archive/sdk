@@ -1,0 +1,12 @@
+Starting session. Type 'help' for a list of commands.
+
+> bf tests/debugger/nonempty_column_test.dart 13 22
+breakpoint set: id: '0' method: 'foo' bytecode index: '12'
+> r
+tests/debugger/nonempty_column_test.dart:13:22
+13     int z = (y + 4) - (x + 5);
+> bt
+* 0: foo         @x
+  1: main        @foo()
+> c
+### process terminated

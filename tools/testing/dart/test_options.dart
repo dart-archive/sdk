@@ -26,7 +26,8 @@ const List<String> defaultTestSelectors = const [
     'cc_tests',
     'lib',
     'os',
-    'pkg'
+    'pkg',
+    'typed_data'
 ];
 
 /**
@@ -63,7 +64,7 @@ class TestOptionsParser {
               'mode',
               'Mode in which to run the tests',
               ['-m', '--mode'],
-              ['all', 'debug', 'release', 'develop'],
+              ['all', 'debug', 'release'],
               'debug'),
           new _TestOptionSpecification(
               'compiler',
@@ -494,18 +495,18 @@ Note: currently only implemented for dart2js.''',
               1,
               type: 'int'),
           new _TestOptionSpecification(
-              'enable_incremental_compilation',
-              "Enable incremental compilation during testing.",
-              ['--enable-incremental-compilation'],
+              'settings_file_name',
+              'The fletch settings file to use for testing',
+              ['--fletch-settings-file'],
+              [],
+              '.fletch-settings'),
+          new _TestOptionSpecification(
+              'no_java',
+              "Don't require running java tests",
+              ['--no-java'],
               [],
               false,
               type: 'bool'),
-        new _TestOptionSpecification(
-            'settings_file_name',
-            'The fletch settings file to use for testing',
-            ['--fletch-settings-file'],
-            [],
-            '.fletch-settings'),
           ];
   }
 
@@ -744,7 +745,7 @@ Note: currently only implemented for dart2js.''',
       configuration['arch'] = 'ia32,x64,simarm,simarm64,simmips';
     }
     if (configuration['mode'] == 'all') {
-      configuration['mode'] = 'debug,release,develop';
+      configuration['mode'] = 'debug,release';
     }
 
     // Use verbose progress indication for verbose output unless buildbot
@@ -861,7 +862,7 @@ Note: currently only implemented for dart2js.''',
           new CompilerConfiguration(configuration).computeTimeoutMultiplier();
       int runtimeMultiplier =
           new RuntimeConfiguration(configuration).computeTimeoutMultiplier(
-              isDebug: ['debug', 'develop'].contains(configuration['mode']),
+              isDebug: configuration['mode'] == 'debug',
               isChecked: configuration['checked'],
               arch: configuration['arch']);
       configuration['timeout'] = 60 * compilerMulitiplier * runtimeMultiplier;

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
@@ -21,7 +21,7 @@ import '../primitives.dart' as primitives;
 import 'cc.dart' show CcVisitor;
 
 const HEADER = """
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -29,7 +29,7 @@ const HEADER = """
 """;
 
 const HEADER_MK = """
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -163,7 +163,7 @@ JNIEXPORT void JNICALL Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
   unsigned char* copy = new unsigned char[len];
   env->GetByteArrayRegion(snapshot, 0, len, reinterpret_cast<jbyte*>(copy));
   FletchProgram program = FletchLoadSnapshot(copy, len);
-  delete copy;
+  delete[] copy;
   FletchRunMain(program);
   FletchDeleteProgram(program);
 }

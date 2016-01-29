@@ -1,0 +1,10 @@
+Starting session. Type 'help' for a list of commands.
+
+> b foo
+breakpoint set: id: '0' method: 'foo' bytecode index: '0'
+> r
+tests/debugger/print_function_locals_test.dart:9:11
+9    foo(x) => x;
+> p
+x: 42
+> q

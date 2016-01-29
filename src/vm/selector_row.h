@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -24,10 +24,7 @@ class Range {
  public:
   typedef Vector<Range> List;
 
-  Range(int begin, int end)
-      : begin_(begin), end_(end) {
-    ASSERT(end > begin);
-  }
+  Range(int begin, int end) : begin_(begin), end_(end) { ASSERT(end > begin); }
 
   int begin() const { return begin_; }
   void set_begin(int value) { begin_ = value; }
@@ -45,13 +42,9 @@ class Range {
     return end() == other.end() && begin() == other.begin();
   }
 
-  bool IsBefore(const Range other) const {
-    return end() < other.begin();
-  }
+  bool IsBefore(const Range other) const { return end() < other.begin(); }
 
-  bool IsAfter(const Range other) const {
-    return begin() > other.end();
-  }
+  bool IsAfter(const Range other) const { return begin() > other.end(); }
 
   bool Overlap(const Range other) const {
     return !IsBefore(other) && !IsAfter(other);
@@ -77,32 +70,17 @@ class Range {
 class SelectorRow {
  public:
   explicit SelectorRow(int selector)
-      : selector_(selector),
-        offset_(-1),
-        variants_(0),
-        begin_(-1),
-        end_(-1) {
-  }
+      : selector_(selector), offset_(-1), variants_(0), begin_(-1), end_(-1) {}
 
-  int begin() const {
-    return begin_;
-  }
+  int begin() const { return begin_; }
 
-  int end() const {
-    return end_;
-  }
+  int end() const { return end_; }
 
-  bool IsMatched() const {
-    return variants_ > 0;
-  }
+  bool IsMatched() const { return variants_ > 0; }
 
-  int offset() const {
-    return offset_;
-  }
+  int offset() const { return offset_; }
 
-  void set_offset(int value) {
-    offset_ = value;
-  }
+  void set_offset(int value) { offset_ = value; }
 
   void Finalize();
 
@@ -111,7 +89,7 @@ class SelectorRow {
     return end_ - begin_;
   }
 
-  void FillTable(Program* program, Array* table);
+  void FillTable(Program* program, Vector<Class*>* classes, Array* table);
 
   // The bottom up construction order guarantees that more specific methods
   // always get defined before less specific ones.
@@ -143,9 +121,7 @@ class SelectorRow {
     // Sort by decreasing sizes (first) and decreasing begin index.
     // According to the litterature, this leads to fewer holes and
     // faster row offset computation.
-    return (a_size == b_size)
-        ? (*a)->begin() > (*b)->begin()
-        : a_size > b_size;
+    return (a_size == b_size) ? (*a)->begin() > (*b)->begin() : a_size > b_size;
   }
 
   const Range::List& ranges() const { return ranges_; }
@@ -184,8 +160,7 @@ class RowFitter {
  private:
   void MarkOffsetAsUsed(int offset);
 
-  int FindOffset(const Range::List& ranges,
-                 int min_row_index,
+  int FindOffset(const Range::List& ranges, int min_row_index,
                  size_t* result_slot_index);
 
   int MatchRemaining(int offset, const Range::List& ranges, size_t slot_index);
@@ -194,8 +169,7 @@ class RowFitter {
 
   size_t MoveForwardToCover(const Range range, size_t slot_index);
 
-  void UpdateFreeSlots(int offset,
-                       const Range::List& ranges,
+  void UpdateFreeSlots(int offset, const Range::List& ranges,
                        size_t slot_index);
 
   size_t FitInFreeSlot(const Range range, size_t slot_index);

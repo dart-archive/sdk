@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,8 +15,8 @@
 
 #include "src/vm/ffi.h"
 #include "src/vm/program.h"
-#include "src/vm/program_info_block.h"
 #include "src/vm/program_folder.h"
+#include "src/vm/program_info_block.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/session.h"
 #include "src/vm/snapshot.h"
@@ -27,8 +27,7 @@ class PrintInterceptorImpl : public PrintInterceptor {
  public:
   typedef void (*PrintFunction)(const char* message, int out, void* data);
 
-  PrintInterceptorImpl(PrintFunction fn, void* data)
-      : fn_(fn), data_(data) {}
+  PrintInterceptorImpl(PrintFunction fn, void* data) : fn_(fn), data_(data) {}
 
   virtual void Out(char* message) { fn_(message, 2, data_); }
   virtual void Error(char* message) { fn_(message, 3, data_); }
@@ -50,22 +49,30 @@ static Program* LoadSnapshot(List<uint8> bytes) {
   return NULL;
 }
 
-static void EnqueueProgramInScheduler(Program* program, Scheduler* scheduler) {
+static int RunProgram(Program* program) {
 #ifdef FLETCH_ENABLE_LIVE_CODING
   ProgramFolder::FoldProgramByDefault(program);
 #endif  // FLETCH_ENABLE_LIVE_CODING
+
+  SimpleProgramRunner runner;
+
+  int exitcodes[1] = { -1 };
+  Program* programs[1] = { program };
+  runner.Run(1, exitcodes, programs);
+
+  return exitcodes[0];
+}
+
+static void StartProgram(Program* program,
+                         ProgramExitListener listener,
+                         void* data) {
+#ifdef FLETCH_ENABLE_LIVE_CODING
+  ProgramFolder::FoldProgramByDefault(program);
+#endif  // FLETCH_ENABLE_LIVE_CODING
+
+  program->SetProgramExitListener(listener, data);
   Process* process = program->ProcessSpawnForMain();
-  scheduler->ScheduleProgram(program, process);
-}
-
-static int RunScheduler(Scheduler* scheduler) {
-  return scheduler->Run();
-}
-
-static int RunProgram(Program* program) {
-  Scheduler scheduler;
-  EnqueueProgramInScheduler(program, &scheduler);
-  return RunScheduler(&scheduler);
+  Scheduler::GlobalInstance()->ScheduleProgram(program, process);
 }
 
 static Program* LoadSnapshotFromFile(const char* path) {
@@ -89,7 +96,7 @@ static void WaitForDebuggerConnection(int port) {
   Session session(connection);
   session.Initialize();
   session.StartMessageProcessingThread();
-  bool success = session.ProcessRun();
+  bool success = session.ProcessRun() == 0;
   if (!success) FATAL("Failed to run via debugger connection");
 #else
   FATAL("fletch was built without live coding support.");
@@ -97,13 +104,9 @@ static void WaitForDebuggerConnection(int port) {
 }
 }  // namespace fletch
 
-void FletchSetup() {
-  fletch::Fletch::Setup();
-}
+void FletchSetup() { fletch::Fletch::Setup(); }
 
-void FletchTearDown() {
-  fletch::Fletch::TearDown();
-}
+void FletchTearDown() { fletch::Fletch::TearDown(); }
 
 void FletchWaitForDebuggerConnection(int port) {
   fletch::WaitForDebuggerConnection(port);
@@ -127,13 +130,20 @@ int FletchRunMain(FletchProgram raw_program) {
   return fletch::RunProgram(program);
 }
 
-int FletchRunMultipleMain(int count, FletchProgram* programs) {
-  fletch::Scheduler scheduler;
+void FletchRunMultipleMain(int count,
+                           FletchProgram* fletch_programs,
+                           int* exitcodes) {
+  fletch::SimpleProgramRunner runner;
+
+  auto programs = reinterpret_cast<fletch::Program**>(fletch_programs);
   for (int i = 0; i < count; i++) {
-    fletch::EnqueueProgramInScheduler(
-        reinterpret_cast<fletch::Program*>(programs[i]), &scheduler);
+    exitcodes[i] = -1;
+#ifdef FLETCH_ENABLE_LIVE_CODING
+    fletch::ProgramFolder::FoldProgramByDefault(programs[i]);
+#endif  // FLETCH_ENABLE_LIVE_CODING
   }
-  return fletch::RunScheduler(&scheduler);
+
+  runner.Run(count, exitcodes, programs);
 }
 
 FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {
@@ -146,11 +156,21 @@ FletchProgram FletchLoadProgramFromFlash(void* heap, size_t size) {
   fletch::ProgramInfoBlock* program_info =
       reinterpret_cast<fletch::ProgramInfoBlock*>(block_address);
   program_info->WriteToProgram(program);
-  fletch::Chunk* memory = fletch::ObjectMemory::CreateChunk(
+  fletch::Chunk* memory = fletch::ObjectMemory::CreateFlashChunk(
       program->heap()->space(), heap, heap_size);
-  program->heap()->space()->AppendProgramChunk(memory, memory->base());
-  program->set_is_compact(true);
+
+  program->heap()->space()->Append(memory);
+  program->heap()->space()->SetReadOnly();
   return reinterpret_cast<FletchProgram>(program);
+}
+
+FLETCH_EXPORT void FletchStartMain(FletchProgram raw_program,
+                                   ProgramExitCallback callback,
+                                   void* callback_data) {
+  fletch::Program* program = reinterpret_cast<fletch::Program*>(raw_program);
+  fletch::ProgramExitListener listener =
+      reinterpret_cast<fletch::ProgramExitListener>(callback);
+  fletch::StartProgram(program, listener, callback_data);
 }
 
 void FletchDeleteProgram(FletchProgram raw_program) {
@@ -162,8 +182,8 @@ void FletchRunSnapshotFromFile(const char* path) {
   fletch::RunSnapshotFromFile(path);
 }
 
-void FletchAddDefaultSharedLibrary(const char* library) {
-  fletch::ForeignFunctionInterface::AddDefaultSharedLibrary(library);
+bool FletchAddDefaultSharedLibrary(const char* library) {
+  return fletch::ForeignFunctionInterface::AddDefaultSharedLibrary(library);
 }
 
 FletchPrintInterceptor FletchRegisterPrintInterceptor(

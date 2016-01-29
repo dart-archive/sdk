@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
@@ -12,3 +12,10 @@ os/sleep_test: RuntimeError
 os/system_info_test: RuntimeError
 file/file_test: RuntimeError
 http/http_test: RuntimeError
+ffi/ffi_test: RuntimeError
+
+[ $use_sdk ]
+ffi/ffi_test: RuntimeError # We don't copy the ffi testing lib to the sdk
+
+[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
+fletch_agent/messages_test: CompiletimeError

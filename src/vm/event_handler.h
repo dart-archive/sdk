@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -6,52 +6,62 @@
 #define SRC_VM_EVENT_HANDLER_H_
 
 #include "src/shared/globals.h"
-#include "src/vm/hash_map.h"
+#include "src/vm/priority_heap.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
 
 class Monitor;
 class Port;
+class Object;
+class Process;
 
 class EventHandler {
  public:
   enum {
-    READ_EVENT        = 1 << 0,
-    WRITE_EVENT       = 1 << 1,
-    CLOSE_EVENT       = 1 << 2,
-    ERROR_EVENT       = 1 << 3,
+    READ_EVENT = 1 << 0,
+    WRITE_EVENT = 1 << 1,
+    CLOSE_EVENT = 1 << 2,
+    ERROR_EVENT = 1 << 3,
   };
+
+  static void Setup();
+  static void TearDown();
+  static EventHandler* GlobalInstance() { return event_handler_; }
 
   EventHandler();
   ~EventHandler();
 
-  int GetEventHandler();
+  Object* Add(Process* process, Object* id, Port* port, int flags);
+
+  void ReceiverForPortsDied(Port* port_list);
 
   void ScheduleTimeout(int64 timeout, Port* port);
 
   Monitor* monitor() const { return monitor_; }
 
  private:
+  // Global EventHandler instance.
+  static EventHandler* event_handler_;
+
   Monitor* monitor_;
   void* data_;
-  int id_;
+  intptr_t id_;
   bool running_;
   ThreadIdentifier thread_;
 
-  HashMap<Port*, int64> timeouts_;
+  PriorityHeapWithValueIndex<int64, Port*> timeouts_;
   int64 next_timeout_;
 
   static void* RunEventHandler(void* peer);
+  void EnsureInitialized();
 
   void Create();
-
   void Run();
-
   void Interrupt();
   void HandleTimeouts();
 
-  void Send(Port* port, uword mask);
+  void Send(Port* port, int64 value, bool release_port);
 };
 
 }  // namespace fletch

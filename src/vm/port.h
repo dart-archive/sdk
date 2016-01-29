@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,12 +15,15 @@ namespace fletch {
 
 class HeapObject;
 class Instance;
+class Object;
 class PointerVisitor;
 class Process;
 
 class Port {
  public:
   Port(Process* process, Instance* channel);
+
+  static Port* FromDartObject(Object* dart_port);
 
   Process* process() { return process_; }
   void set_process(Process* process) { process_ = process; }
@@ -32,6 +35,8 @@ class Port {
   bool IsLocked() const { return spinlock_.IsLocked(); }
   void Lock() { spinlock_.Lock(); }
   void Unlock() { spinlock_.Unlock(); }
+
+  Spinlock* spinlock() { return &spinlock_; }
 
   // Increment the ref count. This function is thread safe.
   void IncrementRef();

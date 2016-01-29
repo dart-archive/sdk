@@ -1,9 +1,9 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'todo_model.dart';
-import 'dart/simple_todo.dart';
+import 'generated/dart/simple_todo.dart';
 
 class TodoImpl extends TodoService {
   TodoModel _model = new TodoModel();

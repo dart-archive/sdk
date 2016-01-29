@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,7 +11,7 @@
 
 namespace fletch {
 
-Atomic<bool> Print::standard_output_enabled_ = true;
+Atomic<bool> Print::standard_output_enabled_(true);
 
 #ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
 Mutex* Print::mutex_ = Platform::CreateMutex();
@@ -34,8 +34,7 @@ void Print::Out(const char* format, ...) {
     fflush(stdout);
   }
   ScopedLock scope(mutex_);
-  for (PrintInterceptor* interceptor = interceptor_;
-       interceptor != NULL;
+  for (PrintInterceptor* interceptor = interceptor_; interceptor != NULL;
        interceptor = interceptor->next_) {
     interceptor->Out(message);
   }
@@ -66,10 +65,9 @@ void Print::Error(const char* format, ...) {
     fflush(stderr);
   }
   ScopedLock scope(mutex_);
-  for (PrintInterceptor* interceptor = interceptor_;
-       interceptor != NULL;
+  for (PrintInterceptor* interceptor = interceptor_; interceptor != NULL;
        interceptor = interceptor->next_) {
-     interceptor->Error(message);
+    interceptor->Error(message);
   }
   free(message);
 #else
@@ -155,9 +153,8 @@ uint32 Utils::StringHash(const uint8* data, int length, int char_width) {
   // Handle the last byte of the string if necessary.
   if (remaining != 0) {
     ASSERT(remaining == 1);
-    uint32 part = (char_width == 2)
-        ? *reinterpret_cast<const uint16*>(cursor)
-        : *cursor;
+    uint32 part =
+        (char_width == 2) ? *reinterpret_cast<const uint16*>(cursor) : *cursor;
     part *= M;
     part ^= part >> R;
     part *= M;

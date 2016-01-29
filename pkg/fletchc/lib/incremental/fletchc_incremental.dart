@@ -12,7 +12,7 @@ import 'dart:developer' show
     UserTag;
 
 import 'package:compiler/src/apiimpl.dart' show
-    Compiler;
+    CompilerImpl;
 
 import 'package:compiler/compiler_new.dart' show
     CompilerDiagnostics,
@@ -27,9 +27,12 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     LibraryElement;
 
-import 'library_updater.dart' show
+import 'package:compiler/src/library_loader.dart' show
+    ReuseLibrariesFunction;
+
+import 'fletch_reuser.dart' show
     IncrementalCompilerContext,
-    LibraryUpdater,
+    FletchReuser,
     Logger;
 
 import '../fletch_compiler.dart' show
@@ -53,8 +56,16 @@ import '../fletch_system.dart';
 import '../src/fletch_backend.dart' show
     FletchBackend;
 
-import 'package:sdk_library_metadata/libraries.dart' show
-    Category;
+import '../src/hub/exit_codes.dart' as exit_codes;
+
+import 'package:compiler/src/source_file_provider.dart' show
+    SourceFileProvider;
+
+import 'package:compiler/src/tokens/token.dart' show
+    Token;
+
+import 'package:compiler/src/diagnostics/source_span.dart' show
+    SourceSpan;
 
 part 'caching_compiler.dart';
 
@@ -65,9 +76,24 @@ const List<String> INCREMENTAL_OPTIONS = const <String>[
     '--no-source-maps', // TODO(ahe): Remove this.
 ];
 
+enum IncrementalMode {
+  /// Incremental compilation is turned off
+  none,
+
+  /// Incremental compilation is turned on for a limited set of features that
+  /// are known to be fully implemented. Initially, this limited set of
+  /// features will be instance methods without signature changes. As other
+  /// features mature, they will be enabled in this mode.
+  production,
+
+  /// All incremental features are turned on even if we know that we don't
+  /// always generate correct code. Initially, this covers features such as
+  /// schema changes.
+  experimental,
+}
+
 class IncrementalCompiler {
   final Uri libraryRoot;
-  final Uri patchRoot;
   final Uri nativesJson;
   final Uri packageConfig;
   final Uri fletchVm;
@@ -76,13 +102,14 @@ class IncrementalCompiler {
   final CompilerOutput outputProvider;
   final Map<String, dynamic> environment;
   final IncrementalCompilerContext _context;
-  final List<Category> categories;
+  final IncrementalMode support;
+  final String platform;
+  final Map<Uri, Uri> _updatedFiles = new Map<Uri, Uri>();
 
   FletchCompilerImplementation _compiler;
 
   IncrementalCompiler(
       {this.libraryRoot,
-       this.patchRoot,
        this.nativesJson,
        this.packageConfig,
        this.fletchVm,
@@ -91,7 +118,8 @@ class IncrementalCompiler {
        this.options,
        this.outputProvider,
        this.environment,
-       this.categories})
+       this.support: IncrementalMode.none,
+       this.platform})
       : _context = new IncrementalCompilerContext(diagnosticHandler) {
     // if (libraryRoot == null) {
     //   throw new ArgumentError('libraryRoot is null.');
@@ -105,7 +133,19 @@ class IncrementalCompiler {
     if (diagnosticHandler == null) {
       throw new ArgumentError('diagnosticHandler is null.');
     }
+    if (platform == null) {
+      throw new ArgumentError('platform is null.');
+    }
     _context.incrementalCompiler = this;
+  }
+
+  bool get isProductionModeEnabled {
+    return support == IncrementalMode.production ||
+        support == IncrementalMode.experimental;
+  }
+
+  bool get isExperimentalModeEnabled {
+    return support == IncrementalMode.experimental;
   }
 
   LibraryElement get mainApp => _compiler.mainApp;
@@ -114,23 +154,58 @@ class IncrementalCompiler {
 
   /// Perform a full compile of [script]. This will reset the incremental
   /// compiler.
-  Future<bool> compile(Uri script) {
+  ///
+  /// Error messages will be reported relative to [base].
+  ///
+  /// Notice: a full compile means not incremental. The part of the program
+  /// that is compiled is determined by tree shaking.
+  Future<bool> compile(Uri script, Uri base) {
     _compiler = null;
-    return _reuseCompiler(null).then((Compiler compiler) {
+    _updatedFiles.clear();
+    return _reuseCompiler(null, base: base).then((CompilerImpl compiler) {
       _compiler = compiler;
       return compiler.run(script);
     });
   }
 
-  Future<Compiler> _reuseCompiler(
-      Future<bool> reuseLibrary(LibraryElement library)) {
+  /// Perform a full analysis of [script]. This will reset the incremental
+  /// compiler.
+  ///
+  /// Error messages will be reported relative to [base].
+  ///
+  /// Notice: a full analysis is analogous to a full compile, that is, full
+  /// analysis not incremental. The part of the program that is analyzed is
+  /// determined by tree shaking.
+  Future<int> analyze(Uri script, Uri base) {
+    _compiler = null;
+    int initialErrorCount = _context.errorCount;
+    int initialProblemCount = _context.problemCount;
+    return _reuseCompiler(null, analyzeOnly: true, base: base).then(
+        (CompilerImpl compiler) {
+      // Don't try to reuse the compiler object.
+      return compiler.run(script).then((_) {
+        return _context.problemCount == initialProblemCount
+            ? 0
+            : _context.errorCount == initialErrorCount
+                ? exit_codes.ANALYSIS_HAD_NON_ERROR_PROBLEMS
+                : exit_codes.ANALYSIS_HAD_ERRORS;
+      });
+    });
+  }
+
+  Future<CompilerImpl> _reuseCompiler(
+      ReuseLibrariesFunction reuseLibraries,
+      {bool analyzeOnly: false,
+       Uri base}) {
     List<String> options = this.options == null
         ? <String> [] : new List<String>.from(this.options);
     options.addAll(INCREMENTAL_OPTIONS);
+    if (analyzeOnly) {
+      options.add("--analyze-only");
+    }
     return reuseCompiler(
         cachedCompiler: _compiler,
         libraryRoot: libraryRoot,
-        patchRoot: patchRoot,
         packageConfig: packageConfig,
         nativesJson: nativesJson,
         fletchVm: fletchVm,
@@ -139,38 +214,58 @@ class IncrementalCompiler {
         options: options,
         outputProvider: outputProvider,
         environment: environment,
-        reuseLibrary: reuseLibrary,
-        categories: categories);
+        reuseLibraries: reuseLibraries,
+        platform: platform,
+        base: base,
+        incrementalCompiler: this);
+  }
+
+  void _checkCompilationFailed() {
+    if (!isExperimentalModeEnabled && _compiler.compilationFailed) {
+      throw new IncrementalCompilationFailed(
+          "Unable to reuse compiler due to compile-time errors");
+    }
   }
 
   /// Perform an incremental compilation of [updatedFiles]. [compile] must have
   /// been called once before calling this method.
+  ///
+  /// Error messages will be reported relative to [base], if [base] is not
+  /// provided the previous set [base] will be used.
   Future<FletchDelta> compileUpdates(
       FletchSystem currentSystem,
       Map<Uri, Uri> updatedFiles,
       {Logger logTime,
-       Logger logVerbose}) {
+       Logger logVerbose,
+       Uri base}) {
+    _checkCompilationFailed();
     if (logTime == null) {
       logTime = (_) {};
     }
     if (logVerbose == null) {
       logVerbose = (_) {};
     }
+    updatedFiles.forEach((Uri from, Uri to) {
+      _updatedFiles[from] = to;
+    });
     Future mappingInputProvider(Uri uri) {
-      Uri updatedFile = updatedFiles[uri];
+      Uri updatedFile = _updatedFiles[uri];
       return inputProvider.readFromUri(updatedFile == null ? uri : updatedFile);
     }
-    LibraryUpdater updater = new LibraryUpdater(
+    FletchReuser reuser = new FletchReuser(
         _compiler,
         mappingInputProvider,
         logTime,
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(updater.reuseLibrary).then((Compiler compiler) {
-      _compiler = compiler;
-      return updater.computeUpdateFletch(currentSystem);
-    });
+    return _reuseCompiler(reuser.reuseLibraries, base: base).then(
+        (CompilerImpl compiler) async {
+          _compiler = compiler;
+          FletchDelta delta = await reuser.computeUpdateFletch(currentSystem);
+          _checkCompilationFailed();
+          return delta;
+        });
   }
 
   FletchDelta computeInitialDelta() {
@@ -213,18 +308,35 @@ class IncrementalCompiler {
   }
 
   DebugInfo debugInfoForPosition(
-      String file,
+      Uri file,
       int position,
       FletchSystem currentSystem) {
     return _compiler.debugInfoForPosition(file, position, currentSystem);
   }
 
-  int positionInFileFromPattern(String file, int line, String pattern) {
+  int positionInFileFromPattern(Uri file, int line, String pattern) {
     return _compiler.positionInFileFromPattern(file, line, pattern);
   }
 
-  int positionInFile(String file, int line, int column) {
+  int positionInFile(Uri file, int line, int column) {
     return _compiler.positionInFile(file, line, column);
+  }
+
+  Iterable<Uri> findSourceFiles(Pattern pattern) {
+    return _compiler.findSourceFiles(pattern);
+  }
+
+  SourceSpan createSourceSpan(
+      Token begin,
+      Token end,
+      Uri uri,
+      Element element) {
+    Uri update = _updatedFiles[uri];
+    if (update != null) {
+      // TODO(ahe): Compute updated position.
+      return new SourceSpan(update, 0, 0);
+    }
+    return new SourceSpan.fromTokens(uri, begin, end);
   }
 }
 
@@ -234,4 +346,33 @@ class IncrementalCompilationFailed {
   const IncrementalCompilationFailed(this.reason);
 
   String toString() => "Can't incrementally compile program.\n\n$reason";
+}
+
+String unparseIncrementalMode(IncrementalMode mode) {
+  switch (mode) {
+    case IncrementalMode.none:
+      return "none";
+
+    case IncrementalMode.production:
+      return "production";
+
+    case IncrementalMode.experimental:
+      return "experimental";
+  }
+  throw "Unhandled $mode";
+}
+
+IncrementalMode parseIncrementalMode(String text) {
+  switch (text) {
+    case "none":
+      return IncrementalMode.none;
+
+    case "production":
+        return IncrementalMode.production;
+
+    case "experimental":
+      return IncrementalMode.experimental;
+
+  }
+  return null;
 }

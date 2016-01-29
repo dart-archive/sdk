@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -21,8 +21,8 @@
 namespace fletch {
 
 struct Socket::SocketData {
-  SocketData() : fd(-1) { }
-  explicit SocketData(int fd) : fd(fd) { }
+  SocketData() : fd(-1) {}
+  explicit SocketData(int fd) : fd(fd) {}
 
   int fd;
 };
@@ -33,8 +33,8 @@ Socket::Socket() : data_(new SocketData()) {
   int status = fcntl(data_->fd, F_SETFD, FD_CLOEXEC);
   if (status == -1) FATAL("Failed making socket close on exec.");
   int optval = 1;
-  status = setsockopt(data_->fd, SOL_SOCKET, SO_REUSEADDR,
-                      &optval, sizeof(optval));
+  status =
+      setsockopt(data_->fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
   if (status == -1) FATAL("Failed setting socket options.");
 }
 
@@ -99,9 +99,8 @@ int Socket::Listen() {
   ASSERT(status == 0);
   struct sockaddr_in addr;
   socklen_t len = sizeof(addr);
-  status = getsockname(data_->fd,
-                       reinterpret_cast<struct sockaddr*>(&addr),
-                       &len);
+  status =
+      getsockname(data_->fd, reinterpret_cast<struct sockaddr*>(&addr), &len);
   if (status == -1) FATAL("Failed Socket::Listen.");
   return ntohs(addr.sin_port);
 }
@@ -127,8 +126,8 @@ Socket* Socket::Accept() {
 void Socket::Write(uint8* data, int length) {
   int offset = 0;
   while (offset < length) {
-    int bytes = TEMP_FAILURE_RETRY(
-        write(data_->fd, data + offset, length - offset));
+    int bytes =
+        TEMP_FAILURE_RETRY(write(data_->fd, data + offset, length - offset));
     if (bytes < 0) {
       Print::Error("Failed to write to socket: %i\n", data_->fd);
       UNREACHABLE();
@@ -141,8 +140,8 @@ uint8* Socket::Read(int length) {
   uint8* data = static_cast<uint8*>(malloc(length));
   int offset = 0;
   while (offset < length) {
-    int bytes = TEMP_FAILURE_RETRY(
-        read(data_->fd, data + offset, length - offset));
+    int bytes =
+        TEMP_FAILURE_RETRY(read(data_->fd, data + offset, length - offset));
     if (bytes <= 0) {
       Print::Error("Failed to read from socket\n");
       free(data);
@@ -153,14 +152,12 @@ uint8* Socket::Read(int length) {
   return data;
 }
 
-int Socket::FileDescriptor() {
-  return data_->fd;
-}
+int Socket::FileDescriptor() { return data_->fd; }
 
 void Socket::SetTCPNoDelay(bool value) {
   int option = value ? 1 : 0;
-  int status = setsockopt(data_->fd, IPPROTO_TCP, TCP_NODELAY,
-                          &option, sizeof(option));
+  int status =
+      setsockopt(data_->fd, IPPROTO_TCP, TCP_NODELAY, &option, sizeof(option));
   if (status == -1) perror("Failed setting TCP_NODELAY socket options.");
 }
 

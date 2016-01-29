@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -52,7 +52,8 @@ class SocketBenchmark extends BenchmarkBase {
 
   void setup() {
     port = new Port(channel);
-    Process.spawn(serverProcess, port);
+    var localPort = port;
+    Process.spawnDetached(() => serverProcess(localPort));
     serverPort = channel.receive();
     serverSocketPort = channel.receive();
   }
@@ -67,7 +68,8 @@ class SocketBenchmark extends BenchmarkBase {
     serverPort.send(clients);
     for (int i = 0; i < clients; i++) {
       var channel = new Channel();
-      Process.spawn(clientProcess, new Port(channel));
+      var handshakePort = new Port(channel);
+      Process.spawnDetached(() => clientProcess(handshakePort));
       var clientPort = channel.receive();
       clientPort.send(serverSocketPort);
       clientPort.send(port);

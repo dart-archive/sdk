@@ -1,10 +1,32 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// Library for the basic Raspberry Pi features.
+/// Access to Raspberry Pi 2 specific hardware features such as onboard LEDs.
+/// Also provides an API to the Sense HAT shield.
 ///
 /// The class [RaspberryPi] provide access to the Raspberry Pi features.
+///
+/// Usage
+/// -----
+/// ```dart
+/// import 'package:raspberry_pi/raspberry_pi.dart';
+///
+/// main() {
+///   // Initialize Raspberry Pi and configure the activity LED to be GPIO
+///   // controlled.
+///   RaspberryPi pi = new RaspberryPi();
+///   pi.leds.activityLED.setMode(OnboardLEDMode.gpio);
+///
+///   // Turn LED on
+///   pi.leds.activityLED.on();
+/// }
+/// ```
+///
+/// Reporting issues
+/// ----------------
+/// Please file an issue [in the issue
+/// tracker](https://github.com/dartino/sdk/issues/new?title=Add%20title&labels=Area-Package&body=%3Cissue%20description%3E%0A%3Crepro%20steps%3E%0A%3Cexpected%20outcome%3E%0A%3Cactual%20outcome%3E).
 library raspberry_pi;
 
 import 'dart:fletch.ffi';

@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,7 +11,7 @@ main(arguments) {
   var forceGC = arguments.length == 1 ? arguments[0] : null;
   var channel = new Channel();
   var port = new Port(channel);
-  Process.spawn(otherProcess, port);
+  Process.spawnDetached(() => otherProcess(port));
   var replyPort = channel.receive();
   replyPort.send(forceGC);
   // Put references to the port into the message queue.

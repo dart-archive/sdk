@@ -27,7 +27,6 @@ library async_helper;
 // 'dart:isolate' (i.e. it is in particular problematic with dart2js).
 // It would be nice if we could use a different mechanism for different
 // runtimes.
-import 'dart:isolate';
 import 'dart:fletch';
 
 bool _initialized = false;
@@ -54,7 +53,8 @@ void asyncStart() {
     print('unittest-suite-wait-for-done');
     _initialized = true;
     var channel = new Channel();
-    Process.spawn(_waitForMessage, new Port(channel));
+    var port = new Port(channel);
+    Process.spawnDetached(() => _waitForMessage(port));
     _port = channel.receive();
   }
   _asyncLevel++;

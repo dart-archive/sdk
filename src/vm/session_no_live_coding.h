@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -17,23 +17,25 @@ class PointerVisitor;
 
 class Session {
  public:
-  explicit Session(Connection* connection) {
+  explicit Session(Connection* connection) { UNIMPLEMENTED(); }
+
+  int FreshProcessId() {
     UNIMPLEMENTED();
+    return -1;
   }
 
-  void Initialize() {
-    UNIMPLEMENTED();
-  }
+  void Initialize() { UNIMPLEMENTED(); }
 
-  void StartMessageProcessingThread() {
-    UNIMPLEMENTED();
-  }
+  void StartMessageProcessingThread() { UNIMPLEMENTED(); }
 
-  void JoinMessageProcessingThread() {
-    UNIMPLEMENTED();
-  }
+  void JoinMessageProcessingThread() { UNIMPLEMENTED(); }
 
   bool UncaughtException(Process* process) {
+    UNIMPLEMENTED();
+    return false;
+  }
+
+  bool UncaughtSignal(Process* process) {
     UNIMPLEMENTED();
     return false;
   }
@@ -63,9 +65,12 @@ class Session {
     return false;
   }
 
-  void IteratePointers(PointerVisitor* visitor) {
+  bool Killed(Process* process) {
     UNIMPLEMENTED();
+    return false;
   }
+
+  void IteratePointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 };
 
 }  // namespace fletch

@@ -1,15 +1,13 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 library fletchc.lazy_field_initializer_codegen;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    MessageKind,
-    Registry;
-
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/resolution.dart';
+import 'package:compiler/src/resolution/tree_elements.dart' show
+    TreeElements;
+
 import 'package:compiler/src/tree/tree.dart';
 
 import 'fletch_context.dart';

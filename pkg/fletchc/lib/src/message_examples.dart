@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -69,6 +69,14 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'],
           <String>['create', 'session', 'foo'])];
 
+    case DiagnosticKind.sessionInvalidState:
+      // TODO(wibling): figure out a way to test this.
+      // Basically we need to have a fletch-vm that is
+      // explicitly attached to via 'fletch attach' and
+      // have it in a state where it has thrown an uncaught
+      // exception and then call e.g. 'fletch run foo.dart'.
+      return untestable;
+
     case DiagnosticKind.noFileTarget:
       return <Example>[
           new CommandLineExample(
@@ -105,8 +113,13 @@ List<Example> getExamples(DiagnosticKind kind) {
       return untestable;
 
     case DiagnosticKind.upgradeInvalidPackageName:
-      return <Example>[new CommandLineExample(
-          <String>['x-upgrade', 'agent', 'with', 'file', 'invalid-file-name'])];
+      // TODO(karlklose,268): We want to write a test similar to the following,
+      // but it records the error in the wrong isolate. We need a way to
+      // test this.
+      // return <Example>[new CommandLineExample(
+      //     <String>['x-upgrade', 'agent', 'with', 'file',
+      //              'invalid-file-name'])];
+      return untestable;
 
     case DiagnosticKind.socketAgentConnectError:
       // TODO(wibling,268): figure out how to test fletch agent failures to
@@ -172,6 +185,9 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(<String>['help', '--fisk']),
           new CommandLineExample(<String>['--compile-and-run', 'test.dart'])];
 
+    case DiagnosticKind.unsupportedPlatform:
+      return untestable;
+
     case DiagnosticKind.missingRequiredArgument:
       return <Example>[new CommandLineExample(
           <String>['run', '--test-debugger'])];
@@ -223,6 +239,12 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.settingsDeviceTypeUnrecognized:
       return <Example>[new SettingsExample('{"device_type":"fisk"}')];
 
+    case DiagnosticKind.settingsIncrementalModeNotAString:
+      return <Example>[new SettingsExample('{"incremental_mode":1}')];
+
+    case DiagnosticKind.settingsIncrementalModeUnrecognized:
+      return <Example>[new SettingsExample('{"incremental_mode":"fisk"}')];
+
     case DiagnosticKind.unknownAction:
       return <Example>[
           new CommandLineExample(<String>['blah']),
@@ -267,8 +289,12 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.verbRequiresNoToFile:
       // Though the quit verb is not a real verb it can still be used to provoke
       // this failure as part of sentence parsing.
-      return <Example>[new CommandLineExample(
-            <String>['quit', 'to', 'foo.txt'])];
+      return <Example>[
+        new CommandLineExample(
+            <String>['quit', 'to', 'foo.txt']),
+        new CommandLineExample(
+            <String>['x-upgrade', 'agent', 'foo.txt']),
+      ];
 
     case DiagnosticKind.verbRequiresNoWithFile:
       // Though the quit verb is not a real verb it can still be used to provoke
@@ -277,12 +303,16 @@ List<Example> getExamples(DiagnosticKind kind) {
             <String>['quit', 'with', 'foo.txt'])];
 
     case DiagnosticKind.verbRequiresTarget:
-      // TODO(ahe): Add test for this.
-      return untestable;
+      return <Example>[new CommandLineExample(
+            <String>['show'])];
 
-    case DiagnosticKind.verbRequiresTargetButGot:
-      // TODO(ahe): Add test for this.
-      return untestable;
+    case DiagnosticKind.verbRequiresSpecificTarget:
+      return <Example>[new CommandLineExample(
+            <String>['x-upgrade'])];
+
+    case DiagnosticKind.verbRequiresSpecificTargetButGot:
+      return <Example>[new CommandLineExample(
+            <String>['x-upgrade', 'file', 'foo'])];
 
     case DiagnosticKind.expectedTargetButGot:
       return <Example>[new CommandLineExample(
@@ -290,6 +320,9 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.quitTakesNoArguments:
       return <Example>[new CommandLineExample(<String>['quit', '-v'])];
+
+    case DiagnosticKind.illegalDefine:
+      return <Example>[new CommandLineExample(<String>['-Dfoo=1=2', 'run'])];
 
     case DiagnosticKind.busySession:
       // TODO(ahe): Add test for this.

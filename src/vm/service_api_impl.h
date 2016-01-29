@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -17,7 +17,8 @@ struct ServiceRequest;
 // probably post a callback into dart? Fix the service param;
 // for now it is a pointer to a pointer so we can post something
 // into dart that dart can free.
-extern "C" void PostResultToService(char* buffer);
+FLETCH_EXPORT
+void PostResultToService(char* buffer);
 
 class Service {
  public:
@@ -29,10 +30,7 @@ class Service {
 
   void Invoke(int id, void* buffer, int size);
 
-  void InvokeAsync(int id,
-                   ServiceApiCallback callback,
-                   void* buffer,
-                   int size);
+  void InvokeAsync(int id, ServiceApiCallback callback, void* buffer, int size);
 
   char* name() const { return name_; }
 
@@ -55,4 +53,3 @@ class Service {
 }  // namespace fletch
 
 #endif  // SRC_VM_SERVICE_API_IMPL_H_
-

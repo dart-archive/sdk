@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -10,24 +10,19 @@
 
 namespace fletch {
 
-void Assembler::Bind(const char* name) {
+void Assembler::Bind(const char* prefix, const char* name) {
   putchar('\n');
-  printf("\t.type %s, %%function\n", name);
-  AlignToPowerOfTwo(4);
+  printf("\t.type %s%s, %%function\n", prefix, name);
   printf("\t.syntax unified\n");
   printf("\t.thumb\n");
-  printf("\t.global %s\n%s:\n", name, name);
+  printf("\t.global %s%s\n%s%s:\n", prefix, name, prefix, name);
 }
 
-void Assembler::DefineLong(const char* name) {
-  printf("\t.long %s\n", name);
-}
+void Assembler::DefineLong(const char* name) { printf("\t.long %s\n", name); }
 
-const char* Assembler::LabelPrefix() {
-  return "";
-}
+const char* Assembler::LabelPrefix() { return ""; }
 
 }  // namespace fletch
 
-#endif  // defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_LINUX) && \
-    defined(FLETCH_THUMB_ONLY)
+#endif  // defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_LINUX) &&
+        // defined(FLETCH_THUMB_ONLY)

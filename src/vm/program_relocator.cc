@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -35,8 +35,7 @@ class PointerRebasingVisitor : public PointerVisitor {
       : from_(from),
         target_(target),
         host_base_(host_base),
-        rebase_base_(rebase_base) {
-  }
+        rebase_base_(rebase_base) {}
 
   void VisitBlock(Object** start, Object** end) {
     for (Object** p = start; p < end; p++) {
@@ -82,8 +81,7 @@ class RelocationVisitor : public HeapObjectVisitor {
   RelocationVisitor(uword space_base, uword target_base, uword rebase_base)
       : space_base_(space_base),
         target_base_(target_base),
-        rebase_base_(rebase_base) {
-  }
+        rebase_base_(rebase_base) {}
 
   int Visit(HeapObject* from) {
     uword address = from->address();
@@ -95,7 +93,7 @@ class RelocationVisitor : public HeapObjectVisitor {
     from->IteratePointers(&visitor);
 
     DEBUG_PRINT("relo %p -> %p [%p]\n", address, target_address,
-           address - space_base_ + rebase_base_);
+                address - space_base_ + rebase_base_);
     return from->Size();
   }
 
@@ -107,7 +105,7 @@ class RelocationVisitor : public HeapObjectVisitor {
   uword rebase_base_;
 };
 
-List<uint8> ProgramHeapRelocator::Relocate() {
+int ProgramHeapRelocator::Relocate() {
   // Clear away the intrinsics as they will point to the wrong
   // addresses.
   program_->ClearDispatchTableIntrinsics();
@@ -116,7 +114,7 @@ List<uint8> ProgramHeapRelocator::Relocate() {
 
   // Make sure we only have one chunk in the heap so that we can linearly
   // relocate objects to the new base.
-  Space* space = program_->heap()->space();
+  SemiSpace* space = program_->heap()->space();
   if (space->first() == NULL || space->first() != space->last()) {
     FATAL("We have more chunks than supported. Go fix the runtime!\n");
   }
@@ -128,11 +126,9 @@ List<uint8> ProgramHeapRelocator::Relocate() {
 
   // heap + roots + main_arity
   int total_size = heap_size + sizeof(ProgramInfoBlock);
-  List<uint8> target = List<uint8>::New(total_size);
-  memcpy(reinterpret_cast<void*>(target.data()),
-         reinterpret_cast<void*>(chunk->base()),
-         heap_size);
-  uword target_base = reinterpret_cast<uword>(target.data());
+  memcpy(reinterpret_cast<void*>(target_),
+         reinterpret_cast<void*>(chunk->base()), heap_size);
+  uword target_base = reinterpret_cast<uword>(target_);
 
   RelocationVisitor relocator(chunk->base(), target_base, baseaddress_);
 
@@ -143,8 +139,7 @@ List<uint8> ProgramHeapRelocator::Relocate() {
   ASSERT(program_->session() == NULL);
 
   // Create a shadow copy of the program.
-  Program* target_program =
-      reinterpret_cast<Program*>(malloc(sizeof(Program)));
+  Program* target_program = reinterpret_cast<Program*>(malloc(sizeof(Program)));
   memcpy(target_program, program_, sizeof(Program));
 
   // Now fix up root pointers in the copy.
@@ -158,14 +153,14 @@ List<uint8> ProgramHeapRelocator::Relocate() {
   // And write them to the end of the blob.
   // TODO(herhut): Use placement new here once supported by all toolchains.
   ProgramInfoBlock* program_info =
-      reinterpret_cast<ProgramInfoBlock*>(target.data() + heap_size);
+      reinterpret_cast<ProgramInfoBlock*>(target_ + heap_size);
   program_info->PopulateFromProgram(target_program);
 
   free(target_program);
 
   DEBUG_PRINT("Relocation complete, result is %d bytes...\n", target.length());
 
-  return target;
+  return total_size;
 }
 
 }  // namespace fletch

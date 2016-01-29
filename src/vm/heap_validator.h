@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,20 +7,18 @@
 
 #include "src/vm/heap.h"
 #include "src/vm/scheduler.h"
-#include "src/vm/stack_walker.h"
 
 namespace fletch {
 
+class SharedHeap;
+
 // Validates that all pointers it gets called with lie inside certain spaces -
-// depending on [shared_heap], [mutable_heap], [program_heap].
-class HeapPointerValidator: public PointerVisitor {
+// depending on [process_heap], [program_heap].
+class HeapPointerValidator : public PointerVisitor {
  public:
-  HeapPointerValidator(Heap* program_heap,
-                       SharedHeap* shared_heap,
-                       Heap* mutable_heap)
+  HeapPointerValidator(Heap* program_heap, Heap* process_heap)
       : program_heap_(program_heap),
-        shared_heap_(shared_heap),
-        mutable_heap_(mutable_heap) {}
+        process_heap_(process_heap) {}
   virtual ~HeapPointerValidator() {}
 
   virtual void VisitBlock(Object** start, Object** end);
@@ -29,25 +27,14 @@ class HeapPointerValidator: public PointerVisitor {
   void ValidatePointer(Object* object);
 
   Heap* program_heap_;
-  SharedHeap* shared_heap_;
-  Heap* mutable_heap_;
-};
-
-// Validates that all pointers it gets called with lie inside program/immutable
-// heaps.
-class SharedHeapPointerValidator: public HeapPointerValidator {
- public:
-  SharedHeapPointerValidator(Heap* program_heap,
-                                SharedHeap* shared_heap)
-      : HeapPointerValidator(program_heap, shared_heap, NULL) {}
-  virtual ~SharedHeapPointerValidator() {}
+  Heap* process_heap_;
 };
 
 // Validates that all pointers it gets called with lie inside the program heap.
-class ProgramHeapPointerValidator: public HeapPointerValidator {
+class ProgramHeapPointerValidator : public HeapPointerValidator {
  public:
   explicit ProgramHeapPointerValidator(Heap* program_heap)
-      : HeapPointerValidator(program_heap, NULL, NULL) {}
+      : HeapPointerValidator(program_heap, NULL) {}
   virtual ~ProgramHeapPointerValidator() {}
 };
 
@@ -55,19 +42,16 @@ class ProgramHeapPointerValidator: public HeapPointerValidator {
 // inside them are valid.
 class ProcessHeapValidatorVisitor : public ProcessVisitor {
  public:
-  explicit ProcessHeapValidatorVisitor(Heap* program_heap,
-                                       SharedHeap* shared_heap)
-      : program_heap_(program_heap), shared_heap_(shared_heap) {}
+  explicit ProcessHeapValidatorVisitor(Heap* program_heap)
+      : program_heap_(program_heap) {}
   virtual ~ProcessHeapValidatorVisitor() {}
 
   virtual void VisitProcess(Process* process);
 
  private:
   Heap* program_heap_;
-  SharedHeap* shared_heap_;
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_HEAP_VALIDATOR_H_

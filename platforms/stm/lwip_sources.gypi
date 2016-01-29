@@ -1,0 +1,51 @@
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+{
+  'variables': {
+    'stm32_cube_f7_lwip': '<(stm32_cube_f7)/Middlewares/Third_Party/LwIP/',
+  },
+  'include_dirs': [
+    '<(stm32_cube_f7_lwip)/src/include/',
+    '<(stm32_cube_f7_lwip)/src/include/ipv4/',
+    '<(stm32_cube_f7_lwip)/system/',
+    '<(stm32_cube_f7_lwip)/system/OS/',
+  ],
+  'sources': [
+    '<(stm32_cube_f7)/Middlewares/Third_Party/LwIP/src/api/api_lib.c',
+    '<(stm32_cube_f7_lwip)/src/api/api_msg.c',
+    '<(stm32_cube_f7_lwip)/src/api/err.c',
+    '<(stm32_cube_f7_lwip)/src/api/netbuf.c',
+    '<(stm32_cube_f7_lwip)/src/api/netdb.c',
+    '<(stm32_cube_f7_lwip)/src/api/netifapi.c',
+    '<(stm32_cube_f7_lwip)/src/api/sockets.c',
+    '<(stm32_cube_f7_lwip)/src/api/tcpip.c',
+    '<(stm32_cube_f7_lwip)/src/core/def.c',
+    '<(stm32_cube_f7_lwip)/src/core/dhcp.c',
+    '<(stm32_cube_f7_lwip)/src/core/dns.c',
+    '<(stm32_cube_f7_lwip)/src/core/init.c',
+    '<(stm32_cube_f7_lwip)/src/core/lwip_timers.c',
+    '<(stm32_cube_f7_lwip)/src/core/mem.c',
+    '<(stm32_cube_f7_lwip)/src/core/memp.c',
+    '<(stm32_cube_f7_lwip)/src/core/netif.c',
+    '<(stm32_cube_f7_lwip)/src/core/pbuf.c',
+    '<(stm32_cube_f7_lwip)/src/core/raw.c',
+    '<(stm32_cube_f7_lwip)/src/core/stats.c',
+    '<(stm32_cube_f7_lwip)/src/core/sys.c',
+    '<(stm32_cube_f7_lwip)/src/core/tcp.c',
+    '<(stm32_cube_f7_lwip)/src/core/tcp_in.c',
+    '<(stm32_cube_f7_lwip)/src/core/tcp_out.c',
+    '<(stm32_cube_f7_lwip)/src/core/udp.c',
+    '<(stm32_cube_f7_lwip)/src/netif/etharp.c',
+    '<(stm32_cube_f7_lwip)/system/OS/sys_arch.c',
+    '<(stm32_cube_f7_lwip)/src/core/ipv4/autoip.c',
+    '<(stm32_cube_f7_lwip)/src/core/ipv4/icmp.c',
+    '<(stm32_cube_f7_lwip)/src/core/ipv4/igmp.c',
+    '<(stm32_cube_f7_lwip)/src/core/ipv4/inet.c',
+    '<(stm32_cube_f7_lwip)/src/core/ipv4/inet_chksum.c',
+    '<(stm32_cube_f7_lwip)/src/core/ipv4/ip.c',
+    '<(stm32_cube_f7_lwip)/src/core/ipv4/ip_addr.c',
+    '<(stm32_cube_f7_lwip)/src/core/ipv4/ip_frag.c',
+  ],
+}

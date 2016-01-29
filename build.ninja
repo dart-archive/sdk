@@ -1,11 +1,11 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
 rule gyp
   command = $
     GYP_CROSSCOMPILE=1 $
-    ./third_party/gyp/gyp --depth=. -Idefault_targets.gypi $
+    third_party/gyp/gyp --depth=. -Idefault_targets.gypi $
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
@@ -23,15 +23,12 @@ rule gyp-mbed
         -Goutput_dir=out $
         --format=ninja fletch.gyp
 
-rule update-version-gyp
+rule gyp-stm
   command = $
-    python tools/update_version_gyp.py version.gyp
-
-build $
-    version.gyp: $
-    update-version-gyp $
-        tools/update_version_gyp.py $
-        .git/HEAD $
+    GYP_CROSSCOMPILE=1 $
+    ./third_party/gyp/gyp --depth=. -Iplatforms/stm/stm_targets.gypi $
+        -Goutput_dir=out $
+        --format=ninja platforms/stm/stm.gyp
 
 build $
     out/DebugIA32/build.ninja $
@@ -66,6 +63,8 @@ build $
         src/tools/driver/driver.gyp $
         src/vm/vm.gyp $
         src/pkg/mdns/mdns.gyp $
+        src/pkg/power_management/power_management.gyp $
+        src/pkg/mbedtls/mbedtls.gyp $
 
 build gyp: phony$
     out/DebugIA32/build.ninja $
@@ -125,4 +124,23 @@ build mbed: phony$
     out/DebugMBED/build.ninja $
     out/ReleaseMBED/build.ninja $
 
-default gyp
+build $
+    out/DebugSTM/build.ninja $
+    out/ReleaseSTM/build.ninja: $
+    gyp-stm $
+        common.gypi $
+        version.gyp $
+        platforms/stm/stm_targets.gypi $
+        platforms/stm/stm.gyp $
+        platforms/stm/disco_fletch/disco_fletch.gyp $
+        fletch.gyp $
+        src/double_conversion.gyp $
+        src/shared/shared.gyp $
+        src/tools/driver/driver.gyp $
+        src/vm/vm.gyp $
+
+build stm: phony$
+    out/DebugSTM/build.ninja $
+    out/ReleaseSTM/build.ninja $
+
+default gyp stm

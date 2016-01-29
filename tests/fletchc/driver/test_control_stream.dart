@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -8,9 +8,9 @@ import 'dart:typed_data';
 
 import 'package:expect/expect.dart';
 
-import 'package:fletchc/src/driver/driver_commands.dart';
+import 'package:fletchc/src/hub/client_commands.dart';
 
-import 'package:fletchc/src/driver/driver_main.dart';
+import 'package:fletchc/src/hub/hub_main.dart';
 
 const List<int> stdinCommandData = const <int>[4, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -49,16 +49,18 @@ Future<Null> testControlStream() async {
       ..addAll(stdinCommandData);
   controller.add(new Uint8List.fromList(testData));
 
-  StreamTransformer<List<int>, Command> transformer =
-      new DriverCommandTransformerBuilder().build();
-  Future<List<Command>> commandsFuture =
+  StreamTransformer<List<int>, ClientCommand> transformer =
+      new ClientCommandTransformerBuilder().build();
+  Future<List<ClientCommand>> commandsFuture =
       controller.stream.transform(transformer).toList();
 
   await controller.close();
 
-  List<Command> commands = await commandsFuture;
+  List<ClientCommand> commands = await commandsFuture;
   Expect.equals(6, commands.length);
-  for (Command command in commands) {
-    Expect.stringEquals('Command(DriverCommand.Stdin, [])', '$command');
+  for (ClientCommand command in commands) {
+    Expect.stringEquals(
+        'ClientCommand(ClientCommandCode.Stdin, [])',
+        '$command');
   }
 }

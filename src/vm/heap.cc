@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -13,32 +13,41 @@
 namespace fletch {
 
 Heap::Heap(RandomXorShift* random, int maximum_initial_size)
-    : random_(random), space_(NULL), weak_pointers_(NULL), foreign_memory_(0) {
-  space_ = new Space(maximum_initial_size);
+    : random_(random),
+      space_(new SemiSpace(maximum_initial_size)),
+      old_space_(new OldSpace(0)),
+      weak_pointers_(NULL),
+      foreign_memory_(0),
+      allocations_have_taken_place_(false) {
   AdjustAllocationBudget();
+  AdjustOldAllocationBudget();
 }
 
-Heap::Heap(Space* existing_space, WeakPointer* weak_pointers)
+Heap::Heap(SemiSpace* existing_space, WeakPointer* weak_pointers)
     : random_(NULL),
       space_(existing_space),
       weak_pointers_(weak_pointers),
-      foreign_memory_(0) { }
+      foreign_memory_(0),
+      allocations_have_taken_place_(false) {}
 
 Heap::~Heap() {
   WeakPointer::ForceCallbacks(&weak_pointers_, this);
   ASSERT(foreign_memory_ == 0);
+  delete old_space_;
   delete space_;
 }
 
 Object* Heap::Allocate(int size) {
+  allocations_have_taken_place_ = true;
   uword result = space_->Allocate(size);
-  if (result == 0) return Failure::retry_after_gc();
+  if (result == 0) return Failure::retry_after_gc(size);
   return HeapObject::FromAddress(result);
 }
 
 Object* Heap::AllocateNonFatal(int size) {
+  allocations_have_taken_place_ = true;
   uword result = space_->AllocateNonFatal(size);
-  if (result == 0) return Failure::retry_after_gc();
+  if (result == 0) return Failure::retry_after_gc(size);
   return HeapObject::FromAddress(result);
 }
 
@@ -47,8 +56,7 @@ void Heap::TryDealloc(Object* object, int size) {
   space_->TryDealloc(location, size);
 }
 
-Object* Heap::CreateInstance(Class* the_class,
-                             Object* init_value,
+Object* Heap::CreateInstance(Class* the_class, Object* init_value,
                              bool immutable) {
   int size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
@@ -102,8 +110,7 @@ void Heap::TryDeallocInteger(LargeInteger* object) {
 }
 
 Object* Heap::CreateDouble(Class* the_class, fletch_double value) {
-  ASSERT(the_class->instance_format().type() ==
-         InstanceFormat::DOUBLE_TYPE);
+  ASSERT(the_class->instance_format().type() == InstanceFormat::DOUBLE_TYPE);
   int size = Double::AllocationSize();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
@@ -114,8 +121,7 @@ Object* Heap::CreateDouble(Class* the_class, fletch_double value) {
 }
 
 Object* Heap::CreateBoxed(Class* the_class, Object* value) {
-  ASSERT(the_class->instance_format().type() ==
-         InstanceFormat::BOXED_TYPE);
+  ASSERT(the_class->instance_format().type() == InstanceFormat::BOXED_TYPE);
   int size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
@@ -137,8 +143,20 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   return Initializer::cast(result);
 }
 
-Object* Heap::CreateOneByteStringInternal(
-    Class* the_class, int length, bool clear) {
+Object* Heap::CreateDispatchTableEntry(Class* the_class) {
+  ASSERT(the_class->instance_format().type() ==
+         InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE);
+  int size = DispatchTableEntry::AllocationSize();
+  Object* raw_result = Allocate(size);
+  if (raw_result->IsFailure()) return raw_result;
+  DispatchTableEntry* result =
+      reinterpret_cast<DispatchTableEntry*>(raw_result);
+  result->set_class(the_class);
+  return DispatchTableEntry::cast(result);
+}
+
+Object* Heap::CreateOneByteStringInternal(Class* the_class, int length,
+                                          bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::ONE_BYTE_STRING_TYPE);
   int size = OneByteString::AllocationSize(length);
@@ -150,8 +168,8 @@ Object* Heap::CreateOneByteStringInternal(
   return OneByteString::cast(result);
 }
 
-Object* Heap::CreateTwoByteStringInternal(
-    Class* the_class, int length, bool clear) {
+Object* Heap::CreateTwoByteStringInternal(Class* the_class, int length,
+                                          bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::TWO_BYTE_STRING_TYPE);
   int size = TwoByteString::AllocationSize(length);
@@ -190,9 +208,7 @@ Object* Heap::CreateStack(Class* the_class, int length) {
   return Stack::cast(result);
 }
 
-Object* Heap::AllocateRawClass(int size) {
-  return Allocate(size);
-}
+Object* Heap::AllocateRawClass(int size) { return Allocate(size); }
 
 Object* Heap::CreateMetaClass() {
   InstanceFormat format = InstanceFormat::class_format();
@@ -207,11 +223,9 @@ Object* Heap::CreateMetaClass() {
   return meta_class;
 }
 
-Object* Heap::CreateClass(InstanceFormat format,
-                          Class* meta_class,
+Object* Heap::CreateClass(InstanceFormat format, Class* meta_class,
                           HeapObject* null) {
-  ASSERT(meta_class->instance_format().type() ==
-         InstanceFormat::CLASS_TYPE);
+  ASSERT(meta_class->instance_format().type() == InstanceFormat::CLASS_TYPE);
 
   int size = meta_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
@@ -222,12 +236,9 @@ Object* Heap::CreateClass(InstanceFormat format,
   return Class::cast(result);  // Perform a cast to validate type.
 }
 
-Object* Heap::CreateFunction(Class* the_class,
-                             int arity,
-                             List<uint8> bytecodes,
+Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
                              int number_of_literals) {
-  ASSERT(the_class->instance_format().type() ==
-         InstanceFormat::FUNCTION_TYPE);
+  ASSERT(the_class->instance_format().type() == InstanceFormat::FUNCTION_TYPE);
   int literals_size = number_of_literals * kPointerSize;
   int bytecode_size = Function::BytecodeAllocationSize(bytecodes.length());
   int size = Function::AllocationSize(bytecode_size + literals_size);
@@ -242,24 +253,33 @@ Object* Heap::CreateFunction(Class* the_class,
 }
 
 void Heap::AllocatedForeignMemory(int size) {
+  ASSERT(foreign_memory_ >= 0);
   foreign_memory_ += size;
-  space()->DecreaseAllocationBudget(size);
+  old_space()->DecreaseAllocationBudget(size);
 }
 
 void Heap::FreedForeignMemory(int size) {
   foreign_memory_ -= size;
   ASSERT(foreign_memory_ >= 0);
-  space()->IncreaseAllocationBudget(size);
+  old_space()->IncreaseAllocationBudget(size);
 }
 
-void Heap::ReplaceSpace(Space* space) {
+void Heap::ReplaceSpace(SemiSpace* space, OldSpace* old_space) {
   delete space_;
   space_ = space;
-  AdjustAllocationBudget();
+  if (old_space != NULL) {
+    // TODO(erikcorry): Fix this heuristic.
+    // Currently the new-space GC time is dependent on the size of old space
+    // because we have no remembered set.  Therefore we have to grow the new
+    // space as the old space grows to avoid going quadratic.
+    space->SetAllocationBudget(old_space->Used() >> 3);
+  } else {
+    AdjustAllocationBudget();
+  }
 }
 
-Space* Heap::TakeSpace() {
-  Space* result = space_;
+SemiSpace* Heap::TakeSpace() {
+  SemiSpace* result = space_;
   space_ = NULL;
   return result;
 }
@@ -270,21 +290,6 @@ WeakPointer* Heap::TakeWeakPointers() {
   return weak_pointers;
 }
 
-void Heap::MergeInOtherHeap(Heap* heap) {
-  Space* other_space = heap->TakeSpace();
-  if (space_ == NULL) {
-    space_ = other_space;
-  } else {
-    space_->PrependSpace(other_space);
-  }
-
-  WeakPointer* other_weak_pointers = heap->TakeWeakPointers();
-  WeakPointer::PrependWeakPointers(&weak_pointers_, other_weak_pointers);
-
-  foreign_memory_ += heap->foreign_memory_;
-  heap->foreign_memory_ = 0;
-}
-
 void Heap::AddWeakPointer(HeapObject* object, WeakPointerCallback callback) {
   weak_pointers_ = new WeakPointer(object, callback, weak_pointers_);
 }
@@ -293,8 +298,50 @@ void Heap::RemoveWeakPointer(HeapObject* object) {
   WeakPointer::Remove(&weak_pointers_, object);
 }
 
-void Heap::ProcessWeakPointers() {
-  WeakPointer::Process(space(), &weak_pointers_, this);
+void Heap::ProcessWeakPointers(Space* space) {
+  WeakPointer::Process(space, &weak_pointers_, this);
 }
+
+#ifdef DEBUG
+void Heap::Find(uword word) {
+  space_->Find(word, "Fletch heap");
+  old_space_->Find(word, "oldspace");
+#ifdef FLETCH_TARGET_OS_LINUX
+  FILE* fp = fopen("/proc/self/maps", "r");
+  if (fp == NULL) return;
+  size_t length;
+  char* line = NULL;
+  while (getline(&line, &length, fp) > 0) {
+    char* start;
+    char* end;
+    char r, w, x, p;  // Permissions.
+    char filename[1000];
+    memset(filename, 0, 1000);
+    sscanf(line, "%p-%p %c%c%c%c %*x %*5c %*d %999c", &start, &end, &r, &w, &x,
+           &p, &(filename[0]));
+    // Don't search in mapped files.
+    if (filename[0] != 0 && filename[0] != '[') continue;
+    if (filename[0] == 0) {
+      snprintf(filename, sizeof(filename), "anonymous: %p-%p %c%c%c%c", start,
+               end, r, w, x, p);
+    } else {
+      if (filename[strlen(filename) - 1] == '\n') {
+        filename[strlen(filename) - 1] = 0;
+      }
+    }
+    // If we can't read it, skip.
+    if (r != 'r') continue;
+    for (char* current = start; current < end; current += 4) {
+      uword w = *reinterpret_cast<uword*>(current);
+      if (w == word) {
+        fprintf(stderr, "Found %p in %s at %p\n", reinterpret_cast<void*>(w),
+                filename, current);
+      }
+    }
+  }
+  fclose(fp);
+#endif  // __linux
+}
+#endif  // DEBUG
 
 }  // namespace fletch

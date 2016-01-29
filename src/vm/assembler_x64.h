@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -14,6 +14,8 @@
 
 namespace fletch {
 
+extern const char* kLocalLabelPrefix;
+
 enum Register {
   RAX = 0,
   RCX = 1,
@@ -23,50 +25,52 @@ enum Register {
   RBP = 5,
   RSI = 6,
   RDI = 7,
-  R8  = 8,
-  R9  = 9,
+  R8 = 8,
+  R9 = 9,
   R10 = 10,
   R11 = 11,
   R12 = 12,
   R13 = 13,
   R14 = 14,
-  R15 = 15
+  R15 = 15,
+  RIP = 16
 };
 
 enum ScaleFactor {
   TIMES_1 = 0,
   TIMES_2 = 1,
   TIMES_4 = 2,
-  TIMES_8 = 3
+  TIMES_8 = 3,
+  TIMES_WORD_SIZE = TIMES_8
 };
 
 enum Condition {
-  OVERFLOW      =  0,
-  NO_OVERFLOW   =  1,
-  BELOW         =  2,
-  ABOVE_EQUAL   =  3,
-  EQUAL         =  4,
-  NOT_EQUAL     =  5,
-  BELOW_EQUAL   =  6,
-  ABOVE         =  7,
-  SIGN          =  8,
-  NOT_SIGN      =  9,
-  PARITY_EVEN   = 10,
-  PARITY_ODD    = 11,
-  LESS          = 12,
+  OVERFLOW_ = 0,
+  NO_OVERFLOW = 1,
+  BELOW = 2,
+  ABOVE_EQUAL = 3,
+  EQUAL = 4,
+  NOT_EQUAL = 5,
+  BELOW_EQUAL = 6,
+  ABOVE = 7,
+  SIGN = 8,
+  NOT_SIGN = 9,
+  PARITY_EVEN = 10,
+  PARITY_ODD = 11,
+  LESS = 12,
   GREATER_EQUAL = 13,
-  LESS_EQUAL    = 14,
-  GREATER       = 15,
+  LESS_EQUAL = 14,
+  GREATER = 15,
 
-  ZERO          = EQUAL,
-  NOT_ZERO      = NOT_EQUAL,
-  NEGATIVE      = SIGN,
-  POSITIVE      = NOT_SIGN
+  ZERO = EQUAL,
+  NOT_ZERO = NOT_EQUAL,
+  NEGATIVE = SIGN,
+  POSITIVE = NOT_SIGN
 };
 
 class Immediate {
  public:
-  explicit Immediate(int64 value) : value_(value) { }
+  explicit Immediate(int64 value) : value_(value) {}
 
   int64 value() const { return value_; }
 
@@ -78,9 +82,7 @@ class Immediate {
 
 class Operand {
  public:
-  uint8 mod() const {
-    return (EncodingAt(0) >> 6) & 3;
-  }
+  uint8 mod() const { return (EncodingAt(0) >> 6) & 3; }
 
   Register rm() const {
     int rm_rex = (rex_ & 1) << 3;
@@ -103,16 +105,16 @@ class Operand {
 
   int8 disp8() const {
     ASSERT(length_ >= 2);
-    return *bit_cast<const int8*>(&encoding_[length_ - 1]);
+    return *reinterpret_cast<const int8*>(&encoding_[length_ - 1]);
   }
 
   int32 disp32() const {
     ASSERT(length_ >= 5);
-    return *bit_cast<const int32*>(&encoding_[length_ - 4]);
+    return *reinterpret_cast<const int32*>(&encoding_[length_ - 4]);
   }
 
  protected:
-  Operand() : length_(0), rex_(0) { }
+  Operand() : length_(0), rex_(0) {}
 
   void SetModRM(int mod, Register rm) {
     ASSERT((mod & ~3) == 0);
@@ -135,13 +137,12 @@ class Operand {
 
   void SetDisp8(int8 disp) {
     ASSERT(length_ == 1 || length_ == 2);
-    *bit_cast<int8*>(&encoding_[length_++]) = disp;
+    *reinterpret_cast<int8*>(&encoding_[length_++]) = disp;
   }
-
 
   void SetDisp32(int32 disp) {
     ASSERT(length_ == 1 || length_ == 2);
-    *bit_cast<int32*>(&encoding_[length_]) = disp;
+    *reinterpret_cast<int32*>(&encoding_[length_]) = disp;
     length_ += 4;
   }
 
@@ -204,35 +205,18 @@ class Address : public Operand {
 
 class Label {
  public:
-  Label() : position_(0) { }
+  Label() : position_(-1) {}
 
-  // Returns the position for bound and linked labels. Cannot be used
-  // for unused labels.
-  int position() const {
-    ASSERT(!IsUnused());
-    return IsBound() ? -position_ - 1 : position_ - 1;
+  // Returns the position for a label. Positions are assigned on first use.
+  int position() {
+    if (position_ == -1) position_ = position_counter_++;
+    return position_;
   }
-
-  bool IsBound() const { return position_ < 0; }
-  bool IsUnused() const { return position_ == 0; }
-  bool IsLinked() const { return position_ > 0; }
 
  private:
   int position_;
-
-  void BindTo(int position) {
-    position_ = -position - 1;
-    ASSERT(IsBound());
-  }
-
-  void LinkTo(int position) {
-    position_ = position + 1;
-    ASSERT(IsLinked());
-  }
-
-  friend class Assembler;
+  static int position_counter_;
 };
-
 
 #define INSTRUCTION_0(name, format) \
   void name() { Print(format); }
@@ -247,12 +231,16 @@ class Assembler {
  public:
   INSTRUCTION_1(pushq, "pushq %rq", Register);
   INSTRUCTION_1(pushq, "pushq %a", const Address&);
+  INSTRUCTION_1(pushq, "pushq %i", const Immediate&);
 
   INSTRUCTION_1(popq, "popq %rq", Register);
   INSTRUCTION_1(popq, "popq %a", const Address&);
 
-  INSTRUCTION_1(incq, "incq %rq", Register);
   INSTRUCTION_1(negq, "negq %rq", Register);
+  INSTRUCTION_1(notq, "notq %rq", Register);
+  INSTRUCTION_1(imul, "imul %rq", Register);
+
+  INSTRUCTION_1(call, "call *%rq", Register);
 
   INSTRUCTION_2(movl, "movl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(movl, "movl %a, %rl", Register, const Address&);
@@ -262,42 +250,98 @@ class Assembler {
   INSTRUCTION_2(movq, "movq %rq, %rq", Register, Register);
   INSTRUCTION_2(movq, "movq %a, %rq", Register, const Address&);
   INSTRUCTION_2(movq, "movq %rq, %a", const Address&, Register);
+  INSTRUCTION_2(movq, "movq %l, %a", const Address&, const Immediate&);
 
-  INSTRUCTION_2(movsxl, "movsxl %a, %rq", Register, const Address&);
+  INSTRUCTION_2(movzbq, "movzbq %a, %rq", Register, const Address&);
+
+  INSTRUCTION_2(cmove, "cmove %rq, %rq", Register, Register);
+
+  INSTRUCTION_2(leaq, "leaq %a, %rq", Register, const Address&);
+
+  INSTRUCTION_1(call, "call *%a", const Address&);
+
+  INSTRUCTION_1(jmp, "jmp *%rq", Register);
 
   INSTRUCTION_2(cmpl, "cmpl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(cmpl, "cmpl %rl, %rl", Register, Register);
 
-  INSTRUCTION_2(cmpq, "cmpq %i, %rq", Register, const Immediate&);
+  INSTRUCTION_2(cmpq, "cmpq %l, %rq", Register, const Immediate&);
   INSTRUCTION_2(cmpq, "cmpq %rq, %rq", Register, Register);
+  INSTRUCTION_2(cmpq, "cmpq %a, %rq", Register, const Address&);
+
+  INSTRUCTION_2(testl, "testl %rl, %rl", Register, Register);
+  INSTRUCTION_2(testl, "testl %i, %rl", Register, const Immediate&);
+
+  INSTRUCTION_2(testq, "testq %rq, %rq", Register, Register);
+  INSTRUCTION_2(testq, "testq %i, %rq", Register, const Immediate&);
 
   INSTRUCTION_2(addl, "addl %rl, %rl", Register, Register);
   INSTRUCTION_2(addl, "addl %i, %a", const Address&, const Immediate&);
 
-  INSTRUCTION_2(addq, "addq %i, %rq", Register, const Immediate&);
-  INSTRUCTION_2(addq, "addq %i, %a", const Address&, const Immediate&);
+  INSTRUCTION_2(addq, "addq %rq, %rq", Register, Register);
+  INSTRUCTION_2(addq, "addq %l, %rq", Register, const Immediate&);
+  INSTRUCTION_2(addq, "addq %l, %a", const Address&, const Immediate&);
 
-  INSTRUCTION_2(andq, "andq %i, %rq", Register, const Immediate&);
+  INSTRUCTION_2(andq, "andq %l, %rq", Register, const Immediate&);
   INSTRUCTION_2(andq, "andq %rq, %rq", Register, Register);
 
-  INSTRUCTION_2(subq, "subq %i, %rq", Register, const Immediate&);
+  INSTRUCTION_2(orq, "orq %rq, %rq", Register, Register);
+
+  INSTRUCTION_2(shrq, "shrq %l, %rq", Register, const Immediate&);
+  INSTRUCTION_2(sarq, "sarq %l, %rq", Register, const Immediate&);
+  INSTRUCTION_1(sarq_cl, "sarq %%cl, %rq", Register);
+
+  INSTRUCTION_2(shll, "shll %i, %rl", Register, const Immediate&);
+  INSTRUCTION_2(shlq, "shlq %i, %rq", Register, const Immediate&);
+  INSTRUCTION_1(shlq_cl, "shlq %%cl, %rq", Register);
+
+  INSTRUCTION_2(subq, "subq %l, %rq", Register, const Immediate&);
+  INSTRUCTION_2(subq, "subq %rq, %rq", Register, Register);
+
+  INSTRUCTION_2(xorq, "xorq %rq, %rq", Register, Register);
 
   INSTRUCTION_0(ret, "ret");
   INSTRUCTION_0(nop, "nop");
   INSTRUCTION_0(int3, "int3");
 
-  void j(Condition condition, Label* label);
-  void jmp(Label* label);
+  void movq(Register reg, Label* label);
 
-  void Bind(const char* name);
+  void j(Condition condition, Label* label);
+  void j(Condition condition, const char* name);
+
+  void jmp(Label* label);
+  void jmp(const char* name);
+  void jmp(const char* name, Register index, ScaleFactor scale,
+           Register scratch);
+
+  void call(const char* name);
+
+  void SwitchToData();
+  void SwitchToText();
+
+  void Bind(const char* prefix, const char* name);
   void Bind(Label* label);
+
+  void BindWithPowerOfTwoAlignment(const char* name, int power);
+
+  void LocalBind(const char* name);
+
+  void RelativeDefine(const char* name, const char* target, const char* base);
+
+  void DefineLong(const char* name);
+  void LoadNative(Register destination, Register index);
+  void LoadLabel(Register reg, const char* name);
+
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
 
  private:
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
 
-  // Align what follows to a 2^power address.
-  void AlignToPowerOfTwo(int power);
+  static const char* ConditionMnemonic(Condition condition);
+
+  static const char* ComputeDirectionForLinking(Label* label);
 
   static int ComputeLabelPosition(Label* label);
 

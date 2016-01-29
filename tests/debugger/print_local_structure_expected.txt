@@ -3,9 +3,8 @@ Starting session. Type 'help' for a list of commands.
 > b breakHere
 breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
 > r
-Stack trace:
-> 0: breakHere   @breakHere() {}
-  1: main        @breakHere()
+tests/debugger/print_local_structure_test.dart:31:1
+31   breakHere() { }
 > f 1
 > p *a
 Instance of 'A' {

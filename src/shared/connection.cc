@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -19,12 +19,9 @@ namespace fletch {
 // a large enough capacity.
 static const int kBufferGrowthSize = 64;
 
-Buffer::Buffer() : buffer_(NULL), buffer_offset_(0), buffer_length_(0) {
-}
+Buffer::Buffer() : buffer_(NULL), buffer_offset_(0), buffer_length_(0) {}
 
-Buffer::~Buffer() {
-  free(buffer_);
-}
+Buffer::~Buffer() { free(buffer_); }
 
 void Buffer::ClearBuffer() {
   ASSERT(buffer_offset_ == buffer_length_);
@@ -99,9 +96,7 @@ int64 ReadBuffer::ReadInt64() {
   return value;
 }
 
-double ReadBuffer::ReadDouble() {
-  return bit_cast<double>(ReadInt64());
-}
+double ReadBuffer::ReadDouble() { return bit_cast<double>(ReadInt64()); }
 
 bool ReadBuffer::ReadBoolean() {
   ASSERT(buffer_offset_ + 1 <= buffer_length_);
@@ -162,9 +157,7 @@ void Connection::Send(Opcode opcode, const WriteBuffer& buffer) {
 }
 
 Connection::Connection(const char* host, int port, Socket* socket)
-    : socket_(socket),
-      send_mutex_(Platform::CreateMutex()) {
-}
+    : socket_(socket), send_mutex_(Platform::CreateMutex()) {}
 
 ConnectionListener::ConnectionListener(const char* host, int port)
     : socket_(new Socket()), port_(-1) {
@@ -172,13 +165,9 @@ ConnectionListener::ConnectionListener(const char* host, int port)
   port_ = socket_->Listen();
 }
 
-ConnectionListener::~ConnectionListener() {
-  delete socket_;
-}
+ConnectionListener::~ConnectionListener() { delete socket_; }
 
-int ConnectionListener::Port() {
-  return port_;
-}
+int ConnectionListener::Port() { return port_; }
 
 Connection* ConnectionListener::Accept() {
   Socket* child = socket_->Accept();

@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,21 +12,24 @@
 #include "src/shared/platform.h"
 #include "src/shared/version.h"
 
+#include "src/vm/frame.h"
+#include "src/vm/heap_validator.h"
+#include "src/vm/native_interpreter.h"
 #include "src/vm/links.h"
 #include "src/vm/object_map.h"
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/snapshot.h"
-#include "src/vm/stack_walker.h"
 #include "src/vm/thread.h"
 
-#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)                    \
-  Object* var = (exp);                                                  \
-  if (var == Failure::retry_after_gc()) {                               \
-    program()->CollectGarbage();                                        \
-    var = (exp);                                                        \
-    ASSERT(!var->IsFailure());                                          \
-  }                                                                     \
+#define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)    \
+  Object* var = (exp);                                  \
+  ASSERT(execution_paused_);                            \
+  if (var->IsRetryAfterGCFailure()) {                   \
+    program()->CollectGarbage();                        \
+    var = (exp);                                        \
+    ASSERT(!var->IsFailure());                          \
+  }
 
 namespace fletch {
 
@@ -52,17 +55,55 @@ class ConnectionPrintInterceptor : public PrintInterceptor {
   Connection* connection_;
 };
 
+class PostponedChange {
+ public:
+  PostponedChange(Object** description, int size)
+      : description_(description), size_(size), next_(NULL) {
+    ++number_of_changes_;
+  }
+
+  ~PostponedChange() {
+    delete[] description_;
+    --number_of_changes_;
+  }
+
+  PostponedChange* next() const { return next_; }
+  void set_next(PostponedChange* change) { next_ = change; }
+
+  Object* get(int i) const { return description_[i]; }
+  int size() const { return size_; }
+
+  static int number_of_changes() { return number_of_changes_; }
+
+  void IteratePointers(PointerVisitor* visitor) {
+    for (int i = 0; i < size_; i++) {
+      visitor->Visit(description_ + i);
+    }
+  }
+
+ private:
+  static int number_of_changes_;
+  Object** description_;
+  int size_;
+  PostponedChange* next_;
+};
+
+int PostponedChange::number_of_changes_ = 0;
+
 Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
       process_(NULL),
-      execution_paused_(false),
+      next_process_id_(0),
+      execution_paused_(true),
+      request_execution_pause_(false),
       debugging_(false),
       method_map_id_(-1),
       class_map_id_(-1),
       fibers_map_id_(-1),
       stack_(0),
-      changes_(0),
+      first_change_(NULL),
+      last_change_(NULL),
       has_program_update_error_(false),
       program_update_error_(NULL),
       main_thread_monitor_(Platform::CreateMonitor()),
@@ -102,9 +143,7 @@ void Session::StartMessageProcessingThread() {
   message_handling_thread_ = Thread::Run(MessageProcessingThread, this);
 }
 
-void Session::JoinMessageProcessingThread() {
-  message_handling_thread_.Join();
-}
+void Session::JoinMessageProcessingThread() { message_handling_thread_.Join(); }
 
 int64_t Session::PopInteger() {
   Object* top = Pop();
@@ -123,9 +162,8 @@ void Session::SignalMainThread(MainThreadResumeKind kind) {
 void Session::SendDartValue(Object* value) {
   WriteBuffer buffer;
   if (value->IsSmi() || value->IsLargeInteger()) {
-    int64_t int_value = value->IsSmi()
-        ? Smi::cast(value)->value()
-        : LargeInteger::cast(value)->value();
+    int64_t int_value = value->IsSmi() ? Smi::cast(value)->value()
+                                       : LargeInteger::cast(value)->value();
     buffer.WriteInt64(int_value);
     connection_->Send(Connection::kInteger, buffer);
   } else if (value->IsTrue() || value->IsFalse()) {
@@ -180,50 +218,81 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
                                  FunctionOffsetsType* function_offsets) {
   WriteBuffer buffer;
 
+  // Write the hashtag for the program.
+  buffer.WriteInt(program()->hashtag());
+
   // Class offset table
   buffer.WriteInt(5 * class_offsets->size());
-  for (auto it = class_offsets->Begin();
-       it != class_offsets->End();
-       ++it) {
+  for (auto it = class_offsets->Begin(); it != class_offsets->End(); ++it) {
     Class* klass = it->first;
-    PortableOffset* offset = it->second;
+    const PortableOffset& offset = it->second;
 
     buffer.WriteInt(MapLookupByObject(class_map_id_, klass));
-    buffer.WriteInt(offset->offset_64bits_double);
-    buffer.WriteInt(offset->offset_64bits_float);
-    buffer.WriteInt(offset->offset_32bits_double);
-    buffer.WriteInt(offset->offset_32bits_float);
-
-    delete offset;
+    buffer.WriteInt(offset.offset_64bits_double);
+    buffer.WriteInt(offset.offset_64bits_float);
+    buffer.WriteInt(offset.offset_32bits_double);
+    buffer.WriteInt(offset.offset_32bits_float);
   }
 
   // Function offset table
   buffer.WriteInt(5 * function_offsets->size());
-  for (auto it = function_offsets->Begin();
-       it != function_offsets->End();
+  for (auto it = function_offsets->Begin(); it != function_offsets->End();
        ++it) {
     Function* function = it->first;
-    PortableOffset* offset = it->second;
+    const PortableOffset& offset = it->second;
 
     buffer.WriteInt(MapLookupByObject(method_map_id_, function));
-    buffer.WriteInt(offset->offset_64bits_double);
-    buffer.WriteInt(offset->offset_64bits_float);
-    buffer.WriteInt(offset->offset_32bits_double);
-    buffer.WriteInt(offset->offset_32bits_float);
-
-    delete offset;
+    buffer.WriteInt(offset.offset_64bits_double);
+    buffer.WriteInt(offset.offset_64bits_float);
+    buffer.WriteInt(offset.offset_32bits_double);
+    buffer.WriteInt(offset.offset_32bits_float);
   }
 
   connection_->Send(Connection::kWriteSnapshotResult, buffer);
 }
 
-void Session::ProcessContinue(Process* process) {
+void Session::RequestExecutionPause() {
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
+  if (!execution_paused_) {
+    request_execution_pause_ = true;
+  }
+}
+
+// Caller thread must have a lock on main_thread_monitor_, ie,
+// ProcessContinue should only be called from within ProcessMessage's
+// main loop.
+void Session::PauseExecution() {
+  ASSERT(request_execution_pause_);
+  ASSERT(!execution_paused_);
+  Scheduler* scheduler = program()->scheduler();
+  ASSERT(scheduler != NULL);
+  request_execution_pause_ = false;
+  execution_paused_ = true;
+  scheduler->StopProgram(program());
+  scheduler->PauseGcThread();
+}
+
+// Caller thread must have a lock on main_thread_monitor_, ie,
+// ProcessContinue should only be called from within ProcessMessage's
+// main loop.
+void Session::ResumeExecution() {
+  ASSERT(IsScheduledAndPaused());
   execution_paused_ = false;
+  Scheduler* scheduler = program()->scheduler();
+  scheduler->ResumeGcThread();
+  scheduler->ResumeProgram(program());
+}
+
+// Caller thread must have a lock on main_thread_monitor_, ie,
+// ProcessContinue should only be called from within ProcessMessage's
+// main loop.
+void Session::ProcessContinue(Process* process) {
+  ResumeExecution();
   process->program()->scheduler()->ContinueProcess(process);
 }
 
 void Session::SendStackTrace(Stack* stack) {
-  int frames = PushStackFrames(process_, stack);
+  int frames = PushStackFrames(stack);
   WriteBuffer buffer;
   buffer.WriteInt(frames);
   for (int i = 0; i < frames; i++) {
@@ -252,8 +321,7 @@ void Session::HandShake() {
   int version_length = strlen(version);
   bool version_match =
       (version_length == compiler_version_length) &&
-      (strncmp(version,
-               reinterpret_cast<char*>(compiler_version),
+      (strncmp(version, reinterpret_cast<char*>(compiler_version),
                compiler_version_length) == 0);
   free(compiler_version);
   WriteBuffer buffer;
@@ -275,6 +343,7 @@ void Session::ProcessMessages() {
     Connection::Opcode opcode = connection_->Receive();
 
     ScopedMonitorLock scoped_lock(main_thread_monitor_);
+    if (request_execution_pause_) PauseExecution();
 
     switch (opcode) {
       case Connection::kConnectionError: {
@@ -294,6 +363,7 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessDebugInterrupt: {
         if (process_ == NULL) break;
+        // TODO(zerny): This can race with ProcessTerminated etc.
         process_->DebugInterrupt();
         break;
       }
@@ -317,10 +387,9 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessSetBreakpoint: {
+        ASSERT(execution_paused_);
+        process_->EnsureDebuggerAttached(this);
         WriteBuffer buffer;
-        if (process_->debug_info() == NULL) {
-          process_->AttachDebugger();
-        }
         int bytecode_index = connection_->ReadInt();
         Function* function = Function::cast(Pop());
         DebugInfo* debug_info = process_->debug_info();
@@ -331,8 +400,9 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessDeleteBreakpoint: {
+        ASSERT(execution_paused_);
+        process_->EnsureDebuggerAttached(this);
         WriteBuffer buffer;
-        ASSERT(process_->debug_info() != NULL);
         int id = connection_->ReadInt();
         bool deleted = process_->debug_info()->DeleteBreakpoint(id);
         ASSERT(deleted);
@@ -342,12 +412,16 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStep: {
-        process_->debug_info()->set_is_stepping(true);
+        ASSERT(IsScheduledAndPaused());
+        process_->EnsureDebuggerAttached(this);
+        process_->debug_info()->SetStepping();
         ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessStepOver: {
+        ASSERT(IsScheduledAndPaused());
+        process_->EnsureDebuggerAttached(this);
         int breakpoint_id = process_->PrepareStepOver();
         WriteBuffer buffer;
         buffer.WriteInt(breakpoint_id);
@@ -357,6 +431,8 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStepOut: {
+        ASSERT(IsScheduledAndPaused());
+        process_->EnsureDebuggerAttached(this);
         int breakpoint_id = process_->PrepareStepOut();
         WriteBuffer buffer;
         buffer.WriteInt(breakpoint_id);
@@ -366,6 +442,8 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessStepTo: {
+        ASSERT(IsScheduledAndPaused());
+        process_->EnsureDebuggerAttached(this);
         int64 id = connection_->ReadInt64();
         int bcp = connection_->ReadInt();
         Function* function =
@@ -377,21 +455,22 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessContinue: {
+        ASSERT(IsScheduledAndPaused());
         ProcessContinue(process_);
         break;
       }
 
       case Connection::kProcessBacktraceRequest: {
-        if (program()->scheduler() == NULL) return;
-        StoppedGcThreadScope scope(program()->scheduler());
-        Stack* stack = process_->stack();
+        ASSERT(IsScheduledAndPaused());
+        int process_id = connection_->ReadInt() - 1;
+        Process* process = GetProcess(process_id);
+        Stack* stack = process->stack();
         SendStackTrace(stack);
         break;
       }
 
       case Connection::kProcessFiberBacktraceRequest: {
-        if (program()->scheduler() == NULL) return;
-        StoppedGcThreadScope scope(program()->scheduler());
+        ASSERT(IsScheduledAndPaused());
         int64 fiber_id = connection_->ReadInt64();
         Stack* stack = Stack::cast(MapLookupById(fibers_map_id_, fiber_id));
         SendStackTrace(stack);
@@ -399,8 +478,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessUncaughtExceptionRequest: {
-        if (program()->scheduler() == NULL) return;
-        StoppedGcThreadScope scope(program()->scheduler());
+        ASSERT(IsScheduledAndPaused());
         Object* exception = process_->exception();
         if (exception->IsInstance()) {
           SendInstanceStructure(Instance::cast(exception));
@@ -412,11 +490,15 @@ void Session::ProcessMessages() {
 
       case Connection::kProcessLocal:
       case Connection::kProcessLocalStructure: {
-        if (program()->scheduler() == NULL) return;
-        StoppedGcThreadScope scope(program()->scheduler());
-        int frame = connection_->ReadInt();
+        ASSERT(IsScheduledAndPaused());
+        int frame_index = connection_->ReadInt();
         int slot = connection_->ReadInt();
-        Object* local = StackWalker::ComputeLocal(process_, frame, slot);
+        Stack* stack = process_->stack();
+        Frame frame(stack);
+        for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
+        word index = frame.FirstLocalIndex() - slot;
+        if (index < frame.LastLocalIndex()) FATAL("Illegal slot offset");
+        Object* local = stack->get(index);
         if (opcode == Connection::kProcessLocalStructure &&
             local->IsInstance()) {
           SendInstanceStructure(Instance::cast(local));
@@ -427,13 +509,12 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessRestartFrame: {
-        if (program()->scheduler() == NULL) return;
-        {
-          StoppedGcThreadScope scope(program()->scheduler());
-          int frame = connection_->ReadInt();
-          StackWalker::RestartFrame(process_, frame);
-          process_->set_exception(process_->program()->null_object());
-        }
+        ASSERT(IsScheduledAndPaused());
+        int frame_index = connection_->ReadInt();
+        RestartFrame(frame_index);
+        process_->set_exception(process_->program()->null_object());
+        DebugInfo* debug_info = process_->debug_info();
+        if (debug_info != NULL) debug_info->ClearBreakpoint();
         ProcessContinue(process_);
         break;
       }
@@ -442,7 +523,8 @@ void Session::ProcessMessages() {
         debugging_ = false;
         // If execution is paused we delete the process to allow the
         // VM to terminate.
-        if (execution_paused_) {
+        if (IsScheduledAndPaused()) {
+          ResumeExecution();
           Scheduler* scheduler = program()->scheduler();
           switch (process_->state()) {
             case Process::kBreakPoint:
@@ -472,12 +554,11 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessAddFibersToMap: {
-        if (program()->scheduler() == NULL) return;
-        StoppedGcThreadScope scope(program()->scheduler());
+        ASSERT(IsScheduledAndPaused());
         // TODO(ager): Potentially optimize this to not require a full
         // process GC to locate the live stacks?
-        int number_of_stacks = process_->CollectGarbageAndChainStacks();
-        Object* current = process_->stack();
+        int number_of_stacks = program()->CollectMutableGarbageAndChainStacks();
+        Object* current = program()->stack_chain();
         for (int i = 0; i < number_of_stacks; i++) {
           Stack* stack = Stack::cast(current);
           AddToMap(fibers_map_id_, i, stack);
@@ -486,9 +567,32 @@ void Session::ProcessMessages() {
           stack->set_next(Smi::FromWord(0));
         }
         ASSERT(current == NULL);
+        program()->ClearStackChain();
         WriteBuffer buffer;
         buffer.WriteInt(number_of_stacks);
         connection_->Send(Connection::kProcessNumberOfStacks, buffer);
+        break;
+      }
+
+      case Connection::kProcessGetProcessIds: {
+        ASSERT(IsScheduledAndPaused());
+        int count = 0;
+        for (Process* process = program()->process_list_head();
+             process != NULL;
+             process = process->process_list_next()) {
+          ++count;
+        }
+
+        WriteBuffer buffer;
+        buffer.WriteInt(count);
+        for (Process* process = program()->process_list_head();
+             process != NULL;
+             process = process->process_list_next()) {
+          process->EnsureDebuggerAttached(this);
+          buffer.WriteInt(process->debug_info()->process_id());
+        }
+
+        connection_->Send(Connection::kProcessGetProcessIdsResult, buffer);
         break;
       }
 
@@ -510,21 +614,25 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kCollectGarbage: {
+        ASSERT(execution_paused_);
         program()->CollectGarbage();
         break;
       }
 
       case Connection::kNewMap: {
+        ASSERT(execution_paused_);
         NewMap(connection_->ReadInt());
         break;
       }
 
       case Connection::kDeleteMap: {
+        ASSERT(execution_paused_);
         DeleteMap(connection_->ReadInt());
         break;
       }
 
       case Connection::kPushFromMap: {
+        ASSERT(execution_paused_);
         int index = connection_->ReadInt();
         int64 id = connection_->ReadInt64();
         PushFromMap(index, id);
@@ -532,6 +640,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPopToMap: {
+        ASSERT(execution_paused_);
         int index = connection_->ReadInt();
         int64 id = connection_->ReadInt64();
         PopToMap(index, id);
@@ -539,6 +648,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kRemoveFromMap: {
+        ASSERT(execution_paused_);
         int index = connection_->ReadInt();
         int64 id = connection_->ReadInt64();
         RemoveFromMap(index, id);
@@ -546,31 +656,37 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kDup: {
+        ASSERT(execution_paused_);
         Dup();
         break;
       }
 
       case Connection::kDrop: {
+        ASSERT(execution_paused_);
         Drop(connection_->ReadInt());
         break;
       }
 
       case Connection::kPushNull: {
+        ASSERT(execution_paused_);
         PushNull();
         break;
       }
 
       case Connection::kPushBoolean: {
+        ASSERT(execution_paused_);
         PushBoolean(connection_->ReadBoolean());
         break;
       }
 
       case Connection::kPushNewInteger: {
+        ASSERT(execution_paused_);
         PushNewInteger(connection_->ReadInt64());
         break;
       }
 
       case Connection::kPushNewBigInteger: {
+        ASSERT(execution_paused_);
         bool negative = connection_->ReadBoolean();
         int used = connection_->ReadInt();
         int class_map = connection_->ReadInt();
@@ -606,11 +722,13 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushNewDouble: {
+        ASSERT(execution_paused_);
         PushNewDouble(connection_->ReadDouble());
         break;
       }
 
       case Connection::kPushNewOneByteString: {
+        ASSERT(execution_paused_);
         int length;
         uint8* bytes = connection_->ReadBytes(&length);
         List<uint8> contents(bytes, length);
@@ -620,6 +738,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushNewTwoByteString: {
+        ASSERT(execution_paused_);
         int length;
         uint8* bytes = connection_->ReadBytes(&length);
         ASSERT((length & 1) == 0);
@@ -630,16 +749,19 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushNewInstance: {
+        ASSERT(execution_paused_);
         PushNewInstance();
         break;
       }
 
       case Connection::kPushNewArray: {
+        ASSERT(execution_paused_);
         PushNewArray(connection_->ReadInt());
         break;
       }
 
       case Connection::kPushNewFunction: {
+        ASSERT(execution_paused_);
         int arity = connection_->ReadInt();
         int literals = connection_->ReadInt();
         int length;
@@ -651,16 +773,19 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushNewInitializer: {
+        ASSERT(execution_paused_);
         PushNewInitializer();
         break;
       }
 
       case Connection::kPushNewClass: {
+        ASSERT(execution_paused_);
         PushNewClass(connection_->ReadInt());
         break;
       }
 
       case Connection::kPushBuiltinClass: {
+        ASSERT(execution_paused_);
         Names::Id name = static_cast<Names::Id>(connection_->ReadInt());
         int fields = connection_->ReadInt();
         PushBuiltinClass(name, fields);
@@ -668,18 +793,21 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kPushConstantList: {
+        ASSERT(execution_paused_);
         int length = connection_->ReadInt();
         PushConstantList(length);
         break;
       }
 
       case Connection::kPushConstantByteList: {
+        ASSERT(execution_paused_);
         int length = connection_->ReadInt();
         PushConstantByteList(length);
         break;
       }
 
       case Connection::kPushConstantMap: {
+        ASSERT(execution_paused_);
         int length = connection_->ReadInt();
         PushConstantMap(length);
         break;
@@ -741,6 +869,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kMapLookup: {
+        ASSERT(execution_paused_);
         int map_index = connection_->ReadInt();
         WriteBuffer buffer;
         buffer.WriteInt64(MapLookupByObject(map_index, Top()));
@@ -748,16 +877,21 @@ void Session::ProcessMessages() {
         break;
       }
 
-      default: {
-        FATAL1("Unknown message opcode %d", opcode);
-      }
+      default: { FATAL1("Unknown message opcode %d", opcode); }
     }
+  }
+}
+
+void Session::IterateChangesPointers(PointerVisitor* visitor) {
+  for (PostponedChange* current = first_change_; current != NULL;
+       current = current->next()) {
+    current->IteratePointers(visitor);
   }
 }
 
 void Session::IteratePointers(PointerVisitor* visitor) {
   stack_.IteratePointers(visitor);
-  changes_.IteratePointers(visitor);
+  IterateChangesPointers(visitor);
   for (int i = 0; i < maps_.length(); ++i) {
     ObjectMap* map = maps_[i];
     if (map != NULL) {
@@ -789,13 +923,18 @@ int Session::ProcessRun() {
         process_started = true;
 
         {
-          Scheduler scheduler;
-          scheduler.ScheduleProgram(program_, process_);
-          {
-            ScopedMonitorUnlock scoped_unlock(main_thread_monitor_);
-            result = scheduler.Run();
-          }
-          scheduler.UnscheduleProgram(program_);
+          SimpleProgramRunner runner;
+
+          Program* programs[1] = { program_ };
+          Process* processes[1] = { process_ };
+          int exitcodes[1] = { -1 };
+
+          execution_paused_ = false;
+          ScopedMonitorUnlock scoped_unlock(main_thread_monitor_);
+          runner.Run(1, exitcodes, programs, processes);
+
+          result = exitcodes[0];
+          ASSERT(result != -1);
         }
 
         has_result = true;
@@ -806,7 +945,9 @@ int Session::ProcessRun() {
         if (!process_started && process_ != NULL) {
           // If the process was spawned but not started, the scheduler does not
           // know about it and we are therefore responsible for deleting it.
-          program()->DeleteProcess(process_, Signal::kTerminated);
+          process_->ChangeState(Process::kSleeping,
+                                Process::kWaitingForChildren);
+          program()->ScheduleProcessForDeletion(process_, Signal::kTerminated);
         }
         Print::UnregisterPrintInterceptors();
         if (!process_started) return 0;
@@ -827,7 +968,7 @@ bool Session::WriteSnapshot(const char* path,
   program()->set_main_arity(Smi::cast(Pop())->value());
   // Make sure that the program is in the compact form before
   // snapshotting.
-  if (!program()->is_compact()) {
+  if (!program()->is_optimized()) {
     ProgramFolder program_folder(program());
     program_folder.Fold();
   }
@@ -921,23 +1062,20 @@ void Session::PushNewDouble(double value) {
 }
 
 void Session::PushNewOneByteString(List<uint8> contents) {
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateOneByteString(contents));
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
+                                     program()->CreateOneByteString(contents));
   Push(result);
 }
 
 void Session::PushNewTwoByteString(List<uint16> contents) {
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateTwoByteString(contents));
+  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
+                                     program()->CreateTwoByteString(contents));
   Push(result);
 }
 
 void Session::PushNewInstance() {
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateInstance(Class::cast(Top())));
+      result, program()->CreateInstance(Class::cast(Top())));
   Class* klass = Class::cast(Pop());
   Instance* instance = Instance::cast(result);
   int fields = klass->NumberOfInstanceFields();
@@ -963,28 +1101,19 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
     Opcode opcode = static_cast<Opcode>(*bcp);
 
     switch (opcode) {
-      case kLoadConstUnfold:
-      case kInvokeStaticUnfold:
-      case kInvokeFactoryUnfold:
-      case kAllocateUnfold:
-      case kAllocateImmutableUnfold: {
+      case kInvokeStatic:
+      case kInvokeFactory:
+      case kLoadConst:
+      case kAllocate:
+      case kAllocateImmutable: {
         int literal_index = Utils::ReadInt32(bcp + 1);
-        Object** literal_address =
-            function->literal_address_for(literal_index);
+        Object** literal_address = function->literal_address_for(literal_index);
         int offset = reinterpret_cast<uint8_t*>(literal_address) - bcp;
         Utils::WriteInt32(bcp + 1, offset);
         break;
       }
       case kMethodEnd:
         return;
-      case kLoadConst:
-      case kInvokeStatic:
-      case kInvokeFactory:
-      case kAllocate:
-      case kAllocateImmutable:
-        // We should only be creating unfolded functions via a
-        // session.
-        UNREACHABLE();
       default:
         ASSERT(opcode < Bytecode::kNumBytecodes);
         break;
@@ -997,11 +1126,10 @@ static void RewriteLiteralIndicesToOffsets(Function* function) {
 }
 
 void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
-  ASSERT(!program()->is_compact());
+  ASSERT(!program()->is_optimized());
 
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateFunction(arity, bytecodes, literals));
+      result, program()->CreateFunction(arity, bytecodes, literals));
   Function* function = Function::cast(result);
   for (int i = literals - 1; i >= 0; --i) {
     function->set_literal_at(i, Pop());
@@ -1024,14 +1152,15 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
 }
 
 void Session::PushNewInitializer() {
+  ASSERT(execution_paused_);
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateInitializer(Function::cast(Top())));
+      result, program()->CreateInitializer(Function::cast(Top())));
   Pop();
   Push(result);
 }
 
 void Session::PushNewClass(int fields) {
+  ASSERT(execution_paused_);
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(result, program()->CreateClass(fields));
   Push(result);
 }
@@ -1040,6 +1169,8 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
   Class* klass = NULL;
   if (name == Names::kObject) {
     klass = program()->object_class();
+  } else if (name == Names::kTearOffClosure) {
+    klass = program()->closure_class();
   } else if (name == Names::kBool) {
     klass = program()->bool_class();
   } else if (name == Names::kNull) {
@@ -1070,6 +1201,8 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->port_class();
   } else if (name == Names::kProcess) {
     klass = program()->process_class();
+  } else if (name == Names::kProcessDeath) {
+    klass = program()->process_death_class();
   } else if (name == Names::kForeignMemory) {
     klass = program()->foreign_memory_class();
   } else if (name == Names::kStackOverflowError) {
@@ -1089,8 +1222,7 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
 void Session::PushConstantList(int length) {
   PushNewArray(length);
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateInstance(program()->constant_list_class()));
+      result, program()->CreateInstance(program()->constant_list_class()));
   Instance* list = Instance::cast(result);
   ASSERT(list->get_class()->NumberOfInstanceFields() == 1);
   list->SetInstanceField(0, Pop());
@@ -1121,8 +1253,7 @@ void Session::PushConstantByteList(int length) {
 
 void Session::PushConstantMap(int length) {
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-      result,
-      program()->CreateInstance(program()->constant_map_class()));
+      result, program()->CreateInstance(program()->constant_map_class()));
   Instance* map = Instance::cast(result);
   ASSERT(map->get_class()->NumberOfInstanceFields() == 2);
   // Values.
@@ -1133,19 +1264,15 @@ void Session::PushConstantMap(int length) {
 }
 
 void Session::PrepareForChanges() {
-  if (program()->is_compact()) {
-    Scheduler* scheduler = program()->scheduler();
-    if (scheduler != NULL) {
-      scheduler->StopProgram(program());
-      scheduler->PauseGcThread();
-    }
-    {
-      ProgramFolder program_folder(program());
-      program_folder.Unfold();
-    }
-    if (scheduler != NULL) {
-      scheduler->ResumeGcThread();
-      scheduler->ResumeProgram(program());
+  ASSERT(execution_paused_);
+  if (program()->is_optimized()) {
+    ProgramFolder program_folder(program());
+    program_folder.Unfold();
+    for (int i = 0; i < maps_.length(); ++i) {
+      ObjectMap* map = maps_[i];
+      if (map != NULL) {
+        map->ClearTableByObject();
+      }
     }
   }
 }
@@ -1154,7 +1281,8 @@ void Session::ChangeSuperClass() {
   PostponeChange(kChangeSuperClass, 2);
 }
 
-void Session::CommitChangeSuperClass(Array* change) {
+void Session::CommitChangeSuperClass(PostponedChange* change) {
+  ASSERT(execution_paused_);
   Class* klass = Class::cast(change->get(1));
   Class* super = Class::cast(change->get(2));
   klass->set_super_class(super);
@@ -1165,7 +1293,8 @@ void Session::ChangeMethodTable(int length) {
   PostponeChange(kChangeMethodTable, 2);
 }
 
-void Session::CommitChangeMethodTable(Array* change) {
+void Session::CommitChangeMethodTable(PostponedChange* change) {
+  ASSERT(execution_paused_);
   Class* clazz = Class::cast(change->get(1));
   Array* methods = Array::cast(change->get(2));
   clazz->set_methods(methods);
@@ -1176,7 +1305,8 @@ void Session::ChangeMethodLiteral(int index) {
   PostponeChange(kChangeMethodLiteral, 3);
 }
 
-void Session::CommitChangeMethodLiteral(Array* change) {
+void Session::CommitChangeMethodLiteral(PostponedChange* change) {
+  ASSERT(execution_paused_);
   Function* function = Function::cast(change->get(1));
   Object* literal = change->get(2);
   int index = Smi::cast(change->get(3))->value();
@@ -1188,7 +1318,8 @@ void Session::ChangeStatics(int count) {
   PostponeChange(kChangeStatics, 1);
 }
 
-void Session::CommitChangeStatics(Array* change) {
+void Session::CommitChangeStatics(PostponedChange* change) {
+  ASSERT(execution_paused_);
   program()->set_static_fields(Array::cast(change->get(1)));
 }
 
@@ -1198,13 +1329,14 @@ void Session::ChangeSchemas(int count, int delta) {
   PostponeChange(kChangeSchemas, count + 2);
 }
 
-void Session::CommitChangeSchemas(Array* change) {
+void Session::CommitChangeSchemas(PostponedChange* change) {
+  ASSERT(execution_paused_);
   // TODO(kasperl): Rework this so we can allow allocation failures
   // as part of allocating the new classes.
-  Space* space = program()->heap()->space();
+  SemiSpace* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
 
-  int length = change->length();
+  int length = change->size();
   Array* transformation = Array::cast(change->get(length - 2));
   int delta = Smi::cast(change->get(length - 1))->value();
   for (int i = 1; i < length - 2; i++) {
@@ -1218,22 +1350,17 @@ void Session::CommitChangeSchemas(Array* change) {
 }
 
 bool Session::CommitChanges(int count) {
-  Scheduler* scheduler = program()->scheduler();
-  if (scheduler != NULL) {
-    scheduler->StopProgram(program());
-    scheduler->PauseGcThread();
-  }
+  ASSERT(execution_paused_);
+  ASSERT(!program()->is_optimized());
 
-  ASSERT(!program()->is_compact());
-
-  if (count != changes_.length()) {
+  if (count != PostponedChange::number_of_changes()) {
     if (!has_program_update_error_) {
       has_program_update_error_ = true;
       program_update_error_ =
           "The CommitChanges command had a different count of changes than "
           "the buffered changes.";
     }
-    changes_.Clear();
+    DiscardChanges();
   }
 
   if (!has_program_update_error_) {
@@ -1242,26 +1369,26 @@ bool Session::CommitChanges(int count) {
     // and "return false".
 
     bool schemas_changed = false;
-    for (int i = 0; i < count; i++) {
-      Array* array = Array::cast(changes_[i]);
-      Change change = static_cast<Change>(Smi::cast(array->get(0))->value());
+    for (PostponedChange* current = first_change_; current != NULL;
+         current = current->next()) {
+      Change change = static_cast<Change>(Smi::cast(current->get(0))->value());
       switch (change) {
         case kChangeSuperClass:
           ASSERT(!schemas_changed);
-          CommitChangeSuperClass(array);
+          CommitChangeSuperClass(current);
           break;
         case kChangeMethodTable:
           ASSERT(!schemas_changed);
-          CommitChangeMethodTable(array);
+          CommitChangeMethodTable(current);
           break;
         case kChangeMethodLiteral:
-          CommitChangeMethodLiteral(array);
+          CommitChangeMethodLiteral(current);
           break;
         case kChangeStatics:
-          CommitChangeStatics(array);
+          CommitChangeStatics(current);
           break;
         case kChangeSchemas:
-          CommitChangeSchemas(array);
+          CommitChangeSchemas(current);
           schemas_changed = true;
           break;
         default:
@@ -1269,49 +1396,54 @@ bool Session::CommitChanges(int count) {
           break;
       }
     }
-    changes_.Clear();
+
+    DiscardChanges();
 
     if (schemas_changed) TransformInstances();
 
     // Fold the program after applying changes to continue running in the
     // optimized compact form.
-    //
-    // NOTE: We disable heap validation always if we changed any objects in the
-    // heaps, because [TransformInstances] will install a forwarding pointer and
-    // thereby destroy the class pointer. The heap verification code will
-    // traverse all heaps and doing so requires a valid class pointer.
     {
       ProgramFolder program_folder(program());
-      program_folder.Fold(schemas_changed);
+      program_folder.Fold();
     }
-  }
-
-  if (scheduler != NULL) {
-    scheduler->ResumeGcThread();
-    scheduler->ResumeProgram(program());
   }
 
   return !has_program_update_error_;
 }
 
 void Session::DiscardChanges() {
-  changes_.Clear();
+  ASSERT(execution_paused_);
+  PostponedChange* current = first_change_;
+  while (current != NULL) {
+    PostponedChange* next = current->next();
+    delete current;
+    current = next;
+  }
+  first_change_ = last_change_ = NULL;
+  ASSERT(PostponedChange::number_of_changes() == 0);
 }
 
 void Session::PostponeChange(Change change, int count) {
-  GC_AND_RETRY_ON_ALLOCATION_FAILURE(result,
-      program()->CreateArray(count + 1));
-  Array* array = Array::cast(result);
-  array->set(0, Smi::FromWord(change));
+  ASSERT(execution_paused_);
+  Object** description = new Object*[count + 1];
+  description[0] = Smi::FromWord(change);
   for (int i = count; i >= 1; i--) {
-    array->set(i, Pop());
+    description[i] = Pop();
   }
-  changes_.Add(array);
+  PostponedChange* postponed_change =
+      new PostponedChange(description, count + 1);
+  if (last_change_ != NULL) {
+    last_change_->set_next(postponed_change);
+    last_change_ = postponed_change;
+  } else {
+    last_change_ = first_change_ = postponed_change;
+  }
 }
 
 bool Session::UncaughtException(Process* process) {
   if (process_ == process) {
-    execution_paused_ = true;
+    RequestExecutionPause();
     WriteBuffer buffer;
     connection_->Send(Connection::kUncaughtException, buffer);
     return true;
@@ -1319,18 +1451,43 @@ bool Session::UncaughtException(Process* process) {
   return false;
 }
 
+bool Session::Killed(Process* process) {
+  if (process_ != process) return false;
+
+  // TODO(kustermann): We might want to let a debugger know that the process
+  // didn't normally terminate, but rather was killed.
+  WriteBuffer buffer;
+  connection_->Send(Connection::kProcessTerminated, buffer);
+  process_ = NULL;
+  program_->scheduler()->ExitAtTermination(process, Signal::kKilled);
+  return true;
+}
+
+bool Session::UncaughtSignal(Process* process) {
+  if (process_ != process) return false;
+
+  // TODO(kustermann): We might want to let a debugger know that the process
+  // didn't normally terminate, but rather was killed due to a linked process.
+  WriteBuffer buffer;
+  connection_->Send(Connection::kProcessTerminated, buffer);
+  process_ = NULL;
+  program_->scheduler()->ExitAtTermination(process, Signal::kUnhandledSignal);
+  return true;
+}
+
 bool Session::BreakPoint(Process* process) {
   if (process_ == process) {
-    execution_paused_ = true;
+    ASSERT(!execution_paused_);
+    RequestExecutionPause();
     DebugInfo* debug_info = process->debug_info();
     int breakpoint_id = -1;
     if (debug_info != NULL) {
-      debug_info->set_is_stepping(false);
+      debug_info->ClearStepping();
       breakpoint_id = debug_info->current_breakpoint_id();
     }
     WriteBuffer buffer;
     buffer.WriteInt(breakpoint_id);
-    PushTopStackFrame(process);
+    PushTopStackFrame(process->stack());
     buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
     // Drop function from session stack.
     Drop(1);
@@ -1340,6 +1497,22 @@ bool Session::BreakPoint(Process* process) {
     return true;
   }
   return false;
+}
+
+Process* Session::GetProcess(int process_id) {
+  ASSERT(execution_paused_);
+  // TODO(zerny): Assert here and eliminate the default process.
+  if (process_id < 0) return process_;
+  for (Process* process = program()->process_list_head();
+       process != NULL;
+       process = process->process_list_next()) {
+    process->EnsureDebuggerAttached(this);
+    if (process->debug_info()->process_id() == process_id) {
+      return process;
+    }
+  }
+  UNREACHABLE();
+  return NULL;
 }
 
 bool Session::ProcessTerminated(Process* process) {
@@ -1355,7 +1528,7 @@ bool Session::ProcessTerminated(Process* process) {
 
 bool Session::CompileTimeError(Process* process) {
   if (process_ == process) {
-    execution_paused_ = true;
+    RequestExecutionPause();
     WriteBuffer buffer;
     connection_->Send(Connection::kProcessCompileTimeError, buffer);
     return true;
@@ -1365,9 +1538,8 @@ bool Session::CompileTimeError(Process* process) {
 
 class TransformInstancesPointerVisitor : public PointerVisitor {
  public:
-  explicit TransformInstancesPointerVisitor(Heap* heap,
-                                            SharedHeap* shared_heap)
-      : heap_(heap), shared_heap_(shared_heap->heap()) { }
+  explicit TransformInstancesPointerVisitor(Heap* heap)
+      : heap_(heap) {}
 
   virtual void VisitClass(Object** p) {
     // The class pointer in the header of an object should not
@@ -1381,21 +1553,14 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
       Object* object = *p;
       if (!object->IsHeapObject()) continue;
       HeapObject* heap_object = HeapObject::cast(object);
-      HeapObject* forward = heap_object->forwarding_address();
-      if (forward != NULL) {
-        *p = forward;
+      if (heap_object->HasForwardingAddress()) {
+        *p = heap_object->forwarding_address();
       } else if (heap_object->IsInstance()) {
         Instance* instance = Instance::cast(heap_object);
         if (instance->get_class()->IsTransformed()) {
           Instance* clone;
-
-          if (heap_->space()->Includes(instance->address())) {
-            clone = instance->CloneTransformed(heap_);
-          } else {
-            ASSERT(shared_heap_->space()->Includes(instance->address()));
-            clone = instance->CloneTransformed(shared_heap_);
-          }
-
+          ASSERT(heap_->space()->Includes(instance->address()));
+          clone = instance->CloneTransformed(heap_);
           instance->set_forwarding_address(clone);
           *p = clone;
         }
@@ -1410,39 +1575,27 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
 
  private:
   Heap* const heap_;
-  Heap* const shared_heap_;
+};
+
+class RebuildVisitor : public ProcessVisitor {
+ public:
+  virtual void VisitProcess(Process* process) {
+    process->heap()->space()->RebuildAfterTransformations();
+    process->heap()->old_space()->RebuildAfterTransformations();
+  }
 };
 
 class TransformInstancesProcessVisitor : public ProcessVisitor {
  public:
-  explicit TransformInstancesProcessVisitor(SharedHeap* shared_heap)
-      : shared_heap_(shared_heap) {}
-
   virtual void VisitProcess(Process* process) {
-    // NOTE: We need to take all spaces which are getting merged into the
-    // process heap, because otherwise we'll not update the pointers it has to
-    // the program space / to the process heap objects which were transformed.
-    process->TakeChildHeaps();
-
     Heap* heap = process->heap();
-
-    Space* space = heap->space();
-    Space* immutable_space = shared_heap_->heap()->space();
-
+    SemiSpace* space = heap->space();
     NoAllocationFailureScope scope(space);
-    NoAllocationFailureScope scope2(immutable_space);
-
-    TransformInstancesPointerVisitor pointer_visitor(heap, shared_heap_);
-
+    TransformInstancesPointerVisitor pointer_visitor(heap);
     process->IterateRoots(&pointer_visitor);
-
     ASSERT(!space->is_empty());
-    space->CompleteTransformations(&pointer_visitor, process);
-    immutable_space->CompleteTransformations(&pointer_visitor, process);
+    space->CompleteTransformations(&pointer_visitor);
   }
-
- private:
-  SharedHeap* shared_heap_;
 };
 
 void Session::TransformInstances() {
@@ -1457,51 +1610,69 @@ void Session::TransformInstances() {
   // the [TransformInstancesProcessVisitor] to use the already installed
   // forwarding pointers in program space.
 
-  Space* space = program()->heap()->space();
+  SemiSpace* space = program()->heap()->space();
   NoAllocationFailureScope scope(space);
-  TransformInstancesPointerVisitor pointer_visitor(
-      program()->heap(), program()->shared_heap());
+  TransformInstancesPointerVisitor pointer_visitor(program()->heap());
   program()->IterateRoots(&pointer_visitor);
   ASSERT(!space->is_empty());
-  space->CompleteTransformations(&pointer_visitor, NULL);
+  space->CompleteTransformations(&pointer_visitor);
 
-  TransformInstancesProcessVisitor process_visitor(program()->shared_heap());
+  TransformInstancesProcessVisitor process_visitor;
   program()->VisitProcesses(&process_visitor);
+
+  space->RebuildAfterTransformations();
+  RebuildVisitor rebuilding_visitor;
+  program()->VisitProcesses(&rebuilding_visitor);
 }
 
-void Session::PushFrameOnSessionStack(bool is_first_name,
-                                      StackWalker* stack_walker) {
-  Function* function = stack_walker->function();
+void Session::PushFrameOnSessionStack(const Frame* frame) {
+  Function* function = frame->FunctionFromByteCodePointer();
   uint8* start_bcp = function->bytecode_address_for(0);
 
-  uint8* return_address = stack_walker->return_address();
-  int bytecode_offset = return_address - start_bcp;
-  // The first byte-code offset is not a return address but the offset for
-  // the current bytecode. Make it look like a return address by adding
+  uint8* bcp = frame->ByteCodePointer();
+  int bytecode_offset = bcp - start_bcp;
+  // The byte-code offset is not a return address but the offset for
+  // the invoke bytecode. Make it look like a return address by adding
   // the current bytecode size to the byte-code offset.
-  if (is_first_name) {
-    Opcode current = static_cast<Opcode>(*return_address);
-    bytecode_offset += Bytecode::Size(current);
-  }
+  Opcode current = static_cast<Opcode>(*bcp);
+  bytecode_offset += Bytecode::Size(current);
+
   PushNewInteger(bytecode_offset);
   PushFunction(function);
 }
 
-int Session::PushStackFrames(Process* process, Stack* stack) {
+int Session::PushStackFrames(Stack* stack) {
+  ASSERT(execution_paused_);
   int frames = 0;
-  StackWalker walker(process, stack);
-  while (walker.MoveNext()) {
-    PushFrameOnSessionStack(frames == 0, &walker);
+  Frame frame(stack);
+  while (frame.MovePrevious()) {
+    if (frame.ByteCodePointer() == NULL) continue;
+    PushFrameOnSessionStack(&frame);
     ++frames;
   }
   return frames;
 }
 
-void Session::PushTopStackFrame(Process* process) {
-  StackWalker walker(process, process->stack());
-  bool has_top_frame = walker.MoveNext();
+void Session::PushTopStackFrame(Stack* stack) {
+  Frame frame(stack);
+  bool has_top_frame = frame.MovePrevious();
   ASSERT(has_top_frame);
-  PushFrameOnSessionStack(true, &walker);
+  PushFrameOnSessionStack(&frame);
+}
+
+void Session::RestartFrame(int frame_index) {
+  ASSERT(execution_paused_);
+  Stack* stack = process_->stack();
+
+  // Move down to the frame we want to reset to.
+  Frame frame(stack);
+  for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
+
+  // Reset the return address to the entry function.
+  frame.SetReturnAddress(reinterpret_cast<void*>(InterpreterEntry));
+
+  // Finally resize the stack to the next frame pointer.
+  stack->SetTopFromPointer(frame.FramePointer());
 }
 
 }  // namespace fletch

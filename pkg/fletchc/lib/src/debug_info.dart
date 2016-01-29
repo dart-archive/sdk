@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -9,7 +9,7 @@ import 'dart:math' show
 
 import 'package:compiler/src/colors.dart' as colors;
 
-import 'package:compiler/src/dart2jslib.dart' show
+import 'package:compiler/src/diagnostics/source_span.dart' show
     SourceSpan;
 
 import 'package:compiler/src/elements/elements.dart';
@@ -25,6 +25,8 @@ import 'package:compiler/src/source_file_provider.dart' show
 
 import 'codegen_visitor.dart';
 import '../fletch_system.dart';
+import 'hub/session_manager.dart' show
+    SessionState;
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
@@ -91,7 +93,7 @@ class DebugInfo {
       FletchCompilerImplementation compiler,
       int bytecodeIndex,
       Node node) {
-    SourceSpan span = compiler.spanFromSpannable(node);
+    SourceSpan span = compiler.reporter.spanFromSpannable(node);
     SourceFile file = null;
     // TODO(ahe): What to do if compiler.provider isn't a SourceFileProvider?
     // Perhaps we can create a new type of diagnostic, see
@@ -148,7 +150,8 @@ class DebugInfo {
       } else if (!foundContaining) {
         current = current != null ? current : location;
         if (location.span.begin > position &&
-            current.span.begin > location.span.begin) {
+            (current.span.begin > location.span.begin ||
+             current.span.begin < position)) {
           current = location;
         }
       }
@@ -177,7 +180,10 @@ class DebugInfo {
   }
 
   // TODO(ager): Should something like this be upstreamed to dart2js?
-  String sourceListStringFor(int bytecodeIndex, {int contextLines: 5}) {
+  String sourceListStringFor(
+      int bytecodeIndex,
+      SessionState state,
+      {int contextLines: 5}) {
     SourceLocation location = locationFor(bytecodeIndex);
     if (location == null) return '';
     SourceSpan span = location.span;
@@ -201,14 +207,15 @@ class DebugInfo {
     }
 
     // Add the breakpoint line highlighting the actual breakpoint location.
-    var l = file.slowSubstring(file.lineStarts[currentLine],
-                               file.lineStarts[currentLine + 1]);
+    var l = file.slowSubstring(
+        file.lineStarts[currentLine],
+        min(file.lineStarts[currentLine + 1], file.length));
     var toColumn = min(column + (span.end - span.begin), l.length);
     var prefix = l.substring(0, column);
-    var focus = l.substring(column, toColumn);
+    var focus = highlight(l.substring(column, toColumn), colors.red, state);
     var postfix = l.substring(toColumn);
     buffer.write('${currentLine + 1}'.padRight(5) + prefix);
-    buffer.write(colors.red(focus));
+    buffer.write(focus);
     buffer.write(postfix);
 
     // Add contextLines after the breakpoint line.
@@ -225,6 +232,10 @@ class DebugInfo {
     }
 
     return buffer.toString();
+  }
+
+  String highlight(String message, Function color, SessionState state) {
+    return state.colorsDisabled ? message : color(message);
   }
 
   SourceLocation sourceLocationFor(int bytecodeIndex) {

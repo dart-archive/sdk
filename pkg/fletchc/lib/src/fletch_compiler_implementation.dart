@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,13 +7,11 @@ library fletchc.fletch_compiler_implementation;
 import 'dart:async' show
     EventSink;
 
-import 'package:sdk_library_metadata/libraries.dart' show
-    libraries,
-    LibraryInfo;
-
 import 'package:compiler/compiler_new.dart' as api;
 
-import 'package:compiler/src/apiimpl.dart' as apiimpl;
+import 'package:compiler/src/apiimpl.dart' show
+    CompilerImpl,
+    makeDiagnosticOptions;
 
 import 'package:compiler/src/io/source_file.dart';
 
@@ -27,31 +25,38 @@ import 'package:compiler/src/elements/modelx.dart' show
 import 'package:compiler/compiler_new.dart' show
     CompilerOutput;
 
-import 'package:compiler/src/util/uri_extras.dart' show
-    relativize;
-
-import 'package:compiler/src/dart2jslib.dart' show
-    CodegenRegistry,
+import 'package:compiler/src/diagnostics/messages.dart' show
     Message,
     MessageKind,
     MessageTemplate;
 
-import 'package:compiler/src/util/util.dart' show
+import 'package:compiler/src/diagnostics/source_span.dart' show
+    SourceSpan;
+
+import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
+    DiagnosticMessage,
+    DiagnosticReporter;
+
+import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
-
-import 'fletch_registry.dart' show
-    FletchRegistry;
-
-import 'please_report_crash.dart' show
-    crashReportRequested,
-    requestBugReportOnCompilerCrashMessage;
 
 import 'fletch_function_builder.dart';
 import 'debug_info.dart';
 import 'find_position_visitor.dart';
 import 'fletch_context.dart';
 
+import 'fletch_enqueuer.dart' show
+    FletchEnqueueTask;
+
 import '../fletch_system.dart';
+import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
+import 'package:compiler/src/elements/elements.dart';
+
+import '../incremental/fletchc_incremental.dart' show
+    IncrementalCompiler;
+
+import 'fletch_diagnostic_reporter.dart' show
+    FletchDiagnosticReporter;
 
 const EXTRA_DART2JS_OPTIONS = const <String>[
     // TODO(ahe): This doesn't completely disable type inference. Investigate.
@@ -66,7 +71,6 @@ const FLETCH_PATCHES = const <String, String>{
   "_internal": "internal/internal_patch.dart",
   "collection": "collection/collection_patch.dart",
   "convert": "convert/convert_patch.dart",
-  "core": "core/core_patch.dart",
   "math": "math/math_patch.dart",
   "async": "async/async_patch.dart",
   "typed_data": "typed_data/typed_data_patch.dart",
@@ -74,53 +78,26 @@ const FLETCH_PATCHES = const <String, String>{
 
 const FLETCH_PLATFORM = 3;
 
-const Map<String, LibraryInfo> FLETCH_LIBRARIES = const {
-  "fletch._system": const LibraryInfo(
-      "system/system.dart",
-      categories: "",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
+DiagnosticOptions makeFletchDiagnosticOptions(
+    {bool suppressWarnings: false,
+     bool fatalWarnings: false,
+     bool suppressHints: false,
+     bool terseDiagnostics: false,
+     bool showPackageWarnings: true}) {
+  return makeDiagnosticOptions(
+      suppressWarnings: suppressWarnings,
+      fatalWarnings: fatalWarnings,
+      suppressHints: suppressHints,
+      terseDiagnostics: terseDiagnostics,
+      showPackageWarnings: true);
+}
 
-  "fletch.ffi": const LibraryInfo(
-      "ffi/ffi.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch": const LibraryInfo(
-      "fletch/fletch.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch.io": const LibraryInfo(
-      "io/io.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch.service": const LibraryInfo(
-      "service/service.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-
-  "fletch.os": const LibraryInfo(
-      "os/os.dart",
-      categories: "Client,Server,Embedded",
-      documented: false,
-      platforms: FLETCH_PLATFORM),
-};
-
-class FletchCompilerImplementation extends apiimpl.Compiler {
-  final Map<String, LibraryInfo> fletchLibraries = <String, LibraryInfo>{};
-
+class FletchCompilerImplementation extends CompilerImpl {
   final Uri fletchVm;
 
-  /// Location of fletch patch files.
-  final Uri patchRoot;
-
   final Uri nativesJson;
+
+  final IncrementalCompiler incrementalCompiler;
 
   Map<Uri, CompilationUnitElementX> compilationUnits;
   FletchContext internalContext;
@@ -129,27 +106,26 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
   // TODO(ahe): Clean this up and remove this.
   var helper;
 
+  @override
+  FletchEnqueueTask get enqueuer => super.enqueuer;
+
   FletchCompilerImplementation(
       api.CompilerInput provider,
       api.CompilerOutput outputProvider,
       api.CompilerDiagnostics handler,
       Uri libraryRoot,
       Uri packageConfig,
-      this.patchRoot,
       this.nativesJson,
       List<String> options,
       Map<String, dynamic> environment,
-      this.fletchVm)
+      this.fletchVm,
+      this.incrementalCompiler)
       : super(
           provider, outputProvider, handler, libraryRoot, null,
           EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
-          packageConfig, null, FletchBackend.newInstance) {
-    CodegenRegistry global = globalDependencies;
-    globalDependencies =
-        new FletchRegistry(this, global.treeElements).asRegistry;
-  }
-
-  bool get showPackageWarnings => true;
+          packageConfig, null, FletchBackend.createInstance,
+          FletchDiagnosticReporter.createInstance,
+          makeFletchDiagnosticOptions);
 
   FletchContext get context {
     if (internalContext == null) {
@@ -158,52 +134,22 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
     return internalContext;
   }
 
-  String fletchPatchLibraryFor(String name) => FLETCH_PATCHES[name];
-
-  LibraryInfo lookupLibraryInfo(String name) {
-    return fletchLibraries.putIfAbsent(name, () {
-      // Let FLETCH_LIBRARIES shadow libraries.
-      if (FLETCH_LIBRARIES.containsKey(name)) {
-        return computeFletchLibraryInfo(name);
-      }
-      LibraryInfo info = libraries[name];
-      if (info == null) {
-        return computeFletchLibraryInfo(name);
-      }
-      return new LibraryInfo(
-          info.path,
-          categories: info.categoriesString,
-          dart2jsPath: info.dart2jsPath,
-          dart2jsPatchPath: fletchPatchLibraryFor(name),
-          implementation: info.implementation,
-          documented: info.documented,
-          maturity: info.maturity,
-          platforms: info.platforms);
-    });
+  String fletchPatchLibraryFor(String name) {
+    // TODO(sigurdm): Try to remove this special casing.
+    if (name == "core") {
+      return platformConfigUri.path.endsWith("fletch_embedded.platform")
+          ? "core/embedded_core_patch.dart"
+          : "core/core_patch.dart";
+    }
+    return FLETCH_PATCHES[name];
   }
 
-  LibraryInfo computeFletchLibraryInfo(String name) {
-    LibraryInfo info = FLETCH_LIBRARIES[name];
-    if (info == null) return null;
-    // Since this LibraryInfo is completely internal to Fletch, there's no need
-    // for dart2js extensions and patches.
-    assert(info.dart2jsPath == null);
-    assert(info.dart2jsPatchPath == null);
-    String path = relativize(
-        libraryRoot, patchRoot.resolve("lib/${info.path}"), false);
-    return new LibraryInfo(
-        '../$path',
-        categories: info.categoriesString,
-        implementation: info.implementation,
-        documented: info.documented,
-        maturity: info.maturity,
-        platforms: info.platforms);
-  }
-
+  @override
   Uri resolvePatchUri(String dartLibraryPath) {
-    String patchPath = lookupPatchPath(dartLibraryPath);
-    if (patchPath == null) return null;
-    return patchRoot.resolve(patchPath);
+    String path = fletchPatchLibraryFor(dartLibraryPath);
+    if (path == null) return null;
+    // Fletch patches are located relative to [libraryRoot].
+    return libraryRoot.resolve(path);
   }
 
   CompilationUnitElementX compilationUnitForUri(Uri uri) {
@@ -219,11 +165,10 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
   }
 
   DebugInfo debugInfoForPosition(
-      String file,
+      Uri file,
       int position,
       FletchSystem currentSystem) {
-    // TODO(ahe): [file] should be a Uri.
-    Uri uri = Uri.base.resolve(file);
+    Uri uri = Uri.base.resolveUri(file);
     CompilationUnitElementX unit = compilationUnitForUri(uri);
     if (unit == null) return null;
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
@@ -238,9 +183,8 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
     return context.backend.createDebugInfo(function, currentSystem);
   }
 
-  int positionInFileFromPattern(String file, int line, String pattern) {
-    // TODO(ahe): [file] should be a Uri.
-    Uri uri = Uri.base.resolve(file);
+  int positionInFileFromPattern(Uri file, int line, String pattern) {
+    Uri uri = Uri.base.resolveUri(file);
     SourceFile sourceFile = getSourceFile(provider, uri);
     if (sourceFile == null) return null;
     List<int> lineStarts = sourceFile.lineStarts;
@@ -255,44 +199,43 @@ class FletchCompilerImplementation extends apiimpl.Compiler {
     return begin + column;
   }
 
-  int positionInFile(String file, int line, int column) {
-    // TODO(ahe): [file] should be a Uri.
-    Uri uri = Uri.base.resolve(file);
+  int positionInFile(Uri file, int line, int column) {
+    Uri uri = Uri.base.resolveUri(file);
     SourceFile sourceFile = getSourceFile(provider, uri);
     if (sourceFile == null) return null;
     if (line >= sourceFile.lineStarts.length) return null;
     return sourceFile.lineStarts[line] + column;
   }
 
+  Iterable<Uri> findSourceFiles(Pattern pattern) {
+    SourceFileProvider provider = this.provider;
+    return provider.sourceFiles.keys.where((Uri uri) {
+      return pattern.matchAsPrefix(uri.pathSegments.last) != null;
+    });
+  }
+
   void reportVerboseInfo(
       Spannable node,
-      String message,
+      String messageText,
       {bool forceVerbose: false}) {
     // TODO(johnniwinther): Use super.reportVerboseInfo once added.
     if (forceVerbose || verbose) {
       MessageTemplate template = MessageTemplate.TEMPLATES[MessageKind.GENERIC];
-      reportDiagnostic(
-          node, template.message({'text': message}, true), api.Diagnostic.HINT);
+      SourceSpan span = reporter.spanFromSpannable(node);
+      Message message = template.message({'text': messageText});
+      reportDiagnostic(new DiagnosticMessage(span, node, message),
+          [], api.Diagnostic.HINT);
     }
   }
 
-  void pleaseReportCrash() {
-    if (crashReportRequested) return;
-    crashReportRequested = true;
-    print(requestBugReportOnCompilerCrashMessage);
-  }
-
-  void reportError(
-      Spannable node,
-      MessageKind messageKind,
-      [Map arguments = const {}]) {
-    if (messageKind == MessageKind.MIRRORS_LIBRARY_NOT_SUPPORT_BY_BACKEND) {
-      const String noMirrors =
-          "Fletch doesn't support 'dart:mirrors'. See https://goo.gl/Kwrd0O";
-      messageKind = MessageKind.GENERIC;
-      arguments = {'text': noMirrors};
+  @override
+  void compileLoadedLibraries() {
+    // TODO(ahe): Ensure fletchSystemLibrary is not null
+    // (also when mainApp is null).
+    if (mainApp == null) {
+      return;
     }
-    super.reportError(node, messageKind, arguments);
+    super.compileLoadedLibraries();
   }
 }
 
@@ -336,7 +279,7 @@ class StringEventSink implements EventSink<String> {
 
 SourceFile getSourceFile(api.CompilerInput provider, Uri uri) {
   if (provider is SourceFileProvider) {
-    return provider.sourceFiles[uri];
+    return provider.getSourceFile(uri);
   } else {
     return null;
   }

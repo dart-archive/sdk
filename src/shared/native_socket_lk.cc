@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -18,23 +18,21 @@ extern "C" {
 namespace fletch {
 
 struct Socket::SocketData {
-  SocketData() : socket(NULL), port(-1) { }
-  SocketData(tcp_socket_t* socket, int port) : socket(socket), port(port) { }
+  SocketData() : socket(NULL), port(-1) {}
+  SocketData(tcp_socket_t* socket, int port) : socket(socket), port(port) {}
 
   tcp_socket_t* socket;
   int port;
 };
 
-Socket::Socket() : data_(new SocketData()) {
-}
+Socket::Socket() : data_(new SocketData()) {}
 
 Socket* Socket::FromFd(int id) {
   UNIMPLEMENTED();
   return NULL;
 }
 
-Socket::Socket(SocketData* data) : data_(data) {
-}
+Socket::Socket(SocketData* data) : data_(data) {}
 
 Socket::~Socket() {
   if (data_->socket != NULL) tcp_close(data_->socket);
@@ -46,9 +44,7 @@ bool Socket::Connect(const char* host, int port) {
   return false;
 }
 
-void Socket::Bind(const char* host, int port) {
-  data_->port = port;
-}
+void Socket::Bind(const char* host, int port) { data_->port = port; }
 
 int Socket::Listen() {
   int port = data_->port;
@@ -103,4 +99,4 @@ void Socket::SetTCPNoDelay(bool value) {
 
 }  // namespace fletch
 
-#endif  // def'd(FLETCH_TARGET_OS_POSIX) && def'd(FLETCH_ENABLE_LIVE_CODING)
+#endif  // def'd(FLETCH_TARGET_OS_LK) && def'd(FLETCH_ENABLE_LIVE_CODING)

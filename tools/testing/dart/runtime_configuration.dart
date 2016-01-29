@@ -46,8 +46,6 @@ class RuntimeConfiguration {
       case 'fletchc':
         return new FletchcRuntimeConfiguration(
             hostChecked: configuration['host_checked'],
-            isIncrementalCompilationEnabled:
-                configuration['enable_incremental_compilation'],
             useSdk:configuration['use_sdk'],
             settingsFileName: configuration['settings_file_name']);
 
@@ -134,13 +132,11 @@ class DartVmRuntimeConfiguration extends RuntimeConfiguration {
 }
 
 class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
-  final bool isIncrementalCompilationEnabled;
   final bool useSdk;
   final String settingsFileName;
 
   FletchcRuntimeConfiguration(
     {bool hostChecked: true,
-     this.isIncrementalCompilationEnabled: true,
      this.useSdk: false,
      this.settingsFileName}) {
     if (!hostChecked) {
@@ -158,7 +154,7 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (artifact.filename != null && artifact.mimeType != 'application/dart') {
       throw "Dart VM cannot run files of type '${artifact.mimeType}'.";
     }
-    String executable = useSdk ? '${suite.buildDir}/fletch-sdk/bin/fletch'
+    String executable = useSdk ? '${suite.buildDir}/dartino-sdk/bin/fletch'
                                : '${suite.buildDir}/fletch';
     Map<String, String> environment = {
       'DART_VM': suite.dartVmBinaryFileName,
@@ -167,7 +163,6 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     return <Command>[
         new FletchSessionCommand(
             executable, script, basicArguments, environment,
-            isIncrementalCompilationEnabled,
             settingsFileName: settingsFileName)];
   }
 }
@@ -200,7 +195,7 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
     }
 
     var useSdk = configuration['use_sdk'];
-    var fletchVM = useSdk ? "${suite.buildDir}/fletch-sdk/bin/fletch-vm"
+    var fletchVM = useSdk ? "${suite.buildDir}/dartino-sdk/bin/fletch-vm"
                           : "${suite.buildDir}/fletch-vm";
     // NOTE: We assume that `fletch-vm` behaves the same as invoking
     // the DartVM in terms of exit codes.

@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -32,8 +32,7 @@
         'driver',
       ],
       'defines': [
-        'FLETCHC_LIBRARY_ROOT="../../third_party/dart/sdk"',
-        'FLETCHC_PATCH_ROOT="../.."',
+        'FLETCHC_LIBRARY_ROOT="../../lib"',
         # How many directories up is the root, used for getting full path to
         # the .packages file for the compiler
         'FLETCH_ROOT_DISTANCE=2',
@@ -54,8 +53,7 @@
         'driver',
       ],
       'defines': [
-        'FLETCHC_LIBRARY_ROOT="../internal/dart_lib"',
-        'FLETCHC_PATCH_ROOT="../internal/fletch_lib"',
+        'FLETCHC_LIBRARY_ROOT="../internal/fletch_lib"',
         # How many directories up is the root, used for getting full path to
         # the .packages file for the compiler
         'FLETCH_ROOT_DISTANCE=1',

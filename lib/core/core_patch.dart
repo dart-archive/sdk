@@ -1,10 +1,12 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 library dart.core_patch;
 
 import 'dart:fletch._system' as fletch;
+import 'dart:fletch._system' show patch;
+import 'dart:collection' show LinkedHashMap, UnmodifiableMapView;
 
 part 'bigint.dart';
 part 'case.dart';
@@ -12,8 +14,6 @@ part 'double.dart';
 part 'int.dart';
 part 'regexp.dart';
 part 'string.dart';
-
-const patch = "patch";
 
 @patch external bool identical(Object a, Object b);
 
@@ -71,6 +71,13 @@ const patch = "patch";
         throw new UnimplementedError("Function.apply");
     }
   }
+}
+
+// Superclass of all compiler generated closures. This is used in the
+// noSuchMethod trampoline to avoid infinite recursion on the call getter.
+class _TearOffClosure {
+  // Tearing off a closure is the identity.
+  get call => this;
 }
 
 @patch class bool {
@@ -236,17 +243,24 @@ const patch = "patch";
     }
     return list;
   }
+
+  @patch factory List.unmodifiable(Iterable elements) {
+    return new UnmodifiableListView(new List.from(elements));
+  }
+}
+
+@patch class Map<K, V> {
+  @patch factory Map() = LinkedHashMap<K, V>;
+
+  @patch factory Map.unmodifiable(Map other) {
+    return new UnmodifiableMapView<K, V>(new Map<K, V>.from(other));
+  }
 }
 
 @patch class NoSuchMethodError {
   @patch String toString() {
     return "NoSuchMethodError: '$_memberName'";
   }
-}
-
-@patch class Null {
-  // This function is overridden, so we can bypass the 'this == null' check.
-  bool operator ==(other) => other == null;
 }
 
 @patch class int {
@@ -662,5 +676,37 @@ const patch = "patch";
 
   @fletch.native static String _base() {
     throw new RangeError("The Uri.base path is too large");
+  }
+
+  /// Encodes all characters in the string [text] except for those
+  /// that appear in [canonicalTable], and returns the escaped string.
+  @patch static String _uriEncode(
+      List<int> canonicalTable,
+      String text,
+      Encoding encoding,
+      bool spaceToPlus) {
+    byteToHex(byte, buffer) {
+      const String hex = '0123456789ABCDEF';
+      buffer.writeCharCode(hex.codeUnitAt(byte >> 4));
+      buffer.writeCharCode(hex.codeUnitAt(byte & 0x0f));
+    }
+
+    // Encode the string into bytes then generate an ASCII only string
+    // by percent encoding selected bytes.
+    StringBuffer result = new StringBuffer();
+    var bytes = encoding.encode(text);
+    for (int i = 0; i < bytes.length; i++) {
+      int byte = bytes[i];
+      if (byte < 128 &&
+          ((canonicalTable[byte >> 4] & (1 << (byte & 0x0f))) != 0)) {
+        result.writeCharCode(byte);
+      } else if (spaceToPlus && byte == _SPACE) {
+        result.writeCharCode(_PLUS);
+      } else {
+        result.writeCharCode(_PERCENT);
+        byteToHex(byte, result);
+      }
+    }
+    return result.toString();
   }
 }

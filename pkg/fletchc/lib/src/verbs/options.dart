@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -16,6 +16,9 @@ enum OptionKind {
   version,
   testDebugger,
   define,
+  analyzeOnly,
+  fatalIncrementalFailures,
+  terminateDebugger,
 
   /// Not an option
   none,
@@ -28,6 +31,11 @@ const List<Option> supportedOptions = const <Option>[
   const Option(
       OptionKind.testDebugger, null, 'test-debugger', requiresArgument: true,
       parseArgument: parseCommaSeparatedList),
+  const Option(OptionKind.analyzeOnly, null, 'analyze-only'),
+  const Option(
+      OptionKind.fatalIncrementalFailures, null, 'fatal-incremental-failures'),
+  const Option(
+      OptionKind.terminateDebugger, null, 'terminate-debugger'),
 ];
 
 final Map<String, Option> shortOptions = computeShortOptions();
@@ -114,6 +122,9 @@ class Options {
   final List<String> testDebuggerCommands;
   final Map<String, String> defines;
   final List<String> nonOptionArguments;
+  final bool analyzeOnly;
+  final bool fatalIncrementalFailures;
+  final bool terminateDebugger;
 
   Options(
       this.help,
@@ -121,7 +132,10 @@ class Options {
       this.version,
       this.testDebuggerCommands,
       this.defines,
-      this.nonOptionArguments);
+      this.nonOptionArguments,
+      this.analyzeOnly,
+      this.fatalIncrementalFailures,
+      this.terminateDebugger);
 
   /// Parse [options] which is a list of command-line arguments, such as those
   /// passed to `main`.
@@ -132,6 +146,9 @@ class Options {
     List<String> testDebuggerCommands;
     Map<String, String> defines = <String, String>{};
     List<String> nonOptionArguments = <String>[];
+    bool analyzeOnly = false;
+    bool fatalIncrementalFailures = false;
+    bool terminateDebugger = false;
 
     Iterator<String> iterator = options.iterator;
 
@@ -142,6 +159,16 @@ class Options {
       if (optionString.startsWith("-D")) {
         // Define.
         kind = OptionKind.define;
+        parsedArgument = optionString.split('=');
+        if (parsedArgument.length > 2) {
+          throwFatalError(DiagnosticKind.illegalDefine,
+                          userInput: optionString,
+                          additionalUserInput:
+                              parsedArgument.sublist(1).join('='));
+        } else if (parsedArgument.length == 1) {
+          // If the user does not provide a value, we use `null`.
+          parsedArgument.add(null);
+        }
       } else if (optionString.startsWith("-")) {
         String name;
         Option option;
@@ -212,7 +239,19 @@ class Options {
           break;
 
         case OptionKind.define:
-          testDebuggerCommands[parsedArgument.name] = parsedArgument.value;
+          defines[parsedArgument[0]] = parsedArgument[1];
+          break;
+
+        case OptionKind.analyzeOnly:
+          analyzeOnly = true;
+          break;
+
+        case OptionKind.fatalIncrementalFailures:
+          fatalIncrementalFailures = true;
+          break;
+
+        case OptionKind.terminateDebugger:
+          terminateDebugger = true;
           break;
 
         case OptionKind.none:
@@ -222,6 +261,7 @@ class Options {
 
     return new Options(
         help, verbose, version, testDebuggerCommands, defines,
-        nonOptionArguments);
+        nonOptionArguments, analyzeOnly, fatalIncrementalFailures,
+        terminateDebugger);
   }
 }

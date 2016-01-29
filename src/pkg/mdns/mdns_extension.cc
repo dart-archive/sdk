@@ -1,6 +1,8 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
+
+#include "mdns_extension.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -9,8 +11,6 @@
 
 #include "include/dart_api.h"
 #include "include/dart_native_api.h"
-
-#include "mdns_extension.h"
 
 // Handle request send on the service port.
 void HandleRequest(Dart_Port port_id, Dart_CObject* message) {
@@ -41,8 +41,7 @@ void HandleRequest(Dart_Port port_id, Dart_CObject* message) {
                 name->type == Dart_CObject_kString &&
                 timeout->type == Dart_CObject_kInt32) {
               HandleLookup(reply_port->value.as_send_port.id,
-                           type->value.as_int32,
-                           name->value.as_string,
+                           type->value.as_int32, name->value.as_string,
                            timeout->value.as_int32);
             }
             return;
@@ -65,12 +64,10 @@ void HandleEcho(Dart_Port reply_port, Dart_CObject* argument) {
   Dart_PostCObject(reply_port, argument);
 }
 
-
 Dart_Handle HandleError(Dart_Handle handle) {
   if (Dart_IsError(handle)) Dart_PropagateError(handle);
   return handle;
 }
-
 
 // Initialize a native port with a request handler.
 void ServicePort(Dart_NativeArguments arguments) {
@@ -83,10 +80,8 @@ void ServicePort(Dart_NativeArguments arguments) {
   }
 }
 
-
 // Resolver for the extension library.
-Dart_NativeFunction ResolveName(Dart_Handle name,
-                                int argc,
+Dart_NativeFunction ResolveName(Dart_Handle name, int argc,
                                 bool* auto_setup_scope) {
   const char* c_name;
   Dart_Handle check_error;
@@ -100,7 +95,6 @@ Dart_NativeFunction ResolveName(Dart_Handle name,
   }
   return NULL;
 }
-
 
 // Entry point for the extension library.
 DART_EXPORT Dart_Handle mdns_extension_lib_Init(Dart_Handle parent_library) {

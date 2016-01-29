@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -14,11 +14,10 @@
 #include "src/vm/thread_lk.h"
 #elif defined(FLETCH_TARGET_OS_CMSIS)
 #include "src/vm/thread_cmsis.h"
+#elif defined(FLETCH_TARGET_OS_WIN)
+#include "src/vm/thread_windows.h"
 #else
-#warning "OS is lacking thread implementation."
-#endif
-#if defined(FLETCH_TARGET_OS_CMSIS)
-#include "src/vm/thread_cmsis.h"
+#error "OS is lacking thread implementation."
 #endif
 
 namespace fletch {
@@ -28,11 +27,21 @@ namespace fletch {
 // Thread handles can be used for referring to threads and testing equality.
 class ThreadIdentifier;
 
+// Forward declaration.
+class Process;
+
 // Thread are started using the static Thread::Run method.
 class Thread {
  public:
   // Returns true if 'thread' is the current thread.
   static bool IsCurrent(const ThreadIdentifier* thread);
+
+  static void SetupOSSignals();
+  static void TeardownOSSignals();
+
+  // TLS accessors for process (used for extracting process at profiler tick).
+  static void SetProcess(Process* process);
+  static Process* GetProcess();
 
   typedef void* (*RunSignature)(void*);
   static ThreadIdentifier Run(RunSignature run, void* data = NULL);
@@ -42,6 +51,5 @@ class Thread {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_THREAD_H_

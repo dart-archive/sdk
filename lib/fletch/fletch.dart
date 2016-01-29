@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -244,18 +244,27 @@ class Coroutine {
   @fletch.native external static _coroutineNewStack(coroutine, entry);
 }
 
+class ProcessDeath {
+  final Process process;
+  final int _reason;
+
+  ProcessDeath._(this.process, this._reason);
+
+  DeathReason get reason => DeathReason.values[_reason];
+}
+
 // TODO: Keep these in sync with src/vm/process.h:Signal::Kind
-enum SignalKind {
+enum DeathReason {
   CompileTimeError,
   Terminated,
   UncaughtException,
   UnhandledSignal,
+  Killed,
 }
 
 class Process {
+  // This is the address of the native process/4 so that it fits in a Smi.
   final int _nativeProcessHandle;
-
-  const Process._(this._nativeProcessHandle);
 
   bool operator==(other) {
     return
@@ -269,13 +278,36 @@ class Process {
     throw fletch.nativeError;
   }
 
-  @fletch.native bool monitor(Port exitPort) {
+  @fletch.native void unlink() {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new StateError("Cannot unlink from parent process.");
+      default:
+        throw fletch.nativeError;
+    }
+  }
+
+  @fletch.native bool monitor(Port port) {
     switch (fletch.nativeError) {
       case fletch.wrongArgumentType:
         throw new StateError("The argument to monitor must be a Port object.");
       default:
         throw fletch.nativeError;
     }
+  }
+
+  @fletch.native void unmonitor(Port port) {
+    switch (fletch.nativeError) {
+      case fletch.wrongArgumentType:
+        throw new StateError(
+            "The argument to unmonitor must be a Port object.");
+      default:
+        throw fletch.nativeError;
+    }
+  }
+
+  @fletch.native void kill() {
+    throw fletch.nativeError;
   }
 
   static Process spawn(Function fn, [argument]) {
@@ -338,7 +370,7 @@ class Process {
 
       final argument = arguments[i];
       final port = new Port(channels[i]);
-      Process.spawn(() {
+      Process.spawnDetached(() {
         try {
           Process.exit(value: fn(argument), to: port);
         } finally {
@@ -390,24 +422,28 @@ class Process {
     Channel channel;
     while ((channel = _queueGetChannel()) != null) {
       var message = _queueGetMessage();
+      if (message is ProcessDeath) {
+        message = _queueSetupProcessDeath(message);
+      }
       channel.send(message);
     }
   }
 
+  @fletch.native external static Process get current;
   @fletch.native external static _queueGetMessage();
+  @fletch.native external static _queueSetupProcessDeath(ProcessDeath message);
   @fletch.native external static Channel _queueGetChannel();
 }
 
 // Ports allow you to send messages to a channel. Ports are
 // are transferable and can be sent between processes.
 class Port {
+  // A Smi stores the aligned pointer to the C++ port object.
   final int _port;
 
   factory Port(Channel channel) {
     return Port._create(channel);
   }
-
-  const Port._(this._port);
 
   // TODO(kasperl): Temporary debugging aid.
   int get id => _port;
@@ -429,7 +465,6 @@ class Port {
   }
 
   @fletch.native external static Port _create(Channel channel);
-  @fletch.native external static void _incrementRef(int port);
 }
 
 class Channel {
@@ -509,3 +544,16 @@ class _ChannelEntry {
 bool isImmutable(Object object) => _isImmutable(object);
 
 @fletch.native external bool _isImmutable(String string);
+
+/// Returns a channel that will receive a message in [milliseconds]
+/// milliseconds.
+// TODO(sigurdm): Move this function?
+Channel sleep(int milliseconds) {
+  if (milliseconds is! int) throw new ArgumentError(milliseconds);
+  Channel channel = new Channel();
+  Port port = new Port(channel);
+  _sleep(milliseconds, port);
+  return channel;
+}
+
+@fletch.native external void _sleep(int milliseconds, Port port);

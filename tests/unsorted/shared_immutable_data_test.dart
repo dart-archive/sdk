@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -31,10 +31,11 @@ stackProcess(Port caller, tree, int process) {
   var channel = new Channel();
   final port = new Port(channel);
   final finalTree = tree;
-  Process.spawn(() => stackProcess(port, finalTree, process - 1));
+  Process.spawnDetached(
+      () => stackProcess(port, finalTree, process - 1),
+      monitor: port);
   var tree2 = channel.receive();
-  Expect.isNotNull(tree2, 'Expected partial tree to be non-null.');
-
+  assertIsTree(tree2);
   offset += INSERTS_PER_PROCESS ~/ 2;
   for (int i = offset; i < offset + count; i++) tree2 = tree2.insert(i, i);
 
@@ -44,11 +45,18 @@ stackProcess(Port caller, tree, int process) {
 void main() {
   var channel = new Channel();
   final port = new Port(channel);
-  Process.spawn(() => stackProcess(port, new RedBlackTree(), NUM_PROCESSES));
+  Process.spawnDetached(
+      () => stackProcess(port, new RedBlackTree(), NUM_PROCESSES),
+      monitor: port);
   var modifiedTree = channel.receive();
-  Expect.isNotNull(modifiedTree, 'Expected computed tree to be non-null.');
+  assertIsTree(modifiedTree);
   for (int i = 0; i < NUM_PROCESSES * INSERTS_PER_PROCESS; i++) {
     Expect.equals(i, modifiedTree.lookup(i));
   }
 }
 
+assertIsTree(value) {
+  if (value is! RedBlackTree) {
+    throw 'Expected to get a tree from child, but got exit message';
+  }
+}

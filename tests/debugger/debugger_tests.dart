@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -24,9 +24,9 @@ import 'package:expect/expect.dart' show
 import 'package:fletchc/src/verbs/infrastructure.dart' show
     fileUri;
 
-import 'package:fletchc/src/driver/session_manager.dart';
+import 'package:fletchc/src/hub/session_manager.dart';
 
-import 'package:fletchc/src/driver/developer.dart';
+import 'package:fletchc/src/worker/developer.dart';
 
 const String testLocation = 'tests/debugger';
 const String generatedTestLocation = 'tests/debugger_generated';
@@ -40,25 +40,29 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
       <String>[],
       <String, String>{},
       null,
-      null);
+      null,
+      IncrementalMode.none);
 
   SessionState state = createSessionState("test", settings);
+  SessionState.internalCurrent = state;
 
-  Expect.equals(0, await compile(Uri.base.resolveUri(uri), state), "compile");
+  Expect.equals(0, await compile(Uri.base.resolveUri(uri), state, Uri.base),
+      "compile");
 
   await startAndAttachDirectly(state, Uri.base);
   state.session.hideRawIds = true;
+  state.session.colorsDisabled = true;
 
   List<int> output = <int>[];
 
   state.stdoutSink.attachCommandSender(output.addAll);
   state.stderrSink.attachCommandSender(output.addAll);
 
-  String debuggerCommands = "";
+  List<String> debuggerCommands = <String>[];
   for (String line in await new File.fromUri(uri).readAsLines()) {
     const String commandsPattern = "// FletchDebuggerCommands=";
     if (line.startsWith(commandsPattern)) {
-      debuggerCommands = line.substring(commandsPattern.length);
+      debuggerCommands = line.substring(commandsPattern.length).split(",");
     }
   }
 
@@ -128,13 +132,14 @@ Future<Map<String, NoArgFuture>> listTestsInternal(
 }
 
 Future<Map<String, NoArgFuture>> listTests() async {
-  if (false) main(); // Mark main as used for dart2js.
+  if (false) main([]); // Mark main as used for dart2js.
   return listTestsInternal(false);
 }
 
-main() async {
+main(List<String> args) async {
+  args = args.map((a) => 'debugger/$a');
   Map<String, NoArgFuture> tests = await listTestsInternal(true);
   for (String name in tests.keys) {
-    await tests[name]();
+    if (args.isEmpty || args.contains(name)) await tests[name]();
   }
 }

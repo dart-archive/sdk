@@ -1,11 +1,11 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:async' show
     Future;
 
-import 'package:fletchc/src/driver/sentence_parser.dart';
+import 'package:fletchc/src/hub/sentence_parser.dart';
 
 import 'package:expect/expect.dart';
 

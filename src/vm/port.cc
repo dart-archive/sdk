@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -20,12 +20,22 @@ Port::Port(Process* process, Instance* channel)
       spinlock_(),
       next_(process->ports()) {
   ASSERT(process != NULL);
-  ASSERT(Thread::IsCurrent(process->thread_state()->thread()));
+#if defined(FLETCH_TARGET_OS_POSIX)
+  ASSERT(Thread::GetProcess() == process);
+#else
+  // Other platforms do not have Thread Local Storage support and just return
+  // `NULL` here.
+#endif
   process->set_ports(this);
 }
 
-Port::~Port() {
-  ASSERT(ref_count_ == 0);
+Port::~Port() { ASSERT(ref_count_ == 0); }
+
+Port* Port::FromDartObject(Object* dart_port) {
+  ASSERT(dart_port->IsPort());
+  Object* p = Instance::cast(dart_port)->GetInstanceField(0);
+  uword address = Smi::cast(p)->value() << 2;
+  return reinterpret_cast<Port*>(address);
 }
 
 void Port::IncrementRef() {
@@ -75,14 +85,11 @@ Port* Port::CleanupPorts(Space* space, Port* head) {
     } else {
       HeapObject* channel = current->channel_;
       if (channel != NULL && space->Includes(channel->address())) {
-        if (space->using_copying_collector()) {
-          // If the channel is not reachable the forwarding_address will
-          // be NULL. Therefore, we should always update the channel with
-          // the forwarding address.
-          HeapObject* forward = channel->forwarding_address();
-          current->channel_ = reinterpret_cast<Instance*>(forward);
+        if (space->IsAlive(channel)) {
+          current->channel_ =
+              reinterpret_cast<Instance*>(space->NewLocation(channel));
         } else {
-          if (!channel->IsMarked()) current->channel_ = NULL;
+          current->channel_ = NULL;
         }
       }
       previous = current;
@@ -93,48 +100,36 @@ Port* Port::CleanupPorts(Space* space, Port* head) {
 }
 
 void Port::WeakCallback(HeapObject* object, Heap* heap) {
-  Instance* instance = Instance::cast(object);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  Port* port = reinterpret_cast<Port*>(address);
+  Port* port = Port::FromDartObject(object);
   port->DecrementRef();
 }
 
-NATIVE(PortCreate) {
+BEGIN_NATIVE(PortCreate) {
   Instance* channel = Instance::cast(arguments[0]);
-
-  // TODO(kustermann): We really shouldn't have two allocations in a native.
-  Object* object = process->NewInteger(0);
-  if (object == Failure::retry_after_gc()) return object;
-  LargeInteger* integer = LargeInteger::cast(object);
 
   Object* dart_port =
       process->NewInstance(process->program()->port_class(), true);
-  if (dart_port == Failure::retry_after_gc()) return dart_port;
+  if (dart_port->IsRetryAfterGCFailure()) return dart_port;
   Instance* port_instance = Instance::cast(dart_port);
 
   Port* port = new Port(process, channel);
+  ASSERT((reinterpret_cast<uword>(port) & 3) == 0);  // Always aligned.
+  Smi* p = Smi::FromWord(reinterpret_cast<uword>(port) >> 2);
+  port_instance->SetInstanceField(0, p);
   process->RegisterFinalizer(port_instance, Port::WeakCallback);
-  integer->set_value(reinterpret_cast<uword>(port));
-
-  port_instance->SetInstanceField(0, integer);
 
   return port_instance;
 }
+END_NATIVE()
 
-NATIVE(PortSend) {
+BEGIN_NATIVE(PortSend) {
   Instance* instance = Instance::cast(arguments[0]);
-  ASSERT(instance->IsPort());
 
   Object* message = arguments[1];
   if (!message->IsImmutable()) return Failure::wrong_argument_type();
 
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  if (address == 0) return Failure::illegal_state();
-
-  Port* port = reinterpret_cast<Port*>(address);
+  Port* port = Port::FromDartObject(instance);
+  if (port == NULL) return Failure::illegal_state();
 
   // We want to avoid holding a spinlock while doing an allocation, so:
   //    * we do an early return if the destination process is not there
@@ -162,15 +157,13 @@ NATIVE(PortSend) {
   }
   return process->program()->null_object();
 }
+END_NATIVE()
 
-NATIVE(PortSendExit) {
+BEGIN_NATIVE(PortSendExit) {
   Instance* instance = Instance::cast(arguments[0]);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  if (address == 0) return Failure::illegal_state();
+  Port* port = Port::FromDartObject(instance);
+  if (port == NULL) return Failure::illegal_state();
 
-  Port* port = reinterpret_cast<Port*>(address);
   port->Lock();
 
   Process* port_process = port->process();
@@ -192,17 +185,6 @@ NATIVE(PortSendExit) {
   port->Unlock();
   return Failure::illegal_state();
 }
-
-NATIVE(SystemIncrementPortRef) {
-  Instance* instance = Instance::cast(arguments[0]);
-  ASSERT(instance->IsPort());
-  Object* field = instance->GetInstanceField(0);
-  uword address = AsForeignWord(field);
-  Port* port = reinterpret_cast<Port*>(address);
-  Object* result = process->ToInteger(address);
-  if (result == Failure::retry_after_gc()) return result;
-  port->IncrementRef();
-  return result;
-}
+END_NATIVE()
 
 }  // namespace fletch

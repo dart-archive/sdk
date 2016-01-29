@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -8,11 +8,13 @@ namespace fletch {
 
 class PointerReadingVisitor : public PointerVisitor {
  public:
-  explicit PointerReadingVisitor(ProgramInfoBlock* info) :
+  explicit PointerReadingVisitor(ProgramInfoBlock* info)
+      :
 #ifdef DEBUG
-      info_(info),
+        info_(info),
 #endif
-      target_(info->roots()) {}
+        target_(info->roots()) {
+  }
   void VisitBlock(Object** start, Object** end) {
     for (Object** p = start; p < end; p++) {
       *(target_++) = *p;
@@ -31,11 +33,13 @@ class PointerReadingVisitor : public PointerVisitor {
 
 class PointerWritingVisitor : public PointerVisitor {
  public:
-  explicit PointerWritingVisitor(ProgramInfoBlock* info) :
+  explicit PointerWritingVisitor(ProgramInfoBlock* info)
+      :
 #ifdef DEBUG
-      info_(info),
+        info_(info),
 #endif
-      target_(info->roots()) {}
+        target_(info->roots()) {
+  }
   void VisitBlock(Object** start, Object** end) {
     for (Object** p = start; p < end; p++) {
       *p = *(target_++);
@@ -52,14 +56,14 @@ class PointerWritingVisitor : public PointerVisitor {
   Object** target_;
 };
 
-ProgramInfoBlock::ProgramInfoBlock() :
-    entry_(NULL),
+ProgramInfoBlock::ProgramInfoBlock()
+    : entry_(NULL),
 #define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
-    ROOTS_DO(CONSTRUCTOR_NULL)
+      ROOTS_DO(CONSTRUCTOR_NULL)
 #undef CONSTRUCTOR_NULL
-    main_arity_(0) {
+          main_arity_(0) {
 #define CONSTRUCTOR_USE(type, name, CamelName) USE(name##_);
-      ROOTS_DO(CONSTRUCTOR_USE)
+  ROOTS_DO(CONSTRUCTOR_USE)
 #undef CONSTRUCTOR_USE
 }
 

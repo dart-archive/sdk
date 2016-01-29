@@ -1,20 +1,30 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 #ifndef INCLUDE_FLETCH_API_H_
 #define INCLUDE_FLETCH_API_H_
 
-#ifdef __cplusplus
-#define FLETCH_EXPORT extern "C" __attribute__((visibility("default")))
+#include <stdbool.h>
+
+#ifdef _MSC_VER
+// TODO(herhut): Do we need a __declspec here for Windows?
+#define FLETCH_VISIBILITY_DEFAULT
 #else
-#define FLETCH_EXPORT __attribute__((visibility("default")))
+#define FLETCH_VISIBILITY_DEFAULT __attribute__((visibility("default")))
+#endif
+
+#ifdef __cplusplus
+#define FLETCH_EXPORT extern "C" FLETCH_VISIBILITY_DEFAULT
+#else
+#define FLETCH_EXPORT FLETCH_VISIBILITY_DEFAULT
 #endif
 
 typedef void* FletchProgram;
 typedef void* FletchPrintInterceptor;
 typedef void (*PrintInterceptionFunction)(
     const char* message, int out, void* data);
+typedef void (*ProgramExitCallback)(FletchProgram*, int exitcode, void* data);
 
 // Setup must be called before using any of the other API methods.
 FLETCH_EXPORT void FletchSetup(void);
@@ -39,19 +49,35 @@ FLETCH_EXPORT void FletchDeleteProgram(FletchProgram program);
 
 // Load a program from the given location. Location should point to a
 // reloacted program heap with appended info block, usually build using
-// the flashtool utility.
+// the flashtool utility or by relocating a loaded program.
 FLETCH_EXPORT FletchProgram FletchLoadProgramFromFlash(void* location,
                                                        size_t size);
 
-// Start a process at main, from the program.
+// Starts the main method of the program. The given callback will be called once
+// all processes of the program have terminated.
+//
+// The [callback] might be called on FletchVM internal threads and is not
+// allowed to use the Fletch API.
+// TODO(kustermann/herhut): We should
+//   * make clear what the callback can do and what not (e.g.
+//     FletchDeleteProgram)
+//   * use thread-local storage - at least in debug mode - which ensures this.
+FLETCH_EXPORT void FletchStartMain(FletchProgram program,
+                                   ProgramExitCallback callback,
+                                   void* callback_data);
+
+// Run the main method of the program and wait until it is done executing.
 FLETCH_EXPORT int FletchRunMain(FletchProgram program);
 
-// Start multiple processes at main, from the programs.
-FLETCH_EXPORT int FletchRunMultipleMain(int count, FletchProgram* programs);
+// Run the main method of multiple programs and wait until all of them are done
+// executing.
+FLETCH_EXPORT void FletchRunMultipleMain(int count,
+                                         FletchProgram* programs,
+                                         int* exitcodes);
 
 // Load the snapshot from the file, load the program from the
-// snapshot, start a process from that program, and run main in that
-// process.
+// snapshot, run the main process of that program and wait until it is done
+// executing.
 FLETCH_EXPORT void FletchRunSnapshotFromFile(const char* path);
 
 // Add a default shared library for the dart:ffi foreign lookups.
@@ -60,7 +86,7 @@ FLETCH_EXPORT void FletchRunSnapshotFromFile(const char* path);
 // The libraries are searched in the order in which they are added.
 // The library string must be null-terminated and Fletch does not
 // take over ownership of the passed in string.
-FLETCH_EXPORT void FletchAddDefaultSharedLibrary(const char* library);
+FLETCH_EXPORT bool FletchAddDefaultSharedLibrary(const char* library);
 
 // Register a print interception function. When a print occurs the passed
 // function will be called with the message, an output id 2 for stdout or output

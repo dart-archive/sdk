@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library trydart.poi.diff;
+library fletchc.incremental.diff;
 
 import 'package:compiler/src/elements/elements.dart' show
     AbstractFieldElement,
@@ -19,14 +19,18 @@ import 'package:compiler/src/elements/modelx.dart' as modelx;
 import 'package:compiler/src/elements/modelx.dart' show
     DeclarationSite;
 
-import 'package:compiler/src/scanner/scannerlib.dart' show
+import 'package:compiler/src/tokens/token_constants.dart' show
     EOF_TOKEN,
-    ErrorToken,
     IDENTIFIER_TOKEN,
-    KEYWORD_TOKEN,
-    PartialClassElement,
-    PartialElement,
+    KEYWORD_TOKEN;
+
+import 'package:compiler/src/tokens/token.dart' show
+    ErrorToken,
     Token;
+
+import 'package:compiler/src/parser/partial_elements.dart' show
+    PartialClassElement,
+    PartialElement;
 
 import 'fletchc_incremental.dart' show
     IncrementalCompilationFailed;
@@ -52,16 +56,30 @@ class Difference {
   }
 }
 
+void checkCanComputeDifference(modelx.ElementX element) {
+  if (element.isMixinApplication) {
+    // TODO(ahe): issue 91
+    throw new IncrementalCompilationFailed(
+        "Mixin applications not supported: $element");
+  }
+  if (element.isClass) {
+    modelx.ClassElementX cls = element;
+    if (cls.isEnumClass) {
+      throw new IncrementalCompilationFailed("Enums not supported: $element");
+    }
+  }
+  if (element.declarationSite == null && !element.isSynthesized) {
+    throw new IncrementalCompilationFailed(
+        "Unable to compute diff for $element");
+  }
+}
+
 List<Difference> computeDifference(
     ScopeContainerElement before,
     ScopeContainerElement after) {
   Map<String, DeclarationSite> beforeMap = <String, DeclarationSite>{};
   before.forEachLocalMember((modelx.ElementX element) {
-    if (element.isMixinApplication) {
-      // TODO(ahe): issue 91
-      throw new IncrementalCompilationFailed(
-          "Mixin applications not supported: $element");
-    }
+    checkCanComputeDifference(element);
     DeclarationSite site = element.declarationSite;
     assert(site != null || element.isSynthesized);
     if (!element.isSynthesized) {
@@ -71,14 +89,12 @@ List<Difference> computeDifference(
   List<Difference> modifications = <Difference>[];
   List<Difference> potentiallyChanged = <Difference>[];
   after.forEachLocalMember((modelx.ElementX element) {
-    if (element.isMixinApplication) {
-      // TODO(ahe): issue 91
-      throw new IncrementalCompilationFailed(
-          "Mixin applications not supported: $element");
-    }
+    checkCanComputeDifference(element);
     DeclarationSite existing = beforeMap.remove(element.name);
     if (existing == null) {
-      modifications.add(new Difference(null, element.declarationSite));
+      if (!element.isSynthesized) {
+        modifications.add(new Difference(null, element.declarationSite));
+      }
     } else {
       potentiallyChanged.add(new Difference(existing, element.declarationSite));
     }

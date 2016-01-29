@@ -1,11 +1,13 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// Fletch Socket package.
+/// Socket access. Only supported when Dartino is running on a Posix platform.
 ///
-/// This is a preliminary API providing socket access when Fletch is
-/// running on a Posix platform.
+/// Reporting issues
+/// ----------------
+/// Please file an issue [in the issue
+/// tracker](https://github.com/dartino/sdk/issues/new?title=Add%20title&labels=Area-Package&body=%3Cissue%20description%3E%0A%3Crepro%20steps%3E%0A%3Cexpected%20outcome%3E%0A%3Cactual%20outcome%3E).
 library socket;
 
 import 'dart:fletch';
@@ -20,16 +22,13 @@ class _SocketBase {
   Channel _channel;
   Port _port;
 
-  void _addSocketToEventHandler() {
-    if (os.eventHandler.addToEventHandler(_fd) == -1) {
-      _error("Failed to assign socket to event handler");
-    }
+  _SocketBase() {
     _channel = new Channel();
     _port = new Port(_channel);
   }
 
   int _waitFor(int mask) {
-    os.eventHandler.setPortForNextEvent(_fd, _port, mask);
+    os.eventHandler.registerPortForNextEvent(_fd, _port, mask);
     return _channel.receive();
   }
 
@@ -77,10 +76,9 @@ class Socket extends _SocketBase {
     sys.setBlocking(_fd, false);
     sys.setCloseOnExec(_fd, true);
     if (sys.connect(_fd, address, port) == -1 &&
-        sys.errno() != Errno.EINPROGRESS) {
+        sys.errno() != errnos.EINPROGRESS) {
       _error("Failed to connect to $host:$port");
     }
-    _addSocketToEventHandler();
     int events = _waitFor(os.WRITE_EVENT);
     if (events != os.WRITE_EVENT) {
       _error("Failed to connect to $host:$port");
@@ -90,7 +88,6 @@ class Socket extends _SocketBase {
   Socket._fromFd(fd) {
     // Be sure it's not in the event handler.
     _fd = fd;
-    _addSocketToEventHandler();
   }
 
   /**
@@ -123,14 +120,18 @@ class Socket extends _SocketBase {
    * Will block until some bytes are available.
    * Returns `null` if the socket was closed for reading.
    */
-  ByteBuffer readNext() {
+  ByteBuffer readNext([int max]) {
     int events = _waitFor(os.READ_EVENT);
     int read = 0;
     ByteBuffer buffer;
     if ((events & os.READ_EVENT) != 0) {
       int available = this.available;
-      buffer = new Uint8List(available).buffer;
-      read = sys.read(_fd, buffer, 0, available);
+      int maxRead = available;
+      if (max != null) {
+        maxRead = max < available ? max : available;
+      }
+      buffer = new Uint8List(maxRead).buffer;
+      read = sys.read(_fd, buffer, 0, maxRead);
     }
     if (read == 0 && (events & os.CLOSE_EVENT) != 0) return null;
     if (read < 0 || (events & os.ERROR_EVENT) != 0) {
@@ -190,7 +191,6 @@ class ServerSocket extends _SocketBase {
       _error("Failed to bind to $host:$port");
     }
     if (sys.listen(_fd) == -1) _error("Failed to listen on $host:$port");
-    _addSocketToEventHandler();
   }
 
   static Struct32 FOREIGN_ONE = new Struct32.finalized(1)..setField(0, 1);
@@ -218,14 +218,14 @@ class ServerSocket extends _SocketBase {
    * A new process will be spawned and the [fn] function called on that process
    * with the new socket as argument.
    */
-  void spawnAccept(void fn(Socket socket)) {
+  Process spawnAccept(void fn(Socket socket)) {
     if (!isImmutable(fn)) {
       throw new ArgumentError(
           'Closure passed to ServerSocket.spawnAccept() must be immutable.');
     }
 
     int client = _accept();
-    Process.spawn(() => fn(new Socket._fromFd(client)));
+    return Process.spawnDetached(() => fn(new Socket._fromFd(client)));
   }
 
   /**
@@ -266,7 +266,6 @@ class DatagramSocket extends _SocketBase {
     if (sys.bind(_fd, address, port) == -1) {
       _error("Failed to bind to $host:$port");
     }
-    _addSocketToEventHandler();
   }
 
   int get port => sys.port(_fd);
@@ -275,7 +274,7 @@ class DatagramSocket extends _SocketBase {
     int events = _waitFor(os.READ_EVENT);
     int availableBytes = available;
     ByteBuffer buffer = new Uint8List(availableBytes).buffer;
-    SockAddr sockaddr = new SockAddr.allocate();
+    PosixSockAddrIn sockaddr = sys.allocateSockAddrIn();
 
     try {
       int result = sys.recvfrom(_fd, buffer, sockaddr.buffer);
@@ -297,7 +296,7 @@ class DatagramSocket extends _SocketBase {
 
 class SocketException implements Exception {
   final String message;
-  final Errno errno;
+  final int errno;
   SocketException(this.message, this.errno);
 
   String toString() => "SocketException: $message, $errno";

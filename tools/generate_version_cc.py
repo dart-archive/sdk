@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -8,7 +8,7 @@ import sys
 import utils
 
 version_cc_template = """\
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -27,16 +27,11 @@ const char* GetVersion() {
 
 def Main():
   args = sys.argv[1:]
-  version_cc = args[1]
-  current_content = None
-  if os.path.isfile(version_cc):
-    with open(version_cc, "r") as f:
-      current_content = f.read()
+  version_cc = args[2]
   version = utils.GetSemanticSDKVersion()
   updated_content = version_cc_template % {"version": version}
-  if (updated_content != current_content):
-    with open(version_cc, 'w') as f:
-      f.write(updated_content)
+  with open(version_cc, 'w') as f:
+    f.write(updated_content)
   return 0
 
 

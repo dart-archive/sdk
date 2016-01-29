@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,23 +7,33 @@ library fletchc.fletch_enqueuer;
 import 'dart:collection' show
     Queue;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    CodegenEnqueuer,
-    Compiler,
-    CompilerTask,
-    EnqueueTask,
-    ItemCompilationContextCreator,
-    QueueFilter,
-    Registry,
-    ResolutionEnqueuer,
-    WorkItem,
+import 'package:compiler/src/common/tasks.dart' show
+  CompilerTask;
+
+import 'package:compiler/src/universe/world_impact.dart' show
     WorldImpact;
 
+import 'package:compiler/src/types/types.dart' show
+    TypeMaskStrategy;
+
+import 'package:compiler/src/enqueue.dart' show
+    ResolutionEnqueuer,
+    CodegenEnqueuer,
+    TreeShakingEnqueuerStrategy;
+
+import 'package:compiler/src/compiler.dart' show
+    Compiler;
+
+import 'package:compiler/src/enqueue.dart' show
+    QueueFilter,
+    EnqueueTask,
+    Enqueuer;
+
+import 'package:compiler/src/universe/selector.dart' show
+    Selector;
+
 import 'package:compiler/src/universe/universe.dart' show
-    CallStructure,
-    Selector,
-    Universe,
-    UniverseSelector;
+    Universe;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType,
@@ -40,12 +50,11 @@ import 'package:compiler/src/elements/elements.dart' show
     Name,
     TypedElement;
 
-import 'package:compiler/src/resolution/resolution.dart' show
+import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
 
 import 'package:compiler/src/util/util.dart' show
-    Hashing,
-    SpannableAssertionFailure;
+    Hashing;
 
 import 'fletch_compiler_implementation.dart' show
     FletchCompilerImplementation;
@@ -58,7 +67,19 @@ import 'dynamic_call_enqueuer.dart' show
 import 'fletch_registry.dart' show
     ClosureKind,
     FletchRegistry,
-    FletchRegistryImplementation;
+    FletchRegistry;
+
+import 'dart:developer';
+import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
+
+import 'package:compiler/src/universe/use.dart' show
+    DynamicUse,
+    StaticUse;
+
+import 'package:compiler/src/universe/use.dart';
+import 'package:compiler/src/common/work.dart';
+import 'package:compiler/src/common/resolution.dart';
+import 'package:compiler/src/enqueue.dart';
 
 part 'enqueuer_mixin.dart';
 
@@ -81,7 +102,9 @@ class FletchEnqueueTask extends CompilerTask implements EnqueueTask {
 
   FletchEnqueueTask(FletchCompilerImplementation compiler)
     : resolution = new ResolutionEnqueuer(
-          compiler, compiler.backend.createItemCompilationContext),
+          compiler, compiler.backend.createItemCompilationContext,
+          compiler.analyzeOnly && compiler.analyzeMain
+              ? const EnqueuerStrategy() : const TreeShakingEnqueuerStrategy()),
       codegen = new FletchEnqueuer(
           compiler, compiler.backend.createItemCompilationContext),
       super(compiler) {
@@ -118,7 +141,7 @@ class FletchEnqueuer extends EnqueuerMixin
   // TODO(ahe): Get rid of this?
   var nativeEnqueuer;
 
-  final Universe universe = new Universe();
+  final Universe universe = new Universe(const TypeMaskStrategy());
 
   final Set<ElementUsage> _enqueuedUsages = new Set<ElementUsage>();
   final Map<Element, List<ElementUsage>> _enqueuedUsagesByElement =
@@ -157,14 +180,13 @@ class FletchEnqueuer extends EnqueuerMixin
 
   void registerInstantiatedType(
       InterfaceType type,
-      Registry registry,
       {bool mirrorUsage: false}) {
     dynamicCallEnqueuer.registerInstantiatedType(type);
   }
 
   // TODO(ahe): Remove this method.
-  void registerStaticUse(Element element) {
-    _enqueueElement(element, null, null);
+  void registerStaticUse(StaticUse staticUse) {
+    _enqueueElement(staticUse.element, null, null);
   }
 
   // TODO(ahe): Remove this method.
@@ -185,8 +207,7 @@ class FletchEnqueuer extends EnqueuerMixin
             ElementUsage usage = _pendingEnqueuedUsages.removeFirst();
             AstElement element = usage.element;
             TreeElements treeElements = element.resolvedAst.elements;
-            FletchRegistry registry =
-                new FletchRegistryImplementation(compiler, treeElements);
+            FletchRegistry registry = new FletchRegistry(compiler);
             Selector selector = usage.selector;
             if (usage.closureKind != null) {
               compiler.context.backend.compileClosurizationUsage(
@@ -220,20 +241,12 @@ class FletchEnqueuer extends EnqueuerMixin
     // TODO(ahe): Implement this.
   }
 
-  void registerDynamicInvocation(UniverseSelector selector) {
-    dynamicCallEnqueuer.enqueueSelector(selector);
+  void registerDynamicUse(DynamicUse use) {
+    dynamicCallEnqueuer.enqueueSelector(use);
   }
 
   void applyImpact(Element element, WorldImpact worldImpact) {
     assert(worldImpact == null);
-  }
-
-  void registerDynamicGetter(UniverseSelector selector) {
-    dynamicCallEnqueuer.enqueueSelector(selector);
-  }
-
-  void registerDynamicSetter(UniverseSelector selector) {
-    dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
   void registerIsCheck(DartType type) {

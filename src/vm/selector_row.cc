@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -74,17 +74,19 @@ void SelectorRow::AddToRanges(Range range) {
   ranges_.PushBack(range);
 }
 
-void SelectorRow::FillTable(Program* program, Array* table) {
+void SelectorRow::FillTable(Program* program, Vector<Class*>* classes,
+                            Array* table) {
   ASSERT(IsMatched());
   int offset = offset_;
   for (int i = 0, length = variants_; i < length; i++) {
     Class* clazz = classes_[i];
     Function* method = methods_[i];
-    Array* entry = Array::cast(program->CreateArray(4));
-    entry->set(0, Smi::FromWord(offset));
-    entry->set(1, Smi::FromWord(selector_));
-    entry->set(2, method);
-    entry->set(3, NULL);
+    DispatchTableEntry* entry = DispatchTableEntry::cast(
+        program->CreateDispatchTableEntry());
+    entry->set_offset(Smi::FromWord(offset));
+    entry->set_selector(selector_);
+    entry->set_target(method);
+    entry->set_code(NULL);
 
     int id = clazz->id();
     int limit = clazz->child_id();
@@ -97,7 +99,7 @@ void SelectorRow::FillTable(Program* program, Array* table) {
         // implementations first, we can skip the entire subclass hierarchy
         // when we find that the method we're currently filling into the table
         // is overridden by an already processed implementation.
-        id = program->class_at(id)->child_id();
+        id = classes->At(id)->child_id();
       }
     }
   }
@@ -128,9 +130,8 @@ int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
   while (index < free_slots_.size() - 1) {
     Range& slot = free_slots_[index];
     int offset = slot.begin() - range.begin();
-    if (offset >= 0 &&
-        range.size() <= slot.size() &&
-        used_offsets_.Count(offset) == 0) {
+    if (offset >= 0 && range.size() <= slot.size() &&
+        used_offsets_.Find(offset) == used_offsets_.End()) {
       // Simply move the start offset of the slot. If the slot is now full,
       // the next row will detect it and move index accordingly.
       slot.set_begin(slot.begin() + range.size());
@@ -146,7 +147,7 @@ int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
 
   Range& slot = free_slots_[index];
   int offset = Utils::Maximum(0, slot.begin() - range.begin());
-  while (used_offsets_.Count(offset) > 0) {
+  while (used_offsets_.Find(offset) != used_offsets_.End()) {
     offset++;
   }
   slot.set_begin(offset + range.end());
@@ -156,14 +157,13 @@ int RowFitter::FitRowWithSingleRange(SelectorRow* row) {
 }
 
 void RowFitter::MarkOffsetAsUsed(int offset) {
-  ASSERT(used_offsets_.Count(offset) == 0);
+  ASSERT(used_offsets_.Find(offset) == used_offsets_.End());
   used_offsets_.Insert(offset);
   // Keep track of the highest used offset.
   if (offset > limit_) limit_ = offset;
 }
 
-int RowFitter::FindOffset(const Range::List& ranges,
-                          int min_row_index,
+int RowFitter::FindOffset(const Range::List& ranges, int min_row_index,
                           size_t* result_slot_index) {
   ASSERT(single_range_start_index_ == 0);
   const Range largest_range = ranges.Front();
@@ -176,8 +176,7 @@ int RowFitter::FindOffset(const Range::List& ranges,
     const Range slot = free_slots_[index];
 
     int start = Utils::Maximum(
-        min_start,
-        Utils::Maximum(slot.begin(), largest_range.begin()));
+        min_start, Utils::Maximum(slot.begin(), largest_range.begin()));
     int end = slot.end() - largest_range.size();
 
     while (start < end) {
@@ -189,7 +188,7 @@ int RowFitter::FindOffset(const Range::List& ranges,
       ASSERT(slot.Contains(largest_range.WithOffset(offset)));
 
       // Pad to guarantee unique offsets.
-      if (used_offsets_.Count(offset) > 0) {
+      if (used_offsets_.Find(offset) != used_offsets_.End()) {
         start++;
         continue;
       }
@@ -227,7 +226,7 @@ int RowFitter::FindOffset(const Range::List& ranges,
   // If we are at end, we know it fits.
   int offset = Utils::Maximum(0, slot.begin() - min_row_index);
   // Pad to guarantee unique offsets.
-  while (used_offsets_.Count(offset) > 0) {
+  while (used_offsets_.Find(offset) != used_offsets_.End()) {
     offset++;
   }
 
@@ -235,8 +234,7 @@ int RowFitter::FindOffset(const Range::List& ranges,
   return offset;
 }
 
-int RowFitter::MatchRemaining(int offset,
-                              const Range::List& ranges,
+int RowFitter::MatchRemaining(int offset, const Range::List& ranges,
                               size_t slot_index) {
   size_t index = 1;
   size_t length = ranges.size();
@@ -268,8 +266,7 @@ size_t RowFitter::MoveForwardToCover(const Range range, size_t slot_index) {
   return slot_index;
 }
 
-void RowFitter::UpdateFreeSlots(int offset,
-                                const Range::List& ranges,
+void RowFitter::UpdateFreeSlots(int offset, const Range::List& ranges,
                                 size_t slot_index) {
   for (size_t i = 0; i < ranges.size(); i++) {
     ASSERT(slot_index < free_slots_.size());

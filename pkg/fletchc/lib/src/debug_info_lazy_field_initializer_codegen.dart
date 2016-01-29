@@ -1,22 +1,18 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 library fletchc.debug_info_lazy_field_initializer_codegen;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    MessageKind,
-    Registry;
-
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/resolution.dart';
+import 'package:compiler/src/resolution/tree_elements.dart';
 import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/universe.dart';
+import 'package:compiler/src/universe/selector.dart';
 
 import 'package:compiler/src/dart_types.dart' show
     DartType;
 
-import 'package:compiler/src/util/util.dart' show
+import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
 import 'fletch_context.dart';
@@ -44,11 +40,10 @@ class DebugInfoLazyFieldInitializerCodegen
                                        FletchFunctionBuilder functionBuilder,
                                        FletchContext context,
                                        TreeElements elements,
-                                       FletchRegistry registry,
                                        ClosureEnvironment closureEnvironment,
                                        FieldElement field,
                                        this.compiler)
-      : super(functionBuilder, context, elements, registry,
+      : super(functionBuilder, context, elements, null,
               closureEnvironment, field);
 
   void recordDebugInfo(Node node) {
@@ -78,14 +73,14 @@ class DebugInfoLazyFieldInitializerCodegen
     super.invokeMethod(node, selector);
   }
 
-  void invokeGetter(Node node, Selector selector) {
+  void invokeGetter(Node node, Name name) {
     recordDebugInfo(node);
-    super.invokeGetter(node, selector);
+    super.invokeGetter(node, name);
   }
 
-  void invokeSetter(Node node, Selector selector) {
+  void invokeSetter(Node node, Name name) {
     recordDebugInfo(node);
-    super.invokeSetter(node, selector);
+    super.invokeSetter(node, name);
   }
 
   void invokeFactory(Node node, int constId, int arity) {
@@ -118,6 +113,11 @@ class DebugInfoLazyFieldInitializerCodegen
   void generateIdenticalNonNumeric(Node node) {
     recordDebugInfo(node);
     super.generateIdenticalNonNumeric(node);
+  }
+
+  void generateThrow(Node node) {
+    recordDebugInfo(node);
+    super.generateThrow(node);
   }
 
   void visitForValue(Node node) {

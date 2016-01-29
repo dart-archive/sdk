@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,26 +11,26 @@ namespace fletch {
 
 typedef bool (*VoidCompare)(uint8* a, uint8* b);
 
-void VoidSort(uint8* buffer, size_t elements,
-              size_t element_size, VoidCompare compare);
+void VoidSort(uint8* buffer, size_t elements, size_t element_size,
+              VoidCompare compare);
 
-template<typename T>
+template <typename T>
 struct SortType {
   typedef bool (*Compare)(const T& a, const T& b);
   typedef bool (*PointerCompare)(const T* a, const T* b);
 };
 
-template<typename T>
+template <typename T>
 void Sort(T* from, size_t elements, typename SortType<T>::Compare compare) {
-  VoidSort(reinterpret_cast<uint8*>(from), elements,
-           sizeof(T), reinterpret_cast<VoidCompare>(compare));
+  VoidSort(reinterpret_cast<uint8*>(from), elements, sizeof(T),
+           reinterpret_cast<VoidCompare>(compare));
 }
 
-template<typename T>
+template <typename T>
 void Sort(T* from, size_t elements,
           typename SortType<T>::PointerCompare compare) {
-  VoidSort(reinterpret_cast<uint8*>(from), elements,
-           sizeof(T), reinterpret_cast<VoidCompare>(compare));
+  VoidSort(reinterpret_cast<uint8*>(from), elements, sizeof(T),
+           reinterpret_cast<VoidCompare>(compare));
 }
 
 }  // namespace fletch

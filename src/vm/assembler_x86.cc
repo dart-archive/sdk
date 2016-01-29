@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -13,21 +13,28 @@ enum RegisterSize {
   kLongRegister = 'l',
 };
 
+int Label::position_counter_ = 0;
+
 void Assembler::j(Condition condition, Label* label) {
   const char* mnemonic = ConditionMnemonic(condition);
-  const char* direction = ComputeDirectionForLinking(label);
-  printf("\tj%s %d%s\n", mnemonic, label->position(), direction);
+  printf("\tj%s %s%d\n", mnemonic, kLocalLabelPrefix, label->position());
 }
 
 void Assembler::jmp(Label* label) {
-  const char* direction = ComputeDirectionForLinking(label);
-  printf("\tjmp %d%s\n", label->position(), direction);
+  printf("\tjmp %s%d\n", kLocalLabelPrefix, label->position());
+}
+
+void Assembler::SwitchToText() {
+  puts("\n\t.text");
+}
+
+void Assembler::SwitchToData() {
+  puts("\n\t.data");
 }
 
 void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
-  puts("\n");
   AlignToPowerOfTwo(power);
-  printf("%s:\n", name);
+  Bind("", name);
 }
 
 void Assembler::AlignToPowerOfTwo(int power) {
@@ -35,23 +42,24 @@ void Assembler::AlignToPowerOfTwo(int power) {
 }
 
 void Assembler::Bind(Label* label) {
-  if (label->IsUnused()) {
-    label->BindTo(NewLabelPosition());
-  } else {
-    label->BindTo(label->position());
-  }
-  printf("%d:\n", label->position());
+  printf("%s%d:\n", kLocalLabelPrefix, label->position());
 }
 
 static const char* ToString(Register reg, RegisterSize size = kLongRegister) {
-  static const char* kLongRegisterNames[] =
-      { "%eax", "%ecx", "%edx", "%ebx", "%esp", "%ebp", "%esi", "%edi" };
+  static const char* kLongRegisterNames[] = {"%eax", "%ecx", "%edx", "%ebx",
+                                             "%esp", "%ebp", "%esi", "%edi"};
   ASSERT(reg >= EAX && reg <= EDI);
   switch (size) {
-    case kLongRegister: return kLongRegisterNames[reg];
+    case kLongRegister:
+      return kLongRegisterNames[reg];
   }
   UNREACHABLE();
   return NULL;
+}
+
+void Assembler::movl(Register reg, Label* label) {
+  printf("\tmovl $%s%d, %s\n", kLocalLabelPrefix, label->position(),
+         ToString(reg));
 }
 
 void Assembler::Print(const char* format, ...) {
@@ -88,6 +96,11 @@ void Assembler::Print(const char* format, ...) {
 
         case 's': {
           printf("%s", va_arg(arguments, const char*));
+          break;
+        }
+
+        case 'd': {
+          printf("%d", va_arg(arguments, int));
           break;
         }
 
@@ -176,16 +189,6 @@ const char* Assembler::ConditionMnemonic(Condition condition) {
   };
   ASSERT(static_cast<unsigned>(condition) < ARRAY_SIZE(kConditionMnemonics));
   return kConditionMnemonics[condition];
-}
-
-const char* Assembler::ComputeDirectionForLinking(Label* label) {
-  if (label->IsUnused()) label->LinkTo(NewLabelPosition());
-  return label->IsBound() ? "b" : "f";
-}
-
-int Assembler::NewLabelPosition() {
-  static int labels = 0;
-  return labels++;
 }
 
 }  // namespace fletch

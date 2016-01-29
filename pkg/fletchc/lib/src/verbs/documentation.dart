@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -160,4 +160,11 @@ const String upgradeDocumentation = """
    x-upgrade agent with <package-file> [in session <session>]
              Upgrade the agent used in session to the version provided in the
              .deb package <package-file>
+""";
+
+// TODO(lukechurch): Review UX.
+const String downloadToolsDocumentation = """
+   x-download-tools
+             Downloads the third party tools required for MCU developemnt.
+             This is currently GCC ARM Embedded and OpenOCD.
 """;

@@ -3,87 +3,75 @@ Starting session. Type 'help' for a list of commands.
 > b
 breakpoint set: id: '0' method: 'main' bytecode index: '0'
 > r
-Stack trace:
-> 0: main        @foo()
+tests/debugger/finish_test.dart:17:3
+17     foo();
 > s
-Stack trace:
-> 0: foo         @32
-  1: main        @foo()
+tests/debugger/finish_test.dart:14:14
+14   int foo() => 32;
 > finish
-Stack trace:
-> 0: main        @32
+tests/debugger/finish_test.dart:18:3
+18     32 + 32 + foo();
 > s
-Stack trace:
-> 0: main        @32
+tests/debugger/finish_test.dart:18:8
+18     32 + 32 + foo();
 > s
-Stack trace:
-> 0: main        @32 + 32
+tests/debugger/finish_test.dart:18:3
+18     32 + 32 + foo();
 > s
-Stack trace:
-> 0: main        @foo()
+tests/debugger/finish_test.dart:18:13
+18     32 + 32 + foo();
 > s
-Stack trace:
-> 0: foo         @32
-  1: main        @foo()
+tests/debugger/finish_test.dart:14:14
+14   int foo() => 32;
 > finish
-Stack trace:
-> 0: main        @32 + 32 + foo()
+tests/debugger/finish_test.dart:18:3
+18     32 + 32 + foo();
 > s
-Stack trace:
-> 0: main        @new A()
+tests/debugger/finish_test.dart:19:11
+19     var a = new A();
 > s
-Stack trace:
-> 0: A initializer   @32
-  1: main            @new A()
+tests/debugger/finish_test.dart:8:12
+8      int _x = 32;
 > s
-Stack trace:
-> 0: main        @a
+tests/debugger/finish_test.dart:20:3
+20     a.x;
 > s
-Stack trace:
-> 0: main        @a.x
+tests/debugger/finish_test.dart:20:3
+20     a.x;
 > s
-Stack trace:
-> 0: A.x         @_x
-  1: main        @a.x
+tests/debugger/finish_test.dart:9:16
+9      int get x => _x;
 > finish
-Stack trace:
-> 0: main        @a
+tests/debugger/finish_test.dart:21:3
+21     a.y();
 > s
-Stack trace:
-> 0: main        @a.y()
+tests/debugger/finish_test.dart:21:3
+21     a.y();
 > s
-Stack trace:
-> 0: A.y         @32
-  1: main        @a.y()
+tests/debugger/finish_test.dart:10:14
+10     int y() => 32 + 32 + _x;
 > s
-Stack trace:
-> 0: A.y         @32
-  1: main        @a.y()
+tests/debugger/finish_test.dart:10:19
+10     int y() => 32 + 32 + _x;
 > s
-Stack trace:
-> 0: A.y         @32 + 32
-  1: main        @a.y()
+tests/debugger/finish_test.dart:10:14
+10     int y() => 32 + 32 + _x;
 > s
-Stack trace:
-> 0: A.y         @_x
-  1: main        @a.y()
+tests/debugger/finish_test.dart:10:24
+10     int y() => 32 + 32 + _x;
 > finish
-Stack trace:
-> 0: main        @a
+tests/debugger/finish_test.dart:22:3
+22     a.z();
 > b y
 breakpoint set: id: '6' method: 'y' bytecode index: '0'
 > s
-Stack trace:
-> 0: main        @a.z()
+tests/debugger/finish_test.dart:22:3
+22     a.z();
 > s
-Stack trace:
-> 0: A.z         @y()
-  1: main        @a.z()
+tests/debugger/finish_test.dart:11:14
+11     int z() => y();
 > finish
-### 'finish' cancelled because another breakpoint was hit
-Stack trace:
-> 0: A.y         @32
-  1: A.z         @y()
-  2: main        @a.z()
+tests/debugger/finish_test.dart:10:14
+10     int y() => 32 + 32 + _x;
 > c
 ### process terminated

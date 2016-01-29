@@ -1,15 +1,13 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 library fletchc.function_codegen;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    MessageKind,
-    Registry;
+import 'package:compiler/src/resolution/tree_elements.dart' show
+    TreeElements;
 
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/resolution.dart';
 import 'package:compiler/src/tree/tree.dart';
 
 import 'fletch_context.dart';
@@ -23,9 +21,6 @@ import 'fletch_registry.dart' show
 import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
-
-import 'bytecode_assembler.dart' show
-    RETURN_NARROW_MAX_STACK_SIZE;
 
 class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
   final FletchRegistry registry;
@@ -55,16 +50,18 @@ class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
     }
 
     ClassElement enclosing = function.enclosingClass;
-    // Generate implicit 'null' check for '==' functions, except for Null.
-    if (enclosing != null &&
-        enclosing.declaration != context.compiler.nullClass &&
-        function.name == '==') {
+    // Generate implicit 'null' check for '==' functions.
+    if (enclosing != null && function.name == '==') {
       BytecodeLabel notNull = new BytecodeLabel();
       assembler.loadParameter(1);
       assembler.loadLiteralNull();
       assembler.identicalNonNumeric();
       assembler.branchIfFalse(notNull);
-      assembler.loadLiteralFalse();
+      // TODO(ajohnsen): Consider creating an injected operator== into 'null',
+      // to avoid this extra check.
+      assembler.loadParameter(0);
+      assembler.loadLiteralNull();
+      assembler.identicalNonNumeric();
       assembler.ret();
       assembler.bind(notNull);
     }
@@ -123,11 +120,8 @@ class FunctionCodegen extends CodegenVisitor with FletchRegistryMixin {
     if (hasAssignmentSemantics) {
       assembler.loadSlot(setterResultSlot);
       assembler.ret();
-    } else if (assembler.stackSize <= RETURN_NARROW_MAX_STACK_SIZE) {
-      assembler.returnNull();
     } else {
-      assembler.loadLiteralNull();
-      assembler.ret();
+      assembler.returnNull();
     }
   }
 

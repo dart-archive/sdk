@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -38,9 +38,10 @@ static void* DartThreadEntry(void* argv) {
   const char** paths = static_cast<const char**>(argv);
   FletchSetup();
   FletchProgram programs[2];
+  int exitcodes[2];
   programs[0] = FletchLoadSnapshotFromFile(paths[1]);
   programs[1] = FletchLoadSnapshotFromFile(paths[2]);
-  FletchRunMultipleMain(2, programs);
+  FletchRunMultipleMain(2, programs, exitcodes);
   FletchDeleteProgram(programs[0]);
   FletchDeleteProgram(programs[1]);
   FletchTearDown();

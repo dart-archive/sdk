@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,6 +15,7 @@ packages
 .idea
 *.iml
 .gdb_history
+*~
 
 # The following match exact path names starting from the location of this file.
 /fletch.xcodeproj/
@@ -22,8 +23,10 @@ packages
 /out/
 /pkg/mdns/lib/native/libmdns_extension_lib.so
 /pkg/mdns/lib/native/libmdns_extension_lib.dylib
-/samples/buildbot/java/
+/pkg/power_management/lib/native/libpower_management_extension_lib.so
+/pkg/power_management/lib/native/libpower_management_extension_lib.dylib
 /samples/github/generated/
+/samples/simple_todo/generated/
 /samples/todomvc/java/
 /src/compiler/compiler.xcodeproj/
 /src/double_conversion.xcodeproj/
@@ -36,23 +39,35 @@ packages
 /third_party/bin/mac/dart
 /third_party/charcode/
 /third_party/crypto/
+/third_party/collection/
 /third_party/dart/
+/third_party/dart2js_info/
 /third_party/dartdoc_deps/dart-sdk.tar.gz
 /third_party/dartdoc_deps/dart-sdk
+/third_party/gcc-arm-embedded/linux/gcc-arm-embedded.tar.gz
+/third_party/gcc-arm-embedded/linux/gcc-arm-embedded
+/third_party/gcc-arm-embedded/mac/gcc-arm-embedded.tar.gz
+/third_party/gcc-arm-embedded/mac/gcc-arm-embedded
 /third_party/gyp/
 /third_party/isolate/
+/third_party/mbedtls/mbedtls.tar.gz
+/third_party/mbedtls/mbedtls/
 /third_party/openocd/
 /third_party/package_config/
 /third_party/path/
 /third_party/persistent/
+/third_party/pub_semver/
 /third_party/qemu/linux/qemu.tar.gz
 /third_party/qemu/linux/qemu/
 /third_party/raspbian/image.tar.gz
 /third_party/raspbian/image
 /third_party/raspbian/kernel.tar.gz
 /third_party/raspbian/kernel
+/third_party/stm/stm32cube_fw_f7.tar.gz
+/third_party/stm/stm32cube_fw_f7/
+/third_party/yasm/source
 /tools/testing/bin/linux/dart
 /tools/testing/bin/linux/dart-arm
 /tools/testing/bin/mac/dart
-/version.gyp
+/tools/vs_dependency/win_toolchain.json
 /xcodebuild/

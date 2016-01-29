@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -6,7 +6,7 @@ library fletchc.verbs.end_verb;
 
 import 'infrastructure.dart';
 
-import '../driver/session_manager.dart' show
+import '../hub/session_manager.dart' show
     endSession;
 
 import 'documentation.dart' show
@@ -20,7 +20,7 @@ Future<int> end(AnalyzedSentence sentence, VerbContext context) {
   UserSession session = endSession(name);
   context = context.copyWithSession(session);
   return session.worker.performTask(
-      new EndSessionTask(name), context.client, endSession: true);
+      new EndSessionTask(name), context.clientConnection, endSession: true);
 }
 
 class EndSessionTask extends SharedTask {
@@ -32,7 +32,7 @@ class EndSessionTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return endSessionTask(name);
   }
 }

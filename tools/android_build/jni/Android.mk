@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
@@ -13,7 +13,6 @@ LOCAL_CFLAGS := \
   -DFLETCH_ENABLE_FFI \
   -DFLETCH_ENABLE_PRINT_INTERCEPTORS \
   -DFLETCH_ENABLE_LIVE_CODING \
-  -DFLETCH_ENABLE_MULTIPLE_PROCESS_HEAPS \
   -DFLETCH_ENABLE_NATIVE_PROCESSES \
   -DANDROID \
   -I$(LOCAL_PATH)/../../../ -std=gnu++11
@@ -40,7 +39,6 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/gc_thread.cc \
 	../../../src/vm/heap.cc \
 	../../../src/vm/heap_validator.cc \
-	../../../src/vm/shared_heap.cc \
 	../../../src/vm/interpreter.cc \
 	../../../src/vm/intrinsics.cc \
 	../../../src/vm/links.cc \
@@ -55,6 +53,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/object_list.cc \
 	../../../src/vm/object_map.cc \
 	../../../src/vm/object_memory.cc \
+	../../../src/vm/object_memory_copying.cc \
 	../../../src/vm/port.cc \
 	../../../src/vm/process.cc \
 	../../../src/vm/process_handle.cc \
@@ -66,8 +65,6 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/session.cc \
 	../../../src/vm/snapshot.cc \
 	../../../src/vm/sort.cc \
-	../../../src/vm/stack_walker.cc \
-	../../../src/vm/storebuffer.cc \
 	../../../src/vm/thread_pool.cc \
 	../../../src/vm/thread_posix.cc \
 	../../../src/vm/unicode.cc \

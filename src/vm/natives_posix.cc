@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,7 +12,7 @@
 
 namespace fletch {
 
-NATIVE(UriBase) {
+BEGIN_NATIVE(UriBase) {
   char* buffer = reinterpret_cast<char*>(malloc(PATH_MAX + 1));
   char* path = getcwd(buffer, PATH_MAX);
   Object* result = Failure::index_out_of_bounds();
@@ -25,6 +25,7 @@ NATIVE(UriBase) {
   free(buffer);
   return result;
 }
+END_NATIVE()
 
 }  // namespace fletch
 

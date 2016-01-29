@@ -1,28 +1,38 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 #if defined(FLETCH_TARGET_ARM)
 
-#include "src/vm/assembler.h" // NOLINT we don't include assembler_arm.h.
+#include "src/vm/assembler.h"  // NOLINT we don't include assembler_arm.h.
 
 #include <stdio.h>
 #include <stdarg.h>
 
 namespace fletch {
 
+int Label::position_counter_ = 0;
+
 static const char* ConditionToString(Condition cond) {
-  static const char* kConditionNames[] = {
-    "eq", "ne", "cs", "cc", "mi", "pl", "vs", "vc", "hi", "ls",
-    "ge", "lt", "gt", "le", ""
-  };
+  static const char* kConditionNames[] = {"eq", "ne", "cs", "cc", "mi",
+                                          "pl", "vs", "vc", "hi", "ls",
+                                          "ge", "lt", "gt", "le", ""};
   return kConditionNames[cond];
 }
 
+void Assembler::LoadInt(Register reg, int value) {
+  if (value >= 0 && value <= 255) {
+    mov(reg, Immediate(value));
+  } else if (value < 0 && value >= -256) {
+    mvn(reg, Immediate(-(value + 1)));
+  } else {
+    ldr(reg, Immediate(value));
+  }
+}
+
 void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
-  puts("\n");
   AlignToPowerOfTwo(power);
-  printf("%s%s:\n", LabelPrefix(), name);
+  printf("\t.global %s%s\n%s%s:\n", LabelPrefix(), name, LabelPrefix(), name);
 }
 
 void Assembler::AlignToPowerOfTwo(int power) {
@@ -30,23 +40,23 @@ void Assembler::AlignToPowerOfTwo(int power) {
 }
 
 void Assembler::Bind(Label* label) {
-  if (label->IsUnused()) {
-    label->BindTo(NewLabelPosition());
-  } else {
-    label->BindTo(label->position());
-  }
   printf(".L%d:\n", label->position());
 }
 
-void Assembler::GenerateConstantPool() {
-  printf(".ltorg\n");
+void Assembler::GenerateConstantPool() { printf(".ltorg\n"); }
+
+void Assembler::SwitchToText() {
+  puts("\n\t.text");
+}
+
+void Assembler::SwitchToData() {
+  puts("\n\t.data");
 }
 
 static const char* ToString(Register reg) {
-  static const char* kRegisterNames[] = {
-    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8",
-    "r9", "r10", "r11", "ip", "sp", "lr", "pc"
-  };
+  static const char* kRegisterNames[] = {"r0", "r1", "r2", "r3", "r4",  "r5",
+                                         "r6", "r7", "r8", "r9", "r10", "r11",
+                                         "ip", "sp", "lr", "pc"};
   ASSERT(reg >= R0 && reg <= R15);
   return kRegisterNames[reg];
 }
@@ -92,7 +102,6 @@ void Assembler::Print(const char* format, ...) {
 
         case 'l': {
           Label* label = va_arg(arguments, Label*);
-          if (label->IsUnused()) label->LinkTo(NewLabelPosition());
           printf(".L%d", label->position());
           break;
         }
@@ -134,6 +143,18 @@ void Assembler::Print(const char* format, ...) {
           break;
         }
 
+        case 'W': {
+#ifdef FLETCH_THUMB_ONLY
+          UNREACHABLE();
+#else
+          WriteBack write_back = static_cast<WriteBack>(va_arg(arguments, int));
+          if (write_back == WRITE_BACK) {
+            putchar('!');
+          }
+#endif
+          break;
+        }
+
         default: {
           UNREACHABLE();
           break;
@@ -160,20 +181,13 @@ void Assembler::PrintAddress(const Address* address) {
 }
 
 static const char* ShiftTypeToString(ShiftType type) {
-  static const char* kShiftNames[] = { "lsl", "asr" };
+  static const char* kShiftNames[] = {"lsl", "asr"};
   return kShiftNames[type];
 }
 
 void Assembler::PrintOperand(const Operand* operand) {
-  printf("%s, %s #%d",
-         ToString(operand->reg()),
-         ShiftTypeToString(operand->shift_type()),
-         operand->shift_amount());
-}
-
-int Assembler::NewLabelPosition() {
-  static int labels = 0;
-  return labels++;
+  printf("%s, %s #%d", ToString(operand->reg()),
+         ShiftTypeToString(operand->shift_type()), operand->shift_amount());
 }
 
 }  // namespace fletch

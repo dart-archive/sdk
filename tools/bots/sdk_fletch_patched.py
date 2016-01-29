@@ -31,23 +31,37 @@ def BuildConfig(name, is_buildbot):
   return None
 
 
+def Archive(gcs_name, vm_path, link_name):
+  download_link = 'https://storage.googleapis.com/%s' % gcs_name
+  gcs_path = 'gs://%s' % gcs_name
+  gsutil = bot_utils.GSUtil()
+  gsutil.upload(vm_path, gcs_path)
+  print '@@@STEP_LINK@download %s@%s@@@' % (link_name, download_link)
+  sys.stdout.flush()
+  
+
 def BuildSteps(build_info):
   with bot.BuildStep('Upload VM to GCS'):
+    # The build binary in the sdk is stripped, the one in build_root is not.
+    # We archive the unstripped binaries in case we need to debug a vm crash.
     sdk_bin_path = utils.GetBuildSdkBin(build_info.system,
                                         build_info.mode,
                                         build_info.arch)
+    build_root = utils.GetBuildRoot(build_info.system,
+                                    build_info.mode,
+                                    build_info.arch)
     revision = utils.GetGitRevision()
-    name = 'fletch-archive/patched_dart_sdks/%s/dart-vm-%s-%s' % (
-        revision, build_info.arch, build_info.system)
-    download_link = 'https://storage.googleapis.com/%s' % name
-    gcs_path = 'gs://%s' % name
-    vm_path = os.path.join(sdk_bin_path, 'dart')
+    archive_path = 'fletch-archive/patched_dart_sdks/%s/' % revision
+    stripped_name = '%sdart-vm-%s-%s' % (archive_path, build_info.arch,
+                                         build_info.system)
+    unstripped_name = '%sdart-vm-%s-%s-symbols' % (archive_path,
+                                                   build_info.arch,
+                                                   build_info.system)
 
-    gsutil = bot_utils.GSUtil()
-    gsutil.upload(vm_path, gcs_path)
-    print '@@@STEP_LINK@download@%s@@@' % download_link
-    sys.stdout.flush()
-
+    unstripped_vm = os.path.join(build_root, 'dart')
+    stripped_vm = os.path.join(sdk_bin_path, 'dart')
+    Archive(stripped_name, stripped_vm, 'stripped')
+    Archive(unstripped_name, unstripped_vm, 'unstripped')
 
 if __name__ == '__main__':
   bot.RunBot(BuildConfig, BuildSteps)

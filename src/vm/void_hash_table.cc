@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -13,18 +13,18 @@ VoidHashTable::hash_t VoidHashTable::HashCode(const void* key) {
 }
 
 VoidHashTable::VoidHashTable(size_t pair_size)
-    : entry_size_(sizeof(hash_t) + pair_size)
-    , mask_(kInitialCapacity - 1)
+    : entry_size_(sizeof(hash_t) + pair_size),
+      mask_(kInitialCapacity - 1)
 #ifdef DEBUG
-    , mutations_(0)
+      ,
+      mutations_(0)
 #endif
-    , size_(0) {
-    AllocateBacking(kInitialCapacity);
+      ,
+      size_(0) {
+  AllocateBacking(kInitialCapacity);
 }
 
-VoidHashTable::~VoidHashTable() {
-  delete[] backing_;
-}
+VoidHashTable::~VoidHashTable() { delete[] backing_; }
 
 void VoidHashTable::AllocateBacking(size_t capacity) {
   size_t length = entry_size_ * capacity + sizeof(hash_t);
@@ -46,8 +46,7 @@ void* VoidHashTable::GetKey(const char* bucket) {
 void VoidHashTable::SwapEntries(char* p1, char* p2) {
   for (size_t i = 0; i < entry_size_; i += sizeof(hash_t)) {
     hash_t temp = *reinterpret_cast<hash_t*>(p1 + i);
-    *reinterpret_cast<hash_t*>(p1 + i) =
-        *reinterpret_cast<hash_t*>(p2 + i);
+    *reinterpret_cast<hash_t*>(p1 + i) = *reinterpret_cast<hash_t*>(p2 + i);
     *reinterpret_cast<hash_t*>(p2 + i) = temp;
   }
 }
@@ -89,8 +88,7 @@ char* VoidHashTable::RawFind(const void* key, bool* inserted) {
       return bucket;
     }
     intptr_t entry_ideal_position = StoredHashCode(bucket) & mask_;
-    intptr_t entry_distance =
-        (current_position - entry_ideal_position) & mask_;
+    intptr_t entry_distance = (current_position - entry_ideal_position) & mask_;
     if (entry_distance < current_position - ideal_position) {
       if (inserted == NULL) return NULL;
       if (answer == NULL) {
@@ -209,8 +207,7 @@ char* VoidHashTable::Erase(const char* entry) {
     memmove(dest, dest + entry_size_, backing_end_ - (dest + entry_size_));
     if (stop_bucket > backing_) {
       memcpy(backing_end_ - entry_size_, backing_, entry_size_);
-      memmove(backing_,
-              backing_ + entry_size_,
+      memmove(backing_, backing_ + entry_size_,
               stop_bucket - (backing_ + entry_size_));
     }
   } else if (stop_bucket != dest) {

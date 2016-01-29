@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -10,10 +10,15 @@
   },
   'targets': [
     {
-      'target_name': 'fletch_vm_library_base',
+      'target_name': 'fletch_vm_library',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
+      'target_conditions': [
+        ['_toolset == "target"', {
+          'standalone_static_library': 1,
+      }]],
       'dependencies': [
+        'fletch_vm_library_generator#host',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
@@ -26,8 +31,49 @@
             '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
           ],
         }],
+        ['OS!="win" and posix==1', {
+          'link_settings': {
+            'libraries': [
+              '-lpthread',
+              '-ldl',
+              # TODO(ahe): Not sure this option works as intended on Mac.
+              '-rdynamic',
+            ],
+          },
+        }],
+        # TODO(kasperl): Now that we no longer use weak symbols, should we
+        #                remove the below conditions?
+        [ 'OS=="linux"', {
+          'link_settings': {
+            'ldflags': [
+              '-Wl,--whole-archive',
+            ],
+            'libraries': [
+              '-Wl,--no-whole-archive',
+            ],
+          },
+        }],
+        [ 'OS=="win"', {
+          'variables': {
+            'asm_file_extension': '.asm',
+          },
+        }],
+      ],
+      'variables': {
+        'asm_file_extension%': '.S',
+        'yasm_output_path': '<(INTERMEDIATE_DIR)',
+        'yasm_flags': [
+          '-f', 'win32',
+          '-m', 'x86',
+          '-p', 'gas',
+          '-r', 'raw',
+        ],
+      },
+      'includes': [
+        '../../third_party/yasm/yasm_compile.gypi'
       ],
       'sources': [
+        '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
         'debug_info.cc',
         'debug_info.h',
         'debug_info_no_live_coding.h',
@@ -36,6 +82,7 @@
         'event_handler_posix.cc',
         'event_handler_linux.cc',
         'event_handler_macos.cc',
+        'event_handler_windows.cc',
         'event_handler_lk.cc',
         'event_handler_cmsis.cc',
         'ffi.cc',
@@ -45,6 +92,7 @@
         'ffi_linux.cc',
         'ffi_macos.cc',
         'ffi_posix.cc',
+        'ffi_windows.cc',
         'fletch_api_impl.cc',
         'fletch_api_impl.h',
         'fletch.cc',
@@ -57,8 +105,6 @@
         'heap.h',
         'heap_validator.cc',
         'heap_validator.h',
-        'shared_heap.cc',
-        'shared_heap.h',
         'interpreter.cc',
         'interpreter.h',
         'intrinsics.cc',
@@ -72,13 +118,17 @@
         'mailbox.h',
         'message_mailbox.h',
         'message_mailbox.cc',
+        'multi_hashset.h',
         'native_interpreter.h',
-        'native_process.cc',
+        'native_interpreter.cc',
         'native_process_disabled.cc',
+        'native_process_posix.cc',
+        'native_process_windows.cc',
         'natives.cc',
         'natives_posix.cc',
         'natives_lk.cc',
         'natives_cmsis.cc',
+        'natives_windows.cc',
         'natives.h',
         'object.cc',
         'object.h',
@@ -87,10 +137,15 @@
         'object_map.cc',
         'object_map.h',
         'object_memory.cc',
+        'object_memory_copying.cc',
+        'object_memory_mark_sweep.cc',
         'object_memory.h',
         'pair.h',
         'port.cc',
         'port.h',
+        'preempter.h',
+        'preempter.cc',
+        'priority_heap.h',
         'process_handle.h',
         'process_handle.cc',
         'process.cc',
@@ -102,8 +157,7 @@
         'program_folder.h',
         'program_info_block.cc',
         'program_info_block.h',
-        'program_relocator.cc',
-        'program_relocator.h',
+        'remembered_set.h',
         'scheduler.cc',
         'scheduler.h',
         'selector_row.cc',
@@ -113,15 +167,11 @@
         'session.cc',
         'session.h',
         'session_no_live_coding.h',
-        'signal_mailbox.h',
+        'signal.h',
         'snapshot.cc',
         'snapshot.h',
         'sort.h',
         'sort.cc',
-        'stack_walker.cc',
-        'stack_walker.h',
-        'storebuffer.cc',
-        'storebuffer.h',
         'thread.h',
         'thread_pool.cc',
         'thread_pool.h',
@@ -131,6 +181,12 @@
         'thread_lk.h',
         'thread_cmsis.cc',
         'thread_cmsis.h',
+        'tick_queue.h',
+        'tick_sampler.h',
+        'tick_sampler_posix.cc',
+        'tick_sampler_other.cc',
+        'thread_windows.cc',
+        'thread_windows.h',
         'unicode.cc',
         'unicode.h',
         'vector.cc',
@@ -139,43 +195,6 @@
         'void_hash_table.h',
         'weak_pointer.cc',
         'weak_pointer.h',
-      ],
-      'link_settings': {
-        'libraries': [
-          '-lpthread',
-          '-ldl',
-          # TODO(ahe): Not sure this option works as intended on Mac.
-          '-rdynamic',
-        ],
-      },
-    },
-    {
-      'target_name': 'fletch_vm_library',
-      'type': 'static_library',
-      'dependencies': [
-        'fletch_vm_library_generator#host',
-        'fletch_vm_library_base',
-        '../shared/shared.gyp:fletch_shared',
-        '../double_conversion.gyp:double_conversion',
-      ],
-
-      # TODO(kasperl): Remove the below conditions when we no longer use weak
-      # symbols.
-      'conditions': [
-        [ 'OS=="linux"', {
-          'link_settings': {
-            'ldflags': [
-              '-Wl,--whole-archive',
-            ],
-            'libraries': [
-              '-Wl,--no-whole-archive',
-            ],
-          },
-        }],
-      ],
-
-      'sources': [
-        '<(INTERMEDIATE_DIR)/generated.S',
       ],
       'actions': [
         {
@@ -186,12 +205,11 @@
             '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
-            '<(INTERMEDIATE_DIR)/generated.S',
+            '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
           ],
           'action': [
-            # TODO(ahe): Change generator to accept command line argument for
-            # output file. Using file redirection may not work well on Windows.
-            'bash', '-c', '<(_inputs) > <(_outputs)',
+            '<@(_inputs)',
+            '<@(_outputs)',
           ],
         },
       ],
@@ -201,7 +219,6 @@
       'type': 'none',
       'dependencies': [
         'fletch_vm_library',
-        'fletch_vm_library_base',
         '../shared/shared.gyp:fletch_shared',
         '../double_conversion.gyp:double_conversion',
       ],
@@ -213,31 +230,17 @@
       'actions': [
         {
           'action_name': 'generate_libfletch',
-          'conditions': [
-            [ 'OS=="linux"', {
-              'inputs': [
-                '../../tools/library_combiner.py',
-                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm_library.a',
-                '<(PRODUCT_DIR)/obj/src/vm/libfletch_vm_library_base.a',
-                '<(PRODUCT_DIR)/obj/src/shared/libfletch_shared.a',
-                '<(PRODUCT_DIR)/obj/src/libdouble_conversion.a',
-              ],
-            }],
-            [ 'OS=="mac"', {
-              'inputs': [
-                '../../tools/library_combiner.py',
-                '<(PRODUCT_DIR)/libfletch_vm_library.a',
-                '<(PRODUCT_DIR)/libfletch_vm_library_base.a',
-                '<(PRODUCT_DIR)/libfletch_shared.a',
-                '<(PRODUCT_DIR)/libdouble_conversion.a',
-              ],
-            }],
+          'inputs': [
+            '../../tools/library_combiner.py',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_vm_library<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_shared<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)double_conversion<(STATIC_LIB_SUFFIX)',
           ],
           'outputs': [
-            '<(PRODUCT_DIR)/libfletch.a',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch<(STATIC_LIB_SUFFIX)',
           ],
           'action': [
-            'bash', '-c', 'python <(_inputs) <(_outputs)',
+            'python', '<@(_inputs)', '<@(_outputs)',
           ]
         },
       ]
@@ -248,7 +251,6 @@
       'toolsets': ['host'],
       'dependencies': [
         '../shared/shared.gyp:fletch_shared',
-        '../double_conversion.gyp:double_conversion',
       ],
       'conditions': [
         [ 'OS=="mac"', {
@@ -277,10 +279,12 @@
         'assembler_x86.h',
         'assembler_x86_linux.cc',
         'assembler_x86_macos.cc',
+        'assembler_x86_win.cc',
         'generator.h',
         'generator.cc',
         'interpreter_arm.cc',
         'interpreter_x86.cc',
+        'interpreter_x64.cc',
       ],
     },
     {
@@ -313,8 +317,38 @@
         'object_memory_test.cc',
         'object_test.cc',
         'platform_test.cc',
+        'priority_heap_test.cc',
         'vector_test.cc',
       ],
+    },
+    {
+      'target_name': 'multiprogram_cc_test',
+      'type': 'executable',
+      'dependencies': [
+        'libfletch',
+      ],
+      'defines': [
+        'TESTING',
+      ],
+      'sources': [
+        'multiprogram_test.cc',
+      ],
+    },
+    {
+      'target_name': 'ffi_test_local_library',
+      'type': 'shared_library',
+      'dependencies': [
+      ],
+      'sources': [
+        'ffi_test_library.h',
+        'ffi_test_library.c',
+      ],
+      'cflags': ['-fPIC'],
+      'xcode_settings': {
+        'OTHER_CPLUSPLUSFLAGS': [
+          '-fPIC',
+        ],
+      },
     },
     {
       'target_name': 'ffi_test_library',
@@ -331,6 +365,18 @@
           '-fPIC',
         ],
       },
+    },
+    {
+      'target_name': 'fletch_relocation_library',
+      'type': 'static_library',
+      'standalone_static_library': 1,
+      'sources': [
+        'fletch_relocation_api_impl.cc',
+        'fletch_relocation_api_impl.h',
+        'program_info_block.h',  # only to detect interface changes
+        'program_relocator.cc',
+        'program_relocator.h',
+      ],
     },
   ],
 }

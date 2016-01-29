@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,16 +11,14 @@
 
 static const int argc = 3;
 static const char* argv[argc] = {
-    "fletch",
-    "-Xverbose",
-    "nothing",
+    "fletch", "-Xverbose", "nothing",
 };
 
 namespace fletch {
 
 TEST_CASE(Arguments) {
 #ifdef USING_ADDRESS_SANITIZER
-__lsan_disable();
+  __lsan_disable();
 #endif
   // Make a copy of the arguments. This is necessary
   // because Flags::ExtractFromCommandLine modifies the arguments.
@@ -30,7 +28,7 @@ __lsan_disable();
     strcpy(values[i], argv[i]);  // NOLINT
   }
 #ifdef USING_ADDRESS_SANITIZER
-__lsan_enable();
+  __lsan_enable();
 #endif
 
   // Parse the fake arguments

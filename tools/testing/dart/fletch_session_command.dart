@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -37,7 +37,7 @@ import 'test_runner.dart' show
 import 'decode_exit_code.dart' show
     DecodeExitCode;
 
-import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
+import '../../../pkg/fletchc/lib/src/hub/exit_codes.dart' show
     COMPILER_EXITCODE_CONNECTION_ERROR,
     COMPILER_EXITCODE_CRASH,
     DART_VM_EXITCODE_COMPILE_TIME_ERROR,
@@ -45,9 +45,6 @@ import '../../../pkg/fletchc/lib/src/driver/exit_codes.dart' show
 
 import '../../../pkg/fletchc/lib/fletch_vm.dart' show
     FletchVm;
-
-const String isIncrementalCompilationEnabledFlag =
-    "test.fletch_session_command.is_incremental_enabled";
 
 const String settingsFileNameFlag = "test.fletch_settings_file_name";
 const String settingsFileName =
@@ -75,12 +72,51 @@ void returnSession(FletchSessionMirror session) {
   sessions.addLast(session);
 }
 
+String explainExitCode(int code) {
+  String exit_message;
+  if (code == null) {
+    exit_message = "no exit code";
+  } else if (code == 0) {
+    exit_message = "(success exit code)";
+  } else if (code > 0) {
+    switch (code) {
+      case COMPILER_EXITCODE_CONNECTION_ERROR:
+        exit_message = "(connection error)";
+        break;
+      case COMPILER_EXITCODE_CRASH:
+        exit_message = "(compiler crash)";
+        break;
+      case DART_VM_EXITCODE_COMPILE_TIME_ERROR:
+        exit_message = "(compile-time error)";
+        break;
+      case DART_VM_EXITCODE_UNCAUGHT_EXCEPTION:
+        exit_message = "(uncaught exception)";
+        break;
+      default:
+        exit_message = "(error exit code)";
+        break;
+    }
+  } else {
+    exit_message = "(signal ${-code})";
+    if (code == -15 || code == -9) {
+      exit_message += " (killed by external signal - timeout?)";
+    } else if (code == -7 || code == -11 || code == -4) {
+      // SIGBUS, SIGSEGV, SIGILL
+      exit_message += " (internal error)";
+    } else if (code == -2) {
+      exit_message += " (control-C)";
+    } else {
+      exit_message += " (see man 7 signal)";
+    }
+  }
+  return exit_message;
+}
+
 class FletchSessionCommand implements Command {
   final String executable;
   final String script;
   final List<String> arguments;
   final Map<String, String> environmentOverrides;
-  final bool isIncrementalCompilationEnabled;
   final String snapshotFileName;
   final String settingsFileName;
 
@@ -89,7 +125,6 @@ class FletchSessionCommand implements Command {
       this.script,
       this.arguments,
       this.environmentOverrides,
-      this.isIncrementalCompilationEnabled,
       {this.snapshotFileName,
        this.settingsFileName: ".fletch-settings"});
 
@@ -99,8 +134,6 @@ class FletchSessionCommand implements Command {
 
   String get reproductionCommand {
     var dartVm = Uri.parse(executable).resolve('dart');
-    String incrementalFlag = "-D$isIncrementalCompilationEnabledFlag="
-        "$isIncrementalCompilationEnabled";
     String fletchPath = Uri.parse(executable).resolve('fletch-vm').toString();
     String versionFlag = '-Dfletch.version=`$fletchPath --version`';
     String settingsFileFlag = "-D$settingsFileNameFlag=$settingsFileName";
@@ -114,7 +147,7 @@ There are three ways to reproduce this error:
   1. Run the test exactly as in this test framework. This is the hardest to
      debug using gdb:
 
-    ${Platform.executable} -c $incrementalFlag $settingsFileFlag \\
+    ${Platform.executable} -c $settingsFileFlag \\
        $versionFlag \\
        tools/testing/dart/fletch_session_command.dart $executable \\
        ${arguments.join(' ')}
@@ -125,7 +158,7 @@ There are three ways to reproduce this error:
      easy to run a reproduction command in a loop:
 
     gdb -ex 'set follow-fork-mode child' -ex run --args \\
-        $dartVm $incrementalFlag $settingsFileFlag \\
+        $dartVm $settingsFileFlag \\
         $versionFlag \\
         -c tests/fletchc/run.dart $script
 
@@ -135,7 +168,7 @@ There are three ways to reproduce this error:
 
     gdb -ex run --args $executable-vm --port=54321
 
-    $dartVm $incrementalFlag $settingsFileFlag \\
+    $dartVm $settingsFileFlag \\
       $versionFlag \\
       -c -DattachToVm=54321 tests/fletchc/run.dart $script
 
@@ -171,10 +204,7 @@ There are three ways to reproduce this error:
     try {
       Future vmTerminationFuture;
       try {
-        await fletch.run(
-            ["create", "session", fletch.sessionName,
-             "with", settingsFileName]);
-        await fletch.runInSession(["show", "log"]);
+        await fletch.createSession(settingsFileName);
 
         // Now that the session is created, start a Fletch VM.
         String vmSocketAddress = await fletch.spawnVm();
@@ -189,9 +219,14 @@ There are three ways to reproduce this error:
               ["export", script, 'to', 'file', snapshotFileName],
               checkExitCode: false, timeout: timeout);
         } else {
-          exitCode =
-              await fletch.runInSession(
-                  ["run", script], checkExitCode: false, timeout: timeout);
+          exitCode = await fletch.runInSession(["compile", script],
+              checkExitCode: false, timeout: timeout);
+          fletch.stderr.writeln("Compilation took: ${sw.elapsed}");
+          if (exitCode == 0) {
+            exitCode = await fletch.runInSession(
+                ["run", "--terminate-debugger"],
+                checkExitCode: false, timeout: timeout);
+          }
         }
       } finally {
         if (exitCode == COMPILER_EXITCODE_CRASH) {
@@ -200,19 +235,20 @@ There are three ways to reproduce this error:
           fletch.killVmProcess(ProcessSignal.SIGTERM);
         }
         int vmExitCode = await vmTerminationFuture;
-        fletch.stderr.writeln("Fletch VM exitcode is $vmExitCode");
+        fletch.stdout.writeln("Fletch VM exitcode is $vmExitCode "
+            "${explainExitCode(vmExitCode)}\n"
+            "Exit code reported by ${fletch.executable} is $exitCode "
+            "${explainExitCode(exitCode)}\n");
         if (exitCode == COMPILER_EXITCODE_CONNECTION_ERROR) {
+          fletch.stderr.writeln("Connection error from compiler");
           exitCode = vmExitCode;
         } else if (exitCode != vmExitCode) {
-          if (!fletch.killedVmProcess || vmExitCode >= 0) {
+          if (!fletch.killedVmProcess || vmExitCode == null ||
+              vmExitCode >= 0) {
             throw new UnexpectedExitCode(
                 vmExitCode, "${fletch.executable}-vm", <String>[]);
           }
         }
-      }
-      if (!isIncrementalCompilationEnabled) {
-        endedSession = true;
-        await fletch.run(["x-end", "session", fletch.sessionName]);
       }
     } on UnexpectedExitCode catch (error) {
       fletch.stderr.writeln("$error");
@@ -232,6 +268,8 @@ There are three ways to reproduce this error:
 
     if (exitCode == null) {
       exitCode = COMPILER_EXITCODE_CRASH;
+      fletch.stdout.writeln(
+          '**test.py** could not determine a good exitcode, using $exitCode.');
     }
 
     if (endedSession) {
@@ -462,7 +500,8 @@ class FletchSessionHelper {
     bool thisCommandTimedout = false;
 
     int exitCode = await exitCodeWithTimeout(process, timeout, () {
-      print("Timed out: $commandDescription");
+      stdout.writeln(
+          "\n=> Reached command timeout (sent SIGTERM to fletch-vm)");
       thisCommandTimedout = true;
       hasTimedOut = true;
       if (vmProcess != null) {
@@ -472,7 +511,7 @@ class FletchSessionHelper {
     await stdoutFuture;
     await stderrFuture;
 
-    stdout.add(UTF8.encode("\n => $exitCode\n"));
+    stdout.writeln("\n => $exitCode ${explainExitCode(exitCode)}\n");
     if (checkExitCode && (thisCommandTimedout || exitCode != 0)) {
       throw new UnexpectedExitCode(exitCode, executable, arguments);
     }
@@ -488,6 +527,16 @@ class FletchSessionHelper {
     return run(
         []..addAll(arguments)..addAll(["in", "session", sessionName]),
         checkExitCode: checkExitCode, timeout: timeout);
+  }
+
+  Future<int> createSession(String settingsFileName) async {
+    if (sessionMirror.isCreated) {
+      return 0;
+    } else {
+      sessionMirror.isCreated = true;
+      return await run(
+          ["create", "session", sessionName, "with", settingsFileName]);
+    }
   }
 
   Future<String> spawnVm() async {
@@ -517,8 +566,11 @@ class FletchSessionHelper {
         .asFuture();
 
     vmExitCodeFuture = fletchVm.exitCode.then((int exitCode) async {
+      if (isVerbose) print("Exiting Fletch VM with exit code $exitCode.");
       await stdoutFuture;
+      if (isVerbose) print("Stdout of Fletch VM process closed.");
       await stderrFuture;
+      if (isVerbose) print("Stderr of Fletch VM process closed.");
       return exitCode;
     });
 
@@ -529,7 +581,8 @@ class FletchSessionHelper {
   /// [exitCodeWithTimeout] to ensure termination within [timeout] seconds.
   Future<int> shutdownVm(int timeout) async {
     await exitCodeWithTimeout(vmProcess, timeout, () {
-      print("Timed out: $executable-vm");
+      stdout.writeln(
+          "\n**fletch-vm** Reached total timeout (sent SIGTERM to fletch-vm)");
       killedVmProcess = true;
       hasTimedOut = true;
     });
@@ -582,16 +635,23 @@ Future<int> exitCodeWithTimeout(
   return exitCode;
 }
 
-/// Represents a session in the persistent Fletch driver process.
+/// Represents a session in the persistent Fletch client process.
 class FletchSessionMirror {
+  static const int RINGBUFFER_SIZE = 15;
+
   final int id;
 
-  final List<List<String>> internalLoggedCommands = <List<String>>[];
+  final Queue<List<String>> internalLoggedCommands = new Queue<List<String>>();
+
+  bool isCreated = false;
 
   FletchSessionMirror(this.id);
 
   void logCommand(List<String> command) {
     internalLoggedCommands.add(command);
+    if (internalLoggedCommands.length >= RINGBUFFER_SIZE) {
+      internalLoggedCommands.removeFirst();
+    }
   }
 
   void printLoggedCommands(BytesOutputSink sink, String executable) {
@@ -619,11 +679,8 @@ Future<Null> main(List<String> arguments) async {
   String script = arguments[1];
   arguments = arguments.skip(2).toList();
   Map<String, String> environmentOverrides = <String, String>{};
-  bool isIncrementalCompilationEnabled = const bool.fromEnvironment(
-      isIncrementalCompilationEnabledFlag);
   FletchSessionCommand command = new FletchSessionCommand(
       executable, script, arguments, environmentOverrides,
-      isIncrementalCompilationEnabled,
       settingsFileName: settingsFileName);
   FletchTestCommandOutput output =
       await command.run(0, true, superVerbose: true);

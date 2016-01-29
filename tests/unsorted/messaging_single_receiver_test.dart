@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -14,7 +14,7 @@ void main() {
   var channel = new Channel();
   var port = new Port(channel);
   for (int i = 0; i < PROCESSES; i++) {
-    Process.spawn(processRun, port);
+    Process.spawnDetached(() => processRun(port));
   }
   int done = 0;
   while (done < PROCESSES) {

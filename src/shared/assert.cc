@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,31 +11,40 @@
 #include "src/shared/platform.h"
 
 namespace fletch {
+namespace DynamicAssertionHelper {
 
-void DynamicAssertionHelper::Fail(const char* format, ...) {
+static void PrintError(const char* file, int line, const char* format,
+                       const va_list& arguments) {
 #ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
   // Print out the error.
-  Print::Error("%s:%d: error: ", file_, line_);
-  va_list arguments;
-  va_start(arguments, format);
+  Print::Error("%s:%d: error: ", file, line);
   char buffer[KB];
-  vsnprintf(buffer, sizeof(buffer), format, arguments);
-  va_end(arguments);
+  vsnprintf(buffer, sizeof(buffer), format, const_cast<va_list&>(arguments));
   Print::Error("%s\n", buffer);
 #else
+  fprintf(stderr, "%s:%d: error: ", file, line);
+  vfprintf(stderr, format, const_cast<va_list&>(arguments));
+  fprintf(stderr, "\n");
+#endif  // FLETCH_SUPPORT_PRINT_INTERCEPTORS
+}
+
+template <>
+void Fail<ASSERT>(const char* file, int line, const char* format, ...) {
   va_list arguments;
   va_start(arguments, format);
-  fprintf(stderr, "%s:%d: error: ", file_, line_);
-  vfprintf(stderr, format, arguments);
-  fprintf(stderr, "\n");
+  PrintError(file, line, format, arguments);
   va_end(arguments);
-#endif  // FLETCH_SUPPORT_PRINT_INTERCEPTORS
+  Platform::ImmediateAbort();
+}
 
-  // In case of failed assertions, abort right away. Otherwise, wait
-  // until the program is exiting before producing a non-zero exit
-  // code through abort.
-  if (kind_ == ASSERT) Platform::ImmediateAbort();
+template <>
+void Fail<EXPECT>(const char* file, int line, const char* format, ...) {
+  va_list arguments;
+  va_start(arguments, format);
+  PrintError(file, line, format, arguments);
+  va_end(arguments);
   Platform::ScheduleAbort();
 }
 
+}  // namespace DynamicAssertionHelper
 }  // namespace fletch

@@ -40,7 +40,7 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     LibraryElement;
 
-import 'package:compiler/src/dart2jslib.dart' show
+import 'package:compiler/src/compiler.dart' show
     Compiler;
 
 import 'package:compiler/src/source_file_provider.dart' show
@@ -51,11 +51,12 @@ import 'package:compiler/src/io/source_file.dart' show
     StringSourceFile;
 
 import 'package:fletchc/incremental/fletchc_incremental.dart' show
+    IncrementalCompilationFailed,
     IncrementalCompiler,
-    IncrementalCompilationFailed;
+    IncrementalMode;
 
-import 'package:fletchc/commands.dart' show
-    Command,
+import 'package:fletchc/vm_commands.dart' show
+    VmCommand,
     CommitChanges,
     CommitChangesResult,
     HandShakeResult,
@@ -73,10 +74,9 @@ import 'package:fletchc/src/guess_configuration.dart' show
 
 import 'package:fletchc/fletch_system.dart';
 
-import 'package:fletchc/commands.dart' as commands_lib;
+import 'package:fletchc/vm_commands.dart' as commands_lib;
 
-import 'package:fletchc/session.dart' show
-    CommandReader,
+import 'package:fletchc/vm_session.dart' show
     Session;
 
 import 'package:fletchc/src/fletch_backend.dart' show
@@ -85,14 +85,15 @@ import 'package:fletchc/src/fletch_backend.dart' show
 import 'package:fletchc/fletch_vm.dart' show
     FletchVm;
 
-import 'package:fletchc/debug_state.dart' show
-    StackFrame;
+import 'package:fletchc/debug_state.dart' as debug show
+    BackTraceFrame,
+    BackTrace;
 
 import 'program_result.dart';
 
 import 'tests_with_expectations.dart' as tests_with_expectations;
 
-import 'package:fletchc/src/driver/exit_codes.dart' show
+import 'package:fletchc/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 const String PACKAGE_SCHEME = 'org.dartlang.fletch.packages';
@@ -113,14 +114,26 @@ Future<Null> main(List<String> arguments) async {
     testCount += skip;
     skippedCount += skip;
 
-    testNamesToRun = tests.keys.skip(skip);
+    testNamesToRun = tests.keys.skip(skip).expand((String name) {
+      return ["experimental/$name", "production/$name"];
+    });
   } else {
     testNamesToRun = arguments;
   }
-  for (var testName in testNamesToRun) {
+  for (String testName in testNamesToRun) {
+    IncrementalMode incrementalMode;
+    if (testName.startsWith("production/")) {
+      incrementalMode = IncrementalMode.production;
+      testName = testName.substring("production/".length);
+    } else if (testName.startsWith("experimental/")) {
+      incrementalMode = IncrementalMode.experimental;
+      testName = testName.substring("experimental/".length);
+    } else {
+      throw "Unable to compute incremental support level from '$testName'";
+    }
     EncodedResult test = tests[testName];
     try {
-      await compileAndRun(testName, test);
+      await compileAndRun(testName, test, incrementalMode: incrementalMode);
     } catch (e, s) {
       print("Test '$testName' failed");
       rethrow;
@@ -145,9 +158,12 @@ void updateSummary() {
       "($skippedCount skipped, $updateFailedCount failed)\n\n");
 }
 
-compileAndRun(String testName, EncodedResult encodedResult) async {
+compileAndRun(
+    String testName,
+    EncodedResult encodedResult,
+    {IncrementalMode incrementalMode}) async {
   print("Test '$testName'");
-  IncrementalTestHelper helper = new IncrementalTestHelper();
+  IncrementalTestHelper helper = new IncrementalTestHelper(incrementalMode);
   TestSession session =
       await TestSession.spawnVm(helper.compiler, testName: testName);
 
@@ -206,7 +222,7 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
 
       if (!isFirstProgram ||
           const bool.fromEnvironment("feature_test.print_initial_commands")) {
-        for (Command command in fletchDelta.commands) {
+        for (VmCommand command in fletchDelta.commands) {
           print(command);
         }
       }
@@ -244,7 +260,7 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
         for (var breakpoint in breakpoints) {
           print("Added breakpoint: $breakpoint");
         }
-        if (!helper.compiler.compiler.mainFunction.isErroneous) {
+        if (!helper.compiler.compiler.mainFunction.isMalformed) {
           // If there's a syntax error in main, we cannot find it to set a
           // breakpoint.
           // TODO(ahe): Consider if this is a problem?
@@ -257,33 +273,49 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
           // Restart the current frame to rerun main.
           await session.restart();
         }
-        // Step out of main to finish execution of main.
-        await session.stepOut();
+        if (session.running) {
+          // Step out of main to finish execution of main.
+          await session.stepOut();
+        }
 
         // Select the stack frame of callMain.
-        await session.getStackTrace();
+        debug.BackTrace trace = await session.backTrace();
         FunctionElement callMainElement =
             backend.fletchSystemLibrary.findLocal("callMain");
         FletchFunction callMain =
             helper.system.lookupFunctionByElement(callMainElement);
-        StackFrame stackFrame =
-            session.debugState.currentStackTrace.stackFrames.firstWhere(
-                (StackFrame frame) => frame.function == callMain);
-        int frame = session.debugState.currentStackTrace.stackFrames.indexOf(
-            stackFrame);
+        debug.BackTraceFrame mainFrame =
+            trace.frames.firstWhere(
+                (debug.BackTraceFrame frame) => frame.function == callMain);
+        int frame = trace.frames.indexOf(mainFrame);
         Expect.notEquals(1, frame);
         session.selectFrame(frame);
-        await session.backtrace();
+        print(trace.format());
+
+        List<String> actualMessages = session.stdoutSink.takeLines();
 
         List<String> messages = new List<String>.from(program.messages);
         if (program.hasCompileTimeError) {
           print("Compile-time error expected");
-          // TODO(ahe): This message shouldn't be printed by the Fletch VM.
-          messages.add("Compile error");
+          // TODO(ahe): The compile-time error message shouldn't be printed by
+          // the Fletch VM.
+
+          // Find the compile-time error message in the actual output, and
+          // remove all lines after it.
+          int compileTimeErrorIndex = -1;
+          for (int i = 0; i < actualMessages.length; i++) {
+            if (actualMessages[i].startsWith("Compile error:")) {
+              compileTimeErrorIndex = i;
+              break;
+            }
+          }
+          Expect.isTrue(compileTimeErrorIndex != -1);
+          actualMessages.removeRange(compileTimeErrorIndex,
+              actualMessages.length);
         }
 
-        List<String> actualMessages = session.stdoutSink.takeLines();
-        Expect.listEquals(messages, actualMessages);
+        Expect.listEquals(messages, actualMessages,
+            "Expected $messages, got $actualMessages");
 
         // TODO(ahe): Enable SerializeScopeTestCase for multiple parts.
         if (!isFirstProgram && program.code is String) {
@@ -302,7 +334,7 @@ compileAndRun(String testName, EncodedResult encodedResult) async {
       print(continueCommand);
 
       // Wait for process termination.
-      Command response = await session.runCommand(continueCommand);
+      VmCommand response = await session.runCommand(continueCommand);
       if (response is! commands_lib.ProcessTerminated) {
         // TODO(ahe): It's probably an instance of
         // commands_lib.UncaughtException, and if so, we should try to print
@@ -624,7 +656,9 @@ class BytesSink implements Sink<List<int>> {
 Future<Map<String, NoArgFuture>> listTests() {
   Map<String, NoArgFuture> result = <String, NoArgFuture>{};
   tests.forEach((String name, EncodedResult test) {
-    result['incremental/$name'] = () => main(<String>[name]);
+    for (String testName in ["experimental/$name", "production/$name"]) {
+      result['incremental/$testName'] = () => main(<String>[testName]);
+    }
   });
   return new Future<Map<String, NoArgFuture>>.value(result);
 }
@@ -643,7 +677,7 @@ class IncrementalTestHelper {
       this.inputProvider,
       this.compiler);
 
-  factory IncrementalTestHelper() {
+  factory IncrementalTestHelper(IncrementalMode incrementalMode) {
     Uri packageConfig = Uri.base.resolve('.packages');
     IoInputProvider inputProvider = new IoInputProvider(packageConfig);
     FormattingDiagnosticHandler diagnosticHandler =
@@ -652,7 +686,9 @@ class IncrementalTestHelper {
         packageConfig: packageConfig,
         inputProvider: inputProvider,
         diagnosticHandler: diagnosticHandler,
-        outputProvider: new OutputProvider());
+        outputProvider: new OutputProvider(),
+        support: incrementalMode,
+        platform: "fletch_mobile.platform");
     return new IncrementalTestHelper.internal(
         packageConfig,
         inputProvider,
@@ -666,7 +702,7 @@ class IncrementalTestHelper {
       inputProvider.sources[customUriBase.resolve(name)] = code;
     });
 
-    await compiler.compile(customUriBase.resolve('main.dart'));
+    await compiler.compile(customUriBase.resolve('main.dart'), customUriBase);
     FletchDelta delta = compiler.compiler.context.backend.computeDelta();
     system = delta.system;
     return delta;

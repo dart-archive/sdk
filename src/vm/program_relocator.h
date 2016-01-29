@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,16 +12,18 @@ namespace fletch {
 
 class ProgramHeapRelocator {
  public:
-  ProgramHeapRelocator(Program* program, uword baseaddress,
+  ProgramHeapRelocator(Program* program, uint8* target, uword baseaddress,
                        IntrinsicsTable* table = IntrinsicsTable::GetDefault())
       : program_(program),
+        target_(target),
         baseaddress_(baseaddress),
         table_(table) {}
 
-  List<uint8> Relocate();
+  int Relocate();
 
  private:
   Program* program_;
+  uint8* target_;
   uword baseaddress_;
   IntrinsicsTable* table_;
 };

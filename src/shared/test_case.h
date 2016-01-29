@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,22 +7,24 @@
 
 #include "src/shared/globals.h"
 
-#define TEST_CASE(name)                                                  \
-  static void Test##name();                                              \
-  static const fletch::TestCase kRegister##name(Test##name, #name);      \
+#define TEST_CASE(name)                                             \
+  static void Test##name();                                         \
+  static const fletch::TestCase kRegister##name(Test##name, #name); \
   static void Test##name()
 
-#define TEST_EXPORT(method)                                     \
-  extern "C" { __attribute__((visibility("default"))) method }
+#define TEST_EXPORT(method)                     \
+  extern "C" {                                  \
+  __attribute__((visibility("default"))) method \
+  }
 
 namespace fletch {
 
 class TestCase {
  public:
-  typedef void (RunEntry)();
+  typedef void(RunEntry)();
 
   TestCase(RunEntry* run, const char* name);
-  virtual ~TestCase() { }
+  virtual ~TestCase() {}
 
   const char* name() const { return name_; }
 

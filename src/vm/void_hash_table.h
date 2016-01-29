@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 //
@@ -16,6 +16,10 @@ class VoidHashTable {
   ~VoidHashTable();
 
   char* Find(const void* key);
+
+  const char* Find(const void* key) const {
+    return const_cast<VoidHashTable*>(this)->Find(key);
+  }
 
   char* At(const void* key);
 
@@ -45,26 +49,32 @@ class VoidHashTable {
   size_t mutations() const { return mutations_; }
 #endif
 
-  template<typename Pointer>
+  template <typename Pointer>
   class Iterator {
    public:
-    inline Iterator(
-        const VoidHashTable* table, Pointer position, size_t entry_size)
+    inline Iterator(const VoidHashTable* table, Pointer position,
+                    size_t entry_size)
         : position_(position)
 #ifdef DEBUG
-        , table_(table)
-        , mutations_(table == NULL ? 0 : table->mutations())
+          ,
+          table_(table),
+          mutations_(table == NULL ? 0 : table->mutations())
 #endif
-        , entry_size_(entry_size) { }
+          ,
+          entry_size_(entry_size) {
+    }
 
-    template<typename OtherPointer>
+    template <typename OtherPointer>
     inline Iterator(const Iterator<OtherPointer>& other)
         : position_(other.position_)
 #ifdef DEBUG
-        , table_(other.table_)
-        , mutations_(other.mutations_)
+          ,
+          table_(other.table_),
+          mutations_(other.mutations_)
 #endif
-        , entry_size_(other.entry_size_) { }
+          ,
+          entry_size_(other.entry_size_) {
+    }
 
     inline void AdvanceToUsedSlot() {
       while (IsUnused(position_)) {
@@ -89,12 +99,12 @@ class VoidHashTable {
 
     Pointer position() { return position_; }
 
-    template<typename OtherPointer>
+    template <typename OtherPointer>
     bool operator==(const Iterator<OtherPointer>& other) const {
       return other.position_ == position_;
     }
 
-    template<typename OtherPointer>
+    template <typename OtherPointer>
     bool operator!=(const Iterator<OtherPointer>& other) const {
       return !(*this == other);
     }
@@ -137,7 +147,7 @@ class VoidHashTable {
   }
 
   static inline char* ValueFromEntry(char* entry) {
-    return reinterpret_cast<char*>(entry + sizeof(hash_t) + sizeof(void*));
+    return entry + sizeof(hash_t) + sizeof(void*);
   }
 
   size_t SizeOfPair() const { return entry_size_ - sizeof(hash_t); }

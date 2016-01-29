@@ -1,6 +1,10 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
+
+[ $system == macos ]
+# https://github.com/dart-lang/fletch/issues/401
+big_integer_huge_mul_vm_test: Pass, Slow, Timeout
 
 [ $runtime == fletchc ]
 # -D option not implemented.
@@ -41,6 +45,7 @@ double_truncate_test: RuntimeError
 
 # Object.runtimeType / type check
 collection_length_test: RuntimeError
+growable_list_test: RuntimeError
 iterable_fold_test: RuntimeError
 iterable_generate_test: RuntimeError
 iterable_reduce_test: RuntimeError
@@ -74,6 +79,17 @@ error_stack_trace_test: RuntimeError
 # dart:typed_data
 list_test/01: Fail
 list_test/none: Fail
+
+# Missing async/await, and resource implementation
+data_resource_test: RuntimeError
+package_resource_test: RuntimeError
+
+# DartVM specific, uses dart:io.
+file_resource_test: CompileTimeError
+http_resource_test: CompileTimeError
+
+# Missing set-if-null implementation
+data_uri_test: RuntimeError
 
 # Unexpected command line arguments to compiler.
 bool_from_environment_test: CompileTimeError
@@ -110,18 +126,16 @@ iterable_return_type_test/02: Fail
 iterable_return_type_test/none: RuntimeError
 list_test/01: RuntimeError
 list_test/none: RuntimeError
-list_unmodifiable_test: CompileTimeError
+list_unmodifiable_test: RuntimeError
 num_clamp_test: RuntimeError
 num_parse_test/01: RuntimeError
 num_parse_test/none: RuntimeError
 safe_to_string_test: RuntimeError
 set_test: RuntimeError
-shuffle_test: CompileTimeError
 splay_tree_from_iterable_test: RuntimeError
 splay_tree_from_iterables_test: RuntimeError
 splay_tree_test: RuntimeError
 string_buffer_test: RuntimeError
-string_fromcharcodes_test: CompileTimeError
 string_replace_all_test: RuntimeError
 string_replace_test: RuntimeError
 symbol_operator_test/03: Fail
@@ -144,23 +158,21 @@ int_parse_radix_test/none: Skip # Extremely slow, so we run them only in one deb
 [ $system == lk ]
 big_integer_arith_vm_test/div: RuntimeError
 big_integer_arith_vm_test/mod: RuntimeError
-big_integer_arith_vm_test/modPow: Pass, Crash
-big_integer_huge_mul_vm_test: Pass, Crash
+big_integer_huge_mul_vm_test: Pass, Slow, Timeout
 compare_to_test: RuntimeError
 core_runtime_types_test: RuntimeError
 double_ceil_to_double_test: RuntimeError
 double_compare_test: RuntimeError
 double_floor_to_double_test: RuntimeError
 double_parse_test/01: RuntimeError
+double_parse_test/02: RuntimeError
+double_parse_test/03: RuntimeError
 double_parse_test/none: RuntimeError
 double_round3_test: RuntimeError
 double_round4_test: RuntimeError
 double_round_to_double2_test: RuntimeError
 double_round_to_double_test: RuntimeError
 double_truncate_to_double_test: RuntimeError
-int_parse_radix_test/01: Pass, Crash
-int_parse_radix_test/02: Pass, Crash
-int_parse_radix_test/none: Pass, Crash
 iterable_fold_test: Crash
 iterable_reduce_test: Crash
 list_test/01: Crash
@@ -168,16 +180,138 @@ list_test/none: Crash
 nan_infinity_test/01: RuntimeError
 nan_infinity_test/none: RuntimeError
 num_sign_test: Pass, Crash
-regexp/global_test: Pass, Fail
+regexp/global_test: Fail
 regexp/regexp_test: Crash
-shuffle_test: Crash
 string_fromcharcodes_test: Crash
 toInt_test: RuntimeError
 uri_base_test: Crash
-uri_parse_test: Pass, Crash
+# These actually crash because of stack overflow. The overflow
+# is caused by the recursive snapshot reader.
+int_parse_radix_test/02: Timeout
+string_fromcharcodes_test: Timeout
+
+[ $mode == debug && $system == lk ]
+uri_parse_test: Slow, Pass, Timeout
+int_parse_radix_test/01: Slow, Pass, Timeout
+int_parse_radix_test/none: Slow, Pass, Timeout
+num_sign_test: Slow, Pass, Timeout
+list_unmodifiable_test: Crash
 
 [ $mode == debug || $asan ]
 regexp/global_test: Slow, Pass
 
-[ $mode == debug && $system == macos && $asan ]
+[ $mode == debug ]
 big_integer_huge_mul_vm_test: Slow, Pass
+
+[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
+# No dart:convert on embedded
+string_source_test: CompileTimeError
+json_map_test: CompileTimeError
+map_test: CompileTimeError
+
+# No async support on embedded
+stacktrace_fromstring_test: CompileTimeError
+
+# No Uri support on embedded
+package_resource_test: CompileTimeError
+data_resource_test: CompileTimeError
+data_uri_test: CompileTimeError
+uri_test: CompileTimeError
+uri_base_test: RuntimeError
+uri_file_test: RuntimeError
+uri_http_test: RuntimeError
+uri_ipv4_test: RuntimeError
+uri_ipv6_test: RuntimeError
+uri_normalize_path_test: RuntimeError
+uri_normalize_test: RuntimeError
+uri_parse_test: RuntimeError
+uri_path_test: RuntimeError
+uri_query_test: RuntimeError
+uri_scheme_test: RuntimeError
+
+# DateTime.parse uses Regex.
+# TODO(sigurdm): fix this.
+date_time2_test: RuntimeError
+date_time3_test: RuntimeError
+date_time4_test: RuntimeError
+date_time7_test: RuntimeError
+date_time_parse_test: RuntimeError
+date_time_test: RuntimeError
+
+# No regex support on embedded
+range_error_test: RuntimeError
+reg_exp1_test: RuntimeError
+reg_exp4_test: RuntimeError
+reg_exp5_test: RuntimeError
+reg_exp_all_matches_test: RuntimeError
+reg_exp_first_match_test: RuntimeError
+reg_exp_group_test: RuntimeError
+reg_exp_groups_test: RuntimeError
+reg_exp_has_match_test: RuntimeError
+reg_exp_pattern_test: RuntimeError
+reg_exp_start_end_test: RuntimeError
+reg_exp_string_match_test: RuntimeError
+regexp/UC16_test: RuntimeError
+regexp/alternative-length-miscalculation_test: RuntimeError
+regexp/alternatives_test: RuntimeError
+regexp/ascii-regexp-subject_test: RuntimeError
+regexp/assertion_test: RuntimeError
+regexp/backreferences_test: RuntimeError
+regexp/bol-with-multiline_test: RuntimeError
+regexp/bol_test: RuntimeError
+regexp/capture_test: RuntimeError
+regexp/captures_test: RuntimeError
+regexp/char-insensitive_test: RuntimeError
+regexp/character-match-out-of-order_test: RuntimeError
+regexp/compile-crash_test: RuntimeError
+regexp/compile_test: RuntimeError
+regexp/constructor_test: RuntimeError
+regexp/default_arguments_test: RuntimeError
+regexp/dotstar_test: RuntimeError
+regexp/early-acid3-86_test: RuntimeError
+regexp/ecma-regex-examples_test: RuntimeError
+regexp/extended-characters-match_test: RuntimeError
+regexp/extended-characters-more_test: RuntimeError
+regexp/find-first-asserted_test: RuntimeError
+regexp/global_test: RuntimeError
+regexp/indexof_test: RuntimeError
+regexp/invalid-range-in-class_test: RuntimeError
+regexp/issue_19193_test: RuntimeError
+regexp/lastindex_test: RuntimeError
+regexp/look-ahead_test: RuntimeError
+regexp/lookahead_test: RuntimeError
+regexp/loop-capture_test: RuntimeError
+regexp/malformed-escapes_test: RuntimeError
+regexp/many-brackets_test: RuntimeError
+regexp/multiline_test: RuntimeError
+regexp/negative-special-characters_test: RuntimeError
+regexp/no-extensions_test: RuntimeError
+regexp/non-bmp_test: RuntimeError
+regexp/non-capturing-backtracking_test: RuntimeError
+regexp/non-capturing-groups_test: RuntimeError
+regexp/non-character_test: RuntimeError
+regexp/non-greedy-parentheses_test: RuntimeError
+regexp/norepeat_test: RuntimeError
+regexp/overflow_test: RuntimeError
+regexp/parentheses_test: RuntimeError
+regexp/pcre-test-4_test: RuntimeError
+regexp/pcre_test: RuntimeError
+regexp/quantified-assertions_test: RuntimeError
+regexp/range-bound-ffff_test: RuntimeError
+regexp/ranges-and-escaped-hyphens_test: RuntimeError
+regexp/regexp_kde_test: RuntimeError
+regexp/regress-6-9-regexp_test: RuntimeError
+regexp/regress-regexp-codeflush_test: RuntimeError
+regexp/regress-regexp-construct-result_test: RuntimeError
+regexp/repeat-match-waldemar_test: RuntimeError
+regexp/results-cache_test: RuntimeError
+regexp/stack-overflow2_test: RuntimeError
+regexp/stack-overflow_test: RuntimeError
+regexp/standalones_test: RuntimeError
+regexp/toString_test: RuntimeError
+regexp/unicode-handling_test: RuntimeError
+regexp/unicodeCaseInsensitive_test: RuntimeError
+regexp/zero-length-alternatives_test: RuntimeError
+string_replace_dollar_test: RuntimeError
+string_split_test: RuntimeError
+string_test: RuntimeError

@@ -1,10 +1,10 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 main() {
   print("""
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -152,9 +152,6 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
     INVOKE(V, "BitXor", -1, "bit xor ", suffix, type);
     INVOKE(V, "BitShr", -1, "bit shr ", suffix, type);
     INVOKE(V, "BitShl", -1, "bit shl ", suffix, type);
-
-    INVOKE(V, "Static", kVarDiff, "static ", suffix, type);
-    INVOKE(V, "Factory", kVarDiff, "factory ", suffix, type);
   }
 
   /* Name             Branching Format Size   SP-diff  format-string   */
@@ -189,9 +186,10 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("LoadLiteralWide",      false,    "I",  5,        1, "load literal %d");
 
   INVOKES_DO(V, "", "");
+  INVOKE(V, "Static", kVarDiff, "static ", "", "");
+  INVOKE(V, "Factory", kVarDiff, "factory ", "", "");
   V("Allocate",             false,    "I",  5, kVarDiff, "allocate %d");
   V("AllocateImmutable",    false,    "I",  5, kVarDiff, "allocateim %d");
-  V("LoadConst",            false,    "I",  5,        1, "load const %d");
 
   V("InvokeNoSuchMethod",   true, "I", 5, kVarDiff, "invoke no such method %d");
   V("InvokeTestNoSuchMethod", true, "I", 5, 0, "invoke test no such method %d");
@@ -201,10 +199,10 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
 
   V("InvokeSelector",        true,    "I",  5, kVarDiff, "invoke selector");
 
-  V("Pop",                  false,    "",   1,       -1, "pop");
-  V("Return",                true,    "BB", 3,       -1, "return %d %d");
-  V("ReturnWide",            true,    "IB", 6,       -1, "return %d %d");
-  V("ReturnNull",            true,    "BB", 3,        0, "return null %d %d");
+  V("Pop",                   false,   "",   1,       -1, "pop");
+  V("Drop",                  false,   "B",  2, kVarDiff, "drop %d");
+  V("Return",                true,    "",   1,       -1, "return");
+  V("ReturnNull",            true,    "",   1,        0, "return null");
 
   V("BranchWide",            true,    "I",  5,        0, "branch +%d");
   V("BranchIfTrueWide",      true,    "I",  5,       -1, "branch if true +%d");
@@ -240,12 +238,8 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("EnterNoSuchMethod",     true,    "B",  2, kVarDiff, "enter noSuchMethod +%d");
   V("ExitNoSuchMethod",      true,    "",   1,       -1, "exit noSuchMethod");
 
-  V("FrameSize",            false,    "B",  2, kVarDiff, "frame size %d");
-
   INVOKES_DO(V, "Unfold", "unfold ");
-  V("AllocateUnfold",       false,    "I",  5, kVarDiff, "allocate @%d");
-  V("AllocateImmutableUnfold", false, "I",  5, kVarDiff, "allocateim @%d");
-  V("LoadConstUnfold",      false,    "I",  5,        1, "load const @%d");
+  V("LoadConst",            false,    "I",  5,        1, "load const @%d");
 
   V("MethodEnd",            false,    "I",  5,        0, "method end %d");
 }

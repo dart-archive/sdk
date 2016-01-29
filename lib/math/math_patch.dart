@@ -1,10 +1,9 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch._system' as fletch;
-
-const patch = "patch";
+import 'dart:fletch._system' show patch;
 
 @patch class Random {
   @patch factory Random([int seed]) {
@@ -21,9 +20,10 @@ class _Random implements Random {
   static const kBitsPerPart = 23;
   static const kLowMask = (1 << kBitsPerPart) - 1;
   static const kMediumMask = (1 << (kBitsPerPart * 2)) - 1;
+  static final _seeder = new _Random(15485863);
 
   _Random([int seed]) {
-    if (seed == null) seed = 0;
+    if (seed == null) seed = _seeder.nextInt(10000000);
     seed ^= 314159265;
     _s0_0 = seed & kLowMask;
     _s0_1 = (seed >> kBitsPerPart) & kLowMask;
@@ -158,7 +158,7 @@ class _Random implements Random {
 
 @patch double atan2(num a, num b) => _atan2(a.toDouble(), b.toDouble());
 
-@patch double pow(num x, num exponent) {
+@patch num pow(num x, num exponent) {
   if ((x is int) && (exponent is int) && (exponent >= 0)) {
     return _intPow(x, exponent);
   }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,17 +15,14 @@ class Spinlock {
  public:
   Spinlock() : is_locked_(false) {}
 
-  bool IsLocked() const {
-    return is_locked_;
-  }
+  bool IsLocked() const { return is_locked_; }
 
   void Lock() {
-    while (is_locked_.exchange(true, fletch::kAcquire)) { }
+    while (is_locked_.exchange(true, kAcquire)) {
+    }
   }
 
-  void Unlock() {
-    is_locked_.store(false, fletch::kRelease);
-  }
+  void Unlock() { is_locked_.store(false, kRelease); }
 
  private:
   Atomic<bool> is_locked_;
@@ -33,12 +30,8 @@ class Spinlock {
 
 class ScopedSpinlock {
  public:
-  explicit ScopedSpinlock(Spinlock* lock) : lock_(lock) {
-    lock_->Lock();
-  }
-  ~ScopedSpinlock() {
-    lock_->Unlock();
-  }
+  explicit ScopedSpinlock(Spinlock* lock) : lock_(lock) { lock_->Lock(); }
+  ~ScopedSpinlock() { lock_->Unlock(); }
 
  private:
   Spinlock* lock_;

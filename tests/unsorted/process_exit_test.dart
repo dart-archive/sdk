@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -35,7 +35,8 @@ createFunction() => (x, y) => x - y;
 
 run(fn) {
   Channel channel = new Channel();
-  Process.spawn(helper, new Port(channel));
+  Port port = new Port(channel);
+  Process.spawnDetached(() => helper(port));
   channel.receive().send(fn);
   return channel.receive();
 }

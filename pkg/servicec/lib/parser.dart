@@ -1,17 +1,18 @@
-// Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 library servicec.parser;
 
-import 'package:compiler/src/scanner/scannerlib.dart' show
-    EOF_TOKEN,
+import 'package:compiler/src/tokens/token.dart' show
     ErrorToken,
-    IDENTIFIER_TOKEN,
-    KEYWORD_TOKEN,
-    Keyword,
     KeywordToken,
     Token;
+
+import 'package:compiler/src/tokens/token_constants.dart' show
+    EOF_TOKEN,
+    IDENTIFIER_TOKEN,
+    KEYWORD_TOKEN;
 
 import 'listener.dart' show
     Listener;

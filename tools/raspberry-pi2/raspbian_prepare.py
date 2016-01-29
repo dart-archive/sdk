@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 #
@@ -21,7 +21,7 @@ USERNAME = 'pi'
 PASSWORD = 'raspberry'
 KERNEL = 'third_party/raspbian/kernel/kernel-qemu'
 CONFIG = 'tools/raspberry-pi2/raspbian-scripts/fletch-configuration'
-QEMU = 'third_party/qemu/linux/qemu/qemu-system-arm'
+QEMU = 'third_party/qemu/linux/qemu/bin/qemu-system-arm'
 PORT = 10022
 
 def Options():
@@ -98,7 +98,7 @@ class QemuSession(object):
     time.sleep(50)
     self.ssh = None
     # Try connection multiple times, the time it takes to boot varies a lot.
-    for x in xrange(10):
+    for x in xrange(20):
       print 'Connection attempt %s' % x
       ssh = pxssh.pxssh()
       # See https://github.com/pexpect/pexpect/issues/179

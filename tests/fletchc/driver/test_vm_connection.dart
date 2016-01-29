@@ -1,10 +1,10 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 /// Used for testing compiler/debugger session when VM socket is closed
 /// unexpectedly.
-library fletchc.test.driver.test_vm_connection;
+library fletchc.test.client.test_vm_connection;
 
 import 'dart:async' show
     Future;
@@ -18,14 +18,14 @@ import 'dart:isolate' show
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:fletchc/src/driver/session_manager.dart' show
+import 'package:fletchc/src/hub/session_manager.dart' show
     SessionState;
 
-import 'package:fletchc/src/driver/developer.dart' show
+import 'package:fletchc/src/worker/developer.dart' show
     attachToVm;
 
-import 'package:fletchc/commands.dart' show
-    CommandCode;
+import 'package:fletchc/vm_commands.dart' show
+    VmCommandCode;
 
 import '../run.dart' show
     FletchRunner;
@@ -35,7 +35,7 @@ import 'mock_vm.dart' show
 
 class MockVmRunner extends FletchRunner {
   final bool closeImmediately;
-  final CommandCode closeAfterFirst;
+  final VmCommandCode closeAfterFirst;
 
   MockVm vm;
 
@@ -47,12 +47,12 @@ class MockVmRunner extends FletchRunner {
     await attachToVm(InternetAddress.LOOPBACK_IP_V4.address, vm.port, state);
   }
 
-  Future<Null> run(List<String> arguments) async {
+  Future<int> run(List<String> arguments, {int expectedExitCode: 0}) async {
     await super.run(arguments);
     int exitCode = await vm.exitCode;
     print("Mock VM exit code: $exitCode");
+    return exitCode;
   }
-
 }
 
 main(List<String> arguments) async {
@@ -70,14 +70,14 @@ Future<Null> testCloseImmediately() async {
 
 Future<Null> testCloseAfterCommitChanges() async {
   int result =
-      await new MockVmRunner(closeAfterFirst: CommandCode.CommitChanges)
+      await new MockVmRunner(closeAfterFirst: VmCommandCode.CommitChanges)
       .run(<String>['tests/language/application_test.dart']);
   // TODO(ahe): The actual exit code is TBD.
   Expect.equals(1, result);
 }
 
 Future<Null> testCloseAfterProcessRun() async {
-  int result = await new MockVmRunner(closeAfterFirst: CommandCode.ProcessRun)
+  int result = await new MockVmRunner(closeAfterFirst: VmCommandCode.ProcessRun)
       .run(<String>['tests/language/application_test.dart']);
   // TODO(ahe): The actual exit code is TBD.
   Expect.equals(1, result);

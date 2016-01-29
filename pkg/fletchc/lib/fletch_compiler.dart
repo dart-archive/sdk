@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -43,20 +43,15 @@ import 'src/fletch_compiler_implementation.dart' show
 import 'fletch_system.dart';
 
 import 'incremental/fletchc_incremental.dart' show
-    IncrementalCompiler;
+    IncrementalCompiler,
+    IncrementalMode;
 
 import 'src/guess_configuration.dart' show
     executable,
     guessFletchVm;
 
-import 'package:sdk_library_metadata/libraries.dart' show
-    Category;
-
 const String _LIBRARY_ROOT =
     const String.fromEnvironment("fletchc-library-root");
-
-const String _PATCH_ROOT = const String.fromEnvironment("fletch-patch-root");
-
 
 const String fletchDeviceType =
     const String.fromEnvironment("fletch.device-type");
@@ -72,12 +67,16 @@ class FletchCompiler {
 
   final bool verbose;
 
-  final List<Category> categories;
+  final String platform;
 
   final Uri nativesJson;
 
-  FletchCompiler._(this._compiler, this.script, this.verbose, this.categories,
-                   this.nativesJson);
+  FletchCompiler._(
+      this._compiler,
+      this.script,
+      this.verbose,
+      this.platform,
+      this.nativesJson);
 
   Backdoor get backdoor => new Backdoor(this);
 
@@ -87,15 +86,15 @@ class FletchCompiler {
        CompilerDiagnostics handler,
        @StringOrUri libraryRoot,
        @StringOrUri packageConfig,
-       /// Location of fletch patch files.
-       @StringOrUri patchRoot,
        @StringOrUri script,
        @StringOrUri fletchVm,
        @StringOrUri currentDirectory,
        @StringOrUri nativesJson,
        List<String> options,
        Map<String, dynamic> environment,
-       List<Category> categories}) {
+       String platform,
+       IncrementalCompiler incrementalCompiler}) {
+
     Uri base = _computeValidatedUri(
         currentDirectory, name: 'currentDirectory', ensureTrailingSlash: true);
     if (base == null) {
@@ -107,21 +106,10 @@ class FletchCompiler {
     } else {
       options = new List<String>.from(options);
     }
-    if (categories != null) {
-      String categoriesOptionValue = categories.map((Category category) {
-        switch (category) {
-          case Category.client:
-            return "Client";
-          case Category.server:
-            return "Server";
-          case Category.embedded:
-            return "Embedded";
-        }
-      }).join(",");
-      options.add("--categories=$categoriesOptionValue");
-    }
 
-    final bool isVerbose = apiimpl.Compiler.hasOption(options, '--verbose');
+    options.add("--platform-config=$platform");
+
+    final bool isVerbose = apiimpl.CompilerImpl.hasOption(options, '--verbose');
 
     if (provider == null) {
       provider = new CompilerSourceFileProvider()
@@ -142,20 +130,20 @@ class FletchCompiler {
       outputProvider = new OutputProvider();
     }
 
-    if (libraryRoot == null  && _LIBRARY_ROOT != null) {
+    if (libraryRoot == null && _LIBRARY_ROOT != null) {
       libraryRoot = executable.resolve(appendSlash(_LIBRARY_ROOT));
     }
     libraryRoot = _computeValidatedUri(
         libraryRoot, name: 'libraryRoot', ensureTrailingSlash: true,
         base: base);
     if (libraryRoot == null) {
-      libraryRoot = _guessLibraryRoot();
+      libraryRoot = _guessLibraryRoot(platform);
       if (libraryRoot == null) {
         throw new StateError("""
 Unable to guess the location of the Dart SDK (libraryRoot).
 Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
       }
-    } else if (!_looksLikeLibraryRoot(libraryRoot)) {
+    } else if (!_looksLikeLibraryRoot(libraryRoot, platform)) {
       throw new ArgumentError(
           "[libraryRoot]: Dart SDK library not found in '$libraryRoot'.");
     }
@@ -175,28 +163,11 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
     fletchVm = guessFletchVm(
         _computeValidatedUri(fletchVm, name: 'fletchVm', base: base));
 
-    if (patchRoot == null  && _PATCH_ROOT != null) {
-      patchRoot = executable.resolve(appendSlash(_PATCH_ROOT));
-    }
-    patchRoot = _computeValidatedUri(
-        patchRoot, name: 'patchRoot', ensureTrailingSlash: true, base: base);
-    if (patchRoot == null) {
-      patchRoot = _guessPatchRoot(libraryRoot);
-      if (patchRoot == null) {
-        throw new StateError("""
-Unable to guess the location of the fletch patch files (patchRoot).
-Try adding command-line option '-Dfletch-patch-root=<path to fletch patch>.""");
-      }
-    } else if (!_looksLikePatchRoot(patchRoot)) {
-      throw new ArgumentError(
-          "[patchRoot]: Fletch patches not found in '$patchRoot'.");
-    }
-
     if (environment == null) {
       environment = <String, dynamic>{};
     }
 
-    if (nativesJson == null  && _NATIVES_JSON != null) {
+    if (nativesJson == null && _NATIVES_JSON != null) {
       nativesJson = base.resolve(_NATIVES_JSON);
     }
     nativesJson = _computeValidatedUri(
@@ -222,17 +193,17 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
         handler,
         libraryRoot,
         packageConfig,
-        patchRoot,
         nativesJson,
         options,
         environment,
-        fletchVm);
+        fletchVm,
+        incrementalCompiler);
 
     compiler.log("Using library root: $libraryRoot");
     compiler.log("Using package config: $packageConfig");
 
-    var helper = new FletchCompiler._(compiler, script, isVerbose, categories,
-                                      nativesJson);
+    var helper = new FletchCompiler._(
+        compiler, script, isVerbose, platform, nativesJson);
     compiler.helper = helper;
     return helper;
   }
@@ -271,10 +242,10 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
 
   /// Create a new instance of [IncrementalCompiler].
   IncrementalCompiler newIncrementalCompiler(
+      IncrementalMode support,
       {List<String> options: const <String>[]}) {
     return new IncrementalCompiler(
         libraryRoot: _compiler.libraryRoot,
-        patchRoot: _compiler.patchRoot,
         packageConfig: _compiler.packageConfig,
         fletchVm: _compiler.fletchVm,
         nativesJson: _compiler.nativesJson,
@@ -283,7 +254,8 @@ Try adding command-line option '-Dfletch-natives-json=<path to natives.json>."""
         options: options,
         outputProvider: _compiler.userOutputProvider,
         environment: _compiler.environment,
-        categories: categories);
+        support: support,
+        platform: platform);
   }
 }
 
@@ -319,9 +291,8 @@ bool _containsFile(Uri uri, String expectedFile) {
   return new File.fromUri(uri.resolve(expectedFile)).existsSync();
 }
 
-bool _looksLikeLibraryRoot(Uri uri) {
-  return _containsFile(
-      uri, 'lib/_internal/sdk_library_metadata/lib/libraries.dart');
+bool _looksLikeLibraryRoot(Uri uri, String platform) {
+  return _containsFile(uri, platform);
 }
 
 Uri _computeValidatedUri(
@@ -347,37 +318,17 @@ Uri _computeValidatedUri(
   }
 }
 
-Uri _guessLibraryRoot() {
+Uri _guessLibraryRoot(String platform) {
   // When running from fletch, [executable] is
   // ".../fletch-repo/fletch/out/$CONFIGURATION/dart", which means that the
-  // fletch root is 2th parent directory (due to how URI resolution works,
-  // the filename ("dart") is removed before resolving, for example,
+  // fletch root is the lib directory in the 2th parent directory (due to
+  // how URI resolution works, the filename ("dart") is removed before
+  // resolving, for example,
   // ".../fletch-repo/fletch/out/$CONFIGURATION/../../" becomes
   // ".../fletch-repo/fletch/").
-  Uri fletchRoot = executable.resolve('../../');
-  Uri guess = fletchRoot.resolve('third_party/dart/sdk/');
-  if (_looksLikeLibraryRoot(guess)) {
-    return _resolveSymbolicLinks(guess);
-  }
-  guess = executable.resolve('../');
-  if (_looksLikeLibraryRoot(guess)) {
-    return _resolveSymbolicLinks(guess);
-  }
-  guess = guess.resolve('../sdk/');
-  if (_looksLikeLibraryRoot(guess)) {
-    return _resolveSymbolicLinks(guess);
-  }
+  Uri guess = executable.resolve('../../lib/');
+  if (_looksLikeLibraryRoot(guess, platform)) return guess;
   return null;
-}
-
-Uri _guessPatchRoot(Uri libraryRoot) {
-  Uri guess = libraryRoot.resolve('../../../');
-  if (_looksLikePatchRoot(guess)) return guess;
-  return null;
-}
-
-bool _looksLikePatchRoot(Uri uri) {
-  return _containsFile(uri, 'lib/core/core_patch.dart');
 }
 
 bool _looksLikeNativesJson(Uri uri) {

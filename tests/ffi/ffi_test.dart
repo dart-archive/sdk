@@ -1,10 +1,11 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch.ffi';
 import 'dart:fletch';
 import "package:expect/expect.dart";
+import "package:isolate/isolate.dart";
 
 bool isRangeError(e) => e is RangeError;
 bool isArgumentError(e) => e is ArgumentError;
@@ -27,7 +28,6 @@ main() {
   testPCallAndMemory(true);
   testPCallAndMemory(false);
   testStruct();
-  testForeignCString();
 
   testImmutablePassing(false);
   testImmutablePassing(true);
@@ -260,8 +260,6 @@ testPCallAndMemory(bool immutable) {
   Expect.approxEquals(memory.getFloat64(24), 1.79769e+308);
   checkOutOfBoundsThrows(() => memory.getFloat64(25));
   freeMem(memory);
-
-  fl.close();
 }
 
 testVAndICall() {
@@ -280,6 +278,11 @@ testVAndICall() {
   Expect.equals(1, getcount.icall$0());
   Expect.equals(42, setcount.icall$1(42));
 
+  // Test that reading out the value of the variable directly works
+  var count = fl.lookupVariable('count');
+  var countMemory = new ForeignMemory.fromAddress(count.address, 4);
+  Expect.equals(42, countMemory.getInt32(0));
+
   // Test all the icall wrappers, all c functions returns the sum of the
   // arguments.
   var icall0 = fl.lookup('ifun0');
@@ -289,6 +292,7 @@ testVAndICall() {
   var icall4 = fl.lookup('ifun4');
   var icall5 = fl.lookup('ifun5');
   var icall6 = fl.lookup('ifun6');
+  var icall7 = fl.lookup('ifun7');
   Expect.equals(0, icall0.icall$0());
   Expect.equals(1, icall1.icall$1(1));
   Expect.equals(2, icall2.icall$2(1, 1));
@@ -296,6 +300,7 @@ testVAndICall() {
   Expect.equals(4, icall4.icall$4(1, 1, 1, 1));
   Expect.equals(5, icall5.icall$5(1, 1, 1, 1, 1));
   Expect.equals(6, icall6.icall$6(1, 1, 1, 1, 1, 1));
+  Expect.equals(7, icall7.icall$7(1, 1, 1, 1, 1, 1, 1));
 
   // Some limit tests, this is more of sanity checking of our conversions.
   Expect.equals(-1, icall1.icall$1(-1));
@@ -317,6 +322,7 @@ testVAndICall() {
   var icall4EINTR = fl.lookup('ifun4EINTR');
   var icall5EINTR = fl.lookup('ifun5EINTR');
   var icall6EINTR = fl.lookup('ifun6EINTR');
+  var icall7EINTR = fl.lookup('ifun7EINTR');
   Expect.equals(-1, icall0EINTR.icall$0());
   Expect.equals(4, Foreign.errno);
   Expect.equals(-1, icall1EINTR.icall$1(1));
@@ -330,6 +336,8 @@ testVAndICall() {
   Expect.equals(-1, icall5EINTR.icall$5(1, 1, 1, 1, 1));
   Expect.equals(4, Foreign.errno);
   Expect.equals(-1, icall6EINTR.icall$6(1, 1, 1, 1, 1, 1));
+  Expect.equals(4, Foreign.errno);
+  Expect.equals(-1, icall7EINTR.icall$7(1, 1, 1, 1, 1, 1, 1));
   Expect.equals(4, Foreign.errno);
   Expect.equals(0, icall0EINTR.icall$0Retry());
   Expect.equals(4, Foreign.errno);
@@ -345,6 +353,8 @@ testVAndICall() {
   Expect.equals(4, Foreign.errno);
   Expect.equals(6, icall6EINTR.icall$6Retry(1, 1, 1, 1, 1, 1));
   Expect.equals(4, Foreign.errno);
+  Expect.equals(7, icall7EINTR.icall$7Retry(1, 1, 1, 1, 1, 1, 1));
+  Expect.equals(4, Foreign.errno);
 
   // Test that ForeignFunction.retry is available (note that this will
   // not actually retry as the retry count was exhausted by the calls above).
@@ -358,7 +368,8 @@ testVAndICall() {
       5, ForeignFunction.retry(() => icall5EINTR.icall$5(1, 1, 1, 1, 1)));
   Expect.equals(
       6, ForeignFunction.retry(() => icall6EINTR.icall$6(1, 1, 1, 1, 1, 1)));
-
+  Expect.equals(
+      7, ForeignFunction.retry(() => icall7EINTR.icall$7(1, 1, 1, 1, 1, 1, 1)));
 
   // Test all the void wrappers. The vcall c functions will set the count to
   // the sum of the arguments, testable by running getcount.
@@ -383,7 +394,6 @@ testVAndICall() {
   Expect.equals(5, getcount.icall$0());
   Expect.equals(null, vcall6.vcall$6(1, 1, 1, 1, 1, 1));
   Expect.equals(6, getcount.icall$0());
-  fl.close();
 }
 
 testFailingLibraryLookups() {
@@ -498,9 +508,9 @@ testImmutablePassing(finalized) {
       : new ImmutableForeignMemory.allocated(length);
   memory.setFloat32(0, 42.0);
   if (finalized) {
-    Process.spawn(otherProcess, memory);
+    Isolate.spawn(() => otherProcess(memory)).join();
   } else {
-    Process.spawn(otherProcessNonFinalized, memory);
+    Isolate.spawn(() => otherProcessNonFinalized(memory)).join();
   }
 }
 
@@ -602,28 +612,4 @@ testStruct() {
   struct.free();
   struct64.free();
   struct32.free();
-  fl.close();
-}
-
-testForeignCString() {
-  var memory = new ForeignMemory.allocated(100);
-  memory.setUint8(0, 65);
-  memory.setUint8(1, 0);
-  Expect.equals(
-      'A', new ForeignCString.fromForeignPointer(memory).toString());
-  memory.setUint8(0, 0xc3);
-  memory.setUint8(1, 0x98);
-  memory.setUint8(2, 0);
-  Expect.equals(
-      'Ø', new ForeignCString.fromForeignPointer(memory).toString());
-  memory.free();
-
-  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
-  ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
-  var memstring = fl.lookup('memstring');
-  var foreignPointer = memstring.pcall$0();
-  Expect.equals(
-      'dart', new ForeignCString.fromForeignPointer(foreignPointer).toString());
-  memory = new ForeignMemory.fromAddress(foreignPointer.address, 5);
-  memory.free();
 }

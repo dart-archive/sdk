@@ -1,22 +1,44 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// Fletch file package.
+/// File access APIs. Only supported when Dartino is running on a Posix platform.
 ///
-/// This is a preliminary API providing file access when Fletch is
-/// running on a Posix platform.
+/// Usage
+/// -----
+/// ```dart
+/// import 'package:file/file.dart';
+///
+/// void main() {
+///   var file = new File.temporary("/tmp/file_test");
+///   // Use file.read() or file.write()
+///   file.close();
+///   File.delete(file.path);
+/// ```
+///
+/// Reporting issues
+/// ----------------
+/// Please file an issue [in the issue
+/// tracker](https://github.com/dartino/sdk/issues/new?title=Add%20title&labels=Area-Package&body=%3Cissue%20description%3E%0A%3Crepro%20steps%3E%0A%3Cexpected%20outcome%3E%0A%3Cactual%20outcome%3E).
 library file;
 
 import 'dart:typed_data';
 
 import 'package:os/os.dart';
 
+final File _stdin = new File._('/dev/stdin', 0);
+final File _stdout = new File._('/dev/stdout', 1);
+final File _stderr = new File._('/dev/stderr', 2);
+
 class File {
   static const int READ       = 0;
   static const int WRITE      = 1;
   static const int APPEND     = 2;
   static const int WRITE_ONLY = 3;
+
+  static get stdin => _stdin;
+  static get stdout => _stdout;
+  static get stderr => _stderr;
 
   final String path;
   int _fd;

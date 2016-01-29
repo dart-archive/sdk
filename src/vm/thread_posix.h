@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -10,6 +10,7 @@
 #endif
 
 #include <pthread.h>
+#include <signal.h>
 #include <errno.h>
 
 #include "src/shared/assert.h"
@@ -21,12 +22,10 @@ namespace fletch {
 // Thread handles can be used for referring to threads and testing equality.
 class ThreadIdentifier {
  public:
-  ThreadIdentifier() : thread_(pthread_self()) { }
+  ThreadIdentifier() : thread_(pthread_self()) {}
 
   // Test for thread running.
-  bool IsSelf() const {
-    return pthread_equal(thread_, pthread_self());
-  }
+  bool IsSelf() const { return pthread_equal(thread_, pthread_self()); }
 
   // Try to join the thread identified by this [ThreadIdentifier].
   //
@@ -44,12 +43,11 @@ class ThreadIdentifier {
  private:
   friend class Thread;
 
-  explicit ThreadIdentifier(pthread_t thread) : thread_(thread) { }
+  explicit ThreadIdentifier(pthread_t thread) : thread_(thread) {}
 
   pthread_t thread_;
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_THREAD_POSIX_H_

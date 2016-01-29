@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,14 +7,18 @@
 
 import 'dart:fletch';
 
+import 'package:isolate/isolate.dart';
+
 main() {
   var channel = new Channel();
-  Process.spawn(worker, new Port(channel));
+  var initPort = new Port(channel);
+  var isolate = Isolate.spawn(() => worker(initPort));
   var port = channel.receive();
   for (int i = 0; i < 10; i++) {
     port.send(1);
   }
   port.send(0);
+  isolate.join();
 }
 
 worker(Port port) {

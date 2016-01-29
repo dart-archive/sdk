@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 #
 
-# Script to build a tarball of the Fletch source.
+# Script to build a tarball of the Dartino source.
 #
-# The tarball includes all the source needed to build Fletch. This
-# includes the fletch repository checkout, the source in third_party
+# The tarball includes all the source needed to build Dartino. This
+# includes the Dartino sdk repository checkout, the source in third_party
 # and the Dart repository checkout. As part of creating the tarball
 # the files used to build Debian packages are copied to a top-level
 # debian directory. This makes it easy to build Debian packages from
@@ -17,9 +17,9 @@
 # For building a Debian package one need to the tarball to follow the
 # Debian naming rules upstream tar files.
 #
-#  $ mv fletch-XXX.tar.gz fletch_XXX.orig.tar.gz
-#  $ tar xf fletch_XXX.orig.tar.gz
-#  $ cd fletch_XXX
+#  $ mv dartino-XXX.tar.gz dartino_XXX.orig.tar.gz
+#  $ tar xf dartino_XXX.orig.tar.gz
+#  $ cd dartino_XXX
 #  $ debuild -us -uc
 
 import datetime
@@ -34,12 +34,12 @@ import utils
 
 HOST_OS = utils.GuessOS()
 FLETCH_DIR = abspath(join(__file__, '..', '..'))
-# The repository directory where fletch, dart and third_party are located.
+# The repository directory where dartino, dart and third_party are located.
 REPO_DIR = abspath(join(__file__, '..', '..', '..'))
 # Flags.
 verbose = False
 
-# Name of the fletch directory when unpacking the tarball.
+# Name of the dartino directory when unpacking the tarball.
 versiondir = ''
 
 # Ignore Git/SVN files, checked-in binaries, backup files, etc.
@@ -48,15 +48,17 @@ versiondir = ''
 # for building the modified Raspbian SD-card image as this tarball is
 # added to that image to have it include all source required to
 # generate it in the first place.
-ignoredPaths = ['fletch/out',
-                'fletch/tools/testing/bin',
-                'fletch/third_party/clang',
-                'fletch/third_party/bin/linux/qemu',
-                'fletch/third_party/bin/linux/qemu.tar.gz',
-                'fletch/third_party/lk',
-                'fletch/third_party/openocd',
-                'fletch/third_party/qemu',
-                'fletch/third_party/raspbian']
+ignoredPaths = ['sdk/out',
+                'sdk/tools/testing/bin',
+                'sdk/third_party/clang',
+                'sdk/third_party/bin/linux/qemu',
+                'sdk/third_party/bin/linux/qemu.tar.gz',
+                'sdk/third_party/gcc-arm-embedded',
+                'sdk/third_party/lk',
+                'sdk/third_party/openocd',
+                'sdk/third_party/qemu',
+                'sdk/third_party/raspbian',
+                'sdk/third_party/stm']
 ignoredDirs = ['.svn', '.git']
 ignoredEndings = ['.mk', '.pyc', 'Makefile', '~']
 
@@ -99,20 +101,20 @@ def GenerateCopyright(filename):
     license_lines = lf.readlines()
 
   with open(filename, 'w') as f:
-    f.write('Name: fletch\n')
-    f.write('Maintainer: Dart Team <misc@dartlang.org>\n')
-    f.write('Source: https://github.com/dart-lang/fletch/\n')
+    f.write('Name: dartino\n')
+    f.write('Maintainer: Dartino Team <misc@dartino.org>\n')
+    f.write('Source: https://github.com/dartino/sdk/\n')
     f.write('License:\n')
     for line in license_lines:
       f.write(' %s' % line)  # Line already contains trailing \n.
 
 def GenerateChangeLog(filename, version):
   with open(filename, 'w') as f:
-    f.write('fletch (%s-1) UNRELEASED; urgency=low\n' % version)
+    f.write('dartino (%s-1) UNRELEASED; urgency=low\n' % version)
     f.write('\n')
     f.write('  * Generated file.\n')
     f.write('\n')
-    f.write(' -- Dart Team <misc@dartlang.org>  %s\n' %
+    f.write(' -- Dartino Team <misc@dartino.org>  %s\n' %
             datetime.datetime.utcnow().strftime('%a, %d %b %Y %X +0000'))
 
 def GenerateGitRevision(filename, git_revision):
@@ -125,7 +127,7 @@ def CreateTarball(tarfilename):
   # Generate the name of the tarfile
   version = utils.GetVersion()
   global versiondir
-  versiondir = 'fletch-%s' % version
+  versiondir = 'dartino-%s' % version
   debian_dir = 'tools/linux_dist_support/debian'
   # Don't include the build directory in the tarball (ignored paths
   # are relative to FLETCH_DIR).
@@ -159,7 +161,7 @@ def CreateTarball(tarfilename):
       git_revision = join(temp_dir, 'GIT_REVISION')
       GenerateGitRevision(git_revision, utils.GetGitRevision())
       tar.add(git_revision,
-              arcname='%s/fletch/tools/GIT_REVISION' % versiondir)
+              arcname='%s/sdk/tools/GIT_REVISION' % versiondir)
 
 def Main():
   if HOST_OS != 'linux':
@@ -177,7 +179,7 @@ def Main():
   if not tar_filename:
     tar_filename = join(FLETCH_DIR,
                         utils.GetBuildDir(HOST_OS),
-                        'fletch-%s.tar.gz' % utils.GetVersion())
+                        'dartino-%s.tar.gz' % utils.GetVersion())
 
   CreateTarball(tar_filename)
 

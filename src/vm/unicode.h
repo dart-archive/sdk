@@ -56,8 +56,8 @@ class Utf {
 class Utf8 {
  public:
   enum Type {
-    kLatin1 = 0,  // Latin-1 code point [U+0000, U+00FF].
-    kBMP,  // Basic Multilingual Plane code point [U+0000, U+FFFF].
+    kLatin1 = 0,     // Latin-1 code point [U+0000, U+00FF].
+    kBMP,            // Basic Multilingual Plane code point [U+0000, U+FFFF].
     kSupplementary,  // Supplementary code point [U+010000, U+10FFFF].
   };
 
@@ -67,10 +67,10 @@ class Utf8 {
   static word Encode(int32 ch, char* dst);
   static word Encode(TwoByteString* src, char* dst, word len);
 
-  static const int32 kMaxOneByteChar   = 0x7F;
-  static const int32 kMaxTwoByteChar   = 0x7FF;
+  static const int32 kMaxOneByteChar = 0x7F;
+  static const int32 kMaxTwoByteChar = 0x7FF;
   static const int32 kMaxThreeByteChar = 0xFFFF;
-  static const int32 kMaxFourByteChar  = Utf::kMaxCodePoint;
+  static const int32 kMaxFourByteChar = Utf::kMaxCodePoint;
 
  private:
   static bool IsTrailByte(uint8_t code_unit) {
@@ -99,24 +99,16 @@ class Utf8 {
 class Utf16 {
  public:
   // Returns the length of the code point in UTF-16 code units.
-  static word Length(int32 ch) {
-    return (ch <= Utf16::kMaxCodeUnit) ? 1 : 2;
-  }
+  static word Length(int32 ch) { return (ch <= Utf16::kMaxCodeUnit) ? 1 : 2; }
 
   // Returns true if ch is a lead or trail surrogate.
-  static bool IsSurrogate(int32 ch) {
-    return (ch & 0xFFFFF800) == 0xD800;
-  }
+  static bool IsSurrogate(int32 ch) { return (ch & 0xFFFFF800) == 0xD800; }
 
   // Returns true if ch is a lead surrogate.
-  static bool IsLeadSurrogate(int32 ch) {
-    return (ch & 0xFFFFFC00) == 0xD800;
-  }
+  static bool IsLeadSurrogate(int32 ch) { return (ch & 0xFFFFFC00) == 0xD800; }
 
   // Returns true if ch is a low surrogate.
-  static bool IsTrailSurrogate(int32 ch) {
-    return (ch & 0xFFFFFC00) == 0xDC00;
-  }
+  static bool IsTrailSurrogate(int32 ch) { return (ch & 0xFFFFFC00) == 0xDC00; }
 
   // Returns the character at i and advances i to the next character
   // boundary.

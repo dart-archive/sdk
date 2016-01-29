@@ -1,0 +1,24 @@
+This directory contains the pre-built GNU toolchain from ARM Cortex-M &
+Cortex-R processors (Cortex-M0/M0+/M3/M4/M7, Cortex-R4/R5/R7).
+
+This is from https://launchpad.net/gcc-arm-embedded.
+
+To update to a new version do the following:
+
+1. Download the version and unpack it.
+
+2. Create a copy in a directory called gcc-arm-embedded, copying
+   following symlinks (and hardlinks, but that is default), e.g.:
+
+   $ cp -RL gcc-arm-none-eabi-4_9-2015q3 gcc-arm-embedded
+
+3. Add an approiate README.google file (start with the one
+   in the previous version and update it).
+
+4. Tar and upload th Google Cloud Storage
+
+   $ tar caf gcc-arm-embedded.tar.gz gcc-arm-embedded
+   $ upload_to_google_storage.py \
+       -b dart-dependencies-fletch gcc-arm-embedded.tar.gz
+
+5. Create a CL updating the .sha1 files.

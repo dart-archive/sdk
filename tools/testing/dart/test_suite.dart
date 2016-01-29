@@ -195,7 +195,7 @@ abstract class TestSuite {
     if (dartExecutable == '') {
       String suffix = executableBinarySuffix;
       dartExecutable = useSdk
-          ? '$buildDir/fletch-sdk/internal/dart$suffix'
+          ? '$buildDir/dartino-sdk/internal/dart$suffix'
           : '$buildDir/dart$suffix';
     }
 

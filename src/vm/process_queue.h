@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -14,10 +14,9 @@ namespace fletch {
 
 class ThreadState;
 
-
 class ProcessQueue {
  public:
-  ProcessQueue() : head_(NULL), tail_(NULL) { }
+  ProcessQueue() : head_(NULL), tail_(NULL) {}
 
   // Try to enqueue [entry].
   // Returns false if it was not possible to modify the queue. The operation
@@ -29,7 +28,7 @@ class ProcessQueue {
     ASSERT(entry != kSentinel);
     ASSERT(entry->queue_next_ == NULL);
     ASSERT(entry->queue_previous_ == NULL);
-    ASSERT(entry->queue_ == NULL);
+    ASSERT(entry->queue_.load() == NULL);
     Process* head = head_.load(kRelaxed);
     while (true) {
       if (head == kSentinel) return false;

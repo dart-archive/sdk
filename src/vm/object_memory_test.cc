@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -9,7 +9,7 @@
 
 namespace fletch {
 
-static Chunk* AllocateChunkAndTestIt(Space* space) {
+static Chunk* AllocateChunkAndTestIt(SemiSpace* space) {
   // Allocate chunk.
   Chunk* chunk = ObjectMemory::AllocateChunk(space, 4 * KB);
   EXPECT(chunk->base() != 0);
@@ -24,7 +24,7 @@ static Chunk* AllocateChunkAndTestIt(Space* space) {
 }
 
 TEST_CASE(ObjectMemory) {
-  Space space;
+  SemiSpace space;
 
   // Allocate.
   Chunk* first = AllocateChunkAndTestIt(&space);
@@ -36,42 +36,6 @@ TEST_CASE(ObjectMemory) {
   // Free.
   ObjectMemory::FreeChunk(first);
   ObjectMemory::FreeChunk(second);
-}
-
-TEST_CASE(Space_PrependSpace) {
-  // Test prepending onto non-empty space.
-  {
-    Space* space = new Space(32);
-    Space* space2 = new Space(32);
-
-    space->AdjustAllocationBudget(0);
-    space2->AdjustAllocationBudget(0);
-
-    space->Allocate(8);
-    uword space2_object = space2->Allocate(8);
-    space2->PrependSpace(space);
-    uword space2_object2 = space2->Allocate(8);
-
-    ASSERT(space2_object2 == (space2_object + 8));
-
-    delete space2;
-  }
-  // Test prepending onto empty space.
-  {
-    Space* space = new Space(32);
-    Space* space2 = new Space();
-
-    space->AdjustAllocationBudget(0);
-    space2->AdjustAllocationBudget(0);
-
-    uword space_object = space->Allocate(8);
-    space2->PrependSpace(space);
-    uword space_object2 = space2->Allocate(8);
-
-    ASSERT(space_object2 == (space_object + 8));
-
-    delete space2;
-  }
 }
 
 }  // namespace fletch

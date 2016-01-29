@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -27,7 +27,7 @@ class PortableOffset {
       : offset_64bits_double(0),
         offset_64bits_float(0),
         offset_32bits_double(0),
-        offset_32bits_float(0) { }
+        offset_32bits_float(0) {}
   PortableOffset(const PortableOffset& other)
       : offset_64bits_double(other.offset_64bits_double),
         offset_64bits_float(other.offset_64bits_float),
@@ -49,8 +49,8 @@ class PortableOffset {
   int offset_32bits_float;
 };
 
-typedef HashMap<Function*, PortableOffset*> FunctionOffsetsType;
-typedef HashMap<Class*, PortableOffset*> ClassOffsetsType;
+typedef HashMap<Function*, PortableOffset> FunctionOffsetsType;
+typedef HashMap<Class*, PortableOffset> ClassOffsetsType;
 
 class SnapshotReader {
  public:
@@ -60,9 +60,8 @@ class SnapshotReader {
         large_integer_class_(NULL),
         memory_(NULL),
         top_(0),
-        index_(0) {
-  }
-  ~SnapshotReader() { }
+        index_(0) {}
+  ~SnapshotReader() {}
 
   // Reads an entire program.
   Program* ReadProgram();
@@ -93,6 +92,7 @@ class SnapshotReader {
   friend class LargeInteger;
   friend class Double;
   friend class Initializer;
+  friend class DispatchTableEntry;
   friend class ReaderVisitor;
 
  private:
@@ -126,8 +126,8 @@ class SnapshotWriter {
         position_(0),
         index_(1),
         function_offsets_(function_offsets),
-        class_offsets_(class_offsets) { }
-  ~SnapshotWriter() { }
+        class_offsets_(class_offsets) {}
+  ~SnapshotWriter() {}
 
   // Create a snapshot of a program. The program must be folded.
   List<uint8> WriteProgram(Program* program);
@@ -156,6 +156,7 @@ class SnapshotWriter {
   friend class LargeInteger;
   friend class Double;
   friend class Initializer;
+  friend class DispatchTableEntry;
   friend class UnmarkSnapshotVisitor;
   friend class WriterVisitor;
 
@@ -185,6 +186,5 @@ class SnapshotWriter {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_SNAPSHOT_H_

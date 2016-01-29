@@ -13,4 +13,4 @@ BUILDROOT ?= out
 # set the default project if no args are passed
 DEFAULT_PROJECT ?= qemu-virt-fletch
 
-#TOOLCHAIN_PREFIX := <relative path to toolchain>
+TOOLCHAIN_PREFIX := ../gcc-arm-embedded/linux/gcc-arm-embedded/bin/arm-none-eabi-

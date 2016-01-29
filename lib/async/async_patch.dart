@@ -1,13 +1,12 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch._system' as fletch;
+import 'dart:fletch._system' show patch;
 import 'dart:fletch';
 import 'dart:fletch.os' as os;
 import 'dart:math';
-
-const patch = "patch";
 
 Channel _eventQueue;
 int _numberOfEvents = 0;
@@ -114,4 +113,8 @@ class _FletchTimer implements Timer {
                                      callback,
                                      milliseconds);
   }
+}
+
+@patch void _rethrow(Object error, StackTrace stackTrace) {
+  throw new AsyncError(error, stackTrace);
 }

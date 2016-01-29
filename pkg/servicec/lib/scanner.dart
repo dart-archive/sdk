@@ -1,24 +1,31 @@
-// Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 library servicec.scanner;
 
-import "package:compiler/src/scanner/scannerlib.dart" show
-    GT_INFO,
-    EOF_INFO,
-    ErrorToken,
-    IDENTIFIER_INFO,
-    KEYWORD_TOKEN,
-    Keyword,
-    KeywordToken,
-    PrecedenceInfo,
-    STRING_INFO,
-    StringScanner,
+import 'package:compiler/src/tokens/token.dart' show
     StringToken,
+    ErrorToken,
+    KeywordToken,
     SymbolToken,
     Token,
     UnmatchedToken;
+
+import 'package:compiler/src/tokens/precedence_constants.dart' show
+    GT_INFO,
+    EOF_INFO,
+    IDENTIFIER_INFO,
+    STRING_INFO;
+
+import 'package:compiler/src/tokens/precedence.dart' show
+    PrecedenceInfo;
+
+import "package:compiler/src/tokens/keyword.dart" show
+    Keyword;
+
+import "package:compiler/src/scanner/string_scanner.dart" show
+    StringScanner;
 
 import "package:compiler/src/util/characters.dart" show
     $LF;

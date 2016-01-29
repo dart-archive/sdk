@@ -1,0 +1,35 @@
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+rule gyp
+  command = $
+    .\tools\gyp-windows.bat --depth=. -Iwindows_targets.gypi $
+        -Goutput_dir=out $
+        --format=ninja fletch.gyp $
+        --no-parallel
+
+build $
+    out\DebugIA32\build.ninja $
+    out\DebugX64\build.ninja $
+    out\ReleaseIA32\build.ninja $
+    out\ReleaseX64\build.ninja: $
+    gyp $
+        common.gypi $
+        windows_targets.gypi $
+        fletch.gyp $
+        version.gyp $
+        src\double_conversion.gyp $
+        src\shared\shared.gyp $
+        src\tools\driver\driver.gyp $
+        src\vm\vm.gyp
+# TODO(346): Enable build of mdns once ported to Windows.
+# src\pkg\mdns\mdns.gyp $
+
+build gyp: phony$
+    out\DebugIA32\build.ninja $
+    out\DebugX64\build.ninja $
+    out\ReleaseIA32\build.ninja $
+    out\ReleaseX64\build.ninja
+
+default gyp

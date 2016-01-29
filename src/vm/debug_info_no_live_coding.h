@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -22,16 +22,18 @@ class DebugInfo {
  public:
   static const int kNoBreakpointId = -1;
 
+  explicit DebugInfo(int process_id) {
+    UNIMPLEMENTED();
+  }
+
   bool ShouldBreak(uint8* bcp, Object** sp) {
     UNIMPLEMENTED();
     return false;
   }
 
-  int SetBreakpoint(Function* function,
-                    int bytecode_index,
-                    bool one_shot = false,
-                    Coroutine* coroutine = NULL,
-                    int stack_height = 0) {
+  int SetBreakpoint(Function* function, int bytecode_index,
+                    bool one_shot = false, Coroutine* coroutine = NULL,
+                    word stack_height = 0) {
     UNIMPLEMENTED();
     return 0;
   }
@@ -41,30 +43,24 @@ class DebugInfo {
     return false;
   }
 
-  void set_is_stepping(bool value) {
-    UNIMPLEMENTED();
-  }
+  void set_is_stepping(bool value) { UNIMPLEMENTED(); }
 
   bool is_at_breakpoint() const {
     UNIMPLEMENTED();
     return false;
   }
 
-  void clear_current_breakpoint() {
-    UNIMPLEMENTED();
-  }
+  void clear_current_breakpoint() { UNIMPLEMENTED(); }
 
-  void VisitPointers(PointerVisitor* visitor) {
-    UNIMPLEMENTED();
-  }
+  void VisitPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 
-  void VisitProgramPointers(PointerVisitor* visitor) {
-    UNIMPLEMENTED();
-  }
+  void VisitProgramPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 
-  void UpdateBreakpoints() {
-    UNIMPLEMENTED();
-  }
+  void UpdateBreakpoints() { UNIMPLEMENTED(); }
+
+  void ClearBreakpoint() { UNIMPLEMENTED(); }
+
+  void SetStepping() { UNIMPLEMENTED(); }
 };
 
 }  // namespace fletch

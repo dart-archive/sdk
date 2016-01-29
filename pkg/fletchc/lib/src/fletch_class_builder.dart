@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -6,7 +6,7 @@ library fletchc.fletch_class_builder;
 
 import 'package:compiler/src/dart_types.dart';
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/universe/universe.dart';
+import 'package:compiler/src/universe/selector.dart';
 import 'package:persistent/persistent.dart';
 
 import 'fletch_function_builder.dart';
@@ -14,7 +14,7 @@ import 'fletch_context.dart';
 import 'fletch_backend.dart';
 
 import '../fletch_system.dart';
-import '../commands.dart';
+import '../vm_commands.dart';
 
 // TODO(ahe): Remove this import.
 import '../incremental/fletchc_incremental.dart' show
@@ -50,7 +50,7 @@ abstract class FletchClassBuilder {
 
   FletchClass finalizeClass(
       FletchContext context,
-      List<Command> commands);
+      List<VmCommand> commands);
 
   // The method table for a class is a mapping from Fletch's integer
   // selectors to method ids. It contains all methods defined for a
@@ -58,7 +58,7 @@ abstract class FletchClassBuilder {
   // TODO(ajohnsen): Remove once not used by feature_test anymore.
   PersistentMap<int, int> computeMethodTable();
 
-  bool computeSchemaChange(List<Command> commands) {
+  bool computeSchemaChange(List<VmCommand> commands) {
     return false;
   }
 }
@@ -156,12 +156,12 @@ class FletchNewClassBuilder extends FletchClassBuilder {
     // CodegenEnqueuer.
     int fieldIndex = superclassFields;
     element.implementation.forEachInstanceField((enclosing, field) {
-      var getter = new Selector.getter(field.name, field.library);
+      var getter = new Selector.getter(field.memberName);
       int getterSelector = backend.context.toFletchSelector(getter);
       _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
 
       if (!field.isFinal) {
-        var setter = new Selector.setter(field.name, field.library);
+        var setter = new Selector.setter(new Name(field.name, field.library));
         var setterSelector = backend.context.toFletchSelector(setter);
         _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
       }
@@ -172,16 +172,16 @@ class FletchNewClassBuilder extends FletchClassBuilder {
 
   void createIsFunctionEntry(FletchBackend backend, int arity) {
     int fletchSelector = backend.context.toFletchIsSelector(
-        backend.compiler.functionClass);
+        backend.compiler.coreClasses.functionClass);
     addIsSelector(fletchSelector);
     fletchSelector = backend.context.toFletchIsSelector(
-        backend.compiler.functionClass, arity);
+        backend.compiler.coreClasses.functionClass, arity);
     addIsSelector(fletchSelector);
   }
 
   FletchClass finalizeClass(
       FletchContext context,
-      List<Command> commands) {
+      List<VmCommand> commands) {
     if (isBuiltin) {
       int nameId = context.getSymbolId(element.name);
       commands.add(new PushBuiltinClass(nameId, fields));
@@ -278,12 +278,12 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     // CodegenEnqueuer.
     int fieldIndex = superclassFields + extraFields;
     element.implementation.forEachInstanceField((enclosing, field) {
-      var getter = new Selector.getter(field.name, field.library);
+      var getter = new Selector.getter(new Name(field.name, field.library));
       int getterSelector = backend.context.toFletchSelector(getter);
       _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
 
       if (!field.isFinal) {
-        var setter = new Selector.setter(field.name, field.library);
+        var setter = new Selector.setter(new Name(field.name, field.library));
         var setterSelector = backend.context.toFletchSelector(setter);
         _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
       }
@@ -292,12 +292,14 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
     });
 
     for (FieldElement field in _removedFields) {
-      Selector getter = new Selector.getter(field.name, field.library);
+      Selector getter =
+          new Selector.getter(new Name(field.name, field.library));
       int getterSelector = backend.context.toFletchSelector(getter);
       _removedAccessors.add(getterSelector);
 
       if (!field.isFinal) {
-        Selector setter = new Selector.setter(field.name, field.library);
+        Selector setter =
+            new Selector.setter(new Name(field.name, field.library));
         int setterSelector = backend.context.toFletchSelector(setter);
         _removedAccessors.add(setterSelector);
       }
@@ -333,7 +335,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
 
   FletchClass finalizeClass(
       FletchContext context,
-      List<Command> commands) {
+      List<VmCommand> commands) {
     // TODO(ajohnsen): We need to figure out when to do this. It should be after
     // we have updated class fields, but before we hit 'computeSystem'.
     updateImplicitAccessors(context.backend);
@@ -362,7 +364,7 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
         fieldsList);
   }
 
-  bool computeSchemaChange(List<Command> commands) {
+  bool computeSchemaChange(List<VmCommand> commands) {
     if (!_fieldsChanged) return false;
 
     // TODO(ajohnsen): Don't recompute this list.

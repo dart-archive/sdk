@@ -2,8 +2,7 @@ Starting session. Type 'help' for a list of commands.
 
 > r
 Uncaught exception: ''runtimeType' isn't supported in Fletch. See https://goo.gl/ELH6Zc'
-Stack trace:
-> 0: x lazy initializer  @12.runtimeType
+* 0: x lazy initializer  @12.runtimeType
   1: main                @x
 > q
 Non-zero exit code from 'fletch-vm' (255).

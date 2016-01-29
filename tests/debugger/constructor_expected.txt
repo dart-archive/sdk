@@ -1,56 +1,118 @@
+Starting session. Type 'help' for a list of commands.
+
+> t verbose
+### verbose printing set to: false
+> b main
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
+> r
 main    @42
+> s
 main    @new B(42)
+> s
 B initializer   @a
+> s
 B initializer   @a
+> s
 B initializer   @add(a, a)
+> s
 add @x
+> s
 add @y
+> s
 add @x + y
+> s
 add @=> x + y;
+> s
 B initializer   @_a = add(a, a)
+> s
 B initializer   @a
+> s
 B initializer   @a
+> s
 B initializer   @x
+> s
 B initializer   @_x = x
+> s
 B initializer   @y
+> s
 B initializer   @_y = y
+> s
 B initializer   @x
+> s
 B initializer   @y
+> s
 B initializer   @add(x, y)
+> s
 add @x
+> s
 add @y
+> s
 add @x + y
+> s
 add @=> x + y;
+> s
 B initializer   @_z = add(x, y)
+> s
 A   @initA(_x, _y, _z)
+> s
 A   @_x
+> s
 A   @_y
+> s
 A   @_z
+> s
 A   @initA(_x, _y, _z)
+> s
 A.initA @a
+> s
 A.initA @b
+> s
 A.initA @a == b
+> s
 A.initA @_z = a + c
+> s
 A.initA @a
+> s
 A.initA @c
+> s
 A.initA @a + c
+> s
 A.initA @_z = a + c
+> s
 A   @initA(_x, _y, _z)
+> s
 B   @initB(_a, _x, _y, _z)
+> s
 B   @_a
+> s
 B   @_x
+> s
 B   @_y
+> s
 B   @_z
+> s
 B   @initB(_a, _x, _y, _z)
+> s
 B.initB @sum = a + b + c + d
+> s
 B.initB @a
+> s
 B.initB @b
+> s
 B.initB @a + b
+> s
 B.initB @c
+> s
 B.initB @a + b + c
+> s
 B.initB @d
+> s
 B.initB @a + b + c + d
+> s
 B.initB @sum = a + b + c + d
+> s
 B   @initB(_a, _x, _y, _z)
+> s
 main    @new B(42)
+> s
 ### process terminated

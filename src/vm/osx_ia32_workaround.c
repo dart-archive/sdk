@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -22,4 +22,8 @@ int fputs$UNIX2003(const char* restrict str, FILE* restrict stream) {
 
 pid_t waitpid$UNIX2003(pid_t pid, int* status, int options) {
   return waitpid(pid, status, options);
+}
+
+char* strerror$UNIX2003(int errnum) {
+  return strerror(errnum);
 }

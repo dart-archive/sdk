@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,17 +11,11 @@
 
 namespace fletch {
 
-WeakPointer::WeakPointer(HeapObject* object,
-                         WeakPointerCallback callback,
+WeakPointer::WeakPointer(HeapObject* object, WeakPointerCallback callback,
                          WeakPointer* next)
-    : object_(object),
-      callback_(callback),
-      prev_(NULL),
-      next_(next) { }
+    : object_(object), callback_(callback), prev_(NULL), next_(next) {}
 
-void WeakPointer::Process(Space* space,
-                          WeakPointer** pointers,
-                          Heap* heap) {
+void WeakPointer::Process(Space* space, WeakPointer** pointers, Heap* heap) {
   WeakPointer* new_list = NULL;
   WeakPointer* previous = NULL;
   WeakPointer* current = *pointers;
@@ -29,15 +23,8 @@ void WeakPointer::Process(Space* space,
     WeakPointer* next = current->next_;
     HeapObject* current_object = current->object_;
     if (space->Includes(current_object->address())) {
-      bool alive = false;
-      HeapObject* forward = current_object->forwarding_address();
-      if (space->using_copying_collector()) {
-        alive = forward != NULL;
-        if (alive) current->object_ = forward;
-      } else {
-        alive = current_object->IsMarked();
-      }
-      if (alive) {
+      if (space->IsAlive(current_object)) {
+        current->object_ = space->NewLocation(current_object);
         if (new_list == NULL) new_list = current;
         previous = current;
       } else {

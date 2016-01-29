@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,6 +12,10 @@
     {
       'target_name': 'double_conversion',
       'type': 'static_library',
+      'target_conditions': [
+        ['_toolset == "target"', {
+          'standalone_static_library': 1,
+	}]],
       'toolsets': ['target', 'host'],
       'sources': [
         '../third_party/double-conversion/src/bignum-dtoa.cc',
@@ -24,10 +28,6 @@
         '../third_party/double-conversion/src/diy-fp.h',
         '../third_party/double-conversion/src/double-conversion.cc',
         '../third_party/double-conversion/src/double-conversion.h',
-        '../third_party/double-conversion/src/fast-dtoa.cc',
-        '../third_party/double-conversion/src/fast-dtoa.h',
-        '../third_party/double-conversion/src/fixed-dtoa.cc',
-        '../third_party/double-conversion/src/fixed-dtoa.h',
         '../third_party/double-conversion/src/ieee.h',
         '../third_party/double-conversion/src/strtod.cc',
         '../third_party/double-conversion/src/strtod.h',

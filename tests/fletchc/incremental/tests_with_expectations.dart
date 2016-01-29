@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -127,6 +127,60 @@ main() {
 ====
   int secondHashCode = foo.hashCode;
   print("firstHashCode == secondHashCode: ${firstHashCode == secondHashCode}");
+>>>>
+}
+''',
+
+// Test that we can do a program rewrite (which implies a big GC) while there
+// are multiple processes alive that depend on the program.
+  r'''
+program_gc_with_processes
+==> main.dart.patch <==
+import 'dart:fletch';
+
+class Comms {
+<<<< "Setup"
+==== "Hello world"
+  int late_arrival;
+>>>>
+  var paused;
+  var pausedPort;
+  var resumePort;
+  Process process;
+}
+
+Comms comms;
+
+void SubProcess(Port pausedPort) {
+  // This function, used by the spawned processes, does not exist after the
+  // rewrite, but it will be on the stack, so it is kept alive across the GC.
+  var c = new Channel();
+  pausedPort.send(new Port(c));
+  c.receive();
+  print("Hello world");
+}
+
+main() {
+<<<<
+  // The setup takes place before the rewrite.
+  comms = new Comms();
+
+  comms.paused = new Channel();
+  var pausedPort = comms.pausedPort = new Port(comms.paused);
+
+  comms.process = Process.spawnDetached(() => SubProcess(pausedPort));
+
+  print("Setup");
+====
+  // After the rewrite we get the port from the sub-process and send the
+  // data it needs to resume running.
+  comms.resumePort = comms.paused.receive();
+
+  var monitor = new Channel();
+
+  comms.process.monitor(new Port(monitor));
+
+  comms.resumePort.send(null);
 >>>>
 }
 ''',
@@ -442,8 +496,7 @@ class C {
   static m() {
 <<<< "v1"
   print('v1');
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Shouldn't throw.
+==== ["v2"]
   print('v2');
 >>>>
   }
@@ -917,6 +970,117 @@ main() {
 ''',
 
   r'''
+signature_change_parameter_instance_method
+==> main.dart.patch <==
+// Test that instance methods can have signature changed
+
+class C {
+<<<< ["instance is null","v1"]
+  foo() {
+    print('v1');
+  }
+==== "v2"
+  foo(int i) {
+    print('v2');
+  }
+>>>>>
+}
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+    instance.foo();
+  } else {
+    instance.foo(1);
+  }
+}
+
+
+''',
+
+  r'''
+super_call_simple_change
+==> main.dart.patch <==
+// Test that super calls are dispatched correctly
+class C {
+
+  foo() {
+<<<< ["instance is null","v1"]
+    print('v1');
+==== "v2"
+    print('v2');
+>>>>>
+  }
+}
+
+class B extends C {
+  bar() {
+    super.foo();
+  }
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new B();
+  }
+
+  instance.bar();
+}
+
+
+''',
+
+  r'''
+super_call_signature_change
+==> main.dart.patch <==
+// Test that super calls are dispatched correctly
+class C {
+<<<< ["instance is null", "v1", "super.foo()", "super.foo(42) threw"]
+  foo() {
+    print('v1');
+  }
+==== ["super.foo() threw", "v2", "super.foo(42)"]
+  foo(int i) {
+    print('v2');
+  }
+>>>>>
+}
+
+class B extends C {
+  superFooNoArgs() => super.foo();
+  superFooOneArg(x) => super.foo(x);
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new B();
+  }
+  try {
+    instance.superFooNoArgs();
+    print("super.foo()");
+  } catch (e) {
+    print("super.foo() threw");
+  }
+  try {
+    instance.superFooOneArg(42);
+    print("super.foo(42)");
+  } catch (e) {
+    print("super.foo(42) threw");
+  }
+}
+
+
+''',
+
+  r'''
 add_class
 ==> main.dart.patch <==
 // Test that adding a class is supported
@@ -1076,6 +1240,40 @@ main() {
 ==== ["v2"]
   instance.foo();
 >>>>
+}
+
+
+''',
+
+  r'''
+call_named_arguments_from_instance_method
+==> main.dart.patch <==
+// Similiar to call_named_arguments_2 but where the change in the way the method
+// with named parameters is called happens in an instance method belonging to
+// the same class.
+
+class C {
+  foo({a: 'v2'}) {
+    print(a);
+  }
+
+  bar() {
+<<<< ["instance is null", "v1"]
+    foo(a: 'v1');
+==== "v2"
+    foo();
+>>>>
+  }
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+  }
+  instance.bar();
 }
 
 
@@ -1264,6 +1462,113 @@ main() {
 ==== "v2"
   print(const C('v2').value);
 >>>>
+}
+
+
+''',
+
+  r'''
+constant_retaining
+==> main.dart.patch <==
+// Test that constants are retained
+class Foo {
+  const Foo();
+}
+
+class Bar {
+  final f = const Foo();
+  const Bar();
+}
+
+class Baz {
+  final f = const Foo();
+  const Baz();
+}
+
+class C {
+  foo() {
+<<<< ["true"]
+    return const Foo();
+==== ["true"]
+    return const Bar().f;
+==== ["true"]
+    return const Baz().f;
+>>>>
+  }
+}
+
+void main() {
+  var c = new C();
+  print(identical(c.foo(), const Foo()));
+}
+
+
+''',
+
+  r'''
+constant_retaining_2
+==> main.dart.patch <==
+// Test that constants are handled correctly when stored in a top-level
+// variable.
+var constant;
+
+class Foo {
+  const Foo();
+}
+
+class C {
+  foo() {
+<<<< ["v1", "true"]
+    print("v1");
+    constant = const Foo();
+==== ["v2", "true"]
+    print("v2");
+==== ["v3", "true"]
+    print("v3");
+>>>>
+    print(constant == const Foo());
+  }
+}
+
+main() {
+  new C().foo();
+}
+
+
+''',
+
+  r'''
+constant_retaining_3
+==> main.dart.patch <==
+// Similiar to constant_retaining_2, but tests that constant handling is still
+// correct even if an unrelated constant is introduced and removed again.
+var constant;
+
+class Foo {
+  const Foo();
+}
+
+class Bar {
+  const Bar();
+}
+
+class C {
+  foo() {
+<<<< ["v1", "true"]
+    print("v1");
+    constant = const Foo();
+==== ["v2", "false", "true"]
+    print("v2");
+    print(constant == const Bar());
+==== ["v3", "true"]
+    print("v3");
+>>>>
+    print(constant == const Foo());
+  }
+}
+
+main() {
+  new C().foo();
 }
 
 
@@ -2037,8 +2342,8 @@ class C {
 ==== {"messages":[],"hasCompileTimeError":1}
   // TODO(ahe): Should just expect [], no compile-time error
   sync();
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should just expect [], not throw
+==== {"messages":[],"hasCompileTimeError":1}
+  // TODO(ahe): Should just expect [], no compile-time error
 >>>>
 }
 main() {
@@ -2350,6 +2655,32 @@ void main() {
   var a = new A();
   a.a();
 >>>>
+}
+''',
+
+r'''
+add_unused_enum_class
+==> main.dart.patch <==
+<<<< []
+==== {"messages": [], "compileUpdatesShouldThrow":1}
+// TODO(ahe): Shouldn't throw
+enum E { e0 }
+>>>>
+
+main() {
+}
+''',
+
+r'''
+remove_unused_enum_class
+==> main.dart.patch <==
+<<<< []
+enum E { e0 }
+==== {"messages": [], "compileUpdatesShouldThrow":1}
+// TODO(ahe): Shouldn't throw
+>>>>
+
+main() {
 }
 ''',
 ];

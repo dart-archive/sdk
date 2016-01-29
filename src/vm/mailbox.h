@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,12 +12,12 @@
 
 namespace fletch {
 
-template<typename MessageType>
+template <typename MessageType>
 class Mailbox {
  public:
   Mailbox() : last_message_(NULL), current_message_(NULL) {}
   ~Mailbox() {
-    while (last_message_ != NULL) {
+    while (last_message_.load() != NULL) {
       MessageType* entry = last_message_;
       last_message_ = entry->next();
       delete entry;
@@ -27,7 +27,7 @@ class Mailbox {
       current_message_ = entry->next();
       delete entry;
     }
-    ASSERT(last_message_ == NULL);
+    ASSERT(last_message_.load() == NULL);
   }
 
   void EnqueueEntry(MessageType* entry) {
@@ -40,12 +40,13 @@ class Mailbox {
   }
 
   // Thread-safe way of asking if the mailbox is empty.
-  bool IsEmpty() const { return last_message_ == NULL; }
+  bool IsEmpty() const { return last_message_.load() == NULL; }
 
   void TakeQueue() {
     ASSERT(current_message_ == NULL);
     MessageType* last = last_message_;
-    while (!last_message_.compare_exchange_weak(last, NULL)) { }
+    while (!last_message_.compare_exchange_weak(last, NULL)) {
+    }
     current_message_ = Reverse(last);
   }
 
@@ -76,10 +77,9 @@ class Mailbox {
 
  private:
   void IterateMailQueuePointers(MessageType* entry, PointerVisitor* visitor) {
-    for (MessageType* current = entry;
-         current != NULL;
+    for (MessageType* current = entry; current != NULL;
          current = current->next()) {
-       current->VisitPointers(visitor);
+      current->VisitPointers(visitor);
     }
   }
 
@@ -95,7 +95,7 @@ class Mailbox {
   }
 };
 
-template<typename MessageType>
+template <typename MessageType>
 class MailboxMessage {
  public:
   MailboxMessage() : next_(NULL) {}
@@ -108,6 +108,5 @@ class MailboxMessage {
 };
 
 }  // namespace fletch
-
 
 #endif  // SRC_VM_MAILBOX_H_

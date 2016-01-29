@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -95,44 +95,36 @@ static char* StrAlloc(size_t size) {
   return result;
 }
 
-static void StrCpy(
-    void* destination,
-    size_t destination_size,
-    const void* source,
-    size_t source_size) {
+static void StrCpy(void* destination, size_t destination_size,
+                   const void* source, size_t source_size) {
   const void* source_end = memchr(source, '\0', source_size);
   if (source_end == NULL) {
     Die("%s: source isn't zero-terminated.", program_name);
   }
   size_t source_length = reinterpret_cast<const uint8*>(source_end) -
-      reinterpret_cast<const uint8*>(source);
+                         reinterpret_cast<const uint8*>(source);
   // Increment source_length to include '\0'.
   source_length++;
 
   if (source_length > destination_size) {
-    Die("%s: not enough room in destination (%i) for %i bytes.",
-        program_name, destination_size, source_length);
+    Die("%s: not enough room in destination (%i) for %i bytes.", program_name,
+        destination_size, source_length);
   }
 
   memcpy(destination, source, source_length);
 }
 
-static void StrCat(
-    void* destination,
-    size_t destination_size,
-    const void* source,
-    size_t source_size) {
+static void StrCat(void* destination, size_t destination_size,
+                   const void* source, size_t source_size) {
   void* destination_end = memchr(destination, '\0', destination_size);
   if (destination_end == NULL) {
     Die("%s: destination isn't zero-terminated.", program_name);
   }
-  size_t destination_length =
-    reinterpret_cast<uint8*>(destination_end) -
-    reinterpret_cast<uint8*>(destination);
+  size_t destination_length = reinterpret_cast<uint8*>(destination_end) -
+                              reinterpret_cast<uint8*>(destination);
 
-  StrCpy(
-      destination_end, destination_size - destination_length,
-      source, source_size);
+  StrCpy(destination_end, destination_size - destination_length, source,
+         source_size);
 }
 
 static void Close(int fd) {
@@ -177,8 +169,8 @@ void ParentDir(char* directory) {
   strncpy(copy, directory, MAXPATHLEN);
   char* parent = dirname(copy);
   if (parent == NULL) {
-    Die("%s: Unable to compute parent directory of '%s': %s",
-        program_name, directory, strerror(errno));
+    Die("%s: Unable to compute parent directory of '%s': %s", program_name,
+        directory, strerror(errno));
   }
   // TODO(ahe): Use StrCat or StrCpy instead.
   strncpy(directory, parent, MAXPATHLEN);
@@ -200,8 +192,8 @@ static void DetectConfiguration() {
   char* fletch_config_env = getenv(fletch_config_env_name);
   if (fletch_config_env != NULL) {
     fletch_config_location = fletch_config_env_name;
-    StrCpy(fletch_config_file, sizeof(fletch_config_file),
-           fletch_config_env, strlen(fletch_config_env) + 1);
+    StrCpy(fletch_config_file, sizeof(fletch_config_file), fletch_config_env,
+           strlen(fletch_config_env) + 1);
     return;
   }
 
@@ -226,10 +218,10 @@ static void DetectConfiguration() {
   struct passwd pwd;
   struct passwd* result = NULL;
   int error_code =
-    getpwuid_r(getuid(), &pwd, pwd_buffer, pwd_buffer_size, &result);
+      getpwuid_r(getuid(), &pwd, pwd_buffer, pwd_buffer_size, &result);
   if (error_code != 0) {
-    Die("%s: Unable to determine home directory: %s",
-        program_name, strerror(error_code));
+    Die("%s: Unable to determine home directory: %s", program_name,
+        strerror(error_code));
   }
   if (result == NULL) {
     Die("%s: Unable to determine home directory: Entry for user not found.",
@@ -279,8 +271,8 @@ static void ReadDriverConfig() {
     ssize_t bytes = TEMP_FAILURE_RETRY(
         read(fletch_config_fd, fletch_socket_file + offset, length - offset));
     if (bytes < 0) {
-      Die("%s: Unable to read from '%s'. Failed with error: %s",
-          program_name, fletch_config_file, strerror(errno));
+      Die("%s: Unable to read from '%s'. Failed with error: %s", program_name,
+          fletch_config_file, strerror(errno));
     } else if (bytes == 0) {
       break;  // End of file.
     }
@@ -301,7 +293,7 @@ static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
 
   // 'buffer' is now the absolute path of this executable (with symlinks
   // resolved). When running from fletch-repo, this executable will be in
-  // "fletch-repo/fletch/out/$CONFIGURATION/fletch_driver".
+  // "fletch-repo/fletch/out/$CONFIGURATION/fletch".
   ParentDir(buffer);
   // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
 
@@ -330,7 +322,7 @@ static void GetExecutableDir(char* buffer, size_t buffer_length) {
 
   // 'buffer' is now the absolute path of this executable (with symlinks
   // resolved). When running from fletch-repo, this executable will be in
-  // "fletch-repo/fletch/out/$CONFIGURATION/fletch_driver".
+  // "fletch-repo/fletch/out/$CONFIGURATION/fletch".
   ParentDir(buffer);
   // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
 
@@ -367,12 +359,11 @@ static void ComputeFletchVmPath(char* buffer, size_t buffer_length) {
 
 // Stores the package root in 'buffer'. The value of 'fletch_root' must be the
 // absolute path of '.../fletch-repo/fletch/' (including trailing slash).
-static void ComputePackageSpec(
-    char* buffer, size_t buffer_length,
-    const char* fletch_root, size_t fletch_root_length) {
+static void ComputePackageSpec(char* buffer, size_t buffer_length,
+                               const char* fletch_root,
+                               size_t fletch_root_length) {
   StrCpy(buffer, buffer_length, fletch_root, fletch_root_length);
-  StrCat(buffer, buffer_length,
-         FLETCHC_PKG_FILE, sizeof(FLETCHC_PKG_FILE));
+  StrCat(buffer, buffer_length, FLETCHC_PKG_FILE, sizeof(FLETCHC_PKG_FILE));
   // 'buffer' is now, for example, "fletch-repo/fletch/package/".
 }
 
@@ -396,18 +387,13 @@ pid_t Fork() {
   return pid;
 }
 
-static void WaitForDaemonHandshake(
-    pid_t pid,
-    int parent_stdout,
-    int parent_stderr);
+static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
+                                   int parent_stderr);
 
-static void ExecDaemon(
-    int child_stdout,
-    int child_stderr,
-    const char** argv);
+static void ExecDaemon(int child_stdout, int child_stderr, const char** argv);
 
 static void StartDriverDaemon() {
-  const int kMaxArgv = 10;
+  const int kMaxArgv = 9;
   const char* argv[kMaxArgv];
 
   char fletch_root[MAXPATHLEN + 1];
@@ -420,30 +406,28 @@ static void StartDriverDaemon() {
   ComputeFletchVmPath(fletch_vm_path, sizeof(fletch_vm_path));
 
   char fletch_vm_option[sizeof("-Dfletch-vm=") + MAXPATHLEN + 1];
-  StrCpy(fletch_vm_option, sizeof(fletch_vm_option),
-         "-Dfletch-vm=", sizeof("-Dfletch-vm="));
-  StrCat(fletch_vm_option, sizeof(fletch_vm_option),
-         fletch_vm_path, sizeof(fletch_vm_path));
+  StrCpy(fletch_vm_option, sizeof(fletch_vm_option), "-Dfletch-vm=",
+         sizeof("-Dfletch-vm="));
+  StrCat(fletch_vm_option, sizeof(fletch_vm_option), fletch_vm_path,
+         sizeof(fletch_vm_path));
 
   char package_spec[MAXPATHLEN + 1];
-  ComputePackageSpec(
-      package_spec, sizeof(package_spec), fletch_root, sizeof(fletch_root));
+  ComputePackageSpec(package_spec, sizeof(package_spec), fletch_root,
+                     sizeof(fletch_root));
   char package_option[sizeof("--packages=") + MAXPATHLEN + 1];
-  StrCpy(package_option, sizeof(package_option),
-         "--packages=", sizeof("--packages="));
-  StrCat(package_option, sizeof(package_option),
-         package_spec, sizeof(package_spec));
+  StrCpy(package_option, sizeof(package_option), "--packages=",
+         sizeof("--packages="));
+  StrCat(package_option, sizeof(package_option), package_spec,
+         sizeof(package_spec));
 
   const char library_root[] = "-Dfletchc-library-root=" FLETCHC_LIBRARY_ROOT;
-  const char patch_root[] = "-Dfletch-patch-root=" FLETCHC_PATCH_ROOT;
   const char define_version[] = "-Dfletch.version=";
   const char* version = GetVersion();
   int version_option_length = sizeof(define_version) + strlen(version) + 1;
   char* version_option = StrAlloc(version_option_length);
-  StrCpy(version_option, version_option_length,
-         define_version, sizeof(define_version));
-  StrCat(version_option, version_option_length,
-         version, strlen(version) + 1);
+  StrCpy(version_option, version_option_length, define_version,
+         sizeof(define_version));
+  StrCat(version_option, version_option_length, version, strlen(version) + 1);
 
   int argc = 0;
   argv[argc++] = vm_path;
@@ -452,8 +436,7 @@ static void StartDriverDaemon() {
   argv[argc++] = package_option;
   argv[argc++] = version_option;
   argv[argc++] = library_root;
-  argv[argc++] = patch_root;
-  argv[argc++] = "package:fletchc/src/driver/driver_main.dart";
+  argv[argc++] = "package:fletchc/src/hub/hub_main.dart";
   argv[argc++] = fletch_config_file;
   argv[argc++] = NULL;
   if (argc > kMaxArgv) Die("Internal error: increase argv size");
@@ -500,10 +483,7 @@ static void Dup2(int source, int destination) {
   }
 }
 
-static void ExecDaemon(
-    int child_stdout,
-    int child_stderr,
-    const char** argv) {
+static void ExecDaemon(int child_stdout, int child_stderr, const char** argv) {
   Close(STDIN_FILENO);
 
   // Change directory to '/' to ensure that we use the client's working
@@ -537,8 +517,7 @@ static void ExecDaemon(
 }
 
 static ssize_t Read(int fd, char* buffer, size_t buffer_length) {
-  ssize_t bytes_read =
-      TEMP_FAILURE_RETRY(read(fd, buffer, buffer_length));
+  ssize_t bytes_read = TEMP_FAILURE_RETRY(read(fd, buffer, buffer_length));
   if (bytes_read < 0) {
     Die("%s: read failed: %s", program_name, strerror(errno));
   }
@@ -547,11 +526,8 @@ static ssize_t Read(int fd, char* buffer, size_t buffer_length) {
 
 // Forwards data on file descriptor "from" to "to" using the buffer. Errors are
 // fatal. Returns true if "from" was closed.
-static bool ForwardWithBuffer(
-    int from,
-    int to,
-    char* buffer,
-    ssize_t* buffer_length) {
+static bool ForwardWithBuffer(int from, int to, char* buffer,
+                              ssize_t* buffer_length) {
   ssize_t bytes_read = Read(from, buffer, *buffer_length);
   *buffer_length = bytes_read;
   if (bytes_read == 0) return true;
@@ -564,10 +540,8 @@ static bool ForwardWithBuffer(
   return false;
 }
 
-static void WaitForDaemonHandshake(
-    pid_t pid,
-    int parent_stdout,
-    int parent_stderr) {
+static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
+                                   int parent_stderr) {
   int status;
   waitpid(pid, &status, 0);
   if (!WIFEXITED(status)) {
@@ -575,8 +549,8 @@ static void WaitForDaemonHandshake(
   }
   status = WEXITSTATUS(status);
   if (status != 0) {
-    Die("%s: child process exited with non-zero exit code %i.",
-        program_name, status);
+    Die("%s: child process exited with non-zero exit code %i.", program_name,
+        status);
   }
 
   char stdout_buffer[4096];
@@ -606,8 +580,8 @@ static void WaitForDaemonHandshake(
     } else {
       if (FD_ISSET(parent_stderr, &readfds)) {
         ssize_t bytes_read = sizeof(buffer);
-        stderr_is_closed = ForwardWithBuffer(
-            parent_stderr, STDERR_FILENO, buffer, &bytes_read);
+        stderr_is_closed = ForwardWithBuffer(parent_stderr, STDERR_FILENO,
+                                             buffer, &bytes_read);
       }
       if (FD_ISSET(parent_stdout, &readfds)) {
         ssize_t bytes_read = Read(parent_stdout, buffer, sizeof(buffer) - 1);
@@ -625,14 +599,12 @@ static void WaitForDaemonHandshake(
           // debugging easier.
           if (match[1] != '\0') {
             FlushAllStreams();
-            WriteFully(STDOUT_FILENO,
-                       reinterpret_cast<uint8*>(buffer),
+            WriteFully(STDOUT_FILENO, reinterpret_cast<uint8*>(buffer),
                        bytes_read);
           }
           match[0] = '\0';
-          StrCpy(
-              fletch_socket_file, sizeof(fletch_socket_file),
-              stdout_buffer, sizeof(stdout_buffer));
+          StrCpy(fletch_socket_file, sizeof(fletch_socket_file), stdout_buffer,
+                 sizeof(stdout_buffer));
           // We got the server handshake (the socket file). So we break to
           // eventually return from this function.
           break;
@@ -739,9 +711,8 @@ Socket* Connect() {
   struct sockaddr_un address;
 
   address.sun_family = AF_UNIX;
-  StrCpy(
-      address.sun_path, sizeof(address.sun_path),
-      fletch_socket_file, sizeof(fletch_socket_file));
+  StrCpy(address.sun_path, sizeof(address.sun_path), fletch_socket_file,
+         sizeof(fletch_socket_file));
 
   int fd = socket(PF_UNIX, SOCK_STREAM, 0);
   if (fd < 0) {
@@ -750,7 +721,7 @@ Socket* Connect() {
   Socket* socket = Socket::FromFd(fd);
 
   int connect_result = TEMP_FAILURE_RETRY(connect(
-    fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)));
+      fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)));
   if (connect_result != 0) {
     delete socket;
     return NULL;
@@ -769,8 +740,8 @@ static void HandleSignal(int signal_pipe, DriverConnection* connection) {
 static int CheckedSystem(const char* command) {
   int exit_status = system(command);
   if (exit_status == -1) {
-    Die("%s: system(%s) failed with error: %s",
-        program_name, command, strerror(errno));
+    Die("%s: system(%s) failed with error: %s", program_name, command,
+        strerror(errno));
   }
   if (WIFSIGNALED(exit_status)) {
     // command exited due to signal, for example, the user pressed Ctrl-C. In
@@ -784,41 +755,38 @@ static int CheckedSystem(const char* command) {
 // process hasn't exited after 2 seconds.
 // The process is identified using lsof on the Dart VM binary.
 static int QuitCommand() {
-  char* vm_path = StrAlloc(MAXPATHLEN + 1);
-  int command_length = 2 * MAXPATHLEN + 1;
-  char* command = StrAlloc(command_length);
-  ComputeDartVmPath(vm_path, MAXPATHLEN + 1);
-  // TODO(ahe): pgrep -f package:fletchc/src/driver/driver_main.dart would
-  // probably be better.
-  const char lsof[] = "lsof -t -- ";
-  const char dev_null[] = "> /dev/null";
-  const char kill[] = "| xargs kill";
-  const char lsof_repeat[] = "lsof -t +r2m%n -- ";
-  const char kill9[] = "| xargs -n1 kill -9";
+  const int MAX_COMMAND_LENGTH = 256;
+  char command[MAX_COMMAND_LENGTH];
+  // We used exec to avoid having pkill the /bin/sh parent process it is running
+  // as a child of when redirecting to /dev/null.
+  const char pkill[] = "exec pkill -f ";
+  const char pkill_force[] = "exec pkill -KILL -f ";
+  const char driver_arguments[] =
+      "package:fletchc/src/driver/driver_main > /dev/null";
+  const char hub_arguments[] = "package:fletchc/src/hub/hub_main > /dev/null";
 
-  StrCpy(command, command_length, lsof, sizeof(lsof));
-  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
-  StrCat(command, command_length, dev_null, sizeof(dev_null));
+  StrCpy(command, MAX_COMMAND_LENGTH, pkill, sizeof(pkill));
+  StrCat(command, MAX_COMMAND_LENGTH, hub_arguments, sizeof(hub_arguments));
 
-  // lsof -t -- <Dart VM> > /dev/null
+  const char* current_arguments = hub_arguments;
+  // pkill -f package:fletchc/src/hub/hub_main
   if (CheckedSystem(command) != 0) {
-    // Remove the socket location file.
-    unlink(fletch_config_file);
-    free(command);
-    free(vm_path);
-
-    printf("Background process wasn't running\n");
-
-    // lsof returns 0 if it listed processes.
-    return 0;
+    // pkill returns 0 if it killed any processes, so in this case it didn't
+    // find/kill any active persistent processes
+    // Try with the legacy driver_main path to see if an old persistent process
+    // was running.
+    StrCpy(command, MAX_COMMAND_LENGTH, pkill, sizeof(pkill));
+    StrCat(command, MAX_COMMAND_LENGTH, driver_arguments,
+        sizeof(driver_arguments));
+    // pkill -f package:fletchc/src/driver/driver_main
+    if (CheckedSystem(command) != 0) {
+      // No legacy persistent process. Just remove the socket location file.
+      unlink(fletch_config_file);
+      printf("Background process wasn't running\n");
+      return 0;
+    }
+    current_arguments = driver_arguments;
   }
-
-  StrCpy(command, command_length, lsof, sizeof(lsof));
-  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
-  StrCat(command, command_length, kill, sizeof(kill));
-
-  // lsof -t -- <Dart VM> | xargs kill
-  CheckedSystem(command);
 
   // Wait two seconds for the process to exit gracefully.
   sleep(2);
@@ -826,32 +794,27 @@ static int QuitCommand() {
   // Remove the socket location file.
   unlink(fletch_config_file);
 
-  StrCpy(command, command_length, lsof, sizeof(lsof));
-  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
-  StrCat(command, command_length, dev_null, sizeof(dev_null));
+  // To check if the process exited gracefully we try to kill it again
+  // (this time with SIGKILL). If that command doesn't find any running
+  // processes it will return 1. If it finds one or more running instance
+  // it returns 0 in which case we know it didn't shutdown gracefully above.
+  // We use the return value to decide what to report to the user.
+  StrCpy(command, MAX_COMMAND_LENGTH, pkill_force, sizeof(pkill_force));
+  StrCat(command, MAX_COMMAND_LENGTH, current_arguments,
+     strlen(current_arguments) + 1);
 
-  // lsof -t -- <Dart VM> > /dev/null
+  // pkill -KILL -f package:fletchc/src/hub/hub_main or
+  // pkill -KILL -f package:fletchc/src/driver/driver_main depending on the
+  // above pkill.
   if (CheckedSystem(command) != 0) {
+    // We assume it didn't find any processes to kill when returning a
+    // non-zero value and hence just report the process gracefully exited.
     printf("Background process exited\n");
-    free(command);
-    free(vm_path);
-
-    // lsof returns 0 if it listed processes.
-    return 0;
+  } else {
+    printf(
+        "The background process didn't exit after 2 seconds. "
+        "Forcefully quit the background process.\n");
   }
-
-  printf("The background process didn't quit after 2 seconds. "
-         "Attempting forced quit.\n");
-
-  StrCpy(command, command_length, lsof_repeat, sizeof(lsof_repeat));
-  StrCat(command, command_length, vm_path, MAXPATHLEN + 1);
-  StrCat(command, command_length, kill9, sizeof(kill9));
-
-  // lsof -t +r2m%n -- <Dart VM> | xargs -n1 kill -9
-  CheckedSystem(command);
-  free(command);
-  free(vm_path);
-  printf("Forced quit succeeded\n");
   return 0;
 }
 
@@ -925,15 +888,15 @@ static int Main(int argc, char** argv) {
             stdin_closed = true;
           }
         } else if (bytes_count < 0) {
-          Die("%s: Error reading from stdin: %s",
-              program_name, strerror(errno));
+          Die("%s: Error reading from stdin: %s", program_name,
+              strerror(errno));
         }
       }
       if (FD_ISSET(control_socket->FileDescriptor(), &readfds)) {
         DriverConnection::Command command = HandleCommand(connection);
         if (command == DriverConnection::kDriverConnectionError) {
-          Die("%s: lost connection to persistent process: %s",
-              program_name, strerror(errno));
+          Die("%s: lost connection to persistent process: %s", program_name,
+              strerror(errno));
         } else if (command == DriverConnection::kDriverConnectionClosed) {
           // Connection was closed.
           break;
@@ -949,6 +912,4 @@ static int Main(int argc, char** argv) {
 }  // namespace fletch
 
 // Forward main calls to fletch::Main.
-int main(int argc, char** argv) {
-  return fletch::Main(argc, argv);
-}
+int main(int argc, char** argv) { return fletch::Main(argc, argv); }

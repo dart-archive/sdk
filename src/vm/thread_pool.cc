@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -12,12 +12,9 @@ ThreadPool::ThreadPool(int max_threads)
       max_threads_(max_threads),
       threads_(0),
       thread_info_(NULL),
-      started_(false) {
-}
+      started_(false) {}
 
-ThreadPool::~ThreadPool() {
-  delete monitor_;
-}
+ThreadPool::~ThreadPool() { delete monitor_; }
 
 struct ThreadInfo {
   ThreadPool* thread_pool;
@@ -28,11 +25,10 @@ struct ThreadInfo {
   ThreadInfo* next;
 };
 
-bool ThreadPool::TryStartThread(Runable run, void* data, int threads_limit) {
+bool ThreadPool::TryStartThread(Runable run, void* data) {
   // Start with inexpensive check.
   int value = threads_;
-  if (max_threads_ < threads_limit) threads_limit = max_threads_;
-  if (value >= threads_limit) return true;
+  if (value >= max_threads_) return true;
   if (!threads_.compare_exchange_weak(value, value + 1)) return false;
 
   // NOTE: This will create a new [ThreadInfo] object. All of the objects will

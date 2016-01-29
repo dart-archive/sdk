@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -8,7 +8,7 @@ import 'messages.dart' show
     DiagnosticKind,
     getMessage;
 
-import 'driver/sentence_parser.dart' show
+import 'hub/sentence_parser.dart' show
     Preposition,
     Target,
     TargetKind,
@@ -42,7 +42,7 @@ class DiagnosticParameter {
       DiagnosticParameterType.target, 'target');
 
   static const DiagnosticParameter requiredTarget = const DiagnosticParameter(
-      DiagnosticParameterType.target, 'requiredTarget');
+      DiagnosticParameterType.targetKind, 'requiredTarget');
 
   static const DiagnosticParameter userInput = const DiagnosticParameter(
       DiagnosticParameterType.string, 'userInput');
@@ -61,6 +61,9 @@ class DiagnosticParameter {
   // example, Spannable from dart2js.
   static const DiagnosticParameter uri = const DiagnosticParameter(
       DiagnosticParameterType.uri, 'uri');
+
+  static const DiagnosticParameter fixit = const DiagnosticParameter(
+      DiagnosticParameterType.string, 'fixit');
 }
 
 enum DiagnosticParameterType {
@@ -68,6 +71,7 @@ enum DiagnosticParameterType {
   verb,
   sessionName,
   target,
+  targetKind,
   preposition,
   uri,
 }
@@ -112,15 +116,30 @@ class Diagnostic {
 
         case DiagnosticParameterType.target:
           Target target = value;
-          // TODO(ahe): Improve this conversion.
-          stringValue = target.toString();
+          // TODO(karlklose): Improve this conversion.
+          stringValue = '$target';
+          break;
+
+        case DiagnosticParameterType.targetKind:
+          TargetKind kind = value;
+          // TODO(karlklose): Improve this conversion.
+          stringValue = '$kind';
           break;
 
         case DiagnosticParameterType.preposition:
           Preposition preposition = value;
-          // TODO(ahe): Improve this conversion.
+          // TODO(karlklose): Improve this conversion.
           stringValue =
               preposition.kind.toString().split('.').last.toLowerCase();
+          break;
+
+        default:
+          throwInternalError("""
+Unsupported parameter type '${parameter.type}'
+found for parameter '$parameter'
+when trying to format the following error message:
+
+$formattedMessage""");
           break;
       }
       formattedMessage = formattedMessage.replaceAll('$parameter', stringValue);
@@ -200,7 +219,8 @@ void throwFatalError(
      String userInput,
      String additionalUserInput,
      Preposition preposition,
-     Uri uri}) {
+     Uri uri,
+     String fixit}) {
   Map<DiagnosticParameter, dynamic> arguments =
       <DiagnosticParameter, dynamic>{};
   if (message != null) {
@@ -229,6 +249,12 @@ void throwFatalError(
   }
   if (uri != null) {
     arguments[DiagnosticParameter.uri] = uri;
+  }
+  if (requiredTarget != null) {
+    arguments[DiagnosticParameter.requiredTarget] = requiredTarget;
+  }
+  if (fixit != null) {
+    arguments[DiagnosticParameter.fixit] = fixit;
   }
   throw new InputError(kind, arguments);
 }

@@ -1,0 +1,20 @@
+Starting session. Type 'help' for a list of commands.
+
+> bf a.dart 5
+breakpoint set: id: '0' method: 'a' bytecode index: '2'
+> r
+tests/debugger/find_file_test/a/a.dart:5:9
+5    int a() => 10;
+> bf b.dart 5
+Multiple matches for file pattern b.dart. Please select from the following choices:
+  1: tests/debugger/find_file_test/a/b.dart
+  2: tests/debugger/find_file_test/b/b.dart
+  a: all of the above
+  n: none of the above
+> 2
+breakpoint set: id: '1' method: 'b' bytecode index: '2'
+> c
+tests/debugger/find_file_test/b/b.dart:5:9
+5    int b() => 30;
+> c
+### process terminated

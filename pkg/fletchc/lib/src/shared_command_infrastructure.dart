@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -6,8 +6,8 @@
 ///
 /// We have two independent command kinds that follow the same scheme:
 ///
-///   1. ../commands.dart
-///   2. driver/driver_commands.dart
+///   1. ../vm_commands.dart
+///   2. hub/client_commands.dart
 ///
 /// Both commands are serialized in this format (using little endian):
 ///

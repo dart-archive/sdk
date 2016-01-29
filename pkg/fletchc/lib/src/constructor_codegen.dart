@@ -1,17 +1,15 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 library fletchc.constructor_codegen;
 
-import 'package:compiler/src/dart2jslib.dart' show
-    MessageKind,
-    Registry;
-
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/resolution.dart';
+import 'package:compiler/src/resolution/tree_elements.dart' show
+    TreeElements;
 import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/universe.dart';
+import 'package:compiler/src/universe/call_structure.dart' show
+    CallStructure;
 import 'package:compiler/src/dart_types.dart';
 
 import 'fletch_context.dart';
@@ -40,7 +38,6 @@ class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
 
   final List<ConstructorElement> constructors = <ConstructorElement>[];
 
-  TreeElements initializerElements;
   ClosureEnvironment initializerClosureEnvironment;
 
   ConstructorCodegen(FletchFunctionBuilder functionBuilder,
@@ -56,11 +53,6 @@ class ConstructorCodegen extends CodegenVisitor with FletchRegistryMixin {
   ConstructorElement get constructor => element;
 
   BytecodeAssembler get assembler => functionBuilder.assembler;
-
-  TreeElements get elements {
-    if (initializerElements != null) return initializerElements;
-    return super.elements;
-  }
 
   ClosureEnvironment get closureEnvironment {
     if (initializerClosureEnvironment != null) {

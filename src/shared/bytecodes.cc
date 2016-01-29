@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -29,8 +29,7 @@ uint8 Bytecode::Print(uint8* bcp) {
   } else if (strcmp(bytecode_format, "BI") == 0) {
     Print::Out(print_format, bcp[1], Utils::ReadInt32(bcp + 2));
   } else if (strcmp(bytecode_format, "II") == 0) {
-    Print::Out(print_format,
-               Utils::ReadInt32(bcp + 1),
+    Print::Out(print_format, Utils::ReadInt32(bcp + 1),
                Utils::ReadInt32(bcp + 5));
   } else {
     FATAL1("Unknown bytecode format %s\n", bytecode_format);
@@ -38,12 +37,10 @@ uint8 Bytecode::Print(uint8* bcp) {
   return Size(opcode);
 }
 
-
 uint8 Bytecode::Size(Opcode opcode) {
   const uint8 sizes[kNumBytecodes] = {
-#define EACH(name, branching, format, size, stack_diff, print) \
-    size,
-  BYTECODES_DO(EACH)
+#define EACH(name, branching, format, size, stack_diff, print) size,
+      BYTECODES_DO(EACH)
 #undef EACH
   };
   ASSERT(opcode < kNumBytecodes);
@@ -54,9 +51,8 @@ uint8 Bytecode::Size(Opcode opcode) {
 
 const char* Bytecode::PrintFormat(Opcode opcode) {
   const char* print_formats[kNumBytecodes] = {
-#define EACH(name, branching, format, size, stack_diff, print) \
-    print,
-  BYTECODES_DO(EACH)
+#define EACH(name, branching, format, size, stack_diff, print) print,
+      BYTECODES_DO(EACH)
 #undef EACH
   };
   ASSERT(opcode < kNumBytecodes);
@@ -65,9 +61,8 @@ const char* Bytecode::PrintFormat(Opcode opcode) {
 
 const char* Bytecode::BytecodeFormat(Opcode opcode) {
   const char* bytecode_formats[kNumBytecodes] = {
-#define EACH(name, branching, format, size, stack_diff, print) \
-    format,
-  BYTECODES_DO(EACH)
+#define EACH(name, branching, format, size, stack_diff, print) format,
+      BYTECODES_DO(EACH)
 #undef EACH
   };
   ASSERT(opcode < kNumBytecodes);
@@ -76,9 +71,8 @@ const char* Bytecode::BytecodeFormat(Opcode opcode) {
 
 int8 Bytecode::StackDiff(Opcode opcode) {
   const int8 stack_diffs[kNumBytecodes] = {
-#define EACH(name, branching, format, size, stack_diff, print) \
-    stack_diff,
-  BYTECODES_DO(EACH)
+#define EACH(name, branching, format, size, stack_diff, print) stack_diff,
+      BYTECODES_DO(EACH)
 #undef EACH
   };
   ASSERT(opcode < kNumBytecodes);
@@ -86,19 +80,23 @@ int8 Bytecode::StackDiff(Opcode opcode) {
 }
 
 bool Bytecode::IsInvokeVariant(Opcode opcode) {
-  return IsInvoke(opcode) || IsInvokeUnfold(opcode);
+  return IsInvoke(opcode) || IsInvokeUnfold(opcode) || IsStaticInvoke(opcode);
 }
 
 bool Bytecode::IsInvokeUnfold(Opcode opcode) {
-  return opcode >= kInvokeMethodUnfold && opcode <= kInvokeFactoryUnfold;
+  return opcode >= kInvokeMethodUnfold && opcode <= kInvokeBitShlUnfold;
 }
 
 bool Bytecode::IsInvoke(Opcode opcode) {
-  return opcode >= kInvokeMethod && opcode <= kInvokeFactory;
+  return opcode >= kInvokeMethod && opcode <= kInvokeBitShl;
+}
+
+bool Bytecode::IsStaticInvoke(Opcode opcode) {
+  return opcode >= kInvokeStatic && opcode <= kInvokeFactory;
 }
 
 // TODO(ager): use branches to skip forward by more than
-// a bytecode at a time as in StackWalker::StackDiff.
+// a bytecode at a time.
 uint8* Bytecode::PreviousBytecode(uint8* current_bcp) {
   uint8* bcp = current_bcp;
   while (*bcp != kMethodEnd) {

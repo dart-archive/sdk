@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -17,8 +17,9 @@ class ForeignFunctionInterface {
  public:
   static void Setup();
   static void TearDown();
-  static void AddDefaultSharedLibrary(const char* library);
+  static bool AddDefaultSharedLibrary(const char* library);
   static void* LookupInDefaultLibraries(const char* symbol);
+
  private:
   static DefaultLibraryEntry* libraries_;
   static Mutex* mutex_;
@@ -33,7 +34,11 @@ class ForeignUtils {
   static const char* kLibBundlePostfix;
 
   // In preparation of supporting windows we have a function for this.
-  static char* DirectoryName(char* path);
+  // [buffer] may be modified by DirectoryName. In particular, the result of
+  // DirectoryName may use [buffer] for storage but is not necessarily
+  // identical to [buffer].
+  // [len] is the size of [buffer], typically MAXPATHLEN + 1.
+  static char* DirectoryName(char* path, char* buffer, size_t len);
 };
 
 #endif  // FLETCH_ENABLE_FFI

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -9,9 +9,14 @@
 #ifndef SRC_VM_FFI_TEST_LIBRARY_H_
 #define SRC_VM_FFI_TEST_LIBRARY_H_
 
+#ifdef _MSC_VER
+// TODO(herhut): Do we need a __declspec here for Windows?
+#define EXPORT
+#else
 #define EXPORT __attribute__((visibility("default")))
+#endif
 
-static int count;
+EXPORT int count;
 
 EXPORT void setup();
 
@@ -35,6 +40,8 @@ EXPORT int ifun5(int a, int b, int c, int d, int e);
 
 EXPORT int ifun6(int a, int b, int c, int d, int e, int f);
 
+EXPORT int ifun7(int a, int b, int c, int d, int e, int f, int g);
+
 EXPORT int ifun0EINTR();
 
 EXPORT int ifun1EINTR(int a);
@@ -48,6 +55,8 @@ EXPORT int ifun4EINTR(int a, int b, int c, int d);
 EXPORT int ifun5EINTR(int a, int b, int c, int d, int e);
 
 EXPORT int ifun6EINTR(int a, int b, int c, int d, int e, int f);
+
+EXPORT int ifun7EINTR(int a, int b, int c, int d, int e, int f, int g);
 
 EXPORT void vfun0();
 
@@ -97,5 +106,9 @@ EXPORT void* memfloat32();
 EXPORT void* memfloat64();
 
 EXPORT void* memstring();
+
+EXPORT int bufferRead(char* buffer);
+
+EXPORT int bufferWrite(char* buffer, int value);
 
 #endif  // SRC_VM_FFI_TEST_LIBRARY_H_

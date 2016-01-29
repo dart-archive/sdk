@@ -1,27 +1,29 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:fletch';
 
 import 'package:expect/expect.dart';
+import 'package:isolate/process_runner.dart';
 
 main() {
-  Process.spawn(noarg);
-  Process.spawn(noarg, null);
   Expect.throws(() => Process.spawn(noarg, 99), (e) => e is ArgumentError);
-
   Expect.throws(() => Process.spawn(arg), (e) => e is ArgumentError);
   Expect.throws(() => Process.spawn(arg, null), (e) => e is ArgumentError);
-  Process.spawn(arg, 99);
 
-  Process.spawn(arg0, 0);
-  Process.spawn(arg42, 42);
+  withProcessRunner((runner) {
+    runner.run(() => noarg());
+    runner.run(() => arg(99));
 
-  Process.spawn(arg87);
-  Process.spawn(arg87, 87);
+    runner.run(() => arg0(0));
+    runner.run(() => arg42(42));
 
-  Process.spawn(argFoo, 'foo');
+    runner.run(() => arg87());
+    runner.run(() => arg87(87));
+
+    runner.run(() => argFoo('foo'));
+  });
 }
 
 void arg(arg) { }

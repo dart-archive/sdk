@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
@@ -47,6 +47,9 @@ dart_utils.DartBinary = DartBinary
 
 # Replace DART_DIR to get the right cwd for git commands.
 dart_utils.DART_DIR = os.path.abspath(os.path.join(__file__, '..', '..', '..'))
+
+# Use the version file in the dartino repo.
+dart_utils.VERSION_FILE = os.path.join(dart_utils.DART_DIR, 'tools', 'VERSION')
 
 # Now that we have patched 'dart_utils', import it into our own scope. This
 # also means that we export everything from that library.

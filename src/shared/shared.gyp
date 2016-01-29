@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -13,6 +13,21 @@
       'target_name': 'fletch_shared',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
+      'conditions': [
+        ['OS=="win"', {
+          'all_dependent_settings': {
+	    'link_settings': {
+	      'libraries': [
+		'-lws2_32.lib',
+	      ],
+	    },
+	  },
+	}],
+      ],
+      'target_conditions': [
+        ['_toolset == "target"', {
+          'standalone_static_library': 1,
+	}]],
       'dependencies': [
         '../../version.gyp:generate_version_cc#host',
       ],
@@ -36,6 +51,7 @@
         'native_socket_lk.cc',
         'native_socket_macos.cc',
         'native_socket_posix.cc',
+        'native_socket_windows.cc',
         'natives.h',
         'platform.h',
         'platform_linux.cc',
@@ -46,6 +62,8 @@
         'platform_cmsis.h',
         'platform_posix.cc',
         'platform_posix.h',
+        'platform_windows.cc',
+        'platform_windows.h',
         'random.h',
         'selectors.h',
         'utils.cc',
@@ -54,11 +72,6 @@
 
         '<(SHARED_INTERMEDIATE_DIR)/version.cc',
       ],
-      'link_settings': {
-        'libraries': [
-          '-lpthread',
-        ],
-      },
     },
     {
       'target_name': 'cc_test_base',

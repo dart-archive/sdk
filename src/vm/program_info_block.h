@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,13 +15,9 @@ class ProgramInfoBlock {
   void PopulateFromProgram(Program* program);
   void WriteToProgram(Program* program);
 
-  Object** roots() {
-    return &entry_;
-  }
+  Object** roots() { return &entry_; }
 
-  void* end_of_roots() {
-    return &main_arity_;
-  }
+  void* end_of_roots() { return &main_arity_; }
 
   void set_main_arity(int arity) { main_arity_ = arity; }
   int main_arity() { return main_arity_; }

@@ -1,4 +1,4 @@
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,6 +15,7 @@ NO_LINTING = (
     r"^package[\\\/]immi[\\\/]objc[\\\/].*",
     r"^package[\\\/]service[\\\/]cc[\\\/].*"
     r"^package[\\\/]service[\\\/]java[\\\/]jni[\\\/].*",
+    r"^platforms[\\\/]stm[\\\/]disco_fletch[\\\/]generated[\\\/].*",
     r"^samples[\\\/]github[\\\/]ios[\\\/].*",
     r"^samples[\\\/]buildbot[\\\/]cc[\\\/].*",
     r"^samples[\\\/]buildbot[\\\/]ios[\\\/].*",
@@ -30,6 +31,7 @@ NO_LINTING = (
     r"^tests[\\\/]service_tests[\\\/]performance[\\\/]java[\\\/]jni[\\\/].*",
     r"^tests[\\\/]service_tests[\\\/]multiple_services[\\\/]cc[\\\/].*",
     r"^tests[\\\/]service_tests[\\\/]multiple_services[\\\/]java[\\\/]jni[\\\/].*",
+    r"^third_party[\\\/]yasm[\\\/]source[\\\/]config[\\\/]win[\\\/].*",
     r"^third_party[\\\/]double-conversion[\\\/]src[\\\/].*",
     r"^tools[\\\/]immic[\\\/]lib[\\\/]src[\\\/]resources[\\\/]objc[\\\/].*",
     r"^tools[\\\/]servicec[\\\/]lib[\\\/]src[\\\/]resources[\\\/]cc[\\\/].*",

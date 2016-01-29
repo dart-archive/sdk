@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -17,7 +17,7 @@ import 'package:compiler/src/filenames.dart' show
     appendSlash;
 
 // Don't export most of these.
-import '../driver/sentence_parser.dart' show
+import '../hub/sentence_parser.dart' show
     ErrorTarget,
     NamedTarget,
     Preposition,
@@ -27,7 +27,7 @@ import '../driver/sentence_parser.dart' show
     TargetKind,
     Verb;
 
-export '../driver/sentence_parser.dart' show
+export '../hub/sentence_parser.dart' show
     TargetKind;
 
 import '../diagnostic.dart' show
@@ -38,29 +38,29 @@ export '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
-import '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
+import '../hub/client_commands.dart' show
+    CommandSender,
+    ClientCommand;
 
-export '../driver/driver_commands.dart' show
-    Command,
-    CommandSender;
+export '../hub/client_commands.dart' show
+    CommandSender,
+    ClientCommand;
 
-import '../driver/session_manager.dart' show
+import '../hub/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
     IncrementalCompiler,
-    IsolateController,
+    WorkerConnection,
     Session,
     SessionState,
     UserSession,
     currentSession;
 
-export '../driver/session_manager.dart' show
+export '../hub/session_manager.dart' show
     FletchCompiler,
     FletchDelta,
     IncrementalCompiler,
-    IsolateController,
+    WorkerConnection,
     Session,
     SessionState,
     UserSession,
@@ -70,25 +70,25 @@ export '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
-import '../driver/session_manager.dart' show
+import '../hub/session_manager.dart' show
     SessionState,
     UserSession,
     createSession;
 
-export '../driver/session_manager.dart' show
+export '../hub/session_manager.dart' show
     SessionState,
     UserSession,
     createSession;
 
-import '../driver/driver_main.dart' show
-    ClientController,
+import '../hub/hub_main.dart' show
+    ClientConnection,
     IsolatePool;
 
-export '../driver/driver_main.dart' show
-    ClientController,
+export '../hub/hub_main.dart' show
+    ClientConnection,
     IsolatePool;
 
-import '../driver/session_manager.dart' show
+import '../hub/session_manager.dart' show
     lookupSession; // Don't export this.
 
 import 'actions.dart' show
@@ -121,7 +121,7 @@ AnalyzedSentence helpSentence(String message) {
   Action contextHelp = new Action(printHelp, null);
   return new AnalyzedSentence(
       new Verb("?", contextHelp), null, null, null, null, null, null,
-      null, null, null);
+      null, null, null, null);
 }
 
 AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
@@ -138,6 +138,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   if (sentence.verb.isErroneous) {
     sentence.verb.action.perform(null, null);
   }
+
   sentence.targets.where((Target t) => t.isErroneous)
       .forEach(reportErroneousTarget);
   sentence.prepositions.map((p) => p.target).where((Target t) => t.isErroneous)
@@ -244,13 +245,13 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   }
   if (secondaryTarget != null) {
     if (secondaryTarget.kind == TargetKind.FILE) {
+      NamedTarget target = secondaryTarget;
       if (action.requiresToUri) {
-        NamedTarget target = secondaryTarget;
         toUri = fileUri(target.name, base);
       } else {
         throwFatalError(
             DiagnosticKind.verbRequiresNoToFile,
-            verb: verb, target: secondaryTarget);
+            verb: verb, userInput: target.name);
       }
     } else {
       throwFatalError(
@@ -286,16 +287,18 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     }
   }
 
+  TargetKind requiredTarget = action.requiredTarget;
+
   if (target != null &&
-      action.requiredTarget == null &&
+      requiredTarget == null &&
       action.supportedTargets == null) {
     throwFatalError(
         DiagnosticKind.verbDoesntSupportTarget, verb: verb, target: target);
   }
 
-  if (action.requiredTarget != null) {
+  if (action.requiresTarget) {
     if (target == null) {
-      switch (action.requiredTarget) {
+      switch (requiredTarget) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(DiagnosticKind.noTcpSocketTarget);
           break;
@@ -308,15 +311,18 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
           if (action.requiresTargetSession) {
             throwFatalError(
                 DiagnosticKind.verbRequiresSessionTarget, verb: verb);
+          } else if (requiredTarget != null) {
+            throwFatalError(
+                DiagnosticKind.verbRequiresSpecificTarget, verb: verb,
+                requiredTarget: requiredTarget);
           } else {
             throwFatalError(
-                DiagnosticKind.verbRequiresTarget, verb: verb,
-                requiredTarget: action.requiredTarget);
+                DiagnosticKind.verbRequiresTarget, verb: verb);
           }
           break;
       }
-    } else if (target.kind != action.requiredTarget) {
-      switch (action.requiredTarget) {
+    } else if (requiredTarget != null && target.kind != requiredTarget) {
+      switch (requiredTarget) {
         case TargetKind.TCP_SOCKET:
           throwFatalError(
               DiagnosticKind.verbRequiresSocketTarget,
@@ -331,9 +337,9 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
 
         default:
           throwFatalError(
-              DiagnosticKind.verbRequiresTargetButGot,
+              DiagnosticKind.verbRequiresSpecificTargetButGot,
               verb: verb, target: target,
-              requiredTarget: action.requiredTarget);
+              requiredTarget: requiredTarget);
       }
     }
   }
@@ -372,28 +378,28 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
       sentence.programName == null ? null : fileUri(sentence.programName, base);
   return new AnalyzedSentence(
       verb, target, targetName, trailing, sessionName, base, programName,
-      targetUri, toUri, withUri);
+      targetUri, toUri, withUri, options);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
 
 abstract class VerbContext {
-  final ClientController client;
+  final ClientConnection clientConnection;
 
   final IsolatePool pool;
 
   final UserSession session;
 
-  VerbContext(this.client, this.pool, this.session);
+  VerbContext(this.clientConnection, this.pool, this.session);
 
   Future<int> performTaskInWorker(SharedTask task);
 
   VerbContext copyWithSession(UserSession session);
 }
 
-/// Represents a task that is shared between the main isolate and a worker
-/// isolate. Since instances of this class are copied from the main isolate to
-/// a worker isolate, they should be kept simple:
+/// Represents a task that is shared between the hub (main isolate) and a worker
+/// isolate. Since instances of this class are sent from the hub (main isolate)
+/// to a worker isolate, they should be kept simple:
 ///
 /// *   Pay attention to the transitive closure of its fields. The closure
 ///     should be kept as small as possible to avoid too much copying.
@@ -405,7 +411,7 @@ abstract class SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator);
+      StreamIterator<ClientCommand> commandIterator);
 }
 
 class AnalyzedSentence {
@@ -433,6 +439,8 @@ class AnalyzedSentence {
   /// Value of 'with <URI>' converted to a Uri.
   final Uri withUri;
 
+  final Options options;
+
   AnalyzedSentence(
       this.verb,
       this.target,
@@ -443,7 +451,8 @@ class AnalyzedSentence {
       this.programName,
       this.targetUri,
       this.toTargetUri,
-      this.withUri);
+      this.withUri,
+      this.options);
 
   Future<int> performVerb(VerbContext context) {
     return verb.action.perform(this, context);

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -10,11 +10,9 @@
 
 namespace fletch {
 
-void ForeignFunctionInterface::Setup() {
-}
+void ForeignFunctionInterface::Setup() {}
 
-void ForeignFunctionInterface::TearDown() {
-}
+void ForeignFunctionInterface::TearDown() {}
 
 void ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
   FATAL("fletch vm was built without FFI support.");
@@ -29,15 +27,15 @@ DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
 Mutex* ForeignFunctionInterface::mutex_ = NULL;
 
 #define UNIMPLEMENTED_NATIVE(name) \
-  NATIVE(name)  {                  \
+  BEGIN_NATIVE(name) {             \
     UNIMPLEMENTED();               \
     return NULL;                   \
-  }
+  }                                \
+  END_NATIVE()
 
 UNIMPLEMENTED_NATIVE(ForeignLibraryLookup)
 UNIMPLEMENTED_NATIVE(ForeignLibraryGetFunction)
 UNIMPLEMENTED_NATIVE(ForeignLibraryBundlePath)
-UNIMPLEMENTED_NATIVE(ForeignLibraryClose)
 
 UNIMPLEMENTED_NATIVE(ForeignErrno)
 

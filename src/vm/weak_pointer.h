@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -16,8 +16,7 @@ typedef void (*WeakPointerCallback)(HeapObject* object, Heap* heap);
 
 class WeakPointer {
  public:
-  WeakPointer(HeapObject* object,
-              WeakPointerCallback callback,
+  WeakPointer(HeapObject* object, WeakPointerCallback callback,
               WeakPointer* next);
 
   static void Process(Space* garbage_space, WeakPointer** pointers, Heap* heap);

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -28,7 +28,7 @@ import 'dart:typed_data' show
 import 'package:persistent/persistent.dart' show
     Pair;
 
-import 'commands.dart' show
+import 'vm_commands.dart' show
     WriteSnapshotResult;
 
 import 'fletch_system.dart' show
@@ -58,8 +58,12 @@ class ProgramInfo {
   // Maps configuration -> offset -> string-id
   final Map<Configuration, Map<int, int>> _functionNames;
 
+  // Snapshot hashtag for validation.
+  final hashtag;
+
   ProgramInfo(this._strings, this._selectorNames,
-              this._classNames, this._functionNames);
+              this._classNames, this._functionNames,
+              this.hashtag);
 
   String classNameOfFunction(Configuration conf, int functionOffset) {
     return _getString(_classNames[conf][functionOffset]);
@@ -124,6 +128,7 @@ abstract class ProgramInfoJson {
       'selectors': info._selectorNames,
       'class-names': buildTables(info._classNames),
       'function-names' : buildTables(info._functionNames),
+      'hashtag': info.hashtag,
     });
   }
 
@@ -161,7 +166,9 @@ abstract class ProgramInfoJson {
     };
 
     return new ProgramInfo(
-        json['strings'], json['selectors'], classNames, functionNames);
+        json['strings'], json['selectors'],
+        classNames, functionNames,
+        json['hashtag']);
   }
 }
 
@@ -422,7 +429,8 @@ abstract class ProgramInfoBinary {
         strings,
         selectorTable,
         classNames,
-        functionNames);
+        functionNames,
+        0);  // hashtag for shapshot is not supported for binary format.
   }
 }
 
@@ -512,7 +520,8 @@ ProgramInfo buildProgramInfo(FletchSystem system, WriteSnapshotResult result) {
     return null;
   });
 
-  return new ProgramInfo(strings, selectors, classNames, functionNames);
+  return new ProgramInfo(strings, selectors, classNames,
+                         functionNames, result.hashtag);
 }
 
 final RegExp _FrameRegexp =
@@ -618,6 +627,241 @@ Future<int> decodeProgramMain(
   await decodedFrames.transform(UTF8.encoder).pipe(output);
 
   return 0;
+}
+
+
+// We are only interested in two kind of lines in the fletch.ticks file.
+final RegExp tickRegexp =
+    new RegExp(r'^0x([0-9a-f]+),0x([0-9a-f]+),0x([0-9a-f]+)');
+final RegExp propertyRegexp = new RegExp(r'^(\w+)=(.*$)');
+
+// Tick contains information from a line matching tickRegexp.
+class Tick {
+  final int pc;  // The actual program counter where the tick occurred.
+  final int bcp;  // The bytecode pointer relative to program heap start.
+  final int hashtag;
+  Tick(this.pc, this.bcp,this.hashtag);
+}
+
+// Property contains information from a line matching propertyRegexp.
+class Property {
+  final String name;
+  final String value;
+  Property(this.name, this.value);
+}
+
+// FunctionInfo captures profiler information for a function.
+class FunctionInfo {
+  int ticks = 0;  // Accumulated number of ticks.
+  final String name;  // Name that indentifies the function.
+
+  FunctionInfo(this.name);
+
+  int Percent(int total_ticks) => ticks * 100 ~/ total_ticks;
+  
+  void Print(int total_ticks) {
+    print(" -${Percent(total_ticks).toString().padLeft(3, ' ')}% $name");
+  }
+
+  static String ComputeName(String function_name, String class_name) {
+    if (class_name == null) return function_name;
+    return "$class_name.$function_name";
+  }
+}
+
+Stream decode(Stream<List<int>> input) async* {
+  Stream<String> inputLines =
+      input.transform(UTF8.decoder).transform(new LineSplitter());
+  await for (String line in inputLines) {
+    Match t = tickRegexp.firstMatch(line);
+    if (t != null) {
+      int pc = int.parse(t.group(1), radix: 16);
+      int offset = 0;
+      int hashtag = 0;
+      if (t.groupCount > 1) {
+        offset = int.parse(t.group(2), radix: 16);
+        hashtag = int.parse(t.group(3), radix: 16);
+      } 
+      yield new Tick(pc, offset, hashtag);
+    } else {
+      t = propertyRegexp.firstMatch(line);
+      if (t != null) yield new Property(t.group(1), t.group(2));
+    }
+  }
+}
+
+// Binary search for named entry start.
+NamedEntry findEntry(List<NamedEntry> functions, Tick t) {
+  int low = 0;
+  int high = functions.length - 1;
+  while (low + 1 < high) {
+    int i = low + ((high - low) ~/ 2);
+    NamedEntry current = functions[i];
+    if (current.offset < t.bcp) {
+      low = i;
+    } else {
+      high = i;
+    }
+  }
+  return functions[low];
+}
+
+// NamedEntry captures a named entry caputred in the .info.json file.
+class NamedEntry {
+  final int offset;
+  final String name;
+  NamedEntry(this.offset, this.name);
+}
+
+class Profile {
+  final String sample_filename;
+  final String info_filename;
+  Profile(this.sample_filename,this.info_filename);
+
+  // Tick information.
+  int total_ticks = 0;
+  int runtime_ticks = 0;
+  int interpreter_ticks = 0;
+  int discarded_ticks = 0;
+  int other_snapshot_ticks = 0;
+
+  // Memory model.
+  String model;
+
+  // All the ticks.
+  List<Tick> ticks = <Tick>[];
+
+  // The resulting histogram.
+  List<FunctionInfo> histogram;
+
+  void Print() {
+    print("# Tick based profiler result.");
+  
+    for (FunctionInfo func in histogram) {
+      if (func.Percent(total_ticks) < 2) break;
+      func.Print(total_ticks);
+    }
+    
+    print("# ticks in interpreter=${interpreter_ticks}");
+    if (runtime_ticks > 0) print("  runtime=${runtime_ticks}");
+    if (discarded_ticks > 0) print("  discarded=${discarded_ticks}");
+    if (other_snapshot_ticks> 0) {
+      print("  other_snapshot=${other_snapshot_ticks}");
+    }
+  }
+}
+
+Future<Profile> decodeTickSamples(
+    List<String> arguments,
+    Stream<List<int>> input,
+    StreamSink<List<int>> output) async {
+
+  usage(message) {
+    print("Invalid arguments: $message");
+    print("Usage: ${io.Platform.script} <fletch.ticks> <snapshot.info.json>");
+  }
+
+  if (arguments.length != 2) {
+    usage("Exactly 2 arguments must be supplied");
+    return null;
+  }
+
+  String sample_filename = arguments[0];
+  io.File sample_file = new io.File(sample_filename);
+  if (!await sample_file.exists()) {
+    usage("The file '$sample_filename' does not exist.");
+    return null;
+  }
+   
+  String info_filename = arguments[1];
+  if (!info_filename.endsWith('.info.json')) {
+    usage("The program info file must end in '.info.json' "
+          "(was: '$info_filename').");
+    return null;
+  }
+
+  io.File info_file = new io.File(info_filename);
+  if (!await info_file.exists()) {
+    usage("The file '$info_filename' does not exist.");
+    return null;
+  }
+
+  ProgramInfo info = ProgramInfoJson.decode(await info_file.readAsString());
+  Profile profile = new Profile(sample_filename, info_filename);
+
+  // Process the tick sample file.
+  await for (var t in decode(sample_file.openRead())) {
+    if (t is Tick) {
+      profile.ticks.add(t);
+    } else if (t is Property) {
+      if (t.name == 'discarded') profile.discarded_ticks = int.parse(t.value);
+      if (t.name == 'model') profile.model = t.value;
+    }
+  }
+  if (profile.model == null) {
+    print("Memory model absent in sample file.");
+    return null;
+  }
+
+  // Compute the configuration key based on the memory model.
+  Configuration conf;
+  String model = profile.model;
+  if (model == 'b64double') {
+    conf = Configuration.Offset64BitsDouble;
+  } else if (model == 'b64float') {
+    conf = Configuration.Offset64BitsFloat;  
+  } else if (model == 'b32double') {
+    conf = Configuration.Offset32BitsDouble;
+  } else if (model == 'b32float') {
+    conf = Configuration.Offset32BitsFloat;
+  } else {
+    print("Memory model in sample file ${model} cannot be recognized.");
+    return null;
+  }
+
+  // Compute a offset sorted list of Function entries.
+  List<NamedEntry> functions = new List<NamedEntry>();
+  Map<int,int> fnames = info._functionNames[conf];
+  fnames.forEach((key, value) {
+     functions.add(new NamedEntry(key, info._getString(value)));
+  });
+  functions.sort((a, b) => a.offset - b.offset);
+
+  // Compute a offset sorted list of Class entries.
+  List<NamedEntry> classes = new List<NamedEntry>();
+  Map<int,int> cnames = info._classNames[conf];
+  cnames.forEach((key, value) {
+     classes.add(new NamedEntry(key, info._getString(value)));
+  });
+  classes.sort((a, b) => a.offset - b.offset);
+  
+  Map<String,FunctionInfo> results = <String,FunctionInfo>{};
+  for (Tick t in profile.ticks) {
+    profile.total_ticks++;
+    if (t.bcp == 0) {
+      profile.runtime_ticks++;
+    } else if (t.hashtag != info.hashtag) {
+      profile.other_snapshot_ticks++;
+    } else {
+      profile.interpreter_ticks++;
+      NamedEntry fe = findEntry(functions, t);
+      if (fe?.name != null) {
+        NamedEntry ce = findEntry(classes, t);
+        String key = FunctionInfo.ComputeName(fe.name, ce?.name);
+        FunctionInfo f =
+            results.putIfAbsent(key, () => new FunctionInfo(key));
+        f.ticks++;
+      }
+    }
+  }
+
+  // Sort the values into the histogram.
+  List<FunctionInfo> histogram =
+    new List<FunctionInfo>.from(results.values);
+  histogram.sort((a,b) { return b.ticks - a.ticks; });
+  profile.histogram = histogram;
+
+  return profile;
 }
 
 Configuration _getConfiguration(bits, floatOrDouble) {

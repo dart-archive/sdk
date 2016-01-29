@@ -1,21 +1,22 @@
-// Copyright (c) 2015, the Fletch project authors.  Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 library servicec.error_handling_listener;
 
-import 'package:compiler/src/scanner/scannerlib.dart' show
+import 'package:compiler/src/tokens/precedence_constants.dart' show
     CLOSE_CURLY_BRACKET_INFO,
-    EOF_INFO,
-    ErrorToken,
-    KeywordToken,
     SEMICOLON_INFO,
-    Token,
-    UnmatchedToken,
-    closeBraceInfoFor;
+    EOF_INFO;
 
-import 'scanner.dart' show
-    LF_INFO;
+import 'package:compiler/src/tokens/token.dart' show
+    ErrorToken,
+    UnmatchedToken,
+    KeywordToken,
+    Token;
+
+import 'package:compiler/src/scanner/scanner.dart' show
+    closeBraceInfoFor;
 
 import 'errors.dart' show
     ErrorTag,
@@ -29,6 +30,9 @@ import 'errors.dart' show
     StructErrorNode,
     TopLevelErrorNode,
     UnionErrorNode;
+
+import 'scanner.dart' show
+    LF_INFO;
 
 import 'keyword.dart' show
     Keyword;
@@ -54,9 +58,7 @@ import 'node.dart' show
     ListType,
     FieldNode,
     MemberNode,
-    NamedNode,
     Node,
-    NodeStack,
     PointerType,
     ServiceNode,
     SimpleType,

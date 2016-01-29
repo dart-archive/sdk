@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,52 +15,50 @@
 namespace fletch {
 
 enum Register {
-  R0  =  0,
-  R1  =  1,
-  R2  =  2,
-  R3  =  3,
-  R4  =  4,
-  R5  =  5,
-  R6  =  6,
-  R7  =  7,
-  R8  =  8,
-  R9  =  9,
+  R0 = 0,
+  R1 = 1,
+  R2 = 2,
+  R3 = 3,
+  R4 = 4,
+  R5 = 5,
+  R6 = 6,
+  R7 = 7,
+  R8 = 8,
+  R9 = 9,
   R10 = 10,
   R11 = 11,
   R12 = 12,
   R13 = 13,
   R14 = 14,
   R15 = 15,
-  FP  = 11,
-  IP  = 12,
-  SP  = 13,
-  LR  = 14,
-  PC  = 15,
+  FP = 11,
+  IP = 12,
+  SP = 13,
+  LR = 14,
+  PC = 15,
 };
 
 enum ScaleFactor {
   TIMES_1 = 0,
   TIMES_2 = 1,
   TIMES_4 = 2,
+  TIMES_WORD_SIZE = TIMES_4,
   TIMES_8 = 3
 };
 
-enum ShiftType {
-  LSL,
-  ASR
-};
+enum ShiftType { LSL, ASR };
 
 enum Condition {
-  EQ =  0,  // equal
-  NE =  1,  // not equal
-  CS =  2,  // carry set/unsigned higher or same
-  CC =  3,  // carry clear/unsigned lower
-  MI =  4,  // minus/negative
-  PL =  5,  // plus/positive or zero
-  VS =  6,  // overflow
-  VC =  7,  // no overflow
-  HI =  8,  // unsigned higher
-  LS =  9,  // unsigned lower or same
+  EQ = 0,   // equal
+  NE = 1,   // not equal
+  CS = 2,   // carry set/unsigned higher or same
+  CC = 3,   // carry clear/unsigned lower
+  MI = 4,   // minus/negative
+  PL = 5,   // plus/positive or zero
+  VS = 6,   // overflow
+  VC = 7,   // no overflow
+  HI = 8,   // unsigned higher
+  LS = 9,   // unsigned lower or same
   GE = 10,  // signed greater than or equal
   LT = 11,  // signed less than
   GT = 12,  // signed greater than
@@ -68,11 +66,16 @@ enum Condition {
   AL = 14,  // always (unconditional)
 };
 
+enum WriteBack {
+  WRITE_BACK_DISABLED = 0,
+  WRITE_BACK = 1,
+};
+
 typedef uint32_t RegisterList;
 
 class Immediate {
  public:
-  explicit Immediate(int32_t value) : value_(value) { }
+  explicit Immediate(int32_t value) : value_(value) {}
   int32_t value() const { return value_; }
 
  private:
@@ -82,17 +85,15 @@ class Immediate {
 class Operand {
  public:
   Operand(Register reg, ScaleFactor scale)
-      : reg_(reg), shift_type_(LSL), shift_amount_(scale) { }
+      : reg_(reg), shift_type_(LSL), shift_amount_(scale) {}
 
   Operand(const Operand& other)
       : reg_(other.reg()),
         shift_type_(other.shift_type()),
-        shift_amount_(other.shift_amount()) { }
+        shift_amount_(other.shift_amount()) {}
 
   Operand(Register reg, ShiftType shift_type, int shift_amount)
-      : reg_(reg),
-        shift_type_(shift_type),
-        shift_amount_(shift_amount) { }
+      : reg_(reg), shift_type_(shift_type), shift_amount_(shift_amount) {}
 
   Register reg() const { return reg_; }
   ShiftType shift_type() const { return shift_type_; }
@@ -109,12 +110,10 @@ class Address {
   enum Kind { IMMEDIATE, OPERAND };
 
   Address(Register base, int32_t offset)
-      : base_(base), offset_(offset), operand_(R0, TIMES_1), kind_(IMMEDIATE) {
-  }
+      : base_(base), offset_(offset), operand_(R0, TIMES_1), kind_(IMMEDIATE) {}
 
   Address(Register base, const Operand& operand)
-      : base_(base), offset_(0), operand_(operand), kind_(OPERAND) {
-  }
+      : base_(base), offset_(0), operand_(operand), kind_(OPERAND) {}
 
   Register base() const { return base_; }
   int32_t offset() const { return offset_; }
@@ -130,33 +129,17 @@ class Address {
 
 class Label {
  public:
-  Label() : position_(0) { }
+  Label() : position_(-1) {}
 
-  // Returns the position for bound and linked labels. Cannot be used
-  // for unused labels.
-  int position() const {
-    ASSERT(!IsUnused());
-    return IsBound() ? -position_ - 1 : position_ - 1;
+  // Returns the position for a label. Positions are assigned on first use.
+  int position() {
+    if (position_ == -1) position_ = position_counter_++;
+    return position_;
   }
-
-  bool IsBound() const { return position_ < 0; }
-  bool IsUnused() const { return position_ == 0; }
-  bool IsLinked() const { return position_ > 0; }
 
  private:
   int position_;
-
-  void BindTo(int position) {
-    position_ = -position - 1;
-    ASSERT(IsBound());
-  }
-
-  void LinkTo(int position) {
-    position_ = position + 1;
-    ASSERT(IsLinked());
-  }
-
-  friend class Assembler;
+  static int position_counter_;
 };
 
 #define INSTRUCTION_0(name, format) \
@@ -168,14 +151,14 @@ class Label {
 #define INSTRUCTION_2(name, format, t0, t1) \
   void name(t0 a0, t1 a1) { Print(format, Wrap(a0), Wrap(a1)); }
 
-#define INSTRUCTION_3(name, format, t0, t1, t2)                          \
-  void name(t0 a0, t1 a1, t2 a2) {                                       \
-    Print(format, Wrap(a0), Wrap(a1), Wrap(a2));                         \
+#define INSTRUCTION_3(name, format, t0, t1, t2)  \
+  void name(t0 a0, t1 a1, t2 a2) {               \
+    Print(format, Wrap(a0), Wrap(a1), Wrap(a2)); \
   }
 
-#define INSTRUCTION_4(name, format, t0, t1, t2, t3)                      \
-  void name(t0 a0, t1 a1, t2 a2, t3 a3) {                                \
-    Print(format, Wrap(a0), Wrap(a1), Wrap(a2), Wrap(a3));               \
+#define INSTRUCTION_4(name, format, t0, t1, t2, t3)        \
+  void name(t0 a0, t1 a1, t2 a2, t3 a3) {                  \
+    Print(format, Wrap(a0), Wrap(a1), Wrap(a2), Wrap(a3)); \
   }
 
 class Assembler {
@@ -211,9 +194,11 @@ class Assembler {
   INSTRUCTION_3(eor, "eor %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
-  INSTRUCTION_2(ldr, "ldr %r, %I", Register, const Immediate&);
   INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);
+  INSTRUCTION_2(ldr, "ldr %r, =%l", Register, Label*);
+  INSTRUCTION_3(ldr, "ldr %r, [%r], %i", Register, Register, const Immediate&);
   INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
+  INSTRUCTION_3(ldrb, "ldrb %r, %a%W", Register, const Address&, WriteBack);
 
   INSTRUCTION_3(lsl, "lsl %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(lsl, "lsl %r, %r, %r", Register, Register, Register);
@@ -224,9 +209,13 @@ class Assembler {
   INSTRUCTION_3(mov, "mov%c %r, %i", Condition, Register, const Immediate&);
 
   INSTRUCTION_2(mvn, "mvn %r, %r", Register, Register);
+  INSTRUCTION_2(mvn, "mvn %r, %i", Register, const Immediate&);
 
   INSTRUCTION_2(neg, "neg %r, %r", Register, Register);
 
+  INSTRUCTION_0(nop, "nop");
+
+  INSTRUCTION_3(orr, "orr %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(orr, "orr %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_1(pop, "pop { %r }", Register);
@@ -235,10 +224,12 @@ class Assembler {
   INSTRUCTION_1(push, "push { %r }", Register);
   INSTRUCTION_1(push, "push { %R }", RegisterList);
 
-  INSTRUCTION_4(smull, "smull %r, %r, %r, %r",
-                Register, Register, Register, Register);
+  INSTRUCTION_4(smull, "smull %r, %r, %r, %r", Register, Register, Register,
+                Register);
 
   INSTRUCTION_2(str, "str %r, %a", Register, const Address&);
+  INSTRUCTION_3(str, "str %r, %a%W", Register, const Address&, WriteBack);
+  INSTRUCTION_3(str, "str %r, [%r], %i", Register, Register, const Immediate&);
   INSTRUCTION_3(str, "str%c %r, %a", Condition, Register, const Address&);
 
   INSTRUCTION_3(sub, "sub %r, %r, %i", Register, Register, const Immediate&);
@@ -249,28 +240,35 @@ class Assembler {
   INSTRUCTION_2(tst, "tst %r, %i", Register, const Immediate&);
   INSTRUCTION_2(tst, "tst %r, %r", Register, Register);
 
+  void LoadInt(Register reg, int value);
+
   void BindWithPowerOfTwoAlignment(const char* name, int power);
-  void Bind(const char* name);
+  void Bind(const char* prefix, const char* name);
   void Bind(Label* label);
 
   void DefineLong(const char* name);
+
+  void SwitchToText();
+  void SwitchToData();
+
+  // Align what follows to a 2^power address.
+  void AlignToPowerOfTwo(int power);
 
   void GenerateConstantPool();
 
   const char* LabelPrefix();
 
  private:
+  // Do not use this one directly. Use LoadInt instead.
+  INSTRUCTION_2(ldr, "ldr %r, %I", Register, const Immediate&);
+
   void Print(const char* format, ...);
   void PrintAddress(const Address* address);
   void PrintOperand(const Operand* operand);
 
-  // Align what follows to a 2^power address.
-  void AlignToPowerOfTwo(int power);
-
-  static int NewLabelPosition();
-
   Condition Wrap(Condition condition) { return condition; }
   Register Wrap(Register reg) { return reg; }
+  WriteBack Wrap(WriteBack wb) { return wb; }
   RegisterList Wrap(RegisterList regs) { return regs; }
   const char* Wrap(const char* label) { return label; }
   Label* Wrap(Label* label) { return label; }

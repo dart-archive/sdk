@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -129,8 +129,7 @@ static void RunThreadTests() {
   thread_pool.Start();
   for (int i = 0; i < kThreadCount; i++) {
     while (!thread_pool.TryStartThread(EchoInThread,
-                                       reinterpret_cast<void*>(i),
-                                       kThreadCount)) {
+                                       reinterpret_cast<void*>(i))) {
     }
   }
   thread_pool.JoinAll();

@@ -6,27 +6,31 @@ part of fletchc_incremental;
 
 /// Do not call this method directly. It will be made private.
 // TODO(ahe): Make this method private.
-Future<Compiler> reuseCompiler(
+Future<CompilerImpl> reuseCompiler(
     {CompilerDiagnostics diagnosticHandler,
      CompilerInput inputProvider,
      CompilerOutput outputProvider,
      List<String> options: const [],
-     Compiler cachedCompiler,
+     CompilerImpl cachedCompiler,
      Uri libraryRoot,
-     Uri patchRoot,
      Uri nativesJson,
      Uri packageConfig,
      Uri fletchVm,
      bool packagesAreImmutable: false,
      Map<String, dynamic> environment,
-     Future<bool> reuseLibrary(LibraryElement library),
-     List<Category> categories}) async {
+     ReuseLibrariesFunction reuseLibraries,
+     String platform,
+     Uri base,
+     IncrementalCompiler incrementalCompiler}) async {
   UserTag oldTag = new UserTag('_reuseCompiler').makeCurrent();
   // if (libraryRoot == null) {
   //   throw 'Missing libraryRoot';
   // }
   if (inputProvider == null) {
     throw 'Missing inputProvider';
+  }
+  if (inputProvider is SourceFileProvider && base != null) {
+    inputProvider.cwd = base;
   }
   if (diagnosticHandler == null) {
     throw 'Missing diagnosticHandler';
@@ -37,7 +41,7 @@ Future<Compiler> reuseCompiler(
   if (environment == null) {
     environment = {};
   }
-  Compiler compiler = cachedCompiler;
+  CompilerImpl compiler = cachedCompiler;
   if (compiler == null ||
       (libraryRoot != null && compiler.libraryRoot != libraryRoot) ||
       !compiler.hasIncrementalSupport ||
@@ -60,18 +64,19 @@ Future<Compiler> reuseCompiler(
       }
     }
     oldTag.makeCurrent();
-    compiler = await new FletchCompiler(
+    FletchCompiler fletchCompiler = new FletchCompiler(
         provider: inputProvider,
         outputProvider: outputProvider,
         handler: diagnosticHandler,
         libraryRoot: libraryRoot,
-        patchRoot: patchRoot,
         nativesJson: nativesJson,
         packageConfig: packageConfig,
         fletchVm: fletchVm,
         options: options,
         environment: environment,
-        categories: categories).backdoor.compilerImplementation;
+        platform: platform,
+        incrementalCompiler: incrementalCompiler);
+    compiler = await fletchCompiler.backdoor.compilerImplementation;
     return compiler;
   } else {
     for (final task in compiler.tasks) {
@@ -91,14 +96,15 @@ Future<Compiler> reuseCompiler(
         ..enqueuer.codegen.hasEnqueuedReflectiveStaticFields = false
         ..compilationFailed = false;
 
-    if (reuseLibrary == null) {
-      reuseLibrary = (LibraryElement library) {
-        return new Future.value(
-            library.isPlatformLibrary ||
-            (packagesAreImmutable && library.isPackageLibrary));
+    if (reuseLibraries == null) {
+      reuseLibraries = (Iterable<LibraryElement> libraries) async {
+        return libraries.where((LibraryElement library) {
+          return library.isPlatformLibrary ||
+              (packagesAreImmutable && library.isPackageLibrary);
+        });
       };
     }
-    return compiler.libraryLoader.resetAsync(reuseLibrary).then((_) {
+    return compiler.libraryLoader.resetLibraries(reuseLibraries).then((_) {
       oldTag.makeCurrent();
       return compiler;
     });

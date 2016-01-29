@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -21,7 +21,7 @@ import 'fletch_context.dart';
 import 'bytecode_assembler.dart';
 
 import '../fletch_system.dart';
-import '../commands.dart';
+import '../vm_commands.dart';
 
 class FletchFunctionBuilder extends FletchFunctionBase {
   final BytecodeAssembler assembler;
@@ -57,7 +57,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
       : super(functionId, kind, arity, name, element, signature, memberOf),
         assembler = new BytecodeAssembler(arity) {
     assert(signature == null ||
-        arity == (signature.parameterCount + (memberOf != null ? 1 : 0)));
+        arity == (signature.parameterCount + (isInstanceMember ? 1 : 0)));
   }
 
   void reuse() {
@@ -98,7 +98,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
 
   FletchFunction finalizeFunction(
       FletchContext context,
-      List<Command> commands) {
+      List<VmCommand> commands) {
     int constantCount = constants.length;
     for (int i = 0; i < constantCount; i++) {
       commands.add(const PushNull());
@@ -139,7 +139,7 @@ class FletchFunctionBuilder extends FletchFunctionBase {
           fletchConstants.add(
               new FletchConstant(constant.classId, MapId.classes));
         } else {
-          int id = context.compiledConstants[constant];
+          int id = context.lookupConstantIdByValue(constant);
           if (id == null) {
             throw "Unsupported constant: ${constant.toStructuredString()}";
           }

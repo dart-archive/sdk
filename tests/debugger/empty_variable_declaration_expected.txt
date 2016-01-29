@@ -1,6 +1,18 @@
+Starting session. Type 'help' for a list of commands.
+
+> t verbose
+### verbose printing set to: false
+> b main
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
+> r
 main    @foo()
+> s
 foo @4
+> s
 foo @4.isOdd
+> s
 foo @var y;
+> s
 main    @foo()
+> s
 ### process terminated

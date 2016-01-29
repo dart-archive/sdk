@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,8 +7,9 @@
 
 #include "src/shared/atomic.h"
 
-#include "src/vm/signal_mailbox.h"
+#include "src/vm/signal.h"
 #include "src/vm/thread_pool.h"
+#include "src/vm/thread.h"
 
 namespace fletch {
 
@@ -19,21 +20,66 @@ class Port;
 class ProcessQueue;
 class Process;
 class Program;
-class ThreadState;
 
 const int kCompileTimeErrorExitCode = 254;
 const int kUncaughtExceptionExitCode = 255;
 const int kBreakPointExitCode = 0;
 
+class ThreadState {
+ public:
+  ThreadState();
+  ~ThreadState();
+
+  const ThreadIdentifier* thread() const { return &thread_; }
+
+  // Update the thread field to point to the current thread.
+  void AttachToCurrentThread();
+
+  Monitor* idle_monitor() const { return idle_monitor_; }
+
+ private:
+  ThreadIdentifier thread_;
+  Monitor* idle_monitor_;
+};
+
 class ProcessVisitor {
  public:
-  virtual ~ProcessVisitor() { }
+  virtual ~ProcessVisitor() {}
 
   virtual void VisitProcess(Process* process) = 0;
 };
 
+class InterpretationBarrier {
+ public:
+  InterpretationBarrier() : current_process(NULL) {}
+  ~InterpretationBarrier() {
+    ASSERT(current_process.load() == NULL ||
+           current_process.load() == kPreemptMarker);
+  }
+
+  void PreemptProcess();
+
+  void Enter(Process* process);
+  void Leave(Process* process);
+
+ private:
+  Process* const kPreemptMarker = reinterpret_cast<Process*>(1);
+
+  // The currently executing process. Upon preemption, the value may be set to
+  // kPreemptMarker if it's NULL (which is the case when no process is being
+  // executed). This means that it will always be in either of these 3 cases:
+  //   - NULL
+  //   - A process
+  //   - kPreemptMarker
+  Atomic<Process*> current_process;
+};
+
 class Scheduler {
  public:
+  static void Setup();
+  static void TearDown();
+  static Scheduler* GlobalInstance() { return scheduler_; }
+
   Scheduler();
   ~Scheduler();
 
@@ -45,6 +91,10 @@ class Scheduler {
 
   void PauseGcThread();
   void ResumeGcThread();
+
+  void PreemptionTick();
+
+  void FinishedGC(Program* program, int count);
 
   // This method should only be called from a thread which is currently
   // interpreting a process.
@@ -69,7 +119,7 @@ class Scheduler {
   // A signal arrived for the process.
   void SignalProcess(Process* process);
 
-  int Run();
+  void Run();
 
   // There are 4 reasons for the interpretation of a process to be interrupted:
   //   * termination
@@ -86,32 +136,23 @@ class Scheduler {
   void ExitAtCompileTimeError(Process* process);
   void ExitAtBreakpoint(Process* process);
 
-  size_t process_count() const { return processes_; }
-
  private:
-  const int max_threads_;
+  friend class Fletch;
+
+  // Global scheduler instance.
+  static Scheduler* scheduler_;
+
   ThreadPool thread_pool_;
-  Monitor* preempt_monitor_;
-  Atomic<int> processes_;
-  Atomic<int> sleeping_threads_;
-  Atomic<int> thread_count_;
-  Atomic<ThreadState*> idle_threads_;
-  Atomic<ThreadState*>* threads_;
-  Atomic<ThreadState*> temporary_thread_states_;
-  ProcessQueue* startup_queue_;
+
+  Atomic<bool> interpreter_is_paused_;
+  Atomic<ThreadState*> interpreting_thread_;
+  ProcessQueue* ready_queue_;
 
   Monitor* pause_monitor_;
-  Atomic<Signal::Kind> last_process_exit_;
   Atomic<bool> pause_;
+  Atomic<bool> shutdown_;
 
-  // A list of currently executed processes, indexable by thread id. Upon
-  // preemption, the value may be set to kPreemptMarker if it's NULL (which is
-  // the case when no process is being executed). This means that they'll always
-  // be in either of these 3 cases:
-  //   - NULL
-  //   - A process
-  //   - kPreemptMarker
-  Atomic<Process*>* current_processes_;
+  InterpretationBarrier interpretation_barrier_;
 
   GCThread* gc_thread_;
 
@@ -120,48 +161,20 @@ class Scheduler {
   // Exit the program for the given process with the given exit code.
   void ExitWith(Process* process, int exit_code, Signal::Kind kind);
 
-  void DeleteProcessAndMergeHeaps(Process* process, ThreadState* thread_state);
   void RescheduleProcess(Process* process, ThreadState* state, bool terminate);
 
-  void PreemptThreadProcess(int thread_id);
-  void ProfileThreadProcess(int thread_id);
-  uint64 GetNextPreemptTime();
-  void EnqueueProcessAndNotifyThreads(ThreadState* thread_state,
-                                      Process* process);
-
-  void PushIdleThread(ThreadState* thread_state);
-  ThreadState* PopIdleThread();
   void RunInThread();
   void RunInterpreterLoop(ThreadState* thread_state);
 
-  void SetCurrentProcessForThread(int thread_id, Process* process);
-  void ClearCurrentProcessForThread(int thread_id, Process* process);
-  // Interpret [process] as thread [thread] with id [thread_id]. Returns the
-  // next Process that should be run on this thraed.
-  Process* InterpretProcess(Process* process,
-                            Heap* immutable_heap,
-                            ThreadState* thread_state,
-                            bool* allocation_failure);
-  void ThreadEnter(ThreadState* thread_state);
-  void ThreadExit(ThreadState* thread_state);
-  void NotifyAllThreads();
+  // Interpret [process] as thread [thread]. Returns the next Process that
+  // should be run.
+  Process* InterpretProcess(Process* process, ThreadState* thread_state);
+  void ThreadEnter();
+  void ThreadExit();
+  void NotifyInterpreterThread();
 
-  ThreadState* TakeThreadState();
-  void ReturnThreadState(ThreadState* thread_state);
-  void FlushCacheInThreadStates();
-
-  // Dequeue from [thread_state]. If [process] is [NULL] after a call to
-  // DequeueFromThread, the [thread_state] is empty. Note that DequeueFromThread
-  // may dequeue a process from another ThreadState.
-  void DequeueFromThread(ThreadState* thread_state, Process** process);
-  // Returns true if it was able to dequeue a process, or all thread_states were
-  // empty. Returns false if the operation should be retried.
-  bool TryDequeueFromAnyThread(Process** process, int start_id = 0);
-  void EnqueueOnThread(ThreadState* thread_state, Process* process);
-  // Returns true if it was able to enqueue the process on an idle thread.
-  bool TryEnqueueOnIdleThread(Process* process);
-  // Returns true if it was able to enqueue the process on an idle thread.
-  bool EnqueueOnAnyThread(Process* process, int start_id = 0);
+  void EnqueueProcess(Process* process);
+  void DequeueProcess(Process** process);
 
   // The [process] will be enqueued on any thread. In case the program is paused
   // the process will be enqueued once the program is resumed.
@@ -172,18 +185,37 @@ class Scheduler {
 
 class StoppedGcThreadScope {
  public:
-  explicit StoppedGcThreadScope(Scheduler* scheduler)
-      : scheduler_(scheduler) {
+  explicit StoppedGcThreadScope(Scheduler* scheduler) : scheduler_(scheduler) {
     scheduler->PauseGcThread();
   }
 
-  ~StoppedGcThreadScope() {
-    scheduler_->ResumeGcThread();
-  }
+  ~StoppedGcThreadScope() { scheduler_->ResumeGcThread(); }
 
  private:
   Scheduler* scheduler_;
 };
+
+// Used for running one or more programs and waiting for their exit codes.
+class SimpleProgramRunner {
+ public:
+  SimpleProgramRunner();
+  ~SimpleProgramRunner();
+
+  void Run(int count,
+           int* exitcodes,
+           Program** programs,
+           Process** main_processes = NULL);
+
+ private:
+  Monitor* monitor_;
+  Program** programs_;
+  int* exitcodes_;
+  int count_;
+  int remaining_;
+
+  static void CaptureExitCode(Program* program, int exitcode, void* data);
+};
+
 
 }  // namespace fletch
 

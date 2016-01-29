@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,20 +7,16 @@
 
 #include "src/vm/object.h"
 #include "src/vm/program.h"
+#include "src/vm/process.h"
 
 namespace fletch {
 
 class MarkingStackChunk {
  public:
   MarkingStackChunk()
-      : next_chunk_(NULL),
-        next_(&backing_[0]),
-        limit_(next_ + kChunkSize) {
-  }
+      : next_chunk_(NULL), next_(&backing_[0]), limit_(next_ + kChunkSize) {}
 
-  ~MarkingStackChunk() {
-    ASSERT(next_chunk_ == NULL);
-  }
+  ~MarkingStackChunk() { ASSERT(next_chunk_ == NULL); }
 
   bool IsEmpty() { return next_ == &backing_[0]; }
 
@@ -71,11 +67,9 @@ class MarkingStackChunk {
 
 class MarkingStack {
  public:
-  MarkingStack() : current_chunk_(new MarkingStackChunk()) { }
+  MarkingStack() : current_chunk_(new MarkingStackChunk()) {}
 
-  ~MarkingStack() {
-    delete current_chunk_;
-  }
+  ~MarkingStack() { delete current_chunk_; }
 
   void Push(HeapObject* object) {
     current_chunk_->Push(object, &current_chunk_);
@@ -83,8 +77,7 @@ class MarkingStack {
 
   void Process(PointerVisitor* visitor) {
     for (MarkingStackChunk* chunk = current_chunk_->TakeChunk(&current_chunk_);
-         chunk != NULL;
-         chunk = current_chunk_->TakeChunk(&current_chunk_)) {
+         chunk != NULL; chunk = current_chunk_->TakeChunk(&current_chunk_)) {
       while (!chunk->IsEmpty()) {
         HeapObject* object = chunk->Pop();
         object->IteratePointers(visitor);
@@ -99,12 +92,17 @@ class MarkingStack {
 
 class MarkingVisitor : public PointerVisitor {
  public:
-  MarkingVisitor(Space* space, MarkingStack* marking_stack)
-      : space_(space), marking_stack_(marking_stack) { }
+  MarkingVisitor(SemiSpace* new_space, OldSpace* old_space,
+                 MarkingStack* marking_stack, Stack** stack_chain = NULL)
+      : stack_chain_(stack_chain),
+        new_space_(new_space),
+        old_space_(old_space),
+        marking_stack_(marking_stack),
+        number_of_stacks_(0) {}
 
-  void Visit(Object** p) { MarkPointer(*p); }
+  virtual void Visit(Object** p) { MarkPointer(*p); }
 
-  void VisitClass(Object** p) {
+  virtual void VisitClass(Object** p) {
     // The class pointer is used for the mark bit. Therefore,
     // the actual class pointer is obtained by clearing the
     // mark bit.
@@ -112,40 +110,62 @@ class MarkingVisitor : public PointerVisitor {
     MarkPointer(reinterpret_cast<Object*>(klass & ~HeapObject::kMarkBit));
   }
 
-  void VisitBlock(Object** start, Object** end) {
+  virtual void VisitBlock(Object** start, Object** end) {
     // Mark live all HeapObjects pointed to by pointers in [start, end)
     for (Object** p = start; p < end; p++) MarkPointer(*p);
   }
 
+  int number_of_stacks() const { return number_of_stacks_; }
+
  private:
+  void ChainStack(Stack* stack) {
+    number_of_stacks_++;
+    stack->set_next(*stack_chain_);
+    *stack_chain_ = stack;
+  }
+
   void MarkPointer(Object* object) {
     if (!object->IsHeapObject()) return;
-    if (!space_->Includes(reinterpret_cast<uword>(object))) return;
+    uword address = reinterpret_cast<uword>(object);
+    if (!new_space_->Includes(address) &&
+        (old_space_ == NULL || !old_space_->Includes(address))) {
+      return;
+    }
     HeapObject* heap_object = HeapObject::cast(object);
     if (!heap_object->IsMarked()) {
+      if (stack_chain_ != NULL && heap_object->IsStack()) {
+        ChainStack(Stack::cast(heap_object));
+      }
       heap_object->SetMark();
       marking_stack_->Push(heap_object);
     }
   }
 
-  Space* space_;
+  Stack** stack_chain_;
+  SemiSpace* new_space_;
+  OldSpace* old_space_;
   MarkingStack* marking_stack_;
+  int number_of_stacks_;
 };
 
 class FreeList {
  public:
+#if defined(_MSC_VER)
+  // Work around Visual Studo 2013 bug 802058
+  FreeList(void) {
+    memset(buckets_, 0, kNumberOfBuckets * sizeof(FreeListChunk*));
+  }
+#endif
+
   void AddChunk(uword free_start, uword free_size) {
     // If the chunk is too small to be turned into an actual
-    // free list chunk we turn it into a filler to be coalesced
+    // free list chunk we turn it into fillers to be coalesced
     // with other free chunks later.
     if (free_size < FreeListChunk::kSize) {
       ASSERT(free_size <= 2 * kPointerSize);
       Object** free_address = reinterpret_cast<Object**>(free_start);
-      if (free_size == kPointerSize) {
-        free_address[0] = StaticClassStructures::one_word_filler_class();
-      } else if (free_size == 2 * kPointerSize) {
-        free_address[0] = StaticClassStructures::two_word_filler_class();
-        free_address[1] = Smi::FromWord(0);
+      for (uword i = 0; i * kPointerSize < free_size; i++) {
+        free_address[i] = StaticClassStructures::one_word_filler_class();
       }
       return;
     }
@@ -207,27 +227,46 @@ class FreeList {
     }
   }
 
+  void Merge(FreeList* other) {
+    for (int i = 0; i < kNumberOfBuckets; i++) {
+      FreeListChunk* chunk = other->buckets_[i];
+      if (chunk != NULL) {
+        FreeListChunk* last_chunk = chunk;
+        while (last_chunk->next_chunk() != NULL) {
+          last_chunk = FreeListChunk::cast(last_chunk->next_chunk());
+        }
+        last_chunk->set_next_chunk(buckets_[i]);
+        buckets_[i] = chunk;
+      }
+    }
+  }
+
  private:
   // Buckets of power of two sized free lists chunks. Bucket i
   // contains chunks of size larger than 2 ** (i + 1).
   static const int kNumberOfBuckets = 12;
-  FreeListChunk* buckets_[kNumberOfBuckets] = { NULL };
+#if defined(_MSC_VER)
+  // Work around Visual Studo 2013 bug 802058
+  FreeListChunk* buckets_[kNumberOfBuckets];
+#else
+  FreeListChunk* buckets_[kNumberOfBuckets] = {NULL};
+#endif
 };
 
 class SweepingVisitor : public HeapObjectVisitor {
  public:
   explicit SweepingVisitor(FreeList* free_list)
-      : free_list_(free_list),
-        free_start_(0),
-        used_(0) {
+      : free_list_(free_list), free_start_(0), used_(0) {
     // Clear the free list. It will be rebuilt during sweeping.
-    free_list_->Clear();
+    if (free_list_ != NULL) free_list_->Clear();
   }
 
   void AddFreeListChunk(uword free_end_) {
     if (free_start_ != 0) {
       uword free_size = free_end_ - free_start_;
-      free_list_->AddChunk(free_start_, free_size);
+      // When sweeping the new space we just remove mark bits, but don't build
+      // free lists, since it is GCed by scavenge instead.
+      if (free_list_ != NULL) free_list_->AddChunk(free_start_, free_size);
       free_start_ = 0;
     }
   }
@@ -245,9 +284,7 @@ class SweepingVisitor : public HeapObjectVisitor {
     return size;
   }
 
-  virtual void ChunkEnd(uword end) {
-    AddFreeListChunk(end);
-  }
+  virtual void ChunkEnd(uword end) { AddFreeListChunk(end); }
 
   int used() const { return used_; }
 

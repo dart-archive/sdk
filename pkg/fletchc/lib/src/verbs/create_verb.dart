@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -6,7 +6,7 @@ library fletchc.verbs.create_verb;
 
 import 'infrastructure.dart';
 
-import '../driver/developer.dart' show
+import '../worker/developer.dart' show
     Settings,
     allocateWorker,
     configFileUri,
@@ -49,7 +49,7 @@ class CreateSessionTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return createSessionTask(
         commandSender, commandIterator, name, settingsUri, base, configFileUri);
   }
@@ -57,7 +57,7 @@ class CreateSessionTask extends SharedTask {
 
 Future<int> createSessionTask(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     String name,
     Uri settingsUri,
     Uri base,
@@ -70,7 +70,7 @@ Future<int> createSessionTask(
   if (settingsUri != null) {
     state.log("created session with $settingsUri $settings");
   } else {
-    state.log("created session");
+    state.log("created session with settings $settings");
   }
   return 0;
 }

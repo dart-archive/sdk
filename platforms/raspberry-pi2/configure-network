@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
@@ -21,7 +21,7 @@ PROG_NAME="$(follow_links "$BASH_SOURCE")"
 
 source $(dirname $PROG_NAME)/.common.shlib
 
-echo "This program requires superuser to run"
+echo "This program requires superuser to run."
 
 exec sudo "$DART_VM" -Dfletch-vm="$FLETCH_VM" "$DART_FILE" \
     --configure-network-only "$@"

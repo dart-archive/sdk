@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -40,6 +40,9 @@ import 'x_servicec_verb.dart' show
 import 'x_upgrade_verb.dart' show
     upgradeAction;
 
+import 'x_download_tools_verb.dart' show
+    downloadToolsAction;
+
 import 'quit_verb.dart' show
     quitAction;
 
@@ -70,6 +73,11 @@ class Action {
   /// Optional kind of target required by this verb.
   final TargetKind requiredTarget;
 
+  /// Indicates whether the action needs a target. If [requiredTarget] is
+  /// non-null, this flag is set to `true`, regardless of the value given
+  /// in the constructor.
+  final bool requiresTarget;
+
   /// Optional list of targets supported (but not required) by this verb.
   final List<TargetKind> supportedTargets;
 
@@ -84,17 +92,21 @@ class Action {
        this.allowsTrailing: false,
        bool requiresTargetSession: false,
        TargetKind requiredTarget,
+       bool requiresTarget: false,
        this.supportedTargets,
        this.supportsWithUri: false})
       : this.requiresTargetSession = requiresTargetSession,
         this.requiredTarget =
-            requiresTargetSession ? TargetKind.SESSION : requiredTarget;
+      requiresTargetSession ? TargetKind.SESSION : requiredTarget,
+        requiresTarget = !identical(requiredTarget, null) ||
+    requiresTarget ||
+    requiresTargetSession;
 }
 
 
 // TODO(ahe): Support short and long documentation.
 
-/// Common verbs are displayed in the default help screen.
+/// Common actions are displayed in the default help screen.
 ///
 /// Please make sure their combined documentation fit in in 80 columns by 20
 /// lines.  The default terminal size is normally 80x24.  Two lines are used
@@ -116,6 +128,7 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "create": createAction,
   "debug": debugAction,
   "export": exportAction,
+  "x-download-tools": downloadToolsAction,
   "x-end": endAction,
   "x-servicec": servicecAction,
   "x-upgrade": upgradeAction,

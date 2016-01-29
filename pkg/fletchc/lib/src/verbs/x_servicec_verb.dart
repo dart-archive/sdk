@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -13,7 +13,7 @@ import 'package:path/path.dart' show join, dirname;
 
 import 'infrastructure.dart';
 
-import '../driver/exit_codes.dart' show
+import '../hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 import 'package:servicec/compiler.dart' as servicec;
@@ -55,7 +55,7 @@ class CompileTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return compileTask(targetUri, base, trailing);
   }
 }

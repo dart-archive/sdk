@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -145,7 +145,7 @@ void main(List<String> arguments) async {
       print('Update finished');
       break;
     case RequestHeader.FLETCH_VERSION:
-      int version = await connection.fletchVersion();
+      String version = await connection.fletchVersion();
       print('Fletch Agent Version $version');
       break;
     case RequestHeader.SIGNAL_VM:

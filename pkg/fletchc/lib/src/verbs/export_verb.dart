@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -9,10 +9,10 @@ import 'infrastructure.dart';
 import 'documentation.dart' show
     exportDocumentation;
 
-import '../driver/developer.dart' show
+import '../worker/developer.dart' show
     compileAndAttachToVmThen;
 
-import '../driver/developer.dart' as developer;
+import '../worker/developer.dart' as developer;
 
 const Action exportAction =
     const Action(
@@ -38,7 +38,7 @@ class ExportTask extends SharedTask {
 
   Future<int> call(
       CommandSender commandSender,
-      StreamIterator<Command> commandIterator) {
+      StreamIterator<ClientCommand> commandIterator) {
     return exportTask(
         commandSender, commandIterator, SessionState.current, script, snapshot,
         base);
@@ -47,7 +47,7 @@ class ExportTask extends SharedTask {
 
 Future<int> exportTask(
     CommandSender commandSender,
-    StreamIterator<Command> commandIterator,
+    StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri script,
     Uri snapshot,
@@ -58,5 +58,6 @@ Future<int> exportTask(
       state,
       script,
       base,
+      true,
       () => developer.export(state, snapshot));
 }

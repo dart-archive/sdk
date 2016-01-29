@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -22,6 +22,7 @@ class PrintInterceptor {
   }
   virtual void Out(char* message) = 0;
   virtual void Error(char* message) = 0;
+
  private:
   friend class Print;
   PrintInterceptor* next_;
@@ -49,41 +50,41 @@ class Print {
 
 class Utils {
  public:
-  template<typename T>
+  template <typename T>
   static inline T Minimum(T x, T y) {
     return x < y ? x : y;
   }
 
-  template<typename T>
+  template <typename T>
   static inline T Maximum(T x, T y) {
     return x > y ? x : y;
   }
 
-  template<typename T>
+  template <typename T>
   static inline bool IsPowerOfTwo(T x) {
     return (x & (x - 1)) == 0;
   }
 
-  template<typename T>
+  template <typename T>
   static inline bool IsAligned(T x, int n) {
     ASSERT(IsPowerOfTwo(n));
     return ((x - static_cast<T>(0)) & (n - 1)) == 0;
   }
 
-  template<typename T>
+  template <typename T>
   static inline T RoundDown(T x, int n) {
     ASSERT(IsPowerOfTwo(n));
     return (x & -n);
   }
 
-  template<typename T>
+  template <typename T>
   static inline T RoundUp(T x, int n) {
     return RoundDown(x + n - 1, n);
   }
 
   // Implementation is from "Hacker's Delight" by Henry S. Warren, Jr.,
   // figure 3-3, page 48, where the function is called clp2.
-  template<typename T>
+  template <typename T>
   static inline T RoundUpToPowerOfTwo(T x) {
     x = x - 1;
     x = x | (x >> 1);
@@ -98,29 +99,23 @@ class Utils {
   static uint32 StringHash(const uint8* data, int length, int char_width);
 
   // Bit width testers.
-  static bool IsInt8(word value) {
-    return (-128 <= value) && (value < 128);
-  }
+  static bool IsInt8(word value) { return (-128 <= value) && (value < 128); }
 
-  static bool IsUint8(word value) {
-    return (0 <= value) && (value < 256);
-  }
+  static bool IsUint8(word value) { return (0 <= value) && (value < 256); }
 
   static bool IsInt16(word value) {
     return (-32768 <= value) && (value < 32768);
   }
 
-  static bool IsUint16(word value) {
-    return (0 <= value) && (value < 65536);
-  }
+  static bool IsUint16(word value) { return (0 <= value) && (value < 65536); }
 
 #ifdef FLETCH64
   static bool IsInt32(word value) {
-    return (-(1L << 31) <= value) && (value < (1L << 31));
+    return (-(WORD_C(1) << 31) <= value) && (value < (WORD_C(1) << 31));
   }
 
   static bool IsUint32(word value) {
-    return (0 <= value) && (value < (1L << 32));
+    return (0 <= value) && (value < (WORD_C(1) << 32));
   }
 #endif
 
@@ -130,7 +125,8 @@ class Utils {
 #else
     uword res = static_cast<uword>(lhs) + static_cast<uword>(rhs);
     *val = bit_cast<uword>(res);
-    return ((res ^ lhs) & (res ^ rhs) & (1UL << (kBitsPerWord - 1))) != 0;
+    word bit = (res ^ lhs) & (res ^ rhs) & (UWORD_C(1) << (kBitsPerWord - 1));
+    return bit != 0;
 #endif
   }
 
@@ -140,7 +136,8 @@ class Utils {
 #else
     uword res = static_cast<uword>(lhs) - static_cast<uword>(rhs);
     *val = bit_cast<word>(res);
-    return ((res ^ lhs) & (res ^ ~rhs) & (1UL << (kBitsPerWord - 1))) != 0;
+    uword bit = (res ^ lhs) & (res ^ ~rhs) & (UWORD_C(1) << (kBitsPerWord - 1));
+    return bit != 0;
 #endif
   }
 
@@ -148,11 +145,26 @@ class Utils {
     uint64 x = static_cast<uint64>((v > 0) ? v : -v);
     uint64 t;
     int r = 0;
-    if ((t = x >> 32) != 0) { x = t; r += 32; }
-    if ((t = x >> 16) != 0) { x = t; r += 16; }
-    if ((t = x >> 8) != 0) { x = t; r += 8; }
-    if ((t = x >> 4) != 0) { x = t; r += 4; }
-    if ((t = x >> 2) != 0) { x = t; r += 2; }
+    if ((t = x >> 32) != 0) {
+      x = t;
+      r += 32;
+    }
+    if ((t = x >> 16) != 0) {
+      x = t;
+      r += 16;
+    }
+    if ((t = x >> 8) != 0) {
+      x = t;
+      r += 8;
+    }
+    if ((t = x >> 4) != 0) {
+      x = t;
+      r += 4;
+    }
+    if ((t = x >> 2) != 0) {
+      x = t;
+      r += 2;
+    }
     if (x > 1) r += 1;
     return r;
   }
@@ -208,7 +220,7 @@ class Utils {
 
 // BitField is a template for encoding and decoding a bit field inside
 // an unsigned machine word.
-template<class T, int position, int size>
+template <class T, int position, int size>
 class BitField {
  public:
   // Tells whether the provided value fits into the bit field.
@@ -217,15 +229,11 @@ class BitField {
   }
 
   // Returns a uword mask of the bit field.
-  static uword mask() {
-    return ((1U << size) - 1) << position;
-  }
+  static uword mask() { return ((1U << size) - 1) << position; }
 
   // Returns the shift count needed to right-shift the bit field to
   // the least-significant bits.
-  static int shift() {
-    return position;
-  }
+  static int shift() { return position; }
 
   // Returns a uword with the bit field value encoded.
   static uword encode(T value) {
@@ -249,7 +257,7 @@ class BitField {
 
 // BoolField is a template for encoding and decoding a bit inside an
 // unsigned machine word.
-template<int position>
+template <int position>
 class BoolField {
  public:
   // Returns a uword with the bool value encoded.
@@ -258,14 +266,10 @@ class BoolField {
   }
 
   // Extracts the bool from the value.
-  static bool decode(uword value) {
-    return (value & (1U << position)) != 0;
-  }
+  static bool decode(uword value) { return (value & (1U << position)) != 0; }
 
   // Returns a uword mask of the bit field.
-  static uword mask() {
-    return 1U << position;
-  }
+  static uword mask() { return 1U << position; }
 
   // Returns a uword with the bool field value encoded based on the
   // original value. Only the single bit corresponding to this bool

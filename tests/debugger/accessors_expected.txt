@@ -1,22 +1,50 @@
+Starting session. Type 'help' for a list of commands.
+
+> t verbose
+### verbose printing set to: false
+> b main
+breakpoint set: id: '0' method: 'main' bytecode index: '0'
+> r
 main    @40
+> s
 main    @2
+> s
 main    @new A(40, 2)
+> s
 main    @a
+> s
 main    @a.x
+> s
 main    @a
+> s
 main    @a.y
+> s
 A.y @_y
+> s
 A.y @=> _y;
+> s
 main    @a.x + a.y
+> s
 main    @a
+> s
 main    @10
+> s
 main    @a.x = 10
+> s
 main    @a
+> s
 main    @32
+> s
 main    @a.y = 32
+> s
 A.y @_y = value
+> s
 A.y @value
+> s
 A.y @_y = value
+> s
 A.y @=> _y = value;
+> s
 main    @a.y = 32
+> s
 ### process terminated

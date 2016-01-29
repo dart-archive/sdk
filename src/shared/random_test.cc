@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -8,12 +8,11 @@
 
 namespace fletch {
 
-
 // Chi squared for getting m 0s out of n bits.
 double ChiSquared(int m, int n) {
-  double ys_minus_np1 = (m - n/2.0);
+  double ys_minus_np1 = (m - n / 2.0);
   double chi_squared_1 = ys_minus_np1 * ys_minus_np1 * 2.0 / n;
-  double ys_minus_np2 = ((n - m) - n/2.0);
+  double ys_minus_np2 = ((n - m) - n / 2.0);
   double chi_squared_2 = ys_minus_np2 * ys_minus_np2 * 2.0 / n;
   return chi_squared_1 + chi_squared_2;
 }
@@ -68,15 +67,11 @@ TEST_CASE(RandomBitCorrelations) {
         if (chi_squared > 24) {
           int percent = static_cast<int>(m * 100.0 / kRepeats);
           if (predictor_bit < 0) {
-            printf("Bit %d is %d %d%% of the time\n",
-                   random_bit,
+            printf("Bit %d is %d %d%% of the time\n", random_bit,
                    predictor_bit == -2 ? 0 : 1, percent);
           } else {
             printf("Bit %d is the same as bit %d %d ago %d%% of the time\n",
-                   random_bit,
-                   predictor_bit,
-                   ago,
-                   percent);
+                   random_bit, predictor_bit, ago, percent);
           }
         }
 

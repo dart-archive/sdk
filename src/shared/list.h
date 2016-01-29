@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,19 +15,18 @@ namespace fletch {
 // contiguous elements. List never take ownership of the data they
 // are passed in, so as long as the data is either in a zone or
 // static, lists can be safely passed by value.
-template<typename T>
+template <typename T>
 class List {
  public:
-  List() : data_(NULL), length_(0) { }
+  List() : data_(NULL), length_(0) {}
 
   List(T* data, int length) : data_(data), length_(length) {
     ASSERT(length >= 0);
   }
 
-  template<typename S>
+  template <typename S>
   explicit List(List<S> other)
-      : data_(reinterpret_cast<T*>(other.data())), length_(other.length()) {
-  }
+      : data_(reinterpret_cast<T*>(other.data())), length_(other.length()) {}
 
   T& operator[](int index) {
     ASSERT(index >= 0 && index < length_);

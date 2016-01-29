@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -11,9 +11,7 @@ ObjectList::ObjectList(int capacity) {
   length_ = 0;
 }
 
-ObjectList::~ObjectList() {
-  contents_.Delete();
-}
+ObjectList::~ObjectList() { contents_.Delete(); }
 
 void ObjectList::Add(Object* object) {
   int index = length_++;
@@ -23,9 +21,7 @@ void ObjectList::Add(Object* object) {
   contents_[index] = object;
 }
 
-void ObjectList::Clear() {
-  length_ = 0;
-}
+void ObjectList::Clear() { length_ = 0; }
 
 void ObjectList::IteratePointers(PointerVisitor* visitor) {
   Object** stack_start = contents_.data();

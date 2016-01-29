@@ -1,0 +1,83 @@
+# Copyright (c) 2015, the Dart project authors.  Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+# The libraries available for embedded fletch programs.
+
+[dart-spec]
+spec:3rd edition.
+
+[features]
+# No extra features.
+
+[libraries]
+# Fletch specific libraries
+fletch.ffi: ffi/ffi.dart
+fletch: fletch/fletch.dart
+fletch.io: io/io.dart
+fletch.service: service/service.dart
+fletch.os: os/os.dart
+fletch._system: system/system.dart
+
+# Embedded core is a reduced version of the regular dart:core.
+core: core/embedded_core.dart
+
+math: ../third_party/dart/sdk/lib/math/math.dart
+typed_data: ../third_party/dart/sdk/lib/typed_data/typed_data.dart
+developer: ../third_party/dart/sdk/lib/developer/developer.dart
+collection: ../third_party/dart/sdk/lib/collection/collection.dart
+
+_internal: ../third_party/dart/sdk/lib/internal/internal.dart
+
+# These are the part-files included by embedded_core.dart.
+# To ease path-management, they are defined as internal libraries.
+_core_annotations: ../third_party/dart/sdk/lib/core/annotations.dart
+_core_bool: ../third_party/dart/sdk/lib/core/bool.dart
+_core_comparable: ../third_party/dart/sdk/lib/core/comparable.dart
+_core_date_time: ../third_party/dart/sdk/lib/core/date_time.dart
+_core_double: ../third_party/dart/sdk/lib/core/double.dart
+_core_duration: ../third_party/dart/sdk/lib/core/duration.dart
+_core_errors: ../third_party/dart/sdk/lib/core/errors.dart
+_core_exceptions: ../third_party/dart/sdk/lib/core/exceptions.dart
+_core_expando: ../third_party/dart/sdk/lib/core/expando.dart
+_core_function: ../third_party/dart/sdk/lib/core/function.dart
+_core_identical: ../third_party/dart/sdk/lib/core/identical.dart
+_core_int: ../third_party/dart/sdk/lib/core/int.dart
+_core_invocation: ../third_party/dart/sdk/lib/core/invocation.dart
+_core_iterable: ../third_party/dart/sdk/lib/core/iterable.dart
+_core_iterator: ../third_party/dart/sdk/lib/core/iterator.dart
+_core_list: ../third_party/dart/sdk/lib/core/list.dart
+_core_map: ../third_party/dart/sdk/lib/core/map.dart
+_core_null: ../third_party/dart/sdk/lib/core/null.dart
+_core_num: ../third_party/dart/sdk/lib/core/num.dart
+_core_object: ../third_party/dart/sdk/lib/core/object.dart
+_core_pattern: ../third_party/dart/sdk/lib/core/pattern.dart
+_core_print: ../third_party/dart/sdk/lib/core/print.dart
+_core_resource: ../third_party/dart/sdk/lib/core/resource.dart
+_core_set: ../third_party/dart/sdk/lib/core/set.dart
+_core_sink: ../third_party/dart/sdk/lib/core/sink.dart
+_core_stacktrace: ../third_party/dart/sdk/lib/core/stacktrace.dart
+_core_stopwatch: ../third_party/dart/sdk/lib/core/stopwatch.dart
+_core_string: ../third_party/dart/sdk/lib/core/string.dart
+_core_string_buffer: ../third_party/dart/sdk/lib/core/string_buffer.dart
+_core_string_sink: ../third_party/dart/sdk/lib/core/string_sink.dart
+_core_symbol: ../third_party/dart/sdk/lib/core/symbol.dart
+_core_type: ../third_party/dart/sdk/lib/core/type.dart
+
+# These are unsupported on fletch-embedded.
+isolate: unsupported:
+mirrors: unsupported:
+async: unsupported:
+convert: unsupported:
+io: unsupported:
+indexed_db: unsupported:
+html: unsupported:
+js: unsupported:
+html_common: unsupported:
+web_sql: unsupported:
+svg: unsupported:
+web_audio: unsupported:
+web_gl: unsupported:
+_native_typed_data: unsupported:
+nativewrappers: unsupported:
+profiler: unsupported:

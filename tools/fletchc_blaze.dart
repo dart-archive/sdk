@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -15,14 +15,14 @@ import 'dart:io';
 import 'package:fletchc/session.dart' show
     Session;
 
-import 'package:fletchc/src/driver/session_manager.dart';
+import 'package:fletchc/src/hub/session_manager.dart';
 
-import 'package:fletchc/src/driver/developer.dart' show
+import 'package:fletchc/src/worker/developer.dart' show
     Address,
     Settings,
     SessionState;
 
-import 'package:fletchc/src/driver/developer.dart' as developer;
+import 'package:fletchc/src/worker/developer.dart' as developer;
 
 import 'package:fletchc/src/verbs/infrastructure.dart' show
     fileUri;
@@ -38,7 +38,6 @@ class FletchRunner {
     String snapshot;
     String script;
     Uri libraryRoot;
-    Uri patchRoot;
     Uri fletchVm;
     Uri nativesJson;
 
@@ -57,8 +56,7 @@ class FletchRunner {
         if (libraryRoot != null) throw "Cannot use multiple library roots";
         libraryRoot = Uri.base.resolve(appendSlash(arguments[++i]));
       } else if (arg == "--patch-root") {
-        if (patchRoot != null) throw "Cannot use multiple patch roots";
-        patchRoot = Uri.base.resolve(appendSlash(arguments[++i]));
+        throw "--patch-root not supported anymore";
       } else if (arg == "--fletch-vm") {
         if (fletchVm != null) throw "Cannot use multiple Fletch VMs";
         fletchVm = Uri.base.resolve(arguments[++i]);
@@ -91,7 +89,6 @@ class FletchRunner {
         "fletchc-blaze",
         settings,
         libraryRoot: libraryRoot,
-        patchRoot: patchRoot,
         fletchVm: fletchVm,
         nativesJson: nativesJson);
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -9,15 +9,13 @@
 
 namespace fletch {
 
-template<typename Key, typename Mapped>
+template <typename Key, typename Mapped>
 struct MapKeyExtractor {
   static Key& GetKey(Pair<Key, Mapped>& pair) {  // NOLINT
     return pair.first;
   }
 
-  static const Key& GetKey(const Pair<Key, Mapped>& pair) {
-    return pair.first;
-  }
+  static const Key& GetKey(const Pair<Key, Mapped>& pair) { return pair.first; }
 };
 
 // HashMap:
@@ -30,11 +28,9 @@ struct MapKeyExtractor {
 // * Iterators are invalidated on all inserts, even if the key was already
 //   present.
 // * Google naming conventions are used (CamelCase classes and methods).
-template<typename Key, typename Mapped>
-class HashMap
-    : public UnorderedHashTable<Key,
-                                Pair<Key, Mapped>,
-                                MapKeyExtractor<Key, Mapped> > {
+template <typename Key, typename Mapped>
+class HashMap : public UnorderedHashTable<Key, Pair<Key, Mapped>,
+                                          MapKeyExtractor<Key, Mapped>> {
  public:
   // This is perhaps what you would think of as the value type, but that name
   // is used for the key-value pair.

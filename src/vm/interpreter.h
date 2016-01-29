@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -21,11 +21,10 @@ class Port;
 class TargetYieldResult {
  public:
   explicit TargetYieldResult(const Object* object)
-      : value_(reinterpret_cast<uword>(object)) { }
+      : value_(reinterpret_cast<uword>(object)) {}
 
   TargetYieldResult(Port* port, bool terminate)
-      : value_(reinterpret_cast<uword>(port) |
-               Terminate::encode(terminate)) { }
+      : value_(reinterpret_cast<uword>(port) | Terminate::encode(terminate)) {}
 
   bool ShouldTerminate() const { return Terminate::decode(value_); }
 
@@ -33,10 +32,14 @@ class TargetYieldResult {
     return reinterpret_cast<Port*>(value_ & ~Terminate::mask());
   }
 
-  Object* AsObject() const { return reinterpret_cast<Object*>(value_); }
+  Object* AsObject() const {
+    Object* result = reinterpret_cast<Object*>(value_);
+    ASSERT(result->IsSmi());
+    return result;
+  }
 
  private:
-  class Terminate : public BoolField<0> {};
+  class Terminate : public BoolField<1> {};
 
   uword value_;
 };
@@ -48,7 +51,6 @@ class Interpreter {
   enum InterruptKind {
     kReady,
     kTerminate,
-    kImmutableAllocationFailure,
     kInterrupt,
     kYield,
     kTargetYield,
@@ -60,15 +62,12 @@ class Interpreter {
   explicit Interpreter(Process* process)
       : process_(process),
         interruption_(kReady),
-        target_yield_result_(NULL, false) { }
+        target_yield_result_(NULL, false) {}
 
   // Run the Process until interruption.
   void Run();
 
   bool IsTerminated() const { return interruption_ == kTerminate; }
-  bool IsImmutableAllocationFailure() const {
-    return interruption_ == kImmutableAllocationFailure;
-  }
   bool IsInterrupted() const { return interruption_ == kInterrupt; }
   bool IsYielded() const { return interruption_ == kYield; }
   bool IsTargetYielded() const { return interruption_ == kTargetYield; }
@@ -81,13 +80,10 @@ class Interpreter {
   TargetYieldResult target_yield_result() const { return target_yield_result_; }
 
  private:
-  InterruptKind HandleBailout();
-
   Process* const process_;
   InterruptKind interruption_;
   TargetYieldResult target_yield_result_;
 };
-
 
 // -------------------- Native interpreter support --------------------
 //
@@ -99,16 +95,13 @@ extern "C" const NativeFunction kNativeTable[];
 extern "C" Process::StackCheckResult HandleStackOverflow(Process* process,
                                                          int size);
 
-extern "C" int HandleGC(Process* process);
+extern "C" void HandleGC(Process* process);
 
-extern "C" Object* HandleAllocate(Process* process,
-                                  Class* clazz,
-                                  int immutable,
-                                  int has_immutable_heapobject_member);
+extern "C" Object* HandleAllocate(Process* process, Class* clazz,
+                                  int immutable);
 
-extern "C" void AddToStoreBufferSlow(Process* process,
-                                     Object* object,
-                                     Object* value);
+extern "C" void AddToRememberedSetSlow(Process* process, Object* object,
+                                       Object* value);
 
 extern "C" Object* HandleAllocateBoxed(Process* process, Object* value);
 
@@ -116,22 +109,22 @@ extern "C" Object* HandleObjectFromFailure(Process* process, Failure* failure);
 
 extern "C" void HandleCoroutineChange(Process* process, Coroutine* coroutine);
 
-extern "C" Object* HandleIdentical(Process* process,
-                                   Object* left,
+extern "C" Object* HandleIdentical(Process* process, Object* left,
                                    Object* right);
 
 extern "C" LookupCache::Entry* HandleLookupEntry(Process* process,
                                                  LookupCache::Entry* primary,
-                                                 Class* clazz,
-                                                 int selector);
+                                                 Class* clazz, int selector);
 
-extern "C" uint8* HandleThrow(Process* process,
-                              Object* exception,
-                              int* stack_delta);
+extern "C" uint8* HandleThrow(Process* process, Object* exception,
+                              int* stack_delta_result,
+                              Object*** frame_pointer_result);
 
 extern "C" void HandleEnterNoSuchMethod(Process* process);
 
-extern "C" void HandleInvokeSelector(Process* process);
+extern "C" Function* HandleInvokeSelector(Process* process);
+
+extern "C" int HandleAtBytecode(Process* process, uint8* bcp, Object** sp);
 
 }  // namespace fletch
 

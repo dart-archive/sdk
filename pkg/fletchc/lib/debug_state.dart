@@ -1,4 +1,4 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -7,18 +7,25 @@ library fletch.debug_state;
 import 'bytecodes.dart';
 import 'fletch_system.dart';
 import 'incremental/fletchc_incremental.dart';
-import 'session.dart';
+import 'vm_session.dart';
 import 'src/debug_info.dart';
 import 'src/class_debug_info.dart';
 
-import 'commands.dart' show
+import 'vm_commands.dart' show
     DartValue,
     InstanceStructure;
 
-part 'stack_trace.dart';
+import 'src/hub/session_manager.dart' show
+    SessionState;
+
+part 'back_trace.dart';
 
 /// A representation of a remote object.
-abstract class RemoteObject { }
+abstract class RemoteObject {
+  String name;
+
+  RemoteObject(this.name);
+}
 
 /// A representation of a remote instance.
 class RemoteInstance extends RemoteObject {
@@ -28,7 +35,7 @@ class RemoteInstance extends RemoteObject {
   /// The fields as [DartValue]s of the remote instance.
   final List<DartValue> fields;
 
-  RemoteInstance(this.instance, this.fields);
+  RemoteInstance(this.instance, this.fields, {String name}) : super(name);
 }
 
 /// A representation of a remote primitive value (i.e. used for non-instances).
@@ -36,7 +43,7 @@ class RemoteValue extends RemoteObject {
   /// A [DartValue] describing the remote object.
   final DartValue value;
 
-  RemoteValue(this.value);
+  RemoteValue(this.value, {String name}) : super(name);
 }
 
 class Breakpoint {
@@ -58,9 +65,10 @@ class DebugState {
       <FletchClass, ClassDebugInfo>{};
 
   bool showInternalFrames = false;
-  StackFrame _topFrame;
+  bool verbose = true;
+  BackTraceFrame _topFrame;
   RemoteObject currentUncaughtException;
-  StackTrace _currentStackTrace;
+  BackTrace _currentBackTrace;
   int currentFrame = 0;
   SourceLocation _currentLocation;
 
@@ -69,32 +77,32 @@ class DebugState {
   void reset() {
     _topFrame = null;
     currentUncaughtException = null;
-    _currentStackTrace = null;
+    _currentBackTrace = null;
     _currentLocation = null;
     currentFrame = 0;
   }
 
   int get actualCurrentFrameNumber {
-    return currentStackTrace.actualFrameNumber(currentFrame);
+    return currentBackTrace.actualFrameNumber(currentFrame);
   }
 
   ScopeInfo get currentScopeInfo {
-    return currentStackTrace.scopeInfo(currentFrame);
+    return currentBackTrace.scopeInfo(currentFrame);
   }
 
   SourceLocation get currentLocation => _currentLocation;
 
-  StackTrace get currentStackTrace => _currentStackTrace;
+  BackTrace get currentBackTrace => _currentBackTrace;
 
-  void set currentStackTrace(StackTrace stackTrace) {
-    _currentLocation = stackTrace.sourceLocation();
-    _topFrame = stackTrace.stackFrames[0];
-    _currentStackTrace = stackTrace;
+  void set currentBackTrace(BackTrace backTrace) {
+    _currentLocation = backTrace.sourceLocation();
+    _topFrame = backTrace.frames[0];
+    _currentBackTrace = backTrace;
   }
 
-  StackFrame get topFrame => _topFrame;
+  BackTraceFrame get topFrame => _topFrame;
 
-  void set topFrame(StackFrame frame) {
+  void set topFrame(BackTraceFrame frame) {
     _currentLocation = frame.sourceLocation();
     _topFrame = frame;
   }
@@ -125,21 +133,7 @@ class DebugState {
             currentLocation.node == null);
   }
 
-  int get numberOfStackFrames => currentStackTrace.stackFrames.length;
-
   SourceLocation sourceLocationForFrame(int frame) {
-    return currentStackTrace.stackFrames[frame].sourceLocation();
-  }
-
-  String list() {
-    return currentStackTrace.list(currentFrame);
-  }
-
-  String disasm() {
-    return currentStackTrace.disasm(currentFrame);
-  }
-
-  String formatStackTrace() {
-    return currentStackTrace.format(currentFrame);
+    return currentBackTrace.frames[frame].sourceLocation();
   }
 }

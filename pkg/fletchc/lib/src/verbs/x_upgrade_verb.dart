@@ -1,11 +1,11 @@
-// Copyright (c) 2015, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
 library fletchc.verbs.x_upgrade_verb;
 
 import 'infrastructure.dart';
-import '../driver/developer.dart' show upgradeAgent;
+import '../worker/developer.dart' show upgradeAgent;
 import 'documentation.dart' show upgradeDocumentation;
 
 const Action upgradeAction = const Action(
@@ -16,23 +16,20 @@ const Action upgradeAction = const Action(
     requiredTarget: TargetKind.AGENT);
 
 Future upgradeFunction(AnalyzedSentence sentence, VerbContext context) async {
-  Uri packageUri = sentence.withUri;
-  List<String> nameParts = packageUri.pathSegments.last.split('_');
-  if (nameParts.length != 3 || nameParts[0] != 'fletch-agent') {
-    throwFatalError(DiagnosticKind.upgradeInvalidPackageName);
-  }
-  String version = nameParts[1];
-  return context.performTaskInWorker(new UpgradeTask(packageUri, version));
+  return context.performTaskInWorker(
+      new UpgradeTask(sentence.base, sentence.withUri));
 }
 
 class UpgradeTask extends SharedTask {
+  final Uri base;
   final Uri package;
-  final String version;
 
-  UpgradeTask(this.package, this.version);
+  UpgradeTask(this.base, this.package);
 
-  Future call(CommandSender commandSender,
-      StreamIterator<Command> commandIterator) async {
-    return await upgradeAgent(SessionState.current, package, version);
+  Future call(
+      CommandSender commandSender,
+      StreamIterator<ClientCommand> commandIterator) async {
+        return await upgradeAgent(commandSender, commandIterator,
+            SessionState.current, base, package);
   }
 }
