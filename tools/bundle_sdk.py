@@ -97,7 +97,7 @@ def CopyPlatformDescriptor(bundle_dir, platform_descriptor_name, repo_dir,
           if path.startswith(repo_dir):
             # Dart-sdk library
             path = path.replace(repo_dir, sdk_dir)
-          l = "%s: %s" % (name, path)
+          line = "%s: %s" % (name, path)
       generated.write('%s\n' % line)
 
 # We have two lib dependencies: the libs from the sdk and the libs dir with
