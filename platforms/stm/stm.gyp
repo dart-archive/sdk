@@ -21,12 +21,5 @@
         'disco_fletch/disco_fletch.gyp:disco_fletch',
       ],
     },
-    {
-      'target_name': 'event_handler_test',
-      'type': 'none',
-      'dependencies': [
-        'event_handler_test/event_handler_test.gyp:event_handler_test',
-      ],
-    },
   ],
 }
