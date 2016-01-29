@@ -65,19 +65,19 @@ class FrameBuffer {
   int get width => _lcdWidth.icall$0();
 
   clear([Color color = Color.black]) {
-    _lcdClear.icall$1(color._rgb8888);
+    _lcdClear.icall$1(color.rgb8888);
   }
 
   set foregroundColor(Color color) {
-    _lcdSetForegroundColor.icall$1(color._rgb8888);
+    _lcdSetForegroundColor.icall$1(color.rgb8888);
   }
 
   set backgroundColor(Color color) {
-    _lcdSetBackgroundColor.icall$1(color._rgb8888);
+    _lcdSetBackgroundColor.icall$1(color.rgb8888);
   }
 
   void drawLine(int x1, int y1, int x2, int y2, [Color color = Color.white]) {
-    _lcdSetForegroundColor.icall$1(color._rgb8888);
+    _lcdSetForegroundColor.icall$1(color.rgb8888);
     _lcdDrawLine.icall$4(x1, y1, x2, y2);
   }
 
