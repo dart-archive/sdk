@@ -1110,7 +1110,7 @@ Future<int> downloadTools(
       result = await Process.run(
           "unzip", ["-o", zipFile.path, "-d", destination.path]);
     } else if (Platform.isMacOS) {
-      result = await ctx.runProcess(
+      result = await Process.run(
           "ditto", ["-x", "-k", zipFile.path, destination.path]);
     } else {
       throwUnsupportedPlatform();

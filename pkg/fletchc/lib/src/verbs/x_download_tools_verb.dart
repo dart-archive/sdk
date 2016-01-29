@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library fletchc.verbs.x_upgrade_verb;
+library fletchc.verbs.x_download_tools_verb;
 
 import 'infrastructure.dart';
 import '../worker/developer.dart' show downloadTools;
@@ -19,7 +19,7 @@ Future downloadToolsFunction(
 
 class DownloadTooksTask extends SharedTask {
 
-  UpgradeTask(DownloadTooksTask);
+  DownloadTooksTask();
 
   Future call(
       CommandSender commandSender,

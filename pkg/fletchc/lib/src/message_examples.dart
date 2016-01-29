@@ -185,6 +185,9 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(<String>['help', '--fisk']),
           new CommandLineExample(<String>['--compile-and-run', 'test.dart'])];
 
+    case DiagnosticKind.unsupportedPlatform:
+      return untestable;
+
     case DiagnosticKind.missingRequiredArgument:
       return <Example>[new CommandLineExample(
           <String>['run', '--test-debugger'])];
