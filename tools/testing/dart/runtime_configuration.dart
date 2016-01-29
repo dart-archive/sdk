@@ -154,7 +154,7 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (artifact.filename != null && artifact.mimeType != 'application/dart') {
       throw "Dart VM cannot run files of type '${artifact.mimeType}'.";
     }
-    String executable = useSdk ? '${suite.buildDir}/fletch-sdk/bin/fletch'
+    String executable = useSdk ? '${suite.buildDir}/dartino-sdk/bin/fletch'
                                : '${suite.buildDir}/fletch';
     Map<String, String> environment = {
       'DART_VM': suite.dartVmBinaryFileName,
@@ -195,7 +195,7 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
     }
 
     var useSdk = configuration['use_sdk'];
-    var fletchVM = useSdk ? "${suite.buildDir}/fletch-sdk/bin/fletch-vm"
+    var fletchVM = useSdk ? "${suite.buildDir}/dartino-sdk/bin/fletch-vm"
                           : "${suite.buildDir}/fletch-vm";
     // NOTE: We assume that `fletch-vm` behaves the same as invoking
     // the DartVM in terms of exit codes.

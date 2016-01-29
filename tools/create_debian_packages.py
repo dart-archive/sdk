@@ -5,10 +5,10 @@
 # BSD-style license that can be found in the LICENSE file.
 #
 
-# Script to build a Debian packages from a Fletch tarball.
+# Script to build a Debian packages from a Dartino tarball.
 #
 # Right now this script only supports building the installation for a ARM Linux
-# target running the Fletch agent
+# target running the Dartino agent
 #
 # The script will build a source package and a ARM binary packages.
 
@@ -59,8 +59,8 @@ def RunBuildPackage(opt, cwd, toolchain=None):
 
 def BuildDebianPackage(tarball, out_dir, arch, toolchain):
   version = utils.GetVersion()
-  tarroot = 'fletch-%s' % version
-  origtarname = 'fletch_%s.orig.tar.gz' % version
+  tarroot = 'dartino-%s' % version
+  origtarname = 'dartino_%s.orig.tar.gz' % version
 
   if not exists(tarball):
     print 'Source tarball not found'
@@ -84,8 +84,8 @@ def BuildDebianPackage(tarball, out_dir, arch, toolchain):
           ['-B', '-aarmhf', '-us', '-uc'], join(temp_dir, tarroot), toolchain)
 
     # Copy the Debian package files to the build directory.
-    debbase = 'fletch_%s' % version
-    agent_debbase = 'fletch-agent_%s' % version
+    debbase = 'dartino_%s' % version
+    agent_debbase = 'dartino-agent_%s' % version
     source_package = [
       '%s-1.dsc' % debbase,
       '%s.orig.tar.gz' % debbase,
@@ -120,7 +120,7 @@ def Main():
   if not tar_filename:
     tar_filename = join(FLETCH_DIR,
                         utils.GetBuildDir(HOST_OS),
-                        'fletch-%s.tar.gz' % utils.GetVersion())
+                        'dartino-%s.tar.gz' % utils.GetVersion())
 
   BuildDebianPackage(tar_filename, out_dir, arch, options.toolchain)
 

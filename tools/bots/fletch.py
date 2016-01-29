@@ -167,20 +167,32 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   StepGyp()
 
   cross_mode = 'release'
-  cross_arch = 'xarm'
+  cross_archs = ['xarm', 'stm']
   cross_system = 'linux'
   # We only cross compile on linux
   if system == 'linux':
     StepsCreateDebianPackage()
     StepsArchiveDebianPackage()
-    CrossCompile(cross_system, [cross_mode], cross_arch)
+    # We need the fletch daemon process to compile snapshots.
+    host_configuration = GetBuildConfigurations(
+        system=utils.GuessOS(),
+        modes=['release'],
+        archs=['x64'],
+        asans=[False],
+        embedded_libs=[False],
+        use_sdks=[False])[0]
+    StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
+
+    for cross_arch in cross_archs:
+      CrossCompile(cross_system, [cross_mode], cross_arch)
     StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
     StepsCreateArchiveRaspbianImge()
   elif system == 'mac':
-     StepsGetArmBinaries(cross_mode, cross_arch)
-     StepsGetArmDeb()
-     # We currently only build documentation on linux.
-     StepsGetDocs()
+    for cross_arch in cross_archs:
+       StepsGetCrossBinaries(cross_mode, cross_arch)
+    StepsGetArmDeb()
+    # We currently only build documentation on linux.
+    StepsGetDocs()
   for configuration in configurations:
     StepBuild(configuration['build_conf'], configuration['build_dir'])
     StepsBundleSDK(configuration['build_dir'], system)
@@ -193,8 +205,8 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
 
 def StepsTestSDK(debug_log, configuration):
   build_dir = configuration['build_dir']
-  sdk_dir = os.path.join(build_dir, 'fletch-sdk')
-  sdk_zip = os.path.join(build_dir, 'fletch-sdk.zip')
+  sdk_dir = os.path.join(build_dir, 'dartino-sdk')
+  sdk_zip = os.path.join(build_dir, 'dartino-sdk.zip')
   if os.path.exists(sdk_dir):
     shutil.rmtree(sdk_dir)
   Unzip(sdk_zip)
@@ -209,14 +221,14 @@ def StepsTestSDK(debug_log, configuration):
 
 def StepsSanityChecking(build_dir):
   version = utils.GetSemanticSDKVersion()
-  fletch = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch')
+  fletch = os.path.join(build_dir, 'dartino-sdk', 'bin', 'fletch')
   # TODO(ricow): we should test this as a normal test, see issue 232.
   fletch_version = subprocess.check_output([fletch, '--version']).strip()
   subprocess.check_call([fletch, 'quit'])
   if fletch_version != version:
     raise Exception('Version mismatch, VERSION file has %s, fletch has %s' %
                     (version, fletch_version))
-  fletch_vm = os.path.join(build_dir, 'fletch-sdk', 'bin', 'fletch-vm')
+  fletch_vm = os.path.join(build_dir, 'dartino-sdk', 'bin', 'fletch-vm')
   fletch_vm_version = subprocess.check_output([fletch_vm, '--version']).strip()
   if fletch_vm_version != version:
     raise Exception('Version mismatch, VERSION file has %s, fletch vm has %s' %
@@ -261,7 +273,7 @@ def StepsBundleSDK(build_dir, system):
          '--deb_package=%s' % deb_file, create_docs])
     # On linux this is build in the step above, on mac this is fetched from
     # cloud storage.
-    sdk_docs = os.path.join(build_dir, 'fletch-sdk', 'docs')
+    sdk_docs = os.path.join(build_dir, 'dartino-sdk', 'docs')
     shutil.copytree(os.path.join('out', 'docs'), sdk_docs)
 
 def CreateZip(directory, target_file):
@@ -328,19 +340,20 @@ def StepsArchiveGCCArmNoneEabi(system):
     http_path = GetDownloadLink(gs_path)
     print '@@@STEP_LINK@download@%s@@@' % http_path
 
-def StepsGetArmBinaries(cross_mode, cross_arch):
-  with bot.BuildStep('Get arm binaries %s' % cross_mode):
+def StepsGetCrossBinaries(cross_mode, cross_arch):
+  with bot.BuildStep('Get % binaries %s' % (cross_arch, cross_mode)):
     build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
     build_dir = os.path.join('out', build_conf)
     version = utils.GetSemanticSDKVersion()
     gsutil = bot_utils.GSUtil()
     namer = GetNamer()
-    zip_file = os.path.join('out', namer.arm_binaries_zipfilename(cross_mode))
+    zip_file = os.path.join(
+      'out', namer.cross_binaries_zipfilename(cross_mode, cross_arch))
     if os.path.exists(zip_file):
       os.remove(zip_file)
     if os.path.exists(build_dir):
       shutil.rmtree(build_dir)
-    gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
+    gs_path = namer.cross_binaries_zipfilepath(version, cross_mode, cross_arch)
     gsutil.execute(['cp', gs_path, zip_file])
     Unzip(zip_file)
 
@@ -370,9 +383,9 @@ def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     gsutil = bot_utils.GSUtil()
-    zip_file = namer.arm_binaries_zipfilename(cross_mode)
+    zip_file = namer.cross_binaries_zipfilename(cross_mode, cross_arch)
     CreateZip(os.path.join('out', build_conf), zip_file)
-    gs_path = namer.arm_binaries_zipfilepath(version, cross_mode)
+    gs_path = namer.cross_binaries_zipfilepath(version, cross_mode, cross_arch)
     http_path = GetDownloadLink(gs_path)
     gsutil.upload(os.path.join('out', zip_file), gs_path, public=True)
     print '@@@STEP_LINK@download@%s@@@' % http_path
@@ -380,13 +393,13 @@ def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
 
 def StepsArchiveSDK(build_dir, system, mode, arch):
   with bot.BuildStep('Archive bundle %s' % build_dir):
-    sdk = os.path.join(build_dir, 'fletch-sdk')
-    zip_file = 'fletch-sdk.zip'
+    sdk = os.path.join(build_dir, 'dartino-sdk')
+    zip_file = 'dartino-sdk.zip'
     CreateZip(sdk, zip_file)
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
     gsutil = bot_utils.GSUtil()
-    gs_path = namer.fletch_sdk_zipfilepath(version, system, arch, mode)
+    gs_path = namer.dartino_sdk_zipfilepath(version, system, arch, mode)
     http_path = GetDownloadLink(gs_path)
     gsutil.upload(os.path.join(build_dir, zip_file), gs_path, public=True)
     print '@@@STEP_LINK@download@%s@@@' % http_path
@@ -953,6 +966,7 @@ def ShouldSkipConfiguration(snapshot_run, configuration):
 def GetCompilerVariants(system, arch, no_clang=False):
   is_mac = system == 'mac'
   is_arm = arch in ['arm', 'xarm']
+  is_stm = arch == 'stm'
   is_windows = system == 'win'
   if no_clang:
     return ['']
@@ -961,6 +975,9 @@ def GetCompilerVariants(system, arch, no_clang=False):
     return ['Clang']
   elif is_arm:
     # We don't support cross compiling to arm with clang ATM.
+    return ['']
+  elif is_stm:
+    # We don't support cross compiling to STM boards (Cortex-M7) with clang ATM.
     return ['']
   elif is_windows:
     # On windows we always use VC++.

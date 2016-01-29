@@ -13,34 +13,34 @@ class FletchGCSNamer(bot_utils.GCSNamer):
     else:
       self.bucket = 'gs://fletch-archive'
 
-  def fletch_sdk_directory(self, revision):
+  def dartino_sdk_directory(self, revision):
     return self._variant_directory('sdk', revision)
 
-  def fletch_sdk_zipfilename(self, system, arch, mode):
+  def dartino_sdk_zipfilename(self, system, arch, mode):
     assert mode in bot_utils.Mode.ALL_MODES
-    return 'fletch-sdk-%s-%s-%s.zip' % (
+    return 'dartino-sdk-%s-%s-%s.zip' % (
         bot_utils.SYSTEM_RENAMES[system], bot_utils.ARCH_RENAMES[arch], mode)
 
-  def fletch_sdk_zipfilepath(self, revision, system, arch, mode):
-    return '/'.join([self.fletch_sdk_directory(revision),
-        self.fletch_sdk_zipfilename(system, arch, mode)])
+  def dartino_sdk_zipfilepath(self, revision, system, arch, mode):
+    return '/'.join([self.dartino_sdk_directory(revision),
+        self.dartino_sdk_zipfilename(system, arch, mode)])
 
-  def arm_binaries_zipfilename(self, mode):
+  def cross_binaries_zipfilename(self, mode, arch):
     assert mode in bot_utils.Mode.ALL_MODES
-    return 'arm-binaries-%s.zip' %  mode
+    return '%s-binaries-%s.zip' % (arch, mode)
 
-  def arm_binaries_zipfilepath(self, revision, mode):
-    return '/'.join([self.fletch_sdk_directory(revision),
-        self.arm_binaries_zipfilename(mode)])
+  def cross_binaries_zipfilepath(self, revision, mode, arch):
+    return '/'.join([self.dartino_sdk_directory(revision),
+                     self.cross_binaries_zipfilename(mode, arch)])
 
   def arm_agent_filename(self, revision):
-    return 'fletch-agent_%s-1_armhf.deb' % revision
+    return 'dartino-agent_%s-1_armhf.deb' % revision
 
   def src_tar_name(self, revision):
-    return 'fletch-%s.tar.gz' % revision
+    return 'dartino-%s.tar.gz' % revision
 
   def arm_agent_filepath(self, revision):
-    return '/'.join([self.fletch_sdk_directory(revision),
+    return '/'.join([self.dartino_sdk_directory(revision),
         self.arm_agent_filename(revision)])
 
   def raspbian_filename(self):
@@ -50,18 +50,18 @@ class FletchGCSNamer(bot_utils.GCSNamer):
     return '%s.zip' % self.raspbian_filename()
 
   def raspbian_zipfilepath(self, revision):
-    return '/'.join([self.fletch_sdk_directory(revision),
+    return '/'.join([self.dartino_sdk_directory(revision),
         self.raspbian_zipfilename()])
 
   def version_filepath(self, revision):
-    return '/'.join([self.fletch_sdk_directory(revision), 'VERSION'])
+    return '/'.join([self.dartino_sdk_directory(revision), 'VERSION'])
 
   def gcc_embedded_bundle_zipfilename(self, system):
     return 'gcc-arm-embedded-%s.zip' % system
 
   def gcc_embedded_bundle_filepath(self, revision, system):
-    return '/'.join([self.fletch_sdk_directory(revision),
+    return '/'.join([self.dartino_sdk_directory(revision),
                      self.gcc_embedded_bundle_zipfilename(system)])
 
   def docs_filepath(self, revision):
-    return '/'.join([self.fletch_sdk_directory(revision), 'docs'])
+    return '/'.join([self.dartino_sdk_directory(revision), 'docs'])

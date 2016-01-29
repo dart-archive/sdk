@@ -4,7 +4,7 @@
 # BSD-style license that can be found in the LICENSE file.
 
 # This script is creating a self contained directory with all the tools,
-# libraries, packages and samples needed for running fletch.
+# libraries, packages and samples needed for running Dartino.
 
 # This script assumes that the target arg has been build in the passed
 # in --build_dir. It also assumes that out/ReleaseXARM/fletch-vm and
@@ -228,7 +228,7 @@ def EnsureDartDoc():
 def CreateDocsPubSpec(fileName):
   print 'Doc-gen: creating %s' %fileName
   f = open(fileName, 'w')
-  f.write('name: Fletch_SDK\n')
+  f.write('name: Dartino_SDK\n')
   f.write('dependencies:\n')
   for package in SDK_PACKAGES:
     f.write('  %s:\n' % package)
@@ -307,7 +307,7 @@ def CreateDocumentation():
     indexFile = join(docs_out, 'index.html')
     with open(indexFile, 'r') as fin:
       s = fin.read()
-      s = s.replace('Fletch_SDK', 'Fletch SDK')
+      s = s.replace('Dartino_SDK', 'Dartino SDK')
       s = s.replace('>package<', '><')
     with open(indexFile, 'w') as fout:
       fout.write(s)
@@ -339,7 +339,7 @@ def Main():
     CopyAdditionalFiles(sdk_temp)
     if deb_package:
       CopyArmDebPackage(sdk_temp, deb_package)
-    sdk_dir = join(build_dir, 'fletch-sdk')
+    sdk_dir = join(build_dir, 'dartino-sdk')
     EnsureDeleted(sdk_dir)
     if options.include_tools:
       CopyTools(sdk_temp)
