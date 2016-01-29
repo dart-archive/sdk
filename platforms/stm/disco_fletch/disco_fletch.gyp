@@ -103,6 +103,7 @@
         ],
       },
       'type': 'static_library',
+      'standalone_static_library': 1,
       'includes': [
         '../free_rtos_sources.gypi',
         '../hal_sources.gypi',

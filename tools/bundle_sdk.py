@@ -6,8 +6,9 @@
 # This script is creating a self contained directory with all the tools,
 # libraries, packages and samples needed for running fletch.
 
-# This script assumes that the target arg has been build in the passed in
-# --build_dir. It also assumes that out/ReleaseXARM/fletch-vm has been build.
+# This script assumes that the target arg has been build in the passed
+# in --build_dir. It also assumes that out/ReleaseXARM/fletch-vm and
+# out/ReleaseSTM have been build.
 
 import optparse
 import subprocess
@@ -23,10 +24,10 @@ from shutil import copyfile, copymode, copytree, rmtree
 TOOLS_DIR = abspath(dirname(__file__))
 
 SDK_PACKAGES = ['ffi', 'file', 'fletch', 'gpio', 'http', 'i2c', 'os',
-                'raspberry_pi', 'socket', 'mqtt']
+                'raspberry_pi', 'stm32f746g_disco', 'socket', 'mqtt']
 THIRD_PARTY_PACKAGES = ['charcode']
 
-SAMPLES = ['raspberry-pi2', 'general']
+SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery']
 with open(join(TOOLS_DIR, 'docs_html', 'head.html')) as f:
   DOC_INDEX_HEAD = f.read()
 with open(join(TOOLS_DIR, 'docs_html', 'tail.html')) as f:
@@ -46,6 +47,7 @@ def ParseOptions():
   parser.add_option("--deb_package")
   parser.add_option("--create_documentation", default=False,
                     action="store_true")
+  parser.add_option("--include_tools", default=False, action="store_true")
   (options, args) = parser.parse_args()
   return options
 
@@ -155,8 +157,12 @@ def CopyPackages(bundle_dir):
       p.write('%s:../pkg/%s/lib\n' % (package, package))
 
 def CopyPlatforms(bundle_dir):
-  target_dir = join(bundle_dir, 'platforms')
-  copytree('platforms', target_dir)
+  # Only copy parts of the platform directory. We also have source
+  # code there at the moment.
+  target_dir = join(bundle_dir, 'platforms/raspberry-pi2')
+  copytree('platforms/raspberry-pi2', target_dir)
+  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/bin')
+  copytree('platforms/stm/bin', target_dir)
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
   cmd = [dart_executable, '-c', '--packages=.packages',
@@ -190,6 +196,24 @@ def CopyArm(bundle_dir):
   for v in binaries:
     CopyFile(join(build_dir, v), join(bin_dir, v))
 
+def CopySTM(bundle_dir):
+  libraries = [
+      'libfletch_vm_library.a',
+      'libfletch_shared.a',
+      'libdouble_conversion.a',
+      'libdisco_fletch.a']
+  disco = join(bundle_dir, 'platforms', 'stm32f746g-discovery')
+  lib_dir = join(disco, 'lib')
+  makedirs(lib_dir)
+  build_dir = 'out/ReleaseSTM'
+  for v in libraries:
+    CopyFile(join(build_dir, v), join(lib_dir, basename(v)))
+
+  config_dir = join(disco, 'config')
+  makedirs(config_dir)
+  CopyFile('platforms/stm/disco_fletch/generated/SW4STM32/'
+           'configuration/STM32F746NGHx_FLASH.ld',
+           join(config_dir, 'stm32f746g-discovery.ld'))
 def CopySamples(bundle_dir):
   target = join(bundle_dir, 'samples')
   for v in SAMPLES:
@@ -288,6 +312,12 @@ def CreateDocumentation():
     with open(indexFile, 'w') as fout:
       fout.write(s)
 
+def CopyTools(bundle_dir):
+  tools_dir = join(bundle_dir, 'tools')
+  makedirs(tools_dir)
+  gcc_arm_embedded_dir = join(tools_dir, 'gcc-arm-embedded')
+  copytree('third_party/gcc-arm-embedded/linux/gcc-arm-embedded',
+           gcc_arm_embedded_dir)
 
 def Main():
   options = ParseOptions();
@@ -304,12 +334,15 @@ def Main():
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
+    CopySTM(sdk_temp)
     CopySamples(sdk_temp)
     CopyAdditionalFiles(sdk_temp)
     if deb_package:
       CopyArmDebPackage(sdk_temp, deb_package)
     sdk_dir = join(build_dir, 'fletch-sdk')
     EnsureDeleted(sdk_dir)
+    if options.include_tools:
+      CopyTools(sdk_temp)
     copytree(sdk_temp, sdk_dir)
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 CREATE libone_disco_fletch.a
-ADDLIB obj/platforms/stm/disco_fletch/libdisco_fletch.a
+ADDLIB libdisco_fletch.a
 ADDLIB libfletch_vm_library.a
 ADDLIB libfletch_shared.a
 ADDLIB libdouble_conversion.a
