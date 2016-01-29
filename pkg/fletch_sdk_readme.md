@@ -1,5 +1,5 @@
-Welcome to the Fletch reference documentation covering the packages available
-for Fletch.
+Welcome to the Dartino reference documentation covering the packages available
+for Dartino.
 
 You must import a package before you can use it. Here's an example of importing
 the `GPIO` package:
@@ -8,10 +8,10 @@ the `GPIO` package:
 import 'package:gpio/gpio.dart';
 ```
 
-For more information on Fletch, see the [Fletch
-site](http://dart-lang.github.io/fletch/).
+For more information on Dartino, see the [Dartino
+site](http://dartino.github.io/sdk/).
 
 This API reference is automatically generated from the source code in the
-[Fletch project](https://github.com/dart-lang/fletch). If you'd like to
+[Dartino SDK repo](https://github.com/dartino/sdk). If you'd like to
 contribute to this documentation, see
-[Contributing](https://github.com/dart-lang/fletch/wiki/Contributing).
+[Contributing](https://github.com/dartino/sdk/wiki/Contributing).

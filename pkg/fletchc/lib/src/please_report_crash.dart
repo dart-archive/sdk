@@ -10,36 +10,36 @@ import 'guess_configuration.dart' show
 bool crashReportRequested = false;
 
 final String requestBugReportOnCompilerCrashMessage = """
-The Fletch compiler is broken.
+The Dartino compiler is broken.
 
 When compiling the above element, the compiler crashed. It is not
 possible to tell if this is caused by a problem in your program or
 not. Regardless, the compiler should not crash.
 
-The Fletch team would greatly appreciate if you would take a moment to
-report this problem at https://github.com/dart-lang/fletch/issues/new
+The Dartino team would greatly appreciate if you would take a moment to
+report this problem at https://github.com/dartino/sdk/issues/new
 
 Please include the following information:
 
 * the name and version of your operating system
 
-* the Fletch SDK version ($fletchVersion)
+* the Dartino SDK version ($fletchVersion)
 
 * the entire message you see here (including the full stack trace
   below as well as the source location above)
 """;
 
 final String requestBugReportOnOtherCrashMessage = """
-The Fletch program is broken and has crashed.
+The Dartino program is broken and has crashed.
 
-The Fletch team would greatly appreciate if you would take a moment to
-report this problem at https://github.com/dart-lang/fletch/issues/new
+The Dartino team would greatly appreciate if you would take a moment to
+report this problem at https://github.com/dartino/sdk/issues/new
 
 Please include the following information:
 
 * the name and version of your operating system
 
-* the Fletch SDK version ($fletchVersion)
+* the Dartino SDK version ($fletchVersion)
 
 * the entire message you see here (including the full stack trace below)
 """;
