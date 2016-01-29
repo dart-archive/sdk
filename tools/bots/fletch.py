@@ -378,7 +378,7 @@ def StepsGetDocs():
     gsutil.execute(['-m', 'cp', '-r', gs_path, docs_out])
 
 def StepsArchiveCrossCompileBundle(cross_mode, cross_arch):
-  with bot.BuildStep('Archive % binaries %s' % (cross_arch, cross_mode)):
+  with bot.BuildStep('Archive %s binaries %s' % (cross_arch, cross_mode)):
     build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
     version = utils.GetSemanticSDKVersion()
     namer = GetNamer()
