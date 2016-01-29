@@ -25,7 +25,8 @@ import 'package:fletchc/src/hub/exit_codes.dart' show
 const String buildDirectory =
     const String.fromEnvironment('test.dart.build-dir');
 
-final String fletchBinary = "$buildDirectory/fletch";
+/// Absolute path to the fletch executable.
+final Uri fletchBinary = Uri.base.resolve("$buildDirectory/fletch");
 
 final Uri thisDirectory = new Uri.directory("tests/cli_tests");
 
@@ -44,18 +45,23 @@ abstract class CliTest {
 
   bool get sessionCreated => sessionName != null;
 
-  Future<ProcessResult> createSession() {
+  Future<ProcessResult> createSession({String workingDirectory}) {
     assert(!sessionCreated);
     sessionName = "clitest-$name-$hashCode";
-    return Process.run(fletchBinary, ["create", "session", sessionName]);
+    return Process.run(
+        fletchBinary.toFilePath(),
+        ["create", "session", sessionName],
+        workingDirectory: workingDirectory);
   }
 
-  Future<Process> fletch(List<String> arguments) async {
+  Future<Process> fletch(List<String> arguments,
+                         {String workingDirectory}) async {
     if (!sessionCreated) {
       ProcessResult result = await createSession();
       Expect.equals(0, result.exitCode);
     }
-    return Process.start(fletchBinary, inSession(arguments));
+    return Process.start(fletchBinary.toFilePath(), inSession(arguments),
+        workingDirectory: workingDirectory);
   }
 
   Iterable<String> inSession(List<String> arguments) {

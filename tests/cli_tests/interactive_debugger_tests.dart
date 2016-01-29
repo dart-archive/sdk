@@ -27,10 +27,12 @@ import 'prompt_splitter.dart' show
 final List<CliTest> tests = <CliTest>[
   new DebuggerInterruptTest(),
   new DebuggerListProcessesTest(),
+  new DebuggerRelativeFileReferenceTest(),
 ];
 
 abstract class InteractiveDebuggerTest extends CliTest {
   final String testFilePath;
+  final String workingDirectory;
   Process process;
   StreamIterator out;
   StreamIterator err;
@@ -42,7 +44,8 @@ abstract class InteractiveDebuggerTest extends CliTest {
   Future<Null> internalRun();
 
   Future<Null> run() async {
-    process = await fletch(["debug", testFilePath]);
+    process = await fletch(["debug", testFilePath],
+                           workingDirectory: workingDirectory);
     out = new StreamIterator(
       process.stdout.transform(UTF8.decoder).transform(new PromptSplitter()));
     err = new StreamIterator(
@@ -90,6 +93,14 @@ abstract class InteractiveDebuggerTest extends CliTest {
     print(out.current);
   }
 
+  Future<Null> expectOut(String message) async {
+    Expect.equals(message, out.current);
+  }
+
+  Future<Null> expectErr(String message) async {
+    Expect.equals(message, err.current);
+  }
+
   Future<Null> expectClosed(StreamIterator iterator, String name) async {
     if (await iterator.moveNext()) {
       do {
@@ -131,5 +142,25 @@ class DebuggerListProcessesTest extends InteractiveDebuggerTest {
     await runCommandAndExpectPrompt("lp");
     await runCommandAndExpectPrompt("c");
     await expectExitCode(0);
+  }
+}
+
+class DebuggerRelativeFileReferenceTest extends InteractiveDebuggerTest {
+
+  // Working directory that is not the fletch-root directory.
+  final String workingDirectory = '$thisDirectory/../';
+
+  // Relative reference to the test file.
+  final String testFilePath = 'cli_tests/debugger_relative_file_reference.dart';
+
+  DebuggerRelativeFileReferenceTest()
+      : super("debugger_relative_file_reference");
+
+  Future<Null> internalRun() async {
+    await runCommandAndExpectPrompt("bf $testFilePath 13");
+    await expectOut(
+        "breakpoint set: id: '0' method: 'main' bytecode index: '0'");
+    await runCommandAndExpectPrompt("r");
+    await quitWithoutError();
   }
 }
