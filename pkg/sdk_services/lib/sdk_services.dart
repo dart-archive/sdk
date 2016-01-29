@@ -91,40 +91,36 @@ class OutputService {
   File _logFile;
   int _previousProgressLength = 0;
   String _progressPrefix;
+  Function _writeStdout;
+  Function _writeLog;
 
-  void log(String s) {
-    if (_logFile != null) {
-      _logFile.writeAsStringSync('$s\n', mode: FileMode.APPEND);
-    } else {
-      print('LOG: $s');
-    }
-  }
+  void log(String s) => _writeLog(s);
 
   /// Start a progress indicator.
   void startProgress(String prefix) {
     if (_progressPrefix != null) {
       throw new StateError('Progress is already active');
     }
-    stdout.write(prefix);
+    _writeStdout(prefix);
     _progressPrefix = prefix;
   }
 
   void _clearProgress() {
-    stdout.write('\r$_progressPrefix${' ' * _previousProgressLength}');
+    _writeStdout('\r$_progressPrefix${' ' * _previousProgressLength}');
   }
 
   /// Update a progress indicator.
   void updateProgress(Object message) {
     _clearProgress();
     var messageString = '$message';
-    stdout.write('\r$_progressPrefix$messageString');
+    _writeStdout('\r$_progressPrefix$messageString');
     _previousProgressLength = messageString.length;
   }
 
   /// End a progress indicator.
   void endProgress(String message) {
     _clearProgress();
-    stdout.writeln('\r$_progressPrefix$message');
+    _writeStdout('\r$_progressPrefix$message');
     _progressPrefix = null;
   }
 
@@ -132,7 +128,26 @@ class OutputService {
     throw new DownloadException(s);
   }
 
-  OutputService();
+  void _defaultWriteStdout(String s) {
+    stdout.write(s);
+  }
+
+  void _defaultWriteLog(String s) {
+    if (_logFile != null) {
+      _logFile.writeAsStringSync('$s\n', mode: FileMode.APPEND);
+    } else {
+      print('LOG: $s');
+    }
+  }
+
+  OutputService([this._writeStdout, this._writeLog]) {
+    if (_writeStdout == null) {
+      _writeStdout = _defaultWriteStdout;
+    }
+    if (_writeLog == null) {
+      _writeLog = _defaultWriteLog;
+    }
+  }
 
   OutputService.logToFile(this._logFile) {
     if(_logFile.existsSync()) {

@@ -13,7 +13,9 @@ mdns:../mdns/lib
 package_config:../../third_party/package_config/lib
 path:../../third_party/path/lib
 persistent:../../third_party/persistent/lib
+power_management:../power_management/lib
 pub_semver:../../third_party/pub_semver/lib
 sdk_library_metadata:../../third_party/dart/sdk/lib/_internal/sdk_library_metadata/lib
+sdk_services:../sdk_services/lib
 servicec:../servicec/lib
 old_servicec:../../tools/servicec/lib

@@ -20,12 +20,17 @@ import 'dart:io' show
     File,
     FileSystemEntity,
     InternetAddress,
+    Platform,
     Process,
     Socket,
     SocketException;
 
 import 'package:sdk_library_metadata/libraries.dart' show
     Category;
+
+import 'package:sdk_services/sdk_services.dart' show
+    OutputService,
+    SDKServices;
 
 import 'package:fletch_agent/agent_connection.dart' show
     AgentConnection,
@@ -40,6 +45,9 @@ import 'package:mdns/mdns.dart' show
     MDnsClient,
     ResourceRecord,
     RRType;
+
+import 'package:path/path.dart' show
+    join;
 
 import '../../vm_commands.dart' show
     VmCommandCode,
@@ -950,6 +958,12 @@ class Version {
         13 * label.hashCode;
   }
 
+  /// Check if this version is a bleeding edge version.
+  bool get isEdgeVersion => label == null ? false : label.startsWith('edge.');
+
+  /// Check if this version is a dev version.
+  bool get isDevVersion => label == null ? false : label.startsWith('dev.');
+
   String toString() {
     String labelPart = label == null ? '' : '-$label';
     return '${version[0]}.${version[1]}.${version[2]}$labelPart';
@@ -1075,6 +1089,90 @@ Future<int> upgradeAgent(
   } else {
     print("Upgrade successful.");
   }
+
+  return 0;
+}
+
+Future<int> downloadTools(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SessionState state) async {
+
+  void throwUnsupportedPlatform() {
+    throwFatalError(
+        DiagnosticKind.unsupportedPlatform,
+        message: Platform.operatingSystem);
+  }
+
+  Future decompressFile(File zipFile, Directory destination) async {
+    var result;
+    if (Platform.isLinux) {
+      result = await Process.run(
+          "unzip", ["-o", zipFile.path, "-d", destination.path]);
+    } else if (Platform.isMacOS) {
+      result = await ctx.runProcess(
+          "ditto", ["-x", "-k", zipFile.path, destination.path]);
+    } else {
+      throwUnsupportedPlatform();
+    }
+    if (result.exitCode != 0) {
+        throwInternalError(
+            "Failed to decompress ${zipFile.path} to ${destination.path}, "
+            "error = ${result.exitCode}");
+    }
+  }
+
+  const String gcsRoot = "https://storage.googleapis.com";
+  String gcsBucket = "fletch-archive";
+  String gcsPath;
+
+  Version version = parseVersion(fletchVersion);
+  if (version.isEdgeVersion) {
+    print("WARNING: For bleeding edge a fixed image is used.");
+    // For edge versions download a well known version for now.
+    var knownVersion = "0.3.0-edge.3de334803a15da98434e85f25f656119ec555b74";
+    gcsBucket = "fletch-temporary";
+    gcsPath = "channels/be/raw/$knownVersion/sdk";
+  } else if (version.isDevVersion) {
+    // TODO(sgjesse): Change this to channels/dev/release at some point.
+    gcsPath = "channels/dev/raw/$version/sdk";
+  } else {
+    print("Stable version not supported. Got version $version.");
+  }
+
+  String osName;
+  if (Platform.isLinux) {
+    osName = "linux";
+  } else if (Platform.isMacOS) {
+    osName = "mac";
+  } else {
+    throwUnsupportedPlatform();
+  }
+  String gccArmEmbedded = "gcc-arm-embedded-${osName}.zip";
+  Uri gccArmEmbeddedUrl =
+      Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$gccArmEmbedded");
+  Directory tmpDir = Directory.systemTemp.createTempSync("fletch_download");
+  File tmpZip = new File(join(tmpDir.path, gccArmEmbedded));
+
+  OutputService outputService =
+      new OutputService(commandSender.sendStdout, state.log);
+  SDKServices service = new SDKServices(outputService);
+  String toolName = "GCC ARM Embedded toolchain";
+  print("Downloading: $toolName");
+  state.log("Downloading $toolName from $gccArmEmbeddedUrl to $tmpZip");
+  await service.downloadWithProgress(gccArmEmbeddedUrl, tmpZip);
+  print(""); // service.downloadWithProgress does not write newline when done.
+
+  // In the SDK the tools directory is at the same level as the
+  // internal (and bin) directory.
+  Directory toolsDirectory =
+      new Directory.fromUri(executable.resolve('../tools'));
+  state.log("Decompression ${tmpZip.path} to ${toolsDirectory.path}");
+  await decompressFile(tmpZip, toolsDirectory);
+  state.log("Deleting temporary directory ${tmpDir.path}");
+  await tmpDir.delete(recursive: true);
+
+  print("Third party tools downloaded");
 
   return 0;
 }

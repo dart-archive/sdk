@@ -56,6 +56,7 @@ enum DiagnosticKind {
   unexpectedArgument,
   unknownAction,
   unknownOption,
+  unsupportedPlatform,
   upgradeInvalidPackageName,
   verbDoesNotSupportTarget,
   verbDoesntSupportTarget,
@@ -206,6 +207,10 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.unknownOption:
       // TODO(lukechurch): Review UX.
       return "Unknown option: '$userInput'.";
+
+    case DiagnosticKind.unsupportedPlatform:
+      // TODO(lukechurch): Review UX.
+      return "Unsupported platform: $message.";
 
     case DiagnosticKind.missingRequiredArgument:
       // TODO(lukechurch): Consider a correction message.

@@ -161,3 +161,10 @@ const String upgradeDocumentation = """
              Upgrade the agent used in session to the version provided in the
              .deb package <package-file>
 """;
+
+// TODO(lukechurch): Review UX.
+const String downloadToolsDocumentation = """
+   x-download-tools
+             Downloads the third party tools required for MCU developemnt.
+             This is currently GCC ARM Embedded and OpenOCD.
+""";
