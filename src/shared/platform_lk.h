@@ -88,7 +88,10 @@ class MonitorImpl {
         sem_timedwait(&wait_entry.semaphore_, microseconds / 1000) == NO_ERROR;
     if (result != NO_ERROR) {
       CHECK_AND_FAIL(mutex_acquire(&internal_));
-      MaybeRemoveFromWaitList(&wait_entry);
+      // Remove our entry from the waitlist. If we are no longer in the list,
+      // we have been notified before we could complete handling the timeout,
+      // so we need to return true.
+      if (!MaybeRemoveFromWaitList(&wait_entry)) result = NO_ERROR;
       CHECK_AND_FAIL(mutex_release(&internal_));
     }
     CHECK_AND_RETURN(mutex_acquire(&mutex_));
@@ -156,12 +159,13 @@ class MonitorImpl {
     last_waiting_ = wait_entry;
   }
 
-  void MaybeRemoveFromWaitList(WaitListEntry* wait_entry) {
+  // Removes [wait_entry] from the wait list and returns true on success.
+  bool MaybeRemoveFromWaitList(WaitListEntry* wait_entry) {
     WaitListEntry* prev = NULL;
     WaitListEntry* curr = first_waiting_;
     while (curr != wait_entry) {
       // If we are no longer in the list, we do not need to clean up.
-      if (curr == last_waiting_) return;
+      if (curr == last_waiting_) return false;
       prev = curr;
       curr = curr->next_;
     }
@@ -173,6 +177,7 @@ class MonitorImpl {
     if (last_waiting_ == wait_entry) {
       last_waiting_ = prev;
     }
+    return true;
   }
 
   mutex_t mutex_;
