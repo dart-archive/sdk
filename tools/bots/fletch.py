@@ -341,7 +341,7 @@ def StepsArchiveGCCArmNoneEabi(system):
     print '@@@STEP_LINK@download@%s@@@' % http_path
 
 def StepsGetCrossBinaries(cross_mode, cross_arch):
-  with bot.BuildStep('Get % binaries %s' % (cross_arch, cross_mode)):
+  with bot.BuildStep('Get %s binaries %s' % (cross_arch, cross_mode)):
     build_conf = GetConfigurationName(cross_mode, cross_arch, '', False)
     build_dir = os.path.join('out', build_conf)
     version = utils.GetSemanticSDKVersion()
