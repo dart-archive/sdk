@@ -175,12 +175,12 @@ String getMessage(DiagnosticKind kind) {
       return "No agent found in this session.";
 
     case DiagnosticKind.upgradeInvalidPackageName:
-      return "A fletch-agent package must have a name of the form\n"
-        "  fletch-agent_<version>_<platform>.deb.\n"
+      return "A dartino-agent package must have a name of the form\n"
+        "  dartino-agent_<version>_<platform>.deb.\n"
         "Try renaming the file to match this pattern.";
 
     case DiagnosticKind.socketAgentConnectError:
-      return "Unable to establish connection to Fletch Agent on "
+      return "Unable to establish connection to Dartino Agent on "
           "$address: $message.";
 
     case DiagnosticKind.socketVmConnectError:
@@ -188,7 +188,7 @@ String getMessage(DiagnosticKind kind) {
           "Unable to establish connection to Fletch VM on $address: $message.";
 
     case DiagnosticKind.socketAgentReplyError:
-      return "Received invalid reply from Fletch Agent on $address: $message.";
+      return "Received invalid reply from Dartino Agent on $address: $message.";
 
     case DiagnosticKind.socketVmReplyError:
       return "Received invalid reply from Fletch VM on $address: $message.";

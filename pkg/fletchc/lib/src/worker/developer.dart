@@ -1235,11 +1235,11 @@ Future<String> getAgentVersion(InternetAddress host, int port) async {
 Future<List<InternetAddress>> discoverDevices(
     {bool prefixWithNumber: false}) async {
   const ipV4AddressLength = 'xxx.xxx.xxx.xxx'.length;
-  print("Looking for Fletch capable devices (will search for 5 seconds)...");
+  print("Looking for Dartino capable devices (will search for 5 seconds)...");
   MDnsClient client = new MDnsClient();
   await client.start();
   List<InternetAddress> result = <InternetAddress>[];
-  String name = '_fletch_agent._tcp.local';
+  String name = '_dartino_agent._tcp.local';
   await for (ResourceRecord ptr in client.lookup(RRType.PTR, name)) {
     String domain = ptr.domainName;
     await for (ResourceRecord srv in client.lookup(RRType.SRV, domain)) {

@@ -1,3 +1,0 @@
-debian/tmp/out/dartino-agent usr/lib
-debian/tmp/out/dartino-agent/avahi/fletch-agent.service etc/avahi/services
-

@@ -141,10 +141,10 @@ def CreateTarball(tarfilename):
     for f in listdir(join(FLETCH_DIR, debian_dir)):
       tar.add(join(FLETCH_DIR, debian_dir, f),
               arcname='%s/debian/%s' % (versiondir, f))
-    tar.add(join(FLETCH_DIR, 'platforms/raspberry-pi2/data/fletch-agent'),
-            arcname='%s/debian/fletch-agent.init' % versiondir)
-    tar.add(join(FLETCH_DIR, 'platforms/raspberry-pi2/data/fletch-agent.env'),
-            arcname='%s/debian/fletch-agent.default' % versiondir)
+    tar.add(join(FLETCH_DIR, 'platforms/raspberry-pi2/data/dartino-agent'),
+            arcname='%s/debian/dartino-agent.init' % versiondir)
+    tar.add(join(FLETCH_DIR, 'platforms/raspberry-pi2/data/dartino-agent.env'),
+            arcname='%s/debian/dartino-agent.default' % versiondir)
 
     with utils.TempDir() as temp_dir:
       # Generate and add debian/copyright

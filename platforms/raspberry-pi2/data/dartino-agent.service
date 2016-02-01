@@ -2,7 +2,7 @@
 <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
 
 <!--
-  Service definition for the fletch-agent service, which is part of the
+  Service definition for the dartino-agent service, which is part of the
   Dartino SDK (http://dartino.github.io/sdk/).
 
   Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
@@ -11,9 +11,9 @@
 -->
 
 <service-group>
-  <name replace-wildcards="no">fletch-agent</name>
+  <name replace-wildcards="no">dartino-agent</name>
   <service>
-    <type>_fletch_agent._tcp</type>
+    <type>_dartino_agent._tcp</type>
     <port>12121</port>
   </service>
 </service-group>
