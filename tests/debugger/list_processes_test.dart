@@ -6,6 +6,7 @@
 
 // FletchDebuggerCommands=b resume,r,lp,c,lp,c
 
+import 'dart:async';
 import 'dart:fletch';
 
 Port spawnPaused(Channel channel) {
@@ -13,6 +14,8 @@ Port spawnPaused(Channel channel) {
   Process.spawnDetached(() {
     var c = new Channel();
     port.send(new Port(c));
+    // TODO(zerny): Make this a CLI test since without the timer, the child
+    // process might not make it to the following receive.
     var echo = c.receive();
     port.send(echo);
   });
@@ -28,6 +31,8 @@ main() {
   Channel channel = new Channel();
   Port p1 = spawnPaused(channel);
   Port p2 = spawnPaused(channel);
-  resume(channel, p2);
-  resume(channel, p1);
+  Timer timer = new Timer(const Duration(seconds: 2), () {
+    resume(channel, p2);
+    resume(channel, p1);
+  });
 }
