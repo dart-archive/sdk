@@ -8,7 +8,7 @@
 
 #include "include/fletch_api.h"
 #include "include/service_api.h"
-#include "cc/simple_todo.h"
+#include "generated/cc/simple_todo.h"
 
 typedef enum {
   EC_OK = 0,

@@ -32,7 +32,7 @@ import 'package:servicec/compiler.dart' as servicec;
 
 List<ServiceTest> SERVICE_TESTS = <ServiceTest>[]
     ..add(todomvc.serviceTest)
-    ..add(simple_todo.serviceTest)
+    ..addAll(simple_todo.serviceTests)
     ..addAll(multiple.serviceTests)
     ..addAll(buildStandardServiceTests(
         'conformance',
