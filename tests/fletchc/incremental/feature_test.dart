@@ -91,8 +91,6 @@ import 'package:fletchc/debug_state.dart' as debug show
 
 import 'program_result.dart';
 
-import 'tests_with_expectations.dart' as tests_with_expectations;
-
 import 'package:fletchc/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
@@ -103,60 +101,6 @@ const String CUSTOM_SCHEME = 'org.dartlang.fletch.test-case';
 final Uri customUriBase = new Uri(scheme: CUSTOM_SCHEME, path: '/');
 
 typedef Future NoArgFuture();
-
-Map<String, EncodedResult> tests = computeTests(tests_with_expectations.tests);
-
-Future<Null> main(List<String> arguments) async {
-  Iterable<String> testNamesToRun;
-
-  if (arguments.isEmpty) {
-    int skip = const int.fromEnvironment("skip", defaultValue: 0);
-    testCount += skip;
-    skippedCount += skip;
-
-    testNamesToRun = tests.keys.skip(skip).expand((String name) {
-      return ["experimental/$name", "production/$name"];
-    });
-  } else {
-    testNamesToRun = arguments;
-  }
-  for (String testName in testNamesToRun) {
-    IncrementalMode incrementalMode;
-    if (testName.startsWith("production/")) {
-      incrementalMode = IncrementalMode.production;
-      testName = testName.substring("production/".length);
-    } else if (testName.startsWith("experimental/")) {
-      incrementalMode = IncrementalMode.experimental;
-      testName = testName.substring("experimental/".length);
-    } else {
-      throw "Unable to compute incremental support level from '$testName'";
-    }
-    EncodedResult test = tests[testName];
-    try {
-      await compileAndRun(testName, test, incrementalMode: incrementalMode);
-    } catch (e, s) {
-      print("Test '$testName' failed");
-      rethrow;
-    }
-    testCount++;
-    updateSummary();
-  }
-}
-
-int testCount = 1;
-
-int skippedCount = 0;
-
-int updateFailedCount = 0;
-
-const bool verboseStatus = const bool.fromEnvironment(
-    "verbose", defaultValue: false);
-
-void updateSummary() {
-  print(
-      "Test ${testCount - 1} of ${tests.length} "
-      "($skippedCount skipped, $updateFailedCount failed)\n\n");
-}
 
 compileAndRun(
     String testName,
@@ -183,7 +127,7 @@ compileAndRun(
         hasCompileTimeError = program.hasCompileTimeError;
       }
 
-      print("Program version $version #$testCount:");
+      print("Program version $version #$testName:");
       print(numberedLines(program.code));
 
       bool compileUpdatesThrew = true;
@@ -212,7 +156,6 @@ compileAndRun(
 
       if (program.compileUpdatesShouldThrow) {
         Expect.isFalse(isFirstProgram);
-        updateFailedCount++;
         Expect.isTrue(
             compileUpdatesThrew,
             "Expected an exception in compileUpdates");
@@ -650,17 +593,6 @@ class BytesSink implements Sink<List<int>> {
   List<String> takeLines() {
     return new LineSplitter().convert(UTF8.decode(builder.takeBytes()));
   }
-}
-
-/// Invoked by ../../fletch_tests/fletch_test_suite.dart.
-Future<Map<String, NoArgFuture>> listTests() {
-  Map<String, NoArgFuture> result = <String, NoArgFuture>{};
-  tests.forEach((String name, EncodedResult test) {
-    for (String testName in ["experimental/$name", "production/$name"]) {
-      result['incremental/$testName'] = () => main(<String>[testName]);
-    }
-  });
-  return new Future<Map<String, NoArgFuture>>.value(result);
 }
 
 class IncrementalTestHelper {

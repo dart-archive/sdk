@@ -13,7 +13,10 @@ import 'self_tests.dart' as self;
 
 import 'verb_tests.dart' as verbs;
 
-import '../fletchc/incremental/feature_test.dart' as incremental;
+import '../fletchc/incremental/production_mode.dart' as incremental_production;
+
+import '../fletchc/incremental/experimental_mode.dart' as
+    incremental_experimental;
 
 import '../fletchc/driver/test_control_stream.dart' as controlStream;
 
@@ -85,7 +88,8 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'servicec/*': servicec_tests.listTests,
 
   // Slow tests, should run early so we don't wait for them.
-  'incremental/*': incremental.listTests,
+  'incremental/production/*': incremental_production.list,
+  'incremental/experimental/*': incremental_experimental.list,
 
   // Slow tests, should run early so we don't wait for them.
   'debugger/*': debugger_tests.listTests,
