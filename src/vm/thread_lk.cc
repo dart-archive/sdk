@@ -26,6 +26,10 @@ bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
 }
 
+void Thread::Setup() {}
+
+void Thread::TearDown() {}
+
 void Thread::SetupOSSignals() {
   // Platform doesn't have signals.
 }

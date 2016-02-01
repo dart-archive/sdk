@@ -36,6 +36,9 @@ class Thread {
   // Returns true if 'thread' is the current thread.
   static bool IsCurrent(const ThreadIdentifier* thread);
 
+  static void Setup();
+  static void TearDown();
+
   static void SetupOSSignals();
   static void TeardownOSSignals();
 
