@@ -24,11 +24,15 @@ import 'cli_tests.dart' show
 import 'prompt_splitter.dart' show
     PromptSplitter;
 
+import 'package:fletchc/src/hub/exit_codes.dart' show
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+
 final List<CliTest> tests = <CliTest>[
   new DebuggerInterruptTest(),
   new DebuggerListProcessesTest(),
   new DebuggerRelativeFileReferenceTest(),
   new DebuggerStepInLoopTest(),
+  new DebuggerRerunThrowingProgramTest(),
 ];
 
 abstract class InteractiveDebuggerTest extends CliTest {
@@ -180,5 +184,19 @@ class DebuggerStepInLoopTest extends InteractiveDebuggerTest {
     await runCommandAndExpectPrompt("s");
     await runCommandAndExpectPrompt("n");
     await quitWithoutError();
+  }
+}
+
+class DebuggerRerunThrowingProgramTest extends InteractiveDebuggerTest {
+
+  DebuggerRerunThrowingProgramTest()
+      : super("debugger_rerun_throwing_program");
+
+  Future<Null> internalRun() async {
+    await runCommandAndExpectPrompt("r");  // throws uncaught exception
+    await runCommandAndExpectPrompt("r");  // invalid command: use restart
+    await expectOut("### process already loaded, use 'restart' to run again");
+    await quit();
+    await expectExitCode(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
   }
 }

@@ -14,6 +14,7 @@ TEST_PY="$ROOT_DIR/tools/test.py"
 ARCH="ia32"
 MODE="release"
 TARGET=""
+OUT=""
 
 function print_help() {
   echo
@@ -26,6 +27,7 @@ function print_help() {
   echo
   echo "  and <target> is one of:"
   echo "    cc   (run the C-based CLI)"
+  echo "    java (run the Java-based CLI)"
 }
 
 function print_error() {
@@ -35,11 +37,13 @@ function print_error() {
 }
 
 function build() {
-  $TEST_PY -a $ARCH -m $MODE fletch_tests/service_tests/simple_todo
+  SUFFIX=service_tests/simple_todo_$1
+  OUT="$ROOT_DIR/out/${MODE_CC}${ARCH_UC}/temporary_test_output/$SUFFIX"
+  $TEST_PY -a $ARCH -m $MODE fletch_tests/$SUFFIX
   echo
   echo "Compilation and testing succeeded"
   echo "Compiled output in"
-  echo "  $OUT_DIR"
+  echo "  $OUT"
 }
 
 while [[ $# > 1 ]]; do
@@ -50,8 +54,6 @@ while [[ $# > 1 ]]; do
   esac
 done
 
-OUT_DIR="$ROOT_DIR/out/${MODE^}${ARCH^^}/temporary_test_output/service_tests/simple_todo"
-
 if [[ $# == 1 ]]; then
   TARGET="$1"
   shift
@@ -59,9 +61,29 @@ else
   print_error "unsupplied target"
 fi
 
-if [[ "$TARGET" == "cc" ]]; then
-  build
-  $OUT_DIR/simple_todo_sample $OUT_DIR/simple_todo.snapshot
-else
-  print_error "unknown target '$TARGET'"
-fi
+# lowercase and uppercase arch
+ARCH=$(echo -n "$ARCH" | tr "[:upper:]" "[:lower:]")
+ARCH_UC=$(echo -n "$ARCH" | tr "[:lower:]" "[:upper:]")
+
+# lowercase and capitalized mode
+MODE=$(echo -n "$MODE" | tr "[:upper:]" "[:lower:]")
+MODE_CC=$(echo -n "${MODE:0:1}" | tr "[:lower:]" "[:upper:]"; echo "${MODE:1}")
+
+case "$TARGET" in
+  cc)
+    build cc
+    $OUT/simple_todo_sample $OUT/simple_todo.snapshot
+    ;;
+  java)
+    if [[ "$ARCH" != "x64" ]]; then
+      print_error "Target java requires using 64 bit by setting: -a x64"
+    fi
+    build java
+    LD_LIBRARY_PATH=$OUT \
+    java -d64 -ea -cp $OUT/simple_todo.jar -Djava.library.path=$OUT \
+      SimpleTodo $OUT/simple_todo.snapshot
+    ;;
+  *)
+    print_error "unknown target '$TARGET'"
+    ;;
+esac

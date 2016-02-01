@@ -31,6 +31,18 @@ Process* Thread::GetProcess() {
   return static_cast<Process*>(pthread_getspecific(thr_id_key));
 }
 
+void Thread::Setup() {
+  if (pthread_key_create(&thr_id_key, NULL) != 0) {
+    FATAL("Failed to create thread local key");
+  }
+}
+
+void Thread::TearDown() {
+  if (pthread_key_delete(thr_id_key) != 0) {
+    FATAL("Failed to delete thread local key");
+  }
+}
+
 void Thread::SetupOSSignals() {
   // Block all signals except SIGPROF.
   sigset_t set;
@@ -38,10 +50,6 @@ void Thread::SetupOSSignals() {
   sigdelset(&set, SIGPROF);
   if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
     FATAL("Failed to block signal on thread");
-  }
-  // Create TLS for process. No need to pass destructor.
-  if (pthread_key_create(&thr_id_key, NULL) != 0) {
-    FATAL("Failed to create thread local key");
   }
   // Start the tick based profiler.
   TickSampler::Setup();

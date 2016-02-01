@@ -56,17 +56,17 @@ static const int COMPILER_CRASHED = 253;
 
 static char* program_name = NULL;
 
-// The file where this program looks for the name of the socket for talking to
-// the persistent process. Controlled by user by setting environment variable
-// FLETCH_SOCKET_FILE.
+// The file where this program looks for the TCP/IP port for talking
+// to the persistent process. Controlled by user by setting
+// environment variable FLETCH_PORT_FILE.
 static char fletch_config_file[MAXPATHLEN];
 
-// The name of socket that was read from [fletch_config_file].
-static char fletch_socket_file[MAXPATHLEN];
+// The port that was read from [fletch_config_file].
+static int fletch_socket_port;
 
 static const char fletch_config_name[] = ".fletch";
 
-static const char fletch_config_env_name[] = "FLETCH_SOCKET_FILE";
+static const char fletch_config_env_name[] = "FLETCH_PORT_FILE";
 
 static const char* fletch_config_location = NULL;
 
@@ -180,15 +180,15 @@ void ParentDir(char* directory) {
 //
 // * fletch_config_file
 //
-// We first look for an environment variable named FLETCH_SOCKET_FILE. If
+// We first look for an environment variable named FLETCH_PORT_FILE. If
 // defined, it gives the value of fletch_config_file.
 //
-// If FLETCH_SOCKET_FILE isn't defined, we look for the environment variable
+// If FLETCH_PORT_FILE isn't defined, we look for the environment variable
 // HOME, if defined, the value of fletch_config_file becomes "${HOME}/.fletch".
 //
 // If HOME isn't defined, we find the user's home directory via getpwuid_r.
 static void DetectConfiguration() {
-  // First look for the environment variable FLETCH_SOCKET_FILE.
+  // First look for the environment variable FLETCH_PORT_FILE.
   char* fletch_config_env = getenv(fletch_config_env_name);
   if (fletch_config_env != NULL) {
     fletch_config_location = fletch_config_env_name;
@@ -265,11 +265,12 @@ static void UnlockConfigFile() {
 }
 
 static void ReadDriverConfig() {
+  char buffer[80];
   size_t offset = 0;
-  size_t length = sizeof(fletch_socket_file) - 1;
+  size_t length = sizeof(buffer) - 1;
   while (offset < length) {
     ssize_t bytes = TEMP_FAILURE_RETRY(
-        read(fletch_config_fd, fletch_socket_file + offset, length - offset));
+        read(fletch_config_fd, buffer + offset, length - offset));
     if (bytes < 0) {
       Die("%s: Unable to read from '%s'. Failed with error: %s", program_name,
           fletch_config_file, strerror(errno));
@@ -278,7 +279,8 @@ static void ReadDriverConfig() {
     }
     offset += bytes;
   }
-  fletch_socket_file[offset] = '\0';
+  buffer[offset] = '\0';
+  fletch_socket_port = atoi(buffer);
 }
 
 static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
@@ -590,7 +592,7 @@ static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
         StrCat(stdout_buffer, sizeof(stdout_buffer), buffer, sizeof(buffer));
         // At this point, stdout_buffer contains all the data we have
         // received from the server process via its stdout. We're looking for
-        // a handshake which is a file name on the first line. So we look for
+        // a handshake which is a port number on the first line. So we look for
         // a newline character.
         char* match = strchr(stdout_buffer, '\n');
         if (match != NULL) {
@@ -603,9 +605,8 @@ static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
                        bytes_read);
           }
           match[0] = '\0';
-          StrCpy(fletch_socket_file, sizeof(fletch_socket_file), stdout_buffer,
-                 sizeof(stdout_buffer));
-          // We got the server handshake (the socket file). So we break to
+          fletch_socket_port = atoi(stdout_buffer);
+          // We got the server handshake (the port). So we break to
           // eventually return from this function.
           break;
         }
@@ -708,13 +709,13 @@ static DriverConnection::Command HandleCommand(DriverConnection* connection) {
 }
 
 Socket* Connect() {
-  struct sockaddr_un address;
+  struct sockaddr_in address;
 
-  address.sun_family = AF_UNIX;
-  StrCpy(address.sun_path, sizeof(address.sun_path), fletch_socket_file,
-         sizeof(fletch_socket_file));
+  address.sin_family = AF_INET;
+  inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);
+  address.sin_port = htons(fletch_socket_port);
 
-  int fd = socket(PF_UNIX, SOCK_STREAM, 0);
+  int fd = socket(PF_INET, SOCK_STREAM, 0);
   if (fd < 0) {
     Die("%s: socket failed: %s", program_name, strerror(errno));
   }
@@ -830,9 +831,9 @@ static int Main(int argc, char** argv) {
   }
 
   Socket* control_socket = Connect();
-
   if (control_socket == NULL) {
     StartDriverDaemon();
+
     control_socket = Connect();
     if (control_socket == NULL) {
       Die(

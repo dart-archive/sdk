@@ -1,3 +1,0 @@
-debian/tmp/out/fletch-agent usr/lib
-debian/tmp/out/fletch-agent/avahi/fletch-agent.service etc/avahi/services
-

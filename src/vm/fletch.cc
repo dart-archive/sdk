@@ -18,6 +18,7 @@ namespace fletch {
 
 void Fletch::Setup() {
   Platform::Setup();
+  Thread::Setup();
   ObjectMemory::Setup();
   StaticClassStructures::Setup();
   ForeignFunctionInterface::Setup();
@@ -28,6 +29,7 @@ void Fletch::Setup() {
 
 void Fletch::TearDown() {
   Preempter::TearDown();
+  Thread::TearDown();
   Scheduler::TearDown();
   EventHandler::TearDown();
   ForeignFunctionInterface::TearDown();
