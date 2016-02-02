@@ -830,6 +830,27 @@ void Codegen::DoAllocate(Class* klass) {
   basic_block_.Push(Slot::Register());
 }
 
+void Codegen::DoAllocateBoxed() {
+  basic_block_.MaterializeKeepRegister();
+
+  if (!basic_block_.IsTopRegister()) {
+    __ movl(EAX, Address(ESP, 0 * kWordSize));
+  }
+
+  __ movl(EBX, ESP);
+  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ call("HandleAllocateBoxed");
+
+  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
+  __ movl(ESP, EBX);
+
+  basic_block_.SetTop(Slot::Register());
+}
+
 void Codegen::DoNegate() {
   if (basic_block_.IsTopCondition()) {
     Condition condition = basic_block_.Pop().condition();

@@ -637,6 +637,11 @@ void Codegen::Generate(Function* function) {
         break;
       }
 
+      case kAllocateBoxed: {
+        DoAllocateBoxed();
+        break;
+      }
+
       case kNegate: {
         DoNegate();
         break;

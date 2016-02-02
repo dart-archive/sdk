@@ -27,9 +27,9 @@ class Session;
 
 // Defines all the roots in the program heap.
 #define ROOTS_DO(V)                                             \
-  V(Instance, null_object, NullObject)                          \
   V(Instance, false_object, FalseObject)                        \
   V(Instance, true_object, TrueObject)                          \
+  V(Instance, null_object, NullObject)                          \
   /* Global literals up to this line */                         \
   V(Array, empty_array, EmptyArray)                             \
   V(OneByteString, empty_string, EmptyString)                   \
@@ -321,7 +321,7 @@ class Program {
 
   // Access to the address of the first and last root.
   Object** first_root_address() {
-    return reinterpret_cast<Object**>(&null_object_);
+    return reinterpret_cast<Object**>(&false_object_);
   }
 
   Object** last_root_address() {
