@@ -41,12 +41,12 @@ int x509_crt_sizeof() {
 const int kSendIndex = 0;
 const int kRecvIndex = sizeof(void*);
 char* get_send_buffer(void* ctx) {
-  char** buffer_address = (char**)(ctx + kSendIndex);
+  char** buffer_address = ((char**) ctx) + kSendIndex;
   return *buffer_address;
 }
 
 char* get_recv_buffer(void* ctx) {
-  char** buffer_address = (char**)(ctx + kRecvIndex);
+  char** buffer_address = ((char**) ctx) + kRecvIndex;
   return *buffer_address;
 }
 
