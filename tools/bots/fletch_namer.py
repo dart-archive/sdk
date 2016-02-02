@@ -67,7 +67,7 @@ class FletchGCSNamer(bot_utils.GCSNamer):
     return 'openocd-%s.zip' % system
 
   def openocd_bundle_filepath(self, revision, system):
-    return '/'.join([self.fletch_sdk_directory(revision),
+    return '/'.join([self.dartino_sdk_directory(revision),
                      self.openocd_bundle_zipfilename(system)])
 
   def docs_filepath(self, revision):
