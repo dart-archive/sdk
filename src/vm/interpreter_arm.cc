@@ -142,6 +142,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   virtual void DoInvokeFactory();
 
   virtual void DoInvokeNative();
+  virtual void DoInvokeDetachableNative();
   virtual void DoInvokeNativeYield();
 
   virtual void DoInvokeTestUnfold();
@@ -721,6 +722,10 @@ void InterpreterGeneratorARM::DoInvokeStatic() { InvokeStatic(); }
 void InterpreterGeneratorARM::DoInvokeFactory() { InvokeStatic(); }
 
 void InterpreterGeneratorARM::DoInvokeNative() { InvokeNative(false); }
+
+void InterpreterGeneratorARM::DoInvokeDetachableNative() {
+  InvokeNative(false);
+}
 
 void InterpreterGeneratorARM::DoInvokeNativeYield() { InvokeNative(true); }
 
