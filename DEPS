@@ -197,14 +197,14 @@ hooks = [
       'sdk/pkg/power_management/lib/native',
     ],
   },
-#  {
+  {
     # Update the Windows toolchain if necessary.
-#    'name': 'win_toolchain',
-#    'pattern': '.',
-#    'action': ['python',
-#               'sdk/tools/vs_dependency/vs_toolchain.py',
-#               'update'],
-#  },
+    'name': 'win_toolchain',
+    'pattern': '.',
+    'action': ['python',
+               'sdk/tools/vs_dependency/vs_toolchain.py',
+               'update'],
+  },
   {
     'name': 'third_party_qemu',
     'pattern': '.',
