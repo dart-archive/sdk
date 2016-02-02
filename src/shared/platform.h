@@ -260,6 +260,38 @@ inline Mutex* Platform::CreateMutex() { return new Mutex(); }
 
 inline Monitor* Platform::CreateMonitor() { return new Monitor(); }
 
+// TODO(kustermann): We should use native sempahores instead of basing them on
+// monitors.
+class Semaphore {
+ public:
+  explicit Semaphore(int count)
+      : monitor_(Platform::CreateMonitor()), count_(count) {
+  }
+
+  ~Semaphore() {
+    delete monitor_;
+  }
+
+  void Down() {
+    ScopedMonitorLock locker(monitor_);
+    while (count_ <= 0) {
+      monitor_->Wait();
+    }
+    count_--;
+  }
+
+  void Up() {
+    ScopedMonitorLock locker(monitor_);
+    if (++count_ == 1) {
+      monitor_->Notify();
+    }
+  }
+
+ private:
+  Monitor* monitor_;
+  int count_;
+};
+
 }  // namespace fletch
 
 #endif  // SRC_SHARED_PLATFORM_H_

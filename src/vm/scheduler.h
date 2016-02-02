@@ -8,7 +8,6 @@
 #include "src/shared/atomic.h"
 
 #include "src/vm/signal.h"
-#include "src/vm/thread_pool.h"
 #include "src/vm/thread.h"
 
 namespace fletch {
@@ -20,26 +19,25 @@ class Port;
 class ProcessQueue;
 class Process;
 class Program;
+class Scheduler;
 
 const int kCompileTimeErrorExitCode = 254;
 const int kUncaughtExceptionExitCode = 255;
 const int kBreakPointExitCode = 0;
 
-class ThreadState {
+class WorkerThread {
  public:
-  ThreadState();
-  ~ThreadState();
+  static void* RunThread(void* data);
 
-  const ThreadIdentifier* thread() const { return &thread_; }
-
-  // Update the thread field to point to the current thread.
-  void AttachToCurrentThread();
-
-  Monitor* idle_monitor() const { return idle_monitor_; }
+  explicit WorkerThread(Scheduler* scheduler);
+  ~WorkerThread();
 
  private:
-  ThreadIdentifier thread_;
-  Monitor* idle_monitor_;
+  void RunInThread();
+  void ThreadEnter();
+  void ThreadExit();
+
+  Scheduler* scheduler_;
 };
 
 class ProcessVisitor {
@@ -119,8 +117,6 @@ class Scheduler {
   // A signal arrived for the process.
   void SignalProcess(Process* process);
 
-  void Run();
-
   // There are 4 reasons for the interpretation of a process to be interrupted:
   //   * termination
   //   * uncaught exception
@@ -138,14 +134,17 @@ class Scheduler {
 
  private:
   friend class Fletch;
+  friend class WorkerThread;
 
   // Global scheduler instance.
   static Scheduler* scheduler_;
 
-  ThreadPool thread_pool_;
+  // Worker threads
+  static const int kThreadCount = 4;
+  ThreadIdentifier thread_ids_[kThreadCount];
+  WorkerThread* threads_[kThreadCount];
 
   Atomic<bool> interpreter_is_paused_;
-  Atomic<ThreadState*> interpreting_thread_;
   ProcessQueue* ready_queue_;
 
   Monitor* pause_monitor_;
@@ -154,6 +153,8 @@ class Scheduler {
 
   InterpretationBarrier interpretation_barrier_;
 
+  Monitor* idle_monitor_;
+  Semaphore interpreter_semaphore_;
   GCThread* gc_thread_;
 
   void DeleteTerminatedProcess(Process* process, Signal::Kind kind);
@@ -161,16 +162,13 @@ class Scheduler {
   // Exit the program for the given process with the given exit code.
   void ExitWith(Process* process, int exit_code, Signal::Kind kind);
 
-  void RescheduleProcess(Process* process, ThreadState* state, bool terminate);
+  void RescheduleProcess(Process* process, bool terminate);
 
-  void RunInThread();
-  void RunInterpreterLoop(ThreadState* thread_state);
+  bool RunInterpreterLoop(WorkerThread* worker);
 
-  // Interpret [process] as thread [thread]. Returns the next Process that
+  // Interpret [process] as worker [worker]. Returns the next Process that
   // should be run.
-  Process* InterpretProcess(Process* process, ThreadState* thread_state);
-  void ThreadEnter();
-  void ThreadExit();
+  Process* InterpretProcess(Process* process, WorkerThread* worker);
   void NotifyInterpreterThread();
 
   void EnqueueProcess(Process* process);
@@ -178,9 +176,7 @@ class Scheduler {
 
   // The [process] will be enqueued on any thread. In case the program is paused
   // the process will be enqueued once the program is resumed.
-  void EnqueueOnAnyThreadSafe(Process* process, int start_id = 0);
-
-  static void RunThread(void* data);
+  void EnqueueSafe(Process* process);
 };
 
 class StoppedGcThreadScope {
