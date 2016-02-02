@@ -1124,13 +1124,37 @@ Future<int> downloadTools(
 
   const String gcsRoot = "https://storage.googleapis.com";
   String gcsBucket = "fletch-archive";
+
+  Future downloadTool(String gcsPath, String zipFile, String toolName) async {
+    Uri url = Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$zipFile");
+    Directory tmpDir = Directory.systemTemp.createTempSync("fletch_download");
+    File tmpZip = new File(join(tmpDir.path, zipFile));
+
+    OutputService outputService =
+        new OutputService(commandSender.sendStdout, state.log);
+    SDKServices service = new SDKServices(outputService);
+    print("Downloading: $toolName");
+    state.log("Downloading $toolName from $url to $tmpZip");
+    await service.downloadWithProgress(url, tmpZip);
+    print(""); // service.downloadWithProgress does not write newline when done.
+
+    // In the SDK, the tools directory is at the same level as the
+    // internal (and bin) directory.
+    Directory toolsDirectory =
+        new Directory.fromUri(executable.resolve('../tools'));
+    state.log("Decompressing ${tmpZip.path} to ${toolsDirectory.path}");
+    await decompressFile(tmpZip, toolsDirectory);
+    state.log("Deleting temporary directory ${tmpDir.path}");
+    await tmpDir.delete(recursive: true);
+  }
+
   String gcsPath;
 
   Version version = parseVersion(fletchVersion);
   if (version.isEdgeVersion) {
     print("WARNING: For bleeding edge a fixed image is used.");
-    // For edge versions download a well known version for now.
-    var knownVersion = "0.3.0-edge.3de334803a15da98434e85f25f656119ec555b74";
+    // For edge versions download use a well known version for now.
+    var knownVersion = "0.3.0-edge.3c85dbafe006eb2ce16545aaf3df1352fa7a4500";
     gcsBucket = "fletch-temporary";
     gcsPath = "channels/be/raw/$knownVersion/sdk";
   } else if (version.isDevVersion) {
@@ -1148,29 +1172,11 @@ Future<int> downloadTools(
   } else {
     throwUnsupportedPlatform();
   }
+
   String gccArmEmbedded = "gcc-arm-embedded-${osName}.zip";
-  Uri gccArmEmbeddedUrl =
-      Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$gccArmEmbedded");
-  Directory tmpDir = Directory.systemTemp.createTempSync("fletch_download");
-  File tmpZip = new File(join(tmpDir.path, gccArmEmbedded));
-
-  OutputService outputService =
-      new OutputService(commandSender.sendStdout, state.log);
-  SDKServices service = new SDKServices(outputService);
-  String toolName = "GCC ARM Embedded toolchain";
-  print("Downloading: $toolName");
-  state.log("Downloading $toolName from $gccArmEmbeddedUrl to $tmpZip");
-  await service.downloadWithProgress(gccArmEmbeddedUrl, tmpZip);
-  print(""); // service.downloadWithProgress does not write newline when done.
-
-  // In the SDK the tools directory is at the same level as the
-  // internal (and bin) directory.
-  Directory toolsDirectory =
-      new Directory.fromUri(executable.resolve('../tools'));
-  state.log("Decompression ${tmpZip.path} to ${toolsDirectory.path}");
-  await decompressFile(tmpZip, toolsDirectory);
-  state.log("Deleting temporary directory ${tmpDir.path}");
-  await tmpDir.delete(recursive: true);
+  await downloadTool(gcsPath, gccArmEmbedded, "GCC ARM Embedded toolchain");
+  String openocd = "openocd-${osName}.zip";
+  await downloadTool(gcsPath, openocd, "Open On-Chip Debugger (OpenOCD)");
 
   print("Third party tools downloaded");
 
