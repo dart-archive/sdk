@@ -37,6 +37,7 @@ packages
 /third_party/bin/linux/dart
 /third_party/bin/linux/dart-arm
 /third_party/bin/mac/dart
+/third_party/bin/win/dart.exe
 /third_party/charcode/
 /third_party/crypto/
 /third_party/collection/
@@ -69,5 +70,6 @@ packages
 /tools/testing/bin/linux/dart
 /tools/testing/bin/linux/dart-arm
 /tools/testing/bin/mac/dart
+/tools/testing/bin/win/dart.exe
 /tools/vs_dependency/win_toolchain.json
 /xcodebuild/

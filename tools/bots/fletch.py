@@ -728,7 +728,7 @@ class PersistentFletchDaemon(object):
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
        # TODO(kustermann): Issue(396): Remove this --enable-dumpcore flag again.
-       '--enable-dumpcore',
+       '--abort-on-assertion-errors',
        '--packages=%s' % os.path.abspath('pkg/fletchc/.packages'),
        '-Dfletch.version=%s' % version,
        'package:fletchc/src/hub/hub_main.dart',
