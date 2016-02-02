@@ -1,20 +1,20 @@
 #!/bin/bash
-# Start/stop the fletch agent.
+# Start/stop the Dartino agent.
 #
 ### BEGIN INIT INFO
-# Provides:          fletch-agent
+# Provides:          dartino-agent
 # Required-Start:    $syslog $network
 # Required-Stop:     $syslog $network
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Fletch agent for managing Fletch VMs.
-# Description:       The Fletch agent is used by the Fletch compiler to start
-#                    and stop Fletch VMs on a Raspberry Pi2 device.
+# Short-Description: Dartino agent for managing Dartino VMs.
+# Description:       The Dartino agent is used by the Dartino compiler to start
+#                    and stop Dartino VMs on a Raspberry Pi2 device.
 ### END INIT INFO
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
-AGENT_SNAPSHOT=/usr/lib/fletch-agent/bin/fletch-agent.snapshot
-NAME=fletch-agent
+AGENT_SNAPSHOT=/usr/lib/dartino-agent/bin/fletch-agent.snapshot
+NAME=dartino-agent
 
 if [ ! -r /lib/lsb/init-functions ]; then
   echo "Missing lsb init-functions to run the Fletch agent"
@@ -24,15 +24,15 @@ fi
 
 # Setup environment variables until we support passing arguments to fletch
 # programs.
-if [ ! -r /etc/default/fletch-agent ]; then
-  echo "Missing fletch environment file, /etc/default/fletch-agent"
+if [ ! -r /etc/default/dartino-agent ]; then
+  echo "Missing Dartino environment file, /etc/default/dartino-agent"
   exit 1
 fi
-. /etc/default/fletch-agent
+. /etc/default/dartino-agent
 
-# Check the environment and create vm directories if necessary.
+# Check the environment and create VM directories if necessary.
 if [ ! -x $FLETCH_VM ]; then
-  log_daemon_msg "No Fletch VM found or VM not executable"
+  log_daemon_msg "No Dartino VM found or VM not executable"
 fi
 if [ ! -d $VM_LOG_DIR ]; then
   mkdir -p $VM_LOG_DIR
@@ -59,7 +59,7 @@ status)
 	status_of_proc -p $AGENT_PID_FILE $FLETCH_VM $NAME && exit 0 || exit $?
 	;;
 *)	log_action_msg \
-	    "Usage: /etc/init.d/fletch-agent {start|stop|status|restart}"
+	    "Usage: /etc/init.d/dartino-agent {start|stop|status|restart}"
 	exit 2
 	;;
 esac

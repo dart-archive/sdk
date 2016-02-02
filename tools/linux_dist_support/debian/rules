@@ -51,6 +51,9 @@ override_dh_strip:
 override_dh_shlibdeps:
 	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
 
+# NOTE that the script tools/create_tarball.py adds additional files
+# to tools/linux_dist_support/debian directory to define the
+# dartino-agent service as part of the Debian package as well.
 override_dh_auto_install:
 	mkdir -p $(TMP_OUT)/bin
 	cp -R sdk/out/$(XBUILD_TYPE)/fletch-vm $(TMP_OUT)/bin
