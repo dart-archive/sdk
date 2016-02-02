@@ -66,9 +66,13 @@ typedef Object* (*NativeFunction)(Process*, Arguments);
   extern "C" Object* Native_##n(Process* process, Arguments arguments) { \
     NativeVerifier verifier(process);
 
+#define BEGIN_DETACHABLE_NATIVE(n)                                      \
+    BEGIN_NATIVE(n)                                                     \
+    static_assert(kIsDetachable_##n, "Incorrect use of natives macro");
+
 #define END_NATIVE() }
 
-#define N(e, c, n) DECLARE_NATIVE(e)
+#define N(e, c, n, d) DECLARE_NATIVE(e)
 NATIVES_DO(N)
 #undef N
 

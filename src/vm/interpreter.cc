@@ -21,7 +21,7 @@
 namespace fletch {
 
 const NativeFunction kNativeTable[] = {
-#define N(e, c, n) &Native_##e,
+#define N(e, c, n, d) &Native_##e,
     NATIVES_DO(N)
 #undef N
 };

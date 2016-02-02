@@ -655,6 +655,10 @@ class BytecodeAssembler {
     internalAdd(new InvokeNative(arity, index));
   }
 
+  void invokeDetachableNative(int arity, int index) {
+    internalAdd(new InvokeDetachableNative(arity, index));
+  }
+
   void invokeNativeYield(int arity, int index) {
     internalAdd(new InvokeNativeYield(arity, index));
   }

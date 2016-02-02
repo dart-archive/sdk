@@ -94,7 +94,7 @@ typedef int (*F5)(word, word, word, word, word);
 typedef int (*F6)(word, word, word, word, word, word);
 typedef int (*F7)(word, word, word, word, word, word, word);
 
-BEGIN_NATIVE(ForeignICall0) {
+BEGIN_DETACHABLE_NATIVE(ForeignICall0) {
   word address = AsForeignWord(arguments[0]);
   F0 function = reinterpret_cast<F0>(address);
   Object* result = process->NewInteger(0);
@@ -109,7 +109,7 @@ BEGIN_NATIVE(ForeignICall0) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignICall1) {
+BEGIN_DETACHABLE_NATIVE(ForeignICall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   F1 function = reinterpret_cast<F1>(address);
@@ -125,7 +125,7 @@ BEGIN_NATIVE(ForeignICall1) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignICall2) {
+BEGIN_DETACHABLE_NATIVE(ForeignICall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -142,7 +142,7 @@ BEGIN_NATIVE(ForeignICall2) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignICall3) {
+BEGIN_DETACHABLE_NATIVE(ForeignICall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -160,7 +160,7 @@ BEGIN_NATIVE(ForeignICall3) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignICall4) {
+BEGIN_DETACHABLE_NATIVE(ForeignICall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -179,7 +179,7 @@ BEGIN_NATIVE(ForeignICall4) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignICall5) {
+BEGIN_DETACHABLE_NATIVE(ForeignICall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -199,7 +199,7 @@ BEGIN_NATIVE(ForeignICall5) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignICall6) {
+BEGIN_DETACHABLE_NATIVE(ForeignICall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -220,7 +220,7 @@ BEGIN_NATIVE(ForeignICall6) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignICall7) {
+BEGIN_DETACHABLE_NATIVE(ForeignICall7) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -250,7 +250,7 @@ typedef word (*PF4)(word, word, word, word);
 typedef word (*PF5)(word, word, word, word, word);
 typedef word (*PF6)(word, word, word, word, word, word);
 
-BEGIN_NATIVE(ForeignPCall0) {
+BEGIN_DETACHABLE_NATIVE(ForeignPCall0) {
   word address = AsForeignWord(arguments[0]);
   PF0 function = reinterpret_cast<PF0>(address);
   Object* result = process->NewInteger(0);
@@ -265,7 +265,7 @@ BEGIN_NATIVE(ForeignPCall0) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignPCall1) {
+BEGIN_DETACHABLE_NATIVE(ForeignPCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   PF1 function = reinterpret_cast<PF1>(address);
@@ -281,7 +281,7 @@ BEGIN_NATIVE(ForeignPCall1) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignPCall2) {
+BEGIN_DETACHABLE_NATIVE(ForeignPCall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -298,7 +298,7 @@ BEGIN_NATIVE(ForeignPCall2) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignPCall3) {
+BEGIN_DETACHABLE_NATIVE(ForeignPCall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -316,7 +316,7 @@ BEGIN_NATIVE(ForeignPCall3) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignPCall4) {
+BEGIN_DETACHABLE_NATIVE(ForeignPCall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -335,7 +335,7 @@ BEGIN_NATIVE(ForeignPCall4) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignPCall5) {
+BEGIN_DETACHABLE_NATIVE(ForeignPCall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -355,7 +355,7 @@ BEGIN_NATIVE(ForeignPCall5) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignPCall6) {
+BEGIN_DETACHABLE_NATIVE(ForeignPCall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -384,7 +384,7 @@ typedef void (*VF4)(word, word, word, word);
 typedef void (*VF5)(word, word, word, word, word);
 typedef void (*VF6)(word, word, word, word, word, word);
 
-BEGIN_NATIVE(ForeignVCall0) {
+BEGIN_DETACHABLE_NATIVE(ForeignVCall0) {
   word address = AsForeignWord(arguments[0]);
   VF0 function = reinterpret_cast<VF0>(address);
   function();
@@ -392,7 +392,7 @@ BEGIN_NATIVE(ForeignVCall0) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignVCall1) {
+BEGIN_DETACHABLE_NATIVE(ForeignVCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   VF1 function = reinterpret_cast<VF1>(address);
@@ -401,7 +401,7 @@ BEGIN_NATIVE(ForeignVCall1) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignVCall2) {
+BEGIN_DETACHABLE_NATIVE(ForeignVCall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -411,7 +411,7 @@ BEGIN_NATIVE(ForeignVCall2) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignVCall3) {
+BEGIN_DETACHABLE_NATIVE(ForeignVCall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -422,7 +422,7 @@ BEGIN_NATIVE(ForeignVCall3) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignVCall4) {
+BEGIN_DETACHABLE_NATIVE(ForeignVCall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -434,7 +434,7 @@ BEGIN_NATIVE(ForeignVCall4) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignVCall5) {
+BEGIN_DETACHABLE_NATIVE(ForeignVCall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -447,7 +447,7 @@ BEGIN_NATIVE(ForeignVCall5) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignVCall6) {
+BEGIN_DETACHABLE_NATIVE(ForeignVCall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);

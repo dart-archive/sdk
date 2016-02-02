@@ -26,12 +26,13 @@ static int Main(int argc, char** argv) {
 
   const char* prefix = "";
   fprintf(output, "{\"natives\": [\n");
-#define N(e, c, n)                                \
-  fprintf(output, "%s  {\n", prefix);             \
-  fprintf(output, "    \"enum\": \"%s\",\n", #e); \
-  fprintf(output, "    \"class\": \"%s\",\n", c); \
-  fprintf(output, "    \"name\": \"%s\"\n", n);   \
-  fprintf(output, "  }");                         \
+#define N(e, c, n, d)                                                         \
+  fprintf(output, "%s  {\n", prefix);                                         \
+  fprintf(output, "    \"enum\": \"%s\",\n", #e);                             \
+  fprintf(output, "    \"class\": \"%s\",\n", c);                             \
+  fprintf(output, "    \"name\": \"%s\",\n", n);                              \
+  fprintf(output, "    \"is_detachable\": %s\n", d ? "true" : "false");       \
+  fprintf(output, "  }");                                                     \
   prefix = ",\n";
   NATIVES_DO(N)
 #undef N

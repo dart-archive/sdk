@@ -1069,7 +1069,11 @@ class FletchBackend extends Backend
         name == "Port._sendExit") {
       codegen.assembler.invokeNativeYield(arity, descriptor.index);
     } else {
-      codegen.assembler.invokeNative(arity, descriptor.index);
+      if (descriptor.isDetachable) {
+        codegen.assembler.invokeDetachableNative(arity, descriptor.index);
+      } else {
+        codegen.assembler.invokeNative(arity, descriptor.index);
+      }
     }
 
     EmptyStatement empty = function.node.body.asEmptyStatement();

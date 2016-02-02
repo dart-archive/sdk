@@ -16,9 +16,15 @@ class FletchNativeDescriptor {
 
   final int index;
 
-  FletchNativeDescriptor(this.enumName, this.cls, this.name, this.index);
+  final bool isDetachable;
 
-  String toString() => "FletchNativeDescriptor($enumName, $cls, $name, $index)";
+  FletchNativeDescriptor(this.enumName, this.cls, this.name, this.index,
+                         this.isDetachable);
+
+  String toString() {
+    return "FletchNativeDescriptor"
+           "($enumName, $cls, $name, $index, $isDetachable)";
+  }
 
   static void decode(
       String jsonData,
@@ -29,11 +35,13 @@ class FletchNativeDescriptor {
     for (Map native in jsonObjects['natives']) {
       String cls = native['class'];
       String name = native['name'];
+      bool isDetachable = native['is_detachable'];
+      assert(isDetachable != null);
       void add(cls, name) {
-        natives['$cls.$name'] =
-            new FletchNativeDescriptor(native['enum'], cls, name, index);
-        natives['$cls._fletchNative$name'] =
-            new FletchNativeDescriptor(native['enum'], cls, name, index);
+        natives['$cls.$name'] = new FletchNativeDescriptor(
+            native['enum'], cls, name, index, isDetachable);
+        natives['$cls._fletchNative$name'] = new FletchNativeDescriptor(
+            native['enum'], cls, name, index, isDetachable);
       }
       if (cls == "<none>") {
         cls = null;
