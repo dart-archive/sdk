@@ -97,15 +97,7 @@ typedef int (*F7)(word, word, word, word, word, word, word);
 BEGIN_DETACHABLE_NATIVE(ForeignICall0) {
   word address = AsForeignWord(arguments[0]);
   F0 function = reinterpret_cast<F0>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int value = function();
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function()));
 }
 END_NATIVE()
 
@@ -113,15 +105,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   F1 function = reinterpret_cast<F1>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int value = function(a0);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0)));
 }
 END_NATIVE()
 
@@ -130,15 +114,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall2) {
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   F2 function = reinterpret_cast<F2>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int value = function(a0, a1);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1)));
 }
 END_NATIVE()
 
@@ -148,15 +124,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall3) {
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   F3 function = reinterpret_cast<F3>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int value = function(a0, a1, a2);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1, a2)));
 }
 END_NATIVE()
 
@@ -167,15 +135,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall4) {
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   F4 function = reinterpret_cast<F4>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int value = function(a0, a1, a2, a3);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1, a2, a3)));
 }
 END_NATIVE()
 
@@ -187,15 +147,8 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   F5 function = reinterpret_cast<F5>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int value = function(a0, a1, a2, a3, a4);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(
+      static_cast<int64>(function(a0, a1, a2, a3, a4)));
 }
 END_NATIVE()
 
@@ -208,15 +161,8 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   F6 function = reinterpret_cast<F6>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int value = function(a0, a1, a2, a3, a4, a5);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(
+      static_cast<int64>(function(a0, a1, a2, a3, a4, a5)));
 }
 END_NATIVE()
 
@@ -230,15 +176,8 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall7) {
   word a5 = AsForeignWord(arguments[6]);
   word a6 = AsForeignWord(arguments[7]);
   F7 function = reinterpret_cast<F7>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int value = function(a0, a1, a2, a3, a4, a5, a6);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(
+      static_cast<int64>(function(a0, a1, a2, a3, a4, a5, a6)));
 }
 END_NATIVE()
 
@@ -253,15 +192,7 @@ typedef word (*PF6)(word, word, word, word, word, word);
 BEGIN_DETACHABLE_NATIVE(ForeignPCall0) {
   word address = AsForeignWord(arguments[0]);
   PF0 function = reinterpret_cast<PF0>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  word value = function();
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function()));
 }
 END_NATIVE()
 
@@ -269,15 +200,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignPCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   PF1 function = reinterpret_cast<PF1>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  word value = function(a0);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0)));
 }
 END_NATIVE()
 
@@ -286,15 +209,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignPCall2) {
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   PF2 function = reinterpret_cast<PF2>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  word value = function(a0, a1);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1)));
 }
 END_NATIVE()
 
@@ -304,15 +219,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignPCall3) {
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   PF3 function = reinterpret_cast<PF3>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  word value = function(a0, a1, a2);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1, a2)));
 }
 END_NATIVE()
 
@@ -323,15 +230,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignPCall4) {
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   PF4 function = reinterpret_cast<PF4>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  word value = function(a0, a1, a2, a3);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1, a2, a3)));
 }
 END_NATIVE()
 
@@ -343,15 +242,8 @@ BEGIN_DETACHABLE_NATIVE(ForeignPCall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   PF5 function = reinterpret_cast<PF5>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  word value = function(a0, a1, a2, a3, a4);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(
+      static_cast<int64>(function(a0, a1, a2, a3, a4)));
 }
 END_NATIVE()
 
@@ -364,15 +256,8 @@ BEGIN_DETACHABLE_NATIVE(ForeignPCall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   PF6 function = reinterpret_cast<PF6>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  word value = function(a0, a1, a2, a3, a4, a5);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+  RUN_INSIDE_BARRIER_AND_RETURN(
+      static_cast<int64>(function(a0, a1, a2, a3, a4, a5)));
 }
 END_NATIVE()
 
@@ -387,8 +272,7 @@ typedef void (*VF6)(word, word, word, word, word, word);
 BEGIN_DETACHABLE_NATIVE(ForeignVCall0) {
   word address = AsForeignWord(arguments[0]);
   VF0 function = reinterpret_cast<VF0>(address);
-  function();
-  return Smi::FromWord(0);
+  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function());
 }
 END_NATIVE()
 
@@ -396,8 +280,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignVCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   VF1 function = reinterpret_cast<VF1>(address);
-  function(a0);
-  return Smi::FromWord(0);
+  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0));
 }
 END_NATIVE()
 
@@ -406,8 +289,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignVCall2) {
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   VF2 function = reinterpret_cast<VF2>(address);
-  function(a0, a1);
-  return Smi::FromWord(0);
+  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1));
 }
 END_NATIVE()
 
@@ -417,8 +299,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignVCall3) {
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   VF3 function = reinterpret_cast<VF3>(address);
-  function(a0, a1, a2);
-  return Smi::FromWord(0);
+  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1, a2));
 }
 END_NATIVE()
 
@@ -429,8 +310,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignVCall4) {
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   VF4 function = reinterpret_cast<VF4>(address);
-  function(a0, a1, a2, a3);
-  return Smi::FromWord(0);
+  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1, a2, a3));
 }
 END_NATIVE()
 
@@ -442,8 +322,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignVCall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   VF5 function = reinterpret_cast<VF5>(address);
-  function(a0, a1, a2, a3, a4);
-  return Smi::FromWord(0);
+  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1, a2, a3, a4));
 }
 END_NATIVE()
 
@@ -456,8 +335,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignVCall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   VF6 function = reinterpret_cast<VF6>(address);
-  function(a0, a1, a2, a3, a4, a5);
-  return Smi::FromWord(0);
+  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1, a2, a3, a4, a5));
 }
 END_NATIVE()
 

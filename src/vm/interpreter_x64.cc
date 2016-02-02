@@ -754,7 +754,7 @@ void InterpreterGeneratorX64::DoInvokeNative() {
   InvokeNative(false);
 }
 
-void InterpreterGeneratorX86::DoInvokeDetachableNative() {
+void InterpreterGeneratorX64::DoInvokeDetachableNative() {
   InvokeNative(false);
 }
 
