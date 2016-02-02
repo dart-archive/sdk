@@ -139,6 +139,19 @@ class TLSSocket implements Socket {
   CircularByteBuffer _recvBuffer;
   ForeignMemory _foreignBuffers;
 
+  int _getSize_tValue(ForeignPointer ptr) {
+    var memory = new ForeignMemory.fromAddress(ptr.address,
+                                               Foreign.machineWordSize);
+    switch (Foreign.machineWordSize) {
+      case 4:
+        return memory.getInt32(0);
+      case 8:
+        return memory.getInt64(0);
+      default:
+        throw new TLSException("Unsupported word size.");
+    }
+  }
+
   /**
    * Connect the socket and do the initial handshake.
    */
@@ -160,10 +173,8 @@ class TLSSocket implements Socket {
           "mbedtls_ctr_drbg_seed returned non 0 value of $result");
     }
 
-    var mbedtls_test_cas_pem_len_address =
-        new ForeignMemory.fromAddress(mbedtls_test_cas_pem_len.address, 8);
     var mbedtls_test_cas_pem_len_size =
-         mbedtls_test_cas_pem_len_address.getInt64(0);
+        _getSize_tValue(mbedtls_test_cas_pem_len);
     result = mbedtls_x509_crt_parse.icall$3(cacert, mbedtls_test_cas_pem,
                                             mbedtls_test_cas_pem_len_size);
     if (result != 0) {

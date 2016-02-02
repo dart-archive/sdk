@@ -42,6 +42,6 @@ void main() {
 }
 
 String bufferToString(ForeignMemory buffer) {
-  return cStringToString(new ForeignPointer(buffer.address));
+  return memoryToString(new ForeignPointer(buffer.address), buffer.length);
 }
 
