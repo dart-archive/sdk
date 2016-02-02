@@ -103,8 +103,9 @@ CC="${TOOLCHAIN_PREFIX}gcc"
 OBJCOPY="${TOOLCHAIN_PREFIX}objcopy"
 SIZE="${TOOLCHAIN_PREFIX}size"
 
-echo "Generating snapshot"
+echo "Compiling snapshot of $DART_FILE"
 "$DARTINO" export "$DART_FILE" to file snapshot
+
 echo "Converting snapshot to object file"
 "$OBJCOPY" -I binary -O elf32-littlearm -B arm snapshot snapshot.o
 
@@ -138,6 +139,7 @@ echo "Linking application"
 -lstdc++ \
 -Wl,--no-whole-archive
 
-echo "Generating flashable image"
 "$OBJCOPY" -O binary "$BUILD_DIR/$BASE_NAME.elf" "$BUILD_DIR/$BASE_NAME.bin"
 "$SIZE" "$BUILD_DIR/$BASE_NAME.elf"
+
+echo "\nFinishing building flashable image: $BUILD_DIR/$BASE_NAME.bin"
