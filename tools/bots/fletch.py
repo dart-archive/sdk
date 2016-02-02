@@ -202,6 +202,7 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
     StepsTestSDK(debug_log, configuration)
     StepsSanityChecking(configuration['build_dir'])
   StepsArchiveGCCArmNoneEabi(system)
+  StepsArchiveOpenOCD(system)
 
 def StepsTestSDK(debug_log, configuration):
   build_dir = configuration['build_dir']
@@ -318,27 +319,40 @@ def StepsCreateArchiveRaspbianImge():
     gsutil.upload(zip_file, gs_path, public=True)
     print '@@@STEP_LINK@download@%s@@@' % http_path
 
+def ArchiveThirdPartyTool(name, zip_name, system, gs_path):
+  zip_file = os.path.join('out', zip_name)
+  if os.path.exists(zip_file):
+    os.remove(zip_file)
+  copy = os.path.join('out', name)
+  if os.path.exists(copy):
+    shutil.rmtree(copy)
+  src = os.path.join('third_party', name, system, name)
+  shutil.copytree(src, copy)
+  CreateZip(copy, zip_name)
+  gsutil = bot_utils.GSUtil()
+  gsutil.upload(zip_file, gs_path, public=True)
+  http_path = GetDownloadLink(gs_path)
+  print '@@@STEP_LINK@download@%s@@@' % http_path
+
 def StepsArchiveGCCArmNoneEabi(system):
   with bot.BuildStep('Archive cross compiler'):
     # TODO(ricow): Early return on bleeding edge when this is validated.
     namer = GetNamer(temporary=IsBleedingEdge())
-    zip_file = os.path.join('out',
-                            namer.gcc_embedded_bundle_zipfilename(system))
-    if os.path.exists(zip_file):
-      os.remove(zip_file)
-    gcc_copy = os.path.join('out', 'gcc-arm-embedded')
-    if os.path.exists(gcc_copy):
-      shutil.rmtree(gcc_copy)
-    gcc_src = os.path.join('third_party', 'gcc-arm-embedded', system,
-                           'gcc-arm-embedded')
-    shutil.copytree(gcc_src, gcc_copy)
-    CreateZip(gcc_copy, namer.gcc_embedded_bundle_zipfilename(system))
     version = utils.GetSemanticSDKVersion()
-    gsutil = bot_utils.GSUtil()
-    gs_path = namer.gcc_embedded_bundle_filepath(version, system)
-    gsutil.upload(zip_file, gs_path, public=True)
-    http_path = GetDownloadLink(gs_path)
-    print '@@@STEP_LINK@download@%s@@@' % http_path
+    ArchiveThirdPartyTool('gcc-arm-embedded',
+                          namer.gcc_embedded_bundle_zipfilename(system),
+                          system,
+                          namer.gcc_embedded_bundle_filepath(version, system))
+
+def StepsArchiveOpenOCD(system):
+  with bot.BuildStep('Archive OpenOCD'):
+    # TODO(ricow): Early return on bleeding edge when this is validated.
+    namer = GetNamer(temporary=IsBleedingEdge())
+    version = utils.GetSemanticSDKVersion()
+    ArchiveThirdPartyTool('openocd',
+                          namer.openocd_bundle_zipfilename(system),
+                          system,
+                          namer.openocd_bundle_filepath(version, system))
 
 def StepsGetCrossBinaries(cross_mode, cross_arch):
   with bot.BuildStep('Get %s binaries %s' % (cross_arch, cross_mode)):

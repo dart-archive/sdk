@@ -315,9 +315,10 @@ def CreateDocumentation():
 def CopyTools(bundle_dir):
   tools_dir = join(bundle_dir, 'tools')
   makedirs(tools_dir)
-  gcc_arm_embedded_dir = join(tools_dir, 'gcc-arm-embedded')
-  copytree('third_party/gcc-arm-embedded/linux/gcc-arm-embedded',
-           gcc_arm_embedded_dir)
+  tools = ['gcc-arm-embedded', 'openocd']
+  for tool in tools:
+    tool_dir = join(tools_dir, tool)
+    copytree('third_party/%s/linux/%s' % (tool, tool), tool_dir)
 
 def Main():
   options = ParseOptions();
