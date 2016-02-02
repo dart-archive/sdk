@@ -22,6 +22,8 @@ vars = {
   # Used by dartino_tests.
   "isolate_tag": "@0.2.2",
 
+  "instrumentation_client_rev": "@33c7bf19f6db1340a999e45dd8fb14d684330d3e",
+
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_fletch_patches".
   # 2. update package revisions below.
@@ -97,6 +99,10 @@ deps = {
 
   "sdk/third_party/dart2js_info":
       "https://github.com/dart-lang/dart2js_info.git" + Var("dart2js_info_rev"),
+
+  "sdk/third_party/instrumentation_client":
+      "https://github.com/dart-lang/instrumentation_client.git"
+      + Var("instrumentation_client_rev"),
 
   "sdk/third_party/pub_semver":
       (Var("github_mirror") % "pub_semver") + Var("pub_semver_tag"),
