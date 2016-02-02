@@ -200,6 +200,7 @@ class TLSSocket implements Socket {
     }
     var serverHostName = new ForeignMemory.fromStringAsUTF8('no_used');
     result = mbedtls_ssl_set_hostname.icall$2(ssl, serverHostName);
+    serverHostName.free();
     if (result != 0) {
       throw new TLSException(
           "mbedtls_ssl_set_hostname returned non 0 value $result");
@@ -222,6 +223,7 @@ class TLSSocket implements Socket {
       var input = new ForeignMemory.fromStringAsUTF8('  !  ');
       mbedtls_x509_crt_verify_info.vcall$4(vrfy_buf, vrfy_buf.length,
                                            input, flags);
+      input.free();
       throw new TLSException(cStringToString(vrfy_buf));
     }
   }

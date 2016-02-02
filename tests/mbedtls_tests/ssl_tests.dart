@@ -66,8 +66,9 @@ Future testServerClient() async {
       .transform(new LineSplitter())
       .listen((s) => print('fletch-vm(stderr): $s')).asFuture();
   var result = await process.exitCode;
-  Expect.equals(result, 0);
+  await server.close();
   await stdoutFuture;
   await stderrFuture;
-  await server.close();
+  Expect.equals(result, 0);
+
 }
