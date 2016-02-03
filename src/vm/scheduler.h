@@ -86,6 +86,7 @@ class Scheduler {
 
   void StopProgram(Program* program);
   void ResumeProgram(Program* program);
+  void KillProgram(Program* program);
 
   void PauseGcThread();
   void ResumeGcThread();
@@ -122,8 +123,8 @@ class Scheduler {
   //   * uncaught exception
   //   * compile-time error
   //   * break point
-  // these are the default implementations. They might be invoked if no session
-  // is attached or the session might call them if it is about to end.
+  // these are the default implementations. They are called if no session
+  // is attached.
   //
   // TODO(kustermann): Once we've made more progress on the design of a
   // multiprocess system, we should consider making an abstraction for these.

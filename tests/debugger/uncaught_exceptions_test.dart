@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// FletchDebuggerCommands=r,restart,restart,restart,restart
+// FletchDebuggerCommands=r,restart,restart,restart,restart,restart
 
 enum State {
   ThrowNumber,
@@ -10,6 +10,7 @@ enum State {
   ThrowExceptionObject,
   ThrowCustomObject,
   AccessNoSuchMethod,
+  Done,
 }
 
 State state = State.ThrowNumber;
@@ -37,10 +38,13 @@ foo() {
       throw new CustomException('foobar', 42);
       break;
     case State.AccessNoSuchMethod:
+      state = State.Done;
       var object = new MyObject();
       object.foo();
       object.bar();
       break;
+    case State.Done:
+      return;
   }
 }
 

@@ -309,6 +309,8 @@ class Program {
   LookupCache* cache() const { return cache_; }
   LookupCache* EnsureCache();
 
+  ProcessHandle* MainProcess();
+
  private:
   // Program GC support. Cook the stack to rewrite bytecode pointers
   // to a pair of a function pointer and a delta. Uncook the stack to

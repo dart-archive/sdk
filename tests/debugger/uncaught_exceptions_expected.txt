@@ -26,4 +26,5 @@ foo
 Uncaught exception: NoSuchMethodError: Class 'MyObject' has no method named 'bar' that takes 0 arguments
 * 0: foo                             @object.bar()
   1: main                            @foo()
-> Non-zero exit code from 'fletch-vm' (255).
+> restart
+### process terminated

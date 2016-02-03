@@ -59,6 +59,9 @@ class Session {
   bool CompileTimeError(Process* process);
 
  private:
+  void SendBreakPoint(Process* process);
+  void ExitWithSessionEndState(Process* process);
+
   // Map operations.
   void NewMap(int map_index);
   void DeleteMap(int map_index);
@@ -154,9 +157,12 @@ class Session {
   // (in which case program()->scheduler() == NULL) or the program
   // is stopped and the GC thread is paused.
   bool execution_paused_;
+  bool execution_interrupted_;
   bool request_execution_pause_;
 
   bool debugging_;
+  bool session_ended_;
+  Process::State session_end_state_;
 
   int method_map_id_;
   int class_map_id_;

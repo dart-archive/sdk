@@ -234,6 +234,22 @@ void Scheduler::ResumeProgram(Program* program) {
   NotifyInterpreterThread();
 }
 
+void Scheduler::KillProgram(Program* program) {
+  ASSERT(program->scheduler() == this);
+  ProcessHandle* handle = program->MainProcess();
+  if (handle == NULL) return;
+  Signal* signal = new Signal(handle, Signal::kShouldKill);
+  ProcessHandle::DecrementRef(handle);
+  {
+    ScopedSpinlock locker(handle->lock());
+    Process* process = handle->process();
+    if (process != NULL) {
+      process->SendSignal(signal);
+      SignalProcess(process);
+    }
+  }
+}
+
 void Scheduler::PauseGcThread() {
   ASSERT(gc_thread_ != NULL);
   gc_thread_->Pause();
@@ -344,6 +360,7 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   }
 
   if (state->DecreaseProcessCount()) {
+    // TODO(kustermann): Conditional on result of ScheduleProcessForDeletion.
     if (state->Release()) program->NotifyExitListener();
   }
 }

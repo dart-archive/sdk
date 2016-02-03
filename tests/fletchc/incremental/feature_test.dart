@@ -310,7 +310,7 @@ class SerializeScopeTestCase extends CompilerTestCase {
 
   final String scopeInfo;
 
-  final Compiler compiler = null; // TODO(ahe): Provide a copiler.
+  final Compiler compiler = null; // TODO(ahe): Provide a compiler.
 
   SerializeScopeTestCase(
       this.source,
