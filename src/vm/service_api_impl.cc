@@ -12,7 +12,7 @@
 
 static const int kRequestHeaderSize = 32;
 
-namespace fletch {
+namespace dartino {
 
 class ServiceRegistry {
  public:
@@ -177,25 +177,25 @@ BEGIN_NATIVE(ServiceRegister) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino
 
 void ServiceApiSetup() {
-  fletch::service_registry = new fletch::ServiceRegistry();
+  dartino::service_registry = new dartino::ServiceRegistry();
 }
 
 void ServiceApiTearDown() {
-  delete fletch::service_registry;
-  fletch::service_registry = NULL;
+  delete dartino::service_registry;
+  dartino::service_registry = NULL;
 }
 
 ServiceId ServiceApiLookup(const char* name) {
-  fletch::Service* service = fletch::service_registry->LookupService(name);
+  dartino::Service* service = dartino::service_registry->LookupService(name);
   return reinterpret_cast<ServiceId>(service);
 }
 
 void ServiceApiInvoke(ServiceId service_id, MethodId method, void* buffer,
                       int size) {
-  fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
+  dartino::Service* service = reinterpret_cast<dartino::Service*>(service_id);
   intptr_t method_id = reinterpret_cast<intptr_t>(method);
   service->Invoke(method_id, buffer, size);
 }
@@ -203,7 +203,7 @@ void ServiceApiInvoke(ServiceId service_id, MethodId method, void* buffer,
 void ServiceApiInvokeAsync(ServiceId service_id, MethodId method,
                            ServiceApiCallback callback, void* buffer,
                            int size) {
-  fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
+  dartino::Service* service = reinterpret_cast<dartino::Service*>(service_id);
   intptr_t method_id = reinterpret_cast<intptr_t>(method);
   service->InvokeAsync(method_id, callback, buffer, size);
 }
@@ -211,6 +211,6 @@ void ServiceApiInvokeAsync(ServiceId service_id, MethodId method,
 void ServiceApiTerminate(ServiceId service_id) {
   char buffer[kRequestHeaderSize];
   ServiceApiInvoke(service_id, kTerminateMethodId, buffer, sizeof(buffer));
-  fletch::Service* service = reinterpret_cast<fletch::Service*>(service_id);
-  fletch::service_registry->Unregister(service);
+  dartino::Service* service = reinterpret_cast<dartino::Service*>(service_id);
+  dartino::service_registry->Unregister(service);
 }

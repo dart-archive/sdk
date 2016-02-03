@@ -9,7 +9,7 @@
 #include "src/shared/atomic.h"
 #include "src/shared/globals.h"
 
-namespace fletch {
+namespace dartino {
 
 class Mutex;
 
@@ -109,7 +109,7 @@ class Utils {
 
   static bool IsUint16(word value) { return (0 <= value) && (value < 65536); }
 
-#ifdef FLETCH64
+#ifdef DARTINO64
   static bool IsInt32(word value) {
     return (-(WORD_C(1) << 31) <= value) && (value < (WORD_C(1) << 31));
   }
@@ -120,7 +120,7 @@ class Utils {
 #endif
 
   static bool SignedAddOverflow(word lhs, word rhs, word* val) {
-#if FLETCH_HAS_BUILTIN_SADDL_OVERFLOW
+#if DARTINO_HAS_BUILTIN_SADDL_OVERFLOW
     return __builtin_saddl_overflow(lhs, rhs, val);
 #else
     uword res = static_cast<uword>(lhs) + static_cast<uword>(rhs);
@@ -131,7 +131,7 @@ class Utils {
   }
 
   static bool SignedSubOverflow(word lhs, word rhs, word* val) {
-#if FLETCH_HAS_BUILTIN_SSUBL_OVERFLOW
+#if DARTINO_HAS_BUILTIN_SSUBL_OVERFLOW
     return __builtin_ssubl_overflow(lhs, rhs, val);
 #else
     uword res = static_cast<uword>(lhs) - static_cast<uword>(rhs);
@@ -180,10 +180,10 @@ class Utils {
   }
 
   static bool SignedMulOverflow(word lhs, word rhs, word* val) {
-#if FLETCH_HAS_BUILTIN_SMULL_OVERFLOW
+#if DARTINO_HAS_BUILTIN_SMULL_OVERFLOW
     return __builtin_smull_overflow(lhs, rhs, val);
 #else
-#ifdef FLETCH64
+#ifdef DARTINO64
     if (Signed64BitMulMightOverflow(lhs, rhs)) return true;
     *val = lhs * rhs;
     return false;
@@ -193,8 +193,8 @@ class Utils {
     if (overflow) return true;
     *val = res;
     return false;
-#endif  // FLETCH64
-#endif  // FLETCH_HAS_BUILTIN_SMULL_OVERFLOW
+#endif  // DARTINO64
+#endif  // DARTINO_HAS_BUILTIN_SMULL_OVERFLOW
   }
 
   // Read a 32-bit integer from the buffer, as little endian.
@@ -280,6 +280,6 @@ class BoolField {
   }
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_UTILS_H_

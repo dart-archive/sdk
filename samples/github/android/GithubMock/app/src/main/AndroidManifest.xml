@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.google.fletch.githubmock" >
+    package="com.google.dartino.githubmock" >
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -13,7 +13,7 @@
             android:name=".GithubMockServer"
             android:exported="true" >
             <intent-filter>
-                <action android:name="com.google.fletch.githubmock.action.ensureServer" />
+                <action android:name="com.google.dartino.githubmock.action.ensureServer" />
             </intent-filter>
         </service>
 

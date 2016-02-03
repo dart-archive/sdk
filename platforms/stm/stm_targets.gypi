@@ -67,19 +67,19 @@
 
   'target_defaults': {
     'configurations': {
-      'fletch_stm': {
+      'dartino_stm': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH32',
-          'FLETCH_TARGET_ARM',
-          'FLETCH_THUMB_ONLY',
+          'DARTINO32',
+          'DARTINO_TARGET_ARM',
+          'DARTINO_THUMB_ONLY',
         ],
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
               'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
-              'FLETCH_TARGET_OS_CMSIS',
+              'DARTINO_TARGET_OS_CMSIS',
               'USE_HAL_DRIVER',
               'STM32F746xx',
               'USE_STM32746G_DISCOVERY',
@@ -125,9 +125,9 @@
               }],
             ],
             'defines!': [
-              'FLETCH_TARGET_OS_POSIX',
-              'FLETCH_TARGET_OS_LINUX',
-              'FLETCH_TARGET_OS_MACOS',
+              'DARTINO_TARGET_OS_POSIX',
+              'DARTINO_TARGET_OS_LINUX',
+              'DARTINO_TARGET_OS_MACOS',
             ],
             'include_dirs': [
               # We need to set these here since the src/shared/platform_cmsis.h
@@ -136,18 +136,18 @@
               '<(stm32_cube_f7_free_rtos)/Source/include/',
               '<(stm32_cube_f7_free_rtos)/Source/portable/GCC/ARM_CM7/r0p1/',
               '<(stm32_cube_f7)/Drivers/CMSIS/Include/',
-              'disco_fletch/src',
+              'disco_dartino/src',
               '../..'
             ],
           }],
 
           ['_toolset=="host"', {
             # Compile host targets as IA32, to get same word size.
-            'inherit_from': [ 'fletch_ia32' ],
+            'inherit_from': [ 'dartino_ia32' ],
 
             # Undefine IA32 target and using existing ARM target.
             'defines!': [
-              'FLETCH_TARGET_IA32',
+              'DARTINO_TARGET_IA32',
             ],
           }],
         ],
@@ -155,9 +155,9 @@
 
       'ReleaseSTM': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_stm',
-          'fletch_disable_live_coding',
-          'fletch_disable_native_processes',
+          'dartino_base', 'dartino_release', 'dartino_stm',
+          'dartino_disable_live_coding',
+          'dartino_disable_native_processes',
         ],
         'target_conditions': [
           ['_toolset=="target"', {
@@ -184,9 +184,9 @@
 
       'DebugSTM': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_stm',
-          'fletch_disable_live_coding',
-          'fletch_disable_native_processes',
+          'dartino_base', 'dartino_debug', 'dartino_stm',
+          'dartino_disable_live_coding',
+          'dartino_disable_native_processes',
         ],
         'target_conditions': [
           ['_toolset=="target"', {

@@ -15,7 +15,7 @@
 #include "src/vm/object_memory.h"
 #include "src/vm/object.h"
 
-namespace fletch {
+namespace dartino {
 
 // In oldspace, the sentinel marks the end of each chunk, and never moves or is
 // overwritten.
@@ -232,4 +232,4 @@ void SemiSpace::StartScavenge() {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

@@ -11,10 +11,10 @@
 
 static const int argc = 3;
 static const char* argv[argc] = {
-    "fletch", "-Xverbose", "nothing",
+    "dartino", "-Xverbose", "nothing",
 };
 
-namespace fletch {
+namespace dartino {
 
 TEST_CASE(Arguments) {
 #ifdef USING_ADDRESS_SANITIZER
@@ -35,9 +35,9 @@ TEST_CASE(Arguments) {
   int count = argc;
   Flags::ExtractFromCommandLine(&count, values);
   EXPECT_EQ(2, count);
-  EXPECT_STREQ("fletch", values[0]);
+  EXPECT_STREQ("dartino", values[0]);
   EXPECT_STREQ("nothing", values[1]);
   EXPECT(Flags::verbose);
 }
 
-}  // namespace fletch
+}  // namespace dartino

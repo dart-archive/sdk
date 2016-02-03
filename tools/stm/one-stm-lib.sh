@@ -12,8 +12,8 @@ set -e
 
 ninja
 ninja -C out/ReleaseX64
-ninja -C out/ReleaseSTM disco_fletch
-ninja -C out/DebugSTM disco_fletch
+ninja -C out/ReleaseSTM disco_dartino
+ninja -C out/DebugSTM disco_dartino
 
 cd out/ReleaseSTM
 ../../third_party/gcc-arm-embedded/linux/gcc-arm-embedded/bin/arm-none-eabi-ar \

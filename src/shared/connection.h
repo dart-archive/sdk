@@ -5,14 +5,14 @@
 #ifndef SRC_SHARED_CONNECTION_H_
 #define SRC_SHARED_CONNECTION_H_
 
-#ifndef FLETCH_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_LIVE_CODING
 #error "connection.h is only available when live coding is enabled."
 #endif
 
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 class Socket;
 
@@ -56,7 +56,7 @@ class WriteBuffer : public Buffer {
 class Connection {
  public:
   // Any change in [Opcode] must also be done in [VMCommandCode] in
-  // pkg/fletchc/lib/vm_commands.dart.
+  // pkg/dartino_compiler/lib/vm_commands.dart.
   enum Opcode {
     // DO NOT MOVE! The handshake opcodes needs to be the first one as
     // it is used to verify the compiler and vm versions.
@@ -189,6 +189,6 @@ class ConnectionListener {
   int port_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_CONNECTION_H_

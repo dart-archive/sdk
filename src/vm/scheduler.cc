@@ -25,19 +25,15 @@
     }                                                                  \
   } while (false);
 
-namespace fletch {
+namespace dartino {
 
 // Global instance of scheduler.
 Scheduler* Scheduler::scheduler_ = NULL;
 
-ThreadState::ThreadState()
-    : idle_monitor_(Platform::CreateMonitor()) {}
+WorkerThread::WorkerThread(Scheduler* scheduler)
+    : scheduler_(scheduler) {}
 
-void ThreadState::AttachToCurrentThread() { thread_ = ThreadIdentifier(); }
-
-ThreadState::~ThreadState() {
-  delete idle_monitor_;
-}
+WorkerThread::~WorkerThread() { }
 
 void InterpretationBarrier::PreemptProcess() {
   Process* process = current_process;
@@ -90,36 +86,43 @@ void Scheduler::Setup() {
   ASSERT(scheduler_ == NULL);
   scheduler_ = new Scheduler();
   scheduler_->gc_thread_->StartThread();
-  scheduler_->thread_pool_.Start();
-  while (!scheduler_->thread_pool_.TryStartThread(RunThread, scheduler_)) {}
 }
 
 void Scheduler::TearDown() {
   ASSERT(scheduler_ != NULL);
   scheduler_->shutdown_ = true;
   scheduler_->NotifyInterpreterThread();
-  scheduler_->thread_pool_.JoinAll();
   scheduler_->gc_thread_->StopThread();
   delete scheduler_;
   scheduler_ = NULL;
 }
 
 Scheduler::Scheduler()
-    : thread_pool_(1),
-      interpreter_is_paused_(false),
-      interpreting_thread_(new ThreadState()),
+    : interpreter_is_paused_(false),
       ready_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       pause_(false),
       shutdown_(false),
+      idle_monitor_(Platform::CreateMonitor()),
+      interpreter_semaphore_(1),
       gc_thread_(new GCThread()) {
+  for (int i = 0; i < kThreadCount; i++) {
+    WorkerThread* worker = new WorkerThread(this);
+    threads_[i] = worker;
+    thread_ids_[i] = Thread::Run(WorkerThread::RunThread, worker);
+  }
 }
 
 Scheduler::~Scheduler() {
+  for (int i = 0; i < kThreadCount; i++) {
+    thread_ids_[i].Join();
+    delete threads_[i];
+  }
+
+  delete idle_monitor_;
   delete pause_monitor_;
   delete ready_queue_;
   delete gc_thread_;
-  delete interpreting_thread_.load();
 }
 
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
@@ -231,6 +234,22 @@ void Scheduler::ResumeProgram(Program* program) {
   NotifyInterpreterThread();
 }
 
+void Scheduler::KillProgram(Program* program) {
+  ASSERT(program->scheduler() == this);
+  ProcessHandle* handle = program->MainProcess();
+  if (handle == NULL) return;
+  Signal* signal = new Signal(handle, Signal::kShouldKill);
+  ProcessHandle::DecrementRef(handle);
+  {
+    ScopedSpinlock locker(handle->lock());
+    Process* process = handle->process();
+    if (process != NULL) {
+      process->SendSignal(signal);
+      SignalProcess(process);
+    }
+  }
+}
+
 void Scheduler::PauseGcThread() {
   ASSERT(gc_thread_ != NULL);
   gc_thread_->Pause();
@@ -261,7 +280,7 @@ void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
 
 void Scheduler::ResumeProcess(Process* process) {
   if (!process->ChangeState(Process::kSleeping, Process::kReady)) return;
-  EnqueueOnAnyThreadSafe(process);
+  EnqueueSafe(process);
 }
 
 void Scheduler::SignalProcess(Process* process) {
@@ -272,7 +291,7 @@ void Scheduler::SignalProcess(Process* process) {
           // TODO(kustermann): If it is guaranteed that [SignalProcess] is only
           // called from a scheduler worker thread, we could use the non *Safe*
           // method here (which doesn't guard against stopped programs).
-          EnqueueOnAnyThreadSafe(process);
+          EnqueueSafe(process);
           return;
         }
         // If the state changed, we'll try again.
@@ -307,7 +326,7 @@ void Scheduler::ContinueProcess(Process* process) {
       process->ChangeState(Process::kCompileTimeError, Process::kReady) ||
       process->ChangeState(Process::kUncaughtException, Process::kReady);
   ASSERT(success);
-  EnqueueOnAnyThreadSafe(process);
+  EnqueueSafe(process);
 }
 
 bool Scheduler::EnqueueProcess(Process* process, Port* port) {
@@ -318,7 +337,7 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
     return false;
   }
   port->Unlock();
-  EnqueueOnAnyThreadSafe(process);
+  EnqueueSafe(process);
 
   return true;
 }
@@ -341,6 +360,7 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   }
 
   if (state->DecreaseProcessCount()) {
+    // TODO(kustermann): Conditional on result of ScheduleProcessForDeletion.
     if (state->Release()) program->NotifyExitListener();
   }
 }
@@ -436,8 +456,7 @@ void Scheduler::ExitWith(Process* process, int exit_code, Signal::Kind kind) {
   DeleteTerminatedProcess(process, kind);
 }
 
-void Scheduler::RescheduleProcess(Process* process, ThreadState* state,
-                                  bool terminate) {
+void Scheduler::RescheduleProcess(Process* process, bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
     process->ChangeState(Process::kRunning, Process::kTerminated);
@@ -448,10 +467,39 @@ void Scheduler::RescheduleProcess(Process* process, ThreadState* state,
   }
 }
 
-void Scheduler::RunInThread() {
-  ThreadState* thread_state = interpreting_thread_;
+void WorkerThread::RunInThread() {
   ThreadEnter();
+  bool running = true;
+  while (running) {
+    scheduler_->interpreter_semaphore_.Down();
+    running = scheduler_->RunInterpreterLoop(this);
+    scheduler_->interpreter_semaphore_.Up();
+  }
+  ThreadExit();
+}
+
+bool Scheduler::RunInterpreterLoop(WorkerThread* worker) {
   while (true) {
+    // Run fletch processes as long as we're not paused or shut down
+    // (and there is work to do).
+    while (!pause_ && !shutdown_) {
+      Process* process = NULL;
+      DequeueProcess(&process);
+
+      // No more processes for this state, break.
+      if (process == NULL) break;
+
+      while (process != NULL && !shutdown_ && !pause_) {
+        process = InterpretProcess(process, worker);
+      }
+      if (process != NULL) {
+        process->ChangeState(Process::kRunning, Process::kReady);
+        EnqueueProcess(process);
+      }
+    }
+
+    if (shutdown_) break;
+
     if (pause_) {
       // Take lock to be sure StopProgram is waiting.
       {
@@ -460,47 +508,29 @@ void Scheduler::RunInThread() {
         pause_monitor_->NotifyAll();
       }
       {
-        ScopedMonitorLock idle_locker(thread_state->idle_monitor());
-        while (pause_) thread_state->idle_monitor()->Wait();
+        ScopedMonitorLock idle_locker(idle_monitor_);
+        while (pause_) idle_monitor_->Wait();
       }
       {
         ScopedMonitorLock locker(pause_monitor_);
         interpreter_is_paused_ = false;
         pause_monitor_->NotifyAll();
       }
-    } else {
-      RunInterpreterLoop(thread_state);
+      continue;
     }
 
     // Sleep until there is something new to execute.
-    ScopedMonitorLock scoped_lock(thread_state->idle_monitor());
+    ScopedMonitorLock scoped_lock(idle_monitor_);
     while (ready_queue_->is_empty() && !pause_ && !shutdown_) {
-      thread_state->idle_monitor()->Wait();
+      idle_monitor_->Wait();
     }
     if (shutdown_) break;
   }
-  ThreadExit();
+
+  return false;
 }
 
-void Scheduler::RunInterpreterLoop(ThreadState* thread_state) {
-  // We use this heap for allocating new immutable objects.
-  while (!pause_) {
-    Process* process = NULL;
-    DequeueProcess(&process);
-
-    // No more processes for this state, break.
-    if (process == NULL) break;
-
-    while (process != NULL) {
-      Process* new_process = InterpretProcess(process, thread_state);
-      // Possibly switch to a new process.
-      process = new_process;
-    }
-  }
-}
-
-Process* Scheduler::InterpretProcess(Process* process,
-                                     ThreadState* thread_state) {
+Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
   ASSERT(process->exception()->IsNull());
 
   Signal* signal = process->signal();
@@ -563,18 +593,18 @@ Process* Scheduler::InterpretProcess(Process* process,
 
     if (target->ChangeState(Process::kSleeping, Process::kRunning)) {
       port->Unlock();
-      RescheduleProcess(process, thread_state, terminate);
+      RescheduleProcess(process, terminate);
       return target;
     } else {
       if (ready_queue_->TryDequeueEntry(target)) {
         port->Unlock();
         ASSERT(target->state() == Process::kRunning);
-        RescheduleProcess(process, thread_state, terminate);
+        RescheduleProcess(process, terminate);
         return target;
       }
     }
     port->Unlock();
-    RescheduleProcess(process, thread_state, terminate);
+    RescheduleProcess(process, terminate);
     return NULL;
   }
 
@@ -621,27 +651,22 @@ Process* Scheduler::InterpretProcess(Process* process,
   return NULL;
 }
 
-void Scheduler::ThreadEnter() {
-  ThreadState* thread_state = interpreting_thread_;
-  thread_state->AttachToCurrentThread();
+void WorkerThread::ThreadEnter() {
   Thread::SetupOSSignals();
-  // Notify pause_monitor_ when changing interpreting_thread_.
-  pause_monitor_->Lock();
-  pause_monitor_->NotifyAll();
-  pause_monitor_->Unlock();
+  scheduler_->pause_monitor_->Lock();
+  scheduler_->pause_monitor_->NotifyAll();
+  scheduler_->pause_monitor_->Unlock();
 }
 
-void Scheduler::ThreadExit() {
-  // Notify pause_monitor_.
-  pause_monitor_->Lock();
-  pause_monitor_->NotifyAll();
-  pause_monitor_->Unlock();
+void WorkerThread::ThreadExit() {
+  scheduler_->pause_monitor_->Lock();
+  scheduler_->pause_monitor_->NotifyAll();
+  scheduler_->pause_monitor_->Unlock();
   Thread::TeardownOSSignals();
 }
 
 void Scheduler::NotifyInterpreterThread() {
-  ThreadState* thread_state = interpreting_thread_;
-  Monitor* monitor = thread_state->idle_monitor();
+  Monitor* monitor = idle_monitor_;
   monitor->Lock();
   monitor->Notify();
   monitor->Unlock();
@@ -657,7 +682,7 @@ void Scheduler::EnqueueProcess(Process* process) {
   if (was_empty) NotifyInterpreterThread();
 }
 
-void Scheduler::EnqueueOnAnyThreadSafe(Process* process, int start_id) {
+void Scheduler::EnqueueSafe(Process* process) {
   // There can be two cases: Either the program is stopped at the moment or
   // not. If it is stopped, we add the process to the list of paused processes
   // and otherwise we enqueue it on any thread.
@@ -681,9 +706,10 @@ void Scheduler::EnqueueOnAnyThreadSafe(Process* process, int start_id) {
   }
 }
 
-void Scheduler::RunThread(void* data) {
-  Scheduler* scheduler = reinterpret_cast<Scheduler*>(data);
-  scheduler->RunInThread();
+void* WorkerThread::RunThread(void* data) {
+  WorkerThread* state = reinterpret_cast<WorkerThread*>(data);
+  state->RunInThread();
+  return NULL;
 }
 
 SimpleProgramRunner::SimpleProgramRunner()
@@ -746,4 +772,4 @@ void SimpleProgramRunner::CaptureExitCode(Program* program,
   UNREACHABLE();
 }
 
-}  // namespace fletch
+}  // namespace dartino

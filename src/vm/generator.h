@@ -5,7 +5,7 @@
 #ifndef SRC_VM_GENERATOR_H_
 #define SRC_VM_GENERATOR_H_
 
-namespace fletch {
+namespace dartino {
 
 class Assembler;
 
@@ -38,6 +38,6 @@ class Generator {
   DISALLOW_COPY_AND_ASSIGN(Generator);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_GENERATOR_H_

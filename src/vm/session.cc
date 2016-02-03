@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
 #include "src/vm/session.h"
 
@@ -31,7 +31,7 @@
     ASSERT(!var->IsFailure());                          \
   }
 
-namespace fletch {
+namespace dartino {
 
 class ConnectionPrintInterceptor : public PrintInterceptor {
  public:
@@ -96,8 +96,11 @@ Session::Session(Connection* connection)
       process_(NULL),
       next_process_id_(0),
       execution_paused_(true),
+      execution_interrupted_(false),
       request_execution_pause_(false),
       debugging_(false),
+      session_ended_(false),
+      session_end_state_(Process::kTerminated),
       method_map_id_(-1),
       class_map_id_(-1),
       fibers_map_id_(-1),
@@ -108,17 +111,17 @@ Session::Session(Connection* connection)
       program_update_error_(NULL),
       main_thread_monitor_(Platform::CreateMonitor()),
       main_thread_resume_kind_(kUnknown) {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   ConnectionPrintInterceptor* interceptor =
       new ConnectionPrintInterceptor(connection_);
   Print::RegisterPrintInterceptor(interceptor);
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 }
 
 Session::~Session() {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   Print::UnregisterPrintInterceptors();
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 
   delete connection_;
   delete program_;
@@ -259,22 +262,18 @@ void Session::RequestExecutionPause() {
 }
 
 // Caller thread must have a lock on main_thread_monitor_, ie,
-// ProcessContinue should only be called from within ProcessMessage's
-// main loop.
+// this should only be called from within ProcessMessage's main loop.
 void Session::PauseExecution() {
-  ASSERT(request_execution_pause_);
   ASSERT(!execution_paused_);
   Scheduler* scheduler = program()->scheduler();
   ASSERT(scheduler != NULL);
-  request_execution_pause_ = false;
   execution_paused_ = true;
   scheduler->StopProgram(program());
   scheduler->PauseGcThread();
 }
 
 // Caller thread must have a lock on main_thread_monitor_, ie,
-// ProcessContinue should only be called from within ProcessMessage's
-// main loop.
+// this should only be called from within ProcessMessage's main loop.
 void Session::ResumeExecution() {
   ASSERT(IsScheduledAndPaused());
   execution_paused_ = false;
@@ -284,11 +283,14 @@ void Session::ResumeExecution() {
 }
 
 // Caller thread must have a lock on main_thread_monitor_, ie,
-// ProcessContinue should only be called from within ProcessMessage's
-// main loop.
+// this should only be called from within ProcessMessage's main loop.
 void Session::ProcessContinue(Process* process) {
   ResumeExecution();
-  process->program()->scheduler()->ContinueProcess(process);
+  if (execution_interrupted_) {
+    execution_interrupted_ = false;
+  } else {
+    process->program()->scheduler()->ContinueProcess(process);
+  }
 }
 
 void Session::SendStackTrace(Stack* stack) {
@@ -343,7 +345,10 @@ void Session::ProcessMessages() {
     Connection::Opcode opcode = connection_->Receive();
 
     ScopedMonitorLock scoped_lock(main_thread_monitor_);
-    if (request_execution_pause_) PauseExecution();
+    if (request_execution_pause_) {
+      request_execution_pause_ = false;
+      PauseExecution();
+    }
 
     switch (opcode) {
       case Connection::kConnectionError: {
@@ -362,9 +367,11 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kProcessDebugInterrupt: {
-        if (process_ == NULL) break;
-        // TODO(zerny): This can race with ProcessTerminated etc.
-        process_->DebugInterrupt();
+        if (!execution_paused_) {
+          PauseExecution();
+          execution_interrupted_ = true;
+          SendBreakPoint(process_);
+        }
         break;
       }
 
@@ -520,26 +527,19 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kSessionEnd: {
-        debugging_ = false;
-        // If execution is paused we delete the process to allow the
-        // VM to terminate.
+        ASSERT(!session_ended_);
+        session_ended_ = true;
+        Scheduler* scheduler = program()->scheduler();
+        // If execution is paused we kill the main process to allow the VM to
+        // terminate.
         if (IsScheduledAndPaused()) {
-          ResumeExecution();
-          Scheduler* scheduler = program()->scheduler();
-          switch (process_->state()) {
-            case Process::kBreakPoint:
-              scheduler->ExitAtBreakpoint(process_);
-              break;
-            case Process::kCompileTimeError:
-              scheduler->ExitAtCompileTimeError(process_);
-              break;
-            case Process::kUncaughtException:
-              scheduler->ExitAtUncaughtException(process_, false);
-              break;
-            default:
-              UNREACHABLE();
-              break;
-          }
+          session_end_state_ = process_->state();
+          scheduler->KillProgram(program());
+          process_->set_exception(process_->program()->null_object());
+          ProcessContinue(process_);
+        } else {
+          // Either the program has not been scheduled or it has completed.
+          ASSERT(scheduler == NULL || process_ == NULL);
         }
         SignalMainThread(kSessionEnd);
         return;
@@ -938,10 +938,10 @@ int Session::ProcessRun() {
         }
 
         has_result = true;
-        if (!debugging_) return result;
+        if (!debugging_ || session_ended_) return result;
         break;
       case kSessionEnd:
-        ASSERT(!debugging_);
+        ASSERT(!debugging_ || session_ended_);
         if (!process_started && process_ != NULL) {
           // If the process was spawned but not started, the scheduler does not
           // know about it and we are therefore responsible for deleting it.
@@ -1207,7 +1207,7 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->foreign_memory_class();
   } else if (name == Names::kStackOverflowError) {
     klass = program()->stack_overflow_error_class();
-  } else if (name == Names::kFletchNoSuchMethodError) {
+  } else if (name == Names::kDartinoNoSuchMethodError) {
     klass = program()->no_such_method_error_class();
   } else {
     UNREACHABLE();
@@ -1442,23 +1442,35 @@ void Session::PostponeChange(Change change, int count) {
 }
 
 bool Session::UncaughtException(Process* process) {
-  if (process_ == process) {
-    RequestExecutionPause();
-    WriteBuffer buffer;
-    connection_->Send(Connection::kUncaughtException, buffer);
+  if (process_ != process) return false;
+
+  if (session_ended_) {
+    ASSERT(session_end_state_ == Process::kUncaughtException);
+    process_ = NULL;
+    program()->scheduler()->ExitAtUncaughtException(process, false);
     return true;
   }
-  return false;
+
+  RequestExecutionPause();
+  WriteBuffer buffer;
+  connection_->Send(Connection::kUncaughtException, buffer);
+  return true;
 }
 
 bool Session::Killed(Process* process) {
   if (process_ != process) return false;
 
-  // TODO(kustermann): We might want to let a debugger know that the process
+  process_ = NULL;
+
+  if (session_ended_) {
+    ExitWithSessionEndState(process);
+    return true;
+  }
+
+  // TODO(kustermann): We might want to let a debugger know if the process
   // didn't normally terminate, but rather was killed.
   WriteBuffer buffer;
   connection_->Send(Connection::kProcessTerminated, buffer);
-  process_ = NULL;
   program_->scheduler()->ExitAtTermination(process, Signal::kKilled);
   return true;
 }
@@ -1466,37 +1478,103 @@ bool Session::Killed(Process* process) {
 bool Session::UncaughtSignal(Process* process) {
   if (process_ != process) return false;
 
+  process_ = NULL;
+
+  if (session_ended_) {
+    ExitWithSessionEndState(process);
+    return true;
+  }
+
   // TODO(kustermann): We might want to let a debugger know that the process
   // didn't normally terminate, but rather was killed due to a linked process.
   WriteBuffer buffer;
   connection_->Send(Connection::kProcessTerminated, buffer);
-  process_ = NULL;
   program_->scheduler()->ExitAtTermination(process, Signal::kUnhandledSignal);
   return true;
 }
 
 bool Session::BreakPoint(Process* process) {
-  if (process_ == process) {
-    ASSERT(!execution_paused_);
-    RequestExecutionPause();
-    DebugInfo* debug_info = process->debug_info();
-    int breakpoint_id = -1;
-    if (debug_info != NULL) {
-      debug_info->ClearStepping();
-      breakpoint_id = debug_info->current_breakpoint_id();
-    }
-    WriteBuffer buffer;
-    buffer.WriteInt(breakpoint_id);
-    PushTopStackFrame(process->stack());
-    buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
-    // Drop function from session stack.
-    Drop(1);
-    // Pop bytecode index from session stack and send it.
-    buffer.WriteInt64(PopInteger());
-    connection_->Send(Connection::kProcessBreakpoint, buffer);
+  if (process_ != process) return false;
+
+  if (session_ended_) {
+    ASSERT(session_end_state_ == Process::kBreakPoint);
+    process_ = NULL;
+    program()->scheduler()->ExitAtBreakpoint(process);
     return true;
   }
-  return false;
+
+  ASSERT(!execution_paused_);
+  RequestExecutionPause();
+  SendBreakPoint(process);
+  return true;
+}
+
+void Session::SendBreakPoint(Process* process) {
+  DebugInfo* debug_info = process->debug_info();
+  int breakpoint_id = -1;
+  if (debug_info != NULL) {
+    debug_info->ClearStepping();
+    breakpoint_id = debug_info->current_breakpoint_id();
+  }
+  WriteBuffer buffer;
+  buffer.WriteInt(breakpoint_id);
+  PushTopStackFrame(process->stack());
+  buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
+  // Drop function from session stack.
+  Drop(1);
+  // Pop bytecode index from session stack and send it.
+  buffer.WriteInt64(PopInteger());
+  connection_->Send(Connection::kProcessBreakpoint, buffer);
+}
+
+bool Session::ProcessTerminated(Process* process) {
+  if (process_ != process) return false;
+
+  process_ = NULL;
+
+  if (session_ended_) {
+    ASSERT(session_end_state_ == Process::kTerminated);
+  } else {
+    WriteBuffer buffer;
+    connection_->Send(Connection::kProcessTerminated, buffer);
+  }
+
+  program()->scheduler()->ExitAtTermination(process, Signal::kTerminated);
+  return true;
+}
+
+bool Session::CompileTimeError(Process* process) {
+  if (process_ != process) return false;
+
+  if (session_ended_) {
+    ASSERT(session_end_state_ == Process::kCompileTimeError);
+    process_ = NULL;
+    program()->scheduler()->ExitAtCompileTimeError(process);
+    return true;
+  }
+
+  RequestExecutionPause();
+  WriteBuffer buffer;
+  connection_->Send(Connection::kProcessCompileTimeError, buffer);
+  return true;
+}
+
+void Session::ExitWithSessionEndState(Process* process) {
+  // Exit using the process state prior to session-end killing the process.
+  // This must be consistent with the exit code used in other cases where the
+  // session has ended since the kill signal can race with other exit causes.
+  Scheduler* scheduler = program()->scheduler();
+  switch (session_end_state_) {
+    case Process::kCompileTimeError:
+      scheduler->ExitAtTermination(process, Signal::kCompileTimeError);
+      break;
+    case Process::kUncaughtException:
+      scheduler->ExitAtTermination(process, Signal::kUncaughtException);
+      break;
+    default:
+      scheduler->ExitAtTermination(process, Signal::kTerminated);
+      break;
+  }
 }
 
 Process* Session::GetProcess(int process_id) {
@@ -1513,27 +1591,6 @@ Process* Session::GetProcess(int process_id) {
   }
   UNREACHABLE();
   return NULL;
-}
-
-bool Session::ProcessTerminated(Process* process) {
-  if (process_ == process) {
-    WriteBuffer buffer;
-    connection_->Send(Connection::kProcessTerminated, buffer);
-    process_ = NULL;
-    program_->scheduler()->ExitAtTermination(process, Signal::kTerminated);
-    return true;
-  }
-  return false;
-}
-
-bool Session::CompileTimeError(Process* process) {
-  if (process_ == process) {
-    RequestExecutionPause();
-    WriteBuffer buffer;
-    connection_->Send(Connection::kProcessCompileTimeError, buffer);
-    return true;
-  }
-  return false;
 }
 
 class TransformInstancesPointerVisitor : public PointerVisitor {
@@ -1675,6 +1732,6 @@ void Session::RestartFrame(int frame_index) {
   stack->SetTopFromPointer(frame.FramePointer());
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING

@@ -7,7 +7,7 @@
 #include "src/vm/object_memory.h"
 #include "src/shared/test_case.h"
 
-namespace fletch {
+namespace dartino {
 
 static Chunk* AllocateChunkAndTestIt(SemiSpace* space) {
   // Allocate chunk.
@@ -38,4 +38,4 @@ TEST_CASE(ObjectMemory) {
   ObjectMemory::FreeChunk(second);
 }
 
-}  // namespace fletch
+}  // namespace dartino

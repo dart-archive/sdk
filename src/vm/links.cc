@@ -8,7 +8,7 @@
 #include "src/vm/program.h"
 #include "src/vm/scheduler.h"
 
-namespace fletch {
+namespace dartino {
 
 void Links::InsertPort(Port* port) {
   ScopedSpinlock locker(&lock_);
@@ -122,4 +122,4 @@ Signal* Links::SendSignal(ProcessHandle* handle, ProcessHandle* dying_handle,
   return signal;
 }
 
-}  // namespace fletch
+}  // namespace dartino

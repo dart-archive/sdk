@@ -243,7 +243,7 @@ class _JavaActionWriter extends _JavaWriter {
   writeTo(String outputDirectory) {
     bool boxedArguments = types.any((t) => t.isString);
     writeHeader([
-      'fletch.ImmiServiceLayer',
+      'dartino.ImmiServiceLayer',
     ]);
     writeln('public final class $className implements Action {');
     writeln();
@@ -255,8 +255,8 @@ class _JavaActionWriter extends _JavaWriter {
     writeln('      public void run() {');
     if (boxedArguments) {
       String builder = actionArgsBuilder;
-      imports.add('fletch.MessageBuilder');
-      imports.add('fletch.$builder');
+      imports.add('dartino.MessageBuilder');
+      imports.add('dartino.$builder');
       writeln('        int space = 48 + $builder.kSize;');
       for (int i = 0; i < types.length; ++i) {
         if (types[i].isString) {
@@ -363,7 +363,7 @@ class _JavaNodeWriter extends _JavaNodeBaseWriter {
     this.node = node;
     actions = node.methods.map(_JavaActionWriter.fromMethod);
     writeHeader([
-      'fletch.${nodeName}Data',
+      'dartino.${nodeName}Data',
     ]);
     writeln('public final class $nodeName implements Node {');
     writeln();
@@ -413,7 +413,7 @@ class _JavaNodeWriter extends _JavaNodeBaseWriter {
     if (type.isList) {
       String typeName = getNonListTypeName(type);
       String dataName = getNodeDataTypeName(type);
-      imports.add('fletch.$dataName');
+      imports.add('dartino.$dataName');
       imports.add('java.util.Collections');
       imports.add('java.util.ArrayList');
       writeln('    {');
@@ -474,9 +474,9 @@ class _JavaNodePatchWriter extends _JavaNodeBaseWriter {
     this.node = node;
     actions = node.methods.map(_JavaActionWriter.fromMethod);
     writeHeader([
-      'fletch.${patchName}Data',
-      'fletch.${node.name}UpdateData',
-      'fletch.${node.name}UpdateDataList',
+      'dartino.${patchName}Data',
+      'dartino.${node.name}UpdateData',
+      'dartino.${node.name}UpdateDataList',
       'java.util.List',
     ]);
     write('public final class $patchName');
@@ -618,7 +618,7 @@ class _AnyNodeWriter extends _JavaNodeBaseWriter {
   _AnyNodeWriter(Map units)
       : super('AnyNode', 'AnyNode') {
     writeHeader([
-      'fletch.NodeData',
+      'dartino.NodeData',
     ]);
     writeln('public final class $nodeName implements Node {');
     writeln();
@@ -668,7 +668,7 @@ class _AnyNodePatchWriter extends _JavaNodeBaseWriter {
   _AnyNodePatchWriter(Map units)
       : super('AnyNode', 'AnyNodePatch') {
     writeHeader([
-      'fletch.NodePatchData',
+      'dartino.NodePatchData',
     ]);
     write('public final class $patchName');
     writeln(' implements NodePatch<$nodeName, $presenterName> {');

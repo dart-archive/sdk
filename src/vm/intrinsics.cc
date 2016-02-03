@@ -6,7 +6,7 @@
 
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 IntrinsicsTable* IntrinsicsTable::default_table_ = NULL;
 
@@ -32,4 +32,4 @@ bool IntrinsicsTable::set_from_string(const char* name, void (*ptr)(void)) {
   return false;
 }
 
-}  // namespace fletch
+}  // namespace dartino

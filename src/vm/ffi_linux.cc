@@ -2,19 +2,19 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LINUX)
+#if defined(DARTINO_TARGET_OS_LINUX)
 
-#ifdef FLETCH_ENABLE_FFI
+#ifdef DARTINO_ENABLE_FFI
 
 #include "src/vm/ffi.h"
 
-namespace fletch {
+namespace dartino {
 
 const char* ForeignUtils::kLibBundlePrefix = "/lib/lib";
 const char* ForeignUtils::kLibBundlePostfix = ".so";
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_FFI
+#endif  // DARTINO_ENABLE_FFI
 
-#endif  // defined(FLETCH_TARGET_OS_LINUX)
+#endif  // defined(DARTINO_TARGET_OS_LINUX)

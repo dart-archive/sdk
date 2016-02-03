@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef FLETCH_ENABLE_NATIVE_PROCESSES
+#ifndef DARTINO_ENABLE_NATIVE_PROCESSES
 
 #include "src/vm/natives.h"
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 BEGIN_NATIVE(NativeProcessSpawnDetached) {
   UNIMPLEMENTED();
@@ -15,6 +15,6 @@ BEGIN_NATIVE(NativeProcessSpawnDetached) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // !FLETCH_ENABLE_NATIVE_PROCESSES
+#endif  // !DARTINO_ENABLE_NATIVE_PROCESSES

@@ -1,0 +1,27 @@
+#!/bin/bash
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+set -e
+
+BUILD_DIR=$(pwd)/out/DebugIA32Clang
+DARTINO_AGENT_SNAPSHOT=${BUILD_DIR}/dartino-agent.snapshot
+export DARTINO_VM=${BUILD_DIR}/dartino-vm
+export AGENT_IP=127.0.0.1
+export AGENT_PORT=12121
+export AGENT_PID_FILE=${BUILD_DIR}/agent/var/run/dartino-agent.pid
+export AGENT_LOG_FILE=${BUILD_DIR}/agent/var/log/dartino-agent.log
+export VM_LOG_DIR=${BUILD_DIR}/agent/var/log/dartino
+
+# Create required files.
+mkdir -p ${VM_LOG_DIR}
+touch ${AGENT_PID_FILE} ${AGENT_LOG_FILE}
+
+# Create snapshot
+${BUILD_DIR}/dartino quit
+${BUILD_DIR}/dartino export pkg/dartino_agent/bin/agent.dart to \
+  $DARTINO_AGENT_SNAPSHOT
+
+# Run the agent
+exec ${DARTINO_VM} ${DARTINO_AGENT_SNAPSHOT}

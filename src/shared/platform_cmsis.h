@@ -9,7 +9,7 @@
 #error Do not include platform_cmsis.h directly; use platform.h instead.
 #endif
 
-#if defined(FLETCH_TARGET_OS_CMSIS)
+#if defined(DARTINO_TARGET_OS_CMSIS)
 
 #include <errno.h>
 #include <cmsis_os.h>
@@ -74,12 +74,12 @@
   }
 #endif
 
-namespace fletch {
+namespace dartino {
 
 static const int kMutexSize = sizeof(int32_t) * 3;
 static const int kSemaphoreSize = sizeof(int32_t) * 2;
 
-osMailQId GetFletchMailQ();
+osMailQId GetDartinoMailQ();
 
 struct CmsisMessage {
   uint32_t port_id;
@@ -148,7 +148,7 @@ class MonitorImpl {
 #else
     // The implementation in STM32CubeF7 returns osOK if the
     // semaphore was acquired.
-    // See https://github.com/dart-lang/fletch/issues/377.
+    // See https://github.com/dart-lang/dartino/issues/377.
     CHECK_AND_FAIL(osSemaphoreWait(wait_entry.semaphore_, osWaitForever));
 #endif
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
@@ -168,7 +168,7 @@ class MonitorImpl {
 #else
     // The implementation in STM32CubeF7 returns osOK if the
     // semaphore was acquired and osErrorOS if it was not.
-    // See https://github.com/dart-lang/fletch/issues/377.
+    // See https://github.com/dart-lang/dartino/issues/377.
     int status = osSemaphoreWait(wait_entry.semaphore_, microseconds / 1000);
     success = (status == osOK);
 #endif
@@ -268,8 +268,8 @@ class MonitorImpl {
   WaitListEntry* last_waiting_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_CMSIS)
+#endif  // defined(DARTINO_TARGET_OS_CMSIS)
 
 #endif  // SRC_SHARED_PLATFORM_CMSIS_H_

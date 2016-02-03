@@ -9,7 +9,7 @@
 #error Do not include platform_posix.h directly; use platform.h instead.
 #endif
 
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(DARTINO_TARGET_OS_POSIX)
 
 #include <errno.h>
 #include <pthread.h>
@@ -20,7 +20,7 @@
 #define MAXPATHLEN PATH_MAX
 #endif
 
-namespace fletch {
+namespace dartino {
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
@@ -77,8 +77,8 @@ class MonitorImpl {
   pthread_cond_t cond_;    // Pthread condition for POSIX platforms.
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_POSIX)
+#endif  // defined(DARTINO_TARGET_OS_POSIX)
 
 #endif  // SRC_SHARED_PLATFORM_POSIX_H_

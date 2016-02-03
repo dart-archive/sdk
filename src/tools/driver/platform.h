@@ -5,7 +5,7 @@
 #ifndef SRC_TOOLS_DRIVER_PLATFORM_H_
 #define SRC_TOOLS_DRIVER_PLATFORM_H_
 
-namespace fletch {
+namespace dartino {
 
 // Create a file descriptor from which signals can be read. The file descriptor
 // can be used with select, and signal numbers can be read using 'ReadSignal'.
@@ -18,6 +18,6 @@ int ReadSignal(int fd);
 // 'Process.exitCode' in 'dart:io'.
 void Exit(int exit_code);
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_TOOLS_DRIVER_PLATFORM_H_

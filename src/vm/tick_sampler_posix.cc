@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(DARTINO_TARGET_OS_POSIX)
 
 #include "src/vm/tick_sampler.h"
 
@@ -20,7 +20,7 @@
 #include "src/vm/thread.h"
 
 
-namespace fletch {
+namespace dartino {
 
 class TickProcessor;
 
@@ -40,18 +40,18 @@ static void SignalHandler(int signal, siginfo_t* info, void* context) {
   ucontext_t* ucontext = reinterpret_cast<ucontext_t*>(context);
   mcontext_t& mcontext = ucontext->uc_mcontext;
   word ip;
-#if defined(FLETCH_TARGET_OS_LINUX)
-#if defined(FLETCH_TARGET_IA32)
+#if defined(DARTINO_TARGET_OS_LINUX)
+#if defined(DARTINO_TARGET_IA32)
   sample->pc = bit_cast<word>(mcontext.gregs[REG_EIP]);
   sample->sp = bit_cast<word>(mcontext.gregs[REG_ESP]);
   sample->fp = bit_cast<word>(mcontext.gregs[REG_EBP]);
   ip = bit_cast<word>(mcontext.gregs[REG_ESI]);
-#elif defined(FLETCH_TARGET_X64)
+#elif defined(DARTINO_TARGET_X64)
   sample->pc = bit_cast<word>(mcontext.gregs[REG_RIP]);
   sample->sp = bit_cast<word>(mcontext.gregs[REG_RSP]);
   sample->fp = bit_cast<word>(mcontext.gregs[REG_RBP]);
   ip = bit_cast<word>(mcontext.gregs[REG_RSI]);
-#elif defined(FLETCH_TARGET_ARM)
+#elif defined(DARTINO_TARGET_ARM)
   sample->pc = bit_cast<word>(mcontext.arm_pc);
   sample->sp = bit_cast<word>(mcontext.arm_sp);
   sample->fp = bit_cast<word>(mcontext.arm_fp);
@@ -60,13 +60,13 @@ static void SignalHandler(int signal, siginfo_t* info, void* context) {
   FATAL("HandleSignal not support on this platform");
 #endif
 #endif
-#if defined(FLETCH_TARGET_OS_MACOS)
-#if defined(FLETCH_TARGET_IA32)
+#if defined(DARTINO_TARGET_OS_MACOS)
+#if defined(DARTINO_TARGET_IA32)
   sample->pc = bit_cast<word>(mcontext->__ss.__eip);
   sample->sp = bit_cast<word>(mcontext->__ss.__esp);
   sample->fp = bit_cast<word>(mcontext->__ss.__ebp);
   ip = bit_cast<word>(mcontext->__ss.__esi);
-#elif defined(FLETCH_TARGET_X64)
+#elif defined(DARTINO_TARGET_X64)
   sample->pc = bit_cast<word>(mcontext->__ss.__rip);
   sample->sp = bit_cast<word>(mcontext->__ss.__rsp);
   sample->fp = bit_cast<word>(mcontext->__ss.__rbp);
@@ -112,16 +112,16 @@ class TickProcessor {
     if (file == NULL) {
       FATAL("Tick file could not be opened for writing");
     }
-    fprintf(file, "# Tick samples from the Fletch VM.\n");
+    fprintf(file, "# Tick samples from the Dartino VM.\n");
     const char* model;
-    if (kPointerSize == 8 && sizeof(fletch_double) == 8) {
+    if (kPointerSize == 8 && sizeof(dartino_double) == 8) {
       model = "b64double";
-    } else if (kPointerSize == 8 && sizeof(fletch_double) == 4) {
+    } else if (kPointerSize == 8 && sizeof(dartino_double) == 4) {
       model = "b64float";
-    } else if (kPointerSize == 4 && sizeof(fletch_double) == 8) {
+    } else if (kPointerSize == 4 && sizeof(dartino_double) == 8) {
       model = "b32double";
     } else {
-      ASSERT(kPointerSize == 4 && sizeof(fletch_double) == 4);
+      ASSERT(kPointerSize == 4 && sizeof(dartino_double) == 4);
       model = "b32float";
     }
     fprintf(file, "model=%s\n", model);
@@ -230,6 +230,6 @@ void TickSampler::Teardown() {
   delete processor;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_TARGET_OS_POSIX
+#endif  // DARTINO_TARGET_OS_POSIX

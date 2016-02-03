@@ -14,11 +14,11 @@
     'configurations': {
 
       'ReleaseIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32'],
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_ia32'],
       },
 
       'DebugIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32'],
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_ia32'],
       },
     },
   },

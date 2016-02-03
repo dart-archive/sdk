@@ -13,5 +13,5 @@ Only two files are used:
 build/find_depot_tools.py
 build/vs_toolchain.py
 
-Modified to fix relative path lookup due to different location in fletch
+Modified to fix relative path lookup due to different location in dartino
 repository.

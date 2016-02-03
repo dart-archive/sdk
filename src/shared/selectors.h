@@ -7,7 +7,7 @@
 
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 class Selector {
  public:
@@ -31,6 +31,6 @@ class Selector {
   class IdField : public BitField<int, 10, 22> {};
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_SELECTORS_H_

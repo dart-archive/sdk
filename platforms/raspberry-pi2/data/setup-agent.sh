@@ -1,4 +1,4 @@
 #!/bin/sh
-echo "Setting up Fletch agent"
-sudo /usr/sbin/update-rc.d fletch-agent defaults
-sudo service fletch-agent start
+echo "Setting up Dartino agent"
+sudo /usr/sbin/update-rc.d dartino-agent defaults
+sudo service dartino-agent start

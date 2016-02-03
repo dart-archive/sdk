@@ -9,14 +9,14 @@
 
 #include "src/shared/connection.h"
 
-namespace fletch {
+namespace dartino {
 
 class Socket;
 
 class DriverConnection {
  public:
   // If you modify this enum, please update
-  // pkg/fletchc/lib/src/driver/driver_commands.dart as well.
+  // pkg/dartino_compiler/lib/src/driver/driver_commands.dart as well.
   enum Command {
     kStdin,             // Data on stdin.
     kStdout,            // Data on stdout.
@@ -54,6 +54,6 @@ class DriverConnection {
   ReadBuffer incoming_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_TOOLS_DRIVER_CONNECTION_H_

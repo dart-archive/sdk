@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_CMSIS)
+#if defined(DARTINO_TARGET_OS_LK) || defined(DARTINO_TARGET_OS_CMSIS)
 
-#ifdef FLETCH_ENABLE_FFI
+#ifdef DARTINO_ENABLE_FFI
 
 #include "src/vm/ffi.h"
 #include "src/vm/natives.h"
@@ -13,9 +13,9 @@
 
 #include "include/static_ffi.h"
 
-extern "C" FletchStaticFFISymbol fletch_ffi_table;
+extern "C" DartinoStaticFFISymbol dartino_ffi_table;
 
-namespace fletch {
+namespace dartino {
 
 void ForeignFunctionInterface::Setup() {}
 
@@ -37,7 +37,7 @@ BEGIN_NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   if (address != 0) return Failure::index_out_of_bounds();
   char* name = AsForeignString(arguments[1]);
-  for (FletchStaticFFISymbol* entry = &fletch_ffi_table; entry->name != NULL;
+  for (DartinoStaticFFISymbol* entry = &dartino_ffi_table; entry->name != NULL;
        entry++) {
     if (strcmp(name, entry->name) == 0) {
       free(name);
@@ -71,8 +71,8 @@ BEGIN_NATIVE(ForeignErrno) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_FFI
+#endif  // DARTINO_ENABLE_FFI
 
-#endif  // defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_CMSIS)
+#endif  // defined(DARTINO_TARGET_OS_LK) || defined(DARTINO_TARGET_OS_CMSIS)

@@ -10,7 +10,7 @@
 
 #include "src/vm/object.h"
 
-namespace fletch {
+namespace dartino {
 
 class ObjectList {
  public:
@@ -43,6 +43,6 @@ class ObjectList {
   int length_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_OBJECT_LIST_H_

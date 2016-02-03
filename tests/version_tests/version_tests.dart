@@ -19,13 +19,13 @@ Future<Null> main() async {
   Expect.equals(0, result.exitCode);
   String version = result.stdout;
 
-  // Check the version of the fletch CLI.
-  result = await Process.run('$buildDir/fletch', ['--version']);
+  // Check the version of the dartino CLI.
+  result = await Process.run('$buildDir/dartino', ['--version']);
   Expect.equals(0, result.exitCode);
   Expect.equals(version, result.stdout);
 
-  // Check the version of the fletch-vm
-  result = await Process.run('$buildDir/fletch-vm', ['--version']);
+  // Check the version of the dartino-vm
+  result = await Process.run('$buildDir/dartino-vm', ['--version']);
   Expect.equals(0, result.exitCode);
   Expect.equals(version, result.stdout);
 }

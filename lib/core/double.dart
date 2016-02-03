@@ -7,7 +7,7 @@ part of dart.core_patch;
 class _DoubleImpl implements double {
   int get hashCode => identityHashCode(this);
 
-  @fletch.native external num operator -();
+  @dartino.native external num operator -();
 
   int compareTo(num other) {
     if (this < other) return -1;
@@ -24,62 +24,62 @@ class _DoubleImpl implements double {
     return -1;
   }
 
-  @fletch.native num operator +(other) {
+  @dartino.native num operator +(other) {
     // TODO(kasperl): Check error.
     return other._addFromDouble(this);
   }
 
-  @fletch.native num operator -(other) {
+  @dartino.native num operator -(other) {
     // TODO(kasperl): Check error.
     return other._subFromDouble(this);
   }
 
-  @fletch.native num operator *(other) {
+  @dartino.native num operator *(other) {
     // TODO(kasperl): Check error.
     return other._mulFromDouble(this);
   }
 
-  @fletch.native num operator %(other) {
+  @dartino.native num operator %(other) {
     // TODO(kasperl): Check error.
     return other._modFromDouble(this);
   }
 
-  @fletch.native num operator /(other) {
+  @dartino.native num operator /(other) {
     // TODO(kasperl): Check error.
     return other._divFromDouble(this);
   }
 
-  @fletch.native num operator ~/(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native num operator ~/(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._truncDivFromDouble(this);
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new UnsupportedError("double.~/ $this");
     }
   }
 
-  @fletch.native bool operator ==(other) {
+  @dartino.native bool operator ==(other) {
     if (other is! num) return false;
     // TODO(kasperl): Check error.
     return other._compareEqFromDouble(this);
   }
 
-  @fletch.native bool operator <(other) {
+  @dartino.native bool operator <(other) {
     // TODO(kasperl): Check error.
     return other._compareLtFromDouble(this);
   }
 
-  @fletch.native bool operator <=(other) {
+  @dartino.native bool operator <=(other) {
     // TODO(kasperl): Check error.
     return other._compareLeFromDouble(this);
   }
 
-  @fletch.native bool operator >(other) {
+  @dartino.native bool operator >(other) {
     // TODO(kasperl): Check error.
     return other._compareGtFromDouble(this);
   }
 
-  @fletch.native bool operator >=(other) {
+  @dartino.native bool operator >=(other) {
     // TODO(kasperl): Check error.
     return other._compareGeFromDouble(this);
   }
@@ -89,33 +89,33 @@ class _DoubleImpl implements double {
     return (this < 0.0) ? -this : this;
   }
 
-  @fletch.native double remainder(other) {
+  @dartino.native double remainder(other) {
     return other._remainderFromDouble(this);
   }
 
-  @fletch.native int round() {
+  @dartino.native int round() {
     throw new UnsupportedError("double.round $this");
   }
 
-  @fletch.native int floor() {
+  @dartino.native int floor() {
     throw new UnsupportedError("double.floor $this");
   }
 
-  @fletch.native int ceil() {
+  @dartino.native int ceil() {
     throw new UnsupportedError("double.ceil $this");
   }
 
-  @fletch.native int truncate() {
+  @dartino.native int truncate() {
     throw new UnsupportedError("double.truncate $this");
   }
 
-  @fletch.native external double roundToDouble();
-  @fletch.native external double floorToDouble();
-  @fletch.native external double ceilToDouble();
-  @fletch.native external double truncateToDouble();
+  @dartino.native external double roundToDouble();
+  @dartino.native external double floorToDouble();
+  @dartino.native external double ceilToDouble();
+  @dartino.native external double truncateToDouble();
 
-  @fletch.native external bool get isNaN;
-  @fletch.native external bool get isNegative;
+  @dartino.native external bool get isNaN;
+  @dartino.native external bool get isNegative;
 
   bool get isFinite {
     return this != double.INFINITY &&
@@ -144,7 +144,7 @@ class _DoubleImpl implements double {
 
   num _toBigintOrDouble() => this;
 
-  @fletch.native external String toString();
+  @dartino.native external String toString();
 
   String toStringAsExponential([int digits]) {
     if (digits == null) {
@@ -177,9 +177,9 @@ class _DoubleImpl implements double {
     return _toStringAsPrecision(digits);
   }
 
-  @fletch.native external String _toStringAsExponential(int digits);
-  @fletch.native external String _toStringAsFixed(int digits);
-  @fletch.native external String _toStringAsPrecision(int digits);
+  @dartino.native external String _toStringAsExponential(int digits);
+  @dartino.native external String _toStringAsFixed(int digits);
+  @dartino.native external String _toStringAsPrecision(int digits);
 
   double _addFromInteger(int other) => other.toDouble() + this;
 

@@ -10,7 +10,7 @@ packages
 .DS_Store
 .ninja_deps
 .ninja_log
-.fletch
+.dartino
 .*.swp
 .idea
 *.iml
@@ -18,7 +18,7 @@ packages
 *~
 
 # The following match exact path names starting from the location of this file.
-/fletch.xcodeproj/
+/dartino.xcodeproj/
 /jniLibs/
 /out/
 /pkg/mdns/lib/native/libmdns_extension_lib.so
@@ -37,6 +37,7 @@ packages
 /third_party/bin/linux/dart
 /third_party/bin/linux/dart-arm
 /third_party/bin/mac/dart
+/third_party/bin/win/dart.exe
 /third_party/charcode/
 /third_party/crypto/
 /third_party/collection/
@@ -69,5 +70,6 @@ packages
 /tools/testing/bin/linux/dart
 /tools/testing/bin/linux/dart-arm
 /tools/testing/bin/mac/dart
+/tools/testing/bin/win/dart.exe
 /tools/vs_dependency/win_toolchain.json
 /xcodebuild/

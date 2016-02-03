@@ -8,7 +8,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
 
-namespace fletch {
+namespace dartino {
 
 // Flags provide access to commmand line flags.
 //
@@ -48,7 +48,7 @@ namespace fletch {
   FLAG_CSTRING(release, filter, NULL, "Filter string for unit testing")   \
   FLAG_BOOLEAN(release, tick_sampler, false,                              \
                "Collect execution time sampels of the entire VM")         \
-  FLAG_CSTRING(release, tick_file, "fletch.ticks",                        \
+  FLAG_CSTRING(release, tick_file, "dartino.ticks",                        \
                "Write tick samples in this file")                         \
   /* Temporary compiler flags */                                          \
   FLAG_BOOLEAN(release, trace_compiler, false, "")                        \
@@ -76,6 +76,6 @@ class Flags {
   static char* executable_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_FLAGS_H_

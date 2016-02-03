@@ -5,7 +5,7 @@
 // Test that we get a meaningful breakpoint when breaking on a non-empty
 // column that does not point to the first sub-expression of the line.
 
-// FletchDebuggerCommands=bf a.dart 5,r,bf b.dart 5,2,c,c
+// DartinoDebuggerCommands=bf a.dart 5,r,bf b.dart 5,2,c,c
 
 import "find_file_test/a/a.dart" as a_a;
 import "find_file_test/a/b.dart" as a_b;

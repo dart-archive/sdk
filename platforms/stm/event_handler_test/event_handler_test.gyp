@@ -40,7 +40,7 @@
             '<(PRODUCT_DIR)/event_handler_test_snapshot',
           ],
           'action': [
-            '<(PRODUCT_DIR)/../ReleaseX64/fletch',
+            '<(PRODUCT_DIR)/../ReleaseX64/dartino',
             'export',
             '<(source_path)/test.dart',
             'to',
@@ -90,9 +90,9 @@
       'target_name': 'libevent_handler_test',
       'variables': {
         'app_source_path': 'src',
-        'source_path': '../disco_fletch/src',
-        'generated_path': '../disco_fletch/generated',
-        'template_path': '../disco_fletch/template',
+        'source_path': '../disco_dartino/src',
+        'generated_path': '../disco_dartino/generated',
+        'template_path': '../disco_dartino/template',
         'common_cflags': [
           # Our target will link in the stm files which do have a few warnings.
           '-Wno-write-strings',
@@ -117,7 +117,7 @@
         '<(source_path)/cmpctmalloc.c',
         '<(source_path)/cmpctmalloc.h',
         '<(source_path)/freertos.cc',
-        '<(app_source_path)/fletch_entry.cc',
+        '<(app_source_path)/dartino_entry.cc',
         '<(source_path)/main.cc',
         '<(source_path)/page_allocator.cc',
         '<(source_path)/page_allocator.h',
@@ -171,7 +171,7 @@
       'dependencies': [
         'libevent_handler_test',
         'event_handler_test_snapshot.o',
-        '../../../src/vm/vm.gyp:libfletch',
+        '../../../src/vm/vm.gyp:libdartino',
       ],
       'variables': {
         'common_ldflags': [
@@ -179,7 +179,7 @@
           # TODO(340): Why does this not work???
           #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???
-          '-T../../platforms/stm/disco_fletch/generated/SW4STM32/'
+          '-T../../platforms/stm/disco_dartino/generated/SW4STM32/'
             'configuration/STM32F746NGHx_FLASH.ld',
           '-Wl,--wrap=__libc_init_array',
           '-Wl,--wrap=_malloc_r',

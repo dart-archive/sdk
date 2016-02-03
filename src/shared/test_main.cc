@@ -3,21 +3,21 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/shared/flags.h"
-#include "src/shared/fletch.h"
+#include "src/shared/dartino.h"
 #include "src/shared/test_case.h"
 
-namespace fletch {
+namespace dartino {
 
 static void Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
-  Fletch::Setup();
+  Dartino::Setup();
   TestCase::RunAll();
-  Fletch::TearDown();
+  Dartino::TearDown();
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
 int main(int argc, char** argv) {
-  fletch::Main(argc, argv);
+  dartino::Main(argc, argv);
   return 0;
 }

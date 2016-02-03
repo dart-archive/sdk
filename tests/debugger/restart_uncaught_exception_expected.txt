@@ -9,4 +9,4 @@ begin
 Uncaught exception: 42
 * 0: main        @throw 42
 > q
-Non-zero exit code from 'fletch-vm' (255).
+Non-zero exit code from 'dartino-vm' (255).

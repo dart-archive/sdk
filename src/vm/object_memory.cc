@@ -16,11 +16,11 @@
 #include "src/vm/mark_sweep.h"
 #include "src/vm/object.h"
 
-#ifdef FLETCH_TARGET_OS_LK
+#ifdef DARTINO_TARGET_OS_LK
 #include "lib/page_alloc.h"
 #endif
 
-#ifdef FLETCH_TARGET_OS_CMSIS
+#ifdef DARTINO_TARGET_OS_CMSIS
 // TODO(sgjesse): Put this into an .h file
 #define PAGE_SIZE_SHIFT 12
 #define PAGE_SIZE (1 << PAGE_SIZE_SHIFT)
@@ -28,7 +28,7 @@ extern "C" void* page_alloc(size_t pages);
 extern "C" void page_free(void* start, size_t pages);
 #endif
 
-namespace fletch {
+namespace dartino {
 
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
 
@@ -40,9 +40,9 @@ Chunk::~Chunk() {
   // If the memory for this chunk is external we leave it alone
   // and let the embedder deallocate it.
   if (is_external()) return;
-#if defined(FLETCH_TARGET_OS_CMSIS) || defined(FLETCH_TARGET_OS_LK)
+#if defined(DARTINO_TARGET_OS_CMSIS) || defined(DARTINO_TARGET_OS_LK)
   page_free(reinterpret_cast<void*>(base()), size() >> PAGE_SIZE_SHIFT);
-#elif defined(FLETCH_TARGET_OS_WIN)
+#elif defined(DARTINO_TARGET_OS_WIN)
   _aligned_free(reinterpret_cast<void*>(base()));
 #else
   free(reinterpret_cast<void*>(base()));
@@ -159,7 +159,7 @@ void PageDirectory::Delete() {
 }
 
 Mutex* ObjectMemory::mutex_;
-#ifdef FLETCH32
+#ifdef DARTINO32
 PageDirectory ObjectMemory::page_directory_;
 #else
 PageDirectory* ObjectMemory::page_directories_[1 << 13];
@@ -169,7 +169,7 @@ Atomic<uword> ObjectMemory::allocated_;
 void ObjectMemory::Setup() {
   mutex_ = Platform::CreateMutex();
   allocated_ = 0;
-#ifdef FLETCH32
+#ifdef DARTINO32
   page_directory_.Clear();
 #else
   memset(&page_directories_, 0, kPointerSize * ARRAY_SIZE(page_directories_));
@@ -177,7 +177,7 @@ void ObjectMemory::Setup() {
 }
 
 void ObjectMemory::TearDown() {
-#ifdef FLETCH32
+#ifdef DARTINO32
   page_directory_.Delete();
 #else
   for (unsigned i = 0; i < ARRAY_SIZE(page_directories_); i++) {
@@ -221,9 +221,9 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   // posix_memalign doesn't exist on Android. We fallback to
   // memalign.
   memory = memalign(kPageSize, size);
-#elif defined(FLETCH_TARGET_OS_WIN)
+#elif defined(DARTINO_TARGET_OS_WIN)
   memory = _aligned_malloc(size, kPageSize);
-#elif defined(FLETCH_TARGET_OS_LK) || defined(FLETCH_TARGET_OS_CMSIS)
+#elif defined(DARTINO_TARGET_OS_LK) || defined(DARTINO_TARGET_OS_CMSIS)
   size = Utils::RoundUp(size, PAGE_SIZE);
   memory = page_alloc(size >> PAGE_SIZE_SHIFT);
 #else
@@ -273,7 +273,7 @@ bool ObjectMemory::IsAddressInSpace(uword address, const Space* space) {
 }
 
 PageTable* ObjectMemory::GetPageTable(uword address) {
-#ifdef FLETCH32
+#ifdef DARTINO32
   return page_directory_.Get(address >> 22);
 #else
   PageDirectory* directory = page_directories_[address >> 35];
@@ -283,7 +283,7 @@ PageTable* ObjectMemory::GetPageTable(uword address) {
 }
 
 void ObjectMemory::SetPageTable(uword address, PageTable* table) {
-#ifdef FLETCH32
+#ifdef DARTINO32
   page_directory_.Set(address >> 22, table);
 #else
   int index = address >> 35;
@@ -356,4 +356,4 @@ void SemiSpace::RebuildAfterTransformations() {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

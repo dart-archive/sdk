@@ -12,7 +12,7 @@
 #include "src/vm/mailbox.h"
 #include "src/vm/port.h"
 
-namespace fletch {
+namespace dartino {
 
 class Process;
 class Signal;
@@ -106,6 +106,6 @@ class MessageMailbox : public Mailbox<Message> {
                                    Process* destination_process);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_MESSAGE_MAILBOX_H_

@@ -1,9 +1,0 @@
-TARGETS = ifplugd triggerhappy fake-hwclock dhcpcd fletch-agent avahi-daemon lightdm plymouth alsa-utils urandom sendsigs rsyslog umountnfs.sh nfs-common rpcbind hwclock.sh networking umountfs umountroot halt reboot
-sendsigs: ifplugd triggerhappy alsa-utils plymouth dhcpcd avahi-daemon lightdm
-rsyslog: sendsigs dhcpcd avahi-daemon fletch-agent
-umountnfs.sh: rsyslog ifplugd triggerhappy alsa-utils plymouth dhcpcd avahi-daemon lightdm sendsigs
-networking: ifplugd umountnfs.sh rpcbind fletch-agent
-umountfs: ifplugd hwclock.sh triggerhappy alsa-utils plymouth dhcpcd avahi-daemon umountnfs.sh urandom rpcbind lightdm networking
-umountroot: umountfs fake-hwclock
-halt: umountroot
-reboot: umountroot

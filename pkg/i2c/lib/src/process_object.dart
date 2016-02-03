@@ -6,7 +6,7 @@
 /// funtions in that process opeating on that object.
 library process_object;
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 /// Instantiate an object in a process.
 ///

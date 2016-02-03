@@ -13,11 +13,11 @@
 #include "src/vm/port.h"
 #include "src/vm/process_handle.h"
 
-namespace fletch {
+namespace dartino {
 
 class Signal : public Refcounted<Signal> {
  public:
-  // Please keep these in sync with lib/fletch/fletch.dart:SignalKind.
+  // Please keep these in sync with lib/dartino/dartino.dart:SignalKind.
   enum Kind {
     kCompileTimeError,
     kTerminated,
@@ -45,6 +45,6 @@ class Signal : public Refcounted<Signal> {
   const Kind kind_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_SIGNAL_H_

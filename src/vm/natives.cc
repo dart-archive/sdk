@@ -24,7 +24,7 @@
 
 #include "third_party/double-conversion/src/double-conversion.h"
 
-namespace fletch {
+namespace dartino {
 
 static const char kDoubleExponentChar = 'e';
 static const char* kDoubleInfinitySymbol = "Infinity";
@@ -521,7 +521,7 @@ BEGIN_NATIVE(DoubleAdd) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return process->NewDouble(x->value() + y_value);
 }
 END_NATIVE()
@@ -530,7 +530,7 @@ BEGIN_NATIVE(DoubleSub) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return process->NewDouble(x->value() - y_value);
 }
 END_NATIVE()
@@ -539,7 +539,7 @@ BEGIN_NATIVE(DoubleMul) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return process->NewDouble(x->value() * y_value);
 }
 END_NATIVE()
@@ -548,7 +548,7 @@ BEGIN_NATIVE(DoubleMod) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return process->NewDouble(fmod(x->value(), y_value));
 }
 END_NATIVE()
@@ -557,7 +557,7 @@ BEGIN_NATIVE(DoubleDiv) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return process->NewDouble(x->value() / y_value);
 }
 END_NATIVE()
@@ -566,7 +566,7 @@ BEGIN_NATIVE(DoubleTruncDiv) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   if (y_value == 0) return Failure::index_out_of_bounds();
   return process->NewInteger(static_cast<int64>(x->value() / y_value));
 }
@@ -576,7 +576,7 @@ BEGIN_NATIVE(DoubleEqual) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() == y_value);
 }
 END_NATIVE()
@@ -585,7 +585,7 @@ BEGIN_NATIVE(DoubleLess) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() < y_value);
 }
 END_NATIVE()
@@ -594,7 +594,7 @@ BEGIN_NATIVE(DoubleLessEqual) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() <= y_value);
 }
 END_NATIVE()
@@ -603,7 +603,7 @@ BEGIN_NATIVE(DoubleGreater) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() > y_value);
 }
 END_NATIVE()
@@ -612,13 +612,13 @@ BEGIN_NATIVE(DoubleGreaterEqual) {
   Double* x = Double::cast(arguments[0]);
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return ToBool(process, x->value() >= y_value);
 }
 END_NATIVE()
 
 BEGIN_NATIVE(DoubleIsNaN) {
-  fletch_double d = Double::cast(arguments[0])->value();
+  dartino_double d = Double::cast(arguments[0])->value();
   return ToBool(process, isnan(static_cast<double>(d)));
 }
 END_NATIVE()
@@ -850,7 +850,7 @@ END_NATIVE()
   BEGIN_NATIVE(name) {                                         \
     Object* x = arguments[0];                                  \
     if (!x->IsDouble()) return Failure::wrong_argument_type(); \
-    fletch_double d = Double::cast(x)->value();                \
+    dartino_double d = Double::cast(x)->value();                \
     return process->NewDouble(method(d));                      \
   }                                                            \
   END_NATIVE()
@@ -870,8 +870,8 @@ BEGIN_NATIVE(DoubleAtan2) {
   if (!x->IsDouble()) return Failure::wrong_argument_type();
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double x_value = Double::cast(x)->value();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double x_value = Double::cast(x)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return process->NewDouble(atan2(x_value, y_value));
 }
 END_NATIVE()
@@ -881,8 +881,8 @@ BEGIN_NATIVE(DoublePow) {
   if (!x->IsDouble()) return Failure::wrong_argument_type();
   Object* y = arguments[1];
   if (!y->IsDouble()) return Failure::wrong_argument_type();
-  fletch_double x_value = Double::cast(x)->value();
-  fletch_double y_value = Double::cast(y)->value();
+  dartino_double x_value = Double::cast(x)->value();
+  dartino_double y_value = Double::cast(y)->value();
   return process->NewDouble(pow(x_value, y_value));
 }
 END_NATIVE()
@@ -1132,7 +1132,7 @@ BEGIN_NATIVE(IdentityHashCode) {
   } else if (object->IsSmi() || object->IsLargeInteger()) {
     return object;
   } else if (object->IsDouble()) {
-    fletch_double value = Double::cast(object)->value();
+    dartino_double value = Double::cast(object)->value();
     return process->ToInteger(static_cast<int64>(value));
   } else {
     return Instance::cast(object)->LazyIdentityHashCode(process->random());
@@ -1520,4 +1520,4 @@ BEGIN_NATIVE(EventHandlerSleep) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino

@@ -11,7 +11,7 @@
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 Port::Port(Process* process, Instance* channel)
     : process_(process),
@@ -20,7 +20,7 @@ Port::Port(Process* process, Instance* channel)
       spinlock_(),
       next_(process->ports()) {
   ASSERT(process != NULL);
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(DARTINO_TARGET_OS_POSIX)
   ASSERT(Thread::GetProcess() == process);
 #else
   // Other platforms do not have Thread Local Storage support and just return
@@ -187,4 +187,4 @@ BEGIN_NATIVE(PortSendExit) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino

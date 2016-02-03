@@ -11,7 +11,7 @@
 #include "src/vm/signal.h"
 #include "src/vm/spinlock.h"
 
-namespace fletch {
+namespace dartino {
 
 class Process;
 
@@ -66,6 +66,6 @@ class Links {
   MultiHashSet<ProcessHandle*> handles_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_LINKS_H_

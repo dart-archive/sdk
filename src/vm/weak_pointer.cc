@@ -9,7 +9,7 @@
 #include "src/vm/object.h"
 #include "src/vm/object_memory.h"
 
-namespace fletch {
+namespace dartino {
 
 WeakPointer::WeakPointer(HeapObject* object, WeakPointerCallback callback,
                          WeakPointer* next)
@@ -100,4 +100,4 @@ void WeakPointer::Visit(WeakPointer* pointers, PointerVisitor* visitor) {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

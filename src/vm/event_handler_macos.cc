@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_MACOS)
+#if defined(DARTINO_TARGET_OS_MACOS)
 
 #include "src/vm/event_handler.h"
 
@@ -16,7 +16,7 @@
 #include "src/vm/process.h"
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
 void EventHandler::Create() {
   int* fds = new int[2];
@@ -144,6 +144,6 @@ Object* EventHandler::Add(Process* process, Object* id, Port* port,
   return process->program()->null_object();
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_MACOS)
+#endif  // defined(DARTINO_TARGET_OS_MACOS)

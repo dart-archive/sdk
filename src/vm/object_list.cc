@@ -4,7 +4,7 @@
 
 #include "src/vm/object_list.h"
 
-namespace fletch {
+namespace dartino {
 
 ObjectList::ObjectList(int capacity) {
   contents_ = List<Object*>::New(capacity);
@@ -29,4 +29,4 @@ void ObjectList::IteratePointers(PointerVisitor* visitor) {
   visitor->VisitBlock(stack_start, stack_end);
 }
 
-}  // namespace fletch
+}  // namespace dartino

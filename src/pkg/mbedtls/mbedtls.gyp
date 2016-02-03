@@ -33,8 +33,27 @@
     {
       'target_name': 'mbedtls',
       'type': 'shared_library',
-      'dependencies': [
-        'mbedtls_static',
+      'includes': [
+        'mbedtls_sources.gypi',
+      ],
+      'cflags_c!': [
+        '-fvisibility=hidden',
+      ],
+      'xcode_settings': {
+        'OTHER_CFLAGS': [
+          '-std=c99', # clang on mac does not like inline unless we explicitly use c99.
+        ],
+      },
+      'sources': [
+        'bindings.c',
+      ],
+      'conditions': [
+        ['OS=="linux"', {
+          'cflags': [
+            '-fPIC',
+            '-fomit-frame-pointer',
+          ],
+        }],
       ],
     },
   ],

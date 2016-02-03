@@ -7,7 +7,7 @@
 # libraries, packages and samples needed for running Dartino.
 
 # This script assumes that the target arg has been build in the passed
-# in --build_dir. It also assumes that out/ReleaseXARM/fletch-vm and
+# in --build_dir. It also assumes that out/ReleaseXARM/dartino-vm and
 # out/ReleaseSTM have been build.
 
 import optparse
@@ -23,7 +23,7 @@ from shutil import copyfile, copymode, copytree, rmtree
 
 TOOLS_DIR = abspath(dirname(__file__))
 
-SDK_PACKAGES = ['ffi', 'file', 'fletch', 'gpio', 'http', 'i2c', 'os',
+SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
                 'raspberry_pi', 'stm32f746g_disco', 'socket', 'mqtt']
 THIRD_PARTY_PACKAGES = ['charcode']
 
@@ -66,9 +66,9 @@ def CopyBinaries(bundle_dir, build_dir):
   internal = join(bundle_dir, 'internal')
   makedirs(bin_dir)
   makedirs(internal)
-  CopyFile(join(build_dir, 'fletch-vm'), join(bin_dir, 'fletch-vm'))
-  # The driver for the sdk is specially named fletch_for_sdk.
-  CopyFile(join(build_dir, 'fletch_for_sdk'), join(bin_dir, 'fletch'))
+  CopyFile(join(build_dir, 'dartino-vm'), join(bin_dir, 'dartino-vm'))
+  # The driver for the sdk is specially named dartino_for_sdk.
+  CopyFile(join(build_dir, 'dartino_for_sdk'), join(bin_dir, 'dartino'))
   # We move the dart vm to internal to not put it on the path of users
   CopyFile(join(build_dir, 'dart'), join(internal, 'dart'))
   # natives.json is read relative to the dart binary
@@ -81,7 +81,7 @@ def CopyPlatformDescriptor(bundle_dir, platform_descriptor_name, repo_dir,
   platform_path = join('lib', platform_descriptor_name)
   with open(platform_path) as f:
     lines = f.read().splitlines()
-  dest = join(bundle_dir, 'internal', 'fletch_lib', platform_descriptor_name)
+  dest = join(bundle_dir, 'internal', 'dartino_lib', platform_descriptor_name)
   print("Copying from %s to %s adjusting paths." % (platform_path, dest))
   with open(dest, 'w') as generated:
     for line in lines:
@@ -101,16 +101,16 @@ def CopyPlatformDescriptor(bundle_dir, platform_descriptor_name, repo_dir,
       generated.write('%s\n' % line)
 
 # We have two lib dependencies: the libs from the sdk and the libs dir with
-# patch files from the fletch repo.
+# patch files from the dartino repo.
 def CopyLibs(bundle_dir, build_dir):
   internal = join(bundle_dir, 'internal')
-  fletch_lib = join(internal, 'fletch_lib')
+  dartino_lib = join(internal, 'dartino_lib')
   dart_lib = join(internal, 'dart_lib')
-  copytree('lib', fletch_lib)
+  copytree('lib', dartino_lib)
   copytree('third_party/dart/sdk/lib', dart_lib)
-  CopyPlatformDescriptor(bundle_dir, 'fletch_mobile.platform',
+  CopyPlatformDescriptor(bundle_dir, 'dartino_mobile.platform',
                          '../third_party/dart/sdk/lib', '../dart_lib')
-  CopyPlatformDescriptor(bundle_dir, 'fletch_embedded.platform',
+  CopyPlatformDescriptor(bundle_dir, 'dartino_embedded.platform',
                          '../third_party/dart/sdk/lib', '../dart_lib')
 
 def CopyInternalPackages(bundle_dir, build_dir):
@@ -119,7 +119,7 @@ def CopyInternalPackages(bundle_dir, build_dir):
   # Copy the pkg dirs for tools and the pkg dirs referred from their
   # .packages files.
   copied_pkgs = Set()
-  for tool in ['fletchc', 'flash_sd_card']:
+  for tool in ['dartino_compiler', 'flash_sd_card']:
     copytree(join('pkg', tool), join(internal_pkg, tool))
     tool_pkg = 'pkg/%s' % tool
     fixed_packages_file = join(internal_pkg, tool, '.packages')
@@ -148,7 +148,7 @@ def CopyInternalPackages(bundle_dir, build_dir):
 def CopyPackages(bundle_dir):
   target_dir = join(bundle_dir, 'pkg')
   makedirs(target_dir)
-  with open(join(bundle_dir, 'internal', 'fletch-sdk.packages'), 'w') as p:
+  with open(join(bundle_dir, 'internal', 'dartino-sdk.packages'), 'w') as p:
     for package in SDK_PACKAGES:
       copytree(join('pkg', package), join(target_dir, package))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
@@ -168,7 +168,7 @@ def CreateSnapshot(dart_executable, dart_file, snapshot):
   cmd = [dart_executable, '-c', '--packages=.packages',
          '-Dsnapshot="%s"' % snapshot,
          '-Dpackages=".packages"',
-         'tests/fletchc/run.dart', dart_file]
+         'tests/dartino_compiler/run.dart', dart_file]
   print 'Running %s' % ' '.join(cmd)
   subprocess.check_call(' '.join(cmd), shell=True)
 
@@ -176,8 +176,8 @@ def CreateAgentSnapshot(bundle_dir, build_dir):
   platforms = join(bundle_dir, 'platforms')
   data_dir = join(platforms, 'raspberry-pi2', 'data')
   dart = join(build_dir, 'dart')
-  snapshot = join(data_dir, 'fletch-agent.snapshot')
-  CreateSnapshot(dart, 'pkg/fletch_agent/bin/agent.dart', snapshot)
+  snapshot = join(data_dir, 'dartino-agent.snapshot')
+  CreateSnapshot(dart, 'pkg/dartino_agent/bin/agent.dart', snapshot)
 
 def CopyArmDebPackage(bundle_dir, package):
   target = join(bundle_dir, 'platforms', 'raspberry-pi2')
@@ -188,7 +188,7 @@ def CopyAdditionalFiles(bundle_dir):
     CopyFile(extra, join(bundle_dir, extra))
 
 def CopyArm(bundle_dir):
-  binaries = ['fletch-vm', 'natives.json']
+  binaries = ['dartino-vm', 'natives.json']
   raspberry = join(bundle_dir, 'platforms', 'raspberry-pi2')
   bin_dir = join(raspberry, 'bin')
   makedirs(bin_dir)
@@ -198,10 +198,10 @@ def CopyArm(bundle_dir):
 
 def CopySTM(bundle_dir):
   libraries = [
-      'libfletch_vm_library.a',
-      'libfletch_shared.a',
+      'libdartino_vm_library.a',
+      'libdartino_shared.a',
       'libdouble_conversion.a',
-      'libdisco_fletch.a']
+      'libdisco_dartino.a']
   disco = join(bundle_dir, 'platforms', 'stm32f746g-discovery')
   lib_dir = join(disco, 'lib')
   makedirs(lib_dir)
@@ -211,7 +211,7 @@ def CopySTM(bundle_dir):
 
   config_dir = join(disco, 'config')
   makedirs(config_dir)
-  CopyFile('platforms/stm/disco_fletch/generated/SW4STM32/'
+  CopyFile('platforms/stm/disco_dartino/generated/SW4STM32/'
            'configuration/STM32F746NGHx_FLASH.ld',
            join(config_dir, 'stm32f746g-discovery.ld'))
 def CopySamples(bundle_dir):
@@ -266,7 +266,7 @@ def CreateDocumentation():
   # We recreate the same structure we have in the repo in a copy to not
   # polute our workspace
   with utils.TempDir() as temp:
-    # Copy Fletch packages.
+    # Copy Dartino packages.
     pkg_copy = join(temp, 'pkg')
     makedirs(pkg_copy)
     for pkg in SDK_PACKAGES:
@@ -283,10 +283,10 @@ def CreateDocumentation():
       copytree(pkg_path, pkg_dst)
       print 'copied %s to %s' % (pkg_path, pkg_dst)
     # Create fake combined package dir.
-    sdk_pkg_dir = join(pkg_copy, 'fletch_sdk')
+    sdk_pkg_dir = join(pkg_copy, 'dartino_sdk')
     makedirs(sdk_pkg_dir)
     # Copy readme.
-    copyfile(join('pkg', 'fletch_sdk_readme.md'),
+    copyfile(join('pkg', 'dartino_sdk_readme.md'),
              join(sdk_pkg_dir, 'README.md'))
     # Add pubspec file.
     CreateDocsPubSpec('%s/pubspec.yaml' % sdk_pkg_dir)
@@ -315,9 +315,10 @@ def CreateDocumentation():
 def CopyTools(bundle_dir):
   tools_dir = join(bundle_dir, 'tools')
   makedirs(tools_dir)
-  gcc_arm_embedded_dir = join(tools_dir, 'gcc-arm-embedded')
-  copytree('third_party/gcc-arm-embedded/linux/gcc-arm-embedded',
-           gcc_arm_embedded_dir)
+  tools = ['gcc-arm-embedded', 'openocd']
+  for tool in tools:
+    tool_dir = join(tools_dir, tool)
+    copytree('third_party/%s/linux/%s' % (tool, tool), tool_dir)
 
 def Main():
   options = ParseOptions();

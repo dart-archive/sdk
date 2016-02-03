@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LK)
+#if defined(DARTINO_TARGET_OS_LK)
 
 #include "src/vm/event_handler.h"
 
@@ -16,17 +16,17 @@
 #include "src/vm/scheduler.h"
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
-const char* kFletchInterruptPortName = "FLETCH_INT";
+const char* kDartinoInterruptPortName = "DARTINO_INT";
 
 class PortSet {
  public:
   PortSet() : group(0), port_set(NULL) {
     // Create and add the interrupt port.
-    port_create(kFletchInterruptPortName, PORT_MODE_UNICAST, &interrupt_port);
+    port_create(kDartinoInterruptPortName, PORT_MODE_UNICAST, &interrupt_port);
     port_t interrupt_read;
-    port_open(kFletchInterruptPortName, NULL, &interrupt_read);
+    port_open(kDartinoInterruptPortName, NULL, &interrupt_read);
     AddReadPort(interrupt_read);
   }
 
@@ -162,6 +162,6 @@ void EventHandler::Run() {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_LK)
+#endif  // defined(DARTINO_TARGET_OS_LK)

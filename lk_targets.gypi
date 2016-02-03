@@ -10,7 +10,7 @@
   ],
 
   'variables': {
-    'LK_PROJECT%': 'qemu-virt-fletch',
+    'LK_PROJECT%': 'qemu-virt-dartino',
 
     'LK_CPU%': 'cortex-a15',
   },
@@ -19,10 +19,10 @@
 
     'configurations': {
 
-      'fletch_lk_flags': {
+      'dartino_lk_flags': {
         'abstract': 1,
 
-        'inherit_from': ['fletch_lk'],
+        'inherit_from': ['dartino_lk'],
 
         'target_conditions': [
           ['_toolset=="target"', {
@@ -37,35 +37,35 @@
 
       'DebugLK': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_lk_flags',
-          'fletch_disable_live_coding',
-          'fletch_disable_native_processes',
-          'fletch_disable_print_interceptors',
+          'dartino_base', 'dartino_debug', 'dartino_lk_flags',
+          'dartino_disable_live_coding',
+          'dartino_disable_native_processes',
+          'dartino_disable_print_interceptors',
         ],
       },
 
       'ReleaseLK': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_lk_flags',
-          'fletch_disable_live_coding',
-          'fletch_disable_native_processes',
-          'fletch_disable_print_interceptors',
+          'dartino_base', 'dartino_release', 'dartino_lk_flags',
+          'dartino_disable_live_coding',
+          'dartino_disable_native_processes',
+          'dartino_disable_print_interceptors',
         ],
       },
 
       'DebugLKFull': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_lk_flags',
-          'fletch_disable_native_processes',
-          'fletch_disable_print_interceptors',
+          'dartino_base', 'dartino_debug', 'dartino_lk_flags',
+          'dartino_disable_native_processes',
+          'dartino_disable_print_interceptors',
         ],
       },
 
       'ReleaseLKFull': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_lk_flags',
-          'fletch_disable_native_processes',
-          'fletch_disable_print_interceptors',
+          'dartino_base', 'dartino_release', 'dartino_lk_flags',
+          'dartino_disable_native_processes',
+          'dartino_disable_print_interceptors',
         ],
       },
     },

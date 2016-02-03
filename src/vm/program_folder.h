@@ -5,9 +5,9 @@
 #ifndef SRC_VM_PROGRAM_FOLDER_H_
 #define SRC_VM_PROGRAM_FOLDER_H_
 
-#ifdef FLETCH_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
-namespace fletch {
+namespace dartino {
 
 class Function;
 class Object;
@@ -42,8 +42,8 @@ class ProgramFolder {
   Program* const program_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_PROGRAM_FOLDER_H_

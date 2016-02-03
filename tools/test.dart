@@ -39,11 +39,11 @@ import "testing/dart/test_runner.dart";
 import "testing/dart/test_suite.dart";
 import "testing/dart/utils.dart";
 
-import 'testing/dart/fletch_warnings_suite.dart' show
-    FletchWarningsSuite;
+import 'testing/dart/dartino_warnings_suite.dart' show
+    DartinoWarningsSuite;
 
-import 'testing/dart/fletch_test_suite.dart' show
-    FletchTestSuite;
+import 'testing/dart/dartino_test_suite.dart' show
+    DartinoTestSuite;
 
 //import "../runtime/tests/vm/test_config.dart";
 //import "../tests/co19/test_config.dart";
@@ -106,7 +106,7 @@ void testConfigurations(List<Map> configurations) {
   }
 
   if (!hasSameModeAndArch(configurations)) {
-    print("Persistent Fletch process doesn't support multiple "
+    print("Persistent Dartino process doesn't support multiple "
           "arch and mode configurations");
     exit(1);
   }
@@ -207,7 +207,7 @@ void testConfigurations(List<Map> configurations) {
       print(conf);
       var suite_path = new Path(conf['suite_dir']);
       testSuites.add(new PKGTestSuite(conf, suite_path));
-    } else if (conf['runtime'] == 'fletch_cc_tests') {
+    } else if (conf['runtime'] == 'dartino_cc_tests') {
       for (final testSuiteDir in CC_TEST_SUITE_DIRECTORIES) {
         final name = testSuiteDir.filename;
         if (selectors.containsKey(name)) {
@@ -215,13 +215,13 @@ void testConfigurations(List<Map> configurations) {
             new StandardTestSuite.forDirectory(conf, testSuiteDir));
         }
       }
-    } else if (conf['runtime'] == 'fletch_warnings') {
+    } else if (conf['runtime'] == 'dartino_warnings') {
       if (selectors.containsKey('warnings')) {
-        testSuites.add(new FletchWarningsSuite(conf, 'warnings'));
+        testSuites.add(new DartinoWarningsSuite(conf, 'warnings'));
       }
-    } else if (conf['runtime'] == 'fletch_tests') {
-      if (selectors.containsKey('fletch_tests')) {
-        testSuites.add(new FletchTestSuite(conf, 'tests/fletch_tests'));
+    } else if (conf['runtime'] == 'dartino_tests') {
+      if (selectors.containsKey('dartino_tests')) {
+        testSuites.add(new DartinoTestSuite(conf, 'tests/dartino_tests'));
       }
     } else {
       for (final testSuiteDir in TEST_SUITE_DIRECTORIES) {
@@ -362,7 +362,7 @@ void killDriverMain() {
     // It's important to remove white space as output from ps is padded with
     // whitespace.
     process = process.trim();
-    if (process.contains("package:fletchc/src/hub/hub_main.dart")) {
+    if (process.contains("package:dartino_compiler/src/hub/hub_main.dart")) {
       int index = process.indexOf(" ");
       String pidString = process.substring(0, index);
       String arguments = process.substring(index + 1);

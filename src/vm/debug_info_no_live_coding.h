@@ -11,7 +11,7 @@
 
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 class Coroutine;
 class Function;
@@ -63,6 +63,6 @@ class DebugInfo {
   void SetStepping() { UNIMPLEMENTED(); }
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_DEBUG_INFO_NO_LIVE_CODING_H_

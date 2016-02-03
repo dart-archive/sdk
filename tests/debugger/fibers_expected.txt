@@ -26,7 +26,7 @@ fiber 1
   1: run                         @print('${marker} ${i}')
   2: call                        @run('a')
   3: runToEnd                    @entry()
-  4: Fiber.call                  @fletch.runToEnd(entry)
+  4: Fiber.call                  @dartino.runToEnd(entry)
   5: Coroutine._coroutineStart   @entry(argument)
 > fibers
 
@@ -36,7 +36,7 @@ fiber 0
   2: run                         @Fiber.yield()
   3: call                        @run('b')
   4: runToEnd                    @entry()
-  5: Fiber.call                  @fletch.runToEnd(entry)
+  5: Fiber.call                  @dartino.runToEnd(entry)
   6: Coroutine._coroutineStart   @entry(argument)
 
 fiber 1
@@ -44,7 +44,7 @@ fiber 1
   1: run                         @print('${marker} ${i}')
   2: call                        @run('a')
   3: runToEnd                    @entry()
-  4: Fiber.call                  @fletch.runToEnd(entry)
+  4: Fiber.call                  @dartino.runToEnd(entry)
   5: Coroutine._coroutineStart   @entry(argument)
 
 > t internal

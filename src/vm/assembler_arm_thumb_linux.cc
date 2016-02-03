@@ -2,13 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_LINUX) && \
-    defined(FLETCH_THUMB_ONLY)
+#if defined(DARTINO_TARGET_ARM) && defined(DARTINO_TARGET_OS_LINUX) && \
+    defined(DARTINO_THUMB_ONLY)
 
 #include <stdio.h>
 #include "src/vm/assembler.h"
 
-namespace fletch {
+namespace dartino {
 
 void Assembler::Bind(const char* prefix, const char* name) {
   putchar('\n');
@@ -22,7 +22,7 @@ void Assembler::DefineLong(const char* name) { printf("\t.long %s\n", name); }
 
 const char* Assembler::LabelPrefix() { return ""; }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_LINUX) &&
-        // defined(FLETCH_THUMB_ONLY)
+#endif  // defined(DARTINO_TARGET_ARM) && defined(DARTINO_TARGET_OS_LINUX) &&
+        // defined(DARTINO_THUMB_ONLY)

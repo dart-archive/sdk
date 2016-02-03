@@ -4,8 +4,8 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 # Run internal/pkg/flash_sd_card/bin/flash_sd_card.dart on the Dart VM.
-# This script assumes either the Fletch SDK's directory structure or
-# a Fletch GitHub repository checkout.
+# This script assumes either the Dartino SDK's directory structure or
+# a Dartino GitHub repository checkout.
 
 function follow_links() {
   file="$1"
@@ -23,4 +23,4 @@ source $(dirname $PROG_NAME)/.common.shlib
 
 echo "This program requires superuser to run."
 
-exec sudo "$DART_VM" -Dfletch-vm="$FLETCH_VM" "$DART_FILE" "$@"
+exec sudo "$DART_VM" -Ddartino-vm="$DARTINO_VM" "$DART_FILE" "$@"

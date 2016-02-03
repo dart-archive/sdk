@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch._system' as fletch;
-import 'dart:fletch._system' show patch;
+import 'dart:dartino._system' as dartino;
+import 'dart:dartino._system' show patch;
 
 @patch class HashMap<K, V> {
   @patch factory HashMap({ bool equals(K key1, K key2),

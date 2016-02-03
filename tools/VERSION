@@ -1,4 +1,4 @@
-# Fletch uses the same schema as the normal dart sdk for making releases.
+# Dartino uses the same schema as the normal dart sdk for making releases.
 # We currently don't do any stable releases, but we still utilize the same
 # structure while working our way towards the first 0.1 stable release.
 #
@@ -34,5 +34,5 @@ CHANNEL dev
 MAJOR 0
 MINOR 3
 PATCH 0
-PRERELEASE 1
+PRERELEASE 2
 PRERELEASE_PATCH 0

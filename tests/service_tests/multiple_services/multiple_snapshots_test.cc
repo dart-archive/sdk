@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "include/fletch_api.h"
+#include "include/dartino_api.h"
 #include "include/service_api.h"
 
 #include "src/shared/assert.h"  // NOLINT(build/include)
@@ -36,15 +36,15 @@ static void WaitForStatus(int expected) {
 
 static void* DartThreadEntry(void* argv) {
   const char** paths = static_cast<const char**>(argv);
-  FletchSetup();
-  FletchProgram programs[2];
+  DartinoSetup();
+  DartinoProgram programs[2];
   int exitcodes[2];
-  programs[0] = FletchLoadSnapshotFromFile(paths[1]);
-  programs[1] = FletchLoadSnapshotFromFile(paths[2]);
-  FletchRunMultipleMain(2, programs, exitcodes);
-  FletchDeleteProgram(programs[0]);
-  FletchDeleteProgram(programs[1]);
-  FletchTearDown();
+  programs[0] = DartinoLoadSnapshotFromFile(paths[1]);
+  programs[1] = DartinoLoadSnapshotFromFile(paths[2]);
+  DartinoRunMultipleMain(2, programs, exitcodes);
+  DartinoDeleteProgram(programs[0]);
+  DartinoDeleteProgram(programs[1]);
+  DartinoTearDown();
   ChangeStatusAndNotify(kDone);
   return NULL;
 }

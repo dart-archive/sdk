@@ -5,18 +5,18 @@
 #include "src/shared/platform.h"
 #include "src/vm/log_print_interceptor.h"
 
-namespace fletch {
+namespace dartino {
 
 void LogPrintInterceptor::Out(char* message) {
   char buf[1024];
-  snprintf(buf, sizeof(buf), "Fletch VM INFO: %s", message);
+  snprintf(buf, sizeof(buf), "Dartino VM INFO: %s", message);
   Platform::WriteText(logPath_, buf, true);
 }
 
 void LogPrintInterceptor::Error(char* message) {
   char buf[1024];
-  snprintf(buf, sizeof(buf), "Fletch VM ERROR: %s", message);
+  snprintf(buf, sizeof(buf), "Dartino VM ERROR: %s", message);
   Platform::WriteText(logPath_, buf, true);
 }
 
-}  // namespace fletch
+}  // namespace dartino

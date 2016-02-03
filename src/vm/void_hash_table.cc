@@ -6,7 +6,7 @@
 
 #include "src/vm/void_hash_table.h"
 
-namespace fletch {
+namespace dartino {
 
 VoidHashTable::hash_t VoidHashTable::HashCode(const void* key) {
   return reinterpret_cast<intptr_t>(key) & INTPTR_MAX;
@@ -239,4 +239,4 @@ void VoidHashTable::Clear() {
   AllocateBacking(kInitialCapacity);
 }
 
-}  // namespace fletch.
+}  // namespace dartino.

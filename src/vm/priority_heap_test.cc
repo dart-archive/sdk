@@ -8,7 +8,7 @@
 
 #include "src/vm/priority_heap.h"
 
-namespace fletch {
+namespace dartino {
 
 TEST_CASE(PRIORITY_HEAP_WITH_INDEX__INCREASING) {
   const word kSize = PriorityHeapWithValueIndex<word, word>::kMinimumSize;
@@ -167,4 +167,4 @@ TEST_CASE(PRIORITY_HEAP_WITH_INDEX__CHANGE_PRIORITY) {
   EXPECT(heap.IsEmpty());
 }
 
-}  // namespace fletch.
+}  // namespace dartino.

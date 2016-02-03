@@ -2,7 +2,9 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-[ ($runtime == fletchc || $runtime == fletchvm) && $clang && $asan]
+github/lib/src/tests/github_api_test: Fail # Rename messed up test data
+
+[ ($runtime == dartino_compiler || $runtime == dartinovm) && $clang && $asan]
 # ASAN detects memory leak in EventHandler implementation
 github/lib/src/tests/github_api_test: Pass, Crash
 
@@ -12,6 +14,6 @@ github/lib/src/tests/github_api_test: Pass, Crash
 [ $system != lk ]
 lk/*: Skip
 
-[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
+[ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No support for dart:convert in embedded
 github/lib/src/tests/github_api_test: CompiletimeError

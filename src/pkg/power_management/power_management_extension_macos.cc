@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_MACOS)
+#if defined(DARTINO_TARGET_OS_MACOS)
 
 #include <IOKit/pwr_mgt/IOPMLib.h>
 
@@ -30,4 +30,4 @@ void HandleEnableSleep(int64_t disable_id) {
   IOPMAssertionRelease(disable_id);
 }
 
-#endif  // FLETCH_TARGET_OS_MACOS
+#endif  // DARTINO_TARGET_OS_MACOS

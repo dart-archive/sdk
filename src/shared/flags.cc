@@ -10,7 +10,7 @@
 #include "src/shared/utils.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 #ifdef DEBUG
 #define MATERIALIZE_DEBUG_FLAG(type, prefix, name, value, doc) \
@@ -173,4 +173,4 @@ void Flags::ExtractFromCommandLine(int* argc, char** argv) {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

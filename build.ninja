@@ -7,21 +7,21 @@ rule gyp
     GYP_CROSSCOMPILE=1 $
     third_party/gyp/gyp --depth=. -Idefault_targets.gypi $
         -Goutput_dir=out $
-        --format=ninja fletch.gyp
+        --format=ninja dartino.gyp
 
 rule gyp-lk
   command = $
     GYP_CROSSCOMPILE=1 $
     ./third_party/gyp/gyp --depth=. -Ilk_targets.gypi $
         -Goutput_dir=out $
-        --format=ninja fletch.gyp
+        --format=ninja dartino.gyp
 
 rule gyp-mbed
   command = $
     GYP_CROSSCOMPILE=1 $
     ./third_party/gyp/gyp --depth=. -Imbed_targets.gypi $
         -Goutput_dir=out $
-        --format=ninja fletch.gyp
+        --format=ninja dartino.gyp
 
 rule gyp-stm
   command = $
@@ -57,7 +57,7 @@ build $
         common.gypi $
         version.gyp $
         default_targets.gypi $
-        fletch.gyp $
+        dartino.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
@@ -97,7 +97,7 @@ build $
         common.gypi $
         version.gyp $
         lk_targets.gypi $
-        fletch.gyp $
+        dartino.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
@@ -114,7 +114,7 @@ build $
         common.gypi $
         version.gyp $
         mbed_targets.gypi $
-        fletch.gyp $
+        dartino.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
@@ -132,8 +132,8 @@ build $
         version.gyp $
         platforms/stm/stm_targets.gypi $
         platforms/stm/stm.gyp $
-        platforms/stm/disco_fletch/disco_fletch.gyp $
-        fletch.gyp $
+        platforms/stm/disco_dartino/disco_dartino.gyp $
+        dartino.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $

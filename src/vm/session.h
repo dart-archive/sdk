@@ -5,9 +5,9 @@
 #ifndef SRC_VM_SESSION_H_
 #define SRC_VM_SESSION_H_
 
-#ifndef FLETCH_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_LIVE_CODING
 #include "src/vm/session_no_live_coding.h"
-#else  // FLETCH_ENABLE_LIVE_CODING
+#else  // DARTINO_ENABLE_LIVE_CODING
 
 #include "src/shared/names.h"
 
@@ -16,7 +16,7 @@
 #include "src/vm/snapshot.h"
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
 class Connection;
 class Frame;
@@ -59,6 +59,9 @@ class Session {
   bool CompileTimeError(Process* process);
 
  private:
+  void SendBreakPoint(Process* process);
+  void ExitWithSessionEndState(Process* process);
+
   // Map operations.
   void NewMap(int map_index);
   void DeleteMap(int map_index);
@@ -154,9 +157,12 @@ class Session {
   // (in which case program()->scheduler() == NULL) or the program
   // is stopped and the GC thread is paused.
   bool execution_paused_;
+  bool execution_interrupted_;
   bool request_execution_pause_;
 
   bool debugging_;
+  bool session_ended_;
+  Process::State session_end_state_;
 
   int method_map_id_;
   int class_map_id_;
@@ -227,8 +233,8 @@ class Session {
   Process* GetProcess(int process_id);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_SESSION_H_

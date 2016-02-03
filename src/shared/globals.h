@@ -21,7 +21,7 @@
 
 // Types for native machine words. Guaranteed to be able to hold
 // pointers and integers.
-#if defined(FLETCH64) && defined(FLETCH_TARGET_OS_WIN)
+#if defined(DARTINO64) && defined(DARTINO_TARGET_OS_WIN)
 typedef long long word;            // NOLINT
 typedef unsigned long long uword;  // NOLINT
 #define WORD_C(n) n##LL
@@ -43,7 +43,7 @@ typedef unsigned short uint16;  // NOLINT
 typedef unsigned int uint32;
 
 // On Windows platforms, long is always 32 bit.
-#if defined(FLETCH64) && !defined(FLETCH_TARGET_OS_WIN)
+#if defined(DARTINO64) && !defined(DARTINO_TARGET_OS_WIN)
 typedef long int64;            // NOLINT
 typedef unsigned long uint64;  // NOLINT
 #else
@@ -51,12 +51,12 @@ typedef long long int int64;        // NOLINT
 typedef long long unsigned uint64;  // NOLINT
 #endif
 
-#ifdef FLETCH_TARGET_OS_LK
-typedef float fletch_double;
-typedef uint32 fletch_double_as_uint;
+#ifdef DARTINO_TARGET_OS_LK
+typedef float dartino_double;
+typedef uint32 dartino_double_as_uint;
 #else
-typedef double fletch_double;
-typedef uint64 fletch_double_as_uint;
+typedef double dartino_double;
+typedef uint64 dartino_double_as_uint;
 #endif
 
 // Byte sizes.
@@ -64,7 +64,7 @@ const int kWordSize = sizeof(word);
 const int kDoubleSize = sizeof(double);  // NOLINT
 const int kPointerSize = sizeof(void*);  // NOLINT
 
-#ifdef FLETCH64
+#ifdef DARTINO64
 const int kPointerSizeLog2 = 3;
 const int kAlternativePointerSize = 4;
 #else
@@ -159,11 +159,11 @@ inline D bit_cast(const S& source) {
 }
 
 #ifdef __has_builtin
-#define FLETCH_HAS_BUILTIN_SADDL_OVERFLOW \
+#define DARTINO_HAS_BUILTIN_SADDL_OVERFLOW \
   (__has_builtin(__builtin_saddl_overflow))
-#define FLETCH_HAS_BUILTIN_SSUBL_OVERFLOW \
+#define DARTINO_HAS_BUILTIN_SSUBL_OVERFLOW \
   (__has_builtin(__builtin_ssubl_overflow))
-#define FLETCH_HAS_BUILTIN_SMULL_OVERFLOW \
+#define DARTINO_HAS_BUILTIN_SMULL_OVERFLOW \
   (__has_builtin(__builtin_smull_overflow))
 #endif
 

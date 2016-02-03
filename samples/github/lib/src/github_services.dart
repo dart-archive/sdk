@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:fletch';
+import 'dart:dartino';
 import 'dart:convert' show JSON, UTF8;
 
 import 'package:http/http.dart';
@@ -40,7 +40,7 @@ getJson(Connection service, String resource) {
   HttpConnection connection = new HttpConnection(service.connect());
   HttpRequest request = new HttpRequest('${service.host}/$resource');
   request.headers["Host"] = service.host;
-  request.headers["User-Agent"] = 'fletch';
+  request.headers["User-Agent"] = 'dartino';
   HttpResponse response = connection.send(request);
   if (response.statusCode != 200) {
     throw 'Failed request: $resource on port ${service.port}';
@@ -143,7 +143,7 @@ class Pagination {
     int firstPage = start ~/ count;
     int lastPage = (end ~/ count) + 1;
     // Scheduling prefetching of surrounding pages in descending order.
-    // (Currently the fletch scheduler will process these in reverse order).
+    // (Currently the dartino scheduler will process these in reverse order).
     if (firstPage > 0) prefetch(firstPage - 1);
     prefetch(lastPage + 1);
     for (int i = lastPage; i >= firstPage; --i) {

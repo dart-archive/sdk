@@ -33,7 +33,7 @@
 #include "bignum-dtoa.h"
 
 // Remove the double-based fast cases and use big int operations always for
-// Fletch. This cuts more than 8KB off the binary size.
+// Dartino. This cuts more than 8KB off the binary size.
 //
 // #include "fast-dtoa.h"
 // #include "fixed-dtoa.h"
@@ -391,7 +391,7 @@ void DoubleToStringConverter::DoubleToAscii(double v,
   }
 
   // Remove the double-based fast cases and use big int operations always for
-  // Fletch. This cuts more than 8KB off the binary size.
+  // Dartino. This cuts more than 8KB off the binary size.
   /*
   bool fast_worked;
   switch (mode) {

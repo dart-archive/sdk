@@ -9,7 +9,7 @@
 #include "src/shared/bytecodes.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 uint8 Bytecode::Print(uint8* bcp) {
   Opcode opcode = static_cast<Opcode>(*bcp);
@@ -113,4 +113,4 @@ uint8* Bytecode::PreviousBytecode(uint8* current_bcp) {
   return previous;
 }
 
-}  // namespace fletch
+}  // namespace dartino

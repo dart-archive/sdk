@@ -7,15 +7,15 @@
 
 #ifdef _MSC_VER
 // TODO(herhut): Do we need a __declspec here for Windows?
-#define FLETCH_VISIBILITY_DEFAULT
+#define DARTINO_VISIBILITY_DEFAULT
 #else
-#define FLETCH_VISIBILITY_DEFAULT __attribute__((visibility("default")))
+#define DARTINO_VISIBILITY_DEFAULT __attribute__((visibility("default")))
 #endif
 
 #ifdef __cplusplus
-#define FLETCH_EXPORT extern "C" FLETCH_VISIBILITY_DEFAULT
+#define DARTINO_EXPORT extern "C" DARTINO_VISIBILITY_DEFAULT
 #else
-#define FLETCH_EXPORT FLETCH_VISIBILITY_DEFAULT
+#define DARTINO_EXPORT DARTINO_VISIBILITY_DEFAULT
 #endif
 
 #include <stddef.h>
@@ -30,25 +30,25 @@ static const MethodId kTerminateMethodId = NULL;
 
 // Setup must be called before using any of the other service API
 // methods.
-FLETCH_EXPORT void ServiceApiSetup();
+DARTINO_EXPORT void ServiceApiSetup();
 
 // TearDown should be called when an application is done using the
 // service API in order to free up resources.
-FLETCH_EXPORT void ServiceApiTearDown();
+DARTINO_EXPORT void ServiceApiTearDown();
 
-FLETCH_EXPORT ServiceId ServiceApiLookup(const char* name);
+DARTINO_EXPORT ServiceId ServiceApiLookup(const char* name);
 
-FLETCH_EXPORT void ServiceApiInvoke(ServiceId service,
+DARTINO_EXPORT void ServiceApiInvoke(ServiceId service,
                                     MethodId method,
                                     void* buffer,
                                     int size);
 
-FLETCH_EXPORT void ServiceApiInvokeAsync(ServiceId service,
+DARTINO_EXPORT void ServiceApiInvokeAsync(ServiceId service,
                                          MethodId method,
                                          ServiceApiCallback callback,
                                          void* buffer,
                                          int size);
 
-FLETCH_EXPORT void ServiceApiTerminate(ServiceId service);
+DARTINO_EXPORT void ServiceApiTerminate(ServiceId service);
 
 #endif  // INCLUDE_SERVICE_API_H_

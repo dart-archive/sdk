@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch._system' as fletch;
-import 'dart:fletch._system' show patch;
+import 'dart:dartino._system' as dartino;
+import 'dart:dartino._system' show patch;
 
 @patch class Random {
   @patch factory Random([int seed]) {
@@ -205,24 +205,24 @@ int _intPow(int base, int exponent) {
 }
 
 
-@fletch.native external double _sin(double x);
+@dartino.native external double _sin(double x);
 
-@fletch.native external double _cos(double x);
+@dartino.native external double _cos(double x);
 
-@fletch.native external double _tan(double x);
+@dartino.native external double _tan(double x);
 
-@fletch.native external double _acos(double x);
+@dartino.native external double _acos(double x);
 
-@fletch.native external double _asin(double x);
+@dartino.native external double _asin(double x);
 
-@fletch.native external double _atan(double x);
+@dartino.native external double _atan(double x);
 
-@fletch.native external double _sqrt(double x);
+@dartino.native external double _sqrt(double x);
 
-@fletch.native external double _exp(double x);
+@dartino.native external double _exp(double x);
 
-@fletch.native external double _log(double x);
+@dartino.native external double _log(double x);
 
-@fletch.native external double _atan2(double a, double b);
+@dartino.native external double _atan2(double a, double b);
 
-@fletch.native external double _pow(double x, double exponent);
+@dartino.native external double _pow(double x, double exponent);

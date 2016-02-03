@@ -9,19 +9,19 @@
 #include "src/shared/globals.h"
 #include "src/shared/list.h"
 
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(DARTINO_TARGET_OS_POSIX)
 #include "src/shared/platform_posix.h"
-#elif defined(FLETCH_TARGET_OS_WIN)
+#elif defined(DARTINO_TARGET_OS_WIN)
 #include "src/shared/platform_windows.h"
-#elif defined(FLETCH_TARGET_OS_LK)
+#elif defined(DARTINO_TARGET_OS_LK)
 #include "src/shared/platform_lk.h"
-#elif defined(FLETCH_TARGET_OS_CMSIS)
+#elif defined(DARTINO_TARGET_OS_CMSIS)
 #include "src/shared/platform_cmsis.h"
 #else
 #error "Platform not implemented for target os."
 #endif
 
-namespace fletch {
+namespace dartino {
 
 // Computes the path of of this executable. This is similar to argv[0], but
 // since argv[0] is provided by the calling process, argv[0] may be an
@@ -132,11 +132,11 @@ inline OperatingSystem OS() {
 }
 
 inline Architecture Arch() {
-#if defined(FLETCH_TARGET_IA32)
+#if defined(DARTINO_TARGET_IA32)
   return kIA32;
-#elif defined(FLETCH_TARGET_X64)
+#elif defined(DARTINO_TARGET_X64)
   return kX64;
-#elif defined(FLETCH_TARGET_ARM)
+#elif defined(DARTINO_TARGET_ARM)
   return kARM;
 #else
   return kUnknownArch;
@@ -260,6 +260,38 @@ inline Mutex* Platform::CreateMutex() { return new Mutex(); }
 
 inline Monitor* Platform::CreateMonitor() { return new Monitor(); }
 
-}  // namespace fletch
+// TODO(kustermann): We should use native sempahores instead of basing them on
+// monitors.
+class Semaphore {
+ public:
+  explicit Semaphore(int count)
+      : monitor_(Platform::CreateMonitor()), count_(count) {
+  }
+
+  ~Semaphore() {
+    delete monitor_;
+  }
+
+  void Down() {
+    ScopedMonitorLock locker(monitor_);
+    while (count_ <= 0) {
+      monitor_->Wait();
+    }
+    count_--;
+  }
+
+  void Up() {
+    ScopedMonitorLock locker(monitor_);
+    if (++count_ == 1) {
+      monitor_->Notify();
+    }
+  }
+
+ private:
+  Monitor* monitor_;
+  int count_;
+};
+
+}  // namespace dartino
 
 #endif  // SRC_SHARED_PLATFORM_H_

@@ -56,9 +56,9 @@ class _Uint32Digits {
   operator [](int index) => _getUint32(_backing, index);
   operator []=(int index, int value) => _setUint32(_backing, index, value);
 
-  @fletch.native external static _allocate(int length);
-  @fletch.native external static _getUint32(backing, int index);
-  @fletch.native external static _setUint32(backing, int index, int value);
+  @dartino.native external static _allocate(int length);
+  @dartino.native external static _getUint32(backing, int index);
+  @dartino.native external static _setUint32(backing, int index, int value);
 }
 
 // A big integer number is represented by a sign, an array of 32-bit unsigned

@@ -92,7 +92,7 @@ class TodoServiceTestJava extends TodoServiceTest {
     if (javaHome.isEmpty) return;
 
     rules.add(new CcRule(
-        sharedLibrary: '$outputDirectory/libfletch',
+        sharedLibrary: '$outputDirectory/libdartino',
         includePaths: [
           'include',
           '$javaHome/include',
@@ -100,8 +100,8 @@ class TodoServiceTestJava extends TodoServiceTest {
           outputDirectory,
         ],
         sources: [
-          '$javaDirectory/jni/fletch_api_wrapper.cc',
-          '$javaDirectory/jni/fletch_service_api_wrapper.cc',
+          '$javaDirectory/jni/dartino_api_wrapper.cc',
+          '$javaDirectory/jni/dartino_service_api_wrapper.cc',
           '$javaDirectory/jni/${baseName}_wrapper.cc',
         ]..addAll(ccSources)));
 
@@ -109,7 +109,7 @@ class TodoServiceTestJava extends TodoServiceTest {
 
     rules.add(new JavacRule(
         warningAsError: false,
-        sources: ['$javaDirectory/fletch']..addAll(javaSources),
+        sources: ['$javaDirectory/dartino']..addAll(javaSources),
         outputDirectory: classesDirectory));
 
     rules.add(new JarRule(

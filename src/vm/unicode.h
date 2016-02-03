@@ -8,7 +8,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
 
-namespace fletch {
+namespace dartino {
 
 class TwoByteString;
 
@@ -141,6 +141,6 @@ class Utf16 {
   static const int32 kSurrogateOffset = (0x10000 - (0xD800 << 10) - 0xDC00);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_UNICODE_H_

@@ -5,7 +5,7 @@
 #ifndef SRC_VM_SELECTOR_ROW_H_
 #define SRC_VM_SELECTOR_ROW_H_
 
-#ifdef FLETCH_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
 #include "src/shared/assert.h"
 #include "src/shared/globals.h"
@@ -15,7 +15,7 @@
 #include "src/vm/object.h"
 #include "src/vm/vector.h"
 
-namespace fletch {
+namespace dartino {
 
 typedef Vector<Class*> ClassVector;
 typedef Vector<Function*> FunctionVector;
@@ -180,8 +180,8 @@ class RowFitter {
   int limit_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_SELECTOR_ROW_H_

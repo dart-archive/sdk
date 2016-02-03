@@ -9,7 +9,7 @@
 #error Do not include atomic_gcc_intrinsics.h directly; use atomic.h instead.
 #endif
 
-namespace fletch {
+namespace dartino {
 
 enum MemoryOrder {
   kRelaxed = __ATOMIC_RELAXED,
@@ -112,6 +112,6 @@ class Atomic {
   T value_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_ATOMIC_GCC_INTRINSICS_H_

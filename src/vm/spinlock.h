@@ -7,7 +7,7 @@
 
 #include "src/shared/atomic.h"
 
-namespace fletch {
+namespace dartino {
 
 // Please limit the use of spinlocks (e.g. reduce critical region to absolute
 // minimum, only if a normal mutex is a bottleneck).
@@ -37,6 +37,6 @@ class ScopedSpinlock {
   Spinlock* lock_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_SPINLOCK_H_

@@ -24,7 +24,7 @@
 #include "src/vm/remembered_set.h"
 #include "src/vm/session.h"
 
-namespace fletch {
+namespace dartino {
 
 static uword kPreemptMarker = 1 << 0;
 static uword kDebugInterruptMarker = 1 << 1;
@@ -206,7 +206,7 @@ Object* Process::NewArray(int length) {
   return result;
 }
 
-Object* Process::NewDouble(fletch_double value) {
+Object* Process::NewDouble(dartino_double value) {
   RegisterProcessAllocation();
   Class* double_class = program()->double_class();
   Object* result = heap()->CreateDouble(double_class, value);
@@ -640,4 +640,4 @@ BEGIN_NATIVE(ProcessQueueGetChannel) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino

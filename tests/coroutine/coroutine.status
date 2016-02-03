@@ -2,7 +2,7 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-[ $compiler == none && $runtime == fletchc ]
+[ $compiler == none && $runtime == dartino_compiler ]
 fib_spawn_program_gc_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 
 [ $system == lk ]

@@ -5,7 +5,7 @@
 // Test that fibers that are blocked in a receive on a channel wake up
 // when there are messages on that channel.
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 import 'package:isolate/isolate.dart';
 

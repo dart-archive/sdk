@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_IA32) && defined(FLETCH_TARGET_OS_WIN)
+#if defined(DARTINO_TARGET_IA32) && defined(DARTINO_TARGET_OS_WIN)
 
 #include <stdio.h>
 #include "src/vm/assembler.h"
 
-namespace fletch {
+namespace dartino {
 
 const char* kLocalLabelPrefix = "L";
 
@@ -48,6 +48,6 @@ void Assembler::LoadLabel(Register reg, const char* name) {
   Print("leal %s%s, %rl", kPrefix, name, reg);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_IA32) && defined(FLETCH_TARGET_OS_WIN)
+#endif  // defined(DARTINO_TARGET_IA32) && defined(DARTINO_TARGET_OS_WIN)

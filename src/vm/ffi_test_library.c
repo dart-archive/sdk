@@ -24,7 +24,7 @@ typedef unsigned char uint8;
 typedef unsigned short uint16;  // NOLINT
 typedef unsigned int uint32;
 
-#ifdef FLETCH64
+#ifdef DARTINO64
 typedef long int64;  // NOLINT
 typedef unsigned long uint64;  // NOLINT
 typedef char foobar;

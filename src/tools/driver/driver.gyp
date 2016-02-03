@@ -14,7 +14,7 @@
       'type': 'static_library',
       'toolsets': ['target'],
       'dependencies': [
-        '../../shared/shared.gyp:fletch_shared',
+        '../../shared/shared.gyp:dartino_shared',
       ],
       'sources': [
         'connection.cc',
@@ -25,39 +25,39 @@
       ],
     },
     {
-      'target_name': 'fletch',
+      'target_name': 'dartino',
       'type': 'executable',
       'toolsets': ['target'],
       'dependencies': [
         'driver',
       ],
       'defines': [
-        'FLETCHC_LIBRARY_ROOT="../../lib"',
+        'DARTINOC_LIBRARY_ROOT="../../lib"',
         # How many directories up is the root, used for getting full path to
         # the .packages file for the compiler
-        'FLETCH_ROOT_DISTANCE=2',
-        'FLETCHC_PKG_FILE="pkg/fletchc/.packages"',
+        'DARTINO_ROOT_DISTANCE=2',
+        'DARTINOC_PKG_FILE="pkg/dartino_compiler/.packages"',
         'DART_VM_NAME="dart"',
       ],
       'sources': [
         'main.cc',
       ],
     },
-    # The same as fletch, but with paths relative to the location in
+    # The same as dartino, but with paths relative to the location in
     # the sdk.
     {
-      'target_name': 'fletch_for_sdk',
+      'target_name': 'dartino_for_sdk',
       'type': 'executable',
       'toolsets': ['target'],
       'dependencies': [
         'driver',
       ],
       'defines': [
-        'FLETCHC_LIBRARY_ROOT="../internal/fletch_lib"',
+        'DARTINOC_LIBRARY_ROOT="../internal/dartino_lib"',
         # How many directories up is the root, used for getting full path to
         # the .packages file for the compiler
-        'FLETCH_ROOT_DISTANCE=1',
-        'FLETCHC_PKG_FILE="internal/pkg/fletchc/.packages"',
+        'DARTINO_ROOT_DISTANCE=1',
+        'DARTINOC_PKG_FILE="internal/pkg/dartino_compiler/.packages"',
         'DART_VM_NAME="../internal/dart"',
       ],
       'sources': [

@@ -9,7 +9,7 @@
 #error "Do not import session_no_live_coding.h directly, import session.h"
 #endif  // SRC_VM_SESSION_H_
 
-namespace fletch {
+namespace dartino {
 
 class Connection;
 class Process;
@@ -73,6 +73,6 @@ class Session {
   void IteratePointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_SESSION_NO_LIVE_CODING_H_

@@ -7,7 +7,7 @@
 
 #include "src/vm/hash_table.h"
 
-namespace fletch {
+namespace dartino {
 
 template <typename Key, typename Mapped>
 struct MapKeyExtractor {
@@ -49,6 +49,6 @@ class HashMap : public UnorderedHashTable<Key, Pair<Key, Mapped>,
   }
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_HASH_MAP_H_

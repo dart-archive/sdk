@@ -2,16 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef FLETCH_TARGET_OS_POSIX
+#ifndef DARTINO_TARGET_OS_POSIX
 
 #include "src/vm/tick_sampler.h"
 
-namespace fletch {
+namespace dartino {
 
 Atomic<bool> TickSampler::is_active_(false);
 void TickSampler::Setup() {}
 void TickSampler::Teardown() {}
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_TICK_SAMPLER_MACOS
+#endif  // DARTINO_TICK_SAMPLER_MACOS

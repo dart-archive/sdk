@@ -9,7 +9,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/natives.h"
 
-namespace fletch {
+namespace dartino {
 
 // Forward declarations.
 class Assembler;
@@ -66,12 +66,32 @@ typedef Object* (*NativeFunction)(Process*, Arguments);
   extern "C" Object* Native_##n(Process* process, Arguments arguments) { \
     NativeVerifier verifier(process);
 
+#define BEGIN_DETACHABLE_NATIVE(n)                                      \
+    BEGIN_NATIVE(n)                                                     \
+    static_assert(kIsDetachable_##n, "Incorrect use of natives macro");
+
 #define END_NATIVE() }
 
-#define N(e, c, n) DECLARE_NATIVE(e)
+
+#define RUN_INSIDE_BARRIER_AND_RETURN(expr)                   \
+  Object* result = process->NewInteger(0);                    \
+  if (result->IsRetryAfterGCFailure()) return result;         \
+  int64 value = (expr);                                       \
+  if (Smi::IsValid(value)) {                                  \
+    process->TryDeallocInteger(LargeInteger::cast(result));   \
+    return Smi::FromWord(value);                              \
+  }                                                           \
+  LargeInteger::cast(result)->set_value(value);               \
+  return result;
+
+#define RUN_INSIDE_BARRIER_AND_RETURN_VOID(expr)              \
+  (expr);                                                     \
+  return Smi::FromWord(0);
+
+#define N(e, c, n, d) DECLARE_NATIVE(e)
 NATIVES_DO(N)
 #undef N
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_NATIVES_H_

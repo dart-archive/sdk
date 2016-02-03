@@ -4,7 +4,7 @@ xcodeproj 'github'
 pod 'MMDrawerController', '~> 0.5.7'
 pod 'LruCache'
 
-pod 'FletchPod', :path => '../../..'
+pod 'DartinoPod', :path => '../../..'
 pod 'Service', :path => '../generated/service'
 pod 'Immi', :path => '../generated/immi'
 pod 'ImmiSamples', :path => '../../../pkg/immi_samples/lib'

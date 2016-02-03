@@ -9,7 +9,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 class Process;
 
@@ -28,6 +28,6 @@ class TickSampler {
   static Atomic<bool> is_active_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_TICK_SAMPLER_H_

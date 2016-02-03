@@ -4,7 +4,7 @@
 
 #import "AppDelegate.h"
 
-#include "include/fletch_api.h"
+#include "include/dartino_api.h"
 #include "include/service_api.h"
 
 #include "github_mock.h"
@@ -24,36 +24,36 @@ static int debugPortNumber = 8123;
 + (void)loadAndRunDartSnapshot {
   if (attachDebugger) {
     NSLog(@"Waiting for debugger connection.");
-    FletchWaitForDebuggerConnection(debugPortNumber);
+    DartinoWaitForDebuggerConnection(debugPortNumber);
     NSLog(@"Debugger connected.");
   } else {
-    FletchProgram programs[2];
+    DartinoProgram programs[2];
     programs[0] = [AppDelegate loadSnapshot:@"github"];
     programs[1] = [AppDelegate loadSnapshot:@"github_mock_service"];
-    FletchRunMultipleMain(2, programs);
-    FletchDeleteProgram(programs[0]);
-    FletchDeleteProgram(programs[1]);
+    DartinoRunMultipleMain(2, programs);
+    DartinoDeleteProgram(programs[0]);
+    DartinoDeleteProgram(programs[1]);
   }
 }
 
-+ (FletchProgram)loadSnapshot:(NSString*)name {
++ (DartinoProgram)loadSnapshot:(NSString*)name {
   // Get the path for the snapshot in the main application bundle.
   NSBundle* mainBundle = [NSBundle mainBundle];
   NSString* snapshot = [mainBundle pathForResource:name ofType:@"snapshot"];
-  // Read the snapshot and pass it to fletch.
+  // Read the snapshot and pass it to dartino.
   NSData* data = [[NSData alloc] initWithContentsOfFile:snapshot];
   unsigned char* bytes =
       reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
-  return FletchLoadSnapshot(bytes, data.length);
+  return DartinoLoadSnapshot(bytes, data.length);
 }
 
 - (BOOL)application:(UIApplication*)application
     didFinishLaunchingWithOptions:(NSDictionary*)launchOptions {
-  // Setup Fletch and the Fletch service API.
-  FletchSetup();
+  // Setup Dartino and the Dartino service API.
+  DartinoSetup();
   ServiceApiSetup();
-  // Create dispatch queue to run the Fletch VM on a separate thread.
-  queue = dispatch_queue_create("com.google.fletch.dartQueue",
+  // Create dispatch queue to run the Dartino VM on a separate thread.
+  queue = dispatch_queue_create("com.google.dartino.dartQueue",
                                 DISPATCH_QUEUE_SERIAL);
   // Post task to load and run snapshot on a different thread.
   dispatch_async(queue, ^() {
@@ -98,11 +98,11 @@ static int debugPortNumber = 8123;
   // appropriate. See also applicationDidEnterBackground:.
   GithubMockServer::stop();
 
-  // Tear down the service API structures and Fletch.
+  // Tear down the service API structures and Dartino.
   ImmiServiceLayer::tearDown();
   GithubMockServer::tearDown();
   ServiceApiTearDown();
-  FletchTearDown();
+  DartinoTearDown();
 }
 
 @end

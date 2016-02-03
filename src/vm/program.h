@@ -12,7 +12,7 @@
 #include "src/vm/links.h"
 #include "src/vm/program_folder.h"
 
-namespace fletch {
+namespace dartino {
 
 typedef void (*ProgramExitListener)(Program*, int exitcode, void* data);
 
@@ -244,7 +244,7 @@ class Program {
   Object* CreateArrayWith(int capacity, Object* initial_value);
   Object* CreateByteArray(int capacity);
   Object* CreateClass(int fields);
-  Object* CreateDouble(fletch_double value);
+  Object* CreateDouble(dartino_double value);
   Object* CreateFunction(int arity, List<uint8> bytes, int number_of_literals);
   Object* CreateInteger(int64 value);
   Object* CreateLargeInteger(int64 value);
@@ -308,6 +308,8 @@ class Program {
 
   LookupCache* cache() const { return cache_; }
   LookupCache* EnsureCache();
+
+  ProcessHandle* MainProcess();
 
  private:
   // Program GC support. Cook the stack to rewrite bytecode pointers
@@ -373,6 +375,6 @@ class Program {
   LookupCache* cache_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PROGRAM_H_

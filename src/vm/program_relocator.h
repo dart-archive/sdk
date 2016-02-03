@@ -8,7 +8,7 @@
 #include "src/vm/intrinsics.h"
 #include "src/vm/program.h"
 
-namespace fletch {
+namespace dartino {
 
 class ProgramHeapRelocator {
  public:
@@ -28,6 +28,6 @@ class ProgramHeapRelocator {
   IntrinsicsTable* table_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PROGRAM_RELOCATOR_H_

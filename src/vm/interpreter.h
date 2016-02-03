@@ -11,7 +11,7 @@
 #include "src/vm/natives.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 class Coroutine;
 class Failure;
@@ -126,6 +126,6 @@ extern "C" Function* HandleInvokeSelector(Process* process);
 
 extern "C" int HandleAtBytecode(Process* process, uint8* bcp, Object** sp);
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_INTERPRETER_H_

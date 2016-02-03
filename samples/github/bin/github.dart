@@ -14,13 +14,13 @@ import 'package:immi_samples/menu.dart';
 main() {
   var server = new Server('127.0.0.1', 8321);
   var user = server.getUser('dart-lang');
-  var repo = user.getRepository('fletch');
+  var repo = user.getRepository('dartino');
 
   var menu = new Menu('Menu');
   var commits = new CommitListPresenter(repo);
   var drawer = new Drawer(commits, left: menu);
 
-  menu.add(new MenuItem('Fletch', () { drawer.center = commits; }));
+  menu.add(new MenuItem('Dartino', () { drawer.center = commits; }));
 
   var impl = new ImmiServiceImpl();
   impl.add('DrawerPresenter', drawer);

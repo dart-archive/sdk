@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library dart.fletch._system;
+library dart.dartino._system;
 
 import 'dart:_internal' hide Symbol;
 import 'dart:collection';
-import 'dart:fletch';
+import 'dart:dartino';
 import 'dart:math';
 
 part 'list.dart';
@@ -16,7 +16,7 @@ part 'nsm.dart';
 const native = "native";
 
 const bool enableBigint =
-    const bool.fromEnvironment('fletch.enable-bigint', defaultValue: true);
+    const bool.fromEnvironment('dartino.enable-bigint', defaultValue: true);
 
 // These strings need to be kept in sync with the strings allocated
 // for the raw failure objects in src/vm/program.cc.
@@ -49,7 +49,7 @@ external invokeMain([arguments, isolateArgument]);
 // TODO(ager): Get rid of this wrapper.
 callMain(arguments) => invokeMain(arguments);
 
-/// This is the main entry point for a Fletch program, and it takes care of
+/// This is the main entry point for a Dartino program, and it takes care of
 /// calling "main" and exiting the VM when "main" is done.
 void entry(int mainArity) {
   Fiber.exit(callMain([]));

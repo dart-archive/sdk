@@ -9,7 +9,7 @@
 #include "src/vm/priority_heap.h"
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
 class Monitor;
 class Port;
@@ -64,6 +64,6 @@ class EventHandler {
   void Send(Port* port, int64 value, bool release_port);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_EVENT_HANDLER_H_

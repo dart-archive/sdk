@@ -8,7 +8,7 @@
 #include "src/shared/atomic.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 struct ThreadInfo;
 
@@ -44,6 +44,6 @@ class ThreadPool {
   void ThreadDone();
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_THREAD_POOL_H_

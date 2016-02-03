@@ -4,7 +4,7 @@
 
 library isolate.process_runner;
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 class ProcessRunner {
   Channel _monitor;

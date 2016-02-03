@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(DARTINO_TARGET_OS_POSIX)
 
 // We do not include platform_posix.h on purpose. That file
 // should never be directly inported. platform.h is always
@@ -24,7 +24,7 @@
 
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 static uint64 time_launch;
 
@@ -167,7 +167,7 @@ void Platform::ImmediateAbort() { abort(); }
 
 #ifdef DEBUG
 void Platform::WaitForDebugger(const char* executable_name) {
-  const char* tty = Platform::GetEnv("FLETCH_VM_TTY");
+  const char* tty = Platform::GetEnv("DARTINO_VM_TTY");
   if (tty) {
     close(2);             // Stderr.
     open(tty, O_WRONLY);  // Replace stderr with terminal.
@@ -241,6 +241,6 @@ bool VirtualMemory::Uncommit(uword address, int size) {
               kMmapFdOffset) != MAP_FAILED;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_POSIX)
+#endif  // defined(DARTINO_TARGET_OS_POSIX)

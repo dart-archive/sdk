@@ -1,4 +1,4 @@
-This license applies to all parts of Fletch with the following exceptions:
+This license applies to all parts of Dartino with the following exceptions:
 
 - All code in the /third_party/ directory is externally maintained libraries
   with separate licenses.

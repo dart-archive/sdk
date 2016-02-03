@@ -4,7 +4,7 @@
 
 library stm32f746g.uart;
 
-import 'dart:fletch.ffi';
+import 'dart:dartino.ffi';
 import 'dart:typed_data';
 
 final _uart_write = ForeignLibrary.main.lookup('uart_write');

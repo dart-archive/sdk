@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LINUX)
+#if defined(DARTINO_TARGET_OS_LINUX)
 
 #include <errno.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 void GetPathOfExecutable(char* path, size_t path_length) {
   ssize_t length = readlink("/proc/self/exe", path, path_length - 1);
@@ -33,6 +33,6 @@ int Platform::GetLocalTimeZoneOffset() {
   return static_cast<int>(-timezone);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_LINUX)
+#endif  // defined(DARTINO_TARGET_OS_LINUX)

@@ -10,12 +10,12 @@
 #include "src/shared/utils.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 namespace DynamicAssertionHelper {
 
 static void PrintError(const char* file, int line, const char* format,
                        const va_list& arguments) {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   // Print out the error.
   Print::Error("%s:%d: error: ", file, line);
   char buffer[KB];
@@ -25,7 +25,7 @@ static void PrintError(const char* file, int line, const char* format,
   fprintf(stderr, "%s:%d: error: ", file, line);
   vfprintf(stderr, format, const_cast<va_list&>(arguments));
   fprintf(stderr, "\n");
-#endif  // FLETCH_SUPPORT_PRINT_INTERCEPTORS
+#endif  // DARTINO_SUPPORT_PRINT_INTERCEPTORS
 }
 
 template <>
@@ -47,4 +47,4 @@ void Fail<EXPECT>(const char* file, int line, const char* format, ...) {
 }
 
 }  // namespace DynamicAssertionHelper
-}  // namespace fletch
+}  // namespace dartino

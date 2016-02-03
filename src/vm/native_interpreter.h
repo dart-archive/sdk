@@ -7,7 +7,7 @@
 
 #include "src/shared/bytecodes.h"
 
-namespace fletch {
+namespace dartino {
 
 class Process;
 class TargetYieldResult;
@@ -30,6 +30,6 @@ void SetBytecodeBreak(Opcode opcode);
 
 void ClearBytecodeBreak(Opcode opcode);
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_NATIVE_INTERPRETER_H_

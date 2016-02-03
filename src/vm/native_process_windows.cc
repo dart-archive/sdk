@@ -2,16 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_NATIVE_PROCESSES
+#ifdef DARTINO_ENABLE_NATIVE_PROCESSES
 
-#if defined(FLETCH_TARGET_OS_WIN)
+#if defined(DARTINO_TARGET_OS_WIN)
 
 #include "src/vm/natives.h"
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 BEGIN_NATIVE(NativeProcessSpawnDetached) {
   word array = AsForeignWord(arguments[0]);
@@ -105,8 +105,8 @@ BEGIN_NATIVE(NativeProcessSpawnDetached) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_WIN)
+#endif  // defined(DARTINO_TARGET_OS_WIN)
 
-#endif  // !FLETCH_ENABLE_NATIVE_PROCESSES
+#endif  // !DARTINO_ENABLE_NATIVE_PROCESSES

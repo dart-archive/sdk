@@ -4,7 +4,7 @@
 
 #include "src/vm/lookup_cache.h"
 
-namespace fletch {
+namespace dartino {
 
 LookupCache::LookupCache()
     : primary_(new Entry[kPrimarySize]), secondary_(new Entry[kSecondarySize]) {
@@ -29,4 +29,4 @@ void LookupCache::Clear() {
   memset(secondary_, 0, sizeof(Entry) * kSecondarySize);
 }
 
-}  // namespace fletch
+}  // namespace dartino

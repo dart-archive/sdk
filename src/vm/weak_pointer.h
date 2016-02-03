@@ -5,7 +5,7 @@
 #ifndef SRC_VM_WEAK_POINTER_H_
 #define SRC_VM_WEAK_POINTER_H_
 
-namespace fletch {
+namespace dartino {
 
 class HeapObject;
 class Space;
@@ -33,6 +33,6 @@ class WeakPointer {
   WeakPointer* next_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_WEAK_POINTER_H_

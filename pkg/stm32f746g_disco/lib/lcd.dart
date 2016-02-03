@@ -4,7 +4,7 @@
 
 library stm32f746g.lcd;
 
-import 'dart:fletch.ffi';
+import 'dart:dartino.ffi';
 
 final _lcdHeight = ForeignLibrary.main.lookup('lcd_height');
 final _lcdWidth = ForeignLibrary.main.lookup('lcd_width');

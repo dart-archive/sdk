@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LK)
+#if defined(DARTINO_TARGET_OS_LK)
 
 // We do not include platform_posix.h on purpose. That file
 // should never be directly inported. platform.h is always
@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-namespace fletch {
+namespace dartino {
 
 void GetPathOfExecutable(char* path, size_t path_length) {
   // We are built into the kernel ...
@@ -203,6 +203,6 @@ char* Platform::GetEnv(const char* name) { return NULL; }
 
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_LK)
+#endif  // defined(DARTINO_TARGET_OS_LK)

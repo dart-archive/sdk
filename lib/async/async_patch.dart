@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch._system' as fletch;
-import 'dart:fletch._system' show patch;
-import 'dart:fletch';
-import 'dart:fletch.os' as os;
+import 'dart:dartino._system' as dartino;
+import 'dart:dartino._system' show patch;
+import 'dart:dartino';
+import 'dart:dartino.os' as os;
 import 'dart:math';
 
 Channel _eventQueue;
@@ -41,25 +41,25 @@ int get _currentTimestamp {
 
 // TODO(ajohnsen): We should create a heap-like structure in Dart, so we only
 // have one active port/channel per process.
-class _FletchTimer implements Timer {
+class _DartinoTimer implements Timer {
   final int _milliseconds;
   var _callback;
   int _timestamp = 0;
-  _FletchTimer _next;
+  _DartinoTimer _next;
   bool _isActive = true;
   Channel _channel;
   Port _port;
 
   bool get _isPeriodic => _milliseconds >= 0;
 
-  _FletchTimer(this._timestamp, this._callback)
+  _DartinoTimer(this._timestamp, this._callback)
       : _milliseconds = -1 {
     _channel = new Channel();
     _port = new Port(_channel);
     _schedule();
   }
 
-  _FletchTimer.periodic(this._timestamp,
+  _DartinoTimer.periodic(this._timestamp,
                         void callback(Timer timer),
                         this._milliseconds) {
     _callback = () { callback(this); };
@@ -97,19 +97,19 @@ class _FletchTimer implements Timer {
 
   bool get isActive => _isActive;
 
-  @fletch.native external static void _scheduleTimeout(int timeout, Port port);
+  @dartino.native external static void _scheduleTimeout(int timeout, Port port);
 }
 
 @patch class Timer {
   @patch static Timer _createTimer(Duration duration, void callback()) {
     int milliseconds = max(0, duration.inMilliseconds);
-    return new _FletchTimer(_currentTimestamp + milliseconds, callback);
+    return new _DartinoTimer(_currentTimestamp + milliseconds, callback);
   }
 
   @patch static Timer _createPeriodicTimer(Duration duration,
                                            void callback(Timer timer)) {
     int milliseconds = max(0, duration.inMilliseconds);
-    return new _FletchTimer.periodic(_currentTimestamp + milliseconds,
+    return new _DartinoTimer.periodic(_currentTimestamp + milliseconds,
                                      callback,
                                      milliseconds);
   }

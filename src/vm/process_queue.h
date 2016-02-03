@@ -10,7 +10,7 @@
 
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 class ThreadState;
 
@@ -147,6 +147,6 @@ class ProcessQueue {
   Process* tail_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PROCESS_QUEUE_H_

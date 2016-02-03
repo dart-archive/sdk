@@ -10,7 +10,7 @@
 #include "src/vm/spinlock.h"
 #include "src/vm/refcounted.h"
 
-namespace fletch {
+namespace dartino {
 
 class Process;
 class Object;
@@ -44,6 +44,6 @@ class ProcessHandle : public Refcounted<ProcessHandle> {
   Spinlock spinlock_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PROCESS_HANDLE_H_

@@ -17,7 +17,7 @@
 #include "src/vm/object.h"
 #include "src/vm/program.h"
 
-namespace fletch {
+namespace dartino {
 
 static const int kSupportedSizeOfDouble = 8;
 static const int kReferenceTableSizeBytes = 4;
@@ -313,14 +313,14 @@ Program* SnapshotReader::ReadProgram() {
 
   // Read the heap size and allocate an area for it.
   int size_position;
-  if (kPointerSize == 8 && sizeof(fletch_double) == 8) {
+  if (kPointerSize == 8 && sizeof(dartino_double) == 8) {
     size_position = position_ + 0 * kHeapSizeBytes;
-  } else if (kPointerSize == 8 && sizeof(fletch_double) == 4) {
+  } else if (kPointerSize == 8 && sizeof(dartino_double) == 4) {
     size_position = position_ + 1 * kHeapSizeBytes;
-  } else if (kPointerSize == 4 && sizeof(fletch_double) == 8) {
+  } else if (kPointerSize == 4 && sizeof(dartino_double) == 8) {
     size_position = position_ + 2 * kHeapSizeBytes;
   } else {
-    ASSERT(kPointerSize == 4 && sizeof(fletch_double) == 4);
+    ASSERT(kPointerSize == 4 && sizeof(dartino_double) == 4);
     size_position = position_ + 3 * kHeapSizeBytes;
   }
   position_ += 4 * kHeapSizeBytes;
@@ -743,7 +743,7 @@ void Class::ClassReadFrom(SnapshotReader* reader) {
   }
 }
 
-#ifdef FLETCH_TARGET_X64
+#ifdef DARTINO_TARGET_X64
 void Function::WriteByteCodes(SnapshotWriter* writer) {
   ASSERT(kPointerSize == 8);
   uint8* bcp = bytecode_address_for(0);
@@ -798,7 +798,7 @@ void Function::WriteByteCodes(SnapshotWriter* writer) {
 }
 #endif
 
-#ifdef FLETCH_TARGET_X64
+#ifdef DARTINO_TARGET_X64
 void Function::ReadByteCodes(SnapshotReader* reader) {
   ASSERT(kPointerSize == 8);
   uint8* bcp = bytecode_address_for(0);
@@ -946,4 +946,4 @@ void DispatchTableEntry::DispatchTableEntryReadFrom(SnapshotReader* reader) {
   set_selector(reader->ReadInt64());
 }
 
-}  // namespace fletch
+}  // namespace dartino

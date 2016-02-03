@@ -11,7 +11,7 @@
 #include "src/vm/scheduler.h"
 #include "src/vm/spinlock.h"
 
-namespace fletch {
+namespace dartino {
 
 ProcessHandle* ProcessHandle::FromDartObject(Object* o) {
   Instance* dart_pid = Instance::cast(o);
@@ -115,4 +115,4 @@ BEGIN_NATIVE(ProcessKill) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino

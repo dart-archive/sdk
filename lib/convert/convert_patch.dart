@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import "dart:_internal" show POWERS_OF_TEN;
-import 'dart:fletch._system' show patch;
+import 'dart:dartino._system' show patch;
 
 // JSON conversion.
 

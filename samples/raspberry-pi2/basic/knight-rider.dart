@@ -6,10 +6,10 @@
 // https://www.youtube.com/watch?v=Mo8Qls0HnWo
 //
 // This sample recreates those with a chain of LEDs running right and left:
-// https://storage.googleapis.com/fletch-archive/images/knight-rider.mp4
+// https://storage.googleapis.com/dartino-archive/images/knight-rider.mp4
 //
 // For breadboard layout and connections to the Pi, see:
-// https://storage.googleapis.com/fletch-archive/images/k-r-schematic.png
+// https://storage.googleapis.com/dartino-archive/images/k-r-schematic.png
 
 import 'package:gpio/gpio.dart';
 import 'package:raspberry_pi/raspberry_pi.dart';

@@ -10,7 +10,7 @@
 
 #include "src/vm/object.h"
 
-namespace fletch {
+namespace dartino {
 
 template <typename MessageType>
 class Mailbox {
@@ -107,6 +107,6 @@ class MailboxMessage {
   MessageType* next_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_MAILBOX_H_

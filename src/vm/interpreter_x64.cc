@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_X64)
+#if defined(DARTINO_TARGET_X64)
 
 #include "src/shared/bytecodes.h"
 #include "src/shared/names.h"
@@ -18,7 +18,7 @@
 
 #define __ assembler()->
 
-namespace fletch {
+namespace dartino {
 
 class InterpreterGenerator {
  public:
@@ -149,6 +149,7 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
   virtual void DoInvokeFactory();
 
   virtual void DoInvokeNative();
+  virtual void DoInvokeDetachableNative();
   virtual void DoInvokeNativeYield();
 
   virtual void DoInvokeSelector();
@@ -750,6 +751,10 @@ void InterpreterGeneratorX64::DoInvokeFactory() {
 }
 
 void InterpreterGeneratorX64::DoInvokeNative() {
+  InvokeNative(false);
+}
+
+void InterpreterGeneratorX64::DoInvokeDetachableNative() {
   InvokeNative(false);
 }
 
@@ -2094,6 +2099,6 @@ void InterpreterGeneratorX64::RestoreState() {
   __ ret();
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined FLETCH_TARGET_X64
+#endif  // defined DARTINO_TARGET_X64

@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 /// Modify this file to include more tests.
-library fletch_tests.debugger;
+library dartino_tests.debugger;
 
 import 'dart:async' show
     Stream,
@@ -21,12 +21,12 @@ import 'dart:io' show
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:fletchc/src/verbs/infrastructure.dart' show
+import 'package:dartino_compiler/src/verbs/infrastructure.dart' show
     fileUri;
 
-import 'package:fletchc/src/hub/session_manager.dart';
+import 'package:dartino_compiler/src/hub/session_manager.dart';
 
-import 'package:fletchc/src/worker/developer.dart';
+import 'package:dartino_compiler/src/worker/developer.dart';
 
 const String testLocation = 'tests/debugger';
 const String generatedTestLocation = 'tests/debugger_generated';
@@ -60,7 +60,7 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
 
   List<String> debuggerCommands = <String>[];
   for (String line in await new File.fromUri(uri).readAsLines()) {
-    const String commandsPattern = "// FletchDebuggerCommands=";
+    const String commandsPattern = "// DartinoDebuggerCommands=";
     if (line.startsWith(commandsPattern)) {
       debuggerCommands = line.substring(commandsPattern.length).split(",");
     }
@@ -68,14 +68,14 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
 
   Expect.equals(0, await run(state, testDebuggerCommands: debuggerCommands));
 
-  int exitCode = await state.fletchVm.exitCode;
+  int exitCode = await state.dartinoVm.exitCode;
 
   state.stdoutSink.detachCommandSender();
   state.stderrSink.detachCommandSender();
 
   if (exitCode != 0) {
     output.addAll(
-        UTF8.encode("Non-zero exit code from 'fletch-vm' ($exitCode).\n"));
+        UTF8.encode("Non-zero exit code from 'dartino-vm' ($exitCode).\n"));
   }
 
   String expectationsFile =

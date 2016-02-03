@@ -77,9 +77,9 @@ class File {
   /**
    * Return the file descriptor value for this file.
    *
-   * This is especially useful in conjunction with `dart:fletch.ffi`. However it
-   * should be used with care, as the `File` object assumes full control over the
-   * file descriptor.
+   * This is especially useful in conjunction with `dart:dartino.ffi`. However
+   * it should be used with care, as the `File` object assumes full control
+   * over the file descriptor.
    */
   int get fd => _fd;
 

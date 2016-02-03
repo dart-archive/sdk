@@ -1,0 +1,2139 @@
+HTTP/1.1 200 OK
+Server: GitHubMock.com
+Date: Tue, 21 Apr 2015 10:32:13 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 108344
+Status: 200 OK
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 23
+X-RateLimit-Reset: 1429615012
+Cache-Control: public, max-age=60, s-maxage=60
+Last-Modified: Fri, 23 Jan 2015 11:38:07 GMT
+ETag: "a967626cff60168e667d36a6b33f272d"
+Vary: Accept
+X-GitHub-Media-Type: github.v3
+Link: <https://api.github.com/repositories/29306978/commits?page=22>; rel="next", <https://api.github.com/repositories/29306978/commits?page=1>; rel="first", <https://api.github.com/repositories/29306978/commits?page=20>; rel="prev"
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: deny
+Content-Security-Policy: default-src 'none'
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: ETag, Link, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval
+Access-Control-Allow-Origin: *
+X-GitHub-Request-Id: 026D42C3:54CA:277087:5536272D
+Strict-Transport-Security: max-age=31536000; includeSubdomains; preload
+X-Content-Type-Options: nosniff
+Vary: Accept-Encoding
+X-Served-By: a30e6f9aa7cf5731b87dfb3b9992202d
+
+[
+  {
+    "sha": "9b087c0469de7950a9675c58f9f305f538509d25",
+    "commit": {
+      "author": {
+        "name": "Anders Johnsen",
+        "email": "ajohnsen@google.com",
+        "date": "2015-01-23T11:38:07Z"
+      },
+      "committer": {
+        "name": "Anders Johnsen",
+        "email": "ajohnsen@google.com",
+        "date": "2015-01-23T11:38:07Z"
+      },
+      "message": "Check for integer devision of (-1 << 63) / -1.\n\nBUG=\nR=kasperl@google.com\n\nReview URL: https://codereview.chromium.org/872683003",
+      "tree": {
+        "sha": "78b19732578e7c3bd02436fcdeac74e6da56b3a5",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/78b19732578e7c3bd02436fcdeac74e6da56b3a5"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/9b087c0469de7950a9675c58f9f305f538509d25",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/9b087c0469de7950a9675c58f9f305f538509d25",
+    "html_url": "https://github.com/dart-lang/dartino/commit/9b087c0469de7950a9675c58f9f305f538509d25",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/9b087c0469de7950a9675c58f9f305f538509d25/comments",
+    "author": {
+      "login": "skabet",
+      "id": 22043,
+      "avatar_url": "https://avatars.githubusercontent.com/u/22043?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/skabet",
+      "html_url": "https://github.com/skabet",
+      "followers_url": "https://api.github.com/users/skabet/followers",
+      "following_url": "https://api.github.com/users/skabet/following{/other_user}",
+      "gists_url": "https://api.github.com/users/skabet/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/skabet/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/skabet/subscriptions",
+      "organizations_url": "https://api.github.com/users/skabet/orgs",
+      "repos_url": "https://api.github.com/users/skabet/repos",
+      "events_url": "https://api.github.com/users/skabet/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/skabet/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "skabet",
+      "id": 22043,
+      "avatar_url": "https://avatars.githubusercontent.com/u/22043?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/skabet",
+      "html_url": "https://github.com/skabet",
+      "followers_url": "https://api.github.com/users/skabet/followers",
+      "following_url": "https://api.github.com/users/skabet/following{/other_user}",
+      "gists_url": "https://api.github.com/users/skabet/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/skabet/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/skabet/subscriptions",
+      "organizations_url": "https://api.github.com/users/skabet/orgs",
+      "repos_url": "https://api.github.com/users/skabet/repos",
+      "events_url": "https://api.github.com/users/skabet/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/skabet/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "77efed07ff024a33c050fcdaa1ea804e11f49d1f",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/77efed07ff024a33c050fcdaa1ea804e11f49d1f",
+        "html_url": "https://github.com/dart-lang/dartino/commit/77efed07ff024a33c050fcdaa1ea804e11f49d1f"
+      }
+    ]
+  },
+  {
+    "sha": "77efed07ff024a33c050fcdaa1ea804e11f49d1f",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-23T11:32:23Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-23T11:32:23Z"
+      },
+      "message": "Fix a few more tests by adding support for hashCode in various places.\n\nR=ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/867193002",
+      "tree": {
+        "sha": "8f7473e4e5525003548a8ea59175c55f068262db",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/8f7473e4e5525003548a8ea59175c55f068262db"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/77efed07ff024a33c050fcdaa1ea804e11f49d1f",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/77efed07ff024a33c050fcdaa1ea804e11f49d1f",
+    "html_url": "https://github.com/dart-lang/dartino/commit/77efed07ff024a33c050fcdaa1ea804e11f49d1f",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/77efed07ff024a33c050fcdaa1ea804e11f49d1f/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a0cc8000f44dc83d19bc0b1630ec0b5063f005cb",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/a0cc8000f44dc83d19bc0b1630ec0b5063f005cb",
+        "html_url": "https://github.com/dart-lang/dartino/commit/a0cc8000f44dc83d19bc0b1630ec0b5063f005cb"
+      }
+    ]
+  },
+  {
+    "sha": "a0cc8000f44dc83d19bc0b1630ec0b5063f005cb",
+    "commit": {
+      "author": {
+        "name": "Peter von der Ahé",
+        "email": "ahe@google.com",
+        "date": "2015-01-23T09:34:24Z"
+      },
+      "committer": {
+        "name": "Peter von der Ahé",
+        "email": "ahe@google.com",
+        "date": "2015-01-23T09:34:24Z"
+      },
+      "message": "Starting on GYP build file.\n\nR=ager@google.com\n\nReview URL: https://codereview.chromium.org/804153005",
+      "tree": {
+        "sha": "919ae67647f28eb2a7c3b5b61eafdeb7bf33fe2a",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/919ae67647f28eb2a7c3b5b61eafdeb7bf33fe2a"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/a0cc8000f44dc83d19bc0b1630ec0b5063f005cb",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/a0cc8000f44dc83d19bc0b1630ec0b5063f005cb",
+    "html_url": "https://github.com/dart-lang/dartino/commit/a0cc8000f44dc83d19bc0b1630ec0b5063f005cb",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/a0cc8000f44dc83d19bc0b1630ec0b5063f005cb/comments",
+    "author": {
+      "login": "peter-ahe-google",
+      "id": 5689005,
+      "avatar_url": "https://avatars.githubusercontent.com/u/5689005?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/peter-ahe-google",
+      "html_url": "https://github.com/peter-ahe-google",
+      "followers_url": "https://api.github.com/users/peter-ahe-google/followers",
+      "following_url": "https://api.github.com/users/peter-ahe-google/following{/other_user}",
+      "gists_url": "https://api.github.com/users/peter-ahe-google/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/peter-ahe-google/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/peter-ahe-google/subscriptions",
+      "organizations_url": "https://api.github.com/users/peter-ahe-google/orgs",
+      "repos_url": "https://api.github.com/users/peter-ahe-google/repos",
+      "events_url": "https://api.github.com/users/peter-ahe-google/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/peter-ahe-google/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "peter-ahe-google",
+      "id": 5689005,
+      "avatar_url": "https://avatars.githubusercontent.com/u/5689005?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/peter-ahe-google",
+      "html_url": "https://github.com/peter-ahe-google",
+      "followers_url": "https://api.github.com/users/peter-ahe-google/followers",
+      "following_url": "https://api.github.com/users/peter-ahe-google/following{/other_user}",
+      "gists_url": "https://api.github.com/users/peter-ahe-google/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/peter-ahe-google/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/peter-ahe-google/subscriptions",
+      "organizations_url": "https://api.github.com/users/peter-ahe-google/orgs",
+      "repos_url": "https://api.github.com/users/peter-ahe-google/repos",
+      "events_url": "https://api.github.com/users/peter-ahe-google/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/peter-ahe-google/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "3c58c0c8941d2b31a80903ee30dfd2996159bd86",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/3c58c0c8941d2b31a80903ee30dfd2996159bd86",
+        "html_url": "https://github.com/dart-lang/dartino/commit/3c58c0c8941d2b31a80903ee30dfd2996159bd86"
+      }
+    ]
+  },
+  {
+    "sha": "3c58c0c8941d2b31a80903ee30dfd2996159bd86",
+    "commit": {
+      "author": {
+        "name": "Anders Johnsen",
+        "email": "ajohnsen@google.com",
+        "date": "2015-01-23T09:29:39Z"
+      },
+      "committer": {
+        "name": "Anders Johnsen",
+        "email": "ajohnsen@google.com",
+        "date": "2015-01-23T09:29:39Z"
+      },
+      "message": "Fix mint shift and closure in list/map literals, and status files.\n\nThis was exposed by the introduction of dart:typed_data.\n\nBUG=\nR=kasperl@google.com\n\nReview URL: https://codereview.chromium.org/867153002",
+      "tree": {
+        "sha": "ee0e0ae3e40284aa8368a799323cae170ce288d0",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/ee0e0ae3e40284aa8368a799323cae170ce288d0"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/3c58c0c8941d2b31a80903ee30dfd2996159bd86",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/3c58c0c8941d2b31a80903ee30dfd2996159bd86",
+    "html_url": "https://github.com/dart-lang/dartino/commit/3c58c0c8941d2b31a80903ee30dfd2996159bd86",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/3c58c0c8941d2b31a80903ee30dfd2996159bd86/comments",
+    "author": {
+      "login": "skabet",
+      "id": 22043,
+      "avatar_url": "https://avatars.githubusercontent.com/u/22043?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/skabet",
+      "html_url": "https://github.com/skabet",
+      "followers_url": "https://api.github.com/users/skabet/followers",
+      "following_url": "https://api.github.com/users/skabet/following{/other_user}",
+      "gists_url": "https://api.github.com/users/skabet/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/skabet/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/skabet/subscriptions",
+      "organizations_url": "https://api.github.com/users/skabet/orgs",
+      "repos_url": "https://api.github.com/users/skabet/repos",
+      "events_url": "https://api.github.com/users/skabet/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/skabet/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "skabet",
+      "id": 22043,
+      "avatar_url": "https://avatars.githubusercontent.com/u/22043?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/skabet",
+      "html_url": "https://github.com/skabet",
+      "followers_url": "https://api.github.com/users/skabet/followers",
+      "following_url": "https://api.github.com/users/skabet/following{/other_user}",
+      "gists_url": "https://api.github.com/users/skabet/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/skabet/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/skabet/subscriptions",
+      "organizations_url": "https://api.github.com/users/skabet/orgs",
+      "repos_url": "https://api.github.com/users/skabet/repos",
+      "events_url": "https://api.github.com/users/skabet/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/skabet/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "95e0bd1183b5301af0f4e358929044994d215f8b",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/95e0bd1183b5301af0f4e358929044994d215f8b",
+        "html_url": "https://github.com/dart-lang/dartino/commit/95e0bd1183b5301af0f4e358929044994d215f8b"
+      }
+    ]
+  },
+  {
+    "sha": "96bae552511574a2251f1d81aab004d78d705ee0",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-23T08:14:24Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-23T08:14:24Z"
+      },
+      "message": "Renames, updates to log cat connection close handling",
+      "tree": {
+        "sha": "d679a8326646af70950c24faa896f29f127a0493",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/d679a8326646af70950c24faa896f29f127a0493"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/96bae552511574a2251f1d81aab004d78d705ee0",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/96bae552511574a2251f1d81aab004d78d705ee0",
+    "html_url": "https://github.com/dart-lang/dartino/commit/96bae552511574a2251f1d81aab004d78d705ee0",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/96bae552511574a2251f1d81aab004d78d705ee0/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "11fbd0a2b79178e9705e91065e1fb9489a135179",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/11fbd0a2b79178e9705e91065e1fb9489a135179",
+        "html_url": "https://github.com/dart-lang/dartino/commit/11fbd0a2b79178e9705e91065e1fb9489a135179"
+      }
+    ]
+  },
+  {
+    "sha": "95e0bd1183b5301af0f4e358929044994d215f8b",
+    "commit": {
+      "author": {
+        "name": "Anders Johnsen",
+        "email": "ajohnsen@google.com",
+        "date": "2015-01-23T08:12:44Z"
+      },
+      "committer": {
+        "name": "Anders Johnsen",
+        "email": "ajohnsen@google.com",
+        "date": "2015-01-23T08:12:44Z"
+      },
+      "message": "Add initial dart:typed_data library, with early Uint8List and ByteData impl.\n\nBUG=\nR=kasperl@google.com\n\nReview URL: https://codereview.chromium.org/865193002",
+      "tree": {
+        "sha": "8b1f310f7ca7488032edf9d6d293edea9e791d66",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/8b1f310f7ca7488032edf9d6d293edea9e791d66"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/95e0bd1183b5301af0f4e358929044994d215f8b",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/95e0bd1183b5301af0f4e358929044994d215f8b",
+    "html_url": "https://github.com/dart-lang/dartino/commit/95e0bd1183b5301af0f4e358929044994d215f8b",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/95e0bd1183b5301af0f4e358929044994d215f8b/comments",
+    "author": {
+      "login": "skabet",
+      "id": 22043,
+      "avatar_url": "https://avatars.githubusercontent.com/u/22043?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/skabet",
+      "html_url": "https://github.com/skabet",
+      "followers_url": "https://api.github.com/users/skabet/followers",
+      "following_url": "https://api.github.com/users/skabet/following{/other_user}",
+      "gists_url": "https://api.github.com/users/skabet/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/skabet/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/skabet/subscriptions",
+      "organizations_url": "https://api.github.com/users/skabet/orgs",
+      "repos_url": "https://api.github.com/users/skabet/repos",
+      "events_url": "https://api.github.com/users/skabet/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/skabet/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "skabet",
+      "id": 22043,
+      "avatar_url": "https://avatars.githubusercontent.com/u/22043?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/skabet",
+      "html_url": "https://github.com/skabet",
+      "followers_url": "https://api.github.com/users/skabet/followers",
+      "following_url": "https://api.github.com/users/skabet/following{/other_user}",
+      "gists_url": "https://api.github.com/users/skabet/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/skabet/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/skabet/subscriptions",
+      "organizations_url": "https://api.github.com/users/skabet/orgs",
+      "repos_url": "https://api.github.com/users/skabet/repos",
+      "events_url": "https://api.github.com/users/skabet/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/skabet/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f3637b21a768ed40e269a458e08e5953f5f84e1a",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/f3637b21a768ed40e269a458e08e5953f5f84e1a",
+        "html_url": "https://github.com/dart-lang/dartino/commit/f3637b21a768ed40e269a458e08e5953f5f84e1a"
+      }
+    ]
+  },
+  {
+    "sha": "11fbd0a2b79178e9705e91065e1fb9489a135179",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T18:31:15Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T18:31:15Z"
+      },
+      "message": "Merge branch 'lukechurch-HelpTextFiles' of https://github.com/dart-lang/dartino into lukechurch-logcat",
+      "tree": {
+        "sha": "3e006a6139facd31b7f9d8507b8b21e601a7d9d7",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/3e006a6139facd31b7f9d8507b8b21e601a7d9d7"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/11fbd0a2b79178e9705e91065e1fb9489a135179",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/11fbd0a2b79178e9705e91065e1fb9489a135179",
+    "html_url": "https://github.com/dart-lang/dartino/commit/11fbd0a2b79178e9705e91065e1fb9489a135179",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/11fbd0a2b79178e9705e91065e1fb9489a135179/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6f3e736959ff044d50651dc726e0223689066c8d",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/6f3e736959ff044d50651dc726e0223689066c8d",
+        "html_url": "https://github.com/dart-lang/dartino/commit/6f3e736959ff044d50651dc726e0223689066c8d"
+      },
+      {
+        "sha": "901ac77da2db1b5cbd1840cf0100b124c6f19eff",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/901ac77da2db1b5cbd1840cf0100b124c6f19eff",
+        "html_url": "https://github.com/dart-lang/dartino/commit/901ac77da2db1b5cbd1840cf0100b124c6f19eff"
+      }
+    ]
+  },
+  {
+    "sha": "f3637b21a768ed40e269a458e08e5953f5f84e1a",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "luke@church.name",
+        "date": "2015-01-22T18:30:48Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "luke@church.name",
+        "date": "2015-01-22T18:30:48Z"
+      },
+      "message": "Merge pull request #2 from dart-lang/lukechurch-HelpTextFiles\n\nRefactor driver help text into separate file",
+      "tree": {
+        "sha": "118be4865f2e19b3626a490a004011bac12850fa",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/118be4865f2e19b3626a490a004011bac12850fa"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/f3637b21a768ed40e269a458e08e5953f5f84e1a",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/f3637b21a768ed40e269a458e08e5953f5f84e1a",
+    "html_url": "https://github.com/dart-lang/dartino/commit/f3637b21a768ed40e269a458e08e5953f5f84e1a",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/f3637b21a768ed40e269a458e08e5953f5f84e1a/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "330377ae8ff3267f752f280cb50d35f3659e43c8",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/330377ae8ff3267f752f280cb50d35f3659e43c8",
+        "html_url": "https://github.com/dart-lang/dartino/commit/330377ae8ff3267f752f280cb50d35f3659e43c8"
+      },
+      {
+        "sha": "901ac77da2db1b5cbd1840cf0100b124c6f19eff",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/901ac77da2db1b5cbd1840cf0100b124c6f19eff",
+        "html_url": "https://github.com/dart-lang/dartino/commit/901ac77da2db1b5cbd1840cf0100b124c6f19eff"
+      }
+    ]
+  },
+  {
+    "sha": "901ac77da2db1b5cbd1840cf0100b124c6f19eff",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T16:59:40Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T16:59:40Z"
+      },
+      "message": "Address review comments",
+      "tree": {
+        "sha": "bc1d8baa32cd95601c9a7008311f86d628a3163b",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/bc1d8baa32cd95601c9a7008311f86d628a3163b"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/901ac77da2db1b5cbd1840cf0100b124c6f19eff",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/901ac77da2db1b5cbd1840cf0100b124c6f19eff",
+    "html_url": "https://github.com/dart-lang/dartino/commit/901ac77da2db1b5cbd1840cf0100b124c6f19eff",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/901ac77da2db1b5cbd1840cf0100b124c6f19eff/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6",
+        "html_url": "https://github.com/dart-lang/dartino/commit/d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6"
+      }
+    ]
+  },
+  {
+    "sha": "6f3e736959ff044d50651dc726e0223689066c8d",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T16:52:49Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T16:52:49Z"
+      },
+      "message": "Logcat WIP",
+      "tree": {
+        "sha": "d4f7a2d18731aa0ee88c289aef65edfb505639cf",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/d4f7a2d18731aa0ee88c289aef65edfb505639cf"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/6f3e736959ff044d50651dc726e0223689066c8d",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/6f3e736959ff044d50651dc726e0223689066c8d",
+    "html_url": "https://github.com/dart-lang/dartino/commit/6f3e736959ff044d50651dc726e0223689066c8d",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/6f3e736959ff044d50651dc726e0223689066c8d/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0c36ed5c29f43fd763e28c913d299d7ba033ed89",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/0c36ed5c29f43fd763e28c913d299d7ba033ed89",
+        "html_url": "https://github.com/dart-lang/dartino/commit/0c36ed5c29f43fd763e28c913d299d7ba033ed89"
+      }
+    ]
+  },
+  {
+    "sha": "0c36ed5c29f43fd763e28c913d299d7ba033ed89",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T16:52:05Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T16:52:05Z"
+      },
+      "message": "Addition of logcat help text",
+      "tree": {
+        "sha": "2be979711e6dd17c5bef4734b6b9be6bb2477d3f",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/2be979711e6dd17c5bef4734b6b9be6bb2477d3f"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/0c36ed5c29f43fd763e28c913d299d7ba033ed89",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/0c36ed5c29f43fd763e28c913d299d7ba033ed89",
+    "html_url": "https://github.com/dart-lang/dartino/commit/0c36ed5c29f43fd763e28c913d299d7ba033ed89",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/0c36ed5c29f43fd763e28c913d299d7ba033ed89/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "df9e9976728a42ae80fc8b341124865af7768f98",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/df9e9976728a42ae80fc8b341124865af7768f98",
+        "html_url": "https://github.com/dart-lang/dartino/commit/df9e9976728a42ae80fc8b341124865af7768f98"
+      }
+    ]
+  },
+  {
+    "sha": "df9e9976728a42ae80fc8b341124865af7768f98",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T16:51:32Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T16:51:32Z"
+      },
+      "message": "First cut of command line utils",
+      "tree": {
+        "sha": "93d705109f52f010dc9c50e00d1647bd70b50bcb",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/93d705109f52f010dc9c50e00d1647bd70b50bcb"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/df9e9976728a42ae80fc8b341124865af7768f98",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/df9e9976728a42ae80fc8b341124865af7768f98",
+    "html_url": "https://github.com/dart-lang/dartino/commit/df9e9976728a42ae80fc8b341124865af7768f98",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/df9e9976728a42ae80fc8b341124865af7768f98/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6",
+        "html_url": "https://github.com/dart-lang/dartino/commit/d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6"
+      }
+    ]
+  },
+  {
+    "sha": "330377ae8ff3267f752f280cb50d35f3659e43c8",
+    "commit": {
+      "author": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T13:46:43Z"
+      },
+      "committer": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T13:46:43Z"
+      },
+      "message": "Fix a number of double corner-cases.\n\nR=kasperl@google.com, ajohnsen@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/865873002",
+      "tree": {
+        "sha": "d4ef4d078759c96644c7fbe342573a26091d5d2f",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/d4ef4d078759c96644c7fbe342573a26091d5d2f"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/330377ae8ff3267f752f280cb50d35f3659e43c8",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/330377ae8ff3267f752f280cb50d35f3659e43c8",
+    "html_url": "https://github.com/dart-lang/dartino/commit/330377ae8ff3267f752f280cb50d35f3659e43c8",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/330377ae8ff3267f752f280cb50d35f3659e43c8/comments",
+    "author": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "16b9d475fe3b2c52b8d8cfa8ce5b5edfc66bc2de",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/16b9d475fe3b2c52b8d8cfa8ce5b5edfc66bc2de",
+        "html_url": "https://github.com/dart-lang/dartino/commit/16b9d475fe3b2c52b8d8cfa8ce5b5edfc66bc2de"
+      }
+    ]
+  },
+  {
+    "sha": "16b9d475fe3b2c52b8d8cfa8ce5b5edfc66bc2de",
+    "commit": {
+      "author": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T13:07:40Z"
+      },
+      "committer": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T13:07:40Z"
+      },
+      "message": "Deal with identical bailout by calling runtime function instead of\ncompletely bailing out of the fast interpreter.\n\nR=kasperl@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/865853002",
+      "tree": {
+        "sha": "2700003e4f62211e6fb0ec24717d0176538a8dbd",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/2700003e4f62211e6fb0ec24717d0176538a8dbd"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/16b9d475fe3b2c52b8d8cfa8ce5b5edfc66bc2de",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/16b9d475fe3b2c52b8d8cfa8ce5b5edfc66bc2de",
+    "html_url": "https://github.com/dart-lang/dartino/commit/16b9d475fe3b2c52b8d8cfa8ce5b5edfc66bc2de",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/16b9d475fe3b2c52b8d8cfa8ce5b5edfc66bc2de/comments",
+    "author": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e79a26a3d1bea134ff32fe9c21da54b690c2c903",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/e79a26a3d1bea134ff32fe9c21da54b690c2c903",
+        "html_url": "https://github.com/dart-lang/dartino/commit/e79a26a3d1bea134ff32fe9c21da54b690c2c903"
+      }
+    ]
+  },
+  {
+    "sha": "e79a26a3d1bea134ff32fe9c21da54b690c2c903",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T13:06:22Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T13:06:22Z"
+      },
+      "message": "Hack: Add support for running the compiler and bridge in a 'simplified' mode that ignores the default core library and only executes a simple entry point.\n\nOnce we've bootstrapped the new compiler, we should revert this change.\n\nR=ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/861193003",
+      "tree": {
+        "sha": "33b2e3b436fd24de85af9654593c79ffeb0f3ff2",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/33b2e3b436fd24de85af9654593c79ffeb0f3ff2"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/e79a26a3d1bea134ff32fe9c21da54b690c2c903",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/e79a26a3d1bea134ff32fe9c21da54b690c2c903",
+    "html_url": "https://github.com/dart-lang/dartino/commit/e79a26a3d1bea134ff32fe9c21da54b690c2c903",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/e79a26a3d1bea134ff32fe9c21da54b690c2c903/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "5bd8bd17ba356164073b4afd60caa0bafd76ec32",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/5bd8bd17ba356164073b4afd60caa0bafd76ec32",
+        "html_url": "https://github.com/dart-lang/dartino/commit/5bd8bd17ba356164073b4afd60caa0bafd76ec32"
+      }
+    ]
+  },
+  {
+    "sha": "5bd8bd17ba356164073b4afd60caa0bafd76ec32",
+    "commit": {
+      "author": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T12:38:04Z"
+      },
+      "committer": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T12:38:04Z"
+      },
+      "message": "Fix identical for large integers and doubles.\n\nBail out to slow interpreter for now and deal with it there.\n\nR=kasperl@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/865813003",
+      "tree": {
+        "sha": "80bb41d0e8e32a146f2e705ba0e3829fe1b472a9",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/80bb41d0e8e32a146f2e705ba0e3829fe1b472a9"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/5bd8bd17ba356164073b4afd60caa0bafd76ec32",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/5bd8bd17ba356164073b4afd60caa0bafd76ec32",
+    "html_url": "https://github.com/dart-lang/dartino/commit/5bd8bd17ba356164073b4afd60caa0bafd76ec32",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/5bd8bd17ba356164073b4afd60caa0bafd76ec32/comments",
+    "author": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "60e24bec8af00f079d616851d53f30a399d34cd1",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/60e24bec8af00f079d616851d53f30a399d34cd1",
+        "html_url": "https://github.com/dart-lang/dartino/commit/60e24bec8af00f079d616851d53f30a399d34cd1"
+      }
+    ]
+  },
+  {
+    "sha": "60e24bec8af00f079d616851d53f30a399d34cd1",
+    "commit": {
+      "author": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T11:53:57Z"
+      },
+      "committer": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T11:53:57Z"
+      },
+      "message": "Remove more passing tests from corelib.status.\n\nR=ajohnsen@google.com, kasperl@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/863233002",
+      "tree": {
+        "sha": "9cc0fb60ca8f3b97d5d4fa385536097ee8aae1ac",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/9cc0fb60ca8f3b97d5d4fa385536097ee8aae1ac"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/60e24bec8af00f079d616851d53f30a399d34cd1",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/60e24bec8af00f079d616851d53f30a399d34cd1",
+    "html_url": "https://github.com/dart-lang/dartino/commit/60e24bec8af00f079d616851d53f30a399d34cd1",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/60e24bec8af00f079d616851d53f30a399d34cd1/comments",
+    "author": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "86d00e5326a35969e01f94e54c8627c71fbd111f",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/86d00e5326a35969e01f94e54c8627c71fbd111f",
+        "html_url": "https://github.com/dart-lang/dartino/commit/86d00e5326a35969e01f94e54c8627c71fbd111f"
+      }
+    ]
+  },
+  {
+    "sha": "86d00e5326a35969e01f94e54c8627c71fbd111f",
+    "commit": {
+      "author": {
+        "name": "Anders Johnsen",
+        "email": "ajohnsen@google.com",
+        "date": "2015-01-22T11:31:30Z"
+      },
+      "committer": {
+        "name": "Anders Johnsen",
+        "email": "ajohnsen@google.com",
+        "date": "2015-01-22T11:31:30Z"
+      },
+      "message": "A factory does not have a 'this' argument, when generating named arguments method stub.\n\nBUG=\nR=ager@google.com\n\nReview URL: https://codereview.chromium.org/866693002",
+      "tree": {
+        "sha": "e735a2306fe34693b3f498cf4ecb6e29d5b84fd7",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/e735a2306fe34693b3f498cf4ecb6e29d5b84fd7"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/86d00e5326a35969e01f94e54c8627c71fbd111f",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/86d00e5326a35969e01f94e54c8627c71fbd111f",
+    "html_url": "https://github.com/dart-lang/dartino/commit/86d00e5326a35969e01f94e54c8627c71fbd111f",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/86d00e5326a35969e01f94e54c8627c71fbd111f/comments",
+    "author": {
+      "login": "skabet",
+      "id": 22043,
+      "avatar_url": "https://avatars.githubusercontent.com/u/22043?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/skabet",
+      "html_url": "https://github.com/skabet",
+      "followers_url": "https://api.github.com/users/skabet/followers",
+      "following_url": "https://api.github.com/users/skabet/following{/other_user}",
+      "gists_url": "https://api.github.com/users/skabet/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/skabet/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/skabet/subscriptions",
+      "organizations_url": "https://api.github.com/users/skabet/orgs",
+      "repos_url": "https://api.github.com/users/skabet/repos",
+      "events_url": "https://api.github.com/users/skabet/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/skabet/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "skabet",
+      "id": 22043,
+      "avatar_url": "https://avatars.githubusercontent.com/u/22043?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/skabet",
+      "html_url": "https://github.com/skabet",
+      "followers_url": "https://api.github.com/users/skabet/followers",
+      "following_url": "https://api.github.com/users/skabet/following{/other_user}",
+      "gists_url": "https://api.github.com/users/skabet/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/skabet/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/skabet/subscriptions",
+      "organizations_url": "https://api.github.com/users/skabet/orgs",
+      "repos_url": "https://api.github.com/users/skabet/repos",
+      "events_url": "https://api.github.com/users/skabet/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/skabet/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "196f0133cdf42a5caaff2e91e41795e28e104c25",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/196f0133cdf42a5caaff2e91e41795e28e104c25",
+        "html_url": "https://github.com/dart-lang/dartino/commit/196f0133cdf42a5caaff2e91e41795e28e104c25"
+      }
+    ]
+  },
+  {
+    "sha": "196f0133cdf42a5caaff2e91e41795e28e104c25",
+    "commit": {
+      "author": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T11:11:15Z"
+      },
+      "committer": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T11:11:15Z"
+      },
+      "message": "Implement more of the List interface.\n\nR=kasperl@google.com, ajohnsen@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/843163004",
+      "tree": {
+        "sha": "cfdad5e03a7ed905c3e0633575f994f0981886df",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/cfdad5e03a7ed905c3e0633575f994f0981886df"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/196f0133cdf42a5caaff2e91e41795e28e104c25",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/196f0133cdf42a5caaff2e91e41795e28e104c25",
+    "html_url": "https://github.com/dart-lang/dartino/commit/196f0133cdf42a5caaff2e91e41795e28e104c25",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/196f0133cdf42a5caaff2e91e41795e28e104c25/comments",
+    "author": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8a834f87def1469e71f97a9f840ce641d65a8f55",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/8a834f87def1469e71f97a9f840ce641d65a8f55",
+        "html_url": "https://github.com/dart-lang/dartino/commit/8a834f87def1469e71f97a9f840ce641d65a8f55"
+      }
+    ]
+  },
+  {
+    "sha": "8a834f87def1469e71f97a9f840ce641d65a8f55",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T10:50:37Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T10:50:37Z"
+      },
+      "message": "Implement a little bit more functionality in LinkedHashMap and LinkedHashSet.\n\nR=ajohnsen@google.com, ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/854063003",
+      "tree": {
+        "sha": "1821bbdd303626146916dcc776155bc1b73adf81",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/1821bbdd303626146916dcc776155bc1b73adf81"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/8a834f87def1469e71f97a9f840ce641d65a8f55",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/8a834f87def1469e71f97a9f840ce641d65a8f55",
+    "html_url": "https://github.com/dart-lang/dartino/commit/8a834f87def1469e71f97a9f840ce641d65a8f55",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/8a834f87def1469e71f97a9f840ce641d65a8f55/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a274ff65b8f6f09ef1b312561146552fa2ee1a7a",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/a274ff65b8f6f09ef1b312561146552fa2ee1a7a",
+        "html_url": "https://github.com/dart-lang/dartino/commit/a274ff65b8f6f09ef1b312561146552fa2ee1a7a"
+      }
+    ]
+  },
+  {
+    "sha": "a274ff65b8f6f09ef1b312561146552fa2ee1a7a",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T09:47:15Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T09:47:15Z"
+      },
+      "message": "The ASan version of corelib/regexp/pcre_test fails, but doesn't crash.\n\nR=ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/870503002",
+      "tree": {
+        "sha": "7488c3d6e63da92f034b68dc7db08ea426996cd0",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/7488c3d6e63da92f034b68dc7db08ea426996cd0"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/a274ff65b8f6f09ef1b312561146552fa2ee1a7a",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/a274ff65b8f6f09ef1b312561146552fa2ee1a7a",
+    "html_url": "https://github.com/dart-lang/dartino/commit/a274ff65b8f6f09ef1b312561146552fa2ee1a7a",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/a274ff65b8f6f09ef1b312561146552fa2ee1a7a/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e03f002d2e3bf6259976b4a36ee6279cf2b739d5",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/e03f002d2e3bf6259976b4a36ee6279cf2b739d5",
+        "html_url": "https://github.com/dart-lang/dartino/commit/e03f002d2e3bf6259976b4a36ee6279cf2b739d5"
+      }
+    ]
+  },
+  {
+    "sha": "e03f002d2e3bf6259976b4a36ee6279cf2b739d5",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T09:29:27Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T09:29:27Z"
+      },
+      "message": "Fix x64 status for corelib/regexp/pcre_test.\n\nR=ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/850543004",
+      "tree": {
+        "sha": "262a8b4c9cc6decfe94495351a4478a40a746c93",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/262a8b4c9cc6decfe94495351a4478a40a746c93"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/e03f002d2e3bf6259976b4a36ee6279cf2b739d5",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/e03f002d2e3bf6259976b4a36ee6279cf2b739d5",
+    "html_url": "https://github.com/dart-lang/dartino/commit/e03f002d2e3bf6259976b4a36ee6279cf2b739d5",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/e03f002d2e3bf6259976b4a36ee6279cf2b739d5/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "96d4721d5608b23748105604987c34a2f565ee64",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/96d4721d5608b23748105604987c34a2f565ee64",
+        "html_url": "https://github.com/dart-lang/dartino/commit/96d4721d5608b23748105604987c34a2f565ee64"
+      }
+    ]
+  },
+  {
+    "sha": "96d4721d5608b23748105604987c34a2f565ee64",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T09:11:19Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T09:11:19Z"
+      },
+      "message": "Add corelib tests and run them by default.\n\nUnsurprisingly, lots of them are failing at the moment.\n\nR=ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/869523002",
+      "tree": {
+        "sha": "ae841c657bed2d0ce1fdef35225995620c88b140",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/ae841c657bed2d0ce1fdef35225995620c88b140"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/96d4721d5608b23748105604987c34a2f565ee64",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/96d4721d5608b23748105604987c34a2f565ee64",
+    "html_url": "https://github.com/dart-lang/dartino/commit/96d4721d5608b23748105604987c34a2f565ee64",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/96d4721d5608b23748105604987c34a2f565ee64/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0ebf728c8f4b6391912c48bde619beb99c7a9296",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/0ebf728c8f4b6391912c48bde619beb99c7a9296",
+        "html_url": "https://github.com/dart-lang/dartino/commit/0ebf728c8f4b6391912c48bde619beb99c7a9296"
+      }
+    ]
+  },
+  {
+    "sha": "0ebf728c8f4b6391912c48bde619beb99c7a9296",
+    "commit": {
+      "author": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T08:36:45Z"
+      },
+      "committer": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-22T08:36:45Z"
+      },
+      "message": "Add API to add default shared libraries for the foreign function API.\n\nThis is useful on Android where we will probably end up with a\nshared library that contains all Dart service jni code. The Android\ndeveloper who loads that library knows what it is called. In order\nto not have to have that knowledge in the Dart service implementation\nit is exposed through the API so it can be added when we actually\nhave the knowledge.\n\nR=kasperl@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/860063003",
+      "tree": {
+        "sha": "bf3509bf510d86ff740768ee36e3a13fe2bdece5",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/bf3509bf510d86ff740768ee36e3a13fe2bdece5"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/0ebf728c8f4b6391912c48bde619beb99c7a9296",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/0ebf728c8f4b6391912c48bde619beb99c7a9296",
+    "html_url": "https://github.com/dart-lang/dartino/commit/0ebf728c8f4b6391912c48bde619beb99c7a9296",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/0ebf728c8f4b6391912c48bde619beb99c7a9296/comments",
+    "author": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d9052223abb73b2f7b06408738aa0521cda49d76",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/d9052223abb73b2f7b06408738aa0521cda49d76",
+        "html_url": "https://github.com/dart-lang/dartino/commit/d9052223abb73b2f7b06408738aa0521cda49d76"
+      }
+    ]
+  },
+  {
+    "sha": "d9052223abb73b2f7b06408738aa0521cda49d76",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T08:23:27Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T08:23:27Z"
+      },
+      "message": "Mark failing test as such.\n\nR=ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/869513002",
+      "tree": {
+        "sha": "136959faa3ff6952ebec536493566647503777f2",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/136959faa3ff6952ebec536493566647503777f2"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/d9052223abb73b2f7b06408738aa0521cda49d76",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/d9052223abb73b2f7b06408738aa0521cda49d76",
+    "html_url": "https://github.com/dart-lang/dartino/commit/d9052223abb73b2f7b06408738aa0521cda49d76",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/d9052223abb73b2f7b06408738aa0521cda49d76/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "accf0c33d61ff86dc6d62ec3d05ffc36384dc5ee",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/accf0c33d61ff86dc6d62ec3d05ffc36384dc5ee",
+        "html_url": "https://github.com/dart-lang/dartino/commit/accf0c33d61ff86dc6d62ec3d05ffc36384dc5ee"
+      }
+    ]
+  },
+  {
+    "sha": "accf0c33d61ff86dc6d62ec3d05ffc36384dc5ee",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T08:09:39Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T08:09:39Z"
+      },
+      "message": "Change 'size' to 'length' in the MacOS system code.\n\nR=ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/869493003",
+      "tree": {
+        "sha": "347e647062d98a2565901738ce1b8e97425b30e8",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/347e647062d98a2565901738ce1b8e97425b30e8"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/accf0c33d61ff86dc6d62ec3d05ffc36384dc5ee",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/accf0c33d61ff86dc6d62ec3d05ffc36384dc5ee",
+    "html_url": "https://github.com/dart-lang/dartino/commit/accf0c33d61ff86dc6d62ec3d05ffc36384dc5ee",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/accf0c33d61ff86dc6d62ec3d05ffc36384dc5ee/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4d44376ed785e20f352310beb5749d07de030607",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/4d44376ed785e20f352310beb5749d07de030607",
+        "html_url": "https://github.com/dart-lang/dartino/commit/4d44376ed785e20f352310beb5749d07de030607"
+      }
+    ]
+  },
+  {
+    "sha": "4d44376ed785e20f352310beb5749d07de030607",
+    "commit": {
+      "author": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T07:47:10Z"
+      },
+      "committer": {
+        "name": "Kasper Lund",
+        "email": "kasperl@google.com",
+        "date": "2015-01-22T07:47:10Z"
+      },
+      "message": "Make all remaining classes in lib/core match the APIs in dart:core.\n\nR=ager@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/863173002",
+      "tree": {
+        "sha": "62bf9d9b80cb48cee6ca0c9458545a947e8eebf2",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/62bf9d9b80cb48cee6ca0c9458545a947e8eebf2"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/4d44376ed785e20f352310beb5749d07de030607",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/4d44376ed785e20f352310beb5749d07de030607",
+    "html_url": "https://github.com/dart-lang/dartino/commit/4d44376ed785e20f352310beb5749d07de030607",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/4d44376ed785e20f352310beb5749d07de030607/comments",
+    "author": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "kasperl",
+      "id": 2156198,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2156198?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kasperl",
+      "html_url": "https://github.com/kasperl",
+      "followers_url": "https://api.github.com/users/kasperl/followers",
+      "following_url": "https://api.github.com/users/kasperl/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kasperl/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kasperl/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kasperl/subscriptions",
+      "organizations_url": "https://api.github.com/users/kasperl/orgs",
+      "repos_url": "https://api.github.com/users/kasperl/repos",
+      "events_url": "https://api.github.com/users/kasperl/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kasperl/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "55cbebb1fdd21e04fd57207ede64d88ab3564466",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/55cbebb1fdd21e04fd57207ede64d88ab3564466",
+        "html_url": "https://github.com/dart-lang/dartino/commit/55cbebb1fdd21e04fd57207ede64d88ab3564466"
+      }
+    ]
+  },
+  {
+    "sha": "d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T01:02:45Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T01:02:45Z"
+      },
+      "message": "Remove additional , and reference to not yet available logcat command",
+      "tree": {
+        "sha": "c4af71230ba6679ca634b72eea74ee141e1cc313",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/c4af71230ba6679ca634b72eea74ee141e1cc313"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6",
+    "html_url": "https://github.com/dart-lang/dartino/commit/d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/d362da62e6ceb32ff1b881cc4a743c0b5d19f8e6/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "89ba553cbeb1123ab80bf2ceb6b054e153f36bb4",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/89ba553cbeb1123ab80bf2ceb6b054e153f36bb4",
+        "html_url": "https://github.com/dart-lang/dartino/commit/89ba553cbeb1123ab80bf2ceb6b054e153f36bb4"
+      }
+    ]
+  },
+  {
+    "sha": "89ba553cbeb1123ab80bf2ceb6b054e153f36bb4",
+    "commit": {
+      "author": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T01:00:56Z"
+      },
+      "committer": {
+        "name": "Luke Church",
+        "email": "lukechurch@google.com",
+        "date": "2015-01-22T01:00:56Z"
+      },
+      "message": "Refactor help text into addition file so behaviour is readable.",
+      "tree": {
+        "sha": "1b7fadf102222e69b5c9e55c663e34821085ba23",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/1b7fadf102222e69b5c9e55c663e34821085ba23"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/89ba553cbeb1123ab80bf2ceb6b054e153f36bb4",
+      "comment_count": 3
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/89ba553cbeb1123ab80bf2ceb6b054e153f36bb4",
+    "html_url": "https://github.com/dart-lang/dartino/commit/89ba553cbeb1123ab80bf2ceb6b054e153f36bb4",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/89ba553cbeb1123ab80bf2ceb6b054e153f36bb4/comments",
+    "author": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lukechurch",
+      "id": 2978182,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2978182?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lukechurch",
+      "html_url": "https://github.com/lukechurch",
+      "followers_url": "https://api.github.com/users/lukechurch/followers",
+      "following_url": "https://api.github.com/users/lukechurch/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lukechurch/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lukechurch/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lukechurch/subscriptions",
+      "organizations_url": "https://api.github.com/users/lukechurch/orgs",
+      "repos_url": "https://api.github.com/users/lukechurch/repos",
+      "events_url": "https://api.github.com/users/lukechurch/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lukechurch/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "55cbebb1fdd21e04fd57207ede64d88ab3564466",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/55cbebb1fdd21e04fd57207ede64d88ab3564466",
+        "html_url": "https://github.com/dart-lang/dartino/commit/55cbebb1fdd21e04fd57207ede64d88ab3564466"
+      }
+    ]
+  },
+  {
+    "sha": "55cbebb1fdd21e04fd57207ede64d88ab3564466",
+    "commit": {
+      "author": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-21T19:05:09Z"
+      },
+      "committer": {
+        "name": "Mads Ager",
+        "email": "ager@google.com",
+        "date": "2015-01-21T19:05:09Z"
+      },
+      "message": "Unbreak dartino when running source.\n\nI accidentally broke dartino when using the dartino api for main. Main\nneeds to check if the file it is given is a snapshot or not. Restored\nthat.\n\nR=kasperl@google.com\nBUG=\n\nReview URL: https://codereview.chromium.org/835803004",
+      "tree": {
+        "sha": "f96a6f2e49dc0065e71a84e7d065b184b2755cc1",
+        "url": "https://api.github.com/repos/dart-lang/dartino/git/trees/f96a6f2e49dc0065e71a84e7d065b184b2755cc1"
+      },
+      "url": "https://api.github.com/repos/dart-lang/dartino/git/commits/55cbebb1fdd21e04fd57207ede64d88ab3564466",
+      "comment_count": 0
+    },
+    "url": "https://api.github.com/repos/dart-lang/dartino/commits/55cbebb1fdd21e04fd57207ede64d88ab3564466",
+    "html_url": "https://github.com/dart-lang/dartino/commit/55cbebb1fdd21e04fd57207ede64d88ab3564466",
+    "comments_url": "https://api.github.com/repos/dart-lang/dartino/commits/55cbebb1fdd21e04fd57207ede64d88ab3564466/comments",
+    "author": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "madsager",
+      "id": 2909286,
+      "avatar_url": "https://avatars.githubusercontent.com/u/2909286?v=3",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/madsager",
+      "html_url": "https://github.com/madsager",
+      "followers_url": "https://api.github.com/users/madsager/followers",
+      "following_url": "https://api.github.com/users/madsager/following{/other_user}",
+      "gists_url": "https://api.github.com/users/madsager/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/madsager/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/madsager/subscriptions",
+      "organizations_url": "https://api.github.com/users/madsager/orgs",
+      "repos_url": "https://api.github.com/users/madsager/repos",
+      "events_url": "https://api.github.com/users/madsager/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/madsager/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e060ab5dc1693f1296d86784cf4c87c5b64b69c9",
+        "url": "https://api.github.com/repos/dart-lang/dartino/commits/e060ab5dc1693f1296d86784cf4c87c5b64b69c9",
+        "html_url": "https://github.com/dart-lang/dartino/commit/e060ab5dc1693f1296d86784cf4c87c5b64b69c9"
+      }
+    ]
+  }
+]

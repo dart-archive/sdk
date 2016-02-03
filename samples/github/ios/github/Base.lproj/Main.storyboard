@@ -5,7 +5,7 @@
         <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
     </dependencies>
     <scenes>
-        <!--Fletch @ GitHub-->
+        <!--Dartino @ GitHub-->
         <scene sceneID="iyQ-Xy-YYT">
             <objects>
                 <tableViewController storyboardIdentifier="CommitListPresenter" id="pko-Lj-HxW" customClass="CommitListPresenter" sceneMemberID="viewController">
@@ -152,7 +152,7 @@
                             <outlet property="delegate" destination="pko-Lj-HxW" id="RzS-wK-3B7"/>
                         </connections>
                     </tableView>
-                    <navigationItem key="navigationItem" title="Fletch @ GitHub" id="NsU-8p-fXk"/>
+                    <navigationItem key="navigationItem" title="Dartino @ GitHub" id="NsU-8p-fXk"/>
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="9np-Vr-3YY" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>

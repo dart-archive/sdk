@@ -20,7 +20,7 @@
 #include "src/vm/signal.h"
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
 class Engine;
 class Interpreter;
@@ -88,7 +88,7 @@ class Process {
 
   Object* NewByteArray(int length);
   Object* NewArray(int length);
-  Object* NewDouble(fletch_double value);
+  Object* NewDouble(dartino_double value);
   Object* NewInteger(int64 value);
 
   // Attempt to deallocate the large integer object. If the large integer
@@ -334,6 +334,6 @@ inline bool Process::ChangeState(State from, State to) {
   return false;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PROCESS_H_

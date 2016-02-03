@@ -24,7 +24,7 @@ import 'cli_tests.dart' show
 import 'prompt_splitter.dart' show
     PromptSplitter;
 
-import 'package:fletchc/src/hub/exit_codes.dart' show
+import 'package:dartino_compiler/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 
 final List<CliTest> tests = <CliTest>[
@@ -49,7 +49,7 @@ abstract class InteractiveDebuggerTest extends CliTest {
   Future<Null> internalRun();
 
   Future<Null> run() async {
-    process = await fletch(["debug", testFilePath],
+    process = await dartino(["debug", testFilePath],
                            workingDirectory: workingDirectory);
     out = new StreamIterator(
       process.stdout.transform(UTF8.decoder).transform(new PromptSplitter()));
@@ -71,8 +71,14 @@ abstract class InteractiveDebuggerTest extends CliTest {
   }
 
   Future<Null> interrupt() async {
-    print("C-\\");
+    print("^\\");
     Expect.isTrue(process.kill(ProcessSignal.SIGQUIT), "Sent quit to process");
+    // TODO(zerny): Make interrupt a first-class and ordered VM command.
+    await new Future.delayed(const Duration(seconds: 1), () {
+      Expect.isTrue(process.kill(ProcessSignal.SIGQUIT),
+                    "Sent quit to process");
+    });
+    await expectPrompt("Interrupt expects to return prompt");
   }
 
   Future<Null> quitWithoutError() async {
@@ -81,7 +87,7 @@ abstract class InteractiveDebuggerTest extends CliTest {
   }
 
   Future<Null> quit() async {
-    process.stdin.writeln("q");
+    await runCommand("q");
     process.stdin.close();
   }
 
@@ -129,7 +135,6 @@ class DebuggerInterruptTest extends InteractiveDebuggerTest {
   Future<Null> internalRun() async {
     await runCommand("r");
     await interrupt();
-    await expectPrompt("Interrupt returns prompt");
     await quitWithoutError();
   }
 }
@@ -152,7 +157,7 @@ class DebuggerListProcessesTest extends InteractiveDebuggerTest {
 
 class DebuggerRelativeFileReferenceTest extends InteractiveDebuggerTest {
 
-  // Working directory that is not the fletch-root directory.
+  // Working directory that is not the dartino-root directory.
   final String workingDirectory = "$thisDirectory/../";
 
   // Relative reference to the test file.
@@ -176,9 +181,10 @@ class DebuggerStepInLoopTest extends InteractiveDebuggerTest {
       : super("debugger_step_in_loop");
 
   Future<Null> internalRun() async {
-    await runCommand("r");
+    await runCommandAndExpectPrompt("b loop");
+    await runCommandAndExpectPrompt("r");
+    await runCommand("c");
     await interrupt();
-    await expectPrompt("Interrupt returns prompt");
     await runCommandAndExpectPrompt("sb");
     await runCommandAndExpectPrompt("nb");
     await runCommandAndExpectPrompt("s");
@@ -198,5 +204,13 @@ class DebuggerRerunThrowingProgramTest extends InteractiveDebuggerTest {
     await expectOut("### process already loaded, use 'restart' to run again");
     await quit();
     await expectExitCode(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
+  }
+}
+
+main(List<String> args) async {
+  for (CliTest test in tests) {
+    if (args.any((arg) => test.name.indexOf(arg) >= 0)) {
+      await test.run();
+    }
   }
 }

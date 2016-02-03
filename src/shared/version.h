@@ -7,15 +7,15 @@
 
 #ifdef _MSC_VER
 // TODO(herhut): Do we need a __declspec here for Windows?
-#define FLETCH_VISIBILITY_DEFAULT
+#define DARTINO_VISIBILITY_DEFAULT
 #else
-#define FLETCH_VISIBILITY_DEFAULT __attribute__((visibility("default")))
+#define DARTINO_VISIBILITY_DEFAULT __attribute__((visibility("default")))
 #endif
 
-namespace fletch {
+namespace dartino {
 
-extern "C" FLETCH_VISIBILITY_DEFAULT const char* GetVersion();
+extern "C" DARTINO_VISIBILITY_DEFAULT const char* GetVersion();
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_VERSION_H_

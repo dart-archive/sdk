@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library dart.fletch.os;
+library dart.dartino.os;
 
-import 'dart:fletch._system' as fletch;
-import 'dart:fletch';
-import 'dart:fletch.ffi';
+import 'dart:dartino._system' as dartino;
+import 'dart:dartino';
+import 'dart:dartino.ffi';
 
 part 'native_process.dart';
 part 'event_handler.dart';

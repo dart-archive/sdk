@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_CMSIS)
+#if defined(DARTINO_TARGET_OS_CMSIS)
 
 // We do not include platform_posix.h on purpose. That file
 // should never be directly inported. platform.h is always
@@ -16,21 +16,21 @@
 
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
-osMailQId fletchMailQ;
+osMailQId dartinoMailQ;
 
-osMailQId GetFletchMailQ() {
-  return fletchMailQ;
+osMailQId GetDartinoMailQ() {
+  return dartinoMailQ;
 }
 
-// Sends a message on the fletch osMailQ used by the event handler.
+// Sends a message on the dartino osMailQ used by the event handler.
 int SendMessageCmsis(uint32_t port_id, int64_t message) {
   CmsisMessage *cmsisMessage =
-      reinterpret_cast<CmsisMessage*>(osMailAlloc(fletchMailQ, 0));
+      reinterpret_cast<CmsisMessage*>(osMailAlloc(dartinoMailQ, 0));
   cmsisMessage->port_id = port_id;
   cmsisMessage->message = message;
-  return osMailPut(GetFletchMailQ(), reinterpret_cast<void*>(cmsisMessage));
+  return osMailPut(GetDartinoMailQ(), reinterpret_cast<void*>(cmsisMessage));
 }
 
 static uint64 time_launch;
@@ -40,8 +40,8 @@ const uint32_t kMailQSize = 50;
 
 void Platform::Setup() {
   time_launch = GetMicroseconds();
-  osMailQDef(fletch_queue, kMailQSize, CmsisMessage);
-  fletchMailQ = osMailCreate(osMailQ(fletch_queue), NULL);
+  osMailQDef(dartino_queue, kMailQSize, CmsisMessage);
+  dartinoMailQ = osMailCreate(osMailQ(dartino_queue), NULL);
 }
 
 void Platform::TearDown() { }
@@ -196,6 +196,6 @@ bool VirtualMemory::Uncommit(uword address, int size) {
   return false;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_CMSIS)
+#endif  // defined(DARTINO_TARGET_OS_CMSIS)

@@ -7,7 +7,7 @@
 
 #include "src/shared/globals.h"
 
-namespace fletch {
+namespace dartino {
 
 #define INTRINSICS_DO(V) \
   V(ObjectEquals)        \
@@ -66,6 +66,6 @@ class IntrinsicsTable {
   static IntrinsicsTable *default_table_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_INTRINSICS_H_

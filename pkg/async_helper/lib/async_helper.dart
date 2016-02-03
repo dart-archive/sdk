@@ -27,7 +27,7 @@ library async_helper;
 // 'dart:isolate' (i.e. it is in particular problematic with dart2js).
 // It would be nice if we could use a different mechanism for different
 // runtimes.
-import 'dart:fletch';
+import 'dart:dartino';
 
 bool _initialized = false;
 Port _port = null;

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LINUX)
+#if defined(DARTINO_TARGET_OS_LINUX)
 
 #include <string.h>
 #include <unistd.h>
@@ -16,7 +16,7 @@
 
 #include "src/tools/driver/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 int SignalFileDescriptor() {
   // Temporarily limit signals to a short list of white-listed signals.
@@ -103,6 +103,6 @@ void Exit(int exit_code) {
   UNREACHABLE();
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_LINUX)
+#endif  // defined(DARTINO_TARGET_OS_LINUX)

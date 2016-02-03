@@ -17,7 +17,7 @@
 
 #include "src/shared/globals.h"
 
-namespace fletch {
+namespace dartino {
 namespace DynamicAssertionHelper {
 
 template <typename K>
@@ -99,19 +99,19 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
 #endif  // ifdef TESTING
 
 }  // namespace DynamicAssertionHelper
-}  // namespace fletch
+}  // namespace dartino
 
 #define FATAL(error)                    \
-  fletch::DynamicAssertionHelper::Fail< \
-      fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, "%s", error)
+  dartino::DynamicAssertionHelper::Fail< \
+      dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, "%s", error)
 
 #define FATAL1(format, p1)                                                \
-  fletch::DynamicAssertionHelper::Fail<                                   \
-      fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, format, \
+  dartino::DynamicAssertionHelper::Fail<                                   \
+      dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, format, \
                                               (p1))
 
 #define FATAL2(format, p1, p2) \
-  fletch::Assert(__FILE__, __LINE__).Fail(format, (p1), (p2))
+  dartino::Assert(__FILE__, __LINE__).Fail(format, (p1), (p2))
 
 #define UNIMPLEMENTED() FATAL("unimplemented code")
 
@@ -133,8 +133,8 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
 
 #define ASSERT(condition)                                                    \
   if (!(condition)) {                                                        \
-    fletch::DynamicAssertionHelper::Fail<                                    \
-        fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__,          \
+    dartino::DynamicAssertionHelper::Fail<                                    \
+        dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__,          \
                                                 "expected: %s", #condition); \
   }
 
@@ -158,76 +158,76 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
 
 #define ASSERT(condition)                                                    \
   if (!(condition)) {                                                        \
-    fletch::DynamicAssertionHelper::Fail<                                    \
-        fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__,          \
+    dartino::DynamicAssertionHelper::Fail<                                    \
+        dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__,          \
                                                 "expected: %s", #condition); \
   }
 
 #define ASSERT_EQ(expected, actual)                                           \
-  fletch::DynamicAssertionHelper::Equals<                                     \
-      fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (expected), \
+  dartino::DynamicAssertionHelper::Equals<                                     \
+      dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (expected), \
                                               (actual))
 
 #define ASSERT_STREQ(expected, actual)                                        \
-  fletch::DynamicAssertionHelper::StringEquals<                               \
-      fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (expected), \
+  dartino::DynamicAssertionHelper::StringEquals<                               \
+      dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (expected), \
                                               (actual))
 
 #define ASSERT_LT(left, right)                                            \
-  fletch::DynamicAssertionHelper::LessThan<                               \
-      fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (left), \
+  dartino::DynamicAssertionHelper::LessThan<                               \
+      dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (left), \
                                               (right))
 
 #define ASSERT_LE(left, right)                                            \
-  fletch::DynamicAssertionHelper::LessEqual<                              \
-      fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (left), \
+  dartino::DynamicAssertionHelper::LessEqual<                              \
+      dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (left), \
                                               (right))
 
 #define ASSERT_GT(left, right)                                            \
-  fletch::DynamicAssertionHelper::GreaterThan<                            \
-      fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (left), \
+  dartino::DynamicAssertionHelper::GreaterThan<                            \
+      dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (left), \
                                               (right))
 
 #define ASSERT_GE(left, right)                                            \
-  fletch::DynamicAssertionHelper::GreaterEqual<                           \
-      fletch::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (left), \
+  dartino::DynamicAssertionHelper::GreaterEqual<                           \
+      dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, (left), \
                                               (right))
 
 #define EXPECT(condition)                                                    \
   if (!(condition)) {                                                        \
-    fletch::DynamicAssertionHelper::Fail<                                    \
-        fletch::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__,          \
+    dartino::DynamicAssertionHelper::Fail<                                    \
+        dartino::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__,          \
                                                 "expected: %s", #condition); \
   }
 
 #define EXPECT_EQ(expected, actual)                                           \
-  fletch::DynamicAssertionHelper::Equals<                                     \
-      fletch::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (expected), \
+  dartino::DynamicAssertionHelper::Equals<                                     \
+      dartino::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (expected), \
                                               (actual))
 
 #define EXPECT_STREQ(expected, actual)                                        \
-  fletch::DynamicAssertionHelper::StringEquals<                               \
-      fletch::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (expected), \
+  dartino::DynamicAssertionHelper::StringEquals<                               \
+      dartino::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (expected), \
                                               (actual))
 
 #define EXPECT_LT(left, right)                                            \
-  fletch::DynamicAssertionHelper::LessThan<                               \
-      fletch::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (left), \
+  dartino::DynamicAssertionHelper::LessThan<                               \
+      dartino::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (left), \
                                               (right))
 
 #define EXPECT_LE(left, right)                                            \
-  fletch::DynamicAssertionHelper::LessEqual<                              \
-      fletch::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (left), \
+  dartino::DynamicAssertionHelper::LessEqual<                              \
+      dartino::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (left), \
                                               (right))
 
 #define EXPECT_GT(left, right)                                            \
-  fletch::DynamicAssertionHelper::GreaterThan<                            \
-      fletch::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (left), \
+  dartino::DynamicAssertionHelper::GreaterThan<                            \
+      dartino::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (left), \
                                               (right))
 
 #define EXPECT_GE(left, right)                                            \
-  fletch::DynamicAssertionHelper::GreaterEqual<                           \
-      fletch::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (left), \
+  dartino::DynamicAssertionHelper::GreaterEqual<                           \
+      dartino::DynamicAssertionHelper::EXPECT>(__FILE__, __LINE__, (left), \
                                               (right))
 
 #endif  // if !defined(TESTING)

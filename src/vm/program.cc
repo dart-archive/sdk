@@ -24,7 +24,7 @@
 #include "src/vm/process.h"
 #include "src/vm/session.h"
 
-namespace fletch {
+namespace dartino {
 
 static List<const char> StringFromCharZ(const char* str) {
   return List<const char>(str, strlen(str));
@@ -97,7 +97,7 @@ int Program::ExitCode() {
 Process* Program::SpawnProcess(Process* parent) {
   Process* process = new Process(this, parent);
 
-  // The counter part of this is in [ScheduleProcessFordeletion].
+  // The counter part of this is in [ScheduleProcessForDeletion].
   if (parent != NULL) {
     parent->process_triangle_count_++;
   }
@@ -197,7 +197,7 @@ Object* Program::CreateClass(int fields) {
   return klass;
 }
 
-Object* Program::CreateDouble(fletch_double value) {
+Object* Program::CreateDouble(dartino_double value) {
   return heap()->CreateDouble(double_class(), value);
 }
 
@@ -443,6 +443,23 @@ void Program::RemoveFromProcessList(Process* process) {
   }
   process->set_process_list_next(NULL);
   process->set_process_list_prev(NULL);
+}
+
+ProcessHandle* Program::MainProcess() {
+  ScopedLock locker(process_list_mutex_);
+
+  Process* current = process_list_head_;
+  while (current != NULL && current->process_list_next()) {
+    current = current->process_list_next();
+  }
+
+  if (current != NULL) {
+    ProcessHandle* handle = current->process_handle();
+    handle->IncrementRef();
+    return handle;
+  }
+
+  return NULL;
 }
 
 struct SharedHeapUsage {
@@ -1157,4 +1174,4 @@ LookupCache* Program::EnsureCache() {
 }
 
 
-}  // namespace fletch
+}  // namespace dartino

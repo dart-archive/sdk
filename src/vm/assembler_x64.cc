@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_X64)
+#if defined(DARTINO_TARGET_X64)
 
 #include <stdarg.h>  // NOLINT we don't include assembler_x64.h
 #include "src/vm/assembler.h"
 
-namespace fletch {
+namespace dartino {
 
 enum RegisterSize { kLongRegister = 'l', kQuadRegister = 'q' };
 
@@ -219,6 +219,6 @@ const char* Assembler::ConditionMnemonic(Condition condition) {
   return kConditionMnemonics[condition];
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined FLETCH_TARGET_X64
+#endif  // defined DARTINO_TARGET_X64

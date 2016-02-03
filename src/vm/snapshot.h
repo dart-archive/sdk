@@ -14,7 +14,7 @@
 #include "src/vm/process.h"
 #include "src/vm/program.h"
 
-namespace fletch {
+namespace dartino {
 
 // Used for calculating the heap size of all supported configurations
 // (i.e. all of {64-bit, 32-bit}x{float,double}).
@@ -185,6 +185,6 @@ class SnapshotWriter {
   void GrowCapacity(int extra);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_SNAPSHOT_H_

@@ -9,7 +9,7 @@
 #include "src/vm/program.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 class MarkingStackChunk {
  public:
@@ -294,6 +294,6 @@ class SweepingVisitor : public HeapObjectVisitor {
   int used_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_MARK_SWEEP_H_

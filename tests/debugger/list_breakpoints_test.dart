@@ -4,7 +4,7 @@
 
 // Test that the 'lb' list breakpoints command works.
 
-// FletchDebuggerCommands=b main,b breakHere,lb,q
+// DartinoDebuggerCommands=b main,b breakHere,lb,q
 
 void breakHere() { }
 

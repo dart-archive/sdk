@@ -37,7 +37,7 @@ trap cleanup_file EXIT
 mkfifo "$PIPEDIR/qemu.in" "$PIPEDIR/qemu.out"
 
 echo "Starting qemu..."
-./third_party/qemu/linux/qemu/bin/qemu-system-arm -machine virt -cpu cortex-a15 -m 16 -kernel third_party/lk/out/build-qemu-virt-fletch/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
+./third_party/qemu/linux/qemu/bin/qemu-system-arm -machine virt -cpu cortex-a15 -m 16 -kernel third_party/lk/out/build-qemu-virt-dartino/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
 PID=$!
 cleanup() {
   echo "Killing $PID"
@@ -51,8 +51,8 @@ echo "Started with PID $PID"
 echo "Waiting for qemu to come up..."
 grep -qe "entering main console loop" $PIPEDIR/qemu.out
 
-echo "Starting fletch..."
-echo "fletch" > $PIPEDIR/qemu.in
+echo "Starting dartino..."
+echo "dartino" > $PIPEDIR/qemu.in
 
 echo "Waiting for size..."
 grep -qe "STEP1" $PIPEDIR/qemu.out
@@ -68,7 +68,7 @@ cat $1 >$PIPEDIR/qemu.in
 
 while IFS='' read -r line; do
   echo "$line"
-  if [ "$line" = $'TEARING DOWN fletch-vm...\r' ]; then
+  if [ "$line" = $'TEARING DOWN dartino-vm...\r' ]; then
     break;
   fi
   if [ "$line" = $'Aborted (immediate)\r' ]; then

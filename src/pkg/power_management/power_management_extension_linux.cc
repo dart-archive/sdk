@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LINUX)
+#if defined(DARTINO_TARGET_OS_LINUX)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,4 +24,4 @@ void HandleEnableSleep(int64_t disable_id) {
   // Currently not implemented on Linux.
 }
 
-#endif  // FLETCH_TARGET_OS_LINUX
+#endif  // DARTINO_TARGET_OS_LINUX

@@ -4,8 +4,8 @@
 
 library dart.core_patch;
 
-import 'dart:fletch._system' as fletch;
-import 'dart:fletch._system' show patch;
+import 'dart:dartino._system' as dartino;
+import 'dart:dartino._system' show patch;
 
 part 'bigint.dart';
 part 'case.dart';
@@ -23,7 +23,7 @@ part 'string.dart';
   return _identityHashCode(object);
 }
 
-@fletch.native external _identityHashCode(Object object);
+@dartino.native external _identityHashCode(Object object);
 
 @patch class Object {
   @patch String toString() => '[object Object]';
@@ -31,11 +31,11 @@ part 'string.dart';
   @patch int get hashCode => _identityHashCode(this);
 
   @patch noSuchMethod(Invocation invocation) {
-    if (invocation is fletch.FletchInvocation) {
+    if (invocation is dartino.DartinoInvocation) {
       throw invocation.asNoSuchMethodError;
     }
     // TODO(ahe): Get rid of this call.
-    fletch.unresolved("<unknown>");
+    dartino.unresolved("<unknown>");
   }
 
   // The noSuchMethod helper is automatically called from the
@@ -45,7 +45,7 @@ part 'string.dart';
   _noSuchMethod(receiver, receiverClass, receiverSelector) {
     // NOTE: The number and type of arguments here must be kept in sync with:
     //     src/vm/interpreter.cc:HandleEnterNoSuchMethod
-    return noSuchMethod(new fletch.FletchInvocation(
+    return noSuchMethod(new dartino.DartinoInvocation(
         receiver, receiverClass, receiverSelector));
   }
 
@@ -190,24 +190,24 @@ class _TearOffClosure {
 }
 
 @patch class Stopwatch {
-  @patch @fletch.native external static int _now();
+  @patch @dartino.native external static int _now();
 
   @patch static int _initTicker() {
-    _frequency = _fletchNative_frequency();
+    _frequency = _dartinoNative_frequency();
   }
 
-  @fletch.native external static int _fletchNative_frequency();
+  @dartino.native external static int _dartinoNative_frequency();
 }
 
 @patch class List {
   @patch factory List([int length]) {
-    return fletch.newList(length);
+    return dartino.newList(length);
   }
 
   @patch factory List.filled(int length, E fill) {
     // All error handling on the length parameter is done at the implementation
     // of new _List.
-    var result = fletch.newList(length);
+    var result = dartino.newList(length);
     if (fill != null) {
       for (int i = 0; i < length; i++) {
         result[i] = fill;
@@ -223,10 +223,10 @@ class _TearOffClosure {
     int length = elements.length;
     var list;
     if (growable) {
-      list = fletch.newList(null);
+      list = dartino.newList(null);
       list.length = length;
     } else {
-      list = fletch.newList(length);
+      list = dartino.newList(length);
     }
     if (elements is List) {
       for (int i = 0; i < length; i++) {
@@ -289,14 +289,14 @@ class _TearOffClosure {
     return _parse(source, radix, onError);
   }
 
-  @fletch.native static int _parse(
+  @dartino.native static int _parse(
       String source,
       int radix,
       int onError(String source)) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         throw new ArgumentError(source);
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         if (onError != null) return onError(source);
         throw new FormatException("Can't parse string as integer", source);
     }
@@ -312,13 +312,13 @@ class _TearOffClosure {
     return _parse(source.trim(), onError);
   }
 
-  @fletch.native static double _parse(
+  @dartino.native static double _parse(
       String source,
       double onError(String source)) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         throw new ArgumentError(source);
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         if (onError != null) return onError(source);
         throw new FormatException("Can't parse string as double", source);
     }
@@ -653,12 +653,12 @@ class _TearOffClosure {
     return _timeZone(equivalentSeconds);
   }
 
-  @fletch.native external static int _getCurrentMs();
+  @dartino.native external static int _getCurrentMs();
 
-  @fletch.native external static String _timeZone(int clampedSecondsSinceEpoch);
+  @dartino.native external static String _timeZone(int clampedSecondsSinceEpoch);
 
-  @fletch.native external static int _timeZoneOffset(
+  @dartino.native external static int _timeZoneOffset(
       int clampedSecondsSinceEpoch);
 
-  @fletch.native external static int _localTimeZoneOffset();
+  @dartino.native external static int _localTimeZoneOffset();
 }

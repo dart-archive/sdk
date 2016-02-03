@@ -28,8 +28,8 @@ import utils
 
 # Path constants. (All of these should be absolute paths.)
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-FLETCH_ROOT_DIR = os.path.abspath(os.path.join(THIS_DIR, '..'))
-THIRD_PARTY_DIR = os.path.join(FLETCH_ROOT_DIR, 'third_party')
+DARTINO_ROOT_DIR = os.path.abspath(os.path.join(THIS_DIR, '..'))
+THIRD_PARTY_DIR = os.path.join(DARTINO_ROOT_DIR, 'third_party')
 
 def GetClangDir(system):
   return os.path.join(THIRD_PARTY_DIR, 'clang', system)

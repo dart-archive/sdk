@@ -1,2 +1,2 @@
-usr/lib/fletch-agent/bin/fletch-vm usr/bin/fletch-vm
+usr/lib/dartino-agent/bin/dartino-vm usr/bin/dartino-vm
 

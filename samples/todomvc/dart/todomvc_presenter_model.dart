@@ -49,7 +49,7 @@ import 'todomvc_service.dart';
 
  */
 
-// Tracing to ease debugging on fletch...
+// Tracing to ease debugging on dartino...
 bool TRACE = false;
 void trace(obj) { if (TRACE) print("  $obj"); }
 

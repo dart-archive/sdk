@@ -8,7 +8,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 class Class;
 class Function;
@@ -69,6 +69,6 @@ uword LookupCache::ComputeSecondaryIndex(Class* clazz, int selector) {
   return hash % kSecondarySize;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_LOOKUP_CACHE_H_

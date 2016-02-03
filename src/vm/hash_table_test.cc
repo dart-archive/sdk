@@ -13,7 +13,7 @@
 #include "src/vm/multi_hashset.h"
 #include "src/vm/pair.h"
 
-namespace fletch {
+namespace dartino {
 
 TEST_CASE(STRING_MAP) {
   typedef HashMap<const char*, const char*> Map;
@@ -294,4 +294,4 @@ TEST_CASE(INT_MULTI_HASH_SET) {
   }
 }
 
-}  // namespace fletch.
+}  // namespace dartino.

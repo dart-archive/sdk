@@ -15,10 +15,10 @@
       ],
     },
     {
-      'target_name': 'disco_fletch',
+      'target_name': 'disco_dartino',
       'type': 'none',
       'dependencies': [
-        'disco_fletch/disco_fletch.gyp:disco_fletch',
+        'disco_dartino/disco_dartino.gyp:disco_dartino',
       ],
     },
   ],

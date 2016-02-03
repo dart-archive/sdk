@@ -4,7 +4,7 @@
 
 library messaging.utils;
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 const int DEFAULT_MESSAGES = 1000;
 

@@ -4,7 +4,7 @@
 
 #include "src/vm/preempter.h"
 
-namespace fletch {
+namespace dartino {
 
 // Global instance of preempter & preempter thread.
 Preempter* Preempter::preempter_ = NULL;
@@ -91,4 +91,4 @@ uint64 Preempter::GetNextPreemptTime() {
 }
 
 
-}  // namespace fletch
+}  // namespace dartino

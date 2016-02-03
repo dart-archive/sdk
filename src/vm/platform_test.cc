@@ -11,7 +11,7 @@
 
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
 static void yield() { usleep(1); }
 
@@ -56,4 +56,4 @@ TEST_CASE(Mutex) {
   delete mutex;
 }
 
-}  // namespace fletch
+}  // namespace dartino

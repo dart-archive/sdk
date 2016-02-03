@@ -7,21 +7,21 @@
 3_test: Fail
 5_test: Fail
 
-10_test: RuntimeError, OK # https://github.com/dart-lang/fletch/issues/249
+10_test: RuntimeError, OK # https://github.com/dart-lang/dartino/issues/249
 
 dart2js_hello_world_test: Slow, Pass
 dart2js_deltablue_test: Slow, Pass
 
-# https://github.com/dart-lang/fletch/issues/395
+# https://github.com/dart-lang/dartino/issues/395
 external_memory_triggers_gc_test: Skip
 
 [ $system == macos ]
-# https://github.com/dart-lang/fletch/issues/401
+# https://github.com/dart-lang/dartino/issues/401
 dart2js_hello_world_test: Slow, Pass, Timeout
 dart2js_deltablue_test: Slow, Pass, Timeout
 shared_immutable_data_test: Slow, Pass, Timeout
 
-[ $compiler == none && $runtime == fletchc ]
+[ $compiler == none && $runtime == dartino_compiler ]
 messaging_drop_messages_expose_gc_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 messaging_port_lifetime_expose_gc_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
 messaging_process_die_early_gc_on_delete_test: CompileTimeError # Issue(75): Driver doesn't support -X flags.
@@ -57,7 +57,7 @@ messaging_many_to_single_test: Slow, Pass
 random_test: Slow, Pass
 messaging_process_die_early_gc_on_delete_test: Slow, Pass
 
-[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
+[ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 dart2js_deltablue_test: CompileTimeError
 dart2js_hello_world_test: CompileTimeError
 messaging_port_lifetime_test: CompileTimeError

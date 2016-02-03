@@ -1,0 +1,46 @@
+# Copyright (c) 2015, the Dart project authors.  Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE file.
+
+# The libraries available for mobile dartino programs.
+
+[dart-spec]
+spec:3rd edition.
+
+[features]
+# No extra features.
+
+[libraries]
+# Dartino specific libraries
+dartino.ffi: ffi/ffi.dart
+dartino: dartino/dartino.dart
+dartino.io: io/io.dart
+dartino.service: service/service.dart
+dartino.os: os/os.dart
+dartino._system: system/system.dart
+
+async: ../third_party/dart/sdk/lib/async/async.dart
+collection: ../third_party/dart/sdk/lib/collection/collection.dart
+convert: ../third_party/dart/sdk/lib/convert/convert.dart
+core: ../third_party/dart/sdk/lib/core/core.dart
+developer: ../third_party/dart/sdk/lib/developer/developer.dart
+math: ../third_party/dart/sdk/lib/math/math.dart
+typed_data: ../third_party/dart/sdk/lib/typed_data/typed_data.dart
+
+_internal: ../third_party/dart/sdk/lib/internal/internal.dart
+
+# These are unsupported on dartino-mobile.
+isolate: unsupported:
+mirrors: unsupported:
+io: unsupported:
+indexed_db: unsupported:
+html: unsupported:
+js: unsupported:
+html_common: unsupported:
+web_sql: unsupported:
+svg: unsupported:
+web_audio: unsupported:
+web_gl: unsupported:
+_native_typed_data: unsupported:
+nativewrappers: unsupported:
+profiler: unsupported:

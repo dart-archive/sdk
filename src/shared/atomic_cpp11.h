@@ -11,7 +11,7 @@
 
 #include <atomic>
 
-namespace fletch {
+namespace dartino {
 
 template <typename T>
 using Atomic = std::atomic<T>;
@@ -23,6 +23,6 @@ static const std::memory_order kRelease = std::memory_order_release;
 static const std::memory_order kAcqRel = std::memory_order_acq_rel;
 static const std::memory_order kSeqCst = std::memory_order_seq_cst;
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_ATOMIC_CPP11_H_

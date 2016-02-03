@@ -9,9 +9,9 @@ import 'src/context.dart';
 import 'src/platform_service.dart';
 
 const String gcsRoot = 'https://storage.googleapis.com';
-const String gcsBucket = 'fletch-archive';
+const String gcsBucket = 'dartino-archive';
 
-const String imageRootFileName = 'fletch_raspbian';
+const String imageRootFileName = 'dartino_raspbian';
 const String defaultImageFileName = '$imageRootFileName.img';
 const String defaultImageZipFileName = '$defaultImageFileName.zip';
 
@@ -39,10 +39,10 @@ Future<bool> flashCDCard(List<String> args) async {
   ctx.log('Args: $args');
   if (ctx.configureNetworkOnly) {
     ctx.infoln('This program will update the network configuration on a '
-               'Fletch Raspberry Pi 2 SD card.');
+               'Dartino Raspberry Pi 2 SD card.');
   } else {
     ctx.infoln('This program will prepare an SD card for '
-               'Fletch on the Raspberry Pi 2.');
+               'Dartino on the Raspberry Pi 2.');
   }
 
   // Determine platform.
@@ -117,8 +117,8 @@ Future<bool> flashCDCard(List<String> args) async {
 
   // Ask for a hostname.
   String hostname = await ctx.readHostname(
-      "Enter the name of the device - default is 'fletch' "
-      "(press Enter to accept): ", 'fletch');
+      "Enter the name of the device - default is 'dartino' "
+      "(press Enter to accept): ", 'dartino');
 
   // Ask for a static IP address.
   String ipAddress = await ctx.readIPAddress(
@@ -179,10 +179,10 @@ Future<bool> flashCDCard(List<String> args) async {
     return false;
   }
 
-  // All configuration files goes into fletch-configuration on the boot
+  // All configuration files goes into dartino-configuration on the boot
   // partition.
   Directory configDir =
-      new Directory(mountDir.path + '/fletch-configuration');
+      new Directory(mountDir.path + '/dartino-configuration');
   await configDir.create();
 
   // Update the hostname if specified.

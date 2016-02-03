@@ -1,9 +1,9 @@
-.fletch-settings
+.dartino-settings
 .packages
 benchmarks/
 lib/
 pkg/
-tests/fletchc/run.dart
+tests/dartino_compiler/run.dart
 third_party/charcode
 third_party/collection
 third_party/crypto

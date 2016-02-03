@@ -4,7 +4,7 @@
 
 #include "src/vm/object_map.h"
 
-namespace fletch {
+namespace dartino {
 
 ObjectMap::ObjectMap(int capacity) {
   table_by_id_ = NewTable(Utils::Maximum(capacity, 8));
@@ -228,4 +228,4 @@ void ObjectMap::DeleteTable(List<Bucket*> table) {
   table.Delete();
 }
 
-}  // namespace fletch
+}  // namespace dartino

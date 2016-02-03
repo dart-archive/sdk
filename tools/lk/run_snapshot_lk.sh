@@ -25,7 +25,7 @@ stty -F $PORT 115200
 
 SIZE=`cat $1 | wc -c`
 
-echo "fletch" >$PORT
+echo "dartino" >$PORT
 sleep 1
 echo $SIZE >$PORT
 sleep 1

@@ -8,9 +8,9 @@
 #include <string.h>
 
 #include "src/shared/flags.h"
-#include "src/shared/fletch.h"
+#include "src/shared/dartino.h"
 
-namespace fletch {
+namespace dartino {
 
 TestCase* TestCase::first_ = NULL;
 TestCase* TestCase::current_ = NULL;
@@ -41,4 +41,4 @@ void TestCase::RunAll() {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

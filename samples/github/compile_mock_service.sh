@@ -11,7 +11,7 @@
 set -ue
 
 DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-FLETCH_DIR="$(cd "$DIR/../.." && pwd)"
+DARTINO_DIR="$(cd "$DIR/../.." && pwd)"
 DATA_DIR="$DIR/lib/src/github_mock_data"
 DATA_FILE="$DIR/lib/src/github_mock.data"
 IDL_FILE="$DIR/lib/src/github_mock.idl"
@@ -19,13 +19,13 @@ MOCK_FILE="$DIR/bin/github_mock_service.dart"
 SNAPSHOT_FILE="$DIR/github_mock_service.snapshot"
 PKG_FILE="$DIR/.packages"
 
-DART="$FLETCH_DIR/out/ReleaseIA32/dart"
-FLETCH="$FLETCH_DIR/out/ReleaseIA32/fletch"
-SERVICEC="$FLETCH x-servicec"
+DART="$DARTINO_DIR/out/ReleaseIA32/dart"
+DARTINO="$DARTINO_DIR/out/ReleaseIA32/dartino"
+SERVICEC="$DARTINO x-servicec"
 
 SERVICE_GEN_DIR="$DIR/generated/service"
 
-cd $FLETCH_DIR
+cd $DARTINO_DIR
 ninja -C out/ReleaseIA32
 
 if [[ $# -eq 0 ]] || [[ "$1" == "data" ]]; then
@@ -51,9 +51,9 @@ if [[ $# -eq 0 ]] || [[ "$1" == "service" ]]; then
 fi
 
 if [[ $# -eq 0 ]] || [[ "$1" == "snapshot" ]]; then
-    cd $FLETCH_DIR
+    cd $DARTINO_DIR
     $DART -c --packages=.packages \
           -Dsnapshot="$SNAPSHOT_FILE" \
           -Dpackages="$PKG_FILE" \
-          tests/fletchc/run.dart "$MOCK_FILE"
+          tests/dartino_compiler/run.dart "$MOCK_FILE"
 fi

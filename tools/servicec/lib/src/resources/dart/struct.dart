@@ -4,7 +4,7 @@
 
 library service.struct;
 
-import "dart:fletch.ffi";
+import "dart:dartino.ffi";
 import "dart:collection";
 
 const int HEADER_SIZE = 56;

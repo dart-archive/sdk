@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.fletch.os;
+part of dart.dartino.os;
 
 // The event source is ready for reading.
 const int READ_EVENT        = 1 << 0;
@@ -43,21 +43,21 @@ class EventHandler {
     _eventHandlerAdd(id, port, mask);
   }
 
-  @fletch.native static void _eventHandlerAdd(Object id, Port port,
+  @dartino.native static void _eventHandlerAdd(Object id, Port port,
       int event_kinds) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         // We check the other arguments in [registerPortForNextEvent], so it
         // must be the id that is wrong.
         throw new ArgumentError(id);
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         // We get index out of bounds when we could not register the port.
         throw new StateError("The port could not be registered.");
-      case fletch.illegalState:
+      case dartino.illegalState:
         // We get an illegal state when the flags were not supported.
         throw new StateError("Operation not supported.");
       default:
-        throw fletch.nativeError;
+        throw dartino.nativeError;
     }
   }
 }

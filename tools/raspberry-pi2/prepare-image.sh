@@ -3,15 +3,15 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 #
-# Script for preparing the Raspberry Pi2 image with the fletch agent.
+# Script for preparing the Raspberry Pi2 image with the dartino agent.
 #
 # You need
 #   $ sudo apt-get qemu qemu-user-static binfmt-support
 # to run this.
 #
-# This must run in the fletch directory.
+# This must run in the dartino directory.
 #
-# The fletch-agent package must be build before running this, so to
+# The dartino-agent package must be build before running this, so to
 # create an image do the following:
 #
 #   $ tools/create_tarball.py
@@ -46,7 +46,7 @@ PI_HOME=/home/pi
 function usage {
   USAGE="Usage: $0 version\n
 \n
-The first mandatory argument speciifies the version of the fletch-agent\n
+The first mandatory argument speciifies the version of the dartino-agent\n
 to install into the image."
 
   echo -e $USAGE
@@ -60,8 +60,8 @@ then
 fi
 
 VERSION=$1
-TARBALL_FILE=fletch-${VERSION}.tar.gz
-DEB_FILE=fletch-agent_${VERSION}-1_armhf.deb
+TARBALL_FILE=dartino-${VERSION}.tar.gz
+DEB_FILE=dartino-agent_${VERSION}-1_armhf.deb
 
 MOUNT_DIR=out/raspbian
 
@@ -93,16 +93,16 @@ sudo cp /usr/bin/qemu-arm-static $MOUNT_DIR/usr/bin
 # through qemu-arm-static.
 sudo mv $MOUNT_DIR/etc/ld.so.preload $MOUNT_DIR/tmp
 
-# Copy the fletch-agent .deb file to the chroot.
+# Copy the dartino-agent .deb file to the chroot.
 cp out/$DEB_FILE $MOUNT_DIR/tmp
 sudo chown $PI_USER_ID:$PI_GROUP_ID $MOUNT_DIR/tmp/$DEB_FILE
 
-# Copy the fletch-configuration service script to the chroot.
-cp tools/raspberry-pi2/raspbian-scripts/fletch-configuration $MOUNT_DIR/tmp
-sudo chown $PI_USER_ID:$PI_GROUP_ID $MOUNT_DIR/tmp/fletch-configuration
+# Copy the dartino-configuration service script to the chroot.
+cp tools/raspberry-pi2/raspbian-scripts/dartino-configuration $MOUNT_DIR/tmp
+sudo chown $PI_USER_ID:$PI_GROUP_ID $MOUNT_DIR/tmp/dartino-configuration
 
 # Create /usr/sbin/policy-rc.d which return 101 to avoid starting the
-# fletch-agent when installing it, see:
+# dartino-agent when installing it, see:
 # https://people.debian.org/~hmh/invokerc.d-policyrc.d-specification.txt
 sudo sh -c 'cat << EOF > $0/usr/sbin/policy-rc.d
 #!/bin/sh
@@ -116,22 +116,22 @@ cat << EOF > $MOUNT_DIR/tmp/init_chroot_trampoline.sh
 su -c /tmp/init_chroot.sh pi
 EOF
 
-# Create the initialization script which installs the fletch-agent
+# Create the initialization script which installs the dartino-agent
 # package.
 cat << EOF > $MOUNT_DIR/tmp/init_chroot.sh
 #!/bin/sh
 
 cd /tmp
 
-# Install the fletch-agent Debian package.
+# Install the dartino-agent Debian package.
 sudo dpkg -i $DEB_FILE
 
-# Install the fletch-configuration service script.
-sudo cp /tmp/fletch-configuration /etc/init.d
-sudo chown root:root /etc/init.d/fletch-configuration
-sudo chmod 755 /etc/init.d/fletch-configuration
-sudo insserv fletch-configuration
-sudo update-rc.d fletch-configuration enable
+# Install the dartino-configuration service script.
+sudo cp /tmp/dartino-configuration /etc/init.d
+sudo chown root:root /etc/init.d/dartino-configuration
+sudo chmod 755 /etc/init.d/dartino-configuration
+sudo insserv dartino-configuration
+sudo update-rc.d dartino-configuration enable
 
 EOF
 
@@ -159,7 +159,7 @@ sudo umount $MOUNT_DIR
 rmdir $MOUNT_DIR
 
 # Rename and zip the resulting image file.
-RESULT_IMAGE_ROOT=${IMAGE_ROOT_NAME}-fletch-${VERSION}
+RESULT_IMAGE_ROOT=${IMAGE_ROOT_NAME}-dartino-${VERSION}
 RESULT_IMAGE_FILE=${RESULT_IMAGE_ROOT}.img
 RESULT_IMAGE_ZIP_FILE=${RESULT_IMAGE_ROOT}.zip
 mv out/$IMAGE_FILE out/$RESULT_IMAGE_FILE

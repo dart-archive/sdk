@@ -55,7 +55,7 @@
 /// This Dart library depends on the [Paho C
 /// library](http://git.eclipse.org/c/paho/org.eclipse.paho.mqtt.c.git/about/).
 /// It will load the Paho shared object file (.so file) dynamically at runtime.
-/// Therefore the Paho shared object file needs to be copied into the Fletch
+/// Therefore the Paho shared object file needs to be copied into the Dartino
 /// SDK. Follow these instructions to compile and copy the library:
 ///
 /// 1. Get the Paho source code
@@ -69,13 +69,13 @@
 /// $ make
 /// ```
 ///
-/// 1. Copy the library to the lib directory Fletch SDK (substitute `<Fletch SDK
-/// location>` with the location where you installed the Fletch SDK, e.g.
-/// ~/fletch-sdk/)
+/// 1. Copy the library to the lib directory Dartino SDK (substitute `<Dartino SDK
+/// location>` with the location where you installed the Dartino SDK, e.g.
+/// ~/dartino-sdk/)
 ///
 /// ```
 /// $ cd org.eclipse.paho.mqtt.c/
-/// $ cp build/output/libpaho-mqtt3c.so <Fletch SDK location>/lib/
+/// $ cp build/output/libpaho-mqtt3c.so <Dartino SDK location>/lib/
 ///
 /// ```
 ///
@@ -86,7 +86,7 @@
 
 library mqtt;
 
-import 'dart:fletch';
+import 'dart:dartino';
 import 'package:os/os.dart';
 import 'package:immutable/immutable.dart';
 

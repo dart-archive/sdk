@@ -18,10 +18,10 @@
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 const NativeFunction kNativeTable[] = {
-#define N(e, c, n) &Native_##e,
+#define N(e, c, n, d) &Native_##e,
     NATIVES_DO(N)
 #undef N
 };
@@ -176,10 +176,10 @@ Object* HandleIdentical(Process* process, Object* left, Object* right) {
   if (left == right) {
     identical = true;
   } else if (left->IsDouble() && right->IsDouble()) {
-    fletch_double_as_uint left_value =
-        bit_cast<fletch_double_as_uint>(Double::cast(left)->value());
-    fletch_double_as_uint right_value =
-        bit_cast<fletch_double_as_uint>(Double::cast(right)->value());
+    dartino_double_as_uint left_value =
+        bit_cast<dartino_double_as_uint>(Double::cast(left)->value());
+    dartino_double_as_uint right_value =
+        bit_cast<dartino_double_as_uint>(Double::cast(right)->value());
     identical = (left_value == right_value);
   } else if (left->IsLargeInteger() && right->IsLargeInteger()) {
     int64 left_value = LargeInteger::cast(left)->value();
@@ -356,8 +356,8 @@ void HandleEnterNoSuchMethod(Process* process) {
     //     lib/core/core_patch.dart:Object._noSuchMethod()
     //
     // The number of arguments must be kept in sync with
-    //     pkg/fletchc/lib/src/fletch_backend.dart:
-    //       FletchBackend.codegenExternalNoSuchMethodTrampoline
+    //     pkg/dartino_compiler/lib/src/dartino_backend.dart:
+    //       DartinoBackend.codegenExternalNoSuchMethodTrampoline
     state.Push(receiver);
     state.Push(clazz);
     state.Push(selector_smi);
@@ -403,4 +403,4 @@ int HandleAtBytecode(Process* process, uint8* bcp, Object** sp) {
   return Interpreter::kReady;
 }
 
-}  // namespace fletch
+}  // namespace dartino

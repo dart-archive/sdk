@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
 #include "src/vm/program_folder.h"
 
@@ -17,7 +17,7 @@
 #include "src/vm/selector_row.h"
 #include "src/vm/vector.h"
 
-namespace fletch {
+namespace dartino {
 
 typedef HashMap<intptr_t, SelectorRow*> SelectorRowMap;
 typedef HashMap<intptr_t, int> SelectorOffsetMap;
@@ -418,6 +418,6 @@ void ProgramFolder::FoldProgramByDefault(Program* program) {
   ASSERT(program->is_optimized() == !unfold);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING

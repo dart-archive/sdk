@@ -9,7 +9,7 @@
 
 #include "src/vm/sort.h"
 
-namespace fletch {
+namespace dartino {
 
 extern uint8* DoubleSize(size_t capacity, uint8* backing);
 
@@ -55,20 +55,20 @@ class Vector {
   const T* Data() const { return backing_; }
 
   void Sort(typename SortType<T>::Compare compare) {
-    fletch::Sort<T>(backing_, size_, compare);
+    dartino::Sort<T>(backing_, size_, compare);
   }
 
   void Sort(typename SortType<T>::PointerCompare compare) {
-    fletch::Sort<T>(backing_, size_, compare);
+    dartino::Sort<T>(backing_, size_, compare);
   }
 
   void Sort(typename SortType<T>::Compare compare, size_t start, size_t end) {
-    fletch::Sort<T>(backing_ + start, end, compare);
+    dartino::Sort<T>(backing_ + start, end, compare);
   }
 
   void Sort(typename SortType<T>::PointerCompare compare, size_t start,
             size_t end) {
-    fletch::Sort<T>(backing_ + start, end, compare);
+    dartino::Sort<T>(backing_ + start, end, compare);
   }
 
   void Swap(Vector& other) {
@@ -151,6 +151,6 @@ class Vector {
   size_t capacity_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_VECTOR_H_
