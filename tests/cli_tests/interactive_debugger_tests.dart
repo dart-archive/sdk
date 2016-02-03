@@ -73,6 +73,7 @@ abstract class InteractiveDebuggerTest extends CliTest {
   Future<Null> interrupt() async {
     print("C-\\");
     Expect.isTrue(process.kill(ProcessSignal.SIGQUIT), "Sent quit to process");
+    await expectPrompt("Interrupt expects to return prompt");
   }
 
   Future<Null> quitWithoutError() async {
@@ -81,7 +82,7 @@ abstract class InteractiveDebuggerTest extends CliTest {
   }
 
   Future<Null> quit() async {
-    process.stdin.writeln("q");
+    await runCommand("q");
     process.stdin.close();
   }
 
@@ -129,7 +130,6 @@ class DebuggerInterruptTest extends InteractiveDebuggerTest {
   Future<Null> internalRun() async {
     await runCommand("r");
     await interrupt();
-    await expectPrompt("Interrupt returns prompt");
     await quitWithoutError();
   }
 }
@@ -176,9 +176,10 @@ class DebuggerStepInLoopTest extends InteractiveDebuggerTest {
       : super("debugger_step_in_loop");
 
   Future<Null> internalRun() async {
-    await runCommand("r");
+    await runCommandAndExpectPrompt("b loop");
+    await runCommandAndExpectPrompt("r");
+    await runCommand("c");
     await interrupt();
-    await expectPrompt("Interrupt returns prompt");
     await runCommandAndExpectPrompt("sb");
     await runCommandAndExpectPrompt("nb");
     await runCommandAndExpectPrompt("s");
@@ -198,5 +199,13 @@ class DebuggerRerunThrowingProgramTest extends InteractiveDebuggerTest {
     await expectOut("### process already loaded, use 'restart' to run again");
     await quit();
     await expectExitCode(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
+  }
+}
+
+main(List<String> args) async {
+  for (CliTest test in tests) {
+    if (args.any((arg) => test.name.indexOf(arg) >= 0)) {
+      await test.run();
+    }
   }
 }
