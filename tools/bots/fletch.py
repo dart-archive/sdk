@@ -52,7 +52,7 @@ TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 DARTINO_PATH = dirname(dirname(dirname(os.path.abspath(__file__))))
 GSUTIL = utils.GetBuildbotGSUtilPath()
 
-GCS_BUCKET = 'gs://dartino-cross-compiled-binaries'
+GCS_BUCKET = 'gs://fletch-cross-compiled-binaries'
 
 MACOS_NUMBER_OF_FILES = 10000
 
@@ -894,7 +894,7 @@ class LinuxCoredumpArchiver(CoredumpArchiver):
           "of {2} must be '{3}'."
           .format(core_pattern_file, expected_core_pattern,
                   core_pattern_uses_pid_file, expected_core_pattern_uses_pid))
-#      raise Exception(message)
+      raise Exception(message)
 
 class MacosCoredumpArchiver(CoredumpArchiver):
   def __init__(self, *args):

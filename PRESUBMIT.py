@@ -42,7 +42,7 @@ def CheckChangeOnCommit(input_api, output_api):
   status_check = input_api.canned_checks.CheckTreeIsOpen(
       input_api,
       output_api,
-      json_url='http://dartino-status.appspot.com/current?format=json')
+      json_url='http://fletch-status.appspot.com/current?format=json')
   results.extend(status_check)
   results.extend(RunLint(input_api, output_api))
   return results
