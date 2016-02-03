@@ -10,23 +10,42 @@
 #include "include/service_api.h"
 #include "generated/cc/simple_todo.h"
 
+static const int kDone = 1;
+static pthread_mutex_t mutex;
+static pthread_cond_t cond;
+static int status = 0;
+
 typedef enum {
   EC_OK = 0,
   EC_THREAD,
   EC_INPUT_ERR,
 } ErrorCode;
 
+static void ChangeStatusAndNotify(int new_status) {
+  pthread_mutex_lock(&mutex);
+  status = new_status;
+  pthread_cond_signal(&cond);
+  pthread_mutex_unlock(&mutex);
+}
+
+static void WaitForVmThread(int expected) {
+  pthread_mutex_lock(&mutex);
+  while (expected != status) pthread_cond_wait(&cond, &mutex);
+  pthread_mutex_unlock(&mutex);
+}
+
 static void* StartFletch(void* arg) {
   char* snapshot_filepath_with_name = reinterpret_cast<char*>(arg);
-
   FletchSetup();
   FletchRunSnapshotFromFile(snapshot_filepath_with_name);
   FletchTearDown();
-
+  ChangeStatusAndNotify(kDone);
   return NULL;
 }
 
 static void StartVmThread(char* snapshot_filename) {
+  pthread_mutex_init(&mutex, NULL);
+  pthread_cond_init(&cond, NULL);
   pthread_t tid = 0;
   int result = pthread_create(&tid, 0, StartFletch,
                              reinterpret_cast<void*>(snapshot_filename));
@@ -177,5 +196,7 @@ int main(int argc, char** argv) {
 
   ServiceApiSetup();
   StartVmThread(argv[1]);
-  return InteractWithService();
+  int ec = InteractWithService();
+  WaitForVmThread(kDone);
+  return ec;
 }
