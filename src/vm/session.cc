@@ -527,6 +527,7 @@ void Session::ProcessMessages() {
       }
 
       case Connection::kSessionEnd: {
+        ASSERT(!session_ended_);
         session_ended_ = true;
         Scheduler* scheduler = program()->scheduler();
         // If execution is paused we kill the main process to allow the VM to
@@ -1445,6 +1446,7 @@ bool Session::UncaughtException(Process* process) {
 
   if (session_ended_) {
     ASSERT(session_end_state_ == Process::kUncaughtException);
+    process_ = NULL;
     program()->scheduler()->ExitAtUncaughtException(process, false);
     return true;
   }
@@ -1458,6 +1460,8 @@ bool Session::UncaughtException(Process* process) {
 bool Session::Killed(Process* process) {
   if (process_ != process) return false;
 
+  process_ = NULL;
+
   if (session_ended_) {
     ExitWithSessionEndState(process);
     return true;
@@ -1467,13 +1471,14 @@ bool Session::Killed(Process* process) {
   // didn't normally terminate, but rather was killed.
   WriteBuffer buffer;
   connection_->Send(Connection::kProcessTerminated, buffer);
-  process_ = NULL;
   program_->scheduler()->ExitAtTermination(process, Signal::kKilled);
   return true;
 }
 
 bool Session::UncaughtSignal(Process* process) {
   if (process_ != process) return false;
+
+  process_ = NULL;
 
   if (session_ended_) {
     ExitWithSessionEndState(process);
@@ -1484,7 +1489,6 @@ bool Session::UncaughtSignal(Process* process) {
   // didn't normally terminate, but rather was killed due to a linked process.
   WriteBuffer buffer;
   connection_->Send(Connection::kProcessTerminated, buffer);
-  process_ = NULL;
   program_->scheduler()->ExitAtTermination(process, Signal::kUnhandledSignal);
   return true;
 }
@@ -1494,6 +1498,7 @@ bool Session::BreakPoint(Process* process) {
 
   if (session_ended_) {
     ASSERT(session_end_state_ == Process::kBreakPoint);
+    process_ = NULL;
     program()->scheduler()->ExitAtBreakpoint(process);
     return true;
   }
@@ -1525,16 +1530,16 @@ void Session::SendBreakPoint(Process* process) {
 bool Session::ProcessTerminated(Process* process) {
   if (process_ != process) return false;
 
+  process_ = NULL;
+
   if (session_ended_) {
     ASSERT(session_end_state_ == Process::kTerminated);
-    program()->scheduler()->ExitAtTermination(process, Signal::kTerminated);
-    return true;
+  } else {
+    WriteBuffer buffer;
+    connection_->Send(Connection::kProcessTerminated, buffer);
   }
 
-  WriteBuffer buffer;
-  connection_->Send(Connection::kProcessTerminated, buffer);
-  process_ = NULL;
-  program_->scheduler()->ExitAtTermination(process, Signal::kTerminated);
+  program()->scheduler()->ExitAtTermination(process, Signal::kTerminated);
   return true;
 }
 
@@ -1543,6 +1548,7 @@ bool Session::CompileTimeError(Process* process) {
 
   if (session_ended_) {
     ASSERT(session_end_state_ == Process::kCompileTimeError);
+    process_ = NULL;
     program()->scheduler()->ExitAtCompileTimeError(process);
     return true;
   }
