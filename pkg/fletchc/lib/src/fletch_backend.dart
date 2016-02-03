@@ -267,16 +267,6 @@ class FletchBackend extends Backend
     systemBuilder = new FletchSystemBuilder(predecessorSystem);
   }
 
-  // TODO(zarah): Move to FletchSystemBuilder.
-  FletchClassBuilder getClassBuilderOfExistingClass(int id) {
-    FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(id);
-    if (classBuilder != null) return classBuilder;
-    FletchClass klass = systemBuilder.lookupClass(id);
-    if (klass.element != null) return registerClassElement(klass.element);
-    // [klass] is a tearoff class
-    return systemBuilder.newPatchClassBuilder(id, compiledClosureClass);
-  }
-
   FletchClassBuilder registerClassElement(ClassElement element) {
     if (element == null) return null;
     assert(element.isDeclaration);
@@ -855,7 +845,9 @@ class FletchBackend extends Backend
             context.compiler.reportVerboseInfo(
                 element, 'Adding stub for $selector');
           }
-          createParameterStub(function, selector);
+          FletchFunctionBase stub = createParameterStub(function, selector);
+          patchClassWithStub(
+              stub, selector, function.memberOf, isLocalFunction(element));
         }
       } else if (element.isGetter || element.isSetter) {
         // No stub needed. If a getter returns a closure, the VM's
@@ -943,7 +935,8 @@ class FletchBackend extends Backend
       }
 
       if (!isExactParameterMatch(function.signature, selector.callStructure)) {
-        createParameterStub(function, selector);
+        FletchFunctionBase stub  = createParameterStub(function, selector);
+        patchClassWithStub(stub, selector, function.memberOf, true);
       }
     });
   }
@@ -1280,22 +1273,36 @@ class FletchBackend extends Backend
         ..ret()
         ..methodEnd();
 
-    if (function.isInstanceMember) {
-      int fletchSelector = context.toFletchSelector(selector);
-      FletchClassBuilder classBuilder = getClassBuilderOfExistingClass(function.memberOf);
-      classBuilder.addToMethodTable(fletchSelector, builder);
-
-      // Inject parameter stub into all mixin usages.
-      getMixinApplicationsOfClass(classBuilder).forEach((ClassElement usage) {
-        FletchClassBuilder classBuilder =
-            systemBuilder.lookupClassBuilderByElement(usage);
-        classBuilder.addToMethodTable(fletchSelector, builder);
-      });
-    }
-
     systemBuilder.registerParameterStub(signature, builder);
 
     return builder;
+  }
+
+  void patchClassWithStub(
+      FletchFunctionBase stub,
+      Selector selector,
+      int classId,
+      bool isClosureClass) {
+    int fletchSelector = context.toFletchSelector(selector);
+    FletchClassBuilder classBuilder = systemBuilder.lookupClassBuilder(classId);
+    if (classBuilder == null) {
+      if (isClosureClass) {
+        classBuilder =
+            systemBuilder.newPatchClassBuilder(classId, compiledClosureClass);
+      } else {
+        FletchClass klass = systemBuilder.lookupClass(classId);
+        assert(klass.element != null);
+        classBuilder = registerClassElement(klass.element);
+      }
+    }
+    classBuilder.addToMethodTable(fletchSelector, stub);
+
+    // Inject parameter stub into all mixin usages.
+    getMixinApplicationsOfClass(classBuilder).forEach((ClassElement usage) {
+      FletchClassBuilder classBuilder =
+          systemBuilder.lookupClassBuilderByElement(usage);
+      classBuilder.addToMethodTable(fletchSelector, stub);
+    });
   }
 
   /// Create a tear-off getter for [function].  If [isSpecialCallMethod] is

@@ -36,7 +36,7 @@ abstract class FletchClassBuilder {
 
   bool get hasSuperClass => superclass != null;
 
-  void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder);
+  void addToMethodTable(int selector, FletchFunctionBase functionBase);
   void removeFromMethodTable(FletchFunctionBase function);
 
   void addField(FieldElement field);
@@ -107,8 +107,8 @@ class FletchNewClassBuilder extends FletchClassBuilder {
     return count;
   }
 
-  void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder) {
-    _methodTable[selector] = functionBuilder;
+  void addToMethodTable(int selector, FletchFunctionBase functionBase) {
+    _methodTable[selector] = functionBase;
   }
 
   void addField(FieldElement field) {
@@ -242,8 +242,8 @@ class FletchPatchClassBuilder extends FletchClassBuilder {
   ClassElement get element => klass.element;
   int get fields => klass.fields.length;
 
-  void addToMethodTable(int selector, FletchFunctionBuilder functionBuilder) {
-    _newMethods[selector] = functionBuilder;
+  void addToMethodTable(int selector, FletchFunctionBase functionBase) {
+    _newMethods[selector] = functionBase;
   }
 
   void removeFromMethodTable(FletchFunctionBase function) {
