@@ -731,7 +731,7 @@ class PersistentDartinoDaemon(object):
        '--abort-on-assertion-errors',
        '--packages=%s' % os.path.abspath('pkg/dartino_compiler/.packages'),
        '-Ddartino.version=%s' % version,
-       'package:dartino/src/hub/hub_main.dart',
+       'package:dartino_compiler/src/hub/hub_main.dart',
        dartinorc],
       stdout=self._log_file,
       stderr=subprocess.STDOUT,
