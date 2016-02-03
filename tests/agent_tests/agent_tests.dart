@@ -22,18 +22,18 @@ import 'dart:async' show
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:fletch_agent/messages.dart' show
+import 'package:dartino_agent/messages.dart' show
     PACKAGE_FILE_NAME;
 
-import 'package:fletch_agent/agent_connection.dart' show
+import 'package:dartino_agent/agent_connection.dart' show
     AgentConnection,
     AgentException,
     VmData;
 
-import 'package:fletchc/src/guess_configuration.dart' show
+import 'package:dartino_compiler/src/guess_configuration.dart' show
     executable;
 
-import '../fletchc/run.dart' show
+import '../dartino_compiler/run.dart' show
     export;
 
 typedef Future NoArgFuture();
@@ -44,7 +44,7 @@ List<AgentTest> AGENT_TESTS = <AgentTest>[
   new AgentUnsupportedCommandsTest(),
 ];
 
-const String fletchVmExecutable = const String.fromEnvironment('fletch-vm');
+const String dartinoVmExecutable = const String.fromEnvironment('dartino-vm');
 const String buildDirectory =
     const String.fromEnvironment('test.dart.build-dir');
 const int SIGINT = 2;
@@ -59,7 +59,7 @@ abstract class AgentTest {
   Future stderrFuture;
   Map<String, String> environment;
 
-  /// Each agent test must be assigned a unique port on which the fletch agent
+  /// Each agent test must be assigned a unique port on which the dartino agent
   /// for the specific test is listening. The port must be unique since the
   /// tests are run in parallel.
   AgentTest(String name, int port)
@@ -67,11 +67,11 @@ abstract class AgentTest {
         this.port = port,
         outputDirectory = '$buildDirectory/tests/$name' {
     environment = {
-      'FLETCH_VM': fletchVmExecutable,
+      'DARTINO_VM': dartinoVmExecutable,
       'AGENT_IP': host,
       'AGENT_PORT': port.toString(),
-      'AGENT_PID_FILE': '$outputDirectory/fletch-agent.pid',
-      'AGENT_LOG_FILE': '$outputDirectory/fletch-agent.log',
+      'AGENT_PID_FILE': '$outputDirectory/dartino-agent.pid',
+      'AGENT_LOG_FILE': '$outputDirectory/dartino-agent.log',
       'VM_LOG_DIR': outputDirectory,
       'VM_PID_DIR': outputDirectory,
       'AGENT_UPGRADE_DRY_RUN': 'true',
@@ -89,16 +89,16 @@ abstract class AgentTest {
   }
 
   Future<Null> createSnapshot() async {
-    // Find the path to the fletch agent script.
-    Uri script = executable.resolve('../../pkg/fletch_agent/bin/agent.dart');
-    await export(script.toFilePath(), '$outputDirectory/fletch-agent.snapshot');
-    print('Agent snapshot generated: $outputDirectory/fletch-agent.snapshot');
+    // Find the path to the dartino agent script.
+    Uri script = executable.resolve('../../pkg/dartino_agent/bin/agent.dart');
+    await export(script.toFilePath(), '$outputDirectory/dartino-agent.snapshot');
+    print('Agent snapshot generated: $outputDirectory/dartino-agent.snapshot');
   }
 
   Future<Null> start() async {
     process = await Process.start(
-        fletchVmExecutable,
-        ['$outputDirectory/fletch-agent.snapshot'],
+        dartinoVmExecutable,
+        ['$outputDirectory/dartino-agent.snapshot'],
         environment: environment);
     stdoutFuture = process.stdout.transform(UTF8.decoder)
         .transform(new LineSplitter())
@@ -171,7 +171,7 @@ class AgentLifeCycleTest extends AgentTest {
   Future<Null> execute() async {
     // Check the version.
     await withConnection((AgentConnection connection) async {
-      String version = await connection.fletchVersion();
+      String version = await connection.dartinoVersion();
       Expect.isTrue(version.length > 0, 'No version found.');
     });
 
@@ -179,14 +179,14 @@ class AgentLifeCycleTest extends AgentTest {
     VmData data;
     await withConnection((AgentConnection connection) async {
       data = await connection.startVm();
-      Expect.isNotNull(data, 'Failed to spawn new fletch VM');
+      Expect.isNotNull(data, 'Failed to spawn new dartino VM');
       Expect.isNotNull(data.id, 'Null is not a valid VM pid');
       Expect.notEquals(0, data.id, 'Invalid pid returned for VM');
       Expect.isNotNull(data.port, 'Null is not a valid VM port');
       Expect.notEquals(0, data.port, 'Invalid port returned for VM');
       // This will not work on Windows, since the ProcessSignal argument
-      // is ignored and the fletch-vm is killed.
-      Expect.isTrue(await checkVmState(data.id, true), 'Fletch vm not running');
+      // is ignored and the dartino-vm is killed.
+      Expect.isTrue(await checkVmState(data.id, true), 'Dartino vm not running');
       print('Started 1. VM with id ${data.id} on port ${data.port}.');
     });
 
@@ -194,21 +194,21 @@ class AgentLifeCycleTest extends AgentTest {
     await withConnection((AgentConnection connection) async {
       await connection.stopVm(data.id);
       Expect.isFalse(await checkVmState(data.id, false),
-          'Fletch vm still running');
+          'Dartino vm still running');
       print('Stopped VM with id ${data.id} on port ${data.port}.');
     });
 
     // Start a new vm.
     await withConnection((AgentConnection connection) async {
       data = await connection.startVm();
-      Expect.isNotNull(data, 'Failed to spawn new fletch VM');
+      Expect.isNotNull(data, 'Failed to spawn new dartino VM');
       Expect.isNotNull(data.id, 'Null is not a valid VM pid');
       Expect.notEquals(0, data.id, 'Invalid pid returned for VM');
       Expect.isNotNull(data.port, 'Null is not a valid VM port');
       Expect.notEquals(0, data.port, 'Invalid port returned for VM');
       // This will not work on Windows, since the ProcessSignal argument
-      // is ignored and the fletch-vm is killed.
-      Expect.isTrue(await checkVmState(data.id, true), 'Fletch vm not running');
+      // is ignored and the dartino-vm is killed.
+      Expect.isTrue(await checkVmState(data.id, true), 'Dartino vm not running');
       print('Started 2. VM with id ${data.id} on port ${data.port}.');
     });
 
@@ -216,7 +216,7 @@ class AgentLifeCycleTest extends AgentTest {
     await withConnection((AgentConnection connection) async {
       await connection.signalVm(data.id, SIGINT);
       Expect.isFalse(await checkVmState(data.id, false),
-          'Fletch vm still running');
+          'Dartino vm still running');
       print('Killed VM with id ${data.id} on port ${data.port}.');
     });
   }
@@ -225,9 +225,9 @@ class AgentLifeCycleTest extends AgentTest {
 /// The AgentUpgrade test sends over mock binary data (as List<int> data),
 /// representing the new agent package that should be used to upgrade the
 /// agent.
-/// When running the test we start the fletch agent with AGENT_UPGRADE_DRY_RUN
+/// When running the test we start the dartino agent with AGENT_UPGRADE_DRY_RUN
 /// set so it won't actually do the dpkg. This allows us to test that the
-/// fletch agent correctly receives the mock data and writes it into the temp
+/// dartino agent correctly receives the mock data and writes it into the temp
 /// package file.
 class AgentUpgradeProtocolTest extends AgentTest {
   AgentUpgradeProtocolTest() : super('testAgentUpgrade', 20001);

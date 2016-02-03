@@ -3,21 +3,21 @@
 # BSD-style license that can be found in the LICENSE.md file.
 
 [ $system == macos ]
-# https://github.com/dart-lang/fletch/issues/401
+# https://github.com/dart-lang/dartino/issues/401
 big_integer_huge_mul_vm_test: Pass, Slow, Timeout
 
-[ $runtime == fletchc ]
+[ $runtime == dartino_compiler ]
 # -D option not implemented.
 int_from_environment2_test: CompileTimeError
 
-# Stack trace printing crashes (https://github.com/dart-lang/fletch/issues/241)
+# Stack trace printing crashes (https://github.com/dart-lang/dartino/issues/241)
 apply3_test: Crash
 
-# FletchBackend.createDebugInfo triggers assertion error
-# (https://github.com/dart-lang/fletch/issues/242)
+# DartinoBackend.createDebugInfo triggers assertion error
+# (https://github.com/dart-lang/dartino/issues/242)
 expando_test: Crash
 
-[ $compiler == fletchc || $runtime == fletchc ]
+[ $compiler == dartino_compiler || $runtime == dartino_compiler ]
 # Test is wrong, as it expects "Stack overflow" and not "Stack Overflow" on
 # overflows.
 regexp/regexp_test: RuntimeError
@@ -150,7 +150,7 @@ symbol_reserved_word_test/10: MissingCompileTimeError
 symbol_reserved_word_test/12: Fail
 symbol_test/none: Fail
 
-[ ($runtime == fletchc || $runtime == fletchvm) && $arch == x64 && $mode == debug && ($clang || $asan) ]
+[ ($runtime == dartino_compiler || $runtime == dartinovm) && $arch == x64 && $mode == debug && ($clang || $asan) ]
 int_parse_radix_test/01: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
 int_parse_radix_test/02: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
 int_parse_radix_test/none: Skip # Extremely slow, so we run them only in one debug-x64 confguration. Issue 46.
@@ -203,7 +203,7 @@ regexp/global_test: Slow, Pass
 [ $mode == debug ]
 big_integer_huge_mul_vm_test: Slow, Pass
 
-[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
+[ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No dart:convert on embedded
 string_source_test: CompileTimeError
 json_map_test: CompileTimeError

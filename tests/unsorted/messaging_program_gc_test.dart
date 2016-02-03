@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 //
-// FletchOptions=-Xgc-on-delete
+// DartinoOptions=-Xgc-on-delete
 
 import 'dart:async';
-import 'dart:fletch';
+import 'dart:dartino';
 
 import 'package:expect/expect.dart';
 

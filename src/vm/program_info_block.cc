@@ -4,7 +4,7 @@
 
 #include "src/vm/program_info_block.h"
 
-namespace fletch {
+namespace dartino {
 
 class PointerReadingVisitor : public PointerVisitor {
  public:
@@ -81,4 +81,4 @@ void ProgramInfoBlock::WriteToProgram(Program* program) {
   program->set_main_arity(main_arity());
 }
 
-}  // namespace fletch
+}  // namespace dartino

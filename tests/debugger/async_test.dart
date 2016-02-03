@@ -5,7 +5,7 @@
 // Test that we get a meaningful stack trace when called from the
 // event loop.
 
-// FletchDebuggerCommands=b breakHere,r,bt,t internal,bt,c
+// DartinoDebuggerCommands=b breakHere,r,bt,t internal,bt,c
 
 import 'dart:async';
 

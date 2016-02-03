@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
 #include "src/vm/session.h"
 
@@ -31,7 +31,7 @@
     ASSERT(!var->IsFailure());                          \
   }
 
-namespace fletch {
+namespace dartino {
 
 class ConnectionPrintInterceptor : public PrintInterceptor {
  public:
@@ -111,17 +111,17 @@ Session::Session(Connection* connection)
       program_update_error_(NULL),
       main_thread_monitor_(Platform::CreateMonitor()),
       main_thread_resume_kind_(kUnknown) {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   ConnectionPrintInterceptor* interceptor =
       new ConnectionPrintInterceptor(connection_);
   Print::RegisterPrintInterceptor(interceptor);
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 }
 
 Session::~Session() {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   Print::UnregisterPrintInterceptors();
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 
   delete connection_;
   delete program_;
@@ -1207,7 +1207,7 @@ void Session::PushBuiltinClass(Names::Id name, int fields) {
     klass = program()->foreign_memory_class();
   } else if (name == Names::kStackOverflowError) {
     klass = program()->stack_overflow_error_class();
-  } else if (name == Names::kFletchNoSuchMethodError) {
+  } else if (name == Names::kDartinoNoSuchMethodError) {
     klass = program()->no_such_method_error_class();
   } else {
     UNREACHABLE();
@@ -1732,6 +1732,6 @@ void Session::RestartFrame(int frame_index) {
   stack->SetTopFromPointer(frame.FramePointer());
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING

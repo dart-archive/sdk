@@ -9,7 +9,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/natives.h"
 
-namespace fletch {
+namespace dartino {
 
 // Forward declarations.
 class Assembler;
@@ -92,6 +92,6 @@ typedef Object* (*NativeFunction)(Process*, Arguments);
 NATIVES_DO(N)
 #undef N
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_NATIVES_H_

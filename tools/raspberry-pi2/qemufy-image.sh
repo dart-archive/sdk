@@ -4,7 +4,7 @@
 # BSD-style license that can be found in the LICENSE.md file.
 #
 # Script for preparing the Raspberry Pi2 image for easy installation of the
-# fletch agent. All this script does is basically to comment out a few lines
+# dartino agent. All this script does is basically to comment out a few lines
 # in /etc/fstab and /etc/ld.so.preload.
 #
 # It is expected that the script producing the actual release image will remove
@@ -16,7 +16,7 @@
 # future.
 #
 # We push the output of this run to a bundle on google cloud storage and use
-# that to create the actual bundles with specific fletch vm/agents on them.
+# that to create the actual bundles with specific dartino vm/agents on them.
 #
 # PLEASE NOTE THAT THIS SCRIPT WILL DO IN PLACE UPDATING
 

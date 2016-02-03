@@ -7,8 +7,8 @@
 /build
 /captures
 
-/app/src/main/java/fletch
+/app/src/main/java/dartino
 /app/src/main/res/raw/github_snapshot
-libfletch.so
+libdartino.so
 gdbserver
 gdb.setup

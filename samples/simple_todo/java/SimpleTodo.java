@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import fletch.*;
+import dartino.*;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -17,13 +17,13 @@ class SimpleTodo {
       System.exit(1);
     }
 
-    // Load libfletch.so.
-    System.loadLibrary("fletch");
+    // Load libdartino.so.
+    System.loadLibrary("dartino");
 
-    // Setup Fletch.
-    FletchApi.Setup();
-    FletchServiceApi.Setup();
-    FletchApi.AddDefaultSharedLibrary("libfletch.so");
+    // Setup Dartino.
+    DartinoApi.Setup();
+    DartinoServiceApi.Setup();
+    DartinoApi.AddDefaultSharedLibrary("libdartino.so");
 
     try {
       // Load snapshot and start dart code on a separate thread.

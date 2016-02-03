@@ -5,7 +5,7 @@
 // Looking up a library should not make the symbols reachable from main lookup
 // unless we explicitly pass the global flag.
 
-import 'dart:fletch.ffi';
+import 'dart:dartino.ffi';
 import "package:expect/expect.dart";
 
 bool isArgumentError(e) => e is ArgumentError;

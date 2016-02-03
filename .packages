@@ -12,9 +12,9 @@ expect:third_party/dart/pkg/expect/lib
 ffi:pkg/ffi/lib
 file:pkg/file/lib
 flash_sd_card:pkg/flash_sd_card/lib
-fletch_agent:pkg/fletch_agent/lib
-fletch:pkg/fletch/lib
-fletchc:pkg/fletchc/lib
+dartino_agent:pkg/dartino_agent/lib
+dartino:pkg/dartino/lib
+dartino_compiler:pkg/dartino_compiler/lib
 github_sample:samples/github/lib
 gpio:pkg/gpio/lib
 http:pkg/http/lib

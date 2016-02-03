@@ -4,10 +4,10 @@
 
 // Test that we get a meaningful list of processes.
 
-// FletchDebuggerCommands=b resume,r,lp,c,lp,c
+// DartinoDebuggerCommands=b resume,r,lp,c,lp,c
 
 import 'dart:async';
-import 'dart:fletch';
+import 'dart:dartino';
 import 'package:expect/expect.dart';
 
 Port spawnPaused(Channel channel, Channel monitor) {

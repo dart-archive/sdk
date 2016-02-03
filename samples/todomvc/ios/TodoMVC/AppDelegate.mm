@@ -4,7 +4,7 @@
 
 #import "AppDelegate.h"
 
-#include "include/fletch_api.h"
+#include "include/dartino_api.h"
 #include "include/service_api.h"
 
 #include "todomvc_presenter.h"
@@ -23,25 +23,25 @@ static dispatch_queue_t queue;
   NSBundle* mainBundle = [NSBundle mainBundle];
   NSString* snapshot =
   [mainBundle pathForResource: @"todomvc" ofType: @"snapshot"];
-  // Read the snapshot and pass it to fletch.
+  // Read the snapshot and pass it to dartino.
   NSData* data = [[NSData alloc] initWithContentsOfFile:snapshot];
   unsigned char* bytes =
   reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
-  NSLog(@"Fletch execution started\n");
-  FletchProgram program = FletchLoadSnapshot(bytes, data.length);
-  FletchRunMain(program);
-  FletchDeleteProgram(program);
-  NSLog(@"Fletch execution terminated\n");
+  NSLog(@"Dartino execution started\n");
+  DartinoProgram program = DartinoLoadSnapshot(bytes, data.length);
+  DartinoRunMain(program);
+  DartinoDeleteProgram(program);
+  NSLog(@"Dartino execution terminated\n");
 }
 
 - (BOOL)application:(UIApplication *)application
     didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 
-  // Setup Fletch and the Fletch service API.
-  FletchSetup();
+  // Setup Dartino and the Dartino service API.
+  DartinoSetup();
   ServiceApiSetup();
-  // Create dispatch queue to run the Fletch VM on a separate thread.
-  queue = dispatch_queue_create("com.google.fletch.dartQueue",
+  // Create dispatch queue to run the Dartino VM on a separate thread.
+  queue = dispatch_queue_create("com.google.dartino.dartQueue",
                                 DISPATCH_QUEUE_SERIAL);
   // Post task to load and run snapshot on a different thread.
   dispatch_async(queue, ^() {
@@ -85,10 +85,10 @@ static dispatch_queue_t queue;
   // Called when the application is about to terminate. Save data if
   // appropriate. See also applicationDidEnterBackground:.
 
-  // Tear down the service API structures and Fletch.
+  // Tear down the service API structures and Dartino.
   TodoMVCService::tearDown();
   ServiceApiTearDown();
-  FletchTearDown();
+  DartinoTearDown();
 }
 
 @end

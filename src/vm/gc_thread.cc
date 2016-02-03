@@ -8,7 +8,7 @@
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
 
-namespace fletch {
+namespace dartino {
 
 void* GCThread::GCThreadEntryPoint(void* data) {
   GCThread* thread = reinterpret_cast<GCThread*>(data);
@@ -221,4 +221,4 @@ void GCThread::MainLoop() {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

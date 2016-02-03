@@ -647,7 +647,7 @@ class StandardTestSuite extends TestSuite {
                          '$directory/${name}_dart2js.status',
                          '$directory/${name}_analyzer.status',
                          '$directory/${name}_analyzer2.status',
-                         '$directory/${name}_fletchc.status'];
+                         '$directory/${name}_dartino_compiler.status'];
     }
 
     return new StandardTestSuite(configuration,
@@ -994,7 +994,7 @@ class StandardTestSuite extends TestSuite {
             environmentOverrides);
     commands.addAll(compilationArtifact.commands);
 
-    // NOTE: Since fletchc does not report compile time errors at compile time,
+    // NOTE: Since dartino_compiler does not report compile time errors at compile time,
     // but rather generates code to call 'lib/system/system.dart:compileError()`
     // We need to enqueue running the snapshot.
     //
@@ -1530,10 +1530,10 @@ class StandardTestSuite extends TestSuite {
       return readOptionsFromCo19File(filePath);
     }
     RegExp testOptionsRegExp = new RegExp(r"// VMOptions=(.*)");
-    RegExp fletchOptionsRegExp = new RegExp(r"// FletchOptions=(.*)");
-    RegExp fletchSnapshotRegExp
-        = new RegExp(r"// FletchSnapshotOptions=(.*)");
-    RegExp fletchCCRegExp = new RegExp(r"// FletchCCOptions=(.*)");
+    RegExp dartinoOptionsRegExp = new RegExp(r"// DartinoOptions=(.*)");
+    RegExp dartinoSnapshotRegExp
+        = new RegExp(r"// DartinoSnapshotOptions=(.*)");
+    RegExp dartinoCCRegExp = new RegExp(r"// DartinoCCOptions=(.*)");
     RegExp sharedOptionsRegExp = new RegExp(r"// SharedOptions=(.*)");
     RegExp dartOptionsRegExp = new RegExp(r"// DartOptions=(.*)");
     RegExp otherScriptsRegExp = new RegExp(r"// OtherScripts=(.*)");
@@ -1550,11 +1550,11 @@ class StandardTestSuite extends TestSuite {
 
     // Find the options in the file.
     List<List> result = new List<List>();
-    List<List> fletchOptions = new List<List>();
-    List<String> fletchSnapshotOptions;
+    List<List> dartinoOptions = new List<List>();
+    List<String> dartinoSnapshotOptions;
     List<String> dartOptions;
     List<String> sharedOptions;
-    List<String> fletchCCOptions;
+    List<String> dartinoCCOptions;
     String packageRoot;
 
     Iterable<Match> matches = testOptionsRegExp.allMatches(contents);
@@ -1563,11 +1563,11 @@ class StandardTestSuite extends TestSuite {
     }
     if (result.isEmpty) result.add([]);
 
-    matches = fletchOptionsRegExp.allMatches(contents);
+    matches = dartinoOptionsRegExp.allMatches(contents);
     for (var match in matches) {
-      fletchOptions.add(match[1].split(' ').where((e) => e != '').toList());
+      dartinoOptions.add(match[1].split(' ').where((e) => e != '').toList());
     }
-    if (fletchOptions.isEmpty) fletchOptions.add([]);
+    if (dartinoOptions.isEmpty) dartinoOptions.add([]);
 
     matches = dartOptionsRegExp.allMatches(contents);
     for (var match in matches) {
@@ -1578,26 +1578,26 @@ class StandardTestSuite extends TestSuite {
       dartOptions = match[1].split(' ').where((e) => e != '').toList();
     }
 
-    matches = fletchCCRegExp.allMatches(contents);
+    matches = dartinoCCRegExp.allMatches(contents);
     for (var match in matches) {
-      if (fletchCCOptions != null) {
+      if (dartinoCCOptions != null) {
         throw new Exception(
-            'More than one "// FletchCCOptions=" line in test $filePath');
+            'More than one "// DartinoCCOptions=" line in test $filePath');
       }
-      fletchCCOptions = match[1].split(' ').where((e) => e != '').toList();
+      dartinoCCOptions = match[1].split(' ').where((e) => e != '').toList();
     }
 
-    matches = fletchSnapshotRegExp.allMatches(contents);
+    matches = dartinoSnapshotRegExp.allMatches(contents);
     for (var match in matches) {
-      if (fletchSnapshotOptions != null) {
+      if (dartinoSnapshotOptions != null) {
         throw new Exception(
-            'More than one "// FletchSnapshotOptions=" line in test $filePath');
+            'More than one "// DartinoSnapshotOptions=" line in test $filePath');
       }
-      fletchSnapshotOptions =
+      dartinoSnapshotOptions =
           match[1].split(' ').where((e) => e != '').toList();
-      if (fletchSnapshotOptions.length != 2) {
+      if (dartinoSnapshotOptions.length != 2) {
         throw new Exception(
-            '// "FletchSnapshotOptions=" takes two arguments in $filePath');
+            '// "DartinoSnapshotOptions=" takes two arguments in $filePath');
       }
     }
 
@@ -1644,9 +1644,9 @@ class StandardTestSuite extends TestSuite {
     }
 
     return { "vmOptions": result,
-             "fletchOptions": fletchOptions,
-             "fletchSnapshotOptions": fletchSnapshotOptions,
-             "fletchCCOptions": fletchCCOptions,
+             "dartinoOptions": dartinoOptions,
+             "dartinoSnapshotOptions": dartinoSnapshotOptions,
+             "dartinoCCOptions": dartinoCCOptions,
              "sharedOptions": sharedOptions == null ? [] : sharedOptions,
              "dartOptions": dartOptions,
              "packageRoot": packageRoot,
@@ -1662,8 +1662,8 @@ class StandardTestSuite extends TestSuite {
   }
 
   List<List<String>> getVmOptions(Map optionsFromFile) {
-    if (['fletchc', 'fletchvm'].contains(configuration['runtime'])) {
-      return optionsFromFile['fletchOptions'];
+    if (['dartino_compiler', 'dartinovm'].contains(configuration['runtime'])) {
+      return optionsFromFile['dartinoOptions'];
     }
 
     var vmOptions = optionsFromFile['vmOptiosn'];

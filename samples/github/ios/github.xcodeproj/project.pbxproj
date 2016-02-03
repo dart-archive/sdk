@@ -10,7 +10,7 @@
 		2D6E8DC71B283A6300FED492 /* dart-logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 2D6E8DC61B283A6300FED492 /* dart-logo.png */; };
 		2DB491831B0C83D200912DA3 /* CommitCellPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491821B0C83D200912DA3 /* CommitCellPresenter.mm */; };
 		2DB4918A1B0C9B2000912DA3 /* CommitListPresenter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2DB491891B0C9B2000912DA3 /* CommitListPresenter.mm */; };
-		DA155C1F1B6A2F2100022EA8 /* libfletchvm.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA155C1E1B6A2F2100022EA8 /* libfletchvm.a */; };
+		DA155C1F1B6A2F2100022EA8 /* libdartinovm.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA155C1E1B6A2F2100022EA8 /* libdartinovm.a */; };
 		DA155C241B6A2FAA00022EA8 /* github.snapshot in Resources */ = {isa = PBXBuildFile; fileRef = DA155C231B6A2FAA00022EA8 /* github.snapshot */; };
 		DA1D77031B037490009E936C /* MainController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DA1D77021B037490009E936C /* MainController.mm */; };
 		DA313FA51AD665A6000089F9 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DA313FA41AD665A6000089F9 /* main.m */; };
@@ -42,7 +42,7 @@
 		4161D6553D51B74A4F8DBA90 /* Pods.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.debug.xcconfig; path = "Pods/Target Support Files/Pods/Pods.debug.xcconfig"; sourceTree = "<group>"; };
 		B2F089567A7ED1FE2EBE0CEE /* Pods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.release.xcconfig; path = "Pods/Target Support Files/Pods/Pods.release.xcconfig"; sourceTree = "<group>"; };
 		CCA642B939EC230FB0A8EBD6 /* libPods.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libPods.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		DA155C1E1B6A2F2100022EA8 /* libfletchvm.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libfletchvm.a; sourceTree = "<group>"; };
+		DA155C1E1B6A2F2100022EA8 /* libdartinovm.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libdartinovm.a; sourceTree = "<group>"; };
 		DA155C231B6A2FAA00022EA8 /* github.snapshot */ = {isa = PBXFileReference; lastKnownFileType = file; path = github.snapshot; sourceTree = "<group>"; };
 		DA1D77011B037490009E936C /* MainController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainController.h; sourceTree = "<group>"; };
 		DA1D77021B037490009E936C /* MainController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = MainController.mm; sourceTree = "<group>"; };
@@ -65,7 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DA155C1F1B6A2F2100022EA8 /* libfletchvm.a in Frameworks */,
+				DA155C1F1B6A2F2100022EA8 /* libdartinovm.a in Frameworks */,
 				ED555EEAB4712F57987985D0 /* libPods.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -92,7 +92,7 @@
 		7C592E2EDA0570FB00C78420 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				DA155C1E1B6A2F2100022EA8 /* libfletchvm.a */,
+				DA155C1E1B6A2F2100022EA8 /* libdartinovm.a */,
 				CCA642B939EC230FB0A8EBD6 /* libPods.a */,
 			);
 			name = Frameworks;

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_MACOS)
+#if defined(DARTINO_TARGET_OS_MACOS)
 
 #include <fcntl.h>
 #include <mach-o/dyld.h>
@@ -17,7 +17,7 @@
 
 #define MAX_SIGNAL SIGUSR2
 
-namespace fletch {
+namespace dartino {
 
 static int signal_pipe[] = {-1, -1};
 
@@ -111,6 +111,6 @@ void Exit(int exit_code) {
   UNREACHABLE();
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_MACOS)
+#endif  // defined(DARTINO_TARGET_OS_MACOS)

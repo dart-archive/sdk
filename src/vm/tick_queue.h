@@ -9,7 +9,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 class Process;
 
@@ -88,6 +88,6 @@ class TickQueue {
   DISALLOW_COPY_AND_ASSIGN(TickQueue);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_TICK_QUEUE_H_

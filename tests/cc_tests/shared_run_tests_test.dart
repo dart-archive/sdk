@@ -4,4 +4,4 @@
 
 // Not an actual Dart program. See README.md.
 
-// FletchCCOptions=shared_cc_tests
+// DartinoCCOptions=shared_cc_tests

@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch._system' as fletch;
-import 'dart:fletch._system' show patch;
+import 'dart:dartino._system' as dartino;
+import 'dart:dartino._system' show patch;
 import 'dart:collection';
-import 'dart:fletch.ffi';
+import 'dart:dartino.ffi';
 
 @patch class Uint8List {
   @patch factory Uint8List(int length) {

@@ -6,13 +6,13 @@
 // https://www.youtube.com/watch?v=Mo8Qls0HnWo
 //
 // This sample recreates those with a chain of LEDs running right and left:
-// https://storage.googleapis.com/fletch-archive/images/knight-rider.mp4
+// https://storage.googleapis.com/dartino-archive/images/knight-rider.mp4
 //
 // TODO: Add a schematics.
 // For breadboard layout and connections to the STM32F746G Discovery board, see:
-// https://storage.googleapis.com/fletch-archive/images/xxx.png
+// https://storage.googleapis.com/dartino-archive/images/xxx.png
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 import 'package:stm32f746g_disco/gpio.dart';
 import 'package:stm32f746g_disco/stm32f746g_disco.dart';
@@ -59,7 +59,7 @@ class Lights {
   void runLightLeft(int waitTime) {
     for (int counter = 0; counter < leds.length; counter++) {
       _setLeds(counter);
-      // TODO(sgjesse): Use the Fletch sleep function.
+      // TODO(sgjesse): Use the Dartino sleep function.
       for (int i= 0; i < 50000; i++) {}
       //sleep(waitTime);
     }
@@ -70,7 +70,7 @@ class Lights {
   void runLightRight(int waitTime) {
     for (int counter = leds.length - 1; counter >= 0; counter--) {
       _setLeds(counter);
-      // TODO(sgjesse): Use the Fletch sleep function.
+      // TODO(sgjesse): Use the Dartino sleep function.
       for (int i= 0; i < 50000; i++) {}
       //sleep(waitTime);
     }

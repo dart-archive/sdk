@@ -130,7 +130,7 @@ Future checkDirectoryExists(String dirName) async {
   Expect.isTrue(await dir.exists(), "Directory $dirName does not exist");
 }
 
-// TODO(stanm): Move cleanup logic to fletch_tests setup
+// TODO(stanm): Move cleanup logic to dartino_tests setup
 Future nukeDirectory(String dirName) async {
   var dir = new Directory(dirName);
   await dir.delete(recursive: true);

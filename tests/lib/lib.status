@@ -21,7 +21,7 @@ async/stack_trace19_test: Fail
 async/stack_trace24_test: Fail
 
 # These tests depend on the unittest library which uses a lot of stuff
-# that Fletch doesn't support yet.
+# that Dartino doesn't support yet.
 async/first_regression_test: CompileTimeError
 async/future_timeout_test: CompileTimeError
 async/multiple_timer_test: CompileTimeError
@@ -77,7 +77,7 @@ async/slow_consumer_test: Crash
 async/slow_consumer2_test: Crash
 async/slow_consumer3_test: Crash
 
-[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
+[ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.
 async/async_await_zones_test: CompileTimeError
 async/async_await_sync_completer_test: CompileTimeError

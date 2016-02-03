@@ -1,7 +1,7 @@
-CREATE libone_disco_fletch.a
-ADDLIB libdisco_fletch.a
-ADDLIB libfletch_vm_library.a
-ADDLIB libfletch_shared.a
+CREATE libone_disco_dartino.a
+ADDLIB libdisco_dartino.a
+ADDLIB libdartino_vm_library.a
+ADDLIB libdartino_shared.a
 ADDLIB libdouble_conversion.a
 SAVE
 END

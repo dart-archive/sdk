@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_POSIX) && defined(FLETCH_ENABLE_LIVE_CODING)
+#if defined(DARTINO_TARGET_OS_POSIX) && defined(DARTINO_ENABLE_LIVE_CODING)
 
 #include "src/shared/native_socket.h"
 
@@ -18,7 +18,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 struct Socket::SocketData {
   SocketData() : fd(-1) {}
@@ -161,6 +161,6 @@ void Socket::SetTCPNoDelay(bool value) {
   if (status == -1) perror("Failed setting TCP_NODELAY socket options.");
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // def'd(FLETCH_TARGET_OS_POSIX) && def'd(FLETCH_ENABLE_LIVE_CODING)
+#endif  // def'd(DARTINO_TARGET_OS_POSIX) && def'd(DARTINO_ENABLE_LIVE_CODING)

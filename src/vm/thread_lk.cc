@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LK)
+#if defined(DARTINO_TARGET_OS_LK)
 
 #include "src/vm/thread.h"  // NOLINT we don't include thread_posix.h.
 
@@ -11,7 +11,7 @@
 
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 void Thread::SetProcess(Process* process) {
   // Unused since tick sample is not available on LK.
@@ -50,6 +50,6 @@ ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   return ThreadIdentifier(thread);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_LK)
+#endif  // defined(DARTINO_TARGET_OS_LK)

@@ -2,20 +2,20 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef FLETCH_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_LIVE_CODING
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 
-#include "include/fletch_api.h"
+#include "include/dartino_api.h"
 
 #include "src/shared/flags.h"
 #include "src/shared/list.h"
 #include "src/shared/utils.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 static bool IsSnapshot(List<uint8> snapshot) {
   return snapshot.length() > 2 && snapshot[0] == 0xbe && snapshot[1] == 0xef;
@@ -23,39 +23,39 @@ static bool IsSnapshot(List<uint8> snapshot) {
 
 static int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
-  FletchSetup();
+  DartinoSetup();
 
   int program_count = argc - 1;
 
-  FletchProgram* programs = new FletchProgram[program_count];
+  DartinoProgram* programs = new DartinoProgram[program_count];
 
   for (int i = 0; i < program_count; i++) {
     // Handle the arguments.
     const char* input = argv[i + 1];
     List<uint8> bytes = Platform::LoadFile(input);
     if (!IsSnapshot(bytes)) {
-      FATAL("The input file is not a fletch snapshot.");
+      FATAL("The input file is not a dartino snapshot.");
     }
 
-    FletchProgram program = FletchLoadSnapshot(bytes.data(), bytes.length());
+    DartinoProgram program = DartinoLoadSnapshot(bytes.data(), bytes.length());
     programs[i] = program;
   }
 
-  int result = FletchRunMultipleMain(program_count, programs);
+  int result = DartinoRunMultipleMain(program_count, programs);
 
   for (int i = 0; i < program_count; i++) {
-    FletchDeleteProgram(programs[i]);
+    DartinoDeleteProgram(programs[i]);
   }
 
   delete[] programs;
 
-  FletchTearDown();
+  DartinoTearDown();
   return result;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-// Forward main calls to fletch::Main.
-int main(int argc, char** argv) { return fletch::Main(argc, argv); }
+// Forward main calls to dartino::Main.
+int main(int argc, char** argv) { return dartino::Main(argc, argv); }
 
-#endif  // !FLETCH_ENABLE_LIVE_CODING
+#endif  // !DARTINO_ENABLE_LIVE_CODING

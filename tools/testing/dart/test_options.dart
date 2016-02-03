@@ -22,7 +22,7 @@ const List<String> defaultTestSelectors = const [
     'ffi',
     'samples',
     'warnings',
-    'fletch_tests',
+    'dartino_tests',
     'cc_tests',
     'lib',
     'os',
@@ -85,7 +85,7 @@ class TestOptionsParser {
    dart2analyzer: Perform static analysis on Dart code by running the analyzer on Dart.
           (only valid with the following runtimes: none)''',
               ['-c', '--compiler'],
-              ['none', 'fletchc'],
+              ['none', 'dartino_compiler'],
               'none'),
           // TODO(antonm): fix the option drt.
           new _TestOptionSpecification(
@@ -113,10 +113,10 @@ class TestOptionsParser {
     none: No runtime, compile only (for example, used for dartanalyzer static
           analysis tests).''',
               ['-r', '--runtime'],
-              ['none', 'fletchc', 'fletchvm', 'fletch_warnings',
-               'fletch_tests', 'fletch_cc_tests'],
-               'fletch_warnings,fletch_tests,fletchc,'
-               'fletch_cc_tests'),
+              ['none', 'dartino_compiler', 'dartinovm', 'dartino_warnings',
+               'dartino_tests', 'dartino_cc_tests'],
+               'dartino_warnings,dartino_tests,dartino_compiler,'
+               'dartino_cc_tests'),
           new _TestOptionSpecification(
               'arch',
               'The architecture to run tests for',
@@ -317,7 +317,7 @@ Note: currently only implemented for dart2js.''',
               'Do not run tests in batch mode',
               ['-n', '--nobatch'],
               [],
-              true, // Batch-mode breaks fletch_warnings.
+              true, // Batch-mode breaks dartino_warnings.
               type: 'bool'),
           new _TestOptionSpecification(
               'dart2js_batch',
@@ -496,10 +496,10 @@ Note: currently only implemented for dart2js.''',
               type: 'int'),
           new _TestOptionSpecification(
               'settings_file_name',
-              'The fletch settings file to use for testing',
-              ['--fletch-settings-file'],
+              'The dartino settings file to use for testing',
+              ['--dartino-settings-file'],
               [],
-              '.fletch-settings'),
+              '.dartino-settings'),
           new _TestOptionSpecification(
               'no_java',
               "Don't require running java tests",
@@ -686,12 +686,12 @@ Note: currently only implemented for dart2js.''',
     bool isValid = true;
     List<String> validRuntimes;
     switch (config['compiler']) {
-      case 'fletchc':
-        validRuntimes = const ['none', 'fletchvm'];
+      case 'dartino_compiler':
+        validRuntimes = const ['none', 'dartinovm'];
         break;
       case 'none':
         validRuntimes = const [
-            'fletchc', 'fletch_warnings', 'fletch_tests', 'fletch_cc_tests'];
+            'dartino_compiler', 'dartino_warnings', 'dartino_tests', 'dartino_cc_tests'];
         break;
     }
     if (!validRuntimes.contains(config['runtime'])) {
@@ -718,18 +718,18 @@ Note: currently only implemented for dart2js.''',
             "--use-public-packages");
     }
 
-    if (config['runtime'] == 'fletchc' && !config['host_checked']) {
+    if (config['runtime'] == 'dartino_compiler' && !config['host_checked']) {
       isValid = false;
       // TODO(ahe): Find a way to make this optional.
-      print("fletch requires --host-checked option.");
+      print("dartino requires --host-checked option.");
     }
 
     if (config['system'] == 'lk' &&
-        (config['compiler'] != 'fletchc' ||
-         config['runtime'] != 'fletchvm')) {
+        (config['compiler'] != 'dartino_compiler' ||
+         config['runtime'] != 'dartinovm')) {
       isValid = false;
       print("Running tests on LK works only in the "
-            "--compiler=fletchc --runtime=fletchvm configuration.");
+            "--compiler=dartino_compiler --runtime=dartinovm configuration.");
     }
 
     return isValid;

@@ -6,7 +6,7 @@
 
 #include "src/vm/object.h"
 
-namespace fletch {
+namespace dartino {
 
 // In the semispaces, the sentinel marks the allocation limit in each chunk.
 // It is written when we flush, and when we allocate during GC, but it is not
@@ -179,4 +179,4 @@ bool SemiSpace::CompleteScavengeGenerational(PointerVisitor* visitor) {
   return found_work;
 }
 
-}  // namespace fletch
+}  // namespace dartino

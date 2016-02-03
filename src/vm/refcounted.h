@@ -8,7 +8,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/atomic.h"
 
-namespace fletch {
+namespace dartino {
 
 template <typename T>
 class Refcounted {
@@ -32,6 +32,6 @@ class Refcounted {
   Atomic<int> ref_count_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_REFCOUNTED_H_

@@ -6,7 +6,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/test_case.h"
 
-namespace fletch {
+namespace dartino {
 
 TEST_CASE(TypeSizes) {
   EXPECT_EQ(1U, sizeof(uint8));
@@ -42,4 +42,4 @@ TEST_CASE(ArraySize) {
   EXPECT_EQ(3U, ARRAY_SIZE(c3));
 }
 
-}  // namespace fletch
+}  // namespace dartino

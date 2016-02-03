@@ -33,7 +33,7 @@ import utils
 
 
 HOST_OS = utils.GuessOS()
-FLETCH_DIR = abspath(join(__file__, '..', '..'))
+DARTINO_DIR = abspath(join(__file__, '..', '..'))
 # The repository directory where dartino, dart and third_party are located.
 REPO_DIR = abspath(join(__file__, '..', '..', '..'))
 # Flags.
@@ -87,9 +87,9 @@ def Filter(tar_info):
   for ending in ignoredEndings:
     if original_name.endswith(ending):
       return None
-  # Add the fletch directory name with version. Place the debian
+  # Add the dartino directory name with version. Place the debian
   # directory one level over the rest which are placed in the
-  # directory 'fletch'. This enables building the Debian packages
+  # directory 'dartino'. This enables building the Debian packages
   # out-of-the-box.
   tar_info.name = join(versiondir, original_name)
   if verbose:
@@ -97,7 +97,7 @@ def Filter(tar_info):
   return tar_info
 
 def GenerateCopyright(filename):
-  with open(join(FLETCH_DIR, 'LICENSE.md')) as lf:
+  with open(join(DARTINO_DIR, 'LICENSE.md')) as lf:
     license_lines = lf.readlines()
 
   with open(filename, 'w') as f:
@@ -130,20 +130,20 @@ def CreateTarball(tarfilename):
   versiondir = 'dartino-%s' % version
   debian_dir = 'tools/linux_dist_support/debian'
   # Don't include the build directory in the tarball (ignored paths
-  # are relative to FLETCH_DIR).
+  # are relative to DARTINO_DIR).
   builddir = utils.GetBuildDir(HOST_OS)
   ignoredPaths.append(builddir)
 
   print 'Creating tarball: %s' % tarfilename
   with tarfile.open(tarfilename, mode='w:gz') as tar:
-    for f in listdir(FLETCH_DIR):
-      tar.add(join(FLETCH_DIR, f), filter=Filter)
-    for f in listdir(join(FLETCH_DIR, debian_dir)):
-      tar.add(join(FLETCH_DIR, debian_dir, f),
+    for f in listdir(DARTINO_DIR):
+      tar.add(join(DARTINO_DIR, f), filter=Filter)
+    for f in listdir(join(DARTINO_DIR, debian_dir)):
+      tar.add(join(DARTINO_DIR, debian_dir, f),
               arcname='%s/debian/%s' % (versiondir, f))
-    tar.add(join(FLETCH_DIR, 'platforms/raspberry-pi2/data/dartino-agent'),
+    tar.add(join(DARTINO_DIR, 'platforms/raspberry-pi2/data/dartino-agent'),
             arcname='%s/debian/dartino-agent.init' % versiondir)
-    tar.add(join(FLETCH_DIR, 'platforms/raspberry-pi2/data/dartino-agent.env'),
+    tar.add(join(DARTINO_DIR, 'platforms/raspberry-pi2/data/dartino-agent.env'),
             arcname='%s/debian/dartino-agent.default' % versiondir)
 
     with utils.TempDir() as temp_dir:
@@ -177,7 +177,7 @@ def Main():
 
   tar_filename = options.tar_filename
   if not tar_filename:
-    tar_filename = join(FLETCH_DIR,
+    tar_filename = join(DARTINO_DIR,
                         utils.GetBuildDir(HOST_OS),
                         'dartino-%s.tar.gz' % utils.GetVersion())
 

@@ -10,7 +10,7 @@
 
 #include "src/vm/vector.h"
 
-namespace fletch {
+namespace dartino {
 
 // Some examples with and without a typedef.  It's a lot easier to understand
 // with the typedef than without!
@@ -283,4 +283,4 @@ TEST_CASE(SORT_SPEED_TEST) {
   }
 }
 
-}  // namespace fletch.
+}  // namespace dartino.

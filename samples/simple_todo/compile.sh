@@ -39,7 +39,7 @@ function print_error() {
 function build() {
   SUFFIX=service_tests/simple_todo_$1
   OUT="$ROOT_DIR/out/${MODE_CC}${ARCH_UC}/temporary_test_output/$SUFFIX"
-  $TEST_PY -a $ARCH -m $MODE fletch_tests/$SUFFIX
+  $TEST_PY -a $ARCH -m $MODE dartino_tests/$SUFFIX
   echo
   echo "Compilation and testing succeeded"
   echo "Compiled output in"

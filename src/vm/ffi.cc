@@ -10,7 +10,7 @@
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 BEGIN_NATIVE(ForeignAllocate) {
   if (!arguments[0]->IsSmi() && !arguments[0]->IsLargeInteger()) {
@@ -420,4 +420,4 @@ DEFINE_FOREIGN_ACCESSORS_DOUBLE(Float64, double)
 
 #undef DEFINE_FOREIGN_ACCESSORS
 
-}  // namespace fletch
+}  // namespace dartino

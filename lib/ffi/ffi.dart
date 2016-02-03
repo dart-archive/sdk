@@ -2,13 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// The dart:fletch.ffi library is a low-level 'foreign function interface'
+// The dart:dartino.ffi library is a low-level 'foreign function interface'
 // library that allows Dart code to call arbitrary native platform
 // code defined outside the VM.
-library dart.fletch.ffi;
+library dart.dartino.ffi;
 
-import 'dart:fletch._system' as fletch;
-import 'dart:fletch';
+import 'dart:dartino._system' as dartino;
+import 'dart:dartino';
 import 'dart:typed_data';
 
 part 'utf.dart';
@@ -44,19 +44,19 @@ abstract class Foreign {
     throw new ArgumentError();
   }
 
-  @fletch.native static int _bitsPerMachineWord() {
+  @dartino.native static int _bitsPerMachineWord() {
     throw new UnsupportedError('_bitsPerMachineWord');
   }
-  @fletch.native static int _errno() {
+  @dartino.native static int _errno() {
     throw new UnsupportedError('_errno');
   }
-  @fletch.native static int _platform() {
+  @dartino.native static int _platform() {
     throw new UnsupportedError('_platform');
   }
-  @fletch.native static int _architecture() {
+  @dartino.native static int _architecture() {
     throw new UnsupportedError('_architecture');
   }
-  @fletch.native static int _convertPort(Port port) {
+  @dartino.native static int _convertPort(Port port) {
     throw new ArgumentError();
   }
 }
@@ -202,80 +202,80 @@ class ForeignFunction extends Foreign {
 
   int Lcall$wLwRetry(a0, a1, a2) => retry(() => Lcall$wLw(a0, a1, a2));
 
-  @fletch.native static int _icall$0(int address) {
+  @dartino.native static int _icall$0(int address) {
     throw new ArgumentError();
   }
-  @fletch.native static int _icall$1(int address, a0) {
+  @dartino.native static int _icall$1(int address, a0) {
     throw new ArgumentError();
   }
-  @fletch.native static int _icall$2(int address, a0, a1) {
+  @dartino.native static int _icall$2(int address, a0, a1) {
     throw new ArgumentError();
   }
-  @fletch.native static int _icall$3(int address, a0, a1, a2) {
+  @dartino.native static int _icall$3(int address, a0, a1, a2) {
     throw new ArgumentError();
   }
-  @fletch.native static int _icall$4(int address, a0, a1, a2, a3) {
+  @dartino.native static int _icall$4(int address, a0, a1, a2, a3) {
     throw new ArgumentError();
   }
-  @fletch.native static int _icall$5(int address, a0, a1, a2, a3, a4) {
+  @dartino.native static int _icall$5(int address, a0, a1, a2, a3, a4) {
     throw new ArgumentError();
   }
-  @fletch.native static int _icall$6(
+  @dartino.native static int _icall$6(
       int address, a0, a1, a2, a3, a4, a5) {
     throw new ArgumentError();
   }
-  @fletch.native static int _icall$7(
+  @dartino.native static int _icall$7(
       int address, a0, a1, a2, a3, a4, a5, a6) {
     throw new ArgumentError();
   }
 
-  @fletch.native static int _pcall$0(int address) {
+  @dartino.native static int _pcall$0(int address) {
     throw new ArgumentError();
   }
-  @fletch.native static int _pcall$1(int address, a0) {
+  @dartino.native static int _pcall$1(int address, a0) {
     throw new ArgumentError();
   }
-  @fletch.native static int _pcall$2(int address, a0, a1) {
+  @dartino.native static int _pcall$2(int address, a0, a1) {
     throw new ArgumentError();
   }
-  @fletch.native static int _pcall$3(int address, a0, a1, a2) {
+  @dartino.native static int _pcall$3(int address, a0, a1, a2) {
     throw new ArgumentError();
   }
-  @fletch.native static int _pcall$4(int address, a0, a1, a2, a3) {
+  @dartino.native static int _pcall$4(int address, a0, a1, a2, a3) {
     throw new ArgumentError();
   }
-  @fletch.native static int _pcall$5(int address, a0, a1, a2, a3, a4) {
+  @dartino.native static int _pcall$5(int address, a0, a1, a2, a3, a4) {
     throw new ArgumentError();
   }
-  @fletch.native static int _pcall$6(
+  @dartino.native static int _pcall$6(
       int address, a0, a1, a2, a3, a4, a5) {
     throw new ArgumentError();
   }
 
-  @fletch.native static int _vcall$0(int address) {
+  @dartino.native static int _vcall$0(int address) {
     throw new ArgumentError();
   }
-  @fletch.native static int _vcall$1(int address, a0) {
+  @dartino.native static int _vcall$1(int address, a0) {
     throw new ArgumentError();
   }
-  @fletch.native static int _vcall$2(int address, a0, a1) {
+  @dartino.native static int _vcall$2(int address, a0, a1) {
     throw new ArgumentError();
   }
-  @fletch.native static int _vcall$3(int address, a0, a1, a2) {
+  @dartino.native static int _vcall$3(int address, a0, a1, a2) {
     throw new ArgumentError();
   }
-  @fletch.native static int _vcall$4(int address, a0, a1, a2, a3) {
+  @dartino.native static int _vcall$4(int address, a0, a1, a2, a3) {
     throw new ArgumentError();
   }
-  @fletch.native static int _vcall$5(int address, a0, a1, a2, a3, a4) {
+  @dartino.native static int _vcall$5(int address, a0, a1, a2, a3, a4) {
     throw new ArgumentError();
   }
-  @fletch.native static int _vcall$6(
+  @dartino.native static int _vcall$6(
       int address, a0, a1, a2, a3, a4, a5) {
     throw new ArgumentError();
   }
 
-  @fletch.native static int _Lcall$wLw(int address, a0, a1, a2) {
+  @dartino.native static int _Lcall$wLw(int address, a0, a1, a2) {
     throw new ArgumentError();
   }
 }
@@ -295,7 +295,7 @@ class _ForeignValue extends ForeignPointer {
 
 class ForeignLibrary extends ForeignPointer {
   /// The ForeignLibrary main is used for looking up functions in the libraries
-  /// linked in to the main Fletch binary.
+  /// linked in to the main Dartino binary.
   static ForeignLibrary main = new ForeignLibrary.fromName(null);
 
   const ForeignLibrary.fromAddress(int address) : super(address);
@@ -316,21 +316,21 @@ class ForeignLibrary extends ForeignPointer {
   }
 
   /// Provides a platform specific location for a library relative to the
-  /// location of the Fletch vm. Takes the name without lib in front and
+  /// location of the Dartino vm. Takes the name without lib in front and
   /// returns a platform specific path. Example, on linux, foobar_hash
   /// become PATH_TO_EXECUTABLE/lib/libfoobar_hash.so.
-  @fletch.native static String bundleLibraryName(String libraryName) {
+  @dartino.native static String bundleLibraryName(String libraryName) {
     throw new ArgumentError();
   }
 
-  @fletch.native static int _lookupLibrary(String name, bool global) {
-    var error = fletch.nativeError;
-    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
+  @dartino.native static int _lookupLibrary(String name, bool global) {
+    var error = dartino.nativeError;
+    throw (error != dartino.indexOutOfBounds) ? error : new ArgumentError();
   }
 
-  @fletch.native static int _lookupFunction(int address, String name) {
-    var error = fletch.nativeError;
-    throw (error != fletch.indexOutOfBounds) ? error : new ArgumentError();
+  @dartino.native static int _lookupFunction(int address, String name) {
+    var error = dartino.nativeError;
+    throw (error != dartino.indexOutOfBounds) ? error : new ArgumentError();
   }
 }
 
@@ -395,76 +395,76 @@ abstract class UnsafeMemory extends Foreign {
     }
   }
 
-  @fletch.native static int _allocate(int length) {
+  @dartino.native static int _allocate(int length) {
     throw new ArgumentError();
   }
-  @fletch.native void _markForFinalization(int length) {
-    throw new ArgumentError();
-  }
-
-  @fletch.native static int _getInt8(int address) {
-    throw new ArgumentError();
-  }
-  @fletch.native static int _getInt16(int address) {
-    throw new ArgumentError();
-  }
-  @fletch.native static int _getInt32(int address) {
-    throw new ArgumentError();
-  }
-  @fletch.native static int _getInt64(int address) {
+  @dartino.native void _markForFinalization(int length) {
     throw new ArgumentError();
   }
 
-  @fletch.native static int _setInt8(int address, int value) {
+  @dartino.native static int _getInt8(int address) {
     throw new ArgumentError();
   }
-  @fletch.native static int _setInt16(int address, int value) {
+  @dartino.native static int _getInt16(int address) {
     throw new ArgumentError();
   }
-  @fletch.native static int _setInt32(int address, int value) {
+  @dartino.native static int _getInt32(int address) {
     throw new ArgumentError();
   }
-  @fletch.native static int _setInt64(int address, int value) {
-    throw new ArgumentError();
-  }
-
-  @fletch.native static int _getUint8(int address) {
-    throw new ArgumentError();
-  }
-  @fletch.native static int _getUint16(int address) {
-    throw new ArgumentError();
-  }
-  @fletch.native static int _getUint32(int address) {
-    throw new ArgumentError();
-  }
-  @fletch.native static int _getUint64(int address) {
+  @dartino.native static int _getInt64(int address) {
     throw new ArgumentError();
   }
 
-  @fletch.native static int _setUint8(int address, int value) {
+  @dartino.native static int _setInt8(int address, int value) {
     throw new ArgumentError();
   }
-  @fletch.native static int _setUint16(int address, int value) {
+  @dartino.native static int _setInt16(int address, int value) {
     throw new ArgumentError();
   }
-  @fletch.native static int _setUint32(int address, int value) {
+  @dartino.native static int _setInt32(int address, int value) {
     throw new ArgumentError();
   }
-  @fletch.native static int _setUint64(int address, int value) {
-    throw new ArgumentError();
-  }
-
-  @fletch.native static double _getFloat32(int address) {
-    throw new ArgumentError();
-  }
-  @fletch.native static double _getFloat64(int address) {
+  @dartino.native static int _setInt64(int address, int value) {
     throw new ArgumentError();
   }
 
-  @fletch.native static double _setFloat32(int address, double value) {
+  @dartino.native static int _getUint8(int address) {
     throw new ArgumentError();
   }
-  @fletch.native static double _setFloat64(int address, double value) {
+  @dartino.native static int _getUint16(int address) {
+    throw new ArgumentError();
+  }
+  @dartino.native static int _getUint32(int address) {
+    throw new ArgumentError();
+  }
+  @dartino.native static int _getUint64(int address) {
+    throw new ArgumentError();
+  }
+
+  @dartino.native static int _setUint8(int address, int value) {
+    throw new ArgumentError();
+  }
+  @dartino.native static int _setUint16(int address, int value) {
+    throw new ArgumentError();
+  }
+  @dartino.native static int _setUint32(int address, int value) {
+    throw new ArgumentError();
+  }
+  @dartino.native static int _setUint64(int address, int value) {
+    throw new ArgumentError();
+  }
+
+  @dartino.native static double _getFloat32(int address) {
+    throw new ArgumentError();
+  }
+  @dartino.native static double _getFloat64(int address) {
+    throw new ArgumentError();
+  }
+
+  @dartino.native static double _setFloat32(int address, double value) {
+    throw new ArgumentError();
+  }
+  @dartino.native static double _setFloat64(int address, double value) {
     throw new ArgumentError();
   }
 }
@@ -582,10 +582,10 @@ class ForeignMemory extends _ForeignMemoryHelper {
     length = 0;
   }
 
-  @fletch.native void _decreaseMemoryUsage(int length) {
+  @dartino.native void _decreaseMemoryUsage(int length) {
     throw new ArgumentError();
   }
-  @fletch.native void _free() {
+  @dartino.native void _free() {
     throw new ArgumentError();
   }
 }

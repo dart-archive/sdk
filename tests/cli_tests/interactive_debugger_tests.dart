@@ -24,7 +24,7 @@ import 'cli_tests.dart' show
 import 'prompt_splitter.dart' show
     PromptSplitter;
 
-import 'package:fletchc/src/hub/exit_codes.dart' show
+import 'package:dartino_compiler/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 
 final List<CliTest> tests = <CliTest>[
@@ -49,7 +49,7 @@ abstract class InteractiveDebuggerTest extends CliTest {
   Future<Null> internalRun();
 
   Future<Null> run() async {
-    process = await fletch(["debug", testFilePath],
+    process = await dartino(["debug", testFilePath],
                            workingDirectory: workingDirectory);
     out = new StreamIterator(
       process.stdout.transform(UTF8.decoder).transform(new PromptSplitter()));
@@ -157,7 +157,7 @@ class DebuggerListProcessesTest extends InteractiveDebuggerTest {
 
 class DebuggerRelativeFileReferenceTest extends InteractiveDebuggerTest {
 
-  // Working directory that is not the fletch-root directory.
+  // Working directory that is not the dartino-root directory.
   final String workingDirectory = "$thisDirectory/../";
 
   // Relative reference to the test file.

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// FletchDebuggerCommands=b,r,n,s,n,n,n,n,n,q
+// DartinoDebuggerCommands=b,r,n,s,n,n,n,n,n,q
 
 void recurse(int i) {
   if (i == 0) return;

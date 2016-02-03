@@ -26,19 +26,19 @@ import "test_suite.dart";
 import "utils.dart";
 import 'record_and_replay.dart';
 
-import 'fletch_warnings_suite.dart' show
-    FletchWarningsOutputCommand;
+import 'dartino_warnings_suite.dart' show
+    DartinoWarningsOutputCommand;
 
-import 'fletch_test_suite.dart' show
-    FletchTestCommand;
+import 'dartino_test_suite.dart' show
+    DartinoTestCommand;
 
-import 'fletch_session_command.dart' show
-    FletchSessionCommand;
+import 'dartino_session_command.dart' show
+    DartinoSessionCommand;
 
 import 'decode_exit_code.dart' show
     DecodeExitCode;
 
-import '../../../pkg/fletchc/lib/src/hub/exit_codes.dart' show
+import '../../../pkg/dartino_compiler/lib/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR,
     DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 
@@ -1660,7 +1660,7 @@ CommandOutput createCommandOutput(Command command,
         command, exitCode, timedOut, stdout, stderr,
         time, compilationSkipped);
   } else if (command is AnalysisCommand) {
-    return new FletchWarningsOutputCommand(
+    return new DartinoWarningsOutputCommand(
         command, exitCode, timedOut, stdout, stderr,
         time, compilationSkipped);
   } else if (command is VmCommand) {
@@ -2511,9 +2511,9 @@ class CommandExecutorImpl implements CommandExecutor {
           .runCommand(command.flavor, command, timeout, command.arguments);
     } else if (command is ScriptCommand) {
       return command.run();
-    } else if (command is FletchTestCommand) {
+    } else if (command is DartinoTestCommand) {
       return command.run(timeout);
-    } else if (command is FletchSessionCommand) {
+    } else if (command is DartinoSessionCommand) {
       return command.run(timeout, globalConfiguration['verbose']);
     } else {
       return new RunningProcess(command, timeout).run();

@@ -1,11 +1,11 @@
-import 'dart:fletch';
+import 'dart:dartino';
 import 'package:mqtt/mqtt.dart';
 
 // Sample code for publishing messages.
 //
 // For an end-to-end sample, first run subscribe-sample.dart, and then start
 // this program next to see the communication between the two. Note that this
-// program has to be started in a second session, e.g. `fletch start
+// program has to be started in a second session, e.g. `dartino start
 // publish-sample.dart in session 2'.
 void main() {
   // Create MQTT client.

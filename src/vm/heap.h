@@ -11,7 +11,7 @@
 #include "src/vm/object_memory.h"
 #include "src/vm/weak_pointer.h"
 
-namespace fletch {
+namespace dartino {
 
 class ExitReference;
 
@@ -49,7 +49,7 @@ class Heap {
   void TryDeallocInteger(LargeInteger* object);
 
   // Allocate double.
-  Object* CreateDouble(Class* the_class, fletch_double value);
+  Object* CreateDouble(Class* the_class, dartino_double value);
 
   // Allocate boxed.
   Object* CreateBoxed(Class* the_class, Object* value);
@@ -255,6 +255,6 @@ inline int64 AsForeignInt64(Object* object) {
                          : LargeInteger::cast(object)->value();
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_HEAP_H_

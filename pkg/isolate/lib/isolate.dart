@@ -4,7 +4,7 @@
 
 library isolate;
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 class Isolate {
   final Channel _channel;

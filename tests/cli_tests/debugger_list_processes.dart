@@ -7,7 +7,7 @@
 // breakpoint. Not doing so could cause inconsistent process structures to be
 // accessed.
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 Port spawnChild(Channel channel) {
   var port = new Port(channel);

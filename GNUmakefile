@@ -51,7 +51,7 @@ endif
 
 gyp_files = \
   common.gypi \
-  fletch.gyp \
+  dartino.gyp \
   src/double_conversion.gyp \
   src/shared/shared.gyp \
   src/vm/vm.gyp

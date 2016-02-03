@@ -9,7 +9,7 @@
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 class FreeList;
 class Heap;
@@ -339,7 +339,7 @@ class PageDirectory {
   void Set(int index, PageTable* table) { tables_[index] = table; }
 
  private:
-#ifdef FLETCH32
+#ifdef DARTINO32
   PageTable* tables_[1 << 10];
 #else
   PageTable* tables_[1 << 13];
@@ -405,7 +405,7 @@ class ObjectMemory {
   // Associate a range of pages with a given space.
   static void SetSpaceForPages(uword base, uword limit, Space* space);
 
-#ifdef FLETCH32
+#ifdef DARTINO32
   static PageDirectory page_directory_;
 #else
   static PageDirectory* page_directories_[1 << 13];
@@ -422,6 +422,6 @@ inline bool Space::Includes(uword address) const {
   return ObjectMemory::IsAddressInSpace(address, this);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_OBJECT_MEMORY_H_

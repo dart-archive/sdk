@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
 #include "src/vm/debug_info.h"
 
@@ -11,7 +11,7 @@
 #include "src/vm/native_interpreter.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 static Mutex* breakpoint_mutex = new Mutex();
 
@@ -178,6 +178,6 @@ void DebugInfo::UpdateBreakpoints() {
   breakpoints_.Swap(new_breakpoints);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING

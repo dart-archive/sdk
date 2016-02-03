@@ -6,7 +6,7 @@
 #include "src/shared/test_case.h"
 #include "src/shared/random.h"
 
-namespace fletch {
+namespace dartino {
 
 // Chi squared for getting m 0s out of n bits.
 double ChiSquared(int m, int n) {
@@ -87,4 +87,4 @@ TEST_CASE(RandomBitCorrelations) {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

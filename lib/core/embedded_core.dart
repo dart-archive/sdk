@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// The dart:core library for embedded fletch.
+/// The dart:core library for embedded dartino.
 ///
 /// It is imported by default in all libraries.
 ///
-/// It is the same as the mobile fletch core library without the
+/// It is the same as the mobile dartino core library without the
 /// Regexp and Uri classes.
 library dart.core;
 
@@ -35,9 +35,9 @@ import "dart:math" show Random;  // Used by List.shuffle
 
 import "dart:_internal" as internal show Symbol;
 
-// TODO(sigurdm): Make fletchc not depend on seeing this library. It is
+// TODO(sigurdm): Make dartino_compiler not depend on seeing this library. It is
 // currently hard-coded to look for [ForeignMemory].
-import 'dart:fletch.ffi' as not_needed; // Needed by fletchc.
+import 'dart:dartino.ffi' as not_needed; // Needed by dartino_compiler.
 
 part "dart:_core_annotations";
 part "dart:_core_bool";

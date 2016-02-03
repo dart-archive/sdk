@@ -12,7 +12,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 enum Register {
   R0 = 0,
@@ -281,6 +281,6 @@ class Assembler {
 #undef INSTRUCTION_1
 #undef INSTRUCTION_2
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_ASSEMBLER_ARM_H_

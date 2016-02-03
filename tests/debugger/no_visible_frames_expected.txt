@@ -11,4 +11,4 @@ Compile error: main is malformed.
   2: callMain        @invokeMain(arguments)
   3: entry           @callMain([])
 > q
-Non-zero exit code from 'fletch-vm' (254).
+Non-zero exit code from 'dartino-vm' (254).

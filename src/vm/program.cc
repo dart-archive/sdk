@@ -24,7 +24,7 @@
 #include "src/vm/process.h"
 #include "src/vm/session.h"
 
-namespace fletch {
+namespace dartino {
 
 static List<const char> StringFromCharZ(const char* str) {
   return List<const char>(str, strlen(str));
@@ -197,7 +197,7 @@ Object* Program::CreateClass(int fields) {
   return klass;
 }
 
-Object* Program::CreateDouble(fletch_double value) {
+Object* Program::CreateDouble(dartino_double value) {
   return heap()->CreateDouble(double_class(), value);
 }
 
@@ -1174,4 +1174,4 @@ LookupCache* Program::EnsureCache() {
 }
 
 
-}  // namespace fletch
+}  // namespace dartino

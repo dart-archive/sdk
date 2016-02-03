@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_NATIVE_PROCESSES
+#ifdef DARTINO_ENABLE_NATIVE_PROCESSES
 
-#ifdef FLETCH_TARGET_OS_POSIX
+#ifdef DARTINO_TARGET_OS_POSIX
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -18,7 +18,7 @@
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 const int MAX_MESSAGE_LENGTH = 256;
 
@@ -296,8 +296,8 @@ BEGIN_NATIVE(NativeProcessSpawnDetached) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_TARGET_OS_POSIX
+#endif  // DARTINO_TARGET_OS_POSIX
 
-#endif  // FLETCH_ENABLE_NATIVE_PROCESSES
+#endif  // DARTINO_ENABLE_NATIVE_PROCESSES

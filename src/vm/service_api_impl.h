@@ -7,7 +7,7 @@
 
 #include "include/service_api.h"
 
-namespace fletch {
+namespace dartino {
 
 class Monitor;
 class Port;
@@ -17,7 +17,7 @@ struct ServiceRequest;
 // probably post a callback into dart? Fix the service param;
 // for now it is a pointer to a pointer so we can post something
 // into dart that dart can free.
-FLETCH_EXPORT
+DARTINO_EXPORT
 void PostResultToService(char* buffer);
 
 class Service {
@@ -50,6 +50,6 @@ class Service {
   Service* next_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_SERVICE_API_IMPL_H_

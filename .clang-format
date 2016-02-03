@@ -1,4 +1,4 @@
-# Defines the Fletch style for automatic reformatting.
+# Defines the Dartino style for automatic reformatting.
 # http://clang.llvm.org/docs/ClangFormatStyleOptions.html
 BasedOnStyle: Google
 # This defaults to 'Auto'. Explicitly set it for a while, so that

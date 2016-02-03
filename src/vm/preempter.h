@@ -10,7 +10,7 @@
 #include "src/vm/thread.h"
 #include "src/vm/scheduler.h"
 
-namespace fletch {
+namespace dartino {
 
 class Preempter {
  public:
@@ -45,6 +45,6 @@ class Preempter {
 };
 
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PREEMPTER_H_

@@ -8,19 +8,19 @@
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(DARTINO_TARGET_OS_POSIX)
 #include "src/vm/thread_posix.h"
-#elif defined(FLETCH_TARGET_OS_LK)
+#elif defined(DARTINO_TARGET_OS_LK)
 #include "src/vm/thread_lk.h"
-#elif defined(FLETCH_TARGET_OS_CMSIS)
+#elif defined(DARTINO_TARGET_OS_CMSIS)
 #include "src/vm/thread_cmsis.h"
-#elif defined(FLETCH_TARGET_OS_WIN)
+#elif defined(DARTINO_TARGET_OS_WIN)
 #include "src/vm/thread_windows.h"
 #else
 #error "OS is lacking thread implementation."
 #endif
 
-namespace fletch {
+namespace dartino {
 
 // A ThreadIdentifier represents a thread identifier for a thread.
 // The ThreadIdentifier does not own the underlying OS handle.
@@ -53,6 +53,6 @@ class Thread {
   DISALLOW_ALLOCATION();
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_THREAD_H_

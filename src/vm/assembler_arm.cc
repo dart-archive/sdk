@@ -2,14 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_ARM)
+#if defined(DARTINO_TARGET_ARM)
 
 #include "src/vm/assembler.h"  // NOLINT we don't include assembler_arm.h.
 
 #include <stdio.h>
 #include <stdarg.h>
 
-namespace fletch {
+namespace dartino {
 
 int Label::position_counter_ = 0;
 
@@ -144,7 +144,7 @@ void Assembler::Print(const char* format, ...) {
         }
 
         case 'W': {
-#ifdef FLETCH_THUMB_ONLY
+#ifdef DARTINO_THUMB_ONLY
           UNREACHABLE();
 #else
           WriteBack write_back = static_cast<WriteBack>(va_arg(arguments, int));
@@ -190,6 +190,6 @@ void Assembler::PrintOperand(const Operand* operand) {
          ShiftTypeToString(operand->shift_type()), operand->shift_amount());
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_ARM)
+#endif  // defined(DARTINO_TARGET_ARM)

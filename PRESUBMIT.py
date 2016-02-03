@@ -4,7 +4,7 @@
 
 import cpplint
 
-"""Top-level presubmit script for Fletch.
+"""Top-level presubmit script for Dartino.
 
 See http://dev.chromium.org/developers/how-tos/depottools/presubmit-scripts
 for more details about the presubmit API built into gcl.
@@ -15,7 +15,7 @@ NO_LINTING = (
     r"^package[\\\/]immi[\\\/]objc[\\\/].*",
     r"^package[\\\/]service[\\\/]cc[\\\/].*"
     r"^package[\\\/]service[\\\/]java[\\\/]jni[\\\/].*",
-    r"^platforms[\\\/]stm[\\\/]disco_fletch[\\\/]generated[\\\/].*",
+    r"^platforms[\\\/]stm[\\\/]disco_dartino[\\\/]generated[\\\/].*",
     r"^samples[\\\/]github[\\\/]ios[\\\/].*",
     r"^samples[\\\/]buildbot[\\\/]cc[\\\/].*",
     r"^samples[\\\/]buildbot[\\\/]ios[\\\/].*",
@@ -42,7 +42,7 @@ def CheckChangeOnCommit(input_api, output_api):
   status_check = input_api.canned_checks.CheckTreeIsOpen(
       input_api,
       output_api,
-      json_url='http://fletch-status.appspot.com/current?format=json')
+      json_url='http://dartino-status.appspot.com/current?format=json')
   results.extend(status_check)
   results.extend(RunLint(input_api, output_api))
   return results

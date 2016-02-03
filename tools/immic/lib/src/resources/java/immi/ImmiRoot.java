@@ -9,9 +9,9 @@ package immi;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import fletch.ImmiServiceLayer;
-import fletch.ImmiServiceLayer.RefreshCallback;
-import fletch.PatchData;
+import dartino.ImmiServiceLayer;
+import dartino.ImmiServiceLayer.RefreshCallback;
+import dartino.PatchData;
 
 public final class ImmiRoot {
 

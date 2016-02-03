@@ -2,7 +2,7 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE file.
 
-# Watchlist rules for the Fletch repository.
+# Watchlist rules for the Dartino repository.
 #
 # Refer to documentation at:
 # http://dev.chromium.org/developers/contributing-code/watchlists
@@ -10,8 +10,8 @@
 {
   'WATCHLIST_DEFINITIONS': {
     'uxreview': {
-       'filepath': 'pkg/fletchc/lib/src/messages.dart' \
-           '|pkg/fletchc/lib/src/verbs/documentation.dart',
+       'filepath': 'pkg/dartino_compiler/lib/src/messages.dart' \
+           '|pkg/dartino_compiler/lib/src/verbs/documentation.dart',
     },
   },
 

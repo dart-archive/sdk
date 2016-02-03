@@ -6,7 +6,7 @@
 
 #include "src/vm/object.h"
 
-namespace fletch {
+namespace dartino {
 
 const int8_t Utf8::kTrailBytes[256] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -120,4 +120,4 @@ void Utf16::Encode(int32 codepoint, uint16_t* dst) {
   dst[1] = (0xDC00 + (codepoint & 0x3FF));
 }
 
-}  // namespace fletch
+}  // namespace dartino

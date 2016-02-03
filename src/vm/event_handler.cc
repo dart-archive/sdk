@@ -11,7 +11,7 @@
 #include "src/vm/scheduler.h"
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
 EventHandler* EventHandler::event_handler_ = NULL;
 
@@ -145,4 +145,4 @@ void EventHandler::Send(Port* port, int64 value, bool release_port) {
   if (release_port) port->DecrementRef();
 }
 
-}  // namespace fletch
+}  // namespace dartino

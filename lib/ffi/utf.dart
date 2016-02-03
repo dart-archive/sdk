@@ -6,7 +6,7 @@
 // here to remove the dependency on dart:convert which will not be
 // part of the library set for embedded due to its dependency on
 // dart:async.
-part of dart.fletch.ffi;
+part of dart.dartino.ffi;
 
 /**
  * Converts [string] to its UTF-8 code units (a list of

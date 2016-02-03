@@ -6,9 +6,9 @@
 ///
 /// For now we have to run this manually.
 
-import "dart:fletch";
-import "dart:fletch.ffi";
-import "dart:fletch.os" hide sleep;
+import "dart:dartino";
+import "dart:dartino.ffi";
+import "dart:dartino.os" hide sleep;
 
 ForeignFunction ledOn = ForeignLibrary.main.lookup('BSP_LED_On');
 ForeignFunction ledOff = ForeignLibrary.main.lookup('BSP_LED_Off');

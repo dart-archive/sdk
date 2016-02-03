@@ -17,7 +17,7 @@
 #include "src/vm/program.h"
 #include "src/vm/unicode.h"
 
-namespace fletch {
+namespace dartino {
 
 uint8 StaticClassStructures::meta_class_storage[Class::kSize];
 uint8 StaticClassStructures::free_list_chunk_class_storage[Class::kSize];
@@ -735,4 +735,4 @@ PromotedTrack* PromotedTrack::Initialize(PromotedTrack* next, uword location,
   return self;
 }
 
-}  // namespace fletch
+}  // namespace dartino

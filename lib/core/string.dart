@@ -447,91 +447,91 @@ abstract class _StringBase implements String {
 
   String toUpperCase() => internalToUpperCase(this);
 
-  @fletch.native external int get length;
+  @dartino.native external int get length;
 }
 
 class _OneByteString extends _StringBase {
   factory _OneByteString(int length) => _create(length);
 
-  @fletch.native int codeUnitAt(int index) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native int codeUnitAt(int index) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         throw new ArgumentError();
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new IndexError(index, this);
     }
   }
 
-  @fletch.native external bool operator ==(Object other);
+  @dartino.native external bool operator ==(Object other);
 
   int get hashCode => identityHashCode(this);
 
-  @fletch.native String operator +(String other) {
+  @dartino.native String operator +(String other) {
     throw new ArgumentError(other);
   }
 
-  @fletch.native String _substring(int start, int end) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native String _substring(int start, int end) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         throw new ArgumentError();
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new IndexError(start, this);
     }
   }
 
-  @fletch.native external void _setContent(int offset, _StringBase content);
+  @dartino.native external void _setContent(int offset, _StringBase content);
 
-  @fletch.native void _setCodeUnitAt(int index, int char) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native void _setCodeUnitAt(int index, int char) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         throw new ArgumentError();
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new IndexError(index, this);
     }
   }
 
-  @fletch.native external static _OneByteString _create(int length);
+  @dartino.native external static _OneByteString _create(int length);
 }
 
 class _TwoByteString extends _StringBase {
   factory _TwoByteString(int length) => _create(length);
 
-  @fletch.native int codeUnitAt(int index) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native int codeUnitAt(int index) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         throw new ArgumentError();
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new IndexError(index, this);
     }
   }
 
-  @fletch.native external bool operator ==(Object other);
+  @dartino.native external bool operator ==(Object other);
 
   int get hashCode => identityHashCode(this);
 
-  @fletch.native String operator +(String other) {
+  @dartino.native String operator +(String other) {
     throw new ArgumentError(other);
   }
 
-  @fletch.native String _substring(int start, int end) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native String _substring(int start, int end) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         throw new ArgumentError();
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new IndexError(start, this);
     }
   }
 
-  @fletch.native external void _setContent(int offset, _StringBase content);
+  @dartino.native external void _setContent(int offset, _StringBase content);
 
-  @fletch.native void _setCodeUnitAt(int index, int char) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native void _setCodeUnitAt(int index, int char) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         throw new ArgumentError();
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new IndexError(index, this);
     }
   }
 
-  @fletch.native external static _TwoByteString _create(int length);
+  @dartino.native external static _TwoByteString _create(int length);
 }

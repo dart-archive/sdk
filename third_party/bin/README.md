@@ -9,7 +9,7 @@ We use a patched version of the Dart VM at the moment, because
   * The persistent process / daemon uses Unix Domain Sockets
 
 These patches are tracked in a [branch of the Dart
-SDK](https://github.com/dart-lang/sdk/tree/_temporary_fletch_patches). This
+SDK](https://github.com/dart-lang/sdk/tree/_temporary_dartino_patches). This
 branch is the source of truth.
 
 In order to have a single binary per OS-Arch combination, we use the

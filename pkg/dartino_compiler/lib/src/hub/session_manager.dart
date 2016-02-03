@@ -1,0 +1,256 @@
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+library dartino_compiler.hub.session_manager;
+
+import 'dart:async' show
+    Future,
+    Timer;
+
+import 'client_commands.dart' show
+    CommandSender;
+
+import 'hub_main.dart' show
+    WorkerConnection;
+
+export 'hub_main.dart' show
+    WorkerConnection;
+
+import '../worker/developer.dart' show
+    Settings;
+
+import '../diagnostic.dart' show
+    DiagnosticKind,
+    DiagnosticParameter,
+    InputError,
+    throwFatalError,
+    throwInternalError;
+
+import '../../dartino_system.dart' show
+    DartinoDelta;
+
+export '../../dartino_system.dart' show
+    DartinoDelta;
+
+import '../../vm_session.dart' show
+    Session;
+
+export '../../vm_session.dart' show
+    Session;
+
+import '../../dartino_compiler.dart' show
+    DartinoCompiler;
+
+export '../../dartino_compiler.dart' show
+    DartinoCompiler;
+
+import '../../incremental/dartino_compiler_incremental.dart' show
+    IncrementalCompiler;
+
+export '../../incremental/dartino_compiler_incremental.dart' show
+    IncrementalCompiler;
+
+import '../../dartino_vm.dart' show
+    DartinoVm;
+
+export '../../dartino_vm.dart' show
+    DartinoVm;
+
+// TODO(karlklose): we need a better API for session management.
+class Sessions {
+  static Iterable<String> get names {
+    return internalSessions.keys;
+  }
+}
+
+final Map<String, UserSession> internalSessions = <String, UserSession>{};
+
+// TODO(ahe): We need a command to switch to another session.
+String internalCurrentSession = "local";
+
+String get currentSession => internalCurrentSession;
+
+Future<UserSession> createSession(
+    String name,
+    Future<WorkerConnection> allocateWorker()) async {
+  if (name == null) {
+    throw new ArgumentError("session name must not be `null`.");
+  }
+
+  UserSession session = lookupSession(name);
+  if (session != null) {
+    throwFatalError(DiagnosticKind.sessionAlreadyExists, sessionName: name);
+  }
+  session = new UserSession(name, await allocateWorker());
+  internalSessions[name] = session;
+  return session;
+}
+
+UserSession lookupSession(String name) => internalSessions[name];
+
+// Remove the session named [name] from [internalSessions], but caller must
+// ensure that [worker] has its static state cleaned up and returned to the
+// isolate pool.
+UserSession endSession(String name) {
+  UserSession session = internalSessions.remove(name);
+  if (session == null) {
+    throwFatalError(DiagnosticKind.noSuchSession, sessionName: name);
+  }
+  return session;
+}
+
+void endAllSessions() {
+  internalSessions.forEach((String name, UserSession session) {
+    print("Ending session: $name");
+    session.worker.endSession();
+  });
+  internalSessions.clear();
+}
+
+/// A session in the hub (main isolate).
+class UserSession {
+  final String name;
+
+  final WorkerConnection worker;
+
+  bool hasActiveWorkerTask = false;
+
+  UserSession(this.name, this.worker);
+
+  void kill(void printLineOnStderr(String line)) {
+    worker.isolate.kill();
+    internalSessions.remove(name);
+    InputError error = new InputError(
+        DiagnosticKind.terminatedSession,
+        <DiagnosticParameter, dynamic>{DiagnosticParameter.sessionName: name});
+    printLineOnStderr(error.asDiagnostic().formatMessage());
+  }
+}
+
+typedef void SendBytesFunction(List<int> bytes);
+
+class BufferingOutputSink implements Sink<List<int>> {
+  SendBytesFunction sendBytes;
+
+  List<List<int>> buffer = new List();
+
+  void attachCommandSender(SendBytesFunction sendBytes) {
+    for (List<int> data in buffer) {
+      sendBytes(data);
+    }
+    buffer = new List();
+    this.sendBytes = sendBytes;
+  }
+
+  void detachCommandSender() {
+    assert(sendBytes != null);
+    sendBytes = null;
+  }
+
+  void add(List<int> bytes) {
+    if (sendBytes != null) {
+      sendBytes(bytes);
+    } else {
+      buffer.add(bytes);
+    }
+  }
+
+  void close() {
+    throwInternalError("Unimplemented");
+  }
+}
+
+/// The state stored in a worker isolate of a [UserSession].
+/// TODO(wibling): This should be moved into a worker specific file.
+class SessionState {
+  final String name;
+
+  final BufferingOutputSink stdoutSink = new BufferingOutputSink();
+
+  final BufferingOutputSink stderrSink = new BufferingOutputSink();
+
+  final DartinoCompiler compilerHelper;
+
+  final IncrementalCompiler compiler;
+
+  final List<DartinoDelta> compilationResults = <DartinoDelta>[];
+
+  final List<String> loggedMessages = <String>[];
+
+  Uri script;
+
+  Session session;
+
+  DartinoVm dartinoVm;
+
+  int dartinoAgentVmId;
+
+  Settings settings;
+
+  bool explicitAttach = false;
+
+  SessionState(this.name, this.compilerHelper, this.compiler, this.settings);
+
+  bool get hasRemoteVm => dartinoAgentVmId != null;
+
+  bool get colorsDisabled  => session == null ? false : session.colorsDisabled;
+
+  void addCompilationResult(DartinoDelta delta) {
+    compilationResults.add(delta);
+  }
+
+  void resetCompiler() {
+    compilationResults.clear();
+  }
+
+  Future terminateSession() async {
+    if (session != null) {
+      if (!session.terminated) {
+        bool done = false;
+        Timer timer = new Timer(const Duration(seconds: 5), () {
+            if (!done) {
+              print("Timed out waiting for Dartino VM to shutdown; killing "
+                  "session");
+              session.kill();
+            }
+          });
+        await session.terminateSession();
+        done = true;
+        timer.cancel();
+      }
+      explicitAttach = false;
+    }
+    session = null;
+  }
+
+  void attachCommandSender(CommandSender sender) {
+    stdoutSink.attachCommandSender((d) => sender.sendStdoutBytes(d));
+    stderrSink.attachCommandSender((d) => sender.sendStderrBytes(d));
+  }
+
+  void detachCommandSender() {
+    stdoutSink.detachCommandSender();
+    stderrSink.detachCommandSender();
+  }
+
+  void log(message) {
+    loggedMessages.add("[$name: ${new DateTime.now()} $message]");
+  }
+
+  String getLog() => loggedMessages.join("\n");
+
+  static SessionState internalCurrent;
+
+  /// Don't use this as a shortcut to get a [SessionState] object. Generally, a
+  /// [SessionState] object should be passed as a parameter to any user of it,
+  /// otherwise API that takes a [SessionState] object doesn't work correctly
+  /// and testing becomes hard.
+  ///
+  /// TODO(ahe): Perhaps we can remove this getter, and [internalCurrent] by
+  /// storing this object in ../worker/worker_main.dart. For example,
+  /// [workerMain] holds a reference to an instance of [SessionState] and
+  /// passes this reference to [WorkerSideTask] which can in turn pass it on to
+  /// the verb/task in [WorkerSideTask.performTask].
+  static SessionState get current => internalCurrent;
+}

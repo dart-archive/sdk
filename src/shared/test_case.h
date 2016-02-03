@@ -9,7 +9,7 @@
 
 #define TEST_CASE(name)                                             \
   static void Test##name();                                         \
-  static const fletch::TestCase kRegister##name(Test##name, #name); \
+  static const dartino::TestCase kRegister##name(Test##name, #name); \
   static void Test##name()
 
 #define TEST_EXPORT(method)                     \
@@ -17,7 +17,7 @@
   __attribute__((visibility("default"))) method \
   }
 
-namespace fletch {
+namespace dartino {
 
 class TestCase {
  public:
@@ -42,6 +42,6 @@ class TestCase {
   DISALLOW_COPY_AND_ASSIGN(TestCase);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_TEST_CASE_H_

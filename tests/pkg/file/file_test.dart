@@ -16,7 +16,7 @@ void main() {
 bool isFileException(e) => e is FileException;
 
 void testOpen() {
-  String path = '/tmp/__fletch_dart_io_non_exist_file__';
+  String path = '/tmp/__dartino_dart_io_non_exist_file__';
   Expect.throws(() => new File.open(path), isFileException);
   var file = new File.temporary("/tmp/file_test");
   Expect.isTrue(file.isOpen);

@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// Regression test for https://github.com/dart-lang/fletch/issues/393
+// Regression test for https://github.com/dart-lang/dartino/issues/393
 
-// FletchDebuggerCommands=b foo,r,p,q
+// DartinoDebuggerCommands=b foo,r,p,q
 
 foo(x) => x;
 

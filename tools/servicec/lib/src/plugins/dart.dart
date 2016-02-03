@@ -91,9 +91,9 @@ class _DartVisitor extends CodeGenerationVisitor {
     writeln('library $libraryName;');
     writeln();
 
-    writeln('import "dart:fletch";');
-    writeln('import "dart:fletch.ffi";');
-    writeln('import "dart:fletch.service" as service;');
+    writeln('import "dart:dartino";');
+    writeln('import "dart:dartino.ffi";');
+    writeln('import "dart:dartino.service" as service;');
     if (node.structs.isNotEmpty) {
       writeln('import "struct.dart";');
     }

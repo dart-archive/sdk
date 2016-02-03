@@ -7,7 +7,7 @@
 
 #include "src/shared/globals.h"
 
-namespace fletch {
+namespace dartino {
 
 const int8 kVarDiff = 0x7f;
 const int kLoadLiteralWideLimit = 0x3fffffff;
@@ -174,6 +174,6 @@ class Bytecode {
   static uint8* PreviousBytecode(uint8* current_bcp);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_BYTECODES_H_

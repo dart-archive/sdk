@@ -5,7 +5,7 @@
 // Test that we get a meaningful breakpoint when breaking on a whitespace
 // column.
 
-// FletchDebuggerCommands=bf tests/debugger/empty_column_test.dart 12 1,r,c
+// DartinoDebuggerCommands=bf tests/debugger/empty_column_test.dart 12 1,r,c
 
 int foo() {
   int x = 2;

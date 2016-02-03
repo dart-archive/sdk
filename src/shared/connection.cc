@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
 #include "src/shared/connection.h"
 
@@ -11,7 +11,7 @@
 #include "src/shared/native_socket.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 // TODO(ager,ajohnsen): Instead of dynamically allocating the actual
 // buffer, we can get away with inline allocation of a small buffer
@@ -174,6 +174,6 @@ Connection* ConnectionListener::Accept() {
   return new Connection("", 0, child);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING

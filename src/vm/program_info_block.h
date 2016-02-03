@@ -7,7 +7,7 @@
 
 #include "src/vm/program.h"
 
-namespace fletch {
+namespace dartino {
 class ProgramInfoBlock {
  public:
   ProgramInfoBlock();
@@ -36,5 +36,5 @@ class ProgramInfoBlock {
   intptr_t main_arity_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 #endif  // SRC_VM_PROGRAM_INFO_BLOCK_H_

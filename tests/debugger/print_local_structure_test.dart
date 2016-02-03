@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// FletchDebuggerCommands=b breakHere,r,f 1,p *a,p *i,c
+// DartinoDebuggerCommands=b breakHere,r,f 1,p *a,p *i,c
 
 class S0 {
   var str = 'spaß';

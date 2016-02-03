@@ -8,4 +8,4 @@ Uncaught exception: 42
   print('not rethrowing from here');
 }
 > q
-Non-zero exit code from 'fletch-vm' (255).
+Non-zero exit code from 'dartino-vm' (255).

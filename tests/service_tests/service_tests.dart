@@ -25,7 +25,7 @@ import '../../samples/todomvc/todomvc_service_tests.dart' as todomvc;
 import '../../samples/simple_todo/simple_todo_service_tests.dart'
     as simple_todo;
 
-import '../fletchc/run.dart' show
+import '../dartino_compiler/run.dart' show
     export;
 
 import 'package:servicec/compiler.dart' as servicec;
@@ -93,8 +93,8 @@ const String tempTestOutputDirectory =
 final String generatedDirectory = '$tempTestOutputDirectory/service_tests';
 
 // TODO(zerny): Provide the below constants via configuration from test.py
-final String fletchExecutable = '$buildDirectory/fletch';
-final String fletchLibrary = '$buildDirectory/libfletch.a';
+final String dartinoExecutable = '$buildDirectory/dartino';
+final String dartinoLibrary = '$buildDirectory/libdartino.a';
 
 /// Location of JDK installation. Empty if no installation was found.
 const String javaHome = const String.fromEnvironment('java-home');
@@ -194,7 +194,7 @@ class StandardServiceJavaTest extends StandardServiceTest {
     if (javaHome.isEmpty) return;
 
     rules.add(new CcRule(
-        sharedLibrary: '$outputDirectory/libfletch',
+        sharedLibrary: '$outputDirectory/libdartino',
         includePaths: [
           'include',
           '$javaHome/include',
@@ -202,8 +202,8 @@ class StandardServiceJavaTest extends StandardServiceTest {
           outputDirectory,
         ],
         sources: [
-          '$javaDirectory/jni/fletch_api_wrapper.cc',
-          '$javaDirectory/jni/fletch_service_api_wrapper.cc',
+          '$javaDirectory/jni/dartino_api_wrapper.cc',
+          '$javaDirectory/jni/dartino_service_api_wrapper.cc',
           '$javaDirectory/jni/${baseName}_service_wrapper.cc',
         ]..addAll(ccSources)));
 
@@ -211,7 +211,7 @@ class StandardServiceJavaTest extends StandardServiceTest {
 
     rules.add(new JavacRule(
         warningAsError: false,
-        sources: ['$javaDirectory/fletch']
+        sources: ['$javaDirectory/dartino']
           ..addAll(javaSources.map((path) => '$inputDirectory/$path')),
         outputDirectory: classesDirectory));
 
@@ -454,8 +454,8 @@ class JavaRule extends Rule {
   }
 }
 
-// TODO(zerny): Consider refactoring fletch specifics into a derived class.
-// TODO(zerny): Find a way to obtain the fletch build configuration from gyp.
+// TODO(zerny): Consider refactoring dartino specifics into a derived class.
+// TODO(zerny): Find a way to obtain the dartino build configuration from gyp.
 class CcRule extends Rule {
   final String language;
   final String executable;
@@ -494,19 +494,19 @@ class CcRule extends Rule {
 
   void addBuildFlags(List<String> arguments) {
     arguments.add('-std=${language}');
-    arguments.add('-DFLETCH_ENABLE_FFI');
-    arguments.add('-DFLETCH_ENABLE_LIVE_CODING');
-    arguments.add('-DFLETCH_ENABLE_PRINT_INTERCEPTORS');
-    arguments.add('-DFLETCH_ENABLE_NATIVE_PROCESSES');
+    arguments.add('-DDARTINO_ENABLE_FFI');
+    arguments.add('-DDARTINO_ENABLE_LIVE_CODING');
+    arguments.add('-DDARTINO_ENABLE_PRINT_INTERCEPTORS');
+    arguments.add('-DDARTINO_ENABLE_NATIVE_PROCESSES');
     if (sharedLibrary != null) arguments.add('-shared');
     if (buildArchitecture == 'ia32') {
       arguments.add('-m32');
-      arguments.add('-DFLETCH32');
-      arguments.add('-DFLETCH_TARGET_IA32');
+      arguments.add('-DDARTINO32');
+      arguments.add('-DDARTINO_TARGET_IA32');
     } else if (buildArchitecture == 'x64') {
       arguments.add('-m64');
-      arguments.add('-DFLETCH64');
-      arguments.add('-DFLETCH_TARGET_X64');
+      arguments.add('-DDARTINO64');
+      arguments.add('-DDARTINO_TARGET_X64');
       if (sharedLibrary != null) arguments.add('-fPIC');
     } else {
       throw "Unsupported architecture ${buildArchitecture}";
@@ -515,12 +515,12 @@ class CcRule extends Rule {
 
   void addHostFlags(List<String> arguments) {
     if (isMacOS) {
-      arguments.add('-DFLETCH_TARGET_OS_MACOS');
-      arguments.add('-DFLETCH_TARGET_OS_POSIX');
+      arguments.add('-DDARTINO_TARGET_OS_MACOS');
+      arguments.add('-DDARTINO_TARGET_OS_POSIX');
       arguments.addAll(['-framework', 'CoreFoundation']);
     } else if (isLinux) {
-      arguments.add('-DFLETCH_TARGET_OS_LINUX');
-      arguments.add('-DFLETCH_TARGET_OS_POSIX');
+      arguments.add('-DDARTINO_TARGET_OS_LINUX');
+      arguments.add('-DDARTINO_TARGET_OS_POSIX');
     } else {
       throw "Unsupported host ${buildSystem}";
     }
@@ -550,7 +550,7 @@ class CcRule extends Rule {
   }
 
   void addLibraries(List<String> arguments) {
-    arguments.add(fletchLibrary);
+    arguments.add(dartinoLibrary);
     for (String lib in libraries) {
       arguments.add(lib.endsWith('.a') ? lib : '-l$lib');
     }
@@ -570,10 +570,10 @@ class CcRule extends Rule {
 
   Future<Null> build() async {
     List<String> arguments = <String>[];
-    if (isClang) arguments.add('-DFLETCH_CLANG');
+    if (isClang) arguments.add('-DDARTINO_CLANG');
     if (isAsan) {
-      arguments.add('-DFLETCH_ASAN');
-      arguments.add('-L/FLETCH_ASAN');
+      arguments.add('-DDARTINO_ASAN');
+      arguments.add('-L/DARTINO_ASAN');
     }
     addBuildFlags(arguments);
     addHostFlags(arguments);

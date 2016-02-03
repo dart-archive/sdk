@@ -9,17 +9,17 @@
 
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 Atomic<bool> Print::standard_output_enabled_(true);
 
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
 Mutex* Print::mutex_ = Platform::CreateMutex();
 PrintInterceptor* Print::interceptor_ = NULL;
 #endif
 
 void Print::Out(const char* format, ...) {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   va_list args;
   va_start(args, format);
   int size = vsnprintf(NULL, 0, format, args);
@@ -46,11 +46,11 @@ void Print::Out(const char* format, ...) {
     vfprintf(stdout, format, args);
     va_end(args);
   }
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 }
 
 void Print::Error(const char* format, ...) {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   va_list args;
   va_start(args, format);
   int size = vsnprintf(NULL, 0, format, args);
@@ -77,22 +77,22 @@ void Print::Error(const char* format, ...) {
     vfprintf(stderr, format, args);
     va_end(args);
   }
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 }
 
 void Print::RegisterPrintInterceptor(PrintInterceptor* interceptor) {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   ScopedLock scope(mutex_);
   ASSERT(!interceptor->next_);
   interceptor->next_ = interceptor_;
   interceptor_ = interceptor;
 #else
   UNIMPLEMENTED();
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 }
 
 void Print::UnregisterPrintInterceptor(PrintInterceptor* interceptor) {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   ScopedLock scope(mutex_);
   if (interceptor == interceptor_) {
     interceptor_ = interceptor->next_;
@@ -108,15 +108,15 @@ void Print::UnregisterPrintInterceptor(PrintInterceptor* interceptor) {
   interceptor->next_ = NULL;
 #else
   UNIMPLEMENTED();
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 }
 
 void Print::UnregisterPrintInterceptors() {
-#ifdef FLETCH_ENABLE_PRINT_INTERCEPTORS
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
   ScopedLock scope(mutex_);
   delete interceptor_;
   interceptor_ = NULL;
-#endif  // FLETCH_ENABLE_PRINT_INTERCEPTORS
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 }
 
 uint32 Utils::StringHash(const uint8* data, int length, int char_width) {
@@ -170,4 +170,4 @@ uint32 Utils::StringHash(const uint8* data, int length, int char_width) {
   return hash;
 }
 
-}  // namespace fletch
+}  // namespace dartino

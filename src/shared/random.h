@@ -7,7 +7,7 @@
 
 #include "src/shared/globals.h"
 
-namespace fletch {
+namespace dartino {
 
 // This class implements Xorshift+
 //
@@ -43,6 +43,6 @@ class RandomXorShift {
   uint64 s1_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_RANDOM_H_

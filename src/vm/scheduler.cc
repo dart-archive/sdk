@@ -25,7 +25,7 @@
     }                                                                  \
   } while (false);
 
-namespace fletch {
+namespace dartino {
 
 // Global instance of scheduler.
 Scheduler* Scheduler::scheduler_ = NULL;
@@ -772,4 +772,4 @@ void SimpleProgramRunner::CaptureExitCode(Program* program,
   UNREACHABLE();
 }
 
-}  // namespace fletch
+}  // namespace dartino

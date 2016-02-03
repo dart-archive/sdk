@@ -15,18 +15,18 @@
 
       'ReleaseMBED': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_mbed',
-          'fletch_disable_live_coding', 'fletch_disable_ffi', 
-          'fletch_disable_native_processes',
-          'fletch_disable_print_interceptors'],
+          'dartino_base', 'dartino_release', 'dartino_mbed',
+          'dartino_disable_live_coding', 'dartino_disable_ffi', 
+          'dartino_disable_native_processes',
+          'dartino_disable_print_interceptors'],
       },
 
       'DebugMBED': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_mbed', 
-          'fletch_disable_live_coding', 'fletch_disable_ffi', 
-          'fletch_disable_native_processes',
-          'fletch_disable_print_interceptors'],
+          'dartino_base', 'dartino_debug', 'dartino_mbed', 
+          'dartino_disable_live_coding', 'dartino_disable_ffi', 
+          'dartino_disable_native_processes',
+          'dartino_disable_print_interceptors'],
       },
     },
   },

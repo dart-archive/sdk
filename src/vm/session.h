@@ -5,9 +5,9 @@
 #ifndef SRC_VM_SESSION_H_
 #define SRC_VM_SESSION_H_
 
-#ifndef FLETCH_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_LIVE_CODING
 #include "src/vm/session_no_live_coding.h"
-#else  // FLETCH_ENABLE_LIVE_CODING
+#else  // DARTINO_ENABLE_LIVE_CODING
 
 #include "src/shared/names.h"
 
@@ -16,7 +16,7 @@
 #include "src/vm/snapshot.h"
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
 class Connection;
 class Frame;
@@ -233,8 +233,8 @@ class Session {
   Process* GetProcess(int process_id);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_SESSION_H_

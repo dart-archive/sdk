@@ -14,8 +14,8 @@
       'type': 'executable',
       'toolsets': ['target'],
       'dependencies': [
-        '../../vm/vm.gyp:libfletch',
-        '../../vm/vm.gyp:fletch_relocation_library',
+        '../../vm/vm.gyp:libdartino',
+        '../../vm/vm.gyp:dartino_relocation_library',
       ],
       'sources': [
         'main.cc',

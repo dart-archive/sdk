@@ -9,7 +9,7 @@
 #error Do not include platform_lk.h directly; use platform.h instead.
 #endif
 
-#if defined(FLETCH_TARGET_OS_LK)
+#if defined(DARTINO_TARGET_OS_LK)
 
 #include <err.h>
 #include <kernel/thread.h>
@@ -30,7 +30,7 @@
     }                                 \
   }
 
-namespace fletch {
+namespace dartino {
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
@@ -187,8 +187,8 @@ class MonitorImpl {
   WaitListEntry* last_waiting_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_LK)
+#endif  // defined(DARTINO_TARGET_OS_LK)
 
 #endif  // SRC_SHARED_PLATFORM_LK_H_

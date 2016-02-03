@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 import 'package:expect/expect.dart';
 
@@ -78,7 +78,7 @@ main() {
   // Expect.isFalse(isImmutable(String));
   // Expect.isFalse(isImmutable(Hest));
 
-  // TODO(kustermann/fletchc-experts): Allow self recursive closures.
+  // TODO(kustermann/dartino_compiler-experts): Allow self recursive closures.
   // [The recursive reference causes a storeField instruction to be
   //  emitted which makes it mutable ATM.]
   void recurse(x) { if (x > 0) { return recurse(x - 1); } }

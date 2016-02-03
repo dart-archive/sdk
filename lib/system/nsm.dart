@@ -2,34 +2,34 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dart.fletch._system;
+part of dart.dartino._system;
 
-class FletchNoSuchMethodError implements NoSuchMethodError {
+class DartinoNoSuchMethodError implements NoSuchMethodError {
   final Object _receiver;
   final int _receiverClass;
   final int _receiverSelector;
 
-  const FletchNoSuchMethodError(this._receiver,
+  const DartinoNoSuchMethodError(this._receiver,
                                 this._receiverClass,
                                 this._receiverSelector);
 
-  String toString() => 'FletchNoSuchMethodError(selector: $_receiverSelector)';
+  String toString() => 'DartinoNoSuchMethodError(selector: $_receiverSelector)';
 
   // TODO(kustermann): This needs to be implemented.
   StackTrace get stackTrace => null;
 }
 
-class FletchInvocation implements Invocation {
+class DartinoInvocation implements Invocation {
   final Object _receiver;
   final int _receiverClass;
   final int _receiverSelector;
 
-  const FletchInvocation(this._receiver,
+  const DartinoInvocation(this._receiver,
                          this._receiverClass,
                          this._receiverSelector);
 
-  FletchNoSuchMethodError get asNoSuchMethodError {
-    return new FletchNoSuchMethodError(
+  DartinoNoSuchMethodError get asNoSuchMethodError {
+    return new DartinoNoSuchMethodError(
         _receiver, _receiverClass, _receiverSelector);
   }
 

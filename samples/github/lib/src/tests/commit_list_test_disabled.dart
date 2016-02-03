@@ -20,7 +20,7 @@ void main() {
   var mock = new GithubMock()..spawn();
   var server = new Server(mock.host, mock.port);
   var user = server.getUser('dart-lang');
-  var repo = user.getRepository('fletch');
+  var repo = user.getRepository('dartino');
   testPresent(repo);
   server.close();
   mock.close();

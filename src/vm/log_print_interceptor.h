@@ -7,7 +7,7 @@
 
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 class LogPrintInterceptor : public PrintInterceptor {
  public:
@@ -20,6 +20,6 @@ class LogPrintInterceptor : public PrintInterceptor {
   const char* logPath_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_LOG_PRINT_INTERCEPTOR_H_

@@ -23,7 +23,7 @@ from shutil import copyfile
 
 HOST_OS = utils.GuessOS()
 HOST_CPUS = utils.GuessCpus()
-FLETCH_DIR = abspath(join(__file__, '..', '..'))
+DARTINO_DIR = abspath(join(__file__, '..', '..'))
 
 def BuildOptions():
   result = optparse.OptionParser()
@@ -115,10 +115,10 @@ def Main():
   arch = options.arch.split(',')
 
   if not options.out_dir:
-    out_dir = join(FLETCH_DIR, 'out')
+    out_dir = join(DARTINO_DIR, 'out')
 
   if not tar_filename:
-    tar_filename = join(FLETCH_DIR,
+    tar_filename = join(DARTINO_DIR,
                         utils.GetBuildDir(HOST_OS),
                         'dartino-%s.tar.gz' % utils.GetVersion())
 

@@ -27,8 +27,8 @@ void testUser(Server server) {
 
 void testRepository(Server server) {
   var user = server.getUser('dart-lang');
-  var repo = user.getRepository('fletch');
-  Expect.stringEquals('dart-lang/fletch', repo['full_name']);
+  var repo = user.getRepository('dartino');
+  Expect.stringEquals('dart-lang/dartino', repo['full_name']);
 }
 
 void testError(Server server) {
@@ -37,8 +37,8 @@ void testError(Server server) {
 }
 
 void testCommits(Server server) {
-  var user = server.getUser('dart-lang');
-  var repo = user.getRepository('fletch');
+  var user = server.getUser('dartino');
+  var repo = user.getRepository('sdk');
   var commit = repo.getCommitAt(0);
   Expect.stringEquals('Ian Zerny', commit['commit']['author']['name']);
   commit = repo.getCommitAt(60);

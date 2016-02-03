@@ -5,7 +5,7 @@
 #ifndef SRC_SHARED_ATOMIC_H_
 #define SRC_SHARED_ATOMIC_H_
 
-#if defined(FLETCH_TARGET_OS_LK)
+#if defined(DARTINO_TARGET_OS_LK)
 #include "src/shared/atomic_gcc_intrinsics.h"
 #else
 #include "src/shared/atomic_cpp11.h"

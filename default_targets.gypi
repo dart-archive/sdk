@@ -14,161 +14,161 @@
     'configurations': {
 
       'ReleaseIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_ia32' ],
       },
 
       'ReleaseIA32IOS': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_ios_sim',
-          'fletch_clang',
+          'dartino_base', 'dartino_release', 'dartino_ia32', 'dartino_ios_sim',
+          'dartino_clang',
         ],
       },
 
       'ReleaseIA32Android': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_ia32' ],
-        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_ia32' ],
+        'defines': [ 'DARTINO_TARGET_ANDROID' ],
       },
 
       'ReleaseIA32Asan': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_asan',
+          'dartino_base', 'dartino_release', 'dartino_ia32', 'dartino_asan',
         ],
       },
 
       'ReleaseX64': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_x64' ],
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_x64' ],
       },
 
       'ReleaseX64Asan': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_asan',
+          'dartino_base', 'dartino_release', 'dartino_x64', 'dartino_asan',
         ],
       },
 
       'ReleaseIA32Clang': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_clang',
+          'dartino_base', 'dartino_release', 'dartino_ia32', 'dartino_clang',
         ],
       },
 
       'ReleaseIA32ClangAsan': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_ia32', 'fletch_asan',
-          'fletch_clang',
+          'dartino_base', 'dartino_release', 'dartino_ia32', 'dartino_asan',
+          'dartino_clang',
         ],
       },
 
       'ReleaseX64Clang': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_clang',
+          'dartino_base', 'dartino_release', 'dartino_x64', 'dartino_clang',
         ],
       },
 
       'ReleaseX64ClangAsan': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_x64', 'fletch_asan',
-          'fletch_clang',
+          'dartino_base', 'dartino_release', 'dartino_x64', 'dartino_asan',
+          'dartino_clang',
         ],
       },
 
       'ReleaseARM': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_arm' ],
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_arm' ],
       },
 
       'ReleaseXARM': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm' ],
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_xarm' ],
       },
 
       'ReleaseXARMAndroid': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm'],
-        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_xarm'],
+        'defines': [ 'DARTINO_TARGET_ANDROID' ],
       },
 
       'ReleaseXARM64': {
-        'inherit_from': [ 'fletch_base', 'fletch_release', 'fletch_xarm64' ],
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_xarm64' ],
       },
 
       'DebugIA32': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32', ],
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_ia32', ],
       },
 
       'DebugIA32Android': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_ia32', ],
-        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_ia32', ],
+        'defines': [ 'DARTINO_TARGET_ANDROID' ],
       },
 
       'DebugIA32Asan': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_asan',
+          'dartino_base', 'dartino_debug', 'dartino_ia32', 'dartino_asan',
         ],
       },
 
       'DebugX64': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_x64' ],
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_x64' ],
       },
 
       'DebugX64Asan': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_asan',
+          'dartino_base', 'dartino_debug', 'dartino_x64', 'dartino_asan',
         ],
       },
 
       'DebugIA32Clang': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_clang',
+          'dartino_base', 'dartino_debug', 'dartino_ia32', 'dartino_clang',
         ],
       },
 
       'DebugIA32ClangAsan': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_ia32', 'fletch_asan',
-          'fletch_clang',
+          'dartino_base', 'dartino_debug', 'dartino_ia32', 'dartino_asan',
+          'dartino_clang',
         ],
       },
 
       'DebugX64Clang': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_clang',
+          'dartino_base', 'dartino_debug', 'dartino_x64', 'dartino_clang',
         ],
       },
 
       'DebugX64ClangAsan': {
         'inherit_from': [
-          'fletch_base', 'fletch_debug', 'fletch_x64', 'fletch_asan',
-          'fletch_clang',
+          'dartino_base', 'dartino_debug', 'dartino_x64', 'dartino_asan',
+          'dartino_clang',
         ],
       },
 
       'DebugARM': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_arm' ],
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_arm' ],
       },
 
       'DebugXARM': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm' ],
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_xarm' ],
       },
 
       'DebugXARMAndroid': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm' ],
-        'defines': [ 'FLETCH_TARGET_ANDROID' ],
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_xarm' ],
+        'defines': [ 'DARTINO_TARGET_ANDROID' ],
       },
 
       'DebugXARM64': {
-        'inherit_from': [ 'fletch_base', 'fletch_debug', 'fletch_xarm64' ],
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_xarm64' ],
       },
 
       # TODO(ajohnsen): Test configuration - to be removed.
       'ReleaseIA32DisableLiveCoding': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_ia32',
-          'fletch_disable_live_coding'
+          'dartino_base', 'dartino_release', 'dartino_ia32',
+          'dartino_disable_live_coding'
         ],
       },
 
       # TODO(herhut): Test configuration - to be removed.
       'ReleaseIA32DisableFFI': {
         'inherit_from': [
-          'fletch_base', 'fletch_release', 'fletch_ia32',
-          'fletch_disable_ffi'
+          'dartino_base', 'dartino_release', 'dartino_ia32',
+          'dartino_disable_ffi'
         ],
       },
     },

@@ -11,7 +11,7 @@ import subprocess
 import sys
 import utils
 
-import bots.fletch_namer as gcs_namer
+import bots.dartino_namer as gcs_namer
 import bots.bot_utils as bot_utils
 
 def ParseOptions():
@@ -47,15 +47,15 @@ def Main():
       subprocess.check_call(cmd, shell=shell)
 
   # Currently we only release on dev
-  raw_namer = gcs_namer.FletchGCSNamer(channel=bot_utils.Channel.DEV)
-  release_namer = gcs_namer.FletchGCSNamer(
+  raw_namer = gcs_namer.DartinoGCSNamer(channel=bot_utils.Channel.DEV)
+  release_namer = gcs_namer.DartinoGCSNamer(
       channel=bot_utils.Channel.DEV,
       release_type=bot_utils.ReleaseType.RELEASE)
   for target_version in [version, 'latest']:
     for system in ['linux', 'mac']:
       for arch in ['x64']:
-        src = raw_namer.fletch_sdk_zipfilepath(version, system, arch, 'release')
-        target = release_namer.fletch_sdk_zipfilepath(target_version, system,
+        src = raw_namer.dartino_sdk_zipfilepath(version, system, arch, 'release')
+        target = release_namer.dartino_sdk_zipfilepath(target_version, system,
                                                       arch, 'release')
         gsutil_cp(src, target)
 
@@ -72,9 +72,9 @@ def Main():
     gsutil_cp(docs, temp_dir, recursive=True, public=False)
     local_docs = os.path.join(temp_dir, 'docs')
     with utils.ChangedWorkingDirectory(temp_dir):
-      print 'Cloning the fletch-api repo'
-      Run(['git', 'clone', 'git@github.com:dart-lang/fletch-api.git'])
-      with utils.ChangedWorkingDirectory(os.path.join(temp_dir, 'fletch-api')):
+      print 'Cloning the dartino-api repo'
+      Run(['git', 'clone', 'git@github.com:dart-lang/dartino-api.git'])
+      with utils.ChangedWorkingDirectory(os.path.join(temp_dir, 'dartino-api')):
         print 'Checking out gh-pages which serves our documentation'
         Run(['git', 'checkout', 'gh-pages'])
         print 'Cleaning out old version of docs locally'

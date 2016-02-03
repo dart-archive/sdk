@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(DARTINO_TARGET_OS_POSIX)
 
 #include "src/vm/thread.h"  // NOLINT we don't include thread_posix.h.
 
@@ -15,7 +15,7 @@
 
 #include "src/vm/tick_sampler.h"
 
-namespace fletch {
+namespace dartino {
 
 bool Thread::IsCurrent(const ThreadIdentifier* thread) {
   return thread->IsSelf();
@@ -80,6 +80,6 @@ ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   return ThreadIdentifier(thread);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_POSIX)
+#endif  // defined(DARTINO_TARGET_OS_POSIX)

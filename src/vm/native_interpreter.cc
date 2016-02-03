@@ -6,7 +6,7 @@
 
 #include "src/vm/native_interpreter.h"
 
-namespace fletch {
+namespace dartino {
 
 extern "C"
 uword Interpret_DispatchTable[];
@@ -37,4 +37,4 @@ void ClearBytecodeBreak(Opcode opcode) {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

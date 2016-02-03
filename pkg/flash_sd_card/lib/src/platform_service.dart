@@ -46,7 +46,7 @@ abstract class PlatformService {
 
     // Wait for an additional disk.
     await ctx.readLine(
-      'Please insert the SD card you want to use with Fletch. '
+      'Please insert the SD card you want to use with Dartino. '
       'Then press Enter.');
     int retryCount = 10;
     while (true) {

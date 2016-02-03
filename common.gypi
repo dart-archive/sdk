@@ -63,14 +63,14 @@
 
     'configurations': {
 
-      'fletch_base': {
+      'dartino_base': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH_ENABLE_LIVE_CODING',
-          'FLETCH_ENABLE_FFI',
-          'FLETCH_ENABLE_NATIVE_PROCESSES',
-          'FLETCH_ENABLE_PRINT_INTERCEPTORS',
+          'DARTINO_ENABLE_LIVE_CODING',
+          'DARTINO_ENABLE_FFI',
+          'DARTINO_ENABLE_NATIVE_PROCESSES',
+          'DARTINO_ENABLE_PRINT_INTERCEPTORS',
         ],
 
         'xcode_settings': {
@@ -121,22 +121,22 @@
         'target_conditions': [
           ['OS=="mac"', {
             'defines': [
-              'FLETCH_TARGET_OS_MACOS',
-              'FLETCH_TARGET_OS_POSIX' ],
+              'DARTINO_TARGET_OS_MACOS',
+              'DARTINO_TARGET_OS_POSIX' ],
           }],
           ['OS=="linux"', {
             'defines': [
-              'FLETCH_TARGET_OS_LINUX',
-              'FLETCH_TARGET_OS_POSIX' ],
+              'DARTINO_TARGET_OS_LINUX',
+              'DARTINO_TARGET_OS_POSIX' ],
           }],
           ['OS=="win"', {
             'defines': [
-              'FLETCH_TARGET_OS_WIN' ],
+              'DARTINO_TARGET_OS_WIN' ],
           }],
         ],
       },
 
-      'fletch_release': {
+      'dartino_release': {
         'abstract': 1,
 
         'defines': [
@@ -186,7 +186,7 @@
         ],
       },
 
-      'fletch_debug': {
+      'dartino_debug': {
         'abstract': 1,
 
         'defines': [
@@ -223,12 +223,12 @@
         ],
       },
 
-      'fletch_ia32': {
+      'dartino_ia32': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH32',
-          'FLETCH_TARGET_IA32',
+          'DARTINO32',
+          'DARTINO_TARGET_IA32',
         ],
 
         'cflags': [
@@ -247,12 +247,12 @@
         },
       },
 
-      'fletch_x64': {
+      'dartino_x64': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH64',
-          'FLETCH_TARGET_X64',
+          'DARTINO64',
+          'DARTINO_TARGET_X64',
         ],
 
         # Shared libraries on x64 require compilation with position
@@ -270,12 +270,12 @@
         },
       },
 
-      'fletch_arm': {
+      'dartino_arm': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH32',
-          'FLETCH_TARGET_ARM',
+          'DARTINO32',
+          'DARTINO_TARGET_ARM',
         ],
 
         'xcode_settings': { # And ninja.
@@ -283,12 +283,12 @@
         },
       },
 
-      'fletch_xarm': {
+      'dartino_xarm': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH32',
-          'FLETCH_TARGET_ARM',
+          'DARTINO32',
+          'DARTINO_TARGET_ARM',
         ],
 
         'target_conditions': [
@@ -299,7 +299,7 @@
                   # Fake define intercepted by cc_wrapper.py to change the
                   # compiler binary to an ARM cross compiler. This is only
                   # needed on linux.
-                  'FLETCH_ARM',
+                  'DARTINO_ARM',
                  ],
                }],
               ['OS=="mac"', {
@@ -321,30 +321,30 @@
 
             'ldflags': [
               # Fake define intercepted by cc_wrapper.py.
-              '-L/FLETCH_ARM',
+              '-L/DARTINO_ARM',
               '-static-libstdc++',
             ],
           }],
 
           ['_toolset=="host"', {
             # Compile host targets as IA32, to get same word size.
-            'inherit_from': [ 'fletch_ia32' ],
+            'inherit_from': [ 'dartino_ia32' ],
 
-            # The 'fletch_ia32' target will define IA32 as the target. Since
+            # The 'dartino_ia32' target will define IA32 as the target. Since
             # the host should still target ARM, undefine it.
             'defines!': [
-              'FLETCH_TARGET_IA32',
+              'DARTINO_TARGET_IA32',
             ],
           }],
         ],
       },
 
-      'fletch_xarm64': {
+      'dartino_xarm64': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH64',
-          'FLETCH_TARGET_ARM64',
+          'DARTINO64',
+          'DARTINO_TARGET_ARM64',
         ],
 
         'target_conditions': [
@@ -355,7 +355,7 @@
                   # Fake define intercepted by cc_wrapper.py to change the
                   # compiler binary to an ARM64 cross compiler. This is only
                   # needed on linux.
-                  'FLETCH_ARM64',
+                  'DARTINO_ARM64',
                  ],
                }],
               ['OS=="mac"', {
@@ -377,37 +377,37 @@
 
             'ldflags': [
               # Fake define intercepted by cc_wrapper.py.
-              '-L/FLETCH_ARM64',
+              '-L/DARTINO_ARM64',
               '-static-libstdc++',
             ],
           }],
 
           ['_toolset=="host"', {
             # Compile host targets as X64, to get same word size.
-            'inherit_from': [ 'fletch_x64' ],
+            'inherit_from': [ 'dartino_x64' ],
 
-            # The 'fletch_x64' target will define IA32 as the target. Since
+            # The 'dartino_x64' target will define IA32 as the target. Since
             # the host should still target ARM, undefine it.
             'defines!': [
-              'FLETCH_TARGET_X64',
+              'DARTINO_TARGET_X64',
             ],
           }],
         ],
       },
 
-      'fletch_lk': {
+      'dartino_lk': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH32',
-          'FLETCH_TARGET_ARM',
-          'FLETCH_THUMB_ONLY',
+          'DARTINO32',
+          'DARTINO_TARGET_ARM',
+          'DARTINO_THUMB_ONLY',
         ],
 
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
-              'FLETCH_TARGET_OS_LK',
+              'DARTINO_TARGET_OS_LK',
              ],
             'conditions': [
               ['LK_USE_DEPS_ARM_GCC==1', {
@@ -456,45 +456,45 @@
             ],
 
             'defines!': [
-              'FLETCH_TARGET_OS_MACOS',
-              'FLETCH_TARGET_OS_LINUX',
-              'FLETCH_TARGET_OS_POSIX',
+              'DARTINO_TARGET_OS_MACOS',
+              'DARTINO_TARGET_OS_LINUX',
+              'DARTINO_TARGET_OS_POSIX',
             ],
           }],
 
           ['_toolset=="host"', {
             # Compile host targets as IA32, to get same word size.
-            'inherit_from': [ 'fletch_ia32' ],
+            'inherit_from': [ 'dartino_ia32' ],
 
-            # The 'fletch_ia32' target will define IA32 as the target. Since
+            # The 'dartino_ia32' target will define IA32 as the target. Since
             # the host should still target ARM, undefine it.
             'defines!': [
-              'FLETCH_TARGET_IA32',
+              'DARTINO_TARGET_IA32',
             ],
           }],
         ],
       },
 
-      'fletch_mbed': {
+      'dartino_mbed': {
         'abstract': 1,
 
         'defines': [
-          'FLETCH32',
-          'FLETCH_TARGET_ARM',
-          'FLETCH_THUMB_ONLY',
+          'DARTINO32',
+          'DARTINO_TARGET_ARM',
+          'DARTINO_THUMB_ONLY',
         ],
 
         'target_conditions': [
           ['_toolset=="target"', {
             'defines': [
               'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
-              'FLETCH_TARGET_OS_CMSIS',
+              'DARTINO_TARGET_OS_CMSIS',
             ],
 
             'defines!': [
-              'FLETCH_TARGET_OS_POSIX',
-              'FLETCH_TARGET_OS_LINUX',
-              'FLETCH_TARGET_OS_MACOS',
+              'DARTINO_TARGET_OS_POSIX',
+              'DARTINO_TARGET_OS_LINUX',
+              'DARTINO_TARGET_OS_MACOS',
             ],
 
             'cflags': [
@@ -526,17 +526,17 @@
 
           ['_toolset=="host"', {
             # Compile host targets as IA32, to get same word size.
-            'inherit_from': [ 'fletch_ia32' ],
+            'inherit_from': [ 'dartino_ia32' ],
 
             # Undefine IA32 target and using existing ARM target.
             'defines!': [
-              'FLETCH_TARGET_IA32',
+              'DARTINO_TARGET_IA32',
             ],
           }],
         ],
       },
 
-      'fletch_asan': {
+      'dartino_asan': {
         'abstract': 1,
 
         'cflags': [
@@ -544,7 +544,7 @@
         ],
 
         'defines': [
-          'FLETCH_ASAN',
+          'DARTINO_ASAN',
         ],
 
         'ldflags': [
@@ -563,37 +563,37 @@
             # which doesn't understand -fsanitize=address. The fake library
             # search path is recognized by cxx_wrapper.py and cc_wrapper.py,
             # which will pass the correct options to the linker.
-            '-L/FLETCH_ASAN',
+            '-L/DARTINO_ASAN',
           ],
         },
       },
 
-      'fletch_clang': {
+      'dartino_clang': {
         'abstract': 1,
 
         'defines': [
           # Recognized by cxx_wrapper.py and cc_wrapper.py and causes them to
           # invoke clang.
-          'FLETCH_CLANG',
+          'DARTINO_CLANG',
         ],
 
         'ldflags': [
           # The define above is not passed to the cxx_wrapper.py and
           # cc_wrapper.py scripts when linking. We therefore have to force
           # the use of clang with a dummy link flag.
-          '-L/FLETCH_CLANG',
+          '-L/DARTINO_CLANG',
         ],
 
         'xcode_settings': { # And ninja.
           'OTHER_LDFLAGS': [
             # Recognized by cxx_wrapper.py and cc_wrapper.py and causes them to
             # invoke clang.
-            '-L/FLETCH_CLANG',
+            '-L/DARTINO_CLANG',
           ],
         },
       },
 
-      'fletch_ios_sim': {
+      'dartino_ios_sim': {
         'abstract': 1,
         'conditions': [
           [ 'OS=="mac"', {
@@ -617,35 +617,35 @@
         ],
       },
 
-      'fletch_disable_live_coding': {
+      'dartino_disable_live_coding': {
         'abstract': 1,
 
         'defines!': [
-          'FLETCH_ENABLE_LIVE_CODING',
+          'DARTINO_ENABLE_LIVE_CODING',
         ],
       },
 
-      'fletch_disable_ffi': {
+      'dartino_disable_ffi': {
         'abstract': 1,
 
         'defines!': [
-          'FLETCH_ENABLE_FFI',
+          'DARTINO_ENABLE_FFI',
         ],
       },
 
-      'fletch_disable_native_processes': {
+      'dartino_disable_native_processes': {
         'abstract': 1,
 
         'defines!': [
-          'FLETCH_ENABLE_NATIVE_PROCESSES',
+          'DARTINO_ENABLE_NATIVE_PROCESSES',
         ],
       },
 
-      'fletch_disable_print_interceptors': {
+      'dartino_disable_print_interceptors': {
         'abstract': 1,
 
         'defines!': [
-          'FLETCH_ENABLE_PRINT_INTERCEPTORS',
+          'DARTINO_ENABLE_PRINT_INTERCEPTORS',
         ],
       },
     },

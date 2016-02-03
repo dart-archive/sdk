@@ -10,7 +10,7 @@
   },
   'targets': [
     {
-      'target_name': 'fletch_vm_library',
+      'target_name': 'dartino_vm_library',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
       'target_conditions': [
@@ -18,8 +18,8 @@
           'standalone_static_library': 1,
       }]],
       'dependencies': [
-        'fletch_vm_library_generator#host',
-        '../shared/shared.gyp:fletch_shared',
+        'dartino_vm_library_generator#host',
+        '../shared/shared.gyp:dartino_shared',
         '../double_conversion.gyp:double_conversion',
       ],
       'conditions': [
@@ -93,9 +93,9 @@
         'ffi_macos.cc',
         'ffi_posix.cc',
         'ffi_windows.cc',
-        'fletch_api_impl.cc',
-        'fletch_api_impl.h',
-        'fletch.cc',
+        'dartino_api_impl.cc',
+        'dartino_api_impl.h',
+        'dartino.cc',
         'gc_thread.cc',
         'gc_thread.h',
         'hash_map.h',
@@ -201,7 +201,7 @@
           'action_name': 'generate_generated_S',
           'inputs': [
             '<(PRODUCT_DIR)/<(EXECUTABLE_PREFIX)'
-            'fletch_vm_library_generator'
+            'dartino_vm_library_generator'
             '<(EXECUTABLE_SUFFIX)',
           ],
           'outputs': [
@@ -215,11 +215,11 @@
       ],
     },
     {
-      'target_name': 'libfletch',
+      'target_name': 'libdartino',
       'type': 'none',
       'dependencies': [
-        'fletch_vm_library',
-        '../shared/shared.gyp:fletch_shared',
+        'dartino_vm_library',
+        '../shared/shared.gyp:dartino_shared',
         '../double_conversion.gyp:double_conversion',
       ],
       'sources': [
@@ -229,15 +229,15 @@
       ],
       'actions': [
         {
-          'action_name': 'generate_libfletch',
+          'action_name': 'generate_libdartino',
           'inputs': [
             '../../tools/library_combiner.py',
-            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_vm_library<(STATIC_LIB_SUFFIX)',
-            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch_shared<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino_vm_library<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino_shared<(STATIC_LIB_SUFFIX)',
             '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)double_conversion<(STATIC_LIB_SUFFIX)',
           ],
           'outputs': [
-            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)fletch<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino<(STATIC_LIB_SUFFIX)',
           ],
           'action': [
             'python', '<@(_inputs)', '<@(_outputs)',
@@ -246,11 +246,11 @@
       ]
     },
     {
-      'target_name': 'fletch_vm_library_generator',
+      'target_name': 'dartino_vm_library_generator',
       'type': 'executable',
       'toolsets': ['host'],
       'dependencies': [
-        '../shared/shared.gyp:fletch_shared',
+        '../shared/shared.gyp:dartino_shared',
       ],
       'conditions': [
         [ 'OS=="mac"', {
@@ -288,10 +288,10 @@
       ],
     },
     {
-      'target_name': 'fletch-vm',
+      'target_name': 'dartino-vm',
       'type': 'executable',
       'dependencies': [
-        'libfletch',
+        'libdartino',
       ],
       'sources': [
         'main.cc',
@@ -302,7 +302,7 @@
       'target_name': 'vm_cc_tests',
       'type': 'executable',
       'dependencies': [
-        'libfletch',
+        'libdartino',
         '../shared/shared.gyp:cc_test_base',
       ],
       'defines': [
@@ -325,7 +325,7 @@
       'target_name': 'multiprogram_cc_test',
       'type': 'executable',
       'dependencies': [
-        'libfletch',
+        'libdartino',
       ],
       'defines': [
         'TESTING',
@@ -367,12 +367,12 @@
       },
     },
     {
-      'target_name': 'fletch_relocation_library',
+      'target_name': 'dartino_relocation_library',
       'type': 'static_library',
       'standalone_static_library': 1,
       'sources': [
-        'fletch_relocation_api_impl.cc',
-        'fletch_relocation_api_impl.h',
+        'dartino_relocation_api_impl.cc',
+        'dartino_relocation_api_impl.h',
         'program_info_block.h',  # only to detect interface changes
         'program_relocator.cc',
         'program_relocator.h',

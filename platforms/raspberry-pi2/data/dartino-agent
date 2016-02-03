@@ -13,16 +13,16 @@
 ### END INIT INFO
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
-AGENT_SNAPSHOT=/usr/lib/dartino-agent/bin/fletch-agent.snapshot
+AGENT_SNAPSHOT=/usr/lib/dartino-agent/bin/dartino-agent.snapshot
 NAME=dartino-agent
 
 if [ ! -r /lib/lsb/init-functions ]; then
-  echo "Missing lsb init-functions to run the Fletch agent"
+  echo "Missing lsb init-functions to run the Dartino agent"
   exit 1
 fi
 . /lib/lsb/init-functions
 
-# Setup environment variables until we support passing arguments to fletch
+# Setup environment variables until we support passing arguments to dartino
 # programs.
 if [ ! -r /etc/default/dartino-agent ]; then
   echo "Missing Dartino environment file, /etc/default/dartino-agent"
@@ -31,7 +31,7 @@ fi
 . /etc/default/dartino-agent
 
 # Check the environment and create VM directories if necessary.
-if [ ! -x $FLETCH_VM ]; then
+if [ ! -x $DARTINO_VM ]; then
   log_daemon_msg "No Dartino VM found or VM not executable"
 fi
 if [ ! -d $VM_LOG_DIR ]; then
@@ -41,11 +41,11 @@ fi
 case "$1" in
 start)	log_daemon_msg "Starting" "$NAME"
 	start-stop-daemon --background --start --quiet --oknodo \
-	    --pidfile $AGENT_PID_FILE --exec $FLETCH_VM $AGENT_SNAPSHOT
+	    --pidfile $AGENT_PID_FILE --exec $DARTINO_VM $AGENT_SNAPSHOT
 	log_end_msg $?
 	;;
 stop)	log_daemon_msg "Stopping" "$NAME"
-	killproc -p $AGENT_PID_FILE $FLETCH_VM
+	killproc -p $AGENT_PID_FILE $DARTINO_VM
 	RETVAL=$?
 	[ $RETVAL -eq 0 ] && [ -e "$AGENT_PID_FILE" ] && rm -f $AGENT_PID_FILE
 	log_end_msg $RETVAL
@@ -56,7 +56,7 @@ restart) log_daemon_msg "Restarting" "$NAME"
 	$0 start
 	;;
 status)
-	status_of_proc -p $AGENT_PID_FILE $FLETCH_VM $NAME && exit 0 || exit $?
+	status_of_proc -p $AGENT_PID_FILE $DARTINO_VM $NAME && exit 0 || exit $?
 	;;
 *)	log_action_msg \
 	    "Usage: /etc/init.d/dartino-agent {start|stop|status|restart}"

@@ -8,7 +8,7 @@
 #include "src/vm/heap.h"
 #include "src/vm/scheduler.h"
 
-namespace fletch {
+namespace dartino {
 
 class SharedHeap;
 
@@ -52,6 +52,6 @@ class ProcessHeapValidatorVisitor : public ProcessVisitor {
   Heap* program_heap_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_HEAP_VALIDATOR_H_

@@ -2,14 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_MACOS)
+#if defined(DARTINO_TARGET_ARM) && defined(DARTINO_TARGET_OS_MACOS)
 
 #include <stdio.h>
 #include "src/vm/assembler.h"
 
-namespace fletch {
+namespace dartino {
 
-#if defined(FLETCH_TARGET_ANDROID)
+#if defined(DARTINO_TARGET_ANDROID)
 static const char* kPrefix = "";
 #else
 static const char* kPrefix = "_";
@@ -28,6 +28,6 @@ void Assembler::DefineLong(const char* name) {
 
 const char* Assembler::LabelPrefix() { return kPrefix; }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_ARM) && defined(FLETCH_TARGET_OS_MACOS)
+#endif  // defined(DARTINO_TARGET_ARM) && defined(DARTINO_TARGET_OS_MACOS)

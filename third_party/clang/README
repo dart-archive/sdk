@@ -1,2 +1,2 @@
-This directory will be populated by fletch/tools/clang_update.py. The updating
+This directory will be populated by dartino/tools/clang_update.py. The updating
 happens automatically via "gclient sync" as one of the runhooks.

@@ -16,7 +16,7 @@ import 'dart:io' show
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:fletchc/src/guess_configuration.dart' show
+import 'package:dartino_compiler/src/guess_configuration.dart' show
     executable;
 
 Future<Null> main() async {
@@ -37,7 +37,7 @@ Future<Null> main() async {
       tarFile.toFilePath(),
       '-T',
       benchmarkingFiles.toFilePath(),
-      '$buildDir/fletch-vm',
+      '$buildDir/dartino-vm',
       '$buildDir/dart',
       '$buildDir/natives.json'];
 
@@ -77,7 +77,7 @@ Future<Null> main() async {
     ProcessResult snapshotResult = Process.runSync(
         '$buildDir/dart',
         ['-Dsnapshot=out.snapshot',
-         'tests/fletchc/run.dart',
+         'tests/dartino_compiler/run.dart',
          'benchmarks/DeltaBlue.dart'],
         workingDirectory: tempDir.path,
         runInShell: true);
@@ -87,11 +87,11 @@ Future<Null> main() async {
                   'stdout:\n${snapshotResult.stdout}\n'
                   'stderr:\n${snapshotResult.stderr}');
 
-    // Run the snapshot in the temporary directory.Use the fletch-vm
+    // Run the snapshot in the temporary directory.Use the dartino-vm
     // binary in the archive to test that everything needed is in
     // there.
     ProcessResult runResult = Process.runSync(
-        '$buildDir/fletch-vm',
+        '$buildDir/dartino-vm',
         ['out.snapshot'],
         workingDirectory: tempDir.path,
         runInShell: true);

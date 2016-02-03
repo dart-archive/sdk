@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_POSIX)
+#if defined(DARTINO_TARGET_OS_POSIX)
 
 #include "src/vm/natives.h"
 
@@ -10,7 +10,7 @@
 
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 BEGIN_NATIVE(UriBase) {
   char* buffer = reinterpret_cast<char*>(malloc(PATH_MAX + 1));
@@ -27,6 +27,6 @@ BEGIN_NATIVE(UriBase) {
 }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined FLETCH_TARGET_OS_POSIX
+#endif  // defined DARTINO_TARGET_OS_POSIX

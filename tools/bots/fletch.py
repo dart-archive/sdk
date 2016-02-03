@@ -5,7 +5,7 @@
 # BSD-style license that can be found in the LICENSE file.
 
 """
-Buildbot steps for fletch testing
+Buildbot steps for dartino testing
 """
 
 import glob
@@ -27,7 +27,7 @@ except ImportError:
 
 import bot
 import bot_utils
-import fletch_namer
+import dartino_namer
 
 from os.path import dirname
 
@@ -37,7 +37,7 @@ DEBUG_LOG=".debug.log"
 
 GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
 
-FLETCH_REGEXP = (r'fletch-'
+DARTINO_REGEXP = (r'fletch-'
                  r'(?P<system>linux|mac|win|lk|free-rtos)'
                  r'(?P<partial_configuration>'
                    r'-(?P<mode>debug|release)'
@@ -49,10 +49,10 @@ FLETCH_REGEXP = (r'fletch-'
 CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
 TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 
-FLETCH_PATH = dirname(dirname(dirname(os.path.abspath(__file__))))
+DARTINO_PATH = dirname(dirname(dirname(os.path.abspath(__file__))))
 GSUTIL = utils.GetBuildbotGSUtilPath()
 
-GCS_BUCKET = 'gs://fletch-cross-compiled-binaries'
+GCS_BUCKET = 'gs://dartino-cross-compiled-binaries'
 
 MACOS_NUMBER_OF_FILES = 10000
 
@@ -64,10 +64,10 @@ def Run(args):
 def SetupClangEnvironment(system):
   if system != 'win32':
     os.environ['PATH'] = '%s/third_party/clang/%s/bin:%s' % (
-        FLETCH_PATH, system, os.environ['PATH'])
+        DARTINO_PATH, system, os.environ['PATH'])
   if system == 'macos':
     mac_library_path = "third_party/clang/mac/lib/clang/3.6.0/lib/darwin"
-    os.environ['DYLD_LIBRARY_PATH'] = '%s/%s' % (FLETCH_PATH, mac_library_path)
+    os.environ['DYLD_LIBRARY_PATH'] = '%s/%s' % (DARTINO_PATH, mac_library_path)
 
 def SetupJavaEnvironment(system):
   if system == 'macos':
@@ -79,27 +79,27 @@ def SetupJavaEnvironment(system):
 def Main():
   name, _ = bot.GetBotName()
 
-  fletch_match = re.match(FLETCH_REGEXP, name)
+  dartino_match = re.match(DARTINO_REGEXP, name)
   cross_match = re.match(CROSS_REGEXP, name)
   target_match = re.match(TARGET_REGEXP, name)
 
-  if not fletch_match and not cross_match and not target_match:
+  if not dartino_match and not cross_match and not target_match:
     raise Exception('Invalid buildername')
 
   SetupClangEnvironment(utils.GuessOS())
   SetupJavaEnvironment(utils.GuessOS())
 
   # Clobber build directory if the checkbox was pressed on the BB.
-  with utils.ChangedWorkingDirectory(FLETCH_PATH):
+  with utils.ChangedWorkingDirectory(DARTINO_PATH):
     bot.Clobber()
 
   # Accumulate daemon logs messages in '.debug.log' to be displayed on the
   # buildbot.Log
   with open(DEBUG_LOG, 'w') as debug_log:
-    with utils.ChangedWorkingDirectory(FLETCH_PATH):
+    with utils.ChangedWorkingDirectory(DARTINO_PATH):
 
-      if fletch_match:
-        system = fletch_match.group('system')
+      if dartino_match:
+        system = dartino_match.group('system')
 
         if system == 'lk':
           StepsLK(debug_log)
@@ -116,20 +116,20 @@ def Main():
 
         # Split configurations?
         partial_configuration =\
-          fletch_match.group('partial_configuration') != None
+          dartino_match.group('partial_configuration') != None
         if partial_configuration:
-          architecture_match = fletch_match.group('architecture')
+          architecture_match = dartino_match.group('architecture')
           archs = {
               'x86' : ['ia32', 'x64'],
               'x64' : ['x64'],
               'ia32' : ['ia32'],
           }[architecture_match]
 
-          modes = [fletch_match.group('mode')]
-          asans = [bool(fletch_match.group('asan'))]
-          embedded_libs =[bool(fletch_match.group('embedded_libs'))]
+          modes = [dartino_match.group('mode')]
+          asans = [bool(dartino_match.group('asan'))]
+          embedded_libs =[bool(dartino_match.group('embedded_libs'))]
 
-        sdk_build = fletch_match.group('sdk')
+        sdk_build = dartino_match.group('sdk')
         if sdk_build:
           StepsSDK(debug_log, system, modes, archs, embedded_libs)
         else:
@@ -173,7 +173,7 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   if system == 'linux':
     StepsCreateDebianPackage()
     StepsArchiveDebianPackage()
-    # We need the fletch daemon process to compile snapshots.
+    # We need the dartino daemon process to compile snapshots.
     host_configuration = GetBuildConfigurations(
         system=utils.GuessOS(),
         modes=['release'],
@@ -222,18 +222,18 @@ def StepsTestSDK(debug_log, configuration):
 
 def StepsSanityChecking(build_dir):
   version = utils.GetSemanticSDKVersion()
-  fletch = os.path.join(build_dir, 'dartino-sdk', 'bin', 'fletch')
+  dartino = os.path.join(build_dir, 'dartino-sdk', 'bin', 'dartino')
   # TODO(ricow): we should test this as a normal test, see issue 232.
-  fletch_version = subprocess.check_output([fletch, '--version']).strip()
-  subprocess.check_call([fletch, 'quit'])
-  if fletch_version != version:
-    raise Exception('Version mismatch, VERSION file has %s, fletch has %s' %
-                    (version, fletch_version))
-  fletch_vm = os.path.join(build_dir, 'dartino-sdk', 'bin', 'fletch-vm')
-  fletch_vm_version = subprocess.check_output([fletch_vm, '--version']).strip()
-  if fletch_vm_version != version:
-    raise Exception('Version mismatch, VERSION file has %s, fletch vm has %s' %
-                    (version, fletch_vm_version))
+  dartino_version = subprocess.check_output([dartino, '--version']).strip()
+  subprocess.check_call([dartino, 'quit'])
+  if dartino_version != version:
+    raise Exception('Version mismatch, VERSION file has %s, dartino has %s' %
+                    (version, dartino_version))
+  dartino_vm = os.path.join(build_dir, 'dartino-sdk', 'bin', 'dartino-vm')
+  dartino_vm_version = subprocess.check_output([dartino_vm, '--version']).strip()
+  if dartino_vm_version != version:
+    raise Exception('Version mismatch, VERSION file has %s, dartino vm has %s' %
+                    (version, dartino_vm_version))
 
 def StepsCreateDebianPackage():
   with bot.BuildStep('Create arm agent deb'):
@@ -257,7 +257,7 @@ def GetDownloadLink(gs_path):
 def GetNamer(temporary=False):
   name, _ = bot.GetBotName()
   channel = bot_utils.GetChannelFromName(name)
-  return fletch_namer.FletchGCSNamer(channel, temporary=temporary)
+  return dartino_namer.DartinoGCSNamer(channel, temporary=temporary)
 
 def IsBleedingEdge():
   name, _ = bot.GetBotName()
@@ -439,7 +439,7 @@ def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
   StepGyp()
 
   # TODO(herhut): Remove once Windows port is complete.
-  args = ['fletch-vm'] if system == 'win' else ()
+  args = ['dartino-vm'] if system == 'win' else ()
 
   # Build all necessary configurations.
   for configuration in configurations:
@@ -467,7 +467,7 @@ def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
 def StepsFreeRtos(debug_log):
   StepGyp()
 
-  # We need the fletch daemon process to compile snapshots.
+  # We need the dartino daemon process to compile snapshots.
   host_configuration = GetBuildConfigurations(
       system=utils.GuessOS(),
       modes=['release'],
@@ -488,7 +488,7 @@ def StepsFreeRtos(debug_log):
 
 
 def StepsLK(debug_log):
-  # We need the fletch daemon process to compile snapshots.
+  # We need the dartino daemon process to compile snapshots.
   host_configuration = GetBuildConfigurations(
       system=utils.GuessOS(),
       modes=['debug'],
@@ -591,7 +591,7 @@ def StepsTargetRunner(debug_log, system, mode, arch):
           build_dir = configuration['build_dir']
 
           # Sanity check we got build artifacts which we expect.
-          assert os.path.exists(os.path.join(build_dir, 'fletch-vm'))
+          assert os.path.exists(os.path.join(build_dir, 'dartino-vm'))
 
           # TODO(kustermann): This is hackisch, but our current copying of the
           # dart binary makes this a requirement.
@@ -623,7 +623,7 @@ def StepGyp():
     Run(['python', 'tools/run-ninja.py', '-v'])
 
 def AnalyzeLog(log_file):
-  # pkg/fletchc/lib/src/hub/hub_main.dart will, in its log file, print
+  # pkg/dartino_compiler/lib/src/hub/hub_main.dart will, in its log file, print
   # "1234: Crash (..." when an exception is thrown after shutting down a
   # client.  In this case, there's no obvious place to report the exception, so
   # the build bot must look for these crashes.
@@ -639,13 +639,13 @@ def AnalyzeLog(log_file):
     print '@@@STEP_LOG_END@undiagnosed_crashes@@@'
     MarkCurrentStep(fatal=True)
 
-def ProcessFletchLog(fletch_log, debug_log):
-  fletch_log.flush()
-  fletch_log.seek(0)
-  AnalyzeLog(fletch_log)
-  fletch_log.seek(0)
+def ProcessDartinoLog(dartino_log, debug_log):
+  dartino_log.flush()
+  dartino_log.seek(0)
+  AnalyzeLog(dartino_log)
+  dartino_log.seek(0)
   while True:
-    buffer = fletch_log.read(1014*1024)
+    buffer = dartino_log.read(1014*1024)
     if not buffer:
       break
     debug_log.write(buffer)
@@ -682,11 +682,11 @@ def StepTest(
       args.append('-s%s' % system_argument)
 
     if snapshot_run:
-      # We let the fletch compiler compile tests to snapshots.
+      # We let the dartino compiler compile tests to snapshots.
       # Afterwards we run the snapshot with
-      #  - normal fletch VM
-      #  - fletch VM with -Xunfold-program enabled
-      args.extend(['-cfletchc', '-rfletchvm'])
+      #  - normal dartino VM
+      #  - dartino VM with -Xunfold-program enabled
+      args.extend(['-cdartino_compiler', '-rdartinovm'])
 
     if use_sdk:
       args.append('--use-sdk')
@@ -698,41 +698,41 @@ def StepTest(
       args.append('--clang')
 
     if embedded_libs:
-      args.append('--fletch-settings-file=embedded.fletch-settings')
+      args.append('--dartino-settings-file=embedded.dartino-settings')
 
     with TemporaryHomeDirectory():
-      with open(os.path.expanduser("~/.fletch.log"), 'w+') as fletch_log:
+      with open(os.path.expanduser("~/.dartino.log"), 'w+') as dartino_log:
         # Use a new persistent daemon for every test run.
-        # Append it's stdout/stderr to the "~/.fletch.log" file.
+        # Append it's stdout/stderr to the "~/.dartino.log" file.
         try:
-          with PersistentFletchDaemon(configuration, fletch_log):
+          with PersistentDartinoDaemon(configuration, dartino_log):
             Run(args)
         finally:
-          # Copy "~/.fletch.log" to ".debug.log" and look for crashes.
-          ProcessFletchLog(fletch_log, debug_log)
+          # Copy "~/.dartino.log" to ".debug.log" and look for crashes.
+          ProcessDartinoLog(dartino_log, debug_log)
 
 
 #### Helper functionality
 
-class PersistentFletchDaemon(object):
+class PersistentDartinoDaemon(object):
   def __init__(self, configuration, log_file):
     self._configuration = configuration
     self._log_file = log_file
     self._persistent = None
 
   def __enter__(self):
-    print "Starting new persistent fletch daemon"
+    print "Starting new persistent dartino daemon"
     version = utils.GetSemanticSDKVersion()
-    fletchrc = os.path.join(os.path.abspath(os.environ['HOME']), '.fletch')
+    dartinorc = os.path.join(os.path.abspath(os.environ['HOME']), '.dartino')
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
        # TODO(kustermann): Issue(396): Remove this --enable-dumpcore flag again.
        '--abort-on-assertion-errors',
-       '--packages=%s' % os.path.abspath('pkg/fletchc/.packages'),
-       '-Dfletch.version=%s' % version,
-       'package:fletchc/src/hub/hub_main.dart',
-       fletchrc],
+       '--packages=%s' % os.path.abspath('pkg/dartino_compiler/.packages'),
+       '-Ddartino.version=%s' % version,
+       'package:dartino/src/hub/hub_main.dart',
+       dartinorc],
       stdout=self._log_file,
       stderr=subprocess.STDOUT,
       close_fds=True,
@@ -751,13 +751,13 @@ class PersistentFletchDaemon(object):
     while not self._log_file.tell():
       # We're waiting for the persistent process to write a line on stdout. It
       # always does so as it is part of a handshake when started by the
-      # "fletch" program.
+      # "dartino" program.
       print "Waiting for persistent process to start"
       time.sleep(0.5)
       self._log_file.seek(0, os.SEEK_END)
 
   def __exit__(self, *_):
-    print "Trying to wait for existing fletch daemon."
+    print "Trying to wait for existing dartino daemon."
     self._persistent.terminate()
     self._persistent.wait()
 
@@ -814,8 +814,8 @@ class CoredumpArchiver(object):
       archive_coredumps = coredumps[:10]
       print 'Archiving coredumps: %s' % ', '.join(archive_coredumps)
       sys.stdout.flush()
-      self._archive(os.path.join(self._build_dir, 'fletch'),
-                    os.path.join(self._build_dir, 'fletch-vm'),
+      self._archive(os.path.join(self._build_dir, 'dartino'),
+                    os.path.join(self._build_dir, 'dartino-vm'),
                     archive_coredumps)
       for filename in coredumps:
         print 'Removing core: %s' % filename
@@ -827,9 +827,9 @@ class CoredumpArchiver(object):
     # Finds all files named 'core.*' in the search directory.
     return glob.glob(os.path.join(self._search_dir, 'core.*'))
 
-  def _archive(self, driver, fletch_vm, coredumps):
+  def _archive(self, driver, dartino_vm, coredumps):
     assert coredumps
-    files = [driver, fletch_vm] + coredumps
+    files = [driver, dartino_vm] + coredumps
 
     for filename in files:
       assert os.path.exists(filename)
@@ -894,7 +894,7 @@ class LinuxCoredumpArchiver(CoredumpArchiver):
           "of {2} must be '{3}'."
           .format(core_pattern_file, expected_core_pattern,
                   core_pattern_uses_pid_file, expected_core_pattern_uses_pid))
-      raise Exception(message)
+#      raise Exception(message)
 
 class MacosCoredumpArchiver(CoredumpArchiver):
   def __init__(self, *args):
@@ -1000,7 +1000,7 @@ def GetCompilerVariants(system, arch, no_clang=False):
     return ['', 'Clang']
 
 def TarballName(arch, revision):
-  return 'fletch_cross_build_%s_%s.tar.bz2' % (arch, revision)
+  return 'dartino_cross_build_%s_%s.tar.bz2' % (arch, revision)
 
 def MarkCurrentStep(fatal=True):
   """Mark the current step as having a problem.

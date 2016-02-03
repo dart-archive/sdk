@@ -19,8 +19,8 @@ import 'test_suite.dart' show
     TestInformation,
     TestUtils;
 
-import 'fletch_session_command.dart' show
-    FletchSessionCommand;
+import 'dartino_session_command.dart' show
+    DartinoSessionCommand;
 
 /// Grouping of a command with its expected result.
 class CommandArtifact {
@@ -65,8 +65,8 @@ abstract class CompilerConfiguration {
     bool isCsp = configuration['csp'];
 
     switch (compiler) {
-      case 'fletchc':
-        return new FletchCCompilerConfiguration(
+      case 'dartino_compiler':
+        return new DartinoCCompilerConfiguration(
             isDebug: isDebug, isChecked: isChecked,
             isHostChecked: isHostChecked, useSdk: useSdk);
       case 'none':
@@ -170,8 +170,8 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
           isHostChecked: isHostChecked, useSdk: useSdk);
 
   String computeCompilerPath(String buildDir) {
-    return useSdk ? '$buildDir/dartino-sdk/bin/fletch-vm'
-                  : '$buildDir/fletch-vm';
+    return useSdk ? '$buildDir/dartino-sdk/bin/dartino-vm'
+                  : '$buildDir/dartino-vm';
   }
 
   CompilationCommand computeCompilationCommand(
@@ -199,19 +199,19 @@ class Dart2xCompilerConfiguration extends CompilerConfiguration {
   }
 }
 
-class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
+class DartinoCCompilerConfiguration extends Dart2xCompilerConfiguration {
 
-  FletchCCompilerConfiguration({
+  DartinoCCompilerConfiguration({
       bool isDebug,
       bool isChecked,
       bool isHostChecked,
       bool useSdk})
       : super(
-          'fletchc',
+          'dartino_compiler',
           isDebug: isDebug, isChecked: isChecked,
           isHostChecked: isHostChecked, useSdk: useSdk) {
     if (!isHostChecked) {
-      throw "fletch only works with --host-checked option.";
+      throw "dartino only works with --host-checked option.";
     }
   }
 
@@ -221,21 +221,21 @@ class FletchCCompilerConfiguration extends Dart2xCompilerConfiguration {
       CommandBuilder commandBuilder,
       List basicArguments,
       Map<String, String> environmentOverrides) {
-    String snapshotFileName = '$tempDir/fletch.snapshot';
-    String executable = useSdk ? '$buildDir/dartino-sdk/bin/fletch'
-                               : '$buildDir/fletch';
+    String snapshotFileName = '$tempDir/dartino.snapshot';
+    String executable = useSdk ? '$buildDir/dartino-sdk/bin/dartino'
+                               : '$buildDir/dartino';
     String dart = useSdk ? '$buildDir/dartino-sdk/internal/dart'
                          : '$buildDir/dart';
     Map<String, String> environment = {
       'DART_VM' : dart,
     }..addAll(environmentOverrides);
 
-    Command command = new FletchSessionCommand(
+    Command command = new DartinoSessionCommand(
         executable, basicArguments.first, basicArguments,
         environment, snapshotFileName: snapshotFileName);
 
     return new CommandArtifact(
-        <Command>[command], snapshotFileName, 'application/fletch-snapshot');
+        <Command>[command], snapshotFileName, 'application/dartino-snapshot');
   }
 
   List<String> computeRuntimeArguments(

@@ -25,7 +25,7 @@ vars = {
   "instrumentation_client_rev": "@33c7bf19f6db1340a999e45dd8fb14d684330d3e",
 
   # When updating this, please remember:
-  # 1. to use a commit on the branch "_temporary_fletch_patches".
+  # 1. to use a commit on the branch "_temporary_dartino_patches".
   # 2. update package revisions below.
   # 3. Upload new binaries and update the `third_party/bin` sha-hash-files as
   #    described in `third_party/bin/README.md`.

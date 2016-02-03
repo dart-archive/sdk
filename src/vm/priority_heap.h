@@ -10,7 +10,7 @@
 #include "src/shared/assert.h"
 #include "src/vm/hash_map.h"
 
-namespace fletch {
+namespace dartino {
 
 template <typename P, typename V>
 class PriorityHeapWithValueIndex {
@@ -207,6 +207,6 @@ class PriorityHeapWithValueIndex {
   HashMap<V, int> hashmap_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PRIORITY_HEAP_H_

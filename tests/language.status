@@ -5,7 +5,7 @@
 # This directory contains tests that are intended to show the
 # current state of the language.
 
-[ $compiler == fletchc || $runtime == fletchc ]
+[ $compiler == dartino_compiler || $runtime == dartino_compiler ]
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
 arithmetic_test: RuntimeError
@@ -747,7 +747,7 @@ generic_creation_test: RuntimeError
 mixin_regress_13688_test: RuntimeError
 null2_test: RuntimeError
 
-[ $compiler == fletchc ]
+[ $compiler == dartino_compiler ]
 
 async_test/constructor2: MissingCompileTimeError
 async_test/constructor3: MissingCompileTimeError
@@ -775,9 +775,9 @@ this_test/03: MissingCompileTimeError
 this_test/05: MissingCompileTimeError
 this_test/07: MissingCompileTimeError
 
-[ $runtime == fletchc ]
+[ $runtime == dartino_compiler ]
 
-# Fletch reports runtime error, but should report compile-time error.
+# Dartino reports runtime error, but should report compile-time error.
 async_test/constructor2: RuntimeError
 async_test/constructor3: RuntimeError
 async_test/setter1: RuntimeError
@@ -804,7 +804,7 @@ this_test/03: RuntimeError
 this_test/05: RuntimeError
 this_test/07: RuntimeError
 
-# Fletch reports compile-time error, but should report a runtime error.
+# Dartino reports compile-time error, but should report a runtime error.
 bad_constructor_test/05: CompileTimeError
 constructor_duplicate_final_test/01: CompileTimeError
 constructor_duplicate_final_test/02: CompileTimeError
@@ -851,7 +851,7 @@ smaller_4_Interface_Types_A11_t01_test: Crash
 [ $mode == debug ]
 closure_cycles_test: Slow, Pass
 
-[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
+[ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.
 async_and_or_test: CompileTimeError
 async_await_catch_regression_test: CompileTimeError

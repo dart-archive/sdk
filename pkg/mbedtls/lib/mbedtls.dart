@@ -1,9 +1,9 @@
-// Copyright (c) 2016, the Fletch project authors. Please see the AUTHORS file
+// Copyright (c) 2016, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:fletch.ffi';
-import 'dart:fletch';
+import 'dart:dartino.ffi';
+import 'dart:dartino';
 import 'dart:typed_data';
 import 'package:os/os.dart';
 import 'package:socket/socket.dart';
@@ -127,9 +127,9 @@ class TLSSocket implements Socket {
   final buf =
       new ForeignMemory.allocatedFinalized(1024);
   final pers =
-      new ForeignMemory.fromStringAsUTF8('ssl_client_fletch');
+      new ForeignMemory.fromStringAsUTF8('ssl_client_dartino');
 
-  // The fletch socket we use to do the actual network communication.
+  // The dartino socket we use to do the actual network communication.
   Socket _socket;
 
   final String server;

@@ -7,7 +7,7 @@
 #include "src/vm/assembler.h"
 #include "src/vm/generator.h"
 
-namespace fletch {
+namespace dartino {
 
 Generator* Generator::first_ = NULL;
 Generator* Generator::current_ = NULL;
@@ -50,7 +50,7 @@ static int Main(int argc, char** argv) {
   return 0;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-// Forward main calls to fletch::Main.
-int main(int argc, char** argv) { return fletch::Main(argc, argv); }
+// Forward main calls to dartino::Main.
+int main(int argc, char** argv) { return dartino::Main(argc, argv); }

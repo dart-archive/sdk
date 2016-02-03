@@ -6,7 +6,7 @@
 #include "src/vm/object_map.h"
 #include "src/shared/test_case.h"
 
-namespace fletch {
+namespace dartino {
 
 TEST_CASE(ObjectMap) {
   ObjectMap map(256);
@@ -47,4 +47,4 @@ TEST_CASE(ObjectMap) {
   EXPECT_EQ(0, map.size());
 }
 
-}  // namespace fletch
+}  // namespace dartino

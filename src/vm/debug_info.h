@@ -5,14 +5,14 @@
 #ifndef SRC_VM_DEBUG_INFO_H_
 #define SRC_VM_DEBUG_INFO_H_
 
-#ifndef FLETCH_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_LIVE_CODING
 #include "src/vm/debug_info_no_live_coding.h"
-#else  // FLETCH_ENABLE_LIVE_CODING
+#else  // DARTINO_ENABLE_LIVE_CODING
 
 #include "src/vm/hash_map.h"
 #include "src/vm/object.h"
 
-namespace fletch {
+namespace dartino {
 
 class Breakpoint {
  public:
@@ -102,8 +102,8 @@ class DebugInfo {
   int next_breakpoint_id_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING
 
 #endif  // SRC_VM_DEBUG_INFO_H_

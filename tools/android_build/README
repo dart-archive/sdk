@@ -1,4 +1,4 @@
-In order to build a static Fletch library for Android, download the
+In order to build a static Dartino library for Android, download the
 Android NDK and run:
 
     NDK_PROJECT_PATH=. ndk-build 

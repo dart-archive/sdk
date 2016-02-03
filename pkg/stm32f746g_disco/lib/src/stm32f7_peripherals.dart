@@ -4,7 +4,7 @@
 
 library stm32f746g.src.stm32f7_peripherals;
 
-import 'dart:fletch.ffi';
+import 'dart:dartino.ffi';
 
 import 'package:stm32f746g_disco/src/stm32f7_constants.dart';
 

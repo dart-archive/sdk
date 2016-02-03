@@ -7,7 +7,7 @@
 
 #include "src/vm/hash_table.h"
 
-namespace fletch {
+namespace dartino {
 
 template <typename Key>
 struct SetKeyExtractor {
@@ -30,6 +30,6 @@ struct SetKeyExtractor {
 template <typename Key>
 class HashSet : public UnorderedHashTable<Key, Key, SetKeyExtractor<Key>> {};
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_HASH_SET_H_

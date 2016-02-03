@@ -15,7 +15,7 @@
 
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 // A ThreadIdentifier represents a thread identifier for a thread.
 // The ThreadIdentifier does not own the underlying OS handle.
@@ -48,6 +48,6 @@ class ThreadIdentifier {
   pthread_t thread_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_THREAD_POSIX_H_

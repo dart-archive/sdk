@@ -17,7 +17,7 @@
 
 #include "src/vm/intrinsics.h"
 
-namespace fletch {
+namespace dartino {
 
 // This is an overview of the object class hierarchy:
 //
@@ -452,8 +452,8 @@ class LargeInteger : public HeapObject {
 class Double : public HeapObject {
  public:
   // [value]: double value.
-  inline fletch_double value();
-  inline void set_value(fletch_double value);
+  inline dartino_double value();
+  inline void set_value(dartino_double value);
 
   // Casting.
   static inline Double* cast(Object* object);
@@ -476,7 +476,7 @@ class Double : public HeapObject {
   }
 
   static const int kValueOffset = HeapObject::kSize;
-  static const int kSize = kValueOffset + sizeof(fletch_double);
+  static const int kSize = kValueOffset + sizeof(dartino_double);
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Double);
@@ -2215,12 +2215,12 @@ LargeInteger* LargeInteger::cast(Object* object) {
 
 // Inlined Double functions.
 
-fletch_double Double::value() {
-  return *reinterpret_cast<fletch_double*>(address() + kValueOffset);
+dartino_double Double::value() {
+  return *reinterpret_cast<dartino_double*>(address() + kValueOffset);
 }
 
-void Double::set_value(fletch_double value) {
-  *reinterpret_cast<fletch_double*>(address() + kValueOffset) = value;
+void Double::set_value(dartino_double value) {
+  *reinterpret_cast<dartino_double*>(address() + kValueOffset) = value;
 }
 
 Double* Double::cast(Object* object) {
@@ -2368,6 +2368,6 @@ inline void Coroutine::set_caller(Coroutine* value) {
   at_put(kCallerOffset, value);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_OBJECT_H_

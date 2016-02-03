@@ -16,4 +16,4 @@ third_party/yasm/yasm.gyp
 third_party/yasm/yasm_compile.gypi
 third_party/yasm/README.chromium
 
-Modified to fit the fletch build system and to only operate on windows.
+Modified to fit the dartino build system and to only operate on windows.

@@ -10,7 +10,7 @@
   },
   'targets': [
     {
-      'target_name': 'fletch_shared',
+      'target_name': 'dartino_shared',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
       'conditions': [
@@ -42,7 +42,7 @@
         'connection.h',
         'flags.cc',
         'flags.h',
-        'fletch.h',
+        'dartino.h',
         'globals.h',
         'list.h',
         'names.h',
@@ -77,7 +77,7 @@
       'target_name': 'cc_test_base',
       'type': 'static_library',
       'dependencies': [
-        'fletch_shared',
+        'dartino_shared',
       ],
       'sources': [
         'test_case.h',
@@ -100,7 +100,7 @@
         'globals_test.cc',
         'random_test.cc',
         'utils_test.cc',
-        'fletch.cc',
+        'dartino.cc',
       ],
     },
     {
@@ -108,7 +108,7 @@
       'type': 'executable',
       'toolsets': ['host'],
       'dependencies': [
-        'fletch_shared',
+        'dartino_shared',
       ],
       'sources': [
         'natives_to_json.cc',

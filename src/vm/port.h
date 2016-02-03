@@ -11,7 +11,7 @@
 #include "src/vm/object_memory.h"
 #include "src/vm/spinlock.h"
 
-namespace fletch {
+namespace dartino {
 
 class HeapObject;
 class Instance;
@@ -70,6 +70,6 @@ class Port {
   Port* next_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PORT_H_

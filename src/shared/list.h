@@ -9,7 +9,7 @@
 #include <string.h>
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 // Lists are light-weight data structures that hold a sequence of
 // contiguous elements. List never take ownership of the data they
@@ -69,6 +69,6 @@ class List {
   int length_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_LIST_H_

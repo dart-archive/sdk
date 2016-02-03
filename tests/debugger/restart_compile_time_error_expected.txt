@@ -7,4 +7,4 @@ Compile error: Expected an expression, but got 'default'.
 begin
 Compile error: Expected an expression, but got 'default'.
 > q
-Non-zero exit code from 'fletch-vm' (254).
+Non-zero exit code from 'dartino-vm' (254).

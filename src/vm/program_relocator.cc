@@ -13,7 +13,7 @@
 #define DEBUG_PRINT(...)
 #endif
 
-namespace fletch {
+namespace dartino {
 
 // Helper class that can be used as a visitor when iterating pointers/roots
 // to rebase them to a new address. It takes four arguments:
@@ -163,4 +163,4 @@ int ProgramHeapRelocator::Relocate() {
   return total_size;
 }
 
-}  // namespace fletch
+}  // namespace dartino

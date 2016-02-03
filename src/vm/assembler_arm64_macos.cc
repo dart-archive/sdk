@@ -2,15 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_ARM64) && defined(FLETCH_TARGET_OS_MACOS)
+#if defined(DARTINO_TARGET_ARM64) && defined(DARTINO_TARGET_OS_MACOS)
 
 #include <stdio.h>
 #include "src/vm/assembler.h"
 
-namespace fletch {
+namespace dartino {
 
 void Assembler::Bind(const char* prefix, const char* name) { UNIMPLEMENTED(); }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_ARM64) && defined(FLETCH_TARGET_OS_MACOS)
+#endif  // defined(DARTINO_TARGET_ARM64) && defined(DARTINO_TARGET_OS_MACOS)

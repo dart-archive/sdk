@@ -8,7 +8,7 @@
 #include <cstdio>
 
 #include "include/service_api.h"
-#include "include/fletch_api.h"
+#include "include/dartino_api.h"
 
 #include "src/shared/assert.h"
 #include "src/shared/platform.h"
@@ -24,7 +24,7 @@ static int status = 0;
 static const int kDone = 1;
 static const int kCallCount = 10000;
 
-static fletch::Monitor* echo_monitor = fletch::Platform::CreateMonitor();
+static dartino::Monitor* echo_monitor = dartino::Platform::CreateMonitor();
 static bool echo_async_done = false;
 
 static uint64_t GetMicroseconds() {
@@ -125,7 +125,7 @@ void EchoInThread(void* data) {
 
 static void RunThreadTests() {
   const int kThreadCount = 32;
-  fletch::ThreadPool thread_pool(kThreadCount);
+  dartino::ThreadPool thread_pool(kThreadCount);
   thread_pool.Start();
   for (int i = 0; i < kThreadCount; i++) {
     while (!thread_pool.TryStartThread(EchoInThread,
@@ -150,9 +150,9 @@ static void WaitForStatus(int expected) {
 
 static void* DartThreadEntry(void* arg) {
   const char* path = static_cast<char*>(arg);
-  FletchSetup();
-  FletchRunSnapshotFromFile(path);
-  FletchTearDown();
+  DartinoSetup();
+  DartinoRunSnapshotFromFile(path);
+  DartinoTearDown();
   ChangeStatusAndNotify(kDone);
   return NULL;
 }

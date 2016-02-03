@@ -37,13 +37,13 @@ const HEADER_MK = """
 """;
 
 const READER_HEADER = """
-package fletch;
+package dartino;
 """;
 
-const FLETCH_API_JAVA = """
-package fletch;
+const DARTINO_API_JAVA = """
+package dartino;
 
-public class FletchApi {
+public class DartinoApi {
   public static abstract class PrintInterceptor {
     public abstract void Out(String message);
     public abstract void Error(String message);
@@ -59,20 +59,20 @@ public class FletchApi {
 }
 """;
 
-const FLETCH_SERVICE_API_JAVA = """
-package fletch;
+const DARTINO_SERVICE_API_JAVA = """
+package dartino;
 
-public class FletchServiceApi {
+public class DartinoServiceApi {
   public static native void Setup();
   public static native void TearDown();
 }
 """;
 
-const FLETCH_API_JAVA_IMPL = """
+const DARTINO_API_JAVA_IMPL = """
 #include <jni.h>
 #include <stdlib.h>
 
-#include "fletch_api.h"
+#include "dartino_api.h"
 
 #ifdef ANDROID
   typedef JNIEnv* AttachEnvType;
@@ -95,7 +95,7 @@ class JNIPrintInterceptorInfo {
     : vm(vm), obj(obj), interceptor(NULL) {}
   JavaVM* vm;
   jobject obj;
-  FletchPrintInterceptor interceptor;
+  DartinoPrintInterceptor interceptor;
 };
 
 static void JNIPrintInterceptorFunction(
@@ -125,7 +125,7 @@ static void RegisterPrintInterceptor(JNIEnv* env, jobject obj) {
   JavaVM* vm = NULL;
   env->GetJavaVM(&vm);
   JNIPrintInterceptorInfo* info = new JNIPrintInterceptorInfo(vm, obj);
-  info->interceptor = FletchRegisterPrintInterceptor(
+  info->interceptor = DartinoRegisterPrintInterceptor(
       JNIPrintInterceptorFunction, reinterpret_cast<void*>(info));
   env->SetLongField(obj, nativePtr, reinterpret_cast<jlong>(info));
 }
@@ -139,7 +139,7 @@ static void UnregisterPrintInterceptor(JNIEnv* env, jobject obj) {
   env->SetLongField(obj, nativePtr, 0);
   JNIPrintInterceptorInfo* info =
       reinterpret_cast<JNIPrintInterceptorInfo*>(nativePtrValue);
-  FletchUnregisterPrintInterceptor(info->interceptor);
+  DartinoUnregisterPrintInterceptor(info->interceptor);
   env->DeleteGlobalRef(info->obj);
   delete info;
 }
@@ -148,44 +148,44 @@ static void UnregisterPrintInterceptor(JNIEnv* env, jobject obj) {
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL Java_fletch_FletchApi_Setup(JNIEnv*, jclass) {
-  FletchSetup();
+JNIEXPORT void JNICALL Java_dartino_DartinoApi_Setup(JNIEnv*, jclass) {
+  DartinoSetup();
 }
 
-JNIEXPORT void JNICALL Java_fletch_FletchApi_TearDown(JNIEnv*, jclass) {
-  FletchTearDown();
+JNIEXPORT void JNICALL Java_dartino_DartinoApi_TearDown(JNIEnv*, jclass) {
+  DartinoTearDown();
 }
 
-JNIEXPORT void JNICALL Java_fletch_FletchApi_RunSnapshot(JNIEnv* env,
+JNIEXPORT void JNICALL Java_dartino_DartinoApi_RunSnapshot(JNIEnv* env,
                                                          jclass,
                                                          jbyteArray snapshot) {
   int len = env->GetArrayLength(snapshot);
   unsigned char* copy = new unsigned char[len];
   env->GetByteArrayRegion(snapshot, 0, len, reinterpret_cast<jbyte*>(copy));
-  FletchProgram program = FletchLoadSnapshot(copy, len);
+  DartinoProgram program = DartinoLoadSnapshot(copy, len);
   delete[] copy;
-  FletchRunMain(program);
-  FletchDeleteProgram(program);
+  DartinoRunMain(program);
+  DartinoDeleteProgram(program);
 }
 
-JNIEXPORT void JNICALL Java_fletch_FletchApi_WaitForDebuggerConnection(
+JNIEXPORT void JNICALL Java_dartino_DartinoApi_WaitForDebuggerConnection(
     JNIEnv* env, jclass, int port) {
-  FletchWaitForDebuggerConnection(port);
+  DartinoWaitForDebuggerConnection(port);
 }
 
-JNIEXPORT void JNICALL Java_fletch_FletchApi_AddDefaultSharedLibrary(
+JNIEXPORT void JNICALL Java_dartino_DartinoApi_AddDefaultSharedLibrary(
     JNIEnv* env, jclass, jstring str) {
   const char* library = env->GetStringUTFChars(str, 0);
-  FletchAddDefaultSharedLibrary(library);
+  DartinoAddDefaultSharedLibrary(library);
   env->ReleaseStringUTFChars(str, library);
 }
 
-JNIEXPORT void JNICALL Java_fletch_FletchApi_RegisterPrintInterceptor(
+JNIEXPORT void JNICALL Java_dartino_DartinoApi_RegisterPrintInterceptor(
     JNIEnv* env, jclass, jobject obj) {
   RegisterPrintInterceptor(env, obj);
 }
 
-JNIEXPORT void JNICALL Java_fletch_FletchApi_UnregisterPrintInterceptor(
+JNIEXPORT void JNICALL Java_dartino_DartinoApi_UnregisterPrintInterceptor(
     JNIEnv* env, jclass, jobject obj) {
   UnregisterPrintInterceptor(env, obj);
 }
@@ -195,7 +195,7 @@ JNIEXPORT void JNICALL Java_fletch_FletchApi_UnregisterPrintInterceptor(
 #endif
 """;
 
-const FLETCH_SERVICE_API_JAVA_IMPL = """
+const DARTINO_SERVICE_API_JAVA_IMPL = """
 #include <jni.h>
 
 #include "service_api.h"
@@ -204,11 +204,11 @@ const FLETCH_SERVICE_API_JAVA_IMPL = """
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL Java_fletch_FletchServiceApi_Setup(JNIEnv*, jclass) {
+JNIEXPORT void JNICALL Java_dartino_DartinoServiceApi_Setup(JNIEnv*, jclass) {
   ServiceApiSetup();
 }
 
-JNIEXPORT void JNICALL Java_fletch_FletchServiceApi_TearDown(JNIEnv*, jclass) {
+JNIEXPORT void JNICALL Java_dartino_DartinoServiceApi_TearDown(JNIEnv*, jclass) {
   ServiceApiTearDown();
 }
 
@@ -363,47 +363,47 @@ void generate(String path,
               Unit unit,
               String resourcesDirectory,
               String outputDirectory) {
-  _generateFletchApis(outputDirectory);
+  _generateDartinoApis(outputDirectory);
   _generateServiceJava(path, unit, outputDirectory);
   _generateServiceJni(path, unit, outputDirectory);
   _generateServiceJniMakeFiles(path, unit, resourcesDirectory, outputDirectory);
 
-  resourcesDirectory = join(resourcesDirectory, 'java', 'fletch');
-  String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+  resourcesDirectory = join(resourcesDirectory, 'java', 'dartino');
+  String dartinoDirectory = join(outputDirectory, 'java', 'dartino');
   for (String resource in JAVA_RESOURCES) {
     String resourcePath = join(resourcesDirectory, resource);
     File file = new File(resourcePath);
     String contents = file.readAsStringSync();
-    writeToFile(fletchDirectory, resource, contents);
+    writeToFile(dartinoDirectory, resource, contents);
   }
 }
 
-void _generateFletchApis(String outputDirectory) {
-  String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+void _generateDartinoApis(String outputDirectory) {
+  String dartinoDirectory = join(outputDirectory, 'java', 'dartino');
   String jniDirectory = join(outputDirectory, 'java', 'jni');
 
   StringBuffer buffer = new StringBuffer(HEADER);
   buffer.writeln();
-  buffer.write(FLETCH_API_JAVA);
-  writeToFile(fletchDirectory, 'FletchApi', buffer.toString(),
+  buffer.write(DARTINO_API_JAVA);
+  writeToFile(dartinoDirectory, 'DartinoApi', buffer.toString(),
       extension: 'java');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
-  buffer.write(FLETCH_SERVICE_API_JAVA);
-  writeToFile(fletchDirectory, 'FletchServiceApi', buffer.toString(),
+  buffer.write(DARTINO_SERVICE_API_JAVA);
+  writeToFile(dartinoDirectory, 'DartinoServiceApi', buffer.toString(),
       extension: 'java');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
-  buffer.write(FLETCH_API_JAVA_IMPL);
-  writeToFile(jniDirectory, 'fletch_api_wrapper', buffer.toString(),
+  buffer.write(DARTINO_API_JAVA_IMPL);
+  writeToFile(jniDirectory, 'dartino_api_wrapper', buffer.toString(),
       extension: 'cc');
 
   buffer = new StringBuffer(HEADER);
   buffer.writeln();
-  buffer.write(FLETCH_SERVICE_API_JAVA_IMPL);
-  writeToFile(jniDirectory, 'fletch_service_api_wrapper',
+  buffer.write(DARTINO_SERVICE_API_JAVA_IMPL);
+  writeToFile(jniDirectory, 'dartino_service_api_wrapper',
       buffer.toString(), extension: 'cc');
 }
 
@@ -411,7 +411,7 @@ void _generateServiceJava(String path, Unit unit, String outputDirectory) {
   _JavaVisitor visitor = new _JavaVisitor(path, outputDirectory);
   visitor.visit(unit);
   String contents = visitor.buffer.toString();
-  String directory = join(outputDirectory, 'java', 'fletch');
+  String directory = join(outputDirectory, 'java', 'dartino');
   // TODO(ager): We should generate a file per service here.
   if (unit.services.length > 1) {
     print('Java plugin: multiple services in one file is not supported.');
@@ -564,7 +564,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
   visitUnit(Unit node) {
     writeln(HEADER);
-    writeln('package fletch;');
+    writeln('package dartino;');
     writeln();
     node.structs.forEach(visit);
     node.services.forEach(visit);
@@ -625,7 +625,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
   }
 
   void writeReader(Struct node) {
-    String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+    String dartinoDirectory = join(outputDirectory, 'java', 'dartino');
     String name = node.name;
     StructLayout layout = node.layout;
 
@@ -727,12 +727,12 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.writeln('}');
 
-    writeToFile(fletchDirectory, '$name', buffer.toString(),
+    writeToFile(dartinoDirectory, '$name', buffer.toString(),
         extension: 'java');
   }
 
   void writeBuilder(Struct node) {
-    String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+    String dartinoDirectory = join(outputDirectory, 'java', 'dartino');
     String name = '${node.name}Builder';
     StructLayout layout = node.layout;
 
@@ -840,12 +840,12 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.writeln('}');
 
-    writeToFile(fletchDirectory, '$name', buffer.toString(),
+    writeToFile(dartinoDirectory, '$name', buffer.toString(),
         extension: 'java');
   }
 
   void writeListReaderImplementation(Type type) {
-    String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+    String dartinoDirectory = join(outputDirectory, 'java', 'dartino');
     String name = '${camelize(type.identifier)}List';
     String listType = getListType(type);
 
@@ -891,12 +891,12 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.writeln('}');
 
-    writeToFile(fletchDirectory, '$name', buffer.toString(),
+    writeToFile(dartinoDirectory, '$name', buffer.toString(),
         extension: 'java');
   }
 
   void writeListBuilderImplementation(Type type) {
-    String fletchDirectory = join(outputDirectory, 'java', 'fletch');
+    String dartinoDirectory = join(outputDirectory, 'java', 'dartino');
     String name = '${camelize(type.identifier)}ListBuilder';
 
     StringBuffer buffer = new StringBuffer(HEADER);
@@ -946,7 +946,7 @@ class _JavaVisitor extends CodeGenerationVisitor {
 
     buffer.writeln('}');
 
-    writeToFile(fletchDirectory, '$name', buffer.toString(),
+    writeToFile(dartinoDirectory, '$name', buffer.toString(),
         extension: 'java');
   }
 }
@@ -992,13 +992,13 @@ class _JniVisitor extends CcVisitor {
     writeln('static ServiceId service_id_ = kNoServiceId;');
 
     writeln();
-    write('JNIEXPORT void JNICALL Java_fletch_');
+    write('JNIEXPORT void JNICALL Java_dartino_');
     writeln('${serviceName}_Setup(JNIEnv*, jclass) {');
     writeln('  service_id_ = ServiceApiLookup("$serviceName");');
     writeln('}');
 
     writeln();
-    write('JNIEXPORT void JNICALL Java_fletch_');
+    write('JNIEXPORT void JNICALL Java_dartino_');
     writeln('${serviceName}_TearDown(JNIEnv*, jclass) {');
     writeln('  ServiceApiTerminate(service_id_);');
     writeln('}');
@@ -1026,7 +1026,7 @@ class _JniVisitor extends CcVisitor {
     writeln();
     write('JNIEXPORT ');
     writeReturnType(node.returnType);
-    write(' JNICALL Java_fletch_${serviceName}_${name}(');
+    write(' JNICALL Java_dartino_${serviceName}_${name}(');
     write('JNIEnv* _env, jclass');
     if (node.arguments.isNotEmpty) write(', ');
     if (node.inputKind != InputKind.PRIMITIVES) {
@@ -1054,7 +1054,7 @@ class _JniVisitor extends CcVisitor {
 
     writeln();
     write('JNIEXPORT void JNICALL ');
-    write('Java_fletch_${serviceName}_${name}Async(');
+    write('Java_dartino_${serviceName}_${name}Async(');
     write('JNIEnv* _env, jclass');
     if (node.arguments.isNotEmpty) write(', ');
     if (node.inputKind != InputKind.PRIMITIVES) {
@@ -1141,10 +1141,10 @@ class _JniVisitor extends CcVisitor {
         writeln('  char* memory = reinterpret_cast<char*>(result);');
         writeln('  jobject rootSegment = GetRootSegment(_env, memory);');
         writeln('  jclass resultClass = '
-                '_env->FindClass("fletch/${type.identifier}");');
+                '_env->FindClass("dartino/${type.identifier}");');
         writeln('  jmethodID create = _env->GetStaticMethodID('
                 'resultClass, "create", '
-                '"(Ljava/lang/Object;)Lfletch/${type.identifier};");');
+                '"(Ljava/lang/Object;)Ldartino/${type.identifier};");');
         writeln('  jobject resultObject = _env->CallStaticObjectMethod('
                 'resultClass, create, rootSegment);');
         writeln('  return resultObject;');
@@ -1190,10 +1190,10 @@ class _JniVisitor extends CcVisitor {
         writeln('  char* memory = reinterpret_cast<char*>(result);');
         writeln('  jobject rootSegment = GetRootSegment(_env, memory);');
         writeln('  jclass resultClass = '
-                '_env->FindClass("fletch/${type.identifier}");');
+                '_env->FindClass("dartino/${type.identifier}");');
         writeln('  jmethodID create = _env->GetStaticMethodID('
                 'resultClass, "create", '
-                '"(Ljava/lang/Object;)Lfletch/${type.identifier};");');
+                '"(Ljava/lang/Object;)Ldartino/${type.identifier};");');
         writeln('  jobject resultObject = _env->CallStaticObjectMethod('
                 'resultClass, create, rootSegment);');
         writeln('  return resultObject;');
@@ -1253,7 +1253,7 @@ class _JniVisitor extends CcVisitor {
   String getJNISignatureType(Type type) {
     String name = type.identifier;
     if (type.isPrimitive) return PRIMITIVE_JNI_SIG[name];
-    return 'Lfletch/$name;';
+    return 'Ldartino/$name;';
   }
 
   final Map<String, String> callbacks = {};
@@ -1290,7 +1290,7 @@ class _JniVisitor extends CcVisitor {
           writeln('env->GetObjectField(info->callback, returnTypeField);');
           writeln('  jmethodID create = env->GetStaticMethodID('
                   'resultClass, "create", '
-                  '"(Ljava/lang/Object;)Lfletch/${type.identifier};");');
+                  '"(Ljava/lang/Object;)Ldartino/${type.identifier};");');
           writeln('  jobject resultObject = env->CallStaticObjectMethod('
                   'resultClass, create, rootSegment);');
         }
@@ -1326,17 +1326,17 @@ void _generateServiceJniMakeFiles(String path,
                                   String resourcesDirectory,
                                   String outputDirectory) {
   String out = join(outputDirectory, 'java');
-  // TODO(stanm): pass fletch root directly
-  String fletchRoot = join(resourcesDirectory, '..', '..', '..', '..', '..');
-  String fletchLibraryBuildDir = join(fletchRoot,
+  // TODO(stanm): pass dartino root directly
+  String dartinoRoot = join(resourcesDirectory, '..', '..', '..', '..', '..');
+  String dartinoLibraryBuildDir = join(dartinoRoot,
                                       'tools',
                                       'android_build',
                                       'jni');
 
-  String fletchIncludeDir = join(fletchRoot, 'include');
+  String dartinoIncludeDir = join(dartinoRoot, 'include');
 
-  String modulePath = relative(fletchLibraryBuildDir, from: out);
-  String includePath = relative(fletchIncludeDir, from: out);
+  String modulePath = relative(dartinoLibraryBuildDir, from: out);
+  String includePath = relative(dartinoIncludeDir, from: out);
 
   StringBuffer buffer = new StringBuffer(HEADER_MK);
 
@@ -1345,14 +1345,14 @@ void _generateServiceJniMakeFiles(String path,
 
   buffer.writeln();
   buffer.writeln('include \$(CLEAR_VARS)');
-  buffer.writeln('LOCAL_MODULE := fletch');
-  buffer.writeln('LOCAL_CFLAGS := -DFLETCH32');
+  buffer.writeln('LOCAL_MODULE := dartino');
+  buffer.writeln('LOCAL_CFLAGS := -DDARTINO32');
   buffer.writeln('LOCAL_LDLIBS := -llog -ldl -rdynamic');
 
   buffer.writeln();
   buffer.writeln('LOCAL_SRC_FILES := \\');
-  buffer.writeln('\tfletch_api_wrapper.cc \\');
-  buffer.writeln('\tfletch_service_api_wrapper.cc \\');
+  buffer.writeln('\tdartino_api_wrapper.cc \\');
+  buffer.writeln('\tdartino_service_api_wrapper.cc \\');
 
   if (unit.services.length > 1) {
     print('Java plugin: multiple services in one file is not supported.');
@@ -1365,7 +1365,7 @@ void _generateServiceJniMakeFiles(String path,
   buffer.writeln();
   buffer.writeln('LOCAL_C_INCLUDES += \$(LOCAL_PATH)');
   buffer.writeln('LOCAL_C_INCLUDES += ${includePath}');
-  buffer.writeln('LOCAL_STATIC_LIBRARIES := fletch-library');
+  buffer.writeln('LOCAL_STATIC_LIBRARIES := dartino-library');
 
   buffer.writeln();
   buffer.writeln('include \$(BUILD_SHARED_LIBRARY)');

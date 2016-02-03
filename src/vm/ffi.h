@@ -8,7 +8,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/natives.h"
 
-namespace fletch {
+namespace dartino {
 
 class DefaultLibraryEntry;
 class Mutex;
@@ -25,7 +25,7 @@ class ForeignFunctionInterface {
   static Mutex* mutex_;
 };
 
-#ifdef FLETCH_ENABLE_FFI
+#ifdef DARTINO_ENABLE_FFI
 // Platform specific ffi constants and methods.
 class ForeignUtils {
  public:
@@ -41,8 +41,8 @@ class ForeignUtils {
   static char* DirectoryName(char* path, char* buffer, size_t len);
 };
 
-#endif  // FLETCH_ENABLE_FFI
+#endif  // DARTINO_ENABLE_FFI
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_FFI_H_

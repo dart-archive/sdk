@@ -8,7 +8,7 @@
 #include "src/vm/object.h"
 #include "src/shared/globals.h"
 
-namespace fletch {
+namespace dartino {
 
 class ObjectMap {
  public:
@@ -57,6 +57,6 @@ class ObjectMap {
   static void DeleteTable(List<Bucket*> table);
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_OBJECT_MAP_H_

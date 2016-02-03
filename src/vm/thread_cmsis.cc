@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_CMSIS)
+#if defined(DARTINO_TARGET_OS_CMSIS)
 
 #include "src/vm/thread.h"  // NOLINT we don't include thread_posix.h.
 
@@ -13,16 +13,17 @@
 
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
-static const int kNumberOfFletchThreads = 8;
-static const int kFletchStackSize = 4096;
-static const int kFletchStackSizeInWords = kFletchStackSize / sizeof(uint32_t);
+static const int kNumberOfDartinoThreads = 8;
+static const int kDartinoStackSize = 4096;
+static const int kDartinoStackSizeInWords =
+    kDartinoStackSize / sizeof(uint32_t);
 
-static osThreadDef_t cmsis_thread_pool[kNumberOfFletchThreads];
+static osThreadDef_t cmsis_thread_pool[kNumberOfDartinoThreads];
 static char cmsis_thread_no = 0;
 #ifdef CMSIS_OS_RTX
-static uint32_t cmsis_stack[kNumberOfFletchThreads][kFletchStackSizeInWords];
+static uint32_t cmsis_stack[kNumberOfDartinoThreads][kDartinoStackSizeInWords];
 #endif
 
 static const char* base_name = "cmsis_thread_";
@@ -57,11 +58,11 @@ ThreadIdentifier Thread::Run(RunSignature run, void* data) {
 
   snprintf(name, strlen(base_name) + 5, "cmsis_thread%d", cmsis_thread_no);
   int thread_no = cmsis_thread_no++;
-  ASSERT(thread_no < kNumberOfFletchThreads);
+  ASSERT(thread_no < kNumberOfDartinoThreads);
   osThreadDef_t* threadDef = &(cmsis_thread_pool[thread_no]);
   threadDef->pthread = reinterpret_cast<void (*)(const void*)>(run);
   threadDef->tpriority = osPriorityNormal;
-  threadDef->stacksize = kFletchStackSize;
+  threadDef->stacksize = kDartinoStackSize;
   threadDef->name = const_cast<char*>(name);
 #ifdef CMSIS_OS_RTX
   threadDef->stack_pointer = cmsis_stack[thread_no];
@@ -75,6 +76,6 @@ ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   return ThreadIdentifier(thread);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_CMSIS)
+#endif  // defined(DARTINO_TARGET_OS_CMSIS)

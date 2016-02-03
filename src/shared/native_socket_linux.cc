@@ -2,13 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_LINUX) && defined(FLETCH_ENABLE_LIVE_CODING)
+#if defined(DARTINO_TARGET_OS_LINUX) && defined(DARTINO_ENABLE_LIVE_CODING)
 
 #include "src/shared/native_socket.h"
 
 #include <errno.h>
 
-namespace fletch {
+namespace dartino {
 
 bool Socket::ShouldRetryAccept(int error) {
   return (error == EAGAIN) || (error == ENETDOWN) || (error == EPROTO) ||
@@ -17,6 +17,6 @@ bool Socket::ShouldRetryAccept(int error) {
          (error == ENETUNREACH);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // def'd(FLETCH_TARGET_OS_LINUX) && def'd(FLETCH_ENABLE_LIVE_CODING)
+#endif  // def'd(DARTINO_TARGET_OS_LINUX) && def'd(DARTINO_ENABLE_LIVE_CODING)

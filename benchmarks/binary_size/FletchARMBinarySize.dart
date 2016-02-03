@@ -9,33 +9,33 @@ List<String> trimAll(List<String> list) {
 }
 
 void main() {
-  // Compute the binary size of Fletch when linked into an LK+Fletch
+  // Compute the binary size of Dartino when linked into an LK+Dartino
   // image. The computation is based on two files containing output
   // from the 'size' program on Linux.
   //
   // The output from 'size' contains two lines of the form:
   //
   //   text    data     bss     dec     hex filename
-  //  25695     537    8240   34472    86a8 out/DebugIA32/fletch
+  //  25695     537    8240   34472    86a8 out/DebugIA32/dartino
   Uri executable = new Uri.file(Platform.resolvedExecutable);
   Uri lkBaselineSizeFile = executable.resolve('lk_sizes_baseline.txt');
-  Uri lkFletchSizeFile = executable.resolve('lk_sizes_fletch.txt');
+  Uri lkDartinoSizeFile = executable.resolve('lk_sizes_dartino.txt');
   List<String> baselineLines =
       new File(lkBaselineSizeFile.toFilePath()).readAsLinesSync();
-  List<String> fletchLines =
-      new File(lkFletchSizeFile.toFilePath()).readAsLinesSync();
+  List<String> dartinoLines =
+      new File(lkDartinoSizeFile.toFilePath()).readAsLinesSync();
   List<String> baselineKeys = trimAll(baselineLines[0].split('\t'));
   List<String> baselineValues = trimAll(baselineLines[1].split('\t'));
-  List<String> fletchKeys = trimAll(fletchLines[0].split('\t'));
-  List<String> fletchValues = trimAll(fletchLines[1].split('\t'));
+  List<String> dartinoKeys = trimAll(dartinoLines[0].split('\t'));
+  List<String> dartinoValues = trimAll(dartinoLines[1].split('\t'));
   List<String> interestingKeys = ['text', 'data', 'bss'];
   for (int i = 0; i < baselineKeys.length; i++) {
     for (var key in interestingKeys) {
       if (baselineKeys[i] == key) {
-        int lkFletchValue = int.parse(fletchValues[i]);
+        int lkDartinoValue = int.parse(dartinoValues[i]);
         int lkBaselineValue = int.parse(baselineValues[i]);
-        int fletchSize = lkFletchValue - lkBaselineValue;
-        print("FletchARMBinarySize_$key(CodeSize): ${fletchSize}");
+        int dartinoSize = lkDartinoValue - lkBaselineValue;
+        print("DartinoARMBinarySize_$key(CodeSize): ${dartinoSize}");
       }
     }
   }

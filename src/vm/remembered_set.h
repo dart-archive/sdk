@@ -5,7 +5,7 @@
 #ifndef SRC_VM_REMEMBERED_SET_H_
 #define SRC_VM_REMEMBERED_SET_H_
 
-namespace fletch {
+namespace dartino {
 
 // TODO(erikcorry): Implement remembered set.
 class RememberedSet {
@@ -13,6 +13,6 @@ class RememberedSet {
   inline void Insert(HeapObject* h) {}
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_REMEMBERED_SET_H_

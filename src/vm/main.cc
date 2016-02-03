@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef FLETCH_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
 #include <stddef.h>  // for size_t
 
-#include "include/fletch_api.h"
+#include "include/dartino_api.h"
 
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
@@ -18,7 +18,7 @@
 #include "src/vm/session.h"
 #include "src/vm/log_print_interceptor.h"
 
-namespace fletch {
+namespace dartino {
 
 static int RunSession(Connection* connection) {
   Session session(connection);
@@ -60,9 +60,9 @@ static bool EndsWith(const char* s, const char* suffix) {
 }
 
 static void PrintUsage() {
-  Print::Out("fletch-vm - The embedded Dart virtual machine.\n\n");
+  Print::Out("dartino-vm - The embedded Dart virtual machine.\n\n");
   Print::Out(
-      "  fletch-vm [--port=<port>] [--host=<address>] "
+      "  dartino-vm [--port=<port>] [--host=<address>] "
       "[snapshot file]\n\n");
   Print::Out("When specifying a snapshot other options are ignored.\n\n");
   Print::Out("Options:\n");
@@ -72,7 +72,7 @@ static void PrintUsage() {
   Print::Out(
       "  --host: specifies which host address to listen on. "
       "Defaults to 127.0.0.1.\n");
-  Print::Out("  --help: print out 'fletch-vm' usage.\n");
+  Print::Out("  --help: print out 'dartino-vm' usage.\n");
   Print::Out("  --version: print the version.\n");
   Print::Out("\n");
 }
@@ -81,12 +81,12 @@ static void PrintVersion() { Print::Out("%s\n", GetVersion()); }
 
 static int Main(int argc, char** argv) {
 #ifdef DEBUG
-  if (Platform::GetEnv("FLETCH_VM_WAIT") != NULL) {
+  if (Platform::GetEnv("DARTINO_VM_WAIT") != NULL) {
     Platform::WaitForDebugger(argv[0]);
   }
 #endif
   Flags::ExtractFromCommandLine(&argc, argv);
-  FletchSetup();
+  DartinoSetup();
 
   if (argc > 5) {
     Print::Out("Too many arguments.\n\n");
@@ -163,14 +163,15 @@ static int Main(int argc, char** argv) {
       exit(1);
     }
     if (IsSnapshot(bytes)) {
-      FletchProgram program = FletchLoadSnapshot(bytes.data(), bytes.length());
-      result = FletchRunMain(program);
-      FletchDeleteProgram(program);
+      DartinoProgram program =
+          DartinoLoadSnapshot(bytes.data(), bytes.length());
+      result = DartinoRunMain(program);
+      DartinoDeleteProgram(program);
       interactive = false;
     } else {
       Print::Out("The file '%s' is not a snapshot.\n\n");
       if (EndsWith(input, ".dart")) {
-        Print::Out("Try: 'fletch run %s'\n\n", input);
+        Print::Out("Try: 'dartino run %s'\n\n", input);
       } else {
         PrintUsage();
       }
@@ -187,13 +188,13 @@ static int Main(int argc, char** argv) {
     result = RunSession(connection);
   }
 
-  FletchTearDown();
+  DartinoTearDown();
   return result;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-// Forward main calls to fletch::Main.
-int main(int argc, char** argv) { return fletch::Main(argc, argv); }
+// Forward main calls to dartino::Main.
+int main(int argc, char** argv) { return dartino::Main(argc, argv); }
 
-#endif  // FLETCH_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_LIVE_CODING

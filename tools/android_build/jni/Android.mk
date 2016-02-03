@@ -5,15 +5,15 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := fletch-library
+LOCAL_MODULE := dartino-library
 LOCAL_CFLAGS := \
-  -DFLETCH32 \
-  -DFLETCH_TARGET_OS_POSIX \
-  -DFLETCH_TARGET_OS_LINUX \
-  -DFLETCH_ENABLE_FFI \
-  -DFLETCH_ENABLE_PRINT_INTERCEPTORS \
-  -DFLETCH_ENABLE_LIVE_CODING \
-  -DFLETCH_ENABLE_NATIVE_PROCESSES \
+  -DDARTINO32 \
+  -DDARTINO_TARGET_OS_POSIX \
+  -DDARTINO_TARGET_OS_LINUX \
+  -DDARTINO_ENABLE_FFI \
+  -DDARTINO_ENABLE_PRINT_INTERCEPTORS \
+  -DDARTINO_ENABLE_LIVE_CODING \
+  -DDARTINO_ENABLE_NATIVE_PROCESSES \
   -DANDROID \
   -I$(LOCAL_PATH)/../../../ -std=gnu++11
 
@@ -34,8 +34,8 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/ffi.cc \
 	../../../src/vm/ffi_linux.cc \
 	../../../src/vm/ffi_posix.cc \
-	../../../src/vm/fletch.cc \
-	../../../src/vm/fletch_api_impl.cc \
+	../../../src/vm/dartino.cc \
+	../../../src/vm/dartino_api_impl.cc \
 	../../../src/vm/gc_thread.cc \
 	../../../src/vm/heap.cc \
 	../../../src/vm/heap_validator.cc \
@@ -81,16 +81,16 @@ LOCAL_SRC_FILES := \
 	../../../third_party/double-conversion/src/strtod.cc \
 
 ifeq ($(TARGET_ARCH_ABI), armeabi-v7a)
-  LOCAL_CFLAGS += -DFLETCH_TARGET_ARM
+  LOCAL_CFLAGS += -DDARTINO_TARGET_ARM
   LOCAL_SRC_FILES += \
-    ../../../out/ReleaseXARMAndroid/obj/src/vm/fletch_vm.gen/generated.S \
+    ../../../out/ReleaseXARMAndroid/obj/src/vm/dartino_vm.gen/generated.S \
     ../../../out/ReleaseXARMAndroid/gen/version.cc
 endif
 
 ifeq ($(TARGET_ARCH_ABI), x86)
-  LOCAL_CFLAGS += -DFLETCH_TARGET_IA32
+  LOCAL_CFLAGS += -DDARTINO_TARGET_IA32
   LOCAL_SRC_FILES += \
-    ../../../out/ReleaseIA32Android/obj/src/vm/fletch_vm.gen/generated.S \
+    ../../../out/ReleaseIA32Android/obj/src/vm/dartino_vm.gen/generated.S \
     ../../../out/ReleaseIA32Android/gen/version.cc
 endif
 

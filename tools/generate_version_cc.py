@@ -14,14 +14,14 @@ version_cc_template = """\
 
 #include "src/shared/version.h"
 
-namespace fletch {
+namespace dartino {
 
 extern "C"
 const char* GetVersion() {
   return "%(version)s";
 }
 
-}  // namespace fletch
+}  // namespace dartino
 """;
 
 

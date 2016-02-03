@@ -2,9 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_WIN)
+#if defined(DARTINO_TARGET_OS_WIN)
 
-#ifdef FLETCH_ENABLE_FFI
+#ifdef DARTINO_ENABLE_FFI
 
 #include "src/vm/ffi.h"
 
@@ -15,7 +15,7 @@
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 const char* ForeignUtils::kLibBundlePrefix = "\\lib\\";
 const char* ForeignUtils::kLibBundlePostfix = ".dll";
@@ -80,7 +80,7 @@ bool ForeignFunctionInterface::AddDefaultSharedLibrary(const char* library) {
   HMODULE handle = LoadLibrary(library);
 
   if (handle != NULL) {
-    // We have to maintain the insertion order (see fletch_api.h).
+    // We have to maintain the insertion order (see dartino_api.h).
     if (libraries_ == NULL) {
       libraries_ = new DefaultLibraryEntry(handle, libraries_);
     } else {
@@ -164,8 +164,8 @@ END_NATIVE()
 BEGIN_NATIVE(ForeignErrno) { return Smi::FromWord(GetLastError()); }
 END_NATIVE()
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // FLETCH_ENABLE_FFI
+#endif  // DARTINO_ENABLE_FFI
 
-#endif  // defined(FLETCH_TARGET_OS_WIN)
+#endif  // defined(DARTINO_TARGET_OS_WIN)

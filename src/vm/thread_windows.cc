@@ -2,16 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_WIN)
+#if defined(DARTINO_TARGET_OS_WIN)
 
 #include "src/vm/thread.h"  // NOLINT we don't include thread_posix.h.
 
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
-static const int kFletchStackSize = 4096;
+static const int kDartinoStackSize = 4096;
 
 void Thread::SetProcess(Process* process) {
   // Unused since tick sample is not available on Windows.
@@ -39,7 +39,7 @@ void Thread::TeardownOSSignals() {
 }
 
 ThreadIdentifier Thread::Run(RunSignature run, void* data) {
-  HANDLE thread = CreateThread(NULL, kFletchStackSize,
+  HANDLE thread = CreateThread(NULL, kDartinoStackSize,
                                reinterpret_cast<LPTHREAD_START_ROUTINE>(run),
                                data, 0, NULL);
   if (thread == NULL) {
@@ -48,6 +48,6 @@ ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   return ThreadIdentifier(thread);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_WIN)
+#endif  // defined(DARTINO_TARGET_OS_WIN)

@@ -6,14 +6,14 @@
 #include "src/shared/test_case.h"
 #include "src/shared/platform.h"
 
-#include "include/fletch_api.h"
+#include "include/dartino_api.h"
 
-namespace fletch {
+namespace dartino {
 
-// This multiprogram runner uses only the FletchStartMain() API function.
+// This multiprogram runner uses only the DartinoStartMain() API function.
 class Runner {
  public:
-  Runner(int count, FletchProgram* programs, int* exitcodes)
+  Runner(int count, DartinoProgram* programs, int* exitcodes)
       : monitor_(Platform::CreateMonitor()),
         programs_(programs),
         exitcodes_(exitcodes),
@@ -58,14 +58,14 @@ class Runner {
 
  private:
   Monitor* monitor_;
-  FletchProgram* programs_;
+  DartinoProgram* programs_;
   int* exitcodes_;
   int count_;
   int started_;
   int awaited_;
   int finished_;
 
-  static void CaptureExitCode(FletchProgram* program,
+  static void CaptureExitCode(DartinoProgram* program,
                               int exitcode,
                               void* data) {
     Runner* runner = reinterpret_cast<Runner*>(data);
@@ -76,7 +76,7 @@ class Runner {
         runner->finished_++;
         runner->monitor_->NotifyAll();
 
-        FletchDeleteProgram(program);
+        DartinoDeleteProgram(program);
 
         return;
       }
@@ -87,7 +87,7 @@ class Runner {
   void Start(int count) {
     ScopedMonitorLock locker(monitor_);
     for (int i = started_; i < started_ + count; i++) {
-      FletchStartMain(programs_[i], &Runner::CaptureExitCode, this);
+      DartinoStartMain(programs_[i], &Runner::CaptureExitCode, this);
     }
     started_ += count;
   }
@@ -112,7 +112,7 @@ static void PrintAndDie(char **argv) {
 static int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
 
-  FletchSetup();
+  DartinoSetup();
 
   if (argc <= 1 || (argc % 2) != 0) PrintAndDie(argv);
 
@@ -123,12 +123,12 @@ static int Main(int argc, char** argv) {
   if (!parallel && !sequence && !batch && !overlapped) PrintAndDie(argv);
 
   int program_count = (argc - 2) / 2;
-  FletchProgram* programs = new FletchProgram[program_count];
+  DartinoProgram* programs = new DartinoProgram[program_count];
   int* expected_exit_codes = new int[program_count];
   for (int i = 0; i < program_count; i++) {
     List<uint8> bytes = Platform::LoadFile(argv[2 + 2 * i]);
     if (bytes.is_empty()) FATAL("Invalid snapshot");
-    programs[i] = FletchLoadSnapshot(bytes.data(), bytes.length());
+    programs[i] = DartinoLoadSnapshot(bytes.data(), bytes.length());
     expected_exit_codes[i] = atoi(argv[2 + 2 * i + 1]);
     bytes.Delete();
   }
@@ -162,11 +162,11 @@ static int Main(int argc, char** argv) {
   delete[] expected_exit_codes;
   delete[] programs;
 
-  FletchTearDown();
+  DartinoTearDown();
 
   return result;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-int main(int argc, char** argv) { return fletch::Main(argc, argv); }
+int main(int argc, char** argv) { return dartino::Main(argc, argv); }

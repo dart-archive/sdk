@@ -5,7 +5,7 @@
 #include "src/vm/heap_validator.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 void HeapPointerValidator::VisitBlock(Object** start, Object** end) {
   for (; start != end; start++) {
@@ -62,4 +62,4 @@ void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

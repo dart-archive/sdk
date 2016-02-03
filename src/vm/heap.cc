@@ -10,7 +10,7 @@
 #include "src/shared/flags.h"
 #include "src/vm/object.h"
 
-namespace fletch {
+namespace dartino {
 
 Heap::Heap(RandomXorShift* random, int maximum_initial_size)
     : random_(random),
@@ -109,7 +109,7 @@ void Heap::TryDeallocInteger(LargeInteger* object) {
   TryDealloc(object, LargeInteger::AllocationSize());
 }
 
-Object* Heap::CreateDouble(Class* the_class, fletch_double value) {
+Object* Heap::CreateDouble(Class* the_class, dartino_double value) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::DOUBLE_TYPE);
   int size = Double::AllocationSize();
   Object* raw_result = Allocate(size);
@@ -304,9 +304,9 @@ void Heap::ProcessWeakPointers(Space* space) {
 
 #ifdef DEBUG
 void Heap::Find(uword word) {
-  space_->Find(word, "Fletch heap");
+  space_->Find(word, "Dartino heap");
   old_space_->Find(word, "oldspace");
-#ifdef FLETCH_TARGET_OS_LINUX
+#ifdef DARTINO_TARGET_OS_LINUX
   FILE* fp = fopen("/proc/self/maps", "r");
   if (fp == NULL) return;
   size_t length;
@@ -344,4 +344,4 @@ void Heap::Find(uword word) {
 }
 #endif  // DEBUG
 
-}  // namespace fletch
+}  // namespace dartino

@@ -2,7 +2,7 @@
 LKMAKEROOT := .
 
 # paths relative to LKMAKEROOT where additional modules should be searched
-LKINC := fletch
+LKINC := dartino
 
 # the path relative to LKMAKEROOT where the main lk repository lives
 LKROOT := lk-downstream
@@ -11,6 +11,6 @@ LKROOT := lk-downstream
 BUILDROOT ?= out
 
 # set the default project if no args are passed
-DEFAULT_PROJECT ?= qemu-virt-fletch
+DEFAULT_PROJECT ?= qemu-virt-dartino
 
 TOOLCHAIN_PREFIX := ../gcc-arm-embedded/linux/gcc-arm-embedded/bin/arm-none-eabi-

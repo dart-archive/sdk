@@ -4,9 +4,9 @@
 
 // Test that we get a meaningful list of processes.
 
-// FletchDebuggerCommands=b resume,r,c
+// DartinoDebuggerCommands=b resume,r,c
 
-import 'dart:fletch';
+import 'dart:dartino';
 
 Port spawnPaused(Channel channel) {
   var port = new Port(channel);

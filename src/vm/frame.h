@@ -9,7 +9,7 @@
 #include "src/vm/object.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 // General stack layout:
 //
@@ -106,6 +106,6 @@ class Frame {
   word size_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_FRAME_H_

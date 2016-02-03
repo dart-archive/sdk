@@ -49,7 +49,7 @@
 /// ```
 library raspberry_pi.sense_hat;
 
-import 'dart:fletch.ffi';
+import 'dart:dartino.ffi';
 
 import 'package:i2c/i2c.dart';
 import 'package:i2c/devices/hts221.dart';

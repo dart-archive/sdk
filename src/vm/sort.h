@@ -7,7 +7,7 @@
 
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 typedef bool (*VoidCompare)(uint8* a, uint8* b);
 
@@ -33,6 +33,6 @@ void Sort(T* from, size_t elements,
            reinterpret_cast<VoidCompare>(compare));
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_SORT_H_

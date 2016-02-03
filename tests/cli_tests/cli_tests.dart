@@ -15,15 +15,15 @@ import 'package:expect/expect.dart' show
 import 'interactive_debugger_tests.dart' as
     interactiveDebuggerTests;
 
-import 'package:fletchc/src/hub/exit_codes.dart' show
+import 'package:dartino_compiler/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 /// Absolute path to the build directory used by test.py.
 const String buildDirectory =
     const String.fromEnvironment('test.dart.build-dir');
 
-/// Absolute path to the fletch executable.
-final Uri fletchBinary = Uri.base.resolve("$buildDirectory/fletch");
+/// Absolute path to the dartino executable.
+final Uri dartinoBinary = Uri.base.resolve("$buildDirectory/dartino");
 
 final Uri thisDirectory = new Uri.directory("tests/cli_tests");
 
@@ -45,18 +45,18 @@ abstract class CliTest {
     assert(!sessionCreated);
     sessionName = "clitest-$name-$hashCode";
     return Process.run(
-        fletchBinary.toFilePath(),
+        dartinoBinary.toFilePath(),
         ["create", "session", sessionName],
         workingDirectory: workingDirectory);
   }
 
-  Future<Process> fletch(List<String> arguments,
+  Future<Process> dartino(List<String> arguments,
                          {String workingDirectory}) async {
     if (!sessionCreated) {
       ProcessResult result = await createSession();
       Expect.equals(0, result.exitCode);
     }
-    return Process.start(fletchBinary.toFilePath(), inSession(arguments),
+    return Process.start(dartinoBinary.toFilePath(), inSession(arguments),
         workingDirectory: workingDirectory);
   }
 
@@ -70,7 +70,7 @@ class NoSuchFile extends CliTest {
       : super("no_such_file");
 
   Future<Null> run() async {
-    Process process = await fletch(["run", "no-such-file.dart"]);
+    Process process = await dartino(["run", "no-such-file.dart"]);
     process.stdin.close();
     Future outClosed = process.stdout.listen(null).asFuture();
     await process.stderr.listen(null).asFuture();

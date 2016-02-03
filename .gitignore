@@ -10,7 +10,7 @@ packages
 .DS_Store
 .ninja_deps
 .ninja_log
-.fletch
+.dartino
 .*.swp
 .idea
 *.iml
@@ -18,7 +18,7 @@ packages
 *~
 
 # The following match exact path names starting from the location of this file.
-/fletch.xcodeproj/
+/dartino.xcodeproj/
 /jniLibs/
 /out/
 /pkg/mdns/lib/native/libmdns_extension_lib.so

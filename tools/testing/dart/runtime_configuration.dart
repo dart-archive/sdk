@@ -23,14 +23,14 @@ import 'test_runner.dart' show
 
 import "utils.dart";
 
-import 'fletch_warnings_suite.dart' show
-    FletchWarningsRuntimeConfiguration;
+import 'dartino_warnings_suite.dart' show
+    DartinoWarningsRuntimeConfiguration;
 
-import 'fletch_test_suite.dart' show
-    FletchTestRuntimeConfiguration;
+import 'dartino_test_suite.dart' show
+    DartinoTestRuntimeConfiguration;
 
-import 'fletch_session_command.dart' show
-    FletchSessionCommand;
+import 'dartino_session_command.dart' show
+    DartinoSessionCommand;
 
 // TODO(ahe): I expect this class will become abstract very soon.
 class RuntimeConfiguration {
@@ -43,22 +43,22 @@ class RuntimeConfiguration {
       case 'none':
         return new NoneRuntimeConfiguration();
 
-      case 'fletchc':
-        return new FletchcRuntimeConfiguration(
+      case 'dartino_compiler':
+        return new DartinocRuntimeConfiguration(
             hostChecked: configuration['host_checked'],
             useSdk:configuration['use_sdk'],
             settingsFileName: configuration['settings_file_name']);
 
-      case 'fletchvm':
-        return new FletchVMRuntimeConfiguration(configuration);
+      case 'dartinovm':
+        return new DartinoVMRuntimeConfiguration(configuration);
 
-      case 'fletch_warnings':
-        return new FletchWarningsRuntimeConfiguration(configuration);
+      case 'dartino_warnings':
+        return new DartinoWarningsRuntimeConfiguration(configuration);
 
-      case 'fletch_tests':
-        return new FletchTestRuntimeConfiguration(configuration);
+      case 'dartino_tests':
+        return new DartinoTestRuntimeConfiguration(configuration);
 
-      case 'fletch_cc_tests':
+      case 'dartino_cc_tests':
         return new CCRuntimeConfiguration();
 
       default:
@@ -131,16 +131,16 @@ class DartVmRuntimeConfiguration extends RuntimeConfiguration {
   }
 }
 
-class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
+class DartinocRuntimeConfiguration extends DartVmRuntimeConfiguration {
   final bool useSdk;
   final String settingsFileName;
 
-  FletchcRuntimeConfiguration(
+  DartinocRuntimeConfiguration(
     {bool hostChecked: true,
      this.useSdk: false,
      this.settingsFileName}) {
     if (!hostChecked) {
-      throw "fletch only works with --host-checked option.";
+      throw "dartino only works with --host-checked option.";
     }
   }
 
@@ -154,23 +154,23 @@ class FletchcRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (artifact.filename != null && artifact.mimeType != 'application/dart') {
       throw "Dart VM cannot run files of type '${artifact.mimeType}'.";
     }
-    String executable = useSdk ? '${suite.buildDir}/dartino-sdk/bin/fletch'
-                               : '${suite.buildDir}/fletch';
+    String executable = useSdk ? '${suite.buildDir}/dartino-sdk/bin/dartino'
+                               : '${suite.buildDir}/dartino';
     Map<String, String> environment = {
       'DART_VM': suite.dartVmBinaryFileName,
     };
 
     return <Command>[
-        new FletchSessionCommand(
+        new DartinoSessionCommand(
             executable, script, basicArguments, environment,
             settingsFileName: settingsFileName)];
   }
 }
 
-class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
+class DartinoVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
   Map configuration;
 
-  FletchVMRuntimeConfiguration(this.configuration);
+  DartinoVMRuntimeConfiguration(this.configuration);
 
   List<Command> computeRuntimeCommands(
       TestSuite suite,
@@ -181,8 +181,8 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
       Map<String, String> environmentOverrides) {
     String script = artifact.filename;
     String type = artifact.mimeType;
-    if (script != null && type != 'application/fletch-snapshot') {
-      throw "Fletch VM cannot run files of type '$type'.";
+    if (script != null && type != 'application/dartino-snapshot') {
+      throw "Dartino VM cannot run files of type '$type'.";
     }
     var argumentsUnfold = ["-Xunfold-program"]..addAll(arguments);
 
@@ -195,14 +195,14 @@ class FletchVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
     }
 
     var useSdk = configuration['use_sdk'];
-    var fletchVM = useSdk ? "${suite.buildDir}/dartino-sdk/bin/fletch-vm"
-                          : "${suite.buildDir}/fletch-vm";
-    // NOTE: We assume that `fletch-vm` behaves the same as invoking
+    var dartinoVM = useSdk ? "${suite.buildDir}/dartino-sdk/bin/dartino-vm"
+                          : "${suite.buildDir}/dartino-vm";
+    // NOTE: We assume that `dartino-vm` behaves the same as invoking
     // the DartVM in terms of exit codes.
     return <Command>[
-        commandBuilder.getVmCommand(fletchVM, arguments, environmentOverrides),
+        commandBuilder.getVmCommand(dartinoVM, arguments, environmentOverrides),
         commandBuilder.getVmCommand(
-           fletchVM, argumentsUnfold, environmentOverrides)];
+           dartinoVM, argumentsUnfold, environmentOverrides)];
   }
 }
 
@@ -217,7 +217,7 @@ class CCRuntimeConfiguration extends DartVmRuntimeConfiguration {
       List<String> arguments,
       Map<String, String> environmentOverrides) {
     Map options = suite.readOptionsFromFile(new Path(arguments[0]));
-    List<String> ccOptions = options["fletchCCOptions"];
+    List<String> ccOptions = options["dartinoCCOptions"];
     var executable = "${suite.buildDir}/${ccOptions[0]}";
     return <Command>[commandBuilder.getVmCommand(
         executable, ccOptions.sublist(1), environmentOverrides)];

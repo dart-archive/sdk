@@ -9,7 +9,7 @@
 #error Do not include platform_win.h directly; use platform.h instead.
 #endif
 
-#if defined(FLETCH_TARGET_OS_WIN)
+#if defined(DARTINO_TARGET_OS_WIN)
 
 // Prevent the windows.h header from including winsock.h and others.
 #ifndef WIN32_LEAN_AND_MEAN
@@ -27,7 +27,7 @@
 #define snprintf _snprintf
 #define MAXPATHLEN MAX_PATH
 
-namespace fletch {
+namespace dartino {
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
@@ -107,8 +107,8 @@ class MonitorImpl {
   CONDITION_VARIABLE cond_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_WIN)
+#endif  // defined(DARTINO_TARGET_OS_WIN)
 
 #endif  // SRC_SHARED_PLATFORM_WINDOWS_H_

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_ARM)
+#if defined(DARTINO_TARGET_ARM)
 
 #include "src/shared/bytecodes.h"
 #include "src/shared/names.h"
@@ -18,7 +18,7 @@
 
 #define __ assembler()->
 
-namespace fletch {
+namespace dartino {
 
 class InterpreterGenerator {
  public:
@@ -431,7 +431,7 @@ void InterpreterGeneratorARM::GenerateBytecodePrologue(const char* name) {
   __ SwitchToText();
   __ AlignToPowerOfTwo(3);
   __ nop();
-#ifdef FLETCH_THUMB_ONLY
+#ifdef DARTINO_THUMB_ONLY
   // Thumb is has 16-bit nop's, not 32-bit.
   __ nop();
 #endif
@@ -1406,7 +1406,7 @@ void InterpreterGeneratorARM::DoIntrinsicListLength() {
 }
 
 void InterpreterGeneratorARM::Push(Register reg) {
-#ifdef FLETCH_THUMB_ONLY
+#ifdef DARTINO_THUMB_ONLY
   StoreLocal(reg, -1);
   __ sub(R6, R6, Immediate(1 * kWordSize));
 #else
@@ -1415,7 +1415,7 @@ void InterpreterGeneratorARM::Push(Register reg) {
 }
 
 void InterpreterGeneratorARM::Pop(Register reg) {
-#ifdef FLETCH_THUMB_ONLY
+#ifdef DARTINO_THUMB_ONLY
   LoadLocal(reg, 0);
   Drop(1);
 #else
@@ -1457,7 +1457,7 @@ void InterpreterGeneratorARM::Drop(Register reg) {
 }
 
 void InterpreterGeneratorARM::DropNAndSetTop(int dropping_slots, Register reg) {
-#ifdef FLETCH_THUMB_ONLY
+#ifdef DARTINO_THUMB_ONLY
   Drop(dropping_slots);
   StoreLocal(reg, 0);
 #else
@@ -1927,7 +1927,7 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ cmp(R9, R7);
   __ b(HI, &done);
   Pop(R1);
-#ifdef FLETCH_THUMB_ONLY
+#ifdef DARTINO_THUMB_ONLY
   __ str(R1, Address(R7, 0));
   __ sub(R7, R7, Immediate(1 * kWordSize));
 #else
@@ -1994,7 +1994,7 @@ void InterpreterGeneratorARM::CheckStackOverflow(int size) {
 
 void InterpreterGeneratorARM::Dispatch(int size) {
 // Load the next bytecode through R5 and dispatch to it.
-#ifdef FLETCH_THUMB_ONLY
+#ifdef DARTINO_THUMB_ONLY
   __ ldrb(R7, Address(R5, size));
   if (size > 0) {
     __ add(R5, R5, Immediate(size));
@@ -2054,6 +2054,6 @@ void InterpreterGeneratorARM::RestoreState() {
   __ mov(PC, LR);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_ARM)
+#endif  // defined(DARTINO_TARGET_ARM)

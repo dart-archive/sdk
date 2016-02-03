@@ -6,7 +6,7 @@
 
 #include "src/vm/vector.h"
 
-namespace fletch {
+namespace dartino {
 
 uint8* DoubleSize(size_t capacity, uint8* backing) {
   uint8* new_backing = new uint8[capacity * 2];
@@ -18,4 +18,4 @@ uint8* DoubleSize(size_t capacity, uint8* backing) {
   return new_backing;
 }
 
-}  // namespace fletch
+}  // namespace dartino

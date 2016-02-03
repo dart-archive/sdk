@@ -12,7 +12,7 @@ import 'package:expect/expect.dart';
 import 'package:file/file.dart';
 
 final mainScriptUri = new Uri(
-    scheme: "org.dartlang.fletch",
+    scheme: "org.dartlang.dartino",
     path: "/main.dart");
 
 void run(Uri uri, String mainScript, bool isServer) {

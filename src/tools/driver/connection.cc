@@ -10,7 +10,7 @@
 #include "src/shared/native_socket.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 DriverConnection::DriverConnection(Socket* socket) : socket_(socket) {}
 
@@ -49,4 +49,4 @@ void DriverConnection::Send(Command command, const WriteBuffer& buffer) {
   buffer.WriteTo(socket_);
 }
 
-}  // namespace fletch
+}  // namespace dartino

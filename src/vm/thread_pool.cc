@@ -5,7 +5,7 @@
 #include "src/vm/thread.h"
 #include "src/vm/thread_pool.h"
 
-namespace fletch {
+namespace dartino {
 
 ThreadPool::ThreadPool(int max_threads)
     : monitor_(Platform::CreateMonitor()),
@@ -89,4 +89,4 @@ void ThreadPool::ThreadDone() {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino

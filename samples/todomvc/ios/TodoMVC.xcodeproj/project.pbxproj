@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		DA4370B71AE9113000EEE52F /* libfletch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA4370B61AE9113000EEE52F /* libfletch.a */; };
+		DA4370B71AE9113000EEE52F /* libdartino.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA4370B61AE9113000EEE52F /* libdartino.a */; };
 		DA4370B91AE914A800EEE52F /* unix_ia32_hack.c in Sources */ = {isa = PBXBuildFile; fileRef = DA4370B81AE914A800EEE52F /* unix_ia32_hack.c */; };
 		DAB201051A9B78890087F7F9 /* struct.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAB200FF1A9B78890087F7F9 /* struct.cc */; };
 		DAB201061A9B78890087F7F9 /* todomvc_presenter.cc in Sources */ = {isa = PBXBuildFile; fileRef = DAB201011A9B78890087F7F9 /* todomvc_presenter.cc */; };
@@ -35,7 +35,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		DA4370B61AE9113000EEE52F /* libfletch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfletch.a; path = TodoMVC/libfletch.a; sourceTree = "<group>"; };
+		DA4370B61AE9113000EEE52F /* libdartino.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libdartino.a; path = TodoMVC/libdartino.a; sourceTree = "<group>"; };
 		DA4370B81AE914A800EEE52F /* unix_ia32_hack.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = unix_ia32_hack.c; path = ../unix_ia32_hack.c; sourceTree = "<group>"; };
 		DAB200FF1A9B78890087F7F9 /* struct.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = struct.cc; sourceTree = "<group>"; };
 		DAB201001A9B78890087F7F9 /* struct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = struct.h; sourceTree = "<group>"; };
@@ -69,7 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DA4370B71AE9113000EEE52F /* libfletch.a in Frameworks */,
+				DA4370B71AE9113000EEE52F /* libdartino.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,7 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				DA4370B81AE914A800EEE52F /* unix_ia32_hack.c */,
-				DA4370B61AE9113000EEE52F /* libfletch.a */,
+				DA4370B61AE9113000EEE52F /* libdartino.a */,
 				DADB66D51A9CA17500BD8B6E /* Resources */,
 				DAB200FE1A9B78890087F7F9 /* cc */,
 				DAC13ECD1A9B6ED000D3159D /* TodoMVC */,

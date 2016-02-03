@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_CMSIS)
+#if defined(DARTINO_TARGET_OS_CMSIS)
 
 #include <cmsis_os.h>
 
@@ -12,7 +12,7 @@
 #include "src/vm/process.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 const uint32_t kInterruptPortId = 0;
 
@@ -64,7 +64,7 @@ Object* EventHandler::Add(Process* process, Object* id, Port* port,
 }
 
 void EventHandler::Run() {
-  osMailQId queue = GetFletchMailQ();
+  osMailQId queue = GetDartinoMailQ();
   while (true) {
     int64 next_timeout;
     {
@@ -111,6 +111,6 @@ void EventHandler::Run() {
   }
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_CMSIS)
+#endif  // defined(DARTINO_TARGET_OS_CMSIS)

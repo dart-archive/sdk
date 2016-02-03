@@ -12,9 +12,9 @@ import sys
 
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
-fletch_src = os.path.abspath(os.path.join(script_dir, os.pardir, os.pardir))
+dartino_src = os.path.abspath(os.path.join(script_dir, os.pardir, os.pardir))
 SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(fletch_src, 'third_party', 'gyp', 'pylib'))
+sys.path.insert(0, os.path.join(dartino_src, 'third_party', 'gyp', 'pylib'))
 json_data_file = os.path.join(script_dir, 'win_toolchain.json')
 
 

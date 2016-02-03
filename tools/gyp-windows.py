@@ -7,24 +7,24 @@ import os
 import sys
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
-fletch_src = os.path.abspath(os.path.join(script_dir, os.pardir))
+dartino_src = os.path.abspath(os.path.join(script_dir, os.pardir))
 
-assert os.path.exists(os.path.join(fletch_src, 'third_party', 'gyp', 'pylib'))
-sys.path.append(os.path.join(fletch_src, 'third_party', 'gyp', 'pylib'))
+assert os.path.exists(os.path.join(dartino_src, 'third_party', 'gyp', 'pylib'))
+sys.path.append(os.path.join(dartino_src, 'third_party', 'gyp', 'pylib'))
 import gyp
 
-sys.path.append(os.path.join(fletch_src, 'tools', 'vs_dependency'))
+sys.path.append(os.path.join(dartino_src, 'tools', 'vs_dependency'))
 import vs_toolchain
 
 vs2013_runtime_dll_dirs = vs_toolchain.SetEnvironmentAndGetRuntimeDllDirs()
 
 gyp_rc = gyp.script_main()
 
-# TODO(herhut): Make the below work for fletch once compilation works.
+# TODO(herhut): Make the below work for dartino once compilation works.
 if vs2013_runtime_dll_dirs:
   x64_runtime, x86_runtime = vs2013_runtime_dll_dirs
   vs_toolchain.CopyVsRuntimeDlls(
-    os.path.join(fletch_src, "out"),
+    os.path.join(dartino_src, "out"),
     (x86_runtime, x64_runtime))
 
 sys.exit(gyp_rc)

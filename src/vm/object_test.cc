@@ -12,7 +12,7 @@
 #include "src/vm/object.h"
 #include "src/vm/program.h"
 
-namespace fletch {
+namespace dartino {
 
 static void CheckValidSmi(word value) {
   EXPECT(Smi::IsValid(value));
@@ -37,4 +37,4 @@ TEST_CASE(Smi) {
   EXPECT(Smi::kMaxValue >= Smi::kMaxPortableValue);
 }
 
-}  // namespace fletch
+}  // namespace dartino

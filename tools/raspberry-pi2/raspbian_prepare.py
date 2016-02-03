@@ -5,7 +5,7 @@
 # BSD-style license that can be found in the LICENSE file.
 #
 
-# Prepares a raspbian image to support fletch. We use qemu to edit the image
+# Prepares a raspbian image to support dartino. We use qemu to edit the image
 # since this allows us to run commands and push data to the image without using
 # sudo. This script will "edit" the image in place, so take a copy before using.
 
@@ -20,7 +20,7 @@ HOSTNAME = 'localhost'
 USERNAME = 'pi'
 PASSWORD = 'raspberry'
 KERNEL = 'third_party/raspbian/kernel/kernel-qemu'
-CONFIG = 'tools/raspberry-pi2/raspbian-scripts/fletch-configuration'
+CONFIG = 'tools/raspberry-pi2/raspbian-scripts/dartino-configuration'
 QEMU = 'third_party/qemu/linux/qemu/bin/qemu-system-arm'
 PORT = 10022
 
@@ -48,16 +48,16 @@ def InstallAgent(qemu, agent):
   qemu.run_command('rm %s' % deb_dst)
   # This will fail, but it lets us validate that the binary was installed.
   # (it fails due to the simulated cpu not being armv7)
-  qemu.run_command('fletch-vm --version')
+  qemu.run_command('dartino-vm --version')
 
 def InstallConfig(qemu):
-  config_dst = '/tmp/fletch-configuration'
+  config_dst = '/tmp/dartino-configuration'
   qemu.put_file(CONFIG, config_dst)
-  qemu.run_command('sudo cp /tmp/fletch-configuration /etc/init.d')
-  qemu.run_command('sudo chown root:root /etc/init.d/fletch-configuration')
-  qemu.run_command('sudo chmod 755 /etc/init.d/fletch-configuration')
-  qemu.run_command('sudo insserv fletch-configuration')
-  qemu.run_command('sudo update-rc.d fletch-configuration enable')
+  qemu.run_command('sudo cp /tmp/dartino-configuration /etc/init.d')
+  qemu.run_command('sudo chown root:root /etc/init.d/dartino-configuration')
+  qemu.run_command('sudo chmod 755 /etc/init.d/dartino-configuration')
+  qemu.run_command('sudo insserv dartino-configuration')
+  qemu.run_command('sudo update-rc.d dartino-configuration enable')
 
 def InstallSrcTarball(qemu, src):
   src_dst = os.path.join('/home', 'pi', os.path.basename(src))

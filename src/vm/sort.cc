@@ -9,7 +9,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/random.h"
 
-namespace fletch {
+namespace dartino {
 
 void InsertionSort(uint8* array, size_t elements, size_t element_size,
                    VoidCompare compare) {
@@ -128,4 +128,4 @@ void VoidSort(uint8* start, size_t elements, size_t element_size,
   InsertionSort(start, elements, element_size, compare);
 }
 
-}  // namespace fletch
+}  // namespace dartino

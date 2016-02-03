@@ -31,7 +31,7 @@
 
 // Fast front-end for persistent compiler process.
 //
-// To obtain the required performance of command line tools, the fletch
+// To obtain the required performance of command line tools, the dartino
 // compiler based on dart2js needs to stay persistent in memory. The start-up
 // time of the Dart VM, and its performance of unoptimized code make this
 // necessary.
@@ -50,7 +50,7 @@
 // the server. If the server doesn't respond, it is started, and the lock isn't
 // released until the server is ready.
 
-namespace fletch {
+namespace dartino {
 
 static const int COMPILER_CRASHED = 253;
 
@@ -58,19 +58,19 @@ static char* program_name = NULL;
 
 // The file where this program looks for the TCP/IP port for talking
 // to the persistent process. Controlled by user by setting
-// environment variable FLETCH_PORT_FILE.
-static char fletch_config_file[MAXPATHLEN];
+// environment variable DARTINO_PORT_FILE.
+static char dartino_config_file[MAXPATHLEN];
 
-// The port that was read from [fletch_config_file].
-static int fletch_socket_port;
+// The port that was read from [dartino_config_file].
+static int dartino_socket_port;
 
-static const char fletch_config_name[] = ".fletch";
+static const char dartino_config_name[] = ".dartino";
 
-static const char fletch_config_env_name[] = "FLETCH_PORT_FILE";
+static const char dartino_config_env_name[] = "DARTINO_PORT_FILE";
 
-static const char* fletch_config_location = NULL;
+static const char* dartino_config_location = NULL;
 
-static int fletch_config_fd;
+static int dartino_config_fd;
 
 static const char dart_vm_env_name[] = "DART_VM";
 
@@ -149,7 +149,7 @@ bool FileExists(const char* name) {
   return false;
 }
 
-void FletchConfigFile(char* result, const char* directory) {
+void DartinoConfigFile(char* result, const char* directory) {
   // TODO(ahe): Use StrCat or StrCpy instead.
   char* ptr = stpncpy(result, directory, MAXPATHLEN);
   if (ptr[-1] != '/') {
@@ -157,7 +157,7 @@ void FletchConfigFile(char* result, const char* directory) {
     ptr++;
   }
   // TODO(ahe): Use StrCat or StrCpy instead.
-  strncpy(ptr, fletch_config_name, sizeof(fletch_config_name));
+  strncpy(ptr, dartino_config_name, sizeof(dartino_config_name));
 }
 
 void ParentDir(char* directory) {
@@ -178,30 +178,31 @@ void ParentDir(char* directory) {
 
 // Detect the configuration and initialize the following variables:
 //
-// * fletch_config_file
+// * dartino_config_file
 //
-// We first look for an environment variable named FLETCH_PORT_FILE. If
-// defined, it gives the value of fletch_config_file.
+// We first look for an environment variable named DARTINO_PORT_FILE. If
+// defined, it gives the value of dartino_config_file.
 //
-// If FLETCH_PORT_FILE isn't defined, we look for the environment variable
-// HOME, if defined, the value of fletch_config_file becomes "${HOME}/.fletch".
+// If DARTINO_PORT_FILE isn't defined, we look for the environment variable
+// HOME, if defined, the value of dartino_config_file becomes
+// "${HOME}/.dartino".
 //
 // If HOME isn't defined, we find the user's home directory via getpwuid_r.
 static void DetectConfiguration() {
-  // First look for the environment variable FLETCH_PORT_FILE.
-  char* fletch_config_env = getenv(fletch_config_env_name);
-  if (fletch_config_env != NULL) {
-    fletch_config_location = fletch_config_env_name;
-    StrCpy(fletch_config_file, sizeof(fletch_config_file), fletch_config_env,
-           strlen(fletch_config_env) + 1);
+  // First look for the environment variable DARTINO_PORT_FILE.
+  char* dartino_config_env = getenv(dartino_config_env_name);
+  if (dartino_config_env != NULL) {
+    dartino_config_location = dartino_config_env_name;
+    StrCpy(dartino_config_file, sizeof(dartino_config_file), dartino_config_env,
+           strlen(dartino_config_env) + 1);
     return;
   }
 
   // Then look for the environment variable HOME.
   char* home_env = getenv("HOME");
   if (home_env != NULL) {
-    fletch_config_location = "HOME";
-    FletchConfigFile(fletch_config_file, home_env);
+    dartino_config_location = "HOME";
+    DartinoConfigFile(dartino_config_file, home_env);
     return;
   }
 
@@ -227,21 +228,21 @@ static void DetectConfiguration() {
     Die("%s: Unable to determine home directory: Entry for user not found.",
         program_name);
   }
-  fletch_config_location = "/etc/passwd";
-  FletchConfigFile(fletch_config_file, pwd.pw_dir);
+  dartino_config_location = "/etc/passwd";
+  DartinoConfigFile(dartino_config_file, pwd.pw_dir);
   free(pwd_buffer);
 }
 
-// Opens and locks the config file named by fletch_config_file and initialize
-// the variable fletch_config_fd. If use_blocking is true, this method will
+// Opens and locks the config file named by dartino_config_file and initialize
+// the variable dartino_config_fd. If use_blocking is true, this method will
 // block until the lock is obtained.
 static void LockConfigFile(bool use_blocking) {
   int fd = TEMP_FAILURE_RETRY(
-      open(fletch_config_file, O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR));
+      open(dartino_config_file, O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR));
   if (fd == -1) {
     Die("%s: Unable to open '%s' failed: %s.\nTry checking the value of '%s'.",
-        program_name, fletch_config_file, strerror(errno),
-        fletch_config_location);
+        program_name, dartino_config_file, strerror(errno),
+        dartino_config_location);
   }
 
   int operation = LOCK_EX;
@@ -250,18 +251,18 @@ static void LockConfigFile(bool use_blocking) {
   }
   if (TEMP_FAILURE_RETRY(flock(fd, operation)) == -1) {
     if (use_blocking || errno != EWOULDBLOCK) {
-      Die("%s: flock '%s' failed: %s.", program_name, fletch_config_file,
+      Die("%s: flock '%s' failed: %s.", program_name, dartino_config_file,
           strerror(errno));
     }
   }
 
-  fletch_config_fd = fd;
+  dartino_config_fd = fd;
 }
 
-// Release the lock on fletch_config_fd.
+// Release the lock on dartino_config_fd.
 static void UnlockConfigFile() {
   // Closing the file descriptor will release the lock.
-  Close(fletch_config_fd);
+  Close(dartino_config_fd);
 }
 
 static void ReadDriverConfig() {
@@ -270,20 +271,20 @@ static void ReadDriverConfig() {
   size_t length = sizeof(buffer) - 1;
   while (offset < length) {
     ssize_t bytes = TEMP_FAILURE_RETRY(
-        read(fletch_config_fd, buffer + offset, length - offset));
+        read(dartino_config_fd, buffer + offset, length - offset));
     if (bytes < 0) {
       Die("%s: Unable to read from '%s'. Failed with error: %s", program_name,
-          fletch_config_file, strerror(errno));
+          dartino_config_file, strerror(errno));
     } else if (bytes == 0) {
       break;  // End of file.
     }
     offset += bytes;
   }
   buffer[offset] = '\0';
-  fletch_socket_port = atoi(buffer);
+  dartino_socket_port = atoi(buffer);
 }
 
-static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
+static void ComputeDartinoRoot(char* buffer, size_t buffer_length) {
   // TODO(ahe): Fix lint problem: Do not use variable-length arrays.
   char resolved[buffer_length];  // NOLINT
   GetPathOfExecutable(buffer, buffer_length);
@@ -294,14 +295,14 @@ static void ComputeFletchRoot(char* buffer, size_t buffer_length) {
   StrCpy(buffer, buffer_length, resolved, sizeof(resolved));
 
   // 'buffer' is now the absolute path of this executable (with symlinks
-  // resolved). When running from fletch-repo, this executable will be in
-  // "fletch-repo/fletch/out/$CONFIGURATION/fletch".
+  // resolved). When running from dartino-repo, this executable will be in
+  // "dartino-repo/dartino/out/$CONFIGURATION/dartino".
   ParentDir(buffer);
-  // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
+  // 'buffer' is now, for example, "dartino-repo/dartino/out/$CONFIGURATION".
 
-  // FLETCH_ROOT_DISTANCE gives the number of directories up that we find the
-  // root of the fletch checkout or sdk bundle.
-  for (int i = 0; i < FLETCH_ROOT_DISTANCE; i++) {
+  // DARTINO_ROOT_DISTANCE gives the number of directories up that we find the
+  // root of the dartino checkout or sdk bundle.
+  for (int i = 0; i < DARTINO_ROOT_DISTANCE; i++) {
     ParentDir(buffer);
   }
 
@@ -323,10 +324,10 @@ static void GetExecutableDir(char* buffer, size_t buffer_length) {
   StrCpy(buffer, buffer_length, resolved, sizeof(resolved));
 
   // 'buffer' is now the absolute path of this executable (with symlinks
-  // resolved). When running from fletch-repo, this executable will be in
-  // "fletch-repo/fletch/out/$CONFIGURATION/fletch".
+  // resolved). When running from dartino-repo, this executable will be in
+  // "dartino-repo/dartino/out/$CONFIGURATION/dartino".
   ParentDir(buffer);
-  // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION".
+  // 'buffer' is now, for example, "dartino-repo/dartino/out/$CONFIGURATION".
 
   size_t length = strlen(buffer);
   if (length > 0 && buffer[length - 1] != '/') {
@@ -348,25 +349,27 @@ static void ComputeDartVmPath(char* buffer, size_t buffer_length) {
 
   GetExecutableDir(buffer, buffer_length);
   StrCat(buffer, buffer_length, DART_VM_NAME, sizeof(DART_VM_NAME));
-  // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION/dart".
+  // 'buffer' is now, for example,
+  // "dartino-repo/dartino/out/$CONFIGURATION/dart".
 }
 
-// Stores the location of the Fletch VM in 'buffer'.
-static void ComputeFletchVmPath(char* buffer, size_t buffer_length) {
+// Stores the location of the Dartino VM in 'buffer'.
+static void ComputeDartinoVmPath(char* buffer, size_t buffer_length) {
   GetExecutableDir(buffer, buffer_length);
 
-  StrCat(buffer, buffer_length, "fletch-vm", sizeof("fletch-vm"));
-  // 'buffer' is now, for example, "fletch-repo/fletch/out/$CONFIGURATION/dart".
+  StrCat(buffer, buffer_length, "dartino-vm", sizeof("dartino-vm"));
+  // 'buffer' is now, for example,
+  // "dartino-repo/dartino/out/$CONFIGURATION/dart".
 }
 
-// Stores the package root in 'buffer'. The value of 'fletch_root' must be the
-// absolute path of '.../fletch-repo/fletch/' (including trailing slash).
+// Stores the package root in 'buffer'. The value of 'dartino_root' must be the
+// absolute path of '.../dartino-repo/dartino/' (including trailing slash).
 static void ComputePackageSpec(char* buffer, size_t buffer_length,
-                               const char* fletch_root,
-                               size_t fletch_root_length) {
-  StrCpy(buffer, buffer_length, fletch_root, fletch_root_length);
-  StrCat(buffer, buffer_length, FLETCHC_PKG_FILE, sizeof(FLETCHC_PKG_FILE));
-  // 'buffer' is now, for example, "fletch-repo/fletch/package/".
+                               const char* dartino_root,
+                               size_t dartino_root_length) {
+  StrCpy(buffer, buffer_length, dartino_root, dartino_root_length);
+  StrCat(buffer, buffer_length, DARTINOC_PKG_FILE, sizeof(DARTINOC_PKG_FILE));
+  // 'buffer' is now, for example, "dartino-repo/dartino/package/".
 }
 
 // Flush all open streams (FILE objects). This is needed before forking
@@ -398,32 +401,33 @@ static void StartDriverDaemon() {
   const int kMaxArgv = 9;
   const char* argv[kMaxArgv];
 
-  char fletch_root[MAXPATHLEN + 1];
-  ComputeFletchRoot(fletch_root, sizeof(fletch_root));
+  char dartino_root[MAXPATHLEN + 1];
+  ComputeDartinoRoot(dartino_root, sizeof(dartino_root));
 
   char vm_path[MAXPATHLEN + 1];
   ComputeDartVmPath(vm_path, sizeof(vm_path));
 
-  char fletch_vm_path[MAXPATHLEN + 1];
-  ComputeFletchVmPath(fletch_vm_path, sizeof(fletch_vm_path));
+  char dartino_vm_path[MAXPATHLEN + 1];
+  ComputeDartinoVmPath(dartino_vm_path, sizeof(dartino_vm_path));
 
-  char fletch_vm_option[sizeof("-Dfletch-vm=") + MAXPATHLEN + 1];
-  StrCpy(fletch_vm_option, sizeof(fletch_vm_option), "-Dfletch-vm=",
-         sizeof("-Dfletch-vm="));
-  StrCat(fletch_vm_option, sizeof(fletch_vm_option), fletch_vm_path,
-         sizeof(fletch_vm_path));
+  char dartino_vm_option[sizeof("-Ddartino-vm=") + MAXPATHLEN + 1];
+  StrCpy(dartino_vm_option, sizeof(dartino_vm_option), "-Ddartino-vm=",
+         sizeof("-Ddartino-vm="));
+  StrCat(dartino_vm_option, sizeof(dartino_vm_option), dartino_vm_path,
+         sizeof(dartino_vm_path));
 
   char package_spec[MAXPATHLEN + 1];
-  ComputePackageSpec(package_spec, sizeof(package_spec), fletch_root,
-                     sizeof(fletch_root));
+  ComputePackageSpec(package_spec, sizeof(package_spec), dartino_root,
+                     sizeof(dartino_root));
   char package_option[sizeof("--packages=") + MAXPATHLEN + 1];
   StrCpy(package_option, sizeof(package_option), "--packages=",
          sizeof("--packages="));
   StrCat(package_option, sizeof(package_option), package_spec,
          sizeof(package_spec));
 
-  const char library_root[] = "-Dfletchc-library-root=" FLETCHC_LIBRARY_ROOT;
-  const char define_version[] = "-Dfletch.version=";
+  const char library_root[] =
+      "-Ddartino_compiler-library-root=" DARTINOC_LIBRARY_ROOT;
+  const char define_version[] = "-Ddartino.version=";
   const char* version = GetVersion();
   int version_option_length = sizeof(define_version) + strlen(version) + 1;
   char* version_option = StrAlloc(version_option_length);
@@ -434,12 +438,12 @@ static void StartDriverDaemon() {
   int argc = 0;
   argv[argc++] = vm_path;
   argv[argc++] = "-c";
-  argv[argc++] = fletch_vm_option;
+  argv[argc++] = dartino_vm_option;
   argv[argc++] = package_option;
   argv[argc++] = version_option;
   argv[argc++] = library_root;
-  argv[argc++] = "package:fletchc/src/hub/hub_main.dart";
-  argv[argc++] = fletch_config_file;
+  argv[argc++] = "package:dartino_compiler/src/hub/hub_main.dart";
+  argv[argc++] = dartino_config_file;
   argv[argc++] = NULL;
   if (argc > kMaxArgv) Die("Internal error: increase argv size");
 
@@ -461,7 +465,7 @@ static void StartDriverDaemon() {
     // In child.
     Close(parent_stdout);
     Close(parent_stderr);
-    Close(fletch_config_fd);
+    Close(dartino_config_fd);
     ExecDaemon(child_stdout, child_stderr, argv);
     UNREACHABLE();
   } else {
@@ -605,7 +609,7 @@ static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
                        bytes_read);
           }
           match[0] = '\0';
-          fletch_socket_port = atoi(stdout_buffer);
+          dartino_socket_port = atoi(stdout_buffer);
           // We got the server handshake (the port). So we break to
           // eventually return from this function.
           break;
@@ -713,7 +717,7 @@ Socket* Connect() {
 
   address.sin_family = AF_INET;
   inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);
-  address.sin_port = htons(fletch_socket_port);
+  address.sin_port = htons(dartino_socket_port);
 
   int fd = socket(PF_INET, SOCK_STREAM, 0);
   if (fd < 0) {
@@ -763,14 +767,15 @@ static int QuitCommand() {
   const char pkill[] = "exec pkill -f ";
   const char pkill_force[] = "exec pkill -KILL -f ";
   const char driver_arguments[] =
-      "package:fletchc/src/driver/driver_main > /dev/null";
-  const char hub_arguments[] = "package:fletchc/src/hub/hub_main > /dev/null";
+      "package:dartino_compiler/src/driver/driver_main > /dev/null";
+  const char hub_arguments[] =
+      "package:dartino_compiler/src/hub/hub_main > /dev/null";
 
   StrCpy(command, MAX_COMMAND_LENGTH, pkill, sizeof(pkill));
   StrCat(command, MAX_COMMAND_LENGTH, hub_arguments, sizeof(hub_arguments));
 
   const char* current_arguments = hub_arguments;
-  // pkill -f package:fletchc/src/hub/hub_main
+  // pkill -f package:dartino_compiler/src/hub/hub_main
   if (CheckedSystem(command) != 0) {
     // pkill returns 0 if it killed any processes, so in this case it didn't
     // find/kill any active persistent processes
@@ -779,10 +784,10 @@ static int QuitCommand() {
     StrCpy(command, MAX_COMMAND_LENGTH, pkill, sizeof(pkill));
     StrCat(command, MAX_COMMAND_LENGTH, driver_arguments,
         sizeof(driver_arguments));
-    // pkill -f package:fletchc/src/driver/driver_main
+    // pkill -f package:dartino_compiler/src/driver/driver_main
     if (CheckedSystem(command) != 0) {
       // No legacy persistent process. Just remove the socket location file.
-      unlink(fletch_config_file);
+      unlink(dartino_config_file);
       printf("Background process wasn't running\n");
       return 0;
     }
@@ -793,7 +798,7 @@ static int QuitCommand() {
   sleep(2);
 
   // Remove the socket location file.
-  unlink(fletch_config_file);
+  unlink(dartino_config_file);
 
   // To check if the process exited gracefully we try to kill it again
   // (this time with SIGKILL). If that command doesn't find any running
@@ -804,9 +809,9 @@ static int QuitCommand() {
   StrCat(command, MAX_COMMAND_LENGTH, current_arguments,
      strlen(current_arguments) + 1);
 
-  // pkill -KILL -f package:fletchc/src/hub/hub_main or
-  // pkill -KILL -f package:fletchc/src/driver/driver_main depending on the
-  // above pkill.
+  // pkill -KILL -f package:dartino_compiler/src/hub/hub_main or
+  // pkill -KILL -f package:dartino_compiler/src/driver/driver_main depending
+  // on the above pkill.
   if (CheckedSystem(command) != 0) {
     // We assume it didn't find any processes to kill when returning a
     // non-zero value and hence just report the process gracefully exited.
@@ -837,7 +842,7 @@ static int Main(int argc, char** argv) {
     control_socket = Connect();
     if (control_socket == NULL) {
       Die(
-          "%s: Failed to start fletch server (%s).\n"
+          "%s: Failed to start dartino server (%s).\n"
           "Use DART_VM environment variable to override location of Dart VM.",
           program_name, strerror(errno));
     }
@@ -910,7 +915,7 @@ static int Main(int argc, char** argv) {
   return exit_code;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-// Forward main calls to fletch::Main.
-int main(int argc, char** argv) { return fletch::Main(argc, argv); }
+// Forward main calls to dartino::Main.
+int main(int argc, char** argv) { return dartino::Main(argc, argv); }

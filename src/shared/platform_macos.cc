@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_MACOS)
+#if defined(DARTINO_TARGET_OS_MACOS)
 
 #include <mach-o/dyld.h>
 
@@ -11,7 +11,7 @@
 #include "src/shared/assert.h"
 #include "src/shared/platform.h"
 
-namespace fletch {
+namespace dartino {
 
 void GetPathOfExecutable(char* path, size_t path_length) {
   uint32_t bytes_copied = path_length;
@@ -29,6 +29,6 @@ int Platform::GetLocalTimeZoneOffset() {
   return static_cast<int>(-offset);
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_MACOS)
+#endif  // defined(DARTINO_TARGET_OS_MACOS)

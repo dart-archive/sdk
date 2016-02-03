@@ -14,9 +14,9 @@ tests/debugger/async_test.dart:12:1
   1: call                          
   2: Future.call                     @computation()
   3: Object._noSuchMethodTrampoline
-  4: _FletchTimer.call               @_callback()
+  4: _DartinoTimer.call              @_callback()
   5: runToEnd                        @entry()
-  6: Fiber.call                      @fletch.runToEnd(entry)
+  6: Fiber.call                      @dartino.runToEnd(entry)
   7: Coroutine._coroutineStart       @entry(argument)
 > c
 ### process terminated

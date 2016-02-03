@@ -9,7 +9,7 @@
 #include "src/vm/pair.h"
 #include "src/vm/void_hash_table.h"
 
-namespace fletch {
+namespace dartino {
 
 // Used to implement UnorderedMap and UnorderedSet (see hash_map.h and
 // hashset.h).  Most methods have a very similar interface to
@@ -154,6 +154,6 @@ class UnorderedHashTable {
   VoidHashTable map_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_HASH_TABLE_H_

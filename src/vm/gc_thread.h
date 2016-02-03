@@ -8,7 +8,7 @@
 #include "src/vm/thread.h"
 #include "src/vm/program.h"
 
-namespace fletch {
+namespace dartino {
 
 class GCThread {
  public:
@@ -41,6 +41,6 @@ class GCThread {
   bool did_shutdown_;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_GC_THREAD_H_

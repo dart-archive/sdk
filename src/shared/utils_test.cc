@@ -6,7 +6,7 @@
 #include "src/shared/test_case.h"
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 TEST_CASE(Minimum) {
   EXPECT_EQ(0, Utils::Minimum(0, 1));
@@ -76,4 +76,4 @@ TEST_CASE(RoundUp) {
   EXPECT_EQ(64, Utils::RoundUp(63, 32));
 }
 
-}  // namespace fletch
+}  // namespace dartino

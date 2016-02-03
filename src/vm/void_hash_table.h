@@ -8,7 +8,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 class VoidHashTable {
  public:
@@ -198,6 +198,6 @@ class VoidHashTable {
   char* backing_end_;  // The end of the backing store of entries.
 };
 
-}  // namespace fletch.
+}  // namespace dartino.
 
 #endif  // SRC_VM_VOID_HASH_TABLE_H_

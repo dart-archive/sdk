@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(FLETCH_TARGET_OS_WIN)
+#if defined(DARTINO_TARGET_OS_WIN)
 
 #include "src/shared/platform.h"  // NOLINT
 
@@ -14,7 +14,7 @@
 
 #include "src/shared/utils.h"
 
-namespace fletch {
+namespace dartino {
 
 static uint64 time_launch;
 
@@ -32,7 +32,7 @@ void GetPathOfExecutable(char* path, size_t path_length) {
 
 void Platform::Setup() {
   time_launch = GetTickCount64();
-#if defined(FLETCH_ENABLE_LIVE_CODING)
+#if defined(DARTINO_ENABLE_LIVE_CODING)
   WSADATA wsa_data;
   int status = WSAStartup(MAKEWORD(2, 2), &wsa_data);
   if (status != 0) {
@@ -42,7 +42,7 @@ void Platform::Setup() {
 }
 
 void Platform::TearDown() {
-#if defined(FLETCH_ENABLE_LIVE_CODING)
+#if defined(DARTINO_ENABLE_LIVE_CODING)
   WSACleanup();
 #endif
 }
@@ -271,6 +271,6 @@ bool VirtualMemory::Uncommit(uword address, int size) {
   return false;
 }
 
-}  // namespace fletch
+}  // namespace dartino
 
-#endif  // defined(FLETCH_TARGET_OS_WIN)
+#endif  // defined(DARTINO_TARGET_OS_WIN)

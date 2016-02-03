@@ -5,7 +5,7 @@
 #ifndef SRC_SHARED_NATIVES_H_
 #define SRC_SHARED_NATIVES_H_
 
-namespace fletch {
+namespace dartino {
 
 #define NATIVES_DO(N)                                                        \
   N(PrintToConsole, "<none>", "printToConsole", false)                       \
@@ -139,7 +139,7 @@ namespace fletch {
   N(StopwatchFrequency, "Stopwatch", "_frequency", false)                    \
   N(StopwatchNow, "Stopwatch", "_now", false)                                \
                                                                              \
-  N(TimerScheduleTimeout, "_FletchTimer", "_scheduleTimeout", false)         \
+  N(TimerScheduleTimeout, "_DartinoTimer", "_scheduleTimeout", false)         \
   N(EventHandlerSleep, "<none>", "_sleep", false)                            \
                                                                              \
   N(ForeignLibraryLookup, "ForeignLibrary", "_lookupLibrary", false)         \
@@ -268,6 +268,6 @@ NATIVES_DO(N)
 #undef N
 
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_NATIVES_H_

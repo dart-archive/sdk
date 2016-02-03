@@ -5,7 +5,7 @@
 #ifndef SRC_VM_PAIR_H_
 #define SRC_VM_PAIR_H_
 
-namespace fletch {
+namespace dartino {
 
 // Basically the same as a std::pair, but we don't want to rely on that
 // being present on a given platform.
@@ -18,6 +18,6 @@ class Pair {
   Second second;
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_PAIR_H_

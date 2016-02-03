@@ -134,7 +134,7 @@ abstract class _IntBase implements int {
     if (exponent < 0) throw new RangeError.range(exponent, 0, null, "exponent");
     if (modulus <= 0) throw new RangeError.range(modulus, 1, null, "modulus");
     if (exponent == 0) return 1;
-    if (fletch.enableBigint) {
+    if (dartino.enableBigint) {
       return this._toBigint().modPow(exponent, modulus);
     } else {
       throw new UnimplementedError();
@@ -147,7 +147,7 @@ abstract class _IntBase implements int {
     }
     if (modulus <= 0) throw new RangeError.range(modulus, 1, null, "modulus");
     if (modulus == 1) return 0;
-    if (fletch.enableBigint) {
+    if (dartino.enableBigint) {
       return this._toBigint().modInverse(modulus);
     } else {
       throw new UnimplementedError();
@@ -163,7 +163,7 @@ abstract class _IntBase implements int {
     if (x == 0) return y;
     if (y == 0) return x;
     if ((x == 1) || (y == 1)) return 1;
-    if (fletch.enableBigint) {
+    if (dartino.enableBigint) {
       return this._toBigint().gcd(other);
     } else {
       throw new UnimplementedError();
@@ -254,14 +254,14 @@ abstract class _IntBase implements int {
 class _Smi extends _IntBase {
   int get hashCode => identityHashCode(this);
 
-  @fletch.native external String toString();
+  @dartino.native external String toString();
 
-  @fletch.native external double toDouble();
+  @dartino.native external double toDouble();
 
-  @fletch.native external int _toMint();
+  @dartino.native external int _toMint();
 
   int _toBigint() {
-    if (fletch.enableBigint) {
+    if (dartino.enableBigint) {
       return new _Bigint._fromInt(this);
     } else {
       throw new UnimplementedError();
@@ -269,104 +269,104 @@ class _Smi extends _IntBase {
   }
 
   int _toBigintOrDouble() {
-    if (fletch.enableBigint) {
+    if (dartino.enableBigint) {
       return new _Bigint._fromInt(this);
     } else {
       throw new UnimplementedError();
     }
   }
 
-  @fletch.native num operator -() {
+  @dartino.native num operator -() {
     return -_toMint();
   }
 
-  @fletch.native num operator +(other) {
+  @dartino.native num operator +(other) {
     // TODO(kasperl): Check error.
     return other._addFromInteger(this);
   }
 
-  @fletch.native num operator -(other) {
+  @dartino.native num operator -(other) {
     // TODO(kasperl): Check error.
     return other._subFromInteger(this);
   }
 
-  @fletch.native num operator *(other) {
+  @dartino.native num operator *(other) {
     // TODO(kasperl): Check error.
     return other._mulFromInteger(this);
   }
 
-  @fletch.native num operator %(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native num operator %(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._modFromInteger(this);
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new IntegerDivisionByZeroException();
     }
   }
 
-  @fletch.native num operator /(other) {
+  @dartino.native num operator /(other) {
     // TODO(kasperl): Check error.
     return other._divFromInteger(this);
   }
 
-  @fletch.native int operator ~/(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native int operator ~/(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._truncDivFromInteger(this);
-      case fletch.indexOutOfBounds:
+      case dartino.indexOutOfBounds:
         throw new IntegerDivisionByZeroException();
     }
   }
 
-  @fletch.native external int operator ~();
+  @dartino.native external int operator ~();
 
-  @fletch.native int operator &(other) {
+  @dartino.native int operator &(other) {
     // TODO(kasperl): Check error.
     return other._bitAndFromInteger(this);
   }
 
-  @fletch.native int operator |(other) {
+  @dartino.native int operator |(other) {
     // TODO(kasperl): Check error.
     return other._bitOrFromInteger(this);
   }
 
-  @fletch.native int operator ^(other) {
+  @dartino.native int operator ^(other) {
     // TODO(kasperl): Check error.
     return other._bitXorFromInteger(this);
   }
 
-  @fletch.native int operator >>(other) {
+  @dartino.native int operator >>(other) {
     // TODO(kasperl): Check error.
     return other._bitShrFromInteger(this);
   }
 
-  @fletch.native int operator <<(other) {
+  @dartino.native int operator <<(other) {
     // TODO(kasperl): Check error.
     return other._bitShlFromInteger(this);
   }
 
-  @fletch.native bool operator ==(other) {
+  @dartino.native bool operator ==(other) {
     if (other is! num) return false;
     // TODO(kasperl): Check error.
     return other._compareEqFromInteger(this);
   }
 
-  @fletch.native bool operator <(other) {
+  @dartino.native bool operator <(other) {
     // TODO(kasperl): Check error.
     return other._compareLtFromInteger(this);
   }
 
-  @fletch.native bool operator <=(other) {
+  @dartino.native bool operator <=(other) {
     // TODO(kasperl): Check error.
     return other._compareLeFromInteger(this);
   }
 
-  @fletch.native bool operator >(other) {
+  @dartino.native bool operator >(other) {
     // TODO(kasperl): Check error.
     return other._compareGtFromInteger(this);
   }
 
-  @fletch.native bool operator >=(other) {
+  @dartino.native bool operator >=(other) {
     // TODO(kasperl): Check error.
     return other._compareGeFromInteger(this);
   }
@@ -411,14 +411,14 @@ class _Smi extends _IntBase {
 class _Mint extends _IntBase {
   int get hashCode => identityHashCode(this);
 
-  @fletch.native external String toString();
+  @dartino.native external String toString();
 
-  @fletch.native external double toDouble();
+  @dartino.native external double toDouble();
 
   int _toMint() => this;
 
   int _toBigint() {
-    if (fletch.enableBigint) {
+    if (dartino.enableBigint) {
       return new _Bigint._fromInt(this);
     } else {
       throw new UnimplementedError();
@@ -426,27 +426,27 @@ class _Mint extends _IntBase {
   }
 
   int _toBigintOrDouble() {
-    if (fletch.enableBigint) {
+    if (dartino.enableBigint) {
       return new _Bigint._fromInt(this);
     } else {
       throw new UnimplementedError();
     }
   }
 
-  @fletch.native num operator -() {
-    if (fletch.enableBigint) {
+  @dartino.native num operator -() {
+    if (dartino.enableBigint) {
       return -_toBigint();
     } else {
       throw new UnimplementedError('Overflow to big integer');
     }
   }
 
-  @fletch.native num operator +(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native num operator +(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._addFromInteger(this);
-      case fletch.indexOutOfBounds:
-        if (fletch.enableBigint) {
+      case dartino.indexOutOfBounds:
+        if (dartino.enableBigint) {
           return other._toBigint()._addFromInteger(this);
         } else {
           throw new UnimplementedError('Overflow to big integer');
@@ -454,12 +454,12 @@ class _Mint extends _IntBase {
     }
   }
 
-  @fletch.native num operator -(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native num operator -(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._subFromInteger(this);
-      case fletch.indexOutOfBounds:
-        if (fletch.enableBigint) {
+      case dartino.indexOutOfBounds:
+        if (dartino.enableBigint) {
           return other._toBigint()._subFromInteger(this);
         } else {
           throw new UnimplementedError('Overflow to big integer');
@@ -467,12 +467,12 @@ class _Mint extends _IntBase {
     }
   }
 
-  @fletch.native num operator *(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native num operator *(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._mulFromInteger(this);
-      case fletch.indexOutOfBounds:
-        if (fletch.enableBigint) {
+      case dartino.indexOutOfBounds:
+        if (dartino.enableBigint) {
           return other._toBigint()._mulFromInteger(this);
         } else {
           throw new UnimplementedError('Overflow to big integer');
@@ -480,69 +480,69 @@ class _Mint extends _IntBase {
     }
   }
 
-  @fletch.native num operator %(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native num operator %(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._modFromInteger(this);
-      case fletch.indexOutOfBounds:
-        if (fletch.enableBigint) {
+      case dartino.indexOutOfBounds:
+        if (dartino.enableBigint) {
           return other._toBigint()._modFromInteger(this);
         } else {
           throw new UnimplementedError('Overflow to big integer');
         }
-      case fletch.illegalState:
+      case dartino.illegalState:
         throw new IntegerDivisionByZeroException();
     }
   }
 
-  @fletch.native num operator /(other) {
+  @dartino.native num operator /(other) {
     // TODO(kasperl): Check error.
     return other._divFromInteger(this);
   }
 
-  @fletch.native int operator ~/(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native int operator ~/(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._truncDivFromInteger(this);
-      case fletch.indexOutOfBounds:
-        if (fletch.enableBigint) {
+      case dartino.indexOutOfBounds:
+        if (dartino.enableBigint) {
           return other._toBigint()._truncDivFromInteger(this);
         } else {
           throw new UnimplementedError('Overflow to big integer');
         }
-      case fletch.illegalState:
+      case dartino.illegalState:
         throw new IntegerDivisionByZeroException();
     }
   }
 
-  @fletch.native external int operator ~();
+  @dartino.native external int operator ~();
 
-  @fletch.native int operator &(other) {
+  @dartino.native int operator &(other) {
     // TODO(kasperl): Check error.
     return other._bitAndFromInteger(this);
   }
 
-  @fletch.native int operator |(other) {
+  @dartino.native int operator |(other) {
     // TODO(kasperl): Check error.
     return other._bitOrFromInteger(this);
   }
 
-  @fletch.native int operator ^(other) {
+  @dartino.native int operator ^(other) {
     // TODO(kasperl): Check error.
     return other._bitXorFromInteger(this);
   }
 
-  @fletch.native int operator >>(other) {
+  @dartino.native int operator >>(other) {
     // TODO(kasperl): Check error.
     return other._bitShrFromInteger(this);
   }
 
-  @fletch.native int operator <<(other) {
-    switch (fletch.nativeError) {
-      case fletch.wrongArgumentType:
+  @dartino.native int operator <<(other) {
+    switch (dartino.nativeError) {
+      case dartino.wrongArgumentType:
         return other._bitShlFromInteger(this);
-      case fletch.indexOutOfBounds:
-        if (fletch.enableBigint) {
+      case dartino.indexOutOfBounds:
+        if (dartino.enableBigint) {
           return other._toBigint()._bitShlFromInteger(this);
         } else {
           throw new UnimplementedError('Overflow to big integer');
@@ -550,28 +550,28 @@ class _Mint extends _IntBase {
     }
   }
 
-  @fletch.native bool operator ==(other) {
+  @dartino.native bool operator ==(other) {
     if (other is! num) return false;
     // TODO(kasperl): Check error.
     return other._compareEqFromInteger(this);
   }
 
-  @fletch.native bool operator <(other) {
+  @dartino.native bool operator <(other) {
     // TODO(kasperl): Check error.
     return other._compareLtFromInteger(this);
   }
 
-  @fletch.native bool operator <=(other) {
+  @dartino.native bool operator <=(other) {
     // TODO(kasperl): Check error.
     return other._compareLeFromInteger(this);
   }
 
-  @fletch.native bool operator >(other) {
+  @dartino.native bool operator >(other) {
     // TODO(kasperl): Check error.
     return other._compareGtFromInteger(this);
   }
 
-  @fletch.native bool operator >=(other) {
+  @dartino.native bool operator >=(other) {
     // TODO(kasperl): Check error.
     return other._compareGeFromInteger(this);
   }

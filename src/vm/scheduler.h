@@ -10,7 +10,7 @@
 #include "src/vm/signal.h"
 #include "src/vm/thread.h"
 
-namespace fletch {
+namespace dartino {
 
 class GCThread;
 class Heap;
@@ -134,7 +134,7 @@ class Scheduler {
   void ExitAtBreakpoint(Process* process);
 
  private:
-  friend class Fletch;
+  friend class Dartino;
   friend class WorkerThread;
 
   // Global scheduler instance.
@@ -214,6 +214,6 @@ class SimpleProgramRunner {
 };
 
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_SCHEDULER_H_

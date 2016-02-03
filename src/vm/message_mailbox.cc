@@ -5,7 +5,7 @@
 #include "src/vm/message_mailbox.h"
 #include "src/vm/process.h"
 
-namespace fletch {
+namespace dartino {
 
 ExitReference::ExitReference(Object* message) : message_(message) {}
 
@@ -55,4 +55,4 @@ void MessageMailbox::EnqueueExit(Process* sender, Port* port, Object* message) {
   EnqueueEntry(entry);
 }
 
-}  // namespace fletch
+}  // namespace dartino

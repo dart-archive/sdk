@@ -4,20 +4,20 @@
 
 # Common script setup.
 
-# Handle the case where fletch-sdk/bin has been symlinked to.
+# Handle the case where dartino-sdk/bin has been symlinked to.
 SCRIPT_DIR="$(cd "${PROG_NAME%/*}" ; pwd -P)"
 
-# Location of the Dart script and the Dart VM in a Fletch SDK.
+# Location of the Dart script and the Dart VM in a Dartino SDK.
 DART_FILE="$SCRIPT_DIR/../../internal/pkg/flash_sd_card/bin/flash_sd_card.dart"
 DART_VM="$SCRIPT_DIR/../../internal/dart"
-FLETCH_VM="$SCRIPT_DIR/../../bin/fletch-vm"
+DARTINO_VM="$SCRIPT_DIR/../../bin/dartino-vm"
 
-# If we are not in a Fletch SDK, assume a Fletch Github checkout.
+# If we are not in a Dartino SDK, assume a Dartino Github checkout.
 if [ ! -r "$DART_FILE" ]; then
   DART_FILE="$SCRIPT_DIR/../../pkg/flash_sd_card/bin/flash_sd_card.dart"
 fi
 
-# If we are not in a Fletch SDK, assume a Fletch Github checkout.
+# If we are not in a Dartino SDK, assume a Dartino Github checkout.
 if [ ! -r "$DART_VM" ]; then
   # Guess Linux, running from platforms/raspberry-pi2.
   DART_VM="$SCRIPT_DIR/../../third_party/bin/linux/dart"
@@ -27,8 +27,8 @@ if [ ! -r "$DART_VM" ]; then
   fi
 fi
 
-# If we are not in a Fletch SDK, assume a Fletch Github checkout.
-if [ ! -r "$FLETCH_VM" ]; then
-  # Don't point to any Fletch VM in this case.
-  FLETCH_VM=
+# If we are not in a Dartino SDK, assume a Dartino Github checkout.
+if [ ! -r "$DARTINO_VM" ]; then
+  # Don't point to any Dartino VM in this case.
+  DARTINO_VM=
 fi

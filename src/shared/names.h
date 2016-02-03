@@ -5,7 +5,7 @@
 #ifndef SRC_SHARED_NAMES_H_
 #define SRC_SHARED_NAMES_H_
 
-namespace fletch {
+namespace dartino {
 
 #define NAMES_LIST(N)                                   \
   N(Illegal, "<illegal>")                               \
@@ -29,7 +29,7 @@ namespace fletch {
   N(TwoByteString, "_TwoByteString")                    \
   N(StackOverflowError, "StackOverflowError")           \
   N(TearOffClosure, "_TearOffClosure")                  \
-  N(FletchNoSuchMethodError, "FletchNoSuchMethodError") \
+  N(DartinoNoSuchMethodError, "DartinoNoSuchMethodError") \
                                                         \
   N(Equals, "==")                                       \
   N(LessThan, "<")                                      \
@@ -74,6 +74,6 @@ class Names {
   }
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_SHARED_NAMES_H_

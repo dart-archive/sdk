@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// FletchDebuggerCommands=r,restart,restart,restart,restart,restart
+// DartinoDebuggerCommands=r,restart,restart,restart,restart,restart
 
 enum State {
   ThrowNumber,

@@ -200,18 +200,18 @@ class Context implements OutputService {
     if (_arguments['version'] != null) {
       return _arguments['version'];
     }
-    const String fletchVm = const String.fromEnvironment("fletch-vm");
-    if (fletchVm == null || fletchVm.isEmpty) {
+    const String dartinoVm = const String.fromEnvironment("dartino-vm");
+    if (dartinoVm == null || dartinoVm.isEmpty) {
       await failure(
           'Failed to determine SDK version. Please use the --version flag.');
     }
-    if (!await new File(fletchVm).exists()) {
+    if (!await new File(dartinoVm).exists()) {
       await failure(
           'Failed to determine SDK version. '
-          "Cannot find the Fletch VM at the expected location '$fletchVm'."
+          "Cannot find the Dartino VM at the expected location '$dartinoVm'."
           'Your SDK might be broken');
     }
-    var result = await runProcess(fletchVm, ['--version']);
+    var result = await runProcess(dartinoVm, ['--version']);
     if (result.exitCode != 0) {
       await failure('Failed to determine SDK version');
     }

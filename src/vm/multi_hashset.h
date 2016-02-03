@@ -7,7 +7,7 @@
 
 #include "src/vm/hash_map.h"
 
-namespace fletch {
+namespace dartino {
 
 // MultiHashSet:
 // Interface is kept as close as possible to std::unordered_map, but:
@@ -54,6 +54,6 @@ class MultiHashSet : public UnorderedHashTable<Key, Pair<Key, int>,
   }
 };
 
-}  // namespace fletch
+}  // namespace dartino
 
 #endif  // SRC_VM_MULTI_HASHSET_H_

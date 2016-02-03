@@ -17,5 +17,5 @@ ffi/ffi_test: RuntimeError
 [ $use_sdk ]
 ffi/ffi_test: RuntimeError # We don't copy the ffi testing lib to the sdk
 
-[ $settings_file_name == embedded.fletch-settings && ($compiler == fletchc || $runtime == fletchc) ]
-fletch_agent/messages_test: CompiletimeError
+[ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
+dartino_agent/messages_test: CompiletimeError
