@@ -19,7 +19,7 @@ import re
 from sets import Set
 from os import makedirs
 from os.path import dirname, join, exists, basename, abspath
-from shutil import copyfile, copymode, copytree, rmtree
+from shutil import copyfile, copymode, copytree, rmtree, ignore_patterns
 
 TOOLS_DIR = abspath(dirname(__file__))
 
@@ -153,7 +153,9 @@ def CopyPackages(bundle_dir):
       copytree(join('pkg', package), join(target_dir, package))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
     for package in THIRD_PARTY_PACKAGES:
-      copytree(join('third_party', package), join(target_dir, package))
+      copytree(join('third_party', package),
+               join(target_dir, package),
+               ignore = ignore_patterns('.git'))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
 
 def CopyPlatforms(bundle_dir):
