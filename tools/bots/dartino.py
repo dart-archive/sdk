@@ -37,7 +37,7 @@ DEBUG_LOG=".debug.log"
 
 GCS_COREDUMP_BUCKET = 'dartino-buildbot-coredumps'
 
-DARTINO_REGEXP = (r'fletch-'
+DARTINO_REGEXP = (r'dartino-'
                  r'(?P<system>linux|mac|win|lk|free-rtos)'
                  r'(?P<partial_configuration>'
                    r'-(?P<mode>debug|release)'
@@ -46,8 +46,8 @@ DARTINO_REGEXP = (r'fletch-'
                    r'-(?P<architecture>x86|arm|x64|ia32)'
                  r')?'
                  r'(?P<sdk>-sdk)?')
-CROSS_REGEXP = r'cross-fletch-(linux)-(arm)'
-TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
+CROSS_REGEXP = r'cross-dartino-(linux)-(arm)'
+TARGET_REGEXP = r'target-dartino-(linux)-(debug|release)-(arm)'
 
 DARTINO_PATH = dirname(dirname(dirname(os.path.abspath(__file__))))
 GSUTIL = utils.GetBuildbotGSUtilPath()
