@@ -29,7 +29,7 @@ class ProcessQueue;
 class ProcessVisitor;
 class Session;
 
-class Process {
+class Process : public ProcessList::Entry {
  public:
   enum State {
     kSleeping,
@@ -146,9 +146,6 @@ class Process {
   Process* next() const { return next_; }
   void set_next(Process* process) { next_ = process; }
 
-  Process* process_list_next() { return process_list_next_; }
-  Process* process_list_prev() { return process_list_prev_; }
-
   void TakeLookupCache();
   void ReleaseLookupCache() { primary_lookup_cache_ = NULL; }
 
@@ -209,7 +206,7 @@ class Process {
 
   // If you add an offset here, remember to add the corresponding static_assert
   // in process.cc.
-  static const uword kNativeStackOffset = 0;
+  static const uword kNativeStackOffset = 2 * kWordSize;
   static const uword kCoroutineOffset = kNativeStackOffset + kWordSize;
   static const uword kStackLimitOffset = kCoroutineOffset + kWordSize;
   static const uword kProgramOffset = kStackLimitOffset + kWordSize;
@@ -234,9 +231,6 @@ class Process {
   void Cleanup(Signal::Kind kind);
 
   void UpdateStackLimit();
-
-  void set_process_list_next(Process* process) { process_list_next_ = process; }
-  void set_process_list_prev(Process* process) { process_list_prev_ = process; }
 
   // Put these first so they can be accessed from the interpreter without
   // issues around object layout.
@@ -279,11 +273,6 @@ class Process {
 
   // Linked list of ports owned by this process.
   Port* ports_;
-
-  // Used for chaining all processes of a program. It is protected by a lock
-  // in the program.
-  Process* process_list_next_;
-  Process* process_list_prev_;
 
   // The number of direct child processes plus 1.
   Atomic<int> process_triangle_count_;

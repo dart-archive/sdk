@@ -25,6 +25,7 @@
     'common_gcc_cflags_cc': [
       '-std=c++11',
       '<@(common_gcc_cflags_c)',
+      '-Wno-invalid-offsetof',
     ],
 
     'LK_PATH%': 'third_party/lk/lk-downstream',

@@ -42,8 +42,7 @@ Program::Program(ProgramSource source, int hashtag)
 #define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
       ROOTS_DO(CONSTRUCTOR_NULL)
 #undef CONSTRUCTOR_NULL
-          process_list_mutex_(Platform::CreateMutex()),
-      process_list_head_(NULL),
+      process_list_mutex_(Platform::CreateMutex()),
       random_(0),
       heap_(&random_),
       process_heap_(NULL, 4 * KB),
@@ -70,7 +69,7 @@ Program::Program(ProgramSource source, int hashtag)
 Program::~Program() {
   delete process_list_mutex_;
   delete cache_;
-  ASSERT(process_list_head_ == NULL);
+  ASSERT(process_list_.IsEmpty());
 }
 
 int Program::ExitCode() {
@@ -165,16 +164,15 @@ bool Program::ScheduleProcessForDeletion(Process* process, Signal::Kind kind) {
 }
 
 void Program::VisitProcesses(ProcessVisitor* visitor) {
-  for (Process* process = process_list_head_; process != NULL;
-       process = process->process_list_next()) {
-    visitor->VisitProcess(process);
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    visitor->VisitProcess(*it);
   }
 }
 
 // TODO(erikcorry): Remove.
 void Program::VisitProcessHeaps(ProcessVisitor* visitor) {
-  if (process_list_head_ != NULL) {
-    visitor->VisitProcess(process_list_head_);
+  if (!process_list_.IsEmpty()) {
+    visitor->VisitProcess(process_list_.First());
   }
 }
 
@@ -418,43 +416,19 @@ void Program::CollectGarbage() {
 
 void Program::AddToProcessList(Process* process) {
   ScopedLock locker(process_list_mutex_);
-
-  ASSERT(process->process_list_next() == NULL &&
-         process->process_list_prev() == NULL);
-  process->set_process_list_next(process_list_head_);
-  if (process_list_head_ != NULL) {
-    process_list_head_->set_process_list_prev(process);
-  }
-  process_list_head_ = process;
+  process_list_.Append(process);
 }
 
 void Program::RemoveFromProcessList(Process* process) {
   ScopedLock locker(process_list_mutex_);
-
-  Process* next = process->process_list_next();
-  Process* prev = process->process_list_prev();
-  if (next != NULL) {
-    next->set_process_list_prev(prev);
-  }
-  if (prev != NULL) {
-    prev->set_process_list_next(next);
-  } else {
-    process_list_head_ = next;
-  }
-  process->set_process_list_next(NULL);
-  process->set_process_list_prev(NULL);
+  process_list_.Remove(process);
 }
 
 ProcessHandle* Program::MainProcess() {
   ScopedLock locker(process_list_mutex_);
 
-  Process* current = process_list_head_;
-  while (current != NULL && current->process_list_next()) {
-    current = current->process_list_next();
-  }
-
-  if (current != NULL) {
-    ProcessHandle* handle = current->process_handle();
+  if (!process_list_.IsEmpty()) {
+    ProcessHandle* handle = process_list_.First()->process_handle();
     handle->IncrementRef();
     return handle;
   }
@@ -522,16 +496,14 @@ void Program::PerformSharedGarbageCollection() {
   SemiSpace* new_space = heap->space();
   MarkingStack stack;
   MarkingVisitor marking_visitor(new_space, old_space, &stack);
-  for (Process* process = process_list_head_; process != NULL;
-       process = process->process_list_next()) {
-    process->IterateRoots(&marking_visitor);
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    it->IterateRoots(&marking_visitor);
   }
   stack.Process(&marking_visitor);
   heap->ProcessWeakPointers(old_space);
 
-  for (Process* process = process_list_head_; process != NULL;
-       process = process->process_list_next()) {
-    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    it->set_ports(Port::CleanupPorts(old_space, it->ports()));
   }
 
   // Sweep over the old-space and rebuild the freelist.
@@ -544,9 +516,8 @@ void Program::PerformSharedGarbageCollection() {
   SweepingVisitor newspace_visitor(NULL);
   new_space->IterateObjects(&newspace_visitor);
 
-  for (Process* process = process_list_head_; process != NULL;
-       process = process->process_list_next()) {
-    process->UpdateStackLimit();
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    it->UpdateStackLimit();
   }
 
   old_space->set_used(sweeping_visitor.used());
@@ -1034,10 +1005,8 @@ void Program::CollectNewSpace() {
   to->StartScavenge();
   old->StartScavenge();
 
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->IterateRoots(&visitor);
-    current = current->process_list_next();
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    it->IterateRoots(&visitor);
   }
 
   old->VisitRememberedSet(&visitor);
@@ -1051,10 +1020,8 @@ void Program::CollectNewSpace() {
 
   data_heap->ProcessWeakPointers(from);
 
-  current = process_list_head_;
-  while (current != NULL) {
-    current->set_ports(Port::CleanupPorts(from, current->ports()));
-    current = current->process_list_next();
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    it->set_ports(Port::CleanupPorts(from, it->ports()));
   }
 
   // Second space argument is used to size the new-space.
@@ -1074,10 +1041,8 @@ void Program::CollectNewSpace() {
 }
 
 void Program::UpdateStackLimits() {
-  Process* current = process_list_head_;
-  while (current != NULL) {
-    current->UpdateStackLimit();
-    current = current->process_list_next();
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    it->UpdateStackLimit();
   }
 }
 
@@ -1092,18 +1057,16 @@ int Program::CollectMutableGarbageAndChainStacks() {
 
   // All processes share the same heap, so we need to iterate all roots from
   // all processes.
-  for (Process* process = process_list_head_; process != NULL;
-       process = process->process_list_next()) {
-    process->IterateRoots(&marking_visitor);
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    it->IterateRoots(&marking_visitor);
   }
 
   marking_stack.Process(&marking_visitor);
 
   // Weak processing.
   process_heap()->ProcessWeakPointers(old_space);
-  for (Process* process = process_list_head_; process != NULL;
-       process = process->process_list_next()) {
-    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
+  for (auto it = process_list_.Begin(); it != process_list_.End(); ++it) {
+    it->set_ports(Port::CleanupPorts(old_space, it->ports()));
   }
 
   // Flush outstanding free_list chunks into the free list. Then sweep

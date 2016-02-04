@@ -47,8 +47,6 @@ Process::Process(Program* program, Process* parent)
       signal_(NULL),
       process_handle_(NULL),
       ports_(NULL),
-      process_list_next_(NULL),
-      process_list_prev_(NULL),
       process_triangle_count_(1),
       parent_(parent),
       errno_cache_(0),

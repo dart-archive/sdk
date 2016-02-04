@@ -577,19 +577,16 @@ void Session::ProcessMessages() {
       case Connection::kProcessGetProcessIds: {
         ASSERT(IsScheduledAndPaused());
         int count = 0;
-        for (Process* process = program()->process_list_head();
-             process != NULL;
-             process = process->process_list_next()) {
+        auto processes = program()->process_list();
+        for (auto it = processes->Begin(); it != processes->End(); ++it) {
           ++count;
         }
 
         WriteBuffer buffer;
         buffer.WriteInt(count);
-        for (Process* process = program()->process_list_head();
-             process != NULL;
-             process = process->process_list_next()) {
-          process->EnsureDebuggerAttached(this);
-          buffer.WriteInt(process->debug_info()->process_id());
+        for (auto it = processes->Begin(); it != processes->End(); ++it) {
+          it->EnsureDebuggerAttached(this);
+          buffer.WriteInt(it->debug_info()->process_id());
         }
 
         connection_->Send(Connection::kProcessGetProcessIdsResult, buffer);
@@ -1581,12 +1578,12 @@ Process* Session::GetProcess(int process_id) {
   ASSERT(execution_paused_);
   // TODO(zerny): Assert here and eliminate the default process.
   if (process_id < 0) return process_;
-  for (Process* process = program()->process_list_head();
-       process != NULL;
-       process = process->process_list_next()) {
-    process->EnsureDebuggerAttached(this);
-    if (process->debug_info()->process_id() == process_id) {
-      return process;
+
+  auto processes = program()->process_list();
+  for (auto it = processes->Begin(); it != processes->End(); ++it) {
+    it->EnsureDebuggerAttached(this);
+    if (it->debug_info()->process_id() == process_id) {
+      return *it;
     }
   }
   UNREACHABLE();

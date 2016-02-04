@@ -7,6 +7,7 @@
 
 #include "src/shared/globals.h"
 #include "src/shared/random.h"
+#include "src/vm/double_list.h"
 #include "src/vm/heap.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/links.h"
@@ -70,6 +71,9 @@ class Session;
   V(Object, native_failure_result, NativeFailureResult)         \
   V(Array, static_fields, StaticFields)                         \
   V(Array, dispatch_table, DispatchTable)
+
+
+typedef DoubleList<Process> ProcessList;
 
 // This state information is managed by the scheduler.
 class ProgramState {
@@ -297,7 +301,7 @@ class Program {
   // to get the offset of functions/classes in the program heap.
   uword OffsetOf(HeapObject* object);
 
-  Process* process_list_head() { return process_list_head_; }
+  ProcessList* process_list() { return &process_list_; }
 
   Stack* stack_chain() { return stack_chain_; }
   void ClearStackChain() { stack_chain_ = NULL; }
@@ -342,7 +346,7 @@ class Program {
 
   // Chained doubly linked list of all processes protected by a lock.
   Mutex* process_list_mutex_;
-  Process* process_list_head_;
+  ProcessList process_list_;
 
   RandomXorShift random_;
 

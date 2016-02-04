@@ -7,7 +7,8 @@
 
 #include "src/vm/double_list.h"
 
-namespace fletch {
+namespace dartino {
+
 class Base {
  public:
   explicit Base(int arg) : base(arg) {}
@@ -153,4 +154,4 @@ TEST_CASE(DOUBLE_LIST_ERASE_ITERATOR) {
   EXPECT(all.IsEmpty());
 }
 
-}  // namespace fletch.
+}  // namespace dartino.

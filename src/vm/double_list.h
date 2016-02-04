@@ -8,7 +8,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/assert.h"
 
-namespace fletch {
+namespace dartino {
 
 template <typename T, int N>
 class DoubleList;
@@ -209,6 +209,6 @@ class DoubleList {
   }
 };
 
-}  // namespace fletch.
+}  // namespace dartino.
 
 #endif  // SRC_VM_DOUBLE_LIST_H_
