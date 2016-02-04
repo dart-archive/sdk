@@ -10,6 +10,7 @@ multiprogram_tests/should_fail: Fail, OK # This is a test of this suite, failure
 # Stored closures not updated
 incremental/*/stored_closure: Fail
 incremental/*/stored_instance_tearoff: Fail
+incremental/*/remove_instance_method_stored_in_tearoff: Fail
 
 # Missing support for multiple libraries
 incremental/*/multiple_libraries: Fail
@@ -64,8 +65,6 @@ incremental/production/remove_class: Fail
 incremental/production/remove_class_with_field_and_subclass: Fail
 incremental/production/remove_class_with_static_method: Fail
 incremental/production/remove_instance_field: Fail
-incremental/production/remove_instance_method: Fail
-incremental/production/remove_instance_method_super_access: Fail
 incremental/production/remove_static_method: Fail
 incremental/production/remove_top_level_method: Fail
 incremental/production/same_tokens: Fail
