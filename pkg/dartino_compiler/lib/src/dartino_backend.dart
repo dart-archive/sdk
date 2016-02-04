@@ -210,9 +210,6 @@ class DartinoBackend extends Backend
   final Map<FieldElement, DartinoFunctionBuilder> lazyFieldInitializers =
       <FieldElement, DartinoFunctionBuilder>{};
 
-  // TODO(ahe): This should be moved to [DartinoSystem].
-  Map<DartinoClassBuilder, DartinoFunctionBuilder> tearoffFunctions;
-
   DartinoCompilerImplementation get compiler => super.compiler;
 
   LibraryElement dartinoSystemLibrary;
