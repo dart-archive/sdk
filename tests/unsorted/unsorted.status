@@ -7,16 +7,16 @@
 3_test: Fail
 5_test: Fail
 
-10_test: RuntimeError, OK # https://github.com/dart-lang/dartino/issues/249
+10_test: RuntimeError, OK # https://github.com/dartino/sdk/issues/249
 
 dart2js_hello_world_test: Slow, Pass
 dart2js_deltablue_test: Slow, Pass
 
-# https://github.com/dart-lang/dartino/issues/395
+# https://github.com/dartino/sdk/issues/395
 external_memory_triggers_gc_test: Skip
 
 [ $system == macos ]
-# https://github.com/dart-lang/dartino/issues/401
+# https://github.com/dartino/sdk/issues/401
 dart2js_hello_world_test: Slow, Pass, Timeout
 dart2js_deltablue_test: Slow, Pass, Timeout
 shared_immutable_data_test: Slow, Pass, Timeout

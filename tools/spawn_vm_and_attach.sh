@@ -13,7 +13,7 @@
 # yourself using this to run Dartino on a regular basis, please get in touch
 # with the authors and let us know why. If you're unsure about how to reach the
 # authors, you're welcome to file an issue at
-# https://github.com/dart-lang/dartino/issues/new.
+# https://github.com/dartino/sdk/issues/new.
 
 dartino="${1}"
 shift
