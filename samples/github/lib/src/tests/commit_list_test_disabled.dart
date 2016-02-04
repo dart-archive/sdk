@@ -19,8 +19,8 @@ import '../commit_presenter.dart';
 void main() {
   var mock = new GithubMock()..spawn();
   var server = new Server(mock.host, mock.port);
-  var user = server.getUser('dart-lang');
-  var repo = user.getRepository('dartino');
+  var user = server.getUser('dartino');
+  var repo = user.getRepository('sdk');
   testPresent(repo);
   server.close();
   mock.close();

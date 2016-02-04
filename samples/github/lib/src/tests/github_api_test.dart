@@ -2,15 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// TODO(ajohnsen): Add UTF8 encoding and reenable.
-
 import 'package:expect/expect.dart';
 
 import '../github_services.dart';
 import '../github_mock.dart';
 
 void main() {
-  var mock = new GithubMock()..spawn();
+  var mock = new GithubMock()..verbose = true..spawn();
   var server = new Server(mock.host, mock.port);
   testError(server);
   testUser(server);
@@ -21,18 +19,18 @@ void main() {
 }
 
 void testUser(Server server) {
-  var user = server.getUser('dart-lang');
-  Expect.stringEquals('dart-lang', user['login']);
+  var user = server.getUser('dartino');
+  Expect.stringEquals('dartino', user['login']);
 }
 
 void testRepository(Server server) {
-  var user = server.getUser('dart-lang');
-  var repo = user.getRepository('dartino');
-  Expect.stringEquals('dart-lang/dartino', repo['full_name']);
+  var user = server.getUser('dartino');
+  var repo = user.getRepository('sdk');
+  Expect.stringEquals('dartino/sdk', repo['full_name']);
 }
 
 void testError(Server server) {
-  var user = server.getUser('dart-lang-no-such-user');
+  var user = server.getUser('dartino-no-such-user');
   Expect.throws(() { user['login']; });
 }
 
@@ -40,7 +38,7 @@ void testCommits(Server server) {
   var user = server.getUser('dartino');
   var repo = user.getRepository('sdk');
   var commit = repo.getCommitAt(0);
-  Expect.stringEquals('Ian Zerny', commit['commit']['author']['name']);
+  Expect.stringEquals('Martin Kustermann', commit['commit']['author']['name']);
   commit = repo.getCommitAt(60);
-  Expect.stringEquals("Anders Johnsen", commit['commit']['author']['name']);
+  Expect.stringEquals('Søren Gjesse', commit['commit']['author']['name']);
 }
