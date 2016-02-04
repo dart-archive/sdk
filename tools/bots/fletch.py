@@ -52,7 +52,7 @@ TARGET_REGEXP = r'target-fletch-(linux)-(debug|release)-(arm)'
 DARTINO_PATH = dirname(dirname(dirname(os.path.abspath(__file__))))
 GSUTIL = utils.GetBuildbotGSUtilPath()
 
-GCS_BUCKET = 'gs://fletch-cross-compiled-binaries'
+GCS_BUCKET = 'gs://dartino-cross-compiled-binaries'
 
 MACOS_NUMBER_OF_FILES = 10000
 

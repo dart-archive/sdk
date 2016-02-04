@@ -480,7 +480,7 @@ void WorkerThread::RunInThread() {
 
 bool Scheduler::RunInterpreterLoop(WorkerThread* worker) {
   while (true) {
-    // Run fletch processes as long as we're not paused or shut down
+    // Run dartino processes as long as we're not paused or shut down
     // (and there is work to do).
     while (!pause_ && !shutdown_) {
       Process* process = NULL;

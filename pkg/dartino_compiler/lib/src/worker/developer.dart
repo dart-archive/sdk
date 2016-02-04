@@ -1129,7 +1129,7 @@ Future<int> downloadTools(
 
   Future downloadTool(String gcsPath, String zipFile, String toolName) async {
     Uri url = Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$zipFile");
-    Directory tmpDir = Directory.systemTemp.createTempSync("fletch_download");
+    Directory tmpDir = Directory.systemTemp.createTempSync("dartino_download");
     File tmpZip = new File(join(tmpDir.path, zipFile));
 
     OutputService outputService =
