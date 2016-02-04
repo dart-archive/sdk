@@ -50,6 +50,7 @@ packages
 /third_party/gcc-arm-embedded/mac/gcc-arm-embedded.tar.gz
 /third_party/gcc-arm-embedded/mac/gcc-arm-embedded
 /third_party/gyp/
+/third_party/instrumentation_client
 /third_party/isolate/
 /third_party/mbedtls/mbedtls.tar.gz
 /third_party/mbedtls/mbedtls/
