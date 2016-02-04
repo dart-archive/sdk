@@ -1386,6 +1386,7 @@ class DartinoBackend extends Backend
     }
 
     List<VmCommand> commands = <VmCommand>[
+        const PrepareForChanges(),
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
         const NewMap(MapId.constants),
