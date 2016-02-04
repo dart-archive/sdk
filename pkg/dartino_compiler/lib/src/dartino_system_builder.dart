@@ -49,7 +49,8 @@ class DartinoSystemBuilder {
   final int classIdStart;
 
   final List<DartinoFunctionBuilder> _newFunctions = <DartinoFunctionBuilder>[];
-  final Map<int, DartinoClassBuilder> _newClasses = <int, DartinoClassBuilder>{};
+  final Map<int, DartinoClassBuilder> _newClasses =
+      <int, DartinoClassBuilder>{};
   final Map<ConstantValue, int> _newConstants = <ConstantValue, int>{};
   final Map<ParameterStubSignature, DartinoFunctionBuilder> _newParameterStubs =
       <ParameterStubSignature, DartinoFunctionBuilder>{};
@@ -306,7 +307,8 @@ class DartinoSystemBuilder {
     if (element != null) {
       DartinoClass klass = predecessorSystem.lookupClassByElement(element);
       if (klass != null) {
-        DartinoClassBuilder builder = newClassBuilderInternal(klass, superclass);
+        DartinoClassBuilder builder =
+            newClassBuilderInternal(klass, superclass);
         _classBuildersByElement[element] = builder;
         return builder;
       }
@@ -372,7 +374,8 @@ class DartinoSystemBuilder {
     _newParameterStubs[signature] = stub;
   }
 
-  DartinoSystem computeSystem(DartinoContext context, List<VmCommand> commands) {
+  DartinoSystem computeSystem(DartinoContext context,
+                              List<VmCommand> commands) {
     // TODO(ajohnsen): Consider if the incremental compiler should be aware of
     // callMain, when detecting changes.
     FunctionElement callMain =
@@ -515,7 +518,8 @@ class DartinoSystemBuilder {
         ConstructedConstantValue value = constant;
         ClassElement classElement = value.type.element;
         // TODO(ajohnsen): Avoid usage of builders (should be DartinoClass).
-        DartinoClassBuilder classBuilder = _classBuildersByElement[classElement];
+        DartinoClassBuilder classBuilder =
+            _classBuildersByElement[classElement];
 
         void addIfField(MemberElement member) {
           if (!member.isField || member.isStatic || member.isPatch) return;
@@ -556,7 +560,8 @@ class DartinoSystemBuilder {
       } else {
         throw "Unsupported constant: ${constant.toStructuredString()}";
       }
-      DartinoConstant dartinoConstant = new DartinoConstant(id, MapId.constants);
+      DartinoConstant dartinoConstant =
+        new DartinoConstant(id, MapId.constants);
       constantsByValue = constantsByValue.insert(constant, dartinoConstant);
       constantsById = constantsById.insert(id, dartinoConstant);
       commands.add(new PopToMap(MapId.constants, id));
@@ -635,7 +640,8 @@ class DartinoSystemBuilder {
 
     commands.add(new CommitChanges(changes));
 
-    PersistentMap<int, DartinoClass> classesById = predecessorSystem.classesById;
+    PersistentMap<int, DartinoClass> classesById =
+        predecessorSystem.classesById;
     PersistentMap<ClassElement, DartinoClass> classesByElement =
         predecessorSystem.classesByElement;
 

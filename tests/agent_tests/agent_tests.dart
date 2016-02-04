@@ -91,7 +91,8 @@ abstract class AgentTest {
   Future<Null> createSnapshot() async {
     // Find the path to the dartino agent script.
     Uri script = executable.resolve('../../pkg/dartino_agent/bin/agent.dart');
-    await export(script.toFilePath(), '$outputDirectory/dartino-agent.snapshot');
+    await export(script.toFilePath(),
+                 '$outputDirectory/dartino-agent.snapshot');
     print('Agent snapshot generated: $outputDirectory/dartino-agent.snapshot');
   }
 
@@ -186,7 +187,8 @@ class AgentLifeCycleTest extends AgentTest {
       Expect.notEquals(0, data.port, 'Invalid port returned for VM');
       // This will not work on Windows, since the ProcessSignal argument
       // is ignored and the dartino-vm is killed.
-      Expect.isTrue(await checkVmState(data.id, true), 'Dartino vm not running');
+      Expect.isTrue(await checkVmState(data.id, true),
+                    'Dartino vm not running');
       print('Started 1. VM with id ${data.id} on port ${data.port}.');
     });
 
@@ -208,7 +210,8 @@ class AgentLifeCycleTest extends AgentTest {
       Expect.notEquals(0, data.port, 'Invalid port returned for VM');
       // This will not work on Windows, since the ProcessSignal argument
       // is ignored and the dartino-vm is killed.
-      Expect.isTrue(await checkVmState(data.id, true), 'Dartino vm not running');
+      Expect.isTrue(await checkVmState(data.id, true),
+                    'Dartino vm not running');
       print('Started 2. VM with id ${data.id} on port ${data.port}.');
     });
 

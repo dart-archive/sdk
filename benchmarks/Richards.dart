@@ -282,7 +282,8 @@ class TaskControlBlock {
     state = state | STATE_RUNNABLE;
   }
 
-  /// Runs this task, if it is ready to be run, and returns the next task to run.
+  /// Runs this task, if it is ready to be run, and returns the next task to
+  /// run.
   TaskControlBlock run() {
     Packet packet;
     if (state == STATE_SUSPENDED_RUNNABLE) {

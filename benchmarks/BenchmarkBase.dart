@@ -14,7 +14,8 @@ class Expect {
 
   static void listEquals(List expected, List actual) {
     if (expected.length != actual.length) {
-      throw "Lists have different lengths: ${expected.length} vs ${actual.length}";
+      throw "Lists have different lengths: ${expected.length} vs "
+            "${actual.length}";
     }
     for (int i = 0; i < actual.length; i++) {
       equals(expected[i], actual[i]);

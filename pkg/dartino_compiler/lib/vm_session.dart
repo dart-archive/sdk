@@ -646,8 +646,8 @@ class Session extends DartinoVmSession {
     int classId = structure.classId;
     DartinoClass klass = dartinoSystem.lookupClassById(classId);
 
-    // TODO(dartino_compiler-team): This should be more strict and a compiler bug
-    // should be reported to the user in order for us to get a bugreport.
+    // TODO(dartino_compiler-team): This should be more strict and a compiler
+    // bug should be reported to the user in order for us to get a bugreport.
     if (klass == null) {
       return 'Unknown (Dartino compiler was unable to find exception class)';
     }

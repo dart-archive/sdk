@@ -667,7 +667,8 @@ class DartinoBackend extends Backend
     return builder;
   }
 
-  DartinoFunctionBuilder createDartinoFunctionBuilder(FunctionElement function) {
+  DartinoFunctionBuilder createDartinoFunctionBuilder(
+      FunctionElement function) {
     assert(function.memberContext == function);
 
     DartinoClassBuilder holderClass;
@@ -1284,7 +1285,8 @@ class DartinoBackend extends Backend
       int classId,
       bool isClosureClass) {
     int dartinoSelector = context.toDartinoSelector(selector);
-    DartinoClassBuilder classBuilder = systemBuilder.lookupClassBuilder(classId);
+    DartinoClassBuilder classBuilder =
+        systemBuilder.lookupClassBuilder(classId);
     if (classBuilder == null) {
       if (isClosureClass) {
         classBuilder =
@@ -1398,7 +1400,8 @@ class DartinoBackend extends Backend
     return true;
   }
 
-  bool enableDeferredLoadingIfSupported(Spannable spannable, Registry registry) {
+  bool enableDeferredLoadingIfSupported(Spannable spannable,
+                                        Registry registry) {
     return false;
   }
 

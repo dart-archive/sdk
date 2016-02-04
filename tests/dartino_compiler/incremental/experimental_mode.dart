@@ -7,8 +7,8 @@ library tests.dartino_compiler.incremental.experimental_mode;
 import 'feature_test.dart' show
     compileAndRun;
 
-import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart' show
-    IncrementalMode;
+import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart'
+    show IncrementalMode;
 
 import 'common.dart';
 

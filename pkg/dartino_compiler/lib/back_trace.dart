@@ -147,7 +147,8 @@ class BackTrace {
       if (!frames[i].isVisible) continue;
       var marker = currentFrame == frameNumber ? '* ' : '  ';
       var line = frames[i].shortString(maxNameLength);
-      String frameNumberString = '${frameNumber++}: '.padLeft(frameNumberLength);
+      String frameNumberString =
+          '${frameNumber++}: '.padLeft(frameNumberLength);
       buffer.writeln('$marker$frameNumberString$line');
     }
     return buffer.toString();

@@ -241,7 +241,8 @@ Future<Null> startAndAttachViaAgent(Uri base, SessionState state) async {
 
 Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
   String dartinoVmPath = state.compilerHelper.dartinoVm.toFilePath();
-  state.dartinoVm = await DartinoVm.start(dartinoVmPath, workingDirectory: base);
+  state.dartinoVm =
+      await DartinoVm.start(dartinoVmPath, workingDirectory: base);
   await attachToVm(state.dartinoVm.host, state.dartinoVm.port, state);
   await state.session.disableVMStandardOutput();
 }
@@ -359,8 +360,8 @@ Future<Settings> createSettings(
     StreamIterator<ClientCommand> commandIterator) async {
   bool userProvidedSettings = uri != null;
   if (!userProvidedSettings) {
-    // Try to find a $sessionName.dartino-settings file starting from the current
-    // working directory and walking up its parent directories.
+    // Try to find a $sessionName.dartino-settings file starting from the
+    // current working directory and walking up its parent directories.
     uri = await findFile(cwd, '$sessionName.dartino-settings');
 
     // If no $sessionName.dartino-settings file is found, try to find the
@@ -508,7 +509,8 @@ SessionState createSessionState(
   if (settings == null) {
     settings = const Settings.empty();
   }
-  List<String> compilerOptions = const bool.fromEnvironment("dartino_compiler-verbose")
+  List<String> compilerOptions =
+      const bool.fromEnvironment("dartino_compiler-verbose")
       ? <String>['--verbose'] : <String>[];
   compilerOptions.addAll(settings.options);
   Uri packageConfig = settings.packages;

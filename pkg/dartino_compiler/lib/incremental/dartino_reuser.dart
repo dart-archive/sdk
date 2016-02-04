@@ -318,16 +318,19 @@ class DartinoReuser extends Reuser with DartinoFeatures {
 
 class DartinoRemovedFunctionUpdate extends RemovedFunctionUpdate
     with DartinoFeatures {
-  DartinoRemovedFunctionUpdate(Compiler compiler, PartialFunctionElement element)
+  DartinoRemovedFunctionUpdate(Compiler compiler,
+                               PartialFunctionElement element)
       : super(compiler, element);
 }
 
-class DartinoRemovedClassUpdate extends RemovedClassUpdate with DartinoFeatures {
+class DartinoRemovedClassUpdate extends RemovedClassUpdate
+    with DartinoFeatures {
   DartinoRemovedClassUpdate(Compiler compiler, PartialClassElement element)
       : super(compiler, element);
 }
 
-class DartinoRemovedFieldUpdate extends RemovedFieldUpdate with DartinoFeatures {
+class DartinoRemovedFieldUpdate extends RemovedFieldUpdate
+    with DartinoFeatures {
   // TODO(ahe): Remove?
   DartinoClassBuilder beforeDartinoClassBuilder;
 
@@ -379,7 +382,8 @@ abstract class DartinoFeatures {
 
   DartinoContext get dartinoContext => compiler.context;
 
-  DartinoFunctionBuilder lookupDartinoFunctionBuilder(FunctionElement function) {
+  DartinoFunctionBuilder lookupDartinoFunctionBuilder(
+      FunctionElement function) {
     return backend.systemBuilder.lookupFunctionBuilderByElement(function);
   }
 }

@@ -265,7 +265,8 @@ Future doMultitest(Path filePath, String outputDir, Path suiteDir,
       bool hasRuntimeErrors = outcome.contains('runtime error');
       bool hasCompileError = outcome.contains('compile-time error');
       bool isNegativeIfChecked = outcome.contains('dynamic type error');
-      bool hasCompileErrorIfChecked = outcome.contains('checked mode compile-time error');
+      bool hasCompileErrorIfChecked =
+          outcome.contains('checked mode compile-time error');
       doTest(multitestFilename,
              hasCompileError,
              hasRuntimeErrors,

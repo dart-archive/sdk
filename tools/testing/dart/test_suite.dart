@@ -994,9 +994,10 @@ class StandardTestSuite extends TestSuite {
             environmentOverrides);
     commands.addAll(compilationArtifact.commands);
 
-    // NOTE: Since dartino_compiler does not report compile time errors at compile time,
-    // but rather generates code to call 'lib/system/system.dart:compileError()`
-    // We need to enqueue running the snapshot.
+    // NOTE: Since dartino_compiler does not report compile time errors at
+    // compile time, but rather generates code to call
+    // 'lib/system/system.dart:compileError()`,
+    // we need to enqueue running the snapshot.
     //
     // if (expectCompileError(info) && compilerConfiguration.hasCompiler) {
     //  // Do not attempt to run the compiled result. A compilation
@@ -1591,7 +1592,8 @@ class StandardTestSuite extends TestSuite {
     for (var match in matches) {
       if (dartinoSnapshotOptions != null) {
         throw new Exception(
-            'More than one "// DartinoSnapshotOptions=" line in test $filePath');
+            'More than one "// DartinoSnapshotOptions=" line in '
+            'test $filePath');
       }
       dartinoSnapshotOptions =
           match[1].split(' ').where((e) => e != '').toList();

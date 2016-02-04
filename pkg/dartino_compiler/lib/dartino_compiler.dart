@@ -179,7 +179,8 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
         throw new StateError(
 """
 Unable to guess the location of the 'natives.json' file (nativesJson).
-Try adding command-line option '-Ddartino-natives-json=<path to natives.json>."""
+Try adding command-line option '-Ddartino-natives-json=<path to natives.json>.
+"""
 );
       }
     } else if (!_looksLikeNativesJson(nativesJson)) {

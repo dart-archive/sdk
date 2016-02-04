@@ -26,7 +26,8 @@ Commands:
   'finish'                              finish current method (step out)
   'restart'                             restart the selected frame
   'sb'                                  step bytecode, enters method invocations
-  'nb'                                  step over bytecode, does not enter method invocations
+  'nb'                                  step over bytecode, does not enter
+                                        method invocations
   'c'                                   continue execution
   'bt'                                  backtrace
   'f <n>'                               select frame

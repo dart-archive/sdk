@@ -320,7 +320,8 @@ class DartinoVersionRequest extends RequestHeader {
     return new DartinoVersionRequest.withHeader(header);
   }
 
-  // A DartinoVersionRequest has no payload so just use parent's toBuffer method.
+  // A DartinoVersionRequest has no payload so just use parent's toBuffer
+  // method.
 }
 
 class SignalVmRequest extends RequestHeader {
@@ -506,12 +507,14 @@ class UpgradeAgentReply extends ReplyHeader {
     ReplyHeader header = new ReplyHeader.fromBuffer(buffer);
     if (header.payloadLength != 0) {
       throw new MessageDecodeException(
-          "Invalid payload length in UpgradeAgentReply: ${buffer.asUint8List()}");
+          "Invalid payload length in UpgradeAgentReply: "
+          "${buffer.asUint8List()}");
     }
     return new UpgradeAgentReply(header.id, header.result);
   }
 
-  // The UPGRADE_AGENT reply has no payload, so leverage parent's toBuffer method.
+  // The UPGRADE_AGENT reply has no payload, so leverage parent's toBuffer
+  // method.
 }
 
 class DartinoVersionReply extends ReplyHeader {

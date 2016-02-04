@@ -1458,7 +1458,8 @@ abstract class CodegenVisitor
       // TODO(ahe): Implement runtimeType.
       generateUnimplementedError(
           node,
-          "'runtimeType' isn't supported in Dartino. See https://goo.gl/ELH6Zc");
+          "'runtimeType' isn't supported in Dartino. "
+          "See https://goo.gl/ELH6Zc");
       applyVisitState();
       return;
     }
