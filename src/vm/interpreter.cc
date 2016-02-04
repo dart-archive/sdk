@@ -416,9 +416,7 @@ static void* FindCatchBlockCodegen(Stack* stack,
       if (frames[i * 3] <= address && address < frames[i*3 + 1]) {
         frame.MovePrevious();
         int frame_size = reinterpret_cast<int>(frames[i*3 + 2]);
-        printf("frame size: %i\n", frame_size);
         int index = frame.FirstLocalIndex() - frame_size - 1;
-        printf("length: %i\n", index - stack->top());
         *stack_delta_result = index - stack->top();
         *frame_pointer_result = frame.FramePointer();
         return frames[i*3 + 1];

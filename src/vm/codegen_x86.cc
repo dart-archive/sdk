@@ -230,7 +230,7 @@ void Codegen::GenerateHelpers() {
     __ ret();
 
     __ Bind(&bail_out);
-    __ movl(EBX, ESP);
+    __ movl(ESI, ESP);
     __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
     __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
 
@@ -240,7 +240,7 @@ void Codegen::GenerateHelpers() {
     __ call("HandleIdentical");
 
     __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
-    __ movl(ESP, EBX);
+    __ movl(ESP, ESI);
 
     Object* root = *reinterpret_cast<Object**>(
         reinterpret_cast<uint8*>(program_) + Program::kTrueObjectOffset);
@@ -434,13 +434,12 @@ void Codegen::DoStoreBoxed(int index) {
 
 void Codegen::DoStoreField(int index) {
   basic_block_.MaterializeKeepRegister();
-  if (basic_block_.IsTopRegister()) {
-    index--;
-  } else {
+  if (!basic_block_.IsTopRegister()) {
     __ popl(EAX);  // Value.
   }
-  __ popl(ECX);
+  __ movl(ECX, Address(ESP, 0));
   __ movl(Address(ECX, index * kWordSize + Instance::kSize - HeapObject::kTag), EAX);
+  basic_block_.Drop(1);
 }
 
 void Codegen::DoStoreStatic(int index) {
@@ -761,6 +760,7 @@ void Codegen::DoInvokeAdd() {
 
   bool materialized = basic_block_.IsTopMaterialized();
   if (!materialized) basic_block_.Materialize();
+  printf("\tcall InvokeAdd\n");
   if (!materialized) __ popl(EDX);
 
   __ Bind(&done);
@@ -1280,9 +1280,10 @@ void Codegen::DoIntrinsicListIndexSet() {
 
 void Codegen::DoNoSuchMethod() {
   Label nsm;
+  __ movl(ECX, EDX);
+  __ shll(ECX, Immediate(1));
+  __ pushl(ECX);
   __ pushl(EAX);
-
-  __ movl(ESI, EDX);
 
   // Compute get selector.
   __ andl(EDX, Immediate(Selector::IdField::mask()));
@@ -1305,12 +1306,12 @@ void Codegen::DoNoSuchMethod() {
   __ cmpl(EAX, Immediate(0));
   __ j(EQUAL, &nsm);
 
-  __ pushl(Address(ESP, 0));
-
   __ call(EAX);
 
   __ movl(Address(ESP, 0), EAX);
 
+  __ movl(ESI, Address(ESP, 1 * kWordSize));
+  __ shrl(ESI, Immediate(1));
   __ andl(ESI, Immediate(Selector::ArityField::mask()));
   __ orl(ESI, Immediate(Selector::IdField::encode(Names::kCall)));
 
@@ -1371,6 +1372,19 @@ void Codegen::DoNoSuchMethod() {
   __ pushl(Immediate(0));
 
   __ call(EAX);
+
+  __ movl(EDX, Address(ESP, 4 * kWordSize));
+
+  int mask = Selector::KindField::mask() << 1;
+  int setter = Selector::KindField::encode(Selector::SETTER) << 1;
+  Label skip;
+  __ andl(EDX, Immediate(mask));
+  __ cmpl(EDX, Immediate(setter));
+  __ j(NOT_EQUAL, &skip);
+
+  __ movl(EAX, Address(ESP, 8 * kWordSize));
+
+  __ Bind(&skip);
 
   __ movl(ESP, EBP);
   __ popl(EBP);

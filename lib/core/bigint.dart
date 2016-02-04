@@ -114,7 +114,7 @@ class _Bigint extends _IntBase {
 
   static int _computeUsed(int used, _Uint32Digits digits) {
     while (used > 0 && digits[used - 1] == 0) --used;
-    if (used > 0 && (used & 1) != 0) {
+    if (used > 0 && (used & 1) != 0 && digits[used] != 0) {
       // Set leading zero for 64-bit processing of digit pairs.
       digits[used] = 0;
     }
