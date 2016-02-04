@@ -285,12 +285,6 @@ class DartinoBackend extends Backend
     // This is a workaround, where we basically add getters for all fields.
     classBuilder.updateImplicitAccessors(this);
 
-    Element callMember = element.lookupLocalMember(Identifiers.call);
-    if (callMember != null && callMember.isFunction) {
-      FunctionElement function = callMember;
-      classBuilder.createIsFunctionEntry(
-          this, function.functionSignature.parameterCount);
-    }
     return classBuilder;
   }
 
@@ -951,13 +945,27 @@ class DartinoBackend extends Backend
 
     DartinoFunctionBuilder functionBuilder;
 
+    bool isImplicitFunction = false;
     if (function.memberContext != function) {
       functionBuilder = internalCreateDartinoFunctionBuilder(
           function,
           Identifiers.call,
           createClosureClass(function, closureEnvironment));
+      isImplicitFunction = true;
     } else {
       functionBuilder = createDartinoFunctionBuilder(function);
+      isImplicitFunction = function.isInstanceMember &&
+          function.isFunction && // Not accessors.
+          function.name == Identifiers.call;
+    }
+
+    if (isImplicitFunction) {
+      // If [function] is a closure, or an instance method named "call", its
+      // class implicitly implements Function.
+      DartinoClassBuilder classBuilder =
+          systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
+      classBuilder.createIsFunctionEntry(
+          this, function.functionSignature.parameterCount);
     }
 
     FunctionCodegen codegen = new FunctionCodegen(
