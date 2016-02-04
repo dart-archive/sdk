@@ -77,6 +77,7 @@
         'debug_info.cc',
         'debug_info.h',
         'debug_info_no_live_coding.h',
+        'double_list.h',
         'event_handler.h',
         'event_handler.cc',
         'event_handler_posix.cc',
@@ -312,6 +313,7 @@
       ],
       'sources': [
         # TODO(ahe): Add header (.h) files.
+        'double_list_tests.cc',
         'hash_table_test.cc',
         'object_map_test.cc',
         'object_memory_test.cc',
