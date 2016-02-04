@@ -51,12 +51,12 @@ Afterwards the binaries can be uploaded.
 
 ```
 cd  third_party/bin/linux
-upload_to_google_storage.py -b dart-dependencies-fletch dart
+upload_to_google_storage.py -b dartino-dependencies dart
 cp dart.sha1 ../../../tools/testing/bin/linux/dart.sha1
-upload_to_google_storage.py -b dart-dependencies-fletch dart-arm
+upload_to_google_storage.py -b dartino-dependencies dart-arm
 cp dart-arm.sha1 ../../../tools/testing/bin/linux/dart-arm.sha1
 cd ../mac
-upload_to_google_storage.py -b dart-dependencies-fletch dart
+upload_to_google_storage.py -b dartino-dependencies dart
 cp dart.sha1 ../../../tools/testing/bin/mac/dart.sha1
 ```
 

@@ -290,7 +290,7 @@ def Unzip(zip_file):
 
 def EnsureRaspbianBase():
   with bot.BuildStep('Ensure raspbian base image and kernel'):
-    Run(['download_from_google_storage', '-b', 'dart-dependencies-fletch',
+    Run(['download_from_google_storage', '-b', 'dartino-dependencies',
          '-u', '-d', 'third_party/raspbian/'])
 
 def StepsCreateArchiveRaspbianImge():

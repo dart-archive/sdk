@@ -15,15 +15,15 @@ To add new version(s) do the following:
 3. Upload to Google Cloud Storage (change the version(s) appropiately)
 
    $ upload_to_google_storage.py \
-       -b dart-dependencies-fletch -a STM32Cube_FW_F4_VX.Y.Z
+       -b dartino-dependencies -a STM32Cube_FW_F4_VX.Y.Z
    $ upload_to_google_storage.py \
-       -b dart-dependencies-fletch -a STM32Cube_FW_F7_VX.Y.Z
+       -b dartino-dependencies -a STM32Cube_FW_F7_VX.Y.Z
 
 4. Create the unversioned copy (change the version(s) appropiately)
    and upload to Google Cloud Storage
 
    $ mv STM32Cube_FW_F7_VX.Y.Z stm32cube_fw_f7
    $ upload_to_google_storage.py \
-       -b dart-dependencies-fletch -a stm32cube_fw_f7
+       -b dartino-dependencies -a stm32cube_fw_f7
 
 5. Create a CL updating the .sha1 files.

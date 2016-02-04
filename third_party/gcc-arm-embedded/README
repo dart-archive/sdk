@@ -19,6 +19,6 @@ To update to a new version do the following:
 
    $ tar caf gcc-arm-embedded.tar.gz gcc-arm-embedded
    $ upload_to_google_storage.py \
-       -b dart-dependencies-fletch gcc-arm-embedded.tar.gz
+       -b dartino-dependencies gcc-arm-embedded.tar.gz
 
 5. Create a CL updating the .sha1 files.

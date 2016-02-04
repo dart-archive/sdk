@@ -10,5 +10,5 @@
 # Using 'gsutil config' (without .py) or 'gclient auth login' probably won't
 # work.
 
-upload_to_google_storage.py -b dart-dependencies-fletch \
+upload_to_google_storage.py -b dartino-dependencies \
     pkg/mdns/lib/native/libmdns_extension_lib.dylib
