@@ -120,11 +120,22 @@ extern "C" uint8* HandleThrow(Process* process, Object* exception,
                               int* stack_delta_result,
                               Object*** frame_pointer_result);
 
+extern "C" void* HandleThrowCodegen(Process* process,
+                                     Object* exception,
+                                     int frame_count,
+                                     void** frames,
+                                     int* stack_delta_result,
+                                     Object*** frame_pointer_result);
+
 extern "C" void HandleEnterNoSuchMethod(Process* process);
 
 extern "C" Function* HandleInvokeSelector(Process* process);
 
 extern "C" int HandleAtBytecode(Process* process, uint8* bcp, Object** sp);
+
+extern "C" void* HandleLookupSelector(Process* process,
+                                      Object* receiver,
+                                      int selector);
 
 }  // namespace fletch
 

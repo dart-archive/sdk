@@ -403,4 +403,92 @@ int HandleAtBytecode(Process* process, uint8* bcp, Object** sp) {
   return Interpreter::kReady;
 }
 
+static void* FindCatchBlockCodegen(Stack* stack,
+                                    int frame_count,
+                                    void** frames,
+                                    int* stack_delta_result,
+                                    Object*** frame_pointer_result) {
+  Frame frame(stack);
+  do {
+    void* address = frame.ReturnAddress();
+
+    for (int i = 0; i < frame_count; i++) {
+      if (frames[i * 3] <= address && address < frames[i*3 + 1]) {
+        frame.MovePrevious();
+        int frame_size = reinterpret_cast<int>(frames[i*3 + 2]);
+        printf("frame size: %i\n", frame_size);
+        int index = frame.FirstLocalIndex() - frame_size - 1;
+        printf("length: %i\n", index - stack->top());
+        *stack_delta_result = index - stack->top();
+        *frame_pointer_result = frame.FramePointer();
+        return frames[i*3 + 1];
+      }
+    }
+  } while (frame.MovePrevious());
+  return NULL;
+}
+
+void* HandleThrowCodegen(Process* process,
+                          Object* exception,
+                          int frame_count,
+                          void** frames,
+                          int* stack_delta_result,
+                          Object*** frame_pointer_result) {
+  Coroutine* current = process->coroutine();
+  while (true) {
+    // If we find a handler, we do a 2nd pass, unwind all coroutine stacks
+    // until the handler, make the unused coroutines/stacks GCable and return
+    // the handling bcp.
+    void* address = FindCatchBlockCodegen(
+        current->stack(),
+        frame_count,
+        frames,
+        stack_delta_result,
+        frame_pointer_result);
+    if (address != NULL) {
+      Coroutine* unused = process->coroutine();
+      while (current != unused) {
+        Coroutine* caller = unused->caller();
+        unused->set_stack(process->program()->null_object());
+        unused->set_caller(unused);
+        unused = caller;
+      }
+      process->UpdateCoroutine(current);
+      return address;
+    }
+
+    if (!current->has_caller()) {
+      break;
+    }
+    current = current->caller();
+  }
+
+  // If we haven't found a handler we leave the coroutine/stacks untouched and
+  // signal that the exception was uncaught.
+  process->set_exception(exception);
+  return NULL;
+}
+
+void* HandleLookupSelector(Process* process,
+                               Object* receiver,
+                               int selector) {
+  Class* clazz = receiver->IsSmi() ? process->program()->smi_class()
+                                   : HeapObject::cast(receiver)->get_class();
+  Function* target = clazz->LookupMethod(selector);
+  if (target == NULL) return NULL;
+  /*
+    static const Names::Id name = Names::kNoSuchMethodTrampoline;
+    target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
+  }*/
+
+  // TODO(ajohnsen): I wonder how buggy/slow this is...
+  Array* table = process->program()->dispatch_table();
+  for (int i = 0; i < table->length(); i++) {
+    DispatchTableEntry* entry = DispatchTableEntry::cast(table->get(i));
+    if (entry->target() == target) return entry->code();
+  }
+
+  return NULL;
+}
+
 }  // namespace fletch

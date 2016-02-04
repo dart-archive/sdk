@@ -1105,7 +1105,7 @@ BEGIN_NATIVE(CoroutineNewStack) {
   stack->set(--top, Smi::FromWord(0));  // Fake 'value' argument.
   // Leave bcp at the kChangeStack instruction to make it look like a
   // suspended co-routine. bcp is incremented on resume.
-  stack->set(--top, reinterpret_cast<Object*>(InterpreterCoroutineEntry));
+  stack->set(--top, reinterpret_cast<Object*>(CodegenCoroutineEntry));
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
   return stack;

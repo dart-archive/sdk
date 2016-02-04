@@ -450,21 +450,23 @@ Function* Class::LookupMethod(int selector) {
   Smi* selector_smi = Smi::FromWord(selector);
   Class* current = this;
   while (true) {
-    Array* methods = current->methods();
-    ASSERT(methods->length() % 2 == 0);
-    if (methods->length() > 0) {
-      int first = 0;
-      int last = (methods->length() / 2) - 1;
-      while (first <= last) {
-        int middle = (first + last) / 2;
-        Smi* current = Smi::cast(methods->get(middle * 2));
-        if (current == selector_smi) {
-          return Function::cast(methods->get(middle * 2 + 1));
-        }
-        if (current > selector_smi) {
-          last = middle - 1;
-        } else {
-          first = middle + 1;
+    if (current->has_methods()) {
+      Array* methods = current->methods();
+      ASSERT(methods->length() % 2 == 0);
+      if (methods->length() > 0) {
+        int first = 0;
+        int last = (methods->length() / 2) - 1;
+        while (first <= last) {
+          int middle = (first + last) / 2;
+          Smi* current = Smi::cast(methods->get(middle * 2));
+          if (current == selector_smi) {
+            return Function::cast(methods->get(middle * 2 + 1));
+          }
+          if (current > selector_smi) {
+            last = middle - 1;
+          } else {
+            first = middle + 1;
+          }
         }
       }
     }

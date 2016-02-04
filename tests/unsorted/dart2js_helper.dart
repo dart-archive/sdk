@@ -36,19 +36,20 @@ void run(Uri uri, String mainScript, bool isServer) {
   EventSink<String> compilerOutputProvider(String name, String extension) {
     var c = new StreamController(sync: true);
 
-    asyncStart();
+//    asyncStart();
     c.stream.listen(
       (data) {
         hasOutput = true;
       },
       onDone: () {
-        asyncEnd();
+        print("DONE!!!!");
+  //      asyncEnd();
       });
 
     return c;
   }
 
-  asyncStart();
+//  asyncStart();
   compile(
       uri,
       Uri.base.resolve('third_party/dart/sdk/'),
@@ -59,7 +60,7 @@ void run(Uri uri, String mainScript, bool isServer) {
       compilerOutputProvider).then((result) {
     Expect.isTrue(result.isSuccess);
     Expect.isTrue(hasOutput);
-    asyncEnd();
+ //   asyncEnd();
   });
 }
 

@@ -232,6 +232,7 @@ class Codegen {
   Program* const program_;
   Assembler* const assembler_;
   HashMap<Function*, Class*>* const function_owners_;
+  Vector<uint8*> frames_;
 
   Function* function_;
   BasicBlock basic_block_;
@@ -255,11 +256,13 @@ class Codegen {
   void DoSetupFrame();
 
   void DoLoadLocal(int index);
+  void DoLoadBoxed(int index);
   void DoLoadField(int index);
   void DoLoadStatic(int index);
   void DoLoadStaticInit(int index);
 
   void DoStoreLocal(int index);
+  void DoStoreBoxed(int index);
   void DoStoreField(int index);
   void DoStoreStatic(int index);
 
@@ -271,6 +274,8 @@ class Codegen {
   void DoBranch(BranchCondition condition, int from, int to);
 
   void DoInvokeMethod(Class* klass, int arity, int offset);
+  void DoInvokeNoSuchMethod(int selector);
+
   void DoInvokeStatic(int bci, int offset, Function* target);
 
   void DoInvokeTest(int offset);
@@ -297,6 +302,8 @@ class Codegen {
   void DoReturn();
 
   void DoThrow();
+  void DoSubroutineCall(int target);
+  void DoSubroutineReturn();
 
   void DoStackOverflowCheck(int size);
 
@@ -305,6 +312,10 @@ class Codegen {
   void DoIntrinsicListLength();
   void DoIntrinsicListIndexGet();
   void DoIntrinsicListIndexSet();
+
+  void DoNoSuchMethod();
+
+  void DoCoroutineChange(bool is_coroutine_entry);
 };
 
 }  // namespace fletch

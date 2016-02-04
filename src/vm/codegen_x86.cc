@@ -6,8 +6,10 @@
 
 #include "src/vm/assembler.h"
 #include "src/vm/process.h"
+#include "src/vm/interpreter.h"
 
 #include "src/shared/flags.h"
+#include "src/shared/names.h"
 #include "src/shared/natives.h"
 #include "src/shared/selectors.h"
 
@@ -50,8 +52,8 @@ void Codegen::GenerateHelpers() {
   __ jmp(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
 
   __ Bind(&nsm);
-  // TODO(ajohnsen): Do NSM!
-  __ call("Throw");
+  printf("\tmovl Selectors(, %%edx, 2), %%edx\n");
+  __ jmp("NoSuchMethod");
 
   if (add_offset_ >= 0) {
     printf("\n");
@@ -117,13 +119,64 @@ void Codegen::GenerateHelpers() {
   DoRestoreState();
   __ ret();
 
-  printf("\n");
-  __ BindWithPowerOfTwoAlignment("StackOverflow", 4);
-  __ int3();
+  {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("StackOverflow", 4);
 
-  printf("\n");
-  __ BindWithPowerOfTwoAlignment("Throw", 4);
-  __ int3();
+    DoSaveState();
+
+    __ movl(Address(ESP, 0 * kWordSize), EDI);
+    __ movl(Address(ESP, 1 * kWordSize), EAX);
+    __ call("HandleStackOverflow");
+
+    DoRestoreState();
+    __ ret();
+  }
+
+  {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("Throw", 4);
+
+    // Expect the exception to be in EBX.
+
+    DoSaveState();
+
+    __ movl(Address(ESP, 0 * kWordSize), EDI);
+    __ movl(Address(ESP, 1 * kWordSize), EBX);
+    __ movl(Address(ESP, 2 * kWordSize), Immediate(frames_.size() / 3));
+    __ LoadLabel(EAX, "Frames");
+    __ movl(Address(ESP, 3 * kWordSize), EAX);
+    __ leal(EAX, Address(ESP, 6 * kWordSize));
+    __ movl(Address(ESP, 4 * kWordSize), EAX);
+    __ leal(EAX, Address(ESP, 7 * kWordSize));
+    __ movl(Address(ESP, 5 * kWordSize), EAX);
+
+    __ call("HandleThrowCodegen");
+
+    DoRestoreState();
+
+    Label unwind;
+    __ testl(EAX, EAX);
+    __ j(NOT_ZERO, &unwind);
+    __ movl(EAX, Immediate(Interpreter::kUncaughtException));
+    // TODO(ajohnsen): Don't use 'Return';
+    // Clear ESI as it's assumed the BCP is located in it.
+    __ xorl(ESI, ESI);
+    __ jmp("Return");
+
+    __ Bind(&unwind);
+
+    __ movl(ECX, Address(EDI, Process::kNativeStackOffset));
+    __ movl(EBP, Address(ECX, 7 * kWordSize));
+    __ movl(ECX, Address(ECX, 6 * kWordSize));
+    __ leal(ESP, Address(ESP, ECX, TIMES_WORD_SIZE));
+    // Set return address.
+    __ movl(Address(ESP, 0 * kWordSize), EAX);
+    // Set exception value.
+    __ movl(Address(ESP, 1 * kWordSize), EBX);
+
+    __ ret();
+  }
 
   printf("\n");
   __ BindWithPowerOfTwoAlignment("NativeFailure", 4);
@@ -219,6 +272,50 @@ void Codegen::GenerateHelpers() {
     __ cmpl(EDX, Address(ECX, DispatchTableEntry::kOffsetOffset - HeapObject::kTag));
     __ ret();
   }
+  {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("CoroutineChange", 4);
+    DoSaveState();
+    __ movl(Address(ESP, 0 * kWordSize), EDI);
+    __ movl(Address(ESP, 1 * kWordSize), EDX);
+    __ call("HandleCoroutineChange");
+    DoRestoreState();
+    __ ret();
+  }
+
+  {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("Frames", 4);
+    for (size_t i = 0; i < frames_.size(); i++) {
+      if (i % 3 == 2) {
+        printf("\t.long 0x%x\n", reinterpret_cast<uint32>(frames_[i]));
+      } else {
+        printf("\t.long F%u\n", reinterpret_cast<uint32>(frames_[i]));
+      }
+    }
+  }
+
+  {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("Selectors", 4);
+
+    Array* table = program()->dispatch_table();
+    for (int i = 0, length = table->length(); i < length; i++) {
+      bool found = false;
+      for (int j = 0; j < table->length(); j++) {
+        Object* element = table->get(j);
+        DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+        if (entry->offset()->value() == i) {
+          printf("\t.long 0x%x\n", entry->selector());
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        printf("\t.long 0x%x\n", 0);
+      }
+    }
+  }
 }
 
 void Codegen::DoEntry() {
@@ -226,6 +323,12 @@ void Codegen::DoEntry() {
   sprintf(name, "%08x", function_);
   __ AlignToPowerOfTwo(4);
   __ Bind("Function_", name);
+
+  DispatchTableEntry* entry = DispatchTableEntry::cast(
+      program()->dispatch_table()->get(0));
+  if (entry->target() == function_) {
+    __ Bind("", "NoSuchMethod");
+  }
 }
 
 void Codegen::DoSetupFrame() {
@@ -254,6 +357,13 @@ void Codegen::DoLoadLocal(int index) {
   } else {
     basic_block_.SetTop(Slot::Unknown());
   }
+  basic_block_.Push(Slot::Register());
+}
+
+void Codegen::DoLoadBoxed(int index) {
+  basic_block_.Materialize();
+  __ movl(EAX, Address(ESP, index * kWordSize));
+  __ movl(EAX, Address(EAX, Boxed::kValueOffset - HeapObject::kTag));
   basic_block_.Push(Slot::Register());
 }
 
@@ -310,6 +420,16 @@ void Codegen::DoStoreLocal(int index) {
     __ movl(EAX, Address(ESP, 0));
   }
   __ movl(Address(ESP, index * kWordSize), EAX);
+}
+
+void Codegen::DoStoreBoxed(int index) {
+  basic_block_.Materialize();
+
+  __ movl(EAX, Address(ESP, 0));
+  __ movl(EBX, Address(ESP, index * kWordSize));
+  __ movl(Address(EBX, Boxed::kValueOffset - HeapObject::kTag), EAX);
+
+  basic_block_.SetAtOffset(index, Slot::Unknown());
 }
 
 void Codegen::DoStoreField(int index) {
@@ -517,8 +637,17 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
     __ jmp(&end);
 
     __ Bind(&nsm);
-    // TODO(ajohnsen): Do NSM!
-    __ call("Throw");
+    __ movl(EAX, Address(ESP, arity * kWordSize));
+    for (int i = 0, length = table->length(); i < length; i++) {
+      Object* element = table->get(i);
+      DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+      if (entry->offset()->value() == offset) {
+      __ movl(EDX, Immediate(entry->selector()));
+        break;
+      }
+    }
+    __ call("NoSuchMethod");
+    __ int3();
     __ Bind(&end);
   } else {
     Label done;
@@ -530,8 +659,8 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
     __ movl(ECX, Address(EAX, HeapObject::kClassOffset - HeapObject::kTag));
     __ movl(ECX, Address(ECX, Class::kIdOrTransformationTargetOffset - HeapObject::kTag));
 
-  // Class ID is now in EDX.
-  __ Bind(&done);
+    // Class ID is now in EDX.
+    __ Bind(&done);
     printf("\tmovl O%08x + %d(, %%ecx, 2), %%ecx\n",
            table->address(),
            Array::kSize + offset * kWordSize);
@@ -540,8 +669,17 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
             Immediate(reinterpret_cast<int32>(Smi::FromWord(offset))));
     __ j(EQUAL, &end);
     __ Bind(&nsm);
-    // TODO(ajohnsen): Do NSM!
-    __ call("Throw");
+    __ movl(EAX, Address(ESP, arity * kWordSize));
+    for (int i = 0, length = table->length(); i < length; i++) {
+      Object* element = table->get(i);
+      DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+      if (entry->offset()->value() == offset) {
+      __ movl(EDX, Immediate(entry->selector()));
+        break;
+      }
+    }
+    __ call("NoSuchMethod");
+    __ int3();
     __ Bind(&end);
     __ call(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
   }
@@ -551,10 +689,24 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
   basic_block_.Push(Slot::Register());
 }
 
+void Codegen::DoInvokeNoSuchMethod(int selector) {
+  basic_block_.Materialize();
+
+  int arity = Selector::ArityField::decode(selector);
+  __ movl(EAX, Address(ESP, arity * kWordSize));
+  __ movl(EDX, Immediate(selector));
+  __ call("NoSuchMethod");
+
+  DoDropMaterialized(arity + 1);
+  basic_block_.Drop(arity + 1);
+  basic_block_.Push(Slot::Register());
+}
+
 void Codegen::DoInvokeStatic(int bci, int offset, Function* target) {
+  int arity = target->arity();
+  printf("// arity: %i\n", arity);
   basic_block_.Materialize();
   printf("\tcall Function_%08x\n", target);
-  int arity = target->arity();
   DoDropMaterialized(arity);
   basic_block_.Drop(arity);
   basic_block_.Push(Slot::Register());
@@ -609,7 +761,6 @@ void Codegen::DoInvokeAdd() {
 
   bool materialized = basic_block_.IsTopMaterialized();
   if (!materialized) basic_block_.Materialize();
-  printf("\tcall InvokeAdd\n");
   if (!materialized) __ popl(EDX);
 
   __ Bind(&done);
@@ -720,9 +871,9 @@ void Codegen::DoInvokeCompare(Condition condition, const char* bailout) {
     printf("\tmovl $O%08x + 1, %%ecx\n", program_->true_object()->address());
     printf("\tcmpl %%eax, %%ecx\n");
   } else if (condition == GREATER) {
-    printf("\tcmpl $O%08x + 1 + 4, %%eax\n", program_->false_object()->address());
+    printf("\tcmpl $O%08x + 1 + 4, %%eax\n", program_->true_object()->address());
   } else if (condition == GREATER_EQUAL) {
-    printf("\tcmpl $O%08x + 1, %%eax\n", program_->false_object()->address());
+    printf("\tcmpl $O%08x + 1, %%eax\n", program_->true_object()->address());
   } else {
     UNREACHABLE();
   }
@@ -916,8 +1067,11 @@ void Codegen::DoIdenticalNonNumeric() {
 
 void Codegen::DoProcessYield() {
   basic_block_.Materialize();
-  __ movl(EAX, Immediate(1));
-  // TODO(ajohnsen): Do better!
+  __ movl(EAX, Address(ESP, 0));
+  __ sarl(EAX, Immediate(1));
+  // TODO(ajohnsen): Don't use 'Return';
+  // Clear ESI as it's assumed the BCP is located in it.
+  __ xorl(ESI, ESI);
   __ jmp("Return");
 }
 
@@ -973,7 +1127,21 @@ void Codegen::DoReturn() {
 }
 
 void Codegen::DoThrow() {
+  basic_block_.Materialize();
+  __ movl(EBX, Address(ESP, 0));
   __ call("Throw");
+}
+
+void Codegen::DoSubroutineCall(int target) {
+  basic_block_.Materialize();
+  printf("\tcall %uf\n",
+           reinterpret_cast<uint32>(function_->bytecode_address_for(target)));
+
+}
+
+void Codegen::DoSubroutineReturn() {
+  basic_block_.Materialize();
+  __ ret();
 }
 
 void Codegen::DoSaveState() {
@@ -1017,18 +1185,15 @@ void Codegen::DoRestoreState() {
 }
 
 void Codegen::DoStackOverflowCheck(int size) {
+  Label done;
   basic_block_.Materialize();
   __ movl(EBX, Address(EDI, Process::kStackLimitOffset));
+  if (size > 0) __ addl(EBX, Immediate(size));
   __ cmpl(ESP, EBX);
-  if (size == 0) {
-    __ j(BELOW_EQUAL, "StackOverflow");
-  } else {
-    Label done;
-    __ j(BELOW, &done);
-    __ movl(EAX, Immediate(size));
-    __ jmp("StackOverflow");
-    __ Bind(&done);
-  }
+  __ j(ABOVE, &done);
+  __ movl(EAX, Immediate(size));
+  __ call("StackOverflow");
+  __ Bind(&done);
 }
 
 void Codegen::DoIntrinsicGetField(int field) {
@@ -1113,6 +1278,126 @@ void Codegen::DoIntrinsicListIndexSet() {
   __ Bind(&failure);
 }
 
+void Codegen::DoNoSuchMethod() {
+  Label nsm;
+  __ pushl(EAX);
+
+  __ movl(ESI, EDX);
+
+  // Compute get selector.
+  __ andl(EDX, Immediate(Selector::IdField::mask()));
+  __ orl(EDX, Immediate(Selector::KindField::encode(Selector::GETTER)));
+
+  // Invoke getter.
+  __ movl(EBX, ESP);
+  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ movl(Address(ESP, 2 * kWordSize), EDX);
+
+  __ call("HandleLookupSelector");
+
+  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
+  __ movl(ESP, EBX);
+
+  __ cmpl(EAX, Immediate(0));
+  __ j(EQUAL, &nsm);
+
+  __ pushl(Address(ESP, 0));
+
+  __ call(EAX);
+
+  __ movl(Address(ESP, 0), EAX);
+
+  __ andl(ESI, Immediate(Selector::ArityField::mask()));
+  __ orl(ESI, Immediate(Selector::IdField::encode(Names::kCall)));
+
+  // Invoke 'call'.
+  __ movl(EBX, ESP);
+  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ movl(Address(ESP, 2 * kWordSize), ESI);
+
+  __ call("HandleLookupSelector");
+
+  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
+  __ movl(ESP, EBX);
+
+  __ andl(ESI, Immediate(Selector::ArityField::mask()));
+  __ movl(EBX, ESI);
+  __ addl(EBX, Immediate(4));
+
+  Label loop, done;
+  __ Bind(&loop);
+  __ cmpl(ESI, Immediate(0));
+  __ j(EQUAL, &done);
+  __ pushl(Address(ESP, EBX, TIMES_WORD_SIZE));
+  __ subl(ESI, Immediate(1));
+  __ jmp(&loop);
+  __ Bind(&done);
+
+  __ call(EAX);
+
+  __ movl(ESP, EBP);
+  __ popl(EBP);
+  __ ret();
+
+  __ Bind(&nsm);
+
+  static const Names::Id name = Names::kNoSuchMethod;
+  int selector = Selector::Encode(name, Selector::METHOD, 3);
+  __ movl(EAX, Address(ESP, 0));
+
+  __ movl(EBX, ESP);
+  __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
+  __ movl(Address(EDI, Process::kNativeStackOffset), Immediate(0));
+
+  __ movl(Address(ESP, 0 * kWordSize), EDI);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+  __ movl(Address(ESP, 2 * kWordSize), Immediate(selector));
+
+  __ call("HandleLookupSelector");
+
+  __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
+  __ movl(ESP, EBX);
+
+  __ pushl(Address(ESP, 0));
+  __ pushl(Immediate(0));
+  __ pushl(Immediate(0));
+
+  __ call(EAX);
+
+  __ movl(ESP, EBP);
+  __ popl(EBP);
+  __ ret();
+}
+
+void Codegen::DoCoroutineChange(bool is_coroutine_entry) {
+  basic_block_.Materialize();
+
+  __ movl(EBX, Address(ESP, 0 * kWordSize));
+  __ movl(EDX, Address(ESP, 1 * kWordSize));
+
+  printf("\tmovl $O%08x + 1, %%eax\n", program()->null_object()->address());
+
+  __ movl(Address(ESP, 0 * kWordSize), EAX);
+  __ movl(Address(ESP, 1 * kWordSize), EAX);
+
+  __ call("CoroutineChange");
+
+  if (is_coroutine_entry) {
+    __ Bind("Codegen", "CoroutineEntry");
+  }
+
+  __ popl(EDX);
+  __ movl(Address(ESP, 0 * kWordSize), EBX);
+}
+
 Program* BasicBlock::program() const {
   return codegen_->program();
 }
@@ -1157,7 +1442,7 @@ void BasicBlock::Materialize() {
     }
 
     case Slot::kSmiSlot: {
-      __ pushl(Immediate(reinterpret_cast<int32>(Pop().smi())));
+      __ pushl(Immediate(reinterpret_cast<int32>(Top().smi())));
       SetTop(Slot::Unknown());
       break;
     }

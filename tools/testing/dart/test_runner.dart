@@ -78,7 +78,7 @@ class Command {
   int _cachedHashCode;
 
   Command._(this.displayName);
-
+/*
   int get hashCode {
     if (_cachedHashCode == null) {
       var builder = new HashCodeBuilder();
@@ -94,7 +94,7 @@ class Command {
     }
     return false;
   }
-
+*/
   void _buildHashCode(HashCodeBuilder builder) {
     builder.add(commandLine);
     builder.add(displayName);
@@ -151,6 +151,7 @@ class ProcessCommand extends Command {
   }
 
   bool _equal(Command other) {
+    return false;
     if (other is ProcessCommand) {
       if (!super._equal(other)) return false;
 
@@ -691,6 +692,7 @@ class CommandBuilder {
   }
 
   Command _getUniqueCommand(Command command) {
+    return command;
     // All Command classes implement hashCode and operator==.
     // We check if this command has already been built.
     //  If so, we return the cached one. Otherwise we

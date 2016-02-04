@@ -336,7 +336,7 @@ void InterpreterGeneratorX86::GeneratePrologue() {
 
   // Pad the stack to guarantee the right alignment for calls.
   // Reserved is 4 registers, 1 return address and 1 Dart stack slot.
-  spill_size_ = ComputeStackPadding(6 * kWordSize, 6 * kWordSize);
+  spill_size_ = ComputeStackPadding(6 * kWordSize, 7 * kWordSize);
   if (spill_size_ > 0) __ subl(ESP, Immediate(spill_size_));
 
   // Restore the register state and dispatch to the first bytecode.

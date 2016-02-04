@@ -234,11 +234,15 @@ class CodegenVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
     environmentOverrides["foo"] = script;
     return <Command>[
       commandBuilder.getVmCommand(
+          "./script.sh", [script], environmentOverrides)/*,
+      commandBuilder.getVmCommand(
           codegen, codegenArguments, environmentOverrides),
       commandBuilder.getVmCommand(
-          'ninja', ["-C", suite.buildDir], environmentOverrides),
+          'rm', ["-f", "${suite.buildDir}/fletch-vm-o"], environmentOverrides),
       commandBuilder.getVmCommand(
-          "${suite.buildDir}/fletch-vm-o", [], environmentOverrides)];
+          'ninja', ["-C", suite.buildDir, "fletch-vm-o"], environmentOverrides),
+      commandBuilder.getVmCommand(
+          "${suite.buildDir}/fletch-vm-o", [], environmentOverrides)*/];
   }
 }
 

@@ -8,6 +8,7 @@
 
 #include "src/shared/bytecodes.h"
 #include "src/shared/flags.h"
+#include "src/shared/names.h"
 #include "src/shared/selectors.h"
 
 #include "src/vm/assembler.h"
@@ -29,6 +30,8 @@ class DumpVisitor : public HeapObjectVisitor {
       DumpInstance(Instance::cast(object));
     } else if (object->IsOneByteString()) {
       DumpOneByteString(OneByteString::cast(object));
+    } else if (object->IsByteArray()) {
+      DumpByteArray(ByteArray::cast(object));
     } else if (object->IsArray()) {
       DumpArray(Array::cast(object));
     } else if (object->IsLargeInteger()) {
@@ -85,6 +88,7 @@ class DumpVisitor : public HeapObjectVisitor {
   }
 
   void DumpOneByteString(OneByteString* string) {
+    string->Hash();
     int size = OneByteString::kSize;
     for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
       DumpReference(string->at(offset));
@@ -92,6 +96,18 @@ class DumpVisitor : public HeapObjectVisitor {
 
     for (int o = size; o < string->StringSize(); o += kPointerSize) {
       printf("\t.long 0x%08x\n", *reinterpret_cast<uword*>(string->byte_address_for(o - size)));
+    }
+  }
+
+  void DumpByteArray(ByteArray* array) {
+    printf("// bytearray\n");
+    int size = ByteArray::kSize;
+    for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+      DumpReference(array->at(offset));
+    }
+
+    for (int o = size; o < array->ByteArraySize(); o += kPointerSize) {
+      printf("\t.long 0x%08x\n", *reinterpret_cast<uword*>(array->byte_address_for(o - size)));
     }
   }
 
@@ -302,9 +318,32 @@ void Codegen::Generate(Function* function) {
         case kBranchBackIfFalseWide: labels[bci - Utils::ReadInt32(bcp + 1)]++; break;
         case kPopAndBranchWide: labels[bci + Utils::ReadInt32(bcp + 2)]++; break;
         case kPopAndBranchBackWide: labels[bci - Utils::ReadInt32(bcp + 2)]++; break;
+        case kSubroutineCall: {
+          labels[bci]++;
+          labels[bci + Utils::ReadInt32(bcp + 1)]++;
+          break;
+        }
+
         default: break;
       }
       bci += Bytecode::Size(opcode);
+    }
+  }
+
+  int32* frames = NULL;
+  {
+    int frames_offset;
+    Function::FromBytecodePointer(function_->bytecode_address_for(0),
+                                  &frames_offset);
+    if (frames_offset != -1) {
+      frames = reinterpret_cast<int32*>(
+          function_->bytecode_address_for(frames_offset));
+      int frames_length = frames[0];
+      for (int i = 0; i < frames_length; i++) {
+        frames_.PushBack(function_->bytecode_address_for(frames[i * 3 + 1]));
+        frames_.PushBack(function_->bytecode_address_for(frames[i * 3 + 2]));
+        frames_.PushBack(reinterpret_cast<uint8*>(frames[i * 3 + 3]));
+      }
     }
   }
 
@@ -317,7 +356,27 @@ void Codegen::Generate(Function* function) {
       return;
     }
 
+    if (frames != NULL) {
+      int frames_length = frames[0];
+      for (int i = 0; i < frames_length; i++) {
+        // printf("%i %i %i\n", bci, frames[i*2 + 1], frames[i * 2 + 2]);
+        if (frames[i * 3 + 1] == bci) {
+          basic_block_.MaterializeAndClear();
+          printf("// frame start\n");
+        } else if (frames[i * 3 + 2] == bci) {
+          basic_block_.MaterializeAndClear();
+          printf("// frame end\n");
+        } else {
+          continue;
+        }
+        printf("F%u: ", reinterpret_cast<uint32>(bcp));
+        break;
+      }
+    }
+
     if (bci == 0 || labels[bci] > 0) {
+      // Avoid smi tagging if label is loaded.
+      assembler()->AlignToPowerOfTwo(2);
       basic_block_.MaterializeAndClear();
       printf("%u: ", reinterpret_cast<uint32>(bcp));
     }
@@ -355,6 +414,11 @@ void Codegen::Generate(Function* function) {
         break;
       }
 
+      case kLoadBoxed: {
+        DoLoadBoxed(*(bcp + 1));
+        break;
+      }
+
       case kLoadField: {
         DoLoadField(*(bcp + 1));
         break;
@@ -378,6 +442,12 @@ void Codegen::Generate(Function* function) {
       case kStoreLocal: {
         int index = *(bcp + 1);
         DoStoreLocal(index);
+        break;
+      }
+
+      case kStoreBoxed: {
+        int index = *(bcp + 1);
+        DoStoreBoxed(index);
         break;
       }
 
@@ -495,7 +565,15 @@ void Codegen::Generate(Function* function) {
         DoBranch(BRANCH_ALWAYS, bci, bci - Utils::ReadInt32(bcp + 2));
         break;
       }
-
+/*
+      case kInvokeAdd:
+      case kInvokeSub:
+      case kInvokeEq:
+      case kInvokeGe:
+      case kInvokeGt:
+      case kInvokeLe:
+      case kInvokeLt:
+*/
       case kInvokeMod:
       case kInvokeMul:
       case kInvokeTruncDiv:
@@ -515,10 +593,22 @@ void Codegen::Generate(Function* function) {
         break;
       }
 
+      case kInvokeNoSuchMethod: {
+        int selector = Utils::ReadInt32(bcp + 1);
+        DoInvokeNoSuchMethod(selector);
+        break;
+      }
+
       case kInvokeTest: {
         int selector = Utils::ReadInt32(bcp + 1);
         int offset = Selector::IdField::decode(selector);
         DoInvokeTest(offset);
+        break;
+      }
+
+      case kInvokeTestNoSuchMethod: {
+        DoDrop(1);
+        DoLoadProgramRoot(Program::kFalseObjectOffset);
         break;
       }
 
@@ -630,6 +720,17 @@ void Codegen::Generate(Function* function) {
         break;
       }
 
+      case kSubroutineCall: {
+        int target = bci + Utils::ReadInt32(bcp + 1);
+        DoSubroutineCall(target);
+        break;
+      }
+
+      case kSubroutineReturn: {
+        DoSubroutineReturn();
+        break;
+      }
+
       case kAllocate:
       case kAllocateImmutable: {
         Class* klass = Class::cast(Function::ConstantForBytecode(bcp));
@@ -660,6 +761,26 @@ void Codegen::Generate(Function* function) {
       case kProcessYield: {
         DoProcessYield();
         basic_block_.Clear();
+        break;
+      }
+
+      case kEnterNoSuchMethod: {
+        DoNoSuchMethod();
+        basic_block_.Clear();
+        break;
+      }
+
+      case kCoroutineChange: {
+        int selector = Selector::Encode(Names::kCoroutineStart, Selector::METHOD, 1);
+        Function* start = program()->coroutine_class()->LookupMethod(selector);
+        DoCoroutineChange(start == function_ && bci == 2);
+        basic_block_.Clear();
+        break;
+      }
+
+      case kStackOverflowCheck: {
+        int size = Utils::ReadInt32(bcp + 1);
+        DoStackOverflowCheck(size);
         break;
       }
 

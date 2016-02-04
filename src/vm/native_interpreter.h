@@ -25,6 +25,10 @@ extern "C" void InterpreterCoroutineEntry();
 
 extern "C" void InterpreterMethodEntry();
 
+extern "C" void CodegenCoroutineEntry();
+
+__attribute__((weak)) void CodegenCoroutineEntry() {
+}
 
 void SetBytecodeBreak(Opcode opcode);
 

@@ -269,6 +269,8 @@ class Assembler {
   INSTRUCTION_1(shll_cl, "shll %%cl, %rl", Register);
 
   INSTRUCTION_2(orl, "orl %rl, %rl", Register, Register);
+  INSTRUCTION_2(orl, "orl %i, %rl", Register, const Immediate&);
+
   INSTRUCTION_2(xorl, "xorl %rl, %rl", Register, Register);
 
   INSTRUCTION_0(cdq, "cdq");
