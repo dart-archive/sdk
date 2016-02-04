@@ -35,7 +35,7 @@ utils = bot_utils.GetUtils()
 
 DEBUG_LOG=".debug.log"
 
-GCS_COREDUMP_BUCKET = 'fletch-buildbot-coredumps'
+GCS_COREDUMP_BUCKET = 'dartino-buildbot-coredumps'
 
 DARTINO_REGEXP = (r'fletch-'
                  r'(?P<system>linux|mac|win|lk|free-rtos)'
