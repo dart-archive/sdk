@@ -348,7 +348,7 @@ class TLSSocket implements Socket {
    * be filled (connection closed, error from mbedtls, eof before full) we
    * return null;
    */
-  ByteBuffer _readInto(ByteBuffer buffer) {
+  ByteBuffer _readInto(var buffer) {
     int offset = 0;
     int bytes = buffer.lengthInBytes;
     int max = bytes;
