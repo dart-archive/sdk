@@ -39,8 +39,8 @@ void Links::NotifyLinkedProcesses(ProcessHandle* dying_handle,
 
   Signal* signal = NULL;
 
-  for (auto it = handles_.Begin(); it != handles_.End(); ++it) {
-    ProcessHandle* handle = it->first;
+  for (auto& pair : handles_) {
+    ProcessHandle* handle = pair.first;
     // NOTE: Even though a link might have been setup several times, there is no
     // reason to send several signals, since the first one is deadly already.
     signal = SendSignal(handle, dying_handle, kind, signal);
@@ -57,9 +57,9 @@ void Links::NotifyMonitors(ProcessHandle* dying_handle) {
   ScopedSpinlock locker(&lock_);
   Signal* signal = NULL;
   ASSERT(half_dead_);
-  for (auto it = ports_.Begin(); it != ports_.End(); ++it) {
-    Port* port = it->first;
-    int count = it->second;
+  for (auto& pair : ports_) {
+    Port* port = pair.first;
+    int count = pair.second;
     // NOTE: Since one can monitor another process X number of times, we need to
     // send the exit signal also X times.
     for (int i = 0; i < count; i++) {

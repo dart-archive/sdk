@@ -94,10 +94,8 @@ bool DebugInfo::DeleteBreakpoint(int id) {
     breakpoints_.Erase(it);
 
     // If we have other breakpoint with that opcode, return.
-    BreakpointMap::ConstIterator it = breakpoints_.Begin();
-    BreakpointMap::ConstIterator end = breakpoints_.End();
-    for (; it != end; ++it) {
-      if (*it->first == *bcp) return true;
+    for (auto& pair : breakpoints_) {
+      if (*pair.first == *bcp) return true;
     }
 
     // Not found, clear the opcode.
@@ -132,27 +130,17 @@ void DebugInfo::ClearBreakpoint() {
     ClearBytecodeBreak(static_cast<Opcode>(i));
   }
 
-  BreakpointMap::ConstIterator it = breakpoints_.Begin();
-  BreakpointMap::ConstIterator end = breakpoints_.End();
-  for (; it != end; ++it) {
-    SetBytecodeBreak(static_cast<Opcode>(*it->first));
+  for (auto& pair : breakpoints_) {
+    SetBytecodeBreak(static_cast<Opcode>(*pair.first));
   }
 }
 
 void DebugInfo::VisitPointers(PointerVisitor* visitor) {
-  BreakpointMap::Iterator it = breakpoints_.Begin();
-  BreakpointMap::Iterator end = breakpoints_.End();
-  for (; it != end; ++it) {
-    it->second.VisitPointers(visitor);
-  }
+  for (auto& pair : breakpoints_) pair.second.VisitPointers(visitor);
 }
 
 void DebugInfo::VisitProgramPointers(PointerVisitor* visitor) {
-  BreakpointMap::Iterator it = breakpoints_.Begin();
-  BreakpointMap::Iterator end = breakpoints_.End();
-  for (; it != end; ++it) {
-    it->second.VisitProgramPointers(visitor);
-  }
+  for (auto& pair : breakpoints_) pair.second.VisitProgramPointers(visitor);
 }
 
 void DebugInfo::UpdateBreakpoints() {
@@ -166,14 +154,12 @@ void DebugInfo::UpdateBreakpoints() {
     }
   }
 
-  BreakpointMap::ConstIterator it = breakpoints_.Begin();
-  BreakpointMap::ConstIterator end = breakpoints_.End();
-  for (; it != end; ++it) {
-    Function* function = it->second.function();
+  for (auto& pair : breakpoints_) {
+    Function* function = pair.second.function();
     uint8_t* bcp =
-        function->bytecode_address_for(0) + it->second.bytecode_index();
+        function->bytecode_address_for(0) + pair.second.bytecode_index();
     SetBytecodeBreak(static_cast<Opcode>(*bcp));
-    new_breakpoints.Insert({bcp, it->second});
+    new_breakpoints.Insert({bcp, pair.second});
   }
   breakpoints_.Swap(new_breakpoints);
 }

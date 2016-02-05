@@ -25,9 +25,7 @@ typedef HashMap<intptr_t, int> SelectorOffsetMap;
 class ProgramRewriter {
  public:
   ~ProgramRewriter() {
-    SelectorRowMap::ConstIterator it = selector_rows_.Begin();
-    SelectorRowMap::ConstIterator end = selector_rows_.End();
-    for (; it != end; ++it) delete it->second;
+    for (auto& pair : selector_rows_) delete pair.second;
   }
 
   SelectorRow* LookupSelectorRow(int selector) {
@@ -39,13 +37,10 @@ class ProgramRewriter {
   }
 
   void ProcessSelectorRows(Program* program, Vector<Class*>* classes) {
-    SelectorRowMap::ConstIterator it;
-    SelectorRowMap::ConstIterator end = selector_rows_.End();
-
     // Compute the sizes of the dispatch tables.
     Vector<SelectorRow*> table_rows;
-    for (it = selector_rows_.Begin(); it != end; ++it) {
-      SelectorRow* row = it->second;
+    for (auto& pair : selector_rows_) {
+      SelectorRow* row = pair.second;
       if (row->IsMatched()) {
         row->Finalize();
         table_rows.PushBack(row);

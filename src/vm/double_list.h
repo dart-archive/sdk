@@ -186,13 +186,13 @@ class DoubleList {
     return container;
   }
 
-  inline Iterator<T, N> Begin() {
-    return Iterator<T, N>(this, head_.Next());
-  }
+  inline Iterator<T, N> Begin() { return Iterator<T, N>(this, head_.Next()); }
 
-  inline Iterator<T, N> End() {
-    return Iterator<T, N>(this, &head_);
-  }
+  inline Iterator<T, N> End() { return Iterator<T, N>(this, &head_); }
+
+  inline Iterator<T, N> begin() { return Begin(); }
+
+  inline Iterator<T, N> end() { return End(); }
 
   inline Iterator<T, N> Erase(const Iterator<T, N>& iterator) {
     ASSERT(iterator.head_ == this);

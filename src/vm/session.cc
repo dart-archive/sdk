@@ -226,9 +226,9 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
 
   // Class offset table
   buffer.WriteInt(5 * class_offsets->size());
-  for (auto it = class_offsets->Begin(); it != class_offsets->End(); ++it) {
-    Class* klass = it->first;
-    const PortableOffset& offset = it->second;
+  for (auto& pair : *class_offsets) {
+    Class* klass = pair.first;
+    const PortableOffset& offset = pair.second;
 
     buffer.WriteInt(MapLookupByObject(class_map_id_, klass));
     buffer.WriteInt(offset.offset_64bits_double);
@@ -239,10 +239,9 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
 
   // Function offset table
   buffer.WriteInt(5 * function_offsets->size());
-  for (auto it = function_offsets->Begin(); it != function_offsets->End();
-       ++it) {
-    Function* function = it->first;
-    const PortableOffset& offset = it->second;
+  for (auto& pair : *function_offsets) {
+    Function* function = pair.first;
+    const PortableOffset& offset = pair.second;
 
     buffer.WriteInt(MapLookupByObject(method_map_id_, function));
     buffer.WriteInt(offset.offset_64bits_double);
@@ -578,15 +577,16 @@ void Session::ProcessMessages() {
         ASSERT(IsScheduledAndPaused());
         int count = 0;
         auto processes = program()->process_list();
-        for (auto it = processes->Begin(); it != processes->End(); ++it) {
+        for (auto process : *processes) {
+          USE(process);
           ++count;
         }
 
         WriteBuffer buffer;
         buffer.WriteInt(count);
-        for (auto it = processes->Begin(); it != processes->End(); ++it) {
-          it->EnsureDebuggerAttached(this);
-          buffer.WriteInt(it->debug_info()->process_id());
+        for (auto process : *processes) {
+          process->EnsureDebuggerAttached(this);
+          buffer.WriteInt(process->debug_info()->process_id());
         }
 
         connection_->Send(Connection::kProcessGetProcessIdsResult, buffer);
@@ -1579,11 +1579,10 @@ Process* Session::GetProcess(int process_id) {
   // TODO(zerny): Assert here and eliminate the default process.
   if (process_id < 0) return process_;
 
-  auto processes = program()->process_list();
-  for (auto it = processes->Begin(); it != processes->End(); ++it) {
-    it->EnsureDebuggerAttached(this);
-    if (it->debug_info()->process_id() == process_id) {
-      return *it;
+  for (auto process : *program()->process_list()) {
+    process->EnsureDebuggerAttached(this);
+    if (process->debug_info()->process_id() == process_id) {
+      return process;
     }
   }
   UNREACHABLE();
