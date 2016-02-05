@@ -31,10 +31,7 @@ static List<const char> StringFromCharZ(const char* str) {
 }
 
 void ProgramState::AddPausedProcess(Process* process) {
-  ASSERT(process->next() == NULL);
-  process->set_next(paused_processes_head_);
-  set_paused_processes_head(process);
-  ASSERT(paused_processes_head_ != paused_processes_head_->next());
+  paused_processes_.Append(process);
 }
 
 Program::Program(ProgramSource source, int hashtag)

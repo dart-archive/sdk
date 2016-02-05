@@ -40,7 +40,6 @@ Process::Process(Program* program, Process* parent)
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
-      next_(NULL),
       queue_(NULL),
       queue_next_(NULL),
       queue_previous_(NULL),
@@ -100,8 +99,6 @@ Process::~Process() {
   if (signal != NULL) Signal::DecrementRef(signal);
 
   delete debug_info_;
-
-  ASSERT(next_ == NULL);
 }
 
 void Process::Cleanup(Signal::Kind kind) {

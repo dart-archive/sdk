@@ -169,7 +169,7 @@ void Scheduler::StopProgram(Program* program) {
       pause_monitor_->Wait();
     }
 
-    Process* to_enqueue = NULL;
+    ProcessQueueList to_enqueue;
 
     while (true) {
       Process* process = NULL;
@@ -182,17 +182,14 @@ void Scheduler::StopProgram(Program* program) {
         process->ChangeState(Process::kRunning, Process::kReady);
         program_state->AddPausedProcess(process);
       } else {
-        process->set_next(to_enqueue);
-        to_enqueue = process;
+        to_enqueue.Append(process);
       }
     }
 
-    while (to_enqueue != NULL) {
-      to_enqueue->ChangeState(Process::kRunning, Process::kReady);
-      Process* next = to_enqueue->next();
-      to_enqueue->set_next(NULL);
-      EnqueueProcess(to_enqueue);
-      to_enqueue = next;
+    while (!to_enqueue.IsEmpty()) {
+      Process* process = to_enqueue.RemoveFirst();
+      process->ChangeState(Process::kRunning, Process::kReady);
+      EnqueueProcess(process);
     }
 
     // TODO(kustermann): Stopping a program should not always clear the lookup
@@ -220,14 +217,11 @@ void Scheduler::ResumeProgram(Program* program) {
     ProgramState* program_state = program->program_state();
     ASSERT(program_state->is_paused());
 
-    Process* process = program_state->paused_processes_head();
-    while (process != NULL) {
-      Process* next = process->next();
-      process->set_next(NULL);
+    auto paused_processes = program_state->paused_processes();
+    while (!paused_processes->IsEmpty()) {
+      Process* process = paused_processes->RemoveFirst();
       EnqueueProcess(process);
-      process = next;
     }
-    program_state->set_paused_processes_head(NULL);
     program_state->set_is_paused(false);
     pause_monitor_->NotifyAll();
   }
@@ -698,7 +692,7 @@ void Scheduler::EnqueueSafe(Process* process) {
 
     // Only add the process into the paused list if it is not already in
     // there.
-    if (process->next() == NULL) {
+    if (!state->paused_processes()->IsInList(process)) {
       state->AddPausedProcess(process);
     }
   } else {

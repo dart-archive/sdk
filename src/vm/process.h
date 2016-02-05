@@ -29,7 +29,7 @@ class ProcessQueue;
 class ProcessVisitor;
 class Session;
 
-class Process : public ProcessList::Entry {
+class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
  public:
   enum State {
     kSleeping,
@@ -143,9 +143,6 @@ class Process : public ProcessList::Entry {
   DebugInfo* debug_info() { return debug_info_; }
   bool is_debugging() const { return debug_info_ != NULL; }
 
-  Process* next() const { return next_; }
-  void set_next(Process* process) { next_ = process; }
-
   void TakeLookupCache();
   void ReleaseLookupCache() { primary_lookup_cache_ = NULL; }
 
@@ -206,7 +203,7 @@ class Process : public ProcessList::Entry {
 
   // If you add an offset here, remember to add the corresponding static_assert
   // in process.cc.
-  static const uword kNativeStackOffset = 2 * kWordSize;
+  static const uword kNativeStackOffset = 4 * kWordSize;
   static const uword kCoroutineOffset = kNativeStackOffset + kWordSize;
   static const uword kStackLimitOffset = kCoroutineOffset + kWordSize;
   static const uword kProgramOffset = kStackLimitOffset + kWordSize;
@@ -252,9 +249,6 @@ class Process : public ProcessList::Entry {
   Links links_;
 
   Atomic<State> state_;
-
-  // Next pointer used by the Scheduler.
-  Process* next_;
 
   // Fields used by ProcessQueue, when holding the Process.
   friend class ProcessQueue;
