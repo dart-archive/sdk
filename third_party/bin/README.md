@@ -4,13 +4,9 @@ for details. All rights reserved. Use of this source code is governed by a
 BSD-style license that can be found in the LICENSE.md file.
 -->
 
-We use a patched version of the Dart VM at the moment, because
-  * Testing is much faster using vfork()
-  * The persistent process / daemon uses Unix Domain Sockets
-
-These patches are tracked in a [branch of the Dart
-SDK](https://github.com/dart-lang/sdk/tree/_temporary_dartino_patches). This
-branch is the source of truth.
+We use the DartVM for running the persistent dartino process and the testing
+scripts. The DartVM binaries we use are declared in sha1 files which
+`gclient runhooks` updates.
 
 In order to have a single binary per OS-Arch combination, we use the
 same Dart VM executable for driving the testing scripts and for driving
@@ -19,17 +15,19 @@ the persistent process.
 Please note that this changes our normally used 32-bit binary for driving the
 testing scripts in tools/testing/bin/... to be a 64-bit binary.
 
-We built the Dart VM for the following configurations
-  * macos-release-x64
-  * linux-release-x64
-  * linux-release-arm
+We don't build these locally, but rely on 4 builders from the client.dart
+buildbot for building them in a controlled environment.
 
-We don't build these locally, but rely on 3 buildbots for building them in
-a controlled environment.
+Temporarily we also archive unstripped versions of the DartVM binaries in order
+to help the DartVM team to debug issues. Since the unstripped binaries are not
+archived anywere they need to be fetched from these builders directly ATM:
 
-There are download links on the 3 sdk patched bots, to update the checked in
-versions download the 3 binaries and put them in the platform specific binaries
-under third_party/bin/linux/{dart,dart-arm} and third_party/bin/mac/dart.
+  * cross-arm-vm-linux-release-be
+  * dart-sdk-linux-be
+  * dart-sdk-mac-be
+  * dart-sdk-windows-be
+
+=> Ask ricow@ or kustermann@ to do this.
 
 The binaries then need to be uploaded to GoogleCloudStorage and
 their sha1 file needs to be checked into the repository.
@@ -58,15 +56,20 @@ cp dart-arm.sha1 ../../../tools/testing/bin/linux/dart-arm.sha1
 cd ../mac
 upload_to_google_storage.py -b dartino-dependencies dart
 cp dart.sha1 ../../../tools/testing/bin/mac/dart.sha1
+cd ../win
+upload_to_google_storage.py -b dartino-dependencies dart.exe
+cp dart.sha1 ../../../tools/testing/bin/win/dart.exe.sha1
 ```
 
 The sha1 files need to be checked into the repository at
   * `third_party/bin/linux/dart.sha1`
   * `third_party/bin/linux/dart-arm.sha1`
   * `third_party/bin/mac/dart.sha1`
+  * `third_party/bin/win/dart.exe.sha1`
   * `tools/testing/bin/linux/dart.sha1`
   * `tools/testing/bin/linux/dart-arm.sha1`
   * `tools/testing/bin/mac/dart.sha1`
+  * `tools/testing/bin/win/dart.exe.sha1`
 
 It is highly recommended to test that everything worked, by
   * ensuring only sha1 files have been changed

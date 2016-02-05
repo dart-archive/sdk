@@ -27,9 +27,7 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_dartino_patches".
   # 2. update package revisions below.
-  # 3. Upload new binaries and update the `third_party/bin` sha-hash-files as
-  #    described in `third_party/bin/README.md`.
-  "dart_rev": "@0cc4be4b0462635dc198d96974e152abbd86ff6f",
+  "dart_rev": "@6eed25f3142039cdc92097c4db27c6cb312581d8",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:
