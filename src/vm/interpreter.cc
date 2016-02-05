@@ -468,23 +468,60 @@ void* HandleThrowCodegen(Process* process,
 }
 
 void* HandleLookupSelector(Process* process,
-                               Object* receiver,
-                               int selector) {
+                           Object* receiver,
+                           int selector,
+                           bool use_fallback,
+                           void** functions_map,
+                           int function_count) {
   Class* clazz = receiver->IsSmi() ? process->program()->smi_class()
                                    : HeapObject::cast(receiver)->get_class();
+  if (use_fallback &&
+      clazz->IsSubclassOf(process->program()->closure_class())) {
+    return NULL;
+  }
+
   Function* target = clazz->LookupMethod(selector);
-  if (target == NULL) return NULL;
-  /*
+  if (target == NULL) {
+    return NULL;
+    /*
     static const Names::Id name = Names::kNoSuchMethodTrampoline;
     target = clazz->LookupMethod(Selector::Encode(name, Selector::METHOD, 0));
-  }*/
+    */
+  }
 
+  int first = 0;
+  int last = function_count - 1;
+  while (first <= last) {
+    int middle = (first + last) / 2;
+    Function* function = reinterpret_cast<Function*>(functions_map[middle * 2]);
+    if (function == target) {
+      return functions_map[middle * 2 + 1];
+    }
+    if (function > target) {
+      last = middle - 1;
+    } else {
+      first = middle + 1;
+    }
+  }
+  /*
   // TODO(ajohnsen): I wonder how buggy/slow this is...
+  // printf("slow case...\n");
+  int index = 0;
+  while (true) {
+    Function* function = reinterpret_cast<Function*>(functions_map[index]);
+    if (function == target) return functions_map[index + 1];
+    index += 2;
+  }
+  */
+  /*
   Array* table = process->program()->dispatch_table();
   for (int i = 0; i < table->length(); i++) {
     DispatchTableEntry* entry = DispatchTableEntry::cast(table->get(i));
     if (entry->target() == target) return entry->code();
   }
+  */
+
+  UNREACHABLE();
 
   return NULL;
 }

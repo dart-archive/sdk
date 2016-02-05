@@ -154,7 +154,7 @@ class BasicBlock {
   }
 
   bool IsTopMaterialized() {
-    if (stack_.IsEmpty()) return false;
+    if (stack_.IsEmpty()) return true;
     return stack_.Back().IsMaterialized();
   }
 
@@ -213,6 +213,8 @@ class Codegen {
         lt_offset_(-1) {
   }
 
+  void Precompute();
+
   void Generate(Function* function);
 
   void GenerateHelpers();
@@ -233,6 +235,7 @@ class Codegen {
   Assembler* const assembler_;
   HashMap<Function*, Class*>* const function_owners_;
   Vector<uint8*> frames_;
+  Vector<Function*> sorted_functions_;
 
   Function* function_;
   BasicBlock basic_block_;

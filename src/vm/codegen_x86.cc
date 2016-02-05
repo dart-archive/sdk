@@ -23,6 +23,29 @@ const char* kNativeNames[] = {
 #undef N
 };
 
+typedef Function* ConstFunction;
+bool FunctionCompare(const ConstFunction* a, const ConstFunction* b) {
+  return *a < *b;
+}
+
+void Codegen::Precompute() {
+  HashMap<Function*, void*> functions;
+
+  Array* table = program()->dispatch_table();
+
+  for (int i = 0, length = table->length(); i < length; i++) {
+    Object* element = table->get(i);
+    DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+    functions[entry->target()] = entry->code();
+  }
+
+  for (auto it = functions.Begin(); it != functions.End(); ++it) {
+    sorted_functions_.PushBack(it->first);
+  }
+
+  sorted_functions_.Sort(FunctionCompare);
+}
+
 
 void Codegen::GenerateHelpers() {
   __ BindWithPowerOfTwoAlignment("program_entry", 4);
@@ -129,7 +152,29 @@ void Codegen::GenerateHelpers() {
     __ movl(Address(ESP, 1 * kWordSize), EAX);
     __ call("HandleStackOverflow");
 
+    Label done;
+    __ testl(EAX, EAX);
+    __ j(ZERO, &done);
+
+    {
+      // Check stack overflow.
+      Label skip;
+      __ cmpl(EAX, Immediate(Process::kStackCheckOverflow));
+      __ j(NOT_EQUAL, &skip);
+      DoRestoreState();
+      Object* root = *reinterpret_cast<Object**>(
+          reinterpret_cast<uint8*>(program_) + Program::kStackOverflowErrorOffset);
+      printf("\tmovl $O%08x + 1, %%ebx\n", HeapObject::cast(root)->address());
+      __ jmp("Throw");
+      __ Bind(&skip);
+    }
+
+    __ int3();
+
+    __ Bind(&done);
+
     DoRestoreState();
+
     __ ret();
   }
 
@@ -299,21 +344,28 @@ void Codegen::GenerateHelpers() {
     printf("\n");
     __ BindWithPowerOfTwoAlignment("Selectors", 4);
 
+    HashMap<word, word> selectors;
+
     Array* table = program()->dispatch_table();
     for (int i = 0, length = table->length(); i < length; i++) {
-      bool found = false;
-      for (int j = 0; j < table->length(); j++) {
-        Object* element = table->get(j);
-        DispatchTableEntry* entry = DispatchTableEntry::cast(element);
-        if (entry->offset()->value() == i) {
-          printf("\t.long 0x%x\n", entry->selector());
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        printf("\t.long 0x%x\n", 0);
-      }
+      Object* element = table->get(i);
+      DispatchTableEntry* entry = DispatchTableEntry::cast(element);
+      selectors[entry->offset()->value()] = entry->selector();
+    }
+
+    for (int i = 0, length = table->length(); i < length; i++) {
+      printf("\t.long 0x%x\n", selectors[i]);
+    }
+  }
+
+  {
+    printf("\n");
+    __ BindWithPowerOfTwoAlignment("Functions", 4);
+
+    for (size_t i = 0; i < sorted_functions_.size(); i++) {
+      Function* function = sorted_functions_[i];
+      printf("\t.long O%08x + 1\n", function->address());
+      printf("\t.long Function_%08x\n", function);
     }
   }
 }
@@ -646,7 +698,6 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
       }
     }
     __ call("NoSuchMethod");
-    __ int3();
     __ Bind(&end);
   } else {
     Label done;
@@ -678,9 +729,11 @@ void Codegen::DoInvokeMethod(Class* klass, int arity, int offset) {
       }
     }
     __ call("NoSuchMethod");
-    __ int3();
+    Label finish;
+    __ jmp(&finish);
     __ Bind(&end);
     __ call(Address(ECX, DispatchTableEntry::kCodeOffset - HeapObject::kTag));
+    __ Bind(&finish);
   }
 
   DoDropMaterialized(arity + 1);
@@ -871,7 +924,7 @@ void Codegen::DoInvokeCompare(Condition condition, const char* bailout) {
     printf("\tmovl $O%08x + 1, %%ecx\n", program_->true_object()->address());
     printf("\tcmpl %%eax, %%ecx\n");
   } else if (condition == GREATER) {
-    printf("\tcmpl $O%08x + 1 + 4, %%eax\n", program_->true_object()->address());
+    printf("\tcmpl $O%08x + 1 - 4, %%eax\n", program_->true_object()->address());
   } else if (condition == GREATER_EQUAL) {
     printf("\tcmpl $O%08x + 1, %%eax\n", program_->true_object()->address());
   } else {
@@ -982,11 +1035,11 @@ void Codegen::DoAllocate(Class* klass) {
 }
 
 void Codegen::DoAllocateBoxed() {
-  basic_block_.MaterializeKeepRegister();
+  basic_block_.Materialize();
+  Label retry;
+  __ Bind(&retry);
 
-  if (!basic_block_.IsTopRegister()) {
-    __ movl(EAX, Address(ESP, 0 * kWordSize));
-  }
+  __ movl(EAX, Address(ESP, 0 * kWordSize));
 
   __ movl(EBX, ESP);
   __ movl(ESP, Address(EDI, Process::kNativeStackOffset));
@@ -999,7 +1052,18 @@ void Codegen::DoAllocateBoxed() {
   __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
   __ movl(ESP, EBX);
 
-  basic_block_.SetTop(Slot::Register());
+  Label gc;
+  __ movl(ECX, EAX);
+  __ andl(ECX, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ cmpl(ECX, Immediate(Failure::kTag));
+  Label no_gc;
+  __ j(NOT_EQUAL, &no_gc);
+
+  __ call("CollectGarbage");
+  __ jmp(&retry);
+
+  __ Bind(&no_gc);
+  __ movl(Address(ESP, 0 * kWordSize), EAX);
 }
 
 void Codegen::DoNegate() {
@@ -1188,7 +1252,7 @@ void Codegen::DoStackOverflowCheck(int size) {
   Label done;
   basic_block_.Materialize();
   __ movl(EBX, Address(EDI, Process::kStackLimitOffset));
-  if (size > 0) __ addl(EBX, Immediate(size));
+  if (size > 0) __ addl(EBX, Immediate(size * kWordSize));
   __ cmpl(ESP, EBX);
   __ j(ABOVE, &done);
   __ movl(EAX, Immediate(size));
@@ -1297,6 +1361,10 @@ void Codegen::DoNoSuchMethod() {
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ movl(Address(ESP, 2 * kWordSize), EDX);
+  __ movl(Address(ESP, 3 * kWordSize), Immediate(1));
+  __ LoadLabel(EAX, "Functions");
+  __ movl(Address(ESP, 4 * kWordSize), EAX);
+  __ movl(Address(ESP, 5 * kWordSize), Immediate(sorted_functions_.size()));
 
   __ call("HandleLookupSelector");
 
@@ -1323,11 +1391,30 @@ void Codegen::DoNoSuchMethod() {
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ movl(Address(ESP, 2 * kWordSize), ESI);
+  __ movl(Address(ESP, 3 * kWordSize), Immediate(0));
+  __ LoadLabel(EAX, "Functions");
+  __ movl(Address(ESP, 4 * kWordSize), EAX);
+  __ movl(Address(ESP, 5 * kWordSize), Immediate(sorted_functions_.size()));
 
   __ call("HandleLookupSelector");
 
   __ movl(Address(EDI, Process::kNativeStackOffset), ESP);
   __ movl(ESP, EBX);
+
+  Label found;
+  __ cmpl(EAX, Immediate(0));
+  __ j(NOT_EQUAL, &found);
+
+  __ movl(EDX, ESI);
+  __ movl(EAX, Address(ESP, 0));
+
+  __ call("NoSuchMethod");
+
+  __ movl(ESP, EBP);
+  __ popl(EBP);
+  __ ret();
+
+  __ Bind(&found);
 
   __ andl(ESI, Immediate(Selector::ArityField::mask()));
   __ movl(EBX, ESI);
@@ -1361,6 +1448,10 @@ void Codegen::DoNoSuchMethod() {
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EAX);
   __ movl(Address(ESP, 2 * kWordSize), Immediate(selector));
+  __ movl(Address(ESP, 3 * kWordSize), Immediate(0));
+  __ LoadLabel(EAX, "Functions");
+  __ movl(Address(ESP, 4 * kWordSize), EAX);
+  __ movl(Address(ESP, 5 * kWordSize), Immediate(sorted_functions_.size()));
 
   __ call("HandleLookupSelector");
 

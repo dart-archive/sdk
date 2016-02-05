@@ -989,6 +989,7 @@ static Process* SpawnProcessInternal(Program* program, Process* process,
   stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
+  ASSERT(false);
 
   return child;
 }

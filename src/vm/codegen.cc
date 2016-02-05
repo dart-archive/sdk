@@ -30,6 +30,8 @@ class DumpVisitor : public HeapObjectVisitor {
       DumpInstance(Instance::cast(object));
     } else if (object->IsOneByteString()) {
       DumpOneByteString(OneByteString::cast(object));
+    } else if (object->IsTwoByteString()) {
+      DumpTwoByteString(TwoByteString::cast(object));
     } else if (object->IsByteArray()) {
       DumpByteArray(ByteArray::cast(object));
     } else if (object->IsArray()) {
@@ -96,6 +98,18 @@ class DumpVisitor : public HeapObjectVisitor {
 
     for (int o = size; o < string->StringSize(); o += kPointerSize) {
       printf("\t.long 0x%08x\n", *reinterpret_cast<uword*>(string->byte_address_for(o - size)));
+    }
+  }
+
+  void DumpTwoByteString(TwoByteString* string) {
+    string->Hash();
+    int size = TwoByteString::kSize;
+    for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+      DumpReference(string->at(offset));
+    }
+
+    for (int o = size; o < string->StringSize(); o += kPointerSize) {
+      printf("\t.long 0x%08x\n", *reinterpret_cast<uword*>(string->byte_address_for((o - size) / 2)));
     }
   }
 
@@ -244,6 +258,7 @@ static int Main(int argc, char** argv) {
 
   Assembler assembler;
   Codegen codegen(program, &assembler, &function_owners);
+  codegen.Precompute();
   CodegenVisitor visitor(&codegen);
   program->heap()->IterateObjects(&visitor);
   codegen.GenerateHelpers();
@@ -568,12 +583,13 @@ void Codegen::Generate(Function* function) {
 /*
       case kInvokeAdd:
       case kInvokeSub:
+      */
       case kInvokeEq:
       case kInvokeGe:
       case kInvokeGt:
       case kInvokeLe:
       case kInvokeLt:
-*/
+
       case kInvokeMod:
       case kInvokeMul:
       case kInvokeTruncDiv:
@@ -629,7 +645,7 @@ void Codegen::Generate(Function* function) {
         DoInvokeSub();
         break;
       }
-
+/*
       case kInvokeEq: {
         int selector = Utils::ReadInt32(bcp + 1);
         int offset = Selector::IdField::decode(selector);
@@ -674,7 +690,7 @@ void Codegen::Generate(Function* function) {
         DoInvokeCompare(LESS, "InvokeLt");
         break;
       }
-
+*/
       case kInvokeStatic:
       case kInvokeFactory: {
         int offset = Utils::ReadInt32(bcp + 1);

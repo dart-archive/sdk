@@ -16,6 +16,7 @@ final mainScriptUri = new Uri(
     path: "/main.dart");
 
 void run(Uri uri, String mainScript, bool isServer) {
+  var sw = new Stopwatch()..start();
 
   void diagnosticHandler(
       Uri uri, int begin, int end, String message, Diagnostic kind) {
@@ -42,7 +43,6 @@ void run(Uri uri, String mainScript, bool isServer) {
         hasOutput = true;
       },
       onDone: () {
-        print("DONE!!!!");
   //      asyncEnd();
       });
 
@@ -60,6 +60,7 @@ void run(Uri uri, String mainScript, bool isServer) {
       compilerOutputProvider).then((result) {
     Expect.isTrue(result.isSuccess);
     Expect.isTrue(hasOutput);
+    print(sw.elapsed);
  //   asyncEnd();
   });
 }

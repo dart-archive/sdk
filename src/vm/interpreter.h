@@ -135,7 +135,10 @@ extern "C" int HandleAtBytecode(Process* process, uint8* bcp, Object** sp);
 
 extern "C" void* HandleLookupSelector(Process* process,
                                       Object* receiver,
-                                      int selector);
+                                      int selector,
+                                      bool use_fallback,
+                                      void** functions_map,
+                                      int function_count);
 
 }  // namespace fletch
 
