@@ -179,8 +179,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   void RegisterProcessAllocation() {}
 #endif
 
-  ProcessQueue* process_queue() const { return queue_; }
-
   void StoreErrno();
   void RestoreErrno();
 
@@ -249,16 +247,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   Links links_;
 
   Atomic<State> state_;
-
-  // Fields used by ProcessQueue, when holding the Process.
-  friend class ProcessQueue;
-  Atomic<ProcessQueue*> queue_;
-  // While the ProcessQueue is lock-free, we have an 'atomic lock' on the
-  // head_ element. That will ensure we have the right memory order on
-  // queue_next_/queue_previous_, as they are always read/modified while
-  // head_ is 'locked'.
-  Process* queue_next_;
-  Process* queue_previous_;
 
   Atomic<Signal*> signal_;
   MessageMailbox mailbox_;

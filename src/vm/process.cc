@@ -20,7 +20,6 @@
 #include "src/vm/natives.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/port.h"
-#include "src/vm/process_queue.h"
 #include "src/vm/remembered_set.h"
 #include "src/vm/session.h"
 
@@ -40,9 +39,6 @@ Process::Process(Program* program, Process* parent)
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
-      queue_(NULL),
-      queue_next_(NULL),
-      queue_previous_(NULL),
       signal_(NULL),
       process_handle_(NULL),
       ports_(NULL),
