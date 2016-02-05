@@ -22,6 +22,7 @@ import 'dart:io' show
     InternetAddress,
     Platform,
     Process,
+    ProcessResult,
     Socket,
     SocketException;
 
@@ -47,7 +48,10 @@ import 'package:mdns/mdns.dart' show
     RRType;
 
 import 'package:path/path.dart' show
-    join;
+    dirname,
+    basenameWithoutExtension,
+    join,
+    withoutExtension;
 
 import '../../vm_commands.dart' show
     VmCommandCode,
@@ -1095,19 +1099,19 @@ Future<int> upgradeAgent(
   return 0;
 }
 
+void throwUnsupportedPlatform() {
+  throwFatalError(
+      DiagnosticKind.unsupportedPlatform,
+      message: Platform.operatingSystem);
+}
+
 Future<int> downloadTools(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
     SessionState state) async {
 
-  void throwUnsupportedPlatform() {
-    throwFatalError(
-        DiagnosticKind.unsupportedPlatform,
-        message: Platform.operatingSystem);
-  }
-
   Future decompressFile(File zipFile, Directory destination) async {
-    var result;
+    ProcessResult result;
     if (Platform.isLinux) {
       result = await Process.run(
           "unzip", ["-o", zipFile.path, "-d", destination.path]);
@@ -1156,7 +1160,7 @@ Future<int> downloadTools(
   if (version.isEdgeVersion) {
     print("WARNING: For bleeding edge a fixed image is used.");
     // For edge versions download use a well known version for now.
-    var knownVersion = "0.3.0-edge.3c85dbafe006eb2ce16545aaf3df1352fa7a4500";
+    var knownVersion = "0.3.0-edge.8882725ac178ac8c9834c7ea8f88a8a8dd6cb4db";
     gcsBucket = "dartino-temporary";
     gcsPath = "channels/be/raw/$knownVersion/sdk";
   } else if (version.isDevVersion) {
@@ -1181,6 +1185,69 @@ Future<int> downloadTools(
   await downloadTool(gcsPath, openocd, "Open On-Chip Debugger (OpenOCD)");
 
   print("Third party tools downloaded");
+
+  return 0;
+}
+
+Future<int> buildImage(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SessionState state,
+    Uri snapshot) async {
+  if (snapshot == null) {
+    throwFatalError(DiagnosticKind.noFileTarget);
+  }
+  assert(snapshot.scheme == 'file');
+  // In the SDK, the tools directory is at the same level as the
+  // internal (and bin) directory.
+  Directory binDirectory =
+      new Directory.fromUri(executable.resolve(
+          '../platforms/stm32f746g-discovery/bin'));
+  // In the Git checkout the platform scripts is under platforms.
+  if (!(await binDirectory.exists())) {
+    binDirectory =
+        new Directory.fromUri(executable.resolve('../../platforms/stm/bin'));
+    assert(await binDirectory.exists());
+  }
+
+  Directory tmpDir;
+  try {
+    String baseName = basenameWithoutExtension(snapshot.path);
+
+    // Create a temp directory for building.
+    tmpDir = Directory.systemTemp.createTempSync("dartino_build");
+    String tmpSnapshot = join(tmpDir.path, "snapshot");
+    await new File.fromUri(snapshot).copy(tmpSnapshot);
+
+    ProcessResult result;
+    File linkScript = new File(join(binDirectory.path, 'link.sh'));
+    if (Platform.isLinux || Platform.isMacOS) {
+      state.log("Linking image: '${linkScript.path} ${baseName}'");
+      result = await Process.run(
+          linkScript.path, [baseName, tmpDir.path],
+          workingDirectory: tmpDir.path);
+    } else {
+      throwUnsupportedPlatform();
+    }
+    state.log("STDOUT:\n${result.stdout}");
+    state.log("STDERR:\n${result.stderr}");
+    if (result.exitCode != 0) {
+      print("STDOUT:\n${result.stdout}");
+      print("STDERR:\n${result.stderr}");
+      throwInternalError(
+          "Failed to build image, "
+          "error = ${result.exitCode}");
+    }
+    // Copy the .bin file from the tmp directory.
+    String tmpBinFile = join(tmpDir.path, "${baseName}.bin");
+    String binFile = "${withoutExtension(snapshot.path)}.bin";
+    await new File(tmpBinFile).copy(binFile);
+    print("Done building $binFile");
+  } finally {
+    if (tmpDir != null) {
+      await tmpDir.delete(recursive: true);
+    }
+  }
 
   return 0;
 }

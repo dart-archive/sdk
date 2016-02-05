@@ -43,6 +43,9 @@ import 'x_upgrade_verb.dart' show
 import 'x_download_tools_verb.dart' show
     downloadToolsAction;
 
+import 'x_build_verb.dart' show
+    buildAction;
+
 import 'quit_verb.dart' show
     quitAction;
 
@@ -128,6 +131,7 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "create": createAction,
   "debug": debugAction,
   "export": exportAction,
+  "x-build": buildAction,
   "x-download-tools": downloadToolsAction,
   "x-end": endAction,
   "x-servicec": servicecAction,
