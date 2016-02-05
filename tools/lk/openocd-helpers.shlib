@@ -2,7 +2,7 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-BOARD="stm32f7discovery.cfg"
+BOARD="stm32f7discovery"
 STLINK="stlink-v2-1"
 ROOT="$(dirname $(dirname $(dirname $(follow_links $0))))"
 OS="`uname`"
@@ -22,7 +22,7 @@ esac
 while [ $# -gt ${EXPECTED_ARGS} ]; do
   case $1 in
     --disco | -d)
-      BOARD="stm32f7discovery.cfg"
+      BOARD="stm32f7discovery"
       STLINK="stlink-v2-1"
       shift
       ;;
