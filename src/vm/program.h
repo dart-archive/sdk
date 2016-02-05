@@ -75,6 +75,7 @@ class Session;
 
 typedef DoubleList<Process> ProcessList;
 typedef DoubleList<Process, 2> ProcessQueueList;
+typedef DoubleList<Program> ProgramList;
 
 // This state information is managed by the scheduler.
 class ProgramState {
@@ -127,7 +128,7 @@ class ProgramState {
   Atomic<int> refcount_;
 };
 
-class Program {
+class Program : public ProgramList::Entry {
  public:
   enum ProgramSource {
     kLoadedFromSnapshot,
@@ -282,9 +283,11 @@ class Program {
 #undef DECLARE_ENUM
 
  public:
-#define ROOT_ACCESSOR(type, name, CamelName) \
-  type* name() const { return name##_; }     \
-  static const int k##CamelName##Offset = sizeof(void*) * k##CamelName##Index;
+  static const int kFirstRootOffset = 2 * kWordSize;
+#define ROOT_ACCESSOR(type, name, CamelName)                  \
+  type* name() const { return name##_; }                      \
+  static const int k##CamelName##Offset =                     \
+      kFirstRootOffset + sizeof(void*) * k##CamelName##Index;
   ROOTS_DO(ROOT_ACCESSOR)
 #undef ROOT_ACCESSOR
 

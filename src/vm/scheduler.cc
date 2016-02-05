@@ -124,9 +124,10 @@ Scheduler::~Scheduler() {
 }
 
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
-  program->set_scheduler(this);
-
   ScopedMonitorLock locker(pause_monitor_);
+
+  program->set_scheduler(this);
+  programs_.Append(program);
 
   // NOTE: Even though this method might be run on any thread, we don't need to
   // guard against the program being stopped, since we insert it the very first
@@ -143,6 +144,7 @@ void Scheduler::UnscheduleProgram(Program* program) {
   ScopedMonitorLock locker(pause_monitor_);
 
   ASSERT(program->scheduler() == this);
+  programs_.Remove(program);
   program->set_scheduler(NULL);
 }
 

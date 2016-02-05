@@ -10,6 +10,7 @@
 #include "src/vm/signal.h"
 #include "src/vm/thread.h"
 #include "src/vm/process_queue.h"
+#include "src/vm/program.h"
 
 namespace dartino {
 
@@ -18,7 +19,6 @@ class Heap;
 class Object;
 class Port;
 class Process;
-class Program;
 class Scheduler;
 
 const int kCompileTimeErrorExitCode = 254;
@@ -147,6 +147,7 @@ class Scheduler {
 
   Atomic<bool> interpreter_is_paused_;
   ProcessQueue ready_queue_;
+  ProgramList programs_;
 
   Monitor* pause_monitor_;
   Atomic<bool> pause_;
