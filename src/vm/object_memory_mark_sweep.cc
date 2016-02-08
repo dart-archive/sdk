@@ -95,7 +95,7 @@ Chunk* OldSpace::AllocateAndUseChunk(size_t size) {
 uword OldSpace::AllocateInNewChunk(int size) {
   ASSERT(top_ == 0);  // Space is flushed.
   // Allocate new chunk that is big enough to fit the object.
-  int tracking_size = tracking_allocations_ ? 0 : sizeof(PromotedTrack);
+  int tracking_size = tracking_allocations_ ? 0 : PromotedTrack::kHeaderSize;
   int default_chunk_size = DefaultChunkSize(Used());
   int chunk_size =
       (size + tracking_size + kPointerSize >= default_chunk_size)
@@ -116,7 +116,7 @@ uword OldSpace::AllocateFromFreeList(int size) {
   Flush();
 
   FreeListChunk* chunk = free_list_->GetChunk(
-      tracking_allocations_ ? size + sizeof(PromotedTrack) : size);
+      tracking_allocations_ ? size + PromotedTrack::kHeaderSize : size);
   if (chunk != NULL) {
     top_ = chunk->address();
     limit_ = top_ + chunk->size();
@@ -132,6 +132,7 @@ uword OldSpace::AllocateFromFreeList(int size) {
           PromotedTrack::Initialize(promoted_track_, top_, limit_);
       top_ += PromotedTrack::kHeaderSize;
     }
+    ASSERT(static_cast<unsigned>(size) <= limit_ - top_);
     return Allocate(size);
   } else {
     return AllocateInNewChunk(size);
