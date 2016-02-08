@@ -25,6 +25,7 @@ override_dh_auto_clean:
 	find . -name *.mk -execdir rm -f {} \;
 	find . -name *.Makefile -execdir rm -f {} \;
 
+# Run as one command (; \ after the commands) to get cd sdk to take effect.
 override_dh_auto_configure:
 	cd sdk; \
 	mkdir .git; \
@@ -38,6 +39,7 @@ override_dh_auto_configure:
 # for the host machine. It will then build the dartino-agent snapshot
 # on the build machine and place it in the build directory for the
 # host machine.
+# Run as one command (; \ after the commands) to get cd sdk to take effect.
 override_dh_auto_build:
 	cd sdk; \
 	ninja -C out/$(BUILD_TYPE); \
@@ -56,8 +58,10 @@ override_dh_shlibdeps:
 # dartino-agent service as part of the Debian package as well.
 override_dh_auto_install:
 	mkdir -p $(TMP_OUT)/bin
+	mkdir -p $(TMP_OUT)/bin/lib
 	cp -R sdk/out/$(XBUILD_TYPE)/dartino-vm $(TMP_OUT)/bin
 	cp -R sdk/out/$(XBUILD_TYPE)/dartino-agent.snapshot $(TMP_OUT)/bin
+	cp -R sdk/out/$(XBUILD_TYPE)/lib/libmbedtls.so $(TMP_OUT)/bin/lib
 	mkdir -p $(TMP_OUT)/avahi
 	cp sdk/platforms/raspberry-pi2/data/dartino-agent.service $(TMP_OUT)/avahi
 	dh_install
