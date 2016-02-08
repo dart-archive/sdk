@@ -27,8 +27,8 @@ import 'dart:convert' show
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:dartino_compiler/incremental/scope_information_visitor.dart' show
-    ScopeInformationVisitor;
+import 'package:dartino_compiler/incremental/scope_information_visitor.dart'
+    show ScopeInformationVisitor;
 
 import 'compiler_test_case.dart' show
     CompilerTestCase;
@@ -50,8 +50,8 @@ import 'package:compiler/src/source_file_provider.dart' show
 import 'package:compiler/src/io/source_file.dart' show
     StringSourceFile;
 
-import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart' show
-    IncrementalCompilationFailed,
+import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart'
+    show IncrementalCompilationFailed,
     IncrementalCompiler,
     IncrementalMode;
 

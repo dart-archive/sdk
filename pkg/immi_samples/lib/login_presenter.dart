@@ -30,7 +30,8 @@ class LoginPresenter {
   void login(String name, String password) {
     user = name;
     if (name == '' || password == '') {
-      state = new LoggedOutStateNode(login: login, message: _emptyNameOrPassword);
+      state = new LoggedOutStateNode(login: login,
+                                     message: _emptyNameOrPassword);
     } else {
       HttpsRequestNode request =
 	new HttpsRequestNode(url: url,

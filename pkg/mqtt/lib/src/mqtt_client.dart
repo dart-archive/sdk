@@ -156,7 +156,8 @@ class MQTTClient {
         // Get the payload
         ForeignMemory payload =
             new ForeignMemory.fromAddress(messagePointer.address, 100);
-        ForeignPointer payloadPointer = new ForeignPointer(payload.getInt64(16));
+        ForeignPointer payloadPointer =
+            new ForeignPointer(payload.getInt64(16));
         int payloadLength = payload.getInt32(8);
         msg.message = memoryToString(payloadPointer, payloadLength);
 

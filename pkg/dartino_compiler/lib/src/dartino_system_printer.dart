@@ -116,7 +116,8 @@ class DartinoSystemPrinter {
             new DecodedDartinoSelector.fromEncodedSelector(pair.fst, system);
         methodTable[selector] = pair.snd;
       }
-      List<DecodedDartinoSelector> selectors = methodTable.keys.toList()..sort();
+      List<DecodedDartinoSelector> selectors =
+          methodTable.keys.toList()..sort();
       for (DecodedDartinoSelector selector in selectors) {
         int methodId = methodTable[selector];
         unseen.remove(system.lookupFunctionById(methodId));
@@ -155,7 +156,8 @@ class DartinoSystemPrinter {
         elements.sort((a, b) => "$a".compareTo("$b"));
         for (Element element in elements) {
           if (element.isClass) {
-            writeDartinoClass(system.classesByElement[element], unseenFunctions);
+            writeDartinoClass(system.classesByElement[element],
+                              unseenFunctions);
           } else if (!element.isInstanceMember) {
             unseenFunctions.remove(system.functionsByElement[element]);
             // TODO(ahe): It would probably be better to call

@@ -2,6 +2,40 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+/// TLS support, based on mbedtls. This can be used in the same way as a normal
+/// Socket (and passed to the http package).
+/// Usage
+/// -----
+/// The following sample code shows how to access an https server.
+///
+/// ```dart
+/// import 'package:mbedtls/mbedtls.dart';
+/// import 'package:http/http.dart';
+///
+/// main() {
+///   var port = 443;
+///   var host = "httpbin.org";
+///   var socket = new TLSSocket.connect(host, port);
+///   print("Connected to $host:$port");
+///   var https = new HttpConnection(socket);
+///   var request = new HttpRequest("/ip");
+///   request.headers["Host"] = "httpbin.org";
+///   var response = https.send(request);
+///   var responseString = new String.fromCharCodes(response.body);
+///   // Reponse looks like this
+///   // {
+///   //   "origin": "2.109.66.196"
+///   // }
+///   var ip = responseString.split('"')[3];
+///   print("Hello $ip");
+///   socket.close();
+/// }
+/// ```
+/// Reporting issues
+/// ----------------
+/// Please file an issue [in the issue tracker](https://github.com/dartino/sdk/issues/new?title=Add%20title&labels=Area-Package&body=%3Cissue%20description%3E%0A%3Crepro%20steps%3E%0A%3Cexpected%20outcome%3E%0A%3Cactual%20outcome%3E).
+library mbedtls;
+
 import 'dart:dartino.ffi';
 import 'dart:dartino';
 import 'dart:typed_data';
@@ -348,7 +382,7 @@ class TLSSocket implements Socket {
    * be filled (connection closed, error from mbedtls, eof before full) we
    * return null;
    */
-  ByteBuffer _readInto(ByteBuffer buffer) {
+  ByteBuffer _readInto(var buffer) {
     int offset = 0;
     int bytes = buffer.lengthInBytes;
     int max = bytes;

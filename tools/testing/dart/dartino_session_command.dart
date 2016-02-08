@@ -2,7 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// Provides a [Command] interface for interacting with a Dartino driver session.
+/// Provides a [Command] interface for interacting with a Dartino driver
+/// session.
 ///
 /// Normally, this is used by test.dart, but is also has a [main] method that
 /// makes it possible to run a test outside test.dart.
@@ -582,7 +583,8 @@ class DartinoSessionHelper {
   Future<int> shutdownVm(int timeout) async {
     await exitCodeWithTimeout(vmProcess, timeout, () {
       stdout.writeln(
-          "\n**dartino-vm** Reached total timeout (sent SIGTERM to dartino-vm)");
+          "\n**dartino-vm** Reached total timeout (sent SIGTERM to "
+          "dartino-vm)");
       killedVmProcess = true;
       hasTimedOut = true;
     });

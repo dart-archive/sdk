@@ -169,7 +169,8 @@ class DartinoTestSuite extends TestSuite {
       for (String name in testNames) {
         Set<Expectation> expectedOutcomes = expectations.expectations(name);
         TestCase testCase = new TestCase(
-            'dartino_tests/$name', <Command>[], configuration, expectedOutcomes);
+            'dartino_tests/$name', <Command>[], configuration,
+            expectedOutcomes);
         var command = new DartinoTestCommand(name, completer);
         testCase.commands.add(command);
         if (!expectedOutcomes.contains(Expectation.SKIP)) {

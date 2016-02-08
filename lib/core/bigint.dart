@@ -992,7 +992,8 @@ class _Bigint extends _IntBase {
   // Note: Intrinsics on 64-bit platforms process a digit pair (i always odd):
   //   Estimate args[_QD.._QD_HI] = digits[i-3..i] ~/ args[_YT_LO.._YT]
   //   return 2
-  static int _estQuotientDigit(_Uint32Digits args, _Uint32Digits digits, int i) {
+  static int _estQuotientDigit(_Uint32Digits args,
+                               _Uint32Digits digits, int i) {
     // Verify that digit pairs are accessible for 64-bit processing.
     assert(digits.length >= 4);
     if (digits[i] == args[_YT]) {

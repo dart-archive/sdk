@@ -148,7 +148,7 @@ class MonitorImpl {
 #else
     // The implementation in STM32CubeF7 returns osOK if the
     // semaphore was acquired.
-    // See https://github.com/dart-lang/dartino/issues/377.
+    // See https://github.com/dartino/sdk/issues/377.
     CHECK_AND_FAIL(osSemaphoreWait(wait_entry.semaphore_, osWaitForever));
 #endif
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
@@ -168,7 +168,7 @@ class MonitorImpl {
 #else
     // The implementation in STM32CubeF7 returns osOK if the
     // semaphore was acquired and osErrorOS if it was not.
-    // See https://github.com/dart-lang/dartino/issues/377.
+    // See https://github.com/dartino/sdk/issues/377.
     int status = osSemaphoreWait(wait_entry.semaphore_, microseconds / 1000);
     success = (status == osOK);
 #endif

@@ -175,6 +175,11 @@ DARTINO_EXPORT void DartinoStartMain(DartinoProgram raw_program,
 
 void DartinoDeleteProgram(DartinoProgram raw_program) {
   dartino::Program* program = reinterpret_cast<dartino::Program*>(raw_program);
+  // TODO(kustermann): Instead of doing this, we should introduce states to
+  // [Program].
+  if (program->scheduler() != NULL) {
+    dartino::Scheduler::GlobalInstance()->UnscheduleProgram(program);
+  }
   delete program;
 }
 

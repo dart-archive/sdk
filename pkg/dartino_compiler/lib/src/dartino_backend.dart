@@ -210,9 +210,6 @@ class DartinoBackend extends Backend
   final Map<FieldElement, DartinoFunctionBuilder> lazyFieldInitializers =
       <FieldElement, DartinoFunctionBuilder>{};
 
-  // TODO(ahe): This should be moved to [DartinoSystem].
-  Map<DartinoClassBuilder, DartinoFunctionBuilder> tearoffFunctions;
-
   DartinoCompilerImplementation get compiler => super.compiler;
 
   LibraryElement dartinoSystemLibrary;
@@ -288,12 +285,6 @@ class DartinoBackend extends Backend
     // This is a workaround, where we basically add getters for all fields.
     classBuilder.updateImplicitAccessors(this);
 
-    Element callMember = element.lookupLocalMember(Identifiers.call);
-    if (callMember != null && callMember.isFunction) {
-      FunctionElement function = callMember;
-      classBuilder.createIsFunctionEntry(
-          this, function.functionSignature.parameterCount);
-    }
     return classBuilder;
   }
 
@@ -667,7 +658,8 @@ class DartinoBackend extends Backend
     return builder;
   }
 
-  DartinoFunctionBuilder createDartinoFunctionBuilder(FunctionElement function) {
+  DartinoFunctionBuilder createDartinoFunctionBuilder(
+      FunctionElement function) {
     assert(function.memberContext == function);
 
     DartinoClassBuilder holderClass;
@@ -953,13 +945,27 @@ class DartinoBackend extends Backend
 
     DartinoFunctionBuilder functionBuilder;
 
+    bool isImplicitFunction = false;
     if (function.memberContext != function) {
       functionBuilder = internalCreateDartinoFunctionBuilder(
           function,
           Identifiers.call,
           createClosureClass(function, closureEnvironment));
+      isImplicitFunction = true;
     } else {
       functionBuilder = createDartinoFunctionBuilder(function);
+      isImplicitFunction = function.isInstanceMember &&
+          function.isFunction && // Not accessors.
+          function.name == Identifiers.call;
+    }
+
+    if (isImplicitFunction) {
+      // If [function] is a closure, or an instance method named "call", its
+      // class implicitly implements Function.
+      DartinoClassBuilder classBuilder =
+          systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
+      classBuilder.createIsFunctionEntry(
+          this, function.functionSignature.parameterCount);
     }
 
     FunctionCodegen codegen = new FunctionCodegen(
@@ -1284,7 +1290,8 @@ class DartinoBackend extends Backend
       int classId,
       bool isClosureClass) {
     int dartinoSelector = context.toDartinoSelector(selector);
-    DartinoClassBuilder classBuilder = systemBuilder.lookupClassBuilder(classId);
+    DartinoClassBuilder classBuilder =
+        systemBuilder.lookupClassBuilder(classId);
     if (classBuilder == null) {
       if (isClosureClass) {
         classBuilder =
@@ -1379,6 +1386,7 @@ class DartinoBackend extends Backend
     }
 
     List<VmCommand> commands = <VmCommand>[
+        const PrepareForChanges(),
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
         const NewMap(MapId.constants),
@@ -1398,7 +1406,8 @@ class DartinoBackend extends Backend
     return true;
   }
 
-  bool enableDeferredLoadingIfSupported(Spannable spannable, Registry registry) {
+  bool enableDeferredLoadingIfSupported(Spannable spannable,
+                                        Registry registry) {
     return false;
   }
 

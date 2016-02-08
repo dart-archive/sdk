@@ -19,12 +19,13 @@ import re
 from sets import Set
 from os import makedirs
 from os.path import dirname, join, exists, basename, abspath
-from shutil import copyfile, copymode, copytree, rmtree
+from shutil import copyfile, copymode, copytree, rmtree, ignore_patterns
 
 TOOLS_DIR = abspath(dirname(__file__))
 
 SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
-                'raspberry_pi', 'stm32f746g_disco', 'socket', 'mqtt']
+                'raspberry_pi', 'stm32f746g_disco', 'socket', 'mqtt',
+                'mbedtls']
 THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery']
@@ -61,6 +62,23 @@ def EnsureDeleted(directory):
   if exists(directory):
     raise Exception("Could not delete %s" % directory)
 
+def CopySharedLibraries(bin_dir, build_dir):
+  shared_libraries = ['mbedtls']
+  # Libraries are placed differently on mac and linux:
+  # Linux has lib/libNAME.so
+  # Mac has libNAME.dylib
+  os_name = utils.GuessOS()
+  lib_dst = join(bin_dir, 'lib') if os_name == 'linux' else bin_dir
+  lib_src = join(build_dir, 'lib') if os_name == 'linux' else build_dir
+  suffix = 'so' if os_name == 'linux' else 'dylib'
+  if os_name == 'linux':
+    makedirs(lib_dst)
+  for lib in shared_libraries:
+    lib_name = 'lib%s.%s' % (lib, suffix)
+    src = join(lib_src, lib_name)
+    dst = join(lib_dst, lib_name)
+    CopyFile(src, dst)
+
 def CopyBinaries(bundle_dir, build_dir):
   bin_dir = join(bundle_dir, 'bin')
   internal = join(bundle_dir, 'internal')
@@ -73,6 +91,7 @@ def CopyBinaries(bundle_dir, build_dir):
   CopyFile(join(build_dir, 'dart'), join(internal, 'dart'))
   # natives.json is read relative to the dart binary
   CopyFile(join(build_dir, 'natives.json'), join(internal, 'natives.json'))
+  CopySharedLibraries(bin_dir, build_dir)
 
 # Copy the platform decriptor, rewriting paths to point to the
 # sdk location at `sdk_dir` instead of `repo_dir`.
@@ -153,7 +172,9 @@ def CopyPackages(bundle_dir):
       copytree(join('pkg', package), join(target_dir, package))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
     for package in THIRD_PARTY_PACKAGES:
-      copytree(join('third_party', package), join(target_dir, package))
+      copytree(join('third_party', package),
+               join(target_dir, package),
+               ignore = ignore_patterns('.git'))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
 
 def CopyPlatforms(bundle_dir):
@@ -221,7 +242,7 @@ def CopySamples(bundle_dir):
 
 def EnsureDartDoc():
   subprocess.check_call(
-      'download_from_google_storage -b dart-dependencies-fletch '
+      'download_from_google_storage -b dartino-dependencies '
       '-u -d third_party/dartdoc_deps/',
       shell=True)
 

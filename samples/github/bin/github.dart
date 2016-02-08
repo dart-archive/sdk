@@ -13,8 +13,8 @@ import 'package:immi_samples/menu.dart';
 
 main() {
   var server = new Server('127.0.0.1', 8321);
-  var user = server.getUser('dart-lang');
-  var repo = user.getRepository('dartino');
+  var user = server.getUser('dartino');
+  var repo = user.getRepository('sdk');
 
   var menu = new Menu('Menu');
   var commits = new CommitListPresenter(repo);

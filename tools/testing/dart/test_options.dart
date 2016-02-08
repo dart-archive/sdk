@@ -691,7 +691,8 @@ Note: currently only implemented for dart2js.''',
         break;
       case 'none':
         validRuntimes = const [
-            'dartino_compiler', 'dartino_warnings', 'dartino_tests', 'dartino_cc_tests'];
+            'dartino_compiler', 'dartino_warnings', 'dartino_tests',
+            'dartino_cc_tests'];
         break;
     }
     if (!validRuntimes.contains(config['runtime'])) {

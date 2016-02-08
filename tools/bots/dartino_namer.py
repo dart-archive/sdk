@@ -9,9 +9,9 @@ class DartinoGCSNamer(bot_utils.GCSNamer):
                release_type=bot_utils.ReleaseType.RAW, temporary=False):
     super(DartinoGCSNamer, self).__init__(channel, release_type, False)
     if temporary:
-      self.bucket = 'gs://fletch-temporary'
+      self.bucket = 'gs://dartino-temporary'
     else:
-      self.bucket = 'gs://fletch-archive'
+      self.bucket = 'gs://dartino-archive'
 
   def dartino_sdk_directory(self, revision):
     return self._variant_directory('sdk', revision)

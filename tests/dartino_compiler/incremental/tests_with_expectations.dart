@@ -590,6 +590,35 @@ main() {
 ''',
 
   r'''
+remove_instance_method_stored_in_tearoff
+==> main.dart.patch <==
+// Test that deleting an instance method works, even if stored in a tear-off
+
+class C {
+<<<< ["instance is null","v1"]
+  m() {
+    print('v1');
+  }
+==== {"messages":["threw"]}
+>>>>
+}
+var closure;
+main() {
+  if (closure == null) {
+    print('instance is null');
+    closure = new C().m;
+  }
+  try {
+    closure();
+  } catch (e) {
+    print('threw');
+  }
+}
+
+
+''',
+
+  r'''
 remove_instance_method_super_access
 ==> main.dart.patch <==
 // Test that deleting an instance method works, even when accessed through

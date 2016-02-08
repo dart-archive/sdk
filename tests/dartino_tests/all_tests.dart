@@ -13,14 +13,16 @@ import 'self_tests.dart' as self;
 
 import 'verb_tests.dart' as verbs;
 
-import '../dartino_compiler/incremental/production_mode.dart' as incremental_production;
+import '../dartino_compiler/incremental/production_mode.dart' as
+    incremental_production;
 
 import '../dartino_compiler/incremental/experimental_mode.dart' as
     incremental_experimental;
 
 import '../dartino_compiler/driver/test_control_stream.dart' as controlStream;
 
-import '../dartino_compiler/serialize_settings_tests.dart' as serialize_settings_tests;
+import '../dartino_compiler/serialize_settings_tests.dart' as
+    serialize_settings_tests;
 
 import 'zone_helper_tests.dart' as zone_helper;
 
@@ -38,7 +40,8 @@ import '../servicec/servicec_tests.dart' as servicec_tests;
 
 import '../dartino_compiler/run.dart' as run;
 
-import '../dartino_compiler/driver/test_vm_connection.dart' as test_vm_connection;
+import '../dartino_compiler/driver/test_vm_connection.dart' as
+    test_vm_connection;
 
 import '../debugger/debugger_tests.dart' as debugger_tests;
 

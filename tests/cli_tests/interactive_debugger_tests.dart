@@ -72,7 +72,6 @@ abstract class InteractiveDebuggerTest extends CliTest {
 
   Future<Null> interrupt() async {
     print("^\\");
-    Expect.isTrue(process.kill(ProcessSignal.SIGQUIT), "Sent quit to process");
     // TODO(zerny): Make interrupt a first-class and ordered VM command.
     await new Future.delayed(const Duration(seconds: 1), () {
       Expect.isTrue(process.kill(ProcessSignal.SIGQUIT),

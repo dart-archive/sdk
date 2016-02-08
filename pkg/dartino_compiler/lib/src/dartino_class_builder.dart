@@ -88,7 +88,8 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
   final int extraFields;
 
   final Map<int, int> _implicitAccessorTable = <int, int>{};
-  final Map<int, DartinoFunctionBase> _methodTable = <int, DartinoFunctionBase>{};
+  final Map<int, DartinoFunctionBase> _methodTable =
+      <int, DartinoFunctionBase>{};
 
   DartinoNewClassBuilder(
       this.classId,
@@ -225,8 +226,10 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
   final DartinoClassBuilder superclass;
 
   final Map<int, int> _implicitAccessorTable = <int, int>{};
-  final Map<int, DartinoFunctionBase> _newMethods = <int, DartinoFunctionBase>{};
-  final Set<DartinoFunctionBase> _removedMethods = new Set<DartinoFunctionBase>();
+  final Map<int, DartinoFunctionBase> _newMethods =
+      <int, DartinoFunctionBase>{};
+  final Set<DartinoFunctionBase> _removedMethods =
+      new Set<DartinoFunctionBase>();
   final Set<FieldElement> _removedFields = new Set<FieldElement>();
   final List<int> _removedAccessors = <int>[];
   bool _fieldsChanged = false;

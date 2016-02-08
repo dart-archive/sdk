@@ -29,7 +29,7 @@ class ProcessQueue;
 class ProcessVisitor;
 class Session;
 
-class Process {
+class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
  public:
   enum State {
     kSleeping,
@@ -143,12 +143,6 @@ class Process {
   DebugInfo* debug_info() { return debug_info_; }
   bool is_debugging() const { return debug_info_ != NULL; }
 
-  Process* next() const { return next_; }
-  void set_next(Process* process) { next_ = process; }
-
-  Process* process_list_next() { return process_list_next_; }
-  Process* process_list_prev() { return process_list_prev_; }
-
   void TakeLookupCache();
   void ReleaseLookupCache() { primary_lookup_cache_ = NULL; }
 
@@ -185,8 +179,6 @@ class Process {
   void RegisterProcessAllocation() {}
 #endif
 
-  ProcessQueue* process_queue() const { return queue_; }
-
   void StoreErrno();
   void RestoreErrno();
 
@@ -209,7 +201,7 @@ class Process {
 
   // If you add an offset here, remember to add the corresponding static_assert
   // in process.cc.
-  static const uword kNativeStackOffset = 0;
+  static const uword kNativeStackOffset = 4 * kWordSize;
   static const uword kCoroutineOffset = kNativeStackOffset + kWordSize;
   static const uword kStackLimitOffset = kCoroutineOffset + kWordSize;
   static const uword kProgramOffset = kStackLimitOffset + kWordSize;
@@ -235,9 +227,6 @@ class Process {
 
   void UpdateStackLimit();
 
-  void set_process_list_next(Process* process) { process_list_next_ = process; }
-  void set_process_list_prev(Process* process) { process_list_prev_ = process; }
-
   // Put these first so they can be accessed from the interpreter without
   // issues around object layout.
   void* native_stack_;
@@ -259,19 +248,6 @@ class Process {
 
   Atomic<State> state_;
 
-  // Next pointer used by the Scheduler.
-  Process* next_;
-
-  // Fields used by ProcessQueue, when holding the Process.
-  friend class ProcessQueue;
-  Atomic<ProcessQueue*> queue_;
-  // While the ProcessQueue is lock-free, we have an 'atomic lock' on the
-  // head_ element. That will ensure we have the right memory order on
-  // queue_next_/queue_previous_, as they are always read/modified while
-  // head_ is 'locked'.
-  Process* queue_next_;
-  Process* queue_previous_;
-
   Atomic<Signal*> signal_;
   MessageMailbox mailbox_;
 
@@ -279,11 +255,6 @@ class Process {
 
   // Linked list of ports owned by this process.
   Port* ports_;
-
-  // Used for chaining all processes of a program. It is protected by a lock
-  // in the program.
-  Process* process_list_next_;
-  Process* process_list_prev_;
 
   // The number of direct child processes plus 1.
   Atomic<int> process_triangle_count_;

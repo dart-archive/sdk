@@ -9,6 +9,8 @@
 
 #include "src/vm/signal.h"
 #include "src/vm/thread.h"
+#include "src/vm/process_queue.h"
+#include "src/vm/program.h"
 
 namespace dartino {
 
@@ -16,9 +18,7 @@ class GCThread;
 class Heap;
 class Object;
 class Port;
-class ProcessQueue;
 class Process;
-class Program;
 class Scheduler;
 
 const int kCompileTimeErrorExitCode = 254;
@@ -146,7 +146,8 @@ class Scheduler {
   WorkerThread* threads_[kThreadCount];
 
   Atomic<bool> interpreter_is_paused_;
-  ProcessQueue* ready_queue_;
+  ProcessQueue ready_queue_;
+  ProgramList programs_;
 
   Monitor* pause_monitor_;
   Atomic<bool> pause_;
@@ -173,7 +174,7 @@ class Scheduler {
   void NotifyInterpreterThread();
 
   void EnqueueProcess(Process* process);
-  void DequeueProcess(Process** process);
+  bool DequeueProcess(Process** process);
 
   // The [process] will be enqueued on any thread. In case the program is paused
   // the process will be enqueued once the program is resumed.

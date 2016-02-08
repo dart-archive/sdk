@@ -655,7 +655,8 @@ class _TearOffClosure {
 
   @dartino.native external static int _getCurrentMs();
 
-  @dartino.native external static String _timeZone(int clampedSecondsSinceEpoch);
+  @dartino.native external static String _timeZone(
+      int clampedSecondsSinceEpoch);
 
   @dartino.native external static int _timeZoneOffset(
       int clampedSecondsSinceEpoch);

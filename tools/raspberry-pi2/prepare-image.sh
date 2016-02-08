@@ -67,7 +67,7 @@ MOUNT_DIR=out/raspbian
 
 # Get and unzip the image.
 echo "Downloading image ZIP file"
-download_from_google_storage.py -c -b dart-dependencies-fletch \
+download_from_google_storage.py -c -b dartino-dependencies \
     -o out/${IMAGE_ZIP_FILE} -s tools/raspberry-pi2/${IMAGE_SHA_FILE}
 echo "Unzipping image file"
 unzip -q -o -d out out/$IMAGE_ZIP_FILE

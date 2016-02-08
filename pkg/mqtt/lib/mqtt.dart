@@ -69,8 +69,8 @@
 /// $ make
 /// ```
 ///
-/// 1. Copy the library to the lib directory Dartino SDK (substitute `<Dartino SDK
-/// location>` with the location where you installed the Dartino SDK, e.g.
+/// 1. Copy the library to the lib directory Dartino SDK (substitute `<Dartino
+/// SDK location>` with the location where you installed the Dartino SDK, e.g.
 /// ~/dartino-sdk/)
 ///
 /// ```

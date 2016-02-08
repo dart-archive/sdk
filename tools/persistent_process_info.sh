@@ -11,7 +11,7 @@
 # This is a tool that's intended for people building the Dartino VM. If you find
 # yourself using this on a regular basis, please get in touch with the authors
 # and let us know why. If you're unsure about how to reach the authors, you're
-# welcome to file an issue at https://github.com/dart-lang/dartino/issues/new.
+# welcome to file an issue at https://github.com/dartino/sdk/issues/new.
 
 # Using ~ instead of $HOME as this should match what the dartino command does
 # (it will fall back to getpwuid_r if HOME isn't defined).

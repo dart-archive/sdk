@@ -317,7 +317,8 @@ testWhere() {
 }
 
 testCreationFromList() {
-  // NOTE: Adding integers > 64bit to the list makes dartino throw ArgumentError.
+  // NOTE: Adding integers > 64bit to the list makes dartino throw
+  // ArgumentError.
   var intList =
     [-100000000000000000, -255, -127, 0, 128, 256, 1000000000000000000];
   var intLists = [];

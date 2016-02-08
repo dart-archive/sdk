@@ -197,19 +197,15 @@ void GCThread::MainLoop() {
   }
 
   // Tell scheduler that we're done with all programs.
-  for (auto it = shared_gc_count_.Begin();
-       it != shared_gc_count_.End();
-       ++it) {
-    Program* program = it->first;
-    program->scheduler()->FinishedGC(program, it->second);
+  for (auto& pair : shared_gc_count_) {
+    Program* program = pair.first;
+    program->scheduler()->FinishedGC(program, pair.second);
   }
   shared_gc_count_.Clear();
 
-  for (auto it = program_gc_count_.Begin();
-       it != program_gc_count_.End();
-       ++it) {
-    Program* program = it->first;
-    program->scheduler()->FinishedGC(program, it->second);
+  for (auto& pair : program_gc_count_) {
+    Program* program = pair.first;
+    program->scheduler()->FinishedGC(program, pair.second);
   }
   program_gc_count_.Clear();
 

@@ -132,6 +132,8 @@
 
         '<(source_path)/syscalls.c',
 
+        '<(source_path)/exceptions.c',
+
         # Generated files.
         '<(generated_path)/Inc/mxconstants.h',
         '<(generated_path)/Inc/stm32f7xx_hal_conf.h',

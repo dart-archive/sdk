@@ -7,6 +7,7 @@
 
 #include "src/shared/globals.h"
 #include "src/shared/random.h"
+#include "src/vm/double_list.h"
 #include "src/vm/heap.h"
 #include "src/vm/lookup_cache.h"
 #include "src/vm/links.h"
@@ -71,12 +72,16 @@ class Session;
   V(Array, static_fields, StaticFields)                         \
   V(Array, dispatch_table, DispatchTable)
 
+
+typedef DoubleList<Process> ProcessList;
+typedef DoubleList<Process, 2> ProcessQueueList;
+typedef DoubleList<Program> ProgramList;
+
 // This state information is managed by the scheduler.
 class ProgramState {
  public:
   ProgramState()
       : processes_(0),
-        paused_processes_head_(NULL),
         is_paused_(false),
         refcount_(0) {}
 
@@ -86,10 +91,7 @@ class ProgramState {
   bool is_paused() const { return is_paused_; }
   void set_is_paused(bool value) { is_paused_ = value; }
 
-  Process* paused_processes_head() const { return paused_processes_head_; }
-  void set_paused_processes_head(Process* value) {
-    paused_processes_head_ = value;
-  }
+  ProcessQueueList* paused_processes() { return &paused_processes_; }
 
   void Retain() {
     refcount_++;
@@ -116,7 +118,7 @@ class ProgramState {
   // is decrementing it to zero must also decrement `refcount_`.
   Atomic<int> processes_;
 
-  Process* paused_processes_head_;
+  ProcessQueueList paused_processes_;
   bool is_paused_;
 
   // All components of the scheduler (including the gc thread) use this
@@ -126,7 +128,7 @@ class ProgramState {
   Atomic<int> refcount_;
 };
 
-class Program {
+class Program : public ProgramList::Entry {
  public:
   enum ProgramSource {
     kLoadedFromSnapshot,
@@ -161,7 +163,7 @@ class Program {
   void set_scheduler(Scheduler* scheduler) {
     ASSERT((scheduler_ == NULL && scheduler != NULL) ||
            (scheduler_ != NULL && scheduler == NULL));
-    ASSERT(program_state_.paused_processes_head() == NULL);
+    ASSERT(program_state_.paused_processes()->IsEmpty());
     ASSERT(!program_state_.is_paused());
     scheduler_ = scheduler;
   }
@@ -281,9 +283,11 @@ class Program {
 #undef DECLARE_ENUM
 
  public:
-#define ROOT_ACCESSOR(type, name, CamelName) \
-  type* name() const { return name##_; }     \
-  static const int k##CamelName##Offset = sizeof(void*) * k##CamelName##Index;
+  static const int kFirstRootOffset = 2 * kWordSize;
+#define ROOT_ACCESSOR(type, name, CamelName)                  \
+  type* name() const { return name##_; }                      \
+  static const int k##CamelName##Offset =                     \
+      kFirstRootOffset + sizeof(void*) * k##CamelName##Index;
   ROOTS_DO(ROOT_ACCESSOR)
 #undef ROOT_ACCESSOR
 
@@ -297,7 +301,7 @@ class Program {
   // to get the offset of functions/classes in the program heap.
   uword OffsetOf(HeapObject* object);
 
-  Process* process_list_head() { return process_list_head_; }
+  ProcessList* process_list() { return &process_list_; }
 
   Stack* stack_chain() { return stack_chain_; }
   void ClearStackChain() { stack_chain_ = NULL; }
@@ -342,7 +346,7 @@ class Program {
 
   // Chained doubly linked list of all processes protected by a lock.
   Mutex* process_list_mutex_;
-  Process* process_list_head_;
+  ProcessList process_list_;
 
   RandomXorShift random_;
 

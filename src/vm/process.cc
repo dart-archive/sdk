@@ -20,7 +20,6 @@
 #include "src/vm/natives.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/port.h"
-#include "src/vm/process_queue.h"
 #include "src/vm/remembered_set.h"
 #include "src/vm/session.h"
 
@@ -40,15 +39,9 @@ Process::Process(Program* program, Process* parent)
       primary_lookup_cache_(NULL),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
-      next_(NULL),
-      queue_(NULL),
-      queue_next_(NULL),
-      queue_previous_(NULL),
       signal_(NULL),
       process_handle_(NULL),
       ports_(NULL),
-      process_list_next_(NULL),
-      process_list_prev_(NULL),
       process_triangle_count_(1),
       parent_(parent),
       errno_cache_(0),
@@ -102,8 +95,6 @@ Process::~Process() {
   if (signal != NULL) Signal::DecrementRef(signal);
 
   delete debug_info_;
-
-  ASSERT(next_ == NULL);
 }
 
 void Process::Cleanup(Signal::Kind kind) {

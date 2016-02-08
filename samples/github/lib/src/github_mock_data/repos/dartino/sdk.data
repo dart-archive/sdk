@@ -1,0 +1,135 @@
+HTTP/1.1 200 OK
+Server: GitHubMock.com
+Date: Thu, 04 Feb 2016 10:53:15 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 5851
+Status: 200 OK
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 25
+X-RateLimit-Reset: 1454585585
+Cache-Control: public, max-age=60, s-maxage=60
+Last-Modified: Wed, 03 Feb 2016 17:50:30 GMT
+ETag: "758e7b79f1598361a643be30fd8e648b"
+Vary: Accept
+X-GitHub-Media-Type: github.v3
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: ETag, Link, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval
+Access-Control-Allow-Origin: *
+Content-Security-Policy: default-src 'none'
+Strict-Transport-Security: max-age=31536000; includeSubdomains; preload
+X-Content-Type-Options: nosniff
+X-Frame-Options: deny
+X-XSS-Protection: 1; mode=block
+Vary: Accept-Encoding
+X-Served-By: 3e3b9690823fb031da84658eb58aa83b
+X-GitHub-Request-Id: 026D42C3:C8CD:9D36EC:56B32D9B
+
+{
+  "id": 29306978,
+  "name": "sdk",
+  "full_name": "dartino/sdk",
+  "owner": {
+    "login": "dartino",
+    "id": 16780800,
+    "avatar_url": "https://avatars.githubusercontent.com/u/16780800?v=3",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/dartino",
+    "html_url": "https://github.com/dartino",
+    "followers_url": "https://api.github.com/users/dartino/followers",
+    "following_url": "https://api.github.com/users/dartino/following{/other_user}",
+    "gists_url": "https://api.github.com/users/dartino/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/dartino/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/dartino/subscriptions",
+    "organizations_url": "https://api.github.com/users/dartino/orgs",
+    "repos_url": "https://api.github.com/users/dartino/repos",
+    "events_url": "https://api.github.com/users/dartino/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/dartino/received_events",
+    "type": "Organization",
+    "site_admin": false
+  },
+  "private": false,
+  "html_url": "https://github.com/dartino/sdk",
+  "description": "An experimental project to enable highly productive development on devices, powered by the Dart language and a fast, lean runtime.",
+  "fork": false,
+  "url": "https://api.github.com/repos/dartino/sdk",
+  "forks_url": "https://api.github.com/repos/dartino/sdk/forks",
+  "keys_url": "https://api.github.com/repos/dartino/sdk/keys{/key_id}",
+  "collaborators_url": "https://api.github.com/repos/dartino/sdk/collaborators{/collaborator}",
+  "teams_url": "https://api.github.com/repos/dartino/sdk/teams",
+  "hooks_url": "https://api.github.com/repos/dartino/sdk/hooks",
+  "issue_events_url": "https://api.github.com/repos/dartino/sdk/issues/events{/number}",
+  "events_url": "https://api.github.com/repos/dartino/sdk/events",
+  "assignees_url": "https://api.github.com/repos/dartino/sdk/assignees{/user}",
+  "branches_url": "https://api.github.com/repos/dartino/sdk/branches{/branch}",
+  "tags_url": "https://api.github.com/repos/dartino/sdk/tags",
+  "blobs_url": "https://api.github.com/repos/dartino/sdk/git/blobs{/sha}",
+  "git_tags_url": "https://api.github.com/repos/dartino/sdk/git/tags{/sha}",
+  "git_refs_url": "https://api.github.com/repos/dartino/sdk/git/refs{/sha}",
+  "trees_url": "https://api.github.com/repos/dartino/sdk/git/trees{/sha}",
+  "statuses_url": "https://api.github.com/repos/dartino/sdk/statuses/{sha}",
+  "languages_url": "https://api.github.com/repos/dartino/sdk/languages",
+  "stargazers_url": "https://api.github.com/repos/dartino/sdk/stargazers",
+  "contributors_url": "https://api.github.com/repos/dartino/sdk/contributors",
+  "subscribers_url": "https://api.github.com/repos/dartino/sdk/subscribers",
+  "subscription_url": "https://api.github.com/repos/dartino/sdk/subscription",
+  "commits_url": "https://api.github.com/repos/dartino/sdk/commits{/sha}",
+  "git_commits_url": "https://api.github.com/repos/dartino/sdk/git/commits{/sha}",
+  "comments_url": "https://api.github.com/repos/dartino/sdk/comments{/number}",
+  "issue_comment_url": "https://api.github.com/repos/dartino/sdk/issues/comments{/number}",
+  "contents_url": "https://api.github.com/repos/dartino/sdk/contents/{+path}",
+  "compare_url": "https://api.github.com/repos/dartino/sdk/compare/{base}...{head}",
+  "merges_url": "https://api.github.com/repos/dartino/sdk/merges",
+  "archive_url": "https://api.github.com/repos/dartino/sdk/{archive_format}{/ref}",
+  "downloads_url": "https://api.github.com/repos/dartino/sdk/downloads",
+  "issues_url": "https://api.github.com/repos/dartino/sdk/issues{/number}",
+  "pulls_url": "https://api.github.com/repos/dartino/sdk/pulls{/number}",
+  "milestones_url": "https://api.github.com/repos/dartino/sdk/milestones{/number}",
+  "notifications_url": "https://api.github.com/repos/dartino/sdk/notifications{?since,all,participating}",
+  "labels_url": "https://api.github.com/repos/dartino/sdk/labels{/name}",
+  "releases_url": "https://api.github.com/repos/dartino/sdk/releases{/id}",
+  "deployments_url": "https://api.github.com/repos/dartino/sdk/deployments",
+  "created_at": "2015-01-15T16:42:05Z",
+  "updated_at": "2016-02-03T17:50:30Z",
+  "pushed_at": "2016-02-04T10:40:55Z",
+  "git_url": "git://github.com/dartino/sdk.git",
+  "ssh_url": "git@github.com:dartino/sdk.git",
+  "clone_url": "https://github.com/dartino/sdk.git",
+  "svn_url": "https://github.com/dartino/sdk",
+  "homepage": "",
+  "size": 16644,
+  "stargazers_count": 234,
+  "watchers_count": 234,
+  "language": "Dart",
+  "has_issues": true,
+  "has_downloads": true,
+  "has_wiki": true,
+  "has_pages": true,
+  "forks_count": 19,
+  "mirror_url": null,
+  "open_issues_count": 127,
+  "forks": 19,
+  "open_issues": 127,
+  "watchers": 234,
+  "default_branch": "master",
+  "organization": {
+    "login": "dartino",
+    "id": 16780800,
+    "avatar_url": "https://avatars.githubusercontent.com/u/16780800?v=3",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/dartino",
+    "html_url": "https://github.com/dartino",
+    "followers_url": "https://api.github.com/users/dartino/followers",
+    "following_url": "https://api.github.com/users/dartino/following{/other_user}",
+    "gists_url": "https://api.github.com/users/dartino/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/dartino/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/dartino/subscriptions",
+    "organizations_url": "https://api.github.com/users/dartino/orgs",
+    "repos_url": "https://api.github.com/users/dartino/repos",
+    "events_url": "https://api.github.com/users/dartino/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/dartino/received_events",
+    "type": "Organization",
+    "site_admin": false
+  },
+  "network_count": 19,
+  "subscribers_count": 62
+}

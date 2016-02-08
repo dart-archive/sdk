@@ -188,16 +188,20 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   INVOKES_DO(V, "", "");
   INVOKE(V, "Static", kVarDiff, "static ", "", "");
   INVOKE(V, "Factory", kVarDiff, "factory ", "", "");
-  V("Allocate",             false,    "I",  5, kVarDiff, "allocate %d");
-  V("AllocateImmutable",    false,    "I",  5, kVarDiff, "allocateim %d");
+  V("Allocate",               false,  "I",  5, kVarDiff, "allocate %d");
+  V("AllocateImmutable",      false,  "I",  5, kVarDiff, "allocateim %d");
 
-  V("InvokeNoSuchMethod",   true, "I", 5, kVarDiff, "invoke no such method %d");
-  V("InvokeTestNoSuchMethod", true, "I", 5, 0, "invoke test no such method %d");
+  V("InvokeNoSuchMethod",     true,   "I",  5, kVarDiff,
+    "invoke no such method %d");
+  V("InvokeTestNoSuchMethod", true,   "I",  5, 0,
+    "invoke test no such method %d");
 
-  V("InvokeNative",           true,    "BB", 3,        1, "invoke native %d %d");
-  V("InvokeDetachableNative", true,    "BB", 3,        1,
+  V("InvokeNative",           true,   "BB", 3, 1,
+    "invoke native %d %d");
+  V("InvokeDetachableNative", true,   "BB", 3, 1,
     "invoke detachable native %d %d");
-  V("InvokeNativeYield",      true,    "BB", 3,   1, "invoke native yield %d %d");
+  V("InvokeNativeYield",      true,   "BB", 3, 1,
+    "invoke native yield %d %d");
 
   V("InvokeSelector",        true,    "I",  5, kVarDiff, "invoke selector");
 
@@ -218,26 +222,32 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("BranchBackIfTrueWide",  true,    "I",  5,       -1, "branch if true -%d");
   V("BranchBackIfFalseWide", true,    "I",  5,       -1, "branch if false -%d");
 
-  V("PopAndBranchWide",      true,    "BI", 6,        0, "pop %d and branch +%d");
-  V("PopAndBranchBackWide",  true,    "BI", 6,        0, "pop %d and branch -%d");
+  V("PopAndBranchWide",      true,    "BI", 6,        0,
+    "pop %d and branch +%d");
+  V("PopAndBranchBackWide",  true,    "BI", 6,        0,
+    "pop %d and branch -%d");
 
-  V("AllocateBoxed",        false,    "",   1,        0, "allocate boxed");
+  V("AllocateBoxed",         false,   "",   1,        0, "allocate boxed");
 
-  V("Negate",               false,    "",   1,        0, "negate");
+  V("Negate",                false,   "",   1,        0, "negate");
 
-  V("StackOverflowCheck",    true,   "I",   5,      0, "stack overflow check %d");
+  V("StackOverflowCheck",    true,    "I",  5,        0,
+    "stack overflow check %d");
 
   V("Throw",                 true,    "",   1,        0, "throw");
-  V("SubroutineCall",        true,  "II", 9, kVarDiff, "subroutine call +%d -%d");
+  V("SubroutineCall",        true,    "II", 9, kVarDiff,
+    "subroutine call +%d -%d");
   V("SubroutineReturn",      true,    "",   1,       -1, "subroutine return");
 
   V("ProcessYield",          true,    "",   1,        0, "process yield");
   V("CoroutineChange",       true,    "",   1,       -1, "coroutine change");
 
   V("Identical",             true,    "",   1,       -1, "identical");
-  V("IdenticalNonNumeric",   true,    "",   1,       -1, "identical non numeric");
+  V("IdenticalNonNumeric",   true,    "",   1,       -1,
+    "identical non numeric");
 
-  V("EnterNoSuchMethod",     true,    "B",  2, kVarDiff, "enter noSuchMethod +%d");
+  V("EnterNoSuchMethod",     true,    "B",  2, kVarDiff,
+    "enter noSuchMethod +%d");
   V("ExitNoSuchMethod",      true,    "",   1,       -1, "exit noSuchMethod");
 
   INVOKES_DO(V, "Unfold", "unfold ");

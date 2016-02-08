@@ -142,11 +142,19 @@ class UnorderedHashTable {
     return answer;
   }
 
+  inline ConstIterator begin() const { return Begin(); }
+
+  inline Iterator begin() { return Begin(); }
+
   inline ConstIterator End() const {
     return ConstIterator(map_, map_.backing_end());
   }
 
   inline Iterator End() { return Iterator(map_, map_.backing_end()); }
+
+  inline ConstIterator end() const { return End(); }
+
+  inline Iterator end() { return End(); }
 
   inline void Clear() { map_.Clear(); }
 

@@ -27,9 +27,7 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_dartino_patches".
   # 2. update package revisions below.
-  # 3. Upload new binaries and update the `third_party/bin` sha-hash-files as
-  #    described in `third_party/bin/README.md`.
-  "dart_rev": "@0cc4be4b0462635dc198d96974e152abbd86ff6f",
+  "dart_rev": "@6eed25f3142039cdc92097c4db27c6cb312581d8",
 
   # Please copy these package revisions from ../dart/DEPS when updating
   # dart_rev:
@@ -152,7 +150,7 @@ hooks = [
       '--no_auth',
       '--no_resume',
       '--bucket',
-      'dart-dependencies-fletch',
+      'dartino-dependencies',
       '-d',
       '-r',
       '--auto_platform',
@@ -168,7 +166,7 @@ hooks = [
       '--no_auth',
       '--no_resume',
       '--bucket',
-      'dart-dependencies-fletch',
+      'dartino-dependencies',
       '-d',
       '-r',
       '--auto_platform',
@@ -184,7 +182,7 @@ hooks = [
       '--no_auth',
       '--no_resume',
       '--bucket',
-      'dart-dependencies-fletch',
+      'dartino-dependencies',
       '-d',
       'sdk/pkg/mdns/lib/native',
     ],
@@ -198,7 +196,7 @@ hooks = [
       '--no_auth',
       '--no_resume',
       '--bucket',
-      'dart-dependencies-fletch',
+      'dartino-dependencies',
       '-d',
       'sdk/pkg/power_management/lib/native',
     ],
@@ -220,7 +218,7 @@ hooks = [
       '--no_auth',
       '--no_resume',
       '--bucket',
-      'dart-dependencies-fletch',
+      'dartino-dependencies',
       '-d',
       '-r',
       '-u',
@@ -237,7 +235,7 @@ hooks = [
       '--no_auth',
       '--no_resume',
       '--bucket',
-      'dart-dependencies-fletch',
+      'dartino-dependencies',
       '-d',
       '-r',
       '-u',
@@ -254,7 +252,7 @@ hooks = [
       '--no_auth',
       '--no_resume',
       '--bucket',
-      'dart-dependencies-fletch',
+      'dartino-dependencies',
       '-d',
       '-r',
       '-u',
@@ -271,7 +269,7 @@ hooks = [
       '--no_auth',
       '--no_resume',
       '--bucket',
-      'dart-dependencies-fletch',
+      'dartino-dependencies',
       '-d',
       '-u',
       'sdk/third_party/stm',
@@ -321,7 +319,7 @@ hooks = [
                 '-q',
                 '--no_resume',
                 '--no_auth',
-                '--bucket', 'dart-dependencies-fletch',
+                '--bucket', 'dartino-dependencies',
                 '-u',
                 '-s', 'sdk/third_party/mbedtls/mbedtls.tar.gz.sha1',
     ],

@@ -133,5 +133,6 @@ testDartinoVersionReply() {
   Expect.equals("456", reply.dartinoVersion);
 
   buffer = new Uint8List.fromList([1, 2, 3]).buffer;
-  throwsMessageDecodeException(() => new DartinoVersionReply.fromBuffer(buffer));
+  throwsMessageDecodeException(() =>
+      new DartinoVersionReply.fromBuffer(buffer));
 }

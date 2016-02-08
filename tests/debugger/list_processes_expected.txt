@@ -26,7 +26,7 @@ process 0
 * 0: resume                          @port
   1: call                            @resume(channel, p1)
 
-process 2
+process 1
 * 0: call                @c.receive()
 
 > c

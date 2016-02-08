@@ -99,7 +99,6 @@ void Scheduler::TearDown() {
 
 Scheduler::Scheduler()
     : interpreter_is_paused_(false),
-      ready_queue_(new ProcessQueue()),
       pause_monitor_(Platform::CreateMonitor()),
       pause_(false),
       shutdown_(false),
@@ -121,14 +120,14 @@ Scheduler::~Scheduler() {
 
   delete idle_monitor_;
   delete pause_monitor_;
-  delete ready_queue_;
   delete gc_thread_;
 }
 
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
-  program->set_scheduler(this);
-
   ScopedMonitorLock locker(pause_monitor_);
+
+  program->set_scheduler(this);
+  programs_.Append(program);
 
   // NOTE: Even though this method might be run on any thread, we don't need to
   // guard against the program being stopped, since we insert it the very first
@@ -145,6 +144,7 @@ void Scheduler::UnscheduleProgram(Program* program) {
   ScopedMonitorLock locker(pause_monitor_);
 
   ASSERT(program->scheduler() == this);
+  programs_.Remove(program);
   program->set_scheduler(NULL);
 }
 
@@ -169,30 +169,25 @@ void Scheduler::StopProgram(Program* program) {
       pause_monitor_->Wait();
     }
 
-    Process* to_enqueue = NULL;
+    ProcessQueueList to_enqueue;
 
     while (true) {
       Process* process = NULL;
       // All processes dequeued are marked as Running.
-      DequeueProcess(&process);
-
-      if (process == NULL) break;
+      if (!DequeueProcess(&process)) break;
 
       if (process->program() == program) {
         process->ChangeState(Process::kRunning, Process::kReady);
         program_state->AddPausedProcess(process);
       } else {
-        process->set_next(to_enqueue);
-        to_enqueue = process;
+        to_enqueue.Append(process);
       }
     }
 
-    while (to_enqueue != NULL) {
-      to_enqueue->ChangeState(Process::kRunning, Process::kReady);
-      Process* next = to_enqueue->next();
-      to_enqueue->set_next(NULL);
-      EnqueueProcess(to_enqueue);
-      to_enqueue = next;
+    while (!to_enqueue.IsEmpty()) {
+      Process* process = to_enqueue.RemoveFirst();
+      process->ChangeState(Process::kRunning, Process::kReady);
+      EnqueueProcess(process);
     }
 
     // TODO(kustermann): Stopping a program should not always clear the lookup
@@ -220,14 +215,11 @@ void Scheduler::ResumeProgram(Program* program) {
     ProgramState* program_state = program->program_state();
     ASSERT(program_state->is_paused());
 
-    Process* process = program_state->paused_processes_head();
-    while (process != NULL) {
-      Process* next = process->next();
-      process->set_next(NULL);
+    auto paused_processes = program_state->paused_processes();
+    while (!paused_processes->IsEmpty()) {
+      Process* process = paused_processes->RemoveFirst();
       EnqueueProcess(process);
-      process = next;
     }
-    program_state->set_paused_processes_head(NULL);
     program_state->set_is_paused(false);
     pause_monitor_->NotifyAll();
   }
@@ -342,8 +334,8 @@ bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   return true;
 }
 
-void Scheduler::DequeueProcess(Process** process) {
-  while (!ready_queue_->TryDequeue(process)) {}
+bool Scheduler::DequeueProcess(Process** process) {
+  return ready_queue_.TryDequeue(process);
 }
 
 void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
@@ -480,14 +472,11 @@ void WorkerThread::RunInThread() {
 
 bool Scheduler::RunInterpreterLoop(WorkerThread* worker) {
   while (true) {
-    // Run fletch processes as long as we're not paused or shut down
+    // Run dartino processes as long as we're not paused or shut down
     // (and there is work to do).
     while (!pause_ && !shutdown_) {
       Process* process = NULL;
-      DequeueProcess(&process);
-
-      // No more processes for this state, break.
-      if (process == NULL) break;
+      if (!DequeueProcess(&process)) break;
 
       while (process != NULL && !shutdown_ && !pause_) {
         process = InterpretProcess(process, worker);
@@ -521,7 +510,7 @@ bool Scheduler::RunInterpreterLoop(WorkerThread* worker) {
 
     // Sleep until there is something new to execute.
     ScopedMonitorLock scoped_lock(idle_monitor_);
-    while (ready_queue_->is_empty() && !pause_ && !shutdown_) {
+    while (ready_queue_.IsEmpty() && !pause_ && !shutdown_) {
       idle_monitor_->Wait();
     }
     if (shutdown_) break;
@@ -596,7 +585,7 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
       RescheduleProcess(process, terminate);
       return target;
     } else {
-      if (ready_queue_->TryDequeueEntry(target)) {
+      if (ready_queue_.TryDequeueEntry(target)) {
         port->Unlock();
         ASSERT(target->state() == Process::kRunning);
         RescheduleProcess(process, terminate);
@@ -675,11 +664,10 @@ void Scheduler::NotifyInterpreterThread() {
 void Scheduler::EnqueueProcess(Process* process) {
   ASSERT(process->state() == Process::kReady);
 
-  bool was_empty = false;
-  while (!ready_queue_->TryEnqueue(process, &was_empty)) {}
-
-  // Maybe we need to wake one up.
-  if (was_empty) NotifyInterpreterThread();
+  if (ready_queue_.Enqueue(process)) {
+    // If the queue was empty, we'll notify the interpreter thread.
+    NotifyInterpreterThread();
+  }
 }
 
 void Scheduler::EnqueueSafe(Process* process) {
@@ -692,13 +680,9 @@ void Scheduler::EnqueueSafe(Process* process) {
   ASSERT(program->scheduler() == this);
   ProgramState* state = program->program_state();
   if (state->is_paused()) {
-    // If the program is paused, there is no way the process can be enqueued
-    // on any process queues.
-    ASSERT(process->process_queue() == NULL);
-
     // Only add the process into the paused list if it is not already in
     // there.
-    if (process->next() == NULL) {
+    if (!state->paused_processes()->IsInList(process)) {
       state->AddPausedProcess(process);
     }
   } else {

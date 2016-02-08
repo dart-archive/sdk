@@ -8,12 +8,18 @@ import 'dart:math';
 class FrameBuffer {
   final ForeignPointer _surface;
 
-  static ForeignFunction _getFrameBuffer = ForeignLibrary.main.lookup('gfx_create');
-  static ForeignFunction _getWidth = ForeignLibrary.main.lookup('gfx_width');
-  static ForeignFunction _getHeight = ForeignLibrary.main.lookup('gfx_height');
-  static ForeignFunction _clear = ForeignLibrary.main.lookup('gfx_clear');
-  static ForeignFunction _flush = ForeignLibrary.main.lookup('gfx_flush');
-  static ForeignFunction _pixel = ForeignLibrary.main.lookup('gfx_pixel');
+  static ForeignFunction _getFrameBuffer =
+      ForeignLibrary.main.lookup('gfx_create');
+  static ForeignFunction _getWidth =
+      ForeignLibrary.main.lookup('gfx_width');
+  static ForeignFunction _getHeight =
+      ForeignLibrary.main.lookup('gfx_height');
+  static ForeignFunction _clear =
+      ForeignLibrary.main.lookup('gfx_clear');
+  static ForeignFunction _flush =
+      ForeignLibrary.main.lookup('gfx_flush');
+  static ForeignFunction _pixel =
+      ForeignLibrary.main.lookup('gfx_pixel');
 
   int get width => _getWidth.icall$1(_surface);
   int get height => _getHeight.icall$1(_surface);
