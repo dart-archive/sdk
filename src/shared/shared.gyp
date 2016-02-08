@@ -127,9 +127,9 @@
     {
       'target_name': 'natives_json',
       'type': 'none',
-      'toolsets': ['host'],
+      'toolsets': ['target'],
       'dependencies': [
-        'natives_to_json',
+        'natives_to_json#host',
       ],
       'actions': [
         {
