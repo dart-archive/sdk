@@ -53,6 +53,9 @@ import '../src/dartino_compiler_implementation.dart' show
 
 import '../dartino_system.dart';
 
+import '../dartino_class.dart' show
+    DartinoClass;
+
 import '../src/dartino_backend.dart' show
     DartinoBackend;
 

@@ -1027,7 +1027,7 @@ abstract class CodegenVisitor
     DartinoFunctionBase target = requireFunction(function);
     DartinoClassBuilder classBuilder =
         context.backend.createTearoffClass(target);
-    assert(classBuilder.fields == 0);
+    assert(classBuilder.fieldCount == 0);
     int constId = allocateConstantClassInstance(classBuilder.classId);
     assembler.loadConst(constId);
     applyVisitState();
@@ -1147,10 +1147,10 @@ abstract class CodegenVisitor
     DartinoFunctionBase target = requireFunction(method);
     DartinoClassBuilder classBuilder =
         context.backend.createTearoffClass(target);
-    assert(classBuilder.fields == 1);
+    assert(classBuilder.fieldCount == 1);
     int constId = functionBuilder.allocateConstantFromClass(
         classBuilder.classId);
-    assembler.allocate(constId, classBuilder.fields);
+    assembler.allocate(constId, classBuilder.fieldCount);
     applyVisitState();
   }
 
@@ -2521,7 +2521,7 @@ abstract class CodegenVisitor
         closureEnvironment.shouldBeBoxed) && !needToStoreThisReference;
 
     assembler.allocate(
-        classConstant, classBuilder.fields, immutable: immutable);
+        classConstant, classBuilder.fieldCount, immutable: immutable);
 
     if (needToStoreThisReference) {
       assert(!immutable);

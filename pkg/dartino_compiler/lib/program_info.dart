@@ -32,9 +32,11 @@ import 'vm_commands.dart' show
     WriteSnapshotResult;
 
 import 'dartino_system.dart' show
-    DartinoClass,
     DartinoFunction,
     DartinoSystem;
+
+import 'dartino_class.dart' show
+    DartinoClass;
 
 import 'src/dartino_selector.dart' show
     DartinoSelector;

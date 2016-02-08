@@ -96,7 +96,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
     // don't have to copy all the fields?
     // Copy all the fields to the end of the stack.
-    int fields = classBuilder.fields;
+    int fields = classBuilder.fieldCount;
     for (int i = 0; i < fields; i++) {
       assembler.loadSlot(i);
     }
@@ -370,6 +370,6 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
         codegen.visitForValue(initializer);
       }
     });
-    assert(fieldIndex <= classBuilder.fields);
+    assert(fieldIndex <= classBuilder.fieldCount);
   }
 }

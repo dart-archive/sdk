@@ -994,10 +994,7 @@ abstract class RemovedFieldUpdate extends RemovalUpdate {
     if (!wasStateCaptured) {
       throw new StateError("captureState must be called before apply.");
     }
-
     removeFromEnclosing();
-    backend.removeField(element);
-
     return element;
   }
 }

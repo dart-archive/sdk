@@ -16,6 +16,9 @@ import 'dart:typed_data' show
 import 'vm_commands.dart';
 import 'dartino_system.dart';
 
+import 'dartino_class.dart' show
+    DartinoClass;
+
 import 'incremental/dartino_compiler_incremental.dart'
     show IncrementalCompiler;
 

@@ -104,6 +104,17 @@ import 'package:compiler/src/library_loader.dart' show
 import 'package:persistent/persistent.dart' show
     PersistentMap;
 
+import 'package:compiler/src/common/names.dart' show
+    Identifiers,
+    Names;
+
+import 'package:compiler/src/universe/world_impact.dart' show
+    TransformedWorldImpact,
+    WorldImpact,
+    WorldImpactBuilder;
+
+import 'package:compiler/src/common/resolution.dart';
+
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
@@ -111,7 +122,11 @@ import 'dartino_class_builder.dart' show
     DartinoClassBuilder;
 
 import 'dartino_system_builder.dart' show
-    DartinoSystemBuilder;
+    DartinoSystemBuilder,
+    SchemaChange;
+
+import '../dartino_class.dart' show
+    DartinoClass;
 
 import '../incremental_backend.dart' show
     IncrementalDartinoBackend;
@@ -126,15 +141,6 @@ import 'dartino_registry.dart' show
 
 import 'diagnostic.dart' show
    throwInternalError;
-
-import 'package:compiler/src/common/names.dart' show
-    Identifiers,
-    Names;
-
-import 'package:compiler/src/universe/world_impact.dart' show
-    TransformedWorldImpact,
-    WorldImpact,
-    WorldImpactBuilder;
 
 import 'class_debug_info.dart';
 import 'codegen_visitor.dart';
@@ -152,7 +158,6 @@ import 'closure_environment.dart';
 import '../bytecodes.dart';
 import '../vm_commands.dart';
 import '../dartino_system.dart';
-import 'package:compiler/src/common/resolution.dart';
 
 const DartinoSystem BASE_DARTINO_SYSTEM = const DartinoSystem(
     const PersistentMap<int, DartinoFunction>(),
@@ -264,7 +269,9 @@ class DartinoBackend extends Backend
     systemBuilder = new DartinoSystemBuilder(predecessorSystem);
   }
 
-  DartinoClassBuilder registerClassElement(ClassElement element) {
+  DartinoClassBuilder registerClassElement(
+      ClassElement element,
+      {Map<ClassElement, SchemaChange> schemaChanges}) {
     if (element == null) return null;
     assert(element.isDeclaration);
 
@@ -273,13 +280,21 @@ class DartinoBackend extends Backend
     if (classBuilder != null) return classBuilder;
 
     directSubclasses[element] = new Set<ClassElement>();
-    DartinoClassBuilder superclass = registerClassElement(element.superclass);
+    DartinoClassBuilder superclass =
+        registerClassElement(element.superclass, schemaChanges: schemaChanges);
     if (superclass != null) {
       Set<ClassElement> subclasses = directSubclasses[element.superclass];
       subclasses.add(element);
     }
+    SchemaChange schemaChange;
+    if (schemaChanges != null) {
+      schemaChange = schemaChanges[element];
+    }
+    if (schemaChange == null) {
+      schemaChange = new SchemaChange(element);
+    }
     classBuilder = systemBuilder.newClassBuilder(
-        element, superclass, builtinClasses.contains(element));
+        element, superclass, builtinClasses.contains(element), schemaChange);
 
     // TODO(ajohnsen): Currently, the DartinoRegistry does not enqueue fields.
     // This is a workaround, where we basically add getters for all fields.
@@ -291,7 +306,7 @@ class DartinoBackend extends Backend
   DartinoClassBuilder createCallableStubClass(
       int fields, int arity, DartinoClassBuilder superclass) {
     DartinoClassBuilder classBuilder = systemBuilder.newClassBuilder(
-        null, superclass, false, extraFields: fields);
+        null, superclass, false, new SchemaChange(null), extraFields: fields);
     classBuilder.createIsFunctionEntry(this, arity);
     return classBuilder;
   }
@@ -1294,8 +1309,8 @@ class DartinoBackend extends Backend
         systemBuilder.lookupClassBuilder(classId);
     if (classBuilder == null) {
       if (isClosureClass) {
-        classBuilder =
-            systemBuilder.newPatchClassBuilder(classId, compiledClosureClass);
+        classBuilder = systemBuilder.newPatchClassBuilder(
+            classId, compiledClosureClass, new SchemaChange(null));
       } else {
         DartinoClass klass = systemBuilder.lookupClass(classId);
         assert(klass.element != null);
@@ -1338,7 +1353,7 @@ class DartinoBackend extends Backend
       int constId = getter.allocateConstantFromClass(tearoffClass.classId);
       getter.assembler
           ..loadParameter(0)
-          ..allocate(constId, tearoffClass.fields)
+          ..allocate(constId, tearoffClass.fieldCount)
           ..ret()
           ..methodEnd();
     }
@@ -1619,15 +1634,6 @@ class DartinoBackend extends Backend
     }
   }
 
-  void newElement(Element element) {
-    if (element.isField && element.isInstanceMember) {
-      forEachSubclassOf(element.enclosingClass, (ClassElement cls) {
-        DartinoClassBuilder builder = registerClassElement(cls);
-        builder.addField(element);
-      });
-    }
-  }
-
   void replaceFunctionUsageElement(Element element, List<Element> users) {
     for (Element user in users) {
       systemBuilder.replaceUsage(user, element);
@@ -1642,15 +1648,6 @@ class DartinoBackend extends Backend
         systemBuilder.lookupFunctionByElement(element);
     if (function == null) return;
     systemBuilder.forgetFunction(function);
-  }
-
-  void removeField(FieldElement element) {
-    if (!element.isInstanceMember) return;
-    ClassElement enclosingClass = element.enclosingClass;
-    forEachSubclassOf(enclosingClass, (ClassElement cls) {
-      DartinoClassBuilder builder = registerClassElement(cls);
-      builder.removeField(element);
-    });
   }
 
   void removeFunction(FunctionElement element) {

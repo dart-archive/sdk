@@ -36,6 +36,9 @@ import 'dartino_constants.dart' show
     DartinoFunctionConstant,
     DartinoClassInstanceConstant;
 
+import '../dartino_class.dart' show
+    DartinoClass;
+
 import 'dartino_class_builder.dart';
 import 'dartino_context.dart';
 import 'dartino_function_builder.dart';
@@ -279,14 +282,15 @@ class DartinoSystemBuilder {
         lookupClassBuilder(functionBuilder.memberOf);
     if (classBuilder != null) return classBuilder;
     DartinoClass cls = lookupClass(functionBuilder.memberOf);
-    return newClassBuilderInternal(cls, superclass);
+    return newClassBuilderInternal(cls, superclass, new SchemaChange(null));
   }
 
   DartinoClassBuilder newClassBuilderInternal(
       DartinoClass klass,
-      DartinoClassBuilder superclass) {
-    DartinoClassBuilder builder = new DartinoPatchClassBuilder(
-        klass, superclass);
+      DartinoClassBuilder superclass,
+      SchemaChange schemaChange) {
+    DartinoClassBuilder builder =
+        new DartinoPatchClassBuilder(klass, superclass, schemaChange);
     assert(_newClasses[klass.classId] == null);
     _newClasses[klass.classId] = builder;
     return builder;
@@ -294,21 +298,23 @@ class DartinoSystemBuilder {
 
   DartinoClassBuilder newPatchClassBuilder(
       int classId,
-      DartinoClassBuilder superclass) {
+      DartinoClassBuilder superclass,
+      SchemaChange schemaChange) {
     DartinoClass klass = lookupClass(classId);
-    return newClassBuilderInternal(klass, superclass);
+    return newClassBuilderInternal(klass, superclass, schemaChange);
   }
 
   DartinoClassBuilder newClassBuilder(
       ClassElement element,
       DartinoClassBuilder superclass,
       bool isBuiltin,
+      SchemaChange schemaChange,
       {int extraFields: 0}) {
     if (element != null) {
       DartinoClass klass = predecessorSystem.lookupClassByElement(element);
       if (klass != null) {
         DartinoClassBuilder builder =
-            newClassBuilderInternal(klass, superclass);
+            newClassBuilderInternal(klass, superclass, schemaChange);
         _classBuildersByElement[element] = builder;
         return builder;
       }
@@ -741,5 +747,34 @@ class DartinoSystemBuilder {
         gettersByFieldIndex,
         settersByFieldIndex,
         parameterStubs);
+  }
+}
+
+class SchemaChange {
+  final ClassElement cls;
+  final List<FieldElement> addedFields = <FieldElement>[];
+  final List<FieldElement> removedFields = <FieldElement>[];
+
+  int extraSuperFields = 0;
+
+  SchemaChange(this.cls);
+
+  void addRemovedField(FieldElement field) {
+    if (field.enclosingClass != cls) extraSuperFields--;
+    removedFields.add(field);
+  }
+
+  void addAddedField(FieldElement field) {
+    if (field.enclosingClass != cls) extraSuperFields++;
+    addedFields.add(field);
+  }
+
+  void addSchemaChange(SchemaChange other) {
+    for (FieldElement field in other.addedFields) {
+      addAddedField(field);
+    }
+    for (FieldElement field in other.removedFields) {
+      addRemovedField(field);
+    }
   }
 }

@@ -29,6 +29,9 @@ import 'src/dartino_selector.dart' show
 import 'src/dartino_system_printer.dart' show
     DartinoSystemPrinter;
 
+import 'dartino_class.dart' show
+    DartinoClass;
+
 enum DartinoFunctionKind {
   NORMAL,
   LAZY_FIELD_INITIALIZER,
@@ -44,30 +47,6 @@ class DartinoConstant {
   const DartinoConstant(this.id, this.mapId);
 
   String toString() => "DartinoConstant($id, $mapId)";
-}
-
-// TODO(ajohnsen): Move to separate file.
-class DartinoClass {
-  final int classId;
-  final String name;
-  final ClassElement element;
-  final int superclassId;
-  final int superclassFields;
-  final PersistentMap<int, int> methodTable;
-  final List<FieldElement> fields;
-
-  const DartinoClass(
-      this.classId,
-      this.name,
-      this.element,
-      this.superclassId,
-      this.superclassFields,
-      this.methodTable,
-      this.fields);
-
-  bool get hasSuperclassId => superclassId >= 0;
-
-  String toString() => "DartinoClass($classId, '$name')";
 }
 
 // TODO(ajohnsen): Move to separate file.

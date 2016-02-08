@@ -40,6 +40,7 @@ import '../incremental_backend.dart' show
     IncrementalDartinoBackend;
 
 import '../src/dartino_class_builder.dart' show
+    DartinoPatchClassBuilder,
     DartinoClassBuilder;
 
 import '../src/dartino_context.dart' show
@@ -58,6 +59,9 @@ import '../vm_commands.dart' show
 import '../dartino_system.dart' show
     DartinoDelta,
     DartinoSystem;
+
+import '../src/dartino_system_builder.dart' show
+    SchemaChange;
 
 import 'dartino_compiler_incremental.dart' show
     IncrementalCompilationFailed,
@@ -130,6 +134,9 @@ class IncrementalCompilerContext extends _IncrementalCompilerContext
 class DartinoReuser extends Reuser with DartinoFeatures {
   final IncrementalCompilerContext _context;
 
+  final Map<PartialClassElement, SchemaChange> schemaChangesByClass =
+      <PartialClassElement, SchemaChange>{};
+
   DartinoReuser(
       DartinoCompilerImplementation compiler,
       api.CompilerInputProvider inputProvider,
@@ -137,6 +144,9 @@ class DartinoReuser extends Reuser with DartinoFeatures {
       Logger logVerbose,
       this._context)
       : super(compiler, inputProvider, logTime, logVerbose);
+
+  // TODO(ahe): If I remove this, I don't get type errors on backend.
+  IncrementalDartinoBackend get backend => super.backend;
 
   DartinoDelta computeUpdateDartino(DartinoSystem currentSystem) {
     // TODO(ahe): Remove this when we support adding static fields.
@@ -167,6 +177,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
         enqueuer.codegen.registerInstantiatedType(cls.rawType);
       }
     }
+    computeAllSchemaChanges();
     compiler.processQueue(enqueuer.resolution, null);
 
     compiler.phase = Compiler.PHASE_DONE_RESOLVING;
@@ -182,7 +193,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
             "Unable to incrementally compile $element with syntax error");
       }
       if (element.isField) {
-        backend.newElement(element);
+        // TODO(ahe): Enqueue fields?
       } else if (!element.isClass) {
         enqueuer.codegen.addToWorkList(element);
       }
@@ -202,6 +213,42 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     DartinoSystem system =
         backend.systemBuilder.computeSystem(dartinoContext, commands);
     return new DartinoDelta(system, currentSystem, commands);
+  }
+
+  void computeAllSchemaChanges() {
+    for (PartialClassElement cls in schemaChangesByClass.keys.toList()) {
+      SchemaChange schemaChange = getSchemaChange(cls);
+      backend.forEachSubclassOf(cls, (ClassElement subclass) {
+        if (cls == subclass) return;
+        getSchemaChange(subclass).addSchemaChange(schemaChange);
+      });
+    }
+    void checkSchemaChangesAreUsed(
+        DartinoClassBuilder builder,
+        PartialClassElement cls) {
+      // TODO(ahe): Eventually, this should be an assertion.
+      if (builder is DartinoPatchClassBuilder) {
+        SchemaChange schemaChange = schemaChangesByClass[cls];
+        if (!builder.addedFields.toSet().containsAll(
+                schemaChange.addedFields)) {
+          throw new IncrementalCompilationFailed(
+              "Missing added fields in $cls");
+        }
+        if (!builder.removedFields.toSet().containsAll(
+                schemaChange.removedFields)) {
+          throw new IncrementalCompilationFailed(
+              "Missing removed fields in $cls");
+        }
+      } else {
+        throw new IncrementalCompilationFailed(
+            "Patched class is registered as new: $cls");
+      }
+    }
+    for (PartialClassElement cls in schemaChangesByClass.keys) {
+      DartinoClassBuilder builder = backend.registerClassElement(
+          cls, schemaChanges: schemaChangesByClass);
+      checkSchemaChangesAreUsed(builder, cls);
+    }
   }
 
   void addClassUpdate(
@@ -228,6 +275,9 @@ class DartinoReuser extends Reuser with DartinoFeatures {
       Compiler compiler,
       FieldElementX element) {
     updates.add(new DartinoRemovedFieldUpdate(compiler, element));
+    if (element.isInstanceMember) {
+      getSchemaChange(element.enclosingClass).addRemovedField(element);
+    }
   }
 
   void addRemovedClassUpdate(
@@ -240,7 +290,13 @@ class DartinoReuser extends Reuser with DartinoFeatures {
       Compiler compiler,
       FieldElementX element,
       /* ScopeContainerElement */ container) {
-    updates.add(new DartinoAddedFieldUpdate(compiler, element, container));
+    SchemaChange schemaChange;
+    if (element.isInstanceMember) {
+      schemaChange = getSchemaChange(container);
+    }
+    updates.add(
+        new DartinoAddedFieldUpdate(
+            compiler, element, container, schemaChange));
   }
 
   void addAddedClassUpdate(
@@ -314,6 +370,10 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     }
     return true;
   }
+
+  SchemaChange getSchemaChange(PartialClassElement cls) {
+    return schemaChangesByClass.putIfAbsent(cls, () => new SchemaChange(cls));
+  }
 }
 
 class DartinoRemovedFunctionUpdate extends RemovedFunctionUpdate
@@ -356,11 +416,22 @@ class DartinoAddedClassUpdate extends AddedClassUpdate with DartinoFeatures {
 }
 
 class DartinoAddedFieldUpdate extends AddedFieldUpdate with DartinoFeatures {
+  final SchemaChange schemaChange;
+
   DartinoAddedFieldUpdate(
       Compiler compiler,
       FieldElementX element,
-      /* ScopeContainerElement */ container)
+      /* ScopeContainerElement */ container,
+      this.schemaChange)
       : super(compiler, element, container);
+
+  FieldElementX apply(IncrementalDartinoBackend backend) {
+    FieldElementX newField = super.apply(backend);
+    if (newField.isInstanceMember) {
+      schemaChange.addAddedField(newField);
+    }
+    return newField;
+  }
 }
 
 class DartinoClassUpdate extends ClassUpdate with DartinoFeatures {
