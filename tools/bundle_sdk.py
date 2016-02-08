@@ -71,7 +71,8 @@ def CopySharedLibraries(bin_dir, build_dir):
   lib_dst = join(bin_dir, 'lib') if os_name == 'linux' else bin_dir
   lib_src = join(build_dir, 'lib') if os_name == 'linux' else build_dir
   suffix = 'so' if os_name == 'linux' else 'dylib'
-  makedirs(lib_dst)
+  if os_name == 'linux':
+    makedirs(lib_dst)
   for lib in shared_libraries:
     lib_name = 'lib%s.%s' % (lib, suffix)
     src = join(lib_src, lib_name)
