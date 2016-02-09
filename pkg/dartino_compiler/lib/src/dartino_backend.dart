@@ -235,8 +235,6 @@ class DartinoBackend extends Backend
   FunctionElement dartinoUnresolved;
   FunctionElement dartinoCompileError;
 
-  DartinoClassBuilder compiledObjectClass;
-
   ClassElement smiClass;
   ClassElement mintClass;
   ClassElement growableListClass;
@@ -265,6 +263,7 @@ class DartinoBackend extends Backend
 
   void newSystemBuilder(DartinoSystem predecessorSystem) {
     systemBuilder = new DartinoSystemBuilder(predecessorSystem);
+    compiledClosureClass = registerClassElement(compiledClosureClass.element);
   }
 
   DartinoClassBuilder registerClassElement(
@@ -439,8 +438,7 @@ class DartinoBackend extends Backend
           String name,
           LibraryElement library,
           {bool builtin})) {
-    compiledObjectClass =
-        loadClass("Object", compiler.coreLibrary, builtin: true);
+    loadClass("Object", compiler.coreLibrary, builtin: true);
     compiledClosureClass =
         loadClass("_TearOffClosure", compiler.coreLibrary, builtin: true);
     smiClass = loadClass("_Smi", compiler.coreLibrary, builtin: true)?.element;
