@@ -267,7 +267,7 @@ void Session::PauseExecution() {
   Scheduler* scheduler = program()->scheduler();
   ASSERT(scheduler != NULL);
   execution_paused_ = true;
-  scheduler->StopProgram(program());
+  scheduler->StopProgram(program(), ProgramState::kSession);
   scheduler->PauseGcThread();
 }
 
@@ -278,7 +278,7 @@ void Session::ResumeExecution() {
   execution_paused_ = false;
   Scheduler* scheduler = program()->scheduler();
   scheduler->ResumeGcThread();
-  scheduler->ResumeProgram(program());
+  scheduler->ResumeProgram(program(), ProgramState::kSession);
 }
 
 // Caller thread must have a lock on main_thread_monitor_, ie,

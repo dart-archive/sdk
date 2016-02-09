@@ -84,8 +84,8 @@ class Scheduler {
   void ScheduleProgram(Program* program, Process* main_process);
   void UnscheduleProgram(Program* program);
 
-  void StopProgram(Program* program);
-  void ResumeProgram(Program* program);
+  void StopProgram(Program* program, ProgramState::State stop_state);
+  void ResumeProgram(Program* program, ProgramState::State stop_state);
   void KillProgram(Program* program);
 
   void PauseGcThread();

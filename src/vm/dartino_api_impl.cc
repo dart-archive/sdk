@@ -175,10 +175,20 @@ DARTINO_EXPORT void DartinoStartMain(DartinoProgram raw_program,
 
 void DartinoDeleteProgram(DartinoProgram raw_program) {
   dartino::Program* program = reinterpret_cast<dartino::Program*>(raw_program);
-  // TODO(kustermann): Instead of doing this, we should introduce states to
-  // [Program].
-  if (program->scheduler() != NULL) {
+  dartino::ProgramState* state = program->program_state();
+  if (state->state() == dartino::ProgramState::kDone) {
+    // Either the program is
+    //   * done running
+    //   * the embedder got the exitcode
+    //   * the embedder wants to unschedule & delete it
     dartino::Scheduler::GlobalInstance()->UnscheduleProgram(program);
+    ASSERT(state->state() == dartino::ProgramState::kPendingDeletion);
+  } else {
+    // Or
+    //   * the program has never been scheduled
+    //   * the embedder wants to delete it (already unscheduled)
+    ASSERT(state->state() == dartino::ProgramState::kInitialized ||
+           state->state() == dartino::ProgramState::kPendingDeletion);
   }
   delete program;
 }

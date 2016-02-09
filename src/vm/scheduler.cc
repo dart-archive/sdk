@@ -132,8 +132,11 @@ void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
   // NOTE: Even though this method might be run on any thread, we don't need to
   // guard against the program being stopped, since we insert it the very first
   // time.
-  program->program_state()->IncreaseProcessCount();
-  program->program_state()->Retain();
+  ProgramState* state = program->program_state();
+  state->ChangeState(ProgramState::kInitialized, ProgramState::kRunning);
+  state->IncreaseProcessCount();
+  state->Retain();
+
   if (!main_process->ChangeState(Process::kSleeping, Process::kReady)) {
     UNREACHABLE();
   }
@@ -146,19 +149,21 @@ void Scheduler::UnscheduleProgram(Program* program) {
   ASSERT(program->scheduler() == this);
   programs_.Remove(program);
   program->set_scheduler(NULL);
+  program->program_state()->ChangeState(
+      ProgramState::kDone, ProgramState::kPendingDeletion);
 }
 
-void Scheduler::StopProgram(Program* program) {
+void Scheduler::StopProgram(Program* program, ProgramState::State stop_state) {
   ASSERT(program->scheduler() == this);
 
   {
     ScopedMonitorLock pause_locker(pause_monitor_);
 
     ProgramState* program_state = program->program_state();
-    while (program_state->is_paused()) {
+    while (program_state->state() != ProgramState::kRunning) {
       pause_monitor_->Wait();
     }
-    program_state->set_is_paused(true);
+    program_state->ChangeState(ProgramState::kRunning, stop_state);
 
     pause_ = true;
     NotifyInterpreterThread();
@@ -206,21 +211,22 @@ void Scheduler::StopProgram(Program* program) {
   NotifyInterpreterThread();
 }
 
-void Scheduler::ResumeProgram(Program* program) {
+void Scheduler::ResumeProgram(Program* program,
+                              ProgramState::State stop_state) {
   ASSERT(program->scheduler() == this);
 
   {
     ScopedMonitorLock locker(pause_monitor_);
 
     ProgramState* program_state = program->program_state();
-    ASSERT(program_state->is_paused());
+    ASSERT(program_state->state() == stop_state);
 
     auto paused_processes = program_state->paused_processes();
     while (!paused_processes->IsEmpty()) {
       Process* process = paused_processes->RemoveFirst();
       EnqueueProcess(process);
     }
-    program_state->set_is_paused(false);
+    program_state->ChangeState(stop_state, ProgramState::kRunning);
     pause_monitor_->NotifyAll();
   }
   NotifyInterpreterThread();
@@ -259,7 +265,11 @@ void Scheduler::PreemptionTick() {
 void Scheduler::FinishedGC(Program* program, int count) {
   ASSERT(count > 0);
   ProgramState* state = program->program_state();
-  if (state->Release(count)) program->NotifyExitListener();
+  if (state->Release(count)) {
+    program->program_state()->ChangeState(ProgramState::kRunning,
+                                          ProgramState::kDone);
+    program->NotifyExitListener();
+  }
 }
 
 void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
@@ -353,7 +363,10 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
 
   if (state->DecreaseProcessCount()) {
     // TODO(kustermann): Conditional on result of ScheduleProcessForDeletion.
-    if (state->Release()) program->NotifyExitListener();
+    if (state->Release()) {
+      state->ChangeState(ProgramState::kRunning, ProgramState::kDone);
+      program->NotifyExitListener();
+    }
   }
 }
 
@@ -679,7 +692,7 @@ void Scheduler::EnqueueSafe(Process* process) {
   Program* program = process->program();
   ASSERT(program->scheduler() == this);
   ProgramState* state = program->program_state();
-  if (state->is_paused()) {
+  if (state->state() != ProgramState::kRunning) {
     // Only add the process into the paused list if it is not already in
     // there.
     if (!state->paused_processes()->IsInList(process)) {

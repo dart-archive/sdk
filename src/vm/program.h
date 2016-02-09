@@ -80,16 +80,40 @@ typedef DoubleList<Program> ProgramList;
 // This state information is managed by the scheduler.
 class ProgramState {
  public:
+  // The possible state transitions are:
+  //   kInitialized -> kRunning
+  //
+  //   kRunning <-> kCollectingGarbage
+  //   kRunning <-> kSession
+  //   kRunning <-> kFrozen
+  //
+  //   kRunning -> kDone
+  //
+  //   kDone -> kPendingDeletion
+  enum State {
+    kInitialized,
+    kRunning,
+    kCollectingGarbage,
+    kSession,
+    kFrozen,
+    kDone,
+    kPendingDeletion,
+  };
+
   ProgramState()
       : processes_(0),
-        is_paused_(false),
+        state_(kInitialized),
         refcount_(0) {}
 
   // The [Scheduler::pause_monitor_] must be locked when calling this method.
   void AddPausedProcess(Process* process);
 
-  bool is_paused() const { return is_paused_; }
-  void set_is_paused(bool value) { is_paused_ = value; }
+  State state() const { return state_; }
+
+  void ChangeState(State from, State to) {
+    ASSERT(state_ == from);
+    state_ = to;
+  }
 
   ProcessQueueList* paused_processes() { return &paused_processes_; }
 
@@ -119,7 +143,7 @@ class ProgramState {
   Atomic<int> processes_;
 
   ProcessQueueList paused_processes_;
-  bool is_paused_;
+  State state_;
 
   // All components of the scheduler (including the gc thread) use this
   // refcounter. Whoever is decrementing it to zero must call the
@@ -164,7 +188,9 @@ class Program : public ProgramList::Entry {
     ASSERT((scheduler_ == NULL && scheduler != NULL) ||
            (scheduler_ != NULL && scheduler == NULL));
     ASSERT(program_state_.paused_processes()->IsEmpty());
-    ASSERT(!program_state_.is_paused());
+    ASSERT(program_state_.state() == ProgramState::kInitialized ||
+           program_state_.state() == ProgramState::kDone);
+
     scheduler_ = scheduler;
   }
 
