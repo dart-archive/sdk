@@ -36,12 +36,16 @@ class Monitor;
 
 // Interface to the underlying platform.
 namespace Platform {
+
+// These constants must be in sync with the constants in class Foreign
+// in lib/ffi/ffi.dart.
 enum OperatingSystem {
   kUnknownOS = 0,
   kLinux = 1,
   kMacOS = 2,
   kAndroid = 3,
   kWindows = 4,
+  kFreeRTOS = 5,
 };
 
 enum Architecture {
@@ -126,6 +130,9 @@ inline OperatingSystem OS() {
   return kMacOS;
 #elif defined(_WINNT)
   return kWindows;
+#elif defined(DARTINO_TARGET_OS_CMSIS)
+  // Right now the CMSIS port is only running on FreeRTOS.
+  return kFreeRTOS;
 #else
   return kUnknownOS;
 #endif

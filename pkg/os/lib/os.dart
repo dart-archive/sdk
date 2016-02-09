@@ -40,6 +40,7 @@ part 'system.dart';
 part 'system_linux.dart';
 part 'system_macos.dart';
 part 'system_posix.dart';
+part 'system_freertos.dart';
 
 abstract class InternetAddress {
   factory InternetAddress(List<int> bytes) = _InternetAddress;

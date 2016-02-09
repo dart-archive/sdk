@@ -13,6 +13,9 @@ Errnos _getErrnos() {
       return new _LinuxErrnos();
     case Foreign.MACOS:
       return new _MacOSErrnos();
+    case Foreign.FREERTOS:
+      // TODO(sgjesse): This needs to be changed.
+      return new _LinuxErrnos();
     default:
       throw "Unsupported system ${Foreign.platform}";
   }

@@ -21,6 +21,8 @@ System getSystem() {
       return new LinuxSystem();
     case Foreign.MACOS:
       return new MacOSSystem();
+    case Foreign.FREERTOS:
+      return new FreeRTOSSystem();
     default:
       throw "Unsupported system ${Foreign.platform}";
   }
