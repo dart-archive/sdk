@@ -104,7 +104,49 @@ extern "C" void page_free(void* start, size_t pages) {
   return page_allocator->FreePages(start, pages);
 }
 
+static void ConfigureMPU() {
+  // Disable the MPU for configuration.
+  HAL_MPU_Disable();
+
+  // Configure the MPU attributes as write-through for SRAM.
+  MPU_Region_InitTypeDef MPU_InitStruct;
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.BaseAddress = 0x20010000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_256KB;
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+  MPU_InitStruct.SubRegionDisable = 0x00;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  // Enable the MPU with new configuration.
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+}
+
+static void EnableCPUCache() {
+  // Enable branch prediction.
+  SCB->CCR |= (1 <<18);
+  __DSB();
+
+  // Enable I-Cache.
+  SCB_EnableICache();
+
+  // Enable D-Cache.
+  SCB_EnableDCache();
+}
+
 int main() {
+  // Configure the MPU attributes as Write Through.
+  ConfigureMPU();
+
+  // Enable the CPU Cache.
+  EnableCPUCache();
+
   // Reset of all peripherals, and initialize the Flash interface and
   // the Systick.
   HAL_Init();
