@@ -1203,8 +1203,16 @@ Future<int> buildImage(
   Directory binDirectory =
       new Directory.fromUri(executable.resolve(
           '../platforms/stm32f746g-discovery/bin'));
-  // In the Git checkout the platform scripts is under platforms.
-  if (!(await binDirectory.exists())) {
+  if ((await binDirectory.exists())) {
+    // In the SDK, the tools directory is at the same level as the
+    // internal (and bin) directory.
+    Directory toolsDirectory =
+        new Directory.fromUri(executable.resolve('../tools'));
+    if (!(await toolsDirectory.exists())) {
+      throwFatalError(DiagnosticKind.toolsNotInstalled);
+    }
+  } else {
+    // In the Git checkout the platform scripts is under platforms.
     binDirectory =
         new Directory.fromUri(executable.resolve('../../platforms/stm/bin'));
     assert(await binDirectory.exists());

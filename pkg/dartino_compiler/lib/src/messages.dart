@@ -53,6 +53,7 @@ enum DiagnosticKind {
   socketVmConnectError,
   socketVmReplyError,
   terminatedSession,
+  toolsNotInstalled,
   unexpectedArgument,
   unknownAction,
   unknownOption,
@@ -362,5 +363,11 @@ $fixit""";
     case DiagnosticKind.illegalDefine:
       return "The define $userInput has an illegal value part: "
              "$additionalUserInput.";
+
+    case DiagnosticKind.toolsNotInstalled:
+      return "Required third party tools GCC ARM Embedded and OpenOCD "
+          "have not been installed.\n\nTry running x-download-tools to "
+          "add these tools to the Dartino install.";
+
   }
 }
