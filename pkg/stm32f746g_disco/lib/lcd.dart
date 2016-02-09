@@ -27,7 +27,7 @@ class Color {
   static const blue = const Color(0x00, 0x000, 0xff);
   static const black = const Color(0x00, 0x00, 0x00);
   static const white = const Color(0xff, 0xff, 0xff);
-  static const cyan = const Color(0x00ffff);
+  static const cyan = const Color(0x00, 0xff, 0xff);
   static const magenta = const Color(0xff, 0x00, 0xff);
   static const yellow = const Color(0xff, 0xff, 0x00);
   static const lightBlue = const Color(0x80, 0x80, 0xff);
