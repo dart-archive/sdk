@@ -10,14 +10,6 @@ import 'package:gpio/gpio.dart';
 import 'package:stm32f746g_disco/src/stm32f7_constants.dart';
 import 'package:stm32f746g_disco/src/stm32f7_peripherals.dart';
 
-/*
- * Proposed New GPIO API.
- */
-
-/*
- * STM32F7 implementation of new GPIO API.
- */
-
 /// All the GPIO ports on the STM32F7 MCU.
 class _STM32F7GpioPort {
   static const A = const _STM32F7GpioPort(
