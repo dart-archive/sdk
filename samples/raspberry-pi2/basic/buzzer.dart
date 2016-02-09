@@ -12,18 +12,17 @@ import 'package:raspberry_pi/raspberry_pi.dart';
 
 main() {
   // GPIO pin constants.
-  const int button = 16;
-  const int speaker = 21;
+  Pin buttonPin = RaspberryPiPin.GPIO16;
+  Pin speakerPin = RaspberryPiPin.GPIO21;
 
-  // Initialize Raspberry Pi and configure the pins.
+  // Initialize Raspberry Pi and use the memory mapped GPIO.
   RaspberryPi pi = new RaspberryPi();
-  PiMemoryMappedGPIO gpio = pi.memoryMappedGPIO;
-  gpio.setMode(button, Mode.input);
-  gpio.setMode(speaker, Mode.output);
+  RaspberryPiMemoryMappedGpio gpio = pi.memoryMappedGpio;
+  GpioOutputPin speaker = gpio.initOutput(speakerPin);
+  GpioInputPin button = gpio.initInput(buttonPin);
 
   // Map state of button to speaker in a continuous loop.
   while (true) {
-    bool buttonState = gpio.getPin(button);
-    gpio.setPin(speaker, buttonState);
+    speaker.state = button.state;
   }
 }

@@ -4,6 +4,7 @@
 
 library stm32f746g;
 
+import 'package:gpio/gpio.dart';
 import 'package:stm32f746g_disco/gpio.dart';
 import 'package:stm32f746g_disco/lcd.dart';
 import 'package:stm32f746g_disco/uart.dart';

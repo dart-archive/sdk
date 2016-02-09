@@ -22,10 +22,13 @@ main() {
   // Array constant containing the GPIO pins of the connected LEDs.
   // You can add more LEDs simply by extending the list. Make sure
   // the pins are listed in the order the LEDs are connected.
-  List<int> leds = [26, 19, 13, 6];
+  List<Pin> leds = [RaspberryPiPin.GPIO26,
+                    RaspberryPiPin.GPIO19,
+                    RaspberryPiPin.GPIO13,
+                    RaspberryPiPin.GPIO6];
 
   // Initialize the lights controller class.
-  Lights lights = new Lights(pi.memoryMappedGPIO, leds);
+  Lights lights = new Lights(pi.memoryMappedGpio, leds);
   lights.init();
 
   // Alternate between running left and right in a continuous loop.
@@ -37,15 +40,15 @@ main() {
 }
 
 class Lights {
-  final GPIO _gpio;
-  final List<int> leds;
+  final Gpio _gpio;
+  final List<Pin> leds;
+  List<GpioOutputPin> gpioPins;
 
   Lights(this._gpio, this.leds);
 
-  // Initializes GPIO and configures the pins.
+  // Initializes all pins as output.
   void init() {
-    leds.forEach((pin) => _gpio.setMode(pin, Mode.output));
-    leds.forEach((pin) => _gpio.setPin(pin, false));
+    gpioPins = leds.map((pin) => _gpio.initOutput(pin)).toList();
   }
 
   // Iterates though the lights in increasing order, and sets the LEDs using
@@ -69,8 +72,7 @@ class Lights {
   // Sets LED [ledToEnable] to true, and all others to false.
   void _setLeds(int ledToEnable) {
     for (int i = 0; i < leds.length; i++) {
-      bool state = (i == ledToEnable);
-      _gpio.setPin(leds[i], state);
+      gpioPins[i].state = (i == ledToEnable);
     }
   }
 }

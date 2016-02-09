@@ -14,7 +14,7 @@
 
 import 'dart:dartino';
 
-import 'package:stm32f746g_disco/gpio.dart';
+import 'package:gpio/gpio.dart';
 import 'package:stm32f746g_disco/stm32f746g_disco.dart';
 
 main() {
@@ -45,13 +45,15 @@ main() {
 class Lights {
   final Gpio _gpio;
   final List<Pin> leds;
-  List<GpioOutputPin> gpioPins;
+  List<GpioOutputPin> gpioPins = [];
 
   Lights(this._gpio, this.leds);
 
   // Initializes all pins as output.
   void init() {
-    gpioPins = leds.map((pin) => _gpio.initOutput(pin)).toList();
+    for (Pin led in leds) {
+      gpioPins.add(_gpio.initOutput(led));
+    }
   }
 
   // Iterates though the lights in increasing order, and sets the LEDs using

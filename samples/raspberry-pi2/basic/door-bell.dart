@@ -13,30 +13,30 @@ import 'package:os/os.dart';
 
 main() {
   // GPIO pin constants.
-  const int button = 16;
-  const int speaker = 21;
+  Pin buttonPin = const SysfsPin(16);
+  Pin speakerPin = const SysfsPin(21);
 
-  // Initialize Raspberry Pi and configure the pins.
+  // Initialize Raspberry Pi and use the Sysfs GPIO.
   RaspberryPi pi = new RaspberryPi();
-  SysfsGPIO gpio = pi.sysfsGPIO;
+  SysfsGpio gpio = pi.sysfsGpio;
 
   // Initialize pins.
-  gpio.exportPin(speaker);
-  gpio.setMode(speaker, Mode.output);
-  gpio.exportPin(button);
-  gpio.setMode(button, Mode.input);
-  gpio.setTrigger(button, Trigger.both);
+  gpio.exportPin(speakerPin);
+  GpioOutputPin speaker = gpio.initOutput(speakerPin);
+  gpio.exportPin(buttonPin);
+  GpioInputPin button =
+      gpio.initInput(buttonPin, trigger: GpioInterruptTrigger.both);
 
   // Continuously monitor button.
   while (true) {
     // Wait for button press.
-    gpio.waitFor(button, true, -1);
+    button.waitFor(true, -1);
 
     // Sound bell.
     for (var i = 1; i <= 3; i++) {
-      gpio.setPin(speaker, true);
+      speaker.state = true;
       sleep(100);
-      gpio.setPin(speaker, false);
+      speaker.state = false;
       sleep(500);
     }
   }

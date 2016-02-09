@@ -33,7 +33,8 @@ import 'dart:dartino.ffi';
 import 'dart:typed_data';
 
 import 'package:file/file.dart';
-import 'package:gpio/gpio.dart' as gpio;
+import 'package:gpio/gpio.dart';
+import 'package:os/os.dart';
 
 // Foreign functions used.
 final ForeignFunction _open = ForeignLibrary.main.lookup('open');
@@ -61,7 +62,7 @@ enum OnboardLEDMode {
 ///
 /// main() {
 ///   RaspberryPi pi = new RaspberryPi();
-///   GPIO gpio = pi.memoryMappedGPIO; // Selecting memory mapped GPIO.
+///   Gpio gpio = pi.memoryMappedGpio; // Selecting memory mapped GPIO.
 ///   gpio.setMode(4, Mode.output);
 ///   gpio.setPin(4, true);
 /// }
@@ -75,7 +76,7 @@ enum OnboardLEDMode {
 ///
 /// main() {
 ///   RaspberryPi pi = new RaspberryPi();
-///   GPIO gpio = pi.sysfsGPIO; // Selecting sysfs GPIO.
+///   GPIO gpio = pi.sysfsGpio; // Selecting sysfs GPIO.
 ///   gpio.setMode(4, Mode.output);
 ///   gpio.setPin(4, true);
 /// }
@@ -107,37 +108,83 @@ enum OnboardLEDMode {
 /// }
 /// ```
 class RaspberryPi {
-  /// The number of GPIO pins on the Raspberry Pi 2.
-  static const int gpioPins = 54;
-  var _memoryMappedGPIO;
-  var _sysfsGPIO;
+  RaspberryPiMemoryMappedGpio _memoryMappedGpio;
+  var _sysfsGpio;
 
   /// Provide access to the on-board LEDs.
   final OnBoardLEDs leds = new OnBoardLEDs._();
 
   RaspberryPi();
 
-  get memoryMappedGPIO {
-    if (_memoryMappedGPIO == null) {
-      _memoryMappedGPIO = new PiMemoryMappedGPIO();
+  Gpio get memoryMappedGpio {
+    if (_memoryMappedGpio == null) {
+      _memoryMappedGpio = new RaspberryPiMemoryMappedGpio();
     }
-    return _memoryMappedGPIO;
+    return _memoryMappedGpio;
   }
 
-  get sysfsGPIO {
-    if (_sysfsGPIO == null) {
-      _sysfsGPIO = new gpio.SysfsGPIO(gpioPins);
+  SysfsGpio get sysfsGpio {
+    if (_sysfsGpio == null) {
+      _sysfsGpio = new SysfsGpio(pins: 54);
     }
-    return _sysfsGPIO;
-
+    return _sysfsGpio;
   }
 }
 
-/// Pull-up/down resistor state.
-enum PullUpDown {
-  floating,
-  pullDown,
-  pullUp,
+/// Concrete pins on the Raspberry Pi.
+class RaspberryPiPin implements Pin {
+  static const Pin GPIO4 = const RaspberryPiPin('GPIO4', 4);
+  static const Pin GPIO5 = const RaspberryPiPin('GPIO5', 5);
+  static const Pin GPIO6 = const RaspberryPiPin('GPIO6', 6);
+  static const Pin GPIO12 = const RaspberryPiPin('GPIO12', 12);
+  static const Pin GPIO13 = const RaspberryPiPin('GPIO13', 13);
+  static const Pin GPIO16 = const RaspberryPiPin('GPIO16', 16);
+  static const Pin GPIO17 = const RaspberryPiPin('GPIO17', 17);
+  static const Pin GPIO18 = const RaspberryPiPin('GPIO18', 18);
+  static const Pin GPIO19 = const RaspberryPiPin('GPIO19', 19);
+  static const Pin GPIO20 = const RaspberryPiPin('GPIO20', 20);
+  static const Pin GPIO21 = const RaspberryPiPin('GPIO21', 21);
+  static const Pin GPIO22 = const RaspberryPiPin('GPIO22', 22);
+  static const Pin GPIO23 = const RaspberryPiPin('GPIO23', 23);
+  static const Pin GPIO24 = const RaspberryPiPin('GPIO24', 24);
+  static const Pin GPIO25 = const RaspberryPiPin('GPIO25', 25);
+  static const Pin GPIO26 = const RaspberryPiPin('GPIO26', 26);
+  static const Pin GPIO27 = const RaspberryPiPin('GPIO27', 27);
+
+  final String name;
+  final int pin;
+
+  const RaspberryPiPin(this.name, this.pin);
+  String toString() => 'GPIO pin $name';
+}
+
+/// Pins on the Raspberry Pi configured for GPIO output.
+class _RaspberryPiGpioOutputPin extends GpioOutputPin {
+  RaspberryPiMemoryMappedGpio _gpio;
+  final RaspberryPiPin pin;
+
+  _RaspberryPiGpioOutputPin(this._gpio, this.pin);
+
+  bool get state => _gpio._getState(pin);
+
+  void set state(bool newState) {
+    _gpio._setState(pin, newState);
+  }
+}
+
+/// Pins on the Raspberry Pi configured for GPIO input.
+class _RaspberryPiGpioInputPin extends GpioInputPin {
+  RaspberryPiMemoryMappedGpio _gpio;
+  final RaspberryPiPin pin;
+
+  _RaspberryPiGpioInputPin(this._gpio, this.pin);
+
+  bool get state => _gpio._getState(pin);
+
+  bool waitFor(bool value, int timeout) {
+    throw new UnsupportedError(
+        'waitFor not supported for Raspberry Pi memory mapped GPIO');
+  }
 }
 
 /// Provide GPIO access on Raspberry Pi using direct memory access.
@@ -145,19 +192,20 @@ enum PullUpDown {
 /// The following code shows how to turn on GPIO pin 4:
 ///
 /// ```
-/// PiMemoryMappedGPIO gpio = new PiMemoryMappedGPIO();
-/// gpio.setMode(4, Mode.output);
-/// gpio.setPin(4, true));
+/// RaspberryPiMemoryMappedGpio gpio = new RaspberryPiMemoryMappedGpio();
+/// GpioOutputPin gpio4 = gpio.initOutput(RaspberryPiPin.GPIO4);
+/// gpio4.state = true;
 /// ```
 ///
 /// The following code shows how to read GPIO pin 17:
 ///
 /// ```
-/// PiMemoryMappedGPIO gpio = new PiMemoryMappedGPIO();
-/// gpio.setMode(17, Mode.input);
-/// print(gpio.getPin(17));
+/// RaspberryPiMemoryMappedGpio gpio = new RaspberryPiMemoryMappedGpio();
+/// GpioInputPin gpio17 = gpio.initInput(RaspberryPiPin.GPIO17);
+/// gpio17.state = true;
+/// print(gpio17.state);
 /// ```
-class PiMemoryMappedGPIO extends gpio.GPIOBase {
+class RaspberryPiMemoryMappedGpio implements Gpio {
   // See datasheet:
   // https://www.raspberrypi.org/wp-content/uploads/2012/02/BCM2835-ARM-Peripherals.pdf
 
@@ -183,17 +231,11 @@ class PiMemoryMappedGPIO extends gpio.GPIOBase {
   static const int _gpioPullUpPullDown = 37 << 2;
   static const int _gpioPullUpPullDownClockBase = 38 << 2;
 
-  // All alternative functions are mapped to `Mode.other` for now.
-  static const _functionToMode =
-      const [gpio.Mode.input, gpio.Mode.output,
-       gpio.Mode.other, gpio.Mode.other,
-       gpio.Mode.other, gpio.Mode.other, gpio.Mode.other];
-
   int _fd;  // File descriptor for /dev/mem.
   ForeignPointer _addr;
   ForeignMemory _mem;
 
-  PiMemoryMappedGPIO(): super(RaspberryPi.gpioPins) {
+  RaspberryPiMemoryMappedGpio() {
     // From /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h.
     const int oRDWR = 02;  // O_RDWR
     // Found from C code 'printf("%x\n", O_SYNC);'.
@@ -203,7 +245,7 @@ class PiMemoryMappedGPIO extends gpio.GPIOBase {
     var devMem = new ForeignMemory.fromStringAsUTF8('/dev/mem');
     _fd = _open.icall$2Retry(devMem, oRDWR | oSync);
     if (_fd < 0) {
-      throw new gpio.GPIOException("Failed to open '/dev/mem'", Foreign.errno);
+      throw new GpioException("Failed to open '/dev/mem'", Foreign.errno);
     }
     devMem.free();
 
@@ -217,33 +259,67 @@ class PiMemoryMappedGPIO extends gpio.GPIOBase {
     _mem = new ForeignMemory.fromAddress(_addr.address, _blockSize);
   }
 
-  void setMode(int pin, gpio.Mode mode) {
-    checkPinRange(pin);
+  GpioOutputPin initOutput(Pin pin) {
+    _init(pin, true, GpioPullUpDown.floating);
+    return new _RaspberryPiGpioOutputPin(this, pin);
+  }
+
+  GpioInputPin initInput(
+      Pin pin, {GpioPullUpDown pullUpDown, GpioInterruptTrigger trigger}) {
+    if (trigger != null) {
+      throw new UnsupportedError(
+          'trigger not supported for Raspberry Pi memory mapped GPIO');
+    }
+    _init(pin, false, pullUpDown);
+    return new _RaspberryPiGpioInputPin(this, pin);
+  }
+
+  void _init(Pin pin, bool output, GpioPullUpDown pullUpDown) {
+    if (pin is! RaspberryPiPin) {
+      throw new ArgumentError('Illegal pin type');
+    }
+    RaspberryPiPin p = pin;
+
     // GPIO function select registers each have 3 bits for 10 pins.
-    var fsel = (pin ~/ 10);
-    var shift = (pin % 10) * 3;
-    var function = mode == gpio.Mode.input ? 0 : 1;
-    var offset = _gpioFunctionSelectBase + (fsel << 2);
-    var value = _mem.getUint32(offset);
+    int fsel = (p.pin ~/ 10);
+    int shift = (p.pin % 10) * 3;
+    int function = output ? 1 : 0;
+    int offset = _gpioFunctionSelectBase + (fsel << 2);
+    int value = _mem.getUint32(offset);
     value = (value & ~(0x07 << shift)) | function << shift;
     _mem.setUint32(offset, value);
+
+    // Configure pull-up/pull-down for input.
+    if (!output) {
+      // Use 0 for floating, 1 for pull down and 2 for pull-up.
+      int register = p.pin ~/ 32;
+      int shift = p.pin % 32;
+      int value = 0;
+      if (pullUpDown != GpioPullUpDown.floating) {
+        value = pullUpDown == GpioPullUpDown.pullDown ? 1 : 2;
+      }
+      // First set the value in the update register.
+      _mem.setUint32(_gpioPullUpPullDown, value);
+      sleep(1);  // Datasheet says: "Wait for 150 cycles".
+      // Then set the clock bit.
+      _mem.setUint32(
+          _gpioPullUpPullDownClockBase + (register << 2), 1 << shift);
+      sleep(1);  // Datasheet says: "Wait for 150 cycles".
+      // Clear value and clock bit.
+      _mem.setUint32(_gpioPullUpPullDown, 0);
+      _mem.setUint32(_gpioPullUpPullDownClockBase + (register << 2), 0);
+    }
   }
 
-  gpio.Mode getMode(int pin) {
-    checkPinRange(pin);
-    // GPIO function select registers each have 3 bits for 10 pins.
-    var fsel = (pin ~/ 10);
-    var shift = (pin % 10) * 3;
-    var offset = _gpioFunctionSelectBase + (fsel << 2);
-    var function = (_mem.getUint32(offset) >> shift) & 0x07;
-    return _functionToMode[function];
-  }
+  void _setState(Pin pin, bool value) {
+    if (pin is! RaspberryPiPin) {
+      throw new ArgumentError('Illegal pin type');
+    }
+    RaspberryPiPin p = pin;
 
-  void setPin(int pin, bool value) {
-    checkPinRange(pin);
     // GPIO output set and output clear registers each have 1 bits for 32 pins.
-    int register = pin ~/ 32;
-    int shift = pin % 32;
+    int register = p.pin ~/ 32;
+    int shift = p.pin % 32;
     if (value) {
       _mem.setUint32(_gpioOutputSetBase + (register << 2), 1 << shift);
     } else {
@@ -251,31 +327,17 @@ class PiMemoryMappedGPIO extends gpio.GPIOBase {
     }
   }
 
-  bool getPin(int pin) {
-    checkPinRange(pin);
+  bool _getState(Pin pin) {
+    if (pin is! RaspberryPiPin) {
+      throw new ArgumentError('Illegal pin type');
+    }
+    RaspberryPiPin p = pin;
+
     // GPIO pin level registers each have 1 bits for 32 pins.
-    int register = pin ~/ 32;
-    int shift = pin % 32;
+    int register = p.pin ~/ 32;
+    int shift = p.pin % 32;
     return
         (_mem.getUint32(_gpioPinLevelBase + (register << 2)) & 1 << shift) != 0;
-  }
-
-  /// Set the floating/pull-up/pull-down state of [pin].
-  ///
-  /// Use `0` for floating, `1` for pull down and `2` for pull-up.
-  void setPullUpDown(int pin, PullUpDown pullUpDown) {
-    checkPinRange(pin);
-    int register = pin ~/ 32;
-    int shift = pin % 32;
-    // First set the value in the update register.
-    _mem.setUint32(_gpioPullUpPullDown, pullUpDown.index);
-    sleep(1);  // Datasheet says: "Wait for 150 cycles".
-    // Then set the clock bit.
-    _mem.setUint32(_gpioPullUpPullDownClockBase + (register << 2), 1 << shift);
-    sleep(1);  // Datasheet says: "Wait for 150 cycles".
-    // Clear value and clock bit.
-    _mem.setUint32(_gpioPullUpPullDown, 0);
-    _mem.setUint32(_gpioPullUpPullDownClockBase + (register << 2), 0);
   }
 }
 
