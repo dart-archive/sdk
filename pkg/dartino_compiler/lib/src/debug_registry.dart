@@ -47,18 +47,6 @@ abstract class DebugRegistry {
   void registerLocalInvoke(LocalElement element, Selector selector) { }
   void registerClosurization(FunctionElement element, _) { }
 
-  int compileLazyFieldInitializer(FieldElement field) {
-    int index = context.getStaticFieldIndex(field, null);
-
-    if (field.initializer == null) return index;
-
-    if (context.backend.lazyFieldInitializers.containsKey(field)) return index;
-
-    context.compiler.reporter.internalError(
-        field, "not compiled before use in debugger");
-    throw null;
-  }
-
   void generateUnimplementedError(Spannable spannable, String reason) {
     context.backend.generateUnimplementedError(
         spannable, reason, functionBuilder, suppressHint: true);

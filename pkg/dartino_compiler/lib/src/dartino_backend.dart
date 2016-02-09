@@ -159,10 +159,12 @@ import '../bytecodes.dart';
 import '../vm_commands.dart';
 import '../dartino_system.dart';
 
+//TODO(zarah): Move to dartino_system.dart
 const DartinoSystem BASE_DARTINO_SYSTEM = const DartinoSystem(
     const PersistentMap<int, DartinoFunction>(),
     const PersistentMap<Element, DartinoFunction>(),
     const PersistentMap<ConstructorElement, DartinoFunction>(),
+    const PersistentMap<FieldElement, int>(),
     const PersistentMap<int, int>(),
     const PersistentMap<int, DartinoClass>(),
     const PersistentMap<ClassElement, DartinoClass>(),
@@ -210,10 +212,6 @@ class DartinoBackend extends Backend
   // TODO(ahe): This should be moved to [DartinoSystem].
   final Map<FunctionElement, DartinoClassBuilder> closureClasses =
       <FunctionElement, DartinoClassBuilder>{};
-
-  // TODO(ahe): This should be moved to [DartinoSystem].
-  final Map<FieldElement, DartinoFunctionBuilder> lazyFieldInitializers =
-      <FieldElement, DartinoFunctionBuilder>{};
 
   DartinoCompilerImplementation get compiler => super.compiler;
 
@@ -1519,14 +1517,11 @@ class DartinoBackend extends Backend
 
     if (field.initializer == null) return index;
 
-    if (lazyFieldInitializers.containsKey(field)) return index;
+    int functionId = systemBuilder.lookupLazyFieldInitializerByElement(field);
+    if (functionId != null) return index;
 
-    DartinoFunctionBuilder functionBuilder = systemBuilder.newFunctionBuilder(
-        DartinoFunctionKind.LAZY_FIELD_INITIALIZER,
-        0,
-        name: "${field.name} lazy initializer",
-        element: field);
-    lazyFieldInitializers[field] = functionBuilder;
+    DartinoFunctionBuilder functionBuilder =
+        systemBuilder.newLazyFieldInitializer(field);
 
     TreeElements elements = field.resolvedAst.elements;
 

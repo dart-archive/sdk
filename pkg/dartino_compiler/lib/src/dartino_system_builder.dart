@@ -77,6 +77,9 @@ class DartinoSystemBuilder {
   final Map<Element, List<FunctionElement>> _replaceUsage =
       <Element, List<FunctionElement>>{};
 
+  final Map<FieldElement, int> _newLazyInitializersByElement =
+      <FieldElement, int>{};
+
   final Map<int, int> _newTearoffsById = <int, int>{};
 
   final int maxInt64 = (1 << 63) - 1;
@@ -162,6 +165,24 @@ class DartinoSystemBuilder {
 
   DartinoFunctionBuilder lookupFunctionBuilderByElement(Element element) {
     return _functionBuildersByElement[element];
+  }
+
+  int lookupLazyFieldInitializerByElement(FieldElement field) {
+    int functionId = _newLazyInitializersByElement[field];
+    if (functionId != null) return functionId;
+    return predecessorSystem.lookupLazyFieldInitializerByElement(field);
+  }
+
+  DartinoFunctionBuilder newLazyFieldInitializer(FieldElement field) {
+    // TODO(zarah): use unique name (which includes library and class)
+    DartinoFunctionBuilder builder = newFunctionBuilder(
+        DartinoFunctionKind.LAZY_FIELD_INITIALIZER,
+        0,
+        name: "${field.name} lazy initializer",
+        element: field
+    );
+    _newLazyInitializersByElement[field] = builder.functionId;
+    return builder;
   }
 
   DartinoFunctionBase lookupConstructorInitializerByElement(
@@ -415,10 +436,9 @@ class DartinoSystemBuilder {
     // incremental.
     if (predecessorSystem.isEmpty) {
       context.forEachStatic((element, index) {
-        DartinoFunctionBuilder initializer =
-            context.backend.lazyFieldInitializers[element];
-        if (initializer != null) {
-          commands.add(new PushFromMap(MapId.methods, initializer.functionId));
+        int functionId = lookupLazyFieldInitializerByElement(element);
+        if (functionId != null) {
+          commands.add(new PushFromMap(MapId.methods, functionId));
           commands.add(const PushNewInitializer());
         } else {
           commands.add(const PushNull());
@@ -582,7 +602,7 @@ class DartinoSystemBuilder {
       changes++;
     }
 
-    // Change constants for the functions, now that classes and constants has
+    // Change constants for the functions, now that classes and constants have
     // been added.
     for (DartinoFunction function in functions) {
       List<DartinoConstant> constants = function.constants;
@@ -704,6 +724,20 @@ class DartinoSystemBuilder {
               element, functionsById[builder.functionId]);
     });
 
+    PersistentMap<FieldElement, int> lazyFieldInitializerByElement =
+        predecessorSystem.lazyFieldInitializersByElement;
+
+    _newLazyInitializersByElement.forEach((field, functionId) {
+      DartinoFunctionBase initializerFunction = null;
+      if (field.initializer != null)  {
+        initializerFunction = functionsById[functionId];
+      }
+
+      lazyFieldInitializerByElement =
+          lazyFieldInitializerByElement.insert(
+              field, initializerFunction?.functionId);
+    });
+
     PersistentMap<int, int> tearoffsById = predecessorSystem.tearoffsById;
     _newTearoffsById.forEach((int functionId, int stubId) {
       tearoffsById = tearoffsById.insert(functionId, stubId);
@@ -738,6 +772,7 @@ class DartinoSystemBuilder {
         functionsById,
         functionsByElement,
         constructorInitializersByElement,
+        lazyFieldInitializerByElement,
         tearoffsById,
         classesById,
         classesByElement,

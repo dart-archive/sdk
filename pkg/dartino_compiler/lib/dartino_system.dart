@@ -189,6 +189,8 @@ class DartinoSystem {
   final PersistentMap<ConstructorElement, DartinoFunction>
       constructorInitializersByElement;
 
+  final PersistentMap<FieldElement, int> lazyFieldInitializersByElement;
+
   final PersistentMap<int, int> tearoffsById;
 
   // classesByElement is a subset of classesById: Some classes do not
@@ -211,6 +213,7 @@ class DartinoSystem {
       this.functionsById,
       this.functionsByElement,
       this.constructorInitializersByElement,
+      this.lazyFieldInitializersByElement,
       this.tearoffsById,
       this.classesById,
       this.classesByElement,
@@ -250,6 +253,10 @@ class DartinoSystem {
   DartinoFunction lookupConstructorInitializerByElement(
       ConstructorElement element) {
     return constructorInitializersByElement[element];
+  }
+
+  int lookupLazyFieldInitializerByElement(FieldElement field) {
+    return lazyFieldInitializersByElement[field];
   }
 
   /// Map from the ID of a [DartinoFunction] to the ID of its corresponding
