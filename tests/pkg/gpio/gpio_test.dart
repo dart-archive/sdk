@@ -5,5 +5,6 @@
 import 'package:gpio/gpio.dart';
 
 main() {
-  var gpio = new SysfsGPIO();
+  var pin = new SysfsPin(1);
+  var gpio = new SysfsGpio();
 }
