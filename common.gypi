@@ -454,6 +454,7 @@
               '<(DEPTH)/<(LK_PATH)/lib/minip/include/',
               '<(DEPTH)/<(LK_PATH)/arch/arm/arm/include',
               '<(DEPTH)/<(LK_PATH)/lib/heap/include/',
+              '<(DEPTH)/<(LK_PATH)/lib/io/include',
             ],
 
             'defines!': [
