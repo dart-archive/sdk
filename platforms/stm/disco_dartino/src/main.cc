@@ -5,12 +5,14 @@
 #include <stm32f7xx_hal.h>
 #include <stm32746g_discovery_sdram.h>
 #include <cmsis_os.h>
+#include <FreeRTOS.h>
+#include <task.h>
 
 #include "src/shared/assert.h"
 
-#include "platforms/stm/disco_dartino/src/page_allocator.h"
 #include "platforms/stm/disco_dartino/src/cmpctmalloc.h"
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
+#include "platforms/stm/disco_dartino/src/page_allocator.h"
 
 // Definition of functions in generated/Src/mx_main.c.
 extern "C" {
@@ -46,25 +48,27 @@ extern "C" void __wrap___libc_init_array() {
 // newlib malloc to never be used, and sbrk should never be called for
 // memory.
 extern "C" void *__wrap__malloc_r(struct _reent *reent, size_t size) {
-  return cmpct_alloc(size);
+  return pvPortMalloc(size);
 }
+
+extern "C" void *suspendingRealloc(void *ptr, size_t size);
 
 extern "C" void *__wrap__realloc_r(
     struct _reent *reent, void *ptr, size_t size) {
-  return cmpct_realloc(ptr, size);
+  return suspendingRealloc(ptr, size);
 }
 
 extern "C" void *__wrap__calloc_r(
     struct _reent *reent, size_t nmemb, size_t size) {
   if (nmemb == 0 || size == 0) return NULL;
   size = nmemb * size;
-  void *ptr = cmpct_alloc(size);
+  void *ptr = pvPortMalloc(size);
   memset(ptr, 0, size);
   return ptr;
 }
 
 extern "C" void __wrap__free_r(struct _reent *reent, void *ptr) {
-  cmpct_free(ptr);
+  vPortFree(ptr);
 }
 
 // Early initialization before static initialization. This will
