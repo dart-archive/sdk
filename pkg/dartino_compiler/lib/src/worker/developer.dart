@@ -31,7 +31,8 @@ import 'package:sdk_library_metadata/libraries.dart' show
 
 import 'package:sdk_services/sdk_services.dart' show
     OutputService,
-    SDKServices;
+    SDKServices,
+    DownloadException;
 
 import 'package:dartino_agent/agent_connection.dart' show
     AgentConnection,
@@ -1131,7 +1132,8 @@ Future<int> downloadTools(
   const String gcsRoot = "https://storage.googleapis.com";
   String gcsBucket = "dartino-archive";
 
-  Future downloadTool(String gcsPath, String zipFile, String toolName) async {
+  Future<int> downloadTool(String gcsPath, String zipFile,
+                           String toolName) async {
     Uri url = Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$zipFile");
     Directory tmpDir = Directory.systemTemp.createTempSync("dartino_download");
     File tmpZip = new File(join(tmpDir.path, zipFile));
@@ -1141,7 +1143,12 @@ Future<int> downloadTools(
     SDKServices service = new SDKServices(outputService);
     print("Downloading: $toolName");
     state.log("Downloading $toolName from $url to $tmpZip");
-    await service.downloadWithProgress(url, tmpZip);
+    try {
+      await service.downloadWithProgress(url, tmpZip);
+    } on DownloadException catch (e) {
+      print("Failed to download $url: $e");
+      return 1;
+    }
     print(""); // service.downloadWithProgress does not write newline when done.
 
     // In the SDK, the tools directory is at the same level as the
@@ -1152,6 +1159,7 @@ Future<int> downloadTools(
     await decompressFile(tmpZip, toolsDirectory);
     state.log("Deleting temporary directory ${tmpDir.path}");
     await tmpDir.delete(recursive: true);
+    return 0;
   }
 
   String gcsPath;
@@ -1180,9 +1188,13 @@ Future<int> downloadTools(
   }
 
   String gccArmEmbedded = "gcc-arm-embedded-${osName}.zip";
-  await downloadTool(gcsPath, gccArmEmbedded, "GCC ARM Embedded toolchain");
+  var result =
+      await downloadTool(gcsPath, gccArmEmbedded, "GCC ARM Embedded toolchain");
+  if (result != 0) return result;
   String openocd = "openocd-${osName}.zip";
-  await downloadTool(gcsPath, openocd, "Open On-Chip Debugger (OpenOCD)");
+  result =
+      await downloadTool(gcsPath, openocd, "Open On-Chip Debugger (OpenOCD)");
+  if (result != 0) return result;
 
   print("Third party tools downloaded");
 
