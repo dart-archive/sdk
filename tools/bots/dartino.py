@@ -727,8 +727,6 @@ class PersistentDartinoDaemon(object):
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
-       # TODO(kustermann): Issue(396): Remove this --enable-dumpcore flag again.
-       '--abort-on-assertion-errors',
        '--packages=%s' % os.path.abspath('pkg/dartino_compiler/.packages'),
        '-Ddartino.version=%s' % version,
        'package:dartino_compiler/src/hub/hub_main.dart',
