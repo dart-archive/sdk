@@ -209,7 +209,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
           "Unable to add static fields:\n  ${newStaticFields.join(',\n  ')}");
     }
 
-    List<VmCommand> commands = <VmCommand>[const PrepareForChanges()];
+    List<VmCommand> commands = <VmCommand>[];
     DartinoSystem system =
         backend.systemBuilder.computeSystem(dartinoContext, commands);
     return new DartinoDelta(system, currentSystem, commands);

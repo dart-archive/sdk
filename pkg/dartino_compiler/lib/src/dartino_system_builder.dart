@@ -458,6 +458,8 @@ class DartinoSystemBuilder {
 
     int changes = 0;
 
+    commands.add(const PrepareForChanges());
+
     // Remove all removed DartinoFunctions.
     for (DartinoFunction function in _removedFunctions) {
       commands.add(new RemoveFromMap(MapId.methods, function.functionId));

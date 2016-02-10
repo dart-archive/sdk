@@ -23,15 +23,26 @@ class Frame;
 class ObjectMap;
 class PointerVisitor;
 class PostponedChange;
+class SessionState;
 
 class Session {
+  // TODO(zerny): Move helper methods to session states and remove these.
+  friend class SessionState;
+  friend class ConnectedState;
+  friend class ModifyingState;
+  friend class PausedState;
+  friend class RunningState;
+  friend class SpawnedState;
+  friend class TerminatedState;
+  friend class TerminatingState;
+
  public:
   explicit Session(Connection* connection);
   virtual ~Session();
 
   Program* program() const { return program_; }
 
-  bool is_debugging() const { return debugging_; }
+  bool is_debugging() const;
 
   int FreshProcessId() { return next_process_id_++; }
 
@@ -59,6 +70,8 @@ class Session {
   bool CompileTimeError(Process* process);
 
  private:
+  void ChangeState(SessionState* new_state);
+
   void SendBreakPoint(Process* process);
   void ExitWithSessionEndState(Process* process);
 
@@ -145,6 +158,7 @@ class Session {
 
   Connection* const connection_;
   Program* program_;
+  SessionState* state_;
 
   // TODO(ager): For debugging, the session should have a mapping from
   // ids to processes. For now we just keep a reference to the main
@@ -152,17 +166,7 @@ class Session {
   Process* process_;
   int next_process_id_;
 
-  // When true execution_paused_ implies that the program is not
-  // running in the scheduler. Either it has not yet been scheduled
-  // (in which case program()->scheduler() == NULL) or the program
-  // is stopped and the GC thread is paused.
-  bool execution_paused_;
-  bool execution_interrupted_;
   bool request_execution_pause_;
-
-  bool debugging_;
-  bool session_ended_;
-  Process::State session_end_state_;
 
   int method_map_id_;
   int class_map_id_;
@@ -189,11 +193,6 @@ class Session {
   void RequestExecutionPause();
   void PauseExecution();
   void ResumeExecution();
-  void ProcessContinue(Process* process);
-
-  bool IsScheduledAndPaused() const {
-    return execution_paused_ && program()->scheduler() != NULL;
-  }
 
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);

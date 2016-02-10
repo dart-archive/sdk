@@ -24,7 +24,6 @@
 
 #define GC_AND_RETRY_ON_ALLOCATION_FAILURE(var, exp)    \
   Object* var = (exp);                                  \
-  ASSERT(execution_paused_);                            \
   if (var->IsRetryAfterGCFailure()) {                   \
     program()->CollectGarbage();                        \
     var = (exp);                                        \
@@ -32,6 +31,297 @@
   }
 
 namespace dartino {
+
+class SessionState {
+ public:
+  virtual ~SessionState() {
+    delete debug_previous_;
+  }
+
+  // Initial state (pre handshake).
+  virtual bool IsInitial() const { return false; }
+
+  // Connected states (post handshake).
+  virtual bool IsConnected() const { return false; }
+  virtual bool IsModifying() const { return false; }
+  virtual bool IsSpawned() const { return false; }
+
+  // Scheduled states (derived from spawned).
+  virtual bool IsScheduled() const { return false; }
+  virtual bool IsRunning() const { return false; }
+  virtual bool IsPaused() const { return false; }
+  virtual bool IsTerminating() const { return false; }
+
+  // Final state.
+  virtual bool IsTerminated() const { return false; }
+
+  // Modal on connected states.
+  virtual bool IsDebugging() const { return false; }
+
+  // Main transition function on states.
+  virtual SessionState* ProcessMessage(Connection::Opcode opcode) {
+    FATAL2("Unexpected message opcode %d received in state %s",
+           opcode, ToString());
+    return NULL;
+  }
+
+  virtual const char* ToString() const = 0;
+
+  void PrintTrace() {
+    if (debug_previous_ != NULL) debug_previous_->PrintTrace();
+    Print::Error("- %s\n", ToString());
+  }
+
+  // ActivateState is called immediately after changing sessions state.
+  virtual void ActivateState(SessionState* previous) {
+    ASSERT(session_ == NULL);
+    ASSERT(debug_previous_ == NULL);
+    session_ = previous->session_;
+    debug_previous_ = previous;
+    previous->session_ = NULL;
+  }
+
+ protected:
+  SessionState()
+      : session_(NULL), debug_previous_(NULL) {
+  }
+
+  explicit SessionState(Session* session)
+      : session_(session), debug_previous_(NULL) {
+  }
+
+  Session* session() const { return session_; }
+  Program* program() const { return session_->program(); }
+  Connection* connection() const { return session_->connection_; }
+
+ private:
+  Session* session_;
+
+ public:
+  // TODO(zerny): Only retain previous state for debug builds.
+  SessionState* debug_previous_;
+};
+
+// The initial session state is the state awaiting a handshake.
+class InitialState : public SessionState {
+ public:
+  explicit InitialState(Session* session) : SessionState(session) {}
+
+  bool IsInitial() const { return true; }
+
+  const char* ToString() const { return "Initial"; }
+
+  SessionState* ProcessMessage(Connection::Opcode opcode);
+};
+
+// Post-handshake and prior to termination, the state will be one of the
+// connected states. Every connected state has two modes: debugging or
+// non-debugging. The debugging mode is inherited on state transitions.
+// TODO(zerny): Consider splitting into two classes: one representing the state
+// of transitioning from initial to spawned, and one containing the shared
+// routines for manipulating the program that can be used in the former state
+// and in a the paused state.
+class ConnectedState : public SessionState {
+ public:
+  ConnectedState() : debugging_(false) {}
+
+  bool IsConnected() const { return true; }
+  bool IsDebugging() const { return debugging_; }
+
+  void EnableDebugging() {
+    debugging_ = true;
+  }
+
+  const char* ToString() const {
+    return IsDebugging() ? "Connected<Debugging>" : "Connected";
+  }
+
+  void ActivateState(SessionState* previous) {
+    SessionState::ActivateState(previous);
+    debugging_ = previous->IsDebugging();
+  }
+
+  SessionState* ProcessMessage(Connection::Opcode opcode);
+
+ private:
+  bool debugging_;
+};
+
+// The modifying state denotes a temporary state-change of a connected
+// state. Once committed or discarded the prior state is restored.
+class ModifyingState : public ConnectedState {
+ public:
+  bool IsModifying() const { return true; }
+
+  void ActivateState(SessionState* previous) {
+    ASSERT(previous->IsConnected());
+    ConnectedState::ActivateState(previous);
+    previous_ = previous;
+  }
+
+  SessionState* RestorePrevious() {
+    SessionState* restored = previous_;
+    previous_ = NULL;
+    // Swap position of this state and previous in the chain.
+    debug_previous_ = restored->debug_previous_;
+    restored->debug_previous_ = NULL;
+    return restored;
+  }
+
+  const char* ToString() const {
+    return IsDebugging() ? "Modifying<Debugging>" : "Modifying";
+  }
+
+  SessionState* ProcessMessage(Connection::Opcode opcode);
+
+ private:
+  SessionState* previous_;
+};
+
+// The spawned state denotes a state where the main program process has been
+// created.
+class SpawnedState : public ConnectedState {
+ public:
+  explicit SpawnedState(Process* main_process) : main_process_(main_process) {}
+
+  bool IsSpawned() const { return true; }
+
+  Process* main_process() const { return main_process_; }
+  // TODO(zerny): Remove uses of this.
+  Process* process() const { return session()->process_; }
+
+  void ActivateState(SessionState* previous) {
+    ASSERT(previous->IsConnected());
+    ConnectedState::ActivateState(previous);
+    if (main_process_ == NULL) {
+      ASSERT(previous->IsSpawned());
+      main_process_ = static_cast<SpawnedState*>(previous)->main_process();
+    } else {
+      ASSERT(!previous->IsSpawned());
+      // TODO(zerny): Remove process_ from session.
+      session()->process_ = main_process_;
+    }
+  }
+
+  const char* ToString() const {
+    return IsDebugging() ? "Spawned<Debugging>" : "Spawned";
+  }
+
+  SessionState* ProcessMessage(Connection::Opcode opcode);
+
+ protected:
+  SpawnedState() : main_process_(NULL) {}
+
+ private:
+  Process* main_process_;
+};
+
+// Abstract base for scheduled states. A scheduled state is a state where the
+// program is known to the scheduler.
+class ScheduledState : public SpawnedState {
+ public:
+  bool IsScheduled() const { return true; }
+
+  void ActivateState(SessionState* previous) {
+    ASSERT(previous->IsModifying() || previous->IsSpawned());
+    SpawnedState::ActivateState(previous);
+  }
+
+  Scheduler* scheduler() const {
+    return main_process()->program()->scheduler();
+  }
+};
+
+// A running state is scheduled and unpaused.
+class RunningState : public ScheduledState {
+ public:
+  bool IsRunning() const { return true; }
+
+  const char* ToString() const {
+    return IsDebugging() ? "Running<Debugging>" : "Running";
+  }
+
+  void ActivateState(SessionState* previous) {
+    ASSERT((!previous->IsScheduled() && previous->IsSpawned()) ||
+           (previous->IsScheduled() && previous->IsPaused()));
+    ScheduledState::ActivateState(previous);
+    if (previous->IsPaused()) {
+      session()->ResumeExecution();
+    }
+  }
+
+  SessionState* ProcessMessage(Connection::Opcode opcode);
+};
+
+// A paused state is scheduled and paused.
+class PausedState : public ScheduledState {
+ public:
+  explicit PausedState(bool interrupted) : interrupted_(interrupted) {}
+
+  bool IsPaused() const { return true; }
+
+  const char* ToString() const {
+    return IsDebugging() ? "Paused<Debugging>" : "Paused";
+  }
+
+  SessionState* ProcessContinue() {
+    if (!interrupted_) {
+      scheduler()->ContinueProcess(process());
+    }
+    return new RunningState();
+  }
+
+  SessionState* ProcessMessage(Connection::Opcode opcode);
+
+ private:
+  bool interrupted_;
+};
+
+// A terminating state is still scheduled, but represents a session that is in
+// the process of shutting down. The session has been terminated from the
+// client's point of view.
+class TerminatingState : public ScheduledState {
+ public:
+  explicit TerminatingState(Process::State process_state)
+      : process_state_(process_state) {
+  }
+
+  bool IsTerminating() const { return true; }
+
+  Process::State process_state() const { return process_state_; }
+
+  const char* ToString() const {
+    return IsDebugging() ? "Terminating<Debugging>" : "Terminating";
+  }
+
+  void ActivateState(SessionState* previous) {
+    ASSERT(previous->IsPaused());
+    ScheduledState::ActivateState(previous);
+    session()->ResumeExecution();
+    session()->SignalMainThread(Session::kSessionEnd);
+  }
+
+ private:
+  Process::State process_state_;
+};
+
+// A terminated state is the final state. It is not considered connected to the
+// session anymore.
+class TerminatedState : public SessionState {
+ public:
+  explicit TerminatedState(int exit_code) : exit_code_(exit_code) {}
+
+  bool IsTerminated() const { return true; }
+
+  const char* ToString() const { return "Terminated"; }
+
+  int exit_code() const { return exit_code_; }
+
+  SessionState* ProcessMessage(Connection::Opcode opcode);
+
+ private:
+  int exit_code_;
+};
 
 class ConnectionPrintInterceptor : public PrintInterceptor {
  public:
@@ -93,14 +383,10 @@ int PostponedChange::number_of_changes_ = 0;
 Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
+      state_(NULL),
       process_(NULL),
       next_process_id_(0),
-      execution_paused_(true),
-      execution_interrupted_(false),
       request_execution_pause_(false),
-      debugging_(false),
-      session_ended_(false),
-      session_end_state_(Process::kTerminated),
       method_map_id_(-1),
       class_map_id_(-1),
       fibers_map_id_(-1),
@@ -123,17 +409,23 @@ Session::~Session() {
   Print::UnregisterPrintInterceptors();
 #endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
 
-  delete connection_;
-  delete program_;
-  delete main_thread_monitor_;
   for (int i = 0; i < maps_.length(); ++i) delete maps_[i];
   maps_.Delete();
+  delete main_thread_monitor_;
+  delete state_;
+  delete program_;
+  delete connection_;
 }
 
 void Session::Initialize() {
+  state_ = new InitialState(this);
   program_ = new Program(Program::kBuiltViaSession);
   program()->Initialize();
   program()->AddSession(this);
+}
+
+bool Session::is_debugging() const {
+  return state_->IsDebugging();
 }
 
 static void* MessageProcessingThread(void* data) {
@@ -253,20 +545,17 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
   connection_->Send(Connection::kWriteSnapshotResult, buffer);
 }
 
+// Caller thread must have a lock on main_thread_monitor_.
 void Session::RequestExecutionPause() {
-  ScopedMonitorLock scoped_lock(main_thread_monitor_);
-  if (!execution_paused_) {
-    request_execution_pause_ = true;
-  }
+  ASSERT(state_->IsScheduled() && !state_->IsPaused());
+  request_execution_pause_ = true;
 }
 
 // Caller thread must have a lock on main_thread_monitor_, ie,
 // this should only be called from within ProcessMessage's main loop.
 void Session::PauseExecution() {
-  ASSERT(!execution_paused_);
+  ASSERT(state_->IsScheduled() && !state_->IsPaused());
   Scheduler* scheduler = program()->scheduler();
-  ASSERT(scheduler != NULL);
-  execution_paused_ = true;
   scheduler->StopProgram(program(), ProgramState::kSession);
   scheduler->PauseGcThread();
 }
@@ -274,22 +563,9 @@ void Session::PauseExecution() {
 // Caller thread must have a lock on main_thread_monitor_, ie,
 // this should only be called from within ProcessMessage's main loop.
 void Session::ResumeExecution() {
-  ASSERT(IsScheduledAndPaused());
-  execution_paused_ = false;
   Scheduler* scheduler = program()->scheduler();
   scheduler->ResumeGcThread();
   scheduler->ResumeProgram(program(), ProgramState::kSession);
-}
-
-// Caller thread must have a lock on main_thread_monitor_, ie,
-// this should only be called from within ProcessMessage's main loop.
-void Session::ProcessContinue(Process* process) {
-  ResumeExecution();
-  if (execution_interrupted_) {
-    execution_interrupted_ = false;
-  } else {
-    process->program()->scheduler()->ContinueProcess(process);
-  }
 }
 
 void Session::SendStackTrace(Stack* stack) {
@@ -311,13 +587,33 @@ static void MessageProcessingError(const char* message) {
   Platform::Exit(-1);
 }
 
-void Session::HandShake() {
-  Connection::Opcode opcode = connection_->Receive();
+void Session::ProcessMessages() {
+  ASSERT(state_->IsInitial());
+  while (true) {
+    Connection::Opcode opcode = connection_->Receive();
+    ScopedMonitorLock scoped_lock(main_thread_monitor_);
+
+    // TODO(zerny): Let scheduler callbacks pause the state directly.
+    if (request_execution_pause_) {
+      request_execution_pause_ = false;
+      ASSERT(state_->IsRunning());
+      PauseExecution();
+      ChangeState(new PausedState(/* interrupted */ false));
+    }
+
+    SessionState* next_state = state_->ProcessMessage(opcode);
+    if (next_state == NULL) return;
+    ChangeState(next_state);
+    if (next_state->IsTerminating()) return;
+  }
+}
+
+SessionState* InitialState::ProcessMessage(Connection::Opcode opcode) {
   if (opcode != Connection::kHandShake) {
     MessageProcessingError("Error: Invalid handshake message from compiler.\n");
   }
   int compiler_version_length;
-  uint8* compiler_version = connection_->ReadBytes(&compiler_version_length);
+  uint8* compiler_version = connection()->ReadBytes(&compiler_version_length);
   const char* version = GetVersion();
   int version_length = strlen(version);
   bool version_match =
@@ -329,554 +625,574 @@ void Session::HandShake() {
   buffer.WriteBoolean(version_match);
   buffer.WriteInt(version_length);
   buffer.WriteString(version);
-  connection_->Send(Connection::kHandShakeResult, buffer);
+  connection()->Send(Connection::kHandShakeResult, buffer);
   if (!version_match) {
     MessageProcessingError("Error: Different compiler and VM version.\n");
   }
+  return new ConnectedState();
 }
 
-void Session::ProcessMessages() {
-  // A session always starts with a handshake verifying that the
-  // compiler and VM have the same version.
-  HandShake();
-
-  while (true) {
-    Connection::Opcode opcode = connection_->Receive();
-
-    ScopedMonitorLock scoped_lock(main_thread_monitor_);
-    if (request_execution_pause_) {
-      request_execution_pause_ = false;
-      PauseExecution();
+SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
+  switch (opcode) {
+    case Connection::kConnectionError: {
+      MessageProcessingError("Lost connection to compiler.");
+      return NULL;
     }
 
-    switch (opcode) {
-      case Connection::kConnectionError: {
-        MessageProcessingError("Lost connection to compiler.");
+    case Connection::kCompilerError: {
+      session()->SignalMainThread(Session::kError);
+      return NULL;
+    }
+
+    case Connection::kSessionEnd: {
+      // TODO(zerny): Refactor to a terminated state change and assert that.
+      ASSERT(!IsScheduled() || session()->process_ == NULL);
+      session()->SignalMainThread(Session::kSessionEnd);
+      return NULL;
+    }
+
+    case Connection::kWriteSnapshot: {
+      ASSERT(!IsScheduled());
+      int length;
+      uint8* data = connection()->ReadBytes(&length);
+      const char* path = reinterpret_cast<const char*>(data);
+      ASSERT(static_cast<int>(strlen(path)) == length - 1);
+      FunctionOffsetsType function_offsets;
+      ClassOffsetsType class_offsets;
+      bool success = session()->WriteSnapshot(
+          path, &function_offsets, &class_offsets);
+      free(data);
+      session()->SendSnapshotResult(&class_offsets, &function_offsets);
+      session()->SignalMainThread(
+          success ? Session::kSnapshotDone : Session::kError);
+      return NULL;
+    }
+
+    case Connection::kProcessSpawnForMain: {
+      // Setup entry point for main thread.
+      program()->set_entry(Function::cast(session()->Pop()));
+      program()->set_main_arity(Smi::cast(session()->Pop())->value());
+      ProgramFolder::FoldProgramByDefault(program());
+      return new SpawnedState(program()->ProcessSpawnForMain());
+    }
+
+    case Connection::kPrepareForChanges: {
+      ASSERT(!IsModifying() && (!IsScheduled() || IsPaused()));
+      session()->PrepareForChanges();
+      return new ModifyingState();
+    }
+
+    case Connection::kDebugging: {
+      EnableDebugging();
+      session()->method_map_id_ = connection()->ReadInt();
+      session()->class_map_id_ = connection()->ReadInt();
+      session()->fibers_map_id_ = connection()->ReadInt();
+      break;
+    }
+
+    case Connection::kDisableStandardOutput: {
+      Print::DisableStandardOutput();
+      break;
+    }
+
+    case Connection::kNewMap: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->NewMap(connection()->ReadInt());
+      break;
+    }
+
+    case Connection::kDeleteMap: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->DeleteMap(connection()->ReadInt());
+      break;
+    }
+
+    case Connection::kPushFromMap: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int index = connection()->ReadInt();
+      int64 id = connection()->ReadInt64();
+      session()->PushFromMap(index, id);
+      break;
+    }
+
+    case Connection::kPopToMap: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int index = connection()->ReadInt();
+      int64 id = connection()->ReadInt64();
+      session()->PopToMap(index, id);
+      break;
+    }
+
+    case Connection::kRemoveFromMap: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int index = connection()->ReadInt();
+      int64 id = connection()->ReadInt64();
+      session()->RemoveFromMap(index, id);
+      break;
+    }
+
+    case Connection::kDup: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->Dup();
+      break;
+    }
+
+    case Connection::kDrop: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->Drop(connection()->ReadInt());
+      break;
+    }
+
+    case Connection::kPushNull: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->PushNull();
+      break;
+    }
+
+    case Connection::kPushBoolean: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->PushBoolean(connection()->ReadBoolean());
+      break;
+    }
+
+    case Connection::kPushNewInteger: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->PushNewInteger(connection()->ReadInt64());
+      break;
+    }
+
+    case Connection::kPushNewBigInteger: {
+      ASSERT(!IsScheduled() || IsPaused());
+      bool negative = connection()->ReadBoolean();
+      int used = connection()->ReadInt();
+      int class_map = connection()->ReadInt();
+      int64 bigint_class_id = connection()->ReadInt64();
+      int64 uint32_digits_class_id = connection()->ReadInt64();
+
+      int rounded_used = (used & 1) == 0 ? used : used + 1;
+
+      // First two arguments for _Bigint allocation.
+      session()->PushBoolean(negative);
+      session()->PushNewInteger(used);
+
+      // Arguments for _Uint32Digits allocation.
+      session()->PushNewInteger(rounded_used);
+      GC_AND_RETRY_ON_ALLOCATION_FAILURE(
+          object, program()->CreateByteArray(rounded_used * 4));
+      ByteArray* backing = ByteArray::cast(object);
+      for (int i = 0; i < used; i++) {
+        uint32 part = static_cast<uint32>(connection()->ReadInt());
+        uint8* part_address = backing->byte_address_for(i * 4);
+        *(reinterpret_cast<uint32*>(part_address)) = part;
       }
-
-      case Connection::kCompilerError: {
-        debugging_ = false;
-        SignalMainThread(kError);
-        return;
-      }
-
-      case Connection::kDisableStandardOutput: {
-        Print::DisableStandardOutput();
-        break;
-      }
-
-      case Connection::kProcessDebugInterrupt: {
-        if (!execution_paused_) {
-          PauseExecution();
-          execution_interrupted_ = true;
-          SendBreakPoint(process_);
-        }
-        break;
-      }
-
-      case Connection::kProcessSpawnForMain: {
-        // Setup entry point for main thread.
-        program()->set_entry(Function::cast(Pop()));
-        program()->set_main_arity(Smi::cast(Pop())->value());
-        ProgramFolder::FoldProgramByDefault(program());
-        process_ = program()->ProcessSpawnForMain();
-        break;
-      }
-
-      case Connection::kProcessRun: {
-        SignalMainThread(kProcessRun);
-        // If we are debugging we continue processing messages. If we are
-        // connected to the compiler directly we terminate the message
-        // processing thread.
-        if (!is_debugging()) return;
-        break;
-      }
-
-      case Connection::kProcessSetBreakpoint: {
-        ASSERT(execution_paused_);
-        process_->EnsureDebuggerAttached(this);
-        WriteBuffer buffer;
-        int bytecode_index = connection_->ReadInt();
-        Function* function = Function::cast(Pop());
-        DebugInfo* debug_info = process_->debug_info();
-        int id = debug_info->SetBreakpoint(function, bytecode_index);
-        buffer.WriteInt(id);
-        connection_->Send(Connection::kProcessSetBreakpoint, buffer);
-        break;
-      }
-
-      case Connection::kProcessDeleteBreakpoint: {
-        ASSERT(execution_paused_);
-        process_->EnsureDebuggerAttached(this);
-        WriteBuffer buffer;
-        int id = connection_->ReadInt();
-        bool deleted = process_->debug_info()->DeleteBreakpoint(id);
-        ASSERT(deleted);
-        buffer.WriteInt(id);
-        connection_->Send(Connection::kProcessDeleteBreakpoint, buffer);
-        break;
-      }
-
-      case Connection::kProcessStep: {
-        ASSERT(IsScheduledAndPaused());
-        process_->EnsureDebuggerAttached(this);
-        process_->debug_info()->SetStepping();
-        ProcessContinue(process_);
-        break;
-      }
-
-      case Connection::kProcessStepOver: {
-        ASSERT(IsScheduledAndPaused());
-        process_->EnsureDebuggerAttached(this);
-        int breakpoint_id = process_->PrepareStepOver();
-        WriteBuffer buffer;
-        buffer.WriteInt(breakpoint_id);
-        connection_->Send(Connection::kProcessSetBreakpoint, buffer);
-        ProcessContinue(process_);
-        break;
-      }
-
-      case Connection::kProcessStepOut: {
-        ASSERT(IsScheduledAndPaused());
-        process_->EnsureDebuggerAttached(this);
-        int breakpoint_id = process_->PrepareStepOut();
-        WriteBuffer buffer;
-        buffer.WriteInt(breakpoint_id);
-        connection_->Send(Connection::kProcessSetBreakpoint, buffer);
-        ProcessContinue(process_);
-        break;
-      }
-
-      case Connection::kProcessStepTo: {
-        ASSERT(IsScheduledAndPaused());
-        process_->EnsureDebuggerAttached(this);
-        int64 id = connection_->ReadInt64();
-        int bcp = connection_->ReadInt();
-        Function* function =
-            Function::cast(maps_[method_map_id_]->LookupById(id));
-        DebugInfo* debug_info = process_->debug_info();
-        debug_info->SetBreakpoint(function, bcp, true);
-        ProcessContinue(process_);
-        break;
-      }
-
-      case Connection::kProcessContinue: {
-        ASSERT(IsScheduledAndPaused());
-        ProcessContinue(process_);
-        break;
-      }
-
-      case Connection::kProcessBacktraceRequest: {
-        ASSERT(IsScheduledAndPaused());
-        int process_id = connection_->ReadInt() - 1;
-        Process* process = GetProcess(process_id);
-        Stack* stack = process->stack();
-        SendStackTrace(stack);
-        break;
-      }
-
-      case Connection::kProcessFiberBacktraceRequest: {
-        ASSERT(IsScheduledAndPaused());
-        int64 fiber_id = connection_->ReadInt64();
-        Stack* stack = Stack::cast(MapLookupById(fibers_map_id_, fiber_id));
-        SendStackTrace(stack);
-        break;
-      }
-
-      case Connection::kProcessUncaughtExceptionRequest: {
-        ASSERT(IsScheduledAndPaused());
-        Object* exception = process_->exception();
-        if (exception->IsInstance()) {
-          SendInstanceStructure(Instance::cast(exception));
-        } else {
-          SendDartValue(exception);
-        }
-        break;
-      }
-
-      case Connection::kProcessLocal:
-      case Connection::kProcessLocalStructure: {
-        ASSERT(IsScheduledAndPaused());
-        int frame_index = connection_->ReadInt();
-        int slot = connection_->ReadInt();
-        Stack* stack = process_->stack();
-        Frame frame(stack);
-        for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
-        word index = frame.FirstLocalIndex() - slot;
-        if (index < frame.LastLocalIndex()) FATAL("Illegal slot offset");
-        Object* local = stack->get(index);
-        if (opcode == Connection::kProcessLocalStructure &&
-            local->IsInstance()) {
-          SendInstanceStructure(Instance::cast(local));
-        } else {
-          SendDartValue(local);
-        }
-        break;
-      }
-
-      case Connection::kProcessRestartFrame: {
-        ASSERT(IsScheduledAndPaused());
-        int frame_index = connection_->ReadInt();
-        RestartFrame(frame_index);
-        process_->set_exception(process_->program()->null_object());
-        DebugInfo* debug_info = process_->debug_info();
-        if (debug_info != NULL) debug_info->ClearBreakpoint();
-        ProcessContinue(process_);
-        break;
-      }
-
-      case Connection::kSessionEnd: {
-        ASSERT(!session_ended_);
-        session_ended_ = true;
-        Scheduler* scheduler = program()->scheduler();
-        // If execution is paused we kill the main process to allow the VM to
-        // terminate.
-        if (IsScheduledAndPaused()) {
-          session_end_state_ = process_->state();
-          scheduler->KillProgram(program());
-          process_->set_exception(process_->program()->null_object());
-          ProcessContinue(process_);
-        } else {
-          // Either the program has not been scheduled or it has completed.
-          ASSERT(scheduler == NULL || process_ == NULL);
-        }
-        SignalMainThread(kSessionEnd);
-        return;
-      }
-
-      case Connection::kDebugging: {
-        method_map_id_ = connection_->ReadInt();
-        class_map_id_ = connection_->ReadInt();
-        fibers_map_id_ = connection_->ReadInt();
-        debugging_ = true;
-        break;
-      }
-
-      case Connection::kProcessAddFibersToMap: {
-        ASSERT(IsScheduledAndPaused());
-        // TODO(ager): Potentially optimize this to not require a full
-        // process GC to locate the live stacks?
-        int number_of_stacks = program()->CollectMutableGarbageAndChainStacks();
-        Object* current = program()->stack_chain();
-        for (int i = 0; i < number_of_stacks; i++) {
-          Stack* stack = Stack::cast(current);
-          AddToMap(fibers_map_id_, i, stack);
-          current = stack->next();
-          // Unchain stacks.
-          stack->set_next(Smi::FromWord(0));
-        }
-        ASSERT(current == NULL);
-        program()->ClearStackChain();
-        WriteBuffer buffer;
-        buffer.WriteInt(number_of_stacks);
-        connection_->Send(Connection::kProcessNumberOfStacks, buffer);
-        break;
-      }
-
-      case Connection::kProcessGetProcessIds: {
-        ASSERT(IsScheduledAndPaused());
-        int count = 0;
-        auto processes = program()->process_list();
-        for (auto process : *processes) {
-          USE(process);
-          ++count;
-        }
-
-        WriteBuffer buffer;
-        buffer.WriteInt(count);
-        for (auto process : *processes) {
-          process->EnsureDebuggerAttached(this);
-          buffer.WriteInt(process->debug_info()->process_id());
-        }
-
-        connection_->Send(Connection::kProcessGetProcessIdsResult, buffer);
-        break;
-      }
-
-      case Connection::kWriteSnapshot: {
-        int length;
-        uint8* data = connection_->ReadBytes(&length);
-        const char* path = reinterpret_cast<const char*>(data);
-        ASSERT(static_cast<int>(strlen(path)) == length - 1);
-
-        FunctionOffsetsType function_offsets;
-        ClassOffsetsType class_offsets;
-        bool success = WriteSnapshot(path, &function_offsets, &class_offsets);
-        free(data);
-
-        SendSnapshotResult(&class_offsets, &function_offsets);
-
-        SignalMainThread(success ? kSnapshotDone : kError);
-        return;
-      }
-
-      case Connection::kCollectGarbage: {
-        ASSERT(execution_paused_);
-        program()->CollectGarbage();
-        break;
-      }
-
-      case Connection::kNewMap: {
-        ASSERT(execution_paused_);
-        NewMap(connection_->ReadInt());
-        break;
-      }
-
-      case Connection::kDeleteMap: {
-        ASSERT(execution_paused_);
-        DeleteMap(connection_->ReadInt());
-        break;
-      }
-
-      case Connection::kPushFromMap: {
-        ASSERT(execution_paused_);
-        int index = connection_->ReadInt();
-        int64 id = connection_->ReadInt64();
-        PushFromMap(index, id);
-        break;
-      }
-
-      case Connection::kPopToMap: {
-        ASSERT(execution_paused_);
-        int index = connection_->ReadInt();
-        int64 id = connection_->ReadInt64();
-        PopToMap(index, id);
-        break;
-      }
-
-      case Connection::kRemoveFromMap: {
-        ASSERT(execution_paused_);
-        int index = connection_->ReadInt();
-        int64 id = connection_->ReadInt64();
-        RemoveFromMap(index, id);
-        break;
-      }
-
-      case Connection::kDup: {
-        ASSERT(execution_paused_);
-        Dup();
-        break;
-      }
-
-      case Connection::kDrop: {
-        ASSERT(execution_paused_);
-        Drop(connection_->ReadInt());
-        break;
-      }
-
-      case Connection::kPushNull: {
-        ASSERT(execution_paused_);
-        PushNull();
-        break;
-      }
-
-      case Connection::kPushBoolean: {
-        ASSERT(execution_paused_);
-        PushBoolean(connection_->ReadBoolean());
-        break;
-      }
-
-      case Connection::kPushNewInteger: {
-        ASSERT(execution_paused_);
-        PushNewInteger(connection_->ReadInt64());
-        break;
-      }
-
-      case Connection::kPushNewBigInteger: {
-        ASSERT(execution_paused_);
-        bool negative = connection_->ReadBoolean();
-        int used = connection_->ReadInt();
-        int class_map = connection_->ReadInt();
-        int64 bigint_class_id = connection_->ReadInt64();
-        int64 uint32_digits_class_id = connection_->ReadInt64();
-
-        int rounded_used = (used & 1) == 0 ? used : used + 1;
-
-        // First two arguments for _Bigint allocation.
-        PushBoolean(negative);
-        PushNewInteger(used);
-
-        // Arguments for _Uint32Digits allocation.
-        PushNewInteger(rounded_used);
-        GC_AND_RETRY_ON_ALLOCATION_FAILURE(
-            object, program()->CreateByteArray(rounded_used * 4));
-        ByteArray* backing = ByteArray::cast(object);
-        for (int i = 0; i < used; i++) {
-          uint32 part = static_cast<uint32>(connection_->ReadInt());
-          uint8* part_address = backing->byte_address_for(i * 4);
-          *(reinterpret_cast<uint32*>(part_address)) = part;
-        }
-        Push(backing);
-        // _Uint32Digits allocation.
-        PushFromMap(class_map, uint32_digits_class_id);
-        PushNewInstance();
-
-        // _Bigint allocation.
-        PushFromMap(class_map, bigint_class_id);
-        PushNewInstance();
-
-        break;
-      }
-
-      case Connection::kPushNewDouble: {
-        ASSERT(execution_paused_);
-        PushNewDouble(connection_->ReadDouble());
-        break;
-      }
-
-      case Connection::kPushNewOneByteString: {
-        ASSERT(execution_paused_);
-        int length;
-        uint8* bytes = connection_->ReadBytes(&length);
-        List<uint8> contents(bytes, length);
-        PushNewOneByteString(contents);
-        contents.Delete();
-        break;
-      }
-
-      case Connection::kPushNewTwoByteString: {
-        ASSERT(execution_paused_);
-        int length;
-        uint8* bytes = connection_->ReadBytes(&length);
-        ASSERT((length & 1) == 0);
-        List<uint16> contents(reinterpret_cast<uint16*>(bytes), length >> 1);
-        PushNewTwoByteString(contents);
-        contents.Delete();
-        break;
-      }
-
-      case Connection::kPushNewInstance: {
-        ASSERT(execution_paused_);
-        PushNewInstance();
-        break;
-      }
-
-      case Connection::kPushNewArray: {
-        ASSERT(execution_paused_);
-        PushNewArray(connection_->ReadInt());
-        break;
-      }
-
-      case Connection::kPushNewFunction: {
-        ASSERT(execution_paused_);
-        int arity = connection_->ReadInt();
-        int literals = connection_->ReadInt();
-        int length;
-        uint8* bytes = connection_->ReadBytes(&length);
-        List<uint8> bytecodes(bytes, length);
-        PushNewFunction(arity, literals, bytecodes);
-        bytecodes.Delete();
-        break;
-      }
-
-      case Connection::kPushNewInitializer: {
-        ASSERT(execution_paused_);
-        PushNewInitializer();
-        break;
-      }
-
-      case Connection::kPushNewClass: {
-        ASSERT(execution_paused_);
-        PushNewClass(connection_->ReadInt());
-        break;
-      }
-
-      case Connection::kPushBuiltinClass: {
-        ASSERT(execution_paused_);
-        Names::Id name = static_cast<Names::Id>(connection_->ReadInt());
-        int fields = connection_->ReadInt();
-        PushBuiltinClass(name, fields);
-        break;
-      }
-
-      case Connection::kPushConstantList: {
-        ASSERT(execution_paused_);
-        int length = connection_->ReadInt();
-        PushConstantList(length);
-        break;
-      }
-
-      case Connection::kPushConstantByteList: {
-        ASSERT(execution_paused_);
-        int length = connection_->ReadInt();
-        PushConstantByteList(length);
-        break;
-      }
-
-      case Connection::kPushConstantMap: {
-        ASSERT(execution_paused_);
-        int length = connection_->ReadInt();
-        PushConstantMap(length);
-        break;
-      }
-
-      case Connection::kChangeSuperClass: {
-        ChangeSuperClass();
-        break;
-      }
-
-      case Connection::kChangeMethodTable: {
-        ChangeMethodTable(connection_->ReadInt());
-        break;
-      }
-
-      case Connection::kChangeMethodLiteral: {
-        ChangeMethodLiteral(connection_->ReadInt());
-        break;
-      }
-
-      case Connection::kChangeStatics: {
-        ChangeStatics(connection_->ReadInt());
-        break;
-      }
-
-      case Connection::kChangeSchemas: {
-        int count = connection_->ReadInt();
-        int delta = connection_->ReadInt();
-        ChangeSchemas(count, delta);
-        break;
-      }
-
-      case Connection::kPrepareForChanges: {
-        PrepareForChanges();
-        break;
-      }
-
-      case Connection::kCommitChanges: {
-        bool success = CommitChanges(connection_->ReadInt());
-        WriteBuffer buffer;
-        buffer.WriteBoolean(success);
-        if (success) {
-          buffer.WriteString("Successfully applied program update.");
-        } else {
-          if (program_update_error_ != NULL) {
-            buffer.WriteString(program_update_error_);
-          } else {
-            buffer.WriteString(
-                "An unknown error occured during program update.");
-          }
-        }
-        connection_->Send(Connection::kCommitChangesResult, buffer);
-        break;
-      }
-
-      case Connection::kDiscardChanges: {
-        DiscardChanges();
-        break;
-      }
-
-      case Connection::kMapLookup: {
-        ASSERT(execution_paused_);
-        int map_index = connection_->ReadInt();
-        WriteBuffer buffer;
-        buffer.WriteInt64(MapLookupByObject(map_index, Top()));
-        connection_->Send(Connection::kObjectId, buffer);
-        break;
-      }
-
-      default: { FATAL1("Unknown message opcode %d", opcode); }
+      session()->Push(backing);
+      // _Uint32Digits allocation.
+      session()->PushFromMap(class_map, uint32_digits_class_id);
+      session()->PushNewInstance();
+
+      // _Bigint allocation.
+      session()->PushFromMap(class_map, bigint_class_id);
+      session()->PushNewInstance();
+
+      break;
+    }
+
+    case Connection::kPushNewDouble: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->PushNewDouble(connection()->ReadDouble());
+      break;
+    }
+
+    case Connection::kPushNewOneByteString: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int length;
+      uint8* bytes = connection()->ReadBytes(&length);
+      List<uint8> contents(bytes, length);
+      session()->PushNewOneByteString(contents);
+      contents.Delete();
+      break;
+    }
+
+    case Connection::kPushNewTwoByteString: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int length;
+      uint8* bytes = connection()->ReadBytes(&length);
+      ASSERT((length & 1) == 0);
+      List<uint16> contents(reinterpret_cast<uint16*>(bytes), length >> 1);
+      session()->PushNewTwoByteString(contents);
+      contents.Delete();
+      break;
+    }
+
+    case Connection::kPushNewInstance: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->PushNewInstance();
+      break;
+    }
+
+    case Connection::kPushNewArray: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->PushNewArray(connection()->ReadInt());
+      break;
+    }
+
+    case Connection::kPushNewFunction: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int arity = connection()->ReadInt();
+      int literals = connection()->ReadInt();
+      int length;
+      uint8* bytes = connection()->ReadBytes(&length);
+      List<uint8> bytecodes(bytes, length);
+      session()->PushNewFunction(arity, literals, bytecodes);
+      bytecodes.Delete();
+      break;
+    }
+
+    case Connection::kPushNewInitializer: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->PushNewInitializer();
+      break;
+    }
+
+    case Connection::kPushNewClass: {
+      ASSERT(!IsScheduled() || IsPaused());
+      session()->PushNewClass(connection()->ReadInt());
+      break;
+    }
+
+    case Connection::kPushBuiltinClass: {
+      ASSERT(!IsScheduled() || IsPaused());
+      Names::Id name = static_cast<Names::Id>(connection()->ReadInt());
+      int fields = connection()->ReadInt();
+      session()->PushBuiltinClass(name, fields);
+      break;
+    }
+
+    case Connection::kPushConstantList: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int length = connection()->ReadInt();
+      session()->PushConstantList(length);
+      break;
+    }
+
+    case Connection::kPushConstantByteList: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int length = connection()->ReadInt();
+      session()->PushConstantByteList(length);
+      break;
+    }
+
+    case Connection::kPushConstantMap: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int length = connection()->ReadInt();
+      session()->PushConstantMap(length);
+      break;
+    }
+
+    case Connection::kMapLookup: {
+      ASSERT(!IsScheduled() || IsPaused());
+      int map_index = connection()->ReadInt();
+      WriteBuffer buffer;
+      buffer.WriteInt64(
+          session()->MapLookupByObject(map_index, session()->Top()));
+      connection()->Send(Connection::kObjectId, buffer);
+      break;
+    }
+
+    default: {
+      return SessionState::ProcessMessage(opcode);
     }
   }
+
+  return this;
+}
+
+SessionState* ModifyingState::ProcessMessage(Connection::Opcode opcode) {
+  switch (opcode) {
+    case Connection::kCollectGarbage: {
+      program()->CollectGarbage();
+      break;
+    }
+
+    case Connection::kChangeSuperClass: {
+      session()->ChangeSuperClass();
+      break;
+    }
+
+    case Connection::kChangeMethodTable: {
+      session()->ChangeMethodTable(connection()->ReadInt());
+      break;
+    }
+
+    case Connection::kChangeMethodLiteral: {
+      session()->ChangeMethodLiteral(connection()->ReadInt());
+      break;
+    }
+
+    case Connection::kChangeStatics: {
+      session()->ChangeStatics(connection()->ReadInt());
+      break;
+    }
+
+    case Connection::kChangeSchemas: {
+      int count = connection()->ReadInt();
+      int delta = connection()->ReadInt();
+      session()->ChangeSchemas(count, delta);
+      break;
+    }
+
+    case Connection::kCommitChanges: {
+      bool success = session()->CommitChanges(connection()->ReadInt());
+      WriteBuffer buffer;
+      buffer.WriteBoolean(success);
+      if (success) {
+        buffer.WriteString("Successfully applied program update.");
+      } else {
+        if (session()->program_update_error_ != NULL) {
+          buffer.WriteString(session()->program_update_error_);
+        } else {
+          buffer.WriteString(
+              "An unknown error occured during program update.");
+        }
+      }
+      connection()->Send(Connection::kCommitChangesResult, buffer);
+      return RestorePrevious();
+    }
+
+    case Connection::kDiscardChanges: {
+      session()->DiscardChanges();
+      return RestorePrevious();
+    }
+
+    default: {
+      return ConnectedState::ProcessMessage(opcode);
+    }
+  }
+
+  return this;
+}
+
+SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
+  switch (opcode) {
+    case Connection::kProcessRun: {
+      session()->SignalMainThread(Session::kProcessRun);
+      // If we are debugging we continue processing messages. If we are
+      // connected to the compiler directly we terminate the message
+      // processing thread.
+      if (!IsDebugging()) return NULL;
+      break;
+    }
+
+    // Debugging commands that are valid on unscheduled programs.
+    case Connection::kProcessDebugInterrupt: {
+      // TODO(zerny): Disallow an interrupt on unscheduled programs?
+      ASSERT(IsDebugging());
+      // This is a noop in all non-running states.
+      break;
+    }
+
+    case Connection::kProcessSetBreakpoint: {
+      ASSERT(IsDebugging());
+      process()->EnsureDebuggerAttached(session());
+      WriteBuffer buffer;
+      int bytecode_index = connection()->ReadInt();
+      Function* function = Function::cast(session()->Pop());
+      DebugInfo* debug_info = process()->debug_info();
+      int id = debug_info->SetBreakpoint(function, bytecode_index);
+      buffer.WriteInt(id);
+      connection()->Send(Connection::kProcessSetBreakpoint, buffer);
+      break;
+    }
+
+    case Connection::kProcessDeleteBreakpoint: {
+      ASSERT(IsDebugging());
+      process()->EnsureDebuggerAttached(session());
+      WriteBuffer buffer;
+      int id = connection()->ReadInt();
+      bool deleted = process()->debug_info()->DeleteBreakpoint(id);
+      ASSERT(deleted);
+      buffer.WriteInt(id);
+      connection()->Send(Connection::kProcessDeleteBreakpoint, buffer);
+      break;
+    }
+    // End of debugging commands that are valid on unscheduled programs.
+
+    default: {
+      return ConnectedState::ProcessMessage(opcode);
+    }
+  }
+  return this;
+}
+
+SessionState* RunningState::ProcessMessage(Connection::Opcode opcode) {
+  switch (opcode) {
+    case Connection::kProcessDebugInterrupt: {
+      session()->PauseExecution();
+      session()->SendBreakPoint(process());
+      return new PausedState(/* interrupted */ true);
+    }
+
+    default: {
+      return ScheduledState::ProcessMessage(opcode);
+    }
+  }
+  return this;
+}
+
+SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
+  switch (opcode) {
+    case Connection::kSessionEnd: {
+      Process::State process_state = process()->state();
+      program()->scheduler()->KillProgram(program());
+      process()->set_exception(program()->null_object());
+      // Continue execution, but change to the terminating state.
+      if (!interrupted_) scheduler()->ContinueProcess(process());
+      return new TerminatingState(process_state);
+    }
+
+    case Connection::kProcessStep: {
+      process()->EnsureDebuggerAttached(session());
+      process()->debug_info()->SetStepping();
+      return ProcessContinue();
+    }
+
+    case Connection::kProcessStepOver: {
+      process()->EnsureDebuggerAttached(session());
+      int breakpoint_id = process()->PrepareStepOver();
+      WriteBuffer buffer;
+      buffer.WriteInt(breakpoint_id);
+      connection()->Send(Connection::kProcessSetBreakpoint, buffer);
+      return ProcessContinue();
+    }
+
+    case Connection::kProcessStepOut: {
+      process()->EnsureDebuggerAttached(session());
+      int breakpoint_id = process()->PrepareStepOut();
+      WriteBuffer buffer;
+      buffer.WriteInt(breakpoint_id);
+      connection()->Send(Connection::kProcessSetBreakpoint, buffer);
+      return ProcessContinue();
+    }
+
+    case Connection::kProcessStepTo: {
+      process()->EnsureDebuggerAttached(session());
+      int64 id = connection()->ReadInt64();
+      int bcp = connection()->ReadInt();
+      Function* function = Function::cast(
+          session()->maps_[session()->method_map_id_]->LookupById(id));
+      DebugInfo* debug_info = process()->debug_info();
+      debug_info->SetBreakpoint(function, bcp, true);
+      return ProcessContinue();
+    }
+
+    case Connection::kProcessContinue: {
+      return ProcessContinue();
+    }
+
+    case Connection::kProcessBacktraceRequest: {
+      int process_id = connection()->ReadInt() - 1;
+      Process* process = session()->GetProcess(process_id);
+      Stack* stack = process->stack();
+      session()->SendStackTrace(stack);
+      break;
+    }
+
+    case Connection::kProcessFiberBacktraceRequest: {
+      int64 fiber_id = connection()->ReadInt64();
+      Stack* stack = Stack::cast(session()->MapLookupById(
+          session()->fibers_map_id_, fiber_id));
+      session()->SendStackTrace(stack);
+      break;
+    }
+
+    case Connection::kProcessUncaughtExceptionRequest: {
+      Object* exception = process()->exception();
+      if (exception->IsInstance()) {
+        session()->SendInstanceStructure(Instance::cast(exception));
+      } else {
+        session()->SendDartValue(exception);
+      }
+      break;
+    }
+
+    case Connection::kProcessLocal:
+    case Connection::kProcessLocalStructure: {
+      int frame_index = connection()->ReadInt();
+      int slot = connection()->ReadInt();
+      Stack* stack = process()->stack();
+      Frame frame(stack);
+      for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
+      word index = frame.FirstLocalIndex() - slot;
+      if (index < frame.LastLocalIndex()) FATAL("Illegal slot offset");
+      Object* local = stack->get(index);
+      if (opcode == Connection::kProcessLocalStructure &&
+          local->IsInstance()) {
+        session()->SendInstanceStructure(Instance::cast(local));
+      } else {
+        session()->SendDartValue(local);
+      }
+      break;
+    }
+
+    case Connection::kProcessRestartFrame: {
+      int frame_index = connection()->ReadInt();
+      session()->RestartFrame(frame_index);
+      process()->set_exception(program()->null_object());
+      DebugInfo* debug_info = process()->debug_info();
+      if (debug_info != NULL) debug_info->ClearBreakpoint();
+      return ProcessContinue();
+    }
+
+    case Connection::kProcessAddFibersToMap: {
+      // TODO(ager): Potentially optimize this to not require a full
+      // process GC to locate the live stacks?
+      int number_of_stacks = program()->CollectMutableGarbageAndChainStacks();
+      Object* current = program()->stack_chain();
+      for (int i = 0; i < number_of_stacks; i++) {
+        Stack* stack = Stack::cast(current);
+        session()->AddToMap(session()->fibers_map_id_, i, stack);
+        current = stack->next();
+        // Unchain stacks.
+        stack->set_next(Smi::FromWord(0));
+      }
+      ASSERT(current == NULL);
+      program()->ClearStackChain();
+      WriteBuffer buffer;
+      buffer.WriteInt(number_of_stacks);
+      connection()->Send(Connection::kProcessNumberOfStacks, buffer);
+      break;
+    }
+
+    case Connection::kProcessGetProcessIds: {
+      int count = 0;
+      auto processes = program()->process_list();
+      for (auto process : *processes) {
+        USE(process);
+        ++count;
+      }
+      WriteBuffer buffer;
+      buffer.WriteInt(count);
+      for (auto process : *processes) {
+        process->EnsureDebuggerAttached(session());
+        buffer.WriteInt(process->debug_info()->process_id());
+      }
+      connection()->Send(Connection::kProcessGetProcessIdsResult, buffer);
+      break;
+    }
+
+    default: {
+      return ScheduledState::ProcessMessage(opcode);
+    }
+  }
+  return this;
+}
+
+SessionState* TerminatedState::ProcessMessage(Connection::Opcode opcode) {
+  if (opcode == Connection::kSessionEnd) {
+    session()->SignalMainThread(Session::kSessionEnd);
+    return NULL;
+  }
+  return SessionState::ProcessMessage(opcode);
 }
 
 void Session::IterateChangesPointers(PointerVisitor* visitor) {
@@ -901,24 +1217,30 @@ void Session::IteratePointers(PointerVisitor* visitor) {
 
 int Session::ProcessRun() {
   bool process_started = false;
-  bool has_result = false;
-  int result = 0;
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
   while (true) {
+    if (state_->IsTerminated()) {
+      return static_cast<TerminatedState*>(state_)->exit_code();
+    }
     MainThreadResumeKind resume_kind;
     while (main_thread_resume_kind_ == kUnknown) main_thread_monitor_->Wait();
     resume_kind = main_thread_resume_kind_;
     main_thread_resume_kind_ = kUnknown;
     main_thread_monitor_->NotifyAll();
     switch (resume_kind) {
-      case kError:
-        ASSERT(!debugging_);
-        return kUncaughtExceptionExitCode;
-      case kSnapshotDone:
-        return 0;
-      case kProcessRun:
+      case kError: {
+        ChangeState(new TerminatedState(kUncaughtExceptionExitCode));
+        break;
+      }
+      case kSnapshotDone: {
+        ChangeState(new TerminatedState(0));
+        break;
+      }
+      case kProcessRun: {
+        ASSERT(process_ != NULL);
         process_started = true;
-
+        int result = -1;
+        ChangeState(new RunningState());
         {
           SimpleProgramRunner runner;
 
@@ -926,36 +1248,38 @@ int Session::ProcessRun() {
           Process* processes[1] = { process_ };
           int exitcodes[1] = { -1 };
 
-          execution_paused_ = false;
           ScopedMonitorUnlock scoped_unlock(main_thread_monitor_);
           runner.Run(1, exitcodes, programs, processes);
 
           result = exitcodes[0];
           ASSERT(result != -1);
         }
-
-        has_result = true;
-        if (!debugging_ || session_ended_) return result;
+        ASSERT(state_->IsScheduled());
+        ChangeState(new TerminatedState(result));
         break;
-      case kSessionEnd:
-        ASSERT(!debugging_ || session_ended_);
-        if (!process_started && process_ != NULL) {
-          // If the process was spawned but not started, the scheduler does not
-          // know about it and we are therefore responsible for deleting it.
-          process_->ChangeState(Process::kSleeping,
-                                Process::kWaitingForChildren);
-          program()->ScheduleProcessForDeletion(process_, Signal::kTerminated);
+      }
+      case kSessionEnd: {
+        ASSERT(!process_started);
+        ASSERT(!state_->IsScheduled());
+        // If the process was spawned but not started, the scheduler does not
+        // know about it and we are therefore responsible for deleting it.
+        if (state_->IsSpawned()) {
+          SpawnedState* spawned = static_cast<SpawnedState*>(state_);
+          spawned->main_process()->ChangeState(
+              Process::kSleeping, Process::kWaitingForChildren);
+          program_->ScheduleProcessForDeletion(process_, Signal::kTerminated);
         }
-        Print::UnregisterPrintInterceptors();
-        if (!process_started) return 0;
-        if (has_result) return result;
+        ChangeState(new TerminatedState(0));
         break;
-      case kUnknown:
+      }
+      default: {
         UNREACHABLE();
         break;
+      }
     }
   }
-  return result;
+  UNREACHABLE();
+  return -1;
 }
 
 bool Session::WriteSnapshot(const char* path,
@@ -1149,7 +1473,7 @@ void Session::PushNewFunction(int arity, int literals, List<uint8> bytecodes) {
 }
 
 void Session::PushNewInitializer() {
-  ASSERT(execution_paused_);
+  ASSERT(!state_->IsScheduled() || state_->IsPaused());
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(
       result, program()->CreateInitializer(Function::cast(Top())));
   Pop();
@@ -1157,7 +1481,7 @@ void Session::PushNewInitializer() {
 }
 
 void Session::PushNewClass(int fields) {
-  ASSERT(execution_paused_);
+  ASSERT(!state_->IsScheduled() || state_->IsPaused());
   GC_AND_RETRY_ON_ALLOCATION_FAILURE(result, program()->CreateClass(fields));
   Push(result);
 }
@@ -1261,7 +1585,7 @@ void Session::PushConstantMap(int length) {
 }
 
 void Session::PrepareForChanges() {
-  ASSERT(execution_paused_);
+  ASSERT(!state_->IsScheduled() || state_->IsPaused());
   if (program()->is_optimized()) {
     ProgramFolder program_folder(program());
     program_folder.Unfold();
@@ -1279,7 +1603,7 @@ void Session::ChangeSuperClass() {
 }
 
 void Session::CommitChangeSuperClass(PostponedChange* change) {
-  ASSERT(execution_paused_);
+  ASSERT(state_->IsModifying());
   Class* klass = Class::cast(change->get(1));
   Class* super = Class::cast(change->get(2));
   klass->set_super_class(super);
@@ -1291,7 +1615,7 @@ void Session::ChangeMethodTable(int length) {
 }
 
 void Session::CommitChangeMethodTable(PostponedChange* change) {
-  ASSERT(execution_paused_);
+  ASSERT(state_->IsModifying());
   Class* clazz = Class::cast(change->get(1));
   Array* methods = Array::cast(change->get(2));
   clazz->set_methods(methods);
@@ -1303,7 +1627,7 @@ void Session::ChangeMethodLiteral(int index) {
 }
 
 void Session::CommitChangeMethodLiteral(PostponedChange* change) {
-  ASSERT(execution_paused_);
+  ASSERT(state_->IsModifying());
   Function* function = Function::cast(change->get(1));
   Object* literal = change->get(2);
   int index = Smi::cast(change->get(3))->value();
@@ -1316,7 +1640,7 @@ void Session::ChangeStatics(int count) {
 }
 
 void Session::CommitChangeStatics(PostponedChange* change) {
-  ASSERT(execution_paused_);
+  ASSERT(state_->IsModifying());
   program()->set_static_fields(Array::cast(change->get(1)));
 }
 
@@ -1327,7 +1651,7 @@ void Session::ChangeSchemas(int count, int delta) {
 }
 
 void Session::CommitChangeSchemas(PostponedChange* change) {
-  ASSERT(execution_paused_);
+  ASSERT(state_->IsModifying());
   // TODO(kasperl): Rework this so we can allow allocation failures
   // as part of allocating the new classes.
   SemiSpace* space = program()->heap()->space();
@@ -1347,7 +1671,7 @@ void Session::CommitChangeSchemas(PostponedChange* change) {
 }
 
 bool Session::CommitChanges(int count) {
-  ASSERT(execution_paused_);
+  ASSERT(state_->IsModifying());
   ASSERT(!program()->is_optimized());
 
   if (count != PostponedChange::number_of_changes()) {
@@ -1410,7 +1734,7 @@ bool Session::CommitChanges(int count) {
 }
 
 void Session::DiscardChanges() {
-  ASSERT(execution_paused_);
+  ASSERT(state_->IsModifying());
   PostponedChange* current = first_change_;
   while (current != NULL) {
     PostponedChange* next = current->next();
@@ -1422,7 +1746,7 @@ void Session::DiscardChanges() {
 }
 
 void Session::PostponeChange(Change change, int count) {
-  ASSERT(execution_paused_);
+  ASSERT(!state_->IsScheduled() || state_->IsPaused());
   Object** description = new Object*[count + 1];
   description[0] = Smi::FromWord(change);
   for (int i = count; i >= 1; i--) {
@@ -1441,8 +1765,10 @@ void Session::PostponeChange(Change change, int count) {
 bool Session::UncaughtException(Process* process) {
   if (process_ != process) return false;
 
-  if (session_ended_) {
-    ASSERT(session_end_state_ == Process::kUncaughtException);
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
+  if (state_->IsTerminating()) {
+    ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
+           Process::kUncaughtException);
     process_ = NULL;
     program()->scheduler()->ExitAtUncaughtException(process, false);
     return true;
@@ -1459,7 +1785,8 @@ bool Session::Killed(Process* process) {
 
   process_ = NULL;
 
-  if (session_ended_) {
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
+  if (state_->IsTerminating()) {
     ExitWithSessionEndState(process);
     return true;
   }
@@ -1477,7 +1804,8 @@ bool Session::UncaughtSignal(Process* process) {
 
   process_ = NULL;
 
-  if (session_ended_) {
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
+  if (state_->IsTerminating()) {
     ExitWithSessionEndState(process);
     return true;
   }
@@ -1493,14 +1821,15 @@ bool Session::UncaughtSignal(Process* process) {
 bool Session::BreakPoint(Process* process) {
   if (process_ != process) return false;
 
-  if (session_ended_) {
-    ASSERT(session_end_state_ == Process::kBreakPoint);
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
+  if (state_->IsTerminating()) {
+    ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
+           Process::kBreakPoint);
     process_ = NULL;
     program()->scheduler()->ExitAtBreakpoint(process);
     return true;
   }
 
-  ASSERT(!execution_paused_);
   RequestExecutionPause();
   SendBreakPoint(process);
   return true;
@@ -1529,8 +1858,10 @@ bool Session::ProcessTerminated(Process* process) {
 
   process_ = NULL;
 
-  if (session_ended_) {
-    ASSERT(session_end_state_ == Process::kTerminated);
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
+  if (state_->IsTerminating()) {
+    ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
+           Process::kTerminated);
   } else {
     WriteBuffer buffer;
     connection_->Send(Connection::kProcessTerminated, buffer);
@@ -1543,8 +1874,10 @@ bool Session::ProcessTerminated(Process* process) {
 bool Session::CompileTimeError(Process* process) {
   if (process_ != process) return false;
 
-  if (session_ended_) {
-    ASSERT(session_end_state_ == Process::kCompileTimeError);
+  ScopedMonitorLock scoped_lock(main_thread_monitor_);
+  if (state_->IsTerminating()) {
+    ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
+           Process::kCompileTimeError);
     process_ = NULL;
     program()->scheduler()->ExitAtCompileTimeError(process);
     return true;
@@ -1560,8 +1893,10 @@ void Session::ExitWithSessionEndState(Process* process) {
   // Exit using the process state prior to session-end killing the process.
   // This must be consistent with the exit code used in other cases where the
   // session has ended since the kill signal can race with other exit causes.
+  ASSERT(state_->IsTerminating());
+  TerminatingState* terminating = static_cast<TerminatingState*>(state_);
   Scheduler* scheduler = program()->scheduler();
-  switch (session_end_state_) {
+  switch (terminating->process_state()) {
     case Process::kCompileTimeError:
       scheduler->ExitAtTermination(process, Signal::kCompileTimeError);
       break;
@@ -1575,7 +1910,7 @@ void Session::ExitWithSessionEndState(Process* process) {
 }
 
 Process* Session::GetProcess(int process_id) {
-  ASSERT(execution_paused_);
+  ASSERT(!state_->IsScheduled() || state_->IsPaused());
   // TODO(zerny): Assert here and eliminate the default process.
   if (process_id < 0) return process_;
 
@@ -1587,6 +1922,14 @@ Process* Session::GetProcess(int process_id) {
   }
   UNREACHABLE();
   return NULL;
+}
+
+void Session::ChangeState(SessionState* new_state) {
+  if (state_ == new_state) return;
+  ASSERT(!state_->IsTerminated());
+  SessionState* previous_state = state_;
+  state_ = new_state;
+  new_state->ActivateState(previous_state);
 }
 
 class TransformInstancesPointerVisitor : public PointerVisitor {
@@ -1695,7 +2038,7 @@ void Session::PushFrameOnSessionStack(const Frame* frame) {
 }
 
 int Session::PushStackFrames(Stack* stack) {
-  ASSERT(execution_paused_);
+  ASSERT(!state_->IsScheduled() || state_->IsPaused());
   int frames = 0;
   Frame frame(stack);
   while (frame.MovePrevious()) {
@@ -1714,7 +2057,7 @@ void Session::PushTopStackFrame(Stack* stack) {
 }
 
 void Session::RestartFrame(int frame_index) {
-  ASSERT(execution_paused_);
+  ASSERT(state_->IsPaused());
   Stack* stack = process_->stack();
 
   // Move down to the frame we want to reset to.
