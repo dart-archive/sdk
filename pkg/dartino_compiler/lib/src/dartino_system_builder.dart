@@ -87,6 +87,14 @@ class DartinoSystemBuilder {
 
   final Map<int, String> _symbolByDartinoSelectorId = <int, String>{};
 
+  // TODO(ahe): This should be queried from World.
+  final Map<ClassElement, Set<ClassElement>> directSubclasses =
+      <ClassElement, Set<ClassElement>>{};
+
+  /// Set of classes that have special meaning to the Dartino VM. They're
+  /// created using [PushBuiltinClass] instead of [PushNewClass].
+  final Set<ClassElement> builtinClasses = new Set<ClassElement>();
+
   DartinoSystemBuilder(DartinoSystem predecessorSystem)
       : this.predecessorSystem = predecessorSystem,
         this.functionIdStart = predecessorSystem.computeMaxFunctionId() + 1,
@@ -306,6 +314,41 @@ class DartinoSystemBuilder {
     return newClassBuilderInternal(cls, superclass, new SchemaChange(null));
   }
 
+  DartinoClassBuilder getClassBuilder(
+      ClassElement element,
+      DartinoBackend backend,
+      {Map<ClassElement, SchemaChange> schemaChanges}) {
+    if (element == null) return null;
+    assert(element.isDeclaration);
+
+    DartinoClassBuilder classBuilder = lookupClassBuilderByElement(element);
+    if (classBuilder != null) return classBuilder;
+
+    directSubclasses[element] = new Set<ClassElement>();
+    DartinoClassBuilder superclass =
+    getClassBuilder(
+        element.superclass, backend, schemaChanges: schemaChanges);
+    if (superclass != null) {
+      Set<ClassElement> subclasses = directSubclasses[element.superclass];
+      subclasses.add(element);
+    }
+    SchemaChange schemaChange;
+    if (schemaChanges != null) {
+      schemaChange = schemaChanges[element];
+    }
+    if (schemaChange == null) {
+      schemaChange = new SchemaChange(element);
+    }
+    classBuilder = newClassBuilder(
+        element, superclass, builtinClasses.contains(element), schemaChange);
+
+    // TODO(ajohnsen): Currently, the DartinoRegistry does not enqueue fields.
+    // This is a workaround, where we basically add getters for all fields.
+    classBuilder.updateImplicitAccessors(backend);
+
+    return classBuilder;
+  }
+
   DartinoClassBuilder newClassBuilderInternal(
       DartinoClass klass,
       DartinoClassBuilder superclass,
@@ -382,6 +425,10 @@ class DartinoSystemBuilder {
       // instead of using constantsById.length
       return predecessorSystem.constantsById.length + _newConstants.length;
     });
+  }
+
+  void registerBuiltinClass(ClassElement cls) {
+    builtinClasses.add(cls);
   }
 
   void registerSymbol(String symbol, int dartinoSelectorId) {

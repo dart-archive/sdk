@@ -245,8 +245,8 @@ class DartinoReuser extends Reuser with DartinoFeatures {
       }
     }
     for (PartialClassElement cls in schemaChangesByClass.keys) {
-      DartinoClassBuilder builder = backend.registerClassElement(
-          cls, schemaChanges: schemaChangesByClass);
+      DartinoClassBuilder builder = backend.systemBuilder.getClassBuilder(
+          cls, backend, schemaChanges: schemaChangesByClass);
       checkSchemaChangesAreUsed(builder, cls);
     }
   }

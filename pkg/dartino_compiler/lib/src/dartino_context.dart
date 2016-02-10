@@ -205,7 +205,7 @@ class DartinoContext {
 
   void registerConstructedConstantValue(ConstructedConstantValue value) {
     ClassElement classElement = value.type.element;
-    backend.registerClassElement(classElement);
+    backend.systemBuilder.getClassBuilder(classElement, backend);
     // TODO(ahe): This should not be required. Also, instantiate type,
     // not class.
     DartinoRegistry registry = new DartinoRegistry(compiler);

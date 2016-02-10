@@ -51,8 +51,4 @@ abstract class IncrementalDartinoBackend implements IncrementalBackend {
   int assembleProgram();
 
   void forEachSubclassOf(ClassElement cls, void f(ClassElement cls));
-
-  DartinoClassBuilder registerClassElement(
-      ClassElement element,
-      {Map<ClassElement, SchemaChange> schemaChanges});
 }

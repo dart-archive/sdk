@@ -1283,7 +1283,9 @@ abstract class CodegenVisitor
     do {
       // We need to find the mixin application of the class, where the field
       // is stored. Iterate until it's found.
-      classBuilder = context.backend.registerClassElement(classElement);
+      classBuilder =
+          context.backend.systemBuilder.getClassBuilder(classElement,
+                                                        context.backend);
       classElement = classElement.implementation;
       int i = 0;
       classElement.forEachInstanceField((_, FieldElement member) {

@@ -196,15 +196,6 @@ class DartinoBackend extends Backend
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
-  // TODO(ahe): This should be queried from World.
-  final Map<ClassElement, Set<ClassElement>> directSubclasses =
-      <ClassElement, Set<ClassElement>>{};
-
-  /// Set of classes that have special meaning to the Dartino VM. They're
-  /// created using [PushBuiltinClass] instead of [PushNewClass].
-  // TODO(ahe): Move this to DartinoSystem?
-  final Set<ClassElement> builtinClasses = new Set<ClassElement>();
-
   // TODO(ahe): This should be invalidated by a new [DartinoSystem].
   final Map<MemberElement, ClosureEnvironment> closureEnvironments =
       <MemberElement, ClosureEnvironment>{};
@@ -263,41 +254,8 @@ class DartinoBackend extends Backend
 
   void newSystemBuilder(DartinoSystem predecessorSystem) {
     systemBuilder = new DartinoSystemBuilder(predecessorSystem);
-    compiledClosureClass = registerClassElement(compiledClosureClass.element);
-  }
-
-  DartinoClassBuilder registerClassElement(
-      ClassElement element,
-      {Map<ClassElement, SchemaChange> schemaChanges}) {
-    if (element == null) return null;
-    assert(element.isDeclaration);
-
-    DartinoClassBuilder classBuilder =
-        systemBuilder.lookupClassBuilderByElement(element);
-    if (classBuilder != null) return classBuilder;
-
-    directSubclasses[element] = new Set<ClassElement>();
-    DartinoClassBuilder superclass =
-        registerClassElement(element.superclass, schemaChanges: schemaChanges);
-    if (superclass != null) {
-      Set<ClassElement> subclasses = directSubclasses[element.superclass];
-      subclasses.add(element);
-    }
-    SchemaChange schemaChange;
-    if (schemaChanges != null) {
-      schemaChange = schemaChanges[element];
-    }
-    if (schemaChange == null) {
-      schemaChange = new SchemaChange(element);
-    }
-    classBuilder = systemBuilder.newClassBuilder(
-        element, superclass, builtinClasses.contains(element), schemaChange);
-
-    // TODO(ajohnsen): Currently, the DartinoRegistry does not enqueue fields.
-    // This is a workaround, where we basically add getters for all fields.
-    classBuilder.updateImplicitAccessors(this);
-
-    return classBuilder;
+    compiledClosureClass =
+        systemBuilder.getClassBuilder(compiledClosureClass.element, this);
   }
 
   DartinoClassBuilder createCallableStubClass(
@@ -366,7 +324,7 @@ class DartinoBackend extends Backend
         return null;
       }
       if (hasMissingHelpers) return null;
-      if (builtin) builtinClasses.add(classImpl);
+      if (builtin) systemBuilder.registerBuiltinClass(classImpl);
       {
         // TODO(ahe): Register in ResolutionCallbacks. The lines in this block
         // should not happen at this point in time.
@@ -376,7 +334,7 @@ class DartinoBackend extends Backend
         // about the instantiated type.
         registry.registerInstantiatedType(classImpl.rawType);
       }
-      return registerClassElement(classImpl);
+      return systemBuilder.getClassBuilder(classImpl, this);
     });
     if (hasMissingHelpers) {
       throwInternalError(
@@ -406,7 +364,7 @@ class DartinoBackend extends Backend
             noSuchMethodName));
 
     if (coroutineClass != null) {
-      builtinClasses.add(coroutineClass);
+      systemBuilder.registerBuiltinClass(coroutineClass);
       alwaysEnqueue.add(coroutineClass.lookupLocalMember("_coroutineStart"));
     }
 
@@ -676,7 +634,7 @@ class DartinoBackend extends Backend
     DartinoClassBuilder holderClass;
     if (function.isInstanceMember || function.isGenerativeConstructor) {
       ClassElement enclosingClass = function.enclosingClass.declaration;
-      holderClass = registerClassElement(enclosingClass);
+      holderClass = systemBuilder.getClassBuilder(enclosingClass, this);
     }
     return internalCreateDartinoFunctionBuilder(
         function,
@@ -1014,7 +972,8 @@ class DartinoBackend extends Backend
       classBuilder.addToMethodTable(dartinoSelector, functionBuilder);
       // Inject method into all mixin usages.
       getMixinApplicationsOfClass(classBuilder).forEach((ClassElement usage) {
-        DartinoClassBuilder compiledUsage = registerClassElement(usage);
+        DartinoClassBuilder compiledUsage =
+            systemBuilder.getClassBuilder(usage, this);
         compiledUsage.addToMethodTable(dartinoSelector, functionBuilder);
       });
     }
@@ -1310,7 +1269,7 @@ class DartinoBackend extends Backend
       } else {
         DartinoClass klass = systemBuilder.lookupClass(classId);
         assert(klass.element != null);
-        classBuilder = registerClassElement(klass.element);
+        classBuilder = systemBuilder.getClassBuilder(klass.element, this);
       }
     }
     classBuilder.addToMethodTable(dartinoSelector, stub);
@@ -1561,7 +1520,8 @@ class DartinoBackend extends Backend
       DartinoRegistry registry = new DartinoRegistry(compiler);
 
       DartinoClassBuilder classBuilder =
-          registerClassElement(constructor.enclosingClass.declaration);
+          systemBuilder.getClassBuilder(constructor.enclosingClass.declaration,
+                                        this);
 
       ClosureEnvironment closureEnvironment =
           createClosureEnvironment(constructor, elements);
@@ -1649,7 +1609,8 @@ class DartinoBackend extends Backend
     if (function == null) return;
     if (element.isInstanceMember) {
       ClassElement enclosingClass = element.enclosingClass;
-      DartinoClassBuilder builder = registerClassElement(enclosingClass);
+      DartinoClassBuilder builder =
+          systemBuilder.getClassBuilder(enclosingClass, this);
       builder.removeFromMethodTable(function);
     }
   }
