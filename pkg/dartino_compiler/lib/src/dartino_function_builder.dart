@@ -30,8 +30,8 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
    * If the functions is an instance member, [memberOf] is set to the id of the
    * class.
    *
-   * If [memberOf] is set, the compiled function takes an 'this' argument in
-   * addition to that of [signature].
+   * If [memberOf] is set, the compiled function takes a 'this' argument in
+   * addition to those of [signature].
    */
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
@@ -85,16 +85,6 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
         classConstantValues.putIfAbsent(
             classId, () => new DartinoClassConstant(classId));
     return allocateConstant(constant);
-  }
-
-  // TODO(ajohnsen): Remove this function when usage is avoided in
-  // DartinoBackend.
-  void copyFrom(DartinoFunctionBuilder function) {
-    assembler.bytecodes.addAll(function.assembler.bytecodes);
-    assembler.catchRanges.addAll(function.assembler.catchRanges);
-    constants.addAll(function.constants);
-    functionConstantValues.addAll(function.functionConstantValues);
-    classConstantValues.addAll(function.classConstantValues);
   }
 
   DartinoFunction finalizeFunction(
