@@ -33,7 +33,10 @@ from os.path import dirname
 
 utils = bot_utils.GetUtils()
 
-DEBUG_LOG=".debug.log"
+DEBUG_LOG = ".debug.log"
+FLAKY_LOG = ".flaky.log"
+QEMU_LOG = ".qemu_log"
+ALL_LOGS = [DEBUG_LOG, FLAKY_LOG, QEMU_LOG]
 
 GCS_COREDUMP_BUCKET = 'dartino-buildbot-coredumps'
 
@@ -95,45 +98,41 @@ def Main():
 
   # Accumulate daemon logs messages in '.debug.log' to be displayed on the
   # buildbot.Log
-  with open(DEBUG_LOG, 'w') as debug_log:
-    with utils.ChangedWorkingDirectory(DARTINO_PATH):
-
+  with utils.ChangedWorkingDirectory(DARTINO_PATH):
+    StepsCleanLogs()
+    with open(DEBUG_LOG, 'w') as debug_log:
       if dartino_match:
         system = dartino_match.group('system')
-
         if system == 'lk':
           StepsLK(debug_log)
-          return
-
-        if system == 'free-rtos':
+        elif system == 'free-rtos':
           StepsFreeRtos(debug_log)
-          return
-
-        modes = ['debug', 'release']
-        archs = ['ia32', 'x64']
-        asans = [False]
-        embedded_libs = [False]
-
-        # Split configurations?
-        partial_configuration =\
-          dartino_match.group('partial_configuration') != None
-        if partial_configuration:
-          architecture_match = dartino_match.group('architecture')
-          archs = {
-              'x86' : ['ia32', 'x64'],
-              'x64' : ['x64'],
-              'ia32' : ['ia32'],
-          }[architecture_match]
-
-          modes = [dartino_match.group('mode')]
-          asans = [bool(dartino_match.group('asan'))]
-          embedded_libs =[bool(dartino_match.group('embedded_libs'))]
-
-        sdk_build = dartino_match.group('sdk')
-        if sdk_build:
-          StepsSDK(debug_log, system, modes, archs, embedded_libs)
         else:
-          StepsNormal(debug_log, system, modes, archs, asans, embedded_libs)
+          modes = ['debug', 'release']
+          archs = ['ia32', 'x64']
+          asans = [False]
+          embedded_libs = [False]
+
+          # Split configurations?
+          partial_configuration =\
+            dartino_match.group('partial_configuration') != None
+          if partial_configuration:
+            architecture_match = dartino_match.group('architecture')
+            archs = {
+                'x86' : ['ia32', 'x64'],
+                'x64' : ['x64'],
+                'ia32' : ['ia32'],
+            }[architecture_match]
+
+            modes = [dartino_match.group('mode')]
+            asans = [bool(dartino_match.group('asan'))]
+            embedded_libs =[bool(dartino_match.group('embedded_libs'))]
+
+          sdk_build = dartino_match.group('sdk')
+          if sdk_build:
+            StepsSDK(debug_log, system, modes, archs, embedded_libs)
+          else:
+            StepsNormal(debug_log, system, modes, archs, asans, embedded_libs)
       elif cross_match:
         system = cross_match.group(1)
         arch = cross_match.group(2)
@@ -149,9 +148,23 @@ def Main():
         mode = target_match.group(2)
         arch = 'xarm'
         StepsTargetRunner(debug_log, system, mode, arch)
-
+  StepsShowLogs()
 
 #### Buildbot steps
+
+def StepsCleanLogs():
+  with bot.BuildStep('Clean logs'):
+    for log in ALL_LOGS:
+      if os.path.exists(log):
+        print 'Removing logfile: %s' % log
+        os.remove(log)
+
+def StepsShowLogs():
+  for log in ALL_LOGS:
+    if os.path.exists(log):
+      with bot.BuildStep('Log %s' % log):
+        with open(log) as f:
+          print f.read()
 
 def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   no_clang = system == 'linux'
