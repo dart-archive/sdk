@@ -518,6 +518,58 @@ LookupCache::Entry* Process::LookupEntrySlow(LookupCache::Entry* primary,
   return primary;
 }
 
+void Process::PrintStackTrace() const {
+  ASSERT(state() == Process::kUncaughtException);
+  Class* nsm_class = program_->no_such_method_error_class();
+  bool using_snapshots = program_->was_loaded_from_snapshot();
+  bool is_optimized = program_->is_optimized();
+
+  if (using_snapshots && is_optimized && exception_->IsInstance() &&
+      Instance::cast(exception_)->get_class() == nsm_class) {
+    Instance* nsm_exception = Instance::cast(exception_);
+    Object* klass_obj = nsm_exception->GetInstanceField(1);
+    Object* selector_obj = nsm_exception->GetInstanceField(2);
+
+    word class_offset = -1;
+    if (klass_obj->IsClass()) {
+      class_offset = program_->OffsetOf(Class::cast(klass_obj));
+    }
+
+    int selector = -1;
+    if (selector_obj->IsSmi()) selector = Smi::cast(selector_obj)->value();
+
+    Print::Out("NoSuchMethodError(%ld, %d)\n", class_offset, selector);
+  } else {
+    Print::Out("Uncaught exception:\n");
+    exception_->Print();
+  }
+
+  if (using_snapshots && is_optimized) {
+    Coroutine* coroutine = coroutine_;
+    while (true) {
+      Stack* stack = coroutine->stack();
+
+      int index = 0;
+      Frame frame(stack);
+      while (frame.MovePrevious()) {
+        Function* function = frame.FunctionFromByteCodePointer();
+        if (function == NULL) continue;
+
+        Print::Out("Frame % 2d: Function(%ld)\n", index,
+                   program_->OffsetOf(function));
+        index++;
+      }
+
+      if (coroutine->has_caller()) {
+        Print::Out(" <<called-by-coroutine>>\n");
+        coroutine = coroutine->caller();
+      } else {
+        break;
+      }
+    }
+  }
+}
+
 BEGIN_NATIVE(ProcessQueueGetMessage) {
   MessageMailbox* mailbox = process->mailbox();
 

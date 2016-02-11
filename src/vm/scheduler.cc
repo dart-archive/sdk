@@ -16,15 +16,6 @@
 #include "src/vm/session.h"
 #include "src/vm/thread.h"
 
-#define HANDLE_BY_SESSION_OR_SELF(session_expression, self_expression) \
-  do {                                                                 \
-    Session* session = process->program()->session();                  \
-    if (session == NULL || !session->is_debugging() ||                 \
-        !(session_expression)) {                                       \
-      self_expression;                                                 \
-    }                                                                  \
-  } while (false);
-
 namespace dartino {
 
 // Global instance of scheduler.
@@ -370,102 +361,11 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   }
 }
 
-void Scheduler::ExitAtTermination(Process* process, Signal::Kind kind) {
-  ASSERT(process->state() == Process::kTerminated);
-  process->ChangeState(Process::kTerminated, Process::kWaitingForChildren);
-
-  DeleteTerminatedProcess(process, kind);
-}
-
-void Scheduler::ExitAtUncaughtException(Process* process, bool print_stack) {
-  ASSERT(process->state() == Process::kUncaughtException);
-  process->ChangeState(Process::kUncaughtException,
-                       Process::kWaitingForChildren);
-
-  if (print_stack) {
-    Program* program = process->program();
-    Class* nsm_class = program->no_such_method_error_class();
-    Object* exception = process->exception();
-    bool using_snapshots = program->was_loaded_from_snapshot();
-    bool is_optimized = program->is_optimized();
-
-    if (using_snapshots && is_optimized && exception->IsInstance() &&
-        Instance::cast(exception)->get_class() == nsm_class) {
-      Instance* nsm_exception = Instance::cast(exception);
-      Object* klass_obj = nsm_exception->GetInstanceField(1);
-      Object* selector_obj = nsm_exception->GetInstanceField(2);
-
-      word class_offset = -1;
-      if (klass_obj->IsClass()) {
-        class_offset = program->OffsetOf(Class::cast(klass_obj));
-      }
-
-      int selector = -1;
-      if (selector_obj->IsSmi()) selector = Smi::cast(selector_obj)->value();
-
-      Print::Out("NoSuchMethodError(%ld, %d)\n", class_offset, selector);
-    } else {
-      Print::Out("Uncaught exception:\n");
-      exception->Print();
-    }
-
-    if (using_snapshots && is_optimized) {
-      Coroutine* coroutine = process->coroutine();
-      while (true) {
-        Stack* stack = coroutine->stack();
-
-        int index = 0;
-        Frame frame(stack);
-        while (frame.MovePrevious()) {
-          Function* function = frame.FunctionFromByteCodePointer();
-          if (function == NULL) continue;
-
-          Print::Out("Frame % 2d: Function(%ld)\n", index,
-                     program->OffsetOf(function));
-          index++;
-        }
-
-        if (coroutine->has_caller()) {
-          Print::Out(" <<called-by-coroutine>>\n");
-          coroutine = coroutine->caller();
-        } else {
-          break;
-        }
-      }
-    }
-  }
-
-  ExitWith(process, kUncaughtExceptionExitCode, Signal::kUncaughtException);
-}
-
-void Scheduler::ExitAtCompileTimeError(Process* process) {
-  ASSERT(process->state() == Process::kCompileTimeError);
-  process->ChangeState(Process::kCompileTimeError,
-                       Process::kWaitingForChildren);
-
-  ExitWith(process, kCompileTimeErrorExitCode, Signal::kCompileTimeError);
-}
-
-void Scheduler::ExitAtBreakpoint(Process* process) {
-  ASSERT(process->state() == Process::kBreakPoint);
-  process->ChangeState(Process::kBreakPoint, Process::kWaitingForChildren);
-
-  // TODO(kustermann): Maybe we want to make a different constant for this? It
-  // is a very strange case and one could even argue that if the session
-  // detaches after hitting a breakpoint the process should not be killed but
-  // rather resumed.
-  ExitWith(process, kBreakPointExitCode, Signal::kTerminated);
-}
-
-void Scheduler::ExitWith(Process* process, int exit_code, Signal::Kind kind) {
-  DeleteTerminatedProcess(process, kind);
-}
-
 void Scheduler::RescheduleProcess(Process* process, bool terminate) {
   ASSERT(process->state() == Process::kRunning);
   if (terminate) {
-    process->ChangeState(Process::kRunning, Process::kTerminated);
-    ExitAtTermination(process, Signal::kTerminated);
+    process->ChangeState(Process::kRunning, Process::kWaitingForChildren);
+    DeleteTerminatedProcess(process, Signal::kTerminated);
   } else {
     process->ChangeState(Process::kRunning, Process::kReady);
     EnqueueProcess(process);
@@ -537,16 +437,11 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
 
   Signal* signal = process->signal();
   if (signal != NULL) {
-    process->ChangeState(Process::kRunning, Process::kTerminated);
     if (signal->kind() == Signal::kShouldKill) {
-      HANDLE_BY_SESSION_OR_SELF(session->Killed(process),
-                                ExitAtTermination(process, Signal::kKilled));
+      HandleKilled(process);
     } else {
-      HANDLE_BY_SESSION_OR_SELF(
-          session->UncaughtSignal(process),
-          ExitAtTermination(process, Signal::kUnhandledSignal));
+      HandleUncaughtSignal(process);
     }
-
     return NULL;
   }
 
@@ -618,39 +513,136 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
   }
 
   if (interpreter.IsTerminated()) {
-    process->ChangeState(Process::kRunning, Process::kTerminated);
-    HANDLE_BY_SESSION_OR_SELF(session->ProcessTerminated(process),
-                              ExitAtTermination(process, Signal::kTerminated));
+    HandleTerminated(process);
     return NULL;
   }
 
   if (interpreter.IsUncaughtException()) {
-    process->ChangeState(Process::kRunning, Process::kUncaughtException);
-    HANDLE_BY_SESSION_OR_SELF(session->UncaughtException(process),
-                              ExitAtUncaughtException(process, true));
+    HandleUncaughtException(process);
     return NULL;
   }
 
   if (interpreter.IsCompileTimeError()) {
-    process->ChangeState(Process::kRunning, Process::kCompileTimeError);
-    HANDLE_BY_SESSION_OR_SELF(session->CompileTimeError(process),
-                              ExitAtCompileTimeError(process));
+    HandleCompileTimeError(process);
     return NULL;
   }
 
   if (interpreter.IsAtBreakPoint()) {
-    process->ChangeState(Process::kRunning, Process::kBreakPoint);
-    // We should only reach a breakpoint if a session is attached and it can
-    // handle [process].
-    HANDLE_BY_SESSION_OR_SELF(
-        session->BreakPoint(process),
-        FATAL("We should never hit a breakpoint without a session being able "
-              "to handle it."));
+    HandleBreakpoint(process);
     return NULL;
   }
 
   UNREACHABLE();
   return NULL;
+}
+
+void Scheduler::HandleKilled(Process* process) {
+  Process::State state = Process::kTerminated;
+  ProcessInterruptionEvent result = kExitWithKilledSignal;
+  Session* session = process->program()->session();
+  process->ChangeState(Process::kRunning, state);
+  if (session != NULL && session->CanHandleEvents()) {
+    result = session->Killed(process);
+  }
+  HandleEventResult(result, process, state);
+}
+
+void Scheduler::HandleUncaughtSignal(Process* process) {
+  Process::State state = Process::kTerminated;
+  ProcessInterruptionEvent result = kExitWithUncaughtSignal;
+  Session* session = process->program()->session();
+  process->ChangeState(Process::kRunning, state);
+  if (session != NULL && session->CanHandleEvents()) {
+    result = session->UncaughtSignal(process);
+  }
+  HandleEventResult(result, process, state);
+}
+
+void Scheduler::HandleTerminated(Process* process) {
+  Process::State state = Process::kTerminated;
+  ProcessInterruptionEvent result = kExitWithoutError;
+  Session* session = process->program()->session();
+  process->ChangeState(Process::kRunning, state);
+  if (session != NULL && session->CanHandleEvents()) {
+    result = session->ProcessTerminated(process);
+  }
+  HandleEventResult(result, process, state);
+}
+
+void Scheduler::HandleUncaughtException(Process* process) {
+  Process::State state = Process::kUncaughtException;
+  ProcessInterruptionEvent result =
+      kExitWithUncaughtExceptionAndPrintStackTrace;
+  Session* session = process->program()->session();
+  process->ChangeState(Process::kRunning, state);
+  if (session != NULL && session->CanHandleEvents()) {
+    result = session->UncaughtException(process);
+  }
+  HandleEventResult(result, process, state);
+}
+
+void Scheduler::HandleCompileTimeError(Process* process) {
+  Process::State state = Process::kCompileTimeError;
+  ProcessInterruptionEvent result = kExitWithCompileTimeError;
+  Session* session = process->program()->session();
+  process->ChangeState(Process::kRunning, state);
+  if (session != NULL && session->CanHandleEvents()) {
+    result = session->CompileTimeError(process);
+  }
+  HandleEventResult(result, process, state);
+}
+
+void Scheduler::HandleBreakpoint(Process* process) {
+  Process::State state = Process::kBreakPoint;
+  ProcessInterruptionEvent result = kExitWithoutError;
+  Session* session = process->program()->session();
+  process->ChangeState(Process::kRunning, state);
+  if (session != NULL && session->CanHandleEvents()) {
+    result = session->BreakPoint(process);
+  }
+  HandleEventResult(result, process, state);
+}
+
+void Scheduler::HandleEventResult(
+    ProcessInterruptionEvent result, Process* process, Process::State state) {
+  switch (result) {
+    case kExitWithCompileTimeError: {
+      process->ChangeState(state, Process::kWaitingForChildren);
+      DeleteTerminatedProcess(process, Signal::kCompileTimeError);
+      break;
+    }
+    case kExitWithUncaughtExceptionAndPrintStackTrace: {
+      process->PrintStackTrace();
+      // Fall through
+    }
+    case kExitWithUncaughtException: {
+      process->ChangeState(state, Process::kWaitingForChildren);
+      DeleteTerminatedProcess(process, Signal::kUncaughtException);
+      break;
+    }
+    case kExitWithUncaughtSignal: {
+      process->ChangeState(state, Process::kWaitingForChildren);
+      DeleteTerminatedProcess(process, Signal::kUnhandledSignal);
+      break;
+    }
+    case kExitWithKilledSignal: {
+      process->ChangeState(state, Process::kWaitingForChildren);
+      DeleteTerminatedProcess(process, Signal::kKilled);
+      break;
+    }
+    case kExitWithoutError: {
+      process->ChangeState(state, Process::kWaitingForChildren);
+      DeleteTerminatedProcess(process, Signal::kTerminated);
+      break;
+    }
+    case kNoAction: {
+      // Nothing to do.
+      break;
+    }
+    default: {
+      UNREACHABLE();
+    }
+  }
 }
 
 void WorkerThread::ThreadEnter() {

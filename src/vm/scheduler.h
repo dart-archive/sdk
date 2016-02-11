@@ -21,10 +21,6 @@ class Port;
 class Process;
 class Scheduler;
 
-const int kCompileTimeErrorExitCode = 254;
-const int kUncaughtExceptionExitCode = 255;
-const int kBreakPointExitCode = 0;
-
 class WorkerThread {
  public:
   static void* RunThread(void* data);
@@ -74,6 +70,16 @@ class InterpretationBarrier {
 
 class Scheduler {
  public:
+  enum ProcessInterruptionEvent {
+    kNoAction,
+    kExitWithCompileTimeError,
+    kExitWithUncaughtException,
+    kExitWithUncaughtExceptionAndPrintStackTrace,
+    kExitWithUncaughtSignal,
+    kExitWithKilledSignal,
+    kExitWithoutError
+  };
+
   static void Setup();
   static void TearDown();
   static Scheduler* GlobalInstance() { return scheduler_; }
@@ -117,21 +123,6 @@ class Scheduler {
 
   // A signal arrived for the process.
   void SignalProcess(Process* process);
-
-  // There are 4 reasons for the interpretation of a process to be interrupted:
-  //   * termination
-  //   * uncaught exception
-  //   * compile-time error
-  //   * break point
-  // these are the default implementations. They are called if no session
-  // is attached.
-  //
-  // TODO(kustermann): Once we've made more progress on the design of a
-  // multiprocess system, we should consider making an abstraction for these.
-  void ExitAtTermination(Process* process, Signal::Kind kind);
-  void ExitAtUncaughtException(Process* process, bool print_stack);
-  void ExitAtCompileTimeError(Process* process);
-  void ExitAtBreakpoint(Process* process);
 
  private:
   friend class Dartino;
@@ -179,6 +170,17 @@ class Scheduler {
   // The [process] will be enqueued on any thread. In case the program is paused
   // the process will be enqueued once the program is resumed.
   void EnqueueSafe(Process* process);
+
+  // Handlers for when the interpretation of a process has been interrupted.
+  void HandleTerminated(Process* process);
+  void HandleUncaughtException(Process* process);
+  void HandleCompileTimeError(Process* process);
+  void HandleBreakpoint(Process* process);
+  void HandleKilled(Process* process);
+  void HandleUncaughtSignal(Process* process);
+
+  void HandleEventResult(
+      ProcessInterruptionEvent result, Process* process, Process::State state);
 };
 
 class StoppedGcThreadScope {

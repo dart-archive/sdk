@@ -77,6 +77,9 @@ typedef DoubleList<Process> ProcessList;
 typedef DoubleList<Process, 2> ProcessQueueList;
 typedef DoubleList<Program> ProgramList;
 
+const int kCompileTimeErrorExitCode = 254;
+const int kUncaughtExceptionExitCode = 255;
+
 // This state information is managed by the scheduler.
 class ProgramState {
  public:

@@ -199,6 +199,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   void SendSignal(Signal* signal);
 
+  void PrintStackTrace() const;
+
   // If you add an offset here, remember to add the corresponding static_assert
   // in process.cc.
   static const uword kNativeStackOffset = 4 * kWordSize;

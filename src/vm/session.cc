@@ -424,10 +424,6 @@ void Session::Initialize() {
   program()->AddSession(this);
 }
 
-bool Session::is_debugging() const {
-  return state_->IsDebugging();
-}
-
 static void* MessageProcessingThread(void* data) {
   Session* session = reinterpret_cast<Session*>(data);
   session->ProcessMessages();
@@ -1762,77 +1758,81 @@ void Session::PostponeChange(Change change, int count) {
   }
 }
 
-bool Session::UncaughtException(Process* process) {
-  if (process_ != process) return false;
+bool Session::CanHandleEvents() const {
+  return state_->IsDebugging();
+}
+
+Scheduler::ProcessInterruptionEvent Session::UncaughtException(
+    Process* process) {
+  if (process_ != process) {
+    return Scheduler::kExitWithUncaughtExceptionAndPrintStackTrace;
+  }
 
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
   if (state_->IsTerminating()) {
     ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
            Process::kUncaughtException);
     process_ = NULL;
-    program()->scheduler()->ExitAtUncaughtException(process, false);
-    return true;
+    return Scheduler::kExitWithUncaughtException;
   }
 
   RequestExecutionPause();
   WriteBuffer buffer;
   connection_->Send(Connection::kUncaughtException, buffer);
-  return true;
+  return Scheduler::kNoAction;
 }
 
-bool Session::Killed(Process* process) {
-  if (process_ != process) return false;
+Scheduler::ProcessInterruptionEvent Session::Killed(Process* process) {
+  if (process_ != process) return Scheduler::kExitWithKilledSignal;
 
   process_ = NULL;
 
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
   if (state_->IsTerminating()) {
-    ExitWithSessionEndState(process);
-    return true;
+    return ExitWithSessionEndState(process);
   }
 
   // TODO(kustermann): We might want to let a debugger know if the process
   // didn't normally terminate, but rather was killed.
   WriteBuffer buffer;
   connection_->Send(Connection::kProcessTerminated, buffer);
-  program_->scheduler()->ExitAtTermination(process, Signal::kKilled);
-  return true;
+  return Scheduler::kExitWithKilledSignal;
 }
 
-bool Session::UncaughtSignal(Process* process) {
-  if (process_ != process) return false;
+Scheduler::ProcessInterruptionEvent Session::UncaughtSignal(
+    Process* process) {
+  if (process_ != process) return Scheduler::kExitWithUncaughtSignal;
 
   process_ = NULL;
 
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
   if (state_->IsTerminating()) {
-    ExitWithSessionEndState(process);
-    return true;
+    return ExitWithSessionEndState(process);
   }
 
   // TODO(kustermann): We might want to let a debugger know that the process
   // didn't normally terminate, but rather was killed due to a linked process.
   WriteBuffer buffer;
   connection_->Send(Connection::kProcessTerminated, buffer);
-  program_->scheduler()->ExitAtTermination(process, Signal::kUnhandledSignal);
-  return true;
+  return Scheduler::kExitWithUncaughtSignal;
 }
 
-bool Session::BreakPoint(Process* process) {
-  if (process_ != process) return false;
+Scheduler::ProcessInterruptionEvent Session::BreakPoint(
+    Process* process) {
+  // We should only reach a breakpoint if attached and we can handle [process].
+  ASSERT(process_ == process);
 
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
   if (state_->IsTerminating()) {
     ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
            Process::kBreakPoint);
     process_ = NULL;
-    program()->scheduler()->ExitAtBreakpoint(process);
-    return true;
+    return Scheduler::kExitWithoutError;
   }
 
   RequestExecutionPause();
   SendBreakPoint(process);
-  return true;
+  return Scheduler::kNoAction;
 }
 
 void Session::SendBreakPoint(Process* process) {
@@ -1853,8 +1853,9 @@ void Session::SendBreakPoint(Process* process) {
   connection_->Send(Connection::kProcessBreakpoint, buffer);
 }
 
-bool Session::ProcessTerminated(Process* process) {
-  if (process_ != process) return false;
+Scheduler::ProcessInterruptionEvent Session::ProcessTerminated(
+    Process* process) {
+  if (process_ != process) return Scheduler::kExitWithoutError;
 
   process_ = NULL;
 
@@ -1867,45 +1868,41 @@ bool Session::ProcessTerminated(Process* process) {
     connection_->Send(Connection::kProcessTerminated, buffer);
   }
 
-  program()->scheduler()->ExitAtTermination(process, Signal::kTerminated);
-  return true;
+  return Scheduler::kExitWithoutError;
 }
 
-bool Session::CompileTimeError(Process* process) {
-  if (process_ != process) return false;
+Scheduler::ProcessInterruptionEvent Session::CompileTimeError(
+    Process* process) {
+  if (process_ != process) return Scheduler::kExitWithCompileTimeError;
 
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
   if (state_->IsTerminating()) {
     ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
            Process::kCompileTimeError);
     process_ = NULL;
-    program()->scheduler()->ExitAtCompileTimeError(process);
-    return true;
+    return Scheduler::kExitWithCompileTimeError;
   }
 
   RequestExecutionPause();
   WriteBuffer buffer;
   connection_->Send(Connection::kProcessCompileTimeError, buffer);
-  return true;
+  return Scheduler::kNoAction;
 }
 
-void Session::ExitWithSessionEndState(Process* process) {
+Scheduler::ProcessInterruptionEvent Session::ExitWithSessionEndState(
+    Process* process) {
   // Exit using the process state prior to session-end killing the process.
   // This must be consistent with the exit code used in other cases where the
   // session has ended since the kill signal can race with other exit causes.
   ASSERT(state_->IsTerminating());
   TerminatingState* terminating = static_cast<TerminatingState*>(state_);
-  Scheduler* scheduler = program()->scheduler();
   switch (terminating->process_state()) {
     case Process::kCompileTimeError:
-      scheduler->ExitAtTermination(process, Signal::kCompileTimeError);
-      break;
+      return Scheduler::kExitWithCompileTimeError;
     case Process::kUncaughtException:
-      scheduler->ExitAtTermination(process, Signal::kUncaughtException);
-      break;
+      return Scheduler::kExitWithUncaughtException;
     default:
-      scheduler->ExitAtTermination(process, Signal::kTerminated);
-      break;
+      return Scheduler::kExitWithoutError;
   }
 }
 

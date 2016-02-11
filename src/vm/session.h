@@ -13,6 +13,7 @@
 
 #include "src/vm/object_list.h"
 #include "src/vm/program.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/snapshot.h"
 #include "src/vm/thread.h"
 
@@ -42,8 +43,6 @@ class Session {
 
   Program* program() const { return program_; }
 
-  bool is_debugging() const;
-
   int FreshProcessId() { return next_process_id_++; }
 
   void Initialize();
@@ -58,22 +57,19 @@ class Session {
   bool WriteSnapshot(const char* path, FunctionOffsetsType* function_offsets,
                      ClassOffsetsType* class_offsets);
 
-  // These functions return `true` if the session knows about [process] and was
-  // able to take action on the event.
-  // In case the session does not know about [process] these functions will
-  // return `false` and the caller is responsible for handling the event.
-  bool UncaughtException(Process* process);
-  bool Killed(Process* process);
-  bool UncaughtSignal(Process* process);
-  bool BreakPoint(Process* process);
-  bool ProcessTerminated(Process* process);
-  bool CompileTimeError(Process* process);
+  bool CanHandleEvents() const;
+  Scheduler::ProcessInterruptionEvent UncaughtException(Process* process);
+  Scheduler::ProcessInterruptionEvent Killed(Process* process);
+  Scheduler::ProcessInterruptionEvent UncaughtSignal(Process* process);
+  Scheduler::ProcessInterruptionEvent BreakPoint(Process* process);
+  Scheduler::ProcessInterruptionEvent ProcessTerminated(Process* process);
+  Scheduler::ProcessInterruptionEvent CompileTimeError(Process* process);
 
  private:
   void ChangeState(SessionState* new_state);
 
   void SendBreakPoint(Process* process);
-  void ExitWithSessionEndState(Process* process);
+  Scheduler::ProcessInterruptionEvent ExitWithSessionEndState(Process* process);
 
   // Map operations.
   void NewMap(int map_index);
