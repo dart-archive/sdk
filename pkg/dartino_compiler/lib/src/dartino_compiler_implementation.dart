@@ -173,13 +173,9 @@ class DartinoCompilerImplementation extends CompilerImpl {
     if (unit == null) return null;
     FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
     unit.accept(visitor, null);
-    DartinoFunctionBuilder builder =
-        context.backend.systemBuilder.lookupFunctionBuilderByElement(
-            visitor.element);
-    if (builder == null) return null;
-    // TODO(ajohnsen): We need a mapping from element to functionId, that can
-    // be looked up in the current dartino system.
-    DartinoFunction function = builder.finalizeFunction(context, []);
+    DartinoFunction function = currentSystem.lookupFunctionByElement(
+        visitor.element);
+    if (function == null) return null;
     return context.backend.createDebugInfo(function, currentSystem);
   }
 

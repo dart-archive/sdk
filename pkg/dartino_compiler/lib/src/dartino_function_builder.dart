@@ -53,9 +53,10 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
       {String name,
        Element element,
        FunctionSignature signature,
-       int memberOf})
+       int memberOf: -1})
       : super(functionId, kind, arity, name, element, signature, memberOf),
         assembler = new BytecodeAssembler(arity) {
+    assert(memberOf is int);
     assert(signature == null ||
         arity == (signature.parameterCount + (isInstanceMember ? 1 : 0)));
   }

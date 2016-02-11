@@ -24,8 +24,8 @@ import 'codegen_visitor.dart';
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
-import 'dartino_class_builder.dart' show
-    DartinoClassBuilder;
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
 
 import 'dartino_registry.dart' show
     DartinoRegistry;
@@ -50,10 +50,10 @@ class DebugInfoConstructorCodegen extends ConstructorCodegen
                               TreeElements elements,
                               ClosureEnvironment closureEnvironment,
                               ConstructorElement constructor,
-                              DartinoClassBuilder classBuilder,
+                              DartinoClassBase classBase,
                               this.compiler)
       : super(functionBuilder, context, elements, null,
-              closureEnvironment, constructor, classBuilder);
+              closureEnvironment, constructor, classBase);
 
   LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
       DartinoFunctionBuilder function,

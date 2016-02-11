@@ -56,6 +56,9 @@ import 'dartino_function_builder.dart' show
 import 'dartino_class_builder.dart' show
     DartinoClassBuilder;
 
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
+
 import 'dartino_selector.dart';
 
 import '../dartino_system.dart';
@@ -1025,10 +1028,9 @@ abstract class CodegenVisitor
       _) {
     registerClosurization(function, ClosureKind.tearOff);
     DartinoFunctionBase target = requireFunction(function);
-    DartinoClassBuilder classBuilder =
-        context.backend.createTearoffClass(target);
-    assert(classBuilder.fieldCount == 0);
-    int constId = allocateConstantClassInstance(classBuilder.classId);
+    DartinoClassBase classBase = context.backend.getTearoffClass(target);
+    assert(classBase.fieldCount == 0);
+    int constId = allocateConstantClassInstance(classBase.classId);
     assembler.loadConst(constId);
     applyVisitState();
   }
@@ -1145,12 +1147,10 @@ abstract class CodegenVisitor
     registerClosurization(method, ClosureKind.superTearOff);
     loadThis();
     DartinoFunctionBase target = requireFunction(method);
-    DartinoClassBuilder classBuilder =
-        context.backend.createTearoffClass(target);
-    assert(classBuilder.fieldCount == 1);
-    int constId = functionBuilder.allocateConstantFromClass(
-        classBuilder.classId);
-    assembler.allocate(constId, classBuilder.fieldCount);
+    DartinoClassBase classBase = context.backend.getTearoffClass(target);
+    assert(classBase.fieldCount == 1);
+    int constId = functionBuilder.allocateConstantFromClass(classBase.classId);
+    assembler.allocate(constId, classBase.fieldCount);
     applyVisitState();
   }
 

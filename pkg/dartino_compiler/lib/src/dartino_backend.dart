@@ -125,6 +125,9 @@ import 'dartino_system_builder.dart' show
     DartinoSystemBuilder,
     SchemaChange;
 
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
+
 import '../dartino_class.dart' show
     DartinoClass;
 
@@ -233,10 +236,10 @@ class DartinoBackend extends Backend
   ClassElement bigintClass;
   ClassElement uint32DigitsClass;
 
-  DartinoClassBuilder compiledClosureClass;
-
   /// Holds a reference to the class Coroutine if it exists.
   ClassElement coroutineClass;
+
+  ClassElement closureClass;
 
   DartinoSystemBuilder systemBuilder;
 
@@ -254,8 +257,11 @@ class DartinoBackend extends Backend
 
   void newSystemBuilder(DartinoSystem predecessorSystem) {
     systemBuilder = new DartinoSystemBuilder(predecessorSystem);
-    compiledClosureClass =
-        systemBuilder.getClassBuilder(compiledClosureClass.element, this);
+  }
+
+  // TODO(ahe): Where should this end up...?
+  DartinoClassBuilder get compiledClosureClass {
+    return systemBuilder.getClassBuilder(closureClass, this);
   }
 
   DartinoClassBuilder createCallableStubClass(
@@ -397,8 +403,10 @@ class DartinoBackend extends Backend
           LibraryElement library,
           {bool builtin})) {
     loadClass("Object", compiler.coreLibrary, builtin: true);
-    compiledClosureClass =
-        loadClass("_TearOffClosure", compiler.coreLibrary, builtin: true);
+    closureClass = loadClass(
+        "_TearOffClosure",
+        compiler.coreLibrary,
+        builtin: true)?.element;
     smiClass = loadClass("_Smi", compiler.coreLibrary, builtin: true)?.element;
     mintClass =
         loadClass("_Mint", compiler.coreLibrary, builtin: true)?.element;
@@ -483,13 +491,12 @@ class DartinoBackend extends Backend
    * If [function] is an instance member, the class will have one field, the
    * instance.
    */
-  DartinoClassBuilder createTearoffClass(DartinoFunctionBase function) {
-    DartinoClassBuilder tearoffClass =
-        systemBuilder.getTearoffClassBuilder(function, compiledClosureClass);
-    if (tearoffClass != null) return tearoffClass;
+  DartinoClassBase getTearoffClass(DartinoFunctionBase function) {
+    DartinoClassBase base = systemBuilder.lookupTearoffClass(function);
+    if (base != null) return base;
     FunctionSignature signature = function.signature;
     bool hasThis = function.isInstanceMember;
-    tearoffClass = createCallableStubClass(
+    DartinoClassBuilder tearoffClass = createCallableStubClass(
         hasThis ? 1 : 0,
         signature.parameterCount,
         compiledClosureClass);
@@ -651,7 +658,7 @@ class DartinoBackend extends Backend
     if (functionBuilder != null) return functionBuilder;
 
     FunctionTypedElement implementation = function.implementation;
-    int memberOf = holderClass != null ? holderClass.classId : null;
+    int memberOf = holderClass != null ? holderClass.classId : -1;
     return systemBuilder.newFunctionBuilderWithSignature(
         name,
         function,
@@ -695,9 +702,8 @@ class DartinoBackend extends Backend
           compiler);
     } else if (function.isInitializerList) {
       ClassElement enclosingClass = element.enclosingClass;
-      // TODO(ajohnsen): Don't depend on the class builder.
-      DartinoClassBuilder classBuilder =
-          systemBuilder.lookupClassBuilderByElement(enclosingClass.declaration);
+      DartinoClassBase classBase = systemBuilder.lookupClassByElement(
+          enclosingClass.declaration);
       codegen = new DebugInfoConstructorCodegen(
           debugInfo,
           builder,
@@ -705,7 +711,7 @@ class DartinoBackend extends Backend
           elements,
           closureEnvironment,
           element,
-          classBuilder,
+          classBase,
           compiler);
     } else {
       codegen = new DebugInfoFunctionCodegen(
@@ -734,6 +740,8 @@ class DartinoBackend extends Backend
                                      codegen.assembler.bytecodes)) {
       throw 'Debug info code different from running code.';
     }
+    // The debug codegen should not modify the system builder.
+    assert(!systemBuilder.hasChanges);
     return debugInfo;
   }
 
@@ -1173,7 +1181,7 @@ class DartinoBackend extends Backend
     // TODO(ajohnsen): Use registry in CodegenVisitor to register the used
     // constants.
     FunctionElement function = value.element;
-    createTearoffClass(createDartinoFunctionBuilder(function));
+    getTearoffClass(createDartinoFunctionBuilder(function));
     // Be sure to actually enqueue the function for compilation.
     DartinoRegistry registry = new DartinoRegistry(compiler);
     registry.registerStaticUse(new StaticUse.foreignUse(function));
@@ -1304,7 +1312,7 @@ class DartinoBackend extends Backend
           ..ret()
           ..methodEnd();
     } else {
-      DartinoClassBuilder tearoffClass = createTearoffClass(function);
+      DartinoClassBase tearoffClass = getTearoffClass(function);
       int constId = getter.allocateConstantFromClass(tearoffClass.classId);
       getter.assembler
           ..loadParameter(0)
@@ -1361,14 +1369,18 @@ class DartinoBackend extends Backend
         const NewMap(MapId.constants),
     ];
 
+    DartinoSystem predecessorSystem = systemBuilder.predecessorSystem;
     DartinoSystem system = systemBuilder.computeSystem(context, commands);
+
+    // Reset the current system builder.
+    newSystemBuilder(system);
 
     commands.add(const PushNewInteger(0));
     commands.add(new PushFromMap(
         MapId.methods,
         system.lookupFunctionByElement(dartinoSystemEntry).functionId));
 
-    return new DartinoDelta(system, systemBuilder.predecessorSystem, commands);
+    return new DartinoDelta(system, predecessorSystem, commands);
   }
 
   bool enableCodegenWithErrorsIfSupported(Spannable spannable) {

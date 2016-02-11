@@ -153,8 +153,6 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     Set<Element> existingStaticFields =
         new Set<Element>.from(dartinoContext.staticIndices.keys);
 
-    backend.newSystemBuilder(currentSystem);
-
     List<Element> updatedElements = applyUpdates();
 
     if (compiler.progress != null) {
@@ -212,6 +210,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     List<VmCommand> commands = <VmCommand>[];
     DartinoSystem system =
         backend.systemBuilder.computeSystem(dartinoContext, commands);
+    backend.newSystemBuilder(system);
     return new DartinoDelta(system, currentSystem, commands);
   }
 

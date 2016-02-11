@@ -38,6 +38,7 @@ abstract class DartinoClassBuilder extends DartinoClassBase {
       : super(classId, name, element, fieldCount);
 
   DartinoClassBuilder get superclass;
+  int get superclassId => hasSuperClass ? superclass.classId : -1;
 
   /**
    * Returns the number of instance fields of all the super classes of this

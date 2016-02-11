@@ -36,6 +36,9 @@ import 'dartino_constants.dart' show
     DartinoFunctionConstant,
     DartinoClassInstanceConstant;
 
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
+
 import '../dartino_class.dart' show
     DartinoClass;
 
@@ -117,7 +120,7 @@ class DartinoSystemBuilder {
       {String name,
        Element element,
        FunctionSignature signature,
-       int memberOf,
+       int memberOf: -1,
        Element mapByElement}) {
     int nextFunctionId = functionIdStart + _newFunctions.length;
     DartinoFunctionBuilder builder = new DartinoFunctionBuilder(
@@ -142,7 +145,7 @@ class DartinoSystemBuilder {
       int memberOf,
       {DartinoFunctionKind kind: DartinoFunctionKind.NORMAL,
        Element mapByElement}) {
-    int arity = signature.parameterCount + (memberOf != null ? 1 : 0);
+    int arity = signature.parameterCount + (memberOf >= 0 ? 1 : 0);
     return newFunctionBuilder(
           kind,
           arity,
@@ -207,7 +210,7 @@ class DartinoSystemBuilder {
         element.name,
         element,
         element.functionSignature,
-        null,
+        -1,
         kind: DartinoFunctionKind.INITIALIZER_LIST);
     _newConstructorInitializers[element] = builder;
     return builder;
@@ -301,17 +304,11 @@ class DartinoSystemBuilder {
 
   List<DartinoFunctionBuilder> getNewFunctions() => _newFunctions;
 
-  DartinoClassBuilder getTearoffClassBuilder(
-      DartinoFunctionBase function,
-      DartinoClassBuilder superclass) {
+  DartinoClassBase lookupTearoffClass(DartinoFunctionBase function) {
     int functionId = lookupTearOffById(function.functionId);
     if (functionId == null) return null;
     DartinoFunctionBase functionBuilder = lookupFunction(functionId);
-    DartinoClassBuilder classBuilder =
-        lookupClassBuilder(functionBuilder.memberOf);
-    if (classBuilder != null) return classBuilder;
-    DartinoClass cls = lookupClass(functionBuilder.memberOf);
-    return newClassBuilderInternal(cls, superclass, new SchemaChange(null));
+    return lookupClass(functionBuilder.memberOf);
   }
 
   DartinoClassBuilder getClassBuilder(
@@ -396,12 +393,20 @@ class DartinoSystemBuilder {
     return builder;
   }
 
-  DartinoClass lookupClass(int classId) {
-    return predecessorSystem.classesById[classId];
+  DartinoClassBase lookupClass(int classId) {
+    DartinoClassBase builder = lookupClassBuilder(classId);
+    if (builder != null) return builder;
+    return predecessorSystem.lookupClassById(classId);
   }
 
   DartinoClassBuilder lookupClassBuilder(int classId) {
     return _newClasses[classId];
+  }
+
+  DartinoClassBase lookupClassByElement(ClassElement element) {
+    DartinoClassBase builder = lookupClassBuilderByElement(element);
+    if (builder != null) return builder;
+    return predecessorSystem.lookupClassByElement(element);
   }
 
   DartinoClassBuilder lookupClassBuilderByElement(ClassElement element) {
@@ -831,6 +836,25 @@ class DartinoSystemBuilder {
         gettersByFieldIndex,
         settersByFieldIndex,
         parameterStubs);
+  }
+
+  bool get hasChanges {
+    var changes = [
+      _newFunctions,
+      _newClasses,
+      _newConstants,
+      _newParameterStubs,
+      _newGettersByFieldIndex,
+      _newSettersByFieldIndex,
+      _removedFunctions,
+      _functionBuildersByElement,
+      _classBuildersByElement,
+      _newConstructorInitializers,
+      _replaceUsage,
+      _newLazyInitializersByElement,
+      _newTearoffsById,
+      _symbolByDartinoSelectorId];
+    return changes.any((c) => c.isNotEmpty);
   }
 }
 

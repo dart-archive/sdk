@@ -31,7 +31,5 @@ class DartinoClass extends DartinoClassBase {
       : fields = new List<FieldElement>.unmodifiable(fields),
         super(classId, name, element, fields.length);
 
-  bool get hasSuperclassId => superclassId >= 0;
-
   String toString() => "DartinoClass($classId, '$name')";
 }

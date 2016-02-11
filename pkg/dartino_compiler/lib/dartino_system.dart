@@ -77,7 +77,7 @@ abstract class DartinoFunctionBase {
       this.signature,
       this.memberOf);
 
-  bool get isInstanceMember => memberOf != null;
+  bool get isInstanceMember => memberOf >= 0;
   bool get isInternal => element == null;
 
   bool get isLazyFieldInitializer {

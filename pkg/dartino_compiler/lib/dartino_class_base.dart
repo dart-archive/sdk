@@ -27,5 +27,10 @@ abstract class DartinoClassBase {
       this.element,
       this.fieldCount);
 
+  int get superclassId;
+  bool get hasSuperclassId => superclassId >= 0;
+
+  int get superclassFields;
+
   String toString() => "DartinoClassBase($classId, '$name')";
 }

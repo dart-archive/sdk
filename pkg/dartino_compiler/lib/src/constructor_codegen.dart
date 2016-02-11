@@ -17,8 +17,8 @@ import 'dartino_context.dart';
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
-import 'dartino_class_builder.dart' show
-    DartinoClassBuilder;
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
 
 import 'closure_environment.dart';
 
@@ -32,7 +32,7 @@ import 'dartino_registry.dart' show
 class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
   final DartinoRegistry registry;
 
-  final DartinoClassBuilder classBuilder;
+  final DartinoClassBase classBase;
 
   final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
 
@@ -46,7 +46,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
                      this.registry,
                      ClosureEnvironment closureEnvironment,
                      ConstructorElement constructor,
-                     this.classBuilder)
+                     this.classBase)
       : super(functionBuilder, context, elements,
               closureEnvironment, constructor);
 
@@ -63,7 +63,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
 
   void compile() {
     // Push all initial field values (including super-classes).
-    pushInitialFieldValues(classBuilder);
+    pushInitialFieldValues(classBase);
     // The stack is now:
     //  Value for field-0
     //  ...
@@ -96,7 +96,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
     // don't have to copy all the fields?
     // Copy all the fields to the end of the stack.
-    int fields = classBuilder.fieldCount;
+    int fields = classBase.fieldCount;
     for (int i = 0; i < fields; i++) {
       assembler.loadSlot(i);
     }
@@ -112,7 +112,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
 
     // Create the actual instance.
     int classConstant = functionBuilder.allocateConstantFromClass(
-        classBuilder.classId);
+        classBase.classId);
     // TODO(ajohnsen): Set immutable for all-final classes.
     assembler.allocate(classConstant, fields, immutable: element.isConst);
 
@@ -347,12 +347,13 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
         ..pop();
   }
 
-  void pushInitialFieldValues(DartinoClassBuilder classBuilder) {
-    if (classBuilder.hasSuperClass) {
-      pushInitialFieldValues(classBuilder.superclass);
+  void pushInitialFieldValues(DartinoClassBase classBase) {
+    if (classBase.hasSuperclassId) {
+      pushInitialFieldValues(
+          context.backend.systemBuilder.lookupClass(classBase.superclassId));
     }
-    int fieldIndex = classBuilder.superclassFields;
-    ClassElement classElement = classBuilder.element.implementation;
+    int fieldIndex = classBase.superclassFields;
+    ClassElement classElement = classBase.element.implementation;
     classElement.forEachInstanceField((_, FieldElement field) {
       fieldScope[field] = new UnboxedLocalValue(fieldIndex++, field);
       Expression initializer = field.initializer;
@@ -370,6 +371,6 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
         codegen.visitForValue(initializer);
       }
     });
-    assert(fieldIndex <= classBuilder.fieldCount);
+    assert(fieldIndex <= classBase.fieldCount);
   }
 }
