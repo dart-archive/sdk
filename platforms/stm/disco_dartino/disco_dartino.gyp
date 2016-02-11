@@ -121,6 +121,8 @@
         '<(source_path)/circular_buffer.h',
         '<(source_path)/cmpctmalloc.c',
         '<(source_path)/cmpctmalloc.h',
+        '<(source_path)/device_manager.h',
+        '<(source_path)/device_manager.cc',
         '<(source_path)/freertos.cc',
         '<(source_path)/FreeRTOSConfig.h',
         '<(source_path)/dartino_entry.cc',

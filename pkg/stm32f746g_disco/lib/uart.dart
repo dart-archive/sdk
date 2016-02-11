@@ -6,21 +6,45 @@ library stm32f746g.uart;
 
 import 'dart:dartino.ffi';
 import 'dart:typed_data';
+import 'dart:dartino.os';
+import 'dart:dartino' hide sleep;
 
-final _uart_write = ForeignLibrary.main.lookup('uart_write');
-final _uart_read = ForeignLibrary.main.lookup('uart_read');
+final _uartOpen = ForeignLibrary.main.lookup('uart_open');
+final _uartRead = ForeignLibrary.main.lookup('uart_read');
+final _uartWrite = ForeignLibrary.main.lookup('uart_write');
+final _uartGetError = ForeignLibrary.main.lookup('uart_get_error');
 
 class Uart {
+  int handle;
+  Port port;
+  Channel channel;
+
+  Uart() {
+    handle = _uartOpen.icall$0();
+    channel = new Channel();
+    port = new Port(channel);
+  }
+
   ForeignMemory _getForeign(ByteBuffer buffer) {
     var b = buffer;
     return b.getForeign();
   }
 
   ByteBuffer readNext() {
+    int event = 0;
+    while (event & READ_EVENT == 0) {
+      eventHandler.registerPortForNextEvent(
+          handle, port, READ_EVENT | ERROR_EVENT);
+      event = channel.receive();
+      if (event & ERROR_EVENT != 0) {
+        // TODO(sigurdm): Find the right way of handling errors.
+        print("Error ${_uartGetError.icall$1(handle)}.");
+      }
+    }
+
     var mem = new ForeignMemory.allocated(10);
     try {
-      var read = _uart_read.icall$2(mem, 10);
-      assert(read > 0);
+      var read = _uartRead.icall$3(handle, mem, 10);
       var result = new Uint8List(read);
       mem.copyBytesToList(result, 0, read, 0);
       return result.buffer;
@@ -29,29 +53,28 @@ class Uart {
     }
   }
 
-  void write(ByteBuffer data) {
-    var bytes = data.lengthInBytes;
-    _uart_write.icall$2(_getForeign(data), bytes);
+  void write(ByteBuffer data, [int offset = 0, int length]) {
+    _write(_getForeign(data), offset, length ?? (data.lengthInBytes - offset));
   }
 
-  void writeByte(int byte) {
-    var mem = new ForeignMemory.allocated(1);
-    mem.setUint8(0, byte);
-    try {
-      _uart_write.icall$2(mem, 1);
-    } finally {
-      mem.free();
-    }
-  }
-
-  int writeString(String message) {
+  void writeString(String message) {
     var mem = new ForeignMemory.fromStringAsUTF8(message);
     try {
       // Don't write the terminating \0.
-      _uart_write.icall$2(mem, mem.length - 1);
+      _write(mem, 0, mem.length - 1);
     } finally {
       mem.free();
     }
   }
-}
 
+  void _write(ForeignMemory mem, int offset, int size) {
+    int written = 0;
+    while (written < size) {
+      written += _uartWrite.icall$4(handle, mem, offset, size);
+      if (written == size) break;
+      // We do not listen for errors here, because writing cannot fail.
+      eventHandler.registerPortForNextEvent(handle, port, WRITE_EVENT);
+      channel.receive();
+    }
+  }
+}

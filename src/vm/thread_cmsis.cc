@@ -16,7 +16,7 @@
 namespace dartino {
 
 static const int kNumberOfDartinoThreads = 8;
-static const int kDartinoStackSize = 4096;
+static const int kDartinoStackSize = 2048;
 static const int kDartinoStackSizeInWords =
     kDartinoStackSize / sizeof(uint32_t);
 

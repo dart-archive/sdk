@@ -11,53 +11,77 @@
 #include <stm32f7xx_hal.h>
 
 #include "platforms/stm/disco_dartino/src/circular_buffer.h"
+#include "platforms/stm/disco_dartino/src/device_manager.h"
 
-// Interface to the universal asynchronous receiver/transmitter
-// (UART).
+#include "src/shared/platform.h"
+
+
+// Interface to the universal asynchronous receiver/transmitter (UART).
 class Uart {
  public:
   // Access the UART on the first UART port.
   Uart();
 
-  // Start processing the UART.
-  void Start();
+  // Open the uart. Returns the device id used for listening.
+  int Open();
 
-  // Read up to count bytes from the UART into the buffer starting at
-  // buffer.
+  // Read up to `count` bytes from the UART into `buffer` starting at
+  // buffer. Return the number of bytes read.
   //
-  // This will block until at least one byte can be read.
+  // This is non-blocking, and will return 0 if no data is available.
   size_t Read(uint8_t* buffer, size_t count);
 
-
-  // Read up to count bytes from the buffer starting at buffer to the
-  // UART.
+  // Write up to `count` bytes from the UART into `buffer` starting at
+  // buffer. Return the number of bytes written.
   //
-  // This will block until at least one byte can be written.
-  size_t Write(const uint8_t* buffer, size_t count);
+  // This is non-blocking, and will return 0 if no data could be written.
+  size_t Write(const uint8_t* buffer, size_t offset, size_t count);
 
- private:
-  static const int kTxBlockSize = 10;
+  // Return the current error-bits of this device.
+  uint32_t GetError();
 
   void Task();
 
+  void ReturnFromInterrupt(uint32_t flag);
+
+  uint32_t error_;
+
+ private:
+  // Send a message to the event-handler with the current flags if there is a
+  // registered listing Port.
+  void SendMessage();
+
   void EnsureTransmission();
 
-  UART_HandleTypeDef* uart_;
-  int error_count_;
-  osSemaphoreDef(semaphore_def_);
-  osSemaphoreId(semaphore_);
+  uint32_t mask_;
 
-  // Receive status.
-  uint8_t rx_data_;  // The one byte received at the time.
-  CircularBuffer* rx_buffer_;
+  static const int kTxBlockSize = 10;
+
+  uint8_t read_data_;
+
+  CircularBuffer* read_buffer_;
+  CircularBuffer* write_buffer_;
+
+  int handle_ = -1;
+
+  UART_HandleTypeDef* uart_;
+
+  dartino::Device device_;
 
   // Transmit status.
   dartino::Mutex* tx_mutex_;
-  uint8_t tx_data_[kTxBlockSize];  // Buffer send to the HAL.
-  bool tx_pending_;
-  CircularBuffer* tx_buffer_;
 
-  friend void __UartTask(const void*);
+  uint8_t tx_data_[kTxBlockSize];  // Buffer send to the HAL.
+
+  // Are we currently waiting for transmission to finish.
+  bool tx_pending_;
+
+  // Used to signal new events from the event handler.
+  osSemaphoreId semaphore_;
+
+  dartino::Atomic<uint32_t> interrupt_flags;
 };
+
+Uart *GetUart(int handle);
 
 #endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_UART_H_

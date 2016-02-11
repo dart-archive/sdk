@@ -14,6 +14,8 @@
 #include <errno.h>
 #include <cmsis_os.h>
 
+#include "src/vm/object.h"
+#include "src/vm/vector.h"
 #include "src/shared/globals.h"
 
 #ifdef DEBUG
@@ -78,15 +80,6 @@ namespace dartino {
 
 static const int kMutexSize = sizeof(int32_t) * 3;
 static const int kSemaphoreSize = sizeof(int32_t) * 2;
-
-osMailQId GetDartinoMailQ();
-
-struct CmsisMessage {
-  uint32_t port_id;
-  int64 message;
-};
-
-int SendMessageCmsis(uint32_t port_id, int64_t message);
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {

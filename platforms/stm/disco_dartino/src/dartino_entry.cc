@@ -25,14 +25,24 @@ extern unsigned char _binary_snapshot_size;
 
 extern PageAllocator* page_allocator;
 
-Uart* uart;
+Uart *uart;
+int uart_handle;
 
-extern "C" size_t UartRead(uint8_t* buffer, size_t count) {
-  return uart->Read(buffer, count);
+extern "C" size_t UartOpen() {
+  return uart_handle;
 }
 
-extern "C" size_t UartWrite(uint8_t* buffer, size_t count) {
-  return uart->Write(buffer, count);
+extern "C" size_t UartRead(int handle, uint8_t* buffer, size_t count) {
+  return GetUart(handle)->Read(buffer, count);
+}
+
+extern "C" size_t UartWrite(
+    int handle, uint8_t* buffer, size_t offset, size_t count) {
+  return GetUart(handle)->Write(buffer, offset, count);
+}
+
+extern "C" uint32_t UartGetError(int handle) {
+  return GetUart(handle)->GetError();
 }
 
 extern "C" void LCDDrawLine(
@@ -55,8 +65,10 @@ extern "C" int Write(int file, char *ptr, int len) {
 }
 
 DARTINO_EXPORT_TABLE_BEGIN
+  DARTINO_EXPORT_TABLE_ENTRY("uart_open", UartOpen)
   DARTINO_EXPORT_TABLE_ENTRY("uart_read", UartRead)
   DARTINO_EXPORT_TABLE_ENTRY("uart_write", UartWrite)
+  DARTINO_EXPORT_TABLE_ENTRY("uart_get_error", UartGetError)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_height", BSP_LCD_GetYSize)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_width", BSP_LCD_GetXSize)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_clear", BSP_LCD_Clear)
@@ -86,9 +98,9 @@ void UartPrintIntercepter(const char* message, int out, void* data) {
   int len = strlen(message);
   for (int i = 0; i < len; i++) {
     if (message[i] == '\n') {
-      uart->Write(reinterpret_cast<const uint8_t*>("\r"), 1);
+      uart->Write(reinterpret_cast<const uint8_t*>("\r\n"), 0, 1);
     }
-    uart->Write(reinterpret_cast<const uint8_t*>(message + i), 1);
+    uart->Write(reinterpret_cast<const uint8_t*>(message + i), 0, 1);
   }
 }
 
@@ -128,13 +140,13 @@ void DartinoEntry(void const * argument) {
   LCD_LOG_SetHeader(reinterpret_cast<uint8_t*>(const_cast<char*>("Dartino")));
   LCD_LOG_SetFooter(reinterpret_cast<uint8_t*>(const_cast<char*>(
       "STM32746G-Discovery")));
-  DartinoRegisterPrintInterceptor(LCDPrintIntercepter, NULL);
 
   // For now always start the UART.
   uart = new Uart();
-  uart->Start();
+  uart_handle = uart->Open();
 
   DartinoRegisterPrintInterceptor(UartPrintIntercepter, NULL);
+  DartinoRegisterPrintInterceptor(LCDPrintIntercepter, NULL);
 
   // Always disable standard out, as this will cause infinite
   // recursion in the syscalls.c handling of write.

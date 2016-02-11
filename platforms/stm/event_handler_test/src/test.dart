@@ -12,24 +12,29 @@ import "dart:dartino.os" hide sleep;
 
 ForeignFunction ledOn = ForeignLibrary.main.lookup('BSP_LED_On');
 ForeignFunction ledOff = ForeignLibrary.main.lookup('BSP_LED_Off');
+ForeignFunction initializeProducer =
+    ForeignLibrary.main.lookup('initialize_producer');
+ForeignFunction notifyRead = ForeignLibrary.main.lookup('notify_read');
 
 // How many timers to schedule.
-const int count = 3;
+const int count = 4;
 
 int nextExpectedTimer = count - 1;
 
-// Listens continuously for messages on port 1.
+// Listens continuously for messages on the handle returned by
+// [initializeProducer].
 //
 // When a message is received, turns on the LED, and starts a timer to turn it
 // off again.
-listenPort1() {
-  int portId = 1;
+listenProducer() {
+  int handle = initializeProducer.icall$0();
   Channel channel = new Channel();
   Port port = new Port(channel);
   for (int i = 0; i < 50; i++) {
-    eventHandler.registerPortForNextEvent(portId, port, 0);
+    eventHandler.registerPortForNextEvent(handle, port, 1);
     int msg = channel.receive();
     ledOn.vcall$1(0);
+    notifyRead.vcall$1(handle);
     Fiber.fork(() {
       Channel offChannel = sleep(50);
       offChannel.receive();
@@ -40,6 +45,7 @@ listenPort1() {
 
 main() {
   print("");
+  print("Starting");
   List<Fiber> fibers = new List<Fiber>();
   // Start the delays with the longest first to test that they are triggered
   // in opposite order.
@@ -61,8 +67,8 @@ main() {
     Fiber.yield();
     fibers.add(fiber);
   }
+  fibers.add(Fiber.fork(listenProducer));
   Fiber.yield();
-  fibers.add(Fiber.fork(listenPort1));
 
   fibers.forEach((Fiber fiber) => fiber.join);
 }
