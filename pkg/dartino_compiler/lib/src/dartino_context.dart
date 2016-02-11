@@ -221,10 +221,6 @@ class DartinoContext {
     backend.systemBuilder.registerConstant(constant, this);
   }
 
-  // TODO(zarah): Remove this and use the DartinoSystemBuilder
-  int lookupConstantIdByValue(ConstantValue value) =>
-      backend.systemBuilder.lookupConstantIdByValue(value);
-
   /// If [isConst] is true, a compile-time error is reported.
   ConstantExpression compileConstant(
       Node node,

@@ -474,7 +474,7 @@ class DartinoSystemBuilder {
     List<DartinoFunction> functions = <DartinoFunction>[];
     for (DartinoFunctionBuilder builder in _newFunctions) {
       context.compiler.reporter.withCurrentElement(builder.element, () {
-        functions.add(builder.finalizeFunction(context, commands));
+        functions.add(builder.finalizeFunction(this, commands));
       });
     }
 

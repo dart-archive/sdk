@@ -17,7 +17,7 @@ import '../bytecodes.dart' show
     Bytecode,
     Opcode;
 
-import 'dartino_context.dart';
+import 'dartino_system_builder.dart';
 import 'bytecode_assembler.dart';
 
 import '../dartino_system.dart';
@@ -88,7 +88,7 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
   }
 
   DartinoFunction finalizeFunction(
-      DartinoContext context,
+      DartinoSystemBuilder systemBuilder,
       List<VmCommand> commands) {
     int constantCount = constants.length;
     for (int i = 0; i < constantCount; i++) {
@@ -114,11 +114,11 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
         element,
         signature,
         assembler.bytecodes,
-        createDartinoConstants(context),
+        createDartinoConstants(systemBuilder),
         memberOf);
   }
 
-  List<DartinoConstant> createDartinoConstants(DartinoContext context) {
+  List<DartinoConstant> createDartinoConstants(DartinoSystemBuilder builder) {
     List<DartinoConstant> dartinoConstants = <DartinoConstant>[];
 
     constants.forEach((constant, int index) {
@@ -130,7 +130,7 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
           dartinoConstants.add(
               new DartinoConstant(constant.classId, MapId.classes));
         } else {
-          int id = context.lookupConstantIdByValue(constant);
+          int id = builder.lookupConstantIdByValue(constant);
           if (id == null) {
             throw "Unsupported constant: ${constant.toStructuredString()}";
           }
