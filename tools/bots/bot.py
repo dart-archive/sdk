@@ -24,6 +24,9 @@ PROJECT_PATH = dirname(dirname(dirname(abspath(__file__))))
 BUILDER_NAME = 'BUILDBOT_BUILDERNAME'
 BUILDER_CLOBBER = 'BUILDBOT_CLOBBER'
 
+# After moving to recipes the bots no longer go red if we don't exit non zero
+# from the annotated steps. Use this to track failures.
+HAS_FAILURES = False
 
 class BuildInfo(object):
   """
@@ -106,6 +109,8 @@ class BuildStep(object):
   def __exit__(self, type, value, traceback):
     if value:
       print '@@@STEP_FAILURE@@@'
+      global HAS_FAILURES
+      HAS_FAILURES = True
       sys.stdout.flush()
       if self.swallow_error and isinstance(value, OSError):
         return True

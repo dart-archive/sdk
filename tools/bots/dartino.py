@@ -149,6 +149,7 @@ def Main():
         arch = 'xarm'
         StepsTargetRunner(debug_log, system, mode, arch)
   StepsShowLogs()
+  return 1 if bot.HAS_FAILURES else 0
 
 #### Buildbot steps
 
@@ -1022,6 +1023,7 @@ def MarkCurrentStep(fatal=True):
   # See
   # https://chromium.googlesource.com/chromium/tools/build/+/c63ec51491a8e47b724b5206a76f8b5e137ff1e7/scripts/master/chromium_step.py#495
   if fatal:
+    bot.HAS_FAILURES = True
     print '@@@STEP_FAILURE@@@'
   else:
     print '@@@STEP_WARNINGS@@@'
@@ -1031,4 +1033,4 @@ if __name__ == '__main__':
   # If main raises an exception we will get a very useful error message with
   # traceback written to stderr. We therefore intentionally do not catch
   # exceptions.
-  Main()
+  sys.exit(Main())
