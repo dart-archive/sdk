@@ -35,29 +35,29 @@ class Session {
     return false;
   }
 
-  bool UncaughtException(Process* process) {
+  Scheduler::ProcessInterruptionEvent UncaughtException(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kNoAction;
   }
 
-  bool UncaughtSignal(Process* process) {
+  Scheduler::ProcessInterruptionEvent UncaughtSignal(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kNoAction;
   }
 
-  bool BreakPoint(Process* process) {
+  Scheduler::ProcessInterruptionEvent BreakPoint(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kNoAction;
   }
 
-  bool ProcessTerminated(Process* process) {
+  Scheduler::ProcessInterruptionEvent ProcessTerminated(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kNoAction;
   }
 
-  bool CompileTimeError(Process* process) {
+  Scheduler::ProcessInterruptionEvent CompileTimeError(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kNoAction;
   }
 
   bool is_debugging() const {
@@ -65,14 +65,14 @@ class Session {
     return false;
   }
 
-  bool ProcessRun() {
+  int ProcessRun() {
     UNIMPLEMENTED();
-    return false;
+    return 0;
   }
 
-  bool Killed(Process* process) {
+  Scheduler::ProcessInterruptionEvent Killed(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kNoAction;
   }
 
   void IteratePointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
