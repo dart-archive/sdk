@@ -126,10 +126,6 @@ class FreeRTOSSystem implements System {
     throw new UnsupportedError(notSupported);
   }
 
-  void sleep(int milliseconds) {
-    throw new UnsupportedError(notSupported);
-  }
-
   int errno() {
     throw new UnsupportedError(notSupported);
   }

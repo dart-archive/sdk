@@ -47,6 +47,4 @@ abstract class InternetAddress {
   bool get isIP4;
 }
 
-// TODO(ajohnsen): Take a Duration?
-void sleep(int milliseconds) => sys.sleep(milliseconds);
 int errno() => sys.errno();

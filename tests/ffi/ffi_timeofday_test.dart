@@ -2,10 +2,10 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:dartino';
 import 'dart:dartino.ffi';
 
 import "package:expect/expect.dart";
-import 'package:os/os.dart' as os;
 
 abstract class Timeval implements ForeignMemory {
   factory Timeval() {
@@ -39,7 +39,7 @@ main() {
   int start = timeval.tv_sec * 1000 + timeval.tv_usec ~/ 1000;
 
   int sleepTime = 300;
-  os.sleep(sleepTime);
+  sleep(sleepTime);
 
   Expect.equals(0, gettimeofday.icall$2(timeval, 0));
   int end = timeval.tv_sec * 1000 + timeval.tv_usec ~/ 1000;

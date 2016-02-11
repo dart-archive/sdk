@@ -322,8 +322,6 @@ abstract class PosixSystem implements System {
     return _close.icall$1Retry(fd);
   }
 
-  void sleep(int milliseconds) => os.sleep(milliseconds);
-
   int errno() => Foreign.errno;
 
   String strerror(int errno) {

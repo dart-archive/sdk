@@ -7,9 +7,10 @@
 // For breadboard layout and connections to the Pi, see:
 // https://storage.googleapis.com/dartino-archive/images/buzzer-schematic.png
 
+import 'dart:dartino';
+
 import 'package:gpio/gpio.dart';
 import 'package:raspberry_pi/raspberry_pi.dart';
-import 'package:os/os.dart';
 
 main() {
   // GPIO pin constants.

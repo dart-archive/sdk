@@ -61,9 +61,7 @@ class Lights {
   void runLightLeft(int waitTime) {
     for (int counter = 0; counter < leds.length; counter++) {
       _setLeds(counter);
-      // TODO(sgjesse): Use the Dartino sleep function.
-      for (int i= 0; i < 50000; i++) {}
-      //sleep(waitTime);
+      sleep(waitTime);
     }
   }
 
@@ -72,9 +70,7 @@ class Lights {
   void runLightRight(int waitTime) {
     for (int counter = leds.length - 1; counter >= 0; counter--) {
       _setLeds(counter);
-      // TODO(sgjesse): Use the Dartino sleep function.
-      for (int i= 0; i < 50000; i++) {}
-      //sleep(waitTime);
+      sleep(waitTime);
     }
   }
 

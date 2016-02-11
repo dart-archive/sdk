@@ -8,7 +8,7 @@
 
 import "dart:dartino";
 import "dart:dartino.ffi";
-import "dart:dartino.os" hide sleep;
+import "dart:dartino.os";
 
 ForeignFunction ledOn = ForeignLibrary.main.lookup('BSP_LED_On');
 ForeignFunction ledOff = ForeignLibrary.main.lookup('BSP_LED_Off');
@@ -36,8 +36,7 @@ listenProducer() {
     ledOn.vcall$1(0);
     notifyRead.vcall$1(handle);
     Fiber.fork(() {
-      Channel offChannel = sleep(50);
-      offChannel.receive();
+      sleep(50);
       ledOff.vcall$1(0);
     });
   }
@@ -50,11 +49,10 @@ main() {
   // Start the delays with the longest first to test that they are triggered
   // in opposite order.
   for (int i = 0; i < count; i++) {
-    Channel channel = sleep((count - i) * 500);
     var localI = i;
     Fiber fiber = Fiber.fork(() {
       print("Timer $localI waiting");
-      var _ = channel.receive();
+      sleep((count - i) * 500);
       if (nextExpectedTimer != localI) {
         print("Failure: Wrong order of timeouts, "
             "expected $nextExpectedTimer got $localI");

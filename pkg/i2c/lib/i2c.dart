@@ -13,10 +13,12 @@
 /// HAT.
 ///
 /// ```dart
+/// import 'dart:dartino';
+///
 /// import 'package:i2c/i2c.dart';
 /// import 'package:i2c/devices/hts221.dart';
 /// import 'package:i2c/devices/lps25h.dart';
-/// import 'package:os/os.dart' as os;
+///
 /// main() {
 ///   The Raspberry Pi 2 has I2C bus 1.
 ///   var busAddress = new I2CBusAddress(1);
@@ -31,7 +33,7 @@
 ///     print('Temperature: ${hts221.readTemperature()}');
 ///     print('Humidity: ${hts221.readHumidity()}');
 ///     print('Pressure: ${lps25h.readPressure()}');
-///     os.sleep(1000);
+///     sleep(1000);
 ///   }
 /// }
 /// ```

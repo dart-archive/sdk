@@ -5,9 +5,10 @@
 // The 'hello world' of embedded: Blinking an LED. Uses the on-board
 // Raspberry Pi 2 activity LED.
 
+import 'dart:dartino';
+
 import 'package:gpio/gpio.dart';
 import 'package:raspberry_pi/raspberry_pi.dart';
-import 'package:os/os.dart';
 
 main() {
   // Initialize Raspberry Pi and configure the activity LED to be GPIO
