@@ -35,7 +35,7 @@ class ProcessQueue {
 
     Process* process = ready_.RemoveFirst();
     if (!process->ChangeState(Process::kReady, Process::kRunning)) {
-      UNIMPLEMENTED();
+      UNREACHABLE();
     }
     *entry = process;
     return true;
@@ -57,6 +57,23 @@ class ProcessQueue {
   bool IsEmpty() {
     ScopedSpinlock locker(&spinlock_);
     return ready_.IsEmpty();
+  }
+
+  void PauseAllProcessesOfProgram(Program* program) {
+    ScopedSpinlock locker(&spinlock_);
+
+    ProgramState* state = program->program_state();
+
+    auto it = ready_.Begin();
+    while (it != ready_.End()) {
+      Process* process = *it;
+      if (process->program() == program) {
+        it = ready_.Erase(it);
+        state->AddPausedProcess(process);
+      } else {
+        ++it;
+      }
+    }
   }
 
  private:

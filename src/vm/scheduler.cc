@@ -165,26 +165,7 @@ void Scheduler::StopProgram(Program* program, ProgramState::State stop_state) {
       pause_monitor_->Wait();
     }
 
-    ProcessQueueList to_enqueue;
-
-    while (true) {
-      Process* process = NULL;
-      // All processes dequeued are marked as Running.
-      if (!DequeueProcess(&process)) break;
-
-      if (process->program() == program) {
-        process->ChangeState(Process::kRunning, Process::kReady);
-        program_state->AddPausedProcess(process);
-      } else {
-        to_enqueue.Append(process);
-      }
-    }
-
-    while (!to_enqueue.IsEmpty()) {
-      Process* process = to_enqueue.RemoveFirst();
-      process->ChangeState(Process::kRunning, Process::kReady);
-      EnqueueProcess(process);
-    }
+    ready_queue_.PauseAllProcessesOfProgram(program);
 
     // TODO(kustermann): Stopping a program should not always clear the lookup
     // cache. But if we don't do, then other code might decide to do a
