@@ -35,7 +35,7 @@ void main() {
         int lkDartinoValue = int.parse(dartinoValues[i]);
         int lkBaselineValue = int.parse(baselineValues[i]);
         int dartinoSize = lkDartinoValue - lkBaselineValue;
-        print("DartinoARMBinarySize_$key(CodeSize): ${dartinoSize}");
+        print("FletchARMBinarySize_$key(CodeSize): ${dartinoSize}");
       }
     }
   }
