@@ -105,6 +105,7 @@ void Exit(int exit_code) {
     // parent process, we send a signal to ourselves.
     signal(-exit_code, SIG_DFL);
     raise(-exit_code);
+    printf("Negative exit code raised with value: %d", exit_code);
   } else {
     exit(exit_code);
   }

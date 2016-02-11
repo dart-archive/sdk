@@ -769,9 +769,10 @@ class PersistentDartinoDaemon(object):
       self._log_file.seek(0, os.SEEK_END)
 
   def __exit__(self, *_):
-    print "Trying to wait for existing dartino daemon."
+    pid = self._persistent.pid
+    print "Trying to wait for existing dartino daemon with pid: %s." % pid
     self._persistent.terminate()
-    self._persistent.wait()
+    print "Exitcode from persistent process: %s" % self._persistent.wait()
 
 class TemporaryHomeDirectory(object):
   """Creates a temporary directory and uses that as the home directory.

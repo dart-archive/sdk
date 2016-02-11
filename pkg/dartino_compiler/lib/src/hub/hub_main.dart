@@ -191,7 +191,8 @@ Future main(List<String> arguments) async {
     subscription.onData((ProcessSignal signal) {
       // Cancel the subscription to restore default signal handler.
       subscription.cancel();
-      print("Received signal $signal");
+      print("Received signal $signal, sending signal to pid 0");
+      print("Our pid was: ${io.pid}");
       gracefulShutdown();
       // 0 means kill the current process group (including this process, which
       // will now die as we restored the default signal handler above).  In
