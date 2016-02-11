@@ -30,6 +30,11 @@ class Session {
 
   void JoinMessageProcessingThread() { UNIMPLEMENTED(); }
 
+  bool CanHandleEvents() const {
+    UNIMPLEMENTED();
+    return false;
+  }
+
   bool UncaughtException(Process* process) {
     UNIMPLEMENTED();
     return false;
