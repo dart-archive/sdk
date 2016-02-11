@@ -5,9 +5,14 @@
 /// Helper functions for running code in a Zone.
 library dartino_compiler.zone_helper;
 
+import 'dart:io' as io;
+
 import 'dart:async';
 
 import 'dart:isolate';
+
+import 'verbs/options.dart' show
+    isBatchMode;
 
 Future runGuarded(
     Future f(),
@@ -24,6 +29,12 @@ Future runGuarded(
   Completer completer = new Completer();
 
   handleUncaughtError(error, StackTrace stackTrace) {
+    if (isBatchMode) {
+      io.stderr.writeln("$error");
+      if (stackTrace != null) {
+        io.stderr.writeln("$stackTrace");
+      }
+    }
     if (!completer.isCompleted) {
       completer.completeError(error, stackTrace);
     } else if (handleLateError != null) {
