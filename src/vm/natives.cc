@@ -1512,8 +1512,11 @@ BEGIN_NATIVE(TimerScheduleTimeout) {
 END_NATIVE()
 
 BEGIN_NATIVE(EventHandlerSleep) {
-  int64 timeout =
-      AsForeignInt64(arguments[0]) + Platform::GetMicroseconds() / 1000;
+  int64 arg = AsForeignInt64(arguments[0]);
+  // Adding one (1) if the sleep is not for 0 ms. This ensures that the
+  // sleep will last at least the provided number of milliseconds.
+  int64 offset = arg == 0 ? 0 : 1;
+  int64 timeout = arg + Platform::GetMicroseconds() / 1000 + offset;
   Port* port = Port::FromDartObject(arguments[1]);
   EventHandler::GlobalInstance()->ScheduleTimeout(timeout, port);
   return process->program()->null_object();
