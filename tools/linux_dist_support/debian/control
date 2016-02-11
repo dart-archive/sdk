@@ -7,5 +7,5 @@ Build-Depends: debhelper (>= 9)
 
 Package: dartino-agent
 Architecture: armhf
-Depends: ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Dartino Agent
