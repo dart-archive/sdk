@@ -4,13 +4,17 @@
 
 library dartino_compiler.lazy_field_initializer_codegen;
 
-import 'package:compiler/src/elements/elements.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    FieldElement;
+
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
 
-import 'package:compiler/src/tree/tree.dart';
+import 'package:compiler/src/tree/tree.dart' show
+    Node;
 
-import 'dartino_context.dart';
+import 'dartino_context.dart' show
+    DartinoContext;
 
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
@@ -18,10 +22,12 @@ import 'dartino_function_builder.dart' show
 import 'dartino_registry.dart' show
     DartinoRegistry;
 
-import 'closure_environment.dart';
+import 'closure_environment.dart' show
+    ClosureEnvironment;
 
-import 'codegen_visitor.dart';
-
+import 'codegen_visitor.dart' show
+    CodegenVisitor,
+    DartinoRegistryMixin;
 
 abstract class LazyFieldInitializerCodegenBase extends CodegenVisitor {
   LazyFieldInitializerCodegenBase(

@@ -4,10 +4,20 @@
 
 library dartino_compiler.debug_info_lazy_field_initializer_codegen;
 
-import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/tree_elements.dart';
-import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/selector.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    Element,
+    FieldElement,
+    Name;
+
+import 'package:compiler/src/resolution/tree_elements.dart' show
+    TreeElements;
+
+import 'package:compiler/src/tree/tree.dart' show
+    CaseMatch,
+    Node;
+
+import 'package:compiler/src/universe/selector.dart' show
+    Selector;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType;
@@ -15,7 +25,10 @@ import 'package:compiler/src/dart_types.dart' show
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
-import 'dartino_context.dart';
+import 'dartino_context.dart' show
+    BytecodeLabel,
+    DartinoCompilerImplementation,
+    DartinoContext;
 
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
@@ -26,10 +39,17 @@ import 'dartino_registry.dart' show
 import 'debug_registry.dart' show
     DebugRegistry;
 
-import 'closure_environment.dart';
-import 'codegen_visitor.dart';
-import 'lazy_field_initializer_codegen.dart';
-import 'debug_info.dart';
+import 'closure_environment.dart' show
+    ClosureEnvironment;
+
+import 'codegen_visitor.dart' show
+    LocalValue;
+
+import 'lazy_field_initializer_codegen.dart' show
+    LazyFieldInitializerCodegenBase;
+
+import 'debug_info.dart' show
+    DebugInfo;
 
 class DebugInfoLazyFieldInitializerCodegen
     extends LazyFieldInitializerCodegenBase with DebugRegistry {

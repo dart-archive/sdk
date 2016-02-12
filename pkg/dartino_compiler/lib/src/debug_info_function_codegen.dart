@@ -4,10 +4,22 @@
 
 library dartino_compiler.debug_info_function_codegen;
 
-import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/resolution/tree_elements.dart';
-import 'package:compiler/src/tree/tree.dart';
-import 'package:compiler/src/universe/selector.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    Element,
+    FunctionElement,
+    Name;
+
+import 'package:compiler/src/resolution/tree_elements.dart' show
+    TreeElements;
+
+import 'package:compiler/src/tree/tree.dart' show
+    Block,
+    CaseMatch,
+    FunctionExpression,
+    Node;
+
+import 'package:compiler/src/universe/selector.dart' show
+    Selector;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType;
@@ -15,9 +27,14 @@ import 'package:compiler/src/dart_types.dart' show
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
-import 'bytecode_assembler.dart';
-import 'closure_environment.dart';
-import 'codegen_visitor.dart';
+import 'bytecode_assembler.dart' show
+    BytecodeLabel;
+
+import 'closure_environment.dart' show
+    ClosureEnvironment;
+
+import 'codegen_visitor.dart' show
+    LocalValue;
 
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
@@ -25,9 +42,16 @@ import 'dartino_function_builder.dart' show
 import 'debug_registry.dart' show
     DebugRegistry;
 
-import 'dartino_context.dart';
-import 'function_codegen.dart';
-import 'debug_info.dart';
+import 'dartino_context.dart' show
+    BytecodeLabel,
+    DartinoCompilerImplementation,
+    DartinoContext;
+
+import 'function_codegen.dart' show
+    FunctionCodegenBase;
+
+import 'debug_info.dart' show
+    DebugInfo;
 
 class DebugInfoFunctionCodegen extends FunctionCodegenBase with DebugRegistry {
   final DartinoCompilerImplementation compiler;

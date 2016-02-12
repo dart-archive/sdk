@@ -145,22 +145,69 @@ import 'dartino_registry.dart' show
 import 'diagnostic.dart' show
    throwInternalError;
 
-import 'class_debug_info.dart';
-import 'codegen_visitor.dart';
-import 'debug_info.dart';
-import 'debug_info_constructor_codegen.dart';
-import 'debug_info_function_codegen.dart';
-import 'debug_info_lazy_field_initializer_codegen.dart';
-import 'dartino_context.dart';
-import 'dartino_selector.dart';
-import 'function_codegen.dart';
-import 'lazy_field_initializer_codegen.dart';
-import 'constructor_codegen.dart';
-import 'closure_environment.dart';
+import 'class_debug_info.dart' show
+    ClassDebugInfo;
 
-import '../bytecodes.dart';
-import '../vm_commands.dart';
-import '../dartino_system.dart';
+import 'codegen_visitor.dart' show
+    CodegenVisitor,
+    LocalValue;
+
+import 'debug_info.dart' show
+    DebugInfo;
+
+import 'debug_info_function_codegen.dart' show
+    DebugInfoFunctionCodegen;
+
+import 'function_codegen.dart' show
+    FunctionCodegen,
+    FunctionCodegenBase;
+
+import 'debug_info_constructor_codegen.dart' show
+    DebugInfoConstructorCodegen;
+
+import 'lazy_field_initializer_codegen.dart' show
+    LazyFieldInitializerCodegen;
+
+import 'constructor_codegen.dart' show
+    ConstructorCodegen;
+
+import 'debug_info_lazy_field_initializer_codegen.dart' show
+    DebugInfoLazyFieldInitializerCodegen;
+
+import 'dartino_context.dart' show
+    BytecodeAssembler,
+    BytecodeLabel,
+    DartinoCompilerImplementation,
+    DartinoContext,
+    DartinoNativeDescriptor;
+
+import 'dartino_selector.dart' show
+    DartinoSelector,
+    SelectorKind;
+
+import 'closure_environment.dart' show
+    ClosureEnvironment,
+    ClosureInfo,
+    ClosureVisitor;
+
+import '../bytecodes.dart' show
+    Bytecode;
+
+import '../vm_commands.dart' show
+    MapId,
+    NewMap,
+    PushFromMap,
+    PushNewInteger,
+    VmCommand;
+
+import '../dartino_system.dart' show
+    DartinoConstant,
+    DartinoDelta,
+    DartinoFunction,
+    DartinoFunctionBase,
+    DartinoFunctionKind,
+    DartinoSystem,
+    ParameterStubSignature;
 
 //TODO(zarah): Move to dartino_system.dart
 const DartinoSystem BASE_DARTINO_SYSTEM = const DartinoSystem(

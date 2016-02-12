@@ -4,15 +4,36 @@
 
 library dartino_compiler.constructor_codegen;
 
-import 'package:compiler/src/elements/elements.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
+    ConstructorElement,
+    FieldElement,
+    FormalElement,
+    FunctionSignature,
+    InitializingFormalElement,
+    LibraryElement,
+    ParameterElement;
+
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
-import 'package:compiler/src/tree/tree.dart';
+
+import 'package:compiler/src/tree/tree.dart' show
+    Expression,
+    FunctionExpression,
+    Node,
+    NodeList,
+    Send,
+    SendSet;
+
 import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
-import 'package:compiler/src/dart_types.dart';
 
-import 'dartino_context.dart';
+import 'package:compiler/src/dart_types.dart' show
+    InterfaceType;
+
+import 'dartino_context.dart' show
+    BytecodeAssembler,
+    DartinoContext;
 
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
@@ -20,11 +41,18 @@ import 'dartino_function_builder.dart' show
 import '../dartino_class_base.dart' show
     DartinoClassBase;
 
-import 'closure_environment.dart';
+import 'closure_environment.dart' show
+    ClosureEnvironment;
 
-import 'lazy_field_initializer_codegen.dart';
+import 'lazy_field_initializer_codegen.dart' show
+    LazyFieldInitializerCodegen,
+    LazyFieldInitializerCodegenBase;
 
-import 'codegen_visitor.dart';
+import 'codegen_visitor.dart' show
+    CodegenVisitor,
+    DartinoRegistryMixin,
+    LocalValue,
+    UnboxedLocalValue;
 
 import 'dartino_registry.dart' show
     DartinoRegistry;
