@@ -258,14 +258,12 @@ class Session extends DartinoVmSession {
     await runCommand(const Debugging());
   }
 
-  Future spawnProcess() async {
-    // TODO(ajohnsen): Handle arguments.
-    await runCommands([const PushNewInteger(0),
-                       const ProcessSpawnForMain()]);
+  Future spawnProcess(List<String> arguments) async {
+    await runCommand(new ProcessSpawnForMain(arguments));
   }
 
-  Future run() async {
-    await spawnProcess();
+  Future run(List<String> arguments) async {
+    await spawnProcess(arguments);
     loaded = true;
     await runCommand(const ProcessRun());
     // NOTE: The [ProcessRun] command normally results in a
@@ -286,7 +284,8 @@ class Session extends DartinoVmSession {
       SessionState state,
       {bool echo: false}) async {
     await enableDebugger();
-    await spawnProcess();
+    // TODO(ahe): Arguments?
+    await spawnProcess([]);
     return new InputHandler(this, inputLines, echo, base).run(state);
   }
 

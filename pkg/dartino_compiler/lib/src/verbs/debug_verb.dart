@@ -370,7 +370,8 @@ Future<int> runToMainDebuggerTask(
   }
 
   await session.enableDebugger();
-  await session.spawnProcess();
+  // TODO(ahe): Add support for arguments when debugging.
+  await session.spawnProcess([]);
   await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
   await session.debugRun();
 

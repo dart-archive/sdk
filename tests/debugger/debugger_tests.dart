@@ -66,7 +66,8 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
     }
   }
 
-  Expect.equals(0, await run(state, testDebuggerCommands: debuggerCommands));
+  int result = await run(state, [], testDebuggerCommands: debuggerCommands);
+  Expect.equals(0, result);
 
   int exitCode = await state.dartinoVm.exitCode;
 

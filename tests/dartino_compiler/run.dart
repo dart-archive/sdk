@@ -99,7 +99,7 @@ class DartinoRunner {
       if (exportTo != null) {
         await developer.export(state, fileUri(exportTo, Uri.base));
       } else {
-        await developer.run(state);
+        await developer.run(state, []);
       }
       if (state.dartinoVm != null) {
         int exitCode = await state.dartinoVm.exitCode;

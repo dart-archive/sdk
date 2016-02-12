@@ -191,7 +191,7 @@ compileAndRun(
         // Turn on debugging.
         await session.enableDebugger();
         // Spawn the process to run.
-        await session.spawnProcess();
+        await session.spawnProcess([]);
         // Allow operations on internal frames.
         await session.toggleInternal();
       }

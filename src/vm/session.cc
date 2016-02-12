@@ -647,13 +647,17 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kProcessSpawnForMain: {
-      // TODO(ajohnsen): Accept arguments.
-      word arguments_count = Smi::cast(session()->Pop())->value();
-      ASSERT(arguments_count == 0);
-      List<List<uint8>> arguments;
-
       // Setup entry point for main thread.
       program()->set_entry(Function::cast(session()->Pop()));
+
+      int arguments_count = connection()->ReadInt();
+      List<List<uint8>> arguments = List<List<uint8>>::New(arguments_count);
+      for (int i = 0; i < arguments_count; i++) {
+        int length;
+        uint8* bytes = connection()->ReadBytes(&length);
+        arguments[i] = List<uint8>(bytes, length);
+      }
+
       ProgramFolder::FoldProgramByDefault(program());
       return new SpawnedState(program()->ProcessSpawnForMain(arguments));
     }

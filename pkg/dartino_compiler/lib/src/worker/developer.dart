@@ -569,6 +569,7 @@ Future runWithDebugger(
 
 Future<int> run(
     SessionState state,
+    List<String> arguments,
     {List<String> testDebuggerCommands,
      bool terminateDebugger: true}) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
@@ -586,7 +587,7 @@ Future<int> run(
   session.silent = true;
 
   await session.enableDebugger();
-  await session.spawnProcess();
+  await session.spawnProcess(arguments);
   var command = await session.debugRun();
 
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
