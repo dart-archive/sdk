@@ -338,6 +338,7 @@ class Program : public ProgramList::Entry {
 
   LookupCache* cache() const { return cache_; }
   LookupCache* EnsureCache();
+  void ClearCache();
 
   ProcessHandle* MainProcess();
 

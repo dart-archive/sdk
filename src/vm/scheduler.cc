@@ -166,17 +166,6 @@ void Scheduler::StopProgram(Program* program, ProgramState::State stop_state) {
     }
 
     ready_queue_.PauseAllProcessesOfProgram(program);
-
-    // TODO(kustermann): Stopping a program should not always clear the lookup
-    // cache. But if we don't do, then other code might decide to do a
-    // ProgramGC (e.g. gc thread) or rewrite instances (e.g. session) and the
-    // lookup cache entries are broken.
-    //
-    // => We should move the responsibility of clearing the cache to the caller
-    //    of StopProgram().
-    LookupCache* cache = program->cache();
-    if (cache != NULL) cache->Clear();
-
     pause_ = false;
   }
 

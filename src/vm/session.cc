@@ -1685,6 +1685,8 @@ bool Session::CommitChanges(int count) {
   }
 
   if (!has_program_update_error_) {
+    program()->ClearCache();
+
     // TODO(kustermann): Sanity check all changes the compiler gave us.
     // If we are unable to apply a change, we should continue the program
     // and "return false".

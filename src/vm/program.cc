@@ -404,6 +404,8 @@ void Program::ValidateSharedHeap() {
 }
 
 void Program::CollectGarbage() {
+  ClearCache();
+
   SemiSpace* to = new SemiSpace(heap_.space()->Used() / 10);
   ScavengeVisitor scavenger(heap_.space(), to);
 
@@ -1126,5 +1128,8 @@ LookupCache* Program::EnsureCache() {
   return cache_;
 }
 
+void Program::ClearCache() {
+  if (cache_ != NULL) cache_->Clear();
+}
 
 }  // namespace dartino
