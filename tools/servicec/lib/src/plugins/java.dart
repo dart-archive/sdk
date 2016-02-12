@@ -164,7 +164,7 @@ JNIEXPORT void JNICALL Java_dartino_DartinoApi_RunSnapshot(JNIEnv* env,
   env->GetByteArrayRegion(snapshot, 0, len, reinterpret_cast<jbyte*>(copy));
   DartinoProgram program = DartinoLoadSnapshot(copy, len);
   delete[] copy;
-  DartinoRunMain(program);
+  DartinoRunMain(program, 0, NULL);
   DartinoDeleteProgram(program);
 }
 

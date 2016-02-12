@@ -29,7 +29,7 @@ static dispatch_queue_t queue;
   reinterpret_cast<unsigned char*>(const_cast<void*>(data.bytes));
   NSLog(@"Dartino execution started\n");
   DartinoProgram program = DartinoLoadSnapshot(bytes, data.length);
-  DartinoRunMain(program);
+  DartinoRunMain(program, 0, NULL);
   DartinoDeleteProgram(program);
   NSLog(@"Dartino execution terminated\n");
 }
