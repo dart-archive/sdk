@@ -47,6 +47,10 @@ abstract class DebugRegistry {
   void registerLocalInvoke(LocalElement element, Selector selector) { }
   void registerClosurization(FunctionElement element, _) { }
 
+  int compileLazyFieldInitializer(FieldElement field) {
+    return context.getStaticFieldIndex(field, null);
+  }
+
   void generateUnimplementedError(Spannable spannable, String reason) {
     context.backend.generateUnimplementedError(
         spannable, reason, functionBuilder, suppressHint: true);

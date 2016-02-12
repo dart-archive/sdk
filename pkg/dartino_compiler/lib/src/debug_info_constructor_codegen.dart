@@ -39,23 +39,24 @@ import 'lazy_field_initializer_codegen.dart';
 import 'debug_info_lazy_field_initializer_codegen.dart';
 import 'debug_info.dart';
 
-class DebugInfoConstructorCodegen extends ConstructorCodegen
+class DebugInfoConstructorCodegen extends ConstructorCodegenBase
     with DebugRegistry {
   final DebugInfo debugInfo;
   final DartinoCompilerImplementation compiler;
 
-  DebugInfoConstructorCodegen(this.debugInfo,
-                              DartinoFunctionBuilder functionBuilder,
-                              DartinoContext context,
-                              TreeElements elements,
-                              ClosureEnvironment closureEnvironment,
-                              ConstructorElement constructor,
-                              DartinoClassBase classBase,
-                              this.compiler)
-      : super(functionBuilder, context, elements, null,
-              closureEnvironment, constructor, classBase);
+  DebugInfoConstructorCodegen(
+      this.debugInfo,
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      ConstructorElement constructor,
+      DartinoClassBase classBase,
+      this.compiler)
+      : super(functionBuilder, context, elements, closureEnvironment,
+              constructor, classBase);
 
-  LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
+  DebugInfoLazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
       DartinoFunctionBuilder function,
       FieldElement field) {
     TreeElements elements = field.resolvedAst.elements;

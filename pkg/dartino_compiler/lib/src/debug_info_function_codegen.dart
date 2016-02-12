@@ -29,19 +29,20 @@ import 'dartino_context.dart';
 import 'function_codegen.dart';
 import 'debug_info.dart';
 
-class DebugInfoFunctionCodegen extends FunctionCodegen with DebugRegistry {
+class DebugInfoFunctionCodegen extends FunctionCodegenBase with DebugRegistry {
   final DartinoCompilerImplementation compiler;
   final DebugInfo debugInfo;
 
-  DebugInfoFunctionCodegen(this.debugInfo,
-                           DartinoFunctionBuilder functionBuilder,
-                           DartinoContext context,
-                           TreeElements elements,
-                           ClosureEnvironment closureEnvironment,
-                           FunctionElement function,
-                           this.compiler)
-      : super(functionBuilder, context, elements, null,
-              closureEnvironment, function) {
+  DebugInfoFunctionCodegen(
+      this.debugInfo,
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      FunctionElement function,
+      this.compiler)
+      : super(functionBuilder, context, elements, closureEnvironment,
+              function) {
     if (functionBuilder.isInstanceMember) pushVariableDeclaration(thisValue);
   }
 

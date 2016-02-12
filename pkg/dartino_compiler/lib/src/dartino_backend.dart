@@ -1008,7 +1008,7 @@ class DartinoBackend extends Backend
 
   void codegenNativeFunction(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     String name = '.${function.name}';
 
     ClassElement enclosingClass = function.enclosingClass;
@@ -1066,7 +1066,7 @@ class DartinoBackend extends Backend
 
   void codegenExternalFunction(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     if (function == dartinoExternalYield) {
       codegenExternalYield(function, codegen);
     } else if (function == context.compiler.identicalFunction.implementation) {
@@ -1092,7 +1092,7 @@ class DartinoBackend extends Backend
 
   void codegenIdentical(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     codegen.assembler
         ..loadParameter(0)
         ..loadParameter(1)
@@ -1103,7 +1103,7 @@ class DartinoBackend extends Backend
 
   void codegenExternalYield(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     codegen.assembler
         ..loadParameter(0)
         ..processYield()
@@ -1113,7 +1113,7 @@ class DartinoBackend extends Backend
 
   void codegenExternalInvokeMain(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     compiler.reporter.internalError(
         function, "[codegenExternalInvokeMain] not implemented.");
     // TODO(ahe): This code shouldn't normally be called, only if invokeMain is
@@ -1122,7 +1122,7 @@ class DartinoBackend extends Backend
 
   void codegenExternalNoSuchMethodTrampoline(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     // NOTE: The number of arguments to the [noSuchMethodName] function must be
     // kept in sync with:
     //     src/vm/interpreter.cc:HandleEnterNoSuchMethod

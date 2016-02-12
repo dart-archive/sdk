@@ -272,11 +272,12 @@ abstract class CodegenVisitor
 
   List<Element> blockLocals = <Element>[];
 
-  CodegenVisitor(this.functionBuilder,
-                 this.context,
-                 TreeElements elements,
-                 this.closureEnvironment,
-                 this.element)
+  CodegenVisitor(
+      this.functionBuilder,
+      this.context,
+      TreeElements elements,
+      this.closureEnvironment,
+      this.element)
       : super(elements) {
     if (functionBuilder.isInstanceMember) {
       thisValue = new UnboxedParameterValue(0, null, assembler);

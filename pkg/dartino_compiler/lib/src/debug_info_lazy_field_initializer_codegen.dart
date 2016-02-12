@@ -32,19 +32,19 @@ import 'lazy_field_initializer_codegen.dart';
 import 'debug_info.dart';
 
 class DebugInfoLazyFieldInitializerCodegen
-    extends LazyFieldInitializerCodegen with DebugRegistry {
+    extends LazyFieldInitializerCodegenBase with DebugRegistry {
   final DebugInfo debugInfo;
   final DartinoCompilerImplementation compiler;
 
-  DebugInfoLazyFieldInitializerCodegen(this.debugInfo,
-                                       DartinoFunctionBuilder functionBuilder,
-                                       DartinoContext context,
-                                       TreeElements elements,
-                                       ClosureEnvironment closureEnvironment,
-                                       FieldElement field,
-                                       this.compiler)
-      : super(functionBuilder, context, elements, null,
-              closureEnvironment, field);
+  DebugInfoLazyFieldInitializerCodegen(
+      this.debugInfo,
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      FieldElement field,
+      this.compiler)
+      : super(functionBuilder, context, elements, closureEnvironment, field);
 
   void recordDebugInfo(Node node) {
     debugInfo.addLocation(compiler, assembler.byteSize, node);

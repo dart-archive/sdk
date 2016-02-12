@@ -22,18 +22,15 @@ import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
 
-class LazyFieldInitializerCodegen
-    extends CodegenVisitor with DartinoRegistryMixin {
-  final DartinoRegistry registry;
 
-  LazyFieldInitializerCodegen(DartinoFunctionBuilder functionBuilder,
-                              DartinoContext context,
-                              TreeElements elements,
-                              this.registry,
-                              ClosureEnvironment closureEnvironment,
-                              FieldElement field)
-      : super(functionBuilder, context, elements,
-              closureEnvironment, field);
+abstract class LazyFieldInitializerCodegenBase extends CodegenVisitor {
+  LazyFieldInitializerCodegenBase(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      FieldElement field)
+      : super(functionBuilder, context, elements, closureEnvironment, field);
 
   FieldElement get field => element;
 
@@ -46,4 +43,18 @@ class LazyFieldInitializerCodegen
         ..ret()
         ..methodEnd();
   }
+}
+
+class LazyFieldInitializerCodegen extends LazyFieldInitializerCodegenBase
+    with DartinoRegistryMixin {
+  final DartinoRegistry registry;
+
+  LazyFieldInitializerCodegen(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      this.registry,
+      ClosureEnvironment closureEnvironment,
+      FieldElement field)
+      : super(functionBuilder, context, elements, closureEnvironment, field);
 }

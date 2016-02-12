@@ -22,18 +22,16 @@ import 'closure_environment.dart';
 
 import 'codegen_visitor.dart';
 
-class FunctionCodegen extends CodegenVisitor with DartinoRegistryMixin {
-  final DartinoRegistry registry;
+abstract class FunctionCodegenBase extends CodegenVisitor {
   int setterResultSlot;
 
-  FunctionCodegen(DartinoFunctionBuilder functionBuilder,
-                  DartinoContext context,
-                  TreeElements elements,
-                  this.registry,
-                  ClosureEnvironment closureEnvironment,
-                  FunctionElement function)
-      : super(functionBuilder, context, elements,
-              closureEnvironment, function);
+  FunctionCodegenBase(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      FunctionElement function)
+      : super(functionBuilder, context, elements, closureEnvironment, function);
 
   FunctionElement get function => element;
 
@@ -131,4 +129,17 @@ class FunctionCodegen extends CodegenVisitor with DartinoRegistryMixin {
       assembler.loadSlot(setterResultSlot);
     }
   }
+}
+
+class FunctionCodegen extends FunctionCodegenBase with DartinoRegistryMixin {
+  final DartinoRegistry registry;
+
+  FunctionCodegen(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      this.registry,
+      ClosureEnvironment closureEnvironment,
+      FunctionElement function)
+      : super(functionBuilder, context, elements, closureEnvironment, function);
 }

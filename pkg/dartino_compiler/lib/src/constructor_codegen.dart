@@ -29,9 +29,7 @@ import 'codegen_visitor.dart';
 import 'dartino_registry.dart' show
     DartinoRegistry;
 
-class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
-  final DartinoRegistry registry;
-
+abstract class ConstructorCodegenBase extends CodegenVisitor {
   final DartinoClassBase classBase;
 
   final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
@@ -40,15 +38,15 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
 
   ClosureEnvironment initializerClosureEnvironment;
 
-  ConstructorCodegen(DartinoFunctionBuilder functionBuilder,
-                     DartinoContext context,
-                     TreeElements elements,
-                     this.registry,
-                     ClosureEnvironment closureEnvironment,
-                     ConstructorElement constructor,
-                     this.classBase)
-      : super(functionBuilder, context, elements,
-              closureEnvironment, constructor);
+  ConstructorCodegenBase(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      ConstructorElement constructor,
+      this.classBase)
+      : super(functionBuilder, context, elements, closureEnvironment,
+              constructor);
 
   ConstructorElement get constructor => element;
 
@@ -79,18 +77,9 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
     handleAllocationAndBodyCall();
   }
 
-  LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
+  LazyFieldInitializerCodegenBase lazyFieldInitializerCodegenFor(
       DartinoFunctionBuilder function,
-      FieldElement field) {
-    TreeElements elements = field.resolvedAst.elements;
-    return new LazyFieldInitializerCodegen(
-        function,
-        context,
-        elements,
-        registry,
-        context.backend.createClosureEnvironment(field, elements),
-        field);
-  }
+      FieldElement field);
 
   void handleAllocationAndBodyCall() {
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
@@ -363,7 +352,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
         // Create a LazyFieldInitializerCodegen for compiling the initializer.
         // Note that we reuse the functionBuilder, to inline it into the
         // constructor.
-        LazyFieldInitializerCodegen codegen =
+        LazyFieldInitializerCodegenBase codegen =
             lazyFieldInitializerCodegenFor(functionBuilder, field);
 
         // We only want the value of the actual initializer, not the usual
@@ -372,5 +361,34 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
       }
     });
     assert(fieldIndex <= classBase.fieldCount);
+  }
+}
+
+class ConstructorCodegen extends ConstructorCodegenBase
+    with DartinoRegistryMixin {
+  final DartinoRegistry registry;
+
+  ConstructorCodegen(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      this.registry,
+      ClosureEnvironment closureEnvironment,
+      ConstructorElement constructor,
+      DartinoClassBase classBase)
+      : super(functionBuilder, context, elements, closureEnvironment,
+              constructor, classBase);
+
+  LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
+      DartinoFunctionBuilder function,
+      FieldElement field) {
+    TreeElements elements = field.resolvedAst.elements;
+    return new LazyFieldInitializerCodegen(
+        function,
+        context,
+        elements,
+        registry,
+        context.backend.createClosureEnvironment(field, elements),
+        field);
   }
 }
