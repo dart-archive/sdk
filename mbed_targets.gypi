@@ -16,15 +16,15 @@
       'ReleaseMBED': {
         'inherit_from': [
           'dartino_base', 'dartino_release', 'dartino_mbed',
-          'dartino_disable_live_coding', 'dartino_disable_ffi', 
+          'dartino_disable_live_coding', 'dartino_disable_ffi',
           'dartino_disable_native_processes',
           'dartino_disable_print_interceptors'],
       },
 
       'DebugMBED': {
         'inherit_from': [
-          'dartino_base', 'dartino_debug', 'dartino_mbed', 
-          'dartino_disable_live_coding', 'dartino_disable_ffi', 
+          'dartino_base', 'dartino_debug', 'dartino_mbed',
+          'dartino_disable_live_coding', 'dartino_disable_ffi',
           'dartino_disable_native_processes',
           'dartino_disable_print_interceptors'],
       },
