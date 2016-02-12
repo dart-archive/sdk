@@ -272,14 +272,6 @@ abstract class CodegenVisitor
 
   List<Element> blockLocals = <Element>[];
 
-  /// A FunctionExpression in this set is a named local function declaration.
-  /// Many calls to such functions are statically bound. So if `f` is a named
-  /// local function declaration, `f()` doesn't need to be registered as a
-  /// dynamic send.
-  // TODO(ahe): Get rid of this by refactoring initializeLocal. See TODO there.
-  final Set<FunctionExpression> functionDeclarations =
-      new Set<FunctionExpression>();
-
   CodegenVisitor(this.functionBuilder,
                  this.context,
                  TreeElements elements,
@@ -2501,9 +2493,7 @@ abstract class CodegenVisitor
     return thisClosureIndex;
   }
 
-  void visitFunctionExpression(FunctionExpression node) {
-    FunctionElement function = elements[node];
-
+  void handleLocalFunction(FunctionElement function) {
     // If the closure captures itself, thisClosureIndex is the field-index in
     // the closure.
     int thisClosureIndex = pushCapturedVariables(function);
@@ -2530,11 +2520,13 @@ abstract class CodegenVisitor
       assembler.dup();
       assembler.storeField(thisClosureIndex);
     }
+  }
 
-    if (!functionDeclarations.contains(node)) {
-      registerClosurization(function, ClosureKind.localFunction);
-    }
+  void visitFunctionExpression(FunctionExpression node) {
+    FunctionElement function = elements[node];
+    handleLocalFunction(function);
     applyVisitState();
+    registerClosurization(function, ClosureKind.localFunction);
   }
 
   void visitExpression(Expression node) {
@@ -2879,15 +2871,7 @@ abstract class CodegenVisitor
     assembler.bind(end);
   }
 
-  LocalValue initializeLocal(LocalElement element, Expression initializer) {
-    int slot = assembler.stackSize;
-    if (initializer != null) {
-      // TODO(ahe): If we can move this to the caller, then we don't need
-      // functionDeclarations.
-      visitForValue(initializer);
-    } else {
-      generateEmptyInitializer(element.node);
-    }
+  LocalValue allocateLocal(LocalElement element, int slot) {
     LocalValue value = createLocalValueFor(element, slot: slot);
     value.initialize(assembler);
     pushVariableDeclaration(value);
@@ -2902,14 +2886,22 @@ abstract class CodegenVisitor
   void visitVariableDefinitions(VariableDefinitions node) {
     for (Node definition in node.definitions) {
       LocalVariableElement element = elements[definition];
-      initializeLocal(element, element.initializer);
+      int slot = assembler.stackSize;
+      if (element.initializer != null) {
+        visitForValue(element.initializer);
+      } else {
+        generateEmptyInitializer(element.node);
+      }
+      allocateLocal(element, slot);
     }
   }
 
   void visitFunctionDeclaration(FunctionDeclaration node) {
-    FunctionExpression function = node.function;
-    functionDeclarations.add(function);
-    initializeLocal(elements[function], function);
+    FunctionExpression functionNode = node.function;
+    LocalFunctionElement function = elements[functionNode];
+    int slot = assembler.stackSize;
+    handleLocalFunction(function);
+    allocateLocal(function, slot);
   }
 
   void visitSwitchStatement(SwitchStatement node) {
