@@ -172,9 +172,15 @@ const String downloadToolsDocumentation = """
 
 // TODO(lukechurch): Review UX.
 const String buildDocumentation = """
-   x-build [<file>]
+   x-build <file>
              Builds an image for flashing on the STM32F746G Discovery board
-             based on <file>. If no <file> is given build using the previous
-             file used.
+             based on <file>.
              The flashable image will be called <basename of file>.bin.
+""";
+
+// TODO(lukechurch): Review UX.
+const String deployDocumentation = """
+   x-deploy <file>
+             Builds an image from <file> and flashes it on the STM32F746G
+             Discovery board.
 """;

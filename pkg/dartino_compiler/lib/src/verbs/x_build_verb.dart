@@ -19,7 +19,7 @@ import 'documentation.dart' show
 
 const Action buildAction = const Action(
     buildFunction, buildDocumentation, requiresSession: true,
-    supportedTargets: const <TargetKind>[TargetKind.FILE]);
+    requiredTarget: TargetKind.FILE);
 
 Future buildFunction(
     AnalyzedSentence sentence, VerbContext context) async {

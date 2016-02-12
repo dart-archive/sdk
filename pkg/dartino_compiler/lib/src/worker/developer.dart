@@ -1201,15 +1201,7 @@ Future<int> downloadTools(
   return 0;
 }
 
-Future<int> buildImage(
-    CommandSender commandSender,
-    StreamIterator<ClientCommand> commandIterator,
-    SessionState state,
-    Uri snapshot) async {
-  if (snapshot == null) {
-    throwFatalError(DiagnosticKind.noFileTarget);
-  }
-  assert(snapshot.scheme == 'file');
+Future<Directory> locateBinDirectory() async {
   // In the SDK, the tools directory is at the same level as the
   // internal (and bin) directory.
   Directory binDirectory =
@@ -1229,6 +1221,20 @@ Future<int> buildImage(
         new Directory.fromUri(executable.resolve('../../platforms/stm/bin'));
     assert(await binDirectory.exists());
   }
+
+  return binDirectory;
+}
+
+Future<int> buildImage(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SessionState state,
+    Uri snapshot) async {
+  if (snapshot == null) {
+    throwFatalError(DiagnosticKind.noFileTarget);
+  }
+  assert(snapshot.scheme == 'file');
+  Directory binDirectory = await locateBinDirectory();
 
   Directory tmpDir;
   try {
@@ -1262,12 +1268,60 @@ Future<int> buildImage(
     String tmpBinFile = join(tmpDir.path, "${baseName}.bin");
     String binFile = "${withoutExtension(snapshot.path)}.bin";
     await new File(tmpBinFile).copy(binFile);
-    print("Done building $binFile");
+    print("Done building image: $binFile");
   } finally {
     if (tmpDir != null) {
       await tmpDir.delete(recursive: true);
     }
   }
+
+  return 0;
+}
+
+Future<int> flashImage(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SessionState state,
+    Uri image) async {
+  assert(image.scheme == 'file');
+  Directory binDirectory = await locateBinDirectory();
+  ProcessResult result;
+  File flashScript = new File(join(binDirectory.path, 'flash.sh'));
+  if (Platform.isLinux || Platform.isMacOS) {
+    state.log("Flashing image: '${flashScript.path} ${image}'");
+    print("Flashing image: ${image}");
+    result = await Process.run(flashScript.path, [image.path]);
+  } else {
+    throwUnsupportedPlatform();
+  }
+  state.log("STDOUT:\n${result.stdout}");
+  state.log("STDERR:\n${result.stderr}");
+  if (result.exitCode != 0) {
+    print("Failed to flash the image: ${image}\n");
+    print("Please check that the device is connected and ready. "
+          "In some situations un-plugging and plugging the device, "
+          "and then retrying will solve the problem.\n");
+    if (Platform.isLinux) {
+      print("On Linux, users must be granted with rights for accessing "
+            "the ST-LINK USB devices. To do that, it might be necessary to "
+            "add rules into /etc/udev/rules.d: for instance on Ubuntu, "
+            "this is done through the command "
+            "'sudo cp 49-stlinkv2-1.rules /etc/udev/rules.d'\n");
+      print("For more information see the release notes "
+            "http://www.st.com/st-web-ui/static/active/en/resource/"
+            "technical/document/release_note/DM00107009.pdf\n");
+    }
+    print("Output from the OpenOCD tool:");
+    if (result.stdout.length == 0 || result.stderr.length == 0) {
+      print("${result.stdout}");
+      print("${result.stderr}");
+    } else {
+      print("STDOUT:\n${result.stdout}");
+      print("STDERR:\n${result.stderr}");
+    }
+    return 1;
+  }
+  print("Done flashing image: ${image.path}");
 
   return 0;
 }
