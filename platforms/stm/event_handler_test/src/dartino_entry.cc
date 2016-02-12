@@ -109,7 +109,7 @@ void StartDartino(void const * argument) {
       reinterpret_cast<int>(&_binary_event_handler_test_snapshot_size);
   DartinoProgram program = DartinoLoadSnapshot(snapshot, snapshot_size);
   dartino::Print::Out("Run Dartino program\n");
-  DartinoRunMain(program);
+  DartinoRunMain(program, 0, NULL);
   dartino::Print::Out("Dartino program exited\n");
 }
 
