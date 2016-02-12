@@ -220,7 +220,7 @@
 
         'cflags': [
           '-g',
-          '-Og',
+          '-O0',
         ],
       },
 
@@ -560,6 +560,9 @@
               'DARTINO_TARGET_OS_MACOS',
             ],
 
+            'cflags!': [
+              '-O0',
+            ],
             'cflags': [
               '-mcpu=cortex-m7',
               '-mthumb',
@@ -568,6 +571,7 @@
               '-Wall',
               '-fmessage-length=0',
               '-ffunction-sections',
+              '-Og',
             ],
 
             # Use the gnu language dialect to get math.h constants
