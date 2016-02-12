@@ -538,6 +538,86 @@
         ],
       },
 
+      'dartino_cortex_m7': {
+        'abstract': 1,
+
+        'defines': [
+          'DARTINO32',
+          'DARTINO_TARGET_ARM',
+          'DARTINO_THUMB_ONLY',
+        ],
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'defines': [
+              'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
+              'DARTINO_TARGET_OS_CMSIS',
+            ],
+
+            'defines!': [
+              'DARTINO_TARGET_OS_POSIX',
+              'DARTINO_TARGET_OS_LINUX',
+              'DARTINO_TARGET_OS_MACOS',
+            ],
+
+            'cflags': [
+              '-mcpu=cortex-m7',
+              '-mthumb',
+              '-mfloat-abi=hard',
+              '-mfpu=fpv5-sp-d16',
+              '-Wall',
+              '-fmessage-length=0',
+              '-ffunction-sections',
+            ],
+
+            # Use the gnu language dialect to get math.h constants
+            'cflags_c': [
+              '--std=gnu99',
+            ],
+
+            # Use the gnu language dialect to get math.h constants
+            'cflags_cc': [
+              '--std=gnu++11',
+            ],
+
+            'ldflags': [
+              '-mcpu=cortex-m7',
+              '-mthumb',
+              '-mfloat-abi=hard',
+              '-mfpu=fpv5-sp-d16',
+              '-Wl,-Map=output.map',
+              '-Wl,--gc-sections',
+              # Fake define intercepted by cc_wrapper.py.
+              '-L/GCC_XARM_EMBEDDED',
+              '-static-libstdc++',
+            ],
+
+            'conditions': [
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  # This removes the option -fasm-blocks that GCC ARM Embedded
+                  # does not support.
+                  'GCC_CW_ASM_SYNTAX': 'NO',
+                  # This removes the option -gdwarf-2'.
+                  # TODO(sgjesse): Revisit debug symbol generation.
+                  'GCC_GENERATE_DEBUGGING_SYMBOLS': 'NO',
+                },
+              }],
+            ],
+          }],
+
+          ['_toolset=="host"', {
+            # Compile host targets as IA32, to get same word size.
+            'inherit_from': [ 'dartino_ia32' ],
+
+            # Undefine IA32 target and using existing ARM target.
+            'defines!': [
+              'DARTINO_TARGET_IA32',
+            ],
+          }],
+        ],
+      },
+
       'dartino_asan': {
         'abstract': 1,
 
