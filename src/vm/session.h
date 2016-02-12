@@ -162,8 +162,6 @@ class Session {
   Process* process_;
   int next_process_id_;
 
-  bool request_execution_pause_;
-
   int method_map_id_;
   int class_map_id_;
   int fibers_map_id_;

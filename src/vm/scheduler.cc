@@ -144,7 +144,9 @@ void Scheduler::UnscheduleProgram(Program* program) {
       ProgramState::kDone, ProgramState::kPendingDeletion);
 }
 
-void Scheduler::StopProgram(Program* program, ProgramState::State stop_state) {
+void Scheduler::StopProgramInternal(Program* program,
+                                    ProgramState::State stop_state,
+                                    bool from_paused_interpreter) {
   ASSERT(program->scheduler() == this);
 
   {
@@ -156,9 +158,9 @@ void Scheduler::StopProgram(Program* program, ProgramState::State stop_state) {
     }
     program_state->ChangeState(ProgramState::kRunning, stop_state);
 
-    PauseInterpreterLoop();
+    if (!from_paused_interpreter) PauseInterpreterLoop();
     ready_queue_.PauseAllProcessesOfProgram(program);
-    ResumeInterpreterLoop();
+    if (!from_paused_interpreter) ResumeInterpreterLoop();
   }
 }
 
@@ -517,7 +519,13 @@ void Scheduler::HandleKilled(Process* process) {
   Session* session = process->program()->session();
   process->ChangeState(Process::kRunning, state);
   if (session != NULL && session->CanHandleEvents()) {
+    StopProgramInternal(process->program(),
+                        ProgramState::kSession,
+                        true);
     result = session->Killed(process);
+    if (result != kRemainPaused) {
+      ResumeProgram(process->program(), ProgramState::kSession);
+    }
   }
   HandleEventResult(result, process, state);
 }
@@ -528,7 +536,13 @@ void Scheduler::HandleUncaughtSignal(Process* process) {
   Session* session = process->program()->session();
   process->ChangeState(Process::kRunning, state);
   if (session != NULL && session->CanHandleEvents()) {
+    StopProgramInternal(process->program(),
+                        ProgramState::kSession,
+                        true);
     result = session->UncaughtSignal(process);
+    if (result != kRemainPaused) {
+      ResumeProgram(process->program(), ProgramState::kSession);
+    }
   }
   HandleEventResult(result, process, state);
 }
@@ -539,7 +553,13 @@ void Scheduler::HandleTerminated(Process* process) {
   Session* session = process->program()->session();
   process->ChangeState(Process::kRunning, state);
   if (session != NULL && session->CanHandleEvents()) {
+    StopProgramInternal(process->program(),
+                        ProgramState::kSession,
+                        true);
     result = session->ProcessTerminated(process);
+    if (result != kRemainPaused) {
+      ResumeProgram(process->program(), ProgramState::kSession);
+    }
   }
   HandleEventResult(result, process, state);
 }
@@ -551,7 +571,13 @@ void Scheduler::HandleUncaughtException(Process* process) {
   Session* session = process->program()->session();
   process->ChangeState(Process::kRunning, state);
   if (session != NULL && session->CanHandleEvents()) {
+    StopProgramInternal(process->program(),
+                        ProgramState::kSession,
+                        true);
     result = session->UncaughtException(process);
+    if (result != kRemainPaused) {
+      ResumeProgram(process->program(), ProgramState::kSession);
+    }
   }
   HandleEventResult(result, process, state);
 }
@@ -562,7 +588,13 @@ void Scheduler::HandleCompileTimeError(Process* process) {
   Session* session = process->program()->session();
   process->ChangeState(Process::kRunning, state);
   if (session != NULL && session->CanHandleEvents()) {
+    StopProgramInternal(process->program(),
+                        ProgramState::kSession,
+                        true);
     result = session->CompileTimeError(process);
+    if (result != kRemainPaused) {
+      ResumeProgram(process->program(), ProgramState::kSession);
+    }
   }
   HandleEventResult(result, process, state);
 }
@@ -573,7 +605,13 @@ void Scheduler::HandleBreakpoint(Process* process) {
   Session* session = process->program()->session();
   process->ChangeState(Process::kRunning, state);
   if (session != NULL && session->CanHandleEvents()) {
+    StopProgramInternal(process->program(),
+                        ProgramState::kSession,
+                        true);
     result = session->BreakPoint(process);
+    if (result != kRemainPaused) {
+      ResumeProgram(process->program(), ProgramState::kSession);
+    }
   }
   HandleEventResult(result, process, state);
 }
@@ -610,7 +648,7 @@ void Scheduler::HandleEventResult(
       DeleteTerminatedProcess(process, Signal::kTerminated);
       break;
     }
-    case kNoAction: {
+    case kRemainPaused: {
       // Nothing to do.
       break;
     }

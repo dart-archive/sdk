@@ -71,7 +71,7 @@ class InterpretationBarrier {
 class Scheduler {
  public:
   enum ProcessInterruptionEvent {
-    kNoAction,
+    kRemainPaused,
     kExitWithCompileTimeError,
     kExitWithUncaughtException,
     kExitWithUncaughtExceptionAndPrintStackTrace,
@@ -90,7 +90,10 @@ class Scheduler {
   void ScheduleProgram(Program* program, Process* main_process);
   void UnscheduleProgram(Program* program);
 
-  void StopProgram(Program* program, ProgramState::State stop_state);
+  void StopProgram(Program* program, ProgramState::State stop_state) {
+    StopProgramInternal(program, stop_state, false);
+  }
+
   void ResumeProgram(Program* program, ProgramState::State stop_state);
   void KillProgram(Program* program);
 
@@ -149,6 +152,10 @@ class Scheduler {
   Monitor* idle_monitor_;
   Semaphore interpreter_semaphore_;
   GCThread* gc_thread_;
+
+  void StopProgramInternal(Program* program,
+                           ProgramState::State stop_state,
+                           bool from_paused_interpreter);
 
   void DeleteTerminatedProcess(Process* process, Signal::Kind kind);
 

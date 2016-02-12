@@ -386,7 +386,6 @@ Session::Session(Connection* connection)
       state_(NULL),
       process_(NULL),
       next_process_id_(0),
-      request_execution_pause_(false),
       method_map_id_(-1),
       class_map_id_(-1),
       fibers_map_id_(-1),
@@ -541,26 +540,18 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
   connection_->Send(Connection::kWriteSnapshotResult, buffer);
 }
 
-// Caller thread must have a lock on main_thread_monitor_.
-void Session::RequestExecutionPause() {
-  ASSERT(state_->IsScheduled() && !state_->IsPaused());
-  request_execution_pause_ = true;
-}
-
 // Caller thread must have a lock on main_thread_monitor_, ie,
 // this should only be called from within ProcessMessage's main loop.
 void Session::PauseExecution() {
   ASSERT(state_->IsScheduled() && !state_->IsPaused());
   Scheduler* scheduler = program()->scheduler();
   scheduler->StopProgram(program(), ProgramState::kSession);
-  scheduler->PauseGcThread();
 }
 
 // Caller thread must have a lock on main_thread_monitor_, ie,
 // this should only be called from within ProcessMessage's main loop.
 void Session::ResumeExecution() {
   Scheduler* scheduler = program()->scheduler();
-  scheduler->ResumeGcThread();
   scheduler->ResumeProgram(program(), ProgramState::kSession);
 }
 
@@ -588,15 +579,6 @@ void Session::ProcessMessages() {
   while (true) {
     Connection::Opcode opcode = connection_->Receive();
     ScopedMonitorLock scoped_lock(main_thread_monitor_);
-
-    // TODO(zerny): Let scheduler callbacks pause the state directly.
-    if (request_execution_pause_) {
-      request_execution_pause_ = false;
-      ASSERT(state_->IsRunning());
-      PauseExecution();
-      ChangeState(new PausedState(/* interrupted */ false));
-    }
-
     SessionState* next_state = state_->ProcessMessage(opcode);
     if (next_state == NULL) return;
     ChangeState(next_state);
@@ -1782,10 +1764,10 @@ Scheduler::ProcessInterruptionEvent Session::UncaughtException(
     return Scheduler::kExitWithUncaughtException;
   }
 
-  RequestExecutionPause();
   WriteBuffer buffer;
   connection_->Send(Connection::kUncaughtException, buffer);
-  return Scheduler::kNoAction;
+  ChangeState(new PausedState(/* interrupted */ false));
+  return Scheduler::kRemainPaused;
 }
 
 Scheduler::ProcessInterruptionEvent Session::Killed(Process* process) {
@@ -1836,9 +1818,9 @@ Scheduler::ProcessInterruptionEvent Session::BreakPoint(
     return Scheduler::kExitWithoutError;
   }
 
-  RequestExecutionPause();
   SendBreakPoint(process);
-  return Scheduler::kNoAction;
+  ChangeState(new PausedState(/* interrupted */ false));
+  return Scheduler::kRemainPaused;
 }
 
 void Session::SendBreakPoint(Process* process) {
@@ -1889,10 +1871,10 @@ Scheduler::ProcessInterruptionEvent Session::CompileTimeError(
     return Scheduler::kExitWithCompileTimeError;
   }
 
-  RequestExecutionPause();
   WriteBuffer buffer;
   connection_->Send(Connection::kProcessCompileTimeError, buffer);
-  return Scheduler::kNoAction;
+  ChangeState(new PausedState(/* interrupted */ false));
+  return Scheduler::kRemainPaused;
 }
 
 Scheduler::ProcessInterruptionEvent Session::ExitWithSessionEndState(
