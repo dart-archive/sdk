@@ -95,6 +95,10 @@ Process::~Process() {
   if (signal != NULL) Signal::DecrementRef(signal);
 
   delete debug_info_;
+  for (int i = 0; i < arguments_.length(); i++) {
+    arguments_[i].Delete();
+  }
+  arguments_.Delete();
 }
 
 void Process::Cleanup(Signal::Kind kind) {

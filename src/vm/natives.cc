@@ -21,6 +21,7 @@
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/session.h"
+#include "src/vm/unicode.h"
 
 #include "third_party/double-conversion/src/double-conversion.h"
 
@@ -941,6 +942,31 @@ BEGIN_NATIVE(ListIndexSet) {
   array->set(index, value);
   process->RecordStore(array, value);
   return value;
+}
+END_NATIVE()
+
+BEGIN_NATIVE(ArgumentsLength) {
+  return process->ToInteger(process->arguments().length());
+}
+END_NATIVE()
+
+BEGIN_NATIVE(ArgumentsToString) {
+  word index = AsForeignWord(arguments[0]);
+  List<uint8> data = process->arguments()[index];
+
+  uint8_t* utf8 = data.data();
+  int utf8_length = data.length();
+  Utf8::Type type;
+  int utf16_length = Utf8::CodeUnitCount(utf8, utf8_length, &type);
+
+  Object* object = process->NewTwoByteString(utf16_length);
+  if (object->IsRetryAfterGCFailure()) return object;
+  TwoByteString* str = TwoByteString::cast(object);
+
+  uint16* utf16 = reinterpret_cast<uint16*>(str->byte_address_for(0));
+  Utf8::DecodeToUTF16(utf8, utf8_length, utf16, utf16_length);
+
+  return str;
 }
 END_NATIVE()
 

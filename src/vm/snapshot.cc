@@ -339,7 +339,6 @@ Program* SnapshotReader::ReadProgram() {
 
   // Read all the program state (except roots).
   program->set_entry(Function::cast(ReadObject()));
-  program->set_main_arity(ReadInt64());
   program->set_static_fields(Array::cast(ReadObject()));
   program->set_dispatch_table(Array::cast(ReadObject()));
 
@@ -397,7 +396,6 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
 
   // Write all the program state (except roots).
   WriteObject(program->entry());
-  WriteInt64(program->main_arity());
   WriteObject(program->static_fields());
   WriteObject(program->dispatch_table());
 

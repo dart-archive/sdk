@@ -99,7 +99,7 @@ int RunSnapshot(unsigned char* snapshot, int size) {
   DartinoProgram program = DartinoLoadSnapshot(snapshot, size);
   free(snapshot);
   printf("RUNNING program...\n");
-  int result = DartinoRunMain(program);
+  int result = DartinoRunMain(program, 0, NULL);
   printf("DELETING program...\n");
   DartinoDeleteProgram(program);
   printf("TEARING DOWN dartino-vm...\n");

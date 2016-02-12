@@ -697,6 +697,7 @@ SimpleProgramRunner::~SimpleProgramRunner() {
 void SimpleProgramRunner::Run(int count,
                               int* exitcodes,
                               Program** programs,
+                              int argc, char** argv,
                               Process** processes) {
   programs_ = programs;
   exitcodes_ = exitcodes;
@@ -710,7 +711,12 @@ void SimpleProgramRunner::Run(int count,
 
     program->SetProgramExitListener(
         &SimpleProgramRunner::CaptureExitCode, this);
-    if (process == NULL) process = program->ProcessSpawnForMain();
+    List<List<uint8>> arguments = List<List<uint8>>::New(argc);
+    for (int i = 0; i < argc; i++) {
+      uint8* utf8 = reinterpret_cast<uint8*>(strdup(argv[i]));
+      arguments[i] = List<uint8>(utf8, strlen(argv[i]));
+    }
+    if (process == NULL) process = program->ProcessSpawnForMain(arguments);
     scheduler->ScheduleProgram(program, process);
   }
 

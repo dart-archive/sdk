@@ -1375,7 +1375,6 @@ class DartinoBackend extends Backend
     // Reset the current system builder.
     newSystemBuilder(system);
 
-    commands.add(const PushNewInteger(0));
     commands.add(new PushFromMap(
         MapId.methods,
         system.lookupFunctionByElement(dartinoSystemEntry).functionId));

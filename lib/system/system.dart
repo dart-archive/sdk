@@ -37,6 +37,21 @@ enum InterruptKind {
   breakPoint
 }
 
+class _Arguments
+    extends Object with UnmodifiableListMixin<String>, ListMixin<String>
+    implements List<String> {
+
+  _Arguments();
+
+  @native external int get length;
+
+  String operator[](int index) {
+    return _toString(index);
+  }
+
+  @native external static String _toString(int index);
+}
+
 /// This is a magic method recognized by the compiler, and references to it
 /// will be substituted for the actual main method.
 /// [arguments] is supposed to be a List<String> with command line arguments.
@@ -51,8 +66,8 @@ callMain(arguments) => invokeMain(arguments);
 
 /// This is the main entry point for a Dartino program, and it takes care of
 /// calling "main" and exiting the VM when "main" is done.
-void entry(int mainArity) {
-  Fiber.exit(callMain([]));
+void entry() {
+  Fiber.exit(callMain(new _Arguments()));
 }
 
 runToEnd(entry) {

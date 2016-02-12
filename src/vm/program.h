@@ -175,9 +175,6 @@ class Program : public ProgramList::Entry {
   Function* entry() const { return entry_; }
   void set_entry(Function* entry) { entry_ = entry; }
 
-  int main_arity() const { return main_arity_; }
-  void set_main_arity(int value) { main_arity_ = value; }
-
   void set_static_fields(Array* static_fields) {
     static_fields_ = static_fields;
   }
@@ -258,7 +255,7 @@ class Program : public ProgramList::Entry {
   }
 
   Process* SpawnProcess(Process* parent);
-  Process* ProcessSpawnForMain();
+  Process* ProcessSpawnForMain(List<List<uint8>> arguments);
   // Returns [true] if this was the last process (i.e. main process).
   bool ScheduleProcessForDeletion(Process* process, Signal::Kind kind);
 
@@ -389,7 +386,6 @@ class Program : public ProgramList::Entry {
   Session* session_;
 
   Function* entry_;
-  int main_arity_;
 
   bool loaded_from_snapshot_;
 

@@ -259,7 +259,9 @@ class Session extends DartinoVmSession {
   }
 
   Future spawnProcess() async {
-    await runCommand(const ProcessSpawnForMain());
+    // TODO(ajohnsen): Handle arguments.
+    await runCommands([const PushNewInteger(0),
+                       const ProcessSpawnForMain()]);
   }
 
   Future run() async {

@@ -204,6 +204,8 @@ class SimpleProgramRunner {
   void Run(int count,
            int* exitcodes,
            Program** programs,
+           int argc,
+           char** argv,
            Process** main_processes = NULL);
 
  private:

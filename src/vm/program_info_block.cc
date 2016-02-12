@@ -57,11 +57,11 @@ class PointerWritingVisitor : public PointerVisitor {
 };
 
 ProgramInfoBlock::ProgramInfoBlock()
-    : entry_(NULL),
-#define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
+    : entry_(NULL)
+#define CONSTRUCTOR_NULL(type, name, CamelName) , name##_(NULL)
       ROOTS_DO(CONSTRUCTOR_NULL)
 #undef CONSTRUCTOR_NULL
-          main_arity_(0) {
+          {
 #define CONSTRUCTOR_USE(type, name, CamelName) USE(name##_);
   ROOTS_DO(CONSTRUCTOR_USE)
 #undef CONSTRUCTOR_USE
@@ -71,14 +71,12 @@ void ProgramInfoBlock::PopulateFromProgram(Program* program) {
   ASSERT(program->session() == NULL);
   PointerReadingVisitor reader(this);
   program->IterateRoots(&reader);
-  set_main_arity(program->main_arity());
 }
 
 void ProgramInfoBlock::WriteToProgram(Program* program) {
   ASSERT(program->session() == NULL);
   PointerWritingVisitor writer(this);
   program->IterateRoots(&writer);
-  program->set_main_arity(main_arity());
 }
 
 }  // namespace dartino

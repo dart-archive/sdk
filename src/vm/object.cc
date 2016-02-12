@@ -223,9 +223,15 @@ void OneByteString::OneByteStringShortPrint() {
 }
 
 char* OneByteString::ToCString() {
-  intptr_t len = length();
+  intptr_t len = 0;
+  for (int i = 0; i < length(); i++) {
+    len += Utf8::Length(get_char_code(i));
+  }
   char* result = reinterpret_cast<char*>(malloc(len + 1));
-  memcpy(result, byte_address_for(0), len);
+  char* buffer = result;
+  for (int i = 0; i < length(); i++) {
+    buffer += Utf8::Encode(get_char_code(i), buffer);
+  }
   result[len] = 0;
   return result;
 }

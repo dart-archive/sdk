@@ -88,11 +88,7 @@ static int Main(int argc, char** argv) {
   Flags::ExtractFromCommandLine(&argc, argv);
   DartinoSetup();
 
-  if (argc > 5) {
-    Print::Out("Too many arguments.\n\n");
-    PrintUsage();
-    exit(1);
-  } else if (argc < 1) {
+  if (argc < 1) {
     Print::Out("Not enough arguments.\n\n");
     PrintUsage();
     exit(1);
@@ -109,8 +105,15 @@ static int Main(int argc, char** argv) {
   bool run_snapshot = false;
   bool invalid_option = false;
 
-  for (int i = 1; i < argc; ++i) {
-    const char* argument = argv[i];
+  // Skip program name;
+  argc--;
+  argv++;
+
+  // Process all options including the snapshot file name.
+  while (argc > 0) {
+    const char* argument = argv[0];
+    argc--;
+    argv++;
     if (StartsWith(argument, "--port=")) {
       port = atoi(argument + 7);
     } else if (StartsWith(argument, "--host=")) {
@@ -132,6 +135,7 @@ static int Main(int argc, char** argv) {
       // No matching option given, assume it is a snapshot.
       input = argument;
       run_snapshot = true;
+      break;
     }
   }
   if (invalid_option) {
@@ -165,7 +169,7 @@ static int Main(int argc, char** argv) {
     if (IsSnapshot(bytes)) {
       DartinoProgram program =
           DartinoLoadSnapshot(bytes.data(), bytes.length());
-      result = DartinoRunMain(program);
+      result = DartinoRunMain(program, argc, argv);
       DartinoDeleteProgram(program);
       interactive = false;
     } else {

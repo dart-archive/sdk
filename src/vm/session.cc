@@ -665,11 +665,15 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kProcessSpawnForMain: {
+      // TODO(ajohnsen): Accept arguments.
+      word arguments_count = Smi::cast(session()->Pop())->value();
+      ASSERT(arguments_count == 0);
+      List<List<uint8>> arguments;
+
       // Setup entry point for main thread.
       program()->set_entry(Function::cast(session()->Pop()));
-      program()->set_main_arity(Smi::cast(session()->Pop())->value());
       ProgramFolder::FoldProgramByDefault(program());
-      return new SpawnedState(program()->ProcessSpawnForMain());
+      return new SpawnedState(program()->ProcessSpawnForMain(arguments));
     }
 
     case Connection::kPrepareForChanges: {
@@ -1245,7 +1249,8 @@ int Session::ProcessRun() {
           int exitcodes[1] = { -1 };
 
           ScopedMonitorUnlock scoped_unlock(main_thread_monitor_);
-          runner.Run(1, exitcodes, programs, processes);
+          // TODO(ajohnsen): Arguments?
+          runner.Run(1, exitcodes, programs, 0, NULL, processes);
 
           result = exitcodes[0];
           ASSERT(result != -1);
@@ -1282,7 +1287,6 @@ bool Session::WriteSnapshot(const char* path,
                             FunctionOffsetsType* function_offsets,
                             ClassOffsetsType* class_offsets) {
   program()->set_entry(Function::cast(Pop()));
-  program()->set_main_arity(Smi::cast(Pop())->value());
   // Make sure that the program is in the compact form before
   // snapshotting.
   if (!program()->is_optimized()) {
@@ -1952,7 +1956,8 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
         Instance* instance = Instance::cast(heap_object);
         if (instance->get_class()->IsTransformed()) {
           Instance* clone;
-          ASSERT(heap_->space()->Includes(instance->address()));
+          ASSERT(heap_->space()->Includes(instance->address()) ||
+                 heap_->old_space()->Includes(instance->address()));
           clone = instance->CloneTransformed(heap_);
           instance->set_forwarding_address(clone);
           *p = clone;
