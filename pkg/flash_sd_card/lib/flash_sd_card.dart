@@ -116,9 +116,10 @@ Future<bool> flashCDCard(List<String> args) async {
   }
 
   // Ask for a hostname.
+  String defaultHostname = 'dartinopi';
   String hostname = await ctx.readHostname(
-      "Enter the name of the device - default is 'dartino' "
-      "(press Enter to accept): ", 'dartino');
+      "Enter the name of the device - default is '$defaultHostname' "
+      "(press Enter to accept): ", defaultHostname);
 
   // Ask for a static IP address.
   String ipAddress = await ctx.readIPAddress(
