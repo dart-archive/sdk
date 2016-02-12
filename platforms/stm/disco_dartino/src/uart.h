@@ -5,10 +5,10 @@
 #ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_UART_H_
 #define PLATFORMS_STM_DISCO_DARTINO_SRC_UART_H_
 
-#include <inttypes.h>
-
 #include <cmsis_os.h>
 #include <stm32f7xx_hal.h>
+
+#include <cinttypes>
 
 #include "platforms/stm/disco_dartino/src/circular_buffer.h"
 #include "platforms/stm/disco_dartino/src/device_manager.h"

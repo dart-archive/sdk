@@ -4,8 +4,10 @@
 
 import 'dart:typed_data';
 
+import 'package:stm32f746g_disco/button.dart';
 import 'package:stm32f746g_disco/uart.dart';
 import 'package:stm32f746g_disco/stm32f746g_disco.dart';
+import 'dart:dartino';
 
 main() {
   const int CR = 13;
@@ -16,6 +18,15 @@ main() {
 
   STM32F746GDiscovery disco = new STM32F746GDiscovery();
   Uart uart = disco.uart;
+
+  Button button = new Button();
+
+  Fiber.fork(() {
+    while (true) {
+      button.waitForPress();
+      uart.writeString("Button press received\n");
+    }
+  });
 
   uart.writeString("\rWelcome to Dart UART echo!\r\n");
   uart.writeString("--------------------------\r\n");

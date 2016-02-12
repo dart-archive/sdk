@@ -35,6 +35,10 @@ bool Device::ClearFlag(uint32_t flag) {
   return true;
 }
 
+bool Device::ClearWaitFlags() {
+  return ClearFlag(wait_mask_);
+}
+
 bool Device::IsReady() {
   return port_ != NULL && (flags_ & wait_mask_) != 0;
 }

@@ -15,14 +15,14 @@ final _uartWrite = ForeignLibrary.main.lookup('uart_write');
 final _uartGetError = ForeignLibrary.main.lookup('uart_get_error');
 
 class Uart {
-  int handle;
-  Port port;
-  Channel channel;
+  int _handle;
+  Port _port;
+  Channel _channel;
 
   Uart() {
-    handle = _uartOpen.icall$0();
-    channel = new Channel();
-    port = new Port(channel);
+    _handle = _uartOpen.icall$0();
+    _channel = new Channel();
+    _port = new Port(_channel);
   }
 
   ForeignMemory _getForeign(ByteBuffer buffer) {
@@ -34,17 +34,17 @@ class Uart {
     int event = 0;
     while (event & READ_EVENT == 0) {
       eventHandler.registerPortForNextEvent(
-          handle, port, READ_EVENT | ERROR_EVENT);
-      event = channel.receive();
+          _handle, _port, READ_EVENT | ERROR_EVENT);
+      event = _channel.receive();
       if (event & ERROR_EVENT != 0) {
         // TODO(sigurdm): Find the right way of handling errors.
-        print("Error ${_uartGetError.icall$1(handle)}.");
+        print("Error ${_uartGetError.icall$1(_handle)}.");
       }
     }
 
     var mem = new ForeignMemory.allocated(10);
     try {
-      var read = _uartRead.icall$3(handle, mem, 10);
+      var read = _uartRead.icall$3(_handle, mem, 10);
       var result = new Uint8List(read);
       mem.copyBytesToList(result, 0, read, 0);
       return result.buffer;
@@ -70,11 +70,11 @@ class Uart {
   void _write(ForeignMemory mem, int offset, int size) {
     int written = 0;
     while (written < size) {
-      written += _uartWrite.icall$4(handle, mem, offset, size);
+      written += _uartWrite.icall$4(_handle, mem, offset, size);
       if (written == size) break;
       // We do not listen for errors here, because writing cannot fail.
-      eventHandler.registerPortForNextEvent(handle, port, WRITE_EVENT);
-      channel.receive();
+      eventHandler.registerPortForNextEvent(_handle, _port, WRITE_EVENT);
+      _channel.receive();
     }
   }
 }

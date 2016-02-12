@@ -16,6 +16,7 @@ extern "C" {
 
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
+#include "platforms/stm/disco_dartino/src/button.h"
 #include "platforms/stm/disco_dartino/src/uart.h"
 #include "src/shared/utils.h"
 
@@ -45,6 +46,16 @@ extern "C" uint32_t UartGetError(int handle) {
   return GetUart(handle)->GetError();
 }
 
+extern "C" size_t ButtonOpen() {
+  Button *button = new Button();
+  return button->Open();
+}
+
+extern "C" void ButtonNotifyRead(int handle) {
+  Button *button = GetButton(handle);
+  button->NotifyRead();
+}
+
 extern "C" void LCDDrawLine(
     uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2) {
   // BSP_LCD_DrawLine takes uint16_t arguments.
@@ -69,6 +80,8 @@ DARTINO_EXPORT_TABLE_BEGIN
   DARTINO_EXPORT_TABLE_ENTRY("uart_read", UartRead)
   DARTINO_EXPORT_TABLE_ENTRY("uart_write", UartWrite)
   DARTINO_EXPORT_TABLE_ENTRY("uart_get_error", UartGetError)
+  DARTINO_EXPORT_TABLE_ENTRY("button_open", ButtonOpen)
+  DARTINO_EXPORT_TABLE_ENTRY("button_notify_read", ButtonNotifyRead)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_height", BSP_LCD_GetYSize)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_width", BSP_LCD_GetXSize)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_clear", BSP_LCD_Clear)

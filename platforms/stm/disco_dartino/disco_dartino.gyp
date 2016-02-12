@@ -117,6 +117,8 @@
       ],
       'sources': [
         # Application.
+        '<(source_path)/button.cc',
+        '<(source_path)/button.h',
         '<(source_path)/circular_buffer.cc',
         '<(source_path)/circular_buffer.h',
         '<(source_path)/cmpctmalloc.c',

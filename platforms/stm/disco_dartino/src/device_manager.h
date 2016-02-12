@@ -24,6 +24,9 @@ class Device {
   // Clears the [flag] in [flags]. Returns true if anything changed.
   bool ClearFlag(uint32_t flag);
 
+  // Clears the flags in wait_mask. Returns true if anything changed.
+  bool ClearWaitFlags();
+
   uint32_t GetFlags();
 
   Mutex *GetMutex();
