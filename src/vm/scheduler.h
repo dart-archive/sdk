@@ -159,6 +159,11 @@ class Scheduler {
 
   bool RunInterpreterLoop(WorkerThread* worker);
 
+  // Caller must hold [pause_monitor_].
+  void PauseInterpreterLoop();
+  // Caller must hold [pause_monitor_].
+  void ResumeInterpreterLoop();
+
   // Interpret [process] as worker [worker]. Returns the next Process that
   // should be run.
   Process* InterpretProcess(Process* process, WorkerThread* worker);

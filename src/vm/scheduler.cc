@@ -156,20 +156,10 @@ void Scheduler::StopProgram(Program* program, ProgramState::State stop_state) {
     }
     program_state->ChangeState(ProgramState::kRunning, stop_state);
 
-    pause_ = true;
-    NotifyInterpreterThread();
-
-    while (true) {
-      interpretation_barrier_.PreemptProcess();
-      if (interpreter_is_paused_) break;
-      pause_monitor_->Wait();
-    }
-
+    PauseInterpreterLoop();
     ready_queue_.PauseAllProcessesOfProgram(program);
-    pause_ = false;
+    ResumeInterpreterLoop();
   }
-
-  NotifyInterpreterThread();
 }
 
 void Scheduler::ResumeProgram(Program* program,
@@ -184,8 +174,7 @@ void Scheduler::ResumeProgram(Program* program,
 
     auto paused_processes = program_state->paused_processes();
     while (!paused_processes->IsEmpty()) {
-      Process* process = paused_processes->RemoveFirst();
-      EnqueueProcess(process);
+      EnqueueProcess(paused_processes->RemoveFirst());
     }
     program_state->ChangeState(stop_state, ProgramState::kRunning);
     pause_monitor_->NotifyAll();
@@ -400,6 +389,22 @@ bool Scheduler::RunInterpreterLoop(WorkerThread* worker) {
   }
 
   return false;
+}
+
+void Scheduler::PauseInterpreterLoop() {
+  pause_ = true;
+  NotifyInterpreterThread();
+
+  while (true) {
+    interpretation_barrier_.PreemptProcess();
+    if (interpreter_is_paused_) break;
+    pause_monitor_->Wait();
+  }
+}
+
+void Scheduler::ResumeInterpreterLoop() {
+  pause_ = false;
+  NotifyInterpreterThread();
 }
 
 Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
