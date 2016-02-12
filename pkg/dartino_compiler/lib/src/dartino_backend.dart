@@ -250,10 +250,6 @@ class DartinoBackend extends Backend
   final Map<MemberElement, ClosureEnvironment> closureEnvironments =
       <MemberElement, ClosureEnvironment>{};
 
-  // TODO(ahe): This should be moved to [DartinoSystem].
-  final Map<FunctionElement, DartinoClassBuilder> closureClasses =
-      <FunctionElement, DartinoClassBuilder>{};
-
   DartinoCompilerImplementation get compiler => super.compiler;
 
   LibraryElement dartinoSystemLibrary;
@@ -512,20 +508,6 @@ class DartinoBackend extends Backend
     // TODO(ahe): Introduce a proper constant class to identify constants. For
     // now, we simply put "const patch = "patch";" in dartino._system.
     return super.stringImplementation;
-  }
-
-  DartinoClassBuilder createClosureClass(
-      FunctionElement closure,
-      ClosureEnvironment closureEnvironment) {
-    return closureClasses.putIfAbsent(closure, () {
-      ClosureInfo info = closureEnvironment.closures[closure];
-      int fields = info.free.length;
-      if (info.isThisFree) fields++;
-      return createCallableStubClass(
-          fields,
-          closure.functionSignature.parameterCount,
-          compiledClosureClass);
-    });
   }
 
   /**
@@ -971,10 +953,8 @@ class DartinoBackend extends Backend
 
     bool isImplicitFunction = false;
     if (function.memberContext != function) {
-      functionBuilder = internalCreateDartinoFunctionBuilder(
-          function,
-          Identifiers.call,
-          createClosureClass(function, closureEnvironment));
+      functionBuilder = systemBuilder.lookupFunctionBuilderByElement(function);
+      assert(functionBuilder != null);
       isImplicitFunction = true;
     } else {
       functionBuilder = createDartinoFunctionBuilder(function);

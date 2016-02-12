@@ -413,6 +413,10 @@ abstract class CodegenVisitor
 
   int compileLazyFieldInitializer(FieldElement field);
 
+  DartinoClassBase getLocalFunctionClosureClass(
+      FunctionElement function,
+      ClosureInfo info);
+
   void invokeMethod(Node node, Selector selector) {
     registerDynamicUse(selector);
     String symbol = context.getSymbolFromSelector(selector);
@@ -2500,11 +2504,10 @@ abstract class CodegenVisitor
     int thisClosureIndex = pushCapturedVariables(function);
     bool needToStoreThisReference = thisClosureIndex >= 0;
 
-    DartinoClassBuilder classBuilder = context.backend.createClosureClass(
-        function,
-        closureEnvironment);
-    int classConstant = functionBuilder.allocateConstantFromClass(
-        classBuilder.classId);
+    ClosureInfo info = closureEnvironment.closures[function];
+    DartinoClassBase classBase = getLocalFunctionClosureClass(function, info);
+    int classConstant =
+        functionBuilder.allocateConstantFromClass(classBase.classId);
 
     // NOTE: Currently we emit a storeField instruction in case a closure
     // captures itself. Changing fields makes it a mutable object.
@@ -2514,7 +2517,7 @@ abstract class CodegenVisitor
         closureEnvironment.shouldBeBoxed) && !needToStoreThisReference;
 
     assembler.allocate(
-        classConstant, classBuilder.fieldCount, immutable: immutable);
+        classConstant, classBase.fieldCount, immutable: immutable);
 
     if (needToStoreThisReference) {
       assert(!immutable);
@@ -2903,6 +2906,8 @@ abstract class CodegenVisitor
     int slot = assembler.stackSize;
     handleLocalFunction(function);
     allocateLocal(function, slot);
+    // TODO(ahe): Remove the following line:
+    registerClosurization(function, ClosureKind.localFunction);
   }
 
   void visitSwitchStatement(SwitchStatement node) {
@@ -3278,5 +3283,17 @@ abstract class DartinoRegistryMixin {
 
   int compileLazyFieldInitializer(FieldElement field) {
     return context.backend.compileLazyFieldInitializer(field, registry);
+  }
+
+  DartinoClassBase getLocalFunctionClosureClass(
+      FunctionElement function,
+      ClosureInfo info) {
+    DartinoFunctionBuilder closureFunctionBuilder =
+        context.backend.systemBuilder.getClosureFunctionBuilder(
+            function, info, context.backend.compiledClosureClass,
+            context.backend);
+
+    return context.backend.systemBuilder.lookupClass(
+        closureFunctionBuilder.memberOf);
   }
 }

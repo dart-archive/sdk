@@ -23,10 +23,14 @@ import 'package:compiler/src/elements/elements.dart' show
     FieldElement,
     FunctionElement,
     FunctionSignature,
+    FunctionTypedElement,
     MemberElement;
 
 import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
+
+import 'package:compiler/src/common/names.dart' show
+    Identifiers;
 
 import 'package:persistent/persistent.dart' show
     PersistentMap;
@@ -41,6 +45,9 @@ import '../dartino_class_base.dart' show
 
 import '../dartino_class.dart' show
     DartinoClass;
+
+import 'closure_environment.dart' show
+    ClosureInfo;
 
 import 'dartino_class_builder.dart';
 import 'dartino_context.dart';
@@ -451,6 +458,35 @@ class DartinoSystemBuilder {
       DartinoFunctionBuilder stub) {
     assert(lookupParameterStub(signature) == null);
     _newParameterStubs[signature] = stub;
+  }
+
+  DartinoFunctionBuilder getClosureFunctionBuilder(
+      FunctionElement function,
+      ClosureInfo info,
+      DartinoClassBuilder superclass,
+      DartinoBackend backend) {
+    DartinoFunctionBuilder closure = lookupFunctionBuilderByElement(function);
+    if (closure != null) return closure;
+
+    int fields = info.free.length;
+    if (info.isThisFree) fields++;
+
+    DartinoClassBuilder classBuilder = newClassBuilder(
+        null, superclass, false, new SchemaChange(null), extraFields: fields);
+    classBuilder.createIsFunctionEntry(
+        backend, function.functionSignature.parameterCount);
+
+    FunctionTypedElement implementation = function.implementation;
+
+    return newFunctionBuilderWithSignature(
+        Identifiers.call,
+        function,
+        // Parameter initializers are expressed in the potential
+        // implementation.
+        implementation.functionSignature,
+        classBuilder.classId,
+        kind: DartinoFunctionKind.NORMAL,
+        mapByElement: function.declaration);
   }
 
   DartinoSystem computeSystem(DartinoContext context,
