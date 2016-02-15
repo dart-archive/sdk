@@ -13,6 +13,7 @@
 
 #include "src/vm/object_list.h"
 #include "src/vm/program.h"
+#include "src/vm/scheduler.h"
 #include "src/vm/snapshot.h"
 #include "src/vm/thread.h"
 
@@ -23,15 +24,24 @@ class Frame;
 class ObjectMap;
 class PointerVisitor;
 class PostponedChange;
+class SessionState;
 
 class Session {
+  // TODO(zerny): Move helper methods to session states and remove these.
+  friend class SessionState;
+  friend class ConnectedState;
+  friend class ModifyingState;
+  friend class PausedState;
+  friend class RunningState;
+  friend class SpawnedState;
+  friend class TerminatedState;
+  friend class TerminatingState;
+
  public:
   explicit Session(Connection* connection);
   virtual ~Session();
 
   Program* program() const { return program_; }
-
-  bool is_debugging() const { return debugging_; }
 
   int FreshProcessId() { return next_process_id_++; }
 
@@ -47,20 +57,16 @@ class Session {
   bool WriteSnapshot(const char* path, FunctionOffsetsType* function_offsets,
                      ClassOffsetsType* class_offsets);
 
-  // These functions return `true` if the session knows about [process] and was
-  // able to take action on the event.
-  // In case the session does not know about [process] these functions will
-  // return `false` and the caller is responsible for handling the event.
-  bool UncaughtException(Process* process);
-  bool Killed(Process* process);
-  bool UncaughtSignal(Process* process);
-  bool BreakPoint(Process* process);
-  bool ProcessTerminated(Process* process);
-  bool CompileTimeError(Process* process);
+  bool CanHandleEvents() const;
+  Scheduler::ProcessInterruptionEvent UncaughtException(Process* process);
+  Scheduler::ProcessInterruptionEvent Killed(Process* process);
+  Scheduler::ProcessInterruptionEvent UnhandledSignal(Process* process);
+  Scheduler::ProcessInterruptionEvent Breakpoint(Process* process);
+  Scheduler::ProcessInterruptionEvent ProcessTerminated(Process* process);
+  Scheduler::ProcessInterruptionEvent CompileTimeError(Process* process);
 
  private:
-  void SendBreakPoint(Process* process);
-  void ExitWithSessionEndState(Process* process);
+  void ChangeState(SessionState* new_state);
 
   // Map operations.
   void NewMap(int map_index);
@@ -145,24 +151,13 @@ class Session {
 
   Connection* const connection_;
   Program* program_;
+  SessionState* state_;
 
   // TODO(ager): For debugging, the session should have a mapping from
   // ids to processes. For now we just keep a reference to the main
   // process (with implicit id 0).
   Process* process_;
   int next_process_id_;
-
-  // When true execution_paused_ implies that the program is not
-  // running in the scheduler. Either it has not yet been scheduled
-  // (in which case program()->scheduler() == NULL) or the program
-  // is stopped and the GC thread is paused.
-  bool execution_paused_;
-  bool execution_interrupted_;
-  bool request_execution_pause_;
-
-  bool debugging_;
-  bool session_ended_;
-  Process::State session_end_state_;
 
   int method_map_id_;
   int class_map_id_;
@@ -189,11 +184,6 @@ class Session {
   void RequestExecutionPause();
   void PauseExecution();
   void ResumeExecution();
-  void ProcessContinue(Process* process);
-
-  bool IsScheduledAndPaused() const {
-    return execution_paused_ && program()->scheduler() != NULL;
-  }
 
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);
@@ -231,6 +221,9 @@ class Session {
   void RestartFrame(int index);
 
   Process* GetProcess(int process_id);
+
+  Scheduler::ProcessInterruptionEvent CheckForPauseEventResult(
+      Scheduler::ProcessInterruptionEvent result);
 };
 
 }  // namespace dartino

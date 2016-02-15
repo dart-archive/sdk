@@ -39,7 +39,7 @@ vars = {
   "pub_semver_tag": "@1.2.1",
   "collection_rev": "@1da9a07f32efa2ba0c391b289e2037391e31da0e",
 
-  "lk_rev": "@6cdc5cd1daaf22f56422301d3dac67c3573ef290",
+  "lk_rev": "@5ab14cbc3a21e687347a0995c77b5ad256061e4f",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.
@@ -90,7 +90,7 @@ deps = {
       (Var("github_mirror") % "crypto") + Var("crypto_rev"),
 
   "sdk/third_party/lk/lk-downstream":
-      (Var("github_url") % "travisg/lk") + Var("lk_rev"),
+      (Var("github_url") % "littlekernel/lk") + Var("lk_rev"),
 
   "sdk/third_party/isolate":
       "https://github.com/dart-lang/isolate.git" + Var("isolate_tag"),

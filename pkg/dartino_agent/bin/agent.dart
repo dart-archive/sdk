@@ -281,7 +281,7 @@ class CommandHandler {
       // Check if we read the same port value twice in a row.
       if (previousPort != -1 && previousPort == port) return port;
       previousPort = port;
-      os.sleep(10);
+      sleep(10);
     }
     throw 'Failed to read port from $portPath';
   }

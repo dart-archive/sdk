@@ -36,7 +36,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
     kReady,
     kRunning,
     kYielding,
-    kBreakPoint,
+    kBreakpoint,
     kCompileTimeError,
     kUncaughtException,
     kTerminated,
@@ -56,7 +56,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   };
 
   Function* entry() { return program_->entry(); }
-  int main_arity() { return program_->main_arity(); }
   Program* program() { return program_; }
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }
@@ -199,6 +198,11 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   void SendSignal(Signal* signal);
 
+  void PrintStackTrace() const;
+
+  List<List<uint8>> arguments() { return arguments_; }
+  void set_arguments(List<List<uint8>> arguments) { arguments_ = arguments; }
+
   // If you add an offset here, remember to add the corresponding static_assert
   // in process.cc.
   static const uword kNativeStackOffset = 4 * kWordSize;
@@ -265,6 +269,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   int errno_cache_;
 
   DebugInfo* debug_info_;
+
+  List<List<uint8>> arguments_;
 
 #ifdef DEBUG
   bool true_then_false_;

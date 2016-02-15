@@ -33,6 +33,9 @@ import '../diagnostic.dart' show
 import '../hub/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH;
 
+import '../verbs/options.dart' show
+    isBatchMode;
+
 // This class is used to send commands from the worker isolate back to the
 // hub (main isolate).
 // TODO(ahe): Send ClientCommands directly when they are canonicalized
@@ -65,6 +68,9 @@ Future<Null> workerMain(SendPort port) async {
   port = null;
   StreamIterator iterator = new StreamIterator(receivePort);
   while (await iterator.moveNext()) {
+    if (isBatchMode) {
+      receivePort.close();
+    }
     await beginSession(iterator.current);
   }
 }

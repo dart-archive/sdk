@@ -61,11 +61,29 @@ class Utf8 {
     kSupplementary,  // Supplementary code point [U+010000, U+10FFFF].
   };
 
+  // Returns the most restricted coding form in which the sequence of utf8
+  // characters in 'utf8_array' can be represented in, and the number of
+  // code units needed in that form.
+  static intptr_t CodeUnitCount(const uint8_t* utf8_array,
+                                intptr_t array_len,
+                                Type* type);
+
   static word Length(int32 ch);
   static word Length(TwoByteString* str);
 
   static word Encode(int32 ch, char* dst);
   static word Encode(TwoByteString* src, char* dst, word len);
+
+  // Decode one character and return the number of bytes consumed.
+  static intptr_t Decode(const uint8_t* utf8_array,
+                         intptr_t array_len,
+                         int32_t* ch);
+
+  // Decode one utf16 character and return the true if successful.
+  static bool DecodeToUTF16(const uint8_t* utf8_array,
+                            intptr_t array_len,
+                            uint16_t* dst,
+                            intptr_t len);
 
   static const int32 kMaxOneByteChar = 0x7F;
   static const int32 kMaxTwoByteChar = 0x7FF;

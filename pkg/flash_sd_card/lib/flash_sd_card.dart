@@ -116,9 +116,10 @@ Future<bool> flashCDCard(List<String> args) async {
   }
 
   // Ask for a hostname.
+  String defaultHostname = 'dartinopi';
   String hostname = await ctx.readHostname(
-      "Enter the name of the device - default is 'dartino' "
-      "(press Enter to accept): ", 'dartino');
+      "Enter the name of the device - default is '$defaultHostname' "
+      "(press Enter to accept): ", defaultHostname);
 
   // Ask for a static IP address.
   String ipAddress = await ctx.readIPAddress(
@@ -192,21 +193,26 @@ Future<bool> flashCDCard(List<String> args) async {
     await new File(configDir.path + '/hosts').writeAsString(hosts);
   }
 
-  // Update the static IP address if specified.
-  if (ipAddress.length > 0) {
-    File cmdLineFile = new File(mountDir.path + '/cmdline.txt');
-    String cmdLine = await cmdLineFile.readAsString();
-    List<String> cmdLineParts = cmdLine.split(' ');
-    bool found = false;
-    for (int i = 0; i < cmdLineParts.length; i++) {
-      if (cmdLineParts[i].startsWith('ip=')) {
-        found = true;
-        cmdLineParts[i] = 'ip=$ipAddress';
+  // Set the static IP address if specified or remove it otherwise.
+  File cmdLineFile = new File(mountDir.path + '/cmdline.txt');
+  String cmdLine = await cmdLineFile.readAsString();
+  List<String> cmdLineParts = cmdLine.split(' ');
+  List<String> updatedcmdLineParts = [];
+  bool found = false;
+  for (int i = 0; i < cmdLineParts.length; i++) {
+    if (cmdLineParts[i].startsWith('ip=')) {
+      found = true;
+      if (ipAddress.length > 0) {
+        updatedcmdLineParts.add('ip=$ipAddress');
       }
+    } else {
+      updatedcmdLineParts.add(cmdLineParts[i]);
     }
-    if (!found) cmdLineParts.insert(cmdLineParts.length - 1, 'ip=$ipAddress');
-    await cmdLineFile.writeAsString(cmdLineParts.join(' '));
   }
+  if (!found && ipAddress.length > 0) {
+    updatedcmdLineParts.insert(updatedcmdLineParts.length - 1, 'ip=$ipAddress');
+  }
+  await cmdLineFile.writeAsString(updatedcmdLineParts.join(' '));
 
   // Sync filesystems before unmounting.
   ctx.infoln('Running sync.');

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library dartino_compiler.verbs.x_build_verb;
+library dartino_compiler.verbs.build_verb;
 
 import 'package:path/path.dart' show
     basenameWithoutExtension;
@@ -19,7 +19,7 @@ import 'documentation.dart' show
 
 const Action buildAction = const Action(
     buildFunction, buildDocumentation, requiresSession: true,
-    supportedTargets: const <TargetKind>[TargetKind.FILE]);
+    requiredTarget: TargetKind.FILE);
 
 Future buildFunction(
     AnalyzedSentence sentence, VerbContext context) async {

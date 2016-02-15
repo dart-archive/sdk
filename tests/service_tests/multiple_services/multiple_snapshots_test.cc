@@ -41,7 +41,7 @@ static void* DartThreadEntry(void* argv) {
   int exitcodes[2];
   programs[0] = DartinoLoadSnapshotFromFile(paths[1]);
   programs[1] = DartinoLoadSnapshotFromFile(paths[2]);
-  DartinoRunMultipleMain(2, programs, exitcodes);
+  DartinoRunMultipleMain(2, programs, exitcodes, 0, NULL);
   DartinoDeleteProgram(programs[0]);
   DartinoDeleteProgram(programs[1]);
   DartinoTearDown();

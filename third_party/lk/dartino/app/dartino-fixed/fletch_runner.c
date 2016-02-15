@@ -62,7 +62,7 @@ int Run(void* ptr) {
   printf("LOADING PROGRAM AT %p size %d...\n", program_heap, size);
   DartinoProgram program = DartinoLoadProgramFromFlash(program_heap, size);
   printf("RUNNING program...\n");
-  int result = DartinoRunMain(program);
+  int result = DartinoRunMain(program, 0, NULL);
   printf("EXIT CODE: %i\n", result);
   printf("TEARING DOWN dartino-vm...\n");
   DartinoTearDown();

@@ -4,35 +4,61 @@
 
 library dartino_compiler.constructor_codegen;
 
-import 'package:compiler/src/elements/elements.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
+    ConstructorElement,
+    FieldElement,
+    FormalElement,
+    FunctionSignature,
+    InitializingFormalElement,
+    LibraryElement,
+    ParameterElement;
+
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
-import 'package:compiler/src/tree/tree.dart';
+
+import 'package:compiler/src/tree/tree.dart' show
+    Expression,
+    FunctionExpression,
+    Node,
+    NodeList,
+    Send,
+    SendSet;
+
 import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
-import 'package:compiler/src/dart_types.dart';
 
-import 'dartino_context.dart';
+import 'package:compiler/src/dart_types.dart' show
+    InterfaceType;
+
+import 'dartino_context.dart' show
+    BytecodeAssembler,
+    DartinoContext;
 
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
-import 'dartino_class_builder.dart' show
-    DartinoClassBuilder;
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
 
-import 'closure_environment.dart';
+import 'closure_environment.dart' show
+    ClosureEnvironment;
 
-import 'lazy_field_initializer_codegen.dart';
+import 'lazy_field_initializer_codegen.dart' show
+    LazyFieldInitializerCodegen,
+    LazyFieldInitializerCodegenBase;
 
-import 'codegen_visitor.dart';
+import 'codegen_visitor.dart' show
+    CodegenVisitor,
+    DartinoRegistryMixin,
+    LocalValue,
+    UnboxedLocalValue;
 
 import 'dartino_registry.dart' show
     DartinoRegistry;
 
-class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
-  final DartinoRegistry registry;
-
-  final DartinoClassBuilder classBuilder;
+abstract class ConstructorCodegenBase extends CodegenVisitor {
+  final DartinoClassBase classBase;
 
   final Map<FieldElement, LocalValue> fieldScope = <FieldElement, LocalValue>{};
 
@@ -40,15 +66,15 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
 
   ClosureEnvironment initializerClosureEnvironment;
 
-  ConstructorCodegen(DartinoFunctionBuilder functionBuilder,
-                     DartinoContext context,
-                     TreeElements elements,
-                     this.registry,
-                     ClosureEnvironment closureEnvironment,
-                     ConstructorElement constructor,
-                     this.classBuilder)
-      : super(functionBuilder, context, elements,
-              closureEnvironment, constructor);
+  ConstructorCodegenBase(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      ConstructorElement constructor,
+      this.classBase)
+      : super(functionBuilder, context, elements, closureEnvironment,
+              constructor);
 
   ConstructorElement get constructor => element;
 
@@ -63,7 +89,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
 
   void compile() {
     // Push all initial field values (including super-classes).
-    pushInitialFieldValues(classBuilder);
+    pushInitialFieldValues(classBase);
     // The stack is now:
     //  Value for field-0
     //  ...
@@ -79,24 +105,15 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
     handleAllocationAndBodyCall();
   }
 
-  LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
+  LazyFieldInitializerCodegenBase lazyFieldInitializerCodegenFor(
       DartinoFunctionBuilder function,
-      FieldElement field) {
-    TreeElements elements = field.resolvedAst.elements;
-    return new LazyFieldInitializerCodegen(
-        function,
-        context,
-        elements,
-        registry,
-        context.backend.createClosureEnvironment(field, elements),
-        field);
-  }
+      FieldElement field);
 
   void handleAllocationAndBodyCall() {
     // TODO(ajohnsen): Let allocate take an offset to the field stack, so we
     // don't have to copy all the fields?
     // Copy all the fields to the end of the stack.
-    int fields = classBuilder.fields;
+    int fields = classBase.fieldCount;
     for (int i = 0; i < fields; i++) {
       assembler.loadSlot(i);
     }
@@ -112,7 +129,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
 
     // Create the actual instance.
     int classConstant = functionBuilder.allocateConstantFromClass(
-        classBuilder.classId);
+        classBase.classId);
     // TODO(ajohnsen): Set immutable for all-final classes.
     assembler.allocate(classConstant, fields, immutable: element.isConst);
 
@@ -347,12 +364,13 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
         ..pop();
   }
 
-  void pushInitialFieldValues(DartinoClassBuilder classBuilder) {
-    if (classBuilder.hasSuperClass) {
-      pushInitialFieldValues(classBuilder.superclass);
+  void pushInitialFieldValues(DartinoClassBase classBase) {
+    if (classBase.hasSuperclassId) {
+      pushInitialFieldValues(
+          context.backend.systemBuilder.lookupClass(classBase.superclassId));
     }
-    int fieldIndex = classBuilder.superclassFields;
-    ClassElement classElement = classBuilder.element.implementation;
+    int fieldIndex = classBase.superclassFields;
+    ClassElement classElement = classBase.element.implementation;
     classElement.forEachInstanceField((_, FieldElement field) {
       fieldScope[field] = new UnboxedLocalValue(fieldIndex++, field);
       Expression initializer = field.initializer;
@@ -362,7 +380,7 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
         // Create a LazyFieldInitializerCodegen for compiling the initializer.
         // Note that we reuse the functionBuilder, to inline it into the
         // constructor.
-        LazyFieldInitializerCodegen codegen =
+        LazyFieldInitializerCodegenBase codegen =
             lazyFieldInitializerCodegenFor(functionBuilder, field);
 
         // We only want the value of the actual initializer, not the usual
@@ -370,6 +388,35 @@ class ConstructorCodegen extends CodegenVisitor with DartinoRegistryMixin {
         codegen.visitForValue(initializer);
       }
     });
-    assert(fieldIndex <= classBuilder.fields);
+    assert(fieldIndex <= classBase.fieldCount);
+  }
+}
+
+class ConstructorCodegen extends ConstructorCodegenBase
+    with DartinoRegistryMixin {
+  final DartinoRegistry registry;
+
+  ConstructorCodegen(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      this.registry,
+      ClosureEnvironment closureEnvironment,
+      ConstructorElement constructor,
+      DartinoClassBase classBase)
+      : super(functionBuilder, context, elements, closureEnvironment,
+              constructor, classBase);
+
+  LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
+      DartinoFunctionBuilder function,
+      FieldElement field) {
+    TreeElements elements = field.resolvedAst.elements;
+    return new LazyFieldInitializerCodegen(
+        function,
+        context,
+        elements,
+        registry,
+        context.backend.createClosureEnvironment(field, elements),
+        field);
   }
 }

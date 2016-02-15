@@ -13,6 +13,9 @@ import 'infrastructure.dart' show
 import 'attach_verb.dart' show
     attachAction;
 
+import 'build_verb.dart' show
+    buildAction;
+
 import 'compile_verb.dart' show
     compileAction;
 
@@ -24,6 +27,9 @@ import 'debug_verb.dart' show
 
 import 'export_verb.dart' show
     exportAction;
+
+import 'flash_verb.dart' show
+    flashAction;
 
 import 'help_verb.dart' show
     helpAction;
@@ -42,9 +48,6 @@ import 'x_upgrade_verb.dart' show
 
 import 'x_download_tools_verb.dart' show
     downloadToolsAction;
-
-import 'x_build_verb.dart' show
-    buildAction;
 
 import 'quit_verb.dart' show
     quitAction;
@@ -127,11 +130,12 @@ const Map<String, Action> commonActions = const <String, Action>{
 /// These verbs are displayed when running `dartino help all`.
 const Map<String, Action> uncommonActions = const <String, Action>{
   "attach": attachAction,
+  "build": buildAction,
   "compile": compileAction,
   "create": createAction,
   "debug": debugAction,
   "export": exportAction,
-  "x-build": buildAction,
+  "flash": flashAction,
   "x-download-tools": downloadToolsAction,
   "x-end": endAction,
   "x-servicec": servicecAction,

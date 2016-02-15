@@ -64,7 +64,9 @@ class PortSet {
   }
 
   bool Wait(lk_time_t timeout, port_result_t* result) {
-    return port_read(group, timeout, result) != ERR_TIMED_OUT;
+    // This might time out or the port is destroyed when the group is expanded.
+    // Just check for NO_ERROR.
+    return port_read(group, timeout, result) == NO_ERROR;
   }
 
  private:
@@ -154,7 +156,8 @@ void EventHandler::Run() {
     }
 
     if (has_result && result.ctx != NULL) {
-      int64 value = *reinterpret_cast<int64*>(&result.packet.value);
+      int64 value;
+      memcpy(&value, result.packet.value, sizeof(value));
       Send(reinterpret_cast<Port*>(result.ctx), value, false);
     }
 

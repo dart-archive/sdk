@@ -63,22 +63,30 @@ DARTINO_EXPORT DartinoProgram DartinoLoadProgramFromFlash(void* location,
 //     DartinoDeleteProgram)
 //   * use thread-local storage - at least in debug mode - which ensures this.
 DARTINO_EXPORT void DartinoStartMain(DartinoProgram program,
-                                   ProgramExitCallback callback,
-                                   void* callback_data);
+                                     ProgramExitCallback callback,
+                                     void* callback_data,
+                                     int argc,
+                                     char** argv);
 
 // Run the main method of the program and wait until it is done executing.
-DARTINO_EXPORT int DartinoRunMain(DartinoProgram program);
+DARTINO_EXPORT int DartinoRunMain(DartinoProgram program,
+                                  int argc,
+                                  char** argv);
 
 // Run the main method of multiple programs and wait until all of them are done
 // executing.
 DARTINO_EXPORT void DartinoRunMultipleMain(int count,
-                                         DartinoProgram* programs,
-                                         int* exitcodes);
+                                           DartinoProgram* programs,
+                                           int* exitcodes,
+                                           int argc,
+                                           char** argv);
 
 // Load the snapshot from the file, load the program from the
 // snapshot, run the main process of that program and wait until it is done
 // executing.
-DARTINO_EXPORT void DartinoRunSnapshotFromFile(const char* path);
+DARTINO_EXPORT void DartinoRunSnapshotFromFile(const char* path,
+                                               int argc,
+                                               char** argv);
 
 // Add a default shared library for the dart:ffi foreign lookups.
 // More than one default shared library can be added. The libraries

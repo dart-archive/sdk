@@ -56,6 +56,8 @@ static const int COMPILER_CRASHED = 253;
 
 static char* program_name = NULL;
 
+static bool is_batch_command = false;
+
 // The file where this program looks for the TCP/IP port for talking
 // to the persistent process. Controlled by user by setting
 // environment variable DARTINO_PORT_FILE.
@@ -75,6 +77,10 @@ static int dartino_config_fd;
 static const char dart_vm_env_name[] = "DART_VM";
 
 static int exit_code = COMPILER_CRASHED;
+
+static int daemon_stderr = -1;
+
+static pid_t daemon_pid = -1;
 
 static void WriteFully(int fd, uint8* data, ssize_t length);
 
@@ -112,6 +118,12 @@ static void StrCpy(void* destination, size_t destination_size,
   }
 
   memcpy(destination, source, source_length);
+}
+
+static char* StrDup(const void* source, size_t source_size) {
+  char* destination = StrAlloc(source_size);
+  StrCpy(destination, source_size, source, source_size);
+  return destination;
 }
 
 static void StrCat(void* destination, size_t destination_size,
@@ -392,15 +404,9 @@ pid_t Fork() {
   return pid;
 }
 
-static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
-                                   int parent_stderr);
+const int kMaxArgc = 10;
 
-static void ExecDaemon(int child_stdout, int child_stderr, const char** argv);
-
-static void StartDriverDaemon() {
-  const int kMaxArgv = 9;
-  const char* argv[kMaxArgv];
-
+static void InitializeDaemonArguments(char** argv, const char* program) {
   char dartino_root[MAXPATHLEN + 1];
   ComputeDartinoRoot(dartino_root, sizeof(dartino_root));
 
@@ -435,17 +441,47 @@ static void StartDriverDaemon() {
          sizeof(define_version));
   StrCat(version_option, version_option_length, version, strlen(version) + 1);
 
+  const char checked_mode[] = "-c";
+  const char batch_mode_true[] = "-Ddartino-batch-mode=true";
+  const char batch_mode_false[] = "-Ddartino-batch-mode=false";
+
+  // Below we use StrDup to ensure all entries in argv are allocated. This
+  // makes it easier to free them all later, which allows us to use ASAN.
   int argc = 0;
-  argv[argc++] = vm_path;
-  argv[argc++] = "-c";
-  argv[argc++] = dartino_vm_option;
-  argv[argc++] = package_option;
+  argv[argc++] = StrDup(vm_path, sizeof(vm_path));
+  argv[argc++] = StrDup(checked_mode, sizeof(checked_mode));
+  argv[argc++] = StrDup(dartino_vm_option, sizeof(dartino_vm_option));
+  argv[argc++] = StrDup(package_option, sizeof(package_option));
   argv[argc++] = version_option;
-  argv[argc++] = library_root;
-  argv[argc++] = "package:dartino_compiler/src/hub/hub_main.dart";
-  argv[argc++] = dartino_config_file;
+  argv[argc++] = StrDup(library_root, sizeof(library_root));
+  if (is_batch_command) {
+    argv[argc++] = StrDup(batch_mode_true, sizeof(batch_mode_true));
+  } else {
+    argv[argc++] = StrDup(batch_mode_false, sizeof(batch_mode_false));
+  }
+  argv[argc++] = StrDup(program, strlen(program) + 1);
+  argv[argc++] = StrDup(dartino_config_file, sizeof(dartino_config_file));
   argv[argc++] = NULL;
-  if (argc > kMaxArgv) Die("Internal error: increase argv size");
+  if (argc > kMaxArgc) Die("Internal error: increase kMaxArgc");
+}
+
+static void FreeDaemonArguments(char** argv) {
+  for (int i = 0; argv[i] != NULL; i++) {
+    free(argv[i]);
+    argv[i] = NULL;
+  }
+}
+
+static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
+                                   int parent_stderr);
+
+static void ExecDaemon(int child_stdout, int child_stderr, char** argv);
+
+static void StartDriverDaemon() {
+  char* argv[kMaxArgc];
+
+  InitializeDaemonArguments(argv,
+                            "package:dartino_compiler/src/hub/hub_main.dart");
 
   int file_descriptors[2];
   if (pipe(file_descriptors) != 0) {
@@ -454,24 +490,30 @@ static void StartDriverDaemon() {
   int parent_stdout = file_descriptors[0];
   int child_stdout = file_descriptors[1];
 
-  if (pipe(file_descriptors) != 0) {
-    Die("%s: pipe failed: %s", program_name, strerror(errno));
+  int parent_stderr = -1;
+  int child_stderr = -1;
+  if (!is_batch_command) {
+    if (pipe(file_descriptors) != 0) {
+      Die("%s: pipe failed: %s", program_name, strerror(errno));
+    }
+    parent_stderr = file_descriptors[0];
+    child_stderr = file_descriptors[1];
   }
-  int parent_stderr = file_descriptors[0];
-  int child_stderr = file_descriptors[1];
 
   pid_t pid = Fork();
   if (pid == 0) {
     // In child.
     Close(parent_stdout);
-    Close(parent_stderr);
-    Close(dartino_config_fd);
+    if (!is_batch_command) {
+      Close(parent_stderr);
+      Close(dartino_config_fd);
+    }
     ExecDaemon(child_stdout, child_stderr, argv);
     UNREACHABLE();
   } else {
-    free(version_option);
+    FreeDaemonArguments(argv);
     Close(child_stdout);
-    Close(child_stderr);
+    if (!is_batch_command) Close(child_stderr);
     WaitForDaemonHandshake(pid, parent_stdout, parent_stderr);
   }
 }
@@ -489,7 +531,7 @@ static void Dup2(int source, int destination) {
   }
 }
 
-static void ExecDaemon(int child_stdout, int child_stderr, const char** argv) {
+static void ExecDaemon(int child_stdout, int child_stderr, char** argv) {
   Close(STDIN_FILENO);
 
   // Change directory to '/' to ensure that we use the client's working
@@ -498,31 +540,36 @@ static void ExecDaemon(int child_stdout, int child_stderr, const char** argv) {
     Die("%s: 'chdir(\"/\")' failed: %s", program_name, strerror(errno));
   }
 
-  // Calling fork one more time to create an indepent processs. This prevents
-  // zombie processes, and ensures the server can continue running in the
-  // background independently of the parent process.
-  if (Fork() > 0) {
-    // This process exits and leaves the new child as an independent process.
-    exit(0);
-  }
+  if (!is_batch_command) {
+    // Calling fork one more time to create an indepent processs. This prevents
+    // zombie processes, and ensures the server can continue running in the
+    // background independently of the parent process.
+    if (Fork() > 0) {
+      // This process exits and leaves the new child as an independent process.
+      exit(0);
+    }
 
-  // Create a new session (to avoid getting killed by Ctrl-C).
-  NewProcessSession();
+    // Create a new session (to avoid getting killed by SIGHUP, etc.).
+    NewProcessSession();
+  }
 
   // This is the child process that will exec the persistent server. We don't
   // want this server to be associated with the current terminal, so we must
   // close stdin (handled above), stdout, and stderr. This is accomplished by
   // redirecting stdout and stderr to the pipes to the parent process.
   Dup2(child_stdout, STDOUT_FILENO);  // Closes stdout.
-  Dup2(child_stderr, STDERR_FILENO);  // Closes stderr.
   Close(child_stdout);
-  Close(child_stderr);
+
+  if (!is_batch_command) {
+    Dup2(child_stderr, STDERR_FILENO);  // Closes stderr.
+    Close(child_stderr);
+  }
 
   execv(argv[0], const_cast<char**>(argv));
   Die("%s: exec '%s' failed: %s", program_name, argv[0], strerror(errno));
 }
 
-static ssize_t Read(int fd, char* buffer, size_t buffer_length) {
+static ssize_t Read(int fd, uint8* buffer, size_t buffer_length) {
   ssize_t bytes_read = TEMP_FAILURE_RETRY(read(fd, buffer, buffer_length));
   if (bytes_read < 0) {
     Die("%s: read failed: %s", program_name, strerror(errno));
@@ -532,7 +579,7 @@ static ssize_t Read(int fd, char* buffer, size_t buffer_length) {
 
 // Forwards data on file descriptor "from" to "to" using the buffer. Errors are
 // fatal. Returns true if "from" was closed.
-static bool ForwardWithBuffer(int from, int to, char* buffer,
+static bool ForwardWithBuffer(int from, int to, uint8* buffer,
                               ssize_t* buffer_length) {
   ssize_t bytes_read = Read(from, buffer, *buffer_length);
   *buffer_length = bytes_read;
@@ -542,12 +589,11 @@ static bool ForwardWithBuffer(int from, int to, char* buffer,
   // descriptor.
   FlushAllStreams();
 
-  WriteFully(to, reinterpret_cast<uint8*>(buffer), bytes_read);
+  WriteFully(to, buffer, bytes_read);
   return false;
 }
 
-static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
-                                   int parent_stderr) {
+static void WaitForDaemon(pid_t pid) {
   int status;
   waitpid(pid, &status, 0);
   if (!WIFEXITED(status)) {
@@ -558,13 +604,22 @@ static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
     Die("%s: child process exited with non-zero exit code %i.", program_name,
         status);
   }
+}
+
+static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
+                                   int parent_stderr) {
+  if (is_batch_command) {
+    daemon_pid = pid;
+  } else {
+    WaitForDaemon(pid);
+  }
 
   char stdout_buffer[4096];
   stdout_buffer[0] = '\0';
   bool stdout_is_closed = false;
-  bool stderr_is_closed = false;
+  bool stderr_is_closed = parent_stderr == -1;
   while (!stdout_is_closed || !stderr_is_closed) {
-    char buffer[4096];
+    uint8 buffer[4096];
     fd_set readfds;
     int max_fd = 0;
     FD_ZERO(&readfds);
@@ -584,7 +639,7 @@ static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
     } else if (ready_count == 0) {
       // Timeout, shouldn't happen.
     } else {
-      if (FD_ISSET(parent_stderr, &readfds)) {
+      if (!stderr_is_closed && FD_ISSET(parent_stderr, &readfds)) {
         ssize_t bytes_read = sizeof(buffer);
         stderr_is_closed = ForwardWithBuffer(parent_stderr, STDERR_FILENO,
                                              buffer, &bytes_read);
@@ -617,8 +672,12 @@ static void WaitForDaemonHandshake(pid_t pid, int parent_stdout,
       }
     }
   }
-  Close(parent_stdout);
-  Close(parent_stderr);
+  if (!is_batch_command) {
+    Close(parent_stdout);
+    Close(parent_stderr);
+  } else {
+    daemon_stderr = parent_stderr;
+  }
 }
 
 static void WriteFully(int fd, uint8* data, ssize_t length) {
@@ -824,18 +883,35 @@ static int QuitCommand() {
   return 0;
 }
 
+// Detects if [argv] is a batch command. A batch command is recognized by the
+// absense of "session name" on the command line.
+static bool IsBatchCommand(int argc, char** argv) {
+  for (int i = 1; i < argc - 1; i++) {
+    if (strcmp("session", argv[i]) == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static int Main(int argc, char** argv) {
   program_name = argv[0];
+  is_batch_command = IsBatchCommand(argc, argv);
   DetectConfiguration();
   bool is_quit_command = (argc == 2 && strcmp("quit", argv[1]) == 0);
-  LockConfigFile(!is_quit_command);
-  ReadDriverConfig();
+  if (!is_batch_command || is_quit_command) {
+    LockConfigFile(!is_quit_command);
+  }
+  if (!is_batch_command) ReadDriverConfig();
 
   if (is_quit_command) {
     return QuitCommand();
   }
 
-  Socket* control_socket = Connect();
+  Socket* control_socket = NULL;
+  if (!is_batch_command) {
+    control_socket = Connect();
+  }
   if (control_socket == NULL) {
     StartDriverDaemon();
 
@@ -848,7 +924,9 @@ static int Main(int argc, char** argv) {
     }
   }
 
-  UnlockConfigFile();
+  if (!is_batch_command) {
+    UnlockConfigFile();
+  }
 
   int signal_pipe = SignalFileDescriptor();
 
@@ -860,14 +938,18 @@ static int Main(int argc, char** argv) {
 
   int max_fd = Utils::Maximum(STDIN_FILENO, control_socket->FileDescriptor());
   max_fd = Utils::Maximum(max_fd, signal_pipe);
+  max_fd = Utils::Maximum(max_fd, daemon_stderr);
   bool stdin_closed = false;
+  uint8 buffer[4096];
   while (true) {
     fd_set readfds;
     FD_ZERO(&readfds);
     if (!stdin_closed) {
       FD_SET(STDIN_FILENO, &readfds);
     }
-    FD_SET(control_socket->FileDescriptor(), &readfds);
+    if (control_socket != NULL) {
+      FD_SET(control_socket->FileDescriptor(), &readfds);
+    }
     FD_SET(signal_pipe, &readfds);
 
     int ready_count =
@@ -881,8 +963,15 @@ static int Main(int argc, char** argv) {
       if (FD_ISSET(signal_pipe, &readfds)) {
         HandleSignal(signal_pipe, connection);
       }
+      if ((daemon_stderr != -1) && FD_ISSET(daemon_stderr, &readfds)) {
+        ssize_t bytes_read = sizeof(buffer);
+        if (ForwardWithBuffer(daemon_stderr, STDERR_FILENO,
+                              buffer, &bytes_read)) {
+          daemon_stderr = -1;
+        }
+      }
+
       if (FD_ISSET(STDIN_FILENO, &readfds)) {
-        uint8 buffer[4096];
         ssize_t bytes_count =
             TEMP_FAILURE_RETRY(read(STDIN_FILENO, &buffer, sizeof(buffer)));
         if (bytes_count >= 0) {
@@ -898,18 +987,23 @@ static int Main(int argc, char** argv) {
               strerror(errno));
         }
       }
-      if (FD_ISSET(control_socket->FileDescriptor(), &readfds)) {
+      if (control_socket != NULL &&
+          FD_ISSET(control_socket->FileDescriptor(), &readfds)) {
         DriverConnection::Command command = HandleCommand(connection);
         if (command == DriverConnection::kDriverConnectionError) {
           Die("%s: lost connection to persistent process: %s", program_name,
               strerror(errno));
         } else if (command == DriverConnection::kDriverConnectionClosed) {
           // Connection was closed.
-          break;
+          delete control_socket;
+          control_socket = NULL;
         }
       }
+      if (control_socket == NULL && daemon_stderr == -1) break;
     }
   }
+
+  if (daemon_pid != -1) WaitForDaemon(daemon_pid);
 
   Exit(exit_code);
   return exit_code;

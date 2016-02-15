@@ -9,7 +9,8 @@
 // accelerometer on the LED array as line segments.
 library sample.accelerometer;
 
-import 'package:os/os.dart' as os;
+import 'dart:dartino';
+
 import 'package:raspberry_pi/sense_hat.dart';
 import 'package:i2c/devices/lsm9ds1.dart';
 
@@ -171,19 +172,19 @@ void splashScreen(SenseHat hat) {
     for (Direction d in allDirections) {
       drawSegment(hat.ledArray, d, s);
     }
-    os.sleep(200);
+    sleep(200);
   }
   for (int s = 0; s < 4; s++) {
     for (Direction d in allDirections) {
       drawSegment(hat.ledArray, d, s, color: Color.black);
     }
-    os.sleep(200);
+    sleep(200);
   }
   for (int s = 0; s < 4; s++) {
     for (Direction d in allDirections) {
       drawSegment(hat.ledArray, d, s);
     }
-    os.sleep(200);
+    sleep(200);
     for (Direction d in allDirections) {
       drawSegment(hat.ledArray, d, s, color: Color.black);
     }

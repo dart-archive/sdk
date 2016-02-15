@@ -30,29 +30,34 @@ class Session {
 
   void JoinMessageProcessingThread() { UNIMPLEMENTED(); }
 
-  bool UncaughtException(Process* process) {
+  bool CanHandleEvents() const {
     UNIMPLEMENTED();
     return false;
   }
 
-  bool UncaughtSignal(Process* process) {
+  Scheduler::ProcessInterruptionEvent UncaughtException(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kUnhandled;
   }
 
-  bool BreakPoint(Process* process) {
+  Scheduler::ProcessInterruptionEvent UnhandledSignal(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kUnhandled;
   }
 
-  bool ProcessTerminated(Process* process) {
+  Scheduler::ProcessInterruptionEvent Breakpoint(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kUnhandled;
   }
 
-  bool CompileTimeError(Process* process) {
+  Scheduler::ProcessInterruptionEvent ProcessTerminated(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kUnhandled;
+  }
+
+  Scheduler::ProcessInterruptionEvent CompileTimeError(Process* process) {
+    UNIMPLEMENTED();
+    return Scheduler::kUnhandled;
   }
 
   bool is_debugging() const {
@@ -60,14 +65,14 @@ class Session {
     return false;
   }
 
-  bool ProcessRun() {
+  int ProcessRun() {
     UNIMPLEMENTED();
-    return false;
+    return 0;
   }
 
-  bool Killed(Process* process) {
+  Scheduler::ProcessInterruptionEvent Killed(Process* process) {
     UNIMPLEMENTED();
-    return false;
+    return Scheduler::kUnhandled;
   }
 
   void IteratePointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }

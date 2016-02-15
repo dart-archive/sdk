@@ -2,33 +2,35 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// Sample the connects to a https server
+// Sample that connects to a https server using TLS.
 //
-// The sample will connect to the httpbin.org https server get back the
-// public ip.
-// This requires an internet connection.
+// It connects to the httpbin.org https test server, and makes an `/ip`
+// request. This returns the public IP of caller.
+//
+// Note: This sample requires an internet connection.
 library sample.tls;
 
 import 'package:mbedtls/mbedtls.dart';
-import 'dart:dartino.ffi';
-import 'package:ffi/ffi.dart';
 import 'package:http/http.dart';
+import 'dart:convert';
 
 main() {
+  // Create and connect a socket connection to httpbin.org
   var port = 443;
   var host = "httpbin.org";
   var socket = new TLSSocket.connect(host, port);
   print("Connected to $host:$port");
+
+  // Create a HTTPS connection on the socket, and send a `/ip` request.
   var https = new HttpConnection(socket);
   var request = new HttpRequest("/ip");
   request.headers["Host"] = "httpbin.org";
   var response = https.send(request);
-  var responseString = new String.fromCharCodes(response.body);
-  // Reponse looks like this
-  // {
-  //   "origin": "2.109.66.196"
-  // }
-  var ip = responseString.split('"')[3];
-  print("Hello $ip");
+  print("Sent an /ip request to httpbin.org");
+
+  // Decode the response string, and get the origin property.
+  Map data = JSON.decode(new String.fromCharCodes(response.body));
+  String ip = data["origin"];
+  print("Response: '$ip'");
   socket.close();
 }

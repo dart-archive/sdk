@@ -75,5 +75,5 @@ if [ -z "$OPENOCDHOME" ]; then
 fi
 
 if [ -z "$GDB" ]; then
-  GDB=arm-none-eabi-gdb
+  GDB="$ROOT/third_party/gcc-arm-embedded/$OS/$T/gcc-arm-embedded/bin/arm-none-eabi-gdb"
 fi

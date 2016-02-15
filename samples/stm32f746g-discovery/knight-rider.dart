@@ -14,7 +14,7 @@
 
 import 'dart:dartino';
 
-import 'package:stm32f746g_disco/gpio.dart';
+import 'package:gpio/gpio.dart';
 import 'package:stm32f746g_disco/stm32f746g_disco.dart';
 
 main() {
@@ -45,13 +45,15 @@ main() {
 class Lights {
   final Gpio _gpio;
   final List<Pin> leds;
-  List<GpioOutputPin> gpioPins;
+  List<GpioOutputPin> gpioPins = [];
 
   Lights(this._gpio, this.leds);
 
   // Initializes all pins as output.
   void init() {
-    gpioPins = leds.map((pin) => _gpio.initOutput(pin)).toList();
+    for (Pin led in leds) {
+      gpioPins.add(_gpio.initOutput(led));
+    }
   }
 
   // Iterates though the lights in increasing order, and sets the LEDs using
@@ -59,9 +61,7 @@ class Lights {
   void runLightLeft(int waitTime) {
     for (int counter = 0; counter < leds.length; counter++) {
       _setLeds(counter);
-      // TODO(sgjesse): Use the Dartino sleep function.
-      for (int i= 0; i < 50000; i++) {}
-      //sleep(waitTime);
+      sleep(waitTime);
     }
   }
 
@@ -70,9 +70,7 @@ class Lights {
   void runLightRight(int waitTime) {
     for (int counter = leds.length - 1; counter >= 0; counter--) {
       _setLeds(counter);
-      // TODO(sgjesse): Use the Dartino sleep function.
-      for (int i= 0; i < 50000; i++) {}
-      //sleep(waitTime);
+      sleep(waitTime);
     }
   }
 

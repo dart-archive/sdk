@@ -17,6 +17,7 @@ import '../worker/developer.dart' as developer;
 const Action runAction =
     const Action(
         run, runDocumentation, requiresSession: true,
+        allowsTrailing: true,
         supportedTargets: const <TargetKind>[TargetKind.FILE]);
 
 Future<int> run(AnalyzedSentence sentence, VerbContext context) {
@@ -25,7 +26,7 @@ Future<int> run(AnalyzedSentence sentence, VerbContext context) {
   return context.performTaskInWorker(
       new RunTask(
           sentence.targetUri, sentence.base, terminateDebugger,
-          testDebuggerCommands));
+          testDebuggerCommands, sentence.trailing ?? []));
 }
 
 class RunTask extends SharedTask {
@@ -42,18 +43,21 @@ class RunTask extends SharedTask {
 
   final List<String> testDebuggerCommands;
 
+  final List<String> arguments;
+
   const RunTask(
       this.script,
       this.base,
       this.terminateDebugger,
-      this.testDebuggerCommands);
+      this.testDebuggerCommands,
+      this.arguments);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<ClientCommand> commandIterator) {
     return runTask(
         commandSender, commandIterator, SessionState.current, script, base,
-        terminateDebugger, testDebuggerCommands);
+        terminateDebugger, testDebuggerCommands, arguments);
   }
 }
 
@@ -64,7 +68,8 @@ Future<int> runTask(
     Uri script,
     Uri base,
     bool terminateDebugger,
-    List<String> testDebuggerCommands) {
+    List<String> testDebuggerCommands,
+    List<String> arguments) {
   return compileAndAttachToVmThen(
       commandSender,
       commandIterator,
@@ -73,6 +78,7 @@ Future<int> runTask(
       base,
       terminateDebugger,
       () => developer.run(
-          state, testDebuggerCommands: testDebuggerCommands,
+          state, arguments,
+          testDebuggerCommands: testDebuggerCommands,
           terminateDebugger: terminateDebugger));
 }

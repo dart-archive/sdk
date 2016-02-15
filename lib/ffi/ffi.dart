@@ -20,9 +20,13 @@ abstract class Foreign {
 
   static const int UNKNOWN = 0;
 
+  // These constants must be in sync with the enum OperatingSystem in
+  // src/shared/platform.h.
   static const int LINUX = 1;
   static const int MACOS = 2;
   static const int ANDROID = 3;
+  static const int WINDOWS = 4;
+  static const int FREERTOS = 5;
 
   static const int IA32 = 1;
   static const int X64 = 2;

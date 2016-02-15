@@ -5,6 +5,7 @@
 library dartino_compiler.incremental_backend;
 
 import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
     Element,
     FieldElement,
     FunctionElement;
@@ -13,7 +14,11 @@ import 'dartino_system.dart' show
     DartinoSystem;
 
 import 'src/dartino_system_builder.dart' show
-    DartinoSystemBuilder;
+    DartinoSystemBuilder,
+    SchemaChange;
+
+import 'src/dartino_class_builder.dart' show
+    DartinoClassBuilder;
 
 import 'src/dartino_context.dart' show
     DartinoContext;
@@ -30,18 +35,6 @@ abstract class IncrementalBackend {
   /// version of [element] should be removed.
   void removeFunction(FunctionElement element);
 
-  /// Remove [element] from the compilation result. Called after resolution and
-  /// codegen phase.
-  ///
-  /// See [removeFunction] for how this compares to `forgetElement`.
-  void removeField(FieldElement element);
-
-  /// Register that [element] is now part of the compilation. This happens
-  /// during the codegen phase.
-  // TODO(ahe): We should probably remove this API, I believe it is an artifact
-  // of the incremental compiler not enqueuing fields.
-  void newElement(Element element);
-
   /// Update references to [element] in [users].
   // TODO(ahe): Computing [users] is expensive, and may not be necessary in
   // dart2js. Move to IncrementalDartinoBackend or add a bool to say if the call
@@ -56,4 +49,6 @@ abstract class IncrementalDartinoBackend implements IncrementalBackend {
 
   /// In Dartino, assembleProgram is incremental. In dart2js it isn't.
   int assembleProgram();
+
+  void forEachSubclassOf(ClassElement cls, void f(ClassElement cls));
 }

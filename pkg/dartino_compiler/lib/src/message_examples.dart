@@ -347,6 +347,10 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.compilerVersionMismatch:
       // TODO(wibling): Add test for this
       return untestable;
+
+    case DiagnosticKind.toolsNotInstalled:
+      // TODO(sgjesse): Add test for this
+      return untestable;
   }
 }
 

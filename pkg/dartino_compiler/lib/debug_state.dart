@@ -18,6 +18,9 @@ import 'vm_commands.dart' show
 import 'src/hub/session_manager.dart' show
     SessionState;
 
+import 'dartino_class.dart' show
+    DartinoClass;
+
 part 'back_trace.dart';
 
 /// A representation of a remote object.

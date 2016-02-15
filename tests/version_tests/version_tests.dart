@@ -19,10 +19,21 @@ Future<Null> main() async {
   Expect.equals(0, result.exitCode);
   String version = result.stdout;
 
-  // Check the version of the dartino CLI.
+  // Check the version of the dartino CLI in batch mode.
   result = await Process.run('$buildDir/dartino', ['--version']);
   Expect.equals(0, result.exitCode);
-  Expect.equals(version, result.stdout);
+  // When creating a new session, the program prints which settings file it
+  // uses on the first line.
+  String lastLine = result.stdout.split(new RegExp('^', multiLine: true)).last;
+  Expect.equals(version, lastLine);
+
+  // Check the version of the dartino CLI using persisten process.
+  result = await Process.run(
+      '$buildDir/dartino',
+      ['--version', 'in', 'session', 'version_tests']);
+  Expect.equals(0, result.exitCode);
+  lastLine = result.stdout.split(new RegExp('^', multiLine: true)).last;
+  Expect.equals(version, lastLine);
 
   // Check the version of the dartino-vm
   result = await Process.run('$buildDir/dartino-vm', ['--version']);

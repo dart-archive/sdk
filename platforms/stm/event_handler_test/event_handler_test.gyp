@@ -119,6 +119,8 @@
         '<(source_path)/freertos.cc',
         '<(app_source_path)/dartino_entry.cc',
         '<(source_path)/main.cc',
+        '<(source_path)/device_manager.cc',
+        '<(source_path)/device_manager.h',
         '<(source_path)/page_allocator.cc',
         '<(source_path)/page_allocator.h',
 

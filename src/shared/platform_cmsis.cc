@@ -18,30 +18,10 @@
 
 namespace dartino {
 
-osMailQId dartinoMailQ;
-
-osMailQId GetDartinoMailQ() {
-  return dartinoMailQ;
-}
-
-// Sends a message on the dartino osMailQ used by the event handler.
-int SendMessageCmsis(uint32_t port_id, int64_t message) {
-  CmsisMessage *cmsisMessage =
-      reinterpret_cast<CmsisMessage*>(osMailAlloc(dartinoMailQ, 0));
-  cmsisMessage->port_id = port_id;
-  cmsisMessage->message = message;
-  return osMailPut(GetDartinoMailQ(), reinterpret_cast<void*>(cmsisMessage));
-}
-
 static uint64 time_launch;
-
-// The size of the queue used by the event handler.
-const uint32_t kMailQSize = 50;
 
 void Platform::Setup() {
   time_launch = GetMicroseconds();
-  osMailQDef(dartino_queue, kMailQSize, CmsisMessage);
-  dartinoMailQ = osMailCreate(osMailQ(dartino_queue), NULL);
 }
 
 void Platform::TearDown() { }

@@ -20,11 +20,25 @@ import '../vm_commands.dart';
 import '../incremental/dartino_compiler_incremental.dart' show
     IncrementalCompilationFailed;
 
-abstract class DartinoClassBuilder {
-  int get classId;
-  ClassElement get element;
+import 'dartino_system_builder.dart' show
+    SchemaChange;
+
+import '../dartino_class.dart' show
+    DartinoClass;
+
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
+
+abstract class DartinoClassBuilder extends DartinoClassBase {
+  const DartinoClassBuilder(
+      int classId,
+      String name,
+      ClassElement element,
+      int fieldCount)
+      : super(classId, name, element, fieldCount);
+
   DartinoClassBuilder get superclass;
-  int get fields;
+  int get superclassId => hasSuperClass ? superclass.classId : -1;
 
   /**
    * Returns the number of instance fields of all the super classes of this
@@ -32,15 +46,12 @@ abstract class DartinoClassBuilder {
    *
    * If this class has no super class (if it's Object), 0 is returned.
    */
-  int get superclassFields => hasSuperClass ? superclass.fields : 0;
+  int get superclassFields => hasSuperClass ? superclass.fieldCount : 0;
 
   bool get hasSuperClass => superclass != null;
 
   void addToMethodTable(int selector, DartinoFunctionBase functionBase);
   void removeFromMethodTable(DartinoFunctionBase function);
-
-  void addField(FieldElement field);
-  void removeField(FieldElement field);
 
   // Add a selector for is-tests. The selector is only to be hit with the
   // InvokeTest bytecode, as the function is not guraranteed to be valid.
@@ -77,8 +88,6 @@ void forEachField(ClassElement c, void action(FieldElement field)) {
 }
 
 class DartinoNewClassBuilder extends DartinoClassBuilder {
-  final int classId;
-  final ClassElement element;
   final DartinoClassBuilder superclass;
   final bool isBuiltin;
 
@@ -92,17 +101,25 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
       <int, DartinoFunctionBase>{};
 
   DartinoNewClassBuilder(
-      this.classId,
-      this.element,
-      this.superclass,
+      int classId,
+      ClassElement element,
+      DartinoClassBuilder superclass,
       this.isBuiltin,
-      this.extraFields);
+      int extraFields)
+      : superclass = superclass,
+        extraFields = extraFields,
+        super(classId, element?.name, element,
+              computeFields(element, superclass, extraFields));
 
-  int get fields {
-    int count = superclassFields + extraFields;
+  static int computeFields(
+      ClassElement element,
+      DartinoClassBuilder superclass,
+      int extraFields) {
+    int count = extraFields;
+    if (superclass != null) {
+      count += superclass.fieldCount;
+    }
     if (element != null) {
-      // TODO(kasperl): Once we change compiled class to be immutable, we
-      // should cache the field count.
       element.implementation.forEachInstanceField((_, __) { count++; });
     }
     return count;
@@ -110,17 +127,6 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
 
   void addToMethodTable(int selector, DartinoFunctionBase functionBase) {
     _methodTable[selector] = functionBase;
-  }
-
-  void addField(FieldElement field) {
-    throw new StateError("Fields should not be added to a new class.");
-  }
-
-  void removeField(FieldElement field) {
-    // TODO(ahe): Change this to a StateError when bug in incremental compiler
-    // is fixed (tested by super_is_parameter).
-    throw new IncrementalCompilationFailed(
-        "Can't remove a field ($field) from a new class ($element)");
   }
 
   void removeFromMethodTable(DartinoFunctionBase function) {
@@ -185,9 +191,9 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
       List<VmCommand> commands) {
     if (isBuiltin) {
       int nameId = context.getSymbolId(element.name);
-      commands.add(new PushBuiltinClass(nameId, fields));
+      commands.add(new PushBuiltinClass(nameId, fieldCount));
     } else {
-      commands.add(new PushNewClass(fields));
+      commands.add(new PushNewClass(fieldCount));
     }
 
     commands.add(const Dup());
@@ -201,7 +207,7 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
     }
     commands.add(new ChangeMethodTable(methodTable.length));
 
-    List<FieldElement> fieldsList = new List<FieldElement>(fields);
+    List<FieldElement> fieldsList = new List<FieldElement>(fieldCount);
     int index = 0;
     forEachField(element, (field) {
       fieldsList[index++] = field;
@@ -223,27 +229,39 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
 
 class DartinoPatchClassBuilder extends DartinoClassBuilder {
   final DartinoClass klass;
+
   final DartinoClassBuilder superclass;
 
   final Map<int, int> _implicitAccessorTable = <int, int>{};
+
   final Map<int, DartinoFunctionBase> _newMethods =
       <int, DartinoFunctionBase>{};
+
   final Set<DartinoFunctionBase> _removedMethods =
       new Set<DartinoFunctionBase>();
-  final Set<FieldElement> _removedFields = new Set<FieldElement>();
+
+  final List<FieldElement> _addedFields;
+
+  final List<FieldElement> _removedFields;
+
   final List<int> _removedAccessors = <int>[];
-  bool _fieldsChanged = false;
 
-  // TODO(ajohnsen): Reconsider bookkeeping of extra fields (this is really only
-  // extra super-class fields).
-  int extraFields = 0;
+  final int extraFields;
 
-  // TODO(ajohnsen): Can the element change?
-  DartinoPatchClassBuilder(this.klass, this.superclass);
+  DartinoPatchClassBuilder(
+      DartinoClass klass,
+      this.superclass,
+      SchemaChange schemaChange)
+      : this.klass = klass,
+        this._addedFields =
+            new List<FieldElement>.unmodifiable(schemaChange.addedFields),
+        this._removedFields =
+            new List<FieldElement>.unmodifiable(schemaChange.removedFields),
+        this.extraFields = schemaChange.extraSuperFields,
+        super(klass.classId, klass.name, klass.element, klass.fieldCount);
 
-  int get classId => klass.classId;
-  ClassElement get element => klass.element;
-  int get fields => klass.fields.length;
+  List<FieldElement> get addedFields => _addedFields;
+  List<FieldElement> get removedFields => _removedFields;
 
   void addToMethodTable(int selector, DartinoFunctionBase functionBase) {
     _newMethods[selector] = functionBase;
@@ -252,17 +270,6 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
   void removeFromMethodTable(DartinoFunctionBase function) {
     assert(function != null);
     _removedMethods.add(function);
-  }
-
-  void removeField(FieldElement field) {
-    if (field.enclosingClass != element) extraFields--;
-    _fieldsChanged = true;
-    _removedFields.add(field);
-  }
-
-  void addField(FieldElement field) {
-    if (field.enclosingClass != element) extraFields++;
-    _fieldsChanged = true;
   }
 
   void addIsSelector(int selector) {
@@ -368,7 +375,7 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
   }
 
   bool computeSchemaChange(List<VmCommand> commands) {
-    if (!_fieldsChanged) return false;
+    if (_addedFields.isEmpty && _removedFields.isEmpty) return false;
 
     // TODO(ajohnsen): Don't recompute this list.
     List<FieldElement> afterFields = <FieldElement>[];

@@ -21,6 +21,7 @@
 #include "src/vm/process.h"
 #include "src/vm/scheduler.h"
 #include "src/vm/session.h"
+#include "src/vm/unicode.h"
 
 #include "third_party/double-conversion/src/double-conversion.h"
 
@@ -944,6 +945,31 @@ BEGIN_NATIVE(ListIndexSet) {
 }
 END_NATIVE()
 
+BEGIN_NATIVE(ArgumentsLength) {
+  return process->ToInteger(process->arguments().length());
+}
+END_NATIVE()
+
+BEGIN_NATIVE(ArgumentsToString) {
+  word index = AsForeignWord(arguments[0]);
+  List<uint8> data = process->arguments()[index];
+
+  uint8_t* utf8 = data.data();
+  int utf8_length = data.length();
+  Utf8::Type type;
+  int utf16_length = Utf8::CodeUnitCount(utf8, utf8_length, &type);
+
+  Object* object = process->NewTwoByteString(utf16_length);
+  if (object->IsRetryAfterGCFailure()) return object;
+  TwoByteString* str = TwoByteString::cast(object);
+
+  uint16* utf16 = reinterpret_cast<uint16*>(str->byte_address_for(0));
+  Utf8::DecodeToUTF16(utf8, utf8_length, utf16, utf16_length);
+
+  return str;
+}
+END_NATIVE()
+
 static Function* FunctionForClosure(Object* argument, unsigned arity) {
   Instance* closure = Instance::cast(argument);
   Class* closure_class = closure->get_class();
@@ -1512,8 +1538,11 @@ BEGIN_NATIVE(TimerScheduleTimeout) {
 END_NATIVE()
 
 BEGIN_NATIVE(EventHandlerSleep) {
-  int64 timeout =
-      AsForeignInt64(arguments[0]) + Platform::GetMicroseconds() / 1000;
+  int64 arg = AsForeignInt64(arguments[0]);
+  // Adding one (1) if the sleep is not for 0 ms. This ensures that the
+  // sleep will last at least the provided number of milliseconds.
+  int64 offset = arg == 0 ? 0 : 1;
+  int64 timeout = arg + Platform::GetMicroseconds() / 1000 + offset;
   Port* port = Port::FromDartObject(arguments[1]);
   EventHandler::GlobalInstance()->ScheduleTimeout(timeout, port);
   return process->program()->null_object();

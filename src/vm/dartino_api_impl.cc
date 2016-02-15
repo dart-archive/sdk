@@ -49,7 +49,7 @@ static Program* LoadSnapshot(List<uint8> bytes) {
   return NULL;
 }
 
-static int RunProgram(Program* program) {
+static int RunProgram(Program* program, int argc, char** argv) {
 #ifdef DARTINO_ENABLE_LIVE_CODING
   ProgramFolder::FoldProgramByDefault(program);
 #endif  // DARTINO_ENABLE_LIVE_CODING
@@ -58,20 +58,27 @@ static int RunProgram(Program* program) {
 
   int exitcodes[1] = { -1 };
   Program* programs[1] = { program };
-  runner.Run(1, exitcodes, programs);
+  runner.Run(1, exitcodes, programs, argc, argv);
 
   return exitcodes[0];
 }
 
 static void StartProgram(Program* program,
                          ProgramExitListener listener,
-                         void* data) {
+                         void* data,
+                         int argc,
+                         char** argv) {
 #ifdef DARTINO_ENABLE_LIVE_CODING
   ProgramFolder::FoldProgramByDefault(program);
 #endif  // DARTINO_ENABLE_LIVE_CODING
 
   program->SetProgramExitListener(listener, data);
-  Process* process = program->ProcessSpawnForMain();
+  List<List<uint8>> arguments = List<List<uint8>>::New(argc);
+  for (int i = 0; i < argc; i++) {
+    uint8* utf8 = reinterpret_cast<uint8*>(strdup(argv[i]));
+    arguments[i] = List<uint8>(utf8, strlen(argv[i]));
+  }
+  Process* process = program->ProcessSpawnForMain(arguments);
   Scheduler::GlobalInstance()->ScheduleProgram(program, process);
 }
 
@@ -82,9 +89,9 @@ static Program* LoadSnapshotFromFile(const char* path) {
   return program;
 }
 
-static void RunSnapshotFromFile(const char* path) {
+static void RunSnapshotFromFile(const char* path, int argc, char** argv) {
   Program* program = LoadSnapshotFromFile(path);
-  int result = RunProgram(program);
+  int result = RunProgram(program, argc, argv);
   delete program;
   if (result != 0) FATAL1("Failed to run snapshot: %s\n", path);
 }
@@ -125,14 +132,16 @@ DartinoProgram DartinoLoadSnapshot(unsigned char* snapshot, int length) {
   return reinterpret_cast<DartinoProgram>(program);
 }
 
-int DartinoRunMain(DartinoProgram raw_program) {
+int DartinoRunMain(DartinoProgram raw_program, int argc, char** argv) {
   dartino::Program* program = reinterpret_cast<dartino::Program*>(raw_program);
-  return dartino::RunProgram(program);
+  return dartino::RunProgram(program, argc, argv);
 }
 
 void DartinoRunMultipleMain(int count,
-                           DartinoProgram* dartino_programs,
-                           int* exitcodes) {
+                            DartinoProgram* dartino_programs,
+                            int* exitcodes,
+                            int argc,
+                            char** argv) {
   dartino::SimpleProgramRunner runner;
 
   auto programs = reinterpret_cast<dartino::Program**>(dartino_programs);
@@ -143,7 +152,7 @@ void DartinoRunMultipleMain(int count,
 #endif  // DARTINO_ENABLE_LIVE_CODING
   }
 
-  runner.Run(count, exitcodes, programs);
+  runner.Run(count, exitcodes, programs, argc, argv);
 }
 
 DartinoProgram DartinoLoadProgramFromFlash(void* heap, size_t size) {
@@ -166,25 +175,37 @@ DartinoProgram DartinoLoadProgramFromFlash(void* heap, size_t size) {
 
 DARTINO_EXPORT void DartinoStartMain(DartinoProgram raw_program,
                                    ProgramExitCallback callback,
-                                   void* callback_data) {
+                                   void* callback_data,
+                                   int argc,
+                                   char** argv) {
   dartino::Program* program = reinterpret_cast<dartino::Program*>(raw_program);
   dartino::ProgramExitListener listener =
       reinterpret_cast<dartino::ProgramExitListener>(callback);
-  dartino::StartProgram(program, listener, callback_data);
+  dartino::StartProgram(program, listener, callback_data, argc, argv);
 }
 
 void DartinoDeleteProgram(DartinoProgram raw_program) {
   dartino::Program* program = reinterpret_cast<dartino::Program*>(raw_program);
-  // TODO(kustermann): Instead of doing this, we should introduce states to
-  // [Program].
-  if (program->scheduler() != NULL) {
+  dartino::ProgramState* state = program->program_state();
+  if (state->state() == dartino::ProgramState::kDone) {
+    // Either the program is
+    //   * done running
+    //   * the embedder got the exitcode
+    //   * the embedder wants to unschedule & delete it
     dartino::Scheduler::GlobalInstance()->UnscheduleProgram(program);
+    ASSERT(state->state() == dartino::ProgramState::kPendingDeletion);
+  } else {
+    // Or
+    //   * the program has never been scheduled
+    //   * the embedder wants to delete it (already unscheduled)
+    ASSERT(state->state() == dartino::ProgramState::kInitialized ||
+           state->state() == dartino::ProgramState::kPendingDeletion);
   }
   delete program;
 }
 
-void DartinoRunSnapshotFromFile(const char* path) {
-  dartino::RunSnapshotFromFile(path);
+void DartinoRunSnapshotFromFile(const char* path, int argc, char** argv) {
+  dartino::RunSnapshotFromFile(path, argc, argv);
 }
 
 bool DartinoAddDefaultSharedLibrary(const char* library) {

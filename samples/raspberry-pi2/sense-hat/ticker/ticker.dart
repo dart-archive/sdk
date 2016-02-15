@@ -8,7 +8,8 @@
 // The sample will run a text message on the LED dot matrix.
 library sample.ticker;
 
-import 'package:os/os.dart' as os;
+import 'dart:dartino';
+
 import 'package:raspberry_pi/sense_hat.dart';
 
 import 'font.dart' show defaultFont;
@@ -29,6 +30,6 @@ main() {
       // Reset.
       offset = -hat.ledArray.width;
     }
-    os.sleep(70);
+    sleep(70);
   }
 }

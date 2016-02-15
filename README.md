@@ -12,7 +12,7 @@ so don't expect to be able to build complete products on top of it.
 ## Trying it out
 
 To try out Dartino for embedded device development, please see the
-[Dartino site](http://dartino.github.io/sdk/).
+[Dartino site](https://dartino.org).
 
 ## Feedback & contributing
 

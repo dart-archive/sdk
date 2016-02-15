@@ -28,7 +28,9 @@ class SDKServices {
       var request = await client.getUrl(url);
       var response = await request.close();
       service.log('Response headers:\n${response.headers}');
-
+      if (response.statusCode != 200) {
+        service.failure('Failed request: ${response.reasonPhrase}');
+      }
       int totalBytes = response.headers.contentLength;
       int bytes = 0;
       StreamTransformer progressTransformer =
@@ -66,7 +68,8 @@ class SDKServices {
             service.log('Download failure: $e\n$s');
             await sleep(retryInterval);
           } else {
-            await service.failure('Download failed after $retryCount retries');
+            await service.failure('Download failed after $retryCount retries '
+                                  ' with error $e');
           }
         }
       }
@@ -81,9 +84,8 @@ class SDKServices {
 class DownloadException implements Exception {
   final String message;
   DownloadException(this.message);
+  String toString() => 'DownloadException($message)';
 }
-
-
 
 /// Class to output information and progress for sdk services. Some platform
 /// specific scripts use their own implementation of this.

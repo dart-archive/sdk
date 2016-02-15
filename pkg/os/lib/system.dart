@@ -21,6 +21,8 @@ System getSystem() {
       return new LinuxSystem();
     case Foreign.MACOS:
       return new MacOSSystem();
+    case Foreign.FREERTOS:
+      return new FreeRTOSSystem();
     default:
       throw "Unsupported system ${Foreign.platform}";
   }
@@ -73,7 +75,6 @@ abstract class System {
   int shutdown(int fd, int how);
   int close(int fd);
   int lseek(int fd, int offset, int whence);
-  void sleep(int milliseconds);
   void memcpy(var dest, int destOffset, var src, int srcOffset, int length);
   int errno();
   String strerror(int errno);

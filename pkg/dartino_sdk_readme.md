@@ -9,7 +9,7 @@ import 'package:gpio/gpio.dart';
 ```
 
 For more information on Dartino, see the [Dartino
-site](http://dartino.github.io/sdk/).
+site](https://dartino.org).
 
 This API reference is automatically generated from the source code in the
 [Dartino SDK repo](https://github.com/dartino/sdk). If you'd like to

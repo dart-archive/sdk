@@ -84,7 +84,8 @@ import '../please_report_crash.dart' show
     requestBugReportOnOtherCrashMessage;
 
 import '../verbs/options.dart' show
-    Options;
+    Options,
+    isBatchMode;
 
 import '../console_print.dart' show
     printToConsole;
@@ -169,33 +170,15 @@ Future main(List<String> arguments) async {
 
   mainArguments.addAll(arguments);
   configFileUri = Uri.base.resolve(arguments.first);
-  File configFile = new File.fromUri(configFileUri);
-  Directory tmpdir = Directory.systemTemp.createTempSync("dartino_client");
-
-  File socketFile = new File("${tmpdir.path}/socket");
-  try {
-    socketFile.deleteSync();
-  } on FileSystemException catch (e) {
-    // Ignored. There's no way to check if a socket file exists.
+  File configFile;
+  if (!isBatchMode) {
+    configFile = new File.fromUri(configFileUri);
   }
-
   ServerSocket server;
 
   Completer shutdown = new Completer();
 
   gracefulShutdown = () {
-    try {
-      socketFile.deleteSync();
-    } catch (e) {
-      print("Unable to delete ${socketFile.path}: $e");
-    }
-
-    try {
-      tmpdir.deleteSync(recursive: true);
-    } catch (e) {
-      print("Unable to delete ${tmpdir.path}: $e");
-    }
-
     if (server != null) {
       server.close();
     }
@@ -208,7 +191,8 @@ Future main(List<String> arguments) async {
     subscription.onData((ProcessSignal signal) {
       // Cancel the subscription to restore default signal handler.
       subscription.cancel();
-      print("Received signal $signal");
+      print("Received signal $signal, sending signal to pid 0");
+      print("Our pid was: ${io.pid}");
       gracefulShutdown();
       // 0 means kill the current process group (including this process, which
       // will now die as we restored the default signal handler above).  In
@@ -228,10 +212,12 @@ Future main(List<String> arguments) async {
 
   server = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 0);
 
-  // Write the TCP port to a config file. This lets multiple command line
-  // programs share this persistent driver process, which in turn eliminates
-  // start up overhead.
-  configFile.writeAsStringSync("${server.port}", flush: true);
+  if (configFile != null) {
+    // Write the TCP port to a config file. This lets multiple command line
+    // programs share this persistent driver process, which in turn eliminates
+    // start up overhead.
+    configFile.writeAsStringSync("${server.port}", flush: true);
+  }
 
   // Print the temporary directory so the launching process knows where to
   // connect, and that the socket is ready.
@@ -240,6 +226,9 @@ Future main(List<String> arguments) async {
   IsolatePool pool = new IsolatePool(workerMain);
   try {
     await server.listen((Socket controlSocket) {
+      if (isBatchMode) {
+        server.close();
+      }
       handleClient(pool, handleSocketErrors(controlSocket, "controlSocket"));
     }).asFuture();
   } finally {
@@ -660,7 +649,9 @@ class WorkerConnection {
       return null;
     }
     // TODO(ahe): Perform the reverse of attachClient here.
-    await beginSession();
+    if (!isBatchMode) {
+      await beginSession();
+    }
   }
 
   Future<int> performTask(

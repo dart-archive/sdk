@@ -9,5 +9,7 @@ import 'package:os/os.dart';
 
 main() {
   SystemInformation si = sys.info();
-  print('Hello from ${si.operatingSystemName} running on ${si.nodeName}.');
+  String nodeInformation =
+      si.nodeName.isEmpty ? '' : ' running on ${si.nodeName}';
+  print('Hello from ${si.operatingSystemName}$nodeInformation.');
 }

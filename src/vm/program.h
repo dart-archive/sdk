@@ -77,19 +77,46 @@ typedef DoubleList<Process> ProcessList;
 typedef DoubleList<Process, 2> ProcessQueueList;
 typedef DoubleList<Program> ProgramList;
 
+const int kCompileTimeErrorExitCode = 254;
+const int kUncaughtExceptionExitCode = 255;
+
 // This state information is managed by the scheduler.
 class ProgramState {
  public:
+  // The possible state transitions are:
+  //   kInitialized -> kRunning
+  //
+  //   kRunning <-> kCollectingGarbage
+  //   kRunning <-> kSession
+  //   kRunning <-> kFrozen
+  //
+  //   kRunning -> kDone
+  //
+  //   kDone -> kPendingDeletion
+  enum State {
+    kInitialized,
+    kRunning,
+    kCollectingGarbage,
+    kSession,
+    kFrozen,
+    kDone,
+    kPendingDeletion,
+  };
+
   ProgramState()
       : processes_(0),
-        is_paused_(false),
+        state_(kInitialized),
         refcount_(0) {}
 
   // The [Scheduler::pause_monitor_] must be locked when calling this method.
   void AddPausedProcess(Process* process);
 
-  bool is_paused() const { return is_paused_; }
-  void set_is_paused(bool value) { is_paused_ = value; }
+  State state() const { return state_; }
+
+  void ChangeState(State from, State to) {
+    ASSERT(state_ == from);
+    state_ = to;
+  }
 
   ProcessQueueList* paused_processes() { return &paused_processes_; }
 
@@ -119,7 +146,7 @@ class ProgramState {
   Atomic<int> processes_;
 
   ProcessQueueList paused_processes_;
-  bool is_paused_;
+  State state_;
 
   // All components of the scheduler (including the gc thread) use this
   // refcounter. Whoever is decrementing it to zero must call the
@@ -148,9 +175,6 @@ class Program : public ProgramList::Entry {
   Function* entry() const { return entry_; }
   void set_entry(Function* entry) { entry_ = entry; }
 
-  int main_arity() const { return main_arity_; }
-  void set_main_arity(int value) { main_arity_ = value; }
-
   void set_static_fields(Array* static_fields) {
     static_fields_ = static_fields;
   }
@@ -164,7 +188,9 @@ class Program : public ProgramList::Entry {
     ASSERT((scheduler_ == NULL && scheduler != NULL) ||
            (scheduler_ != NULL && scheduler == NULL));
     ASSERT(program_state_.paused_processes()->IsEmpty());
-    ASSERT(!program_state_.is_paused());
+    ASSERT(program_state_.state() == ProgramState::kInitialized ||
+           program_state_.state() == ProgramState::kDone);
+
     scheduler_ = scheduler;
   }
 
@@ -229,7 +255,7 @@ class Program : public ProgramList::Entry {
   }
 
   Process* SpawnProcess(Process* parent);
-  Process* ProcessSpawnForMain();
+  Process* ProcessSpawnForMain(List<List<uint8>> arguments);
   // Returns [true] if this was the last process (i.e. main process).
   bool ScheduleProcessForDeletion(Process* process, Signal::Kind kind);
 
@@ -312,6 +338,7 @@ class Program : public ProgramList::Entry {
 
   LookupCache* cache() const { return cache_; }
   LookupCache* EnsureCache();
+  void ClearCache();
 
   ProcessHandle* MainProcess();
 
@@ -360,7 +387,6 @@ class Program : public ProgramList::Entry {
   Session* session_;
 
   Function* entry_;
-  int main_arity_;
 
   bool loaded_from_snapshot_;
 

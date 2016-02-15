@@ -5,12 +5,14 @@
 #include <stm32f7xx_hal.h>
 #include <stm32746g_discovery_sdram.h>
 #include <cmsis_os.h>
+#include <FreeRTOS.h>
+#include <task.h>
 
 #include "src/shared/assert.h"
 
-#include "platforms/stm/disco_dartino/src/page_allocator.h"
 #include "platforms/stm/disco_dartino/src/cmpctmalloc.h"
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
+#include "platforms/stm/disco_dartino/src/page_allocator.h"
 
 // Definition of functions in generated/Src/mx_main.c.
 extern "C" {
@@ -46,25 +48,27 @@ extern "C" void __wrap___libc_init_array() {
 // newlib malloc to never be used, and sbrk should never be called for
 // memory.
 extern "C" void *__wrap__malloc_r(struct _reent *reent, size_t size) {
-  return cmpct_alloc(size);
+  return pvPortMalloc(size);
 }
+
+extern "C" void *suspendingRealloc(void *ptr, size_t size);
 
 extern "C" void *__wrap__realloc_r(
     struct _reent *reent, void *ptr, size_t size) {
-  return cmpct_realloc(ptr, size);
+  return suspendingRealloc(ptr, size);
 }
 
 extern "C" void *__wrap__calloc_r(
     struct _reent *reent, size_t nmemb, size_t size) {
   if (nmemb == 0 || size == 0) return NULL;
   size = nmemb * size;
-  void *ptr = cmpct_alloc(size);
+  void *ptr = pvPortMalloc(size);
   memset(ptr, 0, size);
   return ptr;
 }
 
 extern "C" void __wrap__free_r(struct _reent *reent, void *ptr) {
-  cmpct_free(ptr);
+  vPortFree(ptr);
 }
 
 // Early initialization before static initialization. This will
@@ -104,7 +108,49 @@ extern "C" void page_free(void* start, size_t pages) {
   return page_allocator->FreePages(start, pages);
 }
 
+static void ConfigureMPU() {
+  // Disable the MPU for configuration.
+  HAL_MPU_Disable();
+
+  // Configure the MPU attributes as write-through for SRAM.
+  MPU_Region_InitTypeDef MPU_InitStruct;
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.BaseAddress = 0x20010000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_256KB;
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+  MPU_InitStruct.SubRegionDisable = 0x00;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  // Enable the MPU with new configuration.
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+}
+
+static void EnableCPUCache() {
+  // Enable branch prediction.
+  SCB->CCR |= (1 <<18);
+  __DSB();
+
+  // Enable I-Cache.
+  SCB_EnableICache();
+
+  // Enable D-Cache.
+  SCB_EnableDCache();
+}
+
 int main() {
+  // Configure the MPU attributes as Write Through.
+  ConfigureMPU();
+
+  // Enable the CPU Cache.
+  EnableCPUCache();
+
   // Reset of all peripherals, and initialize the Flash interface and
   // the Systick.
   HAL_Init();

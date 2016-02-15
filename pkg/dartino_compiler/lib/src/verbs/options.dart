@@ -8,6 +8,8 @@ import '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
+const bool isBatchMode = const bool.fromEnvironment("dartino-batch-mode");
+
 typedef R ArgumentParser<R>(String argument);
 
 enum OptionKind {
@@ -148,7 +150,7 @@ class Options {
     List<String> nonOptionArguments = <String>[];
     bool analyzeOnly = false;
     bool fatalIncrementalFailures = false;
-    bool terminateDebugger = false;
+    bool terminateDebugger = isBatchMode;
 
     Iterator<String> iterator = options.iterator;
 

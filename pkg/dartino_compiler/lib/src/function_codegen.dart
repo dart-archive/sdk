@@ -7,10 +7,19 @@ library dartino_compiler.function_codegen;
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
 
-import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/tree/tree.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
+    FunctionElement,
+    FunctionSignature,
+    LocalElement,
+    ParameterElement;
 
-import 'dartino_context.dart';
+import 'package:compiler/src/tree/tree.dart' show
+    FunctionExpression;
+
+import 'dartino_context.dart' show
+    BytecodeLabel,
+    DartinoContext;
 
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
@@ -18,22 +27,26 @@ import 'dartino_function_builder.dart' show
 import 'dartino_registry.dart' show
     DartinoRegistry;
 
-import 'closure_environment.dart';
+import 'closure_environment.dart' show
+    ClosureEnvironment,
+    ClosureInfo;
 
-import 'codegen_visitor.dart';
+import 'codegen_visitor.dart' show
+    CodegenVisitor,
+    DartinoRegistryMixin,
+    LocalValue,
+    UnboxedLocalValue;
 
-class FunctionCodegen extends CodegenVisitor with DartinoRegistryMixin {
-  final DartinoRegistry registry;
+abstract class FunctionCodegenBase extends CodegenVisitor {
   int setterResultSlot;
 
-  FunctionCodegen(DartinoFunctionBuilder functionBuilder,
-                  DartinoContext context,
-                  TreeElements elements,
-                  this.registry,
-                  ClosureEnvironment closureEnvironment,
-                  FunctionElement function)
-      : super(functionBuilder, context, elements,
-              closureEnvironment, function);
+  FunctionCodegenBase(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      FunctionElement function)
+      : super(functionBuilder, context, elements, closureEnvironment, function);
 
   FunctionElement get function => element;
 
@@ -131,4 +144,17 @@ class FunctionCodegen extends CodegenVisitor with DartinoRegistryMixin {
       assembler.loadSlot(setterResultSlot);
     }
   }
+}
+
+class FunctionCodegen extends FunctionCodegenBase with DartinoRegistryMixin {
+  final DartinoRegistry registry;
+
+  FunctionCodegen(
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      this.registry,
+      ClosureEnvironment closureEnvironment,
+      FunctionElement function)
+      : super(functionBuilder, context, elements, closureEnvironment, function);
 }

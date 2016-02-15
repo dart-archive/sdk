@@ -17,7 +17,7 @@ import '../bytecodes.dart' show
     Bytecode,
     Opcode;
 
-import 'dartino_context.dart';
+import 'dartino_system_builder.dart';
 import 'bytecode_assembler.dart';
 
 import '../dartino_system.dart';
@@ -30,8 +30,8 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
    * If the functions is an instance member, [memberOf] is set to the id of the
    * class.
    *
-   * If [memberOf] is set, the compiled function takes an 'this' argument in
-   * addition to that of [signature].
+   * If [memberOf] is set, the compiled function takes a 'this' argument in
+   * addition to those of [signature].
    */
   final Map<ConstantValue, int> constants = <ConstantValue, int>{};
   final Map<int, ConstantValue> functionConstantValues = <int, ConstantValue>{};
@@ -53,9 +53,10 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
       {String name,
        Element element,
        FunctionSignature signature,
-       int memberOf})
+       int memberOf: -1})
       : super(functionId, kind, arity, name, element, signature, memberOf),
         assembler = new BytecodeAssembler(arity) {
+    assert(memberOf is int);
     assert(signature == null ||
         arity == (signature.parameterCount + (isInstanceMember ? 1 : 0)));
   }
@@ -86,18 +87,8 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
     return allocateConstant(constant);
   }
 
-  // TODO(ajohnsen): Remove this function when usage is avoided in
-  // DartinoBackend.
-  void copyFrom(DartinoFunctionBuilder function) {
-    assembler.bytecodes.addAll(function.assembler.bytecodes);
-    assembler.catchRanges.addAll(function.assembler.catchRanges);
-    constants.addAll(function.constants);
-    functionConstantValues.addAll(function.functionConstantValues);
-    classConstantValues.addAll(function.classConstantValues);
-  }
-
   DartinoFunction finalizeFunction(
-      DartinoContext context,
+      DartinoSystemBuilder systemBuilder,
       List<VmCommand> commands) {
     int constantCount = constants.length;
     for (int i = 0; i < constantCount; i++) {
@@ -123,11 +114,11 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
         element,
         signature,
         assembler.bytecodes,
-        createDartinoConstants(context),
+        createDartinoConstants(systemBuilder),
         memberOf);
   }
 
-  List<DartinoConstant> createDartinoConstants(DartinoContext context) {
+  List<DartinoConstant> createDartinoConstants(DartinoSystemBuilder builder) {
     List<DartinoConstant> dartinoConstants = <DartinoConstant>[];
 
     constants.forEach((constant, int index) {
@@ -139,7 +130,7 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
           dartinoConstants.add(
               new DartinoConstant(constant.classId, MapId.classes));
         } else {
-          int id = context.lookupConstantIdByValue(constant);
+          int id = builder.lookupConstantIdByValue(constant);
           if (id == null) {
             throw "Unsupported constant: ${constant.toStructuredString()}";
           }

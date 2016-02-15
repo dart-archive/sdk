@@ -66,7 +66,8 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
     }
   }
 
-  Expect.equals(0, await run(state, testDebuggerCommands: debuggerCommands));
+  int result = await run(state, [], testDebuggerCommands: debuggerCommands);
+  Expect.equals(0, result);
 
   int exitCode = await state.dartinoVm.exitCode;
 
@@ -137,7 +138,7 @@ Future<Map<String, NoArgFuture>> listTests() async {
 }
 
 main(List<String> args) async {
-  args = args.map((a) => 'debugger/$a');
+  args = args.map((a) => 'debugger/$a').toList();
   Map<String, NoArgFuture> tests = await listTestsInternal(true);
   for (String name in tests.keys) {
     if (args.isEmpty || args.contains(name)) await tests[name]();

@@ -29,6 +29,9 @@ import 'src/dartino_selector.dart' show
 import 'src/dartino_system_printer.dart' show
     DartinoSystemPrinter;
 
+import 'dartino_class.dart' show
+    DartinoClass;
+
 enum DartinoFunctionKind {
   NORMAL,
   LAZY_FIELD_INITIALIZER,
@@ -44,30 +47,6 @@ class DartinoConstant {
   const DartinoConstant(this.id, this.mapId);
 
   String toString() => "DartinoConstant($id, $mapId)";
-}
-
-// TODO(ajohnsen): Move to separate file.
-class DartinoClass {
-  final int classId;
-  final String name;
-  final ClassElement element;
-  final int superclassId;
-  final int superclassFields;
-  final PersistentMap<int, int> methodTable;
-  final List<FieldElement> fields;
-
-  const DartinoClass(
-      this.classId,
-      this.name,
-      this.element,
-      this.superclassId,
-      this.superclassFields,
-      this.methodTable,
-      this.fields);
-
-  bool get hasSuperclassId => superclassId >= 0;
-
-  String toString() => "DartinoClass($classId, '$name')";
 }
 
 // TODO(ajohnsen): Move to separate file.
@@ -98,7 +77,7 @@ abstract class DartinoFunctionBase {
       this.signature,
       this.memberOf);
 
-  bool get isInstanceMember => memberOf != null;
+  bool get isInstanceMember => memberOf >= 0;
   bool get isInternal => element == null;
 
   bool get isLazyFieldInitializer {
@@ -210,6 +189,8 @@ class DartinoSystem {
   final PersistentMap<ConstructorElement, DartinoFunction>
       constructorInitializersByElement;
 
+  final PersistentMap<FieldElement, int> lazyFieldInitializersByElement;
+
   final PersistentMap<int, int> tearoffsById;
 
   // classesByElement is a subset of classesById: Some classes do not
@@ -232,6 +213,7 @@ class DartinoSystem {
       this.functionsById,
       this.functionsByElement,
       this.constructorInitializersByElement,
+      this.lazyFieldInitializersByElement,
       this.tearoffsById,
       this.classesById,
       this.classesByElement,
@@ -271,6 +253,10 @@ class DartinoSystem {
   DartinoFunction lookupConstructorInitializerByElement(
       ConstructorElement element) {
     return constructorInitializersByElement[element];
+  }
+
+  int lookupLazyFieldInitializerByElement(FieldElement field) {
+    return lazyFieldInitializersByElement[field];
   }
 
   /// Map from the ID of a [DartinoFunction] to the ID of its corresponding

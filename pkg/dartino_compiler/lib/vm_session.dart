@@ -16,6 +16,9 @@ import 'dart:typed_data' show
 import 'vm_commands.dart';
 import 'dartino_system.dart';
 
+import 'dartino_class.dart' show
+    DartinoClass;
+
 import 'incremental/dartino_compiler_incremental.dart'
     show IncrementalCompiler;
 
@@ -255,12 +258,12 @@ class Session extends DartinoVmSession {
     await runCommand(const Debugging());
   }
 
-  Future spawnProcess() async {
-    await runCommand(const ProcessSpawnForMain());
+  Future spawnProcess(List<String> arguments) async {
+    await runCommand(new ProcessSpawnForMain(arguments));
   }
 
-  Future run() async {
-    await spawnProcess();
+  Future run(List<String> arguments) async {
+    await spawnProcess(arguments);
     loaded = true;
     await runCommand(const ProcessRun());
     // NOTE: The [ProcessRun] command normally results in a
@@ -281,7 +284,8 @@ class Session extends DartinoVmSession {
       SessionState state,
       {bool echo: false}) async {
     await enableDebugger();
-    await spawnProcess();
+    // TODO(ahe): Arguments?
+    await spawnProcess([]);
     return new InputHandler(this, inputLines, echo, base).run(state);
   }
 

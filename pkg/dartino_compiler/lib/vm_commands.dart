@@ -834,12 +834,26 @@ class PushNewDouble extends VmCommand {
 }
 
 class ProcessSpawnForMain extends VmCommand {
-  const ProcessSpawnForMain()
+  final List<String> arguments;
+
+  const ProcessSpawnForMain(this.arguments)
       : super(VmCommandCode.ProcessSpawnForMain);
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "";
+  void internalAddTo(
+      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+    buffer.addUint32(arguments.length);
+    for (String argument in arguments) {
+      List<int> payload = UTF8.encode(argument);
+      buffer
+        ..addUint32(payload.length)
+        ..addUint8List(payload);
+    }
+    buffer.sendOn(sink, code);
+  }
+
+  String valuesToString() => "$arguments";
 }
 
 class ProcessDebugInterrupt extends VmCommand {

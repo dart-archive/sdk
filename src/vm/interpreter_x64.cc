@@ -408,7 +408,7 @@ void InterpreterGeneratorX64::GenerateEpilogue() {
   __ Bind(&check_debug_interrupt);
   __ cmpq(RAX, Immediate(Process::kStackCheckDebugInterrupt));
   __ j(NOT_EQUAL, &overflow);
-  __ movq(RAX, Immediate(Interpreter::kBreakPoint));
+  __ movq(RAX, Immediate(Interpreter::kBreakpoint));
   __ jmp(&done_);
 
   __ Bind(&stay_fast);

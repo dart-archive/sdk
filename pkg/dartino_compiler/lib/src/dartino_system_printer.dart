@@ -5,9 +5,11 @@
 library dartino_compiler.dartino_system_printer;
 
 import '../dartino_system.dart' show
-    DartinoClass,
     DartinoFunction,
     DartinoSystem;
+
+import '../dartino_class.dart' show
+    DartinoClass;
 
 import 'package:compiler/src/util/uri_extras.dart' show
     relativize;

@@ -102,23 +102,24 @@ Process* Program::SpawnProcess(Process* parent) {
   return process;
 }
 
-Process* Program::ProcessSpawnForMain() {
+Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   if (Flags::print_program_statistics) {
     PrintStatistics();
   }
 
   Process* process = SpawnProcess(NULL);
+  process->set_arguments(arguments);
+
   Function* entry = process->entry();
-  int main_arity = process->main_arity();
   process->SetupExecutionStack();
   Stack* stack = process->stack();
   uint8_t* bcp = entry->bytecode_address_for(0);
   word top = stack->length();
+  // Push empty slot, fp and bcp.
   stack->set(--top, NULL);
   stack->set(--top, NULL);
   Object** frame_pointer = stack->Pointer(top);
   stack->set(--top, NULL);
-  stack->set(--top, Smi::FromWord(main_arity));
   // Push empty slot, fp and bcp.
   stack->set(--top, NULL);
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
@@ -403,6 +404,8 @@ void Program::ValidateSharedHeap() {
 }
 
 void Program::CollectGarbage() {
+  ClearCache();
+
   SemiSpace* to = new SemiSpace(heap_.space()->Used() / 10);
   ScavengeVisitor scavenger(heap_.space(), to);
 
@@ -1125,5 +1128,8 @@ LookupCache* Program::EnsureCache() {
   return cache_;
 }
 
+void Program::ClearCache() {
+  if (cache_ != NULL) cache_->Clear();
+}
 
 }  // namespace dartino

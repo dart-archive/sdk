@@ -205,7 +205,7 @@ class DartinoContext {
 
   void registerConstructedConstantValue(ConstructedConstantValue value) {
     ClassElement classElement = value.type.element;
-    backend.registerClassElement(classElement);
+    backend.systemBuilder.getClassBuilder(classElement, backend);
     // TODO(ahe): This should not be required. Also, instantiate type,
     // not class.
     DartinoRegistry registry = new DartinoRegistry(compiler);
@@ -220,10 +220,6 @@ class DartinoContext {
   void markConstantUsed(ConstantValue constant) {
     backend.systemBuilder.registerConstant(constant, this);
   }
-
-  // TODO(zarah): Remove this and use the DartinoSystemBuilder
-  int lookupConstantIdByValue(ConstantValue value) =>
-      backend.systemBuilder.lookupConstantIdByValue(value);
 
   /// If [isConst] is true, a compile-time error is reported.
   ConstantExpression compileConstant(

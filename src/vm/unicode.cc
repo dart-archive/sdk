@@ -51,6 +51,29 @@ bool CodePointIterator::Next() {
   return false;
 }
 
+intptr_t Utf8::CodeUnitCount(const uint8_t* utf8_array,
+                             intptr_t array_len,
+                             Type* type) {
+  intptr_t len = 0;
+  Type char_type = kLatin1;
+  for (intptr_t i = 0; i < array_len; i++) {
+    uint8_t code_unit = utf8_array[i];
+    if (!IsTrailByte(code_unit)) {
+      ++len;
+      if (!IsLatin1SequenceStart(code_unit)) {  // > U+00FF
+        if (IsSupplementarySequenceStart(code_unit)) {  // >= U+10000
+          char_type = kSupplementary;
+          ++len;
+        } else if (char_type == kLatin1) {
+          char_type = kBMP;
+        }
+      }
+    }
+  }
+  *type = char_type;
+  return len;
+}
+
 word Utf8::Length(int32 ch) {
   if (ch <= kMaxOneByteChar) {
     return 1;
@@ -118,6 +141,64 @@ void Utf16::Encode(int32 codepoint, uint16_t* dst) {
   ASSERT(dst != NULL);
   dst[0] = (Utf16::kLeadSurrogateOffset + (codepoint >> 10));
   dst[1] = (0xDC00 + (codepoint & 0x3FF));
+}
+
+intptr_t Utf8::Decode(const uint8_t* utf8_array,
+                      intptr_t array_len,
+                      int32_t* dst) {
+  uint32_t ch = utf8_array[0] & 0xFF;
+  intptr_t i = 1;
+  if (ch >= 0x80) {
+    intptr_t num_trail_bytes = kTrailBytes[ch];
+    bool is_malformed = false;
+    for (; i < num_trail_bytes; ++i) {
+      if (i < array_len) {
+        uint8_t code_unit = utf8_array[i];
+        is_malformed |= !IsTrailByte(code_unit);
+        ch = (ch << 6) + code_unit;
+      } else {
+        *dst = -1;
+        return 0;
+      }
+    }
+    ch -= kMagicBits[num_trail_bytes];
+    if (!((is_malformed == false) &&
+          (i == num_trail_bytes) &&
+          !Utf::IsOutOfRange(ch) &&
+          !IsNonShortestForm(ch, i))) {
+      *dst = -1;
+      return 0;
+    }
+  }
+  *dst = ch;
+  return i;
+}
+
+bool Utf8::DecodeToUTF16(const uint8_t* utf8_array,
+                         intptr_t array_len,
+                         uint16_t* dst,
+                         intptr_t len) {
+  intptr_t i = 0;
+  intptr_t j = 0;
+  intptr_t num_bytes;
+  for (; (i < array_len) && (j < len); i += num_bytes, ++j) {
+    int32_t ch;
+    bool is_supplementary = IsSupplementarySequenceStart(utf8_array[i]);
+    num_bytes = Utf8::Decode(&utf8_array[i], (array_len - i), &ch);
+    if (ch == -1) {
+      return false;  // Invalid input.
+    }
+    if (is_supplementary) {
+      Utf16::Encode(ch, &dst[j]);
+      j = j + 1;
+    } else {
+      dst[j] = ch;
+    }
+  }
+  if ((i < array_len) && (j == len)) {
+    return false;  // Output overflow.
+  }
+  return true;  // Success.
 }
 
 }  // namespace dartino

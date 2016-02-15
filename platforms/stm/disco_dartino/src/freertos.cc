@@ -5,6 +5,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
+#include "platforms/stm/disco_dartino/src/cmpctmalloc.h"
 #include "src/shared/assert.h"
 
 // Hook called by FreeRTOS when a stack overflow is detected.
@@ -16,4 +17,36 @@ extern "C" void vApplicationStackOverflowHook(
 // Hook called by FreeRTOS when allocation failed.
 extern "C" void vApplicationMallocFailedHook() {
   FATAL("Out of memory.\n");
+}
+
+extern "C" void *pvPortMalloc(size_t size) {
+  void *pvReturn;
+  vTaskSuspendAll();
+
+  pvReturn = cmpct_alloc(size);
+  traceMALLOC(pvReturn, size);
+
+  xTaskResumeAll();
+
+  return pvReturn;
+}
+
+extern "C" void vPortFree(void *ptr) {
+  vTaskSuspendAll();
+
+  cmpct_free(ptr);
+  traceFREE(ptr, 0);
+
+  xTaskResumeAll();
+}
+
+extern "C" void *suspendingRealloc(void *ptr, size_t size) {
+  void *pvReturn;
+  vTaskSuspendAll();
+
+  pvReturn = cmpct_realloc(ptr, size);
+
+  xTaskResumeAll();
+
+  return pvReturn;
 }

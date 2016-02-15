@@ -30,6 +30,10 @@
       'toolsets': ['target'],
       'dependencies': [
         'driver',
+	# The natives mapping is required by the compiler dartino relies on.
+        '../../shared/shared.gyp:natives_json',
+	# We need a dartino-vm to talk to.
+        '../../vm/vm.gyp:dartino-vm',
       ],
       'defines': [
         'DARTINOC_LIBRARY_ROOT="../../lib"',

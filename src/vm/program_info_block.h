@@ -17,10 +17,7 @@ class ProgramInfoBlock {
 
   Object** roots() { return &entry_; }
 
-  void* end_of_roots() { return &main_arity_; }
-
-  void set_main_arity(int arity) { main_arity_ = arity; }
-  int main_arity() { return main_arity_; }
+  void* end_of_roots() { return &end_; }
 
  private:
   // This has to remain in sync with all the roots that are traversed by
@@ -31,9 +28,7 @@ class ProgramInfoBlock {
 #define ROOT_DECLARATION(type, name, CamelName) type* name##_;
   ROOTS_DO(ROOT_DECLARATION)
 #undef ROOT_DECLARATION
-  // We also store the arity of main. This field is also used as a marker
-  // of the end of the roots data structure.
-  intptr_t main_arity_;
+  void* end_[0];
 };
 
 }  // namespace dartino

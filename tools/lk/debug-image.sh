@@ -13,7 +13,8 @@ function follow_links() {
 }
 
 if [ -z "$1" ]; then
-  echo "Usage: $0 [options] <image file>"
+  echo "Usage: $0 [options] <elf file>"
+  echo "Eg:    $0 third_party/lk/out/build-stm32f746g-disco-test/lk.elf"
   exit 1
 fi
 
@@ -26,21 +27,44 @@ if [ ! -e $1 ]; then
   exit 1
 fi
 
-# We need to start openocd in its own processgroup, as otherwise it would
-# see the SIGINT commonly used in gdb to interrupt program execution.
-# openocd terminates on SIGINT :(
-sh -ic "$OPENOCDHOME/bin/openocd                               \
+echo Starting openocd
+$OPENOCDHOME/bin/openocd                                       \
     -f interface/${STLINK}.cfg                                 \
     -f board/${BOARD}.cfg                                      \
     --search $OPENOCDHOME/share/openocd/scripts                \
-    -l /tmp/openocd.log" < /dev/null &
+    -l /tmp/openocd.log < /dev/null &
 PID=$!
+
+function cleanup {
+  if ! kill $PID; then
+    echo Failed to kill openocd process $PID
+    echo Killing all openocd processes instead
+    killall openocd
+  fi
+}
 
 while ! nc -vz localhost 3333; do
   sleep 0.1
 done
 
-$GDB $1 --eval-command="tar remote :3333" \
-    --eval-command="mon reset halt"
+cat <<END
+[32;1m
+Find stderr on /dev/ttyACM0
+Type 'c' in gdb to start the image
+[0m
+END
 
-kill $PID
+if [ ! -x $GDB ]; then
+  echo "No gdb executable found at $GDB"
+  echo "Use --gdb <exefile> to indicate where your gdb is located"
+  cleanup
+  exit 1
+fi
+
+# We need to start gdb in its own processgroup, as otherwise openocd would
+# see the SIGINT commonly used in gdb to interrupt program execution.
+# openocd terminates on SIGINT :(
+sh -ic "$GDB $1 --eval-command='tar remote :3333' \
+    --eval-command='mon reset halt'"
+
+cleanup

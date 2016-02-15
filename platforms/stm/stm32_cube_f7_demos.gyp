@@ -53,6 +53,10 @@
       'include_dirs': [
         '<(project_include_path)',
       ],
+      'defines': [
+        'USE_STM32746G_DISCOVERY',
+        'USE_STM32746G_DISCO',
+      ],
       'sources': [
         # Application.
         '<(project_source_path)/main.c',
@@ -132,6 +136,10 @@
       'include_dirs': [
         '<(project_include_path)',
       ],
+      'defines': [
+        'USE_STM32746G_DISCOVERY',
+        'USE_STM32746G_DISCO',
+      ],
       'sources': [
         # Application.
         '<(project_source_path)/main.c',
@@ -210,6 +218,10 @@
       ],
       'include_dirs': [
         '<(project_include_path)',
+      ],
+      'defines': [
+        'USE_STM32746G_DISCOVERY',
+        'USE_STM32746G_DISCO',
       ],
       'sources': [
         # Application.
@@ -304,6 +316,10 @@
       ],
       'includes': [
         'hal_sources.gypi',
+      ],
+      'defines': [
+        'USE_STM32746G_DISCOVERY',
+        'USE_STM32746G_DISCO',
       ],
       'sources': [
         # Application.
@@ -409,6 +425,10 @@
       'include_dirs': [
         '<(project_include_path)',
       ],
+      'defines': [
+        'USE_STM32746G_DISCOVERY',
+        'USE_STM32746G_DISCO',
+      ],
       'sources': [
         # Application.
         '<(project_source_path)/app_ethernet.c',
@@ -429,6 +449,9 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_lcd.c',
+
+        # FreeRTOS malloc. Used to be included via free_rtos_sources.gypi.
+        '<(stm32_cube_f7_free_rtos_src)/portable/MemMang/heap_3.c',
       ],
       'conditions': [
         ['OS=="mac"', {
@@ -498,6 +521,8 @@
       'defines': [
         'LWIP_TIMEVAL_PRIVATE=0',
         'DEMO_VERSION="1.0.1"',
+        'USE_STM32746G_DISCOVERY',
+        'USE_STM32746G_DISCO',
       ],
       'cflags' : [
         '-Wno-format',
@@ -569,6 +594,9 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_qspi.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_ts.c',
+
+        # FreeRTOS malloc. Used to be included via free_rtos_sources.gypi.
+        '<(stm32_cube_f7_free_rtos_src)/portable/MemMang/heap_3.c',
       ],
       'conditions': [
         ['OS=="mac"', {

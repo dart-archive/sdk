@@ -394,7 +394,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ Bind(&check_debug_interrupt);
   __ cmp(R0, Immediate(Process::kStackCheckDebugInterrupt));
   __ b(NE, &overflow);
-  __ mov(R0, Immediate(Interpreter::kBreakPoint));
+  __ mov(R0, Immediate(Interpreter::kBreakpoint));
   __ b(&done_);
 
   __ Bind(&stay_fast);

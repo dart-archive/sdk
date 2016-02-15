@@ -16,6 +16,7 @@ extern "C" {
 
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
+#include "platforms/stm/disco_dartino/src/button.h"
 #include "platforms/stm/disco_dartino/src/uart.h"
 #include "src/shared/utils.h"
 
@@ -25,14 +26,34 @@ extern unsigned char _binary_snapshot_size;
 
 extern PageAllocator* page_allocator;
 
-Uart* uart;
+Uart *uart;
+int uart_handle;
 
-extern "C" size_t UartRead(uint8_t* buffer, size_t count) {
-  return uart->Read(buffer, count);
+extern "C" size_t UartOpen() {
+  return uart_handle;
 }
 
-extern "C" size_t UartWrite(uint8_t* buffer, size_t count) {
-  return uart->Write(buffer, count);
+extern "C" size_t UartRead(int handle, uint8_t* buffer, size_t count) {
+  return GetUart(handle)->Read(buffer, count);
+}
+
+extern "C" size_t UartWrite(
+    int handle, uint8_t* buffer, size_t offset, size_t count) {
+  return GetUart(handle)->Write(buffer, offset, count);
+}
+
+extern "C" uint32_t UartGetError(int handle) {
+  return GetUart(handle)->GetError();
+}
+
+extern "C" size_t ButtonOpen() {
+  Button *button = new Button();
+  return button->Open();
+}
+
+extern "C" void ButtonNotifyRead(int handle) {
+  Button *button = GetButton(handle);
+  button->NotifyRead();
 }
 
 extern "C" void LCDDrawLine(
@@ -55,12 +76,19 @@ extern "C" int Write(int file, char *ptr, int len) {
 }
 
 DARTINO_EXPORT_TABLE_BEGIN
+  DARTINO_EXPORT_TABLE_ENTRY("uart_open", UartOpen)
   DARTINO_EXPORT_TABLE_ENTRY("uart_read", UartRead)
   DARTINO_EXPORT_TABLE_ENTRY("uart_write", UartWrite)
+  DARTINO_EXPORT_TABLE_ENTRY("uart_get_error", UartGetError)
+  DARTINO_EXPORT_TABLE_ENTRY("button_open", ButtonOpen)
+  DARTINO_EXPORT_TABLE_ENTRY("button_notify_read", ButtonNotifyRead)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_height", BSP_LCD_GetYSize)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_width", BSP_LCD_GetXSize)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_clear", BSP_LCD_Clear)
+  DARTINO_EXPORT_TABLE_ENTRY("lcd_read_pixel", BSP_LCD_ReadPixel)
+  DARTINO_EXPORT_TABLE_ENTRY("lcd_draw_pixel", BSP_LCD_DrawPixel)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_draw_line", LCDDrawLine)
+  DARTINO_EXPORT_TABLE_ENTRY("lcd_draw_circle", BSP_LCD_DrawCircle)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_set_foreground_color", BSP_LCD_SetTextColor)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_set_background_color", BSP_LCD_SetBackColor)
   DARTINO_EXPORT_TABLE_ENTRY("lcd_display_string", BSP_LCD_DisplayStringAt)
@@ -75,7 +103,7 @@ void StartDartino(void const * argument) {
   int snapshot_size =  reinterpret_cast<int>(&_binary_snapshot_size);
   DartinoProgram program = DartinoLoadSnapshot(snapshot, snapshot_size);
   dartino::Print::Out("Run dartino program\n");
-  DartinoRunMain(program);
+  DartinoRunMain(program, 0, NULL);
   dartino::Print::Out("Dartino program exited\n");
 }
 
@@ -83,9 +111,9 @@ void UartPrintIntercepter(const char* message, int out, void* data) {
   int len = strlen(message);
   for (int i = 0; i < len; i++) {
     if (message[i] == '\n') {
-      uart->Write(reinterpret_cast<const uint8_t*>("\r"), 1);
+      uart->Write(reinterpret_cast<const uint8_t*>("\r\n"), 0, 1);
     }
-    uart->Write(reinterpret_cast<const uint8_t*>(message + i), 1);
+    uart->Write(reinterpret_cast<const uint8_t*>(message + i), 0, 1);
   }
 }
 
@@ -125,13 +153,13 @@ void DartinoEntry(void const * argument) {
   LCD_LOG_SetHeader(reinterpret_cast<uint8_t*>(const_cast<char*>("Dartino")));
   LCD_LOG_SetFooter(reinterpret_cast<uint8_t*>(const_cast<char*>(
       "STM32746G-Discovery")));
-  DartinoRegisterPrintInterceptor(LCDPrintIntercepter, NULL);
 
   // For now always start the UART.
   uart = new Uart();
-  uart->Start();
+  uart_handle = uart->Open();
 
   DartinoRegisterPrintInterceptor(UartPrintIntercepter, NULL);
+  DartinoRegisterPrintInterceptor(LCDPrintIntercepter, NULL);
 
   // Always disable standard out, as this will cause infinite
   // recursion in the syscalls.c handling of write.

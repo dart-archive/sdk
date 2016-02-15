@@ -14,6 +14,8 @@
 #include <errno.h>
 #include <cmsis_os.h>
 
+#include "src/vm/object.h"
+#include "src/vm/vector.h"
 #include "src/shared/globals.h"
 
 #ifdef DEBUG
@@ -78,15 +80,6 @@ namespace dartino {
 
 static const int kMutexSize = sizeof(int32_t) * 3;
 static const int kSemaphoreSize = sizeof(int32_t) * 2;
-
-osMailQId GetDartinoMailQ();
-
-struct CmsisMessage {
-  uint32_t port_id;
-  int64 message;
-};
-
-int SendMessageCmsis(uint32_t port_id, int64_t message);
 
 // Forward declare [Platform::GetMicroseconds].
 namespace Platform {
@@ -172,6 +165,14 @@ class MonitorImpl {
     int status = osSemaphoreWait(wait_entry.semaphore_, microseconds / 1000);
     success = (status == osOK);
 #endif
+    if (success) {
+      CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
+      // Remove our entry from the waitlist. If we are no longer in the list,
+      // we have been notified before we could complete handling the timeout,
+      // so we need to return true.
+      if (!MaybeRemoveFromWaitList(&wait_entry)) success = true;
+      CHECK_AND_FAIL(osMutexRelease(internal_));
+    }
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
     return success;
   }
@@ -257,6 +258,27 @@ class MonitorImpl {
       last_waiting_->next_ = wait_entry;
     }
     last_waiting_ = wait_entry;
+  }
+
+  // Removes [wait_entry] from the wait list and returns true on success.
+  bool MaybeRemoveFromWaitList(WaitListEntry* wait_entry) {
+    WaitListEntry* prev = NULL;
+    WaitListEntry* curr = first_waiting_;
+    while (curr != wait_entry) {
+      // If we are no longer in the list, we do not need to clean up.
+      if (curr == last_waiting_) return false;
+      prev = curr;
+      curr = curr->next_;
+    }
+    if (prev == NULL) {
+      first_waiting_ = wait_entry->next_;
+    } else {
+      prev->next_ = wait_entry->next_;
+    }
+    if (last_waiting_ == wait_entry) {
+      last_waiting_ = prev;
+    }
+    return true;
   }
 
   osMutexDef(mutex_def_);

@@ -4,10 +4,20 @@
 
 library dartino_compiler.debug_info_constructor_codegen;
 
-import 'package:compiler/src/elements/elements.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    ConstructorElement,
+    Element,
+    FieldElement,
+    Name;
+
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
-import 'package:compiler/src/tree/tree.dart';
+
+import 'package:compiler/src/tree/tree.dart' show
+    CaseMatch,
+    Node,
+    Send;
+
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
 
@@ -17,15 +27,20 @@ import 'package:compiler/src/dart_types.dart' show
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
-import 'bytecode_assembler.dart';
-import 'closure_environment.dart';
-import 'codegen_visitor.dart';
+import 'bytecode_assembler.dart' show
+    BytecodeLabel;
+
+import 'closure_environment.dart' show
+    ClosureEnvironment;
+
+import 'codegen_visitor.dart' show
+    LocalValue;
 
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
-import 'dartino_class_builder.dart' show
-    DartinoClassBuilder;
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
 
 import 'dartino_registry.dart' show
     DartinoRegistry;
@@ -33,29 +48,38 @@ import 'dartino_registry.dart' show
 import 'debug_registry.dart' show
     DebugRegistry;
 
-import 'dartino_context.dart';
-import 'constructor_codegen.dart';
-import 'lazy_field_initializer_codegen.dart';
-import 'debug_info_lazy_field_initializer_codegen.dart';
-import 'debug_info.dart';
+import 'dartino_context.dart' show
+    BytecodeLabel,
+    DartinoCompilerImplementation,
+    DartinoContext;
 
-class DebugInfoConstructorCodegen extends ConstructorCodegen
+import 'constructor_codegen.dart' show
+    ConstructorCodegenBase;
+
+import 'debug_info_lazy_field_initializer_codegen.dart' show
+    DebugInfoLazyFieldInitializerCodegen;
+
+import 'debug_info.dart' show
+    DebugInfo;
+
+class DebugInfoConstructorCodegen extends ConstructorCodegenBase
     with DebugRegistry {
   final DebugInfo debugInfo;
   final DartinoCompilerImplementation compiler;
 
-  DebugInfoConstructorCodegen(this.debugInfo,
-                              DartinoFunctionBuilder functionBuilder,
-                              DartinoContext context,
-                              TreeElements elements,
-                              ClosureEnvironment closureEnvironment,
-                              ConstructorElement constructor,
-                              DartinoClassBuilder classBuilder,
-                              this.compiler)
-      : super(functionBuilder, context, elements, null,
-              closureEnvironment, constructor, classBuilder);
+  DebugInfoConstructorCodegen(
+      this.debugInfo,
+      DartinoFunctionBuilder functionBuilder,
+      DartinoContext context,
+      TreeElements elements,
+      ClosureEnvironment closureEnvironment,
+      ConstructorElement constructor,
+      DartinoClassBase classBase,
+      this.compiler)
+      : super(functionBuilder, context, elements, closureEnvironment,
+              constructor, classBase);
 
-  LazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
+  DebugInfoLazyFieldInitializerCodegen lazyFieldInitializerCodegenFor(
       DartinoFunctionBuilder function,
       FieldElement field) {
     TreeElements elements = field.resolvedAst.elements;

@@ -397,7 +397,7 @@ int HandleAtBytecode(Process* process, uint8* bcp, Object** sp) {
     if (debug_info->is_at_breakpoint()) {
       debug_info->ClearBreakpoint();
     } else if (debug_info->ShouldBreak(bcp, sp)) {
-      return Interpreter::kBreakPoint;
+      return Interpreter::kBreakpoint;
     }
   }
   return Interpreter::kReady;

@@ -33,7 +33,10 @@ from os.path import dirname
 
 utils = bot_utils.GetUtils()
 
-DEBUG_LOG=".debug.log"
+DEBUG_LOG = ".debug.log"
+FLAKY_LOG = ".flaky.log"
+QEMU_LOG = ".qemu_log"
+ALL_LOGS = [DEBUG_LOG, FLAKY_LOG, QEMU_LOG]
 
 GCS_COREDUMP_BUCKET = 'dartino-buildbot-coredumps'
 
@@ -95,45 +98,41 @@ def Main():
 
   # Accumulate daemon logs messages in '.debug.log' to be displayed on the
   # buildbot.Log
-  with open(DEBUG_LOG, 'w') as debug_log:
-    with utils.ChangedWorkingDirectory(DARTINO_PATH):
-
+  with utils.ChangedWorkingDirectory(DARTINO_PATH):
+    StepsCleanLogs()
+    with open(DEBUG_LOG, 'w') as debug_log:
       if dartino_match:
         system = dartino_match.group('system')
-
         if system == 'lk':
           StepsLK(debug_log)
-          return
-
-        if system == 'free-rtos':
+        elif system == 'free-rtos':
           StepsFreeRtos(debug_log)
-          return
-
-        modes = ['debug', 'release']
-        archs = ['ia32', 'x64']
-        asans = [False]
-        embedded_libs = [False]
-
-        # Split configurations?
-        partial_configuration =\
-          dartino_match.group('partial_configuration') != None
-        if partial_configuration:
-          architecture_match = dartino_match.group('architecture')
-          archs = {
-              'x86' : ['ia32', 'x64'],
-              'x64' : ['x64'],
-              'ia32' : ['ia32'],
-          }[architecture_match]
-
-          modes = [dartino_match.group('mode')]
-          asans = [bool(dartino_match.group('asan'))]
-          embedded_libs =[bool(dartino_match.group('embedded_libs'))]
-
-        sdk_build = dartino_match.group('sdk')
-        if sdk_build:
-          StepsSDK(debug_log, system, modes, archs, embedded_libs)
         else:
-          StepsNormal(debug_log, system, modes, archs, asans, embedded_libs)
+          modes = ['debug', 'release']
+          archs = ['ia32', 'x64']
+          asans = [False]
+          embedded_libs = [False]
+
+          # Split configurations?
+          partial_configuration =\
+            dartino_match.group('partial_configuration') != None
+          if partial_configuration:
+            architecture_match = dartino_match.group('architecture')
+            archs = {
+                'x86' : ['ia32', 'x64'],
+                'x64' : ['x64'],
+                'ia32' : ['ia32'],
+            }[architecture_match]
+
+            modes = [dartino_match.group('mode')]
+            asans = [bool(dartino_match.group('asan'))]
+            embedded_libs =[bool(dartino_match.group('embedded_libs'))]
+
+          sdk_build = dartino_match.group('sdk')
+          if sdk_build:
+            StepsSDK(debug_log, system, modes, archs, embedded_libs)
+          else:
+            StepsNormal(debug_log, system, modes, archs, asans, embedded_libs)
       elif cross_match:
         system = cross_match.group(1)
         arch = cross_match.group(2)
@@ -149,9 +148,24 @@ def Main():
         mode = target_match.group(2)
         arch = 'xarm'
         StepsTargetRunner(debug_log, system, mode, arch)
-
+  StepsShowLogs()
+  return 1 if bot.HAS_FAILURES else 0
 
 #### Buildbot steps
+
+def StepsCleanLogs():
+  with bot.BuildStep('Clean logs'):
+    for log in ALL_LOGS:
+      if os.path.exists(log):
+        print 'Removing logfile: %s' % log
+        os.remove(log)
+
+def StepsShowLogs():
+  for log in ALL_LOGS:
+    if os.path.exists(log):
+      with bot.BuildStep('Log %s' % log):
+        with open(log) as f:
+          print f.read()
 
 def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   no_clang = system == 'linux'
@@ -727,8 +741,6 @@ class PersistentDartinoDaemon(object):
     self._persistent = subprocess.Popen(
       [os.path.join(os.path.abspath(self._configuration['build_dir']), 'dart'),
        '-c',
-       # TODO(kustermann): Issue(396): Remove this --enable-dumpcore flag again.
-       '--abort-on-assertion-errors',
        '--packages=%s' % os.path.abspath('pkg/dartino_compiler/.packages'),
        '-Ddartino.version=%s' % version,
        'package:dartino_compiler/src/hub/hub_main.dart',
@@ -757,9 +769,10 @@ class PersistentDartinoDaemon(object):
       self._log_file.seek(0, os.SEEK_END)
 
   def __exit__(self, *_):
-    print "Trying to wait for existing dartino daemon."
+    pid = self._persistent.pid
+    print "Trying to wait for existing dartino daemon with pid: %s." % pid
     self._persistent.terminate()
-    self._persistent.wait()
+    print "Exitcode from persistent process: %s" % self._persistent.wait()
 
 class TemporaryHomeDirectory(object):
   """Creates a temporary directory and uses that as the home directory.
@@ -1011,6 +1024,7 @@ def MarkCurrentStep(fatal=True):
   # See
   # https://chromium.googlesource.com/chromium/tools/build/+/c63ec51491a8e47b724b5206a76f8b5e137ff1e7/scripts/master/chromium_step.py#495
   if fatal:
+    bot.HAS_FAILURES = True
     print '@@@STEP_FAILURE@@@'
   else:
     print '@@@STEP_WARNINGS@@@'
@@ -1020,4 +1034,4 @@ if __name__ == '__main__':
   # If main raises an exception we will get a very useful error message with
   # traceback written to stderr. We therefore intentionally do not catch
   # exceptions.
-  Main()
+  sys.exit(Main())

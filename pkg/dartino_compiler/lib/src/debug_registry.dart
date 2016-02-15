@@ -29,6 +29,15 @@ import 'dartino_context.dart' show
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
+import 'closure_environment.dart' show
+    ClosureInfo;
+
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
+
+import '../dartino_system.dart' show
+    DartinoFunctionBase;
+
 /// Turns off enqueuing when generating debug information.
 ///
 /// We generate debug information for one element at the time, on
@@ -48,15 +57,16 @@ abstract class DebugRegistry {
   void registerClosurization(FunctionElement element, _) { }
 
   int compileLazyFieldInitializer(FieldElement field) {
-    int index = context.getStaticFieldIndex(field, null);
+    return context.getStaticFieldIndex(field, null);
+  }
 
-    if (field.initializer == null) return index;
-
-    if (context.backend.lazyFieldInitializers.containsKey(field)) return index;
-
-    context.compiler.reporter.internalError(
-        field, "not compiled before use in debugger");
-    throw null;
+  DartinoClassBase getLocalFunctionClosureClass(
+      FunctionElement function,
+      ClosureInfo info) {
+    DartinoFunctionBase closureFunctionBase =
+        context.backend.systemBuilder.lookupFunctionByElement(function);
+    return
+        context.backend.systemBuilder.lookupClass(closureFunctionBase.memberOf);
   }
 
   void generateUnimplementedError(Spannable spannable, String reason) {

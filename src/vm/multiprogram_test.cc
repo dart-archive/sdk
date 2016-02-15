@@ -87,7 +87,7 @@ class Runner {
   void Start(int count) {
     ScopedMonitorLock locker(monitor_);
     for (int i = started_; i < started_ + count; i++) {
-      DartinoStartMain(programs_[i], &Runner::CaptureExitCode, this);
+      DartinoStartMain(programs_[i], &Runner::CaptureExitCode, this, 0, NULL);
     }
     started_ += count;
   }

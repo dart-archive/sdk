@@ -56,6 +56,9 @@ import 'dartino_function_builder.dart' show
 import 'dartino_class_builder.dart' show
     DartinoClassBuilder;
 
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
+
 import 'dartino_selector.dart';
 
 import '../dartino_system.dart';
@@ -269,19 +272,12 @@ abstract class CodegenVisitor
 
   List<Element> blockLocals = <Element>[];
 
-  /// A FunctionExpression in this set is a named local function declaration.
-  /// Many calls to such functions are statically bound. So if `f` is a named
-  /// local function declaration, `f()` doesn't need to be registered as a
-  /// dynamic send.
-  // TODO(ahe): Get rid of this by refactoring initializeLocal. See TODO there.
-  final Set<FunctionExpression> functionDeclarations =
-      new Set<FunctionExpression>();
-
-  CodegenVisitor(this.functionBuilder,
-                 this.context,
-                 TreeElements elements,
-                 this.closureEnvironment,
-                 this.element)
+  CodegenVisitor(
+      this.functionBuilder,
+      this.context,
+      TreeElements elements,
+      this.closureEnvironment,
+      this.element)
       : super(elements) {
     if (functionBuilder.isInstanceMember) {
       thisValue = new UnboxedParameterValue(0, null, assembler);
@@ -416,6 +412,10 @@ abstract class CodegenVisitor
   void registerClosurization(FunctionElement element, ClosureKind kind);
 
   int compileLazyFieldInitializer(FieldElement field);
+
+  DartinoClassBase getLocalFunctionClosureClass(
+      FunctionElement function,
+      ClosureInfo info);
 
   void invokeMethod(Node node, Selector selector) {
     registerDynamicUse(selector);
@@ -1025,10 +1025,9 @@ abstract class CodegenVisitor
       _) {
     registerClosurization(function, ClosureKind.tearOff);
     DartinoFunctionBase target = requireFunction(function);
-    DartinoClassBuilder classBuilder =
-        context.backend.createTearoffClass(target);
-    assert(classBuilder.fields == 0);
-    int constId = allocateConstantClassInstance(classBuilder.classId);
+    DartinoClassBase classBase = context.backend.getTearoffClass(target);
+    assert(classBase.fieldCount == 0);
+    int constId = allocateConstantClassInstance(classBase.classId);
     assembler.loadConst(constId);
     applyVisitState();
   }
@@ -1145,12 +1144,10 @@ abstract class CodegenVisitor
     registerClosurization(method, ClosureKind.superTearOff);
     loadThis();
     DartinoFunctionBase target = requireFunction(method);
-    DartinoClassBuilder classBuilder =
-        context.backend.createTearoffClass(target);
-    assert(classBuilder.fields == 1);
-    int constId = functionBuilder.allocateConstantFromClass(
-        classBuilder.classId);
-    assembler.allocate(constId, classBuilder.fields);
+    DartinoClassBase classBase = context.backend.getTearoffClass(target);
+    assert(classBase.fieldCount == 1);
+    int constId = functionBuilder.allocateConstantFromClass(classBase.classId);
+    assembler.allocate(constId, classBase.fieldCount);
     applyVisitState();
   }
 
@@ -1283,7 +1280,9 @@ abstract class CodegenVisitor
     do {
       // We need to find the mixin application of the class, where the field
       // is stored. Iterate until it's found.
-      classBuilder = context.backend.registerClassElement(classElement);
+      classBuilder =
+          context.backend.systemBuilder.getClassBuilder(classElement,
+                                                        context.backend);
       classElement = classElement.implementation;
       int i = 0;
       classElement.forEachInstanceField((_, FieldElement member) {
@@ -2499,19 +2498,16 @@ abstract class CodegenVisitor
     return thisClosureIndex;
   }
 
-  void visitFunctionExpression(FunctionExpression node) {
-    FunctionElement function = elements[node];
-
+  void handleLocalFunction(FunctionElement function) {
     // If the closure captures itself, thisClosureIndex is the field-index in
     // the closure.
     int thisClosureIndex = pushCapturedVariables(function);
     bool needToStoreThisReference = thisClosureIndex >= 0;
 
-    DartinoClassBuilder classBuilder = context.backend.createClosureClass(
-        function,
-        closureEnvironment);
-    int classConstant = functionBuilder.allocateConstantFromClass(
-        classBuilder.classId);
+    ClosureInfo info = closureEnvironment.closures[function];
+    DartinoClassBase classBase = getLocalFunctionClosureClass(function, info);
+    int classConstant =
+        functionBuilder.allocateConstantFromClass(classBase.classId);
 
     // NOTE: Currently we emit a storeField instruction in case a closure
     // captures itself. Changing fields makes it a mutable object.
@@ -2521,18 +2517,20 @@ abstract class CodegenVisitor
         closureEnvironment.shouldBeBoxed) && !needToStoreThisReference;
 
     assembler.allocate(
-        classConstant, classBuilder.fields, immutable: immutable);
+        classConstant, classBase.fieldCount, immutable: immutable);
 
     if (needToStoreThisReference) {
       assert(!immutable);
       assembler.dup();
       assembler.storeField(thisClosureIndex);
     }
+  }
 
-    if (!functionDeclarations.contains(node)) {
-      registerClosurization(function, ClosureKind.localFunction);
-    }
+  void visitFunctionExpression(FunctionExpression node) {
+    FunctionElement function = elements[node];
+    handleLocalFunction(function);
     applyVisitState();
+    registerClosurization(function, ClosureKind.localFunction);
   }
 
   void visitExpression(Expression node) {
@@ -2877,15 +2875,7 @@ abstract class CodegenVisitor
     assembler.bind(end);
   }
 
-  LocalValue initializeLocal(LocalElement element, Expression initializer) {
-    int slot = assembler.stackSize;
-    if (initializer != null) {
-      // TODO(ahe): If we can move this to the caller, then we don't need
-      // functionDeclarations.
-      visitForValue(initializer);
-    } else {
-      generateEmptyInitializer(element.node);
-    }
+  LocalValue allocateLocal(LocalElement element, int slot) {
     LocalValue value = createLocalValueFor(element, slot: slot);
     value.initialize(assembler);
     pushVariableDeclaration(value);
@@ -2900,14 +2890,24 @@ abstract class CodegenVisitor
   void visitVariableDefinitions(VariableDefinitions node) {
     for (Node definition in node.definitions) {
       LocalVariableElement element = elements[definition];
-      initializeLocal(element, element.initializer);
+      int slot = assembler.stackSize;
+      if (element.initializer != null) {
+        visitForValue(element.initializer);
+      } else {
+        generateEmptyInitializer(element.node);
+      }
+      allocateLocal(element, slot);
     }
   }
 
   void visitFunctionDeclaration(FunctionDeclaration node) {
-    FunctionExpression function = node.function;
-    functionDeclarations.add(function);
-    initializeLocal(elements[function], function);
+    FunctionExpression functionNode = node.function;
+    LocalFunctionElement function = elements[functionNode];
+    int slot = assembler.stackSize;
+    handleLocalFunction(function);
+    allocateLocal(function, slot);
+    // TODO(ahe): Remove the following line:
+    registerClosurization(function, ClosureKind.localFunction);
   }
 
   void visitSwitchStatement(SwitchStatement node) {
@@ -3283,5 +3283,17 @@ abstract class DartinoRegistryMixin {
 
   int compileLazyFieldInitializer(FieldElement field) {
     return context.backend.compileLazyFieldInitializer(field, registry);
+  }
+
+  DartinoClassBase getLocalFunctionClosureClass(
+      FunctionElement function,
+      ClosureInfo info) {
+    DartinoFunctionBuilder closureFunctionBuilder =
+        context.backend.systemBuilder.getClosureFunctionBuilder(
+            function, info, context.backend.compiledClosureClass,
+            context.backend);
+
+    return context.backend.systemBuilder.lookupClass(
+        closureFunctionBuilder.memberOf);
   }
 }

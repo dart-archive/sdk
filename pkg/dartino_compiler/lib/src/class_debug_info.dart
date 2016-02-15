@@ -6,7 +6,8 @@ library dartino_compiler.class_debug_info;
 
 import 'package:compiler/src/elements/elements.dart';
 
-import '../dartino_system.dart';
+import '../dartino_class.dart' show
+    DartinoClass;
 
 class ClassDebugInfo {
   final DartinoClass klass;

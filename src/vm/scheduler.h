@@ -21,10 +21,6 @@ class Port;
 class Process;
 class Scheduler;
 
-const int kCompileTimeErrorExitCode = 254;
-const int kUncaughtExceptionExitCode = 255;
-const int kBreakPointExitCode = 0;
-
 class WorkerThread {
  public:
   static void* RunThread(void* data);
@@ -74,6 +70,17 @@ class InterpretationBarrier {
 
 class Scheduler {
  public:
+  enum ProcessInterruptionEvent {
+    kUnhandled,
+    kRemainPaused,
+    kExitWithCompileTimeError,
+    kExitWithUncaughtException,
+    kExitWithUncaughtExceptionAndPrintStackTrace,
+    kExitWithUnhandledSignal,
+    kExitWithKilledSignal,
+    kExitWithoutError
+  };
+
   static void Setup();
   static void TearDown();
   static Scheduler* GlobalInstance() { return scheduler_; }
@@ -84,8 +91,11 @@ class Scheduler {
   void ScheduleProgram(Program* program, Process* main_process);
   void UnscheduleProgram(Program* program);
 
-  void StopProgram(Program* program);
-  void ResumeProgram(Program* program);
+  void StopProgram(Program* program, ProgramState::State stop_state) {
+    StopProgramInternal(program, stop_state, false);
+  }
+
+  void ResumeProgram(Program* program, ProgramState::State stop_state);
   void KillProgram(Program* program);
 
   void PauseGcThread();
@@ -118,21 +128,6 @@ class Scheduler {
   // A signal arrived for the process.
   void SignalProcess(Process* process);
 
-  // There are 4 reasons for the interpretation of a process to be interrupted:
-  //   * termination
-  //   * uncaught exception
-  //   * compile-time error
-  //   * break point
-  // these are the default implementations. They are called if no session
-  // is attached.
-  //
-  // TODO(kustermann): Once we've made more progress on the design of a
-  // multiprocess system, we should consider making an abstraction for these.
-  void ExitAtTermination(Process* process, Signal::Kind kind);
-  void ExitAtUncaughtException(Process* process, bool print_stack);
-  void ExitAtCompileTimeError(Process* process);
-  void ExitAtBreakpoint(Process* process);
-
  private:
   friend class Dartino;
   friend class WorkerThread;
@@ -159,6 +154,10 @@ class Scheduler {
   Semaphore interpreter_semaphore_;
   GCThread* gc_thread_;
 
+  void StopProgramInternal(Program* program,
+                           ProgramState::State stop_state,
+                           bool from_paused_interpreter);
+
   void DeleteTerminatedProcess(Process* process, Signal::Kind kind);
 
   // Exit the program for the given process with the given exit code.
@@ -167,6 +166,11 @@ class Scheduler {
   void RescheduleProcess(Process* process, bool terminate);
 
   bool RunInterpreterLoop(WorkerThread* worker);
+
+  // Caller must hold [pause_monitor_].
+  void PauseInterpreterLoop();
+  // Caller must hold [pause_monitor_].
+  void ResumeInterpreterLoop();
 
   // Interpret [process] as worker [worker]. Returns the next Process that
   // should be run.
@@ -179,6 +183,17 @@ class Scheduler {
   // The [process] will be enqueued on any thread. In case the program is paused
   // the process will be enqueued once the program is resumed.
   void EnqueueSafe(Process* process);
+
+  // Handlers for when the interpretation of a process has been interrupted.
+  void HandleTerminated(Process* process);
+  void HandleUncaughtException(Process* process);
+  void HandleCompileTimeError(Process* process);
+  void HandleBreakpoint(Process* process);
+  void HandleKilled(Process* process);
+  void HandleUnhandledSignal(Process* process);
+
+  void HandleEventResult(
+      ProcessInterruptionEvent result, Process* process, Process::State state);
 };
 
 class StoppedGcThreadScope {
@@ -202,6 +217,8 @@ class SimpleProgramRunner {
   void Run(int count,
            int* exitcodes,
            Program** programs,
+           int argc,
+           char** argv,
            Process** main_processes = NULL);
 
  private:

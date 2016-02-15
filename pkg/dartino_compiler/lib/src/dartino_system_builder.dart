@@ -23,10 +23,14 @@ import 'package:compiler/src/elements/elements.dart' show
     FieldElement,
     FunctionElement,
     FunctionSignature,
+    FunctionTypedElement,
     MemberElement;
 
 import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
+
+import 'package:compiler/src/common/names.dart' show
+    Identifiers;
 
 import 'package:persistent/persistent.dart' show
     PersistentMap;
@@ -35,6 +39,15 @@ import 'dartino_constants.dart' show
     DartinoClassConstant,
     DartinoFunctionConstant,
     DartinoClassInstanceConstant;
+
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
+
+import '../dartino_class.dart' show
+    DartinoClass;
+
+import 'closure_environment.dart' show
+    ClosureInfo;
 
 import 'dartino_class_builder.dart';
 import 'dartino_context.dart';
@@ -74,12 +87,23 @@ class DartinoSystemBuilder {
   final Map<Element, List<FunctionElement>> _replaceUsage =
       <Element, List<FunctionElement>>{};
 
+  final Map<FieldElement, int> _newLazyInitializersByElement =
+      <FieldElement, int>{};
+
   final Map<int, int> _newTearoffsById = <int, int>{};
 
   final int maxInt64 = (1 << 63) - 1;
   final int minInt64 = -(1 << 63);
 
   final Map<int, String> _symbolByDartinoSelectorId = <int, String>{};
+
+  // TODO(ahe): This should be queried from World.
+  final Map<ClassElement, Set<ClassElement>> directSubclasses =
+      <ClassElement, Set<ClassElement>>{};
+
+  /// Set of classes that have special meaning to the Dartino VM. They're
+  /// created using [PushBuiltinClass] instead of [PushNewClass].
+  final Set<ClassElement> builtinClasses = new Set<ClassElement>();
 
   DartinoSystemBuilder(DartinoSystem predecessorSystem)
       : this.predecessorSystem = predecessorSystem,
@@ -103,7 +127,7 @@ class DartinoSystemBuilder {
       {String name,
        Element element,
        FunctionSignature signature,
-       int memberOf,
+       int memberOf: -1,
        Element mapByElement}) {
     int nextFunctionId = functionIdStart + _newFunctions.length;
     DartinoFunctionBuilder builder = new DartinoFunctionBuilder(
@@ -128,7 +152,7 @@ class DartinoSystemBuilder {
       int memberOf,
       {DartinoFunctionKind kind: DartinoFunctionKind.NORMAL,
        Element mapByElement}) {
-    int arity = signature.parameterCount + (memberOf != null ? 1 : 0);
+    int arity = signature.parameterCount + (memberOf >= 0 ? 1 : 0);
     return newFunctionBuilder(
           kind,
           arity,
@@ -161,6 +185,24 @@ class DartinoSystemBuilder {
     return _functionBuildersByElement[element];
   }
 
+  int lookupLazyFieldInitializerByElement(FieldElement field) {
+    int functionId = _newLazyInitializersByElement[field];
+    if (functionId != null) return functionId;
+    return predecessorSystem.lookupLazyFieldInitializerByElement(field);
+  }
+
+  DartinoFunctionBuilder newLazyFieldInitializer(FieldElement field) {
+    // TODO(zarah): use unique name (which includes library and class)
+    DartinoFunctionBuilder builder = newFunctionBuilder(
+        DartinoFunctionKind.LAZY_FIELD_INITIALIZER,
+        0,
+        name: "${field.name} lazy initializer",
+        element: field
+    );
+    _newLazyInitializersByElement[field] = builder.functionId;
+    return builder;
+  }
+
   DartinoFunctionBase lookupConstructorInitializerByElement(
       ConstructorElement element) {
     assert(element.isImplementation);
@@ -175,7 +217,7 @@ class DartinoSystemBuilder {
         element.name,
         element,
         element.functionSignature,
-        null,
+        -1,
         kind: DartinoFunctionKind.INITIALIZER_LIST);
     _newConstructorInitializers[element] = builder;
     return builder;
@@ -269,24 +311,54 @@ class DartinoSystemBuilder {
 
   List<DartinoFunctionBuilder> getNewFunctions() => _newFunctions;
 
-  DartinoClassBuilder getTearoffClassBuilder(
-      DartinoFunctionBase function,
-      DartinoClassBuilder superclass) {
+  DartinoClassBase lookupTearoffClass(DartinoFunctionBase function) {
     int functionId = lookupTearOffById(function.functionId);
     if (functionId == null) return null;
     DartinoFunctionBase functionBuilder = lookupFunction(functionId);
-    DartinoClassBuilder classBuilder =
-        lookupClassBuilder(functionBuilder.memberOf);
+    return lookupClass(functionBuilder.memberOf);
+  }
+
+  DartinoClassBuilder getClassBuilder(
+      ClassElement element,
+      DartinoBackend backend,
+      {Map<ClassElement, SchemaChange> schemaChanges}) {
+    if (element == null) return null;
+    assert(element.isDeclaration);
+
+    DartinoClassBuilder classBuilder = lookupClassBuilderByElement(element);
     if (classBuilder != null) return classBuilder;
-    DartinoClass cls = lookupClass(functionBuilder.memberOf);
-    return newClassBuilderInternal(cls, superclass);
+
+    directSubclasses[element] = new Set<ClassElement>();
+    DartinoClassBuilder superclass =
+    getClassBuilder(
+        element.superclass, backend, schemaChanges: schemaChanges);
+    if (superclass != null) {
+      Set<ClassElement> subclasses = directSubclasses[element.superclass];
+      subclasses.add(element);
+    }
+    SchemaChange schemaChange;
+    if (schemaChanges != null) {
+      schemaChange = schemaChanges[element];
+    }
+    if (schemaChange == null) {
+      schemaChange = new SchemaChange(element);
+    }
+    classBuilder = newClassBuilder(
+        element, superclass, builtinClasses.contains(element), schemaChange);
+
+    // TODO(ajohnsen): Currently, the DartinoRegistry does not enqueue fields.
+    // This is a workaround, where we basically add getters for all fields.
+    classBuilder.updateImplicitAccessors(backend);
+
+    return classBuilder;
   }
 
   DartinoClassBuilder newClassBuilderInternal(
       DartinoClass klass,
-      DartinoClassBuilder superclass) {
-    DartinoClassBuilder builder = new DartinoPatchClassBuilder(
-        klass, superclass);
+      DartinoClassBuilder superclass,
+      SchemaChange schemaChange) {
+    DartinoClassBuilder builder =
+        new DartinoPatchClassBuilder(klass, superclass, schemaChange);
     assert(_newClasses[klass.classId] == null);
     _newClasses[klass.classId] = builder;
     return builder;
@@ -294,21 +366,23 @@ class DartinoSystemBuilder {
 
   DartinoClassBuilder newPatchClassBuilder(
       int classId,
-      DartinoClassBuilder superclass) {
+      DartinoClassBuilder superclass,
+      SchemaChange schemaChange) {
     DartinoClass klass = lookupClass(classId);
-    return newClassBuilderInternal(klass, superclass);
+    return newClassBuilderInternal(klass, superclass, schemaChange);
   }
 
   DartinoClassBuilder newClassBuilder(
       ClassElement element,
       DartinoClassBuilder superclass,
       bool isBuiltin,
+      SchemaChange schemaChange,
       {int extraFields: 0}) {
     if (element != null) {
       DartinoClass klass = predecessorSystem.lookupClassByElement(element);
       if (klass != null) {
         DartinoClassBuilder builder =
-            newClassBuilderInternal(klass, superclass);
+            newClassBuilderInternal(klass, superclass, schemaChange);
         _classBuildersByElement[element] = builder;
         return builder;
       }
@@ -326,12 +400,20 @@ class DartinoSystemBuilder {
     return builder;
   }
 
-  DartinoClass lookupClass(int classId) {
-    return predecessorSystem.classesById[classId];
+  DartinoClassBase lookupClass(int classId) {
+    DartinoClassBase builder = lookupClassBuilder(classId);
+    if (builder != null) return builder;
+    return predecessorSystem.lookupClassById(classId);
   }
 
   DartinoClassBuilder lookupClassBuilder(int classId) {
     return _newClasses[classId];
+  }
+
+  DartinoClassBase lookupClassByElement(ClassElement element) {
+    DartinoClassBase builder = lookupClassBuilderByElement(element);
+    if (builder != null) return builder;
+    return predecessorSystem.lookupClassByElement(element);
   }
 
   DartinoClassBuilder lookupClassBuilderByElement(ClassElement element) {
@@ -357,6 +439,10 @@ class DartinoSystemBuilder {
     });
   }
 
+  void registerBuiltinClass(ClassElement cls) {
+    builtinClasses.add(cls);
+  }
+
   void registerSymbol(String symbol, int dartinoSelectorId) {
     _symbolByDartinoSelectorId[dartinoSelectorId] = symbol;
   }
@@ -374,6 +460,35 @@ class DartinoSystemBuilder {
     _newParameterStubs[signature] = stub;
   }
 
+  DartinoFunctionBuilder getClosureFunctionBuilder(
+      FunctionElement function,
+      ClosureInfo info,
+      DartinoClassBuilder superclass,
+      DartinoBackend backend) {
+    DartinoFunctionBuilder closure = lookupFunctionBuilderByElement(function);
+    if (closure != null) return closure;
+
+    int fields = info.free.length;
+    if (info.isThisFree) fields++;
+
+    DartinoClassBuilder classBuilder = newClassBuilder(
+        null, superclass, false, new SchemaChange(null), extraFields: fields);
+    classBuilder.createIsFunctionEntry(
+        backend, function.functionSignature.parameterCount);
+
+    FunctionTypedElement implementation = function.implementation;
+
+    return newFunctionBuilderWithSignature(
+        Identifiers.call,
+        function,
+        // Parameter initializers are expressed in the potential
+        // implementation.
+        implementation.functionSignature,
+        classBuilder.classId,
+        kind: DartinoFunctionKind.NORMAL,
+        mapByElement: function.declaration);
+  }
+
   DartinoSystem computeSystem(DartinoContext context,
                               List<VmCommand> commands) {
     // TODO(ajohnsen): Consider if the incremental compiler should be aware of
@@ -384,6 +499,8 @@ class DartinoSystemBuilder {
 
     int changes = 0;
 
+    commands.add(const PrepareForChanges());
+
     // Remove all removed DartinoFunctions.
     for (DartinoFunction function in _removedFunctions) {
       commands.add(new RemoveFromMap(MapId.methods, function.functionId));
@@ -393,7 +510,7 @@ class DartinoSystemBuilder {
     List<DartinoFunction> functions = <DartinoFunction>[];
     for (DartinoFunctionBuilder builder in _newFunctions) {
       context.compiler.reporter.withCurrentElement(builder.element, () {
-        functions.add(builder.finalizeFunction(context, commands));
+        functions.add(builder.finalizeFunction(this, commands));
       });
     }
 
@@ -409,10 +526,9 @@ class DartinoSystemBuilder {
     // incremental.
     if (predecessorSystem.isEmpty) {
       context.forEachStatic((element, index) {
-        DartinoFunctionBuilder initializer =
-            context.backend.lazyFieldInitializers[element];
-        if (initializer != null) {
-          commands.add(new PushFromMap(MapId.methods, initializer.functionId));
+        int functionId = lookupLazyFieldInitializerByElement(element);
+        if (functionId != null) {
+          commands.add(new PushFromMap(MapId.methods, functionId));
           commands.add(const PushNewInitializer());
         } else {
           commands.add(const PushNull());
@@ -576,7 +692,7 @@ class DartinoSystemBuilder {
       changes++;
     }
 
-    // Change constants for the functions, now that classes and constants has
+    // Change constants for the functions, now that classes and constants have
     // been added.
     for (DartinoFunction function in functions) {
       List<DartinoConstant> constants = function.constants;
@@ -698,6 +814,20 @@ class DartinoSystemBuilder {
               element, functionsById[builder.functionId]);
     });
 
+    PersistentMap<FieldElement, int> lazyFieldInitializerByElement =
+        predecessorSystem.lazyFieldInitializersByElement;
+
+    _newLazyInitializersByElement.forEach((field, functionId) {
+      DartinoFunctionBase initializerFunction = null;
+      if (field.initializer != null)  {
+        initializerFunction = functionsById[functionId];
+      }
+
+      lazyFieldInitializerByElement =
+          lazyFieldInitializerByElement.insert(
+              field, initializerFunction?.functionId);
+    });
+
     PersistentMap<int, int> tearoffsById = predecessorSystem.tearoffsById;
     _newTearoffsById.forEach((int functionId, int stubId) {
       tearoffsById = tearoffsById.insert(functionId, stubId);
@@ -732,6 +862,7 @@ class DartinoSystemBuilder {
         functionsById,
         functionsByElement,
         constructorInitializersByElement,
+        lazyFieldInitializerByElement,
         tearoffsById,
         classesById,
         classesByElement,
@@ -741,5 +872,53 @@ class DartinoSystemBuilder {
         gettersByFieldIndex,
         settersByFieldIndex,
         parameterStubs);
+  }
+
+  bool get hasChanges {
+    var changes = [
+      _newFunctions,
+      _newClasses,
+      _newConstants,
+      _newParameterStubs,
+      _newGettersByFieldIndex,
+      _newSettersByFieldIndex,
+      _removedFunctions,
+      _functionBuildersByElement,
+      _classBuildersByElement,
+      _newConstructorInitializers,
+      _replaceUsage,
+      _newLazyInitializersByElement,
+      _newTearoffsById,
+      _symbolByDartinoSelectorId];
+    return changes.any((c) => c.isNotEmpty);
+  }
+}
+
+class SchemaChange {
+  final ClassElement cls;
+  final List<FieldElement> addedFields = <FieldElement>[];
+  final List<FieldElement> removedFields = <FieldElement>[];
+
+  int extraSuperFields = 0;
+
+  SchemaChange(this.cls);
+
+  void addRemovedField(FieldElement field) {
+    if (field.enclosingClass != cls) extraSuperFields--;
+    removedFields.add(field);
+  }
+
+  void addAddedField(FieldElement field) {
+    if (field.enclosingClass != cls) extraSuperFields++;
+    addedFields.add(field);
+  }
+
+  void addSchemaChange(SchemaChange other) {
+    for (FieldElement field in other.addedFields) {
+      addAddedField(field);
+    }
+    for (FieldElement field in other.removedFields) {
+      addRemovedField(field);
+    }
   }
 }

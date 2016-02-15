@@ -11,7 +11,8 @@
 /// Sense HAT.
 ///
 /// ```
-/// import 'package:os/os.dart' as os;
+/// import 'dart:dartino';
+///
 /// import 'package:raspberry_pi/sense_hat.dart';
 ///
 /// void draw(hat, c1, c2, c3) {
@@ -34,11 +35,11 @@
 ///
 ///   while (true) {
 ///     draw(hat, Color.red, Color.green, Color.blue);
-///     os.sleep(200);
+///     sleep(200);
 ///     draw(hat, Color.green, Color.blue, Color.red);
-///     os.sleep(200);
+///     sleep(200);
 ///     draw(hat, Color.blue, Color.red, Color.green);
-///     os.sleep(200);
+///     sleep(200);
 ///     var temp = hat.readTemperature();
 ///     var humidity = hat.readHumidity();
 ///     var pressure = hat.readPressure();

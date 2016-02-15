@@ -104,6 +104,17 @@ import 'package:compiler/src/library_loader.dart' show
 import 'package:persistent/persistent.dart' show
     PersistentMap;
 
+import 'package:compiler/src/common/names.dart' show
+    Identifiers,
+    Names;
+
+import 'package:compiler/src/universe/world_impact.dart' show
+    TransformedWorldImpact,
+    WorldImpact,
+    WorldImpactBuilder;
+
+import 'package:compiler/src/common/resolution.dart';
+
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
@@ -111,7 +122,14 @@ import 'dartino_class_builder.dart' show
     DartinoClassBuilder;
 
 import 'dartino_system_builder.dart' show
-    DartinoSystemBuilder;
+    DartinoSystemBuilder,
+    SchemaChange;
+
+import '../dartino_class_base.dart' show
+    DartinoClassBase;
+
+import '../dartino_class.dart' show
+    DartinoClass;
 
 import '../incremental_backend.dart' show
     IncrementalDartinoBackend;
@@ -127,37 +145,76 @@ import 'dartino_registry.dart' show
 import 'diagnostic.dart' show
    throwInternalError;
 
-import 'package:compiler/src/common/names.dart' show
-    Identifiers,
-    Names;
+import 'class_debug_info.dart' show
+    ClassDebugInfo;
 
-import 'package:compiler/src/universe/world_impact.dart' show
-    TransformedWorldImpact,
-    WorldImpact,
-    WorldImpactBuilder;
+import 'codegen_visitor.dart' show
+    CodegenVisitor,
+    LocalValue;
 
-import 'class_debug_info.dart';
-import 'codegen_visitor.dart';
-import 'debug_info.dart';
-import 'debug_info_constructor_codegen.dart';
-import 'debug_info_function_codegen.dart';
-import 'debug_info_lazy_field_initializer_codegen.dart';
-import 'dartino_context.dart';
-import 'dartino_selector.dart';
-import 'function_codegen.dart';
-import 'lazy_field_initializer_codegen.dart';
-import 'constructor_codegen.dart';
-import 'closure_environment.dart';
+import 'debug_info.dart' show
+    DebugInfo;
 
-import '../bytecodes.dart';
-import '../vm_commands.dart';
-import '../dartino_system.dart';
-import 'package:compiler/src/common/resolution.dart';
+import 'debug_info_function_codegen.dart' show
+    DebugInfoFunctionCodegen;
 
+import 'function_codegen.dart' show
+    FunctionCodegen,
+    FunctionCodegenBase;
+
+import 'debug_info_constructor_codegen.dart' show
+    DebugInfoConstructorCodegen;
+
+import 'lazy_field_initializer_codegen.dart' show
+    LazyFieldInitializerCodegen;
+
+import 'constructor_codegen.dart' show
+    ConstructorCodegen;
+
+import 'debug_info_lazy_field_initializer_codegen.dart' show
+    DebugInfoLazyFieldInitializerCodegen;
+
+import 'dartino_context.dart' show
+    BytecodeAssembler,
+    BytecodeLabel,
+    DartinoCompilerImplementation,
+    DartinoContext,
+    DartinoNativeDescriptor;
+
+import 'dartino_selector.dart' show
+    DartinoSelector,
+    SelectorKind;
+
+import 'closure_environment.dart' show
+    ClosureEnvironment,
+    ClosureInfo,
+    ClosureVisitor;
+
+import '../bytecodes.dart' show
+    Bytecode;
+
+import '../vm_commands.dart' show
+    MapId,
+    NewMap,
+    PushFromMap,
+    PushNewInteger,
+    VmCommand;
+
+import '../dartino_system.dart' show
+    DartinoConstant,
+    DartinoDelta,
+    DartinoFunction,
+    DartinoFunctionBase,
+    DartinoFunctionKind,
+    DartinoSystem,
+    ParameterStubSignature;
+
+//TODO(zarah): Move to dartino_system.dart
 const DartinoSystem BASE_DARTINO_SYSTEM = const DartinoSystem(
     const PersistentMap<int, DartinoFunction>(),
     const PersistentMap<Element, DartinoFunction>(),
     const PersistentMap<ConstructorElement, DartinoFunction>(),
+    const PersistentMap<FieldElement, int>(),
     const PersistentMap<int, int>(),
     const PersistentMap<int, DartinoClass>(),
     const PersistentMap<ClassElement, DartinoClass>(),
@@ -189,26 +246,9 @@ class DartinoBackend extends Backend
 
   final Set<FunctionElement> externals = new Set<FunctionElement>();
 
-  // TODO(ahe): This should be queried from World.
-  final Map<ClassElement, Set<ClassElement>> directSubclasses =
-      <ClassElement, Set<ClassElement>>{};
-
-  /// Set of classes that have special meaning to the Dartino VM. They're
-  /// created using [PushBuiltinClass] instead of [PushNewClass].
-  // TODO(ahe): Move this to DartinoSystem?
-  final Set<ClassElement> builtinClasses = new Set<ClassElement>();
-
   // TODO(ahe): This should be invalidated by a new [DartinoSystem].
   final Map<MemberElement, ClosureEnvironment> closureEnvironments =
       <MemberElement, ClosureEnvironment>{};
-
-  // TODO(ahe): This should be moved to [DartinoSystem].
-  final Map<FunctionElement, DartinoClassBuilder> closureClasses =
-      <FunctionElement, DartinoClassBuilder>{};
-
-  // TODO(ahe): This should be moved to [DartinoSystem].
-  final Map<FieldElement, DartinoFunctionBuilder> lazyFieldInitializers =
-      <FieldElement, DartinoFunctionBuilder>{};
 
   DartinoCompilerImplementation get compiler => super.compiler;
 
@@ -232,8 +272,6 @@ class DartinoBackend extends Backend
   FunctionElement dartinoUnresolved;
   FunctionElement dartinoCompileError;
 
-  DartinoClassBuilder compiledObjectClass;
-
   ClassElement smiClass;
   ClassElement mintClass;
   ClassElement growableListClass;
@@ -241,10 +279,10 @@ class DartinoBackend extends Backend
   ClassElement bigintClass;
   ClassElement uint32DigitsClass;
 
-  DartinoClassBuilder compiledClosureClass;
-
   /// Holds a reference to the class Coroutine if it exists.
   ClassElement coroutineClass;
+
+  ClassElement closureClass;
 
   DartinoSystemBuilder systemBuilder;
 
@@ -264,34 +302,15 @@ class DartinoBackend extends Backend
     systemBuilder = new DartinoSystemBuilder(predecessorSystem);
   }
 
-  DartinoClassBuilder registerClassElement(ClassElement element) {
-    if (element == null) return null;
-    assert(element.isDeclaration);
-
-    DartinoClassBuilder classBuilder =
-        systemBuilder.lookupClassBuilderByElement(element);
-    if (classBuilder != null) return classBuilder;
-
-    directSubclasses[element] = new Set<ClassElement>();
-    DartinoClassBuilder superclass = registerClassElement(element.superclass);
-    if (superclass != null) {
-      Set<ClassElement> subclasses = directSubclasses[element.superclass];
-      subclasses.add(element);
-    }
-    classBuilder = systemBuilder.newClassBuilder(
-        element, superclass, builtinClasses.contains(element));
-
-    // TODO(ajohnsen): Currently, the DartinoRegistry does not enqueue fields.
-    // This is a workaround, where we basically add getters for all fields.
-    classBuilder.updateImplicitAccessors(this);
-
-    return classBuilder;
+  // TODO(ahe): Where should this end up...?
+  DartinoClassBuilder get compiledClosureClass {
+    return systemBuilder.getClassBuilder(closureClass, this);
   }
 
   DartinoClassBuilder createCallableStubClass(
       int fields, int arity, DartinoClassBuilder superclass) {
     DartinoClassBuilder classBuilder = systemBuilder.newClassBuilder(
-        null, superclass, false, extraFields: fields);
+        null, superclass, false, new SchemaChange(null), extraFields: fields);
     classBuilder.createIsFunctionEntry(this, arity);
     return classBuilder;
   }
@@ -354,7 +373,7 @@ class DartinoBackend extends Backend
         return null;
       }
       if (hasMissingHelpers) return null;
-      if (builtin) builtinClasses.add(classImpl);
+      if (builtin) systemBuilder.registerBuiltinClass(classImpl);
       {
         // TODO(ahe): Register in ResolutionCallbacks. The lines in this block
         // should not happen at this point in time.
@@ -364,7 +383,7 @@ class DartinoBackend extends Backend
         // about the instantiated type.
         registry.registerInstantiatedType(classImpl.rawType);
       }
-      return registerClassElement(classImpl);
+      return systemBuilder.getClassBuilder(classImpl, this);
     });
     if (hasMissingHelpers) {
       throwInternalError(
@@ -394,7 +413,7 @@ class DartinoBackend extends Backend
             noSuchMethodName));
 
     if (coroutineClass != null) {
-      builtinClasses.add(coroutineClass);
+      systemBuilder.registerBuiltinClass(coroutineClass);
       alwaysEnqueue.add(coroutineClass.lookupLocalMember("_coroutineStart"));
     }
 
@@ -426,10 +445,11 @@ class DartinoBackend extends Backend
           String name,
           LibraryElement library,
           {bool builtin})) {
-    compiledObjectClass =
-        loadClass("Object", compiler.coreLibrary, builtin: true);
-    compiledClosureClass =
-        loadClass("_TearOffClosure", compiler.coreLibrary, builtin: true);
+    loadClass("Object", compiler.coreLibrary, builtin: true);
+    closureClass = loadClass(
+        "_TearOffClosure",
+        compiler.coreLibrary,
+        builtin: true)?.element;
     smiClass = loadClass("_Smi", compiler.coreLibrary, builtin: true)?.element;
     mintClass =
         loadClass("_Mint", compiler.coreLibrary, builtin: true)?.element;
@@ -490,20 +510,6 @@ class DartinoBackend extends Backend
     return super.stringImplementation;
   }
 
-  DartinoClassBuilder createClosureClass(
-      FunctionElement closure,
-      ClosureEnvironment closureEnvironment) {
-    return closureClasses.putIfAbsent(closure, () {
-      ClosureInfo info = closureEnvironment.closures[closure];
-      int fields = info.free.length;
-      if (info.isThisFree) fields++;
-      return createCallableStubClass(
-          fields,
-          closure.functionSignature.parameterCount,
-          compiledClosureClass);
-    });
-  }
-
   /**
    * Create a tearoff class for function [function].
    *
@@ -514,13 +520,12 @@ class DartinoBackend extends Backend
    * If [function] is an instance member, the class will have one field, the
    * instance.
    */
-  DartinoClassBuilder createTearoffClass(DartinoFunctionBase function) {
-    DartinoClassBuilder tearoffClass =
-        systemBuilder.getTearoffClassBuilder(function, compiledClosureClass);
-    if (tearoffClass != null) return tearoffClass;
+  DartinoClassBase getTearoffClass(DartinoFunctionBase function) {
+    DartinoClassBase base = systemBuilder.lookupTearoffClass(function);
+    if (base != null) return base;
     FunctionSignature signature = function.signature;
     bool hasThis = function.isInstanceMember;
-    tearoffClass = createCallableStubClass(
+    DartinoClassBuilder tearoffClass = createCallableStubClass(
         hasThis ? 1 : 0,
         signature.parameterCount,
         compiledClosureClass);
@@ -665,7 +670,7 @@ class DartinoBackend extends Backend
     DartinoClassBuilder holderClass;
     if (function.isInstanceMember || function.isGenerativeConstructor) {
       ClassElement enclosingClass = function.enclosingClass.declaration;
-      holderClass = registerClassElement(enclosingClass);
+      holderClass = systemBuilder.getClassBuilder(enclosingClass, this);
     }
     return internalCreateDartinoFunctionBuilder(
         function,
@@ -682,7 +687,7 @@ class DartinoBackend extends Backend
     if (functionBuilder != null) return functionBuilder;
 
     FunctionTypedElement implementation = function.implementation;
-    int memberOf = holderClass != null ? holderClass.classId : null;
+    int memberOf = holderClass != null ? holderClass.classId : -1;
     return systemBuilder.newFunctionBuilderWithSignature(
         name,
         function,
@@ -726,9 +731,8 @@ class DartinoBackend extends Backend
           compiler);
     } else if (function.isInitializerList) {
       ClassElement enclosingClass = element.enclosingClass;
-      // TODO(ajohnsen): Don't depend on the class builder.
-      DartinoClassBuilder classBuilder =
-          systemBuilder.lookupClassBuilderByElement(enclosingClass.declaration);
+      DartinoClassBase classBase = systemBuilder.lookupClassByElement(
+          enclosingClass.declaration);
       codegen = new DebugInfoConstructorCodegen(
           debugInfo,
           builder,
@@ -736,7 +740,7 @@ class DartinoBackend extends Backend
           elements,
           closureEnvironment,
           element,
-          classBuilder,
+          classBase,
           compiler);
     } else {
       codegen = new DebugInfoFunctionCodegen(
@@ -765,6 +769,8 @@ class DartinoBackend extends Backend
                                      codegen.assembler.bytecodes)) {
       throw 'Debug info code different from running code.';
     }
+    // The debug codegen should not modify the system builder.
+    assert(!systemBuilder.hasChanges);
     return debugInfo;
   }
 
@@ -947,10 +953,8 @@ class DartinoBackend extends Backend
 
     bool isImplicitFunction = false;
     if (function.memberContext != function) {
-      functionBuilder = internalCreateDartinoFunctionBuilder(
-          function,
-          Identifiers.call,
-          createClosureClass(function, closureEnvironment));
+      functionBuilder = systemBuilder.lookupFunctionBuilderByElement(function);
+      assert(functionBuilder != null);
       isImplicitFunction = true;
     } else {
       functionBuilder = createDartinoFunctionBuilder(function);
@@ -1003,7 +1007,8 @@ class DartinoBackend extends Backend
       classBuilder.addToMethodTable(dartinoSelector, functionBuilder);
       // Inject method into all mixin usages.
       getMixinApplicationsOfClass(classBuilder).forEach((ClassElement usage) {
-        DartinoClassBuilder compiledUsage = registerClassElement(usage);
+        DartinoClassBuilder compiledUsage =
+            systemBuilder.getClassBuilder(usage, this);
         compiledUsage.addToMethodTable(dartinoSelector, functionBuilder);
       });
     }
@@ -1030,7 +1035,7 @@ class DartinoBackend extends Backend
 
   void codegenNativeFunction(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     String name = '.${function.name}';
 
     ClassElement enclosingClass = function.enclosingClass;
@@ -1088,7 +1093,7 @@ class DartinoBackend extends Backend
 
   void codegenExternalFunction(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     if (function == dartinoExternalYield) {
       codegenExternalYield(function, codegen);
     } else if (function == context.compiler.identicalFunction.implementation) {
@@ -1114,7 +1119,7 @@ class DartinoBackend extends Backend
 
   void codegenIdentical(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     codegen.assembler
         ..loadParameter(0)
         ..loadParameter(1)
@@ -1125,7 +1130,7 @@ class DartinoBackend extends Backend
 
   void codegenExternalYield(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     codegen.assembler
         ..loadParameter(0)
         ..processYield()
@@ -1135,7 +1140,7 @@ class DartinoBackend extends Backend
 
   void codegenExternalInvokeMain(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     compiler.reporter.internalError(
         function, "[codegenExternalInvokeMain] not implemented.");
     // TODO(ahe): This code shouldn't normally be called, only if invokeMain is
@@ -1144,7 +1149,7 @@ class DartinoBackend extends Backend
 
   void codegenExternalNoSuchMethodTrampoline(
       FunctionElement function,
-      FunctionCodegen codegen) {
+      FunctionCodegenBase codegen) {
     // NOTE: The number of arguments to the [noSuchMethodName] function must be
     // kept in sync with:
     //     src/vm/interpreter.cc:HandleEnterNoSuchMethod
@@ -1203,7 +1208,7 @@ class DartinoBackend extends Backend
     // TODO(ajohnsen): Use registry in CodegenVisitor to register the used
     // constants.
     FunctionElement function = value.element;
-    createTearoffClass(createDartinoFunctionBuilder(function));
+    getTearoffClass(createDartinoFunctionBuilder(function));
     // Be sure to actually enqueue the function for compilation.
     DartinoRegistry registry = new DartinoRegistry(compiler);
     registry.registerStaticUse(new StaticUse.foreignUse(function));
@@ -1294,12 +1299,12 @@ class DartinoBackend extends Backend
         systemBuilder.lookupClassBuilder(classId);
     if (classBuilder == null) {
       if (isClosureClass) {
-        classBuilder =
-            systemBuilder.newPatchClassBuilder(classId, compiledClosureClass);
+        classBuilder = systemBuilder.newPatchClassBuilder(
+            classId, compiledClosureClass, new SchemaChange(null));
       } else {
         DartinoClass klass = systemBuilder.lookupClass(classId);
         assert(klass.element != null);
-        classBuilder = registerClassElement(klass.element);
+        classBuilder = systemBuilder.getClassBuilder(klass.element, this);
       }
     }
     classBuilder.addToMethodTable(dartinoSelector, stub);
@@ -1334,11 +1339,11 @@ class DartinoBackend extends Backend
           ..ret()
           ..methodEnd();
     } else {
-      DartinoClassBuilder tearoffClass = createTearoffClass(function);
+      DartinoClassBase tearoffClass = getTearoffClass(function);
       int constId = getter.allocateConstantFromClass(tearoffClass.classId);
       getter.assembler
           ..loadParameter(0)
-          ..allocate(constId, tearoffClass.fields)
+          ..allocate(constId, tearoffClass.fieldCount)
           ..ret()
           ..methodEnd();
     }
@@ -1386,20 +1391,22 @@ class DartinoBackend extends Backend
     }
 
     List<VmCommand> commands = <VmCommand>[
-        const PrepareForChanges(),
         const NewMap(MapId.methods),
         const NewMap(MapId.classes),
         const NewMap(MapId.constants),
     ];
 
+    DartinoSystem predecessorSystem = systemBuilder.predecessorSystem;
     DartinoSystem system = systemBuilder.computeSystem(context, commands);
 
-    commands.add(const PushNewInteger(0));
+    // Reset the current system builder.
+    newSystemBuilder(system);
+
     commands.add(new PushFromMap(
         MapId.methods,
         system.lookupFunctionByElement(dartinoSystemEntry).functionId));
 
-    return new DartinoDelta(system, systemBuilder.predecessorSystem, commands);
+    return new DartinoDelta(system, predecessorSystem, commands);
   }
 
   bool enableCodegenWithErrorsIfSupported(Spannable spannable) {
@@ -1504,14 +1511,11 @@ class DartinoBackend extends Backend
 
     if (field.initializer == null) return index;
 
-    if (lazyFieldInitializers.containsKey(field)) return index;
+    int functionId = systemBuilder.lookupLazyFieldInitializerByElement(field);
+    if (functionId != null) return index;
 
-    DartinoFunctionBuilder functionBuilder = systemBuilder.newFunctionBuilder(
-        DartinoFunctionKind.LAZY_FIELD_INITIALIZER,
-        0,
-        name: "${field.name} lazy initializer",
-        element: field);
-    lazyFieldInitializers[field] = functionBuilder;
+    DartinoFunctionBuilder functionBuilder =
+        systemBuilder.newLazyFieldInitializer(field);
 
     TreeElements elements = field.resolvedAst.elements;
 
@@ -1553,7 +1557,8 @@ class DartinoBackend extends Backend
       DartinoRegistry registry = new DartinoRegistry(compiler);
 
       DartinoClassBuilder classBuilder =
-          registerClassElement(constructor.enclosingClass.declaration);
+          systemBuilder.getClassBuilder(constructor.enclosingClass.declaration,
+                                        this);
 
       ClosureEnvironment closureEnvironment =
           createClosureEnvironment(constructor, elements);
@@ -1619,15 +1624,6 @@ class DartinoBackend extends Backend
     }
   }
 
-  void newElement(Element element) {
-    if (element.isField && element.isInstanceMember) {
-      forEachSubclassOf(element.enclosingClass, (ClassElement cls) {
-        DartinoClassBuilder builder = registerClassElement(cls);
-        builder.addField(element);
-      });
-    }
-  }
-
   void replaceFunctionUsageElement(Element element, List<Element> users) {
     for (Element user in users) {
       systemBuilder.replaceUsage(user, element);
@@ -1644,22 +1640,14 @@ class DartinoBackend extends Backend
     systemBuilder.forgetFunction(function);
   }
 
-  void removeField(FieldElement element) {
-    if (!element.isInstanceMember) return;
-    ClassElement enclosingClass = element.enclosingClass;
-    forEachSubclassOf(enclosingClass, (ClassElement cls) {
-      DartinoClassBuilder builder = registerClassElement(cls);
-      builder.removeField(element);
-    });
-  }
-
   void removeFunction(FunctionElement element) {
     DartinoFunctionBase function =
         systemBuilder.lookupFunctionByElement(element);
     if (function == null) return;
     if (element.isInstanceMember) {
       ClassElement enclosingClass = element.enclosingClass;
-      DartinoClassBuilder builder = registerClassElement(enclosingClass);
+      DartinoClassBuilder builder =
+          systemBuilder.getClassBuilder(enclosingClass, this);
       builder.removeFromMethodTable(function);
     }
   }

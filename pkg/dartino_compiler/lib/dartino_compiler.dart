@@ -242,9 +242,7 @@ Try adding command-line option '-Ddartino-natives-json=<path to natives.json>.
   Uri get dartinoVm => _compiler.dartinoVm;
 
   /// Create a new instance of [IncrementalCompiler].
-  IncrementalCompiler newIncrementalCompiler(
-      IncrementalMode support,
-      {List<String> options: const <String>[]}) {
+  IncrementalCompiler newIncrementalCompiler(IncrementalMode support) {
     return new IncrementalCompiler(
         libraryRoot: _compiler.libraryRoot,
         packageConfig: _compiler.packageConfig,
@@ -252,7 +250,7 @@ Try adding command-line option '-Ddartino-natives-json=<path to natives.json>.
         nativesJson: _compiler.nativesJson,
         inputProvider: _compiler.provider,
         diagnosticHandler: _compiler.handler,
-        options: options,
+        options: _compiler.options,
         outputProvider: _compiler.userOutputProvider,
         environment: _compiler.environment,
         support: support,

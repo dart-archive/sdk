@@ -6,65 +6,70 @@
 
 #include <cmsis_os.h>
 
+// TODO(sigurdm): The cmsis event-handler should not know about the
+// disco-platform
+#include "platforms/stm/disco_dartino/src/device_manager.h"
+
 #include "src/vm/event_handler.h"
 #include "src/vm/object.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
-#include "src/shared/platform.h"
 
 namespace dartino {
 
-const uint32_t kInterruptPortId = 0;
+// Pseudo device-id.
+// Sending a message with this device-id signals an interruption of the
+// event-handler.
+const int kInterruptHandle = -1;
 
-class PortMapping {
- public:
-  PortMapping() : mapping() {}
+// Dummy-class. Currently we don't store anything in EventHandler::data_. But
+// if we set it to NULL, EventHandler::EnsureInitialized will not realize it is
+// initialized.
+class Data {};
 
-  void SetPort(uint32_t port_id, Port *port) {
-    Port *existing = mapping[port_id];
-    if (existing != NULL) FATAL("Already listening to port");
-    mapping[port_id] = port;
-  }
-
-  Port *GetPort(uint32_t port_id) {
-    return mapping[port_id];
-  }
-
-  void RemovePort(uint32_t port_id) {
-    mapping.Erase(mapping.Find(port_id));
-  }
-
- private:
-  HashMap<uint32_t, Port*> mapping;
-};
+DeviceManager *DeviceManager::instance_;
 
 void EventHandler::Create() {
-  data_ = reinterpret_cast<void*>(new PortMapping());
+  data_ = reinterpret_cast<void*>(new Data());
 }
 
 void EventHandler::Interrupt() {
-  // The interrupt event currently contains no message.
-  int64 dummy_message = 0;
-  SendMessageCmsis(kInterruptPortId, dummy_message);
+  if (DeviceManager::GetDeviceManager()->SendMessage(kInterruptHandle) !=
+      osOK) {
+    FATAL("Could not send Interrupt");
+  }
 }
 
-Object* EventHandler::Add(Process* process, Object* id, Port* port,
-                          int flags) {
+Object* EventHandler::Add(
+    Process* process, Object* id, Port* port, int wait_mask) {
   if (!id->IsSmi()) return Failure::wrong_argument_type();
 
   EnsureInitialized();
 
-  int port_id = Smi::cast(id)->value();
+  int handle = Smi::cast(id)->value();
 
-  ScopedMonitorLock locker(monitor_);
+  Device *device = DeviceManager::GetDeviceManager()->GetDevice(handle);
 
-  reinterpret_cast<PortMapping*>(data_)->SetPort(port_id, port);
-  port->IncrementRef();
+  ScopedLock locker(device->GetMutex());
+
+  if (device->GetPort() != NULL) FATAL("Already listening to device");
+
+  int device_flags = device->GetFlags();
+  if ((wait_mask & device_flags) != 0) {
+    // There is already an event waiting. Send a message immediately.
+    Send(port, device_flags, false);
+  } else {
+    device->SetPort(port);
+    device->SetWaitMask(wait_mask);
+    port->IncrementRef();
+  }
+
   return process->program()->null_object();
 }
 
 void EventHandler::Run() {
-  osMailQId queue = GetDartinoMailQ();
+  osMessageQId queue = DeviceManager::GetDeviceManager()->GetMailQueue();
+
   while (true) {
     int64 next_timeout;
     {
@@ -79,7 +84,7 @@ void EventHandler::Run() {
       if (next_timeout < 0) next_timeout = 0;
     }
 
-    osEvent event = osMailGet(queue, next_timeout);
+    osEvent event = osMessageGet(queue, static_cast<int>(next_timeout));
     HandleTimeouts();
 
     {
@@ -92,21 +97,20 @@ void EventHandler::Run() {
       }
     }
 
-    if (event.status == osEventMail) {
-      CmsisMessage *message = reinterpret_cast<CmsisMessage*>(event.value.p);
-
-      int64 value = message->message;
-      uint32_t port_id = message->port_id;
-      if (port_id != kInterruptPortId) {
-        Port *port = reinterpret_cast<PortMapping*>(data_)->GetPort(port_id);
-        if (port == NULL) {
-          // No listener - drop the event.
+    if (event.status == osEventMessage) {
+      int handle = static_cast<int>(event.value.v);
+      if (handle != kInterruptHandle) {
+        Device *device = DeviceManager::GetDeviceManager()->GetDevice(handle);
+        ScopedLock scoped_lock(device->GetMutex());
+        if (device->IsReady()) {
+          Port *port = device->GetPort();
+          uint32_t device_flags = device->GetFlags();
+          device->SetPort(NULL);
+          Send(port, device_flags, true);
         } else {
-          reinterpret_cast<PortMapping*>(data_)->RemovePort(port_id);
-          Send(port, value, true);
+          // No relevant listener, drop message.
         }
       }
-      osMailFree(queue, reinterpret_cast<void*>(message));
     }
   }
 }

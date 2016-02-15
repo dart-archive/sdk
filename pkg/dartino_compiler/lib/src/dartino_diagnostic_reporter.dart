@@ -13,6 +13,9 @@ import 'package:compiler/src/compiler.dart' show
 import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
     DiagnosticOptions;
 
+import 'package:compiler/src/diagnostics/spannable.dart' show
+    Spannable;
+
 import 'package:compiler/src/diagnostics/source_span.dart' show
     SourceSpan;
 
@@ -23,11 +26,33 @@ import 'dartino_compiler_implementation.dart' show
     DartinoCompilerImplementation;
 
 import 'package:compiler/src/diagnostics/messages.dart' show
-    MessageKind;
+    Message, MessageKind, MessageTemplate;
 
 import 'please_report_crash.dart' show
     crashReportRequested,
     requestBugReportOnCompilerCrashMessage;
+
+final String padding = MessageTemplate.MIRRORS_NOT_SUPPORTED_BY_BACKEND_PADDING;
+
+/// Messages that have a specialized message-text in Dartino.
+final Map<MessageKind, MessageTemplate> dartinoTemplates =
+  <MessageKind, MessageTemplate>{
+    MessageKind.DISALLOWED_LIBRARY_IMPORT:
+      new MessageTemplate(MessageKind.DISALLOWED_LIBRARY_IMPORT,
+          "Your app imports the unsupported library '#{uri}' via:"
+          "$padding#{importChain}."),
+    MessageKind.LIBRARY_NOT_SUPPORTED:
+      new MessageTemplate(MessageKind.LIBRARY_NOT_SUPPORTED,
+          "Library'#{resolvedUri}' not supported on the current device.",
+          howToFix: "Try removing the dependency or enable support by changing "
+                    "the device_type in your '.dartino-settings' file."),
+    MessageKind.MIRRORS_LIBRARY_NOT_SUPPORT_BY_BACKEND:
+      new MessageTemplate(
+          MessageKind.MIRRORS_LIBRARY_NOT_SUPPORT_BY_BACKEND, """
+Dartino doesn't support 'dart:mirrors'. See https://goo.gl/Kwrd0O.
+
+Your app imports dart:mirrors via:$padding#{importChain}""")
+};
 
 class DartinoDiagnosticReporter extends CompilerDiagnosticReporter {
   DartinoDiagnosticReporter(
@@ -36,6 +61,19 @@ class DartinoDiagnosticReporter extends CompilerDiagnosticReporter {
       : super(compiler, options);
 
   DartinoCompilerImplementation get compiler => super.compiler;
+
+  DiagnosticMessage createMessage(
+      Spannable spannable,
+      MessageKind messageKind,
+      [Map arguments = const {}]) {
+    SourceSpan span = spanFromSpannable(spannable);
+    // Note: Except for the following statement, this method is copied from
+    // third_party/dart/pkg/compiler/lib/src/compiler.dart
+    MessageTemplate template =
+        dartinoTemplates[messageKind] ?? MessageTemplate.TEMPLATES[messageKind];
+    Message message = template.message(arguments, options.terseDiagnostics);
+    return new DiagnosticMessage(span, spannable, message);
+  }
 
   @override
   SourceSpan spanFromTokens(Token begin, Token end, [Uri uri]) {
@@ -52,20 +90,6 @@ class DartinoDiagnosticReporter extends CompilerDiagnosticReporter {
     }
     return compiler.incrementalCompiler.createSourceSpan(
         begin, end, uri, currentElement);
-  }
-
-  @override
-  void reportError(DiagnosticMessage message,
-      [List<DiagnosticMessage> infos = const <DiagnosticMessage> []]) {
-    if (message.message.kind ==
-        MessageKind.MIRRORS_LIBRARY_NOT_SUPPORT_BY_BACKEND) {
-      const String noMirrors =
-          "Dartino doesn't support 'dart:mirrors'. See https://goo.gl/Kwrd0O";
-      message = createMessage(message.spannable,
-          MessageKind.GENERIC,
-          {'text': message});
-    }
-    super.reportError(message, infos);
   }
 
   @override

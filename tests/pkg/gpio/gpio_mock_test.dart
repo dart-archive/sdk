@@ -13,37 +13,41 @@ main() {
 }
 
 void test1() {
-  var gpio = new MockGPIO();
-  Expect.equals(GPIO.defaultPins, gpio.pins);
+  var gpio = new MockGpio();
+  Expect.equals(MockGpio.defaultPins, gpio.pins);
+  var gpioPins = [];
   for (int i = 0; i < gpio.pins; i++) {
-    Expect.isFalse(gpio.getPin(i));
-    gpio.setPin(i, true);
-    Expect.isTrue(gpio.getPin(i));
+    var pin = new MockGpioPin(i);
+    gpioPins.add(gpio.initOutput(pin));
+  }
+  for (int i = 0; i < gpio.pins; i++) {
+    Expect.isFalse(gpioPins[i].state);
+    gpioPins[i].state = true;
+    Expect.isTrue(gpioPins[i].state);
   }
 }
 
 void test2() {
   void checkRange(gpio, pins) {
     bool isRangeError(e) => e is RangeError;
-    Expect.throws(() => gpio.getPin(-1), isRangeError);
-    Expect.throws(() => gpio.getPin(pins + 1), isRangeError);
-    Expect.throws(() => gpio.setPin(-1, true), isRangeError);
-    Expect.throws(() => gpio.setPin(pins + 1, true), isRangeError);
-    Expect.throws(() => gpio.getMode(-1), isRangeError);
-    Expect.throws(() => gpio.getMode(pins + 1), isRangeError);
-    Expect.throws(() => gpio.setMode(-1, Mode.output), isRangeError);
-    Expect.throws(() => gpio.setMode(pins + 1, Mode.output), isRangeError);
+    //Expect.throws(() => gpio.getPin(-1), isRangeError);
+    Expect.throws(() => gpio.initOutput(new MockGpioPin(-1)), isRangeError);
+    Expect.throws(() => gpio.initInput(new MockGpioPin(-1)), isRangeError);
+    Expect.throws(
+        () => gpio.initOutput(new MockGpioPin(pins + 1)), isRangeError);
+    Expect.throws(
+        () => gpio.initInput(new MockGpioPin(pins + 1)), isRangeError);
   }
-  checkRange(new MockGPIO(), GPIO.defaultPins);
-  checkRange(new MockGPIO(1), 1);
-  checkRange(new MockGPIO(2), 2);
+  checkRange(new MockGpio(), MockGpio.defaultPins);
+  checkRange(new MockGpio(pins: 1), 1);
+  checkRange(new MockGpio(pins: 2), 2);
 }
 
 void test3() {
   int getCount = 0;
   int setCount = 0;
 
-  bool getPin(int pin) {
+  bool getPin(Pin pin) {
     getCount++;
     if (getCount == 1) {
       throw new _MyException();
@@ -52,20 +56,22 @@ void test3() {
     }
   }
 
-  void setPin(int pin, bool value) {
+  void setPin(Pin pin, bool value) {
     setCount++;
     if (setCount == 1) {
       throw new _MyException();
     }
   }
 
-  var gpio = new MockGPIO();
+  var gpio = new MockGpio();
   gpio.registerGetPin(getPin);
   gpio.registerSetPin(setPin);
-  Expect.throws(() => gpio.getPin(1), (e) => e is _MyException);
-  Expect.throws(() => gpio.setPin(1, false), (e) => e is _MyException);
-  Expect.isTrue(gpio.getPin(1));
-  gpio.setPin(1, false);
+  var gpioPin = gpio.initOutput(new MockGpioPin(1));
+
+  Expect.throws(() => gpioPin.state, (e) => e is _MyException);
+  Expect.throws(() => gpioPin.state = false, (e) => e is _MyException);
+  Expect.isTrue(gpioPin.state);
+  gpioPin.state = false;
   Expect.equals(2, getCount);
   Expect.equals(2, setCount);
 }

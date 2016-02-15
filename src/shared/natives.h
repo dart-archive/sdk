@@ -126,6 +126,9 @@ namespace dartino {
                                                                              \
   N(ListIndexSet, "_FixedList", "[]=", false)                                \
                                                                              \
+  N(ArgumentsLength, "_Arguments", "length", false)                          \
+  N(ArgumentsToString, "_Arguments", "_toString", false)                     \
+                                                                             \
   N(ProcessSpawn, "Process", "_spawn", false)                                \
   N(ProcessQueueGetMessage, "Process", "_queueGetMessage", false)            \
   N(ProcessQueueSetupProcessDeath, "Process", "_queueSetupProcessDeath",     \
@@ -139,7 +142,7 @@ namespace dartino {
   N(StopwatchFrequency, "Stopwatch", "_frequency", false)                    \
   N(StopwatchNow, "Stopwatch", "_now", false)                                \
                                                                              \
-  N(TimerScheduleTimeout, "_DartinoTimer", "_scheduleTimeout", false)         \
+  N(TimerScheduleTimeout, "_DartinoTimer", "_scheduleTimeout", false)        \
   N(EventHandlerSleep, "<none>", "_sleep", false)                            \
                                                                              \
   N(ForeignLibraryLookup, "ForeignLibrary", "_lookupLibrary", false)         \

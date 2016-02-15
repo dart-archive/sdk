@@ -32,9 +32,11 @@ import 'vm_commands.dart' show
     WriteSnapshotResult;
 
 import 'dartino_system.dart' show
-    DartinoClass,
     DartinoFunction,
     DartinoSystem;
+
+import 'dartino_class.dart' show
+    DartinoClass;
 
 import 'src/dartino_selector.dart' show
     DartinoSelector;
@@ -658,7 +660,7 @@ class FunctionInfo {
   FunctionInfo(this.name);
 
   int Percent(int total_ticks) => ticks * 100 ~/ total_ticks;
-  
+
   void Print(int total_ticks) {
     print(" -${Percent(total_ticks).toString().padLeft(3, ' ')}% $name");
   }
@@ -681,7 +683,7 @@ Stream decode(Stream<List<int>> input) async* {
       if (t.groupCount > 1) {
         offset = int.parse(t.group(2), radix: 16);
         hashtag = int.parse(t.group(3), radix: 16);
-      } 
+      }
       yield new Tick(pc, offset, hashtag);
     } else {
       t = propertyRegexp.firstMatch(line);
@@ -736,12 +738,12 @@ class Profile {
 
   void Print() {
     print("# Tick based profiler result.");
-  
+
     for (FunctionInfo func in histogram) {
       if (func.Percent(total_ticks) < 2) break;
       func.Print(total_ticks);
     }
-    
+
     print("# ticks in interpreter=${interpreter_ticks}");
     if (runtime_ticks > 0) print("  runtime=${runtime_ticks}");
     if (discarded_ticks > 0) print("  discarded=${discarded_ticks}");
@@ -772,7 +774,7 @@ Future<Profile> decodeTickSamples(
     usage("The file '$sample_filename' does not exist.");
     return null;
   }
-   
+
   String info_filename = arguments[1];
   if (!info_filename.endsWith('.info.json')) {
     usage("The program info file must end in '.info.json' "
@@ -809,7 +811,7 @@ Future<Profile> decodeTickSamples(
   if (model == 'b64double') {
     conf = Configuration.Offset64BitsDouble;
   } else if (model == 'b64float') {
-    conf = Configuration.Offset64BitsFloat;  
+    conf = Configuration.Offset64BitsFloat;
   } else if (model == 'b32double') {
     conf = Configuration.Offset32BitsDouble;
   } else if (model == 'b32float') {
@@ -834,7 +836,7 @@ Future<Profile> decodeTickSamples(
      classes.add(new NamedEntry(key, info._getString(value)));
   });
   classes.sort((a, b) => a.offset - b.offset);
-  
+
   Map<String,FunctionInfo> results = <String,FunctionInfo>{};
   for (Tick t in profile.ticks) {
     profile.total_ticks++;
