@@ -9,21 +9,29 @@ To add new version(s) do the following:
 1. Download the new version(s) and unpack them (find location in the
    README.google for the previous version).
 
-2. Make local modifications and add an approiate README.google file (start
-   with the one in the previous version and update it).
+2. Create the unversioned copy (change the version(s) appropiately).
 
-3. Upload to Google Cloud Storage (change the version(s) appropiately)
-
-   $ upload_to_google_storage.py \
-       -b dartino-dependencies -a STM32Cube_FW_F4_VX.Y.Z
-   $ upload_to_google_storage.py \
-       -b dartino-dependencies -a STM32Cube_FW_F7_VX.Y.Z
-
-4. Create the unversioned copy (change the version(s) appropiately)
-   and upload to Google Cloud Storage
+   For STM32CubeF7:
 
    $ mv STM32Cube_FW_F7_VX.Y.Z stm32cube_fw_f7
+
+   For STM32CubeF4
+
+   $ mv STM32Cube_FW_F4_VX.Y.Z stm32cube_fw_f4
+
+3. Make local modifications and add an approiate README.google file (start
+   with the one in the previous version and update it).
+
+4. Upload to Google Cloud Storage
+
+   For STM32CubeF7:
+
    $ upload_to_google_storage.py \
        -b dartino-dependencies -a stm32cube_fw_f7
+
+   For STM32CubeF4
+
+   $ upload_to_google_storage.py \
+       -b dartino-dependencies -a stm32cube_fw_f4
 
 5. Create a CL updating the .sha1 files.
