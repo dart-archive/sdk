@@ -11,7 +11,7 @@ def Main():
   # platform.machine() looks like 'armv7l' or 'i386'
   if not platform.machine().startswith('arm'):
     print 'Runing %s' % ' '.join(sys.argv[1:])
-    subprocess.check_call(sys.argv[1:])
+    subprocess.check_call(sys.argv[1:], shell=(platform.system() == "Windows"))
   else:
     print 'Skipping "%s" on arm' % ' '.join(sys.argv[1:])
 
