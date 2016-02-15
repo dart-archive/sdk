@@ -11,7 +11,9 @@ set -e
 
 tar xf disco_dartino.tar.gz
 
-for SRC in disco_dartino/Inc/*
+CUBEMX_PROJECT=disco_dartino
+
+for SRC in $CUBEMX_PROJECT/Inc/*
 do
   BASENAME=$(basename "$SRC")
   if test "$BASENAME" != "FreeRTOSConfig.h"
@@ -24,7 +26,7 @@ do
   fi
 done
 
-for SRC in disco_dartino/Src/* $SRC_FILES
+for SRC in $CUBEMX_PROJECT/Src/* $SRC_FILES
 do
   BASENAME=$(basename "$SRC")
   if test "$BASENAME" != "freertos.c"
@@ -43,12 +45,12 @@ sed -i 's/static void MX_/void MX_/' generated/Src/main.c
 sed -i 's/int main/int _not_using_this_main/' generated/Src/main.c
 mv generated/Src/main.c generated/Src/mx_init.c
 
-SRC="disco_dartino/SW4STM32/disco_dartino Configuration/STM32F746NGHx_FLASH.ld"
+SRC="$CUBEMX_PROJECT/SW4STM32/disco_dartino/STM32F746NGHx_FLASH.ld"
 echo "$SRC"
 cp  "$SRC" generated/SW4STM32/configuration/STM32F746NGHx_FLASH.ld
 dos2unix -q generated/SW4STM32/configuration/STM32F746NGHx_FLASH.ld
 
-SRC="disco_dartino/Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f746xx.s"
+SRC="$CUBEMX_PROJECT/Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f746xx.s"
 echo "$SRC"
 cp "$SRC" template/startup_stm32f746xx.s
 dos2unix -q template/startup_stm32f746xx.s
@@ -58,7 +60,7 @@ dos2unix -q template/startup_stm32f746xx.s
 # STM32CubeMX is the wrong one. It is the one for the EVAL2 board
 # and not the Discovery board.
 
-cp disco_dartino/disco_dartino.ioc disco_dartino.ioc
+cp "$CUBEMX_PROJECT/disco_dartino.ioc" disco_dartino.ioc
 dos2unix -q disco_dartino.ioc
 
 rm -rf disco_dartino
