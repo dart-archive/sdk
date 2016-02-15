@@ -743,12 +743,14 @@ void SimpleProgramRunner::Run(int count,
 
     program->SetProgramExitListener(
         &SimpleProgramRunner::CaptureExitCode, this);
-    List<List<uint8>> arguments = List<List<uint8>>::New(argc);
-    for (int i = 0; i < argc; i++) {
-      uint8* utf8 = reinterpret_cast<uint8*>(strdup(argv[i]));
-      arguments[i] = List<uint8>(utf8, strlen(argv[i]));
+    if (process == NULL) {
+      List<List<uint8>> arguments = List<List<uint8>>::New(argc);
+      for (int i = 0; i < argc; i++) {
+        uint8* utf8 = reinterpret_cast<uint8*>(strdup(argv[i]));
+        arguments[i] = List<uint8>(utf8, strlen(argv[i]));
+      }
+      process = program->ProcessSpawnForMain(arguments);
     }
-    if (process == NULL) process = program->ProcessSpawnForMain(arguments);
     scheduler->ScheduleProgram(program, process);
   }
 
