@@ -396,7 +396,7 @@ void InterpreterGeneratorX86::GenerateEpilogue() {
   __ Bind(&check_debug_interrupt);
   __ cmpl(EAX, Immediate(Process::kStackCheckDebugInterrupt));
   __ j(NOT_EQUAL, &overflow);
-  __ movl(EAX, Immediate(Interpreter::kBreakPoint));
+  __ movl(EAX, Immediate(Interpreter::kBreakpoint));
   __ jmp(&done_);
 
   __ Bind(&stay_fast);

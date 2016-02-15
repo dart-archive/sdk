@@ -251,7 +251,7 @@ void Scheduler::SignalProcess(Process* process) {
         // If the state changed, we'll try again.
         break;
       case Process::kReady:
-      case Process::kBreakPoint:
+      case Process::kBreakpoint:
       case Process::kCompileTimeError:
       case Process::kUncaughtException:
         // Either the scheduler/debugger will signal the process, or it will be
@@ -276,7 +276,7 @@ void Scheduler::SignalProcess(Process* process) {
 
 void Scheduler::ContinueProcess(Process* process) {
   bool success =
-      process->ChangeState(Process::kBreakPoint, Process::kReady) ||
+      process->ChangeState(Process::kBreakpoint, Process::kReady) ||
       process->ChangeState(Process::kCompileTimeError, Process::kReady) ||
       process->ChangeState(Process::kUncaughtException, Process::kReady);
   ASSERT(success);
@@ -417,7 +417,7 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
     if (signal->kind() == Signal::kShouldKill) {
       HandleKilled(process);
     } else {
-      HandleUncaughtSignal(process);
+      HandleUnhandledSignal(process);
     }
     return NULL;
   }
@@ -504,7 +504,7 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
     return NULL;
   }
 
-  if (interpreter.IsAtBreakPoint()) {
+  if (interpreter.IsAtBreakpoint()) {
     HandleBreakpoint(process);
     return NULL;
   }
@@ -530,16 +530,16 @@ void Scheduler::HandleKilled(Process* process) {
   HandleEventResult(result, process, state);
 }
 
-void Scheduler::HandleUncaughtSignal(Process* process) {
+void Scheduler::HandleUnhandledSignal(Process* process) {
   Process::State state = Process::kTerminated;
-  ProcessInterruptionEvent result = kExitWithUncaughtSignal;
+  ProcessInterruptionEvent result = kExitWithUnhandledSignal;
   Session* session = process->program()->session();
   process->ChangeState(Process::kRunning, state);
   if (session != NULL && session->CanHandleEvents()) {
     StopProgramInternal(process->program(),
                         ProgramState::kSession,
                         true);
-    result = session->UncaughtSignal(process);
+    result = session->UnhandledSignal(process);
     if (result != kRemainPaused) {
       ResumeProgram(process->program(), ProgramState::kSession);
     }
@@ -600,7 +600,7 @@ void Scheduler::HandleCompileTimeError(Process* process) {
 }
 
 void Scheduler::HandleBreakpoint(Process* process) {
-  Process::State state = Process::kBreakPoint;
+  Process::State state = Process::kBreakpoint;
   ProcessInterruptionEvent result = kExitWithoutError;
   Session* session = process->program()->session();
   process->ChangeState(Process::kRunning, state);
@@ -608,7 +608,7 @@ void Scheduler::HandleBreakpoint(Process* process) {
     StopProgramInternal(process->program(),
                         ProgramState::kSession,
                         true);
-    result = session->BreakPoint(process);
+    result = session->Breakpoint(process);
     if (result != kRemainPaused) {
       ResumeProgram(process->program(), ProgramState::kSession);
     }
@@ -633,7 +633,7 @@ void Scheduler::HandleEventResult(
       DeleteTerminatedProcess(process, Signal::kUncaughtException);
       break;
     }
-    case kExitWithUncaughtSignal: {
+    case kExitWithUnhandledSignal: {
       process->ChangeState(state, Process::kWaitingForChildren);
       DeleteTerminatedProcess(process, Signal::kUnhandledSignal);
       break;

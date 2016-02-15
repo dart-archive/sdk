@@ -71,11 +71,12 @@ class InterpretationBarrier {
 class Scheduler {
  public:
   enum ProcessInterruptionEvent {
+    kUnhandled,
     kRemainPaused,
     kExitWithCompileTimeError,
     kExitWithUncaughtException,
     kExitWithUncaughtExceptionAndPrintStackTrace,
-    kExitWithUncaughtSignal,
+    kExitWithUnhandledSignal,
     kExitWithKilledSignal,
     kExitWithoutError
   };
@@ -189,7 +190,7 @@ class Scheduler {
   void HandleCompileTimeError(Process* process);
   void HandleBreakpoint(Process* process);
   void HandleKilled(Process* process);
-  void HandleUncaughtSignal(Process* process);
+  void HandleUnhandledSignal(Process* process);
 
   void HandleEventResult(
       ProcessInterruptionEvent result, Process* process, Process::State state);

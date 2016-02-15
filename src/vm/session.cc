@@ -81,6 +81,44 @@ class SessionState {
     previous->session_ = NULL;
   }
 
+  // Handling methods for interrupts of the interpreted process.
+  // These will only be called while holding a lock on main_thread_monitor_
+  // and while the program is paused within the scheduler.
+  virtual Scheduler::ProcessInterruptionEvent HandleBreakpoint(
+      Process* process) {
+    UNREACHABLE();
+    return Scheduler::kUnhandled;
+  }
+
+  virtual Scheduler::ProcessInterruptionEvent HandleUncaughtException(
+      Process* process) {
+    UNREACHABLE();
+    return Scheduler::kUnhandled;
+  }
+
+  virtual Scheduler::ProcessInterruptionEvent HandleCompileTimeError(
+      Process* process) {
+    UNREACHABLE();
+    return Scheduler::kUnhandled;
+  }
+
+  virtual Scheduler::ProcessInterruptionEvent HandleKilled(Process* process) {
+    UNREACHABLE();
+    return Scheduler::kUnhandled;
+  }
+
+  virtual Scheduler::ProcessInterruptionEvent HandleUnhandledSignal(
+      Process* process) {
+    UNREACHABLE();
+    return Scheduler::kUnhandled;
+  }
+
+  virtual Scheduler::ProcessInterruptionEvent HandleTerminated(
+      Process* process) {
+    UNREACHABLE();
+    return Scheduler::kUnhandled;
+  }
+
  protected:
   SessionState()
       : session_(NULL), debug_previous_(NULL) {
@@ -250,7 +288,67 @@ class RunningState : public ScheduledState {
     }
   }
 
+  Scheduler::ProcessInterruptionEvent HandleBreakpoint(Process* process) {
+    SendBreakpoint(process);
+    return Scheduler::kRemainPaused;
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleUncaughtException(
+      Process* process) {
+    WriteBuffer buffer;
+    connection()->Send(Connection::kUncaughtException, buffer);
+    return Scheduler::kRemainPaused;
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleCompileTimeError(Process* process) {
+    WriteBuffer buffer;
+    connection()->Send(Connection::kProcessCompileTimeError, buffer);
+    return Scheduler::kRemainPaused;
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleKilled(Process* process) {
+    // TODO(kustermann): We might want to let a debugger know if the process
+    // didn't normally terminate, but rather was killed.
+    WriteBuffer buffer;
+    connection()->Send(Connection::kProcessTerminated, buffer);
+    return Scheduler::kExitWithKilledSignal;
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleUnhandledSignal(Process* process) {
+    // TODO(kustermann): We might want to let a debugger know that the process
+    // didn't normally terminate, but rather was killed due to a linked process.
+    WriteBuffer buffer;
+    connection()->Send(Connection::kProcessTerminated, buffer);
+    return Scheduler::kExitWithUnhandledSignal;
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleTerminated(Process* process) {
+    WriteBuffer buffer;
+    connection()->Send(Connection::kProcessTerminated, buffer);
+    return Scheduler::kExitWithoutError;
+  }
+
   SessionState* ProcessMessage(Connection::Opcode opcode);
+
+ private:
+  void SendBreakpoint(Process* process) {
+    DebugInfo* debug_info = process->debug_info();
+    int breakpoint_id = -1;
+    if (debug_info != NULL) {
+      debug_info->ClearStepping();
+      breakpoint_id = debug_info->current_breakpoint_id();
+    }
+    WriteBuffer buffer;
+    buffer.WriteInt(breakpoint_id);
+    session()->PushTopStackFrame(process->stack());
+    buffer.WriteInt64(session()->MapLookupByObject(
+        session()->method_map_id_, session()->Top()));
+    // Drop function from session stack.
+    session()->Drop(1);
+    // Pop bytecode index from session stack and send it.
+    buffer.WriteInt64(session()->PopInteger());
+    connection()->Send(Connection::kProcessBreakpoint, buffer);
+  }
 };
 
 // A paused state is scheduled and paused.
@@ -288,8 +386,6 @@ class TerminatingState : public ScheduledState {
 
   bool IsTerminating() const { return true; }
 
-  Process::State process_state() const { return process_state_; }
-
   const char* ToString() const {
     return IsDebugging() ? "Terminating<Debugging>" : "Terminating";
   }
@@ -299,6 +395,42 @@ class TerminatingState : public ScheduledState {
     ScheduledState::ActivateState(previous);
     session()->ResumeExecution();
     session()->SignalMainThread(Session::kSessionEnd);
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleBreakpoint(Process* process) {
+    return HandleEvent(process);
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleUncaughtException(
+      Process* process) {
+    return HandleEvent(process);
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleKilled(Process* process) {
+    return HandleEvent(process);
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleUnhandledSignal(Process* process) {
+    return HandleEvent(process);
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleTerminated(Process* process) {
+    return HandleEvent(process);
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleCompileTimeError(Process* process) {
+    return HandleEvent(process);
+  }
+
+  Scheduler::ProcessInterruptionEvent HandleEvent(Process* process) {
+    switch (process_state_) {
+      case Process::kCompileTimeError:
+        return Scheduler::kExitWithCompileTimeError;
+      case Process::kUncaughtException:
+        return Scheduler::kExitWithUncaughtException;
+      default:
+        return Scheduler::kExitWithoutError;
+    }
   }
 
  private:
@@ -1014,7 +1146,7 @@ SessionState* RunningState::ProcessMessage(Connection::Opcode opcode) {
   switch (opcode) {
     case Connection::kProcessDebugInterrupt: {
       session()->PauseExecution();
-      session()->SendBreakPoint(process());
+      SendBreakpoint(process());
       return new PausedState(/* interrupted */ true);
     }
 
@@ -1754,148 +1886,65 @@ bool Session::CanHandleEvents() const {
   return state_->IsDebugging();
 }
 
+Scheduler::ProcessInterruptionEvent Session::CheckForPauseEventResult(
+    Scheduler::ProcessInterruptionEvent result) {
+  if (result == Scheduler::kRemainPaused) {
+    ChangeState(new PausedState(/* interrupted */ false));
+  }
+  return result;
+}
+
+static Scheduler::ProcessInterruptionEvent AssertExitEventResult(
+    Scheduler::ProcessInterruptionEvent result) {
+  ASSERT(result != Scheduler::kRemainPaused);
+  return result;
+}
+
 Scheduler::ProcessInterruptionEvent Session::UncaughtException(
     Process* process) {
   if (process_ != process) {
     return Scheduler::kExitWithUncaughtExceptionAndPrintStackTrace;
   }
-
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
-  if (state_->IsTerminating()) {
-    ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
-           Process::kUncaughtException);
-    process_ = NULL;
-    return Scheduler::kExitWithUncaughtException;
-  }
-
-  WriteBuffer buffer;
-  connection_->Send(Connection::kUncaughtException, buffer);
-  ChangeState(new PausedState(/* interrupted */ false));
-  return Scheduler::kRemainPaused;
+  return CheckForPauseEventResult(state_->HandleUncaughtException(process));
 }
 
 Scheduler::ProcessInterruptionEvent Session::Killed(Process* process) {
   if (process_ != process) return Scheduler::kExitWithKilledSignal;
-
   process_ = NULL;
-
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
-  if (state_->IsTerminating()) {
-    return ExitWithSessionEndState(process);
-  }
-
-  // TODO(kustermann): We might want to let a debugger know if the process
-  // didn't normally terminate, but rather was killed.
-  WriteBuffer buffer;
-  connection_->Send(Connection::kProcessTerminated, buffer);
-  return Scheduler::kExitWithKilledSignal;
+  return AssertExitEventResult(state_->HandleKilled(process));
 }
 
-Scheduler::ProcessInterruptionEvent Session::UncaughtSignal(
+Scheduler::ProcessInterruptionEvent Session::UnhandledSignal(
     Process* process) {
-  if (process_ != process) return Scheduler::kExitWithUncaughtSignal;
-
+  if (process_ != process) return Scheduler::kExitWithUnhandledSignal;
   process_ = NULL;
-
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
-  if (state_->IsTerminating()) {
-    return ExitWithSessionEndState(process);
-  }
-
-  // TODO(kustermann): We might want to let a debugger know that the process
-  // didn't normally terminate, but rather was killed due to a linked process.
-  WriteBuffer buffer;
-  connection_->Send(Connection::kProcessTerminated, buffer);
-  return Scheduler::kExitWithUncaughtSignal;
+  return AssertExitEventResult(state_->HandleUnhandledSignal(process));
 }
 
-Scheduler::ProcessInterruptionEvent Session::BreakPoint(
+Scheduler::ProcessInterruptionEvent Session::Breakpoint(
     Process* process) {
   // We should only reach a breakpoint if attached and we can handle [process].
   ASSERT(process_ == process);
-
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
-  if (state_->IsTerminating()) {
-    ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
-           Process::kBreakPoint);
-    process_ = NULL;
-    return Scheduler::kExitWithoutError;
-  }
-
-  SendBreakPoint(process);
-  ChangeState(new PausedState(/* interrupted */ false));
-  return Scheduler::kRemainPaused;
-}
-
-void Session::SendBreakPoint(Process* process) {
-  DebugInfo* debug_info = process->debug_info();
-  int breakpoint_id = -1;
-  if (debug_info != NULL) {
-    debug_info->ClearStepping();
-    breakpoint_id = debug_info->current_breakpoint_id();
-  }
-  WriteBuffer buffer;
-  buffer.WriteInt(breakpoint_id);
-  PushTopStackFrame(process->stack());
-  buffer.WriteInt64(MapLookupByObject(method_map_id_, Top()));
-  // Drop function from session stack.
-  Drop(1);
-  // Pop bytecode index from session stack and send it.
-  buffer.WriteInt64(PopInteger());
-  connection_->Send(Connection::kProcessBreakpoint, buffer);
+  return CheckForPauseEventResult(state_->HandleBreakpoint(process));
 }
 
 Scheduler::ProcessInterruptionEvent Session::ProcessTerminated(
     Process* process) {
   if (process_ != process) return Scheduler::kExitWithoutError;
-
   process_ = NULL;
-
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
-  if (state_->IsTerminating()) {
-    ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
-           Process::kTerminated);
-  } else {
-    WriteBuffer buffer;
-    connection_->Send(Connection::kProcessTerminated, buffer);
-  }
-
-  return Scheduler::kExitWithoutError;
+  return AssertExitEventResult(state_->HandleTerminated(process));
 }
 
 Scheduler::ProcessInterruptionEvent Session::CompileTimeError(
     Process* process) {
   if (process_ != process) return Scheduler::kExitWithCompileTimeError;
-
   ScopedMonitorLock scoped_lock(main_thread_monitor_);
-  if (state_->IsTerminating()) {
-    ASSERT(static_cast<TerminatingState*>(state_)->process_state() ==
-           Process::kCompileTimeError);
-    process_ = NULL;
-    return Scheduler::kExitWithCompileTimeError;
-  }
-
-  WriteBuffer buffer;
-  connection_->Send(Connection::kProcessCompileTimeError, buffer);
-  ChangeState(new PausedState(/* interrupted */ false));
-  return Scheduler::kRemainPaused;
-}
-
-Scheduler::ProcessInterruptionEvent Session::ExitWithSessionEndState(
-    Process* process) {
-  // Exit using the process state prior to session-end killing the process.
-  // This must be consistent with the exit code used in other cases where the
-  // session has ended since the kill signal can race with other exit causes.
-  ASSERT(state_->IsTerminating());
-  TerminatingState* terminating = static_cast<TerminatingState*>(state_);
-  switch (terminating->process_state()) {
-    case Process::kCompileTimeError:
-      return Scheduler::kExitWithCompileTimeError;
-    case Process::kUncaughtException:
-      return Scheduler::kExitWithUncaughtException;
-    default:
-      return Scheduler::kExitWithoutError;
-  }
+  return CheckForPauseEventResult(state_->HandleCompileTimeError(process));
 }
 
 Process* Session::GetProcess(int process_id) {

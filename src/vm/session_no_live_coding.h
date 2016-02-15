@@ -37,27 +37,27 @@ class Session {
 
   Scheduler::ProcessInterruptionEvent UncaughtException(Process* process) {
     UNIMPLEMENTED();
-    return Scheduler::kRemainPaused;
+    return Scheduler::kUnhandled;
   }
 
-  Scheduler::ProcessInterruptionEvent UncaughtSignal(Process* process) {
+  Scheduler::ProcessInterruptionEvent UnhandledSignal(Process* process) {
     UNIMPLEMENTED();
-    return Scheduler::kRemainPaused;
+    return Scheduler::kUnhandled;
   }
 
-  Scheduler::ProcessInterruptionEvent BreakPoint(Process* process) {
+  Scheduler::ProcessInterruptionEvent Breakpoint(Process* process) {
     UNIMPLEMENTED();
-    return Scheduler::kRemainPaused;
+    return Scheduler::kUnhandled;
   }
 
   Scheduler::ProcessInterruptionEvent ProcessTerminated(Process* process) {
     UNIMPLEMENTED();
-    return Scheduler::kRemainPaused;
+    return Scheduler::kUnhandled;
   }
 
   Scheduler::ProcessInterruptionEvent CompileTimeError(Process* process) {
     UNIMPLEMENTED();
-    return Scheduler::kRemainPaused;
+    return Scheduler::kUnhandled;
   }
 
   bool is_debugging() const {
@@ -72,7 +72,7 @@ class Session {
 
   Scheduler::ProcessInterruptionEvent Killed(Process* process) {
     UNIMPLEMENTED();
-    return Scheduler::kRemainPaused;
+    return Scheduler::kUnhandled;
   }
 
   void IteratePointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }

@@ -60,16 +60,13 @@ class Session {
   bool CanHandleEvents() const;
   Scheduler::ProcessInterruptionEvent UncaughtException(Process* process);
   Scheduler::ProcessInterruptionEvent Killed(Process* process);
-  Scheduler::ProcessInterruptionEvent UncaughtSignal(Process* process);
-  Scheduler::ProcessInterruptionEvent BreakPoint(Process* process);
+  Scheduler::ProcessInterruptionEvent UnhandledSignal(Process* process);
+  Scheduler::ProcessInterruptionEvent Breakpoint(Process* process);
   Scheduler::ProcessInterruptionEvent ProcessTerminated(Process* process);
   Scheduler::ProcessInterruptionEvent CompileTimeError(Process* process);
 
  private:
   void ChangeState(SessionState* new_state);
-
-  void SendBreakPoint(Process* process);
-  Scheduler::ProcessInterruptionEvent ExitWithSessionEndState(Process* process);
 
   // Map operations.
   void NewMap(int map_index);
@@ -224,6 +221,9 @@ class Session {
   void RestartFrame(int index);
 
   Process* GetProcess(int process_id);
+
+  Scheduler::ProcessInterruptionEvent CheckForPauseEventResult(
+      Scheduler::ProcessInterruptionEvent result);
 };
 
 }  // namespace dartino

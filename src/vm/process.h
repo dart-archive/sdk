@@ -36,7 +36,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
     kReady,
     kRunning,
     kYielding,
-    kBreakPoint,
+    kBreakpoint,
     kCompileTimeError,
     kUncaughtException,
     kTerminated,
