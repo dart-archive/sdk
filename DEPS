@@ -247,6 +247,7 @@ hooks = [
     'name': 'third_party_gcc_arm_embedded',
     'pattern': '.',
     'action': [
+      'python',
       'sdk/tools/not_on_arm.py',
       'download_from_google_storage',
       '-q',
@@ -265,6 +266,7 @@ hooks = [
     'name': 'third_party_stm',
     'pattern': '.',
     'action': [
+      'python',
       'sdk/tools/not_on_arm.py',
       'download_from_google_storage',
       '-q',
@@ -305,7 +307,8 @@ hooks = [
   {
     'name': 'clang_format_linux',
     'pattern': '.',
-    'action': [ 'sdk/tools/not_on_arm.py',
+    'action': [ 'python',
+                'sdk/tools/not_on_arm.py',
                 'download_from_google_storage',
                 '-q',
                 '--no_resume',
