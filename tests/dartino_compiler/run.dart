@@ -140,8 +140,8 @@ Future<Null> testIncrementalDebugInfo() async {
 
 // TODO(ahe): Move this method into DartinoRunner and use computeSettings.
 Future<Null> export(
-    String script, String snapshot, {bool binaryProgramInfo: false,
-        Map<String, String> constants: const <String, String> {}}) async {
+    String script, String snapshot,
+    {Map<String, String> constants: const <String, String> {}}) async {
   Settings settings;
   if (dartinoSettingsFile == null) {
     settings = new Settings(
@@ -159,6 +159,5 @@ Future<Null> export(
   await startAndAttachDirectly(state, Uri.base);
   state.stdoutSink.attachCommandSender(stdout.add);
   state.stderrSink.attachCommandSender(stderr.add);
-  await developer.export(
-      state, fileUri(snapshot, Uri.base), binaryProgramInfo: binaryProgramInfo);
+  await developer.export(state, fileUri(snapshot, Uri.base));
 }
