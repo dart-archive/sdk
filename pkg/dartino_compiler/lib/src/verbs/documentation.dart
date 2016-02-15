@@ -170,17 +170,20 @@ const String downloadToolsDocumentation = """
              This is currently GCC ARM Embedded and OpenOCD.
 """;
 
-// TODO(lukechurch): Review UX.
 const String buildDocumentation = """
-   x-build <file>
-             Builds an image for flashing on the STM32F746G Discovery board
-             based on <file>.
+   build <file>
+             Build flashable image containing the Dart code in <file>.
              The flashable image will be called <basename of file>.bin.
+
+             Currently this will build an image for the STM32F746G Discovery
+             board only.
 """;
 
-// TODO(lukechurch): Review UX.
-const String deployDocumentation = """
-   x-deploy <file>
-             Builds an image from <file> and flashes it on the STM32F746G
-             Discovery board.
+const String flashDocumentation = """
+   flash <file>
+             Build flashable image containing the Dart code in <file> and
+             flash it to a connected board.
+
+             Currently this will build and flash an image for the STM32F746G
+             Discovery board only.
 """;

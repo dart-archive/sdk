@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library dartino_compiler.verbs.x_deploy_verb;
+library dartino_compiler.verbs.flash_verb;
 
 import 'package:path/path.dart' show
     basenameWithoutExtension;
@@ -14,16 +14,16 @@ import '../worker/developer.dart' show
     flashImage;
 
 import 'documentation.dart' show
-    deployDocumentation;
+    flashDocumentation;
 
-import 'x_build_verb.dart' show
+import 'build_verb.dart' show
     BuildTask;
 
-const Action deployAction = const Action(
-    deployFunction, deployDocumentation, requiresSession: true,
+const Action flashAction = const Action(
+    flashFunction, flashDocumentation, requiresSession: true,
     requiredTarget: TargetKind.FILE);
 
-Future deployFunction(
+Future flashFunction(
     AnalyzedSentence sentence, VerbContext context) async {
 
   return context.performTaskInWorker(
