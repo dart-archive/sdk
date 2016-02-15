@@ -52,7 +52,8 @@ Program::Program(ProgramSource source, int hashtag)
       exit_kind_(Signal::kTerminated),
       hashtag_(hashtag),
       stack_chain_(NULL),
-      cache_(NULL) {
+      cache_(NULL),
+      group_mask_(0) {
 // These asserts need to hold when running on the target, but they don't need
 // to hold on the host (the build machine, where the interpreter-generating
 // program runs).  We put these asserts here on the assumption that the

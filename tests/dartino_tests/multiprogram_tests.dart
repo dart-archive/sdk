@@ -87,6 +87,21 @@ Future<Map<String, NoArgFuture>> listTests() async {
             'compute', 0,
             'immutable_gc', 0,
         ], duplicate: 2),
+
+    'multiprogram_tests/mutable_gc_and_freeze':
+        () => runTest('batch=6', [
+            'mutable_gc', 0,
+            'process_links', 0,
+            'runtime_error', 255,
+            'unhandled_signal', 255,
+        ], duplicate: 3, freeze: true),
+
+    'multiprogram_tests/stress_test_and_freeze':
+        () => runTest('batch=6', [
+            'mutable_gc', 0,
+            'compute', 0,
+            'immutable_gc', 0,
+        ], duplicate: 2, freeze: true),
   };
 
   // Dummy use of [main] to make analyzer happy.
@@ -95,7 +110,8 @@ Future<Map<String, NoArgFuture>> listTests() async {
   return tests;
 }
 
-Future runTest(String mode, List testNamesWithExitCodes, {int duplicate}) {
+Future runTest(String mode, List testNamesWithExitCodes,
+               {int duplicate, bool freeze: false}) {
   return withTempDirectory((Directory temp) async {
     List<String> snapshotsExitcodeTuples = <String>[];
 
@@ -115,9 +131,10 @@ Future runTest(String mode, List testNamesWithExitCodes, {int duplicate}) {
           snapshotsExitcodeTuples, duplicate);
     }
 
-    var arguments = []
-        ..add(mode)
-        ..addAll(snapshotsExitcodeTuples);
+    var arguments = [];
+    if (freeze) arguments.add('--freeze-odd');
+    arguments.add(mode);
+    arguments.addAll(snapshotsExitcodeTuples);
 
     // Run all the snapshots inside one dartino vm.
     print("Running $multiprogramRunner ${arguments.join(' ')}");

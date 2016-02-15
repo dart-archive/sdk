@@ -708,6 +708,89 @@ void Scheduler::EnqueueSafe(Process* process) {
   }
 }
 
+void Scheduler::FreezeProgram(Program* program) {
+  ProgramState* program_state = program->program_state();
+  while (program_state->state() != ProgramState::kRunning) {
+    pause_monitor_->Wait();
+  }
+  program_state->ChangeState(ProgramState::kRunning, ProgramState::kFrozen);
+  ready_queue_.PauseAllProcessesOfProgram(program);
+}
+
+void Scheduler::UnFreezeProgram(Program* program) {
+  ProgramState* program_state = program->program_state();
+  ASSERT(program_state->state() == ProgramState::kFrozen);
+
+  program_state->ChangeState(ProgramState::kFrozen, ProgramState::kRunning);
+
+  auto paused_processes = program_state->paused_processes();
+  while (!paused_processes->IsEmpty()) {
+    EnqueueProcess(paused_processes->RemoveFirst());
+  }
+}
+
+ProgramGroup Scheduler::CreateProgramGroup(const char* name) {
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  return program_groups_.Create(name);
+}
+
+void Scheduler::DeleteProgramGroup(ProgramGroup group) {
+  ScopedMonitorLock pause_locker(pause_monitor_);
+
+  for (auto program : programs_) {
+    program_groups_.RemoveProgram(group, program);
+  }
+
+  program_groups_.Delete(group);
+}
+
+void Scheduler::AddProgramToGroup(ProgramGroup group, Program* program) {
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  program_groups_.AddProgram(group, program);
+}
+
+void Scheduler::RemoveProgramFromGroup(ProgramGroup group, Program* program) {
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  program_groups_.RemoveProgram(group, program);
+}
+
+void Scheduler::FreezeProgramGroup(ProgramGroup group) {
+  bool did_freeze_program = false;
+
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  PauseInterpreterLoop();
+  for (auto it = programs_.Begin(); it != programs_.End(); ++it) {
+    Program* program = *it;
+    if (program_groups_.ContainsProgram(group, program)) {
+      FreezeProgram(program);
+      did_freeze_program = true;
+    }
+  }
+  ResumeInterpreterLoop();
+
+  if (did_freeze_program) {
+    pause_monitor_->NotifyAll();
+    NotifyInterpreterThread();
+  }
+}
+
+void Scheduler::UnFreezeProgramGroup(ProgramGroup group) {
+  bool did_unfreeze_program = false;
+
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  for (auto it = programs_.Begin(); it != programs_.End(); ++it) {
+    Program* program = *it;
+    if (program_groups_.ContainsProgram(group, program)) {
+      UnFreezeProgram(program);
+      did_unfreeze_program = true;
+    }
+  }
+  if (did_unfreeze_program) {
+    pause_monitor_->NotifyAll();
+    NotifyInterpreterThread();
+  }
+}
+
 void* WorkerThread::RunThread(void* data) {
   WorkerThread* state = reinterpret_cast<WorkerThread*>(data);
   state->RunInThread();

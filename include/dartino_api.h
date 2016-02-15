@@ -21,6 +21,7 @@
 #endif
 
 typedef void* DartinoProgram;
+typedef void* DartinoProgramGroup;
 typedef void* DartinoPrintInterceptor;
 typedef void (*PrintInterceptionFunction)(
     const char* message, int out, void* data);
@@ -110,5 +111,26 @@ DARTINO_EXPORT DartinoPrintInterceptor DartinoRegisterPrintInterceptor(
 // instance is reclaimed and no longer valid after having called this function.
 DARTINO_EXPORT void DartinoUnregisterPrintInterceptor(
     DartinoPrintInterceptor interceptor);
+
+// Creates a new program group and returns the id, or some error value on
+// failure. The name is only used for debugging.
+DartinoProgramGroup DartinoCreateProgramGroup(const char *name);
+
+// Removes all programs from the group and deletes it.
+void DartinoDeleteProgramGroup(DartinoProgramGroup group);
+
+// Adds the program to the group.
+void DartinoAddProgramToGroup(DartinoProgramGroup group,
+                              DartinoProgram program);
+
+// Removes the program from the group.
+void DartinoRemoveProgramFromGroup(DartinoProgramGroup group,
+                                   DartinoProgram program);
+
+// Freezes a program group.
+void DartinoFreezeProgramGroup(DartinoProgramGroup group);
+
+// Unfreezes a program group.
+void DartinoUnfreezeProgramGroup(DartinoProgramGroup group);
 
 #endif  // INCLUDE_DARTINO_API_H_

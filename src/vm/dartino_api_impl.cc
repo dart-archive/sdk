@@ -227,3 +227,39 @@ void DartinoUnregisterPrintInterceptor(
   dartino::Print::UnregisterPrintInterceptor(impl);
   delete impl;
 }
+
+DartinoProgramGroup DartinoCreateProgramGroup(const char *name) {
+  auto dgroup = dartino::Scheduler::GlobalInstance()->CreateProgramGroup(name);
+  return reinterpret_cast<DartinoProgramGroup>(dgroup);
+}
+
+void DartinoDeleteProgramGroup(DartinoProgramGroup group) {
+  dartino::Scheduler::GlobalInstance()->DeleteProgramGroup(
+      reinterpret_cast<dartino::ProgramGroup>(group));
+}
+
+void DartinoAddProgramToGroup(DartinoProgramGroup group,
+                              DartinoProgram program) {
+  auto dgroup = reinterpret_cast<dartino::ProgramGroup>(group);
+  auto dprogram = reinterpret_cast<dartino::Program*>(program);
+  dartino::Scheduler::GlobalInstance()->AddProgramToGroup(
+      dgroup, dprogram);
+}
+
+void DartinoRemoveProgramFromGroup(DartinoProgramGroup group,
+                                   DartinoProgram program) {
+  auto dgroup = reinterpret_cast<dartino::ProgramGroup>(group);
+  auto dprogram = reinterpret_cast<dartino::Program*>(program);
+  dartino::Scheduler::GlobalInstance()->RemoveProgramFromGroup(
+      dgroup, dprogram);
+}
+
+void DartinoFreezeProgramGroup(DartinoProgramGroup group) {
+  auto dgroup = reinterpret_cast<dartino::ProgramGroup>(group);
+  dartino::Scheduler::GlobalInstance()->FreezeProgramGroup(dgroup);
+}
+
+void DartinoUnfreezeProgramGroup(DartinoProgramGroup group) {
+  auto dgroup = reinterpret_cast<dartino::ProgramGroup>(group);
+  dartino::Scheduler::GlobalInstance()->UnFreezeProgramGroup(dgroup);
+}
