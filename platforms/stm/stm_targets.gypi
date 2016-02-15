@@ -48,7 +48,8 @@
 
       'ReleaseSTM': {
         'inherit_from': [
-          'dartino_base', 'dartino_release', 'dartino_cortex_m7', 'dartino_stm',
+          'dartino_base', 'dartino_release',
+          'dartino_cortex_m_base', 'dartino_cortex_m7', 'dartino_stm',
           'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
@@ -67,7 +68,66 @@
 
       'DebugSTM': {
         'inherit_from': [
-          'dartino_base', 'dartino_debug', 'dartino_cortex_m7', 'dartino_stm',
+          'dartino_base', 'dartino_debug',
+          'dartino_cortex_m_base', 'dartino_cortex_m7', 'dartino_stm',
+          'dartino_disable_live_coding',
+          'dartino_disable_native_processes',
+        ],
+      },
+
+      'ReleaseCM4': {
+        'inherit_from': [
+          'dartino_base', 'dartino_debug',
+          'dartino_cortex_m_base', 'dartino_cortex_m4', 'dartino_stm',
+          'dartino_disable_live_coding',
+          'dartino_disable_native_processes',
+        ],
+        'target_conditions': [
+          # Change to optimize for size.
+          ['_toolset=="target"', {
+            'cflags!': [
+              '-O3',
+            ],
+            'cflags': [
+              '-Os',
+            ],
+          }],
+        ],
+      },
+
+      'DebugCM4': {
+        'inherit_from': [
+          'dartino_base', 'dartino_debug',
+          'dartino_cortex_m_base', 'dartino_cortex_m4', 'dartino_stm',
+          'dartino_disable_live_coding',
+          'dartino_disable_native_processes',
+        ],
+      },
+
+      'ReleaseCM4SF': {
+        'inherit_from': [
+          'dartino_base', 'dartino_debug',
+          'dartino_cortex_m_base', 'dartino_cortex_m4_softfp', 'dartino_stm',
+          'dartino_disable_live_coding',
+          'dartino_disable_native_processes',
+        ],
+        'target_conditions': [
+          # Change to optimize for size.
+          ['_toolset=="target"', {
+            'cflags!': [
+              '-O3',
+            ],
+            'cflags': [
+              '-Os',
+            ],
+          }],
+        ],
+      },
+
+      'DebugCM4SF': {
+        'inherit_from': [
+          'dartino_base', 'dartino_debug',
+          'dartino_cortex_m_base', 'dartino_cortex_m4_softfp', 'dartino_stm',
           'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
