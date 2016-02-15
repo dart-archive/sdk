@@ -24,7 +24,7 @@ typedef void* DartinoProgram;
 typedef void* DartinoPrintInterceptor;
 typedef void (*PrintInterceptionFunction)(
     const char* message, int out, void* data);
-typedef void (*ProgramExitCallback)(DartinoProgram*, int exitcode, void* data);
+typedef void (*ProgramExitCallback)(DartinoProgram, int exitcode, void* data);
 
 // Setup must be called before using any of the other API methods.
 DARTINO_EXPORT void DartinoSetup(void);
@@ -39,7 +39,7 @@ DARTINO_EXPORT void DartinoWaitForDebuggerConnection(int port);
 
 // Load a program from a snapshot.
 DARTINO_EXPORT DartinoProgram DartinoLoadSnapshot(unsigned char* snapshot,
-                                               int length);
+                                                  int length);
 
 // Load the snapshot from the file and load the program from the snapshot.
 DARTINO_EXPORT DartinoProgram DartinoLoadSnapshotFromFile(const char* path);
@@ -51,7 +51,7 @@ DARTINO_EXPORT void DartinoDeleteProgram(DartinoProgram program);
 // reloacted program heap with appended info block, usually build using
 // the flashtool utility or by relocating a loaded program.
 DARTINO_EXPORT DartinoProgram DartinoLoadProgramFromFlash(void* location,
-                                                       size_t size);
+                                                          size_t size);
 
 // Starts the main method of the program. The given callback will be called once
 // all processes of the program have terminated.

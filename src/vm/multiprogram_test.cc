@@ -65,7 +65,7 @@ class Runner {
   int awaited_;
   int finished_;
 
-  static void CaptureExitCode(DartinoProgram* program,
+  static void CaptureExitCode(DartinoProgram program,
                               int exitcode,
                               void* data) {
     Runner* runner = reinterpret_cast<Runner*>(data);
