@@ -45,6 +45,15 @@ class ProcessQueue {
   bool TryDequeueEntry(Process* entry) {
     ScopedSpinlock locker(&spinlock_);
 
+    // NOTE: There is a time lag between the time when a process is marked as
+    // [Process::kReady] and when it's enqueued in the [ProcessQueue].
+    //
+    // The transitions are as follows:
+    //   "kSleeping" -> "kReady" -> "kReady && ready.Contains(p)" -> "kRunning"
+    if (entry->state() != Process::kReady || !ready_.IsInList(entry)) {
+      return false;
+    }
+
     if (entry->ChangeState(Process::kReady, Process::kRunning)) {
       ready_.Remove(entry);
       return true;
