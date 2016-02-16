@@ -33,6 +33,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
  public:
   enum State {
     kSleeping,
+    kEnqueuing,
     kReady,
     kRunning,
     kYielding,

@@ -21,9 +21,11 @@ class ProcessQueue {
   bool Enqueue(Process* entry) {
     ScopedSpinlock locker(&spinlock_);
     ASSERT(!ready_.IsInList(entry));
-    ASSERT(entry->state() == Process::kReady);
     bool was_empty = ready_.IsEmpty();
     ready_.Append(entry);
+    if (!entry->ChangeState(Process::kEnqueuing, Process::kReady)) {
+      UNREACHABLE();
+    }
     return was_empty;
   }
 
@@ -44,15 +46,6 @@ class ProcessQueue {
   // Dequeue [entry] from the ready queue and returns whether it was successful.
   bool TryDequeueEntry(Process* entry) {
     ScopedSpinlock locker(&spinlock_);
-
-    // NOTE: There is a time lag between the time when a process is marked as
-    // [Process::kReady] and when it's enqueued in the [ProcessQueue].
-    //
-    // The transitions are as follows:
-    //   "kSleeping" -> "kReady" -> "kReady && ready.Contains(p)" -> "kRunning"
-    if (entry->state() != Process::kReady || !ready_.IsInList(entry)) {
-      return false;
-    }
 
     if (entry->ChangeState(Process::kReady, Process::kRunning)) {
       ready_.Remove(entry);
@@ -78,6 +71,9 @@ class ProcessQueue {
       Process* process = *it;
       if (process->program() == program) {
         it = ready_.Erase(it);
+        if (!process->ChangeState(Process::kReady, Process::kEnqueuing)) {
+          UNREACHABLE();
+        }
         state->AddPausedProcess(process);
       } else {
         ++it;
