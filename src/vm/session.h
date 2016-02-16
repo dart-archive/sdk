@@ -66,7 +66,16 @@ class Session {
   Scheduler::ProcessInterruptionEvent CompileTimeError(Process* process);
 
  private:
+  // SessionState private methods.
   void ChangeState(SessionState* new_state);
+  bool debugging() const { return debugging_; }
+  void set_debugging(bool debugging) { debugging_ = debugging; }
+  Process* main_process() const { return main_process_; }
+  void set_main_process(Process* process) {
+    ASSERT(main_process_ == NULL);
+    process_ = process;
+    main_process_ = process;
+  }
 
   // Map operations.
   void NewMap(int map_index);
@@ -153,9 +162,9 @@ class Session {
   Program* program_;
   SessionState* state_;
 
-  // TODO(ager): For debugging, the session should have a mapping from
-  // ids to processes. For now we just keep a reference to the main
-  // process (with implicit id 0).
+  bool debugging_;
+  Process* main_process_;
+  // TODO(zerny): remove use of process_.
   Process* process_;
   int next_process_id_;
 
