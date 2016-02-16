@@ -241,7 +241,15 @@ ProgramInfo buildProgramInfo(DartinoSystem system, WriteSnapshotResult result) {
 
   fillTable(functionNames,
             result.functionOffsetTable,
-            (id) => system.functionsById[id].name);
+            (id) {
+    DartinoFunction function = system.functionsById[id];
+    if (function == null) {
+      throw new StateError("Could not find function for id '$id'.");
+      // Why do we get here?
+      return null;
+    }
+    return function.name;
+  });
   fillTable(classNames,
             result.classOffsetTable,
             (id) {
