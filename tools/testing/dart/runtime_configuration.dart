@@ -184,7 +184,8 @@ class DartinoVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
     if (script != null && type != 'application/dartino-snapshot') {
       throw "Dartino VM cannot run files of type '$type'.";
     }
-    var argumentsUnfold = ["-Xunfold-program"]..addAll(arguments);
+    var argumentsUnfold =
+        ["-Xunfold-program", "-Xabort-on-sigterm"]..addAll(arguments);
 
     if (configuration['system'] == 'lk') {
       return <Command>[
