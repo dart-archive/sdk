@@ -5,6 +5,8 @@
 # This directory contains tests that are intended to show the
 # current state of the language.
 
+closure_cycles_test: Slow, Pass # We see this test time out in various configs.
+
 [ $compiler == dartino_compiler || $runtime == dartino_compiler ]
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
@@ -847,9 +849,6 @@ vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
 # recursive.
 large_class_declaration_test: Timeout
 smaller_4_Interface_Types_A11_t01_test: Crash
-
-[ $mode == debug ]
-closure_cycles_test: Slow, Pass
 
 [ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.
