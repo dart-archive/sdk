@@ -235,9 +235,10 @@ def CopySTM(bundle_dir):
   CopyFile('platforms/stm/disco_dartino/generated/SW4STM32/'
            'configuration/STM32F746NGHx_FLASH.ld',
            join(config_dir, 'stm32f746g-discovery.ld'))
+
 def CopySamples(bundle_dir):
   target = join(bundle_dir, 'samples')
-  CopyFile(join('samples', 'dartino.yaml'), join(target, 'dartino.yaml'))
+  CopyFile(join('samples', 'dartino.yaml'), target)
   for v in SAMPLES:
     copytree(join('samples', v), join(target, v))
 
