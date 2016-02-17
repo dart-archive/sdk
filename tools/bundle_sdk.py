@@ -238,9 +238,9 @@ def CopySTM(bundle_dir):
 
 def CopySamples(bundle_dir):
   target = join(bundle_dir, 'samples')
-  CopyFile(join('samples', 'dartino.yaml'), target)
   for v in SAMPLES:
     copytree(join('samples', v), join(target, v))
+  CopyFile(join('samples', 'dartino.yaml'), join(target, 'dartino.yaml'))
 
 def EnsureDartDoc():
   subprocess.check_call(
