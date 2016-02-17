@@ -32,6 +32,21 @@
 
 namespace dartino {
 
+static bool IsBuiltin(Class* klass, Program* program) {
+#define CHECK(type, name, CamelName) \
+    if (static_cast<Object*>(program->name()) == \
+        static_cast<Object*>(klass)) return true;
+ROOTS_DO(CHECK);
+#undef CHECK
+  if (klass == program->true_object()->get_class() ||
+      klass == program->false_object()->get_class() ||
+      klass == program->null_object()->get_class()) {
+    return true;
+  }
+
+  return false;
+}
+
 class SessionState {
  public:
   virtual ~SessionState() {
@@ -641,6 +656,9 @@ void Session::SendInstanceStructure(Instance* instance) {
 
 void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
                                  FunctionOffsetsType* function_offsets) {
+  ASSERT(maps_[class_map_id_] != NULL);
+  ASSERT(maps_[method_map_id_] != NULL);
+
   WriteBuffer buffer;
 
   // Write the hashtag for the program.
@@ -652,7 +670,9 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
     Class* klass = pair.first;
     const PortableOffset& offset = pair.second;
 
-    buffer.WriteInt(MapLookupByObject(class_map_id_, klass));
+    int id = MapLookupByObject(class_map_id_, klass);
+    ASSERT(id != -1 || IsBuiltin(klass, program()));
+    buffer.WriteInt(id);
     buffer.WriteInt(offset.offset_64bits_double);
     buffer.WriteInt(offset.offset_64bits_float);
     buffer.WriteInt(offset.offset_32bits_double);
@@ -665,7 +685,9 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
     Function* function = pair.first;
     const PortableOffset& offset = pair.second;
 
-    buffer.WriteInt(MapLookupByObject(method_map_id_, function));
+    int id = MapLookupByObject(method_map_id_, function);
+    ASSERT(id != -1);
+    buffer.WriteInt(id);
     buffer.WriteInt(offset.offset_64bits_double);
     buffer.WriteInt(offset.offset_64bits_float);
     buffer.WriteInt(offset.offset_32bits_double);

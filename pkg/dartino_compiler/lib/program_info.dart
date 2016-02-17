@@ -241,24 +241,16 @@ ProgramInfo buildProgramInfo(DartinoSystem system, WriteSnapshotResult result) {
 
   fillTable(functionNames,
             result.functionOffsetTable,
-            (id) {
-    DartinoFunction function = system.functionsById[id];
-    if (function == null) {
-      throw new StateError("Could not find function for id '$id'.");
-      // Why do we get here?
-      return null;
-    }
-    return function.name;
-  });
+            (id) => system.functionsById[id].name);
   fillTable(classNames,
             result.classOffsetTable,
             (id) {
-    DartinoClass klass = system.classesById[id];
-    if (klass == null) {
-      // Why do we get here?
-      return null;
-    }
-    return klass.name;
+    // The snapshot contains always all built-in classes, even if the compiler
+    // did not push them to the dartino-vm.
+    // So we get the offsets of built-in classes even though we might not be
+    // able to get their name.
+    if (id == -1) return null;
+    return system.classesById[id].name;
   });
   fillTable(classNames,
             result.functionOffsetTable,
