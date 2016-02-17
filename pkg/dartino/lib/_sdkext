@@ -1,7 +1,0 @@
-{
- "dart:dartino": "../../../lib/dartino/dartino.dart",
- "dart:dartino.io": "../../../lib/io/io.dart",
- "dart:dartino.ffi": "../../../lib/ffi/ffi.dart",
- "dart:dartino.os": "../../../lib/os/os.dart",
- "dart:dartino.service": "../../../lib/service/service.dart"
-}
