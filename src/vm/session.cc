@@ -166,7 +166,7 @@ class ConnectedState : public SessionState {
   bool IsConnected() const { return true; }
   bool IsDebugging() const { return session()->debugging(); }
 
-  void EnableDebugging() {
+  virtual void EnableDebugging() {
     ASSERT(!IsDebugging());
     session()->set_debugging(true);
   }
@@ -221,6 +221,12 @@ class SpawnedState : public ConnectedState {
   Process* main_process() const { return session()->main_process(); }
   // TODO(zerny): Remove uses of this.
   Process* process() const { return session()->process_; }
+
+  void EnableDebugging() {
+    ConnectedState::EnableDebugging();
+    // Ensure that main is allocated the zeroth id.
+    main_process()->EnsureDebuggerAttached(session());
+  }
 
   void ActivateState(SessionState* previous) {
     ASSERT(previous->IsConnected());
@@ -1113,7 +1119,7 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
       int bytecode_index = connection()->ReadInt();
       Function* function = Function::cast(session()->Pop());
       DebugInfo* debug_info = process()->debug_info();
-      int id = debug_info->SetBreakpoint(function, bytecode_index);
+      int id = debug_info->SetProgramBreakpoint(function, bytecode_index);
       buffer.WriteInt(id);
       connection()->Send(Connection::kProcessSetBreakpoint, buffer);
       break;
@@ -1196,7 +1202,7 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       Function* function = Function::cast(
           session()->maps_[session()->method_map_id_]->LookupById(id));
       DebugInfo* debug_info = process()->debug_info();
-      debug_info->SetBreakpoint(function, bcp, true);
+      debug_info->SetProcessLocalBreakpoint(function, bcp, true);
       return ProcessContinue();
     }
 
@@ -1254,7 +1260,9 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       session()->RestartFrame(frame_index);
       process()->set_exception(program()->null_object());
       DebugInfo* debug_info = process()->debug_info();
-      if (debug_info != NULL) debug_info->ClearBreakpoint();
+      if (debug_info != NULL && debug_info->is_at_breakpoint()) {
+        debug_info->ClearBreakpoint();
+      }
       return ProcessContinue();
     }
 

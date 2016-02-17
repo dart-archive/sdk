@@ -7,6 +7,7 @@
 
 #include "src/shared/globals.h"
 #include "src/shared/random.h"
+#include "src/vm/debug_info.h"
 #include "src/vm/double_list.h"
 #include "src/vm/heap.h"
 #include "src/vm/lookup_cache.h"
@@ -342,6 +343,8 @@ class Program : public ProgramList::Entry {
 
   ProcessHandle* MainProcess();
 
+  Breakpoints* breakpoints() { return &breakpoints_; }
+
  private:
   friend class ProgramGroups;
 
@@ -405,6 +408,8 @@ class Program : public ProgramList::Entry {
   List<List<int>> cooked_stack_deltas_;
 
   LookupCache* cache_;
+
+  Breakpoints breakpoints_;
 
   uword group_mask_;
 };

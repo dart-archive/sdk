@@ -18,11 +18,18 @@ class Function;
 class Object;
 class PointerVisitor;
 
+class Breakpoints {
+ public:
+  void UpdateBreakpoints() {}
+  void VisitPointers(PointerVisitor* visitor) {}
+  void VisitProgramPointers(PointerVisitor* visitor) {}
+};
+
 class DebugInfo {
  public:
   static const int kNoBreakpointId = -1;
 
-  explicit DebugInfo(int process_id) {
+  explicit DebugInfo(int process_id, Breakpoints* program_breakpoints) {
     UNIMPLEMENTED();
   }
 
@@ -31,9 +38,15 @@ class DebugInfo {
     return false;
   }
 
-  int SetBreakpoint(Function* function, int bytecode_index,
-                    bool one_shot = false, Coroutine* coroutine = NULL,
-                    word stack_height = 0) {
+  int SetProgramBreakpoint(Function* function, int bytecode_index) {
+    UNIMPLEMENTED();
+    return 0;
+  }
+
+  int SetProcessLocalBreakpoint(
+      Function* function, int bytecode_index,
+      bool one_shot = false, Coroutine* coroutine = NULL,
+      word stack_height = 0) {
     UNIMPLEMENTED();
     return 0;
   }
@@ -61,6 +74,8 @@ class DebugInfo {
   void ClearBreakpoint() { UNIMPLEMENTED(); }
 
   void SetStepping() { UNIMPLEMENTED(); }
+
+  static void ClearBytecodeBreaks() {}
 };
 
 }  // namespace dartino

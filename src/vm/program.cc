@@ -356,8 +356,11 @@ class FinishProgramGCVisitor : public ProcessVisitor {
 void Program::FinishProgramGC() {
   // Uncook process
   UncookAndUnchainStacks();
+
+  DebugInfo::ClearBytecodeBreaks();
   FinishProgramGCVisitor visitor;
   VisitProcesses(&visitor);
+  breakpoints_.UpdateBreakpoints();
 
   if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
@@ -877,6 +880,7 @@ void Program::Initialize() {
 
 void Program::IterateRoots(PointerVisitor* visitor) {
   IterateRootsIgnoringSession(visitor);
+  breakpoints_.VisitProgramPointers(visitor);
   if (session_ != NULL) {
     session_->IteratePointers(visitor);
   }
