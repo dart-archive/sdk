@@ -15,6 +15,12 @@ part 'nsm.dart';
 
 const native = "native";
 
+class _Patch {
+  const _Patch();
+}
+
+const patch = const _Patch();
+
 const bool enableBigint =
     const bool.fromEnvironment('dartino.enable-bigint', defaultValue: true);
 
@@ -99,5 +105,3 @@ external get nativeError;
 
 // Change execution to [coroutine], passing along [argument].
 external coroutineChange(coroutine, argument);
-
-const patch = "patch";

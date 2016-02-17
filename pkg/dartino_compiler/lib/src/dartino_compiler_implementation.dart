@@ -5,7 +5,8 @@
 library dartino_compiler.dartino_compiler_implementation;
 
 import 'dart:async' show
-    EventSink;
+    EventSink,
+    Future;
 
 import 'package:compiler/compiler_new.dart' as api;
 
@@ -17,6 +18,9 @@ import 'package:compiler/src/io/source_file.dart';
 
 import 'package:compiler/src/source_file_provider.dart' show
     SourceFileProvider;
+
+import 'package:compiler/src/library_loader.dart' show
+    LibraryLoader;
 
 import 'package:compiler/src/elements/modelx.dart' show
     CompilationUnitElementX,
@@ -232,6 +236,15 @@ class DartinoCompilerImplementation extends CompilerImpl {
       return;
     }
     super.compileLoadedLibraries();
+  }
+
+  @override
+  Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
+    Uri uri = library.canonicalUri;
+    if (uri.path == "dartino._system") {
+      patchAnnotationClass = library.find("_Patch");
+    }
+    return super.onLibraryScanned(library, loader);
   }
 }
 
