@@ -108,6 +108,10 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
     PrintStatistics();
   }
 
+  // Code in process spawning generally assumes there is enough space for
+  // stacks etc.  We use a [NoAllocationFailureScope] to ensure it.
+  NoAllocationFailureScope scope(process_heap()->space());
+
   Process* process = SpawnProcess(NULL);
   process->set_arguments(arguments);
 
