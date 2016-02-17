@@ -237,6 +237,7 @@ def CopySTM(bundle_dir):
            join(config_dir, 'stm32f746g-discovery.ld'))
 def CopySamples(bundle_dir):
   target = join(bundle_dir, 'samples')
+  CopyFile(join('samples', 'dartino.yaml'), join(target, 'dartino.yaml'))
   for v in SAMPLES:
     copytree(join('samples', v), join(target, v))
 
