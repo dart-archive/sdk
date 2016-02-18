@@ -19,7 +19,7 @@ extern "C" void InterpreterMethodEntry();
 class FlashifyVisitor : public HeapObjectVisitor {
  public:
   virtual int Visit(HeapObject* object) {
-    printf("O%08x:\n", object->address());
+    printf("O%08lx:\n", object->address());
     FlashifyReference(object->get_class());
     if (object->IsClass()) {
       FlashifyClass(Class::cast(object));
@@ -45,7 +45,7 @@ class FlashifyVisitor : public HeapObjectVisitor {
       FlashifyDispatchTableEntry(DispatchTableEntry::cast(object));
     } else {
       FATAL1("Unhandled object type (%d) when flashifying!",
-        object->format().type());
+             object->format().type());
     }
 
     return object->Size();
@@ -53,9 +53,9 @@ class FlashifyVisitor : public HeapObjectVisitor {
 
   void FlashifyReference(Object* object) {
     if (object->IsHeapObject()) {
-      printf("\t.long O%08x + 1\n", HeapObject::cast(object)->address());
+      printf("\t.long O%08lx + 1\n", HeapObject::cast(object)->address());
     } else {
-      printf("\t.long 0x%08x\n", object);
+      printf("\t.long 0x%08lx\n", reinterpret_cast<uword>(object));
     }
   }
 
@@ -76,7 +76,7 @@ class FlashifyVisitor : public HeapObjectVisitor {
     }
 
     for (int o = 0; o < function->bytecode_size(); o += kPointerSize) {
-      printf("\t.long 0x%08x\n",
+      printf("\t.long 0x%08lx\n",
              *reinterpret_cast<uword*>(function->bytecode_address_for(o)));
     }
 
@@ -102,7 +102,7 @@ class FlashifyVisitor : public HeapObjectVisitor {
     }
 
     for (int o = size; o < string->StringSize(); o += kPointerSize) {
-      printf("\t.long 0x%08x\n",
+      printf("\t.long 0x%08lx\n",
              *reinterpret_cast<uword*>(string->byte_address_for(o - size)));
     }
   }
@@ -116,8 +116,9 @@ class FlashifyVisitor : public HeapObjectVisitor {
     }
 
     for (int o = size; o < string->StringSize(); o += kPointerSize) {
-      printf("\t.long 0x%08x\n", *reinterpret_cast<uword*>(
-                                     string->byte_address_for((o - size) / 2)));
+      printf(
+          "\t.long 0x%08lx\n",
+          *reinterpret_cast<uword*>(string->byte_address_for((o - size) / 2)));
     }
   }
 
@@ -129,7 +130,7 @@ class FlashifyVisitor : public HeapObjectVisitor {
     }
 
     for (int o = size; o < array->ByteArraySize(); o += kPointerSize) {
-      printf("\t.long 0x%08x\n",
+      printf("\t.long 0x%08lx\n",
              *reinterpret_cast<uword*>(array->byte_address_for(o - size)));
     }
   }
@@ -145,14 +146,14 @@ class FlashifyVisitor : public HeapObjectVisitor {
   void FlashifyLargeInteger(LargeInteger* large) {
     uword* ptr =
         reinterpret_cast<uword*>(large->address() + LargeInteger::kValueOffset);
-    printf("\t.long 0x%08x\n", ptr[0]);
-    printf("\t.long 0x%08x\n", ptr[1]);
+    printf("\t.long 0x%08lx\n", ptr[0]);
+    printf("\t.long 0x%08lx\n", ptr[1]);
   }
 
   void FlashifyDouble(Double* d) {
     uword* ptr = reinterpret_cast<uword*>(d->address() + Double::kValueOffset);
-    printf("\t.long 0x%08x\n", ptr[0]);
-    printf("\t.long 0x%08x\n", ptr[1]);
+    printf("\t.long 0x%08lx\n", ptr[0]);
+    printf("\t.long 0x%08lx\n", ptr[1]);
   }
 
   void FlashifyInitializer(Initializer* initializer) {
@@ -184,7 +185,7 @@ class FlashifyVisitor : public HeapObjectVisitor {
       FATAL("Unhandled code pointer in dispatch table entry.");
     }
     FlashifyReference(entry->offset());
-    printf("\t.long 0x%08x\n", entry->selector());
+    printf("\t.long 0x%08lx\n", entry->selector());
   }
 };
 
