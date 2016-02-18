@@ -4,7 +4,7 @@
 
 [ $system == macos ]
 # https://github.com/dartino/sdk/issues/401
-big_integer_huge_mul_vm_test: Pass, Slow, Timeout
+big_integer_huge_mul_vm_test: Pass, Slow, Crash
 
 [ $runtime == dartino_compiler ]
 # -D option not implemented.
