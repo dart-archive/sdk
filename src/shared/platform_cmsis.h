@@ -165,7 +165,7 @@ class MonitorImpl {
     int status = osSemaphoreWait(wait_entry.semaphore_, microseconds / 1000);
     success = (status == osOK);
 #endif
-    if (success) {
+    if (!success) {
       CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
       // Remove our entry from the waitlist. If we are no longer in the list,
       // we have been notified before we could complete handling the timeout,
