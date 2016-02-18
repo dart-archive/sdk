@@ -1069,3 +1069,6 @@ vm/regress_22621_vm_test: RuntimeError
 
 # No uri on embedded
 unsorted/uri_base_test: RuntimeError
+
+[ $system == macos && $mode == debug && $asan ]
+override_inheritance_no_such_method_test/none: Pass, Crash # Issue 434
