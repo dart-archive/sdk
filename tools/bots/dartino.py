@@ -187,15 +187,17 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   if system == 'linux':
     StepsCreateDebianPackage()
     StepsArchiveDebianPackage()
+
     # We need the dartino daemon process to compile snapshots.
-    host_configuration = GetBuildConfigurations(
+    for arch in ['ia32', 'x64']:
+      host_configuration = GetBuildConfigurations(
         system=utils.GuessOS(),
         modes=['release'],
-        archs=['x64'],
+        archs=[arch],
         asans=[False],
         embedded_libs=[False],
         use_sdks=[False])[0]
-    StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
+      StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
 
     for cross_arch in cross_archs:
       CrossCompile(cross_system, [cross_mode], cross_arch)
@@ -482,15 +484,15 @@ def StepsFreeRtos(debug_log):
   StepGyp()
 
   # We need the dartino daemon process to compile snapshots.
-  host_configuration = GetBuildConfigurations(
+  for arch in ['ia32', 'x64']:
+    host_configuration = GetBuildConfigurations(
       system=utils.GuessOS(),
       modes=['release'],
-      archs=['x64'],
+      archs=[arch],
       asans=[False],
       embedded_libs=[False],
       use_sdks=[False])[0]
-  StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
-
+    StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
   configuration = GetBuildConfigurations(
       system=utils.GuessOS(),
       modes=['debug'],
