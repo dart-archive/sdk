@@ -14,6 +14,7 @@
 namespace dartino {
 
 static Mutex* breakpoint_mutex = new Mutex();
+static int next_breakpoint_id = 0;
 
 Breakpoint::Breakpoint(Function* function, int bytecode_index, int id,
                        bool is_one_shot, Coroutine* coroutine,
@@ -35,28 +36,105 @@ void Breakpoint::VisitProgramPointers(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&function_));
 }
 
-DebugInfo::DebugInfo(int process_id)
+
+void Breakpoints::SetBytecodeBreaks() {
+  ScopedLock lock(breakpoint_mutex);
+  for (auto& pair : breakpoints_) {
+    SetBytecodeBreak(static_cast<Opcode>(*pair.first));
+  }
+}
+
+void Breakpoints::VisitPointers(PointerVisitor* visitor) {
+  for (auto& pair : breakpoints_) pair.second.VisitPointers(visitor);
+}
+
+void Breakpoints::VisitProgramPointers(PointerVisitor* visitor) {
+  for (auto& pair : breakpoints_) pair.second.VisitProgramPointers(visitor);
+}
+
+// Update breakpoints with new bytecode pointer values after GC.
+void Breakpoints::UpdateBreakpoints() {
+  Map new_breakpoints;
+  ScopedLock lock(breakpoint_mutex);
+  for (auto& pair : breakpoints_) {
+    Function* function = pair.second.function();
+    uint8_t* bcp =
+        function->bytecode_address_for(0) + pair.second.bytecode_index();
+    SetBytecodeBreak(static_cast<Opcode>(*bcp));
+    new_breakpoints.Insert({bcp, pair.second});
+  }
+  breakpoints_.Swap(new_breakpoints);
+}
+
+DebugInfo::DebugInfo(int process_id, Breakpoints* program_breakpoints)
     : process_id_(process_id),
       is_stepping_(false),
       is_at_breakpoint_(false),
       current_breakpoint_id_(kNoBreakpointId),
-      next_breakpoint_id_(0) {}
+      program_breakpoints_(program_breakpoints) {}
+
+int DebugInfo::NextBreakpointId() {
+  return next_breakpoint_id++;
+}
+
+const Breakpoint* DebugInfo::LookupBreakpointByBCP(uint8_t* bcp) {
+  Breakpoints::ConstIterator it = program_breakpoints_->Find(bcp);
+  if (it != program_breakpoints_->End()) {
+    return &it->second;
+  }
+  it = process_breakpoints_.Find(bcp);
+  if (it != process_breakpoints_.End()) {
+    return &it->second;
+  }
+  return NULL;
+}
+
+const Breakpoint* DebugInfo::LookupBreakpointByOpcode(uint8_t opcode) {
+  for (auto& pair : program_breakpoints_->map()) {
+    if (*pair.first == opcode) return &pair.second;
+  }
+  for (auto& pair : process_breakpoints_.map()) {
+    if (*pair.first == opcode) return &pair.second;
+  }
+  return NULL;
+}
+
+uint8_t* DebugInfo::EraseBreakpointById(int id) {
+  Breakpoints::ConstIterator it = program_breakpoints_->Begin();
+  Breakpoints::ConstIterator end = program_breakpoints_->End();
+  for (; it != end; ++it) {
+    if (it->second.id() == id) {
+      uint8* bcp = it->first;
+      program_breakpoints_->Erase(it);
+      return bcp;
+    }
+  }
+  it = process_breakpoints_.Begin();
+  end = process_breakpoints_.End();
+  for (; it != end; ++it) {
+    if (it->second.id() == id) {
+      uint8* bcp = it->first;
+      process_breakpoints_.Erase(it);
+      return bcp;
+    }
+  }
+  return 0;
+}
 
 bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
-  BreakpointMap::ConstIterator it = breakpoints_.Find(bcp);
-  if (it != breakpoints_.End()) {
-    const Breakpoint& breakpoint = it->second;
-    Stack* breakpoint_stack = breakpoint.stack();
+  const Breakpoint* breakpoint = LookupBreakpointByBCP(bcp);
+  if (breakpoint != NULL) {
+    Stack* breakpoint_stack = breakpoint->stack();
     if (breakpoint_stack != NULL) {
       // Step-over breakpoint that only matches if the stack height
       // is correct.
-      word index = breakpoint_stack->length() - breakpoint.stack_height();
+      word index = breakpoint_stack->length() - breakpoint->stack_height();
       Object** expected_sp = breakpoint_stack->Pointer(index);
       ASSERT(sp <= expected_sp);
       if (expected_sp != sp) return false;
     }
-    SetCurrentBreakpoint(breakpoint.id());
-    if (breakpoint.is_one_shot()) DeleteBreakpoint(breakpoint.id());
+    SetCurrentBreakpoint(breakpoint->id());
+    if (breakpoint->is_one_shot()) DeleteBreakpoint(breakpoint->id());
     return true;
   }
   if (is_stepping_) {
@@ -66,38 +144,49 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
   return false;
 }
 
-int DebugInfo::SetBreakpoint(Function* function, int bytecode_index,
-                             bool one_shot, Coroutine* coroutine,
-                             word stack_height) {
-  Breakpoint breakpoint(function, bytecode_index, NextBreakpointId(),
-                        one_shot, coroutine, stack_height);
+int DebugInfo::SetProgramBreakpoint(Function* function, int bytecode_index) {
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
-  BreakpointMap::ConstIterator it = breakpoints_.Find(bcp);
-  if (it != breakpoints_.End()) return it->second.id();
+  // Only check for existing breakpoint in the program-global set.
+  Breakpoints::ConstIterator it = program_breakpoints_->Find(bcp);
+  if (it != program_breakpoints_->End()) {
+    return it->second.id();
+  }
   {
     ScopedLock lock(breakpoint_mutex);
     Opcode opcode = static_cast<Opcode>(*bcp);
     SetBytecodeBreak(opcode);
   }
-  breakpoints_.Insert({bcp, breakpoint});
+  Breakpoint breakpoint(
+      function, bytecode_index, NextBreakpointId(), false, NULL, 0);
+  program_breakpoints_->Insert({bcp, breakpoint});
+  return breakpoint.id();
+}
+
+int DebugInfo::SetProcessLocalBreakpoint(Function* function, int bytecode_index,
+                                         bool one_shot, Coroutine* coroutine,
+                                         word stack_height) {
+  ASSERT(one_shot);
+  uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
+  const Breakpoint* existing_breakpoint = LookupBreakpointByBCP(bcp);
+  if (existing_breakpoint != NULL) return existing_breakpoint->id();
+  {
+    ScopedLock lock(breakpoint_mutex);
+    Opcode opcode = static_cast<Opcode>(*bcp);
+    SetBytecodeBreak(opcode);
+  }
+  Breakpoint breakpoint(function, bytecode_index, NextBreakpointId(),
+                        one_shot, coroutine, stack_height);
+  process_breakpoints_.Insert({bcp, breakpoint});
   return breakpoint.id();
 }
 
 bool DebugInfo::DeleteBreakpoint(int id) {
-  BreakpointMap::ConstIterator it = breakpoints_.Begin();
-  BreakpointMap::ConstIterator end = breakpoints_.End();
-  for (; it != end; ++it) {
-    if (it->second.id() == id) break;
-  }
-  if (it != end) {
-    uint8* bcp = it->first;
-    breakpoints_.Erase(it);
-
-    // If we have other breakpoint with that opcode, return.
-    for (auto& pair : breakpoints_) {
-      if (*pair.first == *bcp) return true;
+  uint8_t* bcp = EraseBreakpointById(id);
+  if (bcp != NULL) {
+    // If we have another breakpoint with that opcode, return.
+    if (LookupBreakpointByOpcode(*bcp) != NULL) {
+      return true;
     }
-
     // Not found, clear the opcode.
     ScopedLock lock(breakpoint_mutex);
     ClearBytecodeBreak(static_cast<Opcode>(*bcp));
@@ -120,48 +209,34 @@ void DebugInfo::ClearStepping() {
 }
 
 void DebugInfo::ClearBreakpoint() {
-  is_at_breakpoint_ = false;
-  current_breakpoint_id_ = kNoBreakpointId;
+  ClearCurrentBreakpoint();
   if (is_stepping_) return;
-
-  ScopedLock lock(breakpoint_mutex);
-
-  for (int i = 0; i < Bytecode::kNumBytecodes; i++) {
-    ClearBytecodeBreak(static_cast<Opcode>(i));
-  }
-
-  for (auto& pair : breakpoints_) {
-    SetBytecodeBreak(static_cast<Opcode>(*pair.first));
-  }
+  ClearBytecodeBreaks();
+  program_breakpoints_->SetBytecodeBreaks();
+  process_breakpoints_.SetBytecodeBreaks();
 }
 
 void DebugInfo::VisitPointers(PointerVisitor* visitor) {
-  for (auto& pair : breakpoints_) pair.second.VisitPointers(visitor);
+  process_breakpoints_.VisitPointers(visitor);
 }
 
 void DebugInfo::VisitProgramPointers(PointerVisitor* visitor) {
-  for (auto& pair : breakpoints_) pair.second.VisitProgramPointers(visitor);
+  process_breakpoints_.VisitProgramPointers(visitor);
 }
 
 void DebugInfo::UpdateBreakpoints() {
-  BreakpointMap new_breakpoints;
+  if (is_stepping_) {
+    is_stepping_ = false;
+    SetStepping();
+  }
+  process_breakpoints_.UpdateBreakpoints();
+}
 
+void DebugInfo::ClearBytecodeBreaks() {
   ScopedLock lock(breakpoint_mutex);
-
-  if (!is_stepping_) {
-    for (int i = 0; i < Bytecode::kNumBytecodes; i++) {
-      ClearBytecodeBreak(static_cast<Opcode>(i));
-    }
+  for (int i = 0; i < Bytecode::kNumBytecodes; i++) {
+    ClearBytecodeBreak(static_cast<Opcode>(i));
   }
-
-  for (auto& pair : breakpoints_) {
-    Function* function = pair.second.function();
-    uint8_t* bcp =
-        function->bytecode_address_for(0) + pair.second.bytecode_index();
-    SetBytecodeBreak(static_cast<Opcode>(*bcp));
-    new_breakpoints.Insert({bcp, pair.second});
-  }
-  breakpoints_.Swap(new_breakpoints);
 }
 
 }  // namespace dartino

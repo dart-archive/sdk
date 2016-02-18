@@ -13,15 +13,22 @@ namespace dartino {
 // This multiprogram runner uses only the DartinoStartMain() API function.
 class Runner {
  public:
-  Runner(int count, DartinoProgram* programs, int* exitcodes)
+  Runner(int count, DartinoProgram* programs, int* exitcodes, bool freeze)
       : monitor_(Platform::CreateMonitor()),
         programs_(programs),
         exitcodes_(exitcodes),
         count_(count),
         started_(0),
         awaited_(0),
-        finished_(0) {}
-  ~Runner() { delete monitor_; }
+        finished_(0),
+        freeze_(freeze) {
+    freeze_group_ = DartinoCreateProgramGroup("odd-numbered-programs");
+  }
+
+  ~Runner() {
+    DartinoDeleteProgramGroup(freeze_group_);
+    delete monitor_;
+  }
 
   // Starts all programs and then waits for all of them.
   void RunInParallel() { RunInBatches(count_); }
@@ -34,11 +41,27 @@ class Runner {
   // until no more programs need to be run.
   void RunInBatches(int batch_size) {
     ASSERT((count_ % batch_size) == 0);
+    ASSERT(count_ == batch_size || (batch_size % 2) == 0 || !freeze_);
+
+    int normal = batch_size / 2;
+    int frozen = batch_size - normal;
 
     int batches = count_ / batch_size;
     for (int batch_nr = 1; batch_nr <= batches; batch_nr++) {
-      Start(batch_size);
-      Wait(batch_size);
+      if (freeze_) {
+        Start(batch_size);
+
+        // Freeze odd numbered programs & wait for even numbered programs.
+        Freeze();
+        Wait(normal);
+
+        // Unfreeze odd numbered programs & wait for for them.
+        Unfreeze();
+        Wait(frozen);
+      } else {
+        Start(batch_size);
+        Wait(batch_size);
+      }
     }
   }
 
@@ -59,13 +82,15 @@ class Runner {
  private:
   Monitor* monitor_;
   DartinoProgram* programs_;
+  DartinoProgramGroup freeze_group_;
   int* exitcodes_;
   int count_;
   int started_;
   int awaited_;
   int finished_;
+  bool freeze_;
 
-  static void CaptureExitCode(DartinoProgram* program,
+  static void CaptureExitCode(DartinoProgram program,
                               int exitcode,
                               void* data) {
     Runner* runner = reinterpret_cast<Runner*>(data);
@@ -87,9 +112,21 @@ class Runner {
   void Start(int count) {
     ScopedMonitorLock locker(monitor_);
     for (int i = started_; i < started_ + count; i++) {
-      DartinoStartMain(programs_[i], &Runner::CaptureExitCode, this, 0, NULL);
+      DartinoProgram program = programs_[i];
+      DartinoStartMain(program, &Runner::CaptureExitCode, this, 0, NULL);
+      if ((i % 2) == 1) {
+        DartinoAddProgramToGroup(freeze_group_, program);
+      }
     }
     started_ += count;
+  }
+
+  void Freeze() {
+    DartinoFreezeProgramGroup(freeze_group_);
+  }
+
+  void Unfreeze() {
+    DartinoUnfreezeProgramGroup(freeze_group_);
   }
 
   void Wait(int count) {
@@ -102,11 +139,27 @@ class Runner {
   }
 };
 
-static void PrintAndDie(char **argv) {
-  FATAL1("Usage: %0 "
+static void PrintAndDie(char* program, char **argv) {
+  FATAL1("Usage: %s "
+         "[--freeze-odd] "
          "<parallel|sequence|batch=NUM|overlapped=NUM> "
          "[[<snapshot> <expected-exitcode>] ...]",
          argv[0]);
+}
+
+// Whether to freeze odd-numbered programs.
+static bool test_flag_freeze = false;
+
+static void ExtractTestFlags(int* argc, char*** argv) {
+  while (*argc > 0) {
+    if (strcmp((*argv)[0], "--freeze-odd") == 0) {
+      test_flag_freeze = true;
+      --(*argc);
+      ++(*argv);
+    } else {
+      break;
+    }
+  }
 }
 
 static int Main(int argc, char** argv) {
@@ -114,53 +167,62 @@ static int Main(int argc, char** argv) {
 
   DartinoSetup();
 
-  if (argc <= 1 || (argc % 2) != 0) PrintAndDie(argv);
+  char* program = argv[0];
+  --argc; ++argv;
 
-  bool parallel = strcmp(argv[1], "parallel") == 0;
-  bool sequence = strcmp(argv[1], "sequence") == 0;
-  bool batch = strncmp(argv[1], "batch=", strlen("batch=")) == 0;
-  bool overlapped = strncmp(argv[1], "overlapped=", strlen("overlapped=")) == 0;
-  if (!parallel && !sequence && !batch && !overlapped) PrintAndDie(argv);
+  ExtractTestFlags(&argc, &argv);
 
-  int program_count = (argc - 2) / 2;
+  if (argc <= 1 || (argc % 2) != 1) PrintAndDie(program, argv);
+
+  bool parallel = strcmp(argv[0], "parallel") == 0;
+  bool sequence = strcmp(argv[0], "sequence") == 0;
+  bool batch = strncmp(argv[0], "batch=", strlen("batch=")) == 0;
+  bool overlapped = strncmp(argv[0], "overlapped=", strlen("overlapped=")) == 0;
+  if (!parallel && !sequence && !batch && !overlapped) {
+    PrintAndDie(program, argv);
+  }
+
+  int program_count = (argc - 1) / 2;
   DartinoProgram* programs = new DartinoProgram[program_count];
   int* expected_exit_codes = new int[program_count];
   for (int i = 0; i < program_count; i++) {
-    List<uint8> bytes = Platform::LoadFile(argv[2 + 2 * i]);
+    List<uint8> bytes = Platform::LoadFile(argv[1 + 2 * i]);
     if (bytes.is_empty()) FATAL("Invalid snapshot");
     programs[i] = DartinoLoadSnapshot(bytes.data(), bytes.length());
-    expected_exit_codes[i] = atoi(argv[2 + 2 * i + 1]);
+    expected_exit_codes[i] = atoi(argv[1 + 2 * i + 1]);
     bytes.Delete();
   }
 
-  int* actual_exitcodes = new int[program_count];
-  Runner runner(program_count, programs, actual_exitcodes);
-  if (parallel) {
-    runner.RunInParallel();
-  } else if (sequence) {
-    runner.RunInSequence();
-  } else if (batch) {
-    int batch_size = atoi(argv[1] + strlen("batch="));
-    runner.RunInBatches(batch_size);
-  } else if (overlapped) {
-    int overlapped = atoi(argv[1] + strlen("overlapped="));
-    runner.RunOverlapped(overlapped);
-  } else {
-    UNREACHABLE();
-  }
-
   int result = 0;
-  for (int i = 0; i < program_count; i++) {
-    if (expected_exit_codes[i] != actual_exitcodes[i]) {
-      fprintf(stderr, "%s: Expected exitcode: %d, Actual exitcode: %d\n",
-          argv[2 + 2 * i], expected_exit_codes[i], actual_exitcodes[i]);
-      result++;
+  {
+    int* actual_exitcodes = new int[program_count];
+    Runner runner(program_count, programs, actual_exitcodes, test_flag_freeze);
+    if (parallel) {
+      runner.RunInParallel();
+    } else if (sequence) {
+      runner.RunInSequence();
+    } else if (batch) {
+      int batch_size = atoi(argv[0] + strlen("batch="));
+      runner.RunInBatches(batch_size);
+    } else if (overlapped) {
+      int overlapped = atoi(argv[0] + strlen("overlapped="));
+      runner.RunOverlapped(overlapped);
+    } else {
+      UNREACHABLE();
     }
-  }
 
-  delete[] actual_exitcodes;
-  delete[] expected_exit_codes;
-  delete[] programs;
+    for (int i = 0; i < program_count; i++) {
+      if (expected_exit_codes[i] != actual_exitcodes[i]) {
+        fprintf(stderr, "%s: Expected exitcode: %d, Actual exitcode: %d\n",
+            argv[1 + 2 * i], expected_exit_codes[i], actual_exitcodes[i]);
+        result++;
+      }
+    }
+
+    delete[] actual_exitcodes;
+    delete[] expected_exit_codes;
+    delete[] programs;
+  }
 
   DartinoTearDown();
 

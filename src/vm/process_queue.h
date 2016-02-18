@@ -21,9 +21,11 @@ class ProcessQueue {
   bool Enqueue(Process* entry) {
     ScopedSpinlock locker(&spinlock_);
     ASSERT(!ready_.IsInList(entry));
-    ASSERT(entry->state() == Process::kReady);
     bool was_empty = ready_.IsEmpty();
     ready_.Append(entry);
+    if (!entry->ChangeState(Process::kEnqueuing, Process::kReady)) {
+      UNREACHABLE();
+    }
     return was_empty;
   }
 
@@ -69,6 +71,9 @@ class ProcessQueue {
       Process* process = *it;
       if (process->program() == program) {
         it = ready_.Erase(it);
+        if (!process->ChangeState(Process::kReady, Process::kEnqueuing)) {
+          UNREACHABLE();
+        }
         state->AddPausedProcess(process);
       } else {
         ++it;

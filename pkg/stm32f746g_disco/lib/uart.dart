@@ -57,6 +57,16 @@ class Uart {
     _write(_getForeign(data), offset, length ?? (data.lengthInBytes - offset));
   }
 
+  void writeByte(int byte) {
+    var mem = new ForeignMemory.allocated(1);
+    mem.setUint8(0, byte);
+    try {
+      _write(mem, 0, 1);
+    } finally {
+      mem.free();
+    }
+  }
+
   void writeString(String message) {
     var mem = new ForeignMemory.fromStringAsUTF8(message);
     try {

@@ -7,6 +7,8 @@
 3_test: Fail
 5_test: Fail
 
+spawn_empty_test: Pass, Timeout, Crash # https://github.com/dartino/sdk/issues/430
+
 10_test: RuntimeError, OK # https://github.com/dartino/sdk/issues/249
 
 dart2js_hello_world_test: Slow, Pass

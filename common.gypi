@@ -538,7 +538,7 @@
         ],
       },
 
-      'dartino_cortex_m7': {
+      'dartino_cortex_m_base': {
         'abstract': 1,
 
         'defines': [
@@ -564,10 +564,7 @@
               '-O0',
             ],
             'cflags': [
-              '-mcpu=cortex-m7',
               '-mthumb',
-              '-mfloat-abi=hard',
-              '-mfpu=fpv5-sp-d16',
               '-Wall',
               '-fmessage-length=0',
               '-ffunction-sections',
@@ -585,10 +582,7 @@
             ],
 
             'ldflags': [
-              '-mcpu=cortex-m7',
               '-mthumb',
-              '-mfloat-abi=hard',
-              '-mfpu=fpv5-sp-d16',
               '-Wl,-Map=output.map',
               '-Wl,--gc-sections',
               # Fake define intercepted by cc_wrapper.py.
@@ -617,6 +611,77 @@
             # Undefine IA32 target and using existing ARM target.
             'defines!': [
               'DARTINO_TARGET_IA32',
+            ],
+          }],
+        ],
+      },
+
+      'dartino_cortex_m7': {
+        'abstract': 1,
+
+        'variables': {
+          'common_cflags_ldflags': [
+            '-mcpu=cortex-m7',
+            '-mfloat-abi=hard',
+            '-mfpu=fpv5-sp-d16',
+          ],
+        },
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'cflags': [
+              '<@(common_cflags_ldflags)',
+            ],
+
+            'ldflags': [
+              '<@(common_cflags_ldflags)',
+            ],
+          }],
+        ],
+      },
+
+      'dartino_cortex_m4': {
+        'abstract': 1,
+
+        'variables': {
+          'common_cflags_ldflags': [
+            '-mcpu=cortex-m4',
+            '-mfloat-abi=hard',
+            '-mfpu=fpv5-sp-d16',
+          ],
+        },
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'cflags': [
+              '<@(common_cflags_ldflags)',
+            ],
+
+            'ldflags': [
+              '<@(common_cflags_ldflags)',
+            ],
+          }],
+        ],
+      },
+
+      'dartino_cortex_m4_softfp': {
+        'abstract': 1,
+
+        'variables': {
+          'common_cflags_ldflags': [
+            '-mcpu=cortex-m4',
+            '-mfloat-abi=softfp',
+          ],
+        },
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'cflags': [
+              '<@(common_cflags_ldflags)',
+            ],
+
+            'ldflags': [
+              '<@(common_cflags_ldflags)',
             ],
           }],
         ],

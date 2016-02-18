@@ -44,27 +44,54 @@ class Breakpoint {
   word stack_height_;
 };
 
+class Breakpoints {
+ public:
+  typedef Pair<uint8_t*, Breakpoint> Entry;
+  typedef HashMap<uint8_t*, Breakpoint> Map;
+  typedef Map::ConstIterator ConstIterator;
+
+  // DebugInfo support.
+  const Map& map() { return breakpoints_; }
+  ConstIterator Begin() const { return breakpoints_.Begin(); }
+  ConstIterator End() const { return breakpoints_.End(); }
+  ConstIterator Find(uint8_t* bcp) { return breakpoints_.Find(bcp); }
+  ConstIterator Erase(ConstIterator it) { return breakpoints_.Erase(it); }
+  void Insert(Entry entry) { breakpoints_.Insert(entry); }
+  void SetBytecodeBreaks();
+
+  // GC support.
+  void VisitPointers(PointerVisitor* visitor);
+  void VisitProgramPointers(PointerVisitor* visitor);
+  void UpdateBreakpoints();
+
+ private:
+  Map breakpoints_;
+};
+
 class DebugInfo {
  public:
   static const int kNoBreakpointId = -1;
 
-  explicit DebugInfo(int process_id);
+  explicit DebugInfo(int process_id, Breakpoints* program_breakpoints);
 
   bool ShouldBreak(uint8_t* bcp, Object** sp);
-  int SetBreakpoint(Function* function, int bytecode_index,
-                    bool one_shot = false, Coroutine* coroutine = NULL,
-                    word stack_height = 0);
+
+  int SetProgramBreakpoint(
+      Function* function,
+      int bytecode_index);
+
+  int SetProcessLocalBreakpoint(
+      Function* function,
+      int bytecode_index,
+      bool one_shot = false,
+      Coroutine* coroutine = NULL,
+      word stack_height = 0);
 
   bool DeleteBreakpoint(int id);
 
   void SetStepping();
 
   void ClearStepping();
-
-  void clear_current_breakpoint() {
-    is_at_breakpoint_ = false;
-    current_breakpoint_id_ = kNoBreakpointId;
-  }
 
   int process_id() const { return process_id_; }
 
@@ -80,16 +107,28 @@ class DebugInfo {
   void VisitPointers(PointerVisitor* visitor);
 
   // GC support for program GCs.
+  static void ClearBytecodeBreaks();
   void VisitProgramPointers(PointerVisitor* visitor);
   void UpdateBreakpoints();
 
  private:
+  void ClearCurrentBreakpoint() {
+    ASSERT(is_at_breakpoint_);
+    is_at_breakpoint_ = false;
+    current_breakpoint_id_ = kNoBreakpointId;
+  }
+
   void SetCurrentBreakpoint(int id) {
+    ASSERT(!is_at_breakpoint_);
     is_at_breakpoint_ = true;
     current_breakpoint_id_ = id;
   }
 
-  int NextBreakpointId() { return next_breakpoint_id_++; }
+  int NextBreakpointId();
+
+  const Breakpoint* LookupBreakpointByBCP(uint8_t* bcp);
+  const Breakpoint* LookupBreakpointByOpcode(uint8_t opcode);
+  uint8_t* EraseBreakpointById(int id);
 
   int process_id_;
 
@@ -97,9 +136,8 @@ class DebugInfo {
   bool is_at_breakpoint_;
   int current_breakpoint_id_;
 
-  typedef HashMap<uint8_t*, Breakpoint> BreakpointMap;
-  BreakpointMap breakpoints_;
-  int next_breakpoint_id_;
+  Breakpoints process_breakpoints_;
+  Breakpoints* program_breakpoints_;
 };
 
 }  // namespace dartino

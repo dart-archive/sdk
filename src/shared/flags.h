@@ -29,6 +29,8 @@ namespace dartino {
 #define APPLY_TO_FLAGS(debug, release)                                    \
   FLAG_BOOLEAN(release, expose_gc, false,                                 \
                "Expose invoking GC to native call.")                      \
+  FLAG_BOOLEAN(release, abort_on_sigterm, false,                          \
+               "Call abort() when receiving SIGTERM.")                    \
   FLAG_BOOLEAN(debug, validate_stack, false,                              \
                "Validate stack at each interperter step")                 \
   FLAG_BOOLEAN(release, unfold_program, false,                            \

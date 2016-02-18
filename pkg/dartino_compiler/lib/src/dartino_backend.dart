@@ -329,7 +329,6 @@ class DartinoBackend extends Backend
 
   void enqueueHelpers(ResolutionEnqueuer world, Registry incomingRegistry) {
     DartinoRegistry registry = new DartinoRegistry(compiler);
-    compiler.patchAnnotationClass = patchAnnotationClass;
 
     bool hasMissingHelpers = false;
     loadHelperMethods((String name) {

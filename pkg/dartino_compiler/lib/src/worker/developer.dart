@@ -69,7 +69,6 @@ import '../../vm_commands.dart' show
 import '../../program_info.dart' show
     Configuration,
     ProgramInfo,
-    ProgramInfoBinary,
     ProgramInfoJson,
     buildProgramInfo;
 
@@ -665,9 +664,7 @@ Future<int> run(
   return exitCode;
 }
 
-Future<int> export(SessionState state,
-                   Uri snapshot,
-                   {bool binaryProgramInfo: false}) async {
+Future<int> export(SessionState state, Uri snapshot) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
   Session session = state.session;
   state.session = null;
@@ -687,11 +684,6 @@ Future<int> export(SessionState state,
 
     File jsonFile = new File('${snapshot.toFilePath()}.info.json');
     await jsonFile.writeAsString(ProgramInfoJson.encode(info));
-
-    if (binaryProgramInfo) {
-      File binFile = new File('${snapshot.toFilePath()}.info.bin');
-      await binFile.writeAsBytes(ProgramInfoBinary.encode(info));
-    }
 
     return 0;
   } else {

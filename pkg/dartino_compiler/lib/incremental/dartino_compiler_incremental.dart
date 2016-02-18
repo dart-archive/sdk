@@ -111,6 +111,8 @@ class IncrementalCompiler {
 
   DartinoCompilerImplementation _compiler;
 
+  DartinoReuser _reuser;
+
   IncrementalCompiler(
       {this.libraryRoot,
        this.nativesJson,
@@ -255,17 +257,18 @@ class IncrementalCompiler {
       Uri updatedFile = _updatedFiles[uri];
       return inputProvider.readFromUri(updatedFile == null ? uri : updatedFile);
     }
-    DartinoReuser reuser = new DartinoReuser(
+    _reuser = new DartinoReuser(
         _compiler,
         mappingInputProvider,
         logTime,
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(reuser.reuseLibraries, base: base).then(
+    return _reuseCompiler(_reuser.reuseLibraries, base: base).then(
         (CompilerImpl compiler) async {
           _compiler = compiler;
-          DartinoDelta delta = await reuser.computeUpdateDartino(currentSystem);
+          DartinoDelta delta =
+              await _reuser.computeUpdateDartino(currentSystem);
           _checkCompilationFailed();
           return delta;
         });

@@ -156,6 +156,8 @@
         'program.h',
         'program_folder.cc',
         'program_folder.h',
+        'program_groups.cc',
+        'program_groups.h',
         'program_info_block.cc',
         'program_info_block.h',
         'remembered_set.h',

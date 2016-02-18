@@ -235,10 +235,12 @@ def CopySTM(bundle_dir):
   CopyFile('platforms/stm/disco_dartino/generated/SW4STM32/'
            'configuration/STM32F746NGHx_FLASH.ld',
            join(config_dir, 'stm32f746g-discovery.ld'))
+
 def CopySamples(bundle_dir):
   target = join(bundle_dir, 'samples')
   for v in SAMPLES:
     copytree(join('samples', v), join(target, v))
+  CopyFile(join('samples', 'dartino.yaml'), join(target, 'dartino.yaml'))
 
 def EnsureDartDoc():
   subprocess.check_call(

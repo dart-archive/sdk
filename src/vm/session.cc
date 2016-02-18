@@ -32,6 +32,21 @@
 
 namespace dartino {
 
+static bool IsBuiltin(Class* klass, Program* program) {
+#define CHECK(type, name, CamelName) \
+    if (static_cast<Object*>(program->name()) == \
+        static_cast<Object*>(klass)) return true;
+ROOTS_DO(CHECK);
+#undef CHECK
+  if (klass == program->true_object()->get_class() ||
+      klass == program->false_object()->get_class() ||
+      klass == program->null_object()->get_class()) {
+    return true;
+  }
+
+  return false;
+}
+
 class SessionState {
  public:
   virtual ~SessionState() {
@@ -161,28 +176,21 @@ class InitialState : public SessionState {
 // and in a the paused state.
 class ConnectedState : public SessionState {
  public:
-  ConnectedState() : debugging_(false) {}
+  ConnectedState() {}
 
   bool IsConnected() const { return true; }
-  bool IsDebugging() const { return debugging_; }
+  bool IsDebugging() const { return session()->debugging(); }
 
-  void EnableDebugging() {
-    debugging_ = true;
+  virtual void EnableDebugging() {
+    ASSERT(!IsDebugging());
+    session()->set_debugging(true);
   }
 
   const char* ToString() const {
     return IsDebugging() ? "Connected<Debugging>" : "Connected";
   }
 
-  void ActivateState(SessionState* previous) {
-    SessionState::ActivateState(previous);
-    debugging_ = previous->IsDebugging();
-  }
-
   SessionState* ProcessMessage(Connection::Opcode opcode);
-
- private:
-  bool debugging_;
 };
 
 // The modifying state denotes a temporary state-change of a connected
@@ -220,24 +228,32 @@ class ModifyingState : public ConnectedState {
 // created.
 class SpawnedState : public ConnectedState {
  public:
-  explicit SpawnedState(Process* main_process) : main_process_(main_process) {}
+  explicit SpawnedState(Process* main_process)
+      : initial_main_process_(main_process) {}
 
   bool IsSpawned() const { return true; }
 
-  Process* main_process() const { return main_process_; }
+  Process* main_process() const { return session()->main_process(); }
   // TODO(zerny): Remove uses of this.
   Process* process() const { return session()->process_; }
+
+  void EnableDebugging() {
+    ConnectedState::EnableDebugging();
+    // Ensure that main is allocated the zeroth id.
+    main_process()->EnsureDebuggerAttached(session());
+  }
 
   void ActivateState(SessionState* previous) {
     ASSERT(previous->IsConnected());
     ConnectedState::ActivateState(previous);
-    if (main_process_ == NULL) {
-      ASSERT(previous->IsSpawned());
-      main_process_ = static_cast<SpawnedState*>(previous)->main_process();
-    } else {
-      ASSERT(!previous->IsSpawned());
-      // TODO(zerny): Remove process_ from session.
-      session()->process_ = main_process_;
+    if (initial_main_process_ == NULL) return;
+    // If this is the initial spawn, store the main process on session.
+    ASSERT(!previous->IsSpawned());
+    session()->set_main_process(initial_main_process_);
+    initial_main_process_ = NULL;
+    if (IsDebugging()) {
+      // Ensure that main is allocated the zeroth id.
+      main_process()->EnsureDebuggerAttached(session());
     }
   }
 
@@ -248,10 +264,10 @@ class SpawnedState : public ConnectedState {
   SessionState* ProcessMessage(Connection::Opcode opcode);
 
  protected:
-  SpawnedState() : main_process_(NULL) {}
+  SpawnedState() : initial_main_process_(NULL) {}
 
  private:
-  Process* main_process_;
+  Process* initial_main_process_;
 };
 
 // Abstract base for scheduled states. A scheduled state is a state where the
@@ -516,6 +532,8 @@ Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
       state_(NULL),
+      debugging_(false),
+      main_process_(NULL),
       process_(NULL),
       next_process_id_(0),
       method_map_id_(-1),
@@ -638,6 +656,9 @@ void Session::SendInstanceStructure(Instance* instance) {
 
 void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
                                  FunctionOffsetsType* function_offsets) {
+  ASSERT(maps_[class_map_id_] != NULL);
+  ASSERT(maps_[method_map_id_] != NULL);
+
   WriteBuffer buffer;
 
   // Write the hashtag for the program.
@@ -649,7 +670,9 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
     Class* klass = pair.first;
     const PortableOffset& offset = pair.second;
 
-    buffer.WriteInt(MapLookupByObject(class_map_id_, klass));
+    int id = MapLookupByObject(class_map_id_, klass);
+    ASSERT(id != -1 || IsBuiltin(klass, program()));
+    buffer.WriteInt(id);
     buffer.WriteInt(offset.offset_64bits_double);
     buffer.WriteInt(offset.offset_64bits_float);
     buffer.WriteInt(offset.offset_32bits_double);
@@ -662,7 +685,9 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
     Function* function = pair.first;
     const PortableOffset& offset = pair.second;
 
-    buffer.WriteInt(MapLookupByObject(method_map_id_, function));
+    int id = MapLookupByObject(method_map_id_, function);
+    ASSERT(id != -1);
+    buffer.WriteInt(id);
     buffer.WriteInt(offset.offset_64bits_double);
     buffer.WriteInt(offset.offset_64bits_float);
     buffer.WriteInt(offset.offset_32bits_double);
@@ -801,7 +826,7 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kDebugging: {
-      EnableDebugging();
+      if (!IsDebugging()) EnableDebugging();
       session()->method_map_id_ = connection()->ReadInt();
       session()->class_map_id_ = connection()->ReadInt();
       session()->fibers_map_id_ = connection()->ReadInt();
@@ -1116,7 +1141,7 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
       int bytecode_index = connection()->ReadInt();
       Function* function = Function::cast(session()->Pop());
       DebugInfo* debug_info = process()->debug_info();
-      int id = debug_info->SetBreakpoint(function, bytecode_index);
+      int id = debug_info->SetProgramBreakpoint(function, bytecode_index);
       buffer.WriteInt(id);
       connection()->Send(Connection::kProcessSetBreakpoint, buffer);
       break;
@@ -1199,7 +1224,7 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       Function* function = Function::cast(
           session()->maps_[session()->method_map_id_]->LookupById(id));
       DebugInfo* debug_info = process()->debug_info();
-      debug_info->SetBreakpoint(function, bcp, true);
+      debug_info->SetProcessLocalBreakpoint(function, bcp, true);
       return ProcessContinue();
     }
 
@@ -1257,7 +1282,9 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       session()->RestartFrame(frame_index);
       process()->set_exception(program()->null_object());
       DebugInfo* debug_info = process()->debug_info();
-      if (debug_info != NULL) debug_info->ClearBreakpoint();
+      if (debug_info != NULL && debug_info->is_at_breakpoint()) {
+        debug_info->ClearBreakpoint();
+      }
       return ProcessContinue();
     }
 

@@ -63,8 +63,7 @@ Future runTest(String testName, bool write_golden_files) {
     String snapshotFilename = '${temp.absolute.path}/test.snapshot';
 
     // Part 1: Generate snapshot.
-    await export(
-        testFilename(testName), snapshotFilename, binaryProgramInfo: true);
+    await export(testFilename(testName), snapshotFilename);
 
     // Part 2: Run VM.
     ProcessResult result = await Process.run(dartinoVM, [snapshotFilename]);
@@ -79,7 +78,7 @@ Future runTest(String testName, bool write_golden_files) {
     var arguments = [
         buildArch.toLowerCase() == 'x64' ? '64' : '32',
         buildSystem.toLowerCase() == 'lk' ? 'float' : 'double',
-        '${snapshotFilename}.info.bin',
+        '${snapshotFilename}.info.json',
     ];
     await program_info.decodeProgramMain(arguments, stdin, stdout);
 

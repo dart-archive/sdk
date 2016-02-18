@@ -128,7 +128,7 @@ void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
   state->IncreaseProcessCount();
   state->Retain();
 
-  if (!main_process->ChangeState(Process::kSleeping, Process::kReady)) {
+  if (!main_process->ChangeState(Process::kSleeping, Process::kEnqueuing)) {
     UNREACHABLE();
   }
   EnqueueProcess(main_process);
@@ -227,13 +227,15 @@ void Scheduler::FinishedGC(Program* program, int count) {
 void Scheduler::EnqueueProcessOnSchedulerWorkerThread(
     Process* interpreting_process, Process* process) {
   process->program()->program_state()->IncreaseProcessCount();
-  if (!process->ChangeState(Process::kSleeping, Process::kReady)) UNREACHABLE();
+  if (!process->ChangeState(Process::kSleeping, Process::kEnqueuing)) {
+    UNREACHABLE();
+  }
 
   EnqueueProcess(process);
 }
 
 void Scheduler::ResumeProcess(Process* process) {
-  if (!process->ChangeState(Process::kSleeping, Process::kReady)) return;
+  if (!process->ChangeState(Process::kSleeping, Process::kEnqueuing)) return;
   EnqueueSafe(process);
 }
 
@@ -241,7 +243,7 @@ void Scheduler::SignalProcess(Process* process) {
   while (true) {
     switch (process->state()) {
       case Process::kSleeping:
-        if (process->ChangeState(Process::kSleeping, Process::kReady)) {
+        if (process->ChangeState(Process::kSleeping, Process::kEnqueuing)) {
           // TODO(kustermann): If it is guaranteed that [SignalProcess] is only
           // called from a scheduler worker thread, we could use the non *Safe*
           // method here (which doesn't guard against stopped programs).
@@ -251,6 +253,7 @@ void Scheduler::SignalProcess(Process* process) {
         // If the state changed, we'll try again.
         break;
       case Process::kReady:
+      case Process::kEnqueuing:
       case Process::kBreakpoint:
       case Process::kCompileTimeError:
       case Process::kUncaughtException:
@@ -263,8 +266,8 @@ void Scheduler::SignalProcess(Process* process) {
         return;
       case Process::kYielding:
         // This is a temporary state and will go either to kReady/kSleeping.
-        // NOTE: Bad that we're busy looping here (liklihood of wasted cycles is
-        // roughly the same as for spinlocks)!
+        // NOTE: Bad that we're busy looping here (likelihood of wasted cycles
+        // is roughly the same as for spinlocks)!
         break;
       case Process::kTerminated:
       case Process::kWaitingForChildren:
@@ -276,9 +279,9 @@ void Scheduler::SignalProcess(Process* process) {
 
 void Scheduler::ContinueProcess(Process* process) {
   bool success =
-      process->ChangeState(Process::kBreakpoint, Process::kReady) ||
-      process->ChangeState(Process::kCompileTimeError, Process::kReady) ||
-      process->ChangeState(Process::kUncaughtException, Process::kReady);
+      process->ChangeState(Process::kBreakpoint, Process::kEnqueuing) ||
+      process->ChangeState(Process::kCompileTimeError, Process::kEnqueuing) ||
+      process->ChangeState(Process::kUncaughtException, Process::kEnqueuing);
   ASSERT(success);
   EnqueueSafe(process);
 }
@@ -286,7 +289,7 @@ void Scheduler::ContinueProcess(Process* process) {
 bool Scheduler::EnqueueProcess(Process* process, Port* port) {
   ASSERT(port->IsLocked());
 
-  if (!process->ChangeState(Process::kSleeping, Process::kReady)) {
+  if (!process->ChangeState(Process::kSleeping, Process::kEnqueuing)) {
     port->Unlock();
     return false;
   }
@@ -328,7 +331,7 @@ void Scheduler::RescheduleProcess(Process* process, bool terminate) {
     process->ChangeState(Process::kRunning, Process::kWaitingForChildren);
     DeleteTerminatedProcess(process, Signal::kTerminated);
   } else {
-    process->ChangeState(Process::kRunning, Process::kReady);
+    process->ChangeState(Process::kRunning, Process::kEnqueuing);
     EnqueueProcess(process);
   }
 }
@@ -356,7 +359,7 @@ bool Scheduler::RunInterpreterLoop(WorkerThread* worker) {
         process = InterpretProcess(process, worker);
       }
       if (process != NULL) {
-        process->ChangeState(Process::kRunning, Process::kReady);
+        process->ChangeState(Process::kRunning, Process::kEnqueuing);
         EnqueueProcess(process);
       }
     }
@@ -444,7 +447,7 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
     if (process->mailbox()->IsEmpty() && process->signal() == NULL) {
       process->ChangeState(Process::kYielding, Process::kSleeping);
     } else {
-      process->ChangeState(Process::kYielding, Process::kReady);
+      process->ChangeState(Process::kYielding, Process::kEnqueuing);
       EnqueueProcess(process);
     }
     return NULL;
@@ -484,7 +487,7 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
 
   if (interpreter.IsInterrupted()) {
     // No need to notify threads, as 'this' is now available.
-    process->ChangeState(Process::kRunning, Process::kReady);
+    process->ChangeState(Process::kRunning, Process::kEnqueuing);
     EnqueueProcess(process);
     return NULL;
   }
@@ -680,7 +683,7 @@ void Scheduler::NotifyInterpreterThread() {
 }
 
 void Scheduler::EnqueueProcess(Process* process) {
-  ASSERT(process->state() == Process::kReady);
+  ASSERT(process->state() == Process::kEnqueuing);
 
   if (ready_queue_.Enqueue(process)) {
     // If the queue was empty, we'll notify the interpreter thread.
@@ -696,6 +699,7 @@ void Scheduler::EnqueueSafe(Process* process) {
 
   Program* program = process->program();
   ASSERT(program->scheduler() == this);
+  ASSERT(process->state() == Process::kEnqueuing);
   ProgramState* state = program->program_state();
   if (state->state() != ProgramState::kRunning) {
     // Only add the process into the paused list if it is not already in
@@ -705,6 +709,89 @@ void Scheduler::EnqueueSafe(Process* process) {
     }
   } else {
     EnqueueProcess(process);
+  }
+}
+
+void Scheduler::FreezeProgram(Program* program) {
+  ProgramState* program_state = program->program_state();
+  while (program_state->state() != ProgramState::kRunning) {
+    pause_monitor_->Wait();
+  }
+  program_state->ChangeState(ProgramState::kRunning, ProgramState::kFrozen);
+  ready_queue_.PauseAllProcessesOfProgram(program);
+}
+
+void Scheduler::UnFreezeProgram(Program* program) {
+  ProgramState* program_state = program->program_state();
+  ASSERT(program_state->state() == ProgramState::kFrozen);
+
+  program_state->ChangeState(ProgramState::kFrozen, ProgramState::kRunning);
+
+  auto paused_processes = program_state->paused_processes();
+  while (!paused_processes->IsEmpty()) {
+    EnqueueProcess(paused_processes->RemoveFirst());
+  }
+}
+
+ProgramGroup Scheduler::CreateProgramGroup(const char* name) {
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  return program_groups_.Create(name);
+}
+
+void Scheduler::DeleteProgramGroup(ProgramGroup group) {
+  ScopedMonitorLock pause_locker(pause_monitor_);
+
+  for (auto program : programs_) {
+    program_groups_.RemoveProgram(group, program);
+  }
+
+  program_groups_.Delete(group);
+}
+
+void Scheduler::AddProgramToGroup(ProgramGroup group, Program* program) {
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  program_groups_.AddProgram(group, program);
+}
+
+void Scheduler::RemoveProgramFromGroup(ProgramGroup group, Program* program) {
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  program_groups_.RemoveProgram(group, program);
+}
+
+void Scheduler::FreezeProgramGroup(ProgramGroup group) {
+  bool did_freeze_program = false;
+
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  PauseInterpreterLoop();
+  for (auto it = programs_.Begin(); it != programs_.End(); ++it) {
+    Program* program = *it;
+    if (program_groups_.ContainsProgram(group, program)) {
+      FreezeProgram(program);
+      did_freeze_program = true;
+    }
+  }
+  ResumeInterpreterLoop();
+
+  if (did_freeze_program) {
+    pause_monitor_->NotifyAll();
+    NotifyInterpreterThread();
+  }
+}
+
+void Scheduler::UnFreezeProgramGroup(ProgramGroup group) {
+  bool did_unfreeze_program = false;
+
+  ScopedMonitorLock pause_locker(pause_monitor_);
+  for (auto it = programs_.Begin(); it != programs_.End(); ++it) {
+    Program* program = *it;
+    if (program_groups_.ContainsProgram(group, program)) {
+      UnFreezeProgram(program);
+      did_unfreeze_program = true;
+    }
+  }
+  if (did_unfreeze_program) {
+    pause_monitor_->NotifyAll();
+    NotifyInterpreterThread();
   }
 }
 

@@ -52,7 +52,8 @@ Program::Program(ProgramSource source, int hashtag)
       exit_kind_(Signal::kTerminated),
       hashtag_(hashtag),
       stack_chain_(NULL),
-      cache_(NULL) {
+      cache_(NULL),
+      group_mask_(0) {
 // These asserts need to hold when running on the target, but they don't need
 // to hold on the host (the build machine, where the interpreter-generating
 // program runs).  We put these asserts here on the assumption that the
@@ -106,6 +107,10 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   if (Flags::print_program_statistics) {
     PrintStatistics();
   }
+
+  // Code in process spawning generally assumes there is enough space for
+  // stacks etc.  We use a [NoAllocationFailureScope] to ensure it.
+  NoAllocationFailureScope scope(process_heap()->space());
 
   Process* process = SpawnProcess(NULL);
   process->set_arguments(arguments);
@@ -355,8 +360,11 @@ class FinishProgramGCVisitor : public ProcessVisitor {
 void Program::FinishProgramGC() {
   // Uncook process
   UncookAndUnchainStacks();
+
+  DebugInfo::ClearBytecodeBreaks();
   FinishProgramGCVisitor visitor;
   VisitProcesses(&visitor);
+  breakpoints_.UpdateBreakpoints();
 
   if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
@@ -876,6 +884,7 @@ void Program::Initialize() {
 
 void Program::IterateRoots(PointerVisitor* visitor) {
   IterateRootsIgnoringSession(visitor);
+  breakpoints_.VisitProgramPointers(visitor);
   if (session_ != NULL) {
     session_->IteratePointers(visitor);
   }

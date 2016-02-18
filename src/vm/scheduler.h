@@ -11,6 +11,7 @@
 #include "src/vm/thread.h"
 #include "src/vm/process_queue.h"
 #include "src/vm/program.h"
+#include "src/vm/program_groups.h"
 
 namespace dartino {
 
@@ -128,6 +129,13 @@ class Scheduler {
   // A signal arrived for the process.
   void SignalProcess(Process* process);
 
+  ProgramGroup CreateProgramGroup(const char* name);
+  void DeleteProgramGroup(ProgramGroup group);
+  void AddProgramToGroup(ProgramGroup group, Program* program);
+  void RemoveProgramFromGroup(ProgramGroup group, Program* program);
+  void FreezeProgramGroup(ProgramGroup group);
+  void UnFreezeProgramGroup(ProgramGroup group);
+
  private:
   friend class Dartino;
   friend class WorkerThread;
@@ -143,6 +151,7 @@ class Scheduler {
   Atomic<bool> interpreter_is_paused_;
   ProcessQueue ready_queue_;
   ProgramList programs_;
+  ProgramGroups program_groups_;
 
   Monitor* pause_monitor_;
   Atomic<bool> pause_;
@@ -183,6 +192,11 @@ class Scheduler {
   // The [process] will be enqueued on any thread. In case the program is paused
   // the process will be enqueued once the program is resumed.
   void EnqueueSafe(Process* process);
+
+  // Caller must hold [pause_monitor_] and have stopped the interpreter loop.
+  void FreezeProgram(Program* program);
+  // Caller must hold [pause_monitor_] and have stopped the interpreter loop.
+  void UnFreezeProgram(Program* program);
 
   // Handlers for when the interpretation of a process has been interrupted.
   void HandleTerminated(Process* process);

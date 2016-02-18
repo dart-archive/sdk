@@ -351,7 +351,8 @@ void Process::DebugInterrupt() { SetStackMarker(kDebugInterruptMarker); }
 
 void Process::EnsureDebuggerAttached(Session* session) {
   if (debug_info_ == NULL) {
-    debug_info_ = new DebugInfo(session->FreshProcessId());
+    debug_info_ = new DebugInfo(
+        session->FreshProcessId(), program_->breakpoints());
   }
 }
 
@@ -398,8 +399,8 @@ int Process::PrepareStepOver() {
   word stack_height = stack()->length() - frame_end;
   int bytecode_index =
       current_bcp + Bytecode::Size(opcode) - function->bytecode_address_for(0);
-  return debug_info_->SetBreakpoint(function, bytecode_index, true, coroutine_,
-                                    stack_height);
+  return debug_info_->SetProcessLocalBreakpoint(
+      function, bytecode_index, true, coroutine_, stack_height);
 }
 
 int Process::PrepareStepOut() {
@@ -418,8 +419,8 @@ int Process::PrepareStepOut() {
   Object** expected_sp = frame_bottom + callee->arity();
   word frame_end = expected_sp - stack()->Pointer(0);
   word stack_height = stack()->length() - frame_end;
-  return debug_info_->SetBreakpoint(caller, bytecode_index, true, coroutine_,
-                                    stack_height);
+  return debug_info_->SetProcessLocalBreakpoint(
+      caller, bytecode_index, true, coroutine_, stack_height);
 }
 
 void Process::UpdateBreakpoints() {

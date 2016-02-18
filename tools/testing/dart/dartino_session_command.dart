@@ -99,7 +99,7 @@ String explainExitCode(int code) {
     }
   } else {
     exit_message = "(signal ${-code})";
-    if (code == -15 || code == -9) {
+    if (code == -15 || code == -9 || code == -6) {
       exit_message += " (killed by external signal - timeout?)";
     } else if (code == -7 || code == -11 || code == -4) {
       // SIGBUS, SIGSEGV, SIGILL
@@ -541,8 +541,11 @@ class DartinoSessionHelper {
   }
 
   Future<String> spawnVm() async {
+    List<String> arguments = <String>['-Xabort-on-sigterm'];
     DartinoVm dartinoVm = await DartinoVm.start(
-        "$executable-vm", environment: environmentOverrides);
+        "$executable-vm",
+        arguments: arguments,
+        environment: environmentOverrides);
     vmProcess = dartinoVm.process;
     String commandDescription = "$executable-vm";
     if (isVerbose) {

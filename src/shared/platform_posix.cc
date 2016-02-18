@@ -8,6 +8,7 @@
 // should never be directly inported. platform.h is always
 // the platform header to include.
 #include "src/shared/platform.h"  // NOLINT
+#include "src/shared/flags.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -28,6 +29,10 @@ namespace dartino {
 
 static uint64 time_launch;
 
+static void SigtermHandler(int signal) {
+  abort();
+}
+
 void Platform::Setup() {
   time_launch = GetMicroseconds();
 
@@ -37,6 +42,14 @@ void Platform::Setup() {
   sigemptyset(&sa.sa_mask);
   sa.sa_handler = SIG_IGN;
   sigaction(SIGPIPE, &sa, NULL);
+
+  if (Flags::abort_on_sigterm) {
+    struct sigaction sa;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_handler = &SigtermHandler;
+    sigaction(SIGTERM, &sa, NULL);
+  }
 }
 
 void Platform::TearDown() { }

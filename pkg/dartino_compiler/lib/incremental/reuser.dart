@@ -137,6 +137,9 @@ abstract class Reuser {
   final Map<LibraryElementX, SourceFile> _entrySourceFiles =
       <LibraryElementX, SourceFile>{};
 
+  final Map<LibraryElement, Future<LibraryElement>> _cachedLibraryCopies =
+      <LibraryElement, Future<LibraryElement>>{};
+
   Reuser(
       this.compiler,
       this.inputProvider,
@@ -169,6 +172,7 @@ abstract class Reuser {
       logTime('Reusing $library (assumed read-only).');
       return true;
     }
+    LibraryElement newLibrary;
     try {
       if (await _haveTagsChanged(library)) {
         cannotReuse(
@@ -180,28 +184,34 @@ abstract class Reuser {
         return true;
       }
 
-      bool isChanged = false;
-      List<Script> scripts = <Script>[];
-
-      for (CompilationUnitElementX unit in library.compilationUnits) {
-        Uri uri = unit.script.resourceUri;
-        if (uriHasUpdate(uri)) {
-          isChanged = true;
-          scripts.add(await _updatedScript(unit.script, library));
-        } else {
-          scripts.add(unit.script);
-        }
-      }
-
-      if (!isChanged) {
-        logTime("Reusing $library, source didn't change.");
-        return true;
-      }
-
-      return canReuseLibrary(library, scripts);
+      logTime('Attempting to reuse ${library}.');
+      newLibrary = await copyLibraryWithChanges(library);
     } finally {
       _cleanUp(library);
     }
+    if (newLibrary == library) {
+      logTime("Reusing $library, source didn't change.");
+      return true;
+    } else {
+      logTime('New library synthesized.');
+      return canReuseScopeContainerElement(library, newLibrary);
+    }
+  }
+
+  Future<bool> _computeUpdatedScripts(
+      LibraryElement library,
+      List<Script> scripts) async {
+    bool isChanged = false;
+    for (CompilationUnitElementX unit in library.compilationUnits) {
+      Uri uri = unit.script.resourceUri;
+      if (uriHasUpdate(uri)) {
+        isChanged = true;
+        scripts.add(await _updatedScript(unit.script, library));
+      } else {
+        scripts.add(unit.script);
+      }
+    }
+    return new Future<bool>.value(isChanged);
   }
 
   void _cleanUp(LibraryElementX library) {
@@ -271,13 +281,9 @@ abstract class Reuser {
     return _sources.putIfAbsent(uri, () => inputProvider(uri));
   }
 
-  /// Returns true if [library] can be reused.
-  ///
-  /// This methods also computes the [updates] (patches) needed to have
-  /// [library] reflect the modifications in [scripts].
-  bool canReuseLibrary(LibraryElement library, List<Script> scripts) {
-    logTime('Attempting to reuse ${library}.');
-
+  LibraryElement _synthesizeLibrary(
+      LibraryElement library,
+      List<Script> scripts) {
     Uri entryUri = library.entryCompilationUnit.script.resourceUri;
     Script entryScript =
         scripts.singleWhere((Script script) => script.resourceUri == entryUri);
@@ -308,8 +314,6 @@ abstract class Reuser {
       }
     }
 
-    // TODO(ahe): Process tags using TagState, not
-    // LibraryLoaderTask.processLibraryTags.
     Link<CompilationUnitElement> units = library.compilationUnits;
     for (Script script in scripts) {
       CompilationUnitElementX unit = units.head;
@@ -328,8 +332,22 @@ abstract class Reuser {
       }
     }
 
-    logTime('New library synthesized.');
-    return canReuseScopeContainerElement(library, newLibrary);
+    return newLibrary;
+  }
+
+  /// Returns a copy of [library] if any of its parts have changed, whose token
+  /// positions represent the changed positions.  If [library] hasn't changed,
+  /// it's returned unmodified.
+  Future<LibraryElement> copyLibraryWithChanges(LibraryElement library) {
+    return _cachedLibraryCopies.putIfAbsent(library, () async {
+      List<Script> scripts = <Script>[];
+      if (!await _computeUpdatedScripts(library, scripts)) return library;
+      try {
+        return _synthesizeLibrary(library, scripts);
+      } finally {
+        _cleanUp(library);
+      }
+    });
   }
 
   bool cannotReuse(context, String message) {
@@ -426,9 +444,9 @@ abstract class Reuser {
   ///
   /// There's no direct link from a [PartialFieldList] to its implied
   /// [FieldElementX], so instead we use [syntheticContainer], the (synthetic)
-  /// container created by [canReuseLibrary], or [canReuseClass] (through
-  /// [PartialClassElement.parseNode]). This container is scanned looking for
-  /// fields whose declaration site is [definition].
+  /// container created by [copyLibraryWithChanges], or [canReuseClass]
+  /// (through [PartialClassElement.parseNode]). This container is scanned
+  /// looking for fields whose declaration site is [definition].
   // TODO(ahe): It would be nice if [computeDifference] returned this
   // information directly.
   void addFields(

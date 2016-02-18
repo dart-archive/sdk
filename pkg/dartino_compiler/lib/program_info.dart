@@ -174,268 +174,6 @@ abstract class ProgramInfoJson {
   }
 }
 
-abstract class ProgramInfoBinary {
-  static const int _INVALID_INDEX = 0xffffff;
-  static final int _HEADER_LENGTH = 4 * (2 + 2 * Configuration.values.length);
-
-  static List<int> encode(ProgramInfo info,
-                          {List<Configuration> enabledConfigs}) {
-    if (enabledConfigs == null) {
-      enabledConfigs = Configuration.values;
-    }
-
-    List<int> stringOffsetsInStringTable = [];
-
-    void ensureEncodableAs24Bit(int number) {
-      if (number >= ((1 << 24) - 1)) {
-        throw new Exception(
-            "The binary program information format cannot encode offsets "
-            "larger than 16 MB (24 bits) at the moment.");
-      }
-    }
-
-    List<int> buildStringTable() {
-      BytesBuilder builder = new BytesBuilder();
-      for (int i = 0; i < info._strings.length; i++) {
-        stringOffsetsInStringTable.add(builder.length);
-        String name = info._strings[i];
-        if (name != null) {
-          builder.add(UTF8.encode(name));
-        }
-        builder.addByte(0);
-      }
-      return builder.takeBytes();
-    }
-
-    List<int> buildSelectorTable(List<int> stringIds) {
-      Uint8List bytes = new Uint8List(3 * stringIds.length);
-
-      int offset = 0;
-
-      void writeByte(int byte) {
-        bytes[offset++] = byte;
-      }
-
-      void writeNumber(int number) {
-        ensureEncodableAs24Bit(number);
-
-        // 0xffffff means -1
-        if (number == -1) number = _INVALID_INDEX;
-
-        writeByte(number & 0xff);
-        writeByte((number >> 8) & 0xff);
-        writeByte((number >> 16) & 0xff);
-      }
-
-      // We write tuples [program-offset, string-table-offset].
-      // So the user can use binary search using a program offset to find the
-      // string offset.
-      for (int i = 0; i < stringIds.length; i++) {
-        int stringId = stringIds[i];
-
-        if (stringId != -1) {
-          int stringOffset = stringOffsetsInStringTable[stringId];
-          writeNumber(stringOffset);
-        } else {
-          writeNumber(-1);
-        }
-      }
-
-      assert(offset == bytes.length);
-
-      return bytes;
-    }
-
-    List<int> buildOffsetTable(Map<int, int> map) {
-      Uint8List bytes = new Uint8List(2 * 3 * map.length);
-
-      int offset = 0;
-
-      void writeByte(int byte) {
-        bytes[offset++] = byte;
-      }
-
-      void writeNumber(int number) {
-        // 0xffffff means -1
-        ensureEncodableAs24Bit(number);
-
-        if (number == -1) number = _INVALID_INDEX;
-
-        writeByte(number & 0xff);
-        writeByte((number >> 8) & 0xff);
-        writeByte((number >> 16) & 0xff);
-      }
-
-      // We write tuples [program-offset, string-table-offset].
-      // So the user can use binary search using a program offset to find the
-      // string offset.
-      List<int> offsets = map.keys.toList()..sort();
-      for (int i = 0; i < offsets.length; i++) {
-        int offset = offsets[i];
-        int stringId = map[offset];
-
-        // We only make an entry for [offset] if there is a known string.
-        if (stringId != -1) {
-          int stringOffset = stringOffsetsInStringTable[stringId];
-          writeNumber(offset);
-          writeNumber(stringOffset);
-        }
-      }
-
-      return new Uint8List.view(bytes.buffer, 0, offset);
-    }
-
-    List<List<int>> tables = [];
-    tables.add(buildStringTable());
-    tables.add(buildSelectorTable(info._selectorNames));
-    for (Configuration conf in Configuration.values) {
-      if (enabledConfigs.contains(conf)) {
-        List<int> offsetTable = buildOffsetTable(info._classNames[conf]);
-        tables.add(offsetTable);
-      } else {
-        tables.add([]);
-      }
-    }
-    for (Configuration conf in Configuration.values) {
-      if (enabledConfigs.contains(conf)) {
-        List<int> offsetTable = buildOffsetTable(info._functionNames[conf]);
-        tables.add(offsetTable);
-      } else {
-        tables.add([]);
-      }
-    }
-
-    int tableLengths = tables.map((t) => t.length).fold(0, (a, b) => a + b);
-    int length = _HEADER_LENGTH + tableLengths;
-
-    Uint8List bytes = new Uint8List(length);
-    ByteData header = new ByteData.view(bytes.buffer);
-
-    int offset = 0;
-    writeLength(List<int> data) {
-      header.setUint32(offset, data.length, Endianness.LITTLE_ENDIAN);
-      offset += 4;
-    }
-    writeTable(List<int> data) {
-      bytes.setRange(offset, offset + data.length, data);
-      offset += data.length;
-    }
-
-    tables.forEach(writeLength);
-    assert(offset == _HEADER_LENGTH);
-    tables.forEach(writeTable);
-
-    return bytes;
-  }
-
-  static ProgramInfo decode(List<int> data) {
-    Uint8List bytes = new Uint8List.fromList(data);
-    ByteData header = new ByteData.view(bytes.buffer);
-
-    int offset = 0;
-    int readLength() {
-      int length = header.getUint32(offset, Endianness.LITTLE_ENDIAN);
-      offset += 4;
-      return length;
-    }
-    List<int> readTable(int length) {
-      var view = new Uint8List.view(bytes.buffer, offset, length);
-      offset += length;
-      return view;
-    }
-
-    Map<int, int> stringOffsetToIndex = {};
-    List<String> buildStringDecodingTable(List<int> data) {
-      List<String> strings = [];
-      int start = 0;
-      while (start < data.length) {
-        stringOffsetToIndex[start] = strings.length;
-
-        int end = start;
-        while (data[end] != 0) end++;
-
-        strings.add(UTF8.decode(data.sublist(start, end)));
-        start = end + 1;
-      }
-      return strings;
-    }
-
-    List<int> decodeSelectors(List<int> data) {
-      assert(data.length % 3 == 0);
-      List<int> indices = new List(data.length ~/ 3);
-      for (int offset = 0; offset < data.length; offset += 3) {
-        int number =
-            data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16);
-        if (number == _INVALID_INDEX) number = -1;
-        if (number != -1) number = stringOffsetToIndex[number];
-        indices[offset ~/ 3] = number;
-      }
-      return indices;
-    }
-
-    Map<int, int> decodeTable(List<int> data) {
-      assert(data.length % 6 == 0);
-      Map<int, int> offset2stringId = {};
-      for (int offset = 0; offset < data.length; offset += 6) {
-        int programOffset =
-            data[offset] |
-            (data[offset + 1] << 8) |
-            (data[offset + 2] << 16);
-        int stringOffset =
-            data[offset + 3] |
-            (data[offset + 4] << 8) |
-            (data[offset + 5] << 16);
-
-        if (programOffset != _INVALID_INDEX && stringOffset != _INVALID_INDEX) {
-          offset2stringId[programOffset] = stringOffsetToIndex[stringOffset];
-        } else {
-          offset2stringId[programOffset] = -1;
-        }
-      }
-      return offset2stringId;
-    }
-
-    int stringTableLength = readLength();
-    int selectorTableLength = readLength();
-
-    Map<Configuration, int> classTableLengths = {};
-    Configuration.values.forEach(
-        (conf) => classTableLengths[conf] = readLength());
-
-    Map<Configuration, int> functionTableLengths = {};
-    Configuration.values.forEach(
-        (conf) => functionTableLengths[conf] = readLength());
-
-    List<int> stringTable = readTable(stringTableLength);
-
-    List<String> strings = buildStringDecodingTable(stringTable);
-    List<int> selectorTable = decodeSelectors(readTable(selectorTableLength));
-
-    Map<Configuration, Map<int, int>> classNames = {};
-    Configuration.values.forEach((conf) {
-      classNames[conf] = decodeTable(readTable(classTableLengths[conf]));
-    });
-
-    Map<Configuration, Map<int, int>> functionNames = {};
-    Configuration.values.forEach((conf) {
-      functionNames[conf] = decodeTable(readTable(functionTableLengths[conf]));
-    });
-
-    assert(offset == (_HEADER_LENGTH +
-                      stringTableLength +
-                      selectorTableLength +
-                      classTableLengths.values.fold(0, (a, b) => a + b) +
-                      functionTableLengths.values.fold(0, (a, b) => a + b)));
-
-    return new ProgramInfo(
-        strings,
-        selectorTable,
-        classNames,
-        functionNames,
-        0);  // hashtag for shapshot is not supported for binary format.
-  }
-}
-
 ProgramInfo buildProgramInfo(DartinoSystem system, WriteSnapshotResult result) {
   List<String> strings = [];
   Map<String, int> stringIndices = {};
@@ -507,12 +245,12 @@ ProgramInfo buildProgramInfo(DartinoSystem system, WriteSnapshotResult result) {
   fillTable(classNames,
             result.classOffsetTable,
             (id) {
-    DartinoClass klass = system.classesById[id];
-    if (klass == null) {
-      // Why do we get here?
-      return null;
-    }
-    return klass.name;
+    // The snapshot contains always all built-in classes, even if the compiler
+    // did not push them to the dartino-vm.
+    // So we get the offsets of built-in classes even though we might not be
+    // able to get their name.
+    if (id == -1) return null;
+    return system.classesById[id].name;
   });
   fillTable(classNames,
             result.functionOffsetTable,
@@ -578,7 +316,7 @@ Future<int> decodeProgramMain(
   usage(message) {
     print("Invalid arguments: $message");
     print("Usage: ${io.Platform.script} "
-          "<32/64> <float/double> <snapshot.info.{json/bin}>");
+          "<32/64> <float/double> <snapshot.info.json>");
   }
 
   if (arguments.length != 3) {
@@ -599,10 +337,8 @@ Future<int> decodeProgramMain(
   }
 
   String filename = arguments[2];
-  bool isJsonFile = filename.endsWith('.json');
-  bool isBinFile = filename.endsWith('.bin');
-  if (!isJsonFile && !isBinFile) {
-    usage("The program info file must end in '.bin' or '.json' "
+  if (!filename.endsWith('.json')) {
+    usage("The program info file must end in '.json' "
           "(was: '$filename').");
     return 1;
   }
@@ -615,11 +351,7 @@ Future<int> decodeProgramMain(
 
   ProgramInfo info;
 
-  if (isJsonFile) {
-    info = ProgramInfoJson.decode(await file.readAsString());
-  } else {
-    info = ProgramInfoBinary.decode(await file.readAsBytes());
-  }
+  info = ProgramInfoJson.decode(await file.readAsString());
 
   Stream<String> inputLines =
       input.transform(UTF8.decoder).transform(new LineSplitter());
