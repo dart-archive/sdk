@@ -18,16 +18,16 @@ testing scripts in tools/testing/bin/... to be a 64-bit binary.
 We don't build these locally, but rely on 4 builders from the client.dart
 buildbot for building them in a controlled environment.
 
-Temporarily we also archive unstripped versions of the DartVM binaries in order
-to help the DartVM team to debug issues. Since the unstripped binaries are not
-archived anywere they need to be fetched from these builders directly ATM:
-
   * cross-arm-vm-linux-release-be
   * dart-sdk-linux-be
   * dart-sdk-mac-be
   * dart-sdk-windows-be
 
-=> Ask ricow@ or kustermann@ to do this.
+The cross-arm-vm-linux-release-be is archiving seperately a full
+bundle, but you can easily extract the binary from there.
+
+Please note down the gsutil paths where you got the binaries from so that people
+can get the corresponding unstripped versions.
 
 The binaries then need to be uploaded to GoogleCloudStorage and
 their sha1 file needs to be checked into the repository.
