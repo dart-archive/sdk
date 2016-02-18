@@ -197,7 +197,8 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
         asans=[False],
         embedded_libs=[False],
         use_sdks=[False])[0]
-      StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
+      StepBuild(host_configuration['build_conf'],
+                host_configuration['build_dir'])
 
     for cross_arch in cross_archs:
       CrossCompile(cross_system, [cross_mode], cross_arch)
@@ -246,7 +247,8 @@ def StepsSanityChecking(build_dir):
     raise Exception('Version mismatch, VERSION file has %s, dartino has %s' %
                     (version, dartino_version))
   dartino_vm = os.path.join(build_dir, 'dartino-sdk', 'bin', 'dartino-vm')
-  dartino_vm_version = subprocess.check_output([dartino_vm, '--version']).strip()
+  dartino_vm_version = subprocess.check_output([dartino_vm,
+                                                '--version']).strip()
   if dartino_vm_version != version:
     raise Exception('Version mismatch, VERSION file has %s, dartino vm has %s' %
                     (version, dartino_vm_version))
