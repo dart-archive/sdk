@@ -168,7 +168,7 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
       _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
 
       if (!field.isFinal) {
-        var setter = new Selector.setter(new Name(field.name, field.library));
+        var setter = new Selector.setter(field.memberName);
         var setterSelector = backend.context.toDartinoSelector(setter);
         _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
       }
@@ -288,12 +288,12 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     // CodegenEnqueuer.
     int fieldIndex = superclassFields + extraFields;
     element.implementation.forEachInstanceField((enclosing, field) {
-      var getter = new Selector.getter(new Name(field.name, field.library));
+      var getter = new Selector.getter(field.memberName);
       int getterSelector = backend.context.toDartinoSelector(getter);
       _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
 
       if (!field.isFinal) {
-        var setter = new Selector.setter(new Name(field.name, field.library));
+        var setter = new Selector.setter(field.memberName);
         var setterSelector = backend.context.toDartinoSelector(setter);
         _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
       }
@@ -303,13 +303,13 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
 
     for (FieldElement field in _removedFields) {
       Selector getter =
-          new Selector.getter(new Name(field.name, field.library));
+          new Selector.getter(field.memberName);
       int getterSelector = backend.context.toDartinoSelector(getter);
       _removedAccessors.add(getterSelector);
 
       if (!field.isFinal) {
         Selector setter =
-            new Selector.setter(new Name(field.name, field.library));
+            new Selector.setter(field.memberName);
         int setterSelector = backend.context.toDartinoSelector(setter);
         _removedAccessors.add(setterSelector);
       }

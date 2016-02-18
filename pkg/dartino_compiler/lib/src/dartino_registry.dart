@@ -4,21 +4,8 @@
 
 library dartino_compiler.dartino_codegen_registry;
 
-import 'package:compiler/src/compiler.dart' show
-    GlobalDependencyRegistry;
-
-import 'package:compiler/src/common/codegen.dart' show
-    CodegenRegistry;
-
-import 'package:compiler/src/common/registry.dart' show
-    Registry;
-
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
-
-import 'package:compiler/src/universe/use.dart' show
-    DynamicUse,
-    StaticUse;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
@@ -79,17 +66,17 @@ class DartinoRegistry {
   DartinoRegistry(DartinoCompilerImplementation compiler)
       : world = compiler.enqueuer.codegen;
 
-  void registerStaticUse(StaticUse staticUse) {
+  void registerStaticInvocation(FunctionElement function) {
     // TODO(ahe): Call a different method.
-    world.registerStaticUse(staticUse);
+    world.registerStaticInvocation(function);
   }
 
   void registerInstantiatedClass(ClassElement element) {
     world.registerInstantiatedType(element.rawType);
   }
 
-  void registerDynamicUse(Selector selector) {
-    world.registerDynamicUse(new DynamicUse(selector, null));
+  void registerDynamicSelector(Selector selector) {
+    world.registerDynamicSelector(selector);
   }
 
   void registerInstantiatedType(InterfaceType type) {

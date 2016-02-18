@@ -7,6 +7,9 @@ library dartino_compiler.dartino_context;
 import 'package:compiler/src/tree/tree.dart' show
     Node;
 
+import 'package:compiler/src/common/names.dart' show
+    Names;
+
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
@@ -136,17 +139,16 @@ class DartinoContext {
   }
 
   String getSymbolForFunction(
-      String name,
-      FunctionSignature signature,
-      LibraryElement library) {
+      Name name,
+      FunctionSignature signature) {
     StringBuffer buffer = new StringBuffer();
-    buffer.write(mangleName(new Name(name, library)));
+    buffer.write(mangleName(name));
     writeNamedArguments(buffer, signature);
     return buffer.toString();
   }
 
   String getCallSymbol(FunctionSignature signature) {
-    return getSymbolForFunction('call', signature, null);
+    return getSymbolForFunction(Names.call, signature);
   }
 
   int getSymbolId(String symbol) {

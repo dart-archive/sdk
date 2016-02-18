@@ -44,7 +44,6 @@ import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
-import 'dartino_function_builder.dart';
 import 'debug_info.dart';
 import 'find_position_visitor.dart';
 import 'dartino_context.dart';
@@ -54,6 +53,7 @@ import 'dartino_enqueuer.dart' show
 
 import '../dartino_system.dart';
 import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
+
 import 'package:compiler/src/elements/elements.dart';
 
 import '../incremental/dartino_compiler_incremental.dart' show
@@ -110,7 +110,6 @@ class DartinoCompilerImplementation extends CompilerImpl {
   // TODO(ahe): Clean this up and remove this.
   var helper;
 
-  @override
   DartinoEnqueueTask get enqueuer => super.enqueuer;
 
   DartinoCompilerImplementation(

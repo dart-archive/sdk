@@ -34,7 +34,8 @@ import 'src/dartino_native_descriptor.dart' show
 import 'src/dartino_backend.dart' show
     DartinoBackend;
 
-import 'package:compiler/src/apiimpl.dart' as apiimpl;
+import 'package:compiler/src/apiimpl.dart' show
+    CompilerImpl;
 
 import 'src/dartino_compiler_implementation.dart' show
     DartinoCompilerImplementation,
@@ -109,7 +110,7 @@ class DartinoCompiler {
 
     options.add("--platform-config=$platform");
 
-    final bool isVerbose = apiimpl.CompilerImpl.hasOption(options, '--verbose');
+    final bool isVerbose = CompilerImpl.hasOption(options, '--verbose');
 
     if (provider == null) {
       provider = new CompilerSourceFileProvider()

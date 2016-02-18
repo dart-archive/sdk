@@ -11,7 +11,8 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     FieldElement,
     FunctionElement,
-    LocalElement;
+    LocalElement,
+    Name;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType;
@@ -47,10 +48,8 @@ abstract class DebugRegistry {
   DartinoContext get context;
   DartinoFunctionBuilder get functionBuilder;
 
-  void registerDynamicUse(Selector selector) { }
-  void registerDynamicGetter(Selector selector) { }
-  void registerDynamicSetter(Selector selector) { }
-  void registerStaticUse(StaticUse use) { }
+  void registerDynamicSelector(Selector selector) { }
+  void registerStaticInvocation(FunctionElement element) { }
   void registerInstantiatedClass(ClassElement klass) { }
   void registerIsCheck(DartType type) { }
   void registerLocalInvoke(LocalElement element, Selector selector) { }

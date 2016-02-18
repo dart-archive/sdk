@@ -746,10 +746,9 @@ class ClosureVisitor
         node, indexFunction, indexSetFunction, index, operator, null);
   }
 
-  @override
   void visitTypeAnnotation(TypeAnnotation node) {
-  // This is to avoid the inherited implementation that visits children and
-  // throws when encountering anything unresolved.
+    // TODO(sigurdm): This is to avoid the inherited implementation that visits
+    // children and throws when encountering anything unresolved.
   }
 
   void handleImmutableLocalSet(

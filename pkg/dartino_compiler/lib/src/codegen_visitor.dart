@@ -30,8 +30,6 @@ import 'package:compiler/src/common/names.dart' show
     Names,
     Selectors;
 
-import 'package:compiler/src/universe/use.dart' show DynamicUse, StaticUse;
-
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/tree/tree.dart';
 import 'package:compiler/src/universe/call_structure.dart' show
@@ -396,9 +394,9 @@ abstract class CodegenVisitor
     scope.remove(local);
   }
 
-  void registerDynamicUse(Selector selector);
+  void registerDynamicSelector(Selector selector);
 
-  void registerStaticUse(StaticUse use);
+  void registerStaticInvocation(FunctionElement function);
 
   void registerInstantiatedClass(ClassElement klass);
 
@@ -418,7 +416,7 @@ abstract class CodegenVisitor
       ClosureInfo info);
 
   void invokeMethod(Node node, Selector selector) {
-    registerDynamicUse(selector);
+    registerDynamicSelector(selector);
     String symbol = context.getSymbolFromSelector(selector);
     int id = context.getSymbolId(symbol);
     int arity = selector.argumentCount;
@@ -427,7 +425,7 @@ abstract class CodegenVisitor
   }
 
   void invokeGetter(Node node, Name name) {
-    registerDynamicUse(new Selector.getter(name));
+    registerDynamicSelector(new Selector.getter(name));
     String symbol = context.mangleName(name);
     int id = context.getSymbolId(symbol);
     int dartinoSelector = DartinoSelector.encodeGetter(id);
@@ -435,7 +433,7 @@ abstract class CodegenVisitor
   }
 
   void invokeSetter(Node node, Name name) {
-    registerDynamicUse(new Selector.setter(name));
+    registerDynamicSelector(new Selector.setter(name));
     String symbol = context.mangleName(name);
     int id = context.getSymbolId(symbol);
     int dartinoSelector = DartinoSelector.encodeSetter(id);
@@ -482,8 +480,7 @@ abstract class CodegenVisitor
   }
 
   DartinoFunctionBase requireFunction(FunctionElement element) {
-    // TODO(johnniwinther): More precise use.
-    registerStaticUse(new StaticUse.foreignUse(element));
+    registerStaticInvocation(element);
     return context.backend.getFunctionForElement(element);
   }
 
@@ -491,7 +488,7 @@ abstract class CodegenVisitor
       ConstructorElement constructor) {
     assert(constructor.isGenerativeConstructor);
     registerInstantiatedClass(constructor.enclosingClass);
-    registerStaticUse(new StaticUse.foreignUse(constructor));
+    registerStaticInvocation(constructor);
     return context.backend.getConstructorInitializerFunction(constructor);
   }
 
@@ -1121,7 +1118,7 @@ abstract class CodegenVisitor
   }
 
   void doSuperCall(Node node, FunctionElement function) {
-    registerStaticUse(new StaticUse.foreignUse(function));
+    registerStaticInvocation(function);
     int arity = function.functionSignature.parameterCount + 1;
     DartinoFunctionBase base = requireFunction(function);
     int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
@@ -1552,8 +1549,7 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void doStaticFieldSet(
-      FieldElement field) {
+  void doStaticFieldSet(FieldElement field) {
     int index = context.getStaticFieldIndex(field, element);
     assembler.storeStatic(index);
   }
@@ -3250,12 +3246,12 @@ abstract class DartinoRegistryMixin {
   DartinoRegistry get registry;
   DartinoContext get context;
 
-  void registerDynamicUse(Selector selector) {
-    registry.registerDynamicUse(selector);
+  void registerDynamicSelector(Selector selector) {
+    registry.registerDynamicSelector(selector);
   }
 
-  void registerStaticUse(StaticUse staticUse) {
-    registry.registerStaticUse(staticUse);
+  void registerStaticInvocation(FunctionElement function) {
+    registry.registerStaticInvocation(function);
   }
 
   void registerInstantiatedClass(ClassElement klass) {
@@ -3276,7 +3272,7 @@ abstract class DartinoRegistryMixin {
       // currently needed to ensure that local function expression closures are
       // compiled correctly. For example, `[() {}].last()`, notice that `last`
       // is a getter. This happens for both named and unnamed.
-      registerStaticUse(new StaticUse.foreignUse(element));
+      registerStaticInvocation(element);
     }
     registry.registerClosurization(element, kind);
   }

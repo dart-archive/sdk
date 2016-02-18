@@ -69,19 +69,12 @@ import 'dartino_registry.dart' show
     DartinoRegistry,
     DartinoRegistry;
 
-import 'dart:developer';
-import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
+import 'package:compiler/src/enqueue.dart' show
+    EnqueuerStrategy,
+    ItemCompilationContextCreator;
 
-import 'package:compiler/src/universe/use.dart' show
-    DynamicUse,
-    StaticUse;
-
-import 'package:compiler/src/universe/use.dart';
-import 'package:compiler/src/common/work.dart';
-import 'package:compiler/src/common/resolution.dart';
-import 'package:compiler/src/enqueue.dart';
-
-part 'enqueuer_mixin.dart';
+import 'enqueuer_mixin.dart' show
+    EnqueuerMixin;
 
 /// True if enqueuing of system libraries should be reported in verbose mode.
 const bool logSystemLibraries =
@@ -185,8 +178,8 @@ class DartinoEnqueuer extends EnqueuerMixin
   }
 
   // TODO(ahe): Remove this method.
-  void registerStaticUse(StaticUse staticUse) {
-    _enqueueElement(staticUse.element, null, null);
+  void registerStaticInvocation(FunctionElement function) {
+    _enqueueElement(function, null, null);
   }
 
   // TODO(ahe): Remove this method.
@@ -241,8 +234,8 @@ class DartinoEnqueuer extends EnqueuerMixin
     // TODO(ahe): Implement this.
   }
 
-  void registerDynamicUse(DynamicUse use) {
-    dynamicCallEnqueuer.enqueueSelector(use);
+  void registerDynamicSelector(Selector selector) {
+    dynamicCallEnqueuer.enqueueSelector(selector);
   }
 
   void applyImpact(Element element, WorldImpact worldImpact) {

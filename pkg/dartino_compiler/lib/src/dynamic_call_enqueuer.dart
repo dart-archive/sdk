@@ -196,9 +196,7 @@ class DynamicCallEnqueuer {
     }
   }
 
-  void enqueueSelector(DynamicUse use) {
-    assert(use.mask == null);
-    Selector selector = use.selector;
+  void enqueueSelector(Selector selector) {
     if (enqueuedSelectors.add(selector)) {
       pendingSelectors.add(selector);
     }

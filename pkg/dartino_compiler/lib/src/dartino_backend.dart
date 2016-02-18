@@ -53,6 +53,7 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionTypedElement,
     LibraryElement,
     MemberElement,
+    MethodElement,
     Name,
     ParameterElement,
     PublicName;
@@ -488,11 +489,7 @@ class DartinoBackend extends Backend
   void onElementResolved(Element element, TreeElements elements) {
     if (alwaysEnqueue.contains(element)) {
       var registry = new DartinoRegistry(compiler);
-      if (element.isStatic || element.isTopLevel) {
-        registry.registerStaticUse(new StaticUse.foreignUse(element));
-      } else {
-        registry.registerDynamicUse(new Selector.fromElement(element));
-      }
+      registry.registerStaticInvocation(element);
     }
   }
 
@@ -942,7 +939,7 @@ class DartinoBackend extends Backend
       FunctionElement function,
       TreeElements elements,
       DartinoRegistry registry) {
-    registry.registerStaticUse(new StaticUse.foreignUse(dartinoSystemEntry));
+    registry.registerStaticInvocation(dartinoSystemEntry);
 
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
         function,
@@ -988,13 +985,14 @@ class DartinoBackend extends Backend
     }
 
     if (functionBuilder.isInstanceMember && !function.isGenerativeConstructor) {
+      Name name = function is MethodElement
+          ? function.memberName
+          : new Name(functionBuilder.name, function.library);
       // Inject the function into the method table of the 'holderClass' class.
       // Note that while constructor bodies has a this argument, we don't inject
       // them into the method table.
-      String symbol = context.getSymbolForFunction(
-          functionBuilder.name,
-          function.functionSignature,
-          function.library);
+      String symbol = context.getSymbolForFunction(name,
+          function.functionSignature);
       int id = context.getSymbolId(symbol);
       int arity = function.functionSignature.parameterCount;
       SelectorKind kind = SelectorKind.Method;
@@ -1056,14 +1054,14 @@ class DartinoBackend extends Backend
           coroutineClass.lookupLocalMember("_coroutineStart");
       Selector selector = new Selector.fromElement(coroutineStart);
       new DartinoRegistry(compiler)
-          ..registerDynamicUse(selector);
+          ..registerDynamicSelector(selector);
     } else if (name == "Process._spawn") {
       // The native method `Process._spawn` will do a closure invoke with 0, 1,
       // or 2 arguments.
       new DartinoRegistry(compiler)
-          ..registerDynamicUse(new Selector.callClosure(0))
-          ..registerDynamicUse(new Selector.callClosure(1))
-          ..registerDynamicUse(new Selector.callClosure(2));
+          ..registerDynamicSelector(new Selector.callClosure(0))
+          ..registerDynamicSelector(new Selector.callClosure(1))
+          ..registerDynamicSelector(new Selector.callClosure(2));
     }
 
     int arity = codegen.assembler.functionArity;
@@ -1210,7 +1208,7 @@ class DartinoBackend extends Backend
     getTearoffClass(createDartinoFunctionBuilder(function));
     // Be sure to actually enqueue the function for compilation.
     DartinoRegistry registry = new DartinoRegistry(compiler);
-    registry.registerStaticUse(new StaticUse.foreignUse(function));
+    registry.registerStaticInvocation(function);
   }
 
   DartinoFunctionBase createParameterStub(
@@ -1352,7 +1350,7 @@ class DartinoBackend extends Backend
     if (function.element != null) {
       library = function.element.library;
     }
-    // TODO(sigurdm): Avoid allocating new name here.
+    // TODO(sigurdm): Avoid allocating new Name and Selector here.
     Name name = new Name(function.name, library);
     int dartinoSelector = context.toDartinoSelector(
         new Selector.getter(name));
@@ -1726,7 +1724,6 @@ class DartinoBackend extends Backend
   Uri resolvePatchUri(String libraryName, Uri libraryRoot) {
     throw "Not implemented";
   }
-
 }
 
 class DartinoImpactTransformer extends ImpactTransformer {
