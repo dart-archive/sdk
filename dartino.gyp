@@ -12,6 +12,13 @@
       ],
     },
     {
+      'target_name': 'dartino-flashify',
+      'type': 'none',
+      'dependencies': [
+        'src/vm/vm.gyp:dartino-flashify',
+      ],
+    },
+    {
       'target_name': 'c_test_library',
       'type': 'none',
       'dependencies': [

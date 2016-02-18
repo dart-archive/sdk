@@ -402,6 +402,7 @@ class HeapObject : public Object {
   // Returns the class field without checks.
   inline Class* raw_class();
 
+  friend class FlashifyVisitor;
   friend class Heap;
   friend class Program;
   friend class SnapshotWriter;

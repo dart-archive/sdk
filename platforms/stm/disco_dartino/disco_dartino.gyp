@@ -30,13 +30,11 @@
       },
       'actions': [
         {
-          'action_name': 'snapshot',
+          'action_name': 'generate_snapshot',
           'inputs': [
             'src/test.dart',
           ],
           'outputs': [
-            # This must be in CWD for the objcopy below to generate the
-            # correct symbol names.
             '<(PRODUCT_DIR)/snapshot',
           ],
           'action': [
@@ -52,36 +50,51 @@
     },
     {
       'type': 'none',
-      'target_name': 'disco_dartino_dart_snapshot.o',
+      'target_name': 'disco_dartino_dart_program.S',
       'dependencies' : [
         'disco_dartino_dart_snapshot',
       ],
       'actions': [
         {
-          'action_name': 'snapshot',
+          'action_name': 'flashify_program',
           'inputs': [
             '<(PRODUCT_DIR)/snapshot',
           ],
           'outputs': [
-            '<(PRODUCT_DIR)/snapshot.o',
+            '<(PRODUCT_DIR)/program.S',
           ],
           'action': [
-            'python',
-            '../../../tools/run_with_cwd.py',
-            '<(PRODUCT_DIR)',
-            # As we are messing with CWD we need the path relative to
-            # PRODUCT_DIR (where we cd into) instead of relative to
-            # where this .gyp file is.
-            '../../third_party/gcc-arm-embedded/linux/'
-                'gcc-arm-embedded/bin/arm-none-eabi-objcopy',
-            '-I',
-            'binary',
-            '-O',
-            'elf32-littlearm',
-            '-B',
-            'arm',
-            'snapshot',
-            'snapshot.o',
+            '<(PRODUCT_DIR)/../ReleaseIA32/dartino-flashify',
+            '<(PRODUCT_DIR)/snapshot',
+            '<(PRODUCT_DIR)/program.S',
+          ],
+        },
+      ],
+    },
+    {
+      'type': 'none',
+      'target_name': 'disco_dartino_dart_program.o',
+      'dependencies' : [
+        'disco_dartino_dart_program.S',
+      ],
+      'actions': [
+        {
+          'action_name': 'linkify_program',
+          'inputs': [
+            '<(PRODUCT_DIR)/program.S',
+          ],
+          'outputs': [
+            '<(PRODUCT_DIR)/program.o',
+          ],
+          'action': [
+            '../../../third_party/gcc-arm-embedded/linux/'
+                'gcc-arm-embedded/bin/arm-none-eabi-gcc',
+            '-mcpu=cortex-m7',
+            '-mthumb',
+            '-o',
+            '<(PRODUCT_DIR)/program.o',
+            '-c',
+            '<(PRODUCT_DIR)/program.S',
           ],
         },
       ],
@@ -184,7 +197,7 @@
       'target_name': 'disco_dartino.elf',
       'dependencies': [
         'libdisco_dartino',
-        'disco_dartino_dart_snapshot.o',
+        'disco_dartino_dart_program.o',
         '../../../src/vm/vm.gyp:libdartino',
       ],
       'variables': {
@@ -205,7 +218,7 @@
       },
       'type': 'executable',
       'sources': [
-        '<(PRODUCT_DIR)/snapshot.o',
+        '<(PRODUCT_DIR)/program.o',
       ],
       'conditions': [
         ['OS=="mac"', {

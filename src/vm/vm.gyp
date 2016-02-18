@@ -302,6 +302,16 @@
       ],
     },
     {
+      'target_name': 'dartino-flashify',
+      'type': 'executable',
+      'dependencies': [
+        'libdartino',
+      ],
+      'sources': [
+        'flashify.cc'
+      ],
+    },
+    {
       'target_name': 'vm_cc_tests',
       'type': 'executable',
       'dependencies': [

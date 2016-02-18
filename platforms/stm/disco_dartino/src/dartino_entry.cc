@@ -18,12 +18,13 @@ extern "C" {
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
 #include "platforms/stm/disco_dartino/src/button.h"
 #include "platforms/stm/disco_dartino/src/uart.h"
+
 #include "src/shared/utils.h"
+#include "src/vm/program_info_block.h"
 
-extern unsigned char _binary_snapshot_start;
-extern unsigned char _binary_snapshot_end;
-extern unsigned char _binary_snapshot_size;
-
+extern "C" dartino::ProgramInfoBlock program_info_block;
+extern "C" char program_start;
+extern "C" char program_end;
 extern PageAllocator* page_allocator;
 
 Uart *uart;
@@ -96,13 +97,16 @@ DARTINO_EXPORT_TABLE_END
 
 // Run dartino on the linked in snapshot.
 void StartDartino(void const * argument) {
-  dartino::Print::Out("Setup dartino\n");
+  dartino::Print::Out("Setup Dartino\n");
   DartinoSetup();
-  dartino::Print::Out("Reading dartino snapshot\n");
-  unsigned char *snapshot = &_binary_snapshot_start;
-  int snapshot_size =  reinterpret_cast<int>(&_binary_snapshot_size);
-  DartinoProgram program = DartinoLoadSnapshot(snapshot, snapshot_size);
-  dartino::Print::Out("Run dartino program\n");
+
+  dartino::Print::Out("Setting up Dartino program space\n");
+  char* heap = &program_start;
+  int heap_size = &program_end - heap;
+  DartinoProgram program = DartinoLoadProgramFromFlash(
+      heap, heap_size + sizeof(dartino::ProgramInfoBlock));
+
+  dartino::Print::Out("Run Dartino program\n");
   DartinoRunMain(program, 0, NULL);
   dartino::Print::Out("Dartino program exited\n");
 }
