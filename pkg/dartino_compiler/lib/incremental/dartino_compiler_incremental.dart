@@ -30,6 +30,21 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'package:compiler/src/library_loader.dart' show
     ReuseLibrariesFunction;
 
+import 'package:compiler/src/source_file_provider.dart' show
+    SourceFileProvider;
+
+import 'package:compiler/src/tokens/token.dart' show
+    Token;
+
+import 'package:compiler/src/diagnostics/source_span.dart' show
+    SourceSpan;
+
+import 'package:compiler/src/parser/partial_elements.dart' show
+    PartialElement;
+
+import 'package:compiler/src/tokens/token_constants.dart' show
+    EOF_TOKEN;
+
 import 'dartino_reuser.dart' show
     IncrementalCompilerContext,
     DartinoReuser,
@@ -60,15 +75,6 @@ import '../src/dartino_backend.dart' show
     DartinoBackend;
 
 import '../src/hub/exit_codes.dart' as exit_codes;
-
-import 'package:compiler/src/source_file_provider.dart' show
-    SourceFileProvider;
-
-import 'package:compiler/src/tokens/token.dart' show
-    Token;
-
-import 'package:compiler/src/diagnostics/source_span.dart' show
-    SourceSpan;
 
 part 'caching_compiler.dart';
 
@@ -337,10 +343,70 @@ class IncrementalCompiler {
       Token end,
       Uri uri,
       Element element) {
-    Uri update = _updatedFiles[uri];
-    if (update != null) {
-      // TODO(ahe): Compute updated position.
-      return new SourceSpan(update, 0, 0);
+    Uri updatedUri = _updatedFiles[uri];
+    if (updatedUri != null) {
+      if (element == null) {
+        // TODO(ahe): In theory, we can map any old position to a new position,
+        // but in this case it's complicated. Consider if we need to deal with
+        // this case.
+        return new SourceSpan(updatedUri, 0, 0);
+      }
+      LibraryElement library = element.library;
+      LibraryElement updatedLibrary =
+          _reuser.copyLibraryWithChangesSync(library);
+
+      if (library == updatedLibrary) {
+        // We know there must be a change as [updatedUri] isn't null, so we
+        // should have gotten a copy of [library], not itself.  However, some
+        // parse errors may be reported on the synthetic library self as part
+        // of computing the differences. In this case, the token positions are
+        // correct, only the URI may have changed.
+        assert(_reuser.isSynthetic(library));
+        return new SourceSpan.fromTokens(updatedUri, begin, end);
+      }
+
+      // We're only interested in top-level elements and direct members of
+      // classes. We're not interested in nested functions.
+      element = element.outermostEnclosingMemberOrTopLevel;
+      while (element.enclosingClass != null &&
+             !element.enclosingClass.isTopLevel) {
+        // There's a bug in [element.outermostEnclosingMemberOrTopLevel] so it
+        // returns nested closure classes. This works around that problem.
+        element = element.enclosingClass.enclosingElement;
+      }
+      Element updatedElement;
+      if (element.isTopLevel) {
+        updatedElement = updatedLibrary.localLookup(element.name);
+      } else {
+        assert(element.isClassMember);
+        ClassElement cls = element.enclosingClass;
+        ClassElement updatedClass = updatedLibrary.localLookup(cls.name);
+        updatedElement = updatedClass.localLookup(element.name);
+      }
+      // TODO(ahe): Why isn't the resourceUri correct?
+      updatedUri =
+          _updatedFiles[updatedElement.compilationUnit.script.resourceUri];
+      if (updatedElement is PartialElement && element is PartialElement) {
+        PartialElement after = updatedElement as PartialElement;
+        PartialElement before = element as PartialElement;
+        Token current = before.beginToken;
+        Token updatedBegin = after.beginToken;
+        while (current.kind != EOF_TOKEN) {
+          if (current == begin) break;
+          current = current.next;
+          updatedBegin = updatedBegin.next;
+        }
+        current = before.beginToken;
+        Token updatedEnd = after.beginToken;
+        while (current.kind != EOF_TOKEN) {
+          if (current == end) break;
+          current = current.next;
+          updatedEnd = updatedEnd.next;
+        }
+        return new SourceSpan.fromTokens(updatedUri, updatedBegin, updatedEnd);
+      } else {
+        return new SourceSpan(updatedUri, 0, 0);
+      }
     }
     return new SourceSpan.fromTokens(uri, begin, end);
   }
