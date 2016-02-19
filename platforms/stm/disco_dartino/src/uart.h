@@ -42,7 +42,7 @@ class Uart {
 
   void Task();
 
-  void ReturnFromInterrupt(uint32_t flag);
+  void InterruptHandler();
 
   uint32_t error_;
 
@@ -71,15 +71,20 @@ class Uart {
   // Transmit status.
   dartino::Mutex* tx_mutex_;
 
-  uint8_t tx_data_[kTxBlockSize];  // Buffer send to the HAL.
+  // Bytes we are transmitting.
+  // TODO(sigurdm): Avoid this, and just transmit from `write_buffer_`;
+  uint8_t tx_data_[kTxBlockSize];
+
+  // Index into tx_data.
+  int tx_progress_;
+  // Length of data in tx_data.
+  int tx_length_;
 
   // Are we currently waiting for transmission to finish.
   bool tx_pending_;
 
-  // Used to signal new events from the event handler.
-  osSemaphoreId semaphore_;
-
-  dartino::Atomic<uint32_t> interrupt_flags;
+  // Thread id of the thread that signals the event-handler.
+  osThreadId signalThread_;
 };
 
 Uart *GetUart(int handle);

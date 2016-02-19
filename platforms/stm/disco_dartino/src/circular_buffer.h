@@ -13,13 +13,9 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 // Circular buffer holding bytes.
+// TODO(sigurdm): Make lock free with atomic head and tail.
 class CircularBuffer {
  public:
-  enum Blocking {
-    kDontBlock,
-    kBlock,
-  };
-
   // Create a new circular buffer holding up to 'capacity' bytes of
   // data.
   explicit CircularBuffer(size_t capacity);
@@ -33,14 +29,13 @@ class CircularBuffer {
 
   // Read up to count bytes into buffer. If block is kBlock the call
   // will not return until at least one byte is read.
-  size_t Read(uint8_t* buffer, size_t count, Blocking block);
+  size_t Read(uint8_t* buffer, size_t count);
 
   // Write up to count bytes from buffer. If block is kBlock the call
   // will not return until at least one byte is written.
-  size_t Write(const uint8_t* buffer, size_t count, Blocking block);
+  size_t Write(const uint8_t* buffer, size_t count);
 
  private:
-  dartino::Monitor* monitor_;
   int waiting_;
   uint8_t* buffer_;
   size_t capacity_;

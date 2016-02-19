@@ -24,7 +24,7 @@ main() {
   Fiber.fork(() {
     while (true) {
       button.waitForPress();
-      uart.writeString("Button press received\n");
+      uart.writeString("Button press received\r\n");
     }
   });
 

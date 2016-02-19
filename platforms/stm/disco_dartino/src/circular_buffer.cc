@@ -8,7 +8,6 @@
 #include <string.h>
 
 CircularBuffer::CircularBuffer(size_t capacity) {
-  monitor_ = dartino::Platform::CreateMonitor();
   // One additional byte needed to distinguish between empty and full.
   capacity_ = capacity + 1;
   buffer_ = new uint8_t[capacity_];
@@ -20,25 +19,14 @@ CircularBuffer::~CircularBuffer() {
 }
 
 bool CircularBuffer::IsEmpty() {
-  dartino::ScopedMonitorLock locker(monitor_);
   return head_ == tail_;
 }
 
 bool CircularBuffer::IsFull() {
-  dartino::ScopedMonitorLock locker(monitor_);
   return ((head_ + 1) % capacity_) == tail_;
 }
 
-size_t CircularBuffer::Read(uint8_t* data, size_t count, Blocking block) {
-  dartino::ScopedMonitorLock locker(monitor_);
-
-  // If buffer is empty wait for data.
-  if (block == kBlock) {
-    if (head_ == tail_) {
-      monitor_->Wait();
-    }
-  }
-
+size_t CircularBuffer::Read(uint8_t* data, size_t count) {
   int bytes;
   int read = 0;
 
@@ -56,22 +44,10 @@ size_t CircularBuffer::Read(uint8_t* data, size_t count, Blocking block) {
     tail_ = (tail_ + bytes) % capacity_;
   }
 
-  monitor_->Notify();
-
   return read;
 }
 
-size_t CircularBuffer::Write(
-    const uint8_t* data, size_t count, Blocking block) {
-  dartino::ScopedMonitorLock locker(monitor_);
-
-  // If buffer is full wait for room.
-  if (block == kBlock) {
-    if (((head_ + 1) % capacity_) == tail_) {
-      monitor_->Wait();
-    }
-  }
-
+size_t CircularBuffer::Write(const uint8_t* data, size_t count) {
   int bytes;
   int written = 0;
 
@@ -89,8 +65,6 @@ size_t CircularBuffer::Write(
     written += bytes;
     head_ = (head_ + bytes) % capacity_;
   }
-
-  monitor_->Notify();
 
   return written;
 }
