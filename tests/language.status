@@ -1072,3 +1072,4 @@ unsorted/uri_base_test: RuntimeError
 
 [ $system == macos && $mode == debug && $asan ]
 override_inheritance_no_such_method_test/none: Pass, Crash # Issue 434
+setter_override_test/none: Pass, Crash # Issue 434
