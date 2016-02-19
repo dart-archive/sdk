@@ -32,7 +32,7 @@ SecurityContext createContext() {
   var chain = testDirUri.resolve('../$certPath/server_chain.pem');
   var key = testDirUri.resolve('../$certPath/server_key.pem');
   return new SecurityContext()
-    ..useCertificateChain(chain.toFilePath())
+    ..useCertificateChain(file: chain.toFilePath())
     ..usePrivateKey(key.toFilePath(), password: 'dartdart');
 }
 
