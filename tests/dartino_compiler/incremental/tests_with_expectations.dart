@@ -561,6 +561,61 @@ main() {
 ''',
 
   r'''
+stored_instance_tearoff_with_named_parameters
+==> main.dart.patch <==
+// Test that a stored instance tearoff with named parameter changes behavior
+// when updated
+
+class C {
+  m({a: 'a'}) {
+<<<< ["closure is null","v1"]
+  print('v1');
+==== "v2"
+  print('v2');
+>>>>
+  }
+}
+var closure;
+main() {
+  if (closure == null) {
+    print('closure is null');
+    closure = new C().m;
+  }
+  closure(a: 'b');
+}
+
+
+''',
+
+  r'''
+stored_instance_tearoff_with_optional_positional_parameters
+==> main.dart.patch <==
+// Test that a stored instance tearoff with optional positional parameter
+// changes behavior when updated
+
+class C {
+  m([a ='a']) {
+<<<< ["closure is null","v1", "v1"]
+  print('v1');
+==== ["v2", "v2"]
+  print('v2');
+>>>>
+  }
+}
+var closure;
+main() {
+  if (closure == null) {
+    print('closure is null');
+    closure = new C().m;
+  }
+  closure('b');
+  closure();
+}
+
+
+''',
+
+r'''
 remove_instance_method
 ==> main.dart.patch <==
 // Test that deleting an instance method works

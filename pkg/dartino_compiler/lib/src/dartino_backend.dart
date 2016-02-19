@@ -519,12 +519,37 @@ class DartinoBackend extends Backend
   DartinoClassBase getTearoffClass(DartinoFunctionBase function) {
     DartinoClassBase base = systemBuilder.lookupTearoffClass(function);
     if (base != null) return base;
+
+    if (base == null) {
+      DartinoFunctionBase predecessorFunction = systemBuilder.
+         predecessorSystem.lookupFunctionByElement(function.element);
+      if (predecessorFunction != null) {
+        base = systemBuilder.lookupTearoffClass(predecessorFunction);
+      }
+    }
+
+    DartinoClassBuilder tearoffClass;
     FunctionSignature signature = function.signature;
     bool hasThis = function.isInstanceMember;
-    DartinoClassBuilder tearoffClass = createCallableStubClass(
-        hasThis ? 1 : 0,
-        signature.parameterCount,
-        compiledClosureClass);
+    if (base != null) {
+      // [function] is the result of an incremental change on
+      // [predecessorFunction] which already has a tear-off class. Hence, we
+      // patch this class instead of creating a new one.
+      tearoffClass = systemBuilder.lookupClassBuilder(base.classId);
+      if (tearoffClass == null) {
+        tearoffClass = systemBuilder.newPatchClassBuilderFromBase(
+            base,
+            new SchemaChange(null));
+        // TODO(zarah): The old call methods will all be removed as they are
+        // overridden because we don't tree shake selectors. Ideally these
+        // methods should be removed explicitly when we patch the closure class.
+      }
+    } else {
+      tearoffClass = createCallableStubClass(
+          hasThis ? 1 : 0,
+          signature.parameterCount,
+          compiledClosureClass);
+    }
 
     DartinoFunctionBuilder functionBuilder =
         systemBuilder.newTearOff(function, tearoffClass.classId);

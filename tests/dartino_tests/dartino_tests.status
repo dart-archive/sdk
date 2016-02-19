@@ -9,7 +9,6 @@ multiprogram_tests/should_fail: Fail, OK # This is a test of this suite, failure
 
 # Stored closures not updated
 incremental/*/stored_closure: Fail
-incremental/*/stored_instance_tearoff: Fail
 incremental/*/remove_instance_method_stored_in_tearoff: Fail
 
 # Missing support for multiple libraries

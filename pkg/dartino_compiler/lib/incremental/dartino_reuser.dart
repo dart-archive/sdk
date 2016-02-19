@@ -72,6 +72,7 @@ import 'reuser.dart' show
     AddedFieldUpdate,
     AddedFunctionUpdate,
     ClassUpdate,
+    FunctionUpdate,
     Logger,
     RemovedClassUpdate,
     RemovedFieldUpdate,
@@ -257,6 +258,13 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     updates.add(new DartinoClassUpdate(compiler, before, after));
   }
 
+  void addFunctionUpdate(
+      Compiler compiler,
+      PartialFunctionElement before,
+      PartialFunctionElement after) {
+    updates.add(new DartinoFunctionUpdate(compiler, before, after));
+  }
+
   void addAddedFunctionUpdate(
       Compiler compiler,
       PartialFunctionElement element,
@@ -373,6 +381,14 @@ class DartinoReuser extends Reuser with DartinoFeatures {
   SchemaChange getSchemaChange(PartialClassElement cls) {
     return schemaChangesByClass.putIfAbsent(cls, () => new SchemaChange(cls));
   }
+}
+
+class DartinoFunctionUpdate extends FunctionUpdate with DartinoFeatures {
+  DartinoFunctionUpdate(
+      Compiler compiler,
+      PartialFunctionElement before,
+      PartialFunctionElement after)
+      : super(compiler, before, after);
 }
 
 class DartinoRemovedFunctionUpdate extends RemovedFunctionUpdate

@@ -731,7 +731,7 @@ abstract class Reuser {
     if (!before.isInstanceMember) {
       if (!allowNonInstanceMemberModified(after)) return false;
     }
-    updates.add(new FunctionUpdate(compiler, before, after));
+    addFunctionUpdate(compiler, before, after);
     return true;
   }
 
@@ -823,6 +823,11 @@ abstract class Reuser {
       PartialClassElement before,
       PartialClassElement after);
 
+  void addFunctionUpdate(
+      Compiler compiler,
+      PartialFunctionElement before,
+      PartialFunctionElement after);
+
   void addAddedFunctionUpdate(
       Compiler compiler,
       PartialFunctionElement element,
@@ -888,7 +893,7 @@ abstract class Update {
 }
 
 /// Represents an update of a function element.
-class FunctionUpdate extends Update with ReuseFunctionElement {
+abstract class FunctionUpdate extends Update with ReuseFunctionElement {
   final PartialFunctionElement before;
 
   final PartialFunctionElement after;

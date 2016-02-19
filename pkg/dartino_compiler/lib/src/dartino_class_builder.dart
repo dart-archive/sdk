@@ -37,7 +37,7 @@ abstract class DartinoClassBuilder extends DartinoClassBase {
       int fieldCount)
       : super(classId, name, element, fieldCount);
 
-  DartinoClassBuilder get superclass;
+  DartinoClassBase get superclass;
   int get superclassId => hasSuperClass ? superclass.classId : -1;
 
   /**
@@ -88,7 +88,7 @@ void forEachField(ClassElement c, void action(FieldElement field)) {
 }
 
 class DartinoNewClassBuilder extends DartinoClassBuilder {
-  final DartinoClassBuilder superclass;
+  final DartinoClassBase superclass;
   final bool isBuiltin;
 
   // The extra fields are synthetic fields not represented in any Dart source
@@ -103,7 +103,7 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
   DartinoNewClassBuilder(
       int classId,
       ClassElement element,
-      DartinoClassBuilder superclass,
+      DartinoClassBase superclass,
       this.isBuiltin,
       int extraFields)
       : superclass = superclass,
@@ -113,7 +113,7 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
 
   static int computeFields(
       ClassElement element,
-      DartinoClassBuilder superclass,
+      DartinoClassBase superclass,
       int extraFields) {
     int count = extraFields;
     if (superclass != null) {
@@ -230,7 +230,7 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
 class DartinoPatchClassBuilder extends DartinoClassBuilder {
   final DartinoClass klass;
 
-  final DartinoClassBuilder superclass;
+  final DartinoClassBase superclass;
 
   final Map<int, int> _implicitAccessorTable = <int, int>{};
 
