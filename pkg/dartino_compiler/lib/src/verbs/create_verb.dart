@@ -29,8 +29,7 @@ Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
   context = context.copyWithSession(session);
 
   return await context.performTaskInWorker(
-      new CreateSessionTask(
-          name, sentence.withUri, sentence.base, configFileUri));
+      new CreateSessionTask(name, sentence.withUri, sentence.base));
 }
 
 class CreateSessionTask extends SharedTask {
@@ -42,16 +41,13 @@ class CreateSessionTask extends SharedTask {
 
   final Uri base;
 
-  final Uri configFileUri;
-
-  const CreateSessionTask(
-      this.name, this.settingsUri, this.base, this.configFileUri);
+  const CreateSessionTask(this.name, this.settingsUri, this.base);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<ClientCommand> commandIterator) {
     return createSessionTask(
-        commandSender, commandIterator, name, settingsUri, base, configFileUri);
+        commandSender, commandIterator, name, settingsUri, base);
   }
 }
 
@@ -60,11 +56,10 @@ Future<int> createSessionTask(
     StreamIterator<ClientCommand> commandIterator,
     String name,
     Uri settingsUri,
-    Uri base,
-    Uri configFileUri) async {
+    Uri base) async {
   assert(SessionState.internalCurrent == null);
   Settings settings = await createSettings(
-      name, settingsUri, base, configFileUri, commandSender, commandIterator);
+      name, settingsUri, base, commandSender, commandIterator);
   SessionState state = createSessionState(name, settings);
   SessionState.internalCurrent = state;
   if (settingsUri != null) {
