@@ -13,8 +13,8 @@
     'LK_PROJECT%': 'qemu-virt-dartino',
 
     'LK_CPU%': 'cortex-a15',
-    'LK_FPU%': 'vfpv4',
-    'LK_FLOAT-ABI%': 'hard',
+    'LK_FPU%': 'vfpv3',
+    'LK_FLOAT-ABI%': 'softfp',
   },
 
   'target_defaults': {
