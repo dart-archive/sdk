@@ -1,5 +1,16 @@
 #!/bin/bash
 
+set -e
+
+TEMPDIR=$(mktemp -d dartinoflash.XXX)
+mkdir ${TEMPDIR}/dartino
+
+function cleanup() {
+  rm -rf ${TEMPDIR}
+}
+
+trap cleanup EXIT INT TERM
+
 function usage {
   echo "Usage: $0 [--dartino <dartino binary directory>] <elf-file>"
   echo "         <snapshot-file> <symbol-name>"
@@ -74,18 +85,17 @@ PARTS=($SNAPSHOT)
 ADDRESS=0x${PARTS[3]}
 echo "Found .snapshot section at $ADDRESS..."
 
-TEMPDIR=$(mktemp -d dartinoflash.XXX)
-mkdir ${TEMPDIR}/dartino
-
 echo "Generating output in $TEMPDIR..."
 
-${DARTINOHOME}flashtool $INTRINSICS $2 ${ADDRESS} ${TEMPDIR}/dartino/programheap.bin
+FLASHTOOLCMD="${DARTINOHOME}flashtool $INTRINSICS $2 ${ADDRESS} ${TEMPDIR}/dartino/programheap.bin"
+$FLASHTOOLCMD
 
 (cd ${TEMPDIR}; arm-none-eabi-objcopy --rename-section .data=.snapshot --redefine-sym _binary_dartino_programheap_bin_start=__dartino_${3}_heap_start --redefine-sym _binary_dartino_programheap_bin_end=__dartino_${3}_heap_end --redefine-sym _binary_dartino_programheap_bin_size=__dartino_${3}_heap_size -I binary -B armv4t -O elf32-littlearm dartino/programheap.bin dartino/programheap.o)
 
 arm-none-eabi-ld -r ${TEMPDIR}/dartino/programheap.o -o ${3}.o
 
-(cd ${TEMPDIR}; rm dartino/*; rmdir dartino)
-rmdir ${TEMPDIR}
-
 echo "Written output to ${3}.o..."
+
+trap - EXIT INT TERM
+
+cleanup
