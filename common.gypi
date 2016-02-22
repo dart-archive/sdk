@@ -453,6 +453,7 @@
               '<(DEPTH)/<(LK_PATH)/arch/arm/arm/include',
               '<(DEPTH)/<(LK_PATH)/lib/heap/include/',
               '<(DEPTH)/<(LK_PATH)/lib/io/include',
+              '<(DEPTH)/<(LK_PATH)/lib/libc/include',
             ],
 
             'defines!': [
