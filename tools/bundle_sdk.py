@@ -192,9 +192,11 @@ def CopyPlatforms(bundle_dir):
   copytree('platforms/stm/config', target_dir)
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
+  # TODO(karlklose): Run 'build_dir/dartino export' instead?
   cmd = [dart_executable, '-c', '--packages=.packages',
          '-Dsnapshot="%s"' % snapshot,
          '-Dpackages=".packages"',
+         '-Dtest.dartino_settings_file_name=".dartino-settings"',
          'tests/dartino_compiler/run.dart', dart_file]
   print 'Running %s' % ' '.join(cmd)
   subprocess.check_call(' '.join(cmd), shell=True)
