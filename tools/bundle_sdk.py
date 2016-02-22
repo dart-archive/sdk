@@ -348,8 +348,11 @@ def CopyTools(bundle_dir):
 
 def Main():
   options = ParseOptions();
-  print 'Creating sdk bundle for %s' % options.build_dir
   build_dir = options.build_dir
+  if not build_dir:
+    print 'Please specify a build directory with "--build_dir".'
+    sys.exit(1)
+  print 'Creating sdk bundle for %s' % build_dir
   deb_package = options.deb_package
   with utils.TempDir() as sdk_temp:
     if options.create_documentation:
