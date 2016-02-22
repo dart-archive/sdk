@@ -78,22 +78,23 @@ int DebugInfo::NextBreakpointId() {
 }
 
 const Breakpoint* DebugInfo::LookupBreakpointByBCP(uint8_t* bcp) {
-  Breakpoints::ConstIterator it = program_breakpoints_->Find(bcp);
-  if (it != program_breakpoints_->End()) {
+  // Always hit process-local/one-shot breakpoints first.
+  Breakpoints::ConstIterator it = process_breakpoints_.Find(bcp);
+  if (it != process_breakpoints_.End()) {
     return &it->second;
   }
-  it = process_breakpoints_.Find(bcp);
-  if (it != process_breakpoints_.End()) {
+  it = program_breakpoints_->Find(bcp);
+  if (it != program_breakpoints_->End()) {
     return &it->second;
   }
   return NULL;
 }
 
 const Breakpoint* DebugInfo::LookupBreakpointByOpcode(uint8_t opcode) {
-  for (auto& pair : program_breakpoints_->map()) {
+  for (auto& pair : process_breakpoints_.map()) {
     if (*pair.first == opcode) return &pair.second;
   }
-  for (auto& pair : process_breakpoints_.map()) {
+  for (auto& pair : program_breakpoints_->map()) {
     if (*pair.first == opcode) return &pair.second;
   }
   return NULL;
@@ -167,8 +168,8 @@ int DebugInfo::SetProcessLocalBreakpoint(Function* function, int bytecode_index,
                                          word stack_height) {
   ASSERT(one_shot);
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
-  const Breakpoint* existing_breakpoint = LookupBreakpointByBCP(bcp);
-  if (existing_breakpoint != NULL) return existing_breakpoint->id();
+  // Assert that a process-local breakpoint does not already exist.
+  ASSERT(process_breakpoints_.Find(bcp) == process_breakpoints_.End());
   {
     ScopedLock lock(breakpoint_mutex);
     Opcode opcode = static_cast<Opcode>(*bcp);
