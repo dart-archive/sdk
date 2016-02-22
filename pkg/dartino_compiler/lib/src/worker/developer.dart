@@ -359,69 +359,53 @@ Future<Settings> createSettings(
     String sessionName,
     Uri uri,
     Uri cwd,
-    Uri configFileUri,
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator) async {
-  bool userProvidedSettings = uri != null;
-  if (!userProvidedSettings) {
+  String settingsFileName = '$sessionName.dartino-settings';
+
+  if (uri == null) {
     // Try to find a $sessionName.dartino-settings file starting from the
     // current working directory and walking up its parent directories.
-    uri = await findFile(cwd, '$sessionName.dartino-settings');
-
-    // If no $sessionName.dartino-settings file is found, try to find the
-    // settings template file (in the SDK or git repo) by looking for a
-    // .dartino-settings file starting from the dart executable's directory
-    // and walking up its parent directory chain.
-    if (uri == null) {
-      uri = await findFile(executable, '.dartino-settings');
-      if (uri != null) print('Using template settings file $uri');
-    }
+    uri = await findFile(cwd, settingsFileName);
   }
 
-  Settings settings = new Settings.empty();
   if (uri != null) {
-    String jsonLikeData = await new File.fromUri(uri).readAsString();
-    settings = parseSettings(jsonLikeData, uri);
-  }
-  if (userProvidedSettings) return settings;
-
-  // TODO(wibling): get rid of below special handling of the sessions 'remote'
-  // and 'local' and come up with a dartino project concept that can contain
-  // these settings.
-  Uri packagesUri;
-  Address address;
-  switch (sessionName) {
-    case "remote":
-      uri = configFileUri.resolve("remote.dartino-settings");
-      Settings remoteSettings = await readSettings(uri);
-      if (remoteSettings != null) return remoteSettings;
-      packagesUri = executable.resolve("dartino-sdk.packages");
-      address = await readAddressFromUser(commandSender, commandIterator);
-      if (address == null) {
-        // Assume user aborted data entry.
-        return settings;
-      }
-      break;
-
-    case "local":
-      uri = configFileUri.resolve("local.dartino-settings");
-      Settings localSettings = await readSettings(uri);
-      if (localSettings != null) return localSettings;
-      // TODO(ahe): Use mock packages here.
-      packagesUri = executable.resolve("dartino-sdk.packages");
-      break;
-
-    default:
-      return settings;
+    return await readSettings(uri);
   }
 
-  if (!await new File.fromUri(packagesUri).exists()) {
-    packagesUri = null;
+  // If no settings file has been found, try to find the settings template file
+  // (in the SDK or git repo) by looking for a .dartino-settings file starting
+  // from the dart executable's directory and walking up its parent directory
+  // chain.
+  Settings settings;
+  uri = await findFile(executable, '.dartino-settings');
+  if (uri != null) {
+    print("Using template settings file '${uri.toFilePath()}'");
+    settings = await readSettings(uri);
+  } else {
+    print('Warning: no template settings file found!');
+    settings = const Settings.empty();
   }
-  settings = settings.copyWith(packages: packagesUri, deviceAddress: address);
-  print("Created settings file '$uri'");
-  await new File.fromUri(uri).writeAsString(
-      "${const JsonEncoder.withIndent('  ').convert(settings)}\n");
+
+  /// Should be set to true if the settings have been modified due to user input
+  /// and should be saved to disk.
+  bool persistSettings = false;
+
+  if (sessionName == "remote") {
+    Address address = await readAddressFromUser(commandSender, commandIterator);
+    settings = settings.copyWith(deviceAddress: address);
+    persistSettings = true;
+  }
+
+  if (persistSettings) {
+    bool aborted = false;
+    Uri path = await readPathFromUser(cwd, commandSender, commandIterator);
+    uri = path.resolve(settingsFileName);
+    print("Creating settings file '${uri.toFilePath()}'");
+    await new File.fromUri(uri).writeAsString(
+        "${const JsonEncoder.withIndent('  ').convert(settings)}\n");
+  }
+
   return settings;
 }
 
@@ -493,6 +477,47 @@ Future<Address> readAddressFromUser(
           if (!checkedIndex) {
             return parseAddress(line, defaultPort: AGENT_DEFAULT_PORT);
           }
+        }
+        break;
+
+      default:
+        throwInternalError("Unexpected ${command.code}");
+        return null;
+    }
+  }
+  return null;
+}
+
+Future<Uri> readPathFromUser(
+    Uri proposal,
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator) async {
+ commandSender.sendStdout(
+     "Please enter the directory in which to store the settings file.\n"
+     "Press (Enter) to select the current directory "
+     "(${proposal.toFilePath()}):\n");
+  while (await commandIterator.moveNext()) {
+    ClientCommand command = commandIterator.current;
+    switch (command.code) {
+      case ClientCommandCode.Stdin:
+        if (command.data.length == 0) {
+          // TODO(ahe): It may be safe to return null here, but we need to
+          // check how this interacts with the debugger's InputHandler.
+          throwInternalError("Unexpected end of input");
+        }
+        // TODO(ahe): This assumes that the user's input arrives as one
+        // message. It is relatively safe to assume this for a normal terminal
+        // session because we use canonical input processing (Unix line
+        // buffering), but it doesn't work in general. So we should fix that.
+        String line = UTF8.decode(command.data).trim();
+        if (line.isEmpty) {
+          return proposal;
+        }
+
+        if (await new Directory(line).exists()) {
+          return new Uri.directory(line);
+        } else {
+          commandSender.sendStdout("Directory $line does not exist!\n");
         }
         break;
 

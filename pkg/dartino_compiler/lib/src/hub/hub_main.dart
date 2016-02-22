@@ -263,7 +263,7 @@ Future<Null> handleVerb(
       if (session == null) {
         session = await createSession(sessionName, () => allocateWorker(pool));
         initializer = new CreateSessionTask(
-            sessionName, null, clientConnection.sentence.base, configFileUri);
+            sessionName, null, clientConnection.sentence.base);
       }
     }
     ClientVerbContext context = new ClientVerbContext(
