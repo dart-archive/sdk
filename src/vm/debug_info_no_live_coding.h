@@ -56,26 +56,21 @@ class DebugInfo {
     return false;
   }
 
-  void set_is_stepping(bool value) { UNIMPLEMENTED(); }
-
   bool is_at_breakpoint() const {
     UNIMPLEMENTED();
     return false;
   }
 
-  void clear_current_breakpoint() { UNIMPLEMENTED(); }
-
-  void VisitPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
-
-  void VisitProgramPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
-
-  void UpdateBreakpoints() { UNIMPLEMENTED(); }
-
-  void ClearBreakpoint() { UNIMPLEMENTED(); }
+  void ClearCurrentBreakpoint() { UNIMPLEMENTED(); }
 
   void SetStepping() { UNIMPLEMENTED(); }
+  void ClearStepping() { UNIMPLEMENTED(); }
 
+  // GC support.
   static void ClearBytecodeBreaks() {}
+  void VisitPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
+  void VisitProgramPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
+  void UpdateBreakpoints() { UNIMPLEMENTED(); }
 };
 
 }  // namespace dartino

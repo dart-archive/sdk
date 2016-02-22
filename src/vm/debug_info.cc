@@ -122,6 +122,10 @@ uint8_t* DebugInfo::EraseBreakpointById(int id) {
 }
 
 bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
+  if (is_stepping_) {
+    SetCurrentBreakpoint(kNoBreakpointId);
+    return true;
+  }
   const Breakpoint* breakpoint = LookupBreakpointByBCP(bcp);
   if (breakpoint != NULL) {
     Stack* breakpoint_stack = breakpoint->stack();
@@ -135,10 +139,6 @@ bool DebugInfo::ShouldBreak(uint8_t* bcp, Object** sp) {
     }
     SetCurrentBreakpoint(breakpoint->id());
     if (breakpoint->is_one_shot()) DeleteBreakpoint(breakpoint->id());
-    return true;
-  }
-  if (is_stepping_) {
-    SetCurrentBreakpoint(kNoBreakpointId);
     return true;
   }
   return false;
@@ -195,22 +195,30 @@ bool DebugInfo::DeleteBreakpoint(int id) {
   return false;
 }
 
+// SetStepping ensures that all bytecodes will trigger and updates the state to
+// be on a breakpoint. This ensures that resuming will not break on the first
+// executed bytecode since it was already at that breakpoint.
 void DebugInfo::SetStepping() {
-  if (is_stepping_) return;
+  ASSERT(!is_stepping_);
+  if (is_at_breakpoint_) ClearCurrentBreakpoint();
   is_stepping_ = true;
+  SetCurrentBreakpoint(kNoBreakpointId);
   ScopedLock lock(breakpoint_mutex);
   for (int i = 0; i < Bytecode::kNumBytecodes; i++) {
     SetBytecodeBreak(static_cast<Opcode>(i));
   }
 }
 
+// Converse to SetStepping, ClearStepping restores bytecode breaks for the
+// actual breakpoints and clears the current breakpoint. This can only be called
+// when the state was actually stepping and the current breakpoint is a cause of
+// stepping.
 void DebugInfo::ClearStepping() {
+  ASSERT(is_stepping_);
+  ASSERT(is_at_breakpoint_);
+  ASSERT(current_breakpoint_id_ == kNoBreakpointId);
   is_stepping_ = false;
-}
-
-void DebugInfo::ClearBreakpoint() {
   ClearCurrentBreakpoint();
-  if (is_stepping_) return;
   ClearBytecodeBreaks();
   program_breakpoints_->SetBytecodeBreaks();
   process_breakpoints_.SetBytecodeBreaks();

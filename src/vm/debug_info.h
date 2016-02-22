@@ -93,6 +93,12 @@ class DebugInfo {
 
   void ClearStepping();
 
+  void ClearCurrentBreakpoint() {
+    ASSERT(is_at_breakpoint_);
+    is_at_breakpoint_ = false;
+    current_breakpoint_id_ = kNoBreakpointId;
+  }
+
   int process_id() const { return process_id_; }
 
   bool is_stepping() const { return is_stepping_; }
@@ -100,8 +106,6 @@ class DebugInfo {
   bool is_at_breakpoint() const { return is_at_breakpoint_; }
 
   int current_breakpoint_id() const { return current_breakpoint_id_; }
-
-  void ClearBreakpoint();
 
   // GC support for process GCs.
   void VisitPointers(PointerVisitor* visitor);
@@ -112,12 +116,6 @@ class DebugInfo {
   void UpdateBreakpoints();
 
  private:
-  void ClearCurrentBreakpoint() {
-    ASSERT(is_at_breakpoint_);
-    is_at_breakpoint_ = false;
-    current_breakpoint_id_ = kNoBreakpointId;
-  }
-
   void SetCurrentBreakpoint(int id) {
     ASSERT(!is_at_breakpoint_);
     is_at_breakpoint_ = true;

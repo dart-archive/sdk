@@ -393,9 +393,9 @@ int HandleAtBytecode(Process* process, uint8* bcp, Object** sp) {
   // TODO(ajohnsen): Support validate stack.
   DebugInfo* debug_info = process->debug_info();
   if (debug_info != NULL) {
-    // If we already are at the breakpoint, just clear it (to support stepping).
+    // If resuming from a breakpoint, clear the breakpoint and ignore the call.
     if (debug_info->is_at_breakpoint()) {
-      debug_info->ClearBreakpoint();
+      debug_info->ClearCurrentBreakpoint();
     } else if (debug_info->ShouldBreak(bcp, sp)) {
       return Interpreter::kBreakpoint;
     }

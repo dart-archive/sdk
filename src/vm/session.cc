@@ -349,10 +349,10 @@ class RunningState : public ScheduledState {
  private:
   void SendBreakpoint(Process* process) {
     DebugInfo* debug_info = process->debug_info();
-    int breakpoint_id = -1;
-    if (debug_info != NULL) {
+    ASSERT(debug_info != NULL);
+    int breakpoint_id = debug_info->current_breakpoint_id();
+    if (debug_info->is_stepping()) {
       debug_info->ClearStepping();
-      breakpoint_id = debug_info->current_breakpoint_id();
     }
     WriteBuffer buffer;
     buffer.WriteInt(breakpoint_id);
@@ -1183,6 +1183,8 @@ SessionState* RunningState::ProcessMessage(Connection::Opcode opcode) {
 }
 
 SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
+  process()->EnsureDebuggerAttached(session());
+  ASSERT(!process()->debug_info()->is_stepping());
   switch (opcode) {
     case Connection::kSessionEnd: {
       Process::State process_state = process()->state();
@@ -1194,13 +1196,11 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kProcessStep: {
-      process()->EnsureDebuggerAttached(session());
       process()->debug_info()->SetStepping();
       return ProcessContinue();
     }
 
     case Connection::kProcessStepOver: {
-      process()->EnsureDebuggerAttached(session());
       int breakpoint_id = process()->PrepareStepOver();
       WriteBuffer buffer;
       buffer.WriteInt(breakpoint_id);
@@ -1209,7 +1209,6 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kProcessStepOut: {
-      process()->EnsureDebuggerAttached(session());
       int breakpoint_id = process()->PrepareStepOut();
       WriteBuffer buffer;
       buffer.WriteInt(breakpoint_id);
@@ -1218,7 +1217,6 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kProcessStepTo: {
-      process()->EnsureDebuggerAttached(session());
       int64 id = connection()->ReadInt64();
       int bcp = connection()->ReadInt();
       Function* function = Function::cast(
@@ -1283,7 +1281,7 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       process()->set_exception(program()->null_object());
       DebugInfo* debug_info = process()->debug_info();
       if (debug_info != NULL && debug_info->is_at_breakpoint()) {
-        debug_info->ClearBreakpoint();
+        debug_info->ClearCurrentBreakpoint();
       }
       return ProcessContinue();
     }
