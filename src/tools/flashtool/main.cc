@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/shared/assert.h"
+#include "src/shared/bytecodes.h"
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
@@ -27,6 +28,20 @@ namespace dartino {
 extern "C" void InterpreterMethodEntry() {
   FATAL("InterpreterMethodEntry not implemented.");
 }
+
+extern "C" void InterpreterEntry() {
+  FATAL("InterpreterEntry not implemented.");
+}
+
+void SetBytecodeBreak(Opcode opcode) {
+  FATAL("SetBytecodeBreak not implemented.");
+}
+
+void ClearBytecodeBreak(Opcode opcode) {
+  FATAL("ClearBytecodeBreak not implemented.");
+}
+
+/* Actual code starts here */
 
 static void printUsage(char* name) {
   printf(
