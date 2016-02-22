@@ -370,7 +370,7 @@ Future<Settings> createSettings(
 
     // If no $sessionName.dartino-settings file is found, try to find the
     // settings template file (in the SDK or git repo) by looking for a
-    // .dartino-settings file starting from the dartino executable's directory
+    // .dartino-settings file starting from the dart executable's directory
     // and walking up its parent directory chain.
     if (uri == null) {
       uri = await findFile(executable, '.dartino-settings');

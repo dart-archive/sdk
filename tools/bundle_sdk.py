@@ -164,9 +164,11 @@ def CopyInternalPackages(bundle_dir, build_dir):
             copied_pkgs.add(target)
           generated.write('%s:../%s/lib\n' % (name, name))
 
-def CopyPackages(bundle_dir):
+def CopyPackagesAndSettingsTemplate(bundle_dir):
   target_dir = join(bundle_dir, 'pkg')
   makedirs(target_dir)
+  copyfile(join('pkg', 'dartino_sdk_dartino_settings'),
+           join(bundle_dir, 'internal', '.dartino-settings'))
   with open(join(bundle_dir, 'internal', 'dartino-sdk.packages'), 'w') as p:
     for package in SDK_PACKAGES:
       copytree(join('pkg', package), join(target_dir, package))
@@ -354,7 +356,7 @@ def Main():
     CopyBinaries(sdk_temp, build_dir)
     CopyInternalPackages(sdk_temp, build_dir)
     CopyLibs(sdk_temp, build_dir)
-    CopyPackages(sdk_temp)
+    CopyPackagesAndSettingsTemplate(sdk_temp)
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
