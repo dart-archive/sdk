@@ -59,7 +59,7 @@
     {
       'target_name': 'flashtool',
       'type': 'none',
-      'toolsets': ['host'],
+      'toolsets': ['target'],
       'dependencies': [
         'src/tools/flashtool/flashtool.gyp:flashtool',
       ],

@@ -12,9 +12,9 @@
     {
       'target_name': 'flashtool',
       'type': 'executable',
-      'toolsets': ['host'],
+      'toolsets': ['target'],
       'dependencies': [
-        '../../vm/vm.gyp:dartino_vm_runtime_library',
+        '../../vm/vm.gyp:libdartino',
         '../../vm/vm.gyp:dartino_relocation_library',
       ],
       'sources': [
