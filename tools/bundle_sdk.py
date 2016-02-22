@@ -186,6 +186,10 @@ def CopyPlatforms(bundle_dir):
   copytree('platforms/raspberry-pi2', target_dir)
   target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/bin')
   copytree('platforms/stm/bin', target_dir)
+  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/templates')
+  copytree('platforms/stm/templates', target_dir)
+  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/config')
+  copytree('platforms/stm/config', target_dir)
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
   cmd = [dart_executable, '-c', '--packages=.packages',
@@ -231,7 +235,6 @@ def CopySTM(bundle_dir):
     CopyFile(join(build_dir, v), join(lib_dir, basename(v)))
 
   config_dir = join(disco, 'config')
-  makedirs(config_dir)
   CopyFile('platforms/stm/disco_dartino/generated/SW4STM32/'
            'configuration/STM32F746NGHx_FLASH.ld',
            join(config_dir, 'stm32f746g-discovery.ld'))
