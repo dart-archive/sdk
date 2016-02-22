@@ -164,9 +164,11 @@ def CopyInternalPackages(bundle_dir, build_dir):
             copied_pkgs.add(target)
           generated.write('%s:../%s/lib\n' % (name, name))
 
-def CopyPackages(bundle_dir):
+def CopyPackagesAndSettingsTemplate(bundle_dir):
   target_dir = join(bundle_dir, 'pkg')
   makedirs(target_dir)
+  copyfile(join('pkg', 'dartino_sdk_dartino_settings'),
+           join(bundle_dir, 'internal', '.dartino-settings'))
   with open(join(bundle_dir, 'internal', 'dartino-sdk.packages'), 'w') as p:
     for package in SDK_PACKAGES:
       copytree(join('pkg', package), join(target_dir, package))
@@ -184,6 +186,10 @@ def CopyPlatforms(bundle_dir):
   copytree('platforms/raspberry-pi2', target_dir)
   target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/bin')
   copytree('platforms/stm/bin', target_dir)
+  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/templates')
+  copytree('platforms/stm/templates', target_dir)
+  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/config')
+  copytree('platforms/stm/config', target_dir)
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
   cmd = [dart_executable, '-c', '--packages=.packages',
@@ -231,7 +237,6 @@ def CopySTM(bundle_dir):
     CopyFile(join(build_dir, v), join(lib_dir, basename(v)))
 
   config_dir = join(disco, 'config')
-  makedirs(config_dir)
   CopyFile('platforms/stm/disco_dartino/generated/SW4STM32/'
            'configuration/STM32F746NGHx_FLASH.ld',
            join(config_dir, 'stm32f746g-discovery.ld'))
@@ -354,7 +359,7 @@ def Main():
     CopyBinaries(sdk_temp, build_dir)
     CopyInternalPackages(sdk_temp, build_dir)
     CopyLibs(sdk_temp, build_dir)
-    CopyPackages(sdk_temp)
+    CopyPackagesAndSettingsTemplate(sdk_temp)
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
