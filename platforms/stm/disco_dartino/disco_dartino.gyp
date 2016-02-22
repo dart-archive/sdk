@@ -203,6 +203,7 @@
       'variables': {
         'common_ldflags': [
           '-specs=nano.specs',
+          '-specs=nosys.specs',
           # TODO(340): Why does this not work???
           #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???

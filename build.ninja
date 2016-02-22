@@ -61,6 +61,7 @@ build $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
+        src/tools/flashtool/flashtool.gyp $
         src/vm/vm.gyp $
         src/pkg/mdns/mdns.gyp $
         src/pkg/power_management/power_management.gyp $
@@ -101,6 +102,7 @@ build $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
+        src/tools/flashtool/flashtool.gyp $
         src/vm/vm.gyp $
 
 build lk: phony$
@@ -118,6 +120,7 @@ build $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
+        src/tools/flashtool/flashtool.gyp $
         src/vm/vm.gyp $
 
 build mbed: phony$
@@ -138,6 +141,7 @@ build $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
+        src/tools/flashtool/flashtool.gyp $
         src/vm/vm.gyp $
 
 build stm: phony$

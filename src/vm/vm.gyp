@@ -9,8 +9,12 @@
     ],
   },
   'targets': [
+    # The split between runtime and interpreter is somewhat arbitrary. The goal
+    # is to be able to build a host version of the runtime part that suffices
+    # to build the flashtool helper. So as long as flashtool still builds in
+    # a crosscompilation setting it does not matter where a new file goes.
     {
-      'target_name': 'dartino_vm_library',
+      'target_name': 'dartino_vm_runtime_library',
       'type': 'static_library',
       'toolsets': ['target', 'host'],
       'target_conditions': [
@@ -18,7 +22,6 @@
           'standalone_static_library': 1,
       }]],
       'dependencies': [
-        'dartino_vm_library_generator#host',
         '../shared/shared.gyp:dartino_shared',
         '../double_conversion.gyp:double_conversion',
       ],
@@ -41,59 +44,12 @@
             ],
           },
         }],
-        # TODO(kasperl): Now that we no longer use weak symbols, should we
-        #                remove the below conditions?
-        [ 'OS=="linux"', {
-          'link_settings': {
-            'ldflags': [
-              '-Wl,--whole-archive',
-            ],
-            'libraries': [
-              '-Wl,--no-whole-archive',
-            ],
-          },
-        }],
-        [ 'OS=="win"', {
-          'variables': {
-            'asm_file_extension': '.asm',
-          },
-        }],
-      ],
-      'variables': {
-        'asm_file_extension%': '.S',
-        'yasm_output_path': '<(INTERMEDIATE_DIR)',
-        'yasm_flags': [
-          '-f', 'win32',
-          '-m', 'x86',
-          '-p', 'gas',
-          '-r', 'raw',
-        ],
-      },
-      'includes': [
-        '../../third_party/yasm/yasm_compile.gypi'
       ],
       'sources': [
-        '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
         'debug_info.cc',
         'debug_info.h',
         'debug_info_no_live_coding.h',
         'double_list.h',
-        'event_handler.h',
-        'event_handler.cc',
-        'event_handler_posix.cc',
-        'event_handler_linux.cc',
-        'event_handler_macos.cc',
-        'event_handler_windows.cc',
-        'event_handler_lk.cc',
-        'event_handler_cmsis.cc',
-        'ffi.cc',
-        'ffi_disabled.cc',
-        'ffi_static.cc',
-        'ffi.h',
-        'ffi_linux.cc',
-        'ffi_macos.cc',
-        'ffi_posix.cc',
-        'ffi_windows.cc',
         'dartino_api_impl.cc',
         'dartino_api_impl.h',
         'dartino.cc',
@@ -106,8 +62,6 @@
         'heap.h',
         'heap_validator.cc',
         'heap_validator.h',
-        'interpreter.cc',
-        'interpreter.h',
         'intrinsics.cc',
         'intrinsics.h',
         'links.cc',
@@ -120,17 +74,9 @@
         'message_mailbox.h',
         'message_mailbox.cc',
         'multi_hashset.h',
-        'native_interpreter.h',
-        'native_interpreter.cc',
         'native_process_disabled.cc',
         'native_process_posix.cc',
         'native_process_windows.cc',
-        'natives.cc',
-        'natives_posix.cc',
-        'natives_lk.cc',
-        'natives_cmsis.cc',
-        'natives_windows.cc',
-        'natives.h',
         'object.cc',
         'object.h',
         'object_list.cc',
@@ -144,8 +90,6 @@
         'pair.h',
         'port.cc',
         'port.h',
-        'preempter.h',
-        'preempter.cc',
         'priority_heap.h',
         'process_handle.h',
         'process_handle.cc',
@@ -175,6 +119,79 @@
         'snapshot.h',
         'sort.h',
         'sort.cc',
+        'unicode.cc',
+        'unicode.h',
+        'vector.cc',
+        'vector.h',
+        'void_hash_table.cc',
+        'void_hash_table.h',
+        'weak_pointer.cc',
+        'weak_pointer.h',
+      ],
+    },
+    {
+      'target_name': 'dartino_vm_interpreter_library',
+      'type': 'static_library',
+      'toolsets': ['target'],
+      'standalone_static_library': 1,
+      'conditions': [
+        [ 'OS=="mac"', {
+          'dependencies': [
+            '../shared/shared.gyp:copy_asan#host',
+          ],
+          'sources': [
+            '<(PRODUCT_DIR)/libclang_rt.asan_osx_dynamic.dylib',
+          ],
+        }],
+        [ 'OS=="win"', {
+          'variables': {
+            'asm_file_extension': '.asm',
+          },
+        }],
+      ],
+      'variables': {
+        'asm_file_extension%': '.S',
+        'yasm_output_path': '<(INTERMEDIATE_DIR)',
+        'yasm_flags': [
+          '-f', 'win32',
+          '-m', 'x86',
+          '-p', 'gas',
+          '-r', 'raw',
+        ],
+      },
+      'includes': [
+        '../../third_party/yasm/yasm_compile.gypi'
+      ],
+      'sources': [
+        '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
+        'event_handler.h',
+        'event_handler.cc',
+        'event_handler_posix.cc',
+        'event_handler_linux.cc',
+        'event_handler_macos.cc',
+        'event_handler_windows.cc',
+        'event_handler_lk.cc',
+        'event_handler_cmsis.cc',
+        'ffi.cc',
+        'ffi_disabled.cc',
+        'ffi_static.cc',
+        'ffi.h',
+        'ffi_linux.cc',
+        'ffi_macos.cc',
+        'ffi_posix.cc',
+        'ffi_windows.cc',
+        'interpreter.cc',
+        'interpreter.h',
+        'native_interpreter.h',
+        'native_interpreter.cc',
+        'natives.cc',
+        'natives_posix.cc',
+        'natives_lk.cc',
+        'natives_cmsis.cc',
+        'natives_windows.cc',
+        'natives.h',
+        'preempter.h',
+        'preempter.cc',
         'thread.h',
         'thread_pool.cc',
         'thread_pool.h',
@@ -184,20 +201,12 @@
         'thread_lk.h',
         'thread_cmsis.cc',
         'thread_cmsis.h',
+        'thread_windows.cc',
+        'thread_windows.h',
         'tick_queue.h',
         'tick_sampler.h',
         'tick_sampler_posix.cc',
         'tick_sampler_other.cc',
-        'thread_windows.cc',
-        'thread_windows.h',
-        'unicode.cc',
-        'unicode.h',
-        'vector.cc',
-        'vector.h',
-        'void_hash_table.cc',
-        'void_hash_table.h',
-        'weak_pointer.cc',
-        'weak_pointer.h',
       ],
       'actions': [
         {
@@ -221,7 +230,8 @@
       'target_name': 'libdartino',
       'type': 'none',
       'dependencies': [
-        'dartino_vm_library',
+        'dartino_vm_runtime_library',
+        'dartino_vm_interpreter_library',
         '../shared/shared.gyp:dartino_shared',
         '../double_conversion.gyp:double_conversion',
       ],
@@ -235,9 +245,14 @@
           'action_name': 'generate_libdartino',
           'inputs': [
             '../../tools/library_combiner.py',
-            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino_vm_library<(STATIC_LIB_SUFFIX)',
-            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino_shared<(STATIC_LIB_SUFFIX)',
-            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)double_conversion<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino_vm_runtime_library'
+                '<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino_vm_interpreter_library'
+                '<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino_shared'
+                '<(STATIC_LIB_SUFFIX)',
+            '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)double_conversion'
+                '<(STATIC_LIB_SUFFIX)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/<(STATIC_LIB_PREFIX)dartino<(STATIC_LIB_SUFFIX)',
@@ -383,7 +398,11 @@
     {
       'target_name': 'dartino_relocation_library',
       'type': 'static_library',
-      'standalone_static_library': 1,
+      'toolsets': ['target', 'host'],
+      'target_conditions': [
+        ['_toolset == "target"', {
+          'standalone_static_library': 1,
+      }]],
       'sources': [
         'dartino_relocation_api_impl.cc',
         'dartino_relocation_api_impl.h',
