@@ -430,8 +430,6 @@
               }],
             ],
             'cflags': [
-              '-mfloat-abi=softfp',
-              '-mfpu=fpv4-sp-d16',
               '-mthumb',
               '-Wno-unused-function',
               '-Wno-error=multichar',
@@ -765,6 +763,14 @@
               }],
             ],
           }],
+        ],
+      },
+
+      'dartino_use_single_precision': {
+        'abstract': 1,
+
+        'defines': [
+          'DARTINO_USE_SINGLE_PRECISION',
         ],
       },
 

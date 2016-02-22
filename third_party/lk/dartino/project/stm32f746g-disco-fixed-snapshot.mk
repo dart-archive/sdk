@@ -8,8 +8,10 @@ MODULES += app/dartino-fixed lib/gfx
 
 EXTRA_LINKER_SCRIPTS += dartino/project/add-dartino-snapshot-section.ld
 
+ARCH_arm_COMPILEFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+
 DARTINO_CONFIGURATION = LK
-DARTINO_GYP_DEFINES = "LK_PROJECT=stm32f746g-disco-dartino LK_CPU=cortex-m4"
+DARTINO_GYP_DEFINES = "LK_PROJECT=stm32f746g-disco-dartino LK_CPU=cortex-m4 LK_FPU=fpv4-sp-d16 LK_FLOAT-ABI=hard"
 
 WITH_CPP_SUPPORT=true
 

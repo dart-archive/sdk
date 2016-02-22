@@ -13,6 +13,8 @@
     'LK_PROJECT%': 'qemu-virt-dartino',
 
     'LK_CPU%': 'cortex-a15',
+    'LK_FPU%': 'vfpv4',
+    'LK_FLOAT-ABI%': 'hard',
   },
 
   'target_defaults': {
@@ -22,12 +24,17 @@
       'dartino_lk_flags': {
         'abstract': 1,
 
-        'inherit_from': ['dartino_lk'],
+        'inherit_from': [
+	  'dartino_lk',
+	  'dartino_use_single_precision',
+	],
 
         'target_conditions': [
           ['_toolset=="target"', {
             'cflags': [
               '-mcpu=<(LK_CPU)',
+	      '-mfpu=<(LK_FPU)',
+	      '-mfloat-abi=<(LK_FLOAT-ABI)',
               '-include',
               'build-<(LK_PROJECT)/config.h',
             ],

@@ -51,7 +51,7 @@ typedef long long int int64;        // NOLINT
 typedef long long unsigned uint64;  // NOLINT
 #endif
 
-#ifdef DARTINO_TARGET_OS_LK
+#ifdef DARTINO_USE_SINGLE_PRECISION
 typedef float dartino_double;
 typedef uint32 dartino_double_as_uint;
 #else

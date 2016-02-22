@@ -6,8 +6,10 @@ include project/target/stm32746g-eval2.mk
 
 MODULES += app/dartino app/shell
 
+ARCH_arm_COMPILEFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+
 DARTINO_CONFIGURATION = LKFull
-DARTINO_GYP_DEFINES = "LK_PROJECT=stm32746g-eval2-dartino LK_CPU=cortex-m4"
+DARTINO_GYP_DEFINES = "LK_PROJECT=stm32746g-eval2-dartino LK_CPU=cortex-m4 LK_FPU=fpv4-sp-d16 LK_FLOAT-ABI=hard"
 
 WITH_CPP_SUPPORT=true
 
