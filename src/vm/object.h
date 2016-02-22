@@ -1162,10 +1162,10 @@ class StaticClassStructures {
   }
 
  private:
-  static uint8 meta_class_storage[Class::kSize];
-  static uint8 free_list_chunk_class_storage[Class::kSize];
-  static uint8 one_word_filler_class_storage[Class::kSize];
-  static uint8 promoted_track_class_storage[Class::kSize];
+  static uword meta_class_storage[Class::kSize / sizeof(uword)];
+  static uword free_list_chunk_class_storage[Class::kSize / sizeof(uword)];
+  static uword one_word_filler_class_storage[Class::kSize / sizeof(uword)];
+  static uword promoted_track_class_storage[Class::kSize / sizeof(uword)];
 
   static void SetupMetaClass() {
     Class* meta = reinterpret_cast<Class*>(
@@ -1175,7 +1175,7 @@ class StaticClassStructures {
     meta->Initialize(class_format, class_format.fixed_size(), NULL);
   }
 
-  static void SetupClass(uint8* class_storage, InstanceFormat format) {
+  static void SetupClass(uword* class_storage, InstanceFormat format) {
     HeapObject* storage =
         HeapObject::FromAddress(reinterpret_cast<uword>(class_storage));
     Class* klass = reinterpret_cast<Class*>(storage);
