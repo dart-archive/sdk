@@ -16,6 +16,18 @@
 
 namespace dartino {
 
+// Create some fake symbols to satisfy dependencies from the missing
+// interpreter.
+#define DEFINE_INTRINSIC(name_) void Intrinsic_##name_() { \
+  FATAL("Intrinsics_" #name_ " not implemented.");         \
+}
+  INTRINSICS_DO(DEFINE_INTRINSIC)
+#undef DEFINE_INTRINSIC
+
+extern "C" void InterpreterMethodEntry() {
+  FATAL("InterpreterMethodEntry not implemented.");
+}
+
 static void printUsage(char* name) {
   printf(
       "Usage: %s [-i <intrinsic name>=<address>] <snapshot file> "

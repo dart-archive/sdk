@@ -1,8 +1,6 @@
 CREATE libone_disco_dartino.a
 ADDLIB libdisco_dartino.a
-ADDLIB libdartino_vm_library.a
-ADDLIB libdartino_shared.a
-ADDLIB libdouble_conversion.a
+ADDLIB libdartino.a
 SAVE
 END
 

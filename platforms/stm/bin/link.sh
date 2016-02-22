@@ -63,10 +63,8 @@ if [ ! -z "$2" ]; then
 fi
 
 # The static libraries to link with.
-LIB1="$LIB_DIR/libdartino_vm_library.a"
-LIB2="$LIB_DIR/libdartino_shared.a"
-LIB3="$LIB_DIR/libdouble_conversion.a"
-LIB4="$LIB_DIR/libdisco_dartino.a"
+LIB1="$LIB_DIR/libdartino.a"
+LIB2="$LIB_DIR/libdisco_dartino.a"
 
 # Paths to to gcc and objcopy.
 TOOLCHAIN_PREFIX="$TOOLCHAIN_DIR/bin/arm-none-eabi-"
@@ -106,8 +104,6 @@ echo "Linking application"
 "$OBJ_FILE" \
 "$LIB1" \
 "$LIB2" \
-"$LIB3" \
-"$LIB4" \
 -Wl,--end-group \
 -lstdc++ \
 -Wl,--no-whole-archive
