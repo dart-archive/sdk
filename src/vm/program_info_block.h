@@ -15,7 +15,7 @@ class ProgramInfoBlock {
   void PopulateFromProgram(Program* program);
   void WriteToProgram(Program* program);
 
-  intptr_t magic() { return magic_; }
+  uword magic() { return magic_; }
 
   Object** roots() { return &entry_; }
 
@@ -26,9 +26,9 @@ class ProgramInfoBlock {
   }
 
  private:
-  static const int kProgramInfoMagic = 0x96064EA9;
+  static const uword kProgramInfoMagic = 0x96064EA9;
 
-  intptr_t magic_;
+  uword magic_;
   // This has to remain in sync with all the roots that are traversed by
   // IterateRoots in Program. Also, the type does not really matter as long
   // as it also is a pointer type and they won't be used in order (as in
