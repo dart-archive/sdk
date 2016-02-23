@@ -624,15 +624,15 @@ class BasicBlockBuilder {
 
   void DoAdd() {
     // TODO: Handle about other classes!
-    auto receiver = h.DecodeSmi(pop());
     auto argument = h.DecodeSmi(pop());
+    auto receiver = h.DecodeSmi(pop());
     push(h.EncodeSmi(b.CreateAdd(receiver, argument)));
   }
 
   void DoSub() {
     // TODO: Handle about other classes!
-    auto receiver = h.DecodeSmi(pop());
     auto argument = h.DecodeSmi(pop());
+    auto receiver = h.DecodeSmi(pop());
     push(h.EncodeSmi(b.CreateSub(receiver, argument)));
   }
 
@@ -662,11 +662,17 @@ class BasicBlockBuilder {
   }
 
   void DoInvokeMethod(int selector, int arity, int offset) {
-    auto target_object = pop();
-    auto function = h.Cast(LookupEntryInDispatchTable(target_object, selector), w.FunctionPtrType(1 + arity));
+    std::vector<llvm::Value*> method_args(1 + 1 + arity);
 
-    std::vector<llvm::Value*> method_args = { llvm_process_, target_object };
-    for (int i = 0; i < arity; i++) method_args.push_back(pop());
+    method_args[0] = llvm_process_;
+
+    int index = method_args.size() - 1;
+    for (int i = 0; i < arity; i++) {
+      method_args[index--] = pop();
+    }
+    ASSERT(index == 1);
+    auto receiver = method_args[1] = pop();
+    auto function = h.Cast(LookupEntryInDispatchTable(receiver, selector), w.FunctionPtrType(1 + arity));
 
     auto result = b.CreateCall(function, method_args, "method_result");
     push(result);
