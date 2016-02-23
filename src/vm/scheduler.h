@@ -7,6 +7,7 @@
 
 #include "src/shared/atomic.h"
 
+#include "src/vm/dispatch_table.h"
 #include "src/vm/signal.h"
 #include "src/vm/thread.h"
 #include "src/vm/process_queue.h"
@@ -162,6 +163,8 @@ class Scheduler {
   Monitor* idle_monitor_;
   Semaphore interpreter_semaphore_;
   GCThread* gc_thread_;
+
+  DispatchTable dispatch_table_;
 
   void StopProgramInternal(Program* program,
                            ProgramState::State stop_state,

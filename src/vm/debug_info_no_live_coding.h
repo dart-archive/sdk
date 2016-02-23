@@ -67,7 +67,6 @@ class DebugInfo {
   void ClearStepping() { UNIMPLEMENTED(); }
 
   // GC support.
-  static void ClearBytecodeBreaks() {}
   void VisitPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
   void VisitProgramPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
   void UpdateBreakpoints() { UNIMPLEMENTED(); }

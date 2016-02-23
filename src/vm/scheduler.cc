@@ -425,6 +425,9 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
     return NULL;
   }
 
+  dispatch_table_.ResetBreakpoints(
+      process->debug_info(), process->program()->breakpoints());
+
   interpretation_barrier_.Enter(process);
 
   // Mark the process as owned by the current thread while interpreting.

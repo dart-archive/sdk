@@ -8,12 +8,10 @@
 
 #include "src/shared/bytecodes.h"
 #include "src/vm/object.h"
-#include "src/vm/native_interpreter.h"
 #include "src/vm/process.h"
 
 namespace dartino {
 
-static Mutex* breakpoint_mutex = new Mutex();
 static int next_breakpoint_id = 0;
 
 Breakpoint::Breakpoint(Function* function, int bytecode_index, int id,
@@ -37,13 +35,6 @@ void Breakpoint::VisitProgramPointers(PointerVisitor* visitor) {
 }
 
 
-void Breakpoints::SetBytecodeBreaks() {
-  ScopedLock lock(breakpoint_mutex);
-  for (auto& pair : breakpoints_) {
-    SetBytecodeBreak(static_cast<Opcode>(*pair.first));
-  }
-}
-
 void Breakpoints::VisitPointers(PointerVisitor* visitor) {
   for (auto& pair : breakpoints_) pair.second.VisitPointers(visitor);
 }
@@ -55,12 +46,10 @@ void Breakpoints::VisitProgramPointers(PointerVisitor* visitor) {
 // Update breakpoints with new bytecode pointer values after GC.
 void Breakpoints::UpdateBreakpoints() {
   Map new_breakpoints;
-  ScopedLock lock(breakpoint_mutex);
   for (auto& pair : breakpoints_) {
     Function* function = pair.second.function();
     uint8_t* bcp =
         function->bytecode_address_for(0) + pair.second.bytecode_index();
-    SetBytecodeBreak(static_cast<Opcode>(*bcp));
     new_breakpoints.Insert({bcp, pair.second});
   }
   breakpoints_.Swap(new_breakpoints);
@@ -152,11 +141,6 @@ int DebugInfo::SetProgramBreakpoint(Function* function, int bytecode_index) {
   if (it != program_breakpoints_->End()) {
     return it->second.id();
   }
-  {
-    ScopedLock lock(breakpoint_mutex);
-    Opcode opcode = static_cast<Opcode>(*bcp);
-    SetBytecodeBreak(opcode);
-  }
   Breakpoint breakpoint(
       function, bytecode_index, NextBreakpointId(), false, NULL, 0);
   program_breakpoints_->Insert({bcp, breakpoint});
@@ -170,11 +154,6 @@ int DebugInfo::SetProcessLocalBreakpoint(Function* function, int bytecode_index,
   uint8_t* bcp = function->bytecode_address_for(0) + bytecode_index;
   // Assert that a process-local breakpoint does not already exist.
   ASSERT(process_breakpoints_.Find(bcp) == process_breakpoints_.End());
-  {
-    ScopedLock lock(breakpoint_mutex);
-    Opcode opcode = static_cast<Opcode>(*bcp);
-    SetBytecodeBreak(opcode);
-  }
   Breakpoint breakpoint(function, bytecode_index, NextBreakpointId(),
                         one_shot, coroutine, stack_height);
   process_breakpoints_.Insert({bcp, breakpoint});
@@ -182,18 +161,7 @@ int DebugInfo::SetProcessLocalBreakpoint(Function* function, int bytecode_index,
 }
 
 bool DebugInfo::DeleteBreakpoint(int id) {
-  uint8_t* bcp = EraseBreakpointById(id);
-  if (bcp != NULL) {
-    // If we have another breakpoint with that opcode, return.
-    if (LookupBreakpointByOpcode(*bcp) != NULL) {
-      return true;
-    }
-    // Not found, clear the opcode.
-    ScopedLock lock(breakpoint_mutex);
-    ClearBytecodeBreak(static_cast<Opcode>(*bcp));
-    return true;
-  }
-  return false;
+  return EraseBreakpointById(id) != NULL;
 }
 
 // SetStepping ensures that all bytecodes will trigger and updates the state to
@@ -204,10 +172,6 @@ void DebugInfo::SetStepping() {
   if (is_at_breakpoint_) ClearCurrentBreakpoint();
   is_stepping_ = true;
   SetCurrentBreakpoint(kNoBreakpointId);
-  ScopedLock lock(breakpoint_mutex);
-  for (int i = 0; i < Bytecode::kNumBytecodes; i++) {
-    SetBytecodeBreak(static_cast<Opcode>(i));
-  }
 }
 
 // Converse to SetStepping, ClearStepping restores bytecode breaks for the
@@ -220,9 +184,6 @@ void DebugInfo::ClearStepping() {
   ASSERT(current_breakpoint_id_ == kNoBreakpointId);
   is_stepping_ = false;
   ClearCurrentBreakpoint();
-  ClearBytecodeBreaks();
-  program_breakpoints_->SetBytecodeBreaks();
-  process_breakpoints_.SetBytecodeBreaks();
 }
 
 void DebugInfo::VisitPointers(PointerVisitor* visitor) {
@@ -234,18 +195,7 @@ void DebugInfo::VisitProgramPointers(PointerVisitor* visitor) {
 }
 
 void DebugInfo::UpdateBreakpoints() {
-  if (is_stepping_) {
-    is_stepping_ = false;
-    SetStepping();
-  }
   process_breakpoints_.UpdateBreakpoints();
-}
-
-void DebugInfo::ClearBytecodeBreaks() {
-  ScopedLock lock(breakpoint_mutex);
-  for (int i = 0; i < Bytecode::kNumBytecodes; i++) {
-    ClearBytecodeBreak(static_cast<Opcode>(i));
-  }
 }
 
 }  // namespace dartino

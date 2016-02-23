@@ -361,7 +361,6 @@ void Program::FinishProgramGC() {
   // Uncook process
   UncookAndUnchainStacks();
 
-  DebugInfo::ClearBytecodeBreaks();
   FinishProgramGCVisitor visitor;
   VisitProcesses(&visitor);
   breakpoints_.UpdateBreakpoints();

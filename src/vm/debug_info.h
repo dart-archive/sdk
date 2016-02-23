@@ -51,13 +51,13 @@ class Breakpoints {
   typedef Map::ConstIterator ConstIterator;
 
   // DebugInfo support.
-  const Map& map() { return breakpoints_; }
+  const Map& map() const { return breakpoints_; }
   ConstIterator Begin() const { return breakpoints_.Begin(); }
   ConstIterator End() const { return breakpoints_.End(); }
   ConstIterator Find(uint8_t* bcp) { return breakpoints_.Find(bcp); }
   ConstIterator Erase(ConstIterator it) { return breakpoints_.Erase(it); }
   void Insert(Entry entry) { breakpoints_.Insert(entry); }
-  void SetBytecodeBreaks();
+  bool IsEmpty() const { return Begin() == End(); }
 
   // GC support.
   void VisitPointers(PointerVisitor* visitor);
@@ -107,11 +107,12 @@ class DebugInfo {
 
   int current_breakpoint_id() const { return current_breakpoint_id_; }
 
+  const Breakpoints* breakpoints() const { return &process_breakpoints_; }
+
   // GC support for process GCs.
   void VisitPointers(PointerVisitor* visitor);
 
   // GC support for program GCs.
-  static void ClearBytecodeBreaks();
   void VisitProgramPointers(PointerVisitor* visitor);
   void UpdateBreakpoints();
 
