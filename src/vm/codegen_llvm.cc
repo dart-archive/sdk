@@ -546,14 +546,23 @@ class BasicBlockBuilder {
   }
 
   void DoLoadField(int field) {
-    auto value = pop();
-    auto instance = h.UntagAndCast(value, w.InstanceTypePtr(1 + field));
-
-    std::vector<llvm::Value*> indices = { w.CInt(0), w.CInt(1 + field) };
+    auto object = pop();
+    auto instance = h.UntagAndCast(object, w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(Instance::kSize / kWordSize + field) };
     auto field_address = b.CreateGEP(instance, indices);
     auto field_value = b.CreateLoad(field_address, name("field_%d", field));
-
     push(field_value);
+  }
+
+  void DoStoreField(int field) {
+    // FIXME: Why we we get here the [object] first???
+    auto object = pop();
+    auto rhs = pop();
+    auto instance = h.UntagAndCast(object, w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(Instance::kSize / kWordSize + field) };
+    auto field_address = b.CreateGEP(instance, indices);
+    b.CreateStore(rhs, field_address);
+    push(rhs);
   }
 
   void DoStoreLocal(int index) {
@@ -1001,6 +1010,15 @@ class BasicBlocksExplorer {
             b.DoStoreLocal(index);
             break;
           }
+          case kStoreField: {
+            b.DoStoreField(*(bcp + 1));
+            break;
+          }
+          case kStoreFieldWide: {
+            b.DoStoreField(Utils::ReadInt32(bcp + 1));
+            break;
+          }
+
 
           case kBranchWide: {
             b.DoBranch(bci + Utils::ReadInt32(bcp + 1));
@@ -1100,16 +1118,6 @@ class BasicBlocksExplorer {
           case kStoreLocal: {
             int index = *(bcp + 1);
             DoStoreLocal(index);
-            break;
-          }
-
-          case kStoreField: {
-            DoStoreField(*(bcp + 1));
-            break;
-          }
-
-          case kStoreFieldWide: {
-            DoStoreField(Utils::ReadInt32(bcp + 1));
             break;
           }
 
