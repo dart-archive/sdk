@@ -906,7 +906,11 @@ void Program::ClearDispatchTableIntrinsics() {
   }
 }
 
-void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
+// NOTE: The below method may never use direct pointers to symbols for
+//       setting up the table, as the flashtool utility and relocation
+//       needs to be able to override this.
+void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics,
+                                           void* method_entry) {
   Array* table = dispatch_table();
   if (table == NULL) return;
 
@@ -928,7 +932,7 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
     if (target != trampoline) hits++;
     void* code = target->ComputeIntrinsic(intrinsics);
     if (code == NULL) {
-      code = reinterpret_cast<void*>(InterpreterMethodEntry);
+      code = method_entry;
     }
     entry->set_code(code);
   }

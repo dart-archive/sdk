@@ -81,13 +81,15 @@ fi
 
 INTRINSICS=$(objdump -t $1 | grep -o -E '^[[:xdigit:]]+ .* Intrinsic_([[:alpha:]])+$' | sed -e 's/^\([[:xdigit:]]*\) .* Intrinsic_\([[:alpha:]]*\)$/-i \2=0x\1/g')
 
+ENTRY_ADDRESS=$(objdump -t $1 | grep -o -E '^[[:xdigit:]]+ .* InterpreterMethodEntry$' | sed -e 's/^\([[:xdigit:]]*\) .* InterpreterMethodEntry$/0x\1/g')
+
 PARTS=($SNAPSHOT)
 ADDRESS=0x${PARTS[3]}
 echo "Found .snapshot section at $ADDRESS..."
 
 echo "Generating output in $TEMPDIR..."
 
-FLASHTOOLCMD="${DARTINOHOME}flashtool $INTRINSICS $2 ${ADDRESS} ${TEMPDIR}/dartino/programheap.bin"
+FLASHTOOLCMD="${DARTINOHOME}flashtool $INTRINSICS $ENTRY_ADDRESS $2 ${ADDRESS} ${TEMPDIR}/dartino/programheap.bin"
 $FLASHTOOLCMD
 
 (cd ${TEMPDIR}; arm-none-eabi-objcopy --rename-section .data=.snapshot --redefine-sym _binary_dartino_programheap_bin_start=__dartino_${3}_heap_start --redefine-sym _binary_dartino_programheap_bin_end=__dartino_${3}_heap_end --redefine-sym _binary_dartino_programheap_bin_size=__dartino_${3}_heap_size -I binary -B armv4t -O elf32-littlearm dartino/programheap.bin dartino/programheap.o)

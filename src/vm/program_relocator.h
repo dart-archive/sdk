@@ -7,17 +7,21 @@
 
 #include "src/vm/intrinsics.h"
 #include "src/vm/program.h"
+#include "src/vm/native_interpreter.h"
 
 namespace dartino {
 
 class ProgramHeapRelocator {
  public:
-  ProgramHeapRelocator(Program* program, uint8* target, uword baseaddress,
-                       IntrinsicsTable* table = IntrinsicsTable::GetDefault())
+  ProgramHeapRelocator(
+      Program* program, uint8* target, uword baseaddress,
+      IntrinsicsTable* table = IntrinsicsTable::GetDefault(),
+      void* method_entry = reinterpret_cast<void*>(InterpreterMethodEntry))
       : program_(program),
         target_(target),
         baseaddress_(baseaddress),
-        table_(table) {}
+        table_(table),
+        method_entry_(method_entry) {}
 
   int Relocate();
 
@@ -26,6 +30,7 @@ class ProgramHeapRelocator {
   uint8* target_;
   uword baseaddress_;
   IntrinsicsTable* table_;
+  void* method_entry_;
 };
 
 }  // namespace dartino

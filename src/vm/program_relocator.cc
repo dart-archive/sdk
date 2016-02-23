@@ -110,7 +110,7 @@ int ProgramHeapRelocator::Relocate() {
   // addresses.
   program_->ClearDispatchTableIntrinsics();
   // And then setup fresh ones using our relocation table.
-  program_->SetupDispatchTableIntrinsics(table_);
+  program_->SetupDispatchTableIntrinsics(table_, method_entry_);
 
   // Make sure we only have one chunk in the heap so that we can linearly
   // relocate objects to the new base.

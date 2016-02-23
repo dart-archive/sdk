@@ -209,6 +209,8 @@ static void FlashifyProgram(Program* program) {
   printf("\t.global program_info_block\n");
   printf("program_info_block:\n");
 
+  printf("\t.long 0x%08lx\n", block->magic());
+
   for (Object** r = block->roots(); r < block->end_of_roots(); r++) {
     visitor.FlashifyReference(*r);
   }

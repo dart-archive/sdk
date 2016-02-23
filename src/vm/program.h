@@ -13,6 +13,7 @@
 #include "src/vm/lookup_cache.h"
 #include "src/vm/links.h"
 #include "src/vm/program_folder.h"
+#include "src/vm/native_interpreter.h"
 
 namespace dartino {
 
@@ -301,7 +302,8 @@ class Program : public ProgramList::Entry {
   // Dispatch table support.
   void ClearDispatchTableIntrinsics();
   void SetupDispatchTableIntrinsics(
-      IntrinsicsTable* table = IntrinsicsTable::GetDefault());
+      IntrinsicsTable* table = IntrinsicsTable::GetDefault(),
+      void* method_entry = reinterpret_cast<void*>(InterpreterMethodEntry));
 
   // Root objects.
  private:

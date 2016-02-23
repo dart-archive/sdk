@@ -43,10 +43,10 @@ void ClearBytecodeBreak(Opcode opcode) {
 
 /* Actual code starts here */
 
-static void printUsage(char* name) {
+static void PrintUsage(char* name) {
   printf(
-      "Usage: %s [-i <intrinsic name>=<address>] <snapshot file> "
-      "<base address> <program heap file>\n",
+      "Usage: %s [-i <intrinsic name>=<address>] <method entry address> "
+      "<snapshot file> <base address> <program heap file>\n",
       name);
 }
 
@@ -54,9 +54,9 @@ static int Main(int argc, char** argv) {
   IntrinsicsTable* table = new IntrinsicsTable();
 
   char** argp = argv + 1;
-  while (argc > 4) {
+  while (argc > 5) {
     if (strcmp(*(argp++), "-i") != 0) {
-      printUsage(*argv);
+      PrintUsage(*argv);
       return 1;
     }
     char* name;
@@ -65,7 +65,7 @@ static int Main(int argc, char** argv) {
     if ((name = strtok_r(*argp++, "=", &safe_ptr)) == NULL ||
         (value = strtok_r(NULL, "=", &safe_ptr)) == NULL ||
         strtok_r(NULL, "=", &safe_ptr) != NULL) {
-      printUsage(*argv);
+      PrintUsage(*argv);
       return 1;
     }
     char* endptr;
@@ -81,30 +81,38 @@ static int Main(int argc, char** argv) {
     argc = argc - 2;
   }
 
-  if (argc < 4) {
-    printUsage(*argv);
+  if (argc < 5) {
+    PrintUsage(*argv);
     return 1;
   }
 
   char* endptr;
+  int64 entry_address;
+  entry_address = strtoll(argp[0], &endptr, 0);
+  if (*endptr != '\0' || entry_address < 0) {
+    printf("Illegal entry address: %s [%" PRIx64 "]\n", argp[0], entry_address);
+    return 1;
+  }
+
   int64 basevalue;
-  basevalue = strtoll(argp[1], &endptr, 0);
+  basevalue = strtoll(argp[2], &endptr, 0);
   if (*endptr != '\0' || basevalue < 0 || basevalue & 0x3) {
-    printf("Illegal base address: %s [%" PRIx64 "]\n", argp[1], basevalue);
+    printf("Illegal base address: %s [%" PRIx64 "]\n", argp[2], basevalue);
     return 1;
   }
 
   ObjectMemory::Setup();
-  List<uint8> bytes = Platform::LoadFile(argp[0]);
+  List<uint8> bytes = Platform::LoadFile(argp[1]);
   SnapshotReader reader(bytes);
   Program* program = reader.ReadProgram();
 
   int size = program->program_heap_size() + sizeof(ProgramInfoBlock);
   List<uint8> result = List<uint8>::New(size);
-  ProgramHeapRelocator relocator(program, result.data(), basevalue, table);
+  ProgramHeapRelocator relocator(program, result.data(), basevalue, table,
+                                 reinterpret_cast<void*>(entry_address));
   relocator.Relocate();
 
-  Platform::StoreFile(argp[2], result);
+  Platform::StoreFile(argp[3], result);
 
   result.Delete();
   return 0;

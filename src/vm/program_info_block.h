@@ -15,11 +15,20 @@ class ProgramInfoBlock {
   void PopulateFromProgram(Program* program);
   void WriteToProgram(Program* program);
 
+  intptr_t magic() { return magic_; }
+
   Object** roots() { return &entry_; }
 
   void* end_of_roots() { return &end_; }
 
+  static bool MightBeProgramInfoBlock(ProgramInfoBlock* block) {
+    return block->magic_ == kProgramInfoMagic;
+  }
+
  private:
+  static const int kProgramInfoMagic = 0x96064EA9;
+
+  intptr_t magic_;
   // This has to remain in sync with all the roots that are traversed by
   // IterateRoots in Program. Also, the type does not really matter as long
   // as it also is a pointer type and they won't be used in order (as in
