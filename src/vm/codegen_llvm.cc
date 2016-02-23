@@ -958,12 +958,14 @@ class BasicBlocksExplorer {
           case kPopAndBranchWide: {
             b.DoDrop(*(bcp + 1));
             b.DoBranch(bci + Utils::ReadInt32(bcp + 2));
+            stop = true;
             break;
           }
 
           case kPopAndBranchBackWide: {
             b.DoDrop(*(bcp + 1));
             b.DoBranch(bci - Utils::ReadInt32(bcp + 2));
+            stop = true;
             break;
           }
 
