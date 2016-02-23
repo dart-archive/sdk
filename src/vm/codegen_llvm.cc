@@ -168,6 +168,8 @@ class HeapBuilder : public HeapObjectVisitor {
       value = BuildDispatchTableEntryConstant(DispatchTableEntry::cast(object));
     } else if (object->IsOneByteString()) {
       value = BuildOneByteStringConstant(OneByteString::cast(object));
+    } else if (object->IsInitializer()) {
+      value = BuildInitializerConstant(Initializer::cast(object));
     } else {
       auto null = llvm::ConstantStruct::getNullValue(ot);
       value = new llvm::GlobalVariable(w.module_, ot, true, llvm::GlobalValue::ExternalLinkage, null, name("Object_%p", object));
@@ -310,6 +312,19 @@ class HeapBuilder : public HeapObjectVisitor {
     entries.push_back(llvm::ConstantArray::get(int8_array_header, bytes));
     auto full_array = llvm::ConstantStruct::get(full_obs_type, entries);
     return new llvm::GlobalVariable(w.module_, full_obs_type, true, llvm::GlobalValue::ExternalLinkage, full_array, name("OneByteString_%p__%d", string, string->length()));
+  }
+
+  llvm::Constant* BuildInitializerConstant(Initializer* initializer) {
+    // Ensure we've the initializer function built:
+    BuildConstant(initializer->function());
+
+    auto ho = llvm::ConstantStruct::get(w.heap_object_type, {BuildConstant(initializer->get_class())});
+    std::vector<llvm::Constant*> initializer_entries= {
+      ho, // heap object
+      w.CCast(w.llvm_functions[initializer->function()]), // machine code
+    };
+    auto initializer_object = llvm::ConstantStruct::get(w.initializer_type, initializer_entries);
+    return new llvm::GlobalVariable(w.module_, w.initializer_type, true, llvm::GlobalValue::ExternalLinkage, initializer_object, name("InitializerObject_%p", initializer));
   }
 
   llvm::Constant* BuildInstanceFormat(Class* klass) {
@@ -1464,6 +1479,8 @@ World::World(Program* program,
       array_header_ptr(NULL),
       onebytestring_type(NULL),
       onebytestring_ptr_type(NULL),
+      initializer_type(NULL),
+      initializer_ptr_type(NULL),
       instance_type(NULL),
       instance_ptr_type(NULL),
       roots(NULL),
@@ -1492,6 +1509,9 @@ World::World(Program* program,
 
   onebytestring_type = llvm::StructType::create(context, "OneByteString");
   onebytestring_ptr_type = llvm::PointerType::get(onebytestring_type, 0);
+
+  initializer_type = llvm::StructType::create(context, "InitializerType");
+  initializer_ptr_type = llvm::PointerType::get(initializer_type, 0);
 
   instance_type = llvm::StructType::create(context, "InstanceType");
   instance_ptr_type = llvm::PointerType::get(instance_type, 0);
@@ -1540,6 +1560,12 @@ World::World(Program* program,
   obs_object_entries.push_back(array_header);
   obs_object_entries.push_back(intptr_type); // hash
   onebytestring_type->setBody(obs_object_entries, true);
+
+  // [initializer_type]
+  std::vector<llvm::Type*> initializer_entries;
+  initializer_entries.push_back(heap_object_type);
+  initializer_entries.push_back(object_ptr_type); // machine code (normally function object)
+  initializer_type->setBody(initializer_entries);
 
   // [instance_type]
   std::vector<llvm::Type*> instance_object_entries;

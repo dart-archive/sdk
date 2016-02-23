@@ -95,6 +95,9 @@ class World {
   llvm::StructType* onebytestring_type;
   llvm::PointerType* onebytestring_ptr_type;
 
+  llvm::StructType* initializer_type;
+  llvm::PointerType* initializer_ptr_type;
+
   llvm::StructType* instance_type;
   llvm::PointerType* instance_ptr_type;
 
