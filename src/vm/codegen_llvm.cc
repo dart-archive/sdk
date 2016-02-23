@@ -383,6 +383,39 @@ class IRHelper {
     return b->CreateIntToPtr(value, w.object_ptr_type);
   }
 
+  llvm::Value* GetArrayPointer(llvm::Value* array, int offset) {
+    auto untagged = UntagAndCast(array, w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(Array::kSize / kWordSize + offset) };
+    return Cast(b->CreateGEP(untagged, indices, "array_value"), w.object_ptr_ptr_type);
+  }
+
+  llvm::Value* LoadClass(llvm::Value* heap_object) {
+    auto untagged = UntagAndCast(heap_object, w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(HeapObject::kClassOffset / kWordSize) };
+    return b->CreateLoad(Cast(b->CreateGEP(untagged, indices, "klass"), w.object_ptr_ptr_type));
+  }
+
+  llvm::Value* LoadArrayEntry(llvm::Value* array, int offset) {
+    return b->CreateLoad(GetArrayPointer(array, offset));
+  }
+
+  llvm::Value* LoadInstanceFormat(llvm::Value* klass) {
+    auto untagged = UntagAndCast(klass, w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(Class::kInstanceFormatOffset / kWordSize) };
+    return b->CreateLoad(Cast(b->CreateGEP(untagged, indices, "instance_format"), w.object_ptr_ptr_type));
+  }
+
+  llvm::Value* LoadStaticsArray(llvm::Value* process) {
+    std::vector<llvm::Value*> statics_indices = { w.CInt(Process::kStaticsOffset  / kWordSize) };
+    return b->CreateLoad(b->CreateGEP(Cast(process, w.object_ptr_ptr_type), statics_indices), "statics");
+  }
+
+  llvm::Value* LoadInitializerCode(llvm::Value* initializer) {
+    auto untagged = UntagAndCast(initializer, w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(Initializer::kFunctionOffset / kWordSize) };
+    return b->CreateLoad(b->CreateGEP(untagged, indices, "init_fun"));
+  }
+
   llvm::Value* Null() {
     return llvm::ConstantStruct::getNullValue(w.object_ptr_type);
   }
@@ -568,15 +601,39 @@ class BasicBlockBuilder {
     push(h.Null());
   }
 
-  void DoLoadStatic(int offset) {
-    std::vector<llvm::Value*> statics_indices = { w.CInt(Process::kStaticsOffset  / kWordSize) };
-    auto statics_tagged = b.CreateLoad(b.CreateGEP(h.Cast(llvm_process_, w.object_ptr_ptr_type), statics_indices), "statics");
-    auto statics = h.UntagAndCast(statics_tagged, w.object_ptr_ptr_type);
+  void DoLoadStatic(int offset, bool check_for_initializer) {
+    auto statics = h.LoadStaticsArray(llvm_process_);
+    auto statics_entry_ptr = h.GetArrayPointer(statics, offset);
+    auto statics_entry = b.CreateLoad(statics_entry_ptr, "statics_entry");
 
-    std::vector<llvm::Value*> statics_entry_indices = { w.CInt(Array::kSize / kWordSize + offset) };
-    auto statics_entry = h.Cast(b.CreateLoad(b.CreateGEP(statics, statics_entry_indices), "statics_entry"), w.object_ptr_ptr_type);
+    llvm::Value* value;
+    if (check_for_initializer) {
+      auto bb_main = b.GetInsertBlock();
+      auto bb_initializer = llvm::BasicBlock::Create(w.context, "bb_initializer", llvm_function_);
+      auto bb_join = llvm::BasicBlock::Create(w.context, "join", llvm_function_);
 
-    push(b.CreateLoad(statics_entry));
+      // TODO: check for smi.
+      auto klass = h.LoadClass(statics_entry);
+      auto instance_format = h.DecodeSmi(h.LoadInstanceFormat(klass));
+      auto tmp = b.CreateAnd(instance_format, w.CInt(InstanceFormat::TypeField::mask() >> 1));
+      auto is_initializer = b.CreateICmpEQ(tmp, w.CInt(InstanceFormat::TypeField::encode(InstanceFormat::INITIALIZER_TYPE) >> 1));
+      b.CreateCondBr(is_initializer, bb_initializer, bb_join);
+
+      b.SetInsertPoint(bb_initializer);
+      auto function = h.Cast(h.LoadInitializerCode(statics_entry), w.FunctionPtrType(0));
+      auto initializer_result = b.CreateCall(function, {llvm_process_});
+      b.CreateStore(initializer_result, statics_entry_ptr);
+      b.CreateBr(bb_join);
+
+      b.SetInsertPoint(bb_join);
+      auto phi = b.CreatePHI(w.object_ptr_type, 2);
+      phi->addIncoming(initializer_result, bb_initializer);
+      phi->addIncoming(statics_entry, bb_main);
+      value = phi;
+    } else {
+      value = statics_entry;
+    }
+    push(value);
   }
 
   void DoStoreStatic(int offset) {
@@ -585,14 +642,9 @@ class BasicBlockBuilder {
     auto statics = h.UntagAndCast(statics_tagged, w.object_ptr_ptr_type);
 
     std::vector<llvm::Value*> statics_entry_indices = { w.CInt(Array::kSize / kWordSize + offset) };
-    auto statics_entry = h.Cast(b.CreateLoad(b.CreateGEP(statics, statics_entry_indices), "statics_entry"), w.object_ptr_ptr_type);
+    auto statics_entry = h.Cast(b.CreateGEP(statics, statics_entry_indices, "statics_entry"), w.object_ptr_ptr_type);
 
     b.CreateStore(local(0), statics_entry);
-  }
-
-  void DoLoadStaticInit(int offset) {
-    // TODO:
-    push(h.Null());
   }
 
   void DoCall(Function* target) {
@@ -1215,18 +1267,16 @@ class BasicBlocksExplorer {
             break;
           }
 
+          case kLoadStaticInit: {
+            b.DoLoadStatic(Utils::ReadInt32(bcp + 1), true);
+            break;
+          }
           case kLoadStatic: {
-            b.DoLoadStatic(Utils::ReadInt32(bcp + 1));
+            b.DoLoadStatic(Utils::ReadInt32(bcp + 1), false);
             break;
           }
           case kStoreStatic: {
             b.DoStoreStatic(Utils::ReadInt32(bcp + 1));
-            break;
-          }
-
-
-          case kLoadStaticInit: {
-            b.DoLoadStaticInit(Utils::ReadInt32(bcp + 1));
             break;
           }
 
@@ -1419,7 +1469,7 @@ class RootsBuilder : public PointerVisitor {
         hbuilder_->Visit(HeapObject::cast(object));
         roots_.push_back(w.CCast(w.tagged_heap_objects[HeapObject::cast(object)]));
       } else {
-        roots_.push_back(llvm::ConstantStruct::getNullValue(w.object_ptr_type));
+        roots_.push_back(w.CInt2Pointer(w.CSmi(Smi::cast(object)->value())));
       }
     }
   }
