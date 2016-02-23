@@ -18,7 +18,8 @@ import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
 
 import 'package:persistent/persistent.dart' show
-    PersistentMap;
+    PersistentMap,
+    PersistentSet;
 
 import 'bytecodes.dart';
 import 'vm_commands.dart';
@@ -209,6 +210,24 @@ class DartinoSystem {
 
   final PersistentMap<ParameterStubSignature, DartinoFunction> parameterStubs;
 
+  final PersistentMap<int, PersistentSet<int>> functionBackReferences;
+
+  static const DartinoSystem base = const DartinoSystem(
+      const PersistentMap<int, DartinoFunction>(),
+      const PersistentMap<Element, DartinoFunction>(),
+      const PersistentMap<ConstructorElement, DartinoFunction>(),
+      const PersistentMap<FieldElement, int>(),
+      const PersistentMap<int, int>(),
+      const PersistentMap<int, DartinoClass>(),
+      const PersistentMap<ClassElement, DartinoClass>(),
+      const PersistentMap<int, DartinoConstant>(),
+      const PersistentMap<ConstantValue, DartinoConstant>(),
+      const PersistentMap<int, String>(),
+      const PersistentMap<int, int>(),
+      const PersistentMap<int, int>(),
+      const PersistentMap<ParameterStubSignature, DartinoFunction>(),
+      const PersistentMap<int, PersistentSet<int>>());
+
   const DartinoSystem(
       this.functionsById,
       this.functionsByElement,
@@ -222,7 +241,8 @@ class DartinoSystem {
       this.symbolByDartinoSelectorId,
       this.gettersByFieldIndex,
       this.settersByFieldIndex,
-      this.parameterStubs);
+      this.parameterStubs,
+      this.functionBackReferences);
 
   bool get isEmpty => functionsById.isEmpty;
 

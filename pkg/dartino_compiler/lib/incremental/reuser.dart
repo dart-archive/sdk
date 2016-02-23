@@ -633,31 +633,7 @@ abstract class Reuser {
     }
   }
 
-  void replaceFunctionInBackend(
-      ElementX element,
-      /* ScopeContainerElement */ container) {
-    List<Element> elements = <Element>[];
-    if (checkForGenericTypes(element)) return;
-    for (ScopeContainerElement scope in scopesAffectedBy(element, container)) {
-      scanSites(scope, (Element member, DeclarationSite site) {
-        // TODO(ahe): Cache qualifiedNamesIn to avoid quadratic behavior.
-        Set<String> names = qualifiedNamesIn(site);
-        if (canNamesResolveStaticallyTo(names, element, container)) {
-          if (checkForGenericTypes(member)) return;
-          if (member is TypeDeclarationElement) {
-            if (!member.isResolved) {
-              // TODO(ahe): This is a bug in dart2js' forgetElement which
-              // attempts to check if member is a generic type.
-              cannotReuse(member, "Not resolved");
-              return;
-            }
-          }
-          elements.add(member);
-        }
-      });
-    }
-    backend.replaceFunctionUsageElement(element, elements);
-  }
+  void replaceFunctionInBackend(ElementX element);
 
   /// Invoke [f] on each [DeclarationSite] in [element]. If [element] is a
   /// [ScopeContainerElement], invoke f on all local members as well.
@@ -797,7 +773,7 @@ abstract class Reuser {
       compiler.forgetElement(element);
       element.reuseElement();
       if (element.isFunction) {
-        replaceFunctionInBackend(element, element.enclosingElement);
+        replaceFunctionInBackend(element);
       }
     }
     List<Element> elementsToInvalidate = <Element>[];
@@ -812,7 +788,7 @@ abstract class Reuser {
         elementsToInvalidate.add(element);
       }
       if (update is FunctionUpdate) {
-        replaceFunctionInBackend(element, element.enclosingElement);
+        replaceFunctionInBackend(element);
       }
     }
     return elementsToInvalidate;

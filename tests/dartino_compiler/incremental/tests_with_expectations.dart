@@ -447,6 +447,79 @@ main() { print(
 ''',
 
   r'''
+two_updates_not_main
+==> main.dart.patch <==
+// Test that the test framework handles more than one update to a top-level
+// method that isn't main.
+foo() {
+<<<< "Hello darkness, my old friend"
+  print("Hello darkness, my old friend");
+==== "I've come to talk with you again"
+  print("I've come to talk with you again");
+==== "Because a vision softly creeping"
+  print('Because a vision softly creeping');
+>>>>
+}
+main() {
+  foo();
+}
+''',
+
+  r'''
+two_updates_instance_method
+==> main.dart.patch <==
+// Test that the test framework handles more than one update to an instance
+// method.
+class C {
+  foo() {
+<<<< ["instance is null", "Hello darkness, my old friend"]
+    print("Hello darkness, my old friend");
+==== "I've come to talk with you again"
+    print("I've come to talk with you again");
+==== "Because a vision softly creeping"
+    print("Because a vision softly creeping");
+>>>>
+  }
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print("instance is null");
+    instance = new C();
+  }
+  instance.foo();
+}
+''',
+
+  r'''
+two_updates_with_removal
+==> main.dart.patch <==
+// Test that the test framework handles more than one update when the last
+// update is a removal.
+
+<<<< "Hello, World!"
+foo() {
+  print("Hello, World!");
+}
+==== "Hello, Brave New World!"
+foo() {
+  print("Hello, Brave New World!");
+}
+==== "threw"
+>>>>
+
+main() {
+  try {
+    foo();
+  } catch (e) {
+    print("threw");
+  }
+}
+''',
+
+  r'''
 main_args
 ==> main.dart.patch <==
 // Test that that isolate support works

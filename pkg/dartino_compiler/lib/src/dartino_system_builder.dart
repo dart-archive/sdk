@@ -33,7 +33,8 @@ import 'package:compiler/src/common/names.dart' show
     Identifiers;
 
 import 'package:persistent/persistent.dart' show
-    PersistentMap;
+    PersistentMap,
+    PersistentSet;
 
 import 'dartino_constants.dart' show
     DartinoClassConstant,
@@ -83,9 +84,7 @@ class DartinoSystemBuilder {
       _newConstructorInitializers =
           <ConstructorElement, DartinoFunctionBuilder>{};
 
-  // TODO(ajohnsen): By function/class?
-  final Map<Element, List<FunctionElement>> _replaceUsage =
-      <Element, List<FunctionElement>>{};
+  final Map<int, List<int>> _replaceUsage = <int, List<int>>{};
 
   final Map<FieldElement, int> _newLazyInitializersByElement =
       <FieldElement, int>{};
@@ -117,8 +116,18 @@ class DartinoSystemBuilder {
     return constant?.id;
   }
 
-  void replaceUsage(Element element, FunctionElement usage) {
-    _replaceUsage.putIfAbsent(element, () => []).add(usage);
+  void replaceUsage(int user, int used) {
+    _replaceUsage.putIfAbsent(user, () => <int>[]).add(used);
+  }
+
+  void replaceElementUsage(Element user, Element used) {
+    DartinoFunction userFunction =
+        predecessorSystem.lookupFunctionByElement(user);
+    if (userFunction == null) return;
+    DartinoFunction usedFunction =
+        predecessorSystem.lookupFunctionByElement(used);
+    if (usedFunction == null) return;
+    replaceUsage(userFunction.functionId, usedFunction.functionId);
   }
 
   DartinoFunctionBuilder newFunctionBuilder(
@@ -504,7 +513,7 @@ class DartinoSystemBuilder {
     // callMain, when detecting changes.
     FunctionElement callMain =
         context.backend.dartinoSystemLibrary.findLocal('callMain');
-    replaceUsage(callMain, context.compiler.mainFunction);
+    replaceElementUsage(callMain, context.compiler.mainFunction);
 
     int changes = 0;
 
@@ -701,6 +710,33 @@ class DartinoSystemBuilder {
       changes++;
     }
 
+    // Key is function id, and its corresponding value is a set of functions
+    // whose literal tables contain references to the key.
+    PersistentMap<int, PersistentSet<int>> functionBackReferences =
+      predecessorSystem.functionBackReferences;
+
+    void addFunctionBackReference(
+        DartinoFunctionBase user,
+        DartinoConstant used) {
+      PersistentSet<int> referrers = functionBackReferences[used.id];
+      if (referrers == null) {
+        referrers = new PersistentSet<int>();
+      }
+      referrers = referrers.insert(user.functionId);
+      functionBackReferences =
+          functionBackReferences.insert(used.id, referrers);
+    }
+
+    void removeFunctionBackReference(
+        DartinoFunctionBase user,
+        DartinoConstant used) {
+      PersistentSet<int> referrers = functionBackReferences[used.id];
+      if (referrers == null) return;
+      referrers = referrers.delete(user.functionId);
+      functionBackReferences =
+          functionBackReferences.insert(used.id, referrers);
+    }
+
     // Change constants for the functions, now that classes and constants have
     // been added.
     for (DartinoFunction function in functions) {
@@ -712,6 +748,9 @@ class DartinoSystemBuilder {
             ..add(new PushFromMap(constant.mapId, constant.id))
             ..add(new ChangeMethodLiteral(i));
         changes++;
+        if (constant.mapId == MapId.methods) {
+          addFunctionBackReference(function, constant);
+        }
       }
     }
 
@@ -721,27 +760,24 @@ class DartinoSystemBuilder {
     }
 
     List<DartinoFunction> changedFunctions = <DartinoFunction>[];
-    for (Element element in _replaceUsage.keys) {
+    for (int user in _replaceUsage.keys) {
       // Don't modify already replaced elements.
-      if (lookupFunctionBuilderByElement(element) != null) continue;
-
-      DartinoFunction function =
-          predecessorSystem.lookupFunctionByElement(element);
-      // Due to false positive, the element can be uncompiled.
-      if (function == null) continue;
+      DartinoFunction function = predecessorSystem.lookupFunctionById(user);
+      if (function == null || function.element == null) continue;
+      if (lookupFunctionBuilderByElement(function.element) != null) continue;
 
       bool constantsChanged = false;
       List<DartinoConstant> constants = function.constants.toList();
       for (int i = 0; i < constants.length; i++) {
         DartinoConstant constant = constants[i];
         if (constant.mapId != MapId.methods) continue;
-        for (var usage in _replaceUsage[element]) {
+        for (int usage in _replaceUsage[user]) {
+          if (usage != constant.id) continue;
           DartinoFunction oldFunction =
-              predecessorSystem.lookupFunctionByElement(usage);
-          if (oldFunction == null) continue;
-          if (oldFunction.functionId != constant.id) continue;
+              predecessorSystem.lookupFunctionById(usage);
+          if (oldFunction == null || oldFunction.element == null) continue;
           DartinoFunctionBuilder newFunction =
-              lookupFunctionBuilderByElement(usage);
+              lookupFunctionBuilderByElement(oldFunction.element);
 
           // If the method didn't really change, ignore.
           if (newFunction == null) continue;
@@ -751,6 +787,7 @@ class DartinoSystemBuilder {
               ..add(new PushFromMap(MapId.methods, function.functionId))
               ..add(new PushFromMap(constant.mapId, constant.id))
               ..add(new ChangeMethodLiteral(i));
+          addFunctionBackReference(function, constant);
           constants[i] = constant;
           constantsChanged = true;
           changes++;
@@ -798,6 +835,12 @@ class DartinoSystemBuilder {
       if (element != null) {
         functionsByElement = functionsByElement.delete(element);
       }
+      for (DartinoConstant constant in function.constants) {
+        if (constant.mapId != MapId.methods) continue;
+        removeFunctionBackReference(function, constant);
+      }
+      functionBackReferences =
+          functionBackReferences.delete(function.functionId);
     }
 
     for (DartinoFunction function in functions) {
@@ -880,7 +923,8 @@ class DartinoSystemBuilder {
         symbolByDartinoSelectorId,
         gettersByFieldIndex,
         settersByFieldIndex,
-        parameterStubs);
+        parameterStubs,
+        functionBackReferences);
   }
 
   bool get hasChanges {

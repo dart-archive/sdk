@@ -30,6 +30,7 @@ import 'package:compiler/src/parser/partial_elements.dart' show
 
 import 'package:compiler/src/elements/modelx.dart' show
     ClassElementX,
+    ElementX,
     FieldElementX,
     LibraryElementX;
 
@@ -58,9 +59,11 @@ import '../vm_commands.dart' show
 
 import '../dartino_system.dart' show
     DartinoDelta,
+    DartinoFunction,
     DartinoSystem;
 
 import '../src/dartino_system_builder.dart' show
+    DartinoSystemBuilder,
     SchemaChange;
 
 import 'dartino_compiler_incremental.dart' show
@@ -210,7 +213,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
 
     List<VmCommand> commands = <VmCommand>[];
     DartinoSystem system =
-        backend.systemBuilder.computeSystem(dartinoContext, commands);
+        systemBuilder.computeSystem(dartinoContext, commands);
     backend.newSystemBuilder(system);
     return new DartinoDelta(system, currentSystem, commands);
   }
@@ -245,7 +248,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
       }
     }
     for (PartialClassElement cls in schemaChangesByClass.keys) {
-      DartinoClassBuilder builder = backend.systemBuilder.getClassBuilder(
+      DartinoClassBuilder builder = systemBuilder.getClassBuilder(
           cls, backend, schemaChanges: schemaChangesByClass);
       checkSchemaChangesAreUsed(builder, cls);
     }
@@ -381,6 +384,19 @@ class DartinoReuser extends Reuser with DartinoFeatures {
   SchemaChange getSchemaChange(PartialClassElement cls) {
     return schemaChangesByClass.putIfAbsent(cls, () => new SchemaChange(cls));
   }
+
+  void replaceFunctionInBackend(ElementX element) {
+    DartinoFunction oldFunction =
+        systemBuilder.predecessorSystem.lookupFunctionByElement(element);
+    if (oldFunction == null) return;
+    Iterable<int> users =
+        systemBuilder.predecessorSystem.functionBackReferences[
+            oldFunction.functionId];
+    if (users == null) return;
+    for (int userId in users) {
+      systemBuilder.replaceUsage(userId, oldFunction.functionId);
+    }
+  }
 }
 
 class DartinoFunctionUpdate extends FunctionUpdate with DartinoFeatures {
@@ -468,8 +484,10 @@ abstract class DartinoFeatures {
 
   DartinoContext get dartinoContext => compiler.context;
 
+  DartinoSystemBuilder get systemBuilder => backend.systemBuilder;
+
   DartinoFunctionBuilder lookupDartinoFunctionBuilder(
       FunctionElement function) {
-    return backend.systemBuilder.lookupFunctionBuilderByElement(function);
+    return systemBuilder.lookupFunctionBuilderByElement(function);
   }
 }

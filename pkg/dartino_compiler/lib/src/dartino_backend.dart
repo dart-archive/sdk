@@ -102,9 +102,6 @@ import 'package:compiler/src/resolution/tree_elements.dart' show
 import 'package:compiler/src/library_loader.dart' show
     LibraryLoader;
 
-import 'package:persistent/persistent.dart' show
-    PersistentMap;
-
 import 'package:compiler/src/common/names.dart' show
     Identifiers,
     Names;
@@ -210,22 +207,6 @@ import '../dartino_system.dart' show
     DartinoSystem,
     ParameterStubSignature;
 
-//TODO(zarah): Move to dartino_system.dart
-const DartinoSystem BASE_DARTINO_SYSTEM = const DartinoSystem(
-    const PersistentMap<int, DartinoFunction>(),
-    const PersistentMap<Element, DartinoFunction>(),
-    const PersistentMap<ConstructorElement, DartinoFunction>(),
-    const PersistentMap<FieldElement, int>(),
-    const PersistentMap<int, int>(),
-    const PersistentMap<int, DartinoClass>(),
-    const PersistentMap<ClassElement, DartinoClass>(),
-    const PersistentMap<int, DartinoConstant>(),
-    const PersistentMap<ConstantValue, DartinoConstant>(),
-    const PersistentMap<int, String>(),
-    const PersistentMap<int, int>(),
-    const PersistentMap<int, int>(),
-    const PersistentMap<ParameterStubSignature, DartinoFunction>());
-
 class DartinoBackend extends Backend
     implements IncrementalDartinoBackend {
   static const String growableListName = '_GrowableList';
@@ -294,7 +275,7 @@ class DartinoBackend extends Backend
   DartinoBackend(DartinoCompilerImplementation compiler)
       : this.context = compiler.context,
         this.constantCompilerTask = new DartConstantTask(compiler),
-        this.systemBuilder = new DartinoSystemBuilder(BASE_DARTINO_SYSTEM),
+        this.systemBuilder = new DartinoSystemBuilder(DartinoSystem.base),
         super(compiler) {
     this.impactTransformer = new DartinoImpactTransformer(this);
   }
@@ -1643,12 +1624,6 @@ class DartinoBackend extends Backend
         queue.addAll(compiler.world.strictSubclassesOf(cls));
       }
       f(cls);
-    }
-  }
-
-  void replaceFunctionUsageElement(Element element, List<Element> users) {
-    for (Element user in users) {
-      systemBuilder.replaceUsage(user, element);
     }
   }
 

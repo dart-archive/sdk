@@ -11,9 +11,6 @@ multiprogram_tests/should_fail: Fail, OK # This is a test of this suite, failure
 incremental/*/stored_closure: Fail
 incremental/*/remove_instance_method_stored_in_tearoff: Fail
 
-# Missing support for multiple libraries
-incremental/*/multiple_libraries: Fail
-
 # Received PushFromMap command which referes to a non-existent map entry
 incremental/*/same_tokens_variant: Fail
 
@@ -52,6 +49,7 @@ incremental/production/instance_field_middle: Fail
 incremental/production/interceptor_classes: Fail
 incremental/production/main_args: Fail
 incremental/production/modify_static_method: Fail
+incremental/production/multiple_libraries: Fail
 incremental/production/newly_instantiated_class: Fail
 incremental/production/newly_instantiated_class_X: Fail
 incremental/production/newly_instantiated_class_with_fields: Fail
@@ -78,6 +76,8 @@ incremental/production/super_call_signature_change: Fail
 incremental/production/super_classes_of_directly_instantiated: Fail
 incremental/production/super_schema: Fail
 incremental/production/two_updates: Fail
+incremental/production/two_updates_not_main: Fail
+incremental/production/two_updates_with_removal: Fail
 incremental/production/update_dependencies: Fail
 incremental/production/update_dependencies_recoverable_compile_time_error: Fail
 incremental/production/update_dependencies_unrecoverable_compile_time_error: Fail
