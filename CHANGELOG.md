@@ -11,7 +11,7 @@
  real time operating system (RTOS).
 
 * Added board support for the [STM32F746 Discovery board]
-(www.st.com/stm32f7-discovery), incl. GPIO and LCD support.
+(http://www.st.com/stm32f7-discovery), incl. GPIO and LCD support.
 
 ### Libraries and packages
 
