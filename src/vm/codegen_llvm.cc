@@ -732,18 +732,10 @@ class BasicBlockBuilder {
     std::vector<llvm::Value*> dentry_indices = { offset };
     auto entry = b.CreateLoad(b.CreateGEP(h.UntagAndCast(dispatch, w.object_ptr_ptr_type), dentry_indices), "dispatch_table_entry");
 
-    std::vector<llvm::Value*> target_indices = { w.CInt(DispatchTableEntry::kTargetOffset / kWordSize) };
-    auto target = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), target_indices), "taret_method");
+    std::vector<llvm::Value*> ccode_indices = { w.CInt(DispatchTableEntry::kCodeOffset / kWordSize) };
+    llvm::Value* code = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), ccode_indices), "target_method");
 
-    // TODO: We should also be able to use this instead
-    // (we store 4 byte machine code pointer in the place where we normally have bytecodes).
-    //std::vector<llvm::Value*> ccode_indices = { w.CInt(DispatchTableEntry::kCodeOffset / kWordSize) };
-    //auto code = b.CreateLoad(b.CreateGEP(h.Cast(entry, w.object_ptr_ptr_type), ccode_indices));
-
-    std::vector<llvm::Value*> code_indices = { w.CInt(Function::kSize / kWordSize) };
-    auto machine_code = b.CreateLoad(b.CreateGEP(h.UntagAndCast(target, w.object_ptr_ptr_type), code_indices), "machine_code");
-
-    return machine_code;
+    return code;
   }
 
   llvm::BasicBlock* GetBasicBlockAt(int bci) {
