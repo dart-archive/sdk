@@ -109,7 +109,15 @@ void Interpreter::Run() {
   // This is conservative.
   process_->remembered_set()->Insert(process_->stack());
 
-  int result = Interpret(process_, &target_yield_result_);
+  Function* entry = process_->program()->entry();
+  int result = -1;
+  if (entry != NULL) {
+    word* code = reinterpret_cast<word*>(entry->bytecode_address_for(0));
+    result = reinterpret_cast<InterpretFunction>(*code)(process_, &target_yield_result_);
+    result = InterruptKind::kTerminate;
+  } else {
+    result = Interpret(process_, &target_yield_result_);
+  }
   if (result < 0) FATAL("Fatal error in native interpreter");
   interruption_ = static_cast<InterruptKind>(result);
 
@@ -144,7 +152,10 @@ Object* HandleObjectFromFailure(Process* process, Failure* failure) {
 
 Object* HandleAllocate(Process* process, Class* clazz, int immutable) {
   Object* result = process->NewInstance(clazz, immutable == 1);
-  if (result->IsFailure()) return result;
+  if (result->IsFailure()) {
+    FATAL("We don't have support for allocation failures yet.");
+    return result;
+  }
   return result;
 }
 

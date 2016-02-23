@@ -778,13 +778,14 @@ class Instance : public HeapObject {
   class FlagsImmutabilityField : public BoolField<1> {};
   class FlagsHashCodeField : public BitField<word, 2, 32 - 2> {};
 
+  inline uint32 FlagsBits();
+
  protected:
   inline void Initialize(int size, Object* init_value);
 
   inline void InitializeIdentityHashCode(RandomXorShift* random);
   inline void SetIdentityHashCode(Smi* smi);
   inline Smi* IdentityHashCode();
-  inline uint32 FlagsBits();
   inline void SetFlagsBits(uint32 bits);
 
   friend class Heap;

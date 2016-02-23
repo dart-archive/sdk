@@ -12,6 +12,20 @@
       ],
     },
     {
+      'target_name': 'llvm-codegen',
+      'type': 'none',
+      'dependencies': [
+        'src/vm/vm.gyp:llvm-codegen',
+      ],
+    },
+    {
+      'target_name': 'llvm_embedder',
+      'type': 'none',
+      'dependencies': [
+        'src/vm/vm.gyp:llvm_embedder',
+      ],
+    },
+    {
       'target_name': 'c_test_library',
       'type': 'none',
       'dependencies': [

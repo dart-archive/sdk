@@ -291,6 +291,66 @@
       ],
     },
     {
+      'target_name': 'llvm-codegen',
+      'type': 'executable',
+
+      # $ llvm-config-3.6  --cxxflags --ldflags --system-libs --libs core scalaropts
+      'defines': [
+          'NDEBUG',
+          'D_GNU_SOURCE',
+          'D__STDC_CONSTANT_MACROS',
+          'D__STDC_FORMAT_MACROS',
+          'D__STDC_LIMIT_MACROS',
+      ],
+      'include_dirs': [
+          #'/usr/lib/llvm-3.6/include',
+          '/usr/local/google/home/kustermann/repositories/llvm/llvm-build/include',
+          '/usr/local/google/home/kustermann/repositories/llvm/include',
+      ],
+      'libraries': [
+          #'-L/usr/lib/llvm-3.6/lib',
+          '-L/usr/local/google/home/kustermann/repositories/llvm/llvm-build/lib',
+
+          # core
+          '-lLLVMCore',
+          '-lLLVMSupport',
+          '-lLLVMBitWriter',
+
+          # scalaropts (contains mem2reg pass, ...)
+          '-lLLVMAnalysis',
+          '-lLLVMBitReader',
+          '-lLLVMCore',
+          '-lLLVMInstCombine',
+          #'-lLLVMipa',
+          '-lLLVMMC',
+          '-lLLVMMCParser',
+          '-lLLVMObject',
+          '-lLLVMProfileData',
+          '-lLLVMScalarOpts',
+          '-lLLVMSupport',
+          '-lLLVMTarget',
+          '-lLLVMTransformUtils',
+
+          # misc
+          '-lz',
+          '-lpthread',
+          '-lffi',
+          '-ledit',
+          '-ltinfo',
+          '-ldl',
+          '-lm',
+      ],
+
+      'dependencies' : [
+        'libdartino',
+      ],
+      'sources': [
+        'codegen_llvm.h',
+        'codegen_llvm.cc',
+        'codegen_llvm_main.cc',
+      ],
+    },
+    {
       'target_name': 'dartino-vm',
       'type': 'executable',
       'dependencies': [
@@ -299,6 +359,16 @@
       'sources': [
         'main.cc',
         'main_simple.cc',
+      ],
+    },
+    {
+      'target_name': 'llvm_embedder',
+      'type': 'static_library',
+      'dependencies': [
+        'libdartino',
+      ],
+      'sources': [
+        'llvm_embedder.cc',
       ],
     },
     {

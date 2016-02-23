@@ -54,6 +54,10 @@ DARTINO_EXPORT void DartinoDeleteProgram(DartinoProgram program);
 DARTINO_EXPORT DartinoProgram DartinoLoadProgramFromFlash(void* location,
                                                           size_t size);
 
+DARTINO_EXPORT DartinoProgram DartinoLoadProgramFromFlashWide(void* location,
+                                                              size_t size,
+                                                              void* program_info);
+
 // Starts the main method of the program. The given callback will be called once
 // all processes of the program have terminated.
 //

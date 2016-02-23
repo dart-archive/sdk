@@ -6,6 +6,8 @@ library dart.dartino;
 
 import 'dart:dartino._system' as dartino;
 
+export "dart:_internal" show printToConsole;
+
 /// Fibers are lightweight co-operative multitask units of execution. They
 /// are scheduled on top of OS-level threads, but they are cheap to create
 /// and block.

@@ -103,6 +103,8 @@ Process* Program::SpawnProcess(Process* parent) {
   return process;
 }
 
+extern "C" void* program_entry __attribute((weak));
+
 Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   if (Flags::print_program_statistics) {
     PrintStatistics();
@@ -111,10 +113,8 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   Process* process = SpawnProcess(NULL);
   process->set_arguments(arguments);
 
-  Function* entry = process->entry();
   process->SetupExecutionStack();
   Stack* stack = process->stack();
-  uint8_t* bcp = entry->bytecode_address_for(0);
   word top = stack->length();
   // Push empty slot, fp and bcp.
   stack->set(--top, NULL);
@@ -125,8 +125,15 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   stack->set(--top, NULL);
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   frame_pointer = stack->Pointer(top);
-  stack->set(--top, reinterpret_cast<Object*>(bcp));
-  stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
+  if (program_entry == NULL) {
+    Function* entry = process->entry();
+    uint8_t* bcp = entry->bytecode_address_for(0);
+    stack->set(--top, reinterpret_cast<Object*>(bcp));
+    stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
+  } else {
+    stack->set(--top, reinterpret_cast<Object*>(NULL));
+    stack->set(--top, reinterpret_cast<Object*>(program_entry));
+  }
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
 

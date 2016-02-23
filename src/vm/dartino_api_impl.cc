@@ -50,9 +50,11 @@ static Program* LoadSnapshot(List<uint8> bytes) {
 }
 
 static int RunProgram(Program* program, int argc, char** argv) {
+  /*
 #ifdef DARTINO_ENABLE_LIVE_CODING
   ProgramFolder::FoldProgramByDefault(program);
 #endif  // DARTINO_ENABLE_LIVE_CODING
+  */
 
   SimpleProgramRunner runner;
 
@@ -156,12 +158,16 @@ void DartinoRunMultipleMain(int count,
 }
 
 DartinoProgram DartinoLoadProgramFromFlash(void* heap, size_t size) {
-  dartino::Program* program =
-      new dartino::Program(dartino::Program::kLoadedFromSnapshot);
   uword address = reinterpret_cast<uword>(heap);
   // The info block is appended at the end of the image.
   size_t heap_size = size - sizeof(dartino::ProgramInfoBlock);
   uword block_address = address + heap_size;
+  return DartinoLoadProgramFromFlashWide(heap, size, reinterpret_cast<void*>(block_address));
+}
+
+DartinoProgram DartinoLoadProgramFromFlashWide(void* heap, size_t heap_size, void* block_address) {
+  dartino::Program* program =
+      new dartino::Program(dartino::Program::kLoadedFromSnapshot);
   dartino::ProgramInfoBlock* program_info =
       reinterpret_cast<dartino::ProgramInfoBlock*>(block_address);
   program_info->WriteToProgram(program);
