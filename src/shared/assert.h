@@ -110,10 +110,10 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
       dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, format, \
                                               (p1))
 
-#define FATAL2(format, p1, p2) \
+#define FATALV(format, ...) \
   dartino::DynamicAssertionHelper::Fail<                           \
       dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, \
-                                               format, (p1), (p2))
+                                               format, __VA_ARGS__)
 
 #define UNIMPLEMENTED() FATAL("unimplemented code")
 

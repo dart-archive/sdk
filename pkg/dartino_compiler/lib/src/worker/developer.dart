@@ -271,9 +271,9 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
                     additionalUserInput: handShakeResult.version);
   }
 
-  // Enable debugging to be able to communicate with VM when there
-  // are errors.
-  await session.runCommand(const Debugging());
+  // Enable live editing to be able to communicate with VM when there are
+  // errors.
+  await session.enableLiveEditing();
 
   state.session = session;
 }

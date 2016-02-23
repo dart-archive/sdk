@@ -254,7 +254,20 @@ class Session extends DartinoVmSession {
     return result;
   }
 
+  // Enable support for live-editing commands. This must be called prior to
+  // sending deltas or if the program termination behavior is to be observed.
+  // TODO(zerny): Separate termination observation from live editing.
+  Future enableLiveEditing() async {
+    await runCommand(const LiveEditing());
+  }
+
+  // Enable support for debugging commands. This must be called prior to setting
+  // breakpoints. Currently debugging support entails live editing, but that
+  // will not continue to be the case once support for attaching to VMs running
+  // read-only programs has been added.
+  // TODO(zerny): Separate debugging from live editing.
   Future enableDebugger() async {
+    await enableLiveEditing();
     await runCommand(const Debugging());
   }
 

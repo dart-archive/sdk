@@ -71,12 +71,16 @@ class SessionState {
   virtual bool IsTerminated() const { return false; }
 
   // Modal on connected states.
-  virtual bool IsDebugging() const { return false; }
+  virtual bool IsLiveEditingEnabled() const { return false; }
+  virtual bool IsDebuggingEnabled() const { return false; }
 
   // Main transition function on states.
   virtual SessionState* ProcessMessage(Connection::Opcode opcode) {
-    FATAL2("Unexpected message opcode %d received in state %s",
-           opcode, ToString());
+    FATALV("Unexpected message opcode %d received in state %s, "
+           "live-editing: %s, debugging: %s>",
+           opcode, ToString(),
+           IsLiveEditingEnabled() ? "true" : "false",
+           IsDebuggingEnabled() ? "true" : "false");
     return NULL;
   }
 
@@ -179,16 +183,26 @@ class ConnectedState : public SessionState {
   ConnectedState() {}
 
   bool IsConnected() const { return true; }
-  bool IsDebugging() const { return session()->debugging(); }
+
+  bool IsLiveEditingEnabled() const { return session()->live_editing(); }
+  bool IsDebuggingEnabled() const { return session()->debugging(); }
+
+  void EnableLiveEditing() {
+    ASSERT(!IsLiveEditingEnabled());
+    session()->set_live_editing(true);
+  }
 
   virtual void EnableDebugging() {
-    ASSERT(!IsDebugging());
+    ASSERT(IsLiveEditingEnabled());
+    ASSERT(!IsDebuggingEnabled());
     session()->set_debugging(true);
   }
 
-  const char* ToString() const {
-    return IsDebugging() ? "Connected<Debugging>" : "Connected";
+  bool KeepConnectionAlive() const {
+    return IsLiveEditingEnabled();
   }
+
+  const char* ToString() const { return "Connected"; }
 
   SessionState* ProcessMessage(Connection::Opcode opcode);
 };
@@ -214,9 +228,7 @@ class ModifyingState : public ConnectedState {
     return restored;
   }
 
-  const char* ToString() const {
-    return IsDebugging() ? "Modifying<Debugging>" : "Modifying";
-  }
+  const char* ToString() const { return "Modifying"; }
 
   SessionState* ProcessMessage(Connection::Opcode opcode);
 
@@ -243,6 +255,12 @@ class SpawnedState : public ConnectedState {
     main_process()->EnsureDebuggerAttached(session());
   }
 
+  // True if the session should be informed of the process's termination.
+  bool ObserveTermination(Process* process) {
+    return IsDebuggingEnabled() ||
+        (IsLiveEditingEnabled() && process == main_process());
+  }
+
   void ActivateState(SessionState* previous) {
     ASSERT(previous->IsConnected());
     ConnectedState::ActivateState(previous);
@@ -251,15 +269,13 @@ class SpawnedState : public ConnectedState {
     ASSERT(!previous->IsSpawned());
     session()->set_main_process(initial_main_process_);
     initial_main_process_ = NULL;
-    if (IsDebugging()) {
+    if (IsDebuggingEnabled()) {
       // Ensure that main is allocated the zeroth id.
       main_process()->EnsureDebuggerAttached(session());
     }
   }
 
-  const char* ToString() const {
-    return IsDebugging() ? "Spawned<Debugging>" : "Spawned";
-  }
+  const char* ToString() const { return "Spawned"; }
 
   SessionState* ProcessMessage(Connection::Opcode opcode);
 
@@ -291,9 +307,7 @@ class RunningState : public ScheduledState {
  public:
   bool IsRunning() const { return true; }
 
-  const char* ToString() const {
-    return IsDebugging() ? "Running<Debugging>" : "Running";
-  }
+  const char* ToString() const { return "Running"; }
 
   void ActivateState(SessionState* previous) {
     ASSERT((!previous->IsScheduled() && previous->IsSpawned()) ||
@@ -305,42 +319,55 @@ class RunningState : public ScheduledState {
   }
 
   Scheduler::ProcessInterruptionEvent HandleBreakpoint(Process* process) {
+    ASSERT(IsDebuggingEnabled());
     SendBreakpoint(process);
     return Scheduler::kRemainPaused;
   }
 
   Scheduler::ProcessInterruptionEvent HandleUncaughtException(
       Process* process) {
-    WriteBuffer buffer;
-    connection()->Send(Connection::kUncaughtException, buffer);
-    return Scheduler::kRemainPaused;
+    if (ObserveTermination(process)) {
+      WriteBuffer buffer;
+      connection()->Send(Connection::kUncaughtException, buffer);
+    }
+    return IsDebuggingEnabled() ?
+        Scheduler::kRemainPaused : Scheduler::kExitWithUncaughtException;
   }
 
   Scheduler::ProcessInterruptionEvent HandleCompileTimeError(Process* process) {
-    WriteBuffer buffer;
-    connection()->Send(Connection::kProcessCompileTimeError, buffer);
-    return Scheduler::kRemainPaused;
+    if (ObserveTermination(process)) {
+      WriteBuffer buffer;
+      connection()->Send(Connection::kProcessCompileTimeError, buffer);
+    }
+    return IsDebuggingEnabled() ?
+        Scheduler::kRemainPaused : Scheduler::kExitWithCompileTimeError;
   }
 
   Scheduler::ProcessInterruptionEvent HandleKilled(Process* process) {
     // TODO(kustermann): We might want to let a debugger know if the process
     // didn't normally terminate, but rather was killed.
-    WriteBuffer buffer;
-    connection()->Send(Connection::kProcessTerminated, buffer);
+    if (ObserveTermination(process)) {
+      WriteBuffer buffer;
+      connection()->Send(Connection::kProcessTerminated, buffer);
+    }
     return Scheduler::kExitWithKilledSignal;
   }
 
   Scheduler::ProcessInterruptionEvent HandleUnhandledSignal(Process* process) {
     // TODO(kustermann): We might want to let a debugger know that the process
     // didn't normally terminate, but rather was killed due to a linked process.
-    WriteBuffer buffer;
-    connection()->Send(Connection::kProcessTerminated, buffer);
+    if (ObserveTermination(process)) {
+      WriteBuffer buffer;
+      connection()->Send(Connection::kProcessTerminated, buffer);
+    }
     return Scheduler::kExitWithUnhandledSignal;
   }
 
   Scheduler::ProcessInterruptionEvent HandleTerminated(Process* process) {
-    WriteBuffer buffer;
-    connection()->Send(Connection::kProcessTerminated, buffer);
+    if (ObserveTermination(process)) {
+      WriteBuffer buffer;
+      connection()->Send(Connection::kProcessTerminated, buffer);
+    }
     return Scheduler::kExitWithoutError;
   }
 
@@ -374,9 +401,7 @@ class PausedState : public ScheduledState {
 
   bool IsPaused() const { return true; }
 
-  const char* ToString() const {
-    return IsDebugging() ? "Paused<Debugging>" : "Paused";
-  }
+  const char* ToString() const { return "Paused"; }
 
   SessionState* ProcessContinue() {
     if (!interrupted_) {
@@ -402,9 +427,7 @@ class TerminatingState : public ScheduledState {
 
   bool IsTerminating() const { return true; }
 
-  const char* ToString() const {
-    return IsDebugging() ? "Terminating<Debugging>" : "Terminating";
-  }
+  const char* ToString() const { return "Terminating"; }
 
   void ActivateState(SessionState* previous) {
     ASSERT(previous->IsPaused());
@@ -532,6 +555,7 @@ Session::Session(Connection* connection)
     : connection_(connection),
       program_(NULL),
       state_(NULL),
+      live_editing_(false),
       debugging_(false),
       main_process_(NULL),
       process_(NULL),
@@ -825,10 +849,15 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       return new ModifyingState();
     }
 
-    case Connection::kDebugging: {
-      if (!IsDebugging()) EnableDebugging();
+    case Connection::kLiveEditing: {
+      if (!IsLiveEditingEnabled()) EnableLiveEditing();
       session()->method_map_id_ = connection()->ReadInt();
       session()->class_map_id_ = connection()->ReadInt();
+      break;
+    }
+
+    case Connection::kDebugging: {
+      if (!IsDebuggingEnabled()) EnableDebugging();
       session()->fibers_map_id_ = connection()->ReadInt();
       break;
     }
@@ -1122,20 +1151,20 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
       // If we are debugging we continue processing messages. If we are
       // connected to the compiler directly we terminate the message
       // processing thread.
-      if (!IsDebugging()) return NULL;
+      if (!KeepConnectionAlive()) return NULL;
       break;
     }
 
     // Debugging commands that are valid on unscheduled programs.
     case Connection::kProcessDebugInterrupt: {
       // TODO(zerny): Disallow an interrupt on unscheduled programs?
-      ASSERT(IsDebugging());
+      ASSERT(IsDebuggingEnabled());
       // This is a noop in all non-running states.
       break;
     }
 
     case Connection::kProcessSetBreakpoint: {
-      ASSERT(IsDebugging());
+      ASSERT(IsDebuggingEnabled());
       process()->EnsureDebuggerAttached(session());
       WriteBuffer buffer;
       int bytecode_index = connection()->ReadInt();
@@ -1148,7 +1177,7 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kProcessDeleteBreakpoint: {
-      ASSERT(IsDebugging());
+      ASSERT(IsDebuggingEnabled());
       process()->EnsureDebuggerAttached(session());
       WriteBuffer buffer;
       int id = connection()->ReadInt();
@@ -1908,7 +1937,7 @@ void Session::PostponeChange(Change change, int count) {
 }
 
 bool Session::CanHandleEvents() const {
-  return state_->IsDebugging();
+  return state_->IsLiveEditingEnabled();
 }
 
 Scheduler::ProcessInterruptionEvent Session::CheckForPauseEventResult(

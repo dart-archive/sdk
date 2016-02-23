@@ -1209,6 +1209,23 @@ class SessionEnd extends VmCommand {
   String valuesToString() => "";
 }
 
+class LiveEditing extends VmCommand {
+  const LiveEditing()
+      : super(VmCommandCode.LiveEditing);
+
+  void internalAddTo(
+      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+    buffer
+        ..addUint32(MapId.methods.index)
+        ..addUint32(MapId.classes.index)
+        ..sendOn(sink, code);
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "";
+}
+
 class Debugging extends VmCommand {
   const Debugging()
       : super(VmCommandCode.Debugging);
@@ -1216,8 +1233,6 @@ class Debugging extends VmCommand {
   void internalAddTo(
       Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
     buffer
-        ..addUint32(MapId.methods.index)
-        ..addUint32(MapId.classes.index)
         ..addUint32(MapId.fibers.index)
         ..sendOn(sink, code);
   }
@@ -1455,6 +1470,7 @@ enum VmCommandCode {
   ConnectionError,
   CompilerError,
   SessionEnd,
+  LiveEditing,
   Debugging,
   DisableStandardOutput,
   StdoutData,

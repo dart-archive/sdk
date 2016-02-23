@@ -68,6 +68,8 @@ class Session {
  private:
   // SessionState private methods.
   void ChangeState(SessionState* new_state);
+  bool live_editing() const { return live_editing_; }
+  void set_live_editing(bool live_editing) { live_editing_ = live_editing; }
   bool debugging() const { return debugging_; }
   void set_debugging(bool debugging) { debugging_ = debugging; }
   Process* main_process() const { return main_process_; }
@@ -162,7 +164,11 @@ class Session {
   Program* program_;
   SessionState* state_;
 
+  // Connection support modes.  See enableLiveEditing/enableDebugging in
+  // pkg/dartino_compiler/lib/vm_session.dart
+  bool live_editing_;
   bool debugging_;
+
   Process* main_process_;
   // TODO(zerny): remove use of process_.
   Process* process_;

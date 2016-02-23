@@ -66,6 +66,7 @@ class Connection {
     kConnectionError,
     kCompilerError,
     kSessionEnd,
+    kLiveEditing,
     kDebugging,
     kDisableStandardOutput,
     kStdoutData,
