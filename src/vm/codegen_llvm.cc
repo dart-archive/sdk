@@ -664,9 +664,9 @@ class BasicBlockBuilder {
     auto instance = b.CreateCall(
         w.runtime__HandleAllocate,
         {llvm_process_, llvm_klass, w.CInt(immutable ? 1 : 0)});
-    auto untagged_instance = h.UntagAndCast(instance, w.InstanceTypePtr(fields));
+    auto untagged_instance = h.UntagAndCast(instance, w.object_ptr_ptr_type);
     for (int field = 0; field < fields; field++) {
-      auto pos = b.CreateGEP(untagged_instance, {w.CInt(0), w.CInt(1 + field)});
+      auto pos = b.CreateGEP(untagged_instance, {w.CInt(Instance::kSize / kWordSize + fields - 1 - field)});
       b.CreateStore(pop(), pos);
     }
     push(instance);
