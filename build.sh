@@ -1,5 +1,7 @@
 #!/bin/bash
 
+LLVM_BIN=$HOME/repositories/llvm/llvm-build-release/bin
+
 if [ ! -f "$1" ]; then
   echo "Usage: $0 file.snapshot";
   exit 1;
@@ -39,10 +41,10 @@ run rm -f $BASENAME.bc $BASENAME.ll $BASENAME.S $BASENAME.o
 run out/DebugX64/llvm-codegen $SNAPSHOT $BASENAME.bc
 
 # Make text representation of LLVM IR (for debugging)
-run llvm-dis $BASENAME.bc -o $BASENAME.ll
+run $LLVM_BIN/llvm-dis $BASENAME.bc -o $BASENAME.ll
 
 # Compile LLVM IR to 32-bit x86 asm code.
-run llc -march=x86 -o $BASENAME.S $BASENAME.bc
+run $LLVM_BIN/llc -march=x86 -o $BASENAME.S $BASENAME.bc
 
 # Link generated code together with dartino runtime and llvm embedder.
 run g++ -m32 -o $BASENAME -Lout/DebugIA32 -Lout/DebugIA32/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.S
