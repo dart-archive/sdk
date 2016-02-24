@@ -696,24 +696,38 @@ class BasicBlockBuilder {
     push(b.CreateSelect(b.CreateICmpEQ(pop(), pop()), true_obj, false_obj, "identical_result"));
   }
 
+  static const bool kTaggedArithmetic = true;
+
   void DoAdd() {
     // TODO: Handle about other classes!
-    auto argument = h.DecodeSmi(pop());
-    auto receiver = h.DecodeSmi(pop());
-    push(h.EncodeSmi(b.CreateAdd(receiver, argument)));
+    if (kTaggedArithmetic) {
+      auto argument = b.CreatePtrToInt(pop(), w.intptr_type);
+      auto receiver = b.CreatePtrToInt(pop(), w.intptr_type);
+      push(b.CreateIntToPtr(b.CreateAdd(receiver, argument), w.object_ptr_type));
+    } else {
+      auto argument = h.DecodeSmi(pop());
+      auto receiver = h.DecodeSmi(pop());
+      push(h.EncodeSmi(b.CreateAdd(receiver, argument)));
+    }
   }
 
   void DoSub() {
     // TODO: Handle about other classes!
-    auto argument = h.DecodeSmi(pop());
-    auto receiver = h.DecodeSmi(pop());
-    push(h.EncodeSmi(b.CreateSub(receiver, argument)));
+    if (kTaggedArithmetic) {
+      auto argument = b.CreatePtrToInt(pop(), w.intptr_type);
+      auto receiver = b.CreatePtrToInt(pop(), w.intptr_type);
+      push(b.CreateIntToPtr(b.CreateSub(receiver, argument), w.object_ptr_type));
+    } else {
+      auto argument = h.DecodeSmi(pop());
+      auto receiver = h.DecodeSmi(pop());
+      push(h.EncodeSmi(b.CreateSub(receiver, argument)));
+    }
   }
 
   void DoCompare(Opcode opcode) {
     // TODO: Handle about other classes!
-    auto right = h.DecodeSmi(pop());
-    auto left = h.DecodeSmi(pop());
+    auto right = b.CreatePtrToInt(pop(), w.intptr_type);
+    auto left = b.CreatePtrToInt(pop(), w.intptr_type);
 
     llvm::Value* comp = NULL;
     if (opcode == kInvokeEq) {
@@ -735,7 +749,7 @@ class BasicBlockBuilder {
     push(b.CreateSelect(comp, true_obj, false_obj, "compare_result"));
   }
 
-  void DoInvokeMethod(int selector, int arity, int offset) {
+  void DoInvokeMethod(int selector, int arity) {
     std::vector<llvm::Value*> method_args(1 + 1 + arity);
 
     method_args[0] = llvm_process_;
@@ -746,10 +760,23 @@ class BasicBlockBuilder {
     }
     ASSERT(index == 1);
     auto receiver = method_args[1] = pop();
-    auto function = h.Cast(LookupEntryInDispatchTable(receiver, selector), w.FunctionPtrType(1 + arity));
+    auto code = h.Cast(LookupDispatchTableCode(receiver, selector), w.FunctionPtrType(1 + arity));
 
-    auto result = b.CreateCall(function, method_args, "method_result");
+    auto result = b.CreateCall(code, method_args, "method_result");
     push(result);
+  }
+
+  void DoInvokeTest(int selector) {
+    auto receiver = pop();
+    auto smi_selector_offset = ((selector & Selector::IdField::mask()) >> Selector::IdField::shift()) << Smi::kTagSize;
+
+    auto actual_offset = w.CInt(smi_selector_offset);
+    auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffset(receiver, selector), w.intptr_type);
+
+    auto comp = b.CreateICmpEQ(actual_offset, expected_offset);
+    auto true_obj = h.Cast(w.tagged_heap_objects[w.program_->true_object()]);
+    auto false_obj = h.Cast(w.tagged_heap_objects[w.program_->false_object()]);
+    push(b.CreateSelect(comp, true_obj, false_obj, "compare_result"));
   }
 
   void DoBranch(int bci) {
@@ -778,12 +805,30 @@ class BasicBlockBuilder {
   }
 
  private:
-  llvm::Value* LookupEntryInDispatchTable(llvm::Value* target_object, int selector) {
-    auto bb_smi = llvm::BasicBlock::Create(context, "smi", llvm_function_);;
-    auto bb_nonsmi = llvm::BasicBlock::Create(context, "nonsmi", llvm_function_);;
-    auto bb_lookup = llvm::BasicBlock::Create(context, "lookup", llvm_function_);;
+  llvm::Value* LookupDispatchTableCode(llvm::Value* receiver, int selector) {
+    auto entry = LookupDispatchTableEntry(receiver, selector);
 
-    auto is_smi = b.CreateIsNull(b.CreateAnd(b.CreatePtrToInt(target_object, w.intptr_type), w.CInt(1)));
+    std::vector<llvm::Value*> code_indices = { w.CInt(DispatchTableEntry::kCodeOffset / kWordSize) };
+    llvm::Value* code = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), code_indices), "code");
+
+    return code;
+  }
+
+  llvm::Value* LookupDispatchTableOffset(llvm::Value* receiver, int selector) {
+    auto entry = LookupDispatchTableEntry(receiver, selector);
+
+    std::vector<llvm::Value*> offset_indices = { w.CInt(DispatchTableEntry::kOffsetOffset / kWordSize) };
+    llvm::Value* offset = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), offset_indices), "offset");
+
+    return offset;
+  }
+
+  llvm::Value* LookupDispatchTableEntry(llvm::Value* receiver, int selector) {
+    auto bb_smi = llvm::BasicBlock::Create(context, "smi", llvm_function_);
+    auto bb_nonsmi = llvm::BasicBlock::Create(context, "nonsmi", llvm_function_);
+    auto bb_lookup = llvm::BasicBlock::Create(context, "lookup", llvm_function_);
+
+    auto is_smi = b.CreateIsNull(b.CreateAnd(b.CreatePtrToInt(receiver, w.intptr_type), w.CInt(1)));
     b.CreateCondBr(is_smi, bb_smi, bb_nonsmi);
 
     b.SetInsertPoint(bb_smi);
@@ -792,7 +837,7 @@ class BasicBlockBuilder {
 
     b.SetInsertPoint(bb_nonsmi);
     std::vector<llvm::Value*> klass_indices = { w.CInt(HeapObject::kClassOffset / kWordSize) };
-    auto custom_klass = b.CreateLoad(b.CreateGEP(h.UntagAndCast(target_object, w.object_ptr_ptr_type), klass_indices), "klass");
+    auto custom_klass = b.CreateLoad(b.CreateGEP(h.UntagAndCast(receiver, w.object_ptr_ptr_type), klass_indices), "klass");
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_lookup);
@@ -811,11 +856,7 @@ class BasicBlockBuilder {
     offset = b.CreateAdd(b.CreateUDiv(h.Cast(offset, w.intptr_type), w.CInt(2)), w.CInt(Array::kSize / kWordSize));
     std::vector<llvm::Value*> dentry_indices = { offset };
     auto entry = b.CreateLoad(b.CreateGEP(h.UntagAndCast(dispatch, w.object_ptr_ptr_type), dentry_indices), "dispatch_table_entry");
-
-    std::vector<llvm::Value*> ccode_indices = { w.CInt(DispatchTableEntry::kCodeOffset / kWordSize) };
-    llvm::Value* code = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), ccode_indices), "target_method");
-
-    return code;
+    return entry;
   }
 
   llvm::BasicBlock* GetBasicBlockAt(int bci) {
@@ -926,7 +967,7 @@ class BasicBlocksExplorer {
         Opcode opcode = static_cast<Opcode>(*bcp);
         int next_bci = bci + Bytecode::Size(opcode);
 
-        b.DoDebugPrint(name("[trace fun: %p  bci: @%02d] %s", function_, bci, bytecode_string(bcp)));
+        // b.DoDebugPrint(name("[trace fun: %p  bci: @%02d] %s", function_, bci, bytecode_string(bcp)));
 
         switch (opcode) {
           case kInvokeFactory:
@@ -1258,8 +1299,19 @@ class BasicBlocksExplorer {
           case kInvokeMethod: {
             int selector = Utils::ReadInt32(bcp + 1);
             int arity = Selector::ArityField::decode(selector);
-            int offset = Selector::IdField::decode(selector);
-            b.DoInvokeMethod(selector, arity, offset);
+            b.DoInvokeMethod(selector, arity);
+            break;
+          }
+
+          case kInvokeTest: {
+            int selector = Utils::ReadInt32(bcp + 1);
+            b.DoInvokeTest(selector);
+            break;
+          }
+
+          case kInvokeTestNoSuchMethod: {
+            b.DoDrop(1);
+            b.DoLoadConstant(w.program_->false_object());
             break;
           }
 
