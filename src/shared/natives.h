@@ -182,6 +182,9 @@ namespace dartino {
                                                                              \
   N(ForeignLCallwLw, "ForeignFunction", "_Lcall$wLw", false)                 \
                                                                              \
+  N(ForeignRegisterFinalizer, "Foreign", "_registerFinalizer", false)        \
+  N(ForeignRemoveFinalizer, "Foreign", "_removeFinalizer", false)            \
+                                                                             \
   N(ForeignDecreaseMemoryUsage, "ForeignMemory", "_decreaseMemoryUsage",     \
     false)                                                                   \
   N(ForeignMarkForFinalization, "UnsafeMemory", "_markForFinalization",      \

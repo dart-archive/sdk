@@ -31,6 +31,8 @@ main() {
 
   testImmutablePassing(false);
   testImmutablePassing(true);
+
+  testExternalFinalizer();
 }
 
 checkOutOfBoundsThrows(function) {
@@ -612,4 +614,40 @@ testStruct() {
   struct.free();
   struct64.free();
   struct32.free();
+}
+
+void testExternalFinalizer() {
+  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
+  ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
+
+  var makeA = fl.lookup("make_a_thing");
+  var makeB = fl.lookup("make_b_thing");
+  var finalizer = fl.lookup("free_thing");
+  var check = fl.lookup("get_things");
+
+  var a = makeA.pcall$0();
+  var b = makeB.pcall$0();
+
+  Expect.equals(3, check.icall$0());
+
+  a.registerFinalizer(finalizer, a.address);
+  b.registerFinalizer(finalizer, b.address);
+  Expect.isTrue(b.removeFinalizer(finalizer));
+  Expect.isFalse(b.removeFinalizer(finalizer));
+  Expect.isFalse(b.removeFinalizer(makeA));
+
+  a = null;
+  b = null;
+
+  // Make a GC happen...
+  var x = new List(1024);
+  x[1023] = 42;
+  for (int i = 0; i < 100; i++) {
+    var y = new List(1024);
+    y[1023] = x[1023];
+    x = y;
+  }
+  Expect.equals(42, x[1023]);
+
+  Expect.equals(1, check.icall$0());
 }

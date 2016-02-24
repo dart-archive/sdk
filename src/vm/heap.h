@@ -127,7 +127,11 @@ class Heap {
   int used_foreign_memory() { return foreign_memory_; }
 
   void AddWeakPointer(HeapObject* object, WeakPointerCallback callback);
+  void AddExternalWeakPointer(HeapObject* object,
+                              ExternalWeakPointerCallback callback, void* arg);
   void RemoveWeakPointer(HeapObject* object);
+  bool RemoveExternalWeakPointer(HeapObject* object,
+                                 ExternalWeakPointerCallback callback);
   void ProcessWeakPointers(Space* space);
   void VisitWeakObjectPointers(PointerVisitor* visitor) {
     WeakPointer::Visit(weak_pointers_, visitor);
