@@ -794,57 +794,48 @@ class BasicBlockBuilder {
     push(b.CreateSelect(b.CreateICmpEQ(pop(), pop()), true_obj, false_obj, "identical_result"));
   }
 
-  static const bool kTaggedArithmetic = true;
-
-  void DoAdd(int selector, int arity, int offset) {
-    auto bb_smi = llvm::BasicBlock::Create(context, "smi", llvm_function_);
+  void DoArithmetic(Opcode opcode, int selector) {
+    auto bb_smi_receiver = llvm::BasicBlock::Create(context, "smi_receiver", llvm_function_);
+    auto bb_smis = llvm::BasicBlock::Create(context, "smis", llvm_function_);
     auto bb_nonsmi = llvm::BasicBlock::Create(context, "nonsmi", llvm_function_);
-    auto bb_join = llvm::BasicBlock::Create(context, "lookup", llvm_function_);
+    auto bb_join = llvm::BasicBlock::Create(context, "join", llvm_function_);
 
     auto tagged_argument = pop();
     auto tagged_receiver = pop();
 
-    b.CreateCondBr(h.CreateSmiCheck(tagged_receiver), bb_smi, bb_nonsmi);
+    b.CreateCondBr(h.CreateSmiCheck(tagged_receiver), bb_smi_receiver, bb_nonsmi);
 
-    b.SetInsertPoint(bb_smi);
-    llvm::Value* smi_add_result;
-    if (kTaggedArithmetic) {
-      auto argument = b.CreatePtrToInt(tagged_argument, w.intptr_type);
-      auto receiver = b.CreatePtrToInt(tagged_receiver, w.intptr_type);
-      smi_add_result = b.CreateIntToPtr(b.CreateAdd(receiver, argument), w.object_ptr_type);
+    b.SetInsertPoint(bb_smi_receiver);
+    b.CreateCondBr(h.CreateSmiCheck(tagged_argument), bb_smis, bb_nonsmi);
+
+    b.SetInsertPoint(bb_smis);
+    auto argument = b.CreatePtrToInt(tagged_argument, w.intptr_type);
+    auto receiver = b.CreatePtrToInt(tagged_receiver, w.intptr_type);
+
+    llvm::Value* tagged_result = NULL;
+    if (opcode == kInvokeAdd) {
+      tagged_result = b.CreateAdd(receiver, argument);
+    } else if (opcode == kInvokeSub) {
+      tagged_result = b.CreateSub(receiver, argument);
     } else {
-      auto receiver = h.DecodeSmi(tagged_receiver);
-      auto argument = h.DecodeSmi(tagged_argument);
-      smi_add_result = h.EncodeSmi(b.CreateAdd(receiver, argument));
+      UNREACHABLE();
     }
+    llvm::Value* smi_result = b.CreateIntToPtr(tagged_result, w.object_ptr_type);
     b.CreateBr(bb_join);
 
     b.SetInsertPoint(bb_nonsmi);
     push(tagged_receiver);
     push(tagged_argument);
-    DoInvokeMethod(selector, arity);
-    auto nonsmi_add_result = pop();
+    DoInvokeMethod(selector, 1);
+    auto nonsmi_result = pop();
     b.CreateBr(bb_join);
     bb_nonsmi = b.GetInsertBlock(); // The basic block can be changed by [DoInvokeMethod]!
 
     b.SetInsertPoint(bb_join);
     auto phi = b.CreatePHI(w.object_ptr_type, 2);
-    phi->addIncoming(smi_add_result, bb_smi);
-    phi->addIncoming(nonsmi_add_result, bb_nonsmi);
+    phi->addIncoming(smi_result, bb_smis);
+    phi->addIncoming(nonsmi_result, bb_nonsmi);
     push(phi);
-  }
-
-  void DoSub() {
-    // TODO: Handle about other classes!
-    if (kTaggedArithmetic) {
-      auto argument = b.CreatePtrToInt(pop(), w.intptr_type);
-      auto receiver = b.CreatePtrToInt(pop(), w.intptr_type);
-      push(b.CreateIntToPtr(b.CreateSub(receiver, argument), w.object_ptr_type));
-    } else {
-      auto argument = h.DecodeSmi(pop());
-      auto receiver = h.DecodeSmi(pop());
-      push(h.EncodeSmi(b.CreateSub(receiver, argument)));
-    }
   }
 
   void DoCompare(Opcode opcode) {
@@ -1362,16 +1353,10 @@ class BasicBlocksExplorer {
             break;
           }
 
-          case kInvokeAdd: {
-            int selector = Utils::ReadInt32(bcp + 1);
-            int arity = Selector::ArityField::decode(selector);
-            int offset = Selector::IdField::decode(selector);
-            b.DoAdd(selector, arity, offset);
-            break;
-          }
-
+          case kInvokeAdd:
           case kInvokeSub: {
-            b.DoSub();
+            int selector = Utils::ReadInt32(bcp + 1);
+            b.DoArithmetic(opcode, selector);
             break;
           }
 
