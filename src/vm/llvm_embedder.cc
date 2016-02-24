@@ -31,5 +31,6 @@ static int Main(int argc, char** argv) {
 
 // Forward main calls to dartino::Main.
 int main(int argc, char** argv) {
+  setbuf(stdout, NULL);
   return dartino::Main(argc, argv);
 }

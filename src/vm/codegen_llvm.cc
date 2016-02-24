@@ -892,8 +892,7 @@ class BasicBlockBuilder {
     b.CreateCondBr(b.CreateICmpEQ(actual_offset, expected_offset), bb_lookup_success, bb_lookup_failure);
 
     b.SetInsertPoint(bb_lookup_failure);
-    DoDebugPrint("Method lookup failed. Exiting due to fatal error");
-    b.CreateCall(w.libc__exit, {w.CInt(1)});
+    DoExitFatal("Method lookup failed. Exiting due to fatal error");
     b.CreateRet(llvm::ConstantStruct::getNullValue(w.object_ptr_type));
 
     b.SetInsertPoint(bb_lookup_success);
@@ -942,6 +941,11 @@ class BasicBlockBuilder {
 
   void DoDebugPrint(const char* message) {
     b.CreateCall(w.libc__printf, {h.BuildCString(message)});
+  }
+
+  void DoExitFatal(const char* message) {
+    DoDebugPrint(message);
+    b.CreateCall(w.libc__exit, {w.CInt(1)});
   }
 
  private:
@@ -1436,7 +1440,7 @@ class BasicBlocksExplorer {
           }
 
           default: {
-            b.DoDebugPrint(name("Unsupported bytecode: %s", bytecode_string(bcp)));
+            b.DoExitFatal(name("Unsupported bytecode: %s. Exiting due to fatal error.", bytecode_string(bcp)));
             b.DoReturnNull();
             Print::Error("     ---> Unsupported \"%s\"\n", bytecode_string(bcp));
             stop = true;

@@ -170,7 +170,10 @@ void AddToStoreBufferSlow(Process* process, Object* object, Object* value) {
 
 Object* HandleAllocateBoxed(Process* process, Object* value) {
   Object* boxed = process->NewBoxed(value);
-  if (boxed->IsFailure()) return boxed;
+  if (boxed->IsFailure()) {
+    FATAL("We don't have support for allocation failures yet.");
+    return boxed;
+  }
 
   if (value->IsHeapObject() && !value->IsNull()) {
     process->remembered_set()->Insert(HeapObject::cast(boxed));
