@@ -62,6 +62,7 @@ class World {
   llvm::Constant* CUnTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
   llvm::Constant* CInt(uint32 integer);
   llvm::Constant* CInt64(int64 value);
+  llvm::Constant* CDouble(double value);
   llvm::Constant* CSmi(uint32 integer);
   llvm::Constant* CPointer2Int(llvm::Constant* constant);
   llvm::Constant* CInt2Pointer(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
@@ -77,6 +78,7 @@ class World {
   llvm::IntegerType* int8_type;
   llvm::PointerType* int8_ptr_type;
   llvm::IntegerType* int64_type;
+  llvm::Type* float_type;
 
   llvm::StructType* object_type;
   llvm::PointerType* object_ptr_type;
@@ -105,6 +107,9 @@ class World {
 
   llvm::StructType* largeinteger_type;
   llvm::PointerType* largeinteger_ptr_type;
+
+  llvm::StructType* double_type;
+  llvm::PointerType* double_ptr_type;
 
   llvm::StructType* dte_type;
   llvm::PointerType* dte_ptr_type;

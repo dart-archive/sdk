@@ -149,7 +149,6 @@ class HeapBuilder : public HeapObjectVisitor {
 
     // TODO
     // Missing are:
-    //    * Double
     //    * BaseArray->ByteArray
     //    * BaseArray->TwoByteString
     //
@@ -173,6 +172,8 @@ class HeapBuilder : public HeapObjectVisitor {
       value = BuildInitializerConstant(Initializer::cast(object));
     } else if (object->IsLargeInteger()) {
       value = BuildLargeInteger(LargeInteger::cast(object)->value());
+    } else if (object->IsDouble()) {
+      value = BuildDoubleConstant(Double::cast(object)->value());
     } else {
       UNREACHABLE();
       auto null = llvm::ConstantStruct::getNullValue(ot);
@@ -323,11 +324,11 @@ class HeapBuilder : public HeapObjectVisitor {
     BuildConstant(initializer->function());
 
     auto ho = llvm::ConstantStruct::get(w.heap_object_type, {BuildConstant(initializer->get_class())});
-    std::vector<llvm::Constant*> initializer_entries= {
+    std::vector<llvm::Constant*> entries = {
       ho, // heap object
       w.CCast(w.llvm_functions[initializer->function()]), // machine code
     };
-    auto initializer_object = llvm::ConstantStruct::get(w.initializer_type, initializer_entries);
+    auto initializer_object = llvm::ConstantStruct::get(w.initializer_type, entries);
     return new llvm::GlobalVariable(w.module_, w.initializer_type, true, llvm::GlobalValue::ExternalLinkage, initializer_object, name("InitializerObject_%p", initializer));
   }
 
@@ -335,12 +336,24 @@ class HeapBuilder : public HeapObjectVisitor {
     auto large_integer_klass = BuildConstant(w.program_->large_integer_class());
 
     auto ho = llvm::ConstantStruct::get(w.heap_object_type, {large_integer_klass});
-    std::vector<llvm::Constant*> initializer_entries= {
+    std::vector<llvm::Constant*> entries = {
       ho, // heap object
       w.CInt64(value), // 64-bit int
     };
-    auto large_integer = llvm::ConstantStruct::get(w.largeinteger_type, initializer_entries);
+    auto large_integer = llvm::ConstantStruct::get(w.largeinteger_type, entries);
     return new llvm::GlobalVariable(w.module_, w.largeinteger_type, true, llvm::GlobalValue::ExternalLinkage, large_integer, name("LargeIntegerObject_%p", value));
+  }
+
+  llvm::Constant* BuildDoubleConstant(double value) {
+    auto double_klass = BuildConstant(w.program_->double_class());
+
+    auto ho = llvm::ConstantStruct::get(w.heap_object_type, {double_klass});
+    std::vector<llvm::Constant*> entries = {
+      ho, // heap object
+      w.CDouble(value), // 64-bit double
+    };
+    auto double_object = llvm::ConstantStruct::get(w.double_type, entries);
+    return new llvm::GlobalVariable(w.module_, w.double_type, true, llvm::GlobalValue::ExternalLinkage, double_object, "DoubleObject");
   }
 
   llvm::Constant* BuildInstanceFormat(Class* klass) {
@@ -1637,6 +1650,8 @@ World::World(Program* program,
       intptr_type(NULL),
       int8_type(NULL),
       int8_ptr_type(NULL),
+      int64_type(NULL),
+      float_type(NULL),
       object_type(NULL),
       object_ptr_type(NULL),
       object_ptr_ptr_type(NULL),
@@ -1656,16 +1671,23 @@ World::World(Program* program,
       instance_ptr_type(NULL),
       largeinteger_type(NULL),
       largeinteger_ptr_type(NULL),
+      double_type(NULL),
+      double_ptr_type(NULL),
       roots(NULL),
       libc__printf(NULL),
       runtime__HandleGC(NULL),
       runtime__HandleAllocate(NULL),
       runtime__HandleAllocateBoxed(NULL),
       runtime__HandleObjectFromFailure(NULL) {
+  // NOTE: Our target pointer is assumed to be 32-bit!
   intptr_type = llvm::Type::getInt32Ty(context);
+
   int8_type = llvm::Type::getInt8Ty(context);
   int8_ptr_type = llvm::PointerType::get(int8_type, 0);
   int64_type = llvm::Type::getInt64Ty(context);
+
+  // NOTE: Our target dart double's are assumed to be 64-bit C double!
+  float_type = llvm::Type::getDoubleTy(context);
 
   object_type = llvm::StructType::create(context, "Tagged");
   object_ptr_type = llvm::PointerType::get(object_type, 0);
@@ -1694,6 +1716,9 @@ World::World(Program* program,
 
   largeinteger_type = llvm::StructType::create(context, "LargeIntegerType");
   largeinteger_ptr_type = llvm::PointerType::get(largeinteger_type, 0);
+
+  double_type = llvm::StructType::create(context, "DoubleType");
+  double_ptr_type = llvm::PointerType::get(double_type, 0);
 
   dte_type = llvm::StructType::create(context, "DispatchTableEntry");
   dte_ptr_type = llvm::PointerType::get(dte_type, 0);
@@ -1757,6 +1782,12 @@ World::World(Program* program,
   largeint_entries.push_back(heap_object_type);
   largeint_entries.push_back(int64_type);
   largeinteger_type->setBody(largeint_entries, true);
+
+  // [double_type]
+  std::vector<llvm::Type*> double_entries;
+  double_entries.push_back(heap_object_type);
+  double_entries.push_back(float_type);
+  double_type->setBody(double_entries, true);
 
   // [dte_type]
   std::vector<llvm::Type*> dte_object_entries;
@@ -1864,6 +1895,9 @@ llvm::Constant* World::CInt64(int64 value) {
   return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(64, value, true));
 }
 
+llvm::Constant* World::CDouble(double value) {
+  return llvm::ConstantFP::get(float_type, value);
+}
 
 llvm::Constant* World::CSmi(uint32 integer) {
   return CInt(static_cast<uint32>(reinterpret_cast<intptr_t>(Smi::FromWord(integer))));
