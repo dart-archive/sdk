@@ -538,6 +538,17 @@ def StepsLK(debug_log):
         debug_log=debug_log,
         snapshot_run=True)
 
+  with bot.BuildStep('Test (heap blobs) %s' %
+                     device_configuration['build_conf']):
+    # TODO(ajohnsen): This is kind of funky, as test.py tries to start the
+    # background process using -a and -m flags. We should maybe changed so
+    # test.py can have both a host and target configuration.
+    StepTest(
+        configuration=device_configuration,
+        debug_log=debug_log,
+        use_heap_blob=True,
+        snapshot_run=True)
+
 def StepsCrossBuilder(debug_log, system, modes, arch):
   """This step builds XARM configurations and archives the results.
 
@@ -675,6 +686,7 @@ def StepBuild(build_config, build_dir, args=()):
 def StepTest(
     configuration=None,
     snapshot_run=False,
+    use_heap_blob=False,
     debug_log=None):
   name = configuration['build_conf']
   mode = configuration['mode']
@@ -705,6 +717,9 @@ def StepTest(
       #  - normal dartino VM
       #  - dartino VM with -Xunfold-program enabled
       args.extend(['-cdartino_compiler', '-rdartinovm'])
+
+    if use_heap_blob:
+      args.append('--use-heap-blob')
 
     if use_sdk:
       args.append('--use-sdk')

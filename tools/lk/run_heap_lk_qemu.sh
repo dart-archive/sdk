@@ -3,13 +3,18 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-if [ "$1" == "-m" ]; then
+if [ "$1" = "-m" ]; then
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 (cd ${DIR}/../../third_party/lk; make -j4 DEBUG=1)
 shift
 fi
 
-if [ "$1" == "-h" ]; then
+if [ ! -f out/DebugLKFull/flashtool ]; then
+  echo "flashtool was not built. Please fix the LK makefile."
+  exit 1
+fi
+
+if [ "$1" = "-h" ]; then
 echo "Usage: $0 <options> <snapshotfile>"
 echo
 echo "Options:"
@@ -25,7 +30,6 @@ echo "$0: Expecting a snapshot file as fist argument."
 exit 1
 fi
 
-SIZE=$(cat $1 | wc -c)
 PIPEDIR=$(mktemp -d)
 
 cleanup_file() {
@@ -51,8 +55,40 @@ echo "Started with PID $PID"
 echo "Waiting for qemu to come up..."
 grep -qe "entering main console loop" $PIPEDIR/qemu.out
 
-echo "Starting dartino..."
-echo "dartino snapshot" > $PIPEDIR/qemu.in
+echo "Requesting flashtool options..."
+echo "dartino getinfo" > $PIPEDIR/qemu.in
+
+echo "Waiting for response..."
+while IFS='' read -r line; do
+  echo $line
+  if [ "$line" = $'COMMANDARGS\r' ]; then
+    break;
+  fi
+done < $PIPEDIR/qemu.out
+read -r ARGS < $PIPEDIR/qemu.out
+read -r BASEADDR < $PIPEDIR/qemu.out
+
+ARGS=$(echo $ARGS | tr -d '\n\r')
+BASEADDR=$(echo $BASEADDR | tr -d '\n\r')
+
+echo
+echo "Repsonse was $ARGS"
+echo "and $BASEADDR..."
+echo
+
+echo "Building program heap..."
+echo
+out/DebugLKFull/flashtool $ARGS $1 $BASEADDR $PIPEDIR/heap.blob
+if [ $? != 0 ]; then
+  echo "Building heap blob failed..."
+  echo $(pwd)/out/DebugLKFull/flashtool $ARGS $1 $BASEADDR $PIPEDIR/heap.blob
+  exit 1
+fi
+
+SIZE=$(cat $PIPEDIR/heap.blob | wc -c)
+
+echo "Requesting run of program heap..."
+echo "dartino heap" > $PIPEDIR/qemu.in
 
 echo "Waiting for size..."
 grep -qe "STEP1" $PIPEDIR/qemu.out
@@ -60,11 +96,11 @@ grep -qe "STEP1" $PIPEDIR/qemu.out
 echo "Sending size ($SIZE)..."
 echo $SIZE >$PIPEDIR/qemu.in
 
-echo "Waiting for snapshot request..."
+echo "Waiting for blob request..."
 grep -qe "STEP2" $PIPEDIR/qemu.out
 
-echo "Sending snapshot..."
-cat $1 >$PIPEDIR/qemu.in
+echo "Sending blob..."
+cat $PIPEDIR/heap.blob >$PIPEDIR/qemu.in
 
 while IFS='' read -r line; do
   echo "$line"

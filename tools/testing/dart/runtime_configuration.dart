@@ -188,11 +188,19 @@ class DartinoVMRuntimeConfiguration extends DartVmRuntimeConfiguration {
         ["-Xunfold-program", "-Xabort-on-sigterm"]..addAll(arguments);
 
     if (configuration['system'] == 'lk') {
-      return <Command>[
-          commandBuilder.getVmCommand(
-              "tools/lk/run_snapshot_lk_qemu.sh",
-              arguments,
-              environmentOverrides)];
+      if (configuration['use_heap_blob']) {
+        return <Command>[
+            commandBuilder.getVmCommand(
+                "tools/lk/run_heap_lk_qemu.sh",
+                arguments,
+                environmentOverrides)];
+      } else {
+        return <Command>[
+            commandBuilder.getVmCommand(
+                "tools/lk/run_snapshot_lk_qemu.sh",
+                arguments,
+                environmentOverrides)];
+      }
     }
 
     var useSdk = configuration['use_sdk'];

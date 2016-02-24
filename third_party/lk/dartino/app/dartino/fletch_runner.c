@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <string.h>
 #include <app.h>
 #include <include/dartino_api.h>
 #include <include/static_ffi.h>
@@ -66,8 +67,11 @@ DARTINO_EXPORT_STATIC(gfx_flush);
 #endif
 #endif
 
-int ReadSnapshot(unsigned char** snapshot) {
-  printf("READY TO READ SNAPSHOT DATA.\n");
+// static buffer to hold snapshot/heap
+static unsigned char buffer[512 * 1024] __attribute__((aligned(4096)));
+
+int ReadBlob(void) {
+  printf("READY TO READ DATA.\n");
   printf("STEP1: size.\n");
   char size_buf[10];
   int pos = 0;
@@ -77,27 +81,40 @@ int ReadSnapshot(unsigned char** snapshot) {
   if (pos > 9) abort();
   size_buf[pos] = 0;
   int size = atoi(size_buf);
-  unsigned char* result = malloc(size);
-  printf("\nSTEP2: reading snapshot of %d bytes.\n", size);
+  if (size < 0 || (unsigned int) size > sizeof(buffer)) abort();
+  printf("\nSTEP2: reading blob of %d bytes.\n", size);
   int status = 0;
   for (pos = 0; pos < size; pos++, status++) {
-    result[pos] = getchar();
+    buffer[pos] = getchar();
     if (status == 1024) {
       putchar('.');
       status = 0;
     }
   }
   printf("\nSNAPSHOT READ.\n");
-  *snapshot = result;
   return size;
 }
 
-int RunSnapshot(unsigned char* snapshot, int size) {
+void PrintArgs(unsigned char* buffer);
+
+int RunHeap(int size) {
+  printf("STARTING dartino-vm...\n");
+  DartinoSetup();
+  printf("LOADING program heap...\n");
+  DartinoProgram program = DartinoLoadProgramFromFlash(buffer, size);
+  printf("RUNNING program...\n");
+  int result = DartinoRunMain(program, 0, NULL);
+  printf("TEARING DOWN dartino-vm...\n");
+  printf("EXIT CODE: %i\n", result);
+  DartinoTearDown();
+  return result;
+}
+
+int RunSnapshot(int size) {
   printf("STARTING dartino-vm...\n");
   DartinoSetup();
   printf("LOADING snapshot...\n");
-  DartinoProgram program = DartinoLoadSnapshot(snapshot, size);
-  free(snapshot);
+  DartinoProgram program = DartinoLoadSnapshot(buffer, size);
   printf("RUNNING program...\n");
   int result = DartinoRunMain(program, 0, NULL);
   printf("DELETING program...\n");
@@ -111,19 +128,10 @@ int RunSnapshot(unsigned char* snapshot, int size) {
 #if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>
 
-int Run(void* ptr) {
-  unsigned char* snapshot;
-  int length = ReadSnapshot(&snapshot);
-  return RunSnapshot(snapshot, length);
-}
-
-static int DartinoRunner(int argc, const cmd_args *argv) {
-  // TODO(ajohnsen): Investigate if we can use the 'shell' thread instaed of
-  // the Dart main thread. Currently, we get stack overflows (into the kernel)
-  // when using the shell thread.
+int RunInThread(int (runner)(int), int size) {
   thread_t* thread = thread_create(
-      "Dart main thread", Run, NULL, DEFAULT_PRIORITY,
-      8 * 1024 /* stack size */);
+      "Dart main thread", (thread_start_routine) runner, (void*) size,
+      DEFAULT_PRIORITY, 8 * 1024 /* stack size */);
   thread_resume(thread);
 
   int retcode;
@@ -132,6 +140,27 @@ static int DartinoRunner(int argc, const cmd_args *argv) {
   return retcode;
 }
 
+static int DartinoRunner(int argc, const cmd_args *argv) {
+  if (argc == 2) {
+    if (strcmp(argv[1].str, "getinfo") == 0) {
+      PrintArgs(buffer);
+      return 0;
+    } else if (strcmp(argv[1].str, "heap") == 0) {
+      int size = ReadBlob();
+      return RunInThread(RunHeap, size);
+    } else if (strcmp(argv[1].str, "snapshot") == 0) {
+      int size = ReadBlob();
+      return RunInThread(RunSnapshot, size);
+    }
+  }
+  printf("Illegal arguments to %s. Expected\n\n", argv[0].str);
+  printf("  getinfo    : Print commandline arguments to flashtool\n");
+  printf("  heap       : Load and run a program heap\n");
+  printf("  snapshot   : Load and run a snapshot\n");
+  return -1;
+}
+
+
 STATIC_COMMAND_START
 STATIC_COMMAND("dartino", "dartino vm", &DartinoRunner)
 STATIC_COMMAND_END(dartinorunner);
@@ -139,5 +168,4 @@ STATIC_COMMAND_END(dartinorunner);
 
 APP_START(dartinorunner)
 .flags = APP_FLAG_CUSTOM_STACK_SIZE,
-.stack_size = 8192,
 APP_END

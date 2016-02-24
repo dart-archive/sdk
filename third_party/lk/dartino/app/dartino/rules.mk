@@ -11,6 +11,7 @@ MODULE_DEPS += \
 MODULE_SRCS += \
 	$(LOCAL_DIR)/fletch_runner.c \
 	$(LOCAL_DIR)/missing.c \
+	$(LOCAL_DIR)/print_args.cpp \
 
 MODULE_INCLUDES += $(DARTINO_BASE)
 
@@ -27,6 +28,7 @@ $(DARTINO_BASE)/out/Debug$(DARTINO_CONFIGURATION)/libdartino.a: force_dartino_ta
 	GYP_DEFINES=$(DARTINO_GYP_DEFINES) ninja -C $(DARTINO_BASE) lk
 	ninja -C $(DARTINO_BASE)/out/Debug$(DARTINO_CONFIGURATION)/ libdartino -t clean
 	ninja -C $(DARTINO_BASE)/out/Debug$(DARTINO_CONFIGURATION)/ libdartino
+	ninja -C $(DARTINO_BASE)/out/Debug$(DARTINO_CONFIGURATION)/ flashtool
 
 $(DARTINO_BASE)/out/Release$(DARTINO_CONFIGURATION)/libdartino.a: force_dartino_target
 	ninja -C $(DARTINO_BASE) lk -t clean
