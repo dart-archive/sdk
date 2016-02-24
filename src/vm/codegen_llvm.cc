@@ -699,16 +699,20 @@ class BasicBlockBuilder {
     auto process = h.Cast(llvm_process_, void_ptr);
     auto array = b.CreateAlloca(w.object_ptr_type, w.CInt(arity));
 
-    llvm::Value* array_pos = array;
     for (int i = 0; i < arity; i++) {
+      std::vector<llvm::Value*> indices = {w.CInt(i)};
+      auto array_pos = b.CreateGEP(array, indices);
       auto arg = b.CreateLoad(stack_[i]);
       b.CreateStore(arg, array_pos);
-      std::vector<llvm::Value*> indices = {w.CInt(1)};
-      array_pos = b.CreateGEP(array_pos, indices);
     }
 
     llvm::Function* native = w.natives_[nativeId];
-    std::vector<llvm::Value*> args = {process, array};
+
+    // NOTE: We point to the last element of the array.
+    std::vector<llvm::Value*> indices = {w.CInt(arity - 1)};
+    auto last_element_in_array = b.CreateGEP(array, indices);
+
+    std::vector<llvm::Value*> args = {process, last_element_in_array};
     auto result = b.CreateCall(native, args, "native_call_result");
     push(result);
 
