@@ -132,9 +132,12 @@ class HeapBuilder : public HeapObjectVisitor {
 
   llvm::Constant* BuildConstant(Object* raw_object) {
     if (!raw_object->IsHeapObject()) {
-      ASSERT(raw_object->IsSmi());
       Smi* smi = Smi::cast(raw_object);
-      return w.CCast(w.CInt2Pointer(w.CSmi(smi->value())));
+      if (Smi::IsValidAsPortable(smi->value())) {
+        return w.CCast(w.CInt2Pointer(w.CSmi(smi->value())));
+      } else {
+        return BuildLargeInteger(smi->value());
+      }
     }
 
     HeapObject* object = HeapObject::cast(raw_object);
@@ -146,14 +149,12 @@ class HeapBuilder : public HeapObjectVisitor {
 
     // TODO
     // Missing are:
-    //    * Boxed
     //    * Double
-    //    * Initializer
-    //    * LargeInteger
     //    * BaseArray->ByteArray
     //    * BaseArray->TwoByteString
     //
     // We should not need these:
+    //    * Boxed
     //    * BaseArray->Stack
     //    * Instance->Coroutine
     if (object->IsFunction()) {
@@ -170,7 +171,10 @@ class HeapBuilder : public HeapObjectVisitor {
       value = BuildOneByteStringConstant(OneByteString::cast(object));
     } else if (object->IsInitializer()) {
       value = BuildInitializerConstant(Initializer::cast(object));
+    } else if (object->IsLargeInteger()) {
+      value = BuildLargeInteger(LargeInteger::cast(object)->value());
     } else {
+      UNREACHABLE();
       auto null = llvm::ConstantStruct::getNullValue(ot);
       value = new llvm::GlobalVariable(w.module_, ot, true, llvm::GlobalValue::ExternalLinkage, null, name("Object_%p", object));
     }
@@ -325,6 +329,18 @@ class HeapBuilder : public HeapObjectVisitor {
     };
     auto initializer_object = llvm::ConstantStruct::get(w.initializer_type, initializer_entries);
     return new llvm::GlobalVariable(w.module_, w.initializer_type, true, llvm::GlobalValue::ExternalLinkage, initializer_object, name("InitializerObject_%p", initializer));
+  }
+
+  llvm::Constant* BuildLargeInteger(int64 value) {
+    auto large_integer_klass = BuildConstant(w.program_->large_integer_class());
+
+    auto ho = llvm::ConstantStruct::get(w.heap_object_type, {large_integer_klass});
+    std::vector<llvm::Constant*> initializer_entries= {
+      ho, // heap object
+      w.CInt64(value), // 64-bit int
+    };
+    auto large_integer = llvm::ConstantStruct::get(w.largeinteger_type, initializer_entries);
+    return new llvm::GlobalVariable(w.module_, w.largeinteger_type, true, llvm::GlobalValue::ExternalLinkage, large_integer, name("LargeIntegerObject_%p", value));
   }
 
   llvm::Constant* BuildInstanceFormat(Class* klass) {
@@ -1638,6 +1654,8 @@ World::World(Program* program,
       initializer_ptr_type(NULL),
       instance_type(NULL),
       instance_ptr_type(NULL),
+      largeinteger_type(NULL),
+      largeinteger_ptr_type(NULL),
       roots(NULL),
       libc__printf(NULL),
       runtime__HandleGC(NULL),
@@ -1647,6 +1665,7 @@ World::World(Program* program,
   intptr_type = llvm::Type::getInt32Ty(context);
   int8_type = llvm::Type::getInt8Ty(context);
   int8_ptr_type = llvm::PointerType::get(int8_type, 0);
+  int64_type = llvm::Type::getInt64Ty(context);
 
   object_type = llvm::StructType::create(context, "Tagged");
   object_ptr_type = llvm::PointerType::get(object_type, 0);
@@ -1672,6 +1691,9 @@ World::World(Program* program,
 
   instance_type = llvm::StructType::create(context, "InstanceType");
   instance_ptr_type = llvm::PointerType::get(instance_type, 0);
+
+  largeinteger_type = llvm::StructType::create(context, "LargeIntegerType");
+  largeinteger_ptr_type = llvm::PointerType::get(largeinteger_type, 0);
 
   dte_type = llvm::StructType::create(context, "DispatchTableEntry");
   dte_ptr_type = llvm::PointerType::get(dte_type, 0);
@@ -1729,6 +1751,12 @@ World::World(Program* program,
   instance_object_entries.push_back(heap_object_type);
   instance_object_entries.push_back(intptr_type); // flags
   instance_type->setBody(instance_object_entries, true);
+
+  // [largeinteger_type]
+  std::vector<llvm::Type*> largeint_entries;
+  largeint_entries.push_back(heap_object_type);
+  largeint_entries.push_back(int64_type);
+  largeinteger_type->setBody(largeint_entries, true);
 
   // [dte_type]
   std::vector<llvm::Type*> dte_object_entries;
@@ -1831,6 +1859,11 @@ llvm::Constant* World::CInt(uint32 value) {
   uint64 value64 = value;
   return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(32, value64, false));
 }
+
+llvm::Constant* World::CInt64(int64 value) {
+  return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(64, value, true));
+}
+
 
 llvm::Constant* World::CSmi(uint32 integer) {
   return CInt(static_cast<uint32>(reinterpret_cast<intptr_t>(Smi::FromWord(integer))));
