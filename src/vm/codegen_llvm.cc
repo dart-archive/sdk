@@ -416,6 +416,14 @@ class IRHelper {
     return b->CreateLoad(b->CreateGEP(untagged, indices, "init_fun"));
   }
 
+  llvm::Value* CreateSmiCheck(llvm::Value* object) {
+    return b->CreateIsNull(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CInt(1)));
+  }
+
+  llvm::Value* CreateFailureCheck(llvm::Value* object) {
+    return b->CreateICmpEQ(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CInt(3)), w.CInt(3));
+  }
+
   llvm::Value* Null() {
     return llvm::ConstantStruct::getNullValue(w.object_ptr_type);
   }
@@ -713,11 +721,20 @@ class BasicBlockBuilder {
     auto last_element_in_array = b.CreateGEP(array, indices);
 
     std::vector<llvm::Value*> args = {process, last_element_in_array};
-    auto result = b.CreateCall(native, args, "native_call_result");
-    push(result);
+    auto native_result= b.CreateCall(native, args, "native_call_result");
 
-    // TODO: Check for Failure::xxx result!
-    b.CreateRet(result);
+    auto bb_failure = llvm::BasicBlock::Create(context, "failure", llvm_function_);
+    auto bb_no_failure = llvm::BasicBlock::Create(context, "no_failure", llvm_function_);
+    b.CreateCondBr(h.CreateFailureCheck(native_result), bb_failure, bb_no_failure);
+
+    b.SetInsertPoint(bb_no_failure);
+    b.CreateRet(native_result);
+
+    // We convert the failure id into a failure object and let the rest of the
+    // bytecodes do its work.
+    b.SetInsertPoint(bb_failure);
+    auto failure_object = b.CreateCall(w.runtime__HandleObjectFromFailure, {llvm_process_, native_result});
+    push(failure_object);
   }
 
   void DoIdentical() {
@@ -1252,11 +1269,6 @@ class BasicBlocksExplorer {
             int arity = *(bcp + 1);
             Native native = static_cast<Native>(*(bcp + 2));
             b.DoInvokeNative(native, arity);
-
-            // FIXME: we should generate the other bytecodes handling
-            // failures as well.
-            stop = true;
-
             break;
           }
 
@@ -1602,7 +1614,8 @@ World::World(Program* program,
       libc__printf(NULL),
       runtime__HandleGC(NULL),
       runtime__HandleAllocate(NULL),
-      runtime__HandleAllocateBoxed(NULL) {
+      runtime__HandleAllocateBoxed(NULL),
+      runtime__HandleObjectFromFailure(NULL) {
   intptr_type = llvm::Type::getInt32Ty(context);
   int8_type = llvm::Type::getInt8Ty(context);
   int8_ptr_type = llvm::PointerType::get(int8_type, 0);
@@ -1715,10 +1728,12 @@ World::World(Program* program,
   auto handle_gc_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {object_ptr_type}, false);
   auto handle_allocate_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type, intptr_type}, false);
   auto handle_allocate_boxed_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type}, false);
+  auto handle_object_from_failure_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type}, false);
 
   runtime__HandleGC = llvm::Function::Create(handle_gc_type, llvm::Function::ExternalLinkage, "HandleGC", &module_);
   runtime__HandleAllocate = llvm::Function::Create(handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate", &module_);
   runtime__HandleAllocateBoxed = llvm::Function::Create(handle_allocate_boxed_type, llvm::Function::ExternalLinkage, "HandleAllocateBoxed", &module_);
+  runtime__HandleObjectFromFailure = llvm::Function::Create(handle_object_from_failure_type, llvm::Function::ExternalLinkage, "HandleObjectFromFailure", &module_);
 }
 
 llvm::StructType* World::ObjectArrayType(int n) {
