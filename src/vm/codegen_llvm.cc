@@ -749,6 +749,13 @@ class BasicBlockBuilder {
     push(b.CreateSelect(comp, true_obj, false_obj, "compare_result"));
   }
 
+  void DoNegate() {
+    auto true_obj = w.tagged_heap_objects[w.program_->true_object()];
+    auto false_obj = w.tagged_heap_objects[w.program_->false_object()];
+    auto comp = b.CreateICmpEQ(pop(), w.CCast(true_obj));
+    push(b.CreateSelect(comp, h.Cast(false_obj), h.Cast(true_obj), "negate"));
+  }
+
   void DoInvokeMethod(int selector, int arity) {
     std::vector<llvm::Value*> method_args(1 + 1 + arity);
 
@@ -1204,11 +1211,6 @@ class BasicBlocksExplorer {
             break;
           }
 
-          case kNegate: {
-            DoNegate();
-            break;
-          }
-
           case kProcessYield: {
             DoProcessYield();
             basic_block_.Clear();
@@ -1263,6 +1265,11 @@ class BasicBlocksExplorer {
           case kAllocateImmutable: {
             Class* klass = Class::cast(Function::ConstantForBytecode(bcp));
             b.DoAllocate(klass, opcode == kAllocateImmutable);
+            break;
+          }
+
+          case kNegate: {
+            b.DoNegate();
             break;
           }
 
