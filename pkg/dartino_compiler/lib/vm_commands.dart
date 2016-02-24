@@ -75,9 +75,10 @@ abstract class VmCommand {
         return backtrace;
       case VmCommandCode.ProcessBreakpoint:
         int breakpointId = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        int functionId = CommandBuffer.readInt64FromBuffer(buffer, 4);
-        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 12);
-        return new ProcessBreakpoint(breakpointId, functionId, bytecodeIndex);
+        int processId = CommandBuffer.readInt32FromBuffer(buffer, 4);
+        int functionId = CommandBuffer.readInt64FromBuffer(buffer, 8);
+        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 16);
+        return new ProcessBreakpoint(breakpointId, processId, functionId, bytecodeIndex);
       case VmCommandCode.ProcessDeleteBreakpoint:
         int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessDeleteBreakpoint(id);
@@ -940,8 +941,8 @@ class ProcessBacktrace extends VmCommand {
 class ProcessBacktraceRequest extends VmCommand {
   final int processId;
 
-  // TODO(zerny): Make the process id non-optional and non-negative.
-  const ProcessBacktraceRequest([this.processId = -1])
+  // TODO(zerny): Make the process id non-negative.
+  const ProcessBacktraceRequest(this.processId)
       : super(VmCommandCode.ProcessBacktraceRequest);
 
   void internalAddTo(
@@ -990,11 +991,12 @@ class ProcessUncaughtExceptionRequest extends VmCommand {
 
 class ProcessBreakpoint extends VmCommand {
   final int breakpointId;
+  final int processId;
   final int functionId;
   final int bytecodeIndex;
 
   const ProcessBreakpoint(
-      this.breakpointId, this.functionId, this.bytecodeIndex)
+      this.breakpointId, this.processId, this.functionId, this.bytecodeIndex)
       : super(VmCommandCode.ProcessBreakpoint);
 
   void internalAddTo(
@@ -1004,7 +1006,8 @@ class ProcessBreakpoint extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$breakpointId, $functionId, $bytecodeIndex";
+  String valuesToString() =>
+      "$breakpointId, $processId, $functionId, $bytecodeIndex";
 }
 
 class ProcessLocal extends VmCommand {

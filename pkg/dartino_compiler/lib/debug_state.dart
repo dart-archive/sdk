@@ -69,6 +69,7 @@ class DebugState {
 
   bool showInternalFrames = false;
   bool verbose = true;
+  int currentProcess = -1;
   BackTraceFrame _topFrame;
   RemoteObject currentUncaughtException;
   BackTrace _currentBackTrace;
@@ -78,6 +79,7 @@ class DebugState {
   DebugState(this.session);
 
   void reset() {
+    currentProcess = -1;
     _topFrame = null;
     currentUncaughtException = null;
     _currentBackTrace = null;

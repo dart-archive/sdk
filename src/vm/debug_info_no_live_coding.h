@@ -23,6 +23,10 @@ class Breakpoints {
   void UpdateBreakpoints() {}
   void VisitPointers(PointerVisitor* visitor) {}
   void VisitProgramPointers(PointerVisitor* visitor) {}
+  bool IsEmpty() const {
+    UNIMPLEMENTED();
+    return true;
+  }
 };
 
 class DebugInfo {

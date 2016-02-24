@@ -336,6 +336,7 @@ class Session extends DartinoVmSession {
 
       case VmCommandCode.ProcessBreakpoint:
         ProcessBreakpoint command = response;
+        debugState.currentProcess = command.processId;
         var function = dartinoSystem.lookupFunctionById(command.functionId);
         debugState.topFrame = new BackTraceFrame(
             function, command.bytecodeIndex, compiler, debugState);
@@ -607,7 +608,8 @@ class Session extends DartinoVmSession {
     assert(loaded);
     if (debugState.currentBackTrace == null) {
       ProcessBacktrace backtraceResponse =
-          await runCommand(const ProcessBacktraceRequest());
+          await runCommand(
+              new ProcessBacktraceRequest(debugState.currentProcess));
       debugState.currentBackTrace =
           stackTraceFromBacktraceResponse(backtraceResponse);
     }

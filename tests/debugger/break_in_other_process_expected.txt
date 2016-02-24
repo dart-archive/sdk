@@ -1,0 +1,13 @@
+Starting session. Type 'help' for a list of commands.
+
+> b foo
+breakpoint set: id: '0' method: 'foo' bytecode index: '0'
+> r
+tests/debugger/break_in_other_process_test.dart:12:14
+12   int foo() => 42;
+> bt
+* 0: foo             @42
+  1: other           @foo()
+  2: call            @other(port)
+> c
+### process terminated

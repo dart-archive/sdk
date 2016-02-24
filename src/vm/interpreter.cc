@@ -392,6 +392,11 @@ Function* HandleInvokeSelector(Process* process) {
 int HandleAtBytecode(Process* process, uint8* bcp, Object** sp) {
   // TODO(ajohnsen): Support validate stack.
   DebugInfo* debug_info = process->debug_info();
+  // TODO(zerny): Support ShouldBreak directly on program.
+  if (debug_info == NULL && !process->program()->breakpoints()->IsEmpty()) {
+    process->EnsureDebuggerAttached(process->program()->session());
+    debug_info = process->debug_info();
+  }
   if (debug_info != NULL) {
     // If resuming from a breakpoint, clear the breakpoint and ignore the call.
     if (debug_info->is_at_breakpoint()) {

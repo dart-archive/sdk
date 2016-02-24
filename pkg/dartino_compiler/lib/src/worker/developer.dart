@@ -610,7 +610,7 @@ Future<int> run(
 
   session.silent = true;
 
-  await session.enableDebugger();
+  await session.enableLiveEditing();
   await session.spawnProcess(arguments);
   var command = await session.debugRun();
 

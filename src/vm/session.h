@@ -75,7 +75,6 @@ class Session {
   Process* main_process() const { return main_process_; }
   void set_main_process(Process* process) {
     ASSERT(main_process_ == NULL);
-    process_ = process;
     main_process_ = process;
   }
 
@@ -170,8 +169,6 @@ class Session {
   bool debugging_;
 
   Process* main_process_;
-  // TODO(zerny): remove use of process_.
-  Process* process_;
   int next_process_id_;
 
   int method_map_id_;
@@ -233,11 +230,10 @@ class Session {
   // and push it on the session stack.
   void PushTopStackFrame(Stack* stack);
 
-  void RestartFrame(int index);
-
   Process* GetProcess(int process_id);
 
   Scheduler::ProcessInterruptionEvent CheckForPauseEventResult(
+      Process* process,
       Scheduler::ProcessInterruptionEvent result);
 };
 
