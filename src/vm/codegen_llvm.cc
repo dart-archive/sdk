@@ -710,7 +710,7 @@ class BasicBlockBuilder {
     for (int i = 0; i < arity; i++) {
       std::vector<llvm::Value*> indices = {w.CInt(i)};
       auto array_pos = b.CreateGEP(array, indices);
-      auto arg = b.CreateLoad(stack_[i]);
+      auto arg = b.CreateLoad(stack_[arity - i - 1]);
       b.CreateStore(arg, array_pos);
     }
 
