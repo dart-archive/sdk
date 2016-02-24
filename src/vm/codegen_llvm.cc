@@ -553,6 +553,14 @@ class BasicBlockBuilder {
     push(field_value);
   }
 
+  void DoLoadBoxed(int index) {
+    auto boxed = h.UntagAndCast(local(index), w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(Boxed::kValueOffset / kWordSize) };
+    auto value_address = b.CreateGEP(boxed, indices);
+    auto value = b.CreateLoad(value_address, "value");
+    push(value);
+  }
+
   void DoStoreField(int field) {
     auto rhs = pop();
     auto object = pop();
@@ -565,6 +573,14 @@ class BasicBlockBuilder {
 
   void DoStoreLocal(int index) {
     SetLocal(index, local(0));
+  }
+
+  void DoStoreBoxed(int index) {
+    auto value = local(0);
+    auto boxed = h.UntagAndCast(local(index), w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> indices = { w.CInt(Boxed::kValueOffset / kWordSize) };
+    auto value_address = b.CreateGEP(boxed, indices);
+    b.CreateStore(value, value_address);
   }
 
   void DoDrop(int n) {
@@ -596,6 +612,17 @@ class BasicBlockBuilder {
       b.CreateStore(pop(), pos);
     }
     push(instance);
+  }
+
+  void DoAllocateBoxed() {
+    auto value = pop();
+
+    // TODO: Check for Failure::xxx result!
+    auto boxed = b.CreateCall(
+        w.runtime__HandleAllocateBoxed,
+        {llvm_process_, value});
+
+    push(boxed);
   }
 
   void DoEnterNSM() {
@@ -1047,6 +1074,11 @@ class BasicBlocksExplorer {
             break;
           }
 
+          case kLoadBoxed: {
+            b.DoLoadBoxed(*(bcp + 1));
+            break;
+          }
+
           case kStoreLocal: {
             int index = *(bcp + 1);
             b.DoStoreLocal(index);
@@ -1061,6 +1093,10 @@ class BasicBlocksExplorer {
             break;
           }
 
+          case kStoreBoxed: {
+            b.DoStoreBoxed(*(bcp + 1));
+            break;
+          }
 
           case kBranchWide: {
             b.DoBranch(bci + Utils::ReadInt32(bcp + 1));
@@ -1147,48 +1183,12 @@ class BasicBlocksExplorer {
           }
 
           /*
-          case kLoadBoxed: {
-            DoLoadBoxed(*(bcp + 1));
-            break;
-          }
-          case kStoreBoxed: {
-            int index = *(bcp + 1);
-            DoStoreBoxed(index);
-            break;
-          }
-
-          case kStoreLocal: {
-            int index = *(bcp + 1);
-            DoStoreLocal(index);
-            break;
-          }
-
           case kInvokeNoSuchMethod: {
             int selector = Utils::ReadInt32(bcp + 1);
             DoInvokeNoSuchMethod(selector);
             break;
           }
 
-          case kInvokeTest: {
-            int selector = Utils::ReadInt32(bcp + 1);
-            int offset = Selector::IdField::decode(selector);
-            DoInvokeTest(offset);
-            break;
-          }
-
-          case kInvokeTestNoSuchMethod: {
-            DoDrop(1);
-            DoLoadProgramRoot(Program::kFalseObjectOffset);
-            break;
-          }
-
-          case kInvokeStatic:
-          case kInvokeFactory: {
-            int offset = Utils::ReadInt32(bcp + 1);
-            Function* target = Function::cast(Function::ConstantForBytecode(bcp));
-            DoInvokeStatic(bci, offset, target);
-            break;
-          }
           case kThrow: {
             DoThrow();
             basic_block_.Clear();
@@ -1203,11 +1203,6 @@ class BasicBlocksExplorer {
 
           case kSubroutineReturn: {
             DoSubroutineReturn();
-            break;
-          }
-
-          case kAllocateBoxed: {
-            DoAllocateBoxed();
             break;
           }
 
@@ -1265,6 +1260,11 @@ class BasicBlocksExplorer {
           case kAllocateImmutable: {
             Class* klass = Class::cast(Function::ConstantForBytecode(bcp));
             b.DoAllocate(klass, opcode == kAllocateImmutable);
+            break;
+          }
+
+          case kAllocateBoxed: {
+            b.DoAllocateBoxed();
             break;
           }
 
@@ -1597,7 +1597,8 @@ World::World(Program* program,
       roots(NULL),
       libc__printf(NULL),
       runtime__HandleGC(NULL),
-      runtime__HandleAllocate(NULL) {
+      runtime__HandleAllocate(NULL),
+      runtime__HandleAllocateBoxed(NULL) {
   intptr_type = llvm::Type::getInt32Ty(context);
   int8_type = llvm::Type::getInt8Ty(context);
   int8_ptr_type = llvm::PointerType::get(int8_type, 0);
@@ -1709,9 +1710,11 @@ World::World(Program* program,
 
   auto handle_gc_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {object_ptr_type}, false);
   auto handle_allocate_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type, intptr_type}, false);
+  auto handle_allocate_boxed_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type}, false);
 
   runtime__HandleGC = llvm::Function::Create(handle_gc_type, llvm::Function::ExternalLinkage, "HandleGC", &module_);
   runtime__HandleAllocate = llvm::Function::Create(handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate", &module_);
+  runtime__HandleAllocateBoxed = llvm::Function::Create(handle_allocate_boxed_type, llvm::Function::ExternalLinkage, "HandleAllocateBoxed", &module_);
 }
 
 llvm::StructType* World::ObjectArrayType(int n) {

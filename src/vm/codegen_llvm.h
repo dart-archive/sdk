@@ -113,6 +113,7 @@ class World {
   llvm::Function* libc__printf2;
   llvm::Function* runtime__HandleGC;
   llvm::Function* runtime__HandleAllocate;
+  llvm::Function* runtime__HandleAllocateBoxed;
   llvm::Function* runtime__HandleInvokeSelector;
 
   std::map<HeapObject*, llvm::Constant*> tagged_heap_objects;
