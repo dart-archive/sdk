@@ -40,6 +40,30 @@ abstract class Foreign {
 
   static int get errno => _errno();
 
+  /**
+   * Registers the foreign function [fn] to be called as finalizer for this
+   * [Foreign] object.
+   *
+   * At finalization time, [argument] will be passed as argument to [fn].
+   * [argument] may be any pointer sized value except 0.
+   */
+  void registerFinalizer(ForeignFunction fn, int argument) {
+    if (argument == 0) throw new ArgumentError.value(argument);
+    _registerFinalizer(fn.address, argument);
+  }
+
+  /**
+   * Removes the foreign function [fn] from the list of finalizers for this
+   * [Foreign] object.
+   *
+   * Returns 'true' if [fn] had previously been registered and was removed.
+   * However, if [fn] has been registered multiple times, it may still be
+   * called at finalization time.
+   */
+  bool removeFinalizer(ForeignFunction fn) {
+    return _removeFinalizer(fn.address);
+  }
+
   // Helper for converting the argument to a machine word.
   int _convert(argument) {
     if (argument is Foreign) return argument.address;
@@ -62,6 +86,22 @@ abstract class Foreign {
   }
   @dartino.native static int _convertPort(Port port) {
     throw new ArgumentError();
+  }
+
+  @dartino.native void _registerFinalizer(int address, int argument) {
+    var error = dartino.nativeError;
+    if (error == dartino.illegalState) {
+      throw new ArgumentError(argument);
+    }
+    throw error;
+  }
+
+  @dartino.native bool _removeFinalizer(int address) {
+    var error = dartino.nativeError;
+    if (error == dartino.illegalState) {
+      throw new ArgumentError(address);
+    }
+    throw error;
   }
 }
 
@@ -134,7 +174,7 @@ class ForeignFunction extends Foreign {
     return retry(() => icall$7(a0, a1, a2, a3, a4, a5, a6));
   }
   // Support for calling foreign functions that return
-  // machine words -- typically pointers -- encapulated in
+  // machine words -- typically pointers -- encapsulated in
   // the given foreign object arguments.
   ForeignPointer pcall$0() =>
       new ForeignPointer(_pcall$0(address));

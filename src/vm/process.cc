@@ -431,17 +431,22 @@ void Process::UpdateBreakpoints() {
 
 void Process::RegisterFinalizer(HeapObject* object,
                                 WeakPointerCallback callback) {
-  uword address = object->address();
-  ASSERT(heap()->space()->Includes(address));
   heap()->AddWeakPointer(object, callback);
 }
 
+void Process::RegisterExternalFinalizer(HeapObject* object,
+                                        ExternalWeakPointerCallback callback,
+                                        void* arg) {
+  heap()->AddExternalWeakPointer(object, callback, arg);
+}
+
 void Process::UnregisterFinalizer(HeapObject* object) {
-  uword address = object->address();
-  // We do not support unregistering weak pointers for the immutable heap (and
-  // it is currently also not used for immutable objects).
-  ASSERT(heap()->space()->Includes(address));
   heap()->RemoveWeakPointer(object);
+}
+
+bool Process::UnregisterExternalFinalizer(
+    HeapObject* object, ExternalWeakPointerCallback callback) {
+  return heap()->RemoveExternalWeakPointer(object, callback);
 }
 
 void Process::FinalizeForeign(HeapObject* foreign, Heap* heap) {
