@@ -721,7 +721,7 @@ class BasicBlockBuilder {
     auto last_element_in_array = b.CreateGEP(array, indices);
 
     std::vector<llvm::Value*> args = {process, last_element_in_array};
-    auto native_result= b.CreateCall(native, args, "native_call_result");
+    auto native_result = b.CreateCall(native, args, "native_call_result");
 
     auto bb_failure = llvm::BasicBlock::Create(context, "failure", llvm_function_);
     auto bb_no_failure = llvm::BasicBlock::Create(context, "no_failure", llvm_function_);
@@ -746,17 +746,42 @@ class BasicBlockBuilder {
 
   static const bool kTaggedArithmetic = true;
 
-  void DoAdd() {
-    // TODO: Handle about other classes!
+  void DoAdd(int selector, int arity, int offset) {
+    auto bb_smi = llvm::BasicBlock::Create(context, "smi", llvm_function_);
+    auto bb_nonsmi = llvm::BasicBlock::Create(context, "nonsmi", llvm_function_);
+    auto bb_join = llvm::BasicBlock::Create(context, "lookup", llvm_function_);
+
+    auto tagged_argument = pop();
+    auto tagged_receiver = pop();
+
+    b.CreateCondBr(h.CreateSmiCheck(tagged_receiver), bb_smi, bb_nonsmi);
+
+    b.SetInsertPoint(bb_smi);
+    llvm::Value* smi_add_result;
     if (kTaggedArithmetic) {
-      auto argument = b.CreatePtrToInt(pop(), w.intptr_type);
-      auto receiver = b.CreatePtrToInt(pop(), w.intptr_type);
-      push(b.CreateIntToPtr(b.CreateAdd(receiver, argument), w.object_ptr_type));
+      auto argument = b.CreatePtrToInt(tagged_argument, w.intptr_type);
+      auto receiver = b.CreatePtrToInt(tagged_receiver, w.intptr_type);
+      smi_add_result = h.EncodeSmi(b.CreateAdd(receiver, argument));
     } else {
-      auto argument = h.DecodeSmi(pop());
-      auto receiver = h.DecodeSmi(pop());
-      push(h.EncodeSmi(b.CreateAdd(receiver, argument)));
+      auto receiver = h.DecodeSmi(tagged_receiver);
+      auto argument = h.DecodeSmi(tagged_argument);
+      smi_add_result = h.EncodeSmi(b.CreateAdd(receiver, argument));
     }
+    b.CreateBr(bb_join);
+
+    b.SetInsertPoint(bb_nonsmi);
+    push(tagged_receiver);
+    push(tagged_argument);
+    DoInvokeMethod(selector, arity);
+    auto nonsmi_add_result = pop();
+    b.CreateBr(bb_join);
+    bb_nonsmi = b.GetInsertBlock(); // The basic block can be changed by [DoInvokeMethod]!
+
+    b.SetInsertPoint(bb_join);
+    auto phi = b.CreatePHI(w.object_ptr_type, 2);
+    phi->addIncoming(smi_add_result, bb_smi);
+    phi->addIncoming(nonsmi_add_result, bb_nonsmi);
+    push(phi);
   }
 
   void DoSub() {
@@ -809,7 +834,7 @@ class BasicBlockBuilder {
 
     method_args[0] = llvm_process_;
 
-    int index = method_args.size() - 1;
+    int index = 1 + arity;
     for (int i = 0; i < arity; i++) {
       method_args[index--] = pop();
     }
@@ -883,7 +908,7 @@ class BasicBlockBuilder {
     auto bb_nonsmi = llvm::BasicBlock::Create(context, "nonsmi", llvm_function_);
     auto bb_lookup = llvm::BasicBlock::Create(context, "lookup", llvm_function_);
 
-    auto is_smi = b.CreateIsNull(b.CreateAnd(b.CreatePtrToInt(receiver, w.intptr_type), w.CInt(1)));
+    auto is_smi = h.CreateSmiCheck(receiver);
     b.CreateCondBr(is_smi, bb_smi, bb_nonsmi);
 
     b.SetInsertPoint(bb_smi);
@@ -1290,7 +1315,10 @@ class BasicBlocksExplorer {
           }
 
           case kInvokeAdd: {
-            b.DoAdd();
+            int selector = Utils::ReadInt32(bcp + 1);
+            int arity = Selector::ArityField::decode(selector);
+            int offset = Selector::IdField::decode(selector);
+            b.DoAdd(selector, arity, offset);
             break;
           }
 
