@@ -674,7 +674,7 @@ class BasicBlockBuilder {
 
     llvm::Value* array_pos = array;
     for (int i = 0; i < arity; i++) {
-      auto arg = argument(i);
+      auto arg = b.CreateLoad(stack_[i]);
       b.CreateStore(arg, array_pos);
       std::vector<llvm::Value*> indices = {w.CInt(1)};
       array_pos = b.CreateGEP(array_pos, indices);
@@ -842,10 +842,6 @@ class BasicBlockBuilder {
 
   llvm::Value* local(int i) {
     return b.CreateLoad(stack_[GetOffset(i)]);
-  }
-
-  llvm::Value* argument(int i) {
-    return local(i + kAuxiliarySlots + stack_pos_);
   }
 
   void SetLocal(int i, llvm::Value* value) {
