@@ -63,29 +63,6 @@ BEGIN_NATIVE(ForeignMarkForFinalization) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignRegisterFinalizer) {
-  auto callback = reinterpret_cast<ExternalWeakPointerCallback>(
-      AsForeignWord(arguments[1]));
-  if (!arguments[0]->IsHeapObject()) return Failure::wrong_argument_type();
-  HeapObject* object = HeapObject::cast(arguments[0]);
-  void* argument = reinterpret_cast<void*>(AsForeignWord(arguments[2]));
-  if (argument == NULL) return Failure::illegal_state();
-  process->RegisterExternalFinalizer(object, callback, argument);
-  return process->program()->null_object();
-}
-END_NATIVE()
-
-BEGIN_NATIVE(ForeignRemoveFinalizer) {
-  auto callback = reinterpret_cast<ExternalWeakPointerCallback>(
-      AsForeignWord(arguments[1]));
-  if (!arguments[0]->IsHeapObject()) return Failure::wrong_argument_type();
-  HeapObject* object = HeapObject::cast(arguments[0]);
-  bool result = process->UnregisterExternalFinalizer(object, callback);
-  return result ? process->program()->true_object()
-                : process->program()->false_object();
-}
-END_NATIVE()
-
 BEGIN_NATIVE(ForeignBitsPerWord) { return Smi::FromWord(kBitsPerWord); }
 END_NATIVE()
 

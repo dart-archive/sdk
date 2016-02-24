@@ -294,19 +294,8 @@ void Heap::AddWeakPointer(HeapObject* object, WeakPointerCallback callback) {
   weak_pointers_ = new WeakPointer(object, callback, weak_pointers_);
 }
 
-void Heap::AddExternalWeakPointer(HeapObject* object,
-                                  ExternalWeakPointerCallback callback,
-                                  void* arg) {
-  weak_pointers_ = new WeakPointer(object, callback, arg, weak_pointers_);
-}
-
 void Heap::RemoveWeakPointer(HeapObject* object) {
-  ASSERT(WeakPointer::Remove(&weak_pointers_, object));
-}
-
-bool Heap::RemoveExternalWeakPointer(HeapObject* object,
-                                     ExternalWeakPointerCallback callback) {
-  return WeakPointer::Remove(&weak_pointers_, object, callback);
+  WeakPointer::Remove(&weak_pointers_, object);
 }
 
 void Heap::ProcessWeakPointers(Space* space) {

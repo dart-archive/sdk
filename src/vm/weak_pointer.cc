@@ -13,30 +13,7 @@ namespace dartino {
 
 WeakPointer::WeakPointer(HeapObject* object, WeakPointerCallback callback,
                          WeakPointer* next)
-    : object_(object),
-      callback_(reinterpret_cast<void*>(callback)),
-      arg_(NULL),
-      prev_(NULL),
-      next_(next) {}
-
-WeakPointer::WeakPointer(HeapObject* object,
-                         ExternalWeakPointerCallback callback, void* arg,
-                         WeakPointer* next)
-    : object_(object),
-      callback_(reinterpret_cast<void*>(callback)),
-      arg_(arg),
-      prev_(NULL),
-      next_(next) {
-  ASSERT(arg_ != NULL);
-}
-
-void WeakPointer::Invoke(Heap* heap) {
-  if (arg_ == NULL) {
-    reinterpret_cast<WeakPointerCallback>(callback_)(object_, heap);
-  } else {
-    reinterpret_cast<ExternalWeakPointerCallback>(callback_)(arg_);
-  }
-}
+    : object_(object), callback_(callback), prev_(NULL), next_(next) {}
 
 void WeakPointer::Process(Space* space, WeakPointer** pointers, Heap* heap) {
   WeakPointer* new_list = NULL;
@@ -53,7 +30,7 @@ void WeakPointer::Process(Space* space, WeakPointer** pointers, Heap* heap) {
       } else {
         if (current->next_ != NULL) current->next_->prev_ = previous;
         if (previous != NULL) previous->next_ = current->next_;
-        current->Invoke(heap);
+        current->callback_(current_object, heap);
         delete current;
       }
     } else {
@@ -69,21 +46,18 @@ void WeakPointer::ForceCallbacks(WeakPointer** pointers, Heap* heap) {
   WeakPointer* current = *pointers;
   while (current != NULL) {
     WeakPointer* temp = current->next_;
-    current->Invoke(heap);
+    current->callback_(current->object_, heap);
     delete current;
     current = temp;
   }
   *pointers = NULL;
 }
 
-bool WeakPointer::Remove(WeakPointer** pointers, HeapObject* object,
-                         ExternalWeakPointerCallback callback) {
+void WeakPointer::Remove(WeakPointer** pointers, HeapObject* object) {
   WeakPointer* current = *pointers;
   WeakPointer* previous = NULL;
   while (current != NULL) {
-    if (current->object_ == object &&
-        ((current->arg_ == NULL && callback == NULL) ||
-         (current->callback_ == callback))) {
+    if (current->object_ == object) {
       if (previous == NULL) {
         *pointers = current->next_;
       } else {
@@ -91,13 +65,12 @@ bool WeakPointer::Remove(WeakPointer** pointers, HeapObject* object,
       }
       if (current->next_ != NULL) current->next_->prev_ = previous;
       delete current;
-      return true;
+      return;
     } else {
       previous = current;
       current = current->next_;
     }
   }
-  return false;
 }
 
 void WeakPointer::PrependWeakPointers(WeakPointer** pointers,

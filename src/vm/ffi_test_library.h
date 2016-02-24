@@ -111,14 +111,4 @@ EXPORT int bufferRead(char* buffer);
 
 EXPORT int bufferWrite(char* buffer, int value);
 
-EXPORT int things;
-
-EXPORT void* make_a_thing(void);
-
-EXPORT void* make_b_thing(void);
-
-EXPORT void free_thing(void* thing);
-
-EXPORT int get_things();
-
 #endif  // SRC_VM_FFI_TEST_LIBRARY_H_

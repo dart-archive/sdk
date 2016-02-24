@@ -357,21 +357,3 @@ int bufferWrite(char* buffer, int value) {
   *head_pointer = (head + 1) % size;
   return value;
 }
-
-void* make_a_thing() {
-  things |= 2;
-  return (void*)(2);
-}
-
-void* make_b_thing() {
-  things |= 1;
-  return (void*)(1);
-}
-
-void free_thing(void* thing) {
-  things ^= (int)(thing);
-}
-
-int get_things() {
-  return things;
-}
