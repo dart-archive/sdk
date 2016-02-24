@@ -514,8 +514,7 @@ class BasicBlockBuilder {
         // parameter (i.e. parameter slots are modifyable as well).
         llvm::Value* slot = b.CreateAlloca(w.object_ptr_type, NULL, name("arg_%d", argc));
         b.CreateStore(&arg, slot);
-
-        stack_[arity - argc] = slot;
+        stack_[argc - 1] = slot;
       }
       argc++;
     }
@@ -555,9 +554,8 @@ class BasicBlockBuilder {
   }
 
   void DoStoreField(int field) {
-    // FIXME: Why we we get here the [object] first???
-    auto object = pop();
     auto rhs = pop();
+    auto object = pop();
     auto instance = h.UntagAndCast(object, w.object_ptr_ptr_type);
     std::vector<llvm::Value*> indices = { w.CInt(Instance::kSize / kWordSize + field) };
     auto field_address = b.CreateGEP(instance, indices);
