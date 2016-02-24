@@ -119,8 +119,9 @@ class World {
 
   llvm::Constant* roots;
 
+  llvm::Function* libc__exit;
   llvm::Function* libc__printf;
-  llvm::Function* libc__printf2;
+
   llvm::Function* runtime__HandleGC;
   llvm::Function* runtime__HandleAllocate;
   llvm::Function* runtime__HandleAllocateBoxed;

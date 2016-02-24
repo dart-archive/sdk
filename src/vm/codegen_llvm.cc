@@ -909,6 +909,10 @@ class BasicBlockBuilder {
     b.CreateCondBr(cond, pos, neg);
   }
 
+  void DoProcessYield() {
+    b.CreateCall(w.libc__exit, {w.CInt(0)});
+  }
+
   void DoDebugPrint(const char* message) {
     b.CreateCall(w.libc__printf, {h.BuildCString(message)});
   }
@@ -1281,12 +1285,6 @@ class BasicBlocksExplorer {
             break;
           }
 
-          case kProcessYield: {
-            DoProcessYield();
-            basic_block_.Clear();
-            break;
-          }
-
           case kEnterNoSuchMethod: {
             DoNoSuchMethod();
             basic_block_.Clear();
@@ -1411,6 +1409,11 @@ class BasicBlocksExplorer {
           }
           case kStoreStatic: {
             b.DoStoreStatic(Utils::ReadInt32(bcp + 1));
+            break;
+          }
+
+          case kProcessYield: {
+            b.DoProcessYield();
             break;
           }
 
@@ -1674,6 +1677,7 @@ World::World(Program* program,
       double_type(NULL),
       double_ptr_type(NULL),
       roots(NULL),
+      libc__exit(NULL),
       libc__printf(NULL),
       runtime__HandleGC(NULL),
       runtime__HandleAllocate(NULL),
@@ -1808,6 +1812,9 @@ World::World(Program* program,
   roots_type->setBody(root_entries, true);
 
   // External C functions for debugging.
+
+  auto exit_type = llvm::FunctionType::get(intptr_type, {intptr_type}, true);
+  libc__exit = llvm::Function::Create(exit_type, llvm::Function::ExternalLinkage, "exit", &module_);
 
   auto printf_type = llvm::FunctionType::get(intptr_type, {int8_ptr_type}, true);
   libc__printf = llvm::Function::Create(printf_type, llvm::Function::ExternalLinkage, "printf", &module_);
