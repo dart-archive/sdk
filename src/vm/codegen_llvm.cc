@@ -740,11 +740,12 @@ class BasicBlockBuilder {
   }
 
   void DoCall(Function* target) {
-    std::vector<llvm::Value*> args;
-    args.push_back(llvm_process_);
-    for (unsigned i = 0; i < target->arity(); i++) {
-      args.push_back(pop());
+    int arity = target->arity();
+    std::vector<llvm::Value*> args(1 + arity, NULL);
+    for (int i = 0; i < arity; i++) {
+      args[arity - i] = pop();
     }
+    args[0] = llvm_process_;
     llvm::Function* llvm_target = static_cast<llvm::Function*>(w.llvm_functions[target]);
     ASSERT(llvm_target != NULL);
     auto result = b.CreateCall(llvm_target, args, "result");
