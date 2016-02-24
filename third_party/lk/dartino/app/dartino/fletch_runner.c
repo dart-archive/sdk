@@ -67,8 +67,13 @@ DARTINO_EXPORT_STATIC(gfx_flush);
 #endif
 #endif
 
+#ifndef LOADER_BUFFER_SIZE
+#define LOADER_BUFFER_SIZE 256
+#endif
+
 // static buffer to hold snapshot/heap
-static unsigned char buffer[512 * 1024] __attribute__((aligned(4096)));
+static unsigned char buffer[LOADER_BUFFER_SIZE * 1024]
+    __attribute__((aligned(4096)));
 
 int ReadBlob(void) {
   printf("READY TO READ DATA.\n");

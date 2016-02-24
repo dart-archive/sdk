@@ -697,7 +697,14 @@ def StepTest(
   embedded_libs = configuration['embedded_libs']
   use_sdk = configuration['use_sdk']
 
-  step_name = '%s%s' % (name, '-snapshot' if snapshot_run else '')
+  if (use_heap_blob):
+    suffix = '-heapblob'
+  elif (snapshot_run):
+    suffix = '-snapshot'
+  else:
+    suffix = ''
+  step_name = '%s%s' % (name, suffix)
+
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
             '--time', '--report', '-pbuildbot',
