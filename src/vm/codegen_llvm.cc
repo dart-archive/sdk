@@ -879,8 +879,23 @@ class BasicBlockBuilder {
     }
     ASSERT(index == 1);
     auto receiver = method_args[1] = pop();
-    auto code = h.Cast(LookupDispatchTableCode(receiver, selector), w.FunctionPtrType(1 + arity));
+    auto entry = LookupDispatchTableEntry(receiver, selector);
+    auto code = h.Cast(LookupDispatchTableCodeFromEntry(entry), w.FunctionPtrType(1 + arity));
+    auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffsetFromEntry(entry), w.intptr_type);
+    auto smi_selector_offset = ((selector & Selector::IdField::mask()) >> Selector::IdField::shift()) << Smi::kTagSize;
+    auto actual_offset = w.CInt(smi_selector_offset);
 
+    auto bb_lookup_failure = llvm::BasicBlock::Create(w.context, "bb_lookup_failure", llvm_function_);
+    auto bb_lookup_success = llvm::BasicBlock::Create(w.context, "bb_lookup_success", llvm_function_);
+
+    b.CreateCondBr(b.CreateICmpEQ(actual_offset, expected_offset), bb_lookup_success, bb_lookup_failure);
+
+    b.SetInsertPoint(bb_lookup_failure);
+    DoDebugPrint("Method lookup failed. Exiting due to fatal error");
+    b.CreateCall(w.libc__exit, {w.CInt(1)});
+    b.CreateRet(llvm::ConstantStruct::getNullValue(w.object_ptr_type));
+
+    b.SetInsertPoint(bb_lookup_success);
     auto result = b.CreateCall(code, method_args, "method_result");
     push(result);
   }
@@ -890,7 +905,8 @@ class BasicBlockBuilder {
     auto smi_selector_offset = ((selector & Selector::IdField::mask()) >> Selector::IdField::shift()) << Smi::kTagSize;
 
     auto actual_offset = w.CInt(smi_selector_offset);
-    auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffset(receiver, selector), w.intptr_type);
+    auto entry = LookupDispatchTableEntry(receiver, selector);
+    auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffsetFromEntry(entry), w.intptr_type);
 
     auto comp = b.CreateICmpEQ(actual_offset, expected_offset);
     auto true_obj = h.Cast(w.tagged_heap_objects[w.program_->true_object()]);
@@ -928,18 +944,14 @@ class BasicBlockBuilder {
   }
 
  private:
-  llvm::Value* LookupDispatchTableCode(llvm::Value* receiver, int selector) {
-    auto entry = LookupDispatchTableEntry(receiver, selector);
-
+  llvm::Value* LookupDispatchTableCodeFromEntry(llvm::Value* entry) {
     std::vector<llvm::Value*> code_indices = { w.CInt(DispatchTableEntry::kCodeOffset / kWordSize) };
     llvm::Value* code = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), code_indices), "code");
 
     return code;
   }
 
-  llvm::Value* LookupDispatchTableOffset(llvm::Value* receiver, int selector) {
-    auto entry = LookupDispatchTableEntry(receiver, selector);
-
+  llvm::Value* LookupDispatchTableOffsetFromEntry(llvm::Value* entry) {
     std::vector<llvm::Value*> offset_indices = { w.CInt(DispatchTableEntry::kOffsetOffset / kWordSize) };
     llvm::Value* offset = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), offset_indices), "offset");
 
