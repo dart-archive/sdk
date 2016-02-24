@@ -49,18 +49,18 @@ class World {
         llvm::LLVMContext& context,
         llvm::Module& module);
 
-  llvm::StructType* ObjectArrayType(int n);
+  llvm::StructType* ObjectArrayType(int n, llvm::Type* entry_type, const char* name);
   llvm::StructType* InstanceType(int n);
   llvm::PointerType* InstanceTypePtr(int n);
   llvm::StructType* OneByteStringType(int n);
   llvm::FunctionType* FunctionType(int n);
   llvm::PointerType* FunctionPtrType(int n);
-  llvm::PointerType* ObjectArrayPtrType(int n);
 
   // Helper methods for creating/manipulating constants
   llvm::Constant* CTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
   llvm::Constant* CUnTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
   llvm::Constant* CInt(uint32 integer);
+  llvm::Constant* CInt8(uint8 integer);
   llvm::Constant* CInt64(int64 value);
   llvm::Constant* CDouble(double value);
   llvm::Constant* CSmi(uint32 integer);

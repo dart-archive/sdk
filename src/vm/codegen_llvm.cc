@@ -162,6 +162,8 @@ class HeapBuilder : public HeapObjectVisitor {
       value = BuildClassConstant(Class::cast(object));
     } else if (object->IsArray()) {
       value = BuildArrayConstant(Array::cast(object));
+    } else if (object->IsByteArray()) {
+      value = BuildByteArrayConstant(ByteArray::cast(object));
     } else if (object->IsInstance()) {
       value = BuildInstanceConstant(Instance::cast(object));
     } else if (object->IsDispatchTableEntry()) {
@@ -194,7 +196,7 @@ class HeapBuilder : public HeapObjectVisitor {
     std::vector<llvm::Constant*> array_entries = {ho, length};
     auto llvm_array = llvm::ConstantStruct::get(w.array_header, array_entries);
 
-    auto full_array_header = w.ObjectArrayType(array->length());
+    auto full_array_header = w.ObjectArrayType(array->length(), w.object_ptr_type, "Array");
     std::vector<llvm::Constant*> entries;
     entries.push_back(llvm_array);
     for (int i = 0; i < array->length(); i++) {
@@ -207,6 +209,25 @@ class HeapBuilder : public HeapObjectVisitor {
     }
     auto full_array = llvm::ConstantStruct::get(full_array_header, entries);
     return new llvm::GlobalVariable(w.module_, full_array_header, true, llvm::GlobalValue::ExternalLinkage, full_array, name("ArrayInstance_%p__%d", array, array->length()));
+  }
+
+  llvm::Constant* BuildByteArrayConstant(ByteArray* array) {
+    auto klass = Class::cast(array->get_class());
+    auto llvm_klass = BuildConstant(klass);
+
+    auto ho = llvm::ConstantStruct::get(w.heap_object_type, {llvm_klass});
+    auto length = w.CSmi(array->length());
+    std::vector<llvm::Constant*> array_entries = {ho, length};
+    auto llvm_array = llvm::ConstantStruct::get(w.array_header, array_entries);
+
+    auto full_array_header = w.ObjectArrayType(array->length(), w.int8_type, "ByteArray");
+    std::vector<llvm::Constant*> entries;
+    entries.push_back(llvm_array);
+    for (int i = 0; i < array->length(); i++) {
+      entries.push_back(w.CInt8(array->get(i)));
+    }
+    auto full_array = llvm::ConstantStruct::get(full_array_header, entries);
+    return new llvm::GlobalVariable(w.module_, full_array_header, true, llvm::GlobalValue::ExternalLinkage, full_array, name("ByteArrayInstance_%p__%d", array, array->length()));
   }
 
   llvm::Constant* BuildClassConstant(Class* klass) {
@@ -1830,19 +1851,15 @@ World::World(Program* program,
   runtime__HandleObjectFromFailure = llvm::Function::Create(handle_object_from_failure_type, llvm::Function::ExternalLinkage, "HandleObjectFromFailure", &module_);
 }
 
-llvm::StructType* World::ObjectArrayType(int n) {
-  auto array = llvm::StructType::create(context, name("Array__%d", n));
+llvm::StructType* World::ObjectArrayType(int n, llvm::Type* entry_type, const char* name_) {
+  auto array = llvm::StructType::create(context, name("%s__%d", name_, n));
   std::vector<llvm::Type*> types;
   types.push_back(array_header);
   for (int i = 0; i < n; i++) {
-    types.push_back(object_ptr_type);
+    types.push_back(entry_type);
   }
   array->setBody(types, true);
   return array;
-}
-
-llvm::PointerType* World::ObjectArrayPtrType(int n) {
-  return llvm::PointerType::get(ObjectArrayType(n), false);
 }
 
 llvm::StructType* World::InstanceType(int n) {
@@ -1896,6 +1913,11 @@ llvm::Constant* World::CUnTag(llvm::Constant* constant, llvm::Type* ptr_type) {
 llvm::Constant* World::CInt(uint32 value) {
   uint64 value64 = value;
   return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(32, value64, false));
+}
+
+llvm::Constant* World::CInt8(uint8 integer) {
+  uint64 value64 = integer;
+  return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(8, value64, true));
 }
 
 llvm::Constant* World::CInt64(int64 value) {
