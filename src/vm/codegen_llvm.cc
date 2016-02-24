@@ -761,7 +761,7 @@ class BasicBlockBuilder {
     if (kTaggedArithmetic) {
       auto argument = b.CreatePtrToInt(tagged_argument, w.intptr_type);
       auto receiver = b.CreatePtrToInt(tagged_receiver, w.intptr_type);
-      smi_add_result = h.EncodeSmi(b.CreateAdd(receiver, argument));
+      smi_add_result = b.CreateIntToPtr(b.CreateAdd(receiver, argument), w.object_ptr_type);
     } else {
       auto receiver = h.DecodeSmi(tagged_receiver);
       auto argument = h.DecodeSmi(tagged_argument);
