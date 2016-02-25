@@ -61,8 +61,10 @@ library dartino_compiler.test.tests_with_expectations;
 /// With expectation `ex3`
 ///
 ///
-/// It is possible to have several independent changes in the same patch. One
-/// should only specify the expectations once. For example:
+/// It is possible to have several independent changes in the same
+/// patch. However, most of the time, it's problematic to have more than one
+/// change in a patch. See topic below on "Making minimal changes". One should
+/// only specify the expectations once. For example:
 ///
 ///     ==> main.dart.patch <==
 ///     class Foo {
@@ -93,6 +95,84 @@ library dartino_compiler.test.tests_with_expectations;
 /// * a new [ProgramExpectation] instance is instantiated with its fields
 ///   initialized to the corresponding properties of the JSON object. See
 ///   [ProgramExpectation.fromJson].
+///
+/// Make minimal changes
+/// --------------------
+///
+/// When adding new tests, it's important to keep the changes to the necessary
+/// minimum. We do this to ensure that a test actually tests what we intend,
+/// and to avoid accidentally relying on side-effects of other changes making
+/// the test pass or fail unexpectedly.
+///
+/// Let's look at an example of testing what happens when an instance field is
+/// added.
+///
+/// A good test:
+///
+///     ==> main.dart.patch <==
+///     class Foo {
+///     <<<< ["instance is null", "setter threw", "getter threw"]
+///     ==== "v2"
+///       var bar;
+///     >>>>
+///     }
+///     var instance;
+///     main() {
+///       if (instance == null) {
+///         print("instance is null");
+///         instance = new Foo();
+///       }
+///       try {
+///         instance.bar = "v2";
+///       } catch (e) {
+///         print("setter threw");
+///       }
+///       try {
+///         print(instance.bar);
+///       } catch (e) {
+///         print("getter threw");
+///       }
+///     }
+///
+/// A problematic version of the same test:
+///
+///     ==> main.dart.patch <==
+///     class Foo {
+///     <<<< "v1"
+///     ==== "v2"
+///       var bar;
+///     >>>>
+///     }
+///     var instance;
+///     main() {
+///     <<<<
+//        instance = new Foo();
+///       print("v1");
+///     ====
+///       instance.bar = 42;
+///       print(instance.bar);
+///     >>>>
+///     }
+///
+/// The former version tests precisely what happens when an instance field is
+/// added to a class, we assume this is the intent of the test.
+///
+/// The latter version tests what happens when:
+///
+/// * An instance field is added to a class.
+///
+/// * A modification is made to a top-level method.
+///
+/// * A modifiction is made to the main method, which is a special case.
+///
+/// * Two more selectors are added to tree-shaking, the enqueuer: 'get:bar',
+///   and 'set:bar'.
+///
+/// The latter version does not test:
+///
+/// * If an instance field is added, does existing accessors correctly access
+///   the new field. As `main` was explicitly changed, we don't know if
+///   already compiled accessors behave correctly.
 const List<String> tests = const <String>[
   r'''
 hello_world
@@ -139,7 +219,7 @@ program_gc_with_processes
 import 'dart:dartino';
 
 class Comms {
-<<<< "Setup"
+<<<< "comms is null"
 ==== "Hello world"
   int late_arrival;
 >>>>
@@ -161,27 +241,26 @@ void SubProcess(Port pausedPort) {
 }
 
 main() {
-<<<<
-  // The setup takes place before the rewrite.
-  comms = new Comms();
+  if (comms == null) {
+    print("comms is null");
+    // The setup takes place before the rewrite.
+    comms = new Comms();
 
-  comms.paused = new Channel();
-  var pausedPort = comms.pausedPort = new Port(comms.paused);
+    comms.paused = new Channel();
+    var pausedPort = comms.pausedPort = new Port(comms.paused);
 
-  comms.process = Process.spawnDetached(() => SubProcess(pausedPort));
+    comms.process = Process.spawnDetached(() => SubProcess(pausedPort));
+  } else {
+    // After the rewrite we get the port from the sub-process and send the
+    // data it needs to resume running.
+    comms.resumePort = comms.paused.receive();
 
-  print("Setup");
-====
-  // After the rewrite we get the port from the sub-process and send the
-  // data it needs to resume running.
-  comms.resumePort = comms.paused.receive();
+    var monitor = new Channel();
 
-  var monitor = new Channel();
+    comms.process.monitor(new Port(monitor));
 
-  comms.process.monitor(new Port(monitor));
-
-  comms.resumePort.send(null);
->>>>
+    comms.resumePort.send(null);
+  }
 }
 ''',
 
