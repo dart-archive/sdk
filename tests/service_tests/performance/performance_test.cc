@@ -152,7 +152,10 @@ static void* DartThreadEntry(void* arg) {
   const char* path = static_cast<char*>(arg);
   DartinoSetup();
   DartinoProgram program = DartinoLoadSnapshotFromFile(path);
-  DartinoRunMain(program, 0, NULL);
+  if (DartinoRunMain(program, 0, NULL) != 0) {
+    FATAL1("Failed to run snapshot: %s\n", path);
+  }
+  DartinoDeleteProgram(program);
   DartinoTearDown();
   ChangeStatusAndNotify(kDone);
   return NULL;

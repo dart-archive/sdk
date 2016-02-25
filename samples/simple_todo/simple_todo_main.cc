@@ -39,7 +39,11 @@ static void* StartDartino(void* arg) {
   DartinoSetup();
   DartinoProgram program =
       DartinoLoadSnapshotFromFile(snapshot_filepath_with_name);
-  DartinoRunMain(program, 0, NULL);
+  if (DartinoRunMain(program, 0, NULL) != 0) {
+    printf("Failed to run snapshot: %s\n", snapshot_filepath_with_name);
+    exit(1);
+  }
+  DartinoDeleteProgram(program);
   DartinoTearDown();
   ChangeStatusAndNotify(kDone);
   return NULL;
