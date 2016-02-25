@@ -163,18 +163,21 @@ class TimedOut extends NamedMessage {
 /// Test [name] failed. A possible reply to [RunTest].
 class TestFailed extends ErrorMessage implements NamedMessage {
   final String name;
+  final String kind;
 
-  const TestFailed(this.name, String error, String stackTrace)
+  const TestFailed(this.name, String error, String stackTrace, {this.kind})
       : super(error, stackTrace);
 
   TestFailed.fromJsonData(Map<String, dynamic> data)
-      : this(data['name'], data['error'], data['stackTrace']);
+      : this(data['name'], data['error'], data['stackTrace'],
+             kind: data['kind']);
 
   String get type => 'TestFailed';
 
   Map<String, dynamic> toJson() {
     Map<String, dynamic> result = super.toJson();
     result['name'] = name;
+    result['kind'] = kind;
     return result;
   }
 

@@ -121,47 +121,22 @@ compileAndRun(
       bool isFirstProgram = version == 0;
       version++;
 
-      if (!program.compileUpdatesShouldThrow) {
-        // We should only update the status of hasCompileTimeError when we run
-        // something on the VM.
-        hasCompileTimeError = program.hasCompileTimeError;
-      }
+      hasCompileTimeError = program.hasCompileTimeError;
 
       print("Program version $version #$testName:");
       print(numberedLines(program.code));
 
-      bool compileUpdatesThrew = true;
       DartinoDelta dartinoDelta;
       if (isFirstProgram) {
         // The first program is compiled "fully".
         dartinoDelta = await helper.fullCompile(program);
-        compileUpdatesThrew = false;
       } else {
         // An update to the first program, all updates are compiled as
         // incremental updates to the first program.
-        try {
-          dartinoDelta = await helper.incrementalCompile(program, version);
-          compileUpdatesThrew = false;
-        } on IncrementalCompilationFailed catch (error) {
-          if (program.compileUpdatesShouldThrow) {
-            print("Expected error in compileUpdates: $error");
-          } else {
-            print("Unexpected error in compileUpdates.");
-            rethrow;
-          }
-        }
+        dartinoDelta = await helper.incrementalCompile(program, version);
       }
 
       DartinoBackend backend = helper.compiler.compiler.context.backend;
-
-      if (program.compileUpdatesShouldThrow) {
-        Expect.isFalse(isFirstProgram);
-        Expect.isTrue(
-            compileUpdatesThrew,
-            "Expected an exception in compileUpdates");
-        Expect.isNull(dartinoDelta, "Expected update == null");
-        break;
-      }
 
       if (!isFirstProgram ||
           const bool.fromEnvironment("feature_test.print_initial_commands")) {
@@ -402,6 +377,9 @@ class TestSession extends Session {
 
   bool isWaitingForCompletion = false;
 
+  var lastError;
+  var lastStackTrace;
+
   TestSession(
       Socket vmSocket,
       IncrementalCompiler compiler,
@@ -431,6 +409,11 @@ class TestSession extends Session {
   /// Add [future] to this session.  All futures that can fail after calling
   /// [waitForCompletion] must be added to the session.
   void recordFuture(Future future) {
+    future = future.catchError((error, stackTrace) {
+      lastError = error;
+      lastStackTrace = stackTrace;
+      throw error;
+    });
     futures.add(convertErrorToString(future));
   }
 
@@ -483,6 +466,9 @@ class TestSession extends Session {
         sb.writeln(line);
       }
       sb.writeln("");
+    }
+    if (problemCount == 1 && lastError != null) {
+      return new Future.error(lastError, lastStackTrace);
     }
     if (problemCount > 0) {
       throw new StateError('Test has $problemCount problem(s). Details:\n$sb');

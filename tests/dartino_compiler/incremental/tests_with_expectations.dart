@@ -1554,8 +1554,7 @@ var normal;
 foo() {
   print(normal);
 }
-==== {"messages":["v2","lazy"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+==== ["v2","lazy"]
 var lazy = bar();
 
 foo() {
@@ -1818,8 +1817,7 @@ add_compound_instance_field
 class C {
 <<<< ["[instance] is null","v1","[instance.y] threw"]
   int x;
-==== {"messages":["v1","v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== ["v1","v2"]
   int x, y;
 >>>>
 }
@@ -1857,8 +1855,7 @@ remove_compound_instance_field
 class C {
 <<<< ["[instance] is null","v1","v2"]
   int x, y;
-==== {"messages":["v1","[instance.y] threw"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== ["v1","[instance.y] threw"]
   int x;
 >>>>
 }
@@ -1895,8 +1892,7 @@ static_field_to_instance_field
 class C {
 <<<< ["[instance] is null","v1","[instance.x] threw"]
   static int x;
-==== {"messages":["[C.x] threw","v2"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== ["[C.x] threw","v2"]
   int x;
 >>>>
 }
@@ -1934,8 +1930,7 @@ instance_field_to_static_field
 class C {
 <<<< ["[instance] is null","[C.x] threw","v1"]
   int x;
-==== {"messages":["v2","[instance.x] threw"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== ["v2","[instance.x] threw"]
   static int x;
 >>>>
 }
@@ -2060,8 +2055,7 @@ change_library_name
 // Test that a change in library name is handled
 <<<< "Hello, World!"
 library test.main1;
-==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "Hello, World!"
 library test.main2;
 >>>>
 
@@ -2075,8 +2069,7 @@ add_import
 ==> main.dart.patch <==
 // Test that adding an import is handled
 <<<< "Hello, World!"
-==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "Hello, World!"
 import 'dart:core';
 >>>>
 
@@ -2090,8 +2083,7 @@ add_export
 ==> main.dart.patch <==
 // Test that adding an export is handled
 <<<< "Hello, World!"
-==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "Hello, World!"
 export 'dart:core';
 >>>>
 
@@ -2107,8 +2099,7 @@ add_part
 library test.main;
 
 <<<< "Hello, World!"
-==== {"messages":["Hello, World!"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw
+==== "Hello, World!"
 part 'part.dart';
 >>>>
 
@@ -2190,9 +2181,7 @@ compile_time_error_001
 // Reproduce a crash when a compile-time error is added
 main() {
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
-// reported instead
+==== {"messages":[],"hasCompileTimeError":1}
   do for while if;
 >>>>
 }
@@ -2216,9 +2205,7 @@ compile_time_error_003
 ==> main.dart.patch <==
 // Reproduce a crash when a compile-time error is reported on a new class
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
-// reported instead
+==== {"messages":[],"hasCompileTimeError":1}
 abstract class A implements bool default F {
   A();
 }
@@ -2245,9 +2232,7 @@ compile_time_error_004
 // Reproduce a crash when a class has a bad hierarchy
 <<<< []
 typedef A(C c);
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
-// reported instead
+==== {"messages":[],"hasCompileTimeError":1}
 typedef A(Class c);
 >>>>
 
@@ -2277,8 +2262,7 @@ compile_time_error_005
 main() {
 <<<< {"messages":[],"hasCompileTimeError":1}
   var funcnuf = (x) => ((x))=((x)) <= (x);
-==== {"messages":["Hello"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): Should not throw
+==== "Hello"
   print("Hello");
 >>>>
 }
@@ -2288,9 +2272,7 @@ main() {
 compile_time_error_006
 ==> main.dart.patch <==
 <<<< "error"
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, a compile-time error should be
-// reported instead
+==== {"messages":[],"hasCompileTimeError":1}
 test({b}) {
   if (?b) return b;
 }
@@ -2312,9 +2294,7 @@ generic_types_001
 <<<< []
 class A<T> {
 }
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
-// instead
+==== []
 >>>>
 
 main() {
@@ -2330,9 +2310,7 @@ generic_types_002
 ==> main.dart.patch <==
 // Test adding a generic class.
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
-// instead
+==== []
 class A<T> {
 }
 >>>>
@@ -2352,9 +2330,7 @@ generic_types_003
 <<<< []
 class A {
 }
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
-// instead
+==== []
 class A<T> {
 }
 >>>>
@@ -2371,9 +2347,7 @@ generic_types_004
 <<<< []
 class A<T> {
 }
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should handle generic types
-// instead
+==== []
 class A {
 }
 >>>>
@@ -2389,9 +2363,7 @@ add_named_mixin_application
 // Test that we can add a mixin application.
 class A {}
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should be able to handle named
-// mixin applications.
+==== []
 class C = Object with A;
 >>>>
 main() {
@@ -2410,9 +2382,7 @@ remove_named_mixin_application
 class A {}
 <<<< []
 class C = Object with A;
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw, we should be able to handle named
-// mixin applications.
+==== []
 >>>>
 main() {
   new A();
@@ -2433,9 +2403,7 @@ class C = Object with A;
 main() {
   new C();
 <<<< []
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): compileUpdates shouldn't throw, we should be able to handle
-  // named mixin applications.
+==== []
   new C();
 >>>>
 }
@@ -2460,8 +2428,7 @@ super_is_parameter
 ==> main.dart.patch <==
 <<<< []
 class A<S> {
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw.
+==== []
 class A<S extends S> {
 >>>>
   S field;
@@ -2483,9 +2450,7 @@ main() {
   var a = "hello";
 <<<< "hello"
   print(a);
-==== {"messages":["hello from closure"],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): compileUpdates shouldn't throw, we should be able to handle
-  // capture variables in closures.
+==== "hello from closure"
   (() => print('$a from closure'))();
 >>>>
 }
@@ -2557,8 +2522,7 @@ compile_time_error_partial_file
 class C {
 <<<< {"messages":[],"hasCompileTimeError":1}
   int sync*;
-==== {"messages":[],"compileUpdatesShouldThrow":1}
-  // TODO(ahe): compileUpdates should not throw.
+==== []
   int sync;
 }
 main() {
@@ -2707,8 +2671,7 @@ main() {
 add_top_level_field
 ==> main.dart.patch <==
 <<<< "v1"
-==== {"messages":["null","value"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw.
+==== ["null","value"]
 var field;
 >>>>
 main() {
@@ -2727,8 +2690,7 @@ add_static_field
 ==> main.dart.patch <==
 class C {
 <<<< "v1"
-==== {"messages":["null","value"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): compileUpdates shouldn't throw.
+==== ["null","value"]
   static var field;
 >>>>
 }
@@ -2751,8 +2713,7 @@ main_signature_change
 void main() {
   print("v1");
 }
-==== {"messages":["v2"],"compileUpdatesShouldThrow":1}
-// TODO(ahe): Should not throw.
+==== "v2"
 main() {
   print("v2");
 }
@@ -2898,8 +2859,7 @@ r'''
 add_unused_enum_class
 ==> main.dart.patch <==
 <<<< []
-==== {"messages": [], "compileUpdatesShouldThrow":1}
-// TODO(ahe): Shouldn't throw
+==== []
 enum E { e0 }
 >>>>
 
@@ -2912,8 +2872,7 @@ remove_unused_enum_class
 ==> main.dart.patch <==
 <<<< []
 enum E { e0 }
-==== {"messages": [], "compileUpdatesShouldThrow":1}
-// TODO(ahe): Shouldn't throw
+==== []
 >>>>
 
 main() {

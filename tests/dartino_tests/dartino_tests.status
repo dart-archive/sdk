@@ -11,79 +11,113 @@ multiprogram_tests/should_fail: Fail, OK # This is a test of this suite, failure
 debugger/break_in_anonymous_function_test: Fail # Issue 444
 
 # Stored closures not updated
-incremental/*/stored_closure: Fail
+incremental/experimental/stored_closure: Fail
 incremental/*/remove_instance_method_stored_in_tearoff: Fail
 
 # Received PushFromMap command which referes to a non-existent map entry
-incremental/*/same_tokens_variant: Fail
+incremental/experimental/same_tokens_variant: Fail
 
 # Update to existing class not correctly detected (we end up trying to modify a
 # new class -> should not happen).
-incremental/*/compile_time_error_hides_field: Fail
+incremental/*/compile_time_error_hides_field: IncrementalCompilationFailed
 
 # Bad 'field' count on DartinoPatchClassBuilder (does not contain new fields).
-incremental/*/add_field_and_remove_subclass: Fail
+incremental/experimental/add_field_and_remove_subclass: Fail
 
 # Most things don't work in production mode yet.
-incremental/production/add_class: Fail
-incremental/production/add_instance_field: Fail
-incremental/production/add_instance_method: Fail
-incremental/production/add_static_method: Fail
-incremental/production/add_top_level_const_field: Fail
-incremental/production/add_top_level_method: Fail
-incremental/production/bad_diagnostics: Fail
-incremental/production/bad_stack_trace_repro: Fail
-incremental/production/call_instance_tear_off_named: Fail
-incremental/production/call_named_arguments_1: Fail
-incremental/production/call_named_arguments_2: Fail
-incremental/production/change_in_part: Fail
-incremental/production/change_optional_arguments: Fail
-incremental/production/change_supertype: Fail
-incremental/production/closure: Fail
-incremental/production/compile_time_error_002: Fail
-incremental/production/compile_time_error_field_becomes_removed_function: Fail
-incremental/production/compound_constants: Fail
-incremental/production/constants: Fail
-incremental/production/constants_of_new_classes: Fail
-incremental/production/fix_compile_time_error_in_field: Fail
-incremental/production/hello_world: Fail
-incremental/production/instance_field_end: Fail
-incremental/production/instance_field_middle: Fail
-incremental/production/interceptor_classes: Fail
-incremental/production/main_args: Fail
-incremental/production/modify_static_method: Fail
-incremental/production/multiple_libraries: Fail
-incremental/production/newly_instantiated_class: Fail
-incremental/production/newly_instantiated_class_X: Fail
-incremental/production/newly_instantiated_class_with_fields: Fail
-incremental/production/newly_instantiated_subclases_two_updates: Fail
-incremental/production/newly_instantiated_superclasses_two_updates: Fail
-incremental/production/no_closure: Fail
-incremental/production/preserving_identity_hashcode: Fail
-incremental/production/program_gc_with_processes: Fail
-incremental/production/remove_class: Fail
-incremental/production/remove_class_with_field_and_subclass: Fail
-incremental/production/remove_class_with_static_method: Fail
-incremental/production/remove_instance_field: Fail
-incremental/production/remove_static_method: Fail
-incremental/production/remove_top_level_method: Fail
-incremental/production/same_tokens: Fail
-incremental/production/signature_change_instance_method: Fail
-incremental/production/signature_change_parameter_instance_method: Fail
-incremental/production/signature_change_static_method: Fail
-incremental/production/signature_change_top_level_method: Fail
-incremental/production/source_maps_no_throw: Fail
-incremental/production/subclass_schema_1: Fail
-incremental/production/subclass_schema_2: Fail
-incremental/production/super_call_signature_change: Fail
-incremental/production/super_classes_of_directly_instantiated: Fail
-incremental/production/super_schema: Fail
-incremental/production/two_updates: Fail
-incremental/production/two_updates_not_main: Fail
-incremental/production/two_updates_with_removal: Fail
-incremental/production/update_dependencies: Fail
-incremental/production/update_dependencies_recoverable_compile_time_error: Fail
-incremental/production/update_dependencies_unrecoverable_compile_time_error: Fail
+incremental/production/add_class: IncrementalCompilationFailed
+incremental/production/add_instance_field: IncrementalCompilationFailed
+incremental/production/add_instance_method: IncrementalCompilationFailed
+incremental/production/add_static_method: IncrementalCompilationFailed
+incremental/production/add_top_level_const_field: IncrementalCompilationFailed
+incremental/production/add_top_level_method: IncrementalCompilationFailed
+incremental/production/bad_diagnostics: IncrementalCompilationFailed
+incremental/production/bad_stack_trace_repro: IncrementalCompilationFailed
+incremental/production/call_instance_tear_off_named: IncrementalCompilationFailed
+incremental/production/call_named_arguments_1: IncrementalCompilationFailed
+incremental/production/call_named_arguments_2: IncrementalCompilationFailed
+incremental/production/change_in_part: IncrementalCompilationFailed
+incremental/production/change_optional_arguments: IncrementalCompilationFailed
+incremental/production/change_supertype: IncrementalCompilationFailed
+incremental/production/closure: IncrementalCompilationFailed
+incremental/production/compile_time_error_002: IncrementalCompilationFailed
+incremental/production/compile_time_error_field_becomes_removed_function: IncrementalCompilationFailed
+incremental/production/compound_constants: IncrementalCompilationFailed
+incremental/production/constants: IncrementalCompilationFailed
+incremental/production/constants_of_new_classes: IncrementalCompilationFailed
+incremental/production/fix_compile_time_error_in_field: IncrementalCompilationFailed
+incremental/production/hello_world: IncrementalCompilationFailed
+incremental/production/instance_field_end: IncrementalCompilationFailed
+incremental/production/instance_field_middle: IncrementalCompilationFailed
+incremental/production/interceptor_classes: IncrementalCompilationFailed
+incremental/production/main_args: IncrementalCompilationFailed
+incremental/production/modify_static_method: IncrementalCompilationFailed
+incremental/production/multiple_libraries: IncrementalCompilationFailed
+incremental/production/newly_instantiated_class: IncrementalCompilationFailed
+incremental/production/newly_instantiated_class_X: IncrementalCompilationFailed
+incremental/production/newly_instantiated_class_with_fields: IncrementalCompilationFailed
+incremental/production/newly_instantiated_subclases_two_updates: IncrementalCompilationFailed
+incremental/production/newly_instantiated_superclasses_two_updates: IncrementalCompilationFailed
+incremental/production/no_closure: IncrementalCompilationFailed
+incremental/production/preserving_identity_hashcode: IncrementalCompilationFailed
+incremental/production/program_gc_with_processes: IncrementalCompilationFailed
+incremental/production/remove_class: IncrementalCompilationFailed
+incremental/production/remove_class_with_field_and_subclass: IncrementalCompilationFailed
+incremental/production/remove_class_with_static_method: IncrementalCompilationFailed
+incremental/production/remove_instance_field: IncrementalCompilationFailed
+incremental/production/remove_static_method: IncrementalCompilationFailed
+incremental/production/remove_top_level_method: IncrementalCompilationFailed
+incremental/production/same_tokens: IncrementalCompilationFailed
+incremental/production/signature_change_instance_method: IncrementalCompilationFailed
+incremental/production/signature_change_parameter_instance_method: IncrementalCompilationFailed
+incremental/production/signature_change_static_method: IncrementalCompilationFailed
+incremental/production/signature_change_top_level_method: IncrementalCompilationFailed
+incremental/production/source_maps_no_throw: IncrementalCompilationFailed
+incremental/production/subclass_schema_1: IncrementalCompilationFailed
+incremental/production/subclass_schema_2: IncrementalCompilationFailed
+incremental/production/super_call_signature_change: IncrementalCompilationFailed
+incremental/production/super_classes_of_directly_instantiated: IncrementalCompilationFailed
+incremental/production/super_schema: IncrementalCompilationFailed
+incremental/production/two_updates: IncrementalCompilationFailed
+incremental/production/two_updates_not_main: IncrementalCompilationFailed
+incremental/production/two_updates_with_removal: IncrementalCompilationFailed
+incremental/production/update_dependencies: IncrementalCompilationFailed
+incremental/production/update_dependencies_recoverable_compile_time_error: IncrementalCompilationFailed
+incremental/production/update_dependencies_unrecoverable_compile_time_error: IncrementalCompilationFailed
+incremental/production/add_field_and_remove_subclass: IncrementalCompilationFailed
+incremental/production/same_tokens_variant: IncrementalCompilationFailed
+incremental/production/stored_closure: IncrementalCompilationFailed
+
+# Unsupported features.
+incremental/*/add_compound_instance_field: IncrementalCompilationFailed
+incremental/*/add_export: IncrementalCompilationFailed
+incremental/*/add_import: IncrementalCompilationFailed
+incremental/*/add_named_mixin_application: IncrementalCompilationFailed
+incremental/*/add_part: IncrementalCompilationFailed
+incremental/*/add_static_field: IncrementalCompilationFailed
+incremental/*/add_top_level_field: IncrementalCompilationFailed
+incremental/*/add_unused_enum_class: IncrementalCompilationFailed
+incremental/*/change_library_name: IncrementalCompilationFailed
+incremental/*/closure_capture: IncrementalCompilationFailed
+incremental/*/compile_time_error_001: IncrementalCompilationFailed
+incremental/*/compile_time_error_003: IncrementalCompilationFailed
+incremental/*/compile_time_error_004: IncrementalCompilationFailed
+incremental/*/compile_time_error_005: IncrementalCompilationFailed
+incremental/*/compile_time_error_006: IncrementalCompilationFailed
+incremental/*/compile_time_error_partial_file: IncrementalCompilationFailed
+incremental/*/generic_types_001: IncrementalCompilationFailed
+incremental/*/generic_types_002: IncrementalCompilationFailed
+incremental/*/generic_types_003: IncrementalCompilationFailed
+incremental/*/generic_types_004: IncrementalCompilationFailed
+incremental/*/instance_field_to_static_field: IncrementalCompilationFailed
+incremental/*/lazy_static: IncrementalCompilationFailed
+incremental/*/main_signature_change: IncrementalCompilationFailed
+incremental/*/remove_compound_instance_field: IncrementalCompilationFailed
+incremental/*/remove_named_mixin_application: IncrementalCompilationFailed
+incremental/*/remove_unused_enum_class: IncrementalCompilationFailed
+incremental/*/static_field_to_instance_field: IncrementalCompilationFailed
+incremental/*/super_is_parameter: IncrementalCompilationFailed
+incremental/*/unchanged_named_mixin_application: IncrementalCompilationFailed
 
 # Incorrectly failing servicec tests
 servicec/bad_field_4: Fail  # Issue 293

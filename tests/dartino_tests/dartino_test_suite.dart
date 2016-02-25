@@ -42,6 +42,10 @@ import 'package:dartino_compiler/src/worker/developer.dart' show
 import 'package:dartino_compiler/src/console_print.dart' show
     printToConsole;
 
+import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart'
+    show
+        IncrementalCompilationFailed;
+
 import 'messages.dart' show
     Info,
     InternalErrorMessage,
@@ -249,6 +253,9 @@ Future<Message> runTest(String name, NoArgFuture test) async {
           "\n$BUILDBOT_MARKER\nLate error in test '$name':\n"
           "$error\n$stackTrace");
     });
+  } on IncrementalCompilationFailed catch (error, stackTrace) {
+    return new TestFailed(
+        name, '$error', '$stackTrace', kind: 'IncrementalCompilationFailed');
   } catch (error, stackTrace) {
     return new TestFailed(name, '$error', '$stackTrace');
   } finally {
