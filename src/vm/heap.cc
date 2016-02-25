@@ -15,7 +15,7 @@ namespace dartino {
 Heap::Heap(RandomXorShift* random, int maximum_initial_size)
     : random_(random),
       space_(new SemiSpace(maximum_initial_size)),
-      old_space_(new OldSpace(0)),
+      old_space_(new OldSpace(maximum_initial_size)),
       weak_pointers_(NULL),
       foreign_memory_(0),
       allocations_have_taken_place_(false) {
