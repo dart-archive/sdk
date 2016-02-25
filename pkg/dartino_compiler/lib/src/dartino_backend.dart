@@ -501,36 +501,12 @@ class DartinoBackend extends Backend
     DartinoClassBase base = systemBuilder.lookupTearoffClass(function);
     if (base != null) return base;
 
-    if (base == null) {
-      DartinoFunctionBase predecessorFunction = systemBuilder.
-         predecessorSystem.lookupFunctionByElement(function.element);
-      if (predecessorFunction != null) {
-        base = systemBuilder.lookupTearoffClass(predecessorFunction);
-      }
-    }
-
-    DartinoClassBuilder tearoffClass;
     FunctionSignature signature = function.signature;
     bool hasThis = function.isInstanceMember;
-    if (base != null) {
-      // [function] is the result of an incremental change on
-      // [predecessorFunction] which already has a tear-off class. Hence, we
-      // patch this class instead of creating a new one.
-      tearoffClass = systemBuilder.lookupClassBuilder(base.classId);
-      if (tearoffClass == null) {
-        tearoffClass = systemBuilder.newPatchClassBuilderFromBase(
-            base,
-            new SchemaChange(null));
-        // TODO(zarah): The old call methods will all be removed as they are
-        // overridden because we don't tree shake selectors. Ideally these
-        // methods should be removed explicitly when we patch the closure class.
-      }
-    } else {
-      tearoffClass = createCallableStubClass(
-          hasThis ? 1 : 0,
-          signature.parameterCount,
-          compiledClosureClass);
-    }
+    DartinoClassBuilder tearoffClass = createCallableStubClass(
+        hasThis ? 1 : 0,
+        signature.parameterCount,
+        compiledClosureClass);
 
     DartinoFunctionBuilder functionBuilder =
         systemBuilder.newTearOff(function, tearoffClass.classId);
@@ -913,8 +889,15 @@ class DartinoBackend extends Backend
             break;
           }
           // A tear-off has a corresponding stub in a closure class. Look up
-          // that stub:
+          // that stub. If the function is a modification of a previous
+          // function we find the stub through that.
           int stub = systemBuilder.lookupTearOffById(function.functionId);
+          if (stub == null) {
+            DartinoFunction predecessorFunction = systemBuilder.
+                predecessorSystem.lookupFunctionByElement(function.element);
+            stub =
+                systemBuilder.lookupTearOffById(predecessorFunction.functionId);
+          }
           if (stub == null) {
             compiler.reporter
                 .internalError(element, "Couldn't find tear-off stub");
@@ -1327,7 +1310,7 @@ class DartinoBackend extends Backend
   /// a class with a `call` method [ClosureKind.functionLike]) and that the
   /// getter should be added to that class.
   void createTearoffGetterForFunction(
-      DartinoFunctionBuilder function,
+      DartinoFunctionBase function,
       {bool isSpecialCallMethod}) {
     if (isSpecialCallMethod == null) {
       throw new ArgumentError("isSpecialCallMethod");
@@ -1342,7 +1325,23 @@ class DartinoBackend extends Backend
           ..ret()
           ..methodEnd();
     } else {
-      DartinoClassBase tearoffClass = getTearoffClass(function);
+      DartinoClassBase tearoffClass;
+      DartinoFunction predecessorFunction = systemBuilder.predecessorSystem
+          .lookupFunctionByElement(function.element);
+      if (predecessorFunction != null) {
+        DartinoClassBase predecessorTearoffClass =
+            systemBuilder.lookupTearoffClass(predecessorFunction);
+        if (predecessorTearoffClass != null) {
+          // No need to create a new tear-off class. The call methods of the old
+          // one will be updated.
+          tearoffClass = predecessorTearoffClass;
+        }
+      }
+
+      if (tearoffClass == null) {
+        tearoffClass = getTearoffClass(function);
+      }
+
       int constId = getter.allocateConstantFromClass(tearoffClass.classId);
       getter.assembler
           ..loadParameter(0)

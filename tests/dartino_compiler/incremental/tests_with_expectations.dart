@@ -713,6 +713,37 @@ main() {
 ''',
 
   r'''
+new_instance_tearoff
+==> main.dart.patch <==
+// Test that we can tear off an exisiting instance method
+
+class C {
+  m(String s) {
+    print(s);
+  }
+
+  n() {
+<<<< ["instance is null","v1"]
+    m("v1");
+==== "v2"
+    var f = m;
+    f("v2");
+>>>>
+  }
+}
+var instance;
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+  }
+  instance.n();
+}
+
+
+''',
+
+  r'''
 stored_instance_tearoff_with_named_parameters
 ==> main.dart.patch <==
 // Test that a stored instance tearoff with named parameter changes behavior

@@ -11,7 +11,6 @@ multiprogram_tests/should_fail: Fail, OK # This is a test of this suite, failure
 debugger/break_in_anonymous_function_test: Fail # Issue 444
 
 # Stored closures not updated
-incremental/experimental/stored_closure: Fail
 incremental/*/remove_instance_method_stored_in_tearoff: Fail
 
 # Received PushFromMap command which referes to a non-existent map entry
@@ -73,6 +72,7 @@ incremental/production/signature_change_parameter_instance_method: IncrementalCo
 incremental/production/signature_change_static_method: IncrementalCompilationFailed
 incremental/production/signature_change_top_level_method: IncrementalCompilationFailed
 incremental/production/source_maps_no_throw: IncrementalCompilationFailed
+incremental/production/stored_closure: IncrementalCompilationFailed
 incremental/production/subclass_schema_1: IncrementalCompilationFailed
 incremental/production/subclass_schema_2: IncrementalCompilationFailed
 incremental/production/super_call_signature_change: IncrementalCompilationFailed

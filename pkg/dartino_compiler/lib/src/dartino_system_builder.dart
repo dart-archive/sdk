@@ -763,7 +763,7 @@ class DartinoSystemBuilder {
     for (int user in _replaceUsage.keys) {
       // Don't modify already replaced elements.
       DartinoFunction function = predecessorSystem.lookupFunctionById(user);
-      if (function == null || function.element == null) continue;
+      if (function == null) continue;
       if (lookupFunctionBuilderByElement(function.element) != null) continue;
 
       bool constantsChanged = false;
