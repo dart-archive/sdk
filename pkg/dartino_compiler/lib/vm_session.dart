@@ -41,6 +41,9 @@ import 'src/shared_command_infrastructure.dart' show
 import 'src/hub/session_manager.dart' show
     SessionState;
 
+import 'package:dartino_compiler/program_info.dart' show
+    Configuration;
+
 part 'vm_command_reader.dart';
 part 'input_handler.dart';
 
@@ -218,6 +221,8 @@ class Session extends DartinoVmSession {
   bool loaded = false;
   bool running = false;
   bool terminated = false;
+
+  Configuration configuration;
 
   Session(Socket dartinoVmSocket,
           this.compiler,

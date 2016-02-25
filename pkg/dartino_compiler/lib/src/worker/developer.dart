@@ -26,9 +26,6 @@ import 'dart:io' show
     Socket,
     SocketException;
 
-import 'package:sdk_library_metadata/libraries.dart' show
-    Category;
-
 import 'package:sdk_services/sdk_services.dart' show
     OutputService,
     SDKServices,
@@ -70,7 +67,8 @@ import '../../program_info.dart' show
     Configuration,
     ProgramInfo,
     ProgramInfoJson,
-    buildProgramInfo;
+    buildProgramInfo,
+    getConfiguration;
 
 import '../hub/session_manager.dart' show
     DartinoVm,
@@ -107,14 +105,6 @@ export '../../incremental/dartino_compiler_incremental.dart' show
 import '../../dartino_compiler.dart' show dartinoDeviceType;
 
 import '../hub/exit_codes.dart' as exit_codes;
-
-import '../../dartino_system.dart' show
-    DartinoFunction,
-    DartinoSystem;
-
-import '../../bytecodes.dart' show
-    Bytecode,
-    MethodEnd;
 
 import '../diagnostic.dart' show
     throwInternalError;
@@ -270,6 +260,8 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
                     userInput: dartinoVersion,
                     additionalUserInput: handShakeResult.version);
   }
+  session.configuration =
+      getConfiguration(handShakeResult.wordSize, handShakeResult.floatSize);
 
   // Enable live editing to be able to communicate with VM when there are
   // errors.
@@ -398,7 +390,6 @@ Future<Settings> createSettings(
   }
 
   if (persistSettings) {
-    bool aborted = false;
     Uri path = await readPathFromUser(cwd, commandSender, commandIterator);
     uri = path.resolve(settingsFileName);
     print("Creating settings file '${uri.toFilePath()}'");
@@ -884,7 +875,6 @@ Future<Uri> lookForAgentPackage(Uri base, {String version}) async {
   Directory platformDir = new Directory.fromUri(platformUri);
 
   // Try to locate the agent package in the SDK for the selected platform.
-  Uri sdkAgentPackage;
   if (await platformDir.exists()) {
     for (FileSystemEntity entry in platformDir.listSync()) {
       Uri uri = entry.uri;
@@ -1096,7 +1086,7 @@ Future<int> upgradeAgent(
       if (newVersion != existingVersion) {
         break;
       }
-    } on SocketException catch (e) {
+    } on SocketException catch (_) {
       // Ignore this error and keep waiting.
     }
   }

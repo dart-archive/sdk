@@ -796,6 +796,10 @@ SessionState* InitialState::ProcessMessage(Connection::Opcode opcode) {
   buffer.WriteBoolean(version_match);
   buffer.WriteInt(version_length);
   buffer.WriteString(version);
+  // Send word size.
+  buffer.WriteInt(sizeof(void*) * 8);
+  // Send floating point size.
+  buffer.WriteInt(sizeof(dartino_double) * 8);
   connection()->Send(Connection::kHandShakeResult, buffer);
   if (!version_match) {
     MessageProcessingError("Error: Different compiler and VM version.\n");

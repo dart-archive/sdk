@@ -598,13 +598,19 @@ Future<Profile> decodeTickSamples(
   return profile;
 }
 
-Configuration _getConfiguration(bits, floatOrDouble) {
-  if (bits == '64') {
-    if (floatOrDouble == 'float') return Configuration.Offset64BitsFloat;
-    else if (floatOrDouble == 'double') return Configuration.Offset64BitsDouble;
-  } else if (bits == '32') {
-    if (floatOrDouble == 'float') return Configuration.Offset32BitsFloat;
-    else if (floatOrDouble == 'double') return Configuration.Offset32BitsDouble;
+Configuration _getConfiguration(String bits, String floatOrDouble) {
+  int wordSize = const {'32': 32, '64': 64}[bits];
+  int floatSize = const {'float': 32, 'double': 64}[floatOrDouble];
+  return getConfiguration(wordSize, floatSize);
+}
+
+Configuration getConfiguration(int wordSize, int floatSize) {
+  if (wordSize == 64) {
+    if (floatSize == 32) return Configuration.Offset64BitsFloat;
+    else if (floatSize == 64) return Configuration.Offset64BitsDouble;
+  } else if (wordSize == 32) {
+    if (floatSize == 32) return Configuration.Offset32BitsFloat;
+    else if (floatSize == 64) return Configuration.Offset32BitsDouble;
   }
-  throw 'Invalid arguments';
+  throw 'Invalid arguments $wordSize $floatSize';
 }
