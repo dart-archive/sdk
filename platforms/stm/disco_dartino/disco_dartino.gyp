@@ -203,7 +203,10 @@
       'variables': {
         'common_ldflags': [
           '-specs=nano.specs',
-          '-specs=nosys.specs',
+          # Without this, the weak and strong symbols for the IRQ handlers are
+          # not linked correctly and you get the weak fallback versions that
+          # loop forever instead of the IRQ handler you want for your hardware.
+          '-Wl,--whole-archive',
           # TODO(340): Why does this not work???
           #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???
@@ -236,6 +239,10 @@
         }],
       ],
       'libraries': [
+        # This option ends up near the end of the linker command, so that
+        # --whole-archive (see above) is not applied to libstdc++ and the
+        # implict libgcc.a library.
+        '-Wl,--no-whole-archive',
         '-lstdc++',
       ],
     },

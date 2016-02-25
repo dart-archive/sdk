@@ -24,10 +24,12 @@ main() {
   Fiber.fork(() {
     while (true) {
       button.waitForPress();
+      // Use print("...\n") to print to both the serial port and the LCD.
       uart.writeString("Button press received\r\n");
     }
   });
 
+  // Use print("...\n") to print to both the serial port and the LCD.
   uart.writeString("\rWelcome to Dart UART echo!\r\n");
   uart.writeString("--------------------------\r\n");
   uart.write(LFBuffer);
