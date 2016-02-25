@@ -293,7 +293,17 @@ class HeapBuilder : public HeapObjectVisitor {
     }
 
     auto full_inst = llvm::ConstantStruct::get(full_inst_type, instance_entries);
-    return new llvm::GlobalVariable(w.module_, full_inst_type, true, llvm::GlobalValue::ExternalLinkage, full_inst, name("InstanceObject_%p__%d", instance, nof));
+    const char* instance_name = NULL;
+    if (instance->IsTrue()) {
+      instance_name = name("true__", instance);
+    } else if (instance->IsFalse()) {
+      instance_name = name("false__", instance);
+    } else if (instance->IsNull()) {
+      instance_name = name("null__", instance);
+    } else {
+      instance_name = name("InstanceObject_%p__%d", instance, nof);
+    }
+    return new llvm::GlobalVariable(w.module_, full_inst_type, true, llvm::GlobalValue::ExternalLinkage, full_inst, instance_name);
   }
 
   llvm::Constant* BuildDispatchTableEntryConstant(DispatchTableEntry* entry) {
@@ -593,7 +603,7 @@ class BasicBlockBuilder {
   void DoLoadConstant(Object* object) {
     llvm::Value* value = NULL;
     if (object->IsHeapObject()) {
-      value = h.Cast(w.tagged_heap_objects[HeapObject::cast(object)]);
+      value = w.CCast(w.tagged_heap_objects[HeapObject::cast(object)]);
       ASSERT(value != NULL);
     } else {
       // TODO: Support LargeIntegers for non-portable Smis.
@@ -657,7 +667,7 @@ class BasicBlockBuilder {
 
   void DoAllocate(Class* klass, bool immutable) {
     int fields = klass->NumberOfInstanceFields();
-    auto llvm_klass = h.Cast(w.tagged_heap_objects[klass], w.object_ptr_type);
+    auto llvm_klass = w.CCast(w.tagged_heap_objects[klass], w.object_ptr_type);
     ASSERT(llvm_klass != NULL);
 
     // TODO: Check for Failure::xxx result!
@@ -790,8 +800,8 @@ class BasicBlockBuilder {
 
   void DoIdentical() {
     // TODO: Handle about other classes!
-    auto true_obj = h.Cast(w.tagged_heap_objects[w.program_->true_object()]);
-    auto false_obj = h.Cast(w.tagged_heap_objects[w.program_->false_object()]);
+    auto true_obj = w.CCast(w.tagged_heap_objects[w.program_->true_object()]);
+    auto false_obj = w.CCast(w.tagged_heap_objects[w.program_->false_object()]);
     push(b.CreateSelect(b.CreateICmpEQ(pop(), pop()), true_obj, false_obj, "identical_result"));
   }
 
@@ -804,9 +814,12 @@ class BasicBlockBuilder {
     auto tagged_argument = pop();
     auto tagged_receiver = pop();
 
-    b.CreateCondBr(h.CreateSmiCheck(tagged_receiver), bb_smi_receiver, bb_nonsmi);
+    llvm::MDBuilder md_builder(context);
+    llvm::MDNode* assume_true = md_builder.createBranchWeights(1000, 0);
+
+    b.CreateCondBr(h.CreateSmiCheck(tagged_receiver), bb_smi_receiver, bb_nonsmi, assume_true);
     b.SetInsertPoint(bb_smi_receiver);
-    b.CreateCondBr(h.CreateSmiCheck(tagged_argument), bb_smis, bb_nonsmi);
+    b.CreateCondBr(h.CreateSmiCheck(tagged_argument), bb_smis, bb_nonsmi, assume_true);
     b.SetInsertPoint(bb_smis);
 
     auto argument = b.CreatePtrToInt(tagged_argument, w.intptr_type);
@@ -839,8 +852,8 @@ class BasicBlockBuilder {
 
     llvm::Value* smi_result = NULL;
     if (boolify) {
-      auto true_obj = h.Cast(w.tagged_heap_objects[w.program_->true_object()]);
-      auto false_obj = h.Cast(w.tagged_heap_objects[w.program_->false_object()]);
+      auto true_obj = w.CCast(w.tagged_heap_objects[w.program_->true_object()]);
+      auto false_obj = w.CCast(w.tagged_heap_objects[w.program_->false_object()]);
       smi_result = b.CreateSelect(result, true_obj, false_obj, "compare_result");
     } else {
       smi_result = b.CreateIntToPtr(result, w.object_ptr_type);
@@ -866,7 +879,7 @@ class BasicBlockBuilder {
     auto true_obj = w.tagged_heap_objects[w.program_->true_object()];
     auto false_obj = w.tagged_heap_objects[w.program_->false_object()];
     auto comp = b.CreateICmpEQ(pop(), w.CCast(true_obj));
-    push(b.CreateSelect(comp, h.Cast(false_obj), h.Cast(true_obj), "negate"));
+    push(b.CreateSelect(comp, w.CCast(false_obj), w.CCast(true_obj), "negate"));
   }
 
   void DoInvokeMethod(int selector, int arity) {
@@ -909,8 +922,8 @@ class BasicBlockBuilder {
     auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffsetFromEntry(entry), w.intptr_type);
 
     auto comp = b.CreateICmpEQ(actual_offset, expected_offset);
-    auto true_obj = h.Cast(w.tagged_heap_objects[w.program_->true_object()]);
-    auto false_obj = h.Cast(w.tagged_heap_objects[w.program_->false_object()]);
+    auto true_obj = w.CCast(w.tagged_heap_objects[w.program_->true_object()]);
+    auto false_obj = w.CCast(w.tagged_heap_objects[w.program_->false_object()]);
     push(b.CreateSelect(comp, true_obj, false_obj, "compare_result"));
   }
 
@@ -972,7 +985,7 @@ class BasicBlockBuilder {
     b.CreateCondBr(is_smi, bb_smi, bb_nonsmi);
 
     b.SetInsertPoint(bb_smi);
-    auto smi_klass = h.Cast(w.tagged_heap_objects[w.program_->smi_class()]);
+    auto smi_klass = w.CCast(w.tagged_heap_objects[w.program_->smi_class()]);
     b.CreateBr(bb_lookup);
 
     b.SetInsertPoint(bb_nonsmi);
