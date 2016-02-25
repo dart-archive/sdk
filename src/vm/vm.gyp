@@ -304,12 +304,12 @@
       ],
       'include_dirs': [
           #'/usr/lib/llvm-3.6/include',
-          '/usr/local/google/home/kustermann/repositories/llvm/llvm-build/include',
-          '/usr/local/google/home/kustermann/repositories/llvm/include',
+          '../../third_party/llvm/llvm-build/include',
+          '../../third_party/llvm/include',
       ],
       'libraries': [
           #'-L/usr/lib/llvm-3.6/lib',
-          '-L/usr/local/google/home/kustermann/repositories/llvm/llvm-build/lib',
+          '-L../../third_party/llvm/llvm-build/lib',
 
           # core
           '-lLLVMCore',

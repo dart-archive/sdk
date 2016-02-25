@@ -1,6 +1,7 @@
 #!/bin/bash
 
-LLVM_BIN=$HOME/repositories/llvm/llvm-build-release/bin
+DARTINO_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+LLVM_BIN=$DARTINO_ROOT/third_party/llvm/llvm-build-release/bin
 
 if [ ! -f "$1" ]; then
   echo "Usage: $0 file.snapshot";
