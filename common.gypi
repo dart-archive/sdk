@@ -28,7 +28,7 @@
       '-Wno-invalid-offsetof',
     ],
 
-    'LK_PATH%': 'third_party/lk/lk-downstream',
+    'LK_PATH%': 'third_party/lk/lk-upstream',
 
     'LK_USE_DEPS_ARM_GCC%': '1',
 

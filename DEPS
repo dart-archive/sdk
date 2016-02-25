@@ -89,7 +89,7 @@ deps = {
   "sdk/third_party/crypto":
       (Var("github_mirror") % "crypto") + Var("crypto_rev"),
 
-  "sdk/third_party/lk/lk-downstream":
+  "sdk/third_party/lk/lk-upstream":
       (Var("github_url") % "littlekernel/lk") + Var("lk_rev"),
 
   "sdk/third_party/isolate":

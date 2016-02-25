@@ -4,7 +4,7 @@ https://github.com/travisg/lk
 
 that contains the dartino specific parts to build a dartino vm that can run as
 an app within the LK kernel. The kernel is located in
-'third_party/lk/lk-downstream'.
+'third_party/lk/lk-upstream'.
 
 To build a image containing the dartino VM, run, in third_party/lk,
 

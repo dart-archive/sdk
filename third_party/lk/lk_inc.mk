@@ -5,7 +5,7 @@ LKMAKEROOT := .
 LKINC := dartino
 
 # the path relative to LKMAKEROOT where the main lk repository lives
-LKROOT := lk-downstream
+LKROOT := lk-upstream
 
 # set the directory relative to LKMAKEROOT where output will go
 BUILDROOT ?= out
