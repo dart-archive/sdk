@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > bf tests/debugger/break_in_anonymous_function_test.dart 12
-breakpoint set: id: '0' method: '<anonymous>' bytecode index: '15'
+### set breakpoint id: '0' method: '<anonymous>' bytecode index: '15'
 > r
 tests/debugger/break_in_anonymous_function_test.dart:12:3
 12     return 1 + 2 + 3;

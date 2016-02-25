@@ -62,7 +62,7 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
   for (String line in await new File.fromUri(uri).readAsLines()) {
     const String commandsPattern = "// DartinoDebuggerCommands=";
     if (line.startsWith(commandsPattern)) {
-      debuggerCommands = line.substring(commandsPattern.length).split(",");
+      debuggerCommands.addAll(line.substring(commandsPattern.length).split(","));
     }
   }
 

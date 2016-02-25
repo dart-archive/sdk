@@ -373,7 +373,7 @@ class Session extends DartinoVmSession {
         new ProcessSetBreakpoint(bytecodeIndex),
     ]);
     int breakpointId = response.value;
-    var breakpoint = new Breakpoint(name, bytecodeIndex, breakpointId);
+    var breakpoint = new Breakpoint(function, bytecodeIndex, breakpointId);
     debugState.breakpoints[breakpointId] = breakpoint;
     return breakpoint;
   }

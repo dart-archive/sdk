@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > b
-breakpoint set: id: '0' method: 'main' bytecode index: '0'
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
 > r
 tests/debugger/step_over_recursive_test.dart:13:11
 13     recurse(10);

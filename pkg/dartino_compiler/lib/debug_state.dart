@@ -50,10 +50,17 @@ class RemoteValue extends RemoteObject {
 }
 
 class Breakpoint {
-  final String methodName;
+  final DartinoFunction function;
   final int bytecodeIndex;
   final int id;
-  Breakpoint(this.methodName, this.bytecodeIndex, this.id);
+  String get methodName => function.name;
+
+  Breakpoint(this.function, this.bytecodeIndex, this.id);
+
+  String location(DebugState state) {
+    return state.getDebugInfo(function).fileAndLineStringFor(bytecodeIndex);
+  }
+
   String toString() => "id: '$id' method: '$methodName' "
       "bytecode index: '$bytecodeIndex'";
 }

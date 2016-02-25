@@ -57,6 +57,7 @@ abstract class InteractiveDebuggerTest extends CliTest {
       process.stderr.transform(UTF8.decoder).transform(new LineSplitter()));
     try {
       await expectPrompt("Debug header");
+      await runCommandAndExpectPrompt("t testing");
       await internalRun();
     } finally {
       process.stdin.close();
@@ -168,7 +169,7 @@ class DebuggerRelativeFileReferenceTest extends InteractiveDebuggerTest {
   Future<Null> internalRun() async {
     await runCommandAndExpectPrompt("bf $testFilePath 13");
     await expectOut(
-        "breakpoint set: id: '0' method: 'main' bytecode index: '0'");
+        "### set breakpoint id: '0' method: 'main' bytecode index: '0'");
     await runCommandAndExpectPrompt("r");
     await quitWithoutError();
   }

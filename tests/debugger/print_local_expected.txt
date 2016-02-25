@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > b breakHere
-breakpoint set: id: '0' method: 'breakHere' bytecode index: '0'
+### set breakpoint id: '0' method: 'breakHere' bytecode index: '0'
 > r
 tests/debugger/print_local_test.dart:10:1
 10   breakHere() { }

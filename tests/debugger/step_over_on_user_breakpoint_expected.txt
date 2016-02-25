@@ -1,11 +1,11 @@
 Starting session. Type 'help' for a list of commands.
 
 > b
-breakpoint set: id: '0' method: 'main' bytecode index: '0'
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
 > b foo
-breakpoint set: id: '1' method: 'foo' bytecode index: '0'
+### set breakpoint id: '1' method: 'foo' bytecode index: '0'
 > b main 5
-breakpoint set: id: '2' method: 'main' bytecode index: '5'
+### set breakpoint id: '2' method: 'main' bytecode index: '5'
 > r
 tests/debugger/step_over_on_user_breakpoint_test.dart:15:3
 15     foo();

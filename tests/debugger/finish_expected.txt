@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > b
-breakpoint set: id: '0' method: 'main' bytecode index: '0'
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
 > r
 tests/debugger/finish_test.dart:17:3
 17     foo();
@@ -63,7 +63,7 @@ tests/debugger/finish_test.dart:10:24
 tests/debugger/finish_test.dart:22:3
 22     a.z();
 > b y
-breakpoint set: id: '6' method: 'y' bytecode index: '0'
+### set breakpoint id: '6' method: 'y' bytecode index: '0'
 > s
 tests/debugger/finish_test.dart:22:3
 22     a.z();

@@ -48,12 +48,16 @@ class InputHandler {
   final bool echo;
   final Uri base;
 
+  bool printForTesting = false;
+
   String previousLine = '';
 
   int processPagingCount = 10;
   int processPagingCurrent = 0;
 
-  InputHandler(this.session, this.stream, this.echo, this.base);
+  InputHandler(this.session, this.stream, this.echo, this.base) {
+    if (echo) printForTesting = true;
+  }
 
   void printPrompt() => session.writeStdout('> ');
 
@@ -90,7 +94,7 @@ class InputHandler {
             await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
         if (breakpoints != null) {
           for (Breakpoint breakpoint in breakpoints) {
-            writeStdoutLine("breakpoint set: $breakpoint");
+            printSetBreakpoint(breakpoint);
           }
         } else {
           writeStdoutLine(
@@ -167,7 +171,7 @@ class InputHandler {
         }
         if (breakpoints.isNotEmpty) {
           for (Breakpoint breakpoint in breakpoints) {
-            writeStdoutLine("breakpoint set: $breakpoint");
+            printSetBreakpoint(breakpoint);
           }
         } else {
           writeStdoutLine(
@@ -234,7 +238,7 @@ class InputHandler {
           writeStdoutLine("### invalid breakpoint id: $id");
           break;
         }
-        writeStdoutLine("### deleted breakpoint: $breakpoint");
+        printDeletedBreakpoint(breakpoint);
         break;
       case 'processes':
       case 'lp':
@@ -309,7 +313,7 @@ class InputHandler {
         } else {
           writeStdoutLine("### breakpoints:");
           for (var bp in breakpoints) {
-            writeStdoutLine('$bp');
+            writeStdoutLine(BreakpointToString(bp));
           }
         }
         break;
@@ -387,6 +391,10 @@ class InputHandler {
           case 'verbose':
             bool verbose = session.toggleVerbose();
             writeStdoutLine('### verbose printing set to: $verbose');
+            break;
+          case 'testing':
+            printForTesting = !printForTesting;
+            writeStdoutLine('### print for testing set to: $printForTesting');
             break;
           default:
             writeStdoutLine('### invalid flag $toggle');
@@ -511,5 +519,26 @@ class InputHandler {
       writeStdoutLine("Please select a number between 1 and $length, " +
                       "'a' for all, or 'n' for none.");
     }
+  }
+
+  // Printing routines. When running in "testing" mode, these will print
+  // messages with relatively stable content (eg, not a line:column format).
+
+  String BreakpointToString(Breakpoint breakpoint) {
+    if (printForTesting) return breakpoint.toString();
+    int id = breakpoint.id;
+    String name = breakpoint.methodName;
+    String location = breakpoint.location(session.debugState);
+    return "$id: $name @ $location";
+  }
+
+  void printSetBreakpoint(Breakpoint breakpoint) {
+    writeStdout("### set breakpoint ");
+    writeStdoutLine(BreakpointToString(breakpoint));
+  }
+
+  void printDeletedBreakpoint(Breakpoint breakpoint) {
+    writeStdout("### deleted breakpoint ");
+    writeStdoutLine(BreakpointToString(breakpoint));
   }
 }
