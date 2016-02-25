@@ -89,13 +89,6 @@ static Program* LoadSnapshotFromFile(const char* path) {
   return program;
 }
 
-static void RunSnapshotFromFile(const char* path, int argc, char** argv) {
-  Program* program = LoadSnapshotFromFile(path);
-  int result = RunProgram(program, argc, argv);
-  delete program;
-  if (result != 0) FATAL1("Failed to run snapshot: %s\n", path);
-}
-
 static void WaitForDebuggerConnection(int port) {
 #ifdef DARTINO_ENABLE_LIVE_CODING
   ConnectionListener listener("127.0.0.1", port);
@@ -121,14 +114,12 @@ void DartinoWaitForDebuggerConnection(int port) {
 
 DartinoProgram DartinoLoadSnapshotFromFile(const char* path) {
   dartino::Program* program = dartino::LoadSnapshotFromFile(path);
-  if (program == NULL) FATAL("Failed to load snapshot from file.\n");
   return reinterpret_cast<DartinoProgram>(program);
 }
 
 DartinoProgram DartinoLoadSnapshot(unsigned char* snapshot, int length) {
   dartino::List<uint8> bytes(snapshot, length);
   dartino::Program* program = dartino::LoadSnapshot(bytes);
-  if (program == NULL) FATAL("Failed to load snapshot.\n");
   return reinterpret_cast<DartinoProgram>(program);
 }
 
@@ -164,6 +155,9 @@ DartinoProgram DartinoLoadProgramFromFlash(void* heap, size_t size) {
   uword block_address = address + heap_size;
   dartino::ProgramInfoBlock* program_info =
       reinterpret_cast<dartino::ProgramInfoBlock*>(block_address);
+  if (!dartino::ProgramInfoBlock::MightBeProgramInfoBlock(program_info)) {
+    return NULL;
+  }
   program_info->WriteToProgram(program);
   dartino::Chunk* memory = dartino::ObjectMemory::CreateFlashChunk(
       program->heap()->space(), heap, heap_size);
@@ -202,10 +196,6 @@ void DartinoDeleteProgram(DartinoProgram raw_program) {
            state->state() == dartino::ProgramState::kPendingDeletion);
   }
   delete program;
-}
-
-void DartinoRunSnapshotFromFile(const char* path, int argc, char** argv) {
-  dartino::RunSnapshotFromFile(path, argc, argv);
 }
 
 bool DartinoAddDefaultSharedLibrary(const char* library) {

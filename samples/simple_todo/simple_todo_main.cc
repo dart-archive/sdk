@@ -37,7 +37,9 @@ static void WaitForVmThread(int expected) {
 static void* StartDartino(void* arg) {
   char* snapshot_filepath_with_name = reinterpret_cast<char*>(arg);
   DartinoSetup();
-  DartinoRunSnapshotFromFile(snapshot_filepath_with_name, 0, NULL);
+  DartinoProgram program =
+      DartinoLoadSnapshotFromFile(snapshot_filepath_with_name);
+  DartinoRunMain(program, 0, NULL);
   DartinoTearDown();
   ChangeStatusAndNotify(kDone);
   return NULL;

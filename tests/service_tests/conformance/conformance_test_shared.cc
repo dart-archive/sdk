@@ -33,7 +33,8 @@ static void WaitForStatus(int expected) {
 static void* DartThreadEntry(void* arg) {
   const char* path = static_cast<char*>(arg);
   DartinoSetup();
-  DartinoRunSnapshotFromFile(path, 0, NULL);
+  DartinoProgram program = DartinoLoadSnapshotFromFile(path);
+  DartinoRunMain(program, 0, NULL);
   DartinoTearDown();
   ChangeStatusAndNotify(kDone);
   return NULL;

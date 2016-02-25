@@ -82,13 +82,6 @@ DARTINO_EXPORT void DartinoRunMultipleMain(int count,
                                            int argc,
                                            char** argv);
 
-// Load the snapshot from the file, load the program from the
-// snapshot, run the main process of that program and wait until it is done
-// executing.
-DARTINO_EXPORT void DartinoRunSnapshotFromFile(const char* path,
-                                               int argc,
-                                               char** argv);
-
 // Add a default shared library for the dart:ffi foreign lookups.
 // More than one default shared library can be added. The libraries
 // are used for foreign lookups where no library has been specified.
