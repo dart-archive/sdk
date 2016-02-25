@@ -794,7 +794,7 @@ class BasicBlockBuilder {
     push(b.CreateSelect(b.CreateICmpEQ(pop(), pop()), true_obj, false_obj, "identical_result"));
   }
 
-  void DoArithmetic(Opcode opcode, int selector) {
+  void DoInvokeSmiOperation(Opcode opcode, int selector) {
     auto bb_smi_receiver = llvm::BasicBlock::Create(context, "smi_receiver", llvm_function_);
     auto bb_smis = llvm::BasicBlock::Create(context, "smis", llvm_function_);
     auto bb_nonsmi = llvm::BasicBlock::Create(context, "nonsmi", llvm_function_);
@@ -804,23 +804,46 @@ class BasicBlockBuilder {
     auto tagged_receiver = pop();
 
     b.CreateCondBr(h.CreateSmiCheck(tagged_receiver), bb_smi_receiver, bb_nonsmi);
-
     b.SetInsertPoint(bb_smi_receiver);
     b.CreateCondBr(h.CreateSmiCheck(tagged_argument), bb_smis, bb_nonsmi);
-
     b.SetInsertPoint(bb_smis);
+
     auto argument = b.CreatePtrToInt(tagged_argument, w.intptr_type);
     auto receiver = b.CreatePtrToInt(tagged_receiver, w.intptr_type);
 
-    llvm::Value* tagged_result = NULL;
+    bool boolify = false;
+    llvm::Value* result = NULL;
     if (opcode == kInvokeAdd) {
-      tagged_result = b.CreateAdd(receiver, argument);
+      result = b.CreateAdd(receiver, argument);
     } else if (opcode == kInvokeSub) {
-      tagged_result = b.CreateSub(receiver, argument);
+      result = b.CreateSub(receiver, argument);
+    } else if (opcode == kInvokeEq) {
+      result = b.CreateICmpEQ(receiver, argument);
+      boolify = true;
+    } else if (opcode == kInvokeGe) {
+      result = b.CreateICmpSGE(receiver, argument);
+      boolify = true;
+    } else if (opcode == kInvokeGt) {
+      result = b.CreateICmpSGT(receiver, argument);
+      boolify = true;
+    } else if (opcode == kInvokeLe) {
+      result = b.CreateICmpSLE(receiver, argument);
+      boolify = true;
+    } else if (opcode == kInvokeLt) {
+      result = b.CreateICmpSLT(receiver, argument);
+      boolify = true;
     } else {
       UNREACHABLE();
     }
-    llvm::Value* smi_result = b.CreateIntToPtr(tagged_result, w.object_ptr_type);
+
+    llvm::Value* smi_result = NULL;
+    if (boolify) {
+      auto true_obj = h.Cast(w.tagged_heap_objects[w.program_->true_object()]);
+      auto false_obj = h.Cast(w.tagged_heap_objects[w.program_->false_object()]);
+      smi_result = b.CreateSelect(result, true_obj, false_obj, "compare_result");
+    } else {
+      smi_result = b.CreateIntToPtr(result, w.object_ptr_type);
+    }
     b.CreateBr(bb_join);
 
     b.SetInsertPoint(bb_nonsmi);
@@ -836,31 +859,6 @@ class BasicBlockBuilder {
     phi->addIncoming(smi_result, bb_smis);
     phi->addIncoming(nonsmi_result, bb_nonsmi);
     push(phi);
-  }
-
-  void DoCompare(Opcode opcode) {
-    // TODO: Handle about other classes!
-    auto right = b.CreatePtrToInt(pop(), w.intptr_type);
-    auto left = b.CreatePtrToInt(pop(), w.intptr_type);
-
-    llvm::Value* comp = NULL;
-    if (opcode == kInvokeEq) {
-      comp = b.CreateICmpEQ(left, right);
-    } else if (opcode == kInvokeGe) {
-      comp = b.CreateICmpSGE(left, right);
-    } else if (opcode == kInvokeGt) {
-      comp = b.CreateICmpSGT(left, right);
-    } else if (opcode == kInvokeLe) {
-      comp = b.CreateICmpSLE(left, right);
-    } else if (opcode == kInvokeLt) {
-      comp = b.CreateICmpSLT(left, right);
-    } else {
-      UNREACHABLE();
-    }
-
-    auto true_obj = h.Cast(w.tagged_heap_objects[w.program_->true_object()]);
-    auto false_obj = h.Cast(w.tagged_heap_objects[w.program_->false_object()]);
-    push(b.CreateSelect(comp, true_obj, false_obj, "compare_result"));
   }
 
   void DoNegate() {
@@ -1353,19 +1351,15 @@ class BasicBlocksExplorer {
             break;
           }
 
-          case kInvokeAdd:
-          case kInvokeSub: {
-            int selector = Utils::ReadInt32(bcp + 1);
-            b.DoArithmetic(opcode, selector);
-            break;
-          }
-
           case kInvokeEq:
           case kInvokeGe:
           case kInvokeGt:
           case kInvokeLe:
-          case kInvokeLt: {
-            b.DoCompare(opcode);
+          case kInvokeLt:
+          case kInvokeAdd:
+          case kInvokeSub: {
+            int selector = Utils::ReadInt32(bcp + 1);
+            b.DoInvokeSmiOperation(opcode, selector);
             break;
           }
 
