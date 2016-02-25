@@ -83,6 +83,9 @@ while IFS='' read -r line; do
   if [[ "$line" =~ "CRASH: starting debug shell..."* ]]; then
     exit 253;
   fi
+  if [[ "$line" =~ "Error: Snapshot and VM versions do not agree."* ]]; then
+    exit 253;
+  fi
 done < $PIPEDIR/qemu.out
 
 read -r line< $PIPEDIR/qemu.out

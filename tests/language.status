@@ -846,9 +846,11 @@ constant_string_interpolation2_test: RuntimeError
 vm/typed_data_polymorphic_view_test: Crash
 vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
 # These actually overflow the stack because the snapshot reader is
-# recursive. When run from a program heap blob, they are fine.
+# recursive.
 large_class_declaration_test: Timeout
-smaller_4_Interface_Types_A11_t01_test: Pass, Crash
+
+[ $system == lk && !$use_heap_blob ]
+smaller_4_Interface_Types_A11_t01_test: Crash
 
 [ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.
