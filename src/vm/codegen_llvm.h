@@ -12,6 +12,7 @@
 #include "src/shared/natives.h"
 
 #include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -61,6 +62,7 @@ class World {
   // Helper methods for creating/manipulating constants
   llvm::Constant* CTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
   llvm::Constant* CUnTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
+  llvm::Constant* CBit(int8 value);
   llvm::Constant* CInt(uint32 integer);
   llvm::Constant* CInt8(uint8 integer);
   llvm::Constant* CInt64(int64 value);

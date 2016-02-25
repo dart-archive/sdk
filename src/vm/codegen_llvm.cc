@@ -826,11 +826,20 @@ class BasicBlockBuilder {
     auto receiver = b.CreatePtrToInt(tagged_receiver, w.intptr_type);
 
     bool boolify = false;
+    llvm::Value* no_overflow = NULL;
     llvm::Value* result = NULL;
     if (opcode == kInvokeAdd) {
-      result = b.CreateAdd(receiver, argument);
+      llvm::Function* f = llvm::Intrinsic::getDeclaration(&w.module_, llvm::Intrinsic::sadd_with_overflow, {w.intptr_type});
+      auto s = b.CreateCall(f, {receiver, argument});
+      auto overflow_bit = b.CreateExtractValue(s, {1});
+      no_overflow = b.CreateICmpEQ(overflow_bit, w.CBit(0));
+      result = b.CreateExtractValue(s, {0});
     } else if (opcode == kInvokeSub) {
-      result = b.CreateSub(receiver, argument);
+      llvm::Function* f = llvm::Intrinsic::getDeclaration(&w.module_, llvm::Intrinsic::ssub_with_overflow, {w.intptr_type});
+      auto s = b.CreateCall(f, {receiver, argument});
+      auto overflow_bit = b.CreateExtractValue(s, {1});
+      no_overflow = b.CreateICmpEQ(overflow_bit, w.CBit(0));
+      result = b.CreateExtractValue(s, {0});
     } else if (opcode == kInvokeEq) {
       result = b.CreateICmpEQ(receiver, argument);
       boolify = true;
@@ -858,7 +867,11 @@ class BasicBlockBuilder {
     } else {
       smi_result = b.CreateIntToPtr(result, w.object_ptr_type);
     }
-    b.CreateBr(bb_join);
+    if (no_overflow == NULL) {
+      b.CreateBr(bb_join);
+    } else {
+      b.CreateCondBr(no_overflow, bb_join, bb_nonsmi, assume_true);
+    }
 
     b.SetInsertPoint(bb_nonsmi);
     push(tagged_receiver);
@@ -1917,6 +1930,11 @@ llvm::Constant* World::CUnTag(llvm::Constant* constant, llvm::Type* ptr_type) {
   auto as_int = llvm::ConstantExpr::getPtrToInt(constant, intptr_type);
   auto untagged = llvm::ConstantExpr::getSub(as_int, CInt(1));
   return llvm::ConstantExpr::getIntToPtr(untagged, ptr_type, "untagged");
+}
+
+llvm::Constant* World::CBit(int8 value) {
+  uint64 value64 = value;
+  return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(1, value64, false));
 }
 
 llvm::Constant* World::CInt(uint32 value) {
