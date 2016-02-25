@@ -381,6 +381,12 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     return true;
   }
 
+  bool allowSimpleModificationWithNestedClosures(PartialElement element) {
+    return cannotReuse(
+        element, "Simple modification of methods with nested closures is not"
+                 " supported.");
+  }
+
   SchemaChange getSchemaChange(PartialClassElement cls) {
     return schemaChangesByClass.putIfAbsent(cls, () => new SchemaChange(cls));
   }

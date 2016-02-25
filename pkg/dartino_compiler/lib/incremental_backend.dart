@@ -20,6 +20,9 @@ import 'src/dartino_system_builder.dart' show
 import 'src/dartino_class_builder.dart' show
     DartinoClassBuilder;
 
+import 'src/closure_environment.dart' show
+    ClosureInfo;
+
 import 'src/dartino_context.dart' show
     DartinoContext;
 
@@ -32,6 +35,9 @@ abstract class IncrementalBackend {
   /// the backend that [element] has changed, this method informs the backend
   /// that [element] was removed.
   void removeFunction(FunctionElement element);
+
+  //TODO(zarah): Remove this and track nested closures via DartinoSystem
+  Map<FunctionElement, ClosureInfo> lookupNestedClosures(Element element);
 }
 
 abstract class IncrementalDartinoBackend implements IncrementalBackend {

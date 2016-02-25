@@ -20,6 +20,7 @@ import 'package:compiler/src/script.dart' show
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
+    FunctionElement,
     CompilationUnitElement,
     Element,
     LibraryElement,
@@ -82,6 +83,9 @@ import 'package:compiler/src/library_loader.dart' show
 
 import '../incremental_backend.dart' show
     IncrementalBackend;
+
+import '../src/closure_environment.dart' show
+    ClosureInfo;
 
 import 'diff.dart' show
     Difference,
@@ -707,8 +711,20 @@ abstract class Reuser {
     if (!before.isInstanceMember) {
       if (!allowNonInstanceMemberModified(after)) return false;
     }
+    if (hasNestedClosures(before)) {
+      if (!allowSimpleModificationWithNestedClosures(before)) {
+        return false;
+      }
+    }
     addFunctionUpdate(compiler, before, after);
     return true;
+  }
+
+  bool hasNestedClosures(PartialFunctionElement function) {
+    Map<FunctionElement, ClosureInfo> nestedClosures =
+        backend.lookupNestedClosures(function);
+    if (nestedClosures == null) return false;
+    return nestedClosures.isNotEmpty;
   }
 
   bool canReuseClass(
@@ -844,6 +860,8 @@ abstract class Reuser {
   bool allowRemovedElement(PartialElement element);
 
   bool allowAddedElement(PartialElement element);
+
+  bool allowSimpleModificationWithNestedClosures(PartialElement element);
 }
 
 /// Represents an update (aka patch) of [before] to [after]. We use the word

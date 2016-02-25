@@ -713,6 +713,35 @@ main() {
 ''',
 
   r'''
+local_function_closure
+==> main.dart.patch <==
+// Test that a stored closure of a local function changes behavior when updated
+
+var closure;
+class C {
+  m() {
+    l() {
+<<<< ["closure is null","v1"]
+      print('v1');
+==== "v2"
+      print('v2');
+>>>>
+    }
+    closure = l;
+  }
+}
+
+main() {
+  if (closure == null) {
+    print('closure is null');
+    new C().m();
+  }
+  closure();
+}
+
+''',
+
+  r'''
 new_instance_tearoff
 ==> main.dart.patch <==
 // Test that we can tear off an exisiting instance method

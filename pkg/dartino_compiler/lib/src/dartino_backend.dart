@@ -289,6 +289,10 @@ class DartinoBackend extends Backend
     return systemBuilder.getClassBuilder(closureClass, this);
   }
 
+  Map<FunctionElement, ClosureInfo> lookupNestedClosures(Element element) {
+    return closureEnvironments[element]?.closures;
+  }
+
   DartinoClassBuilder createCallableStubClass(
       int fields, int arity, DartinoClassBuilder superclass) {
     DartinoClassBuilder classBuilder = systemBuilder.newClassBuilder(

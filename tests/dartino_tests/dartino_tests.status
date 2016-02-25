@@ -111,6 +111,7 @@ incremental/*/generic_types_003: IncrementalCompilationFailed
 incremental/*/generic_types_004: IncrementalCompilationFailed
 incremental/*/instance_field_to_static_field: IncrementalCompilationFailed
 incremental/*/lazy_static: IncrementalCompilationFailed
+incremental/*/local_function_closure: IncrementalCompilationFailed
 incremental/*/main_signature_change: IncrementalCompilationFailed
 incremental/*/remove_compound_instance_field: IncrementalCompilationFailed
 incremental/*/remove_named_mixin_application: IncrementalCompilationFailed
