@@ -596,8 +596,8 @@ class BasicBlockBuilder {
       value = h.Cast(w.tagged_heap_objects[HeapObject::cast(object)]);
       ASSERT(value != NULL);
     } else {
-      // TODO
-      value = llvm::ConstantStruct::getNullValue(w.object_ptr_type);
+      // TODO: Support LargeIntegers for non-portable Smis.
+      value = w.CCast(w.CInt2Pointer(w.CSmi(Smi::cast(object)->value())));
     }
     push(value);
   }
