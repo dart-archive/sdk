@@ -443,7 +443,7 @@ void InterpreterGeneratorX86::GenerateDebugAtBytecode() {
   __ SwitchToText();
   __ AlignToPowerOfTwo(4);
   __ Bind("", "DebugAtBytecode");
-  // TODO(ajohnsen): Check if the process has debug_info set.
+  // TODO(ajohnsen): Check if the program/process has debug_info set.
   __ popl(EBX);
   __ movl(EDX, ESP);
   SwitchToCStack(EAX);

@@ -456,7 +456,7 @@ void InterpreterGeneratorX64::GenerateDebugAtBytecode() {
   __ SwitchToText();
   __ AlignToPowerOfTwo(4);
   __ Bind("", "DebugAtBytecode");
-  // TODO(ajohnsen): Check if the process has debug_info set.
+  // TODO(ajohnsen): Check if the program/process has debug_info set.
   __ popq(RBX);
   LoadProcess(RDI);
   __ movq(RDX, RSP);

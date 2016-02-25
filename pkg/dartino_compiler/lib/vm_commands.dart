@@ -917,6 +917,27 @@ class ProcessDeleteBreakpoint extends VmCommand {
   String valuesToString() => "$id";
 }
 
+class ProcessDeleteOneShotBreakpoint extends VmCommand {
+  final int processId;
+  final int breakpointId;
+
+  const ProcessDeleteOneShotBreakpoint(this.processId, this.breakpointId)
+      : super(VmCommandCode.ProcessDeleteOneShotBreakpoint);
+
+  void internalAddTo(
+      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+    buffer
+        ..addUint32(processId)
+        ..addUint32(breakpointId)
+        ..sendOn(sink, code);
+  }
+
+  /// Peer will respond with [ProcessDeleteBreakpoint]
+  int get numberOfResponsesExpected => 1;
+
+  String valuesToString() => "$processId, $breakpointId";
+}
+
 class ProcessBacktrace extends VmCommand {
   final int frames;
   final List<int> functionIds;
@@ -1484,6 +1505,7 @@ enum VmCommandCode {
   ProcessRun,
   ProcessSetBreakpoint,
   ProcessDeleteBreakpoint,
+  ProcessDeleteOneShotBreakpoint,
   ProcessStep,
   ProcessStepOver,
   ProcessStepOut,

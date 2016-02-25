@@ -14,14 +14,15 @@
 namespace dartino {
 
 class Breakpoints;
-class DebugInfo;
+class ProcessDebugInfo;
+class ProgramDebugInfo;
 
 class DispatchTable {
  public:
   DispatchTable() {}
   void ResetBreakpoints(
-      const DebugInfo* debug_info,
-      const Breakpoints* program_breakpoints) {}
+      const ProgramDebugInfo* program_info,
+      const ProcessDebugInfo* process_info) {}
 };
 
 }  // namespace dartino

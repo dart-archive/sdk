@@ -391,20 +391,32 @@ Function* HandleInvokeSelector(Process* process) {
 
 int HandleAtBytecode(Process* process, uint8* bcp, Object** sp) {
   // TODO(ajohnsen): Support validate stack.
-  DebugInfo* debug_info = process->debug_info();
-  // TODO(zerny): Support ShouldBreak directly on program.
-  if (debug_info == NULL && !process->program()->breakpoints()->IsEmpty()) {
-    process->EnsureDebuggerAttached(process->program()->session());
-    debug_info = process->debug_info();
-  }
-  if (debug_info != NULL) {
+
+  // Always hit process-local/one-shot breakpoints first.
+  ProcessDebugInfo* process_info = process->debug_info();
+  if (process_info != NULL) {
     // If resuming from a breakpoint, clear the breakpoint and ignore the call.
-    if (debug_info->is_at_breakpoint()) {
-      debug_info->ClearCurrentBreakpoint();
-    } else if (debug_info->ShouldBreak(bcp, sp)) {
+    if (process_info->is_at_breakpoint()) {
+      process_info->ClearCurrentBreakpoint();
+      return Interpreter::kReady;
+    }
+    const Breakpoint* breakpoint = process_info->GetBreakpointAt(bcp, sp);
+    if (breakpoint != NULL) {
+      process_info->SetCurrentBreakpoint(breakpoint);
       return Interpreter::kBreakpoint;
     }
   }
+
+  ProgramDebugInfo* program_info = process->program()->debug_info();
+  if (program_info != NULL) {
+    const Breakpoint* breakpoint = program_info->GetBreakpointAt(bcp);
+    if (breakpoint != NULL) {
+      process->EnsureDebuggerAttached();
+      process->debug_info()->SetCurrentBreakpoint(breakpoint);
+      return Interpreter::kBreakpoint;
+    }
+  }
+
   return Interpreter::kReady;
 }
 

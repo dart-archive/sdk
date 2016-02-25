@@ -12,17 +12,17 @@
 namespace dartino {
 
 void DispatchTable::ResetBreakpoints(
-    const DebugInfo* debug_info,
-    const Breakpoints* program_breakpoints) {
+    const ProgramDebugInfo* program_info,
+    const ProcessDebugInfo* process_info) {
   // If stepping, we don't need to clear any previous state.
-  if (debug_info != NULL && debug_info->is_stepping()) {
+  if (process_info != NULL && process_info->is_stepping()) {
     SetStepping();
     return;
   }
   // Otherwise, clear and restore global and local breaks in the table.
   ClearAllBreakpoints();
-  SetBreakpoints(program_breakpoints);
-  if (debug_info != NULL) SetBreakpoints(debug_info->breakpoints());
+  if (program_info != NULL) SetBreakpoints(program_info->breakpoints());
+  if (process_info != NULL) SetBreakpoints(process_info->breakpoints());
 }
 
 void DispatchTable::SetBreakpoints(const Breakpoints* breakpoints) {

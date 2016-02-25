@@ -136,11 +136,11 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   void DebugInterrupt();
 
   // Debugging support.
-  void EnsureDebuggerAttached(Session* session);
+  void EnsureDebuggerAttached();
   int PrepareStepOver();
   int PrepareStepOut();
 
-  DebugInfo* debug_info() { return debug_info_; }
+  ProcessDebugInfo* debug_info() { return debug_info_; }
   bool is_debugging() const { return debug_info_ != NULL; }
 
   void TakeLookupCache();
@@ -274,7 +274,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   int errno_cache_;
 
-  DebugInfo* debug_info_;
+  ProcessDebugInfo* debug_info_;
 
   List<List<uint8>> arguments_;
 

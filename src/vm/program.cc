@@ -53,6 +53,7 @@ Program::Program(ProgramSource source, int hashtag)
       hashtag_(hashtag),
       stack_chain_(NULL),
       cache_(NULL),
+      debug_info_(NULL),
       group_mask_(0) {
 // These asserts need to hold when running on the target, but they don't need
 // to hold on the host (the build machine, where the interpreter-generating
@@ -67,6 +68,7 @@ Program::Program(ProgramSource source, int hashtag)
 Program::~Program() {
   delete process_list_mutex_;
   delete cache_;
+  delete debug_info_;
   ASSERT(process_list_.IsEmpty());
 }
 
@@ -363,7 +365,7 @@ void Program::FinishProgramGC() {
 
   FinishProgramGCVisitor visitor;
   VisitProcesses(&visitor);
-  breakpoints_.UpdateBreakpoints();
+  if (debug_info_ != NULL) debug_info_->UpdateBreakpoints();
 
   if (Flags::validate_heaps) {
     ValidateGlobalHeapsAreConsistent();
@@ -441,6 +443,12 @@ ProcessHandle* Program::MainProcess() {
   }
 
   return NULL;
+}
+
+void Program::EnsureDebuggerAttached() {
+  if (debug_info_ == NULL) {
+    debug_info_ = new ProgramDebugInfo();
+  }
 }
 
 struct SharedHeapUsage {
@@ -883,7 +891,9 @@ void Program::Initialize() {
 
 void Program::IterateRoots(PointerVisitor* visitor) {
   IterateRootsIgnoringSession(visitor);
-  breakpoints_.VisitProgramPointers(visitor);
+  if (debug_info_ != NULL) {
+    debug_info_->VisitProgramPointers(visitor);
+  }
   if (session_ != NULL) {
     session_->IteratePointers(visitor);
   }

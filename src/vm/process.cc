@@ -349,10 +349,10 @@ void Process::Preempt() { SetStackMarker(kPreemptMarker); }
 
 void Process::DebugInterrupt() { SetStackMarker(kDebugInterruptMarker); }
 
-void Process::EnsureDebuggerAttached(Session* session) {
+void Process::EnsureDebuggerAttached() {
   if (debug_info_ == NULL) {
-    debug_info_ = new DebugInfo(
-        session->FreshProcessId(), program_->breakpoints());
+    ASSERT(program_->debug_info() != NULL);
+    debug_info_ = new ProcessDebugInfo(program_->debug_info());
   }
 }
 
@@ -365,8 +365,7 @@ int Process::PrepareStepOver() {
   Opcode opcode = static_cast<Opcode>(*current_bcp);
   if (!Bytecode::IsInvokeVariant(opcode)) {
     // For non-invoke bytecodes step over is the same as step.
-    debug_info_->SetStepping();
-    return DebugInfo::kNoBreakpointId;
+    return debug_info_->SetStepping();
   }
 
   // TODO(ager): We should consider making this less bytecode-specific.
@@ -399,8 +398,8 @@ int Process::PrepareStepOver() {
   word stack_height = stack()->length() - frame_end;
   int bytecode_index =
       current_bcp + Bytecode::Size(opcode) - function->bytecode_address_for(0);
-  return debug_info_->SetProcessLocalBreakpoint(
-      function, bytecode_index, true, coroutine_, stack_height);
+  return debug_info_->CreateBreakpoint(
+      function, bytecode_index, coroutine_, stack_height);
 }
 
 int Process::PrepareStepOut() {
@@ -419,8 +418,8 @@ int Process::PrepareStepOut() {
   Object** expected_sp = frame_bottom + callee->arity();
   word frame_end = expected_sp - stack()->Pointer(0);
   word stack_height = stack()->length() - frame_end;
-  return debug_info_->SetProcessLocalBreakpoint(
-      caller, bytecode_index, true, coroutine_, stack_height);
+  return debug_info_->CreateBreakpoint(
+      caller, bytecode_index, coroutine_, stack_height);
 }
 
 void Process::UpdateBreakpoints() {

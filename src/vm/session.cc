@@ -187,12 +187,12 @@ class ConnectedState : public SessionState {
   bool IsLiveEditingEnabled() const { return session()->live_editing(); }
   bool IsDebuggingEnabled() const { return session()->debugging(); }
 
-  void EnableLiveEditing() {
+  virtual void EnableLiveEditing() {
     ASSERT(!IsLiveEditingEnabled());
     session()->set_live_editing(true);
   }
 
-  virtual void EnableDebugging() {
+  void EnableDebugging() {
     ASSERT(IsLiveEditingEnabled());
     ASSERT(!IsDebuggingEnabled());
     session()->set_debugging(true);
@@ -247,10 +247,11 @@ class SpawnedState : public ConnectedState {
 
   Process* main_process() const { return session()->main_process(); }
 
-  void EnableDebugging() {
-    ConnectedState::EnableDebugging();
+  void EnableLiveEditing() {
+    ConnectedState::EnableLiveEditing();
     // Ensure that main is allocated the zeroth id.
-    main_process()->EnsureDebuggerAttached(session());
+    program()->EnsureDebuggerAttached();
+    main_process()->EnsureDebuggerAttached();
   }
 
   // True if the session should be informed of the process's termination.
@@ -266,9 +267,10 @@ class SpawnedState : public ConnectedState {
     ASSERT(!previous->IsSpawned());
     session()->set_main_process(initial_main_process_);
     initial_main_process_ = NULL;
-    if (IsDebuggingEnabled()) {
+    if (IsLiveEditingEnabled()) {
       // Ensure that main is allocated the zeroth id.
-      main_process()->EnsureDebuggerAttached(session());
+      program()->EnsureDebuggerAttached();
+      main_process()->EnsureDebuggerAttached();
     }
   }
 
@@ -376,7 +378,7 @@ class RunningState : public ScheduledState {
 
  private:
   void SendBreakpoint(Process* process) {
-    DebugInfo* debug_info = process->debug_info();
+    ProcessDebugInfo* debug_info = process->debug_info();
     ASSERT(debug_info != NULL);
     int breakpoint_id = debug_info->current_breakpoint_id();
     // TODO(zerny): Stepping is per-process, but should be cleared at a program
@@ -1177,13 +1179,11 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
 
     case Connection::kProcessSetBreakpoint: {
       ASSERT(IsDebuggingEnabled());
-      // TODO(zerny): Setting and deleting breakpoints should happen on a
-      // program-level debug info.
       WriteBuffer buffer;
       int bytecode_index = connection()->ReadInt();
       Function* function = Function::cast(session()->Pop());
-      DebugInfo* debug_info = main_process()->debug_info();
-      int id = debug_info->SetProgramBreakpoint(function, bytecode_index);
+      ProgramDebugInfo* debug_info = program()->debug_info();
+      int id = debug_info->CreateBreakpoint(function, bytecode_index);
       buffer.WriteInt(id);
       connection()->Send(Connection::kProcessSetBreakpoint, buffer);
       break;
@@ -1191,11 +1191,9 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
 
     case Connection::kProcessDeleteBreakpoint: {
       ASSERT(IsDebuggingEnabled());
-      // TODO(zerny): Setting and deleting breakpoints should happen on a
-      // program-level debug info.
       WriteBuffer buffer;
       int id = connection()->ReadInt();
-      bool deleted = main_process()->debug_info()->DeleteBreakpoint(id);
+      bool deleted = program()->debug_info()->DeleteBreakpoint(id);
       ASSERT(deleted);
       buffer.WriteInt(id);
       connection()->Send(Connection::kProcessDeleteBreakpoint, buffer);
@@ -1228,17 +1226,17 @@ SessionState* RunningState::ProcessMessage(Connection::Opcode opcode) {
 }
 
 SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
-  process()->EnsureDebuggerAttached(session());
+  process()->EnsureDebuggerAttached();
   ASSERT(!process()->debug_info()->is_stepping());
   switch (opcode) {
-    case Connection::kProcessDeleteBreakpoint: {
-      // TODO(zerny): Deleting a process-local breakpoint should explicitly pass
-      // the process id.
+    case Connection::kProcessDeleteOneShotBreakpoint: {
       WriteBuffer buffer;
-      int id = connection()->ReadInt();
-      bool deleted = process()->debug_info()->DeleteBreakpoint(id);
+      int process_id = connection()->ReadInt();
+      int breakpoint_id = connection()->ReadInt();
+      Process* process = session()->GetProcess(process_id);
+      bool deleted = process->debug_info()->DeleteBreakpoint(breakpoint_id);
       ASSERT(deleted);
-      buffer.WriteInt(id);
+      buffer.WriteInt(breakpoint_id);
       connection()->Send(Connection::kProcessDeleteBreakpoint, buffer);
       break;
     }
@@ -1278,8 +1276,8 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       int bcp = connection()->ReadInt();
       Function* function = Function::cast(
           session()->maps_[session()->method_map_id_]->LookupById(id));
-      DebugInfo* debug_info = process()->debug_info();
-      debug_info->SetProcessLocalBreakpoint(function, bcp, true);
+      ProcessDebugInfo* debug_info = process()->debug_info();
+      debug_info->CreateBreakpoint(function, bcp);
       return ProcessContinue();
     }
 
@@ -1336,7 +1334,7 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       int frame_index = connection()->ReadInt();
       RestartFrame(frame_index);
       process()->set_exception(program()->null_object());
-      DebugInfo* debug_info = process()->debug_info();
+      ProcessDebugInfo* debug_info = process()->debug_info();
       if (debug_info != NULL && debug_info->is_at_breakpoint()) {
         debug_info->ClearCurrentBreakpoint();
       }
@@ -1373,7 +1371,7 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       WriteBuffer buffer;
       buffer.WriteInt(count);
       for (auto process : *processes) {
-        process->EnsureDebuggerAttached(session());
+        process->EnsureDebuggerAttached();
         buffer.WriteInt(process->debug_info()->process_id());
       }
       connection()->Send(Connection::kProcessGetProcessIdsResult, buffer);
@@ -2026,8 +2024,9 @@ Process* Session::GetProcess(int process_id) {
   if (process_id < 0) return main_process_;
 
   for (auto process : *program()->process_list()) {
-    process->EnsureDebuggerAttached(this);
-    if (process->debug_info()->process_id() == process_id) {
+    ProcessDebugInfo* debug_info = process->debug_info();
+    if (debug_info == NULL) continue;
+    if (debug_info->process_id() == process_id) {
       return process;
     }
   }

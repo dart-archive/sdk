@@ -345,7 +345,8 @@ class Program : public ProgramList::Entry {
 
   ProcessHandle* MainProcess();
 
-  Breakpoints* breakpoints() { return &breakpoints_; }
+  ProgramDebugInfo* debug_info() { return debug_info_; }
+  void EnsureDebuggerAttached();
 
  private:
   friend class ProgramGroups;
@@ -411,7 +412,7 @@ class Program : public ProgramList::Entry {
 
   LookupCache* cache_;
 
-  Breakpoints breakpoints_;
+  ProgramDebugInfo* debug_info_;
 
   uword group_mask_;
 };

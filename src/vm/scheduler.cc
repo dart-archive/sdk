@@ -426,7 +426,7 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
   }
 
   dispatch_table_.ResetBreakpoints(
-      process->debug_info(), process->program()->breakpoints());
+      process->program()->debug_info(), process->debug_info());
 
   interpretation_barrier_.Enter(process);
 
