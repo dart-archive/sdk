@@ -23,6 +23,7 @@
 #include <stdarg.h>
 
 #include "src/shared/flags.h"
+#include "src/shared/random.h"
 #include "src/shared/utils.h"
 
 namespace dartino {
@@ -56,6 +57,8 @@ void Platform::Setup() {
     sa.sa_handler = &SigtermHandler;
     sigaction(SIGTERM, &sa, NULL);
   }
+
+  VirtualMemoryInit();
 }
 
 void Platform::TearDown() { }
@@ -242,37 +245,83 @@ int Platform::MaxStackSizeInWords() { return 128 * KB; }
 int Platform::GetLastError() { return errno; }
 void Platform::SetLastError(int value) { errno = value; }
 
+static RandomXorShift* random = NULL;
+
+static void* GetRandomMmapAddr() {
+  if (random == NULL) {
+    // Fallback in case the other seeds fail.
+    uint64_t seed = Platform::GetMicroseconds();
+    // If it succeeds, this is a crypto-random seed, but the PRNG we seed with
+    // it is not crypto-random.
+    int fd = open("/dev/urandom", O_RDONLY);
+    if (fd >= 0) {
+      int bytes = read(fd, reinterpret_cast<char*>(&seed), sizeof(seed));
+      // Not a lot to do if we fail to read - fall back on timestamp seed.
+      ASSERT(bytes == sizeof(seed));
+      USE(bytes);
+      close(fd);
+    }
+    random = new RandomXorShift(seed);
+  }
+
+  // The address range used to randomize allocations in heap allocation.
+  // Try not to map pages into ranges used by other things.
+#ifdef DARTINO64
+  static const uintptr_t kAllocationRandomAddressMask = 0x3ffffffff000;
+#else
+  static const uintptr_t kAllocationRandomAddressMask = 0x3ffff000;
+#endif
+  static const uintptr_t kAllocationRandomAddressMin = 0x04000000;
+  // << 32 causes undefined behaviour on 32 bit systems.
+  uintptr_t address = (random->NextUInt32() << 31) + random->NextUInt32();
+  address <<= 12;  // Page bits.
+  address += kAllocationRandomAddressMin;
+  address &= kAllocationRandomAddressMask;
+  return reinterpret_cast<void*>(address);
+}
+
 // Constants used for mmap.
 static const int kMmapFd = -1;
 static const int kMmapFdOffset = 0;
+static const int kMmapFlags = MAP_PRIVATE | MAP_ANON;
+
+static void* RandomizedVirtualAlloc(size_t size) {
+  void* base = MAP_FAILED;
+
+  // Try to randomize the allocation address.
+  for (size_t attempts = 0; base == MAP_FAILED && attempts < 3; ++attempts) {
+    base = mmap(GetRandomMmapAddr(), size, PROT_NONE,
+                kMmapFlags | MAP_NORESERVE, kMmapFd, kMmapFdOffset);
+  }
+
+  // After three attempts give up and let the OS find an address to use.
+  if (base == MAP_FAILED)
+    base = mmap(NULL, size, PROT_NONE, kMmapFlags | MAP_NORESERVE, kMmapFd,
+                kMmapFdOffset);
+
+  return base;
+}
 
 VirtualMemory::VirtualMemory(int size) : size_(size) {
-  void* result =
-      mmap(reinterpret_cast<void*>(0xcafe0000), size, PROT_NONE,
-           MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, kMmapFd, kMmapFdOffset);
-  address_ = reinterpret_cast<uword>(result);
+  address_ = RandomizedVirtualAlloc(size);
 }
 
 VirtualMemory::~VirtualMemory() {
-  if (IsReserved() && munmap(reinterpret_cast<void*>(address()), size()) == 0) {
-    address_ = reinterpret_cast<uword>(MAP_FAILED);
+  if (IsReserved() && munmap(address(), size()) == 0) {
+    address_ = MAP_FAILED;
   }
 }
 
-bool VirtualMemory::IsReserved() const {
-  return address_ != reinterpret_cast<uword>(MAP_FAILED);
-}
+bool VirtualMemory::IsReserved() const { return address_ != MAP_FAILED; }
 
-bool VirtualMemory::Commit(uword address, int size, bool executable) {
-  int prot = PROT_READ | PROT_WRITE | (executable ? PROT_EXEC : 0);
-  return mmap(reinterpret_cast<void*>(address), size, prot,
-              MAP_PRIVATE | MAP_ANON | MAP_FIXED, kMmapFd,
+bool VirtualMemory::Commit(void* address, int size) {
+  int prot = PROT_READ | PROT_WRITE;
+  return mmap(address, size, prot, kMmapFlags | MAP_FIXED, kMmapFd,
               kMmapFdOffset) != MAP_FAILED;
 }
 
-bool VirtualMemory::Uncommit(uword address, int size) {
-  return mmap(reinterpret_cast<void*>(address), size, PROT_NONE,
-              MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, kMmapFd,
+bool VirtualMemory::Uncommit(void* address, int size) {
+  return mmap(address, size, PROT_NONE, kMmapFlags | MAP_NORESERVE, kMmapFd,
               kMmapFdOffset) != MAP_FAILED;
 }
 

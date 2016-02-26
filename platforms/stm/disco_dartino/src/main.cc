@@ -12,6 +12,7 @@
 
 #include "platforms/stm/disco_dartino/src/cmpctmalloc.h"
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
+#include "platforms/stm/disco_dartino/src/page_alloc.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
 
 // Definition of functions in generated/Src/mx_main.c.
@@ -62,7 +63,7 @@ extern "C" void *__wrap__calloc_r(
     struct _reent *reent, size_t nmemb, size_t size) {
   if (nmemb == 0 || size == 0) return NULL;
   size = nmemb * size;
-  void *ptr = pvPortMalloc(size);
+  void* ptr = pvPortMalloc(size);
   memset(ptr, 0, size);
   return ptr;
 }
@@ -100,12 +101,16 @@ void EarlyInit() {
   cmpct_init();
 }
 
-extern "C" void* page_alloc(size_t pages) {
-  return page_allocator->AllocatePages(pages);
+extern "C" void* page_alloc(size_t pages, int arenas) {
+  return page_allocator->AllocatePages(pages, arenas);
 }
 
 extern "C" void page_free(void* start, size_t pages) {
   return page_allocator->FreePages(start, pages);
+}
+
+extern "C" int get_arena_locations(memory_range_t *ranges_return, int ranges) {
+  return page_allocator->GetArenas(ranges_return, ranges);
 }
 
 static void ConfigureMPU() {

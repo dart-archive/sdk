@@ -8,12 +8,14 @@
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/interpreter.h"
 #include "src/vm/intrinsics.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/program.h"
 #include "src/vm/program_info_block.h"
 #include "src/vm/program_relocator.h"
 #include "src/vm/snapshot.h"
+#include "src/vm/tick_sampler.h"
 
 namespace dartino {
 
@@ -40,6 +42,14 @@ void SetBytecodeBreak(Opcode opcode) {
 void ClearBytecodeBreak(Opcode opcode) {
   FATAL("ClearBytecodeBreak not implemented.");
 }
+
+void InterpreterCoroutineEntry() { FATAL("InterpreterCoroutineEntry"); }
+
+void Interpreter::Run() { FATAL("Interpreter::Run"); }
+
+void TickSampler::Setup() { FATAL("TickSampler::Setup"); }
+
+void TickSampler::Teardown() { FATAL("TickSampler::Teardown"); }
 
 /* Actual code starts here */
 
@@ -101,6 +111,8 @@ static int Main(int argc, char** argv) {
     return 1;
   }
 
+  Platform::Setup();
+  Thread::Setup();
   ObjectMemory::Setup();
   List<uint8> bytes = Platform::LoadFile(argp[1]);
   SnapshotReader reader(bytes);

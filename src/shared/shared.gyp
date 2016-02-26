@@ -62,6 +62,7 @@
         'platform_cmsis.h',
         'platform_posix.cc',
         'platform_posix.h',
+        'platform_vm.cc',
         'platform_windows.cc',
         'platform_windows.h',
         'random.h',

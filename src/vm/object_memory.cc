@@ -16,18 +16,6 @@
 #include "src/vm/mark_sweep.h"
 #include "src/vm/object.h"
 
-#ifdef DARTINO_TARGET_OS_LK
-#include "lib/page_alloc.h"
-#endif
-
-#ifdef DARTINO_TARGET_OS_CMSIS
-// TODO(sgjesse): Put this into an .h file
-#define PAGE_SIZE_SHIFT 12
-#define PAGE_SIZE (1 << PAGE_SIZE_SHIFT)
-extern "C" void* page_alloc(size_t pages);
-extern "C" void page_free(void* start, size_t pages);
-#endif
-
 namespace dartino {
 
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
@@ -40,13 +28,7 @@ Chunk::~Chunk() {
   // If the memory for this chunk is external we leave it alone
   // and let the embedder deallocate it.
   if (is_external()) return;
-#if defined(DARTINO_TARGET_OS_CMSIS) || defined(DARTINO_TARGET_OS_LK)
-  page_free(reinterpret_cast<void*>(base()), size() >> PAGE_SIZE_SHIFT);
-#elif defined(DARTINO_TARGET_OS_WIN)
-  _aligned_free(reinterpret_cast<void*>(base()));
-#else
-  free(reinterpret_cast<void*>(base()));
-#endif
+  Platform::FreePages(reinterpret_cast<void*>(base()), size());
 }
 
 Space::~Space() { FreeAllChunks(); }
@@ -58,6 +40,8 @@ void Space::FreeAllChunks() {
     ObjectMemory::FreeChunk(current);
     current = next;
   }
+  first_ = last_ = NULL;
+  top_ = limit_ = 0;
 }
 
 int Space::Size() {
@@ -215,27 +199,15 @@ void Chunk::Find(uword word, const char* name) {
 Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   ASSERT(owner != NULL);
 
-  size = Utils::RoundUp(size, kPageSize);
-  void* memory;
-#if defined(__ANDROID__)
-  // posix_memalign doesn't exist on Android. We fallback to
-  // memalign.
-  memory = memalign(kPageSize, size);
-#elif defined(DARTINO_TARGET_OS_WIN)
-  memory = _aligned_malloc(size, kPageSize);
-#elif defined(DARTINO_TARGET_OS_LK) || defined(DARTINO_TARGET_OS_CMSIS)
-  size = Utils::RoundUp(size, PAGE_SIZE);
-  memory = page_alloc(size >> PAGE_SIZE_SHIFT);
-#else
-  if (posix_memalign(&memory, kPageSize, size) != 0) return NULL;
-#endif
+  size = Utils::RoundUp(size, Platform::kPageSize);
+  void* memory = Platform::AllocatePages(size, Platform::kAnyArena);
   if (memory == NULL) return NULL;
 
   uword base = reinterpret_cast<uword>(memory);
   Chunk* chunk = new Chunk(owner, base, size);
 
-  ASSERT(base == Utils::RoundUp(base, kPageSize));
-  ASSERT(size == Utils::RoundUp(size, kPageSize));
+  ASSERT(base == Utils::RoundUp(base, Platform::kPageSize));
+  ASSERT(size == Utils::RoundUp(size, Platform::kPageSize));
 
 #ifdef DEBUG
   chunk->Scramble();
@@ -297,9 +269,9 @@ void ObjectMemory::SetPageTable(uword address, PageTable* table) {
 }
 
 void ObjectMemory::SetSpaceForPages(uword base, uword limit, Space* space) {
-  ASSERT(Utils::IsAligned(base, kPageSize));
-  ASSERT(Utils::IsAligned(limit, kPageSize));
-  for (uword address = base; address < limit; address += kPageSize) {
+  ASSERT(Utils::IsAligned(base, Platform::kPageSize));
+  ASSERT(Utils::IsAligned(limit, Platform::kPageSize));
+  for (uword address = base; address < limit; address += Platform::kPageSize) {
     PageTable* table = GetPageTable(address);
     if (table == NULL) {
       ASSERT(space != NULL);

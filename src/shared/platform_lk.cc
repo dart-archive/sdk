@@ -14,10 +14,13 @@
 #include <err.h>
 #include <kernel/thread.h>
 #include <kernel/semaphore.h>
+#include <lib/page_alloc.h>
 #include <sys/types.h>
 
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "src/shared/utils.h"
 
 namespace dartino {
 
@@ -156,14 +159,6 @@ VirtualMemory::VirtualMemory(int size) : size_(size) {}
 
 VirtualMemory::~VirtualMemory() {}
 
-bool VirtualMemory::IsReserved() const { return false; }
-
-bool VirtualMemory::Commit(uword address, int size, bool executable) {
-  return false;
-}
-
-bool VirtualMemory::Uncommit(uword address, int size) { return false; }
-
 void Platform::Exit(int exit_code) {
   printf("Exited with code %d.\n", exit_code);
   while (true) {
@@ -200,6 +195,54 @@ int Platform::FormatString(char* buffer, size_t length, const char* format,
 char* Platform::GetEnv(const char* name) { return NULL; }
 
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
+
+static uword heap_start = 0;
+static uword heap_size = 0;
+
+void* Platform::AllocatePages(uword size, int arenas) {
+  size = Utils::RoundUp(size, PAGE_SIZE);
+  // TODO(erikcorry): When LK is upgraded to allow passing the arenas argument
+  // to page_alloc, we can add it back here.
+  void* memory = page_alloc(size >> PAGE_SIZE_SHIFT);
+#ifdef LK_NOT_READY_YET
+  ASSERT(reinterpret_cast<uword>(memory) >= heap_start);
+  ASSERT(reinterpret_cast<uword>(memory) + size <= heap_start + heap_size);
+#endif
+  return memory;
+}
+
+void Platform::FreePages(void* address, uword size) {
+  page_free(address, size >> PAGE_SIZE_SHIFT);
+}
+
+#ifdef LK_NOT_READY_YET
+int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
+                                  int number_of_ranges) {
+  const int kRanges = 4;
+  struct page_range page_ranges[kRanges];
+  int arena_count = page_get_arenas(page_ranges, kRanges);
+  int i;
+  for (i = 0; i < kRanges && i < arena_count; i++) {
+    ranges[i].address = page_ranges[i].address;
+    ranges[i].size = page_ranges[i].size;
+  }
+  return i;
+}
+#else
+// TODO(erikcorry): Remove this hacky version that is a stop-gap until LK has
+// the API we need.
+int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
+                                  int number_of_ranges) {
+  // Allocate a page, and assume that all allocations will be near this
+  // allocation.
+  void* memory = page_alloc(1);
+  heap_start = reinterpret_cast<uword>(memory) - 128 * KB;
+  ranges[0].size = heap_size = 512 * KB;
+  ranges[0].address = reinterpret_cast<void*>(heap_start);
+  page_free(memory, 1);
+  return 1;
+}
+#endif
 
 }  // namespace dartino
 
