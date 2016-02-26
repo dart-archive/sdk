@@ -4,9 +4,9 @@
 
 #if defined(DARTINO_TARGET_OS_WIN)
 
-#include "src/shared/platform.h"  // NOLINT
-
 #define _CRT_RAND_S 1
+
+#include "src/shared/platform.h"  // NOLINT
 
 #include <winsock2.h>
 #include <stdlib.h>
@@ -266,7 +266,7 @@ static void* GetRandomMmapAddr() {
     rand_s(&seed2);
     // The unsigned long long constant should make the whole expression at
     // least 64 bit.
-    random = new RandomXorShift((seed1 << 32ull) + seed2);
+    random = new RandomXorShift((seed1 << 31ull) + seed2);
   }
 
   // The address range used to randomize allocations in heap allocation.
@@ -294,11 +294,11 @@ static void* RandomizedVirtualAlloc(size_t size, int action) {
 
   // Try to randomize the allocation address.
   for (size_t attempts = 0; base == NULL && attempts < 3; ++attempts) {
-    base = VirtualAlloc(GetRandomMmapAddr(), size, action, protection);
+    base = VirtualAlloc(GetRandomMmapAddr(), size, action, PAGE_NOACCESS);
   }
 
   // After three attempts give up and let the OS find an address to use.
-  if (base == NULL) base = VirtualAlloc(NULL, size, action, protection);
+  if (base == NULL) base = VirtualAlloc(NULL, size, action, PAGE_NOACCESS);
 
   return base;
 }
