@@ -8,7 +8,6 @@
 // should never be directly inported. platform.h is always
 // the platform header to include.
 #include "src/shared/platform.h"  // NOLINT
-#include "src/shared/flags.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -23,6 +22,7 @@
 #include <fcntl.h>
 #include <stdarg.h>
 
+#include "src/shared/flags.h"
 #include "src/shared/utils.h"
 
 namespace dartino {
@@ -179,25 +179,41 @@ void Platform::ScheduleAbort() {
 void Platform::ImmediateAbort() { abort(); }
 
 #ifdef DEBUG
-void Platform::WaitForDebugger(const char* executable_name) {
+void Platform::WaitForDebugger() {
+  const int SIZE = 1024;
+  char executable[SIZE];
+  int fd = open("/proc/self/cmdline", O_RDONLY);
+  if (fd >= 0) {
+    for (int i = 0; i < SIZE; i++) {
+      ssize_t s = read(fd, executable + i, 1);
+      if (s < 1) executable[i] = '\0';
+      if (executable[i] == '\0') break;
+    }
+    close(fd);
+  } else {
+    strncpy(executable, "/path/to/executable", SIZE);
+    executable[SIZE - 1] = '\0';
+  }
+
   const char* tty = Platform::GetEnv("DARTINO_VM_TTY");
   if (tty) {
     close(2);             // Stderr.
     open(tty, O_WRONLY);  // Replace stderr with terminal.
   }
-  int fd = open("/dev/tty", O_WRONLY);
-  if (fd >= 0) {
+  fd = open("/dev/tty", O_WRONLY);
+  if (Platform::GetEnv("DARTINO_VM_WAIT") != NULL && fd >= 0) {
     FILE* terminal = fdopen(fd, "w");
     fprintf(terminal, "*** VM paused, debug with:\n");
     fprintf(
         terminal,
         "gdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal SIGCONT'\n",
-        executable_name, getpid());
+        executable, getpid());
     fprintf(stderr,
             "\ngdb %s --ex 'attach %d' --ex 'signal SIGCONT' --ex 'signal "
             "SIGCONT'\n",
-            executable_name, getpid());
+            executable, getpid());
     kill(getpid(), SIGSTOP);
+    fclose(terminal);
   }
 }
 #endif

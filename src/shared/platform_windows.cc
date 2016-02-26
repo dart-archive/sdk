@@ -228,9 +228,7 @@ void Platform::ImmediateAbort() { abort(); }
 int Platform::GetPid() { return static_cast<int>(GetCurrentProcessId()); }
 
 #ifdef DEBUG
-void Platform::WaitForDebugger(const char* executable_name) {
-  UNIMPLEMENTED();
-}
+void Platform::WaitForDebugger() { UNIMPLEMENTED(); }
 #endif
 
 char* Platform::GetEnv(const char* name) {

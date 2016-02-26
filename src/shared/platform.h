@@ -93,7 +93,7 @@ bool StoreFile(const char* uri, List<uint8> bytes);
 bool WriteText(const char* uri, const char* text, bool append);
 
 #if DEBUG
-void WaitForDebugger(const char* executable_name);
+void WaitForDebugger();
 #endif
 
 const char* GetTimeZoneName(int64_t seconds_since_epoch);

@@ -44,6 +44,32 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
     kWaitingForChildren,
   };
 
+  static const char* StateToName(State state) {
+    switch (state) {
+      case kSleeping:
+        return "kSleeping";
+      case kEnqueuing:
+        return "kEnqueuing";
+      case kReady:
+        return "kReady";
+      case kRunning:
+        return "kRunning";
+      case kYielding:
+        return "kYielding";
+      case kBreakpoint:
+        return "kBreakpoint";
+      case kCompileTimeError:
+        return "kCompileTimeError";
+      case kUncaughtException:
+        return "kUncaughtException";
+      case kTerminated:
+        return "kTerminated";
+      case kWaitingForChildren:
+        return "kWaitingForChildren";
+    }
+    return "Unknown";
+  }
+
   enum StackCheckResult {
     // Stack check handled (most likely by growing the stack) and
     // execution can continue.

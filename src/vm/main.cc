@@ -80,11 +80,6 @@ static void PrintUsage() {
 static void PrintVersion() { Print::Out("%s\n", GetVersion()); }
 
 static int Main(int argc, char** argv) {
-#ifdef DEBUG
-  if (Platform::GetEnv("DARTINO_VM_WAIT") != NULL) {
-    Platform::WaitForDebugger(argv[0]);
-  }
-#endif
   Flags::ExtractFromCommandLine(&argc, argv);
   DartinoSetup();
 

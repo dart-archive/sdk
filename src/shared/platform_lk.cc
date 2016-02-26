@@ -188,9 +188,7 @@ int Platform::GetPid() {
 }
 
 #ifdef DEBUG
-void Platform::WaitForDebugger(const char* executable_name) {
-  UNIMPLEMENTED();
-}
+void Platform::WaitForDebugger() { UNIMPLEMENTED(); }
 #endif
 
 int Platform::FormatString(char* buffer, size_t length, const char* format,
