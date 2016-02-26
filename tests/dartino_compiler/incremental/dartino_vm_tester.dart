@@ -2,15 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library dartino_compiler.test.feature_test;
+library dartino_compiler.test.dartino_vm_tester;
 
 import 'dart:io' hide
     exitCode,
     stderr,
     stdin,
     stdout;
-
-import 'dart:io' as io;
 
 import 'dart:async' show
     Completer,
@@ -21,58 +19,31 @@ import 'dart:async' show
 
 import 'dart:convert' show
     LineSplitter,
-    UTF8,
-    Utf8Decoder;
+    UTF8;
 
 import 'package:expect/expect.dart' show
     Expect;
 
-import 'package:dartino_compiler/incremental/scope_information_visitor.dart'
-    show ScopeInformationVisitor;
-
-import 'compiler_test_case.dart' show
-    CompilerTestCase;
-
 import 'package:compiler/src/elements/elements.dart' show
-    AbstractFieldElement,
-    Element,
-    FieldElement,
-    FunctionElement,
-    LibraryElement;
-
-import 'package:compiler/src/compiler.dart' show
-    Compiler;
-
-import 'package:compiler/src/source_file_provider.dart' show
-    FormattingDiagnosticHandler,
-    SourceFileProvider;
-
-import 'package:compiler/src/io/source_file.dart' show
-    StringSourceFile;
+    FunctionElement;
 
 import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart'
-    show IncrementalCompilationFailed,
-    IncrementalCompiler,
-    IncrementalMode;
+    show
+        IncrementalCompiler,
+        IncrementalMode;
 
 import 'package:dartino_compiler/vm_commands.dart' show
-    VmCommand,
-    CommitChanges,
     CommitChangesResult,
     HandShakeResult,
-    MapId;
-
-import 'package:dartino_compiler/dartino_compiler.dart' show
-    DartinoCompiler;
-
-import 'package:dartino_compiler/src/dartino_compiler_implementation.dart' show
-    OutputProvider;
+    VmCommand;
 
 import 'package:dartino_compiler/src/guess_configuration.dart' show
     dartinoVersion,
     guessDartinoVm;
 
-import 'package:dartino_compiler/dartino_system.dart';
+import 'package:dartino_compiler/dartino_system.dart' show
+    DartinoDelta,
+    DartinoFunction;
 
 import 'package:dartino_compiler/vm_commands.dart' as commands_lib;
 
@@ -89,61 +60,41 @@ import 'package:dartino_compiler/debug_state.dart' as debug show
     BackTraceFrame,
     BackTrace;
 
-import 'program_result.dart';
-
 import 'package:dartino_compiler/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
-const String PACKAGE_SCHEME = 'org.dartlang.dartino.packages';
+import 'program_result.dart' show
+    EncodedResult,
+    ProgramResult;
 
-const String CUSTOM_SCHEME = 'org.dartlang.dartino.test-case';
-
-final Uri customUriBase = new Uri(scheme: CUSTOM_SCHEME, path: '/');
-
-typedef Future NoArgFuture();
+import 'incremental_test_runner.dart' show
+    IncrementalTestRunner;
 
 compileAndRun(
     String testName,
     EncodedResult encodedResult,
     {IncrementalMode incrementalMode}) async {
-  print("Test '$testName'");
-  IncrementalTestHelper helper = new IncrementalTestHelper(incrementalMode);
-  TestSession session =
-      await TestSession.spawnVm(helper.compiler, testName: testName);
+  await new DartinoVmTester(testName, encodedResult, incrementalMode).run();
+}
 
-  bool hasCompileTimeError = false;
+class DartinoVmTester extends IncrementalTestRunner {
+  TestSession session;
 
-  await new Future(() async {
+  DartinoVmTester(
+      String testName,
+      EncodedResult encodedResult,
+      IncrementalMode incrementalMode)
+      : super(testName, encodedResult, incrementalMode);
 
-    int version = 0;
 
-    for (ProgramResult program in encodedResult.decode()) {
-      bool isFirstProgram = version == 0;
-      version++;
+  Future<Null> run() async {
+    session = await TestSession.spawnVm(helper.compiler, testName: testName);
+    await super.run().catchError(session.handleError);
+    await waitForCompletion();
+  }
 
-      hasCompileTimeError = program.hasCompileTimeError;
-
-      print("Program version $version #$testName:");
-      print(numberedLines(program.code));
-
-      DartinoDelta dartinoDelta;
-      if (isFirstProgram) {
-        // The first program is compiled "fully".
-        dartinoDelta = await helper.fullCompile(program);
-      } else {
-        // An update to the first program, all updates are compiled as
-        // incremental updates to the first program.
-        dartinoDelta = await helper.incrementalCompile(program, version);
-      }
-
+  Future<Null> runDelta(DartinoDelta dartinoDelta) async {
       DartinoBackend backend = helper.compiler.compiler.context.backend;
-
-      if (!isFirstProgram ||
-          const bool.fromEnvironment("feature_test.print_initial_commands")) {
-        for (VmCommand command in dartinoDelta.commands) {
-          print(command);
-        }
-      }
 
       if (isFirstProgram) {
         // Perform handshake with VM.
@@ -234,15 +185,13 @@ compileAndRun(
 
         Expect.listEquals(messages, actualMessages,
             "Expected $messages, got $actualMessages");
-
-        // TODO(ahe): Enable SerializeScopeTestCase for multiple parts.
-        if (!isFirstProgram && program.code is String) {
-          await new SerializeScopeTestCase(
-              program.code, helper.compiler.mainApp,
-              helper.compiler.compiler).run();
-        }
       }
-    }
+
+    await super.runDelta(dartinoDelta);
+  }
+
+  Future<Null> tearDown() async {
+
 
     // If everything went fine, we will try finishing the execution and do a
     // graceful shutdown.
@@ -263,7 +212,9 @@ compileAndRun(
     }
     await session.runCommand(const commands_lib.SessionEnd());
     await session.shutdown();
-  }).catchError(session.handleError);
+  }
+
+  Future<Null> waitForCompletion() async {
 
   // TODO(ahe/kustermann/ager): We really need to distinguish VM crashes from
   // normal test failures. This information is based on exitCode and we need
@@ -278,92 +229,7 @@ compileAndRun(
       ? DART_VM_EXITCODE_COMPILE_TIME_ERROR : 0;
   Expect.equals(
       expectedExitCode, actualExitCode, "Unexpected exit code from dartino VM");
-}
-
-class SerializeScopeTestCase extends CompilerTestCase {
-  final String source;
-
-  final String scopeInfo;
-
-  final Compiler compiler = null; // TODO(ahe): Provide a compiler.
-
-  SerializeScopeTestCase(
-      this.source,
-      LibraryElement library,
-      Compiler compiler)
-      : scopeInfo = computeScopeInfo(compiler, library),
-        super(library.canonicalUri);
-
-  Future run() {
-    if (true) {
-      // TODO(ahe): Remove this. We're temporarily bypassing scope validation.
-      return new Future.value(null);
-    }
-    return loadMainApp().then(checkScopes);
   }
-
-  void checkScopes(LibraryElement library) {
-    var compiler = null;
-    Expect.stringEquals(computeScopeInfo(compiler, library), scopeInfo);
-  }
-
-  Future<LibraryElement> loadMainApp() async {
-    LibraryElement library =
-        await compiler.libraryLoader.loadLibrary(scriptUri);
-    if (compiler.mainApp == null) {
-      compiler.mainApp = library;
-    } else if (compiler.mainApp != library) {
-      throw "Inconsistent use of compiler (${compiler.mainApp} != $library).";
-    }
-    return library;
-  }
-
-  static String computeScopeInfo(Compiler compiler, LibraryElement library) {
-    ScopeInformationVisitor visitor =
-        new ScopeInformationVisitor(compiler, library, 0);
-
-    visitor.ignoreImports = true;
-    visitor.sortMembers = true;
-    visitor.indented.write('[\n');
-    visitor.indentationLevel++;
-    visitor.indented;
-    library.accept(visitor, null);
-    library.forEachLocalMember((Element member) {
-      if (member.isClass) {
-        visitor.buffer.write(',\n');
-        visitor.indented;
-        member.accept(visitor, null);
-      }
-    });
-    visitor.buffer.write('\n');
-    visitor.indentationLevel--;
-    visitor.indented.write(']');
-    return '${visitor.buffer}';
-  }
-}
-
-void logger(x) {
-  print(x);
-}
-
-String numberedLines(code) {
-  if (code is! Map) {
-    code = {'main.dart': code};
-  }
-  StringBuffer result = new StringBuffer();
-  code.forEach((String fileName, String code) {
-    result.writeln("==> $fileName <==");
-    int lineNumber = 1;
-    for (String text in splitLines(code)) {
-      result.write("$lineNumber: $text");
-      lineNumber++;
-    }
-  });
-  return '$result';
-}
-
-List<String> splitLines(String text) {
-  return text.split(new RegExp('^', multiLine: true));
 }
 
 class TestSession extends Session {
@@ -578,122 +444,5 @@ class BytesSink implements Sink<List<int>> {
 
   List<String> takeLines() {
     return new LineSplitter().convert(UTF8.decode(builder.takeBytes()));
-  }
-}
-
-class IncrementalTestHelper {
-  final Uri packageConfig;
-
-  final IoInputProvider inputProvider;
-
-  final IncrementalCompiler compiler;
-
-  DartinoSystem system;
-
-  IncrementalTestHelper.internal(
-      this.packageConfig,
-      this.inputProvider,
-      this.compiler);
-
-  factory IncrementalTestHelper(IncrementalMode incrementalMode) {
-    Uri packageConfig = Uri.base.resolve('.packages');
-    IoInputProvider inputProvider = new IoInputProvider(packageConfig);
-    FormattingDiagnosticHandler diagnosticHandler =
-        new FormattingDiagnosticHandler(inputProvider);
-    IncrementalCompiler compiler = new IncrementalCompiler(
-        packageConfig: packageConfig,
-        inputProvider: inputProvider,
-        diagnosticHandler: diagnosticHandler,
-        outputProvider: new OutputProvider(),
-        support: incrementalMode,
-        platform: "dartino_mobile.platform");
-    return new IncrementalTestHelper.internal(
-        packageConfig,
-        inputProvider,
-        compiler);
-  }
-
-  Future<DartinoDelta> fullCompile(ProgramResult program) async {
-    Map<String, String> code = computeCode(program);
-    inputProvider.sources.clear();
-    code.forEach((String name, String code) {
-      inputProvider.sources[customUriBase.resolve(name)] = code;
-    });
-
-    await compiler.compile(customUriBase.resolve('main.dart'), customUriBase);
-    DartinoDelta delta = compiler.compiler.context.backend.computeDelta();
-    system = delta.system;
-    return delta;
-  }
-
-  Future<DartinoDelta> incrementalCompile(
-      ProgramResult program,
-      int version) async {
-    Map<String, String> code = computeCode(program);
-    Map<Uri, Uri> uriMap = <Uri, Uri>{};
-    for (String name in code.keys) {
-      Uri uri = customUriBase.resolve('$name?v$version');
-      inputProvider.cachedSources[uri] = new Future.value(code[name]);
-      uriMap[customUriBase.resolve(name)] = uri;
-    }
-    DartinoDelta delta = await compiler.compileUpdates(
-        system, uriMap, logVerbose: logger, logTime: logger);
-    system = delta.system;
-    return delta;
-  }
-
-  Map<String, String> computeCode(ProgramResult program) {
-    return program.code is String
-        ? <String,String>{ 'main.dart': program.code }
-        : program.code;
-  }
-}
-
-/// An input provider which provides input via the class [File].  Includes
-/// in-memory compilation units [sources] which are returned when a matching
-/// key requested.
-class IoInputProvider extends SourceFileProvider {
-  final Map<Uri, String> sources = <Uri, String>{};
-
-  final Uri packageConfig;
-
-  final Map<Uri, Future> cachedSources = new Map<Uri, Future>();
-
-  static final Map<Uri, String> cachedFiles = new Map<Uri, String>();
-
-  IoInputProvider(this.packageConfig);
-
-  Future readFromUri(Uri uri) {
-    return cachedSources.putIfAbsent(uri, () {
-      String text;
-      String name;
-      if (sources.containsKey(uri)) {
-        name = '$uri';
-        text = sources[uri];
-      } else {
-        if (uri.scheme == PACKAGE_SCHEME) {
-          throw "packages not supported $uri";
-        }
-        text = readCachedFile(uri);
-        name = new File.fromUri(uri).path;
-      }
-      sourceFiles[uri] = new StringSourceFile(uri, name, text);
-      return new Future<String>.value(text);
-    });
-  }
-
-  Future call(Uri uri) => readStringFromUri(uri);
-
-  Future<String> readStringFromUri(Uri uri) {
-    return readFromUri(uri);
-  }
-
-  Future<List<int>> readUtf8BytesFromUri(Uri uri) {
-    throw "not supported";
-  }
-
-  static String readCachedFile(Uri uri) {
-    return cachedFiles.putIfAbsent(
-        uri, () => new File.fromUri(uri).readAsStringSync());
   }
 }
