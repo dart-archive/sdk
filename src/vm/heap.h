@@ -227,7 +227,7 @@ class GenerationalScavengeVisitor : public PointerVisitor {
         *p = old_object->forwarding_address();
       } else {
         // TODO(erikcorry): We need a better heuristic than this.
-        if (hacky_counter_++ & 1) {
+        if ((hacky_counter_++ & 1) || old_object->Size() > 8 * MB) {
           *p = old_object->CloneInToSpace(old_);
         } else {
           *p = old_object->CloneInToSpace(to_);

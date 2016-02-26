@@ -272,7 +272,7 @@ void Heap::ReplaceSpace(SemiSpace* space, OldSpace* old_space) {
     // Currently the new-space GC time is dependent on the size of old space
     // because we have no remembered set.  Therefore we have to grow the new
     // space as the old space grows to avoid going quadratic.
-    space->SetAllocationBudget(old_space->Used() >> 3);
+    space->SetAllocationBudget(Utils::Minimum(16 * MB, old_space->Used() >> 3));
   } else {
     AdjustAllocationBudget();
   }
