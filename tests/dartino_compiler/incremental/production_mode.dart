@@ -4,7 +4,7 @@
 
 library tests.dartino_compiler.incremental.production_mode;
 
-import 'feature_test.dart' show
+import 'dartino_vm_tester.dart' show
     compileAndRun;
 
 import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart' show
