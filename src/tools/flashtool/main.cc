@@ -45,7 +45,10 @@ void ClearBytecodeBreak(Opcode opcode) {
 
 void InterpreterCoroutineEntry() { FATAL("InterpreterCoroutineEntry"); }
 
-void Interpreter::Run() { FATAL("Interpreter::Run"); }
+void Interpreter::Run() {
+  USE(process_);  // Avoid "unused" warning.
+  FATAL("Interpreter::Run");
+}
 
 void TickSampler::Setup() { FATAL("TickSampler::Setup"); }
 
