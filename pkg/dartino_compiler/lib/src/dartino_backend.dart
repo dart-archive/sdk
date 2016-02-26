@@ -1649,6 +1649,19 @@ class DartinoBackend extends Backend
       DartinoClassBuilder builder =
           systemBuilder.getClassBuilder(enclosingClass, this);
       builder.removeFromMethodTable(function);
+
+      int tearOff = systemBuilder.lookupTearOffById(function.functionId);
+      if (tearOff != null) {
+        DartinoFunctionBase base = systemBuilder.lookupFunction(tearOff);
+        int classId = base.memberOf;
+        DartinoClassBuilder cls = systemBuilder.lookupClassBuilder(classId);
+        if (cls == null) {
+          cls = systemBuilder.newPatchClassBuilder(
+              classId, compiledClosureClass, new SchemaChange(null));
+        }
+        cls.removeFromMethodTable(base);
+        systemBuilder.forgetFunction(base);
+      }
     }
   }
 

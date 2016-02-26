@@ -72,7 +72,7 @@ class DartinoSystemBuilder {
   final Map<int, int> _newGettersByFieldIndex = <int, int>{};
   final Map<int, int> _newSettersByFieldIndex = <int, int>{};
 
-  final List<DartinoFunction> _removedFunctions = <DartinoFunction>[];
+  final Set<DartinoFunction> _removedFunctions = new Set<DartinoFunction>();
 
   final Map<Element, DartinoFunctionBuilder> _functionBuildersByElement =
       <Element, DartinoFunctionBuilder>{};
