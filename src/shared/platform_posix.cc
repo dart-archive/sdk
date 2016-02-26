@@ -43,6 +43,12 @@ void Platform::Setup() {
   sa.sa_handler = SIG_IGN;
   sigaction(SIGPIPE, &sa, NULL);
 
+  // Ignore SIGQUIT events which are expected to be caught and relayed via an
+  // attached debugger. We can't in general clear this from the parent process
+  // because the Dart VM might our parent and it will install a custom handler
+  // and remove any ignore handler set by its parent.
+  sigaction(SIGQUIT, &sa, NULL);
+
   if (Flags::abort_on_sigterm) {
     struct sigaction sa;
     sa.sa_flags = 0;
