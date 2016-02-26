@@ -105,33 +105,33 @@ abstract class IncrementalTestRunner {
   }
 
   Future<DartinoDelta> compile() async {
-      DartinoDelta dartinoDelta;
-      if (isFirstProgram) {
-        // The first program is compiled "fully".
-        dartinoDelta = await helper.fullCompile(program);
-      } else {
-        // An update to the first program, all updates are compiled as
-        // incremental updates to the first program.
-        dartinoDelta = await helper.incrementalCompile(program, version);
-      }
+    DartinoDelta dartinoDelta;
+    if (isFirstProgram) {
+      // The first program is compiled "fully".
+      dartinoDelta = await helper.fullCompile(program);
+    } else {
+      // An update to the first program, all updates are compiled as
+      // incremental updates to the first program.
+      dartinoDelta = await helper.incrementalCompile(program, version);
+    }
 
-      if (!isFirstProgram ||
-          const bool.fromEnvironment("feature_test.print_initial_commands")) {
-        for (VmCommand command in dartinoDelta.commands) {
-          print(command);
-        }
+    if (!isFirstProgram ||
+        const bool.fromEnvironment("feature_test.print_initial_commands")) {
+      for (VmCommand command in dartinoDelta.commands) {
+        print(command);
       }
+    }
 
     return dartinoDelta;
   }
 
   Future<Null> runDelta(DartinoDelta delta) async {
-        // TODO(ahe): Enable SerializeScopeTestCase for multiple parts.
-        if (!isFirstProgram && program.code is String) {
-          await new SerializeScopeTestCase(
-              program.code, helper.compiler.mainApp,
-              helper.compiler.compiler).run();
-        }
+    // TODO(ahe): Enable SerializeScopeTestCase for multiple parts.
+    if (!isFirstProgram && program.code is String) {
+      await new SerializeScopeTestCase(
+          program.code, helper.compiler.mainApp,
+          helper.compiler.compiler).run();
+    }
   }
 
   Future<Null> tearDown();

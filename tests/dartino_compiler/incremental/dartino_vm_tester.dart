@@ -94,105 +94,103 @@ class DartinoVmTester extends IncrementalTestRunner {
   }
 
   Future<Null> runDelta(DartinoDelta dartinoDelta) async {
-      DartinoBackend backend = helper.compiler.compiler.context.backend;
+    DartinoBackend backend = helper.compiler.compiler.context.backend;
 
+    if (isFirstProgram) {
+      // Perform handshake with VM.
+      HandShakeResult handShakeResult =
+          await session.handShake(dartinoVersion);
+      Expect.isTrue(handShakeResult.success, "Dartino VM version mismatch");
+    }
+
+    CommitChangesResult result = await session.applyDelta(dartinoDelta);
+
+    if (!result.successful) {
+      print("The CommitChanges() command was not successful: "
+            "${result.message}");
+    }
+
+    Expect.equals(result.successful, !program.commitChangesShouldFail,
+                  result.message);
+
+    if (isFirstProgram) {
+      // Turn on debugging.
+      await session.enableDebugger();
+      // Spawn the process to run.
+      await session.spawnProcess([]);
+      // Allow operations on internal frames.
+      await session.toggleInternal();
+    }
+
+    if (result.successful) {
+      // Set breakpoint in main in case main was replaced.
+      var breakpoints =
+          await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+      for (var breakpoint in breakpoints) {
+        print("Added breakpoint: $breakpoint");
+      }
+      if (!helper.compiler.compiler.mainFunction.isMalformed) {
+        // If there's a syntax error in main, we cannot find it to set a
+        // breakpoint.
+        // TODO(ahe): Consider if this is a problem?
+        Expect.equals(1, breakpoints.length);
+      }
       if (isFirstProgram) {
-        // Perform handshake with VM.
-        HandShakeResult handShakeResult =
-            await session.handShake(dartinoVersion);
-        Expect.isTrue(handShakeResult.success, "Dartino VM version mismatch");
+        // Run the program to hit the breakpoint in main.
+        await session.debugRun();
+      } else {
+        // Restart the current frame to rerun main.
+        await session.restart();
+      }
+      if (session.running) {
+        // Step out of main to finish execution of main.
+        await session.stepOut();
       }
 
-      CommitChangesResult result = await session.applyDelta(dartinoDelta);
+      // Select the stack frame of callMain.
+      debug.BackTrace trace = await session.backTrace();
+      FunctionElement callMainElement =
+          backend.dartinoSystemLibrary.findLocal("callMain");
+      DartinoFunction callMain =
+          helper.system.lookupFunctionByElement(callMainElement);
+      debug.BackTraceFrame mainFrame =
+          trace.frames.firstWhere(
+              (debug.BackTraceFrame frame) => frame.function == callMain);
+      int frame = trace.frames.indexOf(mainFrame);
+      Expect.notEquals(1, frame);
+      session.selectFrame(frame);
+      print(trace.format());
 
-      if (!result.successful) {
-        print("The CommitChanges() command was not successful: "
-              "${result.message}");
-      }
+      List<String> actualMessages = session.stdoutSink.takeLines();
 
-      Expect.equals(result.successful, !program.commitChangesShouldFail,
-                    result.message);
+      List<String> messages = new List<String>.from(program.messages);
+      if (program.hasCompileTimeError) {
+        print("Compile-time error expected");
+        // TODO(ahe): The compile-time error message shouldn't be printed by
+        // the Dartino VM.
 
-      if (isFirstProgram) {
-        // Turn on debugging.
-        await session.enableDebugger();
-        // Spawn the process to run.
-        await session.spawnProcess([]);
-        // Allow operations on internal frames.
-        await session.toggleInternal();
-      }
-
-      if (result.successful) {
-        // Set breakpoint in main in case main was replaced.
-        var breakpoints =
-            await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
-        for (var breakpoint in breakpoints) {
-          print("Added breakpoint: $breakpoint");
-        }
-        if (!helper.compiler.compiler.mainFunction.isMalformed) {
-          // If there's a syntax error in main, we cannot find it to set a
-          // breakpoint.
-          // TODO(ahe): Consider if this is a problem?
-          Expect.equals(1, breakpoints.length);
-        }
-        if (isFirstProgram) {
-          // Run the program to hit the breakpoint in main.
-          await session.debugRun();
-        } else {
-          // Restart the current frame to rerun main.
-          await session.restart();
-        }
-        if (session.running) {
-          // Step out of main to finish execution of main.
-          await session.stepOut();
-        }
-
-        // Select the stack frame of callMain.
-        debug.BackTrace trace = await session.backTrace();
-        FunctionElement callMainElement =
-            backend.dartinoSystemLibrary.findLocal("callMain");
-        DartinoFunction callMain =
-            helper.system.lookupFunctionByElement(callMainElement);
-        debug.BackTraceFrame mainFrame =
-            trace.frames.firstWhere(
-                (debug.BackTraceFrame frame) => frame.function == callMain);
-        int frame = trace.frames.indexOf(mainFrame);
-        Expect.notEquals(1, frame);
-        session.selectFrame(frame);
-        print(trace.format());
-
-        List<String> actualMessages = session.stdoutSink.takeLines();
-
-        List<String> messages = new List<String>.from(program.messages);
-        if (program.hasCompileTimeError) {
-          print("Compile-time error expected");
-          // TODO(ahe): The compile-time error message shouldn't be printed by
-          // the Dartino VM.
-
-          // Find the compile-time error message in the actual output, and
-          // remove all lines after it.
-          int compileTimeErrorIndex = -1;
-          for (int i = 0; i < actualMessages.length; i++) {
-            if (actualMessages[i].startsWith("Compile error:")) {
-              compileTimeErrorIndex = i;
-              break;
-            }
+        // Find the compile-time error message in the actual output, and
+        // remove all lines after it.
+        int compileTimeErrorIndex = -1;
+        for (int i = 0; i < actualMessages.length; i++) {
+          if (actualMessages[i].startsWith("Compile error:")) {
+            compileTimeErrorIndex = i;
+            break;
           }
-          Expect.isTrue(compileTimeErrorIndex != -1);
-          actualMessages.removeRange(compileTimeErrorIndex,
-              actualMessages.length);
         }
-
-        Expect.listEquals(messages, actualMessages,
-            "Expected $messages, got $actualMessages");
+        Expect.isTrue(compileTimeErrorIndex != -1);
+        actualMessages.removeRange(compileTimeErrorIndex,
+            actualMessages.length);
       }
+
+      Expect.listEquals(messages, actualMessages,
+          "Expected $messages, got $actualMessages");
+    }
 
     await super.runDelta(dartinoDelta);
   }
 
   Future<Null> tearDown() async {
-
-
     // If everything went fine, we will try finishing the execution and do a
     // graceful shutdown.
     if (session.running) {
@@ -215,20 +213,19 @@ class DartinoVmTester extends IncrementalTestRunner {
   }
 
   Future<Null> waitForCompletion() async {
+    // TODO(ahe/kustermann/ager): We really need to distinguish VM crashes from
+    // normal test failures. This information is based on exitCode and we need
+    // to propagate the exitCode back to test.dart, so we can have Fail/Crash
+    // outcomes of these tests.
+    await session.waitForCompletion();
 
-  // TODO(ahe/kustermann/ager): We really need to distinguish VM crashes from
-  // normal test failures. This information is based on exitCode and we need
-  // to propagate the exitCode back to test.dart, so we can have Fail/Crash
-  // outcomes of these tests.
-  await session.waitForCompletion();
-
-  int actualExitCode = await session.exitCode;
-  // TODO(ahe): We should expect exit code 0, and instead be able to detect
-  // compile-time errors directly via the session.
-  int expectedExitCode = hasCompileTimeError
-      ? DART_VM_EXITCODE_COMPILE_TIME_ERROR : 0;
-  Expect.equals(
-      expectedExitCode, actualExitCode, "Unexpected exit code from dartino VM");
+    int actualExitCode = await session.exitCode;
+    // TODO(ahe): We should expect exit code 0, and instead be able to detect
+    // compile-time errors directly via the session.
+    int expectedExitCode = hasCompileTimeError
+        ? DART_VM_EXITCODE_COMPILE_TIME_ERROR : 0;
+    Expect.equals(
+        expectedExitCode, actualExitCode, "Unexpected exit code from dartino VM");
   }
 }
 
