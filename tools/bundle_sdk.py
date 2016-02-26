@@ -178,6 +178,17 @@ def CopyPackagesAndSettingsTemplate(bundle_dir):
                join(target_dir, package),
                ignore = ignore_patterns('.git'))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
+  # Update the dartino_lib/dartino/lib/_embedder.yaml file
+  # based upon the SDK structure
+  embedderPath = join(target_dir, 'dartino', 'lib', '_embedder.yaml')
+  with open(embedderPath) as f:
+    s = f.read()
+  s = s.replace('../../../lib/',
+                '../../../internal/dartino_lib/')
+  s = s.replace('../../../third_party/dart/sdk/lib/',
+                '../../../internal/dart_lib/')
+  with open(embedderPath, 'w') as f:
+    f.write(s)
 
 def CopyPlatforms(bundle_dir):
   # Only copy parts of the platform directory. We also have source
