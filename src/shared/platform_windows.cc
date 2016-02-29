@@ -307,7 +307,7 @@ VirtualMemory::VirtualMemory(int size) : size_(size) {
   address_ = RandomizedVirtualAlloc(size, MEM_RESERVE);
 }
 
-VirtualMemory::~VirtualMemory() { VirtualFree(address_, size, MEM_RELEASE); }
+VirtualMemory::~VirtualMemory() { VirtualFree(address_, size_, MEM_RELEASE); }
 
 bool VirtualMemory::IsReserved() const { return address_ == NULL; }
 
