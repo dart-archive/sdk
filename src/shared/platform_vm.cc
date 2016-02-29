@@ -22,6 +22,13 @@ class Arena {
     memset(map_, 0, pages_);
   }
 
+  ~Arena() {
+    delete lock_;
+    lock_ = NULL;
+    delete map_;
+    map_ = NULL;
+  }
+
   uword Allocate(uword size) {
     uword pages = size >> kPageBits;
     if (pages == 0 || pages > pages_) return 0;

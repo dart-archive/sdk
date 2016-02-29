@@ -221,8 +221,9 @@ int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
   const int kRanges = 4;
   struct page_range page_ranges[kRanges];
   int arena_count = page_get_arenas(page_ranges, kRanges);
+  ASSERT(arena_count < kRanges);
   int i;
-  for (i = 0; i < kRanges && i < arena_count; i++) {
+  for (i = 0; i < number_of_ranges && i < arena_count; i++) {
     ranges[i].address = page_ranges[i].address;
     ranges[i].size = page_ranges[i].size;
   }
