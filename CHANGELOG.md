@@ -21,7 +21,7 @@
 
 * Added new MQTT package for the [MQTT protocol](http://mqtt.org/). Note this
  requires a third-party library to be compiled, see [the documentation]
- (https://dartino.github.io/api/mqtt/index.html) for details.
+ (http://dartino.github.io/api/mqtt/mqtt-library.html) for details.
 
 * Changed the GPIO package public interface. Changed the existing
  implementations for Raspberry Pi 2. Added an implementation for the STM32
