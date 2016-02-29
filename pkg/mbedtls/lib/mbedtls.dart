@@ -263,6 +263,7 @@ class TLSSocket implements Socket {
   }
 
   bool _handleBuffers(int ret) {
+    _throwIfClosed();
     if (_sendBuffer.available > 0) {
       Uint8List list = new Uint8List(_sendBuffer.available);
       _sendBuffer.read(list.buffer);
@@ -270,6 +271,9 @@ class TLSSocket implements Socket {
     }
     if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
       ByteBuffer readBuffer = _socket.readNext(_recvBuffer.freeSpace);
+      if (readBuffer == null) {
+        throw new TLSException.closed();
+      }
       _recvBuffer.write(readBuffer);
     }
     return (ret == MBEDTLS_ERR_SSL_WANT_READ ||
@@ -302,6 +306,7 @@ class TLSSocket implements Socket {
    * be freed since we have no way of registering dealloc callbacks.
    */
   void close() {
+    _throwIfClosed();
     mbedtls_ssl_close_notify.icall$1(ssl);
     mbedtls_x509_crt_free.icall$1(cacert);
     mbedtls_ssl_free.icall$1(ssl);
@@ -318,9 +323,11 @@ class TLSSocket implements Socket {
     buf.free();
     pers.free();
     _socket.close();
+    _socket = null;
   }
 
   void shutdownWrite() {
+    _throwIfClosed();
     _socket.shutdownWrite();
   }
 
@@ -339,10 +346,17 @@ class TLSSocket implements Socket {
     write(_stringToByteBuffer(s));
   }
 
+  void _throwIfClosed() {
+    if (_socket == null) {
+      throw new TLSException.closed();
+    }
+  }
+
   /**
    * Write the buffer to the secure socket.
    */
   void write(ByteBuffer buffer) {
+    _throwIfClosed();
     // getForeign is not public, TODO(ricow): revisit this
     var buf = buffer;
     var foreign = buf.getForeign();
@@ -359,6 +373,7 @@ class TLSSocket implements Socket {
   }
 
   int get available {
+    _throwIfClosed();
     // There are two possible buffers that are in play here:
     // * The buffer in the socket
     // * The buffer in the tls layer
@@ -416,6 +431,7 @@ class TLSSocket implements Socket {
    * We never read more than 65535 bytes
    */
   ByteBuffer readNext([int max = 65535]) {
+    _throwIfClosed();
     // If there are no available bytes we do a null read, which will block in
     // the dart socket.
     while (available == 0) {
@@ -431,6 +447,7 @@ class TLSException implements Exception {
   final String message;
 
   TLSException(this.message);
+  TLSException.closed() : message = "The underlying socket was closed";
 
   String toString() => "TLSException: $message";
 }
