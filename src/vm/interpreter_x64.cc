@@ -1085,7 +1085,7 @@ void InterpreterGeneratorX64::DoBranchBackIfTrueWide() {
   Label branch;
   Pop(RBX);
   LoadLiteralTrue(RAX);
-  __ cmpl(RBX, RAX);
+  __ cmpq(RBX, RAX);
   __ j(EQUAL, &branch);
   Dispatch(kBranchBackIfTrueWideLength);
 
