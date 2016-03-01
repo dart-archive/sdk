@@ -180,7 +180,7 @@ namespace dartino {
   N(ForeignVCall5, "ForeignFunction", "_vcall$5", true)                      \
   N(ForeignVCall6, "ForeignFunction", "_vcall$6", true)                      \
                                                                              \
-  N(ForeignLCallwLw, "ForeignFunction", "_Lcall$wLw", false)                 \
+  N(ForeignLCallwLw, "ForeignFunction", "_Lcall$wLw", true)                  \
                                                                              \
   N(ForeignRegisterFinalizer, "Foreign", "_registerFinalizer", false)        \
   N(ForeignRemoveFinalizer, "Foreign", "_removeFinalizer", false)            \

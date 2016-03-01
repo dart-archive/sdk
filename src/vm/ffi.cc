@@ -371,21 +371,14 @@ static int64 AsInt64Value(Object* object) {
   return -1;
 }
 
-BEGIN_NATIVE(ForeignLCallwLw) {
+BEGIN_DETACHABLE_NATIVE(ForeignLCallwLw) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   int64 a1 = AsInt64Value(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   LwLw function = reinterpret_cast<LwLw>(address);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
-  int64 value = function(a0, a1, a2);
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
-  LargeInteger::cast(result)->set_value(value);
-  return result;
+
+  RUN_INSIDE_BARRIER_AND_RETURN(function(a0, a1, a2));
 }
 END_NATIVE()
 
