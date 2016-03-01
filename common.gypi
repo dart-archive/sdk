@@ -197,6 +197,10 @@
         'xcode_settings': { # And ninja.
           'GCC_OPTIMIZATION_LEVEL': '0',
 
+          'OTHER_CFLAGS': [
+            '-g',
+          ],
+
           'OTHER_CPLUSPLUSFLAGS': [
             '-g',
           ],
@@ -548,6 +552,35 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
+            'variables': {
+              'gcc_cflags': [
+                '-mthumb',
+                '-Wall',
+                '-fmessage-length=0',
+                '-ffunction-sections',
+                '-Og',
+              ],
+
+              # Use the gnu language dialect to get math.h constants
+              'gcc_cflags_c': [
+                '--std=gnu99',
+              ],
+
+              # Use the gnu language dialect to get math.h constants
+              'gcc_cflags_cc': [
+                '--std=gnu++11',
+              ],
+
+              'gcc_ldflags': [
+                '-mthumb',
+                '-Wl,-Map=output.map',
+                '-Wl,--gc-sections',
+                # Fake define intercepted by cc_wrapper.py.
+                '-L/GCC_XARM_EMBEDDED',
+                '-static-libstdc++',
+              ],
+            },
+
             'defines': [
               'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
               'DARTINO_TARGET_OS_CMSIS',
@@ -559,45 +592,50 @@
               'DARTINO_TARGET_OS_MACOS',
             ],
 
-            'cflags!': [
-              '-O0',
-            ],
-            'cflags': [
-              '-mthumb',
-              '-Wall',
-              '-fmessage-length=0',
-              '-ffunction-sections',
-              '-Og',
-            ],
-
-            # Use the gnu language dialect to get math.h constants
-            'cflags_c': [
-              '--std=gnu99',
-            ],
-
-            # Use the gnu language dialect to get math.h constants
-            'cflags_cc': [
-              '--std=gnu++11',
-            ],
-
-            'ldflags': [
-              '-mthumb',
-              '-Wl,-Map=output.map',
-              '-Wl,--gc-sections',
-              # Fake define intercepted by cc_wrapper.py.
-              '-L/GCC_XARM_EMBEDDED',
-              '-static-libstdc++',
-            ],
-
             'conditions': [
+              ['OS=="linux"', {
+                'cflags!': [
+                  '-O0',
+                ],
+                'cflags': [
+                  '<@(gcc_cflags)'
+                ],
+                'cflags_c': [
+                  '<@(gcc_cflags_c)'
+                ],
+                'cflags_cc': [
+                  '<@(gcc_cflags_cc)'
+                ],
+                'ldflags': [
+                  '<@(gcc_ldflags)'
+                ],
+              }],
               ['OS=="mac"', {
                 'xcode_settings': {
+                  'GCC_OPTIMIZATION_LEVEL': 'g',
                   # This removes the option -fasm-blocks that GCC ARM Embedded
                   # does not support.
                   'GCC_CW_ASM_SYNTAX': 'NO',
                   # This removes the option -gdwarf-2'.
                   # TODO(sgjesse): Revisit debug symbol generation.
                   'GCC_GENERATE_DEBUGGING_SYMBOLS': 'NO',
+                  'OTHER_LDFLAGS!': [
+                    '-framework CoreFoundation',
+                  ],
+                  'OTHER_CFLAGS': [
+                    '<@(gcc_cflags)',
+                    '<@(gcc_cflags_c)'
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS!' : [
+                    '-stdlib=libc++',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS': [
+                    '<@(gcc_cflags)',
+                    '<@(gcc_cflags_cc)'
+                  ],
+                  'OTHER_LDFLAGS': [
+                    '<@(gcc_ldflags)'
+                  ],
                 },
               }],
             ],
@@ -628,18 +666,34 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
-            'cflags': [
-              '<@(common_cflags_ldflags)',
-            ],
-
-            'ldflags': [
-              '<@(common_cflags_ldflags)',
+            'conditions': [
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+                'ldflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+              }],
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  'OTHER_CFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_LDFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                },
+              }],
             ],
           }],
         ],
       },
 
-      'dartino_cortex_m4': {
+      'dartino_cortex_m4f': {
         'abstract': 1,
 
         'variables': {
@@ -652,35 +706,67 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
-            'cflags': [
-              '<@(common_cflags_ldflags)',
-            ],
-
-            'ldflags': [
-              '<@(common_cflags_ldflags)',
+            'conditions': [
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+                'ldflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+              }],
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  'OTHER_CFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_LDFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                },
+              }],
             ],
           }],
         ],
       },
 
-      'dartino_cortex_m4_softfp': {
+      'dartino_cortex_m3': {
         'abstract': 1,
 
         'variables': {
           'common_cflags_ldflags': [
-            '-mcpu=cortex-m4',
-            '-mfloat-abi=softfp',
+            '-mcpu=cortex-m3',
+            '-mfloat-abi=soft',
           ],
         },
 
         'target_conditions': [
           ['_toolset=="target"', {
-            'cflags': [
-              '<@(common_cflags_ldflags)',
-            ],
-
-            'ldflags': [
-              '<@(common_cflags_ldflags)',
+            'conditions': [
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+                'ldflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+              }],
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  'OTHER_CFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_LDFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                },
+              }],
             ],
           }],
         ],

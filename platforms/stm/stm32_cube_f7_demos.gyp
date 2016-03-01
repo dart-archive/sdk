@@ -5,6 +5,16 @@
 {
   'variables': {
     'discovery_projects': '<(stm32_cube_f7)/Projects/STM32746G-Discovery',
+    'additional_gcc_warning_flags' : [
+      '-Wno-empty-body',
+      '-Wno-missing-field-initializers',
+      '-Wno-sign-compare',
+    ],
+    'lwip_gcc_warning_flags' : [
+      '-Wno-format',
+      '-Wno-address',
+      '-Wno-pointer-sign',
+    ],
   },
   'target_defaults': {
     'include_dirs': [
@@ -22,11 +32,6 @@
       '<(stm32_cube_f7)/Utilities/Log',
       '<(stm32_cube_f7)/Utilities/Fonts',
       '<(stm32_cube_f7)/Utilities/CPU',
-    ],
-    'cflags' : [
-      '-Wno-empty-body',
-      '-Wno-missing-field-initializers',
-      '-Wno-sign-compare',
     ],
   },
   'targets': [
@@ -71,17 +76,23 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'cflags' : [
+            '<@(additional_gcc_warning_flags)',
+          ],
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
+            'OTHER_CFLAGS' : [
+              '<@(additional_gcc_warning_flags)',
+            ],
             'OTHER_LDFLAGS': [
               '<@(ldflags)',
             ],
           },
-        }],
-        ['OS=="linux"', {
-          'ldflags': [
-            '<@(ldflags)',
-          ],
         }],
       ],
     },
@@ -154,17 +165,23 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'cflags' : [
+            '<@(additional_gcc_warning_flags)',
+          ],
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
+            'OTHER_CFLAGS' : [
+              '<@(additional_gcc_warning_flags)',
+            ],
             'OTHER_LDFLAGS': [
               '<@(ldflags)',
             ],
           },
-        }],
-        ['OS=="linux"', {
-          'ldflags': [
-            '<@(ldflags)',
-          ],
         }],
       ],
     },
@@ -241,17 +258,23 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'cflags' : [
+            '<@(additional_gcc_warning_flags)',
+          ],
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
+            'OTHER_CFLAGS' : [
+              '<@(additional_gcc_warning_flags)',
+            ],
             'OTHER_LDFLAGS': [
               '<@(ldflags)',
             ],
           },
-        }],
-        ['OS=="linux"', {
-          'ldflags': [
-            '<@(ldflags)',
-          ],
         }],
       ],
       'libraries': [
@@ -356,17 +379,23 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_ts.c',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'cflags' : [
+            '<@(additional_gcc_warning_flags)',
+          ],
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
+            'OTHER_CFLAGS' : [
+              '<@(additional_gcc_warning_flags)',
+            ],
             'OTHER_LDFLAGS': [
               '<@(ldflags)',
             ],
           },
-        }],
-        ['OS=="linux"', {
-          'ldflags': [
-            '<@(ldflags)',
-          ],
         }],
       ],
     },
@@ -411,11 +440,6 @@
               'STM32F746NGHx_FLASH.ld',
         ],
       },
-      'cflags' : [
-        '-Wno-format',
-        '-Wno-address',
-        '-Wno-pointer-sign',
-      ],
       'type': 'executable',
       'includes': [
         'hal_sources.gypi',
@@ -454,17 +478,25 @@
         '<(stm32_cube_f7_free_rtos_src)/portable/MemMang/heap_3.c',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'cflags' : [
+            '<@(additional_gcc_warning_flags)',
+            '<@(lwip_gcc_warning_flags)',
+          ],
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
+            'OTHER_CFLAGS' : [
+              '<@(additional_gcc_warning_flags)',
+              '<@(lwip_gcc_warning_flags)',
+            ],
             'OTHER_LDFLAGS': [
               '<@(ldflags)',
             ],
           },
-        }],
-        ['OS=="linux"', {
-          'ldflags': [
-            '<@(ldflags)',
-          ],
         }],
       ],
     },
@@ -523,11 +555,6 @@
         'DEMO_VERSION="1.0.1"',
         'USE_STM32746G_DISCOVERY',
         'USE_STM32746G_DISCO',
-      ],
-      'cflags' : [
-        '-Wno-format',
-        '-Wno-address',
-        '-Wno-pointer-sign',
       ],
       'include_dirs': [
         '<(project_path)/Core/Inc',
@@ -599,17 +626,25 @@
         '<(stm32_cube_f7_free_rtos_src)/portable/MemMang/heap_3.c',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'cflags' : [
+            '<@(additional_gcc_warning_flags)',
+            '<@(lwip_gcc_warning_flags)',
+          ],
+          'ldflags': [
+            '<@(ldflags)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
+            'OTHER_CFLAGS' : [
+              '<@(additional_gcc_warning_flags)',
+              '<@(lwip_gcc_warning_flags)',
+            ],
             'OTHER_LDFLAGS': [
               '<@(ldflags)',
             ],
           },
-        }],
-        ['OS=="linux"', {
-          'ldflags': [
-            '<@(ldflags)',
-          ],
         }],
       ],
       'libraries': [

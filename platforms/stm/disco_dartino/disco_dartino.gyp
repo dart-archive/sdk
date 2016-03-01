@@ -87,7 +87,7 @@
             '<(PRODUCT_DIR)/program.o',
           ],
           'action': [
-            '../../../third_party/gcc-arm-embedded/linux/'
+            '../../../third_party/gcc-arm-embedded/<(OS)/'
                 'gcc-arm-embedded/bin/arm-none-eabi-gcc',
             '-mcpu=cortex-m7',
             '-mthumb',
@@ -172,6 +172,14 @@
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'cflags': [
+            '<@(common_cflags)',
+          ],
+          'cflags_cc': [
+            '<@(common_cflags_cc)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
             'OTHER_CFLAGS': [
@@ -182,14 +190,6 @@
               '<@(common_cflags_cc)',
             ],
           },
-        }],
-        ['OS=="linux"', {
-          'cflags': [
-            '<@(common_cflags)',
-          ],
-          'cflags_cc': [
-            '<@(common_cflags_cc)',
-          ],
         }],
       ],
     },
@@ -225,17 +225,17 @@
         '<(PRODUCT_DIR)/program.o',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'ldflags': [
+            '<@(common_ldflags)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
             'OTHER_LDFLAGS': [
               '<@(common_ldflags)',
             ],
           },
-        }],
-        ['OS=="linux"', {
-          'ldflags': [
-            '<@(common_ldflags)',
-          ],
         }],
       ],
       'libraries': [

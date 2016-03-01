@@ -72,7 +72,7 @@
             # As we are messing with CWD we need the path relative to
             # PRODUCT_DIR (where we cd into) instead of relative to
             # where this .gyp file is.
-            '../../third_party/gcc-arm-embedded/linux/'
+            '../../third_party/gcc-arm-embedded/<(OS)/'
                 'gcc-arm-embedded/bin/arm-none-eabi-objcopy',
             '-I',
             'binary',
