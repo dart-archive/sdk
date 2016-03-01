@@ -4,7 +4,7 @@
 
 library dartino_compiler.compiler_api_test;
 
-import 'package:dartino_compiler/compiler.dart' show
+import 'package:dartino_compiler/dartino_compiler.dart' show
     DartinoCompiler;
 
 import 'package:expect/expect.dart' show
