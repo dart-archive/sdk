@@ -9,6 +9,7 @@
 #include "src/shared/bytecodes.h"
 #include "src/shared/connection.h"
 #include "src/shared/flags.h"
+#include "src/shared/globals.h"
 #include "src/shared/platform.h"
 #include "src/shared/version.h"
 
@@ -797,9 +798,9 @@ SessionState* InitialState::ProcessMessage(Connection::Opcode opcode) {
   buffer.WriteInt(version_length);
   buffer.WriteString(version);
   // Send word size.
-  buffer.WriteInt(sizeof(void*) * 8);
+  buffer.WriteInt(kBitsPerPointer);
   // Send floating point size.
-  buffer.WriteInt(sizeof(dartino_double) * 8);
+  buffer.WriteInt(kBitsPerDartinoDouble);
   connection()->Send(Connection::kHandShakeResult, buffer);
   if (!version_match) {
     MessageProcessingError("Error: Different compiler and VM version.\n");

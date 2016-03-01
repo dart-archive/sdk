@@ -199,13 +199,13 @@ class HandShakeResult extends VmCommand {
   final bool success;
   final String version;
   final int wordSize;
-  final int floatSize;
+  final int dartinoDoubleSize;
 
   const HandShakeResult(
       this.success,
       this.version,
       this.wordSize,
-      this.floatSize)
+      this.dartinoDoubleSize)
       : super(VmCommandCode.HandShakeResult);
 
   void internalAddTo(
@@ -216,7 +216,7 @@ class HandShakeResult extends VmCommand {
         ..addUint32(payload.length)
         ..addUint8List(payload)
         ..addUint32(wordSize)
-        ..addUint32(floatSize)
+        ..addUint32(dartinoDoubleSize)
         ..sendOn(sink, code);
   }
 
@@ -224,7 +224,7 @@ class HandShakeResult extends VmCommand {
 
   String valuesToString() {
     return "success: $success, version: $version, wordsize: $wordSize, "
-        "floatSize: $floatSize";
+        "floatSize: $dartinoDoubleSize";
   }
 }
 

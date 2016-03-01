@@ -260,8 +260,8 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
                     userInput: dartinoVersion,
                     additionalUserInput: handShakeResult.version);
   }
-  session.configuration =
-      getConfiguration(handShakeResult.wordSize, handShakeResult.floatSize);
+  session.configuration = getConfiguration(handShakeResult.wordSize,
+      handShakeResult.dartinoDoubleSize);
 
   // Enable live editing to be able to communicate with VM when there are
   // errors.
