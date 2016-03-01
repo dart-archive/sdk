@@ -121,6 +121,8 @@ class World {
   llvm::StructType* roots_type;
   llvm::PointerType* roots_ptr_type;
 
+  llvm::PointerType* stack_type;
+
   llvm::Constant* roots;
 
   llvm::Function* libc__exit;

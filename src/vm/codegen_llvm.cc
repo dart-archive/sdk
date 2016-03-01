@@ -570,41 +570,31 @@ class BasicBlockBuilder {
   void DoLoadArguments() {
     b.SetInsertPoint(bb_entry_);
 
-    int arity = function_->arity();
-    for (int i = 0; i < arity; i++) {
-      // These will be set in reverse order blow.
-      stack_.push_back(NULL);
-    }
-
-    for (int i = 0; i < kAuxiliarySlots; i++) {
-      // These should never be read or set.
-      stack_.push_back(NULL);
-    }
-
-    for (int i = 0; i < max_stack_height_; i++) {
-      llvm::Value* slot = b.CreateAlloca(w.object_ptr_type, NULL, name("slot_%d", i));
-      stack_.push_back(slot);
-    }
-
     // Save [process] and set arguments in reverse order on stack slots.
     int argc = 0;
+    llvm::Value* llvm_stack = NULL;
     for (llvm::Argument& arg : llvm_function_->getArgumentList()) {
       if (argc == 0) {
         llvm_process_ = &arg;
+      } else if (argc == 1) {
+        llvm_stack = &arg;
       } else {
-        ASSERT((arity - argc) >= 0);
-
-        // The bytecodes can do a 'storelocal 5' where '5' refers to a function
-        // parameter (i.e. parameter slots are modifyable as well).
-        llvm::Value* slot = b.CreateAlloca(w.object_ptr_type, NULL, name("arg_%d", argc));
-        b.CreateStore(&arg, slot);
-        stack_[argc - 1] = slot;
+        break;
       }
       argc++;
     }
-    ASSERT(static_cast<int>(stack_.size()) ==
-           (arity + kAuxiliarySlots + max_stack_height_));
 
+    // TODO: We should do a stack overflow check here (i.e. do we need to grow
+    // the shadow stack?)!
+
+    // We reserve the bcp, rip, fp slots as the normal interpreter does.
+    llvm_stack = b.CreateGEP(llvm_stack, w.CInt(-kAuxiliarySlots));
+
+    // We reserve X slots for locals.
+    llvm_stack = b.CreateGEP(llvm_stack, w.CInt(-max_stack_height_));
+
+    llvm_stack_slot_ = b.CreateAlloca(w.stack_type);
+    b.CreateStore(llvm_stack, llvm_stack_slot_);
     b.CreateBr(GetBasicBlockAt(0));
   }
 
@@ -656,7 +646,8 @@ class BasicBlockBuilder {
   }
 
   void DoStoreLocal(int index) {
-    SetLocal(index, local(0));
+    auto value = local(0);
+    b.CreateStore(value, LocalStackSlot(index));
   }
 
   void DoStoreBoxed(int index) {
@@ -672,13 +663,13 @@ class BasicBlockBuilder {
   }
 
   void DoReturn() {
-    b.CreateRet(pop());
+    Return(pop());
   }
 
   void DoReturnNull() {
     auto value = w.tagged_heap_objects[w.program_->null_object()];
     ASSERT(value != NULL);
-    b.CreateRet(h.Cast(value, w.object_ptr_type));
+    Return(h.Cast(value, w.object_ptr_type));
   }
 
   void DoAllocate(Class* klass, bool immutable) {
@@ -739,7 +730,8 @@ class BasicBlockBuilder {
 
       b.SetInsertPoint(bb_initializer);
       auto function = h.Cast(h.LoadInitializerCode(statics_entry), w.FunctionPtrType(0));
-      auto initializer_result = b.CreateCall(function, {llvm_process_});
+      ReturnValue(b.CreateCall(function, {llvm_process_, LocalStackSlot(0)}), 0);
+      auto initializer_result = pop();
       b.CreateStore(initializer_result, statics_entry_ptr);
       b.CreateBr(bb_join);
 
@@ -767,15 +759,11 @@ class BasicBlockBuilder {
 
   void DoCall(Function* target) {
     int arity = target->arity();
-    std::vector<llvm::Value*> args(1 + arity, NULL);
-    for (int i = 0; i < arity; i++) {
-      args[arity - i] = pop();
-    }
-    args[0] = llvm_process_;
+    std::vector<llvm::Value*> args = {llvm_process_, LocalStackSlot(0)};
     llvm::Function* llvm_target = static_cast<llvm::Function*>(w.llvm_functions[target]);
     ASSERT(llvm_target != NULL);
-    auto result = b.CreateCall(llvm_target, args, "result");
-    push(result);
+
+    ReturnValue(b.CreateCall(llvm_target, args, "result"), arity);
   }
 
   void DoInvokeNative(Native nativeId, int arity) {
@@ -787,8 +775,7 @@ class BasicBlockBuilder {
     for (int i = 0; i < arity; i++) {
       std::vector<llvm::Value*> indices = {w.CInt(i)};
       auto array_pos = b.CreateGEP(array, indices);
-      auto arg = b.CreateLoad(stack_[arity - i - 1]);
-      b.CreateStore(arg, array_pos);
+      b.CreateStore(argument(arity - i - 1), array_pos);
     }
 
     llvm::Function* native = w.natives_[nativeId];
@@ -805,7 +792,7 @@ class BasicBlockBuilder {
     b.CreateCondBr(h.CreateFailureCheck(native_result), bb_failure, bb_no_failure);
 
     b.SetInsertPoint(bb_no_failure);
-    b.CreateRet(native_result);
+    Return(native_result);
 
     // We convert the failure id into a failure object and let the rest of the
     // bytecodes do its work.
@@ -932,20 +919,12 @@ class BasicBlockBuilder {
   }
 
   void DoInvokeMethod(int selector, int arity) {
-    std::vector<llvm::Value*> method_args(1 + 1 + arity);
+    std::vector<llvm::Value*> method_args = {llvm_process_, LocalStackSlot(0)};
 
-    method_args[0] = llvm_process_;
-
-    int index = 1 + arity;
-    for (int i = 0; i < arity; i++) {
-      method_args[index--] = pop();
-    }
-    ASSERT(index == 1);
-    auto receiver = method_args[1] = pop();
+    auto receiver = local(arity);
     auto entry = LookupDispatchTableEntry(receiver, selector);
     auto code = h.Cast(LookupDispatchTableCodeFromEntry(entry), w.FunctionPtrType(1 + arity));
     auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffsetFromEntry(entry), w.intptr_type);
-
 
     auto smi_selector_offset = Selector::IdField::decode(selector) << Smi::kTagSize;
     auto actual_offset = w.CInt(smi_selector_offset);
@@ -957,11 +936,10 @@ class BasicBlockBuilder {
 
     b.SetInsertPoint(bb_lookup_failure);
     DoExitFatal("Method lookup failed. Exiting due to fatal error");
-    b.CreateRet(llvm::ConstantStruct::getNullValue(w.object_ptr_type));
+    Return(llvm::ConstantStruct::getNullValue(w.object_ptr_type));
 
     b.SetInsertPoint(bb_lookup_success);
-    auto result = b.CreateCall(code, method_args, "method_result");
-    push(result);
+    ReturnValue(b.CreateCall(code, method_args, "method_result"), 1 + arity);
   }
 
   void DoInvokeTest(int selector) {
@@ -1017,6 +995,23 @@ class BasicBlockBuilder {
   }
 
  private:
+  void Return(llvm::Value* value) {
+    auto stack = LocalStackSlot(stack_pos_ + kAuxiliarySlots);
+    auto stack_result_slot  = LocalStackSlot(stack_pos_ + kAuxiliarySlots + function_->arity() - 1);
+    b.CreateStore(value, stack_result_slot);
+    b.CreateRet(stack);
+  }
+
+  void ReturnValue(llvm::Value* llvm_stack, int arity) {
+    int offset_to_tos = max_stack_height_ - stack_pos_;
+    std::vector<llvm::Value*> stack_offset = {w.CInt(-offset_to_tos)};
+    llvm_stack = b.CreateGEP(llvm_stack, stack_offset);
+    b.CreateStore(llvm_stack, llvm_stack_slot_);
+
+    stack_pos_ -= arity;
+    stack_pos_++; // Return value
+  }
+
   llvm::Value* LookupDispatchTableCodeFromEntry(llvm::Value* entry) {
     std::vector<llvm::Value*> code_indices = { w.CInt(DispatchTableEntry::kCodeOffset / kWordSize) };
     llvm::Value* code = b.CreateLoad(b.CreateGEP(h.UntagAndCast(entry, w.object_ptr_ptr_type), code_indices), "code");
@@ -1073,13 +1068,18 @@ class BasicBlockBuilder {
     return bb;
   }
 
+  llvm::Value* LocalStackSlot(int local) {
+    int offset_to_tos = max_stack_height_ - stack_pos_;
+    std::vector<llvm::Value*> indices = {w.CInt(offset_to_tos + local)};
+    return b.CreateGEP(stack(), indices);
+  }
+
   void push(llvm::Value* v) {
     ASSERT(v->getType() == w.object_ptr_type);
     ASSERT(stack_pos_ <= max_stack_height_);
 
-    int arity = function_->arity();
     stack_pos_++;
-    b.CreateStore(v, stack_[arity + kAuxiliarySlots + stack_pos_ - 1]);
+    b.CreateStore(v, LocalStackSlot(0));
   }
 
   llvm::Value* pop() {
@@ -1090,32 +1090,25 @@ class BasicBlockBuilder {
   }
 
   llvm::Value* local(int i) {
-    return b.CreateLoad(stack_[GetOffset(i)]);
+    return b.CreateLoad(LocalStackSlot(i));
   }
 
-  void SetLocal(int i, llvm::Value* value) {
-    b.CreateStore(value, stack_[GetOffset(i)]);
-  }
-
-  int GetOffset(int i) {
-    ASSERT(i >= 0);
+  llvm::Value* argument(int arg) {
     int arity = function_->arity();
-    int offset = arity + kAuxiliarySlots + stack_pos_ - i - 1;
-    ASSERT(offset >= 0 && offset < static_cast<int>(stack_.size()));
-    if (i >= stack_pos_) {
-      // Ensure we don't load any auxiliary slots.
-      ASSERT(i >= (kAuxiliarySlots + stack_pos_));
-    }
-    return offset;
+    return local(stack_pos_ + kAuxiliarySlots + (arity - arg - 1));
+  }
+
+  llvm::Value* stack() {
+    return b.CreateLoad(llvm_stack_slot_);
   }
 
   World& w;
   Function* function_;
   llvm::Function* llvm_function_;
+  llvm::Value* llvm_stack_slot_;
   llvm::IRBuilder<>& b;
   llvm::LLVMContext& context;
   llvm::Value* llvm_process_;
-  std::vector<llvm::Value*> stack_;
   IRHelper h;
   int stack_pos_;
   int max_stack_height_;
@@ -1766,8 +1759,9 @@ class GlobalSymbolsBuilder {
     b.SetInsertPoint(bb);
 
     auto llvm_dart_entry = static_cast<llvm::Function*>(w.llvm_functions[w.program_->entry()]);
-    std::vector<llvm::Value*> args(1 + w.program_->entry()->arity(), h.Null());
+    std::vector<llvm::Value*> args(2 + w.program_->entry()->arity(), h.Null());
     args[0] = &(*entry->args().begin()); // process
+    args[1] = h.LoadTopOfStackPointer(args[0]); // stack pointer
     b.CreateCall(llvm_dart_entry, args);
     b.CreateRet(w.CInt8(1)); // InterruptKind::Terminate.
 
@@ -1814,6 +1808,7 @@ World::World(Program* program,
       dte_ptr_type(NULL),
       roots_type(NULL),
       roots_ptr_type(NULL),
+      stack_type(NULL),
       roots(NULL),
       libc__exit(NULL),
       libc__printf(NULL),
@@ -1867,6 +1862,8 @@ World::World(Program* program,
 
   roots_type = llvm::StructType::create(context, "ProgramRootsType");
   roots_ptr_type = llvm::PointerType::get(roots_type, 0);
+
+  stack_type = object_ptr_ptr_type;
 
   // [object_type]
   std::vector<llvm::Type*> empty;
@@ -2005,8 +2002,9 @@ llvm::StructType* World::OneByteStringType(int n) {
 }
 
 llvm::FunctionType* World::FunctionType(int arity) {
-  std::vector<llvm::Type*> args(1 /* process */ + arity, object_ptr_type);
-  return llvm::FunctionType::get(object_ptr_type, args, false);
+  std::vector<llvm::Type*> args(1 /* process */ + 1 /* stack */, object_ptr_type);
+  args[1] = stack_type;
+  return llvm::FunctionType::get(stack_type, args, false);
 }
 
 llvm::PointerType* World::FunctionPtrType(int arity) {
