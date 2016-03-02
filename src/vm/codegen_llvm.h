@@ -123,6 +123,8 @@ class World {
 
   llvm::PointerType* stack_type;
 
+  llvm::StructType* combined_return_type;
+
   llvm::Constant* roots;
 
   llvm::Function* libc__exit;

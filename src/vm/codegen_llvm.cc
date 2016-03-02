@@ -730,8 +730,7 @@ class BasicBlockBuilder {
 
       b.SetInsertPoint(bb_initializer);
       auto function = h.Cast(h.LoadInitializerCode(statics_entry), w.FunctionPtrType(0));
-      ReturnValue(b.CreateCall(function, {llvm_process_, LocalStackSlot(0)}), 0);
-      auto initializer_result = pop();
+      auto initializer_result = ReturnValue(b.CreateCall(function, {llvm_process_, LocalStackSlot(0)}), 0);
       b.CreateStore(initializer_result, statics_entry_ptr);
       b.CreateBr(bb_join);
 
@@ -763,7 +762,7 @@ class BasicBlockBuilder {
     llvm::Function* llvm_target = static_cast<llvm::Function*>(w.llvm_functions[target]);
     ASSERT(llvm_target != NULL);
 
-    ReturnValue(b.CreateCall(llvm_target, args, "result"), arity);
+    push(ReturnValue(b.CreateCall(llvm_target, args, "combined_result"), arity));
   }
 
   void DoInvokeNative(Native nativeId, int arity) {
@@ -939,7 +938,7 @@ class BasicBlockBuilder {
     Return(llvm::ConstantStruct::getNullValue(w.object_ptr_type));
 
     b.SetInsertPoint(bb_lookup_success);
-    ReturnValue(b.CreateCall(code, method_args, "method_result"), 1 + arity);
+    push(ReturnValue(b.CreateCall(code, method_args, "method_result"), 1 + arity));
   }
 
   void DoInvokeTest(int selector) {
@@ -997,19 +996,28 @@ class BasicBlockBuilder {
  private:
   void Return(llvm::Value* value) {
     auto stack = LocalStackSlot(stack_pos_ + kAuxiliarySlots);
-    auto stack_result_slot  = LocalStackSlot(stack_pos_ + kAuxiliarySlots + function_->arity() - 1);
-    b.CreateStore(value, stack_result_slot);
-    b.CreateRet(stack);
+    llvm::Value* return_values[2] = {stack, value};
+    b.CreateAggregateRet(return_values, 2);
   }
 
-  void ReturnValue(llvm::Value* llvm_stack, int arity) {
+  llvm::Value* ReturnValue(llvm::Value* combined_return_value, int arity) {
+    std::vector<unsigned> stack_indices = {0};
+    auto llvm_stack = b.CreateExtractValue(combined_return_value, stack_indices);
+
+    std::vector<unsigned> result_indices = {1};
+    auto llvm_result = b.CreateExtractValue(combined_return_value, result_indices);
+
+    // Update our stack (might have been relocated)
     int offset_to_tos = max_stack_height_ - stack_pos_;
     std::vector<llvm::Value*> stack_offset = {w.CInt(-offset_to_tos)};
     llvm_stack = b.CreateGEP(llvm_stack, stack_offset);
     b.CreateStore(llvm_stack, llvm_stack_slot_);
 
+    // The stack we get back from the called function is the same we passed it
+    // (modulo relocation). So we need to drop the arguments we passed to it.
     stack_pos_ -= arity;
-    stack_pos_++; // Return value
+
+    return llvm_result;
   }
 
   llvm::Value* LookupDispatchTableCodeFromEntry(llvm::Value* entry) {
@@ -1809,6 +1817,7 @@ World::World(Program* program,
       roots_type(NULL),
       roots_ptr_type(NULL),
       stack_type(NULL),
+      combined_return_type(NULL),
       roots(NULL),
       libc__exit(NULL),
       libc__printf(NULL),
@@ -1864,6 +1873,7 @@ World::World(Program* program,
   roots_ptr_type = llvm::PointerType::get(roots_type, 0);
 
   stack_type = object_ptr_ptr_type;
+  combined_return_type = llvm::StructType::create(context, "CombinedReturnType");
 
   // [object_type]
   std::vector<llvm::Type*> empty;
@@ -1946,6 +1956,12 @@ World::World(Program* program,
   root_entries.push_back(object_ptr_type); // Program::entry_
   roots_type->setBody(root_entries, true);
 
+  // [combined_return_type]
+  std::vector<llvm::Type*> combined_entries;
+  combined_entries.push_back(stack_type); // new stack pointer
+  combined_entries.push_back(object_ptr_type); // real return object
+  combined_return_type->setBody(combined_entries, true);
+
   // External C functions for debugging.
 
   auto exit_type = llvm::FunctionType::get(intptr_type, {intptr_type}, true);
@@ -2004,7 +2020,7 @@ llvm::StructType* World::OneByteStringType(int n) {
 llvm::FunctionType* World::FunctionType(int arity) {
   std::vector<llvm::Type*> args(1 /* process */ + 1 /* stack */, object_ptr_type);
   args[1] = stack_type;
-  return llvm::FunctionType::get(stack_type, args, false);
+  return llvm::FunctionType::get(combined_return_type, args, false);
 }
 
 llvm::PointerType* World::FunctionPtrType(int arity) {
