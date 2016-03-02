@@ -303,7 +303,7 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
   void InvokeBitShr(const char* fallback);
   void InvokeBitShl(const char* fallback);
 
-  void InvokeNative(bool yield);
+  void InvokeNative(bool yield, bool safepoint);
 
   void CheckStackOverflow(int size);
 
@@ -751,15 +751,15 @@ void InterpreterGeneratorX64::DoInvokeFactory() {
 }
 
 void InterpreterGeneratorX64::DoInvokeNative() {
-  InvokeNative(false);
+  InvokeNative(false, false);
 }
 
 void InterpreterGeneratorX64::DoInvokeDetachableNative() {
-  InvokeNative(false);
+  InvokeNative(false, true);
 }
 
 void InterpreterGeneratorX64::DoInvokeNativeYield() {
-  InvokeNative(true);
+  InvokeNative(true, false);
 }
 
 void InterpreterGeneratorX64::DoInvokeSelector() {
@@ -1955,7 +1955,7 @@ void InterpreterGeneratorX64::InvokeDivision(const char* fallback,
   __ jmp(fallback);
 }
 
-void InterpreterGeneratorX64::InvokeNative(bool yield) {
+void InterpreterGeneratorX64::InvokeNative(bool yield, bool safepoint) {
   __ movzbq(RBX, Address(R13, 1));
   __ movzbq(RCX, Address(R13, 2));
 
@@ -1965,10 +1965,22 @@ void InterpreterGeneratorX64::InvokeNative(bool yield) {
   __ leaq(RSI, Address(RSP, RBX, TIMES_WORD_SIZE, 2 * kWordSize));
   LoadProcess(RDI);
 
-  SwitchToCStack();
-  Label failure;
+  Label continue_with_result;
+
+  if (safepoint) {
+    SaveState(&continue_with_result);
+  } else {
+    SwitchToCStack();
+  }
   __ call(RAX);
-  SwitchToDartStack();
+  if (safepoint) {
+    RestoreState();
+  } else {
+    SwitchToDartStack();
+  }
+
+  __ Bind(&continue_with_result);
+  Label failure;
   __ movq(RCX, RAX);
   __ andq(RCX, Immediate(Failure::kTagMask));
   __ cmpq(RCX, Immediate(Failure::kTag));
@@ -1976,6 +1988,8 @@ void InterpreterGeneratorX64::InvokeNative(bool yield) {
 
   // Result is now in eax.
   if (yield) {
+    ASSERT(!safepoint);
+
     // If the result of calling the native is null, we don't yield.
     LoadLiteralNull(RCX);
     Label dont_yield;

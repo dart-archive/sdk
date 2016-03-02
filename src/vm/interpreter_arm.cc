@@ -287,7 +287,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
 
-  void InvokeNative(bool yield);
+  void InvokeNative(bool yield, bool safepoint);
   void InvokeStatic();
 
   void ConditionalStore(Register reg_if_eq, Register reg_if_ne,
@@ -721,13 +721,17 @@ void InterpreterGeneratorARM::DoInvokeStatic() { InvokeStatic(); }
 
 void InterpreterGeneratorARM::DoInvokeFactory() { InvokeStatic(); }
 
-void InterpreterGeneratorARM::DoInvokeNative() { InvokeNative(false); }
-
-void InterpreterGeneratorARM::DoInvokeDetachableNative() {
-  InvokeNative(false);
+void InterpreterGeneratorARM::DoInvokeNative() {
+  InvokeNative(false, false);
 }
 
-void InterpreterGeneratorARM::DoInvokeNativeYield() { InvokeNative(true); }
+void InterpreterGeneratorARM::DoInvokeDetachableNative() {
+  InvokeNative(false, true);
+}
+
+void InterpreterGeneratorARM::DoInvokeNativeYield() {
+  InvokeNative(true, false);
+}
 
 void InterpreterGeneratorARM::DoInvokeSelector() {
   Label resume;
@@ -1715,7 +1719,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   }
 }
 
-void InterpreterGeneratorARM::InvokeNative(bool yield) {
+void InterpreterGeneratorARM::InvokeNative(bool yield, bool safepoint) {
   __ ldrb(R1, Address(R5, 1));
   // Also skip two empty slots.
   __ add(R1, R1, Immediate(2));
@@ -1730,14 +1734,22 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   __ mov(R1, R7);
   __ mov(R0, R4);
 
-  Label failure;
+  Label continue_with_result;
+
+  if (safepoint) SaveState(&continue_with_result);
   __ blx(R2);
+  if (safepoint) RestoreState();
+
+  __ Bind(&continue_with_result);
+  Label failure;
   __ and_(R1, R0, Immediate(Failure::kTagMask));
   __ cmp(R1, Immediate(Failure::kTag));
   __ b(EQ, &failure);
 
   // Result is now in r0.
   if (yield) {
+    ASSERT(!safepoint);
+
     // If the result of calling the native is null, we don't yield.
     Label dont_yield;
     __ cmp(R0, R8);

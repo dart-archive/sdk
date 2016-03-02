@@ -301,7 +301,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   void InvokeBitShr(const char* fallback);
   void InvokeBitShl(const char* fallback);
 
-  void InvokeNative(bool yield);
+  void InvokeNative(bool yield, bool safepoint);
 
   void CheckStackOverflow(int size);
 
@@ -741,15 +741,15 @@ void InterpreterGeneratorX86::DoInvokeFactory() {
 }
 
 void InterpreterGeneratorX86::DoInvokeNative() {
-  InvokeNative(false);
+  InvokeNative(false, false);
 }
 
 void InterpreterGeneratorX86::DoInvokeDetachableNative() {
-  InvokeNative(false);
+  InvokeNative(false, true);
 }
 
 void InterpreterGeneratorX86::DoInvokeNativeYield() {
-  InvokeNative(true);
+  InvokeNative(true, false);
 }
 
 void InterpreterGeneratorX86::DoInvokeSelector() {
@@ -2009,7 +2009,7 @@ void InterpreterGeneratorX86::InvokeDivision(const char* fallback,
   Dispatch(kInvokeMethodLength);
 }
 
-void InterpreterGeneratorX86::InvokeNative(bool yield) {
+void InterpreterGeneratorX86::InvokeNative(bool yield, bool safepoint) {
   __ movzbl(EBX, Address(ESI, 1));
   __ movzbl(EAX, Address(ESI, 2));
 
@@ -2018,13 +2018,24 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
   // Extract address for first argument (note we skip two empty slots).
   __ leal(EBX, Address(ESP, EBX, TIMES_WORD_SIZE, 2 * kWordSize));
 
-  SwitchToCStack(ECX);
+  Label continue_with_result;
+
+  if (safepoint) {
+    SaveState(&continue_with_result);
+  } else {
+    SwitchToCStack(ECX);
+  }
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
-
-  Label failure;
   __ call(EAX);
-  SwitchToDartStack();
+  if (safepoint) {
+    RestoreState();
+  } else {
+    SwitchToDartStack();
+  }
+
+  __ Bind(&continue_with_result);
+  Label failure;
   __ movl(ECX, EAX);
   __ andl(ECX, Immediate(Failure::kTagMask));
   __ cmpl(ECX, Immediate(Failure::kTag));
@@ -2032,6 +2043,8 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
 
   // Result is now in eax.
   if (yield) {
+    ASSERT(!safepoint);
+
     // If the result of calling the native is null, we don't yield.
     LoadLiteralNull(ECX);
     Label dont_yield;
