@@ -42,12 +42,18 @@ run rm -f $BASENAME.bc $BASENAME.ll $BASENAME.S $BASENAME.o
 
 run out/DebugX64/llvm-codegen $SNAPSHOT $BASENAME.bc
 
+# Make an optimized version of the bitcode
+run $LLVM_BIN/opt -O3 $BASENAME.bc -o ${BASENAME}_opt.bc
+
 # Make text representation of LLVM IR (for debugging)
 run $LLVM_BIN/llvm-dis $BASENAME.bc -o $BASENAME.ll
+run $LLVM_BIN/llvm-dis ${BASENAME}_opt.bc -o ${BASENAME}_opt.ll
 
 # Compile LLVM IR to 32-bit x86 asm code.
 run $LLVM_BIN/llc -march=x86 -o $BASENAME.S $BASENAME.bc
+run $LLVM_BIN/llc -march=x86 -o ${BASENAME}_opt.S ${BASENAME}_opt.bc
 
 # Link generated code together with dartino runtime and llvm embedder.
 run g++ -m32 -o $BASENAME -Lout/ReleaseIA32 -Lout/ReleaseIA32/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread $BASENAME.S
+run g++ -m32 -o ${BASENAME}_opt -Lout/ReleaseIA32 -Lout/ReleaseIA32/obj/src/vm -lllvm_embedder -ldartino -ldl -lpthread ${BASENAME}_opt.S
 
