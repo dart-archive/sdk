@@ -87,6 +87,8 @@ class State {
   void* resume_address_;
 };
 
+extern "C" int (*program_entry)(Process*, void*) __attribute((weak));
+
 void Interpreter::Run() {
   ASSERT(interruption_ == kReady);
 
@@ -109,11 +111,9 @@ void Interpreter::Run() {
   // This is conservative.
   process_->remembered_set()->Insert(process_->stack());
 
-  Function* entry = process_->program()->entry();
   int result = -1;
-  if (entry != NULL) {
-    word* code = reinterpret_cast<word*>(entry->bytecode_address_for(0));
-    result = reinterpret_cast<InterpretFunction>(*code)(process_, &target_yield_result_);
+  if (program_entry != NULL) {
+    result = reinterpret_cast<InterpretFunction>(program_entry)(process_, &target_yield_result_);
     result = InterruptKind::kTerminate;
   } else {
     result = Interpret(process_, &target_yield_result_);

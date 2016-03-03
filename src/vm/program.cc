@@ -103,8 +103,6 @@ Process* Program::SpawnProcess(Process* parent) {
   return process;
 }
 
-extern "C" void* program_entry __attribute((weak));
-
 Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   if (Flags::print_program_statistics) {
     PrintStatistics();
@@ -125,15 +123,10 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   stack->set(--top, NULL);
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   frame_pointer = stack->Pointer(top);
-  if (program_entry == NULL) {
-    Function* entry = process->entry();
-    uint8_t* bcp = entry->bytecode_address_for(0);
-    stack->set(--top, reinterpret_cast<Object*>(bcp));
-    stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
-  } else {
-    stack->set(--top, reinterpret_cast<Object*>(NULL));
-    stack->set(--top, reinterpret_cast<Object*>(program_entry));
-  }
+  Function* entry = process->entry();
+  uint8_t* bcp = entry->bytecode_address_for(0);
+  stack->set(--top, reinterpret_cast<Object*>(bcp));
+  stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
   stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
   stack->set_top(top);
 
