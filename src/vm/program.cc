@@ -117,24 +117,18 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   Process* process = SpawnProcess(NULL);
   process->set_arguments(arguments);
 
-  Function* entry = process->entry();
   process->SetupExecutionStack();
   Stack* stack = process->stack();
+
+  Frame frame(stack);
+
+  Function* entry = process->entry();
   uint8_t* bcp = entry->bytecode_address_for(0);
-  word top = stack->length();
-  // Push empty slot, fp and bcp.
-  stack->set(--top, NULL);
-  stack->set(--top, NULL);
-  Object** frame_pointer = stack->Pointer(top);
-  stack->set(--top, NULL);
-  // Push empty slot, fp and bcp.
-  stack->set(--top, NULL);
-  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
-  frame_pointer = stack->Pointer(top);
-  stack->set(--top, reinterpret_cast<Object*>(bcp));
-  stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
-  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
-  stack->set_top(top);
+  // Push the entry Dart function and the start-address on the frames.
+  // The engine can be started by invoking `restoreState()`.
+  int number_of_arguments = 0;
+  frame.PushInitialDartEntryFrames(number_of_arguments, bcp,
+                                   reinterpret_cast<Object*>(InterpreterEntry));
 
   return process;
 }
