@@ -1737,14 +1737,41 @@ class GlobalSymbolsBuilder {
     std::vector<llvm::Type*> int1(1, w.intptr_type);
     std::vector<llvm::Type*> empty;
 
+    auto entry = BuildEntry();
+
     // program_start
     auto program_start = llvm::ConstantInt::getIntegerValue(w.intptr_type, llvm::APInt(32, 4096, false));
     auto program_size = llvm::ConstantInt::getIntegerValue(w.intptr_type, llvm::APInt(32, 1024 * 1024, false));
     new llvm::GlobalVariable(w.module_, w.intptr_type, true, llvm::GlobalValue::ExternalLinkage, program_start, "program_start");
     new llvm::GlobalVariable(w.module_, w.intptr_type, true, llvm::GlobalValue::ExternalLinkage, program_size, "program_size");
-    auto entry = static_cast<llvm::Function*>(w.llvm_functions[w.program_->entry()]);
     new llvm::GlobalVariable(w.module_, entry->getType(), true, llvm::GlobalValue::ExternalLinkage, entry, "program_entry");
     new llvm::GlobalVariable(w.module_, w.roots_type, true, llvm::GlobalValue::ExternalLinkage, w.roots, "program_info_block");
+  }
+
+  llvm::Function* BuildEntry() {
+    // Build entrypoint function:
+    //   (process, target_yield_result*) -> InterruptKind
+    std::vector<llvm::Type*> entry_types = {
+      w.object_ptr_type,  // process
+      w.object_ptr_type,  // &target_yield_result
+    };
+
+    auto ft = llvm::FunctionType::get(w.int8_type, entry_types, false);
+    llvm::Function* entry = llvm::Function::Create(ft, llvm::Function::ExternalLinkage, "ENTRY", &w.module_);
+
+    auto bb = llvm::BasicBlock::Create(w.context, "entry", entry);
+
+    llvm::IRBuilder<> b(w.context);
+    IRHelper h(w, &b);
+    b.SetInsertPoint(bb);
+
+    auto llvm_dart_entry = static_cast<llvm::Function*>(w.llvm_functions[w.program_->entry()]);
+    std::vector<llvm::Value*> args(1 + w.program_->entry()->arity(), h.Null());
+    args[0] = &(*entry->args().begin()); // process
+    b.CreateCall(llvm_dart_entry, args);
+    b.CreateRet(w.CInt8(1)); // InterruptKind::Terminate.
+
+    return entry;
   }
 
  private:
@@ -1783,6 +1810,10 @@ World::World(Program* program,
       largeinteger_ptr_type(NULL),
       double_type(NULL),
       double_ptr_type(NULL),
+      dte_type(NULL),
+      dte_ptr_type(NULL),
+      roots_type(NULL),
+      roots_ptr_type(NULL),
       roots(NULL),
       libc__exit(NULL),
       libc__printf(NULL),
