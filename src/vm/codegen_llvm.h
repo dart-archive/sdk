@@ -130,7 +130,7 @@ class World {
   llvm::Function* libc__exit;
   llvm::Function* libc__printf;
 
-  llvm::Function* runtime__HandleGC;
+  llvm::Function* runtime__HandleLLVMGC;
   llvm::Function* runtime__HandleAllocate;
   llvm::Function* runtime__HandleAllocateBoxed;
   llvm::Function* runtime__HandleInvokeSelector;

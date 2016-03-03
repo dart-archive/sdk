@@ -146,6 +146,32 @@ void HandleGC(Process* process) {
   }
 }
 
+Object** HandleLLVMGC(Process* process, Object** topofstack) {
+  Stack* stack = process->stack();
+  Object** top = stack->Pointer(stack->length());
+  Object** bottom = stack->Pointer(0);
+  ASSERT(bottom <= topofstack && topofstack < top);
+
+  int tos = (reinterpret_cast<int8*>(topofstack) - reinterpret_cast<int8*>(bottom)) / kWordSize;
+  stack->set_top(tos);
+  ASSERT(stack->Pointer(stack->top()) == topofstack);
+
+  if (process->heap()->needs_garbage_collection()) {
+    process->program()->CollectNewSpace();
+
+    // After a mutable GC a lot of stacks might no longer have pointers to
+    // new space on them. If so, the remembered set will no longer contain such
+    // a stack.
+    //
+    // Since we don't update the remembered set on every mutating operation
+    // - e.g. SetLocal() - we add it before we start using it.
+    process->remembered_set()->Insert(process->stack());
+  }
+  auto new_topofstack = process->stack()->Pointer(process->stack()->top());
+
+  return new_topofstack;
+}
+
 Object* HandleObjectFromFailure(Process* process, Failure* failure) {
   return process->program()->ObjectFromFailure(failure);
 }
@@ -153,7 +179,6 @@ Object* HandleObjectFromFailure(Process* process, Failure* failure) {
 Object* HandleAllocate(Process* process, Class* clazz, int immutable) {
   Object* result = process->NewInstance(clazz, immutable == 1);
   if (result->IsFailure()) {
-    FATAL("We don't have support for allocation failures yet.");
     return result;
   }
   return result;
@@ -171,7 +196,6 @@ void AddToStoreBufferSlow(Process* process, Object* object, Object* value) {
 Object* HandleAllocateBoxed(Process* process, Object* value) {
   Object* boxed = process->NewBoxed(value);
   if (boxed->IsFailure()) {
-    FATAL("We don't have support for allocation failures yet.");
     return boxed;
   }
 

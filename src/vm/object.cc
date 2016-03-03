@@ -534,11 +534,19 @@ InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
       // We do not use cast method because the Stack's class pointer is not
       // valid during marking.
       Stack* stack = reinterpret_cast<Stack*>(this);
-      Frame frame(stack);
-      while (frame.MovePrevious()) {
-        visitor->VisitBlock(frame.LastLocalAddress(),
-                            frame.FirstLocalAddress() + 1);
-      }
+
+      // Our LLVM stacks don't have any frame pointers!
+      /*
+          Frame frame(stack);
+          while (frame.MovePrevious()) {
+            visitor->VisitBlock(frame.LastLocalAddress(),
+                                frame.FirstLocalAddress() + 1);
+          }
+      */
+      // FIXME: We should not be using '0' here but rather 'stack->top()'.
+      Object** bottom = stack->Pointer(0);
+      Object** top = stack->Pointer(stack->length() - 1);
+      visitor->VisitBlock(bottom, top + 1);
       break;
     }
 
@@ -604,7 +612,10 @@ HeapObject* HeapObject::CloneInToSpace(SomeSpace* to) {
   CopyBlock(reinterpret_cast<Object**>(target->address()),
             reinterpret_cast<Object**>(address()), object_size);
   if (target->IsStack()) {
-    Stack::cast(target)->UpdateFramePointers(Stack::cast(this));
+    // Our LLVM stacks don't have any frame pointers!
+    /*
+        Stack::cast(target)->UpdateFramePointers(Stack::cast(this));
+    */
   }
   // Set the forwarding address.
   set_forwarding_address(target);

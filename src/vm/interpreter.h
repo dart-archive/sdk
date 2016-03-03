@@ -97,6 +97,8 @@ extern "C" Process::StackCheckResult HandleStackOverflow(Process* process,
 
 extern "C" void HandleGC(Process* process);
 
+extern "C" Object** HandleLLVMGC(Process* process, Object** topofstack);
+
 extern "C" Object* HandleAllocate(Process* process, Class* clazz,
                                   int immutable);
 

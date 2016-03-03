@@ -500,6 +500,12 @@ class IRHelper {
     return b->CreateICmpEQ(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type), w.CInt(3)), w.CInt(3));
   }
 
+  llvm::Value* CreateGCFailureCheck(llvm::Value* object) {
+    return b->CreateICmpEQ(b->CreateAnd(b->CreatePtrToInt(object, w.intptr_type),
+                                        w.CInt(Failure::kTagMask | Failure::kTypeMask)),
+                           w.CInt(Failure::kTag));
+  }
+
   llvm::Value* Null() {
     return llvm::ConstantStruct::getNullValue(w.object_ptr_type);
   }
@@ -673,14 +679,24 @@ class BasicBlockBuilder {
   }
 
   void DoAllocate(Class* klass, bool immutable) {
+    auto bb_entry = llvm::BasicBlock::Create(context, "allocate_entry", llvm_function_);
+    auto bb_done = llvm::BasicBlock::Create(context, "allocate_done", llvm_function_);
+    auto bb_gc_failure = llvm::BasicBlock::Create(context, "gc_failure", llvm_function_);
+
+    b.CreateBr(bb_entry);
+    b.SetInsertPoint(bb_entry);
+
     int fields = klass->NumberOfInstanceFields();
     auto llvm_klass = w.CCast(w.tagged_heap_objects[klass], w.object_ptr_type);
     ASSERT(llvm_klass != NULL);
 
-    // TODO: Check for Failure::xxx result!
-    auto instance = b.CreateCall(
-        w.runtime__HandleAllocate,
-        {llvm_process_, llvm_klass, w.CInt(immutable ? 1 : 0)});
+    auto instance = b.CreateCall(w.runtime__HandleAllocate, {llvm_process_, llvm_klass, w.CInt(immutable ? 1 : 0)});
+    b.CreateCondBr(h.CreateFailureCheck(instance), bb_gc_failure, bb_done);
+
+    b.SetInsertPoint(bb_gc_failure);
+    RunGCAndContinue(bb_entry);
+
+    b.SetInsertPoint(bb_done);
     auto untagged_instance = h.UntagAndCast(instance, w.object_ptr_ptr_type);
     for (int field = 0; field < fields; field++) {
       auto pos = b.CreateGEP(untagged_instance, {w.CInt(Instance::kSize / kWordSize + fields - 1 - field)});
@@ -690,13 +706,21 @@ class BasicBlockBuilder {
   }
 
   void DoAllocateBoxed() {
+    auto bb_entry = llvm::BasicBlock::Create(context, "allocate_entry", llvm_function_);
+    auto bb_done = llvm::BasicBlock::Create(context, "allocate_done", llvm_function_);
+    auto bb_gc_failure = llvm::BasicBlock::Create(context, "gc_failure", llvm_function_);
+
+    b.CreateBr(bb_entry);
+    b.SetInsertPoint(bb_entry);
+
     auto value = pop();
+    auto boxed = b.CreateCall(w.runtime__HandleAllocateBoxed, {llvm_process_, value});
+    b.CreateCondBr(h.CreateFailureCheck(boxed), bb_gc_failure, bb_done);
 
-    // TODO: Check for Failure::xxx result!
-    auto boxed = b.CreateCall(
-        w.runtime__HandleAllocateBoxed,
-        {llvm_process_, value});
+    b.SetInsertPoint(bb_gc_failure);
+    RunGCAndContinue(bb_entry);
 
+    b.SetInsertPoint(bb_done);
     push(boxed);
   }
 
@@ -766,6 +790,11 @@ class BasicBlockBuilder {
   }
 
   void DoInvokeNative(Native nativeId, int arity) {
+    auto bb_entry = llvm::BasicBlock::Create(context, "native_entry", llvm_function_);
+
+    b.CreateBr(bb_entry);
+    b.SetInsertPoint(bb_entry);
+
     auto void_ptr = w.object_ptr_type;
 
     auto process = h.Cast(llvm_process_, void_ptr);
@@ -793,11 +822,19 @@ class BasicBlockBuilder {
     b.SetInsertPoint(bb_no_failure);
     Return(native_result);
 
+    b.SetInsertPoint(bb_failure);
+
     // We convert the failure id into a failure object and let the rest of the
     // bytecodes do its work.
-    b.SetInsertPoint(bb_failure);
-    auto failure_object = b.CreateCall(w.runtime__HandleObjectFromFailure, {llvm_process_, native_result});
-    push(failure_object);
+    auto bb_gc_failure = llvm::BasicBlock::Create(context, "gc_failure", llvm_function_);
+    auto bb_nongc_failure = llvm::BasicBlock::Create(context, "nongc_failure", llvm_function_);
+    b.CreateCondBr(h.CreateGCFailureCheck(native_result), bb_gc_failure, bb_nongc_failure);
+
+    b.SetInsertPoint(bb_gc_failure);
+    RunGCAndContinue(bb_entry);
+
+    b.SetInsertPoint(bb_nongc_failure);
+    push(b.CreateCall(w.runtime__HandleObjectFromFailure, {llvm_process_, native_result}));
   }
 
   void DoIdentical() {
@@ -994,6 +1031,19 @@ class BasicBlockBuilder {
   }
 
  private:
+  void RunGCAndContinue(llvm::BasicBlock* continuation) {
+    std::vector<llvm::Value*> args = {llvm_process_, LocalStackSlot(0)};
+    llvm::Value* new_stack = b.CreateCall(w.runtime__HandleLLVMGC, args, "new_stack");
+
+    // Update our stack (might have been relocated)
+    int offset_to_tos = max_stack_height_ - stack_pos_;
+    std::vector<llvm::Value*> stack_offset = {w.CInt(-offset_to_tos)};
+    new_stack = b.CreateGEP(new_stack, stack_offset);
+    b.CreateStore(new_stack, llvm_stack_slot_);
+
+    b.CreateBr(continuation);
+  }
+
   void Return(llvm::Value* value) {
     auto stack = LocalStackSlot(stack_pos_ + kAuxiliarySlots);
     llvm::Value* return_values[2] = {stack, value};
@@ -1533,7 +1583,6 @@ class BasicBlocksExplorer {
           default: {
             b.DoExitFatal(name("Unsupported bytecode: %s. Exiting due to fatal error.", bytecode_string(bcp)));
             b.DoReturnNull();
-            Print::Error("     ---> Unsupported \"%s\"\n", bytecode_string(bcp));
             stop = true;
             break;
           }
@@ -1821,7 +1870,7 @@ World::World(Program* program,
       roots(NULL),
       libc__exit(NULL),
       libc__printf(NULL),
-      runtime__HandleGC(NULL),
+      runtime__HandleLLVMGC(NULL),
       runtime__HandleAllocate(NULL),
       runtime__HandleAllocateBoxed(NULL),
       runtime__HandleObjectFromFailure(NULL) {
@@ -1970,12 +2019,12 @@ World::World(Program* program,
   auto printf_type = llvm::FunctionType::get(intptr_type, {int8_ptr_type}, true);
   libc__printf = llvm::Function::Create(printf_type, llvm::Function::ExternalLinkage, "printf", &module_);
 
-  auto handle_gc_type = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {object_ptr_type}, false);
+  auto handle_gc_type = llvm::FunctionType::get(stack_type, {object_ptr_type, stack_type}, false);
   auto handle_allocate_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type, intptr_type}, false);
   auto handle_allocate_boxed_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type}, false);
   auto handle_object_from_failure_type = llvm::FunctionType::get(object_ptr_type, {object_ptr_type, object_ptr_type}, false);
 
-  runtime__HandleGC = llvm::Function::Create(handle_gc_type, llvm::Function::ExternalLinkage, "HandleGC", &module_);
+  runtime__HandleLLVMGC = llvm::Function::Create(handle_gc_type, llvm::Function::ExternalLinkage, "HandleLLVMGC", &module_);
   runtime__HandleAllocate = llvm::Function::Create(handle_allocate_type, llvm::Function::ExternalLinkage, "HandleAllocate", &module_);
   runtime__HandleAllocateBoxed = llvm::Function::Create(handle_allocate_boxed_type, llvm::Function::ExternalLinkage, "HandleAllocateBoxed", &module_);
   runtime__HandleObjectFromFailure = llvm::Function::Create(handle_object_from_failure_type, llvm::Function::ExternalLinkage, "HandleObjectFromFailure", &module_);

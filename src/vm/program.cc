@@ -42,7 +42,7 @@ Program::Program(ProgramSource source, int hashtag)
       process_list_mutex_(Platform::CreateMutex()),
       random_(0),
       heap_(&random_),
-      process_heap_(NULL, 512 * 1024 * KB),
+      process_heap_(NULL, 30 * 1024 * KB),
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
