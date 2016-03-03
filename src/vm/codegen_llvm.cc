@@ -525,6 +525,7 @@ class BasicBlockBuilder {
                     llvm::Function* llvm_function,
                     llvm::IRBuilder<>& builder)
       : w(world),
+        md_builder_(w.context),
         function_(function),
         llvm_function_(llvm_function),
         b(builder),
@@ -690,8 +691,10 @@ class BasicBlockBuilder {
     auto llvm_klass = w.CCast(w.tagged_heap_objects[klass], w.object_ptr_type);
     ASSERT(llvm_klass != NULL);
 
+    llvm::MDNode* assume_false = md_builder_.createBranchWeights(0, 1000);
+
     auto instance = b.CreateCall(w.runtime__HandleAllocate, {llvm_process_, llvm_klass, w.CInt(immutable ? 1 : 0)});
-    b.CreateCondBr(h.CreateFailureCheck(instance), bb_gc_failure, bb_done);
+    b.CreateCondBr(h.CreateFailureCheck(instance), bb_gc_failure, bb_done, assume_false);
 
     b.SetInsertPoint(bb_gc_failure);
     RunGCAndContinue(bb_entry);
@@ -714,8 +717,11 @@ class BasicBlockBuilder {
     b.SetInsertPoint(bb_entry);
 
     auto value = pop();
+
+    llvm::MDNode* assume_false = md_builder_.createBranchWeights(0, 1000);
+
     auto boxed = b.CreateCall(w.runtime__HandleAllocateBoxed, {llvm_process_, value});
-    b.CreateCondBr(h.CreateFailureCheck(boxed), bb_gc_failure, bb_done);
+    b.CreateCondBr(h.CreateFailureCheck(boxed), bb_gc_failure, bb_done, assume_false);
 
     b.SetInsertPoint(bb_gc_failure);
     RunGCAndContinue(bb_entry);
@@ -815,9 +821,11 @@ class BasicBlockBuilder {
     std::vector<llvm::Value*> args = {process, last_element_in_array};
     auto native_result = b.CreateCall(native, args, "native_call_result");
 
+    llvm::MDNode* assume_false = md_builder_.createBranchWeights(0, 1000);
+
     auto bb_failure = llvm::BasicBlock::Create(context, "failure", llvm_function_);
     auto bb_no_failure = llvm::BasicBlock::Create(context, "no_failure", llvm_function_);
-    b.CreateCondBr(h.CreateFailureCheck(native_result), bb_failure, bb_no_failure);
+    b.CreateCondBr(h.CreateFailureCheck(native_result), bb_failure, bb_no_failure, assume_false);
 
     b.SetInsertPoint(bb_no_failure);
     Return(native_result);
@@ -828,7 +836,7 @@ class BasicBlockBuilder {
     // bytecodes do its work.
     auto bb_gc_failure = llvm::BasicBlock::Create(context, "gc_failure", llvm_function_);
     auto bb_nongc_failure = llvm::BasicBlock::Create(context, "nongc_failure", llvm_function_);
-    b.CreateCondBr(h.CreateGCFailureCheck(native_result), bb_gc_failure, bb_nongc_failure);
+    b.CreateCondBr(h.CreateGCFailureCheck(native_result), bb_gc_failure, bb_nongc_failure, assume_false);
 
     b.SetInsertPoint(bb_gc_failure);
     RunGCAndContinue(bb_entry);
@@ -856,8 +864,7 @@ class BasicBlockBuilder {
     auto tagged_argument = pop();
     auto tagged_receiver = pop();
 
-    llvm::MDBuilder md_builder(context);
-    llvm::MDNode* assume_true = md_builder.createBranchWeights(1000, 0);
+    llvm::MDNode* assume_true = md_builder_.createBranchWeights(1000, 0);
 
     b.CreateCondBr(h.CreateSmiCheck(tagged_receiver), bb_smi_receiver, bb_nonsmi, assume_true);
     b.SetInsertPoint(bb_smi_receiver);
@@ -1161,6 +1168,7 @@ class BasicBlockBuilder {
   }
 
   World& w;
+  llvm::MDBuilder md_builder_;
   Function* function_;
   llvm::Function* llvm_function_;
   llvm::Value* llvm_stack_slot_;
