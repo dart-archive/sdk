@@ -72,6 +72,10 @@ class World {
   llvm::Constant* CInt2Pointer(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
   llvm::Constant* CCast(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
 
+  // Helper method for getting hold of a smi slow-case helper function for
+  // the slow path for inlined smi operations.
+  llvm::Function* GetSmiSlowCase(int selector);
+
   Program* const program_;
   llvm::LLVMContext& context;
   llvm::Module& module_;
@@ -135,6 +139,8 @@ class World {
   std::map<HeapObject*, llvm::Constant*> tagged_heap_objects;
   std::map<HeapObject*, llvm::Constant*> heap_objects;
   std::map<HeapObject*, llvm::Function*> llvm_functions;
+
+  std::map<int, llvm::Function*> smi_slow_cases;
 
   std::vector<llvm::Function*> natives_;
 };

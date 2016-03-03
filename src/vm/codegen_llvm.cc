@@ -507,6 +507,7 @@ class BasicBlockBuilder {
         llvm_function_(llvm_function),
         b(builder),
         context(w.context),
+        llvm_process_(NULL),
         h(w, &builder),
         stack_pos_(0),
         max_stack_height_(0) {
@@ -549,11 +550,19 @@ class BasicBlockBuilder {
     }
   }
 
+  void SetProcess(llvm::Value* process) {
+    ASSERT(llvm_process_ == NULL);
+    llvm_process_ = process;
+  }
+
   // Methods for generating code inside one basic block.
 
-  void DoLoadArguments() {
-    b.SetInsertPoint(bb_entry_);
+  void DoPrologue() {
+     b.SetInsertPoint(bb_entry_);
+  }
 
+  void DoLoadArguments() {
+    DoPrologue();
     int arity = function_->arity();
     for (int i = 0; i < arity; i++) {
       // These will be set in reverse order blow.
@@ -574,7 +583,7 @@ class BasicBlockBuilder {
     int argc = 0;
     for (llvm::Argument& arg : llvm_function_->getArgumentList()) {
       if (argc == 0) {
-        llvm_process_ = &arg;
+        SetProcess(&arg);
       } else {
         ASSERT((arity - argc) >= 0);
 
@@ -883,10 +892,9 @@ class BasicBlockBuilder {
     }
 
     b.SetInsertPoint(bb_nonsmi);
-    push(tagged_receiver);
-    push(tagged_argument);
-    DoInvokeMethod(selector, 1);
-    auto nonsmi_result = pop();
+    auto slow_case = w.GetSmiSlowCase(selector);
+    auto nonsmi_result = b.CreateCall(slow_case, {llvm_process_, tagged_receiver, tagged_argument}, "slow_case");
+
     if (if_true_bci == -1) {
       b.CreateBr(bb_join);
     } else {
@@ -921,31 +929,40 @@ class BasicBlockBuilder {
     method_args[0] = llvm_process_;
 
     int index = 1 + arity;
-    for (int i = 0; i < arity; i++) {
+    for (int i = 0; i < arity + 1; i++) {
       method_args[index--] = pop();
     }
-    ASSERT(index == 1);
-    auto receiver = method_args[1] = pop();
+    ASSERT(index == 0);
+    auto result = InvokeMethodHelper(selector, method_args);
+
+    push(result);
+  }
+
+  llvm::Value* InvokeMethodHelper(int selector, std::vector<llvm::Value*> args) {
+    int arity = args.size() - 2;
+    auto receiver = args[1];
     auto entry = LookupDispatchTableEntry(receiver, selector);
-    auto code = h.Cast(LookupDispatchTableCodeFromEntry(entry), w.FunctionPtrType(1 + arity));
     auto expected_offset = b.CreatePtrToInt(LookupDispatchTableOffsetFromEntry(entry), w.intptr_type);
-
-
     auto smi_selector_offset = Selector::IdField::decode(selector) << Smi::kTagSize;
     auto actual_offset = w.CInt(smi_selector_offset);
 
     auto bb_lookup_failure = llvm::BasicBlock::Create(w.context, "bb_lookup_failure", llvm_function_);
     auto bb_lookup_success = llvm::BasicBlock::Create(w.context, "bb_lookup_success", llvm_function_);
-
+    auto bb_start = b.GetInsertBlock();
     b.CreateCondBr(b.CreateICmpEQ(actual_offset, expected_offset), bb_lookup_success, bb_lookup_failure);
 
     b.SetInsertPoint(bb_lookup_failure);
-    DoExitFatal("Method lookup failed. Exiting due to fatal error");
-    b.CreateRet(llvm::ConstantStruct::getNullValue(w.object_ptr_type));
+    auto dispatch = w.tagged_heap_objects[w.program_->dispatch_table()];
+    std::vector<llvm::Value*> dentry_indices = { w.CInt(Array::kSize / kWordSize) };
+    auto nsm_entry = b.CreateLoad(b.CreateGEP(h.UntagAndCast(dispatch, w.object_ptr_ptr_type), dentry_indices), "dispatch_table_entry");
+    b.CreateBr(bb_lookup_success);
 
     b.SetInsertPoint(bb_lookup_success);
-    auto result = b.CreateCall(code, method_args, "method_result");
-    push(result);
+    auto phi = b.CreatePHI(w.object_ptr_type, 2);
+    phi->addIncoming(entry, bb_start);
+    phi->addIncoming(nsm_entry, bb_lookup_failure);
+    auto code = h.Cast(LookupDispatchTableCodeFromEntry(phi), w.FunctionPtrType(1 + arity));
+    return b.CreateCall(code, args, "method_result");
   }
 
   void DoInvokeTest(int selector) {
@@ -1388,13 +1405,12 @@ class BasicBlocksExplorer {
             basic_block_.Clear();
             break;
           }
+          */
 
           case kStackOverflowCheck: {
-            int size = Utils::ReadInt32(bcp + 1);
-            DoStackOverflowCheck(size);
+            // Do nothing.
             break;
           }
-          */
 
           case kIdentical: {
             b.DoIdentical();
@@ -2019,6 +2035,30 @@ llvm::Constant* World::CInt2Pointer(llvm::Constant* constant, llvm::Type* ptr_ty
 llvm::Constant* World::CCast(llvm::Constant* constant, llvm::Type* ptr_type) {
   if (ptr_type == NULL) ptr_type = object_ptr_type;
   return llvm::ConstantExpr::getPointerCast(constant, ptr_type);
+}
+
+llvm::Function* World::GetSmiSlowCase(int selector) {
+  auto cached = smi_slow_cases.find(selector);
+  if (cached != smi_slow_cases.end()) return cached->second;
+
+  auto type = FunctionType(2);
+  auto function = llvm::Function::Create(type, llvm::Function::ExternalLinkage, name("Smi_%p", selector), &module_);
+
+  llvm::IRBuilder<> builder(context);
+  BasicBlockBuilder b(*this, NULL, function, builder);
+  b.DoPrologue();
+
+  std::vector<llvm::Value*> args(3);
+  int index = 0;
+  for (llvm::Argument& arg : function->getArgumentList()) {
+    args[index++] = &arg;
+  }
+
+  llvm::Value* result = b.InvokeMethodHelper(selector, args);
+  builder.CreateRet(result);
+
+  smi_slow_cases[selector] = function;
+  return function;
 }
 
 void LLVMCodegen::Generate(const char* filename, bool optimize, bool verify_module) {
