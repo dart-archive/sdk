@@ -470,6 +470,22 @@ class IRHelper {
     return b->CreateLoad(b->CreateGEP(Cast(process, w.object_ptr_ptr_type), statics_indices), "statics");
   }
 
+  llvm::Value* LoadStackArray(llvm::Value* process) {
+    std::vector<llvm::Value*> coroutine_indices = { w.CInt(Process::kCoroutineOffset / kWordSize) };
+    auto coroutine = b->CreateLoad(b->CreateGEP(Cast(process, w.object_ptr_ptr_type), coroutine_indices), "coroutine");
+
+    std::vector<llvm::Value*> stack_indices = { w.CInt(Coroutine::kStackOffset / kWordSize) };
+    return b->CreateLoad(b->CreateGEP(UntagAndCast(coroutine, w.object_ptr_ptr_type), stack_indices), "stack");
+  }
+
+  llvm::Value* LoadTopOfStackPointer(llvm::Value* process) {
+    auto stack = UntagAndCast(LoadStackArray(process), w.object_ptr_ptr_type);
+    std::vector<llvm::Value*> top_offset = { w.CInt(Stack::kTopOffset / kWordSize) };
+    auto top_of_stack = DecodeSmi(b->CreateLoad(b->CreateGEP(stack, top_offset), "top_of_stack"));
+    auto offset = b->CreateAdd(top_of_stack, w.CInt(Stack::kSize / kWordSize));
+    return b->CreateGEP(stack, {offset}, "top_of_stack_pointer");
+  }
+
   llvm::Value* LoadInitializerCode(llvm::Value* initializer) {
     auto untagged = UntagAndCast(initializer, w.object_ptr_ptr_type);
     std::vector<llvm::Value*> indices = { w.CInt(Initializer::kFunctionOffset / kWordSize) };
