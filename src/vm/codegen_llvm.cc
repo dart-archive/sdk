@@ -427,10 +427,9 @@ class IRHelper {
 
   llvm::Value* UntagAndCast(llvm::Value* value, llvm::Type* ptr_type = NULL) {
     if (ptr_type == NULL) ptr_type = w.object_ptr_type;
-    auto tagged = b->CreateBitCast(value, w.object_ptr_type);
-    auto tagged_asint = b->CreatePtrToInt(tagged, w.intptr_type);
-    auto untagged_asint = b->CreateSub(tagged_asint, w.CInt(1), "untagged");
-    return b->CreateIntToPtr(untagged_asint, ptr_type);
+    std::vector<llvm::Value*> indices = {w.CInt(-1)};
+    auto untagged = b->CreateGEP(b->CreateBitCast(value, w.int8_ptr_type), indices);
+    return b->CreateBitCast(untagged, ptr_type, "untagged");
   }
 
   llvm::Value* DecodeSmi(llvm::Value* value) {
@@ -1984,16 +1983,17 @@ llvm::PointerType* World::FunctionPtrType(int arity) {
 
 llvm::Constant* World::CTag(llvm::Constant* constant, llvm::Type* ptr_type) {
   if (ptr_type == NULL) ptr_type = constant->getType();
-  auto as_int = llvm::ConstantExpr::getPtrToInt(constant, intptr_type);
-  auto tagged = llvm::ConstantExpr::getAdd(as_int, CInt(1));
-  return llvm::ConstantExpr::getIntToPtr(tagged, ptr_type);
+  std::vector<llvm::Value*> indices = {CInt(1)};
+  auto tagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices);
+  return llvm::ConstantExpr::getBitCast(tagged, ptr_type);
 }
 
 llvm::Constant* World::CUnTag(llvm::Constant* constant, llvm::Type* ptr_type) {
   if (ptr_type == NULL) ptr_type = constant->getType();
-  auto as_int = llvm::ConstantExpr::getPtrToInt(constant, intptr_type);
-  auto untagged = llvm::ConstantExpr::getSub(as_int, CInt(1));
-  return llvm::ConstantExpr::getIntToPtr(untagged, ptr_type, "untagged");
+  std::vector<llvm::Value*> indices = {CInt(-1)};
+  auto untagged = llvm::ConstantExpr::getGetElementPtr(int8_type, llvm::ConstantExpr::getBitCast(constant, int8_ptr_type), indices);
+  auto result = llvm::ConstantExpr::getBitCast(untagged, ptr_type);
+  return result;
 }
 
 llvm::Constant* World::CBit(int8 value) {
@@ -2001,9 +2001,9 @@ llvm::Constant* World::CBit(int8 value) {
   return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(1, value64, false));
 }
 
-llvm::Constant* World::CInt(uint32 value) {
-  uint64 value64 = value;
-  return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(32, value64, false));
+llvm::Constant* World::CInt(int32 value) {
+  int64 value64 = value;
+  return llvm::ConstantInt::getIntegerValue(intptr_type, llvm::APInt(32, value64, true));
 }
 
 llvm::Constant* World::CInt8(uint8 integer) {

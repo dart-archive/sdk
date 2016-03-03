@@ -63,7 +63,7 @@ class World {
   llvm::Constant* CTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
   llvm::Constant* CUnTag(llvm::Constant* constant, llvm::Type* ptr_type = NULL);
   llvm::Constant* CBit(int8 value);
-  llvm::Constant* CInt(uint32 integer);
+  llvm::Constant* CInt(int32 integer);
   llvm::Constant* CInt8(uint8 integer);
   llvm::Constant* CInt64(int64 value);
   llvm::Constant* CDouble(double value);
