@@ -385,7 +385,7 @@ void GCMetadata::Setup() {
       singleton_.metadata_ + singleton_.number_of_cards_;
 
   uword start = reinterpret_cast<uword>(singleton_.object_starts_);
-  uword lowest = reinterpret_cast<uword>(singleton_.lowest_address_);
+  uword lowest = singleton_.lowest_address_;
   uword shifted = lowest >> kCardBits;
   singleton_.starts_bias_ = start - shifted;
 
