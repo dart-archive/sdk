@@ -285,7 +285,15 @@ Instance* Instance::CloneTransformed(Heap* heap) {
   // immutability bit and the identity hascode will get copied via the flags
   // word.
   Object* clone = heap->CreateInstance(new_class, Smi::FromWord(0), false);
-  ASSERT(!clone->IsFailure());  // Needs to be in no-allocation-failure scope.
+  if (clone->IsRetryAfterGCFailure()) {
+    // We can only get an allocation failure on the new-space in a two-space
+    // heap, since there is a NoAllocationFailureScope on the program heap
+    // and on the old generation of the process heap.
+    ASSERT(!heap->IsTwoSpaceHeap());
+    TwoSpaceHeap* tsh = reinterpret_cast<TwoSpaceHeap*>(heap);
+    clone = tsh->CreateOldSpaceInstance(new_class, Smi::FromWord(0));
+    ASSERT(!clone->IsFailure());
+  }
   Instance* target = Instance::cast(clone);
 
   // Copy the flags word from the old instance.
@@ -602,9 +610,13 @@ HeapObject* HeapObject::CloneInToSpace(SomeSpace* to) {
   // Otherwise, copy the object to the 'to' space
   // and insert a forward pointer.
   int object_size = Size();
-  HeapObject* target = HeapObject::FromAddress(to->Allocate(object_size));
+  uword new_address = to->Allocate(object_size);
+  if (new_address == 0) {
+    return NULL;
+  }
+  HeapObject* target = HeapObject::FromAddress(new_address);
   // Copy the content of source to target.
-  CopyBlock(reinterpret_cast<Object**>(target->address()),
+  CopyBlock(reinterpret_cast<Object**>(new_address),
             reinterpret_cast<Object**>(address()), object_size);
   if (target->IsStack()) {
     Stack::cast(target)->UpdateFramePointers(Stack::cast(this));

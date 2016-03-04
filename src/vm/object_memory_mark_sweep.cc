@@ -25,17 +25,12 @@ static bool HasSentinelAt(uword address) {
   return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
 }
 
-OldSpace::OldSpace(int maximum_initial_size)
-    : Space(maximum_initial_size),
+OldSpace::OldSpace(TwoSpaceHeap* owner)
+    : Space(kCanResize),
+      heap_(owner),
       free_list_(new FreeList()),
       tracking_allocations_(false),
-      promoted_track_(NULL) {
-  if (maximum_initial_size > 0) {
-    int size = Utils::Minimum(maximum_initial_size, kDefaultMaximumChunkSize);
-    Chunk* chunk = AllocateAndUseChunk(size);
-    ASSERT(chunk);
-  }
-}
+      promoted_track_(NULL) {}
 
 OldSpace::~OldSpace() { delete free_list_; }
 
@@ -69,25 +64,30 @@ bool OldSpace::IsAlive(HeapObject* old_location) {
   return old_location->IsMarked();
 }
 
-Chunk* OldSpace::AllocateAndUseChunk(size_t size) {
+void OldSpace::UseWholeChunk(Chunk* chunk) {
+  top_ = chunk->base();
+  limit_ = top_ + chunk->size() - kPointerSize;
+  *reinterpret_cast<Object**>(limit_) = chunk_end_sentinel();
+  if (tracking_allocations_) {
+    promoted_track_ = PromotedTrack::Initialize(promoted_track_, top_, limit_);
+    top_ += PromotedTrack::kHeaderSize;
+  }
+  // Account all of the chunk memory as used for now. When the
+  // rest of the freelist chunk is flushed into the freelist we
+  // decrement used_ by the amount still left unused. used_
+  // therefore reflects actual memory usage after Flush has been
+  // called.
+  used_ += chunk->size() - kPointerSize;
+}
+
+Chunk* OldSpace::AllocateAndUseChunk(int size) {
   Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
   if (chunk != NULL) {
     // Link it into the space.
     Append(chunk);
-    top_ = chunk->base();
-    limit_ = top_ + chunk->size() - kPointerSize;
-    *reinterpret_cast<Object**>(limit_) = chunk_end_sentinel();
-    if (tracking_allocations_) {
-      promoted_track_ =
-          PromotedTrack::Initialize(promoted_track_, top_, limit_);
-      top_ += PromotedTrack::kHeaderSize;
-    }
-    // Account all of the chunk memory as used for now. When the
-    // rest of the freelist chunk is flushed into the freelist we
-    // decrement used_ by the amount still left unused. used_
-    // therefore reflects actual memory usage after Flush has been
-    // called.
-    used_ += chunk->size() - kPointerSize;
+    UseWholeChunk(chunk);
+    GCMetadata::InitializeStartsForChunk(chunk);
+    GCMetadata::InitializeRememberedSetForChunk(chunk);
   }
   return chunk;
 }
@@ -107,7 +107,7 @@ uword OldSpace::AllocateInNewChunk(int size) {
     return Allocate(size);
   }
 
-  FATAL1("Failed to allocate memory of size %d\n", size);
+  allocation_budget_ = -1;  // Trigger GC.
   return 0;
 }
 
@@ -134,43 +134,44 @@ uword OldSpace::AllocateFromFreeList(int size) {
     }
     ASSERT(static_cast<unsigned>(size) <= limit_ - top_);
     return Allocate(size);
-  } else {
-    return AllocateInNewChunk(size);
   }
 
-  FATAL1("Failed to allocate memory of size %d\n", size);
   return 0;
 }
 
 uword OldSpace::Allocate(int size) {
   ASSERT(size >= HeapObject::kSize);
   ASSERT(Utils::IsAligned(size, kPointerSize));
-  if (!in_no_allocation_failure_scope() && needs_garbage_collection()) {
-    return 0;
-  }
 
   // Fast case bump allocation.
   if (limit_ - top_ >= static_cast<uword>(size)) {
     uword result = top_;
     top_ += size;
     allocation_budget_ -= size;
+    GCMetadata::RecordStart(result);
     return result;
   }
 
+  if (!in_no_allocation_failure_scope() && needs_garbage_collection()) {
+    return 0;
+  }
+
   // Can't use bump allocation. Allocate from free lists.
-  return AllocateFromFreeList(size);
+  uword result = AllocateFromFreeList(size);
+  if (result == 0) result = AllocateInNewChunk(size);
+  return result;
 }
 
 int OldSpace::Used() { return used_; }
 
-void OldSpace::StartScavenge() {
+void OldSpace::StartTrackingAllocations() {
   Flush();
   ASSERT(!tracking_allocations_);
   ASSERT(promoted_track_ == NULL);
   tracking_allocations_ = true;
 }
 
-void OldSpace::EndScavenge() {
+void OldSpace::EndTrackingAllocations() {
   ASSERT(tracking_allocations_);
   ASSERT(promoted_track_ == NULL);
   tracking_allocations_ = false;
@@ -193,6 +194,17 @@ void OldSpace::VisitRememberedSet(PointerVisitor* visitor) {
         current += object->Size();
       }
     }
+  }
+}
+
+void OldSpace::UnlinkPromotedTrack() {
+  PromotedTrack* promoted = promoted_track_;
+  promoted_track_ = NULL;
+
+  while (promoted) {
+    PromotedTrack* previous = promoted;
+    promoted = promoted->next();
+    previous->Zap(StaticClassStructures::one_word_filler_class());
   }
 }
 
@@ -225,12 +237,41 @@ bool OldSpace::CompleteScavengeGenerational(PointerVisitor* visitor) {
   return found_work;
 }
 
-void SemiSpace::StartScavenge() {
-  Flush();
+SweepingVisitor::SweepingVisitor(OldSpace* space)
+    : free_list_(space == NULL ? NULL : space->free_list()),
+      free_start_(0),
+      used_(0) {
+  // Clear the free list. It will be rebuilt during sweeping.
+  if (free_list_ != NULL) free_list_->Clear();
+}
 
+#ifdef DEBUG
+void OldSpace::Verify() {
+  // Verify that the object starts table contains only legitimate object start
+  // addresses for each chunk in the space.
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    chunk->set_scavenge_pointer(chunk->base());
+    uword base = chunk->base();
+    uword limit = chunk->limit();
+    uint8* starts = GCMetadata::StartsFor(base);
+    for (uword card = base; card < limit;
+         card += GCMetadata::kCardSize, starts++) {
+      if (*starts == GCMetadata::kNoObjectStart) continue;
+      // Replace low byte of card address with the byte from the object starts
+      // table, yielding some correct object start address.
+      uword object_address = (card & ~0xff) | *starts;
+      ASSERT(object_address >> GCMetadata::kCardBits ==
+             card >> GCMetadata::kCardBits);
+      HeapObject* obj = HeapObject::FromAddress(object_address);
+      ASSERT(obj->get_class()->IsClass());
+      ASSERT(obj->Size() > 0);
+      if (object_address + obj->Size() > card + 2 * GCMetadata::kCardSize) {
+        // If this object stretches over the whole of the next card then the
+        // next entry in the object starts table must be invalid.
+        ASSERT(starts[1] == GCMetadata::kNoObjectStart);
+      }
+    }
   }
 }
+#endif
 
 }  // namespace dartino

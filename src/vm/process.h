@@ -87,7 +87,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
-  Heap* heap() { return program()->process_heap(); }
+  TwoSpaceHeap* heap() { return program()->process_heap(); }
 
   Coroutine* coroutine() const { return coroutine_; }
   void UpdateCoroutine(Coroutine* coroutine);
@@ -103,6 +103,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   Process* parent() const { return parent_; }
 
+  // Returns false for allocation failure.
+  static const int kInitialStackSize = 256;
   void SetupExecutionStack();
   StackCheckResult HandleStackOverflow(int addition);
 
@@ -215,8 +217,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   RandomXorShift* random() { return &random_; }
 
-  RememberedSet* remembered_set() { return &remembered_set_; }
-
   MessageMailbox* mailbox() { return &mailbox_; }
 
   Signal* signal() { return signal_.load(); }
@@ -224,7 +224,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   void RecordStore(HeapObject* object, Object* value) {
     if (value->IsHeapObject()) {
       ASSERT(!program()->heap()->space()->Includes(object->address()));
-      remembered_set_.Insert(object);
+      GCMetadata::InsertIntoRememberedSet(object->address());
     }
   }
 
@@ -244,6 +244,9 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   static const uword kStaticsOffset = kProgramOffset + kWordSize;
   static const uword kExceptionOffset = kStaticsOffset + kWordSize;
   static const uword kPrimaryLookupCacheOffset = kExceptionOffset + kWordSize;
+
+  bool AllocationFailed() { return statics_ == NULL; }
+  void SetAllocationFailed() { statics_ = NULL; }
 
  private:
   friend class Interpreter;
@@ -279,7 +282,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   RandomXorShift random_;
 
-  RememberedSet remembered_set_;
   Links links_;
 
   Atomic<State> state_;

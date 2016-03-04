@@ -255,11 +255,7 @@ class FreeList {
 
 class SweepingVisitor : public HeapObjectVisitor {
  public:
-  explicit SweepingVisitor(FreeList* free_list)
-      : free_list_(free_list), free_start_(0), used_(0) {
-    // Clear the free list. It will be rebuilt during sweeping.
-    if (free_list_ != NULL) free_list_->Clear();
-  }
+  explicit SweepingVisitor(OldSpace* space);
 
   void AddFreeListChunk(uword free_end_) {
     if (free_start_ != 0) {
@@ -271,9 +267,16 @@ class SweepingVisitor : public HeapObjectVisitor {
     }
   }
 
+  virtual void ChunkStart(Chunk* chunk) {
+    GCMetadata::InitializeStartsForChunk(chunk);
+  }
+
   virtual int Visit(HeapObject* object) {
     if (object->IsMarked()) {
       AddFreeListChunk(object->address());
+      if (free_list_ != NULL) {
+        GCMetadata::RecordStart(object->address());
+      }
       object->ClearMark();
       int size = object->Size();
       used_ += size;

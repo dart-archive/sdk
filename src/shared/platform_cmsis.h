@@ -14,7 +14,6 @@
 #include <errno.h>
 #include <cmsis_os.h>
 
-#include "src/vm/object.h"
 #include "src/vm/vector.h"
 #include "src/shared/globals.h"
 

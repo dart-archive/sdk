@@ -18,22 +18,18 @@ class ExitReference;
 // Heap represents the container for all HeapObjects.
 class Heap {
  public:
-  explicit Heap(RandomXorShift* random, int maximum_initial_size = 0);
-  ~Heap();
-
   // Allocate raw object. Returns a failure if a garbage collection is
-  // needed and causes a fatal error if no garbage collection is
-  // needed and there is not enough room for the object.
+  // needed and causes a fatal error if a GC cannot free up enough memory
+  // for the object.
   Object* Allocate(int size);
-
-  // Allocate raw object. Returns a failure if a garbage collection is
-  // needed or if there is not enough room for the object. Never causes
-  // a fatal error.
-  Object* AllocateNonFatal(int size);
 
   // Attempt to deallocate the heap object with the given size. Rewinds the
   // allocation top if the object was the last allocated object.
   void TryDealloc(Object* object, int size);
+
+  // Called when an allocation fails in the semispace.  Usually returns a
+  // retry-after-GC failure, but may divert large allocations to an old space.
+  virtual Object* HandleAllocationFailure(int size) = 0;
 
   // Allocate heap object.
   Object* CreateInstance(Class* the_class, Object* init_value, bool immutable);
@@ -90,35 +86,25 @@ class Heap {
   void FreedForeignMemory(int size);
 
   // Iterate over all objects in the heap.
-  void IterateObjects(HeapObjectVisitor* visitor) {
+  virtual void IterateObjects(HeapObjectVisitor* visitor) {
     space_->IterateObjects(visitor);
-    old_space_->IterateObjects(visitor);
   }
 
   // Flush will write cached values back to object memory.
   // Flush must be called before traveral of heap.
-  void Flush() {
-    space_->Flush();
-    old_space_->Flush();
-  }
+  virtual void Flush() { space_->Flush(); }
 
   // Returns the number of bytes allocated in the space.
-  int Used() { return old_space_->Used() + space_->Used(); }
+  virtual int Used() { return space_->Used(); }
 
   // Returns the number of bytes allocated in the space and via foreign memory.
   int UsedTotal() { return Used() + foreign_memory_; }
 
   SemiSpace* space() { return space_; }
-  OldSpace* old_space() { return old_space_; }
 
-  void ReplaceSpace(SemiSpace* space, OldSpace* old_space = NULL);
+  void ReplaceSpace(SemiSpace* space);
   SemiSpace* TakeSpace();
   WeakPointer* TakeWeakPointers();
-
-  // Tells whether garbage collection is needed.
-  bool needs_garbage_collection() {
-    return space()->needs_garbage_collection();
-  }
 
   bool allocations_have_taken_place() { return allocations_have_taken_place_; }
 
@@ -144,15 +130,20 @@ class Heap {
   // since it uses the /proc filesystem.
   // To actually call this from gdb you probably need to remove the
   // --gc-sections flag from the linker in the build scripts.
-  void Find(uword word);
+  virtual void Find(uword word);
 #endif
 
- private:
+  // For asserts.
+  virtual bool IsTwoSpaceHeap() { return false; }
+
+ protected:
   friend class ExitReference;
   friend class Scheduler;
   friend class Program;
 
   Heap(SemiSpace* existing_space, WeakPointer* weak_pointers);
+  explicit Heap(RandomXorShift* random);
+  virtual ~Heap();
 
   Object* CreateOneByteStringInternal(Class* the_class, int length, bool clear);
   Object* CreateTwoByteStringInternal(Class* the_class, int length, bool clear);
@@ -162,21 +153,90 @@ class Heap {
   // Adjust the allocation budget based on the current heap size.
   void AdjustAllocationBudget() { space()->AdjustAllocationBudget(0); }
 
-  void AdjustOldAllocationBudget() {
-    old_space()->AdjustAllocationBudget(foreign_memory_);
-  }
-
   void set_random(RandomXorShift* random) { random_ = random; }
 
   // Used for initializing identity hash codes for immutable objects.
   RandomXorShift* random_;
   SemiSpace* space_;
-  OldSpace* old_space_;
-  // Linked list of weak pointers to heap objects in this heap.
-  WeakPointer* weak_pointers_;
+
   // The number of bytes of foreign memory heap objects are holding on to.
   int foreign_memory_;
+  // Linked list of weak pointers to heap objects in this heap.
+  WeakPointer* weak_pointers_;
+
+ private:
   bool allocations_have_taken_place_;
+};
+
+class OneSpaceHeap : public Heap {
+ public:
+  explicit OneSpaceHeap(RandomXorShift* random, int maximum_initial_size = 0);
+
+  virtual Object* HandleAllocationFailure(int size) {
+    return Failure::retry_after_gc(size);
+  }
+
+#ifdef DEBUG
+  virtual void Find(uword word);
+#endif
+};
+
+class TwoSpaceHeap : public Heap {
+ public:
+  explicit TwoSpaceHeap(RandomXorShift* random);
+  virtual ~TwoSpaceHeap();
+
+  static const word kFixedSemiSpaceSize = 16 * KB;
+
+  OldSpace* old_space() { return old_space_; }
+  SemiSpace* unused_space() { return unused_semispace_; }
+
+  void SwapSemiSpaces();
+
+  // Iterate over all objects in the heap.
+  virtual void IterateObjects(HeapObjectVisitor* visitor) {
+    Heap::IterateObjects(visitor);
+    old_space_->IterateObjects(visitor);
+  }
+
+  // Flush will write cached values back to object memory.
+  // Flush must be called before traveral of heap.
+  virtual void Flush() {
+    Heap::Flush();
+    old_space_->Flush();
+  }
+
+  // Returns the number of bytes allocated in the space.
+  virtual int Used() { return old_space_->Used() + Heap::Used(); }
+
+#ifdef DEBUG
+  virtual void Find(uword word);
+#endif
+
+  void AdjustOldAllocationBudget() {
+    old_space()->AdjustAllocationBudget(foreign_memory_);
+  }
+
+  virtual Object* HandleAllocationFailure(int size) {
+    if (size >= (kFixedSemiSpaceSize >> 1)) {
+      uword result = old_space_->Allocate(size);
+      if (result != 0) return HeapObject::FromAddress(result);
+    }
+    return Failure::retry_after_gc(size);
+  }
+
+  // Used during object-rewriting to allocate directly in old-space when
+  // new-space is full.
+  Object* CreateOldSpaceInstance(Class* the_class, Object* init_value);
+
+  virtual bool IsTwoSpaceHeap() { return true; }
+
+ private:
+  // Allocate or deallocate the pages used for heap metadata.
+  void ManageMetadata(bool allocate);
+
+  OldSpace* old_space_;
+  SemiSpace* unused_semispace_;
 };
 
 // Helper class for copying HeapObjects.
@@ -196,7 +256,13 @@ class ScavengeVisitor : public PointerVisitor {
     Object* object = *p;
     if (!object->IsHeapObject()) return;
     if (!from_->Includes(reinterpret_cast<uword>(object))) return;
-    *p = reinterpret_cast<HeapObject*>(object)->CloneInToSpace(to_);
+    HeapObject* heap_object = reinterpret_cast<HeapObject*>(object);
+    if (heap_object->HasForwardingAddress()) {
+      *p = heap_object->forwarding_address();
+    } else {
+      *p = reinterpret_cast<HeapObject*>(object)->CloneInToSpace(to_);
+    }
+    ASSERT(*p != NULL);  // No-allocation scope should ensure this.
   }
 
   SemiSpace* from_;
@@ -207,7 +273,7 @@ class ScavengeVisitor : public PointerVisitor {
 class GenerationalScavengeVisitor : public PointerVisitor {
  public:
   GenerationalScavengeVisitor(SemiSpace* from, SemiSpace* to, OldSpace* old)
-      : from_(from), to_(to), old_(old), hacky_counter_(0) {}
+      : from_(from), to_(to), old_(old) {}
 
   virtual void VisitClass(Object** p) {}
 
@@ -227,20 +293,31 @@ class GenerationalScavengeVisitor : public PointerVisitor {
         *p = old_object->forwarding_address();
       } else {
         // TODO(erikcorry): We need a better heuristic than this.
-        if ((hacky_counter_++ & 1) || old_object->Size() > 8 * MB) {
-          *p = old_object->CloneInToSpace(old_);
+        if (hacky_counter_++ & 1) {
+          HeapObject* moved_object = old_object->CloneInToSpace(old_);
+          // The old space may fill up.  This is a bad moment for a GC, so we
+          // promote to the to-space instead.
+          if (moved_object == NULL) {
+            trigger_old_space_gc_ = true;
+            moved_object = old_object->CloneInToSpace(to_);
+          }
+          *p = moved_object;
         } else {
           *p = old_object->CloneInToSpace(to_);
         }
+        ASSERT(*p != NULL);  // In an emergency we can move to to-space.
       }
     }
   }
+
+  bool trigger_old_space_gc() { return trigger_old_space_gc_; }
 
  private:
   SemiSpace* from_;
   SemiSpace* to_;
   OldSpace* old_;
-  int hacky_counter_;
+  int hacky_counter_ = 0;
+  bool trigger_old_space_gc_ = false;
 };
 
 // Read [object] as an integer word value.

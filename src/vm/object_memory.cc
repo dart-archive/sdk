@@ -84,6 +84,7 @@ void Space::IterateObjects(HeapObjectVisitor* visitor) {
   if (is_empty()) return;
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    visitor->ChunkStart(chunk);
     uword current = chunk->base();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
@@ -158,9 +159,11 @@ void ObjectMemory::Setup() {
 #else
   memset(&page_directories_, 0, kPointerSize * ARRAY_SIZE(page_directories_));
 #endif
+  GCMetadata::Setup();
 }
 
 void ObjectMemory::TearDown() {
+  GCMetadata::TearDown();
 #ifdef DARTINO32
   page_directory_.Delete();
 #else
@@ -200,7 +203,13 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   ASSERT(owner != NULL);
 
   size = Utils::RoundUp(size, Platform::kPageSize);
-  void* memory = Platform::AllocatePages(size, Platform::kAnyArena);
+  void* memory =
+      Platform::AllocatePages(size, GCMetadata::heap_allocation_arena());
+  uword lowest = GCMetadata::lowest_old_space_address();
+  USE(lowest);
+  ASSERT(reinterpret_cast<uword>(memory) >= lowest);
+  ASSERT(reinterpret_cast<uword>(memory) - lowest + size <=
+         GCMetadata::heap_extent());
   if (memory == NULL) return NULL;
 
   uword base = reinterpret_cast<uword>(memory);
@@ -217,12 +226,12 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   return chunk;
 }
 
-Chunk* ObjectMemory::CreateFlashChunk(Space* owner, void* memory, int size) {
+Chunk* ObjectMemory::CreateFixedChunk(Space* owner, void* memory, int size) {
   ASSERT(owner != NULL);
-  ASSERT(size == Utils::RoundUp(size, kPageSize));
+  ASSERT(size == Utils::RoundUp(size, Platform::kPageSize));
 
   uword base = reinterpret_cast<uword>(memory);
-  ASSERT(base % kPageSize == 0);
+  ASSERT(base % Platform::kPageSize == 0);
 
   Chunk* chunk = new Chunk(owner, base, size, true);
   SetSpaceForPages(chunk->base(), chunk->limit(), owner);
@@ -287,6 +296,7 @@ void ObjectMemory::SetSpaceForPages(uword base, uword limit, Space* space) {
   }
 }
 
+// Put free-list entries on the objects that are now dead.
 void OldSpace::RebuildAfterTransformations() {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword free_start = 0;
@@ -310,6 +320,7 @@ void OldSpace::RebuildAfterTransformations() {
   }
 }
 
+// Put one-word-fillers on the dead objects so it is still iterable.
 void SemiSpace::RebuildAfterTransformations() {
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();

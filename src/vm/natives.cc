@@ -983,16 +983,9 @@ static Process* SpawnProcessInternal(Program* program, Process* process,
   Function* entry = FunctionForClosure(entrypoint, 2);
   ASSERT(entry != NULL);
 
-  // Code in process spawning generally assumes there is enough space for
-  // stacks etc.  We use a [NoAllocationFailureScope] to ensure it.
-  NoAllocationFailureScope scope(program->process_heap()->space());
-
-  // Spawn a new process and create a copy of the closure in the
-  // new process' heap.
   Process* child = program->SpawnProcess(process);
+  if (child == NULL) return NULL;
 
-  // Set up the stack as a call of the entry with one argument: closure.
-  child->SetupExecutionStack();
   Stack* stack = child->stack();
   uint8_t* bcp = entry->bytecode_address_for(0);
   // The entry closure takes three arguments, 'this', the closure, and
@@ -1057,6 +1050,14 @@ BEGIN_NATIVE(ProcessSpawn) {
 
   Process* child =
       SpawnProcessInternal(program, process, entrypoint, closure, argument);
+
+  if (child == NULL) {
+    // TODO(erikcorry): Somehow collect this information instead of trying to
+    // remember all allocations here.
+    return Failure::retry_after_gc(
+        Stack::AllocationSize(Process::kInitialStackSize) + Coroutine::kSize +
+        Array::AllocationSize(program->static_fields()->length()));
+  }
 
   ProcessHandle* handle = child->process_handle();
   handle->IncrementRef();

@@ -21,17 +21,22 @@ static void WriteSentinelAt(uword address) {
   *reinterpret_cast<Object**>(address) = chunk_end_sentinel();
 }
 
-Space::Space(int maximum_initial_size)
+Space::Space(Space::Resizing resizeable)
     : first_(NULL),
       last_(NULL),
       used_(0),
       top_(0),
       limit_(0),
-      no_allocation_nesting_(0) {}
+      allocation_budget_(0),
+      no_allocation_nesting_(0),
+      resizeable_(resizeable == kCanResize) {}
 
-SemiSpace::SemiSpace(int maximum_initial_size) : Space(maximum_initial_size) {
-  if (maximum_initial_size > 0) {
-    int size = Utils::Minimum(maximum_initial_size, kDefaultMaximumChunkSize);
+SemiSpace::SemiSpace(Space::Resizing resizeable, int maximum_initial_size)
+    : Space(resizeable) {
+  if (resizeable_ && maximum_initial_size > 0) {
+    int size = Utils::Minimum(
+        Utils::RoundUp(maximum_initial_size, Platform::kPageSize),
+        kDefaultMaximumChunkSize);
     Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
     if (chunk == NULL) FATAL1("Failed to allocate %d bytes.\n", size);
     Append(chunk);
@@ -78,6 +83,7 @@ void Space::Append(Chunk* chunk) {
   if (is_empty()) {
     first_ = last_ = chunk;
   } else {
+    ASSERT(resizeable_);
     last_->set_next(chunk);
     last_ = chunk;
   }
@@ -111,7 +117,7 @@ uword SemiSpace::TryAllocate(int size) {
   return 0;
 }
 
-uword SemiSpace::AllocateInNewChunk(int size, bool fatal) {
+uword SemiSpace::AllocateInNewChunk(int size) {
   // Allocate new chunk that is big enough to fit the object.
   int default_chunk_size = DefaultChunkSize(Used());
   int chunk_size =
@@ -132,21 +138,19 @@ uword SemiSpace::AllocateInNewChunk(int size, bool fatal) {
     uword result = TryAllocate(size);
     if (result != 0) return result;
   }
-  if (fatal) FATAL1("Failed to allocate memory of size %d\n", size);
   return 0;
 }
 
-uword SemiSpace::AllocateInternal(int size, bool fatal) {
+uword SemiSpace::Allocate(int size) {
   ASSERT(size >= HeapObject::kSize);
   ASSERT(Utils::IsAligned(size, kPointerSize));
-  if (!in_no_allocation_failure_scope() && needs_garbage_collection()) {
-    return 0;
-  }
 
   uword result = TryAllocate(size);
   if (result != 0) return result;
 
-  return AllocateInNewChunk(size, fatal);
+  if (!in_no_allocation_failure_scope() && needs_garbage_collection()) return 0;
+
+  return AllocateInNewChunk(size);
 }
 
 void SemiSpace::TryDealloc(uword location, int size) {

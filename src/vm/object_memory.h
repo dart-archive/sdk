@@ -19,8 +19,7 @@ class PointerVisitor;
 class ProgramHeapRelocator;
 class PromotedTrack;
 class Space;
-
-const int kPageSize = 4 * KB;
+class TwoSpaceHeap;
 
 // A chunk represents a block of memory provided by ObjectMemory.
 class Chunk {
@@ -94,12 +93,12 @@ class Chunk {
 // Space is a chain of chunks. It supports allocation and traversal.
 class Space {
  public:
-  static const int kDefaultMinimumChunkSize = 4 * KB;
+  static const int kDefaultMinimumChunkSize = Platform::kPageSize;
   static const int kDefaultMaximumChunkSize = 256 * KB;
 
-  explicit Space(int maximum_initial_size = 0);
-
   virtual ~Space();
+
+  enum Resizing { kCanResize, kCannotResize };
 
   // Returns the total size of allocated objects.
   virtual int Used() = 0;
@@ -146,8 +145,13 @@ class Space {
 
   void SetAllocationBudget(int new_budget);
 
-  // Tells whether garbage collection is needed.
-  bool needs_garbage_collection() { return allocation_budget_ <= 0; }
+  // Tells whether garbage collection is needed.  Only to be called when
+  // bump allocation has failed, or on old space after a new-space GC.
+  // For a fixed-size new-space it always returns true because we always
+  // want to do a new-space GC when the single chunk fills up.
+  bool needs_garbage_collection() {
+    return allocation_budget_ <= 0 || !resizeable_;
+  }
 
   bool in_no_allocation_failure_scope() { return no_allocation_nesting_ != 0; }
 
@@ -171,9 +175,12 @@ class Space {
 #endif
 
  protected:
+  explicit Space(Resizing resizeable);
+
   friend class NoAllocationFailureScope;
   friend class ProgramHeapRelocator;
   friend class Program;
+  friend class TwoSpaceHeap;
 
   virtual void Append(Chunk* chunk);
 
@@ -184,7 +191,10 @@ class Space {
 
   uword top() { return top_; }
 
-  void IncrementNoAllocationNesting() { ++no_allocation_nesting_; }
+  void IncrementNoAllocationNesting() {
+    ASSERT(resizeable_);  // Fixed size heap cannot guarantee allocation.
+    ++no_allocation_nesting_;
+  }
   void DecrementNoAllocationNesting() { --no_allocation_nesting_; }
 
   Chunk* first_;           // First chunk in this space.
@@ -194,11 +204,12 @@ class Space {
   uword limit_;            // Allocation limit in current chunk.
   int allocation_budget_;  // Budget before needing a GC.
   int no_allocation_nesting_;
+  bool resizeable_;
 };
 
 class SemiSpace : public Space {
  public:
-  explicit SemiSpace(int maximum_initial_size = 0);
+  explicit SemiSpace(Resizing resizeable, int maximum_initial_size = 0);
 
   // Returns the total size of allocated objects.
   virtual int Used();
@@ -218,12 +229,7 @@ class SemiSpace : public Space {
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and
   // there is no room to allocate the object.
-  uword Allocate(int size) { return AllocateInternal(size, true); }
-
-  // Allocate raw object. Returns 0 if a garbage collection is needed
-  // or if there is no room to allocate the object. Never causes a
-  // fatal error.
-  uword AllocateNonFatal(int size) { return AllocateInternal(size, false); }
+  uword Allocate(int size);
 
   // Rewind allocation top by size bytes if location is equal to current
   // allocation top.
@@ -244,16 +250,16 @@ class SemiSpace : public Space {
   void SetReadOnly() { top_ = limit_ = 0; }
 
  private:
-  uword AllocateInternal(int size, bool fatal);
+  Chunk* AllocateAndUseChunk(size_t size);
 
-  uword AllocateInNewChunk(int size, bool fatal);
+  uword AllocateInNewChunk(int size);
 
   uword TryAllocate(int size);
 };
 
 class OldSpace : public Space {
  public:
-  explicit OldSpace(int maximum_initial_size = 0);
+  explicit OldSpace(TwoSpaceHeap* heap);
 
   virtual ~OldSpace();
 
@@ -284,19 +290,26 @@ class OldSpace : public Space {
   void VisitRememberedSet(PointerVisitor* visitor);
 
   // For the objects promoted to the old space during scavenge.
-  void StartScavenge();
+  inline void StartScavenge() { StartTrackingAllocations(); }
   bool CompleteScavengeGenerational(PointerVisitor* visitor);
-  void EndScavenge();
+  inline void EndScavenge() { EndTrackingAllocations(); }
+
+  void StartTrackingAllocations();
+  void EndTrackingAllocations();
+  void UnlinkPromotedTrack();
+
+  void UseWholeChunk(Chunk* chunk);
+
+#ifdef DEBUG
+  void Verify();
+#endif
 
  private:
-  Chunk* AllocateAndUseChunk(size_t size);
-
-  void SetAllocationPointForPrepend(SemiSpace* space);
-
-  uword AllocateInNewChunk(int size);
-
   uword AllocateFromFreeList(int size);
+  uword AllocateInNewChunk(int size);
+  Chunk* AllocateAndUseChunk(int size);
 
+  TwoSpaceHeap* heap_;
   FreeList* free_list_;  // Free list structure.
   bool tracking_allocations_;
   PromotedTrack* promoted_track_;
@@ -357,9 +370,9 @@ class ObjectMemory {
   // Create a chunk for a piece of external memory (usually in flash). Since
   // this memory is external and potentially read-only, we will not free
   // nor write to it when deleting the space it belongs to.
-  static Chunk* CreateFlashChunk(Space* space, void* heap_space, int size);
-
-  static Chunk* CreateChunk(Space* space, void* heap_space, int size);
+  static Chunk* CreateFlashChunk(Space* space, void* heap_space, int size) {
+    return CreateFixedChunk(space, heap_space, size);
+  }
 
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);
@@ -404,6 +417,9 @@ class ObjectMemory {
 
   // Associate a range of pages with a given space.
   static void SetSpaceForPages(uword base, uword limit, Space* space);
+
+  // Use some already-existing memory for a chunk.
+  static Chunk* CreateFixedChunk(Space* space, void* heap_space, int size);
 
 #ifdef DARTINO32
   static PageDirectory page_directory_;

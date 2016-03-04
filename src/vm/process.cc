@@ -73,7 +73,10 @@ Process::Process(Program* program, Process* parent)
 
   Array* static_fields = program->static_fields();
   int length = static_fields->length();
-  statics_ = Array::cast(NewArray(length));
+  Object* statics = NewArray(length);
+  if (statics->IsFailure()) return;  // Allocation failure - will retry.
+
+  statics_ = Array::cast(statics);
   for (int i = 0; i < length; i++) {
     statics_->set(i, static_fields->get(i));
   }
@@ -123,10 +126,21 @@ void Process::Cleanup(Signal::Kind kind) {
 
 void Process::SetupExecutionStack() {
   ASSERT(coroutine_ == NULL);
-  Stack* stack = Stack::cast(NewStack(256));
+  Object* raw_stack = NewStack(kInitialStackSize);
+  // Retry on allocation failure.
+  if (raw_stack->IsRetryAfterGCFailure()) {
+    SetAllocationFailed();
+    return;
+  }
+  Stack* stack = Stack::cast(raw_stack);
   stack->set(0, NULL);
-  Coroutine* coroutine =
-      Coroutine::cast(NewInstance(program()->coroutine_class()));
+  Object* raw_coroutine = NewInstance(program()->coroutine_class());
+  // Retry on allocation failure.
+  if (raw_coroutine->IsRetryAfterGCFailure()) {
+    SetAllocationFailed();
+    return;
+  }
+  Coroutine* coroutine = Coroutine::cast(raw_coroutine);
   coroutine->set_stack(stack);
   UpdateCoroutine(coroutine);
 }
@@ -135,7 +149,7 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
   ASSERT(coroutine->has_stack());
   coroutine_ = coroutine;
   UpdateStackLimit();
-  remembered_set_.Insert(coroutine->stack());
+  GCMetadata::InsertIntoRememberedSet(coroutine->stack()->address());
 }
 
 Process::StackCheckResult Process::HandleStackOverflow(int addition) {
@@ -182,7 +196,7 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   new_stack->UpdateFramePointers(stack());
   ASSERT(coroutine_->has_stack());
   coroutine_->set_stack(new_stack);
-  remembered_set_.Insert(coroutine_->stack());
+  GCMetadata::InsertIntoRememberedSet(coroutine_->stack()->address());
   UpdateStackLimit();
   return kStackCheckContinue;
 }
@@ -293,7 +307,7 @@ Object* Process::NewStack(int length) {
   Object* result = heap()->CreateStack(stack_class, length);
 
   if (result->IsFailure()) return result;
-  remembered_set_.Insert(HeapObject::cast(result));
+  GCMetadata::InsertIntoRememberedSet(HeapObject::cast(result)->address());
   return result;
 }
 
@@ -484,6 +498,7 @@ void Process::SendSignal(Signal* signal) {
 }
 
 void Process::UpdateStackLimit() {
+  if (coroutine_ == NULL) return;
   // By adding 2, we reserve a slot for a return address and an extra
   // temporary each bytecode can utilize internally.
   Stack* stack = this->stack();

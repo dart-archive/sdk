@@ -12,13 +12,31 @@
 
 namespace dartino {
 
-Heap::Heap(RandomXorShift* random, int maximum_initial_size)
+Heap::Heap(RandomXorShift* random)
     : random_(random),
-      space_(new SemiSpace(maximum_initial_size)),
-      old_space_(new OldSpace(0)),
-      weak_pointers_(NULL),
+      space_(NULL),
       foreign_memory_(0),
-      allocations_have_taken_place_(false) {
+      weak_pointers_(NULL),
+      allocations_have_taken_place_(false) {}
+
+OneSpaceHeap::OneSpaceHeap(RandomXorShift* random, int maximum_initial_size)
+    : Heap(random) {
+  space_ = new SemiSpace(Space::kCanResize, maximum_initial_size);
+  AdjustAllocationBudget();
+}
+
+TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
+    : Heap(random),
+      old_space_(new OldSpace(this)),
+      unused_semispace_(new SemiSpace(Space::kCannotResize, 0)) {
+  space_ = new SemiSpace(Space::kCannotResize, 0);
+  Chunk* chunk = ObjectMemory::AllocateChunk(space_, kFixedSemiSpaceSize);
+  ASSERT(chunk != NULL);  // TODO(erikcorry): Cope with out-of-memory.
+  space_->Append(chunk);
+  space_->UpdateBaseAndLimit(chunk, chunk->base());
+  Chunk* unused_chunk =
+      ObjectMemory::AllocateChunk(unused_semispace_, kFixedSemiSpaceSize);
+  unused_semispace_->Append(unused_chunk);
   AdjustAllocationBudget();
   AdjustOldAllocationBudget();
 }
@@ -26,28 +44,30 @@ Heap::Heap(RandomXorShift* random, int maximum_initial_size)
 Heap::Heap(SemiSpace* existing_space, WeakPointer* weak_pointers)
     : random_(NULL),
       space_(existing_space),
-      weak_pointers_(weak_pointers),
       foreign_memory_(0),
+      weak_pointers_(weak_pointers),
       allocations_have_taken_place_(false) {}
 
 Heap::~Heap() {
+  // This has no effect if we already did it once in the subclass.
   WeakPointer::ForceCallbacks(&weak_pointers_, this);
   ASSERT(foreign_memory_ == 0);
-  delete old_space_;
   delete space_;
+}
+
+TwoSpaceHeap::~TwoSpaceHeap() {
+  // We need to do this now before the old-space disappears.
+  WeakPointer::ForceCallbacks(&weak_pointers_, this);
+  delete unused_semispace_;
+  delete old_space_;
 }
 
 Object* Heap::Allocate(int size) {
   allocations_have_taken_place_ = true;
   uword result = space_->Allocate(size);
-  if (result == 0) return Failure::retry_after_gc(size);
-  return HeapObject::FromAddress(result);
-}
-
-Object* Heap::AllocateNonFatal(int size) {
-  allocations_have_taken_place_ = true;
-  uword result = space_->AllocateNonFatal(size);
-  if (result == 0) return Failure::retry_after_gc(size);
+  if (result == 0) {
+    return HandleAllocationFailure(size);
+  }
   return HeapObject::FromAddress(result);
 }
 
@@ -65,6 +85,20 @@ Object* Heap::CreateInstance(Class* the_class, Object* init_value,
   result->set_class(the_class);
   result->set_immutable(immutable);
   if (immutable) result->InitializeIdentityHashCode(random());
+  ASSERT(size == the_class->instance_format().fixed_size());
+  result->Initialize(size, init_value);
+  return result;
+}
+
+Object* TwoSpaceHeap::CreateOldSpaceInstance(Class* the_class,
+                                             Object* init_value) {
+  int size = the_class->instance_format().fixed_size();
+  uword new_address = old_space_->Allocate(size);
+  ASSERT(new_address != 0);  // Only used in NoAllocationFailureScope.
+  Instance* result =
+      reinterpret_cast<Instance*>(HeapObject::FromAddress(new_address));
+  result->set_class(the_class);
+  result->set_immutable(false);
   ASSERT(size == the_class->instance_format().fixed_size());
   result->Initialize(size, init_value);
   return result;
@@ -200,7 +234,7 @@ Object* Heap::CreateTwoByteStringUninitialized(Class* the_class, int length) {
 Object* Heap::CreateStack(Class* the_class, int length) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::STACK_TYPE);
   int size = Stack::AllocationSize(length);
-  Object* raw_result = AllocateNonFatal(size);
+  Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Stack* result = reinterpret_cast<Stack*>(raw_result);
   result->set_class(the_class);
@@ -255,27 +289,25 @@ Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
 void Heap::AllocatedForeignMemory(int size) {
   ASSERT(foreign_memory_ >= 0);
   foreign_memory_ += size;
-  old_space()->DecreaseAllocationBudget(size);
+  space()->DecreaseAllocationBudget(size);
 }
 
 void Heap::FreedForeignMemory(int size) {
   foreign_memory_ -= size;
   ASSERT(foreign_memory_ >= 0);
-  old_space()->IncreaseAllocationBudget(size);
+  space()->IncreaseAllocationBudget(size);
 }
 
-void Heap::ReplaceSpace(SemiSpace* space, OldSpace* old_space) {
+void TwoSpaceHeap::SwapSemiSpaces() {
+  SemiSpace* temp = space_;
+  space_ = unused_semispace_;
+  unused_semispace_ = temp;
+}
+
+void Heap::ReplaceSpace(SemiSpace* space) {
   delete space_;
   space_ = space;
-  if (old_space != NULL) {
-    // TODO(erikcorry): Fix this heuristic.
-    // Currently the new-space GC time is dependent on the size of old space
-    // because we have no remembered set.  Therefore we have to grow the new
-    // space as the old space grows to avoid going quadratic.
-    space->SetAllocationBudget(Utils::Minimum(16 * MB, old_space->Used() >> 3));
-  } else {
-    AdjustAllocationBudget();
-  }
+  AdjustAllocationBudget();
 }
 
 SemiSpace* Heap::TakeSpace() {
@@ -313,10 +345,77 @@ void Heap::ProcessWeakPointers(Space* space) {
   WeakPointer::Process(space, &weak_pointers_, this);
 }
 
+GCMetadata GCMetadata::singleton_;
+
+void GCMetadata::TearDown() {
+  Platform::FreePages(singleton_.metadata_,
+                      singleton_.number_of_cards_ * kMetadataBytes);
+}
+
+void GCMetadata::Setup() {
+  const int kRanges = 4;
+  Platform::HeapMemoryRange ranges[kRanges];
+  int range_count = Platform::GetHeapMemoryRanges(ranges, kRanges);
+  ASSERT(range_count > 0);
+
+  // Find the largest area
+  int largest_index = 0;
+  uword largest_size = ranges[0].size;
+  for (int i = 1; i < range_count; i++) {
+    if (ranges[i].size > largest_size) {
+      largest_size = ranges[i].size;
+      largest_index = i;
+    }
+  }
+
+  singleton_.heap_allocation_arena_ = 1 << largest_index;
+
+  singleton_.lowest_address_ =
+      reinterpret_cast<uword>(ranges[largest_index].address);
+  uword size = ranges[largest_index].size;
+  singleton_.heap_extent_ = size;
+
+  singleton_.number_of_cards_ = size >> kCardBits;
+
+  singleton_.metadata_ =
+      reinterpret_cast<unsigned char*>(Platform::AllocatePages(
+          singleton_.number_of_cards_ * kMetadataBytes, Platform::kAnyArena));
+  singleton_.remembered_set_ = singleton_.metadata_;
+  singleton_.object_starts_ =
+      singleton_.metadata_ + singleton_.number_of_cards_;
+
+  uword start = reinterpret_cast<uword>(singleton_.object_starts_);
+  uword lowest = reinterpret_cast<uword>(singleton_.lowest_address_);
+  uword shifted = lowest >> kCardBits;
+  singleton_.starts_bias_ = start - shifted;
+
+  start = reinterpret_cast<uword>(singleton_.remembered_set_);
+  singleton_.remembered_set_bias_ = start - shifted;
+}
+
+void SemiSpace::StartScavenge() {
+  Flush();
+
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    chunk->set_scavenge_pointer(chunk->base());
+  }
+}
+
 #ifdef DEBUG
-void Heap::Find(uword word) {
-  space_->Find(word, "Dartino heap");
+void TwoSpaceHeap::Find(uword word) {
+  space_->Find(word, "data semispace");
+  unused_semispace_->Find(word, "unused semispace");
   old_space_->Find(word, "oldspace");
+  Heap::Find(word);
+}
+
+void OneSpaceHeap::Find(uword word) {
+  space_->Find(word, "program semispace");
+  Heap::Find(word);
+}
+
+void Heap::Find(uword word) {
+  space_->Find(word, "semispace");
 #ifdef DARTINO_TARGET_OS_LINUX
   FILE* fp = fopen("/proc/self/maps", "r");
   if (fp == NULL) return;
