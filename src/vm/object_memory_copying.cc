@@ -153,10 +153,6 @@ uword SemiSpace::Allocate(int size) {
   return AllocateInNewChunk(size);
 }
 
-void SemiSpace::TryDealloc(uword location, int size) {
-  if (top_ == location) top_ -= size;
-}
-
 int SemiSpace::Used() {
   if (is_empty()) return used_;
   return used_ + (top() - last()->base());

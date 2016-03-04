@@ -73,15 +73,15 @@ typedef Object* (*NativeFunction)(Process*, Arguments);
 #define END_NATIVE() }
 
 
-#define RUN_INSIDE_BARRIER_AND_RETURN(expr)                   \
-  Object* result = process->NewInteger(0);                    \
-  if (result->IsRetryAfterGCFailure()) return result;         \
-  int64 value = (expr);                                       \
-  if (Smi::IsValid(value)) {                                  \
-    process->TryDeallocInteger(LargeInteger::cast(result));   \
-    return Smi::FromWord(value);                              \
-  }                                                           \
-  LargeInteger::cast(result)->set_value(value);               \
+#define RUN_INSIDE_BARRIER_AND_RETURN(expr)                            \
+  Object* cached_integer = process->EnsureLargeIntegerIsAvailable();   \
+  if (cached_integer->IsRetryAfterGCFailure()) return cached_integer;  \
+  int64 value = (expr);                                                \
+  if (Smi::IsValid(value)) {                                           \
+    return Smi::FromWord(value);                                       \
+  }                                                                    \
+  LargeInteger* result = process->ConsumeLargeInteger();               \
+  result->set_value(value);                                            \
   return result;
 
 #define RUN_INSIDE_BARRIER_AND_RETURN_VOID(expr)              \

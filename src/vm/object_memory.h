@@ -231,10 +231,6 @@ class SemiSpace : public Space {
   // there is no room to allocate the object.
   uword Allocate(int size);
 
-  // Rewind allocation top by size bytes if location is equal to current
-  // allocation top.
-  void TryDealloc(uword location, int size);
-
   // For the program semispaces.  There is no other space into which we
   // promote, so it does all work in one go.
   void CompleteScavenge(PointerVisitor* visitor);
@@ -276,8 +272,6 @@ class OldSpace : public Space {
 
   // Flush will make the current chunk consistent for iteration.
   virtual void Flush();
-
-  void TryDealloc(uword location, int size);
 
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and

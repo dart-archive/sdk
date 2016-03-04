@@ -37,6 +37,7 @@ Process::Process(Program* program, Process* parent)
       statics_(NULL),
       exception_(program->null_object()),
       primary_lookup_cache_(NULL),
+      large_integer_(program->null_object()),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
       signal_(NULL),
@@ -230,10 +231,6 @@ Object* Process::NewInteger(int64 value) {
   return result;
 }
 
-void Process::TryDeallocInteger(LargeInteger* object) {
-  heap()->TryDeallocInteger(object);
-}
-
 Object* Process::NewOneByteString(int length) {
   RegisterProcessAllocation();
   Class* string_class = program()->one_byte_string_class();
@@ -320,6 +317,7 @@ void Process::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
   visitor->Visit(reinterpret_cast<Object**>(&exception_));
+  visitor->Visit(reinterpret_cast<Object**>(&large_integer_));
   if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
 
   mailbox_.IteratePointers(visitor);

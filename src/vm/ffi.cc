@@ -16,22 +16,21 @@ BEGIN_NATIVE(ForeignAllocate) {
   if (!arguments[0]->IsSmi() && !arguments[0]->IsLargeInteger()) {
     return Failure::wrong_argument_type();
   }
+  Object* cached_integer = process->EnsureLargeIntegerIsAvailable();
+  if (cached_integer->IsRetryAfterGCFailure()) return cached_integer;
+
   word size = AsForeignWord(arguments[0]);
-  Object* result = process->NewInteger(0);
-  if (result->IsRetryAfterGCFailure()) return result;
   void* calloc_value = calloc(1, size);
   uint64 value = reinterpret_cast<uint64>(calloc_value);
 
-// If we might be using a leak sanitizer, we'll always use a LargeInteger to
+// If we might be using a leak sanitizer, always use a LargeInteger to
 // hold the memory pointer in order for the leak sanitizer to find pointers to
 // malloc()ed memory regions which are referenced by dart [Foreign] objects.
 #ifndef PROBABLY_USING_LEAK_SANITIZER
-  if (Smi::IsValid(value)) {
-    process->TryDeallocInteger(LargeInteger::cast(result));
-    return Smi::FromWord(value);
-  }
+  if (Smi::IsValid(value)) return Smi::FromWord(value);
 #endif
-  LargeInteger::cast(result)->set_value(value);
+  LargeInteger* result = process->ConsumeLargeInteger();
+  result->set_value(value);
   return result;
 }
 END_NATIVE()

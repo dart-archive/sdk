@@ -23,10 +23,6 @@ class Heap {
   // for the object.
   Object* Allocate(int size);
 
-  // Attempt to deallocate the heap object with the given size. Rewinds the
-  // allocation top if the object was the last allocated object.
-  void TryDealloc(Object* object, int size);
-
   // Called when an allocation fails in the semispace.  Usually returns a
   // retry-after-GC failure, but may divert large allocations to an old space.
   virtual Object* HandleAllocationFailure(int size) = 0;
@@ -42,7 +38,6 @@ class Heap {
 
   // Allocate heap integer.
   Object* CreateLargeInteger(Class* the_class, int64 value);
-  void TryDeallocInteger(LargeInteger* object);
 
   // Allocate double.
   Object* CreateDouble(Class* the_class, dartino_double value);

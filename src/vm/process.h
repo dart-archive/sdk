@@ -114,15 +114,34 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   LookupCache::Entry* LookupEntrySlow(LookupCache::Entry* primary, Class* clazz,
                                       int selector);
 
+  // Ensures that a subsequent call to [ConsumeLargeInteger] returns a
+  // large-integer object.
+  // This call may not be able to allocate the object because of memory issues,
+  // in which case `result->IsRetryAfterGCFailure()` returns true.
+  //
+  // The caller should then return to the interpreter (with this result), or
+  // run the GC and retry.
+  Object* EnsureLargeIntegerIsAvailable() {
+    if (!large_integer_->IsNull()) return large_integer_;
+    Object* result = NewInteger(0);
+    if (!result->IsRetryAfterGCFailure()) {
+      large_integer_ = LargeInteger::cast(result);
+    }
+    return result;
+  }
+
+  // Returns the cached large integer and clears the local copy.
+  LargeInteger* ConsumeLargeInteger() {
+    ASSERT(large_integer_ != NULL);
+    LargeInteger* result = LargeInteger::cast(large_integer_);
+    large_integer_ = program()->null_object();
+    return result;
+  }
+
   Object* NewByteArray(int length);
   Object* NewArray(int length);
   Object* NewDouble(dartino_double value);
   Object* NewInteger(int64 value);
-
-  // Attempt to deallocate the large integer object. If the large integer
-  // was the last allocated object the allocation top is moved back so
-  // the memory can be reused.
-  void TryDeallocInteger(LargeInteger* object);
 
   // NewString allocates a string of the given length and fills the payload
   // with zeroes.
@@ -280,6 +299,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   // code in this process.
   LookupCache::Entry* primary_lookup_cache_;
 
+  Object* large_integer_;
   RandomXorShift random_;
 
   Links links_;
