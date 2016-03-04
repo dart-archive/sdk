@@ -24,7 +24,6 @@ incremental/experimental/add_field_and_remove_subclass: Fail
 # Most things don't work in production mode yet.
 incremental/production/add_class: IncrementalCompilationFailed
 incremental/production/add_instance_field: IncrementalCompilationFailed
-incremental/production/add_instance_method: IncrementalCompilationFailed
 incremental/production/add_static_method: IncrementalCompilationFailed
 incremental/production/add_top_level_const_field: IncrementalCompilationFailed
 incremental/production/add_top_level_method: IncrementalCompilationFailed
