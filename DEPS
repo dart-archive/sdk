@@ -279,6 +279,24 @@ hooks = [
       'sdk/third_party/stm',
     ],
   },
+  {
+    'name': 'third_party_freertos',
+    'pattern': '.',
+    'action': [
+      'python',
+      'sdk/tools/not_on_arm.py',
+      'download_from_google_storage',
+      '-q',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dartino-dependencies',
+      '-d',
+      '-r',
+      '-u',
+      'sdk/third_party/freertos',
+    ],
+  },
   # Pull clang-format binaries using checked-in hashes.
   {
     'name': 'clang_format_win',
