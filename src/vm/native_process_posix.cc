@@ -253,7 +253,7 @@ static void RunDetached(char* path, char* arguments[], int result_pipe) {
   UNREACHABLE();
 }
 
-BEGIN_NATIVE(NativeProcessSpawnDetached) {
+BEGIN_LEAF_NATIVE(NativeProcessSpawnDetached) {
   word array = AsForeignWord(arguments[0]);
   if (array == 0) return Failure::illegal_state();
   char** args = reinterpret_cast<char**>(array);

@@ -148,8 +148,8 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
   virtual void DoInvokeStatic();
   virtual void DoInvokeFactory();
 
+  virtual void DoInvokeLeafNative();
   virtual void DoInvokeNative();
-  virtual void DoInvokeDetachableNative();
   virtual void DoInvokeNativeYield();
 
   virtual void DoInvokeSelector();
@@ -748,11 +748,11 @@ void InterpreterGeneratorX64::DoInvokeFactory() {
   InvokeStatic();
 }
 
-void InterpreterGeneratorX64::DoInvokeNative() {
+void InterpreterGeneratorX64::DoInvokeLeafNative() {
   InvokeNative(false, false);
 }
 
-void InterpreterGeneratorX64::DoInvokeDetachableNative() {
+void InterpreterGeneratorX64::DoInvokeNative() {
   InvokeNative(false, true);
 }
 

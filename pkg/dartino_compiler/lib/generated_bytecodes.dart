@@ -56,8 +56,8 @@ enum Opcode {
   AllocateImmutable,
   InvokeNoSuchMethod,
   InvokeTestNoSuchMethod,
+  InvokeLeafNative,
   InvokeNative,
-  InvokeDetachableNative,
   InvokeNativeYield,
   InvokeSelector,
   Pop,
@@ -2002,6 +2002,52 @@ class InvokeTestNoSuchMethod extends Bytecode {
   }
 }
 
+class InvokeLeafNative extends Bytecode {
+  final int uint8Argument0;
+  final int uint8Argument1;
+  const InvokeLeafNative(this.uint8Argument0, this.uint8Argument1)
+      : super();
+
+  Opcode get opcode => Opcode.InvokeLeafNative;
+
+  String get name => 'InvokeLeafNative';
+
+  bool get isBranching => true;
+
+  String get format => 'BB';
+
+  int get size => 3;
+
+  int get stackPointerDifference => 1;
+
+  String get formatString => 'invoke leaf native %d %d';
+
+  void addTo(Sink<List<int>> sink) {
+    new BytecodeBuffer()
+        ..addUint8(opcode.index)
+        ..addUint8(uint8Argument0)
+        ..addUint8(uint8Argument1)
+        ..sendOn(sink);
+  }
+
+  String toString() => 'invoke leaf native ${uint8Argument0} ${uint8Argument1}';
+
+  operator==(Bytecode other) {
+    if (!(super==(other))) return false;
+    InvokeLeafNative rhs = other;
+    if (uint8Argument0 != rhs.uint8Argument0) return false;
+    if (uint8Argument1 != rhs.uint8Argument1) return false;
+    return true;
+  }
+
+  int get hashCode {
+    int value = super.hashCode;
+    value += uint8Argument0;
+    value += uint8Argument1;
+    return value;
+  }
+}
+
 class InvokeNative extends Bytecode {
   final int uint8Argument0;
   final int uint8Argument1;
@@ -2035,52 +2081,6 @@ class InvokeNative extends Bytecode {
   operator==(Bytecode other) {
     if (!(super==(other))) return false;
     InvokeNative rhs = other;
-    if (uint8Argument0 != rhs.uint8Argument0) return false;
-    if (uint8Argument1 != rhs.uint8Argument1) return false;
-    return true;
-  }
-
-  int get hashCode {
-    int value = super.hashCode;
-    value += uint8Argument0;
-    value += uint8Argument1;
-    return value;
-  }
-}
-
-class InvokeDetachableNative extends Bytecode {
-  final int uint8Argument0;
-  final int uint8Argument1;
-  const InvokeDetachableNative(this.uint8Argument0, this.uint8Argument1)
-      : super();
-
-  Opcode get opcode => Opcode.InvokeDetachableNative;
-
-  String get name => 'InvokeDetachableNative';
-
-  bool get isBranching => true;
-
-  String get format => 'BB';
-
-  int get size => 3;
-
-  int get stackPointerDifference => 1;
-
-  String get formatString => 'invoke detachable native %d %d';
-
-  void addTo(Sink<List<int>> sink) {
-    new BytecodeBuffer()
-        ..addUint8(opcode.index)
-        ..addUint8(uint8Argument0)
-        ..addUint8(uint8Argument1)
-        ..sendOn(sink);
-  }
-
-  String toString() => 'invoke detachable native ${uint8Argument0} ${uint8Argument1}';
-
-  operator==(Bytecode other) {
-    if (!(super==(other))) return false;
-    InvokeDetachableNative rhs = other;
     if (uint8Argument0 != rhs.uint8Argument0) return false;
     if (uint8Argument1 != rhs.uint8Argument1) return false;
     return true;

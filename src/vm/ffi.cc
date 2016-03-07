@@ -12,7 +12,7 @@
 
 namespace dartino {
 
-BEGIN_NATIVE(ForeignAllocate) {
+BEGIN_LEAF_NATIVE(ForeignAllocate) {
   if (!arguments[0]->IsSmi() && !arguments[0]->IsLargeInteger()) {
     return Failure::wrong_argument_type();
   }
@@ -35,7 +35,7 @@ BEGIN_NATIVE(ForeignAllocate) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignFree) {
+BEGIN_LEAF_NATIVE(ForeignFree) {
   uword address = Instance::cast(arguments[0])->GetConsecutiveSmis(0);
   free(reinterpret_cast<void*>(address));
   return process->program()->null_object();
@@ -62,7 +62,7 @@ BEGIN_NATIVE(ForeignMarkForFinalization) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignRegisterFinalizer) {
+BEGIN_LEAF_NATIVE(ForeignRegisterFinalizer) {
   auto callback = reinterpret_cast<ExternalWeakPointerCallback>(
       AsForeignWord(arguments[1]));
   if (!arguments[0]->IsHeapObject()) return Failure::wrong_argument_type();
@@ -74,7 +74,7 @@ BEGIN_NATIVE(ForeignRegisterFinalizer) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignRemoveFinalizer) {
+BEGIN_LEAF_NATIVE(ForeignRemoveFinalizer) {
   auto callback = reinterpret_cast<ExternalWeakPointerCallback>(
       AsForeignWord(arguments[1]));
   if (!arguments[0]->IsHeapObject()) return Failure::wrong_argument_type();
@@ -85,16 +85,18 @@ BEGIN_NATIVE(ForeignRemoveFinalizer) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignBitsPerWord) { return Smi::FromWord(kBitsPerWord); }
+BEGIN_LEAF_NATIVE(ForeignBitsPerWord) { return Smi::FromWord(kBitsPerWord); }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignPlatform) { return Smi::FromWord(Platform::OS()); }
+BEGIN_LEAF_NATIVE(ForeignPlatform) { return Smi::FromWord(Platform::OS()); }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignArchitecture) { return Smi::FromWord(Platform::Arch()); }
+BEGIN_LEAF_NATIVE(ForeignArchitecture) {
+  return Smi::FromWord(Platform::Arch());
+}
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignConvertPort) {
+BEGIN_LEAF_NATIVE(ForeignConvertPort) {
   if (!arguments[0]->IsInstance()) return Smi::zero();
   Instance* instance = Instance::cast(arguments[0]);
   if (!instance->IsPort()) return Smi::zero();
@@ -116,52 +118,52 @@ typedef int (*F5)(word, word, word, word, word);
 typedef int (*F6)(word, word, word, word, word, word);
 typedef int (*F7)(word, word, word, word, word, word, word);
 
-BEGIN_DETACHABLE_NATIVE(ForeignICall0) {
+BEGIN_NATIVE(ForeignICall0) {
   word address = AsForeignWord(arguments[0]);
   F0 function = reinterpret_cast<F0>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function()));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function()));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignICall1) {
+BEGIN_NATIVE(ForeignICall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   F1 function = reinterpret_cast<F1>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0)));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignICall2) {
+BEGIN_NATIVE(ForeignICall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   F2 function = reinterpret_cast<F2>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1)));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignICall3) {
+BEGIN_NATIVE(ForeignICall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   F3 function = reinterpret_cast<F3>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1, a2)));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1, a2)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignICall4) {
+BEGIN_NATIVE(ForeignICall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   F4 function = reinterpret_cast<F4>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1, a2, a3)));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1, a2, a3)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignICall5) {
+BEGIN_NATIVE(ForeignICall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -169,12 +171,12 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   F5 function = reinterpret_cast<F5>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN(
       static_cast<int64>(function(a0, a1, a2, a3, a4)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignICall6) {
+BEGIN_NATIVE(ForeignICall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -183,12 +185,12 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   F6 function = reinterpret_cast<F6>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN(
       static_cast<int64>(function(a0, a1, a2, a3, a4, a5)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignICall7) {
+BEGIN_NATIVE(ForeignICall7) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -198,7 +200,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignICall7) {
   word a5 = AsForeignWord(arguments[6]);
   word a6 = AsForeignWord(arguments[7]);
   F7 function = reinterpret_cast<F7>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN(
       static_cast<int64>(function(a0, a1, a2, a3, a4, a5, a6)));
 }
 END_NATIVE()
@@ -211,52 +213,52 @@ typedef word (*PF4)(word, word, word, word);
 typedef word (*PF5)(word, word, word, word, word);
 typedef word (*PF6)(word, word, word, word, word, word);
 
-BEGIN_DETACHABLE_NATIVE(ForeignPCall0) {
+BEGIN_NATIVE(ForeignPCall0) {
   word address = AsForeignWord(arguments[0]);
   PF0 function = reinterpret_cast<PF0>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function()));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function()));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignPCall1) {
+BEGIN_NATIVE(ForeignPCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   PF1 function = reinterpret_cast<PF1>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0)));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignPCall2) {
+BEGIN_NATIVE(ForeignPCall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   PF2 function = reinterpret_cast<PF2>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1)));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignPCall3) {
+BEGIN_NATIVE(ForeignPCall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   PF3 function = reinterpret_cast<PF3>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1, a2)));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1, a2)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignPCall4) {
+BEGIN_NATIVE(ForeignPCall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   PF4 function = reinterpret_cast<PF4>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(static_cast<int64>(function(a0, a1, a2, a3)));
+  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1, a2, a3)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignPCall5) {
+BEGIN_NATIVE(ForeignPCall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -264,12 +266,12 @@ BEGIN_DETACHABLE_NATIVE(ForeignPCall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   PF5 function = reinterpret_cast<PF5>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN(
       static_cast<int64>(function(a0, a1, a2, a3, a4)));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignPCall6) {
+BEGIN_NATIVE(ForeignPCall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -278,7 +280,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignPCall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   PF6 function = reinterpret_cast<PF6>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN(
       static_cast<int64>(function(a0, a1, a2, a3, a4, a5)));
 }
 END_NATIVE()
@@ -291,52 +293,52 @@ typedef void (*VF4)(word, word, word, word);
 typedef void (*VF5)(word, word, word, word, word);
 typedef void (*VF6)(word, word, word, word, word, word);
 
-BEGIN_DETACHABLE_NATIVE(ForeignVCall0) {
+BEGIN_NATIVE(ForeignVCall0) {
   word address = AsForeignWord(arguments[0]);
   VF0 function = reinterpret_cast<VF0>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function());
+  EVALUATE_FFI_CALL_AND_RETURN_VOID(function());
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignVCall1) {
+BEGIN_NATIVE(ForeignVCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   VF1 function = reinterpret_cast<VF1>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0));
+  EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignVCall2) {
+BEGIN_NATIVE(ForeignVCall2) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   VF2 function = reinterpret_cast<VF2>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1));
+  EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0, a1));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignVCall3) {
+BEGIN_NATIVE(ForeignVCall3) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   VF3 function = reinterpret_cast<VF3>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1, a2));
+  EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0, a1, a2));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignVCall4) {
+BEGIN_NATIVE(ForeignVCall4) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   VF4 function = reinterpret_cast<VF4>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1, a2, a3));
+  EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0, a1, a2, a3));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignVCall5) {
+BEGIN_NATIVE(ForeignVCall5) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -344,11 +346,11 @@ BEGIN_DETACHABLE_NATIVE(ForeignVCall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   VF5 function = reinterpret_cast<VF5>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1, a2, a3, a4));
+  EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0, a1, a2, a3, a4));
 }
 END_NATIVE()
 
-BEGIN_DETACHABLE_NATIVE(ForeignVCall6) {
+BEGIN_NATIVE(ForeignVCall6) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
@@ -357,7 +359,7 @@ BEGIN_DETACHABLE_NATIVE(ForeignVCall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   VF6 function = reinterpret_cast<VF6>(address);
-  RUN_INSIDE_BARRIER_AND_RETURN_VOID(function(a0, a1, a2, a3, a4, a5));
+  EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0, a1, a2, a3, a4, a5));
 }
 END_NATIVE()
 
@@ -370,26 +372,26 @@ static int64 AsInt64Value(Object* object) {
   return -1;
 }
 
-BEGIN_DETACHABLE_NATIVE(ForeignLCallwLw) {
+BEGIN_NATIVE(ForeignLCallwLw) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   int64 a1 = AsInt64Value(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   LwLw function = reinterpret_cast<LwLw>(address);
 
-  RUN_INSIDE_BARRIER_AND_RETURN(function(a0, a1, a2));
+  EVALUATE_FFI_CALL_AND_RETURN(function(a0, a1, a2));
 }
 END_NATIVE()
 
 #define DEFINE_FOREIGN_ACCESSORS_INTEGER(suffix, type)                    \
                                                                           \
-  BEGIN_NATIVE(ForeignGet##suffix) {                                      \
+  BEGIN_LEAF_NATIVE(ForeignGet##suffix) {                                      \
     type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0])); \
     return process->ToInteger(*address);                                  \
   }                                                                       \
   END_NATIVE()                                                            \
                                                                           \
-  BEGIN_NATIVE(ForeignSet##suffix) {                                      \
+  BEGIN_LEAF_NATIVE(ForeignSet##suffix) {                                      \
     Object* value = arguments[1];                                         \
     type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0])); \
     if (value->IsSmi()) {                                                 \
@@ -415,13 +417,13 @@ DEFINE_FOREIGN_ACCESSORS_INTEGER(Uint64, uint64)
 
 #define DEFINE_FOREIGN_ACCESSORS_DOUBLE(suffix, type)                     \
                                                                           \
-  BEGIN_NATIVE(ForeignGet##suffix) {                                      \
+  BEGIN_LEAF_NATIVE(ForeignGet##suffix) {                                      \
     type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0])); \
     return process->NewDouble(static_cast<double>(*address));             \
   }                                                                       \
   END_NATIVE()                                                            \
                                                                           \
-  BEGIN_NATIVE(ForeignSet##suffix) {                                      \
+  BEGIN_LEAF_NATIVE(ForeignSet##suffix) {                                      \
     Object* value = arguments[1];                                         \
     if (!value->IsDouble()) return Failure::wrong_argument_type();        \
     type* address = reinterpret_cast<type*>(AsForeignWord(arguments[0])); \

@@ -33,7 +33,7 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
 DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
 Mutex* ForeignFunctionInterface::mutex_ = NULL;
 
-BEGIN_NATIVE(ForeignLibraryGetFunction) {
+BEGIN_LEAF_NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   if (address != 0) return Failure::index_out_of_bounds();
   char* name = AsForeignString(arguments[1]);
@@ -49,7 +49,7 @@ BEGIN_NATIVE(ForeignLibraryGetFunction) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignLibraryLookup) {
+BEGIN_LEAF_NATIVE(ForeignLibraryLookup) {
   char* library = AsForeignString(arguments[0]);
   if (library != NULL) {
     free(library);
@@ -59,13 +59,13 @@ BEGIN_NATIVE(ForeignLibraryLookup) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignLibraryBundlePath) {
+BEGIN_LEAF_NATIVE(ForeignLibraryBundlePath) {
   UNIMPLEMENTED();
   return Smi::FromWord(0);
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignErrno) {
+BEGIN_LEAF_NATIVE(ForeignErrno) {
   UNIMPLEMENTED();
   return Smi::FromWord(0);
 }

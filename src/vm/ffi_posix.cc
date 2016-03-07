@@ -100,7 +100,7 @@ void FinalizeForeignLibrary(HeapObject* foreign, Heap* heap) {
   }
 }
 
-BEGIN_NATIVE(ForeignLibraryLookup) {
+BEGIN_LEAF_NATIVE(ForeignLibraryLookup) {
   char* library = AsForeignString(arguments[0]);
   bool global = arguments[1]->IsTrue();
   int flags = (global ? RTLD_GLOBAL : RTLD_LOCAL) | RTLD_LAZY;
@@ -117,7 +117,7 @@ BEGIN_NATIVE(ForeignLibraryLookup) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignLibraryGetFunction) {
+BEGIN_LEAF_NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   void* handle = reinterpret_cast<void*>(address);
   char* name = AsForeignString(arguments[1]);
@@ -134,7 +134,7 @@ BEGIN_NATIVE(ForeignLibraryGetFunction) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignLibraryBundlePath) {
+BEGIN_LEAF_NATIVE(ForeignLibraryBundlePath) {
   char* library = AsForeignString(arguments[0]);
   char executable[MAXPATHLEN + 1];
   GetPathOfExecutable(executable, sizeof(executable));
@@ -156,7 +156,7 @@ BEGIN_NATIVE(ForeignLibraryBundlePath) {
 }
 END_NATIVE()
 
-BEGIN_NATIVE(ForeignErrno) { return Smi::FromWord(errno); }
+BEGIN_LEAF_NATIVE(ForeignErrno) { return Smi::FromWord(errno); }
 END_NATIVE()
 
 }  // namespace dartino

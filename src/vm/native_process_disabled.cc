@@ -9,7 +9,7 @@
 
 namespace dartino {
 
-BEGIN_NATIVE(NativeProcessSpawnDetached) {
+BEGIN_LEAF_NATIVE(NativeProcessSpawnDetached) {
   UNIMPLEMENTED();
   return NULL;
 }

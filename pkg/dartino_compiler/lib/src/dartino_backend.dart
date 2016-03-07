@@ -1066,8 +1066,8 @@ class DartinoBackend extends Backend
         name == "Port._sendExit") {
       codegen.assembler.invokeNativeYield(arity, descriptor.index);
     } else {
-      if (descriptor.isDetachable) {
-        codegen.assembler.invokeDetachableNative(arity, descriptor.index);
+      if (descriptor.isLeaf) {
+        codegen.assembler.invokeLeafNative(arity, descriptor.index);
       } else {
         codegen.assembler.invokeNative(arity, descriptor.index);
       }

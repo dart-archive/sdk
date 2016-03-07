@@ -13,7 +13,7 @@
 
 namespace dartino {
 
-BEGIN_NATIVE(NativeProcessSpawnDetached) {
+BEGIN_LEAF_NATIVE(NativeProcessSpawnDetached) {
   word array = AsForeignWord(arguments[0]);
   if (array == 0) return Failure::illegal_state();
   Object* result = process->NewInteger(-1);
