@@ -45,6 +45,8 @@ packages
 /third_party/dart2js_info/
 /third_party/dartdoc_deps/dart-sdk.tar.gz
 /third_party/dartdoc_deps/dart-sdk
+/third_party/freertos/freertos_labs.tar.gz
+/third_party/freertos/freertos_labs
 /third_party/gcc-arm-embedded/linux/gcc-arm-embedded.tar.gz
 /third_party/gcc-arm-embedded/linux/gcc-arm-embedded
 /third_party/gcc-arm-embedded/mac/gcc-arm-embedded.tar.gz
