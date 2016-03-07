@@ -236,7 +236,7 @@ int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
   // allocation.
   void* memory = page_alloc(1);
   heap_start = reinterpret_cast<uword>(memory) - 128 * KB;
-  ranges[0].size = heap_size = 512 * KB;
+  ranges[0].size = heap_size = 2048 * KB;
   ranges[0].address = reinterpret_cast<void*>(heap_start);
   page_free(memory, 1);
   return 1;
