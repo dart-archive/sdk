@@ -857,6 +857,40 @@ main() {
 ''',
 
   r'''
+remove_instance_method_with_optional_parameters
+==> main.dart.patch <==
+// Test that deleting an instance method with optional parameters works
+
+class C {
+<<<< ["instance is null","v1","v1"]
+  m([a = "a"]) {
+    print('v1');
+  }
+==== ["threw","threw"]
+>>>>
+}
+var instance;
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+  }
+  try {
+    instance.m();
+  } catch (e) {
+    print('threw');
+  }
+    try {
+    instance.m("b");
+  } catch (e) {
+    print('threw');
+  }
+}
+
+
+''',
+
+  r'''
 remove_instance_method_stored_in_tearoff
 ==> main.dart.patch <==
 // Test that deleting an instance method works, even if stored in a tear-off
@@ -866,7 +900,7 @@ class C {
   m() {
     print('v1');
   }
-==== {"messages":["threw"]}
+==== {"messages":["threw", "threw"]}
 >>>>
 }
 var closure;
@@ -877,6 +911,47 @@ main() {
   }
   try {
     closure();
+  } catch (e) {
+    print('threw');
+  }
+
+  try {
+    new C().m;
+  } catch (e) {
+    print("threw");
+  }
+}
+
+
+''',
+
+  r'''
+remove_instance_method_with_optional_parameters_stored_in_tearoff
+==> main.dart.patch <==
+// Test that deleting an instance method with optional parameters works, even if
+// stored in a tear-off
+
+class C {
+<<<< ["closure is null","v1","v1"]
+  m([a = "a"]) {
+    print('v1');
+  }
+==== ["threw", "threw"]
+>>>>
+}
+var closure;
+main() {
+  if (closure == null) {
+    print('closure is null');
+    closure = new C().m;
+  }
+  try {
+    closure();
+  } catch (e) {
+    print('threw');
+  }
+    try {
+    closure("b");
   } catch (e) {
     print('threw');
   }

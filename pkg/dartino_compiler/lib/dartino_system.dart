@@ -194,6 +194,8 @@ class DartinoSystem {
 
   final PersistentMap<int, int> tearoffsById;
 
+  final PersistentMap<int, int> tearoffGettersById;
+
   // classesByElement is a subset of classesById: Some classes do not
   // have an element reference.
   final PersistentMap<int, DartinoClass> classesById;
@@ -210,6 +212,9 @@ class DartinoSystem {
 
   final PersistentMap<ParameterStubSignature, DartinoFunction> parameterStubs;
 
+  // Map from a function id to the associated parameter stubs.
+  final PersistentMap<int, PersistentSet<DartinoFunction>> parameterStubsById;
+
   final PersistentMap<int, PersistentSet<int>> functionBackReferences;
 
   static const DartinoSystem base = const DartinoSystem(
@@ -217,6 +222,7 @@ class DartinoSystem {
       const PersistentMap<Element, DartinoFunction>(),
       const PersistentMap<ConstructorElement, DartinoFunction>(),
       const PersistentMap<FieldElement, int>(),
+      const PersistentMap<int, int>(),
       const PersistentMap<int, int>(),
       const PersistentMap<int, DartinoClass>(),
       const PersistentMap<ClassElement, DartinoClass>(),
@@ -226,6 +232,7 @@ class DartinoSystem {
       const PersistentMap<int, int>(),
       const PersistentMap<int, int>(),
       const PersistentMap<ParameterStubSignature, DartinoFunction>(),
+      const PersistentMap<int, PersistentSet<DartinoFunction>>(),
       const PersistentMap<int, PersistentSet<int>>());
 
   const DartinoSystem(
@@ -234,6 +241,7 @@ class DartinoSystem {
       this.constructorInitializersByElement,
       this.lazyFieldInitializersByElement,
       this.tearoffsById,
+      this.tearoffGettersById,
       this.classesById,
       this.classesByElement,
       this.constantsById,
@@ -242,6 +250,7 @@ class DartinoSystem {
       this.gettersByFieldIndex,
       this.settersByFieldIndex,
       this.parameterStubs,
+      this.parameterStubsById,
       this.functionBackReferences);
 
   bool get isEmpty => functionsById.isEmpty;
@@ -286,6 +295,8 @@ class DartinoSystem {
   /// function in [functionsByElement].
   int lookupTearOffById(int functionId) => tearoffsById[functionId];
 
+  int lookupTearOffGetterById(int functionId) => tearoffGettersById[functionId];
+
   /// Instance field getters can be reused between classes. This method returns
   /// a getter that gets the field at [fieldIndex]. Returns `null` if no such
   /// getter exists.
@@ -310,6 +321,10 @@ class DartinoSystem {
 
   DartinoFunction lookupParameterStub(ParameterStubSignature signature) {
     return parameterStubs[signature];
+  }
+
+  PersistentSet<DartinoFunction> lookupParameterStubsForFunction(int id) {
+    return parameterStubsById[id];
   }
 
   int computeMaxFunctionId() {

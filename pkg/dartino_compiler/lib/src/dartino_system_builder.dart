@@ -91,10 +91,15 @@ class DartinoSystemBuilder {
 
   final Map<int, int> _newTearoffsById = <int, int>{};
 
+  final Map<int, int> _newTearoffGettersById = <int, int>{};
+
   final int maxInt64 = (1 << 63) - 1;
   final int minInt64 = -(1 << 63);
 
   final Map<int, String> _symbolByDartinoSelectorId = <int, String>{};
+
+  final Map<int, Set<DartinoFunctionBase>> _newParameterStubsById =
+      <int, Set<DartinoFunctionBase>>{};
 
   // TODO(ahe): This should be queried from World.
   final Map<ClassElement, Set<ClassElement>> directSubclasses =
@@ -239,6 +244,7 @@ class DartinoSystemBuilder {
   }
 
   DartinoFunctionBuilder newTearOff(DartinoFunctionBase function, int classId) {
+    assert(_newTearoffsById[function.functionId] == null);
     DartinoFunctionBuilder builder = newFunctionBuilderWithSignature(
         'call',
         null,
@@ -246,6 +252,21 @@ class DartinoSystemBuilder {
         classId);
     _newTearoffsById[function.functionId] = builder.functionId;
     return builder;
+  }
+
+  int lookupTearOffGetterById(int functionId) {
+    int id = _newTearoffGettersById[functionId];
+    if (id != null) return id;
+    return predecessorSystem.lookupTearOffGetterById(functionId);
+  }
+
+  DartinoFunctionBuilder newTearOffGetter(DartinoFunctionBase function) {
+    assert(_newTearoffGettersById[function.functionId] == null);
+    DartinoFunctionBuilder getter = newFunctionBuilder(
+        DartinoFunctionKind.ACCESSOR,
+        1);
+    _newTearoffGettersById[function.functionId] = getter.functionId;
+    return getter;
   }
 
   /// Return a getter for [fieldIndex] if it already exists, return null
@@ -471,11 +492,22 @@ class DartinoSystemBuilder {
     return predecessorSystem.lookupParameterStub(signature);
   }
 
+
+  PersistentSet<DartinoFunctionBase> lookupParameterStubsForFunction(int id) {
+    Set<DartinoFunctionBase> stubs = _newParameterStubsById[id];
+    if (stubs != null) return new PersistentSet.from(stubs);
+    return predecessorSystem.lookupParameterStubsForFunction(id);
+  }
+
   void registerParameterStub(
+      DartinoFunctionBase base,
       ParameterStubSignature signature,
       DartinoFunctionBuilder stub) {
     assert(lookupParameterStub(signature) == null);
     _newParameterStubs[signature] = stub;
+    _newParameterStubsById.
+        putIfAbsent(base.functionId, () => new Set<DartinoFunctionBase>())
+            .add(stub);
   }
 
   DartinoFunctionBuilder getClosureFunctionBuilder(
@@ -885,6 +917,12 @@ class DartinoSystemBuilder {
       tearoffsById = tearoffsById.insert(functionId, stubId);
     });
 
+    PersistentMap<int, int> tearoffGettersById =
+        predecessorSystem.tearoffGettersById;
+    _newTearoffGettersById.forEach((int functionId, int getter) {
+        tearoffGettersById = tearoffGettersById.insert(functionId, getter);
+    });
+
     PersistentMap<int, String> symbolByDartinoSelectorId =
         predecessorSystem.symbolByDartinoSelectorId;
     _symbolByDartinoSelectorId.forEach((int id, String name) {
@@ -910,12 +948,28 @@ class DartinoSystemBuilder {
       parameterStubs = parameterStubs.insert(signature, function);
     });
 
+    PersistentMap<int, PersistentSet<DartinoFunction>> parameterStubsById =
+        predecessorSystem.parameterStubsById;
+    _newParameterStubsById.forEach(
+        (int functionId, Set<DartinoFunctionBase> newStubs) {
+      PersistentSet<DartinoFunction> stubs = parameterStubsById[functionId];
+      if (stubs == null) {
+        stubs = new PersistentSet<DartinoFunction>();
+      }
+      newStubs.forEach((DartinoFunctionBase stub) {
+        DartinoFunction function = functionsById[stub.functionId];
+        stubs = stubs.insert(function);
+      });
+      parameterStubsById = parameterStubsById.insert(functionId, stubs);
+    });
+
     return new DartinoSystem(
         functionsById,
         functionsByElement,
         constructorInitializersByElement,
         lazyFieldInitializerByElement,
         tearoffsById,
+        tearoffGettersById,
         classesById,
         classesByElement,
         constantsById,
@@ -924,6 +978,7 @@ class DartinoSystemBuilder {
         gettersByFieldIndex,
         settersByFieldIndex,
         parameterStubs,
+        parameterStubsById,
         functionBackReferences);
   }
 

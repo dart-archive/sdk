@@ -113,6 +113,9 @@ import 'package:compiler/src/universe/world_impact.dart' show
 
 import 'package:compiler/src/common/resolution.dart';
 
+import 'package:persistent/persistent.dart' show
+    PersistentSet;
+
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
@@ -1274,7 +1277,7 @@ class DartinoBackend extends Backend
         ..ret()
         ..methodEnd();
 
-    systemBuilder.registerParameterStub(signature, builder);
+    systemBuilder.registerParameterStub(function, signature, builder);
 
     return builder;
   }
@@ -1319,9 +1322,15 @@ class DartinoBackend extends Backend
     if (isSpecialCallMethod == null) {
       throw new ArgumentError("isSpecialCallMethod");
     }
-    DartinoFunctionBuilder getter = systemBuilder.newFunctionBuilder(
-        DartinoFunctionKind.ACCESSOR,
-        1);
+
+    int id = systemBuilder.lookupTearOffGetterById(function.functionId);
+    if (id != null) {
+      // A tearoff getter for [funcion] has already been created.
+      assert(systemBuilder.lookupFunction(id) != null);
+      return;
+    }
+
+    DartinoFunctionBuilder getter = systemBuilder.newTearOffGetter(function);
     // If the getter is of 'call', return the instance instead.
     if (isSpecialCallMethod) {
       getter.assembler
@@ -1638,6 +1647,21 @@ class DartinoBackend extends Backend
         systemBuilder.lookupFunctionByElement(element);
     if (function == null) return;
     systemBuilder.forgetFunction(function);
+
+    int tearOffGetter =
+        systemBuilder.lookupTearOffGetterById(function.functionId);
+    if (tearOffGetter != null) {
+      DartinoFunctionBase getter = systemBuilder.lookupFunction(tearOffGetter);
+      systemBuilder.forgetFunction(getter);
+    }
+
+    PersistentSet<DartinoFunctionBase> stubs =
+        systemBuilder.lookupParameterStubsForFunction(function.functionId);
+    if (stubs != null) {
+      stubs.forEach((DartinoFunctionBase stub) {
+        systemBuilder.forgetFunction(stub);
+      });
+    }
   }
 
   void removeFunction(FunctionElement element) {
@@ -1646,21 +1670,52 @@ class DartinoBackend extends Backend
     if (function == null) return;
     if (element.isInstanceMember) {
       ClassElement enclosingClass = element.enclosingClass;
-      DartinoClassBuilder builder =
+      DartinoClassBuilder classBuilder =
           systemBuilder.getClassBuilder(enclosingClass, this);
-      builder.removeFromMethodTable(function);
+      classBuilder.removeFromMethodTable(function);
 
-      int tearOff = systemBuilder.lookupTearOffById(function.functionId);
-      if (tearOff != null) {
-        DartinoFunctionBase base = systemBuilder.lookupFunction(tearOff);
-        int classId = base.memberOf;
-        DartinoClassBuilder cls = systemBuilder.lookupClassBuilder(classId);
-        if (cls == null) {
-          cls = systemBuilder.newPatchClassBuilder(
+      // Remove associated parameter stubs.
+      PersistentSet<DartinoFunctionBase> stubs =
+          systemBuilder.lookupParameterStubsForFunction(function.functionId);
+      if (stubs != null) {
+        stubs.forEach((DartinoFunctionBase stub) {
+          classBuilder.removeFromMethodTable(stub);
+          systemBuilder.forgetFunction(stub);
+        });
+      }
+
+      // Remove tear-off getter.
+      int tearOffGetter =
+          systemBuilder.lookupTearOffGetterById(function.functionId);
+      if (tearOffGetter != null) {
+        DartinoFunctionBase getterFunction =
+            systemBuilder.lookupFunction(tearOffGetter);
+        systemBuilder.forgetFunction(getterFunction);
+        classBuilder.removeFromMethodTable(getterFunction);
+      }
+
+      // Remove call method and stubs from tear-off closure class.
+      int tearOffId = systemBuilder.lookupTearOffById(function.functionId);
+      if (tearOffId != null) {
+        DartinoFunctionBase tearOff = systemBuilder.lookupFunction(tearOffId);
+        int classId = tearOff.memberOf;
+        DartinoClassBuilder closureClassBuilder =
+            systemBuilder.lookupClassBuilder(classId);
+        if (closureClassBuilder == null) {
+          closureClassBuilder = systemBuilder.newPatchClassBuilder(
               classId, compiledClosureClass, new SchemaChange(null));
         }
-        cls.removeFromMethodTable(base);
-        systemBuilder.forgetFunction(base);
+        closureClassBuilder.removeFromMethodTable(tearOff);
+        systemBuilder.forgetFunction(tearOff);
+
+        PersistentSet<DartinoFunctionBase> stubs =
+            systemBuilder.lookupParameterStubsForFunction(tearOff.functionId);
+        if (stubs != null) {
+          stubs.forEach((DartinoFunctionBase stub) {
+            closureClassBuilder.removeFromMethodTable(stub);
+            systemBuilder.forgetFunction(stub);
+          });
+        }
       }
     }
   }
