@@ -268,51 +268,47 @@ class ScavengeVisitor : public PointerVisitor {
 class GenerationalScavengeVisitor : public PointerVisitor {
  public:
   GenerationalScavengeVisitor(SemiSpace* from, SemiSpace* to, OldSpace* old)
-      : from_(from), to_(to), old_(old) {}
+      : to_start_(to->start()),
+        to_size_(to->size()),
+        from_start_(from->start()),
+        from_size_(from->size()),
+        to_(to),
+        old_(old),
+        record_(&dummy_record_) {}
 
   virtual void VisitClass(Object** p) {}
 
   virtual void Visit(Object** p) { VisitBlock(p, p + 1); }
 
-  virtual void VisitBlock(Object** start, Object** end) {
-    for (Object** p = start; p < end; p++) {
-      Object* object = *p;
-      if (!object->IsHeapObject()) continue;
-      if (!from_->Includes(reinterpret_cast<uword>(object))) {
-        // Optimization that mostly triggers on large arrays of 'null'.
-        while (p < end - 1 && p[1] == object) p++;
-        continue;
-      }
-      HeapObject* old_object = reinterpret_cast<HeapObject*>(object);
-      if (old_object->HasForwardingAddress()) {
-        *p = old_object->forwarding_address();
-      } else {
-        // TODO(erikcorry): We need a better heuristic than this.
-        if (hacky_counter_++ & 1) {
-          HeapObject* moved_object = old_object->CloneInToSpace(old_);
-          // The old space may fill up.  This is a bad moment for a GC, so we
-          // promote to the to-space instead.
-          if (moved_object == NULL) {
-            trigger_old_space_gc_ = true;
-            moved_object = old_object->CloneInToSpace(to_);
-          }
-          *p = moved_object;
-        } else {
-          *p = old_object->CloneInToSpace(to_);
-        }
-        ASSERT(*p != NULL);  // In an emergency we can move to to-space.
-      }
-    }
+  inline bool InFromSpace(Object* object) {
+    if (object->IsSmi()) return false;
+    return reinterpret_cast<uword>(object) - from_start_ < from_size_;
   }
+
+  inline bool InToSpace(Object* object) {
+    if (object->IsSmi()) return false;
+    return reinterpret_cast<uword>(object) - to_start_ < to_size_;
+  }
+
+  virtual void VisitBlock(Object** start, Object** end);
 
   bool trigger_old_space_gc() { return trigger_old_space_gc_; }
 
+  void set_record_new_space_pointers(uint8* p) { record_ = p; }
+
  private:
-  SemiSpace* from_;
+  uword to_start_;
+  uword to_size_;
+  uword from_start_;
+  uword from_size_;
   SemiSpace* to_;
   OldSpace* old_;
   int hacky_counter_ = 0;
   bool trigger_old_space_gc_ = false;
+  uint8* record_;
+  // Avoid checking for null by having a default place to write the remembered
+  // set byte.
+  uint8 dummy_record_;
 };
 
 // Read [object] as an integer word value.

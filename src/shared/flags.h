@@ -50,7 +50,7 @@ namespace dartino {
   FLAG_CSTRING(release, filter, NULL, "Filter string for unit testing")   \
   FLAG_BOOLEAN(release, tick_sampler, false,                              \
                "Collect execution time sampels of the entire VM")         \
-  FLAG_CSTRING(release, tick_file, "dartino.ticks",                        \
+  FLAG_CSTRING(release, tick_file, "dartino.ticks",                       \
                "Write tick samples in this file")                         \
   /* Temporary compiler flags */                                          \
   FLAG_BOOLEAN(release, trace_compiler, false, "")                        \

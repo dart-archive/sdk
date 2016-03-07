@@ -269,11 +269,9 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
 
   void Allocate(bool immutable);
 
-  // This function
-  //   * changes the first three stack slots
-  //   * changes caller-saved registers
-  void AddToRememberedSetSlow(Register object, Register value,
-                              Register scratch);
+  // This function only overwrites 'scratch'.  It checks for Smi values and
+  // does nothing in that case.
+  void AddToRememberedSet(Register object, Register value, Register scratch);
 
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
@@ -593,7 +591,7 @@ void InterpreterGeneratorX86::DoStoreBoxed() {
   __ movl(EBX, Address(ESP, EAX, TIMES_WORD_SIZE));
   __ movl(Address(EBX, Boxed::kValueOffset - HeapObject::kTag), ECX);
 
-  AddToRememberedSetSlow(EBX, ECX, EAX);
+  AddToRememberedSet(EBX, ECX, EAX);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -605,7 +603,7 @@ void InterpreterGeneratorX86::DoStoreStatic() {
   __ movl(Address(EBX, EAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag),
           ECX);
 
-  AddToRememberedSetSlow(EBX, ECX, EAX);
+  AddToRememberedSet(EBX, ECX, EAX);
 
   Dispatch(kStoreStaticLength);
 }
@@ -620,7 +618,7 @@ void InterpreterGeneratorX86::DoStoreField() {
   StoreLocal(ECX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(EAX, ECX, EBX);
+  AddToRememberedSet(EAX, ECX, EBX);
 
   Dispatch(kStoreFieldLength);
 }
@@ -635,7 +633,7 @@ void InterpreterGeneratorX86::DoStoreFieldWide() {
   StoreLocal(ECX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(EAX, ECX, EBX);
+  AddToRememberedSet(EAX, ECX, EBX);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -1396,7 +1394,7 @@ void InterpreterGeneratorX86::DoIntrinsicSetField() {
 
   // We have put the result in EBX to be sure it's kept by the preserved by the
   // store-buffer call.
-  AddToRememberedSetSlow(ECX, EBX, EAX);
+  AddToRememberedSet(ECX, EBX, EAX);
 
   __ movl(EAX, EBX);
   __ ret();
@@ -1455,7 +1453,7 @@ void InterpreterGeneratorX86::DoIntrinsicListIndexSet() {
   // Index (in EAX) is already smi-taged, so only scale by TIMES_2.
   __ movl(Address(ECX, EAX, TIMES_2, Array::kSize - HeapObject::kTag), EBX);
 
-  AddToRememberedSetSlow(ECX, EBX, EAX);
+  AddToRememberedSet(ECX, EBX, EAX);
 
   __ movl(EAX, EBX);
   __ ret();
@@ -1704,10 +1702,20 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorX86::AddToRememberedSetSlow(Register object,
-                                                     Register value,
-                                                     Register scratch) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorX86::AddToRememberedSet(Register object,
+                                                 Register value,
+                                                 Register scratch) {
+  Label smi;
+  __ testl(value, Immediate(Smi::kTagMask));
+  __ j(ZERO, &smi);
+  // TODO(erikcorry): Filter out non-new-space values.
+
+  __ movl(scratch, object);
+  __ shrl(scratch, Immediate(GCMetadata::kCardBits));
+  __ addl(scratch, Address(EDI, Process::kRememberedSetBiasOffset));
+  __ movb(Address(scratch), Immediate(GCMetadata::kNewSpacePointers));
+
+  __ Bind(&smi);
 }
 
 void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {

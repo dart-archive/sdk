@@ -22,12 +22,6 @@ class GCMetadata {
   static const int kNoNewSpacePointers = 0;
   static const int kNewSpacePointers = 1;
 
-  inline static void InsertIntoRememberedSet(uword address) {
-    address >>= kCardBits;
-    address += singleton_.remembered_set_bias_;
-    *reinterpret_cast<uint8*>(address) = kNewSpacePointers;
-  }
-
   static void InitializeStartsForChunk(Chunk* chunk) {
     uword base = chunk->base();
     uword size = (chunk->limit() - base) >> kCardBits;
@@ -48,6 +42,11 @@ class GCMetadata {
                                     singleton_.starts_bias_);
   }
 
+  static uint8* RememberedSetFor(uword address) {
+    return reinterpret_cast<uint8*>((address >> kCardBits) +
+                                    singleton_.remembered_set_bias_);
+  }
+
   static int heap_allocation_arena() {
     return singleton_.heap_allocation_arena_;
   }
@@ -55,6 +54,8 @@ class GCMetadata {
   static uword lowest_old_space_address() { return singleton_.lowest_address_; }
 
   static uword heap_extent() { return singleton_.heap_extent_; }
+
+  static uword remembered_set_bias() { return singleton_.remembered_set_bias_; }
 
   // Unaligned, so cannot clash with a real object start.
   static const int kNoObjectStart = 2;
@@ -67,6 +68,12 @@ class GCMetadata {
     uint8* start = StartsFor(address);
     ASSERT(kCardBits <= 8);
     *start = static_cast<uint8>(address);
+  }
+
+  inline static void InsertIntoRememberedSet(uword address) {
+    address >>= kCardBits;
+    address += singleton_.remembered_set_bias_;
+    *reinterpret_cast<uint8*>(address) = kNewSpacePointers;
   }
 
  private:

@@ -37,6 +37,7 @@ Process::Process(Program* program, Process* parent)
       statics_(NULL),
       exception_(program->null_object()),
       primary_lookup_cache_(NULL),
+      remembered_set_bias_(GCMetadata::remembered_set_bias()),
       large_integer_(program->null_object()),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
@@ -70,6 +71,9 @@ Process::Process(Program* program, Process* parent)
                 "exception_");
   static_assert(
       kPrimaryLookupCacheOffset == offsetof(Process, primary_lookup_cache_),
+      "primary_lookup_cache_");
+  static_assert(
+      kRememberedSetBiasOffset == offsetof(Process, remembered_set_bias_),
       "primary_lookup_cache_");
 
   Array* static_fields = program->static_fields();

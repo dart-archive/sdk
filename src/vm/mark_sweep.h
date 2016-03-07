@@ -170,10 +170,7 @@ class FreeList {
       return;
     }
     // Large enough to add a free list chunk.
-    FreeListChunk* result =
-        reinterpret_cast<FreeListChunk*>(HeapObject::FromAddress(free_start));
-    result->set_class(StaticClassStructures::free_list_chunk_class());
-    result->set_size(free_size);
+    FreeListChunk* result = FreeListChunk::CreateAt(free_start, free_size);
     int bucket = Utils::HighestBit(free_size) - 1;
     if (bucket >= kNumberOfBuckets) bucket = kNumberOfBuckets - 1;
     result->set_next_chunk(buckets_[bucket]);
@@ -257,41 +254,19 @@ class SweepingVisitor : public HeapObjectVisitor {
  public:
   explicit SweepingVisitor(OldSpace* space);
 
-  void AddFreeListChunk(uword free_end_) {
-    if (free_start_ != 0) {
-      uword free_size = free_end_ - free_start_;
-      // When sweeping the new space we just remove mark bits, but don't build
-      // free lists, since it is GCed by scavenge instead.
-      if (free_list_ != NULL) free_list_->AddChunk(free_start_, free_size);
-      free_start_ = 0;
-    }
-  }
-
   virtual void ChunkStart(Chunk* chunk) {
     GCMetadata::InitializeStartsForChunk(chunk);
   }
 
-  virtual int Visit(HeapObject* object) {
-    if (object->IsMarked()) {
-      AddFreeListChunk(object->address());
-      if (free_list_ != NULL) {
-        GCMetadata::RecordStart(object->address());
-      }
-      object->ClearMark();
-      int size = object->Size();
-      used_ += size;
-      return size;
-    }
-    int size = object->Size();
-    if (free_start_ == 0) free_start_ = object->address();
-    return size;
-  }
+  virtual int Visit(HeapObject* object);
 
   virtual void ChunkEnd(uword end) { AddFreeListChunk(end); }
 
   int used() const { return used_; }
 
  private:
+  void AddFreeListChunk(uword free_end_);
+
   FreeList* free_list_;
   uword free_start_;
   int used_;

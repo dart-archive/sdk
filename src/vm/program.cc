@@ -1020,7 +1020,7 @@ void Program::CollectNewSpace() {
   from->Flush();
 
 #ifdef DEBUG
-  old->Verify();
+  if (Flags::validate_heaps) old->Verify();
 #endif
 
   if (Flags::print_heap_statistics) {
@@ -1031,6 +1031,7 @@ void Program::CollectNewSpace() {
 
   // TODO(erikcorry): Remove this semispace-growing code when the remembered
   // set is working.
+#if !defined(DARTINO_TARGET_IA32) && !defined(DARTINO_TARGET_X64)
   bool grow = false;
   if (static_cast<uword>(old->Used() >> 3) > to->first()->size()) {
     grow = true;
@@ -1040,6 +1041,7 @@ void Program::CollectNewSpace() {
     to->Append(larger_chunk);
     ASSERT(to->IsFlushed());
   }
+#endif
 
   to->set_used(0);
   // Allocate from start of to-space..
@@ -1071,6 +1073,7 @@ void Program::CollectNewSpace() {
 
   // TODO(erikcorry): Remove this semispace-growing code when the remembered
   // set is working.
+#if !defined(DARTINO_TARGET_IA32) && !defined(DARTINO_TARGET_X64)
   if (grow) {
     uword size = from->first()->size() * 2;
     from->FreeAllChunks();
@@ -1083,9 +1086,17 @@ void Program::CollectNewSpace() {
     GetHeapUsage(data_heap, &usage_after);
     PrintProcessGCInfo(&usage_before, &usage_after);
   }
+#endif
+
+#ifdef DEBUG
+  if (Flags::validate_heaps) old->Verify();
+#endif
 
   if (old->needs_garbage_collection()) {
     CollectSharedGarbage();
+#ifdef DEBUG
+    if (Flags::validate_heaps) old->Verify();
+#endif
   }
 
   UpdateStackLimits();

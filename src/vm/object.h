@@ -47,12 +47,13 @@ namespace dartino {
 
 class Chunk;
 class Heap;
+class OldSpace;
 class Process;
 class Program;
+class SemiSpace;
 class SnapshotReader;
 class SnapshotWriter;
-class SemiSpace;
-class OldSpace;
+class Space;
 
 // Used for representing the size of a [HeapObject] in a portable way.
 //
@@ -393,6 +394,10 @@ class HeapObject : public Object {
   // Sizing.
   static const int kClassOffset = 0;
   static const int kSize = kClassOffset + kPointerSize;
+
+#ifdef DEBUG
+  bool ContainsPointersTo(Space* space);
+#endif
 
  protected:
   inline void Initialize(int size, Object* init_value);
@@ -1201,6 +1206,14 @@ class FreeListChunk : public HeapObject {
 
   // Casting.
   static inline FreeListChunk* cast(Object* object);
+
+  static inline FreeListChunk* CreateAt(uword free_start, uword free_size) {
+    FreeListChunk* chunk =
+        reinterpret_cast<FreeListChunk*>(HeapObject::FromAddress(free_start));
+    chunk->set_class(StaticClassStructures::free_list_chunk_class());
+    chunk->set_size(free_size);
+    return chunk;
+  }
 
   // Sizing.
   static const int kSizeOffset = HeapObject::kSize;

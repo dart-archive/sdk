@@ -263,6 +263,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   static const uword kStaticsOffset = kProgramOffset + kWordSize;
   static const uword kExceptionOffset = kStaticsOffset + kWordSize;
   static const uword kPrimaryLookupCacheOffset = kExceptionOffset + kWordSize;
+  static const uword kRememberedSetBiasOffset =
+      kPrimaryLookupCacheOffset + kWordSize;
 
   bool AllocationFailed() { return statics_ == NULL; }
   void SetAllocationFailed() { statics_ = NULL; }
@@ -299,7 +301,12 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   // code in this process.
   LookupCache::Entry* primary_lookup_cache_;
 
+  // This is used by the interpreter, and this is an accessible place to find
+  // it quickly.
+  uword remembered_set_bias_;
+
   Object* large_integer_;
+
   RandomXorShift random_;
 
   Links links_;

@@ -384,6 +384,35 @@ void GCMetadata::Setup() {
   singleton_.remembered_set_bias_ = start - shifted;
 }
 
+void GenerationalScavengeVisitor::VisitBlock(Object** start, Object** end) {
+  for (Object** p = start; p < end; p++) {
+    if (!InFromSpace(*p)) continue;
+    HeapObject* old_object = reinterpret_cast<HeapObject*>(*p);
+    if (old_object->HasForwardingAddress()) {
+      HeapObject* destination = old_object->forwarding_address();
+      *p = destination;
+      if (InToSpace(destination)) *record_ = GCMetadata::kNewSpacePointers;
+    } else {
+      // TODO(erikcorry): We need a better heuristic than this.
+      if (hacky_counter_++ & 1) {
+        HeapObject* moved_object = old_object->CloneInToSpace(old_);
+        // The old space may fill up.  This is a bad moment for a GC, so we
+        // promote to the to-space instead.
+        if (moved_object == NULL) {
+          trigger_old_space_gc_ = true;
+          moved_object = old_object->CloneInToSpace(to_);
+          *record_ = GCMetadata::kNewSpacePointers;
+        }
+        *p = moved_object;
+      } else {
+        *p = old_object->CloneInToSpace(to_);
+        *record_ = GCMetadata::kNewSpacePointers;
+      }
+      ASSERT(*p != NULL);  // In an emergency we can move to to-space.
+    }
+  }
+}
+
 void SemiSpace::StartScavenge() {
   Flush();
 

@@ -11,6 +11,7 @@
 //   We skip PromotedTrack areas because we know we will get to them later and
 //   they contain uninitialized memory.
 
+#include "src/shared/flags.h"
 #include "src/vm/mark_sweep.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/object.h"
@@ -177,9 +178,94 @@ void OldSpace::EndTrackingAllocations() {
   tracking_allocations_ = false;
 }
 
+#if defined(DARTINO_TARGET_X64) || defined(DARTINO_TARGET_IA32)
+void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
+  Flush();
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    // Scan the byte-map for cards that may have new-space pointers.
+    uword current = chunk->base();
+    uword bytes =
+        reinterpret_cast<uword>(GCMetadata::RememberedSetFor(current));
+    uword earliest_iteration_start = current;
+    while (current < chunk->limit()) {
+      if ((bytes & 3) == 0) {
+        uint32_t* words = reinterpret_cast<uint32_t*>(bytes);
+        // Skip blank cards 4 at a time.
+        ASSERT(GCMetadata::kNoNewSpacePointers == 0);
+        if (*words == 0) {
+          do {
+            bytes += sizeof *words;
+            words++;
+            current += sizeof(*words) * GCMetadata::kCardSize;
+          } while (current < chunk->limit() && *words == 0);
+          continue;
+        }
+      }
+      uint8* byte = reinterpret_cast<uint8*>(bytes);
+      if (*byte != GCMetadata::kNoNewSpacePointers) {
+        uint8* starts = GCMetadata::StartsFor(current);
+        // Since there is a dirty object starting in this card, we would like
+        // to assert that there is an object starting in this card.
+        // Unfortunately, the sweeper does not clean the dirty object bytes,
+        // and we don't want to slow down the sweeper, so we cannot make this
+        // assertion in the case where a dirty object died and was made into
+        // free-list.
+        uword iteration_start = current;
+        if (starts != GCMetadata::StartsFor(chunk->base())) {
+          // If we are not at the start of the chunk, step back into previous
+          // card to find a place to start iterating from that is guaranteed to
+          // be before the start of the card.  We have to do this because the
+          // starts-table can contain the start offset of any object in the
+          // card, including objects that have higher addresses than the one(s)
+          // with new-space pointers in them.
+          do {
+            starts--;
+            iteration_start -= GCMetadata::kCardSize;
+            // Step back across object-start entries that have not been filled
+            // in
+            // (because of large objects).
+          } while (iteration_start > earliest_iteration_start &&
+                   *starts == GCMetadata::kNoObjectStart);
+
+          if (iteration_start > earliest_iteration_start) {
+            uint8 iteration_low_byte = static_cast<uint8>(iteration_start);
+            iteration_start -= iteration_low_byte;
+            iteration_start += *starts;
+          } else {
+            // Do not step back to before the end of an object that we already
+            // scanned. This is both for efficiency, and also to avoid backing
+            // into a PromotedTrack object, which contains newly allocated
+            // objects inside it, which are not yet traversable.
+            iteration_start = earliest_iteration_start;
+          }
+        }
+        // Skip objects that start in the previous card.
+        while (iteration_start < current) {
+          if (HasSentinelAt(iteration_start)) break;
+          HeapObject* object = HeapObject::FromAddress(iteration_start);
+          iteration_start += object->Size();
+        }
+        // Reset in case there are no new-space pointers any more.
+        *byte = GCMetadata::kNoNewSpacePointers;
+        visitor->set_record_new_space_pointers(byte);
+        // Iterate objects that start in the relevant card.
+        while (iteration_start < current + GCMetadata::kCardSize) {
+          if (HasSentinelAt(iteration_start)) break;
+          HeapObject* object = HeapObject::FromAddress(iteration_start);
+          object->IteratePointers(visitor);
+          iteration_start += object->Size();
+        }
+        earliest_iteration_start = iteration_start;
+      }
+      current += GCMetadata::kCardSize;
+      bytes++;
+    }
+  }
+}
+#else
 // Currently there is no remembered set, so we scan the entire old space,
 // skipping only the areas where newly promoted objects are.
-void OldSpace::VisitRememberedSet(PointerVisitor* visitor) {
+void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->base();
@@ -196,6 +282,7 @@ void OldSpace::VisitRememberedSet(PointerVisitor* visitor) {
     }
   }
 }
+#endif
 
 void OldSpace::UnlinkPromotedTrack() {
   PromotedTrack* promoted = promoted_track_;
@@ -210,7 +297,8 @@ void OldSpace::UnlinkPromotedTrack() {
 
 // Called multiple times until there is no more work.  Finds objects moved to
 // the old-space and traverses them to find and fix more new-space pointers.
-bool OldSpace::CompleteScavengeGenerational(PointerVisitor* visitor) {
+bool OldSpace::CompleteScavengeGenerational(
+    GenerationalScavengeVisitor* visitor) {
   Flush();
   ASSERT(tracking_allocations_);
 
@@ -228,6 +316,8 @@ bool OldSpace::CompleteScavengeGenerational(PointerVisitor* visitor) {
     }
     for (HeapObject *obj = HeapObject::FromAddress(traverse); traverse != end;
          traverse += obj->Size(), obj = HeapObject::FromAddress(traverse)) {
+      visitor->set_record_new_space_pointers(
+          GCMetadata::RememberedSetFor(obj->address()));
       obj->IteratePointers(visitor);
     }
     PromotedTrack* previous = promoted;
@@ -243,6 +333,43 @@ SweepingVisitor::SweepingVisitor(OldSpace* space)
       used_(0) {
   // Clear the free list. It will be rebuilt during sweeping.
   if (free_list_ != NULL) free_list_->Clear();
+}
+
+void SweepingVisitor::AddFreeListChunk(uword free_end) {
+  if (free_start_ != 0) {
+    uword free_size = free_end - free_start_;
+    // When sweeping the new space we just remove mark bits, but don't build
+    // free lists, since it is GCed by scavenge instead.
+    if (free_list_ != NULL) {
+      free_list_->AddChunk(free_start_, free_size);
+#ifdef DEBUG
+    } else if (Flags::validate_heaps) {
+      // If we want to be able to verify the new-space we have to put free-list
+      // objects in place even if we are not going to collect them in
+      // free-lists.
+      FreeListChunk::CreateAt(free_start_, free_size);
+#endif
+    }
+    free_start_ = 0;
+  }
+}
+
+int SweepingVisitor::Visit(HeapObject* object) {
+  if (object->IsMarked()) {
+    AddFreeListChunk(object->address());
+    if (free_list_ != NULL) {
+      // Don't bother recording object start offsets for the new space where
+      // free_list_ is null.
+      GCMetadata::RecordStart(object->address());
+    }
+    object->ClearMark();
+    int size = object->Size();
+    used_ += size;
+    return size;
+  }
+  int size = object->Size();
+  if (free_start_ == 0) free_start_ = object->address();
+  return size;
 }
 
 #ifdef DEBUG
@@ -271,6 +398,20 @@ void OldSpace::Verify() {
       }
     }
   }
+#if defined(DARTINO_TARGET_X64) || defined(DARTINO_TARGET_IA32)
+  // Verify that the remembered set table is marked for all objects that
+  // contain new-space pointers.
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uword current = chunk->base();
+    while (!HasSentinelAt(current)) {
+      HeapObject* object = HeapObject::FromAddress(current);
+      if (object->ContainsPointersTo(heap_->space())) {
+        ASSERT(*GCMetadata::RememberedSetFor(current));
+      }
+      current += object->Size();
+    }
+  }
+#endif
 }
 #endif
 

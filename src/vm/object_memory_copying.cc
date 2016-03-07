@@ -4,6 +4,7 @@
 
 #include "src/vm/object_memory.h"
 
+#include "src/vm/heap.h"
 #include "src/vm/object.h"
 
 namespace dartino {
@@ -160,8 +161,12 @@ int SemiSpace::Used() {
 
 // Called multiple times until there is no more work.  Finds objects moved to
 // the to-space and traverses them to find and fix more new-space pointers.
-bool SemiSpace::CompleteScavengeGenerational(PointerVisitor* visitor) {
+bool SemiSpace::CompleteScavengeGenerational(
+    GenerationalScavengeVisitor* visitor) {
   bool found_work = false;
+  // No need to update remembered set for semispace->semispace pointers.
+  uint8 dummy;
+  visitor->set_record_new_space_pointers(&dummy);
 
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->scavenge_pointer();

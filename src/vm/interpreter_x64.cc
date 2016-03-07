@@ -272,10 +272,8 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
 
   void Allocate(bool immutable);
 
-  // This function
-  //   * changes the first three stack slots
-  //   * changes caller-saved registers
-  void AddToRememberedSetSlow(Register object, Register value);
+  // This function overwrites the 'object' and 'scratch' registers!
+  void AddToRememberedSet(Register object, Register value, Register scratch);
 
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
@@ -605,7 +603,7 @@ void InterpreterGeneratorX64::DoStoreBoxed() {
   __ movq(RBX, Address(RSP, RAX, TIMES_WORD_SIZE));
   __ movq(Address(RBX, Boxed::kValueOffset - HeapObject::kTag), RCX);
 
-  AddToRememberedSetSlow(RBX, RCX);
+  AddToRememberedSet(RBX, RCX, RAX);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -617,7 +615,7 @@ void InterpreterGeneratorX64::DoStoreStatic() {
   __ movq(Address(RBX, RAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag),
           RCX);
 
-  AddToRememberedSetSlow(RBX, RCX);
+  AddToRememberedSet(RBX, RCX, RAX);
 
   Dispatch(kStoreStaticLength);
 }
@@ -632,7 +630,7 @@ void InterpreterGeneratorX64::DoStoreField() {
   StoreLocal(RCX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(RAX, RCX);
+  AddToRememberedSet(RAX, RCX, RBX);
 
   Dispatch(kStoreFieldLength);
 }
@@ -647,7 +645,7 @@ void InterpreterGeneratorX64::DoStoreFieldWide() {
   StoreLocal(RCX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(RAX, RCX);
+  AddToRememberedSet(RAX, RCX, RBX);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -1400,9 +1398,8 @@ void InterpreterGeneratorX64::DoIntrinsicSetField() {
       Address(RCX, RAX, TIMES_WORD_SIZE, Instance::kSize - HeapObject::kTag),
       RBX);
 
-  // We have put the result in EBX to be sure it's kept by the preserved by the
-  // store-buffer call.
-  AddToRememberedSetSlow(RCX, RBX);
+  // The value register (RBX) is not overwritten by the write barrier.
+  AddToRememberedSet(RCX, RBX, RAX);
 
   __ movq(RAX, RBX);
   __ ret();
@@ -1461,7 +1458,8 @@ void InterpreterGeneratorX64::DoIntrinsicListIndexSet() {
   // Index (in RAX) is already smi-taged, so only scale by TIMES_4.
   __ movq(Address(RCX, RAX, TIMES_4, Array::kSize - HeapObject::kTag), RBX);
 
-  AddToRememberedSetSlow(RCX, RBX);
+  // The value register (RBX) is not overwritten by the write barrier.
+  AddToRememberedSet(RCX, RBX, RAX);
 
   __ movq(RAX, RBX);
   __ ret();
@@ -1690,9 +1688,20 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorX64::AddToRememberedSetSlow(Register object,
-                                                     Register value) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorX64::AddToRememberedSet(Register object,
+                                                 Register value,
+                                                 Register scratch) {
+  Label smi;
+  __ testq(value, Immediate(Smi::kTagMask));
+  __ j(ZERO, &smi);
+  // TODO(erikcorry): Filter out non-new-space values.
+
+  LoadProcess(scratch);
+  __ shrq(object, Immediate(GCMetadata::kCardBits));
+  __ addq(object, Address(scratch, Process::kRememberedSetBiasOffset));
+  __ movb(Address(object), Immediate(GCMetadata::kNewSpacePointers + 41));
+
+  __ Bind(&smi);
 }
 
 void InterpreterGeneratorX64::InvokeMethodUnfold(bool test) {

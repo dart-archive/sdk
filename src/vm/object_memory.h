@@ -12,6 +12,7 @@
 namespace dartino {
 
 class FreeList;
+class GenerationalScavengeVisitor;
 class Heap;
 class HeapObject;
 class HeapObjectVisitor;
@@ -174,6 +175,16 @@ class Space {
   void Find(uword word, const char* name);
 #endif
 
+  uword start() {
+    ASSERT(first_ == last_);
+    return first_->base();
+  }
+
+  uword size() {
+    ASSERT(first_ == last_);
+    return first_->limit() - first_->base();
+  }
+
  protected:
   explicit Space(Resizing resizeable);
 
@@ -237,7 +248,7 @@ class SemiSpace : public Space {
 
   // For the mutable heap.
   void StartScavenge();
-  bool CompleteScavengeGenerational(PointerVisitor* visitor);
+  bool CompleteScavengeGenerational(GenerationalScavengeVisitor* visitor);
 
   void UpdateBaseAndLimit(Chunk* chunk, uword top);
 
@@ -281,11 +292,11 @@ class OldSpace : public Space {
   FreeList* free_list() const { return free_list_; }
 
   // Find pointers to young-space.
-  void VisitRememberedSet(PointerVisitor* visitor);
+  void VisitRememberedSet(GenerationalScavengeVisitor* visitor);
 
   // For the objects promoted to the old space during scavenge.
   inline void StartScavenge() { StartTrackingAllocations(); }
-  bool CompleteScavengeGenerational(PointerVisitor* visitor);
+  bool CompleteScavengeGenerational(GenerationalScavengeVisitor* visitor);
   inline void EndScavenge() { EndTrackingAllocations(); }
 
   void StartTrackingAllocations();
