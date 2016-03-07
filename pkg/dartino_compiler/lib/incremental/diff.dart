@@ -29,7 +29,6 @@ import 'package:compiler/src/tokens/token.dart' show
     Token;
 
 import 'package:compiler/src/parser/partial_elements.dart' show
-    PartialClassElement,
     PartialElement;
 
 import 'dartino_compiler_incremental.dart' show
