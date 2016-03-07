@@ -362,25 +362,17 @@ class DartinoReuser extends Reuser with DartinoFeatures {
   }
 
   bool allowRemovedElement(PartialElement element) {
-    if (element is PartialFunctionElement && element.isInstanceMember) {
-      return true;
-    }
     if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
       return cannotReuse(
-          element, "Removing elements besides instance methods requires"
-                   " 'experimental' mode");
+          element, "Removing elements requires 'experimental' mode");
     }
     return true;
   }
 
   bool allowAddedElement(PartialElement element) {
-    if (element is PartialFunctionElement && element.isInstanceMember) {
-      return true;
-    }
     if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
       return cannotReuse(
-          element, "Adding elements besides instance methods requires"
-                   " 'experimental' mode");
+          element, "Adding elements requires 'experimental' mode");
     }
     return true;
   }
