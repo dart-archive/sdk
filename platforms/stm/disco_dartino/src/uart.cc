@@ -56,7 +56,7 @@ static void Initialize(UART_HandleTypeDef *uart) {
 int Uart::Open() {
   handle_ = dartino::DeviceManager::GetDeviceManager()->InstallDevice(&device_);
   uart1 = this;
-  osThreadDef(UART_TASK, UartTask, osPriorityNormal, 0, 1024);
+  osThreadDef(UART_TASK, UartTask, osPriorityHigh, 0, 128);
   signalThread_ =
       osThreadCreate(osThread(UART_TASK), reinterpret_cast<void*>(this));
   // Start receiving.
@@ -97,7 +97,7 @@ void Uart::Task() {
   // Process notifications from the interrupt handlers.
   for (;;) {
     // Wait for a signal.
-    osEvent event = osSignalWait(0x0000FFFF, 0);
+    osEvent event = osSignalWait(0x0000FFFF, osWaitForever);
 
     if (event.status == osEventSignal) {
       uint32_t flags = event.value.signals;
@@ -150,9 +150,8 @@ void Uart::InterruptHandler() {
 
   if ((__HAL_UART_GET_IT(uart_, UART_IT_FE) != RESET) &&
       (__HAL_UART_GET_IT_SOURCE(uart_, UART_IT_ERR) != RESET)) {
-    __HAL_UART_CLEAR_FEFLAG(uart_);
     // Frame error
-    __HAL_UART_CLEAR_PEFLAG(uart_);
+    __HAL_UART_CLEAR_FEFLAG(uart_);
     flags |= kErrorBit;
     error_ |= HAL_UART_ERROR_FE;
   }
