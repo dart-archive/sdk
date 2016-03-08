@@ -39,6 +39,7 @@ TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
   unused_semispace_->Append(unused_chunk);
   AdjustAllocationBudget();
   AdjustOldAllocationBudget();
+  water_mark_ = chunk->base();
 }
 
 Heap::Heap(SemiSpace* existing_space, WeakPointer* weak_pointers)
@@ -293,6 +294,7 @@ void TwoSpaceHeap::SwapSemiSpaces() {
   SemiSpace* temp = space_;
   space_ = unused_semispace_;
   unused_semispace_ = temp;
+  water_mark_ = space_->top();
 }
 
 void Heap::ReplaceSpace(SemiSpace* space) {
@@ -393,8 +395,7 @@ void GenerationalScavengeVisitor::VisitBlock(Object** start, Object** end) {
       *p = destination;
       if (InToSpace(destination)) *record_ = GCMetadata::kNewSpacePointers;
     } else {
-      // TODO(erikcorry): We need a better heuristic than this.
-      if (hacky_counter_++ & 1) {
+      if (old_object->address() < water_mark_) {
         HeapObject* moved_object = old_object->CloneInToSpace(old_);
         // The old space may fill up.  This is a bad moment for a GC, so we
         // promote to the to-space instead.
