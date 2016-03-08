@@ -187,6 +187,19 @@ void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
         reinterpret_cast<uword>(GCMetadata::RememberedSetFor(current));
     uword earliest_iteration_start = current;
     while (current < chunk->limit()) {
+      if (IS_ALIGNED(bytes, sizeof(uword)) {
+        uword* words = reinterpret_cast<uword*>(bytes);
+        // Skip blank cards n at a time.
+        ASSERT(GCMetadata::kNoNewSpacePointers == 0);
+        if (*words == 0) {
+          do {
+            bytes += sizeof *words;
+            words++;
+            current += sizeof(*words) * GCMetadata::kCardSize;
+          } while (current < chunk->limit() && *words == 0);
+          continue;
+        }
+      }
       uint8* byte = reinterpret_cast<uint8*>(bytes);
       if (*byte != GCMetadata::kNoNewSpacePointers) {
         uint8* starts = GCMetadata::StartsFor(current);
