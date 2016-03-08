@@ -1033,7 +1033,7 @@ void Program::CollectNewSpace() {
   // Allocate from start of to-space..
   to->UpdateBaseAndLimit(to->first(), to->first()->base());
 
-  GenerationalScavengeVisitor visitor(data_heap);
+  GenerationalScavengeVisitor visitor(from, to, old);
   to->StartScavenge();
   old->StartScavenge();
 
