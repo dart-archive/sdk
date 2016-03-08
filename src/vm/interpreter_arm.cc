@@ -261,8 +261,8 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   void Allocate(bool immutable);
 
-  // This function changes caller-saved registers.
-  void AddToRememberedSetSlow(Register object, Register value);
+  // This function trashes 'scratch'.
+  void AddToRememberedSet(Register object, Register value, Register scratch);
 
   void InvokeEq(const char* fallback);
   void InvokeLt(const char* fallback);
@@ -591,7 +591,7 @@ void InterpreterGeneratorARM::DoStoreBoxed() {
   __ ldr(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   __ str(R2, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
 
-  AddToRememberedSetSlow(R1, R2);
+  AddToRememberedSet(R1, R2, R3);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -603,7 +603,7 @@ void InterpreterGeneratorARM::DoStoreStatic() {
   __ add(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R0, TIMES_WORD_SIZE)));
 
-  AddToRememberedSetSlow(R1, R2);
+  AddToRememberedSet(R1, R2, R0);
 
   Dispatch(kStoreStaticLength);
 }
@@ -616,7 +616,7 @@ void InterpreterGeneratorARM::DoStoreField() {
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   DropNAndSetTop(1, R2);
 
-  AddToRememberedSetSlow(R0, R2);
+  AddToRememberedSet(R0, R2, R3);
 
   Dispatch(kStoreFieldLength);
 }
@@ -629,7 +629,7 @@ void InterpreterGeneratorARM::DoStoreFieldWide() {
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   DropNAndSetTop(1, R2);
 
-  AddToRememberedSetSlow(R0, R2);
+  AddToRememberedSet(R0, R2, R3);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -1334,8 +1334,8 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
 
   __ mov(R9, LR);
 
-  // R7 and R9 are both callee-saved, so they will survive the call.
-  AddToRememberedSetSlow(R2, R7);
+  // R7 is not trashed.
+  AddToRememberedSet(R2, R7, R3);
 
   __ mov(R0, R7);
   __ mov(PC, R9);
@@ -1393,8 +1393,8 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
   __ str(R7, Address(R12, Operand(R1, TIMES_2)));
   __ mov(R9, LR);
 
-  // R7 and R9 are both callee-saved, so they will survive the call.
-  AddToRememberedSetSlow(R2, R7);
+  // R7 is not trashed.
+  AddToRememberedSet(R2, R7, R3);
 
   __ mov(R0, R7);
   __ mov(PC, R9);
@@ -1952,9 +1952,20 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorARM::AddToRememberedSetSlow(Register object,
-                                                     Register value) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorARM::AddToRememberedSet(Register object,
+                                                 Register value,
+                                                 Register scratch) {
+  Label smi;
+  __ tst(value, Immediate(Smi::kTagMask));
+  __ b(EQ, &smi);
+
+  __ ldr(scratch, Address(R4, Process::kRememberedSetBiasOffset));
+  __ add(scratch, scratch, Operand(object, LSR, GCMetadata::kCardBits));
+  // This will never store zero (kNoNewSpacePointers) because the object is
+  // tagged!
+  __ strb(object, Address(scratch, 0));
+
+  __ Bind(&smi);
 }
 
 void InterpreterGeneratorARM::InvokeCompare(const char* fallback,

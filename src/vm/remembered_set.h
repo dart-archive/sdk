@@ -20,7 +20,7 @@ class GCMetadata {
 
   // There is a byte per card, and any two byte values would work here.
   static const int kNoNewSpacePointers = 0;
-  static const int kNewSpacePointers = 1;
+  static const int kNewSpacePointers = 1;  // Actually any non-zero value.
 
   static void InitializeStartsForChunk(Chunk* chunk) {
     uword base = chunk->base();

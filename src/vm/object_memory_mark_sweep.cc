@@ -178,7 +178,6 @@ void OldSpace::EndTrackingAllocations() {
   tracking_allocations_ = false;
 }
 
-#if defined(DARTINO_TARGET_X64) || defined(DARTINO_TARGET_IA32)
 void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
@@ -188,19 +187,6 @@ void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
         reinterpret_cast<uword>(GCMetadata::RememberedSetFor(current));
     uword earliest_iteration_start = current;
     while (current < chunk->limit()) {
-      if ((bytes & 3) == 0) {
-        uint32_t* words = reinterpret_cast<uint32_t*>(bytes);
-        // Skip blank cards 4 at a time.
-        ASSERT(GCMetadata::kNoNewSpacePointers == 0);
-        if (*words == 0) {
-          do {
-            bytes += sizeof *words;
-            words++;
-            current += sizeof(*words) * GCMetadata::kCardSize;
-          } while (current < chunk->limit() && *words == 0);
-          continue;
-        }
-      }
       uint8* byte = reinterpret_cast<uint8*>(bytes);
       if (*byte != GCMetadata::kNoNewSpacePointers) {
         uint8* starts = GCMetadata::StartsFor(current);
@@ -262,27 +248,6 @@ void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
     }
   }
 }
-#else
-// Currently there is no remembered set, so we scan the entire old space,
-// skipping only the areas where newly promoted objects are.
-void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
-  Flush();
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword current = chunk->base();
-    while (!HasSentinelAt(current)) {
-      HeapObject* object = HeapObject::FromAddress(current);
-      // Newly promoted objects are automatically skipped, because they
-      // are protected by a PromotedTrack object.
-      InstanceFormat format = object->IteratePointers(visitor);
-      if (!format.has_variable_part()) {
-        current += format.fixed_size();
-      } else {
-        current += object->Size();
-      }
-    }
-  }
-}
-#endif
 
 void OldSpace::UnlinkPromotedTrack() {
   PromotedTrack* promoted = promoted_track_;
@@ -398,7 +363,6 @@ void OldSpace::Verify() {
       }
     }
   }
-#if defined(DARTINO_TARGET_X64) || defined(DARTINO_TARGET_IA32)
   // Verify that the remembered set table is marked for all objects that
   // contain new-space pointers.
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
@@ -411,7 +375,6 @@ void OldSpace::Verify() {
       current += object->Size();
     }
   }
-#endif
 }
 #endif
 

@@ -181,7 +181,7 @@ void Assembler::PrintAddress(const Address* address) {
 }
 
 static const char* ShiftTypeToString(ShiftType type) {
-  static const char* kShiftNames[] = {"lsl", "asr"};
+  static const char* kShiftNames[] = {"lsl", "asr", "lsr"};
   return kShiftNames[type];
 }
 

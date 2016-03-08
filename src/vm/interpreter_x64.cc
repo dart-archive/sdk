@@ -1699,7 +1699,7 @@ void InterpreterGeneratorX64::AddToRememberedSet(Register object,
   LoadProcess(scratch);
   __ shrq(object, Immediate(GCMetadata::kCardBits));
   __ addq(object, Address(scratch, Process::kRememberedSetBiasOffset));
-  __ movb(Address(object), Immediate(GCMetadata::kNewSpacePointers + 41));
+  __ movb(Address(object), Immediate(GCMetadata::kNewSpacePointers));
 
   __ Bind(&smi);
 }

@@ -1029,20 +1029,6 @@ void Program::CollectNewSpace() {
 
   SemiSpace* to = data_heap->unused_space();
 
-  // TODO(erikcorry): Remove this semispace-growing code when the remembered
-  // set is working.
-#if !defined(DARTINO_TARGET_IA32) && !defined(DARTINO_TARGET_X64)
-  bool grow = false;
-  if (static_cast<uword>(old->Used() >> 3) > to->first()->size()) {
-    grow = true;
-    uword size = to->first()->size() * 2;
-    to->FreeAllChunks();
-    Chunk* larger_chunk = ObjectMemory::AllocateChunk(to, size);
-    to->Append(larger_chunk);
-    ASSERT(to->IsFlushed());
-  }
-#endif
-
   to->set_used(0);
   // Allocate from start of to-space..
   to->UpdateBaseAndLimit(to->first(), to->first()->base());
@@ -1071,22 +1057,11 @@ void Program::CollectNewSpace() {
   // Second space argument is used to size the new-space.
   data_heap->SwapSemiSpaces();
 
-  // TODO(erikcorry): Remove this semispace-growing code when the remembered
-  // set is working.
-#if !defined(DARTINO_TARGET_IA32) && !defined(DARTINO_TARGET_X64)
-  if (grow) {
-    uword size = from->first()->size() * 2;
-    from->FreeAllChunks();
-    Chunk* larger_chunk = ObjectMemory::AllocateChunk(from, size);
-    from->Append(larger_chunk);
-  }
-
   if (Flags::print_heap_statistics) {
     HeapUsage usage_after;
     GetHeapUsage(data_heap, &usage_after);
     PrintProcessGCInfo(&usage_before, &usage_after);
   }
-#endif
 
 #ifdef DEBUG
   if (Flags::validate_heaps) old->Verify();
