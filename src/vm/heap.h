@@ -306,7 +306,6 @@ class GenerationalScavengeVisitor : public PointerVisitor {
   uword from_size_;
   SemiSpace* to_;
   OldSpace* old_;
-  int hacky_counter_ = 0;
   bool trigger_old_space_gc_ = false;
   uint8* record_;
   // Avoid checking for null by having a default place to write the remembered
