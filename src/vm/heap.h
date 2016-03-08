@@ -285,8 +285,7 @@ class GenerationalScavengeVisitor : public PointerVisitor {
     return reinterpret_cast<uword>(object) - from_start_ < from_size_;
   }
 
-  inline bool InToSpace(Object* object) {
-    if (object->IsSmi()) return false;
+  inline bool InToSpace(HeapObject* object) {
     return reinterpret_cast<uword>(object) - to_start_ < to_size_;
   }
 
