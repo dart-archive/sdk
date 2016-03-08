@@ -12,6 +12,7 @@
 //   they contain uninitialized memory.
 
 #include "src/shared/flags.h"
+#include "src/shared/utils.h"
 #include "src/vm/mark_sweep.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/object.h"
@@ -187,7 +188,7 @@ void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
         reinterpret_cast<uword>(GCMetadata::RememberedSetFor(current));
     uword earliest_iteration_start = current;
     while (current < chunk->limit()) {
-      if (IS_ALIGNED(bytes, sizeof(uword)) {
+      if (Utils::IsAligned(bytes, sizeof(uword))) {
         uword* words = reinterpret_cast<uword*>(bytes);
         // Skip blank cards n at a time.
         ASSERT(GCMetadata::kNoNewSpacePointers == 0);
