@@ -30,6 +30,9 @@ import 'src/dartino_selector.dart' show
 import 'src/dartino_system_printer.dart' show
     DartinoSystemPrinter;
 
+import 'src/dartino_system_validator.dart' show
+    DartinoSystemValidator;
+
 import 'dartino_class.dart' show
     DartinoClass;
 
@@ -337,6 +340,13 @@ class DartinoSystem {
 
   String toDebugString(Uri base) {
     return new DartinoSystemPrinter(this, base).generateDebugString();
+  }
+
+  bool validateSystem() {
+    DartinoSystemValidator systemValidator = new DartinoSystemValidator(this);
+    return
+        systemValidator.validateFunctionLiteralLists() &&
+        systemValidator.validateClassMethodTables();
   }
 }
 

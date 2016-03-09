@@ -40,6 +40,11 @@ const bool printCommands = const bool.fromEnvironment("printCommands");
 /// each compilation.
 const bool printSystem = const bool.fromEnvironment("printSystem");
 
+/// Enables a validation of the system after each compilation. The validation
+/// checks every class' method table and every function's literal list,
+/// verifying that all entries refer to existing methods, constants, or classes.
+const bool validateSystem = const bool.fromEnvironment("validateSystem");
+
 class DartinoRunner {
   Future<Null> attach(SessionState state) async {
     if (userVmAddress == null) {
@@ -89,6 +94,17 @@ class DartinoRunner {
             for (var cmd in delta.commands) {
               print(cmd);
             }
+          }
+        }
+
+        if (validateSystem) {
+          bool valid = state.compilationResults.last.system.validateSystem();
+          if (valid) {
+            print("System validated: all references in method tables and "
+                  "literal lists refer to existing objects.");
+          } else {
+            throw "Invalid system: some method tables and/or literal lists "
+                  "contain references to non-existing objects";
           }
         }
       }
