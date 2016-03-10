@@ -332,6 +332,19 @@ class NoAllocationFailureScope {
   Space* space_;
 };
 
+class NoAllocationScope {
+ public:
+#ifndef DEBUG
+  explicit NoAllocationScope(Heap* heap) {}
+#else
+  explicit NoAllocationScope(Heap* heap);
+  ~NoAllocationScope();
+
+ private:
+  Heap* heap_;
+#endif
+};
+
 class PageTable {
  public:
   explicit PageTable(uword base) : base_(base) {

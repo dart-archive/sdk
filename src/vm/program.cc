@@ -487,7 +487,7 @@ static void PrintProgramGCInfo(SharedHeapUsage* before,
       before->shared_size_2, after->shared_used_2, after->shared_size_2);
 }
 
-void Program::CollectSharedGarbage() {
+void Program::CollectOldSpace() {
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
   }
@@ -1012,7 +1012,8 @@ void Program::CollectNewSpace() {
   SemiSpace* from = data_heap->space();
   OldSpace* old = data_heap->old_space();
 
-  if (!data_heap->allocations_have_taken_place()) {
+  if (data_heap->HasEmptyNewSpace()) {
+    CollectOldSpaceIfNeeded();
     return;
   }
 
@@ -1067,14 +1068,19 @@ void Program::CollectNewSpace() {
   if (Flags::validate_heaps) old->Verify();
 #endif
 
+  CollectOldSpaceIfNeeded();
+  UpdateStackLimits();
+}
+
+void Program::CollectOldSpaceIfNeeded() {
+  OldSpace* old = process_heap_.old_space();
   if (old->needs_garbage_collection()) {
-    CollectSharedGarbage();
+    old->Flush();
+    CollectOldSpace();
 #ifdef DEBUG
     if (Flags::validate_heaps) old->Verify();
 #endif
   }
-
-  UpdateStackLimits();
 }
 
 void Program::UpdateStackLimits() {

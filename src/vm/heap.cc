@@ -13,11 +13,7 @@
 namespace dartino {
 
 Heap::Heap(RandomXorShift* random)
-    : random_(random),
-      space_(NULL),
-      foreign_memory_(0),
-      weak_pointers_(NULL),
-      allocations_have_taken_place_(false) {}
+    : random_(random), space_(NULL), foreign_memory_(0), weak_pointers_(NULL) {}
 
 OneSpaceHeap::OneSpaceHeap(RandomXorShift* random, int maximum_initial_size)
     : Heap(random) {
@@ -45,8 +41,7 @@ Heap::Heap(SemiSpace* existing_space, WeakPointer* weak_pointers)
     : random_(NULL),
       space_(existing_space),
       foreign_memory_(0),
-      weak_pointers_(weak_pointers),
-      allocations_have_taken_place_(false) {}
+      weak_pointers_(weak_pointers) {}
 
 Heap::~Heap() {
   // This has no effect if we already did it once in the subclass.
@@ -63,7 +58,7 @@ TwoSpaceHeap::~TwoSpaceHeap() {
 }
 
 Object* Heap::Allocate(int size) {
-  allocations_have_taken_place_ = true;
+  ASSERT(no_allocation_ == 0);
   uword result = space_->Allocate(size);
   if (result == 0) {
     return HandleAllocationFailure(size);

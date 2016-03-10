@@ -101,8 +101,6 @@ class Heap {
   SemiSpace* TakeSpace();
   WeakPointer* TakeWeakPointers();
 
-  bool allocations_have_taken_place() { return allocations_have_taken_place_; }
-
   RandomXorShift* random() { return random_; }
 
   int used_foreign_memory() { return foreign_memory_; }
@@ -135,6 +133,7 @@ class Heap {
   friend class ExitReference;
   friend class Scheduler;
   friend class Program;
+  friend class NoAllocationScope;
 
   Heap(SemiSpace* existing_space, WeakPointer* weak_pointers);
   explicit Heap(RandomXorShift* random);
@@ -159,8 +158,13 @@ class Heap {
   // Linked list of weak pointers to heap objects in this heap.
   WeakPointer* weak_pointers_;
 
+#ifdef DEBUG
+  void IncrementNoAllocation() { ++no_allocation_; }
+  void DecrementNoAllocation() { --no_allocation_; }
+#endif
+
  private:
-  bool allocations_have_taken_place_;
+  int no_allocation_ = 0;
 };
 
 class OneSpaceHeap : public Heap {
@@ -225,6 +229,8 @@ class TwoSpaceHeap : public Heap {
   Object* CreateOldSpaceInstance(Class* the_class, Object* init_value);
 
   virtual bool IsTwoSpaceHeap() { return true; }
+
+  bool HasEmptyNewSpace() { return space_->top() == space_->start(); }
 
  private:
   // Allocate or deallocate the pages used for heap metadata.

@@ -165,7 +165,8 @@ void GCThread::MainLoop() {
         scheduler->StopProgram(
             shared_heap_to_gc, ProgramState::kCollectingGarbage);
       }
-      shared_heap_to_gc->CollectSharedGarbage();
+      shared_heap_to_gc->CollectOldSpace();
+      shared_heap_to_gc->CollectNewSpace();
       if (scheduler != NULL) {
         scheduler->ResumeProgram(
             shared_heap_to_gc, ProgramState::kCollectingGarbage);

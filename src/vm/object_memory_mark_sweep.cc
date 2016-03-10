@@ -161,6 +161,7 @@ uword OldSpace::Allocate(int size) {
   // Can't use bump allocation. Allocate from free lists.
   uword result = AllocateFromFreeList(size);
   if (result == 0) result = AllocateInNewChunk(size);
+  if (result == 0) allocation_budget_ = 0;  // Trigger GC soon.
   return result;
 }
 

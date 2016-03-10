@@ -339,4 +339,12 @@ void SemiSpace::RebuildAfterTransformations() {
   }
 }
 
+#ifdef DEBUG
+NoAllocationScope::NoAllocationScope(Heap* heap) : heap_(heap) {
+  heap->IncrementNoAllocation();
+}
+
+NoAllocationScope::~NoAllocationScope() { heap_->DecrementNoAllocation(); }
+#endif
+
 }  // namespace dartino
