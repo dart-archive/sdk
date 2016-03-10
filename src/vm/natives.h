@@ -75,21 +75,10 @@ typedef Object* (*NativeFunction)(Process*, Arguments);
 #define END_NATIVE() }
 
 
-#define EVALUATE_FFI_CALL_AND_RETURN(expr)                   \
+#define EVALUATE_FFI_CALL_AND_RETURN_AND_GC(expr)            \
   int64 value = (expr);                                      \
-  if (Smi::IsValid(value)) {                                 \
-    return Smi::FromWord(value);                             \
-  }                                                          \
-  Object* result = process->NewInteger(value);               \
-  if (result->IsRetryAfterGCFailure()) {                     \
-    process->program()->CollectNewSpace();                   \
-    result = process->NewInteger(value);                     \
-    if (result->IsRetryAfterGCFailure()) {                   \
-      process->program()->CollectNewSpace();                 \
-      result = process->NewInteger(value);                   \
-    }                                                        \
-  }                                                          \
-  return result;
+  if (Smi::IsValid(value)) return Smi::FromWord(value);      \
+  return process->NewIntegerWithGC(value);
 
 #define EVALUATE_FFI_CALL_AND_RETURN_VOID(expr)              \
   (expr);                                                    \

@@ -238,6 +238,19 @@ Object* Process::NewInteger(int64 value) {
   return result;
 }
 
+LargeInteger* Process::NewIntegerWithGC(int64 value) {
+  Object* result = NewInteger(value);
+  if (result->IsRetryAfterGCFailure()) {
+    program()->CollectGarbage();
+    result = NewInteger(value);
+    if (result->IsRetryAfterGCFailure()) {
+      program()->CollectGarbage();
+      result = NewInteger(value);
+    }
+  }
+  return LargeInteger::cast(result);
+}
+
 Object* Process::NewOneByteString(int length) {
   RegisterProcessAllocation();
   Class* string_class = program()->one_byte_string_class();

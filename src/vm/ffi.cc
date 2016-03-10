@@ -121,7 +121,7 @@ typedef int (*F7)(word, word, word, word, word, word, word);
 BEGIN_NATIVE(ForeignICall0) {
   word address = AsForeignWord(arguments[0]);
   F0 function = reinterpret_cast<F0>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function()));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(function()));
 }
 END_NATIVE()
 
@@ -129,7 +129,7 @@ BEGIN_NATIVE(ForeignICall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   F1 function = reinterpret_cast<F1>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0)));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(function(a0)));
 }
 END_NATIVE()
 
@@ -138,7 +138,7 @@ BEGIN_NATIVE(ForeignICall2) {
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   F2 function = reinterpret_cast<F2>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1)));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(function(a0, a1)));
 }
 END_NATIVE()
 
@@ -148,7 +148,7 @@ BEGIN_NATIVE(ForeignICall3) {
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   F3 function = reinterpret_cast<F3>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1, a2)));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(function(a0, a1, a2)));
 }
 END_NATIVE()
 
@@ -159,7 +159,8 @@ BEGIN_NATIVE(ForeignICall4) {
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   F4 function = reinterpret_cast<F4>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1, a2, a3)));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(
+    static_cast<int64>(function(a0, a1, a2, a3)));
 }
 END_NATIVE()
 
@@ -171,7 +172,7 @@ BEGIN_NATIVE(ForeignICall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   F5 function = reinterpret_cast<F5>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(
       static_cast<int64>(function(a0, a1, a2, a3, a4)));
 }
 END_NATIVE()
@@ -185,7 +186,7 @@ BEGIN_NATIVE(ForeignICall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   F6 function = reinterpret_cast<F6>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(
       static_cast<int64>(function(a0, a1, a2, a3, a4, a5)));
 }
 END_NATIVE()
@@ -200,7 +201,7 @@ BEGIN_NATIVE(ForeignICall7) {
   word a5 = AsForeignWord(arguments[6]);
   word a6 = AsForeignWord(arguments[7]);
   F7 function = reinterpret_cast<F7>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(
       static_cast<int64>(function(a0, a1, a2, a3, a4, a5, a6)));
 }
 END_NATIVE()
@@ -216,7 +217,7 @@ typedef word (*PF6)(word, word, word, word, word, word);
 BEGIN_NATIVE(ForeignPCall0) {
   word address = AsForeignWord(arguments[0]);
   PF0 function = reinterpret_cast<PF0>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function()));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(function()));
 }
 END_NATIVE()
 
@@ -224,7 +225,7 @@ BEGIN_NATIVE(ForeignPCall1) {
   word address = AsForeignWord(arguments[0]);
   word a0 = AsForeignWord(arguments[1]);
   PF1 function = reinterpret_cast<PF1>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0)));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(function(a0)));
 }
 END_NATIVE()
 
@@ -233,7 +234,7 @@ BEGIN_NATIVE(ForeignPCall2) {
   word a0 = AsForeignWord(arguments[1]);
   word a1 = AsForeignWord(arguments[2]);
   PF2 function = reinterpret_cast<PF2>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1)));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(function(a0, a1)));
 }
 END_NATIVE()
 
@@ -243,7 +244,7 @@ BEGIN_NATIVE(ForeignPCall3) {
   word a1 = AsForeignWord(arguments[2]);
   word a2 = AsForeignWord(arguments[3]);
   PF3 function = reinterpret_cast<PF3>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1, a2)));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(function(a0, a1, a2)));
 }
 END_NATIVE()
 
@@ -254,7 +255,8 @@ BEGIN_NATIVE(ForeignPCall4) {
   word a2 = AsForeignWord(arguments[3]);
   word a3 = AsForeignWord(arguments[4]);
   PF4 function = reinterpret_cast<PF4>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(static_cast<int64>(function(a0, a1, a2, a3)));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(
+      static_cast<int64>(function(a0, a1, a2, a3)));
 }
 END_NATIVE()
 
@@ -266,7 +268,7 @@ BEGIN_NATIVE(ForeignPCall5) {
   word a3 = AsForeignWord(arguments[4]);
   word a4 = AsForeignWord(arguments[5]);
   PF5 function = reinterpret_cast<PF5>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(
       static_cast<int64>(function(a0, a1, a2, a3, a4)));
 }
 END_NATIVE()
@@ -280,7 +282,7 @@ BEGIN_NATIVE(ForeignPCall6) {
   word a4 = AsForeignWord(arguments[5]);
   word a5 = AsForeignWord(arguments[6]);
   PF6 function = reinterpret_cast<PF6>(address);
-  EVALUATE_FFI_CALL_AND_RETURN(
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(
       static_cast<int64>(function(a0, a1, a2, a3, a4, a5)));
 }
 END_NATIVE()
@@ -379,7 +381,7 @@ BEGIN_NATIVE(ForeignLCallwLw) {
   word a2 = AsForeignWord(arguments[3]);
   LwLw function = reinterpret_cast<LwLw>(address);
 
-  EVALUATE_FFI_CALL_AND_RETURN(function(a0, a1, a2));
+  EVALUATE_FFI_CALL_AND_RETURN_AND_GC(function(a0, a1, a2));
 }
 END_NATIVE()
 
