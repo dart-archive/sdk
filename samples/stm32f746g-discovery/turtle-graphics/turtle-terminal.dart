@@ -59,7 +59,6 @@ String getNextCommand(Uart uart) {
         return result;
       } else {
         result = result + new String.fromCharCode(nextByte);
-        // TODO: Update this to the new API
         uart.writeByte(nextByte);
       }
     }
