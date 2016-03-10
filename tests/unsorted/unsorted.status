@@ -52,7 +52,10 @@ messaging_program_gc_test: Fail
 random_test: Pass, Slow, Timeout
 shared_immutable_data_test: RuntimeError, Slow, Timeout # Stack overflow
 uri_base_test: Crash # Uri.base not implemented.
+
 messaging_many_to_single_test: Slow, Pass
+messaging_benchmark_test: Slow, Pass
+corelib/regexp/pcre_test: Slow, Pass
 
 [ $mode == debug && $asan ]
 random_test: Slow, Pass

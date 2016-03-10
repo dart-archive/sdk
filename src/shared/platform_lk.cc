@@ -239,10 +239,10 @@ int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
   ranges[0].size = heap_size = 512 * KB;
   ranges[0].address = reinterpret_cast<void*>(heap_start);
   // See to-do above: Hacky way to determine if we are on a big system.
-  for (int big = 1 << 8; big < 1 << 18; big <<= 3) {
+  for (int big = 1 << 8; big < 1 << 18; big <<= 1) {
     void* memory2 = page_alloc(big);
     if (memory2 == NULL) break;
-    ranges[0].size = heap_size = big << PAGE_SIZE_SHIFT;
+    ranges[0].size = heap_size = big << (PAGE_SIZE_SHIFT + 1);
     page_free(memory2, big);
   }
   page_free(memory, 1);

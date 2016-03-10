@@ -37,7 +37,7 @@ trap cleanup_file EXIT
 mkfifo "$PIPEDIR/qemu.in" "$PIPEDIR/qemu.out"
 
 echo "Starting qemu..."
-./third_party/qemu/linux/qemu/bin/qemu-system-arm -machine virt -cpu cortex-a15 -m 16 -kernel third_party/lk/out/build-qemu-virt-dartino/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
+./third_party/qemu/linux/qemu/bin/qemu-system-arm -machine virt -cpu cortex-a15 -m 64 -kernel third_party/lk/out/build-qemu-virt-dartino/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
 PID=$!
 cleanup() {
   echo "Killing $PID"
