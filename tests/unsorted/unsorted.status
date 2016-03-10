@@ -54,6 +54,7 @@ shared_immutable_data_test: RuntimeError, Slow, Timeout # Stack overflow
 uri_base_test: Crash # Uri.base not implemented.
 
 messaging_many_to_single_test: Slow, Pass
+messaging_many_process_test: Slow, Pass
 messaging_benchmark_test: Slow, Pass
 corelib/regexp/pcre_test: Slow, Pass
 

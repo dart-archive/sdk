@@ -73,9 +73,9 @@ async/future_test/01: Crash  # Port leak
 async/future_test/none: Crash  # Port leak.
 
 [ $system == lk ]
-async/slow_consumer_test: Crash
-async/slow_consumer2_test: Crash
-async/slow_consumer3_test: Crash
+async/slow_consumer_test: Skip
+async/slow_consumer2_test: Skip
+async/slow_consumer3_test: Skip
 
 [ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.

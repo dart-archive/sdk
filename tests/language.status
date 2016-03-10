@@ -828,7 +828,7 @@ bit_operations_test/02: Crash
 bit_operations_test/03: Crash
 bit_operations_test/04: Crash
 bit_operations_test/none: Crash
-closure_cycles_test: Crash
+closure_cycles_test: Pass, Timeout
 double_int_to_string_test: RuntimeError
 double_to_string_as_exponential3_test: RuntimeError
 double_to_string_as_exponential_test: RuntimeError
@@ -836,7 +836,7 @@ double_to_string_as_fixed_test: RuntimeError
 double_to_string_as_precision3_test: RuntimeError
 double_to_string_as_precision_test: RuntimeError
 double_to_string_test: RuntimeError
-gc_test: Crash, Slow
+gc_test: Slow
 intrinsified_methods_test: RuntimeError
 large_class_declaration_test: RuntimeError
 nan_identical_test: Crash

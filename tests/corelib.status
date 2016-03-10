@@ -196,6 +196,7 @@ int_parse_radix_test/01: Slow, Pass, Timeout
 int_parse_radix_test/none: Slow, Pass, Timeout
 num_sign_test: Slow, Pass, Timeout
 list_unmodifiable_test: Crash
+regexp/pcre_test: Slow, Pass
 
 [ $mode == debug || $asan ]
 regexp/global_test: Slow, Pass
