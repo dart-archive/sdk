@@ -233,11 +233,14 @@ class TwoSpaceHeap : public Heap {
   bool HasEmptyNewSpace() { return space_->top() == space_->start(); }
 
  private:
+  friend class GenerationalScavengeVisitor;
+
   // Allocate or deallocate the pages used for heap metadata.
   void ManageMetadata(bool allocate);
 
   OldSpace* old_space_;
   SemiSpace* unused_semispace_;
+  uword water_mark_;
 };
 
 // Helper class for copying HeapObjects.
@@ -273,14 +276,15 @@ class ScavengeVisitor : public PointerVisitor {
 // Helper class for copying HeapObjects.
 class GenerationalScavengeVisitor : public PointerVisitor {
  public:
-  GenerationalScavengeVisitor(SemiSpace* from, SemiSpace* to, OldSpace* old)
-      : to_start_(to->start()),
-        to_size_(to->size()),
-        from_start_(from->start()),
-        from_size_(from->size()),
-        to_(to),
-        old_(old),
-        record_(&dummy_record_) {}
+  explicit GenerationalScavengeVisitor(TwoSpaceHeap* heap)
+      : to_start_(heap->unused_semispace_->start()),
+        to_size_(heap->unused_semispace_->size()),
+        from_start_(heap->space()->start()),
+        from_size_(heap->space()->size()),
+        to_(heap->unused_semispace_),
+        old_(heap->old_space()),
+        record_(&dummy_record_),
+        water_mark_(heap->water_mark_) {}
 
   virtual void VisitClass(Object** p) {}
 
@@ -308,12 +312,12 @@ class GenerationalScavengeVisitor : public PointerVisitor {
   uword from_size_;
   SemiSpace* to_;
   OldSpace* old_;
-  int hacky_counter_ = 0;
   bool trigger_old_space_gc_ = false;
   uint8* record_;
   // Avoid checking for null by having a default place to write the remembered
   // set byte.
   uint8 dummy_record_;
+  uword water_mark_;
 };
 
 // Read [object] as an integer word value.
