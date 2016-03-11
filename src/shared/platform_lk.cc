@@ -236,6 +236,7 @@ int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
   // allocation.
   void* memory = page_alloc(1);
   heap_start = reinterpret_cast<uword>(memory) - 128 * KB;
+  if (heap_start > reinterpret_cast<uword>(memory)) heap_start = 0;
   ranges[0].size = heap_size = 512 * KB;
   ranges[0].address = reinterpret_cast<void*>(heap_start);
   // See to-do above: Hacky way to determine if we are on a big system.
@@ -245,7 +246,7 @@ int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
     ranges[0].size = heap_size = big << (PAGE_SIZE_SHIFT + 1);
     uword new_address = heap_start - (big << (PAGE_SIZE_SHIFT - 1));
     ranges[0].address =
-        reinterpret_cast < void * (new_address < heap_start ? new_address : 0);
+        reinterpret_cast<void*>(new_address < heap_start ? new_address : 0);
     page_free(memory2, big);
   }
   page_free(memory, 1);
