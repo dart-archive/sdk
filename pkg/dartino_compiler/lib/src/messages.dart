@@ -24,7 +24,6 @@ enum DiagnosticKind {
   handShakeFailed,
   illegalDefine,
   internalError,
-  missingRequiredArgument,
   missingSessionName,
   missingToFile,
   noAgentFound,
@@ -212,10 +211,6 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.unsupportedPlatform:
       // TODO(lukechurch): Review UX.
       return "Unsupported platform: $message.";
-
-    case DiagnosticKind.missingRequiredArgument:
-      // TODO(lukechurch): Consider a correction message.
-      return "Option '${DiagnosticParameter.userInput}' needs an argument.";
 
     case DiagnosticKind.missingSessionName:
       // TODO(karlklose,ahe): provide support to list choices here.

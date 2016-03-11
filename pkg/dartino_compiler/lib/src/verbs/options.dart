@@ -50,24 +50,16 @@ class Option {
 
   @StringOrList final longName;
 
-  final bool requiresArgument;
-
   final ArgumentParser<dynamic> parseArgument;
-
-  final DiagnosticKind missingArgumentDiagnostic;
 
   const Option(
       this.kind,
       this.shortName,
       this.longName,
-      {this.requiresArgument: false,
-       this.parseArgument,
-       this.missingArgumentDiagnostic: DiagnosticKind.missingRequiredArgument});
+      {this.parseArgument});
 
   String toString() {
-    return "Option($kind, $shortName, $longName, "
-        "requiresArgument: $requiresArgument, "
-        "missingArgumentDiagnostic: $missingArgumentDiagnostic)";
+    return "Option($kind, $shortName, $longName";
   }
 }
 
@@ -187,24 +179,7 @@ class Options {
         if (option == null) {
           throwFatalError(
               DiagnosticKind.unknownOption, userInput: optionString);
-        } else if (option.requiresArgument) {
-          if (argument == null && iterator.moveNext()) {
-            argument = iterator.current;
-            if (argument == "=") {
-              argument = null;
-              if (iterator.moveNext()) {
-                argument = iterator.current;
-              }
-            }
-          }
-          if (argument == null) {
-            // TODO(ahe): Improve error recovery, don't throw.
-            throwFatalError(option.missingArgumentDiagnostic, userInput: name);
-          }
-          parsedArgument = option.parseArgument == null
-              ? argument : option.parseArgument(argument);
         } else if (argument != null) {
-          assert(!option.requiresArgument);
           // TODO(ahe): Pass what should be removed as additionalUserInput, for
           // example, if saying `--help=fisk`, [userInput] should be `help`,
           // and [additionalUserInput] should be `=fisk`.

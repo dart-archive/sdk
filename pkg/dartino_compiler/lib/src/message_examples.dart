@@ -188,10 +188,6 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.unsupportedPlatform:
       return untestable;
 
-    case DiagnosticKind.missingRequiredArgument:
-      // Currently we have no options taking an argument.
-      return untestable;
-
     case DiagnosticKind.unexpectedArgument:
       return <Example>[new CommandLineExample(
             <String>['help', '--version=fisk'])];
