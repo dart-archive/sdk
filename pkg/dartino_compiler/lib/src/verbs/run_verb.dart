@@ -22,11 +22,10 @@ const Action runAction =
 
 Future<int> run(AnalyzedSentence sentence, VerbContext context) {
   bool terminateDebugger = sentence.options.terminateDebugger;
-  List<String> testDebuggerCommands = sentence.options.testDebuggerCommands;
   return context.performTaskInWorker(
       new RunTask(
           sentence.targetUri, sentence.base, terminateDebugger,
-          testDebuggerCommands, sentence.trailing ?? []));
+          sentence.trailing ?? []));
 }
 
 class RunTask extends SharedTask {
@@ -41,15 +40,12 @@ class RunTask extends SharedTask {
   /// [runTask] completes.
   final bool terminateDebugger;
 
-  final List<String> testDebuggerCommands;
-
   final List<String> arguments;
 
   const RunTask(
       this.script,
       this.base,
       this.terminateDebugger,
-      this.testDebuggerCommands,
       this.arguments);
 
   Future<int> call(
@@ -57,7 +53,7 @@ class RunTask extends SharedTask {
       StreamIterator<ClientCommand> commandIterator) {
     return runTask(
         commandSender, commandIterator, SessionState.current, script, base,
-        terminateDebugger, testDebuggerCommands, arguments);
+        terminateDebugger, arguments);
   }
 }
 
@@ -68,7 +64,6 @@ Future<int> runTask(
     Uri script,
     Uri base,
     bool terminateDebugger,
-    List<String> testDebuggerCommands,
     List<String> arguments) {
   return compileAndAttachToVmThen(
       commandSender,
@@ -79,6 +74,5 @@ Future<int> runTask(
       terminateDebugger,
       () => developer.run(
           state, arguments,
-          testDebuggerCommands: testDebuggerCommands,
           terminateDebugger: terminateDebugger));
 }

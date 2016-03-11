@@ -189,8 +189,8 @@ List<Example> getExamples(DiagnosticKind kind) {
       return untestable;
 
     case DiagnosticKind.missingRequiredArgument:
-      return <Example>[new CommandLineExample(
-          <String>['run', '--test-debugger'])];
+      // Currently we have no options taking an argument.
+      return untestable;
 
     case DiagnosticKind.unexpectedArgument:
       return <Example>[new CommandLineExample(

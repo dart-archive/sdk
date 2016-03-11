@@ -304,7 +304,7 @@ class Session extends DartinoVmSession {
   }
 
   Future<int> debug(
-      Stream<String> inputLines,
+      Stream<String> inputLines(Session session),
       Uri base,
       SessionState state,
       {bool echo: false}) async {
@@ -314,10 +314,14 @@ class Session extends DartinoVmSession {
       // TODO(sigurdm): Implement debugging when running from snapshot.
       throw new Exception("Debugging program running from snapshot is not "
           "implemented yet.");
+    } else {
+      for (DartinoDelta delta in state.compilationResults) {
+        await applyDelta(delta);
+      }
     }
     // TODO(ahe): Arguments?
     await spawnProcess([]);
-    return new InputHandler(this, inputLines, echo, base).run(state);
+    return new InputHandler(this, inputLines(this), echo, base).run(state);
   }
 
   Future terminateSession() async {

@@ -258,15 +258,11 @@ Future<int> interactiveDebuggerTask(
   // Make sure current state's session is not reused if invoked again.
   state.session = null;
 
-  for (DartinoDelta delta in compilationResult) {
-    await session.applyDelta(delta);
-  }
-
   Stream<String> inputStream = stdinController.stream
       .transform(UTF8.decoder)
       .transform(new LineSplitter());
 
-  return await session.debug(inputStream, base, state);
+  return await session.debug((Session _) => inputStream, base, state);
 }
 
 class DebuggerTask extends SharedTask {

@@ -62,11 +62,28 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
   for (String line in await new File.fromUri(uri).readAsLines()) {
     const String commandsPattern = "// DartinoDebuggerCommands=";
     if (line.startsWith(commandsPattern)) {
-      debuggerCommands.addAll(line.substring(commandsPattern.length).split(","));
+      debuggerCommands.addAll(
+          line.substring(commandsPattern.length).split(","));
     }
   }
 
-  int result = await run(state, [], testDebuggerCommands: debuggerCommands);
+  testDebugCommandStream(Session session) async* {
+    yield 't verbose';
+    yield 'b main';
+    yield 'r';
+    while (!session.terminated) {
+      yield 's';
+    }
+  };
+
+  int result = await state.session.debug(
+      debuggerCommands.isEmpty
+        ? testDebugCommandStream
+        : (Session _) => new Stream.fromIterable(debuggerCommands),
+      Uri.base,
+      state,
+      echo: true);
+
   Expect.equals(0, result);
 
   int exitCode = await state.dartinoVm.exitCode;

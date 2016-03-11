@@ -560,43 +560,15 @@ SessionState createSessionState(
       settings);
 }
 
-Future runWithDebugger(
-    List<String> commands,
-    Session session,
-    SessionState state) async {
-
-  // Method used to generate the debugger commands if none are specified.
-  Stream<String> inputGenerator() async* {
-    yield 't verbose';
-    yield 'b main';
-    yield 'r';
-    while (!session.terminated) {
-      yield 's';
-    }
-  }
-
-  return commands.isEmpty ?
-      session.debug(inputGenerator(), Uri.base, state, echo: true) :
-      session.debug(
-          new Stream<String>.fromIterable(commands), Uri.base, state,
-          echo: true);
-}
-
 Future<int> run(
     SessionState state,
     List<String> arguments,
-    {List<String> testDebuggerCommands,
-     bool terminateDebugger: true}) async {
+    {bool terminateDebugger: true}) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
   Session session = state.session;
 
   for (DartinoDelta delta in compilationResults) {
     await session.applyDelta(delta);
-  }
-
-  if (testDebuggerCommands != null) {
-    await runWithDebugger(testDebuggerCommands, session, state);
-    return 0;
   }
 
   session.silent = true;

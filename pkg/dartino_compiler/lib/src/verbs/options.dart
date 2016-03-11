@@ -16,7 +16,6 @@ enum OptionKind {
   help,
   verbose,
   version,
-  testDebugger,
   define,
   analyzeOnly,
   fatalIncrementalFailures,
@@ -30,9 +29,6 @@ const List<Option> supportedOptions = const <Option>[
   const Option(OptionKind.help, const ['h', '?'], const ['help', 'usage']),
   const Option(OptionKind.verbose, 'v', 'verbose'),
   const Option(OptionKind.version, null, 'version'),
-  const Option(
-      OptionKind.testDebugger, null, 'test-debugger', requiresArgument: true,
-      parseArgument: parseCommaSeparatedList),
   const Option(OptionKind.analyzeOnly, null, 'analyze-only'),
   const Option(
       OptionKind.fatalIncrementalFailures, null, 'fatal-incremental-failures'),
@@ -121,7 +117,6 @@ class Options {
   final bool help;
   final bool verbose;
   final bool version;
-  final List<String> testDebuggerCommands;
   final Map<String, String> defines;
   final List<String> nonOptionArguments;
   final bool analyzeOnly;
@@ -132,7 +127,6 @@ class Options {
       this.help,
       this.verbose,
       this.version,
-      this.testDebuggerCommands,
       this.defines,
       this.nonOptionArguments,
       this.analyzeOnly,
@@ -145,7 +139,6 @@ class Options {
     bool help = false;
     bool verbose = false;
     bool version = false;
-    List<String> testDebuggerCommands;
     Map<String, String> defines = <String, String>{};
     List<String> nonOptionArguments = <String>[];
     bool analyzeOnly = false;
@@ -236,10 +229,6 @@ class Options {
           version = true;
           break;
 
-        case OptionKind.testDebugger:
-          testDebuggerCommands.addAll(parsedArgument);
-          break;
-
         case OptionKind.define:
           defines[parsedArgument[0]] = parsedArgument[1];
           break;
@@ -262,7 +251,7 @@ class Options {
     }
 
     return new Options(
-        help, verbose, version, testDebuggerCommands, defines,
+        help, verbose, version, defines,
         nonOptionArguments, analyzeOnly, fatalIncrementalFailures,
         terminateDebugger);
   }
