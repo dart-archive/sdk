@@ -45,7 +45,10 @@ class Session {
 
   int FreshProcessId() { return next_process_id_++; }
 
-  void Initialize();
+  // Initializes with [program]. If [program] is `NULL` a new program will be
+  // created that will be constructed via this session.
+  void Initialize(Program *program);
+
   void StartMessageProcessingThread();
   void JoinMessageProcessingThread();
   void ProcessMessages();

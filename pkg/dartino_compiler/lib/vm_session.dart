@@ -222,7 +222,10 @@ class Session extends DartinoVmSession {
   bool running = false;
   bool terminated = false;
 
+  /// The configuration of the vm connected to this session.
   Configuration configuration;
+  /// `true` if the vm connected to this session is running from a snapshot.
+  bool runningFromSnapshot;
 
   Session(Socket dartinoVmSocket,
           this.compiler,
@@ -271,9 +274,13 @@ class Session extends DartinoVmSession {
   // will not continue to be the case once support for attaching to VMs running
   // read-only programs has been added.
   // TODO(zerny): Separate debugging from live editing.
-  Future enableDebugger() async {
+  Future<DebuggingReply> enableDebugger() async {
     await enableLiveEditing();
-    await runCommand(const Debugging());
+    VmCommand reply = await runCommand(const Debugging());
+    if (reply == null || reply is! DebuggingReply) {
+      throw new Exception("Expected a reply from the debugging command");
+    }
+    return reply;
   }
 
   Future spawnProcess(List<String> arguments) async {
@@ -301,7 +308,13 @@ class Session extends DartinoVmSession {
       Uri base,
       SessionState state,
       {bool echo: false}) async {
-    await enableDebugger();
+    DebuggingReply debuggingReply = await enableDebugger();
+    runningFromSnapshot = debuggingReply.isFromSnapshot;
+    if (runningFromSnapshot) {
+      // TODO(sigurdm): Implement debugging when running from snapshot.
+      throw new Exception("Debugging program running from snapshot is not "
+          "implemented yet.");
+    }
     // TODO(ahe): Arguments?
     await spawnProcess([]);
     return new InputHandler(this, inputLines, echo, base).run(state);

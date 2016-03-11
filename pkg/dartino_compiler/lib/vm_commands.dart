@@ -143,6 +143,9 @@ abstract class VmCommand {
         Int32List functionTable = readArray(functionEntries);
 
         return new WriteSnapshotResult(classTable, functionTable, hashtag);
+      case VmCommandCode.DebuggingReply:
+        bool isFromSnapshot = CommandBuffer.readBoolFromBuffer(buffer, 0);
+        return new DebuggingReply(isFromSnapshot);
       default:
         throw 'Unhandled command in VmCommand.fromBuffer: $code';
     }
@@ -1281,9 +1284,20 @@ class Debugging extends VmCommand {
         ..sendOn(sink, code);
   }
 
-  int get numberOfResponsesExpected => 0;
+  int get numberOfResponsesExpected => 1;
 
   String valuesToString() => "";
+}
+
+class DebuggingReply extends VmCommand {
+  final bool isFromSnapshot;
+
+  const DebuggingReply(this.isFromSnapshot)
+      : super(VmCommandCode.DebuggingReply);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "isFromSnapshot: $isFromSnapshot";
 }
 
 class DisableStandardOutput extends VmCommand {
@@ -1517,6 +1531,7 @@ enum VmCommandCode {
   SessionEnd,
   LiveEditing,
   Debugging,
+  DebuggingReply,
   DisableStandardOutput,
   StdoutData,
   StderrData,

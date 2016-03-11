@@ -603,11 +603,14 @@ Session::~Session() {
   delete connection_;
 }
 
-void Session::Initialize() {
+void Session::Initialize(Program *program) {
   state_ = new InitialState(this);
-  program_ = new Program(Program::kBuiltViaSession);
-  program()->Initialize();
-  program()->AddSession(this);
+  if (program == NULL) {
+    program = new Program(Program::kBuiltViaSession);
+    program->Initialize();
+  }
+  program_ = program;
+  program_->AddSession(this);
 }
 
 static void* MessageProcessingThread(void* data) {
@@ -878,6 +881,9 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
     case Connection::kDebugging: {
       if (!IsDebuggingEnabled()) EnableDebugging();
       session()->fibers_map_id_ = connection()->ReadInt();
+      WriteBuffer buffer;
+      buffer.WriteBoolean(program()->was_loaded_from_snapshot());
+      connection()->Send(Connection::kDebuggingReply, buffer);
       break;
     }
 

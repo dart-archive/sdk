@@ -68,6 +68,7 @@ class Connection {
     kSessionEnd,
     kLiveEditing,
     kDebugging,
+    kDebuggingReply,
     kDisableStandardOutput,
     kStdoutData,
     kStderrData,
