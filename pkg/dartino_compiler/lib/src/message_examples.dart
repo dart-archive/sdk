@@ -320,6 +320,20 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.illegalDefine:
       return <Example>[new CommandLineExample(<String>['-Dfoo=1=2', 'run'])];
 
+    case DiagnosticKind.infoFileNotFound:
+      var examples = <Example>[new CommandLineExample(
+          <String>['attach', 'tcp_socket', exampleAddress,
+                   'in', 'session', 'foo'],
+          <String>['debug', 'with', 'not_existing.snapshot',
+                   'in', 'session', 'foo'])];
+      // TODO(sigurdm): Need to mock up a VM socket to test this.
+      return untestable;
+
+    case DiagnosticKind.malformedInfoFile:
+      // TODO(sigurdm): Need to mock up a VM socket to test this.
+      return untestable;
+
+
     case DiagnosticKind.busySession:
       // TODO(ahe): Add test for this.
       return untestable;
@@ -346,6 +360,11 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.toolsNotInstalled:
       // TODO(sgjesse): Add test for this
+      return untestable;
+
+    case DiagnosticKind.snapshotHashMismatch:
+      // TODO(sigurdm): Add test for this.
+      // We could probably test this with a mock VM.
       return untestable;
   }
 }

@@ -81,6 +81,10 @@ class InputHandler {
         writeStdoutLine(HELP);
         break;
       case 'b':
+        if (!checkNotFromSnapshot("breakpoints not supported yet")) {
+          break;
+        }
+
         var method =
             (commandComponents.length > 1) ? commandComponents[1] : 'main';
         var bci =
@@ -102,6 +106,10 @@ class InputHandler {
         }
         break;
       case 'bf':
+        if (!checkNotFromSnapshot("breakpoints not supported yet")) {
+          break;
+        }
+
         var file =
             (commandComponents.length > 1) ? commandComponents[1] : '';
         var line =
@@ -287,6 +295,9 @@ class InputHandler {
         }
         break;
       case 'finish':
+        if (!checkNotFromSnapshot("finish method not supported yet")) {
+          break;
+        }
         if (checkRunning('cannot finish method')) {
           await handleProcessStopResponse(await session.stepOut(), state);
         }
@@ -318,6 +329,9 @@ class InputHandler {
         }
         break;
       case 'p':
+        if (!checkNotFromSnapshot("printing not supported yet")) {
+          break;
+        }
         if (!checkLoaded('nothing to print')) {
           break;
         }
@@ -357,21 +371,33 @@ class InputHandler {
         }
         break;
       case 's':
+        if (!checkNotFromSnapshot("stepping not supported yet")) {
+          break;
+        }
         if (checkRunning('cannot step to next expression')) {
           await handleProcessStopResponse(await session.step(), state);
         }
         break;
       case 'n':
+        if (!checkNotFromSnapshot("go to next expression not supported yet")) {
+          break;
+        }
         if (checkRunning('cannot go to next expression')) {
           await handleProcessStopResponse(await session.stepOver(), state);
         }
         break;
       case 'sb':
+        if (!checkNotFromSnapshot("stepping not supported yet")) {
+          break;
+        }
         if (checkRunning('cannot step bytecode')) {
           await handleProcessStopResponse(await session.stepBytecode(), state);
         }
         break;
       case 'nb':
+        if (!checkNotFromSnapshot("next bytecode not supported yet")) {
+          break;
+        }
         if (checkRunning('cannot step over bytecode')) {
           await handleProcessStopResponse(
               await session.stepOverBytecode(), state);
@@ -442,6 +468,14 @@ class InputHandler {
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
     return session.running;
+  }
+
+  bool checkNotFromSnapshot([String postfix]) {
+    if (session.runningFromSnapshot) {
+      String prefix = '### process running from snapshot';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return !session.runningFromSnapshot;
   }
 
   bool checkNotRunning([String postfix]) {

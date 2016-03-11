@@ -42,13 +42,17 @@ import '../../debug_state.dart' show
     BackTrace;
 
 import '../../vm_commands.dart' show
+    PushFromOffset,
     VmCommand;
+
+import 'package:dartino_compiler/program_info.dart';
 
 const Action debugAction =
     const Action(
         debug,
         debugDocumentation,
         requiresSession: true,
+        supportsWithUri: true,
         supportedTargets: const [
           TargetKind.APPLY,
           TargetKind.BACKTRACE,
@@ -79,7 +83,7 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
   Uri base = sentence.base;
   if (sentence.target == null) {
     return context.performTaskInWorker(
-        new InteractiveDebuggerTask(base));
+        new InteractiveDebuggerTask(base, snapshotLocation: sentence.withUri));
   }
 
   DebuggerTask task;
@@ -201,7 +205,9 @@ class InteractiveDebuggerTask extends SharedTask {
 
   final Uri base;
 
-  const InteractiveDebuggerTask(this.base);
+  final Uri snapshotLocation;
+
+  const InteractiveDebuggerTask(this.base, {this.snapshotLocation});
 
   Future<int> call(
       CommandSender commandSender,
@@ -216,7 +222,10 @@ class InteractiveDebuggerTask extends SharedTask {
         commandSender,
         debugClientEventHandler(state, commandIterator, stdinController));
 
-    return interactiveDebuggerTask(state, base, stdinController);
+    return interactiveDebuggerTask(state,
+        base,
+        stdinController,
+        snapshotLocation: snapshotLocation);
   }
 }
 
@@ -245,13 +254,14 @@ Future<int> runInteractiveDebuggerTask(
 Future<int> interactiveDebuggerTask(
     SessionState state,
     Uri base,
-    StreamController stdinController) async {
+    StreamController stdinController,
+    {Uri snapshotLocation}) async {
   Session session = state.session;
   if (session == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
   List<DartinoDelta> compilationResult = state.compilationResults;
-  if (compilationResult.isEmpty) {
+  if (snapshotLocation == null && compilationResult.isEmpty) {
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
 
@@ -262,7 +272,10 @@ Future<int> interactiveDebuggerTask(
       .transform(UTF8.decoder)
       .transform(new LineSplitter());
 
-  return await session.debug((Session _) => inputStream, base, state);
+  return await session.debug((Session _) => inputStream,
+      base,
+      state,
+      snapshotLocation: snapshotLocation);
 }
 
 class DebuggerTask extends SharedTask {

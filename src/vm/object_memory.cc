@@ -67,6 +67,19 @@ word Space::OffsetOf(HeapObject* object) {
   return address - base;
 }
 
+HeapObject *Space::ObjectAtOffset(word offset) {
+  uword base = first()->base();
+  uword address = offset + base;
+
+  // Make sure the space consists of exactly one chunk!
+  ASSERT(first() == last());
+
+  ASSERT(first()->Includes(address));
+  ASSERT(base <= address);
+
+  return HeapObject::FromAddress(address);
+}
+
 void Space::AdjustAllocationBudget(int used_outside_space) {
   int used = Used() + used_outside_space;
   allocation_budget_ = Utils::Maximum(DefaultChunkSize(used), used);

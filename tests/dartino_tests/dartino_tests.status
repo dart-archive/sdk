@@ -10,9 +10,6 @@ multiprogram_tests/should_fail: Fail, OK # This is a test of this suite, failure
 # Unsupported debugger features
 debugger/break_in_anonymous_function_test: Fail # Issue 444
 
-# Debugging a program run from snapshot is not supported yet.
-cli_debugger_tests/debugging_from_snapshot: Fail
-
 debugger/break_in_loop_test: Fail # Issue 446
 
 # Received PushFromMap command which referes to a non-existent map entry

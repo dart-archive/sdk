@@ -599,16 +599,11 @@ Session::~Session() {
   maps_.Delete();
   delete main_thread_monitor_;
   delete state_;
-  delete program_;
   delete connection_;
 }
 
 void Session::Initialize(Program *program) {
   state_ = new InitialState(this);
-  if (program == NULL) {
-    program = new Program(Program::kBuiltViaSession);
-    program->Initialize();
-  }
   program_ = program;
   program_->AddSession(this);
 }
@@ -694,15 +689,15 @@ void Session::SendInstanceStructure(Instance* instance) {
   }
 }
 
-void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
-                                 FunctionOffsetsType* function_offsets) {
+void Session::SendProgramInfo(ClassOffsetsType* class_offsets,
+    FunctionOffsetsType* function_offsets) {
   ASSERT(maps_[class_map_id_] != NULL);
   ASSERT(maps_[method_map_id_] != NULL);
 
   WriteBuffer buffer;
 
   // Write the hashtag for the program.
-  buffer.WriteInt(program()->hashtag());
+  buffer.WriteInt(program()->snapshot_hash());
 
   // Class offset table
   buffer.WriteInt(5 * class_offsets->size());
@@ -734,7 +729,7 @@ void Session::SendSnapshotResult(ClassOffsetsType* class_offsets,
     buffer.WriteInt(offset.offset_32bits_float);
   }
 
-  connection_->Send(Connection::kWriteSnapshotResult, buffer);
+  connection_->Send(Connection::kProgramInfo, buffer);
 }
 
 // Caller thread must have a lock on main_thread_monitor_, ie,
@@ -832,18 +827,20 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       return NULL;
     }
 
-    case Connection::kWriteSnapshot: {
+    case Connection::kCreateSnapshot: {
       ASSERT(!IsScheduled());
+      bool writeToDisk = connection()->ReadBoolean();
       int length;
       uint8* data = connection()->ReadBytes(&length);
       const char* path = reinterpret_cast<const char*>(data);
       ASSERT(static_cast<int>(strlen(path)) == length - 1);
+      ASSERT(writeToDisk || (static_cast<int>(strlen(path)) == 0));
       FunctionOffsetsType function_offsets;
       ClassOffsetsType class_offsets;
-      bool success = session()->WriteSnapshot(
-          path, &function_offsets, &class_offsets);
+      bool success = session()->CreateSnapshot(
+          writeToDisk, path, &function_offsets, &class_offsets);
       free(data);
-      session()->SendSnapshotResult(&class_offsets, &function_offsets);
+      session()->SendProgramInfo(&class_offsets, &function_offsets);
       session()->SignalMainThread(
           success ? Session::kSnapshotDone : Session::kError);
       return NULL;
@@ -861,7 +858,9 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
         arguments[i] = List<uint8>(bytes, length);
       }
 
-      ProgramFolder::FoldProgramByDefault(program());
+      if (!program()->was_loaded_from_snapshot()) {
+        ProgramFolder::FoldProgramByDefault(program());
+      }
       return new SpawnedState(program()->ProcessSpawnForMain(arguments));
     }
 
@@ -883,6 +882,7 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       session()->fibers_map_id_ = connection()->ReadInt();
       WriteBuffer buffer;
       buffer.WriteBoolean(program()->was_loaded_from_snapshot());
+      buffer.WriteInt(program()->snapshot_hash());
       connection()->Send(Connection::kDebuggingReply, buffer);
       break;
     }
@@ -925,6 +925,14 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       int index = connection()->ReadInt();
       int64 id = connection()->ReadInt64();
       session()->RemoveFromMap(index, id);
+      break;
+    }
+
+    case Connection::kPushFromOffset: {
+      ASSERT(!IsScheduled() || IsPaused());
+      uword offset = connection()->ReadInt64();
+      Object *object = program()->ObjectAtOffset(offset);
+      session()->Push(object);
       break;
     }
 
@@ -1492,9 +1500,11 @@ int Session::ProcessRun() {
   return -1;
 }
 
-bool Session::WriteSnapshot(const char* path,
-                            FunctionOffsetsType* function_offsets,
-                            ClassOffsetsType* class_offsets) {
+bool Session::CreateSnapshot(
+    bool writeToDisk,
+    const char* path,
+    FunctionOffsetsType* function_offsets,
+    ClassOffsetsType* class_offsets) {
   program()->set_entry(Function::cast(Pop()));
   // Make sure that the program is in the compact form before
   // snapshotting.
@@ -1505,7 +1515,9 @@ bool Session::WriteSnapshot(const char* path,
 
   SnapshotWriter writer(function_offsets, class_offsets);
   List<uint8> snapshot = writer.WriteProgram(program());
-  bool success = Platform::StoreFile(path, snapshot);
+  bool success = writeToDisk
+      ? Platform::StoreFile(path, snapshot)
+      : true;
   snapshot.Delete();
   return success;
 }

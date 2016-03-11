@@ -11,9 +11,6 @@ import 'dart:async' show
 
 import 'dart:io' as io;
 
-import 'dart:io' show
-    BytesBuilder;
-
 import 'dart:convert' show
     JSON,
     LineSplitter,
@@ -29,7 +26,7 @@ import 'package:persistent/persistent.dart' show
     Pair;
 
 import 'vm_commands.dart' show
-    WriteSnapshotResult;
+    ProgramInfoCommand;
 
 import 'dartino_system.dart' show
     DartinoFunction,
@@ -48,49 +45,85 @@ enum Configuration {
   Offset32BitsFloat,
 }
 
+// TODO(sigurdm): Restructure how this information is stored.
 class ProgramInfo {
-  final List<String> _strings;
+  final List<String> strings;
+  final Map<String, int> stringsReverseMapping;
 
   // Maps selector-id -> string-id
-  final List<int> _selectorNames;
+  final List<int> selectorNames;
 
   // Maps configuration -> offset -> string-id
-  final Map<Configuration, Map<int, int>> _classNames;
+  final Map<Configuration, Map<int, int>> classNames;
 
   // Maps configuration -> offset -> string-id
-  final Map<Configuration, Map<int, int>> _functionNames;
+  final Map<Configuration, Map<int, int>> functionNames;
+  final Map<Configuration, Map<int, int>> functionNamesReverseMapping;
 
-  // Snapshot hashtag for validation.
-  final hashtag;
+  // Snapshot hash for validation.
+  final snapshotHash;
 
-  ProgramInfo(this._strings, this._selectorNames,
-              this._classNames, this._functionNames,
-              this.hashtag);
+  ProgramInfo(List<String> strings, this.selectorNames,
+              this.classNames, functionNames,
+              this.snapshotHash)
+    : strings = strings,
+      stringsReverseMapping = invertedListMapping(strings),
+      functionNames = functionNames,
+      functionNamesReverseMapping = invertedMap(functionNames);
 
   String classNameOfFunction(Configuration conf, int functionOffset) {
-    return _getString(_classNames[conf][functionOffset]);
+    return getString(classNames[conf][functionOffset]);
   }
 
   String functionName(Configuration conf, int functionOffset) {
-    return _getString(_functionNames[conf][functionOffset]);
+    return getString(functionNames[conf][functionOffset]);
   }
 
   String className(Configuration conf, int classOffset) {
-    return _getString(_classNames[conf][classOffset]);
+    return getString(classNames[conf][classOffset]);
   }
 
   String selectorName(DartinoSelector selector) {
-    return _getString(_selectorNames[selector.id]);
+    return getString(selectorNames[selector.id]);
   }
 
-  String _getString(int stringId) {
+  int functionOffset(Configuration conf, String functionName) {
+    int functionId = stringsReverseMapping[functionName];
+
+    return functionNamesReverseMapping[conf][functionId];
+  }
+
+  String getString(int stringId) {
     String name = null;
     if (stringId != null && stringId != -1) {
-      name = _strings[stringId];
+      name = strings[stringId];
       if (name == '') name = null;
     }
     return name;
   }
+}
+
+Map<String, int> invertedListMapping(List<String> list) {
+  Map<String, int> result = new Map<String, int>();
+  int i = 0;
+  for (String s in list) {
+    result[s] = i;
+    i++;
+  }
+  return result;
+}
+
+Map<Configuration, Map<int, int>> invertedMap(
+    Map<Configuration, Map<int, int>> map) {
+  Map<Configuration, Map<int, int>> result =
+  new Map<Configuration, Map<int, int>>();
+  for (Configuration configuration in map.keys) {
+    result[configuration] = new Map<int, int>();
+    map[configuration].forEach((int k, int v) {
+      result[configuration][v] = k;
+    });
+  }
+  return result;
 }
 
 abstract class ProgramInfoJson {
@@ -126,16 +159,68 @@ abstract class ProgramInfoJson {
     }
 
     return JSON.encode({
-      'strings': info._strings,
-      'selectors': info._selectorNames,
-      'class-names': buildTables(info._classNames),
-      'function-names' : buildTables(info._functionNames),
-      'hashtag': info.hashtag,
+      'strings': info.strings,
+      'selectors': info.selectorNames,
+      'class-names': buildTables(info.classNames),
+      'function-names' : buildTables(info.functionNames),
+      'hashtag': info.snapshotHash,
     });
   }
 
   static ProgramInfo decode(String string) {
     var json = JSON.decode(string);
+
+    Map<String, Configuration> configurations =
+        const <String, Configuration>{
+          'b32float': Configuration.Offset32BitsFloat,
+          'b32double': Configuration.Offset32BitsDouble,
+          'b64float': Configuration.Offset64BitsFloat,
+          'b64double': Configuration.Offset64BitsDouble};
+
+    void ensureFormat(String key) {
+      if (json[key] is! Map) {
+        throw new FormatException("Expected '$key' to be a map.");
+      }
+      for (String configurationName in configurations.keys) {
+        if (json[key][configurationName] is! List) {
+          throw new FormatException(
+              "Expected '$key.$configurationName' to be a List.");
+        }
+        for (var i in json[key][configurationName]) {
+          if (i is! int) {
+            throw new FormatException(
+                "Found non-integer in '$key.$configurationName'.");
+          }
+        }
+      }
+    }
+
+    ensureFormat('class-names');
+    ensureFormat('function-names');
+
+    if (json['hashtag'] is! int) {
+      throw new FormatException(
+          "Expected 'hashtag' to be an integer.");
+    }
+
+    if (json['strings'] is! List) {
+      throw new FormatException(
+          "Expected 'Strings' to be a list.");
+    }
+    for (var i in json['strings']) {
+      if (i is! String) {
+        throw new FormatException("Found non-string in 'strings'.");
+      }
+    }
+    if (json['selectors'] is! List) {
+      throw new FormatException(
+          "Expected 'selectors' to be a list");
+    }
+    for (var i in json['selectors']) {
+      if (i is! int) {
+        throw new FormatException("Found non-int in 'selectors'.");
+      }
+    }
 
     Map<int, int> convertList(List<int> list) {
       Map<int, int> map = {};
@@ -145,27 +230,16 @@ abstract class ProgramInfoJson {
       return map;
     }
 
-    var classNames = {
-      Configuration.Offset64BitsDouble :
-          convertList(json['class-names']['b64double']),
-      Configuration.Offset64BitsFloat:
-          convertList(json['class-names']['b64float']),
-      Configuration.Offset32BitsDouble :
-          convertList(json['class-names']['b32double']),
-      Configuration.Offset32BitsFloat :
-          convertList(json['class-names']['b32float']),
-    };
+    Map convertNames(String key) {
+      Map result = {};
+      configurations.forEach((String configurationName, Configuration conf) {
+        result[conf] = convertList(json[key][configurationName]);
+      });
+      return result;
+    }
 
-    var functionNames = {
-      Configuration.Offset64BitsDouble :
-          convertList(json['function-names']['b64double']),
-      Configuration.Offset64BitsFloat:
-          convertList(json['function-names']['b64float']),
-      Configuration.Offset32BitsDouble :
-          convertList(json['function-names']['b32double']),
-      Configuration.Offset32BitsFloat :
-          convertList(json['function-names']['b32float']),
-    };
+    var classNames = convertNames('class-names');
+    var functionNames = convertNames('function-names');
 
     return new ProgramInfo(
         json['strings'], json['selectors'],
@@ -174,7 +248,7 @@ abstract class ProgramInfoJson {
   }
 }
 
-ProgramInfo buildProgramInfo(DartinoSystem system, WriteSnapshotResult result) {
+ProgramInfo buildProgramInfo(DartinoSystem system, ProgramInfoCommand result) {
   List<String> strings = [];
   Map<String, int> stringIndices = {};
   List<int> selectors = [];
@@ -261,7 +335,7 @@ ProgramInfo buildProgramInfo(DartinoSystem system, WriteSnapshotResult result) {
   });
 
   return new ProgramInfo(strings, selectors, classNames,
-                         functionNames, result.hashtag);
+                         functionNames, result.snapshotHash);
 }
 
 final RegExp _FrameRegexp =
@@ -555,17 +629,17 @@ Future<Profile> decodeTickSamples(
 
   // Compute a offset sorted list of Function entries.
   List<NamedEntry> functions = new List<NamedEntry>();
-  Map<int,int> fnames = info._functionNames[conf];
+  Map<int,int> fnames = info.functionNames[conf];
   fnames.forEach((key, value) {
-     functions.add(new NamedEntry(key, info._getString(value)));
+     functions.add(new NamedEntry(key, info.getString(value)));
   });
   functions.sort((a, b) => a.offset - b.offset);
 
   // Compute a offset sorted list of Class entries.
   List<NamedEntry> classes = new List<NamedEntry>();
-  Map<int,int> cnames = info._classNames[conf];
+  Map<int,int> cnames = info.classNames[conf];
   cnames.forEach((key, value) {
-     classes.add(new NamedEntry(key, info._getString(value)));
+     classes.add(new NamedEntry(key, info.getString(value)));
   });
   classes.sort((a, b) => a.offset - b.offset);
 
@@ -574,7 +648,7 @@ Future<Profile> decodeTickSamples(
     profile.total_ticks++;
     if (t.bcp == 0) {
       profile.runtime_ticks++;
-    } else if (t.hashtag != info.hashtag) {
+    } else if (t.hashtag != info.snapshotHash) {
       profile.other_snapshot_ticks++;
     } else {
       profile.interpreter_ticks++;

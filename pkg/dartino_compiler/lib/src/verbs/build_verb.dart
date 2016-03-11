@@ -4,15 +4,13 @@
 
 library dartino_compiler.verbs.build_verb;
 
-import 'package:path/path.dart' show
-    basenameWithoutExtension;
-
 import 'infrastructure.dart';
 
 import '../worker/developer.dart' show
     buildImage,
     compileAndAttachToVmThen,
-    export;
+    export,
+    defaultSnapshotLocation;
 
 import 'documentation.dart' show
     buildDocumentation;
@@ -47,9 +45,8 @@ Future<int> buildTask(
     SessionState state,
     Uri script,
     Uri base) async {
-  // TODO(sgjesse): Use a temp directory for the snapshot.
-  String snapshotName = basenameWithoutExtension(script.path) + '.snapshot';
-  Uri snapshot = script.resolve(snapshotName);
+
+  Uri snapshot = defaultSnapshotLocation(script);
   int rc = await compileAndAttachToVmThen(
       commandSender,
       commandIterator,

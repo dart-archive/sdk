@@ -164,7 +164,7 @@ class Program : public ProgramList::Entry {
     kBuiltViaSession,
   };
 
-  explicit Program(ProgramSource source, int hashtag = 0);
+  explicit Program(ProgramSource source, int snapshot_hash = 0);
   ~Program();
 
   void Initialize();
@@ -213,8 +213,10 @@ class Program : public ProgramList::Entry {
 
   ProgramState* program_state() { return &program_state_; }
 
-  int hashtag() const { return hashtag_; }
-  void set_hashtag(int value) { hashtag_ = value; }
+  int snapshot_hash() const { return snapshot_hash_; }
+  void set_snapshot_hash(uint32_t snapshot_hash) {
+    snapshot_hash_ = snapshot_hash;
+  }
 
   // TODO(ager): Support more than one active session at a time.
   void AddSession(Session* session) {
@@ -330,6 +332,7 @@ class Program : public ProgramList::Entry {
   // When the program was loaded from a snapshot, then this function can be used
   // to get the offset of functions/classes in the program heap.
   uword OffsetOf(HeapObject* object);
+  HeapObject *ObjectAtOffset(uword offset);
 
   ProcessList* process_list() { return &process_list_; }
 
@@ -402,14 +405,12 @@ class Program : public ProgramList::Entry {
   Function* entry_;
 
   bool loaded_from_snapshot_;
+  uint32_t snapshot_hash_;
 
   ProgramExitListener program_exit_listener_;
   void* program_exit_listener_data_;
 
   Signal::Kind exit_kind_;
-
-  // Tag used to identified snapshot program when profiling.
-  int hashtag_;
 
   // Used during GC and debugging to traverse the stacks.
   Stack* stack_chain_;

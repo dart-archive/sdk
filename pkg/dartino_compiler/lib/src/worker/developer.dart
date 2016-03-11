@@ -52,16 +52,18 @@ import 'package:path/path.dart' show
     withoutExtension;
 
 import '../../vm_commands.dart' show
-    VmCommandCode,
     ConnectionError,
     Debugging,
+    DebuggingReply,
     HandShakeResult,
     ProcessBacktrace,
     ProcessBacktraceRequest,
     ProcessRun,
     ProcessSpawnForMain,
+    ProgramInfoCommand,
     SessionEnd,
-    WriteSnapshotResult;
+    VmCommand,
+    VmCommandCode;
 
 import '../../program_info.dart' show
     Configuration,
@@ -652,6 +654,23 @@ Future<int> run(
   return exitCode;
 }
 
+/// Returns the [ProgramInfo] stored in the '.info.json' adjacent to a snapshot
+/// location.
+Future<ProgramInfo> getInfoFromSnapshotLocation(Uri snapshot) async {
+  Uri info = snapshot.replace(path: "${snapshot.path}.info.json");
+  File infoFile = new File.fromUri(info);
+
+  if (!await infoFile.exists()) {
+    throwFatalError(DiagnosticKind.infoFileNotFound, uri: snapshot);
+  }
+
+  try {
+    return ProgramInfoJson.decode(await infoFile.readAsString());
+  } on FormatException {
+    throwFatalError(DiagnosticKind.malformedInfoFile, uri: snapshot);
+  }
+}
+
 Future<int> export(SessionState state, Uri snapshot) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
   Session session = state.session;
@@ -661,9 +680,10 @@ Future<int> export(SessionState state, Uri snapshot) async {
     await session.applyDelta(delta);
   }
 
-  var result = await session.writeSnapshot(snapshot.toFilePath());
-  if (result is WriteSnapshotResult) {
-    WriteSnapshotResult snapshotResult = result;
+  var result = await session.createSnapshot(
+      snapshotPath: snapshot.toFilePath());
+  if (result is ProgramInfoCommand) {
+    ProgramInfoCommand snapshotResult = result;
 
     await session.shutdown();
 
@@ -1689,4 +1709,10 @@ class Settings {
 
     return result;
   }
+}
+
+Uri defaultSnapshotLocation(Uri script) {
+  // TODO(sgjesse): Use a temp directory for the snapshot.
+  String snapshotName = basenameWithoutExtension(script.path) + '.snapshot';
+  return script.resolve(snapshotName);
 }

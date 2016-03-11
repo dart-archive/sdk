@@ -34,7 +34,7 @@ void ProgramState::AddPausedProcess(Process* process) {
   paused_processes_.Append(process);
 }
 
-Program::Program(ProgramSource source, int hashtag)
+Program::Program(ProgramSource source, int snapshot_hash)
     :
 #define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
       ROOTS_DO(CONSTRUCTOR_NULL)
@@ -47,10 +47,10 @@ Program::Program(ProgramSource source, int hashtag)
       session_(NULL),
       entry_(NULL),
       loaded_from_snapshot_(source == Program::kLoadedFromSnapshot),
+      snapshot_hash_(snapshot_hash),
       program_exit_listener_(NULL),
       program_exit_listener_data_(NULL),
       exit_kind_(Signal::kTerminated),
-      hashtag_(hashtag),
       stack_chain_(NULL),
       cache_(NULL),
       debug_info_(NULL),
@@ -63,6 +63,7 @@ Program::Program(ProgramSource source, int hashtag)
   static_assert(k##CamelName##Offset == offsetof(Program, name##_), #name);
   ROOTS_DO(ASSERT_OFFSET)
 #undef ASSERT_OFFSET
+  ASSERT(loaded_from_snapshot_ || snapshot_hash_ == 0);
 }
 
 Program::~Program() {
@@ -383,6 +384,11 @@ void Program::FinishProgramGC() {
 uword Program::OffsetOf(HeapObject* object) {
   ASSERT(is_optimized());
   return heap()->space()->OffsetOf(object);
+}
+
+HeapObject *Program::ObjectAtOffset(uword offset) {
+  ASSERT(was_loaded_from_snapshot());
+  return heap()->space()->ObjectAtOffset(offset);
 }
 
 void Program::ValidateGlobalHeapsAreConsistent() {

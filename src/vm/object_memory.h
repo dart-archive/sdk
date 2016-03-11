@@ -170,6 +170,7 @@ class Space {
   // Obtain the offset of [object] from the start of the chunk. We assume
   // there is exactly one chunk in this space and [object] lies within it.
   word OffsetOf(HeapObject* object);
+  HeapObject *ObjectAtOffset(word offset);
 
 #ifdef DEBUG
   void Find(uword word, const char* name);

@@ -374,7 +374,7 @@ void ProgramFolder::Unfold() {
   ASSERT(program_->is_optimized());
 
   // Ensure the tick sampler knows the program has changed.
-  program_->set_hashtag(0);
+  program_->set_snapshot_hash(0);
 
   // Run through the dispatch table and compute a map from selector offsets
   // to the original selectors. This is used when rewriting the

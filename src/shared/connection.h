@@ -100,8 +100,8 @@ class Connection {
     kProcessGetProcessIds,
     kProcessGetProcessIdsResult,
 
-    kWriteSnapshot,
-    kWriteSnapshotResult,
+    kCreateSnapshot,
+    kProgramInfo,
     kCollectGarbage,
 
     kNewMap,
@@ -109,6 +109,7 @@ class Connection {
     kPushFromMap,
     kPopToMap,
     kRemoveFromMap,
+    kPushFromOffset,
 
     kDup,
     kDrop,

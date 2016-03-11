@@ -42,7 +42,13 @@ import 'src/hub/session_manager.dart' show
     SessionState;
 
 import 'package:dartino_compiler/program_info.dart' show
-    Configuration;
+    Configuration,
+    ProgramInfo;
+
+import 'package:dartino_compiler/src/worker/developer.dart';
+import 'package:dartino_compiler/src/diagnostic.dart';
+
+import 'package:dartino_compiler/src/hub/exit_codes.dart' as exit_codes;
 
 part 'vm_command_reader.dart';
 part 'input_handler.dart';
@@ -224,8 +230,16 @@ class Session extends DartinoVmSession {
 
   /// The configuration of the vm connected to this session.
   Configuration configuration;
+
   /// `true` if the vm connected to this session is running from a snapshot.
   bool runningFromSnapshot;
+
+  /// The hash of the snapshot in the vm connected to this session.
+  ///
+  /// Only valid if [runningFromSnapshot].
+  int snapshotHash;
+
+  ProgramInfo info;
 
   Session(Socket dartinoVmSocket,
           this.compiler,
@@ -255,9 +269,11 @@ class Session extends DartinoVmSession {
     await runCommand(const DisableStandardOutput());
   }
 
-  // Returns either a [WriteSnapshotResult] or a [ConnectionError].
-  Future<VmCommand> writeSnapshot(String snapshotPath) async {
-    VmCommand result = await runCommand(new WriteSnapshot(snapshotPath));
+  /// Returns either a [ProgramInfoCommand] or a [ConnectionError].
+  Future<VmCommand> createSnapshot(
+      {String snapshotPath: null}) async {
+    VmCommand result = await runCommand(
+        new CreateSnapshot(snapshotPath: snapshotPath));
     await shutdown();
     return result;
   }
@@ -307,18 +323,40 @@ class Session extends DartinoVmSession {
       Stream<String> inputLines(Session session),
       Uri base,
       SessionState state,
-      {bool echo: false}) async {
+      {bool echo: false,
+       Uri snapshotLocation}) async {
     DebuggingReply debuggingReply = await enableDebugger();
+
     runningFromSnapshot = debuggingReply.isFromSnapshot;
     if (runningFromSnapshot) {
-      // TODO(sigurdm): Implement debugging when running from snapshot.
-      throw new Exception("Debugging program running from snapshot is not "
-          "implemented yet.");
+      snapshotHash = debuggingReply.snapshotHash;
+      if (snapshotLocation == null) {
+        snapshotLocation = defaultSnapshotLocation(state.script);
+      }
+
+      ProgramInfo info = await getInfoFromSnapshotLocation(snapshotLocation);
+      if (info == null) {
+        return exit_codes.COMPILER_EXITCODE_CRASH;
+      }
+
+      if (info.snapshotHash != snapshotHash) {
+        throwFatalError(DiagnosticKind.snapshotHashMismatch,
+            userInput: "${info.snapshotHash}",
+            additionalUserInput: "${snapshotHash}",
+            uri: snapshotLocation);
+      } else {
+        // Push the main entry point to top of debugging stack.
+        // TODO(sigurdm): It is not good enough to look up by name.
+        // We need to store a mapping from element -> offset.
+        runCommand(
+            new PushFromOffset(info.functionOffset(configuration, "entry")));
+      }
     } else {
       for (DartinoDelta delta in state.compilationResults) {
         await applyDelta(delta);
       }
     }
+
     // TODO(ahe): Arguments?
     await spawnProcess([]);
     return new InputHandler(this, inputLines(this), echo, base).run(state);

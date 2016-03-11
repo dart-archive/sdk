@@ -17,6 +17,8 @@ class ProgramInfoBlock {
 
   uword magic() { return magic_; }
 
+  uint32_t snapshot_hash() { return snapshot_hash_; }
+
   Object** roots() { return &entry_; }
 
   void* end_of_roots() { return &end_; }
@@ -29,6 +31,10 @@ class ProgramInfoBlock {
   static const uword kProgramInfoMagic = 0x96064EA9;
 
   uword magic_;
+
+  // The hash of the snapshot the program is created from.
+  uint32_t snapshot_hash_;
+
   // This has to remain in sync with all the roots that are traversed by
   // IterateRoots in Program. Also, the type does not really matter as long
   // as it also is a pointer type and they won't be used in order (as in

@@ -169,10 +169,13 @@ abstract class InteractiveDebuggerTestContext extends SessionTestContext {
 
   Future<Null> expectClosed(StreamIterator iterator, String name) async {
     if (await iterator.moveNext()) {
+      List<String> output = new List<String>();
       do {
         print("Unexpected content on $name: ${iterator.current}");
+        output.add(iterator.current);
       } while (await iterator.moveNext());
-      Expect.fail("Expected $name stream to be empty");
+      Expect.fail(
+          "Expected $name stream to be empty, found '${output.join()}'");
     }
   }
 
@@ -218,7 +221,7 @@ class SnapshotTestcontext extends InteractiveDebuggerTestContext {
     Expect.equals(0, await attach.exitCode);
 
     // Run the debugger.
-    process = await dartino(["debug", test.filePath],
+    process = await dartino(["debug", "with", snapshotPath],
         workingDirectory: test.workingDirectory);
   }
 

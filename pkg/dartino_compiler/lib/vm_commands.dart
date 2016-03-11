@@ -114,7 +114,7 @@ abstract class VmCommand {
         String message = CommandBuffer.readAsciiStringFromBuffer(
             buffer, 1, buffer.length - 1);
         return new CommitChangesResult(success, message);
-      case VmCommandCode.WriteSnapshotResult:
+      case VmCommandCode.ProgramInfo:
         if ((buffer.offsetInBytes % 4) != 0) {
           buffer = new Uint8List.fromList(buffer);
         }
@@ -134,7 +134,7 @@ abstract class VmCommand {
           return classTable;
         }
 
-        int hashtag = readInt();
+        int hash = readInt();
 
         int classEntries = readInt();
         Int32List classTable = readArray(classEntries);
@@ -142,10 +142,11 @@ abstract class VmCommand {
         int functionEntries = readInt();
         Int32List functionTable = readArray(functionEntries);
 
-        return new WriteSnapshotResult(classTable, functionTable, hashtag);
+        return new ProgramInfoCommand(classTable, functionTable, hash);
       case VmCommandCode.DebuggingReply:
         bool isFromSnapshot = CommandBuffer.readBoolFromBuffer(buffer, 0);
-        return new DebuggingReply(isFromSnapshot);
+        int snapshotHash = CommandBuffer.readInt32FromBuffer(buffer, 1);
+        return new DebuggingReply(isFromSnapshot, snapshotHash);
       default:
         throw 'Unhandled command in VmCommand.fromBuffer: $code';
     }
@@ -475,6 +476,26 @@ class RemoveFromMap extends MapAccess {
       : super(map, index, VmCommandCode.RemoveFromMap);
 
   int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "$map, $index";
+}
+
+class PushFromOffset extends VmCommand {
+  const PushFromOffset(this.offset)
+      : super(VmCommandCode.PushFromOffset);
+
+  final int offset;
+
+  int get numberOfResponsesExpected => 0;
+
+  void internalAddTo(
+      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+    buffer
+      ..addUint64(offset)
+      ..sendOn(sink, code);
+  }
+
+  String valuesToString() => "$offset";
 }
 
 class Drop extends VmCommand {
@@ -1291,13 +1312,15 @@ class Debugging extends VmCommand {
 
 class DebuggingReply extends VmCommand {
   final bool isFromSnapshot;
+  final int snapshotHash;
 
-  const DebuggingReply(this.isFromSnapshot)
+  const DebuggingReply(this.isFromSnapshot, this.snapshotHash)
       : super(VmCommandCode.DebuggingReply);
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "isFromSnapshot: $isFromSnapshot";
+  String valuesToString() =>
+      "isFromSnapshot: $isFromSnapshot snapshotHash: $snapshotHash";
 }
 
 class DisableStandardOutput extends VmCommand {
@@ -1331,16 +1354,19 @@ class StderrData extends VmCommand {
   String valuesToString() => "value: $value";
 }
 
-class WriteSnapshot extends VmCommand {
-  final String value;
+class CreateSnapshot extends VmCommand {
+  final String snapshotPath;
 
-  const WriteSnapshot(this.value)
-      : super(VmCommandCode.WriteSnapshot);
+  const CreateSnapshot({this.snapshotPath: null})
+      : super(VmCommandCode.CreateSnapshot);
+
+  bool get writeToDisk => snapshotPath != null;
 
   void internalAddTo(
       Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
-    List<int> payload = UTF8.encode(value).toList()..add(0);
+    List<int> payload = UTF8.encode(snapshotPath ?? "").toList()..add(0);
     buffer
+        ..addBool(writeToDisk)
         ..addUint32(payload.length)
         ..addUint8List(payload)
         ..sendOn(sink, code);
@@ -1349,7 +1375,7 @@ class WriteSnapshot extends VmCommand {
   // Response is a [WriteSnapshotResult] message.
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "value: '$value'";
+  String valuesToString() => "filePath: '$snapshotPath'";
 }
 
 // Contains two tables with information about function/class offsets in the
@@ -1373,15 +1399,15 @@ class WriteSnapshot extends VmCommand {
 //     config3: "32 bit double"
 //     config4: "32 bit float"
 //
-class WriteSnapshotResult extends VmCommand {
+class ProgramInfoCommand extends VmCommand {
   final Int32List classOffsetTable;
   final Int32List functionOffsetTable;
-  final int hashtag;
+  final int snapshotHash;
 
-  const WriteSnapshotResult(this.classOffsetTable,
-                            this.functionOffsetTable,
-                            this.hashtag)
-      : super(VmCommandCode.WriteSnapshotResult);
+  const ProgramInfoCommand(this.classOffsetTable,
+      this.functionOffsetTable,
+      this.snapshotHash)
+      : super(VmCommandCode.ProgramInfo);
 
   void internalAddTo(
       Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
@@ -1563,8 +1589,8 @@ enum VmCommandCode {
   ProcessGetProcessIds,
   ProcessGetProcessIdsResult,
 
-  WriteSnapshot,
-  WriteSnapshotResult,
+  CreateSnapshot,
+  ProgramInfo,
   CollectGarbage,
 
   NewMap,
@@ -1572,6 +1598,7 @@ enum VmCommandCode {
   PushFromMap,
   PopToMap,
   RemoveFromMap,
+  PushFromOffset,
 
   Dup,
   Drop,

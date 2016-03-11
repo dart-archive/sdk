@@ -57,8 +57,9 @@ class Session {
 
   // High-level operations.
   int ProcessRun();
-  bool WriteSnapshot(const char* path, FunctionOffsetsType* function_offsets,
-                     ClassOffsetsType* class_offsets);
+  bool CreateSnapshot(bool writeToDisk,
+      const char* path, FunctionOffsetsType* function_offsets,
+      ClassOffsetsType* class_offsets);
 
   bool CanHandleEvents() const;
   Scheduler::ProcessInterruptionEvent UncaughtException(Process* process);
@@ -203,8 +204,8 @@ class Session {
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);
   void SendInstanceStructure(Instance* instance);
-  void SendSnapshotResult(ClassOffsetsType* class_offsets,
-                          FunctionOffsetsType* function_offsets);
+  void SendProgramInfo(ClassOffsetsType* class_offsets,
+      FunctionOffsetsType* function_offsets);
 
   void Push(Object* object) { stack_.Add(object); }
   Object* Pop() { return stack_.RemoveLast(); }

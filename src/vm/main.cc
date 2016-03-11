@@ -165,7 +165,7 @@ static int Main(int argc, char** argv) {
     Print::RegisterPrintInterceptor(new LogPrintInterceptor(log_path));
   }
 
-  DartinoProgram program = NULL;
+  DartinoProgram program;
 
   // Check if we're passed an snapshot file directly.
   if (run_snapshot) {
@@ -188,6 +188,10 @@ static int Main(int argc, char** argv) {
     }
     bytes.Delete();
   } else {
+    dartino::Program *p =
+        new dartino::Program(dartino::Program::kBuiltViaSession);
+    p->Initialize();
+    program = reinterpret_cast<DartinoProgram>(p);
     // If there was no snapshot, run in interactive mode.
     interactive = true;
   }
@@ -202,9 +206,7 @@ static int Main(int argc, char** argv) {
     result = DartinoRunMain(program, argc, argv);
   }
 
-  if (program != NULL) {
-    DartinoDeleteProgram(program);
-  }
+  DartinoDeleteProgram(program);
 
   DartinoTearDown();
   return result;
