@@ -180,7 +180,6 @@ list_test/none: Crash
 nan_infinity_test/01: RuntimeError
 nan_infinity_test/none: RuntimeError
 num_sign_test: Pass, Crash
-regexp/global_test: Fail
 regexp/regexp_test: Crash
 string_fromcharcodes_test: Crash
 toInt_test: RuntimeError
@@ -199,7 +198,7 @@ list_unmodifiable_test: Crash
 regexp/pcre_test: Slow, Pass
 
 [ $mode == debug || $asan ]
-regexp/global_test: Slow, Pass
+regexp/global_test: Slow, Pass, Timeout
 
 [ $mode == debug ]
 big_integer_huge_mul_vm_test: Slow, Pass

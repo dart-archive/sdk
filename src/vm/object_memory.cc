@@ -220,10 +220,10 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
       Platform::AllocatePages(size, GCMetadata::heap_allocation_arena());
   uword lowest = GCMetadata::lowest_old_space_address();
   USE(lowest);
+  if (memory == NULL) return NULL;
   ASSERT(reinterpret_cast<uword>(memory) >= lowest);
   ASSERT(reinterpret_cast<uword>(memory) - lowest + size <=
          GCMetadata::heap_extent());
-  if (memory == NULL) return NULL;
 
   uword base = reinterpret_cast<uword>(memory);
   Chunk* chunk = new Chunk(owner, base, size);

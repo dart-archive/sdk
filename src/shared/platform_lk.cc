@@ -204,8 +204,10 @@ void* Platform::AllocatePages(uword size, int arenas) {
   // TODO(erikcorry): When LK is upgraded to allow passing the arenas argument
   // to page_alloc, we can add it back here.
   void* memory = page_alloc(size >> PAGE_SIZE_SHIFT);
-  ASSERT(reinterpret_cast<uword>(memory) >= heap_start);
-  ASSERT(reinterpret_cast<uword>(memory) + size <= heap_start + heap_size);
+  if (memory !=NULL) {
+    ASSERT(reinterpret_cast<uword>(memory) >= heap_start);
+    ASSERT(reinterpret_cast<uword>(memory) + size <= heap_start + heap_size);
+  }
   return memory;
 }
 
