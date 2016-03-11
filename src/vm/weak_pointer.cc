@@ -11,22 +11,14 @@
 
 namespace dartino {
 
-WeakPointer::WeakPointer(HeapObject* object, WeakPointerCallback callback,
-                         WeakPointer* next)
+WeakPointer::WeakPointer(HeapObject* object, WeakPointerCallback callback)
     : object_(object),
       callback_(reinterpret_cast<void*>(callback)),
-      arg_(NULL),
-      prev_(NULL),
-      next_(next) {}
+      arg_(NULL) {}
 
 WeakPointer::WeakPointer(HeapObject* object,
-                         ExternalWeakPointerCallback callback, void* arg,
-                         WeakPointer* next)
-    : object_(object),
-      callback_(reinterpret_cast<void*>(callback)),
-      arg_(arg),
-      prev_(NULL),
-      next_(next) {
+                         ExternalWeakPointerCallback callback, void* arg)
+    : object_(object), callback_(reinterpret_cast<void*>(callback)), arg_(arg) {
   ASSERT(arg_ != NULL);
 }
 
@@ -38,92 +30,56 @@ void WeakPointer::Invoke(Heap* heap) {
   }
 }
 
-void WeakPointer::Process(Space* space, WeakPointer** pointers, Heap* heap) {
-  WeakPointer* new_list = NULL;
-  WeakPointer* previous = NULL;
-  WeakPointer* current = *pointers;
-  while (current != NULL) {
-    WeakPointer* next = current->next_;
-    HeapObject* current_object = current->object_;
+void WeakPointer::Process(Space* space, DoubleList<WeakPointer>* pointers,
+                          Heap* heap) {
+  for (auto it = pointers->Begin(); it != pointers->End();) {
+    HeapObject* current_object = it->object_;
     if (space->Includes(current_object->address())) {
       if (space->IsAlive(current_object)) {
-        current->object_ = space->NewLocation(current_object);
-        if (new_list == NULL) new_list = current;
-        previous = current;
+        it->object_ = space->NewLocation(current_object);
+        ++it;
       } else {
-        if (current->next_ != NULL) current->next_->prev_ = previous;
-        if (previous != NULL) previous->next_ = current->next_;
-        current->Invoke(heap);
-        delete current;
+        auto previous = *it;
+        it = pointers->Erase(it);
+        previous->Invoke(heap);
+        delete previous;
       }
     } else {
-      if (new_list == NULL) new_list = current;
-      previous = current;
+      ++it;
     }
-    current = next;
   }
-  *pointers = new_list;
 }
 
-void WeakPointer::ForceCallbacks(WeakPointer** pointers, Heap* heap) {
-  WeakPointer* current = *pointers;
-  while (current != NULL) {
-    WeakPointer* temp = current->next_;
-    current->Invoke(heap);
-    delete current;
-    current = temp;
+void WeakPointer::ForceCallbacks(DoubleList<WeakPointer>* pointers,
+                                 Heap* heap) {
+  for (auto it = pointers->Begin(); it != pointers->End();) {
+    it->Invoke(heap);
+    auto previous = *it;
+    it = pointers->Erase(it);
+    delete previous;
   }
-  *pointers = NULL;
 }
 
-bool WeakPointer::Remove(WeakPointer** pointers, HeapObject* object,
+bool WeakPointer::Remove(DoubleList<WeakPointer>* pointers, HeapObject* object,
                          ExternalWeakPointerCallback callback) {
-  WeakPointer* current = *pointers;
-  WeakPointer* previous = NULL;
-  while (current != NULL) {
-    if (current->object_ == object &&
-        ((current->arg_ == NULL && callback == NULL) ||
-         (current->callback_ == callback))) {
-      if (previous == NULL) {
-        *pointers = current->next_;
-      } else {
-        previous->next_ = current->next_;
-      }
-      if (current->next_ != NULL) current->next_->prev_ = previous;
-      delete current;
+  for (auto it = pointers->Begin(); it != pointers->End();) {
+    if (it->object_ == object && ((it->arg_ == NULL && callback == NULL) ||
+                                  (it->callback_ == callback))) {
+      auto previous = *it;
+      it = pointers->Erase(it);
+      delete previous;
       return true;
     } else {
-      previous = current;
-      current = current->next_;
+      ++it;
     }
   }
   return false;
 }
 
-void WeakPointer::PrependWeakPointers(WeakPointer** pointers,
-                                      WeakPointer* to_be_prepended) {
-  if (to_be_prepended != NULL) {
-    WeakPointer* head = *pointers;
-
-    ASSERT(head == NULL || head->prev_ == NULL);
-    ASSERT(to_be_prepended->prev_ == NULL);
-
-    WeakPointer* last = to_be_prepended;
-    while (last->next_ != NULL) {
-      last = last->next_;
-    }
-    last->next_ = head;
-    if (head != NULL) {
-      head->prev_ = last;
-    }
-    *pointers = to_be_prepended;
-  }
-}
-
-void WeakPointer::Visit(WeakPointer* pointers, PointerVisitor* visitor) {
-  while (pointers != NULL) {
-    visitor->Visit(reinterpret_cast<Object**>(&pointers->object_));
-    pointers = pointers->next_;
+void WeakPointer::Visit(DoubleList<WeakPointer>* pointers,
+                        PointerVisitor* visitor) {
+  for (auto weak_pointer : *pointers) {
+    visitor->Visit(reinterpret_cast<Object**>(&weak_pointer->object_));
   }
 }
 

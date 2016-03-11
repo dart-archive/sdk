@@ -99,7 +99,6 @@ class Heap {
 
   void ReplaceSpace(SemiSpace* space);
   SemiSpace* TakeSpace();
-  WeakPointer* TakeWeakPointers();
 
   RandomXorShift* random() { return random_; }
 
@@ -113,7 +112,7 @@ class Heap {
                                  ExternalWeakPointerCallback callback);
   void ProcessWeakPointers(Space* space);
   void VisitWeakObjectPointers(PointerVisitor* visitor) {
-    WeakPointer::Visit(weak_pointers_, visitor);
+    WeakPointer::Visit(&weak_pointers_, visitor);
   }
 
 #ifdef DEBUG
@@ -156,7 +155,7 @@ class Heap {
   // The number of bytes of foreign memory heap objects are holding on to.
   int foreign_memory_;
   // Linked list of weak pointers to heap objects in this heap.
-  WeakPointer* weak_pointers_;
+  DoubleList<WeakPointer> weak_pointers_;
 
 #ifdef DEBUG
   void IncrementNoAllocation() { ++no_allocation_; }

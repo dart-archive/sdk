@@ -5,38 +5,38 @@
 #ifndef SRC_VM_WEAK_POINTER_H_
 #define SRC_VM_WEAK_POINTER_H_
 
+#include "src/vm/double_list.h"
+
 namespace dartino {
 
 class HeapObject;
 class Space;
 class Heap;
 class PointerVisitor;
+class WeakPointer;
 
 typedef void (*WeakPointerCallback)(HeapObject* object, Heap* heap);
 typedef void (*ExternalWeakPointerCallback)(void* arg);
+typedef DoubleList<WeakPointer> WeakPointerList;
 
-class WeakPointer {
+class WeakPointer : public WeakPointerList::Entry {
  public:
-  WeakPointer(HeapObject* object, WeakPointerCallback callback,
-              WeakPointer* next);
+  WeakPointer(HeapObject* object, WeakPointerCallback callback);
 
   WeakPointer(HeapObject* object, ExternalWeakPointerCallback callback,
-              void* arg, WeakPointer* next);
+              void* arg);
 
-  static void Process(Space* garbage_space, WeakPointer** pointers, Heap* heap);
-  static void ForceCallbacks(WeakPointer** pointers, Heap* heap);
-  static bool Remove(WeakPointer** pointers, HeapObject* object,
+  static void Process(Space* garbage_space, DoubleList<WeakPointer>* pointers,
+                      Heap* heap);
+  static void ForceCallbacks(DoubleList<WeakPointer>* pointers, Heap* heap);
+  static bool Remove(DoubleList<WeakPointer>* pointers, HeapObject* object,
                      ExternalWeakPointerCallback callback = nullptr);
-  static void PrependWeakPointers(WeakPointer** pointers,
-                                  WeakPointer* to_be_prepended);
-  static void Visit(WeakPointer* pointers, PointerVisitor* visitor);
+  static void Visit(DoubleList<WeakPointer>* pointers, PointerVisitor* visitor);
 
  private:
   HeapObject* object_;
   void* callback_;
   void* arg_;
-  WeakPointer* prev_;
-  WeakPointer* next_;
 
   void Invoke(Heap* heap);
 };

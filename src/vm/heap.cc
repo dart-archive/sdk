@@ -13,7 +13,7 @@
 namespace dartino {
 
 Heap::Heap(RandomXorShift* random)
-    : random_(random), space_(NULL), foreign_memory_(0), weak_pointers_(NULL) {}
+    : random_(random), space_(NULL), foreign_memory_(0) {}
 
 OneSpaceHeap::OneSpaceHeap(RandomXorShift* random, int maximum_initial_size)
     : Heap(random) {
@@ -37,12 +37,6 @@ TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
   AdjustOldAllocationBudget();
   water_mark_ = chunk->base();
 }
-
-Heap::Heap(SemiSpace* existing_space, WeakPointer* weak_pointers)
-    : random_(NULL),
-      space_(existing_space),
-      foreign_memory_(0),
-      weak_pointers_(weak_pointers) {}
 
 Heap::~Heap() {
   // This has no effect if we already did it once in the subclass.
@@ -304,20 +298,16 @@ SemiSpace* Heap::TakeSpace() {
   return result;
 }
 
-WeakPointer* Heap::TakeWeakPointers() {
-  WeakPointer* weak_pointers = weak_pointers_;
-  weak_pointers_ = NULL;
-  return weak_pointers;
-}
-
 void Heap::AddWeakPointer(HeapObject* object, WeakPointerCallback callback) {
-  weak_pointers_ = new WeakPointer(object, callback, weak_pointers_);
+  WeakPointer* weak_pointer = new WeakPointer(object, callback);
+  weak_pointers_.Append(weak_pointer);
 }
 
 void Heap::AddExternalWeakPointer(HeapObject* object,
                                   ExternalWeakPointerCallback callback,
                                   void* arg) {
-  weak_pointers_ = new WeakPointer(object, callback, arg, weak_pointers_);
+  WeakPointer* weak_pointer = new WeakPointer(object, callback, arg);
+  weak_pointers_.Append(weak_pointer);
 }
 
 void Heap::RemoveWeakPointer(HeapObject* object) {
