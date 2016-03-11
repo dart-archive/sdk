@@ -18,9 +18,11 @@ typedef struct memory_range_struct {
 extern "C" {
 #endif
 
+int add_page_arena(char* name, uintptr_t start, size_t size);
 void* page_alloc(size_t pages, int arenas);
 void page_free(void* start, size_t pages);
 int get_arena_locations(memory_range_t* ranges_return, int ranges);
+size_t get_pages_for_bytes(size_t bytes);
 
 #ifdef __cplusplus
 }

@@ -101,6 +101,16 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
+  /* Dartino FFI table goes into FLASH */
+  .dartinoffi : {
+    . = ALIGN(4);
+    dartino_ffi_table = .;
+    KEEP(*(.dartinoffi))
+    QUAD(0)
+    QUAD(0)
+    . = ALIGN(4);
+  } >FLASH
+
   .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
   .ARM : {
     __exidx_start = .;

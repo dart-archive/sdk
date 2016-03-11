@@ -6,6 +6,7 @@
 #define INCLUDE_DARTINO_API_H_
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 #ifdef _MSC_VER
 // TODO(herhut): Do we need a __declspec here for Windows?

@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include <stm32f7xx_hal.h>
-#include <stm32746g_discovery_sdram.h>
 #include <cmsis_os.h>
 #include <FreeRTOS.h>
 #include <task.h>
@@ -15,21 +13,7 @@
 #include "platforms/stm/disco_dartino/src/page_alloc.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
 
-// Definition of functions in generated/Src/mx_main.c.
-extern "C" {
-void SystemClock_Config(void);
-void MX_GPIO_Init(void);
-void MX_DCMI_Init(void);
-void MX_DMA2D_Init(void);
-void MX_FMC_Init(void);
-void MX_ETH_Init(void);
-void MX_I2C1_Init(void);
-void MX_LTDC_Init(void);
-void MX_QUADSPI_Init(void);
-void MX_SDMMC1_SD_Init(void);
-void MX_SPDIFRX_Init(void);
-void MX_USART1_UART_Init(void);
-}  // extern "C"
+extern "C" int InitializeBoard();
 
 // This object is initialized during EarlyInit.
 PageAllocator* page_allocator;
@@ -101,6 +85,10 @@ void EarlyInit() {
   cmpct_init();
 }
 
+extern "C" int add_page_arena(char* name, uintptr_t start, size_t size) {
+  return page_allocator->AddArena(name, start, size);
+}
+
 extern "C" void* page_alloc(size_t pages, int arenas) {
   return page_allocator->AllocatePages(pages, arenas);
 }
@@ -113,75 +101,15 @@ extern "C" int get_arena_locations(memory_range_t *ranges_return, int ranges) {
   return page_allocator->GetArenas(ranges_return, ranges);
 }
 
-static void ConfigureMPU() {
-  // Disable the MPU for configuration.
-  HAL_MPU_Disable();
-
-  // Configure the MPU attributes as write-through for SRAM.
-  MPU_Region_InitTypeDef MPU_InitStruct;
-  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-  MPU_InitStruct.BaseAddress = 0x20010000;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_256KB;
-  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
-  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
-  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.SubRegionDisable = 0x00;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-
-  // Enable the MPU with new configuration.
-  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
-}
-
-static void EnableCPUCache() {
-  // Enable branch prediction.
-  SCB->CCR |= (1 <<18);
-  __DSB();
-
-  // Enable I-Cache.
-  SCB_EnableICache();
-
-  // Enable D-Cache.
-  SCB_EnableDCache();
+extern "C" size_t get_pages_for_bytes(size_t bytes) {
+  return page_allocator->PagesForBytes(bytes);
 }
 
 int main() {
-  // Configure the MPU attributes as Write Through.
-  ConfigureMPU();
+  // Initialize the board.
+  InitializeBoard();
 
-  // Enable the CPU Cache.
-  EnableCPUCache();
-
-  // Reset of all peripherals, and initialize the Flash interface and
-  // the Systick.
-  HAL_Init();
-
-  // Configure the system clock. Thie functions is defined in
-  // generated/Src/main.c.
-  SystemClock_Config();
-
-  // Initialize all configured peripherals. These functions are
-  // defined in generated/Src/mx_main.c. We are not calling
-  // MX_FMC_Init, as BSP_SDRAM_Init will do all initialization of the
-  // FMC.
-  MX_GPIO_Init();
-  MX_DCMI_Init();
-  MX_DMA2D_Init();
-  MX_ETH_Init();
-  MX_I2C1_Init();
-  MX_LTDC_Init();
-  MX_QUADSPI_Init();
-  MX_SDMMC1_SD_Init();
-  MX_SPDIFRX_Init();
-  MX_USART1_UART_Init();
-
-  // Initialize the SDRAM (including FMC).
-  BSP_SDRAM_Init();
-
+  // Create the main task.
   osThreadDef(mainTask, DartinoEntry, osPriorityNormal, 0, 4 * 1024);
   osThreadId mainTaskHandle = osThreadCreate(osThread(mainTask), NULL);
   USE(mainTaskHandle);
