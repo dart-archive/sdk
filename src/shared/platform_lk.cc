@@ -243,6 +243,9 @@ int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
     void* memory2 = page_alloc(big);
     if (memory2 == NULL) break;
     ranges[0].size = heap_size = big << (PAGE_SIZE_SHIFT + 1);
+    uword new_address = heap_start - (big << (PAGE_SIZE_SHIFT - 1));
+    ranges[0].address =
+        reinterpret_cast < void * (new_address < heap_start ? new_address : 0);
     page_free(memory2, big);
   }
   page_free(memory, 1);

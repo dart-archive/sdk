@@ -836,7 +836,7 @@ double_to_string_as_fixed_test: RuntimeError
 double_to_string_as_precision3_test: RuntimeError
 double_to_string_as_precision_test: RuntimeError
 double_to_string_test: RuntimeError
-gc_test: Slow
+gc_test: Pass, Slow
 intrinsified_methods_test: RuntimeError
 large_class_declaration_test: RuntimeError
 nan_identical_test: Crash
