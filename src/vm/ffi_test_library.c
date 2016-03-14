@@ -375,28 +375,3 @@ void free_thing(void* thing) {
 intptr_t get_things() {
   return things;
 }
-
-typedef void* (*Arity0)();
-typedef void* (*Arity1)(void* x);
-typedef void* (*Arity2)(void* x, void* y);
-typedef void* (*Arity3)(void* x, void* y, void* z);
-
-void* trampoline0(void* f) {
-  void* result = ((Arity0)f)();
-  return result;
-}
-
-void* trampoline1(void* f, void* x) {
-  void* result = ((Arity1)f)(x);
-  return result;
-}
-
-void* trampoline2(void* f, void* x, void* y) {
-  void* result = ((Arity2)f)(x, y);
-  return result;
-}
-
-void* trampoline3(void* f, void* x, void* y, void* z) {
-  void* result = ((Arity3)f)(x, y, z);
-  return result;
-}

@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// A low-level 'foreign function interface' library that allows Dart code to
-/// call arbitrary native platform code defined outside the VM.
+// The dart:dartino.ffi library is a low-level 'foreign function interface'
+// library that allows Dart code to call arbitrary native platform
+// code defined outside the VM.
 library dart.dartino.ffi;
 
-import 'dart:dartino._ffi';
 import 'dart:dartino._system' as dartino;
 import 'dart:dartino';
 import 'dart:typed_data';
@@ -64,7 +64,13 @@ abstract class Foreign {
     return _removeFinalizer(fn.address);
   }
 
-  int _convert(argument) => ForeignConversion.convert(argument);
+  // Helper for converting the argument to a machine word.
+  int _convert(argument) {
+    if (argument is Foreign) return argument.address;
+    if (argument is Port) return _convertPort(argument);
+    if (argument is int) return argument;
+    throw new ArgumentError();
+  }
 
   @dartino.native static int _bitsPerMachineWord() {
     throw new UnsupportedError('_bitsPerMachineWord');
@@ -77,6 +83,9 @@ abstract class Foreign {
   }
   @dartino.native static int _architecture() {
     throw new UnsupportedError('_architecture');
+  }
+  @dartino.native static int _convertPort(Port port) {
+    throw new ArgumentError();
   }
 
   @dartino.native void _registerFinalizer(int address, int argument) {
@@ -96,22 +105,9 @@ abstract class Foreign {
   }
 }
 
-class ResourceExhaustedException implements Exception {
-  final String message;
-
-  ResourceExhaustedException(String this.message);
-
-  String toString() => "Out of resources: $message.";
-}
-
 class ForeignFunction extends Foreign {
   final int address;
   final ForeignLibrary _library;
-
-  /// Wraps the given [address] as a foreign function.
-  ///
-  /// The [address] must point to a function with standard C calling
-  /// conventions.
   const ForeignFunction.fromAddress(this.address, [this._library = null]);
 
   /// Helper function for retrying functions that follow the POSIX-convention
@@ -325,79 +321,6 @@ class ForeignFunction extends Foreign {
 
   @dartino.native static int _Lcall$wLw(int address, a0, a1, a2) {
     throw new ArgumentError();
-  }
-}
-
-class ForeignDartFunction extends ForeignFunction {
-  bool _hasBeenFreed = false;
-
-  /// Creates a foreign function from the given [dartFunction].
-  ///
-  /// The [dartFunction] is linked to a native function, and can then be
-  /// invoked as callback from native functions. The arity of the native
-  /// function is the same as the one from Dart, but is currently limited to
-  /// at most 3 arguments.
-  ///
-  /// The [errorReturnObject] is returned to the native caller, when this
-  /// function is used as a callback from native code, but the invocation isn't
-  /// successful. For example, this may happen, when the [dartFunction] throws
-  /// an uncaught exception, or the callback is invoked with the wrong number of
-  /// arguments.
-  ///
-  /// Once the callback is not needed anymore, one *must* free the backing
-  /// native function by invoking [free]. There is a limited number of wrappers
-  /// that can be used to implement callbacks in Dart.
-  ///
-  /// Throws an [ResourceExhaustedException] if no native wrapper function is
-  /// available.
-  ///
-  /// Wrapped Dart functions may only be used as a callback from native code
-  /// that has been invoked from Dart code. That is, the callback must not be
-  /// stored in native memory, and be used at a later time.
-  ///
-  /// Example:
-  ///
-  ///     int dartCallback1(int x) {
-  ///       print("callback from native with: $x");
-  ///       return x + 1;
-  ///     }
-  ///
-  ///     main() {
-  ///       var libPath = ForeignLibrary.bundleLibraryName('native_library');
-  ///       ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
-  ///       var trampoline = fl.lookup('trampoline1');
-  ///       // Invoke the native 'trampoline1' function and pass it the
-  ///       // wrapped Dart function. The trampoline function returns the result
-  ///       // of calling the given argument (see below).
-  ///       var foreign = new ForeignFunction.fromDart(dartCallback1);
-  ///       Expect.equals(2, trampoline.icall$2(foreign, 1));
-  ///       foreign.free();
-  ///     }
-  ///
-  /// The native function could be implemented as a C function, as follows:
-  ///
-  ///     typedef void* (*Arity1)(void* x);
-  ///
-  ///     __attribute__((visibility("default")))
-  ///     void* trampoline1(void* f, void* x) {
-  ///       return ((Arity1)f)(x);
-  ///     }
-  ForeignDartFunction(Function dartFunction, [errorReturnObject = -1])
-      : super.fromAddress(ForeignCallback.registerDartCallback(
-           dartFunction, errorReturnObject));
-
-  /// Frees the native wrapper function.
-  ///
-  /// This function must only be called for foreign functions that have been
-  /// allocated with [ForeignFunction.fromDart].
-  ///
-  /// It is an error to free the same wrapper function multiple times.
-  void free() {
-    if (_hasBeenFreed) {
-      throw new StateError("Foreign Dart function has already been freed.");
-    }
-    _hasBeenFreed = true;
-    ForeignCallback.freeFunctionPointer(address);
   }
 }
 

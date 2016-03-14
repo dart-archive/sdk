@@ -33,7 +33,6 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/event_handler_linux.cc \
 	../../../src/vm/event_handler_posix.cc \
 	../../../src/vm/ffi.cc \
-	../../../src/vm/ffi_callback.cc \
 	../../../src/vm/ffi_linux.cc \
 	../../../src/vm/ffi_posix.cc \
 	../../../src/vm/dartino.cc \
