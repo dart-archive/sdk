@@ -6,8 +6,9 @@
 # This script is creating a self contained directory with all the tools,
 # libraries, packages and samples needed for running Dartino.
 
-# This script assumes that the target arg has been build in the passed
-# in --build_dir. It also assumes that out/ReleaseXARM/dartino-vm and
+# This script assumes that the target architecture has been build in the passed
+# in --build_dir and that the corresponding 32-bit architecture is also.
+# Finally it also assumes that out/ReleaseXARM/dartino-vm and
 # out/ReleaseSTM have been build.
 
 import optparse
@@ -62,6 +63,9 @@ def EnsureDeleted(directory):
   if exists(directory):
     raise Exception("Could not delete %s" % directory)
 
+def BuildDir32(build_dir):
+  return build_dir.replace('X64', 'IA32')
+
 def CopySharedLibraries(bin_dir, build_dir):
   shared_libraries = ['mbedtls']
   # Libraries are placed differently on mac and linux:
@@ -84,7 +88,11 @@ def CopyBinaries(bundle_dir, build_dir):
   internal = join(bundle_dir, 'internal')
   makedirs(bin_dir)
   makedirs(internal)
+  # Copy the dartino VM.
   CopyFile(join(build_dir, 'dartino-vm'), join(bin_dir, 'dartino-vm'))
+  # Copy the 32-bit version of dartino-flashify.
+  CopyFile(join(BuildDir32(build_dir), 'dartino-flashify'),
+           join(bin_dir, 'dartino-flashify'))
   # The driver for the sdk is specially named dartino_for_sdk.
   CopyFile(join(build_dir, 'dartino_for_sdk'), join(bin_dir, 'dartino'))
   # We move the dart vm to internal to not put it on the path of users
@@ -365,7 +373,8 @@ def Main():
   if not build_dir:
     print 'Please specify a build directory with "--build_dir".'
     sys.exit(1)
-  print 'Creating sdk bundle for %s' % build_dir
+  sdk_dir = join(build_dir, 'dartino-sdk')
+  print 'Creating sdk bundle for %s in %s' % (build_dir, sdk_dir)
   deb_package = options.deb_package
   with utils.TempDir() as sdk_temp:
     if options.create_documentation:
@@ -382,11 +391,11 @@ def Main():
     CopyAdditionalFiles(sdk_temp)
     if deb_package:
       CopyArmDebPackage(sdk_temp, deb_package)
-    sdk_dir = join(build_dir, 'dartino-sdk')
     EnsureDeleted(sdk_dir)
     if options.include_tools:
       CopyTools(sdk_temp)
     copytree(sdk_temp, sdk_dir)
+  print 'Created sdk bundle for %s in %s' % (build_dir, sdk_dir)
 
 if __name__ == '__main__':
   sys.exit(Main())

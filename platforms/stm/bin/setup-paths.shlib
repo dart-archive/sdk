@@ -18,6 +18,9 @@ OPENOCDHOME="$DARTINO_SDK_DIR/tools/openocd/"
 # Location of the Dartino executable.
 DARTINO="$DARTINO_SDK_DIR/bin/dartino"
 
+# Location of the Dartino Falshify executable.
+DARTINO="$DARTINO_SDK_DIR/bin/dartino-flashify"
+
 # Location of the static libraries to link with.
 LIB_DIR="$DARTINO_SDK_DIR/platforms/stm32f746g-discovery/lib"
 
@@ -39,8 +42,11 @@ if [ ! -d "$TOOLCHAIN_DIR" ]; then
   # Location of OpenOCD in the Dartino SDK.
   OPENOCDHOME="$DARTINO_CHECKOUT_DIR/third_party/openocd/$OS/openocd"
 
-  # Use release dartinu command in a Dartino SDK Github checkout.
+  # Use release dartino command in a Dartino SDK Github checkout.
   DARTINO="$DARTINO_CHECKOUT_DIR/out/ReleaseX64/dartino"
+
+  # Use release dartino-flashify command in a Dartino SDK Github checkout.
+  DARTINO_FLASHIFY="$DARTINO_CHECKOUT_DIR/out/ReleaseIA32/dartino-flashify"
 
   # Location of the static libraries to link with.
   LIB_DIR="$DARTINO_CHECKOUT_DIR/out/ReleaseSTM"

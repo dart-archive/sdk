@@ -72,6 +72,7 @@ CC="${TOOLCHAIN_PREFIX}gcc"
 OBJCOPY="${TOOLCHAIN_PREFIX}objcopy"
 SIZE="${TOOLCHAIN_PREFIX}size"
 
+ASM_FILE="$BUILD_DIR/$BASE_NAME.S"
 OBJ_FILE="$BUILD_DIR/$BASE_NAME.o"
 ELF_FILE="$BUILD_DIR/$BASE_NAME.elf"
 BIN_FILE="$BUILD_DIR/$BASE_NAME.bin"
@@ -79,7 +80,12 @@ HEX_FILE="$BUILD_DIR/$BASE_NAME.hex"
 MAP_FILE="$BUILD_DIR/$BASE_NAME.map"
 
 echo "Converting snapshot to object file"
-"$OBJCOPY" -I binary -O elf32-littlearm -B arm "$SNAPSHOT_FILE" "$OBJ_FILE"
+"$DARTINO_FLASHIFY" "$SNAPSHOT_FILE" "$ASM_FILE"
+"$CC" \
+-mcpu=cortex-m7 \
+-mthumb \
+-o "$OBJ_FILE" \
+-c "$ASM_FILE"
 
 echo "Linking application"
 "$CC" \
