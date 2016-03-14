@@ -11,6 +11,7 @@ embedded_libs:
   'dart:core': '../../../third_party/dart/sdk/lib/core/core.dart'
   'dart:dartino': '../../../lib/dartino/dartino.dart'
   'dart:dartino.ffi': '../../../lib/ffi/ffi.dart'
+  'dart:dartino._ffi': '../../../internal/dartino_lib/ffi/ffi_private.dart'
   'dart:dartino.os': '../../../lib/os/os.dart'
   'dart:dartino.service': '../../../lib/service/service.dart'
   'dart:developer': '../../../third_party/dart/sdk/lib/developer/developer.dart'

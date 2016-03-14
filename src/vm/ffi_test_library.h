@@ -121,4 +121,9 @@ EXPORT void free_thing(void* thing);
 
 EXPORT intptr_t get_things();
 
+EXPORT void* trampoline0(void* f);
+EXPORT void* trampoline1(void* f, void* x);
+EXPORT void* trampoline2(void* f, void* x, void* y);
+EXPORT void* trampoline3(void* f, void* x, void* y, void* z);
+
 #endif  // SRC_VM_FFI_TEST_LIBRARY_H_
