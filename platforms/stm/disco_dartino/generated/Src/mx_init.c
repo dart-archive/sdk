@@ -44,8 +44,6 @@ DCMI_HandleTypeDef hdcmi;
 
 DMA2D_HandleTypeDef hdma2d;
 
-ETH_HandleTypeDef heth;
-
 I2C_HandleTypeDef hi2c1;
 
 LTDC_HandleTypeDef hltdc;
@@ -72,7 +70,6 @@ void SystemClock_Config(void);
 void MX_GPIO_Init(void);
 void MX_DCMI_Init(void);
 void MX_DMA2D_Init(void);
-void MX_ETH_Init(void);
 void MX_I2C1_Init(void);
 void MX_LTDC_Init(void);
 void MX_QUADSPI_Init(void);
@@ -110,7 +107,6 @@ int _not_using_this_main(void)
   MX_GPIO_Init();
   MX_DCMI_Init();
   MX_DMA2D_Init();
-  MX_ETH_Init();
   MX_I2C1_Init();
   MX_LTDC_Init();
   MX_QUADSPI_Init();
@@ -262,29 +258,6 @@ void MX_DMA2D_Init(void)
   HAL_DMA2D_Init(&hdma2d);
 
   HAL_DMA2D_ConfigLayer(&hdma2d, 1);
-
-}
-
-/* ETH init function */
-void MX_ETH_Init(void)
-{
-
-   uint8_t MACAddr[6] ;
-
-  heth.Instance = ETH;
-  heth.Init.AutoNegotiation = ETH_AUTONEGOTIATION_ENABLE;
-  heth.Init.PhyAddress = 1;
-  MACAddr[0] = 0x00;
-  MACAddr[1] = 0x80;
-  MACAddr[2] = 0xE1;
-  MACAddr[3] = 0x00;
-  MACAddr[4] = 0x00;
-  MACAddr[5] = 0x00;
-  heth.Init.MACAddr = &MACAddr[0];
-  heth.Init.RxMode = ETH_RXPOLLING_MODE;
-  heth.Init.ChecksumMode = ETH_CHECKSUM_BY_HARDWARE;
-  heth.Init.MediaInterface = ETH_MEDIA_INTERFACE_RMII;
-  HAL_ETH_Init(&heth);
 
 }
 

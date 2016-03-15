@@ -61,7 +61,11 @@ _Min_Stack_Size = 0x200; /* required amount of stack */
 MEMORY
 {
 FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 1024K
-RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 320K
+RAM (xrw)        : ORIGIN = 0x20003CC8, LENGTH = 320K
+DMA_RxD(xrw)   : ORIGIN = 0x20000000, LENGTH = 0xA0
+DMA_TxD(xrw)   : ORIGIN = 0x200000A0, LENGTH = 0xA0
+DMA_RxB(xrw)   : ORIGIN = 0x20000140, LENGTH = 0x1dc4
+DMA_TxB(xrw)   : ORIGIN = 0x20001F04, LENGTH = 0x1dc4
 }
 
 /* Define output sections */
@@ -193,6 +197,8 @@ SECTIONS
   }
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
+  .RxDescripSection : { *(.RxDescripSection) } >DMA_RxD
+  .TxDescripSection : { *(.TxDescripSection) } >DMA_TxD
+  .RxBUF : { *(.RxBUF) } >DMA_RxB
+  .TxBUF : { *(.TxBUF) } >DMA_TxB
 }
-
-

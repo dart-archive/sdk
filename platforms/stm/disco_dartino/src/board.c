@@ -20,7 +20,6 @@ void MX_GPIO_Init(void);
 void MX_DCMI_Init(void);
 void MX_DMA2D_Init(void);
 void MX_FMC_Init(void);
-void MX_ETH_Init(void);
 void MX_I2C1_Init(void);
 void MX_LTDC_Init(void);
 void MX_QUADSPI_Init(void);
@@ -119,7 +118,6 @@ extern int InitializeBoard() {
   MX_GPIO_Init();
   MX_DCMI_Init();
   MX_DMA2D_Init();
-  MX_ETH_Init();
   MX_I2C1_Init();
   MX_LTDC_Init();
   MX_QUADSPI_Init();

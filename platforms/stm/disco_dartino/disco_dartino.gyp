@@ -146,6 +146,7 @@
         '<(source_path)/page_allocator.h',
         '<(source_path)/uart.cc',
         '<(source_path)/uart.h',
+        '<(source_path)/ethernet.cc',
 
         '<(source_path)/syscalls.c',
 
@@ -173,6 +174,12 @@
 
         # Additional utilities.
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
+
+        # Network driver.
+        '<(source_path)/network_interface.c',
+
+        # Buffer allocation scheme.
+        '<(free_rtos_plus_tcp)/portable/BufferManagement/BufferAllocation_2.c',
       ],
       'conditions': [
         ['OS=="linux"', {

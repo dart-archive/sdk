@@ -8,6 +8,7 @@
 #include "include/dartino_api.h"
 #include "include/static_ffi.h"
 
+#include "platforms/stm/disco_dartino/src/ethernet.h"
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
 #include "platforms/stm/disco_dartino/src/button.h"
@@ -70,6 +71,12 @@ DARTINO_EXPORT_STATIC_RENAME(uart_write, UartWrite)
 DARTINO_EXPORT_STATIC_RENAME(uart_get_error, UartGetError)
 DARTINO_EXPORT_STATIC_RENAME(button_open, ButtonOpen)
 DARTINO_EXPORT_STATIC_RENAME(button_notify_read, ButtonNotifyRead)
+DARTINO_EXPORT_STATIC_RENAME(initialize_network_stack, InitializeNetworkStack)
+DARTINO_EXPORT_STATIC_RENAME(is_network_up, IsNetworkUp)
+DARTINO_EXPORT_STATIC_RENAME(get_ethernet_adapter_status,
+                             GetEthernetAdapterStatus)
+DARTINO_EXPORT_STATIC_RENAME(get_network_address_configuration,
+                             GetNetworkAddressConfiguration)
 
 // Run dartino on the linked in program heap.
 void StartDartino(void const * argument) {

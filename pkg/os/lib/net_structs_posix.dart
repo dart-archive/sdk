@@ -45,7 +45,7 @@ class PosixSockAddrIn6 extends PosixSockAddrIn implements SockAddrIn6 {
   int get flowId => buffer.getUint32(adr(4));
 
   set flowId(int flowId) {
-    buffer.setUint32(adr(4));
+    buffer.setUint32(adr(4), flowId);
   }
 
   InternetAddress get address {
