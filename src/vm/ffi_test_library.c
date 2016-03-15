@@ -183,6 +183,10 @@ void vfun6(int a, int b, int c, int d, int e, int f) {
   count = 6;
 }
 
+void vfun7(int a, int b, int c, int d, int e, int f, int g) {
+  count = 7;
+}
+
 // We assume int are 32 bits, short is 16 bits, char is 8 bits,
 // float is 32 bits, double is 64 bits.
 void* pfun0() {

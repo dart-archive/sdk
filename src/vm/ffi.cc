@@ -294,6 +294,7 @@ typedef void (*VF3)(word, word, word);
 typedef void (*VF4)(word, word, word, word);
 typedef void (*VF5)(word, word, word, word, word);
 typedef void (*VF6)(word, word, word, word, word, word);
+typedef void (*VF7)(word, word, word, word, word, word, word);
 
 BEGIN_NATIVE(ForeignVCall0) {
   word address = AsForeignWord(arguments[0]);
@@ -362,6 +363,20 @@ BEGIN_NATIVE(ForeignVCall6) {
   word a5 = AsForeignWord(arguments[6]);
   VF6 function = reinterpret_cast<VF6>(address);
   EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0, a1, a2, a3, a4, a5));
+}
+END_NATIVE()
+
+BEGIN_NATIVE(ForeignVCall7) {
+  word address = AsForeignWord(arguments[0]);
+  word a0 = AsForeignWord(arguments[1]);
+  word a1 = AsForeignWord(arguments[2]);
+  word a2 = AsForeignWord(arguments[3]);
+  word a3 = AsForeignWord(arguments[4]);
+  word a4 = AsForeignWord(arguments[5]);
+  word a5 = AsForeignWord(arguments[6]);
+  word a6 = AsForeignWord(arguments[7]);
+  VF7 function = reinterpret_cast<VF7>(address);
+  EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0, a1, a2, a3, a4, a5, a6));
 }
 END_NATIVE()
 

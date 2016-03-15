@@ -233,6 +233,11 @@ class ForeignFunction extends Foreign {
         _convert(a4), _convert(a5));
   }
 
+  void vcall$7(a0, a1, a2, a3, a4, a5, a6) {
+    _vcall$7(address, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
+        _convert(a4), _convert(a5), _convert(a6));
+  }
+
   // TODO(ricow): this is insanely specific and only used for rseek.
   // Support for calling foreign functions that
   //  - Returns a 64 bit integer value.
@@ -316,6 +321,10 @@ class ForeignFunction extends Foreign {
   }
   @dartino.native static int _vcall$6(
       int address, a0, a1, a2, a3, a4, a5) {
+    throw new ArgumentError();
+  }
+  @dartino.native static int _vcall$7(
+      int address, a0, a1, a2, a3, a4, a5, a6) {
     throw new ArgumentError();
   }
 

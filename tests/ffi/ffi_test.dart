@@ -382,6 +382,7 @@ testVAndICall() {
   var vcall4 = fl.lookup('vfun4');
   var vcall5 = fl.lookup('vfun5');
   var vcall6 = fl.lookup('vfun6');
+  var vcall7 = fl.lookup('vfun7');
   Expect.equals(null, vcall0.vcall$0());
   Expect.equals(0, getcount.icall$0());
   Expect.equals(null, vcall1.vcall$1(1));
@@ -396,6 +397,8 @@ testVAndICall() {
   Expect.equals(5, getcount.icall$0());
   Expect.equals(null, vcall6.vcall$6(1, 1, 1, 1, 1, 1));
   Expect.equals(6, getcount.icall$0());
+  Expect.equals(null, vcall7.vcall$7(1, 1, 1, 1, 1, 1, 1));
+  Expect.equals(7, getcount.icall$0());
 }
 
 testFailingLibraryLookups() {

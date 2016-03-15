@@ -72,6 +72,8 @@ EXPORT void vfun5(int a, int b, int c, int d, int e);
 
 EXPORT void vfun6(int a, int b, int c, int d, int e, int f);
 
+EXPORT void vfun7(int a, int b, int c, int d, int e, int f, int g);
+
 // We assume int are 32 bits, short is 16 bits, char is 8 bits,
 // float is 32 bits, double is 64 bits.
 EXPORT void* pfun0();

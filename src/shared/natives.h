@@ -179,6 +179,7 @@ namespace dartino {
   N(ForeignVCall4, "ForeignFunction", "_vcall$4", false)                      \
   N(ForeignVCall5, "ForeignFunction", "_vcall$5", false)                      \
   N(ForeignVCall6, "ForeignFunction", "_vcall$6", false)                      \
+  N(ForeignVCall7, "ForeignFunction", "_vcall$7", false)                       \
                                                                               \
   N(ForeignLCallwLw, "ForeignFunction", "_Lcall$wLw", false)                  \
                                                                               \
