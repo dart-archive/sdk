@@ -199,16 +199,12 @@ def CopyPackagesAndSettingsTemplate(bundle_dir):
     f.write(s)
 
 def CopyPlatforms(bundle_dir):
-  # Only copy parts of the platform directory. We also have source
+  # Only copy parts of the platforms directory. We also have source
   # code there at the moment.
   target_dir = join(bundle_dir, 'platforms/raspberry-pi2')
   copytree('platforms/raspberry-pi2', target_dir)
-  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/bin')
-  copytree('platforms/stm/bin', target_dir)
-  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/templates')
-  copytree('platforms/stm/templates', target_dir)
-  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/config')
-  copytree('platforms/stm/config', target_dir)
+  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery')
+  copytree('platforms/stm32f746g-discovery', target_dir)
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
   # TODO(karlklose): Run 'build_dir/dartino export' instead?
