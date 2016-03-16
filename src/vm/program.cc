@@ -530,7 +530,7 @@ void Program::PerformSharedGarbageCollection() {
     process->IterateRoots(&marking_visitor);
   }
   stack.Process(&marking_visitor);
-  heap->ProcessWeakPointers(old_space);
+  old_space->ProcessWeakPointers();
 
   for (auto process : process_list_) {
     process->set_ports(Port::CleanupPorts(old_space, process->ports()));
@@ -1055,7 +1055,7 @@ void Program::CollectNewSpace() {
   }
   old->EndScavenge();
 
-  data_heap->ProcessWeakPointers(from);
+  from->ProcessWeakPointers(to, old);
 
   for (auto process : process_list_) {
     process->set_ports(Port::CleanupPorts(from, process->ports()));
@@ -1109,7 +1109,7 @@ int Program::CollectMutableGarbageAndChainStacks() {
   marking_stack.Process(&marking_visitor);
 
   // Weak processing.
-  process_heap()->ProcessWeakPointers(old_space);
+  old_space->ProcessWeakPointers();
   for (auto process : process_list_) {
     process->set_ports(Port::CleanupPorts(old_space, process->ports()));
   }

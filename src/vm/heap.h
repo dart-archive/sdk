@@ -104,17 +104,6 @@ class Heap {
 
   int used_foreign_memory() { return foreign_memory_; }
 
-  void AddWeakPointer(HeapObject* object, WeakPointerCallback callback);
-  void AddExternalWeakPointer(HeapObject* object,
-                              ExternalWeakPointerCallback callback, void* arg);
-  void RemoveWeakPointer(HeapObject* object);
-  bool RemoveExternalWeakPointer(HeapObject* object,
-                                 ExternalWeakPointerCallback callback);
-  void ProcessWeakPointers(Space* space);
-  void VisitWeakObjectPointers(PointerVisitor* visitor) {
-    WeakPointer::Visit(&weak_pointers_, visitor);
-  }
-
 #ifdef DEBUG
   // Used for debugging.  Give it an address, and it will tell you where there
   // are pointers to that address.  If the address is part of the heap it will
@@ -134,7 +123,7 @@ class Heap {
   friend class Program;
   friend class NoAllocationScope;
 
-  Heap(SemiSpace* existing_space, WeakPointer* weak_pointers);
+  explicit Heap(SemiSpace* existing_space);
   explicit Heap(RandomXorShift* random);
   virtual ~Heap();
 
@@ -154,8 +143,6 @@ class Heap {
 
   // The number of bytes of foreign memory heap objects are holding on to.
   int foreign_memory_;
-  // Linked list of weak pointers to heap objects in this heap.
-  DoubleList<WeakPointer> weak_pointers_;
 
 #ifdef DEBUG
   void IncrementNoAllocation() { ++no_allocation_; }
@@ -230,6 +217,18 @@ class TwoSpaceHeap : public Heap {
   virtual bool IsTwoSpaceHeap() { return true; }
 
   bool HasEmptyNewSpace() { return space_->top() == space_->start(); }
+
+  void AddWeakPointer(HeapObject* object, WeakPointerCallback callback,
+                      void* arg);
+  void AddExternalWeakPointer(HeapObject* object,
+                              ExternalWeakPointerCallback callback, void* arg);
+  void RemoveWeakPointer(HeapObject* object);
+  bool RemoveExternalWeakPointer(HeapObject* object,
+                                 ExternalWeakPointerCallback callback);
+  void VisitWeakObjectPointers(PointerVisitor* visitor) {
+    WeakPointer::Visit(space_->weak_pointers(), visitor);
+    WeakPointer::Visit(old_space_->weak_pointers(), visitor);
+  }
 
  private:
   friend class GenerationalScavengeVisitor;

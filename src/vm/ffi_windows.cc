@@ -102,7 +102,7 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
   return NULL;
 }
 
-void FinalizeForeignLibrary(HeapObject* foreign, Heap* heap) {
+void FinalizeForeignLibrary(HeapObject* foreign, void*) {
   word address = AsForeignWord(foreign);
   HMODULE handle = reinterpret_cast<HMODULE>(address);
   ASSERT(handle != NULL);

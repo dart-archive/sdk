@@ -461,8 +461,8 @@ void Process::UpdateBreakpoints() {
 }
 
 void Process::RegisterFinalizer(HeapObject* object,
-                                WeakPointerCallback callback) {
-  heap()->AddWeakPointer(object, callback);
+                                WeakPointerCallback callback, void* arg) {
+  heap()->AddWeakPointer(object, callback, arg);
 }
 
 void Process::RegisterExternalFinalizer(HeapObject* object,
@@ -480,15 +480,15 @@ bool Process::UnregisterExternalFinalizer(
   return heap()->RemoveExternalWeakPointer(object, callback);
 }
 
-void Process::FinalizeForeign(HeapObject* foreign, Heap* heap) {
+void Process::FinalizeForeign(HeapObject* foreign, void* arg) {
   Instance* instance = Instance::cast(foreign);
   uword value = instance->GetConsecutiveSmis(0);
   uword length = Smi::cast(instance->GetInstanceField(2))->value();
   free(reinterpret_cast<void*>(value));
-  heap->FreedForeignMemory(length);
+  reinterpret_cast<Heap*>(arg)->FreedForeignMemory(length);
 }
 
-void Process::FinalizeProcess(HeapObject* process, Heap* heap) {
+void Process::FinalizeProcess(HeapObject* process, void*) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(process);
   ProcessHandle::DecrementRef(handle);
 }
@@ -636,7 +636,8 @@ BEGIN_NATIVE(ProcessQueueGetMessage) {
       int size = queue->size();
       foreign->SetInstanceField(2, Smi::FromWord(size));
       if (kind == Message::FOREIGN_FINALIZED) {
-        process->RegisterFinalizer(foreign, Process::FinalizeForeign);
+        process->RegisterFinalizer(foreign, Process::FinalizeForeign,
+                                   process->heap());
         process->heap()->AllocatedForeignMemory(size);
       }
       result = foreign;

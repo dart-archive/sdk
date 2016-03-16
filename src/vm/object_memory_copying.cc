@@ -184,4 +184,10 @@ bool SemiSpace::CompleteScavengeGenerational(
   return found_work;
 }
 
+void SemiSpace::ProcessWeakPointers(SemiSpace* to_space, OldSpace* old_space) {
+  ASSERT(this != to_space);  // This should be from-space.
+  WeakPointer::ProcessAndMoveSurvivors(&weak_pointers_, this, to_space,
+                                       old_space);
+}
+
 }  // namespace dartino

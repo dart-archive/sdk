@@ -95,20 +95,15 @@ class MarkingVisitor : public PointerVisitor {
   MarkingVisitor(SemiSpace* new_space, OldSpace* old_space,
                  MarkingStack* marking_stack, Stack** stack_chain = NULL)
       : stack_chain_(stack_chain),
-        new_space_(new_space),
+        new_space_address_(new_space->start()),
+        new_space_size_(new_space->size()),
         old_space_(old_space),
         marking_stack_(marking_stack),
         number_of_stacks_(0) {}
 
   virtual void Visit(Object** p) { MarkPointer(*p); }
 
-  virtual void VisitClass(Object** p) {
-    // The class pointer is used for the mark bit. Therefore,
-    // the actual class pointer is obtained by clearing the
-    // mark bit.
-    uword klass = reinterpret_cast<uword>(*p);
-    MarkPointer(reinterpret_cast<Object*>(klass & ~HeapObject::kMarkBit));
-  }
+  virtual void VisitClass(Object** p) {}
 
   virtual void VisitBlock(Object** start, Object** end) {
     // Mark live all HeapObjects pointed to by pointers in [start, end)
@@ -124,11 +119,14 @@ class MarkingVisitor : public PointerVisitor {
     *stack_chain_ = stack;
   }
 
+  bool NewSpaceIncludes(uword address) {
+    return address - new_space_address_ < new_space_size_;
+  }
+
   void MarkPointer(Object* object) {
     if (!object->IsHeapObject()) return;
     uword address = reinterpret_cast<uword>(object);
-    if (!new_space_->Includes(address) &&
-        (old_space_ == NULL || !old_space_->Includes(address))) {
+    if (!NewSpaceIncludes(address) && !old_space_->Includes(address)) {
       return;
     }
     HeapObject* heap_object = HeapObject::cast(object);
@@ -142,7 +140,8 @@ class MarkingVisitor : public PointerVisitor {
   }
 
   Stack** stack_chain_;
-  SemiSpace* new_space_;
+  uword new_space_address_;
+  uword new_space_size_;
   OldSpace* old_space_;
   MarkingStack* marking_stack_;
   int number_of_stacks_;

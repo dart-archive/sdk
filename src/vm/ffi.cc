@@ -57,7 +57,8 @@ BEGIN_NATIVE(ForeignMarkForFinalization) {
   HeapObject* foreign = HeapObject::cast(arguments[0]);
   int size = static_cast<int>(AsForeignWord(arguments[1]));
   process->heap()->AllocatedForeignMemory(size);
-  process->RegisterFinalizer(foreign, Process::FinalizeForeign);
+  process->RegisterFinalizer(foreign, Process::FinalizeForeign,
+                             process->heap());
   return process->program()->null_object();
 }
 END_NATIVE()

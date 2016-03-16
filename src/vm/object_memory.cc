@@ -31,7 +31,10 @@ Chunk::~Chunk() {
   Platform::FreePages(reinterpret_cast<void*>(base()), size());
 }
 
-Space::~Space() { FreeAllChunks(); }
+Space::~Space() {
+  WeakPointer::ForceCallbacks(&weak_pointers_);
+  FreeAllChunks();
+}
 
 void Space::FreeAllChunks() {
   Chunk* current = first();

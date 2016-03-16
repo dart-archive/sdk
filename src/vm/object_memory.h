@@ -8,6 +8,7 @@
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
+#include "src/vm/weak_pointer.h"
 
 namespace dartino {
 
@@ -16,6 +17,7 @@ class GenerationalScavengeVisitor;
 class Heap;
 class HeapObject;
 class HeapObjectVisitor;
+class OldSpace;
 class PointerVisitor;
 class ProgramHeapRelocator;
 class PromotedTrack;
@@ -186,6 +188,13 @@ class Space {
     return first_->limit() - first_->base();
   }
 
+  bool IsInSingleChunk(HeapObject* object) {
+    ASSERT(first_ == last_);
+    return reinterpret_cast<uword>(object) - start() < size();
+  }
+
+  WeakPointerList* weak_pointers() { return &weak_pointers_; }
+
  protected:
   explicit Space(Resizing resizeable);
 
@@ -217,6 +226,8 @@ class Space {
   int allocation_budget_;  // Budget before needing a GC.
   int no_allocation_nesting_;
   bool resizeable_;
+  // Linked list of weak pointers to heap objects in this space.
+  WeakPointerList weak_pointers_;
 };
 
 class SemiSpace : public Space {
@@ -256,6 +267,8 @@ class SemiSpace : public Space {
   virtual void Append(Chunk* chunk);
 
   void SetReadOnly() { top_ = limit_ = 0; }
+
+  void ProcessWeakPointers(SemiSpace* to_space, OldSpace* old_space);
 
  private:
   Chunk* AllocateAndUseChunk(size_t size);
@@ -305,6 +318,8 @@ class OldSpace : public Space {
   void UnlinkPromotedTrack();
 
   void UseWholeChunk(Chunk* chunk);
+
+  void ProcessWeakPointers();
 
 #ifdef DEBUG
   void Verify();

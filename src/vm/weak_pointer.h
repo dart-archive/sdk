@@ -15,30 +15,33 @@ class Heap;
 class PointerVisitor;
 class WeakPointer;
 
-typedef void (*WeakPointerCallback)(HeapObject* object, Heap* heap);
+typedef void (*WeakPointerCallback)(HeapObject* object, void* arg);
 typedef void (*ExternalWeakPointerCallback)(void* arg);
 typedef DoubleList<WeakPointer> WeakPointerList;
 
 class WeakPointer : public WeakPointerList::Entry {
  public:
-  WeakPointer(HeapObject* object, WeakPointerCallback callback);
+  WeakPointer(HeapObject* object, WeakPointerCallback callback, void* arg);
 
   WeakPointer(HeapObject* object, ExternalWeakPointerCallback callback,
               void* arg);
 
-  static void Process(Space* garbage_space, DoubleList<WeakPointer>* pointers,
-                      Heap* heap);
-  static void ForceCallbacks(DoubleList<WeakPointer>* pointers, Heap* heap);
-  static bool Remove(DoubleList<WeakPointer>* pointers, HeapObject* object,
+  static void Process(WeakPointerList* pointers, Space* space);
+  static void ProcessAndMoveSurvivors(WeakPointerList* pointers,
+                                      Space* from_space, Space* to_space,
+                                      Space* old_space);
+  static void ForceCallbacks(WeakPointerList* pointers);
+  static bool Remove(WeakPointerList* pointers, HeapObject* object,
                      ExternalWeakPointerCallback callback = nullptr);
-  static void Visit(DoubleList<WeakPointer>* pointers, PointerVisitor* visitor);
+  static void Visit(WeakPointerList* pointers, PointerVisitor* visitor);
 
  private:
   HeapObject* object_;
   void* callback_;
   void* arg_;
+  bool external_;
 
-  void Invoke(Heap* heap);
+  void Invoke();
 };
 
 }  // namespace dartino

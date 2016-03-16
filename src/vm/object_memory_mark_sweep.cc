@@ -352,6 +352,10 @@ int SweepingVisitor::Visit(HeapObject* object) {
   return size;
 }
 
+void OldSpace::ProcessWeakPointers() {
+  WeakPointer::Process(&weak_pointers_, this);
+}
+
 #ifdef DEBUG
 void OldSpace::Verify() {
   // Verify that the object starts table contains only legitimate object start

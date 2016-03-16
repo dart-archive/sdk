@@ -207,7 +207,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   inline bool ChangeState(State from, State to);
   State state() const { return state_; }
 
-  void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback);
+  void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback,
+                         void* arg = NULL);
   void RegisterExternalFinalizer(HeapObject* object,
                                  ExternalWeakPointerCallback callback,
                                  void* arg);
@@ -215,8 +216,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   bool UnregisterExternalFinalizer(HeapObject* object,
                                    ExternalWeakPointerCallback callback);
 
-  static void FinalizeForeign(HeapObject* foreign, Heap* heap);
-  static void FinalizeProcess(HeapObject* process, Heap* heap);
+  static void FinalizeForeign(HeapObject* foreign, void* arg);
+  static void FinalizeProcess(HeapObject* process, void*);
 
 #ifdef DEBUG
   // This is used in order to return a retry after gc failure on every other

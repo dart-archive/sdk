@@ -39,15 +39,11 @@ TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
 }
 
 Heap::~Heap() {
-  // This has no effect if we already did it once in the subclass.
-  WeakPointer::ForceCallbacks(&weak_pointers_, this);
-  ASSERT(foreign_memory_ == 0);
   delete space_;
+  ASSERT(foreign_memory_ == 0);
 }
 
 TwoSpaceHeap::~TwoSpaceHeap() {
-  // We need to do this now before the old-space disappears.
-  WeakPointer::ForceCallbacks(&weak_pointers_, this);
   delete unused_semispace_;
   delete old_space_;
 }
@@ -298,29 +294,47 @@ SemiSpace* Heap::TakeSpace() {
   return result;
 }
 
-void Heap::AddWeakPointer(HeapObject* object, WeakPointerCallback callback) {
-  WeakPointer* weak_pointer = new WeakPointer(object, callback);
-  weak_pointers_.Append(weak_pointer);
-}
-
-void Heap::AddExternalWeakPointer(HeapObject* object,
-                                  ExternalWeakPointerCallback callback,
-                                  void* arg) {
+void TwoSpaceHeap::AddWeakPointer(HeapObject* object,
+                                  WeakPointerCallback callback, void* arg) {
   WeakPointer* weak_pointer = new WeakPointer(object, callback, arg);
-  weak_pointers_.Append(weak_pointer);
+  if (space_->IsInSingleChunk(object)) {
+    space_->weak_pointers()->Append(weak_pointer);
+  } else {
+    ASSERT(old_space_->Includes(object->address()));
+    old_space_->weak_pointers()->Append(weak_pointer);
+  }
 }
 
-void Heap::RemoveWeakPointer(HeapObject* object) {
-  ASSERT(WeakPointer::Remove(&weak_pointers_, object));
+void TwoSpaceHeap::AddExternalWeakPointer(HeapObject* object,
+                                          ExternalWeakPointerCallback callback,
+                                          void* arg) {
+  WeakPointer* weak_pointer = new WeakPointer(object, callback, arg);
+  if (space_->IsInSingleChunk(object)) {
+    space_->weak_pointers()->Append(weak_pointer);
+  } else {
+    ASSERT(old_space_->Includes(object->address()));
+    old_space_->weak_pointers()->Append(weak_pointer);
+  }
 }
 
-bool Heap::RemoveExternalWeakPointer(HeapObject* object,
-                                     ExternalWeakPointerCallback callback) {
-  return WeakPointer::Remove(&weak_pointers_, object, callback);
+void TwoSpaceHeap::RemoveWeakPointer(HeapObject* object) {
+  if (space_->IsInSingleChunk(object)) {
+    bool success = WeakPointer::Remove(space_->weak_pointers(), object);
+    ASSERT(success);
+  } else {
+    ASSERT(old_space_->Includes(object->address()));
+    bool success = WeakPointer::Remove(old_space_->weak_pointers(), object);
+    ASSERT(success);
+  }
 }
 
-void Heap::ProcessWeakPointers(Space* space) {
-  WeakPointer::Process(space, &weak_pointers_, this);
+bool TwoSpaceHeap::RemoveExternalWeakPointer(
+    HeapObject* object, ExternalWeakPointerCallback callback) {
+  if (space_->IsInSingleChunk(object)) {
+    return WeakPointer::Remove(space_->weak_pointers(), object, callback);
+  } else {
+    return WeakPointer::Remove(old_space_->weak_pointers(), object, callback);
+  }
 }
 
 GCMetadata GCMetadata::singleton_;

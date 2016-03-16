@@ -50,7 +50,7 @@ class Port {
   // is not referenced from anywhere else.
   static Port* CleanupPorts(Space* space, Port* head);
 
-  static void WeakCallback(HeapObject* port, Heap* heap);
+  static void WeakCallback(HeapObject* port, void*);
 
  private:
   friend class Process;
