@@ -16,8 +16,6 @@
 
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
-#include "platforms/stm/disco_dartino/src/button.h"
-#include "platforms/stm/disco_dartino/src/uart.h"
 #include "src/shared/utils.h"
 
 #include "FreeRTOS.h"

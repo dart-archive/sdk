@@ -12,7 +12,14 @@
 
 #include "include/static_ffi.h"
 
+#include "platforms/stm/disco_dartino/src/device_manager_api.h"
 #include "platforms/stm/disco_dartino/src/page_alloc.h"
+
+static UartDriver uart1;
+static ButtonDriver button1;
+
+void FillUartDriver(UartDriver* driver);
+void FillButtonDriver(ButtonDriver* driver);
 
 // Definition of functions in generated/Src/mx_main.c.
 void SystemClock_Config(void);
@@ -67,7 +74,7 @@ static void EnableCPUCache() {
 // (Utilities/Log/lcd_log.c) by means of the macro definitions of
 // LCD_LOG_PUTCHAR in lcd_log_conf.h.
 extern int LCDLogPutchar(int ch);
-void LCDPrintIntercepter(const char* message, int out, void* data) {
+static void LCDPrintIntercepter(const char* message, int out, void* data) {
   int len = strlen(message);
   if (out == 3) {
     LCD_LineColor = LCD_COLOR_RED;
@@ -130,6 +137,14 @@ extern int InitializeBoard() {
 
   // Add an arena of the 8Mb of external memory.
   int ext_mem_arena = add_page_arena("ExtMem", 0xc0000000, 0x800000);
+
+  // Register UART driver for UART1.
+  FillUartDriver(&uart1);
+  DeviceManagerRegisterUartDevice("uart1", &uart1);
+
+  // Register button driver for the user button.
+  FillButtonDriver(&button1);
+  DeviceManagerRegisterButtonDevice("button1", &button1);
 
   // Initialize the LCD.
   size_t fb_bytes = (RK043FN48H_WIDTH * RK043FN48H_HEIGHT * 4);

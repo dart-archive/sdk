@@ -52,7 +52,9 @@ Object* EventHandler::Add(
 
   ScopedLock locker(device->GetMutex());
 
-  if (device->GetPort() != NULL) FATAL("Already listening to device");
+  if (device->GetPort() != NULL) {
+    return Failure::illegal_state();
+  }
 
   int device_flags = device->GetFlags();
   if ((wait_mask & device_flags) != 0) {

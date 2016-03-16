@@ -9,34 +9,29 @@ namespace dartino {
 // The size of the queue used by the event handler.
 const uint32_t kMailQSize = 50;
 
-DeviceManager::DeviceManager() : mutex_(new Mutex()) {
-  osMessageQDef(device_event_queue, kMailQSize, int);
-  mail_queue_ = osMessageCreate(osMessageQ(device_event_queue), NULL);
-}
-
-bool Device::SetFlag(uint32_t flag) {
+bool Device::SetFlags(uint32_t flags) {
   ScopedLock locker(mutex_);
-  if ((flags_ & flag) != 0) return false;
+  if ((flags_ & flags) != 0) return false;
   int before = IsReady();
-  flags_ |= flag;
+  flags_ |= flags;
   // Send a message if the status changed.
   if (!before && IsReady()) {
-    if (DeviceManager::GetDeviceManager()->SendMessage(handle_) != osOK) {
+    if (DeviceManager::GetDeviceManager()->SendMessage(device_id_) != osOK) {
       FATAL("Could not send message");
     }
   }
   return true;
 }
 
-bool Device::ClearFlag(uint32_t flag) {
+bool Device::ClearFlags(uint32_t flags) {
   ScopedLock locker(mutex_);
-  if ((flags_ & flag) == 0) return false;
-  flags_ = flags_ & ~flag;
+  if ((flags_ & flags) == 0) return false;
+  flags_ = flags_ & ~flags;
   return true;
 }
 
 bool Device::ClearWaitFlags() {
-  return ClearFlag(wait_mask_);
+  return ClearFlags(wait_mask_);
 }
 
 bool Device::IsReady() {
@@ -63,12 +58,9 @@ void Device::SetPort(Port *port) {
   port_ = port;
 }
 
-void Device::SetHandle(int handle) {
-  handle_ = handle;
-}
-
-void *Device::GetData() {
-  return data_;
+DeviceManager::DeviceManager() : mutex_(new Mutex()) {
+  osMessageQDef(device_event_queue, kMailQSize, int);
+  mail_queue_ = osMessageCreate(osMessageQ(device_event_queue), NULL);
 }
 
 DeviceManager *DeviceManager::GetDeviceManager() {
@@ -78,17 +70,90 @@ DeviceManager *DeviceManager::GetDeviceManager() {
   return instance_;
 }
 
-int DeviceManager::InstallDevice(Device *device) {
+// Call from a device driver to indicate a flag change.
+void DeviceManager::DeviceSetFlags(uintptr_t device_id, uint32_t flags) {
   ScopedLock locker(mutex_);
-  devices_.PushBack(device);
-  int handle = devices_.size() - 1;
-  device->SetHandle(handle);
-  return handle;
+  Device* device = devices_[device_id];
+  device->SetFlags(flags);
 }
 
-Device *DeviceManager::GetDevice(int handle) {
+// Call from a device driver to indicate a flag change.
+void DeviceManager::DeviceClearFlags(uintptr_t device_id, uint32_t flags) {
+  ScopedLock locker(mutex_);
+  Device* device = devices_[device_id];
+  device->ClearFlags(flags);
+}
+
+void DeviceManager::RegisterUartDevice(const char* name, UartDriver* driver) {
+  UartDevice* device = new UartDevice(name, driver);
+  ScopedLock locker(mutex_);
+  devices_.PushBack(device);
+  uintptr_t device_id = devices_.size() - 1;
+  driver->device_id = device_id;
+  device->set_device_id(device_id);
+}
+
+void DeviceManager::RegisterButtonDevice(const char* name,
+                                         ButtonDriver* driver) {
+  ButtonDevice* device = new ButtonDevice(name, driver);
+  ScopedLock locker(mutex_);
+  devices_.PushBack(device);
+  uintptr_t device_id = devices_.size() - 1;
+  driver->device_id = device_id;
+  device->set_device_id(device_id);
+}
+
+Device* DeviceManager::LookupDevice(const char* name, Device::Type type) {
+  // Lookup the named device.
+  // No locking - only called by methods which already lock.
+  for (int i = 0; i < devices_.size(); i++) {
+    Device* device = devices_[i];
+    if (device->type() == type && strcmp(name, devices_[i]->name()) == 0) {
+      return device;
+    }
+  }
+  return NULL;
+}
+
+int DeviceManager::OpenUart(const char* name) {
+  ScopedLock locker(mutex_);
+  Device* device = LookupDevice(name, Device::UART_DEVICE);
+  if (device == NULL) return -1;
+  if (device->initialized_) return -1;
+
+  UartDevice* uart_device = UartDevice::cast(device);
+  uart_device->Initialize();
+  device->initialized_ = true;
+
+  return device->device_id();
+}
+
+int DeviceManager::OpenButton(const char* name) {
+  ScopedLock locker(mutex_);
+  Device* device = LookupDevice(name, Device::BUTTON_DEVICE);
+  if (device == NULL) return -1;
+  if (device->initialized_) return -1;
+
+  ButtonDevice* button_device = ButtonDevice::cast(device);
+  button_device->Initialize();
+  device->initialized_ = true;
+
+  return device->device_id();
+}
+
+Device* DeviceManager::GetDevice(int handle) {
   ScopedLock locker(mutex_);
   return devices_[handle];
+}
+
+UartDevice* DeviceManager::GetUart(int handle) {
+  ScopedLock locker(mutex_);
+  return UartDevice::cast(devices_[handle]);
+}
+
+ButtonDevice* DeviceManager::GetButton(int handle) {
+  ScopedLock locker(mutex_);
+  return ButtonDevice::cast(devices_[handle]);
 }
 
 int DeviceManager::SendMessage(int handle) {

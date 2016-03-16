@@ -2,25 +2,27 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_H_
-#define PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_H_
+#ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_DRIVER_H_
+#define PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_DRIVER_H_
 
 #include <cmsis_os.h>
 #include <stm32f7xx_hal.h>
 
 #include <cinttypes>
 
-#include "src/shared/platform.h"
 #include "platforms/stm/disco_dartino/src/device_manager.h"
+#include "src/shared/platform.h"
 
 // Interface to the user button.
-class Button {
+class ButtonDriverImpl {
  public:
-  // Access the UserButton.
-  Button();
+  ButtonDriverImpl();
 
-  // Open the user button. Returns the device id used for listening.
-  int Open();
+  // Initialize the button.
+  void Initialize(uintptr_t device_id);
+
+  // De-initialize the UART.
+  void DeInitialize();
 
   // Clears the press flag.
   void NotifyRead();
@@ -30,12 +32,11 @@ class Button {
   void ReturnFromInterrupt();
 
  private:
+  // Device ID returned from device driver registration.
+  uintptr_t device_id_;
+
   // Used to signal new events from the event handler.
   osSemaphoreId semaphore_;
-
-  dartino::Device device_;
 };
 
-Button *GetButton(int handle);
-
-#endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_H_
+#endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_DRIVER_H_

@@ -37,7 +37,7 @@ main() {
     ByteBuffer input = uart.readNext();
     // Map CR to CR+LF for nicer console output.
     int offset = 0;
-    while(true) {
+    while (true) {
       int index = input.asUint8List().indexOf(CR, offset);
       if (index == -1) {
         uart.write(input, offset);

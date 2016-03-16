@@ -10,9 +10,8 @@
 
 #include "platforms/stm/disco_dartino/src/ethernet.h"
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
+#include "platforms/stm/disco_dartino/src/device_manager.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
-#include "platforms/stm/disco_dartino/src/button.h"
-#include "platforms/stm/disco_dartino/src/uart.h"
 
 #include "src/shared/utils.h"
 #include "src/vm/program_info_block.h"
@@ -22,10 +21,18 @@ extern "C" char program_start;
 extern "C" char program_end;
 extern PageAllocator* page_allocator;
 
-Uart *uart;
 int uart_handle;
+int button_handle;
 
-extern "C" size_t UartOpen() {
+dartino::UartDevice* GetUart(int handle) {
+  return dartino::DeviceManager::GetDeviceManager()->GetUart(handle);
+}
+
+dartino::ButtonDevice* GetButton(int handle) {
+  return dartino::DeviceManager::GetDeviceManager()->GetButton(handle);
+}
+
+extern "C" int UartOpen() {
   return uart_handle;
 }
 
@@ -43,12 +50,11 @@ extern "C" uint32_t UartGetError(int handle) {
 }
 
 extern "C" size_t ButtonOpen() {
-  Button *button = new Button();
-  return button->Open();
+  return button_handle;
 }
 
 extern "C" void ButtonNotifyRead(int handle) {
-  Button *button = GetButton(handle);
+  dartino::ButtonDevice *button = GetButton(handle);
   button->NotifyRead();
 }
 
@@ -78,6 +84,18 @@ DARTINO_EXPORT_STATIC_RENAME(get_ethernet_adapter_status,
 DARTINO_EXPORT_STATIC_RENAME(get_network_address_configuration,
                              GetNetworkAddressConfiguration)
 
+static void UartPrintIntercepter(const char* message, int out, void* data) {
+  int len = strlen(message);
+  for (int i = 0; i < len; i++) {
+    if (message[i] == '\n') {
+      GetUart(uart_handle)->Write(
+          reinterpret_cast<const uint8_t*>("\r\n"), 0, 1);
+    }
+    GetUart(uart_handle)->Write(
+        reinterpret_cast<const uint8_t*>(message + i), 0, 1);
+  }
+}
+
 // Run dartino on the linked in program heap.
 void StartDartino(void const * argument) {
   dartino::Print::Out("Setup Dartino\n");
@@ -94,27 +112,19 @@ void StartDartino(void const * argument) {
   dartino::Print::Out("Dartino program exited\n");
 }
 
-void UartPrintIntercepter(const char* message, int out, void* data) {
-  int len = strlen(message);
-  for (int i = 0; i < len; i++) {
-    if (message[i] == '\n') {
-      uart->Write(reinterpret_cast<const uint8_t*>("\r\n"), 0, 1);
-    }
-    uart->Write(reinterpret_cast<const uint8_t*>(message + i), 0, 1);
-  }
-}
-
 // Main task entry point from FreeRTOS.
 void DartinoEntry(void const * argument) {
-  // For now always start the UART.
-  uart = new Uart();
-  uart_handle = uart->Open();
-
-  DartinoRegisterPrintInterceptor(UartPrintIntercepter, NULL);
-
   // Always disable standard out, as this will cause infinite
   // recursion in the syscalls.c handling of write.
   dartino::Print::DisableStandardOutput();
+
+  // For now always start the UART.
+  uart_handle = dartino::DeviceManager::GetDeviceManager()->OpenUart("uart1");
+  DartinoRegisterPrintInterceptor(UartPrintIntercepter, NULL);
+
+  // For now always initialize the button.
+  button_handle =
+      dartino::DeviceManager::GetDeviceManager()->OpenButton("button1");
 
   StartDartino(argument);
 

@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_UART_H_
-#define PLATFORMS_STM_DISCO_DARTINO_SRC_UART_H_
+#ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_UART_DRIVER_H_
+#define PLATFORMS_STM_DISCO_DARTINO_SRC_UART_DRIVER_H_
 
 #include <cmsis_os.h>
 #include <stm32f7xx_hal.h>
@@ -12,18 +12,19 @@
 
 #include "platforms/stm/disco_dartino/src/circular_buffer.h"
 #include "platforms/stm/disco_dartino/src/device_manager.h"
-
 #include "src/shared/platform.h"
 
-
 // Interface to the universal asynchronous receiver/transmitter (UART).
-class Uart {
+class UartDriverImpl {
  public:
   // Access the UART on the first UART port.
-  Uart();
+  UartDriverImpl();
 
-  // Open the uart. Returns the device id used for listening.
-  int Open();
+  // Initialize the UART.
+  void Initialize(uintptr_t device_id);
+
+  // De-initialize the UART.
+  void DeInitialize();
 
   // Read up to `count` bytes from the UART into `buffer` starting at
   // buffer. Return the number of bytes read.
@@ -32,7 +33,7 @@ class Uart {
   size_t Read(uint8_t* buffer, size_t count);
 
   // Write up to `count` bytes from the UART into `buffer` starting at
-  // buffer. Return the number of bytes written.
+  // `offset`. Return the number of bytes written.
   //
   // This is non-blocking, and will return 0 if no data could be written.
   size_t Write(const uint8_t* buffer, size_t offset, size_t count);
@@ -53,8 +54,6 @@ class Uart {
 
   void EnsureTransmission();
 
-  uint32_t mask_;
-
   static const int kTxBlockSize = 10;
 
   uint8_t read_data_;
@@ -62,11 +61,10 @@ class Uart {
   CircularBuffer* read_buffer_;
   CircularBuffer* write_buffer_;
 
-  int handle_ = -1;
-
   UART_HandleTypeDef* uart_;
 
-  dartino::Device device_;
+  // Device ID returned from device driver registration.
+  uintptr_t device_id_;
 
   // Transmit status.
   dartino::Mutex* tx_mutex_;
@@ -87,6 +85,6 @@ class Uart {
   osThreadId signalThread_;
 };
 
-Uart *GetUart(int handle);
+extern "C" void FillUartDriver(UartDriver* driver);
 
-#endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_UART_H_
+#endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_UART_DRIVER_H_
