@@ -1204,9 +1204,10 @@ Future<int> downloadTools(
 Future<Directory> locateBinDirectory() async {
   // In the SDK, the tools directory is at the same level as the
   // internal (and bin) directory.
+  String path = 'platforms/stm32f746g-discovery/bin';
   Directory binDirectory =
       new Directory.fromUri(executable.resolve(
-          '../platforms/stm32f746g-discovery/bin'));
+          '../$path'));
   if ((await binDirectory.exists())) {
     // In the SDK, the tools directory is at the same level as the
     // internal (and bin) directory.
@@ -1218,7 +1219,8 @@ Future<Directory> locateBinDirectory() async {
   } else {
     // In the Git checkout the platform scripts is under platforms.
     binDirectory =
-        new Directory.fromUri(executable.resolve('../../platforms/stm/bin'));
+        new Directory.fromUri(executable.resolve(
+                '../../$path'));
     assert(await binDirectory.exists());
   }
 
