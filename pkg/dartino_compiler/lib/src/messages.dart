@@ -10,11 +10,13 @@ import 'diagnostic.dart' show
 
 enum DiagnosticKind {
   agentVersionMismatch,
+  boardNotFound,
   busySession,
   cantPerformVerbIn,
   cantPerformVerbTo,
   cantPerformVerbWith,
   compilerVersionMismatch,
+  duplicatedFor,
   duplicatedIn,
   duplicatedTo,
   duplicatedWith,
@@ -25,13 +27,18 @@ enum DiagnosticKind {
   illegalDefine,
   infoFileNotFound,
   internalError,
+  missingForName,
+  missingProjectPath,
+  missingRequiredArgument,
   malformedInfoFile,
+  missingNoun,
   missingSessionName,
   missingToFile,
   noAgentFound,
   noFileTarget,
   noSuchSession,
   noTcpSocketTarget,
+  projectAlreadyExists,
   quitTakesNoArguments,
   sessionAlreadyExists,
   sessionInvalidState,
@@ -58,12 +65,14 @@ enum DiagnosticKind {
   toolsNotInstalled,
   unexpectedArgument,
   unknownAction,
+  unknownNoun,
   unknownOption,
   unsupportedPlatform,
   upgradeInvalidPackageName,
   verbDoesNotSupportTarget,
   verbDoesntSupportTarget,
   verbRequiresFileTarget,
+  verbRequiresNoFor,
   verbRequiresNoSession,
   verbRequiresNoToFile,
   verbRequiresNoWithFile,
@@ -107,6 +116,8 @@ String getMessage(DiagnosticKind kind) {
 
   const DiagnosticParameter message = DiagnosticParameter.message;
   const DiagnosticParameter verb = DiagnosticParameter.verb;
+  const DiagnosticParameter nouns = DiagnosticParameter.nouns;
+  const DiagnosticParameter boardNames = DiagnosticParameter.boardNames;
   const DiagnosticParameter sessionName = DiagnosticParameter.sessionName;
   const DiagnosticParameter target = DiagnosticParameter.target;
   const DiagnosticParameter requiredTarget = DiagnosticParameter.requiredTarget;
@@ -151,6 +162,17 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.verbDoesNotSupportTarget:
       return "'$verb' can't be performed on '$target'.";
+
+    case DiagnosticKind.projectAlreadyExists:
+      return "Project already exists: $uri";
+
+    case DiagnosticKind.missingForName:
+      return "Missing 'for <board-name>' "
+          "where <board-name> is one of $boardNames";
+
+    case DiagnosticKind.boardNotFound:
+      return "Couldn't find a board named '$userInput'. "
+          "Try one of these board names: $boardNames";
 
     case DiagnosticKind.noSuchSession:
       return "Couldn't find a session called '$sessionName'. "
@@ -214,6 +236,14 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.unsupportedPlatform:
       // TODO(lukechurch): Review UX.
       return "Unsupported platform: $message.";
+
+    case DiagnosticKind.missingProjectPath:
+      return "Project path missing. Try adding the path of a directory"
+          " to be created after 'project'.";
+
+    case DiagnosticKind.missingRequiredArgument:
+      // TODO(lukechurch): Consider a correction message.
+      return "Option '${DiagnosticParameter.userInput}' needs an argument.";
 
     case DiagnosticKind.missingSessionName:
       // TODO(karlklose,ahe): provide support to list choices here.
@@ -279,8 +309,20 @@ String getMessage(DiagnosticKind kind) {
       return "'$userInput' isn't a supported action. "
         "Try running 'dartino help'.";
 
+    case DiagnosticKind.missingNoun:
+      return "'$verb' must be followed by one of $nouns. "
+        "Alternately try running 'dartino help'.";
+
+    case DiagnosticKind.unknownNoun:
+      return "'$verb $userInput' isn't a supported action. "
+        "Try '$verb' followed by one of $nouns, "
+        "or try running 'dartino help'.";
+
     case DiagnosticKind.extraArguments:
       return "Unrecognized arguments: $userInput.";
+
+    case DiagnosticKind.duplicatedFor:
+      return "More than one 'for' clause: $preposition.";
 
     case DiagnosticKind.duplicatedIn:
       return "More than one 'in' clause: $preposition.";
@@ -295,6 +337,9 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.verbDoesntSupportTarget:
       return "Can't perform '$verb' with '$target'.";
+
+    case DiagnosticKind.verbRequiresNoFor:
+      return "Can't perform '$verb' for '$userInput'.";
 
     case DiagnosticKind.verbRequiresNoToFile:
       return "Can't perform '$verb' to '$userInput'.";

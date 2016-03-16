@@ -69,6 +69,13 @@ class Action {
   // TODO(ahe): Should be "to uri NAME".
   final bool requiresToUri;
 
+  /// True if this verb needs "for NAME".
+  final bool requiresForName;
+
+  /// True if this verb requires a project target or a session target
+  /// (that is, "project <directory>").
+  final bool requiresTargetProject;
+
   /// True if this verb requires a session target (that is, "session NAME"
   /// without "in").
   final bool requiresTargetSession;
@@ -95,18 +102,35 @@ class Action {
       this.documentation,
       {this.requiresSession: false,
        this.requiresToUri: false,
+       this.requiresForName: false,
        this.allowsTrailing: false,
+       bool requiresTargetProject: false,
        bool requiresTargetSession: false,
        TargetKind requiredTarget,
        bool requiresTarget: false,
        this.supportedTargets,
        this.supportsWithUri: false})
-      : this.requiresTargetSession = requiresTargetSession,
-        this.requiredTarget =
-      requiresTargetSession ? TargetKind.SESSION : requiredTarget,
+      : this.requiresTargetProject = requiresTargetProject,
+        this.requiresTargetSession = requiresTargetSession,
+        this.requiredTarget = requiresTargetSession
+          ? TargetKind.SESSION
+          : requiresTargetProject
+            ? TargetKind.PROJECT
+            : requiredTarget,
         requiresTarget = !identical(requiredTarget, null) ||
     requiresTarget ||
+    requiresTargetProject ||
     requiresTargetSession;
+}
+
+/// Use a [ActionGroup] to group actions that share the same primary verb
+/// such as "create project" and "create session".
+class ActionGroup extends Action {
+  final Map<String, Action> actions;
+
+  const ActionGroup(Map<String, Action> actions, String documentation)
+      : super(null, documentation),
+        this.actions = actions;
 }
 
 

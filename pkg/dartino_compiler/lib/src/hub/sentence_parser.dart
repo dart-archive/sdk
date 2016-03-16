@@ -9,6 +9,7 @@ import 'dart:convert' show
 
 import '../verbs/actions.dart' show
     Action,
+    ActionGroup,
     commonActions,
     uncommonActions;
 
@@ -86,7 +87,18 @@ class SentenceParser {
     action = uncommonActions[name];
     if (action != null) {
       tokens.consume();
-      return new Verb(name, action);
+      if (action is ActionGroup) {
+        String noun = tokens.current;
+        Action child = action.actions[noun];
+        if (child != null) {
+          return new Verb(name, child);
+        } else {
+          List<String> nouns = action.actions.keys.toList()..sort();
+          return new ErrorVerb(name, noun, nouns);
+        }
+      } else {
+        return new Verb(name, action);
+      }
     }
     return new ErrorVerb(name);
   }
@@ -108,6 +120,11 @@ class SentenceParser {
 
       case "to":
         return makePreposition(PrepositionKind.TO);
+
+      case "for":
+        tokens.consume();
+        return new Preposition(PrepositionKind.FOR,
+            new NamedTarget(TargetKind.BOARD_NAME, parseName()));
 
 
       default:
@@ -137,6 +154,9 @@ class SentenceParser {
     switch (word) {
       case "session":
         return makeNamedTarget(TargetKind.SESSION);
+
+      case "project":
+        return makeNamedTarget(TargetKind.PROJECT);
 
       case "class":
         return makeNamedTarget(TargetKind.CLASS);
@@ -322,12 +342,22 @@ class Verb {
 
 class ErrorVerb implements Verb {
   final String name;
+  final String noun;
+  final List<String> nouns;
 
-  const ErrorVerb(this.name);
+  const ErrorVerb(this.name, [this.noun, this.nouns]);
 
   bool get isErroneous => true;
 
   Action get action {
+    if (nouns != null) {
+      if (noun != null && noun.trim().isNotEmpty) {
+        throwFatalError(DiagnosticKind.unknownNoun, verb: new Verb(name, null),
+          userInput: noun, nouns: nouns);
+      }
+      throwFatalError(DiagnosticKind.missingNoun, verb: new Verb(name, null),
+        nouns: nouns);
+    }
     throwFatalError(DiagnosticKind.unknownAction, userInput: name);
   }
 }
@@ -345,6 +375,7 @@ enum PrepositionKind {
   WITH,
   IN,
   TO,
+  FOR,
 }
 
 class Target {
@@ -363,6 +394,7 @@ enum TargetKind {
   APPLY,
   BACKTRACE,
   BREAK,
+  BOARD_NAME,
   CLASS,
   CLASSES,
   CONTINUE,
@@ -382,6 +414,7 @@ enum TargetKind {
   METHODS,
   PRINT,
   PRINT_ALL,
+  PROJECT,
   RESTART,
   RUN_TO_MAIN,
   SESSION,

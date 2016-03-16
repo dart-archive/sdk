@@ -121,7 +121,7 @@ AnalyzedSentence helpSentence(String message) {
   Action contextHelp = new Action(printHelp, null);
   return new AnalyzedSentence(
       new Verb("?", contextHelp), null, null, null, null, null, null,
-      null, null, null, null);
+      null, null, null, null, null);
 }
 
 AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
@@ -159,8 +159,32 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   }
 
   NamedTarget inSession;
+  String forName;
   Uri toUri;
   Uri withUri;
+
+  /// Validates a preposition of kind `for`. For now, the only possible legal
+  /// target is of kind `board name`. Store such a file in [forName].
+  void checkForTarget(Preposition preposition) {
+    assert(preposition.kind == PrepositionKind.FOR);
+    if (preposition.target.kind == TargetKind.BOARD_NAME) {
+      if (forName != null) {
+        throwFatalError(
+            DiagnosticKind.duplicatedFor, preposition: preposition);
+      }
+      NamedTarget target = preposition.target;
+      forName = target.name;
+      if (!action.requiresForName) {
+        throwFatalError(
+            DiagnosticKind.verbRequiresNoFor,
+            verb: verb, userInput: target.name);
+      }
+    } else {
+      throwFatalError(
+          DiagnosticKind.verbRequiresNoFor,
+          verb: verb, target: preposition.target);
+    }
+  }
 
   /// Validates a preposition of kind `in`. For now, the only possible legal
   /// target is of kind `session`. Store such as session in [inSession].
@@ -266,6 +290,10 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
         checkInTarget(preposition);
         break;
 
+      case PrepositionKind.FOR:
+        checkForTarget(preposition);
+        break;
+
       case PrepositionKind.TO:
         checkToTarget(preposition);
         break;
@@ -359,6 +387,10 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     }
   } else if (action.requiresSession) {
     sessionName = currentSession;
+  } else if (action.requiresTargetProject &&
+      target is NamedTarget &&
+      target.name == null) {
+    throwFatalError(DiagnosticKind.missingProjectPath);
   } else if (action.requiresTargetSession &&
       target is NamedTarget &&
       target.name == null) {
@@ -378,7 +410,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
       sentence.programName == null ? null : fileUri(sentence.programName, base);
   return new AnalyzedSentence(
       verb, target, targetName, trailing, sessionName, base, programName,
-      targetUri, toUri, withUri, options);
+      targetUri, toUri, withUri, forName, options);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
@@ -439,6 +471,9 @@ class AnalyzedSentence {
   /// Value of 'with <URI>' converted to a Uri.
   final Uri withUri;
 
+  /// Value of 'for NAME'.
+  final String forName;
+
   final Options options;
 
   AnalyzedSentence(
@@ -452,6 +487,7 @@ class AnalyzedSentence {
       this.targetUri,
       this.toTargetUri,
       this.withUri,
+      this.forName,
       this.options);
 
   Future<int> performVerb(VerbContext context) {

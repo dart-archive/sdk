@@ -59,6 +59,28 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'],
           <String>['debug', 'sessions', 'in', 'session', 'foo'])];
 
+    case DiagnosticKind.projectAlreadyExists:
+      // TODO(danrubel): figure out a way to test this.
+      // Basically we need to create a directory on disk
+      // then call 'dartino project create' on that directory.
+      return untestable;
+
+    case DiagnosticKind.missingRequiredArgument:
+      // TODO(danrubel) create a test
+      return untestable;
+
+    case DiagnosticKind.missingForName:
+      return <Example>[new CommandLineExample(
+          <String>['create', 'project', 'foo'],
+          <String>['create', 'project', 'foo', 'for'])];
+
+    case DiagnosticKind.boardNotFound:
+      // TODO(danrubel): figure out a way to test this
+      // by getting sdkUri to be set correctly.
+      // return <Example>[new CommandLineExample(
+      //     <String>['create', 'project', 'foo', 'for', 'baz-board'])];
+      return untestable;
+
     case DiagnosticKind.noSuchSession:
       return <Example>[
           new CommandLineExample(
@@ -176,6 +198,10 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(
               <String>['export'])];
 
+    case DiagnosticKind.missingProjectPath:
+      return <Example>[new CommandLineExample(
+            <String>['create', 'project'])];
+
     case DiagnosticKind.missingSessionName:
       return <Example>[new CommandLineExample(
             <String>['create', 'session'])];
@@ -246,6 +272,14 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(<String>['blah']),
           new CommandLineExample(<String>['test.dart'])];
 
+    case DiagnosticKind.missingNoun:
+      return <Example>[
+          new CommandLineExample(<String>['create'])];
+
+    case DiagnosticKind.unknownNoun:
+      return <Example>[
+          new CommandLineExample(<String>['create foo'])];
+
     case DiagnosticKind.extraArguments:
       return <Example>[
           new CommandLineExample(<String>['create', 'fisk']),
@@ -254,15 +288,22 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.cantPerformVerbIn:
       return <Example>[
-          new CommandLineExample(<String>['create', 'in', 'classes'])];
+          new CommandLineExample(
+              <String>['create', 'project', 'foo', 'in', 'classes'])];
 
     case DiagnosticKind.cantPerformVerbTo:
       return <Example>[
-          new CommandLineExample(<String>['create', 'to', 'classes'])];
+          new CommandLineExample(<String>[
+              'create', 'project', 'foo', 'to', 'classes'])];
 
     case DiagnosticKind.cantPerformVerbWith:
       return <Example>[
-          new CommandLineExample(<String>['create', 'with', 'classes'])];
+          new CommandLineExample(<String>[
+              'create', 'project', 'foo', 'with', 'classes'])];
+
+    case DiagnosticKind.duplicatedFor:
+      return <Example>[new CommandLineExample(<String>[
+        'create', 'project', 'foo', 'for', 'bar', 'for', 'baz'])];
 
     case DiagnosticKind.duplicatedIn:
       return <Example>[new CommandLineExample(
@@ -273,14 +314,22 @@ List<Example> getExamples(DiagnosticKind kind) {
             <String>['export', 'to', 'foo.dart', 'to', 'foo.dart'])];
 
     case DiagnosticKind.duplicatedWith:
-      return <Example>[new CommandLineExample(
-            <String>['create', 'with', 'foo.txt', 'with', 'foo.txt'])];
+      return <Example>[new CommandLineExample(<String>[
+          'create', 'session', 'foo', 'with', 'bar.dart', 'with', 'baz.dart'])];
 
     case DiagnosticKind.verbDoesntSupportTarget:
       // Though the quit verb is not a real verb it can still be used to provoke
       // this failure as part of sentence parsing.
       return <Example>[new CommandLineExample(
             <String>['quit', 'foo.txt'])];
+
+    case DiagnosticKind.verbRequiresNoFor:
+      // Though the quit verb is not a real verb it can still be used to provoke
+      // this failure as part of sentence parsing.
+      return <Example>[
+        new CommandLineExample(
+            <String>['quit', 'for', 'foo']),
+      ];
 
     case DiagnosticKind.verbRequiresNoToFile:
       // Though the quit verb is not a real verb it can still be used to provoke

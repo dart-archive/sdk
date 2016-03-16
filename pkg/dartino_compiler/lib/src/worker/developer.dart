@@ -46,8 +46,9 @@ import 'package:mdns/mdns.dart' show
     RRType;
 
 import 'package:path/path.dart' show
-    dirname,
+    basename,
     basenameWithoutExtension,
+    dirname,
     join,
     withoutExtension;
 
@@ -272,6 +273,29 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
   state.session = session;
 }
 
+/// Create the new project directory and copy the specified template into it.
+Future<int> createProject(Uri projectUri, String boardName,
+    [String templateName]) async {
+  Uri templateUri = await findProjectTemplate(boardName, templateName);
+  if (templateUri == null) return -1;
+
+  // Recursively copy the template
+  recursiveCopy(Directory src, Directory dst) async {
+    await dst.create(recursive: true);
+    await for (FileSystemEntity srcChild in src.list()) {
+      String dstChildPath = join(dst.path, basename(srcChild.path));
+      if (srcChild is File) {
+        await srcChild.copy(dstChildPath);
+      } else if (srcChild is Directory) {
+        await recursiveCopy(srcChild, new Directory(dstChildPath));
+      }
+    }
+  }
+  recursiveCopy(
+    new Directory.fromUri(templateUri), new Directory.fromUri(projectUri));
+  return 0;
+}
+
 Future<int> compile(
     Uri script,
     SessionState state,
@@ -347,6 +371,37 @@ Future<Uri> findFile(Uri cwd, String fileName) async {
     if (uri.pathSegments.length <= 1) return null;
     uri = uri.resolve('../$fileName');
   }
+}
+
+Future<Uri> findDirectory(Uri cwd, String directoryName) async {
+  // Ensure returned Uri ends with a `/`
+  if (!directoryName.endsWith('/')) directoryName = '$directoryName/';
+  Uri uri = cwd.resolve(directoryName);
+  while (true) {
+    if (await new Directory.fromUri(uri).exists()) return uri;
+    if (uri.pathSegments.length <= 2) return null;
+    // Because uri ends with `/`, must move up 2 levels
+    uri = uri.resolve('../../$directoryName');
+  }
+}
+
+/// Return a list of board names or `null` if none can be found
+Future<List<String>> findBoardNames() async {
+  Uri platformsUri = await findDirectory(executable, 'platforms');
+  if (platformsUri == null) return null;
+  return new Directory.fromUri(platformsUri).list()
+      .map((FileSystemEntity e) => basename(e.path)).toList();
+}
+
+/// Return the [Uri] of the project template for the specified board.
+/// Return `null` if it cannot be found.
+Future<Uri> findProjectTemplate(String boardName, [String templateName]) async {
+  templateName ??= 'default';
+  Uri platformsUri = await findDirectory(executable, 'platforms');
+  if (platformsUri == null) return null;
+  Uri boardUri = platformsUri.resolve('$boardName/');
+  if (!await new Directory.fromUri(boardUri).exists()) return null;
+  return boardUri.resolve('templates/$templateName/');
 }
 
 Future<Settings> createSettings(

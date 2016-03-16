@@ -83,6 +83,10 @@ const String helpDocumentation = """
 """;
 
 const String createDocumentation = """
+   create project <directory> for <board-name>
+             Create a new example project for the specified <board-name>
+             in the given <directory>.
+
    create session <name> [with <settings file>]
              Create a new session with the given name.  Read settings from
              <settings file> (defaults to '.dartino-settings').
