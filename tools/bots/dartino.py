@@ -205,6 +205,18 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
       StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
     StepsCreateArchiveRaspbianImge()
   elif system == 'mac':
+    # We need the 32-bit build for the dartino-flashify program.
+    if 'ia32' not in archs:
+      ia32_configuration = GetBuildConfigurations(
+        system=system,
+        modes=['release'],
+        archs=['ia32'],
+        asans=[False],
+        no_clang=no_clang,
+        embedded_libs=embedded_libs,
+        use_sdks=[True])[0]
+      StepBuild(ia32_configuration['build_conf'],
+                ia32_configuration['build_dir'])
     for cross_arch in cross_archs:
        StepsGetCrossBinaries(cross_mode, cross_arch)
     StepsGetArmDeb()
