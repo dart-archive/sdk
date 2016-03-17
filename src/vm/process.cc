@@ -485,7 +485,7 @@ void Process::FinalizeForeign(HeapObject* foreign, void* arg) {
   uword value = instance->GetConsecutiveSmis(0);
   uword length = Smi::cast(instance->GetInstanceField(2))->value();
   free(reinterpret_cast<void*>(value));
-  reinterpret_cast<TwoSpaceHeap*>(arg)->FreedForeignMemory(length);
+  reinterpret_cast<Heap*>(arg)->FreedForeignMemory(length);
 }
 
 void Process::FinalizeProcess(HeapObject* process, void*) {

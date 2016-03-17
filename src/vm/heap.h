@@ -76,6 +76,10 @@ class Heap {
   Object* CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
                          int number_of_literals);
 
+  void AllocatedForeignMemory(int size);
+
+  void FreedForeignMemory(int size);
+
   // Iterate over all objects in the heap.
   virtual void IterateObjects(HeapObjectVisitor* visitor) {
     space_->IterateObjects(visitor);
@@ -225,10 +229,6 @@ class TwoSpaceHeap : public Heap {
     WeakPointer::Visit(space_->weak_pointers(), visitor);
     WeakPointer::Visit(old_space_->weak_pointers(), visitor);
   }
-
-  void AllocatedForeignMemory(int size);
-
-  void FreedForeignMemory(int size);
 
  private:
   friend class GenerationalScavengeVisitor;

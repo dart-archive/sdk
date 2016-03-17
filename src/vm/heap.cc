@@ -263,16 +263,13 @@ Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
   return Function::cast(result);
 }
 
-void TwoSpaceHeap::AllocatedForeignMemory(int size) {
+void Heap::AllocatedForeignMemory(int size) {
   ASSERT(foreign_memory_ >= 0);
   foreign_memory_ += size;
-  old_space()->DecreaseAllocationBudget(size);
-  if (old_space()->needs_garbage_collection()) {
-    space()->TriggerGCSoon();
-  }
+  space()->DecreaseAllocationBudget(size);
 }
 
-void TwoSpaceHeap::FreedForeignMemory(int size) {
+void Heap::FreedForeignMemory(int size) {
   foreign_memory_ -= size;
   ASSERT(foreign_memory_ >= 0);
   space()->IncreaseAllocationBudget(size);

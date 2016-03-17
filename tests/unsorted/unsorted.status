@@ -14,6 +14,9 @@ spawn_empty_test: Pass, Timeout, Crash # https://github.com/dartino/sdk/issues/4
 dart2js_hello_world_test: Slow, Pass
 dart2js_deltablue_test: Slow, Pass
 
+# https://github.com/dartino/sdk/issues/395
+external_memory_triggers_gc_test: Skip
+
 [ $system == macos ]
 # https://github.com/dartino/sdk/issues/401
 dart2js_hello_world_test: Slow, Pass, Timeout

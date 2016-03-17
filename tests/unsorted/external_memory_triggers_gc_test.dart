@@ -15,17 +15,11 @@ main() {
   const int kChunkSize = 1024 * 1024;
   const int kTotalSize = 4 * 1024 * 1024 * 1024;
 
-  var file;
-  try {
-    file = new File.open('/dev/zero');
-  } catch (e) {
-    // On embedded system there may be no filesystem so this test cannot run.
-    return;
-  }
-
   // We use at least 1MB of heap size, this means the budget will grow to at
   // least 1MB of heap size.
   var keepAllocationBudgetHigh = new List(256 * 1024);
+
+  var file = new File.open('/dev/zero');
 
   int size = 0;
   while (size < kTotalSize) {

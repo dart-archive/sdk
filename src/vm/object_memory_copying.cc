@@ -19,7 +19,6 @@ static bool HasSentinelAt(uword address) {
 }
 
 static void WriteSentinelAt(uword address) {
-  ASSERT(sizeof(Object*) == kSentinelSize);
   *reinterpret_cast<Object**>(address) = chunk_end_sentinel();
 }
 
@@ -102,7 +101,7 @@ void SemiSpace::Append(Chunk* chunk) {
 
 uword SemiSpace::TryAllocate(int size) {
   uword new_top = top_ + size;
-  // Make sure there is room for chunk end sentinel by using < instead of <=.
+  // Make sure there is room for chunk end sentinel.
   if (new_top < limit_) {
     uword result = top_;
     top_ = new_top;
@@ -137,7 +136,8 @@ uword SemiSpace::AllocateInNewChunk(int size) {
     UpdateBaseAndLimit(chunk, chunk->base());
 
     // Allocate.
-    return TryAllocate(size);
+    uword result = TryAllocate(size);
+    if (result != 0) return result;
   }
   return 0;
 }
