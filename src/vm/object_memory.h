@@ -24,6 +24,8 @@ class PromotedTrack;
 class Space;
 class TwoSpaceHeap;
 
+static const int kSentinelSize = sizeof(void*);
+
 // A chunk represents a block of memory provided by ObjectMemory.
 class Chunk {
  public:
@@ -172,7 +174,7 @@ class Space {
   // Obtain the offset of [object] from the start of the chunk. We assume
   // there is exactly one chunk in this space and [object] lies within it.
   word OffsetOf(HeapObject* object);
-  HeapObject *ObjectAtOffset(word offset);
+  HeapObject* ObjectAtOffset(word offset);
 
 #ifdef DEBUG
   void Find(uword word, const char* name);
@@ -195,6 +197,13 @@ class Space {
 
   WeakPointerList* weak_pointers() { return &weak_pointers_; }
 
+  void TriggerGCSoon() {
+    allocation_budget_ = 0;
+    if (!in_no_allocation_failure_scope()) {
+      limit_ = top_ + kSentinelSize;
+    }
+  }
+
  protected:
   explicit Space(Resizing resizeable);
 
@@ -216,7 +225,12 @@ class Space {
     ASSERT(resizeable_);  // Fixed size heap cannot guarantee allocation.
     ++no_allocation_nesting_;
   }
-  void DecrementNoAllocationNesting() { --no_allocation_nesting_; }
+  void DecrementNoAllocationNesting() {
+    --no_allocation_nesting_;
+    if (no_allocation_nesting_ == 0 && allocation_budget_ <= 0) {
+      limit_ = top_ + kSentinelSize;
+    }
+  }
 
   Chunk* first_;           // First chunk in this space.
   Chunk* last_;            // Last chunk in this space.

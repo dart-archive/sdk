@@ -21,7 +21,7 @@ exit 0
 fi
 
 if [ -z "$1" -o ! -s "$1" ]; then
-echo "$0: Expecting a snapshot file as fist argument."
+echo "$0: Expecting a snapshot file as first argument."
 exit 1
 fi
 
