@@ -142,6 +142,10 @@ Object* HandleObjectFromFailure(Process* process, Failure* failure) {
 Object* HandleAllocate(Process* process, Class* clazz, int immutable) {
   Object* result = process->NewInstance(clazz, immutable == 1);
   if (result->IsFailure()) return result;
+  // The object will immediately be populated without a write
+  // barrier, so it must be in new-space!
+  ASSERT(
+      process->heap()->space()->Includes(HeapObject::cast(result)->address()));
   return result;
 }
 
