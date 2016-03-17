@@ -1570,15 +1570,24 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   __ movl(EBX, Address(ESI, EAX, TIMES_1));
 
   const int kStackAllocateImmutable = 2 * kWordSize;
+  const int kStackImmutableMembers = 3 * kWordSize;
 
-  // Initialization of [kStackAllocateImmutable] depended on [immutable]
+  // We initialize the 4rd argument to "HandleAllocate" to 0, meaning the object
+  // we're allocating will not be initialized with pointers to immutable space.
+  // TODO(erikcorry): Simplify now that we don't have an immutable space.
   LoadNativeStack(ECX);
-  __ movl(Address(ECX, kStackAllocateImmutable), Immediate(immutable ? 1 : 0));
+  __ movl(Address(ECX, kStackImmutableMembers), Immediate(0));
 
-  // Loop over all arguments and find out if all of them are immutable (then we
-  // can set the immutable bit in this object too).
+  // Loop over all arguments and find out if
+  //   * all of them are immutable
+  //   * there is at least one immutable member
   Label allocate;
-  if (immutable) {
+  {
+    // Initialization of [kStackAllocateImmutable] depended on [immutable]
+    LoadNativeStack(ECX);
+    __ movl(Address(ECX, kStackAllocateImmutable),
+            Immediate(immutable ? 1 : 0));
+
     __ movl(ECX, Address(EBX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andl(ECX, Immediate(InstanceFormat::FixedSizeField::mask()));
     int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
@@ -1592,7 +1601,8 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
     __ addl(EDX, ECX);
 
     Label loop;
-    Label break_loop_with_mutable_field;
+    Label loop_with_immutable_field;
+    Label loop_with_mutable_field;
 
     // Decrement pointer to point to next field.
     __ Bind(&loop);
@@ -1623,25 +1633,32 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
     __ movl(EAX, Address(EAX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andl(EAX, Immediate(mask));
 
-    // If this is type never immutable we break the loop.
+    // If this is type never immutable we continue the loop.
     __ cmpl(EAX, Immediate(never_immutable_mask));
-    __ j(EQUAL, &break_loop_with_mutable_field);
+    __ j(EQUAL, &loop_with_mutable_field);
 
     // If this is type is always immutable we continue the loop.
     __ cmpl(EAX, Immediate(always_immutable_mask));
-    __ j(EQUAL, &loop);
+    __ j(EQUAL, &loop_with_immutable_field);
 
     // Else, we must have a Instance and check the runtime-tracked
     // immutable bit.
     uword im_mask = Instance::FlagsImmutabilityField::encode(true);
     __ movl(ECX, Address(ECX, Instance::kFlagsOffset - HeapObject::kTag));
     __ testl(ECX, Immediate(im_mask));
-    __ j(NOT_ZERO, &loop);
+    __ j(NOT_ZERO, &loop_with_immutable_field);
 
-    __ Bind(&break_loop_with_mutable_field);
+    __ jmp(&loop_with_mutable_field);
+
+    __ Bind(&loop_with_immutable_field);
+    LoadNativeStack(EAX);
+    __ movl(Address(EAX, kStackImmutableMembers), Immediate(1));
+    __ jmp(&loop);
+
+    __ Bind(&loop_with_mutable_field);
     LoadNativeStack(EAX);
     __ movl(Address(EAX, kStackAllocateImmutable), Immediate(0));
-    // Fall through.
+    __ jmp(&loop);
   }
 
   // TODO(kasperl): Consider inlining this in the interpreter.
@@ -1650,6 +1667,7 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
   // NOTE: The 3nd argument is already present ESP + kStackAllocateImmutable
+  // NOTE: The 4rd argument is already present ESP + kStackImmutableMembers
   __ call("HandleAllocate");
   SwitchToDartStack();
   __ movl(ECX, EAX);
@@ -1675,8 +1693,6 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   __ cmpl(EDX, ECX);
   __ j(BELOW, &done);
   Pop(EBX);
-  // No write barrier, because newly allocated instances are always
-  // in new-space.
   __ movl(Address(EDX, 0), EBX);
   __ subl(EDX, Immediate(1 * kWordSize));
   __ jmp(&loop);
