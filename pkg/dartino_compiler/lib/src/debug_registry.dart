@@ -24,6 +24,12 @@ import 'package:compiler/src/universe/use.dart' show
     DynamicUse,
     StaticUse;
 
+import 'package:compiler/src/constants/values.dart' show
+    ConstantValue;
+
+import 'package:compiler/src/universe/call_structure.dart' show
+    CallStructure;
+
 import 'dartino_context.dart' show
     DartinoContext;
 
@@ -37,7 +43,11 @@ import '../dartino_class_base.dart' show
     DartinoClassBase;
 
 import '../dartino_system.dart' show
-    DartinoFunctionBase;
+    DartinoFunctionBase,
+    ParameterStubSignature;
+
+import 'dartino_system_base.dart' show
+    DartinoSystemBase;
 
 /// Turns off enqueuing when generating debug information.
 ///
@@ -56,20 +66,33 @@ abstract class DebugRegistry {
   void registerClosurization(FunctionElement element, _) { }
 
   int compileLazyFieldInitializer(FieldElement field) {
-    return context.getStaticFieldIndex(field, null);
+    return systemBase.getStaticFieldIndex(field, null);
   }
 
   DartinoClassBase getLocalFunctionClosureClass(
       FunctionElement function,
       ClosureInfo info) {
     DartinoFunctionBase closureFunctionBase =
-        context.backend.systemBuilder.lookupFunctionByElement(function);
-    return
-        context.backend.systemBuilder.lookupClass(closureFunctionBase.memberOf);
+        systemBase.lookupFunctionByElement(function);
+    return systemBase.lookupClassById(closureFunctionBase.memberOf);
   }
 
-  void generateUnimplementedError(Spannable spannable, String reason) {
-    context.backend.generateUnimplementedError(
-        spannable, reason, functionBuilder, suppressHint: true);
+  DartinoSystemBase get systemBase {
+    // TODO(ahe): Would prefer to use predecessorSystem directly instead of
+    // going through context.
+    return context.backend.systemBuilder.predecessorSystem;
+  }
+
+  void reportUnimplementedError(Spannable spannable, String reason) {}
+
+  void markConstantUsed(ConstantValue constant) {}
+
+  DartinoFunctionBase getParameterStub(
+      DartinoFunctionBase function,
+      Selector selector) {
+    CallStructure callStructure = selector.callStructure;
+    ParameterStubSignature signature = new ParameterStubSignature(
+        function.functionId, callStructure);
+    return systemBase.lookupParameterStub(signature);
   }
 }

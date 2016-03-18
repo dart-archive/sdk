@@ -237,7 +237,7 @@ Try adding command-line option '-Ddartino-natives-json=<path to natives.json>.
     Map<String, String> names = <String, String>{};
     DartinoNativeDescriptor.decode(data, natives, names);
     _compiler.context.nativeDescriptors = natives;
-    _compiler.context.setNames(names);
+    _compiler.context.backend.systemBuilder.setNames(names);
   }
 
   Uri get dartinoVm => _compiler.dartinoVm;

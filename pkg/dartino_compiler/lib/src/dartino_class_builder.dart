@@ -11,7 +11,6 @@ import 'package:persistent/persistent.dart';
 
 import 'dartino_function_builder.dart';
 import 'dartino_context.dart';
-import 'dartino_backend.dart';
 
 import '../dartino_system.dart';
 import '../vm_commands.dart';
@@ -21,6 +20,7 @@ import '../incremental/dartino_compiler_incremental.dart' show
     IncrementalCompilationFailed;
 
 import 'dartino_system_builder.dart' show
+    DartinoSystemBuilder,
     SchemaChange;
 
 import '../dartino_class.dart' show
@@ -30,11 +30,14 @@ import '../dartino_class_base.dart' show
     DartinoClassBase;
 
 abstract class DartinoClassBuilder extends DartinoClassBase {
+  final DartinoSystemBuilder builder;
+
   const DartinoClassBuilder(
       int classId,
       String name,
       ClassElement element,
-      int fieldCount)
+      int fieldCount,
+      this.builder)
       : super(classId, name, element, fieldCount);
 
   DartinoClassBase get superclass;
@@ -56,12 +59,10 @@ abstract class DartinoClassBuilder extends DartinoClassBase {
   // Add a selector for is-tests. The selector is only to be hit with the
   // InvokeTest bytecode, as the function is not guraranteed to be valid.
   void addIsSelector(int selector);
-  void createIsFunctionEntry(DartinoBackend backend, int arity);
-  void updateImplicitAccessors(DartinoBackend backend);
+  void createIsFunctionEntry(ClassElement functionClass, int arity);
+  void updateImplicitAccessors();
 
-  DartinoClass finalizeClass(
-      DartinoContext context,
-      List<VmCommand> commands);
+  DartinoClass finalizeClass(List<VmCommand> commands);
 
   // The method table for a class is a mapping from Dartino's integer
   // selectors to method ids. It contains all methods defined for a
@@ -105,11 +106,12 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
       ClassElement element,
       DartinoClassBase superclass,
       this.isBuiltin,
-      int extraFields)
+      int extraFields,
+      DartinoSystemBuilder builder)
       : superclass = superclass,
         extraFields = extraFields,
         super(classId, element?.name, element,
-              computeFields(element, superclass, extraFields));
+              computeFields(element, superclass, extraFields), builder);
 
   static int computeFields(
       ClassElement element,
@@ -154,7 +156,7 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
     return result;
   }
 
-  void updateImplicitAccessors(DartinoBackend backend) {
+  void updateImplicitAccessors() {
     _implicitAccessorTable.clear();
     // If we don't have an element (stub class), we don't have anything to
     // generate accessors for.
@@ -164,33 +166,31 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
     int fieldIndex = superclassFields;
     element.implementation.forEachInstanceField((enclosing, field) {
       var getter = new Selector.getter(field.memberName);
-      int getterSelector = backend.context.toDartinoSelector(getter);
-      _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
+      int getterSelector = builder.toDartinoSelector(getter);
+      _implicitAccessorTable[getterSelector] =
+          builder.getGetterByFieldIndex(fieldIndex);
 
       if (!field.isFinal) {
         var setter = new Selector.setter(field.memberName);
-        var setterSelector = backend.context.toDartinoSelector(setter);
-        _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
+        var setterSelector = builder.toDartinoSelector(setter);
+        _implicitAccessorTable[setterSelector] =
+            builder.getSetterByFieldIndex(fieldIndex);
       }
 
       fieldIndex++;
     });
   }
 
-  void createIsFunctionEntry(DartinoBackend backend, int arity) {
-    int dartinoSelector = backend.context.toDartinoIsSelector(
-        backend.compiler.coreClasses.functionClass);
+  void createIsFunctionEntry(ClassElement functionClass, int arity) {
+    int dartinoSelector = builder.toDartinoIsSelector(functionClass);
     addIsSelector(dartinoSelector);
-    dartinoSelector = backend.context.toDartinoIsSelector(
-        backend.compiler.coreClasses.functionClass, arity);
+    dartinoSelector = builder.toDartinoIsSelector(functionClass, arity);
     addIsSelector(dartinoSelector);
   }
 
-  DartinoClass finalizeClass(
-      DartinoContext context,
-      List<VmCommand> commands) {
+  DartinoClass finalizeClass(List<VmCommand> commands) {
     if (isBuiltin) {
-      int nameId = context.getSymbolId(element.name);
+      int nameId = builder.getSymbolId(element.name);
       commands.add(new PushBuiltinClass(nameId, fieldCount));
     } else {
       commands.add(new PushNewClass(fieldCount));
@@ -251,14 +251,16 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
   DartinoPatchClassBuilder(
       DartinoClass klass,
       this.superclass,
-      SchemaChange schemaChange)
+      SchemaChange schemaChange,
+      DartinoSystemBuilder builder)
       : this.klass = klass,
         this._addedFields =
             new List<FieldElement>.unmodifiable(schemaChange.addedFields),
         this._removedFields =
             new List<FieldElement>.unmodifiable(schemaChange.removedFields),
         this.extraFields = schemaChange.extraSuperFields,
-        super(klass.classId, klass.name, klass.element, klass.fieldCount);
+        super(klass.classId, klass.name, klass.element, klass.fieldCount,
+              builder);
 
   List<FieldElement> get addedFields => _addedFields;
   List<FieldElement> get removedFields => _removedFields;
@@ -276,11 +278,11 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     // TODO(ajohnsen): Implement.
   }
 
-  void createIsFunctionEntry(DartinoBackend backend, int arity) {
+  void createIsFunctionEntry(ClassElement functionClass, int arity) {
     // TODO(ajohnsen): Implement.
   }
 
-  void updateImplicitAccessors(DartinoBackend backend) {
+  void updateImplicitAccessors() {
     // If we don't have an element (stub class), we don't have anything to
     // generate accessors for.
     if (element == null) return;
@@ -289,13 +291,15 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     int fieldIndex = superclassFields + extraFields;
     element.implementation.forEachInstanceField((enclosing, field) {
       var getter = new Selector.getter(field.memberName);
-      int getterSelector = backend.context.toDartinoSelector(getter);
-      _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
+      int getterSelector = builder.toDartinoSelector(getter);
+      _implicitAccessorTable[getterSelector] =
+          builder.getGetterByFieldIndex(fieldIndex);
 
       if (!field.isFinal) {
         var setter = new Selector.setter(field.memberName);
-        var setterSelector = backend.context.toDartinoSelector(setter);
-        _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
+        var setterSelector = builder.toDartinoSelector(setter);
+        _implicitAccessorTable[setterSelector] =
+            builder.getSetterByFieldIndex(fieldIndex);
       }
 
       fieldIndex++;
@@ -304,13 +308,13 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     for (FieldElement field in _removedFields) {
       Selector getter =
           new Selector.getter(field.memberName);
-      int getterSelector = backend.context.toDartinoSelector(getter);
+      int getterSelector = builder.toDartinoSelector(getter);
       _removedAccessors.add(getterSelector);
 
       if (!field.isFinal) {
         Selector setter =
             new Selector.setter(field.memberName);
-        int setterSelector = backend.context.toDartinoSelector(setter);
+        int setterSelector = builder.toDartinoSelector(setter);
         _removedAccessors.add(setterSelector);
       }
     }
@@ -343,12 +347,10 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     return methodTable;
   }
 
-  DartinoClass finalizeClass(
-      DartinoContext context,
-      List<VmCommand> commands) {
+  DartinoClass finalizeClass(List<VmCommand> commands) {
     // TODO(ajohnsen): We need to figure out when to do this. It should be after
     // we have updated class fields, but before we hit 'computeSystem'.
-    updateImplicitAccessors(context.backend);
+    updateImplicitAccessors();
 
     commands.add(new PushFromMap(MapId.classes, classId));
 

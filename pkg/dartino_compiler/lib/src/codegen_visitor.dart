@@ -77,7 +77,14 @@ import 'package:compiler/src/diagnostics/messages.dart' show
     MessageKind;
 
 import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
+    ConstantValue,
+    ConstructedConstantValue;
+
+import 'dartino_system_base.dart' show
+    DartinoSystemBase;
+
+import 'dartino_system_builder.dart' show
+    DartinoSystemBuilder;
 
 enum VisitState {
   Value,
@@ -292,42 +299,47 @@ abstract class CodegenVisitor
   SemanticSendVisitor get sendVisitor => this;
   SemanticDeclarationVisitor get declVisitor => this;
 
+  DartinoSystemBase get systemBase;
+
   void compile();
 
-  ConstantExpression compileConstant(
+  ConstantValue evaluateAndUseConstant(
       Node node,
       {TreeElements elements,
        bool isConst}) {
-    if (elements == null) elements = this.elements;
-    return context.compileConstant(node, elements, isConst: isConst);
+    ConstantValue value =
+        inspectConstant(node, elements: elements, isConst: isConst);
+    if (value == null) return null;
+    markConstantUsed(value);
+    return value;
   }
 
-  ConstantExpression inspectConstant(
+  ConstantValue inspectConstant(
       Node node,
       {TreeElements elements,
        bool isConst}) {
+    assert(isConst != null);
     if (elements == null) elements = this.elements;
-    return context.inspectConstant(node, elements, isConst: isConst);
+    ConstantExpression expression =
+        context.compiler.resolver.constantCompiler.compileNode(
+            node, elements, enforceConst: isConst);
+    if (expression == null) return null;
+    return context.getConstantValue(expression);
   }
 
   bool isConstNull(Node node) {
-    ConstantExpression expression = inspectConstant(node, isConst: false);
-    if (expression == null) return false;
-    return context.getConstantValue(expression).isNull;
+    ConstantValue value = inspectConstant(node, isConst: false);
+    return value == null ? false : value.isNull;
   }
 
   int allocateConstantFromNode(Node node, {TreeElements elements}) {
-    ConstantExpression expression = compileConstant(
-        node,
-        elements: elements,
-        isConst: false);
     return functionBuilder.allocateConstant(
-        context.getConstantValue(expression));
+        evaluateAndUseConstant(node, elements: elements, isConst: false));
   }
 
   int allocateConstantClassInstance(int classId) {
     var constant = new DartinoClassInstanceConstant(classId);
-    context.markConstantUsed(constant);
+    markConstantUsed(constant);
     return functionBuilder.allocateConstant(constant);
   }
 
@@ -368,10 +380,12 @@ abstract class CodegenVisitor
       // If the parameter has an initializer expression, we ask the context
       // to compile it right away to make sure we enqueue all dependent
       // elements correctly before we start assembling the program.
-      context.compileConstant(
-            initializer,
-            parameter.memberContext.resolvedAst.elements,
-            isConst: true);
+
+      // TODO(ahe): We don't need to do this because parameter stubs also
+      // register actually used constants.
+      evaluateAndUseConstant(
+          initializer, elements: parameter.memberContext.resolvedAst.elements,
+          isConst: true);
     }
 
     if (closureEnvironment.shouldBeBoxed(parameter)) {
@@ -415,10 +429,16 @@ abstract class CodegenVisitor
       FunctionElement function,
       ClosureInfo info);
 
+  void markConstantUsed(ConstantValue constant);
+
+  DartinoFunctionBase getParameterStub(
+      DartinoFunctionBase function,
+      Selector selector);
+
   void invokeMethod(Node node, Selector selector) {
     registerDynamicSelector(selector);
-    String symbol = context.getSymbolFromSelector(selector);
-    int id = context.getSymbolId(symbol);
+    String symbol = systemBase.getSymbolFromSelector(selector);
+    int id = systemBase.getSymbolId(symbol);
     int arity = selector.argumentCount;
     int dartinoSelector = DartinoSelector.encodeMethod(id, arity);
     assembler.invokeMethod(dartinoSelector, arity, selector.name);
@@ -426,16 +446,16 @@ abstract class CodegenVisitor
 
   void invokeGetter(Node node, Name name) {
     registerDynamicSelector(new Selector.getter(name));
-    String symbol = context.mangleName(name);
-    int id = context.getSymbolId(symbol);
+    String symbol = systemBase.mangleName(name);
+    int id = systemBase.getSymbolId(symbol);
     int dartinoSelector = DartinoSelector.encodeGetter(id);
     assembler.invokeMethod(dartinoSelector, 0);
   }
 
   void invokeSetter(Node node, Name name) {
     registerDynamicSelector(new Selector.setter(name));
-    String symbol = context.mangleName(name);
-    int id = context.getSymbolId(symbol);
+    String symbol = systemBase.mangleName(name);
+    int id = systemBase.getSymbolId(symbol);
     int dartinoSelector = DartinoSelector.encodeSetter(id);
     assembler.invokeMethod(dartinoSelector, 1);
   }
@@ -508,9 +528,8 @@ abstract class CodegenVisitor
         functionId = function.functionId;
       } else if (callStructure.signatureApplies(signature)) {
         // TODO(ajohnsen): Inline parameter stub?
-        DartinoFunctionBase stub = context.backend.createParameterStub(
-            function,
-            callStructure.callSelector);
+        DartinoFunctionBase stub =
+            getParameterStub(function, callStructure.callSelector);
         functionId = stub.functionId;
       } else {
         doUnresolved(function.name);
@@ -939,7 +958,7 @@ abstract class CodegenVisitor
       // the actual argument types.
       TypedefType typedefType = type;
       int arity = typedefType.element.functionSignature.parameterCount;
-      int dartinoSelector = context.toDartinoIsSelector(
+      int dartinoSelector = systemBase.toDartinoIsSelector(
           context.backend.compiler.coreClasses.functionClass, arity);
       assembler.invokeTest(dartinoSelector, 0);
       return;
@@ -953,7 +972,7 @@ abstract class CodegenVisitor
     }
 
     Element element = type.element;
-    int dartinoSelector = context.toDartinoIsSelector(element);
+    int dartinoSelector = systemBase.toDartinoIsSelector(element);
     assembler.invokeTest(dartinoSelector, 0);
   }
 
@@ -1277,9 +1296,7 @@ abstract class CodegenVisitor
     do {
       // We need to find the mixin application of the class, where the field
       // is stored. Iterate until it's found.
-      classBuilder =
-          context.backend.systemBuilder.getClassBuilder(classElement,
-                                                        context.backend);
+      classBuilder = systemBase.getClassBuilder(classElement);
       classElement = classElement.implementation;
       int i = 0;
       classElement.forEachInstanceField((_, FieldElement member) {
@@ -1550,7 +1567,7 @@ abstract class CodegenVisitor
   }
 
   void doStaticFieldSet(FieldElement field) {
-    int index = context.getStaticFieldIndex(field, element);
+    int index = systemBase.getStaticFieldIndex(field, element);
     assembler.storeStatic(index);
   }
 
@@ -1607,10 +1624,8 @@ abstract class CodegenVisitor
   }
 
   void visitLiteralBool(LiteralBool node) {
-    var expression = compileConstant(node, isConst: false);
-    bool isTrue = expression != null &&
-        context.getConstantValue(expression).isTrue;
-
+    ConstantValue value = evaluateAndUseConstant(node, isConst: false);
+    bool isTrue = value != null ? value.isTrue : false;
     if (visitState == VisitState.Value) {
       if (isTrue) {
         assembler.loadLiteralTrue();
@@ -2225,7 +2240,7 @@ abstract class CodegenVisitor
 
   void doConstConstructorInvoke(ConstantExpression constant) {
     var value = context.getConstantValue(constant);
-    context.markConstantUsed(value);
+    markConstantUsed(value);
     int constId = functionBuilder.allocateConstant(value);
     assembler.loadConst(constId);
   }
@@ -2680,13 +2695,13 @@ abstract class CodegenVisitor
   }
 
   void visitIf(If node) {
-    ConstantExpression conditionConstant =
+    ConstantValue conditionValue =
         inspectConstant(node.condition, isConst: false);
 
-    if (conditionConstant != null) {
+    if (conditionValue != null) {
       BytecodeLabel end = new BytecodeLabel();
       jumpInfo[node] = new JumpInfo(assembler.stackSize, null, end);
-      if (context.getConstantValue(conditionConstant).isTrue) {
+      if (conditionValue.isTrue) {
         doScopedStatement(node.thenPart);
       } else if (node.hasElsePart) {
         doScopedStatement(node.elsePart);
@@ -3057,7 +3072,7 @@ abstract class CodegenVisitor
   void doUnresolved(String name) {
     var constString = context.backend.constantSystem.createString(
         new DartString.literal(name));
-    context.markConstantUsed(constString);
+    markConstantUsed(constString);
     assembler.loadConst(functionBuilder.allocateConstant(constString));
     FunctionElement function = context.backend.dartinoUnresolved;
     DartinoFunctionBase base = requireFunction(function);
@@ -3089,7 +3104,7 @@ abstract class CodegenVisitor
         context.backend.constantSystem.createString(
             new DartString.literal(errorString));
     int messageConstId = functionBuilder.allocateConstant(stringConstant);
-    context.markConstantUsed(stringConstant);
+    markConstantUsed(stringConstant);
     assembler.loadConst(messageConstId);
     registerInstantiatedClass(context.backend.stringImplementation);
     assembler.invokeStatic(constId, 1);
@@ -3140,11 +3155,14 @@ abstract class CodegenVisitor
     context.compiler.reporter.internalError(spannable, reason);
   }
 
+  void reportUnimplementedError(Spannable spannable, String reason);
+
   void generateUnimplementedError(Spannable spannable, String reason) {
-    context.backend.generateUnimplementedError(
-        spannable,
-        reason,
-        functionBuilder);
+    var constString = context.backend.constantSystem.createString(
+        new DartString.literal(reason));
+    markConstantUsed(constString);
+    assembler.loadConst(functionBuilder.allocateConstant(constString));
+    assembler.emitThrow();
   }
 
   String toString() => "FunctionCompiler(${element.name})";
@@ -3246,6 +3264,8 @@ abstract class DartinoRegistryMixin {
   DartinoRegistry get registry;
   DartinoContext get context;
 
+  DartinoSystemBuilder get systemBase => context.backend.systemBuilder;
+
   void registerDynamicSelector(Selector selector) {
     registry.registerDynamicSelector(selector);
   }
@@ -3285,11 +3305,39 @@ abstract class DartinoRegistryMixin {
       FunctionElement function,
       ClosureInfo info) {
     DartinoFunctionBuilder closureFunctionBuilder =
-        context.backend.systemBuilder.getClosureFunctionBuilder(
-            function, info, context.backend.compiledClosureClass,
-            context.backend);
+        systemBase.getClosureFunctionBuilder(
+            function, context.compiler.coreClasses.functionClass, info,
+            context.backend.compiledClosureClass);
 
-    return context.backend.systemBuilder.lookupClass(
-        closureFunctionBuilder.memberOf);
+    return systemBase.lookupClassById(closureFunctionBuilder.memberOf);
+  }
+
+  void reportUnimplementedError(
+      Spannable spannable,
+      String reason) {
+    compiler.reporter.reportHintMessage(
+        spannable, MessageKind.GENERIC, {'text': reason});
+  }
+
+  void markConstantUsed(ConstantValue constant) {
+    for (ConstantValue value in constant.getDependencies()) {
+      markConstantUsed(value);
+    }
+    if (!systemBase.registerConstant(constant)) return;
+    if (constant.isConstructedObject) {
+      // TODO(ahe): Is there a better way to register the constant's class.
+      ConstructedConstantValue value = constant;
+      ClassElement classElement = value.type.element;
+      systemBase.getClassBuilder(classElement);
+      registry.registerInstantiatedClass(classElement);
+    } else if (constant.isFunction) {
+      context.backend.markFunctionConstantAsUsed(constant);
+    }
+  }
+
+  DartinoFunctionBase getParameterStub(
+      DartinoFunctionBase function,
+      Selector selector) {
+    return context.backend.createParameterStub(function, selector, registry);
   }
 }

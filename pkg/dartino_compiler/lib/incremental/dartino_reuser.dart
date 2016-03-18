@@ -153,10 +153,6 @@ class DartinoReuser extends Reuser with DartinoFeatures {
   IncrementalDartinoBackend get backend => super.backend;
 
   DartinoDelta computeUpdateDartino(DartinoSystem currentSystem) {
-    // TODO(ahe): Remove this when we support adding static fields.
-    Set<Element> existingStaticFields =
-        new Set<Element>.from(dartinoContext.staticIndices.keys);
-
     List<Element> updatedElements = applyUpdates();
 
     if (compiler.progress != null) {
@@ -203,17 +199,19 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     compiler.processQueue(enqueuer.codegen, null);
 
     // TODO(ahe): Remove this when we support adding static fields.
-    Set<Element> newStaticFields =
-        new Set<Element>.from(dartinoContext.staticIndices.keys).difference(
-            existingStaticFields);
-    if (newStaticFields.isNotEmpty) {
-      throw new IncrementalCompilationFailed(
-          "Unable to add static fields:\n  ${newStaticFields.join(',\n  ')}");
+    if (systemBuilder.hasNewStaticFields) {
+      throw new IncrementalCompilationFailed("Unable to add static fields");
     }
 
+    FunctionElement callMain =
+        compiler.backend.dartinoSystemLibrary.findLocal('callMain');
+    systemBuilder.replaceElementUsage(callMain, compiler.mainFunction);
+
     List<VmCommand> commands = <VmCommand>[];
-    DartinoSystem system =
-        systemBuilder.computeSystem(dartinoContext, commands);
+    DartinoSystem system = systemBuilder.computeSystem(
+        compiler.reporter, commands, compiler.compilationFailed,
+        dartinoContext.enableBigint, dartinoContext.backend.bigintClass,
+        dartinoContext.backend.uint32DigitsClass);
     backend.newSystemBuilder(system);
     return new DartinoDelta(system, currentSystem, commands);
   }
@@ -249,7 +247,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     }
     for (PartialClassElement cls in schemaChangesByClass.keys) {
       DartinoClassBuilder builder = systemBuilder.getClassBuilder(
-          cls, backend, schemaChanges: schemaChangesByClass);
+          cls, schemaChanges: schemaChangesByClass);
       checkSchemaChangesAreUsed(builder, cls);
     }
   }

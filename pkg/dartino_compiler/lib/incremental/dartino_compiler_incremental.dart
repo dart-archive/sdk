@@ -310,7 +310,7 @@ class IncrementalCompiler {
 
   String lookupFunctionNameBySelector(int selector) {
     int id = DartinoSelector.decodeId(selector);
-    return _compiler.context.symbols[id];
+    return _compiler.context.backend.systemBuilder.lookupSymbolById(id);
   }
 
   DebugInfo createDebugInfo(

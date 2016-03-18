@@ -24,13 +24,22 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionElement,
     FunctionSignature,
     FunctionTypedElement,
-    MemberElement;
+    LibraryElement,
+    MemberElement,
+    Name,
+    ParameterElement;
 
 import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
 
 import 'package:compiler/src/common/names.dart' show
     Identifiers;
+
+import 'package:compiler/src/universe/selector.dart' show
+    Selector;
+
+import 'package:compiler/src/common/names.dart' show
+    Names;
 
 import 'package:persistent/persistent.dart' show
     PersistentMap,
@@ -50,14 +59,23 @@ import '../dartino_class.dart' show
 import 'closure_environment.dart' show
     ClosureInfo;
 
+import 'dartino_system_base.dart' show
+    DartinoSystemBase;
+
+import 'dartino_selector.dart' show
+    DartinoSelector,
+    SelectorKind;
+
+import 'dartino_diagnostic_reporter.dart' show
+    DartinoDiagnosticReporter;
+
 import 'dartino_class_builder.dart';
-import 'dartino_context.dart';
 import 'dartino_function_builder.dart';
 
 import '../dartino_system.dart';
 import '../vm_commands.dart';
 
-class DartinoSystemBuilder {
+class DartinoSystemBuilder extends DartinoSystemBase {
   final DartinoSystem predecessorSystem;
   final int functionIdStart;
   final int classIdStart;
@@ -108,6 +126,18 @@ class DartinoSystemBuilder {
   /// Set of classes that have special meaning to the Dartino VM. They're
   /// created using [PushBuiltinClass] instead of [PushNewClass].
   final Set<ClassElement> builtinClasses = new Set<ClassElement>();
+
+  final Set<String> _names = new Set<String>();
+
+  final Map<LibraryElement, String> _libraryTag = <LibraryElement, String>{};
+
+  final List<String> _symbols = <String>[];
+
+  final Map<String, int> _symbolIds = <String, int>{};
+
+  final Map<Selector, String> _selectorToSymbol = <Selector, String>{};
+
+  final Map<FieldElement, int> _newStaticFieldsById = <FieldElement, int>{};
 
   DartinoSystemBuilder(DartinoSystem predecessorSystem)
       : this.predecessorSystem = predecessorSystem,
@@ -345,12 +375,11 @@ class DartinoSystemBuilder {
     int functionId = lookupTearOffById(function.functionId);
     if (functionId == null) return null;
     DartinoFunctionBase functionBuilder = lookupFunction(functionId);
-    return lookupClass(functionBuilder.memberOf);
+    return lookupClassById(functionBuilder.memberOf);
   }
 
   DartinoClassBuilder getClassBuilder(
       ClassElement element,
-      DartinoBackend backend,
       {Map<ClassElement, SchemaChange> schemaChanges}) {
     if (element == null) return null;
     assert(element.isDeclaration);
@@ -360,8 +389,7 @@ class DartinoSystemBuilder {
 
     directSubclasses[element] = new Set<ClassElement>();
     DartinoClassBuilder superclass =
-    getClassBuilder(
-        element.superclass, backend, schemaChanges: schemaChanges);
+    getClassBuilder(element.superclass, schemaChanges: schemaChanges);
     if (superclass != null) {
       Set<ClassElement> subclasses = directSubclasses[element.superclass];
       subclasses.add(element);
@@ -378,7 +406,7 @@ class DartinoSystemBuilder {
 
     // TODO(ajohnsen): Currently, the DartinoRegistry does not enqueue fields.
     // This is a workaround, where we basically add getters for all fields.
-    classBuilder.updateImplicitAccessors(backend);
+    classBuilder.updateImplicitAccessors();
 
     return classBuilder;
   }
@@ -388,7 +416,7 @@ class DartinoSystemBuilder {
       DartinoClassBase superclass,
       SchemaChange schemaChange) {
     DartinoClassBuilder builder =
-        new DartinoPatchClassBuilder(klass, superclass, schemaChange);
+        new DartinoPatchClassBuilder(klass, superclass, schemaChange, this);
     assert(_newClasses[klass.classId] == null);
     _newClasses[klass.classId] = builder;
     return builder;
@@ -433,13 +461,14 @@ class DartinoSystemBuilder {
         element,
         superclass,
         isBuiltin,
-        extraFields);
+        extraFields,
+        this);
     _newClasses[nextClassId] = builder;
     if (element != null) _classBuildersByElement[element] = builder;
     return builder;
   }
 
-  DartinoClassBase lookupClass(int classId) {
+  DartinoClassBase lookupClassById(int classId) {
     DartinoClassBase builder = lookupClassBuilder(classId);
     if (builder != null) return builder;
     return predecessorSystem.lookupClassById(classId);
@@ -461,21 +490,16 @@ class DartinoSystemBuilder {
 
   Iterable<DartinoClassBuilder> getNewClasses() => _newClasses.values;
 
-  void registerConstant(ConstantValue constant, DartinoContext context) {
-    if (predecessorSystem.lookupConstantByValue(constant) != null) return;
+  bool registerConstant(ConstantValue constant) {
+    if (predecessorSystem.lookupConstantByValue(constant) != null) return false;
+    bool isNew = false;
     _newConstants.putIfAbsent(constant, () {
-      if (constant.isConstructedObject) {
-        context.registerConstructedConstantValue(constant);
-      } else if (constant.isFunction) {
-        context.registerFunctionConstantValue(constant);
-      }
-      for (ConstantValue value in constant.getDependencies()) {
-        registerConstant(value, context);
-      }
+      isNew = true;
       // TODO(zarah): Compute max constant id (as for functions an classes)
       // instead of using constantsById.length
       return predecessorSystem.constantsById.length + _newConstants.length;
     });
+    return isNew;
   }
 
   void registerBuiltinClass(ClassElement cls) {
@@ -512,9 +536,9 @@ class DartinoSystemBuilder {
 
   DartinoFunctionBuilder getClosureFunctionBuilder(
       FunctionElement function,
+      ClassElement functionClass,
       ClosureInfo info,
-      DartinoClassBase superclass,
-      DartinoBackend backend) {
+      DartinoClassBase superclass) {
     DartinoFunctionBuilder closure = lookupFunctionBuilderByElement(function);
     if (closure != null) return closure;
 
@@ -524,7 +548,7 @@ class DartinoSystemBuilder {
     DartinoClassBuilder classBuilder = newClassBuilder(
         null, superclass, false, new SchemaChange(null), extraFields: fields);
     classBuilder.createIsFunctionEntry(
-        backend, function.functionSignature.parameterCount);
+        functionClass, function.functionSignature.parameterCount);
 
     FunctionTypedElement implementation = function.implementation;
 
@@ -539,14 +563,124 @@ class DartinoSystemBuilder {
         mapByElement: function.declaration);
   }
 
-  DartinoSystem computeSystem(DartinoContext context,
-                              List<VmCommand> commands) {
-    // TODO(ajohnsen): Consider if the incremental compiler should be aware of
-    // callMain, when detecting changes.
-    FunctionElement callMain =
-        context.backend.dartinoSystemLibrary.findLocal('callMain');
-    replaceElementUsage(callMain, context.compiler.mainFunction);
+  void setNames(Map<String, String> names) {
+    // Generate symbols of the values.
+    for (String name in names.values) {
+      this._names.add(name);
+      getSymbolId(name);
+    }
+  }
 
+  String mangleName(Name name) {
+    if (!name.isPrivate) return name.text;
+    if (name.library.isPlatformLibrary && _names.contains(name.text)) {
+      return name.text;
+    }
+    return name.text + getLibraryTag(name.library);
+  }
+
+  String getLibraryTag(LibraryElement library) {
+    String tag = predecessorSystem.getLibraryTag(library);
+    if (tag != null) return tag;
+    return _libraryTag.putIfAbsent(library, () {
+      // Give the core library the unique mangling of the empty string. That
+      // will make the VM able to create selector into core (used for e.g.
+      // _noSuchMethodTrampoline).
+      if (library.isDartCore) return "";
+      return "%${_libraryTag.length}";
+    });
+  }
+
+  int getStaticFieldIndex(FieldElement element, Element referrer) {
+    int id = predecessorSystem.getStaticFieldIndex(element, referrer);
+    if (id != -1) return id;
+    return _newStaticFieldsById.putIfAbsent(element, () {
+        return predecessorSystem.staticFieldsById.length +
+            _newStaticFieldsById.length;
+    });
+  }
+
+  String getSymbolFromSelector(Selector selector) {
+    String symbol = predecessorSystem.getSymbolFromSelector(selector);
+    if (symbol != null) return symbol;
+    return _selectorToSymbol.putIfAbsent(selector, () {
+      StringBuffer buffer = new StringBuffer();
+      buffer.write(mangleName(selector.memberName));
+      for (String namedArgument in selector.namedArguments) {
+        buffer.write(":");
+        buffer.write(namedArgument);
+      }
+      return buffer.toString();
+    });
+  }
+
+  void writeNamedArguments(StringBuffer buffer, FunctionSignature signature) {
+    signature.orderedForEachParameter((ParameterElement parameter) {
+      if (parameter.isNamed) {
+        buffer.write(":");
+        buffer.write(parameter.name);
+      }
+    });
+  }
+
+  String getSymbolForFunction(
+      Name name,
+      FunctionSignature signature) {
+    StringBuffer buffer = new StringBuffer();
+    buffer.write(mangleName(name));
+    writeNamedArguments(buffer, signature);
+    return buffer.toString();
+  }
+
+  String getCallSymbol(FunctionSignature signature) {
+    return getSymbolForFunction(Names.call, signature);
+  }
+
+  int getSymbolId(String symbol) {
+    int id = predecessorSystem.getSymbolId(symbol);
+    if (id != -1) return id;
+    return _symbolIds.putIfAbsent(symbol, () {
+      int id = _symbols.length;
+      assert(id == _symbolIds.length);
+      _symbols.add(symbol);
+      registerSymbol(symbol, id);
+      return id;
+    });
+  }
+
+  void forEachStatic(f(FieldElement element, int index)) {
+    staticIndices.forEach(f);
+  }
+
+  int toDartinoTearoffIsSelector(
+      String functionName,
+      ClassElement classElement) {
+    LibraryElement library = classElement.library;
+    StringBuffer buffer = new StringBuffer();
+    buffer.write("?is?");
+    buffer.write(functionName);
+    buffer.write("?");
+    buffer.write(classElement.name);
+    buffer.write("?");
+    buffer.write(getLibraryTag(library));
+    int id = getSymbolId(buffer.toString());
+    return DartinoSelector.encodeMethod(id, 0);
+  }
+
+  String lookupSymbolById(int id) {
+    return predecessorSystem.lookupSymbolById(id) ?? _symbols[id];
+  }
+
+  // TODO(ahe): Remove this when we support adding static fields.
+  bool get hasNewStaticFields => _newStaticFieldsById.isNotEmpty;
+
+  DartinoSystem computeSystem(
+      DartinoDiagnosticReporter reporter,
+      List<VmCommand> commands,
+      bool compilationFailed,
+      bool isBigintEnabled,
+      ClassElement bigintClass,
+      ClassElement uint32DigitsClass) {
     int changes = 0;
 
     commands.add(const PrepareForChanges());
@@ -559,7 +693,7 @@ class DartinoSystemBuilder {
     // Create all new DartinoFunctions.
     List<DartinoFunction> functions = <DartinoFunction>[];
     for (DartinoFunctionBuilder builder in _newFunctions) {
-      context.compiler.reporter.withCurrentElement(builder.element, () {
+      reporter.withCurrentElement(builder.element, () {
         functions.add(builder.finalizeFunction(this, commands));
       });
     }
@@ -567,7 +701,7 @@ class DartinoSystemBuilder {
     // Create all new DartinoClasses.
     List<DartinoClass> classes = <DartinoClass>[];
     for (DartinoClassBuilder builder in _newClasses.values) {
-      classes.add(builder.finalizeClass(context, commands));
+      classes.add(builder.finalizeClass(commands));
       changes++;
     }
 
@@ -575,7 +709,7 @@ class DartinoSystemBuilder {
     // TODO(ajohnsen): Should be part of the dartino system. Does not work with
     // incremental.
     if (predecessorSystem.isEmpty) {
-      context.forEachStatic((element, index) {
+      _newStaticFieldsById.forEach((FieldElement element, int index) {
         int functionId = lookupLazyFieldInitializerByElement(element);
         if (functionId != null) {
           commands.add(new PushFromMap(MapId.methods, functionId));
@@ -584,7 +718,7 @@ class DartinoSystemBuilder {
           commands.add(const PushNull());
         }
       });
-      commands.add(new ChangeStatics(context.staticIndices.length));
+      commands.add(new ChangeStatics(_newStaticFieldsById.length));
       changes++;
     }
 
@@ -615,7 +749,7 @@ class DartinoSystemBuilder {
       }
 
       while (constant is DeferredConstantValue) {
-        assert(context.compiler.compilationFailed);
+        assert(compilationFailed);
         // TODO(ahe): This isn't correct, and only serves to prevent the
         // compiler from crashing. However, the compiler does print a lot of
         // errors about not supporting deferred loading, so it should be fine.
@@ -625,7 +759,7 @@ class DartinoSystemBuilder {
       if (constant.isInt) {
         var value = constant.primitiveValue;
         if (value > maxInt64 || value < minInt64) {
-          assert(context.enableBigint);
+          assert(isBigintEnabled);
           bool negative = value < 0;
           value = negative ? -value : value;
           var parts = new List();
@@ -634,18 +768,12 @@ class DartinoSystemBuilder {
             value >>= 32;
           }
 
-          // TODO(ajohnsen): Avoid usage of builders (should be DartinoClass).
-          DartinoClassBuilder bigintClassBuilder =
-              _classBuildersByElement[context.backend.bigintClass];
-          DartinoClassBuilder uint32DigitsClassBuilder =
-              _classBuildersByElement[context.backend.uint32DigitsClass];
-
           commands.add(new PushNewBigInteger(
               negative,
               parts,
               MapId.classes,
-              bigintClassBuilder.classId,
-              uint32DigitsClassBuilder.classId));
+              lookupClassByElement(bigintClass).classId,
+              lookupClassByElement(uint32DigitsClass).classId));
         } else {
           commands.add(new PushNewInteger(constant.primitiveValue));
         }
@@ -912,34 +1040,24 @@ class DartinoSystemBuilder {
               field, initializerFunction?.functionId);
     });
 
-    PersistentMap<int, int> tearoffsById = predecessorSystem.tearoffsById;
-    _newTearoffsById.forEach((int functionId, int stubId) {
-      tearoffsById = tearoffsById.insert(functionId, stubId);
-    });
+    PersistentMap<int, int> tearoffsById = predecessorSystem.tearoffsById.union(
+        new PersistentMap<int, int>.fromMap(_newTearoffsById));
 
     PersistentMap<int, int> tearoffGettersById =
-        predecessorSystem.tearoffGettersById;
-    _newTearoffGettersById.forEach((int functionId, int getter) {
-        tearoffGettersById = tearoffGettersById.insert(functionId, getter);
-    });
+        predecessorSystem.tearoffGettersById.union(
+            new PersistentMap<int, int>.fromMap(_newTearoffGettersById));
 
     PersistentMap<int, String> symbolByDartinoSelectorId =
-        predecessorSystem.symbolByDartinoSelectorId;
-    _symbolByDartinoSelectorId.forEach((int id, String name) {
-      symbolByDartinoSelectorId = symbolByDartinoSelectorId.insert(id, name);
-    });
+        predecessorSystem.symbolByDartinoSelectorId.union(
+            new PersistentMap<int, String>.fromMap(_symbolByDartinoSelectorId));
 
     PersistentMap<int, int> gettersByFieldIndex =
-        predecessorSystem.gettersByFieldIndex;
-    _newGettersByFieldIndex.forEach((int fieldIndex, int functionId) {
-      gettersByFieldIndex = gettersByFieldIndex.insert(fieldIndex, functionId);
-    });
+        predecessorSystem.gettersByFieldIndex.union(
+            new PersistentMap<int, int>.fromMap(_newGettersByFieldIndex));
 
     PersistentMap<int, int> settersByFieldIndex =
-        predecessorSystem.settersByFieldIndex;
-    _newSettersByFieldIndex.forEach((int fieldIndex, int functionId) {
-      settersByFieldIndex = settersByFieldIndex.insert(fieldIndex, functionId);
-    });
+        predecessorSystem.settersByFieldIndex.union(
+            new PersistentMap<int, int>.fromMap(_newSettersByFieldIndex));
 
     PersistentMap<ParameterStubSignature, DartinoFunction> parameterStubs =
         predecessorSystem.parameterStubs;
@@ -963,6 +1081,28 @@ class DartinoSystemBuilder {
       parameterStubsById = parameterStubsById.insert(functionId, stubs);
     });
 
+    PersistentSet<String> names = predecessorSystem.names == null
+        ? new PersistentSet<String>.from(_names)
+        : predecessorSystem.names.union(new PersistentSet<String>.from(_names));
+
+    PersistentMap<LibraryElement, String> libraryTag =
+        predecessorSystem.libraryTag.union(
+            new PersistentMap<LibraryElement, String>.fromMap(_libraryTag));
+
+    List<String> symbols = new List<String>.unmodifiable(
+        new List<String>.from(predecessorSystem.symbols)..addAll(_symbols));
+
+    PersistentMap<String, int> symbolIds = predecessorSystem.symbolIds.union(
+        new PersistentMap<String, int>.fromMap(_symbolIds));
+
+    PersistentMap<Selector, String> selectorToSymbol =
+        predecessorSystem.selectorToSymbol.union(
+            new PersistentMap<Selector, String>.fromMap(_selectorToSymbol));
+
+    PersistentMap<FieldElement, int> staticFieldsById =
+        predecessorSystem.staticFieldsById.union(
+            new PersistentMap<FieldElement, int>.fromMap(_newStaticFieldsById));
+
     return new DartinoSystem(
         functionsById,
         functionsByElement,
@@ -979,7 +1119,13 @@ class DartinoSystemBuilder {
         settersByFieldIndex,
         parameterStubs,
         parameterStubsById,
-        functionBackReferences);
+        functionBackReferences,
+        names,
+        libraryTag,
+        symbols,
+        symbolIds,
+        selectorToSymbol,
+        staticFieldsById);
   }
 
   bool get hasChanges {
@@ -997,7 +1143,12 @@ class DartinoSystemBuilder {
       _replaceUsage,
       _newLazyInitializersByElement,
       _newTearoffsById,
-      _symbolByDartinoSelectorId];
+      _symbolByDartinoSelectorId,
+      _names,
+      _libraryTag,
+      _symbols,
+      _symbolIds,
+      _selectorToSymbol];
     return changes.any((c) => c.isNotEmpty);
   }
 }

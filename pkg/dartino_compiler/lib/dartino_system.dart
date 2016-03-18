@@ -12,10 +12,15 @@ import 'package:compiler/src/elements/elements.dart' show
     ConstructorElement,
     Element,
     FieldElement,
-    FunctionSignature;
+    FunctionSignature,
+    LibraryElement,
+    Name;
 
 import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
+
+import 'package:compiler/src/universe/selector.dart' show
+    Selector;
 
 import 'package:persistent/persistent.dart' show
     PersistentMap,
@@ -35,6 +40,12 @@ import 'src/dartino_system_validator.dart' show
 
 import 'dartino_class.dart' show
     DartinoClass;
+
+import 'src/dartino_system_base.dart' show
+    DartinoSystemBase;
+
+import 'src/dartino_system_builder.dart' show
+    SchemaChange;
 
 enum DartinoFunctionKind {
   NORMAL,
@@ -184,7 +195,7 @@ class ParameterStubSignature {
   }
 }
 
-class DartinoSystem {
+class DartinoSystem extends DartinoSystemBase {
   // functionsByElement is a subset of functionsById: Some functions do not
   // have an element reference.
   final PersistentMap<int, DartinoFunction> functionsById;
@@ -220,6 +231,18 @@ class DartinoSystem {
 
   final PersistentMap<int, PersistentSet<int>> functionBackReferences;
 
+  final PersistentSet<String> names;
+
+  final PersistentMap<LibraryElement, String> libraryTag;
+
+  final List<String> symbols;
+
+  final PersistentMap<String, int> symbolIds;
+
+  final PersistentMap<Selector, String> selectorToSymbol;
+
+  final PersistentMap<FieldElement, int> staticFieldsById;
+
   static const DartinoSystem base = const DartinoSystem(
       const PersistentMap<int, DartinoFunction>(),
       const PersistentMap<Element, DartinoFunction>(),
@@ -236,7 +259,13 @@ class DartinoSystem {
       const PersistentMap<int, int>(),
       const PersistentMap<ParameterStubSignature, DartinoFunction>(),
       const PersistentMap<int, PersistentSet<DartinoFunction>>(),
-      const PersistentMap<int, PersistentSet<int>>());
+      const PersistentMap<int, PersistentSet<int>>(),
+      null,
+      const PersistentMap<LibraryElement, String>(),
+      const <String>[],
+      const PersistentMap<String, int>(),
+      const PersistentMap<Selector, String>(),
+      const PersistentMap<FieldElement, int>());
 
   const DartinoSystem(
       this.functionsById,
@@ -254,7 +283,13 @@ class DartinoSystem {
       this.settersByFieldIndex,
       this.parameterStubs,
       this.parameterStubsById,
-      this.functionBackReferences);
+      this.functionBackReferences,
+      this.names,
+      this.libraryTag,
+      this.symbols,
+      this.symbolIds,
+      this.selectorToSymbol,
+      this.staticFieldsById);
 
   bool get isEmpty => functionsById.isEmpty;
 
@@ -336,6 +371,36 @@ class DartinoSystem {
 
   int computeMaxClassId() {
     return classesById.keys.fold(-1, (x, y) => x > y ? x : y);
+  }
+
+  String getSymbolFromSelector(Selector selector) => selectorToSymbol[selector];
+
+  int getSymbolId(String symbol) => symbolIds[symbol] ?? -1;
+
+  // TODO(ahe): Rename to getClassBase.
+  DartinoClass getClassBuilder(
+      ClassElement element,
+      {Map<ClassElement, SchemaChange> schemaChanges}) {
+    return lookupClassByElement(element);
+  }
+
+  // TODO(ahe): This is a copy of DartinoSystemBuilder.mangleName.
+  String mangleName(Name name) {
+    if (!name.isPrivate) return name.text;
+    if (name.library.isPlatformLibrary && names.contains(name.text)) {
+      return name.text;
+    }
+    return name.text + getLibraryTag(name.library);
+  }
+
+  String getLibraryTag(LibraryElement library) {
+    return libraryTag[library];
+  }
+
+  String lookupSymbolById(int id) => symbols[id];
+
+  int getStaticFieldIndex(FieldElement element, Element referrer) {
+    return staticFieldsById[element] ?? -1;
   }
 
   String toDebugString(Uri base) {

@@ -367,7 +367,7 @@ abstract class ConstructorCodegenBase extends CodegenVisitor {
   void pushInitialFieldValues(DartinoClassBase classBase) {
     if (classBase.hasSuperclassId) {
       pushInitialFieldValues(
-          context.backend.systemBuilder.lookupClass(classBase.superclassId));
+          systemBase.lookupClassById(classBase.superclassId));
     }
     int fieldIndex = classBase.superclassFields;
     ClassElement classElement = classBase.element.implementation;
