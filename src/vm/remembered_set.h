@@ -76,6 +76,12 @@ class GCMetadata {
     *reinterpret_cast<uint8*>(address) = kNewSpacePointers;
   }
 
+  inline static bool IsMarkedDirty(uword address) {
+    address >>= kCardBits;
+    address += singleton_.remembered_set_bias_;
+    return *reinterpret_cast<uint8*>(address) != kNoNewSpacePointers;
+  }
+
  private:
   GCMetadata() {}
   ~GCMetadata() {}

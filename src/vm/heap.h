@@ -205,7 +205,13 @@ class TwoSpaceHeap : public Heap {
   virtual Object* HandleAllocationFailure(int size) {
     if (size >= (kFixedSemiSpaceSize >> 1)) {
       uword result = old_space_->Allocate(size);
-      if (result != 0) return HeapObject::FromAddress(result);
+      if (result != 0) {
+        // The code that populates newly allocated objects assumes that they
+        // are in new space and does not have a write barrier.  We mark the
+        // object dirty immediately, so it is checked by the next GC.
+        GCMetadata::InsertIntoRememberedSet(result);
+        return HeapObject::FromAddress(result);
+      }
     }
     return Failure::retry_after_gc(size);
   }
