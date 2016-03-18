@@ -24,6 +24,8 @@ class PromotedTrack;
 class Space;
 class TwoSpaceHeap;
 
+static const int kSentinelSize = sizeof(void*);
+
 // A chunk represents a block of memory provided by ObjectMemory.
 class Chunk {
  public:
@@ -156,7 +158,9 @@ class Space {
     return allocation_budget_ <= 0 || !resizeable_;
   }
 
-  bool in_no_allocation_failure_scope() { return no_allocation_nesting_ != 0; }
+  bool in_no_allocation_failure_scope() {
+    return no_allocation_failure_nesting_ != 0;
+  }
 
   bool is_empty() const { return first_ == NULL; }
 
@@ -172,7 +176,7 @@ class Space {
   // Obtain the offset of [object] from the start of the chunk. We assume
   // there is exactly one chunk in this space and [object] lies within it.
   word OffsetOf(HeapObject* object);
-  HeapObject *ObjectAtOffset(word offset);
+  HeapObject* ObjectAtOffset(word offset);
 
 #ifdef DEBUG
   void Find(uword word, const char* name);
@@ -212,11 +216,14 @@ class Space {
 
   uword top() { return top_; }
 
-  void IncrementNoAllocationNesting() {
+  void IncrementNoAllocationFailureNesting() {
     ASSERT(resizeable_);  // Fixed size heap cannot guarantee allocation.
-    ++no_allocation_nesting_;
+    ++no_allocation_failure_nesting_;
   }
-  void DecrementNoAllocationNesting() { --no_allocation_nesting_; }
+
+  void DecrementNoAllocationFailureNesting() {
+    --no_allocation_failure_nesting_;
+  }
 
   Chunk* first_;           // First chunk in this space.
   Chunk* last_;            // Last chunk in this space.
@@ -224,7 +231,7 @@ class Space {
   uword top_;              // Allocation top in current chunk.
   uword limit_;            // Allocation limit in current chunk.
   int allocation_budget_;  // Budget before needing a GC.
-  int no_allocation_nesting_;
+  int no_allocation_failure_nesting_;
   bool resizeable_;
   // Linked list of weak pointers to heap objects in this space.
   WeakPointerList weak_pointers_;
@@ -248,6 +255,8 @@ class SemiSpace : public Space {
   virtual void Flush();
 
   bool IsFlushed();
+
+  void TriggerGCSoon() { limit_ = top_ + kSentinelSize; }
 
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and
@@ -339,10 +348,10 @@ class OldSpace : public Space {
 class NoAllocationFailureScope {
  public:
   explicit NoAllocationFailureScope(Space* space) : space_(space) {
-    space->IncrementNoAllocationNesting();
+    space->IncrementNoAllocationFailureNesting();
   }
 
-  ~NoAllocationFailureScope() { space_->DecrementNoAllocationNesting(); }
+  ~NoAllocationFailureScope() { space_->DecrementNoAllocationFailureNesting(); }
 
  private:
   Space* space_;
