@@ -328,11 +328,6 @@ Object* Process::NewStack(int length) {
   return result;
 }
 
-void Process::ValidateHeaps() {
-  ProcessHeapValidatorVisitor v(program()->heap());
-  v.VisitProcess(this);
-}
-
 void Process::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));

@@ -169,8 +169,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   // Returns either a Smi or a LargeInteger.
   Object* ToInteger(int64 value);
 
-  void ValidateHeaps();
-
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);
 

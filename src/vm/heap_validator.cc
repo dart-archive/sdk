@@ -47,19 +47,13 @@ void HeapPointerValidator::ValidatePointer(Object* object) {
   }
 }
 
-void ProcessHeapValidatorVisitor::VisitProcess(Process* process) {
+void ProcessRootValidatorVisitor::VisitProcess(Process* process) {
   TwoSpaceHeap* process_heap = process->heap();
-
-  // Validate pointers in roots, queues, weak pointers and mutable heap.
-  {
-    HeapPointerValidator validator(program_heap_, process_heap);
-
-    HeapObjectPointerVisitor pointer_visitor(&validator);
-    process->IterateRoots(&validator);
-    process_heap->IterateObjects(&pointer_visitor);
-    process_heap->VisitWeakObjectPointers(&validator);
-    process->mailbox()->IteratePointers(&validator);
-  }
+  // Validate pointers in roots and queues.
+  HeapPointerValidator validator(program_heap_, process_heap);
+  HeapObjectPointerVisitor pointer_visitor(&validator);
+  process->IterateRoots(&validator);
+  process->mailbox()->IteratePointers(&validator);
 }
 
 }  // namespace dartino

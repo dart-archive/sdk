@@ -266,10 +266,6 @@ class Program : public ProgramList::Entry {
   // This function should only be called once the program has been stopped.
   void VisitProcesses(ProcessVisitor* visitor);
 
-  // If we have one heap per process, then this is the same as VisitProcesses,
-  // otherwise it is just called once on one of the processes.
-  void VisitProcessHeaps(ProcessVisitor* visitor);
-
   Object* CreateArray(int capacity) {
     return CreateArrayWith(capacity, null_object());
   }

@@ -183,13 +183,6 @@ void Program::VisitProcesses(ProcessVisitor* visitor) {
   }
 }
 
-// TODO(erikcorry): Remove.
-void Program::VisitProcessHeaps(ProcessVisitor* visitor) {
-  if (!process_list_.IsEmpty()) {
-    visitor->VisitProcess(process_list_.First());
-  }
-}
-
 Object* Program::CreateArrayWith(int capacity, Object* initial_value) {
   Object* result = heap()->CreateArray(array_class(), capacity, initial_value);
   return result;
@@ -284,22 +277,8 @@ Object* Program::CreateDispatchTableEntry() {
   return heap()->CreateDispatchTableEntry(dispatch_table_entry_class_);
 }
 
-class ValidateProcessHeapVisitor : public ProcessVisitor {
- public:
-  virtual void VisitProcess(Process* process) {
-    process->ValidateHeaps();
-  }
-};
-
 void Program::PrepareProgramGC() {
-  if (Flags::validate_heaps) {
-    ValidateGlobalHeapsAreConsistent();
-  }
-
-  if (Flags::validate_heaps) {
-    ValidateProcessHeapVisitor visitor;
-    VisitProcesses(&visitor);
-  }
+  if (Flags::validate_heaps) ValidateHeapsAreConsistent();
 
   // We need to perform a precise GC to get rid of floating garbage stacks.
   // This is done by:
@@ -361,10 +340,6 @@ class FinishProgramGCVisitor : public ProcessVisitor {
  public:
   virtual void VisitProcess(Process* process) {
     process->UpdateBreakpoints();
-    if (Flags::validate_heaps) {
-      // TODO(erikcorry): This should not be on the process.
-      process->ValidateHeaps();
-    }
   }
 };
 
@@ -374,11 +349,10 @@ void Program::FinishProgramGC() {
 
   FinishProgramGCVisitor visitor;
   VisitProcesses(&visitor);
+
   if (debug_info_ != NULL) debug_info_->UpdateBreakpoints();
 
-  if (Flags::validate_heaps) {
-    ValidateGlobalHeapsAreConsistent();
-  }
+  if (Flags::validate_heaps) ValidateHeapsAreConsistent();
 }
 
 uword Program::OffsetOf(HeapObject* object) {
@@ -399,31 +373,21 @@ void Program::ValidateGlobalHeapsAreConsistent() {
 }
 
 void Program::ValidateHeapsAreConsistent() {
-  // Validate the program heap.
-  {
-    ProgramHeapPointerValidator validator(heap());
-    HeapObjectPointerVisitor object_pointer_visitor(&validator);
-    IterateRoots(&validator);
-    heap()->IterateObjects(&object_pointer_visitor);
-  }
-
-  // Validate the shared heap
+  // Program heap.
+  ValidateGlobalHeapsAreConsistent();
+  // Processes and their shared heap.
   ValidateSharedHeap();
-
-  // Validate all process heaps.
-  {
-    ProcessHeapValidatorVisitor validator(heap());
-    VisitProcesses(&validator);
-  }
 }
 
 void Program::ValidateSharedHeap() {
-  // NOTE: We do nothing in the case of *one* shared heap. The shared heap will
-  // get validated (redundantly) for each process.
-  //
-  // (In order to validate the shared heap separately we would need to know
-  //  whether stacks are cooked or not. This information is only available on a
-  //  per-process basis ATM. So we just do it redundantly for now.)
+  ProcessRootValidatorVisitor process_validator(heap());
+  VisitProcesses(&process_validator);
+
+  HeapPointerValidator validator(&heap_, process_heap());
+  HeapObjectPointerVisitor pointer_visitor(&validator);
+
+  process_heap()->IterateObjects(&pointer_visitor);
+  process_heap()->VisitWeakObjectPointers(&validator);
 }
 
 void Program::CollectGarbage() {

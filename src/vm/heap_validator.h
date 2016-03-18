@@ -37,13 +37,13 @@ class ProgramHeapPointerValidator : public HeapPointerValidator {
   virtual ~ProgramHeapPointerValidator() {}
 };
 
-// Traverses roots, queues, heaps of a process and makes sure the pointers
+// Traverses roots and queues of a process and makes sure the pointers
 // inside them are valid.
-class ProcessHeapValidatorVisitor : public ProcessVisitor {
+class ProcessRootValidatorVisitor : public ProcessVisitor {
  public:
-  explicit ProcessHeapValidatorVisitor(OneSpaceHeap* program_heap)
+  explicit ProcessRootValidatorVisitor(OneSpaceHeap* program_heap)
       : program_heap_(program_heap) {}
-  virtual ~ProcessHeapValidatorVisitor() {}
+  virtual ~ProcessRootValidatorVisitor() {}
 
   virtual void VisitProcess(Process* process);
 
