@@ -1820,21 +1820,14 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ ldr(R7, Address(R5, Operand(R0, TIMES_1)));
 
   const Register kRegisterAllocateImmutable = R9;
-  // TODO(erikcorry): Get rid of this immutable tracking.
-  const Register kRegisterImmutableMembers = R12;
 
-  // We initialize the 3rd argument to "HandleAllocate" to 0, meaning the object
-  // we're allocating will not be initialized with pointers to immutable space.
-  __ LoadInt(kRegisterImmutableMembers, 0);
+  // Initialization of [kRegisterAllocateImmutable] depends on [immutable]
+  __ LoadInt(kRegisterAllocateImmutable, immutable ? 1 : 0);
 
-  // Loop over all arguments and find out if
-  //   * all of them are immutable
-  //   * there is at least one immutable member
+  // Loop over all arguments and find out if all of them are immutable (then we
+  // can set the immutable bit in this object too).
   Label allocate;
-  {
-    // Initialization of [kRegisterAllocateImmutable] depended on [immutable]
-    __ LoadInt(kRegisterAllocateImmutable, immutable ? 1 : 0);
-
+  if (immutable) {
     __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ LoadInt(R3, InstanceFormat::FixedSizeField::mask());
     __ and_(R2, R2, R3);
@@ -1848,8 +1841,7 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
     __ add(R3, R6, R2);
 
     Label loop;
-    Label loop_with_immutable_field;
-    Label loop_with_mutable_field;
+    Label break_loop_with_mutable_field;
 
     // Decrement pointer to point to next field.
     __ Bind(&loop);
@@ -1881,13 +1873,13 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
     __ LoadInt(R1, mask);
     __ and_(R0, R0, R1);
 
-    // If this type is never immutable we continue the loop.
+    // If this type is never immutable we break the loop.
     __ cmp(R0, Immediate(never_immutable_mask));
-    __ b(EQ, &loop_with_mutable_field);
+    __ b(EQ, &break_loop_with_mutable_field);
 
     // If this is type is always immutable we continue the loop.
     __ cmp(R0, Immediate(always_immutable_mask));
-    __ b(EQ, &loop_with_immutable_field);
+    __ b(EQ, &loop);
 
     // Else, we must have an Instance and check the runtime-tracked
     // immutable bit.
@@ -1895,17 +1887,11 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
     __ ldr(R2, Address(R2, Instance::kFlagsOffset - HeapObject::kTag));
     __ and_(R2, R2, Immediate(im_mask));
     __ cmp(R2, Immediate(im_mask));
-    __ b(EQ, &loop_with_immutable_field);
+    __ b(EQ, &loop);
 
-    __ b(&loop_with_mutable_field);
-
-    __ Bind(&loop_with_immutable_field);
-    __ LoadInt(kRegisterImmutableMembers, 1);
-    __ b(&loop);
-
-    __ Bind(&loop_with_mutable_field);
+    __ Bind(&break_loop_with_mutable_field);
     __ LoadInt(kRegisterAllocateImmutable, 0);
-    __ b(&loop);
+    // Fall through.
   }
 
   // TODO(kasperl): Consider inlining this in the interpreter.
@@ -1913,7 +1899,6 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ mov(R0, R4);
   __ mov(R1, R7);
   __ mov(R2, kRegisterAllocateImmutable);
-  __ mov(R3, kRegisterImmutableMembers);
   __ bl("HandleAllocate");
   __ and_(R1, R0, Immediate(Failure::kTagMask | Failure::kTypeMask));
   __ cmp(R1, Immediate(Failure::kTag));
@@ -1939,6 +1924,8 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ cmp(R9, R7);
   __ b(HI, &done);
   Pop(R1);
+  // No write barrier, because newly allocated instances are always
+  // in new-space, or are already entered into the remembered set.
 #ifdef DARTINO_THUMB_ONLY
   __ str(R1, Address(R7, 0));
   __ sub(R7, R7, Immediate(1 * kWordSize));

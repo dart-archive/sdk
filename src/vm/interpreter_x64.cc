@@ -1562,20 +1562,13 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   __ movl(RAX, Address(R13, 1));
   __ movq(RBX, Address(R13, RAX, TIMES_1));
 
-  // We initialize the 4rd argument to "HandleAllocate" to 0, meaning the object
-  // we're allocating will not be initialized with pointers to immutable space.
-  __ movq(RCX, Immediate(0));
+  // Initialization of 'allocate immutable' argument depends on [immutable].
+  __ movq(RDX, Immediate(immutable ? 1 : 0));
 
-  // Loop over all arguments and find out if
-  //   * all of them are immutable
-  //   * there is at least one immutable member
+  // Loop over all arguments and find out if all of them are immutable (then we
+  // can set the immutable bit in this object too).
   Label allocate;
-  {
-    // Initialization of 'allocate immutable' argument
-    // depends on [immutable].  TODO(erikcorry): Simplify, now we don't have
-    // an immutable space.
-    __ movq(RDX, Immediate(immutable ? 1 : 0));
-
+  if (immutable) {
     __ movq(R11, Address(RBX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andq(R11, Immediate(InstanceFormat::FixedSizeField::mask()));
     int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
@@ -1589,8 +1582,7 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
     __ addq(R10, R11);
 
     Label loop;
-    Label loop_with_immutable_field;
-    Label loop_with_mutable_field;
+    Label break_loop_with_mutable_field;
 
     // Decrement pointer to point to next field.
     __ Bind(&loop);
@@ -1621,30 +1613,24 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
     __ movq(RAX, Address(RAX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andq(RAX, Immediate(mask));
 
-    // If this is type never immutable we continue the loop.
+    // If this is type never immutable we break the loop.
     __ cmpq(RAX, Immediate(never_immutable_mask));
-    __ j(EQUAL, &loop_with_mutable_field);
+    __ j(EQUAL, &break_loop_with_mutable_field);
 
     // If this is type is always immutable we continue the loop.
     __ cmpq(RAX, Immediate(always_immutable_mask));
-    __ j(EQUAL, &loop_with_immutable_field);
+    __ j(EQUAL, &loop);
 
-    // Else, we must have a Instance and check the runtime-tracked
+    // Else, we must have an Instance and check the runtime-tracked
     // immutable bit.
     uword im_mask = Instance::FlagsImmutabilityField::encode(true);
     __ movq(R11, Address(R11, Instance::kFlagsOffset - HeapObject::kTag));
     __ testq(R11, Immediate(im_mask));
-    __ j(NOT_ZERO, &loop_with_immutable_field);
+    __ j(NOT_ZERO, &loop);
 
-    __ jmp(&loop_with_mutable_field);
-
-    __ Bind(&loop_with_immutable_field);
-    __ movl(RCX, Immediate(1));
-    __ jmp(&loop);
-
-    __ Bind(&loop_with_mutable_field);
+    __ Bind(&break_loop_with_mutable_field);
     __ movl(RDX, Immediate(0));
-    __ jmp(&loop);
+    // Fall through.
   }
 
   // TODO(kasperl): Consider inlining this in the interpreter.
@@ -1652,8 +1638,7 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   LoadProcess(RDI);
   SwitchToCStack();
   __ movq(RSI, RBX);
-  // NOTE: The 3nd argument is already present in RDX
-  // NOTE: The 4rd argument is already present in RCX
+  // NOTE: The 3rd argument is already present in RDX
   __ call("HandleAllocate");
   SwitchToDartStack();
   __ movq(R11, RAX);
@@ -1679,6 +1664,8 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   __ cmpq(R10, R11);
   __ j(BELOW, &done);
   Pop(RBX);
+  // No write barrier, because newly allocated instances are always
+  // in new-space, or are already entered into the remembered set.
   __ movq(Address(R10, 0), RBX);
   __ subq(R10, Immediate(1 * kWordSize));
   __ jmp(&loop);

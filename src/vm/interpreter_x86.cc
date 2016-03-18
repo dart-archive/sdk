@@ -1571,7 +1571,7 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
 
   const int kStackAllocateImmutable = 2 * kWordSize;
 
-  // Initialization of [kStackAllocateImmutable] depended on [immutable]
+  // Initialization of [kStackAllocateImmutable] depends on [immutable]
   LoadNativeStack(ECX);
   __ movl(Address(ECX, kStackAllocateImmutable), Immediate(immutable ? 1 : 0));
 
@@ -1631,7 +1631,7 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
     __ cmpl(EAX, Immediate(always_immutable_mask));
     __ j(EQUAL, &loop);
 
-    // Else, we must have a Instance and check the runtime-tracked
+    // Else, we must have an Instance and check the runtime-tracked
     // immutable bit.
     uword im_mask = Instance::FlagsImmutabilityField::encode(true);
     __ movl(ECX, Address(ECX, Instance::kFlagsOffset - HeapObject::kTag));
@@ -1649,7 +1649,7 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   SwitchToCStack(EAX);
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
-  // NOTE: The 3nd argument is already present ESP + kStackAllocateImmutable
+  // NOTE: The 3rd argument is already present ESP + kStackAllocateImmutable
   __ call("HandleAllocate");
   SwitchToDartStack();
   __ movl(ECX, EAX);
@@ -1676,7 +1676,7 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   __ j(BELOW, &done);
   Pop(EBX);
   // No write barrier, because newly allocated instances are always
-  // in new-space.
+  // in new-space, or are already entered into the remembered set.
   __ movl(Address(EDX, 0), EBX);
   __ subl(EDX, Immediate(1 * kWordSize));
   __ jmp(&loop);
