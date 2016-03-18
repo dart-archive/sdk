@@ -44,6 +44,10 @@ Heap::~Heap() {
 }
 
 TwoSpaceHeap::~TwoSpaceHeap() {
+  // We do this before starting to destroy the heap, because the callbacks can
+  // trigger calls that assume the heap is still working.
+  WeakPointer::ForceCallbacks(old_space_->weak_pointers());
+  WeakPointer::ForceCallbacks(space_->weak_pointers());
   delete unused_semispace_;
   delete old_space_;
 }
