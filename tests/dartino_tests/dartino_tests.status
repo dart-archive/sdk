@@ -165,3 +165,6 @@ incremental/experimental/program_gc_with_processes: Pass, Fail # Issue 389.
 
 [ $arch == x64 && $asan]
 service_tests/simple_todo: Pass, Fail # Issue https://github.com/dartino/sdk/issues/57
+
+[ $arch == x64 ]
+incremental/experimental/add_field_and_remove_subclass: Fail # Issue 460
