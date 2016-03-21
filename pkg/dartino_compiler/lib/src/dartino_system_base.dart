@@ -53,6 +53,14 @@ abstract class DartinoSystemBase {
     return DartinoSelector.encodeMethod(id, arity);
   }
 
+  int toDartinoGetterSelector(Name name) {
+    return toDartinoSelector(new Selector.getter(name));
+  }
+
+  int toDartinoSetterSelector(Name name) {
+    return toDartinoSelector(new Selector.setter(name));
+  }
+
   String getSymbolFromSelector(Selector selector);
 
   int getSymbolId(String symbol);

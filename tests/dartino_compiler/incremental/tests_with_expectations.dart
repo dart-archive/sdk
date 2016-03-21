@@ -408,6 +408,54 @@ main() {
 ''',
 
   r'''
+subclass_schema_3
+==> main.dart.patch <==
+// Test that multiple schema changes in subclasses work as intended.
+class A {
+  var x;
+<<<< "instance is null"
+  var y;
+==== "x = 0"
+==== ["x = 3","y = null","z = 2"]
+  var y;
+>>>>
+}
+
+class B extends A {
+}
+
+class C extends B {
+  var z;
+<<<<
+====
+  var a;
+====
+  var a;
+  var b;
+>>>>
+}
+
+var instance;
+
+main() {
+  if (instance == null) {
+    print('instance is null');
+    instance = new C();
+    instance.x = 0;
+    instance.y = 1;
+    instance.z = 2;
+  } else {
+    print('x = ${instance.x}');
+    if (instance.x == 3) {
+      print('y = ${instance.y}');
+      print('z = ${instance.z}');
+    }
+    instance.x = 3;
+  }
+}
+''',
+
+  r'''
 super_schema
 ==> main.dart.patch <==
 // Test that schema changes work in the presence of fields in the superclass

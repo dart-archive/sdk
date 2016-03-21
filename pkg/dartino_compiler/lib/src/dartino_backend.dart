@@ -216,6 +216,9 @@ import '../dartino_system.dart' show
 import 'parameter_stub_codegen.dart' show
     ParameterStubCodegen;
 
+import '../dartino_field.dart' show
+    DartinoField;
+
 class DartinoBackend extends Backend
     implements IncrementalDartinoBackend {
   static const String growableListName = '_GrowableList';
@@ -303,7 +306,9 @@ class DartinoBackend extends Backend
   }
 
   DartinoClassBuilder createCallableStubClass(
-      int fields, int arity, DartinoClassBuilder superclass) {
+      List<DartinoField> fields,
+      int arity,
+      DartinoClassBuilder superclass) {
     DartinoClassBuilder classBuilder = systemBuilder.newClassBuilder(
         null, superclass, false, new SchemaChange(null), extraFields: fields);
     classBuilder.createIsFunctionEntry(
@@ -517,10 +522,15 @@ class DartinoBackend extends Backend
 
     FunctionSignature signature = function.signature;
     bool hasThis = function.isInstanceMember;
+    List<DartinoField> fields = <DartinoField>[];
+    if (hasThis) {
+      ClassElement classElement =
+          systemBuilder.lookupClassBuilder(function.memberOf).element;
+      fields.add(new DartinoField.boxedThis(classElement));
+    }
+
     DartinoClassBuilder tearoffClass = createCallableStubClass(
-        hasThis ? 1 : 0,
-        signature.parameterCount,
-        compiledClosureClass);
+        fields, signature.parameterCount, compiledClosureClass);
 
     DartinoFunctionBuilder functionBuilder =
         systemBuilder.newTearOff(function, tearoffClass.classId);

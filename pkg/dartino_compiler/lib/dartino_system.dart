@@ -47,6 +47,9 @@ import 'src/dartino_system_base.dart' show
 import 'src/dartino_system_builder.dart' show
     SchemaChange;
 
+import 'dartino_field.dart' show
+    DartinoField;
+
 enum DartinoFunctionKind {
   NORMAL,
   LAZY_FIELD_INITIALIZER,
@@ -401,6 +404,19 @@ class DartinoSystem extends DartinoSystemBase {
 
   int getStaticFieldIndex(FieldElement element, Element referrer) {
     return staticFieldsById[element] ?? -1;
+  }
+
+  List<DartinoField> computeAllFields(DartinoClass cls) {
+    if (!cls.hasSuperclassId) return cls.mixedInFields;
+    List<DartinoField> result = new List<DartinoField>(cls.fieldCount);
+    while (cls != null) {
+      int index = cls.superclassFields;
+      for (DartinoField field in cls.mixedInFields) {
+        result[index++] = field;
+      }
+      cls = cls.hasSuperclassId ? lookupClassById(cls.superclassId) : null;
+    }
+    return result;
   }
 
   String toDebugString(Uri base) {

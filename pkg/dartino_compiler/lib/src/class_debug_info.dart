@@ -4,10 +4,14 @@
 
 library dartino_compiler.class_debug_info;
 
-import 'package:compiler/src/elements/elements.dart';
+import 'package:compiler/src/elements/elements.dart' show
+    ClassElement;
 
 import '../dartino_class.dart' show
     DartinoClass;
+
+import '../dartino_field.dart' show
+    DartinoField;
 
 class ClassDebugInfo {
   final DartinoClass klass;
@@ -17,16 +21,26 @@ class ClassDebugInfo {
       : this.klass = klass,
         fieldNames = _computeFieldNames(klass);
 
-  static _computeFieldNames(DartinoClass klass) {
-    int localFields = klass.fields.length - klass.superclassFields;
-    List fieldNames = new List(localFields);
+  static List<String> _computeFieldNames(DartinoClass klass) {
+    String className;
+    if (klass.element != null) {
+      className = klass.element.name;
+    }
+    if (className != null) {
+      className = "$className.";
+    }
     int index = 0;
-    ClassElement classElement = klass.element.implementation;
-    String className = classElement.name != null ? '${classElement.name}.' : '';
-    classElement.forEachInstanceField((_, FieldElement field) {
-      fieldNames[index++] = '$className${field.name}';
-    });
-    assert(index == localFields);
-    return fieldNames;
+    return new List<String>.from(klass.mixedInFields.map((DartinoField field) {
+      String elementName = field.element.name;
+      String fieldName;
+      if (field.isThis) {
+        fieldName = "<boxed this $elementName>";
+      } else if (field.isBoxed) {
+        fieldName = "<boxed local value $elementName>";
+      } else {
+        fieldName = "$className$elementName";
+      }
+      return fieldName;
+    }));
   }
 }

@@ -19,11 +19,9 @@ incremental/experimental/same_tokens_variant: Fail
 # new class -> should not happen).
 incremental/*/compile_time_error_hides_field: IncrementalCompilationFailed
 
-# Bad 'field' count on DartinoPatchClassBuilder (does not contain new fields).
-incremental/experimental/add_field_and_remove_subclass: Fail
-
 # Most things don't work in production mode yet.
 incremental/production/add_class: IncrementalCompilationFailed
+incremental/production/add_field_and_remove_subclass: IncrementalCompilationFailed
 incremental/production/add_instance_field: IncrementalCompilationFailed
 incremental/production/add_instance_method: IncrementalCompilationFailed
 incremental/production/add_static_method: IncrementalCompilationFailed
@@ -71,14 +69,17 @@ incremental/production/remove_instance_method_with_optional_parameters_stored_in
 incremental/production/remove_static_method: IncrementalCompilationFailed
 incremental/production/remove_top_level_method: IncrementalCompilationFailed
 incremental/production/same_tokens: IncrementalCompilationFailed
+incremental/production/same_tokens_variant: IncrementalCompilationFailed
 incremental/production/signature_change_instance_method: IncrementalCompilationFailed
 incremental/production/signature_change_parameter_instance_method: IncrementalCompilationFailed
 incremental/production/signature_change_static_method: IncrementalCompilationFailed
 incremental/production/signature_change_top_level_method: IncrementalCompilationFailed
 incremental/production/source_maps_no_throw: IncrementalCompilationFailed
 incremental/production/stored_closure: IncrementalCompilationFailed
+incremental/production/stored_closure: IncrementalCompilationFailed
 incremental/production/subclass_schema_1: IncrementalCompilationFailed
 incremental/production/subclass_schema_2: IncrementalCompilationFailed
+incremental/production/subclass_schema_3: IncrementalCompilationFailed
 incremental/production/super_call_signature_change: IncrementalCompilationFailed
 incremental/production/super_classes_of_directly_instantiated: IncrementalCompilationFailed
 incremental/production/super_schema: IncrementalCompilationFailed
@@ -88,9 +89,6 @@ incremental/production/two_updates_with_removal: IncrementalCompilationFailed
 incremental/production/update_dependencies: IncrementalCompilationFailed
 incremental/production/update_dependencies_recoverable_compile_time_error: IncrementalCompilationFailed
 incremental/production/update_dependencies_unrecoverable_compile_time_error: IncrementalCompilationFailed
-incremental/production/add_field_and_remove_subclass: IncrementalCompilationFailed
-incremental/production/same_tokens_variant: IncrementalCompilationFailed
-incremental/production/stored_closure: IncrementalCompilationFailed
 
 # Unsupported features.
 incremental/*/add_compound_instance_field: IncrementalCompilationFailed

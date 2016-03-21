@@ -25,6 +25,7 @@ import 'package:compiler/src/elements/elements.dart' show
     FunctionSignature,
     FunctionTypedElement,
     LibraryElement,
+    LocalElement,
     MemberElement,
     Name,
     ParameterElement;
@@ -58,6 +59,9 @@ import '../dartino_class.dart' show
 
 import 'closure_environment.dart' show
     ClosureInfo;
+
+import '../dartino_field.dart' show
+    DartinoField;
 
 import 'dartino_system_base.dart' show
     DartinoSystemBase;
@@ -416,7 +420,7 @@ class DartinoSystemBuilder extends DartinoSystemBase {
       DartinoClassBase superclass,
       SchemaChange schemaChange) {
     DartinoClassBuilder builder =
-        new DartinoPatchClassBuilder(klass, superclass, schemaChange, this);
+        new DartinoClassBuilder.patch(klass, superclass, schemaChange, this);
     assert(_newClasses[klass.classId] == null);
     _newClasses[klass.classId] = builder;
     return builder;
@@ -444,7 +448,7 @@ class DartinoSystemBuilder extends DartinoSystemBase {
       DartinoClassBase superclass,
       bool isBuiltin,
       SchemaChange schemaChange,
-      {int extraFields: 0}) {
+      {List<DartinoField> extraFields: const <DartinoField>[]}) {
     if (element != null) {
       DartinoClass klass = predecessorSystem.lookupClassByElement(element);
       if (klass != null) {
@@ -456,7 +460,7 @@ class DartinoSystemBuilder extends DartinoSystemBase {
     }
 
     int nextClassId = classIdStart + _newClasses.length;
-    DartinoClassBuilder builder = new DartinoNewClassBuilder(
+    DartinoClassBuilder builder = new DartinoClassBuilder.newClass(
         nextClassId,
         element,
         superclass,
@@ -542,8 +546,15 @@ class DartinoSystemBuilder extends DartinoSystemBase {
     DartinoFunctionBuilder closure = lookupFunctionBuilderByElement(function);
     if (closure != null) return closure;
 
-    int fields = info.free.length;
-    if (info.isThisFree) fields++;
+    List<DartinoField> fields = <DartinoField>[];
+    for (LocalElement local in info.free) {
+      fields.add(new DartinoField.boxed(local));
+    }
+    if (info.isThisFree) {
+      fields.add(
+          new DartinoField.boxedThis(
+              function.declaration.enclosingClass.declaration));
+    }
 
     DartinoClassBuilder classBuilder = newClassBuilder(
         null, superclass, false, new SchemaChange(null), extraFields: fields);
@@ -640,8 +651,8 @@ class DartinoSystemBuilder extends DartinoSystemBase {
     int id = predecessorSystem.getSymbolId(symbol);
     if (id != -1) return id;
     return _symbolIds.putIfAbsent(symbol, () {
-      int id = _symbols.length;
-      assert(id == _symbolIds.length);
+      int id = _symbols.length + predecessorSystem.symbols.length;
+      assert(id == _symbolIds.length + predecessorSystem.symbolIds.length);
       _symbols.add(symbol);
       registerSymbol(symbol, id);
       return id;

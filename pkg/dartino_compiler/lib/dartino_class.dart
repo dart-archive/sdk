@@ -8,28 +8,53 @@ import 'package:persistent/persistent.dart' show
     PersistentMap;
 
 import 'package:compiler/src/elements/elements.dart' show
-    ClassElement,
-    FieldElement;
+    ClassElement;
 
 import 'dartino_class_base.dart' show
     DartinoClassBase;
+
+import 'src/element_utils.dart' show
+    computeFields;
+
+import 'dartino_field.dart' show
+    DartinoField;
 
 class DartinoClass extends DartinoClassBase {
   final int superclassId;
   final int superclassFields;
   final PersistentMap<int, int> methodTable;
-  final List<FieldElement> fields;
+  final List<DartinoField> mixedInFields;
 
   DartinoClass(
       int classId,
       String name,
       ClassElement element,
       this.superclassId,
-      this.superclassFields,
+      int superclassFields,
       this.methodTable,
-      List<FieldElement> fields)
-      : fields = new List<FieldElement>.unmodifiable(fields),
-        super(classId, name, element, fields.length);
+      List<DartinoField> mixedInFields)
+      : mixedInFields = new List<DartinoField>.unmodifiable(mixedInFields),
+        superclassFields = superclassFields,
+        super(classId, name, element, mixedInFields.length + superclassFields);
+
+  factory DartinoClass.validated(
+      int classId,
+      String name,
+      ClassElement element,
+      int superclassId,
+      int superclassFields,
+      PersistentMap<int, int> methodTable,
+      List<DartinoField> mixedInFields) {
+    return new DartinoClass(
+        classId, name, element, superclassId, superclassFields, methodTable,
+        mixedInFields)
+        ..validate();
+  }
+
+  void validate() {
+    assert(element == null || fieldCount == computeFields(element).length);
+    assert(fieldCount - mixedInFields.length == superclassFields);
+  }
 
   String toString() => "DartinoClass($classId, '$name')";
 }
