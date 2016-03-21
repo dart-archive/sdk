@@ -2,8 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef SRC_VM_REMEMBERED_SET_H_
-#define SRC_VM_REMEMBERED_SET_H_
+// Maintains data outside the heap that the garbage collector needs. Because
+// the heap is always allocated from a restricted contiguous address area, the
+// tables of the metadata can also be contiguous without needing complicated
+// mapping.
+
+#ifndef SRC_VM_GC_METADATA_H_
+#define SRC_VM_GC_METADATA_H_
 
 #include "src/vm/object_memory.h"
 
@@ -106,4 +111,4 @@ class GCMetadata {
 
 }  // namespace dartino
 
-#endif  // SRC_VM_REMEMBERED_SET_H_
+#endif  // SRC_VM_GC_METADATA_H_

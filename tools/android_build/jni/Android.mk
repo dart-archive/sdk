@@ -37,6 +37,7 @@ LOCAL_SRC_FILES := \
 	../../../src/vm/ffi_posix.cc \
 	../../../src/vm/dartino.cc \
 	../../../src/vm/dartino_api_impl.cc \
+	../../../src/vm/gc_metadata.cc \
 	../../../src/vm/gc_thread.cc \
 	../../../src/vm/heap.cc \
 	../../../src/vm/heap_validator.cc \

@@ -14,13 +14,13 @@
 
 #include "src/vm/event_handler.h"
 #include "src/vm/frame.h"
+#include "src/vm/gc_metadata.h"
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
 #include "src/vm/native_interpreter.h"
 #include "src/vm/natives.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/port.h"
-#include "src/vm/remembered_set.h"
 #include "src/vm/session.h"
 
 namespace dartino {

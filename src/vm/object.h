@@ -15,8 +15,8 @@
 #include "src/shared/list.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/gc_metadata.h"
 #include "src/vm/intrinsics.h"
-#include "src/vm/remembered_set.h"
 
 namespace dartino {
 

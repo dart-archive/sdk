@@ -9,6 +9,7 @@
 #include "src/shared/random.h"
 
 #include "src/vm/debug_info.h"
+#include "src/vm/gc_metadata.h"
 #include "src/vm/heap.h"
 #include "src/vm/links.h"
 #include "src/vm/lookup_cache.h"
@@ -16,7 +17,6 @@
 #include "src/vm/natives.h"
 #include "src/vm/process_handle.h"
 #include "src/vm/program.h"
-#include "src/vm/remembered_set.h"
 #include "src/vm/signal.h"
 #include "src/vm/thread.h"
 
