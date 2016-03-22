@@ -137,8 +137,18 @@ class Scheduler {
   void FreezeProgramGroup(ProgramGroup group);
   void UnFreezeProgramGroup(ProgramGroup group);
 
+  // Interpret [process] as a nested callback.
+  //
+  // Runs a Dart function, while another interpreter is still active on the
+  // stack.
+  //
+  // The stack must already be set up
+  void InterpretNestedProcess(Process* old_process, Process* process);
+
  private:
   friend class Dartino;
+  friend class InterpreterExecutionScope;
+  friend class NativeScope;
   friend class WorkerThread;
 
   // Global scheduler instance.
@@ -211,6 +221,19 @@ class Scheduler {
 
   void HandleEventResult(
       ProcessInterruptionEvent result, Process* process, Process::State state);
+
+  // Prepares this scheduler and the given [process] for entry into Dart code.
+  //
+  // This function should be called just before running the interpreter.
+  // See [InterpreterExecutionScope] and [NativeScope] for scoped calls to
+  // [EnterDart] and [LeaveDart].
+  void EnterDart(Process* process);
+
+  // Prepares this scheduler and the given [process] for returning from
+  // running Dart code to running native code again.
+  //
+  // See [EnterDart].
+  void LeaveDart(Process* process);
 };
 
 class StoppedGcThreadScope {

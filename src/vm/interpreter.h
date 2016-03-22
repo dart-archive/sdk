@@ -56,7 +56,8 @@ class Interpreter {
     kTargetYield,
     kUncaughtException,
     kCompileTimeError,
-    kBreakpoint
+    kBreakpoint,
+    kFFIReturn,
   };
 
   explicit Interpreter(Process* process)
@@ -76,6 +77,7 @@ class Interpreter {
   }
   bool IsCompileTimeError() const { return interruption_ == kCompileTimeError; }
   bool IsAtBreakpoint() const { return interruption_ == kBreakpoint; }
+  bool IsReturnedFromFFI() const { return interruption_ == kFFIReturn; }
 
   TargetYieldResult target_yield_result() const { return target_yield_result_; }
 

@@ -94,9 +94,6 @@ void Interpreter::Run() {
   // order to make sure that all interruptions active at a certain
   // stack guard check gets handled at the same bcp.
 
-  process_->RestoreErrno();
-  process_->TakeLookupCache();
-
   // Whenever we enter the interpreter, we might operate on a stack which
   // doesn't contain any references to new space. This means the remembered set
   // might *NOT* contain the stack.
@@ -113,8 +110,6 @@ void Interpreter::Run() {
   if (result < 0) FATAL("Fatal error in native interpreter");
   interruption_ = static_cast<InterruptKind>(result);
 
-  process_->ReleaseLookupCache();
-  process_->StoreErrno();
   ASSERT(interruption_ != kReady);
 }
 

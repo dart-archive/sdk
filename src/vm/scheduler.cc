@@ -412,6 +412,36 @@ void Scheduler::ResumeInterpreterLoop() {
   NotifyInterpreterThread();
 }
 
+void Scheduler::EnterDart(Process* process) {
+  dispatch_table_.ResetBreakpoints(
+      process->program()->debug_info(), process->debug_info());
+
+  interpretation_barrier_.Enter(process);
+
+  // Mark the process as owned by the current thread while interpreting.
+  Thread::SetProcess(process);
+
+  process->set_scheduler(this);
+
+  process->heap()->set_random(process->random());
+
+  process->RestoreErrno();
+  process->TakeLookupCache();
+}
+
+void Scheduler::LeaveDart(Process* process) {
+  process->ReleaseLookupCache();
+  process->StoreErrno();
+
+  process->heap()->set_random(NULL);
+
+  process->set_scheduler(NULL);
+
+  Thread::SetProcess(NULL);
+
+  interpretation_barrier_.Leave(process);
+}
+
 Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
   ASSERT(process->exception()->IsNull());
 
@@ -425,25 +455,10 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
     return NULL;
   }
 
-  dispatch_table_.ResetBreakpoints(
-      process->program()->debug_info(), process->debug_info());
-
-  interpretation_barrier_.Enter(process);
-
-  // Mark the process as owned by the current thread while interpreting.
-  Thread::SetProcess(process);
+  EnterDart(process);
   Interpreter interpreter(process);
-
-  // Warning: These two lines should not be moved, since the code further down
-  // will potentially push the process on a queue which is accessed by other
-  // threads, which would create a race.
-  process->heap()->set_random(process->random());
   interpreter.Run();
-  process->heap()->set_random(NULL);
-
-  Thread::SetProcess(NULL);
-
-  interpretation_barrier_.Leave(process);
+  LeaveDart(process);
 
   if (interpreter.IsYielded()) {
     process->ChangeState(Process::kRunning, Process::kYielding);
@@ -517,6 +532,32 @@ Process* Scheduler::InterpretProcess(Process* process, WorkerThread* worker) {
 
   UNREACHABLE();
   return NULL;
+}
+
+void Scheduler::InterpretNestedProcess(Process* old_process, Process* process) {
+  LeaveDart(old_process);
+  while (true) {
+    Interpreter interpreter(process);
+    EnterDart(process);
+    interpreter.Run();
+    LeaveDart(process);
+
+    if (interpreter.IsInterrupted()) continue;
+    if (interpreter.IsAtBreakpoint() || interpreter.IsTargetYielded()) {
+      // TODO(floitsch): handle breakpoints and release locked port.
+      UNIMPLEMENTED();
+    }
+    // For any other case we have finished executing the Dart function.
+    // If the function returned properly it has updated the return slot.
+    // Otherwise, we use the error-value that was stored there.
+    if (interpreter.IsReturnedFromFFI()) break;
+    if (interpreter.IsUncaughtException()) break;
+    if (interpreter.IsCompileTimeError()) break;
+    if (interpreter.IsTerminated()) break;
+    if (interpreter.IsYielded()) break;
+    UNREACHABLE();
+  }
+  EnterDart(old_process);
 }
 
 void Scheduler::HandleKilled(Process* process) {

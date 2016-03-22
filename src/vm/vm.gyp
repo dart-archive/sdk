@@ -194,8 +194,10 @@
       'sources': [
         '<(INTERMEDIATE_DIR)/generated<(asm_file_extension)',
         'ffi.cc',
-        'ffi_disabled.cc',
         'ffi.h',
+        'ffi_callback.cc',
+        'ffi_callback.h',
+        'ffi_disabled.cc',
         'ffi_linux.cc',
         'ffi_macos.cc',
         'ffi_posix.cc',

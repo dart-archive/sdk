@@ -23,6 +23,7 @@ main() {
   testAllocate(true, true);
 
   testVAndICall();
+
   testFailingLibraryLookups();
   testDefaultLibraryLookups();
   testPCallAndMemory(true);
@@ -31,11 +32,15 @@ main() {
 
   testImmutablePassing(false);
   testImmutablePassing(true);
-
   testExternalFinalizer();
 
   testDoubleBits();
   testBitSizes();
+
+  testCallbacksFromC();
+  testNestedFfiCalls();
+  testOutOfResources();
+  testDoubleFree();
 }
 
 checkOutOfBoundsThrows(function) {
@@ -405,13 +410,15 @@ testVAndICall() {
 }
 
 testFailingLibraryLookups() {
-  var libPath = ForeignLibrary.bundleLibraryName('foobar');
+  print("** Failed library lookups on missing.so are normal and expected.");
+  var libPath = ForeignLibrary.bundleLibraryName('missing');
   Expect.throws(
       () => new ForeignLibrary.fromName(libPath),
       isArgumentError);
   Expect.throws(
-      () => new ForeignLibrary.fromName('random__for_not_hitting_foobar.so'),
+      () => new ForeignLibrary.fromName('random__for_not_hitting_missing.so'),
       isArgumentError);
+  print("** Failed library lookups on missing.so are normal and expected.");
 }
 
 testDefaultLibraryLookups() {
@@ -695,4 +702,161 @@ void testBitSizes() {
   Expect.isTrue(wordBitSize == 32 || wordBitSize == 64);
   int doubleBitSize = Foreign.bitsPerDouble;
   Expect.isTrue(doubleBitSize == 32 || doubleBitSize == 64);
+}
+
+// Test callbacks from C to Dart.
+
+testCallbacksFromC() {
+  var foreignDartFunctions = <ForeignDartFunction>[];
+
+  ForeignDartFunction buildCallback(f) {
+    var result = new ForeignDartFunction(f);
+    foreignDartFunctions.add(result);
+    return result;
+  }
+
+  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
+  ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
+  var trampoline0 = fl.lookup('trampoline0');
+  var trampoline1 = fl.lookup('trampoline1');
+  var trampoline2 = fl.lookup('trampoline2');
+  var trampoline3 = fl.lookup('trampoline3');
+
+  var events = [];
+
+  Expect.equals(10000, trampoline0.icall$1(buildCallback(() {
+    events.add("callback from C");
+    var sum = 0;
+    for (int i = 0; i < 10000; i++) {
+      sum++;
+    }
+    events.add("returning sum: $sum");
+    return sum;
+  })));
+
+  Expect.equals(4, trampoline1.icall$2(buildCallback((int x) {
+    events.add("callback from C with $x");
+    return x + 1;
+  }), 3));
+
+  Expect.equals(13, trampoline2.icall$3(buildCallback((int x, int y) {
+    events.add("callback from C with $x and $y");
+    return x + y + 1;
+  }), 5, 7));
+
+  Expect.equals(1007, trampoline3.icall$4(buildCallback((int x, int y, int z) {
+    events.add("callback from C with $x and $y, $z");
+    return x + y + z + 1000;
+  }), 1, 2, 4));
+
+  Expect.listEquals([ "callback from C", "returning sum: 10000",
+      "callback from C with 3", "callback from C with 5 and 7",
+      "callback from C with 1 and 2, 4"],
+      events);
+
+  foreignDartFunctions.forEach((f) => f.free());
+}
+
+// Test nested ffi calls:
+// ===
+
+int allocateALot() {
+  for (int i = 0; i < 100000; i++) {
+    var map = {};
+    map['foo'] = [1, 2];
+    if (map['foo'] == map['bar']) return -1;
+  }
+  return 1;
+}
+
+testNestedFfiCalls() {
+  var foreignDartFunctions = <ForeignDartFunction>[];
+
+  ForeignDartFunction buildCallback(f) {
+    var result = new ForeignDartFunction(f);
+    foreignDartFunctions.add(result);
+    return result;
+  }
+
+  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
+  ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
+  var trampoline2 = fl.lookup('trampoline2');
+
+  var events = [];
+
+  int nested1(trampoline2) {
+    events.add("nested1 before");
+
+    var next = buildCallback((int nextAddress, int trampoline2Address) {
+      events.add("nested2 before");
+
+      var next = new ForeignFunction.fromAddress(nextAddress);
+
+      var nextNext = new ForeignDartFunction(() {
+        events.add("nested4");
+        return allocateALot() + 3;
+      });
+
+      var trampoline2 = new ForeignFunction.fromAddress(trampoline2Address);
+      var result = trampoline2.icall$3(next, nextNext, trampoline2);
+      nextNext.free();
+      events.add("nested2 after: $result");
+      return 2;
+    });
+
+    var nextNext = buildCallback((int nextAddress, int trampoline2Address) {
+      events.add("nested3 before");
+      var next = new ForeignFunction.fromAddress(nextAddress);
+      var result = next.icall$0();
+      events.add("nested3 after: $result");
+      return 3;
+    });
+
+    var result = trampoline2.icall$3(next, nextNext, trampoline2);
+    next.free();
+    nextNext.free();
+    events.add("nested1 after: $result");
+    return 1;
+  }
+
+  Expect.equals(1, nested1(trampoline2));
+  Expect.listEquals([
+      "nested1 before",
+      "nested2 before",
+      "nested3 before",
+      "nested4",
+      "nested3 after: 4",
+      "nested2 after: 3",
+      "nested1 after: 2",
+  ], events);
+}
+
+testOutOfResources() {
+  var allocated = [];
+  // In a system where wrapper functions are created dynamically, this test must
+  // be adapted or removed.
+  bool hitOutOfResources = false;
+  for (int i = 0; i < 10000; i++) {
+    try {
+      allocated.add(new ForeignDartFunction(testOutOfResources));
+    } on ResourceExhaustedException catch (e) {
+      hitOutOfResources = true;
+    }
+  }
+  Expect.isTrue(hitOutOfResources);
+  for (ForeignDartFunction f in allocated) f.free();
+  allocated.clear();
+  // After freeing the allocated wrappers, we should be back in business.
+  for (int i = 0; i < 3; i++) {
+    allocated.add(new ForeignDartFunction(testOutOfResources));
+  }
+  // Should reach this line without exceptions.
+  for (ForeignDartFunction f in allocated) f.free();
+}
+
+testDoubleFree() {
+  var f = new ForeignDartFunction(testDoubleFree);
+  f.free();
+  // It is an error to free a foreign function twice. No need to test the type.
+  Expect.throws(() { f.free(); });
 }

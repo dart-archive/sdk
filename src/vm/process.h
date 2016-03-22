@@ -27,6 +27,7 @@ class Interpreter;
 class Port;
 class ProcessQueue;
 class ProcessVisitor;
+class Scheduler;
 class Session;
 
 class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
@@ -273,6 +274,9 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   bool AllocationFailed() { return statics_ == NULL; }
   void SetAllocationFailed() { statics_ = NULL; }
 
+  void set_scheduler(Scheduler* scheduler) { scheduler_ = scheduler; }
+  Scheduler* scheduler() { return scheduler_; }
+
  private:
   friend class Interpreter;
   friend class Engine;
@@ -336,6 +340,9 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   ProcessDebugInfo* debug_info_;
 
   List<List<uint8>> arguments_;
+
+  // The scheduler that is currently executing an interpreter in this process.
+  Scheduler* scheduler_;
 
 #ifdef DEBUG
   bool true_then_false_;

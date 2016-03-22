@@ -47,7 +47,8 @@ Process::Process(Program* program, Process* parent)
       process_triangle_count_(1),
       parent_(parent),
       errno_cache_(0),
-      debug_info_(NULL)
+      debug_info_(NULL),
+      scheduler_(NULL)
 #ifdef DEBUG
       ,
       native_verifier_(NULL)

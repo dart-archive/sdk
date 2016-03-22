@@ -7,7 +7,7 @@ library dart.dartino._system;
 import 'dart:_internal' hide Symbol;
 import 'dart:collection';
 import 'dart:dartino';
-import 'dart:math';
+import 'dart:dartino._ffi';
 
 part 'list.dart';
 part 'map.dart';
@@ -40,7 +40,8 @@ enum InterruptKind {
   targetYield,
   uncaughtException,
   compileTimeError,
-  breakPoint
+  breakPoint,
+  ffiReturn,
 }
 
 class _Arguments
@@ -70,9 +71,29 @@ external invokeMain([arguments, isolateArgument]);
 // TODO(ager): Get rid of this wrapper.
 callMain(arguments) => invokeMain(arguments);
 
-/// This is the main entry point for a Dartino program, and it takes care of
-/// calling "main" and exiting the VM when "main" is done.
-void entry() {
+/// This is the entry point for the Dartino intepreter.
+///
+/// This function is called:
+/// - when the program starts, as the main entry point for the Dartino program,
+/// - for FFI callbacks, in which case it redirects to the correct Dart closure.
+///
+/// When it is invoked at the program start, it redirects to the `main` function
+/// and exits the VM when `main` is done.
+///
+/// All arguments are only used for FFI callbacks.
+///
+/// If the [oldCoroutine] is not equal to 0, this is an entry for a FFI call.
+///
+/// The [errorReturnValue] is the value that is returned if the callback throws
+/// an exception.
+/// The [returnSlot] is used to return a value to C.
+/// The [oldCoroutine] should not be used, but is passed to make the GC find the
+/// object, and is used as sentinel to know if this is a FFI call.
+void entry(int ffiId, int arity, arg0, arg1, arg2, returnSlot, oldCoroutine) {
+  if (oldCoroutine != 0) {
+    returnSlot = ForeignCallback.doFfiCallback(ffiId, arity, arg0, arg1, arg2);
+    yield(InterruptKind.ffiReturn.index);
+  }
   Fiber.exit(callMain(new _Arguments()));
 }
 

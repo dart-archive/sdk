@@ -223,6 +223,10 @@ class Frame {
     return LastLocalAddress() - stack_->Pointer(0);
   }
 
+  word LastArgumentIndex() const {
+    return LastArgumentAddress() - stack_->Pointer(0);
+  }
+
   // Returns the address of the first local.
   //
   // The first slot after the frame pointer is reserved for the BCP. Therefore,
@@ -232,6 +236,12 @@ class Frame {
   Object** LastLocalAddress() const { return FramePointer() - size_ + 2; }
 
   Object** NextFramePointer() const { return FramePointer() - size_; }
+
+  // Returns the address of the last argument.
+  //
+  // The first slot before the frame pointer is reserved for the return address.
+  // Therefore, the last argument is at an offset of two.
+  Object** LastArgumentAddress() const { return FramePointer() + 2; }
 
  private:
   Stack* stack_;
