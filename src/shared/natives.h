@@ -150,11 +150,14 @@ namespace dartino {
   N(ForeignLibraryBundlePath, "ForeignLibrary", "bundleLibraryName", true)  \
                                                                             \
   N(ForeignBitsPerWord, "Foreign", "_bitsPerMachineWord", true)             \
+  N(ForeignBitsPerDouble, "Foreign", "_bitsPerDouble", true)                \
   N(ForeignErrno, "Foreign", "_errno", true)                                \
   N(ForeignPlatform, "Foreign", "_platform", true)                          \
   N(ForeignArchitecture, "Foreign", "_architecture", true)                  \
   N(ForeignConvertPort, "Foreign", "_convertPort", true)                    \
                                                                             \
+  N(ForeignDoubleToSignedBits, "ForeignFunction", "doubleToSignedBits", true) \
+  N(ForeignSignedBitsToDouble, "ForeignFunction", "signedBitsToDouble", true) \
   N(ForeignICall0, "ForeignFunction", "_icall$0", false)                      \
   N(ForeignICall1, "ForeignFunction", "_icall$1", false)                      \
   N(ForeignICall2, "ForeignFunction", "_icall$2", false)                      \

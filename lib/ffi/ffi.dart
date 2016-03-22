@@ -37,6 +37,12 @@ abstract class Foreign {
   static final int machineWordSize = bitsPerMachineWord ~/ 8;
   static final int platform = _platform();
   static final int architecture = _architecture();
+  /// The bit size of doubles.
+  ///
+  /// With IEEE double-precision floating-point numbers returns 64. On some
+  /// embedded devices [double]s are compiled to single-precision floats, in
+  /// which case the size is 32.
+  static final int bitsPerDouble = _bitsPerDouble();
 
   static int get errno => _errno();
 
@@ -75,6 +81,10 @@ abstract class Foreign {
   @dartino.native static int _bitsPerMachineWord() {
     throw new UnsupportedError('_bitsPerMachineWord');
   }
+  @dartino.native static int _bitsPerDouble() {
+    throw new UnsupportedError('_bitsPerDouble');
+  }
+
   @dartino.native static int _errno() {
     throw new UnsupportedError('_errno');
   }
@@ -123,6 +133,24 @@ class ForeignFunction extends Foreign {
       if (Foreign.errno != EINTR) break;
     }
     return value;
+  }
+
+  /// Returns a signed bit-representation of the given [float].
+  ///
+  /// Returns a 64-bit signed integer for double-precision numbers.
+  /// Returns a 32-bit signed integer for single-precision numbers.
+  ///
+  /// By using signed integers, the returned number is guaranteed to fit into
+  /// native words, if the floating-point size is smaller or equal to the
+  /// word size.
+  @dartino.native static int doubleToSignedBits(double float) {
+    throw new ArgumentError();
+  }
+
+  /// Returns the double corresponding to the given signed bit-representation
+  /// [bits].
+  @dartino.native static double signedBitsToDouble(int bits) {
+    throw new ArgumentError();
   }
 
   // Support for calling foreign functions that return

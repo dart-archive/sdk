@@ -33,6 +33,9 @@ main() {
   testImmutablePassing(true);
 
   testExternalFinalizer();
+
+  testDoubleBits();
+  testBitSizes();
 }
 
 checkOutOfBoundsThrows(function) {
@@ -653,4 +656,43 @@ void testExternalFinalizer() {
   Expect.equals(42, x[1023]);
 
   Expect.equals(1, check.icall$0());
+}
+
+void testDoubleBits() {
+  double roundTrip(x) {
+    return ForeignFunction.signedBitsToDouble(
+        ForeignFunction.doubleToSignedBits(x));
+  }
+
+  List doubleTests = [
+    0.0, 1.0, 2.0,
+    1.0000000000000002, 1.0000000000000004,
+    4.9406564584124654e-324, 2.2250738585072009e-308,
+    2.2250738585072014e-308, 1.7976931348623157e308,
+    double.NAN,
+    double.INFINITY,
+    3.402823466e38, 1.175494351e-38
+  ];
+
+  for (double d in doubleTests) {
+    Expect.identical(d, roundTrip(d));
+    Expect.identical(-d, roundTrip(-d));
+  }
+
+  Expect.throws(() => ForeignFunction.signedBitsToDouble("str"));
+  Expect.throws(() => ForeignFunction.signedBitsToDouble(null));
+  Expect.throws(() => ForeignFunction.signedBitsToDouble(true));
+  Expect.throws(() => ForeignFunction.signedBitsToDouble(5.0));
+
+  Expect.throws(() => ForeignFunction.doubleToSignedBits("str"));
+  Expect.throws(() => ForeignFunction.doubleToSignedBits(null));
+  Expect.throws(() => ForeignFunction.doubleToSignedBits(true));
+  Expect.throws(() => ForeignFunction.doubleToSignedBits(5));
+}
+
+void testBitSizes() {
+  int wordBitSize = Foreign.bitsPerMachineWord;
+  Expect.isTrue(wordBitSize == 32 || wordBitSize == 64);
+  int doubleBitSize = Foreign.bitsPerDouble;
+  Expect.isTrue(doubleBitSize == 32 || doubleBitSize == 64);
 }

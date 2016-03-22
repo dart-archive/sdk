@@ -54,9 +54,11 @@ typedef long long unsigned uint64;  // NOLINT
 #ifdef DARTINO_USE_SINGLE_PRECISION
 typedef float dartino_double;
 typedef uint32 dartino_double_as_uint;
+typedef int32 dartino_double_as_int;
 #else
 typedef double dartino_double;
 typedef uint64 dartino_double_as_uint;
+typedef int64 dartino_double_as_int;
 #endif
 
 // Byte sizes.

@@ -89,6 +89,11 @@ END_NATIVE()
 BEGIN_LEAF_NATIVE(ForeignBitsPerWord) { return Smi::FromWord(kBitsPerWord); }
 END_NATIVE()
 
+BEGIN_LEAF_NATIVE(ForeignBitsPerDouble) {
+  return Smi::FromWord(kBitsPerDartinoDouble);
+}
+END_NATIVE()
+
 BEGIN_LEAF_NATIVE(ForeignPlatform) { return Smi::FromWord(Platform::OS()); }
 END_NATIVE()
 
@@ -107,6 +112,35 @@ BEGIN_LEAF_NATIVE(ForeignConvertPort) {
   if (result->IsRetryAfterGCFailure()) return result;
   port->IncrementRef();
   return result;
+}
+END_NATIVE()
+
+BEGIN_LEAF_NATIVE(ForeignDoubleToSignedBits) {
+  if (!arguments[0]->IsDouble()) return Failure::wrong_argument_type();
+
+  dartino_double value = Double::cast(arguments[0])->value();
+  dartino_double_as_int result = bit_cast<dartino_double_as_int>(value);
+  if (Smi::IsValid(result)) return Smi::FromWord(result);
+  // The allocation of the integer might fail in which case the interpreter
+  // will do a GC and run this function again.
+  return process->NewInteger(result);
+}
+END_NATIVE()
+
+BEGIN_LEAF_NATIVE(ForeignSignedBitsToDouble) {
+  Object* object = arguments[0];
+  dartino_double_as_int bits;
+  if (object->IsSmi()) {
+    bits = static_cast<dartino_double_as_int>(Smi::cast(object)->value());
+  } else if (object->IsLargeInteger()) {
+    bits =
+        static_cast<dartino_double_as_int>(LargeInteger::cast(object)->value());
+  } else {
+    return Failure::wrong_argument_type();
+  }
+  // The allocation of the double might fail in which case the interpreter
+  // will do a GC and run this function again.
+  return process->NewDouble(bit_cast<dartino_double>(bits));
 }
 END_NATIVE()
 
