@@ -91,7 +91,7 @@ import '../verbs/infrastructure.dart' show
     IncrementalCompiler,
     WorkerConnection,
     IsolatePool,
-    Session,
+    DartinoVmContext,
     SharedTask,
     StreamIterator,
     throwFatalError;
@@ -132,7 +132,7 @@ import '../../debug_state.dart' as debug show
     RemoteObject,
     BackTrace;
 
-typedef Future<Null> ClientEventHandler(Session session);
+typedef Future<Null> ClientEventHandler(DartinoVmContext vmContext);
 
 Uri configFileUri;
 
@@ -233,7 +233,7 @@ Future<Null> startAndAttachViaAgent(Uri base, SessionState state) async {
   state.dartinoAgentVmId = vmData.id;
   String host = state.settings.deviceAddress.host;
   await attachToVm(host, vmData.port, state);
-  await state.session.disableVMStandardOutput();
+  await state.vmContext.disableVMStandardOutput();
 }
 
 Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
@@ -241,19 +241,19 @@ Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
   state.dartinoVm =
       await DartinoVm.start(dartinoVmPath, workingDirectory: base);
   await attachToVm(state.dartinoVm.host, state.dartinoVm.port, state);
-  await state.session.disableVMStandardOutput();
+  await state.vmContext.disableVMStandardOutput();
 }
 
 Future<Null> attachToVm(String host, int port, SessionState state) async {
   Socket socket = await connect(
       host, port, DiagnosticKind.socketVmConnectError, "vmSocket", state);
 
-  Session session = new Session(socket, state.compiler, state.stdoutSink,
-      state.stderrSink, null);
+  DartinoVmContext vmContext = new DartinoVmContext(
+      socket, state.compiler, state.stdoutSink, state.stderrSink, null);
 
   // Perform handshake with VM which validates that VM and compiler
   // have the same versions.
-  HandShakeResult handShakeResult = await session.handShake(dartinoVersion);
+  HandShakeResult handShakeResult = await vmContext.handShake(dartinoVersion);
   if (handShakeResult == null) {
     throwFatalError(DiagnosticKind.handShakeFailed, address: '$host:$port');
   }
@@ -263,14 +263,14 @@ Future<Null> attachToVm(String host, int port, SessionState state) async {
                     userInput: dartinoVersion,
                     additionalUserInput: handShakeResult.version);
   }
-  session.configuration = getConfiguration(handShakeResult.wordSize,
+  vmContext.configuration = getConfiguration(handShakeResult.wordSize,
       handShakeResult.dartinoDoubleSize);
 
   // Enable live editing to be able to communicate with VM when there are
   // errors.
-  await session.enableLiveEditing();
+  await vmContext.enableLiveEditing();
 
-  state.session = session;
+  state.vmContext = vmContext;
 }
 
 /// Create the new project directory and copy the specified template into it.
@@ -622,42 +622,42 @@ Future<int> run(
     List<String> arguments,
     {bool terminateDebugger: true}) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
-  Session session = state.session;
+  DartinoVmContext vmContext = state.vmContext;
 
   for (DartinoDelta delta in compilationResults) {
-    await session.applyDelta(delta);
+    await vmContext.applyDelta(delta);
   }
 
-  session.silent = true;
+  vmContext.silent = true;
 
-  await session.enableLiveEditing();
-  await session.spawnProcess(arguments);
-  var command = await session.debugRun();
+  await vmContext.enableLiveEditing();
+  await vmContext.spawnProcess(arguments);
+  var command = await vmContext.debugRun();
 
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
   if (command == null) {
-    await session.kill();
-    await session.shutdown();
+    await vmContext.kill();
+    await vmContext.shutdown();
     throwInternalError("No command received from Dartino VM");
   }
 
   Future printException() async {
-    if (!session.loaded) {
+    if (!vmContext.loaded) {
       print('### process not loaded, cannot print uncaught exception');
       return;
     }
-    debug.RemoteObject exception = await session.uncaughtException();
+    debug.RemoteObject exception = await vmContext.uncaughtException();
     if (exception != null) {
-      print(session.exceptionToString(exception));
+      print(vmContext.exceptionToString(exception));
     }
   }
 
   Future printTrace() async {
-    if (!session.loaded) {
+    if (!vmContext.loaded) {
       print("### process not loaded, cannot print stacktrace and code");
       return;
     }
-    debug.BackTrace stackTrace = await session.backTrace();
+    debug.BackTrace stackTrace = await vmContext.backTrace();
     if (stackTrace != null) {
       print(stackTrace.format());
       print(stackTrace.list(state));
@@ -697,12 +697,12 @@ Future<int> run(
     if (terminateDebugger) {
       await state.terminateSession();
     } else {
-      // If the session terminated due to a ConnectionError or the program
-      // finished don't reuse the state's session.
-      if (session.terminated) {
-        state.session = null;
+      // If the vmContext terminated due to a ConnectionError or the program
+      // finished don't reuse the state's vmContext.
+      if (vmContext.terminated) {
+        state.vmContext = null;
       }
-      session.silent = false;
+      vmContext.silent = false;
     }
   };
 
@@ -728,19 +728,19 @@ Future<ProgramInfo> getInfoFromSnapshotLocation(Uri snapshot) async {
 
 Future<int> export(SessionState state, Uri snapshot) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
-  Session session = state.session;
-  state.session = null;
+  DartinoVmContext vmContext = state.vmContext;
+  state.vmContext = null;
 
   for (DartinoDelta delta in compilationResults) {
-    await session.applyDelta(delta);
+    await vmContext.applyDelta(delta);
   }
 
-  var result = await session.createSnapshot(
+  var result = await vmContext.createSnapshot(
       snapshotPath: snapshot.toFilePath());
   if (result is ProgramInfoCommand) {
     ProgramInfoCommand snapshotResult = result;
 
-    await session.shutdown();
+    await vmContext.shutdown();
 
     ProgramInfo info =
         buildProgramInfo(compilationResults.last.system, snapshotResult);
@@ -777,27 +777,26 @@ Future<int> compileAndAttachToVmThen(
     assert(compilationResults != null);
   }
 
-  Session session = state.session;
-  if (session != null && session.loaded) {
-    // We cannot reuse a session that has already been loaded. Loading
+  DartinoVmContext vmContext = state.vmContext;
+  if (vmContext != null && vmContext.loaded) {
+    // We cannot reuse a vmContext that has already been loaded. Loading
     // currently implies that some of the code has been run.
     if (state.explicitAttach) {
       // If the user explicitly called 'dartino attach' we cannot
-      // create a new VM session since we don't know if the vm is
+      // create a new vmContext since we don't know if the vm is
       // running locally or remotely and if running remotely there
       // is no guarantee there is an agent to start a new vm.
       //
       // The UserSession is invalid in its current state as the
-      // vm session (aka. session in the code here) has already
-      // been loaded and run some code.
+      // vm context has already been loaded and run some code.
       throwFatalError(DiagnosticKind.sessionInvalidState,
           sessionName: state.name);
     }
     state.log('Cannot reuse existing VM session, creating new.');
     await state.terminateSession();
-    session = null;
+    vmContext = null;
   }
-  if (session == null) {
+  if (vmContext == null) {
     if (state.settings.deviceAddress != null) {
       await startAndAttachViaAgent(base, state);
       // TODO(wibling): read stdout from agent.
@@ -811,8 +810,8 @@ Future<int> compileAndAttachToVmThen(
           commandSender.sendStderr("$line\n");
         });
     }
-    session = state.session;
-    assert(session != null);
+    vmContext = state.vmContext;
+    assert(vmContext != null);
   }
 
   eventHandler ??= defaultClientEventHandler(state, commandIterator);
@@ -845,7 +844,7 @@ void setupClientInOut(
   state.attachCommandSender(commandSender);
 
   // Start event handling for input passed from the Dartino C++ client.
-  eventHandler(state.session);
+  eventHandler(state.vmContext);
 
   // Let the hub (main isolate) know that event handling has been started.
   commandSender.sendEventLoopStarted();
@@ -857,7 +856,7 @@ void setupClientInOut(
 ClientEventHandler defaultClientEventHandler(
     SessionState state,
     StreamIterator<ClientCommand> commandIterator) {
-  return (Session session) async {
+  return (DartinoVmContext vmContext) async {
     while (await commandIterator.moveNext()) {
       ClientCommand command = commandIterator.current;
       switch (command.code) {

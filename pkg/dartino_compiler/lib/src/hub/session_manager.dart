@@ -33,11 +33,11 @@ import '../../dartino_system.dart' show
 export '../../dartino_system.dart' show
     DartinoDelta;
 
-import '../../vm_session.dart' show
-    Session;
+import '../../vm_context.dart' show
+    DartinoVmContext;
 
-export '../../vm_session.dart' show
-    Session;
+export '../../vm_context.dart' show
+    DartinoVmContext;
 
 import '../../dartino_compiler.dart' show
     DartinoCompiler;
@@ -180,7 +180,7 @@ class SessionState {
 
   Uri script;
 
-  Session session;
+  DartinoVmContext vmContext;
 
   DartinoVm dartinoVm;
 
@@ -194,7 +194,8 @@ class SessionState {
 
   bool get hasRemoteVm => dartinoAgentVmId != null;
 
-  bool get colorsDisabled  => session == null ? false : session.colorsDisabled;
+  bool get colorsDisabled =>
+      vmContext == null ? false : vmContext.colorsDisabled;
 
   void addCompilationResult(DartinoDelta delta) {
     compilationResults.add(delta);
@@ -205,23 +206,23 @@ class SessionState {
   }
 
   Future terminateSession() async {
-    if (session != null) {
-      if (!session.terminated) {
+    if (vmContext != null) {
+      if (!vmContext.terminated) {
         bool done = false;
         Timer timer = new Timer(const Duration(seconds: 5), () {
             if (!done) {
               print("Timed out waiting for Dartino VM to shutdown; killing "
                   "session");
-              session.kill();
+              vmContext.kill();
             }
           });
-        await session.terminateSession();
+        await vmContext.terminate();
         done = true;
         timer.cancel();
       }
       explicitAttach = false;
     }
-    session = null;
+    vmContext = null;
   }
 
   void attachCommandSender(CommandSender sender) {

@@ -47,22 +47,6 @@ export '../hub/client_commands.dart' show
     ClientCommand;
 
 import '../hub/session_manager.dart' show
-    DartinoCompiler,
-    DartinoDelta,
-    IncrementalCompiler,
-    WorkerConnection,
-    Session,
-    SessionState,
-    UserSession,
-    currentSession;
-
-export '../hub/session_manager.dart' show
-    DartinoCompiler,
-    DartinoDelta,
-    IncrementalCompiler,
-    WorkerConnection,
-    Session,
-    SessionState,
     UserSession,
     currentSession;
 
@@ -70,14 +54,14 @@ export '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
-import '../hub/session_manager.dart' show
-    SessionState,
-    UserSession,
-    createSession;
-
 export '../hub/session_manager.dart' show
+    DartinoVmContext,
+    DartinoDelta,
+    DartinoCompiler,
+    IncrementalCompiler,
     SessionState,
     UserSession,
+    WorkerConnection,
     createSession;
 
 import '../hub/hub_main.dart' show
@@ -87,9 +71,6 @@ import '../hub/hub_main.dart' show
 export '../hub/hub_main.dart' show
     ClientConnection,
     IsolatePool;
-
-import '../hub/session_manager.dart' show
-    lookupSession; // Don't export this.
 
 import 'actions.dart' show
     Action;
@@ -103,8 +84,6 @@ import 'options.dart' show
 export 'options.dart' show
     Options;
 
-import 'documentation.dart' show
-    helpDocumentation;
 
 import '../guess_configuration.dart' show
     dartinoVersion;

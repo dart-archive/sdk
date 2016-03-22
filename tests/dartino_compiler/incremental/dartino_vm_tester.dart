@@ -47,8 +47,8 @@ import 'package:dartino_compiler/dartino_system.dart' show
 
 import 'package:dartino_compiler/vm_commands.dart' as commands_lib;
 
-import 'package:dartino_compiler/vm_session.dart' show
-    Session;
+import 'package:dartino_compiler/vm_context.dart' show
+    DartinoVmContext;
 
 import 'package:dartino_compiler/src/dartino_backend.dart' show
     DartinoBackend;
@@ -78,7 +78,7 @@ compileAndRun(
 }
 
 class DartinoVmTester extends IncrementalTestRunner {
-  TestSession session;
+  TestVmContext vmContext;
 
   DartinoVmTester(
       String testName,
@@ -88,8 +88,9 @@ class DartinoVmTester extends IncrementalTestRunner {
 
 
   Future<Null> run() async {
-    session = await TestSession.spawnVm(helper.compiler, testName: testName);
-    await super.run().catchError(session.handleError);
+    vmContext =
+        await TestVmContext.spawnVm(helper.compiler, testName: testName);
+    await super.run().catchError(vmContext.handleError);
     await waitForCompletion();
   }
 
@@ -99,11 +100,11 @@ class DartinoVmTester extends IncrementalTestRunner {
     if (isFirstProgram) {
       // Perform handshake with VM.
       HandShakeResult handShakeResult =
-          await session.handShake(dartinoVersion);
+          await vmContext.handShake(dartinoVersion);
       Expect.isTrue(handShakeResult.success, "Dartino VM version mismatch");
     }
 
-    CommitChangesResult result = await session.applyDelta(dartinoDelta);
+    CommitChangesResult result = await vmContext.applyDelta(dartinoDelta);
 
     if (!result.successful) {
       print("The CommitChanges() command was not successful: "
@@ -115,17 +116,17 @@ class DartinoVmTester extends IncrementalTestRunner {
 
     if (isFirstProgram) {
       // Turn on debugging.
-      await session.enableDebugger();
+      await vmContext.enableDebugger();
       // Spawn the process to run.
-      await session.spawnProcess([]);
+      await vmContext.spawnProcess([]);
       // Allow operations on internal frames.
-      await session.toggleInternal();
+      await vmContext.toggleInternal();
     }
 
     if (result.successful) {
       // Set breakpoint in main in case main was replaced.
       var breakpoints =
-          await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+          await vmContext.setBreakpoint(methodName: "main", bytecodeIndex: 0);
       for (var breakpoint in breakpoints) {
         print("Added breakpoint: $breakpoint");
       }
@@ -137,18 +138,18 @@ class DartinoVmTester extends IncrementalTestRunner {
       }
       if (isFirstProgram) {
         // Run the program to hit the breakpoint in main.
-        await session.debugRun();
+        await vmContext.debugRun();
       } else {
         // Restart the current frame to rerun main.
-        await session.restart();
+        await vmContext.restart();
       }
-      if (session.running) {
+      if (vmContext.running) {
         // Step out of main to finish execution of main.
-        await session.stepOut();
+        await vmContext.stepOut();
       }
 
       // Select the stack frame of callMain.
-      debug.BackTrace trace = await session.backTrace();
+      debug.BackTrace trace = await vmContext.backTrace();
       FunctionElement callMainElement =
           backend.dartinoSystemLibrary.findLocal("callMain");
       DartinoFunction callMain =
@@ -158,10 +159,10 @@ class DartinoVmTester extends IncrementalTestRunner {
               (debug.BackTraceFrame frame) => frame.function == callMain);
       int frame = trace.frames.indexOf(mainFrame);
       Expect.notEquals(1, frame);
-      session.selectFrame(frame);
+      vmContext.selectFrame(frame);
       print(trace.format());
 
-      List<String> actualMessages = session.stdoutSink.takeLines();
+      List<String> actualMessages = vmContext.stdoutSink.takeLines();
 
       List<String> messages = new List<String>.from(program.messages);
       if (program.hasCompileTimeError) {
@@ -193,13 +194,13 @@ class DartinoVmTester extends IncrementalTestRunner {
   Future<Null> tearDown() async {
     // If everything went fine, we will try finishing the execution and do a
     // graceful shutdown.
-    if (session.running) {
-      // The session is still alive. Run to completion.
+    if (vmContext.running) {
+      // The vmContext is still alive. Run to completion.
       var continueCommand = const commands_lib.ProcessContinue();
       print(continueCommand);
 
       // Wait for process termination.
-      VmCommand response = await session.runCommand(continueCommand);
+      VmCommand response = await vmContext.runCommand(continueCommand);
       if (response is! commands_lib.ProcessTerminated) {
         // TODO(ahe): It's probably an instance of
         // commands_lib.UncaughtException, and if so, we should try to print
@@ -208,8 +209,8 @@ class DartinoVmTester extends IncrementalTestRunner {
             "Expected ProcessTerminated, but got: $response");
       }
     }
-    await session.runCommand(const commands_lib.SessionEnd());
-    await session.shutdown();
+    await vmContext.runCommand(const commands_lib.SessionEnd());
+    await vmContext.shutdown();
   }
 
   Future<Null> waitForCompletion() async {
@@ -217,11 +218,11 @@ class DartinoVmTester extends IncrementalTestRunner {
     // normal test failures. This information is based on exitCode and we need
     // to propagate the exitCode back to test.dart, so we can have Fail/Crash
     // outcomes of these tests.
-    await session.waitForCompletion();
+    await vmContext.waitForCompletion();
 
-    int actualExitCode = await session.exitCode;
+    int actualExitCode = await vmContext.exitCode;
     // TODO(ahe): We should expect exit code 0, and instead be able to detect
-    // compile-time errors directly via the session.
+    // compile-time errors directly via the vmContext.
     int expectedExitCode = hasCompileTimeError
         ? DART_VM_EXITCODE_COMPILE_TIME_ERROR : 0;
     Expect.equals(
@@ -229,7 +230,7 @@ class DartinoVmTester extends IncrementalTestRunner {
   }
 }
 
-class TestSession extends Session {
+class TestVmContext extends DartinoVmContext {
   final Process process;
   final StreamIterator stdoutIterator;
   final Stream<String> stderr;
@@ -243,7 +244,7 @@ class TestSession extends Session {
   var lastError;
   var lastStackTrace;
 
-  TestSession(
+  TestVmContext(
       Socket vmSocket,
       IncrementalCompiler compiler,
       this.process,
@@ -269,8 +270,8 @@ class TestSession extends Session {
     print(s);
   }
 
-  /// Add [future] to this session.  All futures that can fail after calling
-  /// [waitForCompletion] must be added to the session.
+  /// Add [future] to this vmContext. All futures that can fail after calling
+  /// [waitForCompletion] must be added to the vmContext.
   void recordFuture(Future future) {
     future = future.catchError((error, stackTrace) {
       lastError = error;
@@ -344,7 +345,7 @@ class TestSession extends Session {
     });
   }
 
-  static Future<TestSession> spawnVm(
+  static Future<TestVmContext> spawnVm(
       IncrementalCompiler compiler,
       {String testName}) async {
     String vmPath = guessDartinoVm(null).toFilePath();
@@ -388,7 +389,7 @@ class TestSession extends Session {
     var vmSocket = await dartinoVm.connect();
     recordFuture("vmSocket", vmSocket.done);
 
-    TestSession session = new TestSession(
+    TestVmContext vmContext = new TestVmContext(
         vmSocket, compiler, dartinoVm.process,
         new StreamIterator(stdoutController.stream),
         stderrController.stream,
@@ -399,7 +400,7 @@ class TestSession extends Session {
       exitCodeCompleter.complete(exitCode);
     }));
 
-    return session;
+    return vmContext;
   }
 
   static Map<String, String> getProcessEnvironment(String testName) {

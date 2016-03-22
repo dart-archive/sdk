@@ -172,7 +172,7 @@ ClientEventHandler debugClientEventHandler(
     StreamController stdinController) {
   // TODO(zerny): Take the correct session explicitly because it will be cleared
   // later to ensure against possible reuse. Restructure the code to avoid this.
-  return (Session session) async {
+  return (DartinoVmContext vmContext) async {
     while (await commandIterator.moveNext()) {
       ClientCommand command = commandIterator.current;
       switch (command.code) {
@@ -187,7 +187,7 @@ ClientEventHandler debugClientEventHandler(
         case ClientCommandCode.Signal:
           int signalNumber = command.data;
           if (signalNumber == sigQuit) {
-            await session.interrupt();
+            await vmContext.interrupt();
           } else {
             handleSignal(state, signalNumber);
           }
@@ -256,8 +256,8 @@ Future<int> interactiveDebuggerTask(
     Uri base,
     StreamController stdinController,
     {Uri snapshotLocation}) async {
-  Session session = state.session;
-  if (session == null) {
+  DartinoVmContext vmContext = state.vmContext;
+  if (vmContext == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
   List<DartinoDelta> compilationResult = state.compilationResults;
@@ -265,14 +265,14 @@ Future<int> interactiveDebuggerTask(
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
 
-  // Make sure current state's session is not reused if invoked again.
-  state.session = null;
+  // Make sure current state's vmContext is not reused if invoked again.
+  state.vmContext = null;
 
   Stream<String> inputStream = stdinController.stream
       .transform(UTF8.decoder)
       .transform(new LineSplitter());
 
-  return await session.debug((Session _) => inputStream,
+  return await vmContext.debug((DartinoVmContext _) => inputStream,
       base,
       state,
       snapshotLocation: snapshotLocation);
@@ -346,25 +346,26 @@ class DebuggerTask extends SharedTask {
   }
 }
 
-Session attachToSession(SessionState state, CommandSender commandSender) {
-  Session session = state.session;
-  if (session == null) {
+DartinoVmContext attachToSession(
+    SessionState state, CommandSender commandSender) {
+  DartinoVmContext vmContext = state.vmContext;
+  if (vmContext == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
   state.attachCommandSender(commandSender);
-  return session;
+  return vmContext;
 }
 
 Future<int> runToMainDebuggerTask(
     CommandSender commandSender,
     SessionState state) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
-  Session session = state.session;
-  if (session == null) {
+  DartinoVmContext vmContext = state.vmContext;
+  if (vmContext == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
-  if (session.loaded) {
-    // We cannot reuse a session that has already been loaded. Loading
+  if (vmContext.loaded) {
+    // We cannot reuse a vm context that has already been loaded. Loading
     // currently implies that some of the code has been run.
     throwFatalError(DiagnosticKind.sessionInvalidState,
         sessionName: state.name);
@@ -375,14 +376,14 @@ Future<int> runToMainDebuggerTask(
 
   state.attachCommandSender(commandSender);
   for (DartinoDelta delta in compilationResults) {
-    await session.applyDelta(delta);
+    await vmContext.applyDelta(delta);
   }
 
-  await session.enableDebugger();
+  await vmContext.enableDebugger();
   // TODO(ahe): Add support for arguments when debugging.
-  await session.spawnProcess([]);
-  await session.setBreakpoint(methodName: "main", bytecodeIndex: 0);
-  await session.debugRun();
+  await vmContext.spawnProcess([]);
+  await vmContext.setBreakpoint(methodName: "main", bytecodeIndex: 0);
+  await vmContext.debugRun();
 
   return 0;
 }
@@ -390,12 +391,12 @@ Future<int> runToMainDebuggerTask(
 Future<int> backtraceDebuggerTask(
     CommandSender commandSender,
     SessionState state) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!session.loaded) {
+  if (!vmContext.loaded) {
     throwInternalError('### process not loaded, cannot show backtrace');
   }
-  BackTrace trace = await session.backTrace();
+  BackTrace trace = await vmContext.backTrace();
   print(trace.format());
 
   return 0;
@@ -404,16 +405,16 @@ Future<int> backtraceDebuggerTask(
 Future<int> continueDebuggerTask(
     CommandSender commandSender,
     SessionState state) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!session.running) {
+  if (!vmContext.running) {
     // TODO(ager, lukechurch): Fix error reporting.
     throwInternalError('### process not running, cannot continue');
   }
-  VmCommand response = await session.cont();
-  print(await session.processStopResponseToString(response, state));
+  VmCommand response = await vmContext.cont();
+  print(await vmContext.processStopResponseToString(response, state));
 
-  if (session.terminated) state.session = null;
+  if (vmContext.terminated) state.vmContext = null;
 
   return 0;
 }
@@ -423,7 +424,7 @@ Future<int> breakDebuggerTask(
     SessionState state,
     String breakpointSpecification,
     Uri base) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
   if (breakpointSpecification.contains('@')) {
     List<String> parts = breakpointSpecification.split('@');
@@ -445,7 +446,7 @@ Future<int> breakDebuggerTask(
     }
 
     List<Breakpoint> breakpoints =
-    await session.setBreakpoint(methodName: name, bytecodeIndex: index);
+    await vmContext.setBreakpoint(methodName: name, bytecodeIndex: index);
     for (Breakpoint breakpoint in breakpoints) {
       print("Breakpoint set: $breakpoint");
     }
@@ -466,11 +467,11 @@ Future<int> breakDebuggerTask(
       throwInternalError('Invalid line or column number');
     }
 
-    // TODO(ager): Refactor session so that setFileBreakpoint
+    // TODO(ager): Refactor VmContext so that setFileBreakpoint
     // does not print automatically but gives us information about what
     // happened.
     Breakpoint breakpoint =
-        await session.setFileBreakpoint(base.resolve(file), line, column);
+        await vmContext.setFileBreakpoint(base.resolve(file), line, column);
     if (breakpoint != null) {
       print("Breakpoint set: $breakpoint");
     } else {
@@ -479,7 +480,7 @@ Future<int> breakDebuggerTask(
     }
   } else {
     List<Breakpoint> breakpoints =
-        await session.setBreakpoint(
+        await vmContext.setBreakpoint(
             methodName: breakpointSpecification, bytecodeIndex: 0);
     for (Breakpoint breakpoint in breakpoints) {
       print("Breakpoint set: $breakpoint");
@@ -491,12 +492,12 @@ Future<int> breakDebuggerTask(
 
 Future<int> listDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!session.loaded) {
+  if (!vmContext.loaded) {
     throwInternalError('### process not loaded, nothing to list');
   }
-  BackTrace trace = await session.backTrace();
+  BackTrace trace = await vmContext.backTrace();
   if (trace == null) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Source listing failed');
@@ -508,12 +509,12 @@ Future<int> listDebuggerTask(
 
 Future<int> disasmDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!session.loaded) {
+  if (!vmContext.loaded) {
     throwInternalError('### process not loaded, nothing to disassemble');
   }
-  BackTrace trace = await session.backTrace();
+  BackTrace trace = await vmContext.backTrace();
   if (trace == null) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Bytecode disassembly failed');
@@ -525,7 +526,7 @@ Future<int> disasmDebuggerTask(
 
 Future<int> frameDebuggerTask(
     CommandSender commandSender, SessionState state, String frame) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
   int frameNumber = int.parse(frame, onError: (_) => -1);
   if (frameNumber == -1) {
@@ -533,7 +534,7 @@ Future<int> frameDebuggerTask(
     throwInternalError('Invalid frame number');
   }
 
-  bool frameSelected = await session.selectFrame(frameNumber);
+  bool frameSelected = await vmContext.selectFrame(frameNumber);
   if (!frameSelected) {
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Frame selection failed');
@@ -544,7 +545,7 @@ Future<int> frameDebuggerTask(
 
 Future<int> deleteBreakpointDebuggerTask(
     CommandSender commandSender, SessionState state, String breakpoint) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
   int id = int.parse(breakpoint, onError: (_) => -1);
   if (id == -1) {
@@ -552,7 +553,7 @@ Future<int> deleteBreakpointDebuggerTask(
     throwInternalError('Invalid breakpoint id: $breakpoint');
   }
 
-  Breakpoint bp = await session.deleteBreakpoint(id);
+  Breakpoint bp = await vmContext.deleteBreakpoint(id);
   if (bp == null) {
     throwInternalError('Invalid breakpoint id: $id');
   }
@@ -562,8 +563,8 @@ Future<int> deleteBreakpointDebuggerTask(
 
 Future<int> listBreakpointsDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  List<Breakpoint> breakpoints = session.breakpoints();
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  List<Breakpoint> breakpoints = vmContext.breakpoints();
   if (breakpoints == null || breakpoints.isEmpty) {
     print('No breakpoints');
   } else {
@@ -577,34 +578,34 @@ Future<int> listBreakpointsDebuggerTask(
 
 Future<int> stepDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  if (!session.running) {
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  if (!vmContext.running) {
     throwInternalError(
         '### process not running, cannot step to next expression');
   }
-  VmCommand response = await session.step();
-  print(await session.processStopResponseToString(response, state));
+  VmCommand response = await vmContext.step();
+  print(await vmContext.processStopResponseToString(response, state));
   return 0;
 }
 
 Future<int> stepOverDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  if (!session.running) {
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  if (!vmContext.running) {
     throwInternalError('### process not running, cannot go to next expression');
   }
-  VmCommand response = await session.stepOver();
-  print(await session.processStopResponseToString(response, state));
+  VmCommand response = await vmContext.stepOver();
+  print(await vmContext.processStopResponseToString(response, state));
   return 0;
 }
 
 Future<int> fibersDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  if (!session.running) {
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  if (!vmContext.running) {
     throwInternalError('### process not running, cannot show fibers');
   }
-  List<BackTrace> traces = await session.fibers();
+  List<BackTrace> traces = await vmContext.fibers();
   print('');
   for (int fiber = 0; fiber < traces.length; ++fiber) {
     print('fiber $fiber');
@@ -615,79 +616,79 @@ Future<int> fibersDebuggerTask(
 
 Future<int> finishDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  if (!session.running) {
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  if (!vmContext.running) {
     throwInternalError('### process not running, cannot finish method');
   }
-  VmCommand response = await session.stepOut();
-  print(await session.processStopResponseToString(response, state));
+  VmCommand response = await vmContext.stepOut();
+  print(await vmContext.processStopResponseToString(response, state));
   return 0;
 }
 
 Future<int> restartDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  if (!session.loaded) {
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  if (!vmContext.loaded) {
     throwInternalError('### process not loaded, cannot restart');
   }
-  BackTrace trace = await session.backTrace();
+  BackTrace trace = await vmContext.backTrace();
   if (trace == null) {
     throwInternalError("### cannot restart when nothing is executing.");
   }
   if (trace.length <= 1) {
     throwInternalError("### cannot restart entry frame.");
   }
-  VmCommand response = await session.restart();
-  print(await session.processStopResponseToString(response, state));
+  VmCommand response = await vmContext.restart();
+  print(await vmContext.processStopResponseToString(response, state));
   return 0;
 }
 
 Future<int> apply(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  await session.applyDelta(state.compilationResults.last);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  await vmContext.applyDelta(state.compilationResults.last);
   return 0;
 }
 
 Future<int> stepBytecodeDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  if (!session.running) {
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  if (!vmContext.running) {
     throwInternalError('### process not running, cannot step bytecode');
   }
-  VmCommand response = await session.stepBytecode();
+  VmCommand response = await vmContext.stepBytecode();
   assert(response != null);  // stepBytecode cannot return null
-  print(await session.processStopResponseToString(response, state));
+  print(await vmContext.processStopResponseToString(response, state));
   return 0;
 }
 
 Future<int> stepOverBytecodeDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  if (!session.running) {
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  if (!vmContext.running) {
     throwInternalError('### process not running, cannot step over bytecode');
   }
-  VmCommand response = await session.stepOverBytecode();
+  VmCommand response = await vmContext.stepOverBytecode();
   assert(response != null);  // stepOverBytecode cannot return null
-  print(await session.processStopResponseToString(response, state));
+  print(await vmContext.processStopResponseToString(response, state));
   return 0;
 }
 
 Future<int> printDebuggerTask(
     CommandSender commandSender, SessionState state, String name) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
   RemoteObject variable;
   if (name.startsWith("*")) {
     name = name.substring(1);
-    variable = await session.processVariableStructure(name);
+    variable = await vmContext.processVariableStructure(name);
   } else {
-    variable = await session.processVariable(name);
+    variable = await vmContext.processVariable(name);
   }
   if (variable == null) {
     print('### No such variable: $name');
   } else {
-    print(session.remoteObjectToString(variable));
+    print(vmContext.remoteObjectToString(variable));
   }
 
   return 0;
@@ -695,13 +696,13 @@ Future<int> printDebuggerTask(
 
 Future<int> printAllDebuggerTask(
     CommandSender commandSender, SessionState state) async {
-  Session session = attachToSession(state, commandSender);
-  List<RemoteObject> variables = await session.processAllVariables();
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
+  List<RemoteObject> variables = await vmContext.processAllVariables();
   if (variables.isEmpty) {
     print('### No variables in scope');
   } else {
     for (RemoteObject variable in variables) {
-      print(session.remoteObjectToString(variable));
+      print(vmContext.remoteObjectToString(variable));
     }
   }
   return 0;
@@ -709,14 +710,14 @@ Future<int> printAllDebuggerTask(
 
 Future<int> toggleDebuggerTask(
     CommandSender commandSender, SessionState state, String argument) async {
-  Session session = attachToSession(state, commandSender);
+  DartinoVmContext vmContext = attachToSession(state, commandSender);
 
   if (argument != 'internal') {
     // TODO(ager, lukechurch): Fix error reporting.
     throwInternalError("Invalid argument to toggle. "
                        "Valid arguments: 'internal'.");
   }
-  await session.toggleInternal();
+  await vmContext.toggleInternal();
 
   return 0;
 }

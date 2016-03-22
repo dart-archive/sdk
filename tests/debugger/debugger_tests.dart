@@ -50,8 +50,8 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
       "compile");
 
   await startAndAttachDirectly(state, Uri.base);
-  state.session.hideRawIds = true;
-  state.session.colorsDisabled = true;
+  state.vmContext.hideRawIds = true;
+  state.vmContext.colorsDisabled = true;
 
   List<int> output = <int>[];
 
@@ -67,7 +67,7 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
     }
   }
 
-  testDebugCommandStream(Session session) async* {
+  testDebugCommandStream(DartinoVmContext session) async* {
     yield 't verbose';
     yield 'b main';
     yield 'r';
@@ -76,10 +76,10 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
     }
   };
 
-  int result = await state.session.debug(
+  int result = await state.vmContext.debug(
       debuggerCommands.isEmpty
         ? testDebugCommandStream
-        : (Session _) => new Stream.fromIterable(debuggerCommands),
+        : (DartinoVmContext _) => new Stream.fromIterable(debuggerCommands),
       Uri.base,
       state,
       echo: true);

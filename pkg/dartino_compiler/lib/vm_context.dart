@@ -55,7 +55,7 @@ part 'input_handler.dart';
 
 /// Encapsulates a TCP connection to a running dartino-vm and provides a
 /// [VmCommand] based view on top of it.
-class DartinoVmSession {
+class DartinoVmContext {
   /// The outgoing connection to the dartino-vm.
   final StreamSink<List<int>> _outgoingSink;
 
@@ -91,17 +91,47 @@ class DartinoVmSession {
 
   VmCommand connectionError = new ConnectionError("Connection is closed", null);
 
-  DartinoVmSession(Socket vmSocket,
-                  Sink<List<int>> stdoutSink,
-                  Sink<List<int>> stderrSink)
-      : _outgoingSink = vmSocket,
+  final IncrementalCompiler compiler;
+  final Future processExitCodeFuture;
+
+  DebugState debugState;
+  DartinoSystem dartinoSystem;
+  bool loaded = false;
+  bool running = false;
+  bool terminated = false;
+
+  /// The configuration of the vm connected to this session.
+  Configuration configuration;
+
+  /// `true` if the vm connected to this session is running from a snapshot.
+  bool runningFromSnapshot;
+
+  /// The hash of the snapshot in the vm connected to this session.
+  ///
+  /// Only valid if [runningFromSnapshot].
+  int snapshotHash;
+
+  ProgramInfo info;
+
+  DartinoVmContext(Socket dartinoVmSocket,
+          this.compiler,
+          Sink<List<int>> stdoutSink,
+          Sink<List<int>> stderrSink,
+          [this.processExitCodeFuture])
+      : _outgoingSink = dartinoVmSocket,
         this.stdoutSink = stdoutSink,
         this.stderrSink = stderrSink,
-        _done = vmSocket.done,
-        _commandReader = new VmCommandReader(vmSocket, stdoutSink, stderrSink) {
+        _done = dartinoVmSocket.done,
+        _commandReader =
+            new VmCommandReader(dartinoVmSocket, stdoutSink, stderrSink) {
     _done.catchError((_, __) {}).then((_) {
       _connectionIsDead = true;
     });
+
+    // We send many small packages, so use no-delay.
+    dartinoVmSocket.setOption(SocketOption.TCP_NODELAY, true);
+    // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
+    debugState = new DebugState(this);
   }
 
   void writeStdout(String s) {
@@ -125,8 +155,8 @@ class DartinoVmSession {
     if (commands.any((VmCommand c) => c.numberOfResponsesExpected == null)) {
       throw new ArgumentError(
           'The runComands() method will read response commands and therefore '
-          'needs to know how many to read. One of the given commands does'
-          'not specify how many commands the response will have.');
+              'needs to know how many to read. One of the given commands does'
+              'not specify how many commands the response will have.');
     }
 
     VmCommand lastResponse;
@@ -151,7 +181,7 @@ class DartinoVmSession {
     if (_connectionIsDead) {
       throw new StateError(
           'Trying to send command ${command} to dartino-vm, but '
-          'the connection is already closed.');
+              'the connection is already closed.');
     }
     command.addTo(_outgoingSink);
   }
@@ -164,9 +194,9 @@ class DartinoVmSession {
 
     _drainedIncomingCommands = !await _commandReader.iterator.moveNext()
         .catchError((error, StackTrace trace) {
-          connectionError = new ConnectionError(error, trace);
-          return false;
-        });
+      connectionError = new ConnectionError(error, trace);
+      return false;
+    });
 
     if (_drainedIncomingCommands && force) {
       return connectionError;
@@ -189,7 +219,7 @@ class DartinoVmSession {
         await kill();
         throw new StateError(
             "Got unexpected command from dartino-vm during shutdown "
-            "($response)");
+                "($response)");
       }
     }
 
@@ -214,43 +244,6 @@ class DartinoVmSession {
       await value.catchError((_) {});
     }
     _drainedIncomingCommands = true;
-  }
-}
-
-/// Extends a bare [DartinoVmSession] with debugging functionality.
-class Session extends DartinoVmSession {
-  final IncrementalCompiler compiler;
-  final Future processExitCodeFuture;
-
-  DebugState debugState;
-  DartinoSystem dartinoSystem;
-  bool loaded = false;
-  bool running = false;
-  bool terminated = false;
-
-  /// The configuration of the vm connected to this session.
-  Configuration configuration;
-
-  /// `true` if the vm connected to this session is running from a snapshot.
-  bool runningFromSnapshot;
-
-  /// The hash of the snapshot in the vm connected to this session.
-  ///
-  /// Only valid if [runningFromSnapshot].
-  int snapshotHash;
-
-  ProgramInfo info;
-
-  Session(Socket dartinoVmSocket,
-          this.compiler,
-          Sink<List<int>> stdoutSink,
-          Sink<List<int>> stderrSink,
-          [this.processExitCodeFuture])
-      : super(dartinoVmSocket, stdoutSink, stderrSink) {
-    // We send many small packages, so use no-delay.
-    dartinoVmSocket.setOption(SocketOption.TCP_NODELAY, true);
-    // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
-    debugState = new DebugState(this);
   }
 
   Future applyDelta(DartinoDelta delta) async {
@@ -320,7 +313,7 @@ class Session extends DartinoVmSession {
   }
 
   Future<int> debug(
-      Stream<String> inputLines(Session session),
+      Stream<String> inputLines(DartinoVmContext session),
       Uri base,
       SessionState state,
       {bool echo: false,
@@ -362,7 +355,7 @@ class Session extends DartinoVmSession {
     return new InputHandler(this, inputLines(this), echo, base).run(state);
   }
 
-  Future terminateSession() async {
+  Future terminate() async {
     await runCommand(const SessionEnd());
     if (processExitCodeFuture != null) await processExitCodeFuture;
     await shutdown();
@@ -384,7 +377,7 @@ class Session extends DartinoVmSession {
         running = false;
         loaded = false;
         // TODO(ahe): Let the caller terminate the session. See issue 67.
-        await terminateSession();
+        await terminate();
         break;
 
       case VmCommandCode.ConnectionError:
