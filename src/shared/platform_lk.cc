@@ -151,10 +151,6 @@ int Platform::GetLocalTimeZoneOffset() {
 int Platform::GetLastError() { return 0; }
 void Platform::SetLastError(int value) { }
 
-// Constants used for mmap.
-static const int kMmapFd = -1;
-static const int kMmapFdOffset = 0;
-
 VirtualMemory::VirtualMemory(int size) : size_(size) {}
 
 VirtualMemory::~VirtualMemory() {}
@@ -196,18 +192,9 @@ char* Platform::GetEnv(const char* name) { return NULL; }
 
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
-static uword heap_start = 0;
-static uword heap_size = 0;
-
 void* Platform::AllocatePages(uword size, int arenas) {
   size = Utils::RoundUp(size, PAGE_SIZE);
-  // TODO(erikcorry): When LK is upgraded to allow passing the arenas argument
-  // to page_alloc, we can add it back here.
-  void* memory = page_alloc(size >> PAGE_SIZE_SHIFT);
-  if (memory !=NULL) {
-    ASSERT(reinterpret_cast<uword>(memory) >= heap_start);
-    ASSERT(reinterpret_cast<uword>(memory) + size <= heap_start + heap_size);
-  }
+  void* memory = page_alloc(size >> PAGE_SIZE_SHIFT, arenas);
   return memory;
 }
 
@@ -215,7 +202,6 @@ void Platform::FreePages(void* address, uword size) {
   page_free(address, size >> PAGE_SIZE_SHIFT);
 }
 
-#ifdef LK_NOT_READY_YET
 int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
                                   int number_of_ranges) {
   const int kRanges = 4;
@@ -229,32 +215,6 @@ int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
   }
   return i;
 }
-#else
-// TODO(erikcorry): Remove this hacky version that is a stop-gap until LK has
-// the API we need.
-int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
-                                  int number_of_ranges) {
-  // Allocate a page, and assume that all allocations will be near this
-  // allocation.
-  void* memory = page_alloc(1);
-  heap_start = reinterpret_cast<uword>(memory) - 128 * KB;
-  if (heap_start > reinterpret_cast<uword>(memory)) heap_start = 0;
-  ranges[0].size = heap_size = 512 * KB;
-  ranges[0].address = reinterpret_cast<void*>(heap_start);
-  // See to-do above: Hacky way to determine if we are on a big system.
-  for (int big = 1 << 8; big < 1 << 18; big <<= 1) {
-    void* memory2 = page_alloc(big);
-    if (memory2 == NULL) break;
-    ranges[0].size = heap_size = big << (PAGE_SIZE_SHIFT + 1);
-    uword new_address = heap_start - (big << (PAGE_SIZE_SHIFT - 1));
-    ranges[0].address =
-        reinterpret_cast<void*>(new_address < heap_start ? new_address : 0);
-    page_free(memory2, big);
-  }
-  page_free(memory, 1);
-  return 1;
-}
-#endif
 
 }  // namespace dartino
 
