@@ -287,11 +287,21 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     throwFatalError(DiagnosticKind.missingToFile);
   }
 
-  if (!action.allowsTrailing) {
-    if (trailing != null) {
-      throwFatalError(
-          DiagnosticKind.extraArguments, userInput: trailing.join(' '));
+  if (!action.allowsTrailing && trailing != null) {
+    // If there are extra arguments but missing 'for NAME'
+    // then user probably forgot to specify a target
+    if (action.requiresForName && forName == null) {
+      if (action.requiresTarget && target is NamedTarget) {
+        if (target.name == "for") {
+          // TODO(danrubel) generalize this to remove action specific code
+          // throwFatalError(DiagnosticKind.missingTarget,
+          //     requiredTarget: action.requiredTarget);
+          throwFatalError(DiagnosticKind.missingProjectPath);
+        }
+      }
     }
+    throwFatalError(
+        DiagnosticKind.extraArguments, userInput: trailing.join(' '));
   }
 
   TargetKind requiredTarget = action.requiredTarget;
@@ -366,10 +376,6 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     }
   } else if (action.requiresSession) {
     sessionName = currentSession;
-  } else if (action.requiresTargetProject &&
-      target is NamedTarget &&
-      target.name == null) {
-    throwFatalError(DiagnosticKind.missingProjectPath);
   } else if (action.requiresTargetSession &&
       target is NamedTarget &&
       target.name == null) {

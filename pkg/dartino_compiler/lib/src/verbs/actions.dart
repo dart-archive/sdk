@@ -72,10 +72,6 @@ class Action {
   /// True if this verb needs "for NAME".
   final bool requiresForName;
 
-  /// True if this verb requires a project target or a session target
-  /// (that is, "project <directory>").
-  final bool requiresTargetProject;
-
   /// True if this verb requires a session target (that is, "session NAME"
   /// without "in").
   final bool requiresTargetSession;
@@ -104,22 +100,16 @@ class Action {
        this.requiresToUri: false,
        this.requiresForName: false,
        this.allowsTrailing: false,
-       bool requiresTargetProject: false,
        bool requiresTargetSession: false,
        TargetKind requiredTarget,
        bool requiresTarget: false,
        this.supportedTargets,
        this.supportsWithUri: false})
-      : this.requiresTargetProject = requiresTargetProject,
-        this.requiresTargetSession = requiresTargetSession,
+      : this.requiresTargetSession = requiresTargetSession,
         this.requiredTarget = requiresTargetSession
-          ? TargetKind.SESSION
-          : requiresTargetProject
-            ? TargetKind.PROJECT
-            : requiredTarget,
+          ? TargetKind.SESSION : requiredTarget,
         requiresTarget = !identical(requiredTarget, null) ||
     requiresTarget ||
-    requiresTargetProject ||
     requiresTargetSession;
 }
 

@@ -25,8 +25,8 @@ import 'documentation.dart' show
 import 'infrastructure.dart';
 
 const Action createProjectAction = const Action(
-    performCreateProject, createDocumentation, requiresTargetProject: true,
-    requiresForName: true);
+    performCreateProject, createDocumentation,
+    requiresForName: true, requiredTarget: TargetKind.PROJECT);
 
 const Action createSessionAction = const Action(
     performCreateSession, createDocumentation, requiresTargetSession: true,
@@ -44,6 +44,9 @@ Future<int> performCreateProject(
     AnalyzedSentence sentence, VerbContext context) async {
   // Determine the new project location
   String projectPath = sentence.targetName;
+  if (projectPath == null) {
+    throwFatalError(DiagnosticKind.missingProjectPath);
+  }
   Uri projectUri = sentence.base.resolve(projectPath);
   var type = await FileSystemEntity.typeSync(projectUri.toFilePath());
   if (type != FileSystemEntityType.NOT_FOUND) {
