@@ -350,9 +350,6 @@ class ClientConnection {
   /// Updated by [parseArguments].
   AnalyzedSentence sentence;
 
-  /// Path to the dartino VM. Updated by [parseArguments].
-  String dartinoVm;
-
   ClientConnection(this.socket, this.log);
 
   /// Stream of commands from the Dartino C++ client to the hub (main isolate).
@@ -468,12 +465,7 @@ class ClientConnection {
     Options options = Options.parse(arguments);
     Sentence sentence =
         parseSentence(options.nonOptionArguments, includesProgramName: true);
-    // [programName] is the canonicalized absolute path to the dartino
-    // executable (the C++ program).
-    String programName = sentence.programName;
-    String dartinoVm = "$programName-vm";
     this.sentence = analyzeSentence(sentence, options);
-    this.dartinoVm = dartinoVm;
     return this.sentence;
   }
 

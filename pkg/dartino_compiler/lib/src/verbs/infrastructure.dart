@@ -100,7 +100,7 @@ AnalyzedSentence helpSentence(String message) {
   Action contextHelp = new Action(printHelp, null);
   return new AnalyzedSentence(
       new Verb("?", contextHelp), null, null, null, null, null, null,
-      null, null, null, null, null);
+      null, null, null, null);
 }
 
 AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
@@ -391,10 +391,8 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     }
   }
 
-  Uri programName =
-      sentence.programName == null ? null : fileUri(sentence.programName, base);
   return new AnalyzedSentence(
-      verb, target, targetName, trailing, sessionName, base, programName,
+      verb, target, targetName, trailing, sessionName, base,
       targetUri, toUri, withUri, forName, options);
 }
 
@@ -445,8 +443,6 @@ class AnalyzedSentence {
   /// The current working directory of the C++ client.
   final Uri base;
 
-  final Uri programName;
-
   /// Value of 'file NAME' converted to a Uri (main target, no preposition).
   final Uri targetUri;
 
@@ -468,7 +464,6 @@ class AnalyzedSentence {
       this.trailing,
       this.sessionName,
       this.base,
-      this.programName,
       this.targetUri,
       this.toTargetUri,
       this.withUri,

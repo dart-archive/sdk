@@ -72,9 +72,7 @@ class SentenceParser {
     }
     return new Sentence(
         verb, prepositions, targets, trailing,
-        version, currentDirectory, programName,
-        // TODO(ahe): Get rid of the following argument:
-        tokens.originalInput.skip(2).toList());
+        version, currentDirectory);
   }
 
   Verb parseVerb() {
@@ -476,13 +474,7 @@ class Sentence {
   /// The current directory of the C++ client.
   final String currentDirectory;
 
-  // TODO(ahe): Get rid of this.
-  final String programName;
-
   final String version;
-
-  // TODO(ahe): Get rid of this.
-  final List<String> arguments;
 
   const Sentence(
       this.verb,
@@ -490,9 +482,7 @@ class Sentence {
       this.targets,
       this.trailing,
       this.version,
-      this.currentDirectory,
-      this.programName,
-      this.arguments);
+      this.currentDirectory);
 
   String toString() => "Sentence($verb, $prepositions, $targets)";
 }
