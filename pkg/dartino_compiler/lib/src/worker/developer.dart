@@ -1220,11 +1220,11 @@ Future<int> downloadTools(
 
   Version version = parseVersion(dartinoVersion);
   if (version.isEdgeVersion) {
-    print("WARNING: For bleeding edge a fixed image is used.");
     // For edge versions download use a well known version for now.
-    var knownVersion = "0.3.0-edge.8882725ac178ac8c9834c7ea8f88a8a8dd6cb4db";
-    gcsBucket = "dartino-temporary";
-    gcsPath = "channels/be/raw/$knownVersion/sdk";
+    var knownVersion = "0.3.0-dev.5.2";
+    print("WARNING: For bleeding edge tools from version "
+          "$knownVersion is used.");
+    gcsPath = "channels/dev/raw/$knownVersion/sdk";
   } else if (version.isDevVersion) {
     // TODO(sgjesse): Change this to channels/dev/release at some point.
     gcsPath = "channels/dev/raw/$version/sdk";
