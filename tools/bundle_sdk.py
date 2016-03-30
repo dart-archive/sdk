@@ -243,7 +243,8 @@ def CopyArm(bundle_dir):
 def CopySTM(bundle_dir):
   libraries = [
       'libdartino.a',
-      'libdisco_dartino.a']
+      'libdisco_dartino.a',
+      'libstm32f746g-discovery.a' ]
   disco = join(bundle_dir, 'platforms', 'stm32f746g-discovery')
   lib_dir = join(disco, 'lib')
   makedirs(lib_dir)

@@ -13,6 +13,7 @@
 #include "include/static_ffi.h"
 
 #include "platforms/stm/disco_dartino/src/device_manager_api.h"
+#include "platforms/stm/disco_dartino/src/ethernet.h"
 #include "platforms/stm/disco_dartino/src/page_alloc.h"
 
 static UartDriver uart1;
@@ -91,6 +92,13 @@ void LCDDrawLine(
   // BSP_LCD_DrawLine takes uint16_t arguments.
   BSP_LCD_DrawLine(x1, y1, x2, y2);
 }
+
+DARTINO_EXPORT_STATIC_RENAME(initialize_network_stack, InitializeNetworkStack)
+DARTINO_EXPORT_STATIC_RENAME(is_network_up, IsNetworkUp)
+DARTINO_EXPORT_STATIC_RENAME(get_ethernet_adapter_status,
+                             GetEthernetAdapterStatus)
+DARTINO_EXPORT_STATIC_RENAME(get_network_address_configuration,
+                             GetNetworkAddressConfiguration)
 
 DARTINO_EXPORT_STATIC_RENAME(lcd_height, BSP_LCD_GetYSize)
 DARTINO_EXPORT_STATIC_RENAME(lcd_width, BSP_LCD_GetXSize)

@@ -8,12 +8,13 @@
 #include <cmsis_os.h>
 #include <stm32f7xx_hal.h>
 
-#include <cinttypes>
+#include <inttypes.h>
 
 #include "FreeRTOSIPConfig.h"
-#include "platforms/stm/disco_dartino/src/device_manager.h"
-#include "src/shared/platform.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct NetworkParameters {
   uint8_t ipAddress[4];
@@ -21,10 +22,15 @@ struct NetworkParameters {
   uint8_t gatewayAddress[4];
   uint8_t DNSServerAddress[4];
 };
+typedef struct NetworkParameters NetworkParameters;
 
 void GetNetworkAddressConfiguration(NetworkParameters * parameters);
 BaseType_t InitializeNetworkStack(NetworkParameters const * parameters);
 uint8_t IsNetworkUp();
 uint32_t GetEthernetAdapterStatus();
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_ETHERNET_H_

@@ -106,23 +106,16 @@
         'generated_path': 'generated',
         'template_path': 'template',
         'common_cflags': [
-          # Our target will link in the stm files which do have a few warnings.
+          # Our target will link in the CMSIS-RTOS files which do have a few warnings.
           '-Wno-write-strings',
           '-Wno-sign-compare',
           '-Wno-missing-field-initializers',
-        ],
-        'common_cflags_cc': [
-          '-Wno-literal-suffix',
         ],
       },
       'type': 'static_library',
       'standalone_static_library': 1,
       'includes': [
         '../free_rtos_sources.gypi',
-        '../hal_sources.gypi',
-      ],
-      'defines': [
-        'DATA_IN_ExtSDRAM',  # Avoid BSP_LDC_Init initializing SDRAM.
       ],
       'include_dirs': [
         '<(generated_path)/Inc',
@@ -130,10 +123,6 @@
       ],
       'sources': [
         # Application.
-        '<(source_path)/button_driver.cc',
-        '<(source_path)/button_driver.h',
-        '<(source_path)/circular_buffer.cc',
-        '<(source_path)/circular_buffer.h',
         '<(source_path)/cmpctmalloc.c',
         '<(source_path)/cmpctmalloc.h',
         '<(source_path)/device_manager.h',
@@ -146,16 +135,79 @@
         '<(source_path)/main.cc',
         '<(source_path)/page_allocator.cc',
         '<(source_path)/page_allocator.h',
-        '<(source_path)/uart_driver.cc',
-        '<(source_path)/uart_driver.h',
-        '<(source_path)/ethernet.cc',
 
         '<(source_path)/syscalls.c',
 
         '<(source_path)/exceptions.c',
 
+        # Buffer allocation scheme.
+        '<(free_rtos_plus_tcp)/portable/BufferManagement/BufferAllocation_2.c',
+      ],
+      'conditions': [
+        ['OS=="linux"', {
+          'cflags': [
+            '<@(common_cflags)',
+          ],
+        }],
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'OTHER_CFLAGS': [
+              '<@(common_cflags)',
+            ],
+            'OTHER_CPLUSPLUSFLAGS' : [
+              '<@(common_cflags)',
+            ],
+          },
+        }],
+      ],
+    },
+    {
+      'target_name': 'libstm32f746g-discovery',
+      'variables': {
+        'source_path': 'src',
+        'generated_path': 'generated',
+        'template_path': 'template',
+        'common_cflags': [
+          # Our target will link in the stm files which do have a few warnings.
+          '-Wno-write-strings',
+          '-Wno-sign-compare',
+          '-Wno-missing-field-initializers',
+        ],
+        'common_cflags_cc': [
+          '-Wno-literal-suffix',
+        ],
+        'free_rtos_plus_tcp':
+          '<(freertos)/freertos_labs/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/',
+      },
+      'type': 'static_library',
+      'standalone_static_library': 1,
+      'includes': [
+        '../hal_sources.gypi',
+      ],
+      'defines': [
+        'DATA_IN_ExtSDRAM',  # Avoid BSP_LDC_Init initializing SDRAM.
+      ],
+      'include_dirs': [
+        '<(generated_path)/Inc',
+        '<(source_path)',
+        '<(free_rtos_plus_tcp)/include',
+        '<(free_rtos_plus_tcp)/portable/Compiler/GCC/',
+      ],
+      'sources': [
         # Board initialization.
         '<(source_path)/board.c',
+
+        # Device drivers.
+        '<(source_path)/button_driver.cc',
+        '<(source_path)/button_driver.h',
+        '<(source_path)/circular_buffer.cc',
+        '<(source_path)/circular_buffer.h',
+        '<(source_path)/uart_driver.cc',
+        '<(source_path)/uart_driver.h',
+
+        # Network driver.
+        '<(source_path)/network_interface.c',
+        '<(source_path)/ethernet.cc',
 
         # Generated files.
         '<(generated_path)/Inc/mxconstants.h',
@@ -176,12 +228,6 @@
 
         # Additional utilities.
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
-
-        # Network driver.
-        '<(source_path)/network_interface.c',
-
-        # Buffer allocation scheme.
-        '<(free_rtos_plus_tcp)/portable/BufferManagement/BufferAllocation_2.c',
       ],
       'conditions': [
         ['OS=="linux"', {
@@ -209,6 +255,7 @@
       'target_name': 'disco_dartino.elf',
       'dependencies': [
         'libdisco_dartino',
+        'libstm32f746g-discovery',
         'disco_dartino_dart_program.o',
         '../../../src/vm/vm.gyp:libdartino',
       ],

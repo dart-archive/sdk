@@ -65,6 +65,7 @@ fi
 # The static libraries to link with.
 LIB1="$LIB_DIR/libdartino.a"
 LIB2="$LIB_DIR/libdisco_dartino.a"
+LIB3="$LIB_DIR/libstm32f746g-discovery.a"
 
 # Paths to to gcc and objcopy.
 TOOLCHAIN_PREFIX="$TOOLCHAIN_DIR/bin/arm-none-eabi-"
@@ -111,6 +112,7 @@ echo "Linking application"
 "$OBJ_FILE" \
 "$LIB1" \
 "$LIB2" \
+"$LIB3" \
 -Wl,--end-group \
 -lstdc++ \
 -Wl,--no-whole-archive
