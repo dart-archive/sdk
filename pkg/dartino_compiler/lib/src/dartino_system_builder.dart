@@ -936,6 +936,7 @@ class DartinoSystemBuilder extends DartinoSystemBase {
       DartinoFunction function = predecessorSystem.lookupFunctionById(user);
       if (function == null) continue;
       if (lookupFunctionBuilderByElement(function.element) != null) continue;
+      if (_removedFunctions.contains(function)) continue;
 
       bool constantsChanged = false;
       List<DartinoConstant> constants = function.constants.toList();

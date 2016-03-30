@@ -12,7 +12,7 @@ debugger/break_in_anonymous_function_test: Fail # Issue 444
 
 debugger/break_in_loop_test: Fail # Issue 446
 
-# Received PushFromMap command which referes to a non-existent map entry
+# Received PushFromMap command which refers to a non-existent map entry
 incremental/experimental/same_tokens_variant: Fail
 
 # Update to existing class not correctly detected (we end up trying to modify a
@@ -46,6 +46,7 @@ incremental/production/hello_world: IncrementalCompilationFailed
 incremental/production/instance_field_end: IncrementalCompilationFailed
 incremental/production/instance_field_middle: IncrementalCompilationFailed
 incremental/production/interceptor_classes: IncrementalCompilationFailed
+incremental/production/invalidate_method_with_optional_parameters: IncrementalCompilationFailed
 incremental/production/main_args: IncrementalCompilationFailed
 incremental/production/modify_static_method: IncrementalCompilationFailed
 incremental/production/multiple_libraries: IncrementalCompilationFailed

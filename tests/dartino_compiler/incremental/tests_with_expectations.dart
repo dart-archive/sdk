@@ -875,7 +875,32 @@ main() {
 
 ''',
 
-r'''
+  r'''
+invalidate_method_with_optional_parameters
+==> main.dart.patch <==
+// Test that we can introduce a change that causes a method with optional
+// parameters to be recompiled.
+
+class A {
+  m([a="a"]) => print("v1");
+}
+
+class B extends A {
+<<<< "v1"
+  m([a="a"]) => null;
+==== "v1"
+>>>>
+}
+
+main() {
+  new B();
+  new A().m();
+}
+
+
+''',
+
+  r'''
 remove_instance_method
 ==> main.dart.patch <==
 // Test that deleting an instance method works

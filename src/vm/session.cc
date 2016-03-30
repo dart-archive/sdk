@@ -1548,7 +1548,7 @@ void Session::PushFromMap(int map_index, int64 id) {
   if (!entry_exists && !has_program_update_error_) {
     has_program_update_error_ = true;
     program_update_error_ =
-        "Received PushFromMap command which referes to a "
+        "Received PushFromMap command which refers to a "
         "non-existent map entry.";
   }
   Push(object);
