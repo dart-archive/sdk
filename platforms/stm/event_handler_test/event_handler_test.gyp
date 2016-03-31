@@ -147,6 +147,7 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_lcd.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
+        '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_ts.c',
 
         # Additional utilities.
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',

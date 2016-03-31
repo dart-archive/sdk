@@ -7,6 +7,7 @@ library stm32f746g;
 import 'package:gpio/gpio.dart';
 import 'package:stm32f746g_disco/gpio.dart';
 import 'package:stm32f746g_disco/lcd.dart';
+import 'package:stm32f746g_disco/ts.dart';
 import 'package:stm32f746g_disco/uart.dart';
 import 'package:stm32f746g_disco/src/stm32f7_constants.dart';
 
@@ -27,6 +28,7 @@ class STM32F746GDiscovery {
   STM32F7Gpio _gpio;
   Uart _uart;
   FrameBuffer _frameBuffer;
+  TouchScreen _touchScreen;
 
   STM32F746GDiscovery();
 
@@ -49,5 +51,13 @@ class STM32F746GDiscovery {
       _frameBuffer = new FrameBuffer();
     }
     return _frameBuffer;
+  }
+
+  TouchScreen get touchScreen {
+    if (_touchScreen == null) {
+      _touchScreen =
+        new TouchScreen.init(frameBuffer.width, frameBuffer.height);
+    }
+    return _touchScreen;
   }
 }

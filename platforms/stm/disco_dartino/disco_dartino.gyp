@@ -9,6 +9,7 @@
       '<(stm32_cube_f7)/Drivers/CMSIS/Device/ST/STM32F7xx/Include/',
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
       '<(stm32_cube_f7)/Drivers/BSP/Components/Common/',
+      '<(stm32_cube_f7)/Drivers/BSP/Components/ft5336/',
       '<(stm32_cube_f7)/Middlewares/ST/STemWin/Config/',
       '<(stm32_cube_f7)/Middlewares/ST/STemWin/inc/',
       '<(stm32_cube_f7)/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/',
@@ -225,8 +226,10 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_lcd.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
+        '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_ts.c',
 
         # Additional utilities.
+        '<(stm32_cube_f7)/Drivers/BSP/Components/ft5336/ft5336.c',
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
       ],
       'conditions': [

@@ -7,6 +7,7 @@
 #include <stm32f7xx_hal.h>
 #include <stm32746g_discovery_lcd.h>
 #include <stm32746g_discovery_sdram.h>
+#include <stm32746g_discovery_ts.h>
 
 #include <lcd_log.h>
 
@@ -125,6 +126,9 @@ DARTINO_EXPORT_STATIC_RENAME(lcd_draw_circle, BSP_LCD_DrawCircle)
 DARTINO_EXPORT_STATIC_RENAME(lcd_set_foreground_color, BSP_LCD_SetTextColor)
 DARTINO_EXPORT_STATIC_RENAME(lcd_set_background_color, BSP_LCD_SetBackColor)
 DARTINO_EXPORT_STATIC_RENAME(lcd_display_string, BSP_LCD_DisplayStringAt)
+
+DARTINO_EXPORT_STATIC_RENAME(ts_init, BSP_TS_Init)
+DARTINO_EXPORT_STATIC_RENAME(ts_getState, BSP_TS_GetState)
 
 extern int InitializeBoard() {
   // Configure the MPU attributes as Write Through.
