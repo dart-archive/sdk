@@ -35,23 +35,38 @@ void MX_SDMMC1_SD_Init(void);
 void MX_SPDIFRX_Init(void);
 void MX_USART1_UART_Init(void);
 
+static void FillCachableWriteThrough(MPU_Region_InitTypeDef* mpu_init_struct) {
+  mpu_init_struct->AccessPermission = MPU_REGION_FULL_ACCESS;
+  mpu_init_struct->IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  mpu_init_struct->IsCacheable = MPU_ACCESS_CACHEABLE;
+  mpu_init_struct->IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+  mpu_init_struct->TypeExtField = MPU_TEX_LEVEL0;
+  mpu_init_struct->SubRegionDisable = 0x00;
+  mpu_init_struct->DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+}
+
 static void ConfigureMPU() {
+  MPU_Region_InitTypeDef MPU_InitStruct;
+  uint8_t region_number = 0;
+
   // Disable the MPU for configuration.
   HAL_MPU_Disable();
 
-  // Configure the MPU attributes as write-through for SRAM.
-  MPU_Region_InitTypeDef MPU_InitStruct;
+  // Configure the MPU attributes cachable and write-through for SRAM.
   MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.Number = region_number++;
   MPU_InitStruct.BaseAddress = 0x20010000;
   MPU_InitStruct.Size = MPU_REGION_SIZE_256KB;
-  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
-  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
-  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.SubRegionDisable = 0x00;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+  FillCachableWriteThrough(&MPU_InitStruct);
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  // Configure the MPU attributes cachable and write-through for SDRAM.
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.Number = region_number++;
+  MPU_InitStruct.BaseAddress = 0xc0000000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_8MB;
+  FillCachableWriteThrough(&MPU_InitStruct);
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);
 
