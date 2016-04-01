@@ -17,11 +17,11 @@ typedef _Arity3(x, y, z);
 // native external methods. This is necessary, because the native-binding
 // mechanism requires a class-name when it looks up native functions.
 abstract class ForeignConversion {
-  // Helper for converting the argument to a machine word or double.
-  static dynamic convert(argument) {
-    if (argument is int || argument is double) return argument;
+  // Helper for converting the argument to a machine word.
+  static int convert(argument) {
     if (argument is Foreign) return argument.address;
     if (argument is Port) return convertPort(argument);
+    if (argument is int) return argument;
     throw new ArgumentError();
   }
 

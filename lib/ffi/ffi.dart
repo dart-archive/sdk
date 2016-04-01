@@ -70,7 +70,7 @@ abstract class Foreign {
     return _removeFinalizer(fn.address);
   }
 
-  dynamic _convert(argument) => ForeignConversion.convert(argument);
+  int _convert(argument) => ForeignConversion.convert(argument);
 
   @dartino.native static int _bitsPerMachineWord() {
     throw new UnsupportedError('_bitsPerMachineWord');

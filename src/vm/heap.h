@@ -326,23 +326,10 @@ class GenerationalScavengeVisitor : public PointerVisitor {
 
 // Read [object] as an integer word value.
 //
-// [object] must be either a Smi, a LargeInteger or a double.
-//
-// If the word size is 32, then the LargeInteger conversion may truncate the
-// input.
-//
-// The conversion from dartino-double to word is truncating, if the word size
-// is not at least the size of a dartino-double. This happens on x86 where the
-// word size is 32 bits, but doubles are 64 bits.
+// [object] must be either a Smi or a LargeInteger.
 inline word AsForeignWord(Object* object) {
-  if (object->IsSmi()) return Smi::cast(object)->value();
-  if (object->IsLargeInteger()) return LargeInteger::cast(object)->value();
-  dartino_double value = Double::cast(object)->value();
-#if DARTINO_USE_SINGLE_PRECISION
-  return bit_cast<int32>(value);
-#else
-  return static_cast<word>(bit_cast<int64>(value));
-#endif
+  return object->IsSmi() ? Smi::cast(object)->value()
+                         : LargeInteger::cast(object)->value();
 }
 
 // Read [object] as an integer int64 value.
