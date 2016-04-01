@@ -5,9 +5,6 @@
 library stm32f746g.ethernet;
 
 import 'dart:dartino.ffi';
-import 'dart:typed_data';
-import 'dart:dartino.os';
-import 'dart:dartino';
 
 final _initializeNetwork =
   ForeignLibrary.main.lookup("initialize_network_stack");
@@ -16,18 +13,23 @@ final _getEthernetAdapterStatus =
   ForeignLibrary.main.lookup("get_ethernet_adapter_status");
 final _getNetworkAddressConfiguration =
   ForeignLibrary.main.lookup("get_network_address_configuration");
+final _lookupHost = ForeignLibrary.main.lookup("network_lookup_host");
 
 Ethernet ethernet = new Ethernet._internal();
 
 // TODO(karlklose): use the one in os.dart?
 class InternetAddress {
   final List<int> bytes;
+
   const InternetAddress(this.bytes);
+
   toString() => bytes.join('.');
+
   static final InternetAddress localhost =
     const InternetAddress(const <int>[127, 0, 0, 1]);
 }
 
+// TODO(karlklose): rename to internet, ipStack, ...?
 class Ethernet {
   Ethernet._internal();
 
@@ -65,6 +67,23 @@ class Ethernet {
       return _initialized;
     } finally {
       configuration.free();
+    }
+  }
+
+  InternetAddress lookup(String name) {
+    ForeignMemory string = new ForeignMemory.fromStringAsUTF8(name);
+    ForeignMemory address = new ForeignMemory.allocated(4);
+    try {
+      int success = _lookupHost.icall$2(string.address, address.address);
+      if (success == 0) {
+        return null;
+      }
+      List<int> bytes = new List<int>(4);
+      address.copyBytesToList(bytes, 0, 4, 0);
+      return new InternetAddress(bytes);
+    } finally {
+      string.free();
+      address.free();
     }
   }
 
@@ -113,7 +132,7 @@ abstract class NetworkInterface {
       }
       ethernet._eth = new _NetworkInterface(
           _NetworkInterface.ETH_INTERFACE_INDEX,
-          "LAN8720A",
+          "eth0",
           <InternetAddress>[address]);
     }
     if (ethernet._lo == null) {
@@ -122,7 +141,8 @@ abstract class NetworkInterface {
           "lo",
           <InternetAddress>[InternetAddress.localhost]);
     }
-    return isUp ? <NetworkInterface>[ethernet._lo, ethernet._eth]
+    return isUp
+      ? <NetworkInterface>[ethernet._lo, ethernet._eth]
       : <NetworkInterface>[ethernet._lo];
   }
 

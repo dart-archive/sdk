@@ -65,7 +65,7 @@ extern UBaseType_t uxRand();
 
 #define ipconfigMAX_ARP_AGE 150
 
-#define ipconfigINCLUDE_FULL_INET_ADDR 0
+#define ipconfigINCLUDE_FULL_INET_ADDR 1
 
 #if (ipconfigZERO_COPY_RX_DRIVER != 0)
 #define ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS (25 + 6)

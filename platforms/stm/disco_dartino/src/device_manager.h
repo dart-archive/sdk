@@ -18,6 +18,8 @@ class Device {
   enum Type {
     UART_DEVICE = 0,
     BUTTON_DEVICE = 1,
+    // TODO(karlklose): IO endpoints are not really devices.
+    SOCKET_DEVICE = 2,
   };
 
   Device(const char* name, Type type) :
@@ -51,8 +53,6 @@ class Device {
   Port *GetPort();
 
   void SetPort(Port *port);
-
-  void SetHandle(int handle);
 
   int device_id() const { return device_id_; }
   void set_device_id(int device_id) { device_id_ = device_id; }
@@ -153,6 +153,8 @@ class DeviceManager {
   void DeviceSetFlags(uintptr_t device_id, uint32_t flags);
   void DeviceClearFlags(uintptr_t device_id, uint32_t flags);
 
+  uintptr_t RegisterDevice(Device* device);
+
   // Register a UART driver with the given device name.
   void RegisterUartDevice(const char* name, UartDriver* driver);
 
@@ -162,7 +164,11 @@ class DeviceManager {
   int OpenUart(const char* name);
   int OpenButton(const char* name);
 
+  int CreateSocket();
+  void RemoveSocket(int handle);
+
   Device* GetDevice(int handle);
+  void RemoveDevice(Device* device);
   UartDevice* GetUart(int handle);
   ButtonDevice* GetButton(int handle);
 
@@ -177,6 +183,10 @@ class DeviceManager {
 
   Device* LookupDevice(const char* name, Device::Type type);
 
+  uintptr_t FindFreeDeviceSlot();
+
+  void RegisterFreeDeviceSlot(int handle);
+
   Vector<Device*> devices_ = Vector<Device*>();
 
   osMessageQId mail_queue_;
@@ -184,6 +194,10 @@ class DeviceManager {
   static DeviceManager *instance_;
 
   Mutex* mutex_;
+
+  // The smallest index of a free ("NULL") slot in devices_ or kIllegalDeviceId
+  // if there is no such slot.
+  uintptr_t next_free_slot_;
 };
 
 }  // namespace dartino

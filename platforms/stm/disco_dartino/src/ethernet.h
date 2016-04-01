@@ -5,10 +5,9 @@
 #ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_ETHERNET_H_
 #define PLATFORMS_STM_DISCO_DARTINO_SRC_ETHERNET_H_
 
-#include <cmsis_os.h>
-#include <stm32f7xx_hal.h>
-
 #include <inttypes.h>
+
+#include <cmsis_os.h>
 
 #include "FreeRTOSIPConfig.h"
 
@@ -22,12 +21,14 @@ struct NetworkParameters {
   uint8_t gatewayAddress[4];
   uint8_t DNSServerAddress[4];
 };
+
 typedef struct NetworkParameters NetworkParameters;
 
 void GetNetworkAddressConfiguration(NetworkParameters * parameters);
 BaseType_t InitializeNetworkStack(NetworkParameters const * parameters);
 uint8_t IsNetworkUp();
 uint32_t GetEthernetAdapterStatus();
+uint32_t LookupHost(const char *host, uint32_t *result);
 
 #ifdef __cplusplus
 }  // extern "C"

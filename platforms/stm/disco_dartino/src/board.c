@@ -15,6 +15,7 @@
 
 #include "platforms/stm/disco_dartino/src/device_manager_api.h"
 #include "platforms/stm/disco_dartino/src/ethernet.h"
+#include "platforms/stm/disco_dartino/src/socket.h"
 #include "platforms/stm/disco_dartino/src/page_alloc.h"
 
 static UartDriver uart1;
@@ -136,6 +137,33 @@ DARTINO_EXPORT_STATIC_RENAME(get_ethernet_adapter_status,
                              GetEthernetAdapterStatus)
 DARTINO_EXPORT_STATIC_RENAME(get_network_address_configuration,
                              GetNetworkAddressConfiguration)
+
+DARTINO_EXPORT_STATIC_RENAME(create_socket,
+                             FreeRTOS_socket)
+DARTINO_EXPORT_STATIC_RENAME(socket_connect,
+                             SocketConnect)
+DARTINO_EXPORT_STATIC_RENAME(network_register_socket,
+                             RegisterSocket)
+DARTINO_EXPORT_STATIC_RENAME(network_close_socket,
+                             FreeRTOS_closesocket)
+DARTINO_EXPORT_STATIC_RENAME(network_lookup_host,
+                             LookupHost)
+DARTINO_EXPORT_STATIC_RENAME(socket_send,
+                             FreeRTOS_send)
+DARTINO_EXPORT_STATIC_RENAME(socket_recv,
+                             FreeRTOS_recv)
+DARTINO_EXPORT_STATIC_RENAME(socket_available,
+                             FreeRTOS_recvcount)
+DARTINO_EXPORT_STATIC_RENAME(socket_close,
+                             FreeRTOS_closesocket)
+DARTINO_EXPORT_STATIC_RENAME(socket_unregister,
+                             UnregisterAndCloseSocket)
+DARTINO_EXPORT_STATIC_RENAME(socket_shutdown,
+                             FreeRTOS_shutdown)
+DARTINO_EXPORT_STATIC_RENAME(socket_reset_flags,
+                             ResetSocketFlags)
+DARTINO_EXPORT_STATIC_RENAME(socket_listen_for_event,
+                             ListenForSocketEvent)
 
 DARTINO_EXPORT_STATIC_RENAME(lcd_height, BSP_LCD_GetYSize)
 DARTINO_EXPORT_STATIC_RENAME(lcd_width, BSP_LCD_GetXSize)

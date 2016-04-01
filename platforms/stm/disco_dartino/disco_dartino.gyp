@@ -141,7 +141,7 @@
 
         '<(source_path)/exceptions.c',
 
-        # Buffer allocation scheme.
+        # Buffer allocation scheme for IP stack.
         '<(free_rtos_plus_tcp)/portable/BufferManagement/BufferAllocation_2.c',
       ],
       'conditions': [
@@ -209,6 +209,7 @@
         # Network driver.
         '<(source_path)/network_interface.c',
         '<(source_path)/ethernet.cc',
+        '<(source_path)/socket.cc',
 
         # Generated files.
         '<(generated_path)/Inc/mxconstants.h',

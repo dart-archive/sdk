@@ -58,7 +58,8 @@ void Device::SetPort(Port *port) {
   port_ = port;
 }
 
-DeviceManager::DeviceManager() : mutex_(new Mutex()) {
+DeviceManager::DeviceManager() : mutex_(new Mutex()),
+                                 next_free_slot_(kIllegalDeviceId) {
   osMessageQDef(device_event_queue, kMailQSize, int);
   mail_queue_ = osMessageCreate(osMessageQ(device_event_queue), NULL);
 }
@@ -84,23 +85,49 @@ void DeviceManager::DeviceClearFlags(uintptr_t device_id, uint32_t flags) {
   device->ClearFlags(flags);
 }
 
+// Return the index of the first free slot in the list of devices to be used for
+// a new device.
+//
+// If there is no free slot in the exisiting list of devices, this function will
+// add a new slot and return its index.
+uintptr_t DeviceManager::FindFreeDeviceSlot() {
+  if (next_free_slot_ != kIllegalDeviceId) {
+    ASSERT(next_free_slot_ < devices_.size() &&
+           devices_[next_free_slot_] == NULL);
+    uintptr_t slot = next_free_slot_;
+    // Update the invariant of next_free_slot_.
+    next_free_slot_ = kIllegalDeviceId;
+    for (uintptr_t i = slot + 1; i < devices_.size(); ++i) {
+      if (devices_[i] == NULL) {
+        next_free_slot_ = i;
+        break;
+      }
+    }
+    return slot;
+  } else {
+    // Invariant: there is no free slot in devices_.
+    devices_.PushBack(NULL);
+    return devices_.size() - 1;
+  }
+}
+
+uintptr_t DeviceManager::RegisterDevice(Device* device) {
+  ScopedLock locker(mutex_);
+  uintptr_t device_id = FindFreeDeviceSlot();
+  devices_[device_id] = device;
+  device->set_device_id(device_id);
+  return device_id;
+}
+
 void DeviceManager::RegisterUartDevice(const char* name, UartDriver* driver) {
   UartDevice* device = new UartDevice(name, driver);
-  ScopedLock locker(mutex_);
-  devices_.PushBack(device);
-  uintptr_t device_id = devices_.size() - 1;
-  driver->device_id = device_id;
-  device->set_device_id(device_id);
+  driver->device_id = RegisterDevice(device);
 }
 
 void DeviceManager::RegisterButtonDevice(const char* name,
                                          ButtonDriver* driver) {
   ButtonDevice* device = new ButtonDevice(name, driver);
-  ScopedLock locker(mutex_);
-  devices_.PushBack(device);
-  uintptr_t device_id = devices_.size() - 1;
-  driver->device_id = device_id;
-  device->set_device_id(device_id);
+  driver->device_id = RegisterDevice(device);
 }
 
 Device* DeviceManager::LookupDevice(const char* name, Device::Type type) {
@@ -141,9 +168,34 @@ int DeviceManager::OpenButton(const char* name) {
   return device->device_id();
 }
 
+int DeviceManager::CreateSocket() {
+  Device* device = new Device("socket", Device::SOCKET_DEVICE);
+  return RegisterDevice(device);
+}
+
+void DeviceManager::RemoveSocket(int handle) {
+  RemoveDevice(devices_[handle]);
+}
+
+void DeviceManager::RegisterFreeDeviceSlot(int handle) {
+  if (next_free_slot_ == kIllegalDeviceId || handle < next_free_slot_) {
+    next_free_slot_ = handle;
+  }
+}
+
+void DeviceManager::RemoveDevice(Device *device) {
+  ScopedLock locker(mutex_);
+  int handle = device->device_id();
+  device->set_device_id(kIllegalDeviceId);
+  devices_[handle] = NULL;
+  RegisterFreeDeviceSlot(handle);
+}
+
 Device* DeviceManager::GetDevice(int handle) {
   ScopedLock locker(mutex_);
-  return devices_[handle];
+  Device *device = devices_[handle];
+  ASSERT(device != NULL);
+  return device;
 }
 
 UartDevice* DeviceManager::GetUart(int handle) {
@@ -159,5 +211,4 @@ ButtonDevice* DeviceManager::GetButton(int handle) {
 int DeviceManager::SendMessage(int handle) {
   return osMessagePut(mail_queue_, static_cast<uint32_t>(handle), 0);
 }
-
 }  // namespace dartino
