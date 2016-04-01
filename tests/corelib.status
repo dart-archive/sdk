@@ -181,7 +181,8 @@ nan_infinity_test/01: RuntimeError
 nan_infinity_test/none: RuntimeError
 num_sign_test: Pass, Crash
 regexp/global_test: Fail, RuntimeError, Pass
-regexp/regexp_test: Crash
+# Out of memory: https://github.com/dartino/sdk/issues/464
+regexp/regexp_test: Crash, Timeout
 string_fromcharcodes_test: Crash
 toInt_test: RuntimeError
 uri_base_test: Crash
