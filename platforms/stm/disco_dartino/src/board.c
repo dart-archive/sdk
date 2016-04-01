@@ -36,6 +36,16 @@ void MX_SDMMC1_SD_Init(void);
 void MX_SPDIFRX_Init(void);
 void MX_USART1_UART_Init(void);
 
+static void FillNotAccessible(MPU_Region_InitTypeDef* mpu_init_struct) {
+  mpu_init_struct->AccessPermission = MPU_REGION_NO_ACCESS;
+  mpu_init_struct->IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  mpu_init_struct->IsCacheable = MPU_ACCESS_CACHEABLE;
+  mpu_init_struct->IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+  mpu_init_struct->TypeExtField = MPU_TEX_LEVEL0;
+  mpu_init_struct->SubRegionDisable = 0x00;
+  mpu_init_struct->DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+}
+
 static void FillCachableWriteThrough(MPU_Region_InitTypeDef* mpu_init_struct) {
   mpu_init_struct->AccessPermission = MPU_REGION_FULL_ACCESS;
   mpu_init_struct->IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
@@ -52,6 +62,17 @@ static void ConfigureMPU() {
 
   // Disable the MPU for configuration.
   HAL_MPU_Disable();
+
+  // Configure addresses 0x00000000 - 0x08000000 as not
+  // accessible. Currently there is no use of the 16kb ITCM-RAM at
+  // address 0x00000000.
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.Number = region_number++;
+  MPU_InitStruct.BaseAddress = 0x00000000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_128MB;
+  FillNotAccessible(&MPU_InitStruct);
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
 
   // Configure the MPU attributes cachable and write-through for SRAM.
   MPU_InitStruct.Enable = MPU_REGION_ENABLE;
