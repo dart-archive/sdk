@@ -4,6 +4,7 @@
 
 import 'dart:dartino.ffi';
 import 'dart:dartino';
+import 'dart:typed_data';
 import "package:expect/expect.dart";
 import "package:isolate/isolate.dart";
 
@@ -35,6 +36,7 @@ main() {
   testExternalFinalizer();
 
   testDoubleBits();
+  testDoubleConversion();
   testBitSizes();
 
   testCallbacksFromC();
@@ -695,6 +697,52 @@ void testDoubleBits() {
   Expect.throws(() => ForeignFunction.doubleToSignedBits(null));
   Expect.throws(() => ForeignFunction.doubleToSignedBits(true));
   Expect.throws(() => ForeignFunction.doubleToSignedBits(5));
+}
+
+void testDoubleConversion() {
+  // We assume that there is a ffi_test_library library build.
+  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
+  ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
+
+  var echoFun = fl.lookup('echoWord');
+
+  int echo(x) {
+    // We can't use `icall` since that truncates the return value to a C `int`.
+    return echoFun.pcall$1(x).address;
+  }
+
+  List doubleTests = [
+    0.0, 1.0, 2.0,
+    1.0000000000000002, 1.0000000000000004,
+    4.9406564584124654e-324, 2.2250738585072009e-308,
+    2.2250738585072014e-308, 1.7976931348623157e308,
+    double.NAN,
+    double.INFINITY,
+    3.402823466e38, 1.175494351e-38
+  ];
+
+  int typedListLeastSignificantBitsOf(double d) {
+    var float64List = new Float64List(1);
+    float64List[0] = d;
+    return float64List.buffer.asUint32List()[
+        Endianness.HOST_ENDIAN == Endianness.BIG_ENDIAN ? 1 : 0];
+  }
+
+  for (double d in doubleTests) {
+    var bits = echo(d);
+    var negatedBits = echo(-d);
+
+    if (Foreign.bitsPerMachineWord >= Foreign.bitsPerDouble) {
+      Expect.identical(d, ForeignFunction.signedBitsToDouble(bits));
+      Expect.identical(-d, ForeignFunction.signedBitsToDouble(negatedBits));
+    } else {
+      Expect.equals(32, Foreign.bitsPerMachineWord);
+      Expect.equals(64, Foreign.bitsPerDouble);
+      int mask = (1 << Foreign.bitsPerMachineWord) - 1;
+      Expect.equals(typedListLeastSignificantBitsOf(d), bits & mask);
+      Expect.equals(typedListLeastSignificantBitsOf(-d), negatedBits & mask);
+    }
+  }
 }
 
 void testBitSizes() {

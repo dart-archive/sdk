@@ -404,3 +404,7 @@ void* trampoline3(void* f, void* x, void* y, void* z) {
   void* result = ((Arity3)f)(x, y, z);
   return result;
 }
+
+void* echoWord(void* x) {
+  return x;
+}
