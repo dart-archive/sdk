@@ -328,26 +328,6 @@ class HeapObject : public Object {
   // Returns the true address of this object.
   inline uword address() const { return reinterpret_cast<uword>(this) - kTag; }
 
-  // Mark the object as reachable. Used during garbage collection.
-  inline void SetMark() {
-    uword klass = reinterpret_cast<uword>(raw_class());
-    ASSERT((klass & kMarkBit) == 0);
-    set_class(reinterpret_cast<Class*>(klass | kMarkBit));
-  }
-
-  // Clear the mark bit used for garbage collection.
-  inline void ClearMark() {
-    uword klass = reinterpret_cast<uword>(raw_class());
-    ASSERT((klass & HeapObject::kMarkBit) != 0);
-    set_class(reinterpret_cast<Class*>(klass & ~kMarkBit));
-  }
-
-  // Is the mark bit set for this object.
-  inline bool IsMarked() {
-    uword klass = reinterpret_cast<uword>(raw_class());
-    return (klass & kMarkBit) != 0;
-  }
-
   // Retrieve the object format from the class.
   inline InstanceFormat format();
 
@@ -355,10 +335,6 @@ class HeapObject : public Object {
   static const int kTag = 1;
   static const int kTagSize = 2;
   static const uword kTagMask = (1 << kTagSize) - 1;
-
-  // We use the second-least significant bit in the class pointer to
-  // mark heap objects during mark-sweep garbage collection.
-  static const int kMarkBit = 2;
 
   // Casting.
   static inline HeapObject* cast(Object* obj);
@@ -1326,7 +1302,7 @@ class HeapObjectVisitor {
   // object visitor visits all heap objects in a chunk in order
   // calling Visit on each of them. When it reaches the end of the
   // chunk it calls ChunkEnd.
-  virtual void ChunkEnd(uword end) {}
+  virtual void ChunkEnd(Chunk* chunk, uword end) {}
   // Notification that we are about to iterate over a chunk.
   virtual void ChunkStart(Chunk* chunk) {}
 };

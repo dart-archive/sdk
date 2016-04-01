@@ -504,11 +504,9 @@ void Program::PerformSharedGarbageCollection() {
   SweepingVisitor sweeping_visitor(old_space);
   old_space->IterateObjects(&sweeping_visitor);
 
-  new_space->Flush();
-  // We don't pass a free list so this visitor just clears the mark bits
-  // without making free list entries.
-  SweepingVisitor newspace_visitor(NULL);
-  new_space->IterateObjects(&newspace_visitor);
+  // These are only needed during the mark phase, we can clear them without
+  // looking at them.
+  new_space->ClearMarkBits();
 
   for (auto process : process_list_) process->UpdateStackLimit();
 
@@ -1084,10 +1082,7 @@ int Program::CollectMutableGarbageAndChainStacks() {
   SweepingVisitor sweeping_visitor(old_space);
   old_space->IterateObjects(&sweeping_visitor);
 
-  // TODO(erikcorry): Find a better way to delete the mark bits on the new
-  // space.
-  SweepingVisitor new_space_sweeper(NULL);
-  new_space->IterateObjects(&new_space_sweeper);
+  new_space->ClearMarkBits();
 
   UpdateStackLimits();
   return marking_visitor.number_of_stacks();

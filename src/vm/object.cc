@@ -520,9 +520,7 @@ InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
   ASSERT(!HasForwardingAddress());
 
   visitor->VisitClass(reinterpret_cast<Object**>(address()));
-  uword raw = reinterpret_cast<uword>(raw_class());
-  Class* klass = reinterpret_cast<Class*>(raw & ~HeapObject::kMarkBit);
-  InstanceFormat format = klass->instance_format();
+  InstanceFormat format = get_class()->instance_format();
   // Fast case for fixed size object with all pointers.
   if (format.only_pointers_in_fixed_part()) {
     size_t size = format.fixed_size();

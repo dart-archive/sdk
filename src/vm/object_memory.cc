@@ -106,7 +106,7 @@ void Space::IterateObjects(HeapObjectVisitor* visitor) {
       HeapObject* object = HeapObject::FromAddress(current);
       current += visitor->Visit(object);
     }
-    visitor->ChunkEnd(current);
+    visitor->ChunkEnd(chunk, current);
   }
 }
 
@@ -120,6 +120,13 @@ void SemiSpace::CompleteScavenge(PointerVisitor* visitor) {
       current += object->Size();
       Flush();
     }
+  }
+}
+
+void SemiSpace::ClearMarkBits() {
+  Flush();
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    GCMetadata::ClearMarkBitsFor(chunk);
   }
 }
 

@@ -21,7 +21,7 @@ class MarkingStackChunk {
   bool IsEmpty() { return next_ == &backing_[0]; }
 
   void Push(HeapObject* object, MarkingStackChunk** chunk_list) {
-    ASSERT(object->IsMarked());
+    ASSERT(GCMetadata::IsMarked(object));
     if (next_ < limit_) {
       *(next_++) = object;
     } else {
@@ -130,11 +130,11 @@ class MarkingVisitor : public PointerVisitor {
       return;
     }
     HeapObject* heap_object = HeapObject::cast(object);
-    if (!heap_object->IsMarked()) {
+    if (!GCMetadata::IsMarked(heap_object)) {
       if (stack_chain_ != NULL && heap_object->IsStack()) {
         ChainStack(Stack::cast(heap_object));
       }
-      heap_object->SetMark();
+      GCMetadata::Mark(heap_object, heap_object->Size());
       marking_stack_->Push(heap_object);
     }
   }
@@ -259,7 +259,10 @@ class SweepingVisitor : public HeapObjectVisitor {
 
   virtual int Visit(HeapObject* object);
 
-  virtual void ChunkEnd(uword end) { AddFreeListChunk(end); }
+  virtual void ChunkEnd(Chunk* chunk, uword end) {
+    AddFreeListChunk(end);
+    GCMetadata::ClearMarkBitsFor(chunk);
+  }
 
   int used() const { return used_; }
 

@@ -279,6 +279,8 @@ class SemiSpace : public Space {
 
   void ProcessWeakPointers(SemiSpace* to_space, OldSpace* old_space);
 
+  void ClearMarkBits();
+
  private:
   Chunk* AllocateAndUseChunk(size_t size);
 

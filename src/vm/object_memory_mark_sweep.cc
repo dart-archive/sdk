@@ -57,13 +57,13 @@ void OldSpace::Flush() {
 
 HeapObject* OldSpace::NewLocation(HeapObject* old_location) {
   ASSERT(Includes(old_location->address()));
-  ASSERT(old_location->IsMarked());
+  ASSERT(GCMetadata::IsMarked(old_location));
   return old_location;
 }
 
 bool OldSpace::IsAlive(HeapObject* old_location) {
   ASSERT(Includes(old_location->address()));
-  return old_location->IsMarked();
+  return GCMetadata::IsMarked(old_location);
 }
 
 void OldSpace::UseWholeChunk(Chunk* chunk) {
@@ -90,6 +90,7 @@ Chunk* OldSpace::AllocateAndUseChunk(int size) {
     UseWholeChunk(chunk);
     GCMetadata::InitializeStartsForChunk(chunk);
     GCMetadata::InitializeRememberedSetForChunk(chunk);
+    GCMetadata::ClearMarkBitsFor(chunk);
   }
   return chunk;
 }
@@ -308,41 +309,23 @@ bool OldSpace::CompleteScavengeGenerational(
 }
 
 SweepingVisitor::SweepingVisitor(OldSpace* space)
-    : free_list_(space == NULL ? NULL : space->free_list()),
-      free_start_(0),
-      used_(0) {
+    : free_list_(space->free_list()), free_start_(0), used_(0) {
   // Clear the free list. It will be rebuilt during sweeping.
-  if (free_list_ != NULL) free_list_->Clear();
+  free_list_->Clear();
 }
 
 void SweepingVisitor::AddFreeListChunk(uword free_end) {
   if (free_start_ != 0) {
     uword free_size = free_end - free_start_;
-    // When sweeping the new space we just remove mark bits, but don't build
-    // free lists, since it is GCed by scavenge instead.
-    if (free_list_ != NULL) {
-      free_list_->AddChunk(free_start_, free_size);
-#ifdef DEBUG
-    } else if (Flags::validate_heaps) {
-      // If we want to be able to verify the new-space we have to put free-list
-      // objects in place even if we are not going to collect them in
-      // free-lists.
-      FreeListChunk::CreateAt(free_start_, free_size);
-#endif
-    }
+    free_list_->AddChunk(free_start_, free_size);
     free_start_ = 0;
   }
 }
 
 int SweepingVisitor::Visit(HeapObject* object) {
-  if (object->IsMarked()) {
+  if (GCMetadata::IsMarked(object)) {
     AddFreeListChunk(object->address());
-    if (free_list_ != NULL) {
-      // Don't bother recording object start offsets for the new space where
-      // free_list_ is null.
-      GCMetadata::RecordStart(object->address());
-    }
-    object->ClearMark();
+    GCMetadata::RecordStart(object->address());
     int size = object->Size();
     used_ += size;
     return size;

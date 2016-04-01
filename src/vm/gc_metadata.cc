@@ -15,8 +15,10 @@ namespace dartino {
 GCMetadata GCMetadata::singleton_;
 
 void GCMetadata::TearDown() {
-  Platform::FreePages(singleton_.metadata_,
-                      singleton_.number_of_cards_ * kMetadataBytes);
+  uword mark_bits_size = singleton_.heap_extent_ >> kMarkBitsShift;
+  Platform::FreePages(
+      singleton_.metadata_,
+      singleton_.number_of_cards_ * kMetadataBytes + mark_bits_size);
 }
 
 void GCMetadata::Setup() {
@@ -25,7 +27,7 @@ void GCMetadata::Setup() {
   int range_count = Platform::GetHeapMemoryRanges(ranges, kRanges);
   ASSERT(range_count > 0);
 
-  // Find the largest area
+  // Find the largest area.
   int largest_index = 0;
   uword largest_size = ranges[0].size;
   for (int i = 1; i < range_count; i++) {
@@ -44,12 +46,17 @@ void GCMetadata::Setup() {
 
   singleton_.number_of_cards_ = size >> kCardBits;
 
+  uword mark_bits_size = size >> kMarkBitsShift;
+
   singleton_.metadata_ =
       reinterpret_cast<unsigned char*>(Platform::AllocatePages(
-          singleton_.number_of_cards_ * kMetadataBytes, Platform::kAnyArena));
+          singleton_.number_of_cards_ * kMetadataBytes + mark_bits_size,
+          Platform::kAnyArena));
   singleton_.remembered_set_ = singleton_.metadata_;
   singleton_.object_starts_ =
       singleton_.metadata_ + singleton_.number_of_cards_;
+  singleton_.mark_bits_ = reinterpret_cast<uint32*>(
+      singleton_.metadata_ + 2 * singleton_.number_of_cards_);
 
   uword start = reinterpret_cast<uword>(singleton_.object_starts_);
   uword lowest = singleton_.lowest_address_;
@@ -58,6 +65,28 @@ void GCMetadata::Setup() {
 
   start = reinterpret_cast<uword>(singleton_.remembered_set_);
   singleton_.remembered_set_bias_ = start - shifted;
+
+  shifted = lowest >> kMarkBitsShift;
+  start = reinterpret_cast<uword>(singleton_.mark_bits_);
+  singleton_.mark_bits_bias_ = start - shifted;
+}
+
+// Mark an object whose mark bits cross a 32 bit boundary.
+void GCMetadata::SlowMark(HeapObject* object, size_t size) {
+  int mask_shift = ((reinterpret_cast<uword>(object) >> kWordShift) & 31);
+  uint32* bits = reinterpret_cast<uint32*>((singleton_.mark_bits_bias_ +
+                   (reinterpret_cast<uword>(object) >> kMarkBitsShift)) &
+                  ~3);
+  uint32 mask = 0xffffffffu << mask_shift;
+  *bits |= mask;
+
+  bits++;
+  uint32 words = size >> kWordShift;
+  for (words -= 32 - mask_shift; words >= 32; words -= 32) {
+    *bits = 0xffffffffu;
+    bits++;
+  }
+  *bits |= (1 << words) - 1;
 }
 
 }  // namespace dartino
