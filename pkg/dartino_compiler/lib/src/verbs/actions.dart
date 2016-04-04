@@ -100,17 +100,14 @@ class Action {
        this.requiresToUri: false,
        this.requiresForName: false,
        this.allowsTrailing: false,
-       bool requiresTargetSession: false,
        TargetKind requiredTarget,
        bool requiresTarget: false,
        this.supportedTargets,
        this.supportsWithUri: false})
-      : this.requiresTargetSession = requiresTargetSession,
-        this.requiredTarget = requiresTargetSession
-          ? TargetKind.SESSION : requiredTarget,
-        requiresTarget = !identical(requiredTarget, null) ||
-    requiresTarget ||
-    requiresTargetSession;
+      : this.requiresTargetSession =
+          identical(requiredTarget, TargetKind.SESSION),
+        this.requiredTarget = requiredTarget,
+        requiresTarget = !identical(requiredTarget, null) || requiresTarget;
 }
 
 /// Use a [ActionGroup] to group actions that share the same primary verb

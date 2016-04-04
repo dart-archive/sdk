@@ -29,8 +29,8 @@ const Action createProjectAction = const Action(
     requiresForName: true, requiredTarget: TargetKind.PROJECT);
 
 const Action createSessionAction = const Action(
-    performCreateSession, createDocumentation, requiresTargetSession: true,
-    supportsWithUri: true);
+    performCreateSession, createDocumentation,
+    requiredTarget: TargetKind.SESSION, supportsWithUri: true);
 
 const Map<String, Action> createActions = const {
   'project' : createProjectAction,

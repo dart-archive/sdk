@@ -13,7 +13,7 @@ import 'documentation.dart' show
     endDocumentation;
 
 const Action endAction =
-    const Action(end, endDocumentation, requiresTargetSession: true);
+    const Action(end, endDocumentation, requiredTarget: TargetKind.SESSION);
 
 Future<int> end(AnalyzedSentence sentence, VerbContext context) {
   String name = sentence.targetName;
