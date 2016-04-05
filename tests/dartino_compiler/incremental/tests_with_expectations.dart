@@ -876,6 +876,35 @@ main() {
 ''',
 
   r'''
+invalidate_method_used_in_tearoff
+==> main.dart.patch <==
+// Test that we can introduce a change that causes a method used as tear-off
+// to be recompiled.
+
+class A {
+  m() => print("v1");
+}
+
+class B extends A {
+<<<< ["closure is null","v1"]
+==== []
+  m() => null;
+>>>>
+}
+
+var closure;
+main() {
+  if (closure == null) {
+    print('closure is null');
+    closure = new B().m;
+    closure();
+  }
+}
+
+
+''',
+
+  r'''
 invalidate_method_with_optional_parameters
 ==> main.dart.patch <==
 // Test that we can introduce a change that causes a method with optional

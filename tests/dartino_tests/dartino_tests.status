@@ -15,6 +15,12 @@ debugger/break_in_loop_test: Fail # Issue 446
 # Received PushFromMap command which refers to a non-existent map entry
 incremental/experimental/same_tokens_variant: Fail
 
+# Received PushFromMap command which refers to a non-existent map entry.
+# We delete associated tear-offs and stubs when invalidating a function
+# but don't make sure that no references to these still exist.
+# This test fails because of references in class method tables.
+incremental/*/invalidate_method_used_in_tearoff: Fail
+
 # Update to existing class not correctly detected (we end up trying to modify a
 # new class -> should not happen).
 incremental/*/compile_time_error_hides_field: IncrementalCompilationFailed
