@@ -28,7 +28,6 @@ Sentence parseSentence(
 
 class SentenceParser {
   final String version;
-  final String programName;
   final String shortProgramName;
   final String currentDirectory;
   Words tokens;
@@ -36,9 +35,8 @@ class SentenceParser {
   SentenceParser(Iterable<String> tokens, bool includesProgramName)
       : version = includesProgramName ? tokens.first : null,
         currentDirectory = includesProgramName ? tokens.skip(1).first : null,
-        programName = includesProgramName ? tokens.skip(2).first : null,
-        shortProgramName = includesProgramName ? tokens.skip(3).first : null,
-        tokens = new Words(tokens.skip(includesProgramName ? 4 : 0));
+        shortProgramName = includesProgramName ? tokens.skip(2).first : null,
+        tokens = new Words(tokens.skip(includesProgramName ? 3 : 0));
 
   Sentence parseSentence() {
     Verb verb;

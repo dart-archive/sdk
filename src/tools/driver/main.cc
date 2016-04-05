@@ -693,8 +693,7 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
 
 static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   WriteBuffer buffer;
-  buffer.WriteInt(argc + 3);  // Also version, current directory, and absolute
-                              // path to program.
+  buffer.WriteInt(argc + 2);  // Also version and current directory.
 
   buffer.WriteInt(strlen(GetVersion()));
   buffer.WriteString(GetVersion());
@@ -707,19 +706,6 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   buffer.WriteInt(strlen(path));
   buffer.WriteString(path);
 
-  // argv[0] is the name of the executable before path search. But the driver
-  // needs the absolute location provided by GetPathOfExecutable/realpath.
-  char* relative_path = StrAlloc(MAXPATHLEN + 1);
-  GetPathOfExecutable(relative_path, MAXPATHLEN + 1);
-  if (realpath(relative_path, path) == NULL) {
-    Die("%s: realpath of '%s' failed: %s", program_name, relative_path,
-        strerror(errno));
-  }
-  buffer.WriteInt(strlen(path));
-  buffer.WriteString(path);
-
-  free(relative_path);
-  relative_path = NULL;
   free(path);
   path = NULL;
 
