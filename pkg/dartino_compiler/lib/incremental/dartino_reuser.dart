@@ -8,6 +8,9 @@ import 'package:compiler/compiler_new.dart' show
     CompilerDiagnostics,
     Diagnostic;
 
+import 'package:compiler/src/resolution/class_members.dart' show
+    ClassMemberMixin;
+
 import 'package:compiler/compiler.dart' as api;
 
 import 'package:compiler/src/compiler.dart' show
@@ -159,10 +162,20 @@ class DartinoReuser extends Reuser with DartinoFeatures {
       compiler.progress.reset();
     }
 
+    Set<ClassMemberMixin> classesNeedingMemberRecomputing =
+            new Set<ClassMemberMixin>();
+
     for (Element element in updatedElements) {
       if (!element.isClass) {
         if (element.isClassMember) {
-          element.enclosingClass.ensureResolved(compiler.resolution);
+          ClassElement enclosingClass = element.enclosingClass;
+          // If a class member has changed we need to recompute all the members
+          // of its class (and subtypes) and check for potential conflicts.
+          compiler.world.getClassSet(enclosingClass).subtypes().forEach(
+              (ClassElement subtype) {
+            classesNeedingMemberRecomputing.add(subtype);
+          });
+          enclosingClass.ensureResolved(compiler.resolution);
         }
         enqueuer.resolution.addToWorkList(element);
       } else {
@@ -175,6 +188,19 @@ class DartinoReuser extends Reuser with DartinoFeatures {
         enqueuer.codegen.registerInstantiatedType(cls.rawType);
       }
     }
+
+    // Reset the caches.
+    classesNeedingMemberRecomputing.forEach((ClassMemberMixin cls) {
+      cls.computedMemberNames = null;
+      cls.classMembers = null;
+      cls.interfaceMembers = null;
+    });
+
+    // Recompute and check members.
+    classesNeedingMemberRecomputing.forEach((ClassMemberMixin m) {
+      compiler.resolver.checkClass(m);
+    });
+
     computeAllSchemaChanges();
     compiler.processQueue(enqueuer.resolution, null);
 

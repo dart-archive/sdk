@@ -25,6 +25,14 @@ incremental/*/invalidate_method_used_in_tearoff: Fail
 # new class -> should not happen).
 incremental/*/compile_time_error_hides_field: IncrementalCompilationFailed
 
+# Pending on Dart2js change with better recording of elements with compile-time error
+incremental/experimental/override_method_with_getter_conflict: Fail
+incremental/experimental/override_field_with_method_conflict: Fail
+incremental/experimental/override_getter_with_method_conflict: Fail
+
+# We don't check for compile-time errors when adding new fields
+incremental/*/override_method_with_field_conflict: Fail
+
 # Most things don't work in production mode yet.
 incremental/production/add_class: IncrementalCompilationFailed
 incremental/production/add_field_and_remove_subclass: IncrementalCompilationFailed
@@ -62,6 +70,9 @@ incremental/production/newly_instantiated_class_with_fields: IncrementalCompilat
 incremental/production/newly_instantiated_subclases_two_updates: IncrementalCompilationFailed
 incremental/production/newly_instantiated_superclasses_two_updates: IncrementalCompilationFailed
 incremental/production/no_closure: IncrementalCompilationFailed
+incremental/production/override_field_with_method_conflict: IncrementalCompilationFailed
+incremental/production/override_method_with_getter_conflict: IncrementalCompilationFailed
+incremental/production/override_getter_with_method_conflict: IncrementalCompilationFailed
 incremental/production/preserving_identity_hashcode: IncrementalCompilationFailed
 incremental/production/program_gc_with_processes: IncrementalCompilationFailed
 incremental/production/remove_class: IncrementalCompilationFailed

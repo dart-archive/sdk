@@ -1099,6 +1099,138 @@ main() {
 ''',
 
   r'''
+override_method_with_field_conflict
+==> main.dart.patch <==
+// Test that adding an override conflict results in a compile-time error.
+
+class A {
+  m() {}
+}
+
+class B extends A {
+<<<< {"messages":["42"]}
+==== {"messages":["42"],"hasCompileTimeError":1}
+  var m;
+>>>>
+}
+
+var c;
+main() {
+  // This print statement is added to ensure minimal incremental change in the
+  // second version of the program: The compile-time error introduced causes
+  // [compileError] to be added which in turn adds static fields because of its
+  // print statement.
+  print("42");
+  if (c == null) {
+    c = 0;
+  } else {
+    new B().m;
+  }
+}
+
+
+''',
+
+  r'''
+override_field_with_method_conflict
+==> main.dart.patch <==
+// Test that adding an override conflict results in a compile-time error.
+
+class A {
+  var m;
+}
+
+class B extends A {
+<<<< {"messages":["42"]}
+==== {"messages":["42"],"hasCompileTimeError":1}
+  m() {}
+>>>>
+}
+
+var c;
+main() {
+  // This print statement is added to ensure minimal incremental change in the
+  // second version of the program: The compile-time error introduced causes
+  // [compileError] to be added which in turn adds static fields because of its
+  // print statement.
+  print("42");
+  if (c == null) {
+    c = 0;
+  } else {
+    new B().m();
+  }
+}
+
+
+''',
+
+  r'''
+override_method_with_getter_conflict
+==> main.dart.patch <==
+// Test that adding an override conflict results in a compile-time error.
+
+class A {
+  m() {}
+}
+
+class B extends A {
+<<<< {"messages":["42"]}
+==== {"messages":["42"],"hasCompileTimeError":1}
+  get m => null;
+>>>>
+}
+
+var c;
+main() {
+  // This print statement is added to ensure minimal incremental change in the
+  // second version of the program: The compile-time error introduced causes
+  // [compileError] to be added which in turn adds static fields because of its
+  // print statement.
+  print("42");
+  if (c == null) {
+    c = 0;
+  } else {
+    new B().m;
+  }
+}
+
+
+''',
+
+  r'''
+override_getter_with_method_conflict
+==> main.dart.patch <==
+// Test that adding an override conflict results in a compile-time error.
+
+class A {
+  get m => null;
+}
+
+class B extends A {
+<<<< {"messages":["42"]}
+==== {"messages":["42"],"hasCompileTimeError":1}
+  m() {}
+>>>>
+}
+
+var c;
+main() {
+  // This print statement is added to ensure minimal incremental change in the
+  // second version of the program: The compile-time error introduced causes
+  // [compileError] to be added which in turn adds static fields because of its
+  // print statement.
+  print("42");
+  if (c == null) {
+    c = 0;
+  } else {
+    new B().m();
+  }
+}
+
+
+''',
+
+  r'''
 remove_top_level_method
 ==> main.dart.patch <==
 // Test that deleting a top-level method works
