@@ -93,6 +93,9 @@ import '../console_print.dart' show
 import '../please_report_crash.dart' show
     stringifyError;
 
+import 'analytics.dart' show
+    Analytics;
+
 Function gracefulShutdown;
 
 final List<String> mainArguments = <String>[];
@@ -224,23 +227,28 @@ Future main(List<String> arguments) async {
   print(server.port);
 
   IsolatePool pool = new IsolatePool(workerMain);
+  var analytics = new Analytics(printToConsole);
   try {
+    analytics.readUuid();
+    //TODO startup analytics - https://github.com/dartino/sdk/issues/467
     await server.listen((Socket controlSocket) {
       if (isBatchMode) {
         server.close();
       }
-      handleClient(pool, handleSocketErrors(controlSocket, "controlSocket"));
+      handleClient(pool, analytics,
+          handleSocketErrors(controlSocket, "controlSocket"));
     }).asFuture();
   } finally {
     gracefulShutdown();
   }
 }
 
-Future<Null> handleClient(IsolatePool pool, Socket controlSocket) async {
+Future<Null> handleClient(IsolatePool pool, Analytics analytics,
+    Socket controlSocket) async {
   ClientLogger log = ClientLogger.allocate();
 
   ClientConnection clientConnection =
-      new ClientConnection(controlSocket, log)..start();
+      new ClientConnection(controlSocket, analytics, log)..start();
   List<String> arguments = await clientConnection.arguments;
   log.gotArguments(arguments);
 
@@ -254,6 +262,8 @@ Future<Null> handleVerb(
   crashReportRequested = false;
 
   Future<int> performVerb() async {
+    //TODO capture requested operation via clientConnection.analytics.
+    //See https://github.com/dartino/sdk/issues/467
     clientConnection.parseArguments(arguments);
     String sessionName = clientConnection.sentence.sessionName;
     UserSession session;
@@ -278,6 +288,8 @@ Future<Null> handleVerb(
       .catchError(
           clientConnection.reportErrorToClient, test: (e) => e is InputError)
       .catchError((error, StackTrace stackTrace) {
+        //TODO capture exception via clientConnection.analytics.
+        //See https://github.com/dartino/sdk/issues/467
         if (!crashReportRequested) {
           clientConnection.printLineOnStderr(
               requestBugReportOnOtherCrashMessage);
@@ -289,6 +301,10 @@ Future<Null> handleVerb(
         }
         return COMPILER_EXITCODE_CRASH;
       });
+  if (exitCode == 0) {
+    //TODO capture operation successful via clientConnection.analytics.
+    //See https://github.com/dartino/sdk/issues/467
+  }
   clientConnection.exit(exitCode);
 }
 
@@ -338,6 +354,8 @@ class ClientConnection {
 
   final ClientLogger log;
 
+  final Analytics analytics;
+
   /// The commandSender is used to send commands back to the Dartino C++ client.
   ClientCommandSender commandSender;
 
@@ -350,7 +368,11 @@ class ClientConnection {
   /// Updated by [parseArguments].
   AnalyzedSentence sentence;
 
-  ClientConnection(this.socket, this.log);
+  /// The completer used to process a response from the client
+  /// or `null` if no response is expected.
+  Completer<String> responseCompleter;
+
+  ClientConnection(this.socket, this.analytics, this.log);
 
   /// Stream of commands from the Dartino C++ client to the hub (main isolate).
   /// The commands are typically forwarded to a worker isolate, see
@@ -385,9 +407,25 @@ class ClientConnection {
     if (command.code == ClientCommandCode.Arguments) {
       // This intentionally throws if arguments are sent more than once.
       argumentsCompleter.complete(command.data);
+    } else if (responseCompleter != null) {
+      if (command.code == ClientCommandCode.Stdin) {
+        responseCompleter.complete(UTF8.decode(command.data));
+        responseCompleter = null;
+      }
     } else {
       sendCommandToWorker(command);
     }
+  }
+
+  /// Prompt the user and return a future that completes with the response.
+  Future<String> promptUser(String promptText) {
+    if (responseCompleter != null) {
+      throwInternalError("Already waiting for user response");
+    }
+    // Print without the trailing newline character.
+    commandSender.sendStdout(promptText);
+    responseCompleter = new Completer<String>();
+    return responseCompleter.future;
   }
 
   void sendCommandToWorker(ClientCommand command) {
@@ -470,6 +508,8 @@ class ClientConnection {
   }
 
   int reportErrorToClient(InputError error, StackTrace stackTrace) {
+    //TODO capture input error analytics via analytics.
+    //See https://github.com/dartino/sdk/issues/467
     bool isInternalError = error.kind == DiagnosticKind.internalError;
     if (isInternalError && !crashReportRequested) {
       printLineOnStderr(requestBugReportOnOtherCrashMessage);

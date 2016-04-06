@@ -53,6 +53,8 @@ import 'package:dartino_compiler/src/verbs/infrastructure.dart' show
 import 'package:dartino_compiler/src/worker/developer.dart' show
     parseSettings;
 
+import 'package:dartino_compiler/src/hub/analytics.dart';
+
 final IsolatePool pool = new IsolatePool(workerMain);
 
 Future<Null> main() async {
@@ -170,6 +172,8 @@ class MockClientConnection implements ClientConnection {
   final StreamController<ClientCommand> controller =
       new StreamController<ClientCommand>();
 
+  final Analytics analytics = new MockAnalytics();
+
   AnalyzedSentence sentence;
 
   MockClientConnection();
@@ -255,6 +259,7 @@ class MockClientConnection implements ClientConnection {
   handleClientCommand(_) => throw "not supported";
   handleClientCommandError(e, s) => throw "not supported";
   handleClientCommandsDone() => throw "not supported";
+  promptUser(_) => throw "not supported";
   start() => throw "not supported";
   get arguments => throw "not supported";
   get argumentsCompleter => throw "not supported";
@@ -265,6 +270,8 @@ class MockClientConnection implements ClientConnection {
   get dartinoVm => throw "not supported";
   set dartinoVm(_) => throw "not supported";
   get requiresWorker => throw "not supported";
+  get responseCompleter => throw "not supported";
+  set responseCompleter(_) => throw "not supported";
   get socket => throw "not supported";
   get subscription => throw "not supported";
   set subscription(_) => throw "not supported";
@@ -293,4 +300,23 @@ class MockClientLogger implements ClientLogger {
   get arguments => throw "not supported";
   set arguments(_) => throw "not supported";
   get notes => throw "not supported";
+}
+
+class MockAnalytics implements Analytics {
+  int optInCount = 0;
+  get shouldPromptForOptIn => false;
+  set shouldPromptForOptIn(_) => throw "not supported";
+  clearUuid() => throw "not supported";
+  readUuid() => throw "not supported";
+  get uuid => null;
+  get uuidPath => null;
+  bool writeNewUuid() {
+    ++optInCount;
+    return true;
+  }
+  bool writeOptOut() {
+    --optInCount;
+    return true;
+  }
+  writeUuid() => throw "not supported";
 }

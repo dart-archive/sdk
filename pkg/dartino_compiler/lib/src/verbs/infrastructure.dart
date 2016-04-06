@@ -72,6 +72,11 @@ export '../hub/hub_main.dart' show
     ClientConnection,
     IsolatePool;
 
+import '../messages.dart' show
+    analyticsOptInPrompt,
+    analyticsOptInNotification,
+    analyticsOptOutNotification;
+
 import 'actions.dart' show
     Action;
 
@@ -83,7 +88,6 @@ import 'options.dart' show
 
 export 'options.dart' show
     Options;
-
 
 import '../guess_configuration.dart' show
     dartinoVersion;
@@ -471,6 +475,41 @@ class AnalyzedSentence {
       this.options);
 
   Future<int> performVerb(VerbContext context) {
+    if (options != null) {
+      if (options.analytics) {
+        context.clientConnection.analytics.writeNewUuid();
+      }
+      if (options.noAnalytics) {
+        context.clientConnection.analytics.writeOptOut();
+      }
+    }
+    if (context.clientConnection.analytics.shouldPromptForOptIn) {
+      return promptForOptIn(context);
+    } else {
+      return internalPerformVerb(context);
+    }
+  }
+
+  Future<int> promptForOptIn(VerbContext context) async {
+
+    bool isOptInYes(String response) {
+      if (response == null) return false;
+      response = response.trim().toLowerCase();
+      return response.isEmpty || response == 'y' || response == 'yes';
+    }
+
+    var connection = context.clientConnection;
+    if (isOptInYes(await connection.promptUser(analyticsOptInPrompt))) {
+      context.clientConnection.analytics.writeNewUuid();
+      print(analyticsOptInNotification);
+    } else {
+      context.clientConnection.analytics.writeOptOut();
+      print(analyticsOptOutNotification);
+    }
+    return internalPerformVerb(context);
+  }
+
+  Future<int> internalPerformVerb(VerbContext context) {
     return verb.action.perform(this, context);
   }
 }
