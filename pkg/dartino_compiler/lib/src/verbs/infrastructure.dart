@@ -492,20 +492,22 @@ class AnalyzedSentence {
 
   Future<int> promptForOptIn(VerbContext context) async {
 
-    bool isOptInYes(String response) {
-      if (response == null) return false;
-      response = response.trim().toLowerCase();
-      return response.isEmpty || response == 'y' || response == 'yes';
-    }
+    //TODO(danrubel) disable analytics on bots then uncomment this code
 
-    var connection = context.clientConnection;
-    if (isOptInYes(await connection.promptUser(analyticsOptInPrompt))) {
-      context.clientConnection.analytics.writeNewUuid();
-      print(analyticsOptInNotification);
-    } else {
-      context.clientConnection.analytics.writeOptOut();
-      print(analyticsOptOutNotification);
-    }
+    // bool isOptInYes(String response) {
+    //   if (response == null) return false;
+    //   response = response.trim().toLowerCase();
+    //   return response.isEmpty || response == 'y' || response == 'yes';
+    // }
+    //
+    // var connection = context.clientConnection;
+    // if (isOptInYes(await connection.promptUser(analyticsOptInPrompt))) {
+    //   context.clientConnection.analytics.writeNewUuid();
+    //   print(analyticsOptInNotification);
+    // } else {
+    //   context.clientConnection.analytics.writeOptOut();
+    //   print(analyticsOptOutNotification);
+    // }
     return internalPerformVerb(context);
   }
 
