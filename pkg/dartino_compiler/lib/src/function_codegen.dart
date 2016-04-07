@@ -109,6 +109,9 @@ abstract class FunctionCodegenBase extends CodegenVisitor {
         thisValue = new UnboxedLocalValue(assembler.stackSize, null);
         assembler.loadParameter(0);
         assembler.loadField(index++);
+      } else {
+        // Ensure we do not use a wrong value by mistake.
+        thisValue = null;
       }
       for (LocalElement local in info.free) {
         pushVariableDeclaration(createLocalValueFor(local));

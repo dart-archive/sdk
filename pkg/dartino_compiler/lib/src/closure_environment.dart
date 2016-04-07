@@ -715,6 +715,16 @@ class ClosureVisitor
     super.visitSuperGetterFieldPostfix(node, getter, field, operator, null);
   }
 
+  void visitSuperMethodInvoke(
+      Send node,
+      MethodElement element,
+      NodeList arguments,
+      CallStructure callStructure,
+      _) {
+    markThisUsed();
+    super.visitSuperMethodInvoke(node, element, arguments, callStructure, _);
+  }
+
   void visitSuperMethodSetterPostfix(
       Send node,
       FunctionElement method,
@@ -756,6 +766,128 @@ class ClosureVisitor
       LocalElement element,
       Node rhs,
       _) {
+    apply(rhs);
+  }
+
+  void visitFinalLocalVariableSetIfNull(
+      Send node,
+      LocalVariableElement variable,
+      Node rhs,
+      _) {
+    markUsed(variable, CaptureMode.ByValue);
+    apply(rhs);
+  }
+
+  void visitFinalParameterSetIfNull(
+      Send node,
+      ParameterElement parameter,
+      Node rhs,
+      _) {
+    markUsed(parameter, CaptureMode.ByValue);
+    apply(rhs);
+  }
+
+  void visitLocalFunctionSetIfNull(
+      Send node,
+      LocalFunctionElement function,
+      Node rhs,
+      _) {
+    markUsed(function, CaptureMode.ByValue);
+    // rhs is not used.
+  }
+
+  void visitLocalVariableSetIfNull(
+      Send node,
+      LocalVariableElement variable,
+      Node rhs,
+      _) {
+    markUsed(variable, CaptureMode.ByReference);
+    apply(rhs);
+  }
+
+  void visitParameterSetIfNull(
+      Send node,
+      ParameterElement parameter,
+      Node rhs,
+      _) {
+    markUsed(parameter, CaptureMode.ByReference);
+    apply(rhs);
+  }
+
+  void visitSuperFieldFieldSetIfNull(
+      Send node,
+      FieldElement readField,
+      FieldElement writtenField,
+      Node rhs,
+      _) {
+    markThisUsed();
+    apply(rhs);
+  }
+
+  void visitSuperFieldSetIfNull(
+      Send node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    markThisUsed();
+    apply(rhs);
+  }
+
+  void visitSuperFieldSetterSetIfNull(
+      Send node,
+      FieldElement field,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    markThisUsed();
+    apply(rhs);
+  }
+
+  void visitSuperGetterFieldSetIfNull(
+      Send node,
+      FunctionElement getter,
+      FieldElement field,
+      Node rhs,
+      _) {
+    markThisUsed();
+    apply(rhs);
+  }
+
+  void visitSuperGetterSetterSetIfNull(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    markThisUsed();
+    apply(rhs);
+  }
+
+  void visitSuperMethodSetIfNull(
+      Send node,
+      FunctionElement method,
+      Node rhs,
+      _) {
+    markThisUsed();
+    // rhs is never used,
+  }
+
+  void visitSuperMethodSetterSetIfNull(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    markThisUsed();
+    // rhs is never used,
+  }
+
+  void visitThisPropertySetIfNull(
+      Send node,
+      Name name,
+      Node rhs,
+      _) {
+    markThisUsed();
     apply(rhs);
   }
 
