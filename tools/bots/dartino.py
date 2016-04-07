@@ -240,7 +240,7 @@ def StepsTestSDK(debug_log, configuration):
   if os.path.exists(sdk_dir):
     shutil.rmtree(sdk_dir)
   Unzip(sdk_zip)
-  StepsDisableAnalytics(sdk_dir)
+  DisableAnalytics(sdk_dir)
   build_conf = configuration['build_conf']
 
   def run():
@@ -253,7 +253,7 @@ def StepsTestSDK(debug_log, configuration):
 def StepsSanityChecking(build_dir):
   version = utils.GetSemanticSDKVersion()
   sdk_dir = os.path.join(build_dir, 'dartino-sdk')
-  StepsDisableAnalytics(sdk_dir)
+  DisableAnalytics(sdk_dir)
   dartino = os.path.join(sdk_dir, 'bin', 'dartino')
   # TODO(ricow): we should test this as a normal test, see issue 232.
   dartino_version = subprocess.check_output([dartino, '--version']).strip()
@@ -268,18 +268,18 @@ def StepsSanityChecking(build_dir):
     raise Exception('Version mismatch, VERSION file has %s, dartino vm has %s' %
                     (version, dartino_vm_version))
 
-def StepsDisableAnalytics(sdk_dir):
+def DisableAnalytics(sdk_dir):
   dartino = os.path.join(sdk_dir, 'bin', 'dartino')
   print "Disabling analytics"
   try:
     # TODO(danrubel) remove this once old approach has been removed
     result = subprocess.check_output([dartino, '--no-analytics'])
-  except subprocess.CalledProcessError as exception:
+  except subprocess.CalledProcessError as error:
     result = "Ignoring dartino --no-analytics error: %s" % (error)
   print result
   try:
     result = subprocess.check_output([dartino, 'disable', 'analytics'])
-  except subprocess.CalledProcessError as exception:
+  except subprocess.CalledProcessError as error:
     result = "Ignoring dartino disable analytics error: %s" % (error)
   print result
 
