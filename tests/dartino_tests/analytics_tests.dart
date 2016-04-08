@@ -2,7 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dartino_compiler/src/hub/analytics.dart';
@@ -17,15 +16,19 @@ main() {
   }
   var tmpDir = Directory.systemTemp.createTempSync('DartinoAnalytics');
   var tmpUuidFile = new File(join(tmpDir.path, '.dartino_uuid_test'));
-  final analytics = new Analytics(log, tmpUuidFile.path);
+  final analytics = new Analytics(log, tmpUuidFile.uri);
 
-  print(Analytics.defaultUuidPath);
-  Expect.isNotNull(Analytics.defaultUuidPath);
-  Expect.isTrue(isAbsolute(Analytics.defaultUuidPath));
+  Expect.isNotNull(Analytics.defaultUuidUri);
+  String defaultUuidPath = Analytics.defaultUuidUri.toFilePath();
+  print(defaultUuidPath);
+  Expect.isNotNull(defaultUuidPath);
+  Expect.isTrue(isAbsolute(defaultUuidPath));
 
-  print(analytics.uuidPath);
-  Expect.isNotNull(analytics.uuidPath);
-  Expect.isTrue(isAbsolute(analytics.uuidPath));
+  Expect.isNotNull(analytics.uuidUri);
+  var uuidPath = analytics.uuidUri.toFilePath();
+  print(uuidPath);
+  Expect.isNotNull(uuidPath);
+  Expect.isTrue(isAbsolute(uuidPath));
 
   try {
     analytics.clearUuid();
@@ -57,7 +60,7 @@ main() {
     Expect.isFalse(receivedLogMessage);
 
     String expectedUuid = analytics.uuid;
-    File uuidFileSav = new File('${analytics.uuidPath}.sav');
+    File uuidFileSav = new File('${analytics.uuidUri.toFilePath()}.sav');
     tmpUuidFile.renameSync(uuidFileSav.path);
     analytics.clearUuid();
     uuidFileSav.renameSync(tmpUuidFile.path);

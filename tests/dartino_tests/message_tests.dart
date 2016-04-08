@@ -309,7 +309,7 @@ class MockAnalytics implements Analytics {
   clearUuid() => throw "not supported";
   readUuid() => throw "not supported";
   get uuid => null;
-  get uuidPath => null;
+  get uuidUri => null;
   bool writeNewUuid() {
     ++optInCount;
     return true;

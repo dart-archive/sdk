@@ -9,9 +9,8 @@ library dartino_compiler.worker.analytics;
 import 'dart:io';
 import 'dart:math';
 
-import 'package:path/path.dart' show join;
-
 import '../please_report_crash.dart' show stringifyError;
+import '../verbs/infrastructure.dart' show fileUri;
 
 typedef LogMessage(message);
 
@@ -20,17 +19,17 @@ class Analytics {
 
   final LogMessage _log;
 
-  /// The path to the file that stores the analytics unique user id
+  /// The uri for the file that stores the analytics unique user id
   /// or `null` if it cannot be determined.
-  final String uuidPath;
+  final Uri uuidUri;
 
   String _uuid;
 
   /// `true` if the user should be prompted to opt-in.
   bool shouldPromptForOptIn = true;
 
-  Analytics(LogMessage this._log, [String uuidPath]) :
-      this.uuidPath = uuidPath ?? defaultUuidPath;
+  Analytics(LogMessage this._log, [Uri uuidUri]) :
+      this.uuidUri = uuidUri ?? defaultUuidUri;
 
   /// Return the uuid or `null` if no analytics should be sent.
   String get uuid {
@@ -41,9 +40,8 @@ class Analytics {
   void clearUuid() {
     _uuid = null;
     shouldPromptForOptIn = true;
-    String path = uuidPath;
-    if (path == null) return;
-    File uuidFile = new File(path);
+    if (uuidUri == null) return;
+    File uuidFile = new File.fromUri(uuidUri);
     if (uuidFile.existsSync()) uuidFile.deleteSync();
   }
 
@@ -51,12 +49,11 @@ class Analytics {
   /// Return [true] if it was successfully read from disk
   /// or [false] if the user should be prompted to opt-in or opt-out.
   bool readUuid() {
-    String path = uuidPath;
-    if (path == null) {
+    if (uuidUri == null) {
       _log("Failed to determine uuid file path.");
       return false;
     }
-    File uuidFile = new File(path);
+    File uuidFile = new File.fromUri(uuidUri);
     try {
       if (uuidFile.existsSync()) {
         String contents = uuidFile.readAsStringSync();
@@ -104,12 +101,11 @@ class Analytics {
 
   /// Write the current uuid to disk and return [true] if successful.
   bool _writeUuid() {
-    String path = uuidPath;
-    if (path == null) {
+    if (uuidUri == null) {
       _log("Failed to determine uuid file path.");
       return false;
     }
-    File uuidFile = new File(path);
+    File uuidFile = new File.fromUri(uuidUri);
     try {
       uuidFile.parent.createSync(recursive: true);
       uuidFile.writeAsStringSync(_uuid);
@@ -123,18 +119,18 @@ class Analytics {
 
   /// Return the path to the file that stores the analytics unique user id
   /// or `null` if it cannot be determined.
-  static String get defaultUuidPath {
+  static Uri get defaultUuidUri {
     if (Platform.isWindows) {
       String path = Platform.environment['LOCALAPPDATA'];
       if (path == null || !new Directory(path).existsSync()) {
         path = Platform.environment['APPDATA'];
         if (path == null || !new Directory(path).existsSync()) return null;
       }
-      return join(path, 'DartinoUuid.txt');
+      return fileUri(path, Uri.base).resolve('DartinoUuid.txt');
     } else {
       String path = Platform.environment['HOME'];
       if (path == null || !new Directory(path).existsSync()) return null;
-      return join(path, '.dartino_uuid');
+      return fileUri(path, Uri.base).resolve('.dartino_uuid');
     }
   }
 }
