@@ -101,6 +101,13 @@ def CopyBinaries(bundle_dir, build_dir):
   CopyFile(join(build_dir, 'natives.json'), join(internal, 'natives.json'))
   CopySharedLibraries(bin_dir, build_dir)
 
+def CopyDartSdk(bundle_dir):
+  os_name = utils.GuessOS()
+  source = join('tools', 'sdks', os_name, 'dart-sdk')
+  target = join(bundle_dir, 'internal', 'dart-sdk')
+  print 'copying %s to %s' % (source, target)
+  copytree(source, target)
+
 # Copy the platform decriptor, rewriting paths to point to the
 # sdk location at `sdk_dir` instead of `repo_dir`.
 def CopyPlatformDescriptor(bundle_dir, platform_descriptor_name, repo_dir,
@@ -377,6 +384,7 @@ def Main():
     if options.create_documentation:
       CreateDocumentation()
     CopyBinaries(sdk_temp, build_dir)
+    CopyDartSdk(sdk_temp)
     CopyInternalPackages(sdk_temp, build_dir)
     CopyLibs(sdk_temp, build_dir)
     CopyPackagesAndSettingsTemplate(sdk_temp)

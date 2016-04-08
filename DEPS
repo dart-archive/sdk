@@ -158,6 +158,23 @@ hooks = [
     ],
   },
   {
+    "name": "checked_in_dart_sdks",
+    "pattern": ".",
+    "action": [
+      "download_from_google_storage",
+      "-q",
+      "--no_auth",
+      "--no_resume",
+      "--bucket",
+      "dart-dependencies",
+      "--directory",
+      "--recursive",
+      "--auto_platform",
+      "--extract",
+      "sdk/tools/sdks",
+    ],
+  },
+  {
     'name': 'dart_test_binary',
     'pattern': '.',
     'action': [
