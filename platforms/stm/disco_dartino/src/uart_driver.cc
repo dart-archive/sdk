@@ -27,13 +27,14 @@ const int kTxBufferSize = 511;
 
 static UartDriverImpl *uart1;
 
-UartDriverImpl::UartDriverImpl() : device_id_(kIllegalDeviceId) {
-  uart_ = &huart1;
-  read_buffer_ = new CircularBuffer(kRxBufferSize);
-  write_buffer_ = new CircularBuffer(kTxBufferSize);
-  tx_pending_ = false;
-  tx_mutex_ = dartino::Platform::CreateMutex();
-}
+UartDriverImpl::UartDriverImpl()
+  : error_(0),
+    read_buffer_(new CircularBuffer(kRxBufferSize)),
+    write_buffer_(new CircularBuffer(kTxBufferSize)),
+    uart_(&huart1),
+    device_id_(kIllegalDeviceId),
+    tx_mutex_(dartino::Platform::CreateMutex()),
+    tx_pending_(false) {}
 
 static void UartTask(const void *arg) {
   const_cast<UartDriverImpl*>(
