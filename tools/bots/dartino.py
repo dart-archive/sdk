@@ -273,16 +273,21 @@ def StepsDisableAnalytics(bin_dir):
   with bot.BuildStep('Disable analytics'):
     dartino = os.path.join(bin_dir, 'dartino')
     try:
-      # TODO(danrubel) remove this once old approach has been removed
-      result = subprocess.check_output([dartino, '--no-analytics'])
-    except subprocess.CalledProcessError as error:
-      result = "Ignoring dartino --no-analytics error: %s" % (error)
-    print result
-    try:
-      result = subprocess.check_output([dartino, 'disable', 'analytics'])
-    except subprocess.CalledProcessError as error:
-      result = "Ignoring dartino disable analytics error: %s" % (error)
-    print result
+      try:
+        # TODO(danrubel) remove this once old approach has been removed
+        print "%s --no-analytics" % (dartino)
+        result = subprocess.check_output([dartino, '--no-analytics'])
+      except subprocess.CalledProcessError as error:
+        result = "Ignoring dartino --no-analytics error: %s" % (error)
+      print result
+      try:
+        print "%s disable analytics" % (dartino)
+        result = subprocess.check_output([dartino, 'disable', 'analytics'])
+      except subprocess.CalledProcessError as error:
+        result = "Ignoring dartino disable analytics error: %s" % (error)
+      print result
+    except FileNotFoundError as error:
+      print "Could not find dartino file: %s" % (error)
 
 def StepsCreateDebianPackage():
   with bot.BuildStep('Create arm agent deb'):
