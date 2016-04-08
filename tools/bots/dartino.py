@@ -286,7 +286,7 @@ def StepsDisableAnalytics(bin_dir):
       except subprocess.CalledProcessError as error:
         result = "Ignoring dartino disable analytics error: %s" % (error)
       print result
-    except IOError as error:
+    except Exception as error:
       print "Ignoring error: %s" % (error)
 
 def StepsCreateDebianPackage():
