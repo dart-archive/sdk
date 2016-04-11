@@ -34,7 +34,7 @@ main() {
     analytics.clearUuid();
     Expect.isNull(analytics.uuid);
     Expect.isTrue(analytics.shouldPromptForOptIn);
-    Expect.isFalse(analytics.readUuid());
+    Expect.isFalse(analytics.loadUuid());
     Expect.isTrue(analytics.shouldPromptForOptIn);
     Expect.isFalse(tmpUuidFile.existsSync());
     Expect.isFalse(receivedLogMessage);
@@ -66,7 +66,7 @@ main() {
     uuidFileSav.renameSync(tmpUuidFile.path);
     Expect.isNull(analytics.uuid);
     Expect.isTrue(analytics.shouldPromptForOptIn);
-    Expect.isTrue(analytics.readUuid());
+    Expect.isTrue(analytics.loadUuid());
     Expect.isFalse(analytics.shouldPromptForOptIn);
     Expect.equals(expectedUuid, analytics.uuid);
     Expect.isFalse(receivedLogMessage);

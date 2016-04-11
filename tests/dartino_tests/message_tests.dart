@@ -307,6 +307,7 @@ class MockAnalytics implements Analytics {
   get shouldPromptForOptIn => false;
   set shouldPromptForOptIn(_) => throw "not supported";
   clearUuid() => throw "not supported";
+  loadUuid() => throw "not supported";
   readUuid() => throw "not supported";
   get uuid => null;
   get uuidUri => null;

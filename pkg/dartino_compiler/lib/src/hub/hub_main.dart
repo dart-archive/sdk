@@ -229,7 +229,7 @@ Future main(List<String> arguments) async {
   IsolatePool pool = new IsolatePool(workerMain);
   var analytics = new Analytics(printToConsole);
   try {
-    analytics.readUuid();
+    analytics.loadUuid();
     //TODO startup analytics - https://github.com/dartino/sdk/issues/467
     await server.listen((Socket controlSocket) {
       if (isBatchMode) {

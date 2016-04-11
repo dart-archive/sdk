@@ -12,6 +12,8 @@ import 'dart:math';
 import '../please_report_crash.dart' show stringifyError;
 import '../verbs/infrastructure.dart' show fileUri;
 
+const String _dartinoUuidEnvVar = const String.fromEnvironment('dartino.uuid');
+
 typedef LogMessage(message);
 
 class Analytics {
@@ -45,10 +47,16 @@ class Analytics {
     if (uuidFile.existsSync()) uuidFile.deleteSync();
   }
 
-  /// Read the UUID from disk.
-  /// Return [true] if it was successfully read from disk
+  /// Load the UUID from the environment or read it from disk.
+  /// Return [true] if it was successfully loaded or read
   /// or [false] if the user should be prompted to opt-in or opt-out.
-  bool readUuid() {
+  bool loadUuid() {
+    String value = _dartinoUuidEnvVar?.trim();
+    if (value?.isNotEmpty == true) {
+      _uuid = value;
+      shouldPromptForOptIn = false;
+      return true;
+    }
     if (uuidUri == null) {
       _log("Failed to determine uuid file path.");
       return false;
