@@ -11,83 +11,33 @@
 
 namespace dartino {
 
-class MarkingStackChunk {
+class MarkingStack {
  public:
-  MarkingStackChunk()
-      : next_chunk_(NULL), next_(&backing_[0]), limit_(next_ + kChunkSize) {}
+  MarkingStack() : next_(&backing_[0]), limit_(&backing_[kChunkSize]) {}
 
-  ~MarkingStackChunk() { ASSERT(next_chunk_ == NULL); }
-
-  bool IsEmpty() { return next_ == &backing_[0]; }
-
-  void Push(HeapObject* object, MarkingStackChunk** chunk_list) {
+  void Push(HeapObject* object) {
     ASSERT(GCMetadata::IsMarked(object));
     if (next_ < limit_) {
       *(next_++) = object;
     } else {
-      PushInNewChunk(object, chunk_list);
+      overflowed_ = true;
+      GCMetadata::MarkStackOverflow(object);
     }
   }
 
-  HeapObject* Pop() {
-    ASSERT(!IsEmpty());
-    return *(--next_);
-  }
+  bool IsEmpty() { return next_ == &backing_[0]; }
+  bool IsOverflowed() { return overflowed_; }
+  void ClearOverflow() { overflowed_ = false; }
 
-  // Takes the chunk after the current one out of the chain, and
-  // returns it.  If there is no such chunk, puts a new empty chunk in
-  // the chain and returns this.
-  MarkingStackChunk* TakeChunk(MarkingStackChunk** chunk_list) {
-    if (next_chunk_ != NULL) {
-      MarkingStackChunk* result = next_chunk_;
-      next_chunk_ = result->next_chunk_;
-      result->next_chunk_ = NULL;
-      return result;
-    }
-    if (IsEmpty()) return NULL;
-    *chunk_list = new MarkingStackChunk();
-    return this;
-  }
+  void Empty(PointerVisitor* visitor);
+  void Process(PointerVisitor* visitor, Space* old_space, Space* new_space);
 
  private:
   static const int kChunkSize = 128;
-
-  void PushInNewChunk(HeapObject* object, MarkingStackChunk** chunk_list) {
-    MarkingStackChunk* new_chunk = new MarkingStackChunk();
-    new_chunk->next_chunk_ = this;
-    *chunk_list = new_chunk;
-    new_chunk->Push(object, chunk_list);
-  }
-
-  MarkingStackChunk* next_chunk_;
   HeapObject** next_;
   HeapObject** limit_;
   HeapObject* backing_[kChunkSize];
-};
-
-class MarkingStack {
- public:
-  MarkingStack() : current_chunk_(new MarkingStackChunk()) {}
-
-  ~MarkingStack() { delete current_chunk_; }
-
-  void Push(HeapObject* object) {
-    current_chunk_->Push(object, &current_chunk_);
-  }
-
-  void Process(PointerVisitor* visitor) {
-    for (MarkingStackChunk* chunk = current_chunk_->TakeChunk(&current_chunk_);
-         chunk != NULL; chunk = current_chunk_->TakeChunk(&current_chunk_)) {
-      while (!chunk->IsEmpty()) {
-        HeapObject* object = chunk->Pop();
-        object->IteratePointers(visitor);
-      }
-      delete chunk;
-    }
-  }
-
- private:
-  MarkingStackChunk* current_chunk_;
+  bool overflowed_ = false;
 };
 
 class MarkingVisitor : public PointerVisitor {
@@ -134,7 +84,7 @@ class MarkingVisitor : public PointerVisitor {
       if (stack_chain_ != NULL && heap_object->IsStack()) {
         ChainStack(Stack::cast(heap_object));
       }
-      GCMetadata::Mark(heap_object, heap_object->Size());
+      GCMetadata::Mark(heap_object);
       marking_stack_->Push(heap_object);
     }
   }

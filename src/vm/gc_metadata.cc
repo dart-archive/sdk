@@ -15,13 +15,12 @@ namespace dartino {
 GCMetadata GCMetadata::singleton_;
 
 void GCMetadata::TearDown() {
-  uword mark_bits_size = singleton_.heap_extent_ >> kMarkBitsShift;
-  Platform::FreePages(
-      singleton_.metadata_,
-      singleton_.number_of_cards_ * kMetadataBytes + mark_bits_size);
+  Platform::FreePages(singleton_.metadata_, singleton_.metadata_size_);
 }
 
-void GCMetadata::Setup() {
+void GCMetadata::Setup() { singleton_.SetupSingleton(); }
+
+void GCMetadata::SetupSingleton() {
   const int kRanges = 4;
   Platform::HeapMemoryRange ranges[kRanges];
   int range_count = Platform::GetHeapMemoryRanges(ranges, kRanges);
@@ -37,56 +36,77 @@ void GCMetadata::Setup() {
     }
   }
 
-  singleton_.heap_allocation_arena_ = 1 << largest_index;
+  heap_allocation_arena_ = 1 << largest_index;
 
-  singleton_.lowest_address_ =
-      reinterpret_cast<uword>(ranges[largest_index].address);
+  lowest_address_ = reinterpret_cast<uword>(ranges[largest_index].address);
   uword size = ranges[largest_index].size;
-  singleton_.heap_extent_ = size;
+  heap_extent_ = size;
 
-  singleton_.number_of_cards_ = size >> kCardBits;
+  number_of_cards_ = size >> kCardSizeLog2;
 
   uword mark_bits_size = size >> kMarkBitsShift;
+  uword mark_stack_overflow_bits_size = size >> kCardSizeInBitsLog2;
 
-  singleton_.metadata_ =
-      reinterpret_cast<unsigned char*>(Platform::AllocatePages(
-          singleton_.number_of_cards_ * kMetadataBytes + mark_bits_size,
-          Platform::kAnyArena));
-  singleton_.remembered_set_ = singleton_.metadata_;
-  singleton_.object_starts_ =
-      singleton_.metadata_ + singleton_.number_of_cards_;
-  singleton_.mark_bits_ = reinterpret_cast<uint32*>(
-      singleton_.metadata_ + 2 * singleton_.number_of_cards_);
+  // We have two bytes per card: one for remembered set, and one for object
+  // start offset.
+  metadata_size_ = Utils::RoundUp(
+      number_of_cards_ * 2 + mark_bits_size + mark_stack_overflow_bits_size,
+      Platform::kPageSize);
 
-  uword start = reinterpret_cast<uword>(singleton_.object_starts_);
-  uword lowest = singleton_.lowest_address_;
-  uword shifted = lowest >> kCardBits;
-  singleton_.starts_bias_ = start - shifted;
+  metadata_ = reinterpret_cast<unsigned char*>(
+      Platform::AllocatePages(metadata_size_, Platform::kAnyArena));
+  remembered_set_ = metadata_;
+  object_starts_ = metadata_ + number_of_cards_;
+  mark_bits_ = reinterpret_cast<uint32*>(metadata_ + 2 * number_of_cards_);
+  mark_stack_overflow_bits_ =
+      reinterpret_cast<uint8_t*>(mark_bits_) + mark_bits_size;
 
-  start = reinterpret_cast<uword>(singleton_.remembered_set_);
-  singleton_.remembered_set_bias_ = start - shifted;
+  uword start = reinterpret_cast<uword>(object_starts_);
+  uword lowest = lowest_address_;
+  uword shifted = lowest >> kCardSizeLog2;
+  starts_bias_ = start - shifted;
+
+  start = reinterpret_cast<uword>(remembered_set_);
+  remembered_set_bias_ = start - shifted;
 
   shifted = lowest >> kMarkBitsShift;
-  start = reinterpret_cast<uword>(singleton_.mark_bits_);
-  singleton_.mark_bits_bias_ = start - shifted;
+  start = reinterpret_cast<uword>(mark_bits_);
+  mark_bits_bias_ = start - shifted;
+
+  shifted = lowest >> kCardSizeInBitsLog2;
+  start = reinterpret_cast<uword>(mark_stack_overflow_bits_);
+  overflow_bits_bias_ = start - shifted;
 }
 
-// Mark an object whose mark bits cross a 32 bit boundary.
+// Mark all bits of an object whose mark bits cross a 32 bit boundary.
 void GCMetadata::SlowMark(HeapObject* object, size_t size) {
   int mask_shift = ((reinterpret_cast<uword>(object) >> kWordShift) & 31);
-  uint32* bits = reinterpret_cast<uint32*>((singleton_.mark_bits_bias_ +
-                   (reinterpret_cast<uword>(object) >> kMarkBitsShift)) &
-                  ~3);
+  uint32* bits = MarkBitsFor(object);
+
   uint32 mask = 0xffffffffu << mask_shift;
   *bits |= mask;
 
   bits++;
   uint32 words = size >> kWordShift;
-  for (words -= 32 - mask_shift; words >= 32; words -= 32) {
-    *bits = 0xffffffffu;
-    bits++;
-  }
+  for (words -= 32 - mask_shift; words >= 32; words -= 32)
+    *bits++ = 0xffffffffu;
   *bits |= (1 << words) - 1;
+}
+
+void GCMetadata::MarkStackOverflow(HeapObject* object) {
+  uword address = object->address();
+  uint8* overflow_bits = OverflowBitsFor(address);
+  *overflow_bits |= 1 << ((address >> kCardSizeLog2) & 7);
+  // We can have a mark stack overflow in new-space where we do not normally
+  // maintain object starts. By updating the object starts for this card we
+  // can be sure that the necessary objects in this card are walkable.
+  uint8* start = StartsFor(address);
+  ASSERT(kCardSizeLog2 <= 8);
+  uint8 low_byte = static_cast<uint8>(address);
+  // We only overwrite the object start if we didn't have object start info
+  // before or if this object is before the previous object start, which
+  // would mean we would not scan the necessary object.
+  if (*start == kNoObjectStart || *start > low_byte) *start = low_byte;
 }
 
 }  // namespace dartino

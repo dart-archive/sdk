@@ -21,9 +21,11 @@ class GCMetadata {
   static void Setup();
   static void TearDown();
 
-  static const int kCardBits = 7;
+  static const int kCardSizeLog2 = 7;
   // Number of bytes per remembered-set card.
-  static const int kCardSize = 1 << 7;
+  static const int kCardSize = 1 << kCardSizeLog2;
+
+  static const int kCardSizeInBitsLog2 = kCardSizeLog2 + 3;
 
   static const int kWordShift = (sizeof(uword) == 8 ? 3 : 2);
 
@@ -35,18 +37,21 @@ class GCMetadata {
   static const int kMarkBitsShift = 3 + kWordShift;
 
   static void InitializeStartsForChunk(Chunk* chunk) {
-    uword base = chunk->base();
-    uword size = (chunk->limit() - base) >> kCardBits;
-    base = (base >> kCardBits) + singleton_.starts_bias_;
-    memset(reinterpret_cast<uint8*>(base), kNoObjectStart, size);
+    uint8* from = StartsFor(chunk->base());
+    uint8* to = StartsFor(chunk->limit());
+    memset(from, kNoObjectStart, to - from);
   }
 
   static void InitializeRememberedSetForChunk(Chunk* chunk) {
-    uword base = chunk->base();
-    uword size = (chunk->limit() - base) >> kCardBits;
-    base = (base >> kCardBits) + singleton_.remembered_set_bias_;
-    memset(reinterpret_cast<uint8*>(base), GCMetadata::kNoNewSpacePointers,
-           size);
+    uint8* from = RememberedSetFor(chunk->base());
+    uint8* to = RememberedSetFor(chunk->limit());
+    memset(from, GCMetadata::kNoNewSpacePointers, to - from);
+  }
+
+  static void InitializeOverflowBitsForChunk(Chunk* chunk) {
+    uint8* from = OverflowBitsFor(chunk->base());
+    uint8* to = OverflowBitsFor(chunk->limit());
+    memset(from, 0, to - from);
   }
 
   static void ClearMarkBitsFor(Chunk* chunk) {
@@ -56,16 +61,29 @@ class GCMetadata {
     memset(reinterpret_cast<uint8*>(base), 0, size);
   }
 
-  static uint8* StartsFor(uword address) {
-    return reinterpret_cast<uint8*>((address >> kCardBits) +
+  static inline uint8* StartsFor(uword address) {
+    return reinterpret_cast<uint8*>((address >> kCardSizeLog2) +
                                     singleton_.starts_bias_);
   }
 
-  static uint8* RememberedSetFor(uword address) {
-    return reinterpret_cast<uint8*>((address >> kCardBits) +
+  static inline uint8* RememberedSetFor(uword address) {
+    return reinterpret_cast<uint8*>((address >> kCardSizeLog2) +
                                     singleton_.remembered_set_bias_);
   }
 
+  static inline uint8* OverflowBitsFor(uword address) {
+    return reinterpret_cast<uint8*>((address >> kCardSizeInBitsLog2) +
+                                    singleton_.overflow_bits_bias_);
+  }
+
+  static inline uint32* MarkBitsFor(HeapObject* object) {
+    uword address = reinterpret_cast<uword>(object);
+    uword result =
+        (singleton_.mark_bits_bias_ + (address >> kMarkBitsShift)) & ~3;
+    return reinterpret_cast<uint32*>(result);
+  }
+
+  // Returns true if the object is grey (queued) or black(scanned).
   static bool IsMarked(HeapObject* object) {
     uword address = reinterpret_cast<uword>(object);
     address = (singleton_.mark_bits_bias_ + (address >> kMarkBitsShift)) & ~3;
@@ -73,19 +91,41 @@ class GCMetadata {
     return (*reinterpret_cast<uint32*>(address) & mask) != 0;
   }
 
+  // Returns true if the object is grey (queued), but not black (scanned).
+  // This is used when scanning the heap after mark stack overflow, looking for
+  // objects that are conceptually queued, but which are missing from the
+  // explicit marking queue.
+  static bool IsGrey(HeapObject* object) {
+    return IsMarked(object) &&
+           !IsMarked(reinterpret_cast<HeapObject*>(
+               reinterpret_cast<uword>(object) + sizeof(uword)));
+  }
+
+  // Marks an object grey, which normally means it has been queued on the mark
+  // stack.
+  static void Mark(HeapObject* object) {
+    uint32* bits = MarkBitsFor(object);
+    uint32 mask = 1 << ((reinterpret_cast<uword>(object) >> kWordShift) & 31);
+    *bits |= mask;
+  }
+
   // Marks all the bits (1 bit per word) that correspond to a live object.
-  static void Mark(HeapObject* object, size_t size) {
-    ASSERT(size >= sizeof(uword));
+  // This marks the object black (scanned) and sets up the bitmap data we need
+  // for compaction.
+  static void MarkAll(HeapObject* object, size_t size) {
+    // If there were 1-word live objects we could not see the difference
+    // between grey objects (only first word is marked) and black objects (all
+    // words are marked).
+    ASSERT(size > sizeof(uword));
     int mask_shift = ((reinterpret_cast<uword>(object) >> kWordShift) & 31);
     size_t size_in_words = size >> kWordShift;
     // Jump to the slow case routine to handle crossing an int32_t boundary.
     if (mask_shift + size_in_words > 31) return SlowMark(object, size);
 
-    uword address = (singleton_.mark_bits_bias_ +
-                     (reinterpret_cast<uword>(object) >> kMarkBitsShift)) &
-                    ~3;
     uint32 mask = ((1 << size_in_words) - 1) << mask_shift;
-    *reinterpret_cast<uint32*>(address) |= mask;
+
+    uint32* bits = MarkBitsFor(object);
+    *bits |= mask;
   }
 
   static int heap_allocation_arena() {
@@ -96,32 +136,46 @@ class GCMetadata {
 
   static uword heap_extent() { return singleton_.heap_extent_; }
 
+  static bool InMetadataRange(uword start) {
+    uword lowest = singleton_.lowest_address_;
+    return start >= lowest && start - lowest < singleton_.heap_extent_;
+  }
+
   static uword remembered_set_bias() { return singleton_.remembered_set_bias_; }
 
   // Unaligned, so cannot clash with a real object start.
   static const int kNoObjectStart = 2;
 
   // We need to track the start of an object for each card, so that we can
-  // iterate just part of the heap.  This does that.  The cards are less than
-  // 256 bytes large (see the assert below), so writing the last byte of the
-  // object start address is enough to uniquely identify the address.
+  // iterate just part of the heap.  This does that for newly allocated objects
+  // in old-space.  The cards are less than 256 bytes large (see the assert
+  // below), so writing the last byte of the object start address is enough to
+  // uniquely identify the address.
   inline static void RecordStart(uword address) {
     uint8* start = StartsFor(address);
-    ASSERT(kCardBits <= 8);
+    ASSERT(kCardSizeLog2 <= 8);
     *start = static_cast<uint8>(address);
   }
 
+  // An object at this address may contain a pointer from old-space to
+  // new-space.
   inline static void InsertIntoRememberedSet(uword address) {
-    address >>= kCardBits;
+    address >>= kCardSizeLog2;
     address += singleton_.remembered_set_bias_;
     *reinterpret_cast<uint8*>(address) = kNewSpacePointers;
   }
 
+  // May this card contain pointers from old-space to new-space?
   inline static bool IsMarkedDirty(uword address) {
-    address >>= kCardBits;
+    address >>= kCardSizeLog2;
     address += singleton_.remembered_set_bias_;
     return *reinterpret_cast<uint8*>(address) != kNoNewSpacePointers;
   }
+
+  // The object was marked grey and we tried to push it on the mark stack, but
+  // the stack overflowed. Here we record enough information that we can find
+  // these objects later.
+  static void MarkStackOverflow(HeapObject* object);
 
  private:
   GCMetadata() {}
@@ -129,24 +183,25 @@ class GCMetadata {
 
   static GCMetadata singleton_;
 
-  static void SlowMark(HeapObject* object, size_t size);
+  void SetupSingleton();
 
-  // We have two bytes per card: one for remembered set, and one for object
-  // start offset.
-  static const int kMetadataBytes = 2;
+  static void SlowMark(HeapObject* object, size_t size);
 
   // Heap metadata (remembered set etc.).
   uword lowest_address_;
   uword heap_extent_;
   uword number_of_cards_;
+  uword metadata_size_;
   int heap_allocation_arena_;
   unsigned char* metadata_;
   unsigned char* remembered_set_;
   unsigned char* object_starts_;
   uint32* mark_bits_;
+  uint8_t* mark_stack_overflow_bits_;
   uword starts_bias_;
   uword remembered_set_bias_;
   uword mark_bits_bias_;
+  uword overflow_bits_bias_;
 };
 
 }  // namespace dartino

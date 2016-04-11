@@ -90,6 +90,7 @@ Chunk* OldSpace::AllocateAndUseChunk(int size) {
     UseWholeChunk(chunk);
     GCMetadata::InitializeStartsForChunk(chunk);
     GCMetadata::InitializeRememberedSetForChunk(chunk);
+    GCMetadata::InitializeOverflowBitsForChunk(chunk);
     GCMetadata::ClearMarkBitsFor(chunk);
   }
   return chunk;
@@ -224,8 +225,7 @@ void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
             starts--;
             iteration_start -= GCMetadata::kCardSize;
             // Step back across object-start entries that have not been filled
-            // in
-            // (because of large objects).
+            // in (because of large objects).
           } while (iteration_start > earliest_iteration_start &&
                    *starts == GCMetadata::kNoObjectStart);
 
@@ -353,8 +353,8 @@ void OldSpace::Verify() {
       // Replace low byte of card address with the byte from the object starts
       // table, yielding some correct object start address.
       uword object_address = (card & ~0xff) | *starts;
-      ASSERT(object_address >> GCMetadata::kCardBits ==
-             card >> GCMetadata::kCardBits);
+      ASSERT(object_address >> GCMetadata::kCardSizeLog2 ==
+             card >> GCMetadata::kCardSizeLog2);
       HeapObject* obj = HeapObject::FromAddress(object_address);
       ASSERT(obj->get_class()->IsClass());
       ASSERT(obj->Size() > 0);
@@ -379,5 +379,25 @@ void OldSpace::Verify() {
   }
 }
 #endif
+
+void MarkingStack::Empty(PointerVisitor* visitor) {
+  while (!IsEmpty()) {
+    HeapObject* object = *--next_;
+    GCMetadata::MarkAll(object, object->Size());
+    object->IteratePointers(visitor);
+  }
+}
+
+void MarkingStack::Process(PointerVisitor* visitor, Space* old_space,
+                           Space* new_space) {
+  while (!IsEmpty() || IsOverflowed()) {
+    Empty(visitor);
+    if (IsOverflowed()) {
+      ClearOverflow();
+      old_space->IterateOverflowedObjects(visitor, this);
+      new_space->IterateOverflowedObjects(visitor, this);
+    }
+  }
+}
 
 }  // namespace dartino

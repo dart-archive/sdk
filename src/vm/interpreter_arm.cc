@@ -1947,7 +1947,7 @@ void InterpreterGeneratorARM::AddToRememberedSet(Register object,
   __ b(EQ, &smi);
 
   __ ldr(scratch, Address(R4, Process::kRememberedSetBiasOffset));
-  __ add(scratch, scratch, Operand(object, LSR, GCMetadata::kCardBits));
+  __ add(scratch, scratch, Operand(object, LSR, GCMetadata::kCardSizeLog2));
   // This will never store zero (kNoNewSpacePointers) because the object is
   // tagged!
   __ strb(object, Address(scratch, 0));

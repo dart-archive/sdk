@@ -96,6 +96,48 @@ void Space::SetAllocationBudget(int new_budget) {
   allocation_budget_ = Utils::Maximum(DefaultChunkSize(new_budget), new_budget);
 }
 
+void Space::IterateOverflowedObjects(PointerVisitor* visitor,
+                                     MarkingStack* stack) {
+  static_assert(
+      Platform::kPageSize % (1 << GCMetadata::kCardSizeInBitsLog2) == 0,
+      "MarkStackOverflowBytesMustCoverAFractionOfAPage");
+
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    uint8* bits = GCMetadata::OverflowBitsFor(chunk->base());
+    uint8* bits_limit = GCMetadata::OverflowBitsFor(chunk->limit());
+    uword card = chunk->base();
+    for (; bits < bits_limit; bits++) {
+      for (int i = 0; i < 8; i++, card += GCMetadata::kCardSize) {
+        // Skip cards 8 at a time if they are clear.
+        if (*bits == 0) {
+          card += GCMetadata::kCardSize * (8 - i);
+          break;
+        }
+        if ((*bits & (1 << i)) != 0) {
+          // Clear the bit immediately, since the mark stack could overflow and
+          // a different object in this card could fail to push, setting the
+          // bit again.
+          *bits &= ~(1 << i);
+          uint8 start = *GCMetadata::StartsFor(card);
+          ASSERT(start != GCMetadata::kNoObjectStart);
+          uword object_address = (card | start);
+          for (HeapObject* object;
+               object_address < card + GCMetadata::kCardSize &&
+               !HasSentinelAt(object_address);
+               object_address += object->Size()) {
+            object = HeapObject::FromAddress(object_address);
+            if (GCMetadata::IsGrey(object)) {
+              GCMetadata::MarkAll(object, object->Size());
+              object->IteratePointers(visitor);
+            }
+          }
+        }
+      }
+      stack->Empty(visitor);
+    }
+  }
+}
+
 void Space::IterateObjects(HeapObjectVisitor* visitor) {
   if (is_empty()) return;
   Flush();

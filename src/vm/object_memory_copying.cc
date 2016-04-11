@@ -60,6 +60,9 @@ void SemiSpace::UpdateBaseAndLimit(Chunk* chunk, uword top) {
   // Always write a sentinel so the scavenger knows where to stop.
   WriteSentinelAt(top_);
   limit_ = chunk->limit();
+  if (top == chunk->base() && GCMetadata::InMetadataRange(top)) {
+    GCMetadata::InitializeStartsForChunk(chunk);
+  }
 }
 
 void SemiSpace::Flush() {
@@ -90,6 +93,9 @@ void Space::Append(Chunk* chunk) {
     last_ = chunk;
   }
   chunk->set_next(NULL);
+  if (GCMetadata::InMetadataRange(chunk->base())) {
+    GCMetadata::InitializeOverflowBitsForChunk(chunk);
+  }
 }
 
 void SemiSpace::Append(Chunk* chunk) {

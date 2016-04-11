@@ -493,7 +493,7 @@ void Program::PerformSharedGarbageCollection() {
   for (auto process : process_list_) {
     process->IterateRoots(&marking_visitor);
   }
-  stack.Process(&marking_visitor);
+  stack.Process(&marking_visitor, old_space, new_space);
   old_space->ProcessWeakPointers();
 
   for (auto process : process_list_) {
@@ -1068,7 +1068,7 @@ int Program::CollectMutableGarbageAndChainStacks() {
   // all processes.
   for (auto process : process_list_) process->IterateRoots(&marking_visitor);
 
-  marking_stack.Process(&marking_visitor);
+  marking_stack.Process(&marking_visitor, old_space, new_space);
 
   // Weak processing.
   old_space->ProcessWeakPointers();

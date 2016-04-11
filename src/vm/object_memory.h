@@ -17,6 +17,7 @@ class GenerationalScavengeVisitor;
 class Heap;
 class HeapObject;
 class HeapObjectVisitor;
+class MarkingStack;
 class OldSpace;
 class PointerVisitor;
 class ProgramHeapRelocator;
@@ -134,6 +135,9 @@ class Space {
 
   // Iterate over all objects in this space.
   void IterateObjects(HeapObjectVisitor* visitor);
+
+  // Iterate all the objects that are grey, after a mark stack overflow.
+  void IterateOverflowedObjects(PointerVisitor* visitor, MarkingStack* stack);
 
   // Schema change support.
   void CompleteTransformations(PointerVisitor* visitor);

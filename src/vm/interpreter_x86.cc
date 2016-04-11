@@ -1695,7 +1695,7 @@ void InterpreterGeneratorX86::AddToRememberedSet(Register object,
   // TODO(erikcorry): Filter out non-new-space values.
 
   __ movl(scratch, object);
-  __ shrl(scratch, Immediate(GCMetadata::kCardBits));
+  __ shrl(scratch, Immediate(GCMetadata::kCardSizeLog2));
   __ addl(scratch, Address(EDI, Process::kRememberedSetBiasOffset));
   __ movb(Address(scratch), Immediate(GCMetadata::kNewSpacePointers));
 
