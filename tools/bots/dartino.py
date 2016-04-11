@@ -638,8 +638,6 @@ def StepsTargetRunner(debug_log, system, mode, arch):
     with bot.BuildStep('Unpack build tarball'):
       Run(['tar', '-xjf', tarball])
 
-    StepDisableAnalytics(os.path.join('dartino-sdk', 'bin'))
-
     # Run tests on all necessary configurations.
     configurations = GetBuildConfigurations(
       system=system,
@@ -655,6 +653,8 @@ def StepsTargetRunner(debug_log, system, mode, arch):
 
           # Sanity check we got build artifacts which we expect.
           assert os.path.exists(os.path.join(build_dir, 'dartino-vm'))
+
+          StepDisableAnalytics(build_dir)
 
           # TODO(kustermann): This is hackisch, but our current copying of the
           # dart binary makes this a requirement.
