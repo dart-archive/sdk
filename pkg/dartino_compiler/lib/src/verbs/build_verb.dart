@@ -47,7 +47,7 @@ Future<int> buildTask(
     Uri base) async {
 
   Uri snapshot = defaultSnapshotLocation(script);
-  int rc = await compileAndAttachToVmThen(
+  await compileAndAttachToVmThen(
       commandSender,
       commandIterator,
       state,

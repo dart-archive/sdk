@@ -744,7 +744,6 @@ class DartinoVmContext {
 
   String noSuchMethodErrorToString(List<DartValue> nsmFields) {
     assert(nsmFields.length == 3);
-    DartValue receiver = nsmFields[0];
     ClassValue receiverClass = nsmFields[1];
     Integer receiverSelector = nsmFields[2];
     DartinoSelector selector = new DartinoSelector(receiverSelector.value);

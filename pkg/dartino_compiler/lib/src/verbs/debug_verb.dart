@@ -45,8 +45,6 @@ import '../../vm_commands.dart' show
     PushFromOffset,
     VmCommand;
 
-import 'package:dartino_compiler/program_info.dart';
-
 const Action debugAction =
     const Action(
         debug,

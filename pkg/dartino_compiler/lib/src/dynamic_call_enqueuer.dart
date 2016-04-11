@@ -10,9 +10,6 @@ import 'dart:collection' show
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
 
-import 'package:compiler/src/universe/use.dart' show
-    DynamicUse;
-
 import 'package:compiler/src/dart_types.dart' show
     DartType,
     InterfaceType,

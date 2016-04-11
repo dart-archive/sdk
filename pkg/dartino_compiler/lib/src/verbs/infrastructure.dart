@@ -72,11 +72,6 @@ export '../hub/hub_main.dart' show
     ClientConnection,
     IsolatePool;
 
-import '../messages.dart' show
-    analyticsOptInPrompt,
-    analyticsOptInNotification,
-    analyticsOptOutNotification;
-
 import 'actions.dart' show
     Action;
 

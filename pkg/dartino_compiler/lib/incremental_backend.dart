@@ -17,14 +17,8 @@ import 'src/dartino_system_builder.dart' show
     DartinoSystemBuilder,
     SchemaChange;
 
-import 'src/dartino_class_builder.dart' show
-    DartinoClassBuilder;
-
 import 'src/closure_environment.dart' show
     ClosureInfo;
-
-import 'src/dartino_context.dart' show
-    DartinoContext;
 
 // TODO(ahe): Move this to dart2js upstream when it's stabilized
 abstract class IncrementalBackend {

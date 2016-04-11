@@ -18,10 +18,6 @@ import '../hub/exit_codes.dart' show
 
 import 'package:servicec/compiler.dart' as servicec;
 
-import 'package:servicec/errors.dart' show
-    CompilationError,
-    ErrorReporter;
-
 import 'documentation.dart' show
     servicecDocumentation;
 

@@ -4,20 +4,12 @@
 
 library dartino_compiler.dartino_class_builder;
 
-import 'package:compiler/src/dart_types.dart';
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/universe/selector.dart';
 import 'package:persistent/persistent.dart';
 
-import 'dartino_function_builder.dart';
-import 'dartino_context.dart';
 
 import '../dartino_system.dart';
 import '../vm_commands.dart';
-
-// TODO(ahe): Remove this import.
-import '../incremental/dartino_compiler_incremental.dart' show
-    IncrementalCompilationFailed;
 
 import 'dartino_system_builder.dart' show
     DartinoSystemBuilder,
@@ -80,7 +72,6 @@ abstract class DartinoClassBuilder extends DartinoClassBase {
       DartinoClassBase superclass,
       SchemaChange schemaChange,
       DartinoSystemBuilder builder) {
-    List<DartinoField> mixedInFields = klass.mixedInFields;
     return
         new DartinoPatchClassBuilder(klass, superclass, schemaChange, builder)
         ..validate();

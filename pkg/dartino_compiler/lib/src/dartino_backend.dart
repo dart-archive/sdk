@@ -93,9 +93,6 @@ import 'package:compiler/src/constants/values.dart' show
     MapConstantValue,
     StringConstantValue;
 
-import 'package:compiler/src/constants/expressions.dart' show
-    ConstantExpression;
-
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
 

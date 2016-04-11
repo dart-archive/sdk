@@ -42,9 +42,6 @@ import 'dartino_function_builder.dart' show
 import '../dartino_class_base.dart' show
     DartinoClassBase;
 
-import 'dartino_registry.dart' show
-    DartinoRegistry;
-
 import 'debug_registry.dart' show
     DebugRegistry;
 

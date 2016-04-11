@@ -30,9 +30,6 @@ import 'package:compiler/src/elements/elements.dart' show
     Name,
     ParameterElement;
 
-import 'package:compiler/src/universe/call_structure.dart' show
-    CallStructure;
-
 import 'package:compiler/src/common/names.dart' show
     Identifiers;
 

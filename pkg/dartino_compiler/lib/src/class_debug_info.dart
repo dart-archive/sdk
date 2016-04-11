@@ -4,9 +4,6 @@
 
 library dartino_compiler.class_debug_info;
 
-import 'package:compiler/src/elements/elements.dart' show
-    ClassElement;
-
 import '../dartino_class.dart' show
     DartinoClass;
 
@@ -29,7 +26,6 @@ class ClassDebugInfo {
     if (className != null) {
       className = "$className.";
     }
-    int index = 0;
     return new List<String>.from(klass.mixedInFields.map((DartinoField field) {
       String elementName = field.element.name;
       String fieldName;

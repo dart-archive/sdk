@@ -75,9 +75,6 @@ import 'package:compiler/src/elements/modelx.dart' show
     FieldElementX,
     LibraryElementX;
 
-import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
-
 import 'package:compiler/src/library_loader.dart' show
     TagState;
 

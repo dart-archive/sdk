@@ -20,10 +20,6 @@ import 'package:compiler/src/dart_types.dart' show
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
-import 'package:compiler/src/universe/use.dart' show
-    DynamicUse,
-    StaticUse;
-
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue;
 

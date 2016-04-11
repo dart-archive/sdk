@@ -14,9 +14,6 @@ import 'package:compiler/src/elements/elements.dart' show
 import 'package:compiler/src/tree/tree.dart' show
     Expression;
 
-import 'package:compiler/src/resolution/tree_elements.dart' show
-    TreeElements;
-
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
 
@@ -27,9 +24,6 @@ import '../dartino_system.dart' show
 import 'codegen_visitor.dart' show
     CodegenVisitor,
     DartinoRegistryMixin;
-
-import 'closure_environment.dart' show
-    ClosureEnvironment;
 
 import 'dartino_context.dart' show
     DartinoContext;

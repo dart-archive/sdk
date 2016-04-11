@@ -37,9 +37,6 @@ import 'package:compiler/src/elements/modelx.dart' show
     FieldElementX,
     LibraryElementX;
 
-import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
-
 import '../incremental_backend.dart' show
     IncrementalDartinoBackend;
 

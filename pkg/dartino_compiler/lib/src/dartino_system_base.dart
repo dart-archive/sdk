@@ -14,9 +14,6 @@ import 'package:compiler/src/elements/elements.dart' show
     LibraryElement,
     Name;
 
-import 'package:compiler/src/universe/selector.dart' show
-    Selector;
-
 import 'dartino_system_builder.dart' show
     SchemaChange;
 

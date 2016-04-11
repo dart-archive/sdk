@@ -4,28 +4,6 @@
 
 library dartino_compiler.dartino_context;
 
-import 'package:compiler/src/tree/tree.dart' show
-    Node;
-
-import 'package:compiler/src/common/names.dart' show
-    Names;
-
-import 'package:compiler/src/elements/elements.dart' show
-    ClassElement,
-    Element,
-    FieldElement,
-    FunctionElement,
-    FunctionSignature,
-    LibraryElement,
-    ParameterElement,
-    Name;
-
-import 'package:compiler/src/resolution/tree_elements.dart' show
-    TreeElements;
-
-import 'package:compiler/src/universe/selector.dart' show
-    Selector;
-
 import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
@@ -53,15 +31,8 @@ export 'bytecode_assembler.dart' show
 import 'dartino_native_descriptor.dart' show
     DartinoNativeDescriptor;
 
-import 'dartino_selector.dart' show
-    DartinoSelector,
-    SelectorKind;
-
 export 'dartino_native_descriptor.dart' show
     DartinoNativeDescriptor;
-
-import 'dartino_registry.dart' show
-    DartinoRegistry;
 
 class DartinoContext {
   final DartinoCompilerImplementation compiler;

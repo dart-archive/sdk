@@ -14,7 +14,6 @@ import 'package:compiler/src/resolution/operators.dart' show
 
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/resolution/tree_elements.dart';
-import 'package:compiler/src/resolution/send_resolver.dart';
 import 'package:compiler/src/tree/tree.dart';
 import 'package:compiler/src/universe/selector.dart';
 import 'package:compiler/src/universe/call_structure.dart';
