@@ -476,7 +476,9 @@ class AnalyzedSentence {
 
   Future<int> performVerb(VerbContext context) {
     if (context.clientConnection.analytics.shouldPromptForOptIn) {
-      if (target?.kind != TargetKind.ANALYTICS) {
+      // TODO(danrubel) Disable prompt for opt-in
+      // until analytics can be disabled on ARM bots.
+      if (false && target?.kind != TargetKind.ANALYTICS) {
         return promptForOptIn(context);
       }
     }
