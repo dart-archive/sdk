@@ -654,14 +654,14 @@ def StepsTargetRunner(debug_log, system, mode, arch):
           # Sanity check we got build artifacts which we expect.
           assert os.path.exists(os.path.join(build_dir, 'dartino-vm'))
 
-          StepDisableAnalytics(build_dir)
-
           # TODO(kustermann): This is hackisch, but our current copying of the
           # dart binary makes this a requirement.
           dart_arm = 'third_party/bin/linux/dart-arm'
           destination = os.path.join(build_dir, 'dart')
           shutil.copyfile(dart_arm, destination)
           shutil.copymode(dart_arm, destination)
+
+          StepDisableAnalytics(build_dir)
 
           def run():
             StepTest(
