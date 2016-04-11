@@ -191,3 +191,15 @@ const String flashDocumentation = """
              Currently this will build and flash an image for the STM32F746G
              Discovery board only.
 """;
+
+const String enableDocumentation = """
+   enable analytics
+             Turn on collection of anonymous usage statistics and crash reports
+             in order to improve the tool (see http://goo.gl/27JjhU for more).
+""";
+
+const String disableDocumentation = """
+   disable analytics
+             Turn off collection of anonymous usage statistics
+             and crash reports.
+""";

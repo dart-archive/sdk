@@ -8,8 +8,6 @@ library dartino_tests.messages;
 import 'dart:convert' show
     JSON;
 
-import 'dart:io' as io show stdout;
-
 import 'dart:async' show
     StreamTransformer;
 

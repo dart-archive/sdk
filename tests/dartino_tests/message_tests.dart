@@ -26,9 +26,6 @@ import 'package:dartino_compiler/src/hub/sentence_parser.dart' show
     Sentence,
     parseSentence;
 
-import 'package:dartino_compiler/src/verbs/actions.dart' show
-    Action;
-
 import 'package:dartino_compiler/src/hub/hub_main.dart' show
     ClientLogger,
     ClientConnection,

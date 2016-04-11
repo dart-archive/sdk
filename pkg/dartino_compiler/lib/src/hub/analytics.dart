@@ -9,6 +9,7 @@ library dartino_compiler.worker.analytics;
 import 'dart:io';
 import 'dart:math';
 
+import '../messages.dart';
 import '../please_report_crash.dart' show stringifyError;
 import '../verbs/infrastructure.dart' show fileUri;
 
@@ -119,6 +120,10 @@ class Analytics {
       uuidFile.writeAsStringSync(_uuid);
       return true;
     } catch (error, stackTrace) {
+      // Notify the user that there was a problem.
+      print(analyticsRecordChoiceFailed);
+      if (error is FileSystemException) print(error.toString());
+      // and log the information.
       _log("Failed to write uuid.\n"
           "${stringifyError(error, stackTrace)}");
       return false;
@@ -134,10 +139,12 @@ class Analytics {
         path = Platform.environment['APPDATA'];
         if (path == null || !new Directory(path).existsSync()) return null;
       }
+      if (!path.endsWith('/')) path += '/';
       return fileUri(path, Uri.base).resolve('DartinoUuid.txt');
     } else {
       String path = Platform.environment['HOME'];
       if (path == null || !new Directory(path).existsSync()) return null;
+      if (!path.endsWith('/')) path += '/';
       return fileUri(path, Uri.base).resolve('.dartino_uuid');
     }
   }

@@ -30,6 +30,11 @@ import '../hub/sentence_parser.dart' show
 export '../hub/sentence_parser.dart' show
     TargetKind;
 
+import '../messages.dart' show
+    analyticsOptInPrompt,
+    analyticsOptInNotification,
+    analyticsOptOutNotification;
+
 import '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
@@ -470,39 +475,30 @@ class AnalyzedSentence {
       this.options);
 
   Future<int> performVerb(VerbContext context) {
-    if (options != null) {
-      if (options.analytics) {
-        context.clientConnection.analytics.writeNewUuid();
-      }
-      if (options.noAnalytics) {
-        context.clientConnection.analytics.writeOptOut();
-      }
-    }
     if (context.clientConnection.analytics.shouldPromptForOptIn) {
-      return promptForOptIn(context);
-    } else {
-      return internalPerformVerb(context);
+      if (target?.kind != TargetKind.ANALYTICS) {
+        return promptForOptIn(context);
+      }
     }
+    return internalPerformVerb(context);
   }
 
   Future<int> promptForOptIn(VerbContext context) async {
 
-    //TODO(danrubel) disable analytics on bots then uncomment this code
+    bool isOptInYes(String response) {
+      if (response == null) return false;
+      response = response.trim().toLowerCase();
+      return response.isEmpty || response == 'y' || response == 'yes';
+    }
 
-    // bool isOptInYes(String response) {
-    //   if (response == null) return false;
-    //   response = response.trim().toLowerCase();
-    //   return response.isEmpty || response == 'y' || response == 'yes';
-    // }
-    //
-    // var connection = context.clientConnection;
-    // if (isOptInYes(await connection.promptUser(analyticsOptInPrompt))) {
-    //   context.clientConnection.analytics.writeNewUuid();
-    //   print(analyticsOptInNotification);
-    // } else {
-    //   context.clientConnection.analytics.writeOptOut();
-    //   print(analyticsOptOutNotification);
-    // }
+    var connection = context.clientConnection;
+    if (isOptInYes(await connection.promptUser(analyticsOptInPrompt))) {
+      context.clientConnection.analytics.writeNewUuid();
+      print(analyticsOptInNotification);
+    } else {
+      context.clientConnection.analytics.writeOptOut();
+      print(analyticsOptOutNotification);
+    }
     return internalPerformVerb(context);
   }
 

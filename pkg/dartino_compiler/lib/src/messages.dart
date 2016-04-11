@@ -437,3 +437,5 @@ const analyticsOptInNotification = "\nThank you for helping us improve Dartino!\
 
 const analyticsOptOutNotification =
     "\nNo anonymous usage statistics or crash reports will be sent.\n";
+
+const analyticsRecordChoiceFailed = "Failed to record opt-in choice.";

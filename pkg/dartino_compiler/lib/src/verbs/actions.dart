@@ -25,6 +25,12 @@ import 'create_verb.dart' show
 import 'debug_verb.dart' show
     debugAction;
 
+import 'disable_verb.dart' show
+    disableAction;
+
+import 'enable_verb.dart' show
+    enableAction;
+
 import 'export_verb.dart' show
     exportAction;
 
@@ -145,6 +151,8 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "compile": compileAction,
   "create": createAction,
   "debug": debugAction,
+  "disable": disableAction,
+  "enable": enableAction,
   "export": exportAction,
   "flash": flashAction,
   "x-download-tools": downloadToolsAction,
