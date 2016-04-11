@@ -638,6 +638,8 @@ def StepsTargetRunner(debug_log, system, mode, arch):
     with bot.BuildStep('Unpack build tarball'):
       Run(['tar', '-xjf', tarball])
 
+    StepDisableAnalytics(os.path.join('dartino-sdk', 'bin'))
+
     # Run tests on all necessary configurations.
     configurations = GetBuildConfigurations(
       system=system,
