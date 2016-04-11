@@ -240,7 +240,7 @@ def StepsTestSDK(debug_log, configuration):
   if os.path.exists(sdk_dir):
     shutil.rmtree(sdk_dir)
   Unzip(sdk_zip)
-  StepsDisableAnalytics(os.path.join(sdk_dir, 'bin'))
+  StepDisableAnalytics(os.path.join(sdk_dir, 'bin'))
   build_conf = configuration['build_conf']
 
   def run():
@@ -254,7 +254,7 @@ def StepsSanityChecking(build_dir):
   version = utils.GetSemanticSDKVersion()
   sdk_dir = os.path.join(build_dir, 'dartino-sdk')
   bin_dir = os.path.join(sdk_dir, 'bin')
-  StepsDisableAnalytics(bin_dir)
+  StepDisableAnalytics(bin_dir)
   dartino = os.path.join(bin_dir, 'dartino')
   # TODO(ricow): we should test this as a normal test, see issue 232.
   dartino_version = subprocess.check_output([dartino, '--version']).strip()
@@ -269,23 +269,12 @@ def StepsSanityChecking(build_dir):
     raise Exception('Version mismatch, VERSION file has %s, dartino vm has %s' %
                     (version, dartino_vm_version))
 
-def StepsDisableAnalytics(bin_dir):
+def StepDisableAnalytics(bin_dir):
   with bot.BuildStep('Disable analytics'):
     dartino = os.path.join(bin_dir, 'dartino')
     try:
-      try:
-        # TODO(danrubel) remove this once old approach has been removed
-        print "%s --no-analytics" % (dartino)
-        result = subprocess.check_output([dartino, '--no-analytics'])
-      except subprocess.CalledProcessError as error:
-        result = "Ignoring dartino --no-analytics error: %s" % (error)
-      print result
-      try:
-        print "%s disable analytics" % (dartino)
-        result = subprocess.check_output([dartino, 'disable', 'analytics'])
-      except subprocess.CalledProcessError as error:
-        result = "Ignoring dartino disable analytics error: %s" % (error)
-      print result
+      print "%s disable analytics" % (dartino)
+      print subprocess.check_output([dartino, 'disable', 'analytics'])
     except Exception as error:
       print "Ignoring error: %s" % (error)
 
@@ -499,7 +488,7 @@ def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
   for configuration in configurations:
     StepBuild(configuration['build_conf'], configuration['build_dir'], args)
 
-  StepsDisableAnalytics(configuration['build_dir'])
+  StepDisableAnalytics(configuration['build_dir'])
 
   # TODO(herhut): Remove once Windows port is complete.
   if system == 'win':
@@ -541,7 +530,7 @@ def StepsFreeRtos(debug_log):
       embedded_libs=[False],
       use_sdks=[False])[0]
   StepBuild(configuration['build_conf'], configuration['build_dir'])
-  StepsDisableAnalytics(host_configuration['build_dir'])
+  StepDisableAnalytics(host_configuration['build_dir'])
 
 def StepsLK(debug_log):
   # We need the dartino daemon process to compile snapshots.
@@ -567,7 +556,7 @@ def StepsLK(debug_log):
     Run(['make', '-C', 'third_party/lk', 'clean'])
     Run(['make', '-C', 'third_party/lk', '-j8'])
 
-  StepsDisableAnalytics(host_configuration['build_dir'])
+  StepDisableAnalytics(host_configuration['build_dir'])
 
   with bot.BuildStep('Test %s' % device_configuration['build_conf']):
     # TODO(ajohnsen): This is kind of funky, as test.py tries to start the
