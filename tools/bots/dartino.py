@@ -847,10 +847,11 @@ class TemporaryHomeDirectory(object):
     self._old_home_dir = os.getenv('HOME')
     try:
       # copy the analytics opt-out to temp home directory
-      shutil.copyfile(join(self._old_home_dir, '.dartino_uuid'),
-                      join(self._tmp, '.dartino_uuid'))
+      shutil.copyfile(os.path.join(self._old_home_dir, '.dartino_uuid'),
+                      os.path.join(self._tmp, '.dartino_uuid'))
+      print "Copied analytics file to temp home dir"
     except Exception as error:
-      print "Ignoring error: %s" % (error)
+      print "Ignoring error copying analytics file: %s" % (error)
 
     # Note: os.putenv doesn't update os.environ, but assigning to os.environ
     # will also call putenv.
