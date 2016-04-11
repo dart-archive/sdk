@@ -275,6 +275,9 @@ def StepDisableAnalytics(bin_dir):
     try:
       print "%s disable analytics" % (dartino)
       print subprocess.check_output([dartino, 'disable', 'analytics'])
+      print "Ensure background process is not running"
+      print "%s quit" % (dartino)
+      print subprocess.check_output([dartino, 'quit'])
     except Exception as error:
       print "Ignoring error: %s" % (error)
 
