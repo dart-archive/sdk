@@ -709,6 +709,22 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   free(path);
   path = NULL;
 
+  // Test isatty and display the result only if using new disable verb.
+  if (argc > 2 && argv[1][0] == 'd' && argv[2][0] == 'a') {
+    fprintf(stdout, "Diagnostic information:\n");
+    char* term_env = getenv("TERM");
+    fprintf(stdout, "  getenv(TERM) = %s\n", term_env);
+    int stdintty = isatty(fileno(stdin));
+    fprintf(stdout, "  isatty(stdin) = %i\n", stdintty);
+    int stdouttty = isatty(fileno(stdout));
+    fprintf(stdout, "  isatty(stdout) = %i\n", stdouttty);
+    if (stdintty && stdouttty) {
+      fprintf(stdout, "  running in a terminal\n");
+    } else {
+      fprintf(stdout, "  not running in a terminal\n");
+    }
+  }
+
   for (int i = 0; i < argc; i++) {
     buffer.WriteInt(strlen(argv[i]));
     buffer.WriteString(argv[i]);
