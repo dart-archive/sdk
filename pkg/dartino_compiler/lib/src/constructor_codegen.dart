@@ -11,7 +11,6 @@ import 'package:compiler/src/elements/elements.dart' show
     FormalElement,
     FunctionSignature,
     InitializingFormalElement,
-    LibraryElement,
     ParameterElement;
 
 import 'package:compiler/src/resolution/tree_elements.dart' show

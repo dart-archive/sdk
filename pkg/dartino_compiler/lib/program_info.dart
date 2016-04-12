@@ -17,10 +17,7 @@ import 'dart:convert' show
     UTF8;
 
 import 'dart:typed_data' show
-    Int32List,
-    Uint8List,
-    ByteData,
-    Endianness;
+    Int32List;
 
 import 'package:persistent/persistent.dart' show
     Pair;
@@ -29,7 +26,6 @@ import 'vm_commands.dart' show
     ProgramInfoCommand;
 
 import 'dartino_system.dart' show
-    DartinoFunction,
     DartinoSystem;
 
 import 'dartino_class.dart' show

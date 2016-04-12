@@ -16,9 +16,7 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     ConstructorElement,
     Element,
-    FunctionElement,
     LibraryElement,
-    LocalFunctionElement,
     TypedElement;
 
 import 'package:compiler/src/universe/universe.dart' show
@@ -33,7 +31,6 @@ import 'package:compiler/src/universe/world_impact.dart' show
     WorldImpact;
 
 import 'package:compiler/src/dart_types.dart' show
-    DartType,
     InterfaceType;
 
 import 'package:compiler/src/common/work.dart' show

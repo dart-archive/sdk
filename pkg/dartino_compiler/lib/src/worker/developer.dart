@@ -5,10 +5,7 @@
 library dartino_compiler.worker.developer;
 
 import 'dart:async' show
-    Future,
-    Stream,
-    StreamController,
-    Timer;
+    Future;
 
 import 'dart:convert' show
     JSON,
@@ -48,26 +45,16 @@ import 'package:mdns/mdns.dart' show
 import 'package:path/path.dart' show
     basename,
     basenameWithoutExtension,
-    dirname,
     join,
     withoutExtension;
 
 import '../../vm_commands.dart' show
     ConnectionError,
-    Debugging,
-    DebuggingReply,
     HandShakeResult,
-    ProcessBacktrace,
-    ProcessBacktraceRequest,
-    ProcessRun,
-    ProcessSpawnForMain,
     ProgramInfoCommand,
-    SessionEnd,
-    VmCommand,
     VmCommandCode;
 
 import '../../program_info.dart' show
-    Configuration,
     ProgramInfo,
     ProgramInfoJson,
     buildProgramInfo,
@@ -114,8 +101,7 @@ import '../diagnostic.dart' show
 
 import '../guess_configuration.dart' show
     executable,
-    dartinoVersion,
-    guessDartinoVm;
+    dartinoVersion;
 
 import '../device_type.dart' show
     DeviceType,

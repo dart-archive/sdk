@@ -6,7 +6,6 @@ library dartino_compiler.src.guess_configuration;
 
 import 'dart:io' show
     File,
-    Link,
     Platform,
     Process;
 

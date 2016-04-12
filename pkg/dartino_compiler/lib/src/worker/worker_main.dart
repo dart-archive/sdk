@@ -27,8 +27,7 @@ import '../hub/client_commands.dart' show
 
 import '../diagnostic.dart' show
     DiagnosticKind,
-    InputError,
-    throwInternalError;
+    InputError;
 
 import '../hub/exit_codes.dart' show
     COMPILER_EXITCODE_CRASH;

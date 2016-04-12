@@ -18,8 +18,7 @@ import 'package:compiler/src/constants/expressions.dart' show
     IntFromEnvironmentConstantExpression,
     StringFromEnvironmentConstantExpression,
     ConstantExpression,
-    ConstructedConstantExpression,
-    TypeConstantExpression;
+    ConstructedConstantExpression;
 
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
@@ -46,7 +45,6 @@ import 'dartino_context.dart';
 import 'dartino_backend.dart';
 
 import 'dartino_constants.dart' show
-    DartinoClassConstant,
     DartinoClassInstanceConstant;
 
 import 'dartino_function_builder.dart' show

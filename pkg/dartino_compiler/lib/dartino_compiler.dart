@@ -11,9 +11,7 @@ import 'dart:convert' show
     UTF8;
 
 import 'dart:io' show
-    File,
-    Link,
-    Platform;
+    File;
 
 import 'package:compiler/compiler_new.dart' show
     CompilerInput,

@@ -26,8 +26,7 @@ import 'package:compiler/src/compiler.dart' show
 
 import 'package:compiler/src/enqueue.dart' show
     QueueFilter,
-    EnqueueTask,
-    Enqueuer;
+    EnqueueTask;
 
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
@@ -42,13 +41,8 @@ import 'package:compiler/src/dart_types.dart' show
 import 'package:compiler/src/elements/elements.dart' show
     AstElement,
     ClassElement,
-    ConstructorElement,
     Element,
-    FunctionElement,
-    LibraryElement,
-    LocalFunctionElement,
-    Name,
-    TypedElement;
+    FunctionElement;
 
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
@@ -66,7 +60,6 @@ import 'dynamic_call_enqueuer.dart' show
 
 import 'dartino_registry.dart' show
     ClosureKind,
-    DartinoRegistry,
     DartinoRegistry;
 
 import 'package:compiler/src/enqueue.dart' show

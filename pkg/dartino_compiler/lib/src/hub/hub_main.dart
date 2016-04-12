@@ -23,10 +23,7 @@ import 'dart:async' show
     StreamTransformer;
 
 import 'dart:typed_data' show
-    ByteData,
-    Endianness,
-    TypedData,
-    Uint8List;
+    ByteData;
 
 import 'dart:convert' show
     UTF8;
@@ -65,7 +62,6 @@ import '../shared_command_infrastructure.dart' show
     CommandBuffer,
     CommandTransformerBuilder,
     commandEndianness,
-    headerSize,
     toUint8ListView;
 
 import '../worker/developer.dart' show

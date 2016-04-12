@@ -68,7 +68,6 @@ import 'package:compiler/src/util/util.dart' show
     Link;
 
 import 'package:compiler/src/elements/modelx.dart' show
-    ClassElementX,
     CompilationUnitElementX,
     DeclarationSite,
     ElementX,

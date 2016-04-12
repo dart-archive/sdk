@@ -7,15 +7,13 @@ library dartino_compiler.incremental_backend;
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
-    FieldElement,
     FunctionElement;
 
 import 'dartino_system.dart' show
     DartinoSystem;
 
 import 'src/dartino_system_builder.dart' show
-    DartinoSystemBuilder,
-    SchemaChange;
+    DartinoSystemBuilder;
 
 import 'src/closure_environment.dart' show
     ClosureInfo;

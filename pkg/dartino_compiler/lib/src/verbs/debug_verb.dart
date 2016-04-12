@@ -38,11 +38,9 @@ import 'package:dartino_compiler/debug_state.dart' show
 
 import '../../debug_state.dart' show
     RemoteObject,
-    RemoteValue,
     BackTrace;
 
 import '../../vm_commands.dart' show
-    PushFromOffset,
     VmCommand;
 
 const Action debugAction =

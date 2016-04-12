@@ -19,12 +19,9 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
     FunctionElement,
-    LibraryElement,
-    MemberElement,
-    Name;
+    MemberElement;
 
 import 'package:compiler/src/common/names.dart' show
-    Identifiers,
     Names;
 
 import 'package:compiler/src/util/util.dart' show

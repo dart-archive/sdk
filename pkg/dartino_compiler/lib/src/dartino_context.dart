@@ -8,9 +8,7 @@ import 'package:compiler/src/constants/expressions.dart' show
     ConstantExpression;
 
 import 'package:compiler/src/constants/values.dart' show
-    ConstantValue,
-    ConstructedConstantValue,
-    FunctionConstantValue;
+    ConstantValue;
 
 import 'dartino_compiler_implementation.dart' show
     DartinoCompilerImplementation;

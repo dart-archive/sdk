@@ -31,13 +31,10 @@ import 'package:compiler/src/common/registry.dart' show
     Registry;
 
 import 'package:compiler/src/dart_types.dart' show
-    DartType,
     InterfaceType;
 
 import 'package:compiler/src/tree/tree.dart' show
-    DartString,
-    EmptyStatement,
-    Expression;
+    EmptyStatement;
 
 import 'package:compiler/src/elements/elements.dart' show
     AbstractFieldElement,
@@ -47,7 +44,6 @@ import 'package:compiler/src/elements/elements.dart' show
     Element,
     ExecutableElement,
     FieldElement,
-    FormalElement,
     FunctionElement,
     FunctionSignature,
     FunctionTypedElement,
@@ -55,7 +51,6 @@ import 'package:compiler/src/elements/elements.dart' show
     MemberElement,
     MethodElement,
     Name,
-    ParameterElement,
     PublicName;
 
 import 'package:compiler/src/universe/selector.dart' show
@@ -64,8 +59,7 @@ import 'package:compiler/src/universe/selector.dart' show
 import 'package:compiler/src/universe/use.dart' show
     DynamicUse,
     StaticUse,
-    TypeUse,
-    TypeUseKind;
+    TypeUse;
 
 import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
@@ -87,10 +81,7 @@ import 'package:compiler/src/compile_time_constants.dart' show
 
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
-    ConstructedConstantValue,
     FunctionConstantValue,
-    ListConstantValue,
-    MapConstantValue,
     StringConstantValue;
 
 import 'package:compiler/src/resolution/tree_elements.dart' show
@@ -105,8 +96,7 @@ import 'package:compiler/src/common/names.dart' show
 
 import 'package:compiler/src/universe/world_impact.dart' show
     TransformedWorldImpact,
-    WorldImpact,
-    WorldImpactBuilder;
+    WorldImpact;
 
 import 'package:compiler/src/common/resolution.dart';
 
@@ -150,8 +140,7 @@ import 'class_debug_info.dart' show
     ClassDebugInfo;
 
 import 'codegen_visitor.dart' show
-    CodegenVisitor,
-    LocalValue;
+    CodegenVisitor;
 
 import 'debug_info.dart' show
     DebugInfo;
@@ -203,7 +192,6 @@ import '../vm_commands.dart' show
     VmCommand;
 
 import '../dartino_system.dart' show
-    DartinoConstant,
     DartinoDelta,
     DartinoFunction,
     DartinoFunctionBase,

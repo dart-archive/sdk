@@ -38,8 +38,7 @@ import 'package:compiler/src/diagnostics/source_span.dart' show
     SourceSpan;
 
 import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
-    DiagnosticMessage,
-    DiagnosticReporter;
+    DiagnosticMessage;
 
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;

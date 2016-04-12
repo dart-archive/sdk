@@ -11,8 +11,7 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     FieldElement,
     FunctionElement,
-    LocalElement,
-    Name;
+    LocalElement;
 
 import 'package:compiler/src/dart_types.dart' show
     DartType;

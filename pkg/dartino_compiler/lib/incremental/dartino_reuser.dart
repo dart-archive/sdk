@@ -32,7 +32,6 @@ import 'package:compiler/src/parser/partial_elements.dart' show
     PartialFunctionElement;
 
 import 'package:compiler/src/elements/modelx.dart' show
-    ClassElementX,
     ElementX,
     FieldElementX,
     LibraryElementX;
@@ -54,7 +53,6 @@ import '../src/dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
 import '../vm_commands.dart' show
-    PrepareForChanges,
     VmCommand;
 
 import '../dartino_system.dart' show

@@ -17,14 +17,12 @@ import 'package:compiler/src/apiimpl.dart' show
 import 'package:compiler/compiler_new.dart' show
     CompilerDiagnostics,
     CompilerInput,
-    CompilerOutput,
-    Diagnostic;
+    CompilerOutput;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     ConstructorElement,
     Element,
-    FunctionElement,
     LibraryElement;
 
 import 'package:compiler/src/library_loader.dart' show

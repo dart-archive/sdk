@@ -9,7 +9,6 @@ import 'package:compiler/src/universe/selector.dart' show
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
-    Element,
     FunctionElement,
     LocalElement;
 

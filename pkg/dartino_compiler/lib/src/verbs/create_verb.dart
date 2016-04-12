@@ -8,7 +8,6 @@ import 'dart:io';
 
 import '../worker/developer.dart' show
     allocateWorker,
-    configFileUri,
     createProject,
     createSessionState,
     createSettings,

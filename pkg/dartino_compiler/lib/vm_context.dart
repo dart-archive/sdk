@@ -10,8 +10,7 @@ import 'dart:convert';
 import 'dart:io' hide exit;
 
 import 'dart:typed_data' show
-    ByteData,
-    Uint8List;
+    ByteData;
 
 import 'vm_commands.dart';
 import 'dartino_system.dart';

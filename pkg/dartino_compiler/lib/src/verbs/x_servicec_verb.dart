@@ -5,11 +5,9 @@
 library dartino_compiler.verbs.servicec_verb;
 
 import 'dart:io' show
-    File,
-    Directory,
-    Platform;
+    Directory;
 
-import 'package:path/path.dart' show join, dirname;
+import 'package:path/path.dart' show join;
 
 import 'infrastructure.dart';
 

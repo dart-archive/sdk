@@ -12,9 +12,7 @@ import 'package:compiler/src/constants/values.dart' show
     DeferredConstantValue,
     FunctionConstantValue,
     IntConstantValue,
-    ListConstantValue,
-    MapConstantValue,
-    StringConstantValue;
+    MapConstantValue;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
@@ -44,8 +42,6 @@ import 'package:persistent/persistent.dart' show
     PersistentSet;
 
 import 'dartino_constants.dart' show
-    DartinoClassConstant,
-    DartinoFunctionConstant,
     DartinoClassInstanceConstant;
 
 import '../dartino_class_base.dart' show
@@ -64,8 +60,7 @@ import 'dartino_system_base.dart' show
     DartinoSystemBase;
 
 import 'dartino_selector.dart' show
-    DartinoSelector,
-    SelectorKind;
+    DartinoSelector;
 
 import 'dartino_diagnostic_reporter.dart' show
     DartinoDiagnosticReporter;

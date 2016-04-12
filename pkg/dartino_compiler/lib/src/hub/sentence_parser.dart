@@ -14,7 +14,6 @@ import '../verbs/actions.dart' show
     uncommonActions;
 
 import '../verbs/infrastructure.dart' show
-    AnalyzedSentence,
     DiagnosticKind,
     throwFatalError;
 

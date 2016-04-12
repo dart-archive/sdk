@@ -13,8 +13,7 @@ import 'dart:typed_data' show
     Uint8List;
 
 import 'bytecodes.dart' show
-    Bytecode,
-    MethodEnd;
+    Bytecode;
 
 import 'src/shared_command_infrastructure.dart' show
     CommandBuffer;
