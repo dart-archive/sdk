@@ -171,7 +171,7 @@ hooks = [
       "--recursive",
       "--auto_platform",
       "--extract",
-      "sdk/tools/sdks",
+      "sdk/third_party/dart-sdk",
     ],
   },
   {

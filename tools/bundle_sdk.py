@@ -103,7 +103,7 @@ def CopyBinaries(bundle_dir, build_dir):
 
 def CopyDartSdk(bundle_dir):
   os_name = utils.GuessOS()
-  source = join('tools', 'sdks', os_name, 'dart-sdk')
+  source = join('third_party', 'dart-sdk', os_name, 'dart-sdk')
   target = join(bundle_dir, 'internal', 'dart-sdk')
   print 'copying %s to %s' % (source, target)
   copytree(source, target)
