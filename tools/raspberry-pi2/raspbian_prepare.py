@@ -145,7 +145,7 @@ class QemuSession(object):
                                         USERNAME,
                                         HOSTNAME,
                                         dst)
-    child = pexpect.spawn(cmd)
+    child = pexpect.spawn(cmd, timeout=200)
     print 'Running: %s' % cmd
     child.expect(['password:', r"yes/no"], timeout=7)
     child.sendline(PASSWORD)
