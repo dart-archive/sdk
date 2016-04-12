@@ -167,8 +167,7 @@ build $
         version.gyp $
         platforms/stm/cm4_targets.gypi $
         platforms/stm/cm4.gyp $
-        platforms/stm/free_rtos_sources_cm4f.gypi $
-        platforms/stm/free_rtos_sources_cm3.gypi $
+        platforms/stm/free_rtos_sources.gypi $
         platforms/stm/stm32_cube_f4_demos.gyp $
         dartino.gyp $
         src/double_conversion.gyp $

@@ -7,8 +7,8 @@
     'posix': 0,
 
     'stm32_cube_f4': '<(DEPTH)/third_party/stm/stm32cube_fw_f4',
-    'stm32_cube_f4_free_rtos':
-      '<(stm32_cube_f4)/Middlewares/Third_Party/FreeRTOS',
+    'freertos': '<(stm32_cube_f4)/Middlewares/Third_Party/FreeRTOS',
+    'freertos_port': 'ARM_CM3',
     'stm32_cube_f4_bsp_discovery':
       '<(stm32_cube_f4)/Drivers/BSP/STM32F4-Discovery/',
     'stm32_cube_f4_bsp_nucleo':
@@ -36,9 +36,9 @@
             'include_dirs': [
               # We need to set these here since the src/shared/platform_cmsis.h
               # includes cmsis_os.h from here.
-              '<(stm32_cube_f4_free_rtos)/Source/CMSIS_RTOS/',
-              '<(stm32_cube_f4_free_rtos)/Source/include/',
-              '<(stm32_cube_f4_free_rtos)/Source/portable/GCC/ARM_CM3/',
+              '<(freertos)/Source/CMSIS_RTOS/',
+              '<(freertos)/Source/include/',
+              '<(freertos)/Source/portable/GCC/<(freertos_port)/',
               '<(stm32_cube_f4)/Drivers/CMSIS/Include/',
               'nucleo_dartino/src',
               '../..'
@@ -50,7 +50,7 @@
       'ReleaseCM4': {
         'inherit_from': [
           'dartino_base', 'dartino_debug',
-	  # Use the Cortex M3 flags for Cortex M4 without FPU.
+          # Use the Cortex M3 flags for Cortex M4 without FPU.
           'dartino_cortex_m_base', 'dartino_cortex_m3', 'dartino_stm',
           'dartino_disable_live_coding',
           'dartino_disable_native_processes',
@@ -71,7 +71,7 @@
       'DebugCM4': {
         'inherit_from': [
           'dartino_base', 'dartino_debug',
-	  # Use the Cortex M3 flags for Cortex M4 without FPU.
+          # Use the Cortex M3 flags for Cortex M4 without FPU.
           'dartino_cortex_m_base', 'dartino_cortex_m3', 'dartino_stm',
           'dartino_disable_live_coding',
           'dartino_disable_native_processes',
