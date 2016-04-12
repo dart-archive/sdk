@@ -199,6 +199,7 @@ import '../vm_commands.dart' show
     NewMap,
     PushFromMap,
     PushNewInteger,
+    SetEntryPoint,
     VmCommand;
 
 import '../dartino_system.dart' show
@@ -1387,9 +1388,11 @@ class DartinoBackend extends Backend
     // Reset the current system builder.
     newSystemBuilder(system);
 
+    // Set the entry point.
     commands.add(new PushFromMap(
         MapId.methods,
         system.lookupFunctionByElement(dartinoSystemEntry).functionId));
+    commands.add(new SetEntryPoint());
 
     return new DartinoDelta(system, predecessorSystem, commands);
   }

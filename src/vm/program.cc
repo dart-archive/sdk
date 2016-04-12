@@ -132,16 +132,15 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   ASSERT(!process->AllocationFailed());
 
   process->set_arguments(arguments);
-  Function* entry = process->entry();
 
   Stack* stack = process->stack();
 
   Frame frame(stack);
 
-  uint8_t* bcp = entry->bytecode_address_for(0);
+  uint8_t* bcp = entry_->bytecode_address_for(0);
   // Push the entry Dart function and the start-address on the frames.
   // The engine can be started by invoking `restoreState()`.
-  int number_of_arguments = entry->arity();
+  int number_of_arguments = entry_->arity();
   frame.PushInitialDartEntryFrames(number_of_arguments, bcp,
                                    reinterpret_cast<Object*>(InterpreterEntry));
 

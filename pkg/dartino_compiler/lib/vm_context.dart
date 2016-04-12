@@ -337,12 +337,6 @@ class DartinoVmContext {
             userInput: "${info.snapshotHash}",
             additionalUserInput: "${snapshotHash}",
             uri: snapshotLocation);
-      } else {
-        // Push the main entry point to top of debugging stack.
-        // TODO(sigurdm): It is not good enough to look up by name.
-        // We need to store a mapping from element -> offset.
-        runCommand(
-            new PushFromOffset(info.functionOffset(configuration, "entry")));
       }
     } else {
       for (DartinoDelta delta in state.compilationResults) {

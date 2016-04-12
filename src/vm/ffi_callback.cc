@@ -27,7 +27,7 @@ static Object* AllocateCoroutine(Process* process) {
   }
   if (raw_stack->IsRetryAfterGCFailure()) return raw_stack;
 
-  Function* entry = process->entry();
+  Function* entry = process->program()->entry();
   uint8_t* bcp = entry->bytecode_address_for(0);
   int number_of_arguments = entry->arity();
   ASSERT(number_of_arguments == 7);

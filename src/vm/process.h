@@ -83,7 +83,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
     kStackCheckOverflow
   };
 
-  Function* entry() { return program_->entry(); }
   Program* program() { return program_; }
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }

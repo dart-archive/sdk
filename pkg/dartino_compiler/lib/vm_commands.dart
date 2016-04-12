@@ -1354,6 +1354,14 @@ class StderrData extends VmCommand {
   String valuesToString() => "value: $value";
 }
 
+class SetEntryPoint extends VmCommand {
+  const SetEntryPoint() : super(VmCommandCode.SetEntryPoint);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "";
+}
+
 class CreateSnapshot extends VmCommand {
   final String snapshotPath;
 
@@ -1589,6 +1597,7 @@ enum VmCommandCode {
   ProcessGetProcessIds,
   ProcessGetProcessIdsResult,
 
+  SetEntryPoint,
   CreateSnapshot,
   ProgramInfo,
   CollectGarbage,

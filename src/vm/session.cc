@@ -846,10 +846,12 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       return NULL;
     }
 
-    case Connection::kProcessSpawnForMain: {
-      // Setup entry point for main thread.
+    case Connection::kSetEntryPoint: {
       program()->set_entry(Function::cast(session()->Pop()));
+      break;
+    }
 
+    case Connection::kProcessSpawnForMain: {
       int arguments_count = connection()->ReadInt();
       List<List<uint8>> arguments = List<List<uint8>>::New(arguments_count);
       for (int i = 0; i < arguments_count; i++) {
@@ -1157,7 +1159,7 @@ SessionState* ModifyingState::ProcessMessage(Connection::Opcode opcode) {
           buffer.WriteString(session()->program_update_error_);
         } else {
           buffer.WriteString(
-              "An unknown error occured during program update.");
+              "An unknown error occurred during program update.");
         }
       }
       connection()->Send(Connection::kCommitChangesResult, buffer);
@@ -1505,7 +1507,6 @@ bool Session::CreateSnapshot(
     const char* path,
     FunctionOffsetsType* function_offsets,
     ClassOffsetsType* class_offsets) {
-  program()->set_entry(Function::cast(Pop()));
   // Make sure that the program is in the compact form before
   // snapshotting.
   if (!program()->is_optimized()) {

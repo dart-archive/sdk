@@ -100,6 +100,7 @@ class Connection {
     kProcessGetProcessIds,
     kProcessGetProcessIdsResult,
 
+    kSetEntryPoint,
     kCreateSnapshot,
     kProgramInfo,
     kCollectGarbage,
