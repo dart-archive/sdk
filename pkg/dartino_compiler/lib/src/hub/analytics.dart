@@ -9,9 +9,16 @@ library dartino_compiler.worker.analytics;
 import 'dart:io';
 import 'dart:math';
 
-import '../messages.dart';
-import '../please_report_crash.dart' show stringifyError;
-import '../verbs/infrastructure.dart' show fileUri;
+import '../messages.dart' show
+    analyticsRecordChoiceFailed;
+
+import '../please_report_crash.dart' show
+    crashReportRequested,
+    requestBugReportOnOtherCrashMessage,
+    stringifyError;
+
+import '../verbs/infrastructure.dart' show
+    fileUri;
 
 const String _dartinoUuidEnvVar = const String.fromEnvironment('dartino.uuid');
 
@@ -87,47 +94,57 @@ class Analytics {
     return false;
   }
 
-  /// Create a new uuid, and return [true] if it is successfully persisted.
+  /// Create and persist a new uuid.
   /// The newly created uuid can be accessed via [uuid].
-  bool writeNewUuid() {
+  void writeNewUuid() {
     int millisecondsSinceEpoch = new DateTime.now().millisecondsSinceEpoch;
     int random = new Random().nextInt(0x3fffffff);
     _uuid = '$millisecondsSinceEpoch$random';
     shouldPromptForOptIn = false;
-    if (_writeUuid()) return true;
-    // Slightly alter the uuid to indicate it was not persisted
-    _uuid = 'temp-$uuid';
-    return false;
+    _writeUuid();
   }
 
   /// Record that the user has opted out of analytics.
-  /// Return [true] if successfully written to disk.
-  bool writeOptOut() {
+  void writeOptOut() {
     _uuid = optOutValue;
     shouldPromptForOptIn = false;
-    return _writeUuid();
+    _writeUuid();
   }
 
-  /// Write the current uuid to disk and return [true] if successful.
-  bool _writeUuid() {
+  /// Write the current uuid to disk.
+  void _writeUuid() {
     if (uuidUri == null) {
-      _log("Failed to determine uuid file path.");
-      return false;
+      _analyticsWriteUuidError("Failed to determine uuid file path.");
     }
     File uuidFile = new File.fromUri(uuidUri);
     try {
       uuidFile.parent.createSync(recursive: true);
       uuidFile.writeAsStringSync(_uuid);
-      return true;
     } catch (error, stackTrace) {
+      _analyticsWriteUuidError("Failed to write uuid.", error, stackTrace);
+    }
+  }
+
+  /// If there is a problem recording the user's analytics choice
+  /// then make it clear to the user that this has happened
+  /// and exit with prejudice to ensure that we don't report analytics.
+  void _analyticsWriteUuidError(String errorMsg, [error, StackTrace trace]) {
+    try {
+      if (!crashReportRequested) {
+        print(requestBugReportOnOtherCrashMessage);
+        crashReportRequested = true;
+      }
       // Notify the user that there was a problem.
       print(analyticsRecordChoiceFailed);
-      if (error is FileSystemException) print(error.toString());
-      // and log the information.
-      _log("Failed to write uuid.\n"
-          "${stringifyError(error, stackTrace)}");
-      return false;
+      if (errorMsg != null) print(errorMsg);
+      String errorAndTrace = stringifyError(error, trace);
+      if (error != null) print(errorAndTrace);
+      // And log the problem.
+      _log("$errorMsg.\n$errorAndTrace");
+    } catch (_) {
+      // ignore all errors and fall through to exit
     }
+    exit(1);
   }
 
   /// Return the path to the file that stores the analytics unique user id

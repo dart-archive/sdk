@@ -41,7 +41,7 @@ main() {
 
     analytics.clearUuid();
     Expect.isTrue(analytics.shouldPromptForOptIn);
-    Expect.isTrue(analytics.writeOptOut());
+    analytics.writeOptOut();
     Expect.isFalse(analytics.shouldPromptForOptIn);
     Expect.isNull(analytics.uuid);
     Expect.isTrue(tmpUuidFile.existsSync());
@@ -50,7 +50,7 @@ main() {
 
     analytics.clearUuid();
     Expect.isTrue(analytics.shouldPromptForOptIn);
-    Expect.isTrue(analytics.writeNewUuid());
+    analytics.writeNewUuid();
     Expect.isFalse(analytics.shouldPromptForOptIn);
     Expect.isNotNull(analytics.uuid);
     Expect.isTrue(analytics.uuid.length > 5);
