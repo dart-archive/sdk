@@ -68,6 +68,7 @@ class DartinoRunner {
           "foo": "1",
           "bar": "baz",
         },
+        [],
         agentAddress,
         DeviceType.mobile,
         IncrementalMode.production);
@@ -164,6 +165,7 @@ Future<Null> export(
         fileUri(".packages", Uri.base),
         <String>[],
         constants,
+        <String>[],
         null,
         null,
         IncrementalMode.none);

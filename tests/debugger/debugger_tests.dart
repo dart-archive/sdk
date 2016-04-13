@@ -39,6 +39,7 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
       fileUri(".packages", Uri.base),
       <String>[],
       <String, String>{},
+      <String>[],
       null,
       null,
       IncrementalMode.none);

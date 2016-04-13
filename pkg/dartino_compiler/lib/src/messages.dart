@@ -38,6 +38,7 @@ enum DiagnosticKind {
   noFileTarget,
   noSuchSession,
   noTcpSocketTarget,
+  optionsObsolete,
   projectAlreadyExists,
   quitTakesNoArguments,
   sessionAlreadyExists,
@@ -166,6 +167,10 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.projectAlreadyExists:
       return "Project already exists: $uri";
 
+    case DiagnosticKind.optionsObsolete:
+      return "The 'options' setting (value $userInput) is renamed to "
+          "'compiler_options', please update your settings-file: $uri";
+
     case DiagnosticKind.missingForName:
       return "Missing 'for <board-name>' "
           "where <board-name> is one of $boardNames";
@@ -264,7 +269,7 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: 'packages' value '$userInput' isn't a String.";
 
     case DiagnosticKind.settingsOptionsNotAList:
-      return "$uri: 'options' value '$userInput' isn't a List.";
+      return "$uri: '$additionalUserInput' value '$userInput' isn't a List.";
 
     case DiagnosticKind.settingsDeviceTypeNotAString:
       return "$uri: 'device_type' value '$userInput' isn't a String.";
@@ -273,7 +278,8 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: 'incremental_mode' value '$userInput' isn't a String.";
 
     case DiagnosticKind.settingsOptionNotAString:
-      return "$uri: found 'options' entry '$userInput' which isn't a String.";
+      return "$uri: found '$additionalUserInput' entry '$userInput' "
+          "which isn't a String.";
 
     case DiagnosticKind.settingsDeviceTypeNotAString:
       return
@@ -290,7 +296,8 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return "$uri: compile-time constants should be in "
-          "the 'constants' map, not in 'options': '$userInput'.";
+          "the 'constants' map, not in '$additionalUserInput': "
+          "'$userInput'.";
 
     case DiagnosticKind.settingsConstantsNotAMap:
       return "$uri: 'constants' value isn't a Map";

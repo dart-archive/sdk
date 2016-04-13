@@ -575,7 +575,7 @@ SessionState createSessionState(
   List<String> compilerOptions =
       const bool.fromEnvironment("dartino_compiler-verbose")
       ? <String>['--verbose'] : <String>[];
-  compilerOptions.addAll(settings.options);
+  compilerOptions.addAll(settings.compilerOptions);
   Uri packageConfig = settings.packages;
   if (packageConfig == null) {
     packageConfig = executable.resolve("dartino-sdk.packages");
@@ -1267,6 +1267,23 @@ Future<Directory> locateBinDirectory() async {
   return binDirectory;
 }
 
+// Creates a c-file containing the options options in an array.
+void createEmbedderOptionsCFile(Directory location, List<String> options) {
+  String tmpOptionsFilename = join(location.path, "embedder_options.c");
+  String optionStrings = (options ?? <String>[])
+      .map((String option) {
+    String escaped = option
+        .replaceAll(r'\', r'\\')
+        .replaceAll('"', r'\"');
+    return '\n  "$escaped",';
+  }).join();
+  new File(tmpOptionsFilename).writeAsStringSync("""
+const char *dartino_embedder_options[] = {$optionStrings
+  0
+};
+""");
+}
+
 Future<int> buildImage(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
@@ -1287,12 +1304,15 @@ Future<int> buildImage(
     String tmpSnapshot = join(tmpDir.path, "snapshot");
     await new File.fromUri(snapshot).copy(tmpSnapshot);
 
+    createEmbedderOptionsCFile(tmpDir, state.settings.embedderOptions);
+
     ProcessResult result;
     File linkScript = new File(join(binDirectory.path, 'link.sh'));
     if (Platform.isLinux || Platform.isMacOS) {
       state.log("Linking image: '${linkScript.path} ${baseName}'");
       result = await Process.run(
-          linkScript.path, [baseName, tmpDir.path],
+          linkScript.path,
+          [baseName, tmpDir.path],
           workingDirectory: tmpDir.path);
     } else {
       throwUnsupportedPlatform();
@@ -1530,11 +1550,44 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
     throwFatalError(DiagnosticKind.settingsNotAMap, uri: settingsUri);
   }
   Uri packages;
-  final List<String> options = <String>[];
+
+  List<String> compilerOptions;
   final Map<String, String> constants = <String, String>{};
+  List<String> embedderOptions;
+
   Address deviceAddress;
   DeviceType deviceType;
   IncrementalMode incrementalMode = IncrementalMode.none;
+
+  List<String> listOfStrings(value, String key, {bool restrictDashD: false}) {
+    List<String> result = new List<String>();
+    if (value != null) {
+      if (value is! List) {
+        throwFatalError(
+            DiagnosticKind.settingsOptionsNotAList, uri: settingsUri,
+            userInput: "$value",
+            additionalUserInput: key);
+      }
+      for (var option in value) {
+        if (option is! String) {
+          throwFatalError(
+              DiagnosticKind.settingsOptionNotAString, uri: settingsUri,
+              userInput: '$option',
+              additionalUserInput: key);
+        }
+        if (restrictDashD && option.startsWith("-D")) {
+          throwFatalError(
+              DiagnosticKind.settingsCompileTimeConstantAsOption,
+              uri: settingsUri,
+              userInput: '$option',
+              additionalUserInput: key);
+        }
+        result.add(option);
+      }
+    }
+    return result;
+  }
+
   userSettings.forEach((String key, value) {
     switch (key) {
       case "packages":
@@ -1549,26 +1602,13 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
 
       case "options":
-        if (value != null) {
-          if (value is! List) {
-            throwFatalError(
-                DiagnosticKind.settingsOptionsNotAList, uri: settingsUri,
-                userInput: "$value");
-          }
-          for (var option in value) {
-            if (option is! String) {
-              throwFatalError(
-                  DiagnosticKind.settingsOptionNotAString, uri: settingsUri,
-                  userInput: '$option');
-            }
-            if (option.startsWith("-D")) {
-              throwFatalError(
-                  DiagnosticKind.settingsCompileTimeConstantAsOption,
-                  uri: settingsUri, userInput: '$option');
-            }
-            options.add(option);
-          }
-        }
+        throwFatalError(
+            DiagnosticKind.optionsObsolete, uri: settingsUri,
+            userInput: '$value');
+        break;
+
+      case "compiler_options":
+        compilerOptions = listOfStrings(value, key, restrictDashD: true);
         break;
 
       case "constants":
@@ -1590,6 +1630,10 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
             }
           });
         }
+        break;
+
+      case "embedder_options":
+        embedderOptions = listOfStrings(value, key);
         break;
 
       case "device_address":
@@ -1643,8 +1687,15 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
     }
   });
-  return new Settings.fromSource(settingsUri,
-      packages, options, constants, deviceAddress, deviceType, incrementalMode);
+  return new Settings.fromSource(
+      settingsUri,
+      packages,
+      compilerOptions,
+      constants,
+      embedderOptions,
+      deviceAddress,
+      deviceType,
+      incrementalMode);
 }
 
 class Settings {
@@ -1652,7 +1703,9 @@ class Settings {
 
   final Uri packages;
 
-  final List<String> options;
+  final List<String> compilerOptions;
+
+  final List<String> embedderOptions;
 
   final Map<String, String> constants;
 
@@ -1664,8 +1717,9 @@ class Settings {
 
   const Settings(
       this.packages,
-      this.options,
+      this.compilerOptions,
       this.constants,
+      this.embedderOptions,
       this.deviceAddress,
       this.deviceType,
       this.incrementalMode) : source = null;
@@ -1673,20 +1727,22 @@ class Settings {
   const Settings.fromSource(
       this.source,
       this.packages,
-      this.options,
+      this.compilerOptions,
       this.constants,
+      this.embedderOptions,
       this.deviceAddress,
       this.deviceType,
       this.incrementalMode);
 
   const Settings.empty()
-      : this(null, const <String>[], const <String, String>{}, null, null,
-             IncrementalMode.none);
+      : this(null, const <String>[], const <String, String>{}, const<String>[],
+          null, null, IncrementalMode.none);
 
   Settings copyWith({
       Uri packages,
-      List<String> options,
+      List<String> compilerOptions,
       Map<String, String> constants,
+      List<String> vmOptions,
       Address deviceAddress,
       DeviceType deviceType,
       IncrementalMode incrementalMode}) {
@@ -1694,11 +1750,14 @@ class Settings {
     if (packages == null) {
       packages = this.packages;
     }
-    if (options == null) {
-      options = this.options;
+    if (compilerOptions == null) {
+      compilerOptions = this.compilerOptions;
     }
     if (constants == null) {
       constants = this.constants;
+    }
+    if (vmOptions == null) {
+      compilerOptions = this.compilerOptions;
     }
     if (deviceAddress == null) {
       deviceAddress = this.deviceAddress;
@@ -1711,8 +1770,9 @@ class Settings {
     }
     return new Settings(
         packages,
-        options,
+        compilerOptions,
         constants,
+        vmOptions,
         deviceAddress,
         deviceType,
         incrementalMode);
@@ -1721,8 +1781,9 @@ class Settings {
   String toString() {
     return "Settings("
         "packages: $packages, "
-        "options: $options, "
+        "compiler_options: $compilerOptions, "
         "constants: $constants, "
+        "embedder_options: $embedderOptions, "
         "device_address: $deviceAddress, "
         "device_type: $deviceType, "
         "incremental_mode: $incrementalMode)";
@@ -1738,8 +1799,9 @@ class Settings {
     }
 
     addIfNotNull("packages", packages == null ? null : "$packages");
-    addIfNotNull("options", options);
+    addIfNotNull("compiler_options", compilerOptions);
     addIfNotNull("constants", constants);
+    addIfNotNull("embedder_options", embedderOptions);
     addIfNotNull("device_address", deviceAddress);
     addIfNotNull(
         "device_type",

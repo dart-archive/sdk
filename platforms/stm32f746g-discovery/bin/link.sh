@@ -27,6 +27,10 @@ BASE_NAME=$1
 #
 SNAPSHOT_FILE=snapshot
 
+EMBEDDER_OPTIONS_FILE=embedder_options.c
+EMBEDDER_OPTIONS_OBJ=embedder_options.o
+
+
 OS="`uname`"
 case $OS in
   'Linux')
@@ -80,6 +84,15 @@ BIN_FILE="$BUILD_DIR/$BASE_NAME.bin"
 HEX_FILE="$BUILD_DIR/$BASE_NAME.hex"
 MAP_FILE="$BUILD_DIR/$BASE_NAME.map"
 
+echo "Compiling embedder-options"
+"$CC" \
+-mcpu=cortex-m7 \
+-mthumb \
+-mfloat-abi=hard \
+-mfpu=fpv5-sp-d16 \
+-o "$EMBEDDER_OPTIONS_OBJ" \
+-c "$EMBEDDER_OPTIONS_FILE"
+
 echo "Converting snapshot to object file"
 "$DARTINO_FLASHIFY" "$SNAPSHOT_FILE" "$ASM_FILE"
 "$CC" \
@@ -113,6 +126,7 @@ echo "Linking application"
 "$LIB1" \
 "$LIB2" \
 "$LIB3" \
+"$EMBEDDER_OPTIONS_OBJ" \
 -Wl,--end-group \
 -lstdc++ \
 -Wl,--no-whole-archive

@@ -15,6 +15,7 @@
 #include "src/shared/utils.h"
 #include "src/vm/program_info_block.h"
 
+extern "C" const char *dartino_embedder_options[];
 extern "C" dartino::ProgramInfoBlock program_info_block;
 extern "C" char program_start;
 extern "C" char program_end;
@@ -77,7 +78,7 @@ DARTINO_EXPORT_STATIC_RENAME(uart_get_error, UartGetError)
 DARTINO_EXPORT_STATIC_RENAME(button_open, ButtonOpen)
 DARTINO_EXPORT_STATIC_RENAME(button_notify_read, ButtonNotifyRead)
 
-static void UartPrintIntercepter(const char* message, int out, void* data) {
+static void UartPrintInterceptor(const char* message, int out, void* data) {
   int len = strlen(message);
   for (int i = 0; i < len; i++) {
     if (message[i] == '\n') {
@@ -89,11 +90,19 @@ static void UartPrintIntercepter(const char* message, int out, void* data) {
   }
 }
 
+static bool HasOption(const char* option) {
+  for (int i = 0; dartino_embedder_options[i] != NULL; i++) {
+    if (strcmp(dartino_embedder_options[i], option) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Run dartino on the linked in program heap.
 void StartDartino(void const * argument) {
   dartino::Print::Out("Setup Dartino\n");
   DartinoSetup();
-
   dartino::Print::Out("Setting up Dartino program space\n");
   char* heap = &program_start;
   int heap_size = &program_end - heap;
@@ -113,7 +122,9 @@ void DartinoEntry(void const * argument) {
 
   // For now always start the UART.
   uart_handle = dartino::DeviceManager::GetDeviceManager()->OpenUart("uart1");
-  DartinoRegisterPrintInterceptor(UartPrintIntercepter, NULL);
+  if (HasOption("uart_print_interceptor")) {
+    DartinoRegisterPrintInterceptor(UartPrintInterceptor, NULL);
+  }
 
   // For now always initialize the button.
   button_handle =

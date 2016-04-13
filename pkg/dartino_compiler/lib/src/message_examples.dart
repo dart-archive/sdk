@@ -222,7 +222,11 @@ List<Example> getExamples(DiagnosticKind kind) {
             <String>['help', '--version=fisk'])];
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
-      return <Example>[new SettingsExample('{"options":["-Dfoo=bar"]}')];
+      return <Example>[
+        new SettingsExample('{"compiler_options":["-Dfoo=bar"]}')];
+
+    case DiagnosticKind.optionsObsolete:
+      return <Example>[new SettingsExample('{"options":["a", "b", "c"]}')];
 
     case DiagnosticKind.settingsConstantsNotAMap:
       return <Example>[new SettingsExample('{"constants":[]}')];
@@ -241,10 +245,16 @@ List<Example> getExamples(DiagnosticKind kind) {
           new SettingsExample('...')];
 
     case DiagnosticKind.settingsOptionNotAString:
-      return <Example>[new SettingsExample('{"options":[1]}')];
+      return <Example>[
+        new SettingsExample('{"compiler_options":[1]}'),
+        new SettingsExample('{"embedder_options":[1]}')
+      ];
 
     case DiagnosticKind.settingsOptionsNotAList:
-      return <Example>[new SettingsExample('{"options":1}')];
+      return <Example>[
+        new SettingsExample('{"compiler_options":1}'),
+        new SettingsExample('{"embedder_options":1}')
+      ];
 
     case DiagnosticKind.settingsPackagesNotAString:
       return <Example>[new SettingsExample('{"packages":1}')];

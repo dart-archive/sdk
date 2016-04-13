@@ -13,10 +13,10 @@
   "packages": ".packages",
 
   // A list of strings that are passed to the compiler
-  "options": [
+  "compiler_options": [
   ],
 
-  // Values of of compile-time constants, that is, the values of
+  // Values of of dart compile-time constants, that is, the values of
   // expression on these forms:
   //
   //   const bool.fromEnvironment("<name>")
@@ -25,6 +25,11 @@
   //
   "constants": {
   },
+
+  // A list of strings that are passed to the Dartino embedder.
+  "embedder_options": [
+    "uart_print_interceptor"
+  ],
 
   // Address of the target device on which to run the Dartino VMs.
   // If null then vms are started directly on localhost.

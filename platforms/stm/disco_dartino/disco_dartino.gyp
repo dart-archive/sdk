@@ -124,6 +124,7 @@
         'libstm32f746g-discovery',
         'freertos_dartino.gyp:disco_dartino_dart_program.o',
         '../../../src/vm/vm.gyp:libdartino',
+        './freertos_dartino.gyp:embedder_options.o',
       ],
       'variables': {
         'common_ldflags': [
@@ -148,6 +149,7 @@
       'type': 'executable',
       'sources': [
         '<(PRODUCT_DIR)/program.o',
+        '<(PRODUCT_DIR)/embedder_options.o',
       ],
       'conditions': [
         ['OS=="linux"', {

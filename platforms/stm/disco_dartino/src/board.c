@@ -113,7 +113,7 @@ static void EnableCPUCache() {
 // (Utilities/Log/lcd_log.c) by means of the macro definitions of
 // LCD_LOG_PUTCHAR in lcd_log_conf.h.
 extern int LCDLogPutchar(int ch);
-static void LCDPrintIntercepter(const char* message, int out, void* data) {
+static void LCDPrintInterceptor(const char* message, int out, void* data) {
   int len = strlen(message);
   if (out == 3) {
     LCD_LineColor = LCD_COLOR_RED;
@@ -236,7 +236,7 @@ extern int InitializeBoard() {
   LCD_LOG_SetHeader((unsigned char*) "Dartino");
   LCD_LOG_SetFooter((unsigned char*) "STM32746G-Discovery");
 
-  DartinoRegisterPrintInterceptor(LCDPrintIntercepter, NULL);
+  DartinoRegisterPrintInterceptor(LCDPrintInterceptor, NULL);
 
   return 0;
 }
