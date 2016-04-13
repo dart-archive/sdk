@@ -14,6 +14,7 @@ import 'package:compiler/src/elements/elements.dart' show
     FieldElement,
     FunctionSignature,
     LibraryElement,
+    LocalFunctionElement,
     Name;
 
 import 'package:compiler/src/universe/call_structure.dart' show
@@ -23,11 +24,16 @@ import 'package:compiler/src/universe/selector.dart' show
     Selector;
 
 import 'package:persistent/persistent.dart' show
+    Pair,
     PersistentMap,
     PersistentSet;
 
-import 'bytecodes.dart';
-import 'vm_commands.dart';
+import 'bytecodes.dart' show
+    Bytecode;
+
+import 'vm_commands.dart' show
+    MapId,
+    VmCommand;
 
 import 'src/dartino_selector.dart' show
     DartinoSelector;
@@ -428,6 +434,175 @@ class DartinoSystem extends DartinoSystemBase {
     return
         systemValidator.validateFunctionLiteralLists() &&
         systemValidator.validateClassMethodTables();
+  }
+
+  Map<MapId, Map<int, String>> computeSymbolicSystemInfo(
+      Iterable<LibraryElement> libraries) {
+    Map<LibraryElement, String> libraryNames = computeLibraryNames(libraries);
+    Map<MapId, Map<int, String>> result = <MapId, Map<int, String>>{};
+    result[MapId.classes] = computeSymbolicClassInfo(libraryNames);
+    result[MapId.methods] = computeSymbolicMethodInfo(libraryNames);
+    return result;
+  }
+
+  Map<int, String> computeSymbolicClassInfo(
+      Map<LibraryElement, String> libraryNames) {
+    Map<int, String> syntheticNames = <int, String>{};
+    tearoffsById.forEach((Pair<int, int> pair) {
+      int functionId = pair.fst;
+      int tearoffId = pair.snd;
+      DartinoFunction function = functionsById[functionId];
+      DartinoFunction tearoff = functionsById[tearoffId];
+      String name = computeSymbolicElementName(function.element, libraryNames);
+      syntheticNames[tearoff.memberOf] = "$name-tearoff-class";
+    });
+    Map<int, String> result = <int, String>{};
+    classesById.forEach((Pair<int, DartinoClass> pair) {
+      int id = pair.fst;
+      DartinoClass cls = pair.snd;
+      result[id] = computeSymbolicClassName(cls, libraryNames, syntheticNames);
+    });
+    return result;
+  }
+
+  String computeSymbolicClassName(
+      DartinoClass cls,
+      Map<LibraryElement, String> libraryNames,
+      Map<int, String> syntheticNames) {
+    if (cls.element != null) {
+      return computeSymbolicElementName(cls.element, libraryNames);
+    }
+    String name = syntheticNames[cls.classId];
+    if (name != null) return name;
+    LocalFunctionElement localFunction;
+    cls.methodTable.forEach((Pair<int, int> pair) {
+      int selector = pair.fst;
+      int methodId = pair.snd;
+      DartinoFunction function = functionsById[methodId];
+      Element element = function.element;
+      if (element != null && element.isLocal) {
+        localFunction = element;
+      }
+    });
+    if (localFunction != null) {
+      name = computeSymbolicElementName(localFunction, libraryNames);
+      return "$name-class";
+    }
+    throw "No name for $cls";
+  }
+
+  Map<int, String> computeSymbolicMethodInfo(
+      Map<LibraryElement, String> libraryNames) {
+    int equalsSymbolId = getSymbolId("==");
+    int hashCodeSymbolId = getSymbolId("hashCode");
+    int equalsSelector = -1;
+    int hashCodeSelector = -1;
+    if (equalsSymbolId != -1) {
+      equalsSelector = DartinoSelector.encodeMethod(equalsSymbolId, 1);
+    }
+    if (hashCodeSymbolId != -1) {
+      hashCodeSelector = DartinoSelector.encodeGetter(hashCodeSymbolId);
+    }
+    Map<int, String> syntheticNames = <int, String>{};
+    gettersByFieldIndex.forEach((Pair<int, int> pair) {
+      int fieldIndex = pair.fst;
+      int functionId = pair.snd;
+      syntheticNames[functionId] = "get-field$fieldIndex";
+    });
+    settersByFieldIndex.forEach((Pair<int, int> pair) {
+      int fieldIndex = pair.fst;
+      int functionId = pair.snd;
+      syntheticNames[functionId] = "set-field$fieldIndex";
+    });
+    tearoffsById.forEach((Pair<int, int> pair) {
+      int functionId = pair.fst;
+      int tearoffId = pair.snd;
+      DartinoFunction function = functionsById[functionId];
+      DartinoFunction tearoff = functionsById[tearoffId];
+      String name = computeSymbolicElementName(function.element, libraryNames);
+      int tearoffClassId = tearoff.memberOf;
+      DartinoClass tearoffClass = classesById[tearoffClassId];
+      int equalsId = tearoffClass.methodTable[equalsSelector];
+      int hashCodeId = tearoffClass.methodTable[hashCodeSelector];
+      syntheticNames[tearoffId] = "$name-tearoff";
+      if (equalsId != null) {
+        syntheticNames[equalsId] = "$name-tearoff-equals";
+      }
+      if (hashCodeId != null) {
+        syntheticNames[hashCodeId] = "$name-tearoff-hashCode";
+      }
+    });
+    tearoffGettersById.forEach((Pair<int, int> pair) {
+      int functionId = pair.fst;
+      int tearoffGetterId = pair.snd;
+      DartinoFunction function = functionsById[functionId];
+      String name = function.element == null
+          ? syntheticNames[functionId]
+          : computeSymbolicElementName(function.element, libraryNames);
+      syntheticNames[tearoffGetterId] = "$name-tearoff-getter";
+    });
+    parameterStubsById.forEach(
+        (Pair<int, PersistentSet<DartinoFunction>> pair) {
+      int functionId = pair.fst;
+      PersistentSet<DartinoFunction> stubs = pair.snd;
+      DartinoFunction function = functionsById[functionId];
+      String name = function.element == null
+          ? syntheticNames[functionId]
+          : computeSymbolicElementName(function.element, libraryNames);
+      assert(name != null);
+      for (DartinoFunction stub in stubs) {
+        syntheticNames[stub.functionId] = "$name-parameter-stub";
+      }
+    });
+    Map<int, String> result = <int, String>{};
+    functionsById.forEach((Pair<int, DartinoFunction> pair) {
+      int id = pair.fst;
+      DartinoFunction function = pair.snd;
+      result[id] =
+          computeSymbolicMethodName(function, libraryNames, syntheticNames);
+    });
+    return result;
+  }
+
+  String computeSymbolicMethodName(
+      DartinoFunction function,
+      Map<LibraryElement, String> libraryNames,
+      Map<int, String> syntheticNames) {
+    if (function.element != null) {
+      return computeSymbolicElementName(function.element, libraryNames);
+    }
+    String name = syntheticNames[function.functionId];
+    if (name != null) return name;
+    throw "No name for $function";
+  }
+
+  String computeSymbolicElementName(
+      Element element,
+      Map<LibraryElement, String> libraryNames) {
+    element = element.declaration;
+    if (element.isLibrary) {
+      return libraryNames[element];
+    }
+    if (element.isCompilationUnit) {
+      return libraryNames[element.library];
+    }
+    String enclosingName =
+        computeSymbolicElementName(element.enclosingElement, libraryNames);
+    return "$enclosingName#${element.name}";
+  }
+
+  Map<LibraryElement, String> computeLibraryNames(
+      Iterable<LibraryElement> libraries) {
+    List<LibraryElement> sortedLibraries =
+        new List<LibraryElement>.from(libraries)..sort(
+            (LibraryElement a, LibraryElement b) {
+          return "${a.canonicalUri}".compareTo("${b.canonicalUri}");
+        });
+    Map<LibraryElement, String> result = <LibraryElement, String>{};
+    for (LibraryElement library in sortedLibraries) {
+      result[library] = "${library.canonicalUri}";
+    }
+    return result;
   }
 }
 

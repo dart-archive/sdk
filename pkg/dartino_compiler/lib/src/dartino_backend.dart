@@ -1372,6 +1372,9 @@ class DartinoBackend extends Backend
     DartinoSystem system = systemBuilder.computeSystem(
         compiler.reporter, commands, compiler.compilationFailed,
         context.enableBigint, bigintClass, uint32DigitsClass);
+    assert(
+        system.computeSymbolicSystemInfo(compiler.libraryLoader.libraries) !=
+        null);
 
     // Reset the current system builder.
     newSystemBuilder(system);
