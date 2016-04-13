@@ -91,6 +91,7 @@ export 'options.dart' show
 
 import '../guess_configuration.dart' show
     dartinoVersion;
+import 'package:dartino_compiler/src/hub/analytics.dart';
 
 void reportErroneousTarget(ErrorTarget target) {
   throwFatalError(target.errorKind, userInput: target.userInput);
@@ -104,7 +105,7 @@ AnalyzedSentence helpSentence(String message) {
   Action contextHelp = new Action(printHelp, null);
   return new AnalyzedSentence(
       new Verb("?", contextHelp), null, null, null, null, null, null,
-      null, null, null, null);
+      null, null, null, null, false);
 }
 
 AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
@@ -397,7 +398,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
 
   return new AnalyzedSentence(
       verb, target, targetName, trailing, sessionName, base,
-      targetUri, toUri, withUri, forName, options);
+      targetUri, toUri, withUri, forName, options, sentence.interactive);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
@@ -461,6 +462,8 @@ class AnalyzedSentence {
 
   final Options options;
 
+  final bool interactive;
+
   AnalyzedSentence(
       this.verb,
       this.target,
@@ -472,13 +475,16 @@ class AnalyzedSentence {
       this.toTargetUri,
       this.withUri,
       this.forName,
-      this.options);
+      this.options,
+      this.interactive);
 
   Future<int> performVerb(VerbContext context) {
     if (context.clientConnection.analytics.shouldPromptForOptIn) {
-      // TODO(danrubel) Disable prompt for opt-in
-      // until analytics can be disabled on ARM bots.
-      if (false && target?.kind != TargetKind.ANALYTICS) {
+      // If `interactive` is `true` then dartino is being run
+      // from a terminal and we can prompt the user to opt-in.
+      // Otherwise do not prompt for opt-in because it will
+      // hang by waiting for input at will never happen.
+      if (interactive && target?.kind != TargetKind.ANALYTICS) {
         return promptForOptIn(context);
       }
     }

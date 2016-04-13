@@ -76,6 +76,10 @@ static int dartino_config_fd;
 
 static const char dart_vm_env_name[] = "DART_VM";
 
+static const char interactive_token[] = "interactive";
+
+static const char detached_token[] = "detached";
+
 static int exit_code = COMPILER_CRASHED;
 
 static int daemon_stderr = -1;
@@ -693,7 +697,8 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
 
 static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   WriteBuffer buffer;
-  buffer.WriteInt(argc + 2);  // Also version and current directory.
+  buffer.WriteInt(argc + 3);  // Also version and current directory
+                              // and whether the app is run interactively
 
   buffer.WriteInt(strlen(GetVersion()));
   buffer.WriteString(GetVersion());
@@ -709,20 +714,15 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   free(path);
   path = NULL;
 
-  // Test isatty and display the result only if using new disable verb.
-  if (argc > 2 && argv[1][0] == 'd' && argv[2][0] == 'a') {
-    fprintf(stdout, "Diagnostic information:\n");
-    char* term_env = getenv("TERM");
-    fprintf(stdout, "  getenv(TERM) = %s\n", term_env);
-    int stdintty = isatty(fileno(stdin));
-    fprintf(stdout, "  isatty(stdin) = %i\n", stdintty);
-    int stdouttty = isatty(fileno(stdout));
-    fprintf(stdout, "  isatty(stdout) = %i\n", stdouttty);
-    if (stdintty && stdouttty) {
-      fprintf(stdout, "  running in a terminal\n");
-    } else {
-      fprintf(stdout, "  not running in a terminal\n");
-    }
+  // Determine if the app is being run interactively.
+  int stdintty = isatty(fileno(stdin));
+  int stdouttty = isatty(fileno(stdout));
+  if (stdintty && stdouttty) {
+    buffer.WriteInt(strlen(interactive_token));
+    buffer.WriteString(interactive_token);
+  } else {
+    buffer.WriteInt(strlen(detached_token));
+    buffer.WriteString(detached_token);
   }
 
   for (int i = 0; i < argc; i++) {

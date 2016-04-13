@@ -29,13 +29,16 @@ class SentenceParser {
   final String version;
   final String shortProgramName;
   final String currentDirectory;
+  final bool interactive;
   Words tokens;
 
   SentenceParser(Iterable<String> tokens, bool includesProgramName)
       : version = includesProgramName ? tokens.first : null,
         currentDirectory = includesProgramName ? tokens.skip(1).first : null,
         shortProgramName = includesProgramName ? tokens.skip(2).first : null,
-        tokens = new Words(tokens.skip(includesProgramName ? 3 : 0));
+        interactive =
+          (includesProgramName ? tokens.skip(3).first : null) == "interactive",
+        tokens = new Words(tokens.skip(includesProgramName ? 4 : 0));
 
   Sentence parseSentence() {
     Verb verb;
@@ -69,7 +72,7 @@ class SentenceParser {
     }
     return new Sentence(
         verb, prepositions, targets, trailing,
-        version, currentDirectory);
+        version, currentDirectory, interactive);
   }
 
   Verb parseVerb() {
@@ -477,13 +480,16 @@ class Sentence {
 
   final String version;
 
+  final bool interactive;
+
   const Sentence(
       this.verb,
       this.prepositions,
       this.targets,
       this.trailing,
       this.version,
-      this.currentDirectory);
+      this.currentDirectory,
+      this.interactive);
 
   String toString() => "Sentence($verb, $prepositions, $targets)";
 }
