@@ -52,7 +52,7 @@ if [ ! -d "$TOOLCHAIN_DIR" ]; then
   LIB_DIR="$DARTINO_CHECKOUT_DIR/out/ReleaseSTM"
 
   # The linker script to use.
-  LINKER_SCRIPT="$DARTINO_CHECKOUT_DIR/platforms/stm/disco_dartino/generated/SW4STM32/configuration/STM32F746NGHx_FLASH.ld"
+  LINKER_SCRIPT="$DARTINO_CHECKOUT_DIR/platforms/stm/disco_dartino/src/stm32f746g-discovery/STM32F746NGHx_FLASH.ld"
 
   BUILD_DIR="$DARTINO_CHECKOUT_DIR/out/ReleaseSTM"
 fi
