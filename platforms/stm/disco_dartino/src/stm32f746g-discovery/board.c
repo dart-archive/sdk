@@ -14,8 +14,8 @@
 #include "include/static_ffi.h"
 
 #include "platforms/stm/disco_dartino/src/device_manager_api.h"
-#include "platforms/stm/disco_dartino/src/ethernet.h"
-#include "platforms/stm/disco_dartino/src/socket.h"
+#include "platforms/stm/disco_dartino/src/stm32f746g-discovery/ethernet.h"
+#include "platforms/stm/disco_dartino/src/stm32f746g-discovery/socket.h"
 #include "platforms/stm/disco_dartino/src/page_alloc.h"
 
 static UartDriver uart1;

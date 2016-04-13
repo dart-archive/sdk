@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_DRIVER_H_
-#define PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_DRIVER_H_
+#ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_STM32F746G_DISCOVERY_BUTTON_DRIVER_H_
+#define PLATFORMS_STM_DISCO_DARTINO_SRC_STM32F746G_DISCOVERY_BUTTON_DRIVER_H_
 
 #include <cmsis_os.h>
 #include <stm32f7xx_hal.h>
@@ -39,4 +39,4 @@ class ButtonDriverImpl {
   osSemaphoreId semaphore_;
 };
 
-#endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_BUTTON_DRIVER_H_
+#endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_STM32F746G_DISCOVERY_BUTTON_DRIVER_H_

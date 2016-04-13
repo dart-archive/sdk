@@ -5,7 +5,7 @@
 #include "src/vm/hash_map.h"
 #include "platforms/stm/disco_dartino/src/device_manager.h"
 
-#include "platforms/stm/disco_dartino/src/socket.h"
+#include "platforms/stm/disco_dartino/src/stm32f746g-discovery/socket.h"
 
 // TODO(karlklose): count number of sockets in the socket set and disable
 // SocketHandlerTask when no sockets wait for events.

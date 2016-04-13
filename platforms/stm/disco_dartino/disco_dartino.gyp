@@ -26,9 +26,9 @@
     {
       'target_name': 'libstm32f746g-discovery',
       'variables': {
-        'source_path': 'src',
-        'generated_path': 'generated',
-        'template_path': 'template',
+        'source_path': 'src/stm32f746g-discovery',
+        'generated_path': '<(source_path)/generated',
+        'template_path': '<(source_path)/template',
         'common_cflags': [
           # Our target will link in the stm files which do have a few warnings.
           '-Wno-write-strings',
@@ -51,7 +51,7 @@
         'DATA_IN_ExtSDRAM',  # Avoid BSP_LDC_Init initializing SDRAM.
       ],
       'include_dirs': [
-        '<(generated_path)/Inc',
+        '<(generated_path)',
         '<(source_path)',
         '<(freertos_plus_tcp)/include',
         '<(freertos_plus_tcp)/portable/Compiler/GCC/',
@@ -71,15 +71,17 @@
         # Network driver.
         '<(source_path)/network_interface.c',
         '<(source_path)/ethernet.cc',
+        '<(source_path)/ethernet.h',
         '<(source_path)/socket.cc',
+        '<(source_path)/socket.h',
 
         # Generated files.
-        '<(generated_path)/Inc/mxconstants.h',
-        '<(generated_path)/Inc/stm32f7xx_hal_conf.h',
-        '<(generated_path)/Inc/stm32f7xx_it.h',
-        '<(generated_path)/Src/mx_init.c',  # Derived from generated main.c.
-        '<(generated_path)/Src/stm32f7xx_hal_msp.c',
-        '<(generated_path)/Src/stm32f7xx_it.c',
+        '<(generated_path)/mxconstants.h',
+        '<(generated_path)/stm32f7xx_hal_conf.h',
+        '<(generated_path)/stm32f7xx_it.h',
+        '<(generated_path)/mx_init.c',  # Derived from generated main.c.
+        '<(generated_path)/stm32f7xx_hal_msp.c',
+        '<(generated_path)/stm32f7xx_it.c',
 
         # Board initialization and interrupt service routines (template files).
         '<(template_path)/system_stm32f7xx.c',
@@ -134,10 +136,10 @@
           # loop forever instead of the IRQ handler you want for your hardware.
           '-Wl,--whole-archive',
           # TODO(340): Why does this not work???
-          #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
+          #'-T<(source_path)/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???
-          '-T../../platforms/stm/disco_dartino/generated/SW4STM32/'
-            'configuration/STM32F746NGHx_FLASH.ld',
+          '-T../../platforms/stm/disco_dartino/src/stm32f746g-discovery/'
+            'STM32F746NGHx_FLASH.ld',
           '-Wl,--wrap=__libc_init_array',
           '-Wl,--wrap=_malloc_r',
           '-Wl,--wrap=_malloc_r',

@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_CIRCULAR_BUFFER_H_
-#define PLATFORMS_STM_DISCO_DARTINO_SRC_CIRCULAR_BUFFER_H_
+#ifndef PLATFORMS_STM_DISCO_DARTINO_SRC_STM32F746G_DISCOVERY_CIRCULAR_BUFFER_H_
+#define PLATFORMS_STM_DISCO_DARTINO_SRC_STM32F746G_DISCOVERY_CIRCULAR_BUFFER_H_
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -43,4 +43,4 @@ class CircularBuffer {
   int tail_;
 };
 
-#endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_CIRCULAR_BUFFER_H_
+#endif  // PLATFORMS_STM_DISCO_DARTINO_SRC_STM32F746G_DISCOVERY_CIRCULAR_BUFFER_H_

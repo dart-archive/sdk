@@ -19,7 +19,7 @@ do
   if test "$BASENAME" != "FreeRTOSConfig.h"
   then
     echo "$SRC"
-    DEST=generated/Inc/$BASENAME
+    DEST=generated/$BASENAME
     cp "$SRC" "$DEST"
     dos2unix -q $DEST
     sed -i 's/[ \t]*$//' "$DEST"
@@ -32,7 +32,7 @@ do
   if test "$BASENAME" != "freertos.c"
   then
     echo "$SRC"
-    DEST=generated/Src/$BASENAME
+    DEST=generated/$BASENAME
     cp "$SRC" "$DEST"
     dos2unix -q "$DEST"
     sed -i 's/[ \t]*$//' "$DEST"
@@ -41,14 +41,14 @@ done
 
 # Modify generated main.c to expose the MX_ initialization functions
 # and not implement main.
-sed -i 's/static void MX_/void MX_/' generated/Src/main.c
-sed -i 's/int main/int _not_using_this_main/' generated/Src/main.c
+sed -i 's/static void MX_/void MX_/' generated/main.c
+sed -i 's/int main/int _not_using_this_main/' generated/main.c
 mv generated/Src/main.c generated/Src/mx_init.c
 
 SRC="$CUBEMX_PROJECT/SW4STM32/disco_dartino/STM32F746NGHx_FLASH.ld"
 echo "$SRC"
-cp  "$SRC" generated/SW4STM32/configuration/STM32F746NGHx_FLASH.ld
-dos2unix -q generated/SW4STM32/configuration/STM32F746NGHx_FLASH.ld
+cp  "$SRC" STM32F746NGHx_FLASH.ld
+dos2unix -q STM32F746NGHx_FLASH.ld
 
 SRC="$CUBEMX_PROJECT/Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f746xx.s"
 echo "$SRC"
