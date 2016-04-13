@@ -6,11 +6,15 @@
 // setting files created with dartino session commands.
 {
 
-  // Location of the packages configuration file (a relative URI)
+  // Location of the packages configuration file (a relative URI).
   "packages": "dartino-sdk.packages",
 
-  // A list of strings that are passed to the compiler
-  "options": [
+  // A list of strings that are passed to the compiler.
+  "compiler_options": [
+  ],
+
+  // A list of strings that are passed to the embedding.
+  "embedder_options": [
   ],
 
   // Values of of compile-time constants, that is, the values of

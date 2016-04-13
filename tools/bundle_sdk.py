@@ -103,6 +103,8 @@ def CopyBinaries(bundle_dir, build_dir):
 
 def CopyDartSdk(bundle_dir):
   os_name = utils.GuessOS()
+  if os_name == "macos":
+    os_name = "mac"
   source = join('third_party', 'dart-sdk', os_name, 'dart-sdk')
   target = join(bundle_dir, 'internal', 'dart-sdk')
   print 'copying %s to %s' % (source, target)
@@ -260,8 +262,8 @@ def CopySTM(bundle_dir):
     CopyFile(join(build_dir, v), join(lib_dir, basename(v)))
 
   config_dir = join(disco, 'config')
-  CopyFile('platforms/stm/disco_dartino/generated/SW4STM32/'
-           'configuration/STM32F746NGHx_FLASH.ld',
+  CopyFile('platforms/stm/disco_dartino/src/stm32f746g-discovery/'
+           'STM32F746NGHx_FLASH.ld',
            join(config_dir, 'stm32f746g-discovery.ld'))
 
 def CopySamples(bundle_dir):
