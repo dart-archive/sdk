@@ -64,7 +64,7 @@ fi
 
 # The static libraries to link with.
 LIB1="$LIB_DIR/libdartino.a"
-LIB2="$LIB_DIR/libdisco_dartino.a"
+LIB2="$LIB_DIR/libfreertos_dartino.a"
 LIB3="$LIB_DIR/libstm32f746g-discovery.a"
 
 # Paths to to gcc and objcopy.

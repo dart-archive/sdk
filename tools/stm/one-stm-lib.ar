@@ -1,9 +1,0 @@
-CREATE libone_disco_dartino.a
-ADDLIB libdisco_dartino.a
-ADDLIB libdartino.a
-SAVE
-END
-
-
-
-
