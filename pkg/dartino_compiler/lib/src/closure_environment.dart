@@ -122,6 +122,7 @@ class ClosureVisitor
     if (currentElement != element) {
       ClosureInfo info = new ClosureInfo();
       closureEnvironment.closures[currentElement] = info;
+      element.memberContext.nestedClosures.add(currentElement);
     }
     if (currentElement.isConstructor) {
       inInitializers = true;

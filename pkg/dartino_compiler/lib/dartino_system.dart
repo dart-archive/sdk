@@ -12,9 +12,11 @@ import 'package:compiler/src/elements/elements.dart' show
     ConstructorElement,
     Element,
     FieldElement,
+    FunctionElement,
     FunctionSignature,
     LibraryElement,
     LocalFunctionElement,
+    MemberElement,
     Name;
 
 import 'package:compiler/src/universe/call_structure.dart' show
@@ -198,6 +200,8 @@ class ParameterStubSignature {
   int get hashCode => functionId ^ callStructure.hashCode;
 
   bool operator==(other) {
+    // TODO(sigurdm): Consider using ordered named arguments for canonicalizing,
+    // and permute the evaluated parameters before the call.
     return other is ParameterStubSignature &&
       other.functionId == functionId &&
       other.callStructure == callStructure;
@@ -541,18 +545,21 @@ class DartinoSystem extends DartinoSystemBase {
           : computeSymbolicElementName(function.element, libraryNames);
       syntheticNames[tearoffGetterId] = "$name-tearoff-getter";
     });
-    parameterStubsById.forEach(
-        (Pair<int, PersistentSet<DartinoFunction>> pair) {
-      int functionId = pair.fst;
-      PersistentSet<DartinoFunction> stubs = pair.snd;
+    parameterStubs.forEach(
+        (Pair<ParameterStubSignature, DartinoFunction> pair) {
+      ParameterStubSignature signature = pair.fst;
+      DartinoFunction stub = pair.snd;
+      int functionId = signature.functionId;
+      CallStructure callStructure = signature.callStructure;
+      String suffix = callStructure.isNamed
+          ? "${callStructure.namedArguments.join(",")}"
+          : "${callStructure.positionalArgumentCount}";
       DartinoFunction function = functionsById[functionId];
       String name = function.element == null
           ? syntheticNames[functionId]
           : computeSymbolicElementName(function.element, libraryNames);
       assert(name != null);
-      for (DartinoFunction stub in stubs) {
-        syntheticNames[stub.functionId] = "$name-parameter-stub";
-      }
+      syntheticNames[stub.functionId] = "$name-parameter-stub-$suffix";
     });
     Map<int, String> result = <int, String>{};
     functionsById.forEach((Pair<int, DartinoFunction> pair) {
@@ -560,6 +567,17 @@ class DartinoSystem extends DartinoSystemBase {
       DartinoFunction function = pair.snd;
       result[id] =
           computeSymbolicMethodName(function, libraryNames, syntheticNames);
+    });
+    assert(() {
+      // Each function should have a unique name.
+      Set<String> allNames = new Set<String>();
+      for (String name in result.values) {
+        if (!allNames.add(name)) {
+          print("Repeated name $name");
+          return false;
+        }
+      }
+      return true;
     });
     return result;
   }
@@ -569,7 +587,31 @@ class DartinoSystem extends DartinoSystemBase {
       Map<LibraryElement, String> libraryNames,
       Map<int, String> syntheticNames) {
     if (function.element != null) {
-      return computeSymbolicElementName(function.element, libraryNames);
+      String baseName =
+          computeSymbolicElementName(function.element, libraryNames);
+      String suffix;
+      switch (function.kind) {
+        case DartinoFunctionKind.NORMAL:
+          suffix = "method";
+          break;
+        case DartinoFunctionKind.LAZY_FIELD_INITIALIZER:
+          suffix = "lazyFieldInitializer";
+          break;
+        case DartinoFunctionKind.INITIALIZER_LIST:
+          suffix = "initializerList";
+          break;
+        case DartinoFunctionKind.PARAMETER_STUB:
+          suffix = "parameterStub";
+          break;
+        case DartinoFunctionKind.ACCESSOR:
+          if (function.element.isGetter) {
+            suffix = "getter";
+          } else {
+            suffix = "setter";
+          }
+          break;
+      }
+      return "$baseName-$suffix";
     }
     String name = syntheticNames[function.functionId];
     if (name != null) return name;
@@ -585,6 +627,16 @@ class DartinoSystem extends DartinoSystemBase {
     }
     if (element.isCompilationUnit) {
       return libraryNames[element.library];
+    }
+    if (element is FunctionElement) {
+      MemberElement memberContext = element.memberContext;
+      if (memberContext != element) {
+        String memberContextName =
+            computeSymbolicElementName(memberContext, libraryNames);
+        int index = memberContext.nestedClosures.indexOf(element);
+        assert(index != -1);
+        return "$memberContextName-closure$index";
+      }
     }
     String enclosingName =
         computeSymbolicElementName(element.enclosingElement, libraryNames);
