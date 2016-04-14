@@ -15,6 +15,11 @@ packages
 .idea
 *.iml
 .gdb_history
+*.snapshot
+*.info.json
+*.elf
+*.bin
+*.hex
 *~
 
 # The following match exact path names starting from the location of this file.
