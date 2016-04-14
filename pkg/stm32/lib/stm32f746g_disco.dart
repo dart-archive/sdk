@@ -2,30 +2,29 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library stm32f746g;
+library stm32.stm32f746g;
 
 import 'package:gpio/gpio.dart';
-import 'package:stm32f746g_disco/gpio.dart';
-import 'package:stm32f746g_disco/lcd.dart';
-import 'package:stm32f746g_disco/ts.dart';
-import 'package:stm32f746g_disco/uart.dart';
-import 'package:stm32f746g_disco/src/stm32f7_constants.dart';
+import 'package:stm32/gpio.dart';
+import 'package:stm32/lcd.dart';
+import 'package:stm32/ts.dart';
+import 'package:stm32/uart.dart';
 
 class STM32F746GDiscovery {
   /// GPIO pin for on-board green LED.
-  static const Pin LED1 = STM32F7Pin.PI1;
+  static const Pin LED1 = STM32Pin.PI1;
   /// GPIO pin for on-board blue button.
-  static const Pin Button1 = STM32F7Pin.PI11;
+  static const Pin Button1 = STM32Pin.PI11;
 
   /// GPIO pins on the Arduino connector.
-  static const Pin A0 = STM32F7Pin.PA0;
-  static const Pin A1 = STM32F7Pin.PF10;
-  static const Pin A2 = STM32F7Pin.PF9;
-  static const Pin A3 = STM32F7Pin.PF8;
-  static const Pin A4 = STM32F7Pin.PF7;
-  static const Pin A5 = STM32F7Pin.PF6;
+  static const Pin A0 = STM32Pin.PA0;
+  static const Pin A1 = STM32Pin.PF10;
+  static const Pin A2 = STM32Pin.PF9;
+  static const Pin A3 = STM32Pin.PF8;
+  static const Pin A4 = STM32Pin.PF7;
+  static const Pin A5 = STM32Pin.PF6;
 
-  STM32F7Gpio _gpio;
+  STM32Gpio _gpio;
   Uart _uart;
   FrameBuffer _frameBuffer;
   TouchScreen _touchScreen;
@@ -34,7 +33,7 @@ class STM32F746GDiscovery {
 
   Gpio get gpio {
     if (_gpio == null) {
-      _gpio = new STM32F7Gpio();
+      _gpio = new STM32Gpio();
     }
     return _gpio;
   }

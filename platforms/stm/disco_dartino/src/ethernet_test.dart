@@ -5,7 +5,8 @@
 // Demonstrates how to use the ethernet package.
 
 import 'dart:dartino';
-import 'package:stm32f746g_disco/ethernet.dart';
+
+import 'package:stm32/ethernet.dart';
 
 void printNetworkInfo() {
   for (NetworkInterface interface in

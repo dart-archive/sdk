@@ -2,12 +2,15 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library stm32f746g.src.stm32f7_constants;
+library stm32.src.constants;
 
 // Base address of AHB/ABP peripherals.
 //
 // These are from
 // stm32cube_fw_f7/Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f746xx.h
+//
+// Not all models have all the peripherals that F7 has, but the common
+// parts have the same addresses.
 const int PERIPH_BASE = 0x40000000;
 
 const int APB1PERIPH_BASE = PERIPH_BASE;

@@ -6,9 +6,10 @@
 // data.
 
 import 'dart:dartino';
-import 'package:stm32f746g_disco/ethernet.dart';
-import 'package:stm32f746g_disco/socket.dart';
 import 'dart:typed_data';
+
+import 'package:stm32/ethernet.dart';
+import 'package:stm32/socket.dart';
 
 ByteBuffer createBuffer(int length) {
   var list = new Uint8List(length);

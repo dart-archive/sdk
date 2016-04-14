@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:dartino';
 import 'dart:typed_data';
 
-import 'package:stm32f746g_disco/button.dart';
-import 'package:stm32f746g_disco/uart.dart';
-import 'package:stm32f746g_disco/stm32f746g_disco.dart';
-import 'dart:dartino';
+import 'package:stm32/button.dart';
+import 'package:stm32/uart.dart';
+import 'package:stm32/stm32f746g_disco.dart';
 
 main() {
   const int CR = 13;

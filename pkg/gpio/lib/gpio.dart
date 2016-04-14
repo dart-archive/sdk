@@ -38,11 +38,11 @@
 ///   pin.state =  true;
 /// ```
 ///
-/// Usage on STM32F7746G Discovery board
-/// ------------------------------------
+/// Usage on STM32F746G Discovery board
+/// -----------------------------------
 /// ```dart
 /// import 'package:gpio/gpio.dart';
-/// import 'package:stm32f746g_disco/stm32f746g_disco.dart';
+/// import 'package:stm32/stm32f746g_disco.dart';
 ///
 /// main() {
 ///   // Initialize STM32F746G Discovery board and configure the pins.

@@ -6,8 +6,10 @@
 // https://github.com/daftspaniel/dart-Hilbertcurve/blob/master/web/turtle.dart
 
 library turtle;
-import 'package:stm32f746g_disco/lcd.dart';
+
 import "dart:math";
+
+import 'package:stm32/lcd.dart';
 
 class Turtle {
   FrameBuffer _display;
