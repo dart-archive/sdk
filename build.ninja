@@ -145,6 +145,7 @@ build $
         platforms/stm/free_rtos_sources.gypi $
         platforms/stm/stm32_cube_f7_demos.gyp $
         platforms/stm/disco_dartino/disco_dartino.gyp $
+        platforms/stm/disco_dartino/freertos_dartino.gyp $
         platforms/stm/event_handler_test/event_handler_test.gyp $
         dartino.gyp $
         src/double_conversion.gyp $
