@@ -27,8 +27,8 @@ struct EventHandlerInfo {
   HANDLE event;
   // The wait handle needed to unregister this wait.
   HANDLE wait_handle;
-  // The handler to notify.
-  EventListener* event_listener;
+  // The port to notify.
+  Port* port;
 
   struct EventHandlerInfo* next;
   struct EventHandlerData* data;
@@ -109,7 +109,7 @@ void EventHandler::Run() {
         // Unregister the event and wait for pending callbacks.
         UnregisterWaitEx(info->wait_handle, INVALID_HANDLE_VALUE);
         CloseHandle(info->event);
-        delete info->event_listener;
+        info->port->DecrementRef();
         // We are tearing down the event handler and the underlying set will be
         // deleted, so it is save to free all info structures.
         delete info;
@@ -136,7 +136,7 @@ void EventHandler::Run() {
       if ((events & FD_WRITE) != 0) mask |= WRITE_EVENT;
       if ((events & FD_CLOSE) != 0) mask |= CLOSE_EVENT;
 
-      infos->event_listener->Send(mask);
+      Send(infos->port, mask, true);
 
       {
         ScopedMonitorLock locker(monitor_);
@@ -146,7 +146,7 @@ void EventHandler::Run() {
       // completed.
       UnregisterWait(infos->wait_handle);
       CloseHandle(infos->event);
-      delete infos->event_listener;
+      infos->port->DecrementRef();
       EventHandlerInfo* next = infos->next;
       delete infos;
       infos = next;
@@ -154,8 +154,8 @@ void EventHandler::Run() {
   }
 }
 
-EventHandler::Status EventHandler::AddEventListener(
-    Object* id, EventListener* event_listener, int flags) {
+Object* EventHandler::Add(Process* process, Object* id, Port* port,
+                          int flags) {
   EnsureInitialized();
 
   EventHandlerData* data = reinterpret_cast<EventHandlerData*>(data_);
@@ -166,8 +166,7 @@ EventHandler::Status EventHandler::AddEventListener(
   } else if (id->IsLargeInteger()) {
     socket_int = LargeInteger::cast(id)->value();
   } else {
-    delete event_listener;
-    return Status::WRONG_ARGUMENT_TYPE;
+    return Failure::wrong_argument_type();
   }
 
   SOCKET socket = static_cast<SOCKET>(socket_int);
@@ -178,25 +177,23 @@ EventHandler::Status EventHandler::AddEventListener(
   info->event = CreateEvent(NULL, FALSE, FALSE, NULL);
   if (info->event == NULL) {
     delete info;
-    return Status::INDEX_OUT_OF_BOUNDS;
+    return Failure::index_out_of_bounds();
   }
-  info->event_listener = event_listener;
+  info->port = port;
   info->data = data;
 
   LONG event_flags = 0;
 
   if ((flags & ~(READ_EVENT | WRITE_EVENT)) != 0) {
-    delete event_listener;
-    return Status::ILLEGAL_STATE;
+    return Failure::illegal_state();
   }
   if ((flags & READ_EVENT) != 0) event_flags |= FD_READ | FD_ACCEPT;
   if ((flags & WRITE_EVENT) != 0) event_flags |= FD_WRITE;
 
   if (WSAEventSelect(info->socket, info->event, event_flags) != 0) {
     CloseHandle(info->event);
-    delete event_listener;
     delete info;
-    return Status::INDEX_OUT_OF_BOUNDS;
+    return Failure::index_out_of_bounds();
   }
 
   {
@@ -210,8 +207,7 @@ EventHandler::Status EventHandler::AddEventListener(
                     WT_EXECUTEINWAITTHREAD | WT_EXECUTEONLYONCE);
     if (status == 0) {
       delete info;
-      delete event_listener;
-      return Status::INDEX_OUT_OF_BOUNDS;
+      return Failure::index_out_of_bounds();
     }
 
     port->IncrementRef();
@@ -219,7 +215,7 @@ EventHandler::Status EventHandler::AddEventListener(
     data->allocated.Insert(info);
   }
 
-  return Status::OK;
+  return process->program()->null_object();
 }
 
 }  // namespace dartino

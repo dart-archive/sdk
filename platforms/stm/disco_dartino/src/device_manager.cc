@@ -35,25 +35,27 @@ bool Device::ClearWaitFlags() {
 }
 
 bool Device::IsReady() {
-  return event_listener_ != NULL && (flags_ & wait_mask_) != 0;
+  return port_ != NULL && (flags_ & wait_mask_) != 0;
 }
 
-void Device::SendIfReady() {
-  if (IsReady()) {
-    event_listener_->Send(flags_);
-    delete event_listener_;
-    event_listener_ = NULL;
-  }
+void Device::SetWaitMask(uint32_t wait_mask) {
+  wait_mask_ = wait_mask;
 }
 
-Mutex* Device::GetMutex() {
+Mutex *Device::GetMutex() {
   return mutex_;
 }
 
-void Device::SetEventListener(
-    EventListener* event_listener, uint32_t wait_mask) {
-  wait_mask_ = wait_mask;
-  event_listener_ = event_listener;
+Port *Device::GetPort() {
+  return port_;
+}
+
+uint32_t Device::GetFlags() {
+  return flags_;
+}
+
+void Device::SetPort(Port *port) {
+  port_ = port;
 }
 
 DeviceManager::DeviceManager() : mutex_(new Mutex()),
@@ -62,7 +64,7 @@ DeviceManager::DeviceManager() : mutex_(new Mutex()),
   mail_queue_ = osMessageCreate(osMessageQ(device_event_queue), NULL);
 }
 
-DeviceManager* DeviceManager::GetDeviceManager() {
+DeviceManager *DeviceManager::GetDeviceManager() {
   if (instance_ == NULL) {
     instance_ = new DeviceManager();
   }
@@ -191,7 +193,7 @@ void DeviceManager::RemoveDevice(Device *device) {
 
 Device* DeviceManager::GetDevice(int handle) {
   ScopedLock locker(mutex_);
-  Device* device = devices_[handle];
+  Device *device = devices_[handle];
   ASSERT(device != NULL);
   return device;
 }

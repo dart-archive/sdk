@@ -15,22 +15,6 @@ namespace dartino {
 
 EventHandler* EventHandler::event_handler_ = NULL;
 
-class PortEventListener : public EventListener {
- public:
-  explicit PortEventListener(Port *port) : port_(port) {}
-
-  ~PortEventListener() {
-    port_->DecrementRef();
-  }
-
-  void Send(int64 value) {
-    EventHandler::Send(port_, value, false);
-  }
-
- private:
-  Port* port_;
-};
-
 void EventHandler::Setup() {
   ASSERT(event_handler_ == NULL);
   event_handler_ = new EventHandler();
@@ -68,25 +52,6 @@ EventHandler::~EventHandler() {
   }
 
   delete monitor_;
-}
-
-Object* EventHandler::AddPortListener(
-    Process* process, Object* id, Port* port, int wait_mask) {
-  port->IncrementRef();
-  Status status = AddEventListener(id, new PortEventListener(port), wait_mask);
-  switch (status) {
-    case Status::OK:
-      return process->program()->null_object();
-    case Status::WRONG_ARGUMENT_TYPE:
-      return Failure::wrong_argument_type();
-    case Status::ILLEGAL_STATE:
-      return Failure::illegal_state();
-    case Status::INDEX_OUT_OF_BOUNDS:
-      return Failure::index_out_of_bounds();
-    default:
-      FATAL("Unexpected return value from Add");
-      return NULL;
-  }
 }
 
 void EventHandler::ReceiverForPortsDied(Port* ports) {

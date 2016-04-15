@@ -1483,8 +1483,7 @@ BEGIN_LEAF_NATIVE(SystemEventHandlerAdd) {
   Object* flags_arg = arguments[2];
   if (!flags_arg->IsSmi()) return Failure::wrong_argument_type();
   int flags = Smi::cast(flags_arg)->value();
-  return EventHandler::GlobalInstance()
-      ->AddPortListener(process, id, port, flags);
+  return EventHandler::GlobalInstance()->Add(process, id, port, flags);
 }
 END_NATIVE()
 

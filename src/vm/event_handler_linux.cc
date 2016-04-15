@@ -96,15 +96,13 @@ void EventHandler::Run() {
     if ((events & EPOLLHUP) != 0) mask |= CLOSE_EVENT;
     if ((events & EPOLLERR) != 0) mask |= ERROR_EVENT;
 
-    EventListener* event_listener =
-        reinterpret_cast<EventListener*>(event.data.ptr);
-    event_listener->Send(mask);
-    delete event_listener;
+    Port* port = reinterpret_cast<Port*>(event.data.ptr);
+    Send(port, mask, true);
   }
 }
 
-EventHandler::Status EventHandler::AddEventListener(
-    Object* id, EventListener *event_listener, int flags) {
+Object* EventHandler::Add(Process* process, Object* id, Port* port,
+                          int flags) {
   EnsureInitialized();
 
   int fd;
@@ -113,29 +111,27 @@ EventHandler::Status EventHandler::AddEventListener(
   } else if (id->IsLargeInteger()) {
     fd = LargeInteger::cast(id)->value();
   } else {
-    delete event_listener;
-    return Status::WRONG_ARGUMENT_TYPE;
+    return Failure::wrong_argument_type();
   }
 
   struct epoll_event event;
   event.events = EPOLLRDHUP | EPOLLHUP | EPOLLONESHOT;
   if ((flags & ~(READ_EVENT | WRITE_EVENT)) != 0) {
-    delete event_listener;
-    return Status::ILLEGAL_STATE;
+    return Failure::illegal_state();
   }
   if ((flags & READ_EVENT) != 0) event.events |= EPOLLIN;
   if ((flags & WRITE_EVENT) != 0) event.events |= EPOLLOUT;
-  event.data.ptr = event_listener;
+  event.data.ptr = port;
   int result = epoll_ctl(id_, EPOLL_CTL_MOD, fd, &event);
   if (result == -1 && errno == ENOENT) {
     // This is the first time we register the fd, so use ADD.
     result = epoll_ctl(id_, EPOLL_CTL_ADD, fd, &event);
   }
-  if (result == -1) {
-    delete event_listener;
-    return Status::INDEX_OUT_OF_BOUNDS;
-  }
-  return Status::OK;
+  if (result == -1) return Failure::index_out_of_bounds();
+  // Only if the call to epoll_ctl succeeded do we actually have a reference to
+  // the port.
+  port->IncrementRef();
+  return process->program()->null_object();
 }
 
 }  // namespace dartino

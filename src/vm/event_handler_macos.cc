@@ -105,15 +105,13 @@ void EventHandler::Run() {
       }
     }
 
-    EventListener* event_listener =
-        reinterpret_cast<EventListener*>(event.udata);
-
-    event_listener->Send(mask);
+    Port* port = reinterpret_cast<Port*>(event.udata);
+    Send(port, mask, true);
   }
 }
 
-EventHandler::Status EventHandler::AddEventListener(
-    Object* id, EventListener* event_listener, int flags) {
+Object* EventHandler::Add(Process* process, Object* id, Port* port,
+                          int flags) {
   EnsureInitialized();
 
   int fd;
@@ -122,30 +120,28 @@ EventHandler::Status EventHandler::AddEventListener(
   } else if (id->IsLargeInteger()) {
     fd = LargeInteger::cast(id)->value();
   } else {
-    delete event_listener;
-    return Status::WRONG_ARGUMENT_TYPE;
+    return Failure::wrong_argument_type();
   }
 
   struct kevent event = {};
   event.ident = fd;
   event.flags = EV_ADD | EV_ONESHOT;
-  event.udata = event_listener;
+  event.udata = port;
   if (flags == READ_EVENT) {
     event.filter = EVFILT_READ;
   } else if (flags == WRITE_EVENT) {
     event.filter = EVFILT_WRITE;
   } else {
-    delete event_listener;
     Print::Error("Listening for both READ_EVENT and WRITE_EVENT is currently"
                  " unsupported on mac os.");
-    return Status::ILLEGAL_STATE;
+    return Failure::illegal_state();
   }
   int result = kevent(id_, &event, 1, NULL, 0, NULL);
-  if (result == -1) {
-    delete event_listener;
-    return Status::INDEX_OUT_OF_BOUNDS;
-  }
-  return Status::OK;
+  if (result == -1) return Failure::index_out_of_bounds();
+  // Only if the call to kevent succeeded do we actually have a reference to the
+  // port.
+  port->IncrementRef();
+  return process->program()->null_object();
 }
 
 }  // namespace dartino

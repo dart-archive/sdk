@@ -16,12 +16,6 @@ class Port;
 class Object;
 class Process;
 
-class EventListener {
- public:
-  virtual ~EventListener() {}
-  virtual void Send(int64 value) = 0;
-};
-
 class EventHandler {
  public:
   enum {
@@ -31,14 +25,6 @@ class EventHandler {
     ERROR_EVENT = 1 << 3,
   };
 
-  // The possible results of [Add].
-  enum class Status {
-    OK,
-    WRONG_ARGUMENT_TYPE,
-    ILLEGAL_STATE,
-    INDEX_OUT_OF_BOUNDS,
-  };
-
   static void Setup();
   static void TearDown();
   static EventHandler* GlobalInstance() { return event_handler_; }
@@ -46,17 +32,13 @@ class EventHandler {
   EventHandler();
   ~EventHandler();
 
-  Object* AddPortListener(Process* process, Object* id, Port* port, int flags);
-
-  Status AddEventListener(Object* id, EventListener* event_listener, int flags);
+  Object* Add(Process* process, Object* id, Port* port, int flags);
 
   void ReceiverForPortsDied(Port* port_list);
 
   void ScheduleTimeout(int64 timeout, Port* port);
 
   Monitor* monitor() const { return monitor_; }
-
-  static void Send(Port* port, int64 value, bool release_port);
 
  private:
   // Global EventHandler instance.
@@ -78,6 +60,8 @@ class EventHandler {
   void Run();
   void Interrupt();
   void HandleTimeouts();
+
+  void Send(Port* port, int64 value, bool release_port);
 };
 
 }  // namespace dartino

@@ -7,7 +7,6 @@
 
 #include "src/shared/platform.h"
 #include "src/vm/port.h"
-#include "src/vm/event_handler.h"
 
 #include "platforms/stm/disco_dartino/src/device_manager_api.h"
 
@@ -26,7 +25,7 @@ class Device {
   Device(const char* name, Type type) :
       name_(name),
       type_(type),
-      event_listener_(NULL),
+      port_(NULL),
       flags_(0),
       wait_mask_(0),
       initialized_(false),
@@ -44,23 +43,16 @@ class Device {
 
   uint32_t GetFlags();
 
-  Mutex* GetMutex();
+  Mutex *GetMutex();
 
-  // Send a message if there is an installed event_listener and
-  // (flags_ & wait_mask_) != 0.
-  //
-  // This should only be called with mutex_ taken.
-  void SendIfReady();
+  // Returns true if there is a listener, and `(flags_ & wait_mask) != 0`.
+  bool IsReady();
 
-  // Set up listening for the given wait_mask.
-  //
-  // This method transfers ownership of [event_listener] to this Device.
-  void SetEventListener(EventListener *event_listener, uint32_t wait_mask);
+  void SetWaitMask(uint32_t wait_mask);
 
-  // This should only be called with mutex_ taken.
-  bool HasEventListener() {
-    return event_listener_ != NULL;
-  }
+  Port *GetPort();
+
+  void SetPort(Port *port);
 
   int device_id() const { return device_id_; }
   void set_device_id(int device_id) { device_id_ = device_id; }
@@ -71,15 +63,13 @@ class Device {
  private:
   friend class DeviceManager;
 
-  bool IsReady();
-
   const char* name_;
   Type type_;
 
   int device_id_;
 
-  // Whom to notify when messages arrive on this device.
-  EventListener* event_listener_;
+  // The port waiting for messages on this device.
+  Port *port_;
 
   // The current flags for this device.
   uint32_t flags_;
