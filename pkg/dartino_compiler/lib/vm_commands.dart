@@ -23,7 +23,10 @@ abstract class VmCommand {
 
   const VmCommand(this.code);
 
-  factory VmCommand.fromBuffer(VmCommandCode code, Uint8List buffer) {
+  factory VmCommand.fromBuffer(
+      VmCommandCode code,
+      Uint8List buffer,
+      int translateFunction(int offsetOrId)) {
     switch (code) {
       case VmCommandCode.HandShakeResult:
         int offset = 0;
@@ -73,7 +76,8 @@ abstract class VmCommand {
         ProcessBacktrace backtrace = new ProcessBacktrace(frames);
         for (int i = 0; i < frames; i++) {
           int offset = i * 16 + 4;
-          int functionId = CommandBuffer.readInt64FromBuffer(buffer, offset);
+          int functionId = translateFunction(
+              CommandBuffer.readInt64FromBuffer(buffer, offset));
           int bytecodeIndex =
               CommandBuffer.readInt64FromBuffer(buffer, offset + 8);
           backtrace.functionIds[i] = functionId;
@@ -83,7 +87,8 @@ abstract class VmCommand {
       case VmCommandCode.ProcessBreakpoint:
         int breakpointId = CommandBuffer.readInt32FromBuffer(buffer, 0);
         int processId = CommandBuffer.readInt32FromBuffer(buffer, 4);
-        int functionId = CommandBuffer.readInt64FromBuffer(buffer, 8);
+        int functionId =
+            translateFunction(CommandBuffer.readInt64FromBuffer(buffer, 8));
         int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 16);
         return new ProcessBreakpoint(breakpointId, processId, functionId, bytecodeIndex);
       case VmCommandCode.ProcessDeleteBreakpoint:
@@ -151,12 +156,15 @@ abstract class VmCommand {
     }
   }
 
-  void addTo(Sink<List<int>> sink) {
-    internalAddTo(sink, new CommandBuffer<VmCommandCode>());
+  void addTo(Sink<List<int>> sink, int translateObject(
+      MapId mapId, int index)) {
+    internalAddTo(sink, new CommandBuffer<VmCommandCode>(), translateObject);
   }
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer.sendOn(sink, code);
   }
 
@@ -184,7 +192,9 @@ class HandShake extends VmCommand {
       : super(VmCommandCode.HandShake);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = UTF8.encode(value);
     buffer
         ..addUint32(payload.length)
@@ -212,7 +222,9 @@ class HandShakeResult extends VmCommand {
       : super(VmCommandCode.HandShakeResult);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = UTF8.encode(version);
     buffer
         ..addUint8(success ? 1 : 0)
@@ -247,7 +259,9 @@ class PushNewOneByteString extends VmCommand {
       : super(VmCommandCode.PushNewOneByteString);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = value;
     buffer
         ..addUint32(payload.length)
@@ -267,7 +281,9 @@ class PushNewTwoByteString extends VmCommand {
       : super(VmCommandCode.PushNewTwoByteString);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = value.buffer.asUint8List();
     buffer
         ..addUint32(payload.length)
@@ -296,7 +312,9 @@ class PushNewClass extends VmCommand {
       : super(VmCommandCode.PushNewClass);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(fields)
         ..sendOn(sink, code);
@@ -315,7 +333,9 @@ class PushBuiltinClass extends VmCommand {
       : super(VmCommandCode.PushBuiltinClass);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(name)
         ..addUint32(fields)
@@ -334,7 +354,9 @@ class PushConstantList extends VmCommand {
       : super(VmCommandCode.PushConstantList);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(entries)
         ..sendOn(sink, code);
@@ -352,7 +374,9 @@ class PushConstantByteList extends VmCommand {
       : super(VmCommandCode.PushConstantByteList);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(entries)
         ..sendOn(sink, code);
@@ -370,7 +394,9 @@ class PushConstantMap extends VmCommand {
       : super(VmCommandCode.PushConstantMap);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(entries)
         ..sendOn(sink, code);
@@ -388,7 +414,9 @@ class Generic extends VmCommand {
       : super(code);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint8List(payload)
         ..sendOn(sink, code);
@@ -409,7 +437,9 @@ class NewMap extends VmCommand {
       : super(VmCommandCode.NewMap);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(map.index)
         ..sendOn(sink, code);
@@ -427,7 +457,9 @@ class DeleteMap extends VmCommand {
       : super(VmCommandCode.DeleteMap);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(map.index)
         ..sendOn(sink, code);
@@ -446,10 +478,13 @@ abstract class MapAccess extends VmCommand {
       : super(code);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
+    int translatedIndex = translateObject(map, index);
     buffer
         ..addUint32(map.index)
-        ..addUint64(index)
+        ..addUint64(translatedIndex)
         ..sendOn(sink, code);
   }
 
@@ -479,24 +514,6 @@ class RemoveFromMap extends MapAccess {
   String valuesToString() => "$map, $index";
 }
 
-class PushFromOffset extends VmCommand {
-  const PushFromOffset(this.offset)
-      : super(VmCommandCode.PushFromOffset);
-
-  final int offset;
-
-  int get numberOfResponsesExpected => 0;
-
-  void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
-    buffer
-      ..addUint64(offset)
-      ..sendOn(sink, code);
-  }
-
-  String valuesToString() => "$offset";
-}
-
 class Drop extends VmCommand {
   final int value;
 
@@ -504,7 +521,9 @@ class Drop extends VmCommand {
       : super(VmCommandCode.Drop);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(value)
         ..sendOn(sink, code);
@@ -531,7 +550,9 @@ class PushBoolean extends VmCommand {
       : super(VmCommandCode.PushBoolean);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint8(value ? 1 : 0)
         ..sendOn(sink, code);
@@ -578,7 +599,9 @@ class PushNewFunction extends VmCommand {
   }
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> bytes = computeBytes(bytecodes);
     int size = bytes.length;
     if (catchRanges.isNotEmpty) size += 4 + catchRanges.length * 4;
@@ -616,7 +639,9 @@ class ChangeStatics extends VmCommand {
       : super(VmCommandCode.ChangeStatics);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -634,7 +659,9 @@ class ChangeMethodLiteral extends VmCommand {
       : super(VmCommandCode.ChangeMethodLiteral);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(index)
         ..sendOn(sink, code);
@@ -652,7 +679,9 @@ class ChangeMethodTable extends VmCommand {
       : super(VmCommandCode.ChangeMethodTable);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -680,7 +709,9 @@ class ChangeSchemas extends VmCommand {
       : super(VmCommandCode.ChangeSchemas);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(count)
         ..addUint32(delta)
@@ -708,7 +739,9 @@ class CommitChanges extends VmCommand {
       : super(VmCommandCode.CommitChanges);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -728,7 +761,9 @@ class CommitChangesResult extends VmCommand {
       : super(VmCommandCode.CommitChangesResult);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addBool(successful)
         ..addAsciiString(message)
@@ -756,7 +791,9 @@ class MapLookup extends VmCommand {
       : super(VmCommandCode.MapLookup);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(mapId.index)
         ..sendOn(sink, code);
@@ -775,7 +812,9 @@ class ObjectId extends VmCommand {
       : super(VmCommandCode.ObjectId);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint64(id)
         ..sendOn(sink, code);
@@ -793,7 +832,9 @@ class PushNewArray extends VmCommand {
       : super(VmCommandCode.PushNewArray);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(length)
         ..sendOn(sink, code);
@@ -811,7 +852,9 @@ class PushNewInteger extends VmCommand {
       : super(VmCommandCode.PushNewInteger);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint64(value)
         ..sendOn(sink, code);
@@ -837,7 +880,9 @@ class PushNewBigInteger extends VmCommand {
       : super(VmCommandCode.PushNewBigInteger);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint8(negative ? 1 : 0)
         ..addUint32(parts.length)
@@ -864,7 +909,9 @@ class PushNewDouble extends VmCommand {
       : super(VmCommandCode.PushNewDouble);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addDouble(value)
         ..sendOn(sink, code);
@@ -884,7 +931,9 @@ class ProcessSpawnForMain extends VmCommand {
   int get numberOfResponsesExpected => 0;
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer.addUint32(arguments.length);
     for (String argument in arguments) {
       List<int> payload = UTF8.encode(argument);
@@ -927,7 +976,9 @@ class ProcessSetBreakpoint extends VmCommand {
       : super(VmCommandCode.ProcessSetBreakpoint);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(value)
         ..sendOn(sink, code);
@@ -946,7 +997,9 @@ class ProcessDeleteBreakpoint extends VmCommand {
       : super(VmCommandCode.ProcessDeleteBreakpoint);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(id)
         ..sendOn(sink, code);
@@ -966,7 +1019,9 @@ class ProcessDeleteOneShotBreakpoint extends VmCommand {
       : super(VmCommandCode.ProcessDeleteOneShotBreakpoint);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(processId)
         ..addUint32(breakpointId)
@@ -991,7 +1046,9 @@ class ProcessBacktrace extends VmCommand {
         super(VmCommandCode.ProcessBacktrace);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
@@ -1009,7 +1066,9 @@ class ProcessBacktraceRequest extends VmCommand {
       : super(VmCommandCode.ProcessBacktraceRequest);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(processId + 1)
         ..sendOn(sink, code);
@@ -1027,7 +1086,9 @@ class ProcessFiberBacktraceRequest extends VmCommand {
       : super(VmCommandCode.ProcessFiberBacktraceRequest);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint64(fiber)
         ..sendOn(sink, code);
@@ -1063,7 +1124,9 @@ class ProcessBreakpoint extends VmCommand {
       : super(VmCommandCode.ProcessBreakpoint);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
@@ -1082,7 +1145,9 @@ class ProcessLocal extends VmCommand {
       : super(VmCommandCode.ProcessLocal);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(frame)
         ..addUint32(slot)
@@ -1103,7 +1168,9 @@ class ProcessLocalStructure extends VmCommand {
       : super(VmCommandCode.ProcessLocalStructure);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(frame)
         ..addUint32(slot)
@@ -1126,7 +1193,9 @@ class ProcessRestartFrame extends VmCommand {
       : super(VmCommandCode.ProcessRestartFrame);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(frame)
         ..sendOn(sink, code);
@@ -1175,16 +1244,16 @@ class ProcessStepOut extends VmCommand {
 }
 
 class ProcessStepTo extends VmCommand {
-  final int functionId;
   final int bcp;
 
-  const ProcessStepTo(this.functionId, this.bcp)
+  const ProcessStepTo(this.bcp)
       : super(VmCommandCode.ProcessStepTo);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
-        ..addUint64(functionId)
         ..addUint32(bcp)
         ..sendOn(sink, code);
   }
@@ -1193,7 +1262,7 @@ class ProcessStepTo extends VmCommand {
   /// possible responses.
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "functionId: $functionId, bcp: $bcp";
+  String valuesToString() => "bcp: $bcp";
 }
 
 class ProcessContinue extends VmCommand {
@@ -1281,7 +1350,9 @@ class LiveEditing extends VmCommand {
       : super(VmCommandCode.LiveEditing);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(MapId.methods.index)
         ..addUint32(MapId.classes.index)
@@ -1298,7 +1369,9 @@ class Debugging extends VmCommand {
       : super(VmCommandCode.Debugging);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(MapId.fibers.index)
         ..sendOn(sink, code);
@@ -1370,7 +1443,9 @@ class CreateSnapshot extends VmCommand {
   bool get writeToDisk => snapshotPath != null;
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = UTF8.encode(snapshotPath ?? "").toList()..add(0);
     buffer
         ..addBool(writeToDisk)
@@ -1417,7 +1492,9 @@ class ProgramInfoCommand extends VmCommand {
       : super(VmCommandCode.ProgramInfo);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
@@ -1435,7 +1512,9 @@ class InstanceStructure extends VmCommand {
       : super(VmCommandCode.InstanceStructure);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
@@ -1449,7 +1528,9 @@ abstract class DartValue extends VmCommand {
       : super(code);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
@@ -1489,7 +1570,9 @@ class Integer extends DartValue {
       : super(VmCommandCode.Integer);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint64(value)
         ..sendOn(sink, code);
@@ -1606,7 +1689,6 @@ enum VmCommandCode {
   PushFromMap,
   PopToMap,
   RemoveFromMap,
-  PushFromOffset,
 
   Dup,
   Drop,

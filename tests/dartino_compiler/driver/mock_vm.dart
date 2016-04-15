@@ -123,7 +123,7 @@ Future<int> mockVm(MockVmArguments arguments) async {
       if (reply == null) {
         print(command);
       } else {
-        reply.addTo(socket);
+        reply.addTo(socket, (a, b) => b);
         await socket.flush();
       }
     }

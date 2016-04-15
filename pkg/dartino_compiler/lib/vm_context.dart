@@ -40,14 +40,18 @@ import 'src/shared_command_infrastructure.dart' show
 import 'src/hub/session_manager.dart' show
     SessionState;
 
-import 'package:dartino_compiler/program_info.dart' show
+import 'program_info.dart' show
     Configuration,
-    ProgramInfo;
+    IdOffsetMapping,
+    NameOffsetMapping;
 
-import 'package:dartino_compiler/src/worker/developer.dart';
-import 'package:dartino_compiler/src/diagnostic.dart';
+import 'src/worker/developer.dart';
+import 'src/diagnostic.dart';
 
-import 'package:dartino_compiler/src/hub/exit_codes.dart' as exit_codes;
+import 'src/hub/exit_codes.dart' as exit_codes;
+
+import 'package:persistent/persistent.dart' show
+    Pair;
 
 part 'vm_command_reader.dart';
 part 'input_handler.dart';
@@ -67,7 +71,7 @@ class DartinoVmContext {
   /// If the [VmCommand] is for stdout or stderr the reader automatically
   /// forwards them to the stdout/stderr sinks and does not add them to the
   /// iterator.
-  final VmCommandReader _commandReader;
+  StreamIterator<Pair<int, ByteData>> _commandIterator;
 
   /// Completes when the underlying TCP connection is terminated.
   final Future _done;
@@ -93,6 +97,8 @@ class DartinoVmContext {
   final IncrementalCompiler compiler;
   final Future processExitCodeFuture;
 
+  int interactiveExitCode = 0;
+
   DebugState debugState;
   DartinoSystem dartinoSystem;
   bool loaded = false;
@@ -110,7 +116,10 @@ class DartinoVmContext {
   /// Only valid if [runningFromSnapshot].
   int snapshotHash;
 
-  ProgramInfo info;
+  IdOffsetMapping offsetMapping;
+
+  Function translateMapObject = (MapId mapId, int index) => index;
+  Function translateFunctionOffset;
 
   DartinoVmContext(Socket dartinoVmSocket,
           this.compiler,
@@ -121,8 +130,9 @@ class DartinoVmContext {
         this.stdoutSink = stdoutSink,
         this.stderrSink = stderrSink,
         _done = dartinoVmSocket.done,
-        _commandReader =
-            new VmCommandReader(dartinoVmSocket, stdoutSink, stderrSink) {
+        _commandIterator =
+            new StreamIterator<Pair<int, ByteData>>(dartinoVmSocket.transform(
+                new SessionCommandTransformerBuilder().build())) {
     _done.catchError((_, __) {}).then((_) {
       _connectionIsDead = true;
     });
@@ -168,13 +178,6 @@ class DartinoVmContext {
     return lastResponse;
   }
 
-  /// Sends all given [VmCommand]s to a dartino-vm.
-  Future sendCommands(List<VmCommand> commands) async {
-    for (var command in commands) {
-      await sendCommand(command);
-    }
-  }
-
   /// Sends a [VmCommand] to a dartino-vm.
   Future sendCommand(VmCommand command) async {
     if (_connectionIsDead) {
@@ -182,26 +185,45 @@ class DartinoVmContext {
           'Trying to send command ${command} to dartino-vm, but '
               'the connection is already closed.');
     }
-    command.addTo(_outgoingSink);
+    command.addTo(_outgoingSink, translateMapObject);
   }
 
   /// Will read the next [VmCommand] the dartino-vm sends to us.
   Future<VmCommand> readNextCommand({bool force: true}) async {
+    VmCommand result = null;
     if (_drainedIncomingCommands) {
       return connectionError;
     }
 
-    _drainedIncomingCommands = !await _commandReader.iterator.moveNext()
-        .catchError((error, StackTrace trace) {
-      connectionError = new ConnectionError(error, trace);
-      return false;
-    });
+    while (result == null) {
 
-    if (_drainedIncomingCommands && force) {
-      return connectionError;
+      _drainedIncomingCommands = !await _commandIterator.moveNext()
+          .catchError((error, StackTrace trace) {
+        connectionError = new ConnectionError(error, trace);
+        return false;
+      });
+
+      if (_drainedIncomingCommands && force) {
+        return connectionError;
+      }
+
+      Pair<int, ByteData> c = _commandIterator.current;
+
+      if (c == null) return null;
+
+      VmCommand command = new VmCommand.fromBuffer(
+          VmCommandCode.values[c.fst], toUint8ListView(c.snd),
+          translateFunctionOffset ?? (x) => x);
+      if (command is StdoutData) {
+        stdoutSink?.add(command.value);
+      } else if (command is StderrData) {
+        stderrSink?.add(command.value);
+      } else {
+        result = command;
+      }
+
     }
-
-    return _commandReader.iterator.current;
+    return result;
   }
 
   /// Closes the connection to the dartino-vm and drains the remaining response
@@ -238,7 +260,7 @@ class DartinoVmContext {
     _drainedIncomingCommands = true;
 
     await _outgoingSink.close().catchError((_) {});
-    var value = _commandReader.iterator.cancel();
+    var value = _commandIterator.cancel();
     if (value != null) {
       await value.catchError((_) {});
     }
@@ -326,16 +348,37 @@ class DartinoVmContext {
         snapshotLocation = defaultSnapshotLocation(state.script);
       }
 
-      ProgramInfo info = await getInfoFromSnapshotLocation(snapshotLocation);
-      if (info == null) {
+      NameOffsetMapping nameOffsetMapping =
+          await getInfoFromSnapshotLocation(snapshotLocation);
+
+      if (nameOffsetMapping == null) {
         return exit_codes.COMPILER_EXITCODE_CRASH;
       }
 
-      if (info.snapshotHash != snapshotHash) {
+      if (nameOffsetMapping.snapshotHash != snapshotHash) {
         throwFatalError(DiagnosticKind.snapshotHashMismatch,
-            userInput: "${info.snapshotHash}",
+            userInput: "${nameOffsetMapping.snapshotHash}",
             additionalUserInput: "${snapshotHash}",
             uri: snapshotLocation);
+      } else {
+
+        dartinoSystem = state.compilationResults.last.system;
+
+        offsetMapping = new IdOffsetMapping(
+            dartinoSystem.computeSymbolicSystemInfo(
+                state.compiler.compiler.libraryLoader.libraries),
+            nameOffsetMapping);
+
+        translateMapObject = (MapId mapId, int index) {
+          if (mapId == MapId.methods) {
+            return offsetMapping.offsetFromFunctionId(configuration, index);
+          } else {
+            return index;
+          }
+        };
+        translateFunctionOffset = (int offset) {
+          return offsetMapping.functionIdFromOffset(configuration, offset);
+        };
       }
     } else {
       for (DartinoDelta delta in state.compilationResults) {
@@ -359,14 +402,21 @@ class DartinoVmContext {
   // the process has stopped running.
   // The session's state is updated to match the current state of the vm.
   Future<VmCommand> handleProcessStop(VmCommand response) async {
+    interactiveExitCode = exit_codes.COMPILER_EXITCODE_CRASH;
     debugState.reset();
     switch (response.code) {
       case VmCommandCode.UncaughtException:
+        interactiveExitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+        running = false;
+        break;
+
       case VmCommandCode.ProcessCompileTimeError:
+        interactiveExitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
         running = false;
         break;
 
       case VmCommandCode.ProcessTerminated:
+        interactiveExitCode = 0;
         running = false;
         loaded = false;
         // TODO(ahe): Let the caller terminate the session. See issue 67.
@@ -374,6 +424,7 @@ class DartinoVmContext {
         break;
 
       case VmCommandCode.ConnectionError:
+        interactiveExitCode = exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
         running = false;
         loaded = false;
         await shutdown();
@@ -381,6 +432,7 @@ class DartinoVmContext {
         break;
 
       case VmCommandCode.ProcessBreakpoint:
+        interactiveExitCode = 0;
         ProcessBreakpoint command = response;
         debugState.currentProcess = command.processId;
         var function = dartinoSystem.lookupFunctionById(command.functionId);
@@ -502,7 +554,9 @@ class DartinoVmContext {
 
   Future<VmCommand> stepTo(int functionId, int bcp) async {
     assert(running);
-    VmCommand response = await runCommand(new ProcessStepTo(functionId, bcp));
+    VmCommand response = await runCommands([
+      new PushFromMap(MapId.methods, functionId),
+      new ProcessStepTo(bcp)]);
     return handleProcessStop(response);
   }
 

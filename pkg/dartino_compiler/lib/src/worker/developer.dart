@@ -55,9 +55,11 @@ import '../../vm_commands.dart' show
     VmCommandCode;
 
 import '../../program_info.dart' show
-    ProgramInfo,
+    Configuration,
+    IdOffsetMapping,
+    NameOffsetMapping,
     ProgramInfoJson,
-    buildProgramInfo,
+    buildIdOffsetMapping,
     getConfiguration;
 
 import '../hub/session_manager.dart' show
@@ -695,9 +697,9 @@ Future<int> run(
   return exitCode;
 }
 
-/// Returns the [ProgramInfo] stored in the '.info.json' adjacent to a snapshot
-/// location.
-Future<ProgramInfo> getInfoFromSnapshotLocation(Uri snapshot) async {
+/// Returns the [NameOffsetMapping] stored in the '.info.json' adjacent to a
+/// snapshot location.
+Future<NameOffsetMapping> getInfoFromSnapshotLocation(Uri snapshot) async {
   Uri info = snapshot.replace(path: "${snapshot.path}.info.json");
   File infoFile = new File.fromUri(info);
 
@@ -728,11 +730,14 @@ Future<int> export(SessionState state, Uri snapshot) async {
 
     await vmContext.shutdown();
 
-    ProgramInfo info =
-        buildProgramInfo(compilationResults.last.system, snapshotResult);
+    IdOffsetMapping idOffsetMapping =
+        buildIdOffsetMapping(
+            state.compiler.compiler.libraryLoader.libraries,
+            compilationResults.last.system, snapshotResult);
 
     File jsonFile = new File('${snapshot.toFilePath()}.info.json');
-    await jsonFile.writeAsString(ProgramInfoJson.encode(info));
+    await jsonFile.writeAsString(
+        ProgramInfoJson.encode(idOffsetMapping.nameOffsets));
 
     return 0;
   } else {

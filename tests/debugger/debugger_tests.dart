@@ -85,9 +85,9 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
       state,
       echo: true);
 
-  Expect.equals(0, result);
-
   int exitCode = await state.dartinoVm.exitCode;
+
+  Expect.equals(exitCode, result);
 
   state.stdoutSink.detachCommandSender();
   state.stderrSink.detachCommandSender();

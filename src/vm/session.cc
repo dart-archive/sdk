@@ -391,8 +391,8 @@ class RunningState : public ScheduledState {
     buffer.WriteInt(breakpoint_id);
     buffer.WriteInt(debug_info->process_id());
     session()->PushTopStackFrame(process->stack());
-    buffer.WriteInt64(session()->MapLookupByObject(
-        session()->method_map_id_, session()->Top()));
+    buffer.WriteInt64(
+        session()->FunctionMessage(Function::cast(session()->Top())));
     // Drop function from session stack.
     session()->Drop(1);
     // Pop bytecode index from session stack and send it.
@@ -753,7 +753,7 @@ void Session::SendStackTrace(Stack* stack) {
   buffer.WriteInt(frames);
   for (int i = 0; i < frames; i++) {
     // Lookup method in method map and send id.
-    buffer.WriteInt64(MapLookupByObject(method_map_id_, Pop()));
+    buffer.WriteInt64(FunctionMessage(Function::cast(Pop())));
     // Pop bytecode index from session stack and send it.
     buffer.WriteInt64(PopInteger());
   }
@@ -927,14 +927,6 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       int index = connection()->ReadInt();
       int64 id = connection()->ReadInt64();
       session()->RemoveFromMap(index, id);
-      break;
-    }
-
-    case Connection::kPushFromOffset: {
-      ASSERT(!IsScheduled() || IsPaused());
-      uword offset = connection()->ReadInt64();
-      Object *object = program()->ObjectAtOffset(offset);
-      session()->Push(object);
       break;
     }
 
@@ -1293,10 +1285,8 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kProcessStepTo: {
-      int64 id = connection()->ReadInt64();
       int bcp = connection()->ReadInt();
-      Function* function = Function::cast(
-          session()->maps_[session()->method_map_id_]->LookupById(id));
+      Function* function = Function::cast(session()->Pop());
       ProcessDebugInfo* debug_info = process()->debug_info();
       debug_info->CreateBreakpoint(function, bcp);
       return ProcessContinue();
@@ -1545,25 +1535,34 @@ void Session::DeleteMap(int map_index) {
 
 void Session::PushFromMap(int map_index, int64 id) {
   bool entry_exists;
-  Object* object = maps_[map_index]->LookupById(id, &entry_exists);
-  if (!entry_exists && !has_program_update_error_) {
-    has_program_update_error_ = true;
-    program_update_error_ =
-        "Received PushFromMap command which refers to a "
-        "non-existent map entry.";
+  Object* object;
+  if (program()->was_loaded_from_snapshot()) {
+    uword offset = id;
+    object = program()->ObjectAtOffset(offset);
+  } else {
+    object = maps_[map_index]->LookupById(id, &entry_exists);
+    if (!entry_exists && !has_program_update_error_) {
+      has_program_update_error_ = true;
+      program_update_error_ =
+          "Received PushFromMap command which refers to a "
+          "non-existent map entry.";
+    }
   }
   Push(object);
 }
 
 void Session::PopToMap(int map_index, int64 id) {
+  ASSERT(!program()->was_loaded_from_snapshot());
   maps_[map_index]->Add(id, Pop());
 }
 
 void Session::AddToMap(int map_index, int64 id, Object* value) {
+  ASSERT(!program()->was_loaded_from_snapshot());
   maps_[map_index]->Add(id, value);
 }
 
 void Session::RemoveFromMap(int map_index, int64 id) {
+  ASSERT(!program()->was_loaded_from_snapshot());
   maps_[map_index]->RemoveById(id);
 }
 
@@ -2208,6 +2207,14 @@ void PausedState::RestartFrame(int frame_index) {
 
   // Finally resize the stack to the next frame pointer.
   stack->SetTopFromPointer(frame.FramePointer());
+}
+
+int64 Session::FunctionMessage(Function *function) {
+  if (program()->was_loaded_from_snapshot()) {
+    return program()->OffsetOf(HeapObject::cast(function));
+  } else {
+    return MapLookupByObject(method_map_id_, function);
+  }
 }
 
 }  // namespace dartino

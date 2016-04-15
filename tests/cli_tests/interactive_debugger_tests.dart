@@ -61,8 +61,8 @@ Future<Map<String, NoArgFuture>> listTests() async {
     result["cli_debugger_tests/${test.name}"] =
         () => test.run(new BuildViaSessionTestContext());
   }
-  for (Test test in snapshotTests) {
-    result["cli_debugger_tests/${test.name}"] =
+  for (Test test in tests) {
+    result["cli_debugger_tests_snapshot/${test.name}"] =
         () => test.run(new SnapshotTestcontext());
   }
   return result;
@@ -221,7 +221,7 @@ class SnapshotTestcontext extends InteractiveDebuggerTestContext {
     Expect.equals(0, await attach.exitCode);
 
     // Run the debugger.
-    process = await dartino(["debug", "with", snapshotPath],
+    process = await dartino(["debug", test.filePath, "with", snapshotPath],
         workingDirectory: test.workingDirectory);
   }
 

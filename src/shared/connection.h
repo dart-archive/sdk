@@ -110,7 +110,6 @@ class Connection {
     kPushFromMap,
     kPopToMap,
     kRemoveFromMap,
-    kPushFromOffset,
 
     kDup,
     kDrop,

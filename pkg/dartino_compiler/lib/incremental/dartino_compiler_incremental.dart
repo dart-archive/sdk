@@ -23,6 +23,7 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     ConstructorElement,
     Element,
+    FunctionElement,
     LibraryElement;
 
 import 'package:compiler/src/library_loader.dart' show
@@ -281,6 +282,11 @@ class IncrementalCompiler {
   DartinoDelta computeInitialDelta() {
     DartinoBackend backend = _compiler.backend;
     return backend.computeDelta();
+  }
+
+  FunctionElement get dartinoSystemEntry {
+    DartinoBackend backend = _compiler.backend;
+    return backend.dartinoSystemEntry;
   }
 
   String lookupFunctionName(DartinoFunction function) {

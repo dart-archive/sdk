@@ -7,5 +7,5 @@ import 'dart:io' as io;
 import 'package:dartino_compiler/program_info.dart';
 
 main(List<String> arguments) async {
-  await decodeProgramMain(arguments, io.stdin, io.stdout);
+  io.exit(await decodeProgramMain(arguments, io.stdin, io.stdout));
 }

@@ -90,6 +90,9 @@ class Session {
   void PopToMap(int map_index, int64 id);
   void RemoveFromMap(int map_index, int64 id);
 
+  // Get an appropriate message to send over the wire representing [function].
+  int64 FunctionMessage(Function *function);
+
   // Get the id for the object in the map with the given
   // index. Returns -1 if the object does not exist in the map.
   int64 MapLookupByObject(int map_index, Object* object);

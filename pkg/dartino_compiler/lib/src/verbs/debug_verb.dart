@@ -98,7 +98,7 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
       break;
     case TargetKind.BREAK:
       task = new DebuggerTask(TargetKind.BREAK.index, base,
-          sentence.targetName);
+          argument: sentence.targetName);
       break;
     case TargetKind.LIST:
       task = new DebuggerTask(TargetKind.LIST.index, base);
@@ -108,12 +108,11 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
       break;
     case TargetKind.FRAME:
       task = new DebuggerTask(TargetKind.FRAME.index, base,
-          sentence.targetName);
+          argument: sentence.targetName);
       break;
     case TargetKind.DELETE_BREAKPOINT:
-      task = new DebuggerTask(TargetKind.DELETE_BREAKPOINT.index,
-          base,
-          sentence.targetName);
+      task = new DebuggerTask(TargetKind.DELETE_BREAKPOINT.index, base,
+          argument: sentence.targetName);
       break;
     case TargetKind.LIST_BREAKPOINTS:
       task = new DebuggerTask(TargetKind.LIST_BREAKPOINTS.index, base);
@@ -141,18 +140,18 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
       break;
     case TargetKind.PRINT:
       task = new DebuggerTask(TargetKind.PRINT.index, base,
-          sentence.targetName);
+          argument: sentence.targetName);
       break;
     case TargetKind.PRINT_ALL:
       task = new DebuggerTask(TargetKind.PRINT_ALL.index, base);
       break;
     case TargetKind.TOGGLE:
       task = new DebuggerTask(TargetKind.TOGGLE.index, base,
-          sentence.targetName);
+          argument: sentence.targetName);
       break;
     case TargetKind.FILE:
       task = new DebuggerTask(TargetKind.FILE.index, base,
-          sentence.targetUri);
+          argument: sentence.targetUri, snapshotLocation: sentence.withUri);
       break;
     default:
       throwInternalError("Unimplemented ${sentence.target}");
@@ -230,7 +229,8 @@ Future<int> runInteractiveDebuggerTask(
     StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri script,
-    Uri base) {
+    Uri base,
+    {Uri snapshotLocation}) {
 
   // Setup a more advanced client input handler for the interactive debug task
   // that also handles the input and forwards it to the debug input handler.
@@ -242,7 +242,11 @@ Future<int> runInteractiveDebuggerTask(
       script,
       base,
       true,
-      () => interactiveDebuggerTask(state, base, stdinController),
+      () => interactiveDebuggerTask(
+          state,
+          base,
+          stdinController,
+          snapshotLocation: snapshotLocation),
       eventHandler:
           debugClientEventHandler(state, commandIterator, stdinController));
 }
@@ -279,8 +283,9 @@ class DebuggerTask extends SharedTask {
   final int kind;
   final argument;
   final Uri base;
+  final Uri snapshotLocation;
 
-  DebuggerTask(this.kind, this.base, [this.argument]);
+  DebuggerTask(this.kind, this.base, {this.argument, this.snapshotLocation});
 
   Future<int> call(
       CommandSender commandSender,
@@ -333,7 +338,7 @@ class DebuggerTask extends SharedTask {
       case TargetKind.FILE:
         return runInteractiveDebuggerTask(
             commandSender, commandIterator, SessionState.current, argument,
-            base);
+            base, snapshotLocation: snapshotLocation);
 
       default:
         throwInternalError("Unimplemented ${TargetKind.values[kind]}");

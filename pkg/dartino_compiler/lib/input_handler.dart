@@ -81,10 +81,6 @@ class InputHandler {
         writeStdoutLine(HELP);
         break;
       case 'b':
-        if (!checkNotFromSnapshot("breakpoints not supported yet")) {
-          break;
-        }
-
         var method =
             (commandComponents.length > 1) ? commandComponents[1] : 'main';
         var bci =
@@ -107,10 +103,6 @@ class InputHandler {
         }
         break;
       case 'bf':
-        if (!checkNotFromSnapshot("breakpoints not supported yet")) {
-          break;
-        }
-
         var file =
             (commandComponents.length > 1) ? commandComponents[1] : '';
         var line =
@@ -510,7 +502,7 @@ class InputHandler {
       }
     }
     if (!vmContext.terminated) await vmContext.terminate();
-    return 0;
+    return vmContext.interactiveExitCode;
   }
 
   // Prompt the user to select among a set of choices.
