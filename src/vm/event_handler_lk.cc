@@ -94,35 +94,34 @@ void EventHandler::Interrupt() {
   set->Interrupt();
 }
 
-Object* EventHandler::Add(Process* process, Object* id, Port* port,
-                          int flags) {
+EventHandler::Status EventHandler::AddEventListener(
+    Object* id, EventListener* event_listener, int flags) {
   EnsureInitialized();
 
-  if (!id->IsOneByteString()) return Failure::wrong_argument_type();
+  if (!id->IsOneByteString()) return Status::WRONG_ARGUMENT_TYPE;
 
   char* str = OneByteString::cast(id)->ToCString();
 
   if (flags != READ_EVENT) {
+    delete event_listener;
     Print::Error("Only READ_EVENT is current supported on LK");
     return Failure::illegal_state();
   }
   port_t read_port;
-  int status;
-  // TODO(ajohnsen): Implement one-shot semantics.
-  if ((status = port_open(str, port, &read_port)) != 0) {
+  if (port_open(str, event_listener, &read_port) != 0) {
     free(str);
-    return Failure::index_out_of_bounds();
+    delete event_listener;
+    return Status::INDEX_OUT_OF_BOUNDS;
   }
   free(str);
-
-  port->IncrementRef();
 
   PortSet* set = reinterpret_cast<PortSet*>(data_);
 
   ScopedMonitorLock locker(monitor_);
   set->AddReadPort(read_port);
   set->Interrupt();
-  return process->program()->null_object();
+
+  return Status::OK;
 }
 
 void EventHandler::Run() {
@@ -158,7 +157,10 @@ void EventHandler::Run() {
     if (has_result && result.ctx != NULL) {
       int64 value;
       memcpy(&value, result.packet.value, sizeof(value));
-      Send(reinterpret_cast<Port*>(result.ctx), value, false);
+      EventListener* event_listener =
+          reinterpret_cast<EventListener*>(result.ctx)
+      event_listener->Send(value);
+      delete event_listener;
     }
 
     HandleTimeouts();
