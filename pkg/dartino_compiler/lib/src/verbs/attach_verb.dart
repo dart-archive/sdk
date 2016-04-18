@@ -11,7 +11,7 @@ import 'documentation.dart' show
 
 import '../worker/developer.dart' show
     Address,
-    attachToVm,
+    attachToVmTcp,
     parseAddress;
 
 const Action attachAction = const Action(
@@ -47,6 +47,6 @@ Future<int> attachTask(String host, int port) async {
   await state.terminateSession();
 
   state.explicitAttach = true;
-  await attachToVm(host, port, state);
+  await attachToVmTcp(host, port, state);
   return 0;
 }

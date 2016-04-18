@@ -231,8 +231,8 @@ Future main(List<String> arguments) async {
       if (isBatchMode) {
         server.close();
       }
-      handleClient(pool, analytics,
-          handleSocketErrors(controlSocket, "controlSocket"));
+      handleSocketErrors(controlSocket, "controlSocket");
+      handleClient(pool, analytics, controlSocket);
     }).asFuture();
   } finally {
     gracefulShutdown();

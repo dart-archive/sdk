@@ -7,7 +7,9 @@ library dartino.vm_session;
 import 'dart:core';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' hide exit;
+
+import 'dart:io' show
+    File;
 
 import 'dart:typed_data' show
     ByteData;
@@ -50,17 +52,20 @@ import 'src/diagnostic.dart';
 
 import 'src/hub/exit_codes.dart' as exit_codes;
 
+import 'src/vm_connection.dart' show
+  VmConnection;
+
 import 'package:persistent/persistent.dart' show
     Pair;
 
 part 'vm_command_reader.dart';
 part 'input_handler.dart';
 
-/// Encapsulates a TCP connection to a running dartino-vm and provides a
+/// Encapsulates a connection to a running dartino-vm and provides a
 /// [VmCommand] based view on top of it.
 class DartinoVmContext {
-  /// The outgoing connection to the dartino-vm.
-  final StreamSink<List<int>> _outgoingSink;
+  /// The connection to a dartino-vm.
+  final VmConnection connection;
 
   final Sink<List<int>> stdoutSink;
   final Sink<List<int>> stderrSink;
@@ -72,9 +77,6 @@ class DartinoVmContext {
   /// forwards them to the stdout/stderr sinks and does not add them to the
   /// iterator.
   StreamIterator<Pair<int, ByteData>> _commandIterator;
-
-  /// Completes when the underlying TCP connection is terminated.
-  final Future _done;
 
   bool _connectionIsDead = false;
   bool _drainedIncomingCommands = false;
@@ -121,24 +123,20 @@ class DartinoVmContext {
   Function translateMapObject = (MapId mapId, int index) => index;
   Function translateFunctionOffset;
 
-  DartinoVmContext(Socket dartinoVmSocket,
+  DartinoVmContext(
+          VmConnection connection,
           this.compiler,
-          Sink<List<int>> stdoutSink,
-          Sink<List<int>> stderrSink,
+          this.stdoutSink,
+          this.stderrSink,
           [this.processExitCodeFuture])
-      : _outgoingSink = dartinoVmSocket,
-        this.stdoutSink = stdoutSink,
-        this.stderrSink = stderrSink,
-        _done = dartinoVmSocket.done,
+      : connection = connection,
         _commandIterator =
-            new StreamIterator<Pair<int, ByteData>>(dartinoVmSocket.transform(
+            new StreamIterator<Pair<int, ByteData>>(connection.input.transform(
                 new SessionCommandTransformerBuilder().build())) {
-    _done.catchError((_, __) {}).then((_) {
+    connection.done.catchError((_, __) {}).then((_) {
       _connectionIsDead = true;
     });
 
-    // We send many small packages, so use no-delay.
-    dartinoVmSocket.setOption(SocketOption.TCP_NODELAY, true);
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
   }
@@ -185,7 +183,7 @@ class DartinoVmContext {
           'Trying to send command ${command} to dartino-vm, but '
               'the connection is already closed.');
     }
-    command.addTo(_outgoingSink, translateMapObject);
+    command.addTo(connection.output, translateMapObject);
   }
 
   /// Will read the next [VmCommand] the dartino-vm sends to us.
@@ -232,7 +230,7 @@ class DartinoVmContext {
   /// If [ignoreExtraCommands] is `false` it will throw a StateError if the
   /// dartino-vm sent any commands.
   Future shutdown({bool ignoreExtraCommands: false}) async {
-    await _outgoingSink.close().catchError((_) {});
+    await connection.close().catchError((_) {});
 
     while (!_drainedIncomingCommands) {
       VmCommand response = await readNextCommand(force: false);
@@ -244,7 +242,7 @@ class DartinoVmContext {
       }
     }
 
-    return _done;
+    return connection.done;
   }
 
   Future interrupt() {
@@ -259,7 +257,7 @@ class DartinoVmContext {
     _connectionIsDead = true;
     _drainedIncomingCommands = true;
 
-    await _outgoingSink.close().catchError((_) {});
+    await connection.close().catchError((_) {});
     var value = _commandIterator.cancel();
     if (value != null) {
       await value.catchError((_) {});

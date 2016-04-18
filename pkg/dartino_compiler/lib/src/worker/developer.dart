@@ -20,7 +20,6 @@ import 'dart:io' show
     Platform,
     Process,
     ProcessResult,
-    Socket,
     SocketException;
 
 import 'package:sdk_services/sdk_services.dart' show
@@ -120,41 +119,23 @@ import '../../debug_state.dart' as debug show
     RemoteObject,
     BackTrace;
 
+import '../vm_connection.dart' show
+  TcpConnection,
+  VmConnection;
+
 typedef Future<Null> ClientEventHandler(DartinoVmContext vmContext);
 
 Uri configFileUri;
-
-Future<Socket> connect(
-    String host,
-    int port,
-    DiagnosticKind kind,
-    String socketDescription,
-    SessionState state) async {
-  // We are using .catchError rather than try/catch because we have seen
-  // incorrect stack traces using the latter.
-  Socket socket = await Socket.connect(host, port).catchError(
-      (SocketException error) {
-        String message = error.message;
-        if (error.osError != null) {
-          message = error.osError.message;
-        }
-        throwFatalError(kind, address: '$host:$port', message: message);
-      }, test: (e) => e is SocketException);
-  handleSocketErrors(socket, socketDescription, log: (String info) {
-    state.log("Connected to TCP $socketDescription  $info");
-  });
-  return socket;
-}
 
 Future<AgentConnection> connectToAgent(SessionState state) async {
   // TODO(wibling): need to make sure the agent is running.
   assert(state.settings.deviceAddress != null);
   String host = state.settings.deviceAddress.host;
   int agentPort = state.settings.deviceAddress.port;
-  Socket socket = await connect(
-      host, agentPort, DiagnosticKind.socketAgentConnectError,
-      "agentSocket", state);
-  return new AgentConnection(socket);
+  TcpConnection connection = await TcpConnection.connect(
+      host, agentPort, "agentSocket", state.log,
+      messageKind: DiagnosticKind.socketAgentConnectError);
+  return new AgentConnection(connection);
 }
 
 /// Return the result of a function in the context of an open [AgentConnection].
@@ -170,14 +151,12 @@ Future withAgentConnection(
   } on AgentException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
-        address: '${connection.socket.remoteAddress.host}:'
-            '${connection.socket.remotePort}',
+        address: '${connection.connection.description}',
         message: error.message);
   } on MessageDecodeException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
-        address: '${connection.socket.remoteAddress.host}:'
-            '${connection.socket.remotePort}',
+        address: '${connection.connection.description}',
         message: error.message);
   } finally {
     disconnectFromAgent(connection);
@@ -185,8 +164,8 @@ Future withAgentConnection(
 }
 
 void disconnectFromAgent(AgentConnection connection) {
-  assert(connection.socket != null);
-  connection.socket.close();
+  assert(connection.connection != null);
+  connection.connection.close();
 }
 
 Future<Null> checkAgentVersion(Uri base, SessionState state) async {
@@ -220,7 +199,7 @@ Future<Null> startAndAttachViaAgent(Uri base, SessionState state) async {
       (connection) => connection.startVm());
   state.dartinoAgentVmId = vmData.id;
   String host = state.settings.deviceAddress.host;
-  await attachToVm(host, vmData.port, state);
+  await attachToVmTcp(host, vmData.port, state);
   await state.vmContext.disableVMStandardOutput();
 }
 
@@ -228,26 +207,34 @@ Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
   String dartinoVmPath = state.compilerHelper.dartinoVm.toFilePath();
   state.dartinoVm =
       await DartinoVm.start(dartinoVmPath, workingDirectory: base);
-  await attachToVm(state.dartinoVm.host, state.dartinoVm.port, state);
+  await attachToVmTcp(state.dartinoVm.host, state.dartinoVm.port, state);
   await state.vmContext.disableVMStandardOutput();
 }
 
-Future<Null> attachToVm(String host, int port, SessionState state) async {
-  Socket socket = await connect(
-      host, port, DiagnosticKind.socketVmConnectError, "vmSocket", state);
+Future<Null> attachToVmTcp(String host, int port, SessionState state) async {
+  TcpConnection connection = await TcpConnection.connect(
+      host, port, "vmSocket", state.log);
+  await attachToVm(connection, state);
+}
 
+Future<Null> attachToVm(VmConnection connection, SessionState state) async {
   DartinoVmContext vmContext = new DartinoVmContext(
-      socket, state.compiler, state.stdoutSink, state.stderrSink, null);
+      connection,
+      state.compiler,
+      state.stdoutSink,
+      state.stderrSink,
+      null);
 
   // Perform handshake with VM which validates that VM and compiler
   // have the same versions.
   HandShakeResult handShakeResult = await vmContext.handShake(dartinoVersion);
   if (handShakeResult == null) {
-    throwFatalError(DiagnosticKind.handShakeFailed, address: '$host:$port');
+    throwFatalError(
+        DiagnosticKind.handShakeFailed, address: connection.description);
   }
   if (!handShakeResult.success) {
     throwFatalError(DiagnosticKind.versionMismatch,
-                    address: '$host:$port',
+                    address: connection.description,
                     userInput: dartinoVersion,
                     additionalUserInput: handShakeResult.version);
   }
@@ -1071,7 +1058,7 @@ Future<int> upgradeAgent(
 
   if (existingVersion.isGreaterThan(version)) {
     commandSender.sendStdout("The existing version is greater than the "
-            "version you want to use to upgrade.\n"
+        "version you want to use to upgrade.\n"
         "Please confirm this operation by typing 'yes' "
         "(press Enter to abort): ");
     Confirm: while (await commandIterator.moveNext()) {
@@ -1109,22 +1096,18 @@ Future<int> upgradeAgent(
   // Wait for the agent to come back online to verify the version.
   while (--remainingTries > 0) {
     await new Future.delayed(const Duration(seconds: 1));
-    try {
-      // TODO(karlklose): this functionality should be shared with connect.
-      Socket socket = await Socket.connect(
-          state.settings.deviceAddress.host,
-          state.settings.deviceAddress.port);
-      handleSocketErrors(socket, "pollAgentVersion", log: (String info) {
-        state.log("Connected to TCP waitForAgentUpgrade $info");
-      });
-      AgentConnection connection = new AgentConnection(socket);
-      newVersion = parseVersion(await connection.dartinoVersion());
-      disconnectFromAgent(connection);
-      if (newVersion != existingVersion) {
-        break;
-      }
-    } on SocketException catch (_) {
-      // Ignore this error and keep waiting.
+    VmConnection vmConnection = await TcpConnection.connect(
+        state.settings.deviceAddress.host,
+        state.settings.deviceAddress.port,
+        "waitForAgentUpgrade",
+        state.log,
+        // Ignore this error and keep waiting.
+        onConnectionError: (SocketException _) {});
+    AgentConnection connection = new AgentConnection(vmConnection);
+    newVersion = parseVersion(await connection.dartinoVersion());
+    disconnectFromAgent(connection);
+    if (newVersion != existingVersion) {
+      break;
     }
   }
 
@@ -1433,18 +1416,20 @@ Future<int> invokeCombinedTasks(
 }
 
 Future<String> getAgentVersion(InternetAddress host, int port) async {
-  Socket socket;
+  SocketException connectionError = null;
+  VmConnection vmConnection = await TcpConnection.connect(
+      host,
+      port,
+      "getAgentVersionSocket",
+      (String message) {},
+      onConnectionError:
+          (SocketException e) => connectionError = e);
+  if (connectionError != null) return 'Error: no agent: $connectionError';
   try {
-    socket = await Socket.connect(host, port);
-    handleSocketErrors(socket, "getAgentVersionSocket");
-  } on SocketException catch (e) {
-    return 'Error: no agent: $e';
-  }
-  try {
-    AgentConnection connection = new AgentConnection(socket);
+    AgentConnection connection = new AgentConnection(vmConnection);
     return await connection.dartinoVersion();
   } finally {
-    socket.close();
+    vmConnection.close();
   }
 }
 

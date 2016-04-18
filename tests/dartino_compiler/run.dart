@@ -51,7 +51,7 @@ class DartinoRunner {
       await startAndAttachDirectly(state, Uri.base);
     } else {
       Address address = parseAddress(userVmAddress);
-      await attachToVm(address.host, address.port, state);
+      await attachToVmTcp(address.host, address.port, state);
     }
   }
 

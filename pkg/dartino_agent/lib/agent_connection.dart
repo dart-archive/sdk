@@ -8,6 +8,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dartino_compiler/src/vm_connection.dart';
+
 import 'messages.dart';
 
 /// This class is used to connect to the Dartino Agent from Dart code. Ie. it
@@ -19,9 +21,9 @@ import 'messages.dart';
 /// The caller/user of this class must handle any errors occurring on the
 /// socket.done future as this class is not handling that.
 class AgentConnection {
-  final Socket socket;
+  final VmConnection connection;
 
-  AgentConnection(this.socket);
+  AgentConnection(this.connection);
 
   Future<VmData> startVm() async {
     var request = new StartVmRequest();
@@ -87,8 +89,8 @@ class AgentConnection {
   }
 
   Future<ByteBuffer> sendRequest(RequestHeader request) async {
-    socket.add(request.toBuffer().asUint8List());
-    var replyBytes = await socket.fold([], (p, e) => p..addAll(e));
+    connection.output.add(request.toBuffer().asUint8List());
+    var replyBytes = await connection.input.fold([], (p, e) => p..addAll(e));
     return new Uint8List.fromList(replyBytes).buffer;
   }
 }

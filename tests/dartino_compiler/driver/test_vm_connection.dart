@@ -12,9 +12,6 @@ import 'dart:async' show
 import 'dart:io' show
     InternetAddress;
 
-import 'dart:isolate' show
-    SendPort;
-
 import 'package:expect/expect.dart' show
     Expect;
 
@@ -22,7 +19,7 @@ import 'package:dartino_compiler/src/hub/session_manager.dart' show
     SessionState;
 
 import 'package:dartino_compiler/src/worker/developer.dart' show
-    attachToVm;
+    attachToVmTcp;
 
 import 'package:dartino_compiler/vm_commands.dart' show
     VmCommandCode;
@@ -44,7 +41,7 @@ class MockVmRunner extends DartinoRunner {
   Future<Null> attach(SessionState state) async {
     vm = await MockVm.spawn(
         closeImmediately: closeImmediately, closeAfterFirst: closeAfterFirst);
-    await attachToVm(InternetAddress.LOOPBACK_IP_V4.address, vm.port, state);
+    await attachToVmTcp(InternetAddress.LOOPBACK_IP_V4.address, vm.port, state);
   }
 
   Future<int> run(List<String> arguments, {int expectedExitCode: 0}) async {

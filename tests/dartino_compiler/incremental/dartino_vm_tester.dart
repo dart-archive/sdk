@@ -63,6 +63,10 @@ import 'package:dartino_compiler/debug_state.dart' as debug show
 import 'package:dartino_compiler/src/hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
+import 'package:dartino_compiler/src/vm_connection.dart' show
+    TcpConnection,
+    VmConnection;
+
 import 'program_result.dart' show
     EncodedResult,
     ProgramResult;
@@ -245,14 +249,14 @@ class TestVmContext extends DartinoVmContext {
   var lastStackTrace;
 
   TestVmContext(
-      Socket vmSocket,
+      VmConnection connection,
       IncrementalCompiler compiler,
       this.process,
       this.stdoutIterator,
       this.stderr,
       this.futures,
       this.exitCode)
-      : super(vmSocket, compiler, new BytesSink(), null);
+      : super(connection, compiler, new BytesSink(), null);
 
   // Refines type of [stdoutSink].
   BytesSink get stdoutSink => super.stdoutSink;
@@ -390,7 +394,7 @@ class TestVmContext extends DartinoVmContext {
     recordFuture("vmSocket", vmSocket.done);
 
     TestVmContext vmContext = new TestVmContext(
-        vmSocket, compiler, dartinoVm.process,
+        new TcpConnection(vmSocket), compiler, dartinoVm.process,
         new StreamIterator(stdoutController.stream),
         stderrController.stream,
         futures, exitCodeCompleter.future);
