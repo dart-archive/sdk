@@ -216,6 +216,9 @@ static void FlashifyProgram(Program* program) {
     visitor.FlashifyReference(*r);
   }
 
+  printf("\t.global program_info_block_end\n");
+  printf("program_info_block_end:\n");
+
   delete block;
 }
 

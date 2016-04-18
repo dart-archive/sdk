@@ -13,12 +13,12 @@
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
 
 #include "src/shared/utils.h"
-#include "src/vm/program_info_block.h"
 
 extern "C" const char *dartino_embedder_options[];
-extern "C" dartino::ProgramInfoBlock program_info_block;
+
 extern "C" char program_start;
-extern "C" char program_end;
+extern "C" char program_info_block_end;
+
 extern PageAllocator* page_allocator;
 
 int uart_handle;
@@ -103,11 +103,11 @@ static bool HasOption(const char* option) {
 void StartDartino(void const * argument) {
   dartino::Print::Out("Setup Dartino\n");
   DartinoSetup();
-  dartino::Print::Out("Setting up Dartino program space\n");
   char* heap = &program_start;
-  int heap_size = &program_end - heap;
-  DartinoProgram program = DartinoLoadProgramFromFlash(
-      heap, heap_size + sizeof(dartino::ProgramInfoBlock));
+  int heap_size = &program_info_block_end - heap;
+  dartino::Print::Out(
+      "Loading Dartino program at %p size %d\n", heap, heap_size);
+  DartinoProgram program = DartinoLoadProgramFromFlash(heap, heap_size);
 
   dartino::Print::Out("Run Dartino program\n");
   DartinoRunMain(program, 0, NULL);
