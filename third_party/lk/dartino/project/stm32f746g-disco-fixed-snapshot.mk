@@ -6,8 +6,6 @@ include project/target/stm32f746g-disco.mk
 
 MODULES += app/dartino-fixed lib/gfx
 
-EXTRA_LINKER_SCRIPTS += dartino/project/add-dartino-snapshot-section.ld
-
 ARCH_arm_COMPILEFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 
 DARTINO_CONFIGURATION = LK

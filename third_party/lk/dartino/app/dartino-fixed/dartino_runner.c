@@ -47,9 +47,10 @@ DARTINO_EXPORT_TABLE_BEGIN
 #endif  // WITH_LIB_GFX
 DARTINO_EXPORT_TABLE_END
 
-extern __attribute__((weak)) char __dartino_lines_heap_start;
-extern __attribute__((weak)) char __dartino_lines_heap_end;
-extern __attribute__((weak)) char __dartino_lines_start;
+// Start of the embedded Dartino program heap
+extern char program_start;
+// End of the program info following the embedded Dartino program heap.
+extern char program_info_block_end;
 
 int Run(void* ptr) {
   int* pointer = 0xE000E008;
@@ -57,10 +58,11 @@ int Run(void* ptr) {
   printf("Set debugging flag to %d\n", *((int *) 0xE000E008));
   printf("STARTING dartino-vm...\n");
   DartinoSetup();
-  void* program_heap = &__dartino_lines_heap_start;
-  size_t size = ((intptr_t) &__dartino_lines_heap_end) - ((intptr_t) &__dartino_lines_heap_start);
-  printf("LOADING PROGRAM AT %p size %d...\n", program_heap, size);
-  DartinoProgram program = DartinoLoadProgramFromFlash(program_heap, size);
+  char* program_heap_and_info = &program_start;
+  size_t size = &program_info_block_end - program_heap_and_info;
+  printf("LOADING PROGRAM AT %p size %d...\n", program_heap_and_info, size);
+  DartinoProgram program = DartinoLoadProgramFromFlash(
+      program_heap_and_info, size);
   printf("RUNNING program...\n");
   int result = DartinoRunMain(program, 0, NULL);
   printf("EXIT CODE: %i\n", result);
@@ -97,4 +99,3 @@ APP_START(dartinorunner)
   .flags = APP_FLAG_CUSTOM_STACK_SIZE,
   .stack_size = 8192,
 APP_END
-

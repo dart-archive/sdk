@@ -7,8 +7,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_DEPS += lib/libm
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/fletch_runner.c \
+	$(LOCAL_DIR)/dartino_runner.c \
 	$(LOCAL_DIR)/missing.c \
+	$(LOCAL_DIR)/dartino_program.S
 
 MODULE_INCLUDES += $(DARTINO_BASE)
 
@@ -18,9 +19,7 @@ else
 EXTRA_OBJS += $(DARTINO_BASE)/out/Release$(DARTINO_CONFIGURATION)/libdartino.a
 endif
 
-EXTRA_OBJS += $(LOCAL_DIR)/lines.o
-
-force_dartino_target: 
+force_dartino_target:
 
 $(DARTINO_BASE)/out/Debug$(DARTINO_CONFIGURATION)/libdartino.a: force_dartino_target
 	ninja -C $(DARTINO_BASE) lk -t clean

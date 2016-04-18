@@ -7,16 +7,12 @@
 set -e
 
 ./out/ReleaseIA32/dartino quit
-ninja && ninja -C out/ReleaseX64 && ninja -C out/ReleaseIA32
+ninja && ninja -C out/ReleaseIA32
 
-./out/ReleaseIA32/dartino export benchmarks/DeltaBlue.dart to lines.snapshot
+./out/ReleaseIA32/dartino export benchmarks/DeltaBlue.dart to DeltaBlue.snapshot
+./out/ReleaseIA32/dartino-flashify DeltaBlue.snapshot DeltaBlue.S
+cp DeltaBlue.S third_party/lk/dartino/app/dartino-fixed/dartino_program.S
 
-(cd third_party/lk/; PROJECT=stm32f746g-disco-fixed-snapshot make -j8)
-
-./tools/lk/embed_program_in_binary.sh --dartino out/ReleaseIA32 third_party/lk/out/build-stm32f746g-disco-fixed-snapshot/lk.elf lines.snapshot lines
-
-cp lines.o third_party/lk/dartino/app/dartino-fixed/lines.o
-
-(cd third_party/lk/; PROJECT=stm32f746g-disco-fixed-snapshot make -j8)
+(cd third_party/lk/; PROJECT=stm32f746g-disco-fixed-snapshot make)
 
 ./tools/lk/flash-image.sh third_party/lk/out/build-stm32f746g-disco-fixed-snapshot/lk.bin

@@ -9,9 +9,9 @@ MODULE_DEPS += \
 	lib/minip
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/fletch_runner.c \
+	$(LOCAL_DIR)/dartino_runner.c \
 	$(LOCAL_DIR)/missing.c \
-	$(LOCAL_DIR)/print_args.cpp \
+	$(LOCAL_DIR)/print_args.cpp
 
 MODULE_INCLUDES += $(DARTINO_BASE)
 

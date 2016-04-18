@@ -68,7 +68,7 @@ DARTINO_EXPORT_STATIC(gfx_flush);
 #endif
 
 #ifndef LOADER_BUFFER_SIZE
-#define LOADER_BUFFER_SIZE 256
+#define LOADER_BUFFER_SIZE 128
 #endif
 
 // static buffer to hold snapshot/heap
