@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 
+#include "src/shared/platform.h"
 #include "src/vm/object_memory.h"
 
 namespace dartino {
@@ -37,50 +38,83 @@ class GCMetadata {
   static const int kMarkBitsShift = 3 + kWordShift;
 
   static void InitializeStartsForChunk(Chunk* chunk) {
-    uint8* from = StartsFor(chunk->base());
-    uint8* to = StartsFor(chunk->limit());
+    ASSERT(InMetadataRange(chunk->start()));
+    uint8* from = StartsFor(chunk->start());
+    uint8* to = StartsFor(chunk->end());
     memset(from, kNoObjectStart, to - from);
   }
 
   static void InitializeRememberedSetForChunk(Chunk* chunk) {
-    uint8* from = RememberedSetFor(chunk->base());
-    uint8* to = RememberedSetFor(chunk->limit());
+    ASSERT(InMetadataRange(chunk->start()));
+    uint8* from = RememberedSetFor(chunk->start());
+    uint8* to = RememberedSetFor(chunk->end());
     memset(from, GCMetadata::kNoNewSpacePointers, to - from);
   }
 
   static void InitializeOverflowBitsForChunk(Chunk* chunk) {
-    uint8* from = OverflowBitsFor(chunk->base());
-    uint8* to = OverflowBitsFor(chunk->limit());
+    ASSERT(InMetadataRange(chunk->start()));
+    uint8* from = OverflowBitsFor(chunk->start());
+    uint8* to = OverflowBitsFor(chunk->end());
     memset(from, 0, to - from);
   }
 
   static void ClearMarkBitsFor(Chunk* chunk) {
-    uword base = chunk->base();
-    uword size = (chunk->limit() - base) >> kMarkBitsShift;
+    ASSERT(InMetadataRange(chunk->start()));
+    uword base = chunk->start();
+    uword size = chunk->size() >> kMarkBitsShift;
     base = (base >> kMarkBitsShift) + singleton_.mark_bits_bias_;
     memset(reinterpret_cast<uint8*>(base), 0, size);
   }
 
+  static void MarkPagesForChunk(Chunk* chunk, PageType page_type) {
+    uword index = chunk->start() - singleton_.lowest_address_;
+    if (index >= singleton_.heap_extent_) return;
+    uword size = chunk->size() >> Platform::kPageBits;
+    memset(singleton_.page_type_bytes_ + (index >> Platform::kPageBits),
+           page_type, size);
+  }
+
+  static PageType GetPageType(uword address) {
+    uword offset = address - singleton_.lowest_address_;
+    if (offset >= singleton_.heap_extent_) return kUnknownSpacePage;
+    return static_cast<PageType>(
+        singleton_.page_type_bytes_[offset >> Platform::kPageBits]);
+  }
+
+  static bool InNewOrOldSpace(uword address) {
+    PageType page_type = GetPageType(address);
+    return page_type != kUnknownSpacePage;
+  }
+
   static inline uint8* StartsFor(uword address) {
+    ASSERT(InMetadataRange(address));
     return reinterpret_cast<uint8*>((address >> kCardSizeLog2) +
                                     singleton_.starts_bias_);
   }
 
   static inline uint8* RememberedSetFor(uword address) {
+    ASSERT(InMetadataRange(address));
     return reinterpret_cast<uint8*>((address >> kCardSizeLog2) +
                                     singleton_.remembered_set_bias_);
   }
 
   static inline uint8* OverflowBitsFor(uword address) {
+    ASSERT(InMetadataRange(address));
     return reinterpret_cast<uint8*>((address >> kCardSizeInBitsLog2) +
                                     singleton_.overflow_bits_bias_);
   }
 
   static inline uint32* MarkBitsFor(HeapObject* object) {
     uword address = reinterpret_cast<uword>(object);
+    ASSERT(InMetadataRange(address));
     uword result =
         (singleton_.mark_bits_bias_ + (address >> kMarkBitsShift)) & ~3;
     return reinterpret_cast<uint32*>(result);
+  }
+
+  static inline uint32* MarkBitsFor(uword address) {
+    ASSERT(InMetadataRange(address));
+    return MarkBitsFor(reinterpret_cast<HeapObject*>(address));
   }
 
   // Returns true if the object is grey (queued) or black(scanned).
@@ -177,6 +211,8 @@ class GCMetadata {
   // these objects later.
   static void MarkStackOverflow(HeapObject* object);
 
+  static uword ObjectAddressFromStart(uword line, uint8 start);
+
  private:
   GCMetadata() {}
   ~GCMetadata() {}
@@ -198,6 +234,7 @@ class GCMetadata {
   unsigned char* object_starts_;
   uint32* mark_bits_;
   uint8_t* mark_stack_overflow_bits_;
+  uint8_t* page_type_bytes_;
   uword starts_bias_;
   uword remembered_set_bias_;
   uword mark_bits_bias_;

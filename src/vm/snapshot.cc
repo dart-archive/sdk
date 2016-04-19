@@ -333,7 +333,7 @@ Program* SnapshotReader::ReadProgram() {
   // Make sure to make room for the filler at the end of the program space.
   memory_ =
       ObjectMemory::AllocateChunk(program->heap()->space(), heap_size + 1);
-  top_ = memory_->base();
+  top_ = memory_->start();
 
   // Allocate space for the backward references.
   backward_references_ = List<HeapObject*>::New(references);
@@ -356,7 +356,7 @@ Program* SnapshotReader::ReadProgram() {
 
   // As a sanity check we ensure that the heap size the writer of the snapshot
   // predicted we would have, is in fact *precisely* how much space we needed.
-  int consumed_memory = top_ - memory_->base();
+  int consumed_memory = top_ - memory_->start();
   if (consumed_memory != heap_size) {
     FATAL("The heap size in the snapshot was incorrect.");
   }

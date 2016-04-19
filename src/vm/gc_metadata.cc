@@ -47,11 +47,14 @@ void GCMetadata::SetupSingleton() {
   uword mark_bits_size = size >> kMarkBitsShift;
   uword mark_stack_overflow_bits_size = size >> kCardSizeInBitsLog2;
 
+  uword page_type_size_ = size >> Platform::kPageBits;
+
   // We have two bytes per card: one for remembered set, and one for object
   // start offset.
-  metadata_size_ = Utils::RoundUp(
-      number_of_cards_ * 2 + mark_bits_size + mark_stack_overflow_bits_size,
-      Platform::kPageSize);
+  metadata_size_ =
+      Utils::RoundUp(number_of_cards_ * 2 + mark_bits_size +
+                         mark_stack_overflow_bits_size + page_type_size_,
+                     Platform::kPageSize);
 
   metadata_ = reinterpret_cast<unsigned char*>(
       Platform::AllocatePages(metadata_size_, Platform::kAnyArena));
@@ -60,6 +63,9 @@ void GCMetadata::SetupSingleton() {
   mark_bits_ = reinterpret_cast<uint32*>(metadata_ + 2 * number_of_cards_);
   mark_stack_overflow_bits_ =
       reinterpret_cast<uint8_t*>(mark_bits_) + mark_bits_size;
+  page_type_bytes_ = mark_stack_overflow_bits_ + mark_stack_overflow_bits_size;
+
+  memset(page_type_bytes_, kUnknownSpacePage, page_type_size_);
 
   uword start = reinterpret_cast<uword>(object_starts_);
   uword lowest = lowest_address_;
@@ -76,6 +82,13 @@ void GCMetadata::SetupSingleton() {
   shifted = lowest >> kCardSizeInBitsLog2;
   start = reinterpret_cast<uword>(mark_stack_overflow_bits_);
   overflow_bits_bias_ = start - shifted;
+}
+
+uword GCMetadata::ObjectAddressFromStart(uword card, uint8 start) {
+  uword object_address = (card & ~0xff) | start;
+  ASSERT(object_address >> GCMetadata::kCardSizeLog2 ==
+         card >> GCMetadata::kCardSizeLog2);
+  return object_address;
 }
 
 // Mark all bits of an object whose mark bits cross a 32 bit boundary.

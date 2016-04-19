@@ -233,7 +233,7 @@ class Program : public ProgramList::Entry {
     ASSERT(is_optimized());
     Chunk* chunk = heap()->space()->first();
     ASSERT(chunk->next() == NULL);
-    return chunk->limit() - chunk->base();
+    return chunk->size();
   }
 
   // Computes the offset in the program space.
@@ -242,7 +242,7 @@ class Program : public ProgramList::Entry {
   int ComputeBcpOffset(uword address) {
     ASSERT(is_optimized());
     Chunk* chunk = heap()->space()->first();
-    return  chunk->Includes(address) ? address - chunk->base() : 0;
+    return chunk->Includes(address) ? address - chunk->start() : 0;
   }
 
   HeapObject* ObjectFromFailure(Failure* failure) {

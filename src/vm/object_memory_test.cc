@@ -12,10 +12,10 @@ namespace dartino {
 static Chunk* AllocateChunkAndTestIt(SemiSpace* space) {
   // Allocate chunk.
   Chunk* chunk = ObjectMemory::AllocateChunk(space, 4 * KB);
-  EXPECT(chunk->base() != 0);
+  EXPECT(chunk->start() != 0);
 
   // Write to the chunk and check the content.
-  char* chars = reinterpret_cast<char*>(chunk->base());
+  char* chars = reinterpret_cast<char*>(chunk->start());
   for (unsigned i = 0; i < chunk->size(); i++) {
     chars[i] = i % 128;
     EXPECT_EQ(chars[i], static_cast<char>(i % 128));
@@ -24,7 +24,7 @@ static Chunk* AllocateChunkAndTestIt(SemiSpace* space) {
 }
 
 TEST_CASE(ObjectMemory) {
-  SemiSpace space(Space::kCanResize);
+  SemiSpace space(Space::kCanResize, kUnknownSpacePage, 0);
 
   // Allocate.
   Chunk* first = AllocateChunkAndTestIt(&space);

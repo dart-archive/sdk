@@ -17,25 +17,26 @@ Heap::Heap(RandomXorShift* random)
 
 OneSpaceHeap::OneSpaceHeap(RandomXorShift* random, int maximum_initial_size)
     : Heap(random) {
-  space_ = new SemiSpace(Space::kCanResize, maximum_initial_size);
+  space_ =
+      new SemiSpace(Space::kCanResize, kUnknownSpacePage, maximum_initial_size);
   AdjustAllocationBudget();
 }
 
 TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
     : Heap(random),
       old_space_(new OldSpace(this)),
-      unused_semispace_(new SemiSpace(Space::kCannotResize, 0)) {
-  space_ = new SemiSpace(Space::kCannotResize, 0);
+      unused_semispace_(new SemiSpace(Space::kCannotResize, kNewSpacePage, 0)) {
+  space_ = new SemiSpace(Space::kCannotResize, kNewSpacePage, 0);
   Chunk* chunk = ObjectMemory::AllocateChunk(space_, kFixedSemiSpaceSize);
   ASSERT(chunk != NULL);  // TODO(erikcorry): Cope with out-of-memory.
   space_->Append(chunk);
-  space_->UpdateBaseAndLimit(chunk, chunk->base());
+  space_->UpdateBaseAndLimit(chunk, chunk->start());
   Chunk* unused_chunk =
       ObjectMemory::AllocateChunk(unused_semispace_, kFixedSemiSpaceSize);
   unused_semispace_->Append(unused_chunk);
   AdjustAllocationBudget();
   AdjustOldAllocationBudget();
-  water_mark_ = chunk->base();
+  water_mark_ = chunk->start();
 }
 
 Heap::~Heap() {
@@ -376,7 +377,7 @@ void SemiSpace::StartScavenge() {
   Flush();
 
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    chunk->set_scavenge_pointer(chunk->base());
+    chunk->set_scavenge_pointer(chunk->start());
   }
 }
 

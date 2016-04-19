@@ -42,12 +42,11 @@ class MarkingStack {
 
 class MarkingVisitor : public PointerVisitor {
  public:
-  MarkingVisitor(SemiSpace* new_space, OldSpace* old_space,
-                 MarkingStack* marking_stack, Stack** stack_chain = NULL)
+  MarkingVisitor(SemiSpace* new_space, MarkingStack* marking_stack,
+                 Stack** stack_chain = NULL)
       : stack_chain_(stack_chain),
         new_space_address_(new_space->start()),
         new_space_size_(new_space->size()),
-        old_space_(old_space),
         marking_stack_(marking_stack),
         number_of_stacks_(0) {}
 
@@ -69,14 +68,10 @@ class MarkingVisitor : public PointerVisitor {
     *stack_chain_ = stack;
   }
 
-  bool NewSpaceIncludes(uword address) {
-    return address - new_space_address_ < new_space_size_;
-  }
-
   void MarkPointer(Object* object) {
     if (!object->IsHeapObject()) return;
     uword address = reinterpret_cast<uword>(object);
-    if (!NewSpaceIncludes(address) && !old_space_->Includes(address)) {
+    if (!GCMetadata::InNewOrOldSpace(address)) {
       return;
     }
     HeapObject* heap_object = HeapObject::cast(object);
@@ -92,7 +87,6 @@ class MarkingVisitor : public PointerVisitor {
   Stack** stack_chain_;
   uword new_space_address_;
   uword new_space_size_;
-  OldSpace* old_space_;
   MarkingStack* marking_stack_;
   int number_of_stacks_;
 };

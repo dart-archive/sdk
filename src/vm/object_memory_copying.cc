@@ -23,7 +23,7 @@ static void WriteSentinelAt(uword address) {
   *reinterpret_cast<Object**>(address) = chunk_end_sentinel();
 }
 
-Space::Space(Space::Resizing resizeable)
+Space::Space(Space::Resizing resizeable, PageType page_type)
     : first_(NULL),
       last_(NULL),
       used_(0),
@@ -31,10 +31,12 @@ Space::Space(Space::Resizing resizeable)
       limit_(0),
       allocation_budget_(0),
       no_allocation_failure_nesting_(0),
-      resizeable_(resizeable == kCanResize) {}
+      resizeable_(resizeable == kCanResize),
+      page_type_(page_type) {}
 
-SemiSpace::SemiSpace(Space::Resizing resizeable, int maximum_initial_size)
-    : Space(resizeable) {
+SemiSpace::SemiSpace(Space::Resizing resizeable, PageType page_type,
+                     int maximum_initial_size)
+    : Space(resizeable, page_type) {
   if (resizeable_ && maximum_initial_size > 0) {
     int size = Utils::Minimum(
         Utils::RoundUp(maximum_initial_size, Platform::kPageSize),
@@ -42,7 +44,7 @@ SemiSpace::SemiSpace(Space::Resizing resizeable, int maximum_initial_size)
     Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
     if (chunk == NULL) FATAL1("Failed to allocate %d bytes.\n", size);
     Append(chunk);
-    UpdateBaseAndLimit(chunk, chunk->base());
+    UpdateBaseAndLimit(chunk, chunk->start());
   }
 }
 
@@ -53,14 +55,14 @@ bool SemiSpace::IsFlushed() {
 
 void SemiSpace::UpdateBaseAndLimit(Chunk* chunk, uword top) {
   ASSERT(IsFlushed());
-  ASSERT(top >= chunk->base());
-  ASSERT(top < chunk->limit());
+  ASSERT(top >= chunk->start());
+  ASSERT(top < chunk->end());
 
   top_ = top;
   // Always write a sentinel so the scavenger knows where to stop.
   WriteSentinelAt(top_);
-  limit_ = chunk->limit();
-  if (top == chunk->base() && GCMetadata::InMetadataRange(top)) {
+  limit_ = chunk->end();
+  if (top == chunk->start() && GCMetadata::InMetadataRange(top)) {
     GCMetadata::InitializeStartsForChunk(chunk);
   }
 }
@@ -93,7 +95,7 @@ void Space::Append(Chunk* chunk) {
     last_ = chunk;
   }
   chunk->set_next(NULL);
-  if (GCMetadata::InMetadataRange(chunk->base())) {
+  if (GCMetadata::InMetadataRange(chunk->start())) {
     GCMetadata::InitializeOverflowBitsForChunk(chunk);
   }
 }
@@ -101,7 +103,7 @@ void Space::Append(Chunk* chunk) {
 void SemiSpace::Append(Chunk* chunk) {
   if (!is_empty()) {
     // Update the accounting.
-    used_ += top() - last()->base();
+    used_ += top() - last()->start();
   }
   Space::Append(chunk);
 }
@@ -140,7 +142,7 @@ uword SemiSpace::AllocateInNewChunk(int size) {
 
     // Update limits.
     allocation_budget_ -= chunk->size();
-    UpdateBaseAndLimit(chunk, chunk->base());
+    UpdateBaseAndLimit(chunk, chunk->start());
 
     // Allocate.
     uword result = TryAllocate(size);
@@ -163,7 +165,7 @@ uword SemiSpace::Allocate(int size) {
 
 int SemiSpace::Used() {
   if (is_empty()) return used_;
-  return used_ + (top() - last()->base());
+  return used_ + (top() - last()->start());
 }
 
 // Called multiple times until there is no more work.  Finds objects moved to

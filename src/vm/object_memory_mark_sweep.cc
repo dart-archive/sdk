@@ -28,7 +28,7 @@ static bool HasSentinelAt(uword address) {
 }
 
 OldSpace::OldSpace(TwoSpaceHeap* owner)
-    : Space(kCanResize),
+    : Space(kCanResize, kOldSpacePage),
       heap_(owner),
       free_list_(new FreeList()),
       tracking_allocations_(false),
@@ -67,7 +67,7 @@ bool OldSpace::IsAlive(HeapObject* old_location) {
 }
 
 void OldSpace::UseWholeChunk(Chunk* chunk) {
-  top_ = chunk->base();
+  top_ = chunk->start();
   limit_ = top_ + chunk->size() - kPointerSize;
   *reinterpret_cast<Object**>(limit_) = chunk_end_sentinel();
   if (tracking_allocations_) {
@@ -186,11 +186,11 @@ void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
   Flush();
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     // Scan the byte-map for cards that may have new-space pointers.
-    uword current = chunk->base();
+    uword current = chunk->start();
     uword bytes =
         reinterpret_cast<uword>(GCMetadata::RememberedSetFor(current));
     uword earliest_iteration_start = current;
-    while (current < chunk->limit()) {
+    while (current < chunk->end()) {
       if (Utils::IsAligned(bytes, sizeof(uword))) {
         uword* words = reinterpret_cast<uword*>(bytes);
         // Skip blank cards n at a time.
@@ -200,7 +200,7 @@ void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
             bytes += sizeof *words;
             words++;
             current += sizeof(*words) * GCMetadata::kCardSize;
-          } while (current < chunk->limit() && *words == 0);
+          } while (current < chunk->end() && *words == 0);
           continue;
         }
       }
@@ -214,7 +214,7 @@ void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
         // assertion in the case where a dirty object died and was made into
         // free-list.
         uword iteration_start = current;
-        if (starts != GCMetadata::StartsFor(chunk->base())) {
+        if (starts != GCMetadata::StartsFor(chunk->start())) {
           // If we are not at the start of the chunk, step back into previous
           // card to find a place to start iterating from that is guaranteed to
           // be before the start of the card.  We have to do this because the
@@ -344,17 +344,15 @@ void OldSpace::Verify() {
   // Verify that the object starts table contains only legitimate object start
   // addresses for each chunk in the space.
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword base = chunk->base();
-    uword limit = chunk->limit();
+    uword base = chunk->start();
+    uword limit = chunk->end();
     uint8* starts = GCMetadata::StartsFor(base);
     for (uword card = base; card < limit;
          card += GCMetadata::kCardSize, starts++) {
       if (*starts == GCMetadata::kNoObjectStart) continue;
       // Replace low byte of card address with the byte from the object starts
       // table, yielding some correct object start address.
-      uword object_address = (card & ~0xff) | *starts;
-      ASSERT(object_address >> GCMetadata::kCardSizeLog2 ==
-             card >> GCMetadata::kCardSizeLog2);
+      uword object_address = GCMetadata::ObjectAddressFromStart(card, *starts);
       HeapObject* obj = HeapObject::FromAddress(object_address);
       ASSERT(obj->get_class()->IsClass());
       ASSERT(obj->Size() > 0);
@@ -368,7 +366,7 @@ void OldSpace::Verify() {
   // Verify that the remembered set table is marked for all objects that
   // contain new-space pointers.
   for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword current = chunk->base();
+    uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
       if (object->ContainsPointersTo(heap_->space())) {

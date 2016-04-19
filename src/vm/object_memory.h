@@ -27,6 +27,12 @@ class TwoSpaceHeap;
 
 static const int kSentinelSize = sizeof(void*);
 
+enum PageType {
+  kUnknownSpacePage,  // Probably a program space page.
+  kOldSpacePage,
+  kNewSpacePage
+};
+
 // A chunk represents a block of memory provided by ObjectMemory.
 class Chunk {
  public:
@@ -35,27 +41,28 @@ class Chunk {
 
   // The next chunk in same space.
   Chunk* next() const { return next_; }
+  void set_next(Chunk* value) { next_ = value; }
 
   // Returns the first address in this chunk.
-  uword base() const { return base_; }
+  uword start() const { return start_; }
 
   // Returns the first address past this chunk.
-  uword limit() const { return limit_; }
+  uword end() const { return end_; }
 
   // Returns the size of this chunk in bytes.
-  uword size() const { return limit_ - base_; }
+  uword size() const { return end_ - start_; }
 
   // Is the chunk externally allocated by the embedder.
   bool is_external() const { return external_; }
 
   // Test for inclusion.
-  bool Includes(uword address) const {
-    return (address >= base()) && (address < limit());
+  bool Includes(uword address) {
+    return (address >= start_) && (address < end_);
   }
 
   void set_scavenge_pointer(uword p) {
-    ASSERT(p >= base_);
-    ASSERT(p <= limit_);
+    ASSERT(p >= start_);
+    ASSERT(p <= end_);
     scavenge_pointer_ = p;
   }
   uword scavenge_pointer() const { return scavenge_pointer_; }
@@ -70,28 +77,26 @@ class Chunk {
 
  private:
   Space* owner_;
-  const uword base_;
-  const uword limit_;
+  const uword start_;
+  const uword end_;
   const bool external_;
   uword scavenge_pointer_;
 
   Chunk* next_;
 
-  Chunk(Space* owner, uword base, uword size, bool external = false)
+  Chunk(Space* owner, uword start, uword size, bool external = false)
       : owner_(owner),
-        base_(base),
-        limit_(base + size),
+        start_(start),
+        end_(start + size),
         external_(external),
-        scavenge_pointer_(base_),
+        scavenge_pointer_(start_),
         next_(NULL) {}
 
   ~Chunk();
 
-  void set_next(Chunk* value) { next_ = value; }
   void set_owner(Space* value) { owner_ = value; }
 
   friend class ObjectMemory;
-  friend class PageTable;
   friend class Space;
   friend class SemiSpace;
 };
@@ -142,8 +147,9 @@ class Space {
   // Schema change support.
   void CompleteTransformations(PointerVisitor* visitor);
 
-  // Returns true if the address is inside this space.
-  inline bool Includes(uword address) const;
+  // Returns true if the address is inside this space.  Not particularly fast.
+  // See GCMetadata::PageType for a faster possibility.
+  bool Includes(uword address);
 
   // Adjust the allocation budget based on the current heap size.
   void AdjustAllocationBudget(int used_outside_space);
@@ -188,12 +194,12 @@ class Space {
 
   uword start() {
     ASSERT(first_ == last_);
-    return first_->base();
+    return first_->start();
   }
 
   uword size() {
     ASSERT(first_ == last_);
-    return first_->limit() - first_->base();
+    return first_->size();
   }
 
   bool IsInSingleChunk(HeapObject* object) {
@@ -203,12 +209,15 @@ class Space {
 
   WeakPointerList* weak_pointers() { return &weak_pointers_; }
 
+  PageType page_type() { return page_type_; }
+
  protected:
-  explicit Space(Resizing resizeable);
+  explicit Space(Resizing resizeable, PageType page_type);
 
   friend class NoAllocationFailureScope;
   friend class ProgramHeapRelocator;
   friend class Program;
+  friend class SweepingVisitor;
   friend class TwoSpaceHeap;
 
   virtual void Append(Chunk* chunk);
@@ -239,11 +248,13 @@ class Space {
   bool resizeable_;
   // Linked list of weak pointers to heap objects in this space.
   WeakPointerList weak_pointers_;
+  PageType page_type_;
 };
 
 class SemiSpace : public Space {
  public:
-  explicit SemiSpace(Resizing resizeable, int maximum_initial_size = 0);
+  explicit SemiSpace(Resizing resizeable, PageType page_type,
+                     int maximum_initial_size);
 
   // Returns the total size of allocated objects.
   virtual int Used();
@@ -376,38 +387,6 @@ class NoAllocationScope {
 #endif
 };
 
-class PageTable {
- public:
-  explicit PageTable(uword base) : base_(base) {
-    memset(spaces_, 0, kPointerSize * ARRAY_SIZE(spaces_));
-  }
-
-  uword base() const { return base_; }
-
-  Space* Get(int index) const { return spaces_[index]; }
-  void Set(int index, Space* space) { spaces_[index] = space; }
-
- private:
-  Space* spaces_[1 << 10];
-  uword base_;
-};
-
-class PageDirectory {
- public:
-  void Clear();
-  void Delete();
-
-  PageTable* Get(int index) const { return tables_[index]; }
-  void Set(int index, PageTable* table) { tables_[index] = table; }
-
- private:
-#ifdef DARTINO32
-  PageTable* tables_[1 << 10];
-#else
-  PageTable* tables_[1 << 13];
-#endif
-};
-
 // ObjectMemory controls all memory used by object heaps.
 class ObjectMemory {
  public:
@@ -426,32 +405,6 @@ class ObjectMemory {
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);
 
-  // Determine if the address is in the given space using page tables
-  // mapping an address to the space containing it.
-  //
-  // The page tables rely on 4k size-aligned chunks which makes the
-  // least significant 12 bits of a chunk zero. An address is mapped
-  // to its chunk address by masking out the least significant 12
-  // bits. Then that chunk address is mapped to a space using tables.
-  //
-  // On 32-bit systems, the remaining 20 bits of the chunk address are
-  // used as indices into two table. The most significant 10 bits
-  // identify a page table in a page directory. The least significant
-  // 10 bits identify a space in that page table:
-  //
-  // 32-bit: [ 10: table | 10: space | 12: zeros ]
-  //
-  // On 64-bit systems we rely on the virtual address space only being
-  // 48 bits. This is true for x64 and for arm64 as well.  With 4k
-  // alignment that leaves 36 bits of the chunk address which are used
-  // as indices into three tables. The most significant 13 bits identify
-  // a page directory. The next 13 bits identify a page table in the
-  // page directory. The least significant 10 bits identify a space in
-  // that page table:
-  //
-  // 64-bit: [ 16: zeros | 13: directory | 13: table | 10 space | 12: zeros ]
-  static bool IsAddressInSpace(uword address, const Space* space);
-
   // Setup and tear-down support.
   static void Setup();
   static void TearDown();
@@ -459,33 +412,14 @@ class ObjectMemory {
   static uword Allocated() { return allocated_; }
 
  private:
-  // Low-level access to the page table associated with a given
-  // address.
-  static PageTable* GetPageTable(uword address);
-  static void SetPageTable(uword address, PageTable* table);
-
-  // Associate a range of pages with a given space.
-  static void SetSpaceForPages(uword base, uword limit, Space* space);
-
   // Use some already-existing memory for a chunk.
   static Chunk* CreateFixedChunk(Space* space, void* heap_space, int size);
-
-#ifdef DARTINO32
-  static PageDirectory page_directory_;
-#else
-  static PageDirectory* page_directories_[1 << 13];
-#endif
-  static Mutex* mutex_;  // Mutex used for synchronized chunk allocation.
 
   static Atomic<uword> allocated_;
 
   friend class Space;
   friend class SemiSpace;
 };
-
-inline bool Space::Includes(uword address) const {
-  return ObjectMemory::IsAddressInSpace(address, this);
-}
 
 }  // namespace dartino
 

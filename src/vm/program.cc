@@ -391,7 +391,8 @@ void Program::ValidateSharedHeap() {
 
 void Program::CollectGarbage() {
   ClearCache();
-  SemiSpace* to = new SemiSpace(Space::kCanResize, heap_.space()->Used() / 10);
+  SemiSpace* to = new SemiSpace(Space::kCanResize, kUnknownSpacePage,
+                                heap_.space()->Used() / 10);
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
@@ -488,7 +489,7 @@ void Program::PerformSharedGarbageCollection() {
   OldSpace* old_space = heap->old_space();
   SemiSpace* new_space = heap->space();
   MarkingStack stack;
-  MarkingVisitor marking_visitor(new_space, old_space, &stack);
+  MarkingVisitor marking_visitor(new_space, &stack);
   for (auto process : process_list_) {
     process->IterateRoots(&marking_visitor);
   }
@@ -999,7 +1000,7 @@ void Program::CollectNewSpace() {
 
   to->set_used(0);
   // Allocate from start of to-space..
-  to->UpdateBaseAndLimit(to->first(), to->first()->base());
+  to->UpdateBaseAndLimit(to->first(), to->first()->start());
 
   GenerationalScavengeVisitor visitor(data_heap);
   to->StartScavenge();
@@ -1060,8 +1061,7 @@ int Program::CollectMutableGarbageAndChainStacks() {
   SemiSpace* new_space = process_heap()->space();
   MarkingStack marking_stack;
   ASSERT(stack_chain_ == NULL);
-  MarkingVisitor marking_visitor(new_space, old_space, &marking_stack,
-                                 &stack_chain_);
+  MarkingVisitor marking_visitor(new_space, &marking_stack, &stack_chain_);
 
   // All processes share the same heap, so we need to iterate all roots from
   // all processes.
