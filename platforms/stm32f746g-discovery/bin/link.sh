@@ -70,6 +70,7 @@ fi
 LIB1="$LIB_DIR/libdartino.a"
 LIB2="$LIB_DIR/libfreertos_dartino.a"
 LIB3="$LIB_DIR/libstm32f746g-discovery.a"
+LIB4="$LIB_DIR/libmbedtls_static.a"
 
 # Paths to to gcc and objcopy.
 TOOLCHAIN_PREFIX="$TOOLCHAIN_DIR/bin/arm-none-eabi-"
@@ -126,6 +127,7 @@ echo "Linking application"
 "$LIB1" \
 "$LIB2" \
 "$LIB3" \
+"$LIB4" \
 "$EMBEDDER_OPTIONS_OBJ" \
 -Wl,--end-group \
 -lstdc++ \

@@ -12,6 +12,8 @@
     'freertos_port': 'ARM_CM7/r0p1',
     'stm32_cube_f7_bsp_discovery':
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
+    'mbedtls':
+      '<(DEPTH)/third_party/mbedtls/mbedtls/',
 
     'gcc-arm-embedded':
       '<(DEPTH)/third_party/gcc-arm-embedded/<(OS)/gcc-arm-embedded/bin',

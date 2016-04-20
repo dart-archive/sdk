@@ -44,8 +44,8 @@ main() {
     Socket s = new Socket.connect("192.168.0.2", 5001);
     print('Socket connected.');
     ByteBuffer buffer = createBuffer(5);
-    int bytesWritten = s.write(buffer);
-    print('Wrote $bytesWritten bytes');
+    s.write(buffer);
+    print('Wrote data...');
     buffer = s.readNext();
     if (buffer != null) {
       int bytesRead = buffer.lengthInBytes;
@@ -53,7 +53,6 @@ main() {
     } else {
       print('Socket closed by peer.');
     }
-    s.shutdown();
     s.close();
   } on SocketException catch (e) {
     print('Caught exception: $e.');

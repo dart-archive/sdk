@@ -8,6 +8,7 @@ import 'dart:dartino.ffi';
 import 'dart:typed_data';
 import 'dart:dartino.os';
 import 'dart:dartino';
+import 'package:stm32/ethernet.dart';
 
 final _lookupHost = ForeignLibrary.main.lookup("network_lookup_host");
 
@@ -50,6 +51,9 @@ class Socket {
   }
 
   Socket.connect(String host, int port) {
+    if (!ethernet.isInitialized) {
+      throw new SocketException("network stack not initialized");
+    }
     ForeignMemory string = new ForeignMemory.fromStringAsUTF8(host);
     int address;
     try {
@@ -75,12 +79,12 @@ class Socket {
     _port = new Port(_channel);
   }
 
-  int write(ByteBuffer buffer) {
+  void write(ByteBuffer buffer) {
     if ((_waitForEvent(SOCKET_WRITE | SOCKET_CLOSED) & SOCKET_CLOSED) != 0) {
       return null;
     }
     ForeignMemory memory = _foreign(buffer);
-    return _send.icall$4(_socket, memory.address, buffer.lengthInBytes, 0);
+    _send.icall$4(_socket, memory.address, buffer.lengthInBytes, 0);
   }
 
   ForeignMemory _foreign(ByteBuffer buffer) {
@@ -92,7 +96,7 @@ class Socket {
     if ((_waitForEvent(SOCKET_READ | SOCKET_CLOSED) & SOCKET_CLOSED) != 0) {
       return null;
     }
-    int toRead = available();
+    int toRead = available;
     if (maxSize != null && maxSize < toRead) {
       toRead = maxSize;
     }
@@ -108,11 +112,13 @@ class Socket {
     _unregisterAndClose.vcall$1(_socket);
   }
 
-  shutdown() {
+  shutdownWrite() {
+    // FreeRTOS ignores the second argument and always shuts down both ways.  We
+    // use SHUTDOWN_READ_WRITE for compatibility with future versions.
     _shutdown.vcall$2(_socket, SHUTDOWN_READ_WRITE);
   }
 
-  int available() => _available.icall$1(_socket);
+  int get available => _available.icall$1(_socket);
 
   int _waitForEvent(int mask) {
     eventHandler.registerPortForNextEvent(_handle, _port,

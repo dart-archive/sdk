@@ -41,10 +41,11 @@ import 'dart:dartino';
 import 'dart:typed_data';
 import 'package:os/os.dart';
 import 'package:socket/socket.dart';
+// TODO(karlklose): merge both implementations and remove this dependency.
+import 'package:stm32/socket.dart' as stm;
 import 'package:ffi/ffi.dart';
 
-final String mbedtlsLibraryName = ForeignLibrary.bundleLibraryName('mbedtls');
-final ForeignLibrary lib = new ForeignLibrary.fromName(mbedtlsLibraryName);
+final ForeignLibrary lib = mbedTlsLibrary;
 
 // The functions below are named the same as their c counterpart.
 final ForeignFunction entropy_context_sizeof =
@@ -158,8 +159,10 @@ class TLSSocket implements Socket {
   final entropy =
       new ForeignMemory.allocatedFinalized(entropy_context_sizeof.icall$0());
 
-  // The dartino socket we use to do the actual network communication.
-  Socket _socket;
+  // TODO(karlklose): change type back to Socket when the STM32 implementation
+  // fully supports the interface.
+  /// The dartino socket we use to do the actual network communication.
+  var _socket;
 
   final String server;
   final int port;
@@ -186,7 +189,9 @@ class TLSSocket implements Socket {
    */
   TLSSocket.connect(String this.server, int this.port,
                     {bool failOnCertificate: false}) {
-    _socket = new Socket.connect(server, port);
+    _socket = isFreeRTOS
+      ? new stm.Socket.connect(server, port)
+      : new Socket.connect(server, port);
     _sendBuffer = new CircularByteBuffer(1024);
     _recvBuffer = new CircularByteBuffer(1024);
     _foreignBuffers = _getForeignFromBuffers(_sendBuffer, _recvBuffer);
@@ -446,4 +451,18 @@ class TLSException implements Exception {
   TLSException.closed() : message = "The underlying socket was closed";
 
   String toString() => "TLSException: $message";
+}
+
+bool get isFreeRTOS => Foreign.platform == Foreign.FREERTOS;
+
+/// Switch between statically linked and dynamically linked library depending on
+/// the platform.
+/// Currently only FreeRTOS is statically linked.
+ForeignLibrary get mbedTlsLibrary {
+  if (isFreeRTOS) {
+    return ForeignLibrary.main;
+  } else {
+    String mbedtlsLibraryName = ForeignLibrary.bundleLibraryName('mbedtls');
+    return new ForeignLibrary.fromName(mbedtlsLibraryName);
+  }
 }

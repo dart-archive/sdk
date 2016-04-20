@@ -46,7 +46,6 @@
     '<(mbedtls_path)/md.c',
     '<(mbedtls_path)/md_wrap.c',
     '<(mbedtls_path)/memory_buffer_alloc.c',
-    '<(mbedtls_path)/net.c',
     '<(mbedtls_path)/oid.c',
     '<(mbedtls_path)/padlock.c',
     '<(mbedtls_path)/pem.c',

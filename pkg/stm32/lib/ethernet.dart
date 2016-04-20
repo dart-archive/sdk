@@ -94,6 +94,8 @@ class Ethernet {
   bool _initialized = false;
   NetworkInterface _lo;
   NetworkInterface _eth;
+
+  bool get isInitialized => _initialized;
 }
 
 /// A representation of an available ("up") network interface and its

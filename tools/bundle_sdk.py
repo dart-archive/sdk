@@ -253,13 +253,15 @@ def CopySTM(bundle_dir):
   libraries = [
       'libdartino.a',
       'libfreertos_dartino.a',
-      'libstm32f746g-discovery.a' ]
+      'libstm32f746g-discovery.a',
+      'libmbedtls_static.a',
+    ]
   disco = join(bundle_dir, 'platforms', 'stm32f746g-discovery')
   lib_dir = join(disco, 'lib')
   makedirs(lib_dir)
   build_dir = 'out/ReleaseSTM'
-  for v in libraries:
-    CopyFile(join(build_dir, v), join(lib_dir, basename(v)))
+  for lib in libraries:
+    CopyFile(join(build_dir, lib), join(lib_dir, basename(lib)))
 
   config_dir = join(disco, 'config')
   CopyFile('platforms/stm/disco_dartino/src/stm32f746g-discovery/'

@@ -18,6 +18,13 @@
 #include "platforms/stm/disco_dartino/src/stm32f746g-discovery/socket.h"
 #include "platforms/stm/disco_dartino/src/page_alloc.h"
 
+#include "mbedtls/ssl.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/error.h"
+#include "mbedtls/certs.h"
+#include "mbedtls/x509_crt.h"
+
 static UartDriver uart1;
 static ButtonDriver button1;
 
@@ -131,6 +138,7 @@ void LCDDrawLine(
   BSP_LCD_DrawLine(x1, y1, x2, y2);
 }
 
+// Ethernet adapter bindings
 DARTINO_EXPORT_STATIC_RENAME(initialize_network_stack, InitializeNetworkStack)
 DARTINO_EXPORT_STATIC_RENAME(is_network_up, IsNetworkUp)
 DARTINO_EXPORT_STATIC_RENAME(get_ethernet_adapter_status,
@@ -138,6 +146,7 @@ DARTINO_EXPORT_STATIC_RENAME(get_ethernet_adapter_status,
 DARTINO_EXPORT_STATIC_RENAME(get_network_address_configuration,
                              GetNetworkAddressConfiguration)
 
+// FreeRTOS-Plus-TCP bindings
 DARTINO_EXPORT_STATIC_RENAME(create_socket,
                              FreeRTOS_socket)
 DARTINO_EXPORT_STATIC_RENAME(socket_connect,
@@ -165,6 +174,55 @@ DARTINO_EXPORT_STATIC_RENAME(socket_reset_flags,
 DARTINO_EXPORT_STATIC_RENAME(socket_listen_for_event,
                              ListenForSocketEvent)
 
+// The functions used from bindings.c
+int entropy_context_sizeof();
+int ssl_context_sizeof();
+int ctr_drbg_context_sizeof();
+int ssl_config_sizeof();
+int x509_crt_sizeof();
+int dart_send(void *ctx, const unsigned char *buf, size_t len);
+int dart_recv(void *ctx, unsigned char *buf, size_t len);
+
+// mbedtls bindings
+DARTINO_EXPORT_STATIC(entropy_context_sizeof)
+DARTINO_EXPORT_STATIC(ssl_config_sizeof)
+DARTINO_EXPORT_STATIC(ssl_context_sizeof)
+DARTINO_EXPORT_STATIC(ctr_drbg_context_sizeof)
+DARTINO_EXPORT_STATIC(x509_crt_sizeof)
+DARTINO_EXPORT_STATIC(mbedtls_entropy_func)
+DARTINO_EXPORT_STATIC(mbedtls_ctr_drbg_seed)
+DARTINO_EXPORT_STATIC(mbedtls_test_cas_pem)
+DARTINO_EXPORT_STATIC(mbedtls_test_cas_pem_len)
+DARTINO_EXPORT_STATIC(mbedtls_x509_crt_parse)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_config_defaults)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_conf_authmode)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_conf_ca_chain)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_conf_rng)
+DARTINO_EXPORT_STATIC(mbedtls_ctr_drbg_random)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_setup)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_set_hostname)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_set_bio)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_handshake)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_get_verify_result)
+DARTINO_EXPORT_STATIC(mbedtls_x509_crt_verify_info)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_write)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_read)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_get_bytes_avail)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_close_notify)
+DARTINO_EXPORT_STATIC(mbedtls_x509_crt_free)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_free)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_config_free)
+DARTINO_EXPORT_STATIC(mbedtls_ctr_drbg_free)
+DARTINO_EXPORT_STATIC(mbedtls_entropy_free)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_init)
+DARTINO_EXPORT_STATIC(mbedtls_ssl_config_init)
+DARTINO_EXPORT_STATIC(mbedtls_x509_crt_init)
+DARTINO_EXPORT_STATIC(mbedtls_ctr_drbg_init)
+DARTINO_EXPORT_STATIC(mbedtls_entropy_init)
+DARTINO_EXPORT_STATIC(dart_send)
+DARTINO_EXPORT_STATIC(dart_recv)
+
+// LCD bindnings
 DARTINO_EXPORT_STATIC_RENAME(lcd_height, BSP_LCD_GetYSize)
 DARTINO_EXPORT_STATIC_RENAME(lcd_width, BSP_LCD_GetXSize)
 DARTINO_EXPORT_STATIC_RENAME(lcd_clear, BSP_LCD_Clear)
@@ -176,6 +234,7 @@ DARTINO_EXPORT_STATIC_RENAME(lcd_set_foreground_color, BSP_LCD_SetTextColor)
 DARTINO_EXPORT_STATIC_RENAME(lcd_set_background_color, BSP_LCD_SetBackColor)
 DARTINO_EXPORT_STATIC_RENAME(lcd_display_string, BSP_LCD_DisplayStringAt)
 
+// Touchscreen bindings
 DARTINO_EXPORT_STATIC_RENAME(ts_init, BSP_TS_Init)
 DARTINO_EXPORT_STATIC_RENAME(ts_getState, BSP_TS_GetState)
 

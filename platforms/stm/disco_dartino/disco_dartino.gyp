@@ -25,6 +25,9 @@
   'targets': [
     {
       'target_name': 'libstm32f746g-discovery',
+      'dependencies': [
+        '../../../src/pkg/mbedtls/mbedtls.gyp:mbedtls_static',
+      ],
       'variables': {
         'source_path': 'src/stm32f746g-discovery',
         'generated_path': '<(source_path)/generated',
@@ -55,6 +58,7 @@
         '<(source_path)',
         '<(freertos_plus_tcp)/include',
         '<(freertos_plus_tcp)/portable/Compiler/GCC/',
+        '<(mbedtls)/include',
       ],
       'sources': [
         # Board initialization.

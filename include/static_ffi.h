@@ -64,8 +64,7 @@ typedef struct {
 #define DARTINO_EXPORT_FFI __attribute__((section(".dartinoffi")))
 
 #define DARTINO_EXPORT_STATIC(fun)                                             \
-  DARTINO_EXPORT_FFI DartinoStaticFFISymbol dartino_ffi_entry_ ## fun;         \
-  dartino_ffi_entry_ ## fun = {                                                \
+  DARTINO_EXPORT_FFI DartinoStaticFFISymbol dartino_ffi_entry_ ## fun = {      \
       DARTINO_FUNCTION_NAME(fun),                                              \
       DARTINO_EXPORT_CAST(&fun) };                                             \
 

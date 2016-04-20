@@ -7,6 +7,7 @@
     {
       'target_name': 'mbedtls_static',
       'type': 'static_library',
+      'standalone_static_library': 1,
       'includes': [
         'mbedtls_sources.gypi',
       ],
@@ -20,6 +21,9 @@
       },
       'sources': [
         'bindings.c',
+      ],
+      'cflags': [
+        "-DMBEDTLS_CONFIG_FILE='<mbedtls_config.h>'",
       ],
       'conditions': [
         ['OS=="linux"', {
