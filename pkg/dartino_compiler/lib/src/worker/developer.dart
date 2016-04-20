@@ -607,7 +607,7 @@ Future<int> run(
 
   await vmContext.enableLiveEditing();
   await vmContext.spawnProcess(arguments);
-  var command = await vmContext.debugRun();
+  var command = await vmContext.startRunning();
 
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
   if (command == null) {

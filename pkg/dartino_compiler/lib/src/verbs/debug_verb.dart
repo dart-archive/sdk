@@ -384,7 +384,7 @@ Future<int> runToMainDebuggerTask(
   // TODO(ahe): Add support for arguments when debugging.
   await vmContext.spawnProcess([]);
   await vmContext.setBreakpoint(methodName: "main", bytecodeIndex: 0);
-  await vmContext.debugRun();
+  await vmContext.startRunning();
 
   return 0;
 }

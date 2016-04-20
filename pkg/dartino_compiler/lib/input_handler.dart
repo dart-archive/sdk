@@ -361,7 +361,8 @@ class InputHandler {
       case 'r':
       case 'run':
         if (checkNotLoaded("use 'restart' to run again")) {
-          await handleProcessStopResponse(await vmContext.debugRun(), state);
+          await handleProcessStopResponse(
+              await vmContext.startRunning(), state);
         }
         break;
       case 's':

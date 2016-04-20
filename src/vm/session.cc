@@ -199,10 +199,6 @@ class ConnectedState : public SessionState {
     session()->set_debugging(true);
   }
 
-  bool KeepConnectionAlive() const {
-    return IsLiveEditingEnabled();
-  }
-
   const char* ToString() const { return "Connected"; }
 
   SessionState* ProcessMessage(Connection::Opcode opcode);
@@ -1175,10 +1171,6 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
   switch (opcode) {
     case Connection::kProcessRun: {
       session()->SignalMainThread(Session::kProcessRun);
-      // If we are debugging we continue processing messages. If we are
-      // connected to the compiler directly we terminate the message
-      // processing thread.
-      if (!KeepConnectionAlive()) return NULL;
       break;
     }
 

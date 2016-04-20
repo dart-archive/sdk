@@ -142,7 +142,7 @@ class DartinoVmTester extends IncrementalTestRunner {
       }
       if (isFirstProgram) {
         // Run the program to hit the breakpoint in main.
-        await vmContext.debugRun();
+        await vmContext.startRunning();
       } else {
         // Restart the current frame to rerun main.
         await vmContext.restart();

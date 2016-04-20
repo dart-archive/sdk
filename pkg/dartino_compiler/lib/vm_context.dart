@@ -315,22 +315,6 @@ class DartinoVmContext {
     await runCommand(new ProcessSpawnForMain(arguments));
   }
 
-  Future run(List<String> arguments) async {
-    await spawnProcess(arguments);
-    loaded = true;
-    await runCommand(const ProcessRun());
-    // NOTE: The [ProcessRun] command normally results in a
-    // [ProcessTerminated] command. But if the compiler emitted a compile time
-    // error, the dartino-vm will just halt()/exit() and we therefore get no
-    // response.
-    var command = await readNextCommand(force: false);
-    if (command != null && command is! ProcessTerminated) {
-      throw new Exception('Expected process to finish complete with '
-                          '[ProcessTerminated] but got [$command]');
-    }
-    await shutdown();
-  }
-
   Future<int> debug(
       Stream<String> inputLines(DartinoVmContext session),
       Uri base,
@@ -447,7 +431,7 @@ class DartinoVmContext {
     return response;
   }
 
-  Future<VmCommand> debugRun() async {
+  Future<VmCommand> startRunning() async {
     assert(!loaded);
     assert(!running);
     loaded = true;
