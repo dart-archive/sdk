@@ -9,6 +9,11 @@ import 'dart:io' show
     Platform,
     Process;
 
+import 'package:compiler/src/filenames.dart' show
+    appendSlash;
+
+const String StringOrUri = "String or Uri";
+
 const String _DARTINO_VM = const String.fromEnvironment("dartino-vm");
 
 Uri get executable {
@@ -61,4 +66,27 @@ String get dartinoVersion {
         Process.runSync(vmPath, <String>["--version"]).stdout.trim();
   }
   return _cachedDartinoVersion = "version information not available";
+}
+
+Uri computeValidatedUri(
+    @StringOrUri stringOrUri,
+    {String name,
+     bool ensureTrailingSlash: false,
+     Uri base}) {
+  if (base == null) {
+    base = Uri.base;
+  }
+  assert(name != null);
+  if (stringOrUri == null) {
+    return null;
+  } else if (stringOrUri is String) {
+    if (ensureTrailingSlash) {
+      stringOrUri = appendSlash(stringOrUri);
+    }
+    return base.resolve(stringOrUri);
+  } else if (stringOrUri is Uri) {
+    return base.resolveUri(stringOrUri);
+  } else {
+    throw new ArgumentError("[$name] should be a String or a Uri.");
+  }
 }

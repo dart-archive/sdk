@@ -2,6 +2,8 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+stacktrace_current_test: CompileTimeError
+
 [ $system == macos ]
 # https://github.com/dartino/sdk/issues/401
 big_integer_huge_mul_vm_test: Pass, Slow, Timeout, Crash

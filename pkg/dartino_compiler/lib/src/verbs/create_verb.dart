@@ -108,7 +108,7 @@ Future<int> createSessionTask(
   assert(SessionState.internalCurrent == null);
   Settings settings = await createSettings(
       name, settingsUri, base, commandSender, commandIterator);
-  SessionState state = createSessionState(name, settings);
+  SessionState state = createSessionState(name, base, settings);
   SessionState.internalCurrent = state;
   if (settingsUri != null) {
     state.log("created session with $settingsUri $settings");

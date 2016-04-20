@@ -42,7 +42,8 @@ class DartinoContext {
   DartinoBackend get backend => compiler.backend;
 
   bool get enableBigint {
-    String enableBigintConstant = compiler.environment['dartino.enable-bigint'];
+    String enableBigintConstant =
+        compiler.options.environment['dartino.enable-bigint'];
     return enableBigintConstant != "false";
   }
 

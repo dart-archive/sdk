@@ -2,6 +2,9 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:collection' show
+    Queue;
+
 import 'package:compiler/src/enqueue.dart' show
     CodegenEnqueuer,
     EnqueueTask,
@@ -28,6 +31,7 @@ import 'package:compiler/src/universe/use.dart' show
     TypeUse;
 
 import 'package:compiler/src/universe/world_impact.dart' show
+    ImpactUseCase,
     WorldImpact;
 
 import 'package:compiler/src/dart_types.dart' show
@@ -41,10 +45,6 @@ import 'package:compiler/src/common/resolution.dart' show
 
 import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
     DiagnosticReporter;
-
-import 'dart:collection' show
-    Queue;
-
 
 // TODO(ahe): Get rid of this file. Perhaps by having [DartinoEnqueuer] extend
 // [CodegenEnqueuer].
@@ -209,4 +209,10 @@ class EnqueuerMixin implements CodegenEnqueuer {
   Resolution get resolution => notImplemented;
 
   EnqueuerStrategy get strategy => notImplemented;
+
+  ImpactUseCase get impactUse => const ImpactUseCase("EnqueuerMixin");
+
+  get impactVisitor => notImplemented;
+
+  set impactVisitor(_) => notImplemented;
 }

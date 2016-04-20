@@ -20,10 +20,10 @@ import 'package:compiler/src/elements/elements.dart' show
 export 'package:compiler/src/elements/elements.dart' show
     LibraryElement;
 
-import 'package:dartino_compiler/dartino_compiler.dart' show
+import 'package:dartino_compiler/src/guess_configuration.dart' show
     StringOrUri;
 
-export 'package:dartino_compiler/dartino_compiler.dart' show
+export 'package:dartino_compiler/src/guess_configuration.dart' show
     StringOrUri;
 
 const String SCHEME = 'org.trydart.compiler-test-case';

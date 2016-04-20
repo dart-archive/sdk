@@ -44,7 +44,7 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
       null,
       IncrementalMode.none);
 
-  SessionState state = createSessionState("test", settings);
+  SessionState state = createSessionState("test", Uri.base, settings);
   SessionState.internalCurrent = state;
 
   Expect.equals(0, await compile(Uri.base.resolveUri(uri), state, Uri.base),

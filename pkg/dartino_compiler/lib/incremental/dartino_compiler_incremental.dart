@@ -75,43 +75,19 @@ import '../src/dartino_backend.dart' show
 
 import '../src/hub/exit_codes.dart' as exit_codes;
 
+import '../src/dartino_compiler_options.dart' show
+    DartinoCompilerOptions,
+    IncrementalMode;
+
 part 'caching_compiler.dart';
 
-const List<String> INCREMENTAL_OPTIONS = const <String>[
-    '--disable-type-inference',
-    '--incremental-support',
-    '--generate-code-with-compile-time-errors',
-    '--no-source-maps', // TODO(ahe): Remove this.
-];
-
-enum IncrementalMode {
-  /// Incremental compilation is turned off
-  none,
-
-  /// Incremental compilation is turned on for a limited set of features that
-  /// are known to be fully implemented. Initially, this limited set of
-  /// features will be instance methods without signature changes. As other
-  /// features mature, they will be enabled in this mode.
-  production,
-
-  /// All incremental features are turned on even if we know that we don't
-  /// always generate correct code. Initially, this covers features such as
-  /// schema changes.
-  experimental,
-}
-
 class IncrementalCompiler {
-  final Uri libraryRoot;
   final Uri nativesJson;
-  final Uri packageConfig;
   final Uri dartinoVm;
   final CompilerInput inputProvider;
-  final List<String> options;
+  final DartinoCompilerOptions options;
   final CompilerOutput outputProvider;
-  final Map<String, dynamic> environment;
   final IncrementalCompilerContext _context;
-  final IncrementalMode support;
-  final String platform;
   final Map<Uri, Uri> _updatedFiles = new Map<Uri, Uri>();
 
   DartinoCompilerImplementation _compiler;
@@ -119,21 +95,13 @@ class IncrementalCompiler {
   DartinoReuser _reuser;
 
   IncrementalCompiler(
-      {this.libraryRoot,
-       this.nativesJson,
-       this.packageConfig,
+      {this.nativesJson,
        this.dartinoVm,
        this.inputProvider,
        CompilerDiagnostics diagnosticHandler,
        this.options,
-       this.outputProvider,
-       this.environment,
-       this.support: IncrementalMode.none,
-       this.platform})
+       this.outputProvider})
       : _context = new IncrementalCompilerContext(diagnosticHandler) {
-    // if (libraryRoot == null) {
-    //   throw new ArgumentError('libraryRoot is null.');
-    // }
     if (inputProvider == null) {
       throw new ArgumentError('inputProvider is null.');
     }
@@ -143,11 +111,10 @@ class IncrementalCompiler {
     if (diagnosticHandler == null) {
       throw new ArgumentError('diagnosticHandler is null.');
     }
-    if (platform == null) {
-      throw new ArgumentError('platform is null.');
-    }
     _context.incrementalCompiler = this;
   }
+
+  IncrementalMode get support => options.incrementalMode;
 
   bool get isProductionModeEnabled {
     return support == IncrementalMode.production ||
@@ -172,7 +139,7 @@ class IncrementalCompiler {
   Future<bool> compile(Uri script, Uri base) {
     _compiler = null;
     _updatedFiles.clear();
-    return _reuseCompiler(null, base: base).then((CompilerImpl compiler) {
+    return _reuseCompiler(null, base).then((CompilerImpl compiler) {
       _compiler = compiler;
       return compiler.run(script);
     });
@@ -190,7 +157,7 @@ class IncrementalCompiler {
     _compiler = null;
     int initialErrorCount = _context.errorCount;
     int initialProblemCount = _context.problemCount;
-    return _reuseCompiler(null, analyzeOnly: true, base: base).then(
+    return _reuseCompiler(null, base, analyzeOnly: true).then(
         (CompilerImpl compiler) {
       // Don't try to reuse the compiler object.
       return compiler.run(script).then((_) {
@@ -205,27 +172,24 @@ class IncrementalCompiler {
 
   Future<CompilerImpl> _reuseCompiler(
       ReuseLibrariesFunction reuseLibraries,
-      {bool analyzeOnly: false,
-       Uri base}) {
-    List<String> options = this.options == null
-        ? <String> [] : new List<String>.from(this.options);
-    options.addAll(INCREMENTAL_OPTIONS);
-    if (analyzeOnly) {
-      options.add("--analyze-only");
+      Uri base,
+      {bool analyzeOnly: false}) {
+    DartinoCompilerOptions newOptions = options;
+    if (newOptions == null) {
+      newOptions = DartinoCompilerOptions.parse(const <String>[], base);
     }
+    newOptions = DartinoCompilerOptions.copy(
+        newOptions,
+        analyzeOnly: analyzeOnly);
     return reuseCompiler(
         cachedCompiler: _compiler,
-        libraryRoot: libraryRoot,
-        packageConfig: packageConfig,
         nativesJson: nativesJson,
         dartinoVm: dartinoVm,
         inputProvider: inputProvider,
         diagnosticHandler: _context,
-        options: options,
+        options: newOptions,
         outputProvider: outputProvider,
-        environment: environment,
         reuseLibraries: reuseLibraries,
-        platform: platform,
         base: base,
         incrementalCompiler: this);
   }
@@ -245,9 +209,9 @@ class IncrementalCompiler {
   Future<DartinoDelta> compileUpdates(
       DartinoSystem currentSystem,
       Map<Uri, Uri> updatedFiles,
+      Uri base,
       {Logger logTime,
-       Logger logVerbose,
-       Uri base}) {
+       Logger logVerbose}) {
     _checkCompilationFailed();
     if (logTime == null) {
       logTime = (_) {};
@@ -269,7 +233,7 @@ class IncrementalCompiler {
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(_reuser.reuseLibraries, base: base).then(
+    return _reuseCompiler(_reuser.reuseLibraries, base).then(
         (CompilerImpl compiler) async {
           _compiler = compiler;
           DartinoDelta delta =
@@ -422,33 +386,4 @@ class IncrementalCompilationFailed {
   const IncrementalCompilationFailed(this.reason);
 
   String toString() => "Can't incrementally compile program.\n\n$reason";
-}
-
-String unparseIncrementalMode(IncrementalMode mode) {
-  switch (mode) {
-    case IncrementalMode.none:
-      return "none";
-
-    case IncrementalMode.production:
-      return "production";
-
-    case IncrementalMode.experimental:
-      return "experimental";
-  }
-  throw "Unhandled $mode";
-}
-
-IncrementalMode parseIncrementalMode(String text) {
-  switch (text) {
-    case "none":
-      return IncrementalMode.none;
-
-    case "production":
-        return IncrementalMode.production;
-
-    case "experimental":
-      return IncrementalMode.experimental;
-
-  }
-  return null;
 }

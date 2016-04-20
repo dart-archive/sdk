@@ -89,7 +89,7 @@ class DartinoEnqueueTask extends CompilerTask implements EnqueueTask {
   DartinoEnqueueTask(DartinoCompilerImplementation compiler)
     : resolution = new ResolutionEnqueuer(
           compiler, compiler.backend.createItemCompilationContext,
-          compiler.analyzeOnly && compiler.analyzeMain
+          compiler.options.analyzeOnly && compiler.options.analyzeMain
               ? const EnqueuerStrategy() : const TreeShakingEnqueuerStrategy()),
       codegen = new DartinoEnqueuer(
           compiler, compiler.backend.createItemCompilationContext),

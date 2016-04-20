@@ -1058,9 +1058,10 @@ abstract class CodegenVisitor
   void doMainCall(Send node, NodeList arguments) {
     FunctionElement function = context.compiler.mainFunction;
     if (function.isMalformed) {
-      DiagnosticMessage message =
+      List<DiagnosticMessage> messages =
           context.compiler.elementsWithCompileTimeErrors[function];
-      if (message == null) {
+      DiagnosticMessage message;
+      if (messages == null) {
         // TODO(johnniwinther): The error should always be associated with the
         // element.
         // Example triggering this:
@@ -1070,6 +1071,8 @@ abstract class CodegenVisitor
         // ```
         message = context.compiler.reporter.createMessage(
             function, MessageKind.GENERIC, {'text': 'main is malformed.'});
+      } else {
+        message = messages.first;
       }
       doCompileError(message);
       return;
@@ -3114,10 +3117,10 @@ abstract class CodegenVisitor
   }
 
   bool checkCompileError(Element element) {
-    DiagnosticMessage message =
+    List<DiagnosticMessage> messages =
         context.compiler.elementsWithCompileTimeErrors[element];
-    if (message != null) {
-      doCompileError(message);
+    if (messages != null) {
+      doCompileError(messages.first);
       return true;
     }
     return false;

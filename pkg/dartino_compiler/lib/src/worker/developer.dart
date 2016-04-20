@@ -85,12 +85,14 @@ import '../verbs/infrastructure.dart' show
     throwFatalError;
 
 import '../../incremental/dartino_compiler_incremental.dart' show
-    IncrementalCompilationFailed,
+    IncrementalCompilationFailed;
+
+import '../dartino_compiler_options.dart' show
     IncrementalMode,
     parseIncrementalMode,
     unparseIncrementalMode;
 
-export '../../incremental/dartino_compiler_incremental.dart' show
+export '../dartino_compiler_options.dart' show
     IncrementalMode;
 
 import '../../dartino_compiler.dart' show dartinoDeviceType;
@@ -122,6 +124,9 @@ import '../../debug_state.dart' as debug show
 import '../vm_connection.dart' show
   TcpConnection,
   VmConnection;
+
+import '../dartino_compiler_options.dart' show
+    DartinoCompilerOptions;
 
 typedef Future<Null> ClientEventHandler(DartinoVmContext vmContext);
 
@@ -299,7 +304,7 @@ Future<int> compile(
         state.log("Compiling difference from $firstScript to $script");
         newResult = await compiler.compileUpdates(
             previousResults.last.system, <Uri, Uri>{firstScript: script},
-            logTime: state.log, logVerbose: state.log);
+            Uri.base, logTime: state.log, logVerbose: state.log);
       } on IncrementalCompilationFailed catch (error) {
         state.log(error);
         state.resetCompiler();
@@ -554,6 +559,7 @@ Future<Uri> readPathFromUser(
 
 SessionState createSessionState(
     String name,
+    Uri base,
     Settings settings,
     {Uri libraryRoot,
      Uri dartinoVm,
@@ -561,10 +567,7 @@ SessionState createSessionState(
   if (settings == null) {
     settings = const Settings.empty();
   }
-  List<String> compilerOptions =
-      const bool.fromEnvironment("dartino_compiler-verbose")
-      ? <String>['--verbose'] : <String>[];
-  compilerOptions.addAll(settings.compilerOptions);
+
   Uri packageConfig = settings.packages;
   if (packageConfig == null) {
     packageConfig = executable.resolve("dartino-sdk.packages");
@@ -577,12 +580,21 @@ SessionState createSessionState(
       ? "dartino_embedded.platform"
       : "dartino_mobile.platform";
 
-  DartinoCompiler compilerHelper = new DartinoCompiler(
-      options: compilerOptions,
-      packageConfig: packageConfig,
-      environment: settings.constants,
+  DartinoCompilerOptions compilerOptions = DartinoCompilerOptions.parse(
+      settings.compilerOptions,
+      base,
       platform: platform,
       libraryRoot: libraryRoot,
+      packageConfig: packageConfig,
+      environment: settings.constants);
+
+  if (const bool.fromEnvironment("dartino_compiler-verbose")) {
+    compilerOptions =
+        DartinoCompilerOptions.copy(compilerOptions, verbose: true);
+  }
+
+  DartinoCompiler compilerHelper = new DartinoCompiler(
+      options: compilerOptions,
       dartinoVm: dartinoVm,
       nativesJson: nativesJson);
 

@@ -42,22 +42,22 @@ import 'src/dartino_compiler_implementation.dart' show
 import 'dartino_system.dart';
 
 import 'incremental/dartino_compiler_incremental.dart' show
-    IncrementalCompiler,
-    IncrementalMode;
+    IncrementalCompiler;
 
 import 'src/guess_configuration.dart' show
+    StringOrUri,
+    computeValidatedUri,
     executable,
     guessDartinoVm;
 
-const String _LIBRARY_ROOT =
-    const String.fromEnvironment("dartino_compiler-library-root");
+import 'src/dartino_compiler_options.dart' show
+    DartinoCompilerOptions,
+    IncrementalMode;
 
 const String dartinoDeviceType =
     const String.fromEnvironment("dartino.device-type");
 const String _NATIVES_JSON =
     const String.fromEnvironment("dartino-natives-json");
-
-const String StringOrUri = "String or Uri";
 
 class DartinoCompiler {
   final DartinoCompilerImplementation _compiler;
@@ -66,15 +66,12 @@ class DartinoCompiler {
 
   final bool verbose;
 
-  final String platform;
-
   final Uri nativesJson;
 
   DartinoCompiler._(
       this._compiler,
       this.script,
       this.verbose,
-      this.platform,
       this.nativesJson);
 
   Backdoor get backdoor => new Backdoor(this);
@@ -83,32 +80,26 @@ class DartinoCompiler {
       {CompilerInput provider,
        CompilerOutput outputProvider,
        CompilerDiagnostics handler,
-       @StringOrUri libraryRoot,
-       @StringOrUri packageConfig,
        @StringOrUri script,
        @StringOrUri dartinoVm,
        @StringOrUri currentDirectory,
        @StringOrUri nativesJson,
-       List<String> options,
-       Map<String, dynamic> environment,
-       String platform,
+       DartinoCompilerOptions options,
        IncrementalCompiler incrementalCompiler}) {
 
-    Uri base = _computeValidatedUri(
+    Uri base = computeValidatedUri(
         currentDirectory, name: 'currentDirectory', ensureTrailingSlash: true);
     if (base == null) {
       base = Uri.base;
     }
 
+    script = computeValidatedUri(script, name: 'script', base: base);
+
     if (options == null) {
-      options = <String>[];
-    } else {
-      options = new List<String>.from(options);
+      options = DartinoCompilerOptions.parse(<String>[], base, script: script);
     }
 
-    options.add("--platform-config=$platform");
-
-    final bool isVerbose = CompilerImpl.hasOption(options, '--verbose');
+    final bool isVerbose = options.verbose;
 
     if (provider == null) {
       provider = new CompilerSourceFileProvider()
@@ -129,47 +120,13 @@ class DartinoCompiler {
       outputProvider = new OutputProvider();
     }
 
-    if (libraryRoot == null && _LIBRARY_ROOT != null) {
-      libraryRoot = executable.resolve(appendSlash(_LIBRARY_ROOT));
-    }
-    libraryRoot = _computeValidatedUri(
-        libraryRoot, name: 'libraryRoot', ensureTrailingSlash: true,
-        base: base);
-    if (libraryRoot == null) {
-      libraryRoot = _guessLibraryRoot(platform);
-      if (libraryRoot == null) {
-        throw new StateError("""
-Unable to guess the location of the Dart SDK (libraryRoot).
-Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
-      }
-    } else if (!_looksLikeLibraryRoot(libraryRoot, platform)) {
-      throw new ArgumentError(
-          "[libraryRoot]: Dart SDK library not found in '$libraryRoot'.");
-    }
-
-    script = _computeValidatedUri(script, name: 'script', base: base);
-
-    packageConfig = _computeValidatedUri(
-        packageConfig, name: 'packageConfig', base: base);
-    if (packageConfig == null) {
-      if (script != null) {
-        packageConfig = script.resolve('.packages');
-      } else {
-        packageConfig = base.resolve('.packages');
-      }
-    }
-
     dartinoVm = guessDartinoVm(
-        _computeValidatedUri(dartinoVm, name: 'dartinoVm', base: base));
-
-    if (environment == null) {
-      environment = <String, dynamic>{};
-    }
+        computeValidatedUri(dartinoVm, name: 'dartinoVm', base: base));
 
     if (nativesJson == null && _NATIVES_JSON != null) {
       nativesJson = base.resolve(_NATIVES_JSON);
     }
-    nativesJson = _computeValidatedUri(
+    nativesJson = computeValidatedUri(
         nativesJson, name: 'nativesJson', base: base);
 
     if (nativesJson == null) {
@@ -191,26 +148,23 @@ Try adding command-line option '-Ddartino-natives-json=<path to natives.json>.
         provider,
         outputProvider,
         handler,
-        libraryRoot,
-        packageConfig,
         nativesJson,
         options,
-        environment,
         dartinoVm,
         incrementalCompiler);
 
-    compiler.log("Using library root: $libraryRoot");
-    compiler.log("Using package config: $packageConfig");
+    compiler.log("Using library root: ${options.libraryRoot}");
+    compiler.log("Using package config: ${options.packageConfig}");
 
-    var helper = new DartinoCompiler._(
-        compiler, script, isVerbose, platform, nativesJson);
+    var helper =
+        new DartinoCompiler._(compiler, script, isVerbose, nativesJson);
     compiler.helper = helper;
     return helper;
   }
 
   Future<DartinoDelta> run([@StringOrUri script]) async {
     // TODO(ahe): Need a base argument.
-    script = _computeValidatedUri(script, name: 'script');
+    script = computeValidatedUri(script, name: 'script');
     if (script == null) {
       script = this.script;
     }
@@ -243,17 +197,13 @@ Try adding command-line option '-Ddartino-natives-json=<path to natives.json>.
   /// Create a new instance of [IncrementalCompiler].
   IncrementalCompiler newIncrementalCompiler(IncrementalMode support) {
     return new IncrementalCompiler(
-        libraryRoot: _compiler.libraryRoot,
-        packageConfig: _compiler.packageConfig,
         dartinoVm: _compiler.dartinoVm,
         nativesJson: _compiler.nativesJson,
         inputProvider: _compiler.provider,
         diagnosticHandler: _compiler.handler,
-        options: _compiler.options,
-        outputProvider: _compiler.userOutputProvider,
-        environment: _compiler.environment,
-        support: support,
-        platform: platform);
+        options: DartinoCompilerOptions.copy(
+            _compiler.options, incrementalMode: support),
+        outputProvider: _compiler.userOutputProvider);
   }
 }
 
@@ -282,51 +232,6 @@ Uri _resolveSymbolicLinks(Uri uri) {
     realLocation = appendSlash(realLocation);
   }
   return new Uri.file(realLocation);
-}
-
-bool _containsFile(Uri uri, String expectedFile) {
-  if (uri.scheme != 'file') return true;
-  return new File.fromUri(uri.resolve(expectedFile)).existsSync();
-}
-
-bool _looksLikeLibraryRoot(Uri uri, String platform) {
-  return _containsFile(uri, platform);
-}
-
-Uri _computeValidatedUri(
-    @StringOrUri stringOrUri,
-    {String name,
-     bool ensureTrailingSlash: false,
-     Uri base}) {
-  if (base == null) {
-    base = Uri.base;
-  }
-  assert(name != null);
-  if (stringOrUri == null) {
-    return null;
-  } else if (stringOrUri is String) {
-    if (ensureTrailingSlash) {
-      stringOrUri = appendSlash(stringOrUri);
-    }
-    return base.resolve(stringOrUri);
-  } else if (stringOrUri is Uri) {
-    return base.resolveUri(stringOrUri);
-  } else {
-    throw new ArgumentError("[$name] should be a String or a Uri.");
-  }
-}
-
-Uri _guessLibraryRoot(String platform) {
-  // When running from dartino, [executable] is
-  // ".../dartino-repo/sdk/out/$CONFIGURATION/dart", which means that the
-  // dartino root is the lib directory in the 2th parent directory (due to
-  // how URI resolution works, the filename ("dart") is removed before
-  // resolving, for example,
-  // ".../dartino-repo/sdk/out/$CONFIGURATION/../../" becomes
-  // ".../dartino-repo/sdk/").
-  Uri guess = executable.resolve('../../lib/');
-  if (_looksLikeLibraryRoot(guess, platform)) return guess;
-  return null;
 }
 
 bool _looksLikeNativesJson(Uri uri) {

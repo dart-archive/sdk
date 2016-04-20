@@ -38,8 +38,7 @@ import 'package:compiler/src/io/source_file.dart' show
 
 import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart'
     show
-        IncrementalCompiler,
-        IncrementalMode;
+        IncrementalCompiler;
 
 import 'package:dartino_compiler/vm_commands.dart' show
     VmCommand;
@@ -51,6 +50,10 @@ import 'package:dartino_compiler/dartino_system.dart' show
     DartinoDelta,
     DartinoFunction,
     DartinoSystem;
+
+import 'package:dartino_compiler/src/dartino_compiler_options.dart' show
+    DartinoCompilerOptions,
+    IncrementalMode;
 
 import 'program_result.dart' show
     EncodedResult,
@@ -238,19 +241,19 @@ class IncrementalTestHelper {
       this.compiler);
 
   factory IncrementalTestHelper(IncrementalMode incrementalMode) {
-    Uri packageConfig = Uri.base.resolve('.packages');
-    IoInputProvider inputProvider = new IoInputProvider(packageConfig);
+    DartinoCompilerOptions options = DartinoCompilerOptions.parse(
+        const <String>[], Uri.base, packageConfig: '.packages',
+        platform: "dartino_mobile.platform", incrementalMode: incrementalMode);
+    IoInputProvider inputProvider = new IoInputProvider(options.packageConfig);
     FormattingDiagnosticHandler diagnosticHandler =
         new FormattingDiagnosticHandler(inputProvider);
     IncrementalCompiler compiler = new IncrementalCompiler(
-        packageConfig: packageConfig,
+        options: options,
         inputProvider: inputProvider,
         diagnosticHandler: diagnosticHandler,
-        outputProvider: new OutputProvider(),
-        support: incrementalMode,
-        platform: "dartino_mobile.platform");
+        outputProvider: new OutputProvider());
     return new IncrementalTestHelper.internal(
-        packageConfig,
+        options.packageConfig,
         inputProvider,
         compiler);
   }
@@ -279,7 +282,7 @@ class IncrementalTestHelper {
       uriMap[customUriBase.resolve(name)] = uri;
     }
     DartinoDelta delta = await compiler.compileUpdates(
-        system, uriMap, logVerbose: logger, logTime: logger);
+        system, uriMap, Uri.base, logVerbose: logger, logTime: logger);
     system = delta.system;
     return delta;
   }

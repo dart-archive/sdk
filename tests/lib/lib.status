@@ -2,6 +2,8 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+async/stream_view_test: RuntimeError
+
 # Only meant to test when there is no way to implement Timer.
 async/timer_not_available_test: Fail, OK
 

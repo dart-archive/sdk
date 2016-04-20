@@ -29,8 +29,10 @@ import 'package:compiler/src/elements/elements.dart' show
 
 import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart'
     show
-        IncrementalCompiler,
-        IncrementalMode;
+        IncrementalCompiler;
+
+import 'package:dartino_compiler/src/dartino_compiler_options.dart' show
+    IncrementalMode;
 
 import 'package:dartino_compiler/vm_commands.dart' show
     CommitChangesResult,

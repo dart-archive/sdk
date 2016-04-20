@@ -1012,7 +1012,7 @@ class DartinoBackend extends Backend
       });
     }
 
-    if (compiler.verbose) {
+    if (compiler.options.verbose) {
       context.compiler.reportVerboseInfo(
           function, functionBuilder.verboseToString());
     }
@@ -1409,7 +1409,7 @@ class DartinoBackend extends Backend
 
   // TODO(sigurdm): Support async/await on the mobile platform.
   bool get supportsAsyncAwait {
-    return !compiler.platformConfigUri.path.contains("embedded");
+    return !compiler.options.platformConfigUri.path.contains("embedded");
   }
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
@@ -1552,7 +1552,7 @@ class DartinoBackend extends Backend
 
       codegen.compile();
 
-      if (compiler.verbose) {
+      if (compiler.options.verbose) {
         context.compiler.reportVerboseInfo(
             constructor, functionBuilder.verboseToString());
       }

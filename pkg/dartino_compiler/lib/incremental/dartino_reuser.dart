@@ -150,6 +150,9 @@ class DartinoReuser extends Reuser with DartinoFeatures {
   // TODO(ahe): If I remove this, I don't get type errors on backend.
   IncrementalDartinoBackend get backend => super.backend;
 
+  // TODO(ahe): If I remove this, I don't get type errors on backend.
+  DartinoCompilerImplementation get compiler => super.compiler;
+
   DartinoDelta computeUpdateDartino(DartinoSystem currentSystem) {
     List<Element> updatedElements = applyUpdates();
 
@@ -202,7 +205,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     compiler.phase = Compiler.PHASE_DONE_RESOLVING;
 
     // TODO(ahe): Clean this up. Don't call this method in analyze-only mode.
-    if (compiler.analyzeOnly) {
+    if (compiler.options.analyzeOnly) {
       return new DartinoDelta(currentSystem, currentSystem, <VmCommand>[]);
     }
 
@@ -225,7 +228,7 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     }
 
     FunctionElement callMain =
-        compiler.backend.dartinoSystemLibrary.findLocal('callMain');
+        dartinoContext.backend.dartinoSystemLibrary.findLocal('callMain');
     systemBuilder.replaceElementUsage(callMain, compiler.mainFunction);
 
     List<VmCommand> commands = <VmCommand>[];

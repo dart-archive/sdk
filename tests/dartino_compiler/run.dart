@@ -76,7 +76,7 @@ class DartinoRunner {
 
   Future<int> run(List<String> arguments, {int expectedExitCode: 0}) async {
     Settings settings = await computeSettings();
-    SessionState state = createSessionState("test", settings);
+    SessionState state = createSessionState("test", Uri.base, settings);
     for (String script in arguments) {
       print("Compiling $script");
       await compile(fileUri(script, Uri.base), state, Uri.base);
@@ -172,7 +172,7 @@ Future<Null> export(
   } else {
     settings = await readSettings(fileUri(dartinoSettingsFile, Uri.base));
   }
-  SessionState state = createSessionState("test", settings);
+  SessionState state = createSessionState("test", Uri.base, settings);
   await compile(fileUri(script, Uri.base), state, Uri.base);
   await startAndAttachDirectly(state, Uri.base);
   state.stdoutSink.attachCommandSender(stdout.add);
