@@ -113,7 +113,7 @@ namespace dartino {
   N(DoubleAtan2, "<none>", "_atan2", true)                                     \
   N(DoublePow, "<none>", "_pow", true)                                         \
                                                                                \
-  N(DateTimeGetCurrentMs, "DateTime", "_getCurrentMs", true)                   \
+  N(DateTimeGetCurrentMicros, "DateTime", "_getCurrentMicros", true)           \
   N(DateTimeTimeZone, "DateTime", "_timeZone", true)                           \
   N(DateTimeTimeZoneOffset, "DateTime", "_timeZoneOffset", true)               \
   N(DateTimeLocalTimeZoneOffset, "DateTime", "_localTimeZoneOffset", true)     \
@@ -150,7 +150,7 @@ namespace dartino {
   N(ForeignLibraryBundlePath, "ForeignLibrary", "bundleLibraryName", true)     \
                                                                                \
   N(ForeignBitsPerWord, "Foreign", "_bitsPerMachineWord", true)                \
-  N(ForeignBitsPerDouble, "Foreign", "_bitsPerDouble", true)                \
+  N(ForeignBitsPerDouble, "Foreign", "_bitsPerDouble", true)                   \
   N(ForeignErrno, "Foreign", "_errno", true)                                   \
   N(ForeignPlatform, "Foreign", "_platform", true)                             \
   N(ForeignArchitecture, "Foreign", "_architecture", true)                     \

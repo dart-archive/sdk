@@ -1439,9 +1439,9 @@ BEGIN_LEAF_NATIVE(TwoByteStringSubstring) {
 }
 END_NATIVE()
 
-BEGIN_LEAF_NATIVE(DateTimeGetCurrentMs) {
+BEGIN_LEAF_NATIVE(DateTimeGetCurrentMicros) {
   uint64 us = Platform::GetMicroseconds();
-  return process->ToInteger(us / 1000);
+  return process->ToInteger(us);
 }
 END_NATIVE()
 
