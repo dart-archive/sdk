@@ -154,4 +154,33 @@ TEST_CASE(DOUBLE_LIST_ERASE_ITERATOR) {
   EXPECT(all.IsEmpty());
 }
 
+TEST_CASE(DOUBLE_LIST_INSERT_ITERATOR) {
+  Item a1(1, 11), a2(2, 12), a3(3, 13), a4(4, 14);
+
+  DoubleList<Item> all;
+  all.Append(&a1);
+
+  auto it = all.Begin();
+  auto it2 = all.Insert(it, &a2);
+
+  EXPECT_EQ(*it2, &a2);
+  EXPECT_EQ(*it, &a1);
+
+  auto it3 = all.Insert(it2, &a3);
+  auto it4 = all.Insert(it, &a4);
+
+  EXPECT_EQ(*it3, &a3);
+  EXPECT_EQ(*it4, &a4);
+
+  EXPECT(it3 == all.Begin());
+  ++it3;
+  EXPECT_EQ(*it3, &a2);
+  ++it3;
+  EXPECT_EQ(*it3, &a4);
+  ++it3;
+  EXPECT_EQ(*it3, &a1);
+  ++it3;
+  EXPECT(it3 == all.End());
+}
+
 }  // namespace dartino.

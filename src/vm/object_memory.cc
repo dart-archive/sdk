@@ -38,48 +38,42 @@ Space::~Space() {
 }
 
 void Space::FreeAllChunks() {
-  Chunk* current = first();
-  while (current != NULL) {
-    Chunk* next = current->next();
+  for (auto it = chunk_list_.Begin(); it != chunk_list_.End();) {
+    Chunk* current = *it;
+    it = chunk_list_.Erase(it);
     ObjectMemory::FreeChunk(current);
-    current = next;
   }
-  first_ = last_ = NULL;
   top_ = limit_ = 0;
 }
 
 int Space::Size() {
   int result = 0;
-  Chunk* chunk = first();
-  while (chunk != NULL) {
-    result += chunk->size();
-    chunk = chunk->next();
-  }
+  for (auto chunk : chunk_list_) result += chunk->size();
   ASSERT(Used() <= result);
   return result;
 }
 
 word Space::OffsetOf(HeapObject* object) {
   uword address = object->address();
-  uword base = first()->start();
+  uword start = chunk_list_.First()->start();
 
   // Make sure the space consists of exactly one chunk!
-  ASSERT(first() == last());
-  ASSERT(first()->Includes(address));
-  ASSERT(base <= address);
+  ASSERT(chunk_list_.First() == chunk_list_.Last());
+  ASSERT(chunk_list_.First()->Includes(address));
+  ASSERT(start <= address);
 
-  return address - base;
+  return address - start;
 }
 
 HeapObject *Space::ObjectAtOffset(word offset) {
-  uword base = first()->start();
-  uword address = offset + base;
+  uword start = chunk_list_.First()->start();
+  uword address = offset + start;
 
   // Make sure the space consists of exactly one chunk!
-  ASSERT(first() == last());
+  ASSERT(chunk_list_.First() == chunk_list_.Last());
 
-  ASSERT(first()->Includes(address));
-  ASSERT(base <= address);
+  ASSERT(chunk_list_.First()->Includes(address));
+  ASSERT(start <= address);
 
   return HeapObject::FromAddress(address);
 }
@@ -103,7 +97,7 @@ void Space::IterateOverflowedObjects(PointerVisitor* visitor,
       Platform::kPageSize % (1 << GCMetadata::kCardSizeInBitsLog2) == 0,
       "MarkStackOverflowBytesMustCoverAFractionOfAPage");
 
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_) {
     uint8* bits = GCMetadata::OverflowBitsFor(chunk->start());
     uint8* bits_limit = GCMetadata::OverflowBitsFor(chunk->end());
     uword card = chunk->start();
@@ -142,7 +136,7 @@ void Space::IterateOverflowedObjects(PointerVisitor* visitor,
 void Space::IterateObjects(HeapObjectVisitor* visitor) {
   if (is_empty()) return;
   Flush();
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_) {
     visitor->ChunkStart(chunk);
     uword current = chunk->start();
     while (!HasSentinelAt(current)) {
@@ -157,7 +151,7 @@ void Space::IterateObjects(HeapObjectVisitor* visitor) {
 
 void SemiSpace::CompleteScavenge(PointerVisitor* visitor) {
   Flush();
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_) {
     uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
@@ -170,29 +164,24 @@ void SemiSpace::CompleteScavenge(PointerVisitor* visitor) {
 
 void SemiSpace::ClearMarkBits() {
   Flush();
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    GCMetadata::ClearMarkBitsFor(chunk);
-  }
+  for (auto chunk : chunk_list_) GCMetadata::ClearMarkBitsFor(chunk);
 }
 
 bool Space::Includes(uword address) {
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_)
     if (chunk->Includes(address)) return true;
-  }
   return false;
 }
 
 #ifdef DEBUG
 void Space::Find(uword w, const char* name) {
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    chunk->Find(w, name);
-  }
+  for (auto chunk : chunk_list_) chunk->Find(w, name);
 }
 #endif
 
 void Space::CompleteTransformations(PointerVisitor* visitor) {
   Flush();
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_) {
     uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
@@ -289,7 +278,7 @@ void ObjectMemory::FreeChunk(Chunk* chunk) {
 
 // Put free-list entries on the objects that are now dead.
 void OldSpace::RebuildAfterTransformations() {
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_) {
     uword free_start = 0;
     uword current = chunk->start();
     while (!HasSentinelAt(current)) {
@@ -313,7 +302,7 @@ void OldSpace::RebuildAfterTransformations() {
 
 // Put one-word-fillers on the dead objects so it is still iterable.
 void SemiSpace::RebuildAfterTransformations() {
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_) {
     uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);

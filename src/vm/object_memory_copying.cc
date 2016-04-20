@@ -24,9 +24,7 @@ static void WriteSentinelAt(uword address) {
 }
 
 Space::Space(Space::Resizing resizeable, PageType page_type)
-    : first_(NULL),
-      last_(NULL),
-      used_(0),
+    : used_(0),
       top_(0),
       limit_(0),
       allocation_budget_(0),
@@ -87,23 +85,26 @@ bool SemiSpace::IsAlive(HeapObject* old_location) {
 
 void Space::Append(Chunk* chunk) {
   ASSERT(chunk->owner() == this);
-  if (is_empty()) {
-    first_ = last_ = chunk;
-  } else {
-    ASSERT(resizeable_);
-    last_->set_next(chunk);
-    last_ = chunk;
-  }
-  chunk->set_next(NULL);
   if (GCMetadata::InMetadataRange(chunk->start())) {
     GCMetadata::InitializeOverflowBitsForChunk(chunk);
   }
+  // Insert chunk in increasing address order in the list.
+  uword start = 0;
+  for (auto it = chunk_list_.Begin(); it != chunk_list_.End(); ++it) {
+    ASSERT(it->start() > start);
+    start = it->start();
+    if (start > chunk->start()) {
+      chunk_list_.Insert(it, chunk);
+      return;
+    }
+  }
+  chunk_list_.Append(chunk);
 }
 
 void SemiSpace::Append(Chunk* chunk) {
   if (!is_empty()) {
     // Update the accounting.
-    used_ += top() - last()->start();
+    used_ += top() - chunk_list_.Last()->start();
   }
   Space::Append(chunk);
 }
@@ -165,7 +166,7 @@ uword SemiSpace::Allocate(int size) {
 
 int SemiSpace::Used() {
   if (is_empty()) return used_;
-  return used_ + (top() - last()->start());
+  return used_ + (top() - chunk_list_.Last()->start());
 }
 
 // Called multiple times until there is no more work.  Finds objects moved to
@@ -177,7 +178,7 @@ bool SemiSpace::CompleteScavengeGenerational(
   uint8 dummy;
   visitor->set_record_new_space_pointers(&dummy);
 
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_) {
     uword current = chunk->scavenge_pointer();
     while (!HasSentinelAt(current)) {
       found_work = true;

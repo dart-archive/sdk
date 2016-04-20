@@ -8,10 +8,12 @@
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
+#include "src/vm/double_list.h"
 #include "src/vm/weak_pointer.h"
 
 namespace dartino {
 
+class Chunk;
 class FreeList;
 class GenerationalScavengeVisitor;
 class Heap;
@@ -33,15 +35,13 @@ enum PageType {
   kNewSpacePage
 };
 
+typedef DoubleList<Chunk> ChunkList;
+
 // A chunk represents a block of memory provided by ObjectMemory.
-class Chunk {
+class Chunk : public ChunkList::Entry {
  public:
   // The space owning this chunk.
   Space* owner() const { return owner_; }
-
-  // The next chunk in same space.
-  Chunk* next() const { return next_; }
-  void set_next(Chunk* value) { next_ = value; }
 
   // Returns the first address in this chunk.
   uword start() const { return start_; }
@@ -82,15 +82,12 @@ class Chunk {
   const bool external_;
   uword scavenge_pointer_;
 
-  Chunk* next_;
-
   Chunk(Space* owner, uword start, uword size, bool external = false)
       : owner_(owner),
         start_(start),
         end_(start + size),
         external_(external),
-        scavenge_pointer_(start_),
-        next_(NULL) {}
+        scavenge_pointer_(start_) {}
 
   ~Chunk();
 
@@ -172,7 +169,7 @@ class Space {
     return no_allocation_failure_nesting_ != 0;
   }
 
-  bool is_empty() const { return first_ == NULL; }
+  bool is_empty() const { return chunk_list_.IsEmpty(); }
 
   static int DefaultChunkSize(int heap_size) {
     // We return a value between kDefaultMinimumChunkSize and
@@ -193,18 +190,23 @@ class Space {
 #endif
 
   uword start() {
-    ASSERT(first_ == last_);
-    return first_->start();
+    ASSERT(chunk_list_.First() == chunk_list_.Last());
+    return chunk_list_.First()->start();
   }
 
   uword size() {
-    ASSERT(first_ == last_);
-    return first_->size();
+    ASSERT(chunk_list_.First() == chunk_list_.Last());
+    return chunk_list_.First()->size();
   }
 
   bool IsInSingleChunk(HeapObject* object) {
-    ASSERT(first_ == last_);
+    ASSERT(chunk_list_.First() == chunk_list_.Last());
     return reinterpret_cast<uword>(object) - start() < size();
+  }
+
+  Chunk* chunk() {
+    ASSERT(chunk_list_.First() == chunk_list_.Last());
+    return chunk_list_.First();
   }
 
   WeakPointerList* weak_pointers() { return &weak_pointers_; }
@@ -224,9 +226,6 @@ class Space {
 
   void FreeAllChunks();
 
-  Chunk* first() { return first_; }
-  Chunk* last() { return last_; }
-
   uword top() { return top_; }
 
   void IncrementNoAllocationFailureNesting() {
@@ -238,8 +237,7 @@ class Space {
     --no_allocation_failure_nesting_;
   }
 
-  Chunk* first_;           // First chunk in this space.
-  Chunk* last_;            // Last chunk in this space.
+  ChunkList chunk_list_;
   int used_;               // Allocated bytes.
   uword top_;              // Allocation top in current chunk.
   uword limit_;            // Allocation limit in current chunk.
