@@ -376,7 +376,9 @@ void GenerationalScavengeVisitor::VisitBlock(Object** start, Object** end) {
 void SemiSpace::StartScavenge() {
   Flush();
 
-  for (auto chunk : chunk_list_) chunk->set_scavenge_pointer(chunk->start());
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+    chunk->set_scavenge_pointer(chunk->start());
+  }
 }
 
 #ifdef DEBUG

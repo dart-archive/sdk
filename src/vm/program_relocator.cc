@@ -115,20 +115,22 @@ int ProgramHeapRelocator::Relocate() {
   // Make sure we only have one chunk in the heap so that we can linearly
   // relocate objects to the new base.
   SemiSpace* space = program_->heap()->space();
+  if (space->first() == NULL || space->first() != space->last()) {
+    FATAL("We have more chunks than supported. Go fix the runtime!\n");
+  }
 
   DEBUG_PRINT("Relocating %p to %lx\n", program_, baseaddress_);
 
-  // If this fails in an assert then we have more chunks than supported. Go fix
-  // the runtime!
-  int heap_size = space->size();
+  Chunk* chunk = space->first();
+  int heap_size = chunk->size();
 
   // heap + roots + main_arity
   int total_size = heap_size + sizeof(ProgramInfoBlock);
   memcpy(reinterpret_cast<void*>(target_),
-         reinterpret_cast<void*>(space->start()), heap_size);
+         reinterpret_cast<void*>(chunk->start()), heap_size);
   uword target_base = reinterpret_cast<uword>(target_);
 
-  RelocationVisitor relocator(space->start(), target_base, baseaddress_);
+  RelocationVisitor relocator(chunk->start(), target_base, baseaddress_);
 
   program_->heap()->space()->IterateObjects(&relocator);
 
@@ -144,7 +146,7 @@ int ProgramHeapRelocator::Relocate() {
   // Now fix up root pointers in the copy.
   PointerRebasingVisitor visitor(reinterpret_cast<uword>(program_),
                                  reinterpret_cast<uword>(target_program),
-                                 space->start(), baseaddress_);
+                                 chunk->start(), baseaddress_);
   program_->IterateRoots(&visitor);
 
   DEBUG_PRINT("Writing relocated roots to info block...\n");

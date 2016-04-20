@@ -184,7 +184,7 @@ void OldSpace::EndTrackingAllocations() {
 
 void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
   Flush();
-  for (auto chunk : chunk_list_) {
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     // Scan the byte-map for cards that may have new-space pointers.
     uword current = chunk->start();
     uword bytes =
@@ -343,7 +343,7 @@ void OldSpace::ProcessWeakPointers() {
 void OldSpace::Verify() {
   // Verify that the object starts table contains only legitimate object start
   // addresses for each chunk in the space.
-  for (auto chunk : chunk_list_) {
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword base = chunk->start();
     uword limit = chunk->end();
     uint8* starts = GCMetadata::StartsFor(base);
@@ -365,7 +365,7 @@ void OldSpace::Verify() {
   }
   // Verify that the remembered set table is marked for all objects that
   // contain new-space pointers.
-  for (auto chunk : chunk_list_) {
+  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
     uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
