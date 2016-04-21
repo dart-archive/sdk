@@ -253,13 +253,13 @@ abstract class Reuser {
       Token token = new Scanner(_entrySourceFiles[library]).tokenize();
       _entryUnitTokens[library] = token;
       // Using two parsers to only create the nodes we want ([LibraryTag]).
-      Parser parser = new Parser(new Listener());
+      Parser parser = new Parser(new Listener(), compiler.options);
       Element entryCompilationUnit = library.entryCompilationUnit;
       NodeListener listener = new NodeListener(
           compiler.resolution.parsing
               .getScannerOptionsFor(entryCompilationUnit),
           compiler.reporter, entryCompilationUnit);
-      Parser nodeParser = new Parser(listener);
+      Parser nodeParser = new Parser(listener, compiler.options);
       Iterator<LibraryTag> tags = library.tags.iterator;
       while (token.kind != EOF_TOKEN) {
         token = parser.parseMetadataStar(token);

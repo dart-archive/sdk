@@ -2108,13 +2108,6 @@ abstract class CodegenVisitor
       AssignmentOperator operator,
       Node rhs,
       _) {
-    if (operator.kind == AssignmentOperatorKind.IF_NULL) {
-      // TODO(sigurdm): This case should not go here.
-      // This redirection should be removed in a future roll of the dart2js
-      // frontend.
-      visitIndexSetIfNotNull(node, receiver, index, rhs,_);
-      return;
-    }
     visitForValue(receiver);
     visitForValue(index);
     // Load already evaluated receiver and index for '[]' call.
@@ -3775,6 +3768,40 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void visitIndexSetIfNull(
+      SendSet node, Node receiver, Node index, Node rhs, _) {
+    generateUnimplementedError(
+        node, "[visitIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitSuperIndexSetIfNull(SendSet node, MethodElement getter,
+      MethodElement setter, Node index, Node rhs, _) {
+    generateUnimplementedError(
+        node, "[visitSuperIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperGetterIndexSetIfNull(Send node, Element element,
+      MethodElement setter, Node index, Node rhs, _){
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperGetterIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperSetterIndexSetIfNull(Send node, MethodElement getter,
+      Element element, Node index, Node rhs, _){
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperSetterIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperIndexSetIfNull(
+      Send node, Element element, Node index, Node rhs, _){
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
 
   void previsitDeferredAccess(Send node, PrefixElement prefix, _) {
     // We don't support deferred access, so nothing to do for now.

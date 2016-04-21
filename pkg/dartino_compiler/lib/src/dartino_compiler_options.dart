@@ -7,14 +7,12 @@ library dartino_compiler.dartino_compiler_options;
 import 'dart:io' show
     File;
 
-import 'package:compiler/compiler_new.dart' show
-    CompilerOptions;
+import 'package:compiler/src/options.dart' show
+    CompilerOptions,
+    DiagnosticOptions;
 
 import 'package:compiler/compiler.dart' show
     PackagesDiscoveryProvider;
-
-import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
-    DiagnosticOptions;
 
 import 'guess_configuration.dart' show
     StringOrUri,
@@ -62,8 +60,6 @@ class DartinoCompilerOptions implements CompilerOptions {
 
   @override final String buildId;
 
-  @override final DiagnosticOptions diagnosticOptions;
-
   @override final Uri platformConfigUri;
 
   @override final bool preserveUris;
@@ -83,7 +79,6 @@ class DartinoCompilerOptions implements CompilerOptions {
       this.analyzeOnly,
       this.analyzeSignaturesOnly,
       this.buildId,
-      this.diagnosticOptions,
       this.platformConfigUri,
       this.preserveUris,
       this.verbose,
@@ -160,6 +155,22 @@ class DartinoCompilerOptions implements CompilerOptions {
 
   @override List<String> get strips => _unsupported;
 
+  @override bool get enableGenericMethodSyntax => false;
+
+  @override bool get fatalWarnings => false;
+
+  @override bool get terseDiagnostics => false;
+
+  @override bool get suppressWarnings => false;
+
+  @override bool get suppressHints => false;
+
+  @override bool get showAllPackageWarnings => true;
+
+  @override bool get hidePackageWarnings => false;
+
+  @override bool showPackageWarningsFor(Uri uri) => true;
+
   static DartinoCompilerOptions copy(
       CompilerOptions options,
       {Uri libraryRoot,
@@ -170,7 +181,6 @@ class DartinoCompilerOptions implements CompilerOptions {
        bool analyzeOnly,
        bool analyzeSignaturesOnly,
        String buildId,
-       DiagnosticOptions diagnosticOptions,
        Uri platformConfigUri,
        bool preserveUris,
        bool verbose,
@@ -185,7 +195,6 @@ class DartinoCompilerOptions implements CompilerOptions {
         analyzeOnly ?? options.analyzeOnly,
         analyzeSignaturesOnly ?? options.analyzeSignaturesOnly,
         buildId ?? options.buildId,
-        diagnosticOptions ?? options.diagnosticOptions,
         platformConfigUri ?? options.platformConfigUri,
         preserveUris ?? options.preserveUris,
         verbose ?? options.verbose,

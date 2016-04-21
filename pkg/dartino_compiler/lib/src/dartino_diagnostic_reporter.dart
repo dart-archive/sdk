@@ -10,9 +10,6 @@ import 'package:compiler/src/tokens/token.dart' show
 import 'package:compiler/src/compiler.dart' show
     CompilerDiagnosticReporter;
 
-import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
-    DiagnosticOptions;
-
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
@@ -31,6 +28,9 @@ import 'package:compiler/src/diagnostics/messages.dart' show
 import 'please_report_crash.dart' show
     crashReportRequested,
     requestBugReportOnCompilerCrashMessage;
+
+import 'dartino_compiler_options.dart' show
+    DartinoCompilerOptions;
 
 final String padding = MessageTemplate.MIRRORS_NOT_SUPPORTED_BY_BACKEND_PADDING;
 
@@ -57,7 +57,7 @@ Your app imports dart:mirrors via:$padding#{importChain}""")
 class DartinoDiagnosticReporter extends CompilerDiagnosticReporter {
   DartinoDiagnosticReporter(
       DartinoCompilerImplementation compiler,
-      DiagnosticOptions options)
+      DartinoCompilerOptions options)
       : super(compiler, options);
 
   DartinoCompilerImplementation get compiler => super.compiler;
@@ -101,7 +101,7 @@ class DartinoDiagnosticReporter extends CompilerDiagnosticReporter {
 
   static DartinoDiagnosticReporter createInstance(
       DartinoCompilerImplementation compiler,
-      DiagnosticOptions options) {
+      DartinoCompilerOptions options) {
     return new DartinoDiagnosticReporter(compiler, options);
   }
 }
