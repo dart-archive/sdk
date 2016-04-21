@@ -39,7 +39,7 @@ vars = {
   "pub_semver_tag": "@1.2.1",
   "collection_rev": "@f6135e6350c63eb3f4dd12953b8d4363faff16fc",
 
-  "lk_rev": "@ec0c0f5180308086405161f166a617a395369d72",
+  "lk_rev": "@ce0a3db7052e7b33de14685ba7158a4ddf5bd9f5",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.

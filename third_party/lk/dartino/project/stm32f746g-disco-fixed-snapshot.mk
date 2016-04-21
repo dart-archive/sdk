@@ -4,12 +4,9 @@
 
 include project/target/stm32f746g-disco.mk
 
-MODULES += app/dartino-fixed lib/gfx
-
-ARCH_arm_COMPILEFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-
-DARTINO_CONFIGURATION = LK
-DARTINO_GYP_DEFINES = "LK_PROJECT=stm32f746g-disco-dartino LK_CPU=cortex-m4 LK_FPU=fpv4-sp-d16 LK_FLOAT-ABI=hard"
+MODULES += \
+	app/dartino-fixed \
+	lib/gfx
 
 WITH_CPP_SUPPORT=true
 

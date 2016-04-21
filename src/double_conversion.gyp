@@ -15,7 +15,7 @@
       'target_conditions': [
         ['_toolset == "target"', {
           'standalone_static_library': 1,
-	}]],
+      }]],
       'toolsets': ['target', 'host'],
       'sources': [
         '../third_party/double-conversion/src/bignum-dtoa.cc',

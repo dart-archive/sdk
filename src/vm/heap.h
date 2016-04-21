@@ -338,7 +338,7 @@ inline word AsForeignWord(Object* object) {
   if (object->IsSmi()) return Smi::cast(object)->value();
   if (object->IsLargeInteger()) return LargeInteger::cast(object)->value();
   dartino_double value = Double::cast(object)->value();
-#if DARTINO_USE_SINGLE_PRECISION
+#ifdef DARTINO_USE_SINGLE_PRECISION
   return bit_cast<int32>(value);
 #else
   return static_cast<word>(bit_cast<int64>(value));

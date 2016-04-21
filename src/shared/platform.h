@@ -92,7 +92,7 @@ bool StoreFile(const char* uri, List<uint8> bytes);
 // Write text to file, append if the bool append is true.
 bool WriteText(const char* uri, const char* text, bool append);
 
-#if DEBUG
+#ifdef DEBUG
 void WaitForDebugger();
 #endif
 
