@@ -162,16 +162,23 @@ int ProcessDebugInfo::SetStepping() {
   return Breakpoint::kNoBreakpointId;
 }
 
-// Converse to SetStepping, ClearStepping restores bytecode breaks for the
-// actual breakpoints and clears the current breakpoint. This can only be called
-// when the state was actually stepping and the current breakpoint is a cause of
-// stepping.
-void ProcessDebugInfo::ClearStepping() {
+// Converse to SetStepping, ClearSteppingFromBreakPoint restores bytecode breaks
+// for the actual breakpoints and clears the current breakpoint. This can only
+// be called when the state was actually stepping and the current breakpoint is
+// a cause of stepping.
+void ProcessDebugInfo::ClearSteppingFromBreakPoint() {
   ASSERT(is_stepping_);
   ASSERT(is_at_breakpoint_);
   ASSERT(current_breakpoint_id_ == Breakpoint::kNoBreakpointId);
   is_stepping_ = false;
   ClearCurrentBreakpoint();
+}
+
+// Clears the stepping when the program has stopped for another reason than
+// hitting a breakpoint.
+void ProcessDebugInfo::ClearSteppingInterrupted() {
+  ASSERT(is_stepping_);
+  is_stepping_ = false;
 }
 
 void ProgramDebugInfo::VisitProgramPointers(PointerVisitor* visitor) {

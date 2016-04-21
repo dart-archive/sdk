@@ -120,7 +120,9 @@ class ProcessDebugInfo {
   // Returns kNoBreakpointId associated with having set stepping.
   int SetStepping();
 
-  void ClearStepping();
+  void ClearSteppingFromBreakPoint();
+
+  void ClearSteppingInterrupted();
 
   void ClearCurrentBreakpoint() {
     ASSERT(is_at_breakpoint_);

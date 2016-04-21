@@ -323,6 +323,10 @@ class RunningState : public ScheduledState {
   Scheduler::ProcessInterruptionEvent HandleUncaughtException(
       Process* process) {
     if (IsDebuggingEnabled() || ObserveTermination(process)) {
+      ProcessDebugInfo* debug_info = process->debug_info();
+      if (debug_info->is_stepping()) {
+        debug_info->ClearSteppingInterrupted();
+      }
       WriteBuffer buffer;
       connection()->Send(Connection::kUncaughtException, buffer);
       // If observing termination, remain paused to allow access to the
@@ -334,6 +338,10 @@ class RunningState : public ScheduledState {
 
   Scheduler::ProcessInterruptionEvent HandleCompileTimeError(Process* process) {
     if (IsDebuggingEnabled() || ObserveTermination(process)) {
+      ProcessDebugInfo* debug_info = process->debug_info();
+      if (debug_info->is_stepping()) {
+        debug_info->ClearSteppingInterrupted();
+      }
       WriteBuffer buffer;
       connection()->Send(Connection::kProcessCompileTimeError, buffer);
       // If observing termination, remain paused to allow access to the
@@ -381,7 +389,7 @@ class RunningState : public ScheduledState {
     // TODO(zerny): Stepping is per-process, but should be cleared at a program
     // level.
     if (debug_info->is_stepping()) {
-      debug_info->ClearStepping();
+      debug_info->ClearSteppingFromBreakPoint();
     }
     WriteBuffer buffer;
     buffer.WriteInt(breakpoint_id);
