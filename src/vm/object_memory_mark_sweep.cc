@@ -91,7 +91,6 @@ Chunk* OldSpace::AllocateAndUseChunk(uword size) {
     UseWholeChunk(chunk);
     GCMetadata::InitializeStartsForChunk(chunk);
     GCMetadata::InitializeRememberedSetForChunk(chunk);
-    GCMetadata::InitializeOverflowBitsForChunk(chunk);
     GCMetadata::ClearMarkBitsFor(chunk);
   }
   return chunk;

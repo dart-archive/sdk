@@ -85,19 +85,30 @@ bool SemiSpace::IsAlive(HeapObject* old_location) {
 
 void Space::Append(Chunk* chunk) {
   ASSERT(chunk->owner() == this);
-  if (GCMetadata::InMetadataRange(chunk->start())) {
-    GCMetadata::InitializeOverflowBitsForChunk(chunk);
+  // Insert chunk in increasing address order in the list.  This is
+  // useful for the partial compactor.
+  uword start = 0;
+  for (auto it = chunk_list_.Begin(); it != chunk_list_.End(); ++it) {
+    ASSERT(it->start() > start);
+    start = it->start();
+    if (start > chunk->start()) {
+      chunk_list_.Insert(it, chunk);
+      return;
+    }
   }
-  // TODO(erikcorry): Insert chunk in increasing address order in the list.
   chunk_list_.Append(chunk);
 }
 
 void SemiSpace::Append(Chunk* chunk) {
+  ASSERT(chunk->owner() == this);
   if (!is_empty()) {
     // Update the accounting.
     used_ += top() - chunk_list_.Last()->start();
   }
-  Space::Append(chunk);
+  // For the semispaces, we always append the chunk to the end of the space.
+  // This ensures that when iterating over newly promoted objects during a
+  // scavenge we will see the objects newly promoted to newly allocated chunks.
+  chunk_list_.Append(chunk);
 }
 
 uword SemiSpace::TryAllocate(uword size) {

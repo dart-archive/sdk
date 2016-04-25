@@ -24,6 +24,17 @@ static bool HasSentinelAt(uword address) {
   return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
 }
 
+Chunk::Chunk(Space* owner, uword start, uword size, bool external)
+      : owner_(owner),
+        start_(start),
+        end_(start + size),
+        external_(external),
+        scavenge_pointer_(start_) {
+  if (GCMetadata::InMetadataRange(start)) {
+    GCMetadata::InitializeOverflowBitsForChunk(this);
+  }
+}
+
 Chunk::~Chunk() {
   // If the memory for this chunk is external we leave it alone
   // and let the embedder deallocate it.

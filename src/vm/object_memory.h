@@ -82,13 +82,7 @@ class Chunk : public ChunkList::Entry {
   const bool external_;
   uword scavenge_pointer_;
 
-  Chunk(Space* owner, uword start, uword size, bool external = false)
-      : owner_(owner),
-        start_(start),
-        end_(start + size),
-        external_(external),
-        scavenge_pointer_(start_) {}
-
+  Chunk(Space* owner, uword start, uword size, bool external = false);
   ~Chunk();
 
   void set_owner(Space* value) { owner_ = value; }
