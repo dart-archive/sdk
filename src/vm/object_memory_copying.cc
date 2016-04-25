@@ -88,16 +88,7 @@ void Space::Append(Chunk* chunk) {
   if (GCMetadata::InMetadataRange(chunk->start())) {
     GCMetadata::InitializeOverflowBitsForChunk(chunk);
   }
-  // Insert chunk in increasing address order in the list.
-  uword start = 0;
-  for (auto it = chunk_list_.Begin(); it != chunk_list_.End(); ++it) {
-    ASSERT(it->start() > start);
-    start = it->start();
-    if (start > chunk->start()) {
-      chunk_list_.Insert(it, chunk);
-      return;
-    }
-  }
+  // TODO(erikcorry): Insert chunk in increasing address order in the list.
   chunk_list_.Append(chunk);
 }
 
