@@ -289,7 +289,7 @@ static void* GetRandomMmapAddr() {
   return reinterpret_cast<void*>(address);
 }
 
-static void* RandomizedVirtualAlloc(size_t size, int action) {
+static void* RandomizedVirtualAlloc(uword size, int action) {
   LPVOID base = NULL;
 
   // Try to randomize the allocation address.
@@ -303,7 +303,7 @@ static void* RandomizedVirtualAlloc(size_t size, int action) {
   return base;
 }
 
-VirtualMemory::VirtualMemory(int size) : size_(size) {
+VirtualMemory::VirtualMemory(uword size) : size_(size) {
   address_ = RandomizedVirtualAlloc(size, MEM_RESERVE);
 }
 
@@ -311,14 +311,14 @@ VirtualMemory::~VirtualMemory() { VirtualFree(address_, size_, MEM_RELEASE); }
 
 bool VirtualMemory::IsReserved() const { return address_ == NULL; }
 
-bool VirtualMemory::Commit(void* address, int size) {
+bool VirtualMemory::Commit(void* address, uword size) {
   if (NULL == VirtualAlloc(address, size, MEM_COMMIT, PAGE_READWRITE)) {
     return false;
   }
   return true;
 }
 
-bool VirtualMemory::Uncommit(void* address, int size) {
+bool VirtualMemory::Uncommit(void* address, uword size) {
   return VirtualFree(address, size, MEM_DECOMMIT) != 0;
 }
 

@@ -46,7 +46,7 @@ static void CopyBlock(Object** dst, Object** src, int byte_size) {
   }
 }
 
-int HeapObject::Size() {
+uword HeapObject::Size() {
   // Fast check for non-variable length types.
   ASSERT(!HasForwardingAddress());
   InstanceFormat format = raw_class()->instance_format();
@@ -80,7 +80,7 @@ int HeapObject::Size() {
   return 0;
 }
 
-int HeapObject::FixedSize() {
+uword HeapObject::FixedSize() {
   // Fast check for non variable length types.
   ASSERT(!HasForwardingAddress());
   InstanceFormat format = raw_class()->instance_format();
@@ -507,7 +507,7 @@ void Class::ClassPrint() {
     Print::Out("  - number of instance fields = %d\n",
                NumberOfInstanceFields());
   }
-  int size = instance_format().fixed_size();
+  uword size = instance_format().fixed_size();
   Print::Out("  - instance object size = %d\n", size);
   Print::Out("  - methods = ");
   methods()->ShortPrint();
@@ -523,7 +523,7 @@ InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
   InstanceFormat format = get_class()->instance_format();
   // Fast case for fixed size object with all pointers.
   if (format.only_pointers_in_fixed_part()) {
-    size_t size = format.fixed_size();
+    uword size = format.fixed_size();
     if (size > kPointerSize) {
       visitor->VisitBlock(
           reinterpret_cast<Object**>(address() + kPointerSize),
@@ -729,8 +729,8 @@ void HeapObject::HeapObjectShortPrint() {
   }
 }
 
-int CookedHeapObjectPointerVisitor::Visit(HeapObject* object) {
-  int size = object->Size();
+uword CookedHeapObjectPointerVisitor::Visit(HeapObject* object) {
+  uword size = object->Size();
   if (object->IsStack()) {
     visitor_->VisitClass(reinterpret_cast<Object**>(object->address()));
     // We make sure to visit one extra slot which is now the function

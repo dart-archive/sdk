@@ -101,15 +101,15 @@ class Chunk : public ChunkList::Entry {
 // Space is a chain of chunks. It supports allocation and traversal.
 class Space {
  public:
-  static const int kDefaultMinimumChunkSize = Platform::kPageSize;
-  static const int kDefaultMaximumChunkSize = 256 * KB;
+  static const uword kDefaultMinimumChunkSize = Platform::kPageSize;
+  static const uword kDefaultMaximumChunkSize = 256 * KB;
 
   virtual ~Space();
 
   enum Resizing { kCanResize, kCannotResize };
 
   // Returns the total size of allocated objects.
-  virtual int Used() = 0;
+  virtual uword Used() = 0;
 
   // Flush will make the current chunk consistent for iteration.
   virtual void Flush() = 0;
@@ -130,10 +130,10 @@ class Space {
   // space after transformations.
   virtual void RebuildAfterTransformations() = 0;
 
-  void set_used(int used) { used_ = used; }
+  void set_used(uword used) { used_ = used; }
 
   // Returns the total size of allocated chunks.
-  int Size();
+  uword Size();
 
   // Iterate over all objects in this space.
   void IterateObjects(HeapObjectVisitor* visitor);
@@ -149,13 +149,13 @@ class Space {
   bool Includes(uword address);
 
   // Adjust the allocation budget based on the current heap size.
-  void AdjustAllocationBudget(int used_outside_space);
+  void AdjustAllocationBudget(uword used_outside_space);
 
-  void IncreaseAllocationBudget(int size);
+  void IncreaseAllocationBudget(uword size);
 
-  void DecreaseAllocationBudget(int size);
+  void DecreaseAllocationBudget(uword size);
 
-  void SetAllocationBudget(int new_budget);
+  void SetAllocationBudget(word new_budget);
 
   // Tells whether garbage collection is needed.  Only to be called when
   // bump allocation has failed, or on old space after a new-space GC.
@@ -171,7 +171,7 @@ class Space {
 
   bool is_empty() const { return chunk_list_.IsEmpty(); }
 
-  static int DefaultChunkSize(int heap_size) {
+  static uword DefaultChunkSize(uword heap_size) {
     // We return a value between kDefaultMinimumChunkSize and
     // kDefaultMaximumChunkSize - and try to keep the chunks smaller than 20% of
     // the heap.
@@ -238,10 +238,10 @@ class Space {
   }
 
   ChunkList chunk_list_;
-  int used_;               // Allocated bytes.
-  uword top_;              // Allocation top in current chunk.
-  uword limit_;            // Allocation limit in current chunk.
-  int allocation_budget_;  // Budget before needing a GC.
+  uword used_;              // Allocated bytes.
+  uword top_;               // Allocation top in current chunk.
+  uword limit_;             // Allocation limit in current chunk.
+  word allocation_budget_;  // Budget before needing a GC.
   int no_allocation_failure_nesting_;
   bool resizeable_;
   // Linked list of weak pointers to heap objects in this space.
@@ -252,10 +252,10 @@ class Space {
 class SemiSpace : public Space {
  public:
   explicit SemiSpace(Resizing resizeable, PageType page_type,
-                     int maximum_initial_size);
+                     uword maximum_initial_size);
 
   // Returns the total size of allocated objects.
-  virtual int Used();
+  virtual uword Used();
 
   virtual bool IsAlive(HeapObject* old_location);
   virtual HeapObject* NewLocation(HeapObject* old_location);
@@ -274,7 +274,7 @@ class SemiSpace : public Space {
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and
   // there is no room to allocate the object.
-  uword Allocate(int size);
+  uword Allocate(uword size);
 
   // For the program semispaces.  There is no other space into which we
   // promote, so it does all work in one go.
@@ -295,11 +295,11 @@ class SemiSpace : public Space {
   void ClearMarkBits();
 
  private:
-  Chunk* AllocateAndUseChunk(size_t size);
+  Chunk* AllocateAndUseChunk(uword size);
 
-  uword AllocateInNewChunk(int size);
+  uword AllocateInNewChunk(uword size);
 
-  uword TryAllocate(int size);
+  uword TryAllocate(uword size);
 };
 
 class OldSpace : public Space {
@@ -313,7 +313,7 @@ class OldSpace : public Space {
   // OldSpace is currently non-moving, so it returns old_location.
   virtual HeapObject* NewLocation(HeapObject* old_location);
 
-  virtual int Used();
+  virtual uword Used();
 
   // Instance transformation leaves garbage in the heap that needs to be
   // added to freelists when using mark-sweep collection.
@@ -325,7 +325,7 @@ class OldSpace : public Space {
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and
   // there is no room to allocate the object.
-  uword Allocate(int size);
+  uword Allocate(uword size);
 
   FreeList* free_list() const { return free_list_; }
 
@@ -350,9 +350,9 @@ class OldSpace : public Space {
 #endif
 
  private:
-  uword AllocateFromFreeList(int size);
-  uword AllocateInNewChunk(int size);
-  Chunk* AllocateAndUseChunk(int size);
+  uword AllocateFromFreeList(uword size);
+  uword AllocateInNewChunk(uword size);
+  Chunk* AllocateAndUseChunk(uword size);
 
   TwoSpaceHeap* heap_;
   FreeList* free_list_;  // Free list structure.
@@ -391,12 +391,12 @@ class ObjectMemory {
   // Allocate a new chunk for a given space. All chunk sizes are
   // rounded up the page size and the allocated memory is aligned
   // to a page boundary.
-  static Chunk* AllocateChunk(Space* space, int size);
+  static Chunk* AllocateChunk(Space* space, uword size);
 
   // Create a chunk for a piece of external memory (usually in flash). Since
   // this memory is external and potentially read-only, we will not free
   // nor write to it when deleting the space it belongs to.
-  static Chunk* CreateFlashChunk(Space* space, void* heap_space, int size) {
+  static Chunk* CreateFlashChunk(Space* space, void* heap_space, uword size) {
     return CreateFixedChunk(space, heap_space, size);
   }
 
@@ -411,7 +411,7 @@ class ObjectMemory {
 
  private:
   // Use some already-existing memory for a chunk.
-  static Chunk* CreateFixedChunk(Space* space, void* heap_space, int size);
+  static Chunk* CreateFixedChunk(Space* space, void* heap_space, uword size);
 
   static Atomic<uword> allocated_;
 

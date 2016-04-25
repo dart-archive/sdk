@@ -15,7 +15,7 @@ class ObjectMap {
   explicit ObjectMap(int capacity);
   virtual ~ObjectMap();
 
-  int size() const { return size_; }
+  uword size() const { return size_; }
 
   void Add(int64 id, Object* object);
 
@@ -39,7 +39,7 @@ class ObjectMap {
 
   List<Bucket*> table_by_id_;
   List<Bucket*> table_by_object_;
-  int size_;
+  uword size_;
 
   int BucketIndexFromId(int64 id);
   int BucketIndexFromObject(Object* object);

@@ -542,8 +542,8 @@ class StatisticsVisitor : public HeapObjectVisitor {
 
   int function_header_size() const { return function_count_ * Function::kSize; }
 
-  int Visit(HeapObject* object) {
-    int size = object->Size();
+  uword Visit(HeapObject* object) {
+    uword size = object->Size();
     object_count_++;
     if (object->IsClass()) {
       VisitClass(Class::cast(object));

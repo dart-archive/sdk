@@ -18,7 +18,7 @@ extern "C" void InterpreterMethodEntry();
 
 class FlashifyVisitor : public HeapObjectVisitor {
  public:
-  virtual int Visit(HeapObject* object) {
+  virtual uword Visit(HeapObject* object) {
     printf("O%08lx:\n", object->address());
     FlashifyReference(object->get_class());
     if (object->IsClass()) {

@@ -121,7 +121,7 @@ static int Main(int argc, char** argv) {
   SnapshotReader reader(bytes);
   Program* program = reader.ReadProgram();
 
-  int size = program->program_heap_size() + sizeof(ProgramInfoBlock);
+  uword size = program->program_heap_size() + sizeof(ProgramInfoBlock);
   List<uint8> result = List<uint8>::New(size);
   ProgramHeapRelocator relocator(program, result.data(), basevalue, table,
                                  reinterpret_cast<void*>(entry_address));

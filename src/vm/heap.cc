@@ -53,7 +53,7 @@ TwoSpaceHeap::~TwoSpaceHeap() {
   delete old_space_;
 }
 
-Object* Heap::Allocate(int size) {
+Object* Heap::Allocate(uword size) {
   ASSERT(no_allocation_ == 0);
   uword result = space_->Allocate(size);
   if (result == 0) {
@@ -64,7 +64,7 @@ Object* Heap::Allocate(int size) {
 
 Object* Heap::CreateInstance(Class* the_class, Object* init_value,
                              bool immutable) {
-  int size = the_class->instance_format().fixed_size();
+  uword size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Instance* result = reinterpret_cast<Instance*>(raw_result);
@@ -78,7 +78,7 @@ Object* Heap::CreateInstance(Class* the_class, Object* init_value,
 
 Object* TwoSpaceHeap::CreateOldSpaceInstance(Class* the_class,
                                              Object* init_value) {
-  int size = the_class->instance_format().fixed_size();
+  uword size = the_class->instance_format().fixed_size();
   uword new_address = old_space_->Allocate(size);
   ASSERT(new_address != 0);  // Only used in NoAllocationFailureScope.
   Instance* result =
@@ -92,7 +92,7 @@ Object* TwoSpaceHeap::CreateOldSpaceInstance(Class* the_class,
 
 Object* Heap::CreateArray(Class* the_class, int length, Object* init_value) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::ARRAY_TYPE);
-  int size = Array::AllocationSize(length);
+  uword size = Array::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Array* result = reinterpret_cast<Array*>(raw_result);
@@ -104,7 +104,7 @@ Object* Heap::CreateArray(Class* the_class, int length, Object* init_value) {
 Object* Heap::CreateByteArray(Class* the_class, int length) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::BYTE_ARRAY_TYPE);
-  int size = ByteArray::AllocationSize(length);
+  uword size = ByteArray::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   ByteArray* result = reinterpret_cast<ByteArray*>(raw_result);
@@ -116,7 +116,7 @@ Object* Heap::CreateByteArray(Class* the_class, int length) {
 Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::LARGE_INTEGER_TYPE);
-  int size = LargeInteger::AllocationSize();
+  uword size = LargeInteger::AllocationSize();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   LargeInteger* result = reinterpret_cast<LargeInteger*>(raw_result);
@@ -127,7 +127,7 @@ Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
 
 Object* Heap::CreateDouble(Class* the_class, dartino_double value) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::DOUBLE_TYPE);
-  int size = Double::AllocationSize();
+  uword size = Double::AllocationSize();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Double* result = reinterpret_cast<Double*>(raw_result);
@@ -138,7 +138,7 @@ Object* Heap::CreateDouble(Class* the_class, dartino_double value) {
 
 Object* Heap::CreateBoxed(Class* the_class, Object* value) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::BOXED_TYPE);
-  int size = the_class->instance_format().fixed_size();
+  uword size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Boxed* result = reinterpret_cast<Boxed*>(raw_result);
@@ -150,7 +150,7 @@ Object* Heap::CreateBoxed(Class* the_class, Object* value) {
 Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::INITIALIZER_TYPE);
-  int size = the_class->instance_format().fixed_size();
+  uword size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Initializer* result = reinterpret_cast<Initializer*>(raw_result);
@@ -162,7 +162,7 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
 Object* Heap::CreateDispatchTableEntry(Class* the_class) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE);
-  int size = DispatchTableEntry::AllocationSize();
+  uword size = DispatchTableEntry::AllocationSize();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   DispatchTableEntry* result =
@@ -175,7 +175,7 @@ Object* Heap::CreateOneByteStringInternal(Class* the_class, int length,
                                           bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::ONE_BYTE_STRING_TYPE);
-  int size = OneByteString::AllocationSize(length);
+  uword size = OneByteString::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   OneByteString* result = reinterpret_cast<OneByteString*>(raw_result);
@@ -188,7 +188,7 @@ Object* Heap::CreateTwoByteStringInternal(Class* the_class, int length,
                                           bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::TWO_BYTE_STRING_TYPE);
-  int size = TwoByteString::AllocationSize(length);
+  uword size = TwoByteString::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   TwoByteString* result = reinterpret_cast<TwoByteString*>(raw_result);
@@ -215,7 +215,7 @@ Object* Heap::CreateTwoByteStringUninitialized(Class* the_class, int length) {
 
 Object* Heap::CreateStack(Class* the_class, int length) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::STACK_TYPE);
-  int size = Stack::AllocationSize(length);
+  uword size = Stack::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Stack* result = reinterpret_cast<Stack*>(raw_result);
@@ -224,11 +224,11 @@ Object* Heap::CreateStack(Class* the_class, int length) {
   return Stack::cast(result);
 }
 
-Object* Heap::AllocateRawClass(int size) { return Allocate(size); }
+Object* Heap::AllocateRawClass(uword size) { return Allocate(size); }
 
 Object* Heap::CreateMetaClass() {
   InstanceFormat format = InstanceFormat::class_format();
-  int size = Class::AllocationSize();
+  uword size = Class::AllocationSize();
   // Allocate the raw class objects.
   Class* meta_class = reinterpret_cast<Class*>(AllocateRawClass(size));
   if (meta_class->IsFailure()) return meta_class;
@@ -243,7 +243,7 @@ Object* Heap::CreateClass(InstanceFormat format, Class* meta_class,
                           HeapObject* null) {
   ASSERT(meta_class->instance_format().type() == InstanceFormat::CLASS_TYPE);
 
-  int size = meta_class->instance_format().fixed_size();
+  uword size = meta_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Class* result = reinterpret_cast<Class*>(raw_result);
@@ -257,7 +257,7 @@ Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
   ASSERT(the_class->instance_format().type() == InstanceFormat::FUNCTION_TYPE);
   int literals_size = number_of_literals * kPointerSize;
   int bytecode_size = Function::BytecodeAllocationSize(bytecodes.length());
-  int size = Function::AllocationSize(bytecode_size + literals_size);
+  uword size = Function::AllocationSize(bytecode_size + literals_size);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Function* result = reinterpret_cast<Function*>(raw_result);
@@ -268,8 +268,8 @@ Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
   return Function::cast(result);
 }
 
-void TwoSpaceHeap::AllocatedForeignMemory(int size) {
-  ASSERT(foreign_memory_ >= 0);
+void TwoSpaceHeap::AllocatedForeignMemory(uword size) {
+  ASSERT(static_cast<word>(foreign_memory_) >= 0);
   foreign_memory_ += size;
   old_space()->DecreaseAllocationBudget(size);
   if (old_space()->needs_garbage_collection()) {
@@ -277,9 +277,9 @@ void TwoSpaceHeap::AllocatedForeignMemory(int size) {
   }
 }
 
-void TwoSpaceHeap::FreedForeignMemory(int size) {
+void TwoSpaceHeap::FreedForeignMemory(uword size) {
   foreign_memory_ -= size;
-  ASSERT(foreign_memory_ >= 0);
+  ASSERT(static_cast<word>(foreign_memory_) >= 0);
   old_space()->IncreaseAllocationBudget(size);
 }
 

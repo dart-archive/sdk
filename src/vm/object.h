@@ -64,25 +64,25 @@ class Space;
 // [ComputeSizeInBytes] by passing in the size of pointers/doubles.
 class PortableSize {
  public:
-  PortableSize(int pointers, int fixed_size, int doubles)
+  PortableSize(uword pointers, uword fixed_size, uword doubles)
       : num_pointers_(pointers),
         fixed_size_(fixed_size),
         num_doubles_(doubles) {}
 
-  int ComputeSizeInBytes(int pointer_size, int double_size) const {
+  uword ComputeSizeInBytes(uword pointer_size, uword double_size) const {
     ASSERT(pointer_size == 4 || pointer_size == 8);
     ASSERT(double_size == 8 || double_size == 4 || num_doubles_ == 0);
 
-    int byte_size =
+    uword byte_size =
         num_pointers_ * pointer_size + num_doubles_ * double_size + fixed_size_;
 
     return Utils::RoundUp(byte_size, pointer_size);
   }
 
  private:
-  int num_pointers_;
-  int fixed_size_;
-  int num_doubles_;
+  uword num_pointers_;
+  uword fixed_size_;
+  uword num_doubles_;
 };
 
 // Abstract super class for all objects in Dart.
@@ -274,7 +274,9 @@ class InstanceFormat {
   }
 
   // Accessors.
-  int fixed_size() { return FixedSizeField::decode(as_uword()) * kPointerSize; }
+  uword fixed_size() {
+    return FixedSizeField::decode(as_uword()) * kPointerSize;
+  }
 
   Type type() { return TypeField::decode(as_uword()); }
 
@@ -300,7 +302,7 @@ class InstanceFormat {
 
  private:
   // Constructor only used by factory functions.
-  inline explicit InstanceFormat(Type type, int fixed_size,
+  inline explicit InstanceFormat(Type type, uword fixed_size,
                                  DoesItHaveVariablePart has_variable_part,
                                  WhereArePointers where_are_pointers,
                                  Immutable immutable, Marker marker);
@@ -360,23 +362,23 @@ class HeapObject : public Object {
   HeapObject* CloneInToSpace(SomeSpace* to);
 
   // Sizing.
-  int FixedSize();
-  int Size();
+  uword FixedSize();
+  uword Size();
 
   // Printing.
   void HeapObjectPrint();
   void HeapObjectShortPrint();
 
   // Sizing.
-  static const int kClassOffset = 0;
-  static const int kSize = kClassOffset + kPointerSize;
+  static const word kClassOffset = 0;
+  static const word kSize = kClassOffset + kPointerSize;
 
 #ifdef DEBUG
   bool ContainsPointersTo(Space* space);
 #endif
 
  protected:
-  inline void Initialize(int size, Object* init_value);
+  inline void Initialize(uword size, Object* init_value);
 
   // Raw field accessors.
   inline void at_put(int offset, Object* value);
@@ -670,7 +672,7 @@ class Array : public BaseArray {
 
  private:
   // Only Heap should initialize objects.
-  inline void Initialize(int length, int size, Object* null);
+  inline void Initialize(int length, uword size, Object* null);
   friend class Heap;
   DISALLOW_IMPLICIT_CONSTRUCTORS(Array);
 };
@@ -732,13 +734,13 @@ class Instance : public HeapObject {
   inline Smi* LazyIdentityHashCode(RandomXorShift* random);
 
   // Sizing.
-  inline static int AllocationSize(int number_of_fields) {
+  inline static uword AllocationSize(int number_of_fields) {
     ASSERT(number_of_fields >= 0);
     return Utils::RoundUp(kSize + (number_of_fields * kPointerSize),
                           kPointerSize);
   }
 
-  inline static int NumberOfFieldsFromAllocationSize(int size) {
+  inline static uword NumberOfFieldsFromAllocationSize(uword size) {
     return (size - kSize) / kPointerSize;
   }
 
@@ -764,7 +766,7 @@ class Instance : public HeapObject {
   class FlagsHashCodeField : public BitField<word, 2, 32 - 2> {};
 
  protected:
-  inline void Initialize(int size, Object* init_value);
+  inline void Initialize(uword size, Object* init_value);
 
   inline void InitializeIdentityHashCode(RandomXorShift* random);
   inline void SetIdentityHashCode(Smi* smi);
@@ -841,7 +843,7 @@ class OneByteString : public BaseArray {
 
  private:
   // Only Heap should initialize objects.
-  inline void Initialize(int size, int length, bool clear);
+  inline void Initialize(uword size, int length, bool clear);
   friend class Heap;
   friend class Program;
   friend class Process;
@@ -924,7 +926,7 @@ class TwoByteString : public BaseArray {
 
  private:
   // Only Heap should initialize objects.
-  inline void Initialize(int size, int length, bool clear);
+  inline void Initialize(uword size, int length, bool clear);
   friend class Heap;
   friend class Program;
   friend class Process;
@@ -1103,7 +1105,7 @@ class Class : public HeapObject {
  private:
   friend class Heap;
   friend class StaticClassStructures;
-  inline void Initialize(InstanceFormat format, int size, Object* null);
+  inline void Initialize(InstanceFormat format, uword size, Object* null);
   DISALLOW_IMPLICIT_CONSTRUCTORS(Class);
 };
 
@@ -1297,7 +1299,7 @@ class HeapObjectVisitor {
   virtual ~HeapObjectVisitor() {}
   // Visit the heap object. Must return the size of the heap
   // object.
-  virtual int Visit(HeapObject* object) = 0;
+  virtual uword Visit(HeapObject* object) = 0;
   // Notification that the end of a chunk has been reached. A heap
   // object visitor visits all heap objects in a chunk in order
   // calling Visit on each of them. When it reaches the end of the
@@ -1316,8 +1318,8 @@ class HeapObjectPointerVisitor : public HeapObjectVisitor {
       : visitor_(visitor) {}
   virtual ~HeapObjectPointerVisitor() {}
 
-  virtual int Visit(HeapObject* object) {
-    int size = object->Size();
+  virtual uword Visit(HeapObject* object) {
+    uword size = object->Size();
     object->IteratePointers(visitor_);
     return size;
   }
@@ -1333,7 +1335,7 @@ class CookedHeapObjectPointerVisitor : public HeapObjectVisitor {
       : visitor_(visitor) {}
   virtual ~CookedHeapObjectPointerVisitor() {}
 
-  virtual int Visit(HeapObject* object);
+  virtual uword Visit(HeapObject* object);
 
  private:
   PointerVisitor* visitor_;
@@ -1374,7 +1376,7 @@ class PromotedTrack : public HeapObject {
 
 // Inlined InstanceFormat functions.
 
-InstanceFormat::InstanceFormat(Type type, int fixed_size,
+InstanceFormat::InstanceFormat(Type type, uword fixed_size,
                                DoesItHaveVariablePart has_variable_part,
                                WhereArePointers where_are_pointers,
                                Immutable immutable, Marker marker = NO_MARKER) {
@@ -1764,9 +1766,9 @@ Smi* Instance::LazyIdentityHashCode(RandomXorShift* random) {
   return hash_code;
 }
 
-void Instance::Initialize(int size, Object* null) {
+void Instance::Initialize(uword size, Object* null) {
   // Initialize the body of the instance.
-  for (int offset = kSize; offset < size; offset += kPointerSize) {
+  for (uword offset = kSize; offset < size; offset += kPointerSize) {
     at_put(offset, null);
   }
 }
@@ -1815,9 +1817,10 @@ void Instance::SetFlagsBits(uint32 bits) {
   at_put(kFlagsOffset, value);
 }
 
-void HeapObject::Initialize(int size, Object* null) {
+void HeapObject::Initialize(uword size, Object* null) {
   // Initialize the body of the instance.
-  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+  for (uword offset = HeapObject::kSize; offset < size;
+       offset += kPointerSize) {
     at_put(offset, null);
   }
 }
@@ -1859,10 +1862,10 @@ void Array::set(int index, Object* value) {
   at_put(Array::kSize + (index * kPointerSize), value);
 }
 
-void Array::Initialize(int length, int size, Object* null) {
+void Array::Initialize(int length, uword size, Object* null) {
   set_length(length);
   // Initialize the body of the instance.
-  for (int offset = BaseArray::kSize; offset < size; offset += kPointerSize) {
+  for (uword offset = BaseArray::kSize; offset < size; offset += kPointerSize) {
     at_put(offset, null);
   }
 }
@@ -1942,8 +1945,9 @@ void Class::set_child_link(Object* value) {
   at_put(kChildIdOrTransformationOffset, value);
 }
 
-void Class::Initialize(InstanceFormat format, int size, Object* null) {
-  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
+void Class::Initialize(InstanceFormat format, uword size, Object* null) {
+  for (uword offset = HeapObject::kSize; offset < size;
+       offset += kPointerSize) {
     at_put(offset, null);
   }
   set_instance_format(format);
@@ -2008,7 +2012,7 @@ uint8* OneByteString::byte_address_for(int offset) {
   return reinterpret_cast<uint8*>(address() + kSize + offset);
 }
 
-void OneByteString::Initialize(int size, int length, bool clear) {
+void OneByteString::Initialize(uword size, int length, bool clear) {
   set_length(length);
   set_hash_value(kNoHashValue);
   // Clear the body.
@@ -2047,7 +2051,7 @@ uint8_t* TwoByteString::byte_address_for(int offset) {
   return reinterpret_cast<uint8_t*>(address() + kSize + offset);
 }
 
-void TwoByteString::Initialize(int size, int length, bool clear) {
+void TwoByteString::Initialize(uword size, int length, bool clear) {
   set_length(length);
   set_hash_value(kNoHashValue);
   // Clear the body.

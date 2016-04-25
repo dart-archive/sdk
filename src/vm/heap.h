@@ -21,11 +21,11 @@ class Heap {
   // Allocate raw object. Returns a failure if a garbage collection is
   // needed and causes a fatal error if a GC cannot free up enough memory
   // for the object.
-  Object* Allocate(int size);
+  Object* Allocate(uword size);
 
   // Called when an allocation fails in the semispace.  Usually returns a
   // retry-after-GC failure, but may divert large allocations to an old space.
-  virtual Object* HandleAllocationFailure(int size) = 0;
+  virtual Object* HandleAllocationFailure(uword size) = 0;
 
   // Allocate heap object.
   Object* CreateInstance(Class* the_class, Object* init_value, bool immutable);
@@ -89,7 +89,7 @@ class Heap {
   virtual int Used() { return space_->Used(); }
 
   // Returns the number of bytes allocated in the space and via foreign memory.
-  int UsedTotal() { return Used() + foreign_memory_; }
+  uword UsedTotal() { return Used() + foreign_memory_; }
 
   SemiSpace* space() { return space_; }
 
@@ -98,7 +98,7 @@ class Heap {
 
   RandomXorShift* random() { return random_; }
 
-  int used_foreign_memory() { return foreign_memory_; }
+  uword used_foreign_memory() { return foreign_memory_; }
 
 #ifdef DEBUG
   // Used for debugging.  Give it an address, and it will tell you where there
@@ -126,7 +126,7 @@ class Heap {
   Object* CreateOneByteStringInternal(Class* the_class, int length, bool clear);
   Object* CreateTwoByteStringInternal(Class* the_class, int length, bool clear);
 
-  Object* AllocateRawClass(int size);
+  Object* AllocateRawClass(uword size);
 
   // Adjust the allocation budget based on the current heap size.
   void AdjustAllocationBudget() { space()->AdjustAllocationBudget(0); }
@@ -138,7 +138,7 @@ class Heap {
   SemiSpace* space_;
 
   // The number of bytes of foreign memory heap objects are holding on to.
-  int foreign_memory_;
+  uword foreign_memory_;
 
 #ifdef DEBUG
   void IncrementNoAllocation() { ++no_allocation_; }
@@ -153,7 +153,7 @@ class OneSpaceHeap : public Heap {
  public:
   explicit OneSpaceHeap(RandomXorShift* random, int maximum_initial_size = 0);
 
-  virtual Object* HandleAllocationFailure(int size) {
+  virtual Object* HandleAllocationFailure(uword size) {
     return Failure::retry_after_gc(size);
   }
 
@@ -167,7 +167,7 @@ class TwoSpaceHeap : public Heap {
   explicit TwoSpaceHeap(RandomXorShift* random);
   virtual ~TwoSpaceHeap();
 
-  static const word kFixedSemiSpaceSize = 16 * KB;
+  static const uword kFixedSemiSpaceSize = 16 * KB;
 
   OldSpace* old_space() { return old_space_; }
   SemiSpace* unused_space() { return unused_semispace_; }
@@ -198,7 +198,7 @@ class TwoSpaceHeap : public Heap {
     old_space()->AdjustAllocationBudget(foreign_memory_);
   }
 
-  virtual Object* HandleAllocationFailure(int size) {
+  virtual Object* HandleAllocationFailure(uword size) {
     if (size >= (kFixedSemiSpaceSize >> 1)) {
       uword result = old_space_->Allocate(size);
       if (result != 0) {
@@ -232,9 +232,9 @@ class TwoSpaceHeap : public Heap {
     WeakPointer::Visit(old_space_->weak_pointers(), visitor);
   }
 
-  void AllocatedForeignMemory(int size);
+  void AllocatedForeignMemory(uword size);
 
-  void FreedForeignMemory(int size);
+  void FreedForeignMemory(uword size);
 
  private:
   friend class GenerationalScavengeVisitor;
@@ -334,14 +334,14 @@ class GenerationalScavengeVisitor : public PointerVisitor {
 // The conversion from dartino-double to word is truncating, if the word size
 // is not at least the size of a dartino-double. This happens on x86 where the
 // word size is 32 bits, but doubles are 64 bits.
-inline word AsForeignWord(Object* object) {
+inline uword AsForeignWord(Object* object) {
   if (object->IsSmi()) return Smi::cast(object)->value();
   if (object->IsLargeInteger()) return LargeInteger::cast(object)->value();
   dartino_double value = Double::cast(object)->value();
 #ifdef DARTINO_USE_SINGLE_PRECISION
   return bit_cast<int32>(value);
 #else
-  return static_cast<word>(bit_cast<int64>(value));
+  return static_cast<uword>(bit_cast<int64>(value));
 #endif
 }
 

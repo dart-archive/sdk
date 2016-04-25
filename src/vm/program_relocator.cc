@@ -83,7 +83,7 @@ class RelocationVisitor : public HeapObjectVisitor {
         target_base_(target_base),
         rebase_base_(rebase_base) {}
 
-  int Visit(HeapObject* from) {
+  uword Visit(HeapObject* from) {
     uword address = from->address();
     uword target_address = address - space_base_ + target_base_;
 

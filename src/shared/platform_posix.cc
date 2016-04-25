@@ -100,12 +100,12 @@ List<uint8> Platform::LoadFile(const char* name) {
     fclose(file);
     return List<uint8>();
   }
-  int size = ftell(file);
+  uword size = ftell(file);
   rewind(file);
 
   // Read in the entire file.
   uint8* buffer = static_cast<uint8*>(malloc(size));
-  int result = fread(buffer, 1, size, file);
+  size_t result = fread(buffer, 1, size, file);
   fclose(file);
   if (result != size) {
     Print::Error("Unable to read entire file '%s'.\n%s.\n", name,
@@ -302,7 +302,7 @@ static void* RandomizedVirtualAlloc(size_t size) {
   return base;
 }
 
-VirtualMemory::VirtualMemory(int size) : size_(size) {
+VirtualMemory::VirtualMemory(uword size) : size_(size) {
   address_ = RandomizedVirtualAlloc(size);
 }
 
@@ -314,13 +314,13 @@ VirtualMemory::~VirtualMemory() {
 
 bool VirtualMemory::IsReserved() const { return address_ != MAP_FAILED; }
 
-bool VirtualMemory::Commit(void* address, int size) {
+bool VirtualMemory::Commit(void* address, uword size) {
   int prot = PROT_READ | PROT_WRITE;
   return mmap(address, size, prot, kMmapFlags | MAP_FIXED, kMmapFd,
               kMmapFdOffset) != MAP_FAILED;
 }
 
-bool VirtualMemory::Uncommit(void* address, int size) {
+bool VirtualMemory::Uncommit(void* address, uword size) {
   return mmap(address, size, PROT_NONE, kMmapFlags | MAP_NORESERVE, kMmapFd,
               kMmapFdOffset) != MAP_FAILED;
 }

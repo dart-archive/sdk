@@ -156,7 +156,7 @@ void Platform::SetLastError(int value) { }
 
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
-VirtualMemory::VirtualMemory(int size) : size_(size) {}
+VirtualMemory::VirtualMemory(uword size) : size_(size) {}
 
 VirtualMemory::~VirtualMemory() {}
 

@@ -117,8 +117,8 @@ class FunctionOptimizingVisitor : public HeapObjectVisitor {
   explicit FunctionOptimizingVisitor(ProgramRewriter* rewriter)
       : rewriter_(rewriter) {}
 
-  virtual int Visit(HeapObject* object) {
-    int size = object->Size();
+  virtual uword Visit(HeapObject* object) {
+    uword size = object->Size();
     if (object->IsFunction()) Process(Function::cast(object));
     return size;
   }
@@ -186,8 +186,8 @@ class FunctionDeoptimizingVisitor : public HeapObjectVisitor {
  public:
   explicit FunctionDeoptimizingVisitor(SelectorOffsetMap* map) : map_(map) {}
 
-  virtual int Visit(HeapObject* object) {
-    int size = object->Size();
+  virtual uword Visit(HeapObject* object) {
+    uword size = object->Size();
     if (object->IsFunction()) Process(Function::cast(object));
     return size;
   }
@@ -259,8 +259,8 @@ class ClassLocatingVisitor : public HeapObjectVisitor {
  public:
   ClassLocatingVisitor() : classes_chain_(NULL), class_count_(0) {}
 
-  virtual int Visit(HeapObject* object) {
-    int size = object->Size();
+  virtual uword Visit(HeapObject* object) {
+    uword size = object->Size();
     if (object->IsClass()) {
       Class* clazz = Class::cast(object);
       clazz->set_link(classes_chain_);

@@ -51,7 +51,8 @@ void OldSpace::Flush() {
     top_ = 0;
     limit_ = 0;
     used_ -= free_size;
-    ASSERT(used_ >= 0);
+    // Check for 'negative' value.
+    ASSERT(static_cast<word>(used_) >= 0);
   }
 }
 
@@ -82,7 +83,7 @@ void OldSpace::UseWholeChunk(Chunk* chunk) {
   used_ += chunk->size() - kPointerSize;
 }
 
-Chunk* OldSpace::AllocateAndUseChunk(int size) {
+Chunk* OldSpace::AllocateAndUseChunk(uword size) {
   Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
   if (chunk != NULL) {
     // Link it into the space.
@@ -96,12 +97,12 @@ Chunk* OldSpace::AllocateAndUseChunk(int size) {
   return chunk;
 }
 
-uword OldSpace::AllocateInNewChunk(int size) {
+uword OldSpace::AllocateInNewChunk(uword size) {
   ASSERT(top_ == 0);  // Space is flushed.
   // Allocate new chunk that is big enough to fit the object.
   int tracking_size = tracking_allocations_ ? 0 : PromotedTrack::kHeaderSize;
-  int default_chunk_size = DefaultChunkSize(Used());
-  int chunk_size =
+  uword default_chunk_size = DefaultChunkSize(Used());
+  uword chunk_size =
       (size + tracking_size + kPointerSize >= default_chunk_size)
           ? (size + tracking_size + kPointerSize)  // Make room for sentinel.
           : default_chunk_size;
@@ -115,7 +116,7 @@ uword OldSpace::AllocateInNewChunk(int size) {
   return 0;
 }
 
-uword OldSpace::AllocateFromFreeList(int size) {
+uword OldSpace::AllocateFromFreeList(uword size) {
   // Flush the rest of the active chunk into the free list.
   Flush();
 
@@ -143,7 +144,7 @@ uword OldSpace::AllocateFromFreeList(int size) {
   return 0;
 }
 
-uword OldSpace::Allocate(int size) {
+uword OldSpace::Allocate(uword size) {
   ASSERT(size >= HeapObject::kSize);
   ASSERT(Utils::IsAligned(size, kPointerSize));
 
@@ -167,7 +168,7 @@ uword OldSpace::Allocate(int size) {
   return result;
 }
 
-int OldSpace::Used() { return used_; }
+uword OldSpace::Used() { return used_; }
 
 void OldSpace::StartTrackingAllocations() {
   Flush();
@@ -322,15 +323,15 @@ void SweepingVisitor::AddFreeListChunk(uword free_end) {
   }
 }
 
-int SweepingVisitor::Visit(HeapObject* object) {
+uword SweepingVisitor::Visit(HeapObject* object) {
   if (GCMetadata::IsMarked(object)) {
     AddFreeListChunk(object->address());
     GCMetadata::RecordStart(object->address());
-    int size = object->Size();
+    uword size = object->Size();
     used_ += size;
     return size;
   }
-  int size = object->Size();
+  uword size = object->Size();
   if (free_start_ == 0) free_start_ = object->address();
   return size;
 }

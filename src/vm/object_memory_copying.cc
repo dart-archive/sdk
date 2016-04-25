@@ -33,10 +33,10 @@ Space::Space(Space::Resizing resizeable, PageType page_type)
       page_type_(page_type) {}
 
 SemiSpace::SemiSpace(Space::Resizing resizeable, PageType page_type,
-                     int maximum_initial_size)
+                     uword maximum_initial_size)
     : Space(resizeable, page_type) {
   if (resizeable_ && maximum_initial_size > 0) {
-    int size = Utils::Minimum(
+    uword size = Utils::Minimum(
         Utils::RoundUp(maximum_initial_size, Platform::kPageSize),
         kDefaultMaximumChunkSize);
     Chunk* chunk = ObjectMemory::AllocateChunk(this, size);
@@ -109,12 +109,13 @@ void SemiSpace::Append(Chunk* chunk) {
   Space::Append(chunk);
 }
 
-uword SemiSpace::TryAllocate(int size) {
-  uword new_top = top_ + size;
-  // Make sure there is room for chunk end sentinel by using < instead of <=.
-  if (new_top < limit_) {
+uword SemiSpace::TryAllocate(uword size) {
+  // Make sure there is room for chunk end sentinel by using > instead of >=.
+  // Use this ordering of the comparison to avoid very large allocations
+  // turning into 'successful' allocations of negative size.
+  if (limit_ - top_ > size) {
     uword result = top_;
-    top_ = new_top;
+    top_ += size;
     // Always write a sentinel so the scavenger knows where to stop.
     WriteSentinelAt(top_);
     return result;
@@ -128,10 +129,10 @@ uword SemiSpace::TryAllocate(int size) {
   return 0;
 }
 
-uword SemiSpace::AllocateInNewChunk(int size) {
+uword SemiSpace::AllocateInNewChunk(uword size) {
   // Allocate new chunk that is big enough to fit the object.
-  int default_chunk_size = DefaultChunkSize(Used());
-  int chunk_size =
+  uword default_chunk_size = DefaultChunkSize(Used());
+  uword chunk_size =
       size >= default_chunk_size
           ? (size + kPointerSize)  // Make sure there is room for sentinel.
           : default_chunk_size;
@@ -152,7 +153,7 @@ uword SemiSpace::AllocateInNewChunk(int size) {
   return 0;
 }
 
-uword SemiSpace::Allocate(int size) {
+uword SemiSpace::Allocate(uword size) {
   ASSERT(size >= HeapObject::kSize);
   ASSERT(Utils::IsAligned(size, kPointerSize));
 
@@ -164,7 +165,7 @@ uword SemiSpace::Allocate(int size) {
   return AllocateInNewChunk(size);
 }
 
-int SemiSpace::Used() {
+uword SemiSpace::Used() {
   if (is_empty()) return used_;
   return used_ + (top() - chunk_list_.Last()->start());
 }

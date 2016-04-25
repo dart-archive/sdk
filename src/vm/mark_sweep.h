@@ -201,7 +201,7 @@ class SweepingVisitor : public HeapObjectVisitor {
     GCMetadata::InitializeStartsForChunk(chunk);
   }
 
-  virtual int Visit(HeapObject* object);
+  virtual uword Visit(HeapObject* object);
 
   virtual void ChunkEnd(Chunk* chunk, uword end) {
     AddFreeListChunk(end);

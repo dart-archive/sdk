@@ -173,7 +173,7 @@ int GetHeapMemoryRanges(HeapMemoryRange* ranges, int number);
 class VirtualMemory {
  public:
   // Reserves virtual memory with size.
-  explicit VirtualMemory(int size);
+  explicit VirtualMemory(uword size);
   ~VirtualMemory();
 
   // Returns whether the memory has been reserved.
@@ -186,17 +186,17 @@ class VirtualMemory {
   }
 
   // Returns the size of the reserved memory.
-  int size() const { return size_; }
+  uword size() const { return size_; }
 
   // Commits real memory. Returns whether the operation succeeded.
-  bool Commit(void* address, int size);
+  bool Commit(void* address, uword size);
 
   // Uncommit real memory.  Returns whether the operation succeeded.
-  bool Uncommit(void* address, int size);
+  bool Uncommit(void* address, uword size);
 
  private:
   void* address_;   // Start address of the virtual memory.
-  const int size_;  // Size of the virtual memory.
+  const uword size_;  // Size of the virtual memory.
 };
 
 // ----------------------------------------------------------------------------

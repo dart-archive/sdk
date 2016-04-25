@@ -46,8 +46,8 @@ void Space::FreeAllChunks() {
   top_ = limit_ = 0;
 }
 
-int Space::Size() {
-  int result = 0;
+uword Space::Size() {
+  uword result = 0;
   for (auto chunk : chunk_list_) result += chunk->size();
   ASSERT(Used() <= result);
   return result;
@@ -78,17 +78,19 @@ HeapObject *Space::ObjectAtOffset(word offset) {
   return HeapObject::FromAddress(address);
 }
 
-void Space::AdjustAllocationBudget(int used_outside_space) {
-  int used = Used() + used_outside_space;
-  allocation_budget_ = Utils::Maximum(DefaultChunkSize(used), used);
+void Space::AdjustAllocationBudget(uword used_outside_space) {
+  uword used = Used() + used_outside_space;
+  allocation_budget_ = Utils::Maximum(static_cast<word>(DefaultChunkSize(used)),
+                                      static_cast<word>(used));
 }
 
-void Space::IncreaseAllocationBudget(int size) { allocation_budget_ += size; }
+void Space::IncreaseAllocationBudget(uword size) { allocation_budget_ += size; }
 
-void Space::DecreaseAllocationBudget(int size) { allocation_budget_ -= size; }
+void Space::DecreaseAllocationBudget(uword size) { allocation_budget_ -= size; }
 
-void Space::SetAllocationBudget(int new_budget) {
-  allocation_budget_ = Utils::Maximum(DefaultChunkSize(new_budget), new_budget);
+void Space::SetAllocationBudget(word new_budget) {
+  allocation_budget_ = Utils::Maximum(
+      static_cast<word>(DefaultChunkSize(new_budget)), new_budget);
 }
 
 void Space::IterateOverflowedObjects(PointerVisitor* visitor,
@@ -228,7 +230,7 @@ void Chunk::Find(uword word, const char* name) {
 }
 #endif
 
-Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
+Chunk* ObjectMemory::AllocateChunk(Space* owner, uword size) {
   ASSERT(owner != NULL);
 
   size = Utils::RoundUp(size, Platform::kPageSize);
@@ -255,7 +257,7 @@ Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
   return chunk;
 }
 
-Chunk* ObjectMemory::CreateFixedChunk(Space* owner, void* memory, int size) {
+Chunk* ObjectMemory::CreateFixedChunk(Space* owner, void* memory, uword size) {
   ASSERT(owner != NULL);
   ASSERT(size == Utils::RoundUp(size, Platform::kPageSize));
 

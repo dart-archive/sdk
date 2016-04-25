@@ -151,7 +151,7 @@ int Platform::GetLocalTimeZoneOffset() {
 int Platform::GetLastError() { return 0; }
 void Platform::SetLastError(int value) { }
 
-VirtualMemory::VirtualMemory(int size) : size_(size) {}
+VirtualMemory::VirtualMemory(uword size) : size_(size) {}
 
 VirtualMemory::~VirtualMemory() {}
 
