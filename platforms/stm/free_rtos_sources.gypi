@@ -30,7 +30,6 @@
 
     # FreeRTOS+TCP package.
     '<(freertos_plus_tcp)/FreeRTOS_IP.c',
-    '<(freertos_plus_tcp)/FreeRTOS_IP.c',
     '<(freertos_plus_tcp)/FreeRTOS_ARP.c',
     '<(freertos_plus_tcp)/FreeRTOS_DHCP.c',
     '<(freertos_plus_tcp)/FreeRTOS_DNS.c',
