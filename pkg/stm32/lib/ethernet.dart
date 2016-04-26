@@ -129,23 +129,28 @@ abstract class NetworkInterface {
         List<int> bytes = new List<int>(4);
         configuration.copyBytesToList(bytes, 0, 4, 0);
         address = new InternetAddress(bytes);
+        ethernet._eth = new _NetworkInterface(
+            _NetworkInterface.ETH_INTERFACE_INDEX,
+            "eth0",
+            <InternetAddress>[address]);
       } finally {
         configuration.free();
       }
-      ethernet._eth = new _NetworkInterface(
-          _NetworkInterface.ETH_INTERFACE_INDEX,
-          "eth0",
-          <InternetAddress>[address]);
     }
-    if (ethernet._lo == null) {
-      ethernet._lo = new _NetworkInterface(
-          _NetworkInterface.LO_INTERFACE_INDEX,
-          "lo",
-          <InternetAddress>[InternetAddress.localhost]);
+    List<NetworkInterface> interfaces = <NetworkInterface>[];
+    if (includeLoopback) {
+      if (ethernet._lo == null) {
+        ethernet._lo = new _NetworkInterface(
+            _NetworkInterface.LO_INTERFACE_INDEX,
+            "lo",
+            <InternetAddress>[InternetAddress.localhost]);
+      }
+      interfaces.add(ethernet._lo);
     }
-    return isUp
-      ? <NetworkInterface>[ethernet._lo, ethernet._eth]
-      : <NetworkInterface>[ethernet._lo];
+    if (ethernet._eth != null) {
+      interfaces.add(ethernet._eth);
+    }
+    return interfaces;
   }
 
   static bool get _isUp => _isNetworkUp.icall$0() == 1;
