@@ -9,7 +9,8 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 shift
 fi
 
-if [ ! -f out/DebugLKFull/flashtool ]; then
+FLASHTOOL=out/build-qemu-virt-dartino-host/flashtool
+if [ ! -f "$FLASHTOOL" ]; then
   echo "flashtool was not built. Please fix the LK makefile."
   exit 1
 fi
@@ -78,10 +79,10 @@ echo
 
 echo "Building program heap..."
 echo
-out/DebugLKFull/flashtool $ARGS $1 $BASEADDR $PIPEDIR/heap.blob
+"$FLASHTOOL" $ARGS $1 $BASEADDR $PIPEDIR/heap.blob
 if [ $? != 0 ]; then
   echo "Building heap blob failed..."
-  echo $(pwd)/out/DebugLKFull/flashtool $ARGS $1 $BASEADDR $PIPEDIR/heap.blob
+  echo $(pwd)/"$FLASHTOOL" $ARGS $1 $BASEADDR $PIPEDIR/heap.blob
   exit 1
 fi
 

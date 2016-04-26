@@ -18,8 +18,13 @@ DARTINO_ROOT := $(GET_LOCAL_DIR)
 DARTINO_SRC_VM := $(DARTINO_ROOT)/src/vm
 DARTINO_SRC_SHARED := $(DARTINO_ROOT)/src/shared
 DARTINO_SRC_DOUBLE_CONVERSION := $(DARTINO_ROOT)/third_party/double-conversion/src
+DARTINO_SRC_FLASHTOOL := $(DARTINO_ROOT)/src/tools/flashtool
 
-DARTINO_SRC_VM_SRCS += \
+# The split between runtime and interpreter is somewhat arbitrary. The goal
+# is to be able to build a host version of the runtime part that suffices
+# to build the flashtool helper. So as long as flashtool still builds in
+# a crosscompilation setting it does not matter where a new file goes.
+DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/dartino_api_impl.cc \
 	$(DARTINO_SRC_VM)/dartino_api_impl.h \
 	$(DARTINO_SRC_VM)/dartino.cc \
@@ -129,7 +134,9 @@ DARTINO_SRC_VM_SRCS += \
 	$(DARTINO_SRC_VM)/void_hash_table.cc \
 	$(DARTINO_SRC_VM)/void_hash_table.h \
 	$(DARTINO_SRC_VM)/weak_pointer.cc \
-	$(DARTINO_SRC_VM)/weak_pointer.h \
+	$(DARTINO_SRC_VM)/weak_pointer.h
+
+DARTINO_SRC_VM_SRCS_INTERPRETER := \
 	$(DARTINO_SRC_VM)/ffi.cc \
 	$(DARTINO_SRC_VM)/ffi.h \
 	$(DARTINO_SRC_VM)/ffi_callback.cc \
@@ -151,7 +158,15 @@ DARTINO_SRC_VM_SRCS += \
 	$(DARTINO_SRC_VM)/tick_sampler_other.cc \
 	$(DARTINO_SRC_VM)/tick_sampler_posix.cc
 
-DARTINO_SRC_SHARED_SRCS += \
+# The file program_info_block.h is included to detect interface changes.
+DARTINO_SRC_RELOCATION_SRCS := \
+	$(DARTINO_SRC_VM)/dartino_relocation_api_impl.cc \
+	$(DARTINO_SRC_VM)/dartino_relocation_api_impl.h \
+	$(DARTINO_SRC_VM)/program_info_block.h \
+	$(DARTINO_SRC_VM)/program_relocator.cc \
+	$(DARTINO_SRC_VM)/program_relocator.h
+
+DARTINO_SRC_SHARED_SRCS := \
 	$(DARTINO_SRC_SHARED)/asan_helper.h \
 	$(DARTINO_SRC_SHARED)/assert.cc \
 	$(DARTINO_SRC_SHARED)/assert.h \
@@ -191,7 +206,7 @@ DARTINO_SRC_SHARED_SRCS += \
 	$(DARTINO_SRC_SHARED)/utils.h \
 	$(DARTINO_SRC_SHARED)/version.h
 
-DARTINO_SRC_DOUBLE_CONVERSION_SRCS += \
+DARTINO_SRC_DOUBLE_CONVERSION_SRCS := \
 	$(DARTINO_SRC_DOUBLE_CONVERSION)/bignum-dtoa.cc \
 	$(DARTINO_SRC_DOUBLE_CONVERSION)/bignum-dtoa.h \
 	$(DARTINO_SRC_DOUBLE_CONVERSION)/bignum.cc \
@@ -238,20 +253,22 @@ MODULE_CPPFLAGS += \
 
 MODULE_INCLUDES += $(DARTINO_ROOT)
 
-MODULE_SRCS += \
-	$(DARTINO_SRC_VM_SRCS) \
+MODULE_SRCS := \
+	$(DARTINO_SRC_VM_SRCS_RUNTIME) \
+	$(DARTINO_SRC_VM_SRCS_INTERPRETER) \
 	$(DARTINO_SRC_SHARED_SRCS) \
 	$(DARTINO_SRC_DOUBLE_CONVERSION_SRCS) \
 	$(BUILDDIR)/version.cc \
 	$(BUILDDIR)/generated.S
 
 #
-# This is the part for generating generated.S and version.cc on the
-# host. Generating generated.S require a host build of
-# dartino_vm_library_generator.
+# This is the part for building host-tools and generating generated.S
+# and version.cc on the host. Generating generated.S requires a host
+# build of dartino_vm_library_generator.
 #
 
-HOST_SRCS += \
+# Sources for the dartino_vm_library_generator host-tool.
+LIBRARY_GENERATOR_SRCS := \
 	$(DARTINO_SRC_SHARED_SRCS) \
 	$(DARTINO_SRC_VM)/assembler_arm64_linux.cc \
 	$(DARTINO_SRC_VM)/assembler_arm64_macos.cc \
@@ -277,6 +294,20 @@ HOST_SRCS += \
 	$(DARTINO_SRC_VM)/interpreter_x86.cc \
 	$(DARTINO_SRC_VM)/interpreter_x64.cc
 
+# Sources for the flashtool host-tool.
+FLASHTOOL_SRCS := \
+	$(DARTINO_SRC_VM_SRCS_RUNTIME) \
+	$(DARTINO_SRC_SHARED_SRCS) \
+	$(DARTINO_SRC_RELOCATION_SRCS) \
+	$(DARTINO_SRC_FLASHTOOL)/main.cc \
+	$(BUILDDIR)/version.cc
+
+# Combined sources for all host-tools.
+HOST_TOOLS_SRCS := \
+	$(LIBRARY_GENERATOR_SRCS) \
+	$(FLASHTOOL_SRCS)
+
+# Defines for compiling host-tools.
 HOST_DEFINES += \
 	-DDARTINO_ENABLE_LIVE_CODING \
 	-DDARTINO_ENABLE_FFI \
@@ -284,11 +315,12 @@ HOST_DEFINES += \
 	-DDARTINO_ENABLE_PRINT_INTERCEPTORS \
 	-DDARTINO_TARGET_OS_LINUX \
 	-DDARTINO_TARGET_OS_POSIX \
-	-DNDEBUG \
 	-DDARTINO32 \
+	-DDARTINO_USE_SINGLE_PRECISION \
 	-DDARTINO_TARGET_ARM \
 	-DDARTINO_THUMB_ONLY
 
+# Flags for compiling host-tools.
 HOST_CPPFLAGS += \
 	--std=c++11 \
 	-m32 \
@@ -309,34 +341,36 @@ HOST_CPPFLAGS += \
 	-fno-exceptions
 
 HOST_BUILDDIR := $(BUILDDIR)-host
-
-HOST_TOOL := $(HOST_BUILDDIR)/dartino_vm_library_generator
-HOST_CCSRCS := $(filter %.cc,$(HOST_SRCS))
 TOHOSTBUILDDIR = $(addprefix $(HOST_BUILDDIR)/,$(1))
-HOST_CCOBJS := $(call TOHOSTBUILDDIR,$(patsubst %.cc,%.o,$(HOST_CCSRCS)))
 
-$(HOST_TOOL): $(HOST_CCOBJS)
-	@echo host linking $@
-	$(NOECHO)g++ -m32 -Wl,--gc-sections -o $(HOST_TOOL) -Wl,--start-group $(HOST_CCOBJS) -Wl,--end-group -lpthread
+# Rules for building the dartino_vm_library_generator host-tool.
+LIBRARY_GENERATOR_TOOL := $(HOST_BUILDDIR)/dartino_vm_library_generator
+LIBRARY_GENERATOR_CCSRCS := $(filter %.cc,$(LIBRARY_GENERATOR_SRCS))
+LIBRARY_GENERATOR_CCOBJS := $(call TOHOSTBUILDDIR,$(patsubst %.cc,%.o,$(LIBRARY_GENERATOR_CCSRCS)))
+HOST_TOOLS_CCOBJS += $(LIBRARY_GENERATOR_CCOBJS)
+HOST_TOOLS_DEPS += $(LIBRARY_GENERATOR_CCOBJS:%o=%d)
 
-HOST_GENERATED += $(HOST_TOOL)
-
-$(HOST_CCOBJS): $(HOST_BUILDDIR)/%.o: %.cc
+$(LIBRARY_GENERATOR_CCOBJS): $(HOST_BUILDDIR)/%.o: %.cc
 	@$(MKDIR)
 	@echo host compiling $<
 	$(NOECHO)g++ $(HOST_CPPFLAGS) $(HOST_DEFINES) -I$(DARTINO_ROOT) -c $< -MD -MP -MT $@ -MF $(@:%o=%d) -o $@
 
-HOST_DEPS := $(HOST_CCOBJS:%o=%d)
+$(LIBRARY_GENERATOR_TOOL): $(LIBRARY_GENERATOR_CCOBJS)
+	@echo host linking $@
+	$(NOECHO)g++ -m32 -Wl,--gc-sections -o $(LIBRARY_GENERATOR_TOOL) -Wl,--start-group $(LIBRARY_GENERATOR_CCOBJS) -Wl,--end-group -lpthread
 
-$(BUILDDIR)/generated.S: $(HOST_TOOL)
+HOST_GENERATED += $(LIBRARY_GENERATOR_TOOL)
+
+$(BUILDDIR)/generated.S: $(LIBRARY_GENERATOR_TOOL)
 	@$(MKDIR)
 	@echo generating $@
-	$(HOST_TOOL) $(BUILDDIR)/generated.S
+	$(LIBRARY_GENERATOR_TOOL) $(BUILDDIR)/generated.S
 
 HOST_GENERATED += $(BUILDDIR)/generated.S
 
 DARTINO_GENERATE_VERSION := $(DARTINO_ROOT)/tools/generate_version_cc.py
 
+# Rules for building $(BUILDDIR)/version.cc.
 # TODO(473): Find a way to make building
 # version.cc dependent in something which works for submodule checkout.
 force_version_cc:
@@ -347,10 +381,31 @@ $(BUILDDIR)/version.cc: force_version_cc
 
 HOST_GENERATED += $(BUILDDIR)/version.cc
 
+# Rules for building the flashtool host-tool.
+FLASHTOOL_TOOL := $(HOST_BUILDDIR)/flashtool
+FLASHTOOL_CCSRCS := $(filter %.cc,$(FLASHTOOL_SRCS))
+FLASHTOOL_CCOBJS := $(call TOHOSTBUILDDIR,$(patsubst %.cc,%.o,$(FLASHTOOL_CCSRCS)))
+HOST_TOOLS_CCOBJS += $(FLASHTOOL_CCOBJS)
+HOST_TOOLS_DEPS += $(FLASHTOOL_CCOBJS:%o=%d)
+
+$(FLASHTOOL_CCOBJS): $(HOST_BUILDDIR)/%.o: %.cc
+	@$(MKDIR)
+	@echo host compiling $<
+	$(NOECHO)g++ $(HOST_CPPFLAGS) $(HOST_DEFINES) -I$(DARTINO_ROOT) -c $< -MD -MP -MT $@ -MF $(@:%o=%d) -o $@
+
+$(FLASHTOOL_TOOL): $(FLASHTOOL_CCOBJS)
+	echo $(FLASHTOOL_CCOBJS)
+	@echo host linking $@
+	$(NOECHO)g++ -m32 -Wl,--gc-sections -o $(FLASHTOOL_TOOL) -Wl,--start-group $(FLASHTOOL_CCOBJS) -Wl,--end-group -lpthread
+
+HOST_GENERATED += $(FLASHTOOL_TOOL)
+
+EXTRA_BUILDDEPS += $(FLASHTOOL_TOOL)
+
 EXTRA_CLEANDEPS += host-tools-clean
 
 .PHONY: host-tools-clean
 host-tools-clean:
-	rm -rf $(HOST_CCOBJS) $(HOST_DEPS) $(HOST_GENERATED)
+	rm -rf $(HOST_TOOLS_CCOBJS) $(HOST_TOOLS_DEPS) $(HOST_GENERATED)
 
 include make/module.mk
