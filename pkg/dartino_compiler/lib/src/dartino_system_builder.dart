@@ -86,7 +86,8 @@ class DartinoSystemBuilder extends DartinoSystemBase {
   final Map<int, int> _newGettersByFieldIndex = <int, int>{};
   final Map<int, int> _newSettersByFieldIndex = <int, int>{};
 
-  final Set<DartinoFunction> _removedFunctions = new Set<DartinoFunction>();
+  final Set<int> _invalidatedFunctions = new Set<int>();
+  final Set<DartinoFunctionBase> _removedFunctions = new Set<DartinoFunction>();
 
   final Map<Element, DartinoFunctionBuilder> _functionBuildersByElement =
       <Element, DartinoFunctionBuilder>{};
@@ -159,6 +160,68 @@ class DartinoSystemBuilder extends DartinoSystemBase {
         predecessorSystem.lookupFunctionByElement(used);
     if (usedFunction == null) return;
     replaceUsage(userFunction.functionId, usedFunction.functionId);
+  }
+
+  void removeReplacedPredecessorFunction(FunctionElement element) {
+    DartinoFunction predecessorFunction =
+        predecessorSystem.lookupFunctionByElement(element);
+    if (predecessorFunction == null) return;
+    removeFunction(predecessorFunction, false);
+  }
+
+  void removeFunction(DartinoFunctionBase function, bool isDeleted) {
+    _removedFunctions.add(function);
+    FunctionElement element = function.element;
+    if (element.isInstanceMember) {
+      ClassElement enclosingClass = element.enclosingClass;
+
+      // Remove from method table of enclosing class.
+      DartinoClassBuilder classBuilder = getClassBuilder(enclosingClass);
+      classBuilder.removeFromMethodTable(function);
+
+      // Remove associated parameter stubs.
+      PersistentSet<DartinoFunctionBase> stubs =
+          lookupParameterStubsForFunction(function.functionId);
+      if (stubs != null) {
+        stubs.forEach((DartinoFunctionBase stub) {
+          classBuilder.removeFromMethodTable(stub);
+        });
+      }
+
+      // Remove tear-off getter.
+      int tearOffGetter = lookupTearOffGetterById(function.functionId);
+      if (tearOffGetter != null) {
+        DartinoFunctionBase getterFunction = lookupFunction(tearOffGetter);
+        classBuilder.removeFromMethodTable(getterFunction);
+      }
+
+      if (isDeleted) {
+        // Remove call method and stubs from tear-off closure class. In contrast
+        // if the function is replaced and not deleted completely these methods
+        // will get their literal lists updated with the correct reference.
+        int tearOffId = lookupTearOffById(function.functionId);
+        if (tearOffId != null) {
+          DartinoFunctionBase tearOff = lookupFunction(tearOffId);
+          int classId = tearOff.memberOf;
+          DartinoClassBuilder closureClassBuilder = lookupClassBuilder(classId);
+          if (closureClassBuilder == null) {
+            closureClassBuilder = newPatchClassBuilderFromBase(
+                lookupClassById(classId), new SchemaChange(null));
+          }
+          closureClassBuilder.removeFromMethodTable(tearOff);
+          invalidateFunction(tearOff);
+
+          PersistentSet<DartinoFunctionBase> stubs =
+              lookupParameterStubsForFunction(tearOff.functionId);
+          if (stubs != null) {
+            stubs.forEach((DartinoFunctionBase stub) {
+              closureClassBuilder.removeFromMethodTable(stub);
+              invalidateFunction(stub);
+            });
+          }
+        }
+      }
+    }
   }
 
   DartinoFunctionBuilder newFunctionBuilder(
@@ -361,8 +424,8 @@ class DartinoSystemBuilder extends DartinoSystemBase {
     return stub.functionId;
   }
 
-  void forgetFunction(DartinoFunction function) {
-    _removedFunctions.add(function);
+  void invalidateFunction(DartinoFunction function) {
+    _invalidatedFunctions.add(function.functionId);
   }
 
   List<DartinoFunctionBuilder> getNewFunctions() => _newFunctions;
@@ -689,7 +752,7 @@ class DartinoSystemBuilder extends DartinoSystemBase {
     commands.add(const PrepareForChanges());
 
     // Remove all removed DartinoFunctions.
-    for (DartinoFunction function in _removedFunctions) {
+    for (DartinoFunctionBase function in _removedFunctions) {
       commands.add(new RemoveFromMap(MapId.methods, function.functionId));
     }
 
@@ -1107,6 +1170,9 @@ class DartinoSystemBuilder extends DartinoSystemBase {
         predecessorSystem.staticFieldsById.union(
             new PersistentMap<FieldElement, int>.fromMap(_newStaticFieldsById));
 
+    assert(validateFunctionReferences(classesById.values,
+                                      functionsById.values));
+
     return new DartinoSystem(
         functionsById,
         functionsByElement,
@@ -1132,6 +1198,38 @@ class DartinoSystemBuilder extends DartinoSystemBase {
         staticFieldsById);
   }
 
+  bool validateFunctionReferences(Iterable<DartinoClass> classes,
+                                  Iterable<DartinoFunction> functions) {
+
+    bool result = true;
+    classes.forEach((DartinoClass klass) {
+      klass.methodTable.values.forEach((int functionId) {
+        if (_invalidatedFunctions.contains(functionId)) {
+          DartinoFunction function = lookupFunction(functionId);
+          print("Internal Error: Reference to invalidated function ${function} "
+                "in $klass");
+          result = false;
+        }
+      });
+    });
+
+    functions.forEach((DartinoFunction function) {
+      if (_invalidatedFunctions.contains(function.functionId)) return;
+      function.constants.forEach((DartinoConstant constant) {
+        if (constant.mapId == MapId.methods) {
+          if (_invalidatedFunctions.contains(constant.id)) {
+            DartinoFunction functionRef = lookupFunction(constant.id);
+            print("Internal Error: Reference to invalidated function "
+                "${functionRef} in literal list of $function");
+            result = false;
+          }
+        }
+      });
+    });
+
+    return result;
+  }
+
   bool get hasChanges {
     var changes = [
       _newFunctions,
@@ -1141,6 +1239,7 @@ class DartinoSystemBuilder extends DartinoSystemBase {
       _newGettersByFieldIndex,
       _newSettersByFieldIndex,
       _removedFunctions,
+      _invalidatedFunctions,
       _functionBuildersByElement,
       _classBuildersByElement,
       _newConstructorInitializers,
