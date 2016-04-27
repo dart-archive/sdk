@@ -182,13 +182,11 @@ num_sign_test: Pass, Crash
 regexp/global_test: Fail, RuntimeError, Pass
 # Out of memory: https://github.com/dartino/sdk/issues/464
 regexp/regexp_test: Crash, Timeout
-string_fromcharcodes_test: Crash
 toInt_test: RuntimeError
 uri_base_test: Crash
 # These actually crash because of stack overflow. The overflow
 # is caused by the recursive snapshot reader.
 int_parse_radix_test/02: Timeout
-string_fromcharcodes_test: Timeout
 
 [ $mode == debug && $system == lk ]
 uri_parse_test: Slow, Pass, Timeout
