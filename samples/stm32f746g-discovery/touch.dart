@@ -4,9 +4,9 @@
 
 import 'dart:dartino';
 
-import 'package:stm32f746g_disco/lcd.dart';
-import 'package:stm32f746g_disco/stm32f746g_disco.dart';
-import 'package:stm32f746g_disco/ts.dart';
+import 'package:stm32/lcd.dart';
+import 'package:stm32/stm32f746g_disco.dart';
+import 'package:stm32/ts.dart';
 
 main() {
   var disco = new STM32F746GDiscovery();
@@ -25,7 +25,7 @@ main() {
   frameBuffer.drawLine(x - 5, y, x + 5, y, Color.blue);
   frameBuffer.writeText(x - 50, y + 3, "$x, $y");
 
-  for (int count = 0; count < 50; ++count) {
+  while (true) {
     TouchState t = touchScreen.state;
     var msg = new StringBuffer('touch: ${t.count}');
     for (int index = 0; index < t.count; ++index) {
@@ -34,5 +34,4 @@ main() {
     print(msg);
     sleep(500);
   }
-  print('frame: ${frameBuffer.width}, ${frameBuffer.height}');
 }

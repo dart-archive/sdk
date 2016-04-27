@@ -67,11 +67,14 @@ class TouchScreen {
     const int mSize = gestureOffset + gestureSize;
 
     m = new ForeignMemory.allocated(mSize);
+    int touchCount;
+    List<int> x;
+    List<int> y;
     try {
       _tsGetState.icall$1(m);
-      int touchCount = m.getInt8(0);
-      List<int> x = getInt16List(xStart, touchCount);
-      List<int> y = getInt16List(yStart, touchCount);
+      touchCount = m.getInt8(0);
+      x = getInt16List(xStart, touchCount);
+      y = getInt16List(yStart, touchCount);
     } finally {
       m.free();
     }
