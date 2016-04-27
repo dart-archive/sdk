@@ -786,9 +786,6 @@ class DartinoBackend extends Backend
         // For a generative constructor, this means compile the constructor
         // body. See [compilePendingConstructorInitializers] for an overview of
         // how constructor initializers and constructor bodies are compiled.
-        if (element.isFunction) {
-          systemBuilder.removeReplacedPredecessorFunction(element);
-        }
         codegenFunction(element, treeElements, registry);
       } else if (element.isField) {
         context.compiler.reportVerboseInfo(
@@ -1581,20 +1578,20 @@ class DartinoBackend extends Backend
     DartinoFunctionBase function =
         systemBuilder.lookupFunctionByElement(element);
     if (function == null) return;
-    systemBuilder.invalidateFunction(function);
+    systemBuilder.forgetFunction(function);
 
     int tearOffGetter =
         systemBuilder.lookupTearOffGetterById(function.functionId);
     if (tearOffGetter != null) {
       DartinoFunctionBase getter = systemBuilder.lookupFunction(tearOffGetter);
-      systemBuilder.invalidateFunction(getter);
+      systemBuilder.forgetFunction(getter);
     }
 
     PersistentSet<DartinoFunctionBase> stubs =
         systemBuilder.lookupParameterStubsForFunction(function.functionId);
     if (stubs != null) {
       stubs.forEach((DartinoFunctionBase stub) {
-        systemBuilder.invalidateFunction(stub);
+        systemBuilder.forgetFunction(stub);
       });
     }
   }
@@ -1603,7 +1600,56 @@ class DartinoBackend extends Backend
     DartinoFunctionBase function =
         systemBuilder.lookupFunctionByElement(element);
     if (function == null) return;
-    systemBuilder.removeFunction(function, true);
+    if (element.isInstanceMember) {
+      ClassElement enclosingClass = element.enclosingClass;
+      DartinoClassBuilder classBuilder =
+          systemBuilder.getClassBuilder(enclosingClass);
+      classBuilder.removeFromMethodTable(function);
+
+      // Remove associated parameter stubs.
+      PersistentSet<DartinoFunctionBase> stubs =
+          systemBuilder.lookupParameterStubsForFunction(function.functionId);
+      if (stubs != null) {
+        stubs.forEach((DartinoFunctionBase stub) {
+          classBuilder.removeFromMethodTable(stub);
+          systemBuilder.forgetFunction(stub);
+        });
+      }
+
+      // Remove tear-off getter.
+      int tearOffGetter =
+          systemBuilder.lookupTearOffGetterById(function.functionId);
+      if (tearOffGetter != null) {
+        DartinoFunctionBase getterFunction =
+            systemBuilder.lookupFunction(tearOffGetter);
+        systemBuilder.forgetFunction(getterFunction);
+        classBuilder.removeFromMethodTable(getterFunction);
+      }
+
+      // Remove call method and stubs from tear-off closure class.
+      int tearOffId = systemBuilder.lookupTearOffById(function.functionId);
+      if (tearOffId != null) {
+        DartinoFunctionBase tearOff = systemBuilder.lookupFunction(tearOffId);
+        int classId = tearOff.memberOf;
+        DartinoClassBuilder closureClassBuilder =
+            systemBuilder.lookupClassBuilder(classId);
+        if (closureClassBuilder == null) {
+          closureClassBuilder = systemBuilder.newPatchClassBuilder(
+              classId, compiledClosureClass, new SchemaChange(null));
+        }
+        closureClassBuilder.removeFromMethodTable(tearOff);
+        systemBuilder.forgetFunction(tearOff);
+
+        PersistentSet<DartinoFunctionBase> stubs =
+            systemBuilder.lookupParameterStubsForFunction(tearOff.functionId);
+        if (stubs != null) {
+          stubs.forEach((DartinoFunctionBase stub) {
+            closureClassBuilder.removeFromMethodTable(stub);
+            systemBuilder.forgetFunction(stub);
+          });
+        }
+      }
+    }
   }
 
   /// Invoked during codegen enqueuing to compile constructor initializers.
