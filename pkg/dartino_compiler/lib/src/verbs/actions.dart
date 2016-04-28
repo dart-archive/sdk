@@ -25,6 +25,12 @@ import 'create_verb.dart' show
 import 'debug_verb.dart' show
     debugAction;
 
+import 'disable_verb.dart' show
+    disableAction;
+
+import 'enable_verb.dart' show
+    enableAction;
+
 import 'export_verb.dart' show
     exportAction;
 
@@ -69,6 +75,9 @@ class Action {
   // TODO(ahe): Should be "to uri NAME".
   final bool requiresToUri;
 
+  /// True if this verb needs "for NAME".
+  final bool requiresForName;
+
   /// True if this verb requires a session target (that is, "session NAME"
   /// without "in").
   final bool requiresTargetSession;
@@ -95,18 +104,26 @@ class Action {
       this.documentation,
       {this.requiresSession: false,
        this.requiresToUri: false,
+       this.requiresForName: false,
        this.allowsTrailing: false,
-       bool requiresTargetSession: false,
        TargetKind requiredTarget,
        bool requiresTarget: false,
        this.supportedTargets,
        this.supportsWithUri: false})
-      : this.requiresTargetSession = requiresTargetSession,
-        this.requiredTarget =
-      requiresTargetSession ? TargetKind.SESSION : requiredTarget,
-        requiresTarget = !identical(requiredTarget, null) ||
-    requiresTarget ||
-    requiresTargetSession;
+      : this.requiresTargetSession =
+          identical(requiredTarget, TargetKind.SESSION),
+        this.requiredTarget = requiredTarget,
+        requiresTarget = !identical(requiredTarget, null) || requiresTarget;
+}
+
+/// Use a [ActionGroup] to group actions that share the same primary verb
+/// such as "create project" and "create session".
+class ActionGroup extends Action {
+  final Map<String, Action> actions;
+
+  const ActionGroup(Map<String, Action> actions, String documentation)
+      : super(null, documentation),
+        this.actions = actions;
 }
 
 
@@ -134,6 +151,8 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "compile": compileAction,
   "create": createAction,
   "debug": debugAction,
+  "disable": disableAction,
+  "enable": enableAction,
   "export": exportAction,
   "flash": flashAction,
   "x-download-tools": downloadToolsAction,

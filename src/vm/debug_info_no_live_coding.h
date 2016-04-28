@@ -13,69 +13,60 @@
 
 namespace dartino {
 
+class Breakpoint;
 class Coroutine;
 class Function;
 class Object;
 class PointerVisitor;
 
-class Breakpoints {
+class ProgramDebugInfo {
  public:
-  void UpdateBreakpoints() {}
-  void VisitPointers(PointerVisitor* visitor) {}
-  void VisitProgramPointers(PointerVisitor* visitor) {}
+  const Breakpoint* GetBreakpointAt(uint8* bcp) const {
+    UNIMPLEMENTED();
+    return NULL;
+  }
+
+  void VisitProgramPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
+  void UpdateBreakpoints() { UNIMPLEMENTED(); }
 };
 
-class DebugInfo {
+class ProcessDebugInfo {
  public:
-  static const int kNoBreakpointId = -1;
-
-  explicit DebugInfo(int process_id, Breakpoints* program_breakpoints) {
+  explicit ProcessDebugInfo(ProgramDebugInfo* program_info) {
     UNIMPLEMENTED();
   }
 
-  bool ShouldBreak(uint8* bcp, Object** sp) {
+  const Breakpoint* GetBreakpointAt(uint8* bcp, Object** sp) const {
     UNIMPLEMENTED();
-    return false;
+    return NULL;
   }
 
-  int SetProgramBreakpoint(Function* function, int bytecode_index) {
-    UNIMPLEMENTED();
-    return 0;
-  }
+  void SetCurrentBreakpoint(const Breakpoint* breakpoint) { UNIMPLEMENTED(); }
 
-  int SetProcessLocalBreakpoint(
-      Function* function, int bytecode_index,
-      bool one_shot = false, Coroutine* coroutine = NULL,
+  int CreateBreakpoint(
+      Function* function,
+      int bytecode_index,
+      Coroutine* coroutine = NULL,
       word stack_height = 0) {
     UNIMPLEMENTED();
-    return 0;
+    return -1;
   }
 
-  bool is_stepping() const {
+  int SetStepping() {
     UNIMPLEMENTED();
-    return false;
+    return -1;
   }
 
-  void set_is_stepping(bool value) { UNIMPLEMENTED(); }
+  void ClearCurrentBreakpoint() { UNIMPLEMENTED(); }
 
   bool is_at_breakpoint() const {
     UNIMPLEMENTED();
     return false;
   }
 
-  void clear_current_breakpoint() { UNIMPLEMENTED(); }
-
   void VisitPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
-
   void VisitProgramPointers(PointerVisitor* visitor) { UNIMPLEMENTED(); }
-
   void UpdateBreakpoints() { UNIMPLEMENTED(); }
-
-  void ClearBreakpoint() { UNIMPLEMENTED(); }
-
-  void SetStepping() { UNIMPLEMENTED(); }
-
-  static void ClearBytecodeBreaks() {}
 };
 
 }  // namespace dartino

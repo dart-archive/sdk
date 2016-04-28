@@ -7,39 +7,29 @@ library dartino_compiler.incremental_backend;
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
-    FieldElement,
     FunctionElement;
 
 import 'dartino_system.dart' show
     DartinoSystem;
 
 import 'src/dartino_system_builder.dart' show
-    DartinoSystemBuilder,
-    SchemaChange;
+    DartinoSystemBuilder;
 
-import 'src/dartino_class_builder.dart' show
-    DartinoClassBuilder;
-
-import 'src/dartino_context.dart' show
-    DartinoContext;
+import 'src/closure_environment.dart' show
+    ClosureInfo;
 
 // TODO(ahe): Move this to dart2js upstream when it's stabilized
 abstract class IncrementalBackend {
 
-  /// Remove [element] from the compilation result. Called after resolution and
-  /// codegen phase.
+  /// Remove [element] from the compilation result.
   ///
-  /// This is different from [Backend.forgetElement] which is about preparing
-  /// for a new round of resolution and codegen. `forgetElement` is called
-  /// before processing the work queue, this method is called after and the old
-  /// version of [element] should be removed.
+  /// This is different from [Backend.forgetElement]. The former is to inform
+  /// the backend that [element] has changed, this method informs the backend
+  /// that [element] was removed.
   void removeFunction(FunctionElement element);
 
-  /// Update references to [element] in [users].
-  // TODO(ahe): Computing [users] is expensive, and may not be necessary in
-  // dart2js. Move to IncrementalDartinoBackend or add a bool to say if the call
-  // is needed.
-  void replaceFunctionUsageElement(Element element, List<Element> users);
+  //TODO(zarah): Remove this and track nested closures via DartinoSystem
+  Map<FunctionElement, ClosureInfo> lookupNestedClosures(Element element);
 }
 
 abstract class IncrementalDartinoBackend implements IncrementalBackend {

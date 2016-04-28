@@ -187,21 +187,36 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   if system == 'linux':
     StepsCreateDebianPackage()
     StepsArchiveDebianPackage()
+
     # We need the dartino daemon process to compile snapshots.
-    host_configuration = GetBuildConfigurations(
+    for arch in ['ia32', 'x64']:
+      host_configuration = GetBuildConfigurations(
         system=utils.GuessOS(),
         modes=['release'],
-        archs=['x64'],
+        archs=[arch],
         asans=[False],
         embedded_libs=[False],
         use_sdks=[False])[0]
-    StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
+      StepBuild(host_configuration['build_conf'],
+                host_configuration['build_dir'])
 
     for cross_arch in cross_archs:
       CrossCompile(cross_system, [cross_mode], cross_arch)
       StepsArchiveCrossCompileBundle(cross_mode, cross_arch)
     StepsCreateArchiveRaspbianImge()
   elif system == 'mac':
+    # We need the 32-bit build for the dartino-flashify program.
+    if 'ia32' not in archs:
+      ia32_configuration = GetBuildConfigurations(
+        system=system,
+        modes=['release'],
+        archs=['ia32'],
+        asans=[False],
+        no_clang=no_clang,
+        embedded_libs=embedded_libs,
+        use_sdks=[True])[0]
+      StepBuild(ia32_configuration['build_conf'],
+                ia32_configuration['build_dir'])
     for cross_arch in cross_archs:
        StepsGetCrossBinaries(cross_mode, cross_arch)
     StepsGetArmDeb()
@@ -225,6 +240,7 @@ def StepsTestSDK(debug_log, configuration):
   if os.path.exists(sdk_dir):
     shutil.rmtree(sdk_dir)
   Unzip(sdk_zip)
+  StepDisableAnalytics(os.path.join(sdk_dir, 'bin'))
   build_conf = configuration['build_conf']
 
   def run():
@@ -236,7 +252,10 @@ def StepsTestSDK(debug_log, configuration):
 
 def StepsSanityChecking(build_dir):
   version = utils.GetSemanticSDKVersion()
-  dartino = os.path.join(build_dir, 'dartino-sdk', 'bin', 'dartino')
+  sdk_dir = os.path.join(build_dir, 'dartino-sdk')
+  bin_dir = os.path.join(sdk_dir, 'bin')
+  StepDisableAnalytics(bin_dir)
+  dartino = os.path.join(bin_dir, 'dartino')
   # TODO(ricow): we should test this as a normal test, see issue 232.
   dartino_version = subprocess.check_output([dartino, '--version']).strip()
   subprocess.check_call([dartino, 'quit'])
@@ -244,10 +263,23 @@ def StepsSanityChecking(build_dir):
     raise Exception('Version mismatch, VERSION file has %s, dartino has %s' %
                     (version, dartino_version))
   dartino_vm = os.path.join(build_dir, 'dartino-sdk', 'bin', 'dartino-vm')
-  dartino_vm_version = subprocess.check_output([dartino_vm, '--version']).strip()
+  dartino_vm_version = subprocess.check_output([dartino_vm,
+                                                '--version']).strip()
   if dartino_vm_version != version:
     raise Exception('Version mismatch, VERSION file has %s, dartino vm has %s' %
                     (version, dartino_vm_version))
+
+def StepDisableAnalytics(bin_dir):
+  with bot.BuildStep('Disable analytics'):
+    dartino = os.path.join(bin_dir, 'dartino')
+    try:
+      print "%s disable analytics" % (dartino)
+      print subprocess.check_output([dartino, 'disable', 'analytics'])
+      print "Ensure background process is not running"
+      print "%s quit" % (dartino)
+      print subprocess.check_output([dartino, 'quit'])
+    except Exception as error:
+      print "Ignoring error: %s" % (error)
 
 def StepsCreateDebianPackage():
   with bot.BuildStep('Create arm agent deb'):
@@ -459,6 +491,8 @@ def StepsNormal(debug_log, system, modes, archs, asans, embedded_libs):
   for configuration in configurations:
     StepBuild(configuration['build_conf'], configuration['build_dir'], args)
 
+  StepDisableAnalytics(configuration['build_dir'])
+
   # TODO(herhut): Remove once Windows port is complete.
   if system == 'win':
     return
@@ -482,15 +516,15 @@ def StepsFreeRtos(debug_log):
   StepGyp()
 
   # We need the dartino daemon process to compile snapshots.
-  host_configuration = GetBuildConfigurations(
+  for arch in ['ia32', 'x64']:
+    host_configuration = GetBuildConfigurations(
       system=utils.GuessOS(),
       modes=['release'],
-      archs=['x64'],
+      archs=[arch],
       asans=[False],
       embedded_libs=[False],
       use_sdks=[False])[0]
-  StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
-
+    StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
   configuration = GetBuildConfigurations(
       system=utils.GuessOS(),
       modes=['debug'],
@@ -499,7 +533,7 @@ def StepsFreeRtos(debug_log):
       embedded_libs=[False],
       use_sdks=[False])[0]
   StepBuild(configuration['build_conf'], configuration['build_dir'])
-
+  StepDisableAnalytics(host_configuration['build_dir'])
 
 def StepsLK(debug_log):
   # We need the dartino daemon process to compile snapshots.
@@ -525,6 +559,8 @@ def StepsLK(debug_log):
     Run(['make', '-C', 'third_party/lk', 'clean'])
     Run(['make', '-C', 'third_party/lk', '-j8'])
 
+  StepDisableAnalytics(host_configuration['build_dir'])
+
   with bot.BuildStep('Test %s' % device_configuration['build_conf']):
     # TODO(ajohnsen): This is kind of funky, as test.py tries to start the
     # background process using -a and -m flags. We should maybe changed so
@@ -532,6 +568,17 @@ def StepsLK(debug_log):
     StepTest(
         configuration=device_configuration,
         debug_log=debug_log,
+        snapshot_run=True)
+
+  with bot.BuildStep('Test (heap blobs) %s' %
+                     device_configuration['build_conf']):
+    # TODO(ajohnsen): This is kind of funky, as test.py tries to start the
+    # background process using -a and -m flags. We should maybe changed so
+    # test.py can have both a host and target configuration.
+    StepTest(
+        configuration=device_configuration,
+        debug_log=debug_log,
+        use_heap_blob=True,
         snapshot_run=True)
 
 def StepsCrossBuilder(debug_log, system, modes, arch):
@@ -614,6 +661,8 @@ def StepsTargetRunner(debug_log, system, mode, arch):
           shutil.copyfile(dart_arm, destination)
           shutil.copymode(dart_arm, destination)
 
+          StepDisableAnalytics(build_dir)
+
           def run():
             StepTest(
               configuration=configuration,
@@ -671,6 +720,7 @@ def StepBuild(build_config, build_dir, args=()):
 def StepTest(
     configuration=None,
     snapshot_run=False,
+    use_heap_blob=False,
     debug_log=None):
   name = configuration['build_conf']
   mode = configuration['mode']
@@ -681,7 +731,14 @@ def StepTest(
   embedded_libs = configuration['embedded_libs']
   use_sdk = configuration['use_sdk']
 
-  step_name = '%s%s' % (name, '-snapshot' if snapshot_run else '')
+  if (use_heap_blob):
+    suffix = '-heapblob'
+  elif (snapshot_run):
+    suffix = '-snapshot'
+  else:
+    suffix = ''
+  step_name = '%s%s' % (name, suffix)
+
   with bot.BuildStep('Test %s' % step_name, swallow_error=True):
     args = ['python', 'tools/test.py', '-m%s' % mode, '-a%s' % arch,
             '--time', '--report', '-pbuildbot',
@@ -701,6 +758,9 @@ def StepTest(
       #  - normal dartino VM
       #  - dartino VM with -Xunfold-program enabled
       args.extend(['-cdartino_compiler', '-rdartinovm'])
+
+    if use_heap_blob:
+      args.append('--use-heap-blob')
 
     if use_sdk:
       args.append('--use-sdk')
@@ -787,6 +847,14 @@ class TemporaryHomeDirectory(object):
   def __enter__(self):
     self._tmp = tempfile.mkdtemp()
     self._old_home_dir = os.getenv('HOME')
+    try:
+      # copy the analytics opt-out to temp home directory
+      shutil.copyfile(os.path.join(self._old_home_dir, '.dartino_uuid'),
+                      os.path.join(self._tmp, '.dartino_uuid'))
+      print "Copied analytics file to temp home dir"
+    except Exception as error:
+      print "Ignoring error copying analytics file: %s" % (error)
+
     # Note: os.putenv doesn't update os.environ, but assigning to os.environ
     # will also call putenv.
     os.environ['HOME'] = self._tmp

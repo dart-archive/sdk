@@ -72,7 +72,7 @@
             # As we are messing with CWD we need the path relative to
             # PRODUCT_DIR (where we cd into) instead of relative to
             # where this .gyp file is.
-            '../../third_party/gcc-arm-embedded/linux/'
+            '../../third_party/gcc-arm-embedded/<(OS)/'
                 'gcc-arm-embedded/bin/arm-none-eabi-objcopy',
             '-I',
             'binary',
@@ -128,6 +128,9 @@
 
         '<(source_path)/exceptions.c',
 
+        # Board initialization.
+        '<(source_path)/board.c',
+
         # Generated files.
         '<(generated_path)/Inc/mxconstants.h',
         '<(generated_path)/Inc/stm32f7xx_hal_conf.h',
@@ -144,6 +147,7 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_lcd.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
+        '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_ts.c',
 
         # Additional utilities.
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
@@ -180,6 +184,7 @@
       'variables': {
         'common_ldflags': [
           '-specs=nano.specs',
+          '-specs=nosys.specs',
           # TODO(340): Why does this not work???
           #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???

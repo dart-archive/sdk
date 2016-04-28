@@ -84,8 +84,7 @@ class MonitorImpl {
     AddToWaitList(&wait_entry);
     CHECK_AND_FAIL(mutex_release(&internal_));
     CHECK_AND_FAIL(mutex_release(&mutex_));
-    int result =
-        sem_timedwait(&wait_entry.semaphore_, microseconds / 1000) == NO_ERROR;
+    int result = sem_timedwait(&wait_entry.semaphore_, microseconds / 1000);
     if (result != NO_ERROR) {
       CHECK_AND_FAIL(mutex_acquire(&internal_));
       // Remove our entry from the waitlist. If we are no longer in the list,

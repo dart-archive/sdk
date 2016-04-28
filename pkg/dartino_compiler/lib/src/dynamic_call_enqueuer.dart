@@ -10,9 +10,6 @@ import 'dart:collection' show
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
 
-import 'package:compiler/src/universe/use.dart' show
-    DynamicUse;
-
 import 'package:compiler/src/dart_types.dart' show
     DartType,
     InterfaceType,
@@ -22,12 +19,9 @@ import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
     Element,
     FunctionElement,
-    LibraryElement,
-    MemberElement,
-    Name;
+    MemberElement;
 
 import 'package:compiler/src/common/names.dart' show
-    Identifiers,
     Names;
 
 import 'package:compiler/src/util/util.dart' show
@@ -196,9 +190,7 @@ class DynamicCallEnqueuer {
     }
   }
 
-  void enqueueSelector(DynamicUse use) {
-    assert(use.mask == null);
-    Selector selector = use.selector;
+  void enqueueSelector(Selector selector) {
     if (enqueuedSelectors.add(selector)) {
       pendingSelectors.add(selector);
     }

@@ -5,11 +5,9 @@
 library dartino_compiler.verbs.servicec_verb;
 
 import 'dart:io' show
-    File,
-    Directory,
-    Platform;
+    Directory;
 
-import 'package:path/path.dart' show join, dirname;
+import 'package:path/path.dart' show join;
 
 import 'infrastructure.dart';
 
@@ -17,10 +15,6 @@ import '../hub/exit_codes.dart' show
     DART_VM_EXITCODE_COMPILE_TIME_ERROR;
 
 import 'package:servicec/compiler.dart' as servicec;
-
-import 'package:servicec/errors.dart' show
-    CompilationError,
-    ErrorReporter;
 
 import 'documentation.dart' show
     servicecDocumentation;

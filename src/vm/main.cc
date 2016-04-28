@@ -20,9 +20,9 @@
 
 namespace dartino {
 
-static int RunSession(Connection* connection) {
+static int RunSession(Connection* connection, DartinoProgram program) {
   Session session(connection);
-  session.Initialize();
+  session.Initialize(reinterpret_cast<dartino::Program*>(program));
   session.StartMessageProcessingThread();
   int result = session.ProcessRun();
   session.JoinMessageProcessingThread();
@@ -61,17 +61,26 @@ static bool EndsWith(const char* s, const char* suffix) {
 
 static void PrintUsage() {
   Print::Out("dartino-vm - The embedded Dart virtual machine.\n\n");
-  Print::Out(
-      "  dartino-vm [--port=<port>] [--host=<address>] "
-      "[snapshot file]\n\n");
-  Print::Out("When specifying a snapshot other options are ignored.\n\n");
+  Print::Out("Run snapshot non-interactively:\n");
+  Print::Out("  dartino-vm snapshot-file\n\n");
+  Print::Out("Run snapshot interactively:\n");
+  Print::Out("  dartino-vm --interactive [--port=<port>] "
+      "[--host=<address>] snapshot-file\n\n");
+  Print::Out("Run interactively without snapshot:\n");
+  Print::Out("  dartino-vm [--interactive] [--port=<port>] "
+      "[--host=<address>]\n\n");
+
   Print::Out("Options:\n");
   Print::Out(
-      "  --port: specifies which port to listen on. Defaults "
-      "to random port.\n");
+      "  --interactive: tells the VM to listen for a debugger connection on "
+      "the specified port and host.\n"
+      "    This is the default when no snapshot file is given.\n");
   Print::Out(
       "  --host: specifies which host address to listen on. "
       "Defaults to 127.0.0.1.\n");
+  Print::Out(
+      "  --port: specifies which port to listen on. Defaults "
+      "to random port.\n");
   Print::Out("  --help: print out 'dartino-vm' usage.\n");
   Print::Out("  --version: print the version.\n");
   Print::Out("\n");
@@ -80,11 +89,6 @@ static void PrintUsage() {
 static void PrintVersion() { Print::Out("%s\n", GetVersion()); }
 
 static int Main(int argc, char** argv) {
-#ifdef DEBUG
-  if (Platform::GetEnv("DARTINO_VM_WAIT") != NULL) {
-    Platform::WaitForDebugger(argv[0]);
-  }
-#endif
   Flags::ExtractFromCommandLine(&argc, argv);
   DartinoSetup();
 
@@ -109,6 +113,8 @@ static int Main(int argc, char** argv) {
   argc--;
   argv++;
 
+  bool interactive = false;
+
   // Process all options including the snapshot file name.
   while (argc > 0) {
     const char* argument = argv[0];
@@ -128,6 +134,8 @@ static int Main(int argc, char** argv) {
       log_dir = argument + 10;
     } else if (StartsWith(argument, "--port-file=")) {
       port_file = argument + 12;
+    } else if (strcmp(argument, "--interactive") == 0) {
+      interactive = true;
     } else if (StartsWith(argument, "-")) {
       Print::Out("Invalid option: %s.\n", argument);
       invalid_option = true;
@@ -135,16 +143,15 @@ static int Main(int argc, char** argv) {
       // No matching option given, assume it is a snapshot.
       input = argument;
       run_snapshot = true;
-      break;
     }
   }
+
   if (invalid_option) {
     // Don't continue if one or more invalid/unknown options were passed.
     Print::Out("\n");
     PrintUsage();
     exit(1);
   }
-  bool interactive = true;
 
   int result = 0;
 
@@ -158,6 +165,8 @@ static int Main(int argc, char** argv) {
     Print::RegisterPrintInterceptor(new LogPrintInterceptor(log_path));
   }
 
+  DartinoProgram program;
+
   // Check if we're passed an snapshot file directly.
   if (run_snapshot) {
     List<uint8> bytes = Platform::LoadFile(input);
@@ -167,11 +176,7 @@ static int Main(int argc, char** argv) {
       exit(1);
     }
     if (IsSnapshot(bytes)) {
-      DartinoProgram program =
-          DartinoLoadSnapshot(bytes.data(), bytes.length());
-      result = DartinoRunMain(program, argc, argv);
-      DartinoDeleteProgram(program);
-      interactive = false;
+      program = DartinoLoadSnapshot(bytes.data(), bytes.length());
     } else {
       Print::Out("The file '%s' is not a snapshot.\n\n");
       if (EndsWith(input, ".dart")) {
@@ -182,15 +187,26 @@ static int Main(int argc, char** argv) {
       exit(1);
     }
     bytes.Delete();
+  } else {
+    dartino::Program *p =
+        new dartino::Program(dartino::Program::kBuiltViaSession);
+    p->Initialize();
+    program = reinterpret_cast<DartinoProgram>(p);
+    // If there was no snapshot, run in interactive mode.
+    interactive = true;
   }
 
-  // If we haven't already run from a snapshot, we start an
-  // interactive programming session that talks to a separate
-  // compiler process.
   if (interactive) {
+    // If [interactive] is true, start an interactive programming session that
+    // communicates with a separate compiler/debugger process.
     Connection* connection = WaitForCompilerConnection(host, port, port_file);
-    result = RunSession(connection);
+    result = RunSession(connection, program);
+  } else {
+    // Otherwise, run the program.
+    result = DartinoRunMain(program, argc, argv);
   }
+
+  DartinoDeleteProgram(program);
 
   DartinoTearDown();
   return result;

@@ -20,6 +20,7 @@ import 'package:compiler/src/script.dart' show
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
+    FunctionElement,
     CompilationUnitElement,
     Element,
     LibraryElement,
@@ -67,21 +68,20 @@ import 'package:compiler/src/util/util.dart' show
     Link;
 
 import 'package:compiler/src/elements/modelx.dart' show
-    ClassElementX,
     CompilationUnitElementX,
     DeclarationSite,
     ElementX,
     FieldElementX,
     LibraryElementX;
 
-import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
-
 import 'package:compiler/src/library_loader.dart' show
     TagState;
 
 import '../incremental_backend.dart' show
     IncrementalBackend;
+
+import '../src/closure_environment.dart' show
+    ClosureInfo;
 
 import 'diff.dart' show
     Difference,
@@ -137,8 +137,13 @@ abstract class Reuser {
   final Map<LibraryElementX, SourceFile> _entrySourceFiles =
       <LibraryElementX, SourceFile>{};
 
-  final Map<LibraryElement, Future<LibraryElement>> _cachedLibraryCopies =
+  final Map<LibraryElement, Future<LibraryElement>> _cachedLibraryCopyFutures =
       <LibraryElement, Future<LibraryElement>>{};
+
+  final Map<LibraryElement, LibraryElement> _cachedLibraryCopies =
+      <LibraryElement, LibraryElement>{};
+
+  final Set<LibraryElement> _synthesizedLibraries = new Set<LibraryElement>();
 
   Reuser(
       this.compiler,
@@ -248,13 +253,13 @@ abstract class Reuser {
       Token token = new Scanner(_entrySourceFiles[library]).tokenize();
       _entryUnitTokens[library] = token;
       // Using two parsers to only create the nodes we want ([LibraryTag]).
-      Parser parser = new Parser(new Listener());
+      Parser parser = new Parser(new Listener(), compiler.options);
       Element entryCompilationUnit = library.entryCompilationUnit;
       NodeListener listener = new NodeListener(
           compiler.resolution.parsing
               .getScannerOptionsFor(entryCompilationUnit),
           compiler.reporter, entryCompilationUnit);
-      Parser nodeParser = new Parser(listener);
+      Parser nodeParser = new Parser(listener, compiler.options);
       Iterator<LibraryTag> tags = library.tags.iterator;
       while (token.kind != EOF_TOKEN) {
         token = parser.parseMetadataStar(token);
@@ -332,22 +337,43 @@ abstract class Reuser {
       }
     }
 
+    // Record that this library is synthetic.
+    _synthesizedLibraries.add(newLibrary);
+
     return newLibrary;
+  }
+
+  /// Returns true if [library] is synthetic, that is, created with
+  /// [_synthesizeLibrary] above.
+  bool isSynthetic(LibraryElement library) {
+    return _synthesizedLibraries.contains(library);
   }
 
   /// Returns a copy of [library] if any of its parts have changed, whose token
   /// positions represent the changed positions.  If [library] hasn't changed,
   /// it's returned unmodified.
   Future<LibraryElement> copyLibraryWithChanges(LibraryElement library) {
-    return _cachedLibraryCopies.putIfAbsent(library, () async {
+    return _cachedLibraryCopyFutures.putIfAbsent(library, () async {
       List<Script> scripts = <Script>[];
-      if (!await _computeUpdatedScripts(library, scripts)) return library;
+      if (!await _computeUpdatedScripts(library, scripts)) {
+        _cachedLibraryCopies[library] = library;
+        return library;
+      }
       try {
-        return _synthesizeLibrary(library, scripts);
+        LibraryElement copy = _synthesizeLibrary(library, scripts);
+        _cachedLibraryCopies[library] = copy;
+        return copy;
       } finally {
         _cleanUp(library);
       }
     });
+  }
+
+  /// Same as [copyLibraryWithChanges], but synchronous. Relies on
+  /// [copyLibraryWithChanges] was called previously.
+  LibraryElement copyLibraryWithChangesSync(LibraryElement library) {
+    LibraryElement copy = _cachedLibraryCopies[library];
+    return copy == null ? library : copy;
   }
 
   bool cannotReuse(context, String message) {
@@ -607,31 +633,7 @@ abstract class Reuser {
     }
   }
 
-  void replaceFunctionInBackend(
-      ElementX element,
-      /* ScopeContainerElement */ container) {
-    List<Element> elements = <Element>[];
-    if (checkForGenericTypes(element)) return;
-    for (ScopeContainerElement scope in scopesAffectedBy(element, container)) {
-      scanSites(scope, (Element member, DeclarationSite site) {
-        // TODO(ahe): Cache qualifiedNamesIn to avoid quadratic behavior.
-        Set<String> names = qualifiedNamesIn(site);
-        if (canNamesResolveStaticallyTo(names, element, container)) {
-          if (checkForGenericTypes(member)) return;
-          if (member is TypeDeclarationElement) {
-            if (!member.isResolved) {
-              // TODO(ahe): This is a bug in dart2js' forgetElement which
-              // attempts to check if member is a generic type.
-              cannotReuse(member, "Not resolved");
-              return;
-            }
-          }
-          elements.add(member);
-        }
-      });
-    }
-    backend.replaceFunctionUsageElement(element, elements);
-  }
+  void replaceFunctionInBackend(ElementX element);
 
   /// Invoke [f] on each [DeclarationSite] in [element]. If [element] is a
   /// [ScopeContainerElement], invoke f on all local members as well.
@@ -705,8 +707,20 @@ abstract class Reuser {
     if (!before.isInstanceMember) {
       if (!allowNonInstanceMemberModified(after)) return false;
     }
-    updates.add(new FunctionUpdate(compiler, before, after));
+    if (hasNestedClosures(before)) {
+      if (!allowSimpleModificationWithNestedClosures(before)) {
+        return false;
+      }
+    }
+    addFunctionUpdate(compiler, before, after);
     return true;
+  }
+
+  bool hasNestedClosures(PartialFunctionElement function) {
+    Map<FunctionElement, ClosureInfo> nestedClosures =
+        backend.lookupNestedClosures(function);
+    if (nestedClosures == null) return false;
+    return nestedClosures.isNotEmpty;
   }
 
   bool canReuseClass(
@@ -771,7 +785,7 @@ abstract class Reuser {
       compiler.forgetElement(element);
       element.reuseElement();
       if (element.isFunction) {
-        replaceFunctionInBackend(element, element.enclosingElement);
+        replaceFunctionInBackend(element);
       }
     }
     List<Element> elementsToInvalidate = <Element>[];
@@ -786,7 +800,7 @@ abstract class Reuser {
         elementsToInvalidate.add(element);
       }
       if (update is FunctionUpdate) {
-        replaceFunctionInBackend(element, element.enclosingElement);
+        replaceFunctionInBackend(element);
       }
     }
     return elementsToInvalidate;
@@ -796,6 +810,11 @@ abstract class Reuser {
       Compiler compiler,
       PartialClassElement before,
       PartialClassElement after);
+
+  void addFunctionUpdate(
+      Compiler compiler,
+      PartialFunctionElement before,
+      PartialFunctionElement after);
 
   void addAddedFunctionUpdate(
       Compiler compiler,
@@ -837,6 +856,8 @@ abstract class Reuser {
   bool allowRemovedElement(PartialElement element);
 
   bool allowAddedElement(PartialElement element);
+
+  bool allowSimpleModificationWithNestedClosures(PartialElement element);
 }
 
 /// Represents an update (aka patch) of [before] to [after]. We use the word
@@ -862,7 +883,7 @@ abstract class Update {
 }
 
 /// Represents an update of a function element.
-class FunctionUpdate extends Update with ReuseFunctionElement {
+abstract class FunctionUpdate extends Update with ReuseFunctionElement {
   final PartialFunctionElement before;
 
   final PartialFunctionElement after;

@@ -13,10 +13,10 @@
   "packages": ".packages",
 
   // A list of strings that are passed to the compiler
-  "options": [
+  "compiler_options": [
   ],
 
-  // Values of of compile-time constants, that is, the values of
+  // Values of of dart compile-time constants, that is, the values of
   // expression on these forms:
   //
   //   const bool.fromEnvironment("<name>")
@@ -25,6 +25,20 @@
   //
   "constants": {
   },
+
+  // A list of strings that are passed to the Dartino embedder.
+  //
+  // Currently recognized options:
+  // - 'enable_debugger': when enabled the device will wait for the
+  //   debugger on the uart-connection before running the program.
+  //   all stdout will go to the debugger.
+  // - 'uart_print_interceptor': when enabled all stdout will be copied to
+  //   the uart.
+  // Notice 'enable_debugger' and 'uart_print_interceptor' do not work together.
+  "embedder_options": [
+    // "enable_debugger"
+    "uart_print_interceptor"
+  ],
 
   // Address of the target device on which to run the Dartino VMs.
   // If null then vms are started directly on localhost.

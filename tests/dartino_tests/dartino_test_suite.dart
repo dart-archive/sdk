@@ -42,6 +42,10 @@ import 'package:dartino_compiler/src/worker/developer.dart' show
 import 'package:dartino_compiler/src/console_print.dart' show
     printToConsole;
 
+import 'package:dartino_compiler/incremental/dartino_compiler_incremental.dart'
+    show
+        IncrementalCompilationFailed;
+
 import 'messages.dart' show
     Info,
     InternalErrorMessage,
@@ -70,6 +74,10 @@ Sink<Message> messageSink;
 main() async {
   int port = const int.fromEnvironment("test.dartino_test_suite.port");
   Socket socket = await Socket.connect(InternetAddress.LOOPBACK_IP_V4, port);
+  socket.done.catchError((e) {
+    // This error will be reported again when the socket is closed below.
+    stdout.writeln(e);
+  });
   messageSink = new SocketSink(socket);
   IsolatePool pool = new IsolatePool(isolateMain);
   Set<ManagedIsolate> isolates = new Set<ManagedIsolate>();
@@ -244,11 +252,14 @@ Future<Message> runTest(String name, NoArgFuture test) async {
         // handles it).
         return;
       }
-      print(
+      stdout.writeln(
           // Print one string to avoid interleaved messages.
           "\n$BUILDBOT_MARKER\nLate error in test '$name':\n"
           "$error\n$stackTrace");
     });
+  } on IncrementalCompilationFailed catch (error, stackTrace) {
+    return new TestFailed(
+        name, '$error', '$stackTrace', kind: 'IncrementalCompilationFailed');
   } catch (error, stackTrace) {
     return new TestFailed(name, '$error', '$stackTrace');
   } finally {

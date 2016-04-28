@@ -123,7 +123,7 @@ Future<int> mockVm(MockVmArguments arguments) async {
       if (reply == null) {
         print(command);
       } else {
-        reply.addTo(socket);
+        reply.addTo(socket, (a, b) => b);
         await socket.flush();
       }
     }
@@ -165,7 +165,7 @@ VmCommand mockReply(VmCommandCode code) {
   // Please add more cases as needed.
   switch (code) {
     case VmCommandCode.HandShake:
-      return new HandShakeResult(true, "");
+      return new HandShakeResult(true, "", 64, 64);
 
     case VmCommandCode.CommitChanges:
       return new CommitChangesResult(

@@ -196,10 +196,10 @@ void doBytecodes(V(String name, bool isBranching, String format, int size,
   V("InvokeTestNoSuchMethod", true,   "I",  5, 0,
     "invoke test no such method %d");
 
+  V("InvokeLeafNative",       true,   "BB", 3, 1,
+    "invoke leaf native %d %d");
   V("InvokeNative",           true,   "BB", 3, 1,
     "invoke native %d %d");
-  V("InvokeDetachableNative", true,   "BB", 3, 1,
-    "invoke detachable native %d %d");
   V("InvokeNativeYield",      true,   "BB", 3, 1,
     "invoke native yield %d %d");
 

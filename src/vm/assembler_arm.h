@@ -46,7 +46,7 @@ enum ScaleFactor {
   TIMES_8 = 3
 };
 
-enum ShiftType { LSL, ASR };
+enum ShiftType { LSL, ASR, LSR };
 
 enum Condition {
   EQ = 0,   // equal
@@ -231,6 +231,8 @@ class Assembler {
   INSTRUCTION_3(str, "str %r, %a%W", Register, const Address&, WriteBack);
   INSTRUCTION_3(str, "str %r, [%r], %i", Register, Register, const Immediate&);
   INSTRUCTION_3(str, "str%c %r, %a", Condition, Register, const Address&);
+
+  INSTRUCTION_2(strb, "strb %r, %a", Register, const Address&);
 
   INSTRUCTION_3(sub, "sub %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(sub, "sub %r, %r, %r", Register, Register, Register);

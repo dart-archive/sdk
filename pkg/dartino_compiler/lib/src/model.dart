@@ -85,6 +85,9 @@ class ClassMirror implements mirrors.ClassMirror {
     return new ClassBuilder(this);
   }
 
+  delegate(Invocation invocation) {
+    throw ("Not implemented here.");
+  }
 }
 
 /**

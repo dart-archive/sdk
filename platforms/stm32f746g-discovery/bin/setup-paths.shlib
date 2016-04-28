@@ -1,0 +1,58 @@
+#!/bin/sh
+# Copyright (c) 2016, the Dartino project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# Root of the Dartino SDK, that is, $SCRIPT_DIR/../../...
+DARTINO_SDK_DIR=$SCRIPT_DIR
+DARTINO_SDK_DIR="$(dirname "$DARTINO_SDK_DIR")"
+DARTINO_SDK_DIR="$(dirname "$DARTINO_SDK_DIR")"
+DARTINO_SDK_DIR="$(dirname "$DARTINO_SDK_DIR")"
+
+# Location of the GCC ARM embedded toolchain in the Dartino SDK.
+TOOLCHAIN_DIR="$DARTINO_SDK_DIR/tools/gcc-arm-embedded"
+
+# Location of OpenOCD in the Dartino SDK.
+OPENOCDHOME="$DARTINO_SDK_DIR/tools/openocd/"
+
+# Location of the dartino executable.
+DARTINO="$DARTINO_SDK_DIR/bin/dartino"
+
+# Location of the dartino-falshify executable.
+DARTINO_FLASHIFY="$DARTINO_SDK_DIR/bin/dartino-flashify"
+
+# Location of the static libraries to link with.
+LIB_DIR="$DARTINO_SDK_DIR/platforms/stm32f746g-discovery/lib"
+
+# The linker script to use.
+CONFIG_DIR="$DARTINO_SDK_DIR/platforms/stm32f746g-discovery/config"
+LINKER_SCRIPT="$CONFIG_DIR/stm32f746g-discovery.ld"
+
+BUILD_DIR=.
+
+# If we are not in a Dartino SDK, assume a Dartino SDK Github checkout.
+if [ ! -d "$TOOLCHAIN_DIR" ]; then
+  # Relative locations in Dartino SDK and Dartino SDK Github checkout
+  # are the same.
+  DARTINO_CHECKOUT_DIR=$DARTINO_SDK_DIR
+  # Location of the GCC ARM embedded toolchain in a Dartino SDK Github
+  # checkout.
+  TOOLCHAIN_DIR="$DARTINO_CHECKOUT_DIR/third_party/gcc-arm-embedded/$OS/gcc-arm-embedded"
+
+  # Location of OpenOCD in the Dartino SDK.
+  OPENOCDHOME="$DARTINO_CHECKOUT_DIR/third_party/openocd/$OS/openocd"
+
+  # Use release dartino command in a Dartino SDK Github checkout.
+  DARTINO="$DARTINO_CHECKOUT_DIR/out/ReleaseX64/dartino"
+
+  # Use release dartino-flashify command in a Dartino SDK Github checkout.
+  DARTINO_FLASHIFY="$DARTINO_CHECKOUT_DIR/out/ReleaseIA32/dartino-flashify"
+
+  # Location of the static libraries to link with.
+  LIB_DIR="$DARTINO_CHECKOUT_DIR/out/ReleaseSTM"
+
+  # The linker script to use.
+  LINKER_SCRIPT="$DARTINO_CHECKOUT_DIR/platforms/stm/disco_dartino/src/stm32f746g-discovery/STM32F746NGHx_FLASH.ld"
+
+  BUILD_DIR="$DARTINO_CHECKOUT_DIR/out/ReleaseSTM"
+fi

@@ -2,8 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-import 'package:stm32f746g_disco/lcd.dart';
-import 'package:stm32f746g_disco/stm32f746g_disco.dart';
+import 'package:stm32/lcd.dart';
+import 'package:stm32/stm32f746g_disco.dart';
 
 class MovablePoint {
   final int x, y;

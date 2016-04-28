@@ -17,6 +17,12 @@
 namespace dartino {
 
 void Dartino::Setup() {
+#ifdef DEBUG
+  if (Platform::GetEnv("DARTINO_VM_WAIT") != NULL ||
+      Platform::GetEnv("DARTINO_VM_TTY") != NULL) {
+    Platform::WaitForDebugger();
+  }
+#endif
   Platform::Setup();
   Thread::Setup();
   ObjectMemory::Setup();

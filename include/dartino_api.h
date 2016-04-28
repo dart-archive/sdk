@@ -6,6 +6,7 @@
 #define INCLUDE_DARTINO_API_H_
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 #ifdef _MSC_VER
 // TODO(herhut): Do we need a __declspec here for Windows?
@@ -81,13 +82,6 @@ DARTINO_EXPORT void DartinoRunMultipleMain(int count,
                                            int* exitcodes,
                                            int argc,
                                            char** argv);
-
-// Load the snapshot from the file, load the program from the
-// snapshot, run the main process of that program and wait until it is done
-// executing.
-DARTINO_EXPORT void DartinoRunSnapshotFromFile(const char* path,
-                                               int argc,
-                                               char** argv);
 
 // Add a default shared library for the dart:ffi foreign lookups.
 // More than one default shared library can be added. The libraries

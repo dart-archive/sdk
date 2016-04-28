@@ -4,12 +4,9 @@
 
 include project/target/stm32f746g-disco.mk
 
-MODULES += app/dartino-fixed lib/gfx
-
-EXTRA_LINKER_SCRIPTS += dartino/project/add-dartino-snapshot-section.ld
-
-DARTINO_CONFIGURATION = LK
-DARTINO_GYP_DEFINES = "LK_PROJECT=stm32f746g-disco-dartino LK_CPU=cortex-m4"
+MODULES += \
+	app/dartino-fixed \
+	lib/gfx
 
 WITH_CPP_SUPPORT=true
 

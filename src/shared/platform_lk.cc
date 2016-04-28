@@ -14,10 +14,13 @@
 #include <err.h>
 #include <kernel/thread.h>
 #include <kernel/semaphore.h>
+#include <lib/page_alloc.h>
 #include <sys/types.h>
 
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "src/shared/utils.h"
 
 namespace dartino {
 
@@ -148,21 +151,9 @@ int Platform::GetLocalTimeZoneOffset() {
 int Platform::GetLastError() { return 0; }
 void Platform::SetLastError(int value) { }
 
-// Constants used for mmap.
-static const int kMmapFd = -1;
-static const int kMmapFdOffset = 0;
-
-VirtualMemory::VirtualMemory(int size) : size_(size) {}
+VirtualMemory::VirtualMemory(uword size) : size_(size) {}
 
 VirtualMemory::~VirtualMemory() {}
-
-bool VirtualMemory::IsReserved() const { return false; }
-
-bool VirtualMemory::Commit(uword address, int size, bool executable) {
-  return false;
-}
-
-bool VirtualMemory::Uncommit(uword address, int size) { return false; }
 
 void Platform::Exit(int exit_code) {
   printf("Exited with code %d.\n", exit_code);
@@ -188,9 +179,7 @@ int Platform::GetPid() {
 }
 
 #ifdef DEBUG
-void Platform::WaitForDebugger(const char* executable_name) {
-  UNIMPLEMENTED();
-}
+void Platform::WaitForDebugger() { UNIMPLEMENTED(); }
 #endif
 
 int Platform::FormatString(char* buffer, size_t length, const char* format,
@@ -202,6 +191,30 @@ int Platform::FormatString(char* buffer, size_t length, const char* format,
 char* Platform::GetEnv(const char* name) { return NULL; }
 
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
+
+void* Platform::AllocatePages(uword size, int arenas) {
+  size = Utils::RoundUp(size, PAGE_SIZE);
+  void* memory = page_alloc(size >> PAGE_SIZE_SHIFT, arenas);
+  return memory;
+}
+
+void Platform::FreePages(void* address, uword size) {
+  page_free(address, size >> PAGE_SIZE_SHIFT);
+}
+
+int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges,
+                                  int number_of_ranges) {
+  const int kRanges = 4;
+  struct page_range page_ranges[kRanges];
+  int arena_count = page_get_arenas(page_ranges, kRanges);
+  ASSERT(arena_count < kRanges);
+  int i;
+  for (i = 0; i < number_of_ranges && i < arena_count; i++) {
+    ranges[i].address = page_ranges[i].address;
+    ranges[i].size = page_ranges[i].size;
+  }
+  return i;
+}
 
 }  // namespace dartino
 

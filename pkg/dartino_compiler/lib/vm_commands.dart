@@ -13,8 +13,7 @@ import 'dart:typed_data' show
     Uint8List;
 
 import 'bytecodes.dart' show
-    Bytecode,
-    MethodEnd;
+    Bytecode;
 
 import 'src/shared_command_infrastructure.dart' show
     CommandBuffer;
@@ -24,14 +23,25 @@ abstract class VmCommand {
 
   const VmCommand(this.code);
 
-  factory VmCommand.fromBuffer(VmCommandCode code, Uint8List buffer) {
+  factory VmCommand.fromBuffer(
+      VmCommandCode code,
+      Uint8List buffer,
+      int translateFunction(int offsetOrId)) {
     switch (code) {
       case VmCommandCode.HandShakeResult:
-        bool success = CommandBuffer.readBoolFromBuffer(buffer, 0);
-        int versionLength = CommandBuffer.readInt32FromBuffer(buffer, 1);
-        String version =
-            CommandBuffer.readAsciiStringFromBuffer(buffer, 5, versionLength);
-        return new HandShakeResult(success, version);
+        int offset = 0;
+        bool success = CommandBuffer.readBoolFromBuffer(buffer, offset);
+        offset += 1;
+        int versionLength = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        String version = CommandBuffer.readAsciiStringFromBuffer(
+            buffer, offset, versionLength);
+        offset += versionLength;
+        int wordSize = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int floatSize = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        return new HandShakeResult(
+            success, version, wordSize, floatSize);
       case VmCommandCode.InstanceStructure:
         int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
         int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
@@ -66,7 +76,8 @@ abstract class VmCommand {
         ProcessBacktrace backtrace = new ProcessBacktrace(frames);
         for (int i = 0; i < frames; i++) {
           int offset = i * 16 + 4;
-          int functionId = CommandBuffer.readInt64FromBuffer(buffer, offset);
+          int functionId = translateFunction(
+              CommandBuffer.readInt64FromBuffer(buffer, offset));
           int bytecodeIndex =
               CommandBuffer.readInt64FromBuffer(buffer, offset + 8);
           backtrace.functionIds[i] = functionId;
@@ -75,9 +86,11 @@ abstract class VmCommand {
         return backtrace;
       case VmCommandCode.ProcessBreakpoint:
         int breakpointId = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        int functionId = CommandBuffer.readInt64FromBuffer(buffer, 4);
-        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 12);
-        return new ProcessBreakpoint(breakpointId, functionId, bytecodeIndex);
+        int processId = CommandBuffer.readInt32FromBuffer(buffer, 4);
+        int functionId =
+            translateFunction(CommandBuffer.readInt64FromBuffer(buffer, 8));
+        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, 16);
+        return new ProcessBreakpoint(breakpointId, processId, functionId, bytecodeIndex);
       case VmCommandCode.ProcessDeleteBreakpoint:
         int id = CommandBuffer.readInt32FromBuffer(buffer, 0);
         return new ProcessDeleteBreakpoint(id);
@@ -105,7 +118,7 @@ abstract class VmCommand {
         String message = CommandBuffer.readAsciiStringFromBuffer(
             buffer, 1, buffer.length - 1);
         return new CommitChangesResult(success, message);
-      case VmCommandCode.WriteSnapshotResult:
+      case VmCommandCode.ProgramInfo:
         if ((buffer.offsetInBytes % 4) != 0) {
           buffer = new Uint8List.fromList(buffer);
         }
@@ -125,7 +138,7 @@ abstract class VmCommand {
           return classTable;
         }
 
-        int hashtag = readInt();
+        int hash = readInt();
 
         int classEntries = readInt();
         Int32List classTable = readArray(classEntries);
@@ -133,18 +146,25 @@ abstract class VmCommand {
         int functionEntries = readInt();
         Int32List functionTable = readArray(functionEntries);
 
-        return new WriteSnapshotResult(classTable, functionTable, hashtag);
+        return new ProgramInfoCommand(classTable, functionTable, hash);
+      case VmCommandCode.DebuggingReply:
+        bool isFromSnapshot = CommandBuffer.readBoolFromBuffer(buffer, 0);
+        int snapshotHash = CommandBuffer.readInt32FromBuffer(buffer, 1);
+        return new DebuggingReply(isFromSnapshot, snapshotHash);
       default:
         throw 'Unhandled command in VmCommand.fromBuffer: $code';
     }
   }
 
-  void addTo(Sink<List<int>> sink) {
-    internalAddTo(sink, new CommandBuffer<VmCommandCode>());
+  void addTo(Sink<List<int>> sink, int translateObject(
+      MapId mapId, int index)) {
+    internalAddTo(sink, new CommandBuffer<VmCommandCode>(), translateObject);
   }
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer.sendOn(sink, code);
   }
 
@@ -172,7 +192,9 @@ class HandShake extends VmCommand {
       : super(VmCommandCode.HandShake);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = UTF8.encode(value);
     buffer
         ..addUint32(payload.length)
@@ -183,29 +205,42 @@ class HandShake extends VmCommand {
   // Expects a HandShakeResult reply.
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$value";
+  String valuesToString() => "value: $value";
 }
 
 class HandShakeResult extends VmCommand {
   final bool success;
   final String version;
+  final int wordSize;
+  final int dartinoDoubleSize;
 
-  const HandShakeResult(this.success, this.version)
+  const HandShakeResult(
+      this.success,
+      this.version,
+      this.wordSize,
+      this.dartinoDoubleSize)
       : super(VmCommandCode.HandShakeResult);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = UTF8.encode(version);
     buffer
         ..addUint8(success ? 1 : 0)
         ..addUint32(payload.length)
         ..addUint8List(payload)
+        ..addUint32(wordSize)
+        ..addUint32(dartinoDoubleSize)
         ..sendOn(sink, code);
   }
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$success, $version";
+  String valuesToString() {
+    return "success: $success, version: $version, wordsize: $wordSize, "
+        "floatSize: $dartinoDoubleSize";
+  }
 }
 
 class Dup extends VmCommand {
@@ -224,7 +259,9 @@ class PushNewOneByteString extends VmCommand {
       : super(VmCommandCode.PushNewOneByteString);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = value;
     buffer
         ..addUint32(payload.length)
@@ -234,7 +271,7 @@ class PushNewOneByteString extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "'${new String.fromCharCodes(value)}'";
+  String valuesToString() => "value: '${new String.fromCharCodes(value)}'";
 }
 
 class PushNewTwoByteString extends VmCommand {
@@ -244,7 +281,9 @@ class PushNewTwoByteString extends VmCommand {
       : super(VmCommandCode.PushNewTwoByteString);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> payload = value.buffer.asUint8List();
     buffer
         ..addUint32(payload.length)
@@ -254,7 +293,7 @@ class PushNewTwoByteString extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "'${new String.fromCharCodes(value)}'";
+  String valuesToString() => "value: '${new String.fromCharCodes(value)}'";
 }
 
 class PushNewInstance extends VmCommand {
@@ -273,7 +312,9 @@ class PushNewClass extends VmCommand {
       : super(VmCommandCode.PushNewClass);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(fields)
         ..sendOn(sink, code);
@@ -281,7 +322,7 @@ class PushNewClass extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$fields";
+  String valuesToString() => "fields: $fields";
 }
 
 class PushBuiltinClass extends VmCommand {
@@ -292,7 +333,9 @@ class PushBuiltinClass extends VmCommand {
       : super(VmCommandCode.PushBuiltinClass);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(name)
         ..addUint32(fields)
@@ -301,7 +344,7 @@ class PushBuiltinClass extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$name, $fields";
+  String valuesToString() => "name: $name, fields: $fields";
 }
 
 class PushConstantList extends VmCommand {
@@ -311,7 +354,9 @@ class PushConstantList extends VmCommand {
       : super(VmCommandCode.PushConstantList);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(entries)
         ..sendOn(sink, code);
@@ -319,7 +364,7 @@ class PushConstantList extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$entries";
+  String valuesToString() => "entries: $entries";
 }
 
 class PushConstantByteList extends VmCommand {
@@ -329,7 +374,9 @@ class PushConstantByteList extends VmCommand {
       : super(VmCommandCode.PushConstantByteList);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(entries)
         ..sendOn(sink, code);
@@ -337,7 +384,7 @@ class PushConstantByteList extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$entries";
+  String valuesToString() => "entries: $entries";
 }
 
 class PushConstantMap extends VmCommand {
@@ -347,7 +394,9 @@ class PushConstantMap extends VmCommand {
       : super(VmCommandCode.PushConstantMap);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(entries)
         ..sendOn(sink, code);
@@ -355,7 +404,7 @@ class PushConstantMap extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$entries";
+  String valuesToString() => "entries: $entries";
 }
 
 class Generic extends VmCommand {
@@ -365,7 +414,9 @@ class Generic extends VmCommand {
       : super(code);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint8List(payload)
         ..sendOn(sink, code);
@@ -374,7 +425,7 @@ class Generic extends VmCommand {
   // We do not know who many commands to expect as a response.
   int get numberOfResponsesExpected => null;
 
-  String valuesToString() => "$payload";
+  String valuesToString() => "payload: $payload";
 
   String toString() => "Generic($code, ${valuesToString()})";
 }
@@ -386,7 +437,9 @@ class NewMap extends VmCommand {
       : super(VmCommandCode.NewMap);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(map.index)
         ..sendOn(sink, code);
@@ -394,7 +447,7 @@ class NewMap extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$map";
+  String valuesToString() => "mapId: $map";
 }
 
 class DeleteMap extends VmCommand {
@@ -404,7 +457,9 @@ class DeleteMap extends VmCommand {
       : super(VmCommandCode.DeleteMap);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(map.index)
         ..sendOn(sink, code);
@@ -412,7 +467,7 @@ class DeleteMap extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$map";
+  String valuesToString() => "mapId: $map";
 }
 
 abstract class MapAccess extends VmCommand {
@@ -423,12 +478,17 @@ abstract class MapAccess extends VmCommand {
       : super(code);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
+    int translatedIndex = translateObject(map, index);
     buffer
         ..addUint32(map.index)
-        ..addUint64(index)
+        ..addUint64(translatedIndex)
         ..sendOn(sink, code);
   }
+
+  String valuesToString() => "mapId: $map, index: $index";
 }
 
 class PopToMap extends MapAccess {
@@ -436,8 +496,6 @@ class PopToMap extends MapAccess {
       : super(map, index, VmCommandCode.PopToMap);
 
   int get numberOfResponsesExpected => 0;
-
-  String valuesToString() => "$map, $index";
 }
 
 class PushFromMap extends MapAccess {
@@ -445,8 +503,6 @@ class PushFromMap extends MapAccess {
       : super(map, index, VmCommandCode.PushFromMap);
 
   int get numberOfResponsesExpected => 0;
-
-  String valuesToString() => "$map, $index";
 }
 
 class RemoveFromMap extends MapAccess {
@@ -465,7 +521,9 @@ class Drop extends VmCommand {
       : super(VmCommandCode.Drop);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(value)
         ..sendOn(sink, code);
@@ -473,7 +531,7 @@ class Drop extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$value";
+  String valuesToString() => "value: $value";
 }
 
 class PushNull extends VmCommand {
@@ -492,7 +550,9 @@ class PushBoolean extends VmCommand {
       : super(VmCommandCode.PushBoolean);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint8(value ? 1 : 0)
         ..sendOn(sink, code);
@@ -500,7 +560,7 @@ class PushBoolean extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => '$value';
+  String valuesToString() => 'value: $value';
 }
 
 class BytecodeSink implements Sink<List<int>> {
@@ -539,7 +599,9 @@ class PushNewFunction extends VmCommand {
   }
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     List<int> bytes = computeBytes(bytecodes);
     int size = bytes.length;
     if (catchRanges.isNotEmpty) size += 4 + catchRanges.length * 4;
@@ -557,7 +619,8 @@ class PushNewFunction extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$arity, $literals, $bytecodes, $catchRanges";
+  String valuesToString() => "arity: $arity, literals: $literals, "
+      "bytecodes: $bytecodes, catchRanges: $catchRanges";
 }
 
 class PushNewInitializer extends VmCommand {
@@ -576,7 +639,9 @@ class ChangeStatics extends VmCommand {
       : super(VmCommandCode.ChangeStatics);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -584,7 +649,7 @@ class ChangeStatics extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$count";
+  String valuesToString() => "count: $count";
 }
 
 class ChangeMethodLiteral extends VmCommand {
@@ -594,7 +659,9 @@ class ChangeMethodLiteral extends VmCommand {
       : super(VmCommandCode.ChangeMethodLiteral);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(index)
         ..sendOn(sink, code);
@@ -602,7 +669,7 @@ class ChangeMethodLiteral extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$index";
+  String valuesToString() => "index: $index";
 }
 
 class ChangeMethodTable extends VmCommand {
@@ -612,7 +679,9 @@ class ChangeMethodTable extends VmCommand {
       : super(VmCommandCode.ChangeMethodTable);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -620,7 +689,7 @@ class ChangeMethodTable extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$count";
+  String valuesToString() => "count: $count";
 }
 
 class ChangeSuperClass extends VmCommand {
@@ -640,7 +709,9 @@ class ChangeSchemas extends VmCommand {
       : super(VmCommandCode.ChangeSchemas);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(count)
         ..addUint32(delta)
@@ -649,7 +720,7 @@ class ChangeSchemas extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => '$count, $delta';
+  String valuesToString() => 'count: $count, delta: $delta';
 }
 
 class PrepareForChanges extends VmCommand {
@@ -668,7 +739,9 @@ class CommitChanges extends VmCommand {
       : super(VmCommandCode.CommitChanges);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(count)
         ..sendOn(sink, code);
@@ -677,7 +750,7 @@ class CommitChanges extends VmCommand {
   /// Peer will respond with [CommitChangesResult].
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => '$count';
+  String valuesToString() => 'count: $count';
 }
 
 class CommitChangesResult extends VmCommand {
@@ -688,7 +761,9 @@ class CommitChangesResult extends VmCommand {
       : super(VmCommandCode.CommitChangesResult);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addBool(successful)
         ..addAsciiString(message)
@@ -716,7 +791,9 @@ class MapLookup extends VmCommand {
       : super(VmCommandCode.MapLookup);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(mapId.index)
         ..sendOn(sink, code);
@@ -725,7 +802,7 @@ class MapLookup extends VmCommand {
   /// Peer will respond with [ObjectId].
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$mapId";
+  String valuesToString() => "mapId: $mapId";
 }
 
 class ObjectId extends VmCommand {
@@ -735,7 +812,9 @@ class ObjectId extends VmCommand {
       : super(VmCommandCode.ObjectId);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint64(id)
         ..sendOn(sink, code);
@@ -743,7 +822,7 @@ class ObjectId extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$id";
+  String valuesToString() => "id: $id";
 }
 
 class PushNewArray extends VmCommand {
@@ -753,7 +832,9 @@ class PushNewArray extends VmCommand {
       : super(VmCommandCode.PushNewArray);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(length)
         ..sendOn(sink, code);
@@ -761,7 +842,7 @@ class PushNewArray extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => '$length';
+  String valuesToString() => 'length: $length';
 }
 
 class PushNewInteger extends VmCommand {
@@ -771,7 +852,9 @@ class PushNewInteger extends VmCommand {
       : super(VmCommandCode.PushNewInteger);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint64(value)
         ..sendOn(sink, code);
@@ -779,7 +862,7 @@ class PushNewInteger extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$value";
+  String valuesToString() => "value: $value";
 }
 
 class PushNewBigInteger extends VmCommand {
@@ -797,7 +880,9 @@ class PushNewBigInteger extends VmCommand {
       : super(VmCommandCode.PushNewBigInteger);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint8(negative ? 1 : 0)
         ..addUint32(parts.length)
@@ -811,7 +896,9 @@ class PushNewBigInteger extends VmCommand {
   int get numberOfResponsesExpected => 0;
 
   String valuesToString() {
-    return "$negative, $parts, $classMap, $bigintClassId, $uint32DigitsClassId";
+    return "negative: $negative, parts: $parts, classMap: $classMap, "
+        "bigintClassId: $bigintClassId, "
+        "uint32DigitsClassId: $uint32DigitsClassId";
   }
 }
 
@@ -822,7 +909,9 @@ class PushNewDouble extends VmCommand {
       : super(VmCommandCode.PushNewDouble);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addDouble(value)
         ..sendOn(sink, code);
@@ -830,7 +919,7 @@ class PushNewDouble extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$value";
+  String valuesToString() => "value: $value";
 }
 
 class ProcessSpawnForMain extends VmCommand {
@@ -842,7 +931,9 @@ class ProcessSpawnForMain extends VmCommand {
   int get numberOfResponsesExpected => 0;
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer.addUint32(arguments.length);
     for (String argument in arguments) {
       List<int> payload = UTF8.encode(argument);
@@ -853,7 +944,7 @@ class ProcessSpawnForMain extends VmCommand {
     buffer.sendOn(sink, code);
   }
 
-  String valuesToString() => "$arguments";
+  String valuesToString() => "arguments: $arguments";
 }
 
 class ProcessDebugInterrupt extends VmCommand {
@@ -885,7 +976,9 @@ class ProcessSetBreakpoint extends VmCommand {
       : super(VmCommandCode.ProcessSetBreakpoint);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(value)
         ..sendOn(sink, code);
@@ -894,7 +987,7 @@ class ProcessSetBreakpoint extends VmCommand {
   /// Peer will respond with [ProcessSetBreakpoint]
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$value";
+  String valuesToString() => "value: $value";
 }
 
 class ProcessDeleteBreakpoint extends VmCommand {
@@ -904,7 +997,9 @@ class ProcessDeleteBreakpoint extends VmCommand {
       : super(VmCommandCode.ProcessDeleteBreakpoint);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(id)
         ..sendOn(sink, code);
@@ -913,7 +1008,30 @@ class ProcessDeleteBreakpoint extends VmCommand {
   /// Peer will respond with [ProcessDeleteBreakpoint]
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$id";
+  String valuesToString() => "id: $id";
+}
+
+class ProcessDeleteOneShotBreakpoint extends VmCommand {
+  final int processId;
+  final int breakpointId;
+
+  const ProcessDeleteOneShotBreakpoint(this.processId, this.breakpointId)
+      : super(VmCommandCode.ProcessDeleteOneShotBreakpoint);
+
+  void internalAddTo(
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
+    buffer
+        ..addUint32(processId)
+        ..addUint32(breakpointId)
+        ..sendOn(sink, code);
+  }
+
+  /// Peer will respond with [ProcessDeleteBreakpoint]
+  int get numberOfResponsesExpected => 1;
+
+  String valuesToString() => "$processId, $breakpointId";
 }
 
 class ProcessBacktrace extends VmCommand {
@@ -928,24 +1046,29 @@ class ProcessBacktrace extends VmCommand {
         super(VmCommandCode.ProcessBacktrace);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$frames, $functionIds, $bytecodeIndices";
+  String valuesToString() => "frames: $frames, functionIds: $functionIds, "
+      "bytecodeIndices: $bytecodeIndices";
 }
 
 class ProcessBacktraceRequest extends VmCommand {
   final int processId;
 
-  // TODO(zerny): Make the process id non-optional and non-negative.
-  const ProcessBacktraceRequest([this.processId = -1])
+  // TODO(zerny): Make the process id non-negative.
+  const ProcessBacktraceRequest(this.processId)
       : super(VmCommandCode.ProcessBacktraceRequest);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(processId + 1)
         ..sendOn(sink, code);
@@ -953,7 +1076,7 @@ class ProcessBacktraceRequest extends VmCommand {
   /// Peer will respond with [ProcessBacktrace]
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$processId";
+  String valuesToString() => "processId: $processId";
 }
 
 class ProcessFiberBacktraceRequest extends VmCommand {
@@ -963,7 +1086,9 @@ class ProcessFiberBacktraceRequest extends VmCommand {
       : super(VmCommandCode.ProcessFiberBacktraceRequest);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint64(fiber)
         ..sendOn(sink, code);
@@ -972,7 +1097,7 @@ class ProcessFiberBacktraceRequest extends VmCommand {
   /// Peer will respond with [ProcessBacktrace]
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$fiber";
+  String valuesToString() => "fiber: $fiber";
 }
 
 class ProcessUncaughtExceptionRequest extends VmCommand {
@@ -990,21 +1115,26 @@ class ProcessUncaughtExceptionRequest extends VmCommand {
 
 class ProcessBreakpoint extends VmCommand {
   final int breakpointId;
+  final int processId;
   final int functionId;
   final int bytecodeIndex;
 
   const ProcessBreakpoint(
-      this.breakpointId, this.functionId, this.bytecodeIndex)
+      this.breakpointId, this.processId, this.functionId, this.bytecodeIndex)
       : super(VmCommandCode.ProcessBreakpoint);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$breakpointId, $functionId, $bytecodeIndex";
+  String valuesToString() =>
+      "breakpoirntId: $breakpointId, processId: $processId, "
+      "functionId: $functionId, bytecodeIndex: $bytecodeIndex";
 }
 
 class ProcessLocal extends VmCommand {
@@ -1015,7 +1145,9 @@ class ProcessLocal extends VmCommand {
       : super(VmCommandCode.ProcessLocal);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(frame)
         ..addUint32(slot)
@@ -1025,7 +1157,7 @@ class ProcessLocal extends VmCommand {
   /// Peer will respond with a [DartValue].
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$frame, $slot";
+  String valuesToString() => "frame: $frame, slot: $slot";
 }
 
 class ProcessLocalStructure extends VmCommand {
@@ -1036,7 +1168,9 @@ class ProcessLocalStructure extends VmCommand {
       : super(VmCommandCode.ProcessLocalStructure);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(frame)
         ..addUint32(slot)
@@ -1049,7 +1183,7 @@ class ProcessLocalStructure extends VmCommand {
   /// The number of responses is not fixed.
   int get numberOfResponsesExpected => null;
 
-  String valuesToString() => "$frame, $slot";
+  String valuesToString() => "frame: $frame, slot: $slot";
 }
 
 class ProcessRestartFrame extends VmCommand {
@@ -1059,7 +1193,9 @@ class ProcessRestartFrame extends VmCommand {
       : super(VmCommandCode.ProcessRestartFrame);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(frame)
         ..sendOn(sink, code);
@@ -1069,7 +1205,7 @@ class ProcessRestartFrame extends VmCommand {
   /// possible responses.
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$frame";
+  String valuesToString() => "frame: $frame";
 }
 
 class ProcessStep extends VmCommand {
@@ -1108,16 +1244,16 @@ class ProcessStepOut extends VmCommand {
 }
 
 class ProcessStepTo extends VmCommand {
-  final int functionId;
   final int bcp;
 
-  const ProcessStepTo(this.functionId, this.bcp)
+  const ProcessStepTo(this.bcp)
       : super(VmCommandCode.ProcessStepTo);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
-        ..addUint64(functionId)
         ..addUint32(bcp)
         ..sendOn(sink, code);
   }
@@ -1126,7 +1262,7 @@ class ProcessStepTo extends VmCommand {
   /// possible responses.
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "$functionId, $bcp";
+  String valuesToString() => "bcp: $bcp";
 }
 
 class ProcessContinue extends VmCommand {
@@ -1176,7 +1312,7 @@ class ProcessNumberOfStacks extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$value";
+  String valuesToString() => "value: $value";
 }
 
 class ProcessGetProcessIds extends VmCommand {
@@ -1197,7 +1333,7 @@ class ProcessGetProcessIdsResult extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$ids";
+  String valuesToString() => "ids: $ids";
 }
 
 class SessionEnd extends VmCommand {
@@ -1209,22 +1345,54 @@ class SessionEnd extends VmCommand {
   String valuesToString() => "";
 }
 
-class Debugging extends VmCommand {
-  const Debugging()
-      : super(VmCommandCode.Debugging);
+class LiveEditing extends VmCommand {
+  const LiveEditing()
+      : super(VmCommandCode.LiveEditing);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint32(MapId.methods.index)
         ..addUint32(MapId.classes.index)
-        ..addUint32(MapId.fibers.index)
         ..sendOn(sink, code);
   }
 
   int get numberOfResponsesExpected => 0;
 
   String valuesToString() => "";
+}
+
+class Debugging extends VmCommand {
+  const Debugging()
+      : super(VmCommandCode.Debugging);
+
+  void internalAddTo(
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
+    buffer
+        ..addUint32(MapId.fibers.index)
+        ..sendOn(sink, code);
+  }
+
+  int get numberOfResponsesExpected => 1;
+
+  String valuesToString() => "";
+}
+
+class DebuggingReply extends VmCommand {
+  final bool isFromSnapshot;
+  final int snapshotHash;
+
+  const DebuggingReply(this.isFromSnapshot, this.snapshotHash)
+      : super(VmCommandCode.DebuggingReply);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() =>
+      "isFromSnapshot: $isFromSnapshot snapshotHash: $snapshotHash";
 }
 
 class DisableStandardOutput extends VmCommand {
@@ -1244,7 +1412,7 @@ class StdoutData extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$value";
+  String valuesToString() => "value: $value";
 }
 
 class StderrData extends VmCommand {
@@ -1255,19 +1423,32 @@ class StderrData extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$value";
+  String valuesToString() => "value: $value";
 }
 
-class WriteSnapshot extends VmCommand {
-  final String value;
+class SetEntryPoint extends VmCommand {
+  const SetEntryPoint() : super(VmCommandCode.SetEntryPoint);
 
-  const WriteSnapshot(this.value)
-      : super(VmCommandCode.WriteSnapshot);
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "";
+}
+
+class CreateSnapshot extends VmCommand {
+  final String snapshotPath;
+
+  const CreateSnapshot({this.snapshotPath: null})
+      : super(VmCommandCode.CreateSnapshot);
+
+  bool get writeToDisk => snapshotPath != null;
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
-    List<int> payload = UTF8.encode(value).toList()..add(0);
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
+    List<int> payload = UTF8.encode(snapshotPath ?? "").toList()..add(0);
     buffer
+        ..addBool(writeToDisk)
         ..addUint32(payload.length)
         ..addUint8List(payload)
         ..sendOn(sink, code);
@@ -1276,7 +1457,7 @@ class WriteSnapshot extends VmCommand {
   // Response is a [WriteSnapshotResult] message.
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "'$value'";
+  String valuesToString() => "filePath: '$snapshotPath'";
 }
 
 // Contains two tables with information about function/class offsets in the
@@ -1300,24 +1481,27 @@ class WriteSnapshot extends VmCommand {
 //     config3: "32 bit double"
 //     config4: "32 bit float"
 //
-class WriteSnapshotResult extends VmCommand {
+class ProgramInfoCommand extends VmCommand {
   final Int32List classOffsetTable;
   final Int32List functionOffsetTable;
-  final int hashtag;
+  final int snapshotHash;
 
-  const WriteSnapshotResult(this.classOffsetTable,
-                            this.functionOffsetTable,
-                            this.hashtag)
-      : super(VmCommandCode.WriteSnapshotResult);
+  const ProgramInfoCommand(this.classOffsetTable,
+      this.functionOffsetTable,
+      this.snapshotHash)
+      : super(VmCommandCode.ProgramInfo);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$classOffsetTable, $functionOffsetTable";
+  String valuesToString() => "classOffsetTable: $classOffsetTable, "
+      "functionOffsetTable: $functionOffsetTable";
 }
 
 class InstanceStructure extends VmCommand {
@@ -1328,13 +1512,15 @@ class InstanceStructure extends VmCommand {
       : super(VmCommandCode.InstanceStructure);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$classId, $fields";
+  String valuesToString() => "classId: $classId, fields: $fields";
 }
 
 abstract class DartValue extends VmCommand {
@@ -1342,7 +1528,9 @@ abstract class DartValue extends VmCommand {
       : super(code);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     throw new UnimplementedError();
   }
 
@@ -1359,7 +1547,7 @@ class Instance extends DartValue {
   const Instance(this.classId)
       : super(VmCommandCode.Instance);
 
-  String valuesToString() => "$classId";
+  String valuesToString() => "classId: $classId";
 
   String dartToString() => "Instance of $classId";
 }
@@ -1370,7 +1558,7 @@ class ClassValue extends DartValue {
   const ClassValue(this.classId)
       : super(VmCommandCode.Class);
 
-  String valuesToString() => "$classId";
+  String valuesToString() => "classId: $classId";
 
   String dartToString() => "Class with id $classId";
 }
@@ -1382,7 +1570,9 @@ class Integer extends DartValue {
       : super(VmCommandCode.Integer);
 
   void internalAddTo(
-      Sink<List<int>> sink, CommandBuffer<VmCommandCode> buffer) {
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
     buffer
         ..addUint64(value)
         ..sendOn(sink, code);
@@ -1437,7 +1627,7 @@ class ConnectionError extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "$error, $trace";
+  String valuesToString() => "error: $error, trace: $trace";
 }
 
 // Any change in [VmCommandCode] must also be done in [Opcode] in
@@ -1455,7 +1645,9 @@ enum VmCommandCode {
   ConnectionError,
   CompilerError,
   SessionEnd,
+  LiveEditing,
   Debugging,
+  DebuggingReply,
   DisableStandardOutput,
   StdoutData,
   StderrData,
@@ -1465,6 +1657,7 @@ enum VmCommandCode {
   ProcessRun,
   ProcessSetBreakpoint,
   ProcessDeleteBreakpoint,
+  ProcessDeleteOneShotBreakpoint,
   ProcessStep,
   ProcessStepOver,
   ProcessStepOut,
@@ -1486,8 +1679,9 @@ enum VmCommandCode {
   ProcessGetProcessIds,
   ProcessGetProcessIdsResult,
 
-  WriteSnapshot,
-  WriteSnapshotResult,
+  SetEntryPoint,
+  CreateSnapshot,
+  ProgramInfo,
   CollectGarbage,
 
   NewMap,

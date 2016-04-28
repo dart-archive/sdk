@@ -2,6 +2,8 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+async/stream_view_test: RuntimeError
+
 # Only meant to test when there is no way to implement Timer.
 async/timer_not_available_test: Fail, OK
 
@@ -73,9 +75,9 @@ async/future_test/01: Crash  # Port leak
 async/future_test/none: Crash  # Port leak.
 
 [ $system == lk ]
-async/slow_consumer_test: Crash
-async/slow_consumer2_test: Crash
-async/slow_consumer3_test: Crash
+async/slow_consumer_test: Skip
+async/slow_consumer2_test: Skip
+async/slow_consumer3_test: Skip
 
 [ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.

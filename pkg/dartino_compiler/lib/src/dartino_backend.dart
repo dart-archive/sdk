@@ -31,13 +31,10 @@ import 'package:compiler/src/common/registry.dart' show
     Registry;
 
 import 'package:compiler/src/dart_types.dart' show
-    DartType,
     InterfaceType;
 
 import 'package:compiler/src/tree/tree.dart' show
-    DartString,
-    EmptyStatement,
-    Expression;
+    EmptyStatement;
 
 import 'package:compiler/src/elements/elements.dart' show
     AbstractFieldElement,
@@ -47,14 +44,13 @@ import 'package:compiler/src/elements/elements.dart' show
     Element,
     ExecutableElement,
     FieldElement,
-    FormalElement,
     FunctionElement,
     FunctionSignature,
     FunctionTypedElement,
     LibraryElement,
     MemberElement,
+    MethodElement,
     Name,
-    ParameterElement,
     PublicName;
 
 import 'package:compiler/src/universe/selector.dart' show
@@ -63,8 +59,7 @@ import 'package:compiler/src/universe/selector.dart' show
 import 'package:compiler/src/universe/use.dart' show
     DynamicUse,
     StaticUse,
-    TypeUse,
-    TypeUseKind;
+    TypeUse;
 
 import 'package:compiler/src/universe/call_structure.dart' show
     CallStructure;
@@ -86,14 +81,8 @@ import 'package:compiler/src/compile_time_constants.dart' show
 
 import 'package:compiler/src/constants/values.dart' show
     ConstantValue,
-    ConstructedConstantValue,
     FunctionConstantValue,
-    ListConstantValue,
-    MapConstantValue,
     StringConstantValue;
-
-import 'package:compiler/src/constants/expressions.dart' show
-    ConstantExpression;
 
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
@@ -101,19 +90,21 @@ import 'package:compiler/src/resolution/tree_elements.dart' show
 import 'package:compiler/src/library_loader.dart' show
     LibraryLoader;
 
-import 'package:persistent/persistent.dart' show
-    PersistentMap;
-
 import 'package:compiler/src/common/names.dart' show
     Identifiers,
     Names;
 
 import 'package:compiler/src/universe/world_impact.dart' show
     TransformedWorldImpact,
-    WorldImpact,
-    WorldImpactBuilder;
+    WorldImpact;
 
 import 'package:compiler/src/common/resolution.dart';
+
+import 'package:compiler/src/common/names.dart' show
+    Names;
+
+import 'package:persistent/persistent.dart' show
+    PersistentSet;
 
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
@@ -149,8 +140,7 @@ import 'class_debug_info.dart' show
     ClassDebugInfo;
 
 import 'codegen_visitor.dart' show
-    CodegenVisitor,
-    LocalValue;
+    CodegenVisitor;
 
 import 'debug_info.dart' show
     DebugInfo;
@@ -198,10 +188,10 @@ import '../vm_commands.dart' show
     NewMap,
     PushFromMap,
     PushNewInteger,
+    SetEntryPoint,
     VmCommand;
 
 import '../dartino_system.dart' show
-    DartinoConstant,
     DartinoDelta,
     DartinoFunction,
     DartinoFunctionBase,
@@ -209,21 +199,11 @@ import '../dartino_system.dart' show
     DartinoSystem,
     ParameterStubSignature;
 
-//TODO(zarah): Move to dartino_system.dart
-const DartinoSystem BASE_DARTINO_SYSTEM = const DartinoSystem(
-    const PersistentMap<int, DartinoFunction>(),
-    const PersistentMap<Element, DartinoFunction>(),
-    const PersistentMap<ConstructorElement, DartinoFunction>(),
-    const PersistentMap<FieldElement, int>(),
-    const PersistentMap<int, int>(),
-    const PersistentMap<int, DartinoClass>(),
-    const PersistentMap<ClassElement, DartinoClass>(),
-    const PersistentMap<int, DartinoConstant>(),
-    const PersistentMap<ConstantValue, DartinoConstant>(),
-    const PersistentMap<int, String>(),
-    const PersistentMap<int, int>(),
-    const PersistentMap<int, int>(),
-    const PersistentMap<ParameterStubSignature, DartinoFunction>());
+import 'parameter_stub_codegen.dart' show
+    ParameterStubCodegen;
+
+import '../dartino_field.dart' show
+    DartinoField;
 
 class DartinoBackend extends Backend
     implements IncrementalDartinoBackend {
@@ -293,7 +273,7 @@ class DartinoBackend extends Backend
   DartinoBackend(DartinoCompilerImplementation compiler)
       : this.context = compiler.context,
         this.constantCompilerTask = new DartConstantTask(compiler),
-        this.systemBuilder = new DartinoSystemBuilder(BASE_DARTINO_SYSTEM),
+        this.systemBuilder = new DartinoSystemBuilder(DartinoSystem.base),
         super(compiler) {
     this.impactTransformer = new DartinoImpactTransformer(this);
   }
@@ -304,14 +284,21 @@ class DartinoBackend extends Backend
 
   // TODO(ahe): Where should this end up...?
   DartinoClassBuilder get compiledClosureClass {
-    return systemBuilder.getClassBuilder(closureClass, this);
+    return systemBuilder.getClassBuilder(closureClass);
+  }
+
+  Map<FunctionElement, ClosureInfo> lookupNestedClosures(Element element) {
+    return closureEnvironments[element]?.closures;
   }
 
   DartinoClassBuilder createCallableStubClass(
-      int fields, int arity, DartinoClassBuilder superclass) {
+      List<DartinoField> fields,
+      int arity,
+      DartinoClassBuilder superclass) {
     DartinoClassBuilder classBuilder = systemBuilder.newClassBuilder(
         null, superclass, false, new SchemaChange(null), extraFields: fields);
-    classBuilder.createIsFunctionEntry(this, arity);
+    classBuilder.createIsFunctionEntry(
+        compiler.coreClasses.functionClass, arity);
     return classBuilder;
   }
 
@@ -382,7 +369,7 @@ class DartinoBackend extends Backend
         // about the instantiated type.
         registry.registerInstantiatedType(classImpl.rawType);
       }
-      return systemBuilder.getClassBuilder(classImpl, this);
+      return systemBuilder.getClassBuilder(classImpl);
     });
     if (hasMissingHelpers) {
       throwInternalError(
@@ -488,11 +475,7 @@ class DartinoBackend extends Backend
   void onElementResolved(Element element, TreeElements elements) {
     if (alwaysEnqueue.contains(element)) {
       var registry = new DartinoRegistry(compiler);
-      if (element.isStatic || element.isTopLevel) {
-        registry.registerStaticUse(new StaticUse.foreignUse(element));
-      } else {
-        registry.registerDynamicUse(new Selector.fromElement(element));
-      }
+      registry.registerStaticInvocation(element);
     }
   }
 
@@ -522,12 +505,18 @@ class DartinoBackend extends Backend
   DartinoClassBase getTearoffClass(DartinoFunctionBase function) {
     DartinoClassBase base = systemBuilder.lookupTearoffClass(function);
     if (base != null) return base;
+
     FunctionSignature signature = function.signature;
     bool hasThis = function.isInstanceMember;
+    List<DartinoField> fields = <DartinoField>[];
+    if (hasThis) {
+      ClassElement classElement =
+          systemBuilder.lookupClassBuilder(function.memberOf).element;
+      fields.add(new DartinoField.boxedThis(classElement));
+    }
+
     DartinoClassBuilder tearoffClass = createCallableStubClass(
-        hasThis ? 1 : 0,
-        signature.parameterCount,
-        compiledClosureClass);
+        fields, signature.parameterCount, compiledClosureClass);
 
     DartinoFunctionBuilder functionBuilder =
         systemBuilder.newTearOff(function, tearoffClass.classId);
@@ -556,8 +545,8 @@ class DartinoBackend extends Backend
         ..ret()
         ..methodEnd();
 
-    String symbol = context.getCallSymbol(signature);
-    int id = context.getSymbolId(symbol);
+    String symbol = systemBuilder.getCallSymbol(signature);
+    int id = systemBuilder.getSymbolId(symbol);
     int dartinoSelector = DartinoSelector.encodeMethod(
         id,
         signature.parameterCount);
@@ -570,7 +559,7 @@ class DartinoBackend extends Backend
     if (classElement == null) return tearoffClass;
 
     // Create == function that tests for equality.
-    int isSelector = context.toDartinoTearoffIsSelector(
+    int isSelector = systemBuilder.toDartinoTearoffIsSelector(
         function.name,
         classElement);
     tearoffClass.addIsSelector(isSelector);
@@ -600,7 +589,7 @@ class DartinoBackend extends Backend
       ..ret()
       ..methodEnd();
 
-    id = context.getSymbolId("==");
+    id = systemBuilder.getSymbolId("==");
     int equalsSelector = DartinoSelector.encodeMethod(id, 1);
     tearoffClass.addToMethodTable(equalsSelector, equal);
 
@@ -611,12 +600,12 @@ class DartinoBackend extends Backend
         1);
 
     int hashCodeSelector = DartinoSelector.encodeGetter(
-        context.getSymbolId("hashCode"));
+        systemBuilder.getSymbolId("hashCode"));
 
     // TODO(ajohnsen): Use plus, we plus is always enqueued. Consider using
     // xor when we have a way to enqueue it from here.
     int plusSelector = DartinoSelector.encodeMethod(
-        context.getSymbolId("+"), 1);
+        systemBuilder.getSymbolId("+"), 1);
 
     hashCode.assembler
       ..loadParameter(0)
@@ -669,7 +658,7 @@ class DartinoBackend extends Backend
     DartinoClassBuilder holderClass;
     if (function.isInstanceMember || function.isGenerativeConstructor) {
       ClassElement enclosingClass = function.enclosingClass.declaration;
-      holderClass = systemBuilder.getClassBuilder(enclosingClass, this);
+      holderClass = systemBuilder.getClassBuilder(enclosingClass);
     }
     return internalCreateDartinoFunctionBuilder(
         function,
@@ -842,7 +831,8 @@ class DartinoBackend extends Backend
             context.compiler.reportVerboseInfo(
                 element, 'Adding stub for $selector');
           }
-          DartinoFunctionBase stub = createParameterStub(function, selector);
+          DartinoFunctionBase stub =
+              createParameterStub(function, selector, registry);
           patchClassWithStub(
               stub, selector, function.memberOf, isLocalFunction(element));
         }
@@ -910,8 +900,15 @@ class DartinoBackend extends Backend
             break;
           }
           // A tear-off has a corresponding stub in a closure class. Look up
-          // that stub:
+          // that stub. If the function is a modification of a previous
+          // function we find the stub through that.
           int stub = systemBuilder.lookupTearOffById(function.functionId);
+          if (stub == null) {
+            DartinoFunction predecessorFunction = systemBuilder.
+                predecessorSystem.lookupFunctionByElement(function.element);
+            stub =
+                systemBuilder.lookupTearOffById(predecessorFunction.functionId);
+          }
           if (stub == null) {
             compiler.reporter
                 .internalError(element, "Couldn't find tear-off stub");
@@ -932,7 +929,8 @@ class DartinoBackend extends Backend
       }
 
       if (!isExactParameterMatch(function.signature, selector.callStructure)) {
-        DartinoFunctionBase stub  = createParameterStub(function, selector);
+        DartinoFunctionBase stub =
+            createParameterStub(function, selector, registry);
         patchClassWithStub(stub, selector, function.memberOf, true);
       }
     });
@@ -942,7 +940,7 @@ class DartinoBackend extends Backend
       FunctionElement function,
       TreeElements elements,
       DartinoRegistry registry) {
-    registry.registerStaticUse(new StaticUse.foreignUse(dartinoSystemEntry));
+    registry.registerStaticInvocation(dartinoSystemEntry);
 
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
         function,
@@ -968,7 +966,8 @@ class DartinoBackend extends Backend
       DartinoClassBuilder classBuilder =
           systemBuilder.lookupClassBuilder(functionBuilder.memberOf);
       classBuilder.createIsFunctionEntry(
-          this, function.functionSignature.parameterCount);
+          compiler.coreClasses.functionClass,
+          function.functionSignature.parameterCount);
     }
 
     FunctionCodegen codegen = new FunctionCodegen(
@@ -988,14 +987,15 @@ class DartinoBackend extends Backend
     }
 
     if (functionBuilder.isInstanceMember && !function.isGenerativeConstructor) {
+      Name name = function is MethodElement
+          ? function.memberName
+          : new Name(functionBuilder.name, function.library);
       // Inject the function into the method table of the 'holderClass' class.
       // Note that while constructor bodies has a this argument, we don't inject
       // them into the method table.
-      String symbol = context.getSymbolForFunction(
-          functionBuilder.name,
-          function.functionSignature,
-          function.library);
-      int id = context.getSymbolId(symbol);
+      String symbol = systemBuilder.getSymbolForFunction(name,
+          function.functionSignature);
+      int id = systemBuilder.getSymbolId(symbol);
       int arity = function.functionSignature.parameterCount;
       SelectorKind kind = SelectorKind.Method;
       if (function.isGetter) kind = SelectorKind.Getter;
@@ -1007,12 +1007,12 @@ class DartinoBackend extends Backend
       // Inject method into all mixin usages.
       getMixinApplicationsOfClass(classBuilder).forEach((ClassElement usage) {
         DartinoClassBuilder compiledUsage =
-            systemBuilder.getClassBuilder(usage, this);
+            systemBuilder.getClassBuilder(usage);
         compiledUsage.addToMethodTable(dartinoSelector, functionBuilder);
       });
     }
 
-    if (compiler.verbose) {
+    if (compiler.options.verbose) {
       context.compiler.reportVerboseInfo(
           function, functionBuilder.verboseToString());
     }
@@ -1056,14 +1056,14 @@ class DartinoBackend extends Backend
           coroutineClass.lookupLocalMember("_coroutineStart");
       Selector selector = new Selector.fromElement(coroutineStart);
       new DartinoRegistry(compiler)
-          ..registerDynamicUse(selector);
+          ..registerDynamicSelector(selector);
     } else if (name == "Process._spawn") {
       // The native method `Process._spawn` will do a closure invoke with 0, 1,
       // or 2 arguments.
       new DartinoRegistry(compiler)
-          ..registerDynamicUse(new Selector.callClosure(0))
-          ..registerDynamicUse(new Selector.callClosure(1))
-          ..registerDynamicUse(new Selector.callClosure(2));
+          ..registerDynamicSelector(new Selector.callClosure(0))
+          ..registerDynamicSelector(new Selector.callClosure(1))
+          ..registerDynamicSelector(new Selector.callClosure(2));
     }
 
     int arity = codegen.assembler.functionArity;
@@ -1072,8 +1072,8 @@ class DartinoBackend extends Backend
         name == "Port._sendExit") {
       codegen.assembler.invokeNativeYield(arity, descriptor.index);
     } else {
-      if (descriptor.isDetachable) {
-        codegen.assembler.invokeDetachableNative(arity, descriptor.index);
+      if (descriptor.isLeaf) {
+        codegen.assembler.invokeLeafNative(arity, descriptor.index);
       } else {
         codegen.assembler.invokeNative(arity, descriptor.index);
       }
@@ -1152,8 +1152,9 @@ class DartinoBackend extends Backend
     // NOTE: The number of arguments to the [noSuchMethodName] function must be
     // kept in sync with:
     //     src/vm/interpreter.cc:HandleEnterNoSuchMethod
-    int id = context.getSymbolId(
-        context.mangleName(new Name(noSuchMethodName, compiler.coreLibrary)));
+    int id = systemBuilder.getSymbolId(
+        systemBuilder.mangleName(
+            new Name(noSuchMethodName, compiler.coreLibrary)));
     int dartinoSelector = DartinoSelector.encodeMethod(id, 3);
     BytecodeLabel skipGetter = new BytecodeLabel();
     codegen.assembler
@@ -1210,12 +1211,13 @@ class DartinoBackend extends Backend
     getTearoffClass(createDartinoFunctionBuilder(function));
     // Be sure to actually enqueue the function for compilation.
     DartinoRegistry registry = new DartinoRegistry(compiler);
-    registry.registerStaticUse(new StaticUse.foreignUse(function));
+    registry.registerStaticInvocation(function);
   }
 
   DartinoFunctionBase createParameterStub(
       DartinoFunctionBase function,
-      Selector selector) {
+      Selector selector,
+      DartinoRegistry registry) {
     CallStructure callStructure = selector.callStructure;
     assert(callStructure.signatureApplies(function.signature));
     ParameterStubSignature signature = new ParameterStubSignature(
@@ -1230,60 +1232,9 @@ class DartinoBackend extends Backend
         DartinoFunctionKind.PARAMETER_STUB,
         arity);
 
-    BytecodeAssembler assembler = builder.assembler;
-
-    void loadInitializerOrNull(ParameterElement parameter) {
-      Expression initializer = parameter.initializer;
-      if (initializer != null) {
-        ConstantExpression expression = context.compileConstant(
-            initializer,
-            parameter.memberContext.resolvedAst.elements,
-            isConst: true);
-        int constId = builder.allocateConstant(
-            context.getConstantValue(expression));
-        assembler.loadConst(constId);
-      } else {
-        assembler.loadLiteralNull();
-      }
-    }
-
-    // Load this.
-    if (function.isInstanceMember) assembler.loadParameter(0);
-
-    int index = function.isInstanceMember ? 1 : 0;
-    function.signature.orderedForEachParameter((ParameterElement parameter) {
-      if (!parameter.isOptional) {
-        assembler.loadParameter(index);
-      } else if (parameter.isNamed) {
-        int parameterIndex = selector.namedArguments.indexOf(parameter.name);
-        if (parameterIndex >= 0) {
-          if (function.isInstanceMember) parameterIndex++;
-          int position = selector.positionalArgumentCount + parameterIndex;
-          assembler.loadParameter(position);
-        } else {
-          loadInitializerOrNull(parameter);
-        }
-      } else {
-        if (index < arity) {
-          assembler.loadParameter(index);
-        } else {
-          loadInitializerOrNull(parameter);
-        }
-      }
-      index++;
-    });
-
-    // TODO(ajohnsen): We have to be extra careful when overriding a
-    // method that takes optional arguments. We really should
-    // enumerate all the stubs in the superclasses and make sure
-    // they're overridden.
-    int constId = builder.allocateConstantFromFunction(function.functionId);
-    assembler
-        ..invokeStatic(constId, index)
-        ..ret()
-        ..methodEnd();
-
-    systemBuilder.registerParameterStub(signature, builder);
+    new ParameterStubCodegen(
+        builder, context, registry, function.element, function, selector,
+        signature, arity).compile();
 
     return builder;
   }
@@ -1293,7 +1244,7 @@ class DartinoBackend extends Backend
       Selector selector,
       int classId,
       bool isClosureClass) {
-    int dartinoSelector = context.toDartinoSelector(selector);
+    int dartinoSelector = systemBuilder.toDartinoSelector(selector);
     DartinoClassBuilder classBuilder =
         systemBuilder.lookupClassBuilder(classId);
     if (classBuilder == null) {
@@ -1301,9 +1252,9 @@ class DartinoBackend extends Backend
         classBuilder = systemBuilder.newPatchClassBuilder(
             classId, compiledClosureClass, new SchemaChange(null));
       } else {
-        DartinoClass klass = systemBuilder.lookupClass(classId);
+        DartinoClass klass = systemBuilder.lookupClassById(classId);
         assert(klass.element != null);
-        classBuilder = systemBuilder.getClassBuilder(klass.element, this);
+        classBuilder = systemBuilder.getClassBuilder(klass.element);
       }
     }
     classBuilder.addToMethodTable(dartinoSelector, stub);
@@ -1323,14 +1274,20 @@ class DartinoBackend extends Backend
   /// a class with a `call` method [ClosureKind.functionLike]) and that the
   /// getter should be added to that class.
   void createTearoffGetterForFunction(
-      DartinoFunctionBuilder function,
+      DartinoFunctionBase function,
       {bool isSpecialCallMethod}) {
     if (isSpecialCallMethod == null) {
       throw new ArgumentError("isSpecialCallMethod");
     }
-    DartinoFunctionBuilder getter = systemBuilder.newFunctionBuilder(
-        DartinoFunctionKind.ACCESSOR,
-        1);
+
+    int id = systemBuilder.lookupTearOffGetterById(function.functionId);
+    if (id != null) {
+      // A tearoff getter for [funcion] has already been created.
+      assert(systemBuilder.lookupFunction(id) != null);
+      return;
+    }
+
+    DartinoFunctionBuilder getter = systemBuilder.newTearOffGetter(function);
     // If the getter is of 'call', return the instance instead.
     if (isSpecialCallMethod) {
       getter.assembler
@@ -1338,7 +1295,23 @@ class DartinoBackend extends Backend
           ..ret()
           ..methodEnd();
     } else {
-      DartinoClassBase tearoffClass = getTearoffClass(function);
+      DartinoClassBase tearoffClass;
+      DartinoFunction predecessorFunction = systemBuilder.predecessorSystem
+          .lookupFunctionByElement(function.element);
+      if (predecessorFunction != null) {
+        DartinoClassBase predecessorTearoffClass =
+            systemBuilder.lookupTearoffClass(predecessorFunction);
+        if (predecessorTearoffClass != null) {
+          // No need to create a new tear-off class. The call methods of the old
+          // one will be updated.
+          tearoffClass = predecessorTearoffClass;
+        }
+      }
+
+      if (tearoffClass == null) {
+        tearoffClass = getTearoffClass(function);
+      }
+
       int constId = getter.allocateConstantFromClass(tearoffClass.classId);
       getter.assembler
           ..loadParameter(0)
@@ -1352,9 +1325,9 @@ class DartinoBackend extends Backend
     if (function.element != null) {
       library = function.element.library;
     }
-    // TODO(sigurdm): Avoid allocating new name here.
+    // TODO(sigurdm): Avoid allocating new Name and Selector here.
     Name name = new Name(function.name, library);
-    int dartinoSelector = context.toDartinoSelector(
+    int dartinoSelector = systemBuilder.toDartinoSelector(
         new Selector.getter(name));
     DartinoClassBuilder classBuilder = systemBuilder.lookupClassBuilder(
         function.memberOf);
@@ -1370,7 +1343,7 @@ class DartinoBackend extends Backend
 
   void compileTypeTest(ClassElement element, InterfaceType type) {
     assert(element.isDeclaration);
-    int dartinoSelector = context.toDartinoIsSelector(type.element);
+    int dartinoSelector = systemBuilder.toDartinoIsSelector(type.element);
     DartinoClassBuilder builder =
         systemBuilder.lookupClassBuilderByElement(element);
     if (builder != null) {
@@ -1396,14 +1369,21 @@ class DartinoBackend extends Backend
     ];
 
     DartinoSystem predecessorSystem = systemBuilder.predecessorSystem;
-    DartinoSystem system = systemBuilder.computeSystem(context, commands);
+    DartinoSystem system = systemBuilder.computeSystem(
+        compiler.reporter, commands, compiler.compilationFailed,
+        context.enableBigint, bigintClass, uint32DigitsClass);
+    assert(
+        system.computeSymbolicSystemInfo(compiler.libraryLoader.libraries) !=
+        null);
 
     // Reset the current system builder.
     newSystemBuilder(system);
 
+    // Set the entry point.
     commands.add(new PushFromMap(
         MapId.methods,
         system.lookupFunctionByElement(dartinoSystemEntry).functionId));
+    commands.add(new SetEntryPoint());
 
     return new DartinoDelta(system, predecessorSystem, commands);
   }
@@ -1429,7 +1409,7 @@ class DartinoBackend extends Backend
 
   // TODO(sigurdm): Support async/await on the mobile platform.
   bool get supportsAsyncAwait {
-    return !compiler.platformConfigUri.path.contains("embedded");
+    return !compiler.options.platformConfigUri.path.contains("embedded");
   }
 
   Future onLibraryScanned(LibraryElement library, LibraryLoader loader) {
@@ -1506,7 +1486,7 @@ class DartinoBackend extends Backend
   int compileLazyFieldInitializer(
       FieldElement field,
       DartinoRegistry registry) {
-    int index = context.getStaticFieldIndex(field, null);
+    int index = systemBuilder.getStaticFieldIndex(field, null);
 
     if (field.initializer == null) return index;
 
@@ -1556,8 +1536,7 @@ class DartinoBackend extends Backend
       DartinoRegistry registry = new DartinoRegistry(compiler);
 
       DartinoClassBuilder classBuilder =
-          systemBuilder.getClassBuilder(constructor.enclosingClass.declaration,
-                                        this);
+          systemBuilder.getClassBuilder(constructor.enclosingClass.declaration);
 
       ClosureEnvironment closureEnvironment =
           createClosureEnvironment(constructor, elements);
@@ -1573,42 +1552,11 @@ class DartinoBackend extends Backend
 
       codegen.compile();
 
-      if (compiler.verbose) {
+      if (compiler.options.verbose) {
         context.compiler.reportVerboseInfo(
             constructor, functionBuilder.verboseToString());
       }
     });
-  }
-
-  /**
-   * Generate a getter for field [fieldIndex].
-   */
-  int makeGetter(int fieldIndex) {
-    return systemBuilder.getGetterByFieldIndex(fieldIndex);
-  }
-
-  /**
-   * Generate a setter for field [fieldIndex].
-   */
-  int makeSetter(int fieldIndex) {
-    return systemBuilder.getSetterByFieldIndex(fieldIndex);
-  }
-
-  void generateUnimplementedError(
-      Spannable spannable,
-      String reason,
-      DartinoFunctionBuilder function,
-      {bool suppressHint: false}) {
-    if (!suppressHint) {
-      compiler.reporter.reportHintMessage(
-          spannable, MessageKind.GENERIC, {'text': reason});
-    }
-    var constString = constantSystem.createString(
-        new DartString.literal(reason));
-    context.markConstantUsed(constString);
-    function
-        ..assembler.loadConst(function.allocateConstant(constString))
-        ..assembler.emitThrow();
   }
 
   void forEachSubclassOf(ClassElement cls, void f(ClassElement cls)) {
@@ -1623,12 +1571,6 @@ class DartinoBackend extends Backend
     }
   }
 
-  void replaceFunctionUsageElement(Element element, List<Element> users) {
-    for (Element user in users) {
-      systemBuilder.replaceUsage(user, element);
-    }
-  }
-
   void forgetElement(Element element) {
     // TODO(ahe): The front-end should remove the element from
     // elementsWithCompileTimeErrors.
@@ -1637,6 +1579,21 @@ class DartinoBackend extends Backend
         systemBuilder.lookupFunctionByElement(element);
     if (function == null) return;
     systemBuilder.forgetFunction(function);
+
+    int tearOffGetter =
+        systemBuilder.lookupTearOffGetterById(function.functionId);
+    if (tearOffGetter != null) {
+      DartinoFunctionBase getter = systemBuilder.lookupFunction(tearOffGetter);
+      systemBuilder.forgetFunction(getter);
+    }
+
+    PersistentSet<DartinoFunctionBase> stubs =
+        systemBuilder.lookupParameterStubsForFunction(function.functionId);
+    if (stubs != null) {
+      stubs.forEach((DartinoFunctionBase stub) {
+        systemBuilder.forgetFunction(stub);
+      });
+    }
   }
 
   void removeFunction(FunctionElement element) {
@@ -1645,9 +1602,53 @@ class DartinoBackend extends Backend
     if (function == null) return;
     if (element.isInstanceMember) {
       ClassElement enclosingClass = element.enclosingClass;
-      DartinoClassBuilder builder =
-          systemBuilder.getClassBuilder(enclosingClass, this);
-      builder.removeFromMethodTable(function);
+      DartinoClassBuilder classBuilder =
+          systemBuilder.getClassBuilder(enclosingClass);
+      classBuilder.removeFromMethodTable(function);
+
+      // Remove associated parameter stubs.
+      PersistentSet<DartinoFunctionBase> stubs =
+          systemBuilder.lookupParameterStubsForFunction(function.functionId);
+      if (stubs != null) {
+        stubs.forEach((DartinoFunctionBase stub) {
+          classBuilder.removeFromMethodTable(stub);
+          systemBuilder.forgetFunction(stub);
+        });
+      }
+
+      // Remove tear-off getter.
+      int tearOffGetter =
+          systemBuilder.lookupTearOffGetterById(function.functionId);
+      if (tearOffGetter != null) {
+        DartinoFunctionBase getterFunction =
+            systemBuilder.lookupFunction(tearOffGetter);
+        systemBuilder.forgetFunction(getterFunction);
+        classBuilder.removeFromMethodTable(getterFunction);
+      }
+
+      // Remove call method and stubs from tear-off closure class.
+      int tearOffId = systemBuilder.lookupTearOffById(function.functionId);
+      if (tearOffId != null) {
+        DartinoFunctionBase tearOff = systemBuilder.lookupFunction(tearOffId);
+        int classId = tearOff.memberOf;
+        DartinoClassBuilder closureClassBuilder =
+            systemBuilder.lookupClassBuilder(classId);
+        if (closureClassBuilder == null) {
+          closureClassBuilder = systemBuilder.newPatchClassBuilder(
+              classId, compiledClosureClass, new SchemaChange(null));
+        }
+        closureClassBuilder.removeFromMethodTable(tearOff);
+        systemBuilder.forgetFunction(tearOff);
+
+        PersistentSet<DartinoFunctionBase> stubs =
+            systemBuilder.lookupParameterStubsForFunction(tearOff.functionId);
+        if (stubs != null) {
+          stubs.forEach((DartinoFunctionBase stub) {
+            closureClassBuilder.removeFromMethodTable(stub);
+            systemBuilder.forgetFunction(stub);
+          });
+        }
+      }
     }
   }
 
@@ -1726,7 +1727,6 @@ class DartinoBackend extends Backend
   Uri resolvePatchUri(String libraryName, Uri libraryRoot) {
     throw "Not implemented";
   }
-
 }
 
 class DartinoImpactTransformer extends ImpactTransformer {

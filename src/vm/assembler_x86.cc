@@ -89,8 +89,17 @@ void Assembler::Print(const char* format, ...) {
         }
 
         case 'i': {
+          // 32-bit immediate.
           const Immediate* immediate = va_arg(arguments, const Immediate*);
           printf("$%d", immediate->value());
+          break;
+        }
+
+        case 'b': {
+          // 8-bit immediate.
+          const Immediate* immediate = va_arg(arguments, const Immediate*);
+          ASSERT(immediate->is_int8());
+          printf("$%d", static_cast<uint8>(immediate->value()));
           break;
         }
 

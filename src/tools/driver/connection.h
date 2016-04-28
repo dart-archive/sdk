@@ -16,7 +16,7 @@ class Socket;
 class DriverConnection {
  public:
   // If you modify this enum, please update
-  // pkg/dartino_compiler/lib/src/driver/driver_commands.dart as well.
+  // pkg/dartino_compiler/lib/src/hub/client_commands.dart as well.
   enum Command {
     kStdin,             // Data on stdin.
     kStdout,            // Data on stdout.

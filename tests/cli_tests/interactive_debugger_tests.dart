@@ -11,6 +11,7 @@ import 'dart:convert' show
     UTF8;
 
 import 'dart:io' show
+    Directory,
     Process,
     ProcessSignal;
 
@@ -18,47 +19,84 @@ import 'package:expect/expect.dart' show
     Expect;
 
 import 'cli_tests.dart' show
-    CliTest,
-    thisDirectory;
+    Test,
+    TestContext,
+    SessionTestContext,
+    thisDirectory,
+    dartinoVmBinary;
 
 import 'prompt_splitter.dart' show
     PromptSplitter;
 
 import 'package:dartino_compiler/src/hub/exit_codes.dart' show
-    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION,
+    COMPILER_EXITCODE_CRASH;
 
-final List<CliTest> tests = <CliTest>[
-  new DebuggerInterruptTest(),
-  new DebuggerListProcessesTest(),
-  new DebuggerRelativeFileReferenceTest(),
-  new DebuggerStepInLoopTest(),
-  new DebuggerRerunThrowingProgramTest(),
+import 'package:dartino_compiler/dartino_vm.dart' show DartinoVm;
+
+/// Temporary directory for test output.
+///
+/// Snapshots will be put here.
+const String tempTestOutputDirectory =
+    const String.fromEnvironment("test.dart.temp-dir");
+
+final List<Test> tests = <Test>[
+  interrupt,
+  listProcesses,
+  relativePath,
+  stepInLoop,
+  rerunThrowingProgram,
 ];
 
-abstract class InteractiveDebuggerTest extends CliTest {
-  final String testFilePath;
-  final String workingDirectory;
+final List<Test> snapshotTests = <Test>[
+  debuggingFromSnapshot,
+];
+
+typedef Future NoArgFuture();
+
+Future<Map<String, NoArgFuture>> listTests() async {
+  var result = <String, NoArgFuture>{};
+  for (Test test in tests) {
+    // TODO(sigurdm) Run all tests both via session and snapshot.
+    result["cli_debugger_tests/${test.name}"] =
+        () => test.run(new BuildViaSessionTestContext());
+  }
+  for (Test test in tests) {
+    result["cli_debugger_tests_snapshot/${test.name}"] =
+        () => test.run(new SnapshotTestcontext());
+  }
+  return result;
+}
+
+abstract class InteractiveDebuggerTestContext extends SessionTestContext {
   Process process;
   StreamIterator out;
   StreamIterator err;
 
-  InteractiveDebuggerTest(String name)
-      : super(name),
-        testFilePath = thisDirectory.resolve("$name.dart").toFilePath();
+  Future<Null> setup(Test test) async {
+    super.setup(test);
+    await setupProcess();
 
-  Future<Null> internalRun();
-
-  Future<Null> run() async {
-    process = await dartino(["debug", testFilePath],
-                           workingDirectory: workingDirectory);
+    assert(process != null);
     out = new StreamIterator(
-      process.stdout.transform(UTF8.decoder).transform(new PromptSplitter()));
+        process.stdout.transform(UTF8.decoder).transform(new PromptSplitter()));
     err = new StreamIterator(
-      process.stderr.transform(UTF8.decoder).transform(new LineSplitter()));
-    try {
-      await expectPrompt("Debug header");
-      await internalRun();
-    } finally {
+        process.stderr.transform(UTF8.decoder).transform(new LineSplitter()));
+
+    await expectPrompt("Debug header");
+    await runCommandAndExpectPrompt("t testing");
+  }
+
+  /// Initializes a debugging process, and assign it to [process].
+  Future<Null> setupProcess();
+
+  Future<Null> tearDown() async {
+    await tearDownProcess();
+    await super.tearDown();
+  }
+
+  Future<Null> tearDownProcess() async {
+    if (process != null) {
       process.stdin.close();
       await out.cancel();
       await err.cancel();
@@ -91,11 +129,29 @@ abstract class InteractiveDebuggerTest extends CliTest {
   }
 
   Future<Null> expectExitCode(int exitCode) async {
-    Future expectOutClosed = expectClosed(out, "stdout");
-    await expectClosed(err, "stderr");
-    await expectOutClosed;
-    Expect.equals(exitCode, await process.exitCode,
-        "Did not exit as expected");
+    List errors = [];
+
+    Future collectError(Future f) {
+      return f.catchError((e, s) {
+        errors.add([e, s]);
+      });
+    }
+
+    await Future.wait([
+      collectError(expectClosed(out, "stdout")),
+      collectError(expectClosed(err, "stderr")),
+      collectError(process.stdin.done),
+      collectError(process.exitCode.then((int actualExitCode) {
+        Expect.equals(exitCode, actualExitCode, "Did not exit as expected");
+      })),
+    ]);
+    if (errors.isNotEmpty) {
+      if (errors.length == 1) {
+        return new Future.error(errors.single[0], errors.single[1]);
+      } else {
+        throw errors;
+      }
+    }
   }
 
   Future<Null> expectPrompt(String message) async {
@@ -113,10 +169,13 @@ abstract class InteractiveDebuggerTest extends CliTest {
 
   Future<Null> expectClosed(StreamIterator iterator, String name) async {
     if (await iterator.moveNext()) {
+      List<String> output = new List<String>();
       do {
         print("Unexpected content on $name: ${iterator.current}");
+        output.add(iterator.current);
       } while (await iterator.moveNext());
-      Expect.fail("Expected $name stream to be empty");
+      Expect.fail(
+          "Expected $name stream to be empty, found '${output.join()}'");
     }
   }
 
@@ -126,90 +185,114 @@ abstract class InteractiveDebuggerTest extends CliTest {
   }
 }
 
-class DebuggerInterruptTest extends InteractiveDebuggerTest {
-
-  DebuggerInterruptTest()
-      : super("debugger_interrupt");
-
-  Future<Null> internalRun() async {
-    await runCommand("r");
-    await interrupt();
-    await quitWithoutError();
+class BuildViaSessionTestContext extends InteractiveDebuggerTestContext {
+  Future<Null> setupProcess() async {
+    process = await dartino(["debug", test.filePath],
+        workingDirectory: test.workingDirectory);
+    assert(process != null);
   }
 }
 
-class DebuggerListProcessesTest extends InteractiveDebuggerTest {
+class SnapshotTestcontext extends InteractiveDebuggerTestContext {
+  DartinoVm vm;
 
-  DebuggerListProcessesTest()
-      : super("debugger_list_processes");
+  Future<Null> setupProcess() async {
+    Uri snapshotDir =
+        Uri.base.resolve("$tempTestOutputDirectory/cli_tests/${test.name}/");
 
-  Future<Null> internalRun() async {
-    await runCommandAndExpectPrompt("b resumeChild");
-    await runCommandAndExpectPrompt("r");
-    await runCommandAndExpectPrompt("lp");
-    await runCommandAndExpectPrompt("c");
-    await runCommandAndExpectPrompt("lp");
-    await runCommandAndExpectPrompt("c");
-    await expectExitCode(0);
+    new Directory(snapshotDir.toFilePath()).create(recursive: true);
+    String snapshotPath = snapshotDir.resolve("out.snapshot").toFilePath();
+
+    // Build a snapshot.
+    Process export = await dartino(
+        ["export", test.filePath, "to", "file", snapshotPath],
+        workingDirectory: test.workingDirectory);
+
+    Expect.equals(0, await export.exitCode);
+
+    // Start an interactive vm from a snapshot.
+    vm = await DartinoVm.start(
+        dartinoVmBinary.toFilePath(),
+        arguments: ['--interactive', snapshotPath]);
+
+    // Attach to that VM
+    Process attach =
+        await dartino(["attach", "tcp_socket", "localhost:${vm.port}"]);
+    Expect.equals(0, await attach.exitCode);
+
+    // Run the debugger.
+    process = await dartino(["debug", test.filePath, "with", snapshotPath],
+        workingDirectory: test.workingDirectory);
+  }
+
+  tearDownProcess() async {
+    await vm.process.kill();
+    await super.tearDownProcess();
   }
 }
 
-class DebuggerRelativeFileReferenceTest extends InteractiveDebuggerTest {
+Test interrupt = new Test("debugger_interrupt",
+    (InteractiveDebuggerTestContext context) async {
+  await context.runCommand("r");
+  await context.interrupt();
+  await context.quitWithoutError();
+});
 
-  // Working directory that is not the dartino-root directory.
-  final String workingDirectory = "$thisDirectory/../";
+Test listProcesses = new Test("debugger_list_processes",
+    (InteractiveDebuggerTestContext context) async {
+  await context.runCommandAndExpectPrompt("b resumeChild");
+  await context.runCommandAndExpectPrompt("r");
+  await context.runCommandAndExpectPrompt("lp");
+  await context.runCommandAndExpectPrompt("c");
+  await context.runCommandAndExpectPrompt("lp");
+  await context.runCommandAndExpectPrompt("c");
+  await context.expectExitCode(0);
+});
 
-  // Relative reference to the test file.
-  final String testFilePath = "cli_tests/debugger_relative_file_reference.dart";
+Test relativePath = new Test("debugger_relative_file_reference",
+    (InteractiveDebuggerTestContext context) async {
+  await context.runCommandAndExpectPrompt("bf ${context.test.filePath} 13");
+  await context.expectOut(
+      "### set breakpoint id: '0' method: 'main' bytecode index: '0'");
+  await context.runCommandAndExpectPrompt("r");
+  await context.quitWithoutError();
+}, // Working directory that is not the dartino-root directory.
+    workingDirectory: "$thisDirectory/../",
+// Relative reference to the test file.
+    filepath: "cli_tests/debugger_relative_file_reference.dart");
 
-  DebuggerRelativeFileReferenceTest()
-      : super("debugger_relative_file_reference");
+Test stepInLoop = new Test("debugger_step_in_loop",
+    (InteractiveDebuggerTestContext context) async {
+  await context.runCommandAndExpectPrompt("b loop");
+  await context.runCommandAndExpectPrompt("r");
+  await context.runCommand("c");
+  await context.interrupt();
+  await context.runCommandAndExpectPrompt("sb");
+  await context.runCommandAndExpectPrompt("nb");
+  await context.runCommandAndExpectPrompt("s");
+  await context.runCommandAndExpectPrompt("n");
+  await context.quitWithoutError();
+});
 
-  Future<Null> internalRun() async {
-    await runCommandAndExpectPrompt("bf $testFilePath 13");
-    await expectOut(
-        "breakpoint set: id: '0' method: 'main' bytecode index: '0'");
-    await runCommandAndExpectPrompt("r");
-    await quitWithoutError();
-  }
-}
+Test rerunThrowingProgram = new Test("debugger_rerun_throwing_program",
+    (InteractiveDebuggerTestContext context) async {
+  await context.runCommandAndExpectPrompt("r");  // throws uncaught exception
+  await context.runCommandAndExpectPrompt("r");  // invalid command: use restart
+  await context.expectOut(
+      "### process already loaded, use 'restart' to run again");
+  await context.quit();
+  await context.expectExitCode(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
+});
 
-class DebuggerStepInLoopTest extends InteractiveDebuggerTest {
-
-  DebuggerStepInLoopTest()
-      : super("debugger_step_in_loop");
-
-  Future<Null> internalRun() async {
-    await runCommandAndExpectPrompt("b loop");
-    await runCommandAndExpectPrompt("r");
-    await runCommand("c");
-    await interrupt();
-    await runCommandAndExpectPrompt("sb");
-    await runCommandAndExpectPrompt("nb");
-    await runCommandAndExpectPrompt("s");
-    await runCommandAndExpectPrompt("n");
-    await quitWithoutError();
-  }
-}
-
-class DebuggerRerunThrowingProgramTest extends InteractiveDebuggerTest {
-
-  DebuggerRerunThrowingProgramTest()
-      : super("debugger_rerun_throwing_program");
-
-  Future<Null> internalRun() async {
-    await runCommandAndExpectPrompt("r");  // throws uncaught exception
-    await runCommandAndExpectPrompt("r");  // invalid command: use restart
-    await expectOut("### process already loaded, use 'restart' to run again");
-    await quit();
-    await expectExitCode(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
-  }
-}
+Test debuggingFromSnapshot = new Test("debugging_from_snapshot",
+    (InteractiveDebuggerTestContext context) async {
+  await context.quitWithoutError();
+}, filepath: "debugger_trivial.dart");
 
 main(List<String> args) async {
-  for (CliTest test in tests) {
+  for (Test test in tests) {
     if (args.any((arg) => test.name.indexOf(arg) >= 0)) {
-      await test.run();
+      await test.run(new BuildViaSessionTestContext());
     }
   }
 }

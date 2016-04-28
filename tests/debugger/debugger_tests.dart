@@ -39,19 +39,20 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
       fileUri(".packages", Uri.base),
       <String>[],
       <String, String>{},
+      <String>[],
       null,
       null,
       IncrementalMode.none);
 
-  SessionState state = createSessionState("test", settings);
+  SessionState state = createSessionState("test", Uri.base, settings);
   SessionState.internalCurrent = state;
 
   Expect.equals(0, await compile(Uri.base.resolveUri(uri), state, Uri.base),
       "compile");
 
   await startAndAttachDirectly(state, Uri.base);
-  state.session.hideRawIds = true;
-  state.session.colorsDisabled = true;
+  state.vmContext.hideRawIds = true;
+  state.vmContext.colorsDisabled = true;
 
   List<int> output = <int>[];
 
@@ -62,14 +63,31 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
   for (String line in await new File.fromUri(uri).readAsLines()) {
     const String commandsPattern = "// DartinoDebuggerCommands=";
     if (line.startsWith(commandsPattern)) {
-      debuggerCommands = line.substring(commandsPattern.length).split(",");
+      debuggerCommands.addAll(
+          line.substring(commandsPattern.length).split(","));
     }
   }
 
-  int result = await run(state, [], testDebuggerCommands: debuggerCommands);
-  Expect.equals(0, result);
+  testDebugCommandStream(DartinoVmContext session) async* {
+    yield 't verbose';
+    yield 'b main';
+    yield 'r';
+    while (!session.terminated) {
+      yield 's';
+    }
+  };
+
+  int result = await state.vmContext.debug(
+      debuggerCommands.isEmpty
+        ? testDebugCommandStream
+        : (DartinoVmContext _) => new Stream.fromIterable(debuggerCommands),
+      Uri.base,
+      state,
+      echo: true);
 
   int exitCode = await state.dartinoVm.exitCode;
+
+  Expect.equals(exitCode, result);
 
   state.stdoutSink.detachCommandSender();
   state.stderrSink.detachCommandSender();

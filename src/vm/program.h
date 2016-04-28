@@ -13,6 +13,7 @@
 #include "src/vm/lookup_cache.h"
 #include "src/vm/links.h"
 #include "src/vm/program_folder.h"
+#include "src/vm/native_interpreter.h"
 
 namespace dartino {
 
@@ -163,7 +164,7 @@ class Program : public ProgramList::Entry {
     kBuiltViaSession,
   };
 
-  explicit Program(ProgramSource source, int hashtag = 0);
+  explicit Program(ProgramSource source, int snapshot_hash = 0);
   ~Program();
 
   void Initialize();
@@ -212,8 +213,10 @@ class Program : public ProgramList::Entry {
 
   ProgramState* program_state() { return &program_state_; }
 
-  int hashtag() const { return hashtag_; }
-  void set_hashtag(int value) { hashtag_ = value; }
+  int snapshot_hash() const { return snapshot_hash_; }
+  void set_snapshot_hash(uint32_t snapshot_hash) {
+    snapshot_hash_ = snapshot_hash;
+  }
 
   // TODO(ager): Support more than one active session at a time.
   void AddSession(Session* session) {
@@ -223,14 +226,12 @@ class Program : public ProgramList::Entry {
 
   Session* session() { return session_; }
 
-  Heap* heap() { return &heap_; }
-  Heap* process_heap() { return &process_heap_; }
+  OneSpaceHeap* heap() { return &heap_; }
+  TwoSpaceHeap* process_heap() { return &process_heap_; }
 
   int program_heap_size() {
     ASSERT(is_optimized());
-    Chunk* chunk = heap()->space()->first();
-    ASSERT(chunk->next() == NULL);
-    return chunk->limit() - chunk->base();
+    return heap()->space()->size();
   }
 
   // Computes the offset in the program space.
@@ -238,8 +239,9 @@ class Program : public ProgramList::Entry {
   // Please note the first address in the heap is not a valid bcp.
   int ComputeBcpOffset(uword address) {
     ASSERT(is_optimized());
-    Chunk* chunk = heap()->space()->first();
-    return  chunk->Includes(address) ? address - chunk->base() : 0;
+    uword start = heap()->space()->start();
+    if (address - start > heap()->space()->size()) return 0;
+    return address - start;
   }
 
   HeapObject* ObjectFromFailure(Failure* failure) {
@@ -263,10 +265,6 @@ class Program : public ProgramList::Entry {
   // This function should only be called once the program has been stopped.
   void VisitProcesses(ProcessVisitor* visitor);
 
-  // If we have one heap per process, then this is the same as VisitProcesses,
-  // otherwise it is just called once on one of the processes.
-  void VisitProcessHeaps(ProcessVisitor* visitor);
-
   Object* CreateArray(int capacity) {
     return CreateArrayWith(capacity, null_object());
   }
@@ -288,7 +286,8 @@ class Program : public ProgramList::Entry {
   void ValidateSharedHeap();
 
   void CollectGarbage();
-  void CollectSharedGarbage();
+  void CollectOldSpace();
+  void CollectOldSpaceIfNeeded();
   void CollectNewSpace();
   void PerformSharedGarbageCollection();
 
@@ -301,7 +300,8 @@ class Program : public ProgramList::Entry {
   // Dispatch table support.
   void ClearDispatchTableIntrinsics();
   void SetupDispatchTableIntrinsics(
-      IntrinsicsTable* table = IntrinsicsTable::GetDefault());
+      IntrinsicsTable* table = IntrinsicsTable::GetDefault(),
+      void* method_entry = reinterpret_cast<void*>(InterpreterMethodEntry));
 
   // Root objects.
  private:
@@ -327,6 +327,7 @@ class Program : public ProgramList::Entry {
   // When the program was loaded from a snapshot, then this function can be used
   // to get the offset of functions/classes in the program heap.
   uword OffsetOf(HeapObject* object);
+  HeapObject *ObjectAtOffset(uword offset);
 
   ProcessList* process_list() { return &process_list_; }
 
@@ -343,7 +344,12 @@ class Program : public ProgramList::Entry {
 
   ProcessHandle* MainProcess();
 
-  Breakpoints* breakpoints() { return &breakpoints_; }
+  ProgramDebugInfo* debug_info() { return debug_info_; }
+  void EnsureDebuggerAttached();
+
+#ifdef DEBUG
+  void Find(uword address);
+#endif
 
  private:
   friend class ProgramGroups;
@@ -382,8 +388,8 @@ class Program : public ProgramList::Entry {
 
   RandomXorShift random_;
 
-  Heap heap_;
-  Heap process_heap_;
+  OneSpaceHeap heap_;
+  TwoSpaceHeap process_heap_;
 
   Scheduler* scheduler_;
   ProgramState program_state_;
@@ -394,14 +400,12 @@ class Program : public ProgramList::Entry {
   Function* entry_;
 
   bool loaded_from_snapshot_;
+  uint32_t snapshot_hash_;
 
   ProgramExitListener program_exit_listener_;
   void* program_exit_listener_data_;
 
   Signal::Kind exit_kind_;
-
-  // Tag used to identified snapshot program when profiling.
-  int hashtag_;
 
   // Used during GC and debugging to traverse the stacks.
   Stack* stack_chain_;
@@ -409,7 +413,7 @@ class Program : public ProgramList::Entry {
 
   LookupCache* cache_;
 
-  Breakpoints breakpoints_;
+  ProgramDebugInfo* debug_info_;
 
   uword group_mask_;
 };

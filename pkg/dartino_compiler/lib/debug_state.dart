@@ -7,7 +7,7 @@ library dartino.debug_state;
 import 'bytecodes.dart';
 import 'dartino_system.dart';
 import 'incremental/dartino_compiler_incremental.dart';
-import 'vm_session.dart';
+import 'vm_context.dart';
 import 'src/debug_info.dart';
 import 'src/class_debug_info.dart';
 
@@ -50,16 +50,23 @@ class RemoteValue extends RemoteObject {
 }
 
 class Breakpoint {
-  final String methodName;
+  final DartinoFunction function;
   final int bytecodeIndex;
   final int id;
-  Breakpoint(this.methodName, this.bytecodeIndex, this.id);
+  String get methodName => function.name;
+
+  Breakpoint(this.function, this.bytecodeIndex, this.id);
+
+  String location(DebugState state) {
+    return state.getDebugInfo(function).fileAndLineStringFor(bytecodeIndex);
+  }
+
   String toString() => "id: '$id' method: '$methodName' "
       "bytecode index: '$bytecodeIndex'";
 }
 
 class DebugState {
-  final Session session;
+  final DartinoVmContext vmContext;
 
   final Map<int, Breakpoint> breakpoints = <int, Breakpoint>{};
   final Map<DartinoFunction, DebugInfo> debugInfos =
@@ -69,15 +76,17 @@ class DebugState {
 
   bool showInternalFrames = false;
   bool verbose = true;
+  int currentProcess = -1;
   BackTraceFrame _topFrame;
   RemoteObject currentUncaughtException;
   BackTrace _currentBackTrace;
   int currentFrame = 0;
   SourceLocation _currentLocation;
 
-  DebugState(this.session);
+  DebugState(this.vmContext);
 
   void reset() {
+    currentProcess = -1;
     _topFrame = null;
     currentUncaughtException = null;
     _currentBackTrace = null;
@@ -112,19 +121,20 @@ class DebugState {
 
   DebugInfo getDebugInfo(DartinoFunction function) {
     return debugInfos.putIfAbsent(function, () {
-      return session.compiler.createDebugInfo(function, session.dartinoSystem);
+      return vmContext.compiler.createDebugInfo(
+          function, vmContext.dartinoSystem);
     });
   }
 
   ClassDebugInfo getClassDebugInfo(DartinoClass klass) {
     return classDebugInfos.putIfAbsent(klass, () {
-      return session.compiler.createClassDebugInfo(klass);
+      return vmContext.compiler.createClassDebugInfo(klass);
     });
   }
 
   String lookupFieldName(DartinoClass klass, int field) {
     while (field < klass.superclassFields) {
-      klass = session.dartinoSystem.lookupClassById(klass.superclassId);
+      klass = vmContext.dartinoSystem.lookupClassById(klass.superclassId);
     }
     return getClassDebugInfo(klass).fieldNames[field - klass.superclassFields];
   }

@@ -37,97 +37,97 @@
 library mbedtls;
 
 import 'dart:dartino.ffi';
-import 'dart:dartino';
 import 'dart:typed_data';
 import 'package:os/os.dart';
 import 'package:socket/socket.dart';
+// TODO(karlklose): merge both implementations and remove this dependency.
+import 'package:stm32/socket.dart' as stm;
 import 'package:ffi/ffi.dart';
 
-final String mbedtlsLibraryName = ForeignLibrary.bundleLibraryName('mbedtls');
-final ForeignLibrary lib = new ForeignLibrary.fromName(mbedtlsLibraryName);
+final ForeignLibrary _lib = _mbedTlsLibrary;
 
 // The functions below are named the same as their c counterpart.
-final ForeignFunction entropy_context_sizeof =
-    lib.lookup("entropy_context_sizeof");
-final ForeignFunction ssl_context_sizeof =
-    lib.lookup("ssl_context_sizeof");
-final ForeignFunction ctr_drbg_context_sizeof =
-    lib.lookup("ctr_drbg_context_sizeof");
-final ForeignFunction ssl_config_sizeof =
-    lib.lookup("ssl_config_sizeof");
-final ForeignFunction x509_crt_sizeof =
-    lib.lookup("x509_crt_sizeof");
+final ForeignFunction _entropy_context_sizeof =
+    _lib.lookup("entropy_context_sizeof");
+final ForeignFunction _ssl_context_sizeof =
+    _lib.lookup("ssl_context_sizeof");
+final ForeignFunction _ctr_drbg_context_sizeof =
+    _lib.lookup("ctr_drbg_context_sizeof");
+final ForeignFunction _ssl_config_sizeof =
+    _lib.lookup("ssl_config_sizeof");
+final ForeignFunction _x509_crt_sizeof =
+    _lib.lookup("x509_crt_sizeof");
 
-final mbedtls_entropy_func =
-    lib.lookup('mbedtls_entropy_func');
-final mbedtls_ctr_drbg_seed =
-    lib.lookup('mbedtls_ctr_drbg_seed');
-final mbedtls_test_cas_pem =
-    lib.lookup('mbedtls_test_cas_pem');
-final mbedtls_test_cas_pem_len =
-    lib.lookup('mbedtls_test_cas_pem_len');
+final _mbedtls_entropy_func =
+    _lib.lookup('mbedtls_entropy_func');
+final _mbedtls_ctr_drbg_seed =
+    _lib.lookup('mbedtls_ctr_drbg_seed');
+final _mbedtls_test_cas_pem =
+    _lib.lookup('mbedtls_test_cas_pem');
+final _mbedtls_test_cas_pem_len =
+    _lib.lookup('mbedtls_test_cas_pem_len');
 
-final mbedtls_x509_crt_parse =
-    lib.lookup('mbedtls_x509_crt_parse');
-final mbedtls_ssl_config_defaults =
-    lib.lookup('mbedtls_ssl_config_defaults');
-final mbedtls_ssl_conf_authmode =
-    lib.lookup('mbedtls_ssl_conf_authmode');
-final mbedtls_ssl_conf_ca_chain =
-    lib.lookup('mbedtls_ssl_conf_ca_chain');
-final mbedtls_ssl_conf_rng =
-    lib.lookup('mbedtls_ssl_conf_rng');
-final mbedtls_ctr_drbg_random =
-    lib.lookup('mbedtls_ctr_drbg_random');
-final mbedtls_ssl_setup =
-    lib.lookup('mbedtls_ssl_setup');
-final mbedtls_ssl_set_hostname =
-    lib.lookup('mbedtls_ssl_set_hostname');
-final mbedtls_ssl_set_bio =
-    lib.lookup('mbedtls_ssl_set_bio');
-final mbedtls_ssl_handshake =
-    lib.lookup('mbedtls_ssl_handshake');
-final mbedtls_ssl_get_verify_result =
-    lib.lookup('mbedtls_ssl_get_verify_result');
-final mbedtls_x509_crt_verify_info =
-    lib.lookup('mbedtls_x509_crt_verify_info');
-final mbedtls_ssl_write =
-    lib.lookup('mbedtls_ssl_write');
-final mbedtls_ssl_read =
-    lib.lookup('mbedtls_ssl_read');
-final mbedtls_ssl_get_bytes_avail =
-    lib.lookup('mbedtls_ssl_get_bytes_avail');
-final mbedtls_ssl_close_notify =
-    lib.lookup('mbedtls_ssl_close_notify');
+final _mbedtls_x509_crt_parse =
+    _lib.lookup('mbedtls_x509_crt_parse');
+final _mbedtls_ssl_config_defaults =
+    _lib.lookup('mbedtls_ssl_config_defaults');
+final _mbedtls_ssl_conf_authmode =
+    _lib.lookup('mbedtls_ssl_conf_authmode');
+final _mbedtls_ssl_conf_ca_chain =
+    _lib.lookup('mbedtls_ssl_conf_ca_chain');
+final _mbedtls_ssl_conf_rng =
+    _lib.lookup('mbedtls_ssl_conf_rng');
+final _mbedtls_ctr_drbg_random =
+    _lib.lookup('mbedtls_ctr_drbg_random');
+final _mbedtls_ssl_setup =
+    _lib.lookup('mbedtls_ssl_setup');
+final _mbedtls_ssl_set_hostname =
+    _lib.lookup('mbedtls_ssl_set_hostname');
+final _mbedtls_ssl_set_bio =
+    _lib.lookup('mbedtls_ssl_set_bio');
+final _mbedtls_ssl_handshake =
+    _lib.lookup('mbedtls_ssl_handshake');
+final _mbedtls_ssl_get_verify_result =
+    _lib.lookup('mbedtls_ssl_get_verify_result');
+final _mbedtls_x509_crt_verify_info =
+    _lib.lookup('mbedtls_x509_crt_verify_info');
+final _mbedtls_ssl_write =
+    _lib.lookup('mbedtls_ssl_write');
+final _mbedtls_ssl_read =
+    _lib.lookup('mbedtls_ssl_read');
+final _mbedtls_ssl_get_bytes_avail =
+    _lib.lookup('mbedtls_ssl_get_bytes_avail');
+final _mbedtls_ssl_close_notify =
+    _lib.lookup('mbedtls_ssl_close_notify');
 
-final mbedtls_x509_crt_free =
-    lib.lookup('mbedtls_x509_crt_free');
-final mbedtls_ssl_free =
-    lib.lookup('mbedtls_ssl_free');
-final mbedtls_ssl_config_free =
-    lib.lookup('mbedtls_ssl_config_free');
-final mbedtls_ctr_drbg_free =
-    lib.lookup('mbedtls_ctr_drbg_free');
-final mbedtls_entropy_free =
-    lib.lookup('mbedtls_entropy_free');
+final _mbedtls_x509_crt_free =
+    _lib.lookup('mbedtls_x509_crt_free');
+final _mbedtls_ssl_free =
+    _lib.lookup('mbedtls_ssl_free');
+final _mbedtls_ssl_config_free =
+    _lib.lookup('mbedtls_ssl_config_free');
+final _mbedtls_ctr_drbg_free =
+    _lib.lookup('mbedtls_ctr_drbg_free');
+final _mbedtls_entropy_free =
+    _lib.lookup('mbedtls_entropy_free');
 
-final mbedtls_ssl_init =
-  lib.lookup('mbedtls_ssl_init');
-final mbedtls_ssl_config_init =
-  lib.lookup('mbedtls_ssl_config_init');
-final mbedtls_x509_crt_init =
-  lib.lookup('mbedtls_x509_crt_init');
-final mbedtls_ctr_drbg_init =
-  lib.lookup('mbedtls_ctr_drbg_init');
-final mbedtls_entropy_init =
-  lib.lookup('mbedtls_entropy_init');
+final _mbedtls_ssl_init =
+  _lib.lookup('mbedtls_ssl_init');
+final _mbedtls_ssl_config_init =
+  _lib.lookup('mbedtls_ssl_config_init');
+final _mbedtls_x509_crt_init =
+  _lib.lookup('mbedtls_x509_crt_init');
+final _mbedtls_ctr_drbg_init =
+  _lib.lookup('mbedtls_ctr_drbg_init');
+final _mbedtls_entropy_init =
+  _lib.lookup('mbedtls_entropy_init');
 
 // The function sending send requests back to dart.
-final dart_send =
-    lib.lookup('dart_send');
+final _dart_send =
+    _lib.lookup('dart_send');
 // The function sending recv requests back to dart.
-final dart_recv =
-    lib.lookup('dart_recv');
+final _dart_recv =
+    _lib.lookup('dart_recv');
 
 
 /**
@@ -147,24 +147,21 @@ class TLSSocket implements Socket {
 
   // All names here are kept as close as possible to:
   // programs/ssl/ssl_client1.c in the mbedtls repository.
-  final ssl =
-      new ForeignMemory.allocatedFinalized(ssl_context_sizeof.icall$0());
-  final conf =
-      new ForeignMemory.allocatedFinalized(ssl_config_sizeof.icall$0());
-  final cacert =
-      new ForeignMemory.allocatedFinalized(x509_crt_sizeof.icall$0());
-  final ctr_drbg =
-      new ForeignMemory.allocatedFinalized(ctr_drbg_context_sizeof.icall$0());
-  final entropy =
-      new ForeignMemory.allocatedFinalized(entropy_context_sizeof.icall$0());
+  final _ssl =
+      new ForeignMemory.allocatedFinalized(_ssl_context_sizeof.icall$0());
+  final _conf =
+      new ForeignMemory.allocatedFinalized(_ssl_config_sizeof.icall$0());
+  final _cacert =
+      new ForeignMemory.allocatedFinalized(_x509_crt_sizeof.icall$0());
+  final _ctr_drbg =
+      new ForeignMemory.allocatedFinalized(_ctr_drbg_context_sizeof.icall$0());
+  final _entropy =
+      new ForeignMemory.allocatedFinalized(_entropy_context_sizeof.icall$0());
 
-  final buf =
-      new ForeignMemory.allocatedFinalized(1024);
-  final pers =
-      new ForeignMemory.fromStringAsUTF8('ssl_client_dartino');
-
-  // The dartino socket we use to do the actual network communication.
-  Socket _socket;
+  // TODO(karlklose): change type back to Socket when the STM32 implementation
+  // fully supports the interface.
+  /// The dartino socket we use to do the actual network communication.
+  var _socket;
 
   final String server;
   final int port;
@@ -191,78 +188,85 @@ class TLSSocket implements Socket {
    */
   TLSSocket.connect(String this.server, int this.port,
                     {bool failOnCertificate: false}) {
-    _socket = new Socket.connect(server, port);
+    _socket = _isFreeRTOS
+      ? new stm.Socket.connect(server, port)
+      : new Socket.connect(server, port);
     _sendBuffer = new CircularByteBuffer(1024);
     _recvBuffer = new CircularByteBuffer(1024);
     _foreignBuffers = _getForeignFromBuffers(_sendBuffer, _recvBuffer);
-    mbedtls_ssl_init.vcall$1(ssl);
-    mbedtls_ssl_config_init.vcall$1(conf);
-    mbedtls_x509_crt_init.vcall$1(cacert);
-    mbedtls_ctr_drbg_init.vcall$1(ctr_drbg);
-    mbedtls_entropy_init.vcall$1(entropy);
-    var result = mbedtls_ctr_drbg_seed.icall$5(ctr_drbg, mbedtls_entropy_func,
-                                               entropy, pers, pers.length);
+    _mbedtls_ssl_init.vcall$1(_ssl);
+    _mbedtls_ssl_config_init.vcall$1(_conf);
+    _mbedtls_x509_crt_init.vcall$1(_cacert);
+    _mbedtls_ctr_drbg_init.vcall$1(_ctr_drbg);
+    _mbedtls_entropy_init.vcall$1(_entropy);
+    var pers =
+        new ForeignMemory.fromStringAsUTF8('ssl_client_dartino');
+    var result = _mbedtls_ctr_drbg_seed.icall$5(_ctr_drbg, _mbedtls_entropy_func,
+        _entropy, pers, pers.length);
+    pers.free();
     if (result != 0) {
       throw new TLSException(
           "mbedtls_ctr_drbg_seed returned non 0 value of $result");
     }
 
     var mbedtls_test_cas_pem_len_size =
-        _getSize_tValue(mbedtls_test_cas_pem_len);
-    result = mbedtls_x509_crt_parse.icall$3(cacert, mbedtls_test_cas_pem,
-                                            mbedtls_test_cas_pem_len_size);
+        _getSize_tValue(_mbedtls_test_cas_pem_len);
+    result = _mbedtls_x509_crt_parse.icall$3(_cacert, _mbedtls_test_cas_pem,
+        mbedtls_test_cas_pem_len_size);
     if (result != 0) {
       throw new TLSException(
           "mbedtls_x509_crt_parse returned non 0 value $result");
     }
 
-    result = mbedtls_ssl_config_defaults.icall$4(conf,
-                                                 MBEDTLS_SSL_IS_CLIENT,
-                                                 MBEDTLS_SSL_TRANSPORT_STREAM,
-                                                 MBEDTLS_SSL_PRESET_DEFAULT);
+    result = _mbedtls_ssl_config_defaults.icall$4(
+        _conf,
+        MBEDTLS_SSL_IS_CLIENT,
+        MBEDTLS_SSL_TRANSPORT_STREAM,
+        MBEDTLS_SSL_PRESET_DEFAULT);
     if (result != 0) {
       throw new TLSException(
           "mbedtls_ssl_config_defaults returned non 0 value: $result");
     }
 
-    mbedtls_ssl_conf_authmode.vcall$2(conf,  MBEDTLS_SSL_VERIFY_OPTIONAL);
-    mbedtls_ssl_conf_ca_chain.vcall$3(conf, cacert, ForeignPointer.NULL);
-    mbedtls_ssl_conf_rng.vcall$3(conf, mbedtls_ctr_drbg_random, ctr_drbg);
-    result = mbedtls_ssl_setup.icall$2(ssl, conf);
+    _mbedtls_ssl_conf_authmode.vcall$2(_conf,  MBEDTLS_SSL_VERIFY_OPTIONAL);
+    _mbedtls_ssl_conf_ca_chain.vcall$3(_conf, _cacert, ForeignPointer.NULL);
+    _mbedtls_ssl_conf_rng.vcall$3(_conf, _mbedtls_ctr_drbg_random, _ctr_drbg);
+    result = _mbedtls_ssl_setup.icall$2(_ssl, _conf);
     if (result != 0) {
       throw new TLSException("mbedtls_ssl_setup returned non 0 value $result");
     }
     var serverHostName = new ForeignMemory.fromStringAsUTF8('no_used');
-    result = mbedtls_ssl_set_hostname.icall$2(ssl, serverHostName);
+    result = _mbedtls_ssl_set_hostname.icall$2(_ssl, serverHostName);
     serverHostName.free();
     if (result != 0) {
       throw new TLSException(
           "mbedtls_ssl_set_hostname returned non 0 value $result");
     }
-    mbedtls_ssl_set_bio.vcall$5(ssl, _foreignBuffers.address, dart_send,
-                                dart_recv, ForeignPointer.NULL);
-    result = mbedtls_ssl_handshake.icall$1(ssl);
+    _mbedtls_ssl_set_bio.vcall$5(_ssl, _foreignBuffers.address, _dart_send,
+        _dart_recv, ForeignPointer.NULL);
+    result = _mbedtls_ssl_handshake.icall$1(_ssl);
     while (_handleBuffers(result)) {
-      result = mbedtls_ssl_handshake.icall$1(ssl);
+      result = _mbedtls_ssl_handshake.icall$1(_ssl);
     }
     if (result < 0) {
       throw new TLSException(
           "mbedtls_ssl_handshake returned ${result.toRadixString(16)}");
     }
 
-    var flags = mbedtls_ssl_get_verify_result.icall$1(ssl);
+    var flags = _mbedtls_ssl_get_verify_result.icall$1(_ssl);
     // In real life, we probably want to bail out when flags != 0
     if (flags != 0 && failOnCertificate) {
       var vrfy_buf = new ForeignMemory.allocatedFinalized(512);
       var input = new ForeignMemory.fromStringAsUTF8('  !  ');
-      mbedtls_x509_crt_verify_info.vcall$4(vrfy_buf, vrfy_buf.length,
-                                           input, flags);
+      _mbedtls_x509_crt_verify_info.vcall$4(vrfy_buf, vrfy_buf.length,
+                                            input, flags);
       input.free();
       throw new TLSException(cStringToString(vrfy_buf));
     }
   }
 
   bool _handleBuffers(int ret) {
+    _throwIfClosed();
     if (_sendBuffer.available > 0) {
       Uint8List list = new Uint8List(_sendBuffer.available);
       _sendBuffer.read(list.buffer);
@@ -270,6 +274,9 @@ class TLSSocket implements Socket {
     }
     if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
       ByteBuffer readBuffer = _socket.readNext(_recvBuffer.freeSpace);
+      if (readBuffer == null) {
+        throw new TLSException.closed();
+      }
       _recvBuffer.write(readBuffer);
     }
     return (ret == MBEDTLS_ERR_SSL_WANT_READ ||
@@ -284,9 +291,11 @@ class TLSSocket implements Socket {
       case 4:
         buffers.setInt32(0, sendBuffer.foreign.address);
         buffers.setInt32(Foreign.machineWordSize, recvBuffer.foreign.address);
+        break;
       case 8:
         buffers.setInt64(0, sendBuffer.foreign.address);
         buffers.setInt64(Foreign.machineWordSize, recvBuffer.foreign.address);
+        break;
       default:
         throw new TLSException("Unsupported word size.");
     }
@@ -302,25 +311,26 @@ class TLSSocket implements Socket {
    * be freed since we have no way of registering dealloc callbacks.
    */
   void close() {
-    mbedtls_ssl_close_notify.icall$1(ssl);
-    mbedtls_x509_crt_free.icall$1(cacert);
-    mbedtls_ssl_free.icall$1(ssl);
-    mbedtls_ssl_config_free.icall$1(conf);
-    mbedtls_ctr_drbg_free.icall$1(ctr_drbg);
-    mbedtls_entropy_free.icall$1(entropy);
+    _throwIfClosed();
+    _mbedtls_ssl_close_notify.icall$1(_ssl);
+    _mbedtls_x509_crt_free.icall$1(_cacert);
+    _mbedtls_ssl_free.icall$1(_ssl);
+    _mbedtls_ssl_config_free.icall$1(_conf);
+    _mbedtls_ctr_drbg_free.icall$1(_ctr_drbg);
+    _mbedtls_entropy_free.icall$1(_entropy);
     // The free calls above does not actually free the structs, just all
     // referenced structs.
-    ssl.free();
-    cacert.free();
-    conf.free();
-    ctr_drbg.free();
-    entropy.free();
-    buf.free();
-    pers.free();
+    _ssl.free();
+    _cacert.free();
+    _conf.free();
+    _ctr_drbg.free();
+    _entropy.free();
     _socket.close();
+    _socket = null;
   }
 
   void shutdownWrite() {
+    _throwIfClosed();
     _socket.shutdownWrite();
   }
 
@@ -339,16 +349,23 @@ class TLSSocket implements Socket {
     write(_stringToByteBuffer(s));
   }
 
+  void _throwIfClosed() {
+    if (_socket == null) {
+      throw new TLSException.closed();
+    }
+  }
+
   /**
    * Write the buffer to the secure socket.
    */
   void write(ByteBuffer buffer) {
+    _throwIfClosed();
     // getForeign is not public, TODO(ricow): revisit this
     var buf = buffer;
     var foreign = buf.getForeign();
-    var ret = mbedtls_ssl_write.icall$3(ssl, foreign, buffer.lengthInBytes);
+    var ret = _mbedtls_ssl_write.icall$3(_ssl, foreign, buffer.lengthInBytes);
     while (_handleBuffers(ret)) {
-       ret = mbedtls_ssl_write.icall$3(ssl, foreign, buffer.lengthInBytes);
+       ret = _mbedtls_ssl_write.icall$3(_ssl, foreign, buffer.lengthInBytes);
     }
     if (ret < 0) {
       throw new TLSException(
@@ -359,6 +376,7 @@ class TLSSocket implements Socket {
   }
 
   int get available {
+    _throwIfClosed();
     // There are two possible buffers that are in play here:
     // * The buffer in the socket
     // * The buffer in the tls layer
@@ -368,12 +386,12 @@ class TLSSocket implements Socket {
     // If there are available bytes on the socket we issue a null read on the
     // tls socket to get the bits through.
     if (_socket.available > 0) {
-      int ret = mbedtls_ssl_read.icall$3(ssl, ForeignPointer.NULL, 0);
+      int ret = _mbedtls_ssl_read.icall$3(_ssl, ForeignPointer.NULL, 0);
       while (_handleBuffers(ret)) {
-        ret = mbedtls_ssl_read.icall$3(ssl, ForeignPointer.NULL, 0);
+        ret = _mbedtls_ssl_read.icall$3(_ssl, ForeignPointer.NULL, 0);
       }
     }
-    int available = mbedtls_ssl_get_bytes_avail.icall$1(ssl);
+    int available = _mbedtls_ssl_get_bytes_avail.icall$1(_ssl);
     return available;
   }
 
@@ -387,9 +405,9 @@ class TLSSocket implements Socket {
     int bytes = buffer.lengthInBytes;
     int max = bytes;
     while (offset < bytes) {
-      var ret = mbedtls_ssl_read.icall$3(ssl,
-                                         buffer.getForeign().address + offset,
-                                         max);
+      var ret = _mbedtls_ssl_read.icall$3(_ssl,
+          buffer.getForeign().address + offset,
+          max);
       if (_handleBuffers(ret)) {
         continue;
       } else if (ret <= 0) {  // 0 means EOF, < 0 error.
@@ -416,10 +434,11 @@ class TLSSocket implements Socket {
    * We never read more than 65535 bytes
    */
   ByteBuffer readNext([int max = 65535]) {
+    _throwIfClosed();
     // If there are no available bytes we do a null read, which will block in
     // the dart socket.
     while (available == 0) {
-      var ret = mbedtls_ssl_read.icall$3(ssl, ForeignPointer.NULL, 0);
+      var ret = _mbedtls_ssl_read.icall$3(_ssl, ForeignPointer.NULL, 0);
       _handleBuffers(ret);
     }
     int bytes = max < available ? max : available;
@@ -431,6 +450,21 @@ class TLSException implements Exception {
   final String message;
 
   TLSException(this.message);
+  TLSException.closed() : message = "The underlying socket was closed";
 
   String toString() => "TLSException: $message";
+}
+
+bool get _isFreeRTOS => Foreign.platform == Foreign.FREERTOS;
+
+/// Switch between statically linked and dynamically linked library depending on
+/// the platform.
+/// Currently only FreeRTOS is statically linked.
+ForeignLibrary get _mbedTlsLibrary {
+  if (_isFreeRTOS) {
+    return ForeignLibrary.main;
+  } else {
+    String mbedtlsLibraryName = ForeignLibrary.bundleLibraryName('mbedtls');
+    return new ForeignLibrary.fromName(mbedtlsLibraryName);
+  }
 }

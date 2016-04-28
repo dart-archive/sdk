@@ -10,22 +10,15 @@ Future<CompilerImpl> reuseCompiler(
     {CompilerDiagnostics diagnosticHandler,
      CompilerInput inputProvider,
      CompilerOutput outputProvider,
-     List<String> options: const [],
+     DartinoCompilerOptions options,
      CompilerImpl cachedCompiler,
-     Uri libraryRoot,
      Uri nativesJson,
-     Uri packageConfig,
      Uri dartinoVm,
      bool packagesAreImmutable: false,
-     Map<String, dynamic> environment,
      ReuseLibrariesFunction reuseLibraries,
-     String platform,
      Uri base,
      IncrementalCompiler incrementalCompiler}) async {
   UserTag oldTag = new UserTag('_reuseCompiler').makeCurrent();
-  // if (libraryRoot == null) {
-  //   throw 'Missing libraryRoot';
-  // }
   if (inputProvider == null) {
     throw 'Missing inputProvider';
   }
@@ -38,17 +31,14 @@ Future<CompilerImpl> reuseCompiler(
   if (outputProvider == null) {
     outputProvider = new OutputProvider();
   }
-  if (environment == null) {
-    environment = {};
-  }
   CompilerImpl compiler = cachedCompiler;
   if (compiler == null ||
-      (libraryRoot != null && compiler.libraryRoot != libraryRoot) ||
-      !compiler.hasIncrementalSupport ||
+      compiler.libraryRoot != options.libraryRoot ||
+      !compiler.options.hasIncrementalSupport ||
       compiler.hasCrashed ||
       compiler.enqueuer.resolution.hasEnqueuedReflectiveElements ||
       compiler.deferredLoadTask.isProgramSplit) {
-    if (compiler != null && compiler.hasIncrementalSupport) {
+    if (compiler != null && compiler.options.hasIncrementalSupport) {
       if (compiler.hasCrashed) {
         throw new IncrementalCompilationFailed(
             "Unable to reuse compiler due to crash");
@@ -68,13 +58,9 @@ Future<CompilerImpl> reuseCompiler(
         provider: inputProvider,
         outputProvider: outputProvider,
         handler: diagnosticHandler,
-        libraryRoot: libraryRoot,
         nativesJson: nativesJson,
-        packageConfig: packageConfig,
         dartinoVm: dartinoVm,
         options: options,
-        environment: environment,
-        platform: platform,
         incrementalCompiler: incrementalCompiler);
     compiler = await dartinoCompiler.backdoor.compilerImplementation;
     return compiler;

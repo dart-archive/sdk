@@ -4,23 +4,15 @@
 
 library dartino_compiler.dartino_class_builder;
 
-import 'package:compiler/src/dart_types.dart';
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/universe/selector.dart';
 import 'package:persistent/persistent.dart';
 
-import 'dartino_function_builder.dart';
-import 'dartino_context.dart';
-import 'dartino_backend.dart';
 
 import '../dartino_system.dart';
 import '../vm_commands.dart';
 
-// TODO(ahe): Remove this import.
-import '../incremental/dartino_compiler_incremental.dart' show
-    IncrementalCompilationFailed;
-
 import 'dartino_system_builder.dart' show
+    DartinoSystemBuilder,
     SchemaChange;
 
 import '../dartino_class.dart' show
@@ -29,15 +21,63 @@ import '../dartino_class.dart' show
 import '../dartino_class_base.dart' show
     DartinoClassBase;
 
+import '../dartino_field.dart' show
+    DartinoField;
+
+import 'element_utils.dart' show
+    computeFields;
+
 abstract class DartinoClassBuilder extends DartinoClassBase {
+  final DartinoSystemBuilder builder;
+
   const DartinoClassBuilder(
       int classId,
       String name,
       ClassElement element,
-      int fieldCount)
+      int fieldCount,
+      this.builder)
       : super(classId, name, element, fieldCount);
 
-  DartinoClassBuilder get superclass;
+  factory DartinoClassBuilder.newClass(
+      int classId,
+      ClassElement element,
+      DartinoClassBase superclass,
+      bool isBuiltin,
+      List<DartinoField> extraFields,
+      DartinoSystemBuilder builder) {
+    List<DartinoField> mixedInFields = extraFields;
+    if (element != null) {
+      // Make a copy to avoid modifying caller's list.
+      mixedInFields = new List<DartinoField>.from(extraFields)
+          ..addAll(
+              computeFields(element, asMixin: true).map(
+                  (FieldElement field) => new DartinoField(field)));
+    }
+    String name = element?.name;
+    if (name == null) {
+      name = "<subclass of ${superclass.name}>";
+    }
+    int fieldCount = mixedInFields.length;
+    if (superclass != null) {
+      fieldCount += superclass.fieldCount;
+    }
+    return new DartinoNewClassBuilder(
+        classId, element, name, superclass, isBuiltin, fieldCount,
+        mixedInFields, builder)
+        ..validate();
+  }
+
+  factory DartinoClassBuilder.patch(
+      DartinoClass klass,
+      DartinoClassBase superclass,
+      SchemaChange schemaChange,
+      DartinoSystemBuilder builder) {
+    return
+        new DartinoPatchClassBuilder(klass, superclass, schemaChange, builder)
+        ..validate();
+  }
+
+  DartinoClassBase get superclass;
   int get superclassId => hasSuperClass ? superclass.classId : -1;
 
   /**
@@ -56,12 +96,10 @@ abstract class DartinoClassBuilder extends DartinoClassBase {
   // Add a selector for is-tests. The selector is only to be hit with the
   // InvokeTest bytecode, as the function is not guraranteed to be valid.
   void addIsSelector(int selector);
-  void createIsFunctionEntry(DartinoBackend backend, int arity);
-  void updateImplicitAccessors(DartinoBackend backend);
+  void createIsFunctionEntry(ClassElement functionClass, int arity);
+  void updateImplicitAccessors();
 
-  DartinoClass finalizeClass(
-      DartinoContext context,
-      List<VmCommand> commands);
+  DartinoClass finalizeClass(List<VmCommand> commands);
 
   // The method table for a class is a mapping from Dartino's integer
   // selectors to method ids. It contains all methods defined for a
@@ -72,29 +110,15 @@ abstract class DartinoClassBuilder extends DartinoClassBase {
   bool computeSchemaChange(List<VmCommand> commands) {
     return false;
   }
-}
 
-void forEachField(ClassElement c, void action(FieldElement field)) {
-  List classes = [];
-  while (c != null) {
-    classes.add(c);
-    c = c.superclass;
-  }
-  for (int i = classes.length - 1; i >= 0; i--) {
-    classes[i].implementation.forEachInstanceField((_, FieldElement field) {
-      action(field);
-    });
-  }
+  void validate();
 }
 
 class DartinoNewClassBuilder extends DartinoClassBuilder {
-  final DartinoClassBuilder superclass;
+  final DartinoClassBase superclass;
   final bool isBuiltin;
 
-  // The extra fields are synthetic fields not represented in any Dart source
-  // code. They are used for the synthetic closure classes that are introduced
-  // behind the scenes.
-  final int extraFields;
+  final List<DartinoField> mixedInFields;
 
   final Map<int, int> _implicitAccessorTable = <int, int>{};
   final Map<int, DartinoFunctionBase> _methodTable =
@@ -103,27 +127,13 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
   DartinoNewClassBuilder(
       int classId,
       ClassElement element,
-      DartinoClassBuilder superclass,
+      String name,
+      this.superclass,
       this.isBuiltin,
-      int extraFields)
-      : superclass = superclass,
-        extraFields = extraFields,
-        super(classId, element?.name, element,
-              computeFields(element, superclass, extraFields));
-
-  static int computeFields(
-      ClassElement element,
-      DartinoClassBuilder superclass,
-      int extraFields) {
-    int count = extraFields;
-    if (superclass != null) {
-      count += superclass.fieldCount;
-    }
-    if (element != null) {
-      element.implementation.forEachInstanceField((_, __) { count++; });
-    }
-    return count;
-  }
+      int fieldCount,
+      this.mixedInFields,
+      DartinoSystemBuilder builder)
+      : super(classId, name, element, fieldCount, builder);
 
   void addToMethodTable(int selector, DartinoFunctionBase functionBase) {
     _methodTable[selector] = functionBase;
@@ -154,43 +164,37 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
     return result;
   }
 
-  void updateImplicitAccessors(DartinoBackend backend) {
+  void updateImplicitAccessors() {
     _implicitAccessorTable.clear();
-    // If we don't have an element (stub class), we don't have anything to
-    // generate accessors for.
-    if (element == null) return;
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
     // CodegenEnqueuer.
-    int fieldIndex = superclassFields;
-    element.implementation.forEachInstanceField((enclosing, field) {
-      var getter = new Selector.getter(field.memberName);
-      int getterSelector = backend.context.toDartinoSelector(getter);
-      _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
+    int fieldIndex = superclassFields - 1;
+    for (DartinoField dartinoField in mixedInFields) {
+      fieldIndex++;
+      if (dartinoField.isBoxed) continue;
+      FieldElement field = dartinoField.element;
+      int getterSelector = builder.toDartinoGetterSelector(field.memberName);
+      _implicitAccessorTable[getterSelector] =
+          builder.getGetterByFieldIndex(fieldIndex);
 
       if (!field.isFinal) {
-        var setter = new Selector.setter(new Name(field.name, field.library));
-        var setterSelector = backend.context.toDartinoSelector(setter);
-        _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
+        int setterSelector = builder.toDartinoSetterSelector(field.memberName);
+        _implicitAccessorTable[setterSelector] =
+            builder.getSetterByFieldIndex(fieldIndex);
       }
-
-      fieldIndex++;
-    });
+    }
   }
 
-  void createIsFunctionEntry(DartinoBackend backend, int arity) {
-    int dartinoSelector = backend.context.toDartinoIsSelector(
-        backend.compiler.coreClasses.functionClass);
+  void createIsFunctionEntry(ClassElement functionClass, int arity) {
+    int dartinoSelector = builder.toDartinoIsSelector(functionClass);
     addIsSelector(dartinoSelector);
-    dartinoSelector = backend.context.toDartinoIsSelector(
-        backend.compiler.coreClasses.functionClass, arity);
+    dartinoSelector = builder.toDartinoIsSelector(functionClass, arity);
     addIsSelector(dartinoSelector);
   }
 
-  DartinoClass finalizeClass(
-      DartinoContext context,
-      List<VmCommand> commands) {
+  DartinoClass finalizeClass(List<VmCommand> commands) {
     if (isBuiltin) {
-      int nameId = context.getSymbolId(element.name);
+      int nameId = builder.getSymbolId(element.name);
       commands.add(new PushBuiltinClass(nameId, fieldCount));
     } else {
       commands.add(new PushNewClass(fieldCount));
@@ -206,14 +210,7 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
       commands.add(new PushFromMap(MapId.methods, functionId));
     }
     commands.add(new ChangeMethodTable(methodTable.length));
-
-    List<FieldElement> fieldsList = new List<FieldElement>(fieldCount);
-    int index = 0;
-    forEachField(element, (field) {
-      fieldsList[index++] = field;
-    });
-
-    return new DartinoClass(
+    return new DartinoClass.validated(
         classId,
         // TODO(ajohnsen): Take name in DartinoClassBuilder constructor.
         element == null ? '<internal>' : element.name,
@@ -221,16 +218,20 @@ class DartinoNewClassBuilder extends DartinoClassBuilder {
         superclass == null ? -1 : superclass.classId,
         superclassFields,
         methodTable,
-        fieldsList);
+        mixedInFields);
   }
 
-  String toString() => "DartinoClassBuilder($element, $classId)";
+  void validate() {
+    assert(element == null || fieldCount == computeFields(element).length);
+  }
+
+  String toString() => "DartinoNewClassBuilder($element, $classId)";
 }
 
 class DartinoPatchClassBuilder extends DartinoClassBuilder {
   final DartinoClass klass;
 
-  final DartinoClassBuilder superclass;
+  final DartinoClassBase superclass;
 
   final Map<int, int> _implicitAccessorTable = <int, int>{};
 
@@ -251,14 +252,18 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
   DartinoPatchClassBuilder(
       DartinoClass klass,
       this.superclass,
-      SchemaChange schemaChange)
+      SchemaChange schemaChange,
+      DartinoSystemBuilder builder)
       : this.klass = klass,
         this._addedFields =
             new List<FieldElement>.unmodifiable(schemaChange.addedFields),
         this._removedFields =
             new List<FieldElement>.unmodifiable(schemaChange.removedFields),
         this.extraFields = schemaChange.extraSuperFields,
-        super(klass.classId, klass.name, klass.element, klass.fieldCount);
+        super(klass.classId, klass.name, klass.element,
+              klass.element == null
+                  ? klass.fieldCount : computeFields(klass.element).length,
+              builder);
 
   List<FieldElement> get addedFields => _addedFields;
   List<FieldElement> get removedFields => _removedFields;
@@ -276,44 +281,71 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     // TODO(ajohnsen): Implement.
   }
 
-  void createIsFunctionEntry(DartinoBackend backend, int arity) {
+  void createIsFunctionEntry(ClassElement functionClass, int arity) {
     // TODO(ajohnsen): Implement.
   }
 
-  void updateImplicitAccessors(DartinoBackend backend) {
+  void updateImplicitAccessors() {
+    _implicitAccessorTable.clear();
     // If we don't have an element (stub class), we don't have anything to
     // generate accessors for.
     if (element == null) return;
     // TODO(ajohnsen): Don't do this once dart2js can enqueue field getters in
     // CodegenEnqueuer.
-    int fieldIndex = superclassFields + extraFields;
+    int fieldIndex = superclassFields;
     element.implementation.forEachInstanceField((enclosing, field) {
-      var getter = new Selector.getter(new Name(field.name, field.library));
-      int getterSelector = backend.context.toDartinoSelector(getter);
-      _implicitAccessorTable[getterSelector] = backend.makeGetter(fieldIndex);
-
+      int getterSelector = builder.toDartinoGetterSelector(field.memberName);
+      int getter = builder.getGetterByFieldIndex(fieldIndex);
+      assert(_implicitAccessorTable[getterSelector] == null);
+      _implicitAccessorTable[getterSelector] = getter;
       if (!field.isFinal) {
-        var setter = new Selector.setter(new Name(field.name, field.library));
-        var setterSelector = backend.context.toDartinoSelector(setter);
-        _implicitAccessorTable[setterSelector] = backend.makeSetter(fieldIndex);
+        int setterSelector = builder.toDartinoSetterSelector(field.memberName);
+        int setter = builder.getSetterByFieldIndex(fieldIndex);
+        assert(_implicitAccessorTable[setterSelector] == null);
+        _implicitAccessorTable[setterSelector] = setter;
       }
 
       fieldIndex++;
     });
 
     for (FieldElement field in _removedFields) {
-      Selector getter =
-          new Selector.getter(new Name(field.name, field.library));
-      int getterSelector = backend.context.toDartinoSelector(getter);
-      _removedAccessors.add(getterSelector);
-
+      _removedAccessors.add(builder.toDartinoGetterSelector(field.memberName));
       if (!field.isFinal) {
-        Selector setter =
-            new Selector.setter(new Name(field.name, field.library));
-        int setterSelector = backend.context.toDartinoSelector(setter);
-        _removedAccessors.add(setterSelector);
+        _removedAccessors.add(
+            builder.toDartinoSetterSelector(field.memberName));
       }
     }
+    assert(validateImplicitAccessors());
+  }
+
+  bool validateImplicitAccessors() {
+    bool result = true;
+    int fieldIndex = 0;
+    for (FieldElement field in computeFields(element)) {
+      int getterSelector = builder.toDartinoGetterSelector(field.memberName);
+      int expectedGetter = builder.getGetterByFieldIndex(fieldIndex);
+      int actualGetter = _implicitAccessorTable[getterSelector];
+      if (element.enclosingClass == field.enclosingClass &&
+          expectedGetter != actualGetter) {
+        print("Internal error: implicit getter for $field ($fieldIndex) "
+              "is $actualGetter ($getterSelector).");
+        result = false;
+      }
+
+      if (!field.isFinal) {
+        int setterSelector = builder.toDartinoSetterSelector(field.memberName);
+        int expectedSetter = builder.getSetterByFieldIndex(fieldIndex);
+        int actualSetter = _implicitAccessorTable[setterSelector];
+        if (element.enclosingClass == field.enclosingClass &&
+            expectedSetter != actualSetter) {
+          print("Internal error: implicit setter for $field ($fieldIndex) "
+                "is $actualSetter ($setterSelector).");
+          result = false;
+        }
+      }
+      fieldIndex++;
+    }
+    return result;
   }
 
   PersistentMap<int, int> computeMethodTable() {
@@ -343,12 +375,10 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     return methodTable;
   }
 
-  DartinoClass finalizeClass(
-      DartinoContext context,
-      List<VmCommand> commands) {
+  DartinoClass finalizeClass(List<VmCommand> commands) {
     // TODO(ajohnsen): We need to figure out when to do this. It should be after
     // we have updated class fields, but before we hit 'computeSystem'.
-    updateImplicitAccessors(context.backend);
+    updateImplicitAccessors();
 
     commands.add(new PushFromMap(MapId.classes, classId));
 
@@ -360,26 +390,26 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     }
     commands.add(new ChangeMethodTable(methodTable.length));
 
-    List<FieldElement> fieldsList = <FieldElement>[];
-    forEachField(element, (field) { fieldsList.add(field); });
+    Iterable<DartinoField> existingFields = klass.mixedInFields.where(
+        (DartinoField field) => !_removedFields.contains(field.element));
+    Iterable<DartinoField> myAddedFields = _addedFields
+        .where((FieldElement field) => field.enclosingClass == klass.element)
+        .map((FieldElement field) => new DartinoField(field));
 
-    return new DartinoClass(
-        classId,
-        // TODO(ajohnsen): Take name in DartinoClassBuilder constructor.
-        element == null ? '<internal>' : element.name,
-        element,
-        superclass == null ? -1 : superclass.classId,
-        superclassFields + extraFields,
-        methodTable,
-        fieldsList);
+    List<DartinoField> mixedInFields =
+        new List<DartinoField>.from(existingFields)..addAll(myAddedFields);
+
+    return new DartinoClass.validated(
+        classId, klass.name, element,
+        superclass == null ? -1 : superclass.classId, superclassFields,
+        methodTable, mixedInFields);
   }
 
   bool computeSchemaChange(List<VmCommand> commands) {
     if (_addedFields.isEmpty && _removedFields.isEmpty) return false;
 
     // TODO(ajohnsen): Don't recompute this list.
-    List<FieldElement> afterFields = <FieldElement>[];
-    forEachField(element, (field) { afterFields.add(field); });
+    List<FieldElement> afterFields = computeFields(element);
 
     // TODO(ajohnsen): Handle sub/super classes.
     int numberOfClasses = 1;
@@ -391,9 +421,11 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     // no changes.
     const VALUE_FROM_ELSEWHERE = 0;
     const VALUE_FROM_OLD_INSTANCE = 1;
+    List<DartinoField> beforeFields =
+        builder.predecessorSystem.computeAllFields(klass);
     for (int i = 0; i < afterFields.length; i++) {
       FieldElement field = afterFields[i];
-      int beforeIndex = klass.fields.indexOf(field);
+      int beforeIndex = beforeFields.indexOf(new DartinoField(field));
       if (beforeIndex >= 0) {
         commands.add(const PushNewInteger(VALUE_FROM_OLD_INSTANCE));
         commands.add(new PushNewInteger(beforeIndex));
@@ -405,9 +437,34 @@ class DartinoPatchClassBuilder extends DartinoClassBuilder {
     commands.add(new PushNewArray(afterFields.length * 2));
 
     // Finally, ask the runtime to change the schemas!
-    int fieldCountDelta = afterFields.length - klass.fields.length;
+    int fieldCountDelta = afterFields.length - beforeFields.length;
     commands.add(new ChangeSchemas(numberOfClasses, fieldCountDelta));
 
     return true;
   }
+
+  void validate() {
+    if (element == null) return;
+    List<FieldElement> fields = computeFields(element);
+    if (fieldCount != fields.length) {
+      throw """$this $fieldCount != ${fields.length}
+fields: $fields
+addedFields: $addedFields
+removedFields: $removedFields
+""";
+    }
+    int mixinFieldCount = 0;
+    for (FieldElement field in fields) {
+      if (field.enclosingClass.declaration == element.declaration) {
+        mixinFieldCount++;
+      }
+    }
+    if (fieldCount - mixinFieldCount != superclassFields) {
+      throw """$fieldCount - $mixinFieldCount != $superclassFields
+fields: $fields
+""";
+    }
+  }
+
+  String toString() => "DartinoPatchClassBuilder($element, $classId)";
 }

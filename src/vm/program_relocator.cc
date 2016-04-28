@@ -83,7 +83,7 @@ class RelocationVisitor : public HeapObjectVisitor {
         target_base_(target_base),
         rebase_base_(rebase_base) {}
 
-  int Visit(HeapObject* from) {
+  uword Visit(HeapObject* from) {
     uword address = from->address();
     uword target_address = address - space_base_ + target_base_;
 
@@ -110,27 +110,25 @@ int ProgramHeapRelocator::Relocate() {
   // addresses.
   program_->ClearDispatchTableIntrinsics();
   // And then setup fresh ones using our relocation table.
-  program_->SetupDispatchTableIntrinsics(table_);
+  program_->SetupDispatchTableIntrinsics(table_, method_entry_);
 
   // Make sure we only have one chunk in the heap so that we can linearly
   // relocate objects to the new base.
   SemiSpace* space = program_->heap()->space();
-  if (space->first() == NULL || space->first() != space->last()) {
-    FATAL("We have more chunks than supported. Go fix the runtime!\n");
-  }
 
   DEBUG_PRINT("Relocating %p to %lx\n", program_, baseaddress_);
 
-  Chunk* chunk = space->first();
-  int heap_size = chunk->limit() - chunk->base();
+  // If this fails in an assert then we have more chunks than supported. Go fix
+  // the runtime!
+  int heap_size = space->size();
 
   // heap + roots + main_arity
   int total_size = heap_size + sizeof(ProgramInfoBlock);
   memcpy(reinterpret_cast<void*>(target_),
-         reinterpret_cast<void*>(chunk->base()), heap_size);
+         reinterpret_cast<void*>(space->start()), heap_size);
   uword target_base = reinterpret_cast<uword>(target_);
 
-  RelocationVisitor relocator(chunk->base(), target_base, baseaddress_);
+  RelocationVisitor relocator(space->start(), target_base, baseaddress_);
 
   program_->heap()->space()->IterateObjects(&relocator);
 
@@ -140,12 +138,13 @@ int ProgramHeapRelocator::Relocate() {
 
   // Create a shadow copy of the program.
   Program* target_program = reinterpret_cast<Program*>(malloc(sizeof(Program)));
-  memcpy(target_program, program_, sizeof(Program));
+  memcpy(reinterpret_cast<void*>(target_program),
+         reinterpret_cast<void*>(program_), sizeof(Program));
 
   // Now fix up root pointers in the copy.
   PointerRebasingVisitor visitor(reinterpret_cast<uword>(program_),
                                  reinterpret_cast<uword>(target_program),
-                                 chunk->base(), baseaddress_);
+                                 space->start(), baseaddress_);
   program_->IterateRoots(&visitor);
 
   DEBUG_PRINT("Writing relocated roots to info block...\n");

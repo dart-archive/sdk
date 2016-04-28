@@ -11,104 +11,48 @@
 
 namespace dartino {
 
-class MarkingStackChunk {
+class MarkingStack {
  public:
-  MarkingStackChunk()
-      : next_chunk_(NULL), next_(&backing_[0]), limit_(next_ + kChunkSize) {}
+  MarkingStack() : next_(&backing_[0]), limit_(&backing_[kChunkSize]) {}
 
-  ~MarkingStackChunk() { ASSERT(next_chunk_ == NULL); }
-
-  bool IsEmpty() { return next_ == &backing_[0]; }
-
-  void Push(HeapObject* object, MarkingStackChunk** chunk_list) {
-    ASSERT(object->IsMarked());
+  void Push(HeapObject* object) {
+    ASSERT(GCMetadata::IsMarked(object));
     if (next_ < limit_) {
       *(next_++) = object;
     } else {
-      PushInNewChunk(object, chunk_list);
+      overflowed_ = true;
+      GCMetadata::MarkStackOverflow(object);
     }
   }
 
-  HeapObject* Pop() {
-    ASSERT(!IsEmpty());
-    return *(--next_);
-  }
+  bool IsEmpty() { return next_ == &backing_[0]; }
+  bool IsOverflowed() { return overflowed_; }
+  void ClearOverflow() { overflowed_ = false; }
 
-  // Takes the chunk after the current one out of the chain, and
-  // returns it.  If there is no such chunk, puts a new empty chunk in
-  // the chain and returns this.
-  MarkingStackChunk* TakeChunk(MarkingStackChunk** chunk_list) {
-    if (next_chunk_ != NULL) {
-      MarkingStackChunk* result = next_chunk_;
-      next_chunk_ = result->next_chunk_;
-      result->next_chunk_ = NULL;
-      return result;
-    }
-    if (IsEmpty()) return NULL;
-    *chunk_list = new MarkingStackChunk();
-    return this;
-  }
+  void Empty(PointerVisitor* visitor);
+  void Process(PointerVisitor* visitor, Space* old_space, Space* new_space);
 
  private:
   static const int kChunkSize = 128;
-
-  void PushInNewChunk(HeapObject* object, MarkingStackChunk** chunk_list) {
-    MarkingStackChunk* new_chunk = new MarkingStackChunk();
-    new_chunk->next_chunk_ = this;
-    *chunk_list = new_chunk;
-    new_chunk->Push(object, chunk_list);
-  }
-
-  MarkingStackChunk* next_chunk_;
   HeapObject** next_;
   HeapObject** limit_;
   HeapObject* backing_[kChunkSize];
-};
-
-class MarkingStack {
- public:
-  MarkingStack() : current_chunk_(new MarkingStackChunk()) {}
-
-  ~MarkingStack() { delete current_chunk_; }
-
-  void Push(HeapObject* object) {
-    current_chunk_->Push(object, &current_chunk_);
-  }
-
-  void Process(PointerVisitor* visitor) {
-    for (MarkingStackChunk* chunk = current_chunk_->TakeChunk(&current_chunk_);
-         chunk != NULL; chunk = current_chunk_->TakeChunk(&current_chunk_)) {
-      while (!chunk->IsEmpty()) {
-        HeapObject* object = chunk->Pop();
-        object->IteratePointers(visitor);
-      }
-      delete chunk;
-    }
-  }
-
- private:
-  MarkingStackChunk* current_chunk_;
+  bool overflowed_ = false;
 };
 
 class MarkingVisitor : public PointerVisitor {
  public:
-  MarkingVisitor(SemiSpace* new_space, OldSpace* old_space,
-                 MarkingStack* marking_stack, Stack** stack_chain = NULL)
+  MarkingVisitor(SemiSpace* new_space, MarkingStack* marking_stack,
+                 Stack** stack_chain = NULL)
       : stack_chain_(stack_chain),
-        new_space_(new_space),
-        old_space_(old_space),
+        new_space_address_(new_space->start()),
+        new_space_size_(new_space->size()),
         marking_stack_(marking_stack),
         number_of_stacks_(0) {}
 
   virtual void Visit(Object** p) { MarkPointer(*p); }
 
-  virtual void VisitClass(Object** p) {
-    // The class pointer is used for the mark bit. Therefore,
-    // the actual class pointer is obtained by clearing the
-    // mark bit.
-    uword klass = reinterpret_cast<uword>(*p);
-    MarkPointer(reinterpret_cast<Object*>(klass & ~HeapObject::kMarkBit));
-  }
+  virtual void VisitClass(Object** p) {}
 
   virtual void VisitBlock(Object** start, Object** end) {
     // Mark live all HeapObjects pointed to by pointers in [start, end)
@@ -127,23 +71,22 @@ class MarkingVisitor : public PointerVisitor {
   void MarkPointer(Object* object) {
     if (!object->IsHeapObject()) return;
     uword address = reinterpret_cast<uword>(object);
-    if (!new_space_->Includes(address) &&
-        (old_space_ == NULL || !old_space_->Includes(address))) {
+    if (!GCMetadata::InNewOrOldSpace(address)) {
       return;
     }
     HeapObject* heap_object = HeapObject::cast(object);
-    if (!heap_object->IsMarked()) {
+    if (!GCMetadata::IsMarked(heap_object)) {
       if (stack_chain_ != NULL && heap_object->IsStack()) {
         ChainStack(Stack::cast(heap_object));
       }
-      heap_object->SetMark();
+      GCMetadata::Mark(heap_object);
       marking_stack_->Push(heap_object);
     }
   }
 
   Stack** stack_chain_;
-  SemiSpace* new_space_;
-  OldSpace* old_space_;
+  uword new_space_address_;
+  uword new_space_size_;
   MarkingStack* marking_stack_;
   int number_of_stacks_;
 };
@@ -170,10 +113,7 @@ class FreeList {
       return;
     }
     // Large enough to add a free list chunk.
-    FreeListChunk* result =
-        reinterpret_cast<FreeListChunk*>(HeapObject::FromAddress(free_start));
-    result->set_class(StaticClassStructures::free_list_chunk_class());
-    result->set_size(free_size);
+    FreeListChunk* result = FreeListChunk::CreateAt(free_start, free_size);
     int bucket = Utils::HighestBit(free_size) - 1;
     if (bucket >= kNumberOfBuckets) bucket = kNumberOfBuckets - 1;
     result->set_next_chunk(buckets_[bucket]);
@@ -255,40 +195,24 @@ class FreeList {
 
 class SweepingVisitor : public HeapObjectVisitor {
  public:
-  explicit SweepingVisitor(FreeList* free_list)
-      : free_list_(free_list), free_start_(0), used_(0) {
-    // Clear the free list. It will be rebuilt during sweeping.
-    if (free_list_ != NULL) free_list_->Clear();
+  explicit SweepingVisitor(OldSpace* space);
+
+  virtual void ChunkStart(Chunk* chunk) {
+    GCMetadata::InitializeStartsForChunk(chunk);
   }
 
-  void AddFreeListChunk(uword free_end_) {
-    if (free_start_ != 0) {
-      uword free_size = free_end_ - free_start_;
-      // When sweeping the new space we just remove mark bits, but don't build
-      // free lists, since it is GCed by scavenge instead.
-      if (free_list_ != NULL) free_list_->AddChunk(free_start_, free_size);
-      free_start_ = 0;
-    }
-  }
+  virtual uword Visit(HeapObject* object);
 
-  virtual int Visit(HeapObject* object) {
-    if (object->IsMarked()) {
-      AddFreeListChunk(object->address());
-      object->ClearMark();
-      int size = object->Size();
-      used_ += size;
-      return size;
-    }
-    int size = object->Size();
-    if (free_start_ == 0) free_start_ = object->address();
-    return size;
+  virtual void ChunkEnd(Chunk* chunk, uword end) {
+    AddFreeListChunk(end);
+    GCMetadata::ClearMarkBitsFor(chunk);
   }
-
-  virtual void ChunkEnd(uword end) { AddFreeListChunk(end); }
 
   int used() const { return used_; }
 
  private:
+  void AddFreeListChunk(uword free_end_);
+
   FreeList* free_list_;
   uword free_start_;
   int used_;

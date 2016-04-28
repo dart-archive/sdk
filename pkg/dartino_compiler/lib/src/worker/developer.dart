@@ -5,10 +5,7 @@
 library dartino_compiler.worker.developer;
 
 import 'dart:async' show
-    Future,
-    Stream,
-    StreamController,
-    Timer;
+    Future;
 
 import 'dart:convert' show
     JSON,
@@ -23,11 +20,7 @@ import 'dart:io' show
     Platform,
     Process,
     ProcessResult,
-    Socket,
     SocketException;
-
-import 'package:sdk_library_metadata/libraries.dart' show
-    Category;
 
 import 'package:sdk_services/sdk_services.dart' show
     OutputService,
@@ -49,28 +42,24 @@ import 'package:mdns/mdns.dart' show
     RRType;
 
 import 'package:path/path.dart' show
-    dirname,
+    basename,
     basenameWithoutExtension,
     join,
     withoutExtension;
 
 import '../../vm_commands.dart' show
-    VmCommandCode,
     ConnectionError,
-    Debugging,
     HandShakeResult,
-    ProcessBacktrace,
-    ProcessBacktraceRequest,
-    ProcessRun,
-    ProcessSpawnForMain,
-    SessionEnd,
-    WriteSnapshotResult;
+    ProgramInfoCommand,
+    VmCommandCode;
 
 import '../../program_info.dart' show
     Configuration,
-    ProgramInfo,
+    IdOffsetMapping,
+    NameOffsetMapping,
     ProgramInfoJson,
-    buildProgramInfo;
+    buildIdOffsetMapping,
+    getConfiguration;
 
 import '../hub/session_manager.dart' show
     DartinoVm,
@@ -90,39 +79,32 @@ import '../verbs/infrastructure.dart' show
     IncrementalCompiler,
     WorkerConnection,
     IsolatePool,
-    Session,
+    DartinoVmContext,
     SharedTask,
     StreamIterator,
     throwFatalError;
 
 import '../../incremental/dartino_compiler_incremental.dart' show
-    IncrementalCompilationFailed,
+    IncrementalCompilationFailed;
+
+import '../dartino_compiler_options.dart' show
     IncrementalMode,
     parseIncrementalMode,
     unparseIncrementalMode;
 
-export '../../incremental/dartino_compiler_incremental.dart' show
+export '../dartino_compiler_options.dart' show
     IncrementalMode;
 
 import '../../dartino_compiler.dart' show dartinoDeviceType;
 
 import '../hub/exit_codes.dart' as exit_codes;
 
-import '../../dartino_system.dart' show
-    DartinoFunction,
-    DartinoSystem;
-
-import '../../bytecodes.dart' show
-    Bytecode,
-    MethodEnd;
-
 import '../diagnostic.dart' show
     throwInternalError;
 
 import '../guess_configuration.dart' show
     executable,
-    dartinoVersion,
-    guessDartinoVm;
+    dartinoVersion;
 
 import '../device_type.dart' show
     DeviceType,
@@ -139,41 +121,27 @@ import '../../debug_state.dart' as debug show
     RemoteObject,
     BackTrace;
 
-typedef Future<Null> ClientEventHandler(Session session);
+import '../vm_connection.dart' show
+  TcpConnection,
+  TtyConnection,
+  VmConnection;
+
+import '../dartino_compiler_options.dart' show
+    DartinoCompilerOptions;
+
+typedef Future<Null> ClientEventHandler(DartinoVmContext vmContext);
 
 Uri configFileUri;
-
-Future<Socket> connect(
-    String host,
-    int port,
-    DiagnosticKind kind,
-    String socketDescription,
-    SessionState state) async {
-  // We are using .catchError rather than try/catch because we have seen
-  // incorrect stack traces using the latter.
-  Socket socket = await Socket.connect(host, port).catchError(
-      (SocketException error) {
-        String message = error.message;
-        if (error.osError != null) {
-          message = error.osError.message;
-        }
-        throwFatalError(kind, address: '$host:$port', message: message);
-      }, test: (e) => e is SocketException);
-  handleSocketErrors(socket, socketDescription, log: (String info) {
-    state.log("Connected to TCP $socketDescription  $info");
-  });
-  return socket;
-}
 
 Future<AgentConnection> connectToAgent(SessionState state) async {
   // TODO(wibling): need to make sure the agent is running.
   assert(state.settings.deviceAddress != null);
   String host = state.settings.deviceAddress.host;
   int agentPort = state.settings.deviceAddress.port;
-  Socket socket = await connect(
-      host, agentPort, DiagnosticKind.socketAgentConnectError,
-      "agentSocket", state);
-  return new AgentConnection(socket);
+  TcpConnection connection = await TcpConnection.connect(
+      host, agentPort, "agentSocket", state.log,
+      messageKind: DiagnosticKind.socketAgentConnectError);
+  return new AgentConnection(connection);
 }
 
 /// Return the result of a function in the context of an open [AgentConnection].
@@ -189,14 +157,12 @@ Future withAgentConnection(
   } on AgentException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
-        address: '${connection.socket.remoteAddress.host}:'
-            '${connection.socket.remotePort}',
+        address: '${connection.connection.description}',
         message: error.message);
   } on MessageDecodeException catch (error) {
     throwFatalError(
         DiagnosticKind.socketAgentReplyError,
-        address: '${connection.socket.remoteAddress.host}:'
-            '${connection.socket.remotePort}',
+        address: '${connection.connection.description}',
         message: error.message);
   } finally {
     disconnectFromAgent(connection);
@@ -204,8 +170,8 @@ Future withAgentConnection(
 }
 
 void disconnectFromAgent(AgentConnection connection) {
-  assert(connection.socket != null);
-  connection.socket.close();
+  assert(connection.connection != null);
+  connection.connection.close();
 }
 
 Future<Null> checkAgentVersion(Uri base, SessionState state) async {
@@ -239,43 +205,82 @@ Future<Null> startAndAttachViaAgent(Uri base, SessionState state) async {
       (connection) => connection.startVm());
   state.dartinoAgentVmId = vmData.id;
   String host = state.settings.deviceAddress.host;
-  await attachToVm(host, vmData.port, state);
-  await state.session.disableVMStandardOutput();
+  await attachToVmTcp(host, vmData.port, state);
+  await state.vmContext.disableVMStandardOutput();
 }
 
 Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
   String dartinoVmPath = state.compilerHelper.dartinoVm.toFilePath();
   state.dartinoVm =
       await DartinoVm.start(dartinoVmPath, workingDirectory: base);
-  await attachToVm(state.dartinoVm.host, state.dartinoVm.port, state);
-  await state.session.disableVMStandardOutput();
+  await attachToVmTcp(state.dartinoVm.host, state.dartinoVm.port, state);
+  await state.vmContext.disableVMStandardOutput();
 }
 
-Future<Null> attachToVm(String host, int port, SessionState state) async {
-  Socket socket = await connect(
-      host, port, DiagnosticKind.socketVmConnectError, "vmSocket", state);
+Future<Null> attachToVmTty(String ttyDevice, SessionState state) async {
+  TtyConnection connection = await TtyConnection.connect(
+      ttyDevice, "vmTty", state.log);
+  await attachToVm(connection, state);
+}
 
-  Session session = new Session(socket, state.compiler, state.stdoutSink,
-      state.stderrSink, null);
+Future<Null> attachToVmTcp(String host, int port, SessionState state) async {
+  TcpConnection connection = await TcpConnection.connect(
+      host, port, "vmSocket", state.log);
+  await attachToVm(connection, state);
+}
+
+Future<Null> attachToVm(VmConnection connection, SessionState state) async {
+  DartinoVmContext vmContext = new DartinoVmContext(
+      connection,
+      state.compiler,
+      state.stdoutSink,
+      state.stderrSink,
+      null);
 
   // Perform handshake with VM which validates that VM and compiler
   // have the same versions.
-  HandShakeResult handShakeResult = await session.handShake(dartinoVersion);
+  HandShakeResult handShakeResult = await vmContext.handShake(dartinoVersion);
   if (handShakeResult == null) {
-    throwFatalError(DiagnosticKind.handShakeFailed, address: '$host:$port');
+    throwFatalError(
+        DiagnosticKind.handShakeFailed, address: connection.description);
   }
   if (!handShakeResult.success) {
     throwFatalError(DiagnosticKind.versionMismatch,
-                    address: '$host:$port',
+                    address: connection.description,
                     userInput: dartinoVersion,
                     additionalUserInput: handShakeResult.version);
   }
+  vmContext.configuration = getConfiguration(handShakeResult.wordSize,
+      handShakeResult.dartinoDoubleSize);
 
-  // Enable debugging to be able to communicate with VM when there
-  // are errors.
-  await session.runCommand(const Debugging());
+  // Enable live editing to be able to communicate with VM when there are
+  // errors.
+  await vmContext.enableLiveEditing();
 
-  state.session = session;
+  state.vmContext = vmContext;
+}
+
+/// Create the new project directory and copy the specified template into it.
+Future<int> createProject(Uri projectUri, String boardName,
+    [String templateName]) async {
+  Uri templateUri = await findProjectTemplate(boardName, templateName);
+  if (templateUri == null) return -1;
+
+  // Recursively copy the template
+  recursiveCopy(Directory src, Directory dst) async {
+    await dst.create(recursive: true);
+    await for (FileSystemEntity srcChild in src.list()) {
+      String dstChildPath = join(dst.path, basename(srcChild.path));
+      if (srcChild is File) {
+        await srcChild.copy(dstChildPath);
+      } else if (srcChild is Directory) {
+        await recursiveCopy(srcChild, new Directory(dstChildPath));
+      }
+    }
+  }
+  recursiveCopy(
+    new Directory.fromUri(templateUri), new Directory.fromUri(projectUri));
+  return 0;
 }
 
 Future<int> compile(
@@ -306,7 +311,7 @@ Future<int> compile(
         state.log("Compiling difference from $firstScript to $script");
         newResult = await compiler.compileUpdates(
             previousResults.last.system, <Uri, Uri>{firstScript: script},
-            logTime: state.log, logVerbose: state.log);
+            Uri.base, logTime: state.log, logVerbose: state.log);
       } on IncrementalCompilationFailed catch (error) {
         state.log(error);
         state.resetCompiler();
@@ -355,6 +360,37 @@ Future<Uri> findFile(Uri cwd, String fileName) async {
   }
 }
 
+Future<Uri> findDirectory(Uri cwd, String directoryName) async {
+  // Ensure returned Uri ends with a `/`
+  if (!directoryName.endsWith('/')) directoryName = '$directoryName/';
+  Uri uri = cwd.resolve(directoryName);
+  while (true) {
+    if (await new Directory.fromUri(uri).exists()) return uri;
+    if (uri.pathSegments.length <= 2) return null;
+    // Because uri ends with `/`, must move up 2 levels
+    uri = uri.resolve('../../$directoryName');
+  }
+}
+
+/// Return a list of board names or `null` if none can be found
+Future<List<String>> findBoardNames() async {
+  Uri platformsUri = await findDirectory(executable, 'platforms');
+  if (platformsUri == null) return null;
+  return new Directory.fromUri(platformsUri).list()
+      .map((FileSystemEntity e) => basename(e.path)).toList();
+}
+
+/// Return the [Uri] of the project template for the specified board.
+/// Return `null` if it cannot be found.
+Future<Uri> findProjectTemplate(String boardName, [String templateName]) async {
+  templateName ??= 'default';
+  Uri platformsUri = await findDirectory(executable, 'platforms');
+  if (platformsUri == null) return null;
+  Uri boardUri = platformsUri.resolve('$boardName/');
+  if (!await new Directory.fromUri(boardUri).exists()) return null;
+  return boardUri.resolve('templates/$templateName/');
+}
+
 Future<Settings> createSettings(
     String sessionName,
     Uri uri,
@@ -398,7 +434,6 @@ Future<Settings> createSettings(
   }
 
   if (persistSettings) {
-    bool aborted = false;
     Uri path = await readPathFromUser(cwd, commandSender, commandIterator);
     uri = path.resolve(settingsFileName);
     print("Creating settings file '${uri.toFilePath()}'");
@@ -531,6 +566,7 @@ Future<Uri> readPathFromUser(
 
 SessionState createSessionState(
     String name,
+    Uri base,
     Settings settings,
     {Uri libraryRoot,
      Uri dartinoVm,
@@ -538,10 +574,7 @@ SessionState createSessionState(
   if (settings == null) {
     settings = const Settings.empty();
   }
-  List<String> compilerOptions =
-      const bool.fromEnvironment("dartino_compiler-verbose")
-      ? <String>['--verbose'] : <String>[];
-  compilerOptions.addAll(settings.options);
+
   Uri packageConfig = settings.packages;
   if (packageConfig == null) {
     packageConfig = executable.resolve("dartino-sdk.packages");
@@ -554,12 +587,21 @@ SessionState createSessionState(
       ? "dartino_embedded.platform"
       : "dartino_mobile.platform";
 
-  DartinoCompiler compilerHelper = new DartinoCompiler(
-      options: compilerOptions,
-      packageConfig: packageConfig,
-      environment: settings.constants,
+  DartinoCompilerOptions compilerOptions = DartinoCompilerOptions.parse(
+      settings.compilerOptions,
+      base,
       platform: platform,
       libraryRoot: libraryRoot,
+      packageConfig: packageConfig,
+      environment: settings.constants);
+
+  if (const bool.fromEnvironment("dartino_compiler-verbose")) {
+    compilerOptions =
+        DartinoCompilerOptions.copy(compilerOptions, verbose: true);
+  }
+
+  DartinoCompiler compilerHelper = new DartinoCompiler(
+      options: compilerOptions,
       dartinoVm: dartinoVm,
       nativesJson: nativesJson);
 
@@ -569,75 +611,47 @@ SessionState createSessionState(
       settings);
 }
 
-Future runWithDebugger(
-    List<String> commands,
-    Session session,
-    SessionState state) async {
-
-  // Method used to generate the debugger commands if none are specified.
-  Stream<String> inputGenerator() async* {
-    yield 't verbose';
-    yield 'b main';
-    yield 'r';
-    while (!session.terminated) {
-      yield 's';
-    }
-  }
-
-  return commands.isEmpty ?
-      session.debug(inputGenerator(), Uri.base, state, echo: true) :
-      session.debug(
-          new Stream<String>.fromIterable(commands), Uri.base, state,
-          echo: true);
-}
-
 Future<int> run(
     SessionState state,
     List<String> arguments,
-    {List<String> testDebuggerCommands,
-     bool terminateDebugger: true}) async {
+    {bool terminateDebugger: true}) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
-  Session session = state.session;
+  DartinoVmContext vmContext = state.vmContext;
 
   for (DartinoDelta delta in compilationResults) {
-    await session.applyDelta(delta);
+    await vmContext.applyDelta(delta);
   }
 
-  if (testDebuggerCommands != null) {
-    await runWithDebugger(testDebuggerCommands, session, state);
-    return 0;
-  }
+  vmContext.silent = true;
 
-  session.silent = true;
-
-  await session.enableDebugger();
-  await session.spawnProcess(arguments);
-  var command = await session.debugRun();
+  await vmContext.enableLiveEditing();
+  await vmContext.spawnProcess(arguments);
+  var command = await vmContext.startRunning();
 
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
   if (command == null) {
-    await session.kill();
-    await session.shutdown();
+    await vmContext.kill();
+    await vmContext.shutdown();
     throwInternalError("No command received from Dartino VM");
   }
 
   Future printException() async {
-    if (!session.loaded) {
+    if (!vmContext.loaded) {
       print('### process not loaded, cannot print uncaught exception');
       return;
     }
-    debug.RemoteObject exception = await session.uncaughtException();
+    debug.RemoteObject exception = await vmContext.uncaughtException();
     if (exception != null) {
-      print(session.exceptionToString(exception));
+      print(vmContext.exceptionToString(exception));
     }
   }
 
   Future printTrace() async {
-    if (!session.loaded) {
+    if (!vmContext.loaded) {
       print("### process not loaded, cannot print stacktrace and code");
       return;
     }
-    debug.BackTrace stackTrace = await session.backTrace();
+    debug.BackTrace stackTrace = await vmContext.backTrace();
     if (stackTrace != null) {
       print(stackTrace.format());
       print(stackTrace.list(state));
@@ -677,38 +691,59 @@ Future<int> run(
     if (terminateDebugger) {
       await state.terminateSession();
     } else {
-      // If the session terminated due to a ConnectionError or the program
-      // finished don't reuse the state's session.
-      if (session.terminated) {
-        state.session = null;
+      // If the vmContext terminated due to a ConnectionError or the program
+      // finished don't reuse the state's vmContext.
+      if (vmContext.terminated) {
+        state.vmContext = null;
       }
-      session.silent = false;
+      vmContext.silent = false;
     }
   };
 
   return exitCode;
 }
 
-Future<int> export(SessionState state, Uri snapshot) async {
-  List<DartinoDelta> compilationResults = state.compilationResults;
-  Session session = state.session;
-  state.session = null;
+/// Returns the [NameOffsetMapping] stored in the '.info.json' adjacent to a
+/// snapshot location.
+Future<NameOffsetMapping> getInfoFromSnapshotLocation(Uri snapshot) async {
+  Uri info = snapshot.replace(path: "${snapshot.path}.info.json");
+  File infoFile = new File.fromUri(info);
 
-  for (DartinoDelta delta in compilationResults) {
-    await session.applyDelta(delta);
+  if (!await infoFile.exists()) {
+    throwFatalError(DiagnosticKind.infoFileNotFound, uri: snapshot);
   }
 
-  var result = await session.writeSnapshot(snapshot.toFilePath());
-  if (result is WriteSnapshotResult) {
-    WriteSnapshotResult snapshotResult = result;
+  try {
+    return ProgramInfoJson.decode(await infoFile.readAsString());
+  } on FormatException {
+    throwFatalError(DiagnosticKind.malformedInfoFile, uri: snapshot);
+  }
+}
 
-    await session.shutdown();
+Future<int> export(SessionState state, Uri snapshot) async {
+  List<DartinoDelta> compilationResults = state.compilationResults;
+  DartinoVmContext vmContext = state.vmContext;
+  state.vmContext = null;
 
-    ProgramInfo info =
-        buildProgramInfo(compilationResults.last.system, snapshotResult);
+  for (DartinoDelta delta in compilationResults) {
+    await vmContext.applyDelta(delta);
+  }
+
+  var result = await vmContext.createSnapshot(
+      snapshotPath: snapshot.toFilePath());
+  if (result is ProgramInfoCommand) {
+    ProgramInfoCommand snapshotResult = result;
+
+    await vmContext.shutdown();
+
+    IdOffsetMapping idOffsetMapping =
+        buildIdOffsetMapping(
+            state.compiler.compiler.libraryLoader.libraries,
+            compilationResults.last.system, snapshotResult);
 
     File jsonFile = new File('${snapshot.toFilePath()}.info.json');
-    await jsonFile.writeAsString(ProgramInfoJson.encode(info));
+    await jsonFile.writeAsString(
+        ProgramInfoJson.encode(idOffsetMapping.nameOffsets));
 
     return 0;
   } else {
@@ -739,27 +774,26 @@ Future<int> compileAndAttachToVmThen(
     assert(compilationResults != null);
   }
 
-  Session session = state.session;
-  if (session != null && session.loaded) {
-    // We cannot reuse a session that has already been loaded. Loading
+  DartinoVmContext vmContext = state.vmContext;
+  if (vmContext != null && vmContext.loaded) {
+    // We cannot reuse a vmContext that has already been loaded. Loading
     // currently implies that some of the code has been run.
     if (state.explicitAttach) {
       // If the user explicitly called 'dartino attach' we cannot
-      // create a new VM session since we don't know if the vm is
+      // create a new vmContext since we don't know if the vm is
       // running locally or remotely and if running remotely there
       // is no guarantee there is an agent to start a new vm.
       //
       // The UserSession is invalid in its current state as the
-      // vm session (aka. session in the code here) has already
-      // been loaded and run some code.
+      // vm context has already been loaded and run some code.
       throwFatalError(DiagnosticKind.sessionInvalidState,
           sessionName: state.name);
     }
     state.log('Cannot reuse existing VM session, creating new.');
     await state.terminateSession();
-    session = null;
+    vmContext = null;
   }
-  if (session == null) {
+  if (vmContext == null) {
     if (state.settings.deviceAddress != null) {
       await startAndAttachViaAgent(base, state);
       // TODO(wibling): read stdout from agent.
@@ -773,8 +807,8 @@ Future<int> compileAndAttachToVmThen(
           commandSender.sendStderr("$line\n");
         });
     }
-    session = state.session;
-    assert(session != null);
+    vmContext = state.vmContext;
+    assert(vmContext != null);
   }
 
   eventHandler ??= defaultClientEventHandler(state, commandIterator);
@@ -807,7 +841,7 @@ void setupClientInOut(
   state.attachCommandSender(commandSender);
 
   // Start event handling for input passed from the Dartino C++ client.
-  eventHandler(state.session);
+  eventHandler(state.vmContext);
 
   // Let the hub (main isolate) know that event handling has been started.
   commandSender.sendEventLoopStarted();
@@ -819,7 +853,7 @@ void setupClientInOut(
 ClientEventHandler defaultClientEventHandler(
     SessionState state,
     StreamIterator<ClientCommand> commandIterator) {
-  return (Session session) async {
+  return (DartinoVmContext vmContext) async {
     while (await commandIterator.moveNext()) {
       ClientCommand command = commandIterator.current;
       switch (command.code) {
@@ -884,7 +918,6 @@ Future<Uri> lookForAgentPackage(Uri base, {String version}) async {
   Directory platformDir = new Directory.fromUri(platformUri);
 
   // Try to locate the agent package in the SDK for the selected platform.
-  Uri sdkAgentPackage;
   if (await platformDir.exists()) {
     for (FileSystemEntity entry in platformDir.listSync()) {
       Uri uri = entry.uri;
@@ -1044,7 +1077,7 @@ Future<int> upgradeAgent(
 
   if (existingVersion.isGreaterThan(version)) {
     commandSender.sendStdout("The existing version is greater than the "
-            "version you want to use to upgrade.\n"
+        "version you want to use to upgrade.\n"
         "Please confirm this operation by typing 'yes' "
         "(press Enter to abort): ");
     Confirm: while (await commandIterator.moveNext()) {
@@ -1082,22 +1115,18 @@ Future<int> upgradeAgent(
   // Wait for the agent to come back online to verify the version.
   while (--remainingTries > 0) {
     await new Future.delayed(const Duration(seconds: 1));
-    try {
-      // TODO(karlklose): this functionality should be shared with connect.
-      Socket socket = await Socket.connect(
-          state.settings.deviceAddress.host,
-          state.settings.deviceAddress.port);
-      handleSocketErrors(socket, "pollAgentVersion", log: (String info) {
-        state.log("Connected to TCP waitForAgentUpgrade $info");
-      });
-      AgentConnection connection = new AgentConnection(socket);
-      newVersion = parseVersion(await connection.dartinoVersion());
-      disconnectFromAgent(connection);
-      if (newVersion != existingVersion) {
-        break;
-      }
-    } on SocketException catch (e) {
-      // Ignore this error and keep waiting.
+    VmConnection vmConnection = await TcpConnection.connect(
+        state.settings.deviceAddress.host,
+        state.settings.deviceAddress.port,
+        "waitForAgentUpgrade",
+        state.log,
+        // Ignore this error and keep waiting.
+        onConnectionError: (SocketException _) {});
+    AgentConnection connection = new AgentConnection(vmConnection);
+    newVersion = parseVersion(await connection.dartinoVersion());
+    disconnectFromAgent(connection);
+    if (newVersion != existingVersion) {
+      break;
     }
   }
 
@@ -1184,11 +1213,11 @@ Future<int> downloadTools(
 
   Version version = parseVersion(dartinoVersion);
   if (version.isEdgeVersion) {
-    print("WARNING: For bleeding edge a fixed image is used.");
     // For edge versions download use a well known version for now.
-    var knownVersion = "0.3.0-edge.8882725ac178ac8c9834c7ea8f88a8a8dd6cb4db";
-    gcsBucket = "dartino-temporary";
-    gcsPath = "channels/be/raw/$knownVersion/sdk";
+    var knownVersion = "0.3.0-dev.5.2";
+    print("WARNING: For bleeding edge tools from version "
+          "$knownVersion is used.");
+    gcsPath = "channels/dev/raw/$knownVersion/sdk";
   } else if (version.isDevVersion) {
     // TODO(sgjesse): Change this to channels/dev/release at some point.
     gcsPath = "channels/dev/raw/$version/sdk";
@@ -1222,9 +1251,10 @@ Future<int> downloadTools(
 Future<Directory> locateBinDirectory() async {
   // In the SDK, the tools directory is at the same level as the
   // internal (and bin) directory.
+  String path = 'platforms/stm32f746g-discovery/bin';
   Directory binDirectory =
       new Directory.fromUri(executable.resolve(
-          '../platforms/stm32f746g-discovery/bin'));
+          '../$path'));
   if ((await binDirectory.exists())) {
     // In the SDK, the tools directory is at the same level as the
     // internal (and bin) directory.
@@ -1236,11 +1266,29 @@ Future<Directory> locateBinDirectory() async {
   } else {
     // In the Git checkout the platform scripts is under platforms.
     binDirectory =
-        new Directory.fromUri(executable.resolve('../../platforms/stm/bin'));
+        new Directory.fromUri(executable.resolve(
+                '../../$path'));
     assert(await binDirectory.exists());
   }
 
   return binDirectory;
+}
+
+// Creates a c-file containing the options options in an array.
+void createEmbedderOptionsCFile(Directory location, List<String> options) {
+  String tmpOptionsFilename = join(location.path, "embedder_options.c");
+  String optionStrings = (options ?? <String>[])
+      .map((String option) {
+    String escaped = option
+        .replaceAll(r'\', r'\\')
+        .replaceAll('"', r'\"');
+    return '\n  "$escaped",';
+  }).join();
+  new File(tmpOptionsFilename).writeAsStringSync("""
+const char *dartino_embedder_options[] = {$optionStrings
+  0
+};
+""");
 }
 
 Future<int> buildImage(
@@ -1263,12 +1311,15 @@ Future<int> buildImage(
     String tmpSnapshot = join(tmpDir.path, "snapshot");
     await new File.fromUri(snapshot).copy(tmpSnapshot);
 
+    createEmbedderOptionsCFile(tmpDir, state.settings.embedderOptions);
+
     ProcessResult result;
     File linkScript = new File(join(binDirectory.path, 'link.sh'));
     if (Platform.isLinux || Platform.isMacOS) {
       state.log("Linking image: '${linkScript.path} ${baseName}'");
       result = await Process.run(
-          linkScript.path, [baseName, tmpDir.path],
+          linkScript.path,
+          [baseName, tmpDir.path],
           workingDirectory: tmpDir.path);
     } else {
       throwUnsupportedPlatform();
@@ -1384,18 +1435,20 @@ Future<int> invokeCombinedTasks(
 }
 
 Future<String> getAgentVersion(InternetAddress host, int port) async {
-  Socket socket;
+  SocketException connectionError = null;
+  VmConnection vmConnection = await TcpConnection.connect(
+      host,
+      port,
+      "getAgentVersionSocket",
+      (String message) {},
+      onConnectionError:
+          (SocketException e) => connectionError = e);
+  if (connectionError != null) return 'Error: no agent: $connectionError';
   try {
-    socket = await Socket.connect(host, port);
-    handleSocketErrors(socket, "getAgentVersionSocket");
-  } on SocketException catch (e) {
-    return 'Error: no agent: $e';
-  }
-  try {
-    AgentConnection connection = new AgentConnection(socket);
+    AgentConnection connection = new AgentConnection(vmConnection);
     return await connection.dartinoVersion();
   } finally {
-    socket.close();
+    vmConnection.close();
   }
 }
 
@@ -1506,11 +1559,44 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
     throwFatalError(DiagnosticKind.settingsNotAMap, uri: settingsUri);
   }
   Uri packages;
-  final List<String> options = <String>[];
+
+  List<String> compilerOptions;
   final Map<String, String> constants = <String, String>{};
+  List<String> embedderOptions;
+
   Address deviceAddress;
   DeviceType deviceType;
   IncrementalMode incrementalMode = IncrementalMode.none;
+
+  List<String> listOfStrings(value, String key, {bool restrictDashD: false}) {
+    List<String> result = new List<String>();
+    if (value != null) {
+      if (value is! List) {
+        throwFatalError(
+            DiagnosticKind.settingsOptionsNotAList, uri: settingsUri,
+            userInput: "$value",
+            additionalUserInput: key);
+      }
+      for (var option in value) {
+        if (option is! String) {
+          throwFatalError(
+              DiagnosticKind.settingsOptionNotAString, uri: settingsUri,
+              userInput: '$option',
+              additionalUserInput: key);
+        }
+        if (restrictDashD && option.startsWith("-D")) {
+          throwFatalError(
+              DiagnosticKind.settingsCompileTimeConstantAsOption,
+              uri: settingsUri,
+              userInput: '$option',
+              additionalUserInput: key);
+        }
+        result.add(option);
+      }
+    }
+    return result;
+  }
+
   userSettings.forEach((String key, value) {
     switch (key) {
       case "packages":
@@ -1525,26 +1611,13 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
 
       case "options":
-        if (value != null) {
-          if (value is! List) {
-            throwFatalError(
-                DiagnosticKind.settingsOptionsNotAList, uri: settingsUri,
-                userInput: "$value");
-          }
-          for (var option in value) {
-            if (option is! String) {
-              throwFatalError(
-                  DiagnosticKind.settingsOptionNotAString, uri: settingsUri,
-                  userInput: '$option');
-            }
-            if (option.startsWith("-D")) {
-              throwFatalError(
-                  DiagnosticKind.settingsCompileTimeConstantAsOption,
-                  uri: settingsUri, userInput: '$option');
-            }
-            options.add(option);
-          }
-        }
+        throwFatalError(
+            DiagnosticKind.optionsObsolete, uri: settingsUri,
+            userInput: '$value');
+        break;
+
+      case "compiler_options":
+        compilerOptions = listOfStrings(value, key, restrictDashD: true);
         break;
 
       case "constants":
@@ -1566,6 +1639,10 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
             }
           });
         }
+        break;
+
+      case "embedder_options":
+        embedderOptions = listOfStrings(value, key);
         break;
 
       case "device_address":
@@ -1619,8 +1696,15 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         break;
     }
   });
-  return new Settings.fromSource(settingsUri,
-      packages, options, constants, deviceAddress, deviceType, incrementalMode);
+  return new Settings.fromSource(
+      settingsUri,
+      packages,
+      compilerOptions,
+      constants,
+      embedderOptions,
+      deviceAddress,
+      deviceType,
+      incrementalMode);
 }
 
 class Settings {
@@ -1628,7 +1712,9 @@ class Settings {
 
   final Uri packages;
 
-  final List<String> options;
+  final List<String> compilerOptions;
+
+  final List<String> embedderOptions;
 
   final Map<String, String> constants;
 
@@ -1640,8 +1726,9 @@ class Settings {
 
   const Settings(
       this.packages,
-      this.options,
+      this.compilerOptions,
       this.constants,
+      this.embedderOptions,
       this.deviceAddress,
       this.deviceType,
       this.incrementalMode) : source = null;
@@ -1649,20 +1736,22 @@ class Settings {
   const Settings.fromSource(
       this.source,
       this.packages,
-      this.options,
+      this.compilerOptions,
       this.constants,
+      this.embedderOptions,
       this.deviceAddress,
       this.deviceType,
       this.incrementalMode);
 
   const Settings.empty()
-      : this(null, const <String>[], const <String, String>{}, null, null,
-             IncrementalMode.none);
+      : this(null, const <String>[], const <String, String>{}, const<String>[],
+          null, null, IncrementalMode.none);
 
   Settings copyWith({
       Uri packages,
-      List<String> options,
+      List<String> compilerOptions,
       Map<String, String> constants,
+      List<String> vmOptions,
       Address deviceAddress,
       DeviceType deviceType,
       IncrementalMode incrementalMode}) {
@@ -1670,11 +1759,14 @@ class Settings {
     if (packages == null) {
       packages = this.packages;
     }
-    if (options == null) {
-      options = this.options;
+    if (compilerOptions == null) {
+      compilerOptions = this.compilerOptions;
     }
     if (constants == null) {
       constants = this.constants;
+    }
+    if (vmOptions == null) {
+      compilerOptions = this.compilerOptions;
     }
     if (deviceAddress == null) {
       deviceAddress = this.deviceAddress;
@@ -1687,8 +1779,9 @@ class Settings {
     }
     return new Settings(
         packages,
-        options,
+        compilerOptions,
         constants,
+        vmOptions,
         deviceAddress,
         deviceType,
         incrementalMode);
@@ -1697,8 +1790,9 @@ class Settings {
   String toString() {
     return "Settings("
         "packages: $packages, "
-        "options: $options, "
+        "compiler_options: $compilerOptions, "
         "constants: $constants, "
+        "embedder_options: $embedderOptions, "
         "device_address: $deviceAddress, "
         "device_type: $deviceType, "
         "incremental_mode: $incrementalMode)";
@@ -1714,8 +1808,9 @@ class Settings {
     }
 
     addIfNotNull("packages", packages == null ? null : "$packages");
-    addIfNotNull("options", options);
+    addIfNotNull("compiler_options", compilerOptions);
     addIfNotNull("constants", constants);
+    addIfNotNull("embedder_options", embedderOptions);
     addIfNotNull("device_address", deviceAddress);
     addIfNotNull(
         "device_type",
@@ -1727,4 +1822,10 @@ class Settings {
 
     return result;
   }
+}
+
+Uri defaultSnapshotLocation(Uri script) {
+  // TODO(sgjesse): Use a temp directory for the snapshot.
+  String snapshotName = basenameWithoutExtension(script.path) + '.snapshot';
+  return script.resolve(snapshotName);
 }

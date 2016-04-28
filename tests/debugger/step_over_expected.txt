@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > b
-breakpoint set: id: '0' method: 'main' bytecode index: '0'
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
 > r
 tests/debugger/step_over_test.dart:17:3
 17     foo();
@@ -27,7 +27,7 @@ tests/debugger/step_over_test.dart:21:3
 tests/debugger/step_over_test.dart:22:3
 22     a.y();
 > b y
-breakpoint set: id: '6' method: 'y' bytecode index: '0'
+### set breakpoint id: '6' method: 'y' bytecode index: '0'
 > s
 tests/debugger/step_over_test.dart:22:3
 22     a.y();

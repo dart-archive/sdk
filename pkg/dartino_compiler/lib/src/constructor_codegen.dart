@@ -11,7 +11,6 @@ import 'package:compiler/src/elements/elements.dart' show
     FormalElement,
     FunctionSignature,
     InitializingFormalElement,
-    LibraryElement,
     ParameterElement;
 
 import 'package:compiler/src/resolution/tree_elements.dart' show
@@ -367,7 +366,7 @@ abstract class ConstructorCodegenBase extends CodegenVisitor {
   void pushInitialFieldValues(DartinoClassBase classBase) {
     if (classBase.hasSuperclassId) {
       pushInitialFieldValues(
-          context.backend.systemBuilder.lookupClass(classBase.superclassId));
+          systemBase.lookupClassById(classBase.superclassId));
     }
     int fieldIndex = classBase.superclassFields;
     ClassElement classElement = classBase.element.implementation;

@@ -12,53 +12,59 @@
 
 namespace dartino {
 
-Heap::Heap(RandomXorShift* random, int maximum_initial_size)
-    : random_(random),
-      space_(new SemiSpace(maximum_initial_size)),
-      old_space_(new OldSpace(0)),
-      weak_pointers_(NULL),
-      foreign_memory_(0),
-      allocations_have_taken_place_(false) {
+Heap::Heap(RandomXorShift* random)
+    : random_(random), space_(NULL), foreign_memory_(0) {}
+
+OneSpaceHeap::OneSpaceHeap(RandomXorShift* random, int maximum_initial_size)
+    : Heap(random) {
+  space_ =
+      new SemiSpace(Space::kCanResize, kUnknownSpacePage, maximum_initial_size);
+  AdjustAllocationBudget();
+}
+
+TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
+    : Heap(random),
+      old_space_(new OldSpace(this)),
+      unused_semispace_(new SemiSpace(Space::kCannotResize, kNewSpacePage, 0)) {
+  space_ = new SemiSpace(Space::kCannotResize, kNewSpacePage, 0);
+  Chunk* chunk = ObjectMemory::AllocateChunk(space_, kFixedSemiSpaceSize);
+  ASSERT(chunk != NULL);  // TODO(erikcorry): Cope with out-of-memory.
+  space_->Append(chunk);
+  space_->UpdateBaseAndLimit(chunk, chunk->start());
+  Chunk* unused_chunk =
+      ObjectMemory::AllocateChunk(unused_semispace_, kFixedSemiSpaceSize);
+  unused_semispace_->Append(unused_chunk);
   AdjustAllocationBudget();
   AdjustOldAllocationBudget();
+  water_mark_ = chunk->start();
 }
-
-Heap::Heap(SemiSpace* existing_space, WeakPointer* weak_pointers)
-    : random_(NULL),
-      space_(existing_space),
-      weak_pointers_(weak_pointers),
-      foreign_memory_(0),
-      allocations_have_taken_place_(false) {}
 
 Heap::~Heap() {
-  WeakPointer::ForceCallbacks(&weak_pointers_, this);
-  ASSERT(foreign_memory_ == 0);
-  delete old_space_;
   delete space_;
+  ASSERT(foreign_memory_ == 0);
 }
 
-Object* Heap::Allocate(int size) {
-  allocations_have_taken_place_ = true;
+TwoSpaceHeap::~TwoSpaceHeap() {
+  // We do this before starting to destroy the heap, because the callbacks can
+  // trigger calls that assume the heap is still working.
+  WeakPointer::ForceCallbacks(old_space_->weak_pointers());
+  WeakPointer::ForceCallbacks(space_->weak_pointers());
+  delete unused_semispace_;
+  delete old_space_;
+}
+
+Object* Heap::Allocate(uword size) {
+  ASSERT(no_allocation_ == 0);
   uword result = space_->Allocate(size);
-  if (result == 0) return Failure::retry_after_gc(size);
+  if (result == 0) {
+    return HandleAllocationFailure(size);
+  }
   return HeapObject::FromAddress(result);
-}
-
-Object* Heap::AllocateNonFatal(int size) {
-  allocations_have_taken_place_ = true;
-  uword result = space_->AllocateNonFatal(size);
-  if (result == 0) return Failure::retry_after_gc(size);
-  return HeapObject::FromAddress(result);
-}
-
-void Heap::TryDealloc(Object* object, int size) {
-  uword location = reinterpret_cast<uword>(object) + size - HeapObject::kTag;
-  space_->TryDealloc(location, size);
 }
 
 Object* Heap::CreateInstance(Class* the_class, Object* init_value,
                              bool immutable) {
-  int size = the_class->instance_format().fixed_size();
+  uword size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Instance* result = reinterpret_cast<Instance*>(raw_result);
@@ -70,9 +76,23 @@ Object* Heap::CreateInstance(Class* the_class, Object* init_value,
   return result;
 }
 
+Object* TwoSpaceHeap::CreateOldSpaceInstance(Class* the_class,
+                                             Object* init_value) {
+  uword size = the_class->instance_format().fixed_size();
+  uword new_address = old_space_->Allocate(size);
+  ASSERT(new_address != 0);  // Only used in NoAllocationFailureScope.
+  Instance* result =
+      reinterpret_cast<Instance*>(HeapObject::FromAddress(new_address));
+  result->set_class(the_class);
+  result->set_immutable(false);
+  ASSERT(size == the_class->instance_format().fixed_size());
+  result->Initialize(size, init_value);
+  return result;
+}
+
 Object* Heap::CreateArray(Class* the_class, int length, Object* init_value) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::ARRAY_TYPE);
-  int size = Array::AllocationSize(length);
+  uword size = Array::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Array* result = reinterpret_cast<Array*>(raw_result);
@@ -84,7 +104,7 @@ Object* Heap::CreateArray(Class* the_class, int length, Object* init_value) {
 Object* Heap::CreateByteArray(Class* the_class, int length) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::BYTE_ARRAY_TYPE);
-  int size = ByteArray::AllocationSize(length);
+  uword size = ByteArray::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   ByteArray* result = reinterpret_cast<ByteArray*>(raw_result);
@@ -96,7 +116,7 @@ Object* Heap::CreateByteArray(Class* the_class, int length) {
 Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::LARGE_INTEGER_TYPE);
-  int size = LargeInteger::AllocationSize();
+  uword size = LargeInteger::AllocationSize();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   LargeInteger* result = reinterpret_cast<LargeInteger*>(raw_result);
@@ -105,13 +125,9 @@ Object* Heap::CreateLargeInteger(Class* the_class, int64 value) {
   return LargeInteger::cast(result);
 }
 
-void Heap::TryDeallocInteger(LargeInteger* object) {
-  TryDealloc(object, LargeInteger::AllocationSize());
-}
-
 Object* Heap::CreateDouble(Class* the_class, dartino_double value) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::DOUBLE_TYPE);
-  int size = Double::AllocationSize();
+  uword size = Double::AllocationSize();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Double* result = reinterpret_cast<Double*>(raw_result);
@@ -122,7 +138,7 @@ Object* Heap::CreateDouble(Class* the_class, dartino_double value) {
 
 Object* Heap::CreateBoxed(Class* the_class, Object* value) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::BOXED_TYPE);
-  int size = the_class->instance_format().fixed_size();
+  uword size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Boxed* result = reinterpret_cast<Boxed*>(raw_result);
@@ -134,7 +150,7 @@ Object* Heap::CreateBoxed(Class* the_class, Object* value) {
 Object* Heap::CreateInitializer(Class* the_class, Function* function) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::INITIALIZER_TYPE);
-  int size = the_class->instance_format().fixed_size();
+  uword size = the_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Initializer* result = reinterpret_cast<Initializer*>(raw_result);
@@ -146,7 +162,7 @@ Object* Heap::CreateInitializer(Class* the_class, Function* function) {
 Object* Heap::CreateDispatchTableEntry(Class* the_class) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE);
-  int size = DispatchTableEntry::AllocationSize();
+  uword size = DispatchTableEntry::AllocationSize();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   DispatchTableEntry* result =
@@ -159,7 +175,7 @@ Object* Heap::CreateOneByteStringInternal(Class* the_class, int length,
                                           bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::ONE_BYTE_STRING_TYPE);
-  int size = OneByteString::AllocationSize(length);
+  uword size = OneByteString::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   OneByteString* result = reinterpret_cast<OneByteString*>(raw_result);
@@ -172,7 +188,7 @@ Object* Heap::CreateTwoByteStringInternal(Class* the_class, int length,
                                           bool clear) {
   ASSERT(the_class->instance_format().type() ==
          InstanceFormat::TWO_BYTE_STRING_TYPE);
-  int size = TwoByteString::AllocationSize(length);
+  uword size = TwoByteString::AllocationSize(length);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   TwoByteString* result = reinterpret_cast<TwoByteString*>(raw_result);
@@ -199,8 +215,8 @@ Object* Heap::CreateTwoByteStringUninitialized(Class* the_class, int length) {
 
 Object* Heap::CreateStack(Class* the_class, int length) {
   ASSERT(the_class->instance_format().type() == InstanceFormat::STACK_TYPE);
-  int size = Stack::AllocationSize(length);
-  Object* raw_result = AllocateNonFatal(size);
+  uword size = Stack::AllocationSize(length);
+  Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Stack* result = reinterpret_cast<Stack*>(raw_result);
   result->set_class(the_class);
@@ -208,11 +224,11 @@ Object* Heap::CreateStack(Class* the_class, int length) {
   return Stack::cast(result);
 }
 
-Object* Heap::AllocateRawClass(int size) { return Allocate(size); }
+Object* Heap::AllocateRawClass(uword size) { return Allocate(size); }
 
 Object* Heap::CreateMetaClass() {
   InstanceFormat format = InstanceFormat::class_format();
-  int size = Class::AllocationSize();
+  uword size = Class::AllocationSize();
   // Allocate the raw class objects.
   Class* meta_class = reinterpret_cast<Class*>(AllocateRawClass(size));
   if (meta_class->IsFailure()) return meta_class;
@@ -227,7 +243,7 @@ Object* Heap::CreateClass(InstanceFormat format, Class* meta_class,
                           HeapObject* null) {
   ASSERT(meta_class->instance_format().type() == InstanceFormat::CLASS_TYPE);
 
-  int size = meta_class->instance_format().fixed_size();
+  uword size = meta_class->instance_format().fixed_size();
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Class* result = reinterpret_cast<Class*>(raw_result);
@@ -241,7 +257,7 @@ Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
   ASSERT(the_class->instance_format().type() == InstanceFormat::FUNCTION_TYPE);
   int literals_size = number_of_literals * kPointerSize;
   int bytecode_size = Function::BytecodeAllocationSize(bytecodes.length());
-  int size = Function::AllocationSize(bytecode_size + literals_size);
+  uword size = Function::AllocationSize(bytecode_size + literals_size);
   Object* raw_result = Allocate(size);
   if (raw_result->IsFailure()) return raw_result;
   Function* result = reinterpret_cast<Function*>(raw_result);
@@ -252,30 +268,32 @@ Object* Heap::CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
   return Function::cast(result);
 }
 
-void Heap::AllocatedForeignMemory(int size) {
-  ASSERT(foreign_memory_ >= 0);
+void TwoSpaceHeap::AllocatedForeignMemory(uword size) {
+  ASSERT(static_cast<word>(foreign_memory_) >= 0);
   foreign_memory_ += size;
   old_space()->DecreaseAllocationBudget(size);
+  if (old_space()->needs_garbage_collection()) {
+    space()->TriggerGCSoon();
+  }
 }
 
-void Heap::FreedForeignMemory(int size) {
+void TwoSpaceHeap::FreedForeignMemory(uword size) {
   foreign_memory_ -= size;
-  ASSERT(foreign_memory_ >= 0);
+  ASSERT(static_cast<word>(foreign_memory_) >= 0);
   old_space()->IncreaseAllocationBudget(size);
 }
 
-void Heap::ReplaceSpace(SemiSpace* space, OldSpace* old_space) {
+void TwoSpaceHeap::SwapSemiSpaces() {
+  SemiSpace* temp = space_;
+  space_ = unused_semispace_;
+  unused_semispace_ = temp;
+  water_mark_ = space_->top();
+}
+
+void Heap::ReplaceSpace(SemiSpace* space) {
   delete space_;
   space_ = space;
-  if (old_space != NULL) {
-    // TODO(erikcorry): Fix this heuristic.
-    // Currently the new-space GC time is dependent on the size of old space
-    // because we have no remembered set.  Therefore we have to grow the new
-    // space as the old space grows to avoid going quadratic.
-    space->SetAllocationBudget(old_space->Used() >> 3);
-  } else {
-    AdjustAllocationBudget();
-  }
+  AdjustAllocationBudget();
 }
 
 SemiSpace* Heap::TakeSpace() {
@@ -284,28 +302,98 @@ SemiSpace* Heap::TakeSpace() {
   return result;
 }
 
-WeakPointer* Heap::TakeWeakPointers() {
-  WeakPointer* weak_pointers = weak_pointers_;
-  weak_pointers_ = NULL;
-  return weak_pointers;
+void TwoSpaceHeap::AddWeakPointer(HeapObject* object,
+                                  WeakPointerCallback callback, void* arg) {
+  WeakPointer* weak_pointer = new WeakPointer(object, callback, arg);
+  if (space_->IsInSingleChunk(object)) {
+    space_->weak_pointers()->Append(weak_pointer);
+  } else {
+    ASSERT(old_space_->Includes(object->address()));
+    old_space_->weak_pointers()->Append(weak_pointer);
+  }
 }
 
-void Heap::AddWeakPointer(HeapObject* object, WeakPointerCallback callback) {
-  weak_pointers_ = new WeakPointer(object, callback, weak_pointers_);
+void TwoSpaceHeap::AddExternalWeakPointer(HeapObject* object,
+                                          ExternalWeakPointerCallback callback,
+                                          void* arg) {
+  WeakPointer* weak_pointer = new WeakPointer(object, callback, arg);
+  if (space_->IsInSingleChunk(object)) {
+    space_->weak_pointers()->Append(weak_pointer);
+  } else {
+    ASSERT(old_space_->Includes(object->address()));
+    old_space_->weak_pointers()->Append(weak_pointer);
+  }
 }
 
-void Heap::RemoveWeakPointer(HeapObject* object) {
-  WeakPointer::Remove(&weak_pointers_, object);
+void TwoSpaceHeap::RemoveWeakPointer(HeapObject* object) {
+  if (space_->IsInSingleChunk(object)) {
+    bool success = WeakPointer::Remove(space_->weak_pointers(), object);
+    ASSERT(success);
+  } else {
+    ASSERT(old_space_->Includes(object->address()));
+    bool success = WeakPointer::Remove(old_space_->weak_pointers(), object);
+    ASSERT(success);
+  }
 }
 
-void Heap::ProcessWeakPointers(Space* space) {
-  WeakPointer::Process(space, &weak_pointers_, this);
+bool TwoSpaceHeap::RemoveExternalWeakPointer(
+    HeapObject* object, ExternalWeakPointerCallback callback) {
+  if (space_->IsInSingleChunk(object)) {
+    return WeakPointer::Remove(space_->weak_pointers(), object, callback);
+  } else {
+    return WeakPointer::Remove(old_space_->weak_pointers(), object, callback);
+  }
+}
+
+void GenerationalScavengeVisitor::VisitBlock(Object** start, Object** end) {
+  for (Object** p = start; p < end; p++) {
+    if (!InFromSpace(*p)) continue;
+    HeapObject* old_object = reinterpret_cast<HeapObject*>(*p);
+    if (old_object->HasForwardingAddress()) {
+      HeapObject* destination = old_object->forwarding_address();
+      *p = destination;
+      if (InToSpace(destination)) *record_ = GCMetadata::kNewSpacePointers;
+    } else {
+      if (old_object->address() < water_mark_) {
+        HeapObject* moved_object = old_object->CloneInToSpace(old_);
+        // The old space may fill up.  This is a bad moment for a GC, so we
+        // promote to the to-space instead.
+        if (moved_object == NULL) {
+          trigger_old_space_gc_ = true;
+          moved_object = old_object->CloneInToSpace(to_);
+          *record_ = GCMetadata::kNewSpacePointers;
+        }
+        *p = moved_object;
+      } else {
+        *p = old_object->CloneInToSpace(to_);
+        *record_ = GCMetadata::kNewSpacePointers;
+      }
+      ASSERT(*p != NULL);  // In an emergency we can move to to-space.
+    }
+  }
+}
+
+void SemiSpace::StartScavenge() {
+  Flush();
+
+  for (auto chunk : chunk_list_) chunk->set_scavenge_pointer(chunk->start());
 }
 
 #ifdef DEBUG
-void Heap::Find(uword word) {
-  space_->Find(word, "Dartino heap");
+void TwoSpaceHeap::Find(uword word) {
+  space_->Find(word, "data semispace");
+  unused_semispace_->Find(word, "unused semispace");
   old_space_->Find(word, "oldspace");
+  Heap::Find(word);
+}
+
+void OneSpaceHeap::Find(uword word) {
+  space_->Find(word, "program semispace");
+  Heap::Find(word);
+}
+
+void Heap::Find(uword word) {
+  space_->Find(word, "semispace");
 #ifdef DARTINO_TARGET_OS_LINUX
   FILE* fp = fopen("/proc/self/maps", "r");
   if (fp == NULL) return;

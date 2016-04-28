@@ -143,8 +143,8 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   virtual void DoInvokeStatic();
   virtual void DoInvokeFactory();
 
+  virtual void DoInvokeLeafNative();
   virtual void DoInvokeNative();
-  virtual void DoInvokeDetachableNative();
   virtual void DoInvokeNativeYield();
 
   virtual void DoInvokeSelector();
@@ -269,11 +269,9 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
 
   void Allocate(bool immutable);
 
-  // This function
-  //   * changes the first three stack slots
-  //   * changes caller-saved registers
-  void AddToRememberedSetSlow(Register object, Register value,
-                              Register scratch);
+  // This function only overwrites 'scratch'.  It checks for Smi values and
+  // does nothing in that case.
+  void AddToRememberedSet(Register object, Register value, Register scratch);
 
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
@@ -301,7 +299,7 @@ class InterpreterGeneratorX86 : public InterpreterGenerator {
   void InvokeBitShr(const char* fallback);
   void InvokeBitShl(const char* fallback);
 
-  void InvokeNative(bool yield);
+  void InvokeNative(bool yield, bool safepoint);
 
   void CheckStackOverflow(int size);
 
@@ -443,7 +441,7 @@ void InterpreterGeneratorX86::GenerateDebugAtBytecode() {
   __ SwitchToText();
   __ AlignToPowerOfTwo(4);
   __ Bind("", "DebugAtBytecode");
-  // TODO(ajohnsen): Check if the process has debug_info set.
+  // TODO(ajohnsen): Check if the program/process has debug_info set.
   __ popl(EBX);
   __ movl(EDX, ESP);
   SwitchToCStack(EAX);
@@ -593,7 +591,7 @@ void InterpreterGeneratorX86::DoStoreBoxed() {
   __ movl(EBX, Address(ESP, EAX, TIMES_WORD_SIZE));
   __ movl(Address(EBX, Boxed::kValueOffset - HeapObject::kTag), ECX);
 
-  AddToRememberedSetSlow(EBX, ECX, EAX);
+  AddToRememberedSet(EBX, ECX, EAX);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -605,7 +603,7 @@ void InterpreterGeneratorX86::DoStoreStatic() {
   __ movl(Address(EBX, EAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag),
           ECX);
 
-  AddToRememberedSetSlow(EBX, ECX, EAX);
+  AddToRememberedSet(EBX, ECX, EAX);
 
   Dispatch(kStoreStaticLength);
 }
@@ -620,7 +618,7 @@ void InterpreterGeneratorX86::DoStoreField() {
   StoreLocal(ECX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(EAX, ECX, EBX);
+  AddToRememberedSet(EAX, ECX, EBX);
 
   Dispatch(kStoreFieldLength);
 }
@@ -635,7 +633,7 @@ void InterpreterGeneratorX86::DoStoreFieldWide() {
   StoreLocal(ECX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(EAX, ECX, EBX);
+  AddToRememberedSet(EAX, ECX, EBX);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -740,16 +738,16 @@ void InterpreterGeneratorX86::DoInvokeFactory() {
   InvokeStatic();
 }
 
-void InterpreterGeneratorX86::DoInvokeNative() {
-  InvokeNative(false);
+void InterpreterGeneratorX86::DoInvokeLeafNative() {
+  InvokeNative(false, false);
 }
 
-void InterpreterGeneratorX86::DoInvokeDetachableNative() {
-  InvokeNative(false);
+void InterpreterGeneratorX86::DoInvokeNative() {
+  InvokeNative(false, true);
 }
 
 void InterpreterGeneratorX86::DoInvokeNativeYield() {
-  InvokeNative(true);
+  InvokeNative(true, false);
 }
 
 void InterpreterGeneratorX86::DoInvokeSelector() {
@@ -1396,7 +1394,7 @@ void InterpreterGeneratorX86::DoIntrinsicSetField() {
 
   // We have put the result in EBX to be sure it's kept by the preserved by the
   // store-buffer call.
-  AddToRememberedSetSlow(ECX, EBX, EAX);
+  AddToRememberedSet(ECX, EBX, EAX);
 
   __ movl(EAX, EBX);
   __ ret();
@@ -1455,7 +1453,7 @@ void InterpreterGeneratorX86::DoIntrinsicListIndexSet() {
   // Index (in EAX) is already smi-taged, so only scale by TIMES_2.
   __ movl(Address(ECX, EAX, TIMES_2, Array::kSize - HeapObject::kTag), EBX);
 
-  AddToRememberedSetSlow(ECX, EBX, EAX);
+  AddToRememberedSet(ECX, EBX, EAX);
 
   __ movl(EAX, EBX);
   __ ret();
@@ -1572,24 +1570,15 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   __ movl(EBX, Address(ESI, EAX, TIMES_1));
 
   const int kStackAllocateImmutable = 2 * kWordSize;
-  const int kStackImmutableMembers = 3 * kWordSize;
 
-  // We initialize the 4rd argument to "HandleAllocate" to 0, meaning the object
-  // we're allocating will not be initialized with pointers to immutable space.
-  // TODO(erikcorry): Simplify now that we don't have an immutable space.
+  // Initialization of [kStackAllocateImmutable] depends on [immutable]
   LoadNativeStack(ECX);
-  __ movl(Address(ECX, kStackImmutableMembers), Immediate(0));
+  __ movl(Address(ECX, kStackAllocateImmutable), Immediate(immutable ? 1 : 0));
 
-  // Loop over all arguments and find out if
-  //   * all of them are immutable
-  //   * there is at least one immutable member
+  // Loop over all arguments and find out if all of them are immutable (then we
+  // can set the immutable bit in this object too).
   Label allocate;
-  {
-    // Initialization of [kStackAllocateImmutable] depended on [immutable]
-    LoadNativeStack(ECX);
-    __ movl(Address(ECX, kStackAllocateImmutable),
-            Immediate(immutable ? 1 : 0));
-
+  if (immutable) {
     __ movl(ECX, Address(EBX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andl(ECX, Immediate(InstanceFormat::FixedSizeField::mask()));
     int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
@@ -1603,8 +1592,7 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
     __ addl(EDX, ECX);
 
     Label loop;
-    Label loop_with_immutable_field;
-    Label loop_with_mutable_field;
+    Label break_loop_with_mutable_field;
 
     // Decrement pointer to point to next field.
     __ Bind(&loop);
@@ -1635,32 +1623,25 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
     __ movl(EAX, Address(EAX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andl(EAX, Immediate(mask));
 
-    // If this is type never immutable we continue the loop.
+    // If this is type never immutable we break the loop.
     __ cmpl(EAX, Immediate(never_immutable_mask));
-    __ j(EQUAL, &loop_with_mutable_field);
+    __ j(EQUAL, &break_loop_with_mutable_field);
 
     // If this is type is always immutable we continue the loop.
     __ cmpl(EAX, Immediate(always_immutable_mask));
-    __ j(EQUAL, &loop_with_immutable_field);
+    __ j(EQUAL, &loop);
 
-    // Else, we must have a Instance and check the runtime-tracked
+    // Else, we must have an Instance and check the runtime-tracked
     // immutable bit.
     uword im_mask = Instance::FlagsImmutabilityField::encode(true);
     __ movl(ECX, Address(ECX, Instance::kFlagsOffset - HeapObject::kTag));
     __ testl(ECX, Immediate(im_mask));
-    __ j(NOT_ZERO, &loop_with_immutable_field);
+    __ j(NOT_ZERO, &loop);
 
-    __ jmp(&loop_with_mutable_field);
-
-    __ Bind(&loop_with_immutable_field);
-    LoadNativeStack(EAX);
-    __ movl(Address(EAX, kStackImmutableMembers), Immediate(1));
-    __ jmp(&loop);
-
-    __ Bind(&loop_with_mutable_field);
+    __ Bind(&break_loop_with_mutable_field);
     LoadNativeStack(EAX);
     __ movl(Address(EAX, kStackAllocateImmutable), Immediate(0));
-    __ jmp(&loop);
+    // Fall through.
   }
 
   // TODO(kasperl): Consider inlining this in the interpreter.
@@ -1668,8 +1649,7 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   SwitchToCStack(EAX);
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
-  // NOTE: The 3nd argument is already present ESP + kStackAllocateImmutable
-  // NOTE: The 4rd argument is already present ESP + kStackImmutableMembers
+  // NOTE: The 3rd argument is already present ESP + kStackAllocateImmutable
   __ call("HandleAllocate");
   SwitchToDartStack();
   __ movl(ECX, EAX);
@@ -1695,6 +1675,8 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   __ cmpl(EDX, ECX);
   __ j(BELOW, &done);
   Pop(EBX);
+  // No write barrier, because newly allocated instances are always
+  // in new-space, or are already entered into the remembered set.
   __ movl(Address(EDX, 0), EBX);
   __ subl(EDX, Immediate(1 * kWordSize));
   __ jmp(&loop);
@@ -1704,10 +1686,20 @@ void InterpreterGeneratorX86::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorX86::AddToRememberedSetSlow(Register object,
-                                                     Register value,
-                                                     Register scratch) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorX86::AddToRememberedSet(Register object,
+                                                 Register value,
+                                                 Register scratch) {
+  Label smi;
+  __ testl(value, Immediate(Smi::kTagMask));
+  __ j(ZERO, &smi);
+  // TODO(erikcorry): Filter out non-new-space values.
+
+  __ movl(scratch, object);
+  __ shrl(scratch, Immediate(GCMetadata::kCardSizeLog2));
+  __ addl(scratch, Address(EDI, Process::kRememberedSetBiasOffset));
+  __ movb(Address(scratch), Immediate(GCMetadata::kNewSpacePointers));
+
+  __ Bind(&smi);
 }
 
 void InterpreterGeneratorX86::InvokeMethodUnfold(bool test) {
@@ -2009,7 +2001,7 @@ void InterpreterGeneratorX86::InvokeDivision(const char* fallback,
   Dispatch(kInvokeMethodLength);
 }
 
-void InterpreterGeneratorX86::InvokeNative(bool yield) {
+void InterpreterGeneratorX86::InvokeNative(bool yield, bool safepoint) {
   __ movzbl(EBX, Address(ESI, 1));
   __ movzbl(EAX, Address(ESI, 2));
 
@@ -2018,13 +2010,24 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
   // Extract address for first argument (note we skip two empty slots).
   __ leal(EBX, Address(ESP, EBX, TIMES_WORD_SIZE, 2 * kWordSize));
 
-  SwitchToCStack(ECX);
+  Label continue_with_result;
+
+  if (safepoint) {
+    SaveState(&continue_with_result);
+  } else {
+    SwitchToCStack(ECX);
+  }
   __ movl(Address(ESP, 0 * kWordSize), EDI);
   __ movl(Address(ESP, 1 * kWordSize), EBX);
-
-  Label failure;
   __ call(EAX);
-  SwitchToDartStack();
+  if (safepoint) {
+    RestoreState();
+  } else {
+    SwitchToDartStack();
+  }
+
+  __ Bind(&continue_with_result);
+  Label failure;
   __ movl(ECX, EAX);
   __ andl(ECX, Immediate(Failure::kTagMask));
   __ cmpl(ECX, Immediate(Failure::kTag));
@@ -2032,6 +2035,8 @@ void InterpreterGeneratorX86::InvokeNative(bool yield) {
 
   // Result is now in eax.
   if (yield) {
+    ASSERT(!safepoint);
+
     // If the result of calling the native is null, we don't yield.
     LoadLiteralNull(ECX);
     Label dont_yield;

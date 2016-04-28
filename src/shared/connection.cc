@@ -35,6 +35,10 @@ void Buffer::SetBuffer(uint8* buffer, int length) {
   buffer_length_ = length;
 }
 
+uint8* Buffer::GetBuffer() const {
+  return buffer_;
+}
+
 void WriteBuffer::EnsureCapacity(int bytes) {
   if (buffer_offset_ + bytes <= buffer_length_) return;
   int increment = Utils::Maximum(bytes, kBufferGrowthSize);
@@ -113,13 +117,13 @@ uint8* ReadBuffer::ReadBytes(int* length) {
   return buffer;
 }
 
-Connection* Connection::Connect(const char* host, int port) {
+SocketConnection* SocketConnection::Connect(const char* host, int port) {
   Socket* socket = new Socket();
 
   if (socket->Connect(host, port)) {
     // We send many small packages, so use no-delay.
     socket->SetTCPNoDelay(true);
-    return new Connection(host, port, socket);
+    return new SocketConnection(host, port, socket);
   }
 
   Print::Error("Failed to connect to %s:%i\n", host, port);
@@ -129,10 +133,13 @@ Connection* Connection::Connect(const char* host, int port) {
 
 Connection::~Connection() {
   delete send_mutex_;
+}
+
+SocketConnection::~SocketConnection() {
   delete socket_;
 }
 
-Connection::Opcode Connection::Receive() {
+Connection::Opcode SocketConnection::Receive() {
   incoming_.ClearBuffer();
   uint8* bytes = socket_->Read(5);
   if (bytes == NULL) return kConnectionError;
@@ -147,7 +154,7 @@ Connection::Opcode Connection::Receive() {
   return opcode;
 }
 
-void Connection::Send(Opcode opcode, const WriteBuffer& buffer) {
+void SocketConnection::Send(Opcode opcode, const WriteBuffer& buffer) {
   ScopedLock scoped_lock(send_mutex_);
   uint8 header[5];
   Utils::WriteInt32(header, buffer.offset());
@@ -156,8 +163,10 @@ void Connection::Send(Opcode opcode, const WriteBuffer& buffer) {
   buffer.WriteTo(socket_);
 }
 
-Connection::Connection(const char* host, int port, Socket* socket)
-    : socket_(socket), send_mutex_(Platform::CreateMutex()) {}
+Connection::Connection() : send_mutex_(Platform::CreateMutex()) {}
+
+SocketConnection::SocketConnection(const char* host, int port, Socket* socket)
+    : socket_(socket) {}
 
 ConnectionListener::ConnectionListener(const char* host, int port)
     : socket_(new Socket()), port_(-1) {
@@ -171,7 +180,7 @@ int ConnectionListener::Port() { return port_; }
 
 Connection* ConnectionListener::Accept() {
   Socket* child = socket_->Accept();
-  return new Connection("", 0, child);
+  return new SocketConnection("", 0, child);
 }
 
 }  // namespace dartino

@@ -141,8 +141,8 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   virtual void DoInvokeStatic();
   virtual void DoInvokeFactory();
 
+  virtual void DoInvokeLeafNative();
   virtual void DoInvokeNative();
-  virtual void DoInvokeDetachableNative();
   virtual void DoInvokeNativeYield();
 
   virtual void DoInvokeTestUnfold();
@@ -261,8 +261,8 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   void Allocate(bool immutable);
 
-  // This function changes caller-saved registers.
-  void AddToRememberedSetSlow(Register object, Register value);
+  // This function trashes 'scratch'.
+  void AddToRememberedSet(Register object, Register value, Register scratch);
 
   void InvokeEq(const char* fallback);
   void InvokeLt(const char* fallback);
@@ -287,7 +287,7 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
 
-  void InvokeNative(bool yield);
+  void InvokeNative(bool yield, bool safepoint);
   void InvokeStatic();
 
   void ConditionalStore(Register reg_if_eq, Register reg_if_ne,
@@ -591,7 +591,7 @@ void InterpreterGeneratorARM::DoStoreBoxed() {
   __ ldr(R1, Address(R6, Operand(R0, TIMES_WORD_SIZE)));
   __ str(R2, Address(R1, Boxed::kValueOffset - HeapObject::kTag));
 
-  AddToRememberedSetSlow(R1, R2);
+  AddToRememberedSet(R1, R2, R3);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -603,7 +603,7 @@ void InterpreterGeneratorARM::DoStoreStatic() {
   __ add(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R0, TIMES_WORD_SIZE)));
 
-  AddToRememberedSetSlow(R1, R2);
+  AddToRememberedSet(R1, R2, R0);
 
   Dispatch(kStoreStaticLength);
 }
@@ -616,7 +616,7 @@ void InterpreterGeneratorARM::DoStoreField() {
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   DropNAndSetTop(1, R2);
 
-  AddToRememberedSetSlow(R0, R2);
+  AddToRememberedSet(R0, R2, R3);
 
   Dispatch(kStoreFieldLength);
 }
@@ -629,7 +629,7 @@ void InterpreterGeneratorARM::DoStoreFieldWide() {
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   DropNAndSetTop(1, R2);
 
-  AddToRememberedSetSlow(R0, R2);
+  AddToRememberedSet(R0, R2, R3);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -721,13 +721,17 @@ void InterpreterGeneratorARM::DoInvokeStatic() { InvokeStatic(); }
 
 void InterpreterGeneratorARM::DoInvokeFactory() { InvokeStatic(); }
 
-void InterpreterGeneratorARM::DoInvokeNative() { InvokeNative(false); }
-
-void InterpreterGeneratorARM::DoInvokeDetachableNative() {
-  InvokeNative(false);
+void InterpreterGeneratorARM::DoInvokeLeafNative() {
+  InvokeNative(false, false);
 }
 
-void InterpreterGeneratorARM::DoInvokeNativeYield() { InvokeNative(true); }
+void InterpreterGeneratorARM::DoInvokeNative() {
+  InvokeNative(false, true);
+}
+
+void InterpreterGeneratorARM::DoInvokeNativeYield() {
+  InvokeNative(true, false);
+}
 
 void InterpreterGeneratorARM::DoInvokeSelector() {
   Label resume;
@@ -1330,8 +1334,8 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
 
   __ mov(R9, LR);
 
-  // R7 and R9 are both callee-saved, so they will survive the call.
-  AddToRememberedSetSlow(R2, R7);
+  // R7 is not trashed.
+  AddToRememberedSet(R2, R7, R3);
 
   __ mov(R0, R7);
   __ mov(PC, R9);
@@ -1389,8 +1393,8 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
   __ str(R7, Address(R12, Operand(R1, TIMES_2)));
   __ mov(R9, LR);
 
-  // R7 and R9 are both callee-saved, so they will survive the call.
-  AddToRememberedSetSlow(R2, R7);
+  // R7 is not trashed.
+  AddToRememberedSet(R2, R7, R3);
 
   __ mov(R0, R7);
   __ mov(PC, R9);
@@ -1715,7 +1719,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   }
 }
 
-void InterpreterGeneratorARM::InvokeNative(bool yield) {
+void InterpreterGeneratorARM::InvokeNative(bool yield, bool safepoint) {
   __ ldrb(R1, Address(R5, 1));
   // Also skip two empty slots.
   __ add(R1, R1, Immediate(2));
@@ -1730,14 +1734,22 @@ void InterpreterGeneratorARM::InvokeNative(bool yield) {
   __ mov(R1, R7);
   __ mov(R0, R4);
 
-  Label failure;
+  Label continue_with_result;
+
+  if (safepoint) SaveState(&continue_with_result);
   __ blx(R2);
+  if (safepoint) RestoreState();
+
+  __ Bind(&continue_with_result);
+  Label failure;
   __ and_(R1, R0, Immediate(Failure::kTagMask));
   __ cmp(R1, Immediate(Failure::kTag));
   __ b(EQ, &failure);
 
   // Result is now in r0.
   if (yield) {
+    ASSERT(!safepoint);
+
     // If the result of calling the native is null, we don't yield.
     Label dont_yield;
     __ cmp(R0, R8);
@@ -1808,21 +1820,14 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ ldr(R7, Address(R5, Operand(R0, TIMES_1)));
 
   const Register kRegisterAllocateImmutable = R9;
-  // TODO(erikcorry): Get rid of this immutable tracking.
-  const Register kRegisterImmutableMembers = R12;
 
-  // We initialize the 3rd argument to "HandleAllocate" to 0, meaning the object
-  // we're allocating will not be initialized with pointers to immutable space.
-  __ LoadInt(kRegisterImmutableMembers, 0);
+  // Initialization of [kRegisterAllocateImmutable] depends on [immutable]
+  __ LoadInt(kRegisterAllocateImmutable, immutable ? 1 : 0);
 
-  // Loop over all arguments and find out if
-  //   * all of them are immutable
-  //   * there is at least one immutable member
+  // Loop over all arguments and find out if all of them are immutable (then we
+  // can set the immutable bit in this object too).
   Label allocate;
-  {
-    // Initialization of [kRegisterAllocateImmutable] depended on [immutable]
-    __ LoadInt(kRegisterAllocateImmutable, immutable ? 1 : 0);
-
+  if (immutable) {
     __ ldr(R2, Address(R7, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ LoadInt(R3, InstanceFormat::FixedSizeField::mask());
     __ and_(R2, R2, R3);
@@ -1836,8 +1841,7 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
     __ add(R3, R6, R2);
 
     Label loop;
-    Label loop_with_immutable_field;
-    Label loop_with_mutable_field;
+    Label break_loop_with_mutable_field;
 
     // Decrement pointer to point to next field.
     __ Bind(&loop);
@@ -1869,13 +1873,13 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
     __ LoadInt(R1, mask);
     __ and_(R0, R0, R1);
 
-    // If this type is never immutable we continue the loop.
+    // If this type is never immutable we break the loop.
     __ cmp(R0, Immediate(never_immutable_mask));
-    __ b(EQ, &loop_with_mutable_field);
+    __ b(EQ, &break_loop_with_mutable_field);
 
     // If this is type is always immutable we continue the loop.
     __ cmp(R0, Immediate(always_immutable_mask));
-    __ b(EQ, &loop_with_immutable_field);
+    __ b(EQ, &loop);
 
     // Else, we must have an Instance and check the runtime-tracked
     // immutable bit.
@@ -1883,17 +1887,11 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
     __ ldr(R2, Address(R2, Instance::kFlagsOffset - HeapObject::kTag));
     __ and_(R2, R2, Immediate(im_mask));
     __ cmp(R2, Immediate(im_mask));
-    __ b(EQ, &loop_with_immutable_field);
+    __ b(EQ, &loop);
 
-    __ b(&loop_with_mutable_field);
-
-    __ Bind(&loop_with_immutable_field);
-    __ LoadInt(kRegisterImmutableMembers, 1);
-    __ b(&loop);
-
-    __ Bind(&loop_with_mutable_field);
+    __ Bind(&break_loop_with_mutable_field);
     __ LoadInt(kRegisterAllocateImmutable, 0);
-    __ b(&loop);
+    // Fall through.
   }
 
   // TODO(kasperl): Consider inlining this in the interpreter.
@@ -1901,7 +1899,6 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ mov(R0, R4);
   __ mov(R1, R7);
   __ mov(R2, kRegisterAllocateImmutable);
-  __ mov(R3, kRegisterImmutableMembers);
   __ bl("HandleAllocate");
   __ and_(R1, R0, Immediate(Failure::kTagMask | Failure::kTypeMask));
   __ cmp(R1, Immediate(Failure::kTag));
@@ -1927,6 +1924,8 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ cmp(R9, R7);
   __ b(HI, &done);
   Pop(R1);
+  // No write barrier, because newly allocated instances are always
+  // in new-space, or are already entered into the remembered set.
 #ifdef DARTINO_THUMB_ONLY
   __ str(R1, Address(R7, 0));
   __ sub(R7, R7, Immediate(1 * kWordSize));
@@ -1940,9 +1939,20 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorARM::AddToRememberedSetSlow(Register object,
-                                                     Register value) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorARM::AddToRememberedSet(Register object,
+                                                 Register value,
+                                                 Register scratch) {
+  Label smi;
+  __ tst(value, Immediate(Smi::kTagMask));
+  __ b(EQ, &smi);
+
+  __ ldr(scratch, Address(R4, Process::kRememberedSetBiasOffset));
+  __ add(scratch, scratch, Operand(object, LSR, GCMetadata::kCardSizeLog2));
+  // This will never store zero (kNoNewSpacePointers) because the object is
+  // tagged!
+  __ strb(object, Address(scratch, 0));
+
+  __ Bind(&smi);
 }
 
 void InterpreterGeneratorARM::InvokeCompare(const char* fallback,

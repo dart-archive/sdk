@@ -1,11 +1,11 @@
 # the top level directory that all paths are relative to
-LKMAKEROOT := .
+LKMAKEROOT := ../..
 
 # paths relative to LKMAKEROOT where additional modules should be searched
-LKINC := dartino
+LKINC := . third_party/lk/dartino
 
 # the path relative to LKMAKEROOT where the main lk repository lives
-LKROOT := lk-downstream
+LKROOT := third_party/lk/lk-upstream
 
 # set the directory relative to LKMAKEROOT where output will go
 BUILDROOT ?= out

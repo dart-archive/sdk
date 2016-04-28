@@ -7,9 +7,6 @@ library dartino_compiler.client_commands;
 import 'dart:io' show
     Socket;
 
-import 'dart:async' show
-    StreamSubscription;
-
 import 'dart:typed_data' show
     Uint8List;
 

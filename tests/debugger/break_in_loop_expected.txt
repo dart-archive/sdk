@@ -1,0 +1,16 @@
+Starting session. Type 'help' for a list of commands.
+
+> b loop
+breakpoint set: id: '0' method: 'loop' bytecode index: '0'
+> r
+10     while(true);
+> l
+7    // DartinoDebuggerCommands=b loop,r,l,q
+8
+9    loop() {
+10     while (true);
+11   }
+12   
+13   main() {
+> q
+### process terminated

@@ -14,13 +14,13 @@
 
 #include "src/vm/event_handler.h"
 #include "src/vm/frame.h"
+#include "src/vm/gc_metadata.h"
 #include "src/vm/heap_validator.h"
 #include "src/vm/mark_sweep.h"
 #include "src/vm/native_interpreter.h"
 #include "src/vm/natives.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/port.h"
-#include "src/vm/remembered_set.h"
 #include "src/vm/session.h"
 
 namespace dartino {
@@ -37,6 +37,8 @@ Process::Process(Program* program, Process* parent)
       statics_(NULL),
       exception_(program->null_object()),
       primary_lookup_cache_(NULL),
+      remembered_set_bias_(GCMetadata::remembered_set_bias()),
+      large_integer_(program->null_object()),
       random_(program->random()->NextUInt32() + 1),
       state_(kSleeping),
       signal_(NULL),
@@ -45,7 +47,8 @@ Process::Process(Program* program, Process* parent)
       process_triangle_count_(1),
       parent_(parent),
       errno_cache_(0),
-      debug_info_(NULL)
+      debug_info_(NULL),
+      scheduler_(NULL)
 #ifdef DEBUG
       ,
       native_verifier_(NULL)
@@ -70,10 +73,16 @@ Process::Process(Program* program, Process* parent)
   static_assert(
       kPrimaryLookupCacheOffset == offsetof(Process, primary_lookup_cache_),
       "primary_lookup_cache_");
+  static_assert(
+      kRememberedSetBiasOffset == offsetof(Process, remembered_set_bias_),
+      "primary_lookup_cache_");
 
   Array* static_fields = program->static_fields();
   int length = static_fields->length();
-  statics_ = Array::cast(NewArray(length));
+  Object* statics = NewArray(length);
+  if (statics->IsFailure()) return;  // Allocation failure - will retry.
+
+  statics_ = Array::cast(statics);
   for (int i = 0; i < length; i++) {
     statics_->set(i, static_fields->get(i));
   }
@@ -123,10 +132,21 @@ void Process::Cleanup(Signal::Kind kind) {
 
 void Process::SetupExecutionStack() {
   ASSERT(coroutine_ == NULL);
-  Stack* stack = Stack::cast(NewStack(256));
+  Object* raw_stack = NewStack(kInitialStackSize);
+  // Retry on allocation failure.
+  if (raw_stack->IsRetryAfterGCFailure()) {
+    SetAllocationFailed();
+    return;
+  }
+  Stack* stack = Stack::cast(raw_stack);
   stack->set(0, NULL);
-  Coroutine* coroutine =
-      Coroutine::cast(NewInstance(program()->coroutine_class()));
+  Object* raw_coroutine = NewInstance(program()->coroutine_class());
+  // Retry on allocation failure.
+  if (raw_coroutine->IsRetryAfterGCFailure()) {
+    SetAllocationFailed();
+    return;
+  }
+  Coroutine* coroutine = Coroutine::cast(raw_coroutine);
   coroutine->set_stack(stack);
   UpdateCoroutine(coroutine);
 }
@@ -135,7 +155,7 @@ void Process::UpdateCoroutine(Coroutine* coroutine) {
   ASSERT(coroutine->has_stack());
   coroutine_ = coroutine;
   UpdateStackLimit();
-  remembered_set_.Insert(coroutine->stack());
+  GCMetadata::InsertIntoRememberedSet(coroutine->stack()->address());
 }
 
 Process::StackCheckResult Process::HandleStackOverflow(int addition) {
@@ -165,13 +185,16 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
     program()->CollectNewSpace();
     new_stack_object = NewStack(new_size);
     if (new_stack_object->IsRetryAfterGCFailure()) {
-      program()->CollectSharedGarbage();
+      program()->CollectOldSpace();
+      program()->CollectNewSpace();
       new_stack_object = NewStack(new_size);
       if (new_stack_object->IsRetryAfterGCFailure()) {
         return kStackCheckOverflow;
       }
     }
   }
+
+  NoAllocationScope scope(heap());  // Protect new_stack.
 
   Stack* new_stack = Stack::cast(new_stack_object);
   word height = stack()->length() - stack()->top();
@@ -182,7 +205,7 @@ Process::StackCheckResult Process::HandleStackOverflow(int addition) {
   new_stack->UpdateFramePointers(stack());
   ASSERT(coroutine_->has_stack());
   coroutine_->set_stack(new_stack);
-  remembered_set_.Insert(coroutine_->stack());
+  GCMetadata::InsertIntoRememberedSet(coroutine_->stack()->address());
   UpdateStackLimit();
   return kStackCheckContinue;
 }
@@ -216,8 +239,17 @@ Object* Process::NewInteger(int64 value) {
   return result;
 }
 
-void Process::TryDeallocInteger(LargeInteger* object) {
-  heap()->TryDeallocInteger(object);
+LargeInteger* Process::NewIntegerWithGC(int64 value) {
+  Object* result = NewInteger(value);
+  if (result->IsRetryAfterGCFailure()) {
+    program()->CollectGarbage();
+    result = NewInteger(value);
+    if (result->IsRetryAfterGCFailure()) {
+      program()->CollectGarbage();
+      result = NewInteger(value);
+    }
+  }
+  return LargeInteger::cast(result);
 }
 
 Object* Process::NewOneByteString(int length) {
@@ -293,19 +325,15 @@ Object* Process::NewStack(int length) {
   Object* result = heap()->CreateStack(stack_class, length);
 
   if (result->IsFailure()) return result;
-  remembered_set_.Insert(HeapObject::cast(result));
+  GCMetadata::InsertIntoRememberedSet(HeapObject::cast(result)->address());
   return result;
-}
-
-void Process::ValidateHeaps() {
-  ProcessHeapValidatorVisitor v(program()->heap());
-  v.VisitProcess(this);
 }
 
 void Process::IterateRoots(PointerVisitor* visitor) {
   visitor->Visit(reinterpret_cast<Object**>(&statics_));
   visitor->Visit(reinterpret_cast<Object**>(&coroutine_));
   visitor->Visit(reinterpret_cast<Object**>(&exception_));
+  visitor->Visit(reinterpret_cast<Object**>(&large_integer_));
   if (debug_info_ != NULL) debug_info_->VisitPointers(visitor);
 
   mailbox_.IteratePointers(visitor);
@@ -349,10 +377,10 @@ void Process::Preempt() { SetStackMarker(kPreemptMarker); }
 
 void Process::DebugInterrupt() { SetStackMarker(kDebugInterruptMarker); }
 
-void Process::EnsureDebuggerAttached(Session* session) {
+void Process::EnsureDebuggerAttached() {
   if (debug_info_ == NULL) {
-    debug_info_ = new DebugInfo(
-        session->FreshProcessId(), program_->breakpoints());
+    ASSERT(program_->debug_info() != NULL);
+    debug_info_ = new ProcessDebugInfo(program_->debug_info());
   }
 }
 
@@ -365,8 +393,7 @@ int Process::PrepareStepOver() {
   Opcode opcode = static_cast<Opcode>(*current_bcp);
   if (!Bytecode::IsInvokeVariant(opcode)) {
     // For non-invoke bytecodes step over is the same as step.
-    debug_info_->SetStepping();
-    return DebugInfo::kNoBreakpointId;
+    return debug_info_->SetStepping();
   }
 
   // TODO(ager): We should consider making this less bytecode-specific.
@@ -399,8 +426,8 @@ int Process::PrepareStepOver() {
   word stack_height = stack()->length() - frame_end;
   int bytecode_index =
       current_bcp + Bytecode::Size(opcode) - function->bytecode_address_for(0);
-  return debug_info_->SetProcessLocalBreakpoint(
-      function, bytecode_index, true, coroutine_, stack_height);
+  return debug_info_->CreateBreakpoint(
+      function, bytecode_index, coroutine_, stack_height);
 }
 
 int Process::PrepareStepOut() {
@@ -419,8 +446,8 @@ int Process::PrepareStepOut() {
   Object** expected_sp = frame_bottom + callee->arity();
   word frame_end = expected_sp - stack()->Pointer(0);
   word stack_height = stack()->length() - frame_end;
-  return debug_info_->SetProcessLocalBreakpoint(
-      caller, bytecode_index, true, coroutine_, stack_height);
+  return debug_info_->CreateBreakpoint(
+      caller, bytecode_index, coroutine_, stack_height);
 }
 
 void Process::UpdateBreakpoints() {
@@ -430,29 +457,34 @@ void Process::UpdateBreakpoints() {
 }
 
 void Process::RegisterFinalizer(HeapObject* object,
-                                WeakPointerCallback callback) {
-  uword address = object->address();
-  ASSERT(heap()->space()->Includes(address));
-  heap()->AddWeakPointer(object, callback);
+                                WeakPointerCallback callback, void* arg) {
+  heap()->AddWeakPointer(object, callback, arg);
+}
+
+void Process::RegisterExternalFinalizer(HeapObject* object,
+                                        ExternalWeakPointerCallback callback,
+                                        void* arg) {
+  heap()->AddExternalWeakPointer(object, callback, arg);
 }
 
 void Process::UnregisterFinalizer(HeapObject* object) {
-  uword address = object->address();
-  // We do not support unregistering weak pointers for the immutable heap (and
-  // it is currently also not used for immutable objects).
-  ASSERT(heap()->space()->Includes(address));
   heap()->RemoveWeakPointer(object);
 }
 
-void Process::FinalizeForeign(HeapObject* foreign, Heap* heap) {
+bool Process::UnregisterExternalFinalizer(
+    HeapObject* object, ExternalWeakPointerCallback callback) {
+  return heap()->RemoveExternalWeakPointer(object, callback);
+}
+
+void Process::FinalizeForeign(HeapObject* foreign, void* arg) {
   Instance* instance = Instance::cast(foreign);
   uword value = instance->GetConsecutiveSmis(0);
   uword length = Smi::cast(instance->GetInstanceField(2))->value();
   free(reinterpret_cast<void*>(value));
-  heap->FreedForeignMemory(length);
+  reinterpret_cast<TwoSpaceHeap*>(arg)->FreedForeignMemory(length);
 }
 
-void Process::FinalizeProcess(HeapObject* process, Heap* heap) {
+void Process::FinalizeProcess(HeapObject* process, void*) {
   ProcessHandle* handle = ProcessHandle::FromDartObject(process);
   ProcessHandle::DecrementRef(handle);
 }
@@ -480,6 +512,7 @@ void Process::SendSignal(Signal* signal) {
 }
 
 void Process::UpdateStackLimit() {
+  if (coroutine_ == NULL) return;
   // By adding 2, we reserve a slot for a return address and an extra
   // temporary each bytecode can utilize internally.
   Stack* stack = this->stack();
@@ -599,7 +632,8 @@ BEGIN_NATIVE(ProcessQueueGetMessage) {
       int size = queue->size();
       foreign->SetInstanceField(2, Smi::FromWord(size));
       if (kind == Message::FOREIGN_FINALIZED) {
-        process->RegisterFinalizer(foreign, Process::FinalizeForeign);
+        process->RegisterFinalizer(foreign, Process::FinalizeForeign,
+                                   process->heap());
         process->heap()->AllocatedForeignMemory(size);
       }
       result = foreign;

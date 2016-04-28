@@ -43,23 +43,27 @@ Commands:
 """;
 
 class InputHandler {
-  final Session session;
+  final DartinoVmContext vmContext;
   final Stream<String> stream;
   final bool echo;
   final Uri base;
+
+  bool printForTesting = false;
 
   String previousLine = '';
 
   int processPagingCount = 10;
   int processPagingCurrent = 0;
 
-  InputHandler(this.session, this.stream, this.echo, this.base);
+  InputHandler(this.vmContext, this.stream, this.echo, this.base) {
+    if (echo) printForTesting = true;
+  }
 
-  void printPrompt() => session.writeStdout('> ');
+  void printPrompt() => vmContext.writeStdout('> ');
 
-  writeStdout(String s) => session.writeStdout(s);
+  writeStdout(String s) => vmContext.writeStdout(s);
 
-  writeStdoutLine(String s) => session.writeStdout("$s\n");
+  writeStdoutLine(String s) => vmContext.writeStdout("$s\n");
 
   Future handleLine(StreamIterator stream, SessionState state) async {
     String line = stream.current;
@@ -87,10 +91,11 @@ class InputHandler {
           break;
         }
         List<Breakpoint> breakpoints =
-            await session.setBreakpoint(methodName: method, bytecodeIndex: bci);
+            await vmContext.setBreakpoint(
+                methodName: method, bytecodeIndex: bci);
         if (breakpoints != null) {
           for (Breakpoint breakpoint in breakpoints) {
-            writeStdoutLine("breakpoint set: $breakpoint");
+            printSetBreakpoint(breakpoint);
           }
         } else {
           writeStdoutLine(
@@ -112,7 +117,7 @@ class InputHandler {
           files.add(base.resolve(file));
         } else {
           // Otherwise search for possible matches.
-          List<Uri> matches = session.findSourceFiles(file).toList()..sort(
+          List<Uri> matches = vmContext.findSourceFiles(file).toList()..sort(
               (a, b) => a.toString().compareTo(b.toString()));
           Iterable<int> selection = await select(
               stream,
@@ -139,8 +144,9 @@ class InputHandler {
         int columnNumber = int.parse(columnOrPattern, onError: (_) => null);
         if (columnNumber == null) {
           for (Uri fileUri in files) {
-            Breakpoint breakpoint = await session.setFileBreakpointFromPattern(
-                fileUri, line, columnOrPattern);
+            Breakpoint breakpoint =
+                await vmContext.setFileBreakpointFromPattern(
+                    fileUri, line, columnOrPattern);
             if (breakpoint == null) {
               writeStdoutLine(
                   '### failed to set breakpoint for pattern $columnOrPattern ' +
@@ -155,7 +161,7 @@ class InputHandler {
         } else {
           for (Uri fileUri in files) {
             Breakpoint breakpoint =
-                await session.setFileBreakpoint(fileUri, line, columnNumber);
+                await vmContext.setFileBreakpoint(fileUri, line, columnNumber);
             if (breakpoint == null) {
               writeStdoutLine(
                   '### failed to set breakpoint ' +
@@ -167,7 +173,7 @@ class InputHandler {
         }
         if (breakpoints.isNotEmpty) {
           for (Breakpoint breakpoint in breakpoints) {
-            writeStdoutLine("breakpoint set: $breakpoint");
+            printSetBreakpoint(breakpoint);
           }
         } else {
           writeStdoutLine(
@@ -178,7 +184,7 @@ class InputHandler {
         if (!checkLoaded('cannot print backtrace')) {
           break;
         }
-        BackTrace backtrace = await session.backTrace();
+        BackTrace backtrace = await vmContext.backTrace();
         if (backtrace == null) {
           writeStdoutLine('### failed to get backtrace for current program');
         } else {
@@ -189,7 +195,7 @@ class InputHandler {
         var frame =
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
         frame = int.parse(frame, onError: (_) => null);
-        if (frame == null || !session.selectFrame(frame)) {
+        if (frame == null || !vmContext.selectFrame(frame)) {
           writeStdoutLine('### invalid frame number: $frame');
         }
         break;
@@ -197,7 +203,7 @@ class InputHandler {
         if (!checkLoaded('nothing to list')) {
           break;
         }
-        BackTrace trace = await session.backTrace();
+        BackTrace trace = await vmContext.backTrace();
         String listing = trace != null ? trace.list(state) : null;
         if (listing != null) {
           writeStdoutLine(listing);
@@ -207,7 +213,7 @@ class InputHandler {
         break;
       case 'disasm':
         if (checkLoaded('cannot show bytecodes')) {
-          BackTrace backtrace = await session.backTrace();
+          BackTrace backtrace = await vmContext.backTrace();
           String disassembly = backtrace != null ? backtrace.disasm() : null;
           if (disassembly != null) {
             writeStdout(disassembly);
@@ -219,7 +225,7 @@ class InputHandler {
         break;
       case 'c':
         if (checkRunning('cannot continue')) {
-          await handleProcessStopResponse(await session.cont(), state);
+          await handleProcessStopResponse(await vmContext.cont(), state);
         }
         break;
       case 'd':
@@ -229,12 +235,12 @@ class InputHandler {
           writeStdoutLine('### invalid breakpoint number: $id');
           break;
         }
-        Breakpoint breakpoint = await session.deleteBreakpoint(id);
+        Breakpoint breakpoint = await vmContext.deleteBreakpoint(id);
         if (breakpoint == null) {
           writeStdoutLine("### invalid breakpoint id: $id");
           break;
         }
-        writeStdoutLine("### deleted breakpoint: $breakpoint");
+        printDeletedBreakpoint(breakpoint);
         break;
       case 'processes':
       case 'lp':
@@ -244,7 +250,7 @@ class InputHandler {
             processPagingCurrent = 0;
           }
 
-          List<int> processes = await session.processes();
+          List<int> processes = await vmContext.processes();
           processes.sort();
 
           int count = processes.length;
@@ -264,7 +270,7 @@ class InputHandler {
           }
           for (int i = start; i < end; ++i) {
             int processId = processes[i];
-            BackTrace stack = await session.processStack(processId);
+            BackTrace stack = await vmContext.processStack(processId);
             writeStdoutLine('\nprocess ${processId}');
             writeStdout(stack.format());
           }
@@ -274,7 +280,7 @@ class InputHandler {
       case 'fibers':
       case 'lf':
         if (checkRunning('cannot show fibers')) {
-          List<BackTrace> traces = await session.fibers();
+          List<BackTrace> traces = await vmContext.fibers();
           for (int fiber = 0; fiber < traces.length; ++fiber) {
             writeStdoutLine('\nfiber $fiber');
             writeStdout(traces[fiber].format());
@@ -284,14 +290,14 @@ class InputHandler {
         break;
       case 'finish':
         if (checkRunning('cannot finish method')) {
-          await handleProcessStopResponse(await session.stepOut(), state);
+          await handleProcessStopResponse(await vmContext.stepOut(), state);
         }
         break;
       case 'restart':
         if (!checkLoaded('cannot restart')) {
           break;
         }
-        BackTrace trace = await session.backTrace();
+        BackTrace trace = await vmContext.backTrace();
         if (trace == null) {
           writeStdoutLine("### cannot restart when nothing is executing");
           break;
@@ -300,16 +306,16 @@ class InputHandler {
           writeStdoutLine("### cannot restart entry frame");
           break;
         }
-        await handleProcessStopResponse(await session.restart(), state);
+        await handleProcessStopResponse(await vmContext.restart(), state);
         break;
       case 'lb':
-        List<Breakpoint> breakpoints = session.breakpoints();
+        List<Breakpoint> breakpoints = vmContext.breakpoints();
         if (breakpoints == null || breakpoints.isEmpty) {
           writeStdoutLine('### no breakpoints');
         } else {
           writeStdoutLine("### breakpoints:");
           for (var bp in breakpoints) {
-            writeStdoutLine('$bp');
+            writeStdoutLine(BreakpointToString(bp));
           }
         }
         break;
@@ -318,12 +324,12 @@ class InputHandler {
           break;
         }
         if (commandComponents.length <= 1) {
-          List<RemoteObject> variables = await session.processAllVariables();
+          List<RemoteObject> variables = await vmContext.processAllVariables();
           if (variables.isEmpty) {
             writeStdoutLine('### No variables in scope');
           } else {
             for (RemoteObject variable in variables) {
-              writeStdoutLine(session.remoteObjectToString(variable));
+              writeStdoutLine(vmContext.remoteObjectToString(variable));
             }
           }
           break;
@@ -332,45 +338,47 @@ class InputHandler {
         RemoteObject variable;
         if (variableName.startsWith('*')) {
           variableName = variableName.substring(1);
-          variable = await session.processVariableStructure(variableName);
+          variable = await vmContext.processVariableStructure(variableName);
         } else {
-          variable = await session.processVariable(variableName);
+          variable = await vmContext.processVariable(variableName);
         }
         if (variable == null) {
           writeStdoutLine('### no such variable: $variableName');
         } else {
-          writeStdoutLine(session.remoteObjectToString(variable));
+          writeStdoutLine(vmContext.remoteObjectToString(variable));
         }
         break;
       case 'q':
       case 'quit':
-        await session.terminateSession();
+        await vmContext.terminate();
         break;
       case 'r':
       case 'run':
         if (checkNotLoaded("use 'restart' to run again")) {
-          await handleProcessStopResponse(await session.debugRun(), state);
+          await handleProcessStopResponse(
+              await vmContext.startRunning(), state);
         }
         break;
       case 's':
         if (checkRunning('cannot step to next expression')) {
-          await handleProcessStopResponse(await session.step(), state);
+          await handleProcessStopResponse(await vmContext.step(), state);
         }
         break;
       case 'n':
         if (checkRunning('cannot go to next expression')) {
-          await handleProcessStopResponse(await session.stepOver(), state);
+          await handleProcessStopResponse(await vmContext.stepOver(), state);
         }
         break;
       case 'sb':
         if (checkRunning('cannot step bytecode')) {
-          await handleProcessStopResponse(await session.stepBytecode(), state);
+          await handleProcessStopResponse(
+              await vmContext.stepBytecode(), state);
         }
         break;
       case 'nb':
         if (checkRunning('cannot step over bytecode')) {
           await handleProcessStopResponse(
-              await session.stepOverBytecode(), state);
+              await vmContext.stepOverBytecode(), state);
         }
         break;
       case 't':
@@ -380,13 +388,17 @@ class InputHandler {
         }
         switch (toggle) {
           case 'internal':
-            bool internalVisible = session.toggleInternal();
+            bool internalVisible = vmContext.toggleInternal();
             writeStdoutLine(
                 '### internal frame visibility set to: $internalVisible');
             break;
           case 'verbose':
-            bool verbose = session.toggleVerbose();
+            bool verbose = vmContext.toggleVerbose();
             writeStdoutLine('### verbose printing set to: $verbose');
+            break;
+          case 'testing':
+            printForTesting = !printForTesting;
+            writeStdoutLine('### print for testing set to: $printForTesting');
             break;
           default:
             writeStdoutLine('### invalid flag $toggle');
@@ -398,7 +410,7 @@ class InputHandler {
         break;
     }
     previousLine = line;
-    if (!session.terminated) printPrompt();
+    if (!vmContext.terminated) printPrompt();
   }
 
   // This method is used to deal with the stopped process command responses
@@ -406,42 +418,43 @@ class InputHandler {
   Future handleProcessStopResponse(
       VmCommand response,
       SessionState state) async {
-    String output = await session.processStopResponseToString(response, state);
+    String output =
+        await vmContext.processStopResponseToString(response, state);
     if (output != null && output.isNotEmpty) {
       writeStdout(output);
     }
   }
 
   bool checkLoaded([String postfix]) {
-    if (!session.loaded) {
+    if (!vmContext.loaded) {
       String prefix = '### process not loaded';
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
-    return session.loaded;
+    return vmContext.loaded;
   }
 
   bool checkNotLoaded([String postfix]) {
-    if (session.loaded) {
+    if (vmContext.loaded) {
       String prefix = '### process already loaded';
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
-    return !session.loaded;
+    return !vmContext.loaded;
   }
 
   bool checkRunning([String postfix]) {
-    if (!session.running) {
+    if (!vmContext.running) {
       String prefix = '### process not running';
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
-    return session.running;
+    return vmContext.running;
   }
 
   bool checkNotRunning([String postfix]) {
-    if (session.running) {
+    if (vmContext.running) {
       String prefix = '### process already running';
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
-    return !session.running;
+    return !vmContext.running;
   }
 
   Future<int> run(SessionState state) async {
@@ -453,18 +466,18 @@ class InputHandler {
         await handleLine(streamIterator, state);
       } catch (e, s) {
         Future cancel = streamIterator.cancel()?.catchError((_) {});
-        if (!session.terminated) {
-          await session.terminateSession().catchError((_) {});
+        if (!vmContext.terminated) {
+          await vmContext.terminate().catchError((_) {});
         }
         await cancel;
         return new Future.error(e, s);
       }
-      if (session.terminated) {
+      if (vmContext.terminated) {
         await streamIterator.cancel();
       }
     }
-    if (!session.terminated) await session.terminateSession();
-    return 0;
+    if (!vmContext.terminated) await vmContext.terminate();
+    return vmContext.interactiveExitCode;
   }
 
   // Prompt the user to select among a set of choices.
@@ -511,5 +524,26 @@ class InputHandler {
       writeStdoutLine("Please select a number between 1 and $length, " +
                       "'a' for all, or 'n' for none.");
     }
+  }
+
+  // Printing routines. When running in "testing" mode, these will print
+  // messages with relatively stable content (eg, not a line:column format).
+
+  String BreakpointToString(Breakpoint breakpoint) {
+    if (printForTesting) return breakpoint.toString();
+    int id = breakpoint.id;
+    String name = breakpoint.methodName;
+    String location = breakpoint.location(vmContext.debugState);
+    return "$id: $name @ $location";
+  }
+
+  void printSetBreakpoint(Breakpoint breakpoint) {
+    writeStdout("### set breakpoint ");
+    writeStdoutLine(BreakpointToString(breakpoint));
+  }
+
+  void printDeletedBreakpoint(Breakpoint breakpoint) {
+    writeStdout("### deleted breakpoint ");
+    writeStdoutLine(BreakpointToString(breakpoint));
   }
 }

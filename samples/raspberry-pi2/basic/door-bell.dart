@@ -5,7 +5,7 @@
 // A door bell example. Illustrates watching GPIO pin state with events.
 //
 // For breadboard layout and connections to the Pi, see:
-// https://storage.googleapis.com/dartino-archive/images/buzzer-schematic.png
+// https://dartino.org/images/buzzer-schematic-rpi2.png
 
 import 'dart:dartino';
 

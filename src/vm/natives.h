@@ -63,29 +63,25 @@ typedef Object* (*NativeFunction)(Process*, Arguments);
   extern "C" Object* Native_##n(Process* process, Arguments arguments);
 
 #define BEGIN_NATIVE(n)                                                  \
-  extern "C" Object* Native_##n(Process* process, Arguments arguments) { \
-    NativeVerifier verifier(process);
+  extern "C" Object* Native_##n(Process* process, Arguments arguments) {
 
-#define BEGIN_DETACHABLE_NATIVE(n)                                      \
-    BEGIN_NATIVE(n)                                                     \
-    static_assert(kIsDetachable_##n, "Incorrect use of natives macro");
+// Leaf natives are not at a safe point and may not invoke GCs or call back into
+// Dart.
+#define BEGIN_LEAF_NATIVE(n)                                             \
+  BEGIN_NATIVE(n)                                                        \
+    static_assert(kIsLeaf_##n, "Incorrect use of natives macro");        \
+    NativeVerifier verifier(process);
 
 #define END_NATIVE() }
 
 
-#define RUN_INSIDE_BARRIER_AND_RETURN(expr)                   \
-  Object* result = process->NewInteger(0);                    \
-  if (result->IsRetryAfterGCFailure()) return result;         \
-  int64 value = (expr);                                       \
-  if (Smi::IsValid(value)) {                                  \
-    process->TryDeallocInteger(LargeInteger::cast(result));   \
-    return Smi::FromWord(value);                              \
-  }                                                           \
-  LargeInteger::cast(result)->set_value(value);               \
-  return result;
+#define EVALUATE_FFI_CALL_AND_RETURN_AND_GC(expr)            \
+  int64 value = (expr);                                      \
+  if (Smi::IsValid(value)) return Smi::FromWord(value);      \
+  return process->NewIntegerWithGC(value);
 
-#define RUN_INSIDE_BARRIER_AND_RETURN_VOID(expr)              \
-  (expr);                                                     \
+#define EVALUATE_FFI_CALL_AND_RETURN_VOID(expr)              \
+  (expr);                                                    \
   return Smi::FromWord(0);
 
 #define N(e, c, n, d) DECLARE_NATIVE(e)

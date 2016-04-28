@@ -99,7 +99,7 @@ Port* Port::CleanupPorts(Space* space, Port* head) {
   return head;
 }
 
-void Port::WeakCallback(HeapObject* object, Heap* heap) {
+void Port::WeakCallback(HeapObject* object, void*) {
   Port* port = Port::FromDartObject(object);
   port->DecrementRef();
 }

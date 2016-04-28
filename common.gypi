@@ -28,7 +28,7 @@
       '-Wno-invalid-offsetof',
     ],
 
-    'LK_PATH%': 'third_party/lk/lk-downstream',
+    'LK_PATH%': 'third_party/lk/lk-upstream',
 
     'LK_USE_DEPS_ARM_GCC%': '1',
 
@@ -196,6 +196,10 @@
 
         'xcode_settings': { # And ninja.
           'GCC_OPTIMIZATION_LEVEL': '0',
+
+          'OTHER_CFLAGS': [
+            '-g',
+          ],
 
           'OTHER_CPLUSPLUSFLAGS': [
             '-g',
@@ -396,87 +400,6 @@
         ],
       },
 
-      'dartino_lk': {
-        'abstract': 1,
-
-        'defines': [
-          'DARTINO32',
-          'DARTINO_TARGET_ARM',
-          'DARTINO_THUMB_ONLY',
-        ],
-
-        'target_conditions': [
-          ['_toolset=="target"', {
-            'defines': [
-              'DARTINO_TARGET_OS_LK',
-             ],
-            'conditions': [
-              ['LK_USE_DEPS_ARM_GCC==1', {
-                'defines': [
-                  'GCC_XARM_EMBEDDED', # Fake define for cc_wrapper.py.
-                ],
-                'ldflags': [
-                  # Fake define intercepted by cc_wrapper.py.
-                  '-L/GCC_XARM_EMBEDDED',
-                ],
-              }, { # 'LK_USE_DEPS_ARM_GCC!=1'
-                'defines': [
-                  'GCC_XARM_LOCAL', # Fake define for cc_wrapper.py.
-                ],
-                'ldflags': [
-                  # Fake define intercepted by cc_wrapper.py.
-                  '-L/GCC_XARM_LOCAL',
-                ],
-              }],
-            ],
-            'cflags': [
-              '-mfloat-abi=softfp',
-              '-mfpu=fpv4-sp-d16',
-              '-mthumb',
-              '-Wno-unused-function',
-              '-Wno-error=multichar',
-            ],
-
-            'cflags_c': [
-              '--std=c99',
-            ],
-
-            'cflags_cc': [
-              '--std=c++11',
-            ],
-
-            'include_dirs': [
-              '<(DEPTH)/<(LK_PATH)/../out',
-              '<(DEPTH)/<(LK_PATH)/../../out',
-              '<(DEPTH)/<(LK_PATH)/include/',
-              '<(DEPTH)/<(LK_PATH)/arch/arm/include/',
-              '<(DEPTH)/<(LK_PATH)/lib/libm/include/',
-              '<(DEPTH)/<(LK_PATH)/lib/minip/include/',
-              '<(DEPTH)/<(LK_PATH)/arch/arm/arm/include',
-              '<(DEPTH)/<(LK_PATH)/lib/heap/include/',
-              '<(DEPTH)/<(LK_PATH)/lib/io/include',
-            ],
-
-            'defines!': [
-              'DARTINO_TARGET_OS_MACOS',
-              'DARTINO_TARGET_OS_LINUX',
-              'DARTINO_TARGET_OS_POSIX',
-            ],
-          }],
-
-          ['_toolset=="host"', {
-            # Compile host targets as IA32, to get same word size.
-            'inherit_from': [ 'dartino_ia32' ],
-
-            # The 'dartino_ia32' target will define IA32 as the target. Since
-            # the host should still target ARM, undefine it.
-            'defines!': [
-              'DARTINO_TARGET_IA32',
-            ],
-          }],
-        ],
-      },
-
       'dartino_mbed': {
         'abstract': 1,
 
@@ -549,6 +472,35 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
+            'variables': {
+              'gcc_cflags': [
+                '-mthumb',
+                '-Wall',
+                '-fmessage-length=0',
+                '-ffunction-sections',
+                '-Og',
+              ],
+
+              # Use the gnu language dialect to get math.h constants
+              'gcc_cflags_c': [
+                '--std=gnu99',
+              ],
+
+              # Use the gnu language dialect to get math.h constants
+              'gcc_cflags_cc': [
+                '--std=gnu++11',
+              ],
+
+              'gcc_ldflags': [
+                '-mthumb',
+                '-Wl,-Map=output.map',
+                '-Wl,--gc-sections',
+                # Fake define intercepted by cc_wrapper.py.
+                '-L/GCC_XARM_EMBEDDED',
+                '-static-libstdc++',
+              ],
+            },
+
             'defines': [
               'GCC_XARM_EMBEDDED', # Fake define intercepted by cc_wrapper.py.
               'DARTINO_TARGET_OS_CMSIS',
@@ -560,45 +512,50 @@
               'DARTINO_TARGET_OS_MACOS',
             ],
 
-            'cflags!': [
-              '-O0',
-            ],
-            'cflags': [
-              '-mthumb',
-              '-Wall',
-              '-fmessage-length=0',
-              '-ffunction-sections',
-              '-Og',
-            ],
-
-            # Use the gnu language dialect to get math.h constants
-            'cflags_c': [
-              '--std=gnu99',
-            ],
-
-            # Use the gnu language dialect to get math.h constants
-            'cflags_cc': [
-              '--std=gnu++11',
-            ],
-
-            'ldflags': [
-              '-mthumb',
-              '-Wl,-Map=output.map',
-              '-Wl,--gc-sections',
-              # Fake define intercepted by cc_wrapper.py.
-              '-L/GCC_XARM_EMBEDDED',
-              '-static-libstdc++',
-            ],
-
             'conditions': [
+              ['OS=="linux"', {
+                'cflags!': [
+                  '-O0',
+                ],
+                'cflags': [
+                  '<@(gcc_cflags)'
+                ],
+                'cflags_c': [
+                  '<@(gcc_cflags_c)'
+                ],
+                'cflags_cc': [
+                  '<@(gcc_cflags_cc)'
+                ],
+                'ldflags': [
+                  '<@(gcc_ldflags)'
+                ],
+              }],
               ['OS=="mac"', {
                 'xcode_settings': {
+                  'GCC_OPTIMIZATION_LEVEL': 'g',
                   # This removes the option -fasm-blocks that GCC ARM Embedded
                   # does not support.
                   'GCC_CW_ASM_SYNTAX': 'NO',
                   # This removes the option -gdwarf-2'.
                   # TODO(sgjesse): Revisit debug symbol generation.
                   'GCC_GENERATE_DEBUGGING_SYMBOLS': 'NO',
+                  'OTHER_LDFLAGS!': [
+                    '-framework CoreFoundation',
+                  ],
+                  'OTHER_CFLAGS': [
+                    '<@(gcc_cflags)',
+                    '<@(gcc_cflags_c)'
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS!' : [
+                    '-stdlib=libc++',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS': [
+                    '<@(gcc_cflags)',
+                    '<@(gcc_cflags_cc)'
+                  ],
+                  'OTHER_LDFLAGS': [
+                    '<@(gcc_ldflags)'
+                  ],
                 },
               }],
             ],
@@ -629,18 +586,34 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
-            'cflags': [
-              '<@(common_cflags_ldflags)',
-            ],
-
-            'ldflags': [
-              '<@(common_cflags_ldflags)',
+            'conditions': [
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+                'ldflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+              }],
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  'OTHER_CFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_LDFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                },
+              }],
             ],
           }],
         ],
       },
 
-      'dartino_cortex_m4': {
+      'dartino_cortex_m4f': {
         'abstract': 1,
 
         'variables': {
@@ -653,35 +626,67 @@
 
         'target_conditions': [
           ['_toolset=="target"', {
-            'cflags': [
-              '<@(common_cflags_ldflags)',
-            ],
-
-            'ldflags': [
-              '<@(common_cflags_ldflags)',
+            'conditions': [
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+                'ldflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+              }],
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  'OTHER_CFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_LDFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                },
+              }],
             ],
           }],
         ],
       },
 
-      'dartino_cortex_m4_softfp': {
+      'dartino_cortex_m3': {
         'abstract': 1,
 
         'variables': {
           'common_cflags_ldflags': [
-            '-mcpu=cortex-m4',
-            '-mfloat-abi=softfp',
+            '-mcpu=cortex-m3',
+            '-mfloat-abi=soft',
           ],
         },
 
         'target_conditions': [
           ['_toolset=="target"', {
-            'cflags': [
-              '<@(common_cflags_ldflags)',
-            ],
-
-            'ldflags': [
-              '<@(common_cflags_ldflags)',
+            'conditions': [
+              ['OS=="linux"', {
+                'cflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+                'ldflags': [
+                  '<@(common_cflags_ldflags)',
+                ],
+              }],
+              ['OS=="mac"', {
+                'xcode_settings': {
+                  'OTHER_CFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_CPLUSPLUSFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                  'OTHER_LDFLAGS': [
+                    '<@(common_cflags_ldflags)',
+                  ],
+                },
+              }],
             ],
           }],
         ],
@@ -765,6 +770,14 @@
               }],
             ],
           }],
+        ],
+      },
+
+      'dartino_use_single_precision': {
+        'abstract': 1,
+
+        'defines': [
+          'DARTINO_USE_SINGLE_PRECISION',
         ],
       },
 

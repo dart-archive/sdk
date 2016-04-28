@@ -5,13 +5,6 @@
 library dartino_compiler.incremental.diff;
 
 import 'package:compiler/src/elements/elements.dart' show
-    AbstractFieldElement,
-    ClassElement,
-    CompilationUnitElement,
-    Element,
-    ElementCategory,
-    FunctionElement,
-    LibraryElement,
     ScopeContainerElement;
 
 import 'package:compiler/src/elements/modelx.dart' as modelx;
@@ -20,16 +13,13 @@ import 'package:compiler/src/elements/modelx.dart' show
     DeclarationSite;
 
 import 'package:compiler/src/tokens/token_constants.dart' show
-    EOF_TOKEN,
-    IDENTIFIER_TOKEN,
-    KEYWORD_TOKEN;
+    EOF_TOKEN;
 
 import 'package:compiler/src/tokens/token.dart' show
     ErrorToken,
     Token;
 
 import 'package:compiler/src/parser/partial_elements.dart' show
-    PartialClassElement,
     PartialElement;
 
 import 'dartino_compiler_incremental.dart' show

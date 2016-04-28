@@ -30,6 +30,13 @@ rule gyp-stm
         -Goutput_dir=out $
         --format=ninja platforms/stm/stm.gyp
 
+rule gyp-cm4
+  command = $
+    GYP_CROSSCOMPILE=1 $
+    ./third_party/gyp/gyp --depth=. -Iplatforms/stm/cm4_targets.gypi $
+        -Goutput_dir=out $
+        --format=ninja platforms/stm/cm4.gyp
+
 build $
     out/DebugIA32/build.ninja $
     out/DebugIA32Asan/build.ninja $
@@ -61,6 +68,7 @@ build $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
+        src/tools/flashtool/flashtool.gyp $
         src/vm/vm.gyp $
         src/pkg/mdns/mdns.gyp $
         src/pkg/power_management/power_management.gyp $
@@ -101,6 +109,7 @@ build $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
+        src/tools/flashtool/flashtool.gyp $
         src/vm/vm.gyp $
 
 build lk: phony$
@@ -118,6 +127,7 @@ build $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
+        src/tools/flashtool/flashtool.gyp $
         src/vm/vm.gyp $
 
 build mbed: phony$
@@ -132,16 +142,44 @@ build $
         version.gyp $
         platforms/stm/stm_targets.gypi $
         platforms/stm/stm.gyp $
+        platforms/stm/free_rtos_sources.gypi $
+        platforms/stm/stm32_cube_f7_demos.gyp $
         platforms/stm/disco_dartino/disco_dartino.gyp $
+        platforms/stm/disco_dartino/freertos_dartino.gyp $
         platforms/stm/event_handler_test/event_handler_test.gyp $
+        dartino.gyp $
+        src/double_conversion.gyp $
+        src/shared/shared.gyp $
+        src/tools/driver/driver.gyp $
+        src/tools/flashtool/flashtool.gyp $
+        src/vm/vm.gyp $
+
+build stm: phony$
+    out/DebugSTM/build.ninja $
+    out/ReleaseSTM/build.ninja $
+
+build $
+    out/DebugCM4/build.ninja $
+    out/ReleaseCM4/build.ninja $
+    out/DebugCM4F/build.ninja $
+    out/ReleaseCM4F/build.ninja: $
+    gyp-cm4 $
+        common.gypi $
+        version.gyp $
+        platforms/stm/cm4_targets.gypi $
+        platforms/stm/cm4.gyp $
+        platforms/stm/free_rtos_sources.gypi $
+        platforms/stm/stm32_cube_f4_demos.gyp $
         dartino.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
         src/vm/vm.gyp $
 
-build stm: phony$
-    out/DebugSTM/build.ninja $
-    out/ReleaseSTM/build.ninja $
+build cm4: phony$
+    out/DebugCM4/build.ninja $
+    out/ReleaseCM4/build.ninja $
+    out/DebugCM4F/build.ninja $
+    out/ReleaseCM4F/build.ninja $
 
 default gyp stm

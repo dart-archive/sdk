@@ -26,16 +26,19 @@ LOCAL_SRC_FILES := \
 	../../../src/shared/native_socket_posix.cc \
 	../../../src/shared/platform_linux.cc \
 	../../../src/shared/platform_posix.cc \
+	../../../src/shared/platform_vm.cc \
 	../../../src/shared/utils.cc \
 	../../../src/vm/debug_info.cc \
 	../../../src/vm/event_handler.cc \
 	../../../src/vm/event_handler_linux.cc \
 	../../../src/vm/event_handler_posix.cc \
 	../../../src/vm/ffi.cc \
+	../../../src/vm/ffi_callback.cc \
 	../../../src/vm/ffi_linux.cc \
 	../../../src/vm/ffi_posix.cc \
 	../../../src/vm/dartino.cc \
 	../../../src/vm/dartino_api_impl.cc \
+	../../../src/vm/gc_metadata.cc \
 	../../../src/vm/gc_thread.cc \
 	../../../src/vm/heap.cc \
 	../../../src/vm/heap_validator.cc \

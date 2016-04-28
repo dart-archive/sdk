@@ -33,9 +33,6 @@ import 'dartino_context.dart' show
 import 'dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
-import 'dartino_registry.dart' show
-    DartinoRegistry;
-
 import 'debug_registry.dart' show
     DebugRegistry;
 

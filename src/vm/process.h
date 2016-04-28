@@ -9,6 +9,7 @@
 #include "src/shared/random.h"
 
 #include "src/vm/debug_info.h"
+#include "src/vm/gc_metadata.h"
 #include "src/vm/heap.h"
 #include "src/vm/links.h"
 #include "src/vm/lookup_cache.h"
@@ -16,7 +17,6 @@
 #include "src/vm/natives.h"
 #include "src/vm/process_handle.h"
 #include "src/vm/program.h"
-#include "src/vm/remembered_set.h"
 #include "src/vm/signal.h"
 #include "src/vm/thread.h"
 
@@ -27,6 +27,7 @@ class Interpreter;
 class Port;
 class ProcessQueue;
 class ProcessVisitor;
+class Scheduler;
 class Session;
 
 class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
@@ -44,6 +45,32 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
     kWaitingForChildren,
   };
 
+  static const char* StateToName(State state) {
+    switch (state) {
+      case kSleeping:
+        return "kSleeping";
+      case kEnqueuing:
+        return "kEnqueuing";
+      case kReady:
+        return "kReady";
+      case kRunning:
+        return "kRunning";
+      case kYielding:
+        return "kYielding";
+      case kBreakpoint:
+        return "kBreakpoint";
+      case kCompileTimeError:
+        return "kCompileTimeError";
+      case kUncaughtException:
+        return "kUncaughtException";
+      case kTerminated:
+        return "kTerminated";
+      case kWaitingForChildren:
+        return "kWaitingForChildren";
+    }
+    return "Unknown";
+  }
+
   enum StackCheckResult {
     // Stack check handled (most likely by growing the stack) and
     // execution can continue.
@@ -56,12 +83,11 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
     kStackCheckOverflow
   };
 
-  Function* entry() { return program_->entry(); }
   Program* program() { return program_; }
   Array* statics() const { return statics_; }
   Object* exception() const { return exception_; }
   void set_exception(Object* object) { exception_ = object; }
-  Heap* heap() { return program()->process_heap(); }
+  TwoSpaceHeap* heap() { return program()->process_heap(); }
 
   Coroutine* coroutine() const { return coroutine_; }
   void UpdateCoroutine(Coroutine* coroutine);
@@ -77,6 +103,8 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   Process* parent() const { return parent_; }
 
+  // Returns false for allocation failure.
+  static const int kInitialStackSize = 256;
   void SetupExecutionStack();
   StackCheckResult HandleStackOverflow(int addition);
 
@@ -86,15 +114,39 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   LookupCache::Entry* LookupEntrySlow(LookupCache::Entry* primary, Class* clazz,
                                       int selector);
 
+  // Ensures that a subsequent call to [ConsumeLargeInteger] returns a
+  // large-integer object.
+  // This call may not be able to allocate the object because of memory issues,
+  // in which case `result->IsRetryAfterGCFailure()` returns true.
+  //
+  // The caller should then return to the interpreter (with this result), or
+  // run the GC and retry.
+  Object* EnsureLargeIntegerIsAvailable() {
+    if (!large_integer_->IsNull()) return large_integer_;
+    Object* result = NewInteger(0);
+    if (!result->IsRetryAfterGCFailure()) {
+      large_integer_ = LargeInteger::cast(result);
+    }
+    return result;
+  }
+
+  // Returns the cached large integer and clears the local copy.
+  LargeInteger* ConsumeLargeInteger() {
+    ASSERT(large_integer_ != NULL);
+    LargeInteger* result = LargeInteger::cast(large_integer_);
+    large_integer_ = program()->null_object();
+    return result;
+  }
+
   Object* NewByteArray(int length);
   Object* NewArray(int length);
   Object* NewDouble(dartino_double value);
   Object* NewInteger(int64 value);
 
-  // Attempt to deallocate the large integer object. If the large integer
-  // was the last allocated object the allocation top is moved back so
-  // the memory can be reused.
-  void TryDeallocInteger(LargeInteger* object);
+  // Allocates a new integer.
+  //
+  // If there is not enough free memory runs the GC.
+  LargeInteger* NewIntegerWithGC(int64 value);
 
   // NewString allocates a string of the given length and fills the payload
   // with zeroes.
@@ -117,8 +169,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   // Returns either a Smi or a LargeInteger.
   Object* ToInteger(int64 value);
 
-  void ValidateHeaps();
-
   // Iterate all pointers reachable from this process object.
   void IterateRoots(PointerVisitor* visitor);
 
@@ -136,11 +186,11 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   void DebugInterrupt();
 
   // Debugging support.
-  void EnsureDebuggerAttached(Session* session);
+  void EnsureDebuggerAttached();
   int PrepareStepOver();
   int PrepareStepOut();
 
-  DebugInfo* debug_info() { return debug_info_; }
+  ProcessDebugInfo* debug_info() { return debug_info_; }
   bool is_debugging() const { return debug_info_ != NULL; }
 
   void TakeLookupCache();
@@ -155,11 +205,17 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   inline bool ChangeState(State from, State to);
   State state() const { return state_; }
 
-  void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback);
+  void RegisterFinalizer(HeapObject* object, WeakPointerCallback callback,
+                         void* arg = NULL);
+  void RegisterExternalFinalizer(HeapObject* object,
+                                 ExternalWeakPointerCallback callback,
+                                 void* arg);
   void UnregisterFinalizer(HeapObject* object);
+  bool UnregisterExternalFinalizer(HeapObject* object,
+                                   ExternalWeakPointerCallback callback);
 
-  static void FinalizeForeign(HeapObject* foreign, Heap* heap);
-  static void FinalizeProcess(HeapObject* process, Heap* heap);
+  static void FinalizeForeign(HeapObject* foreign, void* arg);
+  static void FinalizeProcess(HeapObject* process, void*);
 
 #ifdef DEBUG
   // This is used in order to return a retry after gc failure on every other
@@ -184,8 +240,6 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   RandomXorShift* random() { return &random_; }
 
-  RememberedSet* remembered_set() { return &remembered_set_; }
-
   MessageMailbox* mailbox() { return &mailbox_; }
 
   Signal* signal() { return signal_.load(); }
@@ -193,7 +247,7 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   void RecordStore(HeapObject* object, Object* value) {
     if (value->IsHeapObject()) {
       ASSERT(!program()->heap()->space()->Includes(object->address()));
-      remembered_set_.Insert(object);
+      GCMetadata::InsertIntoRememberedSet(object->address());
     }
   }
 
@@ -213,6 +267,14 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   static const uword kStaticsOffset = kProgramOffset + kWordSize;
   static const uword kExceptionOffset = kStaticsOffset + kWordSize;
   static const uword kPrimaryLookupCacheOffset = kExceptionOffset + kWordSize;
+  static const uword kRememberedSetBiasOffset =
+      kPrimaryLookupCacheOffset + kWordSize;
+
+  bool AllocationFailed() { return statics_ == NULL; }
+  void SetAllocationFailed() { statics_ = NULL; }
+
+  void set_scheduler(Scheduler* scheduler) { scheduler_ = scheduler; }
+  Scheduler* scheduler() { return scheduler_; }
 
  private:
   friend class Interpreter;
@@ -246,9 +308,14 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   // code in this process.
   LookupCache::Entry* primary_lookup_cache_;
 
+  // This is used by the interpreter, and this is an accessible place to find
+  // it quickly.
+  uword remembered_set_bias_;
+
+  Object* large_integer_;
+
   RandomXorShift random_;
 
-  RememberedSet remembered_set_;
   Links links_;
 
   Atomic<State> state_;
@@ -269,9 +336,12 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
 
   int errno_cache_;
 
-  DebugInfo* debug_info_;
+  ProcessDebugInfo* debug_info_;
 
   List<List<uint8>> arguments_;
+
+  // The scheduler that is currently executing an interpreter in this process.
+  Scheduler* scheduler_;
 
 #ifdef DEBUG
   bool true_then_false_;

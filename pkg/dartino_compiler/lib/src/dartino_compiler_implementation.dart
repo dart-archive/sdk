@@ -11,8 +11,7 @@ import 'dart:async' show
 import 'package:compiler/compiler_new.dart' as api;
 
 import 'package:compiler/src/apiimpl.dart' show
-    CompilerImpl,
-    makeDiagnosticOptions;
+    CompilerImpl;
 
 import 'package:compiler/src/io/source_file.dart';
 
@@ -38,13 +37,11 @@ import 'package:compiler/src/diagnostics/source_span.dart' show
     SourceSpan;
 
 import 'package:compiler/src/diagnostics/diagnostic_listener.dart' show
-    DiagnosticMessage,
-    DiagnosticReporter;
+    DiagnosticMessage;
 
 import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
-import 'dartino_function_builder.dart';
 import 'debug_info.dart';
 import 'find_position_visitor.dart';
 import 'dartino_context.dart';
@@ -54,6 +51,7 @@ import 'dartino_enqueuer.dart' show
 
 import '../dartino_system.dart';
 import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
+
 import 'package:compiler/src/elements/elements.dart';
 
 import '../incremental/dartino_compiler_incremental.dart' show
@@ -61,6 +59,9 @@ import '../incremental/dartino_compiler_incremental.dart' show
 
 import 'dartino_diagnostic_reporter.dart' show
     DartinoDiagnosticReporter;
+
+import 'dartino_compiler_options.dart' show
+    DartinoCompilerOptions;
 
 const EXTRA_DART2JS_OPTIONS = const <String>[
     // TODO(ahe): This doesn't completely disable type inference. Investigate.
@@ -82,20 +83,6 @@ const DARTINO_PATCHES = const <String, String>{
 
 const DARTINO_PLATFORM = 3;
 
-DiagnosticOptions makeDartinoDiagnosticOptions(
-    {bool suppressWarnings: false,
-     bool fatalWarnings: false,
-     bool suppressHints: false,
-     bool terseDiagnostics: false,
-     bool showPackageWarnings: true}) {
-  return makeDiagnosticOptions(
-      suppressWarnings: suppressWarnings,
-      fatalWarnings: fatalWarnings,
-      suppressHints: suppressHints,
-      terseDiagnostics: terseDiagnostics,
-      showPackageWarnings: true);
-}
-
 class DartinoCompilerImplementation extends CompilerImpl {
   final Uri dartinoVm;
 
@@ -110,26 +97,20 @@ class DartinoCompilerImplementation extends CompilerImpl {
   // TODO(ahe): Clean this up and remove this.
   var helper;
 
-  @override
   DartinoEnqueueTask get enqueuer => super.enqueuer;
 
   DartinoCompilerImplementation(
       api.CompilerInput provider,
       api.CompilerOutput outputProvider,
       api.CompilerDiagnostics handler,
-      Uri libraryRoot,
-      Uri packageConfig,
       this.nativesJson,
-      List<String> options,
-      Map<String, dynamic> environment,
+      DartinoCompilerOptions options,
       this.dartinoVm,
       this.incrementalCompiler)
       : super(
-          provider, outputProvider, handler, libraryRoot, null,
-          EXTRA_DART2JS_OPTIONS.toList()..addAll(options), environment,
-          packageConfig, null, DartinoBackend.createInstance,
-          DartinoDiagnosticReporter.createInstance,
-          makeDartinoDiagnosticOptions);
+          provider, outputProvider, handler, options,
+          makeBackend: DartinoBackend.createInstance,
+          makeReporter: DartinoDiagnosticReporter.createInstance);
 
   DartinoContext get context {
     if (internalContext == null) {
@@ -141,6 +122,7 @@ class DartinoCompilerImplementation extends CompilerImpl {
   String dartinoPatchLibraryFor(String name) {
     // TODO(sigurdm): Try to remove this special casing.
     if (name == "core") {
+      Uri platformConfigUri = options.platformConfigUri;
       return platformConfigUri.path.endsWith("dartino_embedded.platform")
           ? "core/embedded_core_patch.dart"
           : "core/core_patch.dart";
@@ -219,7 +201,7 @@ class DartinoCompilerImplementation extends CompilerImpl {
       String messageText,
       {bool forceVerbose: false}) {
     // TODO(johnniwinther): Use super.reportVerboseInfo once added.
-    if (forceVerbose || verbose) {
+    if (forceVerbose || options.verbose) {
       MessageTemplate template = MessageTemplate.TEMPLATES[MessageKind.GENERIC];
       SourceSpan span = reporter.spanFromSpannable(node);
       Message message = template.message({'text': messageText});

@@ -76,6 +76,8 @@ class Immediate {
 
   bool is_int32() const { return Utils::IsInt32(value_); }
 
+  bool is_int8() const { return Utils::IsInt8(value_); }
+
  private:
   const int64 value_;
 };
@@ -252,6 +254,8 @@ class Assembler {
   INSTRUCTION_2(movq, "movq %rq, %a", const Address&, Register);
   INSTRUCTION_2(movq, "movq %l, %a", const Address&, const Immediate&);
 
+  INSTRUCTION_2(movb, "movb %b, %a", const Address&, const Immediate&);
+
   INSTRUCTION_2(movzbq, "movzbq %a, %rq", Register, const Address&);
 
   INSTRUCTION_2(cmove, "cmove %rq, %rq", Register, Register);
@@ -281,6 +285,7 @@ class Assembler {
   INSTRUCTION_2(addq, "addq %rq, %rq", Register, Register);
   INSTRUCTION_2(addq, "addq %l, %rq", Register, const Immediate&);
   INSTRUCTION_2(addq, "addq %l, %a", const Address&, const Immediate&);
+  INSTRUCTION_2(addq, "addq %a, %rq", Register, const Address&);
 
   INSTRUCTION_2(andq, "andq %l, %rq", Register, const Immediate&);
   INSTRUCTION_2(andq, "andq %rq, %rq", Register, Register);

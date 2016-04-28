@@ -5,7 +5,7 @@
 // A small buzzer example illustrating both input and output GPIO pins.
 //
 // For breadboard layout and connections to the Pi, see:
-// https://storage.googleapis.com/dartino-archive/images/buzzer-schematic.png
+// https://dartino.org/images/buzzer-schematic-rpi2.png
 
 import 'package:gpio/gpio.dart';
 import 'package:raspberry_pi/raspberry_pi.dart';

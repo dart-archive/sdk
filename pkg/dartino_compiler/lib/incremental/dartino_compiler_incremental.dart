@@ -17,8 +17,7 @@ import 'package:compiler/src/apiimpl.dart' show
 import 'package:compiler/compiler_new.dart' show
     CompilerDiagnostics,
     CompilerInput,
-    CompilerOutput,
-    Diagnostic;
+    CompilerOutput;
 
 import 'package:compiler/src/elements/elements.dart' show
     ClassElement,
@@ -29,6 +28,21 @@ import 'package:compiler/src/elements/elements.dart' show
 
 import 'package:compiler/src/library_loader.dart' show
     ReuseLibrariesFunction;
+
+import 'package:compiler/src/source_file_provider.dart' show
+    SourceFileProvider;
+
+import 'package:compiler/src/tokens/token.dart' show
+    Token;
+
+import 'package:compiler/src/diagnostics/source_span.dart' show
+    SourceSpan;
+
+import 'package:compiler/src/parser/partial_elements.dart' show
+    PartialElement;
+
+import 'package:compiler/src/tokens/token_constants.dart' show
+    EOF_TOKEN;
 
 import 'dartino_reuser.dart' show
     IncrementalCompilerContext,
@@ -61,52 +75,19 @@ import '../src/dartino_backend.dart' show
 
 import '../src/hub/exit_codes.dart' as exit_codes;
 
-import 'package:compiler/src/source_file_provider.dart' show
-    SourceFileProvider;
-
-import 'package:compiler/src/tokens/token.dart' show
-    Token;
-
-import 'package:compiler/src/diagnostics/source_span.dart' show
-    SourceSpan;
+import '../src/dartino_compiler_options.dart' show
+    DartinoCompilerOptions,
+    IncrementalMode;
 
 part 'caching_compiler.dart';
 
-const List<String> INCREMENTAL_OPTIONS = const <String>[
-    '--disable-type-inference',
-    '--incremental-support',
-    '--generate-code-with-compile-time-errors',
-    '--no-source-maps', // TODO(ahe): Remove this.
-];
-
-enum IncrementalMode {
-  /// Incremental compilation is turned off
-  none,
-
-  /// Incremental compilation is turned on for a limited set of features that
-  /// are known to be fully implemented. Initially, this limited set of
-  /// features will be instance methods without signature changes. As other
-  /// features mature, they will be enabled in this mode.
-  production,
-
-  /// All incremental features are turned on even if we know that we don't
-  /// always generate correct code. Initially, this covers features such as
-  /// schema changes.
-  experimental,
-}
-
 class IncrementalCompiler {
-  final Uri libraryRoot;
   final Uri nativesJson;
-  final Uri packageConfig;
   final Uri dartinoVm;
   final CompilerInput inputProvider;
-  final List<String> options;
+  final DartinoCompilerOptions options;
   final CompilerOutput outputProvider;
-  final Map<String, dynamic> environment;
   final IncrementalCompilerContext _context;
-  final IncrementalMode support;
-  final String platform;
   final Map<Uri, Uri> _updatedFiles = new Map<Uri, Uri>();
 
   DartinoCompilerImplementation _compiler;
@@ -114,21 +95,13 @@ class IncrementalCompiler {
   DartinoReuser _reuser;
 
   IncrementalCompiler(
-      {this.libraryRoot,
-       this.nativesJson,
-       this.packageConfig,
+      {this.nativesJson,
        this.dartinoVm,
        this.inputProvider,
        CompilerDiagnostics diagnosticHandler,
        this.options,
-       this.outputProvider,
-       this.environment,
-       this.support: IncrementalMode.none,
-       this.platform})
+       this.outputProvider})
       : _context = new IncrementalCompilerContext(diagnosticHandler) {
-    // if (libraryRoot == null) {
-    //   throw new ArgumentError('libraryRoot is null.');
-    // }
     if (inputProvider == null) {
       throw new ArgumentError('inputProvider is null.');
     }
@@ -138,11 +111,10 @@ class IncrementalCompiler {
     if (diagnosticHandler == null) {
       throw new ArgumentError('diagnosticHandler is null.');
     }
-    if (platform == null) {
-      throw new ArgumentError('platform is null.');
-    }
     _context.incrementalCompiler = this;
   }
+
+  IncrementalMode get support => options.incrementalMode;
 
   bool get isProductionModeEnabled {
     return support == IncrementalMode.production ||
@@ -167,7 +139,7 @@ class IncrementalCompiler {
   Future<bool> compile(Uri script, Uri base) {
     _compiler = null;
     _updatedFiles.clear();
-    return _reuseCompiler(null, base: base).then((CompilerImpl compiler) {
+    return _reuseCompiler(null, base).then((CompilerImpl compiler) {
       _compiler = compiler;
       return compiler.run(script);
     });
@@ -185,7 +157,7 @@ class IncrementalCompiler {
     _compiler = null;
     int initialErrorCount = _context.errorCount;
     int initialProblemCount = _context.problemCount;
-    return _reuseCompiler(null, analyzeOnly: true, base: base).then(
+    return _reuseCompiler(null, base, analyzeOnly: true).then(
         (CompilerImpl compiler) {
       // Don't try to reuse the compiler object.
       return compiler.run(script).then((_) {
@@ -200,27 +172,24 @@ class IncrementalCompiler {
 
   Future<CompilerImpl> _reuseCompiler(
       ReuseLibrariesFunction reuseLibraries,
-      {bool analyzeOnly: false,
-       Uri base}) {
-    List<String> options = this.options == null
-        ? <String> [] : new List<String>.from(this.options);
-    options.addAll(INCREMENTAL_OPTIONS);
-    if (analyzeOnly) {
-      options.add("--analyze-only");
+      Uri base,
+      {bool analyzeOnly: false}) {
+    DartinoCompilerOptions newOptions = options;
+    if (newOptions == null) {
+      newOptions = DartinoCompilerOptions.parse(const <String>[], base);
     }
+    newOptions = DartinoCompilerOptions.copy(
+        newOptions,
+        analyzeOnly: analyzeOnly);
     return reuseCompiler(
         cachedCompiler: _compiler,
-        libraryRoot: libraryRoot,
-        packageConfig: packageConfig,
         nativesJson: nativesJson,
         dartinoVm: dartinoVm,
         inputProvider: inputProvider,
         diagnosticHandler: _context,
-        options: options,
+        options: newOptions,
         outputProvider: outputProvider,
-        environment: environment,
         reuseLibraries: reuseLibraries,
-        platform: platform,
         base: base,
         incrementalCompiler: this);
   }
@@ -240,9 +209,9 @@ class IncrementalCompiler {
   Future<DartinoDelta> compileUpdates(
       DartinoSystem currentSystem,
       Map<Uri, Uri> updatedFiles,
+      Uri base,
       {Logger logTime,
-       Logger logVerbose,
-       Uri base}) {
+       Logger logVerbose}) {
     _checkCompilationFailed();
     if (logTime == null) {
       logTime = (_) {};
@@ -264,7 +233,7 @@ class IncrementalCompiler {
         logVerbose,
         _context);
     _context.registerUriWithUpdates(updatedFiles.keys);
-    return _reuseCompiler(_reuser.reuseLibraries, base: base).then(
+    return _reuseCompiler(_reuser.reuseLibraries, base).then(
         (CompilerImpl compiler) async {
           _compiler = compiler;
           DartinoDelta delta =
@@ -277,6 +246,11 @@ class IncrementalCompiler {
   DartinoDelta computeInitialDelta() {
     DartinoBackend backend = _compiler.backend;
     return backend.computeDelta();
+  }
+
+  FunctionElement get dartinoSystemEntry {
+    DartinoBackend backend = _compiler.backend;
+    return backend.dartinoSystemEntry;
   }
 
   String lookupFunctionName(DartinoFunction function) {
@@ -304,7 +278,7 @@ class IncrementalCompiler {
 
   String lookupFunctionNameBySelector(int selector) {
     int id = DartinoSelector.decodeId(selector);
-    return _compiler.context.symbols[id];
+    return _compiler.context.backend.systemBuilder.lookupSymbolById(id);
   }
 
   DebugInfo createDebugInfo(
@@ -337,10 +311,70 @@ class IncrementalCompiler {
       Token end,
       Uri uri,
       Element element) {
-    Uri update = _updatedFiles[uri];
-    if (update != null) {
-      // TODO(ahe): Compute updated position.
-      return new SourceSpan(update, 0, 0);
+    Uri updatedUri = _updatedFiles[uri];
+    if (updatedUri != null) {
+      if (element == null) {
+        // TODO(ahe): In theory, we can map any old position to a new position,
+        // but in this case it's complicated. Consider if we need to deal with
+        // this case.
+        return new SourceSpan(updatedUri, 0, 0);
+      }
+      LibraryElement library = element.library;
+      LibraryElement updatedLibrary =
+          _reuser.copyLibraryWithChangesSync(library);
+
+      if (library == updatedLibrary) {
+        // We know there must be a change as [updatedUri] isn't null, so we
+        // should have gotten a copy of [library], not itself.  However, some
+        // parse errors may be reported on the synthetic library self as part
+        // of computing the differences. In this case, the token positions are
+        // correct, only the URI may have changed.
+        assert(_reuser.isSynthetic(library));
+        return new SourceSpan.fromTokens(updatedUri, begin, end);
+      }
+
+      // We're only interested in top-level elements and direct members of
+      // classes. We're not interested in nested functions.
+      element = element.outermostEnclosingMemberOrTopLevel;
+      while (element.enclosingClass != null &&
+             !element.enclosingClass.isTopLevel) {
+        // There's a bug in [element.outermostEnclosingMemberOrTopLevel] so it
+        // returns nested closure classes. This works around that problem.
+        element = element.enclosingClass.enclosingElement;
+      }
+      Element updatedElement;
+      if (element.isTopLevel) {
+        updatedElement = updatedLibrary.localLookup(element.name);
+      } else {
+        assert(element.isClassMember);
+        ClassElement cls = element.enclosingClass;
+        ClassElement updatedClass = updatedLibrary.localLookup(cls.name);
+        updatedElement = updatedClass.localLookup(element.name);
+      }
+      // TODO(ahe): Why isn't the resourceUri correct?
+      updatedUri =
+          _updatedFiles[updatedElement.compilationUnit.script.resourceUri];
+      if (updatedElement is PartialElement && element is PartialElement) {
+        PartialElement after = updatedElement as PartialElement;
+        PartialElement before = element as PartialElement;
+        Token current = before.beginToken;
+        Token updatedBegin = after.beginToken;
+        while (current.kind != EOF_TOKEN) {
+          if (current == begin) break;
+          current = current.next;
+          updatedBegin = updatedBegin.next;
+        }
+        current = before.beginToken;
+        Token updatedEnd = after.beginToken;
+        while (current.kind != EOF_TOKEN) {
+          if (current == end) break;
+          current = current.next;
+          updatedEnd = updatedEnd.next;
+        }
+        return new SourceSpan.fromTokens(updatedUri, updatedBegin, updatedEnd);
+      } else {
+        return new SourceSpan(updatedUri, 0, 0);
+      }
     }
     return new SourceSpan.fromTokens(uri, begin, end);
   }
@@ -352,33 +386,4 @@ class IncrementalCompilationFailed {
   const IncrementalCompilationFailed(this.reason);
 
   String toString() => "Can't incrementally compile program.\n\n$reason";
-}
-
-String unparseIncrementalMode(IncrementalMode mode) {
-  switch (mode) {
-    case IncrementalMode.none:
-      return "none";
-
-    case IncrementalMode.production:
-      return "production";
-
-    case IncrementalMode.experimental:
-      return "experimental";
-  }
-  throw "Unhandled $mode";
-}
-
-IncrementalMode parseIncrementalMode(String text) {
-  switch (text) {
-    case "none":
-      return IncrementalMode.none;
-
-    case "production":
-        return IncrementalMode.production;
-
-    case "experimental":
-      return IncrementalMode.experimental;
-
-  }
-  return null;
 }

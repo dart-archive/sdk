@@ -48,30 +48,28 @@ typedef struct {
 } DartinoStaticFFISymbol;
 
 #ifdef __cplusplus
-#define DARTINO_EXPORT_TABLE_BEGIN \
-  extern "C" { \
-  DARTINO_VISIBILITY_DEFAULT DartinoStaticFFISymbol dartino_ffi_table[] = {
-#define DARTINO_EXPORT_TABLE_ENTRY(name, fun) \
-  {name, reinterpret_cast<const void*>(&fun)},
-#define DARTINO_EXPORT_TABLE_END {NULL, NULL}};}
+#define DARTINO_EXPORT_CAST(fun) (reinterpret_cast<const void*>(fun))
 #else
+#define DARTINO_EXPORT_CAST(fun) ((const void*)(fun))
+#endif  // __cplusplus
+
 #define DARTINO_EXPORT_TABLE_BEGIN \
   DARTINO_VISIBILITY_DEFAULT DartinoStaticFFISymbol dartino_ffi_table[] = {
-#define DARTINO_EXPORT_TABLE_ENTRY(name, fun) {name, &fun},
+#define DARTINO_EXPORT_TABLE_ENTRY(name, fun)                                  \
+  { name, DARTINO_EXPORT_CAST(&fun)},
+
 #define DARTINO_EXPORT_TABLE_END {NULL, NULL}};
-#endif
 
 #define DARTINO_FUNCTION_NAME(name) #name
-#define DARTINO_EXPORT_FFI \
-  DARTINO_EXPORT __attribute__((section(".dartinoffi")))
+#define DARTINO_EXPORT_FFI __attribute__((section(".dartinoffi")))
 
-#define DARTINO_EXPORT_STATIC(fun)                                         \
-  DARTINO_EXPORT_FFI DartinoStaticFFISymbol dartino_ffi_entry_ ## fun = {  \
-      DARTINO_FUNCTION_NAME(fun),                                          \
-      &fun };                                                              \
+#define DARTINO_EXPORT_STATIC(fun)                                             \
+  DARTINO_EXPORT_FFI DartinoStaticFFISymbol dartino_ffi_entry_ ## fun = {      \
+      DARTINO_FUNCTION_NAME(fun),                                              \
+      DARTINO_EXPORT_CAST(&fun) };                                             \
 
-#define DARTINO_EXPORT_STATIC_RENAME(name, fun)                             \
-  DARTINO_EXPORT_FFI DartinoStaticFFISymbol dartino_ffi_entry_ ## name = {  \
-      #name, &fun };                                                        \
+#define DARTINO_EXPORT_STATIC_RENAME(name, fun)                                \
+  DARTINO_EXPORT_FFI DartinoStaticFFISymbol dartino_ffi_entry_ ## name = {     \
+    #name, DARTINO_EXPORT_CAST(&fun) };
 
 #endif  // INCLUDE_STATIC_FFI_H_

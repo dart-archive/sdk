@@ -76,6 +76,10 @@ static int dartino_config_fd;
 
 static const char dart_vm_env_name[] = "DART_VM";
 
+static const char interactive_token[] = "interactive";
+
+static const char detached_token[] = "detached";
+
 static int exit_code = COMPILER_CRASHED;
 
 static int daemon_stderr = -1;
@@ -693,8 +697,8 @@ static void WriteFully(int fd, uint8* data, ssize_t length) {
 
 static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   WriteBuffer buffer;
-  buffer.WriteInt(argc + 3);  // Also version, current directory, and absolute
-                              // path to program.
+  buffer.WriteInt(argc + 3);  // Also version and current directory
+                              // and whether the app is run interactively
 
   buffer.WriteInt(strlen(GetVersion()));
   buffer.WriteString(GetVersion());
@@ -707,21 +711,19 @@ static void SendArgv(DriverConnection* connection, int argc, char** argv) {
   buffer.WriteInt(strlen(path));
   buffer.WriteString(path);
 
-  // argv[0] is the name of the executable before path search. But the driver
-  // needs the absolute location provided by GetPathOfExecutable/realpath.
-  char* relative_path = StrAlloc(MAXPATHLEN + 1);
-  GetPathOfExecutable(relative_path, MAXPATHLEN + 1);
-  if (realpath(relative_path, path) == NULL) {
-    Die("%s: realpath of '%s' failed: %s", program_name, relative_path,
-        strerror(errno));
-  }
-  buffer.WriteInt(strlen(path));
-  buffer.WriteString(path);
-
-  free(relative_path);
-  relative_path = NULL;
   free(path);
   path = NULL;
+
+  // Determine if the app is being run interactively.
+  int stdintty = isatty(fileno(stdin));
+  int stdouttty = isatty(fileno(stdout));
+  if (stdintty && stdouttty) {
+    buffer.WriteInt(strlen(interactive_token));
+    buffer.WriteString(interactive_token);
+  } else {
+    buffer.WriteInt(strlen(detached_token));
+    buffer.WriteString(detached_token);
+  }
 
   for (int i = 0; i < argc; i++) {
     buffer.WriteInt(strlen(argv[i]));

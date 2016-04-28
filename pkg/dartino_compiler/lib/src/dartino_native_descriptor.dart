@@ -16,14 +16,13 @@ class DartinoNativeDescriptor {
 
   final int index;
 
-  final bool isDetachable;
+  final bool isLeaf;
 
   DartinoNativeDescriptor(this.enumName, this.cls, this.name, this.index,
-                          this.isDetachable);
+                          this.isLeaf);
 
   String toString() {
-    return "DartinoNativeDescriptor"
-           "($enumName, $cls, $name, $index, $isDetachable)";
+    return "DartinoNativeDescriptor($enumName, $cls, $name, $index, $isLeaf)";
   }
 
   static void decode(
@@ -35,13 +34,13 @@ class DartinoNativeDescriptor {
     for (Map native in jsonObjects['natives']) {
       String cls = native['class'];
       String name = native['name'];
-      bool isDetachable = native['is_detachable'];
-      assert(isDetachable != null);
+      bool isLeaf = native['is_leaf'];
+      assert(isLeaf != null);
       void add(cls, name) {
         natives['$cls.$name'] = new DartinoNativeDescriptor(
-            native['enum'], cls, name, index, isDetachable);
+            native['enum'], cls, name, index, isLeaf);
         natives['$cls._dartinoNative$name'] = new DartinoNativeDescriptor(
-            native['enum'], cls, name, index, isDetachable);
+            native['enum'], cls, name, index, isLeaf);
       }
       if (cls == "<none>") {
         cls = null;

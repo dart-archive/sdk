@@ -63,12 +63,10 @@ int InitializeProducer() {
   return handle;
 }
 
-DARTINO_EXPORT_TABLE_BEGIN
-  DARTINO_EXPORT_TABLE_ENTRY("BSP_LED_On", BSP_LED_On)
-  DARTINO_EXPORT_TABLE_ENTRY("BSP_LED_Off", BSP_LED_Off)
-  DARTINO_EXPORT_TABLE_ENTRY("initialize_producer", InitializeProducer)
-  DARTINO_EXPORT_TABLE_ENTRY("notify_read", NotifyRead)
-DARTINO_EXPORT_TABLE_END
+DARTINO_EXPORT_STATIC_RENAME(BSP_LED_On, BSP_LED_On)
+DARTINO_EXPORT_STATIC_RENAME(BSP_LED_Off, BSP_LED_Off)
+DARTINO_EXPORT_STATIC_RENAME(initialize_producer, InitializeProducer)
+DARTINO_EXPORT_STATIC_RENAME(notify_read, NotifyRead)
 
 // LCDLogPutchar is defined by the STM LCD log utility
 // (Utilities/Log/lcd_log.c) by means of the macro definitions of
@@ -116,27 +114,6 @@ void StartDartino(void const * argument) {
 // Main entry point from FreeRTOS. Running in the default task.
 void DartinoEntry(void const * argument) {
   BSP_LED_Init(LED1);
-
-  // Add an arena of the 8Mb of external memory.
-  uint32_t ext_mem_arena =
-      page_allocator->AddArena("ExtMem", 0xc0000000, 0x800000);
-
-  // Initialize the LCD.
-  size_t fb_bytes = (RK043FN48H_WIDTH * RK043FN48H_HEIGHT * 2);
-  size_t fb_pages = page_allocator->PagesForBytes(fb_bytes);
-  void* fb = page_allocator->AllocatePages(fb_pages, ext_mem_arena);
-  BSP_LCD_Init();
-  BSP_LCD_LayerDefaultInit(1, reinterpret_cast<uint32_t>(fb));
-  BSP_LCD_SelectLayer(1);
-  BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
-
-  // Initialize LCD Log module.
-  LCD_LOG_Init();
-  LCD_LOG_SetHeader(reinterpret_cast<uint8_t*>(const_cast<char*>("Dartino")));
-  LCD_LOG_SetFooter(reinterpret_cast<uint8_t*>(const_cast<char*>(
-      "STM32746G-Discovery")));
-
-  DartinoRegisterPrintInterceptor(LCDPrintIntercepter, NULL);
 
   // Always disable standard out, as this will cause infinite
   // recursion in the syscalls.c handling of write.

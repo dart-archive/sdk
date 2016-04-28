@@ -94,9 +94,6 @@ void Interpreter::Run() {
   // order to make sure that all interruptions active at a certain
   // stack guard check gets handled at the same bcp.
 
-  process_->RestoreErrno();
-  process_->TakeLookupCache();
-
   // Whenever we enter the interpreter, we might operate on a stack which
   // doesn't contain any references to new space. This means the remembered set
   // might *NOT* contain the stack.
@@ -104,17 +101,15 @@ void Interpreter::Run() {
   // Since we don't update the remembered set on every mutating operation - e.g.
   // SetLocal() - we add it as soon as the interpreter uses it:
   //   * once we enter the interpreter
-  //   * once we we're done with mutable GC
+  //   * once we we're done with GC
   //   * once we we've done a coroutine change
   // This is conservative.
-  process_->remembered_set()->Insert(process_->stack());
+  GCMetadata::InsertIntoRememberedSet(process_->stack()->address());
 
   int result = Interpret(process_, &target_yield_result_);
   if (result < 0) FATAL("Fatal error in native interpreter");
   interruption_ = static_cast<InterruptKind>(result);
 
-  process_->ReleaseLookupCache();
-  process_->StoreErrno();
   ASSERT(interruption_ != kReady);
 }
 
@@ -125,17 +120,14 @@ Process::StackCheckResult HandleStackOverflow(Process* process, int size) {
 }
 
 void HandleGC(Process* process) {
-  if (process->heap()->needs_garbage_collection()) {
-    process->program()->CollectNewSpace();
+  process->program()->CollectNewSpace();
 
-    // After a mutable GC a lot of stacks might no longer have pointers to
-    // new space on them. If so, the remembered set will no longer contain such
-    // a stack.
-    //
-    // Since we don't update the remembered set on every mutating operation
-    // - e.g. SetLocal() - we add it before we start using it.
-    process->remembered_set()->Insert(process->stack());
-  }
+  // After a GC a lot of stacks might no longer have pointers to new space on
+  // them. If so, the remembered set will no longer contain such a stack.
+  //
+  // Since we don't update the remembered set on every mutating operation
+  // - e.g. SetLocal() - we add it before we start using it.
+  GCMetadata::InsertIntoRememberedSet(process->stack()->address());
 }
 
 Object* HandleObjectFromFailure(Process* process, Failure* failure) {
@@ -145,25 +137,20 @@ Object* HandleObjectFromFailure(Process* process, Failure* failure) {
 Object* HandleAllocate(Process* process, Class* clazz, int immutable) {
   Object* result = process->NewInstance(clazz, immutable == 1);
   if (result->IsFailure()) return result;
-  return result;
-}
-
-void AddToStoreBufferSlow(Process* process, Object* object, Object* value) {
-  ASSERT(object->IsHeapObject());
+  // The object will immediately be populated without a write
+  // barrier, so it must be in new-space!
   ASSERT(
-      process->heap()->space()->Includes(HeapObject::cast(object)->address()));
-  if (value->IsHeapObject()) {
-    process->remembered_set()->Insert(HeapObject::cast(object));
-  }
+      process->heap()->space()->Includes(HeapObject::cast(result)->address()) ||
+      GCMetadata::IsMarkedDirty(HeapObject::cast(result)->address()));
+  return result;
 }
 
 Object* HandleAllocateBoxed(Process* process, Object* value) {
   Object* boxed = process->NewBoxed(value);
   if (boxed->IsFailure()) return boxed;
 
-  if (value->IsHeapObject() && !value->IsNull()) {
-    process->remembered_set()->Insert(HeapObject::cast(boxed));
-  }
+  // No write barrier needed for new-space allocated objects.
+  ASSERT(process->heap()->space()->Includes(reinterpret_cast<uword>(boxed)));
   return boxed;
 }
 
@@ -391,15 +378,32 @@ Function* HandleInvokeSelector(Process* process) {
 
 int HandleAtBytecode(Process* process, uint8* bcp, Object** sp) {
   // TODO(ajohnsen): Support validate stack.
-  DebugInfo* debug_info = process->debug_info();
-  if (debug_info != NULL) {
-    // If we already are at the breakpoint, just clear it (to support stepping).
-    if (debug_info->is_at_breakpoint()) {
-      debug_info->ClearBreakpoint();
-    } else if (debug_info->ShouldBreak(bcp, sp)) {
+
+  // Always hit process-local/one-shot breakpoints first.
+  ProcessDebugInfo* process_info = process->debug_info();
+  if (process_info != NULL) {
+    // If resuming from a breakpoint, clear the breakpoint and ignore the call.
+    if (process_info->is_at_breakpoint()) {
+      process_info->ClearCurrentBreakpoint();
+      return Interpreter::kReady;
+    }
+    const Breakpoint* breakpoint = process_info->GetBreakpointAt(bcp, sp);
+    if (breakpoint != NULL) {
+      process_info->SetCurrentBreakpoint(breakpoint);
       return Interpreter::kBreakpoint;
     }
   }
+
+  ProgramDebugInfo* program_info = process->program()->debug_info();
+  if (program_info != NULL) {
+    const Breakpoint* breakpoint = program_info->GetBreakpointAt(bcp);
+    if (breakpoint != NULL) {
+      process->EnsureDebuggerAttached();
+      process->debug_info()->SetCurrentBreakpoint(breakpoint);
+      return Interpreter::kBreakpoint;
+    }
+  }
+
   return Interpreter::kReady;
 }
 

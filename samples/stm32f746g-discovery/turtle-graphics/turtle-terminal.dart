@@ -22,9 +22,11 @@
 //    Turtle definition in turtle.dart.
 
 import 'dart:typed_data';
-import 'package:stm32f746g_disco/stm32f746g_disco.dart';
-import 'package:stm32f746g_disco/lcd.dart';
-import 'package:stm32f746g_disco/uart.dart';
+
+import 'package:stm32/stm32f746g_disco.dart';
+import 'package:stm32/lcd.dart';
+import 'package:stm32/uart.dart';
+
 import 'turtle.dart' show Turtle;
 
 main() {
@@ -59,7 +61,6 @@ String getNextCommand(Uart uart) {
         return result;
       } else {
         result = result + new String.fromCharCode(nextByte);
-        // TODO: Update this to the new API
         uart.writeByte(nextByte);
       }
     }

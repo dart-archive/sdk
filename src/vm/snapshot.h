@@ -185,6 +185,8 @@ class SnapshotWriter {
   void GrowCapacity(int extra);
 };
 
+uint32_t ComputeSnapshotHash(List<uint8> snapshot);
+
 }  // namespace dartino
 
 #endif  // SRC_VM_SNAPSHOT_H_

@@ -651,12 +651,12 @@ class BytecodeAssembler {
     applyStackSizeFix(stackPointerDifference);
   }
 
-  void invokeNative(int arity, int index) {
-    internalAdd(new InvokeNative(arity, index));
+  void invokeLeafNative(int arity, int index) {
+    internalAdd(new InvokeLeafNative(arity, index));
   }
 
-  void invokeDetachableNative(int arity, int index) {
-    internalAdd(new InvokeDetachableNative(arity, index));
+  void invokeNative(int arity, int index) {
+    internalAdd(new InvokeNative(arity, index));
   }
 
   void invokeNativeYield(int arity, int index) {

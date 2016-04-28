@@ -507,6 +507,13 @@ Note: currently only implemented for dart2js.''',
               [],
               false,
               type: 'bool'),
+          new _TestOptionSpecification(
+              'use_heap_blob',
+              'Run tests directly from programheap blobs instead of snapshots.',
+              ['--use-heap-blob'],
+              [],
+              false,
+              type: 'bool'),
           ];
   }
 
@@ -731,6 +738,12 @@ Note: currently only implemented for dart2js.''',
       isValid = false;
       print("Running tests on LK works only in the "
             "--compiler=dartino_compiler --runtime=dartinovm configuration.");
+    }
+
+    if (config['use_heap_blob'] && config['system'] != 'lk') {
+      isValid = false;
+      print("Running tests directly from program heap blobs is only supported "
+            "on LK.");
     }
 
     return isValid;

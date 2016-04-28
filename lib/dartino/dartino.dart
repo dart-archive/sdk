@@ -253,7 +253,7 @@ class ProcessDeath {
   DeathReason get reason => DeathReason.values[_reason];
 }
 
-// TODO: Keep these in sync with src/vm/process.h:Signal::Kind
+// TODO: Keep these in sync with src/vm/signal.h:Signal::Kind
 enum DeathReason {
   CompileTimeError,
   Terminated,

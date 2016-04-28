@@ -8,14 +8,15 @@
 // This sample recreates those with a chain of LEDs running right and left:
 // https://storage.googleapis.com/dartino-archive/images/knight-rider.mp4
 //
-// TODO: Add a schematics.
 // For breadboard layout and connections to the STM32F746G Discovery board, see:
-// https://storage.googleapis.com/dartino-archive/images/xxx.png
+// https://dartino.org/images/knight-rider-schematic.png
+// Connect the four blue wires to A1, A2, A3, and A4.
+// Connect the black wire to ground.
 
 import 'dart:dartino';
 
 import 'package:gpio/gpio.dart';
-import 'package:stm32f746g_disco/stm32f746g_disco.dart';
+import 'package:stm32/stm32f746g_disco.dart';
 
 main() {
   // Initialize STM32F746G Discovery board.

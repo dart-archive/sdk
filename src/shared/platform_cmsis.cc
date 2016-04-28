@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include "src/shared/utils.h"
+#include "platforms/stm/disco_dartino/src/page_alloc.h"
 
 namespace dartino {
 
@@ -138,9 +139,7 @@ int Platform::GetPid() {
 }
 
 #ifdef DEBUG
-void Platform::WaitForDebugger(const char* executable_name) {
-  UNIMPLEMENTED();
-}
+void Platform::WaitForDebugger() { UNIMPLEMENTED(); }
 #endif
 
 char* Platform::GetEnv(const char* name) { return NULL; }
@@ -157,23 +156,30 @@ void Platform::SetLastError(int value) { }
 
 int Platform::MaxStackSizeInWords() { return 16 * KB; }
 
-VirtualMemory::VirtualMemory(int size) : size_(size) { UNIMPLEMENTED(); }
+VirtualMemory::VirtualMemory(uword size) : size_(size) {}
 
-VirtualMemory::~VirtualMemory() { UNIMPLEMENTED(); }
+VirtualMemory::~VirtualMemory() {}
 
-bool VirtualMemory::IsReserved() const {
-  UNIMPLEMENTED();
-  return false;
+void* Platform::AllocatePages(uword size, int arenas) {
+  size = Utils::RoundUp(size, PAGE_SIZE);
+  void* memory = page_alloc(size >> PAGE_SIZE_SHIFT, arenas);
+  return memory;
 }
 
-bool VirtualMemory::Commit(uword address, int size, bool executable) {
-  UNIMPLEMENTED();
-  return false;
+void Platform::FreePages(void* address, uword size) {
+  page_free(address, size >> PAGE_SIZE_SHIFT);
 }
 
-bool VirtualMemory::Uncommit(uword address, int size) {
-  UNIMPLEMENTED();
-  return false;
+int Platform::GetHeapMemoryRanges(HeapMemoryRange* ranges_return, int ranges) {
+  const int kRanges = 4;
+  memory_range_t ranges_get[kRanges];
+  int ranges_got = get_arena_locations(ranges_get, kRanges);
+  int i;
+  for (i = 0; i < ranges_got && i < ranges; i++) {
+    ranges_return[i].address = ranges_get[i].address;
+    ranges_return[i].size = ranges_get[i].size;
+  }
+  return i;
 }
 
 }  // namespace dartino

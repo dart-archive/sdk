@@ -34,25 +34,26 @@ void ProgramState::AddPausedProcess(Process* process) {
   paused_processes_.Append(process);
 }
 
-Program::Program(ProgramSource source, int hashtag)
+Program::Program(ProgramSource source, int snapshot_hash)
     :
 #define CONSTRUCTOR_NULL(type, name, CamelName) name##_(NULL),
       ROOTS_DO(CONSTRUCTOR_NULL)
 #undef CONSTRUCTOR_NULL
-      process_list_mutex_(Platform::CreateMutex()),
+          process_list_mutex_(Platform::CreateMutex()),
       random_(0),
       heap_(&random_),
-      process_heap_(NULL, 4 * KB),
+      process_heap_(NULL),
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
       loaded_from_snapshot_(source == Program::kLoadedFromSnapshot),
+      snapshot_hash_(snapshot_hash),
       program_exit_listener_(NULL),
       program_exit_listener_data_(NULL),
       exit_kind_(Signal::kTerminated),
-      hashtag_(hashtag),
       stack_chain_(NULL),
       cache_(NULL),
+      debug_info_(NULL),
       group_mask_(0) {
 // These asserts need to hold when running on the target, but they don't need
 // to hold on the host (the build machine, where the interpreter-generating
@@ -62,11 +63,13 @@ Program::Program(ProgramSource source, int hashtag)
   static_assert(k##CamelName##Offset == offsetof(Program, name##_), #name);
   ROOTS_DO(ASSERT_OFFSET)
 #undef ASSERT_OFFSET
+  ASSERT(loaded_from_snapshot_ || snapshot_hash_ == 0);
 }
 
 Program::~Program() {
   delete process_list_mutex_;
   delete cache_;
+  delete debug_info_;
   ASSERT(process_list_.IsEmpty());
 }
 
@@ -93,8 +96,22 @@ int Program::ExitCode() {
 
 Process* Program::SpawnProcess(Process* parent) {
   Process* process = new Process(this, parent);
+  if (process->AllocationFailed()) {
+    // Delete the half-built process, we will retry after a GC.
+    process->Cleanup(Signal::kTerminated);
+    delete process;
+    return NULL;
+  }
 
-  // The counter part of this is in [ScheduleProcessForDeletion].
+  process->SetupExecutionStack();
+  if (process->AllocationFailed()) {
+    // Delete the half-built process, we will retry after a GC.
+    process->Cleanup(Signal::kTerminated);
+    delete process;
+    return NULL;
+  }
+
+  // The counterpart of this is in [ScheduleProcessForDeletion].
   if (parent != NULL) {
     parent->process_triangle_count_++;
   }
@@ -108,31 +125,24 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
     PrintStatistics();
   }
 
-  // Code in process spawning generally assumes there is enough space for
-  // stacks etc.  We use a [NoAllocationFailureScope] to ensure it.
-  NoAllocationFailureScope scope(process_heap()->space());
-
   Process* process = SpawnProcess(NULL);
+
+  // TODO(erikcorry): This is not valid for multiple programs, where the
+  // process creation could fail.
+  ASSERT(!process->AllocationFailed());
+
   process->set_arguments(arguments);
 
-  Function* entry = process->entry();
-  process->SetupExecutionStack();
   Stack* stack = process->stack();
-  uint8_t* bcp = entry->bytecode_address_for(0);
-  word top = stack->length();
-  // Push empty slot, fp and bcp.
-  stack->set(--top, NULL);
-  stack->set(--top, NULL);
-  Object** frame_pointer = stack->Pointer(top);
-  stack->set(--top, NULL);
-  // Push empty slot, fp and bcp.
-  stack->set(--top, NULL);
-  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
-  frame_pointer = stack->Pointer(top);
-  stack->set(--top, reinterpret_cast<Object*>(bcp));
-  stack->set(--top, reinterpret_cast<Object*>(InterpreterEntry));
-  stack->set(--top, reinterpret_cast<Object*>(frame_pointer));
-  stack->set_top(top);
+
+  Frame frame(stack);
+
+  uint8_t* bcp = entry_->bytecode_address_for(0);
+  // Push the entry Dart function and the start-address on the frames.
+  // The engine can be started by invoking `restoreState()`.
+  int number_of_arguments = entry_->arity();
+  frame.PushInitialDartEntryFrames(number_of_arguments, bcp,
+                                   reinterpret_cast<Object*>(InterpreterEntry));
 
   return process;
 }
@@ -169,13 +179,6 @@ bool Program::ScheduleProcessForDeletion(Process* process, Signal::Kind kind) {
 void Program::VisitProcesses(ProcessVisitor* visitor) {
   for (auto process : process_list_) {
     visitor->VisitProcess(process);
-  }
-}
-
-// TODO(erikcorry): Remove.
-void Program::VisitProcessHeaps(ProcessVisitor* visitor) {
-  if (!process_list_.IsEmpty()) {
-    visitor->VisitProcess(process_list_.First());
   }
 }
 
@@ -273,22 +276,8 @@ Object* Program::CreateDispatchTableEntry() {
   return heap()->CreateDispatchTableEntry(dispatch_table_entry_class_);
 }
 
-class ValidateProcessHeapVisitor : public ProcessVisitor {
- public:
-  virtual void VisitProcess(Process* process) {
-    process->ValidateHeaps();
-  }
-};
-
 void Program::PrepareProgramGC() {
-  if (Flags::validate_heaps) {
-    ValidateGlobalHeapsAreConsistent();
-  }
-
-  if (Flags::validate_heaps) {
-    ValidateProcessHeapVisitor visitor;
-    VisitProcesses(&visitor);
-  }
+  if (Flags::validate_heaps) ValidateHeapsAreConsistent();
 
   // We need to perform a precise GC to get rid of floating garbage stacks.
   // This is done by:
@@ -350,10 +339,6 @@ class FinishProgramGCVisitor : public ProcessVisitor {
  public:
   virtual void VisitProcess(Process* process) {
     process->UpdateBreakpoints();
-    if (Flags::validate_heaps) {
-      // TODO(erikcorry): This should not be on the process.
-      process->ValidateHeaps();
-    }
   }
 };
 
@@ -361,19 +346,22 @@ void Program::FinishProgramGC() {
   // Uncook process
   UncookAndUnchainStacks();
 
-  DebugInfo::ClearBytecodeBreaks();
   FinishProgramGCVisitor visitor;
   VisitProcesses(&visitor);
-  breakpoints_.UpdateBreakpoints();
 
-  if (Flags::validate_heaps) {
-    ValidateGlobalHeapsAreConsistent();
-  }
+  if (debug_info_ != NULL) debug_info_->UpdateBreakpoints();
+
+  if (Flags::validate_heaps) ValidateHeapsAreConsistent();
 }
 
 uword Program::OffsetOf(HeapObject* object) {
   ASSERT(is_optimized());
   return heap()->space()->OffsetOf(object);
+}
+
+HeapObject *Program::ObjectAtOffset(uword offset) {
+  ASSERT(was_loaded_from_snapshot());
+  return heap()->space()->ObjectAtOffset(offset);
 }
 
 void Program::ValidateGlobalHeapsAreConsistent() {
@@ -384,37 +372,27 @@ void Program::ValidateGlobalHeapsAreConsistent() {
 }
 
 void Program::ValidateHeapsAreConsistent() {
-  // Validate the program heap.
-  {
-    ProgramHeapPointerValidator validator(heap());
-    HeapObjectPointerVisitor object_pointer_visitor(&validator);
-    IterateRoots(&validator);
-    heap()->IterateObjects(&object_pointer_visitor);
-  }
-
-  // Validate the shared heap
+  // Program heap.
+  ValidateGlobalHeapsAreConsistent();
+  // Processes and their shared heap.
   ValidateSharedHeap();
-
-  // Validate all process heaps.
-  {
-    ProcessHeapValidatorVisitor validator(heap());
-    VisitProcesses(&validator);
-  }
 }
 
 void Program::ValidateSharedHeap() {
-  // NOTE: We do nothing in the case of *one* shared heap. The shared heap will
-  // get validated (redundantly) for each process.
-  //
-  // (In order to validate the shared heap separately we would need to know
-  //  whether stacks are cooked or not. This information is only available on a
-  //  per-process basis ATM. So we just do it redundantly for now.)
+  ProcessRootValidatorVisitor process_validator(heap());
+  VisitProcesses(&process_validator);
+
+  HeapPointerValidator validator(&heap_, process_heap());
+  HeapObjectPointerVisitor pointer_visitor(&validator);
+
+  process_heap()->IterateObjects(&pointer_visitor);
+  process_heap()->VisitWeakObjectPointers(&validator);
 }
 
 void Program::CollectGarbage() {
   ClearCache();
-
-  SemiSpace* to = new SemiSpace(heap_.space()->Used() / 10);
+  SemiSpace* to = new SemiSpace(Space::kCanResize, kUnknownSpacePage,
+                                heap_.space()->Used() / 10);
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
@@ -423,6 +401,7 @@ void Program::CollectGarbage() {
 }
 
 void Program::AddToProcessList(Process* process) {
+  ASSERT(!process->AllocationFailed());
   ScopedLock locker(process_list_mutex_);
   process_list_.Append(process);
 }
@@ -444,6 +423,12 @@ ProcessHandle* Program::MainProcess() {
   return NULL;
 }
 
+void Program::EnsureDebuggerAttached() {
+  if (debug_info_ == NULL) {
+    debug_info_ = new ProgramDebugInfo();
+  }
+}
+
 struct SharedHeapUsage {
   uint64 timestamp = 0;
   uword shared_used = 0;
@@ -452,7 +437,8 @@ struct SharedHeapUsage {
   uword shared_size_2 = 0;
 };
 
-static void GetSharedHeapUsage(Heap* heap, SharedHeapUsage* heap_usage) {
+static void GetSharedHeapUsage(TwoSpaceHeap* heap,
+                               SharedHeapUsage* heap_usage) {
   heap_usage->timestamp = Platform::GetMicroseconds();
   heap_usage->shared_used = heap->space()->Used();
   heap_usage->shared_size = heap->space()->Size();
@@ -471,7 +457,7 @@ static void PrintProgramGCInfo(SharedHeapUsage* before,
       before->shared_size_2, after->shared_used_2, after->shared_size_2);
 }
 
-void Program::CollectSharedGarbage() {
+void Program::CollectOldSpace() {
   if (Flags::validate_heaps) {
     ValidateHeapsAreConsistent();
   }
@@ -499,30 +485,28 @@ void Program::PerformSharedGarbageCollection() {
   // detect liveness paths that go through new-space, but we just clear the
   // mark bits afterwards.  Dead objects in new-space are only cleared in a
   // new-space GC (scavenge).
-  Heap* heap = process_heap();
+  TwoSpaceHeap* heap = process_heap();
   OldSpace* old_space = heap->old_space();
   SemiSpace* new_space = heap->space();
   MarkingStack stack;
-  MarkingVisitor marking_visitor(new_space, old_space, &stack);
+  MarkingVisitor marking_visitor(new_space, &stack);
   for (auto process : process_list_) {
     process->IterateRoots(&marking_visitor);
   }
-  stack.Process(&marking_visitor);
-  heap->ProcessWeakPointers(old_space);
+  stack.Process(&marking_visitor, old_space, new_space);
+  old_space->ProcessWeakPointers();
 
   for (auto process : process_list_) {
     process->set_ports(Port::CleanupPorts(old_space, process->ports()));
   }
 
   // Sweep over the old-space and rebuild the freelist.
-  SweepingVisitor sweeping_visitor(old_space->free_list());
+  SweepingVisitor sweeping_visitor(old_space);
   old_space->IterateObjects(&sweeping_visitor);
 
-  new_space->Flush();
-  // We don't pass a free list so this visitor just clears the mark bits
-  // without making free list entries.
-  SweepingVisitor newspace_visitor(NULL);
-  new_space->IterateObjects(&newspace_visitor);
+  // These are only needed during the mark phase, we can clear them without
+  // looking at them.
+  new_space->ClearMarkBits();
 
   for (auto process : process_list_) process->UpdateStackLimit();
 
@@ -558,8 +542,8 @@ class StatisticsVisitor : public HeapObjectVisitor {
 
   int function_header_size() const { return function_count_ * Function::kSize; }
 
-  int Visit(HeapObject* object) {
-    int size = object->Size();
+  uword Visit(HeapObject* object) {
+    uword size = object->Size();
     object_count_++;
     if (object->IsClass()) {
       VisitClass(Class::cast(object));
@@ -884,7 +868,9 @@ void Program::Initialize() {
 
 void Program::IterateRoots(PointerVisitor* visitor) {
   IterateRootsIgnoringSession(visitor);
-  breakpoints_.VisitProgramPointers(visitor);
+  if (debug_info_ != NULL) {
+    debug_info_->VisitProgramPointers(visitor);
+  }
   if (session_ != NULL) {
     session_->IteratePointers(visitor);
   }
@@ -907,7 +893,11 @@ void Program::ClearDispatchTableIntrinsics() {
   }
 }
 
-void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
+// NOTE: The below method may never use direct pointers to symbols for
+//       setting up the table, as the flashtool utility and relocation
+//       needs to be able to override this.
+void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics,
+                                           void* method_entry) {
   Array* table = dispatch_table();
   if (table == NULL) return;
 
@@ -929,7 +919,7 @@ void Program::SetupDispatchTableIntrinsics(IntrinsicsTable* intrinsics) {
     if (target != trampoline) hits++;
     void* code = target->ComputeIntrinsic(intrinsics);
     if (code == NULL) {
-      code = reinterpret_cast<void*>(InterpreterMethodEntry);
+      code = method_entry;
     }
     entry->set_code(code);
   }
@@ -953,7 +943,7 @@ struct HeapUsage {
   uword TotalSize() { return process_used + immutable_size + program_size; }
 };
 
-static void GetHeapUsage(Heap* heap, HeapUsage* heap_usage) {
+static void GetHeapUsage(TwoSpaceHeap* heap, HeapUsage* heap_usage) {
   heap_usage->timestamp = Platform::GetMicroseconds();
   heap_usage->process_used = heap->space()->Used();
   heap_usage->process_size = heap->space()->Size();
@@ -985,30 +975,34 @@ void PrintProcessGCInfo(HeapUsage* before, HeapUsage* after) {
 void Program::CollectNewSpace() {
   HeapUsage usage_before;
 
-  Heap* data_heap = process_heap();
+  TwoSpaceHeap* data_heap = process_heap();
 
   SemiSpace* from = data_heap->space();
   OldSpace* old = data_heap->old_space();
 
-  if (!data_heap->allocations_have_taken_place()) {
+  if (data_heap->HasEmptyNewSpace()) {
+    CollectOldSpaceIfNeeded();
     return;
   }
 
   old->Flush();
   from->Flush();
 
+#ifdef DEBUG
+  if (Flags::validate_heaps) old->Verify();
+#endif
+
   if (Flags::print_heap_statistics) {
     GetHeapUsage(data_heap, &usage_before);
   }
 
-  SemiSpace* to = new SemiSpace(from->Used() / 10);
+  SemiSpace* to = data_heap->unused_space();
 
-  // While garbage collecting, do not fail allocations. Instead grow
-  // the to-space as needed.
-  NoAllocationFailureScope scope(to);
-  NoAllocationFailureScope scope2(old);
+  to->set_used(0);
+  // Allocate from start of to-space..
+  to->UpdateBaseAndLimit(to->chunk(), to->chunk()->start());
 
-  GenerationalScavengeVisitor visitor(from, to, old);
+  GenerationalScavengeVisitor visitor(data_heap);
   to->StartScavenge();
   old->StartScavenge();
 
@@ -1023,14 +1017,14 @@ void Program::CollectNewSpace() {
   }
   old->EndScavenge();
 
-  data_heap->ProcessWeakPointers(from);
+  from->ProcessWeakPointers(to, old);
 
   for (auto process : process_list_) {
     process->set_ports(Port::CleanupPorts(from, process->ports()));
   }
 
   // Second space argument is used to size the new-space.
-  data_heap->ReplaceSpace(to, old);
+  data_heap->SwapSemiSpaces();
 
   if (Flags::print_heap_statistics) {
     HeapUsage usage_after;
@@ -1038,11 +1032,23 @@ void Program::CollectNewSpace() {
     PrintProcessGCInfo(&usage_before, &usage_after);
   }
 
-  if (old->needs_garbage_collection()) {
-    CollectSharedGarbage();
-  }
+#ifdef DEBUG
+  if (Flags::validate_heaps) old->Verify();
+#endif
 
+  CollectOldSpaceIfNeeded();
   UpdateStackLimits();
+}
+
+void Program::CollectOldSpaceIfNeeded() {
+  OldSpace* old = process_heap_.old_space();
+  if (old->needs_garbage_collection()) {
+    old->Flush();
+    CollectOldSpace();
+#ifdef DEBUG
+    if (Flags::validate_heaps) old->Verify();
+#endif
+  }
 }
 
 void Program::UpdateStackLimits() {
@@ -1055,17 +1061,16 @@ int Program::CollectMutableGarbageAndChainStacks() {
   SemiSpace* new_space = process_heap()->space();
   MarkingStack marking_stack;
   ASSERT(stack_chain_ == NULL);
-  MarkingVisitor marking_visitor(new_space, old_space, &marking_stack,
-                                 &stack_chain_);
+  MarkingVisitor marking_visitor(new_space, &marking_stack, &stack_chain_);
 
   // All processes share the same heap, so we need to iterate all roots from
   // all processes.
   for (auto process : process_list_) process->IterateRoots(&marking_visitor);
 
-  marking_stack.Process(&marking_visitor);
+  marking_stack.Process(&marking_visitor, old_space, new_space);
 
   // Weak processing.
-  process_heap()->ProcessWeakPointers(old_space);
+  old_space->ProcessWeakPointers();
   for (auto process : process_list_) {
     process->set_ports(Port::CleanupPorts(old_space, process->ports()));
   }
@@ -1073,13 +1078,10 @@ int Program::CollectMutableGarbageAndChainStacks() {
   // Flush outstanding free_list chunks into the free list. Then sweep
   // over the heap and rebuild the freelist.
   old_space->Flush();
-  SweepingVisitor sweeping_visitor(old_space->free_list());
+  SweepingVisitor sweeping_visitor(old_space);
   old_space->IterateObjects(&sweeping_visitor);
 
-  // TODO(erikcorry): Find a better way to delete the mark bits on the new
-  // space.
-  SweepingVisitor new_space_sweeper(NULL);
-  new_space->IterateObjects(&new_space_sweeper);
+  new_space->ClearMarkBits();
 
   UpdateStackLimits();
   return marking_visitor.number_of_stacks();
@@ -1140,5 +1142,20 @@ LookupCache* Program::EnsureCache() {
 void Program::ClearCache() {
   if (cache_ != NULL) cache_->Clear();
 }
+
+#ifdef DEBUG
+void Program::Find(uword address) {
+  process_heap_.Find(address);
+  heap_.Find(address);
+
+#define CHECK_FOR_ROOT(Type, field_name, FieldName)        \
+  if (reinterpret_cast<Type*>(address) == field_name##_) { \
+    fprintf(stderr, "0x%zx is " #field_name "\n",          \
+            static_cast<size_t>(address));                 \
+  }
+  ROOTS_DO(CHECK_FOR_ROOT)
+#undef CHECK_FOR_ROOT
+}
+#endif
 
 }  // namespace dartino

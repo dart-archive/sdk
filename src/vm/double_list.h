@@ -39,7 +39,7 @@ class DoubleListEntry {
   //
   T* container() { return static_cast<T*>(this); }
 
-  void Append(DoubleListEntry<T, N>* entry) {
+  void Append(DoubleListEntry* entry) {
     ASSERT(entry->next_ == NULL && entry->prev_ == NULL);
     entry->next_ = next_;
     entry->prev_ = this;
@@ -47,7 +47,7 @@ class DoubleListEntry {
     entry->next_->prev_ = entry;
   }
 
-  void Prepend(DoubleListEntry<T, N>* entry) {
+  void Prepend(DoubleListEntry* entry) {
     ASSERT(entry->next_ == NULL && entry->prev_ == NULL);
     entry->next_ = this;
     entry->prev_ = prev_;
@@ -67,7 +67,7 @@ class DoubleListEntry {
     prev_ = NULL;
   }
 
-  bool IsEmpty() {
+  bool IsEmpty() const {
     bool result = next_ == this;
     ASSERT(result == (prev_ == this));
     return result;
@@ -78,18 +78,14 @@ class DoubleListEntry {
     return next_ != NULL;
   }
 
-  DoubleListEntry<T, N>* Prev() {
-    return prev_;
-  }
+  DoubleListEntry* Prev() { return prev_; }
 
-  DoubleListEntry<T, N>* Next() {
-    return next_;
-  }
+  DoubleListEntry* Next() { return next_; }
 
   friend class DoubleList<T, N>;
 
-  DoubleListEntry<T, N>* next_;
-  DoubleListEntry<T, N>* prev_;
+  DoubleListEntry* next_;
+  DoubleListEntry* prev_;
 
   DISALLOW_COPY_AND_ASSIGN(DoubleListEntry);
 };
@@ -156,9 +152,7 @@ class DoubleList {
     convert(a)->Remove();
   }
 
-  inline bool IsEmpty() {
-    return head_.IsEmpty();
-  }
+  inline bool IsEmpty() const { return head_.IsEmpty(); }
 
   inline T* First() {
     ASSERT(!IsEmpty());
@@ -200,6 +194,19 @@ class DoubleList {
     iterator.entry_->Remove();
     return next;
   }
+
+  inline Iterator<T, N> Insert(const Iterator<T, N>& iterator, T* element) {
+    iterator.entry_->Prepend(convert(element));
+    return Iterator<T, N>(this, element);
+  }
+
+#ifdef DEBUG
+  void Dump() {
+    for (auto t : this) {
+      fprintf(stderr, "%p\n", &t);
+    }
+  }
+#endif
 
  private:
   Entry head_;

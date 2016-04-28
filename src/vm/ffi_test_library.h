@@ -72,6 +72,8 @@ EXPORT void vfun5(int a, int b, int c, int d, int e);
 
 EXPORT void vfun6(int a, int b, int c, int d, int e, int f);
 
+EXPORT void vfun7(int a, int b, int c, int d, int e, int f, int g);
+
 // We assume int are 32 bits, short is 16 bits, char is 8 bits,
 // float is 32 bits, double is 64 bits.
 EXPORT void* pfun0();
@@ -110,5 +112,25 @@ EXPORT void* memstring();
 EXPORT int bufferRead(char* buffer);
 
 EXPORT int bufferWrite(char* buffer, int value);
+
+EXPORT intptr_t things;
+
+EXPORT void* make_a_thing(void);
+
+EXPORT void* make_b_thing(void);
+
+EXPORT void free_thing(void* thing);
+
+EXPORT intptr_t get_things();
+
+EXPORT void* trampoline0(void* f);
+
+EXPORT void* trampoline1(void* f, void* x);
+
+EXPORT void* trampoline2(void* f, void* x, void* y);
+
+EXPORT void* trampoline3(void* f, void* x, void* y, void* z);
+
+EXPORT void* echoWord(void* x);
 
 #endif  // SRC_VM_FFI_TEST_LIBRARY_H_

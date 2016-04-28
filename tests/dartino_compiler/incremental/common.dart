@@ -7,9 +7,6 @@ library tests.dartino_compiler.incremental.common;
 export 'dart:async' show
     Future;
 
-export 'feature_test.dart' show
-    NoArgFuture;
-
 export 'program_result.dart' show
     EncodedResult;
 
@@ -19,14 +16,13 @@ import 'dart:async' show
 import 'dart:isolate' show
     ReceivePort;
 
-import 'feature_test.dart' show
-    NoArgFuture;
-
 import 'program_result.dart' show
     EncodedResult,
     computeTests;
 
 import 'tests_with_expectations.dart' as tests_with_expectations;
+
+typedef Future NoArgFuture();
 
 abstract class IncrementalTestSuite {
   final String suiteName;

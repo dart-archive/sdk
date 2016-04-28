@@ -7,6 +7,104 @@
 
 closure_cycles_test: Slow, Pass # We see this test time out in various configs.
 
+abstract_beats_arguments_test: RuntimeError
+accessor_conflict_export2_test: Crash
+accessor_conflict_export_test: Crash
+accessor_conflict_import2_test: RuntimeError
+accessor_conflict_import_prefixed2_test: RuntimeError
+accessor_conflict_import_prefixed_test: RuntimeError
+accessor_conflict_import_test: RuntimeError
+async_await_test: CompileTimeError
+async_star_no_cancel2_test: RuntimeError
+async_star_no_cancel_test: RuntimeError
+class_cycle2_test/01: MissingCompileTimeError
+class_cycle_test/00: MissingCompileTimeError
+class_cycle_test/01: MissingCompileTimeError
+config_import_test: CompileTimeError
+const_getter_test/01: MissingCompileTimeError
+deep_nesting1_negative_test: Crash
+deep_nesting2_negative_test: Crash
+deferred_import_core_test: RuntimeError
+function_syntax_test/36: RuntimeError, Pass
+generic_functions_test: CompileTimeError
+generic_methods_test: CompileTimeError
+generic_sends_test: CompileTimeError
+if_null_assignment_behavior_test/24: RuntimeError
+if_null_assignment_behavior_test/25: RuntimeError
+if_null_assignment_static_test/29: RuntimeError
+if_null_assignment_static_test/30: RuntimeError
+if_null_assignment_static_test/31: RuntimeError
+if_null_assignment_static_test/32: RuntimeError
+if_null_assignment_static_test/33: RuntimeError
+if_null_assignment_static_test/34: RuntimeError
+if_null_assignment_static_test/35: RuntimeError
+issue_25671a_test/01: RuntimeError
+issue_25671b_test/01: RuntimeError
+library_env_test/has_mirror_support: RuntimeError
+library_env_test/has_no_html_support: RuntimeError
+library_env_test/has_no_io_support: RuntimeError
+method_name_test: RuntimeError
+mixin_of_mixin_test/01: CompileTimeError
+mixin_of_mixin_test/02: CompileTimeError
+mixin_of_mixin_test/03: CompileTimeError
+mixin_of_mixin_test/04: CompileTimeError
+mixin_of_mixin_test/05: CompileTimeError
+mixin_of_mixin_test/06: CompileTimeError
+mixin_of_mixin_test/07: CompileTimeError
+mixin_of_mixin_test/08: CompileTimeError
+mixin_of_mixin_test/09: CompileTimeError
+mixin_of_mixin_test/10: CompileTimeError
+mixin_of_mixin_test/11: CompileTimeError
+mixin_of_mixin_test/12: CompileTimeError
+mixin_of_mixin_test/13: CompileTimeError
+mixin_of_mixin_test/14: CompileTimeError
+mixin_of_mixin_test/15: CompileTimeError
+mixin_of_mixin_test/16: CompileTimeError
+mixin_of_mixin_test/17: CompileTimeError
+mixin_of_mixin_test/18: CompileTimeError
+mixin_of_mixin_test/19: CompileTimeError
+mixin_of_mixin_test/20: CompileTimeError
+mixin_of_mixin_test/21: CompileTimeError
+mixin_of_mixin_test/22: CompileTimeError
+mixin_of_mixin_test/none: CompileTimeError
+mixin_supertype_subclass2_test/01: CompileTimeError
+mixin_supertype_subclass2_test/02: CompileTimeError
+mixin_supertype_subclass2_test/03: CompileTimeError
+mixin_supertype_subclass2_test/04: CompileTimeError
+mixin_supertype_subclass2_test/05: CompileTimeError
+mixin_supertype_subclass2_test/none: CompileTimeError
+mixin_supertype_subclass3_test/01: CompileTimeError
+mixin_supertype_subclass3_test/02: CompileTimeError
+mixin_supertype_subclass3_test/03: CompileTimeError
+mixin_supertype_subclass3_test/04: CompileTimeError
+mixin_supertype_subclass3_test/05: CompileTimeError
+mixin_supertype_subclass3_test/none: CompileTimeError
+mixin_supertype_subclass4_test/01: CompileTimeError
+mixin_supertype_subclass4_test/02: CompileTimeError
+mixin_supertype_subclass4_test/03: CompileTimeError
+mixin_supertype_subclass4_test/04: CompileTimeError
+mixin_supertype_subclass4_test/05: CompileTimeError
+mixin_supertype_subclass4_test/none: CompileTimeError
+mixin_supertype_subclass_test/01: CompileTimeError
+mixin_supertype_subclass_test/02: CompileTimeError
+mixin_supertype_subclass_test/03: CompileTimeError
+mixin_supertype_subclass_test/04: CompileTimeError
+mixin_supertype_subclass_test/05: CompileTimeError
+mixin_supertype_subclass_test/none: CompileTimeError
+regress_23996_test: RuntimeError
+regress_24567_test: RuntimeError
+regress_24935_test/none: RuntimeError
+regress_26175_test: RuntimeError
+super_no_such_method1_test/01: RuntimeError
+super_no_such_method2_test/01: RuntimeError
+super_no_such_method3_test/01: RuntimeError
+super_no_such_method4_test/01: RuntimeError
+super_no_such_method5_test/01: RuntimeError
+type_variable_closure3_test: RuntimeError
+type_variable_closure4_test: RuntimeError
+type_variable_field_initializer2_test: RuntimeError
+type_variable_field_initializer_closure2_test: RuntimeError
+
 [ $compiler == dartino_compiler || $runtime == dartino_compiler ]
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
@@ -21,7 +119,6 @@ async_and_or_test: RuntimeError
 async_await_catch_regression_test: RuntimeError
 async_await_syntax_test/a05a: RuntimeError
 async_await_syntax_test/a05b: RuntimeError
-async_await_syntax_test/a05h: RuntimeError
 async_await_syntax_test/a06a: RuntimeError
 async_await_syntax_test/a07a: RuntimeError
 async_await_syntax_test/a08a: RuntimeError
@@ -42,8 +139,6 @@ async_await_syntax_test/c07a: RuntimeError
 async_await_syntax_test/c08a: RuntimeError
 async_await_syntax_test/c09a: RuntimeError
 async_await_syntax_test/c10a: RuntimeError
-async_await_syntax_test/c11a: MissingCompileTimeError
-async_await_syntax_test/c11b: RuntimeError
 async_await_syntax_test/d05a: RuntimeError
 async_await_syntax_test/d06a: RuntimeError
 async_await_syntax_test/d07a: RuntimeError
@@ -116,7 +211,6 @@ await_for_use_local_test: RuntimeError
 await_future_test: RuntimeError
 await_nonfuture_test: RuntimeError
 await_not_started_immediately_test: RuntimeError
-await_null_aware_test: RuntimeError
 await_postfix_expr_test: RuntimeError
 await_regression_test: RuntimeError
 await_test: RuntimeError
@@ -408,80 +502,7 @@ generic_object_type_test: RuntimeError
 generic_parameterized_extends_test: RuntimeError
 generic_test: RuntimeError
 getter_setter_in_lib_test: RuntimeError
-if_null_assignment_behavior_test/01: RuntimeError
-if_null_assignment_behavior_test/02: RuntimeError
-if_null_assignment_behavior_test/03: RuntimeError
-if_null_assignment_behavior_test/04: RuntimeError
-if_null_assignment_behavior_test/05: RuntimeError
-if_null_assignment_behavior_test/06: RuntimeError
-if_null_assignment_behavior_test/07: RuntimeError
-if_null_assignment_behavior_test/08: RuntimeError
-if_null_assignment_behavior_test/09: RuntimeError
-if_null_assignment_behavior_test/10: RuntimeError
-if_null_assignment_behavior_test/11: RuntimeError
-if_null_assignment_behavior_test/12: RuntimeError
-if_null_assignment_behavior_test/13: RuntimeError
-if_null_assignment_behavior_test/14: RuntimeError
-if_null_assignment_behavior_test/15: RuntimeError
-if_null_assignment_behavior_test/16: RuntimeError
-if_null_assignment_behavior_test/17: RuntimeError
-if_null_assignment_behavior_test/18: RuntimeError
-if_null_assignment_behavior_test/19: RuntimeError
-if_null_assignment_behavior_test/20: RuntimeError
-if_null_assignment_behavior_test/21: RuntimeError
-if_null_assignment_behavior_test/22: RuntimeError
-if_null_assignment_behavior_test/23: RuntimeError
-if_null_assignment_behavior_test/24: RuntimeError
-if_null_assignment_behavior_test/25: RuntimeError
-if_null_assignment_behavior_test/26: RuntimeError
-if_null_assignment_behavior_test/27: RuntimeError
-if_null_assignment_behavior_test/28: RuntimeError
-if_null_assignment_behavior_test/31: RuntimeError
-if_null_assignment_behavior_test/32: RuntimeError
-if_null_assignment_behavior_test/none: RuntimeError
-if_null_assignment_static_test/01: RuntimeError
-if_null_assignment_static_test/02: RuntimeError
-if_null_assignment_static_test/03: RuntimeError
-if_null_assignment_static_test/04: RuntimeError
-if_null_assignment_static_test/05: RuntimeError
-if_null_assignment_static_test/06: RuntimeError
-if_null_assignment_static_test/07: RuntimeError
-if_null_assignment_static_test/08: RuntimeError
-if_null_assignment_static_test/09: RuntimeError
-if_null_assignment_static_test/10: RuntimeError
-if_null_assignment_static_test/11: RuntimeError
-if_null_assignment_static_test/12: RuntimeError
-if_null_assignment_static_test/13: RuntimeError
-if_null_assignment_static_test/14: RuntimeError
-if_null_assignment_static_test/15: RuntimeError
-if_null_assignment_static_test/16: RuntimeError
-if_null_assignment_static_test/17: RuntimeError
-if_null_assignment_static_test/18: RuntimeError
-if_null_assignment_static_test/19: RuntimeError
-if_null_assignment_static_test/20: RuntimeError
-if_null_assignment_static_test/21: RuntimeError
-if_null_assignment_static_test/22: RuntimeError
-if_null_assignment_static_test/23: RuntimeError
-if_null_assignment_static_test/24: RuntimeError
-if_null_assignment_static_test/25: RuntimeError
-if_null_assignment_static_test/26: RuntimeError
-if_null_assignment_static_test/27: RuntimeError
-if_null_assignment_static_test/28: RuntimeError
-if_null_assignment_static_test/29: RuntimeError
-if_null_assignment_static_test/30: RuntimeError
-if_null_assignment_static_test/31: RuntimeError
-if_null_assignment_static_test/32: RuntimeError
-if_null_assignment_static_test/33: RuntimeError
-if_null_assignment_static_test/34: RuntimeError
-if_null_assignment_static_test/35: RuntimeError
-if_null_assignment_static_test/36: RuntimeError
-if_null_assignment_static_test/37: RuntimeError
-if_null_assignment_static_test/38: RuntimeError
-if_null_assignment_static_test/39: RuntimeError
-if_null_assignment_static_test/40: RuntimeError
-if_null_assignment_static_test/41: RuntimeError
-if_null_assignment_static_test/42: RuntimeError
-if_null_assignment_static_test/none: RuntimeError
+if_null_assignment_behavior_test/15: RuntimeError # Class literals not implemented.
 incr_op_test: RuntimeError
 instance_creation_in_function_annotation_test: CompileTimeError
 instanceof2_test: RuntimeError
@@ -589,7 +610,6 @@ not_enough_positional_arguments_test/02: CompileTimeError
 not_enough_positional_arguments_test/05: CompileTimeError
 null_is2_test: RuntimeError
 null_test/none: CompileTimeError
-nullaware_opt_test: RuntimeError
 number_identity2_test: RuntimeError
 on_catch_malformed_type_test: RuntimeError
 overridden_no_such_method_test: CompileTimeError
@@ -662,9 +682,6 @@ symbol_literal_test/01: CompileTimeError
 symbol_literal_test/none: CompileTimeError
 sync_generator1_test/01: RuntimeError
 sync_generator1_test/none: RuntimeError
-sync_generator2_test/07: RuntimeError
-sync_generator2_test/08: RuntimeError
-sync_generator2_test/10: RuntimeError
 sync_generator2_test/20: RuntimeError
 sync_generator2_test/30: RuntimeError
 sync_generator2_test/40: RuntimeError
@@ -828,7 +845,7 @@ bit_operations_test/02: Crash
 bit_operations_test/03: Crash
 bit_operations_test/04: Crash
 bit_operations_test/none: Crash
-closure_cycles_test: Crash
+closure_cycles_test: Pass, Timeout
 double_int_to_string_test: RuntimeError
 double_to_string_as_exponential3_test: RuntimeError
 double_to_string_as_exponential_test: RuntimeError
@@ -836,7 +853,7 @@ double_to_string_as_fixed_test: RuntimeError
 double_to_string_as_precision3_test: RuntimeError
 double_to_string_as_precision_test: RuntimeError
 double_to_string_test: RuntimeError
-gc_test: Crash
+gc_test: Pass, Slow
 intrinsified_methods_test: RuntimeError
 large_class_declaration_test: RuntimeError
 nan_identical_test: Crash
@@ -844,10 +861,12 @@ number_identity2_test: Crash
 round_test: RuntimeError
 constant_string_interpolation2_test: RuntimeError
 vm/typed_data_polymorphic_view_test: Crash
-vm/closure_memory_retention_test: Crash # Out of memory. Fragmentation.
+vm/closure_memory_retention_test: Crash, Pass # Out of memory. Fragmentation.
 # These actually overflow the stack because the snapshot reader is
 # recursive.
 large_class_declaration_test: Timeout
+
+[ $system == lk && !$use_heap_blob ]
 smaller_4_Interface_Types_A11_t01_test: Crash
 
 [ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
@@ -1033,12 +1052,9 @@ deferred_type_dependency_test/type_annotation: CompileTimeError
 mixin_prefix_test: CompileTimeError
 
 # No async on embedded, so these give the correct compile-time error:
-async_await_syntax_test/a05h: Pass
 async_await_syntax_test/b00a: Pass
 async_await_syntax_test/b00b: Pass
 async_await_syntax_test/b00c: Pass
-async_await_syntax_test/c11a: Pass
-async_await_syntax_test/c11b: Pass
 async_await_syntax_test/e4: Pass
 async_await_syntax_test/e5: Pass
 async_await_syntax_test/e6: Pass
@@ -1049,9 +1065,6 @@ async_test/setter1: Pass
 await_backwards_compatibility_test/await2: Pass
 await_backwards_compatibility_test/await3: Pass
 await_backwards_compatibility_test/await4: Pass
-sync_generator2_test/07: Pass
-sync_generator2_test/08: Pass
-sync_generator2_test/10: Pass
 sync_generator2_test/20: Pass
 sync_generator2_test/30: Pass
 sync_generator2_test/40: Pass
@@ -1069,3 +1082,7 @@ vm/regress_22621_vm_test: RuntimeError
 
 # No uri on embedded
 unsorted/uri_base_test: RuntimeError
+
+[ $system == macos && $mode == debug && $asan ]
+override_inheritance_no_such_method_test/none: Pass, Crash # Issue 434
+setter_override_test/none: Pass, Crash # Issue 434

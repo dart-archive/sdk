@@ -9,6 +9,7 @@
       '<(stm32_cube_f7)/Drivers/CMSIS/Device/ST/STM32F7xx/Include/',
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
       '<(stm32_cube_f7)/Drivers/BSP/Components/Common/',
+      '<(stm32_cube_f7)/Drivers/BSP/Components/ft5336/',
       '<(stm32_cube_f7)/Middlewares/ST/STemWin/Config/',
       '<(stm32_cube_f7)/Middlewares/ST/STemWin/inc/',
       '<(stm32_cube_f7)/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/',
@@ -23,75 +24,14 @@
   },
   'targets': [
     {
-      'type': 'none',
-      'target_name': 'disco_dartino_dart_snapshot',
+      'target_name': 'libstm32f746g-discovery',
+      'dependencies': [
+        '../../../src/pkg/mbedtls/mbedtls.gyp:mbedtls_static',
+      ],
       'variables': {
-        'source_path': 'src',
-      },
-      'actions': [
-        {
-          'action_name': 'snapshot',
-          'inputs': [
-            'src/test.dart',
-          ],
-          'outputs': [
-            # This must be in CWD for the objcopy below to generate the
-            # correct symbol names.
-            '<(PRODUCT_DIR)/snapshot',
-          ],
-          'action': [
-            '<(PRODUCT_DIR)/../ReleaseX64/dartino',
-            'export',
-            '<(source_path)/test.dart',
-            'to',
-            'file',
-            '<(PRODUCT_DIR)/snapshot',
-          ],
-        },
-      ],
-    },
-    {
-      'type': 'none',
-      'target_name': 'disco_dartino_dart_snapshot.o',
-      'dependencies' : [
-        'disco_dartino_dart_snapshot',
-      ],
-      'actions': [
-        {
-          'action_name': 'snapshot',
-          'inputs': [
-            '<(PRODUCT_DIR)/snapshot',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/snapshot.o',
-          ],
-          'action': [
-            'python',
-            '../../../tools/run_with_cwd.py',
-            '<(PRODUCT_DIR)',
-            # As we are messing with CWD we need the path relative to
-            # PRODUCT_DIR (where we cd into) instead of relative to
-            # where this .gyp file is.
-            '../../third_party/gcc-arm-embedded/linux/'
-                'gcc-arm-embedded/bin/arm-none-eabi-objcopy',
-            '-I',
-            'binary',
-            '-O',
-            'elf32-littlearm',
-            '-B',
-            'arm',
-            'snapshot',
-            'snapshot.o',
-          ],
-        },
-      ],
-    },
-    {
-      'target_name': 'libdisco_dartino',
-      'variables': {
-        'source_path': 'src',
-        'generated_path': 'generated',
-        'template_path': 'template',
+        'source_path': 'src/stm32f746g-discovery',
+        'generated_path': '<(source_path)/generated',
+        'template_path': '<(source_path)/template',
         'common_cflags': [
           # Our target will link in the stm files which do have a few warnings.
           '-Wno-write-strings',
@@ -101,50 +41,51 @@
         'common_cflags_cc': [
           '-Wno-literal-suffix',
         ],
+        'freertos_plus_tcp':
+          '<(freertos_with_labs)/freertos_labs/FreeRTOS-Plus/Source/'
+              'FreeRTOS-Plus-TCP/',
       },
       'type': 'static_library',
       'standalone_static_library': 1,
       'includes': [
-        '../free_rtos_sources.gypi',
         '../hal_sources.gypi',
       ],
       'defines': [
         'DATA_IN_ExtSDRAM',  # Avoid BSP_LDC_Init initializing SDRAM.
       ],
       'include_dirs': [
-        '<(generated_path)/Inc',
+        '<(generated_path)',
         '<(source_path)',
+        '<(freertos_plus_tcp)/include',
+        '<(freertos_plus_tcp)/portable/Compiler/GCC/',
+        '<(mbedtls)/include',
       ],
       'sources': [
-        # Application.
-        '<(source_path)/button.cc',
-        '<(source_path)/button.h',
+        # Board initialization.
+        '<(source_path)/board.c',
+
+        # Device drivers.
+        '<(source_path)/button_driver.cc',
+        '<(source_path)/button_driver.h',
         '<(source_path)/circular_buffer.cc',
         '<(source_path)/circular_buffer.h',
-        '<(source_path)/cmpctmalloc.c',
-        '<(source_path)/cmpctmalloc.h',
-        '<(source_path)/device_manager.h',
-        '<(source_path)/device_manager.cc',
-        '<(source_path)/freertos.cc',
-        '<(source_path)/FreeRTOSConfig.h',
-        '<(source_path)/dartino_entry.cc',
-        '<(source_path)/main.cc',
-        '<(source_path)/page_allocator.cc',
-        '<(source_path)/page_allocator.h',
-        '<(source_path)/uart.cc',
-        '<(source_path)/uart.h',
+        '<(source_path)/uart_driver.cc',
+        '<(source_path)/uart_driver.h',
 
-        '<(source_path)/syscalls.c',
-
-        '<(source_path)/exceptions.c',
+        # Network driver.
+        '<(source_path)/network_interface.c',
+        '<(source_path)/ethernet.cc',
+        '<(source_path)/ethernet.h',
+        '<(source_path)/socket.cc',
+        '<(source_path)/socket.h',
 
         # Generated files.
-        '<(generated_path)/Inc/mxconstants.h',
-        '<(generated_path)/Inc/stm32f7xx_hal_conf.h',
-        '<(generated_path)/Inc/stm32f7xx_it.h',
-        '<(generated_path)/Src/mx_init.c',  # Derived from generated main.c.
-        '<(generated_path)/Src/stm32f7xx_hal_msp.c',
-        '<(generated_path)/Src/stm32f7xx_it.c',
+        '<(generated_path)/mxconstants.h',
+        '<(generated_path)/stm32f7xx_hal_conf.h',
+        '<(generated_path)/stm32f7xx_it.h',
+        '<(generated_path)/mx_init.c',  # Derived from generated main.c.
+        '<(generated_path)/stm32f7xx_hal_msp.c',
+        '<(generated_path)/stm32f7xx_it.c',
 
         # Board initialization and interrupt service routines (template files).
         '<(template_path)/system_stm32f7xx.c',
@@ -154,11 +95,21 @@
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_lcd.c',
         '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_sdram.c',
+        '<(stm32_cube_f7_bsp_discovery)/stm32746g_discovery_ts.c',
 
         # Additional utilities.
+        '<(stm32_cube_f7)/Drivers/BSP/Components/ft5336/ft5336.c',
         '<(stm32_cube_f7)/Utilities/Log/lcd_log.c',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'cflags': [
+            '<@(common_cflags)',
+          ],
+          'cflags_cc': [
+            '<@(common_cflags_cc)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
             'OTHER_CFLAGS': [
@@ -170,31 +121,29 @@
             ],
           },
         }],
-        ['OS=="linux"', {
-          'cflags': [
-            '<@(common_cflags)',
-          ],
-          'cflags_cc': [
-            '<@(common_cflags_cc)',
-          ],
-        }],
       ],
     },
     {
       'target_name': 'disco_dartino.elf',
       'dependencies': [
-        'libdisco_dartino',
-        'disco_dartino_dart_snapshot.o',
+        'freertos_dartino.gyp:libfreertos_dartino',
+        'libstm32f746g-discovery',
+        'freertos_dartino.gyp:disco_dartino_dart_program.o',
         '../../../src/vm/vm.gyp:libdartino',
+        './freertos_dartino.gyp:embedder_options.o',
       ],
       'variables': {
         'common_ldflags': [
           '-specs=nano.specs',
+          # Without this, the weak and strong symbols for the IRQ handlers are
+          # not linked correctly and you get the weak fallback versions that
+          # loop forever instead of the IRQ handler you want for your hardware.
+          '-Wl,--whole-archive',
           # TODO(340): Why does this not work???
-          #'-T<(generated_path)/SW4STM32/configuration/STM32F746NGHx_FLASH.ld',
+          #'-T<(source_path)/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???
-          '-T../../platforms/stm/disco_dartino/generated/SW4STM32/'
-            'configuration/STM32F746NGHx_FLASH.ld',
+          '-T../../platforms/stm/disco_dartino/src/stm32f746g-discovery/'
+            'STM32F746NGHx_FLASH.ld',
           '-Wl,--wrap=__libc_init_array',
           '-Wl,--wrap=_malloc_r',
           '-Wl,--wrap=_malloc_r',
@@ -205,9 +154,15 @@
       },
       'type': 'executable',
       'sources': [
-        '<(PRODUCT_DIR)/snapshot.o',
+        '<(PRODUCT_DIR)/program.o',
+        '<(PRODUCT_DIR)/embedder_options.o',
       ],
       'conditions': [
+        ['OS=="linux"', {
+          'ldflags': [
+            '<@(common_ldflags)',
+          ],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
             'OTHER_LDFLAGS': [
@@ -215,13 +170,12 @@
             ],
           },
         }],
-        ['OS=="linux"', {
-          'ldflags': [
-            '<@(common_ldflags)',
-          ],
-        }],
       ],
       'libraries': [
+        # This option ends up near the end of the linker command, so that
+        # --whole-archive (see above) is not applied to libstdc++ and the
+        # implict libgcc.a library.
+        '-Wl,--no-whole-archive',
         '-lstdc++',
       ],
     },

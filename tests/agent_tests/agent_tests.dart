@@ -7,9 +7,7 @@ import 'dart:io' show
     File,
     FileSystemException,
     Process,
-    ProcessSignal,
-    Socket,
-    SocketException;
+    ProcessSignal;
 
 import 'dart:convert' show
     LineSplitter,
@@ -32,6 +30,13 @@ import 'package:dartino_agent/agent_connection.dart' show
 
 import 'package:dartino_compiler/src/guess_configuration.dart' show
     executable;
+
+import 'package:dartino_compiler/src/vm_connection.dart' show
+    VmConnection,
+    TcpConnection;
+
+import 'package:dartino_compiler/src/verbs/infrastructure.dart' show
+    DiagnosticKind;
 
 import '../dartino_compiler/run.dart' show
     export;
@@ -111,16 +116,21 @@ abstract class AgentTest {
   }
 
   Future<AgentConnection> connect() async {
-    int attempt = 0;
-    Socket socket = await retry(5000, () => Socket.connect(host, port));
-    Expect.isTrue(socket != null, 'Failed to connect to agent');
-    return new AgentConnection(socket);
+    VmConnection connection = await retry(5000, () {
+      return TcpConnection.connect(
+        host, port,
+        "agent socket",
+        print,
+        onConnectionError: (_) {});
+    });
+    Expect.isTrue(connection != null, 'Failed to connect to agent');
+    return new AgentConnection(connection);
   }
 
   Future<Null> disconnect(AgentConnection connection) async {
     if (connection != null) {
-      print('Disconnecting from agent on port ${connection.socket.port}');
-      await connection.socket.destroy();
+      print('Disconnecting from agent on ${connection.connection.description}');
+      await connection.connection.close();
     }
   }
 

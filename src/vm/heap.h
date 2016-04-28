@@ -18,22 +18,14 @@ class ExitReference;
 // Heap represents the container for all HeapObjects.
 class Heap {
  public:
-  explicit Heap(RandomXorShift* random, int maximum_initial_size = 0);
-  ~Heap();
-
   // Allocate raw object. Returns a failure if a garbage collection is
-  // needed and causes a fatal error if no garbage collection is
-  // needed and there is not enough room for the object.
-  Object* Allocate(int size);
+  // needed and causes a fatal error if a GC cannot free up enough memory
+  // for the object.
+  Object* Allocate(uword size);
 
-  // Allocate raw object. Returns a failure if a garbage collection is
-  // needed or if there is not enough room for the object. Never causes
-  // a fatal error.
-  Object* AllocateNonFatal(int size);
-
-  // Attempt to deallocate the heap object with the given size. Rewinds the
-  // allocation top if the object was the last allocated object.
-  void TryDealloc(Object* object, int size);
+  // Called when an allocation fails in the semispace.  Usually returns a
+  // retry-after-GC failure, but may divert large allocations to an old space.
+  virtual Object* HandleAllocationFailure(uword size) = 0;
 
   // Allocate heap object.
   Object* CreateInstance(Class* the_class, Object* init_value, bool immutable);
@@ -46,7 +38,6 @@ class Heap {
 
   // Allocate heap integer.
   Object* CreateLargeInteger(Class* the_class, int64 value);
-  void TryDeallocInteger(LargeInteger* object);
 
   // Allocate double.
   Object* CreateDouble(Class* the_class, dartino_double value);
@@ -85,53 +76,29 @@ class Heap {
   Object* CreateFunction(Class* the_class, int arity, List<uint8> bytecodes,
                          int number_of_literals);
 
-  void AllocatedForeignMemory(int size);
-
-  void FreedForeignMemory(int size);
-
   // Iterate over all objects in the heap.
-  void IterateObjects(HeapObjectVisitor* visitor) {
+  virtual void IterateObjects(HeapObjectVisitor* visitor) {
     space_->IterateObjects(visitor);
-    old_space_->IterateObjects(visitor);
   }
 
   // Flush will write cached values back to object memory.
   // Flush must be called before traveral of heap.
-  void Flush() {
-    space_->Flush();
-    old_space_->Flush();
-  }
+  virtual void Flush() { space_->Flush(); }
 
   // Returns the number of bytes allocated in the space.
-  int Used() { return old_space_->Used() + space_->Used(); }
+  virtual int Used() { return space_->Used(); }
 
   // Returns the number of bytes allocated in the space and via foreign memory.
-  int UsedTotal() { return Used() + foreign_memory_; }
+  uword UsedTotal() { return Used() + foreign_memory_; }
 
   SemiSpace* space() { return space_; }
-  OldSpace* old_space() { return old_space_; }
 
-  void ReplaceSpace(SemiSpace* space, OldSpace* old_space = NULL);
+  void ReplaceSpace(SemiSpace* space);
   SemiSpace* TakeSpace();
-  WeakPointer* TakeWeakPointers();
-
-  // Tells whether garbage collection is needed.
-  bool needs_garbage_collection() {
-    return space()->needs_garbage_collection();
-  }
-
-  bool allocations_have_taken_place() { return allocations_have_taken_place_; }
 
   RandomXorShift* random() { return random_; }
 
-  int used_foreign_memory() { return foreign_memory_; }
-
-  void AddWeakPointer(HeapObject* object, WeakPointerCallback callback);
-  void RemoveWeakPointer(HeapObject* object);
-  void ProcessWeakPointers(Space* space);
-  void VisitWeakObjectPointers(PointerVisitor* visitor) {
-    WeakPointer::Visit(weak_pointers_, visitor);
-  }
+  uword used_foreign_memory() { return foreign_memory_; }
 
 #ifdef DEBUG
   // Used for debugging.  Give it an address, and it will tell you where there
@@ -140,39 +107,144 @@ class Heap {
   // since it uses the /proc filesystem.
   // To actually call this from gdb you probably need to remove the
   // --gc-sections flag from the linker in the build scripts.
-  void Find(uword word);
+  virtual void Find(uword word);
 #endif
 
- private:
+  // For asserts.
+  virtual bool IsTwoSpaceHeap() { return false; }
+
+ protected:
   friend class ExitReference;
   friend class Scheduler;
   friend class Program;
+  friend class NoAllocationScope;
 
-  Heap(SemiSpace* existing_space, WeakPointer* weak_pointers);
+  explicit Heap(SemiSpace* existing_space);
+  explicit Heap(RandomXorShift* random);
+  virtual ~Heap();
 
   Object* CreateOneByteStringInternal(Class* the_class, int length, bool clear);
   Object* CreateTwoByteStringInternal(Class* the_class, int length, bool clear);
 
-  Object* AllocateRawClass(int size);
+  Object* AllocateRawClass(uword size);
 
   // Adjust the allocation budget based on the current heap size.
   void AdjustAllocationBudget() { space()->AdjustAllocationBudget(0); }
-
-  void AdjustOldAllocationBudget() {
-    old_space()->AdjustAllocationBudget(foreign_memory_);
-  }
 
   void set_random(RandomXorShift* random) { random_ = random; }
 
   // Used for initializing identity hash codes for immutable objects.
   RandomXorShift* random_;
   SemiSpace* space_;
-  OldSpace* old_space_;
-  // Linked list of weak pointers to heap objects in this heap.
-  WeakPointer* weak_pointers_;
+
   // The number of bytes of foreign memory heap objects are holding on to.
-  int foreign_memory_;
-  bool allocations_have_taken_place_;
+  uword foreign_memory_;
+
+#ifdef DEBUG
+  void IncrementNoAllocation() { ++no_allocation_; }
+  void DecrementNoAllocation() { --no_allocation_; }
+#endif
+
+ private:
+  int no_allocation_ = 0;
+};
+
+class OneSpaceHeap : public Heap {
+ public:
+  explicit OneSpaceHeap(RandomXorShift* random, int maximum_initial_size = 0);
+
+  virtual Object* HandleAllocationFailure(uword size) {
+    return Failure::retry_after_gc(size);
+  }
+
+#ifdef DEBUG
+  virtual void Find(uword word);
+#endif
+};
+
+class TwoSpaceHeap : public Heap {
+ public:
+  explicit TwoSpaceHeap(RandomXorShift* random);
+  virtual ~TwoSpaceHeap();
+
+  static const uword kFixedSemiSpaceSize = 16 * KB;
+
+  OldSpace* old_space() { return old_space_; }
+  SemiSpace* unused_space() { return unused_semispace_; }
+
+  void SwapSemiSpaces();
+
+  // Iterate over all objects in the heap.
+  virtual void IterateObjects(HeapObjectVisitor* visitor) {
+    Heap::IterateObjects(visitor);
+    old_space_->IterateObjects(visitor);
+  }
+
+  // Flush will write cached values back to object memory.
+  // Flush must be called before traveral of heap.
+  virtual void Flush() {
+    Heap::Flush();
+    old_space_->Flush();
+  }
+
+  // Returns the number of bytes allocated in the space.
+  virtual int Used() { return old_space_->Used() + Heap::Used(); }
+
+#ifdef DEBUG
+  virtual void Find(uword word);
+#endif
+
+  void AdjustOldAllocationBudget() {
+    old_space()->AdjustAllocationBudget(foreign_memory_);
+  }
+
+  virtual Object* HandleAllocationFailure(uword size) {
+    if (size >= (kFixedSemiSpaceSize >> 1)) {
+      uword result = old_space_->Allocate(size);
+      if (result != 0) {
+        // The code that populates newly allocated objects assumes that they
+        // are in new space and does not have a write barrier.  We mark the
+        // object dirty immediately, so it is checked by the next GC.
+        GCMetadata::InsertIntoRememberedSet(result);
+        return HeapObject::FromAddress(result);
+      }
+    }
+    return Failure::retry_after_gc(size);
+  }
+
+  // Used during object-rewriting to allocate directly in old-space when
+  // new-space is full.
+  Object* CreateOldSpaceInstance(Class* the_class, Object* init_value);
+
+  virtual bool IsTwoSpaceHeap() { return true; }
+
+  bool HasEmptyNewSpace() { return space_->top() == space_->start(); }
+
+  void AddWeakPointer(HeapObject* object, WeakPointerCallback callback,
+                      void* arg);
+  void AddExternalWeakPointer(HeapObject* object,
+                              ExternalWeakPointerCallback callback, void* arg);
+  void RemoveWeakPointer(HeapObject* object);
+  bool RemoveExternalWeakPointer(HeapObject* object,
+                                 ExternalWeakPointerCallback callback);
+  void VisitWeakObjectPointers(PointerVisitor* visitor) {
+    WeakPointer::Visit(space_->weak_pointers(), visitor);
+    WeakPointer::Visit(old_space_->weak_pointers(), visitor);
+  }
+
+  void AllocatedForeignMemory(uword size);
+
+  void FreedForeignMemory(uword size);
+
+ private:
+  friend class GenerationalScavengeVisitor;
+
+  // Allocate or deallocate the pages used for heap metadata.
+  void ManageMetadata(bool allocate);
+
+  OldSpace* old_space_;
+  SemiSpace* unused_semispace_;
+  uword water_mark_;
 };
 
 // Helper class for copying HeapObjects.
@@ -192,7 +264,13 @@ class ScavengeVisitor : public PointerVisitor {
     Object* object = *p;
     if (!object->IsHeapObject()) return;
     if (!from_->Includes(reinterpret_cast<uword>(object))) return;
-    *p = reinterpret_cast<HeapObject*>(object)->CloneInToSpace(to_);
+    HeapObject* heap_object = reinterpret_cast<HeapObject*>(object);
+    if (heap_object->HasForwardingAddress()) {
+      *p = heap_object->forwarding_address();
+    } else {
+      *p = reinterpret_cast<HeapObject*>(object)->CloneInToSpace(to_);
+    }
+    ASSERT(*p != NULL);  // No-allocation scope should ensure this.
   }
 
   SemiSpace* from_;
@@ -202,49 +280,69 @@ class ScavengeVisitor : public PointerVisitor {
 // Helper class for copying HeapObjects.
 class GenerationalScavengeVisitor : public PointerVisitor {
  public:
-  GenerationalScavengeVisitor(SemiSpace* from, SemiSpace* to, OldSpace* old)
-      : from_(from), to_(to), old_(old), hacky_counter_(0) {}
+  explicit GenerationalScavengeVisitor(TwoSpaceHeap* heap)
+      : to_start_(heap->unused_semispace_->start()),
+        to_size_(heap->unused_semispace_->size()),
+        from_start_(heap->space()->start()),
+        from_size_(heap->space()->size()),
+        to_(heap->unused_semispace_),
+        old_(heap->old_space()),
+        record_(&dummy_record_),
+        water_mark_(heap->water_mark_) {}
 
   virtual void VisitClass(Object** p) {}
 
   virtual void Visit(Object** p) { VisitBlock(p, p + 1); }
 
-  virtual void VisitBlock(Object** start, Object** end) {
-    for (Object** p = start; p < end; p++) {
-      Object* object = *p;
-      if (!object->IsHeapObject()) continue;
-      if (!from_->Includes(reinterpret_cast<uword>(object))) {
-        // Optimization that mostly triggers on large arrays of 'null'.
-        while (p < end - 1 && p[1] == object) p++;
-        continue;
-      }
-      HeapObject* old_object = reinterpret_cast<HeapObject*>(object);
-      if (old_object->HasForwardingAddress()) {
-        *p = old_object->forwarding_address();
-      } else {
-        // TODO(erikcorry): We need a better heuristic than this.
-        if (hacky_counter_++ & 1) {
-          *p = old_object->CloneInToSpace(old_);
-        } else {
-          *p = old_object->CloneInToSpace(to_);
-        }
-      }
-    }
+  inline bool InFromSpace(Object* object) {
+    if (object->IsSmi()) return false;
+    return reinterpret_cast<uword>(object) - from_start_ < from_size_;
   }
 
+  inline bool InToSpace(HeapObject* object) {
+    return reinterpret_cast<uword>(object) - to_start_ < to_size_;
+  }
+
+  virtual void VisitBlock(Object** start, Object** end);
+
+  bool trigger_old_space_gc() { return trigger_old_space_gc_; }
+
+  void set_record_new_space_pointers(uint8* p) { record_ = p; }
+
  private:
-  SemiSpace* from_;
+  uword to_start_;
+  uword to_size_;
+  uword from_start_;
+  uword from_size_;
   SemiSpace* to_;
   OldSpace* old_;
-  int hacky_counter_;
+  bool trigger_old_space_gc_ = false;
+  uint8* record_;
+  // Avoid checking for null by having a default place to write the remembered
+  // set byte.
+  uint8 dummy_record_;
+  uword water_mark_;
 };
 
 // Read [object] as an integer word value.
 //
-// [object] must be either a Smi or a LargeInteger.
-inline word AsForeignWord(Object* object) {
-  return object->IsSmi() ? Smi::cast(object)->value()
-                         : LargeInteger::cast(object)->value();
+// [object] must be either a Smi, a LargeInteger or a double.
+//
+// If the word size is 32, then the LargeInteger conversion may truncate the
+// input.
+//
+// The conversion from dartino-double to word is truncating, if the word size
+// is not at least the size of a dartino-double. This happens on x86 where the
+// word size is 32 bits, but doubles are 64 bits.
+inline uword AsForeignWord(Object* object) {
+  if (object->IsSmi()) return Smi::cast(object)->value();
+  if (object->IsLargeInteger()) return LargeInteger::cast(object)->value();
+  dartino_double value = Double::cast(object)->value();
+#ifdef DARTINO_USE_SINGLE_PRECISION
+  return bit_cast<int32>(value);
+#else
+  return static_cast<uword>(bit_cast<int64>(value));
+#endif
 }
 
 // Read [object] as an integer int64 value.

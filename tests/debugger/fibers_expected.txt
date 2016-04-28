@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > b print
-breakpoint set: id: '0' method: 'print' bytecode index: '0'
+### set breakpoint id: '0' method: 'print' bytecode index: '0'
 > r
 tests/debugger/fibers_test.dart:12:5
 12       print('$marker ${i}');

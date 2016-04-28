@@ -6,11 +6,14 @@
   'variables': {
     'posix': 0,
 
+    'freertos_with_labs': '<(DEPTH)/third_party/freertos/',
     'stm32_cube_f7': '<(DEPTH)/third_party/stm/stm32cube_fw_f7',
-    'stm32_cube_f7_free_rtos':
-      '<(stm32_cube_f7)/Middlewares/Third_Party/FreeRTOS',
+    'freertos': '<(stm32_cube_f7)/Middlewares/Third_Party/FreeRTOS',
+    'freertos_port': 'ARM_CM7/r0p1',
     'stm32_cube_f7_bsp_discovery':
       '<(stm32_cube_f7)/Drivers/BSP/STM32746G-Discovery/',
+    'mbedtls':
+      '<(DEPTH)/third_party/mbedtls/mbedtls/',
 
     'gcc-arm-embedded':
       '<(DEPTH)/third_party/gcc-arm-embedded/<(OS)/gcc-arm-embedded/bin',
@@ -35,9 +38,9 @@
             'include_dirs': [
               # We need to set these here since the src/shared/platform_cmsis.h
               # includes cmsis_os.h from here.
-              '<(stm32_cube_f7_free_rtos)/Source/CMSIS_RTOS/',
-              '<(stm32_cube_f7_free_rtos)/Source/include/',
-              '<(stm32_cube_f7_free_rtos)/Source/portable/GCC/ARM_CM7/r0p1/',
+              '<(freertos)/Source/CMSIS_RTOS/',
+              '<(freertos)/Source/include/',
+              '<(freertos)/Source/portable/GCC/<(freertos_port)/',
               '<(stm32_cube_f7)/Drivers/CMSIS/Include/',
               'disco_dartino/src',
               '../..'
@@ -50,7 +53,6 @@
         'inherit_from': [
           'dartino_base', 'dartino_release',
           'dartino_cortex_m_base', 'dartino_cortex_m7', 'dartino_stm',
-          'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
         'target_conditions': [
@@ -70,65 +72,6 @@
         'inherit_from': [
           'dartino_base', 'dartino_debug',
           'dartino_cortex_m_base', 'dartino_cortex_m7', 'dartino_stm',
-          'dartino_disable_live_coding',
-          'dartino_disable_native_processes',
-        ],
-      },
-
-      'ReleaseCM4': {
-        'inherit_from': [
-          'dartino_base', 'dartino_debug',
-          'dartino_cortex_m_base', 'dartino_cortex_m4', 'dartino_stm',
-          'dartino_disable_live_coding',
-          'dartino_disable_native_processes',
-        ],
-        'target_conditions': [
-          # Change to optimize for size.
-          ['_toolset=="target"', {
-            'cflags!': [
-              '-O3',
-            ],
-            'cflags': [
-              '-Os',
-            ],
-          }],
-        ],
-      },
-
-      'DebugCM4': {
-        'inherit_from': [
-          'dartino_base', 'dartino_debug',
-          'dartino_cortex_m_base', 'dartino_cortex_m4', 'dartino_stm',
-          'dartino_disable_live_coding',
-          'dartino_disable_native_processes',
-        ],
-      },
-
-      'ReleaseCM4SF': {
-        'inherit_from': [
-          'dartino_base', 'dartino_debug',
-          'dartino_cortex_m_base', 'dartino_cortex_m4_softfp', 'dartino_stm',
-          'dartino_disable_live_coding',
-          'dartino_disable_native_processes',
-        ],
-        'target_conditions': [
-          # Change to optimize for size.
-          ['_toolset=="target"', {
-            'cflags!': [
-              '-O3',
-            ],
-            'cflags': [
-              '-Os',
-            ],
-          }],
-        ],
-      },
-
-      'DebugCM4SF': {
-        'inherit_from': [
-          'dartino_base', 'dartino_debug',
-          'dartino_cortex_m_base', 'dartino_cortex_m4_softfp', 'dartino_stm',
-          'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
       },

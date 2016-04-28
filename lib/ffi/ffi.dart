@@ -2,11 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// The dart:dartino.ffi library is a low-level 'foreign function interface'
-// library that allows Dart code to call arbitrary native platform
-// code defined outside the VM.
+/// A low-level 'foreign function interface' library that allows Dart code to
+/// call arbitrary native platform code defined outside the VM.
 library dart.dartino.ffi;
 
+import 'dart:dartino._ffi';
 import 'dart:dartino._system' as dartino;
 import 'dart:dartino';
 import 'dart:typed_data';
@@ -37,20 +37,48 @@ abstract class Foreign {
   static final int machineWordSize = bitsPerMachineWord ~/ 8;
   static final int platform = _platform();
   static final int architecture = _architecture();
+  /// The bit size of doubles.
+  ///
+  /// With IEEE double-precision floating-point numbers returns 64. On some
+  /// embedded devices [double]s are compiled to single-precision floats, in
+  /// which case the size is 32.
+  static final int bitsPerDouble = _bitsPerDouble();
 
   static int get errno => _errno();
 
-  // Helper for converting the argument to a machine word.
-  int _convert(argument) {
-    if (argument is Foreign) return argument.address;
-    if (argument is Port) return _convertPort(argument);
-    if (argument is int) return argument;
-    throw new ArgumentError();
+  /**
+   * Registers the foreign function [fn] to be called as finalizer for this
+   * [Foreign] object.
+   *
+   * At finalization time, [argument] will be passed as argument to [fn].
+   * [argument] may be any pointer sized value except 0.
+   */
+  void registerFinalizer(ForeignFunction fn, int argument) {
+    if (argument == 0) throw new ArgumentError.value(argument);
+    _registerFinalizer(fn.address, argument);
   }
+
+  /**
+   * Removes the foreign function [fn] from the list of finalizers for this
+   * [Foreign] object.
+   *
+   * Returns 'true' if [fn] had previously been registered and was removed.
+   * However, if [fn] has been registered multiple times, it may still be
+   * called at finalization time.
+   */
+  bool removeFinalizer(ForeignFunction fn) {
+    return _removeFinalizer(fn.address);
+  }
+
+  dynamic _convert(argument) => ForeignConversion.convert(argument);
 
   @dartino.native static int _bitsPerMachineWord() {
     throw new UnsupportedError('_bitsPerMachineWord');
   }
+  @dartino.native static int _bitsPerDouble() {
+    throw new UnsupportedError('_bitsPerDouble');
+  }
+
   @dartino.native static int _errno() {
     throw new UnsupportedError('_errno');
   }
@@ -60,14 +88,40 @@ abstract class Foreign {
   @dartino.native static int _architecture() {
     throw new UnsupportedError('_architecture');
   }
-  @dartino.native static int _convertPort(Port port) {
-    throw new ArgumentError();
+
+  @dartino.native void _registerFinalizer(int address, int argument) {
+    var error = dartino.nativeError;
+    if (error == dartino.illegalState) {
+      throw new ArgumentError(argument);
+    }
+    throw error;
   }
+
+  @dartino.native bool _removeFinalizer(int address) {
+    var error = dartino.nativeError;
+    if (error == dartino.illegalState) {
+      throw new ArgumentError(address);
+    }
+    throw error;
+  }
+}
+
+class ResourceExhaustedException implements Exception {
+  final String message;
+
+  ResourceExhaustedException(String this.message);
+
+  String toString() => "Out of resources: $message.";
 }
 
 class ForeignFunction extends Foreign {
   final int address;
   final ForeignLibrary _library;
+
+  /// Wraps the given [address] as a foreign function.
+  ///
+  /// The [address] must point to a function with standard C calling
+  /// conventions.
   const ForeignFunction.fromAddress(this.address, [this._library = null]);
 
   /// Helper function for retrying functions that follow the POSIX-convention
@@ -83,6 +137,24 @@ class ForeignFunction extends Foreign {
       if (Foreign.errno != EINTR) break;
     }
     return value;
+  }
+
+  /// Returns a signed bit-representation of the given [float].
+  ///
+  /// Returns a 64-bit signed integer for double-precision numbers.
+  /// Returns a 32-bit signed integer for single-precision numbers.
+  ///
+  /// By using signed integers, the returned number is guaranteed to fit into
+  /// native words, if the floating-point size is smaller or equal to the
+  /// word size.
+  @dartino.native static int doubleToSignedBits(double float) {
+    throw new ArgumentError();
+  }
+
+  /// Returns the double corresponding to the given signed bit-representation
+  /// [bits].
+  @dartino.native static double signedBitsToDouble(int bits) {
+    throw new ArgumentError();
   }
 
   // Support for calling foreign functions that return
@@ -134,7 +206,7 @@ class ForeignFunction extends Foreign {
     return retry(() => icall$7(a0, a1, a2, a3, a4, a5, a6));
   }
   // Support for calling foreign functions that return
-  // machine words -- typically pointers -- encapulated in
+  // machine words -- typically pointers -- encapsulated in
   // the given foreign object arguments.
   ForeignPointer pcall$0() =>
       new ForeignPointer(_pcall$0(address));
@@ -191,6 +263,11 @@ class ForeignFunction extends Foreign {
   void vcall$6(a0, a1, a2, a3, a4, a5) {
     _vcall$6(address, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
         _convert(a4), _convert(a5));
+  }
+
+  void vcall$7(a0, a1, a2, a3, a4, a5, a6) {
+    _vcall$7(address, _convert(a0), _convert(a1), _convert(a2), _convert(a3),
+        _convert(a4), _convert(a5), _convert(a6));
   }
 
   // TODO(ricow): this is insanely specific and only used for rseek.
@@ -278,9 +355,86 @@ class ForeignFunction extends Foreign {
       int address, a0, a1, a2, a3, a4, a5) {
     throw new ArgumentError();
   }
+  @dartino.native static int _vcall$7(
+      int address, a0, a1, a2, a3, a4, a5, a6) {
+    throw new ArgumentError();
+  }
 
   @dartino.native static int _Lcall$wLw(int address, a0, a1, a2) {
     throw new ArgumentError();
+  }
+}
+
+class ForeignDartFunction extends ForeignFunction {
+  bool _hasBeenFreed = false;
+
+  /// Creates a foreign function from the given [dartFunction].
+  ///
+  /// The [dartFunction] is linked to a native function, and can then be
+  /// invoked as callback from native functions. The arity of the native
+  /// function is the same as the one from Dart, but is currently limited to
+  /// at most 3 arguments.
+  ///
+  /// The [errorReturnObject] is returned to the native caller, when this
+  /// function is used as a callback from native code, but the invocation isn't
+  /// successful. For example, this may happen, when the [dartFunction] throws
+  /// an uncaught exception, or the callback is invoked with the wrong number of
+  /// arguments.
+  ///
+  /// Once the callback is not needed anymore, one *must* free the backing
+  /// native function by invoking [free]. There is a limited number of wrappers
+  /// that can be used to implement callbacks in Dart.
+  ///
+  /// Throws an [ResourceExhaustedException] if no native wrapper function is
+  /// available.
+  ///
+  /// Wrapped Dart functions may only be used as a callback from native code
+  /// that has been invoked from Dart code. That is, the callback must not be
+  /// stored in native memory, and be used at a later time.
+  ///
+  /// Example:
+  ///
+  ///     int dartCallback1(int x) {
+  ///       print("callback from native with: $x");
+  ///       return x + 1;
+  ///     }
+  ///
+  ///     main() {
+  ///       var libPath = ForeignLibrary.bundleLibraryName('native_library');
+  ///       ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
+  ///       var trampoline = fl.lookup('trampoline1');
+  ///       // Invoke the native 'trampoline1' function and pass it the
+  ///       // wrapped Dart function. The trampoline function returns the result
+  ///       // of calling the given argument (see below).
+  ///       var foreign = new ForeignFunction.fromDart(dartCallback1);
+  ///       Expect.equals(2, trampoline.icall$2(foreign, 1));
+  ///       foreign.free();
+  ///     }
+  ///
+  /// The native function could be implemented as a C function, as follows:
+  ///
+  ///     typedef void* (*Arity1)(void* x);
+  ///
+  ///     __attribute__((visibility("default")))
+  ///     void* trampoline1(void* f, void* x) {
+  ///       return ((Arity1)f)(x);
+  ///     }
+  ForeignDartFunction(Function dartFunction, [errorReturnObject = -1])
+      : super.fromAddress(ForeignCallback.registerDartCallback(
+           dartFunction, errorReturnObject));
+
+  /// Frees the native wrapper function.
+  ///
+  /// This function must only be called for foreign functions that have been
+  /// allocated with [ForeignFunction.fromDart].
+  ///
+  /// It is an error to free the same wrapper function multiple times.
+  void free() {
+    if (_hasBeenFreed) {
+      throw new StateError("Foreign Dart function has already been freed.");
+    }
+    _hasBeenFreed = true;
+    ForeignCallback.freeFunctionPointer(address);
   }
 }
 

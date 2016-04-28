@@ -16,18 +16,6 @@
 #include "src/vm/mark_sweep.h"
 #include "src/vm/object.h"
 
-#ifdef DARTINO_TARGET_OS_LK
-#include "lib/page_alloc.h"
-#endif
-
-#ifdef DARTINO_TARGET_OS_CMSIS
-// TODO(sgjesse): Put this into an .h file
-#define PAGE_SIZE_SHIFT 12
-#define PAGE_SIZE (1 << PAGE_SIZE_SHIFT)
-extern "C" void* page_alloc(size_t pages);
-extern "C" void page_free(void* start, size_t pages);
-#endif
-
 namespace dartino {
 
 static Smi* chunk_end_sentinel() { return Smi::zero(); }
@@ -36,83 +24,148 @@ static bool HasSentinelAt(uword address) {
   return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
 }
 
+Chunk::Chunk(Space* owner, uword start, uword size, bool external)
+      : owner_(owner),
+        start_(start),
+        end_(start + size),
+        external_(external),
+        scavenge_pointer_(start_) {
+  if (GCMetadata::InMetadataRange(start)) {
+    GCMetadata::InitializeOverflowBitsForChunk(this);
+  }
+}
+
 Chunk::~Chunk() {
   // If the memory for this chunk is external we leave it alone
   // and let the embedder deallocate it.
   if (is_external()) return;
-#if defined(DARTINO_TARGET_OS_CMSIS) || defined(DARTINO_TARGET_OS_LK)
-  page_free(reinterpret_cast<void*>(base()), size() >> PAGE_SIZE_SHIFT);
-#elif defined(DARTINO_TARGET_OS_WIN)
-  _aligned_free(reinterpret_cast<void*>(base()));
-#else
-  free(reinterpret_cast<void*>(base()));
-#endif
+  GCMetadata::MarkPagesForChunk(this, kUnknownSpacePage);
+  Platform::FreePages(reinterpret_cast<void*>(start_), size());
 }
 
-Space::~Space() { FreeAllChunks(); }
+Space::~Space() {
+  WeakPointer::ForceCallbacks(&weak_pointers_);
+  FreeAllChunks();
+}
 
 void Space::FreeAllChunks() {
-  Chunk* current = first();
-  while (current != NULL) {
-    Chunk* next = current->next();
+  for (auto it = chunk_list_.Begin(); it != chunk_list_.End();) {
+    Chunk* current = *it;
+    it = chunk_list_.Erase(it);
     ObjectMemory::FreeChunk(current);
-    current = next;
   }
+  top_ = limit_ = 0;
 }
 
-int Space::Size() {
-  int result = 0;
-  Chunk* chunk = first();
-  while (chunk != NULL) {
-    result += chunk->size();
-    chunk = chunk->next();
-  }
+uword Space::Size() {
+  uword result = 0;
+  for (auto chunk : chunk_list_) result += chunk->size();
   ASSERT(Used() <= result);
   return result;
 }
 
 word Space::OffsetOf(HeapObject* object) {
   uword address = object->address();
-  uword base = first()->base();
+  uword start = chunk_list_.First()->start();
 
   // Make sure the space consists of exactly one chunk!
-  ASSERT(first() == last());
-  ASSERT(first()->Includes(address));
-  ASSERT(base <= address);
+  ASSERT(chunk_list_.First() == chunk_list_.Last());
+  ASSERT(chunk_list_.First()->Includes(address));
+  ASSERT(start <= address);
 
-  return address - base;
+  return address - start;
 }
 
-void Space::AdjustAllocationBudget(int used_outside_space) {
-  int used = Used() + used_outside_space;
-  allocation_budget_ = Utils::Maximum(DefaultChunkSize(used), used);
+HeapObject *Space::ObjectAtOffset(word offset) {
+  uword start = chunk_list_.First()->start();
+  uword address = offset + start;
+
+  // Make sure the space consists of exactly one chunk!
+  ASSERT(chunk_list_.First() == chunk_list_.Last());
+
+  ASSERT(chunk_list_.First()->Includes(address));
+  ASSERT(start <= address);
+
+  return HeapObject::FromAddress(address);
 }
 
-void Space::IncreaseAllocationBudget(int size) { allocation_budget_ += size; }
+void Space::AdjustAllocationBudget(uword used_outside_space) {
+  uword used = Used() + used_outside_space;
+  allocation_budget_ = Utils::Maximum(static_cast<word>(DefaultChunkSize(used)),
+                                      static_cast<word>(used));
+}
 
-void Space::DecreaseAllocationBudget(int size) { allocation_budget_ -= size; }
+void Space::IncreaseAllocationBudget(uword size) { allocation_budget_ += size; }
 
-void Space::SetAllocationBudget(int new_budget) {
-  allocation_budget_ = Utils::Maximum(DefaultChunkSize(new_budget), new_budget);
+void Space::DecreaseAllocationBudget(uword size) { allocation_budget_ -= size; }
+
+void Space::SetAllocationBudget(word new_budget) {
+  allocation_budget_ = Utils::Maximum(
+      static_cast<word>(DefaultChunkSize(new_budget)), new_budget);
+}
+
+void Space::IterateOverflowedObjects(PointerVisitor* visitor,
+                                     MarkingStack* stack) {
+  static_assert(
+      Platform::kPageSize % (1 << GCMetadata::kCardSizeInBitsLog2) == 0,
+      "MarkStackOverflowBytesMustCoverAFractionOfAPage");
+
+  for (auto chunk : chunk_list_) {
+    uint8* bits = GCMetadata::OverflowBitsFor(chunk->start());
+    uint8* bits_limit = GCMetadata::OverflowBitsFor(chunk->end());
+    uword card = chunk->start();
+    for (; bits < bits_limit; bits++) {
+      for (int i = 0; i < 8; i++, card += GCMetadata::kCardSize) {
+        // Skip cards 8 at a time if they are clear.
+        if (*bits == 0) {
+          card += GCMetadata::kCardSize * (8 - i);
+          break;
+        }
+        if ((*bits & (1 << i)) != 0) {
+          // Clear the bit immediately, since the mark stack could overflow and
+          // a different object in this card could fail to push, setting the
+          // bit again.
+          *bits &= ~(1 << i);
+          uint8 start = *GCMetadata::StartsFor(card);
+          ASSERT(start != GCMetadata::kNoObjectStart);
+          uword object_address = (card | start);
+          for (HeapObject* object;
+               object_address < card + GCMetadata::kCardSize &&
+               !HasSentinelAt(object_address);
+               object_address += object->Size()) {
+            object = HeapObject::FromAddress(object_address);
+            if (GCMetadata::IsGrey(object)) {
+              GCMetadata::MarkAll(object, object->Size());
+              object->IteratePointers(visitor);
+            }
+          }
+        }
+      }
+      stack->Empty(visitor);
+    }
+  }
 }
 
 void Space::IterateObjects(HeapObjectVisitor* visitor) {
   if (is_empty()) return;
   Flush();
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword current = chunk->base();
+  for (auto chunk : chunk_list_) {
+    visitor->ChunkStart(chunk);
+    uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
-      current += visitor->Visit(object);
+      word size = visitor->Visit(object);
+      ASSERT(size > 0);
+      current += size;
     }
-    visitor->ChunkEnd(current);
+    visitor->ChunkEnd(chunk, current);
   }
 }
 
 void SemiSpace::CompleteScavenge(PointerVisitor* visitor) {
   Flush();
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword current = chunk->base();
+  for (auto chunk : chunk_list_) {
+    uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
       object->IteratePointers(visitor);
@@ -122,18 +175,27 @@ void SemiSpace::CompleteScavenge(PointerVisitor* visitor) {
   }
 }
 
+void SemiSpace::ClearMarkBits() {
+  Flush();
+  for (auto chunk : chunk_list_) GCMetadata::ClearMarkBitsFor(chunk);
+}
+
+bool Space::Includes(uword address) {
+  for (auto chunk : chunk_list_)
+    if (chunk->Includes(address)) return true;
+  return false;
+}
+
 #ifdef DEBUG
 void Space::Find(uword w, const char* name) {
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    chunk->Find(w, name);
-  }
+  for (auto chunk : chunk_list_) chunk->Find(w, name);
 }
 #endif
 
 void Space::CompleteTransformations(PointerVisitor* visitor) {
   Flush();
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword current = chunk->base();
+  for (auto chunk : chunk_list_) {
+    uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
       if (object->HasForwardingAddress()) {
@@ -147,63 +209,30 @@ void Space::CompleteTransformations(PointerVisitor* visitor) {
   }
 }
 
-void PageDirectory::Clear() {
-  memset(&tables_, 0, kPointerSize * ARRAY_SIZE(tables_));
-}
-
-void PageDirectory::Delete() {
-  for (unsigned i = 0; i < ARRAY_SIZE(tables_); i++) {
-    delete tables_[i];
-  }
-  Clear();
-}
-
-Mutex* ObjectMemory::mutex_;
-#ifdef DARTINO32
-PageDirectory ObjectMemory::page_directory_;
-#else
-PageDirectory* ObjectMemory::page_directories_[1 << 13];
-#endif
 Atomic<uword> ObjectMemory::allocated_;
 
 void ObjectMemory::Setup() {
-  mutex_ = Platform::CreateMutex();
   allocated_ = 0;
-#ifdef DARTINO32
-  page_directory_.Clear();
-#else
-  memset(&page_directories_, 0, kPointerSize * ARRAY_SIZE(page_directories_));
-#endif
+  GCMetadata::Setup();
 }
 
 void ObjectMemory::TearDown() {
-#ifdef DARTINO32
-  page_directory_.Delete();
-#else
-  for (unsigned i = 0; i < ARRAY_SIZE(page_directories_); i++) {
-    PageDirectory* directory = page_directories_[i];
-    if (directory == NULL) continue;
-    directory->Delete();
-    page_directories_[i] = NULL;
-    delete directory;
-  }
-#endif
-  delete mutex_;
+  GCMetadata::TearDown();
 }
 
 #ifdef DEBUG
 void Chunk::Scramble() {
-  void* p = reinterpret_cast<void*>(base());
-  memset(p, 0xab, limit() - base());
+  void* p = reinterpret_cast<void*>(start_);
+  memset(p, 0xab, size());
 }
 
 void Chunk::Find(uword word, const char* name) {
-  if (word >= base() && word < limit()) {
+  if (word >= start_ && word < end_) {
     fprintf(stderr, "0x%08zx is inside the 0x%08zx-0x%08zx chunk in %s\n",
-            static_cast<size_t>(word), static_cast<size_t>(base()),
-            static_cast<size_t>(limit()), name);
+            static_cast<size_t>(word), static_cast<size_t>(start_),
+            static_cast<size_t>(end_), name);
   }
-  for (uword current = base(); current < limit(); current += 4) {
+  for (uword current = start_; current < end_; current += 4) {
     if (*reinterpret_cast<unsigned*>(current) == (unsigned)word) {
       fprintf(stderr, "Found 0x%08zx in %s at 0x%08zx\n",
               static_cast<size_t>(word), name, static_cast<size_t>(current));
@@ -212,48 +241,42 @@ void Chunk::Find(uword word, const char* name) {
 }
 #endif
 
-Chunk* ObjectMemory::AllocateChunk(Space* owner, int size) {
+Chunk* ObjectMemory::AllocateChunk(Space* owner, uword size) {
   ASSERT(owner != NULL);
 
-  size = Utils::RoundUp(size, kPageSize);
-  void* memory;
-#if defined(__ANDROID__)
-  // posix_memalign doesn't exist on Android. We fallback to
-  // memalign.
-  memory = memalign(kPageSize, size);
-#elif defined(DARTINO_TARGET_OS_WIN)
-  memory = _aligned_malloc(size, kPageSize);
-#elif defined(DARTINO_TARGET_OS_LK) || defined(DARTINO_TARGET_OS_CMSIS)
-  size = Utils::RoundUp(size, PAGE_SIZE);
-  memory = page_alloc(size >> PAGE_SIZE_SHIFT);
-#else
-  if (posix_memalign(&memory, kPageSize, size) != 0) return NULL;
-#endif
+  size = Utils::RoundUp(size, Platform::kPageSize);
+  void* memory =
+      Platform::AllocatePages(size, GCMetadata::heap_allocation_arena());
+  uword lowest = GCMetadata::lowest_old_space_address();
+  USE(lowest);
   if (memory == NULL) return NULL;
+  ASSERT(reinterpret_cast<uword>(memory) >= lowest);
+  ASSERT(reinterpret_cast<uword>(memory) - lowest + size <=
+         GCMetadata::heap_extent());
 
   uword base = reinterpret_cast<uword>(memory);
   Chunk* chunk = new Chunk(owner, base, size);
 
-  ASSERT(base == Utils::RoundUp(base, kPageSize));
-  ASSERT(size == Utils::RoundUp(size, kPageSize));
+  ASSERT(base == Utils::RoundUp(base, Platform::kPageSize));
+  ASSERT(size == Utils::RoundUp(size, Platform::kPageSize));
 
 #ifdef DEBUG
   chunk->Scramble();
 #endif
-  SetSpaceForPages(chunk->base(), chunk->limit(), owner);
+  GCMetadata::MarkPagesForChunk(chunk, owner->page_type());
   allocated_ += size;
   return chunk;
 }
 
-Chunk* ObjectMemory::CreateFlashChunk(Space* owner, void* memory, int size) {
+Chunk* ObjectMemory::CreateFixedChunk(Space* owner, void* memory, uword size) {
   ASSERT(owner != NULL);
-  ASSERT(size == Utils::RoundUp(size, kPageSize));
+  ASSERT(size == Utils::RoundUp(size, Platform::kPageSize));
 
   uword base = reinterpret_cast<uword>(memory);
-  ASSERT(base % kPageSize == 0);
+  ASSERT(base % Platform::kPageSize == 0);
 
   Chunk* chunk = new Chunk(owner, base, size, true);
-  SetSpaceForPages(chunk->base(), chunk->limit(), owner);
+  GCMetadata::MarkPagesForChunk(chunk, owner->page_type());
   return chunk;
 }
 
@@ -262,63 +285,15 @@ void ObjectMemory::FreeChunk(Chunk* chunk) {
   // Do not touch external memory. It might be read-only.
   if (!chunk->is_external()) chunk->Scramble();
 #endif
-  SetSpaceForPages(chunk->base(), chunk->limit(), NULL);
   allocated_ -= chunk->size();
   delete chunk;
 }
 
-bool ObjectMemory::IsAddressInSpace(uword address, const Space* space) {
-  PageTable* table = GetPageTable(address);
-  return (table != NULL) ? table->Get((address >> 12) & 0x3ff) == space : false;
-}
-
-PageTable* ObjectMemory::GetPageTable(uword address) {
-#ifdef DARTINO32
-  return page_directory_.Get(address >> 22);
-#else
-  PageDirectory* directory = page_directories_[address >> 35];
-  if (directory == NULL) return NULL;
-  return directory->Get((address >> 22) & 0x1fff);
-#endif
-}
-
-void ObjectMemory::SetPageTable(uword address, PageTable* table) {
-#ifdef DARTINO32
-  page_directory_.Set(address >> 22, table);
-#else
-  int index = address >> 35;
-  PageDirectory* directory = page_directories_[index];
-  if (directory == NULL) {
-    page_directories_[index] = directory = new PageDirectory();
-    directory->Clear();
-  }
-  return directory->Set((address >> 22) & 0x1fff, table);
-#endif
-}
-
-void ObjectMemory::SetSpaceForPages(uword base, uword limit, Space* space) {
-  ASSERT(Utils::IsAligned(base, kPageSize));
-  ASSERT(Utils::IsAligned(limit, kPageSize));
-  for (uword address = base; address < limit; address += kPageSize) {
-    PageTable* table = GetPageTable(address);
-    if (table == NULL) {
-      ASSERT(space != NULL);
-      ScopedLock scope(mutex_);
-      // Fetch the table again while locked to make sure only one thread
-      // gets to initialize the directory entry.
-      table = GetPageTable(address);
-      if (table == NULL) {
-        SetPageTable(address, table = new PageTable(address & ~0x3fffff));
-      }
-    }
-    table->Set((address >> 12) & 0x3ff, space);
-  }
-}
-
+// Put free-list entries on the objects that are now dead.
 void OldSpace::RebuildAfterTransformations() {
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
+  for (auto chunk : chunk_list_) {
     uword free_start = 0;
-    uword current = chunk->base();
+    uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
       if (object->HasForwardingAddress()) {
@@ -338,9 +313,10 @@ void OldSpace::RebuildAfterTransformations() {
   }
 }
 
+// Put one-word-fillers on the dead objects so it is still iterable.
 void SemiSpace::RebuildAfterTransformations() {
-  for (Chunk* chunk = first(); chunk != NULL; chunk = chunk->next()) {
-    uword current = chunk->base();
+  for (auto chunk : chunk_list_) {
+    uword current = chunk->start();
     while (!HasSentinelAt(current)) {
       HeapObject* object = HeapObject::FromAddress(current);
       if (object->HasForwardingAddress()) {
@@ -355,5 +331,13 @@ void SemiSpace::RebuildAfterTransformations() {
     }
   }
 }
+
+#ifdef DEBUG
+NoAllocationScope::NoAllocationScope(Heap* heap) : heap_(heap) {
+  heap->IncrementNoAllocation();
+}
+
+NoAllocationScope::~NoAllocationScope() { heap_->DecrementNoAllocation(); }
+#endif
 
 }  // namespace dartino

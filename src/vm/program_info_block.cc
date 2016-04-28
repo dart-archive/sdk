@@ -57,17 +57,22 @@ class PointerWritingVisitor : public PointerVisitor {
 };
 
 ProgramInfoBlock::ProgramInfoBlock()
-    : entry_(NULL)
+    : magic_(kProgramInfoMagic),
+      entry_(NULL)
 #define CONSTRUCTOR_NULL(type, name, CamelName) , name##_(NULL)
-      ROOTS_DO(CONSTRUCTOR_NULL)
+          ROOTS_DO(CONSTRUCTOR_NULL)
 #undef CONSTRUCTOR_NULL
-          {
+{
 #define CONSTRUCTOR_USE(type, name, CamelName) USE(name##_);
   ROOTS_DO(CONSTRUCTOR_USE)
 #undef CONSTRUCTOR_USE
 }
 
 void ProgramInfoBlock::PopulateFromProgram(Program* program) {
+  // We set the magic here, too, as we might not use the constructor
+  // to build an instance.
+  magic_ = kProgramInfoMagic;
+  snapshot_hash_ = program->snapshot_hash();
   ASSERT(program->session() == NULL);
   PointerReadingVisitor reader(this);
   program->IterateRoots(&reader);
@@ -75,6 +80,8 @@ void ProgramInfoBlock::PopulateFromProgram(Program* program) {
 
 void ProgramInfoBlock::WriteToProgram(Program* program) {
   ASSERT(program->session() == NULL);
+  ASSERT(magic_ == kProgramInfoMagic);
+  program->set_snapshot_hash(snapshot_hash_);
   PointerWritingVisitor writer(this);
   program->IterateRoots(&writer);
 }

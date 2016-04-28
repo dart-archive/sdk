@@ -8,6 +8,7 @@ import 'package:compiler/src/resolution/semantic_visitor.dart';
 
 import 'package:compiler/src/resolution/operators.dart' show
     AssignmentOperator,
+    AssignmentOperatorKind,
     BinaryOperator,
     IncDecOperator,
     UnaryOperator;
@@ -17,8 +18,7 @@ import 'package:compiler/src/constants/expressions.dart' show
     IntFromEnvironmentConstantExpression,
     StringFromEnvironmentConstantExpression,
     ConstantExpression,
-    ConstructedConstantExpression,
-    TypeConstantExpression;
+    ConstructedConstantExpression;
 
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
@@ -29,8 +29,6 @@ import 'package:compiler/src/util/util.dart' show
 import 'package:compiler/src/common/names.dart' show
     Names,
     Selectors;
-
-import 'package:compiler/src/universe/use.dart' show DynamicUse, StaticUse;
 
 import 'package:compiler/src/elements/elements.dart';
 import 'package:compiler/src/tree/tree.dart';
@@ -47,7 +45,6 @@ import 'dartino_context.dart';
 import 'dartino_backend.dart';
 
 import 'dartino_constants.dart' show
-    DartinoClassConstant,
     DartinoClassInstanceConstant;
 
 import 'dartino_function_builder.dart' show
@@ -79,7 +76,14 @@ import 'package:compiler/src/diagnostics/messages.dart' show
     MessageKind;
 
 import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
+    ConstantValue,
+    ConstructedConstantValue;
+
+import 'dartino_system_base.dart' show
+    DartinoSystemBase;
+
+import 'dartino_system_builder.dart' show
+    DartinoSystemBuilder;
 
 enum VisitState {
   Value,
@@ -237,8 +241,7 @@ abstract class CodegenVisitor
          ConstructorBulkMixin,
          InitializerBulkMixin,
          BaseImplementationOfStaticsMixin,
-         BaseImplementationOfLocalsMixin,
-         SetIfNullBulkMixin
+         BaseImplementationOfLocalsMixin
     implements SemanticSendVisitor, SemanticDeclarationVisitor {
   // A literal int can have up to 31 bits of information (32 minus sign).
   static const int LITERAL_INT_MAX = 0x3FFFFFFF;
@@ -294,42 +297,47 @@ abstract class CodegenVisitor
   SemanticSendVisitor get sendVisitor => this;
   SemanticDeclarationVisitor get declVisitor => this;
 
+  DartinoSystemBase get systemBase;
+
   void compile();
 
-  ConstantExpression compileConstant(
+  ConstantValue evaluateAndUseConstant(
       Node node,
       {TreeElements elements,
        bool isConst}) {
-    if (elements == null) elements = this.elements;
-    return context.compileConstant(node, elements, isConst: isConst);
+    ConstantValue value =
+        inspectConstant(node, elements: elements, isConst: isConst);
+    if (value == null) return null;
+    markConstantUsed(value);
+    return value;
   }
 
-  ConstantExpression inspectConstant(
+  ConstantValue inspectConstant(
       Node node,
       {TreeElements elements,
        bool isConst}) {
+    assert(isConst != null);
     if (elements == null) elements = this.elements;
-    return context.inspectConstant(node, elements, isConst: isConst);
+    ConstantExpression expression =
+        context.compiler.resolver.constantCompiler.compileNode(
+            node, elements, enforceConst: isConst);
+    if (expression == null) return null;
+    return context.getConstantValue(expression);
   }
 
   bool isConstNull(Node node) {
-    ConstantExpression expression = inspectConstant(node, isConst: false);
-    if (expression == null) return false;
-    return context.getConstantValue(expression).isNull;
+    ConstantValue value = inspectConstant(node, isConst: false);
+    return value == null ? false : value.isNull;
   }
 
   int allocateConstantFromNode(Node node, {TreeElements elements}) {
-    ConstantExpression expression = compileConstant(
-        node,
-        elements: elements,
-        isConst: false);
     return functionBuilder.allocateConstant(
-        context.getConstantValue(expression));
+        evaluateAndUseConstant(node, elements: elements, isConst: false));
   }
 
   int allocateConstantClassInstance(int classId) {
     var constant = new DartinoClassInstanceConstant(classId);
-    context.markConstantUsed(constant);
+    markConstantUsed(constant);
     return functionBuilder.allocateConstant(constant);
   }
 
@@ -370,10 +378,12 @@ abstract class CodegenVisitor
       // If the parameter has an initializer expression, we ask the context
       // to compile it right away to make sure we enqueue all dependent
       // elements correctly before we start assembling the program.
-      context.compileConstant(
-            initializer,
-            parameter.memberContext.resolvedAst.elements,
-            isConst: true);
+
+      // TODO(ahe): We don't need to do this because parameter stubs also
+      // register actually used constants.
+      evaluateAndUseConstant(
+          initializer, elements: parameter.memberContext.resolvedAst.elements,
+          isConst: true);
     }
 
     if (closureEnvironment.shouldBeBoxed(parameter)) {
@@ -396,9 +406,9 @@ abstract class CodegenVisitor
     scope.remove(local);
   }
 
-  void registerDynamicUse(Selector selector);
+  void registerDynamicSelector(Selector selector);
 
-  void registerStaticUse(StaticUse use);
+  void registerStaticInvocation(FunctionElement function);
 
   void registerInstantiatedClass(ClassElement klass);
 
@@ -417,27 +427,33 @@ abstract class CodegenVisitor
       FunctionElement function,
       ClosureInfo info);
 
+  void markConstantUsed(ConstantValue constant);
+
+  DartinoFunctionBase getParameterStub(
+      DartinoFunctionBase function,
+      Selector selector);
+
   void invokeMethod(Node node, Selector selector) {
-    registerDynamicUse(selector);
-    String symbol = context.getSymbolFromSelector(selector);
-    int id = context.getSymbolId(symbol);
+    registerDynamicSelector(selector);
+    String symbol = systemBase.getSymbolFromSelector(selector);
+    int id = systemBase.getSymbolId(symbol);
     int arity = selector.argumentCount;
     int dartinoSelector = DartinoSelector.encodeMethod(id, arity);
     assembler.invokeMethod(dartinoSelector, arity, selector.name);
   }
 
   void invokeGetter(Node node, Name name) {
-    registerDynamicUse(new Selector.getter(name));
-    String symbol = context.mangleName(name);
-    int id = context.getSymbolId(symbol);
+    registerDynamicSelector(new Selector.getter(name));
+    String symbol = systemBase.mangleName(name);
+    int id = systemBase.getSymbolId(symbol);
     int dartinoSelector = DartinoSelector.encodeGetter(id);
     assembler.invokeMethod(dartinoSelector, 0);
   }
 
   void invokeSetter(Node node, Name name) {
-    registerDynamicUse(new Selector.setter(name));
-    String symbol = context.mangleName(name);
-    int id = context.getSymbolId(symbol);
+    registerDynamicSelector(new Selector.setter(name));
+    String symbol = systemBase.mangleName(name);
+    int id = systemBase.getSymbolId(symbol);
     int dartinoSelector = DartinoSelector.encodeSetter(id);
     assembler.invokeMethod(dartinoSelector, 1);
   }
@@ -482,8 +498,7 @@ abstract class CodegenVisitor
   }
 
   DartinoFunctionBase requireFunction(FunctionElement element) {
-    // TODO(johnniwinther): More precise use.
-    registerStaticUse(new StaticUse.foreignUse(element));
+    registerStaticInvocation(element);
     return context.backend.getFunctionForElement(element);
   }
 
@@ -491,7 +506,7 @@ abstract class CodegenVisitor
       ConstructorElement constructor) {
     assert(constructor.isGenerativeConstructor);
     registerInstantiatedClass(constructor.enclosingClass);
-    registerStaticUse(new StaticUse.foreignUse(constructor));
+    registerStaticInvocation(constructor);
     return context.backend.getConstructorInitializerFunction(constructor);
   }
 
@@ -511,9 +526,8 @@ abstract class CodegenVisitor
         functionId = function.functionId;
       } else if (callStructure.signatureApplies(signature)) {
         // TODO(ajohnsen): Inline parameter stub?
-        DartinoFunctionBase stub = context.backend.createParameterStub(
-            function,
-            callStructure.callSelector);
+        DartinoFunctionBase stub =
+            getParameterStub(function, callStructure.callSelector);
         functionId = stub.functionId;
       } else {
         doUnresolved(function.name);
@@ -541,6 +555,11 @@ abstract class CodegenVisitor
   }
 
   void loadThis() {
+    if (thisValue == null) {
+      // If this happens, most probably the closure environment has not been
+      // created correctly.
+      internalError(null, "Failed to look up 'this'");
+    }
     thisValue.load(assembler);
   }
 
@@ -942,7 +961,7 @@ abstract class CodegenVisitor
       // the actual argument types.
       TypedefType typedefType = type;
       int arity = typedefType.element.functionSignature.parameterCount;
-      int dartinoSelector = context.toDartinoIsSelector(
+      int dartinoSelector = systemBase.toDartinoIsSelector(
           context.backend.compiler.coreClasses.functionClass, arity);
       assembler.invokeTest(dartinoSelector, 0);
       return;
@@ -956,7 +975,7 @@ abstract class CodegenVisitor
     }
 
     Element element = type.element;
-    int dartinoSelector = context.toDartinoIsSelector(element);
+    int dartinoSelector = systemBase.toDartinoIsSelector(element);
     assembler.invokeTest(dartinoSelector, 0);
   }
 
@@ -1019,25 +1038,30 @@ abstract class CodegenVisitor
     generateIdentical(node);
   }
 
-  void handleStaticFunctionGet(
-      Send node,
-      MethodElement function,
-      _) {
+  void doStaticFunctionGet(Send node, MethodElement function) {
     registerClosurization(function, ClosureKind.tearOff);
     DartinoFunctionBase target = requireFunction(function);
     DartinoClassBase classBase = context.backend.getTearoffClass(target);
     assert(classBase.fieldCount == 0);
     int constId = allocateConstantClassInstance(classBase.classId);
     assembler.loadConst(constId);
+  }
+
+  void handleStaticFunctionGet(
+      Send node,
+      MethodElement function,
+      _) {
+    doStaticFunctionGet(node, function);
     applyVisitState();
   }
 
   void doMainCall(Send node, NodeList arguments) {
     FunctionElement function = context.compiler.mainFunction;
     if (function.isMalformed) {
-      DiagnosticMessage message =
+      List<DiagnosticMessage> messages =
           context.compiler.elementsWithCompileTimeErrors[function];
-      if (message == null) {
+      DiagnosticMessage message;
+      if (messages == null) {
         // TODO(johnniwinther): The error should always be associated with the
         // element.
         // Example triggering this:
@@ -1047,6 +1071,8 @@ abstract class CodegenVisitor
         // ```
         message = context.compiler.reporter.createMessage(
             function, MessageKind.GENERIC, {'text': 'main is malformed.'});
+      } else {
+        message = messages.first;
       }
       doCompileError(message);
       return;
@@ -1121,7 +1147,7 @@ abstract class CodegenVisitor
   }
 
   void doSuperCall(Node node, FunctionElement function) {
-    registerStaticUse(new StaticUse.foreignUse(function));
+    registerStaticInvocation(function);
     int arity = function.functionSignature.parameterCount + 1;
     DartinoFunctionBase base = requireFunction(function);
     int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
@@ -1137,10 +1163,9 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void visitSuperMethodGet(
+  void doSuperMethodGet(
       Send node,
-      MethodElement method,
-      _) {
+      MethodElement method) {
     registerClosurization(method, ClosureKind.superTearOff);
     loadThis();
     DartinoFunctionBase target = requireFunction(method);
@@ -1148,6 +1173,13 @@ abstract class CodegenVisitor
     assert(classBase.fieldCount == 1);
     int constId = functionBuilder.allocateConstantFromClass(classBase.classId);
     assembler.allocate(constId, classBase.fieldCount);
+  }
+
+  void visitSuperMethodGet(
+      Send node,
+      MethodElement method,
+      _) {
+    doSuperMethodGet(node, method);
     applyVisitState();
   }
 
@@ -1280,9 +1312,7 @@ abstract class CodegenVisitor
     do {
       // We need to find the mixin application of the class, where the field
       // is stored. Iterate until it's found.
-      classBuilder =
-          context.backend.systemBuilder.getClassBuilder(classElement,
-                                                        context.backend);
+      classBuilder = systemBase.getClassBuilder(classElement);
       classElement = classElement.implementation;
       int i = 0;
       classElement.forEachInstanceField((_, FieldElement member) {
@@ -1552,9 +1582,8 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void doStaticFieldSet(
-      FieldElement field) {
-    int index = context.getStaticFieldIndex(field, element);
+  void doStaticFieldSet(FieldElement field) {
+    int index = systemBase.getStaticFieldIndex(field, element);
     assembler.storeStatic(index);
   }
 
@@ -1611,10 +1640,8 @@ abstract class CodegenVisitor
   }
 
   void visitLiteralBool(LiteralBool node) {
-    var expression = compileConstant(node, isConst: false);
-    bool isTrue = expression != null &&
-        context.getConstantValue(expression).isTrue;
-
+    ConstantValue value = evaluateAndUseConstant(node, isConst: false);
+    bool isTrue = value != null ? value.isTrue : false;
     if (visitState == VisitState.Value) {
       if (isTrue) {
         assembler.loadLiteralTrue();
@@ -1751,16 +1778,25 @@ abstract class CodegenVisitor
     node.expression.accept(this);
   }
 
-  void visitLocalFunctionGet(Send node, LocalFunctionElement function, _) {
+  void doLocalFunctionGet(Send node, LocalFunctionElement function) {
     registerClosurization(function, ClosureKind.localFunction);
-    handleLocalGet(node, function, _);
+    doLocalGet(function);
+  }
+
+  void visitLocalFunctionGet(Send node, LocalFunctionElement function, _) {
+    doLocalFunctionGet(node, function);
+    applyVisitState();
+  }
+
+  void doLocalGet(LocalElement element) {
+    scope[element].load(assembler);
   }
 
   void handleLocalGet(
       Send node,
       LocalElement element,
       _) {
-    scope[element].load(assembler);
+    doLocalGet(element);
     applyVisitState();
   }
 
@@ -2229,7 +2265,7 @@ abstract class CodegenVisitor
 
   void doConstConstructorInvoke(ConstantExpression constant) {
     var value = context.getConstantValue(constant);
-    context.markConstantUsed(value);
+    markConstantUsed(value);
     int constId = functionBuilder.allocateConstant(value);
     assembler.loadConst(constId);
   }
@@ -2451,15 +2487,19 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
+  void doStaticSetterSet(Send node, FunctionElement setter, Node rhs) {
+    visitForValue(rhs);
+    DartinoFunctionBase base = requireFunction(setter);
+    int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
+    invokeStatic(node, constId, 1);
+  }
+
   void handleStaticSetterSet(
       Send node,
       FunctionElement setter,
       Node rhs,
       _) {
-    visitForValue(rhs);
-    DartinoFunctionBase base = requireFunction(setter);
-    int constId = functionBuilder.allocateConstantFromFunction(base.functionId);
-    invokeStatic(node, constId, 1);
+    doStaticSetterSet(node, setter, rhs);
     applyVisitState();
   }
 
@@ -2684,13 +2724,13 @@ abstract class CodegenVisitor
   }
 
   void visitIf(If node) {
-    ConstantExpression conditionConstant =
+    ConstantValue conditionValue =
         inspectConstant(node.condition, isConst: false);
 
-    if (conditionConstant != null) {
+    if (conditionValue != null) {
       BytecodeLabel end = new BytecodeLabel();
       jumpInfo[node] = new JumpInfo(assembler.stackSize, null, end);
-      if (context.getConstantValue(conditionConstant).isTrue) {
+      if (conditionValue.isTrue) {
         doScopedStatement(node.thenPart);
       } else if (node.hasElsePart) {
         doScopedStatement(node.elsePart);
@@ -3061,7 +3101,7 @@ abstract class CodegenVisitor
   void doUnresolved(String name) {
     var constString = context.backend.constantSystem.createString(
         new DartString.literal(name));
-    context.markConstantUsed(constString);
+    markConstantUsed(constString);
     assembler.loadConst(functionBuilder.allocateConstant(constString));
     FunctionElement function = context.backend.dartinoUnresolved;
     DartinoFunctionBase base = requireFunction(function);
@@ -3070,10 +3110,10 @@ abstract class CodegenVisitor
   }
 
   bool checkCompileError(Element element) {
-    DiagnosticMessage message =
+    List<DiagnosticMessage> messages =
         context.compiler.elementsWithCompileTimeErrors[element];
-    if (message != null) {
-      doCompileError(message);
+    if (messages != null) {
+      doCompileError(messages.first);
       return true;
     }
     return false;
@@ -3093,7 +3133,7 @@ abstract class CodegenVisitor
         context.backend.constantSystem.createString(
             new DartString.literal(errorString));
     int messageConstId = functionBuilder.allocateConstant(stringConstant);
-    context.markConstantUsed(stringConstant);
+    markConstantUsed(stringConstant);
     assembler.loadConst(messageConstId);
     registerInstantiatedClass(context.backend.stringImplementation);
     assembler.invokeStatic(constId, 1);
@@ -3144,11 +3184,14 @@ abstract class CodegenVisitor
     context.compiler.reporter.internalError(spannable, reason);
   }
 
+  void reportUnimplementedError(Spannable spannable, String reason);
+
   void generateUnimplementedError(Spannable spannable, String reason) {
-    context.backend.generateUnimplementedError(
-        spannable,
-        reason,
-        functionBuilder);
+    var constString = context.backend.constantSystem.createString(
+        new DartString.literal(reason));
+    markConstantUsed(constString);
+    assembler.loadConst(functionBuilder.allocateConstant(constString));
+    assembler.emitThrow();
   }
 
   String toString() => "FunctionCompiler(${element.name})";
@@ -3213,10 +3256,550 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  @override
-  void bulkHandleSetIfNull(Node node, _) {
+  /// Generates code that
+  /// - runs the code generated by [getLhs]. Let the top of stack be t.
+  /// - Compares t to null.
+  ///   - If t is different from null, t is left on the stack.
+  /// - If t is equal to null the code generated by [doSet] is run.
+  ///
+  /// [getLhs] can leave [valuesToPopIfNotNull] values on the stack for [doSet]
+  /// to consume under t. These will be removed if the t is different to null.
+  void doSetIfNull(void getLhs(), void doSet(), int valuesToPopIfNotNull) {
+    BytecodeLabel notNull = new BytecodeLabel();
+    BytecodeLabel end = new BytecodeLabel();
+    getLhs();
+    // We need a copy to return if it Lhs is not null.
+    assembler.dup();
+    assembler.loadLiteralNull();
+    assembler.identicalNonNumeric();
+    assembler.branchIfFalse(notNull);
+    // Pop the extra null left by the dup.
+    assembler.pop();
+    doSet();
+    if (valuesToPopIfNotNull != 0) {
+      assembler.branch(end);
+    }
+    assembler.bind(notNull);
+    if (valuesToPopIfNotNull != 0) {
+      assembler.applyStackSizeFix(valuesToPopIfNotNull);
+      assembler.storeLocal(valuesToPopIfNotNull);
+      assembler.popMany(valuesToPopIfNotNull);
+      assembler.bind(end);
+    }
+  }
+
+  void visitClassTypeLiteralSetIfNull(
+      Send node,
+      ConstantExpression constant,
+      Node rhs,
+      _) {
     generateUnimplementedError(
-        node, "[bulkHandleSetIfNull] isn't implemented.");
+        node, "[visitClassTypeLiteralGetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitDynamicPropertySetIfNull(
+      Send node,
+      Node receiver,
+      Name name,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      visitForValue(receiver);
+      assembler.dup();
+      invokeGetter(node, name);
+    }, () {
+      visitForValue(rhs);
+      invokeSetter(node, name);
+    }, 1);
+    applyVisitState();
+  }
+
+  void visitDynamicTypeLiteralSetIfNull(
+      Send node,
+      ConstantExpression constant,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[visitDynamicTypeLiteralSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void doFinalLocalSetIfNull(Send node, LocalElement element, Node rhs) {
+    doSetIfNull(() {
+      scope[element].load(assembler);
+    }, () {
+      visitForValue(rhs);
+      doUnresolved(element.name);
+      assembler.pop();
+    }, 0);
+  }
+
+  void visitFinalLocalVariableSetIfNull(
+      Send node,
+      LocalVariableElement variable,
+      Node rhs,
+      _) {
+    doFinalLocalSetIfNull(node, variable, rhs);
+    applyVisitState();
+  }
+
+  void visitFinalParameterSetIfNull(
+      Send node,
+      ParameterElement parameter,
+      Node rhs,
+      _) {
+    doFinalLocalSetIfNull(node, parameter, rhs);
+    applyVisitState();
+  }
+
+  void visitFinalStaticFieldSetIfNull(
+      Send node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[visitFinalStaticFieldSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitFinalSuperFieldSetIfNull(
+      Send node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[visitFinalSuperFieldSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitFinalTopLevelFieldSetIfNull(
+      Send node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[visitFinalTopLevelFieldSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitIfNotNullDynamicPropertySetIfNull(
+      Send node,
+      Node receiver,
+      Name name,
+      Node rhs,
+      _) {
+    doIfNotNull(receiver, () {
+      doSetIfNull(() {
+        assembler.dup();
+        invokeGetter(node, name);
+      }, () {
+        visitForValue(rhs);
+        invokeSetter(node, name);
+      }, 1);
+    });
+    applyVisitState();
+  }
+
+  void visitLocalFunctionSetIfNull(
+      Send node,
+      LocalFunctionElement function,
+      Node rhs,
+      _) {
+    doLocalFunctionGet(node, function);
+    applyVisitState();
+  }
+
+  void visitLocalVariableSetIfNull(
+      Send node,
+      LocalVariableElement variable,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      scope[variable].load(assembler);
+    }, () {
+      visitForValue(rhs);
+      scope[variable].store(assembler);
+    }, 0);
+    applyVisitState();
+  }
+
+  void visitParameterSetIfNull(
+      Send node,
+      ParameterElement parameter,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      scope[parameter].load(assembler);
+    }, () {
+      visitForValue(rhs);
+      scope[parameter].store(assembler);
+    }, 0);
+    applyVisitState();
+  }
+
+  void visitStaticFieldSetIfNull(
+      Send node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      doStaticFieldGet(field);
+    }, () {
+      visitForValue(rhs);
+      doStaticFieldSet(field);
+    }, 0);
+    applyVisitState();
+  }
+
+  void visitStaticGetterSetterSetIfNull(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      doStaticGetterGet(node, getter);
+    }, () {
+      doStaticSetterSet(node, setter, rhs);
+    }, 0);
+    applyVisitState();
+  }
+
+  void visitStaticMethodSetIfNull(
+      Send node,
+      FunctionElement method,
+      Node rhs,
+      _) {
+    doStaticFunctionGet(node, method);
+    applyVisitState();
+  }
+
+  void visitStaticMethodSetterSetIfNull(
+      Send node,
+      MethodElement method,
+      MethodElement setter,
+      Node rhs,
+      _) {
+    doStaticFunctionGet(node, method);
+    applyVisitState();
+  }
+
+  void visitSuperFieldFieldSetIfNull(
+      Send node,
+      FieldElement readField,
+      FieldElement writtenField,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      loadThis();
+      assembler.dup();
+      assembler.loadField(computeFieldIndex(readField));
+    }, () {
+      visitForValue(rhs);
+      assembler.storeField(computeFieldIndex(writtenField));
+    }, 1);
+    applyVisitState();
+  }
+
+  void visitSuperFieldSetIfNull(
+      Send node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    int fieldIndex = computeFieldIndex(field);
+    doSetIfNull(() {
+      loadThis();
+      assembler.dup();
+      assembler.loadField(fieldIndex);
+    }, () {
+      visitForValue(rhs);
+      assembler.storeField(fieldIndex);
+    }, 1);
+    applyVisitState();
+  }
+
+  void visitSuperFieldSetterSetIfNull(
+      Send node,
+      FieldElement field,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      loadThis();
+      assembler.dup();
+      assembler.loadField(computeFieldIndex(field));
+    }, () {
+      visitForValue(rhs);
+      doSuperCall(node, setter);
+    }, 1);
+    applyVisitState();
+  }
+
+  void visitSuperGetterFieldSetIfNull(
+      Send node,
+      FunctionElement getter,
+      FieldElement field,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      loadThis();
+      assembler.dup();
+      doSuperCall(node, getter);
+    }, () {
+      visitForValue(rhs);
+      assembler.storeField(computeFieldIndex(field));
+    }, 1);
+    applyVisitState();
+  }
+
+  void visitSuperGetterSetterSetIfNull(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      loadThis();
+      assembler.dup();
+      doSuperCall(node, getter);
+    }, () {
+      visitForValue(rhs);
+      doSuperCall(node, setter);
+    }, 1);
+    applyVisitState();
+  }
+
+  void visitSuperMethodSetIfNull(
+      Send node,
+      FunctionElement method,
+      Node rhs,
+      _) {
+    doSuperMethodGet(node, method);
+    applyVisitState();
+  }
+
+  void visitSuperMethodSetterSetIfNull(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    doSuperMethodGet(node, method);
+    applyVisitState();
+  }
+
+  void visitThisPropertySetIfNull(
+      Send node,
+      Name name,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      loadThis();
+      assembler.dup();
+      invokeGetter(node, name);
+    }, () {
+      visitForValue(rhs);
+      invokeSetter(node, name);
+    }, 1);
+    applyVisitState();
+  }
+
+  void visitTopLevelFieldSetIfNull(
+      Send node,
+      FieldElement field,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      doStaticFieldGet(field);
+    }, () {
+      visitForValue(rhs);
+      doStaticFieldSet(field);
+    }, 0);
+    applyVisitState();
+  }
+
+  void visitTopLevelGetterSetterSetIfNull(
+      Send node,
+      FunctionElement getter,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      doStaticGetterGet(node, getter);
+    }, () {
+      doStaticSetterSet(node, setter, rhs);
+    }, 0);
+    applyVisitState();
+  }
+
+  void visitTopLevelMethodSetIfNull(
+      Send node,
+      FunctionElement method,
+      Node rhs,
+      _) {
+    doStaticFunctionGet(node, method);
+    applyVisitState();
+  }
+
+  void visitTopLevelMethodSetterSetIfNull(
+      Send node,
+      FunctionElement method,
+      FunctionElement setter,
+      Node rhs,
+      _) {
+    doStaticFunctionGet(node, method);
+    applyVisitState();
+  }
+
+  void visitTypeVariableTypeLiteralSetIfNull(
+      Send node,
+      TypeVariableElement element,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[visitTypeVariableTypeLiteralSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitTypedefTypeLiteralSetIfNull(
+      Send node,
+      ConstantExpression constant,
+      Node rhs,
+      _) {
+    generateUnimplementedError(
+        node, "[visitTypedefTypeLiteralSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitUnresolvedSetIfNull(
+      Send node,
+      Element element,
+      Node rhs,
+      _) {
+    visitForValue(node.receiver);
+    applyVisitState();
+  }
+
+  void visitUnresolvedStaticGetterSetIfNull(
+      Send node,
+      Element element,
+      MethodElement setter,
+      Node rhs,
+      _) {
+    visitForValue(node.receiver);
+    applyVisitState();
+  }
+
+  void visitUnresolvedStaticSetterSetIfNull(
+      Send node,
+      MethodElement getter,
+      Element element,
+      Node rhs,
+      _) {
+    visitForValue(node.receiver);
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperGetterSetIfNull(
+      Send node,
+      Element element,
+      MethodElement setter,
+      Node rhs,
+      _) {
+    visitForValue(node.receiver);
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperSetIfNull(
+      Send node,
+      Element element,
+      Node rhs,
+      _) {
+    visitForValue(node.receiver);
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperSetterSetIfNull(
+      Send node,
+      MethodElement getter,
+      Element element,
+      Node rhs,
+      _) {
+    visitForValue(node.receiver);
+    applyVisitState();
+  }
+
+  void visitUnresolvedTopLevelGetterSetIfNull(
+      Send node,
+      Element element,
+      MethodElement setter,
+      Node rhs,
+      _) {
+    visitForValue(node.receiver);
+    applyVisitState();
+  }
+
+  void visitUnresolvedTopLevelSetterSetIfNull(
+      Send node,
+      MethodElement getter,
+      Element element,
+      Node rhs,
+      _) {
+    visitForValue(node.receiver);
+    applyVisitState();
+  }
+
+  void visitIndexSetIfNotNull(Send node,
+      Node receiver,
+      Node index,
+      Node rhs,
+      _) {
+    doSetIfNull(() {
+      visitForValue(receiver);
+      visitForValue(index);
+      assembler.loadLocal(1);
+      assembler.loadLocal(1);
+      invokeMethod(node, new Selector.index());
+    }, () {
+      visitForValue(rhs);
+      invokeMethod(node, new Selector.indexSet());
+    }, 2);
+    applyVisitState();
+  }
+
+  void visitIndexSetIfNull(
+      SendSet node, Node receiver, Node index, Node rhs, _) {
+    generateUnimplementedError(
+        node, "[visitIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitSuperIndexSetIfNull(SendSet node, MethodElement getter,
+      MethodElement setter, Node index, Node rhs, _) {
+    generateUnimplementedError(
+        node, "[visitSuperIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperGetterIndexSetIfNull(Send node, Element element,
+      MethodElement setter, Node index, Node rhs, _){
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperGetterIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperSetterIndexSetIfNull(Send node, MethodElement getter,
+      Element element, Node index, Node rhs, _){
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperSetterIndexSetIfNull] isn't implemented.");
+    applyVisitState();
+  }
+
+  void visitUnresolvedSuperIndexSetIfNull(
+      Send node, Element element, Node index, Node rhs, _){
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperIndexSetIfNull] isn't implemented.");
     applyVisitState();
   }
 
@@ -3250,12 +3833,14 @@ abstract class DartinoRegistryMixin {
   DartinoRegistry get registry;
   DartinoContext get context;
 
-  void registerDynamicUse(Selector selector) {
-    registry.registerDynamicUse(selector);
+  DartinoSystemBuilder get systemBase => context.backend.systemBuilder;
+
+  void registerDynamicSelector(Selector selector) {
+    registry.registerDynamicSelector(selector);
   }
 
-  void registerStaticUse(StaticUse staticUse) {
-    registry.registerStaticUse(staticUse);
+  void registerStaticInvocation(FunctionElement function) {
+    registry.registerStaticInvocation(function);
   }
 
   void registerInstantiatedClass(ClassElement klass) {
@@ -3276,7 +3861,7 @@ abstract class DartinoRegistryMixin {
       // currently needed to ensure that local function expression closures are
       // compiled correctly. For example, `[() {}].last()`, notice that `last`
       // is a getter. This happens for both named and unnamed.
-      registerStaticUse(new StaticUse.foreignUse(element));
+      registerStaticInvocation(element);
     }
     registry.registerClosurization(element, kind);
   }
@@ -3289,11 +3874,39 @@ abstract class DartinoRegistryMixin {
       FunctionElement function,
       ClosureInfo info) {
     DartinoFunctionBuilder closureFunctionBuilder =
-        context.backend.systemBuilder.getClosureFunctionBuilder(
-            function, info, context.backend.compiledClosureClass,
-            context.backend);
+        systemBase.getClosureFunctionBuilder(
+            function, context.compiler.coreClasses.functionClass, info,
+            context.backend.compiledClosureClass);
 
-    return context.backend.systemBuilder.lookupClass(
-        closureFunctionBuilder.memberOf);
+    return systemBase.lookupClassById(closureFunctionBuilder.memberOf);
+  }
+
+  void reportUnimplementedError(
+      Spannable spannable,
+      String reason) {
+    compiler.reporter.reportHintMessage(
+        spannable, MessageKind.GENERIC, {'text': reason});
+  }
+
+  void markConstantUsed(ConstantValue constant) {
+    for (ConstantValue value in constant.getDependencies()) {
+      markConstantUsed(value);
+    }
+    if (!systemBase.registerConstant(constant)) return;
+    if (constant.isConstructedObject) {
+      // TODO(ahe): Is there a better way to register the constant's class.
+      ConstructedConstantValue value = constant;
+      ClassElement classElement = value.type.element;
+      systemBase.getClassBuilder(classElement);
+      registry.registerInstantiatedClass(classElement);
+    } else if (constant.isFunction) {
+      context.backend.markFunctionConstantAsUsed(constant);
+    }
+  }
+
+  DartinoFunctionBase getParameterStub(
+      DartinoFunctionBase function,
+      Selector selector) {
+    return context.backend.createParameterStub(function, selector, registry);
   }
 }

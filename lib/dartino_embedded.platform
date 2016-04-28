@@ -13,8 +13,8 @@ spec:3rd edition.
 [libraries]
 # Dartino specific libraries
 dartino.ffi: ffi/ffi.dart
+dartino._ffi: ffi/ffi_private.dart
 dartino: dartino/dartino.dart
-dartino.io: io/io.dart
 dartino.service: service/service.dart
 dartino.os: os/os.dart
 dartino._system: system/system.dart

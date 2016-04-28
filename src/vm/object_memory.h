@@ -8,49 +8,61 @@
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
+#include "src/vm/double_list.h"
+#include "src/vm/weak_pointer.h"
 
 namespace dartino {
 
+class Chunk;
 class FreeList;
+class GenerationalScavengeVisitor;
 class Heap;
 class HeapObject;
 class HeapObjectVisitor;
+class MarkingStack;
+class OldSpace;
 class PointerVisitor;
 class ProgramHeapRelocator;
 class PromotedTrack;
 class Space;
+class TwoSpaceHeap;
 
-const int kPageSize = 4 * KB;
+static const int kSentinelSize = sizeof(void*);
+
+enum PageType {
+  kUnknownSpacePage,  // Probably a program space page.
+  kOldSpacePage,
+  kNewSpacePage
+};
+
+typedef DoubleList<Chunk> ChunkList;
 
 // A chunk represents a block of memory provided by ObjectMemory.
-class Chunk {
+class Chunk : public ChunkList::Entry {
  public:
   // The space owning this chunk.
   Space* owner() const { return owner_; }
 
-  // The next chunk in same space.
-  Chunk* next() const { return next_; }
-
   // Returns the first address in this chunk.
-  uword base() const { return base_; }
+  uword start() const { return start_; }
 
   // Returns the first address past this chunk.
-  uword limit() const { return limit_; }
+  uword end() const { return end_; }
 
   // Returns the size of this chunk in bytes.
-  uword size() const { return limit_ - base_; }
+  uword size() const { return end_ - start_; }
 
   // Is the chunk externally allocated by the embedder.
   bool is_external() const { return external_; }
 
   // Test for inclusion.
-  bool Includes(uword address) const {
-    return (address >= base()) && (address < limit());
+  bool Includes(uword address) {
+    return (address >= start_) && (address < end_);
   }
 
   void set_scavenge_pointer(uword p) {
-    ASSERT(p >= base_);
-    ASSERT(p <= limit_);
+    ASSERT(p >= start_);
+    ASSERT(p <= end_);
     scavenge_pointer_ = p;
   }
   uword scavenge_pointer() const { return scavenge_pointer_; }
@@ -65,28 +77,17 @@ class Chunk {
 
  private:
   Space* owner_;
-  const uword base_;
-  const uword limit_;
+  const uword start_;
+  const uword end_;
   const bool external_;
   uword scavenge_pointer_;
 
-  Chunk* next_;
-
-  Chunk(Space* owner, uword base, uword size, bool external = false)
-      : owner_(owner),
-        base_(base),
-        limit_(base + size),
-        external_(external),
-        scavenge_pointer_(base_),
-        next_(NULL) {}
-
+  Chunk(Space* owner, uword start, uword size, bool external = false);
   ~Chunk();
 
-  void set_next(Chunk* value) { next_ = value; }
   void set_owner(Space* value) { owner_ = value; }
 
   friend class ObjectMemory;
-  friend class PageTable;
   friend class Space;
   friend class SemiSpace;
 };
@@ -94,15 +95,15 @@ class Chunk {
 // Space is a chain of chunks. It supports allocation and traversal.
 class Space {
  public:
-  static const int kDefaultMinimumChunkSize = 4 * KB;
-  static const int kDefaultMaximumChunkSize = 256 * KB;
-
-  explicit Space(int maximum_initial_size = 0);
+  static const uword kDefaultMinimumChunkSize = Platform::kPageSize;
+  static const uword kDefaultMaximumChunkSize = 256 * KB;
 
   virtual ~Space();
 
+  enum Resizing { kCanResize, kCannotResize };
+
   // Returns the total size of allocated objects.
-  virtual int Used() = 0;
+  virtual uword Used() = 0;
 
   // Flush will make the current chunk consistent for iteration.
   virtual void Flush() = 0;
@@ -123,37 +124,48 @@ class Space {
   // space after transformations.
   virtual void RebuildAfterTransformations() = 0;
 
-  void set_used(int used) { used_ = used; }
+  void set_used(uword used) { used_ = used; }
 
   // Returns the total size of allocated chunks.
-  int Size();
+  uword Size();
 
   // Iterate over all objects in this space.
   void IterateObjects(HeapObjectVisitor* visitor);
 
+  // Iterate all the objects that are grey, after a mark stack overflow.
+  void IterateOverflowedObjects(PointerVisitor* visitor, MarkingStack* stack);
+
   // Schema change support.
   void CompleteTransformations(PointerVisitor* visitor);
 
-  // Returns true if the address is inside this space.
-  inline bool Includes(uword address) const;
+  // Returns true if the address is inside this space.  Not particularly fast.
+  // See GCMetadata::PageType for a faster possibility.
+  bool Includes(uword address);
 
   // Adjust the allocation budget based on the current heap size.
-  void AdjustAllocationBudget(int used_outside_space);
+  void AdjustAllocationBudget(uword used_outside_space);
 
-  void IncreaseAllocationBudget(int size);
+  void IncreaseAllocationBudget(uword size);
 
-  void DecreaseAllocationBudget(int size);
+  void DecreaseAllocationBudget(uword size);
 
-  void SetAllocationBudget(int new_budget);
+  void SetAllocationBudget(word new_budget);
 
-  // Tells whether garbage collection is needed.
-  bool needs_garbage_collection() { return allocation_budget_ <= 0; }
+  // Tells whether garbage collection is needed.  Only to be called when
+  // bump allocation has failed, or on old space after a new-space GC.
+  // For a fixed-size new-space it always returns true because we always
+  // want to do a new-space GC when the single chunk fills up.
+  bool needs_garbage_collection() {
+    return allocation_budget_ <= 0 || !resizeable_;
+  }
 
-  bool in_no_allocation_failure_scope() { return no_allocation_nesting_ != 0; }
+  bool in_no_allocation_failure_scope() {
+    return no_allocation_failure_nesting_ != 0;
+  }
 
-  bool is_empty() const { return first_ == NULL; }
+  bool is_empty() const { return chunk_list_.IsEmpty(); }
 
-  static int DefaultChunkSize(int heap_size) {
+  static uword DefaultChunkSize(uword heap_size) {
     // We return a value between kDefaultMinimumChunkSize and
     // kDefaultMaximumChunkSize - and try to keep the chunks smaller than 20% of
     // the heap.
@@ -165,43 +177,79 @@ class Space {
   // Obtain the offset of [object] from the start of the chunk. We assume
   // there is exactly one chunk in this space and [object] lies within it.
   word OffsetOf(HeapObject* object);
+  HeapObject* ObjectAtOffset(word offset);
 
 #ifdef DEBUG
   void Find(uword word, const char* name);
 #endif
 
+  uword start() {
+    ASSERT(chunk_list_.First() == chunk_list_.Last());
+    return chunk_list_.First()->start();
+  }
+
+  uword size() {
+    ASSERT(chunk_list_.First() == chunk_list_.Last());
+    return chunk_list_.First()->size();
+  }
+
+  bool IsInSingleChunk(HeapObject* object) {
+    ASSERT(chunk_list_.First() == chunk_list_.Last());
+    return reinterpret_cast<uword>(object) - start() < size();
+  }
+
+  Chunk* chunk() {
+    ASSERT(chunk_list_.First() == chunk_list_.Last());
+    return chunk_list_.First();
+  }
+
+  WeakPointerList* weak_pointers() { return &weak_pointers_; }
+
+  PageType page_type() { return page_type_; }
+
  protected:
+  explicit Space(Resizing resizeable, PageType page_type);
+
   friend class NoAllocationFailureScope;
   friend class ProgramHeapRelocator;
   friend class Program;
+  friend class SweepingVisitor;
+  friend class TwoSpaceHeap;
 
   virtual void Append(Chunk* chunk);
 
   void FreeAllChunks();
 
-  Chunk* first() { return first_; }
-  Chunk* last() { return last_; }
-
   uword top() { return top_; }
 
-  void IncrementNoAllocationNesting() { ++no_allocation_nesting_; }
-  void DecrementNoAllocationNesting() { --no_allocation_nesting_; }
+  void IncrementNoAllocationFailureNesting() {
+    ASSERT(resizeable_);  // Fixed size heap cannot guarantee allocation.
+    ++no_allocation_failure_nesting_;
+  }
 
-  Chunk* first_;           // First chunk in this space.
-  Chunk* last_;            // Last chunk in this space.
-  int used_;               // Allocated bytes.
-  uword top_;              // Allocation top in current chunk.
-  uword limit_;            // Allocation limit in current chunk.
-  int allocation_budget_;  // Budget before needing a GC.
-  int no_allocation_nesting_;
+  void DecrementNoAllocationFailureNesting() {
+    --no_allocation_failure_nesting_;
+  }
+
+  ChunkList chunk_list_;
+  uword used_;              // Allocated bytes.
+  uword top_;               // Allocation top in current chunk.
+  uword limit_;             // Allocation limit in current chunk.
+  word allocation_budget_;  // Budget before needing a GC.
+  int no_allocation_failure_nesting_;
+  bool resizeable_;
+  // Linked list of weak pointers to heap objects in this space.
+  WeakPointerList weak_pointers_;
+  PageType page_type_;
 };
 
 class SemiSpace : public Space {
  public:
-  explicit SemiSpace(int maximum_initial_size = 0);
+  explicit SemiSpace(Resizing resizeable, PageType page_type,
+                     uword maximum_initial_size);
 
   // Returns the total size of allocated objects.
-  virtual int Used();
+  virtual uword Used();
 
   virtual bool IsAlive(HeapObject* old_location);
   virtual HeapObject* NewLocation(HeapObject* old_location);
@@ -215,19 +263,12 @@ class SemiSpace : public Space {
 
   bool IsFlushed();
 
+  void TriggerGCSoon() { limit_ = top_ + kSentinelSize; }
+
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and
   // there is no room to allocate the object.
-  uword Allocate(int size) { return AllocateInternal(size, true); }
-
-  // Allocate raw object. Returns 0 if a garbage collection is needed
-  // or if there is no room to allocate the object. Never causes a
-  // fatal error.
-  uword AllocateNonFatal(int size) { return AllocateInternal(size, false); }
-
-  // Rewind allocation top by size bytes if location is equal to current
-  // allocation top.
-  void TryDealloc(uword location, int size);
+  uword Allocate(uword size);
 
   // For the program semispaces.  There is no other space into which we
   // promote, so it does all work in one go.
@@ -235,7 +276,7 @@ class SemiSpace : public Space {
 
   // For the mutable heap.
   void StartScavenge();
-  bool CompleteScavengeGenerational(PointerVisitor* visitor);
+  bool CompleteScavengeGenerational(GenerationalScavengeVisitor* visitor);
 
   void UpdateBaseAndLimit(Chunk* chunk, uword top);
 
@@ -243,17 +284,21 @@ class SemiSpace : public Space {
 
   void SetReadOnly() { top_ = limit_ = 0; }
 
+  void ProcessWeakPointers(SemiSpace* to_space, OldSpace* old_space);
+
+  void ClearMarkBits();
+
  private:
-  uword AllocateInternal(int size, bool fatal);
+  Chunk* AllocateAndUseChunk(uword size);
 
-  uword AllocateInNewChunk(int size, bool fatal);
+  uword AllocateInNewChunk(uword size);
 
-  uword TryAllocate(int size);
+  uword TryAllocate(uword size);
 };
 
 class OldSpace : public Space {
  public:
-  explicit OldSpace(int maximum_initial_size = 0);
+  explicit OldSpace(TwoSpaceHeap* heap);
 
   virtual ~OldSpace();
 
@@ -262,7 +307,7 @@ class OldSpace : public Space {
   // OldSpace is currently non-moving, so it returns old_location.
   virtual HeapObject* NewLocation(HeapObject* old_location);
 
-  virtual int Used();
+  virtual uword Used();
 
   // Instance transformation leaves garbage in the heap that needs to be
   // added to freelists when using mark-sweep collection.
@@ -271,32 +316,39 @@ class OldSpace : public Space {
   // Flush will make the current chunk consistent for iteration.
   virtual void Flush();
 
-  void TryDealloc(uword location, int size);
-
   // Allocate raw object. Returns 0 if a garbage collection is needed
   // and causes a fatal error if no garbage collection is needed and
   // there is no room to allocate the object.
-  uword Allocate(int size);
+  uword Allocate(uword size);
 
   FreeList* free_list() const { return free_list_; }
 
   // Find pointers to young-space.
-  void VisitRememberedSet(PointerVisitor* visitor);
+  void VisitRememberedSet(GenerationalScavengeVisitor* visitor);
 
   // For the objects promoted to the old space during scavenge.
-  void StartScavenge();
-  bool CompleteScavengeGenerational(PointerVisitor* visitor);
-  void EndScavenge();
+  inline void StartScavenge() { StartTrackingAllocations(); }
+  bool CompleteScavengeGenerational(GenerationalScavengeVisitor* visitor);
+  inline void EndScavenge() { EndTrackingAllocations(); }
+
+  void StartTrackingAllocations();
+  void EndTrackingAllocations();
+  void UnlinkPromotedTrack();
+
+  void UseWholeChunk(Chunk* chunk);
+
+  void ProcessWeakPointers();
+
+#ifdef DEBUG
+  void Verify();
+#endif
 
  private:
-  Chunk* AllocateAndUseChunk(size_t size);
+  uword AllocateFromFreeList(uword size);
+  uword AllocateInNewChunk(uword size);
+  Chunk* AllocateAndUseChunk(uword size);
 
-  void SetAllocationPointForPrepend(SemiSpace* space);
-
-  uword AllocateInNewChunk(int size);
-
-  uword AllocateFromFreeList(int size);
-
+  TwoSpaceHeap* heap_;
   FreeList* free_list_;  // Free list structure.
   bool tracking_allocations_;
   PromotedTrack* promoted_track_;
@@ -305,44 +357,25 @@ class OldSpace : public Space {
 class NoAllocationFailureScope {
  public:
   explicit NoAllocationFailureScope(Space* space) : space_(space) {
-    space->IncrementNoAllocationNesting();
+    space->IncrementNoAllocationFailureNesting();
   }
 
-  ~NoAllocationFailureScope() { space_->DecrementNoAllocationNesting(); }
+  ~NoAllocationFailureScope() { space_->DecrementNoAllocationFailureNesting(); }
 
  private:
   Space* space_;
 };
 
-class PageTable {
+class NoAllocationScope {
  public:
-  explicit PageTable(uword base) : base_(base) {
-    memset(spaces_, 0, kPointerSize * ARRAY_SIZE(spaces_));
-  }
-
-  uword base() const { return base_; }
-
-  Space* Get(int index) const { return spaces_[index]; }
-  void Set(int index, Space* space) { spaces_[index] = space; }
-
- private:
-  Space* spaces_[1 << 10];
-  uword base_;
-};
-
-class PageDirectory {
- public:
-  void Clear();
-  void Delete();
-
-  PageTable* Get(int index) const { return tables_[index]; }
-  void Set(int index, PageTable* table) { tables_[index] = table; }
-
- private:
-#ifdef DARTINO32
-  PageTable* tables_[1 << 10];
+#ifndef DEBUG
+  explicit NoAllocationScope(Heap* heap) {}
 #else
-  PageTable* tables_[1 << 13];
+  explicit NoAllocationScope(Heap* heap);
+  ~NoAllocationScope();
+
+ private:
+  Heap* heap_;
 #endif
 };
 
@@ -352,43 +385,17 @@ class ObjectMemory {
   // Allocate a new chunk for a given space. All chunk sizes are
   // rounded up the page size and the allocated memory is aligned
   // to a page boundary.
-  static Chunk* AllocateChunk(Space* space, int size);
+  static Chunk* AllocateChunk(Space* space, uword size);
 
   // Create a chunk for a piece of external memory (usually in flash). Since
   // this memory is external and potentially read-only, we will not free
   // nor write to it when deleting the space it belongs to.
-  static Chunk* CreateFlashChunk(Space* space, void* heap_space, int size);
-
-  static Chunk* CreateChunk(Space* space, void* heap_space, int size);
+  static Chunk* CreateFlashChunk(Space* space, void* heap_space, uword size) {
+    return CreateFixedChunk(space, heap_space, size);
+  }
 
   // Release the chunk.
   static void FreeChunk(Chunk* chunk);
-
-  // Determine if the address is in the given space using page tables
-  // mapping an address to the space containing it.
-  //
-  // The page tables rely on 4k size-aligned chunks which makes the
-  // least significant 12 bits of a chunk zero. An address is mapped
-  // to its chunk address by masking out the least significant 12
-  // bits. Then that chunk address is mapped to a space using tables.
-  //
-  // On 32-bit systems, the remaining 20 bits of the chunk address are
-  // used as indices into two table. The most significant 10 bits
-  // identify a page table in a page directory. The least significant
-  // 10 bits identify a space in that page table:
-  //
-  // 32-bit: [ 10: table | 10: space | 12: zeros ]
-  //
-  // On 64-bit systems we rely on the virtual address space only being
-  // 48 bits. This is true for x64 and for arm64 as well.  With 4k
-  // alignment that leaves 36 bits of the chunk address which are used
-  // as indices into three tables. The most significant 13 bits identify
-  // a page directory. The next 13 bits identify a page table in the
-  // page directory. The least significant 10 bits identify a space in
-  // that page table:
-  //
-  // 64-bit: [ 16: zeros | 13: directory | 13: table | 10 space | 12: zeros ]
-  static bool IsAddressInSpace(uword address, const Space* space);
 
   // Setup and tear-down support.
   static void Setup();
@@ -397,30 +404,14 @@ class ObjectMemory {
   static uword Allocated() { return allocated_; }
 
  private:
-  // Low-level access to the page table associated with a given
-  // address.
-  static PageTable* GetPageTable(uword address);
-  static void SetPageTable(uword address, PageTable* table);
-
-  // Associate a range of pages with a given space.
-  static void SetSpaceForPages(uword base, uword limit, Space* space);
-
-#ifdef DARTINO32
-  static PageDirectory page_directory_;
-#else
-  static PageDirectory* page_directories_[1 << 13];
-#endif
-  static Mutex* mutex_;  // Mutex used for synchronized chunk allocation.
+  // Use some already-existing memory for a chunk.
+  static Chunk* CreateFixedChunk(Space* space, void* heap_space, uword size);
 
   static Atomic<uword> allocated_;
 
   friend class Space;
   friend class SemiSpace;
 };
-
-inline bool Space::Includes(uword address) const {
-  return ObjectMemory::IsAddressInSpace(address, this);
-}
 
 }  // namespace dartino
 

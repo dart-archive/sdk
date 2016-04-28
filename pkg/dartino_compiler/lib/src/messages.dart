@@ -10,11 +10,13 @@ import 'diagnostic.dart' show
 
 enum DiagnosticKind {
   agentVersionMismatch,
+  boardNotFound,
   busySession,
   cantPerformVerbIn,
   cantPerformVerbTo,
   cantPerformVerbWith,
   compilerVersionMismatch,
+  duplicatedFor,
   duplicatedIn,
   duplicatedTo,
   duplicatedWith,
@@ -23,14 +25,21 @@ enum DiagnosticKind {
   extraArguments,
   handShakeFailed,
   illegalDefine,
+  infoFileNotFound,
   internalError,
+  missingForName,
+  missingProjectPath,
   missingRequiredArgument,
+  malformedInfoFile,
+  missingNoun,
   missingSessionName,
   missingToFile,
   noAgentFound,
   noFileTarget,
   noSuchSession,
-  noTcpSocketTarget,
+  noConnectionTarget,
+  optionsObsolete,
+  projectAlreadyExists,
   quitTakesNoArguments,
   sessionAlreadyExists,
   sessionInvalidState,
@@ -48,6 +57,7 @@ enum DiagnosticKind {
   settingsPackagesNotAString,
   settingsUnrecognizedConstantValue,
   settingsUnrecognizedKey,
+  snapshotHashMismatch,
   socketAgentConnectError,
   socketAgentReplyError,
   socketVmConnectError,
@@ -56,17 +66,19 @@ enum DiagnosticKind {
   toolsNotInstalled,
   unexpectedArgument,
   unknownAction,
+  unknownNoun,
   unknownOption,
   unsupportedPlatform,
   upgradeInvalidPackageName,
   verbDoesNotSupportTarget,
   verbDoesntSupportTarget,
   verbRequiresFileTarget,
+  verbRequiresNoFor,
   verbRequiresNoSession,
   verbRequiresNoToFile,
   verbRequiresNoWithFile,
   verbRequiresSessionTarget,
-  verbRequiresSocketTarget,
+  verbRequiresConnectionTarget,
   verbRequiresSpecificTarget,
   verbRequiresSpecificTargetButGot,
   verbRequiresTarget,
@@ -105,6 +117,8 @@ String getMessage(DiagnosticKind kind) {
 
   const DiagnosticParameter message = DiagnosticParameter.message;
   const DiagnosticParameter verb = DiagnosticParameter.verb;
+  const DiagnosticParameter nouns = DiagnosticParameter.nouns;
+  const DiagnosticParameter boardNames = DiagnosticParameter.boardNames;
   const DiagnosticParameter sessionName = DiagnosticParameter.sessionName;
   const DiagnosticParameter target = DiagnosticParameter.target;
   const DiagnosticParameter requiredTarget = DiagnosticParameter.requiredTarget;
@@ -142,13 +156,29 @@ String getMessage(DiagnosticKind kind) {
       return "Can't perform '$verb' without a file, but got '$target', which "
         "is not a file target. Try adding 'file' in front.";
 
-    case DiagnosticKind.verbRequiresSocketTarget:
+    case DiagnosticKind.verbRequiresConnectionTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
-      return "Can't perform '$verb' without a socket, but got '$target', "
-        "which is not a socket. Try adding 'tcp_socket' in front.";
+      return "Can't perform '$verb' without a connection endpoint,"
+          "but got '$target', which is not a connection endpoint. "
+          "Try adding 'tcp_socket' or 'tty' in front.";
 
     case DiagnosticKind.verbDoesNotSupportTarget:
       return "'$verb' can't be performed on '$target'.";
+
+    case DiagnosticKind.projectAlreadyExists:
+      return "Project already exists: $uri";
+
+    case DiagnosticKind.optionsObsolete:
+      return "The 'options' setting (value $userInput) is renamed to "
+          "'compiler_options', please update your settings-file: $uri";
+
+    case DiagnosticKind.missingForName:
+      return "Missing 'for <board-name>' "
+          "where <board-name> is one of $boardNames";
+
+    case DiagnosticKind.boardNotFound:
+      return "Couldn't find a board named '$userInput'. "
+          "Try one of these board names: $boardNames";
 
     case DiagnosticKind.noSuchSession:
       return "Couldn't find a session called '$sessionName'. "
@@ -165,9 +195,10 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.noFileTarget:
       return "No file provided. Try adding <FILE_NAME> to the command line.";
 
-    case DiagnosticKind.noTcpSocketTarget:
-      return "No TCP socket provided. "
-          "Try adding 'tcp_socket HOST:PORT' to the command line.";
+    case DiagnosticKind.noConnectionTarget:
+      return "No connection endpoint provided. "
+          "Try adding 'tcp_socket HOST:PORT' or 'tty /dev/device' to the "
+          "command line.";
 
     case DiagnosticKind.expectedAPortNumber:
       return "Expected a port number, but got '$userInput'.";
@@ -213,6 +244,10 @@ String getMessage(DiagnosticKind kind) {
       // TODO(lukechurch): Review UX.
       return "Unsupported platform: $message.";
 
+    case DiagnosticKind.missingProjectPath:
+      return "Project path missing. Try adding the path of a directory"
+          " to be created after 'project'.";
+
     case DiagnosticKind.missingRequiredArgument:
       // TODO(lukechurch): Consider a correction message.
       return "Option '${DiagnosticParameter.userInput}' needs an argument.";
@@ -236,7 +271,7 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: 'packages' value '$userInput' isn't a String.";
 
     case DiagnosticKind.settingsOptionsNotAList:
-      return "$uri: 'options' value '$userInput' isn't a List.";
+      return "$uri: '$additionalUserInput' value '$userInput' isn't a List.";
 
     case DiagnosticKind.settingsDeviceTypeNotAString:
       return "$uri: 'device_type' value '$userInput' isn't a String.";
@@ -245,7 +280,8 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: 'incremental_mode' value '$userInput' isn't a String.";
 
     case DiagnosticKind.settingsOptionNotAString:
-      return "$uri: found 'options' entry '$userInput' which isn't a String.";
+      return "$uri: found '$additionalUserInput' entry '$userInput' "
+          "which isn't a String.";
 
     case DiagnosticKind.settingsDeviceTypeNotAString:
       return
@@ -262,7 +298,8 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
       return "$uri: compile-time constants should be in "
-          "the 'constants' map, not in 'options': '$userInput'.";
+          "the 'constants' map, not in '$additionalUserInput': "
+          "'$userInput'.";
 
     case DiagnosticKind.settingsConstantsNotAMap:
       return "$uri: 'constants' value isn't a Map";
@@ -281,8 +318,20 @@ String getMessage(DiagnosticKind kind) {
       return "'$userInput' isn't a supported action. "
         "Try running 'dartino help'.";
 
+    case DiagnosticKind.missingNoun:
+      return "'$verb' must be followed by one of $nouns. "
+        "Alternately try running 'dartino help'.";
+
+    case DiagnosticKind.unknownNoun:
+      return "'$verb $userInput' isn't a supported action. "
+        "Try '$verb' followed by one of $nouns, "
+        "or try running 'dartino help'.";
+
     case DiagnosticKind.extraArguments:
       return "Unrecognized arguments: $userInput.";
+
+    case DiagnosticKind.duplicatedFor:
+      return "More than one 'for' clause: $preposition.";
 
     case DiagnosticKind.duplicatedIn:
       return "More than one 'in' clause: $preposition.";
@@ -297,6 +346,9 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.verbDoesntSupportTarget:
       return "Can't perform '$verb' with '$target'.";
+
+    case DiagnosticKind.verbRequiresNoFor:
+      return "Can't perform '$verb' for '$userInput'.";
 
     case DiagnosticKind.verbRequiresNoToFile:
       return "Can't perform '$verb' to '$userInput'.";
@@ -341,6 +393,12 @@ String getMessage(DiagnosticKind kind) {
           "have different versions. Compiler version: '$userInput' "
           "VM version: '$additionalUserInput'.";
 
+    case DiagnosticKind.snapshotHashMismatch:
+      return "The VM on $address runs a snapshot with a hash-tag `$userInput`. "
+          "The info file at $uri has hash-tag `$additionalUserInput`. "
+          "Make sure you are using the same file as when you exported the "
+          "program.";
+
     case DiagnosticKind.agentVersionMismatch:
       // TODO(wibling): lukechurch: Is there advice we can give here?
       // E.g. Consider upgrading your compiler? Do we have an easy place they
@@ -369,5 +427,24 @@ $fixit""";
           "have not been installed.\n\nTry running x-download-tools to "
           "add these tools to the Dartino install.";
 
+    case DiagnosticKind.infoFileNotFound:
+      return "Could not find the debug information at $uri.";
+
+    case DiagnosticKind.malformedInfoFile:
+      return "Parse error when reading $uri.\n"
+          "Ensure this is a .info.json file generated by dartino.";
   }
 }
+
+const analyticsOptInPrompt =
+""""Welcome to Dartino! We collect anonymous usage statistics and crash reports
+in order to improve the tool (see http://goo.gl/27JjhU for details).
+
+Would you like to opt-in to help us improve Dartino (Y/n)?""";
+
+const analyticsOptInNotification = "\nThank you for helping us improve Dartino!\n";
+
+const analyticsOptOutNotification =
+    "\nNo anonymous usage statistics or crash reports will be sent.\n";
+
+const analyticsRecordChoiceFailed = "Failed to record opt-in choice.";

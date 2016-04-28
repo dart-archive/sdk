@@ -35,6 +35,12 @@ class DiagnosticParameter {
   static const DiagnosticParameter verb = const DiagnosticParameter(
       DiagnosticParameterType.verb, 'verb');
 
+  static const DiagnosticParameter nouns = const DiagnosticParameter(
+      DiagnosticParameterType.list, 'nouns');
+
+  static const DiagnosticParameter boardNames = const DiagnosticParameter(
+      DiagnosticParameterType.list, 'boardNames');
+
   static const DiagnosticParameter sessionName = const DiagnosticParameter(
       DiagnosticParameterType.sessionName, 'sessionName');
 
@@ -68,6 +74,7 @@ class DiagnosticParameter {
 
 enum DiagnosticParameterType {
   string,
+  list,
   verb,
   sessionName,
   target,
@@ -99,6 +106,11 @@ class Diagnostic {
       switch (parameter.type) {
         case DiagnosticParameterType.string:
           stringValue = value;
+          break;
+
+        case DiagnosticParameterType.list:
+          List<String> list = value;
+          stringValue = "'" + list.join("', '") + "'";
           break;
 
         case DiagnosticParameterType.uri:
@@ -212,6 +224,8 @@ void throwFatalError(
     DiagnosticKind kind,
     {String message,
      Verb verb,
+     List<String> nouns,
+     List<String> boardNames,
      String sessionName,
      Target target,
      TargetKind requiredTarget,
@@ -228,6 +242,12 @@ void throwFatalError(
   }
   if (verb != null) {
     arguments[DiagnosticParameter.verb] = verb;
+  }
+  if (nouns != null) {
+    arguments[DiagnosticParameter.nouns] = nouns;
+  }
+  if (boardNames != null) {
+    arguments[DiagnosticParameter.boardNames] = boardNames;
   }
   if (sessionName != null) {
     arguments[DiagnosticParameter.sessionName] = sessionName;

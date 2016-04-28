@@ -4,10 +4,10 @@
 
 include project/target/stm32f746g-disco.mk
 
-MODULES += app/dartino app/shell lib/gfx
-
-DARTINO_CONFIGURATION = LKFull
-DARTINO_GYP_DEFINES = "LK_PROJECT=stm32f746g-disco-dartino LK_CPU=cortex-m4"
+MODULES += \
+	app/dartino \
+	app/shell \
+	lib/gfx
 
 WITH_CPP_SUPPORT=true
 

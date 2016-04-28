@@ -9,11 +9,11 @@ import 'dart:convert' show
 
 import '../verbs/actions.dart' show
     Action,
+    ActionGroup,
     commonActions,
     uncommonActions;
 
 import '../verbs/infrastructure.dart' show
-    AnalyzedSentence,
     DiagnosticKind,
     throwFatalError;
 
@@ -27,16 +27,17 @@ Sentence parseSentence(
 
 class SentenceParser {
   final String version;
-  final String programName;
   final String shortProgramName;
   final String currentDirectory;
+  final bool interactive;
   Words tokens;
 
   SentenceParser(Iterable<String> tokens, bool includesProgramName)
       : version = includesProgramName ? tokens.first : null,
         currentDirectory = includesProgramName ? tokens.skip(1).first : null,
-        programName = includesProgramName ? tokens.skip(2).first : null,
-        shortProgramName = includesProgramName ? tokens.skip(3).first : null,
+        shortProgramName = includesProgramName ? tokens.skip(2).first : null,
+        interactive =
+          (includesProgramName ? tokens.skip(3).first : null) == "interactive",
         tokens = new Words(tokens.skip(includesProgramName ? 4 : 0));
 
   Sentence parseSentence() {
@@ -71,9 +72,7 @@ class SentenceParser {
     }
     return new Sentence(
         verb, prepositions, targets, trailing,
-        version, currentDirectory, programName,
-        // TODO(ahe): Get rid of the following argument:
-        tokens.originalInput.skip(2).toList());
+        version, currentDirectory, interactive);
   }
 
   Verb parseVerb() {
@@ -86,7 +85,18 @@ class SentenceParser {
     action = uncommonActions[name];
     if (action != null) {
       tokens.consume();
-      return new Verb(name, action);
+      if (action is ActionGroup) {
+        String noun = tokens.current;
+        Action child = action.actions[noun];
+        if (child != null) {
+          return new Verb(name, child);
+        } else {
+          List<String> nouns = action.actions.keys.toList()..sort();
+          return new ErrorVerb(name, noun, nouns);
+        }
+      } else {
+        return new Verb(name, action);
+      }
     }
     return new ErrorVerb(name);
   }
@@ -108,6 +118,11 @@ class SentenceParser {
 
       case "to":
         return makePreposition(PrepositionKind.TO);
+
+      case "for":
+        tokens.consume();
+        return new Preposition(PrepositionKind.FOR,
+            new NamedTarget(TargetKind.BOARD_NAME, parseName()));
 
 
       default:
@@ -138,6 +153,9 @@ class SentenceParser {
       case "session":
         return makeNamedTarget(TargetKind.SESSION);
 
+      case "project":
+        return makeNamedTarget(TargetKind.PROJECT);
+
       case "class":
         return makeNamedTarget(TargetKind.CLASS);
 
@@ -155,6 +173,9 @@ class SentenceParser {
 
       case "tcp_socket":
         return makeNamedTarget(TargetKind.TCP_SOCKET);
+
+      case "tty":
+        return makeNamedTarget(TargetKind.TTY);
 
       case "sessions":
         return makeTarget(TargetKind.SESSIONS);
@@ -240,6 +261,9 @@ class SentenceParser {
       case "apply":
         return makeTarget(TargetKind.APPLY);
 
+      case "analytics":
+        return makeTarget(TargetKind.ANALYTICS);
+
       default:
         return new ErrorTarget(DiagnosticKind.expectedTargetButGot, word);
     }
@@ -322,12 +346,22 @@ class Verb {
 
 class ErrorVerb implements Verb {
   final String name;
+  final String noun;
+  final List<String> nouns;
 
-  const ErrorVerb(this.name);
+  const ErrorVerb(this.name, [this.noun, this.nouns]);
 
   bool get isErroneous => true;
 
   Action get action {
+    if (nouns != null) {
+      if (noun != null && noun.trim().isNotEmpty) {
+        throwFatalError(DiagnosticKind.unknownNoun, verb: new Verb(name, null),
+          userInput: noun, nouns: nouns);
+      }
+      throwFatalError(DiagnosticKind.missingNoun, verb: new Verb(name, null),
+        nouns: nouns);
+    }
     throwFatalError(DiagnosticKind.unknownAction, userInput: name);
   }
 }
@@ -345,6 +379,7 @@ enum PrepositionKind {
   WITH,
   IN,
   TO,
+  FOR,
 }
 
 class Target {
@@ -360,9 +395,11 @@ class Target {
 enum TargetKind {
   AGENT,
   ALL,
+  ANALYTICS,
   APPLY,
   BACKTRACE,
   BREAK,
+  BOARD_NAME,
   CLASS,
   CLASSES,
   CONTINUE,
@@ -382,6 +419,7 @@ enum TargetKind {
   METHODS,
   PRINT,
   PRINT_ALL,
+  PROJECT,
   RESTART,
   RUN_TO_MAIN,
   SESSION,
@@ -392,8 +430,12 @@ enum TargetKind {
   STEP_OVER,
   STEP_OVER_BYTECODE,
   TCP_SOCKET,
+  TTY,
   TOGGLE,
 }
+
+const List<TargetKind> connectionTargets =
+    const [TargetKind.TCP_SOCKET, TargetKind.TTY];
 
 class NamedTarget extends Target {
   final String name;
@@ -443,13 +485,9 @@ class Sentence {
   /// The current directory of the C++ client.
   final String currentDirectory;
 
-  // TODO(ahe): Get rid of this.
-  final String programName;
-
   final String version;
 
-  // TODO(ahe): Get rid of this.
-  final List<String> arguments;
+  final bool interactive;
 
   const Sentence(
       this.verb,
@@ -458,8 +496,7 @@ class Sentence {
       this.trailing,
       this.version,
       this.currentDirectory,
-      this.programName,
-      this.arguments);
+      this.interactive);
 
   String toString() => "Sentence($verb, $prepositions, $targets)";
 }

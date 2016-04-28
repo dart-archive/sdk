@@ -7,6 +7,7 @@
 
 #include "src/shared/globals.h"
 #include "src/shared/atomic.h"
+#include "src/shared/assert.h"
 
 namespace dartino {
 

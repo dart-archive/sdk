@@ -44,7 +44,7 @@ class IntrinsicsTable {
     USE(last_member_);
   }
 
-  static IntrinsicsTable *GetDefault();
+  static IntrinsicsTable* GetDefault();
 
 #define DEFINE_GETTER(name) \
   void (*name())(void) { return intrinsic_##name##_; }
@@ -63,7 +63,7 @@ class IntrinsicsTable {
 #undef DECLARE_FIELD
   void (*last_member_)(void);
 
-  static IntrinsicsTable *default_table_;
+  static IntrinsicsTable* default_table_;
 };
 
 }  // namespace dartino

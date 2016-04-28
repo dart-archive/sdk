@@ -13,7 +13,7 @@ TEST_CASE(ObjectMap) {
   for (int i = 0; i < 1024; i++) {
     map.Add(i, Smi::FromWord(i));
   }
-  EXPECT_EQ(1024, map.size());
+  EXPECT_EQ(1024u, map.size());
 
   for (int i = 0; i < 1024; i++) {
     EXPECT_EQ(i, Smi::cast(map.LookupById(i))->value());
@@ -27,16 +27,16 @@ TEST_CASE(ObjectMap) {
 
   EXPECT_EQ(100, map.LookupByObject(Smi::FromWord(100)));
   EXPECT(map.RemoveByObject(Smi::FromWord(100)));
-  EXPECT_EQ(1023, map.size());
+  EXPECT_EQ(1023u, map.size());
   EXPECT(!map.RemoveByObject(Smi::FromWord(100)));
-  EXPECT_EQ(1023, map.size());
+  EXPECT_EQ(1023u, map.size());
   EXPECT_EQ(-1, map.LookupByObject(Smi::FromWord(100)));
   map.Add(100, Smi::FromWord(100));
   EXPECT_EQ(100, map.LookupByObject(Smi::FromWord(100)));
   map.Add(100, Smi::FromWord(101));
   EXPECT_EQ(100, map.LookupByObject(Smi::FromWord(101)));
   EXPECT_EQ(Smi::FromWord(101), map.LookupById(100));
-  EXPECT_EQ(1024, map.size());
+  EXPECT_EQ(1024u, map.size());
 
   for (int i = 0; i < 1024; i++) {
     EXPECT(map.RemoveById(i));
@@ -44,7 +44,7 @@ TEST_CASE(ObjectMap) {
     EXPECT(map.LookupById(i) == NULL);
     EXPECT_EQ(-1, map.LookupByObject(Smi::FromWord(i)));
   }
-  EXPECT_EQ(0, map.size());
+  EXPECT_EQ(0u, map.size());
 }
 
 }  // namespace dartino

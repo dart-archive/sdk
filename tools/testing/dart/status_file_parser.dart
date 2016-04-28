@@ -41,6 +41,10 @@ class Expectation {
   static Expectation SKIP = byName('Skip');
   static Expectation SKIP_BY_DESIGN = byName('SkipByDesign');
 
+  // Custom expectations for dartino_tests.
+  static Expectation INCREMENTAL_COMPILATION_FAILED =
+      byName('IncrementalCompilationFailed');
+
   static Expectation byName(String name) {
     _initialize();
     name = name.toLowerCase();
@@ -85,6 +89,8 @@ class Expectation {
       build("SkipByDesign", isMetaExpectation: true);
       build("Ok", isMetaExpectation: true);
       build("Slow", isMetaExpectation: true);
+
+      build('IncrementalCompilationFailed', group: fail);
     }
   }
 

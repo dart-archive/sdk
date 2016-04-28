@@ -25,10 +25,16 @@ import '../hub/sentence_parser.dart' show
     Sentence,
     Target,
     TargetKind,
-    Verb;
+    Verb,
+    connectionTargets;
 
 export '../hub/sentence_parser.dart' show
     TargetKind;
+
+import '../messages.dart' show
+    analyticsOptInPrompt,
+    analyticsOptInNotification,
+    analyticsOptOutNotification;
 
 import '../diagnostic.dart' show
     DiagnosticKind,
@@ -47,22 +53,6 @@ export '../hub/client_commands.dart' show
     ClientCommand;
 
 import '../hub/session_manager.dart' show
-    DartinoCompiler,
-    DartinoDelta,
-    IncrementalCompiler,
-    WorkerConnection,
-    Session,
-    SessionState,
-    UserSession,
-    currentSession;
-
-export '../hub/session_manager.dart' show
-    DartinoCompiler,
-    DartinoDelta,
-    IncrementalCompiler,
-    WorkerConnection,
-    Session,
-    SessionState,
     UserSession,
     currentSession;
 
@@ -70,14 +60,14 @@ export '../diagnostic.dart' show
     DiagnosticKind,
     throwFatalError;
 
-import '../hub/session_manager.dart' show
-    SessionState,
-    UserSession,
-    createSession;
-
 export '../hub/session_manager.dart' show
+    DartinoVmContext,
+    DartinoDelta,
+    DartinoCompiler,
+    IncrementalCompiler,
     SessionState,
     UserSession,
+    WorkerConnection,
     createSession;
 
 import '../hub/hub_main.dart' show
@@ -87,9 +77,6 @@ import '../hub/hub_main.dart' show
 export '../hub/hub_main.dart' show
     ClientConnection,
     IsolatePool;
-
-import '../hub/session_manager.dart' show
-    lookupSession; // Don't export this.
 
 import 'actions.dart' show
     Action;
@@ -103,11 +90,9 @@ import 'options.dart' show
 export 'options.dart' show
     Options;
 
-import 'documentation.dart' show
-    helpDocumentation;
-
 import '../guess_configuration.dart' show
     dartinoVersion;
+import 'package:dartino_compiler/src/hub/analytics.dart';
 
 void reportErroneousTarget(ErrorTarget target) {
   throwFatalError(target.errorKind, userInput: target.userInput);
@@ -121,7 +106,7 @@ AnalyzedSentence helpSentence(String message) {
   Action contextHelp = new Action(printHelp, null);
   return new AnalyzedSentence(
       new Verb("?", contextHelp), null, null, null, null, null, null,
-      null, null, null, null);
+      null, null, null, null, false);
 }
 
 AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
@@ -159,8 +144,32 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   }
 
   NamedTarget inSession;
+  String forName;
   Uri toUri;
   Uri withUri;
+
+  /// Validates a preposition of kind `for`. For now, the only possible legal
+  /// target is of kind `board name`. Store such a file in [forName].
+  void checkForTarget(Preposition preposition) {
+    assert(preposition.kind == PrepositionKind.FOR);
+    if (preposition.target.kind == TargetKind.BOARD_NAME) {
+      if (forName != null) {
+        throwFatalError(
+            DiagnosticKind.duplicatedFor, preposition: preposition);
+      }
+      NamedTarget target = preposition.target;
+      forName = target.name;
+      if (!action.requiresForName) {
+        throwFatalError(
+            DiagnosticKind.verbRequiresNoFor,
+            verb: verb, userInput: target.name);
+      }
+    } else {
+      throwFatalError(
+          DiagnosticKind.verbRequiresNoFor,
+          verb: verb, target: preposition.target);
+    }
+  }
 
   /// Validates a preposition of kind `in`. For now, the only possible legal
   /// target is of kind `session`. Store such as session in [inSession].
@@ -266,6 +275,10 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
         checkInTarget(preposition);
         break;
 
+      case PrepositionKind.FOR:
+        checkForTarget(preposition);
+        break;
+
       case PrepositionKind.TO:
         checkToTarget(preposition);
         break;
@@ -280,11 +293,21 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     throwFatalError(DiagnosticKind.missingToFile);
   }
 
-  if (!action.allowsTrailing) {
-    if (trailing != null) {
-      throwFatalError(
-          DiagnosticKind.extraArguments, userInput: trailing.join(' '));
+  if (!action.allowsTrailing && trailing != null) {
+    // If there are extra arguments but missing 'for NAME'
+    // then user probably forgot to specify a target
+    if (action.requiresForName && forName == null) {
+      if (action.requiresTarget && target is NamedTarget) {
+        if (target.name == "for") {
+          // TODO(danrubel) generalize this to remove action specific code
+          // throwFatalError(DiagnosticKind.missingTarget,
+          //     requiredTarget: action.requiredTarget);
+          throwFatalError(DiagnosticKind.missingProjectPath);
+        }
+      }
     }
+    throwFatalError(
+        DiagnosticKind.extraArguments, userInput: trailing.join(' '));
   }
 
   TargetKind requiredTarget = action.requiredTarget;
@@ -299,10 +322,6 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   if (action.requiresTarget) {
     if (target == null) {
       switch (requiredTarget) {
-        case TargetKind.TCP_SOCKET:
-          throwFatalError(DiagnosticKind.noTcpSocketTarget);
-          break;
-
         case TargetKind.FILE:
           throwFatalError(DiagnosticKind.noFileTarget);
           break;
@@ -315,20 +334,20 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
             throwFatalError(
                 DiagnosticKind.verbRequiresSpecificTarget, verb: verb,
                 requiredTarget: requiredTarget);
+          } else if (action.supportedTargets == connectionTargets) {
+            throwFatalError(DiagnosticKind.noConnectionTarget);
           } else {
             throwFatalError(
                 DiagnosticKind.verbRequiresTarget, verb: verb);
           }
           break;
       }
+    } else if (action.supportedTargets == connectionTargets &&
+        !action.supportedTargets.contains(target.kind)) {
+      throwFatalError(DiagnosticKind.verbRequiresConnectionTarget,
+          verb: verb, target: target);
     } else if (requiredTarget != null && target.kind != requiredTarget) {
       switch (requiredTarget) {
-        case TargetKind.TCP_SOCKET:
-          throwFatalError(
-              DiagnosticKind.verbRequiresSocketTarget,
-              verb: verb, target: target);
-          break;
-
         case TargetKind.FILE:
           throwFatalError(
               DiagnosticKind.verbRequiresFileTarget,
@@ -374,11 +393,9 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     }
   }
 
-  Uri programName =
-      sentence.programName == null ? null : fileUri(sentence.programName, base);
   return new AnalyzedSentence(
-      verb, target, targetName, trailing, sessionName, base, programName,
-      targetUri, toUri, withUri, options);
+      verb, target, targetName, trailing, sessionName, base,
+      targetUri, toUri, withUri, forName, options, sentence.interactive);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
@@ -428,8 +445,6 @@ class AnalyzedSentence {
   /// The current working directory of the C++ client.
   final Uri base;
 
-  final Uri programName;
-
   /// Value of 'file NAME' converted to a Uri (main target, no preposition).
   final Uri targetUri;
 
@@ -439,7 +454,12 @@ class AnalyzedSentence {
   /// Value of 'with <URI>' converted to a Uri.
   final Uri withUri;
 
+  /// Value of 'for NAME'.
+  final String forName;
+
   final Options options;
+
+  final bool interactive;
 
   AnalyzedSentence(
       this.verb,
@@ -448,13 +468,46 @@ class AnalyzedSentence {
       this.trailing,
       this.sessionName,
       this.base,
-      this.programName,
       this.targetUri,
       this.toTargetUri,
       this.withUri,
-      this.options);
+      this.forName,
+      this.options,
+      this.interactive);
 
   Future<int> performVerb(VerbContext context) {
+    if (context.clientConnection.analytics.shouldPromptForOptIn) {
+      // If `interactive` is `true` then dartino is being run
+      // from a terminal and we can prompt the user to opt-in.
+      // Otherwise do not prompt for opt-in because it will
+      // hang by waiting for input at will never happen.
+      if (interactive && target?.kind != TargetKind.ANALYTICS) {
+        return promptForOptIn(context);
+      }
+    }
+    return internalPerformVerb(context);
+  }
+
+  Future<int> promptForOptIn(VerbContext context) async {
+
+    bool isOptInYes(String response) {
+      if (response == null) return false;
+      response = response.trim().toLowerCase();
+      return response.isEmpty || response == 'y' || response == 'yes';
+    }
+
+    var connection = context.clientConnection;
+    if (isOptInYes(await connection.promptUser(analyticsOptInPrompt))) {
+      context.clientConnection.analytics.writeNewUuid();
+      print(analyticsOptInNotification);
+    } else {
+      context.clientConnection.analytics.writeOptOut();
+      print(analyticsOptOutNotification);
+    }
+    return internalPerformVerb(context);
+  }
+
+  Future<int> internalPerformVerb(VerbContext context) {
     return verb.action.perform(this, context);
   }
 }

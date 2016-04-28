@@ -2,12 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
+import 'dart:dartino';
 import 'dart:typed_data';
 
-import 'package:stm32f746g_disco/button.dart';
-import 'package:stm32f746g_disco/uart.dart';
-import 'package:stm32f746g_disco/stm32f746g_disco.dart';
-import 'dart:dartino';
+import 'package:stm32/button.dart';
+import 'package:stm32/uart.dart';
+import 'package:stm32/stm32f746g_disco.dart';
 
 main() {
   const int CR = 13;
@@ -24,10 +24,12 @@ main() {
   Fiber.fork(() {
     while (true) {
       button.waitForPress();
-      uart.writeString("Button press received\n");
+      // Use print("...\n") to print to both the serial port and the LCD.
+      uart.writeString("Button press received\r\n");
     }
   });
 
+  // Use print("...\n") to print to both the serial port and the LCD.
   uart.writeString("\rWelcome to Dart UART echo!\r\n");
   uart.writeString("--------------------------\r\n");
   uart.write(LFBuffer);
@@ -35,7 +37,7 @@ main() {
     ByteBuffer input = uart.readNext();
     // Map CR to CR+LF for nicer console output.
     int offset = 0;
-    while(true) {
+    while (true) {
       int index = input.asUint8List().indexOf(CR, offset);
       if (index == -1) {
         uart.write(input, offset);

@@ -14,7 +14,7 @@ function follow_links() {
 
 if [ -z "$1" ]; then
   echo "Usage: $0 [options] <elf file>"
-  echo "Eg:    $0 third_party/lk/out/build-stm32f746g-disco-test/lk.elf"
+  echo "Eg:    $0 out/build-stm32f746g-disco-test/lk.elf"
   exit 1
 fi
 

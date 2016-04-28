@@ -16,7 +16,6 @@ enum OptionKind {
   help,
   verbose,
   version,
-  testDebugger,
   define,
   analyzeOnly,
   fatalIncrementalFailures,
@@ -30,9 +29,6 @@ const List<Option> supportedOptions = const <Option>[
   const Option(OptionKind.help, const ['h', '?'], const ['help', 'usage']),
   const Option(OptionKind.verbose, 'v', 'verbose'),
   const Option(OptionKind.version, null, 'version'),
-  const Option(
-      OptionKind.testDebugger, null, 'test-debugger', requiresArgument: true,
-      parseArgument: parseCommaSeparatedList),
   const Option(OptionKind.analyzeOnly, null, 'analyze-only'),
   const Option(
       OptionKind.fatalIncrementalFailures, null, 'fatal-incremental-failures'),
@@ -54,24 +50,16 @@ class Option {
 
   @StringOrList final longName;
 
-  final bool requiresArgument;
-
   final ArgumentParser<dynamic> parseArgument;
-
-  final DiagnosticKind missingArgumentDiagnostic;
 
   const Option(
       this.kind,
       this.shortName,
       this.longName,
-      {this.requiresArgument: false,
-       this.parseArgument,
-       this.missingArgumentDiagnostic: DiagnosticKind.missingRequiredArgument});
+      {this.parseArgument});
 
   String toString() {
-    return "Option($kind, $shortName, $longName, "
-        "requiresArgument: $requiresArgument, "
-        "missingArgumentDiagnostic: $missingArgumentDiagnostic)";
+    return "Option($kind, $shortName, $longName";
   }
 }
 
@@ -121,7 +109,6 @@ class Options {
   final bool help;
   final bool verbose;
   final bool version;
-  final List<String> testDebuggerCommands;
   final Map<String, String> defines;
   final List<String> nonOptionArguments;
   final bool analyzeOnly;
@@ -132,7 +119,6 @@ class Options {
       this.help,
       this.verbose,
       this.version,
-      this.testDebuggerCommands,
       this.defines,
       this.nonOptionArguments,
       this.analyzeOnly,
@@ -145,7 +131,6 @@ class Options {
     bool help = false;
     bool verbose = false;
     bool version = false;
-    List<String> testDebuggerCommands;
     Map<String, String> defines = <String, String>{};
     List<String> nonOptionArguments = <String>[];
     bool analyzeOnly = false;
@@ -194,24 +179,7 @@ class Options {
         if (option == null) {
           throwFatalError(
               DiagnosticKind.unknownOption, userInput: optionString);
-        } else if (option.requiresArgument) {
-          if (argument == null && iterator.moveNext()) {
-            argument = iterator.current;
-            if (argument == "=") {
-              argument = null;
-              if (iterator.moveNext()) {
-                argument = iterator.current;
-              }
-            }
-          }
-          if (argument == null) {
-            // TODO(ahe): Improve error recovery, don't throw.
-            throwFatalError(option.missingArgumentDiagnostic, userInput: name);
-          }
-          parsedArgument = option.parseArgument == null
-              ? argument : option.parseArgument(argument);
         } else if (argument != null) {
-          assert(!option.requiresArgument);
           // TODO(ahe): Pass what should be removed as additionalUserInput, for
           // example, if saying `--help=fisk`, [userInput] should be `help`,
           // and [additionalUserInput] should be `=fisk`.
@@ -236,10 +204,6 @@ class Options {
           version = true;
           break;
 
-        case OptionKind.testDebugger:
-          testDebuggerCommands.addAll(parsedArgument);
-          break;
-
         case OptionKind.define:
           defines[parsedArgument[0]] = parsedArgument[1];
           break;
@@ -262,7 +226,7 @@ class Options {
     }
 
     return new Options(
-        help, verbose, version, testDebuggerCommands, defines,
+        help, verbose, version, defines,
         nonOptionArguments, analyzeOnly, fatalIncrementalFailures,
         terminateDebugger);
   }

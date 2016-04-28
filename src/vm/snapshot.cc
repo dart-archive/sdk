@@ -281,6 +281,11 @@ void SnapshotWriter::WriteHeader(InstanceFormat::Type type, int elements) {
   WriteInt64(Header::FromTypeAndElements(type, elements).as_word());
 }
 
+uint32_t ComputeSnapshotHash(List<uint8> snapshot) {
+  return Utils::StringHash(
+      reinterpret_cast<const uint8*>(snapshot.data()), snapshot.length(), 1);
+}
+
 Program* SnapshotReader::ReadProgram() {
   if (ReadByte() != 0xbe || ReadByte() != 0xef) {
     Print::Error("Error: Snapshot has wrong magic header!\n");
@@ -301,7 +306,7 @@ Program* SnapshotReader::ReadProgram() {
   }
   delete[] snapshot_version;
 
-  int hashtag = ReadInt64();
+  uint32_t snapshot_hash = ComputeSnapshotHash(snapshot_);
 
   // Read the required backward reference table size.
   int references = 0;
@@ -309,7 +314,7 @@ Program* SnapshotReader::ReadProgram() {
     references = (references << 8) | ReadByte();
   }
 
-  Program* program = new Program(Program::kLoadedFromSnapshot, hashtag);
+  Program* program = new Program(Program::kLoadedFromSnapshot, snapshot_hash);
 
   // Read the heap size and allocate an area for it.
   int size_position;
@@ -328,7 +333,7 @@ Program* SnapshotReader::ReadProgram() {
   // Make sure to make room for the filler at the end of the program space.
   memory_ =
       ObjectMemory::AllocateChunk(program->heap()->space(), heap_size + 1);
-  top_ = memory_->base();
+  top_ = memory_->start();
 
   // Allocate space for the backward references.
   backward_references_ = List<HeapObject*>::New(references);
@@ -351,7 +356,7 @@ Program* SnapshotReader::ReadProgram() {
 
   // As a sanity check we ensure that the heap size the writer of the snapshot
   // predicted we would have, is in fact *precisely* how much space we needed.
-  int consumed_memory = top_ - memory_->base();
+  int consumed_memory = top_ - memory_->start();
   if (consumed_memory != heap_size) {
     FATAL("The heap size in the snapshot was incorrect.");
   }
@@ -373,11 +378,6 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   int version_length = strlen(version);
   WriteInt64(version_length);
   WriteBytes(version_length, reinterpret_cast<const uint8*>(version));
-
-  // Emit a tag that can be used to match profiler ticks with a program.
-  int hashtag = 0xcafe + (Platform::GetMicroseconds() % 0x10000);
-  program->set_hashtag(hashtag);
-  WriteInt64(hashtag);
 
   // Reserve space for the backward reference table size.
   int reference_count_position = position_;
@@ -419,7 +419,11 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   WriteHeapSizeTo(size32_double_position, heap_size_.offset_32bits_double);
   WriteHeapSizeTo(size32_float_position, heap_size_.offset_32bits_float);
 
-  return snapshot_.Sublist(0, position_);
+  List<uint8> result = snapshot_.Sublist(0, position_);
+
+  program->set_snapshot_hash(ComputeSnapshotHash(result));
+
+  return result;
 }
 
 Object* SnapshotReader::ReadObject() {

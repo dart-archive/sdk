@@ -11,32 +11,26 @@ import 'dart:async' show
 
 import 'dart:io' as io;
 
-import 'dart:io' show
-    BytesBuilder;
-
 import 'dart:convert' show
     JSON,
     LineSplitter,
     UTF8;
 
 import 'dart:typed_data' show
-    Int32List,
-    Uint8List,
-    ByteData,
-    Endianness;
+    Int32List;
+
+import 'package:compiler/src/elements/elements.dart' show
+    LibraryElement;
 
 import 'package:persistent/persistent.dart' show
     Pair;
 
 import 'vm_commands.dart' show
-    WriteSnapshotResult;
+    MapId,
+    ProgramInfoCommand;
 
 import 'dartino_system.dart' show
-    DartinoFunction,
     DartinoSystem;
-
-import 'dartino_class.dart' show
-    DartinoClass;
 
 import 'src/dartino_selector.dart' show
     DartinoSelector;
@@ -48,66 +42,128 @@ enum Configuration {
   Offset32BitsFloat,
 }
 
-class ProgramInfo {
-  final List<String> _strings;
 
-  // Maps selector-id -> string-id
-  final List<int> _selectorNames;
+class IdOffsetMapping {
+  final Map<MapId, Map<int, String>> symbolicNames;
+  final Map<MapId, Map<String, int>> symbolicNamesReverseMapping;
+  final NameOffsetMapping nameOffsets;
 
-  // Maps configuration -> offset -> string-id
-  final Map<Configuration, Map<int, int>> _classNames;
+  IdOffsetMapping(Map<MapId, Map<int, String>> symbolicNames, this.nameOffsets)
+    : symbolicNames = symbolicNames,
+      symbolicNamesReverseMapping = invertedMapIdMap(symbolicNames);
 
-  // Maps configuration -> offset -> string-id
-  final Map<Configuration, Map<int, int>> _functionNames;
-
-  // Snapshot hashtag for validation.
-  final hashtag;
-
-  ProgramInfo(this._strings, this._selectorNames,
-              this._classNames, this._functionNames,
-              this.hashtag);
-
-  String classNameOfFunction(Configuration conf, int functionOffset) {
-    return _getString(_classNames[conf][functionOffset]);
+  int functionIdFromOffset(Configuration conf, int offset) {
+    return symbolicNamesReverseMapping[MapId.methods]
+        [nameOffsets.functionName(conf, offset)];
   }
 
-  String functionName(Configuration conf, int functionOffset) {
-    return _getString(_functionNames[conf][functionOffset]);
-  }
-
-  String className(Configuration conf, int classOffset) {
-    return _getString(_classNames[conf][classOffset]);
-  }
-
-  String selectorName(DartinoSelector selector) {
-    return _getString(_selectorNames[selector.id]);
-  }
-
-  String _getString(int stringId) {
-    String name = null;
-    if (stringId != null && stringId != -1) {
-      name = _strings[stringId];
-      if (name == '') name = null;
-    }
-    return name;
+  int offsetFromFunctionId(Configuration conf, int functionId) {
+    return nameOffsets.functionOffset(
+        conf, symbolicNames[MapId.methods][functionId]);
   }
 }
 
+/// The information that is stored in a '.info.json' file when a snapshot is
+/// created.
+class NameOffsetMapping {
+  // Maps selector-id -> selector name
+  final List<String> selectorNames;
+
+  // Maps configuration -> offset -> name
+  final Map<Configuration, Map<int, String>> programObjectNames;
+  // Maps configuration -> name -> offset
+  final Map<Configuration, Map<String, int>>
+      programObjectNamesReverseMapping;
+
+  // Snapshot hash for validation.
+  final snapshotHash;
+
+  NameOffsetMapping(this.selectorNames,
+              Map<Configuration, Map<int, String>> programObjectNames,
+              this.snapshotHash)
+    : programObjectNames = programObjectNames,
+      programObjectNamesReverseMapping =
+          invertedConfigurationMap(programObjectNames);
+
+  String functionName(Configuration conf, int functionOffset) {
+    return programObjectNames[conf][functionOffset];
+  }
+
+  String className(Configuration conf, int classOffset) {
+    return programObjectNames[conf][classOffset];
+  }
+
+  String selectorName(DartinoSelector selector) {
+    return selectorNames[selector.id];
+  }
+
+  int functionOffset(Configuration conf, String symbolicName) {
+    return programObjectNamesReverseMapping[conf][symbolicName];
+  }
+}
+
+Map<Configuration, Map<String, int>> invertedConfigurationMap(
+    Map<Configuration, Map<int, String>> map) {
+  Map<Configuration, Map<String, int>> result =
+  new Map<Configuration, Map<String, int>>();
+  for (Configuration configuration in map.keys) {
+    result[configuration] = new Map<String, int>();
+    map[configuration].forEach((int k, String v) {
+      result[configuration][v] = k;
+    });
+  }
+  return result;
+}
+
+Map<MapId, Map<String, int>> invertedMapIdMap(
+    Map<MapId, Map<int, String>> map) {
+  Map<MapId, Map<String, int>> result =
+  new Map<MapId, Map<String, int>>();
+  for (MapId mapId in map.keys) {
+    result[mapId] = new Map<String, int>();
+    map[mapId].forEach((int k, String v) {
+      result[mapId][v] = k;
+    });
+  }
+  return result;
+}
+
+String shortName(String symbolicName) {
+  List<String> parts = symbolicName.split("#").sublist(1);
+  List<String> partsOfLast = parts.last.split("-");
+  parts[parts.length - 1] = partsOfLast.first;
+
+  for (int i = 1; i < partsOfLast.length; i++) {
+    if (!partsOfLast[i].startsWith("closure")) break;
+    parts.add("<anonymous>");
+  }
+  return parts.join(".");
+}
+
 abstract class ProgramInfoJson {
-  static String encode(ProgramInfo info, {List<Configuration> enabledConfigs}) {
+  static const Map<Configuration, String> configurationNames =
+    const <Configuration, String>{
+      Configuration.Offset32BitsFloat: 'b32float',
+      Configuration.Offset32BitsDouble: 'b32double',
+      Configuration.Offset64BitsFloat: 'b64float',
+      Configuration.Offset64BitsDouble: 'b64double'};
+
+  static String encode(
+      NameOffsetMapping nameOffsetMapping,
+      {List<Configuration> enabledConfigs}) {
     if (enabledConfigs == null) {
       enabledConfigs = Configuration.values;
     }
 
     Map<String, List<int>> buildTables(
-        Map<Configuration, Map<int, int>> offset2stringIds) {
+        Map<Configuration, Map<int, String>> programObjectNames) {
 
       List<int> convertMap(Configuration conf) {
         if (enabledConfigs.contains(conf)) {
-          var map = offset2stringIds[conf];
-          List<int> list = new List<int>(map.length * 2);
+          Map<int, String> map = programObjectNames[conf];
+          List<dynamic> list = new List<dynamic>(map.length * 2);
           int offset = 0;
-          map.forEach((int a, int b) {
+          map.forEach((int a, String b) {
             list[offset++] = a;
             list[offset++] = b;
           });
@@ -117,151 +173,139 @@ abstract class ProgramInfoJson {
         }
       }
 
-      return {
-        'b64double': convertMap(Configuration.Offset64BitsDouble),
-        'b64float':  convertMap(Configuration.Offset64BitsFloat),
-        'b32double': convertMap(Configuration.Offset32BitsDouble),
-        'b32float':  convertMap(Configuration.Offset32BitsFloat),
-      };
+      return new Map<String, List<int>>
+          .fromIterable(Configuration.values,
+              key: (Configuration conf) => configurationNames[conf],
+              value: convertMap);
     }
 
     return JSON.encode({
-      'strings': info._strings,
-      'selectors': info._selectorNames,
-      'class-names': buildTables(info._classNames),
-      'function-names' : buildTables(info._functionNames),
-      'hashtag': info.hashtag,
+      'selectors': nameOffsetMapping.selectorNames,
+      'program-object-names': buildTables(nameOffsetMapping.programObjectNames),
+      'hashtag': nameOffsetMapping.snapshotHash,
     });
   }
 
-  static ProgramInfo decode(String string) {
+  static NameOffsetMapping decode(String string) {
     var json = JSON.decode(string);
 
-    Map<int, int> convertList(List<int> list) {
-      Map<int, int> map = {};
+    void ensureFormat(String key) {
+      if (json[key] is! Map) {
+        throw new FormatException("Expected '$key' to be a map.");
+      }
+      for (String configurationName in configurationNames.values) {
+        if (json[key][configurationName] is! List) {
+          throw new FormatException(
+              "Expected '$key.$configurationName' to be a List.");
+        }
+        for (int i = 0; i < json[key][configurationName].length; i += 2) {
+          if (json[key][configurationName][i] is! int) {
+            throw new FormatException(
+                "Found non-integer in '$key.$configurationName[$i]'.");
+          }
+          String name = json[key][configurationName][i + 1];
+          if (name != null && name is! String) {
+            throw new FormatException(
+                "Found non-string in '$key.$configurationName[${i+1}]'.");
+          }
+        }
+      }
+    }
+
+    ensureFormat('program-object-names');
+
+    if (json['hashtag'] is! int) {
+      throw new FormatException(
+          "Expected 'hashtag' to be an integer.");
+    }
+
+    if (json['selectors'] is! List) {
+      throw new FormatException(
+          "Expected 'selectors' to be a list");
+    }
+    for (var i in json['selectors']) {
+      if (i is! String) {
+        throw new FormatException("Found non-string in 'selectors'.");
+      }
+    }
+
+    Map<int, String> convertList(List<dynamic> list) {
+      Map<int, String> map = new Map<int, String>();
       for (int i = 0; i < list.length; i += 2) {
         map[list[i]] = list[i + 1];
       }
       return map;
     }
 
-    var classNames = {
-      Configuration.Offset64BitsDouble :
-          convertList(json['class-names']['b64double']),
-      Configuration.Offset64BitsFloat:
-          convertList(json['class-names']['b64float']),
-      Configuration.Offset32BitsDouble :
-          convertList(json['class-names']['b32double']),
-      Configuration.Offset32BitsFloat :
-          convertList(json['class-names']['b32float']),
-    };
+    Map convertNames(String key) {
+      Map<Configuration, Map<int, String>> result =
+          new Map<Configuration, Map<int, String>>();
+      configurationNames.forEach(
+          (Configuration conf, String configurationName) {
+        result[conf] = convertList(json[key][configurationName]);
+      });
+      return result;
+    }
 
-    var functionNames = {
-      Configuration.Offset64BitsDouble :
-          convertList(json['function-names']['b64double']),
-      Configuration.Offset64BitsFloat:
-          convertList(json['function-names']['b64float']),
-      Configuration.Offset32BitsDouble :
-          convertList(json['function-names']['b32double']),
-      Configuration.Offset32BitsFloat :
-          convertList(json['function-names']['b32float']),
-    };
+    var programObjectNames = convertNames('program-object-names');
 
-    return new ProgramInfo(
-        json['strings'], json['selectors'],
-        classNames, functionNames,
+    return new NameOffsetMapping(
+        json['selectors'],
+        programObjectNames,
         json['hashtag']);
   }
 }
 
-ProgramInfo buildProgramInfo(DartinoSystem system, WriteSnapshotResult result) {
-  List<String> strings = [];
-  Map<String, int> stringIndices = {};
-  List<int> selectors = [];
+IdOffsetMapping buildIdOffsetMapping(
+    Iterable<LibraryElement> libraries,
+    DartinoSystem system,
+    ProgramInfoCommand result) {
+  Map<MapId, Map<int, String>> symbolicNames =
+      system.computeSymbolicSystemInfo(libraries);
 
-  int newName(String name) {
-    if (name == null) return -1;
+  NameOffsetMapping nameOffsetMapping = buildNameOffsetMapping(
+      symbolicNames, system, result);
+  return new IdOffsetMapping(symbolicNames, nameOffsetMapping);
+}
 
-    var index = stringIndices[name];
-    if (index == null) {
-      index = strings.length;
-      strings.add(name);
-      stringIndices[name] = index;
-    }
-    return index;
-  }
+NameOffsetMapping buildNameOffsetMapping(
+    Map<MapId, Map<int, String>> symbolicNames,
+    DartinoSystem system,
+    ProgramInfoCommand result) {
 
-  void setIndex(List<int> list, int index, value) {
-    while (list.length <= index) {
-      list.add(-1);
-    }
-    list[index] = value;
-  }
+  Map<Configuration, Map<int, String>> programObjectNames =
+      new Map<Configuration, Map<int, String>>.fromIterable(
+          Configuration.values,
+          value: (Configuration conf) => new Map<int, String>());
+
+  List<String> selectors = new List(system.symbolByDartinoSelectorId.length);
 
   system.symbolByDartinoSelectorId.forEach((Pair<int, String> pair) {
-    setIndex(selectors, pair.fst, newName(pair.snd));
+    selectors[pair.fst] = pair.snd;
   });
 
-  Map<int, DartinoClass> functionId2Class = {};
-  system.classesById.forEach((Pair<int, DartinoClass> pair) {
-    DartinoClass klass = pair.snd;
-    klass.methodTable.forEach((Pair<int, int> pair) {
-      int functionId = pair.snd;
-      functionId2Class[functionId] = klass;
-    });
-  });
-
-  Map<Configuration, Map<int, int>> newTable() {
-    return <Configuration, Map<int, int>>{
-      Configuration.Offset64BitsDouble : <int,int>{},
-      Configuration.Offset64BitsFloat : <int,int>{},
-      Configuration.Offset32BitsDouble : <int,int>{},
-      Configuration.Offset32BitsFloat : <int,int>{},
-    };
-  }
-
-  fillTable(Map<Configuration, Map<int, int>> dst,
-            Int32List list,
-            String symbol(int id)) {
-    for (int offset = 0; offset < list.length; offset += 5) {
+  void fillTable(Int32List list, String symbolicNameFromId(int id)) {
+    for (int offset = 0;
+         offset < list.length;
+         offset += Configuration.values.length + 1) {
       int id = list[offset + 0];
-      int stringId = newName(symbol(id));
-
-      if (stringId != -1) {
-        dst[Configuration.Offset64BitsDouble][list[offset + 1]] = stringId;
-        dst[Configuration.Offset64BitsFloat][list[offset + 2]] = stringId;
-        dst[Configuration.Offset32BitsDouble][list[offset + 3]] = stringId;
-        dst[Configuration.Offset32BitsFloat][list[offset + 4]] = stringId;
+      String symbolicName = symbolicNameFromId(id);
+      for (Configuration conf in Configuration.values) {
+        programObjectNames[conf][list[offset + conf.index + 1]] = symbolicName;
       }
     }
   }
 
-  var functionNames = newTable();
-  var classNames = newTable();
-
-  fillTable(functionNames,
-            result.functionOffsetTable,
-            (id) => system.functionsById[id].name);
-  fillTable(classNames,
-            result.classOffsetTable,
-            (id) {
-    // The snapshot contains always all built-in classes, even if the compiler
-    // did not push them to the dartino-vm.
-    // So we get the offsets of built-in classes even though we might not be
-    // able to get their name.
-    if (id == -1) return null;
-    return system.classesById[id].name;
-  });
-  fillTable(classNames,
-            result.functionOffsetTable,
-            (id) {
-    DartinoClass klass = functionId2Class[id];
-    if (klass != null) return klass.name;
-    return null;
+  fillTable(result.functionOffsetTable, (int id) {
+    return symbolicNames[MapId.methods][id];
   });
 
-  return new ProgramInfo(strings, selectors, classNames,
-                         functionNames, result.hashtag);
+  fillTable(result.classOffsetTable, (id) {
+    return symbolicNames[MapId.classes][id];
+  });
+
+  return new NameOffsetMapping(
+      selectors, programObjectNames, result.snapshotHash);
 }
 
 final RegExp _FrameRegexp =
@@ -271,7 +315,7 @@ final RegExp _NSMRegexp =
     new RegExp(r'^NoSuchMethodError\(([0-9]+), ([0-9]+)\)$');
 
 Stream<String> decodeStackFrames(Configuration conf,
-                                 ProgramInfo info,
+                                 NameOffsetMapping info,
                                  Stream<String> input) async* {
   await for (String line in input) {
     Match frameMatch = _FrameRegexp.firstMatch(line);
@@ -280,25 +324,20 @@ Stream<String> decodeStackFrames(Configuration conf,
       String frameNr = frameMatch.group(1);
       int functionOffset = int.parse(frameMatch.group(2));
 
-      String className = info.classNameOfFunction(conf, functionOffset);
       String functionName = info.functionName(conf, functionOffset);
 
-      if (className == null) {
-        yield '   $frameNr: $functionName\n';
-      } else {
-        yield '   $frameNr: $className.$functionName\n';
-      }
+      yield '   $frameNr: ${shortName(functionName)}\n';
     } else if (nsmMatch != null) {
       int classOffset = int.parse(nsmMatch.group(1));
       DartinoSelector selector =
           new DartinoSelector(int.parse(nsmMatch.group(2)));
-      String functionName = info.selectorName(selector);
+      String selectorName = info.selectorName(selector);
       String className = info.className(conf, classOffset);
 
-      if (className != null && functionName != null) {
-        yield 'NoSuchMethodError: $className.$functionName\n';
-      } else if (functionName != null) {
-        yield 'NoSuchMethodError: $functionName\n';
+      if (className != null && selectorName != null) {
+        yield 'NoSuchMethodError: ${shortName(className)}.$selectorName\n';
+      } else if (selectorName != null) {
+        yield 'NoSuchMethodError: $selectorName\n';
       } else {
         yield 'NoSuchMethodError: <unknown method>\n';
       }
@@ -349,9 +388,7 @@ Future<int> decodeProgramMain(
     return 1;
   }
 
-  ProgramInfo info;
-
-  info = ProgramInfoJson.decode(await file.readAsString());
+  NameOffsetMapping info = ProgramInfoJson.decode(await file.readAsString());
 
   Stream<String> inputLines =
       input.transform(UTF8.decoder).transform(new LineSplitter());
@@ -371,8 +408,10 @@ final RegExp propertyRegexp = new RegExp(r'^(\w+)=(.*$)');
 
 // Tick contains information from a line matching tickRegexp.
 class Tick {
-  final int pc;  // The actual program counter where the tick occurred.
-  final int bcp;  // The bytecode pointer relative to program heap start.
+  // The actual program counter where the tick occurred.
+  final int pc;
+  // The bytecode pointer as an offset relative to program heap start.
+  final int bcp;
   final int hashtag;
   Tick(this.pc, this.bcp,this.hashtag);
 }
@@ -387,14 +426,15 @@ class Property {
 // FunctionInfo captures profiler information for a function.
 class FunctionInfo {
   int ticks = 0;  // Accumulated number of ticks.
-  final String name;  // Name that indentifies the function.
+  final String name;  // Name that identifies the function.
 
   FunctionInfo(this.name);
 
-  int Percent(int total_ticks) => ticks * 100 ~/ total_ticks;
+  int percent(int total_ticks) => ticks * 100 ~/ total_ticks;
 
-  void Print(int total_ticks) {
-    print(" -${Percent(total_ticks).toString().padLeft(3, ' ')}% $name");
+  String stringRepresentation(int total_ticks, NameOffsetMapping info) {
+    return " -${percent(total_ticks).toString().padLeft(3, ' ')}% "
+        "${shortName(name)}";
   }
 
   static String ComputeName(String function_name, String class_name) {
@@ -403,7 +443,7 @@ class FunctionInfo {
   }
 }
 
-Stream decode(Stream<List<int>> input) async* {
+Stream decodeTickStream(Stream<List<int>> input) async* {
   Stream<String> inputLines =
       input.transform(UTF8.decoder).transform(new LineSplitter());
   await for (String line in inputLines) {
@@ -448,9 +488,7 @@ class NamedEntry {
 }
 
 class Profile {
-  final String sample_filename;
-  final String info_filename;
-  Profile(this.sample_filename,this.info_filename);
+  Profile();
 
   // Tick information.
   int total_ticks = 0;
@@ -468,63 +506,34 @@ class Profile {
   // The resulting histogram.
   List<FunctionInfo> histogram;
 
-  void Print() {
-    print("# Tick based profiler result.");
+  String formatted(NameOffsetMapping info) {
+    StringBuffer buffer;
+    buffer.writeln("# Tick based profiler result.");
 
     for (FunctionInfo func in histogram) {
-      if (func.Percent(total_ticks) < 2) break;
-      func.Print(total_ticks);
+      if (func.percent(total_ticks) < 2) break;
+      buffer.writeln(func.stringRepresentation(total_ticks, info));
     }
 
-    print("# ticks in interpreter=${interpreter_ticks}");
+    buffer.writeln("# ticks in interpreter=${interpreter_ticks}");
     if (runtime_ticks > 0) print("  runtime=${runtime_ticks}");
     if (discarded_ticks > 0) print("  discarded=${discarded_ticks}");
     if (other_snapshot_ticks> 0) {
-      print("  other_snapshot=${other_snapshot_ticks}");
+      buffer.writeln("  other_snapshot=${other_snapshot_ticks}");
     }
+    return buffer.toString();
   }
 }
 
 Future<Profile> decodeTickSamples(
-    List<String> arguments,
+    NameOffsetMapping info,
+    Stream<List<int>> sampleStream,
     Stream<List<int>> input,
     StreamSink<List<int>> output) async {
-
-  usage(message) {
-    print("Invalid arguments: $message");
-    print("Usage: ${io.Platform.script} <dartino.ticks> <snapshot.info.json>");
-  }
-
-  if (arguments.length != 2) {
-    usage("Exactly 2 arguments must be supplied");
-    return null;
-  }
-
-  String sample_filename = arguments[0];
-  io.File sample_file = new io.File(sample_filename);
-  if (!await sample_file.exists()) {
-    usage("The file '$sample_filename' does not exist.");
-    return null;
-  }
-
-  String info_filename = arguments[1];
-  if (!info_filename.endsWith('.info.json')) {
-    usage("The program info file must end in '.info.json' "
-          "(was: '$info_filename').");
-    return null;
-  }
-
-  io.File info_file = new io.File(info_filename);
-  if (!await info_file.exists()) {
-    usage("The file '$info_filename' does not exist.");
-    return null;
-  }
-
-  ProgramInfo info = ProgramInfoJson.decode(await info_file.readAsString());
-  Profile profile = new Profile(sample_filename, info_filename);
+  Profile profile = new Profile();
 
   // Process the tick sample file.
-  await for (var t in decode(sample_file.openRead())) {
+  await for (var t in decodeTickStream(sampleStream)) {
     if (t is Tick) {
       profile.ticks.add(t);
     } else if (t is Property) {
@@ -555,35 +564,27 @@ Future<Profile> decodeTickSamples(
 
   // Compute a offset sorted list of Function entries.
   List<NamedEntry> functions = new List<NamedEntry>();
-  Map<int,int> fnames = info._functionNames[conf];
-  fnames.forEach((key, value) {
-     functions.add(new NamedEntry(key, info._getString(value)));
+  Map<int,String> programObjectNames = info.programObjectNames[conf];
+  programObjectNames.forEach((int offset, String name) {
+    if (name.endsWith("-method")) {
+      functions.add(new NamedEntry(offset, name));
+    }
   });
   functions.sort((a, b) => a.offset - b.offset);
 
-  // Compute a offset sorted list of Class entries.
-  List<NamedEntry> classes = new List<NamedEntry>();
-  Map<int,int> cnames = info._classNames[conf];
-  cnames.forEach((key, value) {
-     classes.add(new NamedEntry(key, info._getString(value)));
-  });
-  classes.sort((a, b) => a.offset - b.offset);
-
-  Map<String,FunctionInfo> results = <String,FunctionInfo>{};
+  Map<String, FunctionInfo> results = <String, FunctionInfo>{};
   for (Tick t in profile.ticks) {
     profile.total_ticks++;
     if (t.bcp == 0) {
       profile.runtime_ticks++;
-    } else if (t.hashtag != info.hashtag) {
+    } else if (t.hashtag != info.snapshotHash) {
       profile.other_snapshot_ticks++;
     } else {
       profile.interpreter_ticks++;
-      NamedEntry fe = findEntry(functions, t);
-      if (fe?.name != null) {
-        NamedEntry ce = findEntry(classes, t);
-        String key = FunctionInfo.ComputeName(fe.name, ce?.name);
+      String name = findEntry(functions, t).name;
+      if (name != null) {
         FunctionInfo f =
-            results.putIfAbsent(key, () => new FunctionInfo(key));
+            results.putIfAbsent(name, () => new FunctionInfo(name));
         f.ticks++;
       }
     }
@@ -598,13 +599,19 @@ Future<Profile> decodeTickSamples(
   return profile;
 }
 
-Configuration _getConfiguration(bits, floatOrDouble) {
-  if (bits == '64') {
-    if (floatOrDouble == 'float') return Configuration.Offset64BitsFloat;
-    else if (floatOrDouble == 'double') return Configuration.Offset64BitsDouble;
-  } else if (bits == '32') {
-    if (floatOrDouble == 'float') return Configuration.Offset32BitsFloat;
-    else if (floatOrDouble == 'double') return Configuration.Offset32BitsDouble;
+Configuration _getConfiguration(String bits, String floatOrDouble) {
+  int wordSize = const {'32': 32, '64': 64}[bits];
+  int dartinoDoubleSize = const {'float': 32, 'double': 64}[floatOrDouble];
+  return getConfiguration(wordSize, dartinoDoubleSize);
+}
+
+Configuration getConfiguration(int wordSize, int dartinoDoubleSize) {
+  if (wordSize == 64) {
+    if (dartinoDoubleSize == 32) return Configuration.Offset64BitsFloat;
+    else if (dartinoDoubleSize == 64) return Configuration.Offset64BitsDouble;
+  } else if (wordSize == 32) {
+    if (dartinoDoubleSize == 32) return Configuration.Offset32BitsFloat;
+    else if (dartinoDoubleSize == 64) return Configuration.Offset32BitsDouble;
   }
-  throw 'Invalid arguments';
+  throw 'Invalid arguments $wordSize $dartinoDoubleSize';
 }

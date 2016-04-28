@@ -6,8 +6,9 @@
 # This script is creating a self contained directory with all the tools,
 # libraries, packages and samples needed for running Dartino.
 
-# This script assumes that the target arg has been build in the passed
-# in --build_dir. It also assumes that out/ReleaseXARM/dartino-vm and
+# This script assumes that the target architecture has been build in the passed
+# in --build_dir and that the corresponding 32-bit architecture is also.
+# Finally it also assumes that out/ReleaseXARM/dartino-vm and
 # out/ReleaseSTM have been build.
 
 import optparse
@@ -24,7 +25,7 @@ from shutil import copyfile, copymode, copytree, rmtree, ignore_patterns
 TOOLS_DIR = abspath(dirname(__file__))
 
 SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
-                'raspberry_pi', 'stm32f746g_disco', 'socket', 'mqtt',
+                'raspberry_pi', 'stm32', 'socket', 'mqtt',
                 'mbedtls']
 THIRD_PARTY_PACKAGES = ['charcode']
 
@@ -62,6 +63,9 @@ def EnsureDeleted(directory):
   if exists(directory):
     raise Exception("Could not delete %s" % directory)
 
+def BuildDir32(build_dir):
+  return build_dir.replace('X64', 'IA32')
+
 def CopySharedLibraries(bin_dir, build_dir):
   shared_libraries = ['mbedtls']
   # Libraries are placed differently on mac and linux:
@@ -84,7 +88,11 @@ def CopyBinaries(bundle_dir, build_dir):
   internal = join(bundle_dir, 'internal')
   makedirs(bin_dir)
   makedirs(internal)
+  # Copy the dartino VM.
   CopyFile(join(build_dir, 'dartino-vm'), join(bin_dir, 'dartino-vm'))
+  # Copy the 32-bit version of dartino-flashify.
+  CopyFile(join(BuildDir32(build_dir), 'dartino-flashify'),
+           join(bin_dir, 'dartino-flashify'))
   # The driver for the sdk is specially named dartino_for_sdk.
   CopyFile(join(build_dir, 'dartino_for_sdk'), join(bin_dir, 'dartino'))
   # We move the dart vm to internal to not put it on the path of users
@@ -92,6 +100,15 @@ def CopyBinaries(bundle_dir, build_dir):
   # natives.json is read relative to the dart binary
   CopyFile(join(build_dir, 'natives.json'), join(internal, 'natives.json'))
   CopySharedLibraries(bin_dir, build_dir)
+
+def CopyDartSdk(bundle_dir):
+  os_name = utils.GuessOS()
+  if os_name == "macos":
+    os_name = "mac"
+  source = join('third_party', 'dart-sdk', os_name, 'dart-sdk')
+  target = join(bundle_dir, 'internal', 'dart-sdk')
+  print 'copying %s to %s' % (source, target)
+  copytree(source, target)
 
 # Copy the platform decriptor, rewriting paths to point to the
 # sdk location at `sdk_dir` instead of `repo_dir`.
@@ -178,23 +195,32 @@ def CopyPackagesAndSettingsTemplate(bundle_dir):
                join(target_dir, package),
                ignore = ignore_patterns('.git'))
       p.write('%s:../pkg/%s/lib\n' % (package, package))
+  # Update the dartino_lib/dartino/lib/_embedder.yaml file
+  # based upon the SDK structure
+  embedderPath = join(target_dir, 'dartino', 'lib', '_embedder.yaml')
+  with open(embedderPath) as f:
+    s = f.read()
+  s = s.replace('../../../lib/',
+                '../../../internal/dartino_lib/')
+  s = s.replace('../../../third_party/dart/sdk/lib/',
+                '../../../internal/dart_lib/')
+  with open(embedderPath, 'w') as f:
+    f.write(s)
 
 def CopyPlatforms(bundle_dir):
-  # Only copy parts of the platform directory. We also have source
+  # Only copy parts of the platforms directory. We also have source
   # code there at the moment.
   target_dir = join(bundle_dir, 'platforms/raspberry-pi2')
   copytree('platforms/raspberry-pi2', target_dir)
-  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/bin')
-  copytree('platforms/stm/bin', target_dir)
-  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/templates')
-  copytree('platforms/stm/templates', target_dir)
-  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery/config')
-  copytree('platforms/stm/config', target_dir)
+  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery')
+  copytree('platforms/stm32f746g-discovery', target_dir)
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
+  # TODO(karlklose): Run 'build_dir/dartino export' instead?
   cmd = [dart_executable, '-c', '--packages=.packages',
          '-Dsnapshot="%s"' % snapshot,
          '-Dpackages=".packages"',
+         '-Dtest.dartino_settings_file_name=".dartino-settings"',
          'tests/dartino_compiler/run.dart', dart_file]
   print 'Running %s' % ' '.join(cmd)
   subprocess.check_call(' '.join(cmd), shell=True)
@@ -225,20 +251,21 @@ def CopyArm(bundle_dir):
 
 def CopySTM(bundle_dir):
   libraries = [
-      'libdartino_vm_library.a',
-      'libdartino_shared.a',
-      'libdouble_conversion.a',
-      'libdisco_dartino.a']
+      'libdartino.a',
+      'libfreertos_dartino.a',
+      'libstm32f746g-discovery.a',
+      'libmbedtls_static.a',
+    ]
   disco = join(bundle_dir, 'platforms', 'stm32f746g-discovery')
   lib_dir = join(disco, 'lib')
   makedirs(lib_dir)
   build_dir = 'out/ReleaseSTM'
-  for v in libraries:
-    CopyFile(join(build_dir, v), join(lib_dir, basename(v)))
+  for lib in libraries:
+    CopyFile(join(build_dir, lib), join(lib_dir, basename(lib)))
 
   config_dir = join(disco, 'config')
-  CopyFile('platforms/stm/disco_dartino/generated/SW4STM32/'
-           'configuration/STM32F746NGHx_FLASH.ld',
+  CopyFile('platforms/stm/disco_dartino/src/stm32f746g-discovery/'
+           'STM32F746NGHx_FLASH.ld',
            join(config_dir, 'stm32f746g-discovery.ld'))
 
 def CopySamples(bundle_dir):
@@ -350,13 +377,18 @@ def CopyTools(bundle_dir):
 
 def Main():
   options = ParseOptions();
-  print 'Creating sdk bundle for %s' % options.build_dir
   build_dir = options.build_dir
+  if not build_dir:
+    print 'Please specify a build directory with "--build_dir".'
+    sys.exit(1)
+  sdk_dir = join(build_dir, 'dartino-sdk')
+  print 'Creating sdk bundle for %s in %s' % (build_dir, sdk_dir)
   deb_package = options.deb_package
   with utils.TempDir() as sdk_temp:
     if options.create_documentation:
       CreateDocumentation()
     CopyBinaries(sdk_temp, build_dir)
+    CopyDartSdk(sdk_temp)
     CopyInternalPackages(sdk_temp, build_dir)
     CopyLibs(sdk_temp, build_dir)
     CopyPackagesAndSettingsTemplate(sdk_temp)
@@ -368,11 +400,11 @@ def Main():
     CopyAdditionalFiles(sdk_temp)
     if deb_package:
       CopyArmDebPackage(sdk_temp, deb_package)
-    sdk_dir = join(build_dir, 'dartino-sdk')
     EnsureDeleted(sdk_dir)
     if options.include_tools:
       CopyTools(sdk_temp)
     copytree(sdk_temp, sdk_dir)
+  print 'Created sdk bundle for %s in %s' % (build_dir, sdk_dir)
 
 if __name__ == '__main__':
   sys.exit(Main())

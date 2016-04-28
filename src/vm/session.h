@@ -45,7 +45,10 @@ class Session {
 
   int FreshProcessId() { return next_process_id_++; }
 
-  void Initialize();
+  // Initializes with [program]. If [program] is `NULL` a new program will be
+  // created that will be constructed via this session.
+  void Initialize(Program *program);
+
   void StartMessageProcessingThread();
   void JoinMessageProcessingThread();
   void ProcessMessages();
@@ -54,8 +57,9 @@ class Session {
 
   // High-level operations.
   int ProcessRun();
-  bool WriteSnapshot(const char* path, FunctionOffsetsType* function_offsets,
-                     ClassOffsetsType* class_offsets);
+  bool CreateSnapshot(bool writeToDisk,
+      const char* path, FunctionOffsetsType* function_offsets,
+      ClassOffsetsType* class_offsets);
 
   bool CanHandleEvents() const;
   Scheduler::ProcessInterruptionEvent UncaughtException(Process* process);
@@ -68,12 +72,13 @@ class Session {
  private:
   // SessionState private methods.
   void ChangeState(SessionState* new_state);
+  bool live_editing() const { return live_editing_; }
+  void set_live_editing(bool live_editing) { live_editing_ = live_editing; }
   bool debugging() const { return debugging_; }
   void set_debugging(bool debugging) { debugging_ = debugging; }
   Process* main_process() const { return main_process_; }
   void set_main_process(Process* process) {
     ASSERT(main_process_ == NULL);
-    process_ = process;
     main_process_ = process;
   }
 
@@ -84,6 +89,9 @@ class Session {
   void PushFromMap(int map_index, int64 id);
   void PopToMap(int map_index, int64 id);
   void RemoveFromMap(int map_index, int64 id);
+
+  // Get an appropriate message to send over the wire representing [function].
+  int64 FunctionMessage(Function *function);
 
   // Get the id for the object in the map with the given
   // index. Returns -1 if the object does not exist in the map.
@@ -162,10 +170,12 @@ class Session {
   Program* program_;
   SessionState* state_;
 
+  // Connection support modes.  See enableLiveEditing/enableDebugging in
+  // pkg/dartino_compiler/lib/vm_session.dart
+  bool live_editing_;
   bool debugging_;
+
   Process* main_process_;
-  // TODO(zerny): remove use of process_.
-  Process* process_;
   int next_process_id_;
 
   int method_map_id_;
@@ -197,8 +207,8 @@ class Session {
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);
   void SendInstanceStructure(Instance* instance);
-  void SendSnapshotResult(ClassOffsetsType* class_offsets,
-                          FunctionOffsetsType* function_offsets);
+  void SendProgramInfo(ClassOffsetsType* class_offsets,
+      FunctionOffsetsType* function_offsets);
 
   void Push(Object* object) { stack_.Add(object); }
   Object* Pop() { return stack_.RemoveLast(); }
@@ -227,11 +237,10 @@ class Session {
   // and push it on the session stack.
   void PushTopStackFrame(Stack* stack);
 
-  void RestartFrame(int index);
-
   Process* GetProcess(int process_id);
 
   Scheduler::ProcessInterruptionEvent CheckForPauseEventResult(
+      Process* process,
       Scheduler::ProcessInterruptionEvent result);
 };
 

@@ -51,18 +51,21 @@ typedef long long int int64;        // NOLINT
 typedef long long unsigned uint64;  // NOLINT
 #endif
 
-#ifdef DARTINO_TARGET_OS_LK
+#ifdef DARTINO_USE_SINGLE_PRECISION
 typedef float dartino_double;
 typedef uint32 dartino_double_as_uint;
+typedef int32 dartino_double_as_int;
 #else
 typedef double dartino_double;
 typedef uint64 dartino_double_as_uint;
+typedef int64 dartino_double_as_int;
 #endif
 
 // Byte sizes.
 const int kWordSize = sizeof(word);
 const int kDoubleSize = sizeof(double);  // NOLINT
 const int kPointerSize = sizeof(void*);  // NOLINT
+const int kDartinoDoubleSize = sizeof(dartino_double);
 
 #ifdef DARTINO64
 const int kPointerSizeLog2 = 3;
@@ -77,6 +80,7 @@ const int kBitsPerByte = 8;
 const int kBitsPerByteLog2 = 3;
 const int kBitsPerPointer = kPointerSize * kBitsPerByte;
 const int kBitsPerWord = kWordSize * kBitsPerByte;
+const int kBitsPerDartinoDouble = kDartinoDoubleSize * kBitsPerByte;
 
 // System-wide named constants.
 const int KB = 1024;

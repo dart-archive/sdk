@@ -148,8 +148,8 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
   virtual void DoInvokeStatic();
   virtual void DoInvokeFactory();
 
+  virtual void DoInvokeLeafNative();
   virtual void DoInvokeNative();
-  virtual void DoInvokeDetachableNative();
   virtual void DoInvokeNativeYield();
 
   virtual void DoInvokeSelector();
@@ -272,10 +272,8 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
 
   void Allocate(bool immutable);
 
-  // This function
-  //   * changes the first three stack slots
-  //   * changes caller-saved registers
-  void AddToRememberedSetSlow(Register object, Register value);
+  // This function overwrites the 'object' and 'scratch' registers!
+  void AddToRememberedSet(Register object, Register value, Register scratch);
 
   void InvokeMethodUnfold(bool test);
   void InvokeMethod(bool test);
@@ -303,7 +301,7 @@ class InterpreterGeneratorX64 : public InterpreterGenerator {
   void InvokeBitShr(const char* fallback);
   void InvokeBitShl(const char* fallback);
 
-  void InvokeNative(bool yield);
+  void InvokeNative(bool yield, bool safepoint);
 
   void CheckStackOverflow(int size);
 
@@ -456,7 +454,7 @@ void InterpreterGeneratorX64::GenerateDebugAtBytecode() {
   __ SwitchToText();
   __ AlignToPowerOfTwo(4);
   __ Bind("", "DebugAtBytecode");
-  // TODO(ajohnsen): Check if the process has debug_info set.
+  // TODO(ajohnsen): Check if the program/process has debug_info set.
   __ popq(RBX);
   LoadProcess(RDI);
   __ movq(RDX, RSP);
@@ -605,7 +603,7 @@ void InterpreterGeneratorX64::DoStoreBoxed() {
   __ movq(RBX, Address(RSP, RAX, TIMES_WORD_SIZE));
   __ movq(Address(RBX, Boxed::kValueOffset - HeapObject::kTag), RCX);
 
-  AddToRememberedSetSlow(RBX, RCX);
+  AddToRememberedSet(RBX, RCX, RAX);
 
   Dispatch(kStoreBoxedLength);
 }
@@ -617,7 +615,7 @@ void InterpreterGeneratorX64::DoStoreStatic() {
   __ movq(Address(RBX, RAX, TIMES_WORD_SIZE, Array::kSize - HeapObject::kTag),
           RCX);
 
-  AddToRememberedSetSlow(RBX, RCX);
+  AddToRememberedSet(RBX, RCX, RAX);
 
   Dispatch(kStoreStaticLength);
 }
@@ -632,7 +630,7 @@ void InterpreterGeneratorX64::DoStoreField() {
   StoreLocal(RCX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(RAX, RCX);
+  AddToRememberedSet(RAX, RCX, RBX);
 
   Dispatch(kStoreFieldLength);
 }
@@ -647,7 +645,7 @@ void InterpreterGeneratorX64::DoStoreFieldWide() {
   StoreLocal(RCX, 1);
   Drop(1);
 
-  AddToRememberedSetSlow(RAX, RCX);
+  AddToRememberedSet(RAX, RCX, RBX);
 
   Dispatch(kStoreFieldWideLength);
 }
@@ -750,16 +748,16 @@ void InterpreterGeneratorX64::DoInvokeFactory() {
   InvokeStatic();
 }
 
-void InterpreterGeneratorX64::DoInvokeNative() {
-  InvokeNative(false);
+void InterpreterGeneratorX64::DoInvokeLeafNative() {
+  InvokeNative(false, false);
 }
 
-void InterpreterGeneratorX64::DoInvokeDetachableNative() {
-  InvokeNative(false);
+void InterpreterGeneratorX64::DoInvokeNative() {
+  InvokeNative(false, true);
 }
 
 void InterpreterGeneratorX64::DoInvokeNativeYield() {
-  InvokeNative(true);
+  InvokeNative(true, false);
 }
 
 void InterpreterGeneratorX64::DoInvokeSelector() {
@@ -1085,7 +1083,7 @@ void InterpreterGeneratorX64::DoBranchBackIfTrueWide() {
   Label branch;
   Pop(RBX);
   LoadLiteralTrue(RAX);
-  __ cmpl(RBX, RAX);
+  __ cmpq(RBX, RAX);
   __ j(EQUAL, &branch);
   Dispatch(kBranchBackIfTrueWideLength);
 
@@ -1400,9 +1398,8 @@ void InterpreterGeneratorX64::DoIntrinsicSetField() {
       Address(RCX, RAX, TIMES_WORD_SIZE, Instance::kSize - HeapObject::kTag),
       RBX);
 
-  // We have put the result in EBX to be sure it's kept by the preserved by the
-  // store-buffer call.
-  AddToRememberedSetSlow(RCX, RBX);
+  // The value register (RBX) is not overwritten by the write barrier.
+  AddToRememberedSet(RCX, RBX, RAX);
 
   __ movq(RAX, RBX);
   __ ret();
@@ -1461,7 +1458,8 @@ void InterpreterGeneratorX64::DoIntrinsicListIndexSet() {
   // Index (in RAX) is already smi-taged, so only scale by TIMES_4.
   __ movq(Address(RCX, RAX, TIMES_4, Array::kSize - HeapObject::kTag), RBX);
 
-  AddToRememberedSetSlow(RCX, RBX);
+  // The value register (RBX) is not overwritten by the write barrier.
+  AddToRememberedSet(RCX, RBX, RAX);
 
   __ movq(RAX, RBX);
   __ ret();
@@ -1564,20 +1562,13 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   __ movl(RAX, Address(R13, 1));
   __ movq(RBX, Address(R13, RAX, TIMES_1));
 
-  // We initialize the 4rd argument to "HandleAllocate" to 0, meaning the object
-  // we're allocating will not be initialized with pointers to immutable space.
-  __ movq(RCX, Immediate(0));
+  // Initialization of 'allocate immutable' argument depends on [immutable].
+  __ movq(RDX, Immediate(immutable ? 1 : 0));
 
-  // Loop over all arguments and find out if
-  //   * all of them are immutable
-  //   * there is at least one immutable member
+  // Loop over all arguments and find out if all of them are immutable (then we
+  // can set the immutable bit in this object too).
   Label allocate;
-  {
-    // Initialization of 'allocate immutable' argument
-    // depends on [immutable].  TODO(erikcorry): Simplify, now we don't have
-    // an immutable space.
-    __ movq(RDX, Immediate(immutable ? 1 : 0));
-
+  if (immutable) {
     __ movq(R11, Address(RBX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andq(R11, Immediate(InstanceFormat::FixedSizeField::mask()));
     int size_shift = InstanceFormat::FixedSizeField::shift() - kPointerSizeLog2;
@@ -1591,8 +1582,7 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
     __ addq(R10, R11);
 
     Label loop;
-    Label loop_with_immutable_field;
-    Label loop_with_mutable_field;
+    Label break_loop_with_mutable_field;
 
     // Decrement pointer to point to next field.
     __ Bind(&loop);
@@ -1623,30 +1613,24 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
     __ movq(RAX, Address(RAX, Class::kInstanceFormatOffset - HeapObject::kTag));
     __ andq(RAX, Immediate(mask));
 
-    // If this is type never immutable we continue the loop.
+    // If this is type never immutable we break the loop.
     __ cmpq(RAX, Immediate(never_immutable_mask));
-    __ j(EQUAL, &loop_with_mutable_field);
+    __ j(EQUAL, &break_loop_with_mutable_field);
 
     // If this is type is always immutable we continue the loop.
     __ cmpq(RAX, Immediate(always_immutable_mask));
-    __ j(EQUAL, &loop_with_immutable_field);
+    __ j(EQUAL, &loop);
 
-    // Else, we must have a Instance and check the runtime-tracked
+    // Else, we must have an Instance and check the runtime-tracked
     // immutable bit.
     uword im_mask = Instance::FlagsImmutabilityField::encode(true);
     __ movq(R11, Address(R11, Instance::kFlagsOffset - HeapObject::kTag));
     __ testq(R11, Immediate(im_mask));
-    __ j(NOT_ZERO, &loop_with_immutable_field);
+    __ j(NOT_ZERO, &loop);
 
-    __ jmp(&loop_with_mutable_field);
-
-    __ Bind(&loop_with_immutable_field);
-    __ movl(RCX, Immediate(1));
-    __ jmp(&loop);
-
-    __ Bind(&loop_with_mutable_field);
+    __ Bind(&break_loop_with_mutable_field);
     __ movl(RDX, Immediate(0));
-    __ jmp(&loop);
+    // Fall through.
   }
 
   // TODO(kasperl): Consider inlining this in the interpreter.
@@ -1654,8 +1638,7 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   LoadProcess(RDI);
   SwitchToCStack();
   __ movq(RSI, RBX);
-  // NOTE: The 3nd argument is already present in RDX
-  // NOTE: The 4rd argument is already present in RCX
+  // NOTE: The 3rd argument is already present in RDX
   __ call("HandleAllocate");
   SwitchToDartStack();
   __ movq(R11, RAX);
@@ -1681,6 +1664,8 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   __ cmpq(R10, R11);
   __ j(BELOW, &done);
   Pop(RBX);
+  // No write barrier, because newly allocated instances are always
+  // in new-space, or are already entered into the remembered set.
   __ movq(Address(R10, 0), RBX);
   __ subq(R10, Immediate(1 * kWordSize));
   __ jmp(&loop);
@@ -1690,9 +1675,20 @@ void InterpreterGeneratorX64::Allocate(bool immutable) {
   Dispatch(kAllocateLength);
 }
 
-void InterpreterGeneratorX64::AddToRememberedSetSlow(Register object,
-                                                     Register value) {
-  // TODO(erikcorry): Implement remembered set.
+void InterpreterGeneratorX64::AddToRememberedSet(Register object,
+                                                 Register value,
+                                                 Register scratch) {
+  Label smi;
+  __ testq(value, Immediate(Smi::kTagMask));
+  __ j(ZERO, &smi);
+  // TODO(erikcorry): Filter out non-new-space values.
+
+  LoadProcess(scratch);
+  __ shrq(object, Immediate(GCMetadata::kCardSizeLog2));
+  __ addq(object, Address(scratch, Process::kRememberedSetBiasOffset));
+  __ movb(Address(object), Immediate(GCMetadata::kNewSpacePointers));
+
+  __ Bind(&smi);
 }
 
 void InterpreterGeneratorX64::InvokeMethodUnfold(bool test) {
@@ -1955,7 +1951,7 @@ void InterpreterGeneratorX64::InvokeDivision(const char* fallback,
   __ jmp(fallback);
 }
 
-void InterpreterGeneratorX64::InvokeNative(bool yield) {
+void InterpreterGeneratorX64::InvokeNative(bool yield, bool safepoint) {
   __ movzbq(RBX, Address(R13, 1));
   __ movzbq(RCX, Address(R13, 2));
 
@@ -1965,10 +1961,22 @@ void InterpreterGeneratorX64::InvokeNative(bool yield) {
   __ leaq(RSI, Address(RSP, RBX, TIMES_WORD_SIZE, 2 * kWordSize));
   LoadProcess(RDI);
 
-  SwitchToCStack();
-  Label failure;
+  Label continue_with_result;
+
+  if (safepoint) {
+    SaveState(&continue_with_result);
+  } else {
+    SwitchToCStack();
+  }
   __ call(RAX);
-  SwitchToDartStack();
+  if (safepoint) {
+    RestoreState();
+  } else {
+    SwitchToDartStack();
+  }
+
+  __ Bind(&continue_with_result);
+  Label failure;
   __ movq(RCX, RAX);
   __ andq(RCX, Immediate(Failure::kTagMask));
   __ cmpq(RCX, Immediate(Failure::kTag));
@@ -1976,6 +1984,8 @@ void InterpreterGeneratorX64::InvokeNative(bool yield) {
 
   // Result is now in eax.
   if (yield) {
+    ASSERT(!safepoint);
+
     // If the result of calling the native is null, we don't yield.
     LoadLiteralNull(RCX);
     Label dont_yield;

@@ -8,6 +8,9 @@ import 'package:compiler/compiler_new.dart' show
     CompilerDiagnostics,
     Diagnostic;
 
+import 'package:compiler/src/resolution/class_members.dart' show
+    ClassMemberMixin;
+
 import 'package:compiler/compiler.dart' as api;
 
 import 'package:compiler/src/compiler.dart' show
@@ -29,12 +32,9 @@ import 'package:compiler/src/parser/partial_elements.dart' show
     PartialFunctionElement;
 
 import 'package:compiler/src/elements/modelx.dart' show
-    ClassElementX,
+    ElementX,
     FieldElementX,
     LibraryElementX;
-
-import 'package:compiler/src/constants/values.dart' show
-    ConstantValue;
 
 import '../incremental_backend.dart' show
     IncrementalDartinoBackend;
@@ -53,14 +53,15 @@ import '../src/dartino_function_builder.dart' show
     DartinoFunctionBuilder;
 
 import '../vm_commands.dart' show
-    PrepareForChanges,
     VmCommand;
 
 import '../dartino_system.dart' show
     DartinoDelta,
+    DartinoFunction,
     DartinoSystem;
 
 import '../src/dartino_system_builder.dart' show
+    DartinoSystemBuilder,
     SchemaChange;
 
 import 'dartino_compiler_incremental.dart' show
@@ -72,6 +73,7 @@ import 'reuser.dart' show
     AddedFieldUpdate,
     AddedFunctionUpdate,
     ClassUpdate,
+    FunctionUpdate,
     Logger,
     RemovedClassUpdate,
     RemovedFieldUpdate,
@@ -148,21 +150,30 @@ class DartinoReuser extends Reuser with DartinoFeatures {
   // TODO(ahe): If I remove this, I don't get type errors on backend.
   IncrementalDartinoBackend get backend => super.backend;
 
-  DartinoDelta computeUpdateDartino(DartinoSystem currentSystem) {
-    // TODO(ahe): Remove this when we support adding static fields.
-    Set<Element> existingStaticFields =
-        new Set<Element>.from(dartinoContext.staticIndices.keys);
+  // TODO(ahe): If I remove this, I don't get type errors on backend.
+  DartinoCompilerImplementation get compiler => super.compiler;
 
+  DartinoDelta computeUpdateDartino(DartinoSystem currentSystem) {
     List<Element> updatedElements = applyUpdates();
 
     if (compiler.progress != null) {
       compiler.progress.reset();
     }
 
+    Set<ClassMemberMixin> classesNeedingMemberRecomputing =
+            new Set<ClassMemberMixin>();
+
     for (Element element in updatedElements) {
       if (!element.isClass) {
         if (element.isClassMember) {
-          element.enclosingClass.ensureResolved(compiler.resolution);
+          ClassElement enclosingClass = element.enclosingClass;
+          // If a class member has changed we need to recompute all the members
+          // of its class (and subtypes) and check for potential conflicts.
+          compiler.world.getClassSet(enclosingClass).subtypes().forEach(
+              (ClassElement subtype) {
+            classesNeedingMemberRecomputing.add(subtype);
+          });
+          enclosingClass.ensureResolved(compiler.resolution);
         }
         enqueuer.resolution.addToWorkList(element);
       } else {
@@ -175,13 +186,26 @@ class DartinoReuser extends Reuser with DartinoFeatures {
         enqueuer.codegen.registerInstantiatedType(cls.rawType);
       }
     }
+
+    // Reset the caches.
+    classesNeedingMemberRecomputing.forEach((ClassMemberMixin cls) {
+      cls.computedMemberNames = null;
+      cls.classMembers = null;
+      cls.interfaceMembers = null;
+    });
+
+    // Recompute and check members.
+    classesNeedingMemberRecomputing.forEach((ClassMemberMixin m) {
+      compiler.resolver.checkClass(m);
+    });
+
     computeAllSchemaChanges();
     compiler.processQueue(enqueuer.resolution, null);
 
     compiler.phase = Compiler.PHASE_DONE_RESOLVING;
 
     // TODO(ahe): Clean this up. Don't call this method in analyze-only mode.
-    if (compiler.analyzeOnly) {
+    if (compiler.options.analyzeOnly) {
       return new DartinoDelta(currentSystem, currentSystem, <VmCommand>[]);
     }
 
@@ -199,17 +223,19 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     compiler.processQueue(enqueuer.codegen, null);
 
     // TODO(ahe): Remove this when we support adding static fields.
-    Set<Element> newStaticFields =
-        new Set<Element>.from(dartinoContext.staticIndices.keys).difference(
-            existingStaticFields);
-    if (newStaticFields.isNotEmpty) {
-      throw new IncrementalCompilationFailed(
-          "Unable to add static fields:\n  ${newStaticFields.join(',\n  ')}");
+    if (systemBuilder.hasNewStaticFields) {
+      throw new IncrementalCompilationFailed("Unable to add static fields");
     }
 
+    FunctionElement callMain =
+        dartinoContext.backend.dartinoSystemLibrary.findLocal('callMain');
+    systemBuilder.replaceElementUsage(callMain, compiler.mainFunction);
+
     List<VmCommand> commands = <VmCommand>[];
-    DartinoSystem system =
-        backend.systemBuilder.computeSystem(dartinoContext, commands);
+    DartinoSystem system = systemBuilder.computeSystem(
+        compiler.reporter, commands, compiler.compilationFailed,
+        dartinoContext.enableBigint, dartinoContext.backend.bigintClass,
+        dartinoContext.backend.uint32DigitsClass);
     backend.newSystemBuilder(system);
     return new DartinoDelta(system, currentSystem, commands);
   }
@@ -244,8 +270,8 @@ class DartinoReuser extends Reuser with DartinoFeatures {
       }
     }
     for (PartialClassElement cls in schemaChangesByClass.keys) {
-      DartinoClassBuilder builder = backend.systemBuilder.getClassBuilder(
-          cls, backend, schemaChanges: schemaChangesByClass);
+      DartinoClassBuilder builder = systemBuilder.getClassBuilder(
+          cls, schemaChanges: schemaChangesByClass);
       checkSchemaChangesAreUsed(builder, cls);
     }
   }
@@ -255,6 +281,13 @@ class DartinoReuser extends Reuser with DartinoFeatures {
       PartialClassElement before,
       PartialClassElement after) {
     updates.add(new DartinoClassUpdate(compiler, before, after));
+  }
+
+  void addFunctionUpdate(
+      Compiler compiler,
+      PartialFunctionElement before,
+      PartialFunctionElement after) {
+    updates.add(new DartinoFunctionUpdate(compiler, before, after));
   }
 
   void addAddedFunctionUpdate(
@@ -351,13 +384,9 @@ class DartinoReuser extends Reuser with DartinoFeatures {
   }
 
   bool allowRemovedElement(PartialElement element) {
-    if (element is PartialFunctionElement && element.isInstanceMember) {
-      return true;
-    }
     if (!_context.incrementalCompiler.isExperimentalModeEnabled) {
       return cannotReuse(
-          element, "Removing elements besides instance methods requires"
-                   " 'experimental' mode");
+          element, "Removing elements requires 'experimental' mode");
     }
     return true;
   }
@@ -370,9 +399,36 @@ class DartinoReuser extends Reuser with DartinoFeatures {
     return true;
   }
 
+  bool allowSimpleModificationWithNestedClosures(PartialElement element) {
+    return cannotReuse(
+        element, "Simple modification of methods with nested closures is not"
+                 " supported.");
+  }
+
   SchemaChange getSchemaChange(PartialClassElement cls) {
     return schemaChangesByClass.putIfAbsent(cls, () => new SchemaChange(cls));
   }
+
+  void replaceFunctionInBackend(ElementX element) {
+    DartinoFunction oldFunction =
+        systemBuilder.predecessorSystem.lookupFunctionByElement(element);
+    if (oldFunction == null) return;
+    Iterable<int> users =
+        systemBuilder.predecessorSystem.functionBackReferences[
+            oldFunction.functionId];
+    if (users == null) return;
+    for (int userId in users) {
+      systemBuilder.replaceUsage(userId, oldFunction.functionId);
+    }
+  }
+}
+
+class DartinoFunctionUpdate extends FunctionUpdate with DartinoFeatures {
+  DartinoFunctionUpdate(
+      Compiler compiler,
+      PartialFunctionElement before,
+      PartialFunctionElement after)
+      : super(compiler, before, after);
 }
 
 class DartinoRemovedFunctionUpdate extends RemovedFunctionUpdate
@@ -452,8 +508,10 @@ abstract class DartinoFeatures {
 
   DartinoContext get dartinoContext => compiler.context;
 
+  DartinoSystemBuilder get systemBuilder => backend.systemBuilder;
+
   DartinoFunctionBuilder lookupDartinoFunctionBuilder(
       FunctionElement function) {
-    return backend.systemBuilder.lookupFunctionBuilderByElement(function);
+    return systemBuilder.lookupFunctionBuilderByElement(function);
   }
 }

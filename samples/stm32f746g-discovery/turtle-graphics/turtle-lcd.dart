@@ -8,8 +8,9 @@
 // This sample was inspired by the Dart Hilbert curve sample:
 // https://github.com/daftspaniel/dart-Hilbertcurve/blob/master/web/turtle.dart
 
-import 'package:stm32f746g_disco/stm32f746g_disco.dart';
-import 'package:stm32f746g_disco/lcd.dart';
+import 'package:stm32/stm32f746g_disco.dart';
+import 'package:stm32/lcd.dart';
+
 import 'turtle.dart' show Turtle;
 
 main() {

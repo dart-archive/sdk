@@ -27,19 +27,19 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_dartino_patches".
   # 2. update package revisions below.
-  "dart_rev": "@6eed25f3142039cdc92097c4db27c6cb312581d8",
+  "dart_rev": "@3575fa983644893d5b672e757795b5d52213d88c",
 
-  # Please copy these package revisions from ../dart/DEPS when updating
-  # dart_rev:
+  # Please copy these package revisions from third_party/dart/DEPS when
+  # updating dart_rev:
   "package_config_tag": "@0.1.3",
   "path_tag": "@1.3.6",
   "charcode_tag": "@1.1.0",
-  "args_tag": "@0.13.0",
+  "args_tag": "@0.13.4",
   "dart2js_info_rev" : "@0a221eaf16aec3879c45719de656680ccb80d8a1",
   "pub_semver_tag": "@1.2.1",
-  "collection_rev": "@1da9a07f32efa2ba0c391b289e2037391e31da0e",
+  "collection_rev": "@f6135e6350c63eb3f4dd12953b8d4363faff16fc",
 
-  "lk_rev": "@5ab14cbc3a21e687347a0995c77b5ad256061e4f",
+  "lk_rev": "@ce0a3db7052e7b33de14685ba7158a4ddf5bd9f5",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.
@@ -89,7 +89,7 @@ deps = {
   "sdk/third_party/crypto":
       (Var("github_mirror") % "crypto") + Var("crypto_rev"),
 
-  "sdk/third_party/lk/lk-downstream":
+  "sdk/third_party/lk/lk-upstream":
       (Var("github_url") % "littlekernel/lk") + Var("lk_rev"),
 
   "sdk/third_party/isolate":
@@ -155,6 +155,23 @@ hooks = [
       '-r',
       '--auto_platform',
       'sdk/third_party/bin',
+    ],
+  },
+  {
+    "name": "checked_in_dart_sdks",
+    "pattern": ".",
+    "action": [
+      "download_from_google_storage",
+      "-q",
+      "--no_auth",
+      "--no_resume",
+      "--bucket",
+      "dart-dependencies",
+      "--directory",
+      "--recursive",
+      "--auto_platform",
+      "--extract",
+      "sdk/third_party/dart-sdk",
     ],
   },
   {
@@ -277,6 +294,24 @@ hooks = [
       '-d',
       '-u',
       'sdk/third_party/stm',
+    ],
+  },
+  {
+    'name': 'third_party_freertos',
+    'pattern': '.',
+    'action': [
+      'python',
+      'sdk/tools/not_on_arm.py',
+      'download_from_google_storage',
+      '-q',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dartino-dependencies',
+      '-d',
+      '-r',
+      '-u',
+      'sdk/third_party/freertos',
     ],
   },
   # Pull clang-format binaries using checked-in hashes.

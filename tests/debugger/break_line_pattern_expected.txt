@@ -1,7 +1,7 @@
 Starting session. Type 'help' for a list of commands.
 
 > bf tests/debugger/break_line_pattern_test.dart 10 x
-breakpoint set: id: '0' method: 'main' bytecode index: '6'
+### set breakpoint id: '0' method: 'main' bytecode index: '6'
 > r
 tests/debugger/break_line_pattern_test.dart:10:17
 10     var z = 30 + (x + 10) + (y + 20);

@@ -3,33 +3,40 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include <stdlib.h>
-
 #include <cmsis_os.h>
-extern "C" {
-  #include <lcd_log.h>
-}
-#include <stm32746g_discovery.h>
-#include <stm32746g_discovery_lcd.h>
 
 #include "include/dartino_api.h"
 #include "include/static_ffi.h"
 
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
+#include "platforms/stm/disco_dartino/src/device_manager.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
-#include "platforms/stm/disco_dartino/src/button.h"
-#include "platforms/stm/disco_dartino/src/uart.h"
-#include "src/shared/utils.h"
+#include "platforms/stm/disco_dartino/src/uart_connection.h"
 
-extern unsigned char _binary_snapshot_start;
-extern unsigned char _binary_snapshot_end;
-extern unsigned char _binary_snapshot_size;
+#include "src/shared/connection.h"
+#include "src/shared/utils.h"
+#include "src/vm/program_info_block.h"
+#include "src/vm/session.h"
+
+extern "C" const char *dartino_embedder_options[];
+
+extern "C" char program_start;
+extern "C" char program_info_block_end;
 
 extern PageAllocator* page_allocator;
 
-Uart *uart;
 int uart_handle;
+int button_handle;
 
-extern "C" size_t UartOpen() {
+dartino::UartDevice* GetUart(int handle) {
+  return dartino::DeviceManager::GetDeviceManager()->GetUart(handle);
+}
+
+dartino::ButtonDevice* GetButton(int handle) {
+  return dartino::DeviceManager::GetDeviceManager()->GetButton(handle);
+}
+
+extern "C" int UartOpen() {
   return uart_handle;
 }
 
@@ -47,19 +54,12 @@ extern "C" uint32_t UartGetError(int handle) {
 }
 
 extern "C" size_t ButtonOpen() {
-  Button *button = new Button();
-  return button->Open();
+  return button_handle;
 }
 
 extern "C" void ButtonNotifyRead(int handle) {
-  Button *button = GetButton(handle);
+  dartino::ButtonDevice *button = GetButton(handle);
   button->NotifyRead();
-}
-
-extern "C" void LCDDrawLine(
-    uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2) {
-  // BSP_LCD_DrawLine takes uint16_t arguments.
-  BSP_LCD_DrawLine(x1, y1, x2, y2);
 }
 
 // Implementation of write used from syscalls.c to redirect all printf
@@ -75,95 +75,83 @@ extern "C" int Write(int file, char *ptr, int len) {
   return len;
 }
 
-DARTINO_EXPORT_TABLE_BEGIN
-  DARTINO_EXPORT_TABLE_ENTRY("uart_open", UartOpen)
-  DARTINO_EXPORT_TABLE_ENTRY("uart_read", UartRead)
-  DARTINO_EXPORT_TABLE_ENTRY("uart_write", UartWrite)
-  DARTINO_EXPORT_TABLE_ENTRY("uart_get_error", UartGetError)
-  DARTINO_EXPORT_TABLE_ENTRY("button_open", ButtonOpen)
-  DARTINO_EXPORT_TABLE_ENTRY("button_notify_read", ButtonNotifyRead)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_height", BSP_LCD_GetYSize)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_width", BSP_LCD_GetXSize)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_clear", BSP_LCD_Clear)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_read_pixel", BSP_LCD_ReadPixel)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_draw_pixel", BSP_LCD_DrawPixel)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_draw_line", LCDDrawLine)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_draw_circle", BSP_LCD_DrawCircle)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_set_foreground_color", BSP_LCD_SetTextColor)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_set_background_color", BSP_LCD_SetBackColor)
-  DARTINO_EXPORT_TABLE_ENTRY("lcd_display_string", BSP_LCD_DisplayStringAt)
-DARTINO_EXPORT_TABLE_END
+DARTINO_EXPORT_STATIC_RENAME(uart_open, UartOpen)
+DARTINO_EXPORT_STATIC_RENAME(uart_read, UartRead)
+DARTINO_EXPORT_STATIC_RENAME(uart_write, UartWrite)
+DARTINO_EXPORT_STATIC_RENAME(uart_get_error, UartGetError)
+DARTINO_EXPORT_STATIC_RENAME(button_open, ButtonOpen)
+DARTINO_EXPORT_STATIC_RENAME(button_notify_read, ButtonNotifyRead)
 
-// Run dartino on the linked in snapshot.
-void StartDartino(void const * argument) {
-  dartino::Print::Out("Setup dartino\n");
-  DartinoSetup();
-  dartino::Print::Out("Reading dartino snapshot\n");
-  unsigned char *snapshot = &_binary_snapshot_start;
-  int snapshot_size =  reinterpret_cast<int>(&_binary_snapshot_size);
-  DartinoProgram program = DartinoLoadSnapshot(snapshot, snapshot_size);
-  dartino::Print::Out("Run dartino program\n");
-  DartinoRunMain(program, 0, NULL);
-  dartino::Print::Out("Dartino program exited\n");
+static int RunSession(dartino::Connection* connection, DartinoProgram program) {
+  dartino::Session session = dartino::Session(connection);
+  session.Initialize(reinterpret_cast<dartino::Program*>(program));
+  session.StartMessageProcessingThread();
+    dartino::Print::Out("Listening for connection.\n");
+  int result = session.ProcessRun();
+    dartino::Print::Out("Ran program %d\n", result);
+  return result;
 }
 
-void UartPrintIntercepter(const char* message, int out, void* data) {
+static void UartPrintInterceptor(const char* message, int out, void* data) {
   int len = strlen(message);
   for (int i = 0; i < len; i++) {
     if (message[i] == '\n') {
-      uart->Write(reinterpret_cast<const uint8_t*>("\r\n"), 0, 1);
+      GetUart(uart_handle)->Write(
+          reinterpret_cast<const uint8_t*>("\r\n"), 0, 1);
     }
-    uart->Write(reinterpret_cast<const uint8_t*>(message + i), 0, 1);
+    GetUart(uart_handle)->Write(
+        reinterpret_cast<const uint8_t*>(message + i), 0, 1);
   }
 }
 
-// LCDLogPutchar is defined by the STM LCD log utility
-// (Utilities/Log/lcd_log.c) by means of the macro definitions of
-// LCD_LOG_PUTCHAR in lcd_log_conf.h.
-extern "C" int LCDLogPutchar(int ch);
-void LCDPrintIntercepter(const char* message, int out, void* data) {
-  int len = strlen(message);
-  if (out == 3) {
-    LCD_LineColor = LCD_COLOR_RED;
+static bool HasOption(const char* option) {
+  for (int i = 0; dartino_embedder_options[i] != NULL; i++) {
+    if (strcmp(dartino_embedder_options[i], option) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Run dartino on the linked in program heap.
+void StartDartino(void const * argument) {
+  bool enable_debugger = HasOption("enable_debugger");
+  dartino::Print::Out("Setup Dartino\n");
+  DartinoSetup();
+  char* heap = &program_start;
+  int heap_size = &program_info_block_end - heap;
+  dartino::Print::Out(
+      "Loading Dartino program at %p size %d\n", heap, heap_size);
+  DartinoProgram program = DartinoLoadProgramFromFlash(heap, heap_size);
+
+  if (enable_debugger) {
+    dartino::Print::Out("Waiting for debug-connection\n");
+    dartino::Connection* connection =
+        dartino::UartConnection::Connect(uart_handle);
+    RunSession(connection, program);
   } else {
-    LCD_LineColor = LCD_COLOR_BLACK;
+    dartino::Print::Out("Run Dartino program\n");
+    DartinoRunMain(program, 0, NULL);
   }
-  for (int i = 0; i < len; i++) {
-    LCDLogPutchar(message[i]);
-  }
+
+  dartino::Print::Out("Dartino program exited\n");
 }
 
 // Main task entry point from FreeRTOS.
 void DartinoEntry(void const * argument) {
-  // Add an arena of the 8Mb of external memory.
-  uint32_t ext_mem_arena =
-      page_allocator->AddArena("ExtMem", 0xc0000000, 0x800000);
-
-  // Initialize the LCD.
-  size_t fb_bytes = (RK043FN48H_WIDTH * RK043FN48H_HEIGHT * 2);
-  size_t fb_pages = page_allocator->PagesForBytes(fb_bytes);
-  void* fb = page_allocator->AllocatePages(fb_pages, ext_mem_arena);
-  BSP_LCD_Init();
-  BSP_LCD_LayerDefaultInit(1, reinterpret_cast<uint32_t>(fb));
-  BSP_LCD_SelectLayer(1);
-  BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
-
-  // Initialize LCD Log module.
-  LCD_LOG_Init();
-  LCD_LOG_SetHeader(reinterpret_cast<uint8_t*>(const_cast<char*>("Dartino")));
-  LCD_LOG_SetFooter(reinterpret_cast<uint8_t*>(const_cast<char*>(
-      "STM32746G-Discovery")));
-
-  // For now always start the UART.
-  uart = new Uart();
-  uart_handle = uart->Open();
-
-  DartinoRegisterPrintInterceptor(UartPrintIntercepter, NULL);
-  DartinoRegisterPrintInterceptor(LCDPrintIntercepter, NULL);
-
   // Always disable standard out, as this will cause infinite
   // recursion in the syscalls.c handling of write.
   dartino::Print::DisableStandardOutput();
+
+  // For now always start the UART.
+  uart_handle = dartino::DeviceManager::GetDeviceManager()->OpenUart("uart1");
+  if (HasOption("uart_print_interceptor")) {
+    DartinoRegisterPrintInterceptor(UartPrintInterceptor, NULL);
+  }
+
+  // For now always initialize the button.
+  button_handle =
+      dartino::DeviceManager::GetDeviceManager()->OpenButton("button1");
 
   StartDartino(argument);
 

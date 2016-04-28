@@ -52,6 +52,16 @@ import '../../../tests/dartino_tests/messages.dart' show
     TimedOut,
     messageTransformer;
 
+Expectation expectationFromTestFailed(TestFailed message) {
+  switch (message.kind) {
+    case "IncrementalCompilationFailed":
+      return Expectation.INCREMENTAL_COMPILATION_FAILED;
+
+    default:
+      return Expectation.FAIL;
+  }
+}
+
 class DartinoTestRuntimeConfiguration extends RuntimeConfiguration {
   final String system;
   final String dartBinary;
@@ -280,7 +290,7 @@ class DartinoTestOutputCommand implements CommandOutput {
         return Expectation.PASS;
 
       case 'TestFailed':
-        return Expectation.FAIL;
+        return expectationFromTestFailed(message);
 
       case 'TimedOut':
         return Expectation.TIMEOUT;

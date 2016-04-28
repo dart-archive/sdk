@@ -27,7 +27,7 @@ const int kInterruptHandle = -1;
 // initialized.
 class Data {};
 
-DeviceManager *DeviceManager::instance_;
+DeviceManager* DeviceManager::instance_;
 
 void EventHandler::Create() {
   data_ = reinterpret_cast<void*>(new Data());
@@ -40,31 +40,31 @@ void EventHandler::Interrupt() {
   }
 }
 
-Object* EventHandler::Add(
-    Process* process, Object* id, Port* port, int wait_mask) {
-  if (!id->IsSmi()) return Failure::wrong_argument_type();
-
+EventHandler::Status EventHandler::AddEventListener(
+    Object* id,
+    EventListener* event_listener,
+    int wait_mask) {
+  if (!id->IsSmi()) {
+    delete event_listener;
+    return Status::WRONG_ARGUMENT_TYPE;
+  }
   EnsureInitialized();
 
   int handle = Smi::cast(id)->value();
 
-  Device *device = DeviceManager::GetDeviceManager()->GetDevice(handle);
+  Device* device = DeviceManager::GetDeviceManager()->GetDevice(handle);
 
   ScopedLock locker(device->GetMutex());
 
-  if (device->GetPort() != NULL) FATAL("Already listening to device");
-
-  int device_flags = device->GetFlags();
-  if ((wait_mask & device_flags) != 0) {
-    // There is already an event waiting. Send a message immediately.
-    Send(port, device_flags, false);
-  } else {
-    device->SetPort(port);
-    device->SetWaitMask(wait_mask);
-    port->IncrementRef();
+  if (device->HasEventListener()) {
+    delete event_listener;
+    return Status::ILLEGAL_STATE;
   }
 
-  return process->program()->null_object();
+  device->SetEventListener(event_listener, wait_mask);
+  // Send a message immediately if there already is an event waiting.
+  device->SendIfReady();
+  return Status::OK;
 }
 
 void EventHandler::Run() {
@@ -100,16 +100,9 @@ void EventHandler::Run() {
     if (event.status == osEventMessage) {
       int handle = static_cast<int>(event.value.v);
       if (handle != kInterruptHandle) {
-        Device *device = DeviceManager::GetDeviceManager()->GetDevice(handle);
+        Device* device = DeviceManager::GetDeviceManager()->GetDevice(handle);
         ScopedLock scoped_lock(device->GetMutex());
-        if (device->IsReady()) {
-          Port *port = device->GetPort();
-          uint32_t device_flags = device->GetFlags();
-          device->SetPort(NULL);
-          Send(port, device_flags, true);
-        } else {
-          // No relevant listener, drop message.
-        }
+        device->SendIfReady();
       }
     }
   }

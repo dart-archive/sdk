@@ -92,8 +92,8 @@ bool StoreFile(const char* uri, List<uint8> bytes);
 // Write text to file, append if the bool append is true.
 bool WriteText(const char* uri, const char* text, bool append);
 
-#if DEBUG
-void WaitForDebugger(const char* executable_name);
+#ifdef DEBUG
+void WaitForDebugger();
 #endif
 
 const char* GetTimeZoneName(int64_t seconds_since_epoch);
@@ -149,36 +149,54 @@ inline Architecture Arch() {
   return kUnknownArch;
 #endif
 }
+
+static const int kPageBits = 12;  // 4k pages are universal at this point.
+static const int kPageSize = 1 << kPageBits;
+
+static const int kAnyArena = -1;
+void* AllocatePages(uword size, int arenas);
+void FreePages(void* address, uword size);
+void VirtualMemoryInit();
+
+struct HeapMemoryRange {
+  void* address;
+  uword size;
+};
+
+// All responses from AllocatePages should be within these ranges.  The VM will
+// need 3.2% of the largest arena size for metadata.
+int GetHeapMemoryRanges(HeapMemoryRange* ranges, int number);
+
 }  // namespace Platform
 
 // Interface for manipulating virtual memory.
 class VirtualMemory {
  public:
   // Reserves virtual memory with size.
-  explicit VirtualMemory(int size);
+  explicit VirtualMemory(uword size);
   ~VirtualMemory();
 
   // Returns whether the memory has been reserved.
   bool IsReserved() const;
 
   // Returns the start address of the reserved memory.
-  uword address() const {
+  void* address() const {
     ASSERT(IsReserved());
     return address_;
   }
 
   // Returns the size of the reserved memory.
-  int size() const { return size_; }
+  uword size() const { return size_; }
 
   // Commits real memory. Returns whether the operation succeeded.
-  bool Commit(uword address, int size, bool executable);
+  bool Commit(void* address, uword size);
 
   // Uncommit real memory.  Returns whether the operation succeeded.
-  bool Uncommit(uword address, int size);
+  bool Uncommit(void* address, uword size);
 
  private:
-  uword address_;   // Start address of the virtual memory.
-  const int size_;  // Size of the virtual memory.
+  void* address_;   // Start address of the virtual memory.
+  const uword size_;  // Size of the virtual memory.
 };
 
 // ----------------------------------------------------------------------------

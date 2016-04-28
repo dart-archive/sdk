@@ -34,8 +34,9 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.verbRequiresSessionTarget:
       return <Example>[
-          new CommandLineExample(
-              <String>['create']),
+          // TODO(danrubel) Fix test... throws missingSessionName 
+          // new CommandLineExample(
+          //     <String>['create', 'session']),
           new CommandLineExample(
               <String>['x-end'])];
 
@@ -44,13 +45,13 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'],
           <String>['compile', 'session', 'foo', 'in', 'session', 'foo'])];
 
-    case DiagnosticKind.verbRequiresSocketTarget:
+    case DiagnosticKind.verbRequiresConnectionTarget:
       return <Example>[
           new CommandLineExample(
               <String>['create', 'session', 'foo'],
               <String>['attach', 'in', 'session', 'foo', 'file', 'fisk']),
           new CommandLineExample(
-              // Same as previous example, except with an implict file target.
+              // Same as previous example, except with an implicit file target.
               <String>['create', 'session', 'foo'],
               <String>['attach', 'in', 'session', 'foo', 'fisk.dart'])];
 
@@ -58,6 +59,30 @@ List<Example> getExamples(DiagnosticKind kind) {
       return <Example>[new CommandLineExample(
           <String>['create', 'session', 'foo'],
           <String>['debug', 'sessions', 'in', 'session', 'foo'])];
+
+    case DiagnosticKind.projectAlreadyExists:
+      // TODO(danrubel): figure out a way to test this.
+      // Basically we need to create a directory on disk
+      // then call 'dartino project create' on that directory.
+      return untestable;
+
+    case DiagnosticKind.missingRequiredArgument:
+      // TODO(danrubel) create a test
+      return untestable;
+
+    case DiagnosticKind.missingForName:
+      // TODO(danrubel) fix this test
+      // return <Example>[new CommandLineExample(
+      //     <String>['create', 'project', 'foo'],
+      //     <String>['create', 'project', 'foo', 'for'])];
+      return untestable;
+
+    case DiagnosticKind.boardNotFound:
+      // TODO(danrubel): figure out a way to test this
+      // by getting sdkUri to be set correctly.
+      // return <Example>[new CommandLineExample(
+      //     <String>['create', 'project', 'foo', 'for', 'baz-board'])];
+      return untestable;
 
     case DiagnosticKind.noSuchSession:
       return <Example>[
@@ -83,7 +108,7 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['create', 'session', 'foo'],
               <String>['compile', 'in', 'session', 'foo'])];
 
-    case DiagnosticKind.noTcpSocketTarget:
+    case DiagnosticKind.noConnectionTarget:
       return <Example>[new CommandLineExample(
           <String>['create', 'session', 'foo'],
           <String>['attach', 'in', 'session', 'foo'])];
@@ -176,6 +201,10 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(
               <String>['export'])];
 
+    case DiagnosticKind.missingProjectPath:
+      return <Example>[new CommandLineExample(
+            <String>['create', 'project'])];
+
     case DiagnosticKind.missingSessionName:
       return <Example>[new CommandLineExample(
             <String>['create', 'session'])];
@@ -188,16 +217,16 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.unsupportedPlatform:
       return untestable;
 
-    case DiagnosticKind.missingRequiredArgument:
-      return <Example>[new CommandLineExample(
-          <String>['run', '--test-debugger'])];
-
     case DiagnosticKind.unexpectedArgument:
       return <Example>[new CommandLineExample(
             <String>['help', '--version=fisk'])];
 
     case DiagnosticKind.settingsCompileTimeConstantAsOption:
-      return <Example>[new SettingsExample('{"options":["-Dfoo=bar"]}')];
+      return <Example>[
+        new SettingsExample('{"compiler_options":["-Dfoo=bar"]}')];
+
+    case DiagnosticKind.optionsObsolete:
+      return <Example>[new SettingsExample('{"options":["a", "b", "c"]}')];
 
     case DiagnosticKind.settingsConstantsNotAMap:
       return <Example>[new SettingsExample('{"constants":[]}')];
@@ -216,10 +245,16 @@ List<Example> getExamples(DiagnosticKind kind) {
           new SettingsExample('...')];
 
     case DiagnosticKind.settingsOptionNotAString:
-      return <Example>[new SettingsExample('{"options":[1]}')];
+      return <Example>[
+        new SettingsExample('{"compiler_options":[1]}'),
+        new SettingsExample('{"embedder_options":[1]}')
+      ];
 
     case DiagnosticKind.settingsOptionsNotAList:
-      return <Example>[new SettingsExample('{"options":1}')];
+      return <Example>[
+        new SettingsExample('{"compiler_options":1}'),
+        new SettingsExample('{"embedder_options":1}')
+      ];
 
     case DiagnosticKind.settingsPackagesNotAString:
       return <Example>[new SettingsExample('{"packages":1}')];
@@ -250,23 +285,40 @@ List<Example> getExamples(DiagnosticKind kind) {
           new CommandLineExample(<String>['blah']),
           new CommandLineExample(<String>['test.dart'])];
 
+    case DiagnosticKind.missingNoun:
+      return <Example>[
+          new CommandLineExample(<String>['create'])];
+
+    case DiagnosticKind.unknownNoun:
+      // TODO(danrubel) Fix test
+      // return <Example>[
+      //     new CommandLineExample(<String>['create foo'])];
+      return untestable;
+
     case DiagnosticKind.extraArguments:
       return <Example>[
-          new CommandLineExample(<String>['create', 'fisk']),
+          new CommandLineExample(<String>['create', 'project', 'foo', 'for', 'raspberry-pi2', 'fisk']),
           new CommandLineExample(<String>['x-upgrade', 'hest']),
       ];
 
     case DiagnosticKind.cantPerformVerbIn:
       return <Example>[
-          new CommandLineExample(<String>['create', 'in', 'classes'])];
+          new CommandLineExample(
+              <String>['create', 'project', 'foo', 'in', 'classes'])];
 
     case DiagnosticKind.cantPerformVerbTo:
       return <Example>[
-          new CommandLineExample(<String>['create', 'to', 'classes'])];
+          new CommandLineExample(<String>[
+              'create', 'project', 'foo', 'to', 'classes'])];
 
     case DiagnosticKind.cantPerformVerbWith:
       return <Example>[
-          new CommandLineExample(<String>['create', 'with', 'classes'])];
+          new CommandLineExample(<String>[
+              'create', 'project', 'foo', 'with', 'classes'])];
+
+    case DiagnosticKind.duplicatedFor:
+      return <Example>[new CommandLineExample(<String>[
+        'create', 'project', 'foo', 'for', 'bar', 'for', 'baz'])];
 
     case DiagnosticKind.duplicatedIn:
       return <Example>[new CommandLineExample(
@@ -277,14 +329,22 @@ List<Example> getExamples(DiagnosticKind kind) {
             <String>['export', 'to', 'foo.dart', 'to', 'foo.dart'])];
 
     case DiagnosticKind.duplicatedWith:
-      return <Example>[new CommandLineExample(
-            <String>['create', 'with', 'foo.txt', 'with', 'foo.txt'])];
+      return <Example>[new CommandLineExample(<String>[
+          'create', 'session', 'foo', 'with', 'bar.dart', 'with', 'baz.dart'])];
 
     case DiagnosticKind.verbDoesntSupportTarget:
       // Though the quit verb is not a real verb it can still be used to provoke
       // this failure as part of sentence parsing.
       return <Example>[new CommandLineExample(
             <String>['quit', 'foo.txt'])];
+
+    case DiagnosticKind.verbRequiresNoFor:
+      // Though the quit verb is not a real verb it can still be used to provoke
+      // this failure as part of sentence parsing.
+      return <Example>[
+        new CommandLineExample(
+            <String>['quit', 'for', 'foo']),
+      ];
 
     case DiagnosticKind.verbRequiresNoToFile:
       // Though the quit verb is not a real verb it can still be used to provoke
@@ -324,6 +384,20 @@ List<Example> getExamples(DiagnosticKind kind) {
     case DiagnosticKind.illegalDefine:
       return <Example>[new CommandLineExample(<String>['-Dfoo=1=2', 'run'])];
 
+    case DiagnosticKind.infoFileNotFound:
+      var examples = <Example>[new CommandLineExample(
+          <String>['attach', 'tcp_socket', exampleAddress,
+                   'in', 'session', 'foo'],
+          <String>['debug', 'with', 'not_existing.snapshot',
+                   'in', 'session', 'foo'])];
+      // TODO(sigurdm): Need to mock up a VM socket to test this.
+      return untestable;
+
+    case DiagnosticKind.malformedInfoFile:
+      // TODO(sigurdm): Need to mock up a VM socket to test this.
+      return untestable;
+
+
     case DiagnosticKind.busySession:
       // TODO(ahe): Add test for this.
       return untestable;
@@ -350,6 +424,11 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.toolsNotInstalled:
       // TODO(sgjesse): Add test for this
+      return untestable;
+
+    case DiagnosticKind.snapshotHashMismatch:
+      // TODO(sigurdm): Add test for this.
+      // We could probably test this with a mock VM.
       return untestable;
   }
 }

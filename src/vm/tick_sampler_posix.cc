@@ -82,7 +82,7 @@ static void SignalHandler(int signal, siginfo_t* info, void* context) {
     sample->bcp = 0;
   } else {
     Program* program = process->program();
-    sample->hashtag = program->hashtag();
+    sample->hashtag = program->snapshot_hash();
     sample->bcp = program->ComputeBcpOffset(ip);
   }
   queue->CompleteAdd();

@@ -19,10 +19,13 @@
 
 namespace dartino {
 
-uint8 StaticClassStructures::meta_class_storage[Class::kSize];
-uint8 StaticClassStructures::free_list_chunk_class_storage[Class::kSize];
-uint8 StaticClassStructures::one_word_filler_class_storage[Class::kSize];
-uint8 StaticClassStructures::promoted_track_class_storage[Class::kSize];
+uword StaticClassStructures::meta_class_storage[Class::kSize / sizeof(uword)];
+uword StaticClassStructures::free_list_chunk_class_storage[Class::kSize
+    / sizeof(uword)];
+uword StaticClassStructures::one_word_filler_class_storage[Class::kSize
+    / sizeof(uword)];
+uword StaticClassStructures::promoted_track_class_storage[Class::kSize
+    / sizeof(uword)];
 
 static void CopyBlock(Object** dst, Object** src, int byte_size) {
   ASSERT(byte_size > 0);
@@ -43,7 +46,7 @@ static void CopyBlock(Object** dst, Object** src, int byte_size) {
   }
 }
 
-int HeapObject::Size() {
+uword HeapObject::Size() {
   // Fast check for non-variable length types.
   ASSERT(!HasForwardingAddress());
   InstanceFormat format = raw_class()->instance_format();
@@ -77,7 +80,7 @@ int HeapObject::Size() {
   return 0;
 }
 
-int HeapObject::FixedSize() {
+uword HeapObject::FixedSize() {
   // Fast check for non variable length types.
   ASSERT(!HasForwardingAddress());
   InstanceFormat format = raw_class()->instance_format();
@@ -282,7 +285,15 @@ Instance* Instance::CloneTransformed(Heap* heap) {
   // immutability bit and the identity hascode will get copied via the flags
   // word.
   Object* clone = heap->CreateInstance(new_class, Smi::FromWord(0), false);
-  ASSERT(!clone->IsFailure());  // Needs to be in no-allocation-failure scope.
+  if (clone->IsRetryAfterGCFailure()) {
+    // We can only get an allocation failure on the new-space in a two-space
+    // heap, since there is a NoAllocationFailureScope on the program heap
+    // and on the old generation of the process heap.
+    ASSERT(!heap->IsTwoSpaceHeap());
+    TwoSpaceHeap* tsh = reinterpret_cast<TwoSpaceHeap*>(heap);
+    clone = tsh->CreateOldSpaceInstance(new_class, Smi::FromWord(0));
+    ASSERT(!clone->IsFailure());
+  }
   Instance* target = Instance::cast(clone);
 
   // Copy the flags word from the old instance.
@@ -496,7 +507,7 @@ void Class::ClassPrint() {
     Print::Out("  - number of instance fields = %d\n",
                NumberOfInstanceFields());
   }
-  int size = instance_format().fixed_size();
+  uword size = instance_format().fixed_size();
   Print::Out("  - instance object size = %d\n", size);
   Print::Out("  - methods = ");
   methods()->ShortPrint();
@@ -509,14 +520,15 @@ InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
   ASSERT(!HasForwardingAddress());
 
   visitor->VisitClass(reinterpret_cast<Object**>(address()));
-  uword raw = reinterpret_cast<uword>(raw_class());
-  Class* klass = reinterpret_cast<Class*>(raw & ~HeapObject::kMarkBit);
-  InstanceFormat format = klass->instance_format();
+  InstanceFormat format = get_class()->instance_format();
   // Fast case for fixed size object with all pointers.
   if (format.only_pointers_in_fixed_part()) {
-    visitor->VisitBlock(
-        reinterpret_cast<Object**>(address() + kPointerSize),
-        reinterpret_cast<Object**>(address() + format.fixed_size()));
+    uword size = format.fixed_size();
+    if (size > kPointerSize) {
+      visitor->VisitBlock(
+          reinterpret_cast<Object**>(address() + kPointerSize),
+          reinterpret_cast<Object**>(address() + format.fixed_size()));
+    }
     return format;
   }
   switch (format.type()) {
@@ -594,14 +606,17 @@ template HeapObject* HeapObject::CloneInToSpace<OldSpace>(OldSpace* s);
 template <class SomeSpace>
 HeapObject* HeapObject::CloneInToSpace(SomeSpace* to) {
   ASSERT(!to->Includes(this->address()));
-  // If there is a forward pointer return it.
-  if (HasForwardingAddress()) return forwarding_address();
-  // Otherwise, copy the object to the 'to' space
+  ASSERT(!HasForwardingAddress());
+  // No forwarding address, so copy the object to the 'to' space
   // and insert a forward pointer.
   int object_size = Size();
-  HeapObject* target = HeapObject::FromAddress(to->Allocate(object_size));
+  uword new_address = to->Allocate(object_size);
+  if (new_address == 0) {
+    return NULL;
+  }
+  HeapObject* target = HeapObject::FromAddress(new_address);
   // Copy the content of source to target.
-  CopyBlock(reinterpret_cast<Object**>(target->address()),
+  CopyBlock(reinterpret_cast<Object**>(new_address),
             reinterpret_cast<Object**>(address()), object_size);
   if (target->IsStack()) {
     Stack::cast(target)->UpdateFramePointers(Stack::cast(this));
@@ -714,8 +729,8 @@ void HeapObject::HeapObjectShortPrint() {
   }
 }
 
-int CookedHeapObjectPointerVisitor::Visit(HeapObject* object) {
-  int size = object->Size();
+uword CookedHeapObjectPointerVisitor::Visit(HeapObject* object) {
+  uword size = object->Size();
   if (object->IsStack()) {
     visitor_->VisitClass(reinterpret_cast<Object**>(object->address()));
     // We make sure to visit one extra slot which is now the function
@@ -735,10 +750,47 @@ PromotedTrack* PromotedTrack::Initialize(PromotedTrack* next, uword location,
                                          uword end) {
   PromotedTrack* self =
       reinterpret_cast<PromotedTrack*>(HeapObject::FromAddress(location));
+  GCMetadata::RecordStart(self->address());
+  // We mark the PromotedTrack object as dirty (containing new-space
+  // pointers). This is because the remembered-set scanner mainly looks at
+  // these dirty-bytes.  It ensures that the remembered-set scanner does not
+  // skip past the PromotedTrack object header and start scanning newly
+  // allocated objects inside the PromotedTrack area before they are
+  // traversable.
+  GCMetadata::InsertIntoRememberedSet(self->address());
   self->set_class(StaticClassStructures::promoted_track_class());
   self->set_next(next);
   self->set_end(end);
   return self;
 }
+
+#ifdef DEBUG
+class ContainsPointerVisitor : public PointerVisitor {
+ public:
+  ContainsPointerVisitor(Space* space, bool* flag)
+      : space_(space), flag_(flag) {}
+
+  virtual void VisitBlock(Object** start, Object** end) {
+    for (Object** current = start; current < end; current++) {
+      Object* object = *current;
+      if (object->IsHeapObject()) {
+        HeapObject* heap_object = HeapObject::cast(object);
+        if (space_->Includes(heap_object->address())) *flag_ = true;
+      }
+    }
+  }
+
+ private:
+  Space* space_;
+  bool* flag_;
+};
+
+bool HeapObject::ContainsPointersTo(Space* space) {
+  bool has_pointer = false;
+  ContainsPointerVisitor visitor(space, &has_pointer);
+  IteratePointers(&visitor);
+  return has_pointer;
+}
+#endif
 
 }  // namespace dartino

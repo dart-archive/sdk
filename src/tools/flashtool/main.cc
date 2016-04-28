@@ -3,23 +3,63 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 #include "src/shared/assert.h"
+#include "src/shared/bytecodes.h"
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 #include "src/shared/utils.h"
 
+#include "src/vm/interpreter.h"
 #include "src/vm/intrinsics.h"
 #include "src/vm/object_memory.h"
 #include "src/vm/program.h"
 #include "src/vm/program_info_block.h"
 #include "src/vm/program_relocator.h"
 #include "src/vm/snapshot.h"
+#include "src/vm/tick_sampler.h"
 
 namespace dartino {
 
-static void printUsage(char* name) {
+// Create some fake symbols to satisfy dependencies from the missing
+// interpreter.
+#define DEFINE_INTRINSIC(name_) void Intrinsic_##name_() { \
+  FATAL("Intrinsics_" #name_ " not implemented.");         \
+}
+  INTRINSICS_DO(DEFINE_INTRINSIC)
+#undef DEFINE_INTRINSIC
+
+extern "C" void InterpreterMethodEntry() {
+  FATAL("InterpreterMethodEntry not implemented.");
+}
+
+extern "C" void InterpreterEntry() {
+  FATAL("InterpreterEntry not implemented.");
+}
+
+void SetBytecodeBreak(Opcode opcode) {
+  FATAL("SetBytecodeBreak not implemented.");
+}
+
+void ClearBytecodeBreak(Opcode opcode) {
+  FATAL("ClearBytecodeBreak not implemented.");
+}
+
+void InterpreterCoroutineEntry() { FATAL("InterpreterCoroutineEntry"); }
+
+void Interpreter::Run() {
+  USE(process_);  // Avoid "unused" warning.
+  FATAL("Interpreter::Run");
+}
+
+void TickSampler::Setup() { FATAL("TickSampler::Setup"); }
+
+void TickSampler::Teardown() { FATAL("TickSampler::Teardown"); }
+
+/* Actual code starts here */
+
+static void PrintUsage(char* name) {
   printf(
-      "Usage: %s [-i <intrinsic name>=<address>] <snapshot file> "
-      "<base address> <program heap file>\n",
+      "Usage: %s [-i <intrinsic name>=<address>] <method entry address> "
+      "<snapshot file> <base address> <program heap file>\n",
       name);
 }
 
@@ -27,9 +67,9 @@ static int Main(int argc, char** argv) {
   IntrinsicsTable* table = new IntrinsicsTable();
 
   char** argp = argv + 1;
-  while (argc > 4) {
+  while (argc > 5) {
     if (strcmp(*(argp++), "-i") != 0) {
-      printUsage(*argv);
+      PrintUsage(*argv);
       return 1;
     }
     char* name;
@@ -38,7 +78,7 @@ static int Main(int argc, char** argv) {
     if ((name = strtok_r(*argp++, "=", &safe_ptr)) == NULL ||
         (value = strtok_r(NULL, "=", &safe_ptr)) == NULL ||
         strtok_r(NULL, "=", &safe_ptr) != NULL) {
-      printUsage(*argv);
+      PrintUsage(*argv);
       return 1;
     }
     char* endptr;
@@ -54,30 +94,40 @@ static int Main(int argc, char** argv) {
     argc = argc - 2;
   }
 
-  if (argc < 4) {
-    printUsage(*argv);
+  if (argc < 5) {
+    PrintUsage(*argv);
     return 1;
   }
 
   char* endptr;
-  int64 basevalue;
-  basevalue = strtoll(argp[1], &endptr, 0);
-  if (*endptr != '\0' || basevalue < 0 || basevalue & 0x3) {
-    printf("Illegal base address: %s [%" PRIx64 "]\n", argp[1], basevalue);
+  int64 entry_address;
+  entry_address = strtoll(argp[0], &endptr, 0);
+  if (*endptr != '\0' || entry_address < 0) {
+    printf("Illegal entry address: %s [%" PRIx64 "]\n", argp[0], entry_address);
     return 1;
   }
 
+  int64 basevalue;
+  basevalue = strtoll(argp[2], &endptr, 0);
+  if (*endptr != '\0' || basevalue < 0 || basevalue & 0x3) {
+    printf("Illegal base address: %s [%" PRIx64 "]\n", argp[2], basevalue);
+    return 1;
+  }
+
+  Platform::Setup();
+  Thread::Setup();
   ObjectMemory::Setup();
-  List<uint8> bytes = Platform::LoadFile(argp[0]);
+  List<uint8> bytes = Platform::LoadFile(argp[1]);
   SnapshotReader reader(bytes);
   Program* program = reader.ReadProgram();
 
-  int size = program->program_heap_size() + sizeof(ProgramInfoBlock);
+  uword size = program->program_heap_size() + sizeof(ProgramInfoBlock);
   List<uint8> result = List<uint8>::New(size);
-  ProgramHeapRelocator relocator(program, result.data(), basevalue, table);
+  ProgramHeapRelocator relocator(program, result.data(), basevalue, table,
+                                 reinterpret_cast<void*>(entry_address));
   relocator.Relocate();
 
-  Platform::StoreFile(argp[2], result);
+  Platform::StoreFile(argp[3], result);
 
   result.Delete();
   return 0;

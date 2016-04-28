@@ -31,7 +31,7 @@ void run(SenseHat hat) {
   int roll = 0; // [-3..3]
 
   int trimValue(double value) {
-    int result = (value / 15.0).toInt();
+    int result = value ~/ 15.0;
     if (result < -3) result = -3;
     if (result > 3) result = 3;
     return result;

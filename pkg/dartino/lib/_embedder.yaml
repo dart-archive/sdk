@@ -3,18 +3,17 @@ analyzer:
     enableAsync: false
 embedded_libs:
 # async not supported on embedded
- 'dart:async': '../../../internal/dart_lib/async/async.dart'
- 'dart:collection': '../../../internal/dart_lib/collection/collection.dart'
- 'dart:convert': '../../../internal/dart_lib/convert/convert.dart'
+  'dart:async': '../../../third_party/dart/sdk/lib/async/async.dart'
+  'dart:collection': '../../../third_party/dart/sdk/lib/collection/collection.dart'
+  'dart:convert': '../../../third_party/dart/sdk/lib/convert/convert.dart'
 # alternate dart:core for embedded
-# 'dart:core': '../../../internal/dartino_lib/core/embedded_core.dart'
- 'dart:core': '../../../internal/dart_lib/core/core.dart'
- 'dart:dartino': '../../../internal/dartino_lib/dartino/dartino.dart'
- 'dart:dartino.ffi': '../../../internal/dartino_lib/ffi/ffi.dart'
- 'dart:dartino.io': '../../../internal/dartino_lib/io/io.dart'
- 'dart:dartino.os': '../../../internal/dartino_lib/os/os.dart'
- 'dart:dartino.service': '../../../internal/dartino_lib/service/service.dart'
- 'dart:developer': '../../../internal/dart_lib/developer/developer.dart'
- 'dart:math': '../../../internal/dart_lib/math/math.dart'
- 'dart:typed_data': '../../../internal/dart_lib/typed_data/typed_data.dart'
-
+# 'dart:core': '../../../lib/core/embedded_core.dart'
+  'dart:core': '../../../third_party/dart/sdk/lib/core/core.dart'
+  'dart:dartino': '../../../lib/dartino/dartino.dart'
+  'dart:dartino.ffi': '../../../lib/ffi/ffi.dart'
+  'dart:dartino._ffi': '../../../internal/dartino_lib/ffi/ffi_private.dart'
+  'dart:dartino.os': '../../../lib/os/os.dart'
+  'dart:dartino.service': '../../../lib/service/service.dart'
+  'dart:developer': '../../../third_party/dart/sdk/lib/developer/developer.dart'
+  'dart:math': '../../../third_party/dart/sdk/lib/math/math.dart'
+  'dart:typed_data': '../../../third_party/dart/sdk/lib/typed_data/typed_data.dart'

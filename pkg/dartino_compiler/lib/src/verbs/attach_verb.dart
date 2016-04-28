@@ -9,44 +9,84 @@ import 'infrastructure.dart';
 import 'documentation.dart' show
     attachDocumentation;
 
+import '../hub/sentence_parser.dart' show
+    connectionTargets;
+
 import '../worker/developer.dart' show
     Address,
-    attachToVm,
+    attachToVmTcp,
+    attachToVmTty,
     parseAddress;
 
 const Action attachAction = const Action(
     attach, attachDocumentation, requiresSession: true,
-    requiredTarget: TargetKind.TCP_SOCKET);
+    supportedTargets: connectionTargets,
+    requiresTarget: true);
 
 Future<int> attach(AnalyzedSentence sentence, VerbContext context) {
-  Address address = parseAddress(sentence.targetName);
-  return context.performTaskInWorker(
-      new AttachTask(address.host, address.port));
+  switch (sentence.target.kind) {
+    case TargetKind.TCP_SOCKET:
+      Address address = parseAddress(sentence.targetName);
+      return context.performTaskInWorker(
+          new AttachTcpTask(address.host, address.port));
+    case TargetKind.TTY:
+      return context.performTaskInWorker(
+          new AttachTtyTask(sentence.targetName));
+    default:
+      throw "Unsupported target.";
+  }
 }
 
-class AttachTask extends SharedTask {
+class AttachTcpTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
   final String host;
 
   final int port;
 
-  const AttachTask(this.host, this.port);
+  const AttachTcpTask(this.host, this.port);
 
   Future<int> call(
       CommandSender commandSender,
       StreamIterator<ClientCommand> commandIterator) {
-    return attachTask(host, port);
+    return attachTcpTask(host, port);
   }
 }
 
-Future<int> attachTask(String host, int port) async {
+Future<int> attachTcpTask(String host, int port) async {
   SessionState state = SessionState.current;
 
   // Cleanup previous session if any.
   await state.terminateSession();
 
   state.explicitAttach = true;
-  await attachToVm(host, port, state);
+  await attachToVmTcp(host, port, state);
+  print("Attached to $host:$port");
+  return 0;
+}
+
+class AttachTtyTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+
+  final String ttyDevice;
+
+  const AttachTtyTask(this.ttyDevice);
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<ClientCommand> commandIterator) {
+    return attachTtyTask(ttyDevice);
+  }
+}
+
+Future<int> attachTtyTask(String ttyDevice) async {
+  SessionState state = SessionState.current;
+
+  // Cleanup previous session if any.
+  await state.terminateSession();
+
+  state.explicitAttach = true;
+  await attachToVmTty(ttyDevice, state);
+  print("Attached to $ttyDevice");
   return 0;
 }

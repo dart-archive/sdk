@@ -238,6 +238,8 @@ class Assembler {
   INSTRUCTION_2(movl, "movl %a, %rl", Register, const Address&);
   INSTRUCTION_2(movl, "movl %rl, %a", const Address&, Register);
 
+  INSTRUCTION_2(movb, "movb %b, %a", const Address&, const Immediate&);
+
   INSTRUCTION_2(cmove, "cmove %rl, %rl", Register, Register);
 
   INSTRUCTION_2(leal, "leal %a, %rl", Register, const Address&);
@@ -254,6 +256,7 @@ class Assembler {
   INSTRUCTION_2(addl, "addl %rl, %rl", Register, Register);
   INSTRUCTION_2(addl, "addl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(addl, "addl %i, %a", const Address&, const Immediate&);
+  INSTRUCTION_2(addl, "addl %a, %rl", Register, const Address&);
 
   INSTRUCTION_2(andl, "andl %i, %rl", Register, const Immediate&);
   INSTRUCTION_2(andl, "andl %rl, %rl", Register, Register);

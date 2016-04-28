@@ -4,23 +4,71 @@
 
 library dartino_compiler.verbs.create_verb;
 
-import 'infrastructure.dart';
+import 'dart:io';
 
 import '../worker/developer.dart' show
-    Settings,
     allocateWorker,
-    configFileUri,
+    createProject,
     createSessionState,
-    createSettings;
+    createSettings,
+    findBoardNames,
+    findProjectTemplate,
+    Settings;
+
+import 'actions.dart' show
+    ActionGroup;
 
 import 'documentation.dart' show
     createDocumentation;
 
-const Action createAction = const Action(
-    create, createDocumentation, requiresTargetSession: true,
-    supportsWithUri: true);
+import 'infrastructure.dart';
 
-Future<int> create(AnalyzedSentence sentence, VerbContext context) async {
+const Action createProjectAction = const Action(
+    performCreateProject, createDocumentation,
+    requiresForName: true, requiredTarget: TargetKind.PROJECT);
+
+const Action createSessionAction = const Action(
+    performCreateSession, createDocumentation,
+    requiredTarget: TargetKind.SESSION, supportsWithUri: true);
+
+const Map<String, Action> createActions = const {
+  'project' : createProjectAction,
+  'session' : createSessionAction
+};
+
+const ActionGroup createAction = const ActionGroup(
+    createActions, createDocumentation);
+
+Future<int> performCreateProject(
+    AnalyzedSentence sentence, VerbContext context) async {
+  // Determine the new project location
+  String projectPath = sentence.targetName;
+  if (projectPath == null) {
+    throwFatalError(DiagnosticKind.missingProjectPath);
+  }
+  Uri projectUri = sentence.base.resolve(projectPath);
+  var type = await FileSystemEntity.typeSync(projectUri.toFilePath());
+  if (type != FileSystemEntityType.NOT_FOUND) {
+    throwFatalError(DiagnosticKind.projectAlreadyExists, uri: projectUri);
+  }
+
+  // Validate the specified board name
+  String boardName = sentence.forName;
+  if (boardName == null) {
+    throwFatalError(DiagnosticKind.missingForName,
+        boardNames: await findBoardNames());
+  }
+  Uri templateUri = await findProjectTemplate(boardName);
+  if (templateUri == null) {
+      throwFatalError(DiagnosticKind.boardNotFound,
+        userInput: boardName, boardNames: await findBoardNames());
+  }
+
+  return createProject(projectUri, boardName);
+}
+
+Future<int> performCreateSession(
+    AnalyzedSentence sentence, VerbContext context) async {
   IsolatePool pool = context.pool;
   String name = sentence.targetName;
 
@@ -60,7 +108,7 @@ Future<int> createSessionTask(
   assert(SessionState.internalCurrent == null);
   Settings settings = await createSettings(
       name, settingsUri, base, commandSender, commandIterator);
-  SessionState state = createSessionState(name, settings);
+  SessionState state = createSessionState(name, base, settings);
   SessionState.internalCurrent = state;
   if (settingsUri != null) {
     state.log("created session with $settingsUri $settings");
