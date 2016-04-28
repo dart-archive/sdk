@@ -23,6 +23,7 @@ class Buffer {
 
   void ClearBuffer();
   void SetBuffer(uint8* buffer, int length);
+  uint8* GetBuffer() const;
 
   int offset() const { return buffer_offset_; }
 
@@ -156,8 +157,7 @@ class Connection {
     kInstanceStructure
   };
 
-  static Connection* Connect(const char* host, int port);
-
+  Connection();
   virtual ~Connection();
 
   int ReadInt() { return incoming_.ReadInt(); }
@@ -166,17 +166,26 @@ class Connection {
   bool ReadBoolean() { return incoming_.ReadBoolean(); }
   uint8* ReadBytes(int* length) { return incoming_.ReadBytes(length); }
 
+  virtual void Send(Opcode opcode, const WriteBuffer& buffer) = 0;
+  virtual Opcode Receive() = 0;
+
+ protected:
+  ReadBuffer incoming_;
+  Mutex* send_mutex_;
+};
+
+class SocketConnection : public Connection {
+ public:
+  static SocketConnection* Connect(const char* host, int port);
+  ~SocketConnection();
   void Send(Opcode opcode, const WriteBuffer& buffer);
-  Opcode Receive();
+  Connection::Opcode Receive();
 
  private:
   Socket* socket_;
-  ReadBuffer incoming_;
-
-  Mutex* send_mutex_;
 
   friend class ConnectionListener;
-  Connection(const char* host, int port, Socket* socket);
+  SocketConnection(const char* host, int port, Socket* socket);
 };
 
 class ConnectionListener {

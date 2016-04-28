@@ -11,8 +11,12 @@
 #include "platforms/stm/disco_dartino/src/dartino_entry.h"
 #include "platforms/stm/disco_dartino/src/device_manager.h"
 #include "platforms/stm/disco_dartino/src/page_allocator.h"
+#include "platforms/stm/disco_dartino/src/uart_connection.h"
 
+#include "src/shared/connection.h"
 #include "src/shared/utils.h"
+#include "src/vm/program_info_block.h"
+#include "src/vm/session.h"
 
 extern "C" const char *dartino_embedder_options[];
 
@@ -78,6 +82,16 @@ DARTINO_EXPORT_STATIC_RENAME(uart_get_error, UartGetError)
 DARTINO_EXPORT_STATIC_RENAME(button_open, ButtonOpen)
 DARTINO_EXPORT_STATIC_RENAME(button_notify_read, ButtonNotifyRead)
 
+static int RunSession(dartino::Connection* connection, DartinoProgram program) {
+  dartino::Session session = dartino::Session(connection);
+  session.Initialize(reinterpret_cast<dartino::Program*>(program));
+  session.StartMessageProcessingThread();
+    dartino::Print::Out("Listening for connection.\n");
+  int result = session.ProcessRun();
+    dartino::Print::Out("Ran program %d\n", result);
+  return result;
+}
+
 static void UartPrintInterceptor(const char* message, int out, void* data) {
   int len = strlen(message);
   for (int i = 0; i < len; i++) {
@@ -101,6 +115,7 @@ static bool HasOption(const char* option) {
 
 // Run dartino on the linked in program heap.
 void StartDartino(void const * argument) {
+  bool enable_debugger = HasOption("enable_debugger");
   dartino::Print::Out("Setup Dartino\n");
   DartinoSetup();
   char* heap = &program_start;
@@ -109,8 +124,16 @@ void StartDartino(void const * argument) {
       "Loading Dartino program at %p size %d\n", heap, heap_size);
   DartinoProgram program = DartinoLoadProgramFromFlash(heap, heap_size);
 
-  dartino::Print::Out("Run Dartino program\n");
-  DartinoRunMain(program, 0, NULL);
+  if (enable_debugger) {
+    dartino::Print::Out("Waiting for debug-connection\n");
+    dartino::Connection* connection =
+        dartino::UartConnection::Connect(uart_handle);
+    RunSession(connection, program);
+  } else {
+    dartino::Print::Out("Run Dartino program\n");
+    DartinoRunMain(program, 0, NULL);
+  }
+
   dartino::Print::Out("Dartino program exited\n");
 }
 

@@ -10,5 +10,6 @@
 
 const char *dartino_embedder_options[] = {
   "uart_print_interceptor",
+//  "enable_debugger",
   0
 };

@@ -45,13 +45,13 @@ List<Example> getExamples(DiagnosticKind kind) {
           <String>['create', 'session', 'foo'],
           <String>['compile', 'session', 'foo', 'in', 'session', 'foo'])];
 
-    case DiagnosticKind.verbRequiresSocketTarget:
+    case DiagnosticKind.verbRequiresConnectionTarget:
       return <Example>[
           new CommandLineExample(
               <String>['create', 'session', 'foo'],
               <String>['attach', 'in', 'session', 'foo', 'file', 'fisk']),
           new CommandLineExample(
-              // Same as previous example, except with an implict file target.
+              // Same as previous example, except with an implicit file target.
               <String>['create', 'session', 'foo'],
               <String>['attach', 'in', 'session', 'foo', 'fisk.dart'])];
 
@@ -108,7 +108,7 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['create', 'session', 'foo'],
               <String>['compile', 'in', 'session', 'foo'])];
 
-    case DiagnosticKind.noTcpSocketTarget:
+    case DiagnosticKind.noConnectionTarget:
       return <Example>[new CommandLineExample(
           <String>['create', 'session', 'foo'],
           <String>['attach', 'in', 'session', 'foo'])];

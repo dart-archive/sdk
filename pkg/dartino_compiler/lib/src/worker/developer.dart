@@ -123,6 +123,7 @@ import '../../debug_state.dart' as debug show
 
 import '../vm_connection.dart' show
   TcpConnection,
+  TtyConnection,
   VmConnection;
 
 import '../dartino_compiler_options.dart' show
@@ -214,6 +215,12 @@ Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
       await DartinoVm.start(dartinoVmPath, workingDirectory: base);
   await attachToVmTcp(state.dartinoVm.host, state.dartinoVm.port, state);
   await state.vmContext.disableVMStandardOutput();
+}
+
+Future<Null> attachToVmTty(String ttyDevice, SessionState state) async {
+  TtyConnection connection = await TtyConnection.connect(
+      ttyDevice, "vmTty", state.log);
+  await attachToVm(connection, state);
 }
 
 Future<Null> attachToVmTcp(String host, int port, SessionState state) async {

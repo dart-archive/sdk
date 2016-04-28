@@ -27,7 +27,16 @@
   },
 
   // A list of strings that are passed to the Dartino embedder.
+  //
+  // Currently recognized options:
+  // - 'enable_debugger': when enabled the device will wait for the
+  //   debugger on the uart-connection before running the program.
+  //   all stdout will go to the debugger.
+  // - 'uart_print_interceptor': when enabled all stdout will be copied to
+  //   the uart.
+  // Notice 'enable_debugger' and 'uart_print_interceptor' do not work together.
   "embedder_options": [
+    // "enable_debugger"
     "uart_print_interceptor"
   ],
 

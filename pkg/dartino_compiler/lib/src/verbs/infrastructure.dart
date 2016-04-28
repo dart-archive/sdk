@@ -25,7 +25,8 @@ import '../hub/sentence_parser.dart' show
     Sentence,
     Target,
     TargetKind,
-    Verb;
+    Verb,
+    connectionTargets;
 
 export '../hub/sentence_parser.dart' show
     TargetKind;
@@ -321,10 +322,6 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   if (action.requiresTarget) {
     if (target == null) {
       switch (requiredTarget) {
-        case TargetKind.TCP_SOCKET:
-          throwFatalError(DiagnosticKind.noTcpSocketTarget);
-          break;
-
         case TargetKind.FILE:
           throwFatalError(DiagnosticKind.noFileTarget);
           break;
@@ -337,20 +334,20 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
             throwFatalError(
                 DiagnosticKind.verbRequiresSpecificTarget, verb: verb,
                 requiredTarget: requiredTarget);
+          } else if (action.supportedTargets == connectionTargets) {
+            throwFatalError(DiagnosticKind.noConnectionTarget);
           } else {
             throwFatalError(
                 DiagnosticKind.verbRequiresTarget, verb: verb);
           }
           break;
       }
+    } else if (action.supportedTargets == connectionTargets &&
+        !action.supportedTargets.contains(target.kind)) {
+      throwFatalError(DiagnosticKind.verbRequiresConnectionTarget,
+          verb: verb, target: target);
     } else if (requiredTarget != null && target.kind != requiredTarget) {
       switch (requiredTarget) {
-        case TargetKind.TCP_SOCKET:
-          throwFatalError(
-              DiagnosticKind.verbRequiresSocketTarget,
-              verb: verb, target: target);
-          break;
-
         case TargetKind.FILE:
           throwFatalError(
               DiagnosticKind.verbRequiresFileTarget,

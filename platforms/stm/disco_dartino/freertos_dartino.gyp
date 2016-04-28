@@ -118,6 +118,8 @@
         '<(source_path)/main.cc',
         '<(source_path)/page_allocator.cc',
         '<(source_path)/page_allocator.h',
+        '<(source_path)/uart_connection.cc',
+        '<(source_path)/uart_connection.h',
 
         '<(source_path)/syscalls.c',
 

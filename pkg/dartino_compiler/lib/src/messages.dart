@@ -37,7 +37,7 @@ enum DiagnosticKind {
   noAgentFound,
   noFileTarget,
   noSuchSession,
-  noTcpSocketTarget,
+  noConnectionTarget,
   optionsObsolete,
   projectAlreadyExists,
   quitTakesNoArguments,
@@ -78,7 +78,7 @@ enum DiagnosticKind {
   verbRequiresNoToFile,
   verbRequiresNoWithFile,
   verbRequiresSessionTarget,
-  verbRequiresSocketTarget,
+  verbRequiresConnectionTarget,
   verbRequiresSpecificTarget,
   verbRequiresSpecificTargetButGot,
   verbRequiresTarget,
@@ -156,10 +156,11 @@ String getMessage(DiagnosticKind kind) {
       return "Can't perform '$verb' without a file, but got '$target', which "
         "is not a file target. Try adding 'file' in front.";
 
-    case DiagnosticKind.verbRequiresSocketTarget:
+    case DiagnosticKind.verbRequiresConnectionTarget:
       // TODO(ahe): Be more explicit about what is wrong with the target.
-      return "Can't perform '$verb' without a socket, but got '$target', "
-        "which is not a socket. Try adding 'tcp_socket' in front.";
+      return "Can't perform '$verb' without a connection endpoint,"
+          "but got '$target', which is not a connection endpoint. "
+          "Try adding 'tcp_socket' or 'tty' in front.";
 
     case DiagnosticKind.verbDoesNotSupportTarget:
       return "'$verb' can't be performed on '$target'.";
@@ -194,9 +195,10 @@ String getMessage(DiagnosticKind kind) {
     case DiagnosticKind.noFileTarget:
       return "No file provided. Try adding <FILE_NAME> to the command line.";
 
-    case DiagnosticKind.noTcpSocketTarget:
-      return "No TCP socket provided. "
-          "Try adding 'tcp_socket HOST:PORT' to the command line.";
+    case DiagnosticKind.noConnectionTarget:
+      return "No connection endpoint provided. "
+          "Try adding 'tcp_socket HOST:PORT' or 'tty /dev/device' to the "
+          "command line.";
 
     case DiagnosticKind.expectedAPortNumber:
       return "Expected a port number, but got '$userInput'.";

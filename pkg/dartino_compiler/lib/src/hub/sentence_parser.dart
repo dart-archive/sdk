@@ -174,6 +174,9 @@ class SentenceParser {
       case "tcp_socket":
         return makeNamedTarget(TargetKind.TCP_SOCKET);
 
+      case "tty":
+        return makeNamedTarget(TargetKind.TTY);
+
       case "sessions":
         return makeTarget(TargetKind.SESSIONS);
 
@@ -427,8 +430,12 @@ enum TargetKind {
   STEP_OVER,
   STEP_OVER_BYTECODE,
   TCP_SOCKET,
+  TTY,
   TOGGLE,
 }
+
+const List<TargetKind> connectionTargets =
+    const [TargetKind.TCP_SOCKET, TargetKind.TTY];
 
 class NamedTarget extends Target {
   final String name;
