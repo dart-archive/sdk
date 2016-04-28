@@ -34,7 +34,7 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.verbRequiresSessionTarget:
       return <Example>[
-          // TODO(danrubel) Fix test... throws missingSessionName 
+          // TODO(danrubel) Fix test... throws missingSessionName
           // new CommandLineExample(
           //     <String>['create', 'session']),
           new CommandLineExample(
@@ -71,11 +71,12 @@ List<Example> getExamples(DiagnosticKind kind) {
       return untestable;
 
     case DiagnosticKind.missingForName:
-      // TODO(danrubel) fix this test
-      // return <Example>[new CommandLineExample(
-      //     <String>['create', 'project', 'foo'],
-      //     <String>['create', 'project', 'foo', 'for'])];
-      return untestable;
+      return <Example>[
+          new CommandLineExample(
+              <String>['create', 'project', 'foo']),
+          new CommandLineExample(
+              <String>['create', 'project', 'foo', 'for'])
+      ];
 
     case DiagnosticKind.boardNotFound:
       // TODO(danrubel): figure out a way to test this
@@ -202,8 +203,12 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['export'])];
 
     case DiagnosticKind.missingProjectPath:
-      return <Example>[new CommandLineExample(
-            <String>['create', 'project'])];
+      return <Example>[
+          new CommandLineExample(
+              <String>['create', 'project']),
+          new CommandLineExample(
+              <String>['create', 'project', 'for', 'stm32'])
+      ];
 
     case DiagnosticKind.missingSessionName:
       return <Example>[new CommandLineExample(
@@ -297,8 +302,9 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.extraArguments:
       return <Example>[
-          new CommandLineExample(<String>['create', 'project', 'foo', 'for', 'raspberry-pi2', 'fisk']),
-          new CommandLineExample(<String>['x-upgrade', 'hest']),
+          new CommandLineExample(<String>[
+            'create', 'project', 'foo', 'for', 'raspberry-pi2', 'fisk']),
+          new CommandLineExample(<String>['x-upgrade', 'agent', 'hest']),
       ];
 
     case DiagnosticKind.cantPerformVerbIn:
@@ -367,8 +373,12 @@ List<Example> getExamples(DiagnosticKind kind) {
             <String>['show'])];
 
     case DiagnosticKind.verbRequiresSpecificTarget:
-      return <Example>[new CommandLineExample(
-            <String>['x-upgrade'])];
+      return <Example>[
+        new CommandLineExample(
+            <String>['x-upgrade']),
+        new CommandLineExample(
+            <String>['x-upgrade', 'hest'])
+      ];
 
     case DiagnosticKind.verbRequiresSpecificTargetButGot:
       return <Example>[new CommandLineExample(

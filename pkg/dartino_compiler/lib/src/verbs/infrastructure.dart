@@ -293,21 +293,17 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     throwFatalError(DiagnosticKind.missingToFile);
   }
 
-  if (!action.allowsTrailing && trailing != null) {
-    // If there are extra arguments but missing 'for NAME'
-    // then user probably forgot to specify a target
-    if (action.requiresForName && forName == null) {
-      if (action.requiresTarget && target is NamedTarget) {
-        if (target.name == "for") {
-          // TODO(danrubel) generalize this to remove action specific code
-          // throwFatalError(DiagnosticKind.missingTarget,
-          //     requiredTarget: action.requiredTarget);
-          throwFatalError(DiagnosticKind.missingProjectPath);
-        }
+  // If there is a target but missing 'for NAME'
+  // then user probably forgot to specify a target
+  if (action.requiresForName && forName == null) {
+    if (action.requiresTarget && target is NamedTarget) {
+      if (target.name == "for") {
+        // TODO(danrubel) generalize this to remove action specific code
+        // throwFatalError(DiagnosticKind.missingTarget,
+        //     requiredTarget: action.requiredTarget);
+        throwFatalError(DiagnosticKind.missingProjectPath);
       }
     }
-    throwFatalError(
-        DiagnosticKind.extraArguments, userInput: trailing.join(' '));
   }
 
   TargetKind requiredTarget = action.requiredTarget;
@@ -391,6 +387,11 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
     if (target.kind == TargetKind.FILE) {
       targetUri = fileUri(targetName, base);
     }
+  }
+
+  if (!action.allowsTrailing && trailing != null) {
+    throwFatalError(
+        DiagnosticKind.extraArguments, userInput: trailing.join(' '));
   }
 
   return new AnalyzedSentence(
