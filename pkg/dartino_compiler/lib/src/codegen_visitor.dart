@@ -1142,6 +1142,8 @@ abstract class CodegenVisitor
       NodeList arguments,
       CallStructure callStructure,
       _) {
+    // TODO(sigurdm): implement correct super no-such-method.
+    // To correct eg: super_no_such_method1_test/01: RuntimeError
     doStaticallyBoundInvoke(node, element, arguments, callStructure);
     applyVisitState();
   }
@@ -3358,8 +3360,13 @@ abstract class CodegenVisitor
       FieldElement field,
       Node rhs,
       _) {
-    generateUnimplementedError(
-        node, "[visitFinalStaticFieldSetIfNull] isn't implemented.");
+    doSetIfNull(() {
+      doStaticFieldGet(field);
+    }, () {
+      visitForValue(rhs);
+      doUnresolved(field.name);
+      assembler.pop();
+    }, 0);
     applyVisitState();
   }
 
@@ -3370,7 +3377,6 @@ abstract class CodegenVisitor
       _) {
     generateUnimplementedError(
         node, "[visitFinalSuperFieldSetIfNull] isn't implemented.");
-    applyVisitState();
   }
 
   void visitFinalTopLevelFieldSetIfNull(
@@ -3378,8 +3384,13 @@ abstract class CodegenVisitor
       FieldElement field,
       Node rhs,
       _) {
-    generateUnimplementedError(
-        node, "[visitFinalTopLevelFieldSetIfNull] isn't implemented.");
+    doSetIfNull(() {
+      doStaticFieldGet(field);
+    }, () {
+      visitForValue(rhs);
+      doUnresolved(field.name);
+      assembler.pop();
+    }, 0);
     applyVisitState();
   }
 
@@ -3707,7 +3718,8 @@ abstract class CodegenVisitor
       MethodElement setter,
       Node rhs,
       _) {
-    visitForValue(node.receiver);
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperGetterSetIfNull] isn't implemented.");
     applyVisitState();
   }
 
@@ -3716,7 +3728,8 @@ abstract class CodegenVisitor
       Element element,
       Node rhs,
       _) {
-    visitForValue(node.receiver);
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperSetIfNull] isn't implemented.");
     applyVisitState();
   }
 
@@ -3726,7 +3739,8 @@ abstract class CodegenVisitor
       Element element,
       Node rhs,
       _) {
-    visitForValue(node.receiver);
+    generateUnimplementedError(
+        node, "[visitUnresolvedSuperSetterSetIfNull] isn't implemented.");
     applyVisitState();
   }
 
@@ -3750,11 +3764,8 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void visitIndexSetIfNotNull(Send node,
-      Node receiver,
-      Node index,
-      Node rhs,
-      _) {
+  void visitIndexSetIfNull(
+      SendSet node, Node receiver, Node index, Node rhs, _) {
     doSetIfNull(() {
       visitForValue(receiver);
       visitForValue(index);
@@ -3768,17 +3779,18 @@ abstract class CodegenVisitor
     applyVisitState();
   }
 
-  void visitIndexSetIfNull(
-      SendSet node, Node receiver, Node index, Node rhs, _) {
-    generateUnimplementedError(
-        node, "[visitIndexSetIfNull] isn't implemented.");
-    applyVisitState();
-  }
-
   void visitSuperIndexSetIfNull(SendSet node, MethodElement getter,
       MethodElement setter, Node index, Node rhs, _) {
-    generateUnimplementedError(
-        node, "[visitSuperIndexSetIfNull] isn't implemented.");
+    doSetIfNull(() {
+      loadThis();
+      visitForValue(index);
+      assembler.loadLocal(1);
+      assembler.loadLocal(1);
+      doSuperCall(node, getter);
+    }, () {
+      visitForValue(rhs);
+      doSuperCall(node, setter);
+    }, 2);
     applyVisitState();
   }
 
@@ -3798,8 +3810,7 @@ abstract class CodegenVisitor
 
   void visitUnresolvedSuperIndexSetIfNull(
       Send node, Element element, Node index, Node rhs, _){
-    generateUnimplementedError(
-        node, "[visitUnresolvedSuperIndexSetIfNull] isn't implemented.");
+    doUnresolved(element.name);
     applyVisitState();
   }
 
