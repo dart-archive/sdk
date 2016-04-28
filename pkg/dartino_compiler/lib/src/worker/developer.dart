@@ -253,10 +253,6 @@ Future<Null> attachToVm(VmConnection connection, SessionState state) async {
   vmContext.configuration = getConfiguration(handShakeResult.wordSize,
       handShakeResult.dartinoDoubleSize);
 
-  // Enable live editing to be able to communicate with VM when there are
-  // errors.
-  await vmContext.enableLiveEditing();
-
   state.vmContext = vmContext;
 }
 
@@ -618,13 +614,13 @@ Future<int> run(
   List<DartinoDelta> compilationResults = state.compilationResults;
   DartinoVmContext vmContext = state.vmContext;
 
+  vmContext.enableLiveEditing();
   for (DartinoDelta delta in compilationResults) {
     await vmContext.applyDelta(delta);
   }
 
   vmContext.silent = true;
 
-  await vmContext.enableLiveEditing();
   await vmContext.spawnProcess(arguments);
   var command = await vmContext.startRunning();
 
@@ -725,6 +721,7 @@ Future<int> export(SessionState state, Uri snapshot) async {
   DartinoVmContext vmContext = state.vmContext;
   state.vmContext = null;
 
+  await vmContext.enableLiveEditing();
   for (DartinoDelta delta in compilationResults) {
     await vmContext.applyDelta(delta);
   }

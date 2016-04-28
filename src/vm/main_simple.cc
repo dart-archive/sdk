@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifndef DARTINO_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_DEBUGGING
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,9 +41,16 @@ static int Main(int argc, char** argv) {
     programs[i] = program;
   }
 
-  int result = DartinoRunMultipleMain(program_count, programs);
+  int* exitcodes = new int[program_count];
+
+  DartinoRunMultipleMain(program_count, programs, exitcodes, 0, NULL);
+
+  int result = 0;
 
   for (int i = 0; i < program_count; i++) {
+    if (exitcodes[i] != 0) {
+      result = exitcodes[i];
+    }
     DartinoDeleteProgram(programs[i]);
   }
 
@@ -58,4 +65,4 @@ static int Main(int argc, char** argv) {
 // Forward main calls to dartino::Main.
 int main(int argc, char** argv) { return dartino::Main(argc, argv); }
 
-#endif  // !DARTINO_ENABLE_LIVE_CODING
+#endif  // !DARTINO_ENABLE_DEBUGGING

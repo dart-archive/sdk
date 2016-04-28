@@ -291,19 +291,14 @@ class DartinoVmContext {
   }
 
   // Enable support for live-editing commands. This must be called prior to
-  // sending deltas or if the program termination behavior is to be observed.
-  // TODO(zerny): Separate termination observation from live editing.
+  // sending deltas.
   Future enableLiveEditing() async {
     await runCommand(const LiveEditing());
   }
 
   // Enable support for debugging commands. This must be called prior to setting
-  // breakpoints. Currently debugging support entails live editing, but that
-  // will not continue to be the case once support for attaching to VMs running
-  // read-only programs has been added.
-  // TODO(zerny): Separate debugging from live editing.
-  Future<DebuggingReply> enableDebugger() async {
-    await enableLiveEditing();
+  // breakpoints.
+  Future<DebuggingReply> enableDebugging() async {
     VmCommand reply = await runCommand(const Debugging());
     if (reply == null || reply is! DebuggingReply) {
       throw new Exception("Expected a reply from the debugging command");
@@ -321,7 +316,7 @@ class DartinoVmContext {
       SessionState state,
       {bool echo: false,
        Uri snapshotLocation}) async {
-    DebuggingReply debuggingReply = await enableDebugger();
+    DebuggingReply debuggingReply = await enableDebugging();
 
     runningFromSnapshot = debuggingReply.isFromSnapshot;
     if (runningFromSnapshot) {
@@ -363,6 +358,7 @@ class DartinoVmContext {
         };
       }
     } else {
+      enableLiveEditing();
       for (DartinoDelta delta in state.compilationResults) {
         await applyDelta(delta);
       }

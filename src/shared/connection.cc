@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef DARTINO_ENABLE_LIVE_CODING
-
 #include "src/shared/connection.h"
 
 #include "src/shared/assert.h"
@@ -184,5 +182,3 @@ Connection* ConnectionListener::Accept() {
 }
 
 }  // namespace dartino
-
-#endif  // DARTINO_ENABLE_LIVE_CODING

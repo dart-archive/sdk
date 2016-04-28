@@ -110,6 +110,7 @@ class DartinoVmTester extends IncrementalTestRunner {
       Expect.isTrue(handShakeResult.success, "Dartino VM version mismatch");
     }
 
+    await vmContext.enableLiveEditing();
     CommitChangesResult result = await vmContext.applyDelta(dartinoDelta);
 
     if (!result.successful) {
@@ -122,7 +123,7 @@ class DartinoVmTester extends IncrementalTestRunner {
 
     if (isFirstProgram) {
       // Turn on debugging.
-      await vmContext.enableDebugger();
+      await vmContext.enableDebugging();
       // Spawn the process to run.
       await vmContext.spawnProcess([]);
       // Allow operations on internal frames.

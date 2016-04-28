@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef DARTINO_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_DEBUGGING
 
 #include "src/vm/session.h"
 
@@ -194,7 +194,6 @@ class ConnectedState : public SessionState {
   }
 
   void EnableDebugging() {
-    ASSERT(IsLiveEditingEnabled());
     ASSERT(!IsDebuggingEnabled());
     session()->set_debugging(true);
   }
@@ -244,16 +243,9 @@ class SpawnedState : public ConnectedState {
 
   Process* main_process() const { return session()->main_process(); }
 
-  void EnableLiveEditing() {
-    ConnectedState::EnableLiveEditing();
-    // Ensure that main is allocated the zeroth id.
-    program()->EnsureDebuggerAttached();
-    main_process()->EnsureDebuggerAttached();
-  }
-
   // True if the session should be informed of the process's termination.
   bool ObserveTermination(Process* process) {
-    return IsLiveEditingEnabled() && process == main_process();
+    return process == main_process();
   }
 
   void ActivateState(SessionState* previous) {
@@ -264,11 +256,9 @@ class SpawnedState : public ConnectedState {
     ASSERT(!previous->IsSpawned());
     session()->set_main_process(initial_main_process_);
     initial_main_process_ = NULL;
-    if (IsLiveEditingEnabled()) {
-      // Ensure that main is allocated the zeroth id.
-      program()->EnsureDebuggerAttached();
-      main_process()->EnsureDebuggerAttached();
-    }
+    // Ensure that main is allocated the zeroth id.
+    program()->EnsureDebuggerAttached();
+    main_process()->EnsureDebuggerAttached();
   }
 
   const char* ToString() const { return "Spawned"; }
@@ -831,30 +821,6 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       return NULL;
     }
 
-    case Connection::kCreateSnapshot: {
-      ASSERT(!IsScheduled());
-      bool writeToDisk = connection()->ReadBoolean();
-      int length;
-      uint8* data = connection()->ReadBytes(&length);
-      const char* path = reinterpret_cast<const char*>(data);
-      ASSERT(static_cast<int>(strlen(path)) == length - 1);
-      ASSERT(writeToDisk || (static_cast<int>(strlen(path)) == 0));
-      FunctionOffsetsType function_offsets;
-      ClassOffsetsType class_offsets;
-      bool success = session()->CreateSnapshot(
-          writeToDisk, path, &function_offsets, &class_offsets);
-      free(data);
-      session()->SendProgramInfo(&class_offsets, &function_offsets);
-      session()->SignalMainThread(
-          success ? Session::kSnapshotDone : Session::kError);
-      return NULL;
-    }
-
-    case Connection::kSetEntryPoint: {
-      program()->set_entry(Function::cast(session()->Pop()));
-      break;
-    }
-
     case Connection::kProcessSpawnForMain: {
       int arguments_count = connection()->ReadInt();
       List<List<uint8>> arguments = List<List<uint8>>::New(arguments_count);
@@ -863,24 +829,10 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
         uint8* bytes = connection()->ReadBytes(&length);
         arguments[i] = List<uint8>(bytes, length);
       }
-
       if (!program()->was_loaded_from_snapshot()) {
         ProgramFolder::FoldProgramByDefault(program());
       }
       return new SpawnedState(program()->ProcessSpawnForMain(arguments));
-    }
-
-    case Connection::kPrepareForChanges: {
-      ASSERT(!IsModifying() && (!IsScheduled() || IsPaused()));
-      session()->PrepareForChanges();
-      return new ModifyingState();
-    }
-
-    case Connection::kLiveEditing: {
-      if (!IsLiveEditingEnabled()) EnableLiveEditing();
-      session()->method_map_id_ = connection()->ReadInt();
-      session()->class_map_id_ = connection()->ReadInt();
-      break;
     }
 
     case Connection::kDebugging: {
@@ -1102,6 +1054,46 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       break;
     }
 
+#ifdef DARTINO_ENABLE_LIVE_CODING
+    case Connection::kSetEntryPoint: {
+      program()->set_entry(Function::cast(session()->Pop()));
+      break;
+    }
+
+    case Connection::kCreateSnapshot: {
+      ASSERT(!IsScheduled());
+      bool writeToDisk = connection()->ReadBoolean();
+      int length;
+      uint8* data = connection()->ReadBytes(&length);
+      const char* path = reinterpret_cast<const char*>(data);
+      ASSERT(static_cast<int>(strlen(path)) == length - 1);
+      ASSERT(writeToDisk || (static_cast<int>(strlen(path)) == 0));
+      FunctionOffsetsType function_offsets;
+      ClassOffsetsType class_offsets;
+      bool success = session()->CreateSnapshot(
+          writeToDisk, path, &function_offsets, &class_offsets);
+      free(data);
+      session()->SendProgramInfo(&class_offsets, &function_offsets);
+      session()->SignalMainThread(
+          success ? Session::kSnapshotDone : Session::kError);
+      return NULL;
+    }
+
+    case Connection::kPrepareForChanges: {
+      ASSERT(!IsModifying() && (!IsScheduled() || IsPaused()));
+      session()->PrepareForChanges();
+      return new ModifyingState();
+    }
+
+    case Connection::kLiveEditing: {
+      if (!IsLiveEditingEnabled()) EnableLiveEditing();
+      session()->method_map_id_ = connection()->ReadInt();
+      session()->class_map_id_ = connection()->ReadInt();
+      break;
+    }
+#endif  // DARTINO_ENABLE_LIVE_CODING
+
+
     default: {
       return SessionState::ProcessMessage(opcode);
     }
@@ -1109,6 +1101,8 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
 
   return this;
 }
+
+#ifdef DARTINO_ENABLE_LIVE_CODING
 
 SessionState* ModifyingState::ProcessMessage(Connection::Opcode opcode) {
   switch (opcode) {
@@ -1174,6 +1168,7 @@ SessionState* ModifyingState::ProcessMessage(Connection::Opcode opcode) {
 
   return this;
 }
+#endif  // DARTINO_ENABLE_LIVE_CODING
 
 SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
   switch (opcode) {
@@ -1185,7 +1180,6 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
     // Debugging commands that are valid on unscheduled programs.
     case Connection::kProcessDebugInterrupt: {
       // TODO(zerny): Disallow an interrupt on unscheduled programs?
-      ASSERT(IsDebuggingEnabled());
       // This is a noop in all non-running states.
       break;
     }
@@ -1992,7 +1986,10 @@ void Session::PostponeChange(Change change, int count) {
 }
 
 bool Session::CanHandleEvents() const {
-  return state_->IsLiveEditingEnabled();
+  // TODO(sigurdm): Allow for running with a session without a connected vm.
+  // When that is the case, this should only return true when there is an
+  // established connection.
+  return true;
 }
 
 Scheduler::ProcessInterruptionEvent Session::CheckForPauseEventResult(
@@ -2219,4 +2216,4 @@ int64 Session::FunctionMessage(Function *function) {
 
 }  // namespace dartino
 
-#endif  // DARTINO_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_DEBUGGING

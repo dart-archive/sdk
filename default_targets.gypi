@@ -156,11 +156,11 @@
         'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_xarm64' ],
       },
 
-      # TODO(ajohnsen): Test configuration - to be removed.
-      'ReleaseIA32DisableLiveCoding': {
+      # Test configuration - to ensure that we can compile this configuration
+      'ReleaseIA32DisableDebugging': {
         'inherit_from': [
           'dartino_base', 'dartino_release', 'dartino_ia32',
-          'dartino_disable_live_coding'
+          'dartino_disable_debugging'
         ],
       },
 

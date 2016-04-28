@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef DARTINO_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_DEBUGGING
 
 #include <stddef.h>  // for size_t
 
@@ -217,4 +217,4 @@ static int Main(int argc, char** argv) {
 // Forward main calls to dartino::Main.
 int main(int argc, char** argv) { return dartino::Main(argc, argv); }
 
-#endif  // DARTINO_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_DEBUGGING

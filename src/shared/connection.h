@@ -5,10 +5,6 @@
 #ifndef SRC_SHARED_CONNECTION_H_
 #define SRC_SHARED_CONNECTION_H_
 
-#ifndef DARTINO_ENABLE_LIVE_CODING
-#error "connection.h is only available when live coding is enabled."
-#endif
-
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
 

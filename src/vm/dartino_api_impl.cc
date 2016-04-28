@@ -7,7 +7,7 @@
 #include "src/vm/dartino_api_impl.h"
 
 #include "src/shared/assert.h"
-#ifdef DARTINO_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_DEBUGGING
 #include "src/shared/connection.h"
 #endif
 #include "src/shared/dartino.h"
@@ -90,7 +90,7 @@ static Program* LoadSnapshotFromFile(const char* path) {
 }
 
 static void WaitForDebuggerConnection(int port) {
-#ifdef DARTINO_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_DEBUGGING
   ConnectionListener listener("127.0.0.1", port);
   Connection* connection = listener.Accept();
   Session session(connection);
@@ -99,7 +99,7 @@ static void WaitForDebuggerConnection(int port) {
   bool success = session.ProcessRun() == 0;
   if (!success) FATAL("Failed to run via debugger connection");
 #else
-  FATAL("dartino was built without live coding support.");
+  FATAL("dartino was built without debugging support.");
 #endif
 }
 }  // namespace dartino

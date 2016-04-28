@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#if defined(DARTINO_TARGET_OS_LK) && defined(DARTINO_ENABLE_LIVE_CODING)
+#if defined(DARTINO_TARGET_OS_LK)
 
 #include "src/shared/native_socket.h"
 
@@ -99,4 +99,4 @@ void Socket::SetTCPNoDelay(bool value) {
 
 }  // namespace dartino
 
-#endif  // def'd(DARTINO_TARGET_OS_LK) && def'd(DARTINO_ENABLE_LIVE_CODING)
+#endif  // def'd(DARTINO_TARGET_OS_LK)

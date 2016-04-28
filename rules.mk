@@ -30,10 +30,10 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/dartino.cc \
 	$(DARTINO_SRC_VM)/debug_info.cc \
 	$(DARTINO_SRC_VM)/debug_info.h \
-	$(DARTINO_SRC_VM)/debug_info_no_live_coding.h \
+	$(DARTINO_SRC_VM)/debug_info_no_debugging.h \
 	$(DARTINO_SRC_VM)/dispatch_table.cc \
 	$(DARTINO_SRC_VM)/dispatch_table.h \
-	$(DARTINO_SRC_VM)/dispatch_table_no_live_coding.h \
+	$(DARTINO_SRC_VM)/dispatch_table_debugging.h \
 	$(DARTINO_SRC_VM)/double_list.h \
 	$(DARTINO_SRC_VM)/event_handler.cc \
 	$(DARTINO_SRC_VM)/event_handler_cmsis.cc \
@@ -97,6 +97,7 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/program.cc \
 	$(DARTINO_SRC_VM)/program_folder.cc \
 	$(DARTINO_SRC_VM)/program_folder.h \
+	$(DARTINO_SRC_VM)/program_folder_no_live_coding.h \
 	$(DARTINO_SRC_VM)/program_groups.cc \
 	$(DARTINO_SRC_VM)/program_groups.h \
 	$(DARTINO_SRC_VM)/program.h \
@@ -110,7 +111,7 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/service_api_impl.h \
 	$(DARTINO_SRC_VM)/session.cc \
 	$(DARTINO_SRC_VM)/session.h \
-	$(DARTINO_SRC_VM)/session_no_live_coding.h \
+	$(DARTINO_SRC_VM)/session_no_debugging.h \
 	$(DARTINO_SRC_VM)/signal.h \
 	$(DARTINO_SRC_VM)/snapshot.cc \
 	$(DARTINO_SRC_VM)/snapshot.h \
@@ -230,7 +231,8 @@ MODULE_DEFINES += \
 	DARTINO_TARGET_ARM \
 	DARTINO_THUMB_ONLY \
 	DARTINO_TARGET_OS_LK \
-	DARTINO_ENABLE_FFI
+	DARTINO_ENABLE_FFI \
+	DARTINO_ENABLE_DEBUGGING
 
 ifneq ($(DEBUG),)
 MODULE_DEFINES += DEBUG

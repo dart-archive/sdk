@@ -35,7 +35,7 @@ void GetPathOfExecutable(char* path, size_t path_length) {
 
 void Platform::Setup() {
   time_launch = GetTickCount64();
-#if defined(DARTINO_ENABLE_LIVE_CODING)
+#if defined(DARTINO_ENABLE_DEBUGGING)
   WSADATA wsa_data;
   int status = WSAStartup(MAKEWORD(2, 2), &wsa_data);
   if (status != 0) {
@@ -46,7 +46,7 @@ void Platform::Setup() {
 }
 
 void Platform::TearDown() {
-#if defined(DARTINO_ENABLE_LIVE_CODING)
+#if defined(DARTINO_ENABLE_DEBUGGING)
   WSACleanup();
 #endif
 }
