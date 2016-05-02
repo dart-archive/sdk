@@ -79,10 +79,12 @@ export '../hub/hub_main.dart' show
     IsolatePool;
 
 import 'actions.dart' show
-    Action;
+    Action,
+    ActionGroup;
 
 export 'actions.dart' show
-    Action;
+    Action,
+    ActionGroup;
 
 import 'options.dart' show
     Options;

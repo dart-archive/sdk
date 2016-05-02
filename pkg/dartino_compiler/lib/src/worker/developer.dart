@@ -10,6 +10,7 @@ import 'dart:async' show
 import 'dart:convert' show
     JSON,
     JsonEncoder,
+    LineSplitter,
     UTF8;
 
 import 'dart:io' show
@@ -54,7 +55,6 @@ import '../../vm_commands.dart' show
     VmCommandCode;
 
 import '../../program_info.dart' show
-    Configuration,
     IdOffsetMapping,
     NameOffsetMapping,
     ProgramInfoJson,
@@ -67,11 +67,11 @@ import '../hub/session_manager.dart' show
     Sessions;
 
 import '../hub/client_commands.dart' show
-    ClientCommandCode,
-    handleSocketErrors;
+    ClientCommandCode;
 
 import '../verbs/infrastructure.dart' show
     ClientCommand,
+    ClientConnection,
     CommandSender,
     DiagnosticKind,
     DartinoCompiler,
@@ -215,6 +215,28 @@ Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
       await DartinoVm.start(dartinoVmPath, workingDirectory: base);
   await attachToVmTcp(state.dartinoVm.host, state.dartinoVm.port, state);
   await state.vmContext.disableVMStandardOutput();
+}
+
+/// Analyze the target and report the results to the user.
+Future<int> analyze(
+    Uri fileUri,
+    SessionState state,
+    Uri base) async {
+  Directory dartSdkDir = await locateDartSdkDirectory();
+  String analyzerPath = join(dartSdkDir.path, 'bin', 'dartanalyzer');
+
+  List<String> arguments = <String>[];
+  arguments.add('--packages');
+  arguments.add(new File.fromUri(state.settings.packages).path);
+  arguments.add(new File.fromUri(fileUri).path);
+
+  state.log('Analyze: $analyzerPath ${arguments.join(' ')}');
+  Process process = await Process.start(analyzerPath, arguments);
+  process.stdout.transform(UTF8.decoder).transform(new LineSplitter())
+      .listen(print);
+  process.stderr.transform(UTF8.decoder).transform(new LineSplitter())
+      .listen(print);
+  return process.exitCode;
 }
 
 Future<Null> attachToVmTty(String ttyDevice, SessionState state) async {
@@ -1269,6 +1291,22 @@ Future<Directory> locateBinDirectory() async {
   }
 
   return binDirectory;
+}
+
+Future<Directory> locateDartSdkDirectory() async {
+  // In the SDK, the dart-sdk directory is in the internal directory.
+  Directory dartSdkDirectory =
+      new Directory.fromUri(executable.resolve(
+          '../internal/dart-sdk'));
+  if (!await dartSdkDirectory.exists()) {
+    // When running in a Git checkout...
+    dartSdkDirectory =
+        new Directory.fromUri(executable.resolve(
+                'dartino-sdk/internal/dart-sdk'));
+    assert(await dartSdkDirectory.exists());
+  }
+
+  return dartSdkDirectory;
 }
 
 // Creates a c-file containing the options options in an array.

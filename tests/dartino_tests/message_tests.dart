@@ -10,6 +10,7 @@ import 'dart:async' show
     Zone;
 
 import 'dart:convert' show
+    LineSplitter,
     UTF8;
 
 import 'package:expect/expect.dart' show
@@ -28,6 +29,7 @@ import 'package:dartino_compiler/src/hub/sentence_parser.dart' show
 
 import 'package:dartino_compiler/src/hub/hub_main.dart' show
     ClientLogger,
+    ClientCommandSender,
     ClientConnection,
     IsolatePool,
     handleVerb;
@@ -166,14 +168,20 @@ class MockClientConnection implements ClientConnection {
 
   final List<String> stderrMessages = <String>[];
 
+  List<String> stdoutMessages;
+
   final StreamController<ClientCommand> controller =
       new StreamController<ClientCommand>();
 
   final Analytics analytics = new MockAnalytics();
 
+  ClientCommandSender commandSender;
+
   AnalyzedSentence sentence;
 
-  MockClientConnection();
+  MockClientConnection() {
+    commandSender = new MockClientCommandSender(this);
+  }
 
   get completer => mockCompleter;
 
@@ -230,6 +238,7 @@ class MockClientConnection implements ClientConnection {
   }
 
   printLineOnStdout(line) {
+    stdoutMessages?.add(line);
     mockPrintLine('stdout: $line');
   }
 
@@ -261,8 +270,6 @@ class MockClientConnection implements ClientConnection {
   get arguments => throw "not supported";
   get argumentsCompleter => throw "not supported";
   set argumentsCompleter(_) => throw "not supported";
-  get commandSender => throw "not supported";
-  set commandSender(_) => throw "not supported";
   set completer(_) => throw "not supported";
   get dartinoVm => throw "not supported";
   set dartinoVm(_) => throw "not supported";
@@ -317,4 +324,35 @@ class MockAnalytics implements Analytics {
     return true;
   }
   writeUuid() => throw "not supported";
+}
+
+class MockClientCommandSender implements ClientCommandSender {
+  final MockClientConnection mockClientConnection;
+  final StreamController<List<int>> mockOut = new StreamController();
+  final StreamController<List<int>> mockErr = new StreamController();
+
+  MockClientCommandSender(MockClientConnection clientConnection)
+      : mockClientConnection = clientConnection {
+    mockOut.stream
+        .transform(UTF8.decoder)
+        .transform(new LineSplitter())
+        .listen(mockClientConnection.printLineOnStdout);
+    mockErr.stream
+        .transform(UTF8.decoder)
+        .transform(new LineSplitter())
+        .listen(mockClientConnection.printLineOnStderr);
+  }
+
+  void sendClose() => throw "not supported";
+  void sendDataCommand(ClientCommandCode code, List<int> data) =>
+      throw "not supported";
+  void sendEventLoopStarted() => throw "not supported";
+  void sendExitCode(int exitCode) {
+    mockClientConnection.printLineOnStdout('Exit code sent: $exitCode');
+  }
+  void sendStderr(String data) => throw "not supported";
+  void sendStderrBytes(List<int> data) => mockErr.add(data);
+  void sendStdout(String data) => throw "not supported";
+  void sendStdoutBytes(List<int> data) => mockOut.add(data);
+  Sink<List<int>> get sink => null;
 }

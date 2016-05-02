@@ -10,6 +10,9 @@ import 'infrastructure.dart' show
     TargetKind,
     VerbContext;
 
+import 'analyze_verb.dart' show
+    analyzeAction;
+
 import 'attach_verb.dart' show
     attachAction;
 
@@ -146,6 +149,7 @@ const Map<String, Action> commonActions = const <String, Action>{
 ///
 /// These verbs are displayed when running `dartino help all`.
 const Map<String, Action> uncommonActions = const <String, Action>{
+  "analyze": analyzeAction,
   "attach": attachAction,
   "build": buildAction,
   "compile": compileAction,

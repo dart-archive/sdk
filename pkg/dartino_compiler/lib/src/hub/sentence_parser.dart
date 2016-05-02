@@ -7,6 +7,9 @@ library dartino_compiler.hub.sentence_parser;
 import 'dart:convert' show
     JSON;
 
+import 'package:path/path.dart' show
+    separator;
+
 import '../verbs/actions.dart' show
     Action,
     ActionGroup,
@@ -295,7 +298,7 @@ class SentenceParser {
     return
         word != null &&
         !word.startsWith("-") &&
-        word.contains(".");
+        (word.contains(".") || word.contains(separator));
   }
 }
 

@@ -113,6 +113,11 @@ const String createDocumentation = """
 }
 """;
 
+const String analyzeDocumentation = """
+   analyze <file>
+             Analyze the specified source file.
+""";
+
 const String compileDocumentation = """
    compile <file> [in session <name>]
              Compile <file>
