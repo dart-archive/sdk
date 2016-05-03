@@ -153,6 +153,7 @@ build $
         src/tools/driver/driver.gyp $
         src/tools/flashtool/flashtool.gyp $
         src/vm/vm.gyp $
+        src/pkg/mbedtls/mbedtls_static.gyp $
 
 build stm: phony$
     out/DebugSTM/build.ninja $
@@ -175,6 +176,7 @@ build $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $
         src/vm/vm.gyp $
+        src/pkg/mbedtls/mbedtls_static.gyp $
 
 build cm4: phony$
     out/DebugCM4/build.ninja $

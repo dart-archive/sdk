@@ -254,7 +254,7 @@ def CopySTM(bundle_dir):
       'libdartino.a',
       'libfreertos_dartino.a',
       'libstm32f746g-discovery.a',
-      'libmbedtls_static.a',
+      'libmbedtls.a',
     ]
   disco = join(bundle_dir, 'platforms', 'stm32f746g-discovery')
   lib_dir = join(disco, 'lib')

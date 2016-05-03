@@ -26,7 +26,7 @@
     {
       'target_name': 'libstm32f746g-discovery',
       'dependencies': [
-        '../../../src/pkg/mbedtls/mbedtls.gyp:mbedtls_static',
+        '../../../src/pkg/mbedtls/mbedtls_static.gyp:mbedtls',
       ],
       'variables': {
         'source_path': 'src/stm32f746g-discovery',
