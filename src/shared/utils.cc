@@ -2,14 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "src/shared/utils.h"
-
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include <cctype>
+#include "src/shared/utils.h"
 
-#include "src/shared/version.h"
 #include "src/shared/platform.h"
 
 namespace dartino {
@@ -171,44 +168,6 @@ uint32 Utils::StringHash(const uint8* data, int length, int char_width) {
   hash *= M;
   hash ^= hash >> 15;
   return hash;
-}
-
-bool Version::Check(const char* compiler_version,
-                    int compiler_version_length,
-                    CheckType check) {
-  const char* vm_version = GetVersion();
-  int vm_version_length = strlen(vm_version);
-  return Check(vm_version, vm_version_length,
-               compiler_version, compiler_version_length, check);
-}
-
-bool Version::Check(const char* vm_version,
-                    int vm_version_length,
-                    const char* compiler_version,
-                    int compiler_version_length,
-                    CheckType check) {
-  if (check == kExact) {
-    return (vm_version_length == compiler_version_length) &&
-           (strncmp(vm_version, compiler_version, vm_version_length) == 0);
-  } else {
-    ASSERT(check == kCompatible);
-    const char* v1 = vm_version;
-    const char* v2 = compiler_version;
-    // Match digits and dots.
-    while (*v1 == *v2 &&
-           (isdigit(*v1) || *v1 == '.') &&
-           (v1 - vm_version) < vm_version_length &&
-           (v2 - compiler_version) < compiler_version_length) {
-      v1++;
-      v2++;
-    }
-    // Match if first non-match is dash or end of string, and the
-    // previous character was a digit (not a dot).
-    return (v1 > vm_version) &&
-        isdigit(*(v1 - 1)) &&
-        (*v1 == '-' || (v1 - vm_version) == vm_version_length) &&
-        (*v2 == '-' || (v2 - compiler_version) == compiler_version_length);
-  }
 }
 
 }  // namespace dartino

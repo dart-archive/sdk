@@ -280,37 +280,6 @@ class BoolField {
   }
 };
 
-// Utility for version checking.
-//
-// Versions come in three formats:
-// Stable: <major>.<minor>.<patch>
-// Dev:    <major>.<minor>.<patch>-dev.<major-dev>.<minor-dev>
-// Edge:   <major>.<minor>.<patch>-edge.<githash>
-//
-// The check type kExact will match the full version.
-// The check type kCompatible will match the <major>.<minor>.<patch> part.
-class Version {
- public:
-  enum CheckType {
-    kExact,
-    kCompatible
-  };
-
-  // Check if the current vm version is compatible with the compiler version
-  // provided.
-  static bool Check(const char* compiler_version,
-                    int compiler_version_length,
-                    CheckType check = kExact);
-
-  // Check if the VM version provided is compatible with the compiler version
-  // provided.
-  static bool Check(const char* vm_version,
-                    int vm_version_length,
-                    const char* compiler_version,
-                    int compiler_version_length,
-                    CheckType check = kExact);
-};
-
 }  // namespace dartino
 
 #endif  // SRC_SHARED_UTILS_H_
