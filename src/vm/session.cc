@@ -11,7 +11,7 @@
 #include "src/shared/flags.h"
 #include "src/shared/globals.h"
 #include "src/shared/platform.h"
-#include "src/shared/version.h"
+#include "src/shared/utils.h"
 
 #include "src/vm/frame.h"
 #include "src/vm/heap_validator.h"
@@ -778,17 +778,14 @@ SessionState* InitialState::ProcessMessage(Connection::Opcode opcode) {
   }
   int compiler_version_length;
   uint8* compiler_version = connection()->ReadBytes(&compiler_version_length);
-  const char* version = GetVersion();
-  int version_length = strlen(version);
   bool version_match =
-      (version_length == compiler_version_length) &&
-      (strncmp(version, reinterpret_cast<char*>(compiler_version),
-               compiler_version_length) == 0);
-  free(compiler_version);
+      Version::Check(reinterpret_cast<const char *>(compiler_version),
+                                                    compiler_version_length);
   WriteBuffer buffer;
   buffer.WriteBoolean(version_match);
-  buffer.WriteInt(version_length);
-  buffer.WriteString(version);
+  buffer.WriteInt(compiler_version_length);
+  buffer.WriteString(reinterpret_cast<const char *>(compiler_version));
+  free(compiler_version);
   // Send word size.
   buffer.WriteInt(kBitsPerPointer);
   // Send floating point size.
