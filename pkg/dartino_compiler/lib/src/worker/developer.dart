@@ -1372,6 +1372,9 @@ Future<int> buildImage(
     String tmpBinFile = join(tmpDir.path, "${baseName}.bin");
     String binFile = "${withoutExtension(snapshot.path)}.bin";
     await new File(tmpBinFile).copy(binFile);
+    String tmpElfFile = join(tmpDir.path, "${baseName}.elf");
+    String elfFile = "${withoutExtension(snapshot.path)}.elf";
+    await new File(tmpElfFile).copy(elfFile);
     print("Done building image: $binFile");
   } finally {
     if (tmpDir != null) {
