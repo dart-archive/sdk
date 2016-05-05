@@ -94,6 +94,7 @@ export 'options.dart' show
 
 import '../guess_configuration.dart' show
     dartinoVersion;
+
 import 'package:dartino_compiler/src/hub/analytics.dart';
 
 void reportErroneousTarget(ErrorTarget target) {

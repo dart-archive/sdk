@@ -4,12 +4,14 @@
 charcode:../../third_party/charcode/lib
 collection:../../third_party/collection/lib
 compiler:../../third_party/dart/pkg/compiler/lib
+crypto:../../third_party/crypto/lib
 dart2js_info:../../third_party/dart2js_info/lib
 dartino_agent:../dartino_agent/lib
 dartino_compiler:lib
 expect:../../third_party/dart/pkg/expect/lib
 js_ast:../../third_party/dart/pkg/js_ast/lib
 js_runtime:../../third_party/dart/sdk/lib/_internal/js_runtime/lib
+instrumentation_client:../../third_party/instrumentation_client/lib
 mdns:../mdns/lib
 package_config:../../third_party/package_config/lib
 path:../../third_party/path/lib

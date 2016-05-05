@@ -177,7 +177,13 @@ Future main(List<String> arguments) async {
 
   Completer shutdown = new Completer();
 
+  Analytics analytics = new Analytics(printToConsole);
+
   gracefulShutdown = () {
+    if (analytics != null) {
+      analytics.shutdown();
+      analytics = null;
+    }
     if (server != null) {
       server.close();
     }
@@ -223,9 +229,9 @@ Future main(List<String> arguments) async {
   print(server.port);
 
   IsolatePool pool = new IsolatePool(workerMain);
-  var analytics = new Analytics(printToConsole);
   try {
     analytics.loadUuid();
+    analytics.logStartup();
     //TODO startup analytics - https://github.com/dartino/sdk/issues/467
     await server.listen((Socket controlSocket) {
       if (isBatchMode) {

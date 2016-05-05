@@ -308,13 +308,20 @@ class MockClientLogger implements ClientLogger {
 
 class MockAnalytics implements Analytics {
   int optInCount = 0;
+  get hasOptedIn => false;
+  get hasOptedOut => true;
   get shouldPromptForOptIn => false;
   set shouldPromptForOptIn(_) => throw "not supported";
-  clearUuid() => throw "not supported";
-  loadUuid() => throw "not supported";
-  readUuid() => throw "not supported";
+  get serverUrl => throw "not supported";
   get uuid => null;
   get uuidUri => null;
+  clearUuid() => throw "not supported";
+  loadUuid() => throw "not supported";
+  logShutdown() { /* ignored */ }
+  logStartup() { /* ignored */ }
+  logVersion() { /* ignored */ }
+  readUuid() => throw "not supported";
+  shutdown() async { /* ignored */ }
   bool writeNewUuid() {
     ++optInCount;
     return true;

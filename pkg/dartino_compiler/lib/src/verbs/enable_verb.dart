@@ -19,7 +19,7 @@ const Action enableAction = const Action(
 Future<int> performEnableAction(
     AnalyzedSentence sentence, VerbContext context) async {
   var analytics = context.clientConnection.analytics;
-  if (analytics.uuid == null) analytics.writeNewUuid();
+  if (!analytics.hasOptedIn) analytics.writeNewUuid();
   print(analyticsOptInNotification);
   return 0;
 }
