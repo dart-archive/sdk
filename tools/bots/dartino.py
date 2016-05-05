@@ -555,9 +555,24 @@ def StepsLK(debug_log):
   device_configuration['build_conf'] = 'DebugLK'
   device_configuration['system'] = 'lk'
 
+  # Build the configurations we want to test.
   with bot.BuildStep('Build %s' % device_configuration['build_conf']):
     Run(['make', '-C', 'third_party/lk', 'clean'])
     Run(['make', '-C', 'third_party/lk', '-j8'])
+
+  # Build additional configurations we care about - some of these are
+  # used on Golem.
+  with bot.BuildStep('Build stm32f746g-disco configurations'):
+    Run(['make', 'PROJECT=stm32f746g-disco-baseline', '-C', 'third_party/lk',
+         'clean'])
+    Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-baseline', '-j8'])
+    Run(['make', 'PROJECT=stm32f746g-disco-dartino', '-C', 'third_party/lk',
+         'clean'])
+    Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-dartino', '-j8'])
+    Run(['make', 'PROJECT=stm32f746g-disco-fixed-snapshot',
+         '-C', 'third_party/lk', 'clean'])
+    Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-fixed-snapshot',
+         '-j8'])
 
   StepDisableAnalytics(host_configuration['build_dir'])
 
