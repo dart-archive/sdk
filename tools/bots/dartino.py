@@ -566,13 +566,22 @@ def StepsLK(debug_log):
     Run(['make', 'PROJECT=stm32f746g-disco-baseline', '-C', 'third_party/lk',
          'clean'])
     Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-baseline', '-j8'])
+
     Run(['make', 'PROJECT=stm32f746g-disco-dartino', '-C', 'third_party/lk',
          'clean'])
     Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-dartino', '-j8'])
+
+    Run(['out/DebugIA32/dartino', 'export', 'benchmarks/DeltaBlue.dart',
+         'to', 'third_party/lk/dartino/app/dartino-fixed/dartino_snapshot'])
+    Run(['out/DebugIA32/dartino-flashify',
+         'third_party/lk/dartino/app/dartino-fixed/dartino_snapshot',
+         'third_party/lk/dartino/app/dartino-fixed/dartino_program.S'])
     Run(['make', 'PROJECT=stm32f746g-disco-fixed-snapshot',
          '-C', 'third_party/lk', 'clean'])
     Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-fixed-snapshot',
          '-j8'])
+    Run(['rm', 'third_party/lk/dartino/app/dartino-fixed/dartino_snapshot'])
+    Run(['rm', 'third_party/lk/dartino/app/dartino-fixed/dartino_program.S'])
 
   StepDisableAnalytics(host_configuration['build_dir'])
 
