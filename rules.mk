@@ -13,6 +13,8 @@
 #
 # [1] https://github.com/littlekernel/lk).
 
+OS := $(shell uname)
+
 DARTINO_ROOT := $(GET_LOCAL_DIR)
 
 DARTINO_SRC_VM := $(DARTINO_ROOT)/src/vm
@@ -310,17 +312,24 @@ HOST_TOOLS_SRCS := \
 	$(FLASHTOOL_SRCS)
 
 # Defines for compiling host-tools.
-HOST_DEFINES += \
+HOST_DEFINES := \
 	-DDARTINO_ENABLE_LIVE_CODING \
 	-DDARTINO_ENABLE_FFI \
 	-DDARTINO_ENABLE_NATIVE_PROCESSES \
 	-DDARTINO_ENABLE_PRINT_INTERCEPTORS \
-	-DDARTINO_TARGET_OS_LINUX \
 	-DDARTINO_TARGET_OS_POSIX \
 	-DDARTINO32 \
 	-DDARTINO_USE_SINGLE_PRECISION \
 	-DDARTINO_TARGET_ARM \
 	-DDARTINO_THUMB_ONLY
+
+ifeq ($(OS),Darwin)
+HOST_DEFINES += \
+	-DDARTINO_TARGET_OS_MACOS
+else
+HOST_DEFINES += \
+	-DDARTINO_TARGET_OS_LINUX
+endif
 
 # Flags for compiling host-tools.
 HOST_CPPFLAGS += \
@@ -342,6 +351,18 @@ HOST_CPPFLAGS += \
 	-fno-rtti \
 	-fno-exceptions
 
+# Flags for linking host-tools.
+HOST_LDFLAGS := \
+	-m32
+
+ifeq ($(OS),Darwin)
+HOST_LDFLAGS += \
+	-Wl,-dead_strip
+else
+HOST_LDFLAGS += \
+	-Wl,--gc-sections
+endif
+
 HOST_BUILDDIR := $(BUILDDIR)-host
 TOHOSTBUILDDIR = $(addprefix $(HOST_BUILDDIR)/,$(1))
 
@@ -359,7 +380,7 @@ $(LIBRARY_GENERATOR_CCOBJS): $(HOST_BUILDDIR)/%.o: %.cc
 
 $(LIBRARY_GENERATOR_TOOL): $(LIBRARY_GENERATOR_CCOBJS)
 	@echo host linking $@
-	$(NOECHO)g++ -m32 -Wl,--gc-sections -o $(LIBRARY_GENERATOR_TOOL) -Wl,--start-group $(LIBRARY_GENERATOR_CCOBJS) -Wl,--end-group -lpthread
+	$(NOECHO)g++ $(HOST_LDFLAGS) -o $(LIBRARY_GENERATOR_TOOL) $(LIBRARY_GENERATOR_CCOBJS) -lpthread
 
 HOST_GENERATED += $(LIBRARY_GENERATOR_TOOL)
 
@@ -398,7 +419,7 @@ $(FLASHTOOL_CCOBJS): $(HOST_BUILDDIR)/%.o: %.cc
 $(FLASHTOOL_TOOL): $(FLASHTOOL_CCOBJS)
 	echo $(FLASHTOOL_CCOBJS)
 	@echo host linking $@
-	$(NOECHO)g++ -m32 -Wl,--gc-sections -o $(FLASHTOOL_TOOL) -Wl,--start-group $(FLASHTOOL_CCOBJS) -Wl,--end-group -lpthread
+	$(NOECHO)g++ $(HOST_LDFLAGS) -o $(FLASHTOOL_TOOL) $(FLASHTOOL_CCOBJS) -lpthread
 
 HOST_GENERATED += $(FLASHTOOL_TOOL)
 
