@@ -40,8 +40,6 @@ import 'dart:dartino.ffi';
 import 'dart:typed_data';
 import 'package:os/os.dart';
 import 'package:socket/socket.dart';
-// TODO(karlklose): merge both implementations and remove this dependency.
-import 'package:stm32/socket.dart' as stm;
 import 'package:ffi/ffi.dart';
 
 final ForeignLibrary _lib = _mbedTlsLibrary;
@@ -158,10 +156,8 @@ class TLSSocket implements Socket {
   final _entropy =
       new ForeignMemory.allocatedFinalized(_entropy_context_sizeof.icall$0());
 
-  // TODO(karlklose): change type back to Socket when the STM32 implementation
-  // fully supports the interface.
   /// The dartino socket we use to do the actual network communication.
-  var _socket;
+  Socket _socket;
 
   final String server;
   final int port;
@@ -188,9 +184,7 @@ class TLSSocket implements Socket {
    */
   TLSSocket.connect(String this.server, int this.port,
                     {bool failOnCertificate: false}) {
-    _socket = _isFreeRTOS
-      ? new stm.Socket.connect(server, port)
-      : new Socket.connect(server, port);
+    _socket = new Socket.connect(server, port);
     _sendBuffer = new CircularByteBuffer(1024);
     _recvBuffer = new CircularByteBuffer(1024);
     _foreignBuffers = _getForeignFromBuffers(_sendBuffer, _recvBuffer);
@@ -455,13 +449,11 @@ class TLSException implements Exception {
   String toString() => "TLSException: $message";
 }
 
-bool get _isFreeRTOS => Foreign.platform == Foreign.FREERTOS;
-
 /// Switch between statically linked and dynamically linked library depending on
 /// the platform.
 /// Currently only FreeRTOS is statically linked.
 ForeignLibrary get _mbedTlsLibrary {
-  if (_isFreeRTOS) {
+  if (Foreign.platform == Foreign.FREERTOS) {
     return ForeignLibrary.main;
   } else {
     String mbedtlsLibraryName = ForeignLibrary.bundleLibraryName('mbedtls');

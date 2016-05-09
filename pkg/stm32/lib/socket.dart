@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'dart:dartino.os';
 import 'dart:dartino';
 import 'package:stm32/ethernet.dart';
+import 'package:socket/socket.dart' as system;
 
 final _lookupHost = ForeignLibrary.main.lookup("network_lookup_host");
 
@@ -30,7 +31,7 @@ class SocketException {
   String toString() => "SocketException: '$message'";
 }
 
-class Socket {
+class Socket implements system.Socket {
   static const int SOCKET_READ = 1 << 0;
   static const int SOCKET_WRITE = 1 << 1;
   static const int SOCKET_CLOSED = 1 << 2;
@@ -51,6 +52,9 @@ class Socket {
   }
 
   Socket.connect(String host, int port) {
+    if (Foreign.platform != Foreign.FREERTOS) {
+      throw new SocketException("Library only supported for FreeRTOS embedding");
+    }
     if (!ethernet.isInitialized) {
       throw new SocketException("network stack not initialized");
     }
@@ -104,6 +108,27 @@ class Socket {
     int read = _recv.icall$4(_socket, _foreign(buffer), toRead, 0);
     if (read < toRead) {
       throw new SocketException('unable to read all data');
+    }
+    return buffer;
+  }
+
+  ByteBuffer read(int bytes) {
+    ByteBuffer buffer = new Uint8List(bytes).buffer;
+    int offset = 0;
+    int address = _foreign(buffer).address;
+    while (offset < bytes) {
+      int events = _waitForEvent(SOCKET_READ | SOCKET_CLOSED);
+      int read = 0;
+      if ((events & SOCKET_READ) != 0) {
+        read = _recv.icall$4(_socket, address + offset, bytes - offset);
+      }
+      if (read == 0 || (events & SOCKET_CLOSED) != 0) {
+        if (offset + read < bytes) return null;
+      }
+      if (read < 0 || (events & SOCKET_CLOSED) != 0) {
+        throw new SocketException("Failed to read from socket");
+      }
+      offset += read;
     }
     return buffer;
   }

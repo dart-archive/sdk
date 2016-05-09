@@ -13,9 +13,10 @@ library socket;
 import 'dart:dartino';
 import 'dart:dartino.os' as os;
 import 'dart:typed_data';
-import 'dart:dartino.ffi' show Struct32, ForeignMemory;
+import 'dart:dartino.ffi' show Struct32, ForeignMemory, Foreign;
 
 import 'package:os/os.dart';
+import 'package:stm32/socket.dart' as stm32;
 
 class _SocketBase {
   int _fd = -1;
@@ -68,7 +69,16 @@ class Socket extends _SocketBase {
   /**
    * Connect to the endpoint '[host]:[port]'.
    */
-  Socket.connect(String host, int port) {
+  factory Socket.connect(String host, int port) {
+    if (Foreign.platform == Foreign.FREERTOS) {
+      return new stm32.Socket.connect(host, port);
+    } else {
+      return new Socket._connect(host, port);
+    }
+  }
+
+  Socket._connect(String host, int port) {
+
     var address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
     _fd = sys.socket(sys.AF_INET, sys.SOCK_STREAM, 0);
