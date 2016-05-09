@@ -11,18 +11,18 @@ Starting session. Type 'help' for a list of commands.
 const String HELP = """
 Commands:
   'help'                                show list of commands
-  'r'/'run'                             start program
+  'r/run'                               start program
   'b [method name] [bytecode index]'    set breakpoint
   'bf <file> [line] [column]'           set breakpoint
   'bf <file> [line] [pattern]'          set breakpoint on first occurrence of
                                         the string pattern on the indicated line
-  'd <breakpoint id>'                   delete breakpoint
+  'd/delete <breakpoint id>'            delete breakpoint
   'lb'                                  list breakpoints
-  's'                                   step until next expression,
+  's/step'                              step until next expression,
                                         enters method invocations
-  'n'                                   step until next expression,
+  'n/next'                              step until next expression,
                                         does not enter method invocations
-  'fibers', 'lf'                        list all process fibers
+  'lf', 'fibers'                        list all process fibers
   'finish'                              finish current method (step out)
   'restart'                             restart the selected frame
   'sb'                                  step bytecode, enters method invocations
@@ -30,16 +30,16 @@ Commands:
                                         method invocations
   'c'                                   continue execution
   'bt'                                  backtrace
-  'f <n>'                               select frame
-  'l'                                   list source for frame
-  'p <name>'                            print the value of local variable
-  'p *<name>'                           print the structure of local variable
-  'p'                                   print the values of all locals
-  'processes', 'lp'                     list all processes
-  'disasm'                              disassemble code for frame
-  't <flag>'                            toggle one of the flags:
+  'f/frame <n>'                         select frame
+  'l/list'                              list source for frame
+  'p/print <name>'                      print the value of local variable
+  'p/print *<name>'                     print the structure of local variable
+  'p/print'                             print the values of all locals
+  'lp/processes'                        list all processes
+  'disasm/disassemble'                  disassemble code for frame
+  't/toggle <flag>'                     toggle one of the flags:
                                           - 'internal' : show internal frames
-  'q'/'quit'                            quit the session
+  'q/quit'                              quit the session
 """;
 
 class InputHandler {
@@ -80,6 +80,7 @@ class InputHandler {
       case 'help':
         writeStdoutLine(HELP);
         break;
+      case 'break':
       case 'b':
         var method =
             (commandComponents.length > 1) ? commandComponents[1] : 'main';
@@ -180,6 +181,7 @@ class InputHandler {
               "### failed to set any breakpoints");
         }
         break;
+      case 'backtrace':
       case 'bt':
         if (!checkLoaded('cannot print backtrace')) {
           break;
@@ -191,6 +193,7 @@ class InputHandler {
           writeStdout(backtrace.format());
         }
         break;
+      case 'frame':
       case 'f':
         var frame =
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
@@ -199,6 +202,7 @@ class InputHandler {
           writeStdoutLine('### invalid frame number: $frame');
         }
         break;
+      case 'list':
       case 'l':
         if (!checkLoaded('nothing to list')) {
           break;
@@ -211,6 +215,7 @@ class InputHandler {
           writeStdoutLine("### failed listing source");
         }
         break;
+      case 'disassemble':
       case 'disasm':
         if (checkLoaded('cannot show bytecodes')) {
           BackTrace backtrace = await vmContext.backTrace();
@@ -223,11 +228,13 @@ class InputHandler {
           }
         }
         break;
+      case 'continue':
       case 'c':
         if (checkRunning('cannot continue')) {
           await handleProcessStopResponse(await vmContext.cont(), state);
         }
         break;
+      case 'delete':
       case 'd':
         var id = (commandComponents.length > 1) ? commandComponents[1] : null;
         id = int.parse(id, onError: (_) => null);
@@ -319,6 +326,7 @@ class InputHandler {
           }
         }
         break;
+      case 'print':
       case 'p':
         if (!checkLoaded('nothing to print')) {
           break;
@@ -359,6 +367,7 @@ class InputHandler {
               await vmContext.startRunning(), state);
         }
         break;
+      case 'step':
       case 's':
         if (checkRunning('cannot step to next expression')) {
           await handleProcessStopResponse(await vmContext.step(), state);
@@ -381,6 +390,7 @@ class InputHandler {
               await vmContext.stepOverBytecode(), state);
         }
         break;
+      case 'toggle':
       case 't':
         String toggle;
         if (commandComponents.length > 1) {
