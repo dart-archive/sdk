@@ -24,7 +24,7 @@ class Session {
     return -1;
   }
 
-  void Initialize() { UNIMPLEMENTED(); }
+  void Initialize(Program* program) { UNIMPLEMENTED(); }
 
   void StartMessageProcessingThread() { UNIMPLEMENTED(); }
 

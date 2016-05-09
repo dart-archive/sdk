@@ -168,11 +168,6 @@ JNIEXPORT void JNICALL Java_dartino_DartinoApi_RunSnapshot(JNIEnv* env,
   DartinoDeleteProgram(program);
 }
 
-JNIEXPORT void JNICALL Java_dartino_DartinoApi_WaitForDebuggerConnection(
-    JNIEnv* env, jclass, int port) {
-  DartinoWaitForDebuggerConnection(port);
-}
-
 JNIEXPORT void JNICALL Java_dartino_DartinoApi_AddDefaultSharedLibrary(
     JNIEnv* env, jclass, jstring str) {
   const char* library = env->GetStringUTFChars(str, 0);
