@@ -910,7 +910,10 @@ class CoredumpArchiver(object):
 
   def __enter__(self):
     coredumps = self._find_coredumps()
-    assert not coredumps
+    if coredumps:
+      print "WARNING: Found stale coredumps, removing"
+      MarkCurrentStep(fatal=False)
+      self._remove_coredumps(coredumps)
 
   def __exit__(self, *_):
     coredumps = self._find_coredumps()
@@ -922,15 +925,18 @@ class CoredumpArchiver(object):
       self._archive(os.path.join(self._build_dir, 'dartino'),
                     os.path.join(self._build_dir, 'dartino-vm'),
                     archive_coredumps)
-      for filename in coredumps:
-        print 'Removing core: %s' % filename
-        os.remove(filename)
+      self._remove_coredumps(coredumps)
     coredumps = self._find_coredumps()
     assert not coredumps
 
   def _find_coredumps(self):
     # Finds all files named 'core.*' in the search directory.
     return glob.glob(os.path.join(self._search_dir, 'core.*'))
+
+  def _remove_coredumps(self, coredumps):
+    for filename in coredumps:
+      print 'Removing core: %s' % filename
+      os.remove(filename)
 
   def _archive(self, driver, dartino_vm, coredumps):
     assert coredumps
