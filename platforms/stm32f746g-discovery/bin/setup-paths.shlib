@@ -24,12 +24,6 @@ DARTINO_FLASHIFY="$DARTINO_SDK_DIR/bin/dartino-flashify"
 # Location of the static libraries to link with.
 LIB_DIR="$DARTINO_SDK_DIR/platforms/stm32f746g-discovery/lib"
 
-# The linker script to use.
-CONFIG_DIR="$DARTINO_SDK_DIR/platforms/stm32f746g-discovery/config"
-LINKER_SCRIPT="$CONFIG_DIR/stm32f746g-discovery.ld"
-
-BUILD_DIR=.
-
 # If we are not in a Dartino SDK, assume a Dartino SDK Github checkout.
 if [ ! -d "$TOOLCHAIN_DIR" ]; then
   # Relative locations in Dartino SDK and Dartino SDK Github checkout
@@ -50,9 +44,4 @@ if [ ! -d "$TOOLCHAIN_DIR" ]; then
 
   # Location of the static libraries to link with.
   LIB_DIR="$DARTINO_CHECKOUT_DIR/out/ReleaseSTM"
-
-  # The linker script to use.
-  LINKER_SCRIPT="$DARTINO_CHECKOUT_DIR/platforms/stm/disco_dartino/src/stm32f746g-discovery/STM32F746NGHx_FLASH.ld"
-
-  BUILD_DIR="$DARTINO_CHECKOUT_DIR/out/ReleaseSTM"
 fi

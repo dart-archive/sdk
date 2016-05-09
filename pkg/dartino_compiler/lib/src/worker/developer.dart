@@ -1293,6 +1293,35 @@ Future<Directory> locateBinDirectory() async {
   return binDirectory;
 }
 
+Future<Device> readDevice(String deviceId) async {
+  // In the SDK, the tools directory is at the same level as the
+  // internal (and bin) directory.
+  String path = 'platforms/$deviceId';
+
+  Uri libraryDirectoryUri;
+  Uri deviceDirectoryUri = executable.resolve('../$path/');
+  Directory deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
+  if ((await deviceDirectory.exists())) {
+    // In the SDK the libraries are in the device directory..
+    libraryDirectoryUri = executable.resolve('../$path/lib/');
+  } else {
+    deviceDirectoryUri = executable.resolve('../../$path/');
+    deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
+    assert(await deviceDirectory.exists());
+    // In a Git checkout the libraries are is out/ReleaseSTM.
+    libraryDirectoryUri = executable.resolve('../ReleaseSTM/');
+  }
+
+  Uri uri = deviceDirectoryUri.resolve('device.json');
+  if (await new File.fromUri(uri).exists()) {
+    String jsonLikeData = await new File.fromUri(uri).readAsString();
+    return parseDevice(jsonLikeData, uri, libraryDirectoryUri);
+  } else {
+    throw uri;
+    return null;
+  }
+}
+
 Future<Directory> locateDartSdkDirectory() async {
   // In the SDK, the dart-sdk directory is in the internal directory.
   Directory dartSdkDirectory =
@@ -1336,6 +1365,10 @@ Future<int> buildImage(
     throwFatalError(DiagnosticKind.noFileTarget);
   }
   assert(snapshot.scheme == 'file');
+
+  String deviceId = state.settings.device;
+  if (deviceId == null) deviceId = "stm32f746g-discovery";
+  Device device = await readDevice(deviceId);
   Directory binDirectory = await locateBinDirectory();
 
   Directory tmpDir;
@@ -1362,10 +1395,14 @@ Future<int> buildImage(
     ProcessResult result;
     File linkScript = new File(join(binDirectory.path, 'link.sh'));
     if (Platform.isLinux || Platform.isMacOS) {
-      state.log("Linking image: '${linkScript.path} ${baseName}'");
+      state.log(
+          "Linking image: '${linkScript.path} ${baseName} for ${device.name}");
       result = await Process.run(
           linkScript.path,
-          [baseName, tmpDir.path],
+          ['-f', device.cflags.join(' '),
+           '-l', device.libraries.join(' '),
+           '-t', device.linker_script,
+           baseName, tmpDir.path],
           workingDirectory: tmpDir.path);
     } else {
       throwUnsupportedPlatform();
@@ -1383,6 +1420,7 @@ Future<int> buildImage(
     String tmpBinFile = join(tmpDir.path, "${baseName}.bin");
     String binFile = "${withoutExtension(snapshot.path)}.bin";
     await new File(tmpBinFile).copy(binFile);
+    // Copy the .elf file from the tmp directory.
     String tmpElfFile = join(tmpDir.path, "${baseName}.elf");
     String elfFile = "${withoutExtension(snapshot.path)}.elf";
     await new File(tmpElfFile).copy(elfFile);
@@ -1613,6 +1651,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
   final Map<String, String> constants = <String, String>{};
   List<String> embedderOptions;
 
+  String device;
   Address deviceAddress;
   DeviceType deviceType;
   IncrementalMode incrementalMode = IncrementalMode.none;
@@ -1694,6 +1733,17 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
         embedderOptions = listOfStrings(value, key);
         break;
 
+      case "device":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(
+                DiagnosticKind.settingsDeviceAddressNotAString,
+                uri: settingsUri, userInput: '$value');
+          }
+          device = value;
+        }
+        break;
+
       case "device_address":
         if (value != null) {
           if (value is! String) {
@@ -1751,6 +1801,7 @@ Settings parseSettings(String jsonLikeData, Uri settingsUri) {
       compilerOptions,
       constants,
       embedderOptions,
+      device,
       deviceAddress,
       deviceType,
       incrementalMode);
@@ -1767,6 +1818,8 @@ class Settings {
 
   final Map<String, String> constants;
 
+  final String device;
+
   final Address deviceAddress;
 
   final DeviceType deviceType;
@@ -1778,6 +1831,7 @@ class Settings {
       this.compilerOptions,
       this.constants,
       this.embedderOptions,
+      this.device,
       this.deviceAddress,
       this.deviceType,
       this.incrementalMode) : source = null;
@@ -1788,19 +1842,21 @@ class Settings {
       this.compilerOptions,
       this.constants,
       this.embedderOptions,
+      this.device,
       this.deviceAddress,
       this.deviceType,
       this.incrementalMode);
 
   const Settings.empty()
       : this(null, const <String>[], const <String, String>{}, const<String>[],
-          null, null, IncrementalMode.none);
+          null, null, null, IncrementalMode.none);
 
   Settings copyWith({
       Uri packages,
       List<String> compilerOptions,
       Map<String, String> constants,
       List<String> vmOptions,
+      String device,
       Address deviceAddress,
       DeviceType deviceType,
       IncrementalMode incrementalMode}) {
@@ -1820,6 +1876,9 @@ class Settings {
     if (deviceAddress == null) {
       deviceAddress = this.deviceAddress;
     }
+    if (device == null) {
+      device = this.device;
+    }
     if (deviceType == null) {
       deviceType = this.deviceType;
     }
@@ -1831,6 +1890,7 @@ class Settings {
         compilerOptions,
         constants,
         vmOptions,
+        device,
         deviceAddress,
         deviceType,
         incrementalMode);
@@ -1842,6 +1902,7 @@ class Settings {
         "compiler_options: $compilerOptions, "
         "constants: $constants, "
         "embedder_options: $embedderOptions, "
+        "device: $device, "
         "device_address: $deviceAddress, "
         "device_type: $deviceType, "
         "incremental_mode: $incrementalMode)";
@@ -1860,6 +1921,7 @@ class Settings {
     addIfNotNull("compiler_options", compilerOptions);
     addIfNotNull("constants", constants);
     addIfNotNull("embedder_options", embedderOptions);
+    addIfNotNull("device", device);
     addIfNotNull("device_address", deviceAddress);
     addIfNotNull(
         "device_type",
@@ -1869,6 +1931,165 @@ class Settings {
         incrementalMode == null
             ? null : unparseIncrementalMode(incrementalMode));
 
+    return result;
+  }
+}
+
+Device parseDevice(
+    String jsonLikeData, Uri deviceUri, Uri libraryDirectoryUri) {
+  String json = jsonLikeData.split("\n")
+      .where((String line) => !line.trim().startsWith("//")).join("\n");
+  var deviceData;
+  try {
+    deviceData = JSON.decode(json);
+  } on FormatException catch (e) {
+    throwFatalError(
+        DiagnosticKind.settingsNotJson, uri: deviceUri, message: e.message);
+  }
+  if (deviceData is! Map) {
+    throwFatalError(DiagnosticKind.settingsNotAMap, uri: deviceUri);
+  }
+
+  String id;
+  String name;
+  List<String> cflags;
+  List<String> libraries;
+  String linker_script;
+
+  List<String> listOfStrings(value, String key) {
+    List<String> result = new List<String>();
+    if (value != null) {
+      if (value is! List) {
+        throwFatalError(
+            DiagnosticKind.settingsOptionsNotAList, uri: deviceUri,
+            userInput: "$value",
+            additionalUserInput: key);
+      }
+      for (var option in value) {
+        if (option is! String) {
+          throwFatalError(
+              DiagnosticKind.settingsOptionNotAString, uri: deviceUri,
+              userInput: '$option',
+              additionalUserInput: key);
+        }
+        result.add(option);
+      }
+    }
+    return result;
+  }
+
+  deviceData.forEach((String key, value) {
+    switch (key) {
+      case "id":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(
+                DiagnosticKind.settingsPackagesNotAString, uri: deviceUri,
+                userInput: '$value');
+          }
+          id = value;
+        }
+        break;
+
+      case "name":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(
+                DiagnosticKind.settingsDeviceAddressNotAString,
+                uri: deviceUri, userInput: '$value');
+          }
+          name = value;
+        }
+        break;
+
+      case "cflags":
+        cflags = listOfStrings(value, key);
+        break;
+
+      case "libraries":
+        libraries = listOfStrings(value, key)
+            .map((library) => libraryDirectoryUri.resolve(library).toFilePath())
+            .toList();
+        break;
+
+      case "linker_script":
+        if (value != null) {
+          if (value is! String) {
+            throwFatalError(
+                DiagnosticKind.settingsDeviceAddressNotAString,
+                uri: deviceUri, userInput: '$value');
+          }
+          linker_script = deviceUri.resolve(value).toFilePath();
+        }
+        break;
+
+      default:
+        throwFatalError(
+            DiagnosticKind.settingsUnrecognizedKey, uri: deviceUri,
+            userInput: key);
+        break;
+    }
+  });
+  return new Device.fromSource(
+      deviceUri,
+      id,
+      name,
+      cflags,
+      libraries,
+      linker_script);
+}
+
+class Device {
+  final Uri source;
+
+  final String id;
+
+  final String name;
+
+  final List<String> cflags;
+
+  final List<String> libraries;
+
+  final String linker_script;
+
+  const Device(
+      this.id,
+      this.name,
+      this.cflags,
+      this.libraries,
+      this.linker_script) : source = null;
+
+  const Device.fromSource(
+      this.source,
+      this.id,
+      this.name,
+      this.cflags,
+      this.libraries,
+      this.linker_script);
+
+  String toString() {
+    return "Device("
+        "id: $id, "
+        "name: $name, "
+        "cflags: $cflags, "
+        "libraries: $libraries, "
+	"linker_script: $linker_script)";
+  }
+
+  Map<String, dynamic> toJson() {
+    Map<String, dynamic> result = <String, dynamic>{};
+
+    void addIfNotNull(String name, value) {
+      if (value != null) {
+        result[name] = value;
+      }
+    }
+
+    addIfNotNull("id", id);
+    addIfNotNull("name", name);
+    addIfNotNull("cflags", cflags);
+    addIfNotNull("libraries", libraries);
+    addIfNotNull("linker_script", linker_script);
     return result;
   }
 }

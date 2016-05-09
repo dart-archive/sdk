@@ -263,11 +263,6 @@ def CopySTM(bundle_dir):
   for lib in libraries:
     CopyFile(join(build_dir, lib), join(lib_dir, basename(lib)))
 
-  config_dir = join(disco, 'config')
-  CopyFile('platforms/stm/disco_dartino/src/stm32f746g-discovery/'
-           'STM32F746NGHx_FLASH.ld',
-           join(config_dir, 'stm32f746g-discovery.ld'))
-
 def CopySamples(bundle_dir):
   target = join(bundle_dir, 'samples')
   for v in SAMPLES:

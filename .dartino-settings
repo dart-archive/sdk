@@ -48,6 +48,8 @@
   // "mobile" and "embedded".
   "device_type": "mobile",
 
+  "device": "stm32f746g-discovery",
+
   // Support for incremental compilation, one of "none", "production", or
   // "experimental".
   "incremental_mode": "production"

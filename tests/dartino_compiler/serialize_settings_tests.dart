@@ -42,6 +42,7 @@ Future<Null> main() async {
       ["a", "b", "c"],
       {"a": "A", "b": "b"},
       ["x", "y", "z"],
+      "device",
       new Address("localhost", 8080),
       DeviceType.embedded,
       IncrementalMode.experimental));
