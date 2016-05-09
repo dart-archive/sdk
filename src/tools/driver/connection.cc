@@ -46,7 +46,9 @@ void DriverConnection::Send(Command command, const WriteBuffer& buffer) {
   Utils::WriteInt32(header, buffer.offset());
   header[4] = command;
   socket_->Write(header, 5);
-  buffer.WriteTo(socket_);
+  if (buffer.offset() != 0) {
+    socket_->Write(buffer.GetBuffer(), buffer.offset());
+  }
 }
 
 }  // namespace dartino

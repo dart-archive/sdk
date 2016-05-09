@@ -184,13 +184,6 @@ DARTINO_SRC_SHARED_SRCS := \
 	$(DARTINO_SRC_SHARED)/globals.h \
 	$(DARTINO_SRC_SHARED)/list.h \
 	$(DARTINO_SRC_SHARED)/names.h \
-	$(DARTINO_SRC_SHARED)/native_socket.h \
-	$(DARTINO_SRC_SHARED)/native_socket_linux.cc \
-	$(DARTINO_SRC_SHARED)/native_socket_lk.cc \
-	$(DARTINO_SRC_SHARED)/native_socket_macos.cc \
-	$(DARTINO_SRC_SHARED)/native_socket_posix.cc \
-	$(DARTINO_SRC_SHARED)/native_socket_windows.cc \
-	$(DARTINO_SRC_SHARED)/natives.h \
 	$(DARTINO_SRC_SHARED)/platform.h \
 	$(DARTINO_SRC_SHARED)/platform_linux.cc \
 	$(DARTINO_SRC_SHARED)/platform_lk.cc \

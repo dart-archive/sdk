@@ -47,7 +47,6 @@ class WriteBuffer : public Buffer {
   void WriteBoolean(bool value);
   void WriteBytes(const uint8* bytes, int length);
   void WriteString(const char* str);
-  void WriteTo(Socket* socket) const;
 };
 
 class Connection {
@@ -168,34 +167,6 @@ class Connection {
  protected:
   ReadBuffer incoming_;
   Mutex* send_mutex_;
-};
-
-class SocketConnection : public Connection {
- public:
-  static SocketConnection* Connect(const char* host, int port);
-  ~SocketConnection();
-  void Send(Opcode opcode, const WriteBuffer& buffer);
-  Connection::Opcode Receive();
-
- private:
-  Socket* socket_;
-
-  friend class ConnectionListener;
-  SocketConnection(const char* host, int port, Socket* socket);
-};
-
-class ConnectionListener {
- public:
-  ConnectionListener(const char* host, int port);
-  virtual ~ConnectionListener();
-
-  int Port();
-
-  Connection* Accept();
-
- private:
-  Socket* socket_;
-  int port_;
 };
 
 }  // namespace dartino

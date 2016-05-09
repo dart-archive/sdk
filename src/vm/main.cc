@@ -7,8 +7,8 @@
 #include <stddef.h>  // for size_t
 
 #include "include/dartino_api.h"
+#include "include/socket_connection_api.h"
 
-#include "src/shared/connection.h"
 #include "src/shared/flags.h"
 #include "src/shared/utils.h"
 #include "src/shared/version.h"
@@ -20,27 +20,25 @@
 
 namespace dartino {
 
-static int RunSession(Connection* connection, DartinoProgram program) {
-  Session session(connection);
-  session.Initialize(reinterpret_cast<dartino::Program*>(program));
-  session.StartMessageProcessingThread();
-  int result = session.ProcessRun();
-  session.JoinMessageProcessingThread();
-  return result;
-}
+static DartinoConnection WaitForCompilerConnection(
+    const char* host, int port, const char* port_file) {
+  DartinoSocketConnectionListener listener =
+      DartinoCreateSocketConnectionListener(host, port);
 
-static Connection* WaitForCompilerConnection(const char* host, int port,
-                                             const char* port_file) {
-  // Listen for new connections.
-  ConnectionListener listener(host, port);
+  int actual_port = DartinoSocketConnectionListenerPort(listener);
 
-  Print::Out("Waiting for compiler on %s:%i\n", host, listener.Port());
+  Print::Out("Waiting for compiler on %s:%i\n", host, actual_port);
+
   if (port_file != NULL) {
     char value_string[20];
-    snprintf(value_string, sizeof(value_string), "%d", listener.Port());
+    snprintf(value_string, sizeof(value_string), "%d", actual_port);
     Platform::WriteText(port_file, value_string, false);
   }
-  return listener.Accept();
+  DartinoConnection connection =
+      DartinoSocketConnectionListenerAccept(listener);
+
+  DartinoDeleteSocketConnectionListener(listener);
+  return connection;
 }
 
 static bool IsSnapshot(List<uint8> snapshot) {
@@ -199,8 +197,9 @@ static int Main(int argc, char** argv) {
   if (interactive) {
     // If [interactive] is true, start an interactive programming session that
     // communicates with a separate compiler/debugger process.
-    Connection* connection = WaitForCompilerConnection(host, port, port_file);
-    result = RunSession(connection, program);
+    DartinoConnection connection =
+        WaitForCompilerConnection(host, port, port_file);
+    result = DartinoRunWithDebuggerConnection(connection, program);
   } else {
     // Otherwise, run the program.
     result = DartinoRunMain(program, argc, argv);

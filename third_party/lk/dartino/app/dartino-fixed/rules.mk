@@ -6,7 +6,6 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
 	lib/libm \
-	lib/minip \
 	$(DARTINO_BASE)
 
 MODULE_SRCS += \

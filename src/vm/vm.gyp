@@ -136,6 +136,8 @@
         'signal.h',
         'snapshot.cc',
         'snapshot.h',
+        'socket_connection_api_impl.cc',
+        'socket_connection_api_impl.h',
         'sort.cc',
         'sort.h',
         'thread_cmsis.cc',
