@@ -26,9 +26,12 @@ const Action flashAction = const Action(
 Future flashFunction(
     AnalyzedSentence sentence, VerbContext context) async {
 
-  return context.performTaskInWorker(
-      combineTasks(new BuildTask(sentence.targetUri, sentence.base),
-                   new FlashTask(sentence.targetUri)));
+  return context.performTaskInWorker(combineTasks(
+      new BuildTask(
+          sentence.targetUri,
+          sentence.base,
+          sentence.options.debuggingMode),
+      new FlashTask(sentence.targetUri)));
 }
 
 class FlashTask extends SharedTask {

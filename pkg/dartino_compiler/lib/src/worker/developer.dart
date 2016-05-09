@@ -122,9 +122,9 @@ import '../../debug_state.dart' as debug show
     BackTrace;
 
 import '../vm_connection.dart' show
-  TcpConnection,
-  TtyConnection,
-  VmConnection;
+    TcpConnection,
+    TtyConnection,
+    VmConnection;
 
 import '../dartino_compiler_options.dart' show
     DartinoCompilerOptions;
@@ -1330,7 +1330,8 @@ Future<int> buildImage(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
     SessionState state,
-    Uri snapshot) async {
+    Uri snapshot,
+    {bool debuggingMode: false}) async {
   if (snapshot == null) {
     throwFatalError(DiagnosticKind.noFileTarget);
   }
@@ -1346,7 +1347,17 @@ Future<int> buildImage(
     String tmpSnapshot = join(tmpDir.path, "snapshot");
     await new File.fromUri(snapshot).copy(tmpSnapshot);
 
-    createEmbedderOptionsCFile(tmpDir, state.settings.embedderOptions);
+    List<String> embedderOptions =
+        new List<String>.from(state.settings.embedderOptions);
+
+    if (debuggingMode) {
+      embedderOptions.removeWhere((String x) {
+        return x == "enable_debugger" || x == "uart_print_interceptor";
+      });
+      embedderOptions.add("enable_debugger");
+    }
+
+    createEmbedderOptionsCFile(tmpDir, embedderOptions);
 
     ProcessResult result;
     File linkScript = new File(join(binDirectory.path, 'link.sh'));
