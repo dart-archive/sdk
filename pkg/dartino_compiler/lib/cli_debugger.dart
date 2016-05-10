@@ -2,7 +2,20 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-part of dartino.vm_session;
+import "dart:async";
+
+import "dart:io" show
+    File;
+
+import "src/hub/session_manager.dart" show
+    SessionState;
+
+import "debug_state.dart";
+
+import "vm_context.dart";
+
+import 'vm_commands.dart' show
+    VmCommand;
 
 const String BANNER = """
 Starting session. Type 'help' for a list of commands.

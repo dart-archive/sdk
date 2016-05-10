@@ -4,15 +4,14 @@
 
 library dartino.vm_session;
 
-import 'dart:core';
 import 'dart:async';
 import 'dart:convert';
 
-import 'dart:io' show
-    File;
-
 import 'dart:typed_data' show
     ByteData;
+
+import 'package:persistent/persistent.dart' show
+    Pair;
 
 import 'vm_commands.dart';
 import 'dartino_system.dart';
@@ -20,8 +19,8 @@ import 'dartino_system.dart';
 import 'dartino_class.dart' show
     DartinoClass;
 
-import 'incremental/dartino_compiler_incremental.dart'
-    show IncrementalCompiler;
+import 'incremental/dartino_compiler_incremental.dart' show
+    IncrementalCompiler;
 
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
@@ -53,13 +52,18 @@ import 'src/diagnostic.dart';
 import 'src/hub/exit_codes.dart' as exit_codes;
 
 import 'src/vm_connection.dart' show
-  VmConnection;
+    VmConnection;
 
-import 'package:persistent/persistent.dart' show
-    Pair;
+import 'cli_debugger.dart' show
+    InputHandler;
 
-part 'vm_command_reader.dart';
-part 'input_handler.dart';
+class SessionCommandTransformerBuilder
+    extends CommandTransformerBuilder<Pair<int, ByteData>> {
+
+  Pair<int, ByteData> makeCommand(int code, ByteData payload) {
+    return new Pair<int, ByteData>(code, payload);
+  }
+}
 
 /// Encapsulates a connection to a running dartino-vm and provides a
 /// [VmCommand] based view on top of it.
