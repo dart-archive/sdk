@@ -153,7 +153,7 @@ Future<Null> checkCommandLineExample(
 Future<MockClientConnection> mockCommandLine(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
   MockClientConnection client = new MockClientConnection();
-  await handleVerb(arguments, client, pool);
+  await handleVerb(arguments, client, null, pool);
   return client;
 }
 
@@ -317,6 +317,7 @@ class MockAnalytics implements Analytics {
   get uuidUri => null;
   clearUuid() => throw "not supported";
   loadUuid() => throw "not supported";
+  logComplete(int exitCode) { /* ignored */ }
   logShutdown() { /* ignored */ }
   logStartup() { /* ignored */ }
   logVersion() { /* ignored */ }

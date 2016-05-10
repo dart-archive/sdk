@@ -232,7 +232,6 @@ Future main(List<String> arguments) async {
   try {
     analytics.loadUuid();
     analytics.logStartup();
-    //TODO startup analytics - https://github.com/dartino/sdk/issues/467
     await server.listen((Socket controlSocket) {
       if (isBatchMode) {
         server.close();
@@ -254,12 +253,13 @@ Future<Null> handleClient(IsolatePool pool, Analytics analytics,
   List<String> arguments = await clientConnection.arguments;
   log.gotArguments(arguments);
 
-  await handleVerb(arguments, clientConnection, pool);
+  await handleVerb(arguments, clientConnection, analytics, pool);
 }
 
 Future<Null> handleVerb(
     List<String> arguments,
     ClientConnection clientConnection,
+    Analytics analytics,
     IsolatePool pool) async {
   crashReportRequested = false;
 
@@ -303,10 +303,7 @@ Future<Null> handleVerb(
         }
         return COMPILER_EXITCODE_CRASH;
       });
-  if (exitCode == 0) {
-    //TODO capture operation successful via clientConnection.analytics.
-    //See https://github.com/dartino/sdk/issues/467
-  }
+  analytics?.logComplete(exitCode);
   clientConnection.exit(exitCode);
 }
 

@@ -12,29 +12,23 @@ import 'dart:math';
 
 import 'package:instrumentation_client/instrumentation_client.dart';
 
-import '../console_print.dart' show
-    OneArgVoid;
+import '../console_print.dart' show OneArgVoid;
+import '../guess_configuration.dart' show dartinoVersion;
+import '../messages.dart' show analyticsRecordChoiceFailed;
+import '../please_report_crash.dart'
+    show
+        crashReportRequested,
+        requestBugReportOnOtherCrashMessage,
+        stringifyError;
 
-import '../guess_configuration.dart' show
-    dartinoVersion;
-
-import '../messages.dart' show
-    analyticsRecordChoiceFailed;
-
-import '../please_report_crash.dart' show
-    crashReportRequested,
-    requestBugReportOnOtherCrashMessage,
-    stringifyError;
-
-import '../verbs/infrastructure.dart' show
-    fileUri;
+import '../verbs/infrastructure.dart' show fileUri;
 
 const String _dartinoUuidEnvVar = const String.fromEnvironment('dartino.uuid');
 
 // Tags used when sending analytics
+const String TAG_COMPLETE = 'complete';
 const String TAG_SHUTDOWN = 'shutdown';
 const String TAG_STARTUP = 'startup';
-const String TAG_VERSION = 'version';
 
 class Analytics {
   static const String optOutValue = 'opt-out';
@@ -114,9 +108,17 @@ class Analytics {
     return false;
   }
 
+  void logComplete(int exitCode) => _send([TAG_COMPLETE, '$exitCode']);
+
   void logShutdown() => _send([TAG_SHUTDOWN]);
-  void logStartup() => _send([TAG_STARTUP]);
-  void logVersion() => _send([TAG_VERSION, uuid, dartinoVersion]);
+
+  void logStartup() => _send([
+        TAG_STARTUP,
+        uuid,
+        dartinoVersion,
+        Platform.version,
+        Platform.operatingSystem
+      ]);
 
   /// If the user has opt-in to analytics, then send the given [message]
   /// to the analytics server so that it will be logged with other messages.
@@ -127,7 +129,6 @@ class Analytics {
       if (!hasOptedIn) return;
       _client =
           new InstrumentationClient(userID: uuid, serverEndPoint: serverUrl);
-      logVersion();
     }
 
     // Write an escaped version of the given [field] to the given [buffer].

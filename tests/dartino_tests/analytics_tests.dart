@@ -108,10 +108,17 @@ main() async {
 
     analytics.writeNewUuid();
     analytics.logStartup();
+    analytics.logComplete(0);
     await analytics.shutdown();
-    await mockServer.expectMessage(TAG_VERSION, analytics.uuid);
-    await mockServer.expectMessage(TAG_STARTUP);
-    await mockServer.expectMessage(TAG_SHUTDOWN);
+    await mockServer.expectMessage([
+      TAG_STARTUP,
+      analytics.uuid,
+      'version information not available', // Dartino version
+      Platform.version,
+      Platform.operatingSystem,
+    ]);
+    await mockServer.expectMessage([TAG_COMPLETE, '0']);
+    await mockServer.expectMessage([TAG_SHUTDOWN]);
     await mockServer.assertNoMessages('optIn');
   } finally {
     if (tmpUuidFile.existsSync()) tmpUuidFile.deleteSync();
@@ -163,7 +170,7 @@ class MockServer {
   }
 
   /// Assert that the received messages have the specified uuid.
-  Future<Null> expectMessage(String p1, [String p2, String p3]) async {
+  Future<Null> expectMessage(List<String> expectedParts) async {
     // Messages may be received out of order... wait for msgN #[expectedMsgN].
     int messageIndex = 0;
     dynamic map;
@@ -205,10 +212,15 @@ class MockServer {
     // pkg/dartino_compiler/lib/src/hub/analytics.dart # _send(...).
     Expect.isTrue(
         message.startsWith('~'), 'Unexpected message start "$message"');
-    List<String> parts = message.substring(1).split(':');
+    List<String> parts = message
+        .substring(1)
+        .replaceAll('::', 'qqqq')
+        .split(':')
+        .map((String part) => part.replaceAll('qqqq', ':'))
+        .toList();
     // parts[0] is a timestamp.
-    Expect.stringEquals(p1, parts[1]);
-    if (p2 != null) Expect.stringEquals(p2, parts[2]);
-    if (p3 != null) Expect.stringEquals(p3, parts[3]);
+    List<String> actualParts = parts.sublist(1);
+    Expect.listEquals(expectedParts, actualParts,
+        '\nexpected: $expectedParts\nactual:   $actualParts\n');
   }
 }

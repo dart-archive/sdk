@@ -4,7 +4,6 @@
 
 import 'dart:async';
 
-import 'package:dartino_compiler/src/hub/client_commands.dart';
 import 'package:dartino_compiler/src/hub/hub_main.dart';
 import 'package:dartino_compiler/src/hub/session_manager.dart';
 import 'package:dartino_compiler/src/verbs/create_verb.dart';
@@ -61,4 +60,3 @@ void expectMessage(List<String> messages, String expected) {
   }
   Expect.fail('Failed to find "$expected" in $messages');
 }
-
