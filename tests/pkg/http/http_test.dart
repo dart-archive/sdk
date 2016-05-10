@@ -18,7 +18,10 @@ void testGet() {
 
   Fiber.fork(() {
     // Server is a simple raw Socket.
-    final expected = "GET / HTTP/1.1\r\nHost: myhost\r\n\r\n";
+
+    // TODO(karlklose): this should test against a parsed version, since
+    // commands are case-sensitive while header names are case-insensitive.
+    final expected = "GET / HTTP/1.1\r\nhost: myhost\r\n\r\n";
     final response = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nheya";
     var socket = server.accept();
     var data = new Uint8List.view(socket.read(expected.length));
