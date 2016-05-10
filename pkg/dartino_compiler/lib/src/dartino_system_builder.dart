@@ -855,7 +855,7 @@ class DartinoSystemBuilder extends DartinoSystemBase {
         // turn into null in the runtime.
         commands.add(const PushNull());
       } else {
-        throw "Unsupported constant: ${constant.toStructuredString()}";
+        throw "Unsupported constant: ${constant.toStructuredText()}";
       }
       DartinoConstant dartinoConstant =
         new DartinoConstant(id, MapId.constants);

@@ -27,9 +27,9 @@ class DartinoFunctionConstant extends ConstantValue {
     throw new UnsupportedError("DartinoFunctionConstant.accept");
   }
 
-  String unparse() => toStructuredString();
+  String toDartText() => toStructuredText();
 
-  String toStructuredString() {
+  String toStructuredText() {
     return 'DartinoFunctionConstant($functionId)';
   }
 }
@@ -47,9 +47,9 @@ class DartinoClassConstant extends ConstantValue {
     throw new UnsupportedError("DartinoClassConstant.accept");
   }
 
-  String unparse() => toStructuredString();
+  String toDartText() => toStructuredText();
 
-  String toStructuredString() {
+  String toStructuredText() {
     return 'DartinoClassConstant($classId)';
   }
 }
@@ -67,9 +67,9 @@ class DartinoClassInstanceConstant extends ConstantValue {
     throw new UnsupportedError("DartinoClassInstanceConstant.accept");
   }
 
-  String unparse() => toStructuredString();
+  String toDartText() => toStructuredText();
 
-  String toStructuredString() {
+  String toStructuredText() {
     return 'DartinoClassInstanceConstant($classId)';
   }
 

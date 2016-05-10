@@ -256,7 +256,7 @@ abstract class Reuser {
       Parser parser = new Parser(new Listener(), compiler.options);
       Element entryCompilationUnit = library.entryCompilationUnit;
       NodeListener listener = new NodeListener(
-          compiler.resolution.parsing
+          compiler.resolution.parsingContext
               .getScannerOptionsFor(entryCompilationUnit),
           compiler.reporter, entryCompilationUnit);
       Parser nodeParser = new Parser(listener, compiler.options);
@@ -580,7 +580,8 @@ abstract class Reuser {
     if (element is TypeDeclarationElement) {
       if (!element.isResolved) {
         if (element is PartialClassElement) {
-          ClassNode node = element.parseNode(compiler.parsing).asClassNode();
+          ClassNode node =
+              element.parseNode(compiler.parsingContext).asClassNode();
           if (node == null) {
             cannotReuse(
                 element, "Class body isn't a ClassNode on $element");
@@ -683,7 +684,7 @@ abstract class Reuser {
       PartialFunctionElement before,
       PartialFunctionElement after) {
     FunctionExpression node =
-        after.parseNode(compiler.parsing).asFunctionExpression();
+        after.parseNode(compiler.parsingContext).asFunctionExpression();
     if (node == null) {
       return cannotReuse(after, "Not a function expression: '$node'");
     }
@@ -727,7 +728,7 @@ abstract class Reuser {
       Token diffToken,
       PartialClassElement before,
       PartialClassElement after) {
-    ClassNode node = after.parseNode(compiler.parsing).asClassNode();
+    ClassNode node = after.parseNode(compiler.parsingContext).asClassNode();
     if (node == null) {
       return cannotReuse(after, "Not a ClassNode: '$node'");
     }

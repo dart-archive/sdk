@@ -26,6 +26,7 @@ deep_nesting1_negative_test: Crash
 deep_nesting2_negative_test: Crash
 deferred_import_core_test: RuntimeError
 function_syntax_test/36: RuntimeError, Pass
+generic_local_functions_test: CompileTimeError
 generic_functions_test: CompileTimeError
 generic_methods_test: CompileTimeError
 generic_sends_test: CompileTimeError

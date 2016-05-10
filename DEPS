@@ -27,7 +27,7 @@ vars = {
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_dartino_patches".
   # 2. update package revisions below.
-  "dart_rev": "@3575fa983644893d5b672e757795b5d52213d88c",
+  "dart_rev": "@e47e8af36491eb883c14641c8587e9b0ee4a805b",
 
   # Please copy these package revisions from third_party/dart/DEPS when
   # updating dart_rev:

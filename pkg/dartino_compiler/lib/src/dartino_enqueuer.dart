@@ -42,7 +42,8 @@ import 'package:compiler/src/elements/elements.dart' show
     AstElement,
     ClassElement,
     Element,
-    FunctionElement;
+    FunctionElement,
+    ResolvedAstKind;
 
 import 'package:compiler/src/resolution/tree_elements.dart' show
     TreeElements;
@@ -192,7 +193,10 @@ class DartinoEnqueuer extends EnqueuerMixin
           if (!_pendingEnqueuedUsages.isEmpty) {
             ElementUsage usage = _pendingEnqueuedUsages.removeFirst();
             AstElement element = usage.element;
-            TreeElements treeElements = element.resolvedAst.elements;
+            TreeElements treeElements;
+            if (element.resolvedAst.kind == ResolvedAstKind.PARSED) {
+              treeElements = element.resolvedAst.elements;
+            }
             DartinoRegistry registry = new DartinoRegistry(compiler);
             Selector selector = usage.selector;
             if (usage.closureKind != null) {
