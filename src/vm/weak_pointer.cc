@@ -58,7 +58,7 @@ void WeakPointer::ProcessAndMoveSurvivors(WeakPointerList* pointers,
   }
 }
 
-void WeakPointer::Process(WeakPointerList* pointers, Space* space) {
+void WeakPointer::Process(WeakPointerList* pointers, OldSpace* space) {
   for (auto it = pointers->Begin(); it != pointers->End();) {
     HeapObject* current_object = it->object_;
     ASSERT(space->Includes(current_object->address()));
@@ -69,7 +69,7 @@ void WeakPointer::Process(WeakPointerList* pointers, Space* space) {
       previous->Invoke();
       delete previous;
     } else {
-      // We don't move old-space objects.
+      it->object_ = space->NewLocation(current_object);
       ++it;
     }
   }

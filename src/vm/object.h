@@ -384,6 +384,7 @@ class HeapObject : public Object {
   inline void at_put(int offset, Object* value);
   inline void at_put_bypass_write_barrier(int offset, Object* value);
   inline Object* at(int offset);
+  inline Object** address_at(int offset);
   void RawPrint(const char* title);
   // Returns the class field without checks.
   inline Class* raw_class();
@@ -1190,7 +1191,15 @@ class FreeListChunk : public HeapObject {
         reinterpret_cast<FreeListChunk*>(HeapObject::FromAddress(free_start));
     chunk->set_class(StaticClassStructures::free_list_chunk_class());
     chunk->set_size(free_size);
+    chunk->Zap();
     return chunk;
+  }
+
+  void Zap() {
+#ifdef DEBUG
+    void* start = reinterpret_cast<void*>(address() + kSize);
+    memset(start, 0x55, Size() - kSize);
+#endif
   }
 
   // Sizing.
@@ -1230,6 +1239,7 @@ class Stack : public BaseArray {
   static inline Stack* cast(Object* obj);
 
   void UpdateFramePointers(Stack* old_stack);
+  void UpdateFramePointers(word diff);
 
   // Printing.
   void StackPrint();
@@ -1291,6 +1301,8 @@ class PointerVisitor {
 
   // Handy shorthand for visiting a class field in an object.
   virtual void VisitClass(Object** p) { VisitBlock(p, p + 1); }
+
+  virtual void AboutToVisitStack(Stack* stack) {}
 };
 
 // Abstract base class for visiting all objects in a space.
@@ -1726,6 +1738,10 @@ void HeapObject::at_put_bypass_write_barrier(int offset, Object* value) {
 
 Object* HeapObject::at(int offset) {
   return *reinterpret_cast<Object**>(address() + offset);
+}
+
+Object** HeapObject::address_at(int offset) {
+  return reinterpret_cast<Object**>(address() + offset);
 }
 
 bool HeapObject::HasForwardingAddress() { return at(kClassOffset)->IsSmi(); }

@@ -2077,6 +2077,7 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
     // be updated even if it points to a transformed class. If we
     // updated the pointer, the new class would have the wrong
     // instance format for the non-transformed, old instance.
+    current_object_address_ = reinterpret_cast<uword>(p);
   }
 
   virtual void VisitBlock(Object** start, Object** end) {
@@ -2098,6 +2099,9 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
           clone = instance->CloneTransformed(heap_);
           instance->set_forwarding_address(clone);
           *p = clone;
+          if (GCMetadata::GetPageType(clone->address()) == kNewSpacePage) {
+            GCMetadata::InsertIntoRememberedSet(current_object_address_);
+          }
         }
       } else if (heap_object->IsClass()) {
         Class* clazz = Class::cast(heap_object);
@@ -2110,6 +2114,7 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
 
  private:
   Heap* const heap_;
+  uword current_object_address_;
 };
 
 void Session::TransformInstances() {

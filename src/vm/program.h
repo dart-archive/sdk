@@ -362,6 +362,9 @@ class Program : public ProgramList::Entry {
   void UncookAndUnchainStacks();
   bool stacks_are_cooked() { return !cooked_stack_deltas_.is_empty(); }
   void UpdateStackLimits();
+  void CompactSharedHeap();
+  void SweepSharedHeap();
+  void IterateSharedHeapRoots(PointerVisitor* visitor);
 
   // Access to the address of the first and last root.
   Object** first_root_address() {

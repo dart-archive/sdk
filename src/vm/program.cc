@@ -490,10 +490,31 @@ void Program::PerformSharedGarbageCollection() {
   SemiSpace* new_space = heap->space();
   MarkingStack stack;
   MarkingVisitor marking_visitor(new_space, &stack);
-  for (auto process : process_list_) {
-    process->IterateRoots(&marking_visitor);
-  }
+
+  IterateSharedHeapRoots(&marking_visitor);
+
   stack.Process(&marking_visitor, old_space, new_space);
+
+  if (old_space->compacting()) {
+    SweepSharedHeap();
+  } else {
+    CompactSharedHeap();
+  }
+
+  heap->AdjustOldAllocationBudget();
+
+#ifdef DEBUG
+  if (Flags::validate_heaps) old_space->Verify();
+#endif
+}
+
+void Program::SweepSharedHeap() {
+  TwoSpaceHeap* heap = process_heap();
+  OldSpace* old_space = heap->old_space();
+  SemiSpace* new_space = heap->space();
+
+  old_space->set_compacting(false);
+
   old_space->ProcessWeakPointers();
 
   for (auto process : process_list_) {
@@ -512,6 +533,43 @@ void Program::PerformSharedGarbageCollection() {
 
   old_space->set_used(sweeping_visitor.used());
   heap->AdjustOldAllocationBudget();
+}
+
+void Program::CompactSharedHeap() {
+  TwoSpaceHeap* heap = process_heap();
+  OldSpace* old_space = heap->old_space();
+  SemiSpace* new_space = heap->space();
+
+  old_space->set_compacting(true);
+
+  old_space->ComputeCompactionDestinations();
+
+  old_space->ClearFreeList();
+
+  // Weak processing when the destination addresses have been calculated, but
+  // before they are moved (which ruins the liveness data).
+  old_space->ProcessWeakPointers();
+
+  for (auto process : process_list_) {
+    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
+  }
+
+  old_space->ZapObjectStarts();
+
+  FixPointersVisitor fix;
+  CompactingVisitor compacting_visitor(old_space, &fix);
+  old_space->IterateObjects(&compacting_visitor);
+  old_space->set_used(compacting_visitor.used());
+  fix.set_source_address(0);
+
+  HeapObjectPointerVisitor new_space_visitor(&fix);
+  new_space->IterateObjects(&new_space_visitor);
+
+  IterateSharedHeapRoots(&fix);
+
+  new_space->ClearMarkBits();
+  old_space->ClearMarkBits();
+  old_space->MarkChunkEndsFree();
 }
 
 class StatisticsVisitor : public HeapObjectVisitor {
@@ -874,6 +932,7 @@ void Program::IterateRoots(PointerVisitor* visitor) {
   if (session_ != NULL) {
     session_->IteratePointers(visitor);
   }
+  visitor->Visit(reinterpret_cast<Object**>(&stack_chain_));
 }
 
 void Program::IterateRootsIgnoringSession(PointerVisitor* visitor) {
@@ -1006,7 +1065,7 @@ void Program::CollectNewSpace() {
   to->StartScavenge();
   old->StartScavenge();
 
-  for (auto process : process_list_) process->IterateRoots(&visitor);
+  IterateSharedHeapRoots(&visitor);
 
   old->VisitRememberedSet(&visitor);
 
@@ -1055,6 +1114,13 @@ void Program::UpdateStackLimits() {
   for (auto process : process_list_) process->UpdateStackLimit();
 }
 
+void Program::IterateSharedHeapRoots(PointerVisitor* visitor) {
+  // All processes share the same heap, so we need to iterate all roots from
+  // all processes.
+  for (auto process : process_list_) process->IterateRoots(visitor);
+  visitor->Visit(reinterpret_cast<Object**>(&stack_chain_));
+}
+
 int Program::CollectMutableGarbageAndChainStacks() {
   // Mark all reachable objects.
   OldSpace* old_space = process_heap()->old_space();
@@ -1063,27 +1129,18 @@ int Program::CollectMutableGarbageAndChainStacks() {
   ASSERT(stack_chain_ == NULL);
   MarkingVisitor marking_visitor(new_space, &marking_stack, &stack_chain_);
 
-  // All processes share the same heap, so we need to iterate all roots from
-  // all processes.
-  for (auto process : process_list_) process->IterateRoots(&marking_visitor);
+  IterateSharedHeapRoots(&marking_visitor);
 
   marking_stack.Process(&marking_visitor, old_space, new_space);
 
-  // Weak processing.
-  old_space->ProcessWeakPointers();
-  for (auto process : process_list_) {
-    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
-  }
-
-  // Flush outstanding free_list chunks into the free list. Then sweep
-  // over the heap and rebuild the freelist.
-  old_space->Flush();
-  SweepingVisitor sweeping_visitor(old_space);
-  old_space->IterateObjects(&sweeping_visitor);
-
-  new_space->ClearMarkBits();
+  CompactSharedHeap();
 
   UpdateStackLimits();
+
+#ifdef DEBUG
+  if (Flags::validate_heaps) old_space->Verify();
+#endif
+
   return marking_visitor.number_of_stacks();
 }
 

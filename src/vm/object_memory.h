@@ -20,14 +20,26 @@ class Heap;
 class HeapObject;
 class HeapObjectVisitor;
 class MarkingStack;
+class Object;
 class OldSpace;
 class PointerVisitor;
 class ProgramHeapRelocator;
 class PromotedTrack;
+class Smi;
 class Space;
 class TwoSpaceHeap;
 
 static const int kSentinelSize = sizeof(void*);
+
+// In oldspace, the sentinel marks the end of each chunk, and never moves or is
+// overwritten.
+static inline Object* chunk_end_sentinel() {
+  return reinterpret_cast<Object*>(0);
+}
+
+static inline bool HasSentinelAt(uword address) {
+  return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
+}
 
 enum PageType {
   kUnknownSpacePage,  // Probably a program space page.
@@ -36,6 +48,7 @@ enum PageType {
 };
 
 typedef DoubleList<Chunk> ChunkList;
+typedef DoubleList<Chunk>::Iterator<Chunk> ChunkListIterator;
 
 // A chunk represents a block of memory provided by ObjectMemory.
 class Chunk : public ChunkList::Entry {
@@ -48,6 +61,12 @@ class Chunk : public ChunkList::Entry {
 
   // Returns the first address past this chunk.
   uword end() const { return end_; }
+
+  uword usable_end() const { return end_ - kSentinelSize; }
+
+  uword compaction_top() { return compaction_top_; }
+
+  void set_compaction_top(uword top) { compaction_top_ = top; }
 
   // Returns the size of this chunk in bytes.
   uword size() const { return end_ - start_; }
@@ -81,6 +100,7 @@ class Chunk : public ChunkList::Entry {
   const uword end_;
   const bool external_;
   uword scavenge_pointer_;
+  uword compaction_top_;
 
   Chunk(Space* owner, uword start, uword size, bool external = false);
   ~Chunk();
@@ -88,8 +108,8 @@ class Chunk : public ChunkList::Entry {
   void set_owner(Space* value) { owner_ = value; }
 
   friend class ObjectMemory;
-  friend class Space;
   friend class SemiSpace;
+  friend class Space;
 };
 
 // Space is a chain of chunks. It supports allocation and traversal.
@@ -151,6 +171,8 @@ class Space {
 
   void SetAllocationBudget(word new_budget);
 
+  void ClearMarkBits();
+
   // Tells whether garbage collection is needed.  Only to be called when
   // bump allocation has failed, or on old space after a new-space GC.
   // For a fixed-size new-space it always returns true because we always
@@ -164,6 +186,9 @@ class Space {
   }
 
   bool is_empty() const { return chunk_list_.IsEmpty(); }
+
+  ChunkListIterator ChunkListBegin() { return chunk_list_.Begin(); }
+  ChunkListIterator ChunkListEnd() { return chunk_list_.End(); }
 
   static uword DefaultChunkSize(uword heap_size) {
     // We return a value between kDefaultMinimumChunkSize and
@@ -210,10 +235,11 @@ class Space {
  protected:
   explicit Space(Resizing resizeable, PageType page_type);
 
+  friend class Chunk;
+  friend class CompactingVisitor;
   friend class NoAllocationFailureScope;
-  friend class ProgramHeapRelocator;
   friend class Program;
-  friend class SweepingVisitor;
+  friend class ProgramHeapRelocator;
   friend class TwoSpaceHeap;
 
   virtual void Append(Chunk* chunk);
@@ -286,8 +312,6 @@ class SemiSpace : public Space {
 
   void ProcessWeakPointers(SemiSpace* to_space, OldSpace* old_space);
 
-  void ClearMarkBits();
-
  private:
   Chunk* AllocateAndUseChunk(uword size);
 
@@ -304,7 +328,6 @@ class OldSpace : public Space {
 
   virtual bool IsAlive(HeapObject* old_location);
 
-  // OldSpace is currently non-moving, so it returns old_location.
   virtual HeapObject* NewLocation(HeapObject* old_location);
 
   virtual uword Used();
@@ -321,7 +344,11 @@ class OldSpace : public Space {
   // there is no room to allocate the object.
   uword Allocate(uword size);
 
-  FreeList* free_list() const { return free_list_; }
+  FreeList* free_list() { return free_list_; }
+
+  void ClearFreeList();
+  void MarkChunkEndsFree();
+  void ZapObjectStarts();
 
   // Find pointers to young-space.
   void VisitRememberedSet(GenerationalScavengeVisitor* visitor);
@@ -339,9 +366,14 @@ class OldSpace : public Space {
 
   void ProcessWeakPointers();
 
+  void ComputeCompactionDestinations();
+
 #ifdef DEBUG
   void Verify();
 #endif
+
+  void set_compacting(bool value) { compacting_ = value; }
+  bool compacting() { return compacting_; }
 
  private:
   uword AllocateFromFreeList(uword size);
@@ -350,8 +382,9 @@ class OldSpace : public Space {
 
   TwoSpaceHeap* heap_;
   FreeList* free_list_;  // Free list structure.
-  bool tracking_allocations_;
-  PromotedTrack* promoted_track_;
+  bool tracking_allocations_ = false;
+  PromotedTrack* promoted_track_ = NULL;
+  bool compacting_ = true;
 };
 
 class NoAllocationFailureScope {
@@ -409,8 +442,8 @@ class ObjectMemory {
 
   static Atomic<uword> allocated_;
 
-  friend class Space;
   friend class SemiSpace;
+  friend class Space;
 };
 
 }  // namespace dartino

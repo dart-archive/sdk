@@ -18,12 +18,6 @@
 
 namespace dartino {
 
-static Smi* chunk_end_sentinel() { return Smi::zero(); }
-
-static bool HasSentinelAt(uword address) {
-  return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
-}
-
 Chunk::Chunk(Space* owner, uword start, uword size, bool external)
       : owner_(owner),
         start_(start),
@@ -175,7 +169,7 @@ void SemiSpace::CompleteScavenge(PointerVisitor* visitor) {
   }
 }
 
-void SemiSpace::ClearMarkBits() {
+void Space::ClearMarkBits() {
   Flush();
   for (auto chunk : chunk_list_) GCMetadata::ClearMarkBitsFor(chunk);
 }

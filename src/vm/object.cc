@@ -520,14 +520,14 @@ InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
   ASSERT(!HasForwardingAddress());
 
   visitor->VisitClass(reinterpret_cast<Object**>(address()));
+
   InstanceFormat format = get_class()->instance_format();
   // Fast case for fixed size object with all pointers.
   if (format.only_pointers_in_fixed_part()) {
     uword size = format.fixed_size();
     if (size > kPointerSize) {
-      visitor->VisitBlock(
-          reinterpret_cast<Object**>(address() + kPointerSize),
-          reinterpret_cast<Object**>(address() + format.fixed_size()));
+      visitor->VisitBlock(reinterpret_cast<Object**>(address() + kPointerSize),
+                          reinterpret_cast<Object**>(address() + size));
     }
     return format;
   }
@@ -547,6 +547,8 @@ InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
       // valid during marking.
       Stack* stack = reinterpret_cast<Stack*>(this);
       Frame frame(stack);
+      visitor->AboutToVisitStack(stack);
+      visitor->Visit(stack->address_at(Stack::kNextOffset));
       while (frame.MovePrevious()) {
         visitor->VisitBlock(frame.LastLocalAddress(),
                             frame.FirstLocalAddress() + 1);
@@ -589,6 +591,11 @@ void Stack::UpdateFramePointers(Stack* old_stack) {
   Object** fp = Pointer(top());
   Object** old_fp = old_stack->Pointer(old_stack->top());
   word diff = (fp - old_fp) * kWordSize;
+  UpdateFramePointers(diff);
+}
+
+void Stack::UpdateFramePointers(word diff) {
+  Object** fp = Pointer(top());
   while (*fp != NULL) {
     // Read the fp value and update it.
     Object* fp_value = *fp + diff;
