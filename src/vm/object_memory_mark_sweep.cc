@@ -19,6 +19,7 @@
 
 #ifdef _MSC_VER
 #include <intrin.h>
+#pragma intrinsic(_BitScanForward)
 #endif
 
 namespace dartino {
@@ -374,8 +375,7 @@ static void ALWAYS_INLINE ObjectMemMove(uword dest, uword source, uword size) {
 
 static int ALWAYS_INLINE FindFirstSet(uint32 x) {
 #ifdef _MSC_VER
-#pragma intrinsic(_BitScanForward)
-  unsigned index;
+  unsigned long index;  // NOLINT
   bool non_zero = _BitScanForward(&index, x);
   return index + non_zero;
 #else

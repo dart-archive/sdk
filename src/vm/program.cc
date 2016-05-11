@@ -932,7 +932,6 @@ void Program::IterateRoots(PointerVisitor* visitor) {
   if (session_ != NULL) {
     session_->IteratePointers(visitor);
   }
-  visitor->Visit(reinterpret_cast<Object**>(&stack_chain_));
 }
 
 void Program::IterateRootsIgnoringSession(PointerVisitor* visitor) {
