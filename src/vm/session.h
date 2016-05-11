@@ -93,6 +93,9 @@ class Session {
   // Get an appropriate message to send over the wire representing [function].
   int64 FunctionMessage(Function *function);
 
+  // Get an appropriate message to send over the wire representing [klass].
+  int64 ClassMessage(Class *klass);
+
   // Get the id for the object in the map with the given
   // index. Returns -1 if the object does not exist in the map.
   int64 MapLookupByObject(int map_index, Object* object);

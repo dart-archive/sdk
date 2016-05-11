@@ -26,7 +26,8 @@ abstract class VmCommand {
   factory VmCommand.fromBuffer(
       VmCommandCode code,
       Uint8List buffer,
-      int translateFunction(int offsetOrId)) {
+      int translateFunction(int offsetOrId),
+      int translateClass(int offsetOrId)) {
     switch (code) {
       case VmCommandCode.HandShakeResult:
         int offset = 0;
@@ -43,14 +44,17 @@ abstract class VmCommand {
         return new HandShakeResult(
             success, version, wordSize, floatSize);
       case VmCommandCode.InstanceStructure:
-        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int classId =
+            translateClass(CommandBuffer.readInt64FromBuffer(buffer, 0));
         int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
         return new InstanceStructure(classId, fields);
       case VmCommandCode.Instance:
-        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int classId = translateClass(
+            CommandBuffer.readInt64FromBuffer(buffer, 0));
         return new Instance(classId);
       case VmCommandCode.Class:
-        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int classId = translateClass(
+            CommandBuffer.readInt64FromBuffer(buffer, 0));
         return new ClassValue(classId);
       case VmCommandCode.Integer:
         int value = CommandBuffer.readInt64FromBuffer(buffer, 0);

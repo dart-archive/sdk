@@ -653,8 +653,7 @@ void Session::SendDartValue(Object* value) {
     }
     connection_->Send(Connection::kString, buffer);
   } else if (value->IsClass()) {
-    Push(HeapObject::cast(value));
-    buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
+    buffer.WriteInt64(ClassMessage(Class::cast(value)));
     connection_->Send(Connection::kClass, buffer);
   } else if (value->IsTwoByteString()) {
     // TODO(ager): We should send the character data as 16-bit values
@@ -665,8 +664,7 @@ void Session::SendDartValue(Object* value) {
     }
     connection_->Send(Connection::kString, buffer);
   } else {
-    Push(HeapObject::cast(value)->get_class());
-    buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
+    buffer.WriteInt64(ClassMessage(HeapObject::cast(value)->get_class()));
     connection_->Send(Connection::kInstance, buffer);
   }
 }
@@ -674,8 +672,7 @@ void Session::SendDartValue(Object* value) {
 void Session::SendInstanceStructure(Instance* instance) {
   WriteBuffer buffer;
   Class* klass = instance->get_class();
-  Push(klass);
-  buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
+  buffer.WriteInt64(ClassMessage(klass));
   int fields = klass->NumberOfInstanceFields();
   buffer.WriteInt(fields);
   connection_->Send(Connection::kInstanceStructure, buffer);
@@ -2213,6 +2210,14 @@ int64 Session::FunctionMessage(Function *function) {
     return program()->OffsetOf(HeapObject::cast(function));
   } else {
     return MapLookupByObject(method_map_id_, function);
+  }
+}
+
+int64 Session::ClassMessage(Class *klass) {
+  if (program()->was_loaded_from_snapshot()) {
+    return program()->OffsetOf(HeapObject::cast(klass));
+  } else {
+    return MapLookupByObject(class_map_id_, klass);
   }
 }
 

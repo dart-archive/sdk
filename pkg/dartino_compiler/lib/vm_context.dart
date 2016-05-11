@@ -125,7 +125,10 @@ class DartinoVmContext {
   IdOffsetMapping offsetMapping;
 
   Function translateMapObject = (MapId mapId, int index) => index;
-  Function translateFunctionOffset;
+
+  Function translateFunctionMessage = (int x) => x;
+
+  Function translateClassMessage = (int x) => x;
 
   DartinoVmContext(
           VmConnection connection,
@@ -215,7 +218,8 @@ class DartinoVmContext {
 
       VmCommand command = new VmCommand.fromBuffer(
           VmCommandCode.values[c.fst], toUint8ListView(c.snd),
-          translateFunctionOffset ?? (x) => x);
+          translateFunctionMessage,
+          translateClassMessage);
       if (command is StdoutData) {
         stdoutSink?.add(command.value);
       } else if (command is StderrData) {
@@ -357,8 +361,11 @@ class DartinoVmContext {
             return index;
           }
         };
-        translateFunctionOffset = (int offset) {
+        translateFunctionMessage = (int offset) {
           return offsetMapping.functionIdFromOffset(configuration, offset);
+        };
+        translateClassMessage = (int offset) {
+          return offsetMapping.classIdFromOffset(configuration, offset);
         };
       }
     } else {
