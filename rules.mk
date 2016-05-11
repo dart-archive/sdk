@@ -139,6 +139,12 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/weak_pointer.cc \
 	$(DARTINO_SRC_VM)/weak_pointer.h
 
+ifeq ($(DARTINO_ENABLE_SOCKETS),1)
+DARTINO_SRC_VM_SRCS_RUNTIME += \
+	$(DARTINO_SRC_VM)/socket_connection_api_impl.cc \
+	$(DARTINO_SRC_VM)/socket_connection_api_impl.h
+endif
+
 DARTINO_SRC_VM_SRCS_INTERPRETER := \
 	$(DARTINO_SRC_VM)/ffi.cc \
 	$(DARTINO_SRC_VM)/ffi.h \
@@ -201,6 +207,19 @@ DARTINO_SRC_SHARED_SRCS := \
 	$(DARTINO_SRC_SHARED)/utils.cc \
 	$(DARTINO_SRC_SHARED)/utils.h \
 	$(DARTINO_SRC_SHARED)/version.h
+
+ifeq ($(DARTINO_ENABLE_SOCKETS),1)
+DARTINO_SRC_SHARED_SRCS += \
+	$(DARTINO_SRC_SHARED)/native_socket.h \
+	$(DARTINO_SRC_SHARED)/native_socket_linux.cc \
+	$(DARTINO_SRC_SHARED)/native_socket_lk.cc \
+	$(DARTINO_SRC_SHARED)/native_socket_macos.cc \
+	$(DARTINO_SRC_SHARED)/native_socket_posix.cc \
+	$(DARTINO_SRC_SHARED)/native_socket_windows.cc \
+	$(DARTINO_SRC_SHARED)/natives.h \
+	$(DARTINO_SRC_SHARED)/socket_connection.cc \
+	$(DARTINO_SRC_SHARED)/socket_connection.h
+endif
 
 DARTINO_SRC_DOUBLE_CONVERSION_SRCS := \
 	$(DARTINO_SRC_DOUBLE_CONVERSION)/bignum-dtoa.cc \
