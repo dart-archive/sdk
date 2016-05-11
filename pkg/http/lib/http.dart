@@ -204,7 +204,7 @@ class HttpHeaders {
 class _HttpParser {
   final Socket socket;
 
-  var _buffer = const [];
+  Uint8List _buffer = new Uint8List(0);
   var _offset = 0;
 
   _HttpParser(this.socket);
@@ -305,7 +305,8 @@ class _HttpParser {
           ++count;
           char = _peek();
         }
-        Uint8List chars = new Uint8List.view(_buffer, _offset - count, count);
+        Uint8List chars = new Uint8List.view(_buffer.buffer, _offset - count,
+            count);
         int chunkLength = int.parse(new String.fromCharCodes(chars), radix: 16);
 
         // TODO(zerny): support optional extensions.
@@ -322,13 +323,14 @@ class _HttpParser {
         int bufferRemaining = _buffer.length - _offset;
         int chunkRemaining = chunkLength;
         while (chunkRemaining > bufferRemaining) {
-          chunks.add(new Uint8List.view(_buffer, _offset, bufferRemaining));
+          chunks.add(new Uint8List.view(_buffer.buffer, _offset,
+                  bufferRemaining));
           chunkRemaining -= bufferRemaining;
           _buffer = new Uint8List.view(socket.readNext());
           _offset = 0;
           bufferRemaining = _buffer.length;
         }
-        chunks.add(new Uint8List.view(_buffer, _offset, chunkRemaining));
+        chunks.add(new Uint8List.view(_buffer.buffer, _offset, chunkRemaining));
         _offset += chunkRemaining;
 
         contentLength += chunkLength;
