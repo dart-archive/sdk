@@ -1,5 +1,5 @@
 CC=gcc
-LIBDIR=../../../bin/
+LIBDIR=../../../../bin/
 LIBNAME=netlib
 
 # OS detection needed to produce expected dynamic library.

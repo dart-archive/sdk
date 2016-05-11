@@ -7,7 +7,7 @@
 #include "src/vm/dartino_api_impl.h"
 
 #include "src/shared/assert.h"
-#ifdef DARTINO_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_DEBUGGING
 #include "src/shared/connection.h"
 #endif
 #include "src/shared/dartino.h"
@@ -89,18 +89,14 @@ static Program* LoadSnapshotFromFile(const char* path) {
   return program;
 }
 
-static void WaitForDebuggerConnection(int port) {
-#ifdef DARTINO_ENABLE_LIVE_CODING
-  ConnectionListener listener("127.0.0.1", port);
-  Connection* connection = listener.Accept();
+static int RunWithDebuggerConnection(
+    Connection* connection, Program* program) {
   Session session(connection);
-  session.Initialize(NULL);
+  session.Initialize(program);
   session.StartMessageProcessingThread();
-  bool success = session.ProcessRun() == 0;
-  if (!success) FATAL("Failed to run via debugger connection");
-#else
-  FATAL("dartino was built without live coding support.");
-#endif
+  int result = session.ProcessRun();
+  session.JoinMessageProcessingThread();
+  return result;
 }
 }  // namespace dartino
 
@@ -108,8 +104,11 @@ void DartinoSetup() { dartino::Dartino::Setup(); }
 
 void DartinoTearDown() { dartino::Dartino::TearDown(); }
 
-void DartinoWaitForDebuggerConnection(int port) {
-  dartino::WaitForDebuggerConnection(port);
+int DartinoRunWithDebuggerConnection(
+    DartinoConnection connection, DartinoProgram program) {
+  return dartino::RunWithDebuggerConnection(
+      reinterpret_cast<dartino::Connection*>(connection),
+      reinterpret_cast<dartino::Program*>(program));
 }
 
 DartinoProgram DartinoLoadSnapshotFromFile(const char* path) {

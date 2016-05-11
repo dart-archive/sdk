@@ -9,7 +9,7 @@
 // as the user will do when deploying an app. Thus getting rid of this file.
 
 const char *dartino_embedder_options[] = {
-  "uart_print_interceptor",
-//  "enable_debugger",
+//  "uart_print_interceptor",
+  "enable_debugger",
   0
 };

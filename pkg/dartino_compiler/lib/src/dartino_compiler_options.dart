@@ -107,8 +107,6 @@ class DartinoCompilerOptions implements CompilerOptions {
 
   @override bool get enableAssertMessage => false;
 
-  @override bool get enableConditionalDirectives => false;
-
   @override bool get enableExperimentalMirrors => false;
 
   @override bool get enableMinification => false;

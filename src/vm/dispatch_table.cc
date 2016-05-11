@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#ifdef DARTINO_ENABLE_LIVE_CODING
+#ifdef DARTINO_ENABLE_DEBUGGING
 
 #include "src/vm/dispatch_table.h"
 
@@ -51,4 +51,4 @@ void DispatchTable::ClearAllBreakpoints() {
 
 }  // namespace dartino
 
-#endif  // DARTINO_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_DEBUGGING

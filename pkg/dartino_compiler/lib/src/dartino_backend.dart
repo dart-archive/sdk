@@ -51,7 +51,8 @@ import 'package:compiler/src/elements/elements.dart' show
     MemberElement,
     MethodElement,
     Name,
-    PublicName;
+    PublicName,
+    ResolvedAstKind;
 
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
@@ -472,7 +473,7 @@ class DartinoBackend extends Backend
     }
   }
 
-  void onElementResolved(Element element, TreeElements elements) {
+  void onElementResolved(Element element) {
     if (alwaysEnqueue.contains(element)) {
       var registry = new DartinoRegistry(compiler);
       registry.registerStaticInvocation(element);
@@ -701,7 +702,11 @@ class DartinoBackend extends Backend
     if (element == null) return debugInfo;
     List<Bytecode> expectedBytecodes = function.bytecodes;
     element = element.implementation;
-    TreeElements elements = element.resolvedAst.elements;
+    TreeElements elements;
+    if (element.resolvedAst.kind == ResolvedAstKind.PARSED) {
+      elements = element.resolvedAst.elements;
+    }
+
     ClosureEnvironment closureEnvironment = createClosureEnvironment(
         element,
         elements);
@@ -1458,7 +1463,7 @@ class DartinoBackend extends Backend
     if (element.isPatched) {
       FunctionElementX patch = element.patch;
       compiler.reporter.withCurrentElement(patch, () {
-        patch.parseNode(compiler.parsing);
+        patch.parseNode(compiler.parsingContext);
         patch.computeType(compiler.resolution);
       });
       element = patch;
@@ -1528,7 +1533,12 @@ class DartinoBackend extends Backend
       context.compiler.reportVerboseInfo(
           constructor, 'Compiling constructor initializer $constructor');
 
-      TreeElements elements = constructor.resolvedAst.elements;
+      TreeElements elements;
+      // TODO(sigurdm): We should not create the `codegen` when
+      // `kind != PARSED`.
+      if (constructor.resolvedAst.kind == ResolvedAstKind.PARSED) {
+        elements = constructor.resolvedAst.elements;
+      }
 
       // TODO(ahe): We shouldn't create a registry, but we have to as long as
       // the enqueuer doesn't support elements with more than one compilation

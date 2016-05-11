@@ -376,11 +376,14 @@ Future<int> runToMainDebuggerTask(
   }
 
   state.attachCommandSender(commandSender);
+
+  await vmContext.enableLiveEditing();
+
   for (DartinoDelta delta in compilationResults) {
     await vmContext.applyDelta(delta);
   }
 
-  await vmContext.enableDebugger();
+  await vmContext.enableDebugging();
   // TODO(ahe): Add support for arguments when debugging.
   await vmContext.spawnProcess([]);
   await vmContext.setBreakpoint(methodName: "main", bytecodeIndex: 0);
@@ -647,6 +650,7 @@ Future<int> restartDebuggerTask(
 Future<int> apply(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
+  await vmContext.enableLiveEditing();
   await vmContext.applyDelta(state.compilationResults.last);
   return 0;
 }

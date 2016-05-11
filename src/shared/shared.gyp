@@ -40,6 +40,8 @@
         'bytecodes.h',
         'connection.cc',
         'connection.h',
+        'socket_connection.cc',
+        'socket_connection.h',
         'flags.cc',
         'flags.h',
         'dartino.h',

@@ -22,12 +22,12 @@ vars = {
   # Used by dartino_tests.
   "isolate_tag": "@0.2.2",
 
-  "instrumentation_client_rev": "@33c7bf19f6db1340a999e45dd8fb14d684330d3e",
+  "instrumentation_client_rev": "@9d6a136bff412c3f428a3435ff1a77cbbe5f1b6c",
 
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_dartino_patches".
   # 2. update package revisions below.
-  "dart_rev": "@3575fa983644893d5b672e757795b5d52213d88c",
+  "dart_rev": "@e47e8af36491eb883c14641c8587e9b0ee4a805b",
 
   # Please copy these package revisions from third_party/dart/DEPS when
   # updating dart_rev:
@@ -39,7 +39,7 @@ vars = {
   "pub_semver_tag": "@1.2.1",
   "collection_rev": "@f6135e6350c63eb3f4dd12953b8d4363faff16fc",
 
-  "lk_rev": "@ce0a3db7052e7b33de14685ba7158a4ddf5bd9f5",
+  "lk_rev": "@0f0b4959ad25cb1a2bffd1a2eba487b88a602c96",
 
   # We use mirrors of all github repos to guarantee reproducibility and
   # consistency between what users see and what the bots see.

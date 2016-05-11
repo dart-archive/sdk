@@ -555,9 +555,33 @@ def StepsLK(debug_log):
   device_configuration['build_conf'] = 'DebugLK'
   device_configuration['system'] = 'lk'
 
+  # Build the configurations we want to test.
   with bot.BuildStep('Build %s' % device_configuration['build_conf']):
     Run(['make', '-C', 'third_party/lk', 'clean'])
     Run(['make', '-C', 'third_party/lk', '-j8'])
+
+  # Build additional configurations we care about - some of these are
+  # used on Golem.
+  with bot.BuildStep('Build stm32f746g-disco configurations'):
+    Run(['make', 'PROJECT=stm32f746g-disco-baseline', '-C', 'third_party/lk',
+         'clean'])
+    Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-baseline', '-j8'])
+
+    Run(['make', 'PROJECT=stm32f746g-disco-dartino', '-C', 'third_party/lk',
+         'clean'])
+    Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-dartino', '-j8'])
+
+    Run(['out/DebugIA32/dartino', 'export', 'benchmarks/DeltaBlue.dart',
+         'to', 'third_party/lk/dartino/app/dartino-fixed/dartino_snapshot'])
+    Run(['out/DebugIA32/dartino-flashify',
+         'third_party/lk/dartino/app/dartino-fixed/dartino_snapshot',
+         'third_party/lk/dartino/app/dartino-fixed/dartino_program.S'])
+    Run(['make', 'PROJECT=stm32f746g-disco-fixed-snapshot',
+         '-C', 'third_party/lk', 'clean'])
+    Run(['make', '-C', 'third_party/lk', 'stm32f746g-disco-fixed-snapshot',
+         '-j8'])
+    Run(['rm', 'third_party/lk/dartino/app/dartino-fixed/dartino_snapshot'])
+    Run(['rm', 'third_party/lk/dartino/app/dartino-fixed/dartino_program.S'])
 
   StepDisableAnalytics(host_configuration['build_dir'])
 
@@ -886,7 +910,10 @@ class CoredumpArchiver(object):
 
   def __enter__(self):
     coredumps = self._find_coredumps()
-    assert not coredumps
+    if coredumps:
+      print "WARNING: Found stale coredumps, removing"
+      MarkCurrentStep(fatal=False)
+      self._remove_coredumps(coredumps)
 
   def __exit__(self, *_):
     coredumps = self._find_coredumps()
@@ -898,15 +925,18 @@ class CoredumpArchiver(object):
       self._archive(os.path.join(self._build_dir, 'dartino'),
                     os.path.join(self._build_dir, 'dartino-vm'),
                     archive_coredumps)
-      for filename in coredumps:
-        print 'Removing core: %s' % filename
-        os.remove(filename)
+      self._remove_coredumps(coredumps)
     coredumps = self._find_coredumps()
     assert not coredumps
 
   def _find_coredumps(self):
     # Finds all files named 'core.*' in the search directory.
     return glob.glob(os.path.join(self._search_dir, 'core.*'))
+
+  def _remove_coredumps(self, coredumps):
+    for filename in coredumps:
+      print 'Removing core: %s' % filename
+      os.remove(filename)
 
   def _archive(self, driver, dartino_vm, coredumps):
     assert coredumps

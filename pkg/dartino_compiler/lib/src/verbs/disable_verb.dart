@@ -19,7 +19,7 @@ const Action disableAction = const Action(
 Future<int> performDisableAction(
     AnalyzedSentence sentence, VerbContext context) async {
   var analytics = context.clientConnection.analytics;
-  if (analytics.uuid == null) analytics.writeOptOut();
+  if (!analytics.hasOptedOut) analytics.writeOptOut();
   print(analyticsOptOutNotification);
   return 0;
 }

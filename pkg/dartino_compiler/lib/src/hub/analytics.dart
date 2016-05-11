@@ -6,28 +6,39 @@
 // maintaining the analytics unique user identifier (uuid).
 library dartino_compiler.worker.analytics;
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import '../messages.dart' show
-    analyticsRecordChoiceFailed;
+import 'package:instrumentation_client/instrumentation_client.dart';
 
-import '../please_report_crash.dart' show
-    crashReportRequested,
-    requestBugReportOnOtherCrashMessage,
-    stringifyError;
+import '../console_print.dart' show OneArgVoid;
+import '../guess_configuration.dart' show dartinoVersion;
+import '../messages.dart' show analyticsRecordChoiceFailed;
+import '../please_report_crash.dart'
+    show
+        crashReportRequested,
+        requestBugReportOnOtherCrashMessage,
+        stringifyError;
 
-import '../verbs/infrastructure.dart' show
-    fileUri;
+import '../verbs/infrastructure.dart' show fileUri;
 
 const String _dartinoUuidEnvVar = const String.fromEnvironment('dartino.uuid');
 
-typedef LogMessage(message);
+// Tags used when sending analytics
+const String TAG_COMPLETE = 'complete';
+const String TAG_SHUTDOWN = 'shutdown';
+const String TAG_STARTUP = 'startup';
 
 class Analytics {
   static const String optOutValue = 'opt-out';
 
-  final LogMessage _log;
+  final OneArgVoid _log;
+
+  InstrumentationClient _client;
+
+  /// The url used by [InstrumentationClient] to send analytics.
+  final String serverUrl;
 
   /// The uri for the file that stores the analytics unique user id
   /// or `null` if it cannot be determined.
@@ -38,13 +49,16 @@ class Analytics {
   /// `true` if the user should be prompted to opt-in.
   bool shouldPromptForOptIn = true;
 
-  Analytics(LogMessage this._log, [Uri uuidUri]) :
-      this.uuidUri = uuidUri ?? defaultUuidUri;
+  Analytics(this._log, {String serverUrl, Uri uuidUri})
+      : this.serverUrl = serverUrl ?? defaultServerUrl,
+        this.uuidUri = uuidUri ?? defaultUuidUri;
+
+  bool get hasOptedIn => _uuid != null && !hasOptedOut;
+
+  bool get hasOptedOut => _uuid == optOutValue;
 
   /// Return the uuid or `null` if no analytics should be sent.
-  String get uuid {
-    return _uuid == optOutValue ? null : _uuid;
-  }
+  String get uuid => hasOptedOut ? null : _uuid;
 
   /// Erase the current uuid so that the user will be prompted the next time.
   void clearUuid() {
@@ -92,6 +106,69 @@ class Analytics {
       // fall through to return false.
     }
     return false;
+  }
+
+  void logComplete(int exitCode) => _send([TAG_COMPLETE, '$exitCode']);
+
+  void logShutdown() => _send([TAG_SHUTDOWN]);
+
+  void logStartup() => _send([
+        TAG_STARTUP,
+        uuid,
+        dartinoVersion,
+        Platform.version,
+        Platform.operatingSystem
+      ]);
+
+  /// If the user has opt-in to analytics, then send the given [message]
+  /// to the analytics server so that it will be logged with other messages.
+  /// The format of the data blob sent to the server mirrors the format
+  /// that the Dart analysis server uses for sending instrumentation data.
+  void _send(List<String> fields) {
+    if (_client == null) {
+      if (!hasOptedIn) return;
+      _client =
+          new InstrumentationClient(userID: uuid, serverEndPoint: serverUrl);
+    }
+
+    // Write an escaped version of the given [field] to the given [buffer].
+    void _escape(StringBuffer buffer, String field) {
+      int index = field.indexOf(':');
+      if (index < 0) {
+        buffer.write(field);
+        return;
+      }
+      int start = 0;
+      while (index >= 0) {
+        buffer.write(field.substring(start, index));
+        buffer.write('::');
+        start = index + 1;
+        index = field.indexOf(':', start);
+      }
+      buffer.write(field.substring(start));
+    }
+
+    // Join the values of the given fields,
+    // escaping the separator character by doubling it.
+    StringBuffer buffer = new StringBuffer();
+    buffer.write(new DateTime.now().millisecondsSinceEpoch.toString());
+    for (String field in fields) {
+      buffer.write(':');
+      _escape(buffer, field);
+    }
+
+    _client.logWithPriority(buffer.toString());
+  }
+
+  /// Signal that the client is done communicating with the analytics server.
+  /// This method should be invoked exactly one time and no other methods
+  /// should be invoked on this instance after this method has been invoked.
+  Future shutdown() async {
+    if (_client != null) {
+      logShutdown();
+      await _client.shutdown();
+      _client = null;
+    }
   }
 
   /// Create and persist a new uuid.
@@ -146,6 +223,10 @@ class Analytics {
     }
     exit(1);
   }
+
+  /// The default analytics server.
+  static const String defaultServerUrl =
+      'https://dartino-instr-fe.appspot.com/rpc';
 
   /// Return the path to the file that stores the analytics unique user id
   /// or `null` if it cannot be determined.

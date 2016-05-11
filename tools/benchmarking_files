@@ -10,6 +10,7 @@ third_party/crypto
 third_party/dart/pkg
 third_party/dart/sdk
 third_party/dart2js_info
+third_party/instrumentation_client
 third_party/package_config
 third_party/path
 third_party/persistent

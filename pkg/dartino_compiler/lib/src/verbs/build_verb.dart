@@ -22,20 +22,27 @@ const Action buildAction = const Action(
 Future buildFunction(
     AnalyzedSentence sentence, VerbContext context) async {
   return context.performTaskInWorker(
-      new BuildTask(sentence.targetUri, sentence.base));
+      new BuildTask(
+          sentence.targetUri, sentence.base, sentence.options.debuggingMode));
 }
 
 class BuildTask extends SharedTask {
   final Uri script;
   final Uri base;
+  final bool debuggingMode;
 
-  BuildTask(this.script, this.base);
+  BuildTask(this.script, this.base, this.debuggingMode);
 
   Future call(
       CommandSender commandSender,
       StreamIterator<ClientCommand> commandIterator) async {
     return buildTask(
-        commandSender, commandIterator, SessionState.current, script, base);
+        commandSender,
+        commandIterator,
+        SessionState.current,
+        script,
+        base,
+        debuggingMode);
   }
 }
 
@@ -44,7 +51,8 @@ Future<int> buildTask(
     StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri script,
-    Uri base) async {
+    Uri base,
+    bool debuggingMode) async {
 
   Uri snapshot = defaultSnapshotLocation(script);
   await compileAndAttachToVmThen(
@@ -55,5 +63,10 @@ Future<int> buildTask(
       base,
       true,
       () => export(state, snapshot));
-  return buildImage(commandSender, commandIterator, state, snapshot);
+  return buildImage(
+      commandSender,
+      commandIterator,
+      state,
+      snapshot,
+      debuggingMode: debuggingMode);
 }

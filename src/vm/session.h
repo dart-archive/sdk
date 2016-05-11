@@ -5,9 +5,9 @@
 #ifndef SRC_VM_SESSION_H_
 #define SRC_VM_SESSION_H_
 
-#ifndef DARTINO_ENABLE_LIVE_CODING
-#include "src/vm/session_no_live_coding.h"
-#else  // DARTINO_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_DEBUGGING
+#include "src/vm/session_no_debugging.h"
+#else  // DARTINO_ENABLE_DEBUGGING
 
 #include "src/shared/names.h"
 
@@ -27,7 +27,7 @@ class PostponedChange;
 class SessionState;
 
 class Session {
-  // TODO(zerny): Move helper methods to session states and remove these.
+  // TODO(sigurdm): Move helper methods to session states and remove these.
   friend class SessionState;
   friend class ConnectedState;
   friend class ModifyingState;
@@ -246,6 +246,6 @@ class Session {
 
 }  // namespace dartino
 
-#endif  // DARTINO_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_DEBUGGING
 
 #endif  // SRC_VM_SESSION_H_

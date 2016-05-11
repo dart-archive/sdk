@@ -21,6 +21,7 @@ http:pkg/http/lib
 i2c:pkg/i2c/lib
 immi_samples:pkg/immi_samples/lib
 immutable:pkg/immutable/lib
+instrumentation_client:third_party/instrumentation_client/lib
 isolate:pkg/isolate/lib
 js_ast:third_party/dart/pkg/js_ast/lib
 js_runtime:third_party/dart/sdk/lib/_internal/js_runtime/lib/

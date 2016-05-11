@@ -26,18 +26,10 @@ deep_nesting1_negative_test: Crash
 deep_nesting2_negative_test: Crash
 deferred_import_core_test: RuntimeError
 function_syntax_test/36: RuntimeError, Pass
+generic_local_functions_test: CompileTimeError
 generic_functions_test: CompileTimeError
 generic_methods_test: CompileTimeError
 generic_sends_test: CompileTimeError
-if_null_assignment_behavior_test/24: RuntimeError
-if_null_assignment_behavior_test/25: RuntimeError
-if_null_assignment_static_test/29: RuntimeError
-if_null_assignment_static_test/30: RuntimeError
-if_null_assignment_static_test/31: RuntimeError
-if_null_assignment_static_test/32: RuntimeError
-if_null_assignment_static_test/33: RuntimeError
-if_null_assignment_static_test/34: RuntimeError
-if_null_assignment_static_test/35: RuntimeError
 issue_25671a_test/01: RuntimeError
 issue_25671b_test/01: RuntimeError
 library_env_test/has_mirror_support: RuntimeError

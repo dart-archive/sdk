@@ -5,7 +5,9 @@
 #ifndef SRC_VM_PROGRAM_FOLDER_H_
 #define SRC_VM_PROGRAM_FOLDER_H_
 
-#ifdef DARTINO_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_LIVE_CODING
+#include "src/vm/program_folder_no_live_coding.h"
+#else  // DARTINO_ENABLE_LIVE_CODING
 
 namespace dartino {
 

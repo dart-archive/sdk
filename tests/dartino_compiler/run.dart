@@ -69,6 +69,7 @@ class DartinoRunner {
           "bar": "baz",
         },
         [],
+        null,
         agentAddress,
         DeviceType.mobile,
         IncrementalMode.production);
@@ -166,6 +167,7 @@ Future<Null> export(
         <String>[],
         constants,
         <String>[],
+        null,
         null,
         null,
         IncrementalMode.none);

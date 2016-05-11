@@ -13,6 +13,8 @@
 #
 # [1] https://github.com/littlekernel/lk).
 
+OS := $(shell uname)
+
 DARTINO_ROOT := $(GET_LOCAL_DIR)
 
 DARTINO_SRC_VM := $(DARTINO_ROOT)/src/vm
@@ -30,10 +32,10 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/dartino.cc \
 	$(DARTINO_SRC_VM)/debug_info.cc \
 	$(DARTINO_SRC_VM)/debug_info.h \
-	$(DARTINO_SRC_VM)/debug_info_no_live_coding.h \
+	$(DARTINO_SRC_VM)/debug_info_no_debugging.h \
 	$(DARTINO_SRC_VM)/dispatch_table.cc \
 	$(DARTINO_SRC_VM)/dispatch_table.h \
-	$(DARTINO_SRC_VM)/dispatch_table_no_live_coding.h \
+	$(DARTINO_SRC_VM)/dispatch_table_debugging.h \
 	$(DARTINO_SRC_VM)/double_list.h \
 	$(DARTINO_SRC_VM)/event_handler.cc \
 	$(DARTINO_SRC_VM)/event_handler_cmsis.cc \
@@ -97,6 +99,7 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/program.cc \
 	$(DARTINO_SRC_VM)/program_folder.cc \
 	$(DARTINO_SRC_VM)/program_folder.h \
+	$(DARTINO_SRC_VM)/program_folder_no_live_coding.h \
 	$(DARTINO_SRC_VM)/program_groups.cc \
 	$(DARTINO_SRC_VM)/program_groups.h \
 	$(DARTINO_SRC_VM)/program.h \
@@ -110,7 +113,7 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/service_api_impl.h \
 	$(DARTINO_SRC_VM)/session.cc \
 	$(DARTINO_SRC_VM)/session.h \
-	$(DARTINO_SRC_VM)/session_no_live_coding.h \
+	$(DARTINO_SRC_VM)/session_no_debugging.h \
 	$(DARTINO_SRC_VM)/signal.h \
 	$(DARTINO_SRC_VM)/snapshot.cc \
 	$(DARTINO_SRC_VM)/snapshot.h \
@@ -181,13 +184,6 @@ DARTINO_SRC_SHARED_SRCS := \
 	$(DARTINO_SRC_SHARED)/globals.h \
 	$(DARTINO_SRC_SHARED)/list.h \
 	$(DARTINO_SRC_SHARED)/names.h \
-	$(DARTINO_SRC_SHARED)/native_socket.h \
-	$(DARTINO_SRC_SHARED)/native_socket_linux.cc \
-	$(DARTINO_SRC_SHARED)/native_socket_lk.cc \
-	$(DARTINO_SRC_SHARED)/native_socket_macos.cc \
-	$(DARTINO_SRC_SHARED)/native_socket_posix.cc \
-	$(DARTINO_SRC_SHARED)/native_socket_windows.cc \
-	$(DARTINO_SRC_SHARED)/natives.h \
 	$(DARTINO_SRC_SHARED)/platform.h \
 	$(DARTINO_SRC_SHARED)/platform_linux.cc \
 	$(DARTINO_SRC_SHARED)/platform_lk.cc \
@@ -230,7 +226,8 @@ MODULE_DEFINES += \
 	DARTINO_TARGET_ARM \
 	DARTINO_THUMB_ONLY \
 	DARTINO_TARGET_OS_LK \
-	DARTINO_ENABLE_FFI
+	DARTINO_ENABLE_FFI \
+	DARTINO_ENABLE_DEBUGGING
 
 ifneq ($(DEBUG),)
 MODULE_DEFINES += DEBUG
@@ -308,17 +305,24 @@ HOST_TOOLS_SRCS := \
 	$(FLASHTOOL_SRCS)
 
 # Defines for compiling host-tools.
-HOST_DEFINES += \
+HOST_DEFINES := \
 	-DDARTINO_ENABLE_LIVE_CODING \
 	-DDARTINO_ENABLE_FFI \
 	-DDARTINO_ENABLE_NATIVE_PROCESSES \
 	-DDARTINO_ENABLE_PRINT_INTERCEPTORS \
-	-DDARTINO_TARGET_OS_LINUX \
 	-DDARTINO_TARGET_OS_POSIX \
 	-DDARTINO32 \
 	-DDARTINO_USE_SINGLE_PRECISION \
 	-DDARTINO_TARGET_ARM \
 	-DDARTINO_THUMB_ONLY
+
+ifeq ($(OS),Darwin)
+HOST_DEFINES += \
+	-DDARTINO_TARGET_OS_MACOS
+else
+HOST_DEFINES += \
+	-DDARTINO_TARGET_OS_LINUX
+endif
 
 # Flags for compiling host-tools.
 HOST_CPPFLAGS += \
@@ -340,6 +344,18 @@ HOST_CPPFLAGS += \
 	-fno-rtti \
 	-fno-exceptions
 
+# Flags for linking host-tools.
+HOST_LDFLAGS := \
+	-m32
+
+ifeq ($(OS),Darwin)
+HOST_LDFLAGS += \
+	-Wl,-dead_strip
+else
+HOST_LDFLAGS += \
+	-Wl,--gc-sections
+endif
+
 HOST_BUILDDIR := $(BUILDDIR)-host
 TOHOSTBUILDDIR = $(addprefix $(HOST_BUILDDIR)/,$(1))
 
@@ -357,7 +373,7 @@ $(LIBRARY_GENERATOR_CCOBJS): $(HOST_BUILDDIR)/%.o: %.cc
 
 $(LIBRARY_GENERATOR_TOOL): $(LIBRARY_GENERATOR_CCOBJS)
 	@echo host linking $@
-	$(NOECHO)g++ -m32 -Wl,--gc-sections -o $(LIBRARY_GENERATOR_TOOL) -Wl,--start-group $(LIBRARY_GENERATOR_CCOBJS) -Wl,--end-group -lpthread
+	$(NOECHO)g++ $(HOST_LDFLAGS) -o $(LIBRARY_GENERATOR_TOOL) $(LIBRARY_GENERATOR_CCOBJS) -lpthread
 
 HOST_GENERATED += $(LIBRARY_GENERATOR_TOOL)
 
@@ -396,7 +412,7 @@ $(FLASHTOOL_CCOBJS): $(HOST_BUILDDIR)/%.o: %.cc
 $(FLASHTOOL_TOOL): $(FLASHTOOL_CCOBJS)
 	echo $(FLASHTOOL_CCOBJS)
 	@echo host linking $@
-	$(NOECHO)g++ -m32 -Wl,--gc-sections -o $(FLASHTOOL_TOOL) -Wl,--start-group $(FLASHTOOL_CCOBJS) -Wl,--end-group -lpthread
+	$(NOECHO)g++ $(HOST_LDFLAGS) -o $(FLASHTOOL_TOOL) $(FLASHTOOL_CCOBJS) -lpthread
 
 HOST_GENERATED += $(FLASHTOOL_TOOL)
 

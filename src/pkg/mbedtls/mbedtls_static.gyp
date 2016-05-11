@@ -6,7 +6,8 @@
   'targets': [
     {
       'target_name': 'mbedtls',
-      'type': 'shared_library',
+      'type': 'static_library',
+      'standalone_static_library': 1,
       'includes': [
         'mbedtls_sources.gypi',
       ],
@@ -18,8 +19,14 @@
           '-std=c99', # clang on mac does not like inline unless we explicitly use c99.
         ],
       },
+      'defines': [
+        'MBEDTLS_CONFIG_FILE=<mbedtls_config.h>',
+      ],
       'sources': [
         'bindings.c',
+      ],
+      'include_dirs': [
+        '.',
       ],
       'conditions': [
         ['OS=="linux"', {

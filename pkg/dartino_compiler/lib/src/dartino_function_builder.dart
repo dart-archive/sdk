@@ -132,7 +132,7 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
         } else {
           int id = builder.lookupConstantIdByValue(constant);
           if (id == null) {
-            throw "Unsupported constant: ${constant.toStructuredString()}";
+            throw "Unsupported constant: ${constant.toStructuredText()}";
           }
           dartinoConstants.add(
               new DartinoConstant(id, MapId.constants));
@@ -152,7 +152,7 @@ class DartinoFunctionBuilder extends DartinoFunctionBase {
     sb.writeln("Constants:");
     constants.forEach((constant, int index) {
       if (constant is ConstantValue) {
-        constant = constant.toStructuredString();
+        constant = constant.toStructuredText();
       }
       sb.writeln("  #$index: $constant");
     });

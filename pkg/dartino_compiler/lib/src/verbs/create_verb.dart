@@ -15,9 +15,6 @@ import '../worker/developer.dart' show
     findProjectTemplate,
     Settings;
 
-import 'actions.dart' show
-    ActionGroup;
-
 import 'documentation.dart' show
     createDocumentation;
 

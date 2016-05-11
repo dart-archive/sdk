@@ -55,6 +55,7 @@ import 'package:compiler/src/diagnostics/diagnostic_listener.dart';
 import 'package:compiler/src/elements/elements.dart';
 
 import '../incremental/dartino_compiler_incremental.dart' show
+    IncrementalCompilationFailed,
     IncrementalCompiler;
 
 import 'dartino_diagnostic_reporter.dart' show
@@ -117,6 +118,12 @@ class DartinoCompilerImplementation extends CompilerImpl {
       internalContext = new DartinoContext(this);
     }
     return internalContext;
+  }
+
+  void reportCrashInUserCode(String message, exception, stackTrace) {
+    if (exception is! IncrementalCompilationFailed) {
+      super.reportCrashInUserCode(message, exception, stackTrace);
+    }
   }
 
   String dartinoPatchLibraryFor(String name) {

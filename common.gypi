@@ -69,6 +69,7 @@
 
         'defines': [
           'DARTINO_ENABLE_LIVE_CODING',
+          'DARTINO_ENABLE_DEBUGGING',
           'DARTINO_ENABLE_FFI',
           'DARTINO_ENABLE_NATIVE_PROCESSES',
           'DARTINO_ENABLE_PRINT_INTERCEPTORS',
@@ -786,6 +787,15 @@
 
         'defines!': [
           'DARTINO_ENABLE_LIVE_CODING',
+        ],
+      },
+
+      'dartino_disable_debugging': {
+        'abstract': 1,
+
+        'defines!': [
+          'DARTINO_ENABLE_LIVE_CODING',
+          'DARTINO_ENABLE_DEBUGGING',
         ],
       },
 

@@ -4,15 +4,14 @@
 
 library dartino.vm_session;
 
-import 'dart:core';
 import 'dart:async';
 import 'dart:convert';
 
-import 'dart:io' show
-    File;
-
 import 'dart:typed_data' show
     ByteData;
+
+import 'package:persistent/persistent.dart' show
+    Pair;
 
 import 'vm_commands.dart';
 import 'dartino_system.dart';
@@ -20,8 +19,8 @@ import 'dartino_system.dart';
 import 'dartino_class.dart' show
     DartinoClass;
 
-import 'incremental/dartino_compiler_incremental.dart'
-    show IncrementalCompiler;
+import 'incremental/dartino_compiler_incremental.dart' show
+    IncrementalCompiler;
 
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
@@ -53,13 +52,18 @@ import 'src/diagnostic.dart';
 import 'src/hub/exit_codes.dart' as exit_codes;
 
 import 'src/vm_connection.dart' show
-  VmConnection;
+    VmConnection;
 
-import 'package:persistent/persistent.dart' show
-    Pair;
+import 'cli_debugger.dart' show
+    InputHandler;
 
-part 'vm_command_reader.dart';
-part 'input_handler.dart';
+class SessionCommandTransformerBuilder
+    extends CommandTransformerBuilder<Pair<int, ByteData>> {
+
+  Pair<int, ByteData> makeCommand(int code, ByteData payload) {
+    return new Pair<int, ByteData>(code, payload);
+  }
+}
 
 /// Encapsulates a connection to a running dartino-vm and provides a
 /// [VmCommand] based view on top of it.
@@ -291,19 +295,14 @@ class DartinoVmContext {
   }
 
   // Enable support for live-editing commands. This must be called prior to
-  // sending deltas or if the program termination behavior is to be observed.
-  // TODO(zerny): Separate termination observation from live editing.
+  // sending deltas.
   Future enableLiveEditing() async {
     await runCommand(const LiveEditing());
   }
 
   // Enable support for debugging commands. This must be called prior to setting
-  // breakpoints. Currently debugging support entails live editing, but that
-  // will not continue to be the case once support for attaching to VMs running
-  // read-only programs has been added.
-  // TODO(zerny): Separate debugging from live editing.
-  Future<DebuggingReply> enableDebugger() async {
-    await enableLiveEditing();
+  // breakpoints.
+  Future<DebuggingReply> enableDebugging() async {
     VmCommand reply = await runCommand(const Debugging());
     if (reply == null || reply is! DebuggingReply) {
       throw new Exception("Expected a reply from the debugging command");
@@ -321,7 +320,7 @@ class DartinoVmContext {
       SessionState state,
       {bool echo: false,
        Uri snapshotLocation}) async {
-    DebuggingReply debuggingReply = await enableDebugger();
+    DebuggingReply debuggingReply = await enableDebugging();
 
     runningFromSnapshot = debuggingReply.isFromSnapshot;
     if (runningFromSnapshot) {
@@ -363,6 +362,7 @@ class DartinoVmContext {
         };
       }
     } else {
+      enableLiveEditing();
       for (DartinoDelta delta in state.compilationResults) {
         await applyDelta(delta);
       }

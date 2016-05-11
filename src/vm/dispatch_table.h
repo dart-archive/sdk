@@ -5,9 +5,9 @@
 #ifndef SRC_VM_DISPATCH_TABLE_H_
 #define SRC_VM_DISPATCH_TABLE_H_
 
-#ifndef DARTINO_ENABLE_LIVE_CODING
-#include "src/vm/dispatch_table_no_live_coding.h"
-#else  // DARTINO_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_DEBUGGING
+#include "src/vm/dispatch_table_no_debugging.h"
+#else  // DARTINO_ENABLE_DEBUGGING
 
 namespace dartino {
 
@@ -39,5 +39,5 @@ class DispatchTable {
 
 }  // namespace dartino
 
-#endif  // DARTINO_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_DEBUGGING
 #endif  // SRC_VM_DISPATCH_TABLE_H_

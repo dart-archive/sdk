@@ -5,9 +5,9 @@
 #ifndef SRC_VM_DEBUG_INFO_H_
 #define SRC_VM_DEBUG_INFO_H_
 
-#ifndef DARTINO_ENABLE_LIVE_CODING
-#include "src/vm/debug_info_no_live_coding.h"
-#else  // DARTINO_ENABLE_LIVE_CODING
+#ifndef DARTINO_ENABLE_DEBUGGING
+#include "src/vm/debug_info_no_debugging.h"
+#else  // DARTINO_ENABLE_DEBUGGING
 
 #include "src/vm/hash_map.h"
 #include "src/vm/object.h"
@@ -167,6 +167,6 @@ class ProcessDebugInfo {
 
 }  // namespace dartino
 
-#endif  // DARTINO_ENABLE_LIVE_CODING
+#endif  // DARTINO_ENABLE_DEBUGGING
 
 #endif  // SRC_VM_DEBUG_INFO_H_
