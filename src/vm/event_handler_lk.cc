@@ -108,6 +108,7 @@ EventHandler::Status EventHandler::AddEventListener(
     return Status::ILLEGAL_STATE;
   }
   port_t read_port;
+  // TODO(493): Implement one-shot semantics.
   if (port_open(str, event_listener, &read_port) != 0) {
     free(str);
     delete event_listener;
@@ -160,7 +161,8 @@ void EventHandler::Run() {
       EventListener* event_listener =
           reinterpret_cast<EventListener*>(result.ctx);
       event_listener->Send(value);
-      delete event_listener;
+      // TODO(493): Don't delete the event_listener as LK ports are
+      // currently not single-shot.
     }
 
     HandleTimeouts();
