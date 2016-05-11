@@ -17,6 +17,10 @@
 #include "src/vm/object_memory.h"
 #include "src/vm/object.h"
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 namespace dartino {
 
 OldSpace::OldSpace(TwoSpaceHeap* owner)
@@ -368,6 +372,17 @@ static void ALWAYS_INLINE ObjectMemMove(uword dest, uword source, uword size) {
   }
 }
 
+static int ALWAYS_INLINE FindFirstSet(uint32 x) {
+#ifdef _MSC_VER
+#pragma intrinsic(_BitScanForward)
+  unsigned index;
+  bool non_zero = _BitScanForward(&index, x);
+  return index + non_zero;
+#else
+  return __builtin_ffs(x);
+#endif
+}
+
 CompactingVisitor::CompactingVisitor(OldSpace* space,
                                      FixPointersVisitor* fix_pointers_visitor)
     : used_(0),
@@ -380,7 +395,7 @@ uword CompactingVisitor::Visit(HeapObject* object) {
   uint32 bits = *bits_addr >> pos;
   if ((bits & 1) == 0) {
     // Object is unmarked.
-    if (bits != 0) return (__builtin_ffs(bits) - 1) << GCMetadata::kWordShift;
+    if (bits != 0) return (FindFirstSet(bits) - 1) << GCMetadata::kWordShift;
     // If all the bits in this mark word are zero, then let's see if we can
     // skip a bit more.
     uword next_live_object =
@@ -388,7 +403,7 @@ uword CompactingVisitor::Visit(HeapObject* object) {
     // This never runs over the end of the chunk because the last word in the
     // chunk (the sentinel) is artificially marked live.
     while (*++bits_addr == 0) next_live_object += GCMetadata::kCardSize;
-    next_live_object += (__builtin_ffs(*bits_addr) - 1)
+    next_live_object += (FindFirstSet(*bits_addr) - 1)
                         << GCMetadata::kWordShift;
     ASSERT(next_live_object - object->address() >= (uword)object->Size());
     return next_live_object - object->address();
