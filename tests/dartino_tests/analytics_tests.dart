@@ -11,6 +11,8 @@ import 'package:dartino_compiler/src/hub/analytics.dart';
 import 'package:expect/expect.dart' show Expect;
 import 'package:path/path.dart' show isAbsolute, join;
 
+import 'package:dartino_compiler/src/verbs/infrastructure.dart';
+
 main() async {
   bool receivedLogMessage = false;
   log(message) {
@@ -106,10 +108,20 @@ main() async {
     await analytics.shutdown();
     await mockServer.assertNoMessages('optOut');
 
+    String dartPath = 'some/path/to/my.dart';
+    String dartPathHash = analytics.hash(dartPath);
+    Expect.equals(dartPathHash.indexOf('some'), -1);
+    Expect.equals(dartPathHash.indexOf('dart'), -1);
+
     analytics.writeNewUuid();
     analytics.logStartup();
+    analytics.logRequest([]);
+    analytics.logRequest(['help']);
+    analytics.logRequest(['help', 'all']);
+    analytics.logRequest(['analyze', dartPath]);
     analytics.logComplete(0);
     await analytics.shutdown();
+
     await mockServer.expectMessage([
       TAG_STARTUP,
       analytics.uuid,
@@ -117,6 +129,10 @@ main() async {
       Platform.version,
       Platform.operatingSystem,
     ]);
+    await mockServer.expectMessage([TAG_REQUEST]);
+    await mockServer.expectMessage([TAG_REQUEST, 'help']);
+    await mockServer.expectMessage([TAG_REQUEST, 'help', 'all']);
+    await mockServer.expectMessage([TAG_REQUEST, 'analyze', dartPathHash]);
     await mockServer.expectMessage([TAG_COMPLETE, '0']);
     await mockServer.expectMessage([TAG_SHUTDOWN]);
     await mockServer.assertNoMessages('optIn');

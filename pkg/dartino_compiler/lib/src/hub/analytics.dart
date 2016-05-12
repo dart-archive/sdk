@@ -7,9 +7,11 @@
 library dartino_compiler.worker.analytics;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart' show Hash, SHA256;
 import 'package:instrumentation_client/instrumentation_client.dart';
 
 import '../console_print.dart' show OneArgVoid;
@@ -20,13 +22,14 @@ import '../please_report_crash.dart'
         crashReportRequested,
         requestBugReportOnOtherCrashMessage,
         stringifyError;
-
 import '../verbs/infrastructure.dart' show fileUri;
+import 'sentence_parser.dart' show looksLikeAUri;
 
 const String _dartinoUuidEnvVar = const String.fromEnvironment('dartino.uuid');
 
 // Tags used when sending analytics
 const String TAG_COMPLETE = 'complete';
+const String TAG_REQUEST = 'request';
 const String TAG_SHUTDOWN = 'shutdown';
 const String TAG_STARTUP = 'startup';
 
@@ -36,6 +39,8 @@ class Analytics {
   final OneArgVoid _log;
 
   InstrumentationClient _client;
+
+  final List<int> _hashSalt = Platform.localHostname.codeUnits;
 
   /// The url used by [InstrumentationClient] to send analytics.
   final String serverUrl;
@@ -67,6 +72,12 @@ class Analytics {
     if (uuidUri == null) return;
     File uuidFile = new File.fromUri(uuidUri);
     if (uuidFile.existsSync()) uuidFile.deleteSync();
+  }
+
+  /// Return a string which is a hash of the original string.
+  String hash(String original) {
+    Hash hash = new SHA256()..add(_hashSalt)..add(original.codeUnits);
+    return BASE64.encode(hash.close());
   }
 
   /// Load the UUID from the environment or read it from disk.
@@ -109,6 +120,14 @@ class Analytics {
   }
 
   void logComplete(int exitCode) => _send([TAG_COMPLETE, '$exitCode']);
+
+  void logRequest(List<String> arguments) {
+    var fields = <String>[TAG_REQUEST];
+    for (String arg in arguments) {
+      fields.add(looksLikeAUri(arg) ? hash(arg) : arg);
+    }
+    _send(fields);
+  }
 
   void logShutdown() => _send([TAG_SHUTDOWN]);
 
