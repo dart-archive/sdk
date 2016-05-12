@@ -292,14 +292,14 @@ class SentenceParser {
     tokens.consume();
     return name;
   }
+}
 
-  /// Returns true if [word] looks like it is a (relative) URI.
-  bool looksLikeAUri(String word) {
-    return
-        word != null &&
-        !word.startsWith("-") &&
-        (word.contains(".") || word.contains(separator));
-  }
+/// Returns true if [word] looks like it is a (relative) URI.
+bool looksLikeAUri(String word) {
+  return
+      word != null &&
+      !word.startsWith("-") &&
+      (word.contains(".") || word.contains('/') || word.contains('\\'));
 }
 
 String quoteString(String string) => JSON.encode(string);

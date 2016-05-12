@@ -264,8 +264,7 @@ Future<Null> handleVerb(
   crashReportRequested = false;
 
   Future<int> performVerb() async {
-    //TODO capture requested operation via clientConnection.analytics.
-    //See https://github.com/dartino/sdk/issues/467
+    analytics?.logRequest(arguments);
     clientConnection.parseArguments(arguments);
     String sessionName = clientConnection.sentence.sessionName;
     UserSession session;
