@@ -1550,7 +1550,7 @@ void Session::PopToMap(int map_index, int64 id) {
 }
 
 void Session::AddToMap(int map_index, int64 id, Object* value) {
-  ASSERT(!program()->was_loaded_from_snapshot());
+  ASSERT(maps_[map_index] != NULL);
   maps_[map_index]->Add(id, value);
 }
 
