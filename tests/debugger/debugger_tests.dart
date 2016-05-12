@@ -119,6 +119,7 @@ Future runTest(String name, Uri uri,
         : (DartinoVmContext _) => new Stream.fromIterable(debuggerCommands),
       Uri.base,
       state,
+      state.stdoutSink,
       echo: true,
       snapshotLocation: snapshotPath);
 

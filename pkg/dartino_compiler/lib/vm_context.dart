@@ -5,7 +5,9 @@
 library dartino.vm_session;
 
 import 'dart:async';
-import 'dart:convert';
+
+import 'dart:convert' show
+    UTF8;
 
 import 'dart:typed_data' show
     ByteData;
@@ -65,14 +67,60 @@ class SessionCommandTransformerBuilder
   }
 }
 
+// TODO(sigurdm): for now only the stdio and stderr events are actually
+// notified.
+abstract class DebugListener {
+  // Notification that a new process has started.
+  processStart(int processId) {}
+  // Notification that a process is ready to run.
+  processRunnable(int processId) {}
+  // Notification that a process has exited.
+  processExit(int processId) {}
+  // A process has paused at start, before executing code.
+  pauseStart(int processId, BackTraceFrame topframe) {}
+  // An process has paused at exit, before terminating.
+  pauseExit(int processId, BackTraceFrame topframe) {}
+  // A process has paused at a breakpoint or due to stepping.
+  pauseBreakpoint(int processId, BackTraceFrame topframe, int breakpointId) {}
+  // A process has paused due to interruption.
+  pauseInterrupted(int processId, BackTraceFrame topframe) {}
+  // A process has paused due to an exception.
+  pauseException(int processId, BackTraceFrame topframe, RemoteObject thrown) {}
+  // A process has started or resumed execution.
+  resume(int processId) {}
+  // A breakpoint has been added for a process.
+  breakpointAdded(int processId, Breakpoint breakpoint) {}
+  // A breakpoint has been removed.
+  breakpointRemoved(int processId, Breakpoint breakpoint) {}
+  // A garbage collection event.
+  gc(int processId) {}
+  // Notification of bytes written to stdout.
+  writeStdOut(int processId, List<int> data) {}
+  // Notification of bytes written stderr.
+  writeStdErr(int processId, List<int> data) {}
+  // The connection to the vm was lost.
+  lostConnection() {}
+}
+
+class SinkDebugListener extends DebugListener {
+  final Sink stdoutSink;
+  final Sink stderrSink;
+  SinkDebugListener(this.stdoutSink, this.stderrSink);
+
+  writeStdOut(int processId, List<int> data) {
+    stdoutSink.add(data);
+  }
+
+  writeStdErr(int processId, List<int> data) {
+    stderrSink.add(data);
+  }
+}
+
 /// Encapsulates a connection to a running dartino-vm and provides a
 /// [VmCommand] based view on top of it.
 class DartinoVmContext {
   /// The connection to a dartino-vm.
   final VmConnection connection;
-
-  final Sink<List<int>> stdoutSink;
-  final Sink<List<int>> stderrSink;
 
   /// The VM command reader reads data from the vm, converts the data
   /// into a [VmCommand], and provides a stream iterator iterating over
@@ -130,11 +178,11 @@ class DartinoVmContext {
 
   Function translateClassMessage = (int x) => x;
 
+  List<DebugListener> listeners = new List<DebugListener>();
+
   DartinoVmContext(
           VmConnection connection,
           this.compiler,
-          this.stdoutSink,
-          this.stderrSink,
           [this.processExitCodeFuture])
       : connection = connection,
         _commandIterator =
@@ -147,12 +195,6 @@ class DartinoVmContext {
     // TODO(ajohnsen): Should only be initialized on debug()/testDebugger().
     debugState = new DebugState(this);
   }
-
-  void writeStdout(String s) {
-    if (!silent && stdoutSink != null) stdoutSink.add(UTF8.encode(s));
-  }
-
-  void writeStdoutLine(String s) => writeStdout("$s\n");
 
   /// Convenience around [runCommands] for running just a single command.
   Future<VmCommand> runCommand(VmCommand command) {
@@ -221,9 +263,13 @@ class DartinoVmContext {
           translateFunctionMessage,
           translateClassMessage);
       if (command is StdoutData) {
-        stdoutSink?.add(command.value);
+        listeners.forEach((DebugListener listener) {
+          listener.writeStdOut(0, command.value);
+        });
       } else if (command is StderrData) {
-        stderrSink?.add(command.value);
+        listeners.forEach((DebugListener listener) {
+          listener.writeStdErr(0, command.value);
+        });
       } else {
         result = command;
       }
@@ -322,6 +368,7 @@ class DartinoVmContext {
       Stream<String> inputLines(DartinoVmContext session),
       Uri base,
       SessionState state,
+      Sink<List<int>> stdout,
       {bool echo: false,
        Uri snapshotLocation}) async {
     DebuggingReply debuggingReply = await enableDebugging();
@@ -377,7 +424,8 @@ class DartinoVmContext {
 
     // TODO(ahe): Arguments?
     await spawnProcess([]);
-    return new InputHandler(this, inputLines(this), echo, base).run(state);
+    return new InputHandler(this, inputLines(this), echo, base, stdout)
+        .run(state);
   }
 
   Future terminate() async {

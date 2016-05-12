@@ -71,7 +71,6 @@ import '../hub/client_commands.dart' show
 
 import '../verbs/infrastructure.dart' show
     ClientCommand,
-    ClientConnection,
     CommandSender,
     DiagnosticKind,
     DartinoCompiler,
@@ -79,10 +78,13 @@ import '../verbs/infrastructure.dart' show
     IncrementalCompiler,
     WorkerConnection,
     IsolatePool,
-    DartinoVmContext,
     SharedTask,
     StreamIterator,
     throwFatalError;
+
+import '../../vm_context.dart' show
+    DartinoVmContext,
+    SinkDebugListener;
 
 import '../../incremental/dartino_compiler_incremental.dart' show
     IncrementalCompilationFailed;
@@ -255,9 +257,10 @@ Future<Null> attachToVm(VmConnection connection, SessionState state) async {
   DartinoVmContext vmContext = new DartinoVmContext(
       connection,
       state.compiler,
-      state.stdoutSink,
-      state.stderrSink,
       null);
+
+  vmContext.listeners.add(
+      new SinkDebugListener(state.stdoutSink, state.stderrSink));
 
   // Perform handshake with VM which validates that VM and compiler
   // have the same versions.

@@ -4,6 +4,9 @@
 
 import "dart:async";
 
+import "dart:convert" show
+    UTF8;
+
 import "dart:io" show
     File;
 
@@ -60,6 +63,7 @@ class InputHandler {
   final Stream<String> stream;
   final bool echo;
   final Uri base;
+  final Sink<List<int>> stdout;
 
   bool printForTesting = false;
 
@@ -68,15 +72,15 @@ class InputHandler {
   int processPagingCount = 10;
   int processPagingCurrent = 0;
 
-  InputHandler(this.vmContext, this.stream, this.echo, this.base) {
+  InputHandler(this.vmContext, this.stream, this.echo, this.base, this.stdout) {
     if (echo) printForTesting = true;
   }
 
-  void printPrompt() => vmContext.writeStdout('> ');
+  void printPrompt() => writeStdout('> ');
 
-  writeStdout(String s) => vmContext.writeStdout(s);
+  writeStdout(String s) => stdout.add(UTF8.encode(s));
 
-  writeStdoutLine(String s) => vmContext.writeStdout("$s\n");
+  writeStdoutLine(String s) => writeStdout("$s\n");
 
   Future handleLine(StreamIterator stream, SessionState state) async {
     String line = stream.current;

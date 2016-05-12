@@ -275,6 +275,7 @@ Future<int> interactiveDebuggerTask(
   return await vmContext.debug((DartinoVmContext _) => inputStream,
       base,
       state,
+      state.stdoutSink,
       snapshotLocation: snapshotLocation);
 }
 
