@@ -22,7 +22,7 @@ vars = {
   # Used by dartino_tests.
   "isolate_tag": "@0.2.2",
 
-  "instrumentation_client_rev": "@9d6a136bff412c3f428a3435ff1a77cbbe5f1b6c",
+  "instrumentation_client_rev": "@f06dca45223695f7828b9f045ef4317833fb2dba",
 
   "dart_rev": "@1fa317ac4dd96280f1693d998bc0e9228713628b",
 
