@@ -52,6 +52,8 @@ class Ethernet {
   ///
   /// It is an error to call this method more than once, even with the same
   /// arguments.
+
+  // TODO(karlklose): Change to lower-case (initializeNetworkStack)
   bool InitializeNetworkStack(InternetAddress address, InternetAddress netmask,
       InternetAddress gateway, InternetAddress dnsServer) {
     if (_initialized) {
