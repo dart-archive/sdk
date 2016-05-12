@@ -422,7 +422,7 @@ void InterpreterGeneratorARM::GenerateMethodEntry() {
   StoreFramePointer(R6);
   __ LoadInt(R2, 0);
   Push(R2);
-  __ add(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
+  __ adds(R5, R0, Immediate(Function::kSize - HeapObject::kTag));
   CheckStackOverflow(0);
   Dispatch(0);
 }
@@ -517,7 +517,7 @@ void InterpreterGeneratorARM::DoLoadBoxed() {
 void InterpreterGeneratorARM::DoLoadStatic() {
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::kStaticsOffset));
-  __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
+  __ adds(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R1, Operand(R0, TIMES_WORD_SIZE)));
   Push(R0);
   Dispatch(kLoadStaticLength);
@@ -526,7 +526,7 @@ void InterpreterGeneratorARM::DoLoadStatic() {
 void InterpreterGeneratorARM::DoLoadStaticInit() {
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::kStaticsOffset));
-  __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
+  __ adds(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R1, Operand(R0, TIMES_WORD_SIZE)));
 
   Label done;
@@ -556,7 +556,7 @@ void InterpreterGeneratorARM::DoLoadStaticInit() {
 void InterpreterGeneratorARM::DoLoadField() {
   __ ldrb(R1, Address(R5, 1));
   LoadLocal(R0, 0);
-  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ adds(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R0, Operand(R1, TIMES_WORD_SIZE)));
   StoreLocal(R0, 0);
   Dispatch(kLoadFieldLength);
@@ -565,7 +565,7 @@ void InterpreterGeneratorARM::DoLoadField() {
 void InterpreterGeneratorARM::DoLoadFieldWide() {
   __ ldr(R1, Address(R5, 1));
   LoadLocal(R0, 0);
-  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ adds(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R0, Operand(R1, TIMES_WORD_SIZE)));
   StoreLocal(R0, 0);
   Dispatch(kLoadFieldWideLength);
@@ -600,7 +600,7 @@ void InterpreterGeneratorARM::DoStoreStatic() {
   LoadLocal(R2, 0);
   __ ldr(R0, Address(R5, 1));
   __ ldr(R1, Address(R4, Process::kStaticsOffset));
-  __ add(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
+  __ adds(R3, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R0, TIMES_WORD_SIZE)));
 
   AddToRememberedSet(R1, R2, R0);
@@ -612,7 +612,7 @@ void InterpreterGeneratorARM::DoStoreField() {
   __ ldrb(R1, Address(R5, 1));
   LoadLocal(R2, 0);
   LoadLocal(R0, 1);
-  __ add(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ adds(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   DropNAndSetTop(1, R2);
 
@@ -625,7 +625,7 @@ void InterpreterGeneratorARM::DoStoreFieldWide() {
   __ ldr(R1, Address(R5, 1));
   LoadLocal(R2, 0);
   LoadLocal(R0, 1);
-  __ add(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ adds(R3, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ str(R2, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
   DropNAndSetTop(1, R2);
 
@@ -747,7 +747,7 @@ void InterpreterGeneratorARM::DoInvokeSelector() {
 
   __ LoadInt(R7, -2);
   __ ldr(R2, Address(R5, 1));
-  __ sub(R7, R7, R2);
+  __ subs(R7, R7, R2);
   LoadFramePointer(R2);
   __ ldr(R2, Address(R2, Operand(R7, TIMES_WORD_SIZE)));
 
@@ -914,7 +914,7 @@ void InterpreterGeneratorARM::InvokeBitShr(const char* fallback) {
   __ asr(R0, R0, R1);
 
   // Retag and store.
-  __ add(R0, R0, R0);
+  __ adds(R0, R0, R0);
   DropNAndSetTop(1, R0);
   Dispatch(kInvokeBitAndLength);
 }
@@ -962,7 +962,7 @@ void InterpreterGeneratorARM::DoReturnNull() { Return(true); }
 
 void InterpreterGeneratorARM::DoBranchWide() {
   __ ldr(R0, Address(R5, 1));
-  __ add(R5, R5, R0);
+  __ adds(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -975,7 +975,7 @@ void InterpreterGeneratorARM::DoBranchIfTrueWide() {
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
-  __ add(R5, R5, R0);
+  __ adds(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -988,14 +988,14 @@ void InterpreterGeneratorARM::DoBranchIfFalseWide() {
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
-  __ add(R5, R5, R0);
+  __ adds(R5, R5, R0);
   Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoBranchBack() {
   CheckStackOverflow(0);
   __ ldrb(R0, Address(R5, 1));
-  __ sub(R5, R5, R0);
+  __ subs(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -1010,7 +1010,7 @@ void InterpreterGeneratorARM::DoBranchBackIfTrue() {
 
   __ Bind(&branch);
   __ ldrb(R0, Address(R5, 1));
-  __ sub(R5, R5, R0);
+  __ subs(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -1025,14 +1025,14 @@ void InterpreterGeneratorARM::DoBranchBackIfFalse() {
 
   __ Bind(&branch);
   __ ldrb(R0, Address(R5, 1));
-  __ sub(R5, R5, R0);
+  __ subs(R5, R5, R0);
   Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoBranchBackWide() {
   CheckStackOverflow(0);
   __ ldr(R0, Address(R5, 1));
-  __ sub(R5, R5, R0);
+  __ subs(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -1047,7 +1047,7 @@ void InterpreterGeneratorARM::DoBranchBackIfTrueWide() {
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
-  __ sub(R5, R5, R0);
+  __ subs(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -1062,7 +1062,7 @@ void InterpreterGeneratorARM::DoBranchBackIfFalseWide() {
 
   __ Bind(&branch);
   __ ldr(R0, Address(R5, 1));
-  __ sub(R5, R5, R0);
+  __ subs(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -1071,7 +1071,7 @@ void InterpreterGeneratorARM::DoPopAndBranchWide() {
   __ add(R6, R6, Operand(R0, TIMES_WORD_SIZE));
 
   __ ldr(R0, Address(R5, 2));
-  __ add(R5, R5, R0);
+  __ adds(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -1082,7 +1082,7 @@ void InterpreterGeneratorARM::DoPopAndBranchBackWide() {
   __ add(R6, R6, Operand(R0, TIMES_WORD_SIZE));
 
   __ ldr(R0, Address(R5, 2));
-  __ sub(R5, R5, R0);
+  __ subs(R5, R5, R0);
   Dispatch(0);
 }
 
@@ -1171,21 +1171,21 @@ void InterpreterGeneratorARM::DoSubroutineCall() {
   __ lsl(R1, R1, Immediate(Smi::kTagSize));
   Push(R1);
 
-  __ add(R5, R5, R0);
+  __ adds(R5, R5, R0);
   Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoSubroutineReturn() {
   Pop(R0);
   __ lsr(R0, R0, Immediate(Smi::kTagSize));
-  __ sub(R5, R5, R0);
+  __ subs(R5, R5, R0);
   Dispatch(0);
 }
 
 void InterpreterGeneratorARM::DoProcessYield() {
   LoadLocal(R0, 0);
   __ asr(R0, R0, Immediate(1));
-  __ add(R5, R5, Immediate(kProcessYieldLength));
+  __ adds(R5, R5, Immediate(kProcessYieldLength));
   StoreLocal(R8, 0);
   __ b(&done_);
 }
@@ -1319,7 +1319,7 @@ void InterpreterGeneratorARM::DoIntrinsicObjectEquals() {
 void InterpreterGeneratorARM::DoIntrinsicGetField() {
   __ ldrb(R1, Address(R0, 2 + Function::kSize - HeapObject::kTag));
   LoadLocal(R0, 0);
-  __ add(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
+  __ adds(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R0, Operand(R1, TIMES_WORD_SIZE)));
 
   __ mov(PC, LR);
@@ -1329,7 +1329,7 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
   __ ldrb(R1, Address(R0, 3 + Function::kSize - HeapObject::kTag));
   LoadLocal(R7, 0);
   LoadLocal(R2, 1);
-  __ add(R3, R2, Immediate(Instance::kSize - HeapObject::kTag));
+  __ adds(R3, R2, Immediate(Instance::kSize - HeapObject::kTag));
   __ str(R7, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
 
   __ mov(R9, LR);
@@ -1362,7 +1362,7 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexGet() {
 
   // Load from the array and continue.
   ASSERT(Smi::kTagSize == 1);
-  __ add(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
+  __ adds(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R2, Operand(R1, TIMES_2)));
 
   __ mov(PC, LR);
@@ -1453,7 +1453,7 @@ void InterpreterGeneratorARM::StoreLocal(Register reg, int index) {
 }
 
 void InterpreterGeneratorARM::Drop(int n) {
-  __ add(R6, R6, Immediate(n * kWordSize));
+  __ adds(R6, R6, Immediate(n * kWordSize));
 }
 
 void InterpreterGeneratorARM::Drop(Register reg) {
@@ -1651,12 +1651,12 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   int id_offset = Class::kIdOrTransformationTargetOffset - HeapObject::kTag;
   __ Bind(&dispatch);
   __ ldr(R2, Address(R2, id_offset));
-  __ add(R2, R2, R7);
+  __ adds(R2, R2, R7);
 
   // Fetch the entry from the table. Because the index is smi tagged
   // we only multiply by two -- not four -- when indexing.
   ASSERT(Smi::kTagSize == 1);
-  __ add(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
+  __ adds(R1, R1, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R1, Address(R1, Operand(R2, TIMES_2)));
 
   // Validate that the offset stored in the entry matches the offset
@@ -1722,7 +1722,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
 void InterpreterGeneratorARM::InvokeNative(bool yield, bool safepoint) {
   __ ldrb(R1, Address(R5, 1));
   // Also skip two empty slots.
-  __ add(R1, R1, Immediate(2));
+  __ adds(R1, R1, Immediate(2));
   __ ldrb(R0, Address(R5, 2));
 
   // Load native from native table.
@@ -1838,7 +1838,7 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
     __ sub(R2, R2, Immediate(Instance::kSize));
 
     // R3 = StackPointer(R6) + NumberOfFields*kPointerSize
-    __ add(R3, R6, R2);
+    __ adds(R3, R6, R2);
 
     Label loop;
     Label break_loop_with_mutable_field;
@@ -2007,7 +2007,7 @@ void InterpreterGeneratorARM::Dispatch(int size) {
 #ifdef DARTINO_THUMB_ONLY
   __ ldrb(R7, Address(R5, size));
   if (size > 0) {
-    __ add(R5, R5, Immediate(size));
+    __ adds(R5, R5, Immediate(size));
   }
 #else
   __ ldrb(R7, Address(R5, size), WRITE_BACK);
@@ -2043,7 +2043,7 @@ void InterpreterGeneratorARM::RestoreState() {
   __ ldr(R6, Address(R4, Process::kCoroutineOffset));
   __ ldr(R6, Address(R6, Coroutine::kStackOffset - HeapObject::kTag));
   __ ldr(R5, Address(R6, Stack::kTopOffset - HeapObject::kTag));
-  __ add(R6, R6, Immediate(Stack::kSize - HeapObject::kTag));
+  __ adds(R6, R6, Immediate(Stack::kSize - HeapObject::kTag));
   __ add(R6, R6, Operand(R5, TIMES_2));
 
   // Load constants into registers.

@@ -167,6 +167,7 @@ class Assembler {
   INSTRUCTION_3(add, "add %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(add, "add %r, %r, %o", Register, Register, const Operand&);
   INSTRUCTION_3(adds, "adds %r, %r, %r", Register, Register, Register);
+  INSTRUCTION_3(adds, "adds %r, %r, %i", Register, Register, const Immediate&);
 
   INSTRUCTION_3(and_, "and %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(and_, "and %r, %r, %r", Register, Register, Register);
