@@ -127,6 +127,8 @@ class SentenceParser {
         return new Preposition(PrepositionKind.FOR,
             new NamedTarget(TargetKind.BOARD_NAME, parseName()));
 
+      case "on":
+        return makePreposition(PrepositionKind.ON);
 
       default:
         return null;
@@ -383,6 +385,7 @@ enum PrepositionKind {
   IN,
   TO,
   FOR,
+  ON,
 }
 
 class Target {
