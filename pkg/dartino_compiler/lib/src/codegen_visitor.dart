@@ -8,7 +8,6 @@ import 'package:compiler/src/resolution/semantic_visitor.dart';
 
 import 'package:compiler/src/resolution/operators.dart' show
     AssignmentOperator,
-    AssignmentOperatorKind,
     BinaryOperator,
     IncDecOperator,
     UnaryOperator;

@@ -7,9 +7,6 @@ library dartino_compiler.hub.sentence_parser;
 import 'dart:convert' show
     JSON;
 
-import 'package:path/path.dart' show
-    separator;
-
 import '../verbs/actions.dart' show
     Action,
     ActionGroup,

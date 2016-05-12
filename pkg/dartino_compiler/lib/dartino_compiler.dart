@@ -32,9 +32,6 @@ import 'src/dartino_native_descriptor.dart' show
 import 'src/dartino_backend.dart' show
     DartinoBackend;
 
-import 'package:compiler/src/apiimpl.dart' show
-    CompilerImpl;
-
 import 'src/dartino_compiler_implementation.dart' show
     DartinoCompilerImplementation,
     OutputProvider;

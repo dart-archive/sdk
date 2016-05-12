@@ -188,7 +188,6 @@ import '../vm_commands.dart' show
     MapId,
     NewMap,
     PushFromMap,
-    PushNewInteger,
     SetEntryPoint,
     VmCommand;
 

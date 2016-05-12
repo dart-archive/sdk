@@ -8,8 +8,7 @@ import 'dart:io' show
     File;
 
 import 'package:compiler/src/options.dart' show
-    CompilerOptions,
-    DiagnosticOptions;
+    CompilerOptions;
 
 import 'package:compiler/compiler.dart' show
     PackagesDiscoveryProvider;
