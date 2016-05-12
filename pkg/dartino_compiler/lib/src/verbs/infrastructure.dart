@@ -106,7 +106,7 @@ AnalyzedSentence helpSentence(String message) {
   Action contextHelp = new Action(printHelp, null);
   return new AnalyzedSentence(
       new Verb("?", contextHelp), null, null, null, null, null, null,
-      null, null, null, null, false, null);
+      null, null, null, null, false);
 }
 
 AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
@@ -147,7 +147,6 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   String forName;
   Uri toUri;
   Uri withUri;
-  Target onTarget;
 
   /// Validates a preposition of kind `for`. For now, the only possible legal
   /// target is of kind `board name`. Store such a file in [forName].
@@ -215,18 +214,6 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
           DiagnosticKind.cantPerformVerbTo,
           verb: verb, target: preposition.target);
     }
-  }
-
-  void checkOnTarget(Preposition preposition) {
-    assert(preposition.kind == PrepositionKind.ON);
-    if (preposition.target.kind != TargetKind.TTY &&
-        preposition.target.kind != TargetKind.TCP_SOCKET) {
-      throwFatalError(
-          DiagnosticKind.verbRequiresConnectionTarget,
-          verb: verb,
-          target: preposition.target);
-    }
-    onTarget = preposition.target;
   }
 
   /// Validates a preposition of kind `with`. For now, the only possible legal
@@ -298,10 +285,6 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
 
       case PrepositionKind.WITH:
         checkWithTarget(preposition);
-        break;
-
-      case PrepositionKind.ON:
-        checkOnTarget(preposition);
         break;
     }
   }
@@ -413,8 +396,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
 
   return new AnalyzedSentence(
       verb, target, targetName, trailing, sessionName, base,
-      targetUri, toUri, withUri, forName, options, sentence.interactive,
-      onTarget);
+      targetUri, toUri, withUri, forName, options, sentence.interactive);
 }
 
 Uri fileUri(String path, Uri base) => base.resolveUri(new Uri.file(path));
@@ -473,9 +455,6 @@ class AnalyzedSentence {
   /// Value of 'with <URI>' converted to a Uri.
   final Uri withUri;
 
-  /// Value of e.g. 'on tty /dev/ttyACM0' or 'on tcp_socket localhost:4040'.
-  final NamedTarget onTarget;
-
   /// Value of 'for NAME'.
   final String forName;
 
@@ -495,8 +474,7 @@ class AnalyzedSentence {
       this.withUri,
       this.forName,
       this.options,
-      this.interactive,
-      this.onTarget);
+      this.interactive);
 
   Future<int> performVerb(VerbContext context) {
     if (context.clientConnection.analytics.shouldPromptForOptIn) {

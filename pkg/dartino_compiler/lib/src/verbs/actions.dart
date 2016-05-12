@@ -102,8 +102,6 @@ class Action {
   /// True if this verb supports "with <URI>"
   final bool supportsWithUri;
 
-  final bool supportsOn;
-
   const Action(
       this.perform,
       this.documentation,
@@ -114,8 +112,7 @@ class Action {
        TargetKind requiredTarget,
        bool requiresTarget: false,
        this.supportedTargets,
-       this.supportsWithUri: false,
-       this.supportsOn: false})
+       this.supportsWithUri: false})
       : this.requiresTargetSession =
           identical(requiredTarget, TargetKind.SESSION),
         this.requiredTarget = requiredTarget,
