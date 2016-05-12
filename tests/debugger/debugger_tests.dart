@@ -28,12 +28,22 @@ import 'package:dartino_compiler/src/hub/session_manager.dart';
 
 import 'package:dartino_compiler/src/worker/developer.dart';
 
+import '../cli_tests/cli_tests.dart' show
+    dartinoVmBinary;
+
 const String testLocation = 'tests/debugger';
 const String generatedTestLocation = 'tests/debugger_generated';
 
 typedef Future NoArgFuture();
 
-Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
+/// Temporary directory for test output.
+///
+/// Snapshots will be put here.
+const String tempTestOutputDirectory =
+    const String.fromEnvironment("test.dart.temp-dir");
+
+Future runTest(String name, Uri uri,
+    {bool writeGoldenFiles, bool runFromSnapshot: false}) async {
   print("$name: $uri");
   Settings settings = new Settings(
       fileUri(".packages", Uri.base),
@@ -51,7 +61,32 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
   Expect.equals(0, await compile(Uri.base.resolveUri(uri), state, Uri.base),
       "compile");
 
-  await startAndAttachDirectly(state, Uri.base);
+  DartinoVm vm;
+  Uri snapshotPath;
+
+  if (runFromSnapshot) {
+    Uri snapshotDir =
+        Uri.base.resolve("$tempTestOutputDirectory/cli_tests/${name}/");
+
+    new Directory(snapshotDir.toFilePath()).create(recursive: true);
+    snapshotPath = snapshotDir.resolve("out.snapshot");
+
+    await startAndAttachDirectly(state, Uri.base);
+    // Build a snapshot.
+    int exportResult = await export(state, snapshotPath);
+
+    Expect.equals(0, exportResult);
+
+    // Start an interactive vm from a snapshot.
+    vm = await DartinoVm.start(
+        dartinoVmBinary.toFilePath(),
+        arguments: ['--interactive', snapshotPath.toFilePath()]);
+
+    // Attach to that VM
+    await attachToVmTcp("localhost", vm.port, state);
+  } else {
+    await startAndAttachDirectly(state, Uri.base);
+  }
   state.vmContext.hideRawIds = true;
   state.vmContext.colorsDisabled = true;
 
@@ -84,9 +119,12 @@ Future runTest(String name, Uri uri, bool writeGoldenFiles) async {
         : (DartinoVmContext _) => new Stream.fromIterable(debuggerCommands),
       Uri.base,
       state,
-      echo: true);
+      echo: true,
+      snapshotLocation: snapshotPath);
 
-  int exitCode = await state.dartinoVm.exitCode;
+  int exitCode = runFromSnapshot
+      ? await vm.exitCode
+      : await state.dartinoVm.exitCode;
 
   Expect.equals(exitCode, result);
 
@@ -144,7 +182,17 @@ Future<Map<String, NoArgFuture>> listTestsInternal(
       if (name.endsWith("_test.dart")) {
         name = name.substring(0, name.length - ".dart".length);
         result["debugger/$name"] =
-            () => runTest(name, entity.uri, writeGoldenFiles);
+            () => runTest(
+                name,
+                entity.uri,
+                writeGoldenFiles: writeGoldenFiles,
+                runFromSnapshot: false);
+        result["debugger_snapshot/$name"] =
+            () => runTest(
+                name,
+                entity.uri,
+                writeGoldenFiles: writeGoldenFiles,
+                runFromSnapshot: true);
       }
     }
   }
