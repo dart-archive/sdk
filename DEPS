@@ -22,7 +22,7 @@ vars = {
   # Used by dartino_tests.
   "isolate_tag": "@0.2.2",
 
-  "instrumentation_client_rev": "@9d6a136bff412c3f428a3435ff1a77cbbe5f1b6c",
+  "instrumentation_client_rev": "@f06dca45223695f7828b9f045ef4317833fb2dba",
 
   # When updating this, please remember:
   # 1. to use a commit on the branch "_temporary_dartino_patches".
