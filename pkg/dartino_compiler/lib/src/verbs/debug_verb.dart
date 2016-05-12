@@ -18,6 +18,8 @@ import 'dart:convert' show
     UTF8,
     LineSplitter;
 
+import 'attach_verb.dart';
+
 import 'documentation.dart' show
     debugDocumentation;
 
@@ -25,9 +27,12 @@ import '../diagnostic.dart' show
     throwInternalError;
 
 import '../worker/developer.dart' show
+    Address,
     ClientEventHandler,
-    handleSignal,
+    combineTasks,
     compileAndAttachToVmThen,
+    handleSignal,
+    parseAddress,
     setupClientInOut;
 
 import '../hub/client_commands.dart' show
@@ -49,6 +54,7 @@ const Action debugAction =
         debugDocumentation,
         requiresSession: true,
         supportsWithUri: true,
+        supportsOn: true,
         supportedTargets: const [
           TargetKind.APPLY,
           TargetKind.BACKTRACE,
@@ -82,82 +88,98 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
         new InteractiveDebuggerTask(base, snapshotLocation: sentence.withUri));
   }
 
-  DebuggerTask task;
+  SharedTask attachTask;
+
+  if (sentence.onTarget != null) {
+    switch (sentence.onTarget.kind) {
+      case TargetKind.TTY:
+        attachTask = new AttachTtyTask(sentence.onTarget.name);
+        break;
+      case TargetKind.TCP_SOCKET:
+        Address address = parseAddress(sentence.onTarget.name);
+        attachTask = new AttachTcpTask(address.host, address.port);
+        break;
+      default:
+        throw "Unsupported on target.";
+    }
+  }
+
+  DebuggerTask debugTask;
   switch (sentence.target.kind) {
     case TargetKind.APPLY:
-      task = new DebuggerTask(TargetKind.APPLY.index, base);
+      debugTask = new DebuggerTask(TargetKind.APPLY.index, base);
       break;
     case TargetKind.RUN_TO_MAIN:
-      task = new DebuggerTask(TargetKind.RUN_TO_MAIN.index, base);
+      debugTask = new DebuggerTask(TargetKind.RUN_TO_MAIN.index, base);
       break;
     case TargetKind.BACKTRACE:
-      task = new DebuggerTask(TargetKind.BACKTRACE.index, base);
+      debugTask = new DebuggerTask(TargetKind.BACKTRACE.index, base);
       break;
     case TargetKind.CONTINUE:
-      task = new DebuggerTask(TargetKind.CONTINUE.index, base);
+      debugTask = new DebuggerTask(TargetKind.CONTINUE.index, base);
       break;
     case TargetKind.BREAK:
-      task = new DebuggerTask(TargetKind.BREAK.index, base,
+      debugTask = new DebuggerTask(TargetKind.BREAK.index, base,
           argument: sentence.targetName);
       break;
     case TargetKind.LIST:
-      task = new DebuggerTask(TargetKind.LIST.index, base);
+      debugTask = new DebuggerTask(TargetKind.LIST.index, base);
       break;
     case TargetKind.DISASM:
-      task = new DebuggerTask(TargetKind.DISASM.index, base);
+      debugTask = new DebuggerTask(TargetKind.DISASM.index, base);
       break;
     case TargetKind.FRAME:
-      task = new DebuggerTask(TargetKind.FRAME.index, base,
+      debugTask = new DebuggerTask(TargetKind.FRAME.index, base,
           argument: sentence.targetName);
       break;
     case TargetKind.DELETE_BREAKPOINT:
-      task = new DebuggerTask(TargetKind.DELETE_BREAKPOINT.index, base,
+      debugTask = new DebuggerTask(TargetKind.DELETE_BREAKPOINT.index, base,
           argument: sentence.targetName);
       break;
     case TargetKind.LIST_BREAKPOINTS:
-      task = new DebuggerTask(TargetKind.LIST_BREAKPOINTS.index, base);
+      debugTask = new DebuggerTask(TargetKind.LIST_BREAKPOINTS.index, base);
       break;
     case TargetKind.STEP:
-      task = new DebuggerTask(TargetKind.STEP.index, base);
+      debugTask = new DebuggerTask(TargetKind.STEP.index, base);
       break;
     case TargetKind.STEP_OVER:
-      task = new DebuggerTask(TargetKind.STEP_OVER.index, base);
+      debugTask = new DebuggerTask(TargetKind.STEP_OVER.index, base);
       break;
     case TargetKind.FIBERS:
-      task = new DebuggerTask(TargetKind.FIBERS.index, base);
+      debugTask = new DebuggerTask(TargetKind.FIBERS.index, base);
       break;
     case TargetKind.FINISH:
-      task = new DebuggerTask(TargetKind.FINISH.index, base);
+      debugTask = new DebuggerTask(TargetKind.FINISH.index, base);
       break;
     case TargetKind.RESTART:
-      task = new DebuggerTask(TargetKind.RESTART.index, base);
+      debugTask = new DebuggerTask(TargetKind.RESTART.index, base);
       break;
     case TargetKind.STEP_BYTECODE:
-      task = new DebuggerTask(TargetKind.STEP_BYTECODE.index, base);
+      debugTask = new DebuggerTask(TargetKind.STEP_BYTECODE.index, base);
       break;
     case TargetKind.STEP_OVER_BYTECODE:
-      task = new DebuggerTask(TargetKind.STEP_OVER_BYTECODE.index, base);
+      debugTask = new DebuggerTask(TargetKind.STEP_OVER_BYTECODE.index, base);
       break;
     case TargetKind.PRINT:
-      task = new DebuggerTask(TargetKind.PRINT.index, base,
+      debugTask = new DebuggerTask(TargetKind.PRINT.index, base,
           argument: sentence.targetName);
       break;
     case TargetKind.PRINT_ALL:
-      task = new DebuggerTask(TargetKind.PRINT_ALL.index, base);
+      debugTask = new DebuggerTask(TargetKind.PRINT_ALL.index, base);
       break;
     case TargetKind.TOGGLE:
-      task = new DebuggerTask(TargetKind.TOGGLE.index, base,
+      debugTask = new DebuggerTask(TargetKind.TOGGLE.index, base,
           argument: sentence.targetName);
       break;
     case TargetKind.FILE:
-      task = new DebuggerTask(TargetKind.FILE.index, base,
+      debugTask = new DebuggerTask(TargetKind.FILE.index, base,
           argument: sentence.targetUri, snapshotLocation: sentence.withUri);
       break;
     default:
       throwInternalError("Unimplemented ${sentence.target}");
   }
 
-  return context.performTaskInWorker(task);
+  return context.performTaskInWorker(combineTasks(attachTask, debugTask));
 }
 
 // Returns a debug client event handler that is bound to the current session.
