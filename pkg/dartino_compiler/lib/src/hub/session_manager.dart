@@ -194,9 +194,6 @@ class SessionState {
 
   bool get hasRemoteVm => dartinoAgentVmId != null;
 
-  bool get colorsDisabled =>
-      vmContext == null ? false : vmContext.colorsDisabled;
-
   void addCompilationResult(DartinoDelta delta) {
     compilationResults.add(delta);
   }

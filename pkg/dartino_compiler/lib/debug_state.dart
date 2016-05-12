@@ -89,9 +89,11 @@ class BackTraceFrame {
 
   DebugInfo get debugInfo => debugState.getDebugInfo(function);
 
-  String list(SessionState state, {int contextLines: 5}) {
+  String list({bool colorsDisabled, int contextLines: 5}) {
     return debugInfo.sourceListStringFor(
-        bytecodePointer - 1, state, contextLines: contextLines);
+        bytecodePointer - 1,
+        contextLines: contextLines,
+        colorsDisabled: colorsDisabled);
   }
 
   String disasm() {
@@ -240,11 +242,11 @@ class BackTrace {
     visibleFrameMapping = null;
   }
 
-  String list(SessionState state, [int frame]) {
+  String list({int frame, bool colorsDisabled}) {
     if (frame == null) frame = debugState.currentFrame;
     BackTraceFrame visibleStackFrame = visibleFrame(frame);
     if (visibleStackFrame == null) return null;
-    return visibleStackFrame.list(state);
+    return visibleStackFrame.list(colorsDisabled: colorsDisabled);
   }
 
   String disasm([int frame]) {
@@ -281,7 +283,6 @@ class DebugState {
       <DartinoClass, ClassDebugInfo>{};
 
   bool showInternalFrames = false;
-  bool verbose = true;
   int currentProcess = -1;
   BackTraceFrame _topFrame;
   RemoteObject currentUncaughtException;

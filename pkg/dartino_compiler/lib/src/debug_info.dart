@@ -182,8 +182,8 @@ class DebugInfo {
   // TODO(ager): Should something like this be upstreamed to dart2js?
   String sourceListStringFor(
       int bytecodeIndex,
-      SessionState state,
-      {int contextLines: 5}) {
+      {int contextLines: 5,
+       bool colorsDisabled}) {
     SourceLocation location = locationFor(bytecodeIndex);
     if (location == null) return '';
     SourceSpan span = location.span;
@@ -212,7 +212,8 @@ class DebugInfo {
         min(file.lineStarts[currentLine + 1], file.length));
     var toColumn = min(column + (span.end - span.begin), l.length);
     var prefix = l.substring(0, column);
-    var focus = highlight(l.substring(column, toColumn), colors.red, state);
+    var focus = highlight(l.substring(column, toColumn), colors.red,
+        colorsDisabled: colorsDisabled);
     var postfix = l.substring(toColumn);
     buffer.write('${currentLine + 1}'.padRight(5) + prefix);
     buffer.write(focus);
@@ -234,8 +235,11 @@ class DebugInfo {
     return buffer.toString();
   }
 
-  String highlight(String message, Function color, SessionState state) {
-    return state.colorsDisabled ? message : color(message);
+  String highlight(
+      String message,
+      Function color,
+      {bool colorsDisabled}) {
+    return colorsDisabled ? message : color(message);
   }
 
   SourceLocation sourceLocationFor(int bytecodeIndex) {

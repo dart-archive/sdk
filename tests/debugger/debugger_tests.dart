@@ -27,6 +27,7 @@ import 'package:dartino_compiler/src/verbs/infrastructure.dart' show
 import 'package:dartino_compiler/src/hub/session_manager.dart';
 
 import 'package:dartino_compiler/src/worker/developer.dart';
+import 'package:dartino_compiler/cli_debugger.dart';
 
 import '../cli_tests/cli_tests.dart' show
     dartinoVmBinary;
@@ -88,7 +89,6 @@ Future runTest(String name, Uri uri,
     await startAndAttachDirectly(state, Uri.base);
   }
   state.vmContext.hideRawIds = true;
-  state.vmContext.colorsDisabled = true;
 
   List<int> output = <int>[];
 
@@ -104,24 +104,23 @@ Future runTest(String name, Uri uri,
     }
   }
 
-  testDebugCommandStream(DartinoVmContext session) async* {
+  testDebugCommandStream(DartinoVmContext context) async* {
     yield 't verbose';
     yield 'b main';
     yield 'r';
-    while (!session.terminated) {
+    while (!context.terminated) {
       yield 's';
     }
   };
 
-  int result = await state.vmContext.debug(
+  int result = await new CommandLineDebugger(
+      state.vmContext,
       debuggerCommands.isEmpty
-        ? testDebugCommandStream
-        : (DartinoVmContext _) => new Stream.fromIterable(debuggerCommands),
+          ? testDebugCommandStream(state.vmContext)
+          : new Stream.fromIterable(debuggerCommands),
       Uri.base,
-      state,
       state.stdoutSink,
-      echo: true,
-      snapshotLocation: snapshotPath);
+      echo: true).run(state, snapshotLocation: snapshotPath);
 
   int exitCode = runFromSnapshot
       ? await vm.exitCode

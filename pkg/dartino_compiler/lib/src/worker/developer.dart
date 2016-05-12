@@ -675,7 +675,7 @@ Future<int> run(
     debug.BackTrace stackTrace = await vmContext.backTrace();
     if (stackTrace != null) {
       print(stackTrace.format());
-      print(stackTrace.list(state));
+      print(stackTrace.list(colorsDisabled: false));
     }
   }
 

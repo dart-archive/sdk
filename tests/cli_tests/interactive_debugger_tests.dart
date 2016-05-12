@@ -20,7 +20,6 @@ import 'package:expect/expect.dart' show
 
 import 'cli_tests.dart' show
     Test,
-    TestContext,
     SessionTestContext,
     thisDirectory,
     dartinoVmBinary;
@@ -29,8 +28,7 @@ import 'prompt_splitter.dart' show
     PromptSplitter;
 
 import 'package:dartino_compiler/src/hub/exit_codes.dart' show
-    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION,
-    COMPILER_EXITCODE_CRASH;
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 
 import 'package:dartino_compiler/dartino_vm.dart' show DartinoVm;
 

@@ -43,6 +43,9 @@ import '../../debug_state.dart' show
 import '../../vm_commands.dart' show
     VmCommand;
 
+import '../../cli_debugger.dart' show
+    CommandLineDebugger;
+
 const Action debugAction =
     const Action(
         debug,
@@ -272,11 +275,12 @@ Future<int> interactiveDebuggerTask(
       .transform(UTF8.decoder)
       .transform(new LineSplitter());
 
-  return await vmContext.debug((DartinoVmContext _) => inputStream,
+  return await new CommandLineDebugger(
+      vmContext,
+      inputStream,
       base,
-      state,
       state.stdoutSink,
-      snapshotLocation: snapshotLocation);
+      echo: false).run(state, snapshotLocation: snapshotLocation);
 }
 
 class DebuggerTask extends SharedTask {
@@ -417,7 +421,8 @@ Future<int> continueDebuggerTask(
     throwInternalError('### process not running, cannot continue');
   }
   VmCommand response = await vmContext.cont();
-  print(await vmContext.processStopResponseToString(response, state));
+  print(await CommandLineDebugger.processStopResponseToString(
+      vmContext, response));
 
   if (vmContext.terminated) state.vmContext = null;
 
@@ -507,7 +512,7 @@ Future<int> listDebuggerTask(
     // TODO(ager,lukechurch): Fix error reporting.
     throwInternalError('Source listing failed');
   }
-  print(trace.list(state));
+  print(trace.list());
 
   return 0;
 }
@@ -589,7 +594,8 @@ Future<int> stepDebuggerTask(
         '### process not running, cannot step to next expression');
   }
   VmCommand response = await vmContext.step();
-  print(await vmContext.processStopResponseToString(response, state));
+  print(await CommandLineDebugger.processStopResponseToString(
+      vmContext, response));
   return 0;
 }
 
@@ -600,7 +606,8 @@ Future<int> stepOverDebuggerTask(
     throwInternalError('### process not running, cannot go to next expression');
   }
   VmCommand response = await vmContext.stepOver();
-  print(await vmContext.processStopResponseToString(response, state));
+  print(await CommandLineDebugger.processStopResponseToString(
+      vmContext, response));
   return 0;
 }
 
@@ -626,7 +633,8 @@ Future<int> finishDebuggerTask(
     throwInternalError('### process not running, cannot finish method');
   }
   VmCommand response = await vmContext.stepOut();
-  print(await vmContext.processStopResponseToString(response, state));
+  print(await CommandLineDebugger.processStopResponseToString(
+      vmContext, response));
   return 0;
 }
 
@@ -644,7 +652,8 @@ Future<int> restartDebuggerTask(
     throwInternalError("### cannot restart entry frame.");
   }
   VmCommand response = await vmContext.restart();
-  print(await vmContext.processStopResponseToString(response, state));
+  print(await CommandLineDebugger.processStopResponseToString(
+      vmContext, response));
   return 0;
 }
 
@@ -664,7 +673,8 @@ Future<int> stepBytecodeDebuggerTask(
   }
   VmCommand response = await vmContext.stepBytecode();
   assert(response != null);  // stepBytecode cannot return null
-  print(await vmContext.processStopResponseToString(response, state));
+  print(await CommandLineDebugger.processStopResponseToString(
+      vmContext, response));
   return 0;
 }
 
@@ -676,7 +686,8 @@ Future<int> stepOverBytecodeDebuggerTask(
   }
   VmCommand response = await vmContext.stepOverBytecode();
   assert(response != null);  // stepOverBytecode cannot return null
-  print(await vmContext.processStopResponseToString(response, state));
+  print(await CommandLineDebugger.processStopResponseToString(
+      vmContext, response));
   return 0;
 }
 

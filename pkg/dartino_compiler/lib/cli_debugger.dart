@@ -18,6 +18,11 @@ import "debug_state.dart";
 import "vm_context.dart";
 
 import 'vm_commands.dart' show
+    ConnectionError,
+    ProcessCompileTimeError,
+    ProcessBreakpoint,
+    ProcessTerminated,
+    UncaughtException,
     VmCommand;
 
 const String BANNER = """
@@ -55,10 +60,11 @@ Commands:
   'disasm/disassemble'                  disassemble code for frame
   't/toggle <flag>'                     toggle one of the flags:
                                           - 'internal' : show internal frames
+                                          - 'verbose' : verbose stack traces
   'q/quit'                              quit the session
 """;
 
-class InputHandler {
+class CommandLineDebugger {
   final DartinoVmContext vmContext;
   final Stream<String> stream;
   final bool echo;
@@ -67,14 +73,18 @@ class InputHandler {
 
   bool printForTesting = false;
 
+  bool get colorsDisabled => printForTesting;
+  bool verbose = true;
+
   String previousLine = '';
 
   int processPagingCount = 10;
   int processPagingCurrent = 0;
 
-  InputHandler(this.vmContext, this.stream, this.echo, this.base, this.stdout) {
-    if (echo) printForTesting = true;
-  }
+  CommandLineDebugger(
+      this.vmContext, this.stream, this.base, this.stdout, {bool echo: false})
+    : echo = echo,
+      printForTesting = echo;
 
   void printPrompt() => writeStdout('> ');
 
@@ -82,7 +92,7 @@ class InputHandler {
 
   writeStdoutLine(String s) => writeStdout("$s\n");
 
-  Future handleLine(StreamIterator stream, SessionState state) async {
+  Future handleLine(StreamIterator stream) async {
     String line = stream.current;
     if (line.isEmpty) line = previousLine;
     if (line.isEmpty) {
@@ -225,7 +235,7 @@ class InputHandler {
           break;
         }
         BackTrace trace = await vmContext.backTrace();
-        String listing = trace != null ? trace.list(state) : null;
+        String listing = trace?.list(colorsDisabled: colorsDisabled);
         if (listing != null) {
           writeStdoutLine(listing);
         } else {
@@ -248,7 +258,7 @@ class InputHandler {
       case 'continue':
       case 'c':
         if (checkRunning('cannot continue')) {
-          await handleProcessStopResponse(await vmContext.cont(), state);
+          await handleProcessStopResponse(await vmContext.cont());
         }
         break;
       case 'delete':
@@ -314,7 +324,7 @@ class InputHandler {
         break;
       case 'finish':
         if (checkRunning('cannot finish method')) {
-          await handleProcessStopResponse(await vmContext.stepOut(), state);
+          await handleProcessStopResponse(await vmContext.stepOut());
         }
         break;
       case 'restart':
@@ -330,7 +340,7 @@ class InputHandler {
           writeStdoutLine("### cannot restart entry frame");
           break;
         }
-        await handleProcessStopResponse(await vmContext.restart(), state);
+        await handleProcessStopResponse(await vmContext.restart());
         break;
       case 'lb':
         List<Breakpoint> breakpoints = vmContext.breakpoints();
@@ -380,31 +390,28 @@ class InputHandler {
       case 'r':
       case 'run':
         if (checkNotLoaded("use 'restart' to run again")) {
-          await handleProcessStopResponse(
-              await vmContext.startRunning(), state);
+          await handleProcessStopResponse(await vmContext.startRunning());
         }
         break;
       case 'step':
       case 's':
         if (checkRunning('cannot step to next expression')) {
-          await handleProcessStopResponse(await vmContext.step(), state);
+          await handleProcessStopResponse(await vmContext.step());
         }
         break;
       case 'n':
         if (checkRunning('cannot go to next expression')) {
-          await handleProcessStopResponse(await vmContext.stepOver(), state);
+          await handleProcessStopResponse(await vmContext.stepOver());
         }
         break;
       case 'sb':
         if (checkRunning('cannot step bytecode')) {
-          await handleProcessStopResponse(
-              await vmContext.stepBytecode(), state);
+          await handleProcessStopResponse(await vmContext.stepBytecode());
         }
         break;
       case 'nb':
         if (checkRunning('cannot step over bytecode')) {
-          await handleProcessStopResponse(
-              await vmContext.stepOverBytecode(), state);
+          await handleProcessStopResponse(await vmContext.stepOverBytecode());
         }
         break;
       case 'toggle':
@@ -420,7 +427,7 @@ class InputHandler {
                 '### internal frame visibility set to: $internalVisible');
             break;
           case 'verbose':
-            bool verbose = vmContext.toggleVerbose();
+            bool verbose = toggleVerbose();
             writeStdoutLine('### verbose printing set to: $verbose');
             break;
           case 'testing':
@@ -440,13 +447,17 @@ class InputHandler {
     if (!vmContext.terminated) printPrompt();
   }
 
+  bool toggleVerbose() => verbose = !verbose;
+
   // This method is used to deal with the stopped process command responses
   // that can be returned when sending the Dartino VM a command request.
   Future handleProcessStopResponse(
-      VmCommand response,
-      SessionState state) async {
-    String output =
-        await vmContext.processStopResponseToString(response, state);
+      VmCommand response) async {
+    String output = await processStopResponseToString(
+        vmContext,
+        response,
+        colorsDisabled: colorsDisabled,
+        verbose: verbose);
     if (output != null && output.isNotEmpty) {
       writeStdout(output);
     }
@@ -484,13 +495,14 @@ class InputHandler {
     return !vmContext.running;
   }
 
-  Future<int> run(SessionState state) async {
+  Future<int> run(SessionState state, {Uri snapshotLocation}) async {
+    await vmContext.initialize(state, snapshotLocation: snapshotLocation);
     writeStdoutLine(BANNER);
     printPrompt();
     StreamIterator streamIterator = new StreamIterator(stream);
     while (await streamIterator.moveNext()) {
       try {
-        await handleLine(streamIterator, state);
+        await handleLine(streamIterator);
       } catch (e, s) {
         Future cancel = streamIterator.cancel()?.catchError((_) {});
         if (!vmContext.terminated) {
@@ -572,5 +584,59 @@ class InputHandler {
   void printDeletedBreakpoint(Breakpoint breakpoint) {
     writeStdout("### deleted breakpoint ");
     writeStdoutLine(BreakpointToString(breakpoint));
+  }
+
+  // This method is a helper method for computing the default output for one
+// of the stop command results. There are currently the following stop
+// responses:
+//   ProcessTerminated
+//   ProcessBreakpoint
+//   UncaughtException
+//   ProcessCompileError
+//   ConnectionError
+  static Future<String> processStopResponseToString(
+      DartinoVmContext vmContext,
+      VmCommand response,
+      {bool verbose: true,
+      bool colorsDisabled: true}) async {
+    if (response is UncaughtException) {
+      StringBuffer sb = new StringBuffer();
+      // Print the exception first, followed by a stack trace.
+      RemoteObject exception = await vmContext.uncaughtException();
+      sb.writeln(vmContext.exceptionToString(exception));
+      BackTrace trace = await vmContext.backTrace();
+      assert(trace != null);
+      sb.write(trace.format());
+      String result = '$sb';
+      if (!result.endsWith('\n')) result = '$result\n';
+      return result;
+    } else if (response is ProcessBreakpoint) {
+      // Print the current line of source code.
+      BackTrace trace = await vmContext.backTrace();
+      assert(trace != null);
+      BackTraceFrame topFrame = trace.visibleFrame(0);
+      if (topFrame != null) {
+        String result;
+        if (verbose) {
+          result = topFrame.list(
+              colorsDisabled: colorsDisabled,
+              contextLines: 0);
+        } else {
+          result = topFrame.shortString();
+        }
+        if (!result.endsWith('\n')) result = '$result\n';
+        return result;
+      }
+    } else if (response is ProcessCompileTimeError) {
+      // TODO(sigurdm): add information to ProcessCompileTimeError about the
+      // specific error and print here. (issue #494).
+      return '';
+    } else if (response is ProcessTerminated) {
+      return '### process terminated\n';
+
+    } else if (response is ConnectionError) {
+      return '### lost connection to the virtual machine\n';
+    }
+    return '';
   }
 }

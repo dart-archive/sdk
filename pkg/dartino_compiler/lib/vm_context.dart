@@ -56,9 +56,6 @@ import 'src/hub/exit_codes.dart' as exit_codes;
 import 'src/vm_connection.dart' show
     VmConnection;
 
-import 'cli_debugger.dart' show
-    InputHandler;
-
 class SessionCommandTransformerBuilder
     extends CommandTransformerBuilder<Pair<int, ByteData>> {
 
@@ -364,13 +361,9 @@ class DartinoVmContext {
     await runCommand(new ProcessSpawnForMain(arguments));
   }
 
-  Future<int> debug(
-      Stream<String> inputLines(DartinoVmContext session),
-      Uri base,
+  Future<Null> initialize(
       SessionState state,
-      Sink<List<int>> stdout,
-      {bool echo: false,
-       Uri snapshotLocation}) async {
+      {Uri snapshotLocation}) async {
     DebuggingReply debuggingReply = await enableDebugging();
 
     runningFromSnapshot = debuggingReply.isFromSnapshot;
@@ -424,8 +417,6 @@ class DartinoVmContext {
 
     // TODO(ahe): Arguments?
     await spawnProcess([]);
-    return new InputHandler(this, inputLines(this), echo, base, stdout)
-        .run(state);
   }
 
   Future terminate() async {
@@ -967,61 +958,5 @@ class DartinoVmContext {
       debugState.currentBackTrace.visibilityChanged();
     }
     return debugState.showInternalFrames;
-  }
-
-  bool toggleVerbose() {
-    debugState.verbose = !debugState.verbose;
-    return debugState.verbose;
-  }
-
-  // This method is a helper method for computing the default output for one
-  // of the stop command results. There are currently the following stop
-  // responses:
-  //   ProcessTerminated
-  //   ProcessBreakpoint
-  //   UncaughtException
-  //   ProcessCompileError
-  //   ConnectionError
-  Future<String> processStopResponseToString(
-      VmCommand response,
-      SessionState state) async {
-    if (response is UncaughtException) {
-      StringBuffer sb = new StringBuffer();
-      // Print the exception first, followed by a stack trace.
-      RemoteObject exception = await uncaughtException();
-      sb.writeln(exceptionToString(exception));
-      BackTrace trace = await backTrace();
-      assert(trace != null);
-      sb.write(trace.format());
-      String result = '$sb';
-      if (!result.endsWith('\n')) result = '$result\n';
-      return result;
-
-    } else if (response is ProcessBreakpoint) {
-      // Print the current line of source code.
-      BackTrace trace = await backTrace();
-      assert(trace != null);
-      BackTraceFrame topFrame = trace.visibleFrame(0);
-      if (topFrame != null) {
-        String result;
-        if (debugState.verbose) {
-          result = topFrame.list(state, contextLines: 0);
-        } else {
-          result = topFrame.shortString();
-        }
-        if (!result.endsWith('\n')) result = '$result\n';
-        return result;
-      }
-    } else if (response is ProcessCompileTimeError) {
-      // TODO(wibling): add information to ProcessCompileTimeError about the
-      // specific error and print here.
-      return '';
-    } else if (response is ProcessTerminated) {
-      return '### process terminated\n';
-
-    } else if (response is ConnectionError) {
-      return '### lost connection to the virtual machine\n';
-    }
-    return '';
   }
 }
