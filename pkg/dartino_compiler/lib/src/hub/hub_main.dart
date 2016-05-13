@@ -264,6 +264,12 @@ Future<Null> handleVerb(
   crashReportRequested = false;
 
   Future<int> performVerb() async {
+    // TODO(danrubel) The first 4 arguments should not be included here,
+    // but in the startup message instead:
+    // * dartino version (not hashed)
+    // * current directory (hashed)
+    // * short program name (should ignore this)
+    // * "interactive" (or not) indicating that its a user not a bash script
     analytics?.logRequest(arguments);
     clientConnection.parseArguments(arguments);
     String sessionName = clientConnection.sentence.sessionName;
@@ -289,8 +295,7 @@ Future<Null> handleVerb(
       .catchError(
           clientConnection.reportErrorToClient, test: (e) => e is InputError)
       .catchError((error, StackTrace stackTrace) {
-        //TODO capture exception via clientConnection.analytics.
-        //See https://github.com/dartino/sdk/issues/467
+        analytics?.logError(error, stackTrace);
         if (!crashReportRequested) {
           clientConnection.printLineOnStderr(
               requestBugReportOnOtherCrashMessage);
@@ -506,14 +511,15 @@ class ClientConnection {
   }
 
   int reportErrorToClient(InputError error, StackTrace stackTrace) {
-    //TODO capture input error analytics via analytics.
-    //See https://github.com/dartino/sdk/issues/467
+    analytics?.logError(error, stackTrace);
     bool isInternalError = error.kind == DiagnosticKind.internalError;
     if (isInternalError && !crashReportRequested) {
       printLineOnStderr(requestBugReportOnOtherCrashMessage);
       crashReportRequested = true;
     }
-    printLineOnStderr(error.asDiagnostic().formatMessage());
+    String userErrMsg = error.asDiagnostic().formatMessage();
+    analytics?.logErrorMessage(userErrMsg);
+    printLineOnStderr(userErrMsg);
     if (isInternalError) {
       printLineOnStderr('$stackTrace');
       return COMPILER_EXITCODE_CRASH;
