@@ -24,10 +24,7 @@ import 'dart:dartino.ffi';
 import 'package:ffi/ffi.dart';
 
 final ForeignLibrary _netLib =
-    Foreign.platform == Foreign.FREERTOS)
-        ? ForeignLibrary.main
-        : new ForeignLibrary.fromName(
-              ForeignLibrary.bundleLibraryName('netlib'));
+    new ForeignLibrary.fromName(ForeignLibrary.bundleLibraryName('netlib'));
 
 final netlibProtocolVersion = _netLib.lookup('NetlibProtocolVersion');
 final netlibProtocolDesc = _netLib.lookup('NetlibProtocolDesc');

@@ -149,10 +149,6 @@ def CopyLibs(bundle_dir, build_dir):
   CopyPlatformDescriptor(bundle_dir, 'dartino_embedded.platform',
                          '../third_party/dart/sdk/lib', '../dart_lib')
 
-def CopyInclude(bundle_dir):
-  include = join(bundle_dir, 'include')
-  copytree('include', include)
-
 def CopyInternalPackages(bundle_dir, build_dir):
   internal_pkg = join(bundle_dir, 'internal', 'pkg')
   makedirs(internal_pkg)
@@ -390,7 +386,6 @@ def Main():
     CopyDartSdk(sdk_temp)
     CopyInternalPackages(sdk_temp, build_dir)
     CopyLibs(sdk_temp, build_dir)
-    CopyInclude(sdk_temp)
     CopyPackagesAndSettingsTemplate(sdk_temp)
     CopyPlatforms(sdk_temp)
     CopyArm(sdk_temp)

@@ -35,7 +35,7 @@ int NetlibSend(int messageType, char* message);
 
 // Registers a new event handler callback function.
 // No more than MAX_RECEIVE_HANDLERS handlers may be set.
-#define MAX_RECEIVE_HANDLERS 10
+const int MAX_RECEIVE_HANDLERS = 10;
 typedef void (*receiveHandler) (char* message);
 int NetlibRegisterReceiver(int messageType, receiveHandler handler);
 
