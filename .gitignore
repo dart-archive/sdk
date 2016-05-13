@@ -30,9 +30,13 @@ packages
 /pkg/mdns/lib/native/libmdns_extension_lib.dylib
 /pkg/power_management/lib/native/libpower_management_extension_lib.so
 /pkg/power_management/lib/native/libpower_management_extension_lib.dylib
+/samples/general/native-interop/ffi/
+/samples/general/native-interop/netlib/*.a
+/samples/general/native-interop/netlib/*.o
 /samples/github/generated/
 /samples/simple_todo/generated/
 /samples/todomvc/java/
+
 /src/compiler/compiler.xcodeproj/
 /src/double_conversion.xcodeproj/
 /src/shared/shared.xcodeproj/

@@ -1374,6 +1374,18 @@ Future<int> buildImage(
   Device device = await readDevice(deviceId);
   Directory binDirectory = await locateBinDirectory();
 
+  // Collect additional libraries to link with from the 'ffi'
+  // directory. This can be either .a or .o files.
+  List additionalLibraries = <String>[];
+  Directory ffiDirectory = new Directory(snapshot.resolve("ffi").toFilePath());
+  if (await ffiDirectory.exists()) {
+    await for (FileSystemEntity file in ffiDirectory.list()) {
+      if (file is File) {
+        additionalLibraries.add(file.absolute.path);
+      }
+    }
+  }
+
   Directory tmpDir;
   try {
     String baseName = basenameWithoutExtension(snapshot.path);
@@ -1400,10 +1412,12 @@ Future<int> buildImage(
     if (Platform.isLinux || Platform.isMacOS) {
       state.log(
           "Linking image: '${linkScript.path} ${baseName} for ${device.name}");
+      List libraries =
+          new List<String>.from(device.libraries)..addAll(additionalLibraries);
       result = await Process.run(
           linkScript.path,
           ['-f', device.cflags.join(' '),
-           '-l', device.libraries.join(' '),
+           '-l', libraries.join(' '),
            '-t', device.linker_script,
            baseName, tmpDir.path],
           workingDirectory: tmpDir.path);
