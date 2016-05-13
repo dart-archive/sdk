@@ -424,8 +424,8 @@ $fixit""";
 
     case DiagnosticKind.toolsNotInstalled:
       return "Required third party tools GCC ARM Embedded and OpenOCD "
-          "have not been installed.\n\nTry running x-download-tools to "
-          "add these tools to the Dartino install.";
+          "have not been installed.\n\nTry running 'dartino x-download-tools' "
+          "to add these tools to the Dartino install.";
 
     case DiagnosticKind.infoFileNotFound:
       return "Could not find the debug information at $uri.";

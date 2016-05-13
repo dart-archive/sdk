@@ -30,21 +30,37 @@ void* ForeignFunctionInterface::LookupInDefaultLibraries(const char* symbol) {
   return NULL;
 }
 
+DartinoStaticFFISymbol intrinsic_ffi_table[] = {
+  {"strlen", reinterpret_cast<const void*>(strlen)},
+  {NULL, NULL}
+};
+
 DefaultLibraryEntry* ForeignFunctionInterface::libraries_ = NULL;
 Mutex* ForeignFunctionInterface::mutex_ = NULL;
+
+static const void* Lookup(DartinoStaticFFISymbol* table, char* name) {
+  for (DartinoStaticFFISymbol* entry = table; entry->name != NULL;
+       entry++) {
+    if (strcmp(name, entry->name) == 0) {
+      return entry->ptr;
+    }
+  }
+  return NULL;
+}
 
 BEGIN_LEAF_NATIVE(ForeignLibraryGetFunction) {
   word address = AsForeignWord(arguments[0]);
   if (address != 0) return Failure::index_out_of_bounds();
   char* name = AsForeignString(arguments[1]);
-  for (DartinoStaticFFISymbol* entry = &dartino_ffi_table; entry->name != NULL;
-       entry++) {
-    if (strcmp(name, entry->name) == 0) {
-      free(name);
-      return process->ToInteger(reinterpret_cast<intptr_t>(entry->ptr));
-    }
+  const void* ptr;
+  ptr = Lookup(&dartino_ffi_table, name);
+  if (ptr == NULL) {
+    ptr = Lookup(intrinsic_ffi_table, name);
   }
   free(name);
+  if (ptr != NULL) {
+    return process->ToInteger(reinterpret_cast<intptr_t>(ptr));
+  }
   return Failure::index_out_of_bounds();
 }
 END_NATIVE()

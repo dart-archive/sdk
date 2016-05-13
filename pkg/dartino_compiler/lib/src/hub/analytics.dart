@@ -7,9 +7,11 @@
 library dartino_compiler.worker.analytics;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart' show Hash, SHA256;
 import 'package:instrumentation_client/instrumentation_client.dart';
 
 import '../console_print.dart' show OneArgVoid;
@@ -20,13 +22,16 @@ import '../please_report_crash.dart'
         crashReportRequested,
         requestBugReportOnOtherCrashMessage,
         stringifyError;
-
 import '../verbs/infrastructure.dart' show fileUri;
+import 'sentence_parser.dart' show looksLikeAUri;
 
 const String _dartinoUuidEnvVar = const String.fromEnvironment('dartino.uuid');
 
 // Tags used when sending analytics
 const String TAG_COMPLETE = 'complete';
+const String TAG_ERROR = 'error';
+const String TAG_ERRMSG = 'errmsg';
+const String TAG_REQUEST = 'request';
 const String TAG_SHUTDOWN = 'shutdown';
 const String TAG_STARTUP = 'startup';
 
@@ -36,6 +41,8 @@ class Analytics {
   final OneArgVoid _log;
 
   InstrumentationClient _client;
+
+  final List<int> _hashSalt = Platform.localHostname.codeUnits;
 
   /// The url used by [InstrumentationClient] to send analytics.
   final String serverUrl;
@@ -67,6 +74,26 @@ class Analytics {
     if (uuidUri == null) return;
     File uuidFile = new File.fromUri(uuidUri);
     if (uuidFile.existsSync()) uuidFile.deleteSync();
+  }
+
+  /// Return a string which is a hash of the original string.
+  String hash(String original) {
+    Hash hash = new SHA256()..add(_hashSalt)..add(original.codeUnits);
+    return BASE64.encode(hash.close());
+  }
+
+  /// If the given string looks like a Uri,
+  /// then return a salted hash of the string, otherwise return the string.
+  String hashUri(String str) => looksLikeAUri(str) ? hash(str) : str;
+
+  /// Return a list where each word that looks like a Uri has been hashed.
+  Iterable<String> hashAllUris(List<String> words) =>
+      words.map((String word) => hashUri(word));
+
+  /// Return a string where each word that looks like a Uri has been hashed.
+  String hashUriWords(String stringOfWords) {
+    if (stringOfWords == null) return 'null';
+    return hashAllUris(stringOfWords.split(' ')).join(' ');
   }
 
   /// Load the UUID from the environment or read it from disk.
@@ -109,6 +136,15 @@ class Analytics {
   }
 
   void logComplete(int exitCode) => _send([TAG_COMPLETE, '$exitCode']);
+
+  void logError(error, [StackTrace stackTrace]) =>
+      _send([TAG_ERROR, hashUriWords(error), stackTrace?.toString() ?? 'null']);
+
+  void logErrorMessage(String userErrMsg) =>
+      _send([TAG_ERRMSG, hashUriWords(userErrMsg)]);
+
+  void logRequest(List<String> arguments) =>
+      _send(<String>[TAG_REQUEST]..addAll(hashAllUris(arguments)));
 
   void logShutdown() => _send([TAG_SHUTDOWN]);
 

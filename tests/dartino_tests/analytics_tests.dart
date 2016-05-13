@@ -11,6 +11,8 @@ import 'package:dartino_compiler/src/hub/analytics.dart';
 import 'package:expect/expect.dart' show Expect;
 import 'package:path/path.dart' show isAbsolute, join;
 
+import 'package:dartino_compiler/src/verbs/infrastructure.dart';
+
 main() async {
   bool receivedLogMessage = false;
   log(message) {
@@ -106,10 +108,39 @@ main() async {
     await analytics.shutdown();
     await mockServer.assertNoMessages('optOut');
 
+    String dartPath = 'some/path/to/my.dart';
+    String dartPathHash = analytics.hash(dartPath);
+    Expect.equals(dartPathHash.indexOf('some'), -1);
+    Expect.equals(dartPathHash.indexOf('dart'), -1);
+
+    Expect.equals(dartPathHash, analytics.hashUri(dartPath));
+    Expect.equals('session', analytics.hashUri('session'));
+
+    Expect.listEquals(['analyze', dartPathHash],
+        analytics.hashAllUris(['analyze', dartPath]).toList());
+
+    Expect.equals('null', analytics.hashUriWords(null));
+    Expect.equals('', analytics.hashUriWords(''));
+    Expect.equals(
+        'analyze $dartPathHash', analytics.hashUriWords('analyze $dartPath'));
+
     analytics.writeNewUuid();
     analytics.logStartup();
-    analytics.logComplete(0);
+    analytics.logRequest([]);
+    analytics.logRequest(['help']);
+    analytics.logRequest(['help', 'all']);
+    analytics.logRequest(['analyze', dartPath]);
+    analytics.logErrorMessage('$dartPath not found');
+    analytics.logError('error1');
+    analytics.logError('error2', null);
+    try {
+      throw 'test exception logging $dartPath';
+    } catch (error, stackTrace) {
+      analytics.logError(error, stackTrace);
+    }
+    analytics.logComplete(37);
     await analytics.shutdown();
+
     await mockServer.expectMessage([
       TAG_STARTUP,
       analytics.uuid,
@@ -117,7 +148,18 @@ main() async {
       Platform.version,
       Platform.operatingSystem,
     ]);
-    await mockServer.expectMessage([TAG_COMPLETE, '0']);
+    await mockServer.expectMessage([TAG_REQUEST]);
+    await mockServer.expectMessage([TAG_REQUEST, 'help']);
+    await mockServer.expectMessage([TAG_REQUEST, 'help', 'all']);
+    await mockServer.expectMessage([TAG_REQUEST, 'analyze', dartPathHash]);
+    await mockServer.expectMessage([TAG_ERRMSG, '$dartPathHash not found']);
+    await mockServer.expectMessage([TAG_ERROR, 'error1', 'null']);
+    await mockServer.expectMessage([TAG_ERROR, 'error2', 'null']);
+    List<String> errMsg = await mockServer.nextMessage();
+    Expect.equals(TAG_ERROR, errMsg[0]);
+    Expect.equals('test exception logging $dartPathHash', errMsg[1]);
+    Expect.isTrue(errMsg[2].length > 10);
+    await mockServer.expectMessage([TAG_COMPLETE, '37']);
     await mockServer.expectMessage([TAG_SHUTDOWN]);
     await mockServer.assertNoMessages('optIn');
   } finally {
@@ -171,6 +213,13 @@ class MockServer {
 
   /// Assert that the received messages have the specified uuid.
   Future<Null> expectMessage(List<String> expectedParts) async {
+    List<String> actualParts = await nextMessage();
+    Expect.listEquals(expectedParts, actualParts,
+        '\nexpected: $expectedParts\nactual:   $actualParts\n');
+  }
+
+  /// Return the next analytics message.
+  Future<List<String>> nextMessage() async {
     // Messages may be received out of order... wait for msgN #[expectedMsgN].
     int messageIndex = 0;
     dynamic map;
@@ -219,8 +268,6 @@ class MockServer {
         .map((String part) => part.replaceAll('qqqq', ':'))
         .toList();
     // parts[0] is a timestamp.
-    List<String> actualParts = parts.sublist(1);
-    Expect.listEquals(expectedParts, actualParts,
-        '\nexpected: $expectedParts\nactual:   $actualParts\n');
+    return parts.sublist(1);
   }
 }

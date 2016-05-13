@@ -127,6 +127,8 @@ class SentenceParser {
         return new Preposition(PrepositionKind.FOR,
             new NamedTarget(TargetKind.BOARD_NAME, parseName()));
 
+      case "on":
+        return makePreposition(PrepositionKind.ON);
 
       default:
         return null;
@@ -292,14 +294,14 @@ class SentenceParser {
     tokens.consume();
     return name;
   }
+}
 
-  /// Returns true if [word] looks like it is a (relative) URI.
-  bool looksLikeAUri(String word) {
-    return
-        word != null &&
-        !word.startsWith("-") &&
-        (word.contains(".") || word.contains(separator));
-  }
+/// Returns true if [word] looks like it is a (relative) URI.
+bool looksLikeAUri(String word) {
+  return
+      word != null &&
+      !word.startsWith("-") &&
+      (word.contains(".") || word.contains('/') || word.contains('\\'));
 }
 
 String quoteString(String string) => JSON.encode(string);
@@ -383,6 +385,7 @@ enum PrepositionKind {
   IN,
   TO,
   FOR,
+  ON,
 }
 
 class Target {

@@ -5,7 +5,6 @@
 import 'dart:async' show
     Completer,
     Future,
-    Stream,
     StreamController,
     Zone;
 
@@ -316,8 +315,15 @@ class MockAnalytics implements Analytics {
   get uuid => null;
   get uuidUri => null;
   clearUuid() => throw "not supported";
+  hash(String original) => throw "not supported";
+  hashAllUris(List<String> words) => throw "not supported";
+  hashUri(String str) => throw "not supported";
+  hashUriWords(String stringOfWords) => throw "not supported";
   loadUuid() => throw "not supported";
   logComplete(int exitCode) { /* ignored */ }
+  logError(error, [StackTrace stackTrace]) { /* ignored */ }
+  logErrorMessage(String userErrMsg) { /* ignored */ }
+  logRequest(List<String> arguments) { /* ignored */ }
   logShutdown() { /* ignored */ }
   logStartup() { /* ignored */ }
   logVersion() { /* ignored */ }
