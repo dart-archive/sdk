@@ -24,7 +24,10 @@ vars = {
 
   "instrumentation_client_rev": "@f06dca45223695f7828b9f045ef4317833fb2dba",
 
-  "dart_rev": "@1fa317ac4dd96280f1693d998bc0e9228713628b",
+  # When updating this, please remember:
+  # 1. to use a commit on the branch "_temporary_dartino_patches".
+  # 2. update package revisions below.
+  "dart_rev": "@e47e8af36491eb883c14641c8587e9b0ee4a805b",
 
   # Please copy these package revisions from third_party/dart/DEPS when
   # updating dart_rev:

@@ -15,7 +15,7 @@ import 'package:dartino_compiler/src/hub/hub_main.dart';
 const List<int> stdinCommandData = const <int>[4, 0, 0, 0, 0, 0, 0, 0, 0];
 
 Future<Null> testControlStream() async {
-  StreamController<List<int>> controller = new StreamController<List<int>>();
+  StreamController<Uint8List> controller = new StreamController<Uint8List>();
 
   // Test that one byte at the time is handled.
   for (int byte in stdinCommandData) {
