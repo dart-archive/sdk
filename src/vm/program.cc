@@ -389,6 +389,40 @@ void Program::ValidateSharedHeap() {
   process_heap()->VisitWeakObjectPointers(&validator);
 }
 
+class FindDoubleVisitor : public HeapObjectVisitor {
+ public:
+  explicit FindDoubleVisitor(PointerVisitor* visitor) : visitor_(visitor) {}
+
+  virtual uword Visit(HeapObject* object) {
+    if (object->IsDouble()) {
+      visitor_->Visit(reinterpret_cast<Object**>(&object));
+    }
+    return object->Size();
+  }
+
+ private:
+  PointerVisitor* visitor_;
+};
+
+// First does one program GC to get rid of garbage, then does a second to move
+// the Double objects to the start of the heap.
+void Program::SnapshotGC() {
+  CollectGarbage();
+
+  SemiSpace* to = new SemiSpace(Space::kCanResize, kUnknownSpacePage,
+                                heap_.space()->Used() / 10);
+  ScavengeVisitor scavenger(heap_.space(), to);
+
+  PrepareProgramGC();
+  {
+    NoAllocationFailureScope scope(to);
+    FindDoubleVisitor heap_number_visitor(&scavenger);
+    heap_.IterateObjects(&heap_number_visitor);
+  }
+  PerformProgramGC(to, &scavenger);
+  FinishProgramGC();
+}
+
 void Program::CollectGarbage() {
   ClearCache();
   SemiSpace* to = new SemiSpace(Space::kCanResize, kUnknownSpacePage,

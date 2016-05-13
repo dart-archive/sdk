@@ -369,6 +369,8 @@ Program* SnapshotReader::ReadProgram() {
 List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   ASSERT(program->is_optimized());
 
+  program->SnapshotGC();
+
   program->ClearDispatchTableIntrinsics();
 
   // Emit recognizable header.

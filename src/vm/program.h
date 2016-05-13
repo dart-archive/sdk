@@ -286,6 +286,7 @@ class Program : public ProgramList::Entry {
   void ValidateSharedHeap();
 
   void CollectGarbage();
+  void SnapshotGC();
   void CollectOldSpace();
   void CollectOldSpaceIfNeeded();
   void CollectNewSpace();
