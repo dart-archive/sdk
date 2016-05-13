@@ -29,6 +29,8 @@ const String _dartinoUuidEnvVar = const String.fromEnvironment('dartino.uuid');
 
 // Tags used when sending analytics
 const String TAG_COMPLETE = 'complete';
+const String TAG_ERROR = 'error';
+const String TAG_ERRMSG = 'errmsg';
 const String TAG_REQUEST = 'request';
 const String TAG_SHUTDOWN = 'shutdown';
 const String TAG_STARTUP = 'startup';
@@ -80,6 +82,20 @@ class Analytics {
     return BASE64.encode(hash.close());
   }
 
+  /// If the given string looks like a Uri,
+  /// then return a salted hash of the string, otherwise return the string.
+  String hashUri(String str) => looksLikeAUri(str) ? hash(str) : str;
+
+  /// Return a list where each word that looks like a Uri has been hashed.
+  Iterable<String> hashAllUris(List<String> words) =>
+      words.map((String word) => hashUri(word));
+
+  /// Return a string where each word that looks like a Uri has been hashed.
+  String hashUriWords(String stringOfWords) {
+    if (stringOfWords == null) return 'null';
+    return hashAllUris(stringOfWords.split(' ')).join(' ');
+  }
+
   /// Load the UUID from the environment or read it from disk.
   /// Return [true] if it was successfully loaded or read
   /// or [false] if the user should be prompted to opt-in or opt-out.
@@ -121,13 +137,14 @@ class Analytics {
 
   void logComplete(int exitCode) => _send([TAG_COMPLETE, '$exitCode']);
 
-  void logRequest(List<String> arguments) {
-    var fields = <String>[TAG_REQUEST];
-    for (String arg in arguments) {
-      fields.add(looksLikeAUri(arg) ? hash(arg) : arg);
-    }
-    _send(fields);
-  }
+  void logError(error, [StackTrace stackTrace]) =>
+      _send([TAG_ERROR, hashUriWords(error), stackTrace?.toString() ?? 'null']);
+
+  void logErrorMessage(String userErrMsg) =>
+      _send([TAG_ERRMSG, hashUriWords(userErrMsg)]);
+
+  void logRequest(List<String> arguments) =>
+      _send(<String>[TAG_REQUEST]..addAll(hashAllUris(arguments)));
 
   void logShutdown() => _send([TAG_SHUTDOWN]);
 
