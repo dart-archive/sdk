@@ -25,8 +25,9 @@ final _send = ForeignLibrary.main.lookup("socket_send");
 final _shutdown = ForeignLibrary.main.lookup("socket_shutdown");
 final _unregisterAndClose = ForeignLibrary.main.lookup("socket_unregister");
 
-class SocketException {
+class SocketException implements system.SocketException {
   final String message;
+  int get errno => null;
   const SocketException(this.message);
   String toString() => "SocketException: '$message'";
 }
