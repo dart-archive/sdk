@@ -7,8 +7,7 @@ import 'dart:async' show
 
 import 'dart:io' show
     Process,
-    ProcessResult,
-    stdout;
+    ProcessResult;
 
 import 'package:expect/expect.dart' show
     Expect;
@@ -17,7 +16,7 @@ import 'interactive_debugger_tests.dart' as
     interactiveDebuggerTests;
 
 import 'package:dartino_compiler/src/hub/exit_codes.dart' show
-    DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+    INPUT_ERROR;
 
 /// Absolute path to the build directory used by test.py.
 const String buildDirectory =
@@ -114,7 +113,7 @@ List<Test> cliTests = [
     Future outClosed = process.stdout.listen(null).asFuture();
     await process.stderr.listen(null).asFuture();
     await outClosed;
-    Expect.equals(DART_VM_EXITCODE_COMPILE_TIME_ERROR, await process.exitCode);
+    Expect.equals(INPUT_ERROR, await process.exitCode);
   })
 ];
 

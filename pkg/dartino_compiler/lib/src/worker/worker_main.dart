@@ -30,7 +30,8 @@ import '../diagnostic.dart' show
     InputError;
 
 import '../hub/exit_codes.dart' show
-    COMPILER_EXITCODE_CRASH;
+    COMPILER_EXITCODE_CRASH,
+    INPUT_ERROR;
 
 import '../verbs/options.dart' show
     isBatchMode;
@@ -158,7 +159,7 @@ class WorkerSideTask {
         commandSender.sendStderr("$stackTrace\n");
         return COMPILER_EXITCODE_CRASH;
       } else {
-        return 1;
+        return INPUT_ERROR;
       }
     }
   }

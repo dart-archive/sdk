@@ -131,6 +131,9 @@ import '../vm_connection.dart' show
 import '../dartino_compiler_options.dart' show
     DartinoCompilerOptions;
 
+import '../hub/exit_codes.dart' show
+    INPUT_ERROR;
+
 typedef Future<Null> ClientEventHandler(DartinoVmContext vmContext);
 
 Uri configFileUri;
@@ -316,6 +319,10 @@ Future<int> compile(
   }
   Uri firstScript = state.script;
   List<DartinoDelta> previousResults = state.compilationResults;
+
+  if (!await new File.fromUri(script).exists()) {
+    throwFatalError(DiagnosticKind.scriptNotFound, uri: script);
+  }
 
   DartinoDelta newResult;
   try {
@@ -675,7 +682,10 @@ Future<int> run(
     debug.BackTrace stackTrace = await vmContext.backTrace();
     if (stackTrace != null) {
       print(stackTrace.format());
-      print(stackTrace.list(colorsDisabled: false));
+      String stackTraceListing = stackTrace.list(colorsDisabled: false);
+      if (stackTraceListing != null) {
+        print(stackTraceListing);
+      }
     }
   }
 
@@ -1080,7 +1090,7 @@ Future<int> upgradeAgent(
 
   if (!await new File.fromUri(packageUri).exists()) {
     print('File not found: $packageUri');
-    return 1;
+    return INPUT_ERROR;
   }
 
   Version version = parseVersion(extractVersion(packageUri));
@@ -1156,12 +1166,12 @@ Future<int> upgradeAgent(
     print("Failed to upgrade: the device is still at the old version.");
     print("Try running x-upgrade again. "
         "If the upgrade fails again, try rebooting the device.");
-    return 1;
+    return INPUT_ERROR;
   } else if (newVersion == null) {
     print("Could not connect to Dartino agent after upgrade.");
     print("Try running 'dartino show devices' later to see if it has been"
         " restarted. If the device does not show up, try rebooting it.");
-    return 1;
+    return INPUT_ERROR;
   } else {
     print("Upgrade successful.");
   }
@@ -1216,7 +1226,7 @@ Future<int> downloadTools(
       await service.downloadWithProgress(url, tmpZip);
     } on DownloadException catch (e) {
       print("Failed to download $url: $e");
-      return 1;
+      return INPUT_ERROR;
     }
     print(""); // service.downloadWithProgress does not write newline when done.
 
@@ -1492,7 +1502,7 @@ Future<int> flashImage(
       print("STDOUT:\n${result.stdout}");
       print("STDERR:\n${result.stderr}");
     }
-    return 1;
+    return INPUT_ERROR;
   }
   print("Done flashing image: ${image.path}");
 
