@@ -16,7 +16,6 @@
 import 'dart:convert';
 import 'dart:dartino';
 import 'dart:dartino.ffi';
-import 'dart:typed_data';
 
 import 'package:http/http.dart';
 import 'package:socket/socket.dart';
