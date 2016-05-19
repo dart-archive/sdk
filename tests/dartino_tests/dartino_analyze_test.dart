@@ -39,7 +39,7 @@ Future<MockClientConnection> testAnalysis(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
   MockClientConnection client = new MockClientConnection();
   client.stdoutMessages = <String>[];
-  client.parseArguments(arguments);
+  client.parseArguments(null, null, false, arguments);
 
   String testName = 'analysis-test';
   UserSession session =

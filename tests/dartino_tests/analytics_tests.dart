@@ -126,10 +126,10 @@ main() async {
 
     analytics.writeNewUuid();
     analytics.logStartup();
-    analytics.logRequest([]);
-    analytics.logRequest(['help']);
-    analytics.logRequest(['help', 'all']);
-    analytics.logRequest(['analyze', dartPath]);
+    analytics.logRequest('1.2.3', dartPath, 'detached', []);
+    analytics.logRequest('0.0.0', dartPath, 'interactive', ['help']);
+    analytics.logRequest('0.0.0', dartPath, 'interactive', ['help', 'all']);
+    analytics.logRequest('0.0.0', dartPath, 'detached', ['analyze', dartPath]);
     analytics.logErrorMessage('$dartPath not found');
     analytics.logError('error1');
     analytics.logError('error2', null);
@@ -148,10 +148,20 @@ main() async {
       Platform.version,
       Platform.operatingSystem,
     ]);
-    await mockServer.expectMessage([TAG_REQUEST]);
-    await mockServer.expectMessage([TAG_REQUEST, 'help']);
-    await mockServer.expectMessage([TAG_REQUEST, 'help', 'all']);
-    await mockServer.expectMessage([TAG_REQUEST, 'analyze', dartPathHash]);
+    await mockServer
+        .expectMessage([TAG_REQUEST, '1.2.3', dartPathHash, 'detached']);
+    await mockServer.expectMessage(
+        [TAG_REQUEST, '0.0.0', dartPathHash, 'interactive', 'help']);
+    await mockServer.expectMessage(
+        [TAG_REQUEST, '0.0.0', dartPathHash, 'interactive', 'help', 'all']);
+    await mockServer.expectMessage([
+      TAG_REQUEST,
+      '0.0.0',
+      dartPathHash,
+      'detached',
+      'analyze',
+      dartPathHash
+    ]);
     await mockServer.expectMessage([TAG_ERRMSG, '$dartPathHash not found']);
     await mockServer.expectMessage([TAG_ERROR, 'error1', 'null']);
     await mockServer.expectMessage([TAG_ERROR, 'error2', 'null']);

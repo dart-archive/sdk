@@ -51,6 +51,9 @@ import 'package:dartino_compiler/src/verbs/infrastructure.dart' show
 import 'package:dartino_compiler/src/worker/developer.dart' show
     parseSettings;
 
+import 'package:dartino_compiler/src/guess_configuration.dart' show
+    dartinoVersion;
+
 import 'package:dartino_compiler/src/hub/analytics.dart';
 
 final IsolatePool pool = new IsolatePool(workerMain);
@@ -152,7 +155,9 @@ Future<Null> checkCommandLineExample(
 Future<MockClientConnection> mockCommandLine(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
   MockClientConnection client = new MockClientConnection();
-  await handleVerb(arguments, client, null, pool);
+  List<String> mainArgs = [dartinoVersion, '/current/dir', null, 'detached']
+      ..addAll(arguments);
+  await handleVerb(mainArgs, client, null, pool);
   return client;
 }
 
@@ -254,9 +259,13 @@ class MockClientConnection implements ClientConnection {
     return 1;
   }
 
-  AnalyzedSentence parseArguments(List<String> arguments) {
+  AnalyzedSentence parseArguments(String version, String currentDirectory,
+      bool interactive, List<String> arguments) {
     Options options = Options.parse(arguments);
-    Sentence sentence = parseSentence(options.nonOptionArguments);
+    Sentence sentence = parseSentence(options.nonOptionArguments,
+        version: version,
+        currentDirectory: currentDirectory,
+        interactive: interactive);
     this.sentence = analyzeSentence(sentence, null);
     return this.sentence;
   }
@@ -323,7 +332,8 @@ class MockAnalytics implements Analytics {
   logComplete(int exitCode) { /* ignored */ }
   logError(error, [StackTrace stackTrace]) { /* ignored */ }
   logErrorMessage(String userErrMsg) { /* ignored */ }
-  logRequest(List<String> arguments) { /* ignored */ }
+  logRequest(String version, String currentDirectory, String interactive,
+      List<String> arguments) { /* ignored */ }
   logShutdown() { /* ignored */ }
   logStartup() { /* ignored */ }
   logVersion() { /* ignored */ }

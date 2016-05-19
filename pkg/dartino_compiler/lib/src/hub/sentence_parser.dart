@@ -19,26 +19,21 @@ import '../verbs/infrastructure.dart' show
 
 Sentence parseSentence(
     Iterable<String> arguments,
-    {bool includesProgramName}) {
+    {String version, String currentDirectory, bool interactive}) {
   SentenceParser parser =
-      new SentenceParser(arguments, includesProgramName == true);
+      new SentenceParser(version, currentDirectory, interactive, arguments);
   return parser.parseSentence();
 }
 
 class SentenceParser {
   final String version;
-  final String shortProgramName;
   final String currentDirectory;
   final bool interactive;
   Words tokens;
 
-  SentenceParser(Iterable<String> tokens, bool includesProgramName)
-      : version = includesProgramName ? tokens.first : null,
-        currentDirectory = includesProgramName ? tokens.skip(1).first : null,
-        shortProgramName = includesProgramName ? tokens.skip(2).first : null,
-        interactive =
-          (includesProgramName ? tokens.skip(3).first : null) == "interactive",
-        tokens = new Words(tokens.skip(includesProgramName ? 4 : 0));
+  SentenceParser(this.version, this.currentDirectory, this.interactive,
+      Iterable<String> tokens)
+      : tokens = new Words(tokens);
 
   Sentence parseSentence() {
     Verb verb;
