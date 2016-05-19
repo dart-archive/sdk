@@ -20,6 +20,7 @@ class Turtle {
 
   /// Create a new Turtle, and set initial location.
   Turtle(this._display, {xPosition: 0, yPosition: 0}) {
+    _display.backgroundColor = Color.black;
     _display.clear();
     _x = xPosition;
     _y = yPosition;

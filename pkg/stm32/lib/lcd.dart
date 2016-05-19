@@ -81,16 +81,20 @@ class FrameBuffer {
   int get height => _lcdHeight.icall$0();
   int get width => _lcdWidth.icall$0();
 
-  clear([Color color = Color.black]) {
+  Color _backgroundColor = Color.white;
+
+  clear([Color color]) {
+    color ??= _backgroundColor;
     _lcdClear.icall$1(color.rgb8888);
+  }
+
+  set backgroundColor(Color color) {
+    _backgroundColor = color;
+    _lcdSetBackgroundColor.icall$1(color.rgb8888);
   }
 
   set foregroundColor(Color color) {
     _lcdSetForegroundColor.icall$1(color.rgb8888);
-  }
-
-  set backgroundColor(Color color) {
-    _lcdSetBackgroundColor.icall$1(color.rgb8888);
   }
 
   Color readPixel(int x, int y) {

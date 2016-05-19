@@ -26,7 +26,7 @@ main() {
     // Every 100 lines, clear the display and update the counter.
     lineCounter += 1;
     if ((lineCounter % 100) == 0) {
-      display.clear(Color.black);
+      display.clear();
       display.writeText(10, 10, 'Rendered $lineCounter lines');
     }
   }
