@@ -101,7 +101,7 @@ class RandomAccessFileSink implements Sink<List<int>> {
   RandomAccessFileSink(this.f);
   Queue<Function> actions = new Queue<Function>();
   Completer emptied = new Completer();
-  bool actionIsRunning;
+  bool actionIsRunning = false;
 
   void addAction(Future action()) {
     void doNext() {
