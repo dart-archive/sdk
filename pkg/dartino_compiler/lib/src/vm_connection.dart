@@ -9,6 +9,9 @@ import "dart:async" show
     Future,
     Stream;
 
+import "dart:collection" show
+    Queue;
+
 import "dart:io" show
     File,
     FileMode,
@@ -96,20 +99,36 @@ class TcpConnection extends VmConnection {
 class RandomAccessFileSink implements Sink<List<int>> {
   final RandomAccessFile f;
   RandomAccessFileSink(this.f);
-  Future lastAction = new Future.value(null);
+  Queue<Function> actions = new Queue<Function>();
+  Completer emptied = new Completer();
+  bool actionIsRunning;
+
+  void addAction(Future action()) {
+    void doNext() {
+      if (actions.isEmpty) {
+        actionIsRunning = false;
+      } else {
+        actionIsRunning = true;
+        actions.removeFirst()().then((_) {
+          doNext();
+        });
+      }
+    }
+
+    actions.add(action);
+    if (!actionIsRunning) {
+      doNext();
+    }
+  }
 
   @override
   void add(List<int> data) {
-    lastAction.then((_) {
-      lastAction = f.writeFrom(data);
-    });
+    addAction(() => f.writeFrom(data));
   }
 
   @override
   void close() {
-    lastAction.then((_) {
-      lastAction = f.close();
-    });
+    addAction(() => f.close());
   }
 }
 
