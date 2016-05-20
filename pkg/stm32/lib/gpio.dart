@@ -253,6 +253,8 @@ class _STM32GpioInputPin extends GpioInputPin {
     // Read bit for pin (GPIOx->IDR).
     return (peripherals.getUint32(pin._port._base + IDR) & (1 << pin.pin)) != 0;
   }
+
+  bool waitFor(bool value, int timeout) => throw new UnimplementedError();
 }
 
 /// Access to STM32 MCU GPIO interface to configure GPIO pins.
