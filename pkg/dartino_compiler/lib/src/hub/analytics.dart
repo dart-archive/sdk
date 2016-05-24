@@ -137,8 +137,10 @@ class Analytics {
 
   void logComplete(int exitCode) => _send([TAG_COMPLETE, '$exitCode']);
 
-  void logError(error, [StackTrace stackTrace]) =>
-      _send([TAG_ERROR, hashUriWords(error), stackTrace?.toString() ?? 'null']);
+  void logError(error, [StackTrace stackTrace]) {
+    return _send([TAG_ERROR, hashUriWords(error.toString()),
+      stackTrace?.toString() ?? 'null']);
+  }
 
   void logErrorMessage(String userErrMsg) =>
       _send([TAG_ERRMSG, hashUriWords(userErrMsg)]);
