@@ -11,9 +11,6 @@ multiprogram_tests/should_fail: Fail, OK # This is a test of this suite, failure
 debugger/break_in_anonymous_function_test: Fail # Issue 444
 debugger_snapshot/break_in_anonymous_function_test: Fail # Issue 444
 
-debugger/break_in_loop_test: Fail # Issue 446
-debugger_snapshot/break_in_loop_test: Fail # Issue 446
-
 # Received PushFromMap command which refers to a non-existent map entry
 incremental/experimental/same_tokens_variant: Fail
 

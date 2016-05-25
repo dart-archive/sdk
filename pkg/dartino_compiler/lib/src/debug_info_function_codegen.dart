@@ -16,7 +16,8 @@ import 'package:compiler/src/tree/tree.dart' show
     Block,
     CaseMatch,
     FunctionExpression,
-    Node;
+    Node,
+    NodList;
 
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
@@ -174,5 +175,17 @@ class DebugInfoFunctionCodegen extends FunctionCodegenBase with DebugRegistry {
   void visitForEffect(Node node) {
     recordDebugInfo(node);
     super.visitForEffect(node);
+  }
+
+  void visitEmptyStatement(Node node) {
+    recordDebugInfo(node);
+    super.visitEmptyStatement(node);
+  }
+
+  void doStatements(NodeList statements) {
+    if (statements.isEmpty) {
+      recordDebugInfo(statements);
+    }
+    super.doStatements(statements);
   }
 }
