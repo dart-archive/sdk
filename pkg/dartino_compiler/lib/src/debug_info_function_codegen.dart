@@ -16,7 +16,8 @@ import 'package:compiler/src/tree/tree.dart' show
     Block,
     CaseMatch,
     FunctionExpression,
-    Node;
+    Node,
+    NodeList;
 
 import 'package:compiler/src/universe/selector.dart' show
     Selector;
