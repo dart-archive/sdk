@@ -1,21 +1,16 @@
 Starting session. Type 'help' for a list of commands.
 
 > b loop
-### set breakpoint id: '0' method: 'loop' bytecode index: '0'
+breakpoint set: id: '0' method: 'loop' bytecode index: '0'
 > r
-tests/debugger/break_in_loop_test.dart:10:15
-10     while (true);
+10     while(true);
 > l
-tests/debugger/break_in_loop_test.dart:10:15
-5    // Test that a trivial loop has source code listing.
-6    
 7    // DartinoDebuggerCommands=b loop,r,l,q
-8    
+8
 9    loop() {
 10     while (true);
 11   }
 12   
 13   main() {
-14     loop();
-15   }
 > q
+### process terminated
