@@ -181,9 +181,9 @@
         'cflags': [
           '-O3',
           '-fomit-frame-pointer',
-            # Strict aliasing optimizations are not safe for the
-            # type of VM code that we write. We operate with
-            # raw memory aliased with a mixture of pointer types.
+          # Strict aliasing optimizations are not safe for the
+          # type of VM code that we write. We operate with
+          # raw memory aliased with a mixture of pointer types.
           '-fno-strict-aliasing',
         ],
       },
@@ -226,6 +226,8 @@
         'cflags': [
           '-g',
           '-O0',
+          # See comment on strict aliasing optimizations above.
+          '-fno-strict-aliasing',
         ],
       },
 
@@ -479,6 +481,9 @@
                 '-Wall',
                 '-fmessage-length=0',
                 '-ffunction-sections',
+                # Use -Og here and remove -O0 below as the GCC ARM Embedded
+                # compiler cannot compile the cmpctmalloc implementation
+                # with -O0.
                 '-Og',
               ],
 
@@ -516,6 +521,7 @@
             'conditions': [
               ['OS=="linux"', {
                 'cflags!': [
+                  # See comment on -Og above.
                   '-O0',
                 ],
                 'cflags': [
@@ -533,6 +539,7 @@
               }],
               ['OS=="mac"', {
                 'xcode_settings': {
+                  # See comment on -Og above.
                   'GCC_OPTIMIZATION_LEVEL': 'g',
                   # This removes the option -fasm-blocks that GCC ARM Embedded
                   # does not support.
