@@ -8,9 +8,6 @@ self/testNeverCompletes: Timeout # This is a test of this suite, timeout is expe
 multiprogram_tests/should_fail: Fail, OK # This is a test of this suite, failure is expected.
 
 # Unsupported debugger features
-debugger/break_in_anonymous_function_test: Fail # Issue 444
-debugger_snapshot/break_in_anonymous_function_test: Fail # Issue 444
-
 debugger/break_in_loop_test: Fail # Issue 446
 debugger_snapshot/break_in_loop_test: Fail # Issue 446
 

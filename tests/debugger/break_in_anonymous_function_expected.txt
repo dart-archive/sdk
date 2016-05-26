@@ -1,9 +1,19 @@
 Starting session. Type 'help' for a list of commands.
 
 > bf tests/debugger/break_in_anonymous_function_test.dart 12
-### set breakpoint id: '0' method: '<anonymous>' bytecode index: '15'
+### set breakpoint id: '0' method: 'call' bytecode index: '15'
+> bf tests/debugger/break_in_anonymous_function_test.dart 17
+### set breakpoint id: '1' method: 'call' bytecode index: '0'
+> bf tests/debugger/break_in_anonymous_function_test.dart 19
+### set breakpoint id: '2' method: 'call' bytecode index: '0'
 > r
 tests/debugger/break_in_anonymous_function_test.dart:12:3
 12     return 1 + 2 + 3;
+> c
+tests/debugger/break_in_anonymous_function_test.dart:17:19
+17       Expect.equals(3, i);
+> c
+tests/debugger/break_in_anonymous_function_test.dart:19:21
+19         Expect.equals(5, j);
 > c
 ### process terminated

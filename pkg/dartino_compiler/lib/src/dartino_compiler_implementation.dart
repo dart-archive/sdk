@@ -43,7 +43,10 @@ import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
 import 'debug_info.dart';
-import 'find_position_visitor.dart';
+
+import 'find_position_visitor.dart' show
+    findFunctionAtPosition;
+
 import 'dartino_context.dart';
 
 import 'dartino_enqueuer.dart' show
@@ -164,12 +167,11 @@ class DartinoCompilerImplementation extends CompilerImpl {
     Uri uri = Uri.base.resolveUri(file);
     CompilationUnitElementX unit = compilationUnitForUri(uri);
     if (unit == null) return null;
-    FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
-    unit.accept(visitor, null);
-    DartinoFunction function = currentSystem.lookupFunctionByElement(
-        visitor.element);
-    if (function == null) return null;
-    return context.backend.createDebugInfo(function, currentSystem);
+    FunctionElement containingFunction = findFunctionAtPosition(unit, position);
+    DartinoFunction dartinoFunction = currentSystem.lookupFunctionByElement(
+        containingFunction);
+    if (dartinoFunction == null) return null;
+    return context.backend.createDebugInfo(dartinoFunction, currentSystem);
   }
 
   int positionInFileFromPattern(Uri file, int line, String pattern) {
