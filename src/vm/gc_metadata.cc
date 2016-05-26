@@ -68,8 +68,9 @@ void GCMetadata::SetupSingleton() {
   mark_bits_ = reinterpret_cast<uint32*>(metadata_ + 2 * number_of_cards_);
   cumulative_mark_bit_counts_ = reinterpret_cast<uword*>(
       reinterpret_cast<uword>(mark_bits_) + mark_bits_size);
-  mark_stack_overflow_bits_ = reinterpret_cast<uint8_t*>(mark_bits_) +
-                              mark_bits_size + cumulative_mark_bits_size;
+  mark_stack_overflow_bits_ =
+      reinterpret_cast<uint8_t*>(cumulative_mark_bit_counts_) +
+      cumulative_mark_bits_size;
   page_type_bytes_ = mark_stack_overflow_bits_ + mark_stack_overflow_bits_size;
 
   memset(page_type_bytes_, kUnknownSpacePage, page_type_size_);
@@ -247,14 +248,21 @@ void GCMetadata::SlowMark(HeapObject* object, size_t size) {
   int mask_shift = ((reinterpret_cast<uword>(object) >> kWordShift) & 31);
   uint32* bits = MarkBitsFor(object);
 
+  ASSERT(mask_shift < 32);
   uint32 mask = 0xffffffffu << mask_shift;
+  ASSERT(PopCount(*bits & mask) == 1);
   *bits |= mask;
 
   bits++;
   uint32 words = size >> kWordShift;
-  for (words -= 32 - mask_shift; words >= 32; words -= 32)
+  ASSERT(words + mask_shift >= 32);
+  for (words -= 32 - mask_shift; words >= 32; words -= 32) {
+    ASSERT(*bits == 0u);
     *bits++ = 0xffffffffu;
-  *bits |= (1 << words) - 1;
+  }
+  mask = (1 << words) - 1;
+  ASSERT((*bits & mask) == 0u);
+  *bits |= mask;
 }
 
 void GCMetadata::MarkStackOverflow(HeapObject* object) {

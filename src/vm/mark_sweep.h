@@ -71,9 +71,6 @@ class MarkingVisitor : public PointerVisitor {
     if (!GCMetadata::InNewOrOldSpace(object)) return;
     HeapObject* heap_object = HeapObject::cast(object);
     if (!GCMetadata::MarkGreyIfNotMarked(heap_object)) {
-#ifndef _MSC_VER
-      __builtin_prefetch(heap_object);
-#endif
       if (stack_chain_ != NULL && heap_object->IsStack()) {
         ChainStack(Stack::cast(heap_object));
       }

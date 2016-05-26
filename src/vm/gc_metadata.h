@@ -287,6 +287,7 @@ class GCMetadata {
 #else
     uint32* bits = BytewiseMarkBitsFor(object);
 #endif
+    ASSERT(PopCount(*bits & mask) == 1);
     *bits |= mask;
   }
 
