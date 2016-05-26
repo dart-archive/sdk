@@ -142,8 +142,7 @@
           # TODO(340): Why does this not work???
           #'-T<(source_path)/STM32F746NGHx_FLASH.ld',
           # TODO(340): Why is this needed???
-          '-T../../platforms/stm/disco_dartino/src/stm32f746g-discovery/'
-            'STM32F746NGHx_FLASH.ld',
+          '-T../../platforms/stm32f746g-discovery/stm32f746nghx-flash.ld',
           '-Wl,--wrap=__libc_init_array',
           '-Wl,--wrap=_malloc_r',
           '-Wl,--wrap=_malloc_r',
