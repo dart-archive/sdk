@@ -208,3 +208,9 @@ const String disableDocumentation = """
              Turn off collection of anonymous usage statistics
              and crash reports.
 """;
+
+const String shouldPromptAnalyticsDocumentation = """
+   x-should-prompt-analytics
+             Return `true` if the user should be asked to opt into analytics.
+             This is used by IDEs to determine whether to prompt the user.
+""";

@@ -25,8 +25,6 @@ import 'package:compiler/src/source_file_provider.dart' show
 
 import 'codegen_visitor.dart';
 import '../dartino_system.dart';
-import 'hub/session_manager.dart' show
-    SessionState;
 
 import 'dartino_compiler_implementation.dart' show
     DartinoCompilerImplementation;

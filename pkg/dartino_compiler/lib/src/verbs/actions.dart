@@ -58,6 +58,9 @@ import 'x_upgrade_verb.dart' show
 import 'x_download_tools_verb.dart' show
     downloadToolsAction;
 
+import 'x_should_prompt_analytics_verb.dart' show
+    shouldPromptAnalyticsAction;
+
 import 'quit_verb.dart' show
     quitAction;
 
@@ -165,5 +168,6 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "x-download-tools": downloadToolsAction,
   "x-end": endAction,
   "x-servicec": servicecAction,
+  "x-should-prompt-analytics": shouldPromptAnalyticsAction,
   "x-upgrade": upgradeAction,
 };

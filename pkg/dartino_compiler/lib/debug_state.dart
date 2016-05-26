@@ -15,9 +15,6 @@ import 'vm_commands.dart' show
     DartValue,
     InstanceStructure;
 
-import 'src/hub/session_manager.dart' show
-    SessionState;
-
 import 'dartino_class.dart' show
     DartinoClass;
 

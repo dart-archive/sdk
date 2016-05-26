@@ -6,9 +6,6 @@ library dartino.vm_session;
 
 import 'dart:async';
 
-import 'dart:convert' show
-    UTF8;
-
 import 'dart:typed_data' show
     ByteData;
 

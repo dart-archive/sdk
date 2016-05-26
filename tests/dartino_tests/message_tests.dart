@@ -177,13 +177,15 @@ class MockClientConnection implements ClientConnection {
   final StreamController<ClientCommand> controller =
       new StreamController<ClientCommand>();
 
-  final Analytics analytics = new MockAnalytics();
+  final Analytics analytics;
 
   ClientCommandSender commandSender;
 
   AnalyzedSentence sentence;
 
-  MockClientConnection() {
+  MockClientConnection({bool shouldPromptForOptIn: false})
+      : analytics = new MockAnalytics(
+          shouldPromptForOptInValue: shouldPromptForOptIn) {
     commandSender = new MockClientCommandSender(this);
   }
 
@@ -315,10 +317,12 @@ class MockClientLogger implements ClientLogger {
 }
 
 class MockAnalytics implements Analytics {
+  final bool shouldPromptForOptInValue;
+  MockAnalytics({this.shouldPromptForOptInValue: false});
   int optInCount = 0;
   get hasOptedIn => false;
   get hasOptedOut => true;
-  get shouldPromptForOptIn => false;
+  get shouldPromptForOptIn => shouldPromptForOptInValue;
   set shouldPromptForOptIn(_) => throw "not supported";
   get serverUrl => throw "not supported";
   get uuid => null;

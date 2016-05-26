@@ -8,10 +8,12 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:dartino_compiler/src/hub/analytics.dart';
+import 'package:dartino_compiler/src/hub/hub_main.dart' show ClientVerbContext;
+import 'package:dartino_compiler/src/verbs/infrastructure.dart';
 import 'package:expect/expect.dart' show Expect;
 import 'package:path/path.dart' show isAbsolute, join;
 
-import 'package:dartino_compiler/src/verbs/infrastructure.dart';
+import 'message_tests.dart' show MockClientConnection;
 
 main() async {
   bool receivedLogMessage = false;
@@ -178,6 +180,24 @@ main() async {
     if (tmpDir.existsSync()) tmpDir.deleteSync();
     mockServer.shutdown();
   }
+
+  MockClientConnection conn = await mockCmdline(['x-should-prompt-analytics']);
+  Expect.listEquals(['false'], conn.stdoutMessages);
+  conn = await mockCmdline(['x-should-prompt-analytics'],
+      shouldPromptForOptIn: true);
+  Expect.listEquals(['true'], conn.stdoutMessages);
+}
+
+Future<MockClientConnection> mockCmdline(List<String> arguments,
+    {bool shouldPromptForOptIn: false}) async {
+  MockClientConnection client =
+      new MockClientConnection(shouldPromptForOptIn: shouldPromptForOptIn);
+  client.stdoutMessages = <String>[];
+  client.parseArguments(null, null, false, arguments);
+  ClientVerbContext context = new ClientVerbContext(client, null, null);
+  var exitCode = await client.sentence.performVerb(context);
+  client.recordedExitCode = exitCode;
+  return client;
 }
 
 class MockServer {
