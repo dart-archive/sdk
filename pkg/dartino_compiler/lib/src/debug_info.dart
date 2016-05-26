@@ -80,6 +80,11 @@ class SourceLocation {
     if (span == null || other.span == null) return span == other.span;
     return span.begin == other.span.begin && span.end == other.span.end;
   }
+
+  String toString() {
+    return "SourceLocation(${file.filename} "
+        "bytecodeIndex: $bytecodeIndex ${span.begin}-${span.end})";
+  }
 }
 
 class DebugInfo {

@@ -597,7 +597,9 @@ abstract class CodegenVisitor
     } else {
       var previousElements = initializerElements;
       initializerElements = parameter.resolvedAst.elements;
-      visitForValue(initializer);
+      context.compiler.reporter.withCurrentElement(parameter, () {
+        visitForValue(initializer);
+      });
       initializerElements = previousElements;
     }
   }
