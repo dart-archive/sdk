@@ -644,7 +644,6 @@ regress_23500_test/01: RuntimeError
 regress_23500_test/02: RuntimeError
 regress_23500_test/none: RuntimeError
 regress_23650_test: RuntimeError
-regress_26133_test: RuntimeError
 regress_r24720_test: RuntimeError
 reify_typevar_test: RuntimeError
 runtime_type_test: CompileTimeError
