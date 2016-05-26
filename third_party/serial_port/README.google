@@ -1,0 +1,8 @@
+URL: https://github.com/nfrancois/serial_port/archive/v0.3.1.tar.gz
+Version: v0.3.1
+License: Apache 2.0
+License File: LICENSE
+Description:
+SerialPort is a Dart Api to provide access read and write access to serial port.
+Local Modifications:
+No modifications.
