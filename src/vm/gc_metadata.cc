@@ -250,19 +250,14 @@ void GCMetadata::SlowMark(HeapObject* object, size_t size) {
 
   ASSERT(mask_shift < 32);
   uint32 mask = 0xffffffffu << mask_shift;
-  ASSERT(PopCount(*bits & mask) == 1);
   *bits |= mask;
 
   bits++;
   uint32 words = size >> kWordShift;
   ASSERT(words + mask_shift >= 32);
-  for (words -= 32 - mask_shift; words >= 32; words -= 32) {
-    ASSERT(*bits == 0u);
+  for (words -= 32 - mask_shift; words >= 32; words -= 32)
     *bits++ = 0xffffffffu;
-  }
-  mask = (1 << words) - 1;
-  ASSERT((*bits & mask) == 0u);
-  *bits |= mask;
+  *bits |= (1 << words) - 1;
 }
 
 void GCMetadata::MarkStackOverflow(HeapObject* object) {
