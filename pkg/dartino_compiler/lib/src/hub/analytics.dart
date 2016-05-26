@@ -138,8 +138,11 @@ class Analytics {
   void logComplete(int exitCode) => _send([TAG_COMPLETE, '$exitCode']);
 
   void logError(error, [StackTrace stackTrace]) {
-    return _send([TAG_ERROR, hashUriWords(error.toString()),
-      stackTrace?.toString() ?? 'null']);
+    return _send([
+      TAG_ERROR,
+      hashUriWords(error.toString()),
+      stackTrace?.toString() ?? 'null'
+    ]);
   }
 
   void logErrorMessage(String userErrMsg) =>
@@ -154,7 +157,6 @@ class Analytics {
 
   void logStartup() => _send([
         TAG_STARTUP,
-        uuid,
         dartinoVersion,
         Platform.version,
         Platform.operatingSystem
@@ -192,6 +194,8 @@ class Analytics {
     // escaping the separator character by doubling it.
     StringBuffer buffer = new StringBuffer();
     buffer.write(new DateTime.now().millisecondsSinceEpoch.toString());
+    buffer.write(':');
+    buffer.write(uuid);
     for (String field in fields) {
       buffer.write(':');
       _escape(buffer, field);

@@ -141,9 +141,10 @@ main() async {
     analytics.logComplete(37);
     await analytics.shutdown();
 
+    mockServer.expectedUuid = analytics.uuid;
+
     await mockServer.expectMessage([
       TAG_STARTUP,
-      analytics.uuid,
       'version information not available', // Dartino version
       Platform.version,
       Platform.operatingSystem,
@@ -191,6 +192,8 @@ class MockServer {
   /// Messages are asserted/tested in numerical order, and [expectedMsgN]
   /// is the # of the next message to be asserted by [expectMessage].
   int expectedMsgN = 0;
+
+  String expectedUuid;
 
   Future<Null> start() async {
     server = await HttpServer.bind(InternetAddress.LOOPBACK_IP_V4, 0);
@@ -278,6 +281,11 @@ class MockServer {
         .map((String part) => part.replaceAll('qqqq', ':'))
         .toList();
     // parts[0] is a timestamp.
-    return parts.sublist(1);
+    // parts[1] is the UUID
+    // parts[2] is the tag
+    if (parts.length < 3) Expect.fail('Unexpected msg: $parts');
+    int.parse(parts[0]);
+    Expect.equals(expectedUuid, parts[1], 'Expected uuid');
+    return parts.sublist(2);
   }
 }
