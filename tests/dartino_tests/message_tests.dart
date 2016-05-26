@@ -155,7 +155,7 @@ Future<Null> checkCommandLineExample(
 Future<MockClientConnection> mockCommandLine(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
   MockClientConnection client = new MockClientConnection();
-  List<String> mainArgs = [dartinoVersion, '/current/dir', null, 'detached']
+  List<String> mainArgs = [dartinoVersion, '/current/dir', 'detached', null]
       ..addAll(arguments);
   await handleVerb(mainArgs, client, null, pool);
   return client;
@@ -332,7 +332,7 @@ class MockAnalytics implements Analytics {
   logComplete(int exitCode) { /* ignored */ }
   logError(error, [StackTrace stackTrace]) { /* ignored */ }
   logErrorMessage(String userErrMsg) { /* ignored */ }
-  logRequest(String version, String currentDirectory, String interactive,
+  logRequest(String version, String currentDirectory, bool interactive,
       List<String> arguments) { /* ignored */ }
   logShutdown() { /* ignored */ }
   logStartup() { /* ignored */ }

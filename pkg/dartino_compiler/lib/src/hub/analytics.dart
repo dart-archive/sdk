@@ -148,9 +148,10 @@ class Analytics {
   void logErrorMessage(String userErrMsg) =>
       _send([TAG_ERRMSG, hashUriWords(userErrMsg)]);
 
-  void logRequest(String version, String currentDirectory, String interactive,
+  void logRequest(String version, String currentDirectory, bool interactive,
           List<String> arguments) =>
-      _send(<String>[TAG_REQUEST, version, hash(currentDirectory), interactive]
+      _send(<String>[TAG_REQUEST, version, hash(currentDirectory)]
+        ..add(interactive ? 'interactive' : 'detached')
         ..addAll(hashAllUris(arguments)));
 
   void logShutdown() => _send([TAG_SHUTDOWN]);

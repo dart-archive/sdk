@@ -268,10 +268,18 @@ Future<Null> handleVerb(
     // Extract additional information passed by driver/main.cc
     String version = arguments[0];
     String currentDirectory = arguments[1];
-    // arguments[2] is the short program name and is ignored
     // "interactive" indicating that a user is typing
     // or "detached" indicating that dartino is executed as part of a script
-    String interactive = arguments[3];
+    bool interactive;
+    if (arguments[2] == 'interactive') {
+      interactive = true;
+    } else if (arguments[2] == 'detached') {
+      interactive = false;
+    } else {
+      // Fast fail if arguments do not meet expectations.
+      throw 'unexpected arguments from driver';
+    }
+    // arguments[3] is the program name and is ignored
     List<String> remaining = arguments.sublist(4);
 
     analytics?.logRequest(version, currentDirectory, interactive, remaining);

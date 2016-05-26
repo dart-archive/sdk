@@ -126,10 +126,10 @@ main() async {
 
     analytics.writeNewUuid();
     analytics.logStartup();
-    analytics.logRequest('1.2.3', dartPath, 'detached', []);
-    analytics.logRequest('0.0.0', dartPath, 'interactive', ['help']);
-    analytics.logRequest('0.0.0', dartPath, 'interactive', ['help', 'all']);
-    analytics.logRequest('0.0.0', dartPath, 'detached', ['analyze', dartPath]);
+    analytics.logRequest('1.2.3', dartPath, false, []);
+    analytics.logRequest('0.0.0', dartPath, true, ['help']);
+    analytics.logRequest('0.0.0', dartPath, true, ['help', 'all']);
+    analytics.logRequest('0.0.0', dartPath, false, ['analyze', dartPath]);
     analytics.logErrorMessage('$dartPath not found');
     analytics.logError('error1');
     analytics.logError('error2', null);
