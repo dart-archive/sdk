@@ -24,6 +24,7 @@ enum DiagnosticKind {
   expectedTargetButGot,
   extraArguments,
   handShakeFailed,
+  handShakeTimeout,
   illegalDefine,
   infoFileNotFound,
   internalError,
@@ -385,6 +386,9 @@ String getMessage(DiagnosticKind kind) {
       // Should they report this to us as a bug?
       return "Connection rejected because of invalid handshake reply from "
           "VM on $address.";
+
+    case DiagnosticKind.handShakeTimeout:
+      return "Handshake with VM on $address timed out.";
 
     case DiagnosticKind.versionMismatch:
       // TODO(ager): lukechurch: Is there advice we can give here?

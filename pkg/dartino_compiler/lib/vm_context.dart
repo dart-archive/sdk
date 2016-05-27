@@ -319,10 +319,40 @@ class DartinoVmContext {
     return response;
   }
 
-  Future<HandShakeResult> handShake(String version) async {
-    VmCommand command = await runCommand(new HandShake(version));
-    if (command != null && command is HandShakeResult) return command;
-    return null;
+  Future<HandShakeResult> handShake(
+      String version, {Duration maxTimeSpent: null}) async {
+    Completer<HandShakeResult> completer = new Completer<HandShakeResult>();
+    Timer timer;
+    if (maxTimeSpent != null) {
+      timer = new Timer(maxTimeSpent, () {
+        if (!completer.isCompleted) {
+          completer.completeError(
+              new TimeoutException(
+                  "No handshake reply from device", maxTimeSpent));
+        }
+      });
+    }
+
+    readNextCommand().then((VmCommand answer) {
+      if (!completer.isCompleted) {
+        completer.complete(answer);
+      }
+    });
+
+    retryLoop() async {
+      while (!completer.isCompleted) {
+        sendCommand(new HandShake(version));
+        if (maxTimeSpent == null) break;
+        await new Future.delayed(new Duration(seconds: 1));
+      }
+    }
+
+    retryLoop();
+
+    return completer.future.then((HandShakeResult value) {
+      timer?.cancel();
+      return value;
+    });
   }
 
   Future disableVMStandardOutput() async {

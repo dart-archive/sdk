@@ -433,6 +433,9 @@ List<Example> getExamples(DiagnosticKind kind) {
       // TODO(ager): We could probably test this with a mock VM.
       return untestable;
 
+    case DiagnosticKind.handShakeTimeout:
+      return untestable;
+
     case DiagnosticKind.versionMismatch:
       // TODO(ager): We could probably test this with a mock VM.
       return untestable;

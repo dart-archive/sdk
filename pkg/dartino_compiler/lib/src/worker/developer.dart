@@ -5,7 +5,8 @@
 library dartino_compiler.worker.developer;
 
 import 'dart:async' show
-    Future;
+    Future,
+    TimeoutException;
 
 import 'dart:convert' show
     JSON,
@@ -247,7 +248,7 @@ Future<int> analyze(
 Future<Null> attachToVmTty(String ttyDevice, SessionState state) async {
   TtyConnection connection = await TtyConnection.connect(
       ttyDevice, "vmTty", state.log);
-  await attachToVm(connection, state);
+  await attachToVm(connection, state, maxTimeSpent: new Duration(seconds: 20));
 }
 
 Future<Null> attachToVmTcp(String host, int port, SessionState state) async {
@@ -256,7 +257,10 @@ Future<Null> attachToVmTcp(String host, int port, SessionState state) async {
   await attachToVm(connection, state);
 }
 
-Future<Null> attachToVm(VmConnection connection, SessionState state) async {
+Future<Null> attachToVm(
+    VmConnection connection,
+    SessionState state,
+    {Duration maxTimeSpent}) async {
   DartinoVmContext vmContext = new DartinoVmContext(
       connection,
       state.compiler,
@@ -267,7 +271,15 @@ Future<Null> attachToVm(VmConnection connection, SessionState state) async {
 
   // Perform handshake with VM which validates that VM and compiler
   // have the same versions.
-  HandShakeResult handShakeResult = await vmContext.handShake(dartinoVersion);
+  HandShakeResult handShakeResult;
+  try {
+    handShakeResult =
+        await vmContext.handShake(dartinoVersion, maxTimeSpent: maxTimeSpent);
+  } on TimeoutException {
+    throwFatalError(
+        DiagnosticKind.handShakeTimeout,
+        address: connection.description);
+  }
   if (handShakeResult == null) {
     throwFatalError(
         DiagnosticKind.handShakeFailed, address: connection.description);
