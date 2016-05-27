@@ -18,9 +18,10 @@ import utils
 import re
 
 from sets import Set
-from os import makedirs
+from os import makedirs, listdir
 from os.path import dirname, join, exists, basename, abspath
 from shutil import copyfile, copymode, copytree, rmtree, ignore_patterns
+from fnmatch import fnmatch
 
 TOOLS_DIR = abspath(dirname(__file__))
 
@@ -30,18 +31,6 @@ SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
 THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery']
-with open(join(TOOLS_DIR, 'docs_html', 'head.html')) as f:
-  DOC_INDEX_HEAD = f.read()
-with open(join(TOOLS_DIR, 'docs_html', 'tail.html')) as f:
-  DOC_INDEX_TAIL = f.read()
-
-DOC_ENTRY = ('<dt><span class="name"><a class="" href="%s/index.html">%s</a>'
-             '</span></dt>')
-
-DOC_INDEX = '%s%s%s' % (
-    DOC_INDEX_HEAD,
-    '\n'.join([DOC_ENTRY % (p, p) for p in SDK_PACKAGES]),
-    DOC_INDEX_TAIL)
 
 def ParseOptions():
   parser = optparse.OptionParser()
@@ -292,20 +281,24 @@ def CreateDocsPubSpec(fileName):
 def CreateDocsLibs(docPkgDir, outDir):
   for package in SDK_PACKAGES:
     # Read the original package file and match out the documentation from it.
-    sourceFileName = join(outDir, package, 'lib', '{0}.dart'.format(package))
-    with open(sourceFileName) as f:
+    sourceDir = join(outDir, package, 'lib')
+    sourceFile = join(sourceDir, '{0}.dart'.format(package))
+    with open(sourceFile) as f:
       s = f.read()
     # Extract the doc comment for the library; this is everything before a line
     # that starts with 'library' and ends with ';'.
     match = re.match(r'(.*)^library ([^;]+);', s, re.DOTALL|re.MULTILINE)
-    doc = match.group(1)
+    docComment = match.group(1)
     # Create a new lib dart file with same documentation.
-    destFileName = join(docPkgDir, '%s.dart' % package)
-    print 'Doc-gen: Creating %s from %s' % (destFileName, sourceFileName)
-    with open(destFileName, 'w') as f:
-      f.write(match.group(1))
+    destFile = join(docPkgDir, '%s.dart' % package)
+    print 'Doc-gen: Creating %s from %s' % (destFile, sourceFile)
+    with open(destFile, 'w') as f:
+      f.write(docComment)
       f.write('\nlibrary {0};\n'.format(package))
-      f.write('export \'package:{0}/{0}.dart\';'.format(package))
+      # Add an import statement for all .dart files in the dir
+      for sf in listdir(sourceDir):
+        if fnmatch(sf, '*.dart'):
+          f.write('export \'package:{0}/{1}\';\n'.format(package, sf))
 
 def CreateDocumentation():
   EnsureDartDoc()

@@ -11,7 +11,7 @@ library ffi;
 import 'dart:dartino.ffi';
 import 'dart:typed_data';
 
-part 'utf.dart';
+part 'src/utf.dart';
 
 final ForeignFunction _strlen = ForeignLibrary.main.lookup('strlen');
 
