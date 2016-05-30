@@ -13,6 +13,7 @@ CFLAGS=
 LIBS=
 LINKER_SCRIPT=
 
+SCRIPT_NAME="$0"
 while [ $# -gt 0 ]; do
   case $1 in
     --cflags | -f)
@@ -28,14 +29,14 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     *)
-      BASE_NAME=$1
+      BASE_NAME="$1"
       shift
       if [ ! -z "$1" ]; then
-        _BUILD_DIR=$1
+        _BUILD_DIR="$1"
         shift
       fi
       if [ ! -z "$1" ]; then
-        echo "Usage: $0 -f <cflags> -l <library> -t <linker_script> <base name> <cflags> [<build dir>]"
+        echo "Usage: $SCRIPT_NAME -f <cflags> -l <library> -t <linker_script> <base name> [<build dir>]"
         exit 1
       fi
       ;;

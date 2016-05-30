@@ -49,7 +49,8 @@ import 'package:dartino_compiler/src/verbs/infrastructure.dart' show
     analyzeSentence;
 
 import 'package:dartino_compiler/src/worker/developer.dart' show
-    parseSettings;
+    parseSettings,
+    parseDevice;
 
 import 'package:dartino_compiler/src/guess_configuration.dart' show
     dartinoVersion;
@@ -82,6 +83,8 @@ Future<Null> checkExample(DiagnosticKind kind, Example example) async {
     await checkCommandLineExample(kind, example);
   } else if (example is SettingsExample) {
     checkSettingsExample(kind, example);
+  } else if (example is DeviceExample) {
+    checkDeviceConfigurationExample(kind, example);
   } else if (example is Untestable) {
     // Ignored.
   } else {
@@ -94,6 +97,23 @@ void checkSettingsExample(DiagnosticKind kind, SettingsExample example) {
   try {
     parseSettings(example.data, mockUri);
     throw "Settings example: '${example.data}' "
+        "didn't produce the expected '$kind' error";
+  } on InputError catch (e) {
+    Expect.isNotNull(e);
+    Expect.equals(kind, e.kind, '$e');
+    // Ensure that the diagnostic can be turned into a formatted error message.
+    String message = e.asDiagnostic().formatMessage();
+    Expect.isNotNull(message);
+  }
+}
+
+void checkDeviceConfigurationExample(
+    DiagnosticKind kind, DeviceExample example) {
+  Uri mockUri = new Uri(scheme: "org.dartlang.tests.mock");
+  Uri mockUri2 = new Uri(scheme: "org.dartlang.tests.mock2");
+  try {
+    parseDevice(example.data, mockUri, mockUri2);
+    throw "Device configuration example: '${example.data}' "
         "didn't produce the expected '$kind' error";
   } on InputError catch (e) {
     Expect.isNotNull(e);

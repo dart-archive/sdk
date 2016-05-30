@@ -416,6 +416,27 @@ List<Example> getExamples(DiagnosticKind kind) {
       // TODO(sigurdm): This is only sent from the worker.
       return untestable;
 
+    case DiagnosticKind.deviceConfigurationNotJson:
+      return <Example>[
+          new DeviceExample(''),
+          new DeviceExample('{1:null}'),
+          new DeviceExample('...')];
+
+    case DiagnosticKind.deviceConfigurationUnrecognizedKey:
+      return <Example>[new DeviceExample('{"fisk":null}')];
+
+    case DiagnosticKind.deviceConfigurationValueNotAString:
+      return <Example>[
+          new DeviceExample('{"id":42}'),
+          new DeviceExample('{"name":42}'),
+          new DeviceExample('{"linker_script":42}'),
+          new DeviceExample('{"open_ocd_board":42}')];
+
+    case DiagnosticKind.deviceConfigurationValueNotAList:
+      return <Example>[
+          new DeviceExample('{"cflags":"fugl"}'),
+          new DeviceExample('{"libraries":"fugl"}')];
+
     case DiagnosticKind.malformedInfoFile:
       // TODO(sigurdm): Need to mock up a VM socket to test this.
       return untestable;
@@ -477,6 +498,12 @@ class SettingsExample extends Example {
   final String data;
 
   const SettingsExample(this.data);
+}
+
+class DeviceExample extends Example {
+  final String data;
+
+  const DeviceExample(this.data);
 }
 
 class Untestable extends Example {

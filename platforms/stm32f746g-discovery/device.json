@@ -20,5 +20,7 @@
     "libmbedtls.a"
   ],
   // The linker script is located in this directory.
-  "linker_script": "stm32f746nghx-flash.ld"
+  "linker_script": "stm32f746nghx-flash.ld",
+  // Board name when flashing with OpenOCD.
+  "open_ocd_board": "stm32f7discovery"
 }

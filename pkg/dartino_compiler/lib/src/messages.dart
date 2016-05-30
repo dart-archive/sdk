@@ -16,6 +16,10 @@ enum DiagnosticKind {
   cantPerformVerbTo,
   cantPerformVerbWith,
   compilerVersionMismatch,
+  deviceConfigurationNotJson,
+  deviceConfigurationUnrecognizedKey,
+  deviceConfigurationValueNotAList,
+  deviceConfigurationValueNotAString,
   duplicatedFor,
   duplicatedIn,
   duplicatedTo,
@@ -270,24 +274,24 @@ String getMessage(DiagnosticKind kind) {
       return "$uri: unable to decode as JSON: $message.";
 
     case DiagnosticKind.settingsPackagesNotAString:
-      return "$uri: 'packages' value '$userInput' isn't a String.";
+      return "$uri: 'packages' value '$userInput' isn't a string.";
 
     case DiagnosticKind.settingsOptionsNotAList:
-      return "$uri: '$additionalUserInput' value '$userInput' isn't a List.";
+      return "$uri: '$additionalUserInput' value '$userInput' isn't a list.";
 
     case DiagnosticKind.settingsDeviceTypeNotAString:
-      return "$uri: 'device_type' value '$userInput' isn't a String.";
+      return "$uri: 'device_type' value '$userInput' isn't a string.";
 
     case DiagnosticKind.settingsIncrementalModeNotAString:
-      return "$uri: 'incremental_mode' value '$userInput' isn't a String.";
+      return "$uri: 'incremental_mode' value '$userInput' isn't a string.";
 
     case DiagnosticKind.settingsOptionNotAString:
       return "$uri: found '$additionalUserInput' entry '$userInput' "
-          "which isn't a String.";
+          "which isn't a string.";
 
     case DiagnosticKind.settingsDeviceTypeNotAString:
       return
-          "$uri: found 'device_type' entry '$userInput' which isn't a String.";
+          "$uri: found 'device_type' entry '$userInput' which isn't a string.";
 
     case DiagnosticKind.settingsDeviceTypeUnrecognized:
       return "$uri: found 'device_type' entry '$userInput' which is not one of "
@@ -304,17 +308,17 @@ String getMessage(DiagnosticKind kind) {
           "'$userInput'.";
 
     case DiagnosticKind.settingsConstantsNotAMap:
-      return "$uri: 'constants' value isn't a Map";
+      return "$uri: 'constants' value isn't a map";
 
     case DiagnosticKind.settingsUnrecognizedConstantValue:
       return "$uri: found 'constant[$userInput]' value '$additionalUserInput' "
-          "isn't a bool, int, or String.";
+          "isn't a bool, int, or string.";
 
     case DiagnosticKind.settingsUnrecognizedKey:
       return "$uri: unexpected key '$userInput'.";
 
     case DiagnosticKind.settingsDeviceAddressNotAString:
-      return "$uri: 'device_address' value '$userInput' isn't a String.";
+      return "$uri: 'device_address' value '$userInput' isn't a string.";
 
     case DiagnosticKind.unknownAction:
       return "'$userInput' isn't a supported action. "
@@ -441,6 +445,19 @@ $fixit""";
 
     case DiagnosticKind.scriptNotFound:
       return "Main script file: $uri not found.";
+
+    case DiagnosticKind.deviceConfigurationNotJson:
+      return "$uri: unable to decode as JSON: $message.";
+
+    case DiagnosticKind.deviceConfigurationUnrecognizedKey:
+      return "$uri: unexpected key '$userInput'.";
+
+    case DiagnosticKind.deviceConfigurationValueNotAString:
+      return "$uri: '$additionalUserInput' value '$userInput' isn't a string.";
+
+    case DiagnosticKind.deviceConfigurationValueNotAList:
+      return "$uri: '$additionalUserInput' value '$userInput' isn't a list.";
+
   }
 }
 

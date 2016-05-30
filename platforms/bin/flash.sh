@@ -3,12 +3,55 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
+# Script to flash a binary using OpenOCD.
 
-if [ -z "$1" ]; then
-  echo "Usage: $0 <image file>"
-  exit 1
+set -e
+set -x
+
+IMAGE_FILE=
+BOARD=
+
+SCRIPT_NAME="$0"
+
+function usage() {
+  echo "Usage: $SCRIPT_NAME -b <board> <image file>"
+  exit 1;
+}
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --board | -b)
+      BOARD="$2"
+      shift 2
+      ;;
+    *)
+      IMAGE_FILE="$1"
+      shift
+      if [ ! -z "$1" ]; then
+        echo "Additional arguments after image file not supported."
+        usage
+      fi
+      ;;
+  esac
+done
+
+# Check for image file on command line.
+if [ -z "$IMAGE_FILE" ]; then
+  echo "Image file not specified."
+  usage
 fi
-IMAGE_FILE=$1
+
+# Check for image file on command line.
+if [ ! -e "$IMAGE_FILE" ]; then
+  echo "Image file does not exist: $IMAGE_FILE."
+  usage
+fi
+
+# Check for "-b <board>" on command line.
+if [ -z "$BOARD" ]; then
+  echo "Board for OpenOCD not specified."
+  usage
+fi
 
 OS="`uname`"
 case $OS in
@@ -41,12 +84,6 @@ SCRIPT_DIR="$(cd "${PROG_NAME%/*}" ; pwd -P)"
 
 source "$SCRIPT_DIR/setup-paths.shlib"
 
-if [ ! -e $1 ]; then
-  echo "Image file does not exist: $1."
-  exit 1
-fi
-
-BOARD="stm32f7discovery"
 STLINK="stlink-v2-1"
 
 $OPENOCDHOME/bin/openocd                                                  \

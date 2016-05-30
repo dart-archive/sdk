@@ -1379,6 +1379,12 @@ const char *dartino_embedder_options[] = {$optionStrings
 """);
 }
 
+Future<Device> readDeviceFromSettings(SessionState state) async {
+  String deviceId = state.settings.device;
+  if (deviceId == null) deviceId = "stm32f746g-discovery";
+  return await readDevice(deviceId);
+}
+
 Future<int> buildImage(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
@@ -1390,9 +1396,7 @@ Future<int> buildImage(
   }
   assert(snapshot.scheme == 'file');
 
-  String deviceId = state.settings.device;
-  if (deviceId == null) deviceId = "stm32f746g-discovery";
-  Device device = await readDevice(deviceId);
+  Device device = await readDeviceFromSettings(state);
   Directory binDirectory = await locateBinDirectory();
 
   // Collect additional libraries to link with from the 'ffi'
@@ -1478,13 +1482,15 @@ Future<int> flashImage(
     SessionState state,
     Uri image) async {
   assert(image.scheme == 'file');
+  Device device = await readDeviceFromSettings(state);
   Directory binDirectory = await locateBinDirectory();
   ProcessResult result;
   File flashScript = new File(join(binDirectory.path, 'flash.sh'));
   if (Platform.isLinux || Platform.isMacOS) {
     state.log("Flashing image: '${flashScript.path} ${image}'");
     print("Flashing image: ${image}");
-    result = await Process.run(flashScript.path, [image.path]);
+    result = await Process.run(
+        flashScript.path, ['-b', device.open_ocd_board, image.path]);
   } else {
     throwUnsupportedPlatform();
   }
@@ -1981,8 +1987,8 @@ Device parseDevice(
   try {
     deviceData = JSON.decode(json);
   } on FormatException catch (e) {
-    throwFatalError(
-        DiagnosticKind.settingsNotJson, uri: deviceUri, message: e.message);
+    throwFatalError(DiagnosticKind.deviceConfigurationNotJson,
+                    uri: deviceUri, message: e.message);
   }
   if (deviceData is! Map) {
     throwFatalError(DiagnosticKind.settingsNotAMap, uri: deviceUri);
@@ -1993,20 +1999,21 @@ Device parseDevice(
   List<String> cflags;
   List<String> libraries;
   String linker_script;
+  String open_ocd_board;
 
   List<String> listOfStrings(value, String key) {
     List<String> result = new List<String>();
     if (value != null) {
       if (value is! List) {
         throwFatalError(
-            DiagnosticKind.settingsOptionsNotAList, uri: deviceUri,
+            DiagnosticKind.deviceConfigurationValueNotAList, uri: deviceUri,
             userInput: "$value",
             additionalUserInput: key);
       }
       for (var option in value) {
         if (option is! String) {
           throwFatalError(
-              DiagnosticKind.settingsOptionNotAString, uri: deviceUri,
+              DiagnosticKind.deviceConfigurationValueNotAString, uri: deviceUri,
               userInput: '$option',
               additionalUserInput: key);
         }
@@ -2016,28 +2023,25 @@ Device parseDevice(
     return result;
   }
 
+  String stringValue(value, String key) {
+    if (value != null) {
+      if (value is! String) {
+        throwFatalError(
+            DiagnosticKind.deviceConfigurationValueNotAString,
+            uri: deviceUri, userInput: '$value', additionalUserInput: key);
+      }
+    }
+    return value;
+  }
+
   deviceData.forEach((String key, value) {
     switch (key) {
       case "id":
-        if (value != null) {
-          if (value is! String) {
-            throwFatalError(
-                DiagnosticKind.settingsPackagesNotAString, uri: deviceUri,
-                userInput: '$value');
-          }
-          id = value;
-        }
+        id = stringValue(value, key);
         break;
 
       case "name":
-        if (value != null) {
-          if (value is! String) {
-            throwFatalError(
-                DiagnosticKind.settingsDeviceAddressNotAString,
-                uri: deviceUri, userInput: '$value');
-          }
-          name = value;
-        }
+        name = stringValue(value, key);
         break;
 
       case "cflags":
@@ -2051,19 +2055,25 @@ Device parseDevice(
         break;
 
       case "linker_script":
+        id = stringValue(value, key);
         if (value != null) {
           if (value is! String) {
             throwFatalError(
-                DiagnosticKind.settingsDeviceAddressNotAString,
-                uri: deviceUri, userInput: '$value');
+                DiagnosticKind.deviceConfigurationValueNotAString,
+                uri: deviceUri, userInput: '$value',
+                additionalUserInput: 'linker_script');
           }
           linker_script = deviceUri.resolve(value).toFilePath();
         }
         break;
 
+      case "open_ocd_board":
+        open_ocd_board = stringValue(value, key);
+        break;
+
       default:
         throwFatalError(
-            DiagnosticKind.settingsUnrecognizedKey, uri: deviceUri,
+            DiagnosticKind.deviceConfigurationUnrecognizedKey, uri: deviceUri,
             userInput: key);
         break;
     }
@@ -2074,28 +2084,26 @@ Device parseDevice(
       name,
       cflags,
       libraries,
-      linker_script);
+      linker_script,
+      open_ocd_board);
 }
 
 class Device {
   final Uri source;
-
   final String id;
-
   final String name;
-
   final List<String> cflags;
-
   final List<String> libraries;
-
   final String linker_script;
+  final String open_ocd_board;
 
   const Device(
       this.id,
       this.name,
       this.cflags,
       this.libraries,
-      this.linker_script) : source = null;
+      this.linker_script,
+      this.open_ocd_board) : source = null;
 
   const Device.fromSource(
       this.source,
@@ -2103,7 +2111,8 @@ class Device {
       this.name,
       this.cflags,
       this.libraries,
-      this.linker_script);
+      this.linker_script,
+      this.open_ocd_board);
 
   String toString() {
     return "Device("
@@ -2111,7 +2120,8 @@ class Device {
         "name: $name, "
         "cflags: $cflags, "
         "libraries: $libraries, "
-	"linker_script: $linker_script)";
+        "linker_script: $linker_script, "
+        "open_ocd_board: $open_ocd_board)";
   }
 
   Map<String, dynamic> toJson() {
@@ -2128,6 +2138,7 @@ class Device {
     addIfNotNull("cflags", cflags);
     addIfNotNull("libraries", libraries);
     addIfNotNull("linker_script", linker_script);
+    addIfNotNull("open_ocd_board", open_ocd_board);
     return result;
   }
 }
