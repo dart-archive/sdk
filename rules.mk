@@ -295,9 +295,9 @@ LIBRARY_GENERATOR_SRCS := \
 	$(DARTINO_SRC_VM)/assembler_arm_thumb_macos.cc \
 	$(DARTINO_SRC_VM)/assembler_arm_macos.cc \
 	$(DARTINO_SRC_VM)/assembler.h \
-	$(DARTINO_SRC_VM)/assembler_mips.cc
-	$(DARTINO_SRC_VM)/assembler_mips.h
-	$(DARTINO_SRC_VM)/assembler_mips_linux.cc
+	$(DARTINO_SRC_VM)/assembler_mips.cc \
+	$(DARTINO_SRC_VM)/assembler_mips.h \
+	$(DARTINO_SRC_VM)/assembler_mips_linux.cc \
 	$(DARTINO_SRC_VM)/assembler_x64.cc \
 	$(DARTINO_SRC_VM)/assembler_x64.h \
 	$(DARTINO_SRC_VM)/assembler_x64_linux.cc \
