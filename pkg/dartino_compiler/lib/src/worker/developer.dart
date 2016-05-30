@@ -1295,10 +1295,9 @@ Future<int> downloadTools(
 Future<Directory> locateBinDirectory() async {
   // In the SDK, the tools directory is at the same level as the
   // internal (and bin) directory.
-  String path = 'platforms/stm32f746g-discovery/bin';
+  String path = 'platforms/bin';
   Directory binDirectory =
-      new Directory.fromUri(executable.resolve(
-          '../$path'));
+      new Directory.fromUri(executable.resolve('../$path'));
   if ((await binDirectory.exists())) {
     // In the SDK, the tools directory is at the same level as the
     // internal (and bin) directory.

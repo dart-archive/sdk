@@ -3,9 +3,9 @@
 # for details. All rights reserved. Use of this source code is governed by a
 # BSD-style license that can be found in the LICENSE.md file.
 
-# Root of the Dartino SDK, that is, $SCRIPT_DIR/../../...
+# Root of the Dartino SDK, that is, $SCRIPT_DIR/../... This is true
+# for both the SDK and a Github checkout
 DARTINO_SDK_DIR=$SCRIPT_DIR
-DARTINO_SDK_DIR="$(dirname "$DARTINO_SDK_DIR")"
 DARTINO_SDK_DIR="$(dirname "$DARTINO_SDK_DIR")"
 DARTINO_SDK_DIR="$(dirname "$DARTINO_SDK_DIR")"
 
