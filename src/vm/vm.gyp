@@ -299,6 +299,9 @@
         'assembler_arm_thumb_macos.cc',
         'assembler_arm_macos.cc',
         'assembler.h',
+        'assembler_mips.h',
+        'assembler_mips.cc',
+        'assembler_mips_linux.cc',
         'assembler_x64.cc',
         'assembler_x64.h',
         'assembler_x64_linux.cc',
@@ -313,6 +316,7 @@
         'interpreter_arm.cc',
         'interpreter_x86.cc',
         'interpreter_x64.cc',
+        'interpreter_mips.cc',
       ],
     },
     {

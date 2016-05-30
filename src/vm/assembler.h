@@ -11,6 +11,8 @@
 
 #if defined(DARTINO_TARGET_ARM)
 #include "src/vm/assembler_arm.h"
+#elif defined(DARTINO_TARGET_MIPS)
+#include "src/vm/assembler_mips.h"
 #else
 #include "src/vm/assembler_x86.h"
 #endif

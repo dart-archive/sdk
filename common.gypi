@@ -255,6 +255,96 @@
         },
       },
 
+      'dartino_mips': {
+        'abstract': 1,
+
+        'defines': [
+          'DARTINO32',
+          'DARTINO_TARGET_MIPS',
+        ],
+
+        'cflags_cc': [
+          '-Wno-unused-variable',
+          '-mips32r2',
+          '-EL',
+        ],
+
+        'cflags_c':[
+          '-Wno-unused-variable',
+          '-mips32r2',
+          '-EL',
+        ],
+
+        'ldflags': [
+          '-EL',
+        ],
+
+      },
+
+      'dartino_xmips': {
+        'abstract': 1,
+
+        'defines': [
+          'DARTINO32',
+          'DARTINO_TARGET_MIPS',
+        ],
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'defines': [
+              # Fake define intercepted by cc_wrapper.py to change the
+              # compiler binary to a MIPS cross compiler. This is only
+              # needed on linux.
+              'DARTINO_MIPS',
+            ],
+
+            'cflags_cc': [
+              '-Wno-unused-variable',
+              '-mips32r2',
+              '-EL',
+            ],
+
+            'cflags_c':[
+              '-Wno-unused-variable',
+              '-mips32r2',
+              '-EL',
+            ],
+
+            'ldflags': [
+              # Fake define intercepted by cc_wrapper.py.
+              '-L/DARTINO_MIPS',
+              '-EL',
+            ],
+
+            'variables': {
+              'ldso_path%': '<!(/bin/echo -n $LDSO_PATH)',
+              'ld_r_path%': '<!(/bin/echo -n $LD_R_PATH)',
+            },
+
+            'conditions': [
+              ['ldso_path!=""', {
+                'ldflags': ['-Wl,--dynamic-linker=<(ldso_path)'],
+              }],
+              ['ld_r_path!=""', {
+                'ldflags': ['-Wl,--rpath=<(ld_r_path)'],
+              }],
+            ],
+          }],
+
+          ['_toolset=="host"', {
+            # Compile host targets as IA32, to get same word size.
+            'inherit_from': [ 'dartino_ia32' ],
+
+            # The 'dartino_ia32' target will define IA32 as the target. Since
+            # the host should still target MIPS, undefine it.
+            'defines!': [
+              'DARTINO_TARGET_IA32',
+            ],
+          }],
+        ],
+
+      },
+
       'dartino_x64': {
         'abstract': 1,
 

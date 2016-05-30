@@ -84,6 +84,10 @@ def invoke_gcc_local(args):
     args.insert(0, "arm-none-eabi-g++")
     os.execvp("arm-none-eabi-g++", args)
 
+def invoke_gcc_mips(args):
+  args.insert(0, "mips-mti-linux-gnu-g++")
+  os.execvp("mips-mti-linux-gnu-g++", args)
+
 def main():
   args = sys.argv[1:]
   if "-L/DARTINO_ASAN" in args:
@@ -121,6 +125,11 @@ def main():
   elif "-L/GCC_XARM_LOCAL" in args:
     args.remove("-L/GCC_XARM_LOCAL")
     invoke_gcc_local(args)
+  elif "-DDARTINO_MIPS" in args:
+    invoke_gcc_mips(args)
+  elif "-L/DARTINO_MIPS" in args:
+    args.remove("-L/DARTINO_MIPS")
+    invoke_gcc_mips(args)
   else:
     invoke_gcc(args)
 
