@@ -110,7 +110,7 @@ int main() {
   InitializeBoard();
 
   // Create the main task.
-  osThreadDef(mainTask, DartinoEntry, osPriorityNormal, 0, 4 * 1024);
+  osThreadDef(mainTask, DartinoEntry, osPriorityNormal, 0, 1024);
   osThreadId mainTaskHandle = osThreadCreate(osThread(mainTask), NULL);
   USE(mainTaskHandle);
 

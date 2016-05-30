@@ -17,8 +17,7 @@ namespace dartino {
 
 static const int kNumberOfDartinoThreads = 8;
 static const int kDartinoStackSize = 2048;
-static const int kDartinoStackSizeInWords =
-    kDartinoStackSize / sizeof(uint32_t);
+static const int kDartinoStackSizeInWords = kDartinoStackSize / kPointerSize;
 
 static osThreadDef_t cmsis_thread_pool[kNumberOfDartinoThreads];
 static char cmsis_thread_no = 0;
@@ -62,7 +61,14 @@ ThreadIdentifier Thread::Run(RunSignature run, void* data) {
   osThreadDef_t* threadDef = &(cmsis_thread_pool[thread_no]);
   threadDef->pthread = reinterpret_cast<void (*)(const void*)>(run);
   threadDef->tpriority = osPriorityNormal;
+#ifdef CMSIS_OS_RTX
   threadDef->stacksize = kDartinoStackSize;
+#else
+  // The CMSIS-RTOS implementation provided with STM32Cube passed the
+  // stacksize directly to FreeRTOS xTaskCreate. However the stacksize
+  // for xTaskCreate is in words not in bytes.
+  threadDef->stacksize = kDartinoStackSizeInWords;
+#endif
   threadDef->name = const_cast<char*>(name);
 #ifdef CMSIS_OS_RTX
   threadDef->stack_pointer = cmsis_stack[thread_no];
