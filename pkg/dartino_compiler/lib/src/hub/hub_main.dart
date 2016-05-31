@@ -284,7 +284,7 @@ Future<Null> handleVerb(
 
     analytics?.logRequest(version, currentDirectory, interactive, remaining);
     clientConnection.parseArguments(
-        version, currentDirectory, interactive == 'interactive', remaining);
+        version, currentDirectory, interactive, remaining);
     String sessionName = clientConnection.sentence.sessionName;
     UserSession session;
     SharedTask initializer;
