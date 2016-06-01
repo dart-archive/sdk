@@ -34,8 +34,10 @@ extern uint32_t bmsrValue;
 uint8_t MACAddress[6] = {MAC_ADDR0, MAC_ADDR1, MAC_ADDR2,
                          MAC_ADDR3, MAC_ADDR4, MAC_ADDR5};
 
-static int networkIsUp = 0;
+static bool networkIsUp = false;
+static bool networkAddressMayHaveChanged = false;
 static int device_handle_ = -1;
+static dartino::Mutex* mutex_;
 
 // Return the host address in network byte order, if an address for the host has
 // been resolved and 0 otherwise.
@@ -59,9 +61,19 @@ uint32_t LookupHost(const char *host, uint32_t *result) {
   return address;
 }
 
-uint8_t IsNetworkUp() { return networkIsUp; }
+bool IsNetworkUp() {
+  dartino::ScopedLock lock(mutex_);
+  return networkIsUp;
+}
 
-uint8_t IsNetworkInitialized() { return (device_handle_ != -1); }
+bool IsNetworkInitialized() { return (device_handle_ != -1); }
+
+bool NetworkAddressMayHaveChanged() {
+  dartino::ScopedLock lock(mutex_);
+  bool oldState = networkAddressMayHaveChanged;
+  networkAddressMayHaveChanged = false;
+  return oldState;
+}
 
 void GetNetworkAddressConfiguration(NetworkParameters *parameters) {
   FreeRTOS_GetAddressConfiguration(
@@ -89,6 +101,7 @@ BaseType_t InitializeNetworkStack(NetworkParameters const *parameters) {
   } else {
     ASSERT(result == pdFAIL);
   }
+  mutex_ = dartino::Platform::CreateMutex();
   return result;
 }
 
@@ -101,10 +114,12 @@ BaseType_t xApplicationDNSQueryHook(const char *pcName) {
 const char *pcApplicationHostnameHook() { return "disco_dartino"; }
 
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
+  dartino::ScopedLock lock(mutex_);
   if (eNetworkEvent == eNetworkUp) {
-    networkIsUp = 1;
+    networkIsUp = true;
+    networkAddressMayHaveChanged = true;
   } else {
-    networkIsUp = 0;
+    networkIsUp = true;
   }
 }
 

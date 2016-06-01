@@ -10,7 +10,7 @@ import 'package:stm32/ethernet.dart';
 import '../../../../samples/general/tls-socket.dart' as sample;
 
 main() {
-  if (!ethernet.InitializeNetworkStack(
+  if (!ethernet.initializeNetworkStack(
     const InternetAddress(const <int>[192, 168, 0, 10]),
     const InternetAddress(const <int>[255, 255, 255, 0]),
     const InternetAddress(const <int>[192, 168, 0, 1]),
@@ -18,7 +18,7 @@ main() {
     throw 'Failed to initialize network stack';
   }
 
-  while (NetworkInterface.list().isEmpty) {
+  while (NetworkInterface.list().first.addresses.isEmpty) {
     sleep(10);
   }
 

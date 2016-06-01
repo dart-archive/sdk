@@ -7,13 +7,15 @@ library stm32.ethernet;
 import 'dart:dartino.ffi';
 
 final _initializeNetwork =
-  ForeignLibrary.main.lookup("initialize_network_stack");
-final _isNetworkUp = ForeignLibrary.main.lookup("is_network_up");
+  ForeignLibrary.main.lookup("InitializeNetworkStack");
+final _isNetworkUp = ForeignLibrary.main.lookup("IsNetworkUp");
 final _getEthernetAdapterStatus =
-  ForeignLibrary.main.lookup("get_ethernet_adapter_status");
+  ForeignLibrary.main.lookup("GetEthernetAdapterStatus");
 final _getNetworkAddressConfiguration =
-  ForeignLibrary.main.lookup("get_network_address_configuration");
-final _lookupHost = ForeignLibrary.main.lookup("network_lookup_host");
+  ForeignLibrary.main.lookup("GetNetworkAddressConfiguration");
+final _lookupHost = ForeignLibrary.main.lookup("LookupHost");
+final _networkAddressMayHaveChanged = ForeignLibrary.main.lookup(
+    "NetworkAddressMayHaveChanged");
 
 Ethernet ethernet = new Ethernet._internal();
 
@@ -52,9 +54,7 @@ class Ethernet {
   ///
   /// It is an error to call this method more than once, even with the same
   /// arguments.
-
-  // TODO(karlklose): Change to lower-case (initializeNetworkStack)
-  bool InitializeNetworkStack(InternetAddress address, InternetAddress netmask,
+  bool initializeNetworkStack(InternetAddress address, InternetAddress netmask,
       InternetAddress gateway, InternetAddress dnsServer) {
     if (_initialized) {
       throw new StateError("network stack already initialized");
@@ -66,6 +66,12 @@ class Ethernet {
       _writeIp4Address(configuration, 8, gateway);
       _writeIp4Address(configuration, 12, dnsServer);
       _initialized = (_initializeNetwork.icall$1(configuration.address) == 1);
+      _lo = new _NetworkInterface(_NetworkInterface.LO_INTERFACE_INDEX,
+          "lo",
+          <InternetAddress>[InternetAddress.localhost]);
+      _eth = new _NetworkInterface(_NetworkInterface.ETH_INTERFACE_INDEX,
+          "eth0",
+          <InternetAddress>[]);
       return _initialized;
     } finally {
       configuration.free();
@@ -94,14 +100,13 @@ class Ethernet {
   }
 
   bool _initialized = false;
-  NetworkInterface _lo;
-  NetworkInterface _eth;
+  _NetworkInterface _lo;
+  _NetworkInterface _eth;
 
   bool get isInitialized => _initialized;
 }
 
-/// A representation of an available ("up") network interface and its
-/// properties.
+/// A representation of an available network interface and its properties.
 abstract class NetworkInterface {
   // TODO(karlklose): also provide access to netmask, gateway, and DNS server.
 
@@ -113,17 +118,13 @@ abstract class NetworkInterface {
 
   /// Returns a list of the currently active [NetworkInterface]s.
   ///
-  /// This list is a snapshot and is not updated when interfaces change status.
+  /// This list is a snapshot and will not updated when interfaces change
+  /// status.
   static List<NetworkInterface> list({bool includeLoopback: false}) {
     if (!ethernet._initialized) {
       throw new StateError("network stack not initialized");
     }
-    bool isUp = _isUp;  // Make a copy to not call the native function twice.
-    if (!isUp && ethernet._eth != null) {
-      // Network adapter went down since last listing.
-      ethernet._eth = null;
-    } else if (isUp && ethernet._eth == null) {
-      // Network adapter went up since last listing (or the first time).
+    if (_networkAddressMayHaveChanged.icall$0() != 0) {
       ForeignMemory configuration = new ForeignMemory.allocated(16);
       InternetAddress address;
       try {
@@ -131,26 +132,17 @@ abstract class NetworkInterface {
         List<int> bytes = new List<int>(4);
         configuration.copyBytesToList(bytes, 0, 4, 0);
         address = new InternetAddress(bytes);
-        ethernet._eth = new _NetworkInterface(
-            _NetworkInterface.ETH_INTERFACE_INDEX,
-            "eth0",
-            <InternetAddress>[address]);
+        ethernet._eth._addresses = <InternetAddress>[];
+        if (address != null) {
+          ethernet._eth._addresses.add(address);
+        }
       } finally {
         configuration.free();
       }
     }
-    List<NetworkInterface> interfaces = <NetworkInterface>[];
+    List<NetworkInterface> interfaces = <NetworkInterface>[ethernet._eth];
     if (includeLoopback) {
-      if (ethernet._lo == null) {
-        ethernet._lo = new _NetworkInterface(
-            _NetworkInterface.LO_INTERFACE_INDEX,
-            "lo",
-            <InternetAddress>[InternetAddress.localhost]);
-      }
       interfaces.add(ethernet._lo);
-    }
-    if (ethernet._eth != null) {
-      interfaces.add(ethernet._eth);
     }
     return interfaces;
   }
@@ -166,9 +158,10 @@ class _NetworkInterface implements NetworkInterface {
 
   final int index;
   final String name;
-  final List<InternetAddress> addresses;
+  List<InternetAddress> get addresses => _addresses;
+  List<InternetAddress> _addresses;
 
-  _NetworkInterface(this.index, this.name, this.addresses);
+  _NetworkInterface(this.index, this.name, this._addresses);
 
   bool get isConnected {
     switch (index) {

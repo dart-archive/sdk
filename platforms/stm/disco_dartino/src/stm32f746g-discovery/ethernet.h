@@ -26,7 +26,8 @@ typedef struct NetworkParameters NetworkParameters;
 
 void GetNetworkAddressConfiguration(NetworkParameters * parameters);
 BaseType_t InitializeNetworkStack(NetworkParameters const * parameters);
-uint8_t IsNetworkUp();
+bool IsNetworkUp();
+bool NetworkAddressMayHaveChanged();
 uint32_t GetEthernetAdapterStatus();
 uint32_t LookupHost(const char *host, uint32_t *result);
 

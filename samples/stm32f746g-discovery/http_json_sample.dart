@@ -91,11 +91,11 @@ void initializeNetwork({
   InternetAddress gateway: fallbackGateway,
   InternetAddress dnsServer: fallbackDnsServer}) {
 
-  if (!ethernet.InitializeNetworkStack(address, netmask, gateway, dnsServer)) {
+  if (!ethernet.initializeNetworkStack(address, netmask, gateway, dnsServer)) {
     throw "Failed to initialize network stack";
   }
 
-  while (NetworkInterface.list().isEmpty) {
+  while (NetworkInterface.list().first.addresses.isEmpty) {
     sleep(10);
   }
 }

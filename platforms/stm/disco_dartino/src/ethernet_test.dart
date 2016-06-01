@@ -21,7 +21,7 @@ void printNetworkInfo() {
 
 main() {
   print('Hello from Dartino');
-  if (!ethernet.InitializeNetworkStack(
+  if (!ethernet.initializeNetworkStack(
       const InternetAddress(const <int>[192, 168, 0, 10]),
       const InternetAddress(const <int>[255, 255, 255, 0]),
       const InternetAddress(const <int>[192, 168, 0, 1]),

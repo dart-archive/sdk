@@ -139,12 +139,12 @@ void LCDDrawLine(
 }
 
 // Ethernet adapter bindings
-DARTINO_EXPORT_STATIC_RENAME(initialize_network_stack, InitializeNetworkStack)
-DARTINO_EXPORT_STATIC_RENAME(is_network_up, IsNetworkUp)
-DARTINO_EXPORT_STATIC_RENAME(get_ethernet_adapter_status,
-                             GetEthernetAdapterStatus)
-DARTINO_EXPORT_STATIC_RENAME(get_network_address_configuration,
-                             GetNetworkAddressConfiguration)
+DARTINO_EXPORT_STATIC(InitializeNetworkStack)
+DARTINO_EXPORT_STATIC(IsNetworkUp)
+DARTINO_EXPORT_STATIC(GetEthernetAdapterStatus)
+DARTINO_EXPORT_STATIC(GetNetworkAddressConfiguration)
+DARTINO_EXPORT_STATIC(NetworkAddressMayHaveChanged)
+
 
 // FreeRTOS-Plus-TCP bindings
 DARTINO_EXPORT_STATIC_RENAME(create_socket,
