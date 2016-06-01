@@ -13,16 +13,13 @@ import "dart:collection" show
     Queue;
 
 import "dart:io" show
-    File,
-    FileMode,
+    FileSystemException,
     IOSink,
-    RandomAccessFile,
     Socket,
     SocketException,
     SocketOption;
 
-import "dart:typed_data" show
-    Uint8List;
+import "package:serial_port/serial_port.dart";
 
 import 'verbs/infrastructure.dart' show
     DiagnosticKind,
@@ -96,12 +93,15 @@ class TcpConnection extends VmConnection {
   Future<Null> get done => doneCompleter.future;
 }
 
-class RandomAccessFileSink implements Sink<List<int>> {
-  final RandomAccessFile f;
-  RandomAccessFileSink(this.f);
+class SerialPortSink implements Sink<List<int>> {
+  final SerialPort serialPort;
+  SerialPortSink(this.serialPort);
   Queue<Function> actions = new Queue<Function>();
   Completer emptied = new Completer();
   bool actionIsRunning = false;
+  Completer<Null> doneCompleter = new Completer<Null>();
+
+  Future<Null> get done => doneCompleter.future;
 
   void addAction(Future action()) {
     void doNext() {
@@ -123,54 +123,57 @@ class RandomAccessFileSink implements Sink<List<int>> {
 
   @override
   void add(List<int> data) {
-    addAction(() => f.writeFrom(data));
+    addAction(() => serialPort.write(data));
   }
 
   @override
   void close() {
-    addAction(() => f.close());
-  }
-}
-
-Stream<List<int>> readingStream(RandomAccessFile f) async* {
-  while (true) {
-    int a = await f.readByte();
-    Uint8List x = new Uint8List(1);
-    x[0] = a;
-    yield x;
+    addAction(() async => doneCompleter.complete());
   }
 }
 
 class TtyConnection extends VmConnection {
-  final Stream<List<int>> input;
-  final RandomAccessFileSink output;
+  SerialPort serialPort;
   final String address;
-  final RandomAccessFile inputFile;
-  final RandomAccessFile outputFile;
+  final SerialPortSink output;
 
-  TtyConnection(RandomAccessFile input,
-      RandomAccessFile output, this.address)
-      : inputFile = input,
-        outputFile = output,
-        input = readingStream(input),
-        output = new RandomAccessFileSink(output);
+  Stream<List<int>> get input => serialPort.onRead;
+
+  TtyConnection(this.address, SerialPort serialPort)
+      : serialPort = serialPort,
+        output = new SerialPortSink(serialPort);
 
   static Future<TtyConnection> connect(
       String address,
       String connectionDescription,
-      void log(String message)) async {
-    File device = new File(address);
+      void log(String message),
+      {void onConnectionError(FileSystemException error),
+       DiagnosticKind messageKind: DiagnosticKind.socketVmConnectError}) async {
+    onConnectionError ??= (FileSystemException error) {
+      String message = error.message;
+      throwFatalError(
+          messageKind,
+          address: address,
+          message: message);
+    };
+
+    SerialPort serialPort = new SerialPort(address, baudrate: 115200);
+    try {
+      await serialPort.open();
+    } on FileSystemException catch(e) {
+      onConnectionError(e);
+    }
     log("Connected to device $connectionDescription $address");
-    return new TtyConnection(await device.open(mode: FileMode.READ),
-        await device.open(mode: FileMode.WRITE_ONLY), address);
+    return new TtyConnection(address, serialPort);
   }
 
   String get description => "$address";
 
   Future<Null> close() async {
     print("Closing tty-connection");
-    await inputFile.close();
-    await output.close();
+    output.close();
+    await output.done;
+    await serialPort.close();
     doneCompleter.complete(null);
   }
 

@@ -18,6 +18,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:io';
 import 'dart-ext:src/serial_port';
+import 'dart:typed_data';
 
 part 'src/serial_port_impl.dart';
 part 'src/helpers.dart';

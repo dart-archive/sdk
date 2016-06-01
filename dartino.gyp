@@ -49,6 +49,13 @@
       ],
     },
     {
+      'target_name': 'serial_port_extension_lib',
+      'type': 'none',
+      'dependencies': [
+        'src/pkg/serial_port/serial_port.gyp:serial_port',
+      ],
+    },
+    {
       'target_name': 'natives_json',
       'type': 'none',
       'toolsets': ['target'],

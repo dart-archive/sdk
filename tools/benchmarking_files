@@ -15,4 +15,5 @@ third_party/package_config
 third_party/path
 third_party/persistent
 third_party/pub_semver
+third_party/serial_port
 tools/servicec/

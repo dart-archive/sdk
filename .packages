@@ -43,3 +43,4 @@ stm32:pkg/stm32/lib
 old_servicec:tools/servicec/lib
 socket:pkg/socket/lib
 dart_isolate:third_party/isolate/lib
+serial_port:third_party/serial_port/lib

@@ -117,16 +117,9 @@ int readFromSerialPort(int tty_fd, uint8_t* data, int buffer_size){
   return bytes_read;
 }
 
-int writeToSerialPort(int tty_fd, const char* data){
+int writeToSerialPort(int tty_fd, uint8_t* data, int buffer_size){
   HANDLE handlePort =  reinterpret_cast<HANDLE>(_get_osfhandle(tty_fd));
   DWORD length = -1;
-  WriteFile(handlePort, data,  strlen(data), &length, NULL);
-  return length;
-}
-
-int writeToSerialPort(int tty_fd, uint8_t byte){
-  HANDLE handlePort =  reinterpret_cast<HANDLE>(_get_osfhandle(tty_fd));
-  DWORD length = -1;
-  WriteFile(handlePort, &byte, sizeof(uint8_t), &length,NULL);
+  WriteFile(handlePort, data, buffer_size, &length, NULL);
   return length;
 }

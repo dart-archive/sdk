@@ -219,6 +219,20 @@ hooks = [
     ],
   },
   {
+    'name': 'serial_port_binaries',
+    'pattern': '.',
+    'action': [
+      'download_from_google_storage',
+      '-q',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dartino-dependencies',
+      '-d',
+      'sdk/third_party/serial_port/lib/src/',
+    ],
+  },
+  {
     # Update the Windows toolchain if necessary.
     'name': 'win_toolchain',
     'pattern': '.',

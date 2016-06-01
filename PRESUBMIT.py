@@ -33,6 +33,7 @@ NO_LINTING = (
     r"^tests[\\\/]service_tests[\\\/]multiple_services[\\\/]java[\\\/]jni[\\\/].*",
     r"^third_party[\\\/]yasm[\\\/]source[\\\/]config[\\\/]win[\\\/].*",
     r"^third_party[\\\/]double-conversion[\\\/]src[\\\/].*",
+    r"^third_party[\\\/]serial_port[\\\/]lib[\\\/]src[\\\/]native[\\\/].*",
     r"^tools[\\\/]immic[\\\/]lib[\\\/]src[\\\/]resources[\\\/]objc[\\\/].*",
     r"^tools[\\\/]servicec[\\\/]lib[\\\/]src[\\\/]resources[\\\/]cc[\\\/].*",
 )

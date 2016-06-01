@@ -38,6 +38,4 @@ bool closeSerialPort(int tty_fd);
 
 int readFromSerialPort(int tty_fd, uint8_t* data, int buffer_size);
 
-int writeToSerialPort(int tty_fd, const char* data);
-
-int writeToSerialPort(int tty_fd, uint8_t byte);
+int writeToSerialPort(int tty_fd, uint8_t* data, int buffer_size);

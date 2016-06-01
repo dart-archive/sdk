@@ -161,12 +161,8 @@ bool closeSerialPort(int tty_fd){
   return value >= 0;
 }
 
-int writeToSerialPort(int tty_fd, const char* data){
-  return write(tty_fd, data, strlen(data));
-}
-
-int writeToSerialPort(int tty_fd, uint8_t byte){
-  return write(tty_fd, &byte, sizeof(uint8_t));
+int writeToSerialPort(int tty_fd, uint8_t *data, int buffer_size){
+  return write(tty_fd, data, buffer_size);
 }
 
 int readFromSerialPort(int tty_fd, uint8_t *data, int buffer_size){

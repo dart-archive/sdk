@@ -73,6 +73,7 @@ build $
         src/pkg/mdns/mdns.gyp $
         src/pkg/power_management/power_management.gyp $
         src/pkg/mbedtls/mbedtls.gyp $
+        src/pkg/serial_port/serial_port.gyp $
 
 build gyp: phony$
     out/DebugIA32/build.ninja $

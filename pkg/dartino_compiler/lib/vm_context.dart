@@ -343,7 +343,8 @@ class DartinoVmContext {
       while (!completer.isCompleted) {
         sendCommand(new HandShake(version));
         if (maxTimeSpent == null) break;
-        await new Future.delayed(new Duration(seconds: 1));
+        // TODO(sigurdm): The vm should allow several handshakes.
+        await new Future.delayed(new Duration(seconds: 2));
       }
     }
 

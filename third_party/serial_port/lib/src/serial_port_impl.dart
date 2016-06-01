@@ -23,7 +23,6 @@ class SerialPort {
   static const int _CLOSE_METHOD = 2;
   static const int _READ_METHOD = 3;
   static const int _WRITE_METHOD = 4;
-  static const int _WRITE_BYTE_METHOD = 5;
 
   // Name of device on which the connection is made
   final String portName;
@@ -82,13 +81,13 @@ class SerialPort {
   /// Open the connection with serial port.
   Future open() async {
     if(isOpen){
-      throw "$portName is yet open";
+      throw new FileSystemException("$portName is already open");
     }
     final replyPort = new ReceivePort();
     _servicePort.send([replyPort.sendPort, _OPEN_METHOD, portName, baudrate, databits, _parityCodes[parity], _stopBitsCodes[stopBits]]);
     final result = await replyPort.first;
     if (result[0] != null) {
-      throw "Cannot open $portName : ${result[0]}";
+      throw new FileSystemException("Cannot open $portName: ${result[0]}");
     }
     _ttyFd = result[1];
     _read();
@@ -110,34 +109,25 @@ class SerialPort {
     final result = await replyPort.first;
     _onReadController.close();
     if (result[0] != null) {
-      throw "Cannot close $portName : ${result[0]}";
+      throw new FileSystemException("Cannot close $portName : ${result[0]}");
     }
     _ttyFd = -1;
     return true;
   }
 
   /// Write as a string
-  Future writeString(String data) async {
-    _checkOpen();
-    final replyPort = new ReceivePort();
-    _servicePort.send([replyPort.sendPort, _WRITE_METHOD, _ttyFd, data]);
-    final result = await replyPort.first;
-    if (result[0] != null) {
-      throw "Cannot write in $portName : ${result[0]}";
-    }
-    return true;
+  Future<bool> writeString(String data) {
+    return write(data.codeUnits);
   }
 
   /// Write bytes
-  Future write(List<int> bytes){
-    final writes = bytes.map((byte) => _writeOneByte(byte));
-    return Future.wait(writes, eagerError: true).then((_) => true);
-  }
-
-  Future _writeOneByte(int byte) async {
+  Future<bool> write(List<int> bytes) async {
+    if (bytes is! Uint8List) {
+      bytes = new Uint8List.fromList(bytes);
+    }
     _checkOpen();
     final replyPort = new ReceivePort();
-    _servicePort.send([replyPort.sendPort, _WRITE_BYTE_METHOD, _ttyFd, byte]);
+    _servicePort.send([replyPort.sendPort, _WRITE_METHOD, _ttyFd, bytes]);
     final result = await replyPort.first;
     if (result[0] != null) {
       throw "Cannot write in $portName : ${result[0]}";
@@ -150,7 +140,7 @@ class SerialPort {
 
   _checkOpen() {
     if (!isOpen) {
-      throw "$portName is not open";
+      throw new FileSystemException("$portName is not open");
     }
   }
 
@@ -179,9 +169,10 @@ class SerialPort {
     return _port;
   }
 
-  static SendPort _newServicePort() native "serialPortServicePort";
 
 }
+
+SendPort _newServicePort() native "serialPortServicePort";
 
 /// Wrap a port name and it available result;
 class PortNameAvailability {

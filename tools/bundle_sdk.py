@@ -28,7 +28,7 @@ TOOLS_DIR = abspath(dirname(__file__))
 SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
                 'raspberry_pi', 'stm32', 'socket', 'mqtt',
                 'mbedtls']
-THIRD_PARTY_PACKAGES = ['charcode']
+THIRD_PARTY_PACKAGES = ['charcode', 'serial_port']
 
 SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery']
 
@@ -210,7 +210,7 @@ def CopyPlatforms(bundle_dir):
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
   # TODO(karlklose): Run 'build_dir/dartino export' instead?
-  cmd = [dart_executable, '-c', '--packages=.packages',
+  cmd = [dart_executable, '-c', '--packages=pkg/dartino_compiler/.packages',
          '-Dsnapshot="%s"' % snapshot,
          '-Dpackages=".packages"',
          '-Dtest.dartino_settings_file_name=".dartino-settings"',

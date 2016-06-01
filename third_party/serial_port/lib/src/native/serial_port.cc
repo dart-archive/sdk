@@ -33,7 +33,6 @@ enum METHOD_CODE {
   CLOSE = 2,
   READ = 3,
   WRITE = 4,
-  WRITE_BYTE = 5 // TODO delete with the real write by bytes implementation.
 };
 
 DECLARE_DART_NATIVE_METHOD(native_test_port){
@@ -93,9 +92,18 @@ DECLARE_DART_NATIVE_METHOD(native_close){
 DECLARE_DART_NATIVE_METHOD(native_write){
   DECLARE_DART_RESULT;
   int64_t tty_fd = GET_INT_ARG(0);
-  const char* data = GET_STRING_ARG(1);
+  Dart_CObject *data_arg = argv[1];
 
-  int length = writeToSerialPort(tty_fd, data);
+  uint8_t* data = data_arg->value.as_typed_data.values;
+  intptr_t data_length = data_arg->value.as_typed_data.length;
+  int type = data_arg->value.as_typed_data.type;
+
+  if(type != Dart_TypedData_kUint8){
+    SET_ERROR("Can only write Uint8");
+    RETURN_DART_RESULT;
+  }
+
+  int length = writeToSerialPort(tty_fd, data, data_length);
 
   if(length <0){
     SET_ERROR("Impossible to write");
@@ -104,19 +112,6 @@ DECLARE_DART_NATIVE_METHOD(native_write){
 
   SET_RESULT_INT(length);
 
-  RETURN_DART_RESULT;
-}
-
-DECLARE_DART_NATIVE_METHOD(native_write_byte){
-  DECLARE_DART_RESULT;
-  int64_t tty_fd = GET_INT_ARG(0);
-  int8_t byte = GET_INT_ARG(1);
-  int length = writeToSerialPort(tty_fd, byte);
-  if(length <0){
-    SET_ERROR("Impossible to write");
-    RETURN_DART_RESULT;
-  }
-  SET_RESULT_INT(length);
   RETURN_DART_RESULT;
 }
 
@@ -148,9 +143,6 @@ DART_EXT_DISPATCH_METHOD()
       break;
     case WRITE:
       CALL_DART_NATIVE_METHOD(native_write);
-      break;
-    case WRITE_BYTE:
-      CALL_DART_NATIVE_METHOD(native_write_byte);
       break;
     default:
      UNKNOW_METHOD_CALL;

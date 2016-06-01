@@ -76,6 +76,8 @@ packages
 /third_party/raspbian/image
 /third_party/raspbian/kernel.tar.gz
 /third_party/raspbian/kernel
+/third_party/serial_port/lib/src/libserial_port.dylib
+/third_party/serial_port/lib/src/libserial_port.so
 /third_party/stm/stm32cube_fw_f7.tar.gz
 /third_party/stm/stm32cube_fw_f7/
 /third_party/stm/stm32cube_fw_f4.tar.gz
