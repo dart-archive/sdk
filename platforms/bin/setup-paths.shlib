@@ -21,9 +21,6 @@ DARTINO="$DARTINO_SDK_DIR/bin/dartino"
 # Location of the dartino-falshify executable.
 DARTINO_FLASHIFY="$DARTINO_SDK_DIR/bin/dartino-flashify"
 
-# Location of the static libraries to link with.
-LIB_DIR="$DARTINO_SDK_DIR/platforms/stm32f746g-discovery/lib"
-
 # If we are not in a Dartino SDK, assume a Dartino SDK Github checkout.
 if [ ! -d "$TOOLCHAIN_DIR" ]; then
   # Relative locations in Dartino SDK and Dartino SDK Github checkout
@@ -41,7 +38,4 @@ if [ ! -d "$TOOLCHAIN_DIR" ]; then
 
   # Use release dartino-flashify command in a Dartino SDK Github checkout.
   DARTINO_FLASHIFY="$DARTINO_CHECKOUT_DIR/out/ReleaseIA32/dartino-flashify"
-
-  # Location of the static libraries to link with.
-  LIB_DIR="$DARTINO_CHECKOUT_DIR/out/ReleaseSTM"
 fi

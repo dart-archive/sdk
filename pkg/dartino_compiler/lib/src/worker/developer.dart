@@ -1332,8 +1332,8 @@ Future<Device> readDevice(String deviceId) async {
     deviceDirectoryUri = executable.resolve('../../$path/');
     deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
     assert(await deviceDirectory.exists());
-    // In a Git checkout the libraries are is out/ReleaseSTM.
-    libraryDirectoryUri = executable.resolve('../ReleaseSTM/');
+    // In a Git checkout the libraries are is out/DebugSTM and out/ReleaseSTM.
+    libraryDirectoryUri = executable.resolve('../DebugSTM/');
   }
 
   Uri uri = deviceDirectoryUri.resolve('device.json');
