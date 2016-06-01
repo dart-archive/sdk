@@ -63,6 +63,10 @@ class DartinoCompilerOptions implements CompilerOptions {
 
   @override final bool preserveUris;
 
+  @override Uri get resolutionInput => null;
+  @override Uri get resolutionOutput => null;
+  @override bool get resolveOnly => false;
+
   @override final bool verbose;
 
   final Uri base;

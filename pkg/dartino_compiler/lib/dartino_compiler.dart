@@ -18,6 +18,9 @@ import 'package:compiler/compiler_new.dart' show
     CompilerOutput,
     CompilerDiagnostics;
 
+import 'package:compiler/src/io/source_file.dart' show
+    SourceFile;
+
 import 'package:compiler/src/source_file_provider.dart' show
     CompilerSourceFileProvider,
     FormattingDiagnosticHandler,
@@ -174,13 +177,8 @@ Try adding command-line option '-Ddartino-natives-json=<path to natives.json>.
   }
 
   Future _inititalizeContext() async {
-    var data = await _compiler.callUserProvider(nativesJson);
-    if (data is! String) {
-      if (data.last == 0) {
-        data = data.sublist(0, data.length - 1);
-      }
-      data = UTF8.decode(data);
-    }
+    SourceFile file = await _compiler.callUserProvider(nativesJson);
+    String data = file.slowText();
     Map<String, DartinoNativeDescriptor> natives =
         <String, DartinoNativeDescriptor>{};
     Map<String, String> names = <String, String>{};
