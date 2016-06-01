@@ -126,8 +126,8 @@ import '../../debug_state.dart' as debug show
 
 import '../vm_connection.dart' show
     TcpConnection,
-    TtyConnection,
-    VmConnection;
+    VmConnection,
+    connectToTty;
 
 import '../dartino_compiler_options.dart' show
     DartinoCompilerOptions;
@@ -246,7 +246,7 @@ Future<int> analyze(
 }
 
 Future<Null> attachToVmTty(String ttyDevice, SessionState state) async {
-  TtyConnection connection = await TtyConnection.connect(
+  VmConnection connection = await connectToTty(
       ttyDevice, "vmTty", state.log);
   await attachToVm(connection, state, maxTimeSpent: new Duration(seconds: 20));
 }
