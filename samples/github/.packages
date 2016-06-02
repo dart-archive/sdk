@@ -1,0 +1,14 @@
+# Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+charcode:../../third_party/charcode/lib
+crypto:../../third_party/crypto/lib
+expect:../../../dart/pkg/expect/lib
+file:../../pkg/file/lib
+github_sample:lib
+http:../../pkg/http/lib
+immi:generated/immi
+immi_samples:../../pkg/immi_samples/lib
+os:../../pkg/os/lib
+service:generated/service
+socket:../../pkg/socket/lib

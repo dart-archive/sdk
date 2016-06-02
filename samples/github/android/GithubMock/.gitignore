@@ -1,0 +1,13 @@
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+/captures
+
+/app/src/main/java/dartino
+/app/src/main/res/raw/snapshot
+libdartino.so
+gdbserver
+gdb.setup

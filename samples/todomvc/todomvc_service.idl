@@ -1,0 +1,51 @@
+// Copyright (c) 2015, the Dartino project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+service TodoMVCService {
+  void createItem(BoxedString* title);
+  void clearItems();
+
+  // Event dispatching.
+  void dispatch(uint16 id);
+
+  // Synchronization should be considered internal.
+  PatchSet* sync();
+  void reset();
+}
+
+// Primary structures.
+
+struct Node {
+  union {
+    void nil;
+    int32 num;
+    bool truth;
+    String str;
+    Cons cons;
+  }
+}
+
+struct Cons {
+  Node* fst;
+  Node* snd;
+
+  uint16 deleteEvent;
+  uint16 completeEvent;
+  uint16 uncompleteEvent;
+}
+
+// Utility structures.
+
+struct Patch {
+  List<uint8> path;
+  Node content;
+}
+
+struct PatchSet {
+  List<Patch> patches;
+}
+
+struct BoxedString {
+  String str;
+}

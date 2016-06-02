@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Github Sample</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="login">login</string>
+    <string name="hint_username">Username</string>
+    <string name="hint_password">Password</string>
+    <string name="login_button">Login</string>
+    <string name="logout_button">Logout</string>
+    <string name="login_title">Login to your Github account</string>
+    <string name="login_success">Login successful!</string>
+    <string name="login_request">Validating login ... </string>
+    <string name="login_error">Login Error!</string>
+</resources>
