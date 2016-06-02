@@ -83,7 +83,7 @@ class Analytics {
   /// Return a string which is a hash of the original string.
   String hash(String original) {
     Hash hash = new SHA256()..add(_hashSalt)..add(original.codeUnits);
-    return BASE64.encode(hash.close());
+    return 'SHA(${BASE64.encode(hash.close())})';
   }
 
   /// If the given string looks like a Uri,

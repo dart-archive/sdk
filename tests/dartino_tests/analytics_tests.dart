@@ -112,8 +112,14 @@ main() async {
 
     String dartPath = 'some/path/to/my.dart';
     String dartPathHash = analytics.hash(dartPath);
-    Expect.equals(dartPathHash.indexOf('some'), -1);
-    Expect.equals(dartPathHash.indexOf('dart'), -1);
+    Expect.isTrue(dartPathHash.startsWith('SHA('));
+    Expect.isTrue(dartPathHash.endsWith(')'));
+    Expect.isTrue(dartPathHash.length > 6);
+    Expect.equals(-1, dartPathHash.indexOf('some'));
+    Expect.equals(-1, dartPathHash.indexOf('dart'));
+    Expect.equals(-1, dartPathHash.indexOf('hash'));
+    Expect.equals(-1, dartPathHash.indexOf('encode'));
+    Expect.equals(-1, dartPathHash.indexOf('BASE64'));
 
     Expect.equals(dartPathHash, analytics.hashUri(dartPath));
     Expect.equals('session', analytics.hashUri('session'));
@@ -145,12 +151,19 @@ main() async {
 
     mockServer.expectedUuid = analytics.uuid;
 
-    await mockServer.expectMessage([
+    List<String> expectedStartupMsg = [
       TAG_STARTUP,
       'version information not available', // Dartino version
       Platform.version,
       Platform.operatingSystem,
-    ]);
+    ];
+    List<String> actualStartupMsg = await mockServer.nextMessage();
+    String actualVersion = actualStartupMsg[1];
+    Expect.isTrue(actualVersion.length > 2);
+    expectedStartupMsg[1] = actualVersion;
+    Expect.listEquals(expectedStartupMsg, actualStartupMsg,
+        '\nexpected: $expectedStartupMsg\nactual:   $actualStartupMsg\n');
+
     await mockServer
         .expectMessage([TAG_REQUEST, '1.2.3', dartPathHash, 'detached']);
     await mockServer.expectMessage(
