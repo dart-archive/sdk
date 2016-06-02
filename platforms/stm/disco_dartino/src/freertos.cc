@@ -11,7 +11,7 @@
 // Hook called by FreeRTOS when a stack overflow is detected.
 extern "C" void vApplicationStackOverflowHook(
     xTaskHandle xTask, signed char *pcTaskName) {
-  FATAL("Stack overflow.\n");
+  FATALV("Stack overflow in %s.\n", pcTaskName);
 }
 
 // Hook called by FreeRTOS when allocation failed.

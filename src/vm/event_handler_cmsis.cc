@@ -17,10 +17,10 @@
 
 namespace dartino {
 
-// Pseudo device-id.
-// Sending a message with this device-id signals an interruption of the
+// Event value for interruption.
+// Sending a message with this value signals an interruption of the
 // event-handler.
-const int kInterruptHandle = -1;
+const uint32_t kInterruptHandle = 0;
 
 // Dummy-class. Currently we don't store anything in EventHandler::data_. But
 // if we set it to NULL, EventHandler::EnsureInitialized will not realize it is
@@ -52,18 +52,14 @@ EventHandler::Status EventHandler::AddEventListener(
 
   int handle = Smi::cast(id)->value();
 
-  Device* device = DeviceManager::GetDeviceManager()->GetDevice(handle);
-
-  ScopedLock locker(device->GetMutex());
-
-  if (device->HasEventListener()) {
+  bool success =
+      DeviceManager::GetDeviceManager()->SetEventListener(
+          handle, wait_mask, event_listener);
+  if (!success) {
     delete event_listener;
     return Status::ILLEGAL_STATE;
   }
 
-  device->SetEventListener(event_listener, wait_mask);
-  // Send a message immediately if there already is an event waiting.
-  device->SendIfReady();
   return Status::OK;
 }
 
@@ -98,11 +94,10 @@ void EventHandler::Run() {
     }
 
     if (event.status == osEventMessage) {
-      int handle = static_cast<int>(event.value.v);
-      if (handle != kInterruptHandle) {
-        Device* device = DeviceManager::GetDeviceManager()->GetDevice(handle);
-        ScopedLock scoped_lock(device->GetMutex());
-        device->SendIfReady();
+      if (event.value.v != kInterruptHandle) {
+        Event* e = reinterpret_cast<Event*>(event.value.p);
+        e->event_listener->Send(e->flags);
+        delete e;
       }
     }
   }

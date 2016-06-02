@@ -10,21 +10,16 @@ namespace dartino {
 const uint32_t kMailQSize = 50;
 
 bool Device::SetFlags(uint32_t flags) {
-  ScopedLock locker(mutex_);
-  if ((flags_ & flags) != 0) return false;
-  int before = IsReady();
-  flags_ |= flags;
-  // Send a message if the status changed.
-  if (!before && IsReady()) {
-    if (DeviceManager::GetDeviceManager()->SendMessage(device_id_) != osOK) {
-      FATAL("Could not send message");
-    }
+  if ((flags_ & flags) != 0) {
+    return false;
   }
+  flags_ |= flags;
+  // Send a message if requested flags set.
+  SendIfReady();
   return true;
 }
 
 bool Device::ClearFlags(uint32_t flags) {
-  ScopedLock locker(mutex_);
   if ((flags_ & flags) == 0) return false;
   flags_ = flags_ & ~flags;
   return true;
@@ -40,14 +35,16 @@ bool Device::IsReady() {
 
 void Device::SendIfReady() {
   if (IsReady()) {
-    event_listener_->Send(flags_);
-    delete event_listener_;
+    Event* event = new Event();
+    event->device = device_id_;
+    event->flags = flags_ & wait_mask_;
+    event->event_listener = event_listener_;
     event_listener_ = NULL;
+    DeviceManager* device_manager = DeviceManager::GetDeviceManager();
+    if (device_manager->SendMessage((uint32_t)(event)) != osOK) {
+      FATAL("Could not send message");
+    }
   }
-}
-
-Mutex* Device::GetMutex() {
-  return mutex_;
 }
 
 void Device::SetEventListener(
@@ -58,7 +55,7 @@ void Device::SetEventListener(
 
 DeviceManager::DeviceManager() : mutex_(new Mutex()),
                                  next_free_slot_(kIllegalDeviceId) {
-  osMessageQDef(device_event_queue, kMailQSize, int);
+  osMessageQDef(device_event_queue, kMailQSize, Event*);
   mail_queue_ = osMessageCreate(osMessageQ(device_event_queue), NULL);
 }
 
@@ -189,11 +186,21 @@ void DeviceManager::RemoveDevice(Device *device) {
   RegisterFreeDeviceSlot(handle);
 }
 
-Device* DeviceManager::GetDevice(int handle) {
+bool DeviceManager::SetEventListener(int handle,
+                                     uint32_t wait_mask,
+                                     EventListener* event_listener) {
   ScopedLock locker(mutex_);
   Device* device = devices_[handle];
   ASSERT(device != NULL);
-  return device;
+
+  if (device->HasEventListener()) {
+    return false;
+  }
+
+  device->SetEventListener(event_listener, wait_mask);
+  // Send a message immediately if there already is an event waiting.
+  device->SendIfReady();
+  return true;
 }
 
 UartDevice* DeviceManager::GetUart(int handle) {

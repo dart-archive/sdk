@@ -14,7 +14,7 @@
         {
           'action_name': 'generate_snapshot',
           'inputs': [
-            'src/test.dart',
+            '<(source_path)/test.dart',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/snapshot',
