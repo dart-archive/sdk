@@ -148,6 +148,7 @@ class DartinoTestSuite extends TestSuite {
            '-Dtest.dart.build-system=${configuration["system"]}',
            '-Dtest.dart.build-clang=${configuration["clang"]}',
            '-Dtest.dart.build-asan=${configuration["asan"]}',
+           '-Dtest.dart.analytics-disable=true',
            '-Dtest.dart.temp-dir=$tempDirPath',
            '-Dtest.dart.servicec-dir=tools/servicec/',
            '-c',

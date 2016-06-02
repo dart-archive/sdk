@@ -56,6 +56,10 @@ class Analytics {
   /// `true` if the user should be prompted to opt-in.
   bool shouldPromptForOptIn = true;
 
+  final bool _testing =
+      Platform.environment['DARTINO_DISABLE_ANALYTICS'] != null ||
+          new String.fromEnvironment('test.dart.analytics-disable') != null;
+
   Analytics(this._log, {String serverUrl, Uri uuidUri})
       : this.serverUrl = serverUrl ?? defaultServerUrl,
         this.uuidUri = uuidUri ?? defaultUuidUri;
@@ -169,7 +173,7 @@ class Analytics {
   /// that the Dart analysis server uses for sending instrumentation data.
   void _send(List<String> fields) {
     if (_client == null) {
-      if (!hasOptedIn) return;
+      if (!hasOptedIn || _testing) return;
       _client =
           new InstrumentationClient(userID: uuid, serverEndPoint: serverUrl);
     }
