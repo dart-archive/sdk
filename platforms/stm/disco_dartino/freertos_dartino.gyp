@@ -9,12 +9,13 @@
       'target_name': 'disco_dartino_dart_snapshot',
       'variables': {
         'source_path': 'src',
+        'test_file': 'test.dart',
       },
       'actions': [
         {
           'action_name': 'generate_snapshot',
           'inputs': [
-            '<(source_path)/test.dart',
+            '<(source_path)/<(test_file)',
           ],
           'outputs': [
             '<(PRODUCT_DIR)/snapshot',
@@ -22,7 +23,7 @@
           'action': [
             '<(PRODUCT_DIR)/../ReleaseX64/dartino',
             'export',
-            '<(source_path)/test.dart',
+            '<(source_path)/<(test_file)',
             'to',
             'file',
             '<(PRODUCT_DIR)/snapshot',
