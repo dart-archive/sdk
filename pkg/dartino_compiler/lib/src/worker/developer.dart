@@ -1488,7 +1488,7 @@ Future<int> flashImage(
   File flashScript = new File(join(binDirectory.path, 'flash.sh'));
   if (Platform.isLinux || Platform.isMacOS) {
     state.log("Flashing image: '${flashScript.path} ${image}'");
-    print("Flashing image: ${image}");
+    print("Flashing image: ${image.path}");
     result = await Process.run(
         flashScript.path, ['-b', device.open_ocd_board, image.path]);
   } else {
@@ -1497,7 +1497,7 @@ Future<int> flashImage(
   state.log("STDOUT:\n${result.stdout}");
   state.log("STDERR:\n${result.stderr}");
   if (result.exitCode != 0) {
-    print("Failed to flash the image: ${image}\n");
+    print("Failed to flash the image: ${image.path}\n");
     print("Please check that the device is connected and ready. "
           "In some situations un-plugging and plugging the device, "
           "and then retrying will solve the problem.\n");
