@@ -44,12 +44,15 @@ class DartinoVm {
             workingDirectory: workingDirectory?.toFilePath());
 
     Completer<String> addressCompleter = new Completer<String>();
+    List<String> outputBeforeAddress = new List<String>();
     Completer stdoutCompleter = new Completer();
     Stream<String> stdoutLines = convertStream(
         process.stdout, stdoutCompleter,
         (String line) {
           const String prefix = "Waiting for compiler on ";
-          if (!addressCompleter.isCompleted && line.startsWith(prefix)) {
+          if (!addressCompleter.isCompleted)
+            outputBeforeAddress.add(line);
+            if (line.startsWith(prefix)) {
             addressCompleter.complete(line.substring(prefix.length));
             return false;
           }
@@ -58,7 +61,9 @@ class DartinoVm {
           if (!addressCompleter.isCompleted) {
             addressCompleter.completeError(
                 new StateError('The dartino-vm did not print an address on '
-                               'which it is listening on.'));
+                               'which it is listening on. '
+                               'Output from the dartino-vm until now: \n'
+                               '${outputBeforeAddress.join('\n')}'));
           }
         });
 
