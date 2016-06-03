@@ -46,7 +46,7 @@ void UartDriverImpl::Initialize(uintptr_t device_id) {
   ASSERT(device_id_ == kIllegalDeviceId);
   ASSERT(device_id != kIllegalDeviceId);
   device_id_ = device_id;
-  osThreadDef(UART_TASK, UartTask, osPriorityNormal, 0, 128);
+  osThreadDef(UART_TASK, UartTask, osPriorityHigh, 0, 128);
   signalThread_ =
       osThreadCreate(osThread(UART_TASK), reinterpret_cast<void*>(this));
   // Start receiving.
@@ -60,7 +60,12 @@ void UartDriverImpl::Initialize(uintptr_t device_id) {
   // Enable the UART Data Register not empty Interrupt.
   __HAL_UART_ENABLE_IT(uart_, UART_IT_RXNE);
 
-  // TODO(sigurdm): Generalize when we support multiple UARTs.
+  // Disable the transmission complete interrupt as we are not using it.
+  __HAL_UART_DISABLE_IT(uart_, UART_IT_TC);
+
+  // TODO(sigurdm): Generalize when we support multiple UARTs. For
+  // certain sleep modes this will be required to ensure all data is
+  // send on the UART.
   HAL_NVIC_EnableIRQ(USART1_IRQn);
 }
 
@@ -69,23 +74,20 @@ void UartDriverImpl::DeInitialize() {
 }
 
 size_t UartDriverImpl::Read(uint8_t* buffer, size_t count) {
-  taskENTER_CRITICAL();
+  dartino::ScopedLock lock(tx_mutex_);
   int c = read_buffer_->Read(buffer, count);
   if (read_buffer_->IsEmpty()) {
     DeviceManagerClearFlags(device_id_, kReceivedBit);
   }
-  taskEXIT_CRITICAL();
   return c;
 }
 
 size_t UartDriverImpl::Write(
     const uint8_t* buffer, size_t offset, size_t count) {
-  taskENTER_CRITICAL();
+  dartino::ScopedLock lock(tx_mutex_);
   size_t written_count =
       write_buffer_->Write(buffer + offset, count);
-  taskEXIT_CRITICAL();
   if (written_count > 0) {
-    dartino::ScopedLock lock(tx_mutex_);
     EnsureTransmission();
   }
   return written_count;
@@ -101,11 +103,10 @@ void UartDriverImpl::Task() {
   for (;;) {
     // Wait for a signal.
     osEvent event = osSignalWait(0x0000FFFF, osWaitForever);
-
     if (event.status == osEventSignal) {
+      dartino::ScopedLock lock(tx_mutex_);
       uint32_t flags = event.value.signals;
       if ((flags & kTransmittedBit) != 0) {
-        dartino::ScopedLock lock(tx_mutex_);
         EnsureTransmission();
       }
       // This will send a message on the event handler,
@@ -117,15 +118,11 @@ void UartDriverImpl::Task() {
 
 void UartDriverImpl::EnsureTransmission() {
   if (!tx_pending_) {
-    taskENTER_CRITICAL();
     tx_length_ = write_buffer_->Read(tx_data_, kTxBlockSize);
-    taskEXIT_CRITICAL();
 
     if (tx_length_ > 0) {
       tx_progress_ = 0;
-      uart_->Instance->TDR = tx_data_[tx_progress_++] & 0xff;
       __HAL_UART_ENABLE_IT(uart_, UART_IT_TXE);
-
       tx_pending_ = true;
     }
   } else {
@@ -199,11 +196,15 @@ void UartDriverImpl::InterruptHandler() {
 
   if ((__HAL_UART_GET_IT(uart_, UART_IT_TC) != RESET) &&
       (__HAL_UART_GET_IT_SOURCE(uart_, UART_IT_TC) != RESET)) {
-    // Transmission complete.
+    // Transmission complete. Currently this is not handled.
+    UNREACHABLE();
   }
 
   // Send a signal to the listening thread.
-  osSignalSet(signalThread_, flags);
+  if (flags != 0) {
+    uint32_t result = osSignalSet(signalThread_, flags);
+    ASSERT(result == osOK);
+  }
 }
 
 extern "C" void USART1_IRQHandler(void) {
