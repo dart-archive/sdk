@@ -9,6 +9,9 @@ import 'dart:async';
 import 'dart:typed_data' show
     ByteData;
 
+import 'dart:io' show
+    File;
+
 import 'package:persistent/persistent.dart' show
     Pair;
 
@@ -52,6 +55,11 @@ import 'src/hub/exit_codes.dart' as exit_codes;
 
 import 'src/vm_connection.dart' show
     VmConnection;
+
+import 'program_info.dart' show
+    IdOffsetMapping,
+    NameOffsetMapping,
+    ProgramInfoJson;
 
 class SessionCommandTransformerBuilder
     extends CommandTransformerBuilder<Pair<int, ByteData>> {
@@ -394,6 +402,25 @@ class DartinoVmContext {
     vmState = VmState.spawned;
   }
 
+  /// Returns the [NameOffsetMapping] stored in the '.info.json' adjacent to a
+  /// snapshot location.
+  Future<NameOffsetMapping> getInfoFromSnapshotLocation(Uri snapshot) async {
+    Uri info = snapshot.replace(path: "${snapshot.path}.info.json");
+    File infoFile = new File.fromUri(info);
+
+    if (!await infoFile.exists()) {
+      shutdown();
+      throwFatalError(DiagnosticKind.infoFileNotFound, uri: info);
+    }
+
+    try {
+      return ProgramInfoJson.decode(await infoFile.readAsString());
+    } on FormatException {
+      shutdown();
+      throwFatalError(DiagnosticKind.malformedInfoFile, uri: snapshot);
+    }
+  }
+
   Future<Null> initialize(
       SessionState state,
       {Uri snapshotLocation}) async {
@@ -414,9 +441,11 @@ class DartinoVmContext {
       }
 
       if (nameOffsetMapping.snapshotHash != snapshotHash) {
+        shutdown();
         throwFatalError(DiagnosticKind.snapshotHashMismatch,
             userInput: "${nameOffsetMapping.snapshotHash}",
             additionalUserInput: "${snapshotHash}",
+            address: connection.description,
             uri: snapshotLocation);
       } else {
 

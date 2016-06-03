@@ -57,7 +57,6 @@ import '../../vm_commands.dart' show
 
 import '../../program_info.dart' show
     IdOffsetMapping,
-    NameOffsetMapping,
     ProgramInfoJson,
     buildIdOffsetMapping,
     getConfiguration;
@@ -134,6 +133,9 @@ import '../dartino_compiler_options.dart' show
 
 import '../hub/exit_codes.dart' show
     INPUT_ERROR;
+
+import '../diagnostic.dart' show
+    InputError;
 
 typedef Future<Null> ClientEventHandler(DartinoVmContext vmContext);
 
@@ -744,23 +746,6 @@ Future<int> run(
   return exitCode;
 }
 
-/// Returns the [NameOffsetMapping] stored in the '.info.json' adjacent to a
-/// snapshot location.
-Future<NameOffsetMapping> getInfoFromSnapshotLocation(Uri snapshot) async {
-  Uri info = snapshot.replace(path: "${snapshot.path}.info.json");
-  File infoFile = new File.fromUri(info);
-
-  if (!await infoFile.exists()) {
-    throwFatalError(DiagnosticKind.infoFileNotFound, uri: snapshot);
-  }
-
-  try {
-    return ProgramInfoJson.decode(await infoFile.readAsString());
-  } on FormatException {
-    throwFatalError(DiagnosticKind.malformedInfoFile, uri: snapshot);
-  }
-}
-
 Future<int> export(SessionState state, Uri snapshot) async {
   List<DartinoDelta> compilationResults = state.compilationResults;
   DartinoVmContext vmContext = state.vmContext;
@@ -859,6 +844,8 @@ Future<int> compileAndAttachToVmThen(
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
   try {
     exitCode = await action();
+  } on InputError {
+    rethrow;
   } catch (error, trace) {
     print(error);
     if (trace != null) {
