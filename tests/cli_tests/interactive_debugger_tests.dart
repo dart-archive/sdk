@@ -277,7 +277,7 @@ Test rerunThrowingProgram = new Test("debugger_rerun_throwing_program",
   await context.runCommandAndExpectPrompt("r");  // throws uncaught exception
   await context.runCommandAndExpectPrompt("r");  // invalid command: use restart
   await context.expectOut(
-      "### process already loaded, use 'restart' to run again");
+      "### process already scheduled, use 'restart' to run again");
   await context.quit();
   await context.expectExitCode(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
 });

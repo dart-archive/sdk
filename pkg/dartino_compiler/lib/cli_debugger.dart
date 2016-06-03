@@ -71,6 +71,8 @@ class CommandLineDebugger {
   final Uri base;
   final Sink<List<int>> stdout;
 
+  bool quitDebugger = false;
+
   bool printForTesting = false;
 
   bool get colorsDisabled => printForTesting;
@@ -210,7 +212,7 @@ class CommandLineDebugger {
         break;
       case 'backtrace':
       case 'bt':
-        if (!checkLoaded('cannot print backtrace')) {
+        if (!checkSpawned('cannot print backtrace')) {
           break;
         }
         BackTrace backtrace = await vmContext.backTrace();
@@ -231,7 +233,7 @@ class CommandLineDebugger {
         break;
       case 'list':
       case 'l':
-        if (!checkLoaded('nothing to list')) {
+        if (!checkSpawned('nothing to list')) {
           break;
         }
         BackTrace trace = await vmContext.backTrace();
@@ -244,7 +246,7 @@ class CommandLineDebugger {
         break;
       case 'disassemble':
       case 'disasm':
-        if (checkLoaded('cannot show bytecodes')) {
+        if (checkSpawned('cannot show bytecodes')) {
           BackTrace backtrace = await vmContext.backTrace();
           String disassembly = backtrace != null ? backtrace.disasm() : null;
           if (disassembly != null) {
@@ -328,7 +330,7 @@ class CommandLineDebugger {
         }
         break;
       case 'restart':
-        if (!checkLoaded('cannot restart')) {
+        if (!checkSpawned('cannot restart')) {
           break;
         }
         BackTrace trace = await vmContext.backTrace();
@@ -355,7 +357,7 @@ class CommandLineDebugger {
         break;
       case 'print':
       case 'p':
-        if (!checkLoaded('nothing to print')) {
+        if (!checkSpawned('nothing to print')) {
           break;
         }
         if (commandComponents.length <= 1) {
@@ -385,11 +387,11 @@ class CommandLineDebugger {
         break;
       case 'q':
       case 'quit':
-        await vmContext.terminate();
+        quitDebugger = true;
         break;
       case 'r':
       case 'run':
-        if (checkNotLoaded("use 'restart' to run again")) {
+        if (checkNotScheduled("use 'restart' to run again")) {
           await handleProcessStopResponse(await vmContext.startRunning());
         }
         break;
@@ -444,7 +446,6 @@ class CommandLineDebugger {
         break;
     }
     previousLine = line;
-    if (!vmContext.terminated) printPrompt();
   }
 
   bool toggleVerbose() => verbose = !verbose;
@@ -461,61 +462,71 @@ class CommandLineDebugger {
     if (output != null && output.isNotEmpty) {
       writeStdout(output);
     }
+    if (response is ProcessTerminated) {
+      // TODO(sigurdm): Do we want to keep the program open for inspection?
+      await vmContext.terminate();
+    }
   }
 
-  bool checkLoaded([String postfix]) {
-    if (!vmContext.loaded) {
-      String prefix = '### process not loaded';
+  bool checkSpawned([String postfix]) {
+    if (!vmContext.isSpawned) {
+      String prefix = '### process not scheduled';
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
-    return vmContext.loaded;
+    return vmContext.isSpawned;
   }
 
-  bool checkNotLoaded([String postfix]) {
-    if (vmContext.loaded) {
-      String prefix = '### process already loaded';
+  bool checkNotScheduled([String postfix]) {
+    if (vmContext.isScheduled) {
+      String prefix = '### process already scheduled';
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
-    return !vmContext.loaded;
+    return !vmContext.isScheduled;
   }
 
   bool checkRunning([String postfix]) {
-    if (!vmContext.running) {
+    if (!vmContext.isRunning) {
       String prefix = '### process not running';
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
-    return vmContext.running;
+    return vmContext.isRunning;
   }
 
   bool checkNotRunning([String postfix]) {
-    if (vmContext.running) {
+    if (vmContext.isRunning) {
       String prefix = '### process already running';
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
-    return !vmContext.running;
+    return !vmContext.isRunning;
   }
 
   Future<int> run(SessionState state, {Uri snapshotLocation}) async {
     await vmContext.initialize(state, snapshotLocation: snapshotLocation);
     writeStdoutLine(BANNER);
-    printPrompt();
-    StreamIterator streamIterator = new StreamIterator(stream);
-    while (await streamIterator.moveNext()) {
+    StreamIterator<String> streamIterator = new StreamIterator(stream);
+
+    Future<bool> getNext() async {
+      if (vmContext.isTerminated) return false;
+      printPrompt();
+      return await streamIterator.moveNext();
+    }
+
+    while (!quitDebugger && await getNext()) {
       try {
         await handleLine(streamIterator);
       } catch (e, s) {
         Future cancel = streamIterator.cancel()?.catchError((_) {});
-        if (!vmContext.terminated) {
+        if (!vmContext.isTerminated) {
           await vmContext.terminate().catchError((_) {});
         }
         await cancel;
         return new Future.error(e, s);
       }
-      if (vmContext.terminated) {
+      if (vmContext.isTerminated) {
         await streamIterator.cancel();
       }
     }
-    if (!vmContext.terminated) await vmContext.terminate();
+    if (!vmContext.isTerminated) await vmContext.terminate();
     return vmContext.interactiveExitCode;
   }
 

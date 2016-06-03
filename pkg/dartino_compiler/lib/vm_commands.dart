@@ -41,8 +41,10 @@ abstract class VmCommand {
         int wordSize = CommandBuffer.readInt32FromBuffer(buffer, offset);
         offset += 4;
         int floatSize = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int vmState = CommandBuffer.readInt32FromBuffer(buffer, offset);
         return new HandShakeResult(
-            success, version, wordSize, floatSize);
+            success, version, wordSize, floatSize, VmState.values[vmState]);
       case VmCommandCode.InstanceStructure:
         int classId =
             translateClass(CommandBuffer.readInt64FromBuffer(buffer, 0));
@@ -212,17 +214,32 @@ class HandShake extends VmCommand {
   String valuesToString() => "value: $value";
 }
 
+/// The state of a dartino-vm session.
+/// This enum should be kept in sync with `enum StateKind` at
+/// 'src/vm/session.cc'.
+enum VmState {
+  initial,
+  modifying,
+  spawned,
+  paused,
+  running,
+  terminating,
+  terminated
+}
+
 class HandShakeResult extends VmCommand {
   final bool success;
   final String version;
   final int wordSize;
   final int dartinoDoubleSize;
+  final VmState vmState;
 
   const HandShakeResult(
       this.success,
       this.version,
       this.wordSize,
-      this.dartinoDoubleSize)
+      this.dartinoDoubleSize,
+      this.vmState)
       : super(VmCommandCode.HandShakeResult);
 
   void internalAddTo(
@@ -236,6 +253,7 @@ class HandShakeResult extends VmCommand {
         ..addUint8List(payload)
         ..addUint32(wordSize)
         ..addUint32(dartinoDoubleSize)
+        ..addUint32(vmState.index)
         ..sendOn(sink, code);
   }
 

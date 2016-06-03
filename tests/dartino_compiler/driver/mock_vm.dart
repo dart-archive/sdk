@@ -28,6 +28,7 @@ import 'package:dartino_compiler/src/shared_command_infrastructure.dart' show
 import 'package:dartino_compiler/vm_commands.dart' show
     VmCommand,
     VmCommandCode,
+    VmState,
     CommitChangesResult,
     HandShakeResult,
     ProcessTerminated;
@@ -165,7 +166,7 @@ VmCommand mockReply(VmCommandCode code) {
   // Please add more cases as needed.
   switch (code) {
     case VmCommandCode.HandShake:
-      return new HandShakeResult(true, "", 64, 64);
+      return new HandShakeResult(true, "", 64, 64, VmState.initial);
 
     case VmCommandCode.CommitChanges:
       return new CommitChangesResult(

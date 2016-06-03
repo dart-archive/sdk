@@ -81,6 +81,8 @@ class Session {
     ASSERT(main_process_ == NULL);
     main_process_ = process;
   }
+  bool got_handshake() const { return got_handshake_; }
+  void set_got_handshake(bool value) { got_handshake_ = value; }
 
   // Map operations.
   void NewMap(int map_index);
@@ -170,6 +172,7 @@ class Session {
   ThreadIdentifier message_handling_thread_;
 
   Connection* const connection_;
+  bool got_handshake_;
   Program* program_;
   SessionState* state_;
 

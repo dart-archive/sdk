@@ -292,6 +292,7 @@ Future<Null> attachToVm(
   }
   vmContext.configuration = getConfiguration(handShakeResult.wordSize,
       handShakeResult.dartinoDoubleSize);
+  vmContext.vmState = handShakeResult.vmState;
 
   state.vmContext = vmContext;
 }
@@ -663,8 +664,6 @@ Future<int> run(
     await vmContext.applyDelta(delta);
   }
 
-  vmContext.silent = true;
-
   await vmContext.spawnProcess(arguments);
   var command = await vmContext.startRunning();
 
@@ -676,8 +675,8 @@ Future<int> run(
   }
 
   Future printException() async {
-    if (!vmContext.loaded) {
-      print('### process not loaded, cannot print uncaught exception');
+    if (!vmContext.isSpawned) {
+      print('### process not spawned, cannot print uncaught exception');
       return;
     }
     debug.RemoteObject exception = await vmContext.uncaughtException();
@@ -687,8 +686,8 @@ Future<int> run(
   }
 
   Future printTrace() async {
-    if (!vmContext.loaded) {
-      print("### process not loaded, cannot print stacktrace and code");
+    if (!vmContext.isSpawned) {
+      print("### process not spawned, cannot print stacktrace and code");
       return;
     }
     debug.BackTrace stackTrace = await vmContext.backTrace();
@@ -736,10 +735,9 @@ Future<int> run(
     } else {
       // If the vmContext terminated due to a ConnectionError or the program
       // finished don't reuse the state's vmContext.
-      if (vmContext.terminated) {
+      if (vmContext.isTerminated) {
         state.vmContext = null;
       }
-      vmContext.silent = false;
     }
   };
 
@@ -819,7 +817,7 @@ Future<int> compileAndAttachToVmThen(
   }
 
   DartinoVmContext vmContext = state.vmContext;
-  if (vmContext != null && vmContext.loaded) {
+  if (vmContext != null && vmContext.isSpawned) {
     // We cannot reuse a vmContext that has already been loaded. Loading
     // currently implies that some of the code has been run.
     if (state.explicitAttach) {

@@ -204,7 +204,7 @@ class SessionState {
 
   Future terminateSession() async {
     if (vmContext != null) {
-      if (!vmContext.terminated) {
+      if (!vmContext.isTerminated) {
         bool done = false;
         Timer timer = new Timer(const Duration(seconds: 5), () {
             if (!done) {

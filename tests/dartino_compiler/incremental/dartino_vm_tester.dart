@@ -150,7 +150,7 @@ class DartinoVmTester extends IncrementalTestRunner {
         // Restart the current frame to rerun main.
         await vmContext.restart();
       }
-      if (vmContext.running) {
+      if (vmContext.isRunning) {
         // Step out of main to finish execution of main.
         await vmContext.stepOut();
       }
@@ -201,7 +201,7 @@ class DartinoVmTester extends IncrementalTestRunner {
   Future<Null> tearDown() async {
     // If everything went fine, we will try finishing the execution and do a
     // graceful shutdown.
-    if (vmContext.running) {
+    if (vmContext.isRunning) {
       // The vmContext is still alive. Run to completion.
       var continueCommand = const commands_lib.ProcessContinue();
       print(continueCommand);

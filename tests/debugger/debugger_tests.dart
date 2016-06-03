@@ -108,7 +108,7 @@ Future runTest(String name, Uri uri,
     yield 't verbose';
     yield 'b main';
     yield 'r';
-    while (!context.terminated) {
+    while (!context.isTerminated) {
       yield 's';
     }
   };

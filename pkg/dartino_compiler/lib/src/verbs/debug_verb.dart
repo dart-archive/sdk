@@ -392,7 +392,7 @@ Future<int> runToMainDebuggerTask(
   if (vmContext == null) {
     throwFatalError(DiagnosticKind.attachToVmBeforeRun);
   }
-  if (vmContext.loaded) {
+  if (vmContext.isSpawned) {
     // We cannot reuse a vm context that has already been loaded. Loading
     // currently implies that some of the code has been run.
     throwFatalError(DiagnosticKind.sessionInvalidState,
@@ -424,8 +424,8 @@ Future<int> backtraceDebuggerTask(
     SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!vmContext.loaded) {
-    throwInternalError('### process not loaded, cannot show backtrace');
+  if (!vmContext.isSpawned) {
+    throwInternalError('### process not spawned, cannot show backtrace');
   }
   BackTrace trace = await vmContext.backTrace();
   print(trace.format());
@@ -438,7 +438,7 @@ Future<int> continueDebuggerTask(
     SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!vmContext.running) {
+  if (!vmContext.isRunning) {
     // TODO(ager, lukechurch): Fix error reporting.
     throwInternalError('### process not running, cannot continue');
   }
@@ -446,7 +446,7 @@ Future<int> continueDebuggerTask(
   print(await CommandLineDebugger.processStopResponseToString(
       vmContext, response));
 
-  if (vmContext.terminated) state.vmContext = null;
+  if (vmContext.isTerminated) state.vmContext = null;
 
   return 0;
 }
@@ -526,8 +526,8 @@ Future<int> listDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!vmContext.loaded) {
-    throwInternalError('### process not loaded, nothing to list');
+  if (!vmContext.isSpawned) {
+    throwInternalError('### process not spawned, nothing to list');
   }
   BackTrace trace = await vmContext.backTrace();
   if (trace == null) {
@@ -543,8 +543,8 @@ Future<int> disasmDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!vmContext.loaded) {
-    throwInternalError('### process not loaded, nothing to disassemble');
+  if (!vmContext.isSpawned) {
+    throwInternalError('### process not spawned, nothing to disassemble');
   }
   BackTrace trace = await vmContext.backTrace();
   if (trace == null) {
@@ -611,7 +611,7 @@ Future<int> listBreakpointsDebuggerTask(
 Future<int> stepDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.running) {
+  if (!vmContext.isRunning) {
     throwInternalError(
         '### process not running, cannot step to next expression');
   }
@@ -624,7 +624,7 @@ Future<int> stepDebuggerTask(
 Future<int> stepOverDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.running) {
+  if (!vmContext.isRunning) {
     throwInternalError('### process not running, cannot go to next expression');
   }
   VmCommand response = await vmContext.stepOver();
@@ -636,7 +636,7 @@ Future<int> stepOverDebuggerTask(
 Future<int> fibersDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.running) {
+  if (!vmContext.isRunning) {
     throwInternalError('### process not running, cannot show fibers');
   }
   List<BackTrace> traces = await vmContext.fibers();
@@ -651,7 +651,7 @@ Future<int> fibersDebuggerTask(
 Future<int> finishDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.running) {
+  if (!vmContext.isRunning) {
     throwInternalError('### process not running, cannot finish method');
   }
   VmCommand response = await vmContext.stepOut();
@@ -663,8 +663,8 @@ Future<int> finishDebuggerTask(
 Future<int> restartDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.loaded) {
-    throwInternalError('### process not loaded, cannot restart');
+  if (!vmContext.isSpawned) {
+    throwInternalError('### process not spawned, cannot restart');
   }
   BackTrace trace = await vmContext.backTrace();
   if (trace == null) {
@@ -690,7 +690,7 @@ Future<int> apply(
 Future<int> stepBytecodeDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.running) {
+  if (!vmContext.isRunning) {
     throwInternalError('### process not running, cannot step bytecode');
   }
   VmCommand response = await vmContext.stepBytecode();
@@ -703,7 +703,7 @@ Future<int> stepBytecodeDebuggerTask(
 Future<int> stepOverBytecodeDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.running) {
+  if (!vmContext.isRunning) {
     throwInternalError('### process not running, cannot step over bytecode');
   }
   VmCommand response = await vmContext.stepOverBytecode();
