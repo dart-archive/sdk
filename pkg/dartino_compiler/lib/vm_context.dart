@@ -316,7 +316,6 @@ class DartinoVmContext {
   Future kill() async {
     vmState = VmState.terminated;
     _drainedIncomingCommands = true;
-
     await connection.close().catchError((_) {});
     var value = _commandIterator.cancel();
     if (value != null) {
@@ -333,7 +332,7 @@ class DartinoVmContext {
 
   Future<HandShakeResult> handShake(
       String version, {Duration maxTimeSpent: null}) async {
-    Completer<HandShakeResult> completer = new Completer<HandShakeResult>();
+    Completer<VmCommand> completer = new Completer<VmCommand>();
     Timer timer;
     if (maxTimeSpent != null) {
       timer = new Timer(maxTimeSpent, () {
@@ -362,9 +361,13 @@ class DartinoVmContext {
 
     retryLoop();
 
-    return completer.future.then((HandShakeResult value) {
+    return completer.future.then((VmCommand value) {
       timer?.cancel();
-      return value;
+      if (value is HandShakeResult) {
+        return value;
+      } else {
+        return null;
+      }
     });
   }
 
@@ -409,14 +412,14 @@ class DartinoVmContext {
     File infoFile = new File.fromUri(info);
 
     if (!await infoFile.exists()) {
-      shutdown();
+      await shutdown();
       throwFatalError(DiagnosticKind.infoFileNotFound, uri: info);
     }
 
     try {
       return ProgramInfoJson.decode(await infoFile.readAsString());
     } on FormatException {
-      shutdown();
+      await shutdown();
       throwFatalError(DiagnosticKind.malformedInfoFile, uri: snapshot);
     }
   }
@@ -441,7 +444,7 @@ class DartinoVmContext {
       }
 
       if (nameOffsetMapping.snapshotHash != snapshotHash) {
-        shutdown();
+        await shutdown();
         throwFatalError(DiagnosticKind.snapshotHashMismatch,
             userInput: "${nameOffsetMapping.snapshotHash}",
             additionalUserInput: "${snapshotHash}",

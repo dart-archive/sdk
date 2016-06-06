@@ -278,15 +278,18 @@ Future<Null> attachToVm(
     handShakeResult =
         await vmContext.handShake(dartinoVersion, maxTimeSpent: maxTimeSpent);
   } on TimeoutException {
+    await vmContext.shutdown(ignoreExtraCommands: true);
     throwFatalError(
         DiagnosticKind.handShakeTimeout,
         address: connection.description);
   }
   if (handShakeResult == null) {
+    await vmContext.shutdown(ignoreExtraCommands: true);
     throwFatalError(
         DiagnosticKind.handShakeFailed, address: connection.description);
   }
   if (!handShakeResult.success) {
+    await vmContext.shutdown(ignoreExtraCommands: true);
     throwFatalError(DiagnosticKind.versionMismatch,
                     address: connection.description,
                     userInput: dartinoVersion,
