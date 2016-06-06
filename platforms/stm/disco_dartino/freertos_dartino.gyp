@@ -147,32 +147,5 @@
         }],
       ],
     },
-    {
-      'type': 'static_library',
-      'target_name': 'embedder_options.o',
-      'actions': [
-        {
-          'action_name': 'build_embedder_options',
-          'inputs': [
-            'src/embedder_options.c',
-          ],
-          'outputs': [
-            '<(PRODUCT_DIR)/embedder_options.o',
-          ],
-          'action': [
-            '../../../third_party/gcc-arm-embedded/<(OS)/'
-                'gcc-arm-embedded/bin/arm-none-eabi-gcc',
-            '-mcpu=cortex-m7',
-            '-mthumb',
-            '-mfloat-abi=hard',
-            '-mfpu=fpv5-sp-d16',
-            '-o',
-            '<(PRODUCT_DIR)/embedder_options.o',
-            '-c',
-            'src/embedder_options.c',
-          ]
-        },
-      ],
-    },
   ],
 }

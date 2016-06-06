@@ -12,5 +12,12 @@
          'stm32_cube_f4_demos.gyp:stm32f411re_nucleo_demonstrations',
       ],
     },
+    {
+      'target_name': 'nucleo_dartino',
+      'type': 'none',
+      'dependencies': [
+        'disco_dartino/nucleo_dartino.gyp:nucleo_dartino',
+      ],
+    },
   ],
 }

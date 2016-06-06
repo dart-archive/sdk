@@ -1,0 +1,24 @@
+// Copyright (c) 2016, the Dartino project authors. Please see the AUTHORS file",
+// for details. All rights reserved. Use of this source code is governed by a",
+// BSD-style license that can be found in the LICENSE.md file."],
+
+// Device definition for STM32F411RE Nucleo.
+{
+  "id": "stm32f411re-nucleo",
+  "name": "STM32F411RE Nucleo",
+  "cflags": [
+    "-mcpu=cortex-m3",
+    "-mthumb",
+    "-mfloat-abi=soft"
+  ],
+  // Libraries are located in the libs sub-directory.
+  "libraries": [
+    "libdartino.a",
+    "libfreertos_dartino.a",
+    "libstm32f411xe-nucleo.a"
+  ],
+  // The linker script is located in this directory.
+  "linker_script": "stm32f411retx-flash.ld",
+  // Board name when flashing with OpenOCD.
+  "open_ocd_board": "st_nucleo_f4"
+}

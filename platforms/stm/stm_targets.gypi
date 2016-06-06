@@ -33,7 +33,6 @@
           ['_toolset=="target"', {
             'defines': [
               'USE_HAL_DRIVER',
-              'STM32F746xx',
             ],
             'include_dirs': [
               # We need to set these here since the src/shared/platform_cmsis.h
@@ -42,7 +41,9 @@
               '<(freertos)/Source/include/',
               '<(freertos)/Source/portable/GCC/<(freertos_port)/',
               '<(stm32_cube_f7)/Drivers/CMSIS/Include/',
+              # For FreeRTOSConfig.h.
               'disco_dartino/src',
+              # The include directory in the root.
               '../..'
             ],
           }],

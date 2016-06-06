@@ -33,6 +33,11 @@
       '<(stm32_cube_f7)/Utilities/Fonts',
       '<(stm32_cube_f7)/Utilities/CPU',
     ],
+    'defines': [
+      'USE_STM32746G_DISCOVERY',
+      'USE_STM32746G_DISCO',
+      'STM32F746xx',
+    ],
   },
   'targets': [
     {
@@ -57,10 +62,6 @@
       ],
       'include_dirs': [
         '<(project_include_path)',
-      ],
-      'defines': [
-        'USE_STM32746G_DISCOVERY',
-        'USE_STM32746G_DISCO',
       ],
       'sources': [
         # Application.
@@ -147,10 +148,6 @@
       'include_dirs': [
         '<(project_include_path)',
       ],
-      'defines': [
-        'USE_STM32746G_DISCOVERY',
-        'USE_STM32746G_DISCO',
-      ],
       'sources': [
         # Application.
         '<(project_source_path)/main.c',
@@ -235,10 +232,6 @@
       ],
       'include_dirs': [
         '<(project_include_path)',
-      ],
-      'defines': [
-        'USE_STM32746G_DISCOVERY',
-        'USE_STM32746G_DISCO',
       ],
       'sources': [
         # Application.
@@ -339,10 +332,6 @@
       ],
       'includes': [
         'hal_sources.gypi',
-      ],
-      'defines': [
-        'USE_STM32746G_DISCOVERY',
-        'USE_STM32746G_DISCO',
       ],
       'sources': [
         # Application.
@@ -449,10 +438,6 @@
       'include_dirs': [
         '<(project_include_path)',
       ],
-      'defines': [
-        'USE_STM32746G_DISCOVERY',
-        'USE_STM32746G_DISCO',
-      ],
       'sources': [
         # Application.
         '<(project_source_path)/app_ethernet.c',
@@ -553,8 +538,6 @@
       'defines': [
         'LWIP_TIMEVAL_PRIVATE=0',
         'DEMO_VERSION="1.0.1"',
-        'USE_STM32746G_DISCOVERY',
-        'USE_STM32746G_DISCO',
       ],
       'include_dirs': [
         '<(project_path)/Core/Inc',

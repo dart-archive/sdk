@@ -48,6 +48,10 @@
   // "mobile" and "embedded".
   "device_type": "mobile",
 
+  // The device ID when running on an embedded device. The following
+  // devices are supported:
+  //   stm32f746g-discovery (STM32F746G Discovery)
+  //   stm32f411re-nucleo (STM32F411RE Nucleo)
   "device": "stm32f746g-discovery",
 
   // Support for incremental compilation, one of "none", "production", or

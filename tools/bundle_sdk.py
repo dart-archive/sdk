@@ -8,8 +8,8 @@
 
 # This script assumes that the target architecture has been build in the passed
 # in --build_dir and that the corresponding 32-bit architecture is also.
-# Finally it also assumes that out/ReleaseXARM/dartino-vm and
-# out/ReleaseSTM have been build.
+# Finally it also assumes that out/ReleaseXARM/dartino-vm, out/ReleaseSTM
+# and out/ReleaseCM4 have been build.
 
 import optparse
 import subprocess
@@ -30,7 +30,8 @@ SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
                 'mbedtls']
 THIRD_PARTY_PACKAGES = ['charcode', 'serial_port']
 
-SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery']
+SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery',
+           'stm32f411re-nucleo']
 
 def ParseOptions():
   parser = optparse.OptionParser()
@@ -204,7 +205,8 @@ def CopyPlatforms(bundle_dir):
   # Only copy parts of the platforms directory. We also have source
   # code there at the moment.
   target_platforms_dir = join(bundle_dir, 'platforms')
-  for platforms_dir in ['bin', 'raspberry-pi2', 'stm32f746g-discovery']:
+  for platforms_dir in [
+      'bin', 'raspberry-pi2', 'stm32f746g-discovery', 'stm32f411re-nucleo']:
     copytree(join('platforms', platforms_dir),
              join(target_platforms_dir, platforms_dir))
 
@@ -253,6 +255,19 @@ def CopySTM(bundle_dir):
   lib_dir = join(disco, 'lib')
   makedirs(lib_dir)
   build_dir = 'out/ReleaseSTM'
+  for lib in libraries:
+    CopyFile(join(build_dir, lib), join(lib_dir, basename(lib)))
+
+def CopyCM4(bundle_dir):
+  libraries = [
+      'libdartino.a',
+      'libfreertos_dartino.a',
+      'libstm32f411xe-nucleo.a',
+    ]
+  disco = join(bundle_dir, 'platforms', 'stm32f411re-nucleo')
+  lib_dir = join(disco, 'lib')
+  makedirs(lib_dir)
+  build_dir = 'out/ReleaseCM4'
   for lib in libraries:
     CopyFile(join(build_dir, lib), join(lib_dir, basename(lib)))
 
@@ -389,6 +404,7 @@ def Main():
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
     CopySTM(sdk_temp)
+    CopyCM4(sdk_temp)
     CopySamples(sdk_temp)
     CopyAdditionalFiles(sdk_temp)
     if deb_package:

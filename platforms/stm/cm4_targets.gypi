@@ -6,6 +6,7 @@
   'variables': {
     'posix': 0,
 
+    'freertos_with_labs': '<(DEPTH)/third_party/freertos/',
     'stm32_cube_f4': '<(DEPTH)/third_party/stm/stm32cube_fw_f4',
     'freertos': '<(stm32_cube_f4)/Middlewares/Third_Party/FreeRTOS',
     'freertos_port': 'ARM_CM3',
@@ -40,7 +41,9 @@
               '<(freertos)/Source/include/',
               '<(freertos)/Source/portable/GCC/<(freertos_port)/',
               '<(stm32_cube_f4)/Drivers/CMSIS/Include/',
-              'nucleo_dartino/src',
+              # For FreeRTOSConfig.h.
+              'disco_dartino/src',
+              # The include directory in the root.
               '../..'
             ],
           }],
@@ -49,7 +52,7 @@
 
       'ReleaseCM4': {
         'inherit_from': [
-          'dartino_base', 'dartino_debug',
+          'dartino_base', 'dartino_release',
           # Use the Cortex M3 flags for Cortex M4 without FPU.
           'dartino_cortex_m_base', 'dartino_cortex_m3', 'dartino_stm',
           'dartino_disable_live_coding',

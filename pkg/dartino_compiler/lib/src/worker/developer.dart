@@ -1321,7 +1321,12 @@ Future<Device> readDevice(String deviceId) async {
     deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
     assert(await deviceDirectory.exists());
     // In a Git checkout the libraries are is out/DebugSTM and out/ReleaseSTM.
-    libraryDirectoryUri = executable.resolve('../DebugSTM/');
+    if (deviceId.startsWith('stm32f7')) {
+      libraryDirectoryUri = executable.resolve('../DebugSTM/');
+    } else {
+      libraryDirectoryUri = executable.resolve('../DebugCM4/');
+    }
+    print('Using ${libraryDirectoryUri} to locate libraries');
   }
 
   Uri uri = deviceDirectoryUri.resolve('device.json');

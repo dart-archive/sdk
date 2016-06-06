@@ -145,7 +145,7 @@ void DartinoEntry(void const * argument) {
 
   // For now always start the UART.
   uart_handle = dartino::DeviceManager::GetDeviceManager()->OpenUart("uart1");
-  if (HasOption("uart_print_interceptor")) {
+  if (uart_handle != -1 && HasOption("uart_print_interceptor")) {
     DartinoRegisterPrintInterceptor(UartPrintInterceptor, NULL);
   }
 

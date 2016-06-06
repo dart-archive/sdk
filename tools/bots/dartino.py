@@ -181,7 +181,7 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   StepGyp()
 
   cross_mode = 'release'
-  cross_archs = ['xarm', 'stm']
+  cross_archs = ['xarm', 'stm', 'cm4']
   cross_system = 'linux'
   # We only cross compile on linux
   if system == 'linux':
@@ -525,15 +525,17 @@ def StepsFreeRtos(debug_log):
       embedded_libs=[False],
       use_sdks=[False])[0]
     StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
-  configuration = GetBuildConfigurations(
+  configurations = GetBuildConfigurations(
       system=utils.GuessOS(),
       modes=['debug'],
-      archs=['STM'],
+      archs=['STM', 'CM4'],
       asans=[False],
+      no_clang=True,
       embedded_libs=[False],
-      use_sdks=[False])[0]
-  StepBuild(configuration['build_conf'], configuration['build_dir'])
-  StepDisableAnalytics(host_configuration['build_dir'])
+      use_sdks=[False])
+  for configuration in configurations:
+    StepBuild(configuration['build_conf'], configuration['build_dir'])
+    StepDisableAnalytics(host_configuration['build_dir'])
 
 def StepsLK(debug_log):
   # We need the dartino daemon process to compile snapshots.

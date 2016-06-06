@@ -172,6 +172,7 @@ build $
         platforms/stm/cm4.gyp $
         platforms/stm/free_rtos_sources.gypi $
         platforms/stm/stm32_cube_f4_demos.gyp $
+        platforms/stm/disco_dartino/nucleo_dartino.gyp $
         dartino.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
@@ -185,4 +186,4 @@ build cm4: phony$
     out/DebugCM4F/build.ninja $
     out/ReleaseCM4F/build.ninja $
 
-default gyp stm
+default gyp stm cm4
