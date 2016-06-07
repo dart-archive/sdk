@@ -1093,7 +1093,7 @@ def ShouldSkipConfiguration(snapshot_run, configuration):
 def GetCompilerVariants(system, arch, no_clang=False):
   is_mac = system == 'mac'
   is_arm = arch in ['arm', 'xarm']
-  is_stm = arch == 'stm'
+  is_stm = arch == 'stm' or arch == 'cm4'
   is_windows = system == 'win'
   if no_clang:
     return ['']
