@@ -139,37 +139,9 @@ incremental/*/static_field_to_instance_field: IncrementalCompilationFailed
 incremental/*/super_is_parameter: IncrementalCompilationFailed
 incremental/*/unchanged_named_mixin_application: IncrementalCompilationFailed
 
-# Incorrectly failing servicec tests
-servicec/bad_field_4: Fail  # Issue 293
-servicec/bad_field_8: Fail  # Issue 293
-servicec/bad_formal_1: Fail  # Issue 294
-servicec/bad_formal_2: Fail  # Issue 294
-servicec/bad_formal_3: Fail  # Issue 294
-servicec/bad_function_7: Fail  # Issue 292
-servicec/bad_function_8: Fail  # Issue 292
-servicec/bad_list_type_2: Fail # Issue 295
-servicec/bad_list_type_3: Fail # Issue 295
-servicec/bad_list_type_4: Fail # Issue 295
-servicec/bad_list_type_5: Fail # Issue 295
-
 test_vm_connection/testCloseImmediately: Skip # Fails and prints during run.
 test_vm_connection/testCloseAfterCommitChanges: Fail
 test_vm_connection/testCloseAfterProcessRun: Fail
-
-# Old servicec backend fails on these tests; Issue 235
-servicec/good_type_parameter_1: Fail
-
-# Skip slow service performance test
-service_tests/performance_java: Skip
-
-# Only run java service tests on non-asan x64 linux.
-[ $arch != x64 || $system != linux || $asan ]
-
-service_tests/*_java: Skip
-
-[ $arch != ia32 && $arch != x64 ]
-
-service_tests/*: Skip
 
 [ $arch == xarm ]
 
@@ -179,9 +151,6 @@ flash_sd_card_tests/*: Skip # The native extension is not compiled for ARM.
 sdk_service_tests/*: Skip # The native extension is not compiled for ARM.
 
 incremental/experimental/program_gc_with_processes: Pass, Fail # Issue 389.
-
-[ $arch == x64 && $asan]
-service_tests/simple_todo: Pass, Fail # Issue https://github.com/dartino/sdk/issues/57
 
 [ $arch == x64 ]
 incremental/experimental/add_field_and_remove_subclass: Pass, Fail # Issue 460

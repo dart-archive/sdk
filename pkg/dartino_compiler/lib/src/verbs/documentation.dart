@@ -140,11 +140,6 @@ const String endDocumentation = """
              End the named session
 """;
 
-const String servicecDocumentation = """
-   x-servicec <file>
-             Compile service IDL file named <file> to custom Dartino interface
-""";
-
 const String exportDocumentation = """
    export [<dartfile>] to <snapshot>
              Compile <dartfile> and create a snapshot in <snapshot>. If no

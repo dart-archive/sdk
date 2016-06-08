@@ -34,10 +34,6 @@ import 'multiprogram_tests.dart' as multiprogram_tests;
 
 import 'snapshot_stacktrace_tests.dart' as snapshot_stacktrace_tests;
 
-import '../service_tests/service_tests.dart' as service_tests;
-
-import '../servicec/servicec_tests.dart' as servicec_tests;
-
 import '../dartino_compiler/run.dart' as run;
 
 import '../dartino_compiler/driver/test_vm_connection.dart' as
@@ -85,12 +81,6 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'self/testPrint': self.testPrint,
 
   'verbs/helpTextFormat': verbs.testHelpTextFormatCompliance,
-
-  // Slow tests, should run early so we don't wait for them.
-  'service_tests/*': service_tests.listTests,
-
-  // Slow tests, should run early so we don't wait for them
-  'servicec/*': servicec_tests.listTests,
 
   // Slow tests, should run early so we don't wait for them.
   'incremental/production/*': incremental_production.list,

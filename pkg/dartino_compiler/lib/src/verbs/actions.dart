@@ -49,9 +49,6 @@ import 'run_verb.dart' show
 import 'x_end_verb.dart' show
     endAction;
 
-import 'x_servicec_verb.dart' show
-    servicecAction;
-
 import 'x_upgrade_verb.dart' show
     upgradeAction;
 
@@ -167,7 +164,6 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "flash": flashAction,
   "x-download-tools": downloadToolsAction,
   "x-end": endAction,
-  "x-servicec": servicecAction,
   "x-should-prompt-analytics": shouldPromptAnalyticsAction,
   "x-upgrade": upgradeAction,
 };

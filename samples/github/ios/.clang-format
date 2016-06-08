@@ -1,6 +1,0 @@
-BasedOnStyle: Google
-DerivePointerAlignment: false
-PointerAlignment: Left
-ObjCBlockIndentWidth: 2
-ObjCSpaceAfterProperty: true
-ObjCSpaceBeforeProtocolList: true

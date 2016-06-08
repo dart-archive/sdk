@@ -501,13 +501,6 @@ Note: currently only implemented for dart2js.''',
               [],
               '.dartino-settings'),
           new _TestOptionSpecification(
-              'no_java',
-              "Don't require running java tests",
-              ['--no-java'],
-              [],
-              false,
-              type: 'bool'),
-          new _TestOptionSpecification(
               'use_heap_blob',
               'Run tests directly from programheap blobs instead of snapshots.',
               ['--use-heap-blob'],
