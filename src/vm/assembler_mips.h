@@ -194,6 +194,7 @@ class Assembler {
   INSTRUCTION_2(not_, "nor %r, %r, $0", Register, Register);
 
   INSTRUCTION_3(or_, "or %r, %r, %r", Register, Register, Register);
+  INSTRUCTION_3(ori, "ori %r, %r, %i", Register, Register, const Immediate&);
 
   INSTRUCTION_3(sll, "sll %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(sllv, "sllv %r, %r, %r", Register, Register, Register);
@@ -219,6 +220,8 @@ class Assembler {
 
   // Align what follows to a 2^power address.
   void AlignToPowerOfTwo(int power);
+
+  void B(Condition cond, Register reg1, Register reg2, Label* label);
 
   void Bind(const char* prefix, const char* name);
   void Bind(Label* label);

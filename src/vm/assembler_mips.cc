@@ -24,6 +24,11 @@ static const char* ConditionToString(Condition cond) {
   return kConditionNames[cond];
 }
 
+void Assembler::B(Condition cond, Register reg1, Register reg2, Label* label) {
+  b(cond, reg1, reg2, label);
+  nop();
+}
+
 void Assembler::BindWithPowerOfTwoAlignment(const char* name, int power) {
   AlignToPowerOfTwo(power);
   printf("\t.globl %s%s\n%s%s:\n", LabelPrefix(), name, LabelPrefix(), name);

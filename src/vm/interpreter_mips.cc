@@ -90,6 +90,15 @@ class InterpreterGeneratorMIPS: public InterpreterGenerator {
   explicit InterpreterGeneratorMIPS(Assembler* assembler)
       : InterpreterGenerator(assembler) { }
 
+  // Registers
+  // ---------
+  // s0: current process
+  // s1: bytecode pointer
+  // s2: stack pointer
+  // s4: null
+  // s6: true
+  // s7: false
+
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
 
@@ -234,6 +243,8 @@ class InterpreterGeneratorMIPS: public InterpreterGenerator {
   Label intrinsic_failure_;
   Label interpreter_entry_;
   int spill_size_;
+  // Used in GeneratePrologue/Epilogue, S0-S7 + RA + FP.
+  static const int kSaveFrameSize = 10;
 
   void LoadLocal(Register reg, int index);
   void StoreLocal(Register reg, int index);
@@ -296,6 +307,10 @@ class InterpreterGeneratorMIPS: public InterpreterGenerator {
   void SaveState(Label* resume);
   void RestoreState();
 
+  void ShiftAddJump(Register reg1, Register reg2, int imm);
+  void PrepareStack();
+  void RestoreStack();
+
   static int ComputeStackPadding(int reserved, int extra) {
     const int kAlignment = 8;
     int rounded = (reserved + extra + kAlignment - 1) & ~(kAlignment - 1);
@@ -309,15 +324,113 @@ GENERATE(, Interpret) {
 }
 
 void InterpreterGeneratorMIPS::GeneratePrologue() {
+  // Push callee-saved registers and reserve one extra slot.
+  __ addiu(SP, SP, Immediate(-kSaveFrameSize * kWordSize));
+  __ sw(S0, Address(SP, 9 * kWordSize));
+  __ sw(S1, Address(SP, 8 * kWordSize));
+  __ sw(S2, Address(SP, 7 * kWordSize));
+  __ sw(S3, Address(SP, 6 * kWordSize));
+  __ sw(S4, Address(SP, 5 * kWordSize));
+  __ sw(S5, Address(SP, 4 * kWordSize));
+  __ sw(S6, Address(SP, 3 * kWordSize));
+  __ sw(S7, Address(SP, 2 * kWordSize));
+  __ sw(RA, Address(SP, 1 * kWordSize));
+
+  // Setup process pointer in S0
+  __ move(S0, A0);
+
+  // Pad the stack to guarantee the right alignment for calls.
+  spill_size_ = ComputeStackPadding(kSaveFrameSize * kWordSize, 1 * kWordSize);
+  if (spill_size_ > 0) __ addiu(SP, SP, Immediate(-1 * spill_size_));
+
+  // Store the argument target yield address in the extra slot on the
+  // top of the stack.
+  __ sw(A1, Address(SP, 0));
+
+  // Restore the register state and dispatch to the first bytecode.
+  RestoreState();
 }
 
 void InterpreterGeneratorMIPS::GenerateEpilogue() {
+  // Done. Save the register state.
+  __ Bind(&done_);
+  SaveState(&interpreter_entry_);
+
+  // Undo stack padding.
+  __ Bind(&done_state_saved_);
+  if (spill_size_ > 0) __ addiu(SP, SP, Immediate(spill_size_));
+
+  // Restore callee-saved registers and return.
+  __ lw(RA, Address(SP, 1 * kWordSize));
+  __ lw(S7, Address(SP, 2 * kWordSize));
+  __ lw(S6, Address(SP, 3 * kWordSize));
+  __ lw(S5, Address(SP, 4 * kWordSize));
+  __ lw(S4, Address(SP, 5 * kWordSize));
+  __ lw(S3, Address(SP, 6 * kWordSize));
+  __ lw(S2, Address(SP, 7 * kWordSize));
+  __ lw(S1, Address(SP, 8 * kWordSize));
+  __ lw(S0, Address(SP, 9 * kWordSize));
+
+  __ jr(RA);
+  __ addiu(SP, SP, Immediate(kSaveFrameSize * kWordSize));  // Delay-slot.
+
   // Default entrypoint.
   __ Bind("", "InterpreterEntry");
   __ Bind(&interpreter_entry_);
   Dispatch(0);
 
-  /* ... */
+  // Handle GC and re-interpret current bytecode.
+  __ Bind(&gc_);
+  SaveState(&interpreter_entry_);
+  PrepareStack();
+  __ la(T9, "HandleGC");
+  __ jalr(T9);
+  __ move(A0, S0);  // Delay-slot.
+  RestoreStack();
+  RestoreState();
+
+  // Stack overflow handling (slow case).
+  Label stay_fast, overflow, check_debug_interrupt, overflow_resume;
+  __ Bind(&check_stack_overflow_0_);
+  __ move(A0, ZR);
+  __ Bind(&check_stack_overflow_);
+  SaveState(&overflow_resume);
+
+  __ move(A1, A0);
+  PrepareStack();
+  __ la(T9, "HandleStackOverflow");
+  __ jalr(T9);
+  __ move(A0, S0);  // Delay-slot.
+  RestoreStack();
+  RestoreState();
+  __ Bind(&overflow_resume);
+  ASSERT(Process::kStackCheckContinue == 0);
+  __ B(EQ, V0, ZR, &stay_fast);
+  __ li(T0, Immediate(Process::kStackCheckInterrupt));
+  __ B(NEQ, V0, T0, &check_debug_interrupt);
+  __ b(&done_);
+  __ ori(V0, ZR, Immediate(Interpreter::kInterrupt));  // Delay-slot.
+  __ Bind(&check_debug_interrupt);
+  __ li(T0, Immediate(Process::kStackCheckDebugInterrupt));
+  __ B(NEQ, V0, T0, &overflow);
+  __ b(&done_);
+  __ ori(V0, ZR, Immediate(Interpreter::kBreakpoint));  // Delay-slot.
+
+  __ Bind(&stay_fast);
+  Dispatch(0);
+
+  __ Bind(&overflow);
+  Label throw_resume;
+  SaveState(&throw_resume);
+  __ lw(S3, Address(S0, Process::kProgramOffset));
+  __ lw(S3, Address(S3, Program::kStackOverflowErrorOffset));
+  DoThrowAfterSaveState(&throw_resume);
+
+  // Intrinsic failure: Just invoke the method.
+  __ Bind(&intrinsic_failure_);
+  __ la(T9, "InterpreterMethodEntry");
+  __ jr(T9);
+  __ nop();
 }
 
 void InterpreterGeneratorMIPS::GenerateMethodEntry() {
@@ -331,10 +444,6 @@ void InterpreterGeneratorMIPS::GenerateMethodEntry() {
 void InterpreterGeneratorMIPS::GenerateBytecodePrologue(const char* name) {
   __ SwitchToText();
   __ AlignToPowerOfTwo(3);
-  __ nop();
-  __ nop();
-  __ nop();
-  __ nop();
   __ nop();
   __ Bind("Debug_", name);
   __ la(T9, "DebugAtBytecode");
@@ -623,7 +732,14 @@ void InterpreterGeneratorMIPS::DoIntrinsicListIndexSet() {
 void InterpreterGeneratorMIPS::DoIntrinsicListLength() {
 }
 
+void InterpreterGeneratorMIPS::Pop(Register reg) {
+  __ lw(reg, Address(S2, 0));
+  __ addiu(S2, S2, Immediate(1 * kWordSize));
+}
+
 void InterpreterGeneratorMIPS::Push(Register reg) {
+  __ addiu(S2, S2, Immediate(-1 * kWordSize));
+  __ sw(reg, Address(S2, 0));
 }
 
 void InterpreterGeneratorMIPS::Return(bool is_return_null) {
@@ -698,12 +814,41 @@ void InterpreterGeneratorMIPS::CheckStackOverflow(int size) {
 }
 
 void InterpreterGeneratorMIPS::Dispatch(int size) {
+  __ lbu(S3, Address(S1, size));
+  if (size > 0) {
+    __ addi(S1, S1, Immediate(size));
+  }
+  __ la(S5, "Interpret_DispatchTable");
+  ShiftAddJump(S5, S3, TIMES_WORD_SIZE);
 }
 
 void InterpreterGeneratorMIPS::SaveState(Label* resume) {
 }
 
 void InterpreterGeneratorMIPS::RestoreState() {
+}
+
+void InterpreterGeneratorMIPS::ShiftAddJump(Register reg1,
+                                            Register reg2,
+                                            int imm) {
+  __ sll(T0, reg2, Immediate(imm));
+  __ addu(T1, reg1, T0);
+  __ lw(T9, Address(T1, 0));
+  __ jr(T9);
+  __ nop();
+}
+
+void InterpreterGeneratorMIPS::PrepareStack() {
+  // Reserve 4 words for function arguments and push GP.
+  // The stack pointer must always be double-word aligned, so make room for
+  // 6 words instead of 5.
+  __ addiu(SP, SP, Immediate(-6 * kWordSize));
+  __ sw(GP, Address(SP, 5 * kWordSize));
+}
+
+void InterpreterGeneratorMIPS::RestoreStack() {
+  __ lw(GP, Address(SP, 5 * kWordSize));
+  __ addiu(SP, SP, Immediate(6 * kWordSize));
 }
 }  // namespace dartino
 #endif  // defined DARTINO_TARGET_MIPS

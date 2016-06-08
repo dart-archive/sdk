@@ -13,6 +13,7 @@ void Assembler::Bind(const char* prefix, const char* name) {
   putchar('\n');
   printf("\t.type %s%s, @function\n", prefix, name);
   printf("\t.globl %s%s\n%s%s:\n", prefix, name, prefix, name);
+  printf("\n\t.set noreorder\n");
 }
 
 void Assembler::DefineLong(const char* name) {
