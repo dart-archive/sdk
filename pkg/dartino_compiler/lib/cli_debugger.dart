@@ -259,7 +259,7 @@ class CommandLineDebugger {
         break;
       case 'continue':
       case 'c':
-        if (checkRunning('cannot continue')) {
+        if (checkPaused('cannot continue')) {
           await handleProcessStopResponse(await vmContext.cont());
         }
         break;
@@ -280,7 +280,7 @@ class CommandLineDebugger {
         break;
       case 'processes':
       case 'lp':
-        if (checkRunning('cannot list processes')) {
+        if (checkPausedOrRunning('cannot list processes')) {
           // Reset current paging point if not continuing from an 'lp' command.
           if (previousLine != 'lp' && previousLine != 'processes') {
             processPagingCurrent = 0;
@@ -315,7 +315,7 @@ class CommandLineDebugger {
         break;
       case 'fibers':
       case 'lf':
-        if (checkRunning('cannot show fibers')) {
+        if (checkPausedOrRunning('cannot show fibers')) {
           List<BackTrace> traces = await vmContext.fibers();
           for (int fiber = 0; fiber < traces.length; ++fiber) {
             writeStdoutLine('\nfiber $fiber');
@@ -325,7 +325,7 @@ class CommandLineDebugger {
         }
         break;
       case 'finish':
-        if (checkRunning('cannot finish method')) {
+        if (checkPaused('cannot finish method')) {
           await handleProcessStopResponse(await vmContext.stepOut());
         }
         break;
@@ -397,22 +397,22 @@ class CommandLineDebugger {
         break;
       case 'step':
       case 's':
-        if (checkRunning('cannot step to next expression')) {
+        if (checkPaused('cannot step to next expression')) {
           await handleProcessStopResponse(await vmContext.step());
         }
         break;
       case 'n':
-        if (checkRunning('cannot go to next expression')) {
+        if (checkPaused('cannot go to next expression')) {
           await handleProcessStopResponse(await vmContext.stepOver());
         }
         break;
       case 'sb':
-        if (checkRunning('cannot step bytecode')) {
+        if (checkPaused('cannot step bytecode')) {
           await handleProcessStopResponse(await vmContext.stepBytecode());
         }
         break;
       case 'nb':
-        if (checkRunning('cannot step over bytecode')) {
+        if (checkPaused('cannot step over bytecode')) {
           await handleProcessStopResponse(await vmContext.stepOverBytecode());
         }
         break;
@@ -482,6 +482,22 @@ class CommandLineDebugger {
       writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
     }
     return !vmContext.isScheduled;
+  }
+
+  bool checkPaused([String postfix]) {
+    if (!vmContext.isPaused) {
+      String prefix = '### process not paused';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return vmContext.isPaused;
+  }
+
+  bool checkPausedOrRunning([String postfix]) {
+    if (!vmContext.isPaused && !vmContext.isRunning) {
+      String prefix = '### process not running';
+      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+    }
+    return vmContext.isPaused;
   }
 
   bool checkRunning([String postfix]) {

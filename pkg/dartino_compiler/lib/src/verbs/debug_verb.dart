@@ -438,9 +438,9 @@ Future<int> continueDebuggerTask(
     SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
 
-  if (!vmContext.isRunning) {
+  if (!vmContext.isPaused) {
     // TODO(ager, lukechurch): Fix error reporting.
-    throwInternalError('### process not running, cannot continue');
+    throwInternalError('### process not paused, cannot continue');
   }
   VmCommand response = await vmContext.cont();
   print(await CommandLineDebugger.processStopResponseToString(
@@ -611,9 +611,9 @@ Future<int> listBreakpointsDebuggerTask(
 Future<int> stepDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.isRunning) {
+  if (!vmContext.isPaused) {
     throwInternalError(
-        '### process not running, cannot step to next expression');
+        '### process not paused, cannot step to next expression');
   }
   VmCommand response = await vmContext.step();
   print(await CommandLineDebugger.processStopResponseToString(
@@ -624,8 +624,8 @@ Future<int> stepDebuggerTask(
 Future<int> stepOverDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.isRunning) {
-    throwInternalError('### process not running, cannot go to next expression');
+  if (!vmContext.isPaused) {
+    throwInternalError('### process not paused, cannot go to next expression');
   }
   VmCommand response = await vmContext.stepOver();
   print(await CommandLineDebugger.processStopResponseToString(
@@ -636,7 +636,7 @@ Future<int> stepOverDebuggerTask(
 Future<int> fibersDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.isRunning) {
+  if (!vmContext.isRunning && !vmContext.isPaused) {
     throwInternalError('### process not running, cannot show fibers');
   }
   List<BackTrace> traces = await vmContext.fibers();
@@ -651,8 +651,8 @@ Future<int> fibersDebuggerTask(
 Future<int> finishDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.isRunning) {
-    throwInternalError('### process not running, cannot finish method');
+  if (!vmContext.isPaused) {
+    throwInternalError('### process not paused, cannot finish method');
   }
   VmCommand response = await vmContext.stepOut();
   print(await CommandLineDebugger.processStopResponseToString(
@@ -690,8 +690,8 @@ Future<int> apply(
 Future<int> stepBytecodeDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.isRunning) {
-    throwInternalError('### process not running, cannot step bytecode');
+  if (!vmContext.isPaused) {
+    throwInternalError('### process not paused, cannot step bytecode');
   }
   VmCommand response = await vmContext.stepBytecode();
   assert(response != null);  // stepBytecode cannot return null
@@ -703,8 +703,8 @@ Future<int> stepBytecodeDebuggerTask(
 Future<int> stepOverBytecodeDebuggerTask(
     CommandSender commandSender, SessionState state) async {
   DartinoVmContext vmContext = attachToSession(state, commandSender);
-  if (!vmContext.isRunning) {
-    throwInternalError('### process not running, cannot step over bytecode');
+  if (!vmContext.isPaused) {
+    throwInternalError('### process not paused, cannot step over bytecode');
   }
   VmCommand response = await vmContext.stepOverBytecode();
   assert(response != null);  // stepOverBytecode cannot return null

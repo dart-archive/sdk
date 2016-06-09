@@ -162,6 +162,7 @@ class DartinoVmContext {
       vmState == VmState.paused ||
       vmState == VmState.terminating;
   }
+  bool get isPaused => vmState == VmState.paused;
   bool get isRunning => vmState == VmState.running;
   bool get isTerminated => vmState == VmState.terminated;
 
@@ -526,7 +527,7 @@ class DartinoVmContext {
         var function = dartinoSystem.lookupFunctionById(command.functionId);
         debugState.topFrame = new BackTraceFrame(
             function, command.bytecodeIndex, compiler, debugState);
-        vmState = VmState.running;
+        vmState = VmState.paused;
         break;
 
       default:
@@ -638,7 +639,7 @@ class DartinoVmContext {
   }
 
   Future<VmCommand> stepTo(int functionId, int bcp) async {
-    assert(isRunning);
+    assert(isPaused);
     VmCommand response = await runCommands([
       new PushFromMap(MapId.methods, functionId),
       new ProcessStepTo(bcp)]);
@@ -646,7 +647,7 @@ class DartinoVmContext {
   }
 
   Future<VmCommand> step() async {
-    assert(isRunning);
+    assert(isPaused);
     final SourceLocation previous = debugState.currentLocation;
     final BackTraceFrame initialFrame = debugState.topFrame;
     VmCommand response;
@@ -657,27 +658,27 @@ class DartinoVmContext {
       } else {
         response = await stepBytecode();
       }
-    } while (isRunning &&
+    } while (isPaused &&
              debugState.atLocation(previous) &&
              stepMadeProgress(initialFrame));
     return response;
   }
 
   Future<VmCommand> stepOver() async {
-    assert(isRunning);
+    assert(isPaused);
     VmCommand response;
     final SourceLocation previous = debugState.currentLocation;
     final BackTraceFrame initialFrame = debugState.topFrame;
     do {
       response = await stepOverBytecode();
-    } while (isRunning &&
+    } while (isPaused &&
              debugState.atLocation(previous) &&
              stepMadeProgress(initialFrame));
     return response;
   }
 
   Future<VmCommand> stepOut() async {
-    assert(isRunning);
+    assert(isPaused);
     BackTrace trace = await backTrace();
     // If we are at the last frame, just continue. This will either terminate
     // the process or stop at any user configured breakpoints.
@@ -706,7 +707,7 @@ class DartinoVmContext {
         return response;
       }
     } while (!debugState.topFrame.isVisible);
-    if (isRunning && debugState.atLocation(return_location)) {
+    if (isPaused && debugState.atLocation(return_location)) {
       response = await step();
     }
     return response;
@@ -721,12 +722,12 @@ class DartinoVmContext {
   }
 
   Future<VmCommand> stepBytecode() async {
-    assert(isRunning);
+    assert(isPaused);
     return handleProcessStop(await runCommand(const ProcessStep()));
   }
 
   Future<VmCommand> stepOverBytecode() async {
-    assert(isRunning);
+    assert(isPaused);
     int processId = debugState.currentProcess;
     await sendCommand(const ProcessStepOver());
     ProcessSetBreakpoint setBreakpoint = await readNextCommand();
@@ -742,7 +743,7 @@ class DartinoVmContext {
   }
 
   Future<VmCommand> cont() async {
-    assert(isRunning);
+    assert(isPaused);
     return handleProcessStop(await runCommand(const ProcessContinue()));
   }
 
@@ -811,7 +812,7 @@ class DartinoVmContext {
   }
 
   Future<List<BackTrace>> fibers() async {
-    assert(isRunning);
+    assert(isRunning || isPaused);
     await runCommand(const NewMap(MapId.fibers));
     ProcessNumberOfStacks response =
         await runCommand(const ProcessAddFibersToMap());
@@ -825,14 +826,14 @@ class DartinoVmContext {
   }
 
   Future<List<int>> processes() async {
-    assert(isRunning);
+    assert(isRunning || isPaused);
     ProcessGetProcessIdsResult response =
       await runCommand(const ProcessGetProcessIds());
     return response.ids;
   }
 
   Future<BackTrace> processStack(int processId) async {
-    assert(isRunning);
+    assert(isPaused);
     ProcessBacktrace backtraceResponse =
       await runCommand(new ProcessBacktraceRequest(processId));
     return stackTraceFromBacktraceResponse(backtraceResponse);

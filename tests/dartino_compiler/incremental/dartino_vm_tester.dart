@@ -150,7 +150,7 @@ class DartinoVmTester extends IncrementalTestRunner {
         // Restart the current frame to rerun main.
         await vmContext.restart();
       }
-      if (vmContext.isRunning) {
+      if (vmContext.isPaused) {
         // Step out of main to finish execution of main.
         await vmContext.stepOut();
       }
