@@ -330,8 +330,11 @@ Stream<String> decodeStackFrames(Configuration conf,
       int functionOffset = int.parse(frameMatch.group(2));
 
       String functionName = info.functionName(conf, functionOffset);
-
-      yield '   $frameNr: ${shortName(functionName)}\n';
+      if (functionName == null) {
+        yield '   $frameNr: <unknown function (offset $functionOffset)>\n';
+      } else {
+        yield '   $frameNr: ${shortName(functionName)}\n';
+      }
     } else if (nsmMatch != null) {
       int classOffset = int.parse(nsmMatch.group(1));
       DartinoSelector selector =
