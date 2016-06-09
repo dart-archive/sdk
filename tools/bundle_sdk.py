@@ -28,7 +28,7 @@ TOOLS_DIR = abspath(dirname(__file__))
 SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
                 'raspberry_pi', 'stm32', 'socket', 'mqtt',
                 'mbedtls']
-THIRD_PARTY_PACKAGES = ['charcode', 'serial_port']
+THIRD_PARTY_PACKAGES = ['charcode']
 
 SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery',
            'stm32f411re-nucleo']
