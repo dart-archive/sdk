@@ -1159,12 +1159,17 @@ class ProcessBreakpoint extends VmCommand {
       "functionId: $functionId, bytecodeIndex: $bytecodeIndex";
 }
 
-class ProcessLocal extends VmCommand {
+/// Request for a description of an instance object in the heap of the current
+/// process. [frame] and [slot] refers to a variable in the local scope to start
+/// the search, and [fieldAccesses] gives a path to follow from there
+/// dereferencing fields.
+class ProcessInstance extends VmCommand {
   final int frame;
   final int slot;
+  final List<int> fieldAccesses;
 
-  const ProcessLocal(this.frame, this.slot)
-      : super(VmCommandCode.ProcessLocal);
+  const ProcessInstance(this.frame, this.slot, this.fieldAccesses)
+      : super(VmCommandCode.ProcessInstance);
 
   void internalAddTo(
       Sink<List<int>> sink,
@@ -1173,7 +1178,11 @@ class ProcessLocal extends VmCommand {
     buffer
         ..addUint32(frame)
         ..addUint32(slot)
-        ..sendOn(sink, code);
+        ..addUint32(fieldAccesses.length);
+    for (int fieldAccess in fieldAccesses) {
+      buffer.addUint32(fieldAccess);
+    }
+    buffer.sendOn(sink, code);
   }
 
   /// Peer will respond with a [DartValue].
@@ -1182,21 +1191,26 @@ class ProcessLocal extends VmCommand {
   String valuesToString() => "frame: $frame, slot: $slot";
 }
 
-class ProcessLocalStructure extends VmCommand {
+class ProcessInstanceStructure extends VmCommand {
   final int frame;
   final int slot;
+  final List<int> fieldAccesses;
 
-  const ProcessLocalStructure(this.frame, this.slot)
-      : super(VmCommandCode.ProcessLocalStructure);
+  const ProcessInstanceStructure(this.frame, this.slot, this.fieldAccesses)
+      : super(VmCommandCode.ProcessInstanceStructure);
 
   void internalAddTo(
       Sink<List<int>> sink,
       CommandBuffer<VmCommandCode> buffer,
       int translateObject(MapId mapId, int index)) {
     buffer
-        ..addUint32(frame)
-        ..addUint32(slot)
-        ..sendOn(sink, code);
+      ..addUint32(frame)
+      ..addUint32(slot)
+      ..addUint32(fieldAccesses.length);
+    for (int fieldAccess in fieldAccesses) {
+      buffer.addUint32(fieldAccess);
+    }
+    buffer.sendOn(sink, code);
   }
 
   /// Peer will respond with a [DartValue] or [InstanceStructure] and a number
@@ -1639,6 +1653,18 @@ class StringValue extends DartValue {
   String dartToString() => "'$value'";
 }
 
+class CommandError extends VmCommand {
+  final ErrorCode errorCode;
+
+  const CommandError(this.errorCode)
+      : super(VmCommandCode.CommandError);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "command error: $errorCode";
+}
+
+
 class ConnectionError extends VmCommand {
   final error;
 
@@ -1649,7 +1675,13 @@ class ConnectionError extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "error: $error, trace: $trace";
+  String valuesToString() => "connection error: $error, trace: $trace";
+}
+
+// Any change in [ErrorCode] must also be done in [ErrorCode] in
+// src/shared/connection.h.
+enum ErrorCode {
+  invalidInstanceAccess,
 }
 
 // Any change in [VmCommandCode] must also be done in [Opcode] in
@@ -1690,13 +1722,14 @@ enum VmCommandCode {
   ProcessBacktrace,
   ProcessUncaughtExceptionRequest,
   ProcessBreakpoint,
-  ProcessLocal,
-  ProcessLocalStructure,
+  ProcessInstance,
+  ProcessInstanceStructure,
   ProcessRestartFrame,
   ProcessTerminated,
   ProcessCompileTimeError,
   ProcessAddFibersToMap,
   ProcessNumberOfStacks,
+  CommandError,
 
   ProcessGetProcessIds,
   ProcessGetProcessIdsResult,

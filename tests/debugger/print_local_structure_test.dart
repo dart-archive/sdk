@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// DartinoDebuggerCommands=b breakHere,r,f 1,p *a,p *i,c
+// DartinoDebuggerCommands=b breakHere,r,f 1,p *a,p *i,p notExisting,p a.shadowMe,p a.notExisting,p a.s,p *a.s, p a.s.shadowMe,p a.s.shadowMe.a,c
 
 class S0 {
   var str = 'spaß';
@@ -26,6 +26,7 @@ class A extends S3 {
   var shadowMe = 42;
   var t = true;
   var f = false;
+  var s = new S3();
 }
 
 breakHere() { }

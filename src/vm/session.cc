@@ -968,6 +968,12 @@ void Session::SignalMainThread(MainThreadResumeKind kind) {
   main_thread_monitor_->NotifyAll();
 }
 
+void Session::SendError(Connection::ErrorCode errorCode) {
+  WriteBuffer buffer;
+  buffer.WriteInt(errorCode);
+  connection_->Send(Connection::kCommandError, buffer);
+}
+
 void Session::SendDartValue(Object* value) {
   WriteBuffer buffer;
   if (value->IsSmi() || value->IsLargeInteger()) {
@@ -1317,21 +1323,34 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       break;
     }
 
-    case Connection::kProcessLocal:
-    case Connection::kProcessLocalStructure: {
+    case Connection::kProcessInstance:
+    case Connection::kProcessInstanceStructure: {
       int frame_index = connection()->ReadInt();
       int slot = connection()->ReadInt();
+      int fieldAccessCount = connection()->ReadInt();
       Stack* stack = process()->stack();
       Frame frame(stack);
       for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
       word index = frame.FirstLocalIndex() - slot;
       if (index < frame.LastLocalIndex()) FATAL("Illegal slot offset");
-      Object* local = stack->get(index);
-      if (opcode == Connection::kProcessLocalStructure &&
-          local->IsInstance()) {
-        session()->SendInstanceStructure(Instance::cast(local));
+      Object* object = stack->get(index);
+      for (int i = 0; i < fieldAccessCount; i++) {
+        if (!object->IsInstance()) {
+          session()->SendError(Connection::kInvalidInstanceAccess);
+        }
+        Instance* instance = Instance::cast(object);
+        Class* klass = instance->get_class();
+        int fieldAccess = connection()->ReadInt();
+        if (fieldAccess < 0 || fieldAccess >= klass->NumberOfInstanceFields()) {
+          session()->SendError(Connection::kInvalidInstanceAccess);
+        }
+        object = instance->GetInstanceField(fieldAccess);
+      }
+      if (opcode == Connection::kProcessInstanceStructure &&
+          object->IsInstance()) {
+        session()->SendInstanceStructure(Instance::cast(object));
       } else {
-        session()->SendDartValue(local);
+        session()->SendDartValue(object);
       }
       break;
     }

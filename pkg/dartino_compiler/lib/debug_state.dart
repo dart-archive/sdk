@@ -42,6 +42,14 @@ class RemoteValue extends RemoteObject {
   final DartValue value;
 
   RemoteValue(this.value, {String name}) : super(name);
+  bool get isError => false;
+}
+
+/// A representation of a failure to retrieve a remote object.
+class RemoteErrorObject extends RemoteObject {
+  String message;
+  RemoteErrorObject(this.message, {String name}) : super(name);
+
 }
 
 class Breakpoint {

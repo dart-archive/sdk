@@ -26,6 +26,7 @@ import 'incremental/dartino_compiler_incremental.dart' show
 
 import 'src/codegen_visitor.dart';
 import 'src/debug_info.dart';
+import 'src/element_utils.dart' show getFieldIndex;
 
 // TODO(ahe): Get rid of this import.
 import 'src/dartino_backend.dart' show DartinoBackend;
@@ -60,6 +61,10 @@ import 'program_info.dart' show
     IdOffsetMapping,
     NameOffsetMapping,
     ProgramInfoJson;
+
+import 'package:compiler/src/elements/elements.dart' show
+    ClassElement,
+    FieldElement;
 
 class SessionCommandTransformerBuilder
     extends CommandTransformerBuilder<Pair<int, ByteData>> {
@@ -941,16 +946,52 @@ class DartinoVmContext {
     return 'Uncaught exception: $message';
   }
 
-  Future<RemoteValue> processVariable(String name) async {
+  Future<RemoteObject> _processVariable(
+      List<String> names, bool getStructure) async {
     assert(isSpawned);
-    LocalValue local = await lookupValue(name);
-    return local != null ? await processLocal(local) : null;
+    assert(names.isNotEmpty);
+    String localName = names.first;
+    LocalValue local = await lookupValue(localName);
+    if (local == null) {
+      return new RemoteErrorObject("No local '$localName' in scope.");
+    }
+
+    List<int> fieldIndices = new List<int>();
+    List<String> namesTillHere = <String>[localName];
+    for (String fieldName in names.skip(1)) {
+      RemoteValue remoteValue =
+          await processLocal(local, fieldAccesses: fieldIndices);
+      DartValue value = remoteValue.value;
+      if (value is Instance) {
+        ClassElement classElement =
+            dartinoSystem.classesById[value.classId].element;
+        int fieldIndex = getFieldIndex(classElement, fieldName);
+        if (fieldIndex == null) {
+          return new RemoteErrorObject(
+              "'${namesTillHere.join(".")}' has type ${classElement}"
+              " that does not have a field named '${fieldName}'.");
+        }
+        fieldIndices.add(fieldIndex);
+      } else {
+        return new RemoteErrorObject("'${namesTillHere.join(".")}' "
+            "is a primitive value '${dartValueToString(value)}' "
+            "and does not have a field named '${fieldName}'");
+      }
+      namesTillHere.add(fieldName);
+    }
+    if (getStructure) {
+      return await processLocalStructure(local, fieldAccesses: fieldIndices);
+    } else {
+      return await processLocal(local, fieldAccesses: fieldIndices);
+    }
   }
 
-  Future<RemoteObject> processVariableStructure(String name) async {
-    assert(isSpawned);
-    LocalValue local = await lookupValue(name);
-    return local != null ? await processLocalStructure(local) : null;
+  Future<RemoteValue> processVariable(List<String> names) {
+    return _processVariable(names, false);
+  }
+
+  Future<RemoteObject> processVariableStructure(List<String> names) {
+    return _processVariable(names, true);
   }
 
   Future<List<RemoteObject>> processAllVariables() async {
@@ -961,7 +1002,7 @@ class DartinoVmContext {
     for (ScopeInfo current = info;
          current != ScopeInfo.sentinel;
          current = current.previous) {
-      variables.add(await processLocal(current.local, current.name));
+      variables.add(await processLocal(current.local, name: current.name));
     }
     return variables;
   }
@@ -972,17 +1013,24 @@ class DartinoVmContext {
     return trace.scopeInfoForCurrentFrame.lookup(name);
   }
 
-  Future<RemoteValue> processLocal(LocalValue local, [String name]) async {
+  Future<RemoteValue> processLocal(
+      LocalValue local,
+      {String name,
+       List<int> fieldAccesses: const <int>[]}) async {
     var actualFrameNumber = debugState.actualCurrentFrameNumber;
     VmCommand response = await runCommand(
-        new ProcessLocal(actualFrameNumber, local.slot));
+        new ProcessInstance(actualFrameNumber, local.slot, fieldAccesses));
     assert(response is DartValue);
     return new RemoteValue(response, name: name);
   }
 
-  Future<RemoteObject> processLocalStructure(LocalValue local) async {
+  Future<RemoteObject> processLocalStructure(
+      LocalValue local,
+      {String name,
+       List<int> fieldAccesses: const <int>[]}) async {
     var frameNumber = debugState.actualCurrentFrameNumber;
-    await sendCommand(new ProcessLocalStructure(frameNumber, local.slot));
+    await sendCommand(
+        new ProcessInstanceStructure(frameNumber, local.slot, fieldAccesses));
     VmCommand response = await readNextCommand();
     if (response is DartValue) {
       return new RemoteValue(response);

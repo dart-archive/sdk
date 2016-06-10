@@ -9,6 +9,7 @@
 #include "src/vm/session_no_debugging.h"
 #else  // DARTINO_ENABLE_DEBUGGING
 
+#include "src/shared/connection.h"
 #include "src/shared/names.h"
 
 #include "src/vm/object_list.h"
@@ -215,6 +216,7 @@ class Session {
   void SendInstanceStructure(Instance* instance);
   void SendProgramInfo(ClassOffsetsType* class_offsets,
       FunctionOffsetsType* function_offsets);
+  void SendError(Connection::ErrorCode errorCode);
 
   void Push(Object* object) { stack_.Add(object); }
   Object* Pop() { return stack_.RemoveLast(); }

@@ -53,8 +53,10 @@ Commands:
   'bt'                                  backtrace
   'f/frame <n>'                         select frame
   'l/list'                              list source for frame
-  'p/print <name>'                      print the value of local variable
-  'p/print *<name>'                     print the structure of local variable
+  'p/print <name>(.<field>)*'           print a value starting from a local
+                                        variable
+  'p/print *<name>(.<field>)*'          print the structure of a value starting
+                                        from a local variable
   'p/print'                             print the values of all locals
   'lp/processes'                        list all processes
   'disasm/disassemble'                  disassemble code for frame
@@ -371,18 +373,23 @@ class CommandLineDebugger {
           }
           break;
         }
-        String variableName = commandComponents[1];
-        RemoteObject variable;
-        if (variableName.startsWith('*')) {
-          variableName = variableName.substring(1);
-          variable = await vmContext.processVariableStructure(variableName);
-        } else {
-          variable = await vmContext.processVariable(variableName);
+        String access = commandComponents[1];
+        bool getStructure = false;
+
+        if (access.startsWith('*')) {
+          access = access.substring(1);
+          getStructure = true;
         }
-        if (variable == null) {
-          writeStdoutLine('### no such variable: $variableName');
+        List<String> names = access.split(".");
+
+        RemoteObject value = getStructure
+            ? await vmContext.processVariableStructure(names)
+            : await vmContext.processVariable(names);
+
+        if (value is RemoteErrorObject) {
+          writeStdoutLine("### could not access '$access': ${value.message}");
         } else {
-          writeStdoutLine(vmContext.remoteObjectToString(variable));
+          writeStdoutLine(vmContext.remoteObjectToString(value));
         }
         break;
       case 'q':
