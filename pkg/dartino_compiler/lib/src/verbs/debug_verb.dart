@@ -720,9 +720,9 @@ Future<int> printDebuggerTask(
   RemoteObject variable;
   if (name.startsWith("*")) {
     name = name.substring(1);
-    variable = await vmContext.processVariableStructure(name);
+    variable = await vmContext.processVariableStructure([name]);
   } else {
-    variable = await vmContext.processVariable(name);
+    variable = await vmContext.processVariable([name]);
   }
   if (variable == null) {
     print('### No such variable: $name');
