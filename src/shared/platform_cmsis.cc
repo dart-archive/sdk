@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #include "src/shared/utils.h"
-#include "platforms/stm/disco_dartino/src/page_alloc.h"
+#include "src/freertos/page_alloc.h"
 
 namespace dartino {
 

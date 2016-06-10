@@ -15,7 +15,7 @@ NO_LINTING = (
     r"^package[\\\/]immi[\\\/]objc[\\\/].*",
     r"^package[\\\/]service[\\\/]cc[\\\/].*"
     r"^package[\\\/]service[\\\/]java[\\\/]jni[\\\/].*",
-    r"^platforms[\\\/]stm[\\\/]disco_dartino[\\\/]src[\\\/]stm32f746g-discovery[\\\/]generated[\\\/].*",
+    r"^src[\\\/]freertos[\\\/]stm32f746g-discovery[\\\/]generated[\\\/].*",
     r"^samples[\\\/]github[\\\/]ios[\\\/].*",
     r"^samples[\\\/]buildbot[\\\/]cc[\\\/].*",
     r"^samples[\\\/]buildbot[\\\/]ios[\\\/].*",

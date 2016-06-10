@@ -26,16 +26,16 @@ rule gyp-mbed
 rule gyp-stm
   command = $
     GYP_CROSSCOMPILE=1 $
-    ./third_party/gyp/gyp --depth=. -Iplatforms/stm/stm_targets.gypi $
+    ./third_party/gyp/gyp --depth=. -Isrc/freertos/stm_targets.gypi $
         -Goutput_dir=out $
-        --format=ninja platforms/stm/stm.gyp
+        --format=ninja src/freertos/stm.gyp
 
 rule gyp-cm4
   command = $
     GYP_CROSSCOMPILE=1 $
-    ./third_party/gyp/gyp --depth=. -Iplatforms/stm/cm4_targets.gypi $
+    ./third_party/gyp/gyp --depth=. -Isrc/freertos/cm4_targets.gypi $
         -Goutput_dir=out $
-        --format=ninja platforms/stm/cm4.gyp
+        --format=ninja src/freertos/cm4.gyp
 
 build $
     out/DebugIA32/build.ninja $
@@ -141,13 +141,12 @@ build $
     gyp-stm $
         common.gypi $
         version.gyp $
-        platforms/stm/stm_targets.gypi $
-        platforms/stm/stm.gyp $
-        platforms/stm/free_rtos_sources.gypi $
-        platforms/stm/stm32_cube_f7_demos.gyp $
-        platforms/stm/disco_dartino/disco_dartino.gyp $
-        platforms/stm/disco_dartino/freertos_dartino.gyp $
-        platforms/stm/event_handler_test/event_handler_test.gyp $
+        src/freertos/stm_targets.gypi $
+        src/freertos/stm.gyp $
+        src/freertos/free_rtos_sources.gypi $
+        src/freertos/stm32_cube_f7_demos.gyp $
+        src/freertos/disco_dartino.gyp $
+        src/freertos/freertos_dartino.gyp $
         dartino.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
@@ -168,11 +167,11 @@ build $
     gyp-cm4 $
         common.gypi $
         version.gyp $
-        platforms/stm/cm4_targets.gypi $
-        platforms/stm/cm4.gyp $
-        platforms/stm/free_rtos_sources.gypi $
-        platforms/stm/stm32_cube_f4_demos.gyp $
-        platforms/stm/disco_dartino/nucleo_dartino.gyp $
+        src/freertos/cm4_targets.gypi $
+        src/freertos/cm4.gyp $
+        src/freertos/free_rtos_sources.gypi $
+        src/freertos/stm32_cube_f4_demos.gyp $
+        src/freertos/nucleo_dartino.gyp $
         dartino.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $

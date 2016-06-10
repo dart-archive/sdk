@@ -8,7 +8,7 @@
 
 // TODO(sigurdm): The cmsis event-handler should not know about the
 // disco-platform
-#include "platforms/stm/disco_dartino/src/device_manager.h"
+#include "src/freertos/device_manager.h"
 
 #include "src/vm/event_handler.h"
 #include "src/vm/object.h"
