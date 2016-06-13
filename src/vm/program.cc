@@ -23,6 +23,7 @@
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 #include "src/vm/session.h"
+#include "src/vm/snapshot.h"
 
 namespace dartino {
 
@@ -389,24 +390,85 @@ void Program::ValidateSharedHeap() {
   process_heap()->VisitWeakObjectPointers(&validator);
 }
 
+// Visits all pointers to doubles, so we can move them to the start.
+// Also visits all pointers with the other visitor, so we can determine the
+// popular objects.
 class FindDoubleVisitor : public HeapObjectVisitor {
  public:
-  explicit FindDoubleVisitor(PointerVisitor* visitor) : visitor_(visitor) {}
+  explicit FindDoubleVisitor(PointerVisitor* double_mover,
+                             PointerVisitor* counter)
+      : double_mover_(double_mover), counter_(counter) {}
 
   virtual uword Visit(HeapObject* object) {
     if (object->IsDouble()) {
-      visitor_->Visit(reinterpret_cast<Object**>(&object));
+      double_mover_->Visit(reinterpret_cast<Object**>(&object));
     }
+    object->IteratePointers(counter_);
     return object->Size();
   }
 
  private:
-  PointerVisitor* visitor_;
+  PointerVisitor* double_mover_;
+  PointerVisitor* counter_;
 };
 
+#ifdef DARTINO64
+class BigSmiFixer : public PointerVisitor {
+ public:
+  BigSmiFixer(SemiSpace* to, Class* large_integer_class)
+      : to_(to), large_integer_class_(large_integer_class) {}
+
+  virtual void VisitBlock(Object** start, Object** end) {
+    for (Object** p = start; p < end; p++) {
+      Object* object = *p;
+      if (!object->IsSmi()) continue;
+      Smi* smi = reinterpret_cast<Smi*>(object);
+      if (!Smi::IsValidAsPortable(smi->value())) {
+        uword new_address = to_->Allocate(LargeInteger::kSize);
+        ASSERT(new_address != 0);  // we are in a no-allocation-failure scope.
+        *reinterpret_cast<Class**>(new_address) = large_integer_class_;
+        *reinterpret_cast<word*>(new_address + kPointerSize) = smi->value();
+        ASSERT(LargeInteger::kSize == kPointerSize + sizeof(word));
+        *p = HeapObject::FromAddress(new_address);
+      }
+    }
+  }
+
+ private:
+  SemiSpace* to_;
+  Class* large_integer_class_;
+};
+
+// Visits all Smis, finding those that are too big to be Smis on a 32 bit
+// system, and converting them to boxed integers.
+class FindOversizedSmiVisitor : public HeapObjectVisitor {
+ public:
+  explicit FindOversizedSmiVisitor(SemiSpace* to, Class* large_integer_class)
+      : fixer_(to, large_integer_class) {}
+
+  virtual uword Visit(HeapObject* object) {
+    object->IterateEverything(&fixer_);
+    return object->Size();
+  }
+
+ private:
+  BigSmiFixer fixer_;
+};
+#endif
+
 // First does one program GC to get rid of garbage, then does a second to move
-// the Double objects to the start of the heap.
-void Program::SnapshotGC() {
+// the Double objects to the start of the heap. Also finds the most popular
+// (most pointed-at) objects on the heap and moves them to the start of the
+// heap for better locality.
+void Program::SnapshotGC(PopularityCounter* popularity_counter) {
+#ifdef DARTINO64
+  {
+    SemiSpace* space = heap_.space();
+    NoAllocationFailureScope scope(space);
+    FindOversizedSmiVisitor smi_visitor(space, large_integer_class());
+    heap_.IterateObjects(&smi_visitor);
+  }
+#endif
   CollectGarbage();
 
   SemiSpace* to = new SemiSpace(Space::kCanResize, kUnknownSpacePage,
@@ -414,11 +476,28 @@ void Program::SnapshotGC() {
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
+  NoAllocationFailureScope scope(to);
   {
-    NoAllocationFailureScope scope(to);
-    FindDoubleVisitor heap_number_visitor(&scavenger);
+    FindDoubleVisitor heap_number_visitor(&scavenger, popularity_counter);
     heap_.IterateObjects(&heap_number_visitor);
   }
+  popularity_counter->FindMostPopular();
+
+  // The first object after the boxed floats should be the boxed float class,
+  // which puts it in a predictable place for the deserializer.
+  scavenger.Visit(double_class_slot());
+
+  // These three must be next because they should have a predictable placement
+  // relative to each other for the sake of the interpreter.
+  scavenger.Visit(null_object_slot());
+  scavenger.Visit(false_object_slot());
+  scavenger.Visit(true_object_slot());
+
+  // Visit the most popular objects to get them bunched near the start of the
+  // heap.  This is good for locality and for the snapshot size.
+  popularity_counter->VisitMostPopular(&scavenger);
+
+  // Visit the roots and all other objects that are live.
   PerformProgramGC(to, &scavenger);
   FinishProgramGC();
 }
@@ -430,6 +509,7 @@ void Program::CollectGarbage() {
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
+  NoAllocationFailureScope scope(to);
   PerformProgramGC(to, &scavenger);
   FinishProgramGC();
 }

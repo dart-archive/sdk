@@ -1044,30 +1044,30 @@ void Session::SendProgramInfo(ClassOffsetsType* class_offsets,
   buffer.WriteInt(5 * class_offsets->size());
   for (auto& pair : *class_offsets) {
     Class* klass = pair.first;
-    const PortableOffset& offset = pair.second;
+    const PortableSize& offset = pair.second;
 
     int id = MapLookupByObject(class_map_id_, klass);
     ASSERT(id != -1 || IsBuiltin(klass, program()));
     buffer.WriteInt(id);
-    buffer.WriteInt(offset.offset_64bits_double);
-    buffer.WriteInt(offset.offset_64bits_float);
-    buffer.WriteInt(offset.offset_32bits_double);
-    buffer.WriteInt(offset.offset_32bits_float);
+    buffer.WriteInt(offset.ComputeSizeInBytes(kBigPointerBigFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kBigPointerSmallFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kSmallPointerBigFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kSmallPointerSmallFloat));
   }
 
   // Function offset table
   buffer.WriteInt(5 * function_offsets->size());
   for (auto& pair : *function_offsets) {
     Function* function = pair.first;
-    const PortableOffset& offset = pair.second;
+    const PortableSize& offset = pair.second;
 
     int id = MapLookupByObject(method_map_id_, function);
     ASSERT(id != -1);
     buffer.WriteInt(id);
-    buffer.WriteInt(offset.offset_64bits_double);
-    buffer.WriteInt(offset.offset_64bits_float);
-    buffer.WriteInt(offset.offset_32bits_double);
-    buffer.WriteInt(offset.offset_32bits_float);
+    buffer.WriteInt(offset.ComputeSizeInBytes(kBigPointerBigFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kBigPointerSmallFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kSmallPointerBigFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kSmallPointerSmallFloat));
   }
 
   connection_->Send(Connection::kProgramInfo, buffer);

@@ -22,6 +22,7 @@ typedef void (*ProgramExitListener)(Program*, int exitcode, void* data);
 class Class;
 class Function;
 class Method;
+class PopularityCounter;
 class Process;
 class ProcessVisitor;
 class ProgramTableRewriter;
@@ -286,7 +287,7 @@ class Program : public ProgramList::Entry {
   void ValidateSharedHeap();
 
   void CollectGarbage();
-  void SnapshotGC();
+  void SnapshotGC(PopularityCounter* popularity_counter);
   void CollectOldSpace();
   void CollectOldSpaceIfNeeded();
   void CollectNewSpace();
@@ -312,9 +313,10 @@ class Program : public ProgramList::Entry {
 
  public:
   static const int kFirstRootOffset = 2 * kWordSize;
-#define ROOT_ACCESSOR(type, name, CamelName)                  \
-  type* name() const { return name##_; }                      \
-  static const int k##CamelName##Offset =                     \
+#define ROOT_ACCESSOR(type, name, CamelName)                              \
+  type* name() const { return name##_; }                                  \
+  Object** name##_slot() { return reinterpret_cast<Object**>(&name##_); } \
+  static const int k##CamelName##Offset =                                 \
       kFirstRootOffset + sizeof(void*) * k##CamelName##Index;
   ROOTS_DO(ROOT_ACCESSOR)
 #undef ROOT_ACCESSOR

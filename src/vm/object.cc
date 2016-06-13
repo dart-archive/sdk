@@ -516,6 +516,141 @@ void Class::ClassPrint() {
 
 void Class::ClassShortPrint() { Print::Out("class"); }
 
+void ByteArray::IterateEverything(PointerVisitor* visitor) {
+  visitor->VisitInteger(address() + BaseArray::kLengthOffset);
+  ByteArray* byte_array = ByteArray::cast(this);
+  if (byte_array->length() != 0) {
+    visitor->VisitRaw(byte_array->byte_address_for(0), byte_array->length());
+  }
+}
+
+void OneByteString::IterateEverything(PointerVisitor* visitor) {
+  visitor->VisitInteger(address() + BaseArray::kLengthOffset);
+  visitor->VisitInteger(address() + OneByteString::kHashValueOffset);
+  OneByteString* str = OneByteString::cast(this);
+  visitor->VisitRaw(str->byte_address_for(0), str->length());
+}
+
+void TwoByteString::IterateEverything(PointerVisitor* visitor) {
+  visitor->VisitInteger(address() + BaseArray::kLengthOffset);
+  visitor->VisitInteger(address() + TwoByteString::kHashValueOffset);
+  TwoByteString* str = TwoByteString::cast(this);
+  visitor->VisitRaw(str->byte_address_for(0), str->length() * 2);
+}
+
+void Array::IterateEverything(PointerVisitor* visitor) {
+  visitor->VisitInteger(address() + BaseArray::kLengthOffset);
+  Array* array = reinterpret_cast<Array*>(this);
+  visitor->VisitBlock(
+      reinterpret_cast<Object**>(address() + (2 * kPointerSize)),
+      reinterpret_cast<Object**>(address() + array->ArraySize()));
+}
+
+void Function::IterateEverything(PointerVisitor* visitor) {
+  visitor->VisitInteger(address() + Function::kBytecodeSizeOffset);
+  visitor->VisitInteger(address() + Function::kLiteralsSizeOffset);
+  visitor->VisitInteger(address() + Function::kArityOffset);
+  Function* function = reinterpret_cast<Function*>(this);
+  visitor->VisitByteCodes(function->bytecode_address_for(0),
+                          function->bytecode_size());
+  Object** first = function->literal_address_for(0);
+  visitor->VisitBlock(first, first + function->literals_size());
+}
+
+void DispatchTableEntry::IterateEverything(PointerVisitor* visitor) {
+  visitor->Visit(reinterpret_cast<Object**>(address() +
+                                            DispatchTableEntry::kTargetOffset));
+  visitor->VisitCode(address() + DispatchTableEntry::kCodeOffset);
+  visitor->VisitInteger(address() + DispatchTableEntry::kOffsetOffset);
+  visitor->VisitInteger(address() + DispatchTableEntry::kSelectorOffset);
+}
+
+void Instance::IterateEverything(PointerVisitor* visitor) {
+  int32 flags = *reinterpret_cast<int32*>(address() + Instance::kFlagsOffset);
+  visitor->VisitLiteralInteger(flags);
+  visitor->VisitBlock(reinterpret_cast<Object**>(address() + Instance::kSize),
+                      reinterpret_cast<Object**>(address() + Size()));
+}
+
+void Class::IterateEverything(PointerVisitor* visitor) {
+  visitor->Visit(
+      reinterpret_cast<Object**>(address() + Class::kSuperClassOffset));
+  visitor->VisitInteger(address() + Class::kInstanceFormatOffset);
+  visitor->VisitInteger(address() + Class::kIdOrTransformationTargetOffset);
+  visitor->Visit(reinterpret_cast<Object**>(
+      address() + Class::kChildIdOrTransformationOffset));
+  visitor->Visit(reinterpret_cast<Object**>(address() + Class::kMethodsOffset));
+}
+
+void Boxed::IterateEverything(PointerVisitor* visitor) {
+  visitor->Visit(reinterpret_cast<Object**>(address() + Boxed::kValueOffset));
+}
+
+void Initializer::IterateEverything(PointerVisitor* visitor) {
+  visitor->Visit(
+      reinterpret_cast<Object**>(address() + Initializer::kFunctionOffset));
+}
+
+void Double::IterateEverything(PointerVisitor* visitor) {
+  Double* floating = Double::cast(this);
+  visitor->VisitFloat(floating->value());
+}
+
+void LargeInteger::IterateEverything(PointerVisitor* visitor) {
+  visitor->VisitRaw(reinterpret_cast<uint8*>(address() + kWordSize),
+                    sizeof(int64));
+}
+
+// Only used by the serializer. Unlike IteratePointers, this cares about all
+// of the object, not just pointers. Eg it cares about integer fields,
+// always-Smi fields and pointers to machine code outside the heap.
+void HeapObject::IterateEverything(PointerVisitor* visitor) {
+  visitor->VisitClass(reinterpret_cast<Object**>(address()));
+
+  InstanceFormat format = get_class()->instance_format();
+
+  switch (format.type()) {
+    case InstanceFormat::BYTE_ARRAY_TYPE:
+      ByteArray::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::ONE_BYTE_STRING_TYPE:
+      OneByteString::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::TWO_BYTE_STRING_TYPE:
+      TwoByteString::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::ARRAY_TYPE:
+      Array::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::FUNCTION_TYPE:
+      Function::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE:
+      DispatchTableEntry::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::INSTANCE_TYPE:
+      Instance::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::CLASS_TYPE:
+      Class::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::BOXED_TYPE:
+      Boxed::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::INITIALIZER_TYPE:
+      Initializer::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::DOUBLE_TYPE:
+      Double::cast(this)->IterateEverything(visitor);
+      return;
+    case InstanceFormat::LARGE_INTEGER_TYPE:
+      LargeInteger::cast(this)->IterateEverything(visitor);
+      return;
+    default:
+      UNREACHABLE();
+  }
+}
+
 InstanceFormat HeapObject::IteratePointers(PointerVisitor* visitor) {
   ASSERT(!HasForwardingAddress());
 
