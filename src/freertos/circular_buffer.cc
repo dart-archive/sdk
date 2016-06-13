@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-#include "src/freertos/stm32f746g-discovery/circular_buffer.h"
+#include "src/freertos/circular_buffer.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -48,8 +48,8 @@ size_t CircularBuffer::Read(uint8_t* data, size_t count) {
 }
 
 size_t CircularBuffer::Write(const uint8_t* data, size_t count) {
-  int bytes;
-  int written = 0;
+  size_t bytes;
+  size_t written = 0;
 
   if (head_ >= tail_) {
     bytes = (capacity_ - head_) - (tail_ == 0 ? 1 : 0);
