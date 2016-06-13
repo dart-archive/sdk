@@ -160,7 +160,9 @@ inline bool IsSectionBoundary(uint8 b) {
 class SnapshotReader {
  public:
   explicit SnapshotReader(List<uint8> snapshot)
-      : snapshot_(snapshot), position_(0) {}
+      : snapshot_(snapshot), position_(0) {
+    for (int i = 0; i < 3; i++) recents_[i] = 0;
+  }
   ~SnapshotReader() {}
 
   // Reads an entire program.
@@ -186,7 +188,7 @@ class SnapshotReader {
  private:
   List<uint8> snapshot_;
   int position_;
-  word recents_[3] = {0, 0, 0};
+  word recents_[3];
   uword base_ = 0;
 
   int index_ = 0;
@@ -241,7 +243,13 @@ class SnapshotWriter {
         position_(0),
         index_(1),
         function_offsets_(function_offsets),
-        class_offsets_(class_offsets) {}
+        class_offsets_(class_offsets) {
+    for (int i = 0; i < 2; i++) {
+      recent_[i] = 0;
+      lru_[i] = 0;
+    }
+  }
+
   ~SnapshotWriter() {}
 
   // Create a snapshot of a program. The program must be folded.
@@ -289,10 +297,10 @@ class SnapshotWriter {
   word recent_smi_ = 0;
   // Two registers record recently referenced objects.  New non-popular object
   // references are coded as offsets from these recent objects.
-  word recent_[2] = {0, 0};
+  word recent_[2];
   // Track how recently used the register was, to implement the
   // least-recently-used register choice.
-  word lru_[2] = {0, 0};
+  word lru_[2];
   int counter_ = 0;
 
   // The snapshot contains the heap size needed in order to read in the snapshot
