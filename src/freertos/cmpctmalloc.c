@@ -144,7 +144,7 @@ static void unlock(void)
 
 static void dump_free(header_t *header)
 {
-    dprintf(INFO, "\t\tbase %p, end 0x%lx, len 0x%zx\n", header, (vaddr_t)header + header->size, header->size);
+    dprintf(INFO, "\t\tbase %p, end %p, len 0x%zx\n", header, (char*)header + header->size, header->size);
 }
 
 void cmpct_dump(void)
