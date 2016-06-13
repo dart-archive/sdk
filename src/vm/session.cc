@@ -865,7 +865,11 @@ SessionState* SessionState::ProcessMessage(Connection::Opcode opcode) {
       bool success = session()->CreateSnapshot(
           writeToDisk, path, &function_offsets, &class_offsets);
       free(data);
-      session()->SendProgramInfo(&class_offsets, &function_offsets);
+      if (success) {
+        session()->SendProgramInfo(&class_offsets, &function_offsets);
+      } else {
+        session()->SendError(Connection::kSnapshotCreationError);
+      }
       session()->SignalMainThread(
           success ? Session::kSnapshotDone : Session::kError);
       return NULL;

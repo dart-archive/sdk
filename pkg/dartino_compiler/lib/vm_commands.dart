@@ -1682,6 +1682,7 @@ class ConnectionError extends VmCommand {
 // src/shared/connection.h.
 enum ErrorCode {
   invalidInstanceAccess,
+  kSnapshotCreationError,
 }
 
 // Any change in [VmCommandCode] must also be done in [Opcode] in

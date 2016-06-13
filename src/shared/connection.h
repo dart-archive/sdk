@@ -55,6 +55,7 @@ class Connection {
   // pkg/dartino_compiler/lib/vm_commands.dart.
   enum ErrorCode {
     kInvalidInstanceAccess,
+    kSnapshotCreationError,
   };
 
   // Any change in [Opcode] must also be done in [VMCommandCode] in

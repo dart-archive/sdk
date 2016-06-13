@@ -114,6 +114,15 @@ List<Test> cliTests = [
     await process.stderr.listen(null).asFuture();
     await outClosed;
     Expect.equals(INPUT_ERROR, await process.exitCode);
+  }), new Test("export_to_nonexisting_dir", (SessionTestContext context) async{
+    Process process =
+        await context.dartino(["export", "debugger_trivial.dart", "to", "file",
+            "non_existing/debugger_trivial.dart.snapshot"]);
+    process.stdin.close();
+    Future outClosed = process.stdout.listen(null).asFuture();
+    await process.stderr.listen(null).asFuture();
+    await outClosed;
+    Expect.equals(INPUT_ERROR, await process.exitCode);
   })
 ];
 

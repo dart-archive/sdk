@@ -51,8 +51,11 @@ import 'package:path/path.dart' show
 
 import '../../vm_commands.dart' show
     ConnectionError,
+    CommandError,
+    ErrorCode,
     HandShakeResult,
     ProgramInfoCommand,
+    VmCommand,
     VmCommandCode;
 
 import '../../program_info.dart' show
@@ -759,7 +762,7 @@ Future<int> export(SessionState state, Uri snapshot) async {
     await vmContext.applyDelta(delta);
   }
 
-  var result = await vmContext.createSnapshot(
+  VmCommand result = await vmContext.createSnapshot(
       snapshotPath: snapshot.toFilePath());
   if (result is ProgramInfoCommand) {
     ProgramInfoCommand snapshotResult = result;
@@ -776,6 +779,9 @@ Future<int> export(SessionState state, Uri snapshot) async {
         ProgramInfoJson.encode(idOffsetMapping.nameOffsets));
 
     return 0;
+  } else if (result is CommandError) {
+    assert(result.errorCode == ErrorCode.kSnapshotCreationError);
+    return exit_codes.INPUT_ERROR;
   } else {
     assert(result is ConnectionError);
     print("There was a connection error while writing the snapshot.");
