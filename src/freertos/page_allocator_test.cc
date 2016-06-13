@@ -5,13 +5,11 @@
 #include <stdio.h>
 #include <cinttypes>
 
-#define TESTING
-#include "src/shared/assert.h"
-#include "src/shared/atomic.h"
-
 #include "src/freertos/page_allocator.h"
+#include "src/shared/assert.h"
+#include "src/shared/test_case.h"
 
-void Test() {
+TEST_CASE(PageAllocatorTest) {
   PageAllocator *allocator = new PageAllocator();
   void* arena1;
   int rc = posix_memalign(&arena1, PAGE_SIZE, 10);
@@ -46,7 +44,7 @@ void Test() {
   free(arena1);
 }
 
-void TestExternalMap() {
+TEST_CASE(PageAllocatorTestExternalMap) {
   const int kMapSize = 10;
 
   // Allocate memory for an arena.
@@ -98,9 +96,4 @@ void TestExternalMap() {
   }
 
   free(arena);
-}
-
-int main(int argc, char** argv) {
-  Test();
-  TestExternalMap();
 }

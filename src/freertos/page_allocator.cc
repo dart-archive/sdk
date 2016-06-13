@@ -94,7 +94,7 @@ void* PageAllocator::Arena::AllocatePages(size_t pages) {
 
 void PageAllocator::Arena::FreePages(void* start, size_t pages) {
   size_t index = (reinterpret_cast<uint8_t*>(start) - base_) >> PAGE_SIZE_SHIFT;
-  for (int i = 0; i < pages; i++) {
+  for (size_t i = 0; i < pages; i++) {
     ASSERT(map_[index + i] != 0);
     map_[index + i] = 0;
   }

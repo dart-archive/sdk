@@ -22,6 +22,8 @@
       'sources': [
         'circular_buffer.cc',
         'circular_buffer_test.cc',
+        'page_allocator.cc',
+        'page_allocator_test.cc',
       ],
     },
   ],
