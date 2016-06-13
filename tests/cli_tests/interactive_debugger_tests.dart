@@ -198,7 +198,7 @@ class SnapshotTestcontext extends InteractiveDebuggerTestContext {
     Uri snapshotDir =
         Uri.base.resolve("$tempTestOutputDirectory/cli_tests/${test.name}/");
 
-    new Directory(snapshotDir.toFilePath()).create(recursive: true);
+    await new Directory(snapshotDir.toFilePath()).create(recursive: true);
     String snapshotPath = snapshotDir.resolve("out.snapshot").toFilePath();
 
     // Build a snapshot.
