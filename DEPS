@@ -24,7 +24,7 @@ vars = {
 
   "instrumentation_client_rev": "@f06dca45223695f7828b9f045ef4317833fb2dba",
 
-  "dart_rev": "@8babc61b57094cd8980ffe180018d3a7e8d2f371",
+  "dart_rev": "@ec86e2ec9ae918b28d80e98b97a13f582fcdd7a6",
 
   # Please copy these package revisions from third_party/dart/DEPS when
   # updating dart_rev:
@@ -34,7 +34,7 @@ vars = {
   "args_tag": "@0.13.4",
   "dart2js_info_rev" : "@0a221eaf16aec3879c45719de656680ccb80d8a1",
   "pub_semver_tag": "@1.2.1",
-  "collection_rev": "@f6135e6350c63eb3f4dd12953b8d4363faff16fc",
+  "collection_tag": "@1.6.0",
 
   "lk_rev": "@0f0b4959ad25cb1a2bffd1a2eba487b88a602c96",
 
@@ -103,7 +103,7 @@ deps = {
       (Var("github_mirror") % "pub_semver") + Var("pub_semver_tag"),
 
   "sdk/third_party/collection":
-      (Var("github_mirror") % "collection") + Var("collection_rev"),
+      (Var("github_mirror") % "collection") + Var("collection_tag"),
 
   "wiki": (Var("github_url") % "dartino/sdk.wiki"),
 }

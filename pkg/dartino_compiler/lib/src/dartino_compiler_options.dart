@@ -63,7 +63,7 @@ class DartinoCompilerOptions implements CompilerOptions {
 
   @override final bool preserveUris;
 
-  @override Uri get resolutionInput => null;
+  @override List<Uri> get resolutionInputs => null;
   @override Uri get resolutionOutput => null;
   @override bool get resolveOnly => false;
 
@@ -171,6 +171,8 @@ class DartinoCompilerOptions implements CompilerOptions {
   @override bool get hidePackageWarnings => false;
 
   @override bool showPackageWarningsFor(Uri uri) => true;
+
+  @override bool get enableInitializingFormalAccess => false;
 
   static DartinoCompilerOptions copy(
       CompilerOptions options,

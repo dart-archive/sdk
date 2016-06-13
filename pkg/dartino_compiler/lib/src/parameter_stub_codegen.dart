@@ -71,6 +71,7 @@ class ParameterStubCodegen extends CodegenVisitor with DartinoRegistryMixin {
 
     int index = function.isInstanceMember ? 1 : 0;
     function.signature.orderedForEachParameter((ParameterElement parameter) {
+      if (checkCompileError(parameter)) return;
       if (!parameter.isOptional) {
         assembler.loadParameter(index);
       } else if (parameter.isNamed) {

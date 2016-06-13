@@ -579,7 +579,9 @@ abstract class CodegenVisitor
         visitForValue(it.current);
       } else {
         if (parameter.isOptional) {
-          doParameterInitializer(parameter);
+          if (!checkCompileError(parameter)) {
+            doParameterInitializer(parameter);
+          }
         } else {
           doUnresolved(name);
         }
@@ -2935,7 +2937,9 @@ abstract class CodegenVisitor
       LocalVariableElement element = elements[definition];
       int slot = assembler.stackSize;
       if (element.initializer != null) {
-        visitForValue(element.initializer);
+        if (!checkCompileError(element)) {
+          visitForValue(element.initializer);
+        }
       } else {
         generateEmptyInitializer(element.node);
       }

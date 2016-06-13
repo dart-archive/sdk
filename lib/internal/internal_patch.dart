@@ -10,4 +10,9 @@ import 'dart:dartino._system' show patch;
 @patch class Symbol {
   // TODO(ajohnsen): Decide what to do with 'name'.
   @patch const Symbol(String name) : _name = name;
+
+  @patch int get hashCode {
+    const arbitraryPrime = 664597;
+    return 0x1fffffff & (arbitraryPrime * _name.hashCode);
+  }
 }

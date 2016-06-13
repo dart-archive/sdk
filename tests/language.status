@@ -30,6 +30,9 @@ generic_local_functions_test: CompileTimeError
 generic_functions_test: CompileTimeError
 generic_methods_test: CompileTimeError
 generic_sends_test: CompileTimeError
+generic_methods_function_type_test: CompileTimeError # Generic functions not implemented
+generic_methods_type_expression_test: CompileTimeError # Generic functions not implemented
+generic_methods_new_test: CompileTimeError # Generic functions not implemented
 issue_25671a_test/01: RuntimeError
 issue_25671b_test/01: RuntimeError
 library_env_test/has_mirror_support: RuntimeError
@@ -495,6 +498,7 @@ generic_parameterized_extends_test: RuntimeError
 generic_test: RuntimeError
 getter_setter_in_lib_test: RuntimeError
 if_null_assignment_behavior_test/15: RuntimeError # Class literals not implemented.
+initializing_formal_access_test: CompileTimeError # Initializing formal access not implemented
 incr_op_test: RuntimeError
 instance_creation_in_function_annotation_test: CompileTimeError
 instanceof2_test: RuntimeError
@@ -579,9 +583,9 @@ mixin_type_parameters_simple_test: RuntimeError
 mixin_type_parameters_super_extends_test: RuntimeError
 mixin_type_parameters_super_test: RuntimeError
 mixin_super_use_test: CompileTimeError
-multiline_newline_test/01: CompileTimeError
-multiline_newline_test/02: CompileTimeError
-multiline_newline_test/03: CompileTimeError
+multiline_newline_test/01: RuntimeError
+multiline_newline_test/02: RuntimeError
+multiline_newline_test/03: RuntimeError
 multiline_newline_test/04: RuntimeError
 multiline_newline_test/05: RuntimeError
 multiline_newline_test/06: RuntimeError
@@ -701,6 +705,7 @@ top_level_getter_no_setter2_test/01: RuntimeError
 try_catch_on_syntax_test/10: MissingRuntimeError
 try_catch_on_syntax_test/11: MissingRuntimeError
 try_catch_optimized1_test: RuntimeError
+try_catch_test/01: MissingCompileTimeError # The compile-time-error is never met.
 type_argument_substitution_test: RuntimeError
 type_check_test: RuntimeError
 type_checks_in_factory_method_test: RuntimeError
