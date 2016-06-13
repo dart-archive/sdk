@@ -16,12 +16,23 @@
         '../vm/vm.gyp:libdartino',
         '../shared/shared.gyp:cc_test_base',
       ],
+      # C99 is required for compiling cmpctmalloc.c with some toolchains.
+      'cflags_c': [
+        '-std=c99',
+      ],
+      'xcode_settings': {
+        'OTHER_CFLAGS': [
+          '-std=c99',
+        ],
+      },
       'defines': [
         'TESTING',
       ],
       'sources': [
         'circular_buffer.cc',
         'circular_buffer_test.cc',
+        'cmpctmalloc.c',
+        'cmpctmalloc_test.cc',
         'page_allocator.cc',
         'page_allocator_test.cc',
       ],

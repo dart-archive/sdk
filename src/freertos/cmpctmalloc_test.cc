@@ -5,12 +5,11 @@
 #include <stdio.h>
 #include <cinttypes>
 
-#define TESTING
-#include "src/shared/assert.h"
-
 #include "src/freertos/cmpctmalloc.h"
 #include "src/freertos/page_alloc.h"
 #include "src/freertos/page_allocator.h"
+#include "src/shared/assert.h"
+#include "src/shared/test_case.h"
 
 PageAllocator* page_allocator;
 
@@ -28,7 +27,7 @@ extern "C" void cmpct_test_get_back_newly_freed();
 extern "C" void cmpct_test_return_to_os();
 extern "C" void cmpct_test_trim();
 
-int main(int argc, char **argv) {
+TEST_CASE(CmpctMallocTest) {
   page_allocator = new PageAllocator();
 
   // Test that nothing can be allocated in the empty page allocator.
@@ -46,10 +45,8 @@ int main(int argc, char **argv) {
   EXPECT_EQ(1, arena1_bitmap);
 
   cmpct_test_buckets();
-#ifdef DARTINO_TARGET_OS_LK
-  // TODO(sgjesse): This test crashes.
-  cmpct_test_get_back_newly_freed();
-#endif
+  // TODO(534): This test crashes.
+  // cmpct_test_get_back_newly_freed();
   cmpct_test_return_to_os();
   cmpct_test_trim();
   cmpct_dump();

@@ -228,22 +228,22 @@ static int size_to_index_freeing(size_t size)
     return size_to_index_helper(size, &dummy, 0, 0);
 }
 
-inline header_t *tag_as_free(void *left)
+inline static header_t *tag_as_free(void *left)
 {
     return (header_t *)((uintptr_t)left | 1);
 }
 
-inline bool is_tagged_as_free(header_t *header)
+inline static bool is_tagged_as_free(header_t *header)
 {
     return ((uintptr_t)(header->left) & 1) != 0;
 }
 
-inline header_t *untag(void *left)
+inline static header_t *untag(void *left)
 {
     return (header_t *)((uintptr_t)left & ~1);
 }
 
-inline header_t *right_header(header_t *header)
+inline static header_t *right_header(header_t *header)
 {
     return (header_t *)((char *)header + header->size);
 }
