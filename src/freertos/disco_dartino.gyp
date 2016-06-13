@@ -70,8 +70,6 @@
         # Device drivers.
         '<(source_path)/button_driver.cc',
         '<(source_path)/button_driver.h',
-        '<(source_path)/circular_buffer.cc',
-        '<(source_path)/circular_buffer.h',
         '<(source_path)/uart_driver.cc',
         '<(source_path)/uart_driver.h',
 

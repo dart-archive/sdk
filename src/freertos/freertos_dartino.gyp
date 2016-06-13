@@ -105,6 +105,8 @@
       ],
       'sources': [
         # Application.
+        'circular_buffer.cc',
+        'circular_buffer.h',
         'cmpctmalloc.c',
         'cmpctmalloc.h',
         'device_manager.h',

@@ -65,6 +65,7 @@ build $
         version.gyp $
         default_targets.gypi $
         dartino.gyp $
+        src/freertos/freertos_dartino_host_tests.gyp $
         src/double_conversion.gyp $
         src/shared/shared.gyp $
         src/tools/driver/driver.gyp $

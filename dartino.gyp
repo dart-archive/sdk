@@ -82,13 +82,14 @@
       ],
     },
     {
-      # C based test executables. See also tests/cc_tests/README.md.
+      # C++ based test executables. See also tests/cc_tests/README.md.
       'target_name': 'cc_tests',
       'type': 'none',
       'toolsets': ['target'],
       'dependencies': [
         'src/shared/shared.gyp:shared_cc_tests',
         'src/vm/vm.gyp:vm_cc_tests',
+        'src/freertos/freertos_dartino_host_tests.gyp:freertos_dartino_host_cc_tests',
       ],
     },
     {

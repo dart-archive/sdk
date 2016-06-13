@@ -10,7 +10,7 @@
 
 #include <cinttypes>
 
-#include "src/freertos/stm32f746g-discovery/circular_buffer.h"
+#include "src/freertos/circular_buffer.h"
 #include "src/freertos/device_manager.h"
 #include "src/shared/platform.h"
 
