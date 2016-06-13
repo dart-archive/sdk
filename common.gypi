@@ -316,17 +316,21 @@
               '-EL',
             ],
 
-            'variables': {
-              'ldso_path%': '<!(/bin/echo -n $LDSO_PATH)',
-              'ld_r_path%': '<!(/bin/echo -n $LD_R_PATH)',
-            },
 
             'conditions': [
-              ['ldso_path!=""', {
-                'ldflags': ['-Wl,--dynamic-linker=<(ldso_path)'],
-              }],
-              ['ld_r_path!=""', {
-                'ldflags': ['-Wl,--rpath=<(ld_r_path)'],
+              [ 'OS!="win"', {
+                'variables': {
+                  'ldso_path%': '<!(/bin/echo -n $LDSO_PATH)',
+                  'ld_r_path%': '<!(/bin/echo -n $LD_R_PATH)',
+                },
+                'conditions': [
+                  ['ldso_path!=""', {
+                    'ldflags': ['-Wl,--dynamic-linker=<(ldso_path)'],
+                  }],
+                  ['ld_r_path!=""', {
+                    'ldflags': ['-Wl,--rpath=<(ld_r_path)'],
+                  }],
+                ],
               }],
             ],
           }],
