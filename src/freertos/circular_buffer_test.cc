@@ -46,7 +46,7 @@ static void WriteReadTestInner(int to_write, int to_read) {
     EXPECT_LE(buffer_content, buffer_size);
     if (buffer_content == buffer_size) {
       EXPECT(cb->IsFull());
-      EXPECT_EQ(0, cb->Write(write_data + total_written, bytes));
+      EXPECT_EQ(0u, cb->Write(write_data + total_written, bytes));
     }
 
     int read =
@@ -58,7 +58,7 @@ static void WriteReadTestInner(int to_write, int to_read) {
     EXPECT_GE(buffer_content, 0);
     if (buffer_content == 0) {
       EXPECT(cb->IsEmpty());
-      EXPECT_EQ(0, cb->Read(read_data + total_read, to_read));
+      EXPECT_EQ(0u, cb->Read(read_data + total_read, to_read));
     }
   }
   CompareBuffers(write_data, read_data, size);
@@ -67,19 +67,19 @@ static void WriteReadTestInner(int to_write, int to_read) {
 // This test will alternate between writing and reading the full
 // capacity of the buffer.
 TEST_CASE(WriteTestFull) {
-  const int buffer_size = 100;
+  const size_t buffer_size = 100;
   uint8_t* write_data = new uint8_t[buffer_size];
   uint8_t* read_data = new uint8_t[buffer_size];
-  for (int i = 0; i < buffer_size; i++) {
+  for (size_t i = 0; i < buffer_size; i++) {
     write_data[i] = i % 0xff;
   }
-  for (int i = 0; i < buffer_size; i++) {
+  for (size_t i = 0; i < buffer_size; i++) {
     read_data[i] = 0;
   }
 
   CircularBuffer* cb = new CircularBuffer(buffer_size);
 
-  for (int i = 0; i < buffer_size; i++) {
+  for (size_t i = 0; i < buffer_size; i++) {
     EXPECT_EQ(buffer_size, cb->Write(write_data, buffer_size));
     EXPECT(cb->IsFull());
     EXPECT_EQ(buffer_size, cb->Read(read_data, buffer_size));

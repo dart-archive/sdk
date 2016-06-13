@@ -36,7 +36,6 @@ class CircularBuffer {
   size_t Write(const uint8_t* buffer, size_t count);
 
  private:
-  int waiting_;
   uint8_t* buffer_;
   size_t capacity_;
   size_t  head_;
