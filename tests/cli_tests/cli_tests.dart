@@ -100,6 +100,9 @@ class Test {
     try {
       await context.setup(this);
       await runFunction(context);
+    } catch (e, st) {
+      print("Running the test gave exception: $e $st");
+      rethrow;
     } finally {
       await context.tearDown();
     }

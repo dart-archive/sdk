@@ -72,7 +72,7 @@ abstract class InteractiveDebuggerTestContext extends SessionTestContext {
   StreamIterator err;
 
   Future<Null> setup(Test test) async {
-    super.setup(test);
+    await super.setup(test);
     await setupProcess();
 
     assert(process != null);
