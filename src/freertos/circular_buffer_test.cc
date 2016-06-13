@@ -62,6 +62,10 @@ static void WriteReadTestInner(int to_write, int to_read) {
     }
   }
   CompareBuffers(write_data, read_data, size);
+
+  delete cb;
+  delete[] write_data;
+  delete[] read_data;
 }
 
 // This test will alternate between writing and reading the full
@@ -87,6 +91,10 @@ TEST_CASE(WriteTestFull) {
 
     CompareBuffers(write_data, read_data, buffer_size);
   }
+
+  delete cb;
+  delete[] write_data;
+  delete[] read_data;
 }
 
 TEST_CASE(WriteReadTest) {

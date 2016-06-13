@@ -42,6 +42,7 @@ TEST_CASE(PageAllocatorTest) {
   }
 
   free(arena1);
+  delete allocator;
 }
 
 TEST_CASE(PageAllocatorTestExternalMap) {
@@ -78,6 +79,7 @@ TEST_CASE(PageAllocatorTestExternalMap) {
     EXPECT_EQ(1, map[i]);
   }
   EXPECT_EQ(0xaa, map[kMapSize]);
+  delete allocator;
 
   allocator = new PageAllocator();
   allocator->AddArena("test", start, PAGE_SIZE * kMapSize, map, kMapSize - 1);
@@ -96,4 +98,5 @@ TEST_CASE(PageAllocatorTestExternalMap) {
   }
 
   free(arena);
+  delete allocator;
 }
