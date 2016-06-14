@@ -118,7 +118,14 @@ abstract class VmCommand {
         }
         return new ProcessGetProcessIdsResult(ids);
       case VmCommandCode.UncaughtException:
-        return const UncaughtException();
+        int offset = 0;
+        int processId = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int functionId = translateFunction(
+            CommandBuffer.readInt64FromBuffer(buffer, offset));
+        offset += 8;
+        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, offset);
+        return new UncaughtException(processId, functionId, bytecodeIndex);
       case VmCommandCode.CommitChangesResult:
         bool success = CommandBuffer.readBoolFromBuffer(buffer, 0);
         String message = CommandBuffer.readAsciiStringFromBuffer(
@@ -798,7 +805,12 @@ class CommitChangesResult extends VmCommand {
 }
 
 class UncaughtException extends VmCommand {
-  const UncaughtException()
+  final int processId;
+  final int functionId;
+  final int bytecodeIndex;
+
+  const UncaughtException(
+      this.processId, this.functionId, this.bytecodeIndex)
       : super(VmCommandCode.UncaughtException);
 
   int get numberOfResponsesExpected => 0;

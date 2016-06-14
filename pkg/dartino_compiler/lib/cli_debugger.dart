@@ -606,7 +606,7 @@ class CommandLineDebugger {
     if (printForTesting) return breakpoint.toString();
     int id = breakpoint.id;
     String name = breakpoint.methodName;
-    String location = breakpoint.location(vmContext.debugState);
+    String location = breakpoint.locationString(vmContext.debugState);
     return "$id: $name @ $location";
   }
 

@@ -24,6 +24,9 @@ import 'dart:io' show
     ProcessResult,
     SocketException;
 
+import 'dart:typed_data' show
+    Uint8List;
+
 import 'package:sdk_services/sdk_services.dart' show
     OutputService,
     SDKServices,
@@ -86,8 +89,7 @@ import '../verbs/infrastructure.dart' show
     throwFatalError;
 
 import '../../vm_context.dart' show
-    DartinoVmContext,
-    SinkDebugListener;
+    DartinoVmContext;
 
 import '../../incremental/dartino_compiler_incremental.dart' show
     IncrementalCompilationFailed;
@@ -133,6 +135,8 @@ import '../vm_connection.dart' show
 
 import '../dartino_compiler_options.dart' show
     DartinoCompilerOptions;
+
+import '../../vm_context.dart' show DebugListener;
 
 import '../hub/exit_codes.dart' show
     INPUT_ERROR;
@@ -260,6 +264,22 @@ Future<Null> attachToVmTcp(String host, int port, SessionState state) async {
   TcpConnection connection = await TcpConnection.connect(
       host, port, "vmSocket", state.log);
   await attachToVm(connection, state);
+}
+
+class SinkDebugListener extends DebugListener {
+  final Sink stdoutSink;
+  final Sink stderrSink;
+  SinkDebugListener(this.stdoutSink, this.stderrSink);
+
+  // Notification of bytes written to stdout.
+  writeStdOut(int processId, Uint8List data) {
+    stdoutSink.add(data);
+  }
+
+  // Notification of bytes written stderr.
+  writeStdErr(int processId, Uint8List data) {
+    stderrSink.add(data);
+  }
 }
 
 Future<Null> attachToVm(

@@ -45,6 +45,9 @@ import '../../debug_state.dart' show
     RemoteObject,
     BackTrace;
 
+import '../debug_service_protocol.dart' show
+    DebugServer;
+
 import '../../vm_commands.dart' show
     VmCommand;
 
@@ -75,6 +78,7 @@ const Action debugAction =
           TargetKind.PRINT_ALL,
           TargetKind.RESTART,
           TargetKind.RUN_TO_MAIN,
+          TargetKind.SERVE,
           TargetKind.STEP,
           TargetKind.STEP_BYTECODE,
           TargetKind.STEP_OVER,
@@ -174,10 +178,15 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
       debugTask = new DebuggerTask(TargetKind.TOGGLE.index, base,
           argument: sentence.targetName);
       break;
+    case TargetKind.SERVE:
+      debugTask = new DebuggerTask(TargetKind.SERVE.index, base,
+          argument: sentence.targetUri, snapshotLocation: sentence.withUri);
+      break;
     case TargetKind.FILE:
       debugTask = new DebuggerTask(TargetKind.FILE.index, base,
           argument: sentence.targetUri, snapshotLocation: sentence.withUri);
       break;
+
     default:
       throwInternalError("Unimplemented ${sentence.target}");
   }
@@ -276,6 +285,25 @@ Future<int> runInteractiveDebuggerTask(
           debugClientEventHandler(state, commandIterator, stdinController));
 }
 
+Future<int> serveDebuggerTask(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SessionState state,
+    Uri script,
+    Uri base,
+    {Uri snapshotLocation}) {
+
+  return compileAndAttachToVmThen(
+      commandSender,
+      commandIterator,
+      state,
+      script,
+      base,
+      true,
+      () => new DebugServer().serveSingleShot(
+          state, snapshotLocation: snapshotLocation));
+}
+
 Future<int> interactiveDebuggerTask(
     SessionState state,
     Uri base,
@@ -362,11 +390,18 @@ class DebuggerTask extends SharedTask {
       case TargetKind.TOGGLE:
         return toggleDebuggerTask(
             commandSender, SessionState.current, argument);
+      case TargetKind.SERVE:
+        return serveDebuggerTask(
+            commandSender,
+            commandIterator,
+            SessionState.current,
+            argument,
+            base,
+            snapshotLocation: snapshotLocation);
       case TargetKind.FILE:
         return runInteractiveDebuggerTask(
             commandSender, commandIterator, SessionState.current, argument,
             base, snapshotLocation: snapshotLocation);
-
       default:
         throwInternalError("Unimplemented ${TargetKind.values[kind]}");
     }

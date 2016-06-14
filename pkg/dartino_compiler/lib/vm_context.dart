@@ -84,15 +84,17 @@ abstract class DebugListener {
   // Notification that a process has exited.
   processExit(int processId) {}
   // A process has paused at start, before executing code.
-  pauseStart(int processId, BackTraceFrame topframe) {}
+  // This is sent on spawning processes.
+  pauseStart(int processId) {}
   // An process has paused at exit, before terminating.
-  pauseExit(int processId, BackTraceFrame topframe) {}
+  pauseExit(int processId, BackTraceFrame topFrame) {}
   // A process has paused at a breakpoint or due to stepping.
-  pauseBreakpoint(int processId, BackTraceFrame topframe, int breakpointId) {}
+  pauseBreakpoint(
+      int processId, BackTraceFrame topFrame, Breakpoint breakpoint) {}
   // A process has paused due to interruption.
-  pauseInterrupted(int processId, BackTraceFrame topframe) {}
+  pauseInterrupted(int processId, BackTraceFrame topFrame) {}
   // A process has paused due to an exception.
-  pauseException(int processId, BackTraceFrame topframe, RemoteObject thrown) {}
+  pauseException(int processId, BackTraceFrame topFrame, RemoteObject thrown) {}
   // A process has started or resumed execution.
   resume(int processId) {}
   // A breakpoint has been added for a process.
@@ -107,6 +109,8 @@ abstract class DebugListener {
   writeStdErr(int processId, List<int> data) {}
   // The connection to the vm was lost.
   lostConnection() {}
+  // The debugged program is over.
+  terminated() {}
 }
 
 class SinkDebugListener extends DebugListener {
@@ -208,6 +212,10 @@ class DartinoVmContext {
     debugState = new DebugState(this);
   }
 
+  void notifyListeners(void f(DebugListener listener)) {
+    listeners.forEach(f);
+  }
+
   /// Convenience around [runCommands] for running just a single command.
   Future<VmCommand> runCommand(VmCommand command) {
     return runCommands([command]);
@@ -275,11 +283,11 @@ class DartinoVmContext {
           translateFunctionMessage,
           translateClassMessage);
       if (command is StdoutData) {
-        listeners.forEach((DebugListener listener) {
+        notifyListeners((DebugListener listener) {
           listener.writeStdOut(0, command.value);
         });
       } else if (command is StderrData) {
-        listeners.forEach((DebugListener listener) {
+        notifyListeners((DebugListener listener) {
           listener.writeStdErr(0, command.value);
         });
       } else {
@@ -308,6 +316,9 @@ class DartinoVmContext {
       }
     }
     vmState = VmState.terminated;
+    notifyListeners((DebugListener listener) {
+      listener.terminated();
+    });
     return connection.done;
   }
 
@@ -409,6 +420,10 @@ class DartinoVmContext {
   Future spawnProcess(List<String> arguments) async {
     await runCommand(new ProcessSpawnForMain(arguments));
     vmState = VmState.spawned;
+    notifyListeners((DebugListener listener) {
+      listener.pauseStart(0);
+      listener.processRunnable(0);
+    });
   }
 
   /// Returns the [NameOffsetMapping] stored in the '.info.json' adjacent to a
@@ -507,9 +522,23 @@ class DartinoVmContext {
       case VmCommandCode.UncaughtException:
         interactiveExitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
         vmState = VmState.terminating;
+        UncaughtException command = response;
+        debugState.currentProcess = command.processId;
+        var function = dartinoSystem.lookupFunctionById(command.functionId);
+        debugState.topFrame = new BackTraceFrame(
+            function, command.bytecodeIndex, compiler, debugState);
+        RemoteObject thrown = await uncaughtException();
+        notifyListeners((DebugListener listener) {
+          listener.pauseException(
+              debugState.currentProcess, debugState.topFrame, thrown);
+        });
         break;
 
       case VmCommandCode.ProcessCompileTimeError:
+        notifyListeners((DebugListener listener) {
+          // TODO(sigurdm): Add processId and exception data.
+          listener.pauseException(0, null, null);
+        });
         interactiveExitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
         vmState = VmState.terminating;
         break;
@@ -517,12 +546,19 @@ class DartinoVmContext {
       case VmCommandCode.ProcessTerminated:
         interactiveExitCode = 0;
         vmState = VmState.terminating;
+        notifyListeners((DebugListener listener) {
+          // TODO(sigurdm): Communicate process id.
+          listener.processExit(0);
+        });
         break;
 
       case VmCommandCode.ConnectionError:
         interactiveExitCode = exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
         vmState = VmState.terminating;
         await shutdown();
+        notifyListeners((DebugListener listener) {
+          listener.lostConnection();
+        });
         break;
 
       case VmCommandCode.ProcessBreakpoint:
@@ -533,6 +569,21 @@ class DartinoVmContext {
         debugState.topFrame = new BackTraceFrame(
             function, command.bytecodeIndex, compiler, debugState);
         vmState = VmState.paused;
+        Breakpoint bp = debugState.breakpoints[command.breakpointId];
+        if (bp == null) {
+          notifyListeners((DebugListener listener) {
+            listener.pauseInterrupted(
+                command.processId,
+                debugState.topFrame);
+          });
+        } else {
+          notifyListeners((DebugListener listener) {
+            listener.pauseBreakpoint(
+                command.processId,
+                debugState.topFrame,
+                bp);
+          });
+        }
         break;
 
       default:
@@ -546,19 +597,30 @@ class DartinoVmContext {
   Future<VmCommand> startRunning() async {
     await sendCommand(const ProcessRun());
     vmState = VmState.running;
+    notifyListeners((DebugListener listener) {
+      listener.processStart(0);
+    });
+    notifyListeners((DebugListener listener) {
+      listener.processRunnable(0);
+    });
+    notifyListeners((DebugListener listener) {
+      listener.resume(0);
+    });
     return handleProcessStop(await readNextCommand());
   }
 
-  Future setBreakpointHelper(String name,
-                             DartinoFunction function,
+  Future<Breakpoint> setBreakpointHelper(DartinoFunction function,
                              int bytecodeIndex) async {
     ProcessSetBreakpoint response = await runCommands([
         new PushFromMap(MapId.methods, function.functionId),
         new ProcessSetBreakpoint(bytecodeIndex),
     ]);
     int breakpointId = response.value;
-    var breakpoint = new Breakpoint(function, bytecodeIndex, breakpointId);
+    Breakpoint breakpoint =
+        new Breakpoint(function, bytecodeIndex, breakpointId);
     debugState.breakpoints[breakpointId] = breakpoint;
+    notifyListeners(
+        (DebugListener listener) => listener.breakpointAdded(0, breakpoint));
     return breakpoint;
   }
 
@@ -571,12 +633,12 @@ class DartinoVmContext {
     List<Breakpoint> breakpoints = [];
     for (DartinoFunction function in functions) {
       breakpoints.add(
-          await setBreakpointHelper(methodName, function, bytecodeIndex));
+          await setBreakpointHelper(function, bytecodeIndex));
     }
     return breakpoints;
   }
 
-  Future setFileBreakpointFromPosition(String name,
+  Future<Breakpoint> setFileBreakpointFromPosition(String name,
                                        Uri file,
                                        int position) async {
     if (position == null) {
@@ -595,10 +657,10 @@ class DartinoVmContext {
     }
     DartinoFunction function = debugInfo.function;
     int bytecodeIndex = location.bytecodeIndex;
-    return setBreakpointHelper(function.name, function, bytecodeIndex);
+    return setBreakpointHelper(function, bytecodeIndex);
   }
 
-  Future setFileBreakpointFromPattern(Uri file,
+  Future<Breakpoint> setFileBreakpointFromPattern(Uri file,
                                       int line,
                                       String pattern) async {
     assert(line > 0);
@@ -607,26 +669,32 @@ class DartinoVmContext {
         '$file:$line:$pattern', file, position);
   }
 
-  Future setFileBreakpoint(Uri file, int line, int column) async {
+  Future<Breakpoint> setFileBreakpoint(Uri file, int line, int column) async {
     assert(line > 0 && column > 0);
     int position = compiler.positionInFile(file, line - 1, column - 1);
     return setFileBreakpointFromPosition('$file:$line:$column', file, position);
   }
 
-  Future doDeleteOneShotBreakpoint(int processId, int breakpointId) async {
+  Future<Null> doDeleteOneShotBreakpoint(
+      int processId, int breakpointId) async {
     ProcessDeleteBreakpoint response = await runCommand(
         new ProcessDeleteOneShotBreakpoint(processId, breakpointId));
     assert(response.id == breakpointId);
   }
 
   Future<Breakpoint> deleteBreakpoint(int id) async {
+    assert(!isRunning && !isTerminated);
     if (!debugState.breakpoints.containsKey(id)) {
       return null;
     }
     ProcessDeleteBreakpoint response =
         await runCommand(new ProcessDeleteBreakpoint(id));
     assert(response.id == id);
-    return debugState.breakpoints.remove(id);
+    Breakpoint breakpoint = debugState.breakpoints.remove(id);
+    notifyListeners((DebugListener listener) {
+      listener.breakpointRemoved(0, breakpoint);
+    });
+    return breakpoint;
   }
 
   List<Breakpoint> breakpoints() {
@@ -749,6 +817,9 @@ class DartinoVmContext {
 
   Future<VmCommand> cont() async {
     assert(isPaused);
+    notifyListeners((DebugListener listener) {
+      listener.resume(0);
+    });
     return handleProcessStop(await runCommand(const ProcessContinue()));
   }
 
@@ -798,12 +869,13 @@ class DartinoVmContext {
     return debugState.currentUncaughtException;
   }
 
-  Future<BackTrace> backTrace() async {
+  Future<BackTrace> backTrace({int processId}) async {
+    processId ??= debugState.currentProcess;
     assert(isSpawned);
     if (debugState.currentBackTrace == null) {
       ProcessBacktrace backtraceResponse =
           await runCommand(
-              new ProcessBacktraceRequest(debugState.currentProcess));
+              new ProcessBacktraceRequest(processId));
       debugState.currentBackTrace =
           stackTraceFromBacktraceResponse(backtraceResponse);
     }
@@ -831,7 +903,7 @@ class DartinoVmContext {
   }
 
   Future<List<int>> processes() async {
-    assert(isRunning || isPaused);
+    assert(isSpawned);
     ProcessGetProcessIdsResult response =
       await runCommand(const ProcessGetProcessIds());
     return response.ids;

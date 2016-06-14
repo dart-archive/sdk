@@ -401,7 +401,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   Uri targetUri;
   if (target is NamedTarget) {
     targetName = target.name;
-    if (target.kind == TargetKind.FILE) {
+    if (target.kind == TargetKind.FILE || target.kind == TargetKind.SERVE) {
       targetUri = fileUri(targetName, base);
     }
   }

@@ -261,6 +261,9 @@ class SentenceParser {
       case "analytics":
         return makeTarget(TargetKind.ANALYTICS);
 
+      case "serve":
+        return makeNamedTarget(TargetKind.SERVE);
+
       default:
         return new ErrorTarget(DiagnosticKind.expectedTargetButGot, word);
     }
@@ -423,6 +426,7 @@ enum TargetKind {
   SESSION,
   SESSIONS,
   SETTINGS,
+  SERVE,
   STEP,
   STEP_BYTECODE,
   STEP_OVER,

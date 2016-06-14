@@ -60,8 +60,12 @@ class Breakpoint {
 
   Breakpoint(this.function, this.bytecodeIndex, this.id);
 
-  String location(DebugState state) {
+  String locationString(DebugState state) {
     return state.getDebugInfo(function).fileAndLineStringFor(bytecodeIndex);
+  }
+
+  SourceLocation location(DebugState state) {
+    return state.getDebugInfo(function).locationFor(bytecodeIndex);
   }
 
   String toString() => "id: '$id' method: '$methodName' "

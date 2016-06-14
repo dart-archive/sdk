@@ -315,6 +315,14 @@ class RunningState : public ScheduledState {
         debug_info->ClearSteppingInterrupted();
       }
       WriteBuffer buffer;
+      buffer.WriteInt(debug_info->process_id());
+      session()->PushTopStackFrame(process->stack());
+      buffer.WriteInt64(
+          session()->FunctionMessage(Function::cast(session()->Top())));
+      // Drop function from session stack.
+      session()->Drop(1);
+      // Pop bytecode index from session stack and send it.
+      buffer.WriteInt64(session()->PopInteger());
       connection()->Send(Connection::kUncaughtException, buffer);
       // If observing termination, remain paused to allow access to the
       // termination state.
@@ -843,6 +851,23 @@ SessionState* SessionState::ProcessMessage(Connection::Opcode opcode) {
       buffer.WriteInt64(
           session()->MapLookupByObject(map_index, session()->Top()));
       connection()->Send(Connection::kObjectId, buffer);
+      break;
+    }
+
+    case Connection::kProcessGetProcessIds: {
+      int count = 0;
+      auto processes = program()->process_list();
+      for (auto process : *processes) {
+        USE(process);
+        ++count;
+      }
+      WriteBuffer buffer;
+      buffer.WriteInt(count);
+      for (auto process : *processes) {
+        process->EnsureDebuggerAttached();
+        buffer.WriteInt(process->debug_info()->process_id());
+      }
+      connection()->Send(Connection::kProcessGetProcessIdsResult, buffer);
       break;
     }
 
@@ -1387,23 +1412,6 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       WriteBuffer buffer;
       buffer.WriteInt(number_of_stacks);
       connection()->Send(Connection::kProcessNumberOfStacks, buffer);
-      break;
-    }
-
-    case Connection::kProcessGetProcessIds: {
-      int count = 0;
-      auto processes = program()->process_list();
-      for (auto process : *processes) {
-        USE(process);
-        ++count;
-      }
-      WriteBuffer buffer;
-      buffer.WriteInt(count);
-      for (auto process : *processes) {
-        process->EnsureDebuggerAttached();
-        buffer.WriteInt(process->debug_info()->process_id());
-      }
-      connection()->Send(Connection::kProcessGetProcessIdsResult, buffer);
       break;
     }
 
