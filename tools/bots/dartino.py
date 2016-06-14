@@ -351,19 +351,23 @@ def StepsCreateArchiveRaspbianImge():
     version = utils.GetSemanticSDKVersion()
     deb_file = os.path.join('out', namer.arm_agent_filename(version))
     src_file = os.path.join('out', namer.src_tar_name(version))
-    Run(['tools/raspberry-pi2/raspbian_prepare.py',
-         '--image=%s' % raspbian_dst,
-         '--agent=%s' % deb_file,
-         '--src=%s' % src_file])
-    zip_file = os.path.join('out', namer.raspbian_zipfilename())
-    if os.path.exists(zip_file):
-      os.remove(zip_file)
-    CreateZip(raspbian_dst, namer.raspbian_zipfilename())
-    gsutil = bot_utils.GSUtil()
-    gs_path = namer.raspbian_zipfilepath(version)
-    http_path = GetDownloadLink(gs_path)
-    gsutil.upload(zip_file, gs_path, public=True)
-    print '@@@STEP_LINK@download@%s@@@' % http_path
+    try:
+      Run(['tools/raspberry-pi2/raspbian_prepare.py',
+           '--image=%s' % raspbian_dst,
+           '--agent=%s' % deb_file,
+           '--src=%s' % src_file])
+      zip_file = os.path.join('out', namer.raspbian_zipfilename())
+      if os.path.exists(zip_file):
+        os.remove(zip_file)
+      CreateZip(raspbian_dst, namer.raspbian_zipfilename())
+      gsutil = bot_utils.GSUtil()
+      gs_path = namer.raspbian_zipfilepath(version)
+      http_path = GetDownloadLink(gs_path)
+      gsutil.upload(zip_file, gs_path, public=True)
+      print '@@@STEP_LINK@download@%s@@@' % http_path
+    except Exception as error:
+      message = "Failed to create modified raspbian image, error: %s" % error
+      print '@@@STEP_LOG_LINE@error@%s@@@' % message
 
 def ArchiveThirdPartyTool(name, zip_name, system, gs_path):
   zip_file = os.path.join('out', zip_name)
