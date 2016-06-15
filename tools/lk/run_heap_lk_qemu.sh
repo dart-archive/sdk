@@ -54,7 +54,7 @@ trap cleanup EXIT
 echo "Started with PID $PID"
 
 echo "Waiting for qemu to come up..."
-grep -qe "entering main console loop" $PIPEDIR/qemu.out
+awk -e '/entering main console loop/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Requesting flashtool options..."
 echo "dartino getinfo" > $PIPEDIR/qemu.in
@@ -92,13 +92,13 @@ echo "Requesting run of program heap..."
 echo "dartino heap" > $PIPEDIR/qemu.in
 
 echo "Waiting for size..."
-grep -qe "STEP1" $PIPEDIR/qemu.out
+awk -e '/STEP1/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Sending size ($SIZE)..."
 echo $SIZE >$PIPEDIR/qemu.in
 
 echo "Waiting for blob request..."
-grep -qe "STEP2" $PIPEDIR/qemu.out
+awk -e '/STEP2/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Sending blob..."
 cat $PIPEDIR/heap.blob >$PIPEDIR/qemu.in
@@ -117,7 +117,7 @@ while IFS='' read -r line; do
   if [[ "$line" =~ "HALT: spinning forever..."* ]]; then
     exit 253;
   fi
-  if [[ "$line" =~ "CRASH: starting debug shell..."* ]]; then
+  if [[ "$line" =~ "CRASH: starting debug shellargs ..."* ]]; then
     exit 253;
   fi
 done < $PIPEDIR/qemu.out

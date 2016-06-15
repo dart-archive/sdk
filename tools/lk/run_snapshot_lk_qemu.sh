@@ -49,19 +49,19 @@ trap cleanup EXIT
 echo "Started with PID $PID"
 
 echo "Waiting for qemu to come up..."
-grep -qe "entering main console loop" $PIPEDIR/qemu.out
+awk -e '/entering main console loop/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Starting dartino..."
 echo "dartino snapshot" > $PIPEDIR/qemu.in
 
 echo "Waiting for size..."
-grep -qe "STEP1" $PIPEDIR/qemu.out
+awk -e '/STEP1/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Sending size ($SIZE)..."
 echo $SIZE >$PIPEDIR/qemu.in
 
 echo "Waiting for snapshot request..."
-grep -qe "STEP2" $PIPEDIR/qemu.out
+awk -e '/STEP2/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Sending snapshot..."
 cat $1 >$PIPEDIR/qemu.in

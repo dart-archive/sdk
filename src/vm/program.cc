@@ -1057,8 +1057,6 @@ void Program::VerifyObjectPlacements() {
 }
 
 void Program::IterateRoots(PointerVisitor* visitor) {
-  VerifyObjectPlacements();
-
   IterateRootsIgnoringSession(visitor);
   if (debug_info_ != NULL) {
     debug_info_->VisitProgramPointers(visitor);
