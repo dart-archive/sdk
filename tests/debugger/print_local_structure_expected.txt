@@ -42,5 +42,30 @@ Instance of 'S3' {
 0
 > p a.s.shadowMe.a
 ### could not access 'a.s.shadowMe.a': 'a.s.shadowMe' is a primitive value '0' and does not have a field named 'a'
+> p *list._list
+Array with length 3 [
+  0 = null
+  1 = Instance of 'A'
+  2 = null
+]
+> p *list._list.1
+Instance of 'A' {
+  S0.str: 'spaß'
+  S1.i: 42
+  S1.i2: 8589934592
+  S2.n: null
+  S2.d: 42.42
+  S3.shadowMe: 0
+  A.shadowMe: 42
+  A.t: true
+  A.f: false
+  A.s: Instance of 'S3'
+}
+> p *list._list.k
+### could not access 'list._list.k': list._list' is an array with length 3. It cannot be indexed with k
+> p *list._list.-1
+### could not access 'list._list.-1': list._list' is an array with length 3. It cannot be indexed with -1
+> p *list._list.4
+### could not access 'list._list.4': list._list' is an array with length 3. It cannot be indexed with 4
 > c
 ### process terminated

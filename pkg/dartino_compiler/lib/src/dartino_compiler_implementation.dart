@@ -97,6 +97,8 @@ class DartinoCompilerImplementation extends CompilerImpl {
   Map<Uri, CompilationUnitElementX> compilationUnits;
   DartinoContext internalContext;
 
+  DartinoBackend get backend => super.backend;
+
   /// A reference to [../compiler.dart:DartinoCompiler] used for testing.
   // TODO(ahe): Clean this up and remove this.
   var helper;

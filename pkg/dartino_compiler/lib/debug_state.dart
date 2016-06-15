@@ -12,6 +12,8 @@ import 'src/debug_info.dart';
 import 'src/class_debug_info.dart';
 
 import 'vm_commands.dart' show
+    Array,
+    ArrayStructure,
     DartValue,
     InstanceStructure;
 
@@ -34,6 +36,18 @@ class RemoteInstance extends RemoteObject {
   final List<DartValue> fields;
 
   RemoteInstance(this.instance, this.fields, {String name}) : super(name);
+}
+
+/// A representation of a remote instance.
+// TODO(sigurdm): Send partial arrays when they are very big. See issue #536.
+class RemoteArray extends RemoteObject {
+  /// An [Array] describing the remote instance.
+  final ArrayStructure array;
+
+  /// The values of the array as [DartValue]s of the remote instance.
+  final List<DartValue> values;
+
+  RemoteArray(this.array, this.values, {String name}) : super(name);
 }
 
 /// A representation of a remote primitive value (i.e. used for non-instances).

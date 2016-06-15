@@ -380,6 +380,7 @@ class CommandLineDebugger {
           access = access.substring(1);
           getStructure = true;
         }
+        // TODO: Handle '[]'-syntax for array-indexing.
         List<String> names = access.split(".");
 
         RemoteObject value = getStructure

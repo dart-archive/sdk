@@ -1037,7 +1037,12 @@ void Session::SendDartValue(Object* value) {
       buffer.WriteInt(str->get_code_unit(i));
     }
     connection_->Send(Connection::kString, buffer);
+  } else if (value->IsArray()) {
+    Array* array = Array::cast(value);
+    buffer.WriteInt(array->length());
+    connection_->Send(Connection::kArray, buffer);
   } else {
+    ASSERT(value->IsInstance());
     buffer.WriteInt64(ClassMessage(HeapObject::cast(value)->get_class()));
     connection_->Send(Connection::kInstance, buffer);
   }
@@ -1052,6 +1057,26 @@ void Session::SendInstanceStructure(Instance* instance) {
   connection_->Send(Connection::kInstanceStructure, buffer);
   for (int i = 0; i < fields; i++) {
     SendDartValue(instance->GetInstanceField(i));
+  }
+}
+
+void Session::SendArrayStructure(Array* array) {
+  int length = array->length();
+  WriteBuffer buffer;
+  buffer.WriteInt(length);
+  connection_->Send(Connection::kArrayStructure, buffer);
+  for (int i = 0; i < length; i++) {
+    SendDartValue(array->get(i));
+  }
+}
+
+void Session::SendStructure(Object* object) {
+  if (object->IsArray()) {
+    SendArrayStructure(Array::cast(object));
+  } else if (object->IsInstance()) {
+    SendInstanceStructure(Instance::cast(object));
+  } else {
+    SendDartValue(object);
   }
 }
 
@@ -1344,11 +1369,7 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
 
     case Connection::kProcessUncaughtExceptionRequest: {
       Object* exception = process()->exception();
-      if (exception->IsInstance()) {
-        session()->SendInstanceStructure(Instance::cast(exception));
-      } else {
-        session()->SendDartValue(exception);
-      }
+      session()->SendStructure(exception);
       break;
     }
 
@@ -1361,23 +1382,37 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       Frame frame(stack);
       for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
       word index = frame.FirstLocalIndex() - slot;
-      if (index < frame.LastLocalIndex()) FATAL("Illegal slot offset");
+      if (index < frame.LastLocalIndex()) {
+        session()->SendError(Connection::kInvalidInstanceAccess);
+        break;
+      }
       Object* object = stack->get(index);
       for (int i = 0; i < fieldAccessCount; i++) {
-        if (!object->IsInstance()) {
+        if (object->IsArray()) {
+          Array* array = Array::cast(object);
+          int index = connection()->ReadInt();
+          if (index < 0 || index >= array->length()) {
+            session()->SendError(Connection::kInvalidInstanceAccess);
+            break;
+          }
+          object = array->get(index);
+        } else if (object->IsInstance()) {
+          Instance* instance = Instance::cast(object);
+          Class* klass = instance->get_class();
+          int fieldAccess = connection()->ReadInt();
+          if (fieldAccess < 0 ||
+             fieldAccess >= klass->NumberOfInstanceFields()) {
+            session()->SendError(Connection::kInvalidInstanceAccess);
+            break;
+          }
+          object = instance->GetInstanceField(fieldAccess);
+        } else {
           session()->SendError(Connection::kInvalidInstanceAccess);
+          break;
         }
-        Instance* instance = Instance::cast(object);
-        Class* klass = instance->get_class();
-        int fieldAccess = connection()->ReadInt();
-        if (fieldAccess < 0 || fieldAccess >= klass->NumberOfInstanceFields()) {
-          session()->SendError(Connection::kInvalidInstanceAccess);
-        }
-        object = instance->GetInstanceField(fieldAccess);
       }
-      if (opcode == Connection::kProcessInstanceStructure &&
-          object->IsInstance()) {
-        session()->SendInstanceStructure(Instance::cast(object));
+      if (opcode == Connection::kProcessInstanceStructure) {
+        session()->SendStructure(object);
       } else {
         session()->SendDartValue(object);
       }

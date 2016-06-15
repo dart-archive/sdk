@@ -157,7 +157,9 @@ class Connection {
     kString,
     kInstance,
     kClass,
-    kInstanceStructure
+    kArray,
+    kInstanceStructure,
+    kArrayStructure,
   };
 
   Connection();

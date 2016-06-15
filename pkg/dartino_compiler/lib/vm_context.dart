@@ -63,8 +63,7 @@ import 'program_info.dart' show
     ProgramInfoJson;
 
 import 'package:compiler/src/elements/elements.dart' show
-    ClassElement,
-    FieldElement;
+    ClassElement;
 
 class SessionCommandTransformerBuilder
     extends CommandTransformerBuilder<Pair<int, ByteData>> {
@@ -856,15 +855,7 @@ class DartinoVmContext {
     assert(vmState == VmState.terminating);
     if (debugState.currentUncaughtException == null) {
       await sendCommand(const ProcessUncaughtExceptionRequest());
-      VmCommand response = await readNextCommand();
-      if (response is DartValue) {
-        debugState.currentUncaughtException = new RemoteValue(response);
-      } else {
-        assert(response is InstanceStructure);
-        List<DartValue> fields = await readInstanceStructureFields(response);
-        debugState.currentUncaughtException =
-            new RemoteInstance(response, fields);
-      }
+      debugState.currentUncaughtException = await readStructuredObject();
     }
     return debugState.currentUncaughtException;
   }
@@ -951,6 +942,16 @@ class DartinoVmContext {
     return '$sb';
   }
 
+  String arrayStructureToString(List<DartValue> items) {
+    StringBuffer sb = new StringBuffer();
+    sb.writeln("Array with length ${items.length} [");
+    for (int i = 0; i < items.length; i++) {
+      sb.writeln("  $i = ${dartValueToString(items[i])}");
+    }
+    sb.write("]");
+    return '$sb';
+  }
+
   String noSuchMethodErrorToString(List<DartValue> nsmFields) {
     assert(nsmFields.length == 3);
     ClassValue receiverClass = nsmFields[1];
@@ -984,13 +985,25 @@ class DartinoVmContext {
     }
   }
 
-  Future<List<DartValue>> readInstanceStructureFields(
-      InstanceStructure structure) async {
-    List<DartValue> fields = <DartValue>[];
-    for (int i = 0; i < structure.fields; i++) {
-      fields.add(await readNextCommand());
+  Future<RemoteObject> readStructuredObject() async {
+    VmCommand response = await readNextCommand();
+    if (response is DartValue) {
+      return new RemoteValue(response);
+    } else if (response is InstanceStructure) {
+      List<DartValue> fields = new List<DartValue>();
+      for (int i = 0; i < response.fields; i++) {
+        fields.add(await readNextCommand());
+      }
+      return new RemoteInstance(response, fields);
+    } else if (response is ArrayStructure) {
+      List<DartValue> values = new List<DartValue>();
+      for (int i = 0; i < response.length; i++) {
+        values.add(await readNextCommand());
+      }
+      return new RemoteArray(response, values);
+    } else {
+      return new RemoteErrorObject("Failed reading structured object.");
     }
-    return fields;
   }
 
   String exceptionToString(RemoteObject exception) {
@@ -1023,6 +1036,7 @@ class DartinoVmContext {
     assert(isSpawned);
     assert(names.isNotEmpty);
     String localName = names.first;
+    int frame = debugState.currentFrame;
     LocalValue local = await lookupValue(localName);
     if (local == null) {
       return new RemoteErrorObject("No local '$localName' in scope.");
@@ -1031,8 +1045,10 @@ class DartinoVmContext {
     List<int> fieldIndices = new List<int>();
     List<String> namesTillHere = <String>[localName];
     for (String fieldName in names.skip(1)) {
-      RemoteValue remoteValue =
-          await processLocal(local, fieldAccesses: fieldIndices);
+      RemoteValue remoteValue = await processLocal(
+          frame,
+          local.slot,
+          fieldAccesses: fieldIndices);
       DartValue value = remoteValue.value;
       if (value is Instance) {
         ClassElement classElement =
@@ -1044,6 +1060,14 @@ class DartinoVmContext {
               " that does not have a field named '${fieldName}'.");
         }
         fieldIndices.add(fieldIndex);
+      } else if (value is Array) {
+        int index = int.parse(fieldName, onError: (_) => -1);
+        if (index < 0 || index > value.length) {
+          return new RemoteErrorObject(
+              "${namesTillHere.join(".")}' is an array with length "
+              "${value.length}. It cannot be indexed with ${fieldName}");
+        }
+        fieldIndices.add(index);
       } else {
         return new RemoteErrorObject("'${namesTillHere.join(".")}' "
             "is a primitive value '${dartValueToString(value)}' "
@@ -1052,9 +1076,10 @@ class DartinoVmContext {
       namesTillHere.add(fieldName);
     }
     if (getStructure) {
-      return await processLocalStructure(local, fieldAccesses: fieldIndices);
+      return await processLocalStructure(
+          frame, local.slot, fieldAccesses: fieldIndices);
     } else {
-      return await processLocal(local, fieldAccesses: fieldIndices);
+      return await processLocal(frame, local.slot, fieldAccesses: fieldIndices);
     }
   }
 
@@ -1074,7 +1099,8 @@ class DartinoVmContext {
     for (ScopeInfo current = info;
          current != ScopeInfo.sentinel;
          current = current.previous) {
-      variables.add(await processLocal(current.local, name: current.name));
+      variables.add(await processLocal(
+          debugState.currentFrame, current.local.slot, name: current.name));
     }
     return variables;
   }
@@ -1086,31 +1112,25 @@ class DartinoVmContext {
   }
 
   Future<RemoteValue> processLocal(
-      LocalValue local,
+      int frameNumber,
+      int localSlot,
       {String name,
        List<int> fieldAccesses: const <int>[]}) async {
-    var actualFrameNumber = debugState.actualCurrentFrameNumber;
     VmCommand response = await runCommand(
-        new ProcessInstance(actualFrameNumber, local.slot, fieldAccesses));
+        new ProcessInstance(frameNumber, localSlot, fieldAccesses));
     assert(response is DartValue);
     return new RemoteValue(response, name: name);
   }
 
   Future<RemoteObject> processLocalStructure(
-      LocalValue local,
+      int frameNumber,
+      int localSlot,
       {String name,
        List<int> fieldAccesses: const <int>[]}) async {
-    var frameNumber = debugState.actualCurrentFrameNumber;
+    frameNumber ??= debugState.actualCurrentFrameNumber;
     await sendCommand(
-        new ProcessInstanceStructure(frameNumber, local.slot, fieldAccesses));
-    VmCommand response = await readNextCommand();
-    if (response is DartValue) {
-      return new RemoteValue(response);
-    } else {
-      assert(response is InstanceStructure);
-      List<DartValue> fields = await readInstanceStructureFields(response);
-      return new RemoteInstance(response, fields);
-    }
+        new ProcessInstanceStructure(frameNumber, localSlot, fieldAccesses));
+    return await readStructuredObject();
   }
 
   String remoteObjectToString(RemoteObject object) {
@@ -1119,6 +1139,8 @@ class DartinoVmContext {
       message = dartValueToString(object.value);
     } else if (object is RemoteInstance) {
       message = instanceStructureToString(object.instance, object.fields);
+    } else if (object is RemoteArray) {
+      message = arrayStructureToString(object.values);
     } else {
       throw new UnimplementedError();
     }

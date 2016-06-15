@@ -50,6 +50,9 @@ abstract class VmCommand {
             translateClass(CommandBuffer.readInt64FromBuffer(buffer, 0));
         int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
         return new InstanceStructure(classId, fields);
+      case VmCommandCode.ArrayStructure:
+        int length = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new ArrayStructure(length);
       case VmCommandCode.Instance:
         int classId = translateClass(
             CommandBuffer.readInt64FromBuffer(buffer, 0));
@@ -70,6 +73,9 @@ abstract class VmCommand {
       case VmCommandCode.String:
         return new StringValue(
             CommandBuffer.readStringFromBuffer(buffer, 0, buffer.length));
+      case VmCommandCode.Array:
+        int length = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new Array(length);
       case VmCommandCode.StdoutData:
         return new StdoutData(buffer);
       case VmCommandCode.StderrData:
@@ -164,6 +170,9 @@ abstract class VmCommand {
         bool isFromSnapshot = CommandBuffer.readBoolFromBuffer(buffer, 0);
         int snapshotHash = CommandBuffer.readInt32FromBuffer(buffer, 1);
         return new DebuggingReply(isFromSnapshot, snapshotHash);
+      case VmCommandCode.CommandError:
+        int errorCode = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new CommandError(ErrorCode.values[errorCode]);
       default:
         throw 'Unhandled command in VmCommand.fromBuffer: $code';
     }
@@ -1200,7 +1209,8 @@ class ProcessInstance extends VmCommand {
   /// Peer will respond with a [DartValue].
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "frame: $frame, slot: $slot";
+  String valuesToString() =>
+      "frame: $frame, slot: $slot, fieldAccesses: $fieldAccesses";
 }
 
 class ProcessInstanceStructure extends VmCommand {
@@ -1231,7 +1241,8 @@ class ProcessInstanceStructure extends VmCommand {
   /// The number of responses is not fixed.
   int get numberOfResponsesExpected => null;
 
-  String valuesToString() => "frame: $frame, slot: $slot";
+  String valuesToString() =>
+      "frame: $frame, slot: $slot fieldAccesses: $fieldAccesses";
 }
 
 class ProcessRestartFrame extends VmCommand {
@@ -1571,6 +1582,23 @@ class InstanceStructure extends VmCommand {
   String valuesToString() => "classId: $classId, fields: $fields";
 }
 
+class ArrayStructure extends VmCommand {
+  final int length;
+  const ArrayStructure(this.length)
+      : super(VmCommandCode.ArrayStructure);
+
+  void internalAddTo(
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
+    throw new UnimplementedError();
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "length: $length";
+}
+
 abstract class DartValue extends VmCommand {
   const DartValue(VmCommandCode code)
       : super(code);
@@ -1663,6 +1691,15 @@ class StringValue extends DartValue {
       : super(VmCommandCode.String);
 
   String dartToString() => "'$value'";
+}
+
+class Array extends DartValue {
+  final int length;
+
+  const Array(this.length)
+      : super(VmCommandCode.Array);
+
+  String dartToString() => "array of length $length";
 }
 
 class CommandError extends VmCommand {
@@ -1800,7 +1837,9 @@ enum VmCommandCode {
   String,
   Instance,
   Class,
-  InstanceStructure
+  Array,
+  InstanceStructure,
+  ArrayStructure,
 }
 
 enum MapId {
