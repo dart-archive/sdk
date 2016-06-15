@@ -7,7 +7,6 @@
 #include "src/shared/flags.h"
 
 #include "src/vm/frame.h"
-#include "src/vm/gc_thread.h"
 #include "src/vm/interpreter.h"
 #include "src/vm/links.h"
 #include "src/vm/port.h"
@@ -76,14 +75,12 @@ void InterpretationBarrier::Leave(Process* process) {
 void Scheduler::Setup() {
   ASSERT(scheduler_ == NULL);
   scheduler_ = new Scheduler();
-  scheduler_->gc_thread_->StartThread();
 }
 
 void Scheduler::TearDown() {
   ASSERT(scheduler_ != NULL);
   scheduler_->shutdown_ = true;
   scheduler_->NotifyInterpreterThread();
-  scheduler_->gc_thread_->StopThread();
   delete scheduler_;
   scheduler_ = NULL;
 }
@@ -94,8 +91,7 @@ Scheduler::Scheduler()
       pause_(false),
       shutdown_(false),
       idle_monitor_(Platform::CreateMonitor()),
-      interpreter_semaphore_(1),
-      gc_thread_(new GCThread()) {
+      interpreter_semaphore_(1) {
   for (int i = 0; i < kThreadCount; i++) {
     WorkerThread* worker = new WorkerThread(this);
     threads_[i] = worker;
@@ -111,7 +107,6 @@ Scheduler::~Scheduler() {
 
   delete idle_monitor_;
   delete pause_monitor_;
-  delete gc_thread_;
 }
 
 void Scheduler::ScheduleProgram(Program* program, Process* main_process) {
@@ -198,16 +193,6 @@ void Scheduler::KillProgram(Program* program) {
       SignalProcess(process);
     }
   }
-}
-
-void Scheduler::PauseGcThread() {
-  ASSERT(gc_thread_ != NULL);
-  gc_thread_->Pause();
-}
-
-void Scheduler::ResumeGcThread() {
-  ASSERT(gc_thread_ != NULL);
-  gc_thread_->Resume();
 }
 
 void Scheduler::PreemptionTick() {
@@ -310,10 +295,7 @@ void Scheduler::DeleteTerminatedProcess(Process* process, Signal::Kind kind) {
   program->ScheduleProcessForDeletion(process, kind);
 
   if (Flags::gc_on_delete) {
-    ASSERT(gc_thread_ != NULL);
-
-    state->Retain();
-    gc_thread_->TriggerGC(program);
+    program->PerformSharedGarbageCollection();
   }
 
   if (state->DecreaseProcessCount()) {

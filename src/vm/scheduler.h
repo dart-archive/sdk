@@ -16,7 +16,6 @@
 
 namespace dartino {
 
-class GCThread;
 class Heap;
 class Object;
 class Port;
@@ -172,7 +171,6 @@ class Scheduler {
 
   Monitor* idle_monitor_;
   Semaphore interpreter_semaphore_;
-  GCThread* gc_thread_;
 
   DispatchTable dispatch_table_;
 

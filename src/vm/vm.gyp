@@ -66,8 +66,6 @@
         'event_handler_windows.cc',
         'gc_metadata.cc',
         'gc_metadata.h',
-        'gc_thread.cc',
-        'gc_thread.h',
         'hash_map.h',
         'hash_set.h',
         'hash_table.h',

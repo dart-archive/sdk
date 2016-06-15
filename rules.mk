@@ -47,8 +47,6 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/event_handler_windows.cc \
 	$(DARTINO_SRC_VM)/gc_metadata.cc \
 	$(DARTINO_SRC_VM)/gc_metadata.h \
-	$(DARTINO_SRC_VM)/gc_thread.cc \
-	$(DARTINO_SRC_VM)/gc_thread.h \
 	$(DARTINO_SRC_VM)/hash_map.h \
 	$(DARTINO_SRC_VM)/hash_set.h \
 	$(DARTINO_SRC_VM)/hash_table.h \
