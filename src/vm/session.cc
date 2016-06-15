@@ -1530,6 +1530,8 @@ bool Session::CreateSnapshot(
     program_folder.Fold();
   }
 
+  program()->VerifyObjectPlacements();
+
   SnapshotWriter writer(function_offsets, class_offsets);
   List<uint8> snapshot = writer.WriteProgram(program());
   bool success = writeToDisk

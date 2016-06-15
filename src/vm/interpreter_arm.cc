@@ -86,12 +86,12 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
 
   // Registers
   // ---------
-  //   r4: current process
-  //   r5: bytecode pointer
-  //   r6: stack pointer (top)
-  //   r8: null
-  //   r10: true
-  //   r11: false
+  //   R4: current process
+  //   R5: bytecode pointer
+  //   R6: stack pointer (top)
+  //   R8: null
+  //   R10: program
+  //   R11: dispatch table
 
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
@@ -239,6 +239,9 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   Label interpreter_entry_;
   int spill_size_;
 
+  static const int kFalseOffset = 8;
+  static const int kTrueOffset = 16;
+
   void LoadLocal(Register reg, int index);
   void StoreLocal(Register reg, int index);
 
@@ -290,8 +293,10 @@ class InterpreterGeneratorARM : public InterpreterGenerator {
   void InvokeNative(bool yield, bool safepoint);
   void InvokeStatic();
 
-  void ConditionalStore(Register reg_if_eq, Register reg_if_ne,
-                        const Address& address);
+  void AddIf(Condition cond, Register reg, int immediate);
+  void ToBoolean(Condition cond, Register reg);
+  void LoadFalse(Register reg);
+  void LoadTrue(Register reg);
 
   void CheckStackOverflow(int size);
 
@@ -403,8 +408,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ Bind(&overflow);
   Label throw_resume;
   SaveState(&throw_resume);
-  __ ldr(R7, Address(R4, Process::kProgramOffset));
-  __ ldr(R7, Address(R7, Program::kStackOverflowErrorOffset));
+  __ ldr(R7, Address(R10, Program::kStackOverflowErrorOffset));
   DoThrowAfterSaveState(&throw_resume);
 
   // Intrinsic failure: Just invoke the method.
@@ -640,12 +644,14 @@ void InterpreterGeneratorARM::DoLoadLiteralNull() {
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralTrue() {
-  Push(R10);
+  LoadTrue(R2);
+  Push(R2);
   Dispatch(kLoadLiteralTrueLength);
 }
 
 void InterpreterGeneratorARM::DoLoadLiteralFalse() {
-  Push(R11);
+  LoadFalse(R2);
+  Push(R2);
   Dispatch(kLoadLiteralFalseLength);
 }
 
@@ -685,8 +691,7 @@ void InterpreterGeneratorARM::DoInvokeMethod() { InvokeMethod(false); }
 
 void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
   // Use the noSuchMethod entry from entry zero of the virtual table.
-  __ ldr(R1, Address(R4, Process::kProgramOffset));
-  __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
+  __ ldr(R1, Address(R10, Program::kDispatchTableOffset));
   __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
 
   // Load the function.
@@ -709,7 +714,8 @@ void InterpreterGeneratorARM::DoInvokeNoSuchMethod() {
 }
 
 void InterpreterGeneratorARM::DoInvokeTestNoSuchMethod() {
-  StoreLocal(R11, 0);
+  LoadFalse(R2);
+  StoreLocal(R2, 0);
   Dispatch(kInvokeTestNoSuchMethodLength);
 }
 
@@ -969,7 +975,8 @@ void InterpreterGeneratorARM::DoBranchWide() {
 void InterpreterGeneratorARM::DoBranchIfTrueWide() {
   Label branch;
   Pop(R7);
-  __ cmp(R7, R10);
+  LoadTrue(R2);
+  __ cmp(R7, R2);
   __ b(EQ, &branch);
   Dispatch(kBranchIfTrueWideLength);
 
@@ -982,7 +989,8 @@ void InterpreterGeneratorARM::DoBranchIfTrueWide() {
 void InterpreterGeneratorARM::DoBranchIfFalseWide() {
   Label branch;
   Pop(R7);
-  __ cmp(R7, R10);
+  LoadTrue(R2);
+  __ cmp(R7, R2);
   __ b(NE, &branch);
   Dispatch(kBranchIfFalseWideLength);
 
@@ -1004,7 +1012,8 @@ void InterpreterGeneratorARM::DoBranchBackIfTrue() {
 
   Label branch;
   Pop(R1);
-  __ cmp(R1, R10);
+  LoadTrue(R2);
+  __ cmp(R1, R2);
   __ b(EQ, &branch);
   Dispatch(kBranchBackIfTrueLength);
 
@@ -1019,7 +1028,8 @@ void InterpreterGeneratorARM::DoBranchBackIfFalse() {
 
   Label branch;
   Pop(R1);
-  __ cmp(R1, R10);
+  LoadTrue(R2);
+  __ cmp(R1, R2);
   __ b(NE, &branch);
   Dispatch(kBranchBackIfFalseLength);
 
@@ -1041,7 +1051,8 @@ void InterpreterGeneratorARM::DoBranchBackIfTrueWide() {
 
   Label branch;
   Pop(R1);
-  __ cmp(R10, R1);
+  LoadTrue(R2);
+  __ cmp(R2, R1);
   __ b(EQ, &branch);
   Dispatch(kBranchBackIfTrueWideLength);
 
@@ -1056,7 +1067,8 @@ void InterpreterGeneratorARM::DoBranchBackIfFalseWide() {
 
   Label branch;
   Pop(R1);
-  __ cmp(R10, R1);
+  LoadTrue(R2);
+  __ cmp(R2, R1);
   __ b(NE, &branch);
   Dispatch(kBranchBackIfTrueWideLength);
 
@@ -1103,8 +1115,10 @@ void InterpreterGeneratorARM::DoAllocateBoxed() {
 
 void InterpreterGeneratorARM::DoNegate() {
   LoadLocal(R1, 0);
-  __ cmp(R1, R10);
-  ConditionalStore(R11, R10, Address(R6, 0));
+  LoadTrue(R2);
+  __ cmp(R1, R2);
+  AddIf(EQ, R2, kFalseOffset - kTrueOffset);
+  StoreLocal(R2, 0);
   Dispatch(kNegateLength);
 }
 
@@ -1253,7 +1267,8 @@ void InterpreterGeneratorARM::DoIdentical() {
 
   __ Bind(&fast_case);
   __ cmp(R1, R0);
-  ConditionalStore(R10, R11, Address(R6, kWordSize));
+  ToBoolean(EQ, R2);
+  StoreLocal(R2, 1);
   Drop(1);
   Dispatch(kIdenticalLength);
 
@@ -1269,7 +1284,8 @@ void InterpreterGeneratorARM::DoIdenticalNonNumeric() {
   LoadLocal(R0, 0);
   LoadLocal(R1, 1);
   __ cmp(R0, R1);
-  ConditionalStore(R10, R11, Address(R6, kWordSize));
+  ToBoolean(EQ, R2);
+  StoreLocal(R2, 1);
   Drop(1);
   Dispatch(kIdenticalNonNumericLength);
 }
@@ -1311,7 +1327,8 @@ void InterpreterGeneratorARM::DoIntrinsicObjectEquals() {
   LoadLocal(R0, 0);
   LoadLocal(R1, 1);
   __ cmp(R0, R1);
-  ConditionalStore(R10, R11, Address(R6, -kWordSize));
+  ToBoolean(EQ, R2);
+  StoreLocal(R2, -1);
   Drop(1);
   Dispatch(kInvokeMethodLength);
 }
@@ -1577,7 +1594,8 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
     // we've found a target method.
     Label found;
     __ tst(R0, R0);
-    ConditionalStore(R11, R10, Address(R6, 0));
+    ToBoolean(EQ, R2);
+    StoreLocal(R2, 0);
     Dispatch(kInvokeTestUnfoldLength);
   } else {
     SaveByteCodePointer(R2);
@@ -1596,8 +1614,7 @@ void InterpreterGeneratorARM::InvokeMethodUnfold(bool test) {
   }
 
   __ Bind(&smi);
-  __ ldr(R3, Address(R4, Process::kProgramOffset));
-  __ ldr(R2, Address(R3, Program::kSmiClassOffset));
+  __ ldr(R2, Address(R10, Program::kSmiClassOffset));
   __ b(&probe);
 
   // We didn't find a valid entry in primary lookup cache.
@@ -1619,8 +1636,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   __ ldr(R7, Address(R5, 1));
 
   // Fetch the virtual table from the program.
-  __ ldr(R1, Address(R4, Process::kProgramOffset));
-  __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
+  __ ldr(R1, Address(R10, Program::kDispatchTableOffset));
 
   if (!test) {
     // Compute the arity from the selector.
@@ -1670,7 +1686,8 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   Label validated, intrinsified;
   if (test) {
     // Valid entry: The answer is true.
-    StoreLocal(R10, 0);
+    LoadTrue(R2);
+    StoreLocal(R2, 0);
     Dispatch(kInvokeTestLength);
   } else {
     __ Bind(&validated);
@@ -1696,14 +1713,14 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   }
 
   __ Bind(&smi);
-  __ ldr(R2, Address(R4, Process::kProgramOffset));
-  __ ldr(R2, Address(R2, Program::kSmiClassOffset));
+  __ ldr(R2, Address(R10, Program::kSmiClassOffset));
   __ b(&dispatch);
 
   if (test) {
     // Invalid entry: The answer is false.
     __ Bind(&invalid);
-    StoreLocal(R11, 0);
+    LoadFalse(R2);
+    StoreLocal(R2, 0);
     Dispatch(kInvokeTestLength);
   } else {
     __ Bind(&intrinsified);
@@ -1712,8 +1729,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     // Invalid entry: Use the noSuchMethod entry from entry zero of
     // the virtual table.
     __ Bind(&invalid);
-    __ ldr(R1, Address(R4, Process::kProgramOffset));
-    __ ldr(R1, Address(R1, Program::kDispatchTableOffset));
+    __ ldr(R1, Address(R10, Program::kDispatchTableOffset));
     __ ldr(R1, Address(R1, Array::kSize - HeapObject::kTag));
     __ b(&validated);
   }
@@ -1966,26 +1982,28 @@ void InterpreterGeneratorARM::InvokeCompare(const char* fallback,
 
   Label true_case;
   __ cmp(R1, R0);
-  __ b(cond, &true_case);
-
-  DropNAndSetTop(1, R11);
-  Dispatch(5);
-
-  __ Bind(&true_case);
-  DropNAndSetTop(1, R10);
+  ToBoolean(cond, R2);
+  DropNAndSetTop(1, R2);
   Dispatch(5);
 }
 
-void InterpreterGeneratorARM::ConditionalStore(Register reg_if_eq,
-                                               Register reg_if_ne,
-                                               const Address& address) {
-  Label if_ne, done;
-  __ b(NE, &if_ne);
-  __ str(reg_if_eq, address);
-  __ b(&done);
-  __ Bind(&if_ne);
-  __ str(reg_if_ne, address);
-  __ Bind(&done);
+void InterpreterGeneratorARM::AddIf(Condition cond, Register reg,
+                                    int add_if_eq) {
+  __ it(cond);
+  __ add(cond, reg, reg, Immediate(add_if_eq));
+}
+
+void InterpreterGeneratorARM::LoadTrue(Register reg) {
+  __ add(reg, R8, Immediate(kTrueOffset));
+}
+
+void InterpreterGeneratorARM::LoadFalse(Register reg) {
+  __ add(reg, R8, Immediate(kFalseOffset));
+}
+
+void InterpreterGeneratorARM::ToBoolean(Condition cond, Register reg) {
+  LoadFalse(reg);
+  AddIf(cond, reg, kTrueOffset - kFalseOffset);
 }
 
 void InterpreterGeneratorARM::CheckStackOverflow(int size) {
@@ -2012,8 +2030,7 @@ void InterpreterGeneratorARM::Dispatch(int size) {
 #else
   __ ldrb(R7, Address(R5, size), WRITE_BACK);
 #endif
-  __ ldr(R9, "Interpret_DispatchTable");
-  __ ldr(PC, Address(R9, Operand(R7, TIMES_WORD_SIZE)));
+  __ ldr(PC, Address(R11, Operand(R7, TIMES_WORD_SIZE)));
   __ GenerateConstantPool();
 }
 
@@ -2048,9 +2065,8 @@ void InterpreterGeneratorARM::RestoreState() {
 
   // Load constants into registers.
   __ ldr(R10, Address(R4, Process::kProgramOffset));
-  __ ldr(R11, Address(R10, Program::kFalseObjectOffset));
   __ ldr(R8, Address(R10, Program::kNullObjectOffset));
-  __ ldr(R10, Address(R10, Program::kTrueObjectOffset));
+  __ ldr(R11, "Interpret_DispatchTable");
 
   // Pop and store frame pointer.
   Pop(R5);

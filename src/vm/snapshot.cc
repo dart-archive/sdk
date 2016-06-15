@@ -19,6 +19,8 @@
 
 namespace dartino {
 
+class SnapshotOracle;
+
 void FixByteCodes(uint8* bcp, uword size, int old_shift, int new_shift);
 
 class ReaderVisitor : public PointerVisitor {
@@ -206,8 +208,7 @@ void SnapshotReader::BuildLocationMap(Program* program, word total_floats,
         break;
       }
       case kSnapshotRaw: {
-        word x = (b & 7) + kSnapshotBias;
-        ASSERT(x >= 0);
+        word x = ArgumentStart(b, w);
         while (w-- != 0) {
           x <<= 8;
           x |= snapshot_[position++];
@@ -399,7 +400,7 @@ word SnapshotReader::ReadWord() {
   } else {
     uint8 opcode = OpCode(b);
     int w = ArgumentBytes(b);
-    word x = (b & 7) + kSnapshotBias;
+    word x = ArgumentStart(b, w);
     for (int i = 0; i < w; i++) {
       x <<= 8;
       x |= ReadByte();
@@ -570,15 +571,19 @@ void FixByteCodes(uint8* bcp, uword size, int old_shift, int new_shift) {
 class ObjectWriter : public PointerVisitor {
  public:
   ObjectWriter(SnapshotWriter* writer, PortableAddressMap* map,
+               SnapshotOracle* pointer_oracle, SnapshotOracle* smi_oracle,
                HeapObject* current = NULL)
       : writer_(writer),
         address_map_(map),
+        pointer_oracle_(pointer_oracle),
+        smi_oracle_(smi_oracle),
         current_(current == NULL ? 0 : reinterpret_cast<uint8*>(
                                            current->address())) {}
 
   virtual void VisitClass(Object** p) {
     ASSERT(current_ == reinterpret_cast<uint8*>(p));
-    WriteWord(*p, reinterpret_cast<uword>(p));
+    ASSERT(!(*p)->IsSmi());
+    WriteWord(*p);
     current_ += kWordSize;
   }
 
@@ -587,7 +592,7 @@ class ObjectWriter : public PointerVisitor {
     uint8* block_start = reinterpret_cast<uint8*>(start);
     ASSERT(current_ == 0 || block_start == current_);
     for (Object** p = start; p < end; p++) {
-      WriteWord(*p, reinterpret_cast<uword>(p));
+      WriteWord(*p);
     }
     if (current_ != NULL) current_ = reinterpret_cast<uint8*>(end);
   }
@@ -659,119 +664,73 @@ class ObjectWriter : public PointerVisitor {
     writer_->WriteBytes(start, size);
   }
 
-  int32 abs(int32 x) {
-    if (x < 0) return -x;
-    return x;
-  }
+  void WriteInteger(word i);
 
-  void WriteInteger(word i) {
-    // Large Smis must be purged from the heap before we serialize, since
-    // they can't be represented on small devices.
-    ASSERT(i <= 0x7fffffff);
-    ASSERT(i >= -0x7fffffff - 1);
-    int32 offset = i - writer_->recent_smi();
-    if (offset < -2 || abs(i) < abs(offset)) {
-      WriteOpcode(kSnapshotSmi, i);
-    } else {
-      WriteOpcode(kSnapshotRecentSmi, offset);
-      writer_->set_recent_smi(i);
-    }
-  }
+  void WriteWord(Object* object);
 
-  void WriteWord(Object* object, uword from = 0) {
-    if (object->IsSmi()) {
-      WriteInteger(reinterpret_cast<word>(object));
-      return;
-    }
-
-    HeapObject* heap_object = HeapObject::cast(object);
-    uword ideal = address_map_->IdealizedAddress(heap_object) -
-                  address_map_->doubles_size();
-    int popular_index = writer_->PopularityIndex(heap_object);
-    if (popular_index != -1) {
-      ASSERT(popular_index < kSnapshotNumberOfPopularObjects &&
-             popular_index >= 0);
-      ASSERT(kSnapshotPopular == 0);
-      ASSERT((kSnapshotPopularMask & kSnapshotPopular) == 0);
-      ASSERT((kSnapshotPopularMask & (kSnapshotNumberOfPopularObjects - 1)) ==
-             0);
-      writer_->WriteByte(popular_index);
-    } else {
-      // If there's a register that we can use that gives a 1-byte encoding,
-      // then just use that.
-      for (int i = 0; i < 2; i++) {
-        word offset = ideal - writer_->recent(i);
-        if (OpcodeLength(offset / kIdealWordSize) == 1) {
-          WriteOpcode(kSnapshotRecentPointer + i, offset / kIdealWordSize);
-          writer_->set_recent(i, ideal);
-          return;
-        }
-      }
-      int reg = -1;
-      word offset0 = ideal - writer_->recent(0);
-      word offset1 = ideal - writer_->recent(1);
-      // For each encoding length, check if there is a register that we can
-      // pick that will give that length.  If there are two, pick the least
-      // recently used.
-      for (int goal = 2; goal <= 5; goal++) {
-        word offset0 = ideal - writer_->recent(0);
-        word offset1 = ideal - writer_->recent(1);
-        if (OpcodeLength(offset0 / kIdealWordSize) == goal) {
-          if (OpcodeLength(offset1 / kIdealWordSize) == goal) {
-            if (writer_->lru(0) < writer_->lru(1)) {
-              reg = 0;
-            } else {
-              reg = 1;
-            }
-          } else {
-            reg = 0;
-          }
-          break;
-        } else if (OpcodeLength(offset1 / kIdealWordSize) == goal) {
-          reg = 1;
-          break;
-        }
-      }
-      word offset = reg ? offset1 : offset0;
-      ASSERT(reg != -1);
-      WriteOpcode(kSnapshotRecentPointer + reg, offset / kIdealWordSize);
-      writer_->set_recent(reg, ideal);
-    }
-  }
-
-  int OpcodeLength(word offset) {
+  static int OpcodeLength(word offset) {
     int w = 0;
-    // We can't code for a w with 3, so we keep going to 4 if we hit that one.
-    while (offset < kSnapshotBias || offset > 7 + kSnapshotBias || w == 3) {
+    int first_byte_bits = 4;
+    while (offset < kSnapshotBias ||
+           offset >= (1 << first_byte_bits) + kSnapshotBias) {
       w++;
       offset >>= 8;  // Signed shift.
+      first_byte_bits--;
+      if (first_byte_bits == 0) {
+        ASSERT(w == 4);
+        ASSERT(offset <= 0 && offset >= kSnapshotBias);
+        return 5;
+      }
     }
-    ASSERT(w >= 0 && w <= 4 && w != 3);
+    ASSERT(w <= 4);
     return w + 1;
   }
 
   void WriteOpcode(int opcode, word offset) {
-    int w = 0;
-    uint8 bytes[4] = {0, 0, 0, 0};
-    // We can't code for a w with 3, so we keep going to 4 if we hit that one.
-    while (offset < kSnapshotBias || offset > 7 + kSnapshotBias || w == 3) {
-      w++;
-      bytes[3] = bytes[2];
-      bytes[2] = bytes[1];
-      bytes[1] = bytes[0];
-      bytes[0] = offset;
-      offset >>= 8;  // Signed shift.
+    int w = OpcodeLength(offset) - 1;
+    // bytecode has the opcode in the top 3 bits.
+    uint8 opcode_byte = opcode << 5;
+    // Move to 64 bit even on 32 bit platforms.
+    int64 x = offset;
+    int64 bias = -kSnapshotBias;
+    // We can do a shift of 32 on bias because it is a 64 bit value.
+    x += bias << (8 * w);
+    ASSERT(x >= 0 && (x >> 33) == 0);  // Unsigned 33 bit value now.
+    // We can encode 4 bits for a 0-byte instruction.  For each byte
+    // we add to the instruction we lose one bit in the initial word
+    // so we gain only 7 bits per extra byte.  However for the 5-byte
+    // encoding where w == 4 we have an extra bit.
+    int64 one = 1;  // Value that can legally be shifted by 32.
+    if (offset > 0 && w == 4) {
+      ASSERT(x == (x & ((one << 33) - 1)));
+    } else {
+      ASSERT(x == (x & ((one << (4 + 7 * w)) - 1)));
     }
-    ASSERT(w >= 0 && w <= 4 && w != 3);
-    uint8 opcode_byte = (opcode << 5) | ((w == 4 ? 3 : w) << 3) |
-                        ((offset - kSnapshotBias) & 7);
-    writer_->WriteByte(opcode_byte);
-    writer_->WriteBytes(bytes, w);
+    // The lower part of the bytecode has a unary encoding of the width
+    // and the first few bits of the biased offset.
+    // w == 0: 0xxxx
+    // w == 1: 10xxx
+    // w == 2: 110xx
+    // w == 3: 1110x
+    // w == 4: 1111x
+    uint8 width_indicator = 0x1f;
+    // Zap the low bits (the xs and the 0s).
+    width_indicator &= ~((1 << (5 - w)) - 1);
+    // The width indicator and the top part of the x may not overlap.
+    uint8 offset_top_part = x >> (8 * w);
+    ASSERT((width_indicator & offset_top_part) == 0);
+
+    writer_->WriteByte(opcode_byte | width_indicator | offset_top_part);
+    for (int i = w - 1; i >= 0; i--) {
+      writer_->WriteByte(x >> (8 * i));
+    }
   }
 
  private:
   SnapshotWriter* writer_;
   PortableAddressMap* address_map_;
+  SnapshotOracle* pointer_oracle_;
+  SnapshotOracle* smi_oracle_;
   // This is the position in the current object we are serializing.  If we
   // are outputting roots, which are not inside any object, then it is null.
   // Only used for asserts, to ensure we don't skip part of the object
@@ -779,14 +738,209 @@ class ObjectWriter : public PointerVisitor {
   uint8* current_;
 };
 
+// The oracle tells the snapshot encoder at each step, which register to use,
+// using knowledge of the future pointers that the encoder will soon encounter.
+// Like all good oracles, it does this by cheating: It runs through the
+// pointers first, and remembers the order they arrived last time. In the first
+// pass it keeps track of all possible decisions for the last kStatesLog2
+// pointers. When a new pointer arrives, it discards half the possibilities, by
+// making a decision on how to encode the pointer we had, kStatesLog2 calls
+// ago.  Then it doubles the number of possibilities by picking either register
+// 0 or register 1.  Similarly in the smi mode it does this for Smis, with the
+// difference that here one of the registers is locked to zero (ie the choice
+// is between register-relative and absolute encoding).
+class SnapshotOracle : public PointerVisitor {
+ public:
+  SnapshotOracle(bool smi_mode, PortableAddressMap* map, SnapshotWriter* writer)
+      : smi_mode_(smi_mode), writer_(writer), map_(map) {
+    for (int i = 0; i < kStates; i++) {
+      costs_[i] = 0;
+      regs_[0][i] = 0;
+      regs_[1][i] = 0;
+    }
+  }
+
+  virtual void VisitInteger(uword slot) {
+    if (!smi_mode_) return;
+    word i = *reinterpret_cast<word*>(slot);
+    SimulateInput(i);
+  }
+
+  virtual void VisitLiteralInteger(int32 i) {
+    if (!smi_mode_) return;
+    SimulateInput(i);
+  }
+
+  virtual void VisitClass(Object** slot) { VisitBlock(slot, slot + 1); }
+
+  virtual void VisitBlock(Object** start, Object** end) {
+    for (Object** p = start; p < end; p++) {
+      Object* o = *p;
+      if (o->IsSmi()) {
+        if (!smi_mode_) continue;
+        SimulateInput(static_cast<int>(reinterpret_cast<word>(o)));
+      } else {
+        if (smi_mode_) continue;
+        int addr = map_->IdealizedAddress(o);
+        int popular_index = writer_->PopularityIndex(HeapObject::cast(o));
+        if (popular_index == -1) {
+          SimulateInput(addr);
+        }
+      }
+    }
+  }
+
+  void WrapUp() {
+    int bogus = kStatesLog2 - unused_;
+    for (int i = 0; i < bogus; i++) {
+      // Add enough bogus entries to the list of pointers to be encoded. These
+      // have the effect of forcing the decision to be made on all pointers up
+      // to the last real one.
+      SimulateInput(0);
+    }
+  }
+
+  void SimulateInput(int addr) {
+    int best_cost = 1000000000;
+    int best_reg = -1;
+    for (int i = 0; i < kStates; i++) {
+      if (costs_[i] >= best_cost) continue;  // Optimization.
+      for (int reg = 0; reg < 2; reg++) {
+        int diff = addr - regs_[reg][i];
+        int cost = ObjectWriter::OpcodeLength(diff >> (smi_mode_ ? 0 : 2));
+        if (costs_[i] + cost < best_cost) {
+          best_reg = ((i >> (kStatesLog2 - 1)) & 1);
+          best_cost = costs_[i] + cost;
+        }
+      }
+    }
+    // Oldest choice is in the most significant bit.
+    // Find a decision that is now made, using the oldest possibility.
+    int decision = best_reg;
+    if (unused_ == 0) {
+      script_.PushBack(decision);
+    } else {
+      unused_--;
+    }
+    for (int i = 0; i < kStatesLog2 - 1; i++) ideals_[i] = ideals_[i + 1];
+    ideals_[kStatesLog2 - 1] = addr;
+    if (decision == 0) {
+      // Keep the left-hand-side entries (the lower half of the leaf arrays),
+      // and spread them out.
+      for (int i = kStates - 1; i >= 0; i--) {
+        int j = i >> 1;
+        costs_[i] = costs_[j];
+        regs_[0][i] = regs_[0][j];
+        regs_[1][i] = regs_[1][j];
+      }
+    } else {
+      // Keep the right-hand-side entries (the upper half of the leaf arrays),
+      // and spread them out.
+      for (int i = 0; i < kStates; i++) {
+        int j = kStates / 2 + (i >> 1);
+        costs_[i] = costs_[j];
+        regs_[0][i] = regs_[0][j];
+        regs_[1][i] = regs_[1][j];
+      }
+    }
+    for (int i = 0; i < kStates; i++) {
+      int reg = (i & 1);
+      int diff = addr - regs_[reg][i];
+      int cost = ObjectWriter::OpcodeLength(diff >> (smi_mode_ ? 0 : 2));
+      costs_[i] += cost;
+      if (!smi_mode_ || reg == 1) regs_[reg][i] = addr;
+    }
+  }
+
+  int Consult() { return script_[oracular_pronouncements_++]; }
+
+  void DoneConsulting() { ASSERT(oracular_pronouncements_ == script_.size()); }
+
+ private:
+  static const int kStatesLog2 = 6;
+  static const int kStates = 1 << kStatesLog2;
+  bool smi_mode_;
+  SnapshotWriter* writer_;
+  // We have a binary tree of k recent possible choices for choosing snapshot
+  // byte codes. The arrays represent the 2^k leaves, and the bits of the
+  // indices represent the potential choices made.  For each leaf we record the
+  // cost (in bytes added to the snapshot) and the values of the two registers.
+  int costs_[kStates];
+  int regs_[2][kStates];
+  int unused_ = kStatesLog2;
+  size_t oracular_pronouncements_ = 0;
+  int ideals_[kStatesLog2];
+  Vector<int> script_;
+  PortableAddressMap* map_;
+};
+
+class SnapshotDecisionObjectVisitor : public HeapObjectVisitor {
+ public:
+  explicit SnapshotDecisionObjectVisitor(SnapshotOracle* oracle)
+      : oracle_(oracle) {}
+
+  virtual uword Visit(HeapObject* object) {
+    object->IterateEverything(oracle_);
+    return object->Size();
+  }
+
+ private:
+  SnapshotOracle* oracle_;
+};
+
+void ObjectWriter::WriteInteger(word i) {
+  // Large Smis must be purged from the heap before we serialize, since
+  // they can't be represented on small devices.
+  ASSERT(i <= 0x7fffffff);
+  ASSERT(i >= -0x7fffffff - 1);
+  int reg = smi_oracle_->Consult();
+  if (reg == 0) {
+    WriteOpcode(kSnapshotSmi, i);
+  } else {
+    int32 offset = i - writer_->recent_smi();
+    WriteOpcode(kSnapshotRecentSmi, offset);
+    writer_->set_recent_smi(i);
+  }
+}
+
+void ObjectWriter::WriteWord(Object* object) {
+  if (object->IsSmi()) {
+    WriteInteger(reinterpret_cast<word>(object));
+    return;
+  }
+
+  HeapObject* heap_object = HeapObject::cast(object);
+  uword ideal = address_map_->IdealizedAddress(heap_object) -
+                address_map_->doubles_size();
+  int popular_index = writer_->PopularityIndex(heap_object);
+  if (popular_index != -1) {
+    ASSERT(popular_index < kSnapshotNumberOfPopularObjects &&
+           popular_index >= 0);
+    ASSERT(kSnapshotPopular == 0);
+    ASSERT((kSnapshotPopularMask & kSnapshotPopular) == 0);
+    ASSERT((kSnapshotPopularMask & (kSnapshotNumberOfPopularObjects - 1)) == 0);
+    writer_->WriteByte(popular_index);
+  } else {
+    int reg = pointer_oracle_->Consult();
+    int offset = ideal - writer_->recent(reg);
+    WriteOpcode(kSnapshotRecentPointer + reg, offset / kIdealWordSize);
+    writer_->set_recent(reg, ideal);
+  }
+}
+
 void SnapshotWriter::WriteSectionBoundary(ObjectWriter* writer) {
   writer->WriteOpcode(kSnapshotRaw, -1);
 }
 
 class SnapshotWriterVisitor : public HeapObjectVisitor {
  public:
-  SnapshotWriterVisitor(PortableAddressMap* map, SnapshotWriter* writer)
-      : address_map_(map), writer_(writer) {}
+  SnapshotWriterVisitor(PortableAddressMap* map, SnapshotWriter* writer,
+                        SnapshotOracle* pointer_oracle,
+                        SnapshotOracle* smi_oracle)
+      : address_map_(map),
+        writer_(writer),
+        pointer_oracle_(pointer_oracle),
+        smi_oracle_(smi_oracle) {}
 
   virtual uword Visit(HeapObject* object) {
     ASSERT(!object->IsStack());
@@ -794,10 +948,15 @@ class SnapshotWriterVisitor : public HeapObjectVisitor {
     if (object->IsDouble()) {
       ASSERT(doubles_mode_);
       writer_->WriteDouble(Double::cast(object)->value());
+      // We have to consume one oracular pronouncement (for the class
+      // field of the double) to keep the oracle in sync with the
+      // writer.
+      pointer_oracle_->Consult();
       return size;
     }
     doubles_mode_ = false;
-    ObjectWriter object_writer(writer_, address_map_, object);
+    ObjectWriter object_writer(writer_, address_map_, pointer_oracle_,
+                               smi_oracle_, object);
     object->IterateEverything(&object_writer);
     object_writer.End(object->address() + size);
     return size;
@@ -807,6 +966,8 @@ class SnapshotWriterVisitor : public HeapObjectVisitor {
   bool doubles_mode_ = true;
   PortableAddressMap* address_map_;
   SnapshotWriter* writer_;
+  SnapshotOracle* pointer_oracle_;
+  SnapshotOracle* smi_oracle_;
 };
 
 void PopularityCounter::VisitClass(Object** slot) {
@@ -886,7 +1047,24 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   WriteSize(portable_addresses.total_size().ComputeSizeInBytes(
       kSmallPointerBigFloat));
 
-  ObjectWriter object_writer(this, &portable_addresses);
+  SnapshotOracle pointer_oracle(false, &portable_addresses, this);
+  emitting_popular_list_ = true;
+  popularity_counter_.VisitMostPopular(&pointer_oracle);
+  emitting_popular_list_ = false;
+  program->IterateRootsIgnoringSession(&pointer_oracle);
+  SnapshotDecisionObjectVisitor sdov(&pointer_oracle);
+  program->heap()->IterateObjects(&sdov);
+  pointer_oracle.WrapUp();
+
+  SnapshotOracle smi_oracle(true, NULL, this);
+  popularity_counter_.VisitMostPopular(&smi_oracle);
+  program->IterateRootsIgnoringSession(&smi_oracle);
+  SnapshotDecisionObjectVisitor sdov2(&smi_oracle);
+  program->heap()->IterateObjects(&sdov2);
+  smi_oracle.WrapUp();
+
+  ObjectWriter object_writer(this, &portable_addresses, &pointer_oracle,
+                             &smi_oracle);
 
   WriteSectionBoundary(&object_writer);
   emitting_popular_list_ = true;
@@ -897,10 +1075,14 @@ List<uint8> SnapshotWriter::WriteProgram(Program* program) {
   program->IterateRootsIgnoringSession(&object_writer);
 
   WriteSectionBoundary(&object_writer);
-  SnapshotWriterVisitor writer_visitor(&portable_addresses, this);
+  SnapshotWriterVisitor writer_visitor(&portable_addresses, this,
+                                       &pointer_oracle, &smi_oracle);
   program->heap()->IterateObjects(&writer_visitor);
 
   WriteSectionBoundary(&object_writer);
+
+  smi_oracle.DoneConsulting();
+  pointer_oracle.DoneConsulting();
 
   List<uint8> result = snapshot_.Sublist(0, position_);
 

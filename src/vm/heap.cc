@@ -62,6 +62,17 @@ Object* Heap::Allocate(uword size) {
   return HeapObject::FromAddress(result);
 }
 
+Object* Heap::CreateBooleanObject(uword position, Class* the_class,
+                                  Object* init_value) {
+  HeapObject* raw_result = HeapObject::FromAddress(position);
+  Instance* result = reinterpret_cast<Instance*>(raw_result);
+  result->set_class(the_class);
+  result->set_immutable(true);
+  result->InitializeIdentityHashCode(random());
+  result->Initialize(the_class->instance_format().fixed_size(), init_value);
+  return result;
+}
+
 Object* Heap::CreateInstance(Class* the_class, Object* init_value,
                              bool immutable) {
   uword size = the_class->instance_format().fixed_size();

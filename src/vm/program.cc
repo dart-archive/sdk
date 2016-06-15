@@ -126,6 +126,8 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
     PrintStatistics();
   }
 
+  VerifyObjectPlacements();
+
   Process* process = SpawnProcess(NULL);
 
   // TODO(erikcorry): This is not valid for multiple programs, where the
@@ -351,6 +353,8 @@ void Program::FinishProgramGC() {
   VisitProcesses(&visitor);
 
   if (debug_info_ != NULL) debug_info_->UpdateBreakpoints();
+
+  VerifyObjectPlacements();
 
   if (Flags::validate_heaps) ValidateHeapsAreConsistent();
 }
@@ -805,6 +809,15 @@ void Program::Initialize() {
   null_object_ =
       reinterpret_cast<Instance*>(heap()->Allocate(null_format.fixed_size()));
 
+  InstanceFormat false_format =
+      InstanceFormat::instance_format(0, InstanceFormat::FALSE_MARKER);
+  uword false_address =
+      HeapObject::cast(heap()->Allocate(false_format.fixed_size()))->address();
+  InstanceFormat true_format =
+      InstanceFormat::instance_format(0, InstanceFormat::TRUE_MARKER);
+  uword true_address =
+      HeapObject::cast(heap()->Allocate(true_format.fixed_size()))->address();
+
   meta_class_ = Class::cast(heap()->CreateMetaClass());
 
   {
@@ -991,25 +1004,21 @@ void Program::Initialize() {
   }
 
   {  // Create False class and the false object.
-    InstanceFormat format =
-        InstanceFormat::instance_format(0, InstanceFormat::FALSE_MARKER);
-    Class* false_class =
-        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+    Class* false_class = Class::cast(
+        heap()->CreateClass(false_format, meta_class_, null_object_));
     false_class->set_super_class(bool_class_);
     false_class->set_methods(empty_array_);
     false_object_ = Instance::cast(
-        heap()->CreateInstance(false_class, null_object(), true));
+        heap()->CreateBooleanObject(false_address, false_class, null_object()));
   }
 
   {  // Create True class and the true object.
-    InstanceFormat format =
-        InstanceFormat::instance_format(0, InstanceFormat::TRUE_MARKER);
-    Class* true_class =
-        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+    Class* true_class = Class::cast(
+        heap()->CreateClass(true_format, meta_class_, null_object_));
     true_class->set_super_class(bool_class_);
     true_class->set_methods(empty_array_);
-    true_object_ =
-        Instance::cast(heap()->CreateInstance(true_class, null_object(), true));
+    true_object_ = Instance::cast(
+        heap()->CreateBooleanObject(true_address, true_class, null_object()));
   }
 
   {  // Create stack overflow error object.
@@ -1036,9 +1045,20 @@ void Program::Initialize() {
       CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
   native_failure_result_ = null_object_;
+  VerifyObjectPlacements();
+}
+
+void Program::VerifyObjectPlacements() {
+  uword n = reinterpret_cast<uword>(null_object_);
+  uword f = reinterpret_cast<uword>(false_object_);
+  uword t = reinterpret_cast<uword>(true_object_);
+  ASSERT(f - n == 2 * kWordSize);
+  ASSERT(t - f == 2 * kWordSize);
 }
 
 void Program::IterateRoots(PointerVisitor* visitor) {
+  VerifyObjectPlacements();
+
   IterateRootsIgnoringSession(visitor);
   if (debug_info_ != NULL) {
     debug_info_->VisitProgramPointers(visitor);

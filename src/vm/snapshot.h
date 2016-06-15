@@ -110,11 +110,16 @@ enum kSnapshotOpcodes {
   kSnapshotPopularMask = 0xc0,
   kSnapshotNumberOfPopularObjects = 0x40,
 
-  // ooo ww xxx are the other opcodes.  Opcodes 0 and 1 are taken by the
-  // popular objects.  ww gives the number of extra bytes that help make up the
-  // value, 0, 1, 2 or 4.  xxx are is the biased starting point from -1 to 6,
-  // and each extra byte specified by w is combined with the previous values by
-  // x = (x << 8) | next_byte;
+  // ooo w x are the other opcodes.  Opcodes 0 and 1 are taken by the popular
+  // objects.  The number of extra bytes that help make up the value is named
+  // 'w' and can be between 0 and 4.  The encoding of w is unary as follows:
+  // ooo 0 xxxx /* w == 0 */
+  // ooo 10 xxx /* w == 1 */
+  // ooo 110 xx /* w == 2 */
+  // ooo 1110 x /* w == 3 */
+  // ooo 1111 x /* w == 4 */
+  // xxx is the biased starting point (-1 based), and each extra byte specified
+  // by w is combined with the previous values by x = (x << 8) | next_byte;
   // There are several places where ReadWord() relies on the order and bit
   // patterns of these opcodes.
   kSnapshotRecentPointer = 2,
@@ -144,12 +149,19 @@ inline bool IsOneBytePopularByteCode(uint8 byte_code) {
   return (byte_code & kSnapshotPopularMask) == kSnapshotPopular;
 }
 
+static const uint8 kNumberOfArgumentBytes[32] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4};
+
 inline int ArgumentBytes(uint8 byte_code) {
   ASSERT(!IsOneBytePopularByteCode(byte_code));
-  int w = (byte_code >> 3) & 3;
-  // This is a branchless way to say if (w == 3) w = 4;
-  w += w & (w >> 1);
-  return w;
+  return kNumberOfArgumentBytes[byte_code & 0x1f];
+}
+
+inline word ArgumentStart(uint8 byte_code, int w) {
+  if (w == 4) return (byte_code & 1) + kSnapshotBias;
+  word x = byte_code & ((1 << (4 - w)) - 1);
+  return x + kSnapshotBias;
 }
 
 inline bool IsSectionBoundary(uint8 b) {

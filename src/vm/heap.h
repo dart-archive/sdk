@@ -29,6 +29,8 @@ class Heap {
 
   // Allocate heap object.
   Object* CreateInstance(Class* the_class, Object* init_value, bool immutable);
+  Object* CreateBooleanObject(uword address, Class* the_class,
+                              Object* init_value);
 
   // Allocate array.
   Object* CreateArray(Class* the_class, int length, Object* init_value);

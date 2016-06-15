@@ -35,10 +35,12 @@ class Session;
   V(Instance, false_object, FalseObject)                        \
   V(Instance, true_object, TrueObject)                          \
   /* Global literals up to this line */                         \
+  V(Class, smi_class, SmiClass)                                 \
+  /* The order of null, false, true and smi_class is used by */ \
+  /* the ARM interpreter.                                    */ \
   V(Array, empty_array, EmptyArray)                             \
   V(OneByteString, empty_string, EmptyString)                   \
   V(Class, meta_class, MetaClass)                               \
-  V(Class, smi_class, SmiClass)                                 \
   V(Class, boxed_class, BoxedClass)                             \
   V(Class, large_integer_class, LargeIntegerClass)              \
   V(Class, num_class, NumClass)                                 \
@@ -74,7 +76,6 @@ class Session;
   V(Object, native_failure_result, NativeFailureResult)         \
   V(Array, static_fields, StaticFields)                         \
   V(Array, dispatch_table, DispatchTable)
-
 
 typedef DoubleList<Process> ProcessList;
 typedef DoubleList<Process, 2> ProcessQueueList;
@@ -298,6 +299,7 @@ class Program : public ProgramList::Entry {
   // Iterates over all roots in the program.
   void IterateRoots(PointerVisitor* visitor);
   void IterateRootsIgnoringSession(PointerVisitor* visitor);
+  void VerifyObjectPlacements();
 
   // Dispatch table support.
   void ClearDispatchTableIntrinsics();
