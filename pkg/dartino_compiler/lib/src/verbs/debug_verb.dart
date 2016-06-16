@@ -52,7 +52,10 @@ import '../../vm_commands.dart' show
     VmCommand;
 
 import '../../cli_debugger.dart' show
-    CommandLineDebugger;
+    CommandLineDebugger,
+    processVariable,
+    processVariableStructure,
+    remoteObjectToString;
 
 const Action debugAction =
     const Action(
@@ -755,14 +758,14 @@ Future<int> printDebuggerTask(
   RemoteObject variable;
   if (name.startsWith("*")) {
     name = name.substring(1);
-    variable = await vmContext.processVariableStructure([name]);
+    variable = await processVariableStructure([name], vmContext);
   } else {
-    variable = await vmContext.processVariable([name]);
+    variable = await processVariable([name], vmContext);
   }
   if (variable == null) {
     print('### No such variable: $name');
   } else {
-    print(vmContext.remoteObjectToString(variable));
+    print(remoteObjectToString(variable, vmContext));
   }
 
   return 0;
@@ -776,7 +779,7 @@ Future<int> printAllDebuggerTask(
     print('### No variables in scope');
   } else {
     for (RemoteObject variable in variables) {
-      print(vmContext.remoteObjectToString(variable));
+      print(remoteObjectToString(variable, vmContext));
     }
   }
   return 0;

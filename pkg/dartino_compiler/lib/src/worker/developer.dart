@@ -88,6 +88,9 @@ import '../verbs/infrastructure.dart' show
     StreamIterator,
     throwFatalError;
 
+import '../../cli_debugger.dart' show
+    exceptionToString;
+
 import '../../vm_context.dart' show
     DartinoVmContext;
 
@@ -709,7 +712,7 @@ Future<int> run(
     }
     debug.RemoteObject exception = await vmContext.uncaughtException();
     if (exception != null) {
-      print(vmContext.exceptionToString(exception));
+      print(exceptionToString(exception, vmContext));
     }
   }
 

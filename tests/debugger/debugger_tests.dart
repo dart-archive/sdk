@@ -88,7 +88,6 @@ Future runTest(String name, Uri uri,
   } else {
     await startAndAttachDirectly(state, Uri.base);
   }
-  state.vmContext.hideRawIds = true;
 
   List<int> output = <int>[];
 
@@ -112,15 +111,17 @@ Future runTest(String name, Uri uri,
       yield 's';
     }
   };
-
-  int result = await new CommandLineDebugger(
+  CommandLineDebugger debugger = new CommandLineDebugger(
       state.vmContext,
       debuggerCommands.isEmpty
           ? testDebugCommandStream(state.vmContext)
           : new Stream.fromIterable(debuggerCommands),
       Uri.base,
       state.stdoutSink,
-      echo: true).run(state, snapshotLocation: snapshotPath);
+      echo: true);
+  debugger.hideRawIds = true;
+
+  int result = await debugger.run(state, snapshotLocation: snapshotPath);
 
   int exitCode = runFromSnapshot
       ? await vm.exitCode
