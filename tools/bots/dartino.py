@@ -390,7 +390,7 @@ def StepsArchiveEmul8(system):
     # TODO(ricow): Early return on bleeding edge when this is validated.
     namer = GetNamer(temporary=IsBleedingEdge())
     version = utils.GetSemanticSDKVersion()
-    ArchiveThirdPartyTool('emul8'),
+    ArchiveThirdPartyTool('emul8',
                           namer.gcc_embedded_bundle_zipfilename(system),
                           system,
                           namer.gcc_embedded_bundle_filepath(version, system))
