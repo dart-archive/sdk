@@ -982,6 +982,14 @@ void PopularityCounter::VisitBlock(Object** start, Object** end) {
       // table.
       if (h->HasForwardingAddress()) continue;
       if (h->IsDouble()) continue;
+      // Causes confusion if the double class is one of the popular objects, and
+      // there's no point anyway since it is coded specially and will not use
+      // its slot in the popular objects table.
+      if (h->IsClass() &&
+          Class::cast(h)->instance_format().type() ==
+              InstanceFormat::DOUBLE_TYPE) {
+        continue;
+      }
       auto it = popularity_.Find(h);
       if (it == popularity_.End()) {
         popularity_[h] = 1;
