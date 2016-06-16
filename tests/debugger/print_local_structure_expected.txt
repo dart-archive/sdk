@@ -26,7 +26,7 @@ Instance of 'A' {
 > p a.shadowMe
 42
 > p a.notExisting
-### could not access 'a.notExisting': 'a' has type class(A) that does not have a field named 'notExisting'.
+### could not access 'a.notExisting': 'a' has type A that does not have a field named 'notExisting'.
 > p a.s
 Instance of 'S3'
 > p *a.s
@@ -41,14 +41,14 @@ Instance of 'S3' {
 >  p a.s.shadowMe
 0
 > p a.s.shadowMe.a
-### could not access 'a.s.shadowMe.a': 'a.s.shadowMe' is a primitive value '0' and does not have a field named 'a'
+### could not access 'a.s.shadowMe.a': 'a.s.shadowMe' is a primitive value '0' and cannot not be accessed field at '.a'
 > p *list._list
 Array with length 3 [
   0 = null
   1 = Instance of 'A'
   2 = null
 ]
-> p *list._list.1
+> p *list._list[1]
 Instance of 'A' {
   S0.str: 'spaß'
   S1.i: 42
@@ -62,10 +62,38 @@ Instance of 'A' {
   A.s: Instance of 'S3'
 }
 > p *list._list.k
-### could not access 'list._list.k': list._list' is an array with length 3. It cannot be indexed with k
-> p *list._list.-1
-### could not access 'list._list.-1': list._list' is an array with length 3. It cannot be indexed with -1
+### could not access 'list._list.k': 'list._list' is an array with length 3. It can only be indexed with the '[index]' operation.
+> p *list._list.[-1]
+A field access must start with an identifier. Found '['.
+list._list.[-1]
+           ^
 > p *list._list.4
-### could not access 'list._list.4': list._list' is an array with length 3. It cannot be indexed with 4
+A field access must start with an identifier. Found 'number'.
+list._list.4
+           ^
+> p [4]
+The expression to print must start with an identifier. Found '['.
+[4]
+^
+> p a[x]
+An indexing '[' must be followed by a number.  Found 'identifier'.
+a[x]
+  ^
+> p a[1e
+Missing ']' Found 'identifier'.
+a[1e
+   ^
+> p a.x[1]1
+Expected '.field' or '[index]'  Found 'number'.
+a.x[1]1
+      ^
+> p %%
+The expression to print must start with an identifier. Found 'unrecognized'.
+%%
+^
+> p a.
+A field access must start with an identifier. Found 'end of text'.
+a.
+  ^
 > c
 ### process terminated

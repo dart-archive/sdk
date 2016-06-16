@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-// DartinoDebuggerCommands=b breakHere,r,f 1,p *a,p *i,p notExisting,p a.shadowMe,p a.notExisting,p a.s,p *a.s, p a.s.shadowMe,p a.s.shadowMe.a,p *list._list,p *list._list.1,p *list._list.k,p *list._list.-1,p *list._list.4,c
+// DartinoDebuggerCommands=b breakHere,r,f 1,p *a,p *i,p notExisting,p a.shadowMe,p a.notExisting,p a.s,p *a.s, p a.s.shadowMe,p a.s.shadowMe.a,p *list._list,p *list._list[1],p *list._list.k,p *list._list.[-1],p *list._list.4,p [4],p a[x],p a[1e,p a.x[1]1,p %%,p a.,c
 
 class S0 {
   var str = 'spaß';

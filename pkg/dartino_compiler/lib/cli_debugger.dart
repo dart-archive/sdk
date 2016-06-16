@@ -406,12 +406,18 @@ class CommandLineDebugger {
           access = access.substring(1);
           getStructure = true;
         }
-        // TODO: Handle '[]'-syntax for array-indexing.
-        List<String> names = access.split(".");
-
+        List<Access> parsedAccesses;
+        try {
+          parsedAccesses = AccessParser.parse(access);
+        } on FormatException catch (e) {
+          writeStdoutLine("${e.message}");
+          writeStdoutLine("$access");
+          writeStdoutLine(" " * e.offset + "^");
+          break;
+        }
         RemoteObject value = getStructure
-            ? await processVariableStructure(names, vmContext)
-            : await processVariable(names, vmContext);
+            ? await processVariableStructure(parsedAccesses, vmContext)
+            : await processVariable(parsedAccesses, vmContext);
 
         if (value is RemoteErrorObject) {
           writeStdoutLine("### could not access '$access': ${value.message}");
@@ -690,18 +696,22 @@ Future<LocalValue> lookupValue(String name, DartinoVmContext vmContext) async {
 }
 
 Future<RemoteObject> _processVariable(
-    List<String> names, bool getStructure, DartinoVmContext vmContext) async {
+    List<Access> accesses,
+    bool getStructure,
+    DartinoVmContext vmContext) async {
   assert(vmContext.isSpawned);
-  assert(names.isNotEmpty);
-  String localName = names.first;
+  assert(accesses.isNotEmpty);
+  LocalAccess localAccess = accesses.first;
   int frame = vmContext.debugState.currentFrame;
-  LocalValue local = await lookupValue(localName, vmContext);
+  LocalValue local = await lookupValue(localAccess.localName, vmContext);
   if (local == null) {
-    return new RemoteErrorObject("No local '$localName' in scope.");
+    return new RemoteErrorObject(
+        "No local '${localAccess.localName}' in scope.");
   }
+
   List<int> fieldIndices = new List<int>();
-  List<String> namesTillHere = <String>[localName];
-  for (String fieldName in names.skip(1)) {
+  List<Access> accessesTillHere = <Access>[localAccess];
+  for (Access access in accesses.skip(1)) {
     RemoteValue remoteValue = await vmContext.processLocal(
         frame,
         local.slot,
@@ -710,45 +720,65 @@ Future<RemoteObject> _processVariable(
     if (value is Instance) {
       ClassElement classElement =
           vmContext.dartinoSystem.classesById[value.classId].element;
-      int fieldIndex = getFieldIndex(classElement, fieldName);
-      if (fieldIndex == null) {
+      if (access is Indexing) {
         return new RemoteErrorObject(
-            "'${namesTillHere.join(".")}' has type ${classElement}"
-            " that does not have a field named '${fieldName}'.");
+            "'${accessesTillHere.join()}' is an instance with type "
+                "${classElement.name}. "
+                "It can only be accessed with a field name.");
+      } else if (access is FieldAccess) {
+        String fieldName = access.fieldName;
+        int fieldIndex = getFieldIndex(classElement, access.fieldName);
+        if (fieldIndex == null) {
+          return new RemoteErrorObject(
+              "'${accessesTillHere.join()}' has type ${classElement.name}"
+                  " that does not have a field named '${fieldName}'.");
+        }
+        fieldIndices.add(fieldIndex);
+      } else {
+        throw new UnimplementedError();
       }
-      fieldIndices.add(fieldIndex);
     } else if (value is Array) {
-      int index = int.parse(fieldName, onError: (_) => -1);
-      if (index < 0 || index > value.length) {
+      if (access is FieldAccess) {
         return new RemoteErrorObject(
-            "${namesTillHere.join(".")}' is an array with length "
-            "${value.length}. It cannot be indexed with ${fieldName}");
+            "'${accessesTillHere.join()}' is an array with length "
+                "${value.length}. "
+                "It can only be indexed with the '[index]' operation.");
+      } else if (access is Indexing) {
+        int index = access.index;
+        if (index < 0 || index >= value.length) {
+          return new RemoteErrorObject(
+              "${accessesTillHere.join(".")}' is an array with length "
+                  "${value.length}. "
+                  "${index} is out of bounds");
+        }
+        fieldIndices.add(index);
+      } else {
+        throw new UnimplementedError();
       }
-      fieldIndices.add(index);
     } else {
-      return new RemoteErrorObject("'${namesTillHere.join(".")}' "
+      return new RemoteErrorObject("'${accessesTillHere.join()}' "
           "is a primitive value '${dartValueToString(value, vmContext)}' "
-          "and does not have a field named '${fieldName}'");
+          "and cannot not be accessed field at '${access}'");
     }
-    namesTillHere.add(fieldName);
+    accessesTillHere.add(access);
   }
   if (getStructure) {
     return await vmContext.processLocalStructure(
         frame, local.slot, fieldAccesses: fieldIndices);
   } else {
-    return await  vmContext.processLocal(
+    return await vmContext.processLocal(
         frame, local.slot, fieldAccesses: fieldIndices);
   }
 }
 
-Future<RemoteValue> processVariable(List<String> names,
-    DartinoVmContext vmContext) {
-  return _processVariable(names, false, vmContext);
+Future<RemoteValue> processVariable(
+    List<Access> accesses, DartinoVmContext vmContext) {
+  return _processVariable(accesses, false, vmContext);
 }
 
 Future<RemoteObject> processVariableStructure(
-    List<String> names, DartinoVmContext vmContext) {
-  return _processVariable(names, true, vmContext);
+    List<Access> accesses, DartinoVmContext vmContext) {
+  return _processVariable(accesses, true, vmContext);
 }
 
 
@@ -887,4 +917,143 @@ String exceptionToString(
     throw new UnimplementedError();
   }
   return 'Uncaught exception: $message';
+}
+
+abstract class Access {}
+
+class LocalAccess extends Access {
+  String localName;
+
+  LocalAccess(this.localName);
+
+  String toString() => "$localName";
+}
+
+class FieldAccess extends Access {
+  String fieldName;
+
+  FieldAccess(this.fieldName);
+
+  String toString() => ".$fieldName";
+}
+
+class Indexing extends Access {
+  int index;
+
+  Indexing(this.index);
+
+  String toString() => "[$index]";
+}
+
+enum TokenKind {
+  identifier,
+  number,
+  bracketStart,
+  bracketEnd,
+  dot,
+  eof,
+  unrecognized,
+}
+
+class AccessParser {
+  final String text;
+  int position = 0;
+  String currentToken;
+  TokenKind tokenKind;
+  List<Access> result = new List<Access>();
+
+  AccessParser(this.text);
+
+  String get kindName => kindNames[tokenKind];
+
+  static Map<TokenKind, Pattern> tokenPatterns = {
+    TokenKind.identifier: new RegExp(r"[a-zA-Z_][a-zA-Z_0-9]*"),
+    TokenKind.number: new RegExp(r"-?[0-9]+"),
+    TokenKind.bracketStart: "[",
+    TokenKind.bracketEnd: "]",
+    TokenKind.dot: ".",
+    TokenKind.eof: new RegExp(r"$"),
+    TokenKind.unrecognized: new RegExp(r"."),
+  };
+
+  static Map<TokenKind, String> kindNames = {
+    TokenKind.identifier: "identifier",
+    TokenKind.number: "number",
+    TokenKind.bracketStart: "[",
+    TokenKind.bracketEnd: "]",
+    TokenKind.dot: ".",
+    TokenKind.eof: "end of text",
+    TokenKind.unrecognized: "unrecognized",
+  };
+
+  static List<Access> parse(String access) {
+    AccessParser parser = new AccessParser(access);
+    parser.nextToken();
+    parser.parseExpression();
+    return parser.result;
+  }
+
+  void parseError(String message) {
+    throw new FormatException(message, text, position - currentToken.length);
+  }
+
+  void nextToken() {
+    for (TokenKind kind in TokenKind.values) {
+      Match match = tokenPatterns[kind].matchAsPrefix(text, position);
+      if (match != null) {
+        position = match.end;
+        currentToken = match.group(0);
+        tokenKind = kind;
+        return;
+      }
+    }
+  }
+
+  void expect(List<TokenKind> expected, String message) {
+    if (!expected.contains(tokenKind)) {
+      parseError(message + " Found '${kindNames[tokenKind]}'.");
+    }
+  }
+
+  parseLocal() {
+    expect([TokenKind.identifier],
+        "The expression to print must start with an identifier.");
+    result.add(new LocalAccess(currentToken));
+    nextToken();
+  }
+
+  void parseFieldAccess() {
+    expect([TokenKind.identifier],
+        "A field access must start with an identifier.");
+    result.add(new FieldAccess(currentToken));
+    nextToken();
+  }
+
+  void parseIndex() {
+    expect([TokenKind.number],
+        "An indexing '[' must be followed by a number. ");
+    result.add(new Indexing(int.parse(currentToken)));
+    nextToken();
+    expect([TokenKind.bracketEnd], "Missing ']'");
+    nextToken();
+  }
+
+  void parseAccess() {
+    expect([TokenKind.dot, TokenKind.bracketStart],
+        "Expected '.field' or '[index]' ");
+    if (tokenKind == TokenKind.dot) {
+      nextToken();
+      parseFieldAccess();
+    } else if (tokenKind == TokenKind.bracketStart) {
+      nextToken();
+      parseIndex();
+    }
+  }
+
+  void parseExpression() {
+    parseLocal();
+    while(tokenKind != TokenKind.eof) {
+      parseAccess();
+    }
+  }
 }
