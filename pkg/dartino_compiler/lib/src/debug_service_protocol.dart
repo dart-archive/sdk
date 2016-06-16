@@ -6,7 +6,6 @@
 /// Processes are mapped to isolates.
 // TODO(sigurdm): Handle processes better.
 // TODO(sigurdm): Find a way to represent fibers.
-// TODO(sigurdm): Represent remote values.
 // TODO(sigurdm): Use https://pub.dartlang.org/packages/json_rpc_2 for serving.
 
 import "dart:async" show Future;
@@ -20,7 +19,15 @@ import 'hub/session_manager.dart' show SessionState;
 import 'guess_configuration.dart' show dartinoVersion;
 
 import '../debug_state.dart'
-    show BackTrace, BackTraceFrame, Breakpoint, RemoteObject;
+    show
+        BackTrace,
+        BackTraceFrame,
+        Breakpoint,
+        RemoteArray,
+        RemoteErrorObject,
+        RemoteInstance,
+        RemoteObject,
+        RemoteValue;
 
 import '../vm_context.dart' show DartinoVmContext, DebugListener;
 
@@ -31,10 +38,20 @@ import 'debug_info.dart' show DebugInfo, ScopeInfo, SourceLocation;
 
 import 'dartino_compiler_implementation.dart'
     show DartinoCompilerImplementation;
-
-import 'codegen_visitor.dart' show LocalValue;
+import 'element_utils.dart';
 
 import '../program_info.dart' show Configuration;
+import '../vm_commands.dart'
+    show
+        Array,
+        Boolean,
+        ClassValue,
+        DartValue,
+        Double,
+        Instance,
+        Integer,
+        NullValue,
+        StringValue;
 
 import 'package:collection/collection.dart' show binarySearch;
 
@@ -44,51 +61,16 @@ import 'package:compiler/src/io/source_file.dart' show SourceFile;
 import 'package:compiler/src/elements/visitor.dart' show BaseElementVisitor;
 import 'package:compiler/src/elements/elements.dart'
     show
+        ClassElement,
         CompilationUnitElement,
         Element,
+        FieldElement,
         FunctionElement,
         LibraryElement,
         MemberElement,
         ScopeContainerElement;
 
 const bool logging = const bool.fromEnvironment("dartino-log-debug-server");
-
-//TODO(danrubel): Verify const map values
-const Map<String, dynamic> dartCoreLibRefDesc = const <String, dynamic>{
-  "type": "@Library",
-  "id": "libraries/dart:core",
-  "fixedId": true,
-  "name": "dart:core",
-  "uri": "dart:core",
-};
-
-//TODO(danrubel): Verify correct id
-const String nullId = "objects/Null";
-
-//TODO(danrubel): Verify const map values
-const Map<String, dynamic> nullClassRefDesc = const <String, dynamic>{
-  "type": "@Class",
-  "id": "classes/NullClass",
-  "name": "NullClass",
-};
-
-//TODO(danrubel): Verify const map values
-const Map<String, dynamic> nullRefDesc = const <String, dynamic>{
-  "type": "@Null",
-  "id": nullId,
-  "kind": "Null",
-  "class": nullClassRefDesc,
-  "valueAsString": "null",
-};
-
-//TODO(danrubel): Verify const map values
-const Map<String, dynamic> nullDesc = const <String, dynamic>{
-  "type": "Null",
-  "id": nullId,
-  "kind": "Null",
-  "class": nullClassRefDesc,
-  "valueAsString": "null",
-};
 
 class DebugServer {
   Future<int> serveSingleShot(SessionState state,
@@ -145,15 +127,18 @@ class DebugConnection implements DebugListener {
   Map<String, CompilationUnitElement> scripts =
       new Map<String, CompilationUnitElement>();
 
-  Map frameDesc(BackTraceFrame frame, int index) {
+  Future<Map> frameDesc(BackTraceFrame frame, int index) async {
     List<Map> vars = new List<Map>();
     for (ScopeInfo current = frame.scopeInfo();
         current != ScopeInfo.sentinel;
         current = current.previous) {
+      RemoteValue remoteValue =
+          await vmContext.processLocal(index, current.local.slot);
       vars.add({
         "type": "BoundVariable",
         "name": current.name,
-        "value": valueDesc(current.lookup(current.name))
+        "value": instanceRef(
+            remoteValue.value, "objects/$index.${current.local.slot}"),
       });
     }
     return {
@@ -338,10 +323,136 @@ class DebugConnection implements DebugListener {
     };
   }
 
-  Map valueDesc(LocalValue lookup) {
-    //TODO(danrubel): Translate local value into description?
-    // Need to return an @InstanceRef or Sentinel
-    return nullRefDesc;
+  Map classRef(ClassElement classElement) {
+    if (classElement == null) {
+      return {"type": "@Class", "id": "unknown", "name": "unknown class"};
+    }
+    String symbolicName =
+        "${classElement.library.canonicalUri}.${classElement.name}";
+    return {
+      "type": "@Class",
+      "id": "classes/$symbolicName",
+      "name": "${classElement.name}",
+    };
+  }
+
+  Map instanceRef(DartValue value, String id) {
+    int classId;
+    Element classElement;
+    String stringValue;
+    String kind;
+    int length;
+    String name;
+    if (value is Instance) {
+      kind = "PlainInstance";
+      classId = value.classId;
+    } else if (value is Integer) {
+      kind = "Int";
+      classElement = vmContext.compiler.compiler.backend.intImplementation;
+      stringValue = "${value.value}";
+    } else if (value is StringValue) {
+      kind = "String";
+      classElement = vmContext.compiler.compiler.backend.stringImplementation;
+      stringValue = value.value;
+    } else if (value is Boolean) {
+      kind = "Bool";
+      classElement = vmContext.compiler.compiler.backend.boolImplementation;
+      stringValue = "${value.value}";
+    } else if (value is Double) {
+      kind = "Double";
+      classElement = vmContext.compiler.compiler.backend.doubleImplementation;
+      stringValue = "${value.value}";
+    } else if (value is ClassValue) {
+      kind = "Type";
+      Element element =
+          vmContext.dartinoSystem.classesById[value.classId].element;
+      classElement = vmContext.compiler.compiler.backend.typeImplementation;
+      name = "${element}";
+    } else if (value is NullValue) {
+      kind = "Null";
+      classElement = vmContext.compiler.compiler.backend.nullImplementation;
+      stringValue = "null";
+    } else if (value is Array) {
+      kind = "List";
+      classElement = vmContext.compiler.compiler.backend.listImplementation;
+      length = value.length;
+    } else {
+      throw "Unexpected remote value $value";
+    }
+    Map classReference = classRef(
+        classElement ?? vmContext.dartinoSystem.classesById[classId]?.element);
+    Map result = {
+      "type": "@Instance",
+      "id": id,
+      "kind": kind,
+      "class": classReference,
+    };
+    if (stringValue != null) {
+      result["valueAsString"] = stringValue;
+    }
+    if (length != null) {
+      result["length"] = length;
+    }
+    if (name != null) {
+      result["name"] = name;
+    }
+    return result;
+  }
+
+  Map instanceDesc(RemoteObject remoteObject, String id) {
+    // TODO(sigurdm): Allow inspecting any frame.
+    assert(remoteObject is! RemoteErrorObject);
+    if (remoteObject is RemoteInstance) {
+      int classId = remoteObject.instance.classId;
+      Element classElement =
+          vmContext.dartinoSystem.classesById[classId].element;
+      List<FieldElement> fieldElements = computeFields(classElement);
+      assert(fieldElements.length == remoteObject.fields.length);
+      List fields = new List();
+      for (int i = 0; i < fieldElements.length; i++) {
+        FieldElement fieldElement = fieldElements[i];
+        fields.add({
+          "type": "BoundField",
+          "decl": {
+            "type": "@Field",
+            "name": fieldElement.name,
+            "owner": classRef(fieldElement.contextClass),
+            "declaredType": null, // TODO(sigurdm): fill this in.
+            "const": fieldElement.isConst,
+            "final": fieldElement.isFinal,
+            "static": fieldElement.isStatic,
+          },
+          "value": instanceRef(remoteObject.fields[i], "$id.$i"),
+        });
+      }
+      return <String, dynamic>{
+        "type": "Instance",
+        "id": id,
+        "kind": "PlainInstance",
+        "class": classRef(classElement),
+        "fields": fields,
+      };
+    } else if (remoteObject is RemoteArray) {
+      // TODO(sigurdm): Handle large arrays. (Issue #536).
+      List elements = new List();
+      for (int i = 0; i < remoteObject.array.length; i++) {
+        elements.add(instanceRef(remoteObject.values[i], "$id.$i"));
+      }
+      return <String, dynamic>{
+        "type": "Instance",
+        "id": id,
+        "kind": "List",
+        "class":
+            classRef(vmContext.compiler.compiler.backend.listImplementation),
+        "elements": elements,
+      };
+    } else if (remoteObject is RemoteValue) {
+      Map instance = instanceRef(remoteObject.value, id);
+      instance["type"] = "Instance";
+      return instance;
+    } else {
+      throw "Unexpected remote object kind";
+    }
   }
 
   initialize(DartinoCompilerImplementation compiler) {
@@ -504,13 +615,15 @@ class DebugConnection implements DebugListener {
                   int.parse(id.substring(slashIndex + 1))]));
               break;
             case "objects":
-              if (id == nullId) {
-                sendResult(nullDesc);
-              } else {
-                //TODO(danrubel): Need to return an Instance description
-                // or Sentinel for the given @InstanceRef
-                throw 'Unknown object: $id';
-              }
+              String path = id.substring(slashIndex + 1);
+              List<int> dotted = path.split(".").map(int.parse).toList();
+              int localFrame = dotted.first;
+              int localSlot = dotted[1];
+              List<int> fieldAccesses = dotted.skip(2).toList();
+              RemoteObject remoteObject = await vmContext.processLocalStructure(
+                  localFrame, localSlot,
+                  fieldAccesses: fieldAccesses);
+              sendResult(instanceDesc(remoteObject, id));
               break;
             default:
               throw "Unsupported object type $id";
@@ -525,7 +638,7 @@ class DebugConnection implements DebugListener {
           List frames = [];
           int index = 0;
           for (BackTraceFrame frame in backTrace.frames) {
-            frames.add(frameDesc(frame, index));
+            frames.add(await frameDesc(frame, index));
             index++;
           }
 
@@ -710,7 +823,7 @@ class DebugConnection implements DebugListener {
 
   @override
   pauseBreakpoint(
-      int processId, BackTraceFrame topFrame, Breakpoint breakpoint) {
+      int processId, BackTraceFrame topFrame, Breakpoint breakpoint) async {
     //TODO(danrubel): are there any other breakpoints
     // at which we are currently paused for a PauseBreakpoint event?
     List<Breakpoint> pauseBreakpoints = <Breakpoint>[];
@@ -720,7 +833,7 @@ class DebugConnection implements DebugListener {
       "kind": "PauseBreakpoint",
       "isolate": isolateRef(processId),
       "timestamp": new DateTime.now().millisecondsSinceEpoch,
-      "topFrame": frameDesc(topFrame, 0),
+      "topFrame": await frameDesc(topFrame, 0),
       "atAsyncSuspension": false,
       "breakpoint": breakpointDesc(breakpoint),
       "pauseBreakpoints":
@@ -731,13 +844,14 @@ class DebugConnection implements DebugListener {
   }
 
   @override
-  pauseException(int processId, BackTraceFrame topFrame, RemoteObject thrown) {
+  pauseException(
+      int processId, BackTraceFrame topFrame, RemoteObject thrown) async {
     Map event = {
       "type": "Event",
       "kind": "PauseException",
       "isolate": isolateRef(processId),
       "timestamp": new DateTime.now().millisecondsSinceEpoch,
-      "topFrame": frameDesc(topFrame, 0),
+      "topFrame": await frameDesc(topFrame, 0),
       "atAsyncSuspension": false,
       // TODO(sigurdm): pass thrown as an instance.
     };
@@ -750,13 +864,13 @@ class DebugConnection implements DebugListener {
   }
 
   @override
-  pauseInterrupted(int processId, BackTraceFrame topFrame) {
+  pauseInterrupted(int processId, BackTraceFrame topFrame) async {
     Map event = {
       "type": "Event",
       "kind": "PauseInterrupted",
       "isolate": isolateRef(processId),
       "timestamp": new DateTime.now().millisecondsSinceEpoch,
-      "topFrame": frameDesc(topFrame, 0),
+      "topFrame": await frameDesc(topFrame, 0),
       "atAsyncSuspension": false,
     };
     lastPauseEvent = event;
@@ -808,7 +922,7 @@ class DebugConnection implements DebugListener {
   }
 
   @override
-  resume(int processId) {
+  resume(int processId) async {
     Map event = {
       "type": "Event",
       "kind": "Resume",
@@ -817,7 +931,7 @@ class DebugConnection implements DebugListener {
     };
     BackTraceFrame topFrame = vmContext.debugState.topFrame;
     if (topFrame != null) {
-      event["topFrame"] = frameDesc(vmContext.debugState.topFrame, 0);
+      event["topFrame"] = await frameDesc(vmContext.debugState.topFrame, 0);
     }
     lastPauseEvent = event;
     streamNotify("Debug", event);
