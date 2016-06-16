@@ -859,10 +859,6 @@ number_identity2_test: Crash
 round_test: RuntimeError
 constant_string_interpolation2_test: RuntimeError
 vm/typed_data_polymorphic_view_test: Crash
-vm/closure_memory_retention_test: Crash, Pass # Out of memory. Fragmentation.
-# These actually overflow the stack because the snapshot reader is
-# recursive.
-large_class_declaration_test: Timeout
 
 [ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.
