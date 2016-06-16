@@ -878,6 +878,8 @@ async_continue_label_test/await_in_init: CompileTimeError
 async_continue_label_test/await_in_update: CompileTimeError
 async_continue_label_test/none: CompileTimeError
 async_regression_23058_test: CompileTimeError
+async_star_no_cancel_test: CompileTimeError
+async_star_no_cancel2_test: CompileTimeError
 async_this_bound_test: CompileTimeError
 asyncstar_concat_test: CompileTimeError
 await_not_started_immediately_test: CompileTimeError
@@ -1033,6 +1035,12 @@ regress_23498_test: CompileTimeError
 regress_23500_test/01: CompileTimeError
 regress_23500_test/02: CompileTimeError
 regress_23500_test/none: CompileTimeError
+regress_23996_test: CompileTimeError
+regress_24935_test/01: CompileTimeError
+regress_24935_test/none: CompileTimeError
+regress_25620_test: CompileTimeError
+regress_26133_test: CompileTimeError
+regress_26175_test: CompileTimeError
 vm/store_to_load_forwarding_phis_vm_test: CompileTimeError
 closure_cycles_test: CompileTimeError
 

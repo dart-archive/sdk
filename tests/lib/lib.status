@@ -161,11 +161,13 @@ async/stack_trace25_test: CompileTimeError
 async/stream_controller_test: CompileTimeError
 async/stream_empty_test: CompileTimeError
 async/stream_event_transformed_test: CompileTimeError
+async/stream_from_futures_test: CompileTimeError
 async/stream_iterator_double_cancel_test: CompileTimeError
 async/stream_listen_zone_test: CompileTimeError
 async/stream_transformer_from_handlers_test: CompileTimeError
 async/stream_transformer_test: CompileTimeError
 async/stream_type_test: CompileTimeError
+async/stream_view_test: CompileTimeError
 async/stream_zones_test: CompileTimeError
 async/timer_regress22626_test: CompileTimeError
 async/wait_for_cancel_test: CompileTimeError
