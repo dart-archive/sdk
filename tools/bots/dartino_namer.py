@@ -70,5 +70,12 @@ class DartinoGCSNamer(bot_utils.GCSNamer):
     return '/'.join([self.dartino_sdk_directory(revision),
                      self.openocd_bundle_zipfilename(system)])
 
+  def emul8_bundle_zipfilename(self, system):
+    return 'emul8-%s.zip' % system
+
+  def emul8_bundle_filepath(self, revision, system):
+    return '/'.join([self.dartino_sdk_directory(revision),
+                     self.emul8_bundle_zipfilename(system)])
+
   def docs_filepath(self, revision):
     return '/'.join([self.dartino_sdk_directory(revision), 'docs'])

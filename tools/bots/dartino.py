@@ -391,9 +391,9 @@ def StepsArchiveEmul8(system):
     namer = GetNamer(temporary=IsBleedingEdge())
     version = utils.GetSemanticSDKVersion()
     ArchiveThirdPartyTool('emul8',
-                          namer.gcc_embedded_bundle_zipfilename(system),
+                          namer.emul8_embedded_bundle_zipfilename(system),
                           system,
-                          namer.gcc_embedded_bundle_filepath(version, system))
+                          namer.emul8_embedded_bundle_filepath(version, system))
 
 def StepsArchiveGCCArmNoneEabi(system):
   with bot.BuildStep('Archive cross compiler'):
