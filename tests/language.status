@@ -864,9 +864,6 @@ vm/closure_memory_retention_test: Crash, Pass # Out of memory. Fragmentation.
 # recursive.
 large_class_declaration_test: Timeout
 
-[ $system == lk && !$use_heap_blob ]
-smaller_4_Interface_Types_A11_t01_test: Crash
-
 [ $settings_file_name == embedded.dartino-settings && ($compiler == dartino_compiler || $runtime == dartino_compiler) ]
 # No async on embedded.
 async_and_or_test: CompileTimeError
