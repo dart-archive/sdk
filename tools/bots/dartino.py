@@ -230,6 +230,7 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   for configuration in configurations:
     StepsTestSDK(debug_log, configuration)
     StepsSanityChecking(configuration['build_dir'])
+  StepsArchiveEmul8(system)
   StepsArchiveGCCArmNoneEabi(system)
   StepsArchiveOpenOCD(system)
 
@@ -383,6 +384,16 @@ def ArchiveThirdPartyTool(name, zip_name, system, gs_path):
   gsutil.upload(zip_file, gs_path, public=True)
   http_path = GetDownloadLink(gs_path)
   print '@@@STEP_LINK@download@%s@@@' % http_path
+
+def StepsArchiveEmul8(system):
+  with bot.BuildStep('Archive emul8'):
+    # TODO(ricow): Early return on bleeding edge when this is validated.
+    namer = GetNamer(temporary=IsBleedingEdge())
+    version = utils.GetSemanticSDKVersion()
+    ArchiveThirdPartyTool('emul8'),
+                          namer.gcc_embedded_bundle_zipfilename(system),
+                          system,
+                          namer.gcc_embedded_bundle_filepath(version, system))
 
 def StepsArchiveGCCArmNoneEabi(system):
   with bot.BuildStep('Archive cross compiler'):

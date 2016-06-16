@@ -325,6 +325,25 @@ hooks = [
       'sdk/third_party/freertos',
     ],
   },
+  {
+    'name': 'third_party_emul8',
+    'pattern': '.',
+    'action': [
+      'python',
+      'sdk/tools/not_on_arm.py',
+      'download_from_google_storage',
+      '-q',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dartino-dependencies',
+      '-d',
+      '-r',
+      '-u',
+      '--auto_platform',
+      'sdk/third_party/emul8',
+    ],
+  },
   # Pull clang-format binaries using checked-in hashes.
   {
     'name': 'clang_format_win',
