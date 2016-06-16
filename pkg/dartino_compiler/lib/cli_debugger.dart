@@ -214,7 +214,7 @@ class CommandLineDebugger {
         break;
       case 'backtrace':
       case 'bt':
-        if (!checkSpawned('cannot print backtrace')) {
+        if (!checkScheduled('cannot print backtrace')) {
           break;
         }
         BackTrace backtrace = await vmContext.backTrace();
@@ -226,6 +226,9 @@ class CommandLineDebugger {
         break;
       case 'frame':
       case 'f':
+        if (!checkScheduled('cannot select frame')) {
+          break;
+        }
         var frame =
             (commandComponents.length > 1) ? commandComponents[1] : "-1";
         frame = int.parse(frame, onError: (_) => null);
@@ -235,7 +238,7 @@ class CommandLineDebugger {
         break;
       case 'list':
       case 'l':
-        if (!checkSpawned('nothing to list')) {
+        if (!checkScheduled('nothing to list')) {
           break;
         }
         BackTrace trace = await vmContext.backTrace();
@@ -248,7 +251,7 @@ class CommandLineDebugger {
         break;
       case 'disassemble':
       case 'disasm':
-        if (checkSpawned('cannot show bytecodes')) {
+        if (checkScheduled('cannot show bytecodes')) {
           BackTrace backtrace = await vmContext.backTrace();
           String disassembly = backtrace != null ? backtrace.disasm() : null;
           if (disassembly != null) {
@@ -332,7 +335,7 @@ class CommandLineDebugger {
         }
         break;
       case 'restart':
-        if (!checkSpawned('cannot restart')) {
+        if (!checkScheduled('cannot restart')) {
           break;
         }
         BackTrace trace = await vmContext.backTrace();
@@ -359,7 +362,7 @@ class CommandLineDebugger {
         break;
       case 'print':
       case 'p':
-        if (!checkSpawned('nothing to print')) {
+        if (!checkScheduled('nothing to print')) {
           break;
         }
         if (commandComponents.length <= 1) {
@@ -476,52 +479,29 @@ class CommandLineDebugger {
     }
   }
 
-  bool checkSpawned([String postfix]) {
-    if (!vmContext.isSpawned) {
-      String prefix = '### process not scheduled';
-      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
+  bool check(condition, String description, String message) {
+    if (!condition) {
+      writeStdoutLine(message == null ? description : "$description, $message");
     }
-    return vmContext.isSpawned;
+    return condition;
+  }
+
+  bool checkScheduled([String postfix]) {
+    return check(vmContext.isScheduled, '### process not scheduled', postfix);
   }
 
   bool checkNotScheduled([String postfix]) {
-    if (vmContext.isScheduled) {
-      String prefix = '### process already scheduled';
-      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
-    }
-    return !vmContext.isScheduled;
+    return check(
+        !vmContext.isScheduled, '### process already scheduled', postfix);
   }
 
   bool checkPaused([String postfix]) {
-    if (!vmContext.isPaused) {
-      String prefix = '### process not paused';
-      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
-    }
-    return vmContext.isPaused;
+    return check(vmContext.isPaused, '### process not paused', postfix);
   }
 
   bool checkPausedOrRunning([String postfix]) {
-    if (!vmContext.isPaused && !vmContext.isRunning) {
-      String prefix = '### process not running';
-      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
-    }
-    return vmContext.isPaused;
-  }
-
-  bool checkRunning([String postfix]) {
-    if (!vmContext.isRunning) {
-      String prefix = '### process not running';
-      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
-    }
-    return vmContext.isRunning;
-  }
-
-  bool checkNotRunning([String postfix]) {
-    if (vmContext.isRunning) {
-      String prefix = '### process already running';
-      writeStdoutLine(postfix != null ? '$prefix, $postfix' : prefix);
-    }
-    return !vmContext.isRunning;
+    return check(vmContext.isPaused && !vmContext.isRunning,
+        '### process not running', postfix);
   }
 
   Future<int> run(SessionState state, {Uri snapshotLocation}) async {
