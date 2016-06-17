@@ -146,6 +146,7 @@ build $
         src/freertos/stm.gyp $
         src/freertos/free_rtos_sources.gypi $
         src/freertos/stm32_cube_f7_demos.gyp $
+        src/freertos/lwip_sources.gypi $
         src/freertos/disco_dartino.gyp $
         src/freertos/freertos_dartino.gyp $
         dartino.gyp $
