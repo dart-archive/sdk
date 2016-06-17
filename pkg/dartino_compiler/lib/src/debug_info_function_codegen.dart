@@ -176,4 +176,16 @@ class DebugInfoFunctionCodegen extends FunctionCodegenBase with DebugRegistry {
     recordDebugInfo(node);
     super.visitForEffect(node);
   }
+
+  void visitEmptyStatement(Node node) {
+    recordDebugInfo(node);
+    super.visitEmptyStatement(node);
+  }
+
+  void doStatements(NodeList statements) {
+    if (statements.isEmpty) {
+      recordDebugInfo(statements);
+    }
+    super.doStatements(statements);
+  }
 }
