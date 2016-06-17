@@ -362,8 +362,7 @@ void InterpreterGeneratorARM::GenerateEpilogue() {
   __ add(SP, SP, Immediate(kWordSize));
 
   // Restore callee-saved registers and return.
-  __ pop(RegisterRange(R4, R11) | RegisterRange(LR, LR));
-  __ bx(LR);
+  __ pop(RegisterRange(R4, R11) | RegisterRange(PC, PC));
 
   // Default entrypoint.
   __ Bind("", "InterpreterEntry");
@@ -456,8 +455,7 @@ void InterpreterGeneratorARM::GenerateDebugAtBytecode() {
   __ bl("HandleAtBytecode");
   __ tst(R0, R0);
   __ b(NE, &done_);
-  __ mov(LR, R7);
-  __ bx(LR);
+  __ bx(R7);
 }
 
 void InterpreterGeneratorARM::DoLoadLocal0() {
@@ -1318,7 +1316,7 @@ void InterpreterGeneratorARM::DoExitNoSuchMethod() {
 
   __ Bind(&done);
   Pop(LR);
-  __ mov(PC, LR);
+  __ bx(LR);
 }
 
 void InterpreterGeneratorARM::DoMethodEnd() { __ bkpt(); }
@@ -1339,7 +1337,7 @@ void InterpreterGeneratorARM::DoIntrinsicGetField() {
   __ adds(R0, R0, Immediate(Instance::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R0, Operand(R1, TIMES_WORD_SIZE)));
 
-  __ mov(PC, LR);
+  __ bx(LR);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicSetField() {
@@ -1349,13 +1347,11 @@ void InterpreterGeneratorARM::DoIntrinsicSetField() {
   __ adds(R3, R2, Immediate(Instance::kSize - HeapObject::kTag));
   __ str(R7, Address(R3, Operand(R1, TIMES_WORD_SIZE)));
 
-  __ mov(R9, LR);
-
   // R7 is not trashed.
   AddToRememberedSet(R2, R7, R3);
 
   __ mov(R0, R7);
-  __ mov(PC, R9);
+  __ bx(LR);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicListIndexGet() {
@@ -1382,7 +1378,7 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexGet() {
   __ adds(R2, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R2, Operand(R1, TIMES_2)));
 
-  __ mov(PC, LR);
+  __ bx(LR);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
@@ -1408,13 +1404,12 @@ void InterpreterGeneratorARM::DoIntrinsicListIndexSet() {
   LoadLocal(R7, 0);
   __ add(R12, R2, Immediate(Array::kSize - HeapObject::kTag));
   __ str(R7, Address(R12, Operand(R1, TIMES_2)));
-  __ mov(R9, LR);
 
   // R7 is not trashed.
   AddToRememberedSet(R2, R7, R3);
 
   __ mov(R0, R7);
-  __ mov(PC, R9);
+  __ bx(LR);
 }
 
 void InterpreterGeneratorARM::DoIntrinsicListLength() {
@@ -1423,7 +1418,7 @@ void InterpreterGeneratorARM::DoIntrinsicListLength() {
   __ ldr(R2, Address(R2, Instance::kSize - HeapObject::kTag));
   __ ldr(R0, Address(R2, Array::kLengthOffset - HeapObject::kTag));
 
-  __ mov(PC, LR);
+  __ bx(LR);
 }
 
 void InterpreterGeneratorARM::Push(Register reg) {
@@ -1437,8 +1432,13 @@ void InterpreterGeneratorARM::Push(Register reg) {
 
 void InterpreterGeneratorARM::Pop(Register reg) {
 #ifdef DARTINO_THUMB_ONLY
-  LoadLocal(reg, 0);
-  Drop(1);
+  if (reg == PC) {
+    Drop(1);
+    LoadLocal(reg, -1);
+  } else {
+    LoadLocal(reg, 0);
+    Drop(1);
+  }
 #else
   __ ldr(reg, R6, Immediate(kWordSize));
 #endif
@@ -1458,7 +1458,7 @@ void InterpreterGeneratorARM::Return(bool is_return_null) {
   StoreFramePointer(R2);
 
   Pop(LR);
-  __ mov(PC, LR);
+  __ bx(LR);
 }
 
 void InterpreterGeneratorARM::LoadLocal(Register reg, int index) {
@@ -1683,7 +1683,7 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
   __ b(NE, &invalid);
 
   // Load the target and the intrinsic from the entry.
-  Label validated, intrinsified;
+  Label validated;
   if (test) {
     // Valid entry: The answer is true.
     LoadTrue(R2);
@@ -1723,9 +1723,6 @@ void InterpreterGeneratorARM::InvokeMethod(bool test) {
     StoreLocal(R2, 0);
     Dispatch(kInvokeTestLength);
   } else {
-    __ Bind(&intrinsified);
-    __ mov(PC, R2);
-
     // Invalid entry: Use the noSuchMethod entry from entry zero of
     // the virtual table.
     __ Bind(&invalid);
@@ -1788,7 +1785,7 @@ void InterpreterGeneratorARM::InvokeNative(bool yield, bool safepoint) {
   StoreFramePointer(R2);
 
   Pop(LR);
-  __ mov(PC, LR);
+  __ bx(LR);
 
   // Failure: Check if it's a request to garbage collect. If not,
   // just continue running the failure block by dispatching to the
@@ -2077,6 +2074,9 @@ void InterpreterGeneratorARM::RestoreState() {
 
   // Pop and branch to resume address.
   Pop(LR);
+
+  // This is dodgy because it doesn't switch mode (Thumb/ARM) based on the last
+  // bit of the register, which is always clear, indicating ARM mode.
   __ mov(PC, LR);
 }
 
