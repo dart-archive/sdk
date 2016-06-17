@@ -2,7 +2,8 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-library dartino.vm_session;
+/// Handling of the communication with a dartino vm over a [VmConnection].
+library dartino.vm_context;
 
 import 'dart:async';
 
@@ -787,7 +788,7 @@ class DartinoVmContext {
     bool success =
         response is ProcessBreakpoint &&
         response.breakpointId == setBreakpoint.value;
-    if (!success && !isTerminated && setBreakpoint.value != -1) {
+    if (!success && isPaused && setBreakpoint.value != -1) {
       // Delete the initial one-time breakpoint as it wasn't hit.
       await doDeleteOneShotBreakpoint(processId, setBreakpoint.value);
     }
