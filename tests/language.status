@@ -499,6 +499,10 @@ generic_test: RuntimeError
 getter_setter_in_lib_test: RuntimeError
 if_null_assignment_behavior_test/15: RuntimeError # Class literals not implemented.
 initializing_formal_access_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_final_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_capture_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_type_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_promotion_test: CompileTimeError # Initializing formal access not implemented
 incr_op_test: RuntimeError
 instance_creation_in_function_annotation_test: CompileTimeError
 instanceof2_test: RuntimeError
@@ -650,6 +654,7 @@ regress_23500_test/none: RuntimeError
 regress_23650_test: RuntimeError
 regress_26133_test: RuntimeError
 regress_r24720_test: RuntimeError
+regress_26668_test: RuntimeError
 reify_typevar_test: RuntimeError
 runtime_type_test: CompileTimeError
 scope_variable_test/01: MissingCompileTimeError
