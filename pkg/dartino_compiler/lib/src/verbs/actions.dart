@@ -31,6 +31,9 @@ import 'debug_verb.dart' show
 import 'disable_verb.dart' show
     disableAction;
 
+import 'emulate_verb.dart' show
+    emulateAction;
+
 import 'enable_verb.dart' show
     enableAction;
 
@@ -163,6 +166,7 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "export": exportAction,
   "flash": flashAction,
   "x-download-tools": downloadToolsAction,
+  "x-emulate": emulateAction,
   "x-end": endAction,
   "x-should-prompt-analytics": shouldPromptAnalyticsAction,
   "x-upgrade": upgradeAction,

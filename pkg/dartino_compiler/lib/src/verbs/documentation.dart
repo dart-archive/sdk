@@ -192,6 +192,15 @@ const String flashDocumentation = """
              Discovery board only.
 """;
 
+const String emulateDocumentation = """
+   x-emulate <file>
+             Build flashable image containing the Dart code in <file> and
+             run it in an emulator.
+
+             Currently dartino only has an emulator for the STM32F746G Discovery
+             board.
+""";
+
 const String enableDocumentation = """
    enable analytics
              Turn on collection of anonymous usage statistics and crash reports

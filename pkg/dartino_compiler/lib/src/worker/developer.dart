@@ -19,6 +19,7 @@ import 'dart:io' show
     File,
     FileSystemEntity,
     InternetAddress,
+    IOSink,
     Platform,
     Process,
     ProcessResult,
@@ -1240,9 +1241,8 @@ Future<int> downloadTools(
   const String gcsRoot = "https://storage.googleapis.com";
   String gcsBucket = "dartino-archive";
 
-  Future<int> downloadTool(String gcsPath, String zipFile,
-                           String toolName) async {
-    Uri url = Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$zipFile");
+  Future<int> downloadToolFromUri(Uri url, String zipFile,
+      String toolName) async {
     Directory tmpDir = Directory.systemTemp.createTempSync("dartino_download");
     File tmpZip = new File(join(tmpDir.path, zipFile));
 
@@ -1268,6 +1268,12 @@ Future<int> downloadTools(
     state.log("Deleting temporary directory ${tmpDir.path}");
     await tmpDir.delete(recursive: true);
     return 0;
+  }
+
+  Future<int> downloadTool(String gcsPath, String zipFile,
+                           String toolName) async {
+    Uri url = Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$zipFile");
+    return await downloadToolFromUri(url, zipFile, toolName);
   }
 
   String gcsPath;
@@ -1299,10 +1305,24 @@ Future<int> downloadTools(
   var result =
       await downloadTool(gcsPath, gccArmEmbedded, "GCC ARM Embedded toolchain");
   if (result != 0) return result;
+
   String openocd = "openocd-${osName}.zip";
   result =
       await downloadTool(gcsPath, openocd, "Open On-Chip Debugger (OpenOCD)");
   if (result != 0) return result;
+
+  // TODO(karlklose): add MacOS version
+  if (Platform.isLinux) {
+    String emul8 = "emul8-${osName}.zip";
+    // TODO(karlklose): remove this and the helper when we have a dev version
+    // archived that we can point to.
+    Uri temporaryPath = Uri.parse(
+        "https://storage.googleapis.com/dartino-temporary/channels/be/raw/"
+        "0.4.0-edge.8fa0e09687e17b163825f757a9a7e89e6dd8e97d/sdk/"
+        "emul8-linux.zip");
+    result = await downloadToolFromUri(temporaryPath, emul8, "Emul8");
+    if (result != 0) return result;
+  }
 
   print("Third party tools downloaded");
 
@@ -1349,13 +1369,14 @@ Future<Device> readDevice(String deviceId) async {
     deviceDirectoryUri = executable.resolve('../../$path/');
     deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
     assert(await deviceDirectory.exists());
-    // In a Git checkout the libraries are is out/DebugSTM and out/ReleaseSTM.
+    // In a Git checkout the libraries are in out/DebugSTM and out/ReleaseSTM,
+    // depending on the board.
     if (deviceId.startsWith('stm32f7')) {
       libraryDirectoryUri = executable.resolve('../DebugSTM/');
     } else {
       libraryDirectoryUri = executable.resolve('../DebugCM4/');
     }
-    print('Using ${libraryDirectoryUri} to locate libraries');
+    print('Using ${libraryDirectoryUri.path} to locate libraries');
   }
 
   Uri uri = deviceDirectoryUri.resolve('device.json');
@@ -1495,6 +1516,65 @@ Future<int> buildImage(
     }
   }
 
+  return 0;
+}
+
+Future<int> emulateImage(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SessionState state,
+    Uri image) async {
+  assert(image.scheme == 'file');
+
+  // TODO(karlklose): add a map from the board name in dartino.settings to the
+  // name of the emulator start script and the name of the board used in the
+  // emulator.
+
+  Device device = await readDeviceFromSettings(state);
+  String board = device.open_ocd_board;
+  if (board != 'stm32f7discovery') {
+    print("Unable to find emulator for board '$board'");
+    return 1;
+  }
+
+  String emulatorScriptName = 'emul8.sh';
+  String boardName = 'STM32F746';
+
+  // Create the emul8 script file.  TODO(karlklose): remove this when we know
+  // how to construct the command line call.
+  Directory tmp = Directory.systemTemp.createTempSync('dartino_emulate');
+  File startScript = new File.fromUri(tmp.uri.resolve('emul8.script'));
+  IOSink sink = startScript.openWrite();
+  sink.write('''
+createPlatform $boardName
+showAnalyzer sysbus.usart1
+plugins EnablePlugin "XwtProvider"
+showAnalyzer sysbus.LTDC
+sysbus LoadELF @${image.path}
+start
+''');
+  await sink.close();
+
+  Directory binDirectory = await locateBinDirectory();
+
+  ProcessResult result;
+  File emulateScript = new File(join(binDirectory.path, emulatorScriptName));
+  // TODO(karlklose): add MacOs support
+  if (Platform.isLinux) {
+    state.log("Starting emulator for image: '${emulateScript.path} ${boardName}"
+              " ${image}'");
+    print("Starting emulator for image: ${image.path}.");
+    print("Enter 'q' into the Emul8 console window to quit Emul8.");
+    result = await Process.run(emulateScript.path, [startScript.path]);
+  } else {
+    throwUnsupportedPlatform();
+  }
+  state.log("STDOUT:\n${result.stdout}");
+  state.log("STDERR:\n${result.stderr}");
+  if (result.exitCode != 0) {
+    print("Failed to start the emulator for image: ${image.path}\n");
+    return INPUT_ERROR;
+  }
   return 0;
 }
 
