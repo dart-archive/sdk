@@ -230,7 +230,9 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   for configuration in configurations:
     StepsTestSDK(debug_log, configuration)
     StepsSanityChecking(configuration['build_dir'])
-  StepsArchiveEmul8(system)
+  # TODO(karlklose): add MacOS version of Emul8
+  if system == 'linux':
+    StepsArchiveEmul8(system)
   StepsArchiveGCCArmNoneEabi(system)
   StepsArchiveOpenOCD(system)
 
