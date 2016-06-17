@@ -1171,7 +1171,7 @@ void Program::CollectNewSpace() {
   OldSpace* old = data_heap->old_space();
 
   if (data_heap->HasEmptyNewSpace()) {
-    CollectOldSpaceIfNeeded();
+    CollectOldSpaceIfNeeded(false);
     return;
   }
 
@@ -1226,13 +1226,13 @@ void Program::CollectNewSpace() {
   if (Flags::validate_heaps) old->Verify();
 #endif
 
-  CollectOldSpaceIfNeeded();
+  CollectOldSpaceIfNeeded(visitor.trigger_old_space_gc());
   UpdateStackLimits();
 }
 
-void Program::CollectOldSpaceIfNeeded() {
+void Program::CollectOldSpaceIfNeeded(bool force) {
   OldSpace* old = process_heap_.old_space();
-  if (old->needs_garbage_collection()) {
+  if (force || old->needs_garbage_collection()) {
     old->Flush();
     CollectOldSpace();
 #ifdef DEBUG

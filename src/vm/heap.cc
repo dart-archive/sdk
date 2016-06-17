@@ -37,6 +37,15 @@ TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
   AdjustAllocationBudget();
   AdjustOldAllocationBudget();
   water_mark_ = chunk->start();
+  max_size_ = Utils::RoundUp(Flags::max_heap_size * 1024, Platform::kPageSize);
+}
+
+uword TwoSpaceHeap::MaxExpansion() {
+  if (max_size_ == 0) return kUnlimitedExpansion;
+  word max = max_size_ - 2 * kFixedSemiSpaceSize;
+  max -= old_space_->Size();
+  if (max < 0) return 0;
+  return max;
 }
 
 Heap::~Heap() {
@@ -365,7 +374,7 @@ void GenerationalScavengeVisitor::VisitBlock(Object** start, Object** end) {
       *p = destination;
       if (InToSpace(destination)) *record_ = GCMetadata::kNewSpacePointers;
     } else {
-      if (old_object->address() < water_mark_) {
+      if (!trigger_old_space_gc_ && old_object->address() < water_mark_) {
         HeapObject* moved_object = old_object->CloneInToSpace(old_);
         // The old space may fill up.  This is a bad moment for a GC, so we
         // promote to the to-space instead.

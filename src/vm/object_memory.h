@@ -261,7 +261,11 @@ class Space {
   uword used_;              // Allocated bytes.
   uword top_;               // Allocation top in current chunk.
   uword limit_;             // Allocation limit in current chunk.
-  word allocation_budget_;  // Budget before needing a GC.
+  // The allocation budget can be used to trigger a GC early, eg. in response
+  // to large amounts of external allocation. If the allocation budget is not
+  // hit, we may still trigger a GC because we are getting close to the limit
+  // for the committed size of the chunks in the heap.
+  word allocation_budget_;
   int no_allocation_failure_nesting_;
   bool resizeable_;
   // Linked list of weak pointers to heap objects in this space.

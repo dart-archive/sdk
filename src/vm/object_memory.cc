@@ -85,8 +85,9 @@ HeapObject *Space::ObjectAtOffset(word offset) {
 
 void Space::AdjustAllocationBudget(uword used_outside_space) {
   uword used = Used() + used_outside_space;
-  allocation_budget_ = Utils::Maximum(static_cast<word>(DefaultChunkSize(used)),
-                                      static_cast<word>(used));
+  // Allow heap size to double (but we may hit maximum heap size limits before
+  // that).
+  allocation_budget_ = used + Platform::kPageSize;
 }
 
 void Space::IncreaseAllocationBudget(uword size) { allocation_budget_ += size; }

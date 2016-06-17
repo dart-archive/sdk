@@ -99,15 +99,26 @@ uword OldSpace::AllocateInNewChunk(uword size) {
   ASSERT(top_ == 0);  // Space is flushed.
   // Allocate new chunk that is big enough to fit the object.
   int tracking_size = tracking_allocations_ ? 0 : PromotedTrack::kHeaderSize;
-  uword default_chunk_size = DefaultChunkSize(Used());
+  uword max_expansion = heap_->MaxExpansion();
+  uword smallest_chunk_size =
+      Utils::Minimum(DefaultChunkSize(Used()), max_expansion);
   uword chunk_size =
-      (size + tracking_size + kPointerSize >= default_chunk_size)
+      (size + tracking_size + kPointerSize >= smallest_chunk_size)
           ? (size + tracking_size + kPointerSize)  // Make room for sentinel.
-          : default_chunk_size;
+          : smallest_chunk_size;
 
-  Chunk* chunk = AllocateAndUseChunk(chunk_size);
-  if (chunk != NULL) {
-    return Allocate(size);
+  if (chunk_size <= max_expansion) {
+    if (chunk_size + (chunk_size >> 1) > max_expansion) {
+      // If we are near the limit, then just get memory up to the limit from
+      // the OS to reduce the number of small chunks in the heap, which can
+      // cause some fragmentation.
+      chunk_size = max_expansion;
+    }
+
+    Chunk* chunk = AllocateAndUseChunk(chunk_size);
+    if (chunk != NULL) {
+      return Allocate(size);
+    }
   }
 
   allocation_budget_ = -1;  // Trigger GC.
@@ -162,7 +173,6 @@ uword OldSpace::Allocate(uword size) {
   // Can't use bump allocation. Allocate from free lists.
   uword result = AllocateFromFreeList(size);
   if (result == 0) result = AllocateInNewChunk(size);
-  if (result == 0) allocation_budget_ = 0;  // Trigger GC soon.
   return result;
 }
 

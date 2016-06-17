@@ -290,7 +290,7 @@ class Program : public ProgramList::Entry {
   void CollectGarbage();
   void SnapshotGC(PopularityCounter* popularity_counter);
   void CollectOldSpace();
-  void CollectOldSpaceIfNeeded();
+  void CollectOldSpaceIfNeeded(bool force);
   void CollectNewSpace();
   void PerformSharedGarbageCollection();
 
