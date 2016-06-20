@@ -11,8 +11,10 @@ below).
 
 ## Trying it out
 
-To try out Dartino for embedded device development, please see the
-[Dartino site](https://dartino.org).
+For building Dartino SDK please follow the instructions outlined in 
+[the wiki](https://github.com/dartino/sdk/wiki/Building).
+To learn more about using Dartino for embedded device development, please see 
+the [Dartino site](https://dartino.org).
 
 ## Feedback & contributing
 
