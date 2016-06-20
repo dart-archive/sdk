@@ -24,8 +24,29 @@ static const char* ConditionToString(Condition cond) {
   return kConditionNames[cond];
 }
 
+void Assembler::B(Label* label) {
+  b(label);
+  nop();
+}
+
 void Assembler::B(Condition cond, Register reg1, Register reg2, Label* label) {
   b(cond, reg1, reg2, label);
+  nop();
+}
+
+void Assembler::B(Condition cond, Register reg1, Register reg2,
+                  const char* label) {
+  b(cond, reg1, reg2, label);
+  nop();
+}
+
+void Assembler::Jr(Register reg) {
+  jr(reg);
+  nop();
+}
+
+void Assembler::Jalr(Register reg) {
+  jalr(reg);
   nop();
 }
 

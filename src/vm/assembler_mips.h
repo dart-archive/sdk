@@ -152,8 +152,6 @@ class Label {
 
 class Assembler {
  public:
-  INSTRUCTION_3(add, "add %r, %r, %r", Register, Register, Register);
-  INSTRUCTION_3(addi, "addi %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(addu, "addu %r, %r, %r", Register, Register, Register);
   INSTRUCTION_3(addiu, "addiu %r, %r, %i", Register, Register,
                 const Immediate&);
@@ -206,8 +204,6 @@ class Assembler {
   INSTRUCTION_3(sltu, "sltu %r, %r, %r", Register, Register, Register);
 
 
-  INSTRUCTION_3(sub, "sub %r, %r, %r", Register, Register, Register);
-  INSTRUCTION_3(subi, "addi %r, %r, -%i", Register, Register, const Immediate&);
   INSTRUCTION_3(subu, "subu %r, %r, %r", Register, Register, Register);
 
   INSTRUCTION_0(syscall, "syscall");
@@ -221,7 +217,9 @@ class Assembler {
   // Align what follows to a 2^power address.
   void AlignToPowerOfTwo(int power);
 
+  void B(Label* label);
   void B(Condition cond, Register reg1, Register reg2, Label* label);
+  void B(Condition cond, Register reg1, Register reg2, const char* label);
 
   void Bind(const char* prefix, const char* name);
   void Bind(Label* label);
@@ -232,6 +230,9 @@ class Assembler {
 
   void BindWithPowerOfTwoAlignment(const char* name, int power);
   void SwitchToData();
+
+  void Jr(Register reg);
+  void Jalr(Register reg);
 
   const char* LabelPrefix();
 
