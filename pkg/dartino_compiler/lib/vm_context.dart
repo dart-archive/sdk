@@ -900,7 +900,7 @@ class DartinoVmContext {
       return new RemoteInstance(response, fields);
     } else if (response is ArrayStructure) {
       List<DartValue> values = new List<DartValue>();
-      for (int i = 0; i < response.length; i++) {
+      for (int i = response.startIndex; i < response.endIndex; i++) {
         values.add(await readNextCommand());
       }
       return new RemoteArray(response, values);
@@ -938,10 +938,16 @@ class DartinoVmContext {
       int frameNumber,
       int localSlot,
       {String name,
-       List<int> fieldAccesses: const <int>[]}) async {
+       List<int> fieldAccesses: const <int>[],
+       startIndex: 0,
+       endIndex: -1}) async {
     frameNumber ??= debugState.actualCurrentFrameNumber;
     await sendCommand(
-        new ProcessInstanceStructure(frameNumber, localSlot, fieldAccesses));
+        new ProcessInstanceStructure(
+            frameNumber,
+            localSlot, fieldAccesses,
+            startIndex,
+            endIndex));
     return await readStructuredObject();
   }
 

@@ -214,8 +214,8 @@ class Session {
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);
   void SendInstanceStructure(Instance* instance);
-  void SendArrayStructure(Array* array);
-  void SendStructure(Object* object);
+  void SendArrayStructure(Array* array, int startIndex, int endIndex);
+  void SendStructure(Object* object, int startIndex, int endIndex);
   void SendProgramInfo(ClassOffsetsType* class_offsets,
       FunctionOffsetsType* function_offsets);
   void SendError(Connection::ErrorCode errorCode);

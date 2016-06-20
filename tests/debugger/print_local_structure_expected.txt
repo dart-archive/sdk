@@ -3,8 +3,8 @@ Starting session. Type 'help' for a list of commands.
 > b breakHere
 ### set breakpoint id: '0' method: 'breakHere' bytecode index: '0'
 > r
-tests/debugger/print_local_structure_test.dart:32:1
-32   breakHere() { }
+tests/debugger/print_local_structure_test.dart:73:1
+73   breakHere() { }
 > f 1
 > p *a
 Instance of 'A' {
@@ -23,10 +23,6 @@ Instance of 'A' {
 42
 > p notExisting
 ### could not access 'notExisting': No local 'notExisting' in scope.
-> p a.shadowMe
-42
-> p a.notExisting
-### could not access 'a.notExisting': 'a' has type A that does not have a field named 'notExisting'.
 > p a.s
 Instance of 'S3'
 > p *a.s
@@ -38,15 +34,19 @@ Instance of 'S3' {
   S2.d: 42.42
   S3.shadowMe: 0
 }
->  p a.s.shadowMe
+> p a.s.shadowMe
 0
 > p a.s.shadowMe.a
-### could not access 'a.s.shadowMe.a': 'a.s.shadowMe' is a primitive value '0' and cannot not be accessed field at '.a'
+### could not access 'a.s.shadowMe.a': 'a.s.shadowMe' is a primitive value '0' and cannot not be accessed field at '.a'.
+> p a.notExisting
+### could not access 'a.notExisting': 'a' has type A that does not have a field named 'notExisting'.
+> p a.shadowMe
+42
 > p *list._list
-Array with length 3 [
-  0 = null
+Array of length 3 [
+  0 = 1
   1 = Instance of 'A'
-  2 = null
+  2 = 2
 ]
 > p *list._list[1]
 Instance of 'A' {
@@ -61,8 +61,85 @@ Instance of 'A' {
   A.f: false
   A.s: Instance of 'S3'
 }
-> p *list._list.k
-### could not access 'list._list.k': 'list._list' is an array with length 3. It can only be indexed with the '[index]' operation.
+> p *bigList._list
+Array of length 200 [
+  0 = 0
+  1 = 1
+  2 = 4
+  3 = 9
+  4 = 16
+  5 = 25
+  6 = 36
+  7 = 49
+  8 = 64
+  9 = 81
+  10 = 100
+  11 = 121
+  12 = 144
+  13 = 169
+  14 = 196
+  15 = 225
+  16 = 256
+  17 = 289
+  18 = 324
+  19 = 361
+  ... 180 item(s) not shown
+]
+> p *list._list[1:2]
+Array of length 3 [
+  ... 1 item(s) not shown
+  1 = Instance of 'A'
+  ... 1 item(s) not shown
+]
+> p *list._list[1:-1]
+Array of length 3 [
+  ... 1 item(s) not shown
+  1 = Instance of 'A'
+  2 = 2
+]
+> p *list._list[0:2]
+Array of length 3 [
+  0 = 1
+  1 = Instance of 'A'
+  ... 1 item(s) not shown
+]
+> p *list._list[1:2]
+Array of length 3 [
+  ... 1 item(s) not shown
+  1 = Instance of 'A'
+  ... 1 item(s) not shown
+]
+> p *list._list[1:1]
+Array of length 3 [
+  ... 3 item(s) not shown
+]
+> p *bigList._list[100:102]
+Array of length 200 [
+  ... 100 item(s) not shown
+  100 = 10000
+  101 = 10201
+  ... 98 item(s) not shown
+]
+> p *list._list[1:2][2]
+Only the last operation can be a slice.
+list._list[1:2][2]
+             ^
+> p *list._list[1:2].a
+Only the last operation can be a slice.
+list._list[1:2].a
+             ^
+> p *list._list[-1:2]
+### could not access 'list._list[-1:2]': In [-1:2], the start index must be positive.
+> p *list._list[1:55]
+### could not access 'list._list[1:55]': In [1:55] the end-index cannot be higher than the array length (3).
+> p *list._list[3:2]
+### could not access 'list._list[3:2]': In [3:2] the start-index is bigger than the end-index.
+> p *list[3:2]
+### could not access 'list[3:2]': 'list' is an instance with type _FixedList. It can only be accessed with a field name.
+> p *list._list.[-1]
+A field access must start with an identifier. Found '['.
+list._list.[-1]
+           ^
 > p *list._list.[-1]
 A field access must start with an identifier. Found '['.
 list._list.[-1]
@@ -71,26 +148,38 @@ list._list.[-1]
 A field access must start with an identifier. Found 'number'.
 list._list.4
            ^
+> p *list._list.4
+A field access must start with an identifier. Found 'number'.
+list._list.4
+           ^
+> p a[x]
+An indexing '[' must be followed by a number. Found 'identifier'.
+a[x]
+  ^
+> p *list._list.k
+### could not access 'list._list.k': 'list._list' is an array with length 3. It can only be indexed with the '[index]' or [start:end] operation.
+> p *list._list.k
+### could not access 'list._list.k': 'list._list' is an array with length 3. It can only be indexed with the '[index]' or [start:end] operation.
 > p [4]
 The expression to print must start with an identifier. Found '['.
 [4]
 ^
-> p a[x]
-An indexing '[' must be followed by a number.  Found 'identifier'.
-a[x]
-  ^
+> p %%
+The expression to print must start with an identifier. Found 'unrecognized'.
+%%
+^
+> p [1:2]
+The expression to print must start with an identifier. Found '['.
+[1:2]
+^
 > p a[1e
-Missing ']' Found 'identifier'.
+Missing ']' or ':' Found 'identifier'.
 a[1e
    ^
 > p a.x[1]1
 Expected '.field' or '[index]'  Found 'number'.
 a.x[1]1
       ^
-> p %%
-The expression to print must start with an identifier. Found 'unrecognized'.
-%%
-^
 > p a.
 A field access must start with an identifier. Found 'end of text'.
 a.

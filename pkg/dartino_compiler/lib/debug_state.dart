@@ -39,7 +39,6 @@ class RemoteInstance extends RemoteObject {
 }
 
 /// A representation of a remote instance.
-// TODO(sigurdm): Send partial arrays when they are very big. See issue #536.
 class RemoteArray extends RemoteObject {
   /// An [Array] describing the remote instance.
   final ArrayStructure array;

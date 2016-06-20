@@ -1060,19 +1060,33 @@ void Session::SendInstanceStructure(Instance* instance) {
   }
 }
 
-void Session::SendArrayStructure(Array* array) {
+void Session::SendArrayStructure(Array* array, int startIndex, int endIndex) {
   int length = array->length();
+  if (endIndex == -1 || endIndex > length) {
+    endIndex = length;
+  }
+  // This is not strictly necessary, but makes the resulting ArrayStructure
+  // neater.
+  if (endIndex == startIndex) {
+    endIndex = startIndex = 0;
+  }
+  if (startIndex < 0 || startIndex > endIndex) {
+    SendError(Connection::kInvalidInstanceAccess);
+    return;
+  }
   WriteBuffer buffer;
   buffer.WriteInt(length);
+  buffer.WriteInt(startIndex);
+  buffer.WriteInt(endIndex);
   connection_->Send(Connection::kArrayStructure, buffer);
-  for (int i = 0; i < length; i++) {
+  for (int i = startIndex; i < endIndex; i++) {
     SendDartValue(array->get(i));
   }
 }
 
-void Session::SendStructure(Object* object) {
+void Session::SendStructure(Object* object, int startIndex, int endIndex) {
   if (object->IsArray()) {
-    SendArrayStructure(Array::cast(object));
+    SendArrayStructure(Array::cast(object), startIndex, endIndex);
   } else if (object->IsInstance()) {
     SendInstanceStructure(Instance::cast(object));
   } else {
@@ -1369,7 +1383,7 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
 
     case Connection::kProcessUncaughtExceptionRequest: {
       Object* exception = process()->exception();
-      session()->SendStructure(exception);
+      session()->SendStructure(exception, 0, -1);
       break;
     }
 
@@ -1412,7 +1426,9 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
         }
       }
       if (opcode == Connection::kProcessInstanceStructure) {
-        session()->SendStructure(object);
+        int startIndex = connection()->ReadInt();
+        int endIndex = connection()->ReadInt();
+        session()->SendStructure(object, startIndex, endIndex);
       } else {
         session()->SendDartValue(object);
       }

@@ -51,8 +51,13 @@ abstract class VmCommand {
         int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
         return new InstanceStructure(classId, fields);
       case VmCommandCode.ArrayStructure:
-        int length = CommandBuffer.readInt32FromBuffer(buffer, 0);
-        return new ArrayStructure(length);
+        int offset = 0;
+        int length = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int startIndex = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int endIndex = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        return new ArrayStructure(length, startIndex, endIndex);
       case VmCommandCode.Instance:
         int classId = translateClass(
             CommandBuffer.readInt64FromBuffer(buffer, 0));
@@ -1218,8 +1223,25 @@ class ProcessInstanceStructure extends VmCommand {
   final int slot;
   final List<int> fieldAccesses;
 
-  const ProcessInstanceStructure(this.frame, this.slot, this.fieldAccesses)
-      : super(VmCommandCode.ProcessInstanceStructure);
+  /// If the requested object is an array [startIndex] and [endIndex] limit the
+  /// number of returned elements.
+  /// They are ignored if the requested object is an array.
+  ///
+  /// `endIndex = -1` corresponds to requesting up to the end of the array.
+  ///
+  /// Requests for elements beyond the end of the array are cut of at the end.
+  ///
+  /// Request for elements at negative indices is an error.
+  final int startIndex;
+  final int endIndex;
+
+  const ProcessInstanceStructure(
+      this.frame,
+      this.slot,
+      this.fieldAccesses,
+      this.startIndex,
+      this.endIndex)
+    : super(VmCommandCode.ProcessInstanceStructure);
 
   void internalAddTo(
       Sink<List<int>> sink,
@@ -1232,6 +1254,9 @@ class ProcessInstanceStructure extends VmCommand {
     for (int fieldAccess in fieldAccesses) {
       buffer.addUint32(fieldAccess);
     }
+    buffer
+      ..addUint32(startIndex)
+      ..addUint32(endIndex);
     buffer.sendOn(sink, code);
   }
 
@@ -1584,7 +1609,10 @@ class InstanceStructure extends VmCommand {
 
 class ArrayStructure extends VmCommand {
   final int length;
-  const ArrayStructure(this.length)
+  final int startIndex;
+  final int endIndex;
+
+  const ArrayStructure(this.length, this.startIndex, this.endIndex)
       : super(VmCommandCode.ArrayStructure);
 
   void internalAddTo(
