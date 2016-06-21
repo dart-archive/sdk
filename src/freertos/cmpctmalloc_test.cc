@@ -45,8 +45,7 @@ TEST_CASE(CmpctMallocTest) {
   EXPECT_EQ(1, arena1_bitmap);
 
   cmpct_test_buckets();
-  // TODO(534): This test crashes.
-  // cmpct_test_get_back_newly_freed();
+  cmpct_test_get_back_newly_freed();
   cmpct_test_return_to_os();
   cmpct_test_trim();
   cmpct_dump();
