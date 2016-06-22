@@ -22,6 +22,12 @@ void DeviceManagerRegisterButtonDevice(char* name, ButtonDriver* driver) {
   device_manager->RegisterButtonDevice(name, driver);
 }
 
+void DeviceManagerRegisterI2CDevice(char* name, I2CDriver* driver) {
+  dartino::DeviceManager* device_manager =
+      dartino::DeviceManager::GetDeviceManager();
+  device_manager->RegisterI2CDevice(name, driver);
+}
+
 void DeviceManagerSetFlags(uintptr_t device_id, uint32_t flags) {
   dartino::DeviceManager* device_manager =
       dartino::DeviceManager::GetDeviceManager();

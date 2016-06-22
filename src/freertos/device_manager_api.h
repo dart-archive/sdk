@@ -52,11 +52,31 @@ struct ButtonDriver {
 
 typedef struct ButtonDriver ButtonDriver;
 
+// Definition of an I2C driver.
+struct I2CDriver {
+  uintptr_t context;
+  uintptr_t device_id;
+  void (*Initialize)(struct I2CDriver* driver);
+  void (*DeInitialize)(struct I2CDriver* driver);
+  int (*RequestReadRegisters)(struct I2CDriver* driver,
+                              uint16_t address, uint16_t reg,
+                              uint8_t* buffer, size_t count);
+  int (*RequestWriteRegisters)(struct I2CDriver* driver,
+                               uint16_t address, uint16_t reg,
+                               uint8_t* buffer, size_t count);
+  int (*AcknowledgeResult)(struct I2CDriver* driver);
+};
+
+typedef struct I2CDriver I2CDriver;
+
 // Register a UART driver with the device manager.
 void DeviceManagerRegisterUartDevice(char* name, UartDriver* driver);
 
 // Register a button driver with the device manager.
 void DeviceManagerRegisterButtonDevice(char* name, ButtonDriver* driver);
+
+// Register a I2C driver with the device manager.
+void DeviceManagerRegisterI2CDevice(char* name, I2CDriver* driver);
 
 // Set state flags for a given driver.
 void DeviceManagerSetFlags(uintptr_t device_id, uint32_t flags);

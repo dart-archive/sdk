@@ -1,0 +1,109 @@
+// Copyright (c) 2016, the Dartino project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
+
+library stm32.i2c;
+
+import 'dart:dartino';
+import 'dart:dartino.ffi';
+import 'dart:dartino.os';
+import 'dart:typed_data';
+
+import 'package:i2c/i2c.dart';
+
+final _i2c_open = ForeignLibrary.main.lookup('i2c_open');
+final _i2c_request_read_register =
+    ForeignLibrary.main.lookup('i2c_request_read_register');
+final _i2c_request_write_register =
+    ForeignLibrary.main.lookup('i2c_request_write_register');
+final _i2c_acknowledge_result =
+    ForeignLibrary.main.lookup('i2c_acknowledge_result');
+
+/// I2C bus on ST device.
+class I2CBusSTM implements I2CBus {
+  final String _deviceName;
+  final int _handle;
+  final Channel _channel = new Channel();
+  Port _port;
+  final Uint8List oneByteBuffer = new Uint8List(1);
+
+  // Device manager event flags.
+  static const int _RESULT_READY_FLAG = 1 << 0;
+  static const int _RESULT_ERROR_FLAG = 1 << 1;
+
+  I2CBusSTM._(this._deviceName, this._handle) {
+    _port = new Port(_channel);
+    print(_i2c_acknowledge_result);
+  }
+
+  factory I2CBusSTM(String deviceName) {
+    int handle;
+    var foreignDeviceName = new ForeignMemory.fromStringAsUTF8(deviceName);
+    try {
+      handle = _i2c_open.icall$1(foreignDeviceName);
+      if (handle == -1) {
+        throw new I2CException("Cannot open I2C bus");
+      }
+    } finally {
+      foreignDeviceName.free();
+    }
+    return new I2CBusSTM._(deviceName, handle);
+  }
+
+  /// Read one byte from register [register] on slave device [slave].
+  int readByte(int slave, int register) {
+    int rc = _readBytes(slave, register, oneByteBuffer);
+    if (rc == 1) {
+      return oneByteBuffer[0];
+    } else {
+      throw new I2CException("I2C error", rc);
+    }
+  }
+
+  /// Wite one byte to register [register] on slave device [slave].
+  void writeByte(int slave, int register, int value) {
+    oneByteBuffer[0] = value;
+    int rc = _writeBytes(slave, register, oneByteBuffer);
+    if (rc != 1) {
+      throw new I2CException("I2C error", rc);
+    }
+  }
+
+  /// Read bytes from register [register] on slave device
+  /// [slave]. Returns the number of bytes read. Returns -1 on error.
+  int _readBytes(int slave, int register, Uint8List buffer) {
+    var foreignBuffer = _getForeign(buffer.buffer);
+    var rc = _i2c_request_read_register.icall$5(
+        _handle, slave, register, foreignBuffer, buffer.length);
+    if (rc != 0) return rc;
+
+    eventHandler.registerPortForNextEvent(
+        _handle, _port, _RESULT_READY_FLAG | _RESULT_ERROR_FLAG);
+    _channel.receive();
+    rc = _i2c_acknowledge_result.icall$1(_handle);
+    return rc == 0 ? buffer.length : rc;
+  }
+
+  /// Write bytes to register [register] on slave device
+  /// [slave]. Returns the number of bytes written. Returns -1 on error.
+  int _writeBytes(int slave, int register, Uint8List buffer) {
+    var foreignBuffer = _getForeign(buffer.buffer);
+    var rc = _i2c_request_write_register.icall$5(
+        _handle, slave, register, foreignBuffer, buffer.length);
+    if (rc != 0) return rc;
+
+    eventHandler.registerPortForNextEvent(
+        _handle, _port, _RESULT_READY_FLAG | _RESULT_ERROR_FLAG);
+    _channel.receive();
+    rc = _i2c_acknowledge_result.icall$1(_handle);
+    return rc == 0 ? buffer.length : rc;
+  }
+
+  ForeignMemory _getForeign(ByteBuffer buffer) {
+    var b = buffer;
+    return b.getForeign();
+  }
+
+  toString() => 'I2CBusSTM $_deviceName';
+}
+

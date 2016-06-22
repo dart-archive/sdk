@@ -62,7 +62,7 @@ class I2CBusAddress {
   const I2CBusAddress(this.bus);
 
   /// Open the I2C bus addressed by this address.
-  I2CBus open() => new I2CBus(this);
+  I2CBus open() => new I2CBusLinux(this);
 }
 
 /// I2C device connected to a I2C bus.
@@ -87,9 +87,18 @@ class I2CDevice {
 }
 
 /// I2C bus connection.
+abstract class I2CBus {
+  /// Read one byte from register [register] on slave device [slave].
+  int readByte(int slave, int register);
+
+  /// Write one byte to register [register] on slave device [slave].
+  void writeByte(int slave, int register, int value);
+}
+
+/// Linux I2C bus connection.
 ///
 /// Each I2C bus is identified by an [I2CBusAddress].
-class I2CBus {
+class I2CBusLinux implements I2CBus {
   // From /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h.
   static const _oRDWR = 02;  // O_RDWR
 
@@ -97,12 +106,12 @@ class I2CBus {
   final int bus;
   final ProcessObject _busObject;
 
-  const I2CBus._(this.bus, this._busObject);
+  const I2CBusLinux._(this.bus, this._busObject);
 
-  factory I2CBus(I2CBusAddress address) {
+  factory I2CBusLinux(I2CBusAddress address) {
     var fd = _openDevice(address.bus);
     var busObject = new ProcessObject((fd) => new _I2CBusImpl(fd), fd);
-    return new I2CBus._(address.bus, busObject);
+    return new I2CBusLinux._(address.bus, busObject);
   }
 
   static int _openDevice(int bus) {
@@ -129,12 +138,10 @@ class I2CBus {
 
   int supportedFunctions() => _busObject.run((bus) => bus.supportedFunctions());
 
-  /// Read one byte from register [register] on slave device [slave].
   int readByte(int slave, int register) {
     return _busObject.run((bus) => bus.readByte(slave, register));
   }
 
-  /// Wite one byte to register [register] on slave device [slave].
   void writeByte(int slave, int register, int value) {
     return _busObject.run((bus) => bus.writeByte(slave, register, value));
   }

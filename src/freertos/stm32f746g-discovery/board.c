@@ -25,11 +25,15 @@
 #include "mbedtls/certs.h"
 #include "mbedtls/x509_crt.h"
 
+extern I2C_HandleTypeDef hi2c1;
+
 static UartDriver uart1;
 static ButtonDriver button1;
+static I2CDriver i2c1;
 
 void FillUartDriver(UartDriver* driver);
 void FillButtonDriver(ButtonDriver* driver);
+void FillI2CDriver(I2CDriver* driver);
 
 // Definition of functions in generated/Src/mx_main.c.
 void SystemClock_Config(void);
@@ -280,6 +284,10 @@ extern int InitializeBoard() {
   // Register button driver for the user button.
   FillButtonDriver(&button1);
   DeviceManagerRegisterButtonDevice("button1", &button1);
+
+  // Register I2C driver for I2C1.
+  FillI2CDriver(&i2c1);
+  DeviceManagerRegisterI2CDevice("i2c1", &i2c1);
 
   // Initialize the LCD.
   size_t fb_bytes = (RK043FN48H_WIDTH * RK043FN48H_HEIGHT * 4);

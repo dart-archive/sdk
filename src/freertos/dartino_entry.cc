@@ -36,6 +36,10 @@ dartino::ButtonDevice* GetButton(int handle) {
   return dartino::DeviceManager::GetDeviceManager()->GetButton(handle);
 }
 
+dartino::I2CDevice* GetI2C(int handle) {
+  return dartino::DeviceManager::GetDeviceManager()->GetI2C(handle);
+}
+
 extern "C" int UartOpen() {
   return uart_handle;
 }
@@ -62,6 +66,29 @@ extern "C" void ButtonNotifyRead(int handle) {
   button->NotifyRead();
 }
 
+extern "C" int I2COpen(char* name) {
+  return dartino::DeviceManager::GetDeviceManager()->OpenI2C(name);
+}
+
+extern "C" int I2CRequestReadRegister(int handle,
+                                      uint16_t address, uint16_t reg,
+                                      uint8_t* buffer, size_t count) {
+  dartino::I2CDevice *i2c = GetI2C(handle);
+  return i2c->RequestReadRegisters(address, reg, buffer, count);
+}
+
+extern "C" int I2CRequestWriteRegister(int handle,
+                                       uint16_t address, uint16_t reg,
+                                       uint8_t* buffer, size_t count) {
+  dartino::I2CDevice *i2c = GetI2C(handle);
+  return i2c->RequestWriteRegisters(address, reg, buffer, count);
+}
+
+extern "C" int I2CAcknowledgeResult(int handle) {
+  dartino::I2CDevice *i2c = GetI2C(handle);
+  return i2c->AcknowledgeResult();
+}
+
 // Implementation of write used from syscalls.c to redirect all printf
 // calls to the print interceptors.
 extern "C" int Write(int file, char *ptr, int len) {
@@ -81,6 +108,12 @@ DARTINO_EXPORT_STATIC_RENAME(uart_write, UartWrite)
 DARTINO_EXPORT_STATIC_RENAME(uart_get_error, UartGetError)
 DARTINO_EXPORT_STATIC_RENAME(button_open, ButtonOpen)
 DARTINO_EXPORT_STATIC_RENAME(button_notify_read, ButtonNotifyRead)
+
+DARTINO_EXPORT_STATIC_RENAME(i2c_open, I2COpen)
+DARTINO_EXPORT_STATIC_RENAME(i2c_request_read_register, I2CRequestReadRegister)
+DARTINO_EXPORT_STATIC_RENAME(i2c_request_write_register,
+                             I2CRequestWriteRegister)
+DARTINO_EXPORT_STATIC_RENAME(i2c_acknowledge_result, I2CAcknowledgeResult)
 
 static int RunSession(dartino::Connection* connection, DartinoProgram program) {
   dartino::Session session = dartino::Session(connection);

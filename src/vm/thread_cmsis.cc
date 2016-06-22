@@ -16,7 +16,7 @@
 namespace dartino {
 
 static const int kNumberOfDartinoThreads = 8;
-static const int kDartinoStackSize = 2048;
+static const int kDartinoStackSize = 4096;
 static const int kDartinoStackSizeInWords = kDartinoStackSize / kPointerSize;
 
 static osThreadDef_t cmsis_thread_pool[kNumberOfDartinoThreads];

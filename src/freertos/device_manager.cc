@@ -125,6 +125,11 @@ void DeviceManager::RegisterButtonDevice(const char* name,
   driver->device_id = RegisterDevice(device);
 }
 
+void DeviceManager::RegisterI2CDevice(const char* name, I2CDriver* driver) {
+  I2CDevice* device = new I2CDevice(name, driver);
+  driver->device_id = RegisterDevice(device);
+}
+
 Device* DeviceManager::LookupDevice(const char* name, Device::Type type) {
   // Lookup the named device.
   // No locking - only called by methods which already lock.
@@ -158,6 +163,19 @@ int DeviceManager::OpenButton(const char* name) {
 
   ButtonDevice* button_device = ButtonDevice::cast(device);
   button_device->Initialize();
+  device->initialized_ = true;
+
+  return device->device_id();
+}
+
+int DeviceManager::OpenI2C(const char* name) {
+  ScopedLock locker(mutex_);
+  Device* device = LookupDevice(name, Device::I2C_DEVICE);
+  if (device == NULL) return -1;
+  if (device->initialized_) return -1;
+
+  I2CDevice* i2c_device = I2CDevice::cast(device);
+  i2c_device->Initialize();
   device->initialized_ = true;
 
   return device->device_id();
@@ -211,6 +229,11 @@ UartDevice* DeviceManager::GetUart(int handle) {
 ButtonDevice* DeviceManager::GetButton(int handle) {
   ScopedLock locker(mutex_);
   return ButtonDevice::cast(devices_[handle]);
+}
+
+I2CDevice* DeviceManager::GetI2C(int handle) {
+  ScopedLock locker(mutex_);
+  return I2CDevice::cast(devices_[handle]);
 }
 
 int DeviceManager::SendMessage(int handle) {

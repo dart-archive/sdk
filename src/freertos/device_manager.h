@@ -27,8 +27,9 @@ class Device {
   enum Type {
     UART_DEVICE = 0,
     BUTTON_DEVICE = 1,
+    I2C_DEVICE = 2,
     // TODO(karlklose): IO endpoints are not really devices.
-    SOCKET_DEVICE = 2,
+    SOCKET_DEVICE = 3,
   };
 
   Device(const char* name, Type type) :
@@ -158,6 +159,38 @@ class ButtonDevice: public Device {
   ButtonDriver* driver_;
 };
 
+class I2CDevice: public Device {
+ public:
+  I2CDevice(const char* name, I2CDriver* driver)
+      : Device(name, I2C_DEVICE), driver_(driver) {}
+
+  void Initialize() {
+    driver_->Initialize(driver_);
+  }
+
+  int RequestReadRegisters(uint16_t address, uint16_t reg,
+                           uint8_t* buffer, size_t count) {
+    return driver_->RequestReadRegisters(driver_, address, reg, buffer, count);
+  }
+
+  int RequestWriteRegisters(uint16_t address, uint16_t reg,
+                            uint8_t* buffer, size_t count) {
+    return driver_->RequestWriteRegisters(driver_, address, reg, buffer, count);
+  }
+
+  int AcknowledgeResult() {
+    return driver_->AcknowledgeResult(driver_);
+  }
+
+  static I2CDevice* cast(Device* device) {
+    ASSERT(device->type() == I2C_DEVICE);
+    return reinterpret_cast<I2CDevice*>(device);
+  }
+
+ private:
+  I2CDriver* driver_;
+};
+
 class DeviceManager {
  public:
   static DeviceManager *GetDeviceManager();
@@ -173,8 +206,12 @@ class DeviceManager {
   // Register a button driver with the given device name.
   void RegisterButtonDevice(const char* name, ButtonDriver* driver);
 
+  // Register a I2C driver with the given device name.
+  void RegisterI2CDevice(const char* name, I2CDriver* driver);
+
   int OpenUart(const char* name);
   int OpenButton(const char* name);
+  int OpenI2C(const char* name);
 
   int CreateSocket();
   void RemoveSocket(int handle);
@@ -185,6 +222,7 @@ class DeviceManager {
   void RemoveDevice(Device* device);
   UartDevice* GetUart(int handle);
   ButtonDevice* GetButton(int handle);
+  I2CDevice* GetI2C(int handle);
 
   osMessageQId GetMailQueue() {
     return mail_queue_;
