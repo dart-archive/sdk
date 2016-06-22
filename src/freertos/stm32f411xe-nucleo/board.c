@@ -16,6 +16,10 @@
 
 UART_HandleTypeDef huart2;
 
+static UartDriver uart2;
+
+void FillUartDriver(UartDriver* driver);
+
 /**
   * @brief  System Clock Configuration
   *         The system Clock is configured as follow :
@@ -134,10 +138,6 @@ void SysTick_Handler(void) {
   osSystickHandler();
 }
 
-void USART2_IRQHandler(void) {
-  HAL_UART_IRQHandler(&huart2);
-}
-
 extern int InitializeBoard() {
   // Reset of all peripherals, and initialize the Flash interface and
   // the Systick.
@@ -150,9 +150,11 @@ extern int InitializeBoard() {
   // Initialize all configured peripherals.
   UART2Init();
 
-  // TODO(sgjesse): Remove this test output when UART drive is added.
-  char *hello = "Hello from STM32F411RE Nucleo!\r\n";
-  HAL_UART_Transmit(&huart2, (uint8_t*)hello, 32, 10000);
+  // Register UART driver for UART2.
+  // TODO(542): Registered as "uart1" for now, so it's hooked up to the
+  // console. Should be registered as "uart2".
+  FillUartDriver(&uart2);
+  DeviceManagerRegisterUartDevice("uart1", &uart2);
 
   return 0;
 }

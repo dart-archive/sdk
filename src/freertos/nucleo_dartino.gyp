@@ -118,6 +118,10 @@
         # Board initialization.
         '<(source_path)/board.c',
 
+        # Device drivers.
+        '<(source_path)/uart_driver.cc',
+        '<(source_path)/uart_driver.h',
+
         # Board initialization and interrupt service routines (template files).
         '<(template_path)/Src/system_stm32f4xx.c',
         '<(template_path)/SW4STM32/startup_stm32f411xe.s',

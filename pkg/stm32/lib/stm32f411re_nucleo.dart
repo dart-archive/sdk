@@ -6,7 +6,7 @@ library stm32.stm32f411re_nucleo;
 
 import 'package:gpio/gpio.dart';
 import 'package:stm32/gpio.dart';
-//import 'package:stm32/uart.dart';
+import 'package:stm32/uart.dart';
 import 'package:stm32/src/constants.dart';
 
 class STM32F411RENucleo {
@@ -24,6 +24,7 @@ class STM32F411RENucleo {
   static const Pin A5 = STM32Pin.PC0;
 
   STM32Gpio _gpio;
+  Uart _uart;
 
   STM32F411RENucleo();
 
@@ -32,5 +33,12 @@ class STM32F411RENucleo {
       _gpio = new STM32Gpio();
     }
     return _gpio;
+  }
+
+  Uart get uart {
+    if (_uart == null) {
+      _uart = new Uart();
+    }
+    return _uart;
   }
 }
