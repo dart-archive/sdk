@@ -565,6 +565,7 @@
           'DARTINO32',
           'DARTINO_TARGET_ARM',
           'DARTINO_THUMB_ONLY',
+          'DARTINO_SMALL',
         ],
 
         'target_conditions': [
