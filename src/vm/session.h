@@ -27,6 +27,8 @@ class PointerVisitor;
 class PostponedChange;
 class SessionState;
 
+typedef Connection* (*ConnectionListenerCallback)(void* data);
+
 class Session {
   // TODO(sigurdm): Move helper methods to session states and remove these.
   friend class SessionState;
@@ -39,19 +41,30 @@ class Session {
   friend class TerminatingState;
 
  public:
-  explicit Session(Connection* connection);
+  // If [program] is `NULL` a new program will be
+  // created that will be constructed via this session.
+  //
+  // [connection_listener_callback] is invoked with [listener_data] to obtain a
+  // connection.
+  //
+  // If [wait_for_connection] the program will not spawn before it
+  // gets instructed from the connection. Otherwise it will run immediately.
+  Session(
+      Program* program,
+      ConnectionListenerCallback connection_listener_callback,
+      void* listener_data,
+      bool wait_for_connection_);
   virtual ~Session();
 
   Program* program() const { return program_; }
 
   int FreshProcessId() { return next_process_id_++; }
 
-  // Initializes with [program]. If [program] is `NULL` a new program will be
-  // created that will be constructed via this session.
-  void Initialize(Program *program);
-
   void StartMessageProcessingThread();
+
   void JoinMessageProcessingThread();
+
+  void StartSession();
   void ProcessMessages();
 
   void IteratePointers(PointerVisitor* visitor);
@@ -172,7 +185,9 @@ class Session {
 
   ThreadIdentifier message_handling_thread_;
 
-  Connection* const connection_;
+  bool wait_for_connection_;
+
+  Connection* connection_;
   bool got_handshake_;
   Program* program_;
   SessionState* state_;
@@ -199,6 +214,9 @@ class Session {
   Monitor* main_thread_monitor_;
   MainThreadResumeKind main_thread_resume_kind_;
 
+  ConnectionListenerCallback connection_listener_callback_;
+  void* listener_data_;
+
   void IterateChangesPointers(PointerVisitor* visitor);
 
   void HandShake();
@@ -210,6 +228,8 @@ class Session {
   void RequestExecutionPause();
   void PauseExecution();
   void ResumeExecution();
+
+  SessionState* ProcessSpawnForMain(List<List<uint8_t>> arguments);
 
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);

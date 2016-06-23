@@ -16,7 +16,6 @@
 #include "src/shared/connection.h"
 #include "src/shared/utils.h"
 #include "src/vm/program_info_block.h"
-#include "src/vm/session.h"
 
 extern "C" const char *dartino_embedder_options[];
 
@@ -108,22 +107,11 @@ DARTINO_EXPORT_STATIC_RENAME(uart_write, UartWrite)
 DARTINO_EXPORT_STATIC_RENAME(uart_get_error, UartGetError)
 DARTINO_EXPORT_STATIC_RENAME(button_open, ButtonOpen)
 DARTINO_EXPORT_STATIC_RENAME(button_notify_read, ButtonNotifyRead)
-
 DARTINO_EXPORT_STATIC_RENAME(i2c_open, I2COpen)
 DARTINO_EXPORT_STATIC_RENAME(i2c_request_read_register, I2CRequestReadRegister)
 DARTINO_EXPORT_STATIC_RENAME(i2c_request_write_register,
                              I2CRequestWriteRegister)
 DARTINO_EXPORT_STATIC_RENAME(i2c_acknowledge_result, I2CAcknowledgeResult)
-
-static int RunSession(dartino::Connection* connection, DartinoProgram program) {
-  dartino::Session session = dartino::Session(connection);
-  session.Initialize(reinterpret_cast<dartino::Program*>(program));
-  session.StartMessageProcessingThread();
-    dartino::Print::Out("Listening for connection.\n");
-  int result = session.ProcessRun();
-    dartino::Print::Out("Ran program %d\n", result);
-  return result;
-}
 
 static void UartPrintInterceptor(const char* message, int out, void* data) {
   int len = strlen(message);
@@ -146,9 +134,14 @@ static bool HasOption(const char* option) {
   return false;
 }
 
+static DartinoConnection UartConnnectionListenerCallback(void *data) {
+  return dartino::UartConnection::Connect(uart_handle);
+}
+
 // Run dartino on the linked in program heap.
 void StartDartino(void const * argument) {
   bool enable_debugger = HasOption("enable_debugger");
+  bool wait_for_connection = HasOption("wait_for_connection");
   dartino::Print::Out("Setup Dartino\n");
   DartinoSetup();
   char* heap = &program_start;
@@ -158,10 +151,13 @@ void StartDartino(void const * argument) {
   DartinoProgram program = DartinoLoadProgramFromFlash(heap, heap_size);
 
   if (enable_debugger) {
-    dartino::Print::Out("Waiting for debug-connection\n");
-    dartino::Connection* connection =
-        dartino::UartConnection::Connect(uart_handle);
-    RunSession(connection, program);
+    dartino::Print::Out("Debugging enabled - listening for connection.\n");
+    int result = DartinoRunWithDebuggerConnection(
+        program,
+        UartConnnectionListenerCallback,
+        NULL,
+        wait_for_connection);
+    dartino::Print::Out("Ran program, exit code: %d\n", result);
   } else {
     dartino::Print::Out("Run Dartino program\n");
     DartinoRunMain(program, 0, NULL);

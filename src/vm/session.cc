@@ -245,7 +245,6 @@ class SpawnedState : public SessionState {
   }
 
   void ActivateState(SessionState* previous) {
-    ASSERT(previous->IsConnected());
     SessionState::ActivateState(previous);
     if (initial_main_process_ == NULL) return;
     // If this is the initial spawn, store the main process on session.
@@ -629,10 +628,8 @@ SessionState* SessionState::ProcessMessage(Connection::Opcode opcode) {
         uint8* bytes = connection()->ReadBytes(&length);
         arguments[i] = List<uint8>(bytes, length);
       }
-      if (!program()->was_loaded_from_snapshot()) {
-        ProgramFolder::FoldProgramByDefault(program());
-      }
-      return new SpawnedState(program()->ProcessSpawnForMain(arguments));
+
+      return session()->ProcessSpawnForMain(arguments);
     }
 
     case Connection::kDebugging: {
@@ -927,31 +924,34 @@ SessionState* SessionState::ProcessMessage(Connection::Opcode opcode) {
 
 int PostponedChange::number_of_changes_ = 0;
 
-Session::Session(Connection* connection)
-    : connection_(connection),
-      got_handshake_(false),
-      program_(NULL),
-      state_(NULL),
-      live_editing_(false),
-      debugging_(false),
-      main_process_(NULL),
-      next_process_id_(0),
-      method_map_id_(-1),
-      class_map_id_(-1),
-      fibers_map_id_(-1),
-      stack_(0),
-      first_change_(NULL),
-      last_change_(NULL),
-      has_program_update_error_(false),
-      program_update_error_(NULL),
-      main_thread_monitor_(Platform::CreateMonitor()),
-      main_thread_resume_kind_(kUnknown) {
-#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
-  ConnectionPrintInterceptor* interceptor =
-      new ConnectionPrintInterceptor(connection_);
-  Print::RegisterPrintInterceptor(interceptor);
-#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
-}
+Session::Session(
+    Program* program,
+    ConnectionListenerCallback connection_listener_callback,
+    void* listener_data,
+    bool wait_for_connection)
+  : wait_for_connection_(wait_for_connection),
+    connection_(NULL),
+    got_handshake_(false),
+    program_(program),
+    state_(new InitialState(this)),
+    live_editing_(false),
+    debugging_(false),
+    main_process_(NULL),
+    next_process_id_(0),
+    method_map_id_(-1),
+    class_map_id_(-1),
+    fibers_map_id_(-1),
+    stack_(0),
+    first_change_(NULL),
+    last_change_(NULL),
+    has_program_update_error_(false),
+    program_update_error_(NULL),
+    main_thread_monitor_(Platform::CreateMonitor()),
+    main_thread_resume_kind_(kUnknown),
+    connection_listener_callback_(connection_listener_callback),
+    listener_data_(listener_data) {
+      program_->AddSession(this);
+    }
 
 Session::~Session() {
 #ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
@@ -962,18 +962,14 @@ Session::~Session() {
   maps_.Delete();
   delete main_thread_monitor_;
   delete state_;
-  delete connection_;
-}
-
-void Session::Initialize(Program *program) {
-  state_ = new InitialState(this);
-  program_ = program;
-  program_->AddSession(this);
+  if (connection_ != NULL) {
+    delete connection_;
+  }
 }
 
 static void* MessageProcessingThread(void* data) {
   Session* session = reinterpret_cast<Session*>(data);
-  session->ProcessMessages();
+  session->StartSession();
   return NULL;
 }
 
@@ -1165,8 +1161,23 @@ void Session::SendStackTrace(Stack* stack) {
   connection_->Send(Connection::kProcessBacktrace, buffer);
 }
 
+void Session::StartSession() {
+  if (!wait_for_connection_) {
+    // TODO(sigurdm): Should we allow passing arguments from the api?
+    List<List<uint8_t>> empty_arguments = List<List<uint8_t>>::New(0);
+    ChangeState(ProcessSpawnForMain(empty_arguments));
+    SignalMainThread(Session::kProcessRun);
+  }
+  connection_ = connection_listener_callback_(listener_data_);
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
+  ConnectionPrintInterceptor* interceptor =
+      new ConnectionPrintInterceptor(connection_);
+  Print::RegisterPrintInterceptor(interceptor);
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
+  ProcessMessages();
+}
+
 void Session::ProcessMessages() {
-  ASSERT(state_->IsInitial());
   while (true) {
     Connection::Opcode opcode = connection_->Receive();
     ScopedMonitorLock scoped_lock(main_thread_monitor_);
@@ -1499,6 +1510,13 @@ void Session::IteratePointers(PointerVisitor* visitor) {
       map->IteratePointers(visitor);
     }
   }
+}
+
+SessionState* Session::ProcessSpawnForMain(List<List<uint8_t>> arguments) {
+  if (!program()->was_loaded_from_snapshot()) {
+    ProgramFolder::FoldProgramByDefault(program());
+  }
+  return new SpawnedState(program()->ProcessSpawnForMain(arguments));
 }
 
 int Session::ProcessRun() {

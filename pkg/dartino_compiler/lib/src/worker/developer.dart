@@ -813,6 +813,10 @@ Future<int> export(SessionState state, Uri snapshot) async {
   }
 }
 
+// TODO(sigurdm): This function does too much.
+// Split all uses into explicit calls to compile and attach.
+// TODO(sigurdm): The functions in this file should throw exceptions instead of
+// returning error-codes. The caller should translate that into error-codes.
 Future<int> compileAndAttachToVmThen(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
@@ -835,24 +839,7 @@ Future<int> compileAndAttachToVmThen(
   }
 
   DartinoVmContext vmContext = state.vmContext;
-  if (vmContext != null && vmContext.isSpawned) {
-    // We cannot reuse a vmContext that has already been loaded. Loading
-    // currently implies that some of the code has been run.
-    if (state.explicitAttach) {
-      // If the user explicitly called 'dartino attach' we cannot
-      // create a new vmContext since we don't know if the vm is
-      // running locally or remotely and if running remotely there
-      // is no guarantee there is an agent to start a new vm.
-      //
-      // The UserSession is invalid in its current state as the
-      // vm context has already been loaded and run some code.
-      throwFatalError(DiagnosticKind.sessionInvalidState,
-          sessionName: state.name);
-    }
-    state.log('Cannot reuse existing VM session, creating new.');
-    await state.terminateSession();
-    vmContext = null;
-  }
+
   if (vmContext == null) {
     if (state.settings.deviceAddress != null) {
       await startAndAttachViaAgent(base, state);
@@ -1433,7 +1420,8 @@ Future<int> buildImage(
     StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri snapshot,
-    {bool debuggingMode: false}) async {
+    {bool debuggingMode: false,
+     noWait: false}) async {
   if (snapshot == null) {
     throwFatalError(DiagnosticKind.noFileTarget);
   }
@@ -1468,9 +1456,14 @@ Future<int> buildImage(
 
     if (debuggingMode) {
       embedderOptions.removeWhere((String x) {
-        return x == "enable_debugger" || x == "uart_print_interceptor";
+        return ["enable_debugger",
+                "uart_print_interceptor",
+                "wait_for_connection"].contains(x);
       });
       embedderOptions.add("enable_debugger");
+      if (noWait) {
+        embedderOptions.add("wait_for_connection");
+      }
     }
 
     createEmbedderOptionsCFile(tmpDir, embedderOptions);

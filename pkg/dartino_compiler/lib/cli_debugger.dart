@@ -548,6 +548,14 @@ class CommandLineDebugger {
       return await streamIterator.moveNext();
     }
 
+    if (vmContext.isRunning) {
+      writeStdoutLine(
+          r"### Process is running. Press Ctrl + \ to interrupt it.");
+      // If we attach to an already running process, wait for it to stop.
+      await handleProcessStopResponse(
+          await vmContext.handleProcessStop(await vmContext.readNextCommand()));
+    }
+
     while (!quitDebugger && await getNext()) {
       try {
         await handleLine(streamIterator);

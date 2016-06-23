@@ -21,6 +21,7 @@ enum OptionKind {
   fatalIncrementalFailures,
   terminateDebugger,
   debuggingMode,
+  noWait,
 
   /// Not an option
   none,
@@ -37,6 +38,8 @@ const List<Option> supportedOptions = const <Option>[
       OptionKind.terminateDebugger, null, 'terminate-debugger'),
   const Option(
       OptionKind.debuggingMode, null, 'debugging-mode'),
+  const Option(
+      OptionKind.debuggingMode, null, 'no-wait'),
 ];
 
 final Map<String, Option> shortOptions = computeShortOptions();
@@ -118,6 +121,7 @@ class Options {
   final bool fatalIncrementalFailures;
   final bool terminateDebugger;
   final bool debuggingMode;
+  final bool noWait;
 
   Options(
       this.help,
@@ -128,7 +132,8 @@ class Options {
       this.analyzeOnly,
       this.fatalIncrementalFailures,
       this.terminateDebugger,
-      this.debuggingMode);
+      this.debuggingMode,
+      this.noWait);
 
   /// Parse [options] which is a list of command-line arguments, such as those
   /// passed to `main`.
@@ -142,6 +147,7 @@ class Options {
     bool fatalIncrementalFailures = false;
     bool terminateDebugger = isBatchMode;
     bool debuggingMode = false;
+    bool noWait = false;
 
     Iterator<String> iterator = options.iterator;
 
@@ -230,6 +236,10 @@ class Options {
           debuggingMode = true;
           break;
 
+        case OptionKind.noWait:
+          noWait = true;
+          break;
+
         case OptionKind.none:
           break;
       }
@@ -238,6 +248,6 @@ class Options {
     return new Options(
         help, verbose, version, defines,
         nonOptionArguments, analyzeOnly, fatalIncrementalFailures,
-        terminateDebugger, debuggingMode);
+        terminateDebugger, debuggingMode, noWait);
   }
 }

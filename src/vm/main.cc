@@ -41,6 +41,18 @@ static DartinoConnection WaitForCompilerConnection(
   return connection;
 }
 
+struct ConnectionArguments {
+  const char* host;
+  int port;
+  const char* port_file;
+};
+
+static DartinoConnection WaitForCompilerConnectionCallback(void* data) {
+  ConnectionArguments* arguments = reinterpret_cast<ConnectionArguments*>(data);
+  return WaitForCompilerConnection(
+      arguments->host, arguments->port, arguments->port_file);
+}
+
 static bool IsSnapshot(List<uint8> snapshot) {
   return snapshot.length() > 2 && snapshot[0] == 0xbe && snapshot[1] == 0xef;
 }
@@ -61,8 +73,11 @@ static void PrintUsage() {
   Print::Out("dartino-vm - The embedded Dart virtual machine.\n\n");
   Print::Out("Run snapshot non-interactively:\n");
   Print::Out("  dartino-vm snapshot-file\n\n");
-  Print::Out("Run snapshot interactively:\n");
+  Print::Out("Run snapshot interactively, waiting for debugger-connection:\n");
   Print::Out("  dartino-vm --interactive [--port=<port>] "
+      "[--host=<address>] snapshot-file\n\n");
+  Print::Out("Run snapshot interactively, run right away:\n");
+  Print::Out("  dartino-vm --interactive --no-wait [--port=<port>] "
       "[--host=<address>] snapshot-file\n\n");
   Print::Out("Run interactively without snapshot:\n");
   Print::Out("  dartino-vm [--interactive] [--port=<port>] "
@@ -70,15 +85,18 @@ static void PrintUsage() {
 
   Print::Out("Options:\n");
   Print::Out(
-      "  --interactive: tells the VM to listen for a debugger connection on "
-      "the specified port and host.\n"
+      "  --interactive: tells the VM to listen for a debugger connection on \n"
+      "    the specified port and host.\n"
       "    This is the default when no snapshot file is given.\n");
+  Print::Out(
+      "  --no-wait: start running the program before a connection is "
+      "obtained.\n");
   Print::Out(
       "  --host: specifies which host address to listen on. "
       "Defaults to 127.0.0.1.\n");
   Print::Out(
       "  --port: specifies which port to listen on. Defaults "
-      "to random port.\n");
+      "to a random available port.\n");
   Print::Out("  --help: print out 'dartino-vm' usage.\n");
   Print::Out("  --version: print the version.\n");
   Print::Out("\n");
@@ -112,6 +130,7 @@ static int Main(int argc, char** argv) {
   argv++;
 
   bool interactive = false;
+  bool wait_for_connection = true;
 
   // Process all options including the snapshot file name.
   while (argc > 0) {
@@ -134,6 +153,8 @@ static int Main(int argc, char** argv) {
       port_file = argument + 12;
     } else if (strcmp(argument, "--interactive") == 0) {
       interactive = true;
+    } else if (strcmp(argument, "--no-wait") == 0) {
+      wait_for_connection = false;
     } else if (StartsWith(argument, "-")) {
       Print::Out("Invalid option: %s.\n", argument);
       invalid_option = true;
@@ -142,6 +163,11 @@ static int Main(int argc, char** argv) {
       input = argument;
       run_snapshot = true;
     }
+  }
+
+  if (!run_snapshot && !wait_for_connection) {
+    Print::Out("Invalid option: '--no-wait' requires a snapshot.");
+    invalid_option = true;
   }
 
   if (invalid_option) {
@@ -195,11 +221,16 @@ static int Main(int argc, char** argv) {
   }
 
   if (interactive) {
-    // If [interactive] is true, start an interactive programming session that
-    // communicates with a separate compiler/debugger process.
-    DartinoConnection connection =
-        WaitForCompilerConnection(host, port, port_file);
-    result = DartinoRunWithDebuggerConnection(connection, program);
+    struct ConnectionArguments* listener_arguments = new ConnectionArguments();
+    listener_arguments->host = host;
+    listener_arguments->port = port;
+    listener_arguments->port_file = port_file;
+    result = DartinoRunWithDebuggerConnection(
+        program,
+        WaitForCompilerConnectionCallback,
+        listener_arguments,
+        wait_for_connection);
+    delete listener_arguments;
   } else {
     // Otherwise, run the program.
     result = DartinoRunMain(program, argc, argv);

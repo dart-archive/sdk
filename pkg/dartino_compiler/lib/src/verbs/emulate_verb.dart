@@ -30,7 +30,8 @@ Future emulateFunction(
       new BuildTask(
           sentence.targetUri,
           sentence.base,
-          sentence.options.debuggingMode),
+          sentence.options.debuggingMode,
+          sentence.options.noWait),
       new EmulateTask(sentence.targetUri)));
 }
 
