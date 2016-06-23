@@ -164,6 +164,9 @@
 #define MBEDTLS_X509_CSR_WRITE_C
 #define MBEDTLS_XTEA_C
 
+#define MBEDTLS_NO_PLATFORM_ENTROPY
+#define MBEDTLS_HAVEGE_C
+
 #if defined(TARGET_LIKE_MBED)
 #include "mbedtls/target_config.h"
 #endif

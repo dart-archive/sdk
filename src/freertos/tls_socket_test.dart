@@ -7,7 +7,7 @@
 
 import 'dart:dartino' show sleep;
 import 'package:stm32/ethernet.dart';
-import '../../../../samples/general/tls-socket.dart' as sample;
+import '../../samples/general/tls-socket.dart' as sample;
 
 main() {
   if (!ethernet.initializeNetworkStack(

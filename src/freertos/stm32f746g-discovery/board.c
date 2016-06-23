@@ -225,6 +225,7 @@ DARTINO_EXPORT_STATIC(mbedtls_ctr_drbg_init)
 DARTINO_EXPORT_STATIC(mbedtls_entropy_init)
 DARTINO_EXPORT_STATIC(dart_send)
 DARTINO_EXPORT_STATIC(dart_recv)
+DARTINO_EXPORT_STATIC(mbedtls_strerror)
 
 // LCD bindnings
 DARTINO_EXPORT_STATIC_RENAME(lcd_height, BSP_LCD_GetYSize)
