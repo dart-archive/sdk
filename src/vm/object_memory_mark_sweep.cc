@@ -121,8 +121,43 @@ uword OldSpace::AllocateInNewChunk(uword size) {
     }
   }
 
+  hard_limit_hit_ = true;
   allocation_budget_ = -1;  // Trigger GC.
   return 0;
+}
+
+// Progress is defined as the number of bytes of objects that have been
+// successfully allocated since the last GC that was forced by running out of
+// memory. If we set the minimum too low then the program will slow down too
+// much (effectively, hang) before declaring an out-of-memory situation.  If we
+// set the minimum too high then the program will declare OOM when it could
+// have continued.  This 1/(1 << 8) is 0.4%, which is a compromise that results
+// in OOMs on heaps that are actually 100.4% of the required minimum size. At
+// that level the program has slowed down around 30x relative to the running
+// speed with unconstrained heap size.
+uword OldSpace::MinimumProgress() { return 256 + (used_ >> 8); }
+
+void OldSpace::EvaluatePointlessness() {
+  ASSERT(used_ >= used_after_last_gc_);
+  uword bytes_collected =
+      new_space_garbage_found_since_last_gc_ + used_ - used_after_last_gc_;
+  if (hard_limit_hit_ && bytes_collected < MinimumProgress()) {
+    successive_pointless_gcs_++;
+    if (successive_pointless_gcs_ > 3) {
+      FATAL("Out of memory");
+    }
+  } else {
+    successive_pointless_gcs_ = 0;
+  }
+  new_space_garbage_found_since_last_gc_ = 0;
+}
+
+void OldSpace::ReportNewSpaceProgress(uword bytes_collected) {
+  uword new_total = new_space_garbage_found_since_last_gc_ + bytes_collected;
+  // Guard against wraparound.
+  if (new_total > new_space_garbage_found_since_last_gc_) {
+    new_space_garbage_found_since_last_gc_ = new_total;
+  }
 }
 
 uword OldSpace::AllocateFromFreeList(uword size) {

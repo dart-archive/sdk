@@ -614,8 +614,17 @@ void Program::PerformSharedGarbageCollection() {
   stack.Process(&marking_visitor, old_space, new_space);
 
   if (old_space->compacting()) {
+    // If the last GC was compacting we don't have fragmentation, so it
+    // is fair to evaluate if we are making progress or just doing
+    // pointless GCs.
+    old_space->EvaluatePointlessness();
+    old_space->clear_hard_limit_hit();
+    // Do a non-compacting GC this time for speed.
     SweepSharedHeap();
   } else {
+    // Last GC was sweeping, so we do a compaction this time to avoid
+    // fragmentation.
+    old_space->clear_hard_limit_hit();
     CompactSharedHeap();
   }
 
@@ -649,7 +658,9 @@ void Program::SweepSharedHeap() {
 
   for (auto process : process_list_) process->UpdateStackLimit();
 
-  old_space->set_used(sweeping_visitor.used());
+  uword used_after = sweeping_visitor.used();
+  old_space->set_used(used_after);
+  old_space->set_used_after_last_gc(used_after);
   heap->AdjustOldAllocationBudget();
 }
 
@@ -677,7 +688,9 @@ void Program::CompactSharedHeap() {
   FixPointersVisitor fix;
   CompactingVisitor compacting_visitor(old_space, &fix);
   old_space->IterateObjects(&compacting_visitor);
-  old_space->set_used(compacting_visitor.used());
+  uword used_after = compacting_visitor.used();
+  old_space->set_used(used_after);
+  old_space->set_used_after_last_gc(used_after);
   fix.set_source_address(0);
 
   HeapObjectPointerVisitor new_space_visitor(&fix);
@@ -1188,6 +1201,8 @@ void Program::CollectNewSpace() {
 
   SemiSpace* to = data_heap->unused_space();
 
+  uword old_used = old->Used();
+
   to->set_used(0);
   // Allocate from start of to-space..
   to->UpdateBaseAndLimit(to->chunk(), to->chunk()->start());
@@ -1226,6 +1241,16 @@ void Program::CollectNewSpace() {
   if (Flags::validate_heaps) old->Verify();
 #endif
 
+  ASSERT(from->Used() >= to->Used());
+  // Find out how much garbage was found.
+  word progress = (from->Used() - to->Used()) - (old->Used() - old_used);
+  // There's a little overhead when allocating in old space which was not there
+  // in new space, so we might overstate the number of promoted bytes a little,
+  // which could result in an understatement of the garbage found, even to make
+  // it negative.
+  if (progress > 0) {
+    old->ReportNewSpaceProgress(progress);
+  }
   CollectOldSpaceIfNeeded(visitor.trigger_old_space_gc());
   UpdateStackLimits();
 }

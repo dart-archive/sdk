@@ -374,7 +374,7 @@ void GenerationalScavengeVisitor::VisitBlock(Object** start, Object** end) {
       *p = destination;
       if (InToSpace(destination)) *record_ = GCMetadata::kNewSpacePointers;
     } else {
-      if (!trigger_old_space_gc_ && old_object->address() < water_mark_) {
+      if (old_object->address() < water_mark_) {
         HeapObject* moved_object = old_object->CloneInToSpace(old_);
         // The old space may fill up.  This is a bad moment for a GC, so we
         // promote to the to-space instead.

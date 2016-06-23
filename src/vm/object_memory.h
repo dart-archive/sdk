@@ -268,6 +268,7 @@ class Space {
   word allocation_budget_;
   int no_allocation_failure_nesting_;
   bool resizeable_;
+
   // Linked list of weak pointers to heap objects in this space.
   WeakPointerList weak_pointers_;
   PageType page_type_;
@@ -379,6 +380,14 @@ class OldSpace : public Space {
   void set_compacting(bool value) { compacting_ = value; }
   bool compacting() { return compacting_; }
 
+  void clear_hard_limit_hit() { hard_limit_hit_ = false; }
+  void set_used_after_last_gc(uword used) { used_after_last_gc_ = used; }
+
+  // For detecting pointless GCs that are really an out-of-memory situation.
+  void EvaluatePointlessness();
+  uword MinimumProgress();
+  void ReportNewSpaceProgress(uword bytes_collected);
+
  private:
   uword AllocateFromFreeList(uword size);
   uword AllocateInNewChunk(uword size);
@@ -389,6 +398,13 @@ class OldSpace : public Space {
   bool tracking_allocations_ = false;
   PromotedTrack* promoted_track_ = NULL;
   bool compacting_ = true;
+
+  // Actually new space garbage found since last compacting GC. Used to
+  // evaluate whether we are out of memory.
+  uword new_space_garbage_found_since_last_gc_ = 0;
+  int successive_pointless_gcs_ = 0;
+  uword used_after_last_gc_ = 0;
+  bool hard_limit_hit_ = false;
 };
 
 class NoAllocationFailureScope {
