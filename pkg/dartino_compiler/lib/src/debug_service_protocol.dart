@@ -44,6 +44,7 @@ import '../program_info.dart' show Configuration;
 import '../vm_commands.dart'
     show
         Array,
+        ArrayStructure,
         Boolean,
         ClassValue,
         DartValue,
@@ -433,19 +434,27 @@ class DebugConnection implements DebugListener {
         "fields": fields,
       };
     } else if (remoteObject is RemoteArray) {
-      // TODO(sigurdm): Handle large arrays. (Issue #536).
       List elements = new List();
-      for (int i = 0; i < remoteObject.array.length; i++) {
-        elements.add(instanceRef(remoteObject.values[i], "$id.$i"));
+      ArrayStructure array = remoteObject.array;
+      for (int i = array.startIndex; i < array.endIndex; i++) {
+        elements.add(
+            instanceRef(remoteObject.values[i - array.startIndex], "$id.$i"));
       }
-      return <String, dynamic>{
+      Map result = <String, dynamic>{
         "type": "Instance",
         "id": id,
         "kind": "List",
         "class":
             classRef(vmContext.compiler.compiler.backend.listImplementation),
-        "elements": elements,
       };
+      if (array.startIndex != 0) {
+        result["offset"] = array.startIndex;
+      }
+      if (array.endIndex != array.length) {
+        result["count"] = array.startIndex - array.endIndex;
+      }
+      result["elements"] = elements;
+      return result;
     } else if (remoteObject is RemoteValue) {
       Map instance = instanceRef(remoteObject.value, id);
       instance["type"] = "Instance";
@@ -620,9 +629,14 @@ class DebugConnection implements DebugListener {
               int localFrame = dotted.first;
               int localSlot = dotted[1];
               List<int> fieldAccesses = dotted.skip(2).toList();
+              int startIndex = decodedMessage["params"]["offset"] ?? 0;
+              int count = decodedMessage["params"]["count"];
+              int endIndex = count == null ? -1 : count + startIndex;
               RemoteObject remoteObject = await vmContext.processLocalStructure(
                   localFrame, localSlot,
-                  fieldAccesses: fieldAccesses);
+                  fieldAccesses: fieldAccesses,
+                  startIndex: startIndex,
+                  endIndex: endIndex);
               sendResult(instanceDesc(remoteObject, id));
               break;
             default:
