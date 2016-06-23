@@ -8,23 +8,17 @@
 #include "include/dartino_api.h"
 
 /**
- * The static FFI interface of dartino can be used in two ways. The easiest way
- * is to define an export table that covers all functions that should be
- * available via FFI. This is done using the DARTINO_EXPORT_TABLE macros
- * defined below.
+ * The static FFI interface of dartino can be used in two ways.
+ * The easiest way is to mark for export all external functions
+ * you want to call via FFI using any of the below two macros:
  *
- * DARTINO_EXPORT_TABLE_BEGIN
- *   DARTINO_EXPORT_TABLE_ENTRY("magic_meat", FFITestMagicMeat)
- *   DARTINO_EXPORT_TABLE_ENTRY("magic_veg", FFITestMagicVeg)
- * DARTINO_EXPORT_TABLE_END
+ * DARTINO_EXPORT_STATIC(fun) exports the C function 'fun' as 'fun' in dart.
  *
- * While easy to integrate into an existing build, this solution does not
- * compose well. All exported functions have to be declared in a single
- * location.
+ * DARTINO_EXPORT_STATIC_RENAME(name, fun) exports the C function 'fun' as
+ *     'name' in dart.
  *
- * Alternatively, a linker script can be used to collect the exported
- * functions from various files. For this, you have to add the following to
- * the output declaration of the rodata section in your linker script
+ * The following linker script is then used to collect the exported
+ * functions from various files.
  *
  *  . = ALIGN(4);
  *  dartino_ffi_table = .;
@@ -33,13 +27,22 @@
  *  QUAD(0)
  *  . = ALIGN(4);
  *
- * and export all external functions you want to call via FFI using the below
- * two macros:
+ * The linker scripts supplied as part of Dartino SDK should all have this
+ * section already.
  *
- * DARTINO_EXPORT_STATIC(fun) exports the C function 'fun' as 'fun' in dart.
+ * The legacy solution is to define an export table that covers all functions
+ * that should be available via FFI. This is done using the
+ * DARTINO_EXPORT_TABLE macros defined below.
  *
- * DARTINO_EXPORT_STATIC_RENAME(name, fun) exports the C function 'fun' as
- *     'name' in dart.
+ * DARTINO_EXPORT_TABLE_BEGIN
+ *   DARTINO_EXPORT_TABLE_ENTRY("magic_meat", FFITestMagicMeat)
+ *   DARTINO_EXPORT_TABLE_ENTRY("magic_veg", FFITestMagicVeg)
+ * DARTINO_EXPORT_TABLE_END
+ *
+ * While easy to integrate into an existing build (requires no linker script 
+ * changes), this solution does not compose well. All exported functions 
+ * have to be declared in a single location.
+ *
  */
 
 typedef struct {
