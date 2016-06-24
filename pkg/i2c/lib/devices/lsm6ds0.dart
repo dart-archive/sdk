@@ -268,27 +268,27 @@ class LSM6DS0 {
 
   /// Read the current gyroscope measurement.
   GyroMeasurement readGyro() {
-    var x = _signed16(_device.readByte(_outXHG), _device.readByte(_outXLG));
-    var y = _signed16(_device.readByte(_outYHG), _device.readByte(_outYLG));
-    var z = _signed16(_device.readByte(_outZHG), _device.readByte(_outZLG));
+    var x = _readSigned16(_outXHG, _outXLG);
+    var y = _readSigned16(_outYHG, _outYLG);
+    var z = _readSigned16(_outZHG, _outZLG);
     var res = _gyroRes[_gyroScale];
     return new GyroMeasurement(x * res, y * res, z * res);
   }
 
   /// Read the current accelerometer measurement.
   AccelMeasurement readAccel() {
-    var x = _signed16(_device.readByte(_outXHXL),
-                      _device.readByte(_outXLXL));
-    var y = _signed16(_device.readByte(_outYHXL),
-                      _device.readByte(_outYLXL));
-    var z = _signed16(_device.readByte(_outZHXL),
-                      _device.readByte(_outZLXL));
+    var x = _readSigned16(_outXHXL, _outXLXL);
+    var y = _readSigned16(_outYHXL, _outYLXL);
+    var z = _readSigned16(_outZHXL, _outZLXL);
     var res = _accelRes[_accelScale];
     return new AccelMeasurement(x * res, y * res, z * res);
   }
-}
 
-int _signed16(int msb, int lsb) {
-  var x = msb << 8 | lsb;
-  return x < 0x7fff ? x : x - 0x10000;
+  int _readSigned16(int msbRegister, int lsbRegister) {
+    // Always read LSB before MSB.
+    var lsb = _device.readByte(lsbRegister);
+    var msb = _device.readByte(msbRegister);
+    var x = msb << 8 | lsb;
+    return x < 0x7fff ? x : x - 0x10000;
+  }
 }

@@ -160,15 +160,18 @@ class LIS3MDL {
 
   /// Read the current magnetometer measurement.
   MagnetMeasurement readMagnet() {
-    var x = _signed16(_device.readByte(_outXHM), _device.readByte(_outXLM));
-    var y = _signed16(_device.readByte(_outYHM), _device.readByte(_outYLM));
-    var z = _signed16(_device.readByte(_outZHM), _device.readByte(_outZLM));
+    var x = _readSigned16(_outXHM, _outXLM);
+    var y = _readSigned16(_outYHM, _outYLM);
+    var z = _readSigned16(_outZHM, _outZLM);
     var res = _magnetRes[_magnetScale];
     return new MagnetMeasurement(x * res, y * res, z * res);
   }
-}
 
-int _signed16(int msb, int lsb) {
-  var x = msb << 8 | lsb;
-  return x < 0x7fff ? x : x - 0x10000;
+  int _readSigned16(int msbRegister, int lsbRegister) {
+    // Always read LSB before MSB.
+    var lsb = _device.readByte(lsbRegister);
+    var msb = _device.readByte(msbRegister);
+    var x = msb << 8 | lsb;
+    return x < 0x7fff ? x : x - 0x10000;
+  }
 }
