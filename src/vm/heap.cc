@@ -28,8 +28,8 @@ TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
       unused_semispace_(new SemiSpace(Space::kCannotResize, kNewSpacePage, 0)) {
   space_ = new SemiSpace(Space::kCannotResize, kNewSpacePage, 0);
   uword size = Utils::RoundUp(Flags::semispace_size << 10, Platform::kPageSize);
-  size = Utils::Maximum(1ul << 24,
-                        Utils::Minimum(size, 0ul + Platform::kPageSize));
+  size = Utils::Minimum(1ul << 24,
+                        Utils::Maximum(size, 0ul + Platform::kPageSize));
   semispace_size_ = size;
   Chunk* chunk = ObjectMemory::AllocateChunk(space_, size);
   ASSERT(chunk != NULL);  // TODO(erikcorry): Cope with out-of-memory.
