@@ -15,9 +15,17 @@ class Connection;
 class Process;
 class PointerVisitor;
 
+typedef Connection* (*ConnectionListenerCallback)(void* data);
+
 class Session {
  public:
-  explicit Session(Connection* connection) { UNIMPLEMENTED(); }
+  Session(
+      Program* program,
+      ConnectionListenerCallback connection_listener_callback,
+      void* listener_data,
+      bool wait_for_connection_) {
+    UNIMPLEMENTED();
+  }
 
   int FreshProcessId() {
     UNIMPLEMENTED();
