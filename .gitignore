@@ -42,8 +42,8 @@ packages
 /src/shared/shared.xcodeproj/
 /src/vm/vm.xcodeproj/
 /tests/service_tests/service_tests.xcodeproj/
-/third_party/emulators/emul8
-/third_party/emulators/emul8.tar.gz
+/third_party/emul8/linux/emul8
+/third_party/emul8/linux/emul8.tar.gz
 /third_party/args
 /third_party/bin/linux/dart
 /third_party/bin/linux/dart-arm
