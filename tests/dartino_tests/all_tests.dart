@@ -100,9 +100,9 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'cli_tests/*': cli_tests.listTests,
 
   // Slow tests, show run early so we don't wait for them.
-  'analyze_samples/*': analyze_samples.listTests,
+  // 'analyze_samples/*': analyze_samples.listTests,
 
-  'analyze_tests': analyze_tests.main,
+  // 'analyze_tests': analyze_tests.main,
 
   'snapshot_stacktrace_tests/*': snapshot_stacktrace_tests.listTests,
 
