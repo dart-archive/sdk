@@ -2,8 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// API for LPS25H "MEMS pressure sensor: 260-1260 hPa absolute digital output
-/// barometer" chip using the I2C bus.
+/// API for LPS25H and LPS25HB "MEMS pressure sensor: 260-1260 hPa
+/// absolute digital output barometer" chip using the I2C bus.
+///
+/// According to the documentation from STMicroelectronics the LPS25H
+/// and LPS25HB are compatible and "present the same registers map".
 ///
 /// Currently this has only been tested with a Raspberry Pi 2 and the Sense HAT.
 library lps25h;
