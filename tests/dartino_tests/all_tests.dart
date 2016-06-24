@@ -62,6 +62,8 @@ import '../cli_tests/cli_tests.dart' as cli_tests;
 
 import 'dartino_analyze_test.dart' as analyze_tests;
 
+import 'dartino_analyze_samples.dart' as analyze_samples;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -96,6 +98,9 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   // Slow tests, should run early so we don't wait for them.
   'cli_tests/*': cli_tests.listTests,
+
+  // Slow tests, show run early so we don't wait for them.
+  'analyze_samples/*': analyze_samples.listTests,
 
   'analyze_tests': analyze_tests.main,
 
@@ -151,4 +156,5 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'golem_tests': golem_tests.main,
 
   'version_tests': version_tests.main,
+
 };

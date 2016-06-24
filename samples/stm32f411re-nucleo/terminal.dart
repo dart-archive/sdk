@@ -116,6 +116,7 @@ class Terminal {
         } else {
           sleep(arg);
         }
+        break;
       case 't':
         pin.toggle();
         break;
@@ -124,6 +125,7 @@ class Terminal {
         break;
       default:
         _log("Unknown terminal command '$command'");
+        break;
     }
   }
 }
