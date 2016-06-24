@@ -45,9 +45,7 @@ namespace dartino {
   FLAG_BOOLEAN(release, print_heap_statistics, false,                     \
                "Print heap statistics before GC")                         \
   FLAG_INTEGER(release, max_heap_size, 0,                                 \
-               "Max heap size in kbytes (default unlimited)")             \
-  FLAG_INTEGER(release, semispace_size, 16,                               \
-               "New-space semispace size in kbytes")                      \
+               "Max heap size in k (default unlimited)")                  \
   FLAG_BOOLEAN(release, verbose, false, "Verbose output")                 \
   FLAG_BOOLEAN(debug, print_flags, false, "Print flags")                  \
   FLAG_INTEGER(release, profile_interval, 1000, "Profile interval in us") \

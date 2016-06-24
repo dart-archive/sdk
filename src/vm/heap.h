@@ -175,6 +175,8 @@ class TwoSpaceHeap : public Heap {
   explicit TwoSpaceHeap(RandomXorShift* random);
   virtual ~TwoSpaceHeap();
 
+  static const uword kFixedSemiSpaceSize = 16 * KB;
+
   OldSpace* old_space() { return old_space_; }
   SemiSpace* unused_space() { return unused_semispace_; }
 
@@ -205,7 +207,7 @@ class TwoSpaceHeap : public Heap {
   }
 
   virtual Object* HandleAllocationFailure(uword size) {
-    if (size >= (semispace_size_ >> 1)) {
+    if (size >= (kFixedSemiSpaceSize >> 1)) {
       uword result = old_space_->Allocate(size);
       if (result != 0) {
         // The code that populates newly allocated objects assumes that they
@@ -254,7 +256,6 @@ class TwoSpaceHeap : public Heap {
   SemiSpace* unused_semispace_;
   uword water_mark_;
   uword max_size_;
-  uword semispace_size_;
 };
 
 // Helper class for copying HeapObjects.
