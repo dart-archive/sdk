@@ -135,7 +135,7 @@ list._list[1:2].a
 > p *list._list[3:2]
 ### could not access 'list._list[3:2]': In [3:2] the start-index is bigger than the end-index.
 > p *list[3:2]
-### could not access 'list[3:2]': 'list' is an instance with type _FixedList. It can only be accessed with a field name.
+### could not access 'list[3:2]': 'list' is an instance with type FixedList. It can only be accessed with a field name.
 > p *list._list.[-1]
 A field access must start with an identifier. Found '['.
 list._list.[-1]
