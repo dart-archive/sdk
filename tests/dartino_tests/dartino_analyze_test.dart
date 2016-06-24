@@ -12,8 +12,10 @@ import 'package:expect/expect.dart';
 
 import 'message_tests.dart';
 
+bool _debug = false;
+
 /// This program exercises the `dartino analyze` functionality
-main() async {
+Future<Null> main() async {
   MockClientConnection client;
 
   // Analyze clean file
@@ -32,12 +34,12 @@ main() async {
   Expect.listEquals([], client.stderrMessages);
   expectMessage(client.stdoutMessages, "Undefined class 'new'");
 
-  print('... "dartino analyze" test passed');
+  if (_debug) print('... "dartino analyze" test passed');
 }
 
 Future<MockClientConnection> testAnalysis(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
-  MockClientConnection client = new MockClientConnection();
+  MockClientConnection client = new MockClientConnection(debug: _debug);
   client.stdoutMessages = <String>[];
   client.parseArguments(null, null, false, arguments);
 

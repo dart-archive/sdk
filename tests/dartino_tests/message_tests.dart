@@ -190,6 +190,8 @@ class MockClientConnection implements ClientConnection {
 
   final Completer mockCompleter = new Completer();
 
+  final bool debug;
+
   final List<String> stderrMessages = <String>[];
 
   List<String> stdoutMessages;
@@ -203,7 +205,7 @@ class MockClientConnection implements ClientConnection {
 
   AnalyzedSentence sentence;
 
-  MockClientConnection({bool shouldPromptForOptIn: false})
+  MockClientConnection({bool shouldPromptForOptIn: false, this.debug: false})
       : analytics = new MockAnalytics(
           shouldPromptForOptInValue: shouldPromptForOptIn) {
     commandSender = new MockClientCommandSender(this);
@@ -251,6 +253,7 @@ class MockClientConnection implements ClientConnection {
   }
 
   mockPrintLine(String line) {
+    if (!debug) return;
     Zone zone = Zone.current.parent;
     if (zone == null) {
       zone = Zone.current;

@@ -245,6 +245,7 @@ Future<int> analyze(
   String analyzerPath = join(dartSdkDir.path, 'bin', 'dartanalyzer');
 
   List<String> arguments = <String>[];
+  arguments.add('--strong');
   arguments.add('--packages');
   arguments.add(new File.fromUri(state.settings.packages).path);
   arguments.add(new File.fromUri(fileUri).path);
