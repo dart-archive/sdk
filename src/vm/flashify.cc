@@ -253,7 +253,7 @@ static int Main(int argc, char** argv) {
   exit(1);
 #endif
   // uword is used for writing .long values.
-  ASSERT(sizeof(uword) == 32);
+  ASSERT(sizeof(uword) == 4);
 
   Flags::ExtractFromCommandLine(&argc, argv);
 
