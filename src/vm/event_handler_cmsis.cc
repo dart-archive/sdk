@@ -97,6 +97,7 @@ void EventHandler::Run() {
       if (event.value.v != kInterruptHandle) {
         Event* e = reinterpret_cast<Event*>(event.value.p);
         e->event_listener->Send(e->flags);
+        delete e->event_listener;
         delete e;
       }
     }
