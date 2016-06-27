@@ -1470,19 +1470,21 @@ Future<int> buildImage(
     createEmbedderOptionsCFile(tmpDir, embedderOptions);
 
     ProcessResult result;
-    File linkScript = new File(join(binDirectory.path, 'link.sh'));
+    File linkShellScript = new File(join(binDirectory.path, 'link.sh'));
     if (Platform.isLinux || Platform.isMacOS) {
       state.log(
-          "Linking image: '${linkScript.path} ${baseName} for ${device.name}");
+          "Linking image: "
+          "'${linkShellScript.path} ${baseName} for ${device.name}");
       List libraries =
           new List<String>.from(device.libraries)..addAll(additionalLibraries);
+      List arguments = <String>[
+          '--cflags', device.cflags.join(' '),
+          '--library', libraries.join(' '),
+          '--linker_script', device.linkerScript,
+          '--floating_point_size', '${device.floatingPointSize}',
+          baseName, tmpDir.path];
       result = await Process.run(
-          linkScript.path,
-          ['-f', device.cflags.join(' '),
-           '-l', libraries.join(' '),
-           '-t', device.linker_script,
-           baseName, tmpDir.path],
-          workingDirectory: tmpDir.path);
+          linkShellScript.path, arguments, workingDirectory: tmpDir.path);
     } else {
       throwUnsupportedPlatform();
     }
@@ -1525,7 +1527,7 @@ Future<int> emulateImage(
   // emulator.
 
   Device device = await readDeviceFromSettings(state);
-  String board = device.open_ocd_board;
+  String board = device.openOcdBoard;
   if (board != 'stm32f7discovery') {
     print("Unable to find emulator for board '$board'");
     return 1;
@@ -1586,7 +1588,7 @@ Future<int> flashImage(
     state.log("Flashing image: '${flashScript.path} ${image}'");
     print("Flashing image: ${image.path}");
     result = await Process.run(
-        flashScript.path, ['-b', device.open_ocd_board, image.path]);
+        flashScript.path, ['-b', device.openOcdBoard, image.path]);
   } else {
     throwUnsupportedPlatform();
   }
@@ -2092,10 +2094,11 @@ Device parseDevice(
 
   String id;
   String name;
+  int floatingPointSize;
   List<String> cflags;
   List<String> libraries;
-  String linker_script;
-  String open_ocd_board;
+  String linkerScript;
+  String openOcdBoard;
 
   List<String> listOfStrings(value, String key) {
     List<String> result = new List<String>();
@@ -2130,6 +2133,17 @@ Device parseDevice(
     return value;
   }
 
+  int intValue(value, String key) {
+    if (value != null) {
+      if (value is! int) {
+        throwFatalError(
+            DiagnosticKind.deviceConfigurationValueNotAString,
+            uri: deviceUri, userInput: '$value', additionalUserInput: key);
+      }
+    }
+    return value;
+  }
+
   deviceData.forEach((String key, value) {
     switch (key) {
       case "id":
@@ -2138,6 +2152,10 @@ Device parseDevice(
 
       case "name":
         name = stringValue(value, key);
+        break;
+
+      case "dartino_floating_point_size":
+        floatingPointSize = intValue(value, key);
         break;
 
       case "cflags":
@@ -2157,14 +2175,14 @@ Device parseDevice(
             throwFatalError(
                 DiagnosticKind.deviceConfigurationValueNotAString,
                 uri: deviceUri, userInput: '$value',
-                additionalUserInput: 'linker_script');
+                additionalUserInput: 'linkerScript');
           }
-          linker_script = deviceUri.resolve(value).toFilePath();
+          linkerScript = deviceUri.resolve(value).toFilePath();
         }
         break;
 
       case "open_ocd_board":
-        open_ocd_board = stringValue(value, key);
+        openOcdBoard = stringValue(value, key);
         break;
 
       default:
@@ -2174,50 +2192,59 @@ Device parseDevice(
         break;
     }
   });
+
+  // The default floating point size is 64 bits.
+  if (floatingPointSize == null) floatingPointSize = 64;
+
   return new Device.fromSource(
       deviceUri,
       id,
       name,
+      floatingPointSize,
       cflags,
       libraries,
-      linker_script,
-      open_ocd_board);
+      linkerScript,
+      openOcdBoard);
 }
 
 class Device {
   final Uri source;
   final String id;
   final String name;
+  final int floatingPointSize;
   final List<String> cflags;
   final List<String> libraries;
-  final String linker_script;
-  final String open_ocd_board;
+  final String linkerScript;
+  final String openOcdBoard;
 
   const Device(
       this.id,
       this.name,
+      this.floatingPointSize,
       this.cflags,
       this.libraries,
-      this.linker_script,
-      this.open_ocd_board) : source = null;
+      this.linkerScript,
+      this.openOcdBoard) : source = null;
 
   const Device.fromSource(
       this.source,
       this.id,
       this.name,
+      this.floatingPointSize,
       this.cflags,
       this.libraries,
-      this.linker_script,
-      this.open_ocd_board);
+      this.linkerScript,
+      this.openOcdBoard);
 
   String toString() {
     return "Device("
         "id: $id, "
         "name: $name, "
         "cflags: $cflags, "
+        "dartino_floating_point_size: $floatingPointSize, "
         "libraries: $libraries, "
-        "linker_script: $linker_script, "
-        "open_ocd_board: $open_ocd_board)";
+        "linker_script: $linkerScript, "
+        "open_ocd_board: $openOcdBoard)";
   }
 
   Map<String, dynamic> toJson() {
@@ -2231,10 +2258,11 @@ class Device {
 
     addIfNotNull("id", id);
     addIfNotNull("name", name);
+    addIfNotNull("dartino_floating_point_size", floatingPointSize);
     addIfNotNull("cflags", cflags);
     addIfNotNull("libraries", libraries);
-    addIfNotNull("linker_script", linker_script);
-    addIfNotNull("open_ocd_board", open_ocd_board);
+    addIfNotNull("linker_script", linkerScript);
+    addIfNotNull("open_ocd_board", openOcdBoard);
     return result;
   }
 }

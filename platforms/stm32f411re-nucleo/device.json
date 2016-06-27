@@ -1,11 +1,13 @@
-// Copyright (c) 2016, the Dartino project authors. Please see the AUTHORS file",
-// for details. All rights reserved. Use of this source code is governed by a",
-// BSD-style license that can be found in the LICENSE.md file."],
+// Copyright (c) 2016, the Dartino project authors. Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE.md file.
 
 // Device definition for STM32F411RE Nucleo.
 {
   "id": "stm32f411re-nucleo",
   "name": "STM32F411RE Nucleo",
+  // The size of the Dartino double for the compiled libdartino.a.
+  "dartino_floating_point_size": 32,
   "cflags": [
     "-mcpu=cortex-m3",
     "-mthumb",

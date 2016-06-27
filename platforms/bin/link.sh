@@ -12,6 +12,7 @@ BASE_NAME=
 CFLAGS=
 LIBS=
 LINKER_SCRIPT=
+FLOATING_POINT_SIZE=64
 
 SCRIPT_NAME="$0"
 while [ $# -gt 0 ]; do
@@ -28,6 +29,10 @@ while [ $# -gt 0 ]; do
       LINKER_SCRIPT="$2"
       shift 2
       ;;
+    --floating_point_size)
+      FLOATING_POINT_SIZE="$2"
+      shift 2
+      ;;
     *)
       BASE_NAME="$1"
       shift
@@ -36,7 +41,7 @@ while [ $# -gt 0 ]; do
         shift
       fi
       if [ ! -z "$1" ]; then
-        echo "Usage: $SCRIPT_NAME -f <cflags> -l <library> -t <linker_script> <base name> [<build dir>]"
+        echo "Usage: $SCRIPT_NAME -f <cflags> -l <library> -t <linker_script> [--single_precision] <base name> [<build dir>]"
         exit 1
       fi
       ;;
@@ -106,7 +111,7 @@ $CFLAGS \
 -c "$EMBEDDER_OPTIONS_FILE"
 
 echo "Converting snapshot to object file"
-"$DARTINO_FLASHIFY" "$SNAPSHOT_FILE" "$ASM_FILE"
+"$DARTINO_FLASHIFY" "--floating-point-size=$FLOATING_POINT_SIZE" "$SNAPSHOT_FILE" "$ASM_FILE"
 "$CC" \
 $CFLAGS \
 -o "$OBJ_FILE" \

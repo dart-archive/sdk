@@ -53,7 +53,8 @@
       'ReleaseSTM': {
         'inherit_from': [
           'dartino_base', 'dartino_release',
-          'dartino_cortex_m_base', 'dartino_cortex_m7', 'dartino_stm',
+          'dartino_cortex_m_base', 'dartino_cortex_m7',
+          'dartino_use_single_precision', 'dartino_stm',
           'dartino_disable_native_processes',
         ],
         'target_conditions': [
@@ -72,7 +73,9 @@
       'DebugSTM': {
         'inherit_from': [
           'dartino_base', 'dartino_debug',
-          'dartino_cortex_m_base', 'dartino_cortex_m7', 'dartino_stm',
+          'dartino_cortex_m_base', 'dartino_cortex_m7',
+          'dartino_use_single_precision',
+          'dartino_stm',
           'dartino_disable_native_processes',
         ],
       },

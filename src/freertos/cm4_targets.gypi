@@ -54,7 +54,8 @@
         'inherit_from': [
           'dartino_base', 'dartino_release',
           # Use the Cortex M3 flags for Cortex M4 without FPU.
-          'dartino_cortex_m_base', 'dartino_cortex_m3', 'dartino_stm',
+          'dartino_cortex_m_base', 'dartino_cortex_m3',
+          'dartino_use_single_precision', 'dartino_stm',
           'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
@@ -75,7 +76,8 @@
         'inherit_from': [
           'dartino_base', 'dartino_debug',
           # Use the Cortex M3 flags for Cortex M4 without FPU.
-          'dartino_cortex_m_base', 'dartino_cortex_m3', 'dartino_stm',
+          'dartino_cortex_m_base', 'dartino_cortex_m3',
+          'dartino_use_single_precision', 'dartino_stm',
           'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
@@ -84,7 +86,8 @@
       'ReleaseCM4F': {
         'inherit_from': [
           'dartino_base', 'dartino_debug',
-          'dartino_cortex_m_base', 'dartino_cortex_m4f', 'dartino_stm',
+          'dartino_cortex_m_base', 'dartino_cortex_m4f',
+          'dartino_use_single_precision', 'dartino_stm',
           'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
@@ -104,7 +107,8 @@
       'DebugCM4F': {
         'inherit_from': [
           'dartino_base', 'dartino_debug',
-          'dartino_cortex_m_base', 'dartino_cortex_m4f', 'dartino_stm',
+          'dartino_cortex_m_base', 'dartino_cortex_m4f',
+          'dartino_use_single_precision', 'dartino_stm',
           'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
