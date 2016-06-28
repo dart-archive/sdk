@@ -1,0 +1,5 @@
+name: dartinodoc
+dependencies:
+  dartdoc: 0.9.6+1
+  compiler:
+    path: ../../third_party/dart/pkg/compiler

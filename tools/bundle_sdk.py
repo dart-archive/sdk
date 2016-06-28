@@ -277,102 +277,17 @@ def CopySamples(bundle_dir):
     copytree(join('samples', v), join(target, v))
   CopyFile(join('samples', 'dartino.yaml'), join(target, 'dartino.yaml'))
 
-def EnsureDartDoc():
-  subprocess.check_call(
-      'download_from_google_storage -b dartino-dependencies '
-      '-u -d third_party/dartdoc_deps/',
-      shell=True)
-
-def CreateDocsPubSpec(fileName):
-  print 'Doc-gen: creating %s' %fileName
-  f = open(fileName, 'w')
-  f.write('name: Dartino_SDK\n')
-  f.write('dependencies:\n')
-  for package in SDK_PACKAGES:
-    f.write('  %s:\n' % package)
-    f.write('    path: ../%s\n' % package)
-  f.close()
-
-def CreateDocsLibs(docPkgDir, outDir):
-  for package in SDK_PACKAGES:
-    # Read the original package file and match out the documentation from it.
-    sourceDir = join(outDir, package, 'lib')
-    sourceFile = join(sourceDir, '{0}.dart'.format(package))
-    with open(sourceFile) as f:
-      s = f.read()
-    # Extract the doc comment for the library; this is everything before a line
-    # that starts with 'library' and ends with ';'.
-    match = re.match(r'(.*)^library ([^;]+);', s, re.DOTALL|re.MULTILINE)
-    docComment = match.group(1)
-    # Create a new lib dart file with same documentation.
-    destFile = join(docPkgDir, '%s.dart' % package)
-    print 'Doc-gen: Creating %s from %s' % (destFile, sourceFile)
-    with open(destFile, 'w') as f:
-      f.write(docComment)
-      f.write('\nlibrary {0};\n'.format(package))
-      # Add an import statement for all .dart files in the dir
-      for sf in listdir(sourceDir):
-        if fnmatch(sf, '*.dart'):
-          f.write('export \'package:{0}/{1}\';\n'.format(package, sf))
-
 def CreateDocumentation():
-  EnsureDartDoc()
-  docs_out = join('out', 'docs')
-  sdk = join('third_party', 'dartdoc_deps', 'dart-sdk')
+  # Ensure all the dependencies of dartinodoc are available.
+  subprocess.call(['pub', 'get'], cwd='pkg/dartinodoc')
   sdk_dst = join('out', 'dartdoc-dart-sdk')
   EnsureDeleted(sdk_dst)
-  copytree(sdk, sdk_dst)
-  copytree('lib', join(sdk_dst, 'lib', 'mobile'))
-  pub = abspath(join(sdk_dst, 'bin', 'pub'))
-  dartdoc = join(sdk_dst, 'bin', 'dartdoc')
-  # We recreate the same structure we have in the repo in a copy to not
-  # polute our workspace
-  with utils.TempDir() as temp:
-    # Copy Dartino packages.
-    pkg_copy = join(temp, 'pkg')
-    makedirs(pkg_copy)
-    for pkg in SDK_PACKAGES:
-      pkg_path = join('pkg', pkg)
-      pkg_dst = join(pkg_copy, pkg)
-      copytree(pkg_path, pkg_dst)
-      print 'copied %s to %s' % (pkg_path, pkg_dst)
-    # Copy third party packages.
-    third_party_copy = join(temp, 'third_party')
-    makedirs(third_party_copy)
-    for pkg in THIRD_PARTY_PACKAGES:
-      pkg_path = join('third_party', pkg)
-      pkg_dst = join(third_party_copy, pkg)
-      copytree(pkg_path, pkg_dst)
-      print 'copied %s to %s' % (pkg_path, pkg_dst)
-    # Create fake combined package dir.
-    sdk_pkg_dir = join(pkg_copy, 'dartino_sdk')
-    makedirs(sdk_pkg_dir)
-    # Copy readme.
-    copyfile(join('pkg', 'dartino_sdk_readme.md'),
-             join(sdk_pkg_dir, 'README.md'))
-    # Add pubspec file.
-    CreateDocsPubSpec('%s/pubspec.yaml' % sdk_pkg_dir)
-    # Add lib dir, and a generated file for each package.
-    sdk_pkg_lib_dir = join(sdk_pkg_dir, 'lib')
-    makedirs(sdk_pkg_lib_dir)
-    CreateDocsLibs(sdk_pkg_lib_dir, pkg_copy)
-    # Call pub get.
-    with utils.ChangedWorkingDirectory(sdk_pkg_dir):
-      print 'Calling pub get in %s' % sdk_pkg_dir
-      subprocess.check_call([pub, 'get'])
-    # Call dartdoc.
-    EnsureDeleted(docs_out)
-    subprocess.check_call([dartdoc, '--input', sdk_pkg_dir,'--output',
-                          docs_out])
-
-    # Patch the generated index.html file to fix a few issues.
-    indexFile = join(docs_out, 'index.html')
-    with open(indexFile, 'r') as fin:
-      s = fin.read()
-      s = s.replace('Dartino_SDK', 'Dartino SDK')
-      s = s.replace('>package<', '><')
-    with open(indexFile, 'w') as fout:
-      fout.write(s)
+  subprocess.call(
+      ['dart', '-c', 'pkg/dartinodoc/bin/dartinodoc.dart',
+       '--output', sdk_dst,
+       '--sdk-packages', ",".join(SDK_PACKAGES),
+       '--third-party-packages', ",".join(THIRD_PARTY_PACKAGES),
+       '--version', utils.GetSemanticSDKVersion()])
 
 def CopyTools(bundle_dir):
   tools_dir = join(bundle_dir, 'tools')
@@ -383,7 +298,7 @@ def CopyTools(bundle_dir):
     copytree('third_party/%s/linux/%s' % (tool, tool), tool_dir)
 
 def Main():
-  options = ParseOptions();
+  options = ParseOptions()
   build_dir = options.build_dir
   if not build_dir:
     print 'Please specify a build directory with "--build_dir".'
