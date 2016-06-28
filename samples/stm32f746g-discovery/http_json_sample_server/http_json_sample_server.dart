@@ -13,7 +13,8 @@ void handleRequest(HttpRequest request) {
   requestCount++;
   HttpResponse response = request.response;
   if (request.method == 'GET') {
-    print('GET request from ${request.connectionInfo.remoteAddress}, '
+    print('GET request from ${request.connectionInfo.remoteAddress.address} '
+          'on port ${request.connectionInfo.localPort}, '
           'request no. $requestCount');
     if (request.uri.toFilePath() == '/message.json') {
       String message = JSON.encode({"message": "Hello Dartino!"});
@@ -34,9 +35,24 @@ void handleRequest(HttpRequest request) {
 }
 
 main() async {
+  String localFile(path) => Platform.script.resolve(path).toFilePath();
+
+  // Load certificates and private key for the self-signed server
+  // certificate. These certificates and the key have been copied from
+  // the secure sockets tests for the Dart SDK.
+  SecurityContext serverContext = new SecurityContext()
+    ..useCertificateChain(localFile('server_chain.pem'))
+    ..usePrivateKey(localFile('server_key.pem'),
+                    password: 'dartdart');
+
   HttpServer server =
       await HttpServer.bind(InternetAddress.ANY_IP_V4, 8080);
-  await for (HttpRequest request in server) {
-    handleRequest(request);
-  }
+  print('Listening for http requests on port ${server.port}');
+  HttpServer secureServer =
+      await HttpServer.bindSecure(
+          InternetAddress.ANY_IP_V4, 8443, serverContext);
+  print('Listening for https requests on port ${secureServer.port}');
+
+  server.listen(handleRequest);
+  secureServer.listen(handleRequest);
 }
