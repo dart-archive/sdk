@@ -20,6 +20,8 @@ import 'dart:convert' show
 
 import 'attach_verb.dart';
 
+import 'compile_verb.dart';
+
 import 'documentation.dart' show
     debugDocumentation;
 
@@ -30,10 +32,12 @@ import '../worker/developer.dart' show
     Address,
     ClientEventHandler,
     combineTasks,
-    compileAndAttachToVmThen,
+    compile,
     handleSignal,
+    parallelTasks,
     parseAddress,
-    setupClientInOut;
+    setupClientInOut,
+    startAndAttach;
 
 import '../hub/client_commands.dart' show
     ClientCommandCode;
@@ -70,14 +74,14 @@ const int sigQuit = 3;
 
 Future debug(AnalyzedSentence sentence, VerbContext context) async {
   Uri base = sentence.base;
-  if (sentence.target == null) {
-    return context.performTaskInWorker(
-        new InteractiveDebuggerTask(base, snapshotLocation: sentence.withUri));
-  }
 
+  SharedTask compileTask;
   SharedTask attachTask;
+  DebuggerTask debugTask;
 
-  if (sentence.onTarget != null) {
+  if (sentence.onTarget == null) {
+    attachTask = new AttachDirectlyTask(base);
+  } else {
     switch (sentence.onTarget.kind) {
       case TargetKind.TTY:
         attachTask = new AttachTtyTask(sentence.onTarget.name);
@@ -91,21 +95,27 @@ Future debug(AnalyzedSentence sentence, VerbContext context) async {
     }
   }
 
-  DebuggerTask debugTask;
-  switch (sentence.target.kind) {
-    case TargetKind.SERVE:
-      debugTask = new DebuggerTask(TargetKind.SERVE.index, base,
-          argument: sentence.targetUri, snapshotLocation: sentence.withUri);
-      break;
-    case TargetKind.FILE:
-      debugTask = new DebuggerTask(TargetKind.FILE.index, base,
-          argument: sentence.targetUri, snapshotLocation: sentence.withUri);
-      break;
-    default:
-      throwInternalError("Unimplemented ${sentence.target}");
+  if (sentence.target == null) {
+    debugTask = new DebuggerTask(TargetKind.FILE.index, base,
+    snapshotLocation: sentence.withUri);
+  } else {
+    compileTask = new CompileTask(sentence.targetUri, base, false, false);
+    switch (sentence.target.kind) {
+      case TargetKind.SERVE:
+        debugTask = new DebuggerTask(TargetKind.SERVE.index, base,
+            argument: sentence.targetUri, snapshotLocation: sentence.withUri);
+        break;
+      case TargetKind.FILE:
+        debugTask = new DebuggerTask(TargetKind.FILE.index, base,
+            argument: sentence.targetUri, snapshotLocation: sentence.withUri);
+        break;
+      default:
+        throwInternalError("Unimplemented ${sentence.target}");
+    }
   }
 
-  return context.performTaskInWorker(combineTasks(attachTask, debugTask));
+  return context.performTaskInWorker(
+      combineTasks(parallelTasks(compileTask, attachTask), debugTask));
 }
 
 // Returns a debug client event handler that is bound to the current session.
@@ -143,62 +153,6 @@ ClientEventHandler debugClientEventHandler(
   };
 }
 
-class InteractiveDebuggerTask extends SharedTask {
-  // Keep this class simple, see note in superclass.
-
-  final Uri base;
-
-  final Uri snapshotLocation;
-
-  const InteractiveDebuggerTask(this.base, {this.snapshotLocation});
-
-  Future<int> call(
-      CommandSender commandSender,
-      StreamIterator<ClientCommand> commandIterator) {
-
-    // Setup a more advanced client input handler for the interactive debug task
-    // that also handles the input and forwards it to the debug input handler.
-    StreamController stdinController = new StreamController();
-    SessionState state = SessionState.current;
-    setupClientInOut(
-        state,
-        commandSender,
-        debugClientEventHandler(state, commandIterator, stdinController));
-
-    return interactiveDebuggerTask(state,
-        base,
-        stdinController,
-        snapshotLocation: snapshotLocation);
-  }
-}
-
-Future<int> runInteractiveDebuggerTask(
-    CommandSender commandSender,
-    StreamIterator<ClientCommand> commandIterator,
-    SessionState state,
-    Uri script,
-    Uri base,
-    {Uri snapshotLocation}) {
-
-  // Setup a more advanced client input handler for the interactive debug task
-  // that also handles the input and forwards it to the debug input handler.
-  StreamController stdinController = new StreamController();
-  return compileAndAttachToVmThen(
-      commandSender,
-      commandIterator,
-      state,
-      script,
-      base,
-      true,
-      () => interactiveDebuggerTask(
-          state,
-          base,
-          stdinController,
-          snapshotLocation: snapshotLocation),
-      eventHandler:
-          debugClientEventHandler(state, commandIterator, stdinController));
-}
-
 Future<int> serveDebuggerTask(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
@@ -206,38 +160,52 @@ Future<int> serveDebuggerTask(
     Uri script,
     Uri base,
     {Uri snapshotLocation}) {
-
-  return compileAndAttachToVmThen(
-      commandSender,
-      commandIterator,
-      state,
-      script,
-      base,
-      true,
-      () => new DebugServer().serveSingleShot(
-          state, snapshotLocation: snapshotLocation));
-}
-
-Future<int> interactiveDebuggerTask(
-    SessionState state,
-    Uri base,
-    StreamController stdinController,
-    {Uri snapshotLocation}) async {
   DartinoVmContext vmContext = state.vmContext;
   if (vmContext == null) {
-    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
+    throwInternalError("Not connected to a dartino vm.");
   }
   List<DartinoDelta> compilationResult = state.compilationResults;
-  if (snapshotLocation == null && compilationResult.isEmpty) {
+  if (compilationResult.isEmpty) {
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
 
   // Make sure current state's vmContext is not reused if invoked again.
   state.vmContext = null;
 
+  return new DebugServer()
+      .serveSingleShot(state, snapshotLocation: snapshotLocation);
+}
+
+Future<int> interactiveDebuggerTask(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SessionState state,
+    Uri base,
+    {Uri snapshotLocation}) async {
+  DartinoVmContext vmContext = state.vmContext;
+  if (vmContext == null) {
+    throwInternalError("Not connected to a dartino vm.");
+  }
+  List<DartinoDelta> compilationResult = state.compilationResults;
+  if (compilationResult.isEmpty) {
+    throwFatalError(DiagnosticKind.compileBeforeRun);
+  }
+
+  // Setup a more advanced client input handler for the interactive debug task
+  // that also handles the input and forwards it to the debug input handler.
+  StreamController stdinController = new StreamController();
+
+  setupClientInOut(
+      state,
+      commandSender,
+      debugClientEventHandler(state, commandIterator, stdinController));
+
   Stream<String> inputStream = stdinController.stream
       .transform(UTF8.decoder)
       .transform(new LineSplitter());
+
+  // Make sure current state's vmContext is not reused if invoked again.
+  state.vmContext = null;
 
   return await new CommandLineDebugger(
       vmContext,
@@ -269,22 +237,15 @@ class DebuggerTask extends SharedTask {
             base,
             snapshotLocation: snapshotLocation);
       case TargetKind.FILE:
-        return runInteractiveDebuggerTask(
-            commandSender, commandIterator, SessionState.current, argument,
-            base, snapshotLocation: snapshotLocation);
+        return interactiveDebuggerTask(
+            commandSender,
+            commandIterator,
+            SessionState.current,
+            base,
+            snapshotLocation: snapshotLocation);
       default:
         throwInternalError("Unimplemented ${TargetKind.values[kind]}");
     }
     return null;
   }
-}
-
-DartinoVmContext attachToSession(
-    SessionState state, CommandSender commandSender) {
-  DartinoVmContext vmContext = state.vmContext;
-  if (vmContext == null) {
-    throwFatalError(DiagnosticKind.attachToVmBeforeRun);
-  }
-  state.attachCommandSender(commandSender);
-  return vmContext;
 }

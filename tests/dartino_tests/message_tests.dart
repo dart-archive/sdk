@@ -159,9 +159,6 @@ Future<Null> checkCommandLineExample(
     Expect.stringEquals(
         message,
         new RegExp(expectedMessage).stringMatch(message));
-  } else if (kind == DiagnosticKind.attachToVmBeforeRun) {
-    await mock.done;
-    Expect.stringEquals(getMessage(kind), mock.stderrMessages.single);
   } else {
     Expect.isNotNull(mock.recordedError);
     Expect.equals(kind, mock.recordedError.kind, '${mock.recordedError}');

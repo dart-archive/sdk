@@ -170,12 +170,6 @@ List<Example> getExamples(DiagnosticKind kind) {
       // exercise this error.
       return untestable;
 
-    case DiagnosticKind.attachToVmBeforeRun:
-      return <Example>[
-          new CommandLineExample(
-              <String>['create', 'session', 'foo'],
-              <String>['debug', 'in', 'session', 'foo'])];
-
     case DiagnosticKind.compileBeforeRun:
       var examples = <Example>[
           new CommandLineExample(
@@ -187,7 +181,11 @@ List<Example> getExamples(DiagnosticKind kind) {
               <String>['create', 'session', 'foo'],
               <String>['attach', 'in', 'session', 'foo',
                        'tcp_socket', exampleAddress],
-              <String>['debug', 'attach', 'in', 'session', 'foo'])];
+              <String>['debug', 'attach', 'in', 'session', 'foo']),
+          new CommandLineExample(
+              <String>['create', 'session', 'foo'],
+              <String>['debug', 'in', 'session', 'foo'])
+      ];
       // TODO(ahe): Need to mock up a VM socket to test this. But hopefully
       // we'll get rid of this message before then, most commands should
       // support auto-compiling.

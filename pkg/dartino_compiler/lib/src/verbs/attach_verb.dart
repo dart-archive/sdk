@@ -16,7 +16,8 @@ import '../worker/developer.dart' show
     Address,
     attachToVmTcp,
     attachToVmTty,
-    parseAddress;
+    parseAddress,
+    startAndAttach;
 
 const Action attachAction = const Action(
     attach, attachDocumentation, requiresSession: true,
@@ -88,5 +89,26 @@ Future<int> attachTtyTask(String ttyDevice) async {
   state.explicitAttach = true;
   await attachToVmTty(ttyDevice, state);
   print("Attached to $ttyDevice");
+  return 0;
+}
+
+class AttachDirectlyTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+  final Uri base;
+
+  const AttachDirectlyTask(this.base);
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<ClientCommand> commandIterator) {
+    return attachDirectlyTask(commandSender, base);
+  }
+}
+
+Future<int> attachDirectlyTask(CommandSender commandSender, Uri base) async {
+  SessionState state = SessionState.current;
+  if (state.vmContext == null) {
+    await startAndAttach(state, base, commandSender);
+  }
   return 0;
 }

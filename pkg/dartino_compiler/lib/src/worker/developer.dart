@@ -236,6 +236,24 @@ Future<Null> startAndAttachDirectly(SessionState state, Uri base) async {
   await state.vmContext.disableVMStandardOutput();
 }
 
+Future<Null> startAndAttach(
+    SessionState state,
+    Uri base,
+    CommandSender commandSender) async {
+  if (state.settings.deviceAddress != null) {
+    await startAndAttachViaAgent(base, state);
+    // TODO(wibling): read stdout from agent.
+  } else {
+    await startAndAttachDirectly(state, base);
+    state.dartinoVm.stdoutLines.listen((String line) {
+      commandSender.sendStdout("$line\n");
+    });
+    state.dartinoVm.stderrLines.listen((String line) {
+      commandSender.sendStderr("$line\n");
+    });
+  }
+}
+
 /// Analyze the target and report the results to the user.
 Future<int> analyze(
     Uri fileUri,
@@ -827,7 +845,6 @@ Future<int> compileAndAttachToVmThen(
     bool waitForVmExit,
     Future<int> action(),
     {ClientEventHandler eventHandler}) async {
-  bool startedVmDirectly = false;
   List<DartinoDelta> compilationResults = state.compilationResults;
   if (compilationResults.isEmpty || script != null) {
     if (script == null) {
@@ -842,21 +859,8 @@ Future<int> compileAndAttachToVmThen(
   DartinoVmContext vmContext = state.vmContext;
 
   if (vmContext == null) {
-    if (state.settings.deviceAddress != null) {
-      await startAndAttachViaAgent(base, state);
-      // TODO(wibling): read stdout from agent.
-    } else {
-      startedVmDirectly = true;
-      await startAndAttachDirectly(state, base);
-      state.dartinoVm.stdoutLines.listen((String line) {
-          commandSender.sendStdout("$line\n");
-        });
-      state.dartinoVm.stderrLines.listen((String line) {
-          commandSender.sendStderr("$line\n");
-        });
-    }
-    vmContext = state.vmContext;
-    assert(vmContext != null);
+    await startAndAttach(state, base, commandSender);
+    assert(state.vmContext != null);
   }
 
   eventHandler ??= defaultClientEventHandler(state, commandIterator);
@@ -873,7 +877,7 @@ Future<int> compileAndAttachToVmThen(
       print(trace);
     }
   } finally {
-    if (waitForVmExit && startedVmDirectly) {
+    if (waitForVmExit && !state.explicitAttach) {
       exitCode = await state.dartinoVm.exitCode;
     }
     state.detachCommandSender();
@@ -1637,6 +1641,12 @@ SharedTask combineTasks(SharedTask task1, SharedTask task2) {
   return new CombinedTask(task1, task2);
 }
 
+SharedTask parallelTasks(SharedTask task1, SharedTask task2) {
+  if (task1 == null) return task2;
+  if (task2 == null) return task1;
+  return new ParallelTask(task1, task2);
+}
+
 class CombinedTask extends SharedTask {
   // Keep this class simple, see note in superclass.
 
@@ -1653,6 +1663,22 @@ class CombinedTask extends SharedTask {
   }
 }
 
+class ParallelTask extends SharedTask {
+  // Keep this class simple, see note in superclass.
+
+  final SharedTask task1;
+
+  final SharedTask task2;
+
+  const ParallelTask(this.task1, this.task2);
+
+  Future<int> call(
+      CommandSender commandSender,
+      StreamIterator<ClientCommand> commandIterator) {
+    return invokeParallelTasks(commandSender, commandIterator, task1, task2);
+  }
+}
+
 Future<int> invokeCombinedTasks(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
@@ -1661,6 +1687,21 @@ Future<int> invokeCombinedTasks(
   int result = await task1(commandSender, commandIterator);
   if (result != 0) return result;
   return task2(commandSender, commandIterator);
+}
+
+Future<int> invokeParallelTasks(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SharedTask task1,
+    SharedTask task2) async {
+  List results = await Future.wait([
+    task1(commandSender, commandIterator),
+    task2(commandSender, commandIterator)
+  ]);
+  if (results[0] != 0) {
+    return results[0];
+  }
+  return results[1];
 }
 
 Future<String> getAgentVersion(InternetAddress host, int port) async {
