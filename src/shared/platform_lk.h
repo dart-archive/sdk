@@ -89,7 +89,7 @@ class MonitorImpl {
       CHECK_AND_FAIL(mutex_acquire(&internal_));
       // Remove our entry from the waitlist. If we are no longer in the list,
       // we have been notified before we could complete handling the timeout,
-      // so we need to return true.
+      // so we need to return false.
       if (!MaybeRemoveFromWaitList(&wait_entry)) result = NO_ERROR;
       CHECK_AND_FAIL(mutex_release(&internal_));
     }
@@ -98,7 +98,8 @@ class MonitorImpl {
   }
 
   bool WaitUntil(uint64 microseconds_since_epoch) {
-    uint64 us = microseconds_since_epoch - Platform::GetMicroseconds();
+    int64 us = microseconds_since_epoch - Platform::GetMicroseconds();
+    if (us < 0) us = 0;
     return Wait(us);
   }
 

@@ -148,7 +148,6 @@ class MonitorImpl {
   }
 
   bool Wait(uint64 microseconds) {
-    bool success = true;
     CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
     WaitListEntry wait_entry;
     AddToWaitList(&wait_entry);
@@ -156,28 +155,29 @@ class MonitorImpl {
     CHECK_AND_FAIL(osMutexRelease(mutex_));
 #ifdef CMSIS_OS_RTX
     int tokens = osSemaphoreWait(wait_entry.semaphore_, microseconds / 1000);
-    success = (tokens == 0);
+    bool waited_successfully = (tokens == 0);
 #else
     // The implementation in STM32CubeF7 returns osOK if the
     // semaphore was acquired and osErrorOS if it was not.
     // See https://github.com/dartino/sdk/issues/377.
     int status = osSemaphoreWait(wait_entry.semaphore_, microseconds / 1000);
-    success = (status == osOK);
+    bool waited_successfully = (status == osErrorOS);
 #endif
-    if (!success) {
+    if (waited_successfully) {
       CHECK_AND_FAIL(osMutexWait(internal_, osWaitForever));
       // Remove our entry from the waitlist. If we are no longer in the list,
       // we have been notified before we could complete handling the timeout,
-      // so we need to return true.
-      if (!MaybeRemoveFromWaitList(&wait_entry)) success = true;
+      // so we need to return false.
+      if (!MaybeRemoveFromWaitList(&wait_entry)) waited_successfully = false;
       CHECK_AND_FAIL(osMutexRelease(internal_));
     }
     CHECK_AND_RETURN(osMutexWait(mutex_, osWaitForever));
-    return success;
+    return waited_successfully;
   }
 
   bool WaitUntil(uint64 microseconds_since_epoch) {
-    uint64 us = microseconds_since_epoch - Platform::GetMicroseconds();
+    int64 us = microseconds_since_epoch - Platform::GetMicroseconds();
+    if (us < 0) us = 0;
     return Wait(us);
   }
 
