@@ -12,70 +12,13 @@ Usage: dartino <action> [<argument>]...
  where <action> is one of the following:""";
 
 const String debugDocumentation = """
-   debug
-             Start an interactive debug session
-
-   debug backtrace
-             Print the current stack trace
-
-   debug break <location>
-             Set a breakpoint at <location>. <Location> must have one of the
-             formats methodName@bytecodeIndex or filename:line:column
-
-   debug continue
-             Resume execution of a program when at a breakpoint
-
-   debug delete-breakpoint <n>
-             Delete breakpoint with id <n>
-
-   debug disasm
-             Print bytecodes for the selected frame
-
-   debug fibers
-             Print a stack trace for all fibers
-
-   debug finish
-             Finish execution of the current frame
-
-   debug frame <n>
-             Select frame <n> in the stack trace
-
-   debug list
-             Print source listing for the selected frame
-
-   debug list breakpoints
-             Print a list of all breakpoints
-
-   debug print <name>
-             Print the value of the local variable with the given name
-
-   debug print *<name>
-             Print the structure of the local variable with the given name
-
-   debug print-all
-             Print the value of all local variables
-
-   debug restart
-             Restart the selected frame
-
-   debug run-to-main
-             Run the compiled code on the Dartino VM and break at the main
-             method
-
-   debug step
-             Step to next source position
-
-   debug step-bytecode
-             Step one bytecode
-
-   debug step-over
-             Step to next source location; do not follow calls
-
-   debug step-over-bytecode
-             Step one bytecode; do not follow calls
-
-   debug toggle internal
-             Toggle visibility of internal frames
+   debug <script> [with <snapshot>]
+         [on (tty <tty-device> | tcp_socket <host>:<port>)]
+             Start a command line debug session.
+             The debugger will attach to a vm on the given tty or tcp socket.
+             If no 'on' is given the program will be run in a local vm.
+             If no <snapshot> is provided, debug information is taken from the
+               default location relative to script.
 """;
 
 const String helpDocumentation = """

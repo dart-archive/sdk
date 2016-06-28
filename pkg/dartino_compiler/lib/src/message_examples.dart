@@ -174,13 +174,7 @@ List<Example> getExamples(DiagnosticKind kind) {
       return <Example>[
           new CommandLineExample(
               <String>['create', 'session', 'foo'],
-              <String>['debug', 'in', 'session', 'foo']),
-          new CommandLineExample(
-              <String>['create', 'session', 'foo'],
-              <String>['debug', 'run-to-main', 'in', 'session', 'foo']),
-          new CommandLineExample(
-              <String>['create', 'session', 'foo'],
-              <String>['debug', 'backtrace', 'in', 'session', 'foo'])];
+              <String>['debug', 'in', 'session', 'foo'])];
 
     case DiagnosticKind.compileBeforeRun:
       var examples = <Example>[
