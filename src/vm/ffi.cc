@@ -248,6 +248,7 @@ typedef word (*PF3)(word, word, word);
 typedef word (*PF4)(word, word, word, word);
 typedef word (*PF5)(word, word, word, word, word);
 typedef word (*PF6)(word, word, word, word, word, word);
+typedef word (*PF7)(word, word, word, word, word, word, word);
 
 BEGIN_NATIVE(ForeignPCall0) {
   word address = AsForeignWord(arguments[0]);
@@ -412,6 +413,173 @@ BEGIN_NATIVE(ForeignVCall7) {
   word a6 = AsForeignWord(arguments[7]);
   VF7 function = reinterpret_cast<VF7>(address);
   EVALUATE_FFI_CALL_AND_RETURN_VOID(function(a0, a1, a2, a3, a4, a5, a6));
+}
+END_NATIVE()
+
+typedef int (*I64F0)();
+typedef int (*I64F1)(word);
+typedef int (*I64F2)(word, word);
+typedef int (*I64F3)(word, word, word);
+typedef int (*I64F4)(word, word, word, word);
+typedef int (*I64F5)(word, word, word, word, word);
+typedef int (*I64F6)(word, word, word, word, word, word);
+typedef int (*I64F7)(word, word, word, word, word, word, word);
+
+// This enum should match the one in ffi.dart
+enum {
+  FFI_RET_POINTER = 0,
+  FFI_RET_INT32,
+  FFI_RET_INT64,
+  FFI_RET_FLOAT32,
+  FFI_RET_VOID
+};
+
+BEGIN_NATIVE(ForeignListCall) {
+  word address = AsForeignWord(arguments[0]);
+  int retType = AsForeignWord(arguments[1]);
+  int size = AsForeignWord(arguments[2]);
+  Object* obj = Instance::cast(arguments[3])->GetInstanceField(0);
+  Array* list = Array::cast(obj);
+  word a0 = 0, a1 = 0, a2 = 0, a3 = 0, a4 = 0, a5 = 0, a6 = 0;
+  // fall-through initialization
+  switch (size) {
+    case 7:
+      a6 = AsForeignWord(list->get(6));
+    case 6:
+      a5 = AsForeignWord(list->get(5));
+    case 5:
+      a4 = AsForeignWord(list->get(4));
+    case 4:
+      a3 = AsForeignWord(list->get(3));
+    case 3:
+      a2 = AsForeignWord(list->get(2));
+    case 2:
+      a1 = AsForeignWord(list->get(1));
+    case 1:
+      a0 = AsForeignWord(list->get(0));
+    case 0:
+      break;
+    default:
+      return Failure::index_out_of_bounds();
+  }
+  if (retType == FFI_RET_INT32) {
+    int ret = 0;
+    switch (size) {
+      case 0:
+        ret = reinterpret_cast<F0>(address)();
+        break;
+      case 1:
+        ret = reinterpret_cast<F1>(address)(a0);
+        break;
+      case 2:
+        ret = reinterpret_cast<F2>(address)(a0, a1);
+        break;
+      case 3:
+        ret = reinterpret_cast<F3>(address)(a0, a1, a2);
+        break;
+      case 4:
+        ret = reinterpret_cast<F4>(address)(a0, a1, a2, a3);
+        break;
+      case 5:
+        ret = reinterpret_cast<F5>(address)(a0, a1, a2, a3, a4);
+        break;
+      case 6:
+        ret = reinterpret_cast<F6>(address)(a0, a1, a2, a3, a4, a5);
+        break;
+      case 7:
+        ret = reinterpret_cast<F7>(address)(a0, a1, a2, a3, a4, a5, a6);
+        break;
+    }
+    EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(ret));
+  } else if (retType == FFI_RET_INT64) {
+    int64 ret = 0;
+    switch (size) {
+      case 0:
+        ret = reinterpret_cast<I64F0>(address)();
+        break;
+      case 1:
+        ret = reinterpret_cast<I64F1>(address)(a0);
+        break;
+      case 2:
+        ret = reinterpret_cast<I64F2>(address)(a0, a1);
+        break;
+      case 3:
+        ret = reinterpret_cast<I64F3>(address)(a0, a1, a2);
+        break;
+      case 4:
+        ret = reinterpret_cast<I64F4>(address)(a0, a1, a2, a3);
+        break;
+      case 5:
+        ret = reinterpret_cast<I64F5>(address)(a0, a1, a2, a3, a4);
+        break;
+      case 6:
+        ret = reinterpret_cast<I64F6>(address)(a0, a1, a2, a3, a4, a5);
+        break;
+      case 7:
+        ret = reinterpret_cast<I64F7>(address)(a0, a1, a2, a3, a4, a5, a6);
+        break;
+    }
+    EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(ret));
+  } else if (retType == FFI_RET_POINTER) {
+    word ret = 0;
+    switch (size) {
+      case 0:
+        ret = reinterpret_cast<PF0>(address)();
+        break;
+      case 1:
+        ret = reinterpret_cast<PF1>(address)(a0);
+        break;
+      case 2:
+        ret = reinterpret_cast<PF2>(address)(a0, a1);
+        break;
+      case 3:
+        ret = reinterpret_cast<PF3>(address)(a0, a1, a2);
+        break;
+      case 4:
+        ret = reinterpret_cast<PF4>(address)(a0, a1, a2, a3);
+        break;
+      case 5:
+        ret = reinterpret_cast<PF5>(address)(a0, a1, a2, a3, a4);
+        break;
+      case 6:
+        ret = reinterpret_cast<PF6>(address)(a0, a1, a2, a3, a4, a5);
+        break;
+      case 7:
+        ret = reinterpret_cast<PF7>(address)(a0, a1, a2, a3, a4, a5, a6);
+        break;
+    }
+    EVALUATE_FFI_CALL_AND_RETURN_AND_GC(static_cast<int64>(ret));
+  } else if (retType == FFI_RET_VOID) {
+    switch (size) {
+      case 0:
+        reinterpret_cast<VF0>(address)();
+        break;
+      case 1:
+        reinterpret_cast<VF1>(address)(a0);
+        break;
+      case 2:
+        reinterpret_cast<VF2>(address)(a0, a1);
+        break;
+      case 3:
+        reinterpret_cast<VF3>(address)(a0, a1, a2);
+        break;
+      case 4:
+        reinterpret_cast<VF4>(address)(a0, a1, a2, a3);
+        break;
+      case 5:
+        reinterpret_cast<VF5>(address)(a0, a1, a2, a3, a4);
+        break;
+      case 6:
+        reinterpret_cast<VF6>(address)(a0, a1, a2, a3, a4, a5);
+        break;
+      case 7:
+        reinterpret_cast<VF7>(address)(a0, a1, a2, a3, a4, a5, a6);
+        break;
+    }
+    return Smi::FromWord(0);
+  } else {  // TODO(dmitryolsh) : float32 return type
+    return Failure::wrong_argument_type();
+  }
 }
 END_NATIVE()
 

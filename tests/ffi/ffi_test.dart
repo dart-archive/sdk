@@ -31,6 +31,8 @@ main() {
   testPCallAndMemory(false);
   testStruct();
 
+  testVariadicFfiCall();
+
   testImmutablePassing(false);
   testImmutablePassing(true);
   testExternalFinalizer();
@@ -409,6 +411,215 @@ testVAndICall() {
   Expect.equals(6, getcount.icall$0());
   Expect.equals(null, vcall7.vcall$7(1, 1, 1, 1, 1, 1, 1));
   Expect.equals(7, getcount.icall$0());
+}
+
+testVariadicFfiCall() {
+  var libPath = ForeignLibrary.bundleLibraryName('ffi_test_library');
+  ForeignLibrary fl = new ForeignLibrary.fromName(libPath);
+
+  // Test methods that use a static int.
+  var setup = new Ffi('setup', Ffi.returnsVoid, [], fl);
+  var getcount = new Ffi('getcount', Ffi.returnsInt32, [], fl);
+  var inc = new Ffi('inc', Ffi.returnsVoid, [], fl);
+  var setcount = new Ffi('setcount', Ffi.returnsInt32, [Ffi.int32], fl);
+  Expect.equals(null, setup([]));
+  Expect.equals(0, setcount([0]));
+  Expect.equals(0, getcount([]));
+  Expect.equals(null, inc([]));
+  Expect.equals(1, getcount([]));
+  Expect.equals(42, setcount([42]));
+
+  // Test that reading out the value of the variable directly works
+  var count = fl.lookupVariable('count');
+  var countMemory = new ForeignMemory.fromAddress(count.address, 4);
+  Expect.equals(42, countMemory.getInt32(0));
+
+  // Test function calls with different number of arguments
+  var icall0 = new Ffi('ifun0', Ffi.returnsInt32, [], fl);
+  var icall1 = new Ffi('ifun1', Ffi.returnsInt32, [Ffi.int32], fl);
+  var icall2 = new Ffi('ifun2', Ffi.returnsInt32, [Ffi.int32, Ffi.int32], fl);
+  var icall3 = new Ffi('ifun3', Ffi.returnsInt32, 
+    new List.filled(3, Ffi.int32), fl);
+  var icall4 = new Ffi('ifun4', Ffi.returnsInt32,
+    new List.filled(4, Ffi.int32), fl);
+  var icall5 = new Ffi('ifun5', Ffi.returnsInt32,
+    new List.filled(5, Ffi.int32), fl);
+  var icall6 = new Ffi('ifun6', Ffi.returnsInt32,
+    new List.filled(6, Ffi.int32), fl);
+  var icall7 = new Ffi('ifun7', Ffi.returnsInt32,
+    new List.filled(7, Ffi.int32), fl);
+  Expect.equals(0, icall0([]));
+  Expect.equals(1, icall1([1]));
+  Expect.equals(2, icall2([1, 1]));
+  Expect.equals(3, icall3([1, 1, 1]));
+  Expect.equals(4, icall4([1, 1, 1, 1]));
+  Expect.equals(5, icall5([1, 1, 1, 1, 1]));
+  Expect.equals(6, icall6([1, 1, 1, 1, 1, 1]));
+  Expect.equals(7, icall7([1, 1, 1, 1, 1, 1, 1]));
+
+  // Test wrong number of arguments
+  Expect.throws(() => icall0([1]), isArgumentError);
+  Expect.throws(() => icall3([1, 1]), isArgumentError);
+  // Test wrong argument types
+  Expect.throws(() => icall1(1), isArgumentError);
+  Expect.throws(() => icall1(["Abc"]), isArgumentError);
+  Expect.throws(() => icall2([1, "Abc"]), isArgumentError);
+  // Conversion of doubles (truncates)
+  Expect.equals(1, icall2([1.5, 0.9]));
+
+  // Some limit tests, this is more of sanity checking of our conversions.
+  Expect.equals(-1, icall1([-1]));
+  Expect.equals(-2, icall2([-1, -1]));
+  Expect.equals(2147483647, icall3([2147483647, 0, 0]));
+  Expect.equals(2147483646, icall3([2147483647, -1, 0]));
+  Expect.equals(-2147483647, icall3([2147483647, 2, 0]));
+  Expect.equals(0, icall1([4294967296]));
+  Expect.equals(1, icall1([4294967297]));
+  Expect.equals(-1, icall1([4294967295]));
+  Expect.equals(0, icall1([1024 * 4294967296]));
+  Expect.equals(1, icall1([1024 * 4294967296 + 1]));
+
+  // Test all int64 returning versions.
+  var i64call0 = new Ffi('ifun0', Ffi.returnsInt64, [], fl);
+  var i64call1 = new Ffi('ifun1', Ffi.returnsInt64, [Ffi.int32], fl);
+  var i64call2 = new Ffi('ifun2', Ffi.returnsInt64, [Ffi.int32, Ffi.int32], fl);
+  var i64call3 = new Ffi('ifun3', Ffi.returnsInt64, 
+    new List.filled(3, Ffi.int32), fl);
+  var i64call4 = new Ffi('ifun4', Ffi.returnsInt64,
+    new List.filled(4, Ffi.int32), fl);
+  var i64call5 = new Ffi('ifun5', Ffi.returnsInt64,
+    new List.filled(5, Ffi.int32), fl);
+  var i64call6 = new Ffi('ifun6', Ffi.returnsInt64,
+    new List.filled(6, Ffi.int32), fl);
+  var i64call7 = new Ffi('ifun7', Ffi.returnsInt64,
+    new List.filled(7, Ffi.int32), fl);
+  Expect.equals(0, i64call0([]));
+  Expect.equals(1, i64call1([1]));
+  Expect.equals(2, i64call2([1, 1]));
+  Expect.equals(3, i64call3([1, 1, 1]));
+  Expect.equals(4, i64call4([1, 1, 1, 1]));
+  Expect.equals(5, i64call5([1, 1, 1, 1, 1]));
+  Expect.equals(6, i64call6([1, 1, 1, 1, 1, 1]));
+  Expect.equals(7, i64call7([1, 1, 1, 1, 1, 1, 1]));
+
+  // Test all the void returning versions.
+  // The vcall c functions will set the count to
+  // the sum of the arguments, testable by running getcount.
+  var vcall0 = new Ffi('vfun0', Ffi.returnsVoid, [], fl);
+  var vcall1 = new Ffi('vfun1', Ffi.returnsVoid, [Ffi.int32], fl);
+  var vcall2 = new Ffi('vfun2', Ffi.returnsVoid, [Ffi.int32, Ffi.int32], fl);
+  var vcall3 = new Ffi('vfun3', Ffi.returnsVoid, 
+    new List.filled(3, Ffi.int32), fl);
+  var vcall4 = new Ffi('vfun4', Ffi.returnsVoid,
+    new List.filled(4, Ffi.int32), fl);
+  var vcall5 = new Ffi('vfun5', Ffi.returnsVoid,
+    new List.filled(5, Ffi.int32), fl);
+  var vcall6 = new Ffi('vfun6', Ffi.returnsVoid,
+    new List.filled(6, Ffi.int32), fl);
+  var vcall7 = new Ffi('vfun7', Ffi.returnsVoid,
+    new List.filled(7, Ffi.int32), fl);
+  Expect.equals(null, vcall0([]));
+  Expect.equals(0, getcount([]));
+  Expect.equals(null, vcall1([1]));
+  Expect.equals(1, getcount([]));
+  Expect.equals(null, vcall2([1, 1]));
+  Expect.equals(2, getcount([]));
+  Expect.equals(null, vcall3([1, 1, 1]));
+  Expect.equals(3, getcount([]));
+  Expect.equals(null, vcall4([1, 1, 1, 1]));
+  Expect.equals(4, getcount([]));
+  Expect.equals(null, vcall5([1, 1, 1, 1, 1]));
+  Expect.equals(5, getcount([]));
+  Expect.equals(null, vcall6([1, 1, 1, 1, 1, 1]));
+  Expect.equals(6, getcount([]));
+  Expect.equals(null, vcall7([1, 1, 1, 1, 1, 1, 1]));
+  Expect.equals(7, getcount([]));
+
+  var pcall0 = new Ffi('pfun0', Ffi.returnsPointer, [], fl);
+  var pcall1 = new Ffi('pfun1', Ffi.returnsPointer, [Ffi.int32], fl);
+  var pcall2 = new Ffi('pfun2', Ffi.returnsPointer, 
+    [Ffi.int32, Ffi.int32], fl);
+  var pcall3 = new Ffi('pfun3', Ffi.returnsPointer, 
+    new List.filled(3, Ffi.int32), fl);
+  var pcall4 = new Ffi('pfun4', Ffi.returnsPointer,
+    new List.filled(4, Ffi.int32), fl);
+  var pcall5 = new Ffi('pfun5', Ffi.returnsPointer,
+    new List.filled(5, Ffi.int32), fl);
+  var pcall6 = new Ffi('pfun6', Ffi.returnsPointer,
+    new List.filled(6, Ffi.int32), fl);
+
+  fromPointer(ForeignPointer pointer, int length) {
+    return new ForeignMemory.fromAddress(pointer.address, length);
+  }
+
+  var foreignPointer = pcall0([]);
+  var memory = fromPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 1);
+  Expect.equals(memory.getInt32(4), 2);
+  Expect.equals(memory.getInt32(8), 3);
+  Expect.equals(memory.getInt32(12), 4);
+  checkOutOfBoundsThrows(() => memory.getInt32(16));
+  memory.free();
+
+  foreignPointer = pcall1([42]);
+  memory = fromPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 42);
+  Expect.equals(memory.getInt32(8), 42);
+  Expect.equals(memory.getInt32(12), 42);
+  memory.setInt32(8, -1);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 42);
+  Expect.equals(memory.getInt32(8), -1);
+  Expect.equals(memory.getInt32(12), 42);
+  memory.free();
+
+  foreignPointer = pcall2([42, 43]);
+  memory = fromPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 42);
+  Expect.equals(memory.getInt32(12), 43);
+  memory.free();
+
+  foreignPointer = pcall3([42, 43, 44]);
+  memory = fromPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 44);
+  Expect.equals(memory.getInt32(12), 43);
+  memory.free();
+
+  foreignPointer = pcall4([42, 43, 44, 45]);
+  memory = fromPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 44);
+  Expect.equals(memory.getInt32(12), 45);
+  memory.free();
+
+  foreignPointer = pcall5([42, 43, 44, 45, 46]);
+  memory = fromPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 44);
+  Expect.equals(memory.getInt32(12), 45 + 46);
+  memory.free();
+
+  foreignPointer = pcall6([42, 43, 44, 45, 46, 47]);
+  memory = fromPointer(foreignPointer, 16);
+  Expect.equals(memory.address, foreignPointer.address);
+  Expect.equals(memory.getInt32(0), 42);
+  Expect.equals(memory.getInt32(4), 43);
+  Expect.equals(memory.getInt32(8), 44);
+  Expect.equals(memory.getInt32(12), 45 + 46 + 47);
+  memory.free();
 }
 
 testFailingLibraryLookups() {
