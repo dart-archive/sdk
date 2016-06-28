@@ -135,6 +135,7 @@ class Socket implements system.Socket {
   }
 
   close() {
+    shutdownWrite();
     _unregisterAndClose.vcall$1(_socket);
   }
 

@@ -9,6 +9,12 @@
 #include "src/shared/atomic.h"
 #include "src/shared/globals.h"
 
+#ifdef _MSC_VER
+#define ALWAYS_INLINE inline __forceinline
+#else
+#define ALWAYS_INLINE inline __attribute__((always_inline))
+#endif
+
 namespace dartino {
 
 class Mutex;

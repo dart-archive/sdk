@@ -9,9 +9,12 @@ import 'infrastructure.dart';
 import 'documentation.dart' show
     quitDocumentation;
 
+import '../hub/exit_codes.dart' show
+    INPUT_ERROR;
+
 const Action quitAction = const Action(quit, quitDocumentation);
 
 Future<int> quit(AnalyzedSentence sentence, VerbContext context) async {
   throwFatalError(DiagnosticKind.quitTakesNoArguments);
-  return 1;
+  return INPUT_ERROR;
 }

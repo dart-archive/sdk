@@ -88,6 +88,14 @@
         'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_xarm64' ],
       },
 
+      'ReleaseMIPS': {
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_mips' ],
+      },
+
+      'ReleaseXMIPS': {
+        'inherit_from': [ 'dartino_base', 'dartino_release', 'dartino_xmips' ],
+      },
+
       'DebugIA32': {
         'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_ia32', ],
       },
@@ -154,6 +162,14 @@
 
       'DebugXARM64': {
         'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_xarm64' ],
+      },
+
+      'DebugMIPS': {
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_mips' ],
+      },
+
+      'DebugXMIPS': {
+        'inherit_from': [ 'dartino_base', 'dartino_debug', 'dartino_xmips' ],
       },
 
       # Test configuration - to ensure that we can compile this configuration

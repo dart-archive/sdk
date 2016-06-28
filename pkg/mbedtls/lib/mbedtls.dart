@@ -121,12 +121,22 @@ final _mbedtls_entropy_init =
   _lib.lookup('mbedtls_entropy_init');
 
 // The function sending send requests back to dart.
-final _dart_send =
-    _lib.lookup('dart_send');
+final _dart_send = _lib.lookup('dart_send');
 // The function sending recv requests back to dart.
-final _dart_recv =
-    _lib.lookup('dart_recv');
+final _dart_recv = _lib.lookup('dart_recv');
 
+final _strerror = _lib.lookup('mbedtls_strerror');
+
+String _getErrorString(int code) {
+  const int BUFFER_SIZE = 128;
+  ForeignMemory buffer = new ForeignMemory.allocated(BUFFER_SIZE);
+  try {
+    _strerror.vcall$3(code, buffer, BUFFER_SIZE);
+    return cStringToString(new ForeignPointer(buffer.address));
+  } finally {
+    buffer.free();
+  }
+}
 
 /**
  * A TLS socket build on top of the mbed tls library.
@@ -179,6 +189,12 @@ class TLSSocket implements Socket {
     }
   }
 
+  void checkResult(String function, int result) {
+    if (result != 0) {
+      throw new TLSException("$function: ${_getErrorString(result)}");
+    }
+  }
+
   /**
    * Connect the socket and do the initial handshake.
    */
@@ -195,66 +211,57 @@ class TLSSocket implements Socket {
     _mbedtls_entropy_init.vcall$1(_entropy);
     var pers =
         new ForeignMemory.fromStringAsUTF8('ssl_client_dartino');
-    var result = _mbedtls_ctr_drbg_seed.icall$5(_ctr_drbg, _mbedtls_entropy_func,
-        _entropy, pers, pers.length);
-    pers.free();
-    if (result != 0) {
-      throw new TLSException(
-          "mbedtls_ctr_drbg_seed returned non 0 value of $result");
+    try {
+      checkResult("mbedtls_ctr_drbg_seed",
+          _mbedtls_ctr_drbg_seed.icall$5(_ctr_drbg, _mbedtls_entropy_func,
+              _entropy, pers, pers.length));
+    } finally {
+      pers.free();
     }
 
     var mbedtls_test_cas_pem_len_size =
         _getSize_tValue(_mbedtls_test_cas_pem_len);
-    result = _mbedtls_x509_crt_parse.icall$3(_cacert, _mbedtls_test_cas_pem,
-        mbedtls_test_cas_pem_len_size);
-    if (result != 0) {
-      throw new TLSException(
-          "mbedtls_x509_crt_parse returned non 0 value $result");
-    }
+    checkResult("mbedtls_x509_crt_parse",
+        _mbedtls_x509_crt_parse.icall$3(_cacert, _mbedtls_test_cas_pem,
+            mbedtls_test_cas_pem_len_size));
 
-    result = _mbedtls_ssl_config_defaults.icall$4(
-        _conf,
-        MBEDTLS_SSL_IS_CLIENT,
-        MBEDTLS_SSL_TRANSPORT_STREAM,
-        MBEDTLS_SSL_PRESET_DEFAULT);
-    if (result != 0) {
-      throw new TLSException(
-          "mbedtls_ssl_config_defaults returned non 0 value: $result");
-    }
+    checkResult("mbedtls_ssl_config_defaults",
+        _mbedtls_ssl_config_defaults.icall$4(
+            _conf,
+            MBEDTLS_SSL_IS_CLIENT,
+            MBEDTLS_SSL_TRANSPORT_STREAM,
+            MBEDTLS_SSL_PRESET_DEFAULT));
 
     _mbedtls_ssl_conf_authmode.vcall$2(_conf,  MBEDTLS_SSL_VERIFY_OPTIONAL);
     _mbedtls_ssl_conf_ca_chain.vcall$3(_conf, _cacert, ForeignPointer.NULL);
     _mbedtls_ssl_conf_rng.vcall$3(_conf, _mbedtls_ctr_drbg_random, _ctr_drbg);
-    result = _mbedtls_ssl_setup.icall$2(_ssl, _conf);
-    if (result != 0) {
-      throw new TLSException("mbedtls_ssl_setup returned non 0 value $result");
-    }
+    checkResult("mbedtls_ssl_setup", _mbedtls_ssl_setup.icall$2(_ssl, _conf));
     var serverHostName = new ForeignMemory.fromStringAsUTF8('no_used');
-    result = _mbedtls_ssl_set_hostname.icall$2(_ssl, serverHostName);
-    serverHostName.free();
-    if (result != 0) {
-      throw new TLSException(
-          "mbedtls_ssl_set_hostname returned non 0 value $result");
+    try {
+      checkResult("_mbedtls_ssl_set_hostname",
+          _mbedtls_ssl_set_hostname.icall$2(_ssl, serverHostName));
+    } finally {
+      serverHostName.free();
     }
     _mbedtls_ssl_set_bio.vcall$5(_ssl, _foreignBuffers.address, _dart_send,
         _dart_recv, ForeignPointer.NULL);
-    result = _mbedtls_ssl_handshake.icall$1(_ssl);
+    var result = _mbedtls_ssl_handshake.icall$1(_ssl);
     while (_handleBuffers(result)) {
       result = _mbedtls_ssl_handshake.icall$1(_ssl);
     }
-    if (result < 0) {
-      throw new TLSException(
-          "mbedtls_ssl_handshake returned ${result.toRadixString(16)}");
-    }
+    checkResult("mbedtls_ssl_handshake", result);
 
     var flags = _mbedtls_ssl_get_verify_result.icall$1(_ssl);
     // In real life, we probably want to bail out when flags != 0
     if (flags != 0 && failOnCertificate) {
       var vrfy_buf = new ForeignMemory.allocatedFinalized(512);
       var input = new ForeignMemory.fromStringAsUTF8('  !  ');
-      _mbedtls_x509_crt_verify_info.vcall$4(vrfy_buf, vrfy_buf.length,
-                                            input, flags);
-      input.free();
+      try {
+        _mbedtls_x509_crt_verify_info.vcall$4(vrfy_buf, vrfy_buf.length,
+            input, flags);
+      } finally {
+        input.free();
+      }
       throw new TLSException(cStringToString(vrfy_buf));
     }
   }

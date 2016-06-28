@@ -5,6 +5,7 @@
 #ifndef SRC_VM_MARK_SWEEP_H_
 #define SRC_VM_MARK_SWEEP_H_
 
+#include "src/shared/utils.h"
 #include "src/vm/object.h"
 #include "src/vm/program.h"
 #include "src/vm/process.h"
@@ -50,8 +51,6 @@ class MarkingVisitor : public PointerVisitor {
         marking_stack_(marking_stack),
         number_of_stacks_(0) {}
 
-  virtual void Visit(Object** p) { MarkPointer(*p); }
-
   virtual void VisitClass(Object** p) {}
 
   virtual void VisitBlock(Object** start, Object** end) {
@@ -68,18 +67,13 @@ class MarkingVisitor : public PointerVisitor {
     *stack_chain_ = stack;
   }
 
-  void MarkPointer(Object* object) {
-    if (!object->IsHeapObject()) return;
-    uword address = reinterpret_cast<uword>(object);
-    if (!GCMetadata::InNewOrOldSpace(address)) {
-      return;
-    }
+  void ALWAYS_INLINE MarkPointer(Object* object) {
+    if (!GCMetadata::InNewOrOldSpace(object)) return;
     HeapObject* heap_object = HeapObject::cast(object);
-    if (!GCMetadata::IsMarked(heap_object)) {
+    if (!GCMetadata::MarkGreyIfNotMarked(heap_object)) {
       if (stack_chain_ != NULL && heap_object->IsStack()) {
         ChainStack(Stack::cast(heap_object));
       }
-      GCMetadata::Mark(heap_object);
       marking_stack_->Push(heap_object);
     }
   }
@@ -193,6 +187,48 @@ class FreeList {
 #endif
 };
 
+class FixPointersVisitor : public PointerVisitor {
+ public:
+  FixPointersVisitor() : source_address_(0) {}
+
+  virtual void VisitClass(Object** p) {}
+
+  virtual void VisitBlock(Object** start, Object** end);
+
+  virtual void AboutToVisitStack(Stack* stack);
+
+  void set_source_address(uword address) { source_address_ = address; }
+
+ private:
+  uword source_address_;
+};
+
+class CompactingVisitor : public HeapObjectVisitor {
+ public:
+  CompactingVisitor(OldSpace* space, FixPointersVisitor* fix_pointers_visitor);
+
+  virtual void ChunkStart(Chunk* chunk) {
+    GCMetadata::InitializeStartsForChunk(chunk);
+    uint32* last_bits = GCMetadata::MarkBitsFor(chunk->usable_end());
+    // When compacting the heap, we skip dead objects.  In order to do this
+    // faster when we have hit a dead object we use the mark bits to find the
+    // next live object, rather than stepping one object at a time and calling
+    // Size() on each dead object.  To ensure that we don't go over the edge of
+    // a chunk into the next chunk, we mark the end-of-chunk sentinel live.
+    // This is done after the mark bits have been counted.
+    *last_bits |= 1u << 31;
+  }
+
+  virtual uword Visit(HeapObject* object);
+
+  uword used() const { return used_; }
+
+ private:
+  uword used_;
+  GCMetadata::Destination dest_;
+  FixPointersVisitor* fix_pointers_visitor_;
+};
+
 class SweepingVisitor : public HeapObjectVisitor {
  public:
   explicit SweepingVisitor(OldSpace* space);
@@ -208,7 +244,7 @@ class SweepingVisitor : public HeapObjectVisitor {
     GCMetadata::ClearMarkBitsFor(chunk);
   }
 
-  int used() const { return used_; }
+  uword used() const { return used_; }
 
  private:
   void AddFreeListChunk(uword free_end_);

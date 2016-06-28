@@ -37,7 +37,7 @@ trap cleanup_file EXIT
 mkfifo "$PIPEDIR/qemu.in" "$PIPEDIR/qemu.out"
 
 echo "Starting qemu..."
-./third_party/qemu/linux/qemu/bin/qemu-system-arm -machine virt -cpu cortex-a15 -m 64 -kernel out/build-qemu-virt-dartino/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
+./third_party/qemu/linux/qemu/bin/qemu-system-arm -machine virt -cpu cortex-a15 -m 128 -kernel out/build-qemu-virt-dartino/lk.elf -nographic -serial pipe:$PIPEDIR/qemu &
 PID=$!
 cleanup() {
   echo "Killing $PID"
@@ -49,19 +49,19 @@ trap cleanup EXIT
 echo "Started with PID $PID"
 
 echo "Waiting for qemu to come up..."
-grep -qe "entering main console loop" $PIPEDIR/qemu.out
+awk -e '/entering main console loop/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Starting dartino..."
 echo "dartino snapshot" > $PIPEDIR/qemu.in
 
 echo "Waiting for size..."
-grep -qe "STEP1" $PIPEDIR/qemu.out
+awk -e '/STEP1/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Sending size ($SIZE)..."
 echo $SIZE >$PIPEDIR/qemu.in
 
 echo "Waiting for snapshot request..."
-grep -qe "STEP2" $PIPEDIR/qemu.out
+awk -e '/STEP2/ { exit; } {print $0}' $PIPEDIR/qemu.out
 
 echo "Sending snapshot..."
 cat $1 >$PIPEDIR/qemu.in

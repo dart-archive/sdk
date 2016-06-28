@@ -34,10 +34,6 @@ import 'multiprogram_tests.dart' as multiprogram_tests;
 
 import 'snapshot_stacktrace_tests.dart' as snapshot_stacktrace_tests;
 
-import '../service_tests/service_tests.dart' as service_tests;
-
-import '../servicec/servicec_tests.dart' as servicec_tests;
-
 import '../dartino_compiler/run.dart' as run;
 
 import '../dartino_compiler/driver/test_vm_connection.dart' as
@@ -64,6 +60,10 @@ import '../version_tests/version_tests.dart' as version_tests;
 
 import '../cli_tests/cli_tests.dart' as cli_tests;
 
+import 'dartino_analyze_test.dart' as analyze_tests;
+
+import 'dartino_analyze_samples.dart' as analyze_samples;
+
 typedef Future NoArgFuture();
 
 /// Map of names to tests or collections of tests.
@@ -87,12 +87,6 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'verbs/helpTextFormat': verbs.testHelpTextFormatCompliance,
 
   // Slow tests, should run early so we don't wait for them.
-  'service_tests/*': service_tests.listTests,
-
-  // Slow tests, should run early so we don't wait for them
-  'servicec/*': servicec_tests.listTests,
-
-  // Slow tests, should run early so we don't wait for them.
   'incremental/production/*': incremental_production.list,
   'incremental/experimental/*': incremental_experimental.list,
 
@@ -104,6 +98,11 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
 
   // Slow tests, should run early so we don't wait for them.
   'cli_tests/*': cli_tests.listTests,
+
+  // Slow tests, show run early so we don't wait for them.
+  // 'analyze_samples/*': analyze_samples.listTests,
+
+  // 'analyze_tests': analyze_tests.main,
 
   'snapshot_stacktrace_tests/*': snapshot_stacktrace_tests.listTests,
 
@@ -157,4 +156,5 @@ const Map<String, NoArgFuture> TESTS = const <String, NoArgFuture>{
   'golem_tests': golem_tests.main,
 
   'version_tests': version_tests.main,
+
 };

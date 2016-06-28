@@ -140,11 +140,6 @@ const String endDocumentation = """
              End the named session
 """;
 
-const String servicecDocumentation = """
-   x-servicec <file>
-             Compile service IDL file named <file> to custom Dartino interface
-""";
-
 const String exportDocumentation = """
    export [<dartfile>] to <snapshot>
              Compile <dartfile> and create a snapshot in <snapshot>. If no
@@ -197,6 +192,15 @@ const String flashDocumentation = """
              Discovery board only.
 """;
 
+const String emulateDocumentation = """
+   x-emulate <file>
+             Build flashable image containing the Dart code in <file> and
+             run it in an emulator.
+
+             Currently dartino only has an emulator for the STM32F746G Discovery
+             board.
+""";
+
 const String enableDocumentation = """
    enable analytics
              Turn on collection of anonymous usage statistics and crash reports
@@ -207,4 +211,10 @@ const String disableDocumentation = """
    disable analytics
              Turn off collection of anonymous usage statistics
              and crash reports.
+""";
+
+const String shouldPromptAnalyticsDocumentation = """
+   x-should-prompt-analytics
+             Return `true` if the user should be asked to opt into analytics.
+             This is used by IDEs to determine whether to prompt the user.
 """;

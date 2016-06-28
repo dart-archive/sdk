@@ -8,8 +8,7 @@ import 'dart:io' show
     File;
 
 import 'package:compiler/src/options.dart' show
-    CompilerOptions,
-    DiagnosticOptions;
+    CompilerOptions;
 
 import 'package:compiler/compiler.dart' show
     PackagesDiscoveryProvider;
@@ -63,6 +62,10 @@ class DartinoCompilerOptions implements CompilerOptions {
   @override final Uri platformConfigUri;
 
   @override final bool preserveUris;
+
+  @override List<Uri> get resolutionInputs => null;
+  @override Uri get resolutionOutput => null;
+  @override bool get resolveOnly => false;
 
   @override final bool verbose;
 
@@ -168,6 +171,8 @@ class DartinoCompilerOptions implements CompilerOptions {
   @override bool get hidePackageWarnings => false;
 
   @override bool showPackageWarningsFor(Uri uri) => true;
+
+  @override bool get enableInitializingFormalAccess => false;
 
   static DartinoCompilerOptions copy(
       CompilerOptions options,

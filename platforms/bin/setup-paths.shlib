@@ -1,0 +1,47 @@
+#!/bin/sh
+# Copyright (c) 2016, the Dartino project authors. Please see the AUTHORS file
+# for details. All rights reserved. Use of this source code is governed by a
+# BSD-style license that can be found in the LICENSE.md file.
+
+# Root of the Dartino SDK, that is, $SCRIPT_DIR/../... This is true
+# for both the SDK and a Github checkout
+DARTINO_SDK_DIR=$SCRIPT_DIR
+DARTINO_SDK_DIR="$(dirname "$DARTINO_SDK_DIR")"
+DARTINO_SDK_DIR="$(dirname "$DARTINO_SDK_DIR")"
+
+# Location of the GCC ARM embedded toolchain in the Dartino SDK.
+TOOLCHAIN_DIR="$DARTINO_SDK_DIR/tools/gcc-arm-embedded"
+
+# Location of OpenOCD in the Dartino SDK.
+OPENOCDHOME="$DARTINO_SDK_DIR/tools/openocd/"
+
+# Location of Emul8 in the Dartino SDK
+EMUL8_HOME="$DARTINO_SDK_DIR/tools/emul8"
+
+# Location of the dartino executable.
+DARTINO="$DARTINO_SDK_DIR/bin/dartino"
+
+# Location of the dartino-falshify executable.
+DARTINO_FLASHIFY="$DARTINO_SDK_DIR/bin/dartino-flashify"
+
+# If we are not in a Dartino SDK, assume a Dartino SDK Github checkout.
+if [ ! -d "$TOOLCHAIN_DIR" ]; then
+  # Relative locations in Dartino SDK and Dartino SDK Github checkout
+  # are the same.
+  DARTINO_CHECKOUT_DIR=$DARTINO_SDK_DIR
+  # Location of the GCC ARM embedded toolchain in a Dartino SDK Github
+  # checkout.
+  TOOLCHAIN_DIR="$DARTINO_CHECKOUT_DIR/third_party/gcc-arm-embedded/$OS/gcc-arm-embedded"
+
+  # Location of OpenOCD in the Dartino SDK.
+  OPENOCDHOME="$DARTINO_CHECKOUT_DIR/third_party/openocd/$OS/openocd"
+
+  # Location of Emul8 in the Dartino SDK
+  EMUL8_HOME="$DARTINO_CHECKOUT_DIR/third_party/emul8/$OS/emul8"
+
+  # Use release dartino command in a Dartino SDK Github checkout.
+  DARTINO="$DARTINO_CHECKOUT_DIR/out/ReleaseX64/dartino"
+
+  # Use release dartino-flashify command in a Dartino SDK Github checkout.
+  DARTINO_FLASHIFY="$DARTINO_CHECKOUT_DIR/out/ReleaseIA32/dartino-flashify"
+fi

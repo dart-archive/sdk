@@ -71,6 +71,7 @@ DARTINO_EXPORT_STATIC(gfx_flush);
 #define LOADER_BUFFER_SIZE 128
 #endif
 
+#define SIZE_STRING_BUFFER_LENGTH 10
 // static buffer to hold snapshot/heap
 static unsigned char buffer[LOADER_BUFFER_SIZE * 1024]
     __attribute__((aligned(4096)));
@@ -78,15 +79,22 @@ static unsigned char buffer[LOADER_BUFFER_SIZE * 1024]
 int ReadBlob(void) {
   printf("READY TO READ DATA.\n");
   printf("STEP1: size.\n");
-  char size_buf[10];
+
+  char size_buf[SIZE_STRING_BUFFER_LENGTH];
   int pos = 0;
-  while ((size_buf[pos++] = getchar()) != '\n') {
+  while ((size_buf[pos++] = getchar()) != '\n' && pos < SIZE_STRING_BUFFER_LENGTH) {
     putchar(size_buf[pos-1]);
   }
-  if (pos > 9) abort();
+  if (pos > SIZE_STRING_BUFFER_LENGTH - 1) {
+    printf("\nERROR: size string too long: %d\n", pos);
+    abort();
+  }
   size_buf[pos] = 0;
   int size = atoi(size_buf);
-  if (size < 0 || (unsigned int) size > sizeof(buffer)) abort();
+  if (size < 0 || (unsigned int) size > sizeof(buffer)) {
+    printf("\nERROR: blob size too big: %d\n", size);
+    abort();
+  }
   printf("\nSTEP2: reading blob of %d bytes.\n", size);
   int status = 0;
   for (pos = 0; pos < size; pos++, status++) {

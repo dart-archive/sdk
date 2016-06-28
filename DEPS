@@ -24,10 +24,7 @@ vars = {
 
   "instrumentation_client_rev": "@f06dca45223695f7828b9f045ef4317833fb2dba",
 
-  # When updating this, please remember:
-  # 1. to use a commit on the branch "_temporary_dartino_patches".
-  # 2. update package revisions below.
-  "dart_rev": "@e47e8af36491eb883c14641c8587e9b0ee4a805b",
+  "dart_rev": "@570299e56843339291244e4358105c34c4cbc0dc",
 
   # Please copy these package revisions from third_party/dart/DEPS when
   # updating dart_rev:
@@ -37,7 +34,7 @@ vars = {
   "args_tag": "@0.13.4",
   "dart2js_info_rev" : "@0a221eaf16aec3879c45719de656680ccb80d8a1",
   "pub_semver_tag": "@1.2.1",
-  "collection_rev": "@f6135e6350c63eb3f4dd12953b8d4363faff16fc",
+  "collection_tag": "@1.6.0",
 
   "lk_rev": "@0f0b4959ad25cb1a2bffd1a2eba487b88a602c96",
 
@@ -106,7 +103,7 @@ deps = {
       (Var("github_mirror") % "pub_semver") + Var("pub_semver_tag"),
 
   "sdk/third_party/collection":
-      (Var("github_mirror") % "collection") + Var("collection_rev"),
+      (Var("github_mirror") % "collection") + Var("collection_tag"),
 
   "wiki": (Var("github_url") % "dartino/sdk.wiki"),
 }
@@ -219,6 +216,20 @@ hooks = [
     ],
   },
   {
+    'name': 'serial_port_binaries',
+    'pattern': '.',
+    'action': [
+      'download_from_google_storage',
+      '-q',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dartino-dependencies',
+      '-d',
+      'sdk/third_party/serial_port/lib/src/',
+    ],
+  },
+  {
     # Update the Windows toolchain if necessary.
     'name': 'win_toolchain',
     'pattern': '.',
@@ -312,6 +323,25 @@ hooks = [
       '-r',
       '-u',
       'sdk/third_party/freertos',
+    ],
+  },
+  {
+    'name': 'third_party_emul8',
+    'pattern': '.',
+    'action': [
+      'python',
+      'sdk/tools/not_on_arm.py',
+      'download_from_google_storage',
+      '-q',
+      '--no_auth',
+      '--no_resume',
+      '--bucket',
+      'dartino-dependencies',
+      '-d',
+      '-r',
+      '-u',
+      '--auto_platform',
+      'sdk/third_party/emul8',
     ],
   },
   # Pull clang-format binaries using checked-in hashes.

@@ -26,3 +26,17 @@ List<FieldElement> computeFields(ClassElement cls, {bool asMixin: false}) {
   });
   return fields;
 }
+
+int getFieldIndex(ClassElement cls, String name) {
+  List<FieldElement> fields = computeFields(cls);
+  int fieldIndex = -1;
+  // Run through the fields backwards to find shadowing fields first.
+  for (int i = fields.length - 1; i >= 0; i--) {
+    if (fields[i].name == name) {
+      fieldIndex = i;
+      break;
+    }
+  }
+  if (fieldIndex == -1) return null;
+  return fieldIndex;
+}

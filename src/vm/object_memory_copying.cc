@@ -9,15 +9,6 @@
 
 namespace dartino {
 
-// In the semispaces, the sentinel marks the allocation limit in each chunk.
-// It is written when we flush, and when we allocate during GC, but it is not
-// necessarily maintained when allocating between GCs.
-static Smi* chunk_end_sentinel() { return Smi::zero(); }
-
-static bool HasSentinelAt(uword address) {
-  return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
-}
-
 static void WriteSentinelAt(uword address) {
   ASSERT(sizeof(Object*) == kSentinelSize);
   *reinterpret_cast<Object**>(address) = chunk_end_sentinel();

@@ -56,6 +56,10 @@ class Analytics {
   /// `true` if the user should be prompted to opt-in.
   bool shouldPromptForOptIn = true;
 
+  final bool _testing =
+      Platform.environment['DARTINO_DISABLE_ANALYTICS'] != null ||
+          new String.fromEnvironment('test.dart.analytics-disable') != null;
+
   Analytics(this._log, {String serverUrl, Uri uuidUri})
       : this.serverUrl = serverUrl ?? defaultServerUrl,
         this.uuidUri = uuidUri ?? defaultUuidUri;
@@ -79,7 +83,7 @@ class Analytics {
   /// Return a string which is a hash of the original string.
   String hash(String original) {
     Hash hash = new SHA256()..add(_hashSalt)..add(original.codeUnits);
-    return BASE64.encode(hash.close());
+    return 'SHA(${BASE64.encode(hash.close())})';
   }
 
   /// If the given string looks like a Uri,
@@ -137,20 +141,27 @@ class Analytics {
 
   void logComplete(int exitCode) => _send([TAG_COMPLETE, '$exitCode']);
 
-  void logError(error, [StackTrace stackTrace]) =>
-      _send([TAG_ERROR, hashUriWords(error), stackTrace?.toString() ?? 'null']);
+  void logError(error, [StackTrace stackTrace]) {
+    return _send([
+      TAG_ERROR,
+      hashUriWords(error.toString()),
+      stackTrace?.toString() ?? 'null'
+    ]);
+  }
 
   void logErrorMessage(String userErrMsg) =>
       _send([TAG_ERRMSG, hashUriWords(userErrMsg)]);
 
-  void logRequest(List<String> arguments) =>
-      _send(<String>[TAG_REQUEST]..addAll(hashAllUris(arguments)));
+  void logRequest(String version, String currentDirectory, bool interactive,
+          List<String> arguments) =>
+      _send(<String>[TAG_REQUEST, version, hash(currentDirectory)]
+        ..add(interactive ? 'interactive' : 'detached')
+        ..addAll(hashAllUris(arguments)));
 
   void logShutdown() => _send([TAG_SHUTDOWN]);
 
   void logStartup() => _send([
         TAG_STARTUP,
-        uuid,
         dartinoVersion,
         Platform.version,
         Platform.operatingSystem
@@ -162,7 +173,7 @@ class Analytics {
   /// that the Dart analysis server uses for sending instrumentation data.
   void _send(List<String> fields) {
     if (_client == null) {
-      if (!hasOptedIn) return;
+      if (!hasOptedIn || _testing) return;
       _client =
           new InstrumentationClient(userID: uuid, serverEndPoint: serverUrl);
     }
@@ -188,6 +199,8 @@ class Analytics {
     // escaping the separator character by doubling it.
     StringBuffer buffer = new StringBuffer();
     buffer.write(new DateTime.now().millisecondsSinceEpoch.toString());
+    buffer.write(':');
+    buffer.write(uuid);
     for (String field in fields) {
       buffer.write(':');
       _escape(buffer, field);

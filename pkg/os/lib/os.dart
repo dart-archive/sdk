@@ -28,19 +28,19 @@ import 'dart:dartino.os' as os;
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
-part 'errno.dart';
+part 'src/errno.dart';
 
-part 'net_structs.dart';
-part 'net_structs_android.dart';
-part 'net_structs_linux.dart';
-part 'net_structs_macos.dart';
-part 'net_structs_posix.dart';
+part 'src/net_structs.dart';
+part 'src/net_structs_android.dart';
+part 'src/net_structs_linux.dart';
+part 'src/net_structs_macos.dart';
+part 'src/net_structs_posix.dart';
 
-part 'system.dart';
-part 'system_linux.dart';
-part 'system_macos.dart';
-part 'system_posix.dart';
-part 'system_freertos.dart';
+part 'src/system.dart';
+part 'src/system_linux.dart';
+part 'src/system_macos.dart';
+part 'src/system_posix.dart';
+part 'src/system_freertos.dart';
 
 abstract class InternetAddress {
   factory InternetAddress(List<int> bytes) = _InternetAddress;

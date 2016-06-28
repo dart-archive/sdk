@@ -8,7 +8,6 @@ import 'package:compiler/src/resolution/semantic_visitor.dart';
 
 import 'package:compiler/src/resolution/operators.dart' show
     AssignmentOperator,
-    AssignmentOperatorKind,
     BinaryOperator,
     IncDecOperator,
     UnaryOperator;
@@ -580,7 +579,9 @@ abstract class CodegenVisitor
         visitForValue(it.current);
       } else {
         if (parameter.isOptional) {
-          doParameterInitializer(parameter);
+          if (!checkCompileError(parameter)) {
+            doParameterInitializer(parameter);
+          }
         } else {
           doUnresolved(name);
         }
@@ -598,7 +599,9 @@ abstract class CodegenVisitor
     } else {
       var previousElements = initializerElements;
       initializerElements = parameter.resolvedAst.elements;
-      visitForValue(initializer);
+      context.compiler.reporter.withCurrentElement(parameter, () {
+        visitForValue(initializer);
+      });
       initializerElements = previousElements;
     }
   }
@@ -2934,7 +2937,9 @@ abstract class CodegenVisitor
       LocalVariableElement element = elements[definition];
       int slot = assembler.stackSize;
       if (element.initializer != null) {
-        visitForValue(element.initializer);
+        if (!checkCompileError(element)) {
+          visitForValue(element.initializer);
+        }
       } else {
         generateEmptyInitializer(element.node);
       }

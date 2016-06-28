@@ -2,8 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// API for LPS25H "MEMS pressure sensor: 260-1260 hPa absolute digital output
-/// barometer" chip using the I2C bus.
+/// API for LPS25H and LPS25HB "MEMS pressure sensor: 260-1260 hPa
+/// absolute digital output barometer" chip using the I2C bus.
+///
+/// According to the documentation from STMicroelectronics the LPS25H
+/// and LPS25HB are compatible and "present the same registers map".
 ///
 /// Currently this has only been tested with a Raspberry Pi 2 and the Sense HAT.
 library lps25h;
@@ -48,9 +51,7 @@ class LPS25H {
 
   LPS25H(this._device) {
     // Read the reference preasure.
-    int refP = _signed24(
-        _device.readByte(_refPH), _device.readByte(_refPL),
-        _device.readByte(_refPXL));
+    int refP = _readSigned24(_refPH, _refPL, _refPXL);
   }
 
   /// Power on the chip with the convertion rate of [rate].
@@ -75,23 +76,27 @@ class LPS25H {
 
   /// Read the current pressure value.
   double readPressure() {
-    return _signed24(
-        _device.readByte(_pressOutH), _device.readByte(_pressOutL),
-        _device.readByte(_pressOutXL)) / 4096;
+    return _readSigned24(_pressOutH, _pressOutL, _pressOutXL) / 4096;
   }
 
   /// Read the current temperature value.
   double readTemperature() {
-    return 42.5 + _signed16(
-        _device.readByte(_tempOutH), _device.readByte(_tempOutL)) / 480;
+    return 42.5 + _readSigned16(_tempOutH, _tempOutL) / 480;
   }
 
-  int _signed16(int msb, int lsb) {
+  int _readSigned16(int msbRegister, int lsbRegister) {
+    // Always read LSB before MSB.
+    var lsb = _device.readByte(lsbRegister);
+    var msb = _device.readByte(msbRegister);
     var x = msb << 8 | lsb;
     return x < 0x7fff ? x : x - 0x10000;
   }
 
-  int _signed24(int msb, int mb, int lsb) {
+  int _readSigned24(int msbRegister, int mbRegister, int lsbRegister) {
+    // Always read LSB before MSB.
+    var lsb = _device.readByte(lsbRegister);
+    var mb = _device.readByte(mbRegister);
+    var msb = _device.readByte(msbRegister);
     var x = msb << 16 | mb << 8 | lsb;
     return x < 0x7fffff ? x : x - 0x1000000;
   }

@@ -1,0 +1,45 @@
+bits: 0 # 0 means the bits of Dart SDK
+compiler:
+  includes: ['{DART_SDK}/bin', '{DART_SDK}']
+  input_files:
+  - 'native/serial_port.cc'
+clean: [ '*.exp', '*.lib', '*.o', '*.obj']
+linker:
+  input_files:
+  - 'serial_port'
+platforms:
+  linux:
+    compiler:
+      arguments: ['-fPIC', '-Wall']
+      input_files:
+      - 'native/serial_port_posix.cc'
+    linker:
+      arguments: ['-shared']
+      input_files:
+      - 'serial_port_posix'
+      output_file: 'libserial_port.so'
+  macos:
+    compiler:
+      arguments: ['-fPIC', '-Wall']
+      input_files:
+      - 'native/serial_port_posix.cc'
+    linker:
+      arguments: ['-dynamiclib', '-undefined', 'dynamic_lookup']
+      input_files:
+      - 'serial_port_posix'
+      output_file: 'libserial_port.dylib'
+  windows:
+    compiler:
+      defines: {'DART_SHARED_LIB':}
+      arguments: ['/EHsc']
+      input_files:
+      - 'native/serial_port_win.cc'
+      - 'native/serial_port_dllmain_win.cc'
+    linker:
+      arguments: ['/DLL']
+      input_files:
+      - 'dart.lib'
+      - 'serial_port_win'
+      - 'serial_port_dllmain_win'
+      libpaths: ['{DART_SDK}/bin']
+      output_file: 'serial_port.dll'

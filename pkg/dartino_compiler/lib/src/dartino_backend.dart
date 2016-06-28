@@ -188,7 +188,6 @@ import '../vm_commands.dart' show
     MapId,
     NewMap,
     PushFromMap,
-    PushNewInteger,
     SetEntryPoint,
     VmCommand;
 
@@ -208,8 +207,8 @@ import '../dartino_field.dart' show
 
 class DartinoBackend extends Backend
     implements IncrementalDartinoBackend {
-  static const String growableListName = '_GrowableList';
-  static const String constantListName = '_ConstantList';
+  static const String growableListName = 'GrowableList';
+  static const String constantListName = 'ConstantList';
   static const String constantByteListName = '_ConstantByteList';
   static const String constantMapName = '_ConstantMap';
   static const String dartinoNoSuchMethodErrorName = 'DartinoNoSuchMethodError';

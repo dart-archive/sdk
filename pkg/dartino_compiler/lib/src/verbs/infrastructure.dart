@@ -79,8 +79,7 @@ export '../hub/hub_main.dart' show
     IsolatePool;
 
 import 'actions.dart' show
-    Action,
-    ActionGroup;
+    Action;
 
 export 'actions.dart' show
     Action,
@@ -94,8 +93,6 @@ export 'options.dart' show
 
 import '../guess_configuration.dart' show
     dartinoVersion;
-
-import 'package:dartino_compiler/src/hub/analytics.dart';
 
 void reportErroneousTarget(ErrorTarget target) {
   throwFatalError(target.errorKind, userInput: target.userInput);
@@ -404,7 +401,7 @@ AnalyzedSentence analyzeSentence(Sentence sentence, Options options) {
   Uri targetUri;
   if (target is NamedTarget) {
     targetName = target.name;
-    if (target.kind == TargetKind.FILE) {
+    if (target.kind == TargetKind.FILE || target.kind == TargetKind.SERVE) {
       targetUri = fileUri(targetName, base);
     }
   }

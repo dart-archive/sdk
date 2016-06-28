@@ -181,7 +181,7 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   StepGyp()
 
   cross_mode = 'release'
-  cross_archs = ['xarm', 'stm']
+  cross_archs = ['xarm', 'stm', 'cm4']
   cross_system = 'linux'
   # We only cross compile on linux
   if system == 'linux':
@@ -230,6 +230,9 @@ def StepsSDK(debug_log, system, modes, archs, embedded_libs):
   for configuration in configurations:
     StepsTestSDK(debug_log, configuration)
     StepsSanityChecking(configuration['build_dir'])
+  # TODO(karlklose): add MacOS version of Emul8
+  if system == 'linux':
+    StepsArchiveEmul8(system)
   StepsArchiveGCCArmNoneEabi(system)
   StepsArchiveOpenOCD(system)
 
@@ -351,19 +354,23 @@ def StepsCreateArchiveRaspbianImge():
     version = utils.GetSemanticSDKVersion()
     deb_file = os.path.join('out', namer.arm_agent_filename(version))
     src_file = os.path.join('out', namer.src_tar_name(version))
-    Run(['tools/raspberry-pi2/raspbian_prepare.py',
-         '--image=%s' % raspbian_dst,
-         '--agent=%s' % deb_file,
-         '--src=%s' % src_file])
-    zip_file = os.path.join('out', namer.raspbian_zipfilename())
-    if os.path.exists(zip_file):
-      os.remove(zip_file)
-    CreateZip(raspbian_dst, namer.raspbian_zipfilename())
-    gsutil = bot_utils.GSUtil()
-    gs_path = namer.raspbian_zipfilepath(version)
-    http_path = GetDownloadLink(gs_path)
-    gsutil.upload(zip_file, gs_path, public=True)
-    print '@@@STEP_LINK@download@%s@@@' % http_path
+    try:
+      Run(['tools/raspberry-pi2/raspbian_prepare.py',
+           '--image=%s' % raspbian_dst,
+           '--agent=%s' % deb_file,
+           '--src=%s' % src_file])
+      zip_file = os.path.join('out', namer.raspbian_zipfilename())
+      if os.path.exists(zip_file):
+        os.remove(zip_file)
+      CreateZip(raspbian_dst, namer.raspbian_zipfilename())
+      gsutil = bot_utils.GSUtil()
+      gs_path = namer.raspbian_zipfilepath(version)
+      http_path = GetDownloadLink(gs_path)
+      gsutil.upload(zip_file, gs_path, public=True)
+      print '@@@STEP_LINK@download@%s@@@' % http_path
+    except Exception as error:
+      message = "Failed to create modified raspbian image, error: %s" % error
+      print '@@@STEP_LOG_LINE@error@%s@@@' % message
 
 def ArchiveThirdPartyTool(name, zip_name, system, gs_path):
   zip_file = os.path.join('out', zip_name)
@@ -379,6 +386,16 @@ def ArchiveThirdPartyTool(name, zip_name, system, gs_path):
   gsutil.upload(zip_file, gs_path, public=True)
   http_path = GetDownloadLink(gs_path)
   print '@@@STEP_LINK@download@%s@@@' % http_path
+
+def StepsArchiveEmul8(system):
+  with bot.BuildStep('Archive emul8'):
+    # TODO(ricow): Early return on bleeding edge when this is validated.
+    namer = GetNamer(temporary=IsBleedingEdge())
+    version = utils.GetSemanticSDKVersion()
+    ArchiveThirdPartyTool('emul8',
+                          namer.emul8_bundle_zipfilename(system),
+                          system,
+                          namer.emul8_bundle_filepath(version, system))
 
 def StepsArchiveGCCArmNoneEabi(system):
   with bot.BuildStep('Archive cross compiler'):
@@ -525,15 +542,17 @@ def StepsFreeRtos(debug_log):
       embedded_libs=[False],
       use_sdks=[False])[0]
     StepBuild(host_configuration['build_conf'], host_configuration['build_dir'])
-  configuration = GetBuildConfigurations(
+  configurations = GetBuildConfigurations(
       system=utils.GuessOS(),
       modes=['debug'],
-      archs=['STM'],
+      archs=['STM', 'CM4'],
       asans=[False],
+      no_clang=True,
       embedded_libs=[False],
-      use_sdks=[False])[0]
-  StepBuild(configuration['build_conf'], configuration['build_dir'])
-  StepDisableAnalytics(host_configuration['build_dir'])
+      use_sdks=[False])
+  for configuration in configurations:
+    StepBuild(configuration['build_conf'], configuration['build_dir'])
+    StepDisableAnalytics(host_configuration['build_dir'])
 
 def StepsLK(debug_log):
   # We need the dartino daemon process to compile snapshots.
@@ -1091,7 +1110,7 @@ def ShouldSkipConfiguration(snapshot_run, configuration):
 def GetCompilerVariants(system, arch, no_clang=False):
   is_mac = system == 'mac'
   is_arm = arch in ['arm', 'xarm']
-  is_stm = arch == 'stm'
+  is_stm = arch == 'stm' or arch == 'cm4'
   is_windows = system == 'win'
   if no_clang:
     return ['']

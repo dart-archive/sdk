@@ -19,8 +19,11 @@ To add new version(s) do the following:
 
    $ mv STM32Cube_FW_F4_VX.Y.Z stm32cube_fw_f4
 
-3. Make local modifications and add an approiate README.google file (start
-   with the one in the previous version and update it).
+3. Add the files files README.google and LICENSE
+    * For README.google file start with the one in the
+      previous version and update it.
+    * Add the file LICENSE with a copy of the license
+      curl -L -o LICENSE http://www.st.com/software_license_agreement_liberty_v2
 
 4. Upload to Google Cloud Storage
 

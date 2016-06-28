@@ -22,6 +22,7 @@ import "dart:_internal" show
     EmptyIterable,
     ExpandIterable,
     IterableElementError,
+    ListIterable,
     MappedIterable,
     SkipIterable,
     SkipWhileIterable,
@@ -71,52 +72,3 @@ part "dart:_core_string_buffer";
 part "dart:_core_string_sink";
 part "dart:_core_symbol";
 part "dart:_core_type";
-
-/// A result from searching within a string.
-///
-/// A Match or an [Iterable] of Match objects is returned from [Pattern]
-/// matching methods.
-// TODO(sigurdm): Move this class from regex.dart to pattern.dart in the sdk.
-// This is a verbatim copy from regex.dart.
-
-abstract class Match {
-  /// Returns the index in the string where the match starts.
-  int get start;
-
-  /// Returns the index in the string after the last character of the match.
-  int get end;
-
-  /// Returns the string matched by the given [group].
-  ///
-  /// If [group] is 0, returns the match of the pattern.
-  ///
-  /// The result may be `null` if the pattern didn't assign a value to it
-  /// as part of this match.
-  String group(int group);
-
-  ///  Returns the string matched by the given [group].
-  ///
-  ///  If [group] is 0, returns the match of the pattern.
-  ///
-  ///  Short alias for [Match.group].
-  String operator [](int group);
-
-  /// Returns a list of the groups with the given indices.
-  ///
-  /// The list contains the strings returned by [group] for each index in
-  /// [groupIndices].
-  List<String> groups(List<int> groupIndices);
-
-  /// Returns the number of captured groups in the match.
-  ///
-  /// Some patterns may capture parts of the input that was used to
-  /// compute the full match. This is the number of captured groups,
-  /// which is also the maximal allowed argument to the [group] method.
-  int get groupCount;
-
-  /// The string on which this match was computed.
-  String get input;
-
-  /// The pattern used to search in [input].
-  Pattern get pattern;
-}

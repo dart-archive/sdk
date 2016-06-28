@@ -264,14 +264,26 @@ Future<Null> handleVerb(
   crashReportRequested = false;
 
   Future<int> performVerb() async {
-    // TODO(danrubel) The first 4 arguments should not be included here,
-    // but in the startup message instead:
-    // * dartino version (not hashed)
-    // * current directory (hashed)
-    // * short program name (should ignore this)
-    // * "interactive" (or not) indicating that its a user not a bash script
-    analytics?.logRequest(arguments);
-    clientConnection.parseArguments(arguments);
+    // Extract additional information passed by driver/main.cc
+    String version = arguments[0];
+    String currentDirectory = arguments[1];
+    // "interactive" indicating that a user is typing
+    // or "detached" indicating that dartino is executed as part of a script
+    bool interactive;
+    if (arguments[2] == 'interactive') {
+      interactive = true;
+    } else if (arguments[2] == 'detached') {
+      interactive = false;
+    } else {
+      // Fast fail if arguments do not meet expectations.
+      throw 'unexpected arguments from driver';
+    }
+    // arguments[3] is the program name and is ignored
+    List<String> remaining = arguments.sublist(4);
+
+    analytics?.logRequest(version, currentDirectory, interactive, remaining);
+    clientConnection.parseArguments(
+        version, currentDirectory, interactive, remaining);
     String sessionName = clientConnection.sentence.sessionName;
     UserSession session;
     SharedTask initializer;
@@ -502,10 +514,13 @@ class ClientConnection {
     endSession();
   }
 
-  AnalyzedSentence parseArguments(List<String> arguments) {
+  AnalyzedSentence parseArguments(String version, String currentDirectory,
+      bool interactive, List<String> arguments) {
     Options options = Options.parse(arguments);
-    Sentence sentence =
-        parseSentence(options.nonOptionArguments, includesProgramName: true);
+    Sentence sentence = parseSentence(options.nonOptionArguments,
+        version: version,
+        currentDirectory: currentDirectory,
+        interactive: interactive);
     this.sentence = analyzeSentence(sentence, options);
     return this.sentence;
   }

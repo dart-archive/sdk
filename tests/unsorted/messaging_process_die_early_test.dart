@@ -7,7 +7,7 @@ import 'dart:dartino';
 import 'package:expect/expect.dart';
 import 'package:isolate/process_runner.dart';
 
-const int PROCESSES = 5000;
+const int PROCESSES = 500;
 const int MESSAGES = 10;
 
 void main() {

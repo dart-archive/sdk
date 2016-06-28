@@ -30,7 +30,8 @@ Future flashFunction(
       new BuildTask(
           sentence.targetUri,
           sentence.base,
-          sentence.options.debuggingMode),
+          sentence.options.debuggingMode,
+          sentence.options.noWait),
       new FlashTask(sentence.targetUri)));
 }
 

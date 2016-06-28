@@ -8,8 +8,8 @@
 
 # This script assumes that the target architecture has been build in the passed
 # in --build_dir and that the corresponding 32-bit architecture is also.
-# Finally it also assumes that out/ReleaseXARM/dartino-vm and
-# out/ReleaseSTM have been build.
+# Finally it also assumes that out/ReleaseXARM/dartino-vm, out/ReleaseSTM
+# and out/ReleaseCM4 have been build.
 
 import optparse
 import subprocess
@@ -18,9 +18,10 @@ import utils
 import re
 
 from sets import Set
-from os import makedirs
+from os import makedirs, listdir
 from os.path import dirname, join, exists, basename, abspath
 from shutil import copyfile, copymode, copytree, rmtree, ignore_patterns
+from fnmatch import fnmatch
 
 TOOLS_DIR = abspath(dirname(__file__))
 
@@ -29,19 +30,8 @@ SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
                 'mbedtls']
 THIRD_PARTY_PACKAGES = ['charcode']
 
-SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery']
-with open(join(TOOLS_DIR, 'docs_html', 'head.html')) as f:
-  DOC_INDEX_HEAD = f.read()
-with open(join(TOOLS_DIR, 'docs_html', 'tail.html')) as f:
-  DOC_INDEX_TAIL = f.read()
-
-DOC_ENTRY = ('<dt><span class="name"><a class="" href="%s/index.html">%s</a>'
-             '</span></dt>')
-
-DOC_INDEX = '%s%s%s' % (
-    DOC_INDEX_HEAD,
-    '\n'.join([DOC_ENTRY % (p, p) for p in SDK_PACKAGES]),
-    DOC_INDEX_TAIL)
+SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery',
+           'stm32f411re-nucleo']
 
 def ParseOptions():
   parser = optparse.OptionParser()
@@ -214,14 +204,15 @@ def CopyPackagesAndSettingsTemplate(bundle_dir):
 def CopyPlatforms(bundle_dir):
   # Only copy parts of the platforms directory. We also have source
   # code there at the moment.
-  target_dir = join(bundle_dir, 'platforms/raspberry-pi2')
-  copytree('platforms/raspberry-pi2', target_dir)
-  target_dir = join(bundle_dir, 'platforms/stm32f746g-discovery')
-  copytree('platforms/stm32f746g-discovery', target_dir)
+  target_platforms_dir = join(bundle_dir, 'platforms')
+  for platforms_dir in [
+      'bin', 'raspberry-pi2', 'stm32f746g-discovery', 'stm32f411re-nucleo']:
+    copytree(join('platforms', platforms_dir),
+             join(target_platforms_dir, platforms_dir))
 
 def CreateSnapshot(dart_executable, dart_file, snapshot):
   # TODO(karlklose): Run 'build_dir/dartino export' instead?
-  cmd = [dart_executable, '-c', '--packages=.packages',
+  cmd = [dart_executable, '-c', '--packages=pkg/dartino_compiler/.packages',
          '-Dsnapshot="%s"' % snapshot,
          '-Dpackages=".packages"',
          '-Dtest.dartino_settings_file_name=".dartino-settings"',
@@ -267,6 +258,19 @@ def CopySTM(bundle_dir):
   for lib in libraries:
     CopyFile(join(build_dir, lib), join(lib_dir, basename(lib)))
 
+def CopyCM4(bundle_dir):
+  libraries = [
+      'libdartino.a',
+      'libfreertos_dartino.a',
+      'libstm32f411xe-nucleo.a',
+    ]
+  disco = join(bundle_dir, 'platforms', 'stm32f411re-nucleo')
+  lib_dir = join(disco, 'lib')
+  makedirs(lib_dir)
+  build_dir = 'out/ReleaseCM4'
+  for lib in libraries:
+    CopyFile(join(build_dir, lib), join(lib_dir, basename(lib)))
+
 def CopySamples(bundle_dir):
   target = join(bundle_dir, 'samples')
   for v in SAMPLES:
@@ -292,20 +296,24 @@ def CreateDocsPubSpec(fileName):
 def CreateDocsLibs(docPkgDir, outDir):
   for package in SDK_PACKAGES:
     # Read the original package file and match out the documentation from it.
-    sourceFileName = join(outDir, package, 'lib', '{0}.dart'.format(package))
-    with open(sourceFileName) as f:
+    sourceDir = join(outDir, package, 'lib')
+    sourceFile = join(sourceDir, '{0}.dart'.format(package))
+    with open(sourceFile) as f:
       s = f.read()
     # Extract the doc comment for the library; this is everything before a line
     # that starts with 'library' and ends with ';'.
     match = re.match(r'(.*)^library ([^;]+);', s, re.DOTALL|re.MULTILINE)
-    doc = match.group(1)
+    docComment = match.group(1)
     # Create a new lib dart file with same documentation.
-    destFileName = join(docPkgDir, '%s.dart' % package)
-    print 'Doc-gen: Creating %s from %s' % (destFileName, sourceFileName)
-    with open(destFileName, 'w') as f:
-      f.write(match.group(1))
+    destFile = join(docPkgDir, '%s.dart' % package)
+    print 'Doc-gen: Creating %s from %s' % (destFile, sourceFile)
+    with open(destFile, 'w') as f:
+      f.write(docComment)
       f.write('\nlibrary {0};\n'.format(package))
-      f.write('export \'package:{0}/{0}.dart\';'.format(package))
+      # Add an import statement for all .dart files in the dir
+      for sf in listdir(sourceDir):
+        if fnmatch(sf, '*.dart'):
+          f.write('export \'package:{0}/{1}\';\n'.format(package, sf))
 
 def CreateDocumentation():
   EnsureDartDoc()
@@ -396,6 +404,7 @@ def Main():
     CopyArm(sdk_temp)
     CreateAgentSnapshot(sdk_temp, build_dir)
     CopySTM(sdk_temp)
+    CopyCM4(sdk_temp)
     CopySamples(sdk_temp)
     CopyAdditionalFiles(sdk_temp)
     if deb_package:

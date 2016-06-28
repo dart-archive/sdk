@@ -15,7 +15,7 @@ To update to a new version do the following:
 3. Add an approiate README.google file (start with the one
    in the previous version and update it).
 
-4. Tar and upload th Google Cloud Storage
+4. Tar and upload to Google Cloud Storage
 
    $ tar caf gcc-arm-embedded.tar.gz gcc-arm-embedded
    $ upload_to_google_storage.py \

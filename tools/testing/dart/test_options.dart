@@ -122,7 +122,7 @@ class TestOptionsParser {
               'The architecture to run tests for',
               ['-a', '--arch'],
               ['all', 'ia32', 'x64', 'arm', 'arm64', 'mips',
-               'simarm', 'simarm64', 'simmips', 'xarm'],
+               'simarm', 'simarm64', 'simmips', 'xarm', 'xmips'],
               'ia32'),
           new _TestOptionSpecification(
               'system',
@@ -500,13 +500,6 @@ Note: currently only implemented for dart2js.''',
               ['--dartino-settings-file'],
               [],
               '.dartino-settings'),
-          new _TestOptionSpecification(
-              'no_java',
-              "Don't require running java tests",
-              ['--no-java'],
-              [],
-              false,
-              type: 'bool'),
           new _TestOptionSpecification(
               'use_heap_blob',
               'Run tests directly from programheap blobs instead of snapshots.',

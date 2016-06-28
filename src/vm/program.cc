@@ -23,6 +23,7 @@
 #include "src/vm/port.h"
 #include "src/vm/process.h"
 #include "src/vm/session.h"
+#include "src/vm/snapshot.h"
 
 namespace dartino {
 
@@ -124,6 +125,8 @@ Process* Program::ProcessSpawnForMain(List<List<uint8>> arguments) {
   if (Flags::print_program_statistics) {
     PrintStatistics();
   }
+
+  VerifyObjectPlacements();
 
   Process* process = SpawnProcess(NULL);
 
@@ -351,6 +354,8 @@ void Program::FinishProgramGC() {
 
   if (debug_info_ != NULL) debug_info_->UpdateBreakpoints();
 
+  VerifyObjectPlacements();
+
   if (Flags::validate_heaps) ValidateHeapsAreConsistent();
 }
 
@@ -389,6 +394,118 @@ void Program::ValidateSharedHeap() {
   process_heap()->VisitWeakObjectPointers(&validator);
 }
 
+// Visits all pointers to doubles, so we can move them to the start.
+// Also visits all pointers with the other visitor, so we can determine the
+// popular objects.
+class FindDoubleVisitor : public HeapObjectVisitor {
+ public:
+  explicit FindDoubleVisitor(PointerVisitor* double_mover,
+                             PointerVisitor* counter)
+      : double_mover_(double_mover), counter_(counter) {}
+
+  virtual uword Visit(HeapObject* object) {
+    if (object->IsDouble()) {
+      double_mover_->Visit(reinterpret_cast<Object**>(&object));
+    }
+    object->IteratePointers(counter_);
+    return object->Size();
+  }
+
+ private:
+  PointerVisitor* double_mover_;
+  PointerVisitor* counter_;
+};
+
+#ifdef DARTINO64
+class BigSmiFixer : public PointerVisitor {
+ public:
+  BigSmiFixer(SemiSpace* to, Class* large_integer_class)
+      : to_(to), large_integer_class_(large_integer_class) {}
+
+  virtual void VisitBlock(Object** start, Object** end) {
+    for (Object** p = start; p < end; p++) {
+      Object* object = *p;
+      if (!object->IsSmi()) continue;
+      Smi* smi = reinterpret_cast<Smi*>(object);
+      if (!Smi::IsValidAsPortable(smi->value())) {
+        uword new_address = to_->Allocate(LargeInteger::kSize);
+        ASSERT(new_address != 0);  // we are in a no-allocation-failure scope.
+        *reinterpret_cast<Class**>(new_address) = large_integer_class_;
+        *reinterpret_cast<word*>(new_address + kPointerSize) = smi->value();
+        ASSERT(LargeInteger::kSize == kPointerSize + sizeof(word));
+        *p = HeapObject::FromAddress(new_address);
+      }
+    }
+  }
+
+ private:
+  SemiSpace* to_;
+  Class* large_integer_class_;
+};
+
+// Visits all Smis, finding those that are too big to be Smis on a 32 bit
+// system, and converting them to boxed integers.
+class FindOversizedSmiVisitor : public HeapObjectVisitor {
+ public:
+  explicit FindOversizedSmiVisitor(SemiSpace* to, Class* large_integer_class)
+      : fixer_(to, large_integer_class) {}
+
+  virtual uword Visit(HeapObject* object) {
+    object->IterateEverything(&fixer_);
+    return object->Size();
+  }
+
+ private:
+  BigSmiFixer fixer_;
+};
+#endif
+
+// First does one program GC to get rid of garbage, then does a second to move
+// the Double objects to the start of the heap. Also finds the most popular
+// (most pointed-at) objects on the heap and moves them to the start of the
+// heap for better locality.
+void Program::SnapshotGC(PopularityCounter* popularity_counter) {
+#ifdef DARTINO64
+  {
+    SemiSpace* space = heap_.space();
+    NoAllocationFailureScope scope(space);
+    FindOversizedSmiVisitor smi_visitor(space, large_integer_class());
+    heap_.IterateObjects(&smi_visitor);
+  }
+#endif
+  CollectGarbage();
+
+  SemiSpace* to = new SemiSpace(Space::kCanResize, kUnknownSpacePage,
+                                heap_.space()->Used() / 10);
+  ScavengeVisitor scavenger(heap_.space(), to);
+
+  PrepareProgramGC();
+  NoAllocationFailureScope scope(to);
+  {
+    FindDoubleVisitor heap_number_visitor(&scavenger, popularity_counter);
+    heap_.IterateObjects(&heap_number_visitor);
+  }
+  popularity_counter->FindMostPopular();
+
+  // The first object after the boxed floats should be the boxed float class,
+  // which puts it in a predictable place for the deserializer.
+  scavenger.Visit(double_class_slot());
+
+  // These three must be next because they should have a predictable placement
+  // relative to each other for the sake of the interpreter.
+  scavenger.Visit(null_object_slot());
+  scavenger.Visit(false_object_slot());
+  scavenger.Visit(true_object_slot());
+
+  // Visit the most popular objects to get them bunched near the start of the
+  // heap.  This is good for locality and for the snapshot size.
+  popularity_counter->VisitMostPopular(&scavenger);
+
+  // Visit the roots and all other objects that are live.
+  PerformProgramGC(to, &scavenger);
+  FinishProgramGC();
+}
+
 void Program::CollectGarbage() {
   ClearCache();
   SemiSpace* to = new SemiSpace(Space::kCanResize, kUnknownSpacePage,
@@ -396,6 +513,7 @@ void Program::CollectGarbage() {
   ScavengeVisitor scavenger(heap_.space(), to);
 
   PrepareProgramGC();
+  NoAllocationFailureScope scope(to);
   PerformProgramGC(to, &scavenger);
   FinishProgramGC();
 }
@@ -490,10 +608,40 @@ void Program::PerformSharedGarbageCollection() {
   SemiSpace* new_space = heap->space();
   MarkingStack stack;
   MarkingVisitor marking_visitor(new_space, &stack);
-  for (auto process : process_list_) {
-    process->IterateRoots(&marking_visitor);
-  }
+
+  IterateSharedHeapRoots(&marking_visitor);
+
   stack.Process(&marking_visitor, old_space, new_space);
+
+  if (old_space->compacting()) {
+    // If the last GC was compacting we don't have fragmentation, so it
+    // is fair to evaluate if we are making progress or just doing
+    // pointless GCs.
+    old_space->EvaluatePointlessness();
+    old_space->clear_hard_limit_hit();
+    // Do a non-compacting GC this time for speed.
+    SweepSharedHeap();
+  } else {
+    // Last GC was sweeping, so we do a compaction this time to avoid
+    // fragmentation.
+    old_space->clear_hard_limit_hit();
+    CompactSharedHeap();
+  }
+
+  heap->AdjustOldAllocationBudget();
+
+#ifdef DEBUG
+  if (Flags::validate_heaps) old_space->Verify();
+#endif
+}
+
+void Program::SweepSharedHeap() {
+  TwoSpaceHeap* heap = process_heap();
+  OldSpace* old_space = heap->old_space();
+  SemiSpace* new_space = heap->space();
+
+  old_space->set_compacting(false);
+
   old_space->ProcessWeakPointers();
 
   for (auto process : process_list_) {
@@ -510,8 +658,49 @@ void Program::PerformSharedGarbageCollection() {
 
   for (auto process : process_list_) process->UpdateStackLimit();
 
-  old_space->set_used(sweeping_visitor.used());
+  uword used_after = sweeping_visitor.used();
+  old_space->set_used(used_after);
+  old_space->set_used_after_last_gc(used_after);
   heap->AdjustOldAllocationBudget();
+}
+
+void Program::CompactSharedHeap() {
+  TwoSpaceHeap* heap = process_heap();
+  OldSpace* old_space = heap->old_space();
+  SemiSpace* new_space = heap->space();
+
+  old_space->set_compacting(true);
+
+  old_space->ComputeCompactionDestinations();
+
+  old_space->ClearFreeList();
+
+  // Weak processing when the destination addresses have been calculated, but
+  // before they are moved (which ruins the liveness data).
+  old_space->ProcessWeakPointers();
+
+  for (auto process : process_list_) {
+    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
+  }
+
+  old_space->ZapObjectStarts();
+
+  FixPointersVisitor fix;
+  CompactingVisitor compacting_visitor(old_space, &fix);
+  old_space->IterateObjects(&compacting_visitor);
+  uword used_after = compacting_visitor.used();
+  old_space->set_used(used_after);
+  old_space->set_used_after_last_gc(used_after);
+  fix.set_source_address(0);
+
+  HeapObjectPointerVisitor new_space_visitor(&fix);
+  new_space->IterateObjects(&new_space_visitor);
+
+  IterateSharedHeapRoots(&fix);
+
+  new_space->ClearMarkBits();
+  old_space->ClearMarkBits();
+  old_space->MarkChunkEndsFree();
 }
 
 class StatisticsVisitor : public HeapObjectVisitor {
@@ -632,6 +821,15 @@ void Program::Initialize() {
       InstanceFormat::instance_format(0, InstanceFormat::NULL_MARKER);
   null_object_ =
       reinterpret_cast<Instance*>(heap()->Allocate(null_format.fixed_size()));
+
+  InstanceFormat false_format =
+      InstanceFormat::instance_format(0, InstanceFormat::FALSE_MARKER);
+  uword false_address =
+      HeapObject::cast(heap()->Allocate(false_format.fixed_size()))->address();
+  InstanceFormat true_format =
+      InstanceFormat::instance_format(0, InstanceFormat::TRUE_MARKER);
+  uword true_address =
+      HeapObject::cast(heap()->Allocate(true_format.fixed_size()))->address();
 
   meta_class_ = Class::cast(heap()->CreateMetaClass());
 
@@ -819,25 +1017,21 @@ void Program::Initialize() {
   }
 
   {  // Create False class and the false object.
-    InstanceFormat format =
-        InstanceFormat::instance_format(0, InstanceFormat::FALSE_MARKER);
-    Class* false_class =
-        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+    Class* false_class = Class::cast(
+        heap()->CreateClass(false_format, meta_class_, null_object_));
     false_class->set_super_class(bool_class_);
     false_class->set_methods(empty_array_);
     false_object_ = Instance::cast(
-        heap()->CreateInstance(false_class, null_object(), true));
+        heap()->CreateBooleanObject(false_address, false_class, null_object()));
   }
 
   {  // Create True class and the true object.
-    InstanceFormat format =
-        InstanceFormat::instance_format(0, InstanceFormat::TRUE_MARKER);
-    Class* true_class =
-        Class::cast(heap()->CreateClass(format, meta_class_, null_object_));
+    Class* true_class = Class::cast(
+        heap()->CreateClass(true_format, meta_class_, null_object_));
     true_class->set_super_class(bool_class_);
     true_class->set_methods(empty_array_);
-    true_object_ =
-        Instance::cast(heap()->CreateInstance(true_class, null_object(), true));
+    true_object_ = Instance::cast(
+        heap()->CreateBooleanObject(true_address, true_class, null_object()));
   }
 
   {  // Create stack overflow error object.
@@ -864,6 +1058,15 @@ void Program::Initialize() {
       CreateStringFromAscii(StringFromCharZ("Illegal state.")));
 
   native_failure_result_ = null_object_;
+  VerifyObjectPlacements();
+}
+
+void Program::VerifyObjectPlacements() {
+  uword n = reinterpret_cast<uword>(null_object_);
+  uword f = reinterpret_cast<uword>(false_object_);
+  uword t = reinterpret_cast<uword>(true_object_);
+  ASSERT(f - n == 2 * kWordSize);
+  ASSERT(t - f == 2 * kWordSize);
 }
 
 void Program::IterateRoots(PointerVisitor* visitor) {
@@ -981,7 +1184,7 @@ void Program::CollectNewSpace() {
   OldSpace* old = data_heap->old_space();
 
   if (data_heap->HasEmptyNewSpace()) {
-    CollectOldSpaceIfNeeded();
+    CollectOldSpaceIfNeeded(false);
     return;
   }
 
@@ -998,6 +1201,8 @@ void Program::CollectNewSpace() {
 
   SemiSpace* to = data_heap->unused_space();
 
+  uword old_used = old->Used();
+
   to->set_used(0);
   // Allocate from start of to-space..
   to->UpdateBaseAndLimit(to->chunk(), to->chunk()->start());
@@ -1006,7 +1211,7 @@ void Program::CollectNewSpace() {
   to->StartScavenge();
   old->StartScavenge();
 
-  for (auto process : process_list_) process->IterateRoots(&visitor);
+  IterateSharedHeapRoots(&visitor);
 
   old->VisitRememberedSet(&visitor);
 
@@ -1036,13 +1241,23 @@ void Program::CollectNewSpace() {
   if (Flags::validate_heaps) old->Verify();
 #endif
 
-  CollectOldSpaceIfNeeded();
+  ASSERT(from->Used() >= to->Used());
+  // Find out how much garbage was found.
+  word progress = (from->Used() - to->Used()) - (old->Used() - old_used);
+  // There's a little overhead when allocating in old space which was not there
+  // in new space, so we might overstate the number of promoted bytes a little,
+  // which could result in an understatement of the garbage found, even to make
+  // it negative.
+  if (progress > 0) {
+    old->ReportNewSpaceProgress(progress);
+  }
+  CollectOldSpaceIfNeeded(visitor.trigger_old_space_gc());
   UpdateStackLimits();
 }
 
-void Program::CollectOldSpaceIfNeeded() {
+void Program::CollectOldSpaceIfNeeded(bool force) {
   OldSpace* old = process_heap_.old_space();
-  if (old->needs_garbage_collection()) {
+  if (force || old->needs_garbage_collection()) {
     old->Flush();
     CollectOldSpace();
 #ifdef DEBUG
@@ -1055,6 +1270,13 @@ void Program::UpdateStackLimits() {
   for (auto process : process_list_) process->UpdateStackLimit();
 }
 
+void Program::IterateSharedHeapRoots(PointerVisitor* visitor) {
+  // All processes share the same heap, so we need to iterate all roots from
+  // all processes.
+  for (auto process : process_list_) process->IterateRoots(visitor);
+  visitor->Visit(reinterpret_cast<Object**>(&stack_chain_));
+}
+
 int Program::CollectMutableGarbageAndChainStacks() {
   // Mark all reachable objects.
   OldSpace* old_space = process_heap()->old_space();
@@ -1063,27 +1285,18 @@ int Program::CollectMutableGarbageAndChainStacks() {
   ASSERT(stack_chain_ == NULL);
   MarkingVisitor marking_visitor(new_space, &marking_stack, &stack_chain_);
 
-  // All processes share the same heap, so we need to iterate all roots from
-  // all processes.
-  for (auto process : process_list_) process->IterateRoots(&marking_visitor);
+  IterateSharedHeapRoots(&marking_visitor);
 
   marking_stack.Process(&marking_visitor, old_space, new_space);
 
-  // Weak processing.
-  old_space->ProcessWeakPointers();
-  for (auto process : process_list_) {
-    process->set_ports(Port::CleanupPorts(old_space, process->ports()));
-  }
-
-  // Flush outstanding free_list chunks into the free list. Then sweep
-  // over the heap and rebuild the freelist.
-  old_space->Flush();
-  SweepingVisitor sweeping_visitor(old_space);
-  old_space->IterateObjects(&sweeping_visitor);
-
-  new_space->ClearMarkBits();
+  CompactSharedHeap();
 
   UpdateStackLimits();
+
+#ifdef DEBUG
+  if (Flags::validate_heaps) old_space->Verify();
+#endif
+
   return marking_visitor.number_of_stacks();
 }
 

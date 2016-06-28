@@ -5,41 +5,73 @@
 import 'package:compiler/src/elements/visitor.dart';
 import 'package:compiler/src/parser/partial_elements.dart';
 import 'package:compiler/src/elements/elements.dart';
-import 'package:compiler/src/elements/modelx.dart';
+import 'package:compiler/src/tree/nodes.dart';
 
-class FindPositionVisitor extends BaseElementVisitor {
+/// Returns the innermost function in [compilationUnit] spanning [position] or
+/// [null] if no such function is found.
+findFunctionAtPosition(CompilationUnitElement compilationUnit, int position) {
+  FindFunctionAtPositionVisitor visitor =
+      new FindFunctionAtPositionVisitor(position);
+  visitor.visit(compilationUnit);
+  return visitor.element;
+}
+
+class FindFunctionAtPositionVisitor extends BaseElementVisitor {
   final int position;
-  Element element;
+  FunctionElement element;
 
-  FindPositionVisitor(this.position, this.element);
+  FindFunctionAtPositionVisitor(this.position);
+
+  visitFunctionElement(FunctionElement function, _) {
+    if (containsPosition(function.node)) {
+      element = function;
+      MemberElement memberElement = function.memberContext;
+      if (memberElement == function) {
+        element = findSmallestMatchingClosure(memberElement) ?? element;
+      }
+    }
+  }
+
+  FunctionElement findSmallestMatchingClosure(MemberElement memberElement) {
+    FunctionElement smallest;
+    for (FunctionElement closure in memberElement.nestedClosures) {
+      if (!containsPosition(closure.node)) continue;
+      if (smallest == null ||
+          nodeLength(closure.node) < nodeLength(smallest.node)) {
+        smallest = closure;
+      }
+    }
+    return smallest;
+  }
+
+  visitClassElement(ClassElement element, _) {
+    if (element is PartialClassElement) {
+      if (element.beginToken.charOffset <= position &&
+          position < element.endToken.next.charOffset) {
+        element.forEachLocalMember(visit);
+      }
+    }
+  }
+
+  visitCompilationUnitElement(CompilationUnitElement element, _) {
+    element.forEachLocalMember(visit);
+  }
+
+  visitFieldElement(FieldElement e, _) {
+    element = findSmallestMatchingClosure(e) ?? element;
+  }
+
 
   visit(Element e, [arg]) => e.accept(this, arg);
 
-  visitElement(ElementX e, _) {
-    DeclarationSite site = e.declarationSite;
-    if (site is PartialElement) {
-      if (site.beginToken.charOffset <= position &&
-          position < site.endToken.next.charOffset) {
-        element = e;
-      }
-    }
+  visitElement(Element element, _) {}
+
+  bool containsPosition(Node node) {
+    return node.getBeginToken().charOffset <= position &&
+        position < node.getEndToken().charEnd;
   }
 
-  visitClassElement(ClassElement e, _) {
-    if (e is PartialClassElement) {
-      if (e.beginToken.charOffset <= position &&
-          position < e.endToken.next.charOffset) {
-        element = e;
-        visitScopeContainerElement(e, null);
-      }
-    }
-  }
-
-  visitScopeContainerElement(ScopeContainerElement e, _) {
-    e.forEachLocalMember((Element element) => visit(element));
-  }
-
-  visitCompilationUnitElement(CompilationUnitElement e, _) {
-    e.forEachLocalMember((Element element) => visit(element));
+  static int nodeLength(Node node) {
+    return node.getEndToken().charEnd - node.getBeginToken().charOffset;
   }
 }

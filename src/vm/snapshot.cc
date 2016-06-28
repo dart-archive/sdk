@@ -1,4 +1,4 @@
-// Copyright (c) 2014, the Dartino project authors. Please see the AUTHORS file
+// Copyright (c) 2016, the Dartino project authors. Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
@@ -19,218 +19,58 @@
 
 namespace dartino {
 
-static const int kSupportedSizeOfDouble = 8;
-static const int kReferenceTableSizeBytes = 4;
-static const int kHeapSizeBytes = 4;
+class SnapshotOracle;
 
-class Header {
- public:
-  explicit Header(int64 value) : value_(value) {}
-
-  static Header FromSmi(Smi* value) {
-    Header h((value->value() << kSmiShift) | kSmiTag);
-    ASSERT(h.is_smi());
-    ASSERT(h.as_smi() == value);
-    return h;
-  }
-
-  static Header FromIndex(word value) {
-    Header h((value << kIndexFieldShift) | kIndexTag);
-    ASSERT(h.is_index());
-    ASSERT(h.as_index() == value);
-    return h;
-  }
-
-  static Header FromTypeAndElements(InstanceFormat::Type type,
-                                    int elements = 0) {
-    Header h = Header(TypeField::encode(type) |
-                      ElementsField::encode(elements) | kTypeAndElementsTag);
-    ASSERT(h.is_type());
-    ASSERT(type == h.as_type());
-    ASSERT(elements == h.elements());
-    return h;
-  }
-
-  // Compute the object size based on type and elements.
-  int Size() {
-    switch (as_type()) {
-      case InstanceFormat::ONE_BYTE_STRING_TYPE:
-        return OneByteString::AllocationSize(elements());
-      case InstanceFormat::TWO_BYTE_STRING_TYPE:
-        return TwoByteString::AllocationSize(elements());
-      case InstanceFormat::ARRAY_TYPE:
-        return Array::AllocationSize(elements());
-      case InstanceFormat::BYTE_ARRAY_TYPE:
-        return ByteArray::AllocationSize(elements());
-      case InstanceFormat::LARGE_INTEGER_TYPE:
-        return LargeInteger::AllocationSize();
-      case InstanceFormat::INSTANCE_TYPE:
-        return Instance::AllocationSize(elements());
-      case InstanceFormat::CLASS_TYPE:
-        return Class::AllocationSize();
-      case InstanceFormat::FUNCTION_TYPE:
-        return Function::AllocationSize(
-            Function::BytecodeAllocationSize(elements()));
-      case InstanceFormat::DOUBLE_TYPE:
-        return Double::AllocationSize();
-      case InstanceFormat::INITIALIZER_TYPE:
-        return Initializer::AllocationSize();
-      case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE:
-        return DispatchTableEntry::AllocationSize();
-      default:
-        UNREACHABLE();
-        return 0;
-    }
-  }
-
-  bool is_smi() { return (value_ & kSmiMask) == kSmiTag; }
-  bool is_native_smi() { return is_smi() && Smi::IsValid(value_ >> kSmiShift); }
-  Smi* as_smi() {
-    ASSERT(is_native_smi());
-    return Smi::FromWord(value_ >> kSmiShift);
-  }
-
-  int64 as_large_integer_value() {
-    ASSERT(is_smi() && !is_native_smi());
-    return value_ >> kSmiShift;
-  }
-
-  bool is_index() { return (value_ & kTagMask) == kIndexTag; }
-  word as_index() {
-    ASSERT(is_index());
-    return value_ >> kIndexFieldShift;
-  }
-
-  bool is_type() { return (value_ & kTagMask) == kTypeAndElementsTag; }
-  InstanceFormat::Type as_type() {
-    ASSERT(is_type());
-    return TypeField::decode(value_);
-  }
-
-  int elements() {
-    ASSERT(is_type());
-    return ElementsField::decode(value_);
-  }
-
-  word as_word() {
-    ASSERT(static_cast<word>(value_) == value_);
-    return value_;
-  }
-
-  // Lowest one/two bits are used for tagging between:
-  // Smi, Indexed and Type+Elements.
-  static const int kSmiMask = 1;
-  static const int kTagMask = 3;
-
-  static const int kSmiTag = 0;
-  static const int kIndexTag = 1;
-  static const int kTypeAndElementsTag = 3;
-
-  static const int kIndexFieldShift = 2;
-  static const int kSmiShift = 1;
-
-  // Fields in case of Type + Elements encoding.
-  class TypeField : public BitField<InstanceFormat::Type, 2, 4> {};
-  class ElementsField : public BitField<word, 6, 26> {};
-
- private:
-  int64 value_;
-};
-
-class ObjectInfo {
- public:
-  ObjectInfo(Class* the_class, int index)
-      : the_class_(the_class), index_(index) {}
-  Class* the_class() { return the_class_; }
-  int index() { return index_; }
-
- private:
-  Class* the_class_;
-  int index_;
-};
+void FixByteCodes(uint8* bcp, uword size, int old_shift, int new_shift);
 
 class ReaderVisitor : public PointerVisitor {
  public:
   explicit ReaderVisitor(SnapshotReader* reader) : reader_(reader) {}
 
-  void Visit(Object** p) { *p = reader_->ReadObject(); }
+  void Visit(Object** p) {
+    *p = reinterpret_cast<Object*>(reader_->ReadWord());
+  }
 
   void VisitBlock(Object** start, Object** end) {
     // Copy all HeapObject pointers in [start, end)
-    for (Object** p = start; p < end; p++) *p = reader_->ReadObject();
+    for (Object** p = start; p < end; p++)
+      *p = reinterpret_cast<Object*>(reader_->ReadWord());
   }
 
  private:
   SnapshotReader* reader_;
 };
 
-class WriterVisitor : public PointerVisitor {
- public:
-  explicit WriterVisitor(SnapshotWriter* writer) : writer_(writer) {}
-
-  void Visit(Object** p) { writer_->WriteObject(*p); }
-
-  void VisitBlock(Object** start, Object** end) {
-    // Copy all HeapObject pointers in [start, end)
-    for (Object** p = start; p < end; p++) writer_->WriteObject(*p);
-  }
-
- private:
-  SnapshotWriter* writer_;
-};
-
-class UnmarkSnapshotVisitor : public PointerVisitor {
- public:
-  void VisitBlock(Object** start, Object** end) {
-    for (Object** p = start; p < end; p++) {
-      Object* object = *p;
-      if (object->IsHeapObject()) {
-        Unmark(HeapObject::cast(object));
-      }
-    }
-  }
-
-  void Unmark(HeapObject* object) {
-    word f = object->forwarding_word();
-    if (f == 0) return;  // Not marked.
-    ObjectInfo* info = reinterpret_cast<ObjectInfo*>(f);
-    object->set_class(info->the_class());
-    delete info;
-    object->IteratePointers(this);
-  }
-};
-
-class UnmarkVisitor : public PointerVisitor {
- public:
-  UnmarkVisitor() {}
-
-  void Visit(Object** p) { Unmark(*p); }
-
-  void VisitBlock(Object** start, Object** end) {
-    // Copy all HeapObject pointers in [start, end)
-    for (Object** p = start; p < end; p++) Unmark(*p);
-  }
-
- private:
-  void Unmark(Object* object) {
-    if (object->IsHeapObject()) {
-      UnmarkSnapshotVisitor visitor;
-      visitor.Unmark(HeapObject::cast(object));
-    }
-  }
-};
-
-void SnapshotReader::AddReference(HeapObject* object) {
-  backward_references_[index_++] = object;
-}
-
-HeapObject* SnapshotReader::Dereference(int index) {
-  return backward_references_[index - 1];
-}
-
 void SnapshotWriter::WriteByte(uint8 value) {
   EnsureCapacity(1);
   snapshot_[position_++] = value;
+}
+
+void SnapshotWriter::WriteSize(unsigned value) {
+  EnsureCapacity(4);
+  snapshot_[position_++] = value & 0xff;
+  snapshot_[position_++] = (value >> 8) & 0xff;
+  snapshot_[position_++] = (value >> 16) & 0xff;
+  snapshot_[position_++] = (value >> 24) & 0xff;
+}
+
+double SnapshotReader::ReadDouble() {
+  double result = 0.0;
+  uint8* p_data = reinterpret_cast<uint8*>(&result);
+  ReadBytes(8, p_data);
+  return result;
+}
+
+void SnapshotWriter::WriteDouble(double value) {
+  union {
+    double d;
+    uint8 bytes[8];
+  } u;
+  u.d = value;
+  EnsureCapacity(8);
+  for (int i = 0; i < 8; i++) {
+    snapshot_[position_++] = u.bytes[i];
+  }
 }
 
 void SnapshotReader::ReadBytes(int length, uint8* values) {
@@ -238,53 +78,181 @@ void SnapshotReader::ReadBytes(int length, uint8* values) {
   position_ += length;
 }
 
-void SnapshotWriter::WriteBytes(int length, const uint8* values) {
+void SnapshotWriter::WriteBytes(const uint8* values, int length) {
   EnsureCapacity(length);
   memcpy(&snapshot_[position_], values, length);
   position_ += length;
 }
 
-int64 SnapshotReader::ReadInt64() {
-  int64 r = 0;
-  int64 s = 0;
-  uint8 b = ReadByte();
-  while (b < 128) {
-    r |= static_cast<int64>(b) << s;
-    s += 7;
-    b = ReadByte();
-  }
-  return r | ((static_cast<int64>(b) - 192) << s);
+unsigned SnapshotReader::ReadSize() {
+  unsigned size = ReadByte();
+  size += ReadByte() << 8;
+  size += ReadByte() << 16;
+  size += ReadByte() << 24;
+  return size;
 }
 
-void SnapshotWriter::WriteInt64(int64 value) {
-  while (value < -64 || value >= 64) {
-    WriteByte(static_cast<uint8>(value & 127));
-    value = value >> 7;
-  }
-  WriteByte(static_cast<uint8>(value + 192));
-}
-
-double SnapshotReader::ReadDouble() {
-  double result = 0.0;
-  uint8* p_data = reinterpret_cast<uint8*>(&result);
-  ASSERT(sizeof(double) == kSupportedSizeOfDouble);
-  ReadBytes(kSupportedSizeOfDouble, p_data);
-  return result;
-}
-
-void SnapshotWriter::WriteDouble(double value) {
-  uint8* p_data = reinterpret_cast<uint8*>(&value);
-  WriteBytes(kSupportedSizeOfDouble, p_data);
-}
-
-void SnapshotWriter::WriteHeader(InstanceFormat::Type type, int elements) {
-  WriteInt64(Header::FromTypeAndElements(type, elements).as_word());
+void SnapshotReader::ReadSectionBoundary() {
+  uint8 boundary = ReadByte();
+  ASSERT(IsSectionBoundary(boundary));
 }
 
 uint32_t ComputeSnapshotHash(List<uint8> snapshot) {
-  return Utils::StringHash(
-      reinterpret_cast<const uint8*>(snapshot.data()), snapshot.length(), 1);
+  return Utils::StringHash(reinterpret_cast<const uint8*>(snapshot.data()),
+                           snapshot.length(), 1);
 }
+
+const char* OpCodeName(int opcode) {
+  switch (opcode) {
+    case kSnapshotPopular:
+    case kSnapshotPopular + 1:
+      return "kSnapshotPopular";
+    case kSnapshotRecentPointer:
+      return "kSnapshotRecentPointer REL0";
+    case kSnapshotRecentPointer + 1:
+      return "kSnapshotRecentPointer REL1";
+    case kSnapshotRecentSmi:
+      return "kSnapshotRecentSmi";
+    case kSnapshotSmi:
+      return "kSnapshotSmi";
+    case kSnapshotExternal:
+      return "kSnapshotExternal";
+    case kSnapshotRaw:
+      return "kSnapshotRaw";
+  }
+  return "UNKNOWN";
+}
+
+#ifdef DARTINO_TARGET_X64
+struct RootCounter : public PointerVisitor {
+  virtual void VisitBlock(Object** from, Object** to) { count += to - from; }
+  int count = 0;
+};
+
+int SnapshotReader::Skip(int position, int words_to_skip) {
+  ASSERT(IsSectionBoundary(snapshot_[position]));
+  position++;
+  while (words_to_skip-- != 0) {
+    uint8 byte_code = snapshot_[position++];
+    ASSERT(OpCode(byte_code) != kSnapshotRaw);
+    if (IsOneBytePopularByteCode(byte_code)) continue;
+    position += ArgumentBytes(byte_code);
+  }
+  return position;
+}
+
+void SnapshotReader::BuildLocationMap(Program* program, word total_floats,
+                                      uword heap_size) {
+  // On 64 bit platforms we prescan the entire snapshot to build up a map from
+  // ideal addresses to real addresses.  This is obviously rather expensive and
+  // precludes a truly streamed snapshot, but we expect 64 bit platforms to be
+  // so beefy that it doesn't matter.
+  int position = position_;
+  position = Skip(position, kSnapshotNumberOfPopularObjects);
+
+  RootCounter roots;
+  program->IterateRootsIgnoringSession(&roots);
+  position = Skip(position, roots.count);
+
+  ASSERT(IsSectionBoundary(snapshot_[position]));
+  position++;
+
+  uword real_address = base_ - total_floats * Double::kSize;
+  uword end = real_address + heap_size;
+  word ideal_address = -total_floats * kIdealBoxedFloatSize;
+  for (int i = 0; i < total_floats; i++) {
+    location_map_[ideal_address] = real_address;
+    real_address += Double::kSize;
+    ideal_address += kIdealBoxedFloatSize;
+  }
+  ASSERT(ideal_address == 0);
+  ASSERT(real_address == base_);
+  position += total_floats * sizeof(double);
+  while (real_address < end) {
+    uint8 b = snapshot_[position++];
+    if (IsSectionBoundary(b)) continue;
+    int opcode = OpCode(b);
+    int w;  // Width - number of extra bytes in the instruction.
+    switch (opcode) {
+      case kSnapshotPopular:
+      case kSnapshotPopular + 1:
+        w = 0;
+        break;
+      case kSnapshotRecentPointer:
+      case kSnapshotRecentPointer + 1:
+      case kSnapshotRecentSmi:
+      case kSnapshotSmi:
+      case kSnapshotExternal:
+      case kSnapshotRaw:
+        w = ArgumentBytes(b);
+        break;
+      default:
+        UNREACHABLE();
+    }
+
+    switch (opcode) {
+      case kSnapshotPopular:
+      case kSnapshotPopular + 1:
+      case kSnapshotRecentPointer:
+      case kSnapshotRecentPointer + 1:
+        // We only need map entries for the start of objects and objects can
+        // only start with certain bytecodes.
+        location_map_[ideal_address] = real_address;
+      // FALL THROUGH!
+      case kSnapshotRecentSmi:
+      case kSnapshotSmi:
+      case kSnapshotExternal: {
+        position += w;
+        real_address += kWordSize;
+        ideal_address += kIdealWordSize;
+        break;
+      }
+      case kSnapshotRaw: {
+        word x = ArgumentStart(b, w);
+        while (w-- != 0) {
+          x <<= 8;
+          x |= snapshot_[position++];
+        }
+        real_address += Utils::RoundUp(x, kWordSize);
+        ideal_address += Utils::RoundUp(x, kIdealWordSize);
+        position += x;
+        break;
+      }
+      default:
+        UNREACHABLE();
+    }
+  }
+  ASSERT(IsSectionBoundary(snapshot_[position]));
+}
+
+class ByteCodeFixer : public PointerVisitor {
+ public:
+  virtual void VisitByteCodes(uint8* bcp, uword size) {
+    const int kIdealWordShift = 2;
+    const int kWordShift = 3;
+    ASSERT(kWordSize == 1 << kWordShift);
+    ASSERT(kIdealWordSize == 1 << kIdealWordShift);
+    FixByteCodes(bcp, size, kIdealWordShift, kWordShift);
+  }
+  virtual void VisitBlock(Object**, Object**) {}
+};
+
+class ByteCodeFixingObjectVisitor : public HeapObjectVisitor {
+ public:
+  virtual uword Visit(HeapObject* object) {
+    if (object->IsFunction()) {
+      ByteCodeFixer fixer;
+      object->IterateEverything(&fixer);
+    }
+    return object->Size();
+  }
+};
+
+#else
+
+void SnapshotReader::BuildLocationMap(Program* program, word total_floats,
+                                      uword heap_size) {}
+#endif
 
 Program* SnapshotReader::ReadProgram() {
   if (ReadByte() != 0xbe || ReadByte() != 0xef) {
@@ -294,465 +262,278 @@ Program* SnapshotReader::ReadProgram() {
 
   const char* version = GetVersion();
   int version_length = strlen(version);
-  int snapshot_version_length = ReadInt64();
-  uint8* snapshot_version = new uint8[snapshot_version_length];
-  ReadBytes(snapshot_version_length, snapshot_version);
-  if (!Version::Check(version,
-                      version_length,
-                      reinterpret_cast<const char*>(snapshot_version),
-                      snapshot_version_length,
-                      Version::kCompatible)) {
+  int snapshot_version_length = ReadSize();
+  {
+    uint8* snapshot_version = new uint8[snapshot_version_length];
+    ReadBytes(snapshot_version_length, snapshot_version);
+    if (!Version::Check(version, version_length,
+                        reinterpret_cast<const char*>(snapshot_version),
+                        snapshot_version_length, Version::kCompatible)) {
+      delete[] snapshot_version;
+      Print::Error("Error: Snapshot and VM versions do not agree.\n");
+      Platform::Exit(-1);
+    }
     delete[] snapshot_version;
-    Print::Error("Error: Snapshot and VM versions do not agree.\n");
-    Platform::Exit(-1);
   }
-  delete[] snapshot_version;
 
+  // TODO(erikcorry): This reads the entire snapshot and then rewinds,
+  // which will make it hard to stream the snapshot.
   uint32_t snapshot_hash = ComputeSnapshotHash(snapshot_);
-
-  // Read the required backward reference table size.
-  int references = 0;
-  for (int i = 0; i < kReferenceTableSizeBytes; i++) {
-    references = (references << 8) | ReadByte();
-  }
 
   Program* program = new Program(Program::kLoadedFromSnapshot, snapshot_hash);
 
-  // Read the heap size and allocate an area for it.
-  int size_position;
-  if (kPointerSize == 8 && sizeof(dartino_double) == 8) {
-    size_position = position_ + 0 * kHeapSizeBytes;
-  } else if (kPointerSize == 8 && sizeof(dartino_double) == 4) {
-    size_position = position_ + 1 * kHeapSizeBytes;
-  } else if (kPointerSize == 4 && sizeof(dartino_double) == 8) {
-    size_position = position_ + 2 * kHeapSizeBytes;
-  } else {
-    ASSERT(kPointerSize == 4 && sizeof(dartino_double) == 4);
-    size_position = position_ + 3 * kHeapSizeBytes;
-  }
-  position_ += 4 * kHeapSizeBytes;
-  int heap_size = ReadHeapSizeFrom(size_position);
-  // Make sure to make room for the filler at the end of the program space.
-  memory_ =
-      ObjectMemory::AllocateChunk(program->heap()->space(), heap_size + 1);
-  top_ = memory_->start();
+// Pick the right size for our architecture.
+#ifdef DARTINO64
+  const int index = (sizeof(dartino_double) == 4) ? 0 : 1;
+#else
+  const int index = (sizeof(dartino_double) == 4) ? 2 : 3;
+#endif
 
-  // Allocate space for the backward references.
-  backward_references_ = List<HeapObject*>::New(references);
+  uword total_floats = ReadSize();
+  uword sizes[4];
+  for (int i = 0; i < 4; i++) sizes[i] = ReadSize();
+  uword heap_size = sizes[index];
+
+  // Make sure to make room for the filler at the end of the program space.
+  Chunk* memory = ObjectMemory::AllocateChunk(program->heap()->space(),
+                                              heap_size + kWordSize);
+  program->heap()->space()->Append(memory);
+
+  base_ = memory->start() + Double::kSize * total_floats;
+
+#ifdef DARTINO64
+  recents_[0] = recents_[1] = 0;
+#else
+  recents_[0] = recents_[1] = base_ + HeapObject::kTag;
+#endif
+
+  int pos = position_;
+  BuildLocationMap(program, total_floats, heap_size);  // 64 bit only.
+  ASSERT(pos == position_);
+
+  // Read the list of popular objects.
+  ReadSectionBoundary();
+  ReaderVisitor visitor(this);
+  for (int i = 0; i < kSnapshotNumberOfPopularObjects; i++) {
+    visitor.Visit(&popular_objects_[i]);
+  }
 
   // Read the roots.
-  ReaderVisitor visitor(this);
+  ReadSectionBoundary();
   program->IterateRootsIgnoringSession(&visitor);
 
-  // Read all the program state (except roots).
-  program->set_entry(Function::cast(ReadObject()));
-  program->set_static_fields(Array::cast(ReadObject()));
-  program->set_dispatch_table(Array::cast(ReadObject()));
-
-  program->heap()->space()->Append(memory_);
-  program->heap()->space()->UpdateBaseAndLimit(memory_, top_);
-  backward_references_.Delete();
-
-  // Programs read from a snapshot are always compact.
-  program->SetupDispatchTableIntrinsics();
-
-  // As a sanity check we ensure that the heap size the writer of the snapshot
-  // predicted we would have, is in fact *precisely* how much space we needed.
-  int consumed_memory = top_ - memory_->start();
-  if (consumed_memory != heap_size) {
-    FATAL("The heap size in the snapshot was incorrect.");
+  // Read the main heap, starting with the boxed double objects.
+  ReadSectionBoundary();
+  uword double_position = memory->start();
+  uword double_class = base_ + HeapObject::kTag;
+  for (uword i = 0; i < total_floats; i++) {
+    *reinterpret_cast<uword*>(double_position) = double_class;
+    double_position += kWordSize;
+    double d = ReadDouble();
+    *reinterpret_cast<dartino_double*>(double_position) = d;
+    double_position += sizeof(dartino_double);
   }
+  ASSERT(double_position = base_);
+  Object** p = reinterpret_cast<Object**>(base_);
+  Object** end = reinterpret_cast<Object**>(memory->start() + heap_size);
+  visitor.VisitBlock(p, end);
+  ReadSectionBoundary();
+  program->heap()->space()->UpdateBaseAndLimit(memory,
+                                               reinterpret_cast<uword>(end));
+#ifdef DARTINO64
+  // This modifies byte codes in place, so we can't currenly unpack the
+  // heap in a streaming way on 64 bit.
+  ByteCodeFixingObjectVisitor byte_code_fixer;
+  program->heap()->IterateObjects(&byte_code_fixer);
+#endif
 
   return program;
 }
 
-List<uint8> SnapshotWriter::WriteProgram(Program* program) {
-  ASSERT(program->is_optimized());
+class PortableSizeCalculator : public PointerVisitor {
+ public:
+  virtual void VisitClass(Object**) { size_ += PortableSize::Pointer(); }
 
-  program->ClearDispatchTableIntrinsics();
+  virtual void Visit(Object**) { size_ += PortableSize::Pointer(); }
 
-  // Emit recognizable header.
-  WriteByte(0xbe);
-  WriteByte(0xef);
-
-  // Emit version of the VM.
-  const char* version = GetVersion();
-  int version_length = strlen(version);
-  WriteInt64(version_length);
-  WriteBytes(version_length, reinterpret_cast<const uint8*>(version));
-
-  // Reserve space for the backward reference table size.
-  int reference_count_position = position_;
-  for (int i = 0; i < kReferenceTableSizeBytes; i++) WriteByte(0);
-
-  // Reserve space for the size of the heap.
-  int size64_double_position = position_ + 0 * kHeapSizeBytes;
-  int size64_float_position = position_ + 1 * kHeapSizeBytes;
-  int size32_double_position = position_ + 2 * kHeapSizeBytes;
-  int size32_float_position = position_ + 3 * kHeapSizeBytes;
-  for (int i = 0; i < 4 * kHeapSizeBytes; i++) WriteByte(0);
-
-  // Write out all the roots of the program.
-  WriterVisitor visitor(this);
-  program->IterateRootsIgnoringSession(&visitor);
-
-  // Write all the program state (except roots).
-  WriteObject(program->entry());
-  WriteObject(program->static_fields());
-  WriteObject(program->dispatch_table());
-
-  // TODO(kasperl): Unmark all touched objects. Right now, we
-  // only unmark the roots.
-  UnmarkVisitor unmarker;
-  program->IterateRoots(&unmarker);
-
-  // Write out the required size of the backward reference table
-  // at the beginning of the snapshot.
-  int references = index_ - 1;
-  for (int i = kReferenceTableSizeBytes - 1; i >= 0; i--) {
-    snapshot_[reference_count_position + i] = references & 0xFF;
-    references >>= 8;
+  virtual void VisitBlock(Object** start, Object** end) {
+    size_ += PortableSize::Pointer(end - start);
   }
-  ASSERT(references == 0);
 
-  // Write the size of the heap.
-  WriteHeapSizeTo(size64_double_position, heap_size_.offset_64bits_double);
-  WriteHeapSizeTo(size64_float_position, heap_size_.offset_64bits_float);
-  WriteHeapSizeTo(size32_double_position, heap_size_.offset_32bits_double);
-  WriteHeapSizeTo(size32_float_position, heap_size_.offset_32bits_float);
+  virtual void VisitInteger(uword slot) { size_ += PortableSize::Pointer(); }
 
-  List<uint8> result = snapshot_.Sublist(0, position_);
+  virtual void VisitLiteralInteger(int32 i) {
+    size_ += PortableSize::Pointer();
+  }
 
-  program->set_snapshot_hash(ComputeSnapshotHash(result));
+  virtual void VisitCode(uword slot) { size_ += PortableSize::Pointer(); }
 
-  return result;
-}
+  virtual void VisitRaw(uint8* start, uword size) {
+    size_ += PortableSize::Fixed(size);
+  }
 
-Object* SnapshotReader::ReadObject() {
-  Header header(ReadInt64());
-  if (header.is_smi()) {
-    if (header.is_native_smi()) {
-      // The header word indicates that this is an encoded small integer.
-      return header.as_smi();
+  virtual void VisitByteCodes(uint8* start, uword size) {
+    size_ += PortableSize::Fixed(size);
+  }
+
+  virtual void VisitFloat(dartino_double value) {
+    size_ += PortableSize::Float();
+  }
+
+  PortableSize size() { return size_; }
+
+ private:
+  PortableSize size_ = PortableSize();
+};
+
+word SnapshotReader::ReadWord() {
+  if (raw_to_do_ > 0) {
+    word result = 0;
+    ReadBytes(raw_to_do_ >= kWordSize ? kWordSize : raw_to_do_,
+              reinterpret_cast<uint8*>(&result));
+    raw_to_do_ -= kWordSize;
+    return result;
+  }
+  uint8 b = ReadByte();
+  if ((b & kSnapshotPopularMask) == kSnapshotPopular) {
+    return reinterpret_cast<word>(popular_objects_[b]);
+  } else {
+    uint8 opcode = OpCode(b);
+    int w = ArgumentBytes(b);
+    word x = ArgumentStart(b, w);
+    for (int i = 0; i < w; i++) {
+      x <<= 8;
+      x |= ReadByte();
     }
-
-    // The smi-tagged word doesn't fit on this platform.
-    ASSERT(large_integer_class_ != NULL);
-    HeapObject* object = Allocate(LargeInteger::AllocationSize());
-    LargeInteger* integer = reinterpret_cast<LargeInteger*>(object);
-    integer->set_class(large_integer_class_);
-    integer->set_value(header.as_large_integer_value());
-    return object;
-  } else if (header.is_index()) {
-    // The header word indicates that this is a backreference.
-    word index = header.as_index();
-    ASSERT(index < 0);
-    return Dereference(-index);
-  }
-
-  int elements = header.elements();
-  InstanceFormat::Type type = header.as_type();
-
-  int size = header.Size();
-  if (type == InstanceFormat::FUNCTION_TYPE) {
-    size += ReadInt64() * kPointerSize;
-  }
-  HeapObject* object = Allocate(size);
-
-  AddReference(object);
-  object->set_class(reinterpret_cast<Class*>(ReadObject()));
-  switch (type) {
-    case InstanceFormat::ONE_BYTE_STRING_TYPE:
-      reinterpret_cast<OneByteString*>(object)
-          ->OneByteStringReadFrom(this, elements);
-      break;
-    case InstanceFormat::TWO_BYTE_STRING_TYPE:
-      reinterpret_cast<TwoByteString*>(object)
-          ->TwoByteStringReadFrom(this, elements);
-      break;
-    case InstanceFormat::ARRAY_TYPE:
-      reinterpret_cast<Array*>(object)->ArrayReadFrom(this, elements);
-      break;
-    case InstanceFormat::BYTE_ARRAY_TYPE:
-      reinterpret_cast<ByteArray*>(object)->ByteArrayReadFrom(this, elements);
-      break;
-    case InstanceFormat::LARGE_INTEGER_TYPE:
-      reinterpret_cast<LargeInteger*>(object)->LargeIntegerReadFrom(this);
-      break;
-    case InstanceFormat::CLASS_TYPE: {
-      reinterpret_cast<Class*>(object)->ClassReadFrom(this);
-      Class* klass = reinterpret_cast<Class*>(object);
-      if (klass->instance_format().type() ==
-          InstanceFormat::LARGE_INTEGER_TYPE) {
-        large_integer_class_ = klass;
+    if (opcode <= kSnapshotRecentSmi) {
+      int index = opcode - kSnapshotRecentPointer;
+      ASSERT(index >= 0 && index <= 2);
+      word ideal = recents_[index];
+      // For the pointers, multiply by 4.
+      int pointer_flag = ((~opcode) & 4) >> 1;
+      ASSERT(pointer_flag == 0 || (1 << pointer_flag) == kIdealWordSize);
+      x <<= pointer_flag;
+      ideal += x;
+      uword actual = ideal;
+#ifdef DARTINO64
+      if (opcode != kSnapshotRecentSmi) {
+        actual = location_map_.At(ideal) + HeapObject::kTag;
       }
-      break;
+#else
+      if (sizeof(dartino_double) != kIdealFloatSize) {
+        // Negative offsets are to Double objects, and we have to adjust the
+        // actual value written back to account for non-ideal boxed float
+        // sizes.  This code should be removed by the compiler on the smallest
+        // devices.
+        if (opcode != kSnapshotRecentSmi && actual < base_) {
+          word ideal_distance = base_ - (actual - HeapObject::kTag);
+          ASSERT(Double::kSize == 12 && kIdealBoxedFloatSize == 8);
+          // Distance multiplied by 12/8 ie 1.5.
+          actual = base_ + HeapObject::kTag -
+                   (ideal_distance + (ideal_distance >> 1));
+        }
+      }
+#endif
+      recents_[index] = ideal;
+      return actual;
+    } else if (opcode == kSnapshotSmi) {
+      return x;
+    } else if (opcode == kSnapshotExternal) {
+      return intrinsics_table_[x];
+    } else {
+      ASSERT(opcode == kSnapshotRaw);
+      ASSERT(x > 0);
+      raw_to_do_ = x;
+      return ReadWord();
     }
-    case InstanceFormat::FUNCTION_TYPE:
-      reinterpret_cast<Function*>(object)->FunctionReadFrom(this, elements);
-      break;
-    case InstanceFormat::DOUBLE_TYPE:
-      reinterpret_cast<Double*>(object)->DoubleReadFrom(this);
-      break;
-    case InstanceFormat::INSTANCE_TYPE:
-      reinterpret_cast<Instance*>(object)->InstanceReadFrom(this, elements);
-      break;
-    case InstanceFormat::INITIALIZER_TYPE: {
-      Initializer* initializer = reinterpret_cast<Initializer*>(object);
-      initializer->InitializerReadFrom(this);
-      break;
-    }
-    case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE: {
-      DispatchTableEntry* entry = reinterpret_cast<DispatchTableEntry*>(object);
-      entry->DispatchTableEntryReadFrom(this);
-      break;
-    }
-    default:
-      UNIMPLEMENTED();
-  }
-
-  return object;
-}
-
-void SnapshotWriter::WriteObject(Object* object) {
-  // First check if object is small integer.
-  if (object->IsSmi()) {
-    Smi* smi = Smi::cast(object);
-    if (!Smi::IsValidAsPortable(smi->value())) {
-      int integer_size =
-          LargeInteger::CalculatePortableSize().ComputeSizeInBytes(4, -1);
-      heap_size_.offset_32bits_double += integer_size;
-      heap_size_.offset_32bits_float += integer_size;
-    }
-    WriteInt64(Header::FromSmi(smi).as_word());
-    return;
-  }
-
-  HeapObject* heap_object = HeapObject::cast(object);
-  // Then check possible backward reference.
-  word f = heap_object->forwarding_word();
-  if (f != 0) {
-    ObjectInfo* info = reinterpret_cast<ObjectInfo*>(f);
-    WriteInt64(Header::FromIndex(-info->index()).as_word());
-    return;
-  }
-
-  Class* klass = ClassFor(heap_object);
-  InstanceFormat::Type type = klass->instance_format().type();
-
-  // Serialize the object.
-  switch (type) {
-    case InstanceFormat::ONE_BYTE_STRING_TYPE: {
-      OneByteString* str = OneByteString::cast(object);
-      heap_size_ += str->CalculatePortableSize();
-      str->OneByteStringWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::TWO_BYTE_STRING_TYPE: {
-      TwoByteString* str = TwoByteString::cast(object);
-      heap_size_ += str->CalculatePortableSize();
-      str->TwoByteStringWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::ARRAY_TYPE: {
-      Array* array = Array::cast(object);
-      heap_size_ += array->CalculatePortableSize();
-      array->ArrayWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::BYTE_ARRAY_TYPE: {
-      ByteArray* array = ByteArray::cast(object);
-      heap_size_ += array->CalculatePortableSize();
-      array->ByteArrayWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::LARGE_INTEGER_TYPE: {
-      LargeInteger* integer = LargeInteger::cast(object);
-      heap_size_ += integer->CalculatePortableSize();
-      integer->LargeIntegerWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::INSTANCE_TYPE: {
-      Instance* instance = Instance::cast(object);
-      heap_size_ += instance->CalculatePortableSize(klass);
-      instance->InstanceWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::CLASS_TYPE: {
-      Class* klass_object = Class::cast(object);
-      (*class_offsets_)[klass_object] = PortableOffset(heap_size_);
-      heap_size_ += klass_object->CalculatePortableSize();
-      klass_object->ClassWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::FUNCTION_TYPE: {
-      Function* function = Function::cast(object);
-      (*function_offsets_)[function] = PortableOffset(heap_size_);
-      heap_size_ += function->CalculatePortableSize();
-      function->FunctionWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::DOUBLE_TYPE: {
-      Double* d = Double::cast(object);
-      heap_size_ += d->CalculatePortableSize();
-      d->DoubleWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::INITIALIZER_TYPE: {
-      Initializer* initializer = Initializer::cast(object);
-      heap_size_ += initializer->CalculatePortableSize();
-      initializer->InitializerWriteTo(this, klass);
-      break;
-    }
-    case InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE: {
-      DispatchTableEntry* entry = DispatchTableEntry::cast(object);
-      heap_size_ += entry->CalculatePortableSize();
-      entry->DispatchTableEntryWriteTo(this, klass);
-      break;
-    }
-    default:
-      // Unable to handle this type of object.
-      UNREACHABLE();
   }
 }
 
-int SnapshotReader::ReadHeapSizeFrom(int position) {
-  int size = 0;
-  for (int i = 0; i < kHeapSizeBytes; i++) {
-    size = (size << 8) | snapshot_[position + i];
+word SnapshotReader::intrinsics_table_[] = {
+    reinterpret_cast<word>(InterpreterMethodEntry),
+#define V(name) reinterpret_cast<word>(Intrinsic_##name),
+    INTRINSICS_DO(V)
+#undef V
+};
+
+// Determines for each object what its address would be in various scenarios.
+// The system can be either 32 or 64 bit, and have either 32 or 64 bit floating
+// point numbers.
+class PortableAddressMap : public HeapObjectVisitor {
+ public:
+  PortableAddressMap(FunctionOffsetsType* function_offsets,
+                     ClassOffsetsType* class_offsets)
+      : function_offsets_(function_offsets), class_offsets_(class_offsets) {}
+
+  virtual uword Visit(HeapObject* object) {
+    ASSERT(!object->IsStack());
+    int size = object->Size();
+    if (object->IsDouble()) {
+      ASSERT(!non_double_seen_);
+    } else {
+      if (!non_double_seen_) {
+        first_non_double_ = portable_address_;
+        non_double_seen_ = true;
+      }
+      if (object->IsFunction()) {
+        Function* function = Function::cast(object);
+        (*function_offsets_)[function] = portable_address_;
+      } else if (object->IsClass()) {
+        Class* clazz = Class::cast(object);
+        (*class_offsets_)[clazz] = portable_address_;
+      }
+    }
+    PortableSizeCalculator calculator;
+    object->IterateEverything(&calculator);
+#ifdef DARTINO32
+    ASSERT(object->IsDouble() ||
+           object->Size() == calculator.size().IdealizedSize());
+#endif
+    map_[object->address()] = portable_address_;
+    portable_address_ += calculator.size();
+    return size;
   }
-  return size;
-}
 
-void SnapshotWriter::WriteHeapSizeTo(int position, int size) {
-  for (int i = kHeapSizeBytes - 1; i >= 0; i--) {
-    snapshot_[position + i] = size & 0xFF;
-    size >>= 8;
+  uword doubles_size() { return first_non_double_.IdealizedSize(); }
+  uword total_floats() {
+    return first_non_double_.IdealizedSize() / kIdealBoxedFloatSize;
   }
-}
 
-Class* SnapshotWriter::ClassFor(HeapObject* object) {
-  ASSERT(object->forwarding_word() == 0);
-  return object->raw_class();
-}
+  PortableSize total_size() { return portable_address_; }
 
-void SnapshotWriter::Forward(HeapObject* object) {
-  Class* klass = ClassFor(object);
-  ObjectInfo* info = new ObjectInfo(object->raw_class(), index_++);
-  object->set_forwarding_word(reinterpret_cast<word>(info));
-  ASSERT(object->forwarding_word() != 0);
-  WriteObject(klass);
-}
-
-void SnapshotWriter::GrowCapacity(int extra) {
-  int growth = Utils::Maximum(1 * MB, extra);
-  int capacity = snapshot_.length() + growth;
-  uint8* data = static_cast<uint8*>(realloc(snapshot_.data(), capacity));
-  snapshot_ = List<uint8>(data, capacity);
-}
-
-void OneByteString::OneByteStringWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::ONE_BYTE_STRING_TYPE, length());
-  writer->Forward(this);
-  // Body.
-  writer->WriteBytes(length(), byte_address_for(0));
-}
-
-void OneByteString::OneByteStringReadFrom(SnapshotReader* reader, int length) {
-  set_length(length);
-  set_hash_value(kNoHashValue);
-  reader->ReadBytes(length, byte_address_for(0));
-}
-
-void TwoByteString::TwoByteStringWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::TWO_BYTE_STRING_TYPE, length());
-  writer->Forward(this);
-  // Body.
-  writer->WriteBytes(length() * sizeof(uint16_t), byte_address_for(0));
-}
-
-void TwoByteString::TwoByteStringReadFrom(SnapshotReader* reader, int length) {
-  set_length(length);
-  set_hash_value(kNoHashValue);
-  reader->ReadBytes(length * sizeof(uint16_t), byte_address_for(0));
-}
-
-void Array::ArrayWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::ARRAY_TYPE, length());
-  writer->Forward(this);
-  // Body.
-  for (int i = 0; i < length(); i++) {
-    writer->WriteObject(get(i));
+  uword IdealizedAddress(Object* object) {
+    ASSERT(object->IsHeapObject());
+    return map_[HeapObject::cast(object)->address()].IdealizedSize();
   }
-}
 
-void Array::ArrayReadFrom(SnapshotReader* reader, int length) {
-  set_length(length);
-  for (int i = 0; i < length; i++) set(i, reader->ReadObject());
-}
-
-void ByteArray::ByteArrayWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::BYTE_ARRAY_TYPE, length());
-  writer->Forward(this);
-  // Body.
-  if (length() == 0) return;
-  writer->WriteBytes(length(), byte_address_for(0));
-}
-
-void ByteArray::ByteArrayReadFrom(SnapshotReader* reader, int length) {
-  set_length(length);
-  if (length == 0) return;
-  reader->ReadBytes(length, byte_address_for(0));
-}
-
-void Instance::InstanceWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  int nof = klass->NumberOfInstanceFields();
-  writer->WriteHeader(klass->instance_format().type(), nof);
-  writer->Forward(this);
-  // Body
-  writer->WriteInt64(FlagsBits());
-  for (int i = 0; i < nof; i++) {
-    writer->WriteObject(GetInstanceField(i));
+  PortableSize PortableAddress(Object* object) {
+    ASSERT(object->IsHeapObject());
+    return map_[HeapObject::cast(object)->address()];
   }
-}
 
-void Instance::InstanceReadFrom(SnapshotReader* reader, int fields) {
-  int size = AllocationSize(fields);
-  SetFlagsBits(reader->ReadInt64());
-  for (int offset = Instance::kSize; offset < size; offset += kPointerSize) {
-    at_put(offset, reader->ReadObject());
-  }
-}
+ private:
+  typedef HashMap<uword, PortableSize> AddrMap;
 
-void Class::ClassWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::CLASS_TYPE);
-  writer->Forward(this);
-  // Body.
-  int size = AllocationSize();
-  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
-    writer->WriteObject(at(offset));
-  }
-}
+  FunctionOffsetsType* function_offsets_;
+  ClassOffsetsType* class_offsets_;
+  bool non_double_seen_ = false;
+  PortableSize portable_address_ = PortableSize();
+  PortableSize first_non_double_ = PortableSize();
+  AddrMap map_;
+};
 
-void Class::ClassReadFrom(SnapshotReader* reader) {
-  int size = AllocationSize();
-  for (int offset = HeapObject::kSize; offset < size; offset += kPointerSize) {
-    at_put(offset, reader->ReadObject());
-  }
-}
-
-#ifdef DARTINO_TARGET_X64
-void Function::WriteByteCodes(SnapshotWriter* writer) {
-  ASSERT(kPointerSize == 8);
-  uint8* bcp = bytecode_address_for(0);
-  int i = 0;
-  while (i < bytecode_size()) {
+// Byte codes contain relative pointers from the instruction to a word-aligned
+// constant in a block that follows the byte code. Since they are word aligned,
+// the offsets have to be adjusted when we convert from 32 bit to 64 bit byte
+// codes or vice versa.
+void FixByteCodes(uint8* bcp, uword size, int old_shift, int new_shift) {
+  unsigned i = 0;
+  uword old_mask = (1 << old_shift) - 1;
+  uword new_mask = (1 << new_shift) - 1;
+  // Round up.
+  uword first_pointer_old = (size + old_mask) & ~old_mask;
+  uword first_pointer_new = (size + new_mask) & ~new_mask;
+  while (i < size) {
     Opcode opcode = static_cast<Opcode>(bcp[i]);
     switch (opcode) {
       case kLoadConst:
@@ -762,192 +543,567 @@ void Function::WriteByteCodes(SnapshotWriter* writer) {
       case kInvokeFactory: {
         ASSERT(Bytecode::Size(opcode) == 5);
         // Read the offset.
-        int32 offset = Utils::ReadInt32(bcp + i + 1);
+        unsigned offset = Utils::ReadInt32(bcp + i + 1);
         // Rewrite offset from 64 bit format to 32 bit format.
-        int delta_to_bytecode_end = bytecode_size() - i;
-        int padding32 = Utils::RoundUp(bytecode_size(), 4) - bytecode_size();
-        int padding64 =
-            Utils::RoundUp(bytecode_size(), kPointerSize) - bytecode_size();
-        int pointers =
-            (offset - delta_to_bytecode_end - padding64) / kPointerSize;
-        offset = delta_to_bytecode_end + padding32 + pointers * 4;
-        // Write the bytecode.
-        writer->WriteByte(bcp[i++]);
-        uint8* offset_pointer = reinterpret_cast<uint8*>(&offset);
+        unsigned offset_from_start = i + offset;
+        unsigned pointers =
+            (offset_from_start - first_pointer_old) >> old_shift;
+        unsigned new_offset_from_start =
+            first_pointer_new + (pointers << new_shift);
+        unsigned new_offset = new_offset_from_start - i;
+
+        uint8* offset_pointer = reinterpret_cast<uint8*>(&new_offset);
         for (int j = 0; j < 4; j++) {
-          writer->WriteByte(*(offset_pointer++));
+          bcp[i + j + 1] = offset_pointer[j];
         }
-        i += 4;
+        i += 5;
         break;
       }
       case kMethodEnd:
-        // Write the method end bytecode and everything that follows.
-        writer->WriteBytes(bytecode_size() - i, bcp + i);
         return;
       default:
-        // TODO(ager): Maybe just collect chunks and copy them with
-        // memcpy when encountering the end or a bytecode we need to
-        // rewrite?
-        for (int j = 0; j < Bytecode::Size(opcode); j++) {
-          writer->WriteByte(bcp[i++]);
-        }
+        i += Bytecode::Size(opcode);
         break;
     }
   }
 }
-#else
-void Function::WriteByteCodes(SnapshotWriter* writer) {
-  ASSERT(kPointerSize == 4);
-  writer->WriteBytes(bytecode_size(), bytecode_address_for(0));
-}
-#endif
 
-#ifdef DARTINO_TARGET_X64
-void Function::ReadByteCodes(SnapshotReader* reader) {
-  ASSERT(kPointerSize == 8);
-  uint8* bcp = bytecode_address_for(0);
-  int i = 0;
-  while (i < bytecode_size()) {
-    uint8 raw_opcode = reader->ReadByte();
-    Opcode opcode = static_cast<Opcode>(raw_opcode);
-    switch (opcode) {
-      case kLoadConst:
-      case kAllocate:
-      case kAllocateImmutable:
-      case kInvokeStatic:
-      case kInvokeFactory: {
-        ASSERT(Bytecode::Size(opcode) == 5);
-        // Read the offset.
-        int32 offset = 0;
-        uint8* offset_pointer = reinterpret_cast<uint8*>(&offset);
-        for (int i = 0; i < 4; i++) {
-          offset_pointer[i] = reader->ReadByte();
-        }
-        // Rewrite offset from 32 bit format to 64 bit format.
-        int delta_to_bytecode_end = bytecode_size() - i;
-        int padding32 = Utils::RoundUp(bytecode_size(), 4) - bytecode_size();
-        int padding64 =
-            Utils::RoundUp(bytecode_size(), kPointerSize) - bytecode_size();
-        int pointers = (offset - delta_to_bytecode_end - padding32) / 4;
-        offset = delta_to_bytecode_end + padding64 + pointers * kPointerSize;
-        // Write the bytecode.
-        bcp[i++] = raw_opcode;
-        Utils::WriteInt32(bcp + i, offset);
-        i += 4;
-        break;
+class ObjectWriter : public PointerVisitor {
+ public:
+  ObjectWriter(SnapshotWriter* writer, PortableAddressMap* map,
+               SnapshotOracle* pointer_oracle, SnapshotOracle* smi_oracle,
+               HeapObject* current = NULL)
+      : writer_(writer),
+        address_map_(map),
+        pointer_oracle_(pointer_oracle),
+        smi_oracle_(smi_oracle),
+        current_(current == NULL ? 0 : reinterpret_cast<uint8*>(
+                                           current->address())) {}
+
+  virtual void VisitClass(Object** p) {
+    ASSERT(current_ == reinterpret_cast<uint8*>(p));
+    ASSERT(!(*p)->IsSmi());
+    WriteWord(*p);
+    current_ += kWordSize;
+  }
+
+  void VisitBlock(Object** start, Object** end) {
+    if (start == end) return;
+    uint8* block_start = reinterpret_cast<uint8*>(start);
+    ASSERT(current_ == 0 || block_start == current_);
+    for (Object** p = start; p < end; p++) {
+      WriteWord(*p);
+    }
+    if (current_ != NULL) current_ = reinterpret_cast<uint8*>(end);
+  }
+
+  void End(uword end_of_object) {
+    ASSERT(current_ == reinterpret_cast<uint8*>(end_of_object));
+  }
+
+  virtual void VisitInteger(uword slot) {
+    ASSERT(current_ = reinterpret_cast<uint8*>(slot));
+    WriteInteger(*reinterpret_cast<uword*>(slot));
+    current_ += kWordSize;
+  }
+
+  virtual void VisitLiteralInteger(int32 i) {
+    WriteInteger(i);
+    current_ += kWordSize;
+  }
+
+  virtual void VisitCode(uword slot) {
+    ASSERT(current_ = reinterpret_cast<uint8*>(slot));
+    void* code = *reinterpret_cast<void**>(slot);
+    // In the snapshot format the external pointers are pointers to intrinsic
+    // code.  The intrinsics are numbered starting from 1. The 0th intrinsic is
+    // the address of the interpreter, corresponding to interpreted methods.
+    int intrinsic = 0;
+    int i = 0;
+#define V(name)                                            \
+  i++;                                                     \
+  if (code == reinterpret_cast<void*>(Intrinsic_##name)) { \
+    intrinsic = i;                                         \
+  }
+    INTRINSICS_DO(V)
+#undef V
+    if (intrinsic == 0) {
+      void* method_entry = reinterpret_cast<void*>(InterpreterMethodEntry);
+      ASSERT(code == method_entry);
+    }
+    WriteOpcode(kSnapshotExternal, intrinsic);
+    current_ += kWordSize;
+  }
+
+  virtual void VisitByteCodes(uint8* bcp, uword size) {
+    ASSERT(bcp == current_);
+#ifdef DARTINO64
+    uint8* bcp32 = new uint8[size];
+    memcpy(bcp32, bcp, size);
+    const int kIdealWordShift = 2;
+    const int kWordShift = 3;
+    ASSERT(kWordSize == 1 << kWordShift);
+    ASSERT(kIdealWordSize == 1 << kIdealWordShift);
+    FixByteCodes(bcp32, size, kWordShift, kIdealWordShift);
+
+    current_ += Utils::RoundUp(size, kWordSize);
+    WriteOpcode(kSnapshotRaw, size);
+    writer_->WriteBytes(bcp32, size);
+    delete[] bcp32;
+#else
+    ASSERT(kWordSize == kIdealWordSize);
+    VisitRaw(bcp, size);
+#endif
+  }
+
+  void VisitRaw(uint8* start, uword size) {
+    if (size == 0) return;
+    ASSERT(start == current_);
+    current_ += Utils::RoundUp(size, kWordSize);
+    WriteOpcode(kSnapshotRaw, size);
+    writer_->WriteBytes(start, size);
+  }
+
+  void WriteInteger(word i);
+
+  void WriteWord(Object* object);
+
+  static int OpcodeLength(word offset) {
+    int w = 0;
+    int first_byte_bits = 4;
+    while (offset < kSnapshotBias ||
+           offset >= (1 << first_byte_bits) + kSnapshotBias) {
+      w++;
+      offset >>= 8;  // Signed shift.
+      first_byte_bits--;
+      if (first_byte_bits == 0) {
+        ASSERT(w == 4);
+        ASSERT(offset <= 0 && offset >= kSnapshotBias);
+        return 5;
       }
-      case kMethodEnd:
-        // Read the method end bytecode and everything that follows.
-        bcp[i++] = raw_opcode;
-        while (i < bytecode_size()) {
-          bcp[i++] = reader->ReadByte();
+    }
+    ASSERT(w <= 4);
+    return w + 1;
+  }
+
+  void WriteOpcode(int opcode, word offset) {
+    int w = OpcodeLength(offset) - 1;
+    // bytecode has the opcode in the top 3 bits.
+    uint8 opcode_byte = opcode << 5;
+    // Move to 64 bit even on 32 bit platforms.
+    int64 x = offset;
+    int64 bias = -kSnapshotBias;
+    // We can do a shift of 32 on bias because it is a 64 bit value.
+    x += bias << (8 * w);
+    ASSERT(x >= 0 && (x >> 33) == 0);  // Unsigned 33 bit value now.
+    // We can encode 4 bits for a 0-byte instruction.  For each byte
+    // we add to the instruction we lose one bit in the initial word
+    // so we gain only 7 bits per extra byte.  However for the 5-byte
+    // encoding where w == 4 we have an extra bit.
+    int64 one = 1;  // Value that can legally be shifted by 32.
+    if (offset > 0 && w == 4) {
+      ASSERT(x == (x & ((one << 33) - 1)));
+    } else {
+      ASSERT(x == (x & ((one << (4 + 7 * w)) - 1)));
+    }
+    // The lower part of the bytecode has a unary encoding of the width
+    // and the first few bits of the biased offset.
+    // w == 0: 0xxxx
+    // w == 1: 10xxx
+    // w == 2: 110xx
+    // w == 3: 1110x
+    // w == 4: 1111x
+    uint8 width_indicator = 0x1f;
+    // Zap the low bits (the xs and the 0s).
+    width_indicator &= ~((1 << (5 - w)) - 1);
+    // The width indicator and the top part of the x may not overlap.
+    uint8 offset_top_part = x >> (8 * w);
+    ASSERT((width_indicator & offset_top_part) == 0);
+
+    writer_->WriteByte(opcode_byte | width_indicator | offset_top_part);
+    for (int i = w - 1; i >= 0; i--) {
+      writer_->WriteByte(x >> (8 * i));
+    }
+  }
+
+ private:
+  SnapshotWriter* writer_;
+  PortableAddressMap* address_map_;
+  SnapshotOracle* pointer_oracle_;
+  SnapshotOracle* smi_oracle_;
+  // This is the position in the current object we are serializing.  If we
+  // are outputting roots, which are not inside any object, then it is null.
+  // Only used for asserts, to ensure we don't skip part of the object
+  // without serializint it.
+  uint8* current_;
+};
+
+// The oracle tells the snapshot encoder at each step, which register to use,
+// using knowledge of the future pointers that the encoder will soon encounter.
+// Like all good oracles, it does this by cheating: It runs through the
+// pointers first, and remembers the order they arrived last time. In the first
+// pass it keeps track of all possible decisions for the last kStatesLog2
+// pointers. When a new pointer arrives, it discards half the possibilities, by
+// making a decision on how to encode the pointer we had, kStatesLog2 calls
+// ago.  Then it doubles the number of possibilities by picking either register
+// 0 or register 1.  Similarly in the smi mode it does this for Smis, with the
+// difference that here one of the registers is locked to zero (ie the choice
+// is between register-relative and absolute encoding).
+class SnapshotOracle : public PointerVisitor {
+ public:
+  SnapshotOracle(bool smi_mode, PortableAddressMap* map, SnapshotWriter* writer)
+      : smi_mode_(smi_mode), writer_(writer), map_(map) {
+    for (int i = 0; i < kStates; i++) {
+      costs_[i] = 0;
+      regs_[0][i] = 0;
+      regs_[1][i] = 0;
+    }
+  }
+
+  virtual void VisitInteger(uword slot) {
+    if (!smi_mode_) return;
+    word i = *reinterpret_cast<word*>(slot);
+    SimulateInput(i);
+  }
+
+  virtual void VisitLiteralInteger(int32 i) {
+    if (!smi_mode_) return;
+    SimulateInput(i);
+  }
+
+  virtual void VisitClass(Object** slot) { VisitBlock(slot, slot + 1); }
+
+  virtual void VisitBlock(Object** start, Object** end) {
+    for (Object** p = start; p < end; p++) {
+      Object* o = *p;
+      if (o->IsSmi()) {
+        if (!smi_mode_) continue;
+        SimulateInput(static_cast<int>(reinterpret_cast<word>(o)));
+      } else {
+        if (smi_mode_) continue;
+        int addr = map_->IdealizedAddress(o);
+        int popular_index = writer_->PopularityIndex(HeapObject::cast(o));
+        if (popular_index == -1) {
+          SimulateInput(addr);
         }
-        return;
-      default:
-        // TODO(ager): Maybe just collect chunks and copy them with
-        // memcpy when encountering the end or a bytecode we need to
-        // rewrite?
-        bcp[i++] = raw_opcode;
-        for (int j = 1; j < Bytecode::Size(opcode); j++) {
-          bcp[i++] = reader->ReadByte();
+      }
+    }
+  }
+
+  void WrapUp() {
+    int bogus = kStatesLog2 - unused_;
+    for (int i = 0; i < bogus; i++) {
+      // Add enough bogus entries to the list of pointers to be encoded. These
+      // have the effect of forcing the decision to be made on all pointers up
+      // to the last real one.
+      SimulateInput(0);
+    }
+  }
+
+  void SimulateInput(int addr) {
+    int best_cost = 1000000000;
+    int best_reg = -1;
+    for (int i = 0; i < kStates; i++) {
+      if (costs_[i] >= best_cost) continue;  // Optimization.
+      for (int reg = 0; reg < 2; reg++) {
+        int diff = addr - regs_[reg][i];
+        int cost = ObjectWriter::OpcodeLength(diff >> (smi_mode_ ? 0 : 2));
+        if (costs_[i] + cost < best_cost) {
+          best_reg = ((i >> (kStatesLog2 - 1)) & 1);
+          best_cost = costs_[i] + cost;
         }
-        break;
+      }
+    }
+    // Oldest choice is in the most significant bit.
+    // Find a decision that is now made, using the oldest possibility.
+    int decision = best_reg;
+    if (unused_ == 0) {
+      script_.PushBack(decision);
+    } else {
+      unused_--;
+    }
+    for (int i = 0; i < kStatesLog2 - 1; i++) ideals_[i] = ideals_[i + 1];
+    ideals_[kStatesLog2 - 1] = addr;
+    if (decision == 0) {
+      // Keep the left-hand-side entries (the lower half of the leaf arrays),
+      // and spread them out.
+      for (int i = kStates - 1; i >= 0; i--) {
+        int j = i >> 1;
+        costs_[i] = costs_[j];
+        regs_[0][i] = regs_[0][j];
+        regs_[1][i] = regs_[1][j];
+      }
+    } else {
+      // Keep the right-hand-side entries (the upper half of the leaf arrays),
+      // and spread them out.
+      for (int i = 0; i < kStates; i++) {
+        int j = kStates / 2 + (i >> 1);
+        costs_[i] = costs_[j];
+        regs_[0][i] = regs_[0][j];
+        regs_[1][i] = regs_[1][j];
+      }
+    }
+    for (int i = 0; i < kStates; i++) {
+      int reg = (i & 1);
+      int diff = addr - regs_[reg][i];
+      int cost = ObjectWriter::OpcodeLength(diff >> (smi_mode_ ? 0 : 2));
+      costs_[i] += cost;
+      if (!smi_mode_ || reg == 1) regs_[reg][i] = addr;
+    }
+  }
+
+  int Consult() { return script_[oracular_pronouncements_++]; }
+
+  void DoneConsulting() { ASSERT(oracular_pronouncements_ == script_.size()); }
+
+ private:
+  static const int kStatesLog2 = 6;
+  static const int kStates = 1 << kStatesLog2;
+  bool smi_mode_;
+  SnapshotWriter* writer_;
+  // We have a binary tree of k recent possible choices for choosing snapshot
+  // byte codes. The arrays represent the 2^k leaves, and the bits of the
+  // indices represent the potential choices made.  For each leaf we record the
+  // cost (in bytes added to the snapshot) and the values of the two registers.
+  int costs_[kStates];
+  int regs_[2][kStates];
+  int unused_ = kStatesLog2;
+  size_t oracular_pronouncements_ = 0;
+  int ideals_[kStatesLog2];
+  Vector<int> script_;
+  PortableAddressMap* map_;
+};
+
+class SnapshotDecisionObjectVisitor : public HeapObjectVisitor {
+ public:
+  explicit SnapshotDecisionObjectVisitor(SnapshotOracle* oracle)
+      : oracle_(oracle) {}
+
+  virtual uword Visit(HeapObject* object) {
+    object->IterateEverything(oracle_);
+    return object->Size();
+  }
+
+ private:
+  SnapshotOracle* oracle_;
+};
+
+void ObjectWriter::WriteInteger(word i) {
+  // Large Smis must be purged from the heap before we serialize, since
+  // they can't be represented on small devices.
+  ASSERT(i <= 0x7fffffff);
+  ASSERT(i >= -0x7fffffff - 1);
+  int reg = smi_oracle_->Consult();
+  if (reg == 0) {
+    WriteOpcode(kSnapshotSmi, i);
+  } else {
+    int32 offset = i - writer_->recent_smi();
+    WriteOpcode(kSnapshotRecentSmi, offset);
+    writer_->set_recent_smi(i);
+  }
+}
+
+void ObjectWriter::WriteWord(Object* object) {
+  if (object->IsSmi()) {
+    WriteInteger(reinterpret_cast<word>(object));
+    return;
+  }
+
+  HeapObject* heap_object = HeapObject::cast(object);
+  uword ideal = address_map_->IdealizedAddress(heap_object) -
+                address_map_->doubles_size();
+  int popular_index = writer_->PopularityIndex(heap_object);
+  if (popular_index != -1) {
+    ASSERT(popular_index < kSnapshotNumberOfPopularObjects &&
+           popular_index >= 0);
+    ASSERT(kSnapshotPopular == 0);
+    ASSERT((kSnapshotPopularMask & kSnapshotPopular) == 0);
+    ASSERT((kSnapshotPopularMask & (kSnapshotNumberOfPopularObjects - 1)) == 0);
+    writer_->WriteByte(popular_index);
+  } else {
+    int reg = pointer_oracle_->Consult();
+    int offset = ideal - writer_->recent(reg);
+    WriteOpcode(kSnapshotRecentPointer + reg, offset / kIdealWordSize);
+    writer_->set_recent(reg, ideal);
+  }
+}
+
+void SnapshotWriter::WriteSectionBoundary(ObjectWriter* writer) {
+  writer->WriteOpcode(kSnapshotRaw, -1);
+}
+
+class SnapshotWriterVisitor : public HeapObjectVisitor {
+ public:
+  SnapshotWriterVisitor(PortableAddressMap* map, SnapshotWriter* writer,
+                        SnapshotOracle* pointer_oracle,
+                        SnapshotOracle* smi_oracle)
+      : address_map_(map),
+        writer_(writer),
+        pointer_oracle_(pointer_oracle),
+        smi_oracle_(smi_oracle) {}
+
+  virtual uword Visit(HeapObject* object) {
+    ASSERT(!object->IsStack());
+    int size = object->Size();
+    if (object->IsDouble()) {
+      ASSERT(doubles_mode_);
+      writer_->WriteDouble(Double::cast(object)->value());
+      // We have to consume one oracular pronouncement (for the class
+      // field of the double) to keep the oracle in sync with the
+      // writer.
+      pointer_oracle_->Consult();
+      return size;
+    }
+    doubles_mode_ = false;
+    ObjectWriter object_writer(writer_, address_map_, pointer_oracle_,
+                               smi_oracle_, object);
+    object->IterateEverything(&object_writer);
+    object_writer.End(object->address() + size);
+    return size;
+  }
+
+ private:
+  bool doubles_mode_ = true;
+  PortableAddressMap* address_map_;
+  SnapshotWriter* writer_;
+  SnapshotOracle* pointer_oracle_;
+  SnapshotOracle* smi_oracle_;
+};
+
+void PopularityCounter::VisitClass(Object** slot) {
+  VisitBlock(slot, slot + 1);
+}
+
+void PopularityCounter::VisitBlock(Object** start, Object** end) {
+  for (Object** p = start; p < end; p++) {
+    if (!(*p)->IsSmi()) {
+      HeapObject* h = HeapObject::cast(*p);
+      // Doubles (moved already or not) are not eligible for the popular objects
+      // table.
+      if (h->HasForwardingAddress()) continue;
+      if (h->IsDouble()) continue;
+      // Causes confusion if the double class is one of the popular objects, and
+      // there's no point anyway since it is coded specially and will not use
+      // its slot in the popular objects table.
+      if (h->IsClass() &&
+          Class::cast(h)->instance_format().type() ==
+              InstanceFormat::DOUBLE_TYPE) {
+        continue;
+      }
+      auto it = popularity_.Find(h);
+      if (it == popularity_.End()) {
+        popularity_[h] = 1;
+      } else {
+        it->second++;
+      }
     }
   }
 }
-#else
-void Function::ReadByteCodes(SnapshotReader* reader) {
-  reader->ReadBytes(bytecode_size(), bytecode_address_for(0));
-}
-#endif
 
-void Function::FunctionWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::FUNCTION_TYPE, bytecode_size());
-  writer->WriteInt64(literals_size());
-  writer->Forward(this);
-  // Body.
-  for (int offset = HeapObject::kSize; offset < Function::kSize;
-       offset += kPointerSize) {
-    writer->WriteObject(at(offset));
+void PopularityCounter::FindMostPopular() {
+  for (auto p : popularity_) most_popular_.PushBack(p);
+  most_popular_.Sort(PopularityCompare);
+}
+
+void PopularityCounter::VisitMostPopular(PointerVisitor* visitor) {
+  unsigned i = 0;
+  while (i < kSnapshotNumberOfPopularObjects && i < most_popular_.size()) {
+    visitor->Visit(reinterpret_cast<Object**>(&most_popular_[i].first));
+    i++;
   }
-  WriteByteCodes(writer);
-  for (int i = 0; i < literals_size(); i++) {
-    writer->WriteObject(literal_at(i));
+  Object* filler = Smi::FromWord(0);
+  while (i < kSnapshotNumberOfPopularObjects) {
+    visitor->Visit(&filler);
+    i++;
   }
 }
 
-void Function::FunctionReadFrom(SnapshotReader* reader, int length) {
-  for (int offset = HeapObject::kSize; offset < Function::kSize;
-       offset += kPointerSize) {
-    at_put(offset, reader->ReadObject());
+int PopularityCounter::PopularityIndex(HeapObject* object) {
+  for (unsigned i = 0; i < 32 && i < most_popular_.size(); i++) {
+    if (object == most_popular_[i].first) {
+      return i;
+    }
   }
-  ReadByteCodes(reader);
-  for (int i = 0; i < literals_size(); i++) {
-    set_literal_at(i, reader->ReadObject());
-  }
+  return -1;
 }
 
-void LargeInteger::LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::LARGE_INTEGER_TYPE);
-  writer->Forward(this);
-  // Body.
-  writer->WriteInt64(value());
+List<uint8> SnapshotWriter::WriteProgram(Program* program) {
+  ASSERT(program->is_optimized());
+
+  program->SnapshotGC(&popularity_counter_);
+  PortableAddressMap portable_addresses(function_offsets_, class_offsets_);
+  program->heap()->IterateObjects(&portable_addresses);
+
+  // Emit recognizable header.
+  WriteByte(0xbe);
+  WriteByte(0xef);
+
+  // Emit version of the VM.
+  const char* version = GetVersion();
+  int version_length = strlen(version);
+  WriteSize(version_length);
+  WriteBytes(reinterpret_cast<const uint8*>(version), version_length);
+
+  // Emit size of the heap for various scenarios.
+  WriteSize(portable_addresses.total_floats());
+  WriteSize(portable_addresses.total_size().ComputeSizeInBytes(
+      kBigPointerSmallFloat));
+  WriteSize(
+      portable_addresses.total_size().ComputeSizeInBytes(kBigPointerBigFloat));
+  WriteSize(portable_addresses.total_size().ComputeSizeInBytes(
+      kSmallPointerSmallFloat));
+  WriteSize(portable_addresses.total_size().ComputeSizeInBytes(
+      kSmallPointerBigFloat));
+
+  SnapshotOracle pointer_oracle(false, &portable_addresses, this);
+  emitting_popular_list_ = true;
+  popularity_counter_.VisitMostPopular(&pointer_oracle);
+  emitting_popular_list_ = false;
+  program->IterateRootsIgnoringSession(&pointer_oracle);
+  SnapshotDecisionObjectVisitor sdov(&pointer_oracle);
+  program->heap()->IterateObjects(&sdov);
+  pointer_oracle.WrapUp();
+
+  SnapshotOracle smi_oracle(true, NULL, this);
+  popularity_counter_.VisitMostPopular(&smi_oracle);
+  program->IterateRootsIgnoringSession(&smi_oracle);
+  SnapshotDecisionObjectVisitor sdov2(&smi_oracle);
+  program->heap()->IterateObjects(&sdov2);
+  smi_oracle.WrapUp();
+
+  ObjectWriter object_writer(this, &portable_addresses, &pointer_oracle,
+                             &smi_oracle);
+
+  WriteSectionBoundary(&object_writer);
+  emitting_popular_list_ = true;
+  popularity_counter_.VisitMostPopular(&object_writer);
+  emitting_popular_list_ = false;
+
+  WriteSectionBoundary(&object_writer);
+  program->IterateRootsIgnoringSession(&object_writer);
+
+  WriteSectionBoundary(&object_writer);
+  SnapshotWriterVisitor writer_visitor(&portable_addresses, this,
+                                       &pointer_oracle, &smi_oracle);
+  program->heap()->IterateObjects(&writer_visitor);
+
+  WriteSectionBoundary(&object_writer);
+
+  smi_oracle.DoneConsulting();
+  pointer_oracle.DoneConsulting();
+
+  List<uint8> result = snapshot_.Sublist(0, position_);
+
+  program->set_snapshot_hash(ComputeSnapshotHash(result));
+
+  return result;
 }
 
-void LargeInteger::LargeIntegerReadFrom(SnapshotReader* reader) {
-  set_value(reader->ReadInt64());
-}
-
-void Double::DoubleWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::DOUBLE_TYPE);
-  writer->Forward(this);
-  // Body.
-  writer->WriteDouble(value());
-}
-
-void Double::DoubleReadFrom(SnapshotReader* reader) {
-  set_value(reader->ReadDouble());
-}
-
-void Initializer::InitializerWriteTo(SnapshotWriter* writer, Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::INITIALIZER_TYPE);
-  writer->Forward(this);
-  // Body.
-  for (int offset = HeapObject::kSize; offset < Initializer::kSize;
-       offset += kPointerSize) {
-    writer->WriteObject(at(offset));
-  }
-}
-
-void Initializer::InitializerReadFrom(SnapshotReader* reader) {
-  for (int offset = HeapObject::kSize; offset < Initializer::kSize;
-       offset += kPointerSize) {
-    at_put(offset, reader->ReadObject());
-  }
-}
-
-void DispatchTableEntry::DispatchTableEntryWriteTo(SnapshotWriter* writer,
-                                                   Class* klass) {
-  // Header.
-  writer->WriteHeader(InstanceFormat::DISPATCH_TABLE_ENTRY_TYPE);
-  writer->Forward(this);
-
-  // Body.
-  writer->WriteObject(at(kTargetOffset));
-  ASSERT(code() == NULL);
-  writer->WriteObject(offset());
-  writer->WriteInt64(selector());
-}
-
-void DispatchTableEntry::DispatchTableEntryReadFrom(SnapshotReader* reader) {
-  set_target(Function::cast(reader->ReadObject()));
-  set_code(NULL);
-  set_offset(Smi::cast(reader->ReadObject()));
-  set_selector(reader->ReadInt64());
+void SnapshotWriter::GrowCapacity(int extra) {
+  int growth = Utils::Maximum(1 * MB, extra);
+  int capacity = snapshot_.length() + growth;
+  uint8* data = static_cast<uint8*>(realloc(snapshot_.data(), capacity));
+  snapshot_ = List<uint8>(data, capacity);
 }
 
 }  // namespace dartino

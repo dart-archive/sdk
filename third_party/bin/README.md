@@ -58,7 +58,7 @@ upload_to_google_storage.py -b dartino-dependencies dart
 cp dart.sha1 ../../../tools/testing/bin/mac/dart.sha1
 cd ../win
 upload_to_google_storage.py -b dartino-dependencies dart.exe
-cp dart.sha1 ../../../tools/testing/bin/win/dart.exe.sha1
+cp dart.exe.sha1 ../../../tools/testing/bin/win/dart.exe.sha1
 ```
 
 The sha1 files need to be checked into the repository at

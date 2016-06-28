@@ -4,7 +4,7 @@
 
 // Test that we can set a breakpoint in the body of an anonymous function.
 
-// DartinoDebuggerCommands=bf tests/debugger/break_in_anonymous_function_test.dart 12,r,c
+// DartinoDebuggerCommands=bf tests/debugger/break_in_anonymous_function_test.dart 12,bf tests/debugger/break_in_anonymous_function_test.dart 17,bf tests/debugger/break_in_anonymous_function_test.dart 19,r,c,c,c
 
 import 'package:expect/expect.dart';
 
@@ -13,5 +13,13 @@ var foo = () {
 };
 
 main() {
+  var local = (i) {
+    Expect.equals(3, i);
+    return (j) {
+      Expect.equals(5, j);
+      return 42;
+    }(i + 2);
+  };
   Expect.equals(6, foo());
+  Expect.equals(42, local(3));
 }

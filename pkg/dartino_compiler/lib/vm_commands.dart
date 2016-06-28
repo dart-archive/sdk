@@ -26,7 +26,8 @@ abstract class VmCommand {
   factory VmCommand.fromBuffer(
       VmCommandCode code,
       Uint8List buffer,
-      int translateFunction(int offsetOrId)) {
+      int translateFunction(int offsetOrId),
+      int translateClass(int offsetOrId)) {
     switch (code) {
       case VmCommandCode.HandShakeResult:
         int offset = 0;
@@ -40,17 +41,30 @@ abstract class VmCommand {
         int wordSize = CommandBuffer.readInt32FromBuffer(buffer, offset);
         offset += 4;
         int floatSize = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int vmState = CommandBuffer.readInt32FromBuffer(buffer, offset);
         return new HandShakeResult(
-            success, version, wordSize, floatSize);
+            success, version, wordSize, floatSize, VmState.values[vmState]);
       case VmCommandCode.InstanceStructure:
-        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int classId =
+            translateClass(CommandBuffer.readInt64FromBuffer(buffer, 0));
         int fields = CommandBuffer.readInt32FromBuffer(buffer, 8);
         return new InstanceStructure(classId, fields);
+      case VmCommandCode.ArrayStructure:
+        int offset = 0;
+        int length = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int startIndex = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int endIndex = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        return new ArrayStructure(length, startIndex, endIndex);
       case VmCommandCode.Instance:
-        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int classId = translateClass(
+            CommandBuffer.readInt64FromBuffer(buffer, 0));
         return new Instance(classId);
       case VmCommandCode.Class:
-        int classId = CommandBuffer.readInt64FromBuffer(buffer, 0);
+        int classId = translateClass(
+            CommandBuffer.readInt64FromBuffer(buffer, 0));
         return new ClassValue(classId);
       case VmCommandCode.Integer:
         int value = CommandBuffer.readInt64FromBuffer(buffer, 0);
@@ -64,6 +78,9 @@ abstract class VmCommand {
       case VmCommandCode.String:
         return new StringValue(
             CommandBuffer.readStringFromBuffer(buffer, 0, buffer.length));
+      case VmCommandCode.Array:
+        int length = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new Array(length);
       case VmCommandCode.StdoutData:
         return new StdoutData(buffer);
       case VmCommandCode.StderrData:
@@ -112,7 +129,14 @@ abstract class VmCommand {
         }
         return new ProcessGetProcessIdsResult(ids);
       case VmCommandCode.UncaughtException:
-        return const UncaughtException();
+        int offset = 0;
+        int processId = CommandBuffer.readInt32FromBuffer(buffer, offset);
+        offset += 4;
+        int functionId = translateFunction(
+            CommandBuffer.readInt64FromBuffer(buffer, offset));
+        offset += 8;
+        int bytecodeIndex = CommandBuffer.readInt64FromBuffer(buffer, offset);
+        return new UncaughtException(processId, functionId, bytecodeIndex);
       case VmCommandCode.CommitChangesResult:
         bool success = CommandBuffer.readBoolFromBuffer(buffer, 0);
         String message = CommandBuffer.readAsciiStringFromBuffer(
@@ -151,6 +175,9 @@ abstract class VmCommand {
         bool isFromSnapshot = CommandBuffer.readBoolFromBuffer(buffer, 0);
         int snapshotHash = CommandBuffer.readInt32FromBuffer(buffer, 1);
         return new DebuggingReply(isFromSnapshot, snapshotHash);
+      case VmCommandCode.CommandError:
+        int errorCode = CommandBuffer.readInt32FromBuffer(buffer, 0);
+        return new CommandError(ErrorCode.values[errorCode]);
       default:
         throw 'Unhandled command in VmCommand.fromBuffer: $code';
     }
@@ -208,17 +235,32 @@ class HandShake extends VmCommand {
   String valuesToString() => "value: $value";
 }
 
+/// The state of a dartino-vm session.
+/// This enum should be kept in sync with `enum StateKind` at
+/// 'src/vm/session.cc'.
+enum VmState {
+  initial,
+  modifying,
+  spawned,
+  paused,
+  running,
+  terminating,
+  terminated
+}
+
 class HandShakeResult extends VmCommand {
   final bool success;
   final String version;
   final int wordSize;
   final int dartinoDoubleSize;
+  final VmState vmState;
 
   const HandShakeResult(
       this.success,
       this.version,
       this.wordSize,
-      this.dartinoDoubleSize)
+      this.dartinoDoubleSize,
+      this.vmState)
       : super(VmCommandCode.HandShakeResult);
 
   void internalAddTo(
@@ -232,6 +274,7 @@ class HandShakeResult extends VmCommand {
         ..addUint8List(payload)
         ..addUint32(wordSize)
         ..addUint32(dartinoDoubleSize)
+        ..addUint32(vmState.index)
         ..sendOn(sink, code);
   }
 
@@ -776,7 +819,12 @@ class CommitChangesResult extends VmCommand {
 }
 
 class UncaughtException extends VmCommand {
-  const UncaughtException()
+  final int processId;
+  final int functionId;
+  final int bytecodeIndex;
+
+  const UncaughtException(
+      this.processId, this.functionId, this.bytecodeIndex)
       : super(VmCommandCode.UncaughtException);
 
   int get numberOfResponsesExpected => 0;
@@ -1137,12 +1185,17 @@ class ProcessBreakpoint extends VmCommand {
       "functionId: $functionId, bytecodeIndex: $bytecodeIndex";
 }
 
-class ProcessLocal extends VmCommand {
+/// Request for a description of an instance object in the heap of the current
+/// process. [frame] and [slot] refers to a variable in the local scope to start
+/// the search, and [fieldAccesses] gives a path to follow from there
+/// dereferencing fields.
+class ProcessInstance extends VmCommand {
   final int frame;
   final int slot;
+  final List<int> fieldAccesses;
 
-  const ProcessLocal(this.frame, this.slot)
-      : super(VmCommandCode.ProcessLocal);
+  const ProcessInstance(this.frame, this.slot, this.fieldAccesses)
+      : super(VmCommandCode.ProcessInstance);
 
   void internalAddTo(
       Sink<List<int>> sink,
@@ -1151,30 +1204,60 @@ class ProcessLocal extends VmCommand {
     buffer
         ..addUint32(frame)
         ..addUint32(slot)
-        ..sendOn(sink, code);
+        ..addUint32(fieldAccesses.length);
+    for (int fieldAccess in fieldAccesses) {
+      buffer.addUint32(fieldAccess);
+    }
+    buffer.sendOn(sink, code);
   }
 
   /// Peer will respond with a [DartValue].
   int get numberOfResponsesExpected => 1;
 
-  String valuesToString() => "frame: $frame, slot: $slot";
+  String valuesToString() =>
+      "frame: $frame, slot: $slot, fieldAccesses: $fieldAccesses";
 }
 
-class ProcessLocalStructure extends VmCommand {
+class ProcessInstanceStructure extends VmCommand {
   final int frame;
   final int slot;
+  final List<int> fieldAccesses;
 
-  const ProcessLocalStructure(this.frame, this.slot)
-      : super(VmCommandCode.ProcessLocalStructure);
+  /// If the requested object is an array [startIndex] and [endIndex] limit the
+  /// number of returned elements.
+  /// They are ignored if the requested object is an array.
+  ///
+  /// `endIndex = -1` corresponds to requesting up to the end of the array.
+  ///
+  /// Requests for elements beyond the end of the array are cut of at the end.
+  ///
+  /// Request for elements at negative indices is an error.
+  final int startIndex;
+  final int endIndex;
+
+  const ProcessInstanceStructure(
+      this.frame,
+      this.slot,
+      this.fieldAccesses,
+      this.startIndex,
+      this.endIndex)
+    : super(VmCommandCode.ProcessInstanceStructure);
 
   void internalAddTo(
       Sink<List<int>> sink,
       CommandBuffer<VmCommandCode> buffer,
       int translateObject(MapId mapId, int index)) {
     buffer
-        ..addUint32(frame)
-        ..addUint32(slot)
-        ..sendOn(sink, code);
+      ..addUint32(frame)
+      ..addUint32(slot)
+      ..addUint32(fieldAccesses.length);
+    for (int fieldAccess in fieldAccesses) {
+      buffer.addUint32(fieldAccess);
+    }
+    buffer
+      ..addUint32(startIndex)
+      ..addUint32(endIndex);
+    buffer.sendOn(sink, code);
   }
 
   /// Peer will respond with a [DartValue] or [InstanceStructure] and a number
@@ -1183,7 +1266,8 @@ class ProcessLocalStructure extends VmCommand {
   /// The number of responses is not fixed.
   int get numberOfResponsesExpected => null;
 
-  String valuesToString() => "frame: $frame, slot: $slot";
+  String valuesToString() =>
+      "frame: $frame, slot: $slot fieldAccesses: $fieldAccesses";
 }
 
 class ProcessRestartFrame extends VmCommand {
@@ -1523,6 +1607,26 @@ class InstanceStructure extends VmCommand {
   String valuesToString() => "classId: $classId, fields: $fields";
 }
 
+class ArrayStructure extends VmCommand {
+  final int length;
+  final int startIndex;
+  final int endIndex;
+
+  const ArrayStructure(this.length, this.startIndex, this.endIndex)
+      : super(VmCommandCode.ArrayStructure);
+
+  void internalAddTo(
+      Sink<List<int>> sink,
+      CommandBuffer<VmCommandCode> buffer,
+      int translateObject(MapId mapId, int index)) {
+    throw new UnimplementedError();
+  }
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "length: $length";
+}
+
 abstract class DartValue extends VmCommand {
   const DartValue(VmCommandCode code)
       : super(code);
@@ -1617,6 +1721,27 @@ class StringValue extends DartValue {
   String dartToString() => "'$value'";
 }
 
+class Array extends DartValue {
+  final int length;
+
+  const Array(this.length)
+      : super(VmCommandCode.Array);
+
+  String dartToString() => "array of length $length";
+}
+
+class CommandError extends VmCommand {
+  final ErrorCode errorCode;
+
+  const CommandError(this.errorCode)
+      : super(VmCommandCode.CommandError);
+
+  int get numberOfResponsesExpected => 0;
+
+  String valuesToString() => "command error: $errorCode";
+}
+
+
 class ConnectionError extends VmCommand {
   final error;
 
@@ -1627,7 +1752,14 @@ class ConnectionError extends VmCommand {
 
   int get numberOfResponsesExpected => 0;
 
-  String valuesToString() => "error: $error, trace: $trace";
+  String valuesToString() => "connection error: $error, trace: $trace";
+}
+
+// Any change in [ErrorCode] must also be done in [ErrorCode] in
+// src/shared/connection.h.
+enum ErrorCode {
+  invalidInstanceAccess,
+  kSnapshotCreationError,
 }
 
 // Any change in [VmCommandCode] must also be done in [Opcode] in
@@ -1668,13 +1800,14 @@ enum VmCommandCode {
   ProcessBacktrace,
   ProcessUncaughtExceptionRequest,
   ProcessBreakpoint,
-  ProcessLocal,
-  ProcessLocalStructure,
+  ProcessInstance,
+  ProcessInstanceStructure,
   ProcessRestartFrame,
   ProcessTerminated,
   ProcessCompileTimeError,
   ProcessAddFibersToMap,
   ProcessNumberOfStacks,
+  CommandError,
 
   ProcessGetProcessIds,
   ProcessGetProcessIdsResult,
@@ -1732,7 +1865,9 @@ enum VmCommandCode {
   String,
   Instance,
   Class,
-  InstanceStructure
+  Array,
+  InstanceStructure,
+  ArrayStructure,
 }
 
 enum MapId {

@@ -29,6 +29,9 @@ typedef void (*PrintInterceptionFunction)(
 typedef void (*ProgramExitCallback)(DartinoProgram, int exitcode, void* data);
 typedef void* DartinoConnection;
 
+// Blocking callback returning a new connection.
+typedef DartinoConnection (*DartinoConnectionListenerCallback)(void* data);
+
 // Setup must be called before using any of the other API methods.
 DARTINO_EXPORT void DartinoSetup(void);
 
@@ -36,11 +39,18 @@ DARTINO_EXPORT void DartinoSetup(void);
 // dartino API in order to free up resources.
 DARTINO_EXPORT void DartinoTearDown(void);
 
-// Load [program] and wait for a debugger connection.
+// Load [program] and start a debugging thread listening for a connection.
+//
+// If [waitForConnection] is true, wait for the connection to start running the
+// program. Otherwise start it running immediately.
+//
 // If [program] is NULL, the VM will wait for the debugger to send it a program
-// before it can be run.
+// before it can be run. In this case [waitForConnection] is ignored.
 DARTINO_EXPORT int DartinoRunWithDebuggerConnection(
-    DartinoConnection connection, DartinoProgram program);
+    DartinoProgram program,
+    DartinoConnectionListenerCallback connection_listener_callback,
+    void* listener_data,
+    bool waitForConnection);
 
 // Load a program from a snapshot.
 DARTINO_EXPORT DartinoProgram DartinoLoadSnapshot(unsigned char* snapshot,

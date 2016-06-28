@@ -10,16 +10,15 @@ import "dart:async" show
     Stream;
 
 import "dart:io" show
-    File,
-    FileMode,
+    FileSystemException,
     IOSink,
-    RandomAccessFile,
     Socket,
     SocketException,
     SocketOption;
 
-import "dart:typed_data" show
-    Uint8List;
+// This import is deferred to make the rest of the compiler run on
+// platforms without a dynamic library.
+import "tty_connection.dart" deferred as tty_connection;
 
 import 'verbs/infrastructure.dart' show
     DiagnosticKind,
@@ -93,69 +92,16 @@ class TcpConnection extends VmConnection {
   Future<Null> get done => doneCompleter.future;
 }
 
-class RandomAccessFileSink implements Sink<List<int>> {
-  final RandomAccessFile f;
-  RandomAccessFileSink(this.f);
-  Future lastAction = new Future.value(null);
 
-  @override
-  void add(List<int> data) {
-    lastAction.then((_) {
-      lastAction = f.writeFrom(data);
-    });
-  }
-
-  @override
-  void close() {
-    lastAction.then((_) {
-      lastAction = f.close();
-    });
-  }
-}
-
-Stream<List<int>> readingStream(RandomAccessFile f) async* {
-  while (true) {
-    int a = await f.readByte();
-    Uint8List x = new Uint8List(1);
-    x[0] = a;
-    yield x;
-  }
-}
-
-class TtyConnection extends VmConnection {
-  final Stream<List<int>> input;
-  final RandomAccessFileSink output;
-  final String address;
-  final RandomAccessFile inputFile;
-  final RandomAccessFile outputFile;
-
-  TtyConnection(RandomAccessFile input,
-      RandomAccessFile output, this.address)
-      : inputFile = input,
-        outputFile = output,
-        input = readingStream(input),
-        output = new RandomAccessFileSink(output);
-
-  static Future<TtyConnection> connect(
-      String address,
-      String connectionDescription,
-      void log(String message)) async {
-    File device = new File(address);
-    log("Connected to device $connectionDescription $address");
-    return new TtyConnection(await device.open(mode: FileMode.READ),
-        await device.open(mode: FileMode.WRITE_ONLY), address);
-  }
-
-  String get description => "$address";
-
-  Future<Null> close() async {
-    print("Closing tty-connection");
-    await inputFile.close();
-    await output.close();
-    doneCompleter.complete(null);
-  }
-
-  Completer doneCompleter = new Completer();
-
-  Future<Null> get done => doneCompleter.future;
+Future<VmConnection> connectToTty(String address, String connectionDescription,
+    void log(String message),
+    {void onConnectionError(FileSystemException e),
+     DiagnosticKind messageKind: DiagnosticKind.socketVmConnectError}) async {
+  await tty_connection.loadLibrary();
+  return tty_connection.TtyConnection.connect(
+      address,
+      connectionDescription,
+      log,
+      onConnectionError: onConnectionError,
+      messageKind: messageKind);
 }

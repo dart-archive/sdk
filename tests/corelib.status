@@ -26,8 +26,9 @@ regexp/regexp_test: RuntimeError
 
 # Function.apply
 apply2_test: RuntimeError
-apply3_test: CompileTimeError
-apply4_test: RuntimeError
+apply3_test: CompileTimeError # https://github.com/dartino/sdk/issues/518
+apply4_test: RuntimeError # https://github.com/dartino/sdk/issues/518
+apply5_test: RuntimeError # https://github.com/dartino/sdk/issues/518
 apply_test: RuntimeError
 
 # int.parse not working for big integers.
@@ -222,6 +223,7 @@ uri_ipv4_test: RuntimeError
 uri_ipv6_test: RuntimeError
 uri_normalize_path_test: RuntimeError
 uri_normalize_test: RuntimeError
+uri_parameters_all_test: CompileTimeError
 uri_parse_test: RuntimeError
 uri_path_test: RuntimeError
 uri_query_test: RuntimeError

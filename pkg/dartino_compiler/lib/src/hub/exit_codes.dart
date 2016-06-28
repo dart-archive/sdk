@@ -36,3 +36,7 @@ const ANALYSIS_HAD_NON_ERROR_PROBLEMS = 2;
 /// Exit code returned by `compile` verb when `--analyze-only` is used and
 /// errors were detected.
 const ANALYSIS_HAD_ERRORS = 1;
+
+/// Exit code returned when there was a problem with the command-line input or
+/// a connection.
+const INPUT_ERROR = 1;

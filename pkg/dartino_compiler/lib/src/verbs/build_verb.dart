@@ -23,15 +23,19 @@ Future buildFunction(
     AnalyzedSentence sentence, VerbContext context) async {
   return context.performTaskInWorker(
       new BuildTask(
-          sentence.targetUri, sentence.base, sentence.options.debuggingMode));
+          sentence.targetUri,
+          sentence.base,
+          sentence.options.debuggingMode,
+          sentence.options.noWait));
 }
 
 class BuildTask extends SharedTask {
   final Uri script;
   final Uri base;
   final bool debuggingMode;
+  final bool noWait;
 
-  BuildTask(this.script, this.base, this.debuggingMode);
+  BuildTask(this.script, this.base, this.debuggingMode, this.noWait);
 
   Future call(
       CommandSender commandSender,
@@ -42,7 +46,8 @@ class BuildTask extends SharedTask {
         SessionState.current,
         script,
         base,
-        debuggingMode);
+        debuggingMode,
+        noWait);
   }
 }
 
@@ -52,7 +57,8 @@ Future<int> buildTask(
     SessionState state,
     Uri script,
     Uri base,
-    bool debuggingMode) async {
+    bool debuggingMode,
+    bool noWait) async {
 
   Uri snapshot = defaultSnapshotLocation(script);
   await compileAndAttachToVmThen(
@@ -68,5 +74,6 @@ Future<int> buildTask(
       commandIterator,
       state,
       snapshot,
-      debuggingMode: debuggingMode);
+      debuggingMode: debuggingMode,
+      noWait: noWait);
 }

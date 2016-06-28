@@ -56,6 +56,11 @@ static void SignalHandler(int signal, siginfo_t* info, void* context) {
   sample->sp = bit_cast<word>(mcontext.arm_sp);
   sample->fp = bit_cast<word>(mcontext.arm_fp);
   ip = bit_cast<word>(mcontext.arm_r5);
+#elif defined(DARTINO_TARGET_MIPS)
+  sample->pc = (word)mcontext.pc;
+  sample->sp = (word)mcontext.gregs[29];
+  sample->fp = (word)mcontext.gregs[30];
+  ip = (word)mcontext.gregs[17];
 #else
   FATAL("HandleSignal not support on this platform");
 #endif

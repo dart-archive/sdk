@@ -7,9 +7,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+int requestCount = 0;
+
 void handleRequest(HttpRequest request) {
+  requestCount++;
   HttpResponse response = request.response;
   if (request.method == 'GET') {
+    print('GET request from ${request.connectionInfo.remoteAddress}, '
+          'request no. $requestCount');
     if (request.uri.toFilePath() == '/message.json') {
       String message = JSON.encode({"message": "Hello Dartino!"});
       response..statusCode = HttpStatus.OK

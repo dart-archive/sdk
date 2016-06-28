@@ -97,8 +97,7 @@ class HTS221 {
 
   /// Read the current temperature value.
   double readTemperature() {
-    var t_out = _signed16(
-        _device.readByte(_tempOutH), _device.readByte(_tempOutL));
+    var t_out = _readSigned16(_tempOutH, _tempOutL);
     // Interpolate using the calibration values.
     return t0 + (t_out - t0Out) * (t1 - t0) / (t1Out - t0Out);
   }
@@ -120,6 +119,14 @@ class HTS221 {
       var status = _device.readByte(_statusReg);
       if ((status & 0x03) == 0x03) break;
     }
+  }
+
+  int _readSigned16(int msbRegister, int lsbRegister) {
+    // Always read LSB before MSB.
+    var lsb = _device.readByte(lsbRegister);
+    var msb = _device.readByte(msbRegister);
+    var x = msb << 8 | lsb;
+    return x < 0x7fff ? x : x - 0x10000;
   }
 
   int _signed16(int msb, int lsb) {

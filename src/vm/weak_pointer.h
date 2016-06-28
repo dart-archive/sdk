@@ -12,6 +12,7 @@ namespace dartino {
 class HeapObject;
 class Space;
 class Heap;
+class OldSpace;
 class PointerVisitor;
 class WeakPointer;
 
@@ -26,7 +27,7 @@ class WeakPointer : public WeakPointerList::Entry {
   WeakPointer(HeapObject* object, ExternalWeakPointerCallback callback,
               void* arg);
 
-  static void Process(WeakPointerList* pointers, Space* space);
+  static void Process(WeakPointerList* pointers, OldSpace* space);
   static void ProcessAndMoveSurvivors(WeakPointerList* pointers,
                                       Space* from_space, Space* to_space,
                                       Space* old_space);

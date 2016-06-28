@@ -9,6 +9,7 @@
 #include "src/vm/session_no_debugging.h"
 #else  // DARTINO_ENABLE_DEBUGGING
 
+#include "src/shared/connection.h"
 #include "src/shared/names.h"
 
 #include "src/vm/object_list.h"
@@ -26,6 +27,8 @@ class PointerVisitor;
 class PostponedChange;
 class SessionState;
 
+typedef Connection* (*ConnectionListenerCallback)(void* data);
+
 class Session {
   // TODO(sigurdm): Move helper methods to session states and remove these.
   friend class SessionState;
@@ -38,19 +41,30 @@ class Session {
   friend class TerminatingState;
 
  public:
-  explicit Session(Connection* connection);
+  // If [program] is `NULL` a new program will be
+  // created that will be constructed via this session.
+  //
+  // [connection_listener_callback] is invoked with [listener_data] to obtain a
+  // connection.
+  //
+  // If [wait_for_connection] the program will not spawn before it
+  // gets instructed from the connection. Otherwise it will run immediately.
+  Session(
+      Program* program,
+      ConnectionListenerCallback connection_listener_callback,
+      void* listener_data,
+      bool wait_for_connection_);
   virtual ~Session();
 
   Program* program() const { return program_; }
 
   int FreshProcessId() { return next_process_id_++; }
 
-  // Initializes with [program]. If [program] is `NULL` a new program will be
-  // created that will be constructed via this session.
-  void Initialize(Program *program);
-
   void StartMessageProcessingThread();
+
   void JoinMessageProcessingThread();
+
+  void StartSession();
   void ProcessMessages();
 
   void IteratePointers(PointerVisitor* visitor);
@@ -81,6 +95,8 @@ class Session {
     ASSERT(main_process_ == NULL);
     main_process_ = process;
   }
+  bool got_handshake() const { return got_handshake_; }
+  void set_got_handshake(bool value) { got_handshake_ = value; }
 
   // Map operations.
   void NewMap(int map_index);
@@ -92,6 +108,9 @@ class Session {
 
   // Get an appropriate message to send over the wire representing [function].
   int64 FunctionMessage(Function *function);
+
+  // Get an appropriate message to send over the wire representing [klass].
+  int64 ClassMessage(Class *klass);
 
   // Get the id for the object in the map with the given
   // index. Returns -1 if the object does not exist in the map.
@@ -166,7 +185,10 @@ class Session {
 
   ThreadIdentifier message_handling_thread_;
 
-  Connection* const connection_;
+  bool wait_for_connection_;
+
+  Connection* connection_;
+  bool got_handshake_;
   Program* program_;
   SessionState* state_;
 
@@ -192,6 +214,9 @@ class Session {
   Monitor* main_thread_monitor_;
   MainThreadResumeKind main_thread_resume_kind_;
 
+  ConnectionListenerCallback connection_listener_callback_;
+  void* listener_data_;
+
   void IterateChangesPointers(PointerVisitor* visitor);
 
   void HandShake();
@@ -204,11 +229,16 @@ class Session {
   void PauseExecution();
   void ResumeExecution();
 
+  SessionState* ProcessSpawnForMain(List<List<uint8_t>> arguments);
+
   void SendStackTrace(Stack* stack);
   void SendDartValue(Object* value);
   void SendInstanceStructure(Instance* instance);
+  void SendArrayStructure(Array* array, int startIndex, int endIndex);
+  void SendStructure(Object* object, int startIndex, int endIndex);
   void SendProgramInfo(ClassOffsetsType* class_offsets,
       FunctionOffsetsType* function_offsets);
+  void SendError(Connection::ErrorCode errorCode);
 
   void Push(Object* object) { stack_.Add(object); }
   Object* Pop() { return stack_.RemoveLast(); }

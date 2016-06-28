@@ -8,10 +8,12 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:dartino_compiler/src/hub/analytics.dart';
+import 'package:dartino_compiler/src/hub/hub_main.dart' show ClientVerbContext;
+import 'package:dartino_compiler/src/verbs/infrastructure.dart';
 import 'package:expect/expect.dart' show Expect;
 import 'package:path/path.dart' show isAbsolute, join;
 
-import 'package:dartino_compiler/src/verbs/infrastructure.dart';
+import 'message_tests.dart' show MockClientConnection;
 
 main() async {
   bool receivedLogMessage = false;
@@ -110,8 +112,14 @@ main() async {
 
     String dartPath = 'some/path/to/my.dart';
     String dartPathHash = analytics.hash(dartPath);
-    Expect.equals(dartPathHash.indexOf('some'), -1);
-    Expect.equals(dartPathHash.indexOf('dart'), -1);
+    Expect.isTrue(dartPathHash.startsWith('SHA('));
+    Expect.isTrue(dartPathHash.endsWith(')'));
+    Expect.isTrue(dartPathHash.length > 6);
+    Expect.equals(-1, dartPathHash.indexOf('some'));
+    Expect.equals(-1, dartPathHash.indexOf('dart'));
+    Expect.equals(-1, dartPathHash.indexOf('hash'));
+    Expect.equals(-1, dartPathHash.indexOf('encode'));
+    Expect.equals(-1, dartPathHash.indexOf('BASE64'));
 
     Expect.equals(dartPathHash, analytics.hashUri(dartPath));
     Expect.equals('session', analytics.hashUri('session'));
@@ -126,10 +134,10 @@ main() async {
 
     analytics.writeNewUuid();
     analytics.logStartup();
-    analytics.logRequest([]);
-    analytics.logRequest(['help']);
-    analytics.logRequest(['help', 'all']);
-    analytics.logRequest(['analyze', dartPath]);
+    analytics.logRequest('1.2.3', dartPath, false, []);
+    analytics.logRequest('0.0.0', dartPath, true, ['help']);
+    analytics.logRequest('0.0.0', dartPath, true, ['help', 'all']);
+    analytics.logRequest('0.0.0', dartPath, false, ['analyze', dartPath]);
     analytics.logErrorMessage('$dartPath not found');
     analytics.logError('error1');
     analytics.logError('error2', null);
@@ -141,17 +149,35 @@ main() async {
     analytics.logComplete(37);
     await analytics.shutdown();
 
-    await mockServer.expectMessage([
+    mockServer.expectedUuid = analytics.uuid;
+
+    List<String> expectedStartupMsg = [
       TAG_STARTUP,
-      analytics.uuid,
       'version information not available', // Dartino version
       Platform.version,
       Platform.operatingSystem,
+    ];
+    List<String> actualStartupMsg = await mockServer.nextMessage();
+    String actualVersion = actualStartupMsg[1];
+    Expect.isTrue(actualVersion.length > 2);
+    expectedStartupMsg[1] = actualVersion;
+    Expect.listEquals(expectedStartupMsg, actualStartupMsg,
+        '\nexpected: $expectedStartupMsg\nactual:   $actualStartupMsg\n');
+
+    await mockServer
+        .expectMessage([TAG_REQUEST, '1.2.3', dartPathHash, 'detached']);
+    await mockServer.expectMessage(
+        [TAG_REQUEST, '0.0.0', dartPathHash, 'interactive', 'help']);
+    await mockServer.expectMessage(
+        [TAG_REQUEST, '0.0.0', dartPathHash, 'interactive', 'help', 'all']);
+    await mockServer.expectMessage([
+      TAG_REQUEST,
+      '0.0.0',
+      dartPathHash,
+      'detached',
+      'analyze',
+      dartPathHash
     ]);
-    await mockServer.expectMessage([TAG_REQUEST]);
-    await mockServer.expectMessage([TAG_REQUEST, 'help']);
-    await mockServer.expectMessage([TAG_REQUEST, 'help', 'all']);
-    await mockServer.expectMessage([TAG_REQUEST, 'analyze', dartPathHash]);
     await mockServer.expectMessage([TAG_ERRMSG, '$dartPathHash not found']);
     await mockServer.expectMessage([TAG_ERROR, 'error1', 'null']);
     await mockServer.expectMessage([TAG_ERROR, 'error2', 'null']);
@@ -167,6 +193,24 @@ main() async {
     if (tmpDir.existsSync()) tmpDir.deleteSync();
     mockServer.shutdown();
   }
+
+  MockClientConnection conn = await mockCmdline(['x-should-prompt-analytics']);
+  Expect.listEquals(['false'], conn.stdoutMessages);
+  conn = await mockCmdline(['x-should-prompt-analytics'],
+      shouldPromptForOptIn: true);
+  Expect.listEquals(['true'], conn.stdoutMessages);
+}
+
+Future<MockClientConnection> mockCmdline(List<String> arguments,
+    {bool shouldPromptForOptIn: false}) async {
+  MockClientConnection client =
+      new MockClientConnection(shouldPromptForOptIn: shouldPromptForOptIn);
+  client.stdoutMessages = <String>[];
+  client.parseArguments(null, null, false, arguments);
+  ClientVerbContext context = new ClientVerbContext(client, null, null);
+  var exitCode = await client.sentence.performVerb(context);
+  client.recordedExitCode = exitCode;
+  return client;
 }
 
 class MockServer {
@@ -181,6 +225,8 @@ class MockServer {
   /// Messages are asserted/tested in numerical order, and [expectedMsgN]
   /// is the # of the next message to be asserted by [expectMessage].
   int expectedMsgN = 0;
+
+  String expectedUuid;
 
   Future<Null> start() async {
     server = await HttpServer.bind(InternetAddress.LOOPBACK_IP_V4, 0);
@@ -268,6 +314,11 @@ class MockServer {
         .map((String part) => part.replaceAll('qqqq', ':'))
         .toList();
     // parts[0] is a timestamp.
-    return parts.sublist(1);
+    // parts[1] is the UUID
+    // parts[2] is the tag
+    if (parts.length < 3) Expect.fail('Unexpected msg: $parts');
+    int.parse(parts[0]);
+    Expect.equals(expectedUuid, parts[1], 'Expected uuid');
+    return parts.sublist(2);
   }
 }

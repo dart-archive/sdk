@@ -50,7 +50,8 @@ import 'package:dartino_compiler/dartino_system.dart' show
 import 'package:dartino_compiler/vm_commands.dart' as commands_lib;
 
 import 'package:dartino_compiler/vm_context.dart' show
-    DartinoVmContext;
+    DartinoVmContext,
+    SinkDebugListener;
 
 import 'package:dartino_compiler/src/dartino_backend.dart' show
     DartinoBackend;
@@ -70,8 +71,7 @@ import 'package:dartino_compiler/src/vm_connection.dart' show
     VmConnection;
 
 import 'program_result.dart' show
-    EncodedResult,
-    ProgramResult;
+    EncodedResult;
 
 import 'incremental_test_runner.dart' show
     IncrementalTestRunner;
@@ -150,7 +150,7 @@ class DartinoVmTester extends IncrementalTestRunner {
         // Restart the current frame to rerun main.
         await vmContext.restart();
       }
-      if (vmContext.running) {
+      if (vmContext.isPaused) {
         // Step out of main to finish execution of main.
         await vmContext.stepOut();
       }
@@ -201,7 +201,7 @@ class DartinoVmTester extends IncrementalTestRunner {
   Future<Null> tearDown() async {
     // If everything went fine, we will try finishing the execution and do a
     // graceful shutdown.
-    if (vmContext.running) {
+    if (vmContext.isRunning) {
       // The vmContext is still alive. Run to completion.
       var continueCommand = const commands_lib.ProcessContinue();
       print(continueCommand);
@@ -239,8 +239,12 @@ class DartinoVmTester extends IncrementalTestRunner {
 
 class TestVmContext extends DartinoVmContext {
   final Process process;
+
   final StreamIterator stdoutIterator;
   final Stream<String> stderr;
+
+  final BytesSink stdoutSink = new BytesSink();
+  final BytesSink stderrSink = new BytesSink();
 
   final List<Future> futures;
 
@@ -259,22 +263,8 @@ class TestVmContext extends DartinoVmContext {
       this.stderr,
       this.futures,
       this.exitCode)
-      : super(connection, compiler, new BytesSink(), null);
-
-  // Refines type of [stdoutSink].
-  BytesSink get stdoutSink => super.stdoutSink;
-
-  void writeStdout(String s) {
-    // Unfortunately, print will always add a newline, and the alternative is
-    // to use stdout.write. However, to make it easier to debug problems in
-    // this and other dartino_tests, everything that is printed to stdout ends
-    // up on the console of test.dart. This is good enough for testing, but DO
-    // NOT COPY TO PRODUCTION CODE.
-    print(s);
-  }
-
-  void writeStdoutLine(String s) {
-    print(s);
+      : super(connection, compiler) {
+    listeners.add(new SinkDebugListener(stdoutSink, stderrSink));
   }
 
   /// Add [future] to this vmContext. All futures that can fail after calling

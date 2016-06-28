@@ -20,7 +20,6 @@ import 'package:expect/expect.dart' show
 
 import 'cli_tests.dart' show
     Test,
-    TestContext,
     SessionTestContext,
     thisDirectory,
     dartinoVmBinary;
@@ -29,8 +28,7 @@ import 'prompt_splitter.dart' show
     PromptSplitter;
 
 import 'package:dartino_compiler/src/hub/exit_codes.dart' show
-    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION,
-    COMPILER_EXITCODE_CRASH;
+    DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
 
 import 'package:dartino_compiler/dartino_vm.dart' show DartinoVm;
 
@@ -74,7 +72,7 @@ abstract class InteractiveDebuggerTestContext extends SessionTestContext {
   StreamIterator err;
 
   Future<Null> setup(Test test) async {
-    super.setup(test);
+    await super.setup(test);
     await setupProcess();
 
     assert(process != null);
@@ -200,7 +198,7 @@ class SnapshotTestcontext extends InteractiveDebuggerTestContext {
     Uri snapshotDir =
         Uri.base.resolve("$tempTestOutputDirectory/cli_tests/${test.name}/");
 
-    new Directory(snapshotDir.toFilePath()).create(recursive: true);
+    await new Directory(snapshotDir.toFilePath()).create(recursive: true);
     String snapshotPath = snapshotDir.resolve("out.snapshot").toFilePath();
 
     // Build a snapshot.
@@ -279,7 +277,7 @@ Test rerunThrowingProgram = new Test("debugger_rerun_throwing_program",
   await context.runCommandAndExpectPrompt("r");  // throws uncaught exception
   await context.runCommandAndExpectPrompt("r");  // invalid command: use restart
   await context.expectOut(
-      "### process already loaded, use 'restart' to run again");
+      "### process already scheduled, use 'restart' to run again");
   await context.quit();
   await context.expectExitCode(DART_VM_EXITCODE_UNCAUGHT_EXCEPTION);
 });

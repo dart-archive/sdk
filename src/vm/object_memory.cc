@@ -18,12 +18,6 @@
 
 namespace dartino {
 
-static Smi* chunk_end_sentinel() { return Smi::zero(); }
-
-static bool HasSentinelAt(uword address) {
-  return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
-}
-
 Chunk::Chunk(Space* owner, uword start, uword size, bool external)
       : owner_(owner),
         start_(start),
@@ -91,8 +85,9 @@ HeapObject *Space::ObjectAtOffset(word offset) {
 
 void Space::AdjustAllocationBudget(uword used_outside_space) {
   uword used = Used() + used_outside_space;
-  allocation_budget_ = Utils::Maximum(static_cast<word>(DefaultChunkSize(used)),
-                                      static_cast<word>(used));
+  // Allow heap size to double (but we may hit maximum heap size limits before
+  // that).
+  allocation_budget_ = used + Platform::kPageSize;
 }
 
 void Space::IncreaseAllocationBudget(uword size) { allocation_budget_ += size; }
@@ -175,7 +170,7 @@ void SemiSpace::CompleteScavenge(PointerVisitor* visitor) {
   }
 }
 
-void SemiSpace::ClearMarkBits() {
+void Space::ClearMarkBits() {
   Flush();
   for (auto chunk : chunk_list_) GCMetadata::ClearMarkBitsFor(chunk);
 }

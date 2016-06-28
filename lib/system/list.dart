@@ -4,17 +4,12 @@
 
 part of dart.dartino._system;
 
-// TODO(ajohnsen): Temp hack to expose _GrowableList/_FixedList to core.
-List newList(int length) {
-  return (length == null) ? new _GrowableList() : new _FixedList(length);
-}
-
-abstract class _FixedListBase<E>
+abstract class FixedListBase<E>
     extends Object with ListMixin<E>
     implements List<E> {
   final _list;
 
-  _FixedListBase([int length])
+  FixedListBase([int length])
       : this._list = _new(length);
 
   // Not external, to match non-external setter.
@@ -32,15 +27,15 @@ abstract class _FixedListBase<E>
     }
   }
 
-  @native static _ConstantList _new(int length) {
+  @native static ConstantList _new(int length) {
     throw new ArgumentError(length);
   }
 }
 
-class _ConstantList<E> extends _FixedListBase<E> with UnmodifiableListMixin<E> {
+class ConstantList<E> extends FixedListBase<E> with UnmodifiableListMixin<E> {
 }
 
-class _ConstantByteList<E> extends _ConstantList<E> {
+class _ConstantByteList<E> extends ConstantList<E> {
   @native E operator[](int index) {
     switch (nativeError) {
       case wrongArgumentType:
@@ -52,8 +47,8 @@ class _ConstantByteList<E> extends _ConstantList<E> {
   }
 }
 
-class _FixedList<E> extends _FixedListBase<E> with FixedLengthListMixin<E> {
-  _FixedList([int length])
+class FixedList<E> extends FixedListBase<E> with FixedLengthListMixin<E> {
+  FixedList([int length])
       : super(length);
 
   @native E operator[]=(int index, value) {
@@ -67,16 +62,16 @@ class _FixedList<E> extends _FixedListBase<E> with FixedLengthListMixin<E> {
   }
 }
 
-class _GrowableList<E> extends ListBase<E> implements List<E> {
+class GrowableList<E> extends ListBase<E> implements List<E> {
   int _length = 0;
-  _FixedList<E> _list = new _FixedList<E>(4);
+  FixedList<E> _list = new FixedList<E>(4);
 
-  _GrowableList();
+  GrowableList();
 
   int get length => _length;
 
   void add(E value) {
-    _FixedList<E> list = _list;
+    FixedList<E> list = _list;
     int length = _length;
     int newLength = length + 1;
     if (length >= list.length) {
@@ -135,7 +130,7 @@ class _GrowableList<E> extends ListBase<E> implements List<E> {
   void clear() {
     if (_length != 0) {
       _length = 0;
-      _list = new _FixedList(4);
+      _list = new FixedList(4);
     }
   }
 
@@ -187,9 +182,9 @@ class _GrowableList<E> extends ListBase<E> implements List<E> {
     }
   }
 
-  _FixedList<E> _grow(minSize) {
+  FixedList<E> _grow(minSize) {
     // TODO(ager): play with heuristics here.
-    var newList = new _FixedList<E>(minSize + (minSize >> 2));
+    var newList = new FixedList<E>(minSize + (minSize >> 2));
     for (int i = 0; i < _list.length; ++i) {
       newList[i] = _list[i];
     }
@@ -197,7 +192,7 @@ class _GrowableList<E> extends ListBase<E> implements List<E> {
   }
 
   void _shiftDown(int i, int length) {
-    _FixedList<E> list = _list;
+    FixedList<E> list = _list;
     --length;
     while (i < length) {
       int j = i + 1;

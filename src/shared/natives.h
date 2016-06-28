@@ -118,13 +118,13 @@ namespace dartino {
   N(DateTimeTimeZoneOffset, "DateTime", "_timeZoneOffset", true)               \
   N(DateTimeLocalTimeZoneOffset, "DateTime", "_localTimeZoneOffset", true)     \
                                                                                \
-  N(ListNew, "_FixedListBase", "_new", true)                                   \
-  N(ListLength, "_FixedListBase", "length", true)                              \
-  N(ListIndexGet, "_FixedListBase", "[]", true)                                \
+  N(ListNew, "FixedListBase", "_new", true)                                    \
+  N(ListLength, "FixedListBase", "length", true)                               \
+  N(ListIndexGet, "FixedListBase", "[]", true)                                 \
                                                                                \
   N(ByteListIndexGet, "_ConstantByteList", "[]", true)                         \
                                                                                \
-  N(ListIndexSet, "_FixedList", "[]=", true)                                   \
+  N(ListIndexSet, "FixedList", "[]=", true)                                    \
                                                                                \
   N(ArgumentsLength, "_Arguments", "length", true)                             \
   N(ArgumentsToString, "_Arguments", "_toString", true)                        \

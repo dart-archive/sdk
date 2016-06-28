@@ -17,22 +17,17 @@
 #include "src/vm/object_memory.h"
 #include "src/vm/object.h"
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#pragma intrinsic(_BitScanForward)
+#endif
+
 namespace dartino {
-
-// In oldspace, the sentinel marks the end of each chunk, and never moves or is
-// overwritten.
-static Smi* chunk_end_sentinel() { return Smi::zero(); }
-
-static bool HasSentinelAt(uword address) {
-  return *reinterpret_cast<Object**>(address) == chunk_end_sentinel();
-}
 
 OldSpace::OldSpace(TwoSpaceHeap* owner)
     : Space(kCanResize, kOldSpacePage),
       heap_(owner),
-      free_list_(new FreeList()),
-      tracking_allocations_(false),
-      promoted_track_(NULL) {}
+      free_list_(new FreeList()) {}
 
 OldSpace::~OldSpace() { delete free_list_; }
 
@@ -59,7 +54,11 @@ void OldSpace::Flush() {
 HeapObject* OldSpace::NewLocation(HeapObject* old_location) {
   ASSERT(Includes(old_location->address()));
   ASSERT(GCMetadata::IsMarked(old_location));
-  return old_location;
+  if (compacting_) {
+    return HeapObject::FromAddress(GCMetadata::GetDestination(old_location));
+  } else {
+    return old_location;
+  }
 }
 
 bool OldSpace::IsAlive(HeapObject* old_location) {
@@ -100,19 +99,65 @@ uword OldSpace::AllocateInNewChunk(uword size) {
   ASSERT(top_ == 0);  // Space is flushed.
   // Allocate new chunk that is big enough to fit the object.
   int tracking_size = tracking_allocations_ ? 0 : PromotedTrack::kHeaderSize;
-  uword default_chunk_size = DefaultChunkSize(Used());
+  uword max_expansion = heap_->MaxExpansion();
+  uword smallest_chunk_size =
+      Utils::Minimum(DefaultChunkSize(Used()), max_expansion);
   uword chunk_size =
-      (size + tracking_size + kPointerSize >= default_chunk_size)
+      (size + tracking_size + kPointerSize >= smallest_chunk_size)
           ? (size + tracking_size + kPointerSize)  // Make room for sentinel.
-          : default_chunk_size;
+          : smallest_chunk_size;
 
-  Chunk* chunk = AllocateAndUseChunk(chunk_size);
-  if (chunk != NULL) {
-    return Allocate(size);
+  if (chunk_size <= max_expansion) {
+    if (chunk_size + (chunk_size >> 1) > max_expansion) {
+      // If we are near the limit, then just get memory up to the limit from
+      // the OS to reduce the number of small chunks in the heap, which can
+      // cause some fragmentation.
+      chunk_size = max_expansion;
+    }
+
+    Chunk* chunk = AllocateAndUseChunk(chunk_size);
+    if (chunk != NULL) {
+      return Allocate(size);
+    }
   }
 
+  hard_limit_hit_ = true;
   allocation_budget_ = -1;  // Trigger GC.
   return 0;
+}
+
+// Progress is defined as the number of bytes of objects that have been
+// successfully allocated since the last GC that was forced by running out of
+// memory. If we set the minimum too low then the program will slow down too
+// much (effectively, hang) before declaring an out-of-memory situation.  If we
+// set the minimum too high then the program will declare OOM when it could
+// have continued.  This 1/(1 << 8) is 0.4%, which is a compromise that results
+// in OOMs on heaps that are actually 100.4% of the required minimum size. At
+// that level the program has slowed down around 30x relative to the running
+// speed with unconstrained heap size.
+uword OldSpace::MinimumProgress() { return 256 + (used_ >> 8); }
+
+void OldSpace::EvaluatePointlessness() {
+  ASSERT(used_ >= used_after_last_gc_);
+  uword bytes_collected =
+      new_space_garbage_found_since_last_gc_ + used_ - used_after_last_gc_;
+  if (hard_limit_hit_ && bytes_collected < MinimumProgress()) {
+    successive_pointless_gcs_++;
+    if (successive_pointless_gcs_ > 3) {
+      FATAL("Out of memory");
+    }
+  } else {
+    successive_pointless_gcs_ = 0;
+  }
+  new_space_garbage_found_since_last_gc_ = 0;
+}
+
+void OldSpace::ReportNewSpaceProgress(uword bytes_collected) {
+  uword new_total = new_space_garbage_found_since_last_gc_ + bytes_collected;
+  // Guard against wraparound.
+  if (new_total > new_space_garbage_found_since_last_gc_) {
+    new_space_garbage_found_since_last_gc_ = new_total;
+  }
 }
 
 uword OldSpace::AllocateFromFreeList(uword size) {
@@ -163,7 +208,6 @@ uword OldSpace::Allocate(uword size) {
   // Can't use bump allocation. Allocate from free lists.
   uword result = AllocateFromFreeList(size);
   if (result == 0) result = AllocateInNewChunk(size);
-  if (result == 0) allocation_budget_ = 0;  // Trigger GC soon.
   return result;
 }
 
@@ -180,6 +224,27 @@ void OldSpace::EndTrackingAllocations() {
   ASSERT(tracking_allocations_);
   ASSERT(promoted_track_ == NULL);
   tracking_allocations_ = false;
+}
+
+void OldSpace::ComputeCompactionDestinations() {
+  if (is_empty()) return;
+  auto it = chunk_list_.Begin();
+  GCMetadata::Destination dest(it, it->start(), it->usable_end());
+  for (auto chunk : chunk_list_) {
+    dest = GCMetadata::CalculateObjectDestinations(chunk, dest);
+  }
+  dest.chunk()->set_compaction_top(dest.address);
+  while (dest.HasNextChunk()) {
+    dest = dest.NextChunk();
+    Chunk* unused = dest.chunk();
+    unused->set_compaction_top(unused->start());
+  }
+}
+
+void OldSpace::ZapObjectStarts() {
+  for (auto chunk : chunk_list_) {
+    GCMetadata::InitializeStartsForChunk(chunk);
+  }
 }
 
 void OldSpace::VisitRememberedSet(GenerationalScavengeVisitor* visitor) {
@@ -308,6 +373,114 @@ bool OldSpace::CompleteScavengeGenerational(
   return found_work;
 }
 
+void OldSpace::ClearFreeList() { free_list_->Clear(); }
+
+void OldSpace::MarkChunkEndsFree() {
+  for (auto chunk : chunk_list_) {
+    uword top = chunk->compaction_top();
+    uword end = chunk->usable_end();
+    if (top != end) free_list_->AddChunk(top, end - top);
+    top = Utils::RoundUp(top, GCMetadata::kCardSize);
+    GCMetadata::InitializeStartsForChunk(chunk, top);
+    GCMetadata::InitializeRememberedSetForChunk(chunk, top);
+  }
+}
+
+void FixPointersVisitor::VisitBlock(Object** start, Object** end) {
+  for (Object** current = start; current < end; current++) {
+    Object* object = *current;
+    if (GCMetadata::GetPageType(object) == kOldSpacePage) {
+      HeapObject* heap_object = HeapObject::cast(object);
+      uword destination = GCMetadata::GetDestination(heap_object);
+      *current = HeapObject::FromAddress(destination);
+      ASSERT(GCMetadata::GetPageType(*current) == kOldSpacePage);
+    }
+  }
+}
+
+// This is faster than the builtin memmove because we know the source and
+// destination are aligned and we know the size is at least 2 words.  Also
+// we know that any overlap is only in one direction.
+static void ALWAYS_INLINE ObjectMemMove(uword dest, uword source, uword size) {
+  ASSERT(source > dest);
+  ASSERT(size >= kWordSize * 2);
+  uword t0 = *reinterpret_cast<uword*>(source);
+  uword t1 = *reinterpret_cast<uword*>(source + kWordSize);
+  *reinterpret_cast<uword*>(dest) = t0;
+  *reinterpret_cast<uword*>(dest + kWordSize) = t1;
+  uword end = source + size;
+  source += kWordSize * 2;
+  dest += kWordSize * 2;
+  while (source != end) {
+    *reinterpret_cast<uword*>(dest) = *reinterpret_cast<uword*>(source);
+    source += kWordSize;
+    dest += kWordSize;
+  }
+}
+
+static int ALWAYS_INLINE FindFirstSet(uint32 x) {
+#ifdef _MSC_VER
+  unsigned long index;  // NOLINT
+  bool non_zero = _BitScanForward(&index, x);
+  return index + non_zero;
+#else
+  return __builtin_ffs(x);
+#endif
+}
+
+CompactingVisitor::CompactingVisitor(OldSpace* space,
+                                     FixPointersVisitor* fix_pointers_visitor)
+    : used_(0),
+      dest_(space->ChunkListBegin(), space->ChunkListEnd()),
+      fix_pointers_visitor_(fix_pointers_visitor) {}
+
+uword CompactingVisitor::Visit(HeapObject* object) {
+  uint32* bits_addr = GCMetadata::MarkBitsFor(object);
+  int pos = GCMetadata::WordIndexInLine(object);
+  uint32 bits = *bits_addr >> pos;
+  if ((bits & 1) == 0) {
+    // Object is unmarked.
+    if (bits != 0) return (FindFirstSet(bits) - 1) << GCMetadata::kWordShift;
+    // If all the bits in this mark word are zero, then let's see if we can
+    // skip a bit more.
+    uword next_live_object =
+        object->address() + ((32 - pos) << GCMetadata::kWordShift);
+    // This never runs over the end of the chunk because the last word in the
+    // chunk (the sentinel) is artificially marked live.
+    while (*++bits_addr == 0) next_live_object += GCMetadata::kCardSize;
+    next_live_object += (FindFirstSet(*bits_addr) - 1)
+                        << GCMetadata::kWordShift;
+    ASSERT(next_live_object - object->address() >= (uword)object->Size());
+    return next_live_object - object->address();
+  }
+
+  // Object is marked.
+  uword size = object->Size();
+  // Unless we have large objects and small chunks max one iteration of this
+  // loop is needed to move on to the next destination chunk.
+  while (dest_.address + size > dest_.limit) {
+    dest_ = dest_.NextSweepingChunk();
+  }
+  ASSERT(dest_.address == GCMetadata::GetDestination(object));
+  GCMetadata::RecordStart(dest_.address);
+  if (object->address() != dest_.address) {
+    ObjectMemMove(dest_.address, object->address(), size);
+
+    if (*GCMetadata::RememberedSetFor(object->address()) !=
+        GCMetadata::kNoNewSpacePointers) {
+      *GCMetadata::RememberedSetFor(dest_.address) =
+          GCMetadata::kNewSpacePointers;
+    }
+  }
+
+  fix_pointers_visitor_->set_source_address(object->address());
+  HeapObject::FromAddress(dest_.address)
+      ->IteratePointers(fix_pointers_visitor_);
+  used_ += size;
+  dest_.address += size;
+  return size;
+}
+
 SweepingVisitor::SweepingVisitor(OldSpace* space)
     : free_list_(space->free_list()), free_start_(0), used_(0) {
   // Clear the free list. It will be rebuilt during sweeping.
@@ -333,6 +506,12 @@ uword SweepingVisitor::Visit(HeapObject* object) {
   uword size = object->Size();
   if (free_start_ == 0) free_start_ = object->address();
   return size;
+}
+
+void FixPointersVisitor::AboutToVisitStack(Stack* stack) {
+  if (source_address_ != 0) {
+    stack->UpdateFramePointers(stack->address() - source_address_);
+  }
 }
 
 void OldSpace::ProcessWeakPointers() {

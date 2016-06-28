@@ -123,7 +123,7 @@ void DoubleToStringConverter::CreateDecimalRepresentation(
     StringBuilder* result_builder) const {
   // Create a representation that is padded with zeros if needed.
   if (decimal_point <= 0) {
-      // "0.00000decimal_rep".
+      // "0.00000decimal_rep" or "0.000decimal_rep00".
     result_builder->AddCharacter('0');
     if (digits_after_point > 0) {
       result_builder->AddCharacter('.');
@@ -134,7 +134,7 @@ void DoubleToStringConverter::CreateDecimalRepresentation(
       result_builder->AddPadding('0', remaining_digits);
     }
   } else if (decimal_point >= length) {
-    // "decimal_rep0000.00000" or "decimal_rep.0000"
+    // "decimal_rep0000.00000" or "decimal_rep.0000".
     result_builder->AddSubstring(decimal_digits, length);
     result_builder->AddPadding('0', decimal_point - length);
     if (digits_after_point > 0) {
@@ -142,7 +142,7 @@ void DoubleToStringConverter::CreateDecimalRepresentation(
       result_builder->AddPadding('0', digits_after_point);
     }
   } else {
-    // "decima.l_rep000"
+    // "decima.l_rep000".
     ASSERT(digits_after_point > 0);
     result_builder->AddSubstring(decimal_digits, decimal_point);
     result_builder->AddCharacter('.');

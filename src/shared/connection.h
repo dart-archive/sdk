@@ -51,6 +51,13 @@ class WriteBuffer : public Buffer {
 
 class Connection {
  public:
+  // Any change in [Opcode] must also be done in [VMCommandError] in
+  // pkg/dartino_compiler/lib/vm_commands.dart.
+  enum ErrorCode {
+    kInvalidInstanceAccess,
+    kSnapshotCreationError,
+  };
+
   // Any change in [Opcode] must also be done in [VMCommandCode] in
   // pkg/dartino_compiler/lib/vm_commands.dart.
   enum Opcode {
@@ -85,13 +92,14 @@ class Connection {
     kProcessBacktrace,
     kProcessUncaughtExceptionRequest,
     kProcessBreakpoint,
-    kProcessLocal,
-    kProcessLocalStructure,
+    kProcessInstance,
+    kProcessInstanceStructure,
     kProcessRestartFrame,
     kProcessTerminated,
     kProcessCompileTimeError,
     kProcessAddFibersToMap,
     kProcessNumberOfStacks,
+    kCommandError,
 
     kProcessGetProcessIds,
     kProcessGetProcessIdsResult,
@@ -149,7 +157,9 @@ class Connection {
     kString,
     kInstance,
     kClass,
-    kInstanceStructure
+    kArray,
+    kInstanceStructure,
+    kArrayStructure,
   };
 
   Connection();

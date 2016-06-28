@@ -165,8 +165,11 @@ class Assembler {
  public:
   INSTRUCTION_3(add, "add %r, %r, %r", Register, Register, Register);
   INSTRUCTION_3(add, "add %r, %r, %i", Register, Register, const Immediate&);
+  INSTRUCTION_4(add, "add%c %r, %r, %i", Condition, Register, Register,
+                const Immediate&);
   INSTRUCTION_3(add, "add %r, %r, %o", Register, Register, const Operand&);
   INSTRUCTION_3(adds, "adds %r, %r, %r", Register, Register, Register);
+  INSTRUCTION_3(adds, "adds %r, %r, %i", Register, Register, const Immediate&);
 
   INSTRUCTION_3(and_, "and %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(and_, "and %r, %r, %r", Register, Register, Register);
@@ -192,6 +195,8 @@ class Assembler {
   INSTRUCTION_2(cmp, "cmp %r, %o", Register, const Operand&);
 
   INSTRUCTION_3(eor, "eor %r, %r, %r", Register, Register, Register);
+
+  INSTRUCTION_1(it, "it %c", Condition);
 
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
   INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);

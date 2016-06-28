@@ -181,9 +181,9 @@
         'cflags': [
           '-O3',
           '-fomit-frame-pointer',
-            # Strict aliasing optimizations are not safe for the
-            # type of VM code that we write. We operate with
-            # raw memory aliased with a mixture of pointer types.
+          # Strict aliasing optimizations are not safe for the
+          # type of VM code that we write. We operate with
+          # raw memory aliased with a mixture of pointer types.
           '-fno-strict-aliasing',
         ],
       },
@@ -226,6 +226,8 @@
         'cflags': [
           '-g',
           '-O0',
+          # See comment on strict aliasing optimizations above.
+          '-fno-strict-aliasing',
         ],
       },
 
@@ -251,6 +253,100 @@
         'xcode_settings': { # And ninja.
           'ARCHS': [ 'i386' ],
         },
+      },
+
+      'dartino_mips': {
+        'abstract': 1,
+
+        'defines': [
+          'DARTINO32',
+          'DARTINO_TARGET_MIPS',
+        ],
+
+        'cflags_cc': [
+          '-Wno-unused-variable',
+          '-mips32r2',
+          '-EL',
+        ],
+
+        'cflags_c':[
+          '-Wno-unused-variable',
+          '-mips32r2',
+          '-EL',
+        ],
+
+        'ldflags': [
+          '-EL',
+        ],
+
+      },
+
+      'dartino_xmips': {
+        'abstract': 1,
+
+        'defines': [
+          'DARTINO32',
+          'DARTINO_TARGET_MIPS',
+        ],
+
+        'target_conditions': [
+          ['_toolset=="target"', {
+            'defines': [
+              # Fake define intercepted by cc_wrapper.py to change the
+              # compiler binary to a MIPS cross compiler. This is only
+              # needed on linux.
+              'DARTINO_MIPS',
+            ],
+
+            'cflags_cc': [
+              '-Wno-unused-variable',
+              '-mips32r2',
+              '-EL',
+            ],
+
+            'cflags_c':[
+              '-Wno-unused-variable',
+              '-mips32r2',
+              '-EL',
+            ],
+
+            'ldflags': [
+              # Fake define intercepted by cc_wrapper.py.
+              '-L/DARTINO_MIPS',
+              '-EL',
+            ],
+
+
+            'conditions': [
+              [ 'OS!="win"', {
+                'variables': {
+                  'ldso_path%': '<!(/bin/echo -n $LDSO_PATH)',
+                  'ld_r_path%': '<!(/bin/echo -n $LD_R_PATH)',
+                },
+                'conditions': [
+                  ['ldso_path!=""', {
+                    'ldflags': ['-Wl,--dynamic-linker=<(ldso_path)'],
+                  }],
+                  ['ld_r_path!=""', {
+                    'ldflags': ['-Wl,--rpath=<(ld_r_path)'],
+                  }],
+                ],
+              }],
+            ],
+          }],
+
+          ['_toolset=="host"', {
+            # Compile host targets as IA32, to get same word size.
+            'inherit_from': [ 'dartino_ia32' ],
+
+            # The 'dartino_ia32' target will define IA32 as the target. Since
+            # the host should still target MIPS, undefine it.
+            'defines!': [
+              'DARTINO_TARGET_IA32',
+            ],
+          }],
+        ],
+
       },
 
       'dartino_x64': {
@@ -469,6 +565,7 @@
           'DARTINO32',
           'DARTINO_TARGET_ARM',
           'DARTINO_THUMB_ONLY',
+          'DARTINO_SMALL',
         ],
 
         'target_conditions': [
@@ -479,6 +576,9 @@
                 '-Wall',
                 '-fmessage-length=0',
                 '-ffunction-sections',
+                # Use -Og here and remove -O0 below as the GCC ARM Embedded
+                # compiler cannot compile the cmpctmalloc implementation
+                # with -O0.
                 '-Og',
               ],
 
@@ -516,6 +616,7 @@
             'conditions': [
               ['OS=="linux"', {
                 'cflags!': [
+                  # See comment on -Og above.
                   '-O0',
                 ],
                 'cflags': [
@@ -533,6 +634,7 @@
               }],
               ['OS=="mac"', {
                 'xcode_settings': {
+                  # See comment on -Og above.
                   'GCC_OPTIMIZATION_LEVEL': 'g',
                   # This removes the option -fasm-blocks that GCC ARM Embedded
                   # does not support.

@@ -43,7 +43,10 @@ import 'package:compiler/src/diagnostics/spannable.dart' show
     Spannable;
 
 import 'debug_info.dart';
-import 'find_position_visitor.dart';
+
+import 'find_position_visitor.dart' show
+    findFunctionAtPosition;
+
 import 'dartino_context.dart';
 
 import 'dartino_enqueuer.dart' show
@@ -74,11 +77,20 @@ const EXTRA_DART2JS_OPTIONS = const <String>[
 ];
 
 const DARTINO_PATCHES = const <String, String>{
+  "core": "core/core_patch.dart",
   "_internal": "internal/internal_patch.dart",
   "collection": "collection/collection_patch.dart",
   "convert": "convert/convert_patch.dart",
   "math": "math/math_patch.dart",
   "async": "async/async_patch.dart",
+  "typed_data": "typed_data/typed_data_patch.dart",
+};
+
+const DARTINO_PATCHES_EMBEDDED = const <String, String>{
+  "core": "core/embedded_core_patch.dart",
+  "_internal": "internal/internal_patch.dart",
+  "collection": "collection/collection_patch.dart",
+  "math": "math/math_patch.dart",
   "typed_data": "typed_data/typed_data_patch.dart",
 };
 
@@ -93,6 +105,8 @@ class DartinoCompilerImplementation extends CompilerImpl {
 
   Map<Uri, CompilationUnitElementX> compilationUnits;
   DartinoContext internalContext;
+
+  DartinoBackend get backend => super.backend;
 
   /// A reference to [../compiler.dart:DartinoCompiler] used for testing.
   // TODO(ahe): Clean this up and remove this.
@@ -127,14 +141,10 @@ class DartinoCompilerImplementation extends CompilerImpl {
   }
 
   String dartinoPatchLibraryFor(String name) {
-    // TODO(sigurdm): Try to remove this special casing.
-    if (name == "core") {
-      Uri platformConfigUri = options.platformConfigUri;
-      return platformConfigUri.path.endsWith("dartino_embedded.platform")
-          ? "core/embedded_core_patch.dart"
-          : "core/core_patch.dart";
-    }
-    return DARTINO_PATCHES[name];
+    Uri platformConfigUri = options.platformConfigUri;
+    return platformConfigUri.path.endsWith("dartino_embedded.platform")
+      ? DARTINO_PATCHES_EMBEDDED[name]
+      : DARTINO_PATCHES[name];
   }
 
   @override
@@ -164,12 +174,11 @@ class DartinoCompilerImplementation extends CompilerImpl {
     Uri uri = Uri.base.resolveUri(file);
     CompilationUnitElementX unit = compilationUnitForUri(uri);
     if (unit == null) return null;
-    FindPositionVisitor visitor = new FindPositionVisitor(position, unit);
-    unit.accept(visitor, null);
-    DartinoFunction function = currentSystem.lookupFunctionByElement(
-        visitor.element);
-    if (function == null) return null;
-    return context.backend.createDebugInfo(function, currentSystem);
+    FunctionElement containingFunction = findFunctionAtPosition(unit, position);
+    DartinoFunction dartinoFunction = currentSystem.lookupFunctionByElement(
+        containingFunction);
+    if (dartinoFunction == null) return null;
+    return context.backend.createDebugInfo(dartinoFunction, currentSystem);
   }
 
   int positionInFileFromPattern(Uri file, int line, String pattern) {

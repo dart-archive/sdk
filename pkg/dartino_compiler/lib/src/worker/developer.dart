@@ -5,7 +5,8 @@
 library dartino_compiler.worker.developer;
 
 import 'dart:async' show
-    Future;
+    Future,
+    TimeoutException;
 
 import 'dart:convert' show
     JSON,
@@ -18,10 +19,14 @@ import 'dart:io' show
     File,
     FileSystemEntity,
     InternetAddress,
+    IOSink,
     Platform,
     Process,
     ProcessResult,
     SocketException;
+
+import 'dart:typed_data' show
+    Uint8List;
 
 import 'package:sdk_services/sdk_services.dart' show
     OutputService,
@@ -50,13 +55,15 @@ import 'package:path/path.dart' show
 
 import '../../vm_commands.dart' show
     ConnectionError,
+    CommandError,
+    ErrorCode,
     HandShakeResult,
     ProgramInfoCommand,
+    VmCommand,
     VmCommandCode;
 
 import '../../program_info.dart' show
     IdOffsetMapping,
-    NameOffsetMapping,
     ProgramInfoJson,
     buildIdOffsetMapping,
     getConfiguration;
@@ -71,7 +78,6 @@ import '../hub/client_commands.dart' show
 
 import '../verbs/infrastructure.dart' show
     ClientCommand,
-    ClientConnection,
     CommandSender,
     DiagnosticKind,
     DartinoCompiler,
@@ -79,10 +85,15 @@ import '../verbs/infrastructure.dart' show
     IncrementalCompiler,
     WorkerConnection,
     IsolatePool,
-    DartinoVmContext,
     SharedTask,
     StreamIterator,
     throwFatalError;
+
+import '../../cli_debugger.dart' show
+    exceptionToString;
+
+import '../../vm_context.dart' show
+    DartinoVmContext;
 
 import '../../incremental/dartino_compiler_incremental.dart' show
     IncrementalCompilationFailed;
@@ -123,11 +134,19 @@ import '../../debug_state.dart' as debug show
 
 import '../vm_connection.dart' show
     TcpConnection,
-    TtyConnection,
-    VmConnection;
+    VmConnection,
+    connectToTty;
 
 import '../dartino_compiler_options.dart' show
     DartinoCompilerOptions;
+
+import '../../vm_context.dart' show DebugListener;
+
+import '../hub/exit_codes.dart' show
+    INPUT_ERROR;
+
+import '../diagnostic.dart' show
+    InputError;
 
 typedef Future<Null> ClientEventHandler(DartinoVmContext vmContext);
 
@@ -226,6 +245,7 @@ Future<int> analyze(
   String analyzerPath = join(dartSdkDir.path, 'bin', 'dartanalyzer');
 
   List<String> arguments = <String>[];
+  arguments.add('--strong');
   arguments.add('--packages');
   arguments.add(new File.fromUri(state.settings.packages).path);
   arguments.add(new File.fromUri(fileUri).path);
@@ -240,9 +260,9 @@ Future<int> analyze(
 }
 
 Future<Null> attachToVmTty(String ttyDevice, SessionState state) async {
-  TtyConnection connection = await TtyConnection.connect(
+  VmConnection connection = await connectToTty(
       ttyDevice, "vmTty", state.log);
-  await attachToVm(connection, state);
+  await attachToVm(connection, state, maxTimeSpent: new Duration(seconds: 20));
 }
 
 Future<Null> attachToVmTcp(String host, int port, SessionState state) async {
@@ -251,22 +271,53 @@ Future<Null> attachToVmTcp(String host, int port, SessionState state) async {
   await attachToVm(connection, state);
 }
 
-Future<Null> attachToVm(VmConnection connection, SessionState state) async {
+class SinkDebugListener extends DebugListener {
+  final Sink stdoutSink;
+  final Sink stderrSink;
+  SinkDebugListener(this.stdoutSink, this.stderrSink);
+
+  // Notification of bytes written to stdout.
+  writeStdOut(int processId, Uint8List data) {
+    stdoutSink.add(data);
+  }
+
+  // Notification of bytes written stderr.
+  writeStdErr(int processId, Uint8List data) {
+    stderrSink.add(data);
+  }
+}
+
+Future<Null> attachToVm(
+    VmConnection connection,
+    SessionState state,
+    {Duration maxTimeSpent}) async {
   DartinoVmContext vmContext = new DartinoVmContext(
       connection,
       state.compiler,
-      state.stdoutSink,
-      state.stderrSink,
       null);
+
+  vmContext.listeners.add(
+      new SinkDebugListener(state.stdoutSink, state.stderrSink));
 
   // Perform handshake with VM which validates that VM and compiler
   // have the same versions.
-  HandShakeResult handShakeResult = await vmContext.handShake(dartinoVersion);
+  HandShakeResult handShakeResult;
+  try {
+    handShakeResult =
+        await vmContext.handShake(dartinoVersion, maxTimeSpent: maxTimeSpent);
+  } on TimeoutException {
+    await vmContext.shutdown(ignoreExtraCommands: true);
+    throwFatalError(
+        DiagnosticKind.handShakeTimeout,
+        address: connection.description);
+  }
   if (handShakeResult == null) {
+    await vmContext.shutdown(ignoreExtraCommands: true);
     throwFatalError(
         DiagnosticKind.handShakeFailed, address: connection.description);
   }
   if (!handShakeResult.success) {
+    await vmContext.shutdown(ignoreExtraCommands: true);
     throwFatalError(DiagnosticKind.versionMismatch,
                     address: connection.description,
                     userInput: dartinoVersion,
@@ -274,6 +325,7 @@ Future<Null> attachToVm(VmConnection connection, SessionState state) async {
   }
   vmContext.configuration = getConfiguration(handShakeResult.wordSize,
       handShakeResult.dartinoDoubleSize);
+  vmContext.vmState = handShakeResult.vmState;
 
   state.vmContext = vmContext;
 }
@@ -313,6 +365,10 @@ Future<int> compile(
   }
   Uri firstScript = state.script;
   List<DartinoDelta> previousResults = state.compilationResults;
+
+  if (!await new File.fromUri(script).exists()) {
+    throwFatalError(DiagnosticKind.scriptNotFound, uri: script);
+  }
 
   DartinoDelta newResult;
   try {
@@ -641,8 +697,6 @@ Future<int> run(
     await vmContext.applyDelta(delta);
   }
 
-  vmContext.silent = true;
-
   await vmContext.spawnProcess(arguments);
   var command = await vmContext.startRunning();
 
@@ -654,25 +708,28 @@ Future<int> run(
   }
 
   Future printException() async {
-    if (!vmContext.loaded) {
-      print('### process not loaded, cannot print uncaught exception');
+    if (!vmContext.isSpawned) {
+      print('### process not spawned, cannot print uncaught exception');
       return;
     }
     debug.RemoteObject exception = await vmContext.uncaughtException();
     if (exception != null) {
-      print(vmContext.exceptionToString(exception));
+      print(exceptionToString(exception, vmContext));
     }
   }
 
   Future printTrace() async {
-    if (!vmContext.loaded) {
-      print("### process not loaded, cannot print stacktrace and code");
+    if (!vmContext.isSpawned) {
+      print("### process not spawned, cannot print stacktrace and code");
       return;
     }
     debug.BackTrace stackTrace = await vmContext.backTrace();
     if (stackTrace != null) {
       print(stackTrace.format());
-      print(stackTrace.list(state));
+      String stackTraceListing = stackTrace.list(colorsDisabled: false);
+      if (stackTraceListing != null) {
+        print(stackTraceListing);
+      }
     }
   }
 
@@ -711,31 +768,13 @@ Future<int> run(
     } else {
       // If the vmContext terminated due to a ConnectionError or the program
       // finished don't reuse the state's vmContext.
-      if (vmContext.terminated) {
+      if (vmContext.isTerminated) {
         state.vmContext = null;
       }
-      vmContext.silent = false;
     }
   };
 
   return exitCode;
-}
-
-/// Returns the [NameOffsetMapping] stored in the '.info.json' adjacent to a
-/// snapshot location.
-Future<NameOffsetMapping> getInfoFromSnapshotLocation(Uri snapshot) async {
-  Uri info = snapshot.replace(path: "${snapshot.path}.info.json");
-  File infoFile = new File.fromUri(info);
-
-  if (!await infoFile.exists()) {
-    throwFatalError(DiagnosticKind.infoFileNotFound, uri: snapshot);
-  }
-
-  try {
-    return ProgramInfoJson.decode(await infoFile.readAsString());
-  } on FormatException {
-    throwFatalError(DiagnosticKind.malformedInfoFile, uri: snapshot);
-  }
 }
 
 Future<int> export(SessionState state, Uri snapshot) async {
@@ -748,7 +787,7 @@ Future<int> export(SessionState state, Uri snapshot) async {
     await vmContext.applyDelta(delta);
   }
 
-  var result = await vmContext.createSnapshot(
+  VmCommand result = await vmContext.createSnapshot(
       snapshotPath: snapshot.toFilePath());
   if (result is ProgramInfoCommand) {
     ProgramInfoCommand snapshotResult = result;
@@ -765,6 +804,9 @@ Future<int> export(SessionState state, Uri snapshot) async {
         ProgramInfoJson.encode(idOffsetMapping.nameOffsets));
 
     return 0;
+  } else if (result is CommandError) {
+    assert(result.errorCode == ErrorCode.kSnapshotCreationError);
+    return exit_codes.INPUT_ERROR;
   } else {
     assert(result is ConnectionError);
     print("There was a connection error while writing the snapshot.");
@@ -772,6 +814,10 @@ Future<int> export(SessionState state, Uri snapshot) async {
   }
 }
 
+// TODO(sigurdm): This function does too much.
+// Split all uses into explicit calls to compile and attach.
+// TODO(sigurdm): The functions in this file should throw exceptions instead of
+// returning error-codes. The caller should translate that into error-codes.
 Future<int> compileAndAttachToVmThen(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
@@ -794,24 +840,7 @@ Future<int> compileAndAttachToVmThen(
   }
 
   DartinoVmContext vmContext = state.vmContext;
-  if (vmContext != null && vmContext.loaded) {
-    // We cannot reuse a vmContext that has already been loaded. Loading
-    // currently implies that some of the code has been run.
-    if (state.explicitAttach) {
-      // If the user explicitly called 'dartino attach' we cannot
-      // create a new vmContext since we don't know if the vm is
-      // running locally or remotely and if running remotely there
-      // is no guarantee there is an agent to start a new vm.
-      //
-      // The UserSession is invalid in its current state as the
-      // vm context has already been loaded and run some code.
-      throwFatalError(DiagnosticKind.sessionInvalidState,
-          sessionName: state.name);
-    }
-    state.log('Cannot reuse existing VM session, creating new.');
-    await state.terminateSession();
-    vmContext = null;
-  }
+
   if (vmContext == null) {
     if (state.settings.deviceAddress != null) {
       await startAndAttachViaAgent(base, state);
@@ -836,6 +865,8 @@ Future<int> compileAndAttachToVmThen(
   int exitCode = exit_codes.COMPILER_EXITCODE_CRASH;
   try {
     exitCode = await action();
+  } on InputError {
+    rethrow;
   } catch (error, trace) {
     print(error);
     if (trace != null) {
@@ -1077,7 +1108,7 @@ Future<int> upgradeAgent(
 
   if (!await new File.fromUri(packageUri).exists()) {
     print('File not found: $packageUri');
-    return 1;
+    return INPUT_ERROR;
   }
 
   Version version = parseVersion(extractVersion(packageUri));
@@ -1153,12 +1184,12 @@ Future<int> upgradeAgent(
     print("Failed to upgrade: the device is still at the old version.");
     print("Try running x-upgrade again. "
         "If the upgrade fails again, try rebooting the device.");
-    return 1;
+    return INPUT_ERROR;
   } else if (newVersion == null) {
     print("Could not connect to Dartino agent after upgrade.");
     print("Try running 'dartino show devices' later to see if it has been"
         " restarted. If the device does not show up, try rebooting it.");
-    return 1;
+    return INPUT_ERROR;
   } else {
     print("Upgrade successful.");
   }
@@ -1198,9 +1229,8 @@ Future<int> downloadTools(
   const String gcsRoot = "https://storage.googleapis.com";
   String gcsBucket = "dartino-archive";
 
-  Future<int> downloadTool(String gcsPath, String zipFile,
-                           String toolName) async {
-    Uri url = Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$zipFile");
+  Future<int> downloadToolFromUri(Uri url, String zipFile,
+      String toolName) async {
     Directory tmpDir = Directory.systemTemp.createTempSync("dartino_download");
     File tmpZip = new File(join(tmpDir.path, zipFile));
 
@@ -1213,7 +1243,7 @@ Future<int> downloadTools(
       await service.downloadWithProgress(url, tmpZip);
     } on DownloadException catch (e) {
       print("Failed to download $url: $e");
-      return 1;
+      return INPUT_ERROR;
     }
     print(""); // service.downloadWithProgress does not write newline when done.
 
@@ -1226,6 +1256,12 @@ Future<int> downloadTools(
     state.log("Deleting temporary directory ${tmpDir.path}");
     await tmpDir.delete(recursive: true);
     return 0;
+  }
+
+  Future<int> downloadTool(String gcsPath, String zipFile,
+                           String toolName) async {
+    Uri url = Uri.parse("$gcsRoot/$gcsBucket/$gcsPath/$zipFile");
+    return await downloadToolFromUri(url, zipFile, toolName);
   }
 
   String gcsPath;
@@ -1257,10 +1293,24 @@ Future<int> downloadTools(
   var result =
       await downloadTool(gcsPath, gccArmEmbedded, "GCC ARM Embedded toolchain");
   if (result != 0) return result;
+
   String openocd = "openocd-${osName}.zip";
   result =
       await downloadTool(gcsPath, openocd, "Open On-Chip Debugger (OpenOCD)");
   if (result != 0) return result;
+
+  // TODO(karlklose): add MacOS version
+  if (Platform.isLinux) {
+    String emul8 = "emul8-${osName}.zip";
+    // TODO(karlklose): remove this and the helper when we have a dev version
+    // archived that we can point to.
+    Uri temporaryPath = Uri.parse(
+        "https://storage.googleapis.com/dartino-temporary/channels/be/raw/"
+        "0.4.0-edge.8fa0e09687e17b163825f757a9a7e89e6dd8e97d/sdk/"
+        "emul8-linux.zip");
+    result = await downloadToolFromUri(temporaryPath, emul8, "Emul8");
+    if (result != 0) return result;
+  }
 
   print("Third party tools downloaded");
 
@@ -1270,10 +1320,9 @@ Future<int> downloadTools(
 Future<Directory> locateBinDirectory() async {
   // In the SDK, the tools directory is at the same level as the
   // internal (and bin) directory.
-  String path = 'platforms/stm32f746g-discovery/bin';
+  String path = 'platforms/bin';
   Directory binDirectory =
-      new Directory.fromUri(executable.resolve(
-          '../$path'));
+      new Directory.fromUri(executable.resolve('../$path'));
   if ((await binDirectory.exists())) {
     // In the SDK, the tools directory is at the same level as the
     // internal (and bin) directory.
@@ -1308,8 +1357,14 @@ Future<Device> readDevice(String deviceId) async {
     deviceDirectoryUri = executable.resolve('../../$path/');
     deviceDirectory = new Directory.fromUri(deviceDirectoryUri);
     assert(await deviceDirectory.exists());
-    // In a Git checkout the libraries are is out/ReleaseSTM.
-    libraryDirectoryUri = executable.resolve('../ReleaseSTM/');
+    // In a Git checkout the libraries are in out/DebugSTM and out/ReleaseSTM,
+    // depending on the board.
+    if (deviceId.startsWith('stm32f7')) {
+      libraryDirectoryUri = executable.resolve('../DebugSTM/');
+    } else {
+      libraryDirectoryUri = executable.resolve('../DebugCM4/');
+    }
+    print('Using ${libraryDirectoryUri.path} to locate libraries');
   }
 
   Uri uri = deviceDirectoryUri.resolve('device.json');
@@ -1355,20 +1410,25 @@ const char *dartino_embedder_options[] = {$optionStrings
 """);
 }
 
+Future<Device> readDeviceFromSettings(SessionState state) async {
+  String deviceId = state.settings.device;
+  if (deviceId == null) deviceId = "stm32f746g-discovery";
+  return await readDevice(deviceId);
+}
+
 Future<int> buildImage(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri snapshot,
-    {bool debuggingMode: false}) async {
+    {bool debuggingMode: false,
+     noWait: false}) async {
   if (snapshot == null) {
     throwFatalError(DiagnosticKind.noFileTarget);
   }
   assert(snapshot.scheme == 'file');
 
-  String deviceId = state.settings.device;
-  if (deviceId == null) deviceId = "stm32f746g-discovery";
-  Device device = await readDevice(deviceId);
+  Device device = await readDeviceFromSettings(state);
   Directory binDirectory = await locateBinDirectory();
 
   // Collect additional libraries to link with from the 'ffi'
@@ -1397,27 +1457,34 @@ Future<int> buildImage(
 
     if (debuggingMode) {
       embedderOptions.removeWhere((String x) {
-        return x == "enable_debugger" || x == "uart_print_interceptor";
+        return ["enable_debugger",
+                "uart_print_interceptor",
+                "wait_for_connection"].contains(x);
       });
       embedderOptions.add("enable_debugger");
+      if (noWait) {
+        embedderOptions.add("wait_for_connection");
+      }
     }
 
     createEmbedderOptionsCFile(tmpDir, embedderOptions);
 
     ProcessResult result;
-    File linkScript = new File(join(binDirectory.path, 'link.sh'));
+    File linkShellScript = new File(join(binDirectory.path, 'link.sh'));
     if (Platform.isLinux || Platform.isMacOS) {
       state.log(
-          "Linking image: '${linkScript.path} ${baseName} for ${device.name}");
+          "Linking image: "
+          "'${linkShellScript.path} ${baseName} for ${device.name}");
       List libraries =
           new List<String>.from(device.libraries)..addAll(additionalLibraries);
+      List arguments = <String>[
+          '--cflags', device.cflags.join(' '),
+          '--library', libraries.join(' '),
+          '--linker_script', device.linkerScript,
+          '--floating_point_size', '${device.floatingPointSize}',
+          baseName, tmpDir.path];
       result = await Process.run(
-          linkScript.path,
-          ['-f', device.cflags.join(' '),
-           '-l', libraries.join(' '),
-           '-t', device.linker_script,
-           baseName, tmpDir.path],
-          workingDirectory: tmpDir.path);
+          linkShellScript.path, arguments, workingDirectory: tmpDir.path);
     } else {
       throwUnsupportedPlatform();
     }
@@ -1448,26 +1515,87 @@ Future<int> buildImage(
   return 0;
 }
 
-Future<int> flashImage(
+Future<int> emulateImage(
     CommandSender commandSender,
     StreamIterator<ClientCommand> commandIterator,
     SessionState state,
     Uri image) async {
   assert(image.scheme == 'file');
+
+  // TODO(karlklose): add a map from the board name in dartino.settings to the
+  // name of the emulator start script and the name of the board used in the
+  // emulator.
+
+  Device device = await readDeviceFromSettings(state);
+  String board = device.openOcdBoard;
+  if (board != 'stm32f7discovery') {
+    print("Unable to find emulator for board '$board'");
+    return 1;
+  }
+
+  String emulatorScriptName = 'emul8.sh';
+  String boardName = 'STM32F746';
+
+  // Create the emul8 script file.  TODO(karlklose): remove this when we know
+  // how to construct the command line call.
+  Directory tmp = Directory.systemTemp.createTempSync('dartino_emulate');
+  File startScript = new File.fromUri(tmp.uri.resolve('emul8.script'));
+  IOSink sink = startScript.openWrite();
+  sink.write('''
+createPlatform $boardName
+showAnalyzer sysbus.usart1
+plugins EnablePlugin "XwtProvider"
+showAnalyzer sysbus.LTDC
+sysbus LoadELF @${image.path}
+start
+''');
+  await sink.close();
+
   Directory binDirectory = await locateBinDirectory();
+
   ProcessResult result;
-  File flashScript = new File(join(binDirectory.path, 'flash.sh'));
-  if (Platform.isLinux || Platform.isMacOS) {
-    state.log("Flashing image: '${flashScript.path} ${image}'");
-    print("Flashing image: ${image}");
-    result = await Process.run(flashScript.path, [image.path]);
+  File emulateScript = new File(join(binDirectory.path, emulatorScriptName));
+  // TODO(karlklose): add MacOs support
+  if (Platform.isLinux) {
+    state.log("Starting emulator for image: '${emulateScript.path} ${boardName}"
+              " ${image}'");
+    print("Starting emulator for image: ${image.path}.");
+    print("Enter 'q' into the Emul8 console window to quit Emul8.");
+    result = await Process.run(emulateScript.path, [startScript.path]);
   } else {
     throwUnsupportedPlatform();
   }
   state.log("STDOUT:\n${result.stdout}");
   state.log("STDERR:\n${result.stderr}");
   if (result.exitCode != 0) {
-    print("Failed to flash the image: ${image}\n");
+    print("Failed to start the emulator for image: ${image.path}\n");
+    return INPUT_ERROR;
+  }
+  return 0;
+}
+
+Future<int> flashImage(
+    CommandSender commandSender,
+    StreamIterator<ClientCommand> commandIterator,
+    SessionState state,
+    Uri image) async {
+  assert(image.scheme == 'file');
+  Device device = await readDeviceFromSettings(state);
+  Directory binDirectory = await locateBinDirectory();
+  ProcessResult result;
+  File flashScript = new File(join(binDirectory.path, 'flash.sh'));
+  if (Platform.isLinux || Platform.isMacOS) {
+    state.log("Flashing image: '${flashScript.path} ${image}'");
+    print("Flashing image: ${image.path}");
+    result = await Process.run(
+        flashScript.path, ['-b', device.openOcdBoard, image.path]);
+  } else {
+    throwUnsupportedPlatform();
+  }
+  state.log("STDOUT:\n${result.stdout}");
+  state.log("STDERR:\n${result.stderr}");
+  if (result.exitCode != 0) {
+    print("Failed to flash the image: ${image.path}\n");
     print("Please check that the device is connected and ready. "
           "In some situations un-plugging and plugging the device, "
           "and then retrying will solve the problem.\n");
@@ -1489,7 +1617,7 @@ Future<int> flashImage(
       print("STDOUT:\n${result.stdout}");
       print("STDERR:\n${result.stderr}");
     }
-    return 1;
+    return INPUT_ERROR;
   }
   print("Done flashing image: ${image.path}");
 
@@ -1957,8 +2085,8 @@ Device parseDevice(
   try {
     deviceData = JSON.decode(json);
   } on FormatException catch (e) {
-    throwFatalError(
-        DiagnosticKind.settingsNotJson, uri: deviceUri, message: e.message);
+    throwFatalError(DiagnosticKind.deviceConfigurationNotJson,
+                    uri: deviceUri, message: e.message);
   }
   if (deviceData is! Map) {
     throwFatalError(DiagnosticKind.settingsNotAMap, uri: deviceUri);
@@ -1966,23 +2094,25 @@ Device parseDevice(
 
   String id;
   String name;
+  int floatingPointSize;
   List<String> cflags;
   List<String> libraries;
-  String linker_script;
+  String linkerScript;
+  String openOcdBoard;
 
   List<String> listOfStrings(value, String key) {
     List<String> result = new List<String>();
     if (value != null) {
       if (value is! List) {
         throwFatalError(
-            DiagnosticKind.settingsOptionsNotAList, uri: deviceUri,
+            DiagnosticKind.deviceConfigurationValueNotAList, uri: deviceUri,
             userInput: "$value",
             additionalUserInput: key);
       }
       for (var option in value) {
         if (option is! String) {
           throwFatalError(
-              DiagnosticKind.settingsOptionNotAString, uri: deviceUri,
+              DiagnosticKind.deviceConfigurationValueNotAString, uri: deviceUri,
               userInput: '$option',
               additionalUserInput: key);
         }
@@ -1992,28 +2122,40 @@ Device parseDevice(
     return result;
   }
 
+  String stringValue(value, String key) {
+    if (value != null) {
+      if (value is! String) {
+        throwFatalError(
+            DiagnosticKind.deviceConfigurationValueNotAString,
+            uri: deviceUri, userInput: '$value', additionalUserInput: key);
+      }
+    }
+    return value;
+  }
+
+  int intValue(value, String key) {
+    if (value != null) {
+      if (value is! int) {
+        throwFatalError(
+            DiagnosticKind.deviceConfigurationValueNotAString,
+            uri: deviceUri, userInput: '$value', additionalUserInput: key);
+      }
+    }
+    return value;
+  }
+
   deviceData.forEach((String key, value) {
     switch (key) {
       case "id":
-        if (value != null) {
-          if (value is! String) {
-            throwFatalError(
-                DiagnosticKind.settingsPackagesNotAString, uri: deviceUri,
-                userInput: '$value');
-          }
-          id = value;
-        }
+        id = stringValue(value, key);
         break;
 
       case "name":
-        if (value != null) {
-          if (value is! String) {
-            throwFatalError(
-                DiagnosticKind.settingsDeviceAddressNotAString,
-                uri: deviceUri, userInput: '$value');
-          }
-          name = value;
-        }
+        name = stringValue(value, key);
+        break;
+
+      case "dartino_floating_point_size":
+        floatingPointSize = intValue(value, key);
         break;
 
       case "cflags":
@@ -2027,67 +2169,82 @@ Device parseDevice(
         break;
 
       case "linker_script":
+        id = stringValue(value, key);
         if (value != null) {
           if (value is! String) {
             throwFatalError(
-                DiagnosticKind.settingsDeviceAddressNotAString,
-                uri: deviceUri, userInput: '$value');
+                DiagnosticKind.deviceConfigurationValueNotAString,
+                uri: deviceUri, userInput: '$value',
+                additionalUserInput: 'linkerScript');
           }
-          linker_script = deviceUri.resolve(value).toFilePath();
+          linkerScript = deviceUri.resolve(value).toFilePath();
         }
+        break;
+
+      case "open_ocd_board":
+        openOcdBoard = stringValue(value, key);
         break;
 
       default:
         throwFatalError(
-            DiagnosticKind.settingsUnrecognizedKey, uri: deviceUri,
+            DiagnosticKind.deviceConfigurationUnrecognizedKey, uri: deviceUri,
             userInput: key);
         break;
     }
   });
+
+  // The default floating point size is 64 bits.
+  if (floatingPointSize == null) floatingPointSize = 64;
+
   return new Device.fromSource(
       deviceUri,
       id,
       name,
+      floatingPointSize,
       cflags,
       libraries,
-      linker_script);
+      linkerScript,
+      openOcdBoard);
 }
 
 class Device {
   final Uri source;
-
   final String id;
-
   final String name;
-
+  final int floatingPointSize;
   final List<String> cflags;
-
   final List<String> libraries;
-
-  final String linker_script;
+  final String linkerScript;
+  final String openOcdBoard;
 
   const Device(
       this.id,
       this.name,
+      this.floatingPointSize,
       this.cflags,
       this.libraries,
-      this.linker_script) : source = null;
+      this.linkerScript,
+      this.openOcdBoard) : source = null;
 
   const Device.fromSource(
       this.source,
       this.id,
       this.name,
+      this.floatingPointSize,
       this.cflags,
       this.libraries,
-      this.linker_script);
+      this.linkerScript,
+      this.openOcdBoard);
 
   String toString() {
     return "Device("
         "id: $id, "
         "name: $name, "
         "cflags: $cflags, "
+        "dartino_floating_point_size: $floatingPointSize, "
         "libraries: $libraries, "
-	"linker_script: $linker_script)";
+        "linker_script: $linkerScript, "
+        "open_ocd_board: $openOcdBoard)";
   }
 
   Map<String, dynamic> toJson() {
@@ -2101,9 +2258,11 @@ class Device {
 
     addIfNotNull("id", id);
     addIfNotNull("name", name);
+    addIfNotNull("dartino_floating_point_size", floatingPointSize);
     addIfNotNull("cflags", cflags);
     addIfNotNull("libraries", libraries);
-    addIfNotNull("linker_script", linker_script);
+    addIfNotNull("linker_script", linkerScript);
+    addIfNotNull("open_ocd_board", openOcdBoard);
     return result;
   }
 }

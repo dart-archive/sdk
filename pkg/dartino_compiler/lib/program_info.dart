@@ -52,14 +52,19 @@ class IdOffsetMapping {
     : symbolicNames = symbolicNames,
       symbolicNamesReverseMapping = invertedMapIdMap(symbolicNames);
 
-  int functionIdFromOffset(Configuration conf, int offset) {
+  int functionIdFromOffset(Configuration configuration, int offset) {
     return symbolicNamesReverseMapping[MapId.methods]
-        [nameOffsets.functionName(conf, offset)];
+        [nameOffsets.functionName(configuration, offset)];
   }
 
   int offsetFromFunctionId(Configuration conf, int functionId) {
     return nameOffsets.functionOffset(
         conf, symbolicNames[MapId.methods][functionId]);
+  }
+
+  int classIdFromOffset(Configuration configuration, int offset) {
+    return symbolicNamesReverseMapping[MapId.classes]
+        [nameOffsets.className(configuration, offset)];
   }
 }
 
@@ -325,8 +330,11 @@ Stream<String> decodeStackFrames(Configuration conf,
       int functionOffset = int.parse(frameMatch.group(2));
 
       String functionName = info.functionName(conf, functionOffset);
-
-      yield '   $frameNr: ${shortName(functionName)}\n';
+      if (functionName == null) {
+        yield '   $frameNr: <unknown function (offset $functionOffset)>\n';
+      } else {
+        yield '   $frameNr: ${shortName(functionName)}\n';
+      }
     } else if (nsmMatch != null) {
       int classOffset = int.parse(nsmMatch.group(1));
       DartinoSelector selector =

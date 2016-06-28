@@ -14,7 +14,7 @@ main() {
   var touchScreen = disco.touchScreen;
 
   frameBuffer.backgroundColor = Color.white;
-  frameBuffer.clear(Color.white);
+  frameBuffer.clear();
   int x = 25;
   int y = 25;
   frameBuffer.drawLine(x, y - 5, x, y + 5, Color.blue);

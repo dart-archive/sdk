@@ -1,0 +1,78 @@
+Starting session. Type 'help' for a list of commands.
+
+> b main
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
+> fibers
+### process not running, cannot show fibers
+> bt
+### process not scheduled, cannot print backtrace
+> f 1
+### process not scheduled, cannot select frame
+> list
+### process not scheduled, nothing to list
+> disasm
+### process not scheduled, cannot show bytecodes
+> c
+### process not paused, cannot continue
+> lp
+### process not running, cannot list processes
+> restart
+### process not scheduled, cannot restart
+> print
+### process not scheduled, nothing to print
+> n
+### process not paused, cannot go to next expression
+> sb
+### process not paused, cannot step bytecode
+> nb
+### process not paused, cannot step over bytecode
+> r
+tests/debugger/checks_test.dart:8:9
+8      throw "uncaught";
+> r
+### process already scheduled, use 'restart' to run again
+> c
+Uncaught exception: 'uncaught'
+* 0: main        @throw "uncaught"
+> fibers
+### process not running, cannot show fibers
+> bt
+* 0: main        @throw "uncaught"
+> f 1
+### invalid frame number: 1
+> list
+tests/debugger/checks_test.dart:8:3
+3    // BSD-style license that can be found in the LICENSE.md file.
+4    
+5    // DartinoDebuggerCommands=b main,fibers,bt,f 1,list,disasm,c,lp,restart,print,n,sb,nb,r,r,c,fibers,bt,f 1,list,disasm,c,lp,restart,c,print,r,n,sb,nb
+6    
+7    main() {
+8      throw "uncaught";
+
+> disasm
+  0: load const @0              // "uncaught"
+* 5: throw                      // throw "uncaught"
+  6: pop                        // throw "uncaught"
+  7: return null                // throw "uncaught"
+  8: method end 16              // throw "uncaught"
+> c
+### process not paused, cannot continue
+> lp
+### process not running, cannot list processes
+> restart
+tests/debugger/checks_test.dart:8:9
+8      throw "uncaught";
+> c
+Uncaught exception: 'uncaught'
+* 0: main        @throw "uncaught"
+> print
+### No variables in scope
+> r
+### process already scheduled, use 'restart' to run again
+> n
+### process not paused, cannot go to next expression
+> sb
+### process not paused, cannot step bytecode
+> nb
+### process not paused, cannot step over bytecode
+> Non-zero exit code from 'dartino-vm' (255).

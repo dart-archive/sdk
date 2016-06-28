@@ -16,7 +16,7 @@ namespace dartino {
   N(Int, "int")                                         \
   N(Smi, "_Smi")                                        \
   N(Mint, "_Mint")                                      \
-  N(ConstantList, "_ConstantList")                      \
+  N(ConstantList, "ConstantList")                       \
   N(ConstantByteList, "_ConstantByteList")              \
   N(ConstantMap, "_ConstantMap")                        \
   N(Num, "num")                                         \

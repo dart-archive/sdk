@@ -47,8 +47,6 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/event_handler_windows.cc \
 	$(DARTINO_SRC_VM)/gc_metadata.cc \
 	$(DARTINO_SRC_VM)/gc_metadata.h \
-	$(DARTINO_SRC_VM)/gc_thread.cc \
-	$(DARTINO_SRC_VM)/gc_thread.h \
 	$(DARTINO_SRC_VM)/hash_map.h \
 	$(DARTINO_SRC_VM)/hash_set.h \
 	$(DARTINO_SRC_VM)/hash_table.h \
@@ -139,6 +137,12 @@ DARTINO_SRC_VM_SRCS_RUNTIME := \
 	$(DARTINO_SRC_VM)/weak_pointer.cc \
 	$(DARTINO_SRC_VM)/weak_pointer.h
 
+ifeq ($(DARTINO_ENABLE_SOCKETS),1)
+DARTINO_SRC_VM_SRCS_RUNTIME += \
+	$(DARTINO_SRC_VM)/socket_connection_api_impl.cc \
+	$(DARTINO_SRC_VM)/socket_connection_api_impl.h
+endif
+
 DARTINO_SRC_VM_SRCS_INTERPRETER := \
 	$(DARTINO_SRC_VM)/ffi.cc \
 	$(DARTINO_SRC_VM)/ffi.h \
@@ -201,6 +205,19 @@ DARTINO_SRC_SHARED_SRCS := \
 	$(DARTINO_SRC_SHARED)/utils.cc \
 	$(DARTINO_SRC_SHARED)/utils.h \
 	$(DARTINO_SRC_SHARED)/version.h
+
+ifeq ($(DARTINO_ENABLE_SOCKETS),1)
+DARTINO_SRC_SHARED_SRCS += \
+	$(DARTINO_SRC_SHARED)/native_socket.h \
+	$(DARTINO_SRC_SHARED)/native_socket_linux.cc \
+	$(DARTINO_SRC_SHARED)/native_socket_lk.cc \
+	$(DARTINO_SRC_SHARED)/native_socket_macos.cc \
+	$(DARTINO_SRC_SHARED)/native_socket_posix.cc \
+	$(DARTINO_SRC_SHARED)/native_socket_windows.cc \
+	$(DARTINO_SRC_SHARED)/natives.h \
+	$(DARTINO_SRC_SHARED)/socket_connection.cc \
+	$(DARTINO_SRC_SHARED)/socket_connection.h
+endif
 
 DARTINO_SRC_DOUBLE_CONVERSION_SRCS := \
 	$(DARTINO_SRC_DOUBLE_CONVERSION)/bignum-dtoa.cc \
@@ -276,6 +293,9 @@ LIBRARY_GENERATOR_SRCS := \
 	$(DARTINO_SRC_VM)/assembler_arm_thumb_macos.cc \
 	$(DARTINO_SRC_VM)/assembler_arm_macos.cc \
 	$(DARTINO_SRC_VM)/assembler.h \
+	$(DARTINO_SRC_VM)/assembler_mips.cc \
+	$(DARTINO_SRC_VM)/assembler_mips.h \
+	$(DARTINO_SRC_VM)/assembler_mips_linux.cc \
 	$(DARTINO_SRC_VM)/assembler_x64.cc \
 	$(DARTINO_SRC_VM)/assembler_x64.h \
 	$(DARTINO_SRC_VM)/assembler_x64_linux.cc \
@@ -288,6 +308,7 @@ LIBRARY_GENERATOR_SRCS := \
 	$(DARTINO_SRC_VM)/generator.h \
 	$(DARTINO_SRC_VM)/generator.cc \
 	$(DARTINO_SRC_VM)/interpreter_arm.cc \
+	$(DARTINO_SRC_VM)/interpreter_mips.cc \
 	$(DARTINO_SRC_VM)/interpreter_x86.cc \
 	$(DARTINO_SRC_VM)/interpreter_x64.cc
 

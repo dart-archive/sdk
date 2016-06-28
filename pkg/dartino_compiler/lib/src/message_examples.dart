@@ -18,6 +18,8 @@ const String exampleAddress = 'example.com:54321';
 
 const List<Example> untestable = const <Example>[const Untestable()];
 
+const String nonExistingFile = 'path/to/nowhere.dart';
+
 List<Example> getExamples(DiagnosticKind kind) {
   switch (kind) {
     case DiagnosticKind.internalError:
@@ -403,6 +405,38 @@ List<Example> getExamples(DiagnosticKind kind) {
       // TODO(sigurdm): Need to mock up a VM socket to test this.
       return untestable;
 
+    case DiagnosticKind.scriptNotFound:
+      var examples = <Example>[
+        new CommandLineExample(<String>["run", nonExistingFile]),
+        new CommandLineExample(<String>["compile", nonExistingFile]),
+        new CommandLineExample(<String>["export", nonExistingFile]),
+        new CommandLineExample(<String>["build", nonExistingFile]),
+        new CommandLineExample(<String>["flash", nonExistingFile])
+      ];
+      // TODO(sigurdm): This is only sent from the worker.
+      return untestable;
+
+    case DiagnosticKind.deviceConfigurationNotJson:
+      return <Example>[
+          new DeviceExample(''),
+          new DeviceExample('{1:null}'),
+          new DeviceExample('...')];
+
+    case DiagnosticKind.deviceConfigurationUnrecognizedKey:
+      return <Example>[new DeviceExample('{"fisk":null}')];
+
+    case DiagnosticKind.deviceConfigurationValueNotAString:
+      return <Example>[
+          new DeviceExample('{"id":42}'),
+          new DeviceExample('{"name":42}'),
+          new DeviceExample('{"linker_script":42}'),
+          new DeviceExample('{"open_ocd_board":42}')];
+
+    case DiagnosticKind.deviceConfigurationValueNotAList:
+      return <Example>[
+          new DeviceExample('{"cflags":"fugl"}'),
+          new DeviceExample('{"libraries":"fugl"}')];
+
     case DiagnosticKind.malformedInfoFile:
       // TODO(sigurdm): Need to mock up a VM socket to test this.
       return untestable;
@@ -418,6 +452,9 @@ List<Example> getExamples(DiagnosticKind kind) {
 
     case DiagnosticKind.handShakeFailed:
       // TODO(ager): We could probably test this with a mock VM.
+      return untestable;
+
+    case DiagnosticKind.handShakeTimeout:
       return untestable;
 
     case DiagnosticKind.versionMismatch:
@@ -461,6 +498,12 @@ class SettingsExample extends Example {
   final String data;
 
   const SettingsExample(this.data);
+}
+
+class DeviceExample extends Example {
+  final String data;
+
+  const DeviceExample(this.data);
 }
 
 class Untestable extends Example {

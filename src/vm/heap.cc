@@ -27,16 +27,29 @@ TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
       old_space_(new OldSpace(this)),
       unused_semispace_(new SemiSpace(Space::kCannotResize, kNewSpacePage, 0)) {
   space_ = new SemiSpace(Space::kCannotResize, kNewSpacePage, 0);
-  Chunk* chunk = ObjectMemory::AllocateChunk(space_, kFixedSemiSpaceSize);
+  uword size = Utils::RoundUp(Flags::semispace_size << 10, Platform::kPageSize);
+  size = Utils::Minimum(1ul << 24,
+                        Utils::Maximum(size, 0ul + Platform::kPageSize));
+  semispace_size_ = size;
+  Chunk* chunk = ObjectMemory::AllocateChunk(space_, size);
   ASSERT(chunk != NULL);  // TODO(erikcorry): Cope with out-of-memory.
   space_->Append(chunk);
   space_->UpdateBaseAndLimit(chunk, chunk->start());
-  Chunk* unused_chunk =
-      ObjectMemory::AllocateChunk(unused_semispace_, kFixedSemiSpaceSize);
+  Chunk* unused_chunk = ObjectMemory::AllocateChunk(unused_semispace_, size);
   unused_semispace_->Append(unused_chunk);
   AdjustAllocationBudget();
   AdjustOldAllocationBudget();
   water_mark_ = chunk->start();
+  max_size_ = Utils::RoundUp(Flags::max_heap_size * 1024, Platform::kPageSize);
+}
+
+uword TwoSpaceHeap::MaxExpansion() {
+  if (max_size_ == 0) return kUnlimitedExpansion;
+  if (semispace_size_ * 2 > max_size_) return 0;
+  uword max = max_size_ - 2 * semispace_size_;
+  uword old_space_size = old_space_->Size();
+  if (max < old_space_size) return 0;
+  return max - old_space_size;
 }
 
 Heap::~Heap() {
@@ -60,6 +73,17 @@ Object* Heap::Allocate(uword size) {
     return HandleAllocationFailure(size);
   }
   return HeapObject::FromAddress(result);
+}
+
+Object* Heap::CreateBooleanObject(uword position, Class* the_class,
+                                  Object* init_value) {
+  HeapObject* raw_result = HeapObject::FromAddress(position);
+  Instance* result = reinterpret_cast<Instance*>(raw_result);
+  result->set_class(the_class);
+  result->set_immutable(true);
+  result->InitializeIdentityHashCode(random());
+  result->Initialize(the_class->instance_format().fixed_size(), init_value);
+  return result;
 }
 
 Object* Heap::CreateInstance(Class* the_class, Object* init_value,

@@ -12,11 +12,10 @@ import 'src/debug_info.dart';
 import 'src/class_debug_info.dart';
 
 import 'vm_commands.dart' show
+    Array,
+    ArrayStructure,
     DartValue,
     InstanceStructure;
-
-import 'src/hub/session_manager.dart' show
-    SessionState;
 
 import 'dartino_class.dart' show
     DartinoClass;
@@ -39,12 +38,31 @@ class RemoteInstance extends RemoteObject {
   RemoteInstance(this.instance, this.fields, {String name}) : super(name);
 }
 
+/// A representation of a remote instance.
+class RemoteArray extends RemoteObject {
+  /// An [Array] describing the remote instance.
+  final ArrayStructure array;
+
+  /// The values of the array as [DartValue]s of the remote instance.
+  final List<DartValue> values;
+
+  RemoteArray(this.array, this.values, {String name}) : super(name);
+}
+
 /// A representation of a remote primitive value (i.e. used for non-instances).
 class RemoteValue extends RemoteObject {
   /// A [DartValue] describing the remote object.
   final DartValue value;
 
   RemoteValue(this.value, {String name}) : super(name);
+  bool get isError => false;
+}
+
+/// A representation of a failure to retrieve a remote object.
+class RemoteErrorObject extends RemoteObject {
+  String message;
+  RemoteErrorObject(this.message, {String name}) : super(name);
+
 }
 
 class Breakpoint {
@@ -55,8 +73,12 @@ class Breakpoint {
 
   Breakpoint(this.function, this.bytecodeIndex, this.id);
 
-  String location(DebugState state) {
+  String locationString(DebugState state) {
     return state.getDebugInfo(function).fileAndLineStringFor(bytecodeIndex);
+  }
+
+  SourceLocation location(DebugState state) {
+    return state.getDebugInfo(function).locationFor(bytecodeIndex);
   }
 
   String toString() => "id: '$id' method: '$methodName' "
@@ -89,9 +111,11 @@ class BackTraceFrame {
 
   DebugInfo get debugInfo => debugState.getDebugInfo(function);
 
-  String list(SessionState state, {int contextLines: 5}) {
+  String list({bool colorsDisabled, int contextLines: 5}) {
     return debugInfo.sourceListStringFor(
-        bytecodePointer - 1, state, contextLines: contextLines);
+        bytecodePointer - 1,
+        contextLines: contextLines,
+        colorsDisabled: colorsDisabled);
   }
 
   String disasm() {
@@ -240,11 +264,11 @@ class BackTrace {
     visibleFrameMapping = null;
   }
 
-  String list(SessionState state, [int frame]) {
+  String list({int frame, bool colorsDisabled}) {
     if (frame == null) frame = debugState.currentFrame;
     BackTraceFrame visibleStackFrame = visibleFrame(frame);
     if (visibleStackFrame == null) return null;
-    return visibleStackFrame.list(state);
+    return visibleStackFrame.list(colorsDisabled: colorsDisabled);
   }
 
   String disasm([int frame]) {
@@ -281,7 +305,6 @@ class DebugState {
       <DartinoClass, ClassDebugInfo>{};
 
   bool showInternalFrames = false;
-  bool verbose = true;
   int currentProcess = -1;
   BackTraceFrame _topFrame;
   RemoteObject currentUncaughtException;

@@ -25,8 +25,6 @@ import 'package:compiler/src/source_file_provider.dart' show
 
 import 'codegen_visitor.dart';
 import '../dartino_system.dart';
-import 'hub/session_manager.dart' show
-    SessionState;
 
 import 'dartino_compiler_implementation.dart' show
     DartinoCompilerImplementation;
@@ -79,6 +77,11 @@ class SourceLocation {
     if (file != other.file) return false;
     if (span == null || other.span == null) return span == other.span;
     return span.begin == other.span.begin && span.end == other.span.end;
+  }
+
+  String toString() {
+    return "SourceLocation(${file.filename} "
+        "bytecodeIndex: $bytecodeIndex ${span.begin}-${span.end})";
   }
 }
 
@@ -182,8 +185,8 @@ class DebugInfo {
   // TODO(ager): Should something like this be upstreamed to dart2js?
   String sourceListStringFor(
       int bytecodeIndex,
-      SessionState state,
-      {int contextLines: 5}) {
+      {int contextLines: 5,
+       bool colorsDisabled}) {
     SourceLocation location = locationFor(bytecodeIndex);
     if (location == null) return '';
     SourceSpan span = location.span;
@@ -212,7 +215,8 @@ class DebugInfo {
         min(file.lineStarts[currentLine + 1], file.length));
     var toColumn = min(column + (span.end - span.begin), l.length);
     var prefix = l.substring(0, column);
-    var focus = highlight(l.substring(column, toColumn), colors.red, state);
+    var focus = highlight(l.substring(column, toColumn), colors.red,
+        colorsDisabled: colorsDisabled);
     var postfix = l.substring(toColumn);
     buffer.write('${currentLine + 1}'.padRight(5) + prefix);
     buffer.write(focus);
@@ -234,8 +238,11 @@ class DebugInfo {
     return buffer.toString();
   }
 
-  String highlight(String message, Function color, SessionState state) {
-    return state.colorsDisabled ? message : color(message);
+  String highlight(
+      String message,
+      Function color,
+      {bool colorsDisabled}) {
+    return colorsDisabled ? message : color(message);
   }
 
   SourceLocation sourceLocationFor(int bytecodeIndex) {

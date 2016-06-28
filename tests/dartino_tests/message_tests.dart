@@ -49,7 +49,11 @@ import 'package:dartino_compiler/src/verbs/infrastructure.dart' show
     analyzeSentence;
 
 import 'package:dartino_compiler/src/worker/developer.dart' show
-    parseSettings;
+    parseSettings,
+    parseDevice;
+
+import 'package:dartino_compiler/src/guess_configuration.dart' show
+    dartinoVersion;
 
 import 'package:dartino_compiler/src/hub/analytics.dart';
 
@@ -79,6 +83,8 @@ Future<Null> checkExample(DiagnosticKind kind, Example example) async {
     await checkCommandLineExample(kind, example);
   } else if (example is SettingsExample) {
     checkSettingsExample(kind, example);
+  } else if (example is DeviceExample) {
+    checkDeviceConfigurationExample(kind, example);
   } else if (example is Untestable) {
     // Ignored.
   } else {
@@ -91,6 +97,23 @@ void checkSettingsExample(DiagnosticKind kind, SettingsExample example) {
   try {
     parseSettings(example.data, mockUri);
     throw "Settings example: '${example.data}' "
+        "didn't produce the expected '$kind' error";
+  } on InputError catch (e) {
+    Expect.isNotNull(e);
+    Expect.equals(kind, e.kind, '$e');
+    // Ensure that the diagnostic can be turned into a formatted error message.
+    String message = e.asDiagnostic().formatMessage();
+    Expect.isNotNull(message);
+  }
+}
+
+void checkDeviceConfigurationExample(
+    DiagnosticKind kind, DeviceExample example) {
+  Uri mockUri = new Uri(scheme: "org.dartlang.tests.mock");
+  Uri mockUri2 = new Uri(scheme: "org.dartlang.tests.mock2");
+  try {
+    parseDevice(example.data, mockUri, mockUri2);
+    throw "Device configuration example: '${example.data}' "
         "didn't produce the expected '$kind' error";
   } on InputError catch (e) {
     Expect.isNotNull(e);
@@ -152,7 +175,9 @@ Future<Null> checkCommandLineExample(
 Future<MockClientConnection> mockCommandLine(List<String> arguments) async {
   print("Command line: ${arguments.join(' ')}");
   MockClientConnection client = new MockClientConnection();
-  await handleVerb(arguments, client, null, pool);
+  List<String> mainArgs = [dartinoVersion, '/current/dir', 'detached', null]
+      ..addAll(arguments);
+  await handleVerb(mainArgs, client, null, pool);
   return client;
 }
 
@@ -165,6 +190,8 @@ class MockClientConnection implements ClientConnection {
 
   final Completer mockCompleter = new Completer();
 
+  final bool debug;
+
   final List<String> stderrMessages = <String>[];
 
   List<String> stdoutMessages;
@@ -172,13 +199,15 @@ class MockClientConnection implements ClientConnection {
   final StreamController<ClientCommand> controller =
       new StreamController<ClientCommand>();
 
-  final Analytics analytics = new MockAnalytics();
+  final Analytics analytics;
 
   ClientCommandSender commandSender;
 
   AnalyzedSentence sentence;
 
-  MockClientConnection() {
+  MockClientConnection({bool shouldPromptForOptIn: false, this.debug: false})
+      : analytics = new MockAnalytics(
+          shouldPromptForOptInValue: shouldPromptForOptIn) {
     commandSender = new MockClientCommandSender(this);
   }
 
@@ -224,6 +253,7 @@ class MockClientConnection implements ClientConnection {
   }
 
   mockPrintLine(String line) {
+    if (!debug) return;
     Zone zone = Zone.current.parent;
     if (zone == null) {
       zone = Zone.current;
@@ -254,9 +284,13 @@ class MockClientConnection implements ClientConnection {
     return 1;
   }
 
-  AnalyzedSentence parseArguments(List<String> arguments) {
+  AnalyzedSentence parseArguments(String version, String currentDirectory,
+      bool interactive, List<String> arguments) {
     Options options = Options.parse(arguments);
-    Sentence sentence = parseSentence(options.nonOptionArguments);
+    Sentence sentence = parseSentence(options.nonOptionArguments,
+        version: version,
+        currentDirectory: currentDirectory,
+        interactive: interactive);
     this.sentence = analyzeSentence(sentence, null);
     return this.sentence;
   }
@@ -306,10 +340,12 @@ class MockClientLogger implements ClientLogger {
 }
 
 class MockAnalytics implements Analytics {
+  final bool shouldPromptForOptInValue;
+  MockAnalytics({this.shouldPromptForOptInValue: false});
   int optInCount = 0;
   get hasOptedIn => false;
   get hasOptedOut => true;
-  get shouldPromptForOptIn => false;
+  get shouldPromptForOptIn => shouldPromptForOptInValue;
   set shouldPromptForOptIn(_) => throw "not supported";
   get serverUrl => throw "not supported";
   get uuid => null;
@@ -323,7 +359,8 @@ class MockAnalytics implements Analytics {
   logComplete(int exitCode) { /* ignored */ }
   logError(error, [StackTrace stackTrace]) { /* ignored */ }
   logErrorMessage(String userErrMsg) { /* ignored */ }
-  logRequest(List<String> arguments) { /* ignored */ }
+  logRequest(String version, String currentDirectory, bool interactive,
+      List<String> arguments) { /* ignored */ }
   logShutdown() { /* ignored */ }
   logStartup() { /* ignored */ }
   logVersion() { /* ignored */ }

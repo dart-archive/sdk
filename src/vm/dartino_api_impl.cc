@@ -90,9 +90,15 @@ static Program* LoadSnapshotFromFile(const char* path) {
 }
 
 static int RunWithDebuggerConnection(
-    Connection* connection, Program* program) {
-  Session session(connection);
-  session.Initialize(program);
+    Program* program,
+    ConnectionListenerCallback connection_listener_callback,
+    void* listener_data,
+    bool wait_for_connection) {
+  Session session(
+      program,
+      connection_listener_callback,
+      listener_data,
+      wait_for_connection);
   session.StartMessageProcessingThread();
   int result = session.ProcessRun();
   session.JoinMessageProcessingThread();
@@ -105,10 +111,16 @@ void DartinoSetup() { dartino::Dartino::Setup(); }
 void DartinoTearDown() { dartino::Dartino::TearDown(); }
 
 int DartinoRunWithDebuggerConnection(
-    DartinoConnection connection, DartinoProgram program) {
+    DartinoProgram program,
+    DartinoConnectionListenerCallback connection_listener_callback,
+    void* listener_data,
+    bool wait_for_connection) {
   return dartino::RunWithDebuggerConnection(
-      reinterpret_cast<dartino::Connection*>(connection),
-      reinterpret_cast<dartino::Program*>(program));
+      reinterpret_cast<dartino::Program*>(program),
+      reinterpret_cast<dartino::ConnectionListenerCallback>(
+          connection_listener_callback),
+      listener_data,
+      wait_for_connection);
 }
 
 DartinoProgram DartinoLoadSnapshotFromFile(const char* path) {

@@ -22,6 +22,7 @@ typedef void (*ProgramExitListener)(Program*, int exitcode, void* data);
 class Class;
 class Function;
 class Method;
+class PopularityCounter;
 class Process;
 class ProcessVisitor;
 class ProgramTableRewriter;
@@ -34,10 +35,12 @@ class Session;
   V(Instance, false_object, FalseObject)                        \
   V(Instance, true_object, TrueObject)                          \
   /* Global literals up to this line */                         \
+  V(Class, smi_class, SmiClass)                                 \
+  /* The order of null, false, true and smi_class is used by */ \
+  /* the ARM interpreter.                                    */ \
   V(Array, empty_array, EmptyArray)                             \
   V(OneByteString, empty_string, EmptyString)                   \
   V(Class, meta_class, MetaClass)                               \
-  V(Class, smi_class, SmiClass)                                 \
   V(Class, boxed_class, BoxedClass)                             \
   V(Class, large_integer_class, LargeIntegerClass)              \
   V(Class, num_class, NumClass)                                 \
@@ -73,7 +76,6 @@ class Session;
   V(Object, native_failure_result, NativeFailureResult)         \
   V(Array, static_fields, StaticFields)                         \
   V(Array, dispatch_table, DispatchTable)
-
 
 typedef DoubleList<Process> ProcessList;
 typedef DoubleList<Process, 2> ProcessQueueList;
@@ -286,8 +288,9 @@ class Program : public ProgramList::Entry {
   void ValidateSharedHeap();
 
   void CollectGarbage();
+  void SnapshotGC(PopularityCounter* popularity_counter);
   void CollectOldSpace();
-  void CollectOldSpaceIfNeeded();
+  void CollectOldSpaceIfNeeded(bool force);
   void CollectNewSpace();
   void PerformSharedGarbageCollection();
 
@@ -296,6 +299,7 @@ class Program : public ProgramList::Entry {
   // Iterates over all roots in the program.
   void IterateRoots(PointerVisitor* visitor);
   void IterateRootsIgnoringSession(PointerVisitor* visitor);
+  void VerifyObjectPlacements();
 
   // Dispatch table support.
   void ClearDispatchTableIntrinsics();
@@ -311,9 +315,10 @@ class Program : public ProgramList::Entry {
 
  public:
   static const int kFirstRootOffset = 2 * kWordSize;
-#define ROOT_ACCESSOR(type, name, CamelName)                  \
-  type* name() const { return name##_; }                      \
-  static const int k##CamelName##Offset =                     \
+#define ROOT_ACCESSOR(type, name, CamelName)                              \
+  type* name() const { return name##_; }                                  \
+  Object** name##_slot() { return reinterpret_cast<Object**>(&name##_); } \
+  static const int k##CamelName##Offset =                                 \
       kFirstRootOffset + sizeof(void*) * k##CamelName##Index;
   ROOTS_DO(ROOT_ACCESSOR)
 #undef ROOT_ACCESSOR
@@ -362,6 +367,9 @@ class Program : public ProgramList::Entry {
   void UncookAndUnchainStacks();
   bool stacks_are_cooked() { return !cooked_stack_deltas_.is_empty(); }
   void UpdateStackLimits();
+  void CompactSharedHeap();
+  void SweepSharedHeap();
+  void IterateSharedHeapRoots(PointerVisitor* visitor);
 
   // Access to the address of the first and last root.
   Object** first_root_address() {

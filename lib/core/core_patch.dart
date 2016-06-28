@@ -206,13 +206,14 @@ class _TearOffClosure {
 
 @patch class List {
   @patch factory List([int length]) {
-    return dartino.newList(length);
+    return (length == null) ? new dartino.GrowableList()
+      : new dartino.FixedList(length);
   }
 
   @patch factory List.filled(int length, E fill) {
     // All error handling on the length parameter is done at the implementation
     // of new _List.
-    var result = dartino.newList(length);
+    var result = new List(length);
     if (fill != null) {
       for (int i = 0; i < length; i++) {
         result[i] = fill;
@@ -228,10 +229,10 @@ class _TearOffClosure {
     int length = elements.length;
     var list;
     if (growable) {
-      list = dartino.newList(null);
+      list = new List(null);
       list.length = length;
     } else {
-      list = dartino.newList(length);
+      list = new List(length);
     }
     if (elements is List) {
       for (int i = 0; i < length; i++) {

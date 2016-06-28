@@ -55,11 +55,13 @@ class SessionState {
     delete debug_previous_;
   }
 
-  // Initial state (pre handshake).
+  // Did we get a handshake from the compiler yet?
+  bool IsConnected() const { return session()->got_handshake(); }
+
+  // Initial state (pre spawn-for-main).
   virtual bool IsInitial() const { return false; }
 
-  // Connected states (post handshake).
-  virtual bool IsConnected() const { return false; }
+  // Connected states (post spawn-for-main).
   virtual bool IsModifying() const { return false; }
   virtual bool IsSpawned() const { return false; }
 
@@ -72,19 +74,21 @@ class SessionState {
   // Final state.
   virtual bool IsTerminated() const { return false; }
 
-  // Modal on connected states.
-  virtual bool IsLiveEditingEnabled() const { return false; }
-  virtual bool IsDebuggingEnabled() const { return false; }
+  bool IsLiveEditingEnabled() const { return session()->live_editing(); }
+  bool IsDebuggingEnabled() const { return session()->debugging(); }
+
+  virtual void EnableLiveEditing() {
+    ASSERT(!IsLiveEditingEnabled());
+    session()->set_live_editing(true);
+  }
+
+  void EnableDebugging() {
+    ASSERT(!IsDebuggingEnabled());
+    session()->set_debugging(true);
+  }
 
   // Main transition function on states.
-  virtual SessionState* ProcessMessage(Connection::Opcode opcode) {
-    FATALV("Unexpected message opcode %d received in state %s, "
-           "live-editing: %s, debugging: %s>",
-           opcode, ToString(),
-           IsLiveEditingEnabled() ? "true" : "false",
-           IsDebuggingEnabled() ? "true" : "false");
-    return NULL;
-  }
+  virtual SessionState* ProcessMessage(Connection::Opcode opcode);
 
   virtual const char* ToString() const = 0;
 
@@ -153,6 +157,20 @@ class SessionState {
   Program* program() const { return session_->program(); }
   Connection* connection() const { return session_->connection_; }
 
+  /// This enum should be kept in sync with `enum VmState` at
+  /// 'pkg/dartino_compiler/lib/vm_commands.dart'.
+  enum StateKind {
+    kInitial,
+    kModifying,
+    kSpawned,
+    kPaused,
+    kRunning,
+    kTerminating,
+    kTerminated
+  };
+
+  virtual StateKind Kind() = 0;
+
  private:
   Session* session_;
 
@@ -160,6 +178,12 @@ class SessionState {
   // TODO(zerny): Only retain previous state for debug builds.
   SessionState* debug_previous_;
 };
+
+static void MessageProcessingError(const char* message) {
+  Print::UnregisterPrintInterceptors();
+  Print::Error(message);
+  Platform::Exit(-1);
+}
 
 // The initial session state is the state awaiting a handshake.
 class InitialState : public SessionState {
@@ -170,49 +194,19 @@ class InitialState : public SessionState {
 
   const char* ToString() const { return "Initial"; }
 
-  SessionState* ProcessMessage(Connection::Opcode opcode);
-};
-
-// Post-handshake and prior to termination, the state will be one of the
-// connected states. Every connected state has two modes: debugging or
-// non-debugging. The debugging mode is inherited on state transitions.
-// TODO(zerny): Consider splitting into two classes: one representing the state
-// of transitioning from initial to spawned, and one containing the shared
-// routines for manipulating the program that can be used in the former state
-// and in a the paused state.
-class ConnectedState : public SessionState {
- public:
-  ConnectedState() {}
-
-  bool IsConnected() const { return true; }
-
-  bool IsLiveEditingEnabled() const { return session()->live_editing(); }
-  bool IsDebuggingEnabled() const { return session()->debugging(); }
-
-  virtual void EnableLiveEditing() {
-    ASSERT(!IsLiveEditingEnabled());
-    session()->set_live_editing(true);
-  }
-
-  void EnableDebugging() {
-    ASSERT(!IsDebuggingEnabled());
-    session()->set_debugging(true);
-  }
-
-  const char* ToString() const { return "Connected"; }
-
-  SessionState* ProcessMessage(Connection::Opcode opcode);
+ private:
+  StateKind Kind() { return kInitial; }
 };
 
 // The modifying state denotes a temporary state-change of a connected
 // state. Once committed or discarded the prior state is restored.
-class ModifyingState : public ConnectedState {
+class ModifyingState : public SessionState {
  public:
   bool IsModifying() const { return true; }
 
   void ActivateState(SessionState* previous) {
     ASSERT(previous->IsConnected());
-    ConnectedState::ActivateState(previous);
+    SessionState::ActivateState(previous);
     previous_ = previous;
   }
 
@@ -230,12 +224,13 @@ class ModifyingState : public ConnectedState {
   SessionState* ProcessMessage(Connection::Opcode opcode);
 
  private:
+  StateKind Kind() { return kModifying; }
   SessionState* previous_;
 };
 
 // The spawned state denotes a state where the main program process has been
 // created.
-class SpawnedState : public ConnectedState {
+class SpawnedState : public SessionState {
  public:
   explicit SpawnedState(Process* main_process)
       : initial_main_process_(main_process) {}
@@ -250,8 +245,7 @@ class SpawnedState : public ConnectedState {
   }
 
   void ActivateState(SessionState* previous) {
-    ASSERT(previous->IsConnected());
-    ConnectedState::ActivateState(previous);
+    SessionState::ActivateState(previous);
     if (initial_main_process_ == NULL) return;
     // If this is the initial spawn, store the main process on session.
     ASSERT(!previous->IsSpawned());
@@ -268,6 +262,7 @@ class SpawnedState : public ConnectedState {
 
  protected:
   SpawnedState() : initial_main_process_(NULL) {}
+  StateKind Kind() { return kSpawned; }
 
  private:
   Process* initial_main_process_;
@@ -319,6 +314,14 @@ class RunningState : public ScheduledState {
         debug_info->ClearSteppingInterrupted();
       }
       WriteBuffer buffer;
+      buffer.WriteInt(debug_info->process_id());
+      session()->PushTopStackFrame(process->stack());
+      buffer.WriteInt64(
+          session()->FunctionMessage(Function::cast(session()->Top())));
+      // Drop function from session stack.
+      session()->Drop(1);
+      // Pop bytecode index from session stack and send it.
+      buffer.WriteInt64(session()->PopInteger());
       connection()->Send(Connection::kUncaughtException, buffer);
       // If observing termination, remain paused to allow access to the
       // termination state.
@@ -394,6 +397,8 @@ class RunningState : public ScheduledState {
     buffer.WriteInt64(session()->PopInteger());
     connection()->Send(Connection::kProcessBreakpoint, buffer);
   }
+
+  StateKind Kind() { return kRunning; }
 };
 
 // A paused state is scheduled and paused.
@@ -423,6 +428,7 @@ class PausedState : public ScheduledState {
 
   Process* process_;
   bool interrupted_;
+  StateKind Kind() { return kPaused; }
 };
 
 // A terminating state is still scheduled, but represents a session that is in
@@ -483,6 +489,7 @@ class TerminatingState : public ScheduledState {
 
  private:
   Process::State process_state_;
+  StateKind Kind() { return kTerminating; }
 };
 
 // A terminated state is the final state. It is not considered connected to the
@@ -501,6 +508,7 @@ class TerminatedState : public SessionState {
 
  private:
   int exit_code_;
+  StateKind Kind() { return kTerminated; }
 };
 
 class ConnectionPrintInterceptor : public PrintInterceptor {
@@ -558,252 +566,40 @@ class PostponedChange {
   PostponedChange* next_;
 };
 
-int PostponedChange::number_of_changes_ = 0;
-
-Session::Session(Connection* connection)
-    : connection_(connection),
-      program_(NULL),
-      state_(NULL),
-      live_editing_(false),
-      debugging_(false),
-      main_process_(NULL),
-      next_process_id_(0),
-      method_map_id_(-1),
-      class_map_id_(-1),
-      fibers_map_id_(-1),
-      stack_(0),
-      first_change_(NULL),
-      last_change_(NULL),
-      has_program_update_error_(false),
-      program_update_error_(NULL),
-      main_thread_monitor_(Platform::CreateMonitor()),
-      main_thread_resume_kind_(kUnknown) {
-#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
-  ConnectionPrintInterceptor* interceptor =
-      new ConnectionPrintInterceptor(connection_);
-  Print::RegisterPrintInterceptor(interceptor);
-#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
-}
-
-Session::~Session() {
-#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
-  Print::UnregisterPrintInterceptors();
-#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
-
-  for (int i = 0; i < maps_.length(); ++i) delete maps_[i];
-  maps_.Delete();
-  delete main_thread_monitor_;
-  delete state_;
-  delete connection_;
-}
-
-void Session::Initialize(Program *program) {
-  state_ = new InitialState(this);
-  program_ = program;
-  program_->AddSession(this);
-}
-
-static void* MessageProcessingThread(void* data) {
-  Session* session = reinterpret_cast<Session*>(data);
-  session->ProcessMessages();
-  return NULL;
-}
-
-void Session::StartMessageProcessingThread() {
-  message_handling_thread_ = Thread::Run(MessageProcessingThread, this);
-}
-
-void Session::JoinMessageProcessingThread() { message_handling_thread_.Join(); }
-
-int64_t Session::PopInteger() {
-  Object* top = Pop();
-  if (top->IsLargeInteger()) {
-    return LargeInteger::cast(top)->value();
+SessionState* SessionState::ProcessMessage(Connection::Opcode opcode) {
+  if (opcode != Connection::kHandShake && !IsConnected()) {
+    MessageProcessingError("Got command before handshake\n");
   }
-  return Smi::cast(top)->value();
-}
-
-void Session::SignalMainThread(MainThreadResumeKind kind) {
-  while (main_thread_resume_kind_ != kUnknown) main_thread_monitor_->Wait();
-  main_thread_resume_kind_ = kind;
-  main_thread_monitor_->NotifyAll();
-}
-
-void Session::SendDartValue(Object* value) {
-  WriteBuffer buffer;
-  if (value->IsSmi() || value->IsLargeInteger()) {
-    int64_t int_value = value->IsSmi() ? Smi::cast(value)->value()
-                                       : LargeInteger::cast(value)->value();
-    buffer.WriteInt64(int_value);
-    connection_->Send(Connection::kInteger, buffer);
-  } else if (value->IsTrue() || value->IsFalse()) {
-    buffer.WriteBoolean(value->IsTrue());
-    connection_->Send(Connection::kBoolean, buffer);
-  } else if (value->IsNull()) {
-    connection_->Send(Connection::kNull, buffer);
-  } else if (value->IsDouble()) {
-    buffer.WriteDouble(Double::cast(value)->value());
-    connection_->Send(Connection::kDouble, buffer);
-  } else if (value->IsOneByteString()) {
-    // TODO(ager): We should send the character data as 8-bit values
-    // instead of 32-bit values.
-    OneByteString* str = OneByteString::cast(value);
-    for (int i = 0; i < str->length(); i++) {
-      buffer.WriteInt(str->get_char_code(i));
-    }
-    connection_->Send(Connection::kString, buffer);
-  } else if (value->IsClass()) {
-    Push(HeapObject::cast(value));
-    buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
-    connection_->Send(Connection::kClass, buffer);
-  } else if (value->IsTwoByteString()) {
-    // TODO(ager): We should send the character data as 16-bit values
-    // instead of 32-bit values.
-    TwoByteString* str = TwoByteString::cast(value);
-    for (int i = 0; i < str->length(); i++) {
-      buffer.WriteInt(str->get_code_unit(i));
-    }
-    connection_->Send(Connection::kString, buffer);
-  } else {
-    Push(HeapObject::cast(value)->get_class());
-    buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
-    connection_->Send(Connection::kInstance, buffer);
-  }
-}
-
-void Session::SendInstanceStructure(Instance* instance) {
-  WriteBuffer buffer;
-  Class* klass = instance->get_class();
-  Push(klass);
-  buffer.WriteInt64(MapLookupByObject(class_map_id_, Top()));
-  int fields = klass->NumberOfInstanceFields();
-  buffer.WriteInt(fields);
-  connection_->Send(Connection::kInstanceStructure, buffer);
-  for (int i = 0; i < fields; i++) {
-    SendDartValue(instance->GetInstanceField(i));
-  }
-}
-
-void Session::SendProgramInfo(ClassOffsetsType* class_offsets,
-    FunctionOffsetsType* function_offsets) {
-  ASSERT(maps_[class_map_id_] != NULL);
-  ASSERT(maps_[method_map_id_] != NULL);
-
-  WriteBuffer buffer;
-
-  // Write the hashtag for the program.
-  buffer.WriteInt(program()->snapshot_hash());
-
-  // Class offset table
-  buffer.WriteInt(5 * class_offsets->size());
-  for (auto& pair : *class_offsets) {
-    Class* klass = pair.first;
-    const PortableOffset& offset = pair.second;
-
-    int id = MapLookupByObject(class_map_id_, klass);
-    ASSERT(id != -1 || IsBuiltin(klass, program()));
-    buffer.WriteInt(id);
-    buffer.WriteInt(offset.offset_64bits_double);
-    buffer.WriteInt(offset.offset_64bits_float);
-    buffer.WriteInt(offset.offset_32bits_double);
-    buffer.WriteInt(offset.offset_32bits_float);
-  }
-
-  // Function offset table
-  buffer.WriteInt(5 * function_offsets->size());
-  for (auto& pair : *function_offsets) {
-    Function* function = pair.first;
-    const PortableOffset& offset = pair.second;
-
-    int id = MapLookupByObject(method_map_id_, function);
-    ASSERT(id != -1);
-    buffer.WriteInt(id);
-    buffer.WriteInt(offset.offset_64bits_double);
-    buffer.WriteInt(offset.offset_64bits_float);
-    buffer.WriteInt(offset.offset_32bits_double);
-    buffer.WriteInt(offset.offset_32bits_float);
-  }
-
-  connection_->Send(Connection::kProgramInfo, buffer);
-}
-
-// Caller thread must have a lock on main_thread_monitor_, ie,
-// this should only be called from within ProcessMessage's main loop.
-void Session::PauseExecution() {
-  ASSERT(state_->IsScheduled() && !state_->IsPaused());
-  Scheduler* scheduler = program()->scheduler();
-  scheduler->StopProgram(program(), ProgramState::kSession);
-}
-
-// Caller thread must have a lock on main_thread_monitor_, ie,
-// this should only be called from within ProcessMessage's main loop.
-void Session::ResumeExecution() {
-  Scheduler* scheduler = program()->scheduler();
-  scheduler->ResumeProgram(program(), ProgramState::kSession);
-}
-
-void Session::SendStackTrace(Stack* stack) {
-  int frames = PushStackFrames(stack);
-  WriteBuffer buffer;
-  buffer.WriteInt(frames);
-  for (int i = 0; i < frames; i++) {
-    // Lookup method in method map and send id.
-    buffer.WriteInt64(FunctionMessage(Function::cast(Pop())));
-    // Pop bytecode index from session stack and send it.
-    buffer.WriteInt64(PopInteger());
-  }
-  connection_->Send(Connection::kProcessBacktrace, buffer);
-}
-
-static void MessageProcessingError(const char* message) {
-  Print::UnregisterPrintInterceptors();
-  Print::Error(message);
-  Platform::Exit(-1);
-}
-
-void Session::ProcessMessages() {
-  ASSERT(state_->IsInitial());
-  while (true) {
-    Connection::Opcode opcode = connection_->Receive();
-    ScopedMonitorLock scoped_lock(main_thread_monitor_);
-    SessionState* next_state = state_->ProcessMessage(opcode);
-    if (next_state == NULL) return;
-    ChangeState(next_state);
-    if (next_state->IsTerminating()) return;
-  }
-}
-
-SessionState* InitialState::ProcessMessage(Connection::Opcode opcode) {
-  if (opcode != Connection::kHandShake) {
-    MessageProcessingError("Error: Invalid handshake message from compiler.\n");
-  }
-  const char* version = GetVersion();
-  int version_length = strlen(version);
-  int compiler_version_length;
-  uint8* compiler_version = connection()->ReadBytes(&compiler_version_length);
-  bool version_match =
-      Version::Check(version,
-                     version_length,
-                     reinterpret_cast<const char *>(compiler_version),
-                     compiler_version_length);
-  WriteBuffer buffer;
-  buffer.WriteBoolean(version_match);
-  buffer.WriteInt(version_length);
-  buffer.WriteString(version);
-  free(compiler_version);
-  // Send word size.
-  buffer.WriteInt(kBitsPerPointer);
-  // Send floating point size.
-  buffer.WriteInt(kBitsPerDartinoDouble);
-  connection()->Send(Connection::kHandShakeResult, buffer);
-  if (!version_match) {
-    MessageProcessingError("Error: Different compiler and VM version.\n");
-  }
-  return new ConnectedState();
-}
-
-SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
   switch (opcode) {
+    case Connection::kHandShake: {
+      const char* version = GetVersion();
+      int version_length = strlen(version);
+      int compiler_version_length;
+      uint8* compiler_version =
+          connection()->ReadBytes(&compiler_version_length);
+      bool version_match = Version::Check(version,
+          version_length,
+          reinterpret_cast<const char *>(compiler_version),
+          compiler_version_length);
+      WriteBuffer buffer;
+      buffer.WriteBoolean(version_match);
+      buffer.WriteInt(version_length);
+      buffer.WriteString(version);
+      free(compiler_version);
+      // Send word size.
+      buffer.WriteInt(kBitsPerPointer);
+      // Send floating point size.
+      buffer.WriteInt(kBitsPerDartinoDouble);
+      // Send state
+      buffer.WriteInt(Kind());
+      connection()->Send(Connection::kHandShakeResult, buffer);
+      if (!version_match) {
+        MessageProcessingError("Error: Different compiler and VM version.\n");
+      }
+      session()->set_got_handshake(true);
+      return this;
+    }
+
     case Connection::kConnectionError: {
       MessageProcessingError("Lost connection to compiler.");
       return NULL;
@@ -815,6 +611,7 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     case Connection::kSessionEnd: {
+      // TODO(sigurdm): Allow disconnecting without terminating the process.
       // The main process might have just received a signal in which case we are
       // still in a running state.
       // TODO(zerny): Refactor to a terminated state change and assert that.
@@ -831,10 +628,8 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
         uint8* bytes = connection()->ReadBytes(&length);
         arguments[i] = List<uint8>(bytes, length);
       }
-      if (!program()->was_loaded_from_snapshot()) {
-        ProgramFolder::FoldProgramByDefault(program());
-      }
-      return new SpawnedState(program()->ProcessSpawnForMain(arguments));
+
+      return session()->ProcessSpawnForMain(arguments);
     }
 
     case Connection::kDebugging: {
@@ -1056,6 +851,23 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       break;
     }
 
+    case Connection::kProcessGetProcessIds: {
+      int count = 0;
+      auto processes = program()->process_list();
+      for (auto process : *processes) {
+        USE(process);
+        ++count;
+      }
+      WriteBuffer buffer;
+      buffer.WriteInt(count);
+      for (auto process : *processes) {
+        process->EnsureDebuggerAttached();
+        buffer.WriteInt(process->debug_info()->process_id());
+      }
+      connection()->Send(Connection::kProcessGetProcessIdsResult, buffer);
+      break;
+    }
+
 #ifdef DARTINO_ENABLE_LIVE_CODING
     case Connection::kSetEntryPoint: {
       program()->set_entry(Function::cast(session()->Pop()));
@@ -1075,7 +887,11 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
       bool success = session()->CreateSnapshot(
           writeToDisk, path, &function_offsets, &class_offsets);
       free(data);
-      session()->SendProgramInfo(&class_offsets, &function_offsets);
+      if (success) {
+        session()->SendProgramInfo(&class_offsets, &function_offsets);
+      } else {
+        session()->SendError(Connection::kSnapshotCreationError);
+      }
       session()->SignalMainThread(
           success ? Session::kSnapshotDone : Session::kError);
       return NULL;
@@ -1095,13 +911,281 @@ SessionState* ConnectedState::ProcessMessage(Connection::Opcode opcode) {
     }
 #endif  // DARTINO_ENABLE_LIVE_CODING
 
-
-    default: {
-      return SessionState::ProcessMessage(opcode);
-    }
+    default:
+      FATALV("Unexpected message opcode %d received in state %s, "
+         "live-editing: %s, debugging: %s",
+         opcode, ToString(),
+         IsLiveEditingEnabled() ? "true" : "false",
+         IsDebuggingEnabled() ? "true" : "false");
   }
 
   return this;
+}
+
+int PostponedChange::number_of_changes_ = 0;
+
+Session::Session(
+    Program* program,
+    ConnectionListenerCallback connection_listener_callback,
+    void* listener_data,
+    bool wait_for_connection)
+  : wait_for_connection_(wait_for_connection),
+    connection_(NULL),
+    got_handshake_(false),
+    program_(program),
+    state_(new InitialState(this)),
+    live_editing_(false),
+    debugging_(false),
+    main_process_(NULL),
+    next_process_id_(0),
+    method_map_id_(-1),
+    class_map_id_(-1),
+    fibers_map_id_(-1),
+    stack_(0),
+    first_change_(NULL),
+    last_change_(NULL),
+    has_program_update_error_(false),
+    program_update_error_(NULL),
+    main_thread_monitor_(Platform::CreateMonitor()),
+    main_thread_resume_kind_(kUnknown),
+    connection_listener_callback_(connection_listener_callback),
+    listener_data_(listener_data) {
+      program_->AddSession(this);
+    }
+
+Session::~Session() {
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
+  Print::UnregisterPrintInterceptors();
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
+
+  for (int i = 0; i < maps_.length(); ++i) delete maps_[i];
+  maps_.Delete();
+  delete main_thread_monitor_;
+  delete state_;
+  if (connection_ != NULL) {
+    delete connection_;
+  }
+}
+
+static void* MessageProcessingThread(void* data) {
+  Session* session = reinterpret_cast<Session*>(data);
+  session->StartSession();
+  return NULL;
+}
+
+void Session::StartMessageProcessingThread() {
+  message_handling_thread_ = Thread::Run(MessageProcessingThread, this);
+}
+
+void Session::JoinMessageProcessingThread() { message_handling_thread_.Join(); }
+
+int64_t Session::PopInteger() {
+  Object* top = Pop();
+  if (top->IsLargeInteger()) {
+    return LargeInteger::cast(top)->value();
+  }
+  return Smi::cast(top)->value();
+}
+
+void Session::SignalMainThread(MainThreadResumeKind kind) {
+  while (main_thread_resume_kind_ != kUnknown) main_thread_monitor_->Wait();
+  main_thread_resume_kind_ = kind;
+  main_thread_monitor_->NotifyAll();
+}
+
+void Session::SendError(Connection::ErrorCode errorCode) {
+  WriteBuffer buffer;
+  buffer.WriteInt(errorCode);
+  connection_->Send(Connection::kCommandError, buffer);
+}
+
+void Session::SendDartValue(Object* value) {
+  WriteBuffer buffer;
+  if (value->IsSmi() || value->IsLargeInteger()) {
+    int64_t int_value = value->IsSmi() ? Smi::cast(value)->value()
+                                       : LargeInteger::cast(value)->value();
+    buffer.WriteInt64(int_value);
+    connection_->Send(Connection::kInteger, buffer);
+  } else if (value->IsTrue() || value->IsFalse()) {
+    buffer.WriteBoolean(value->IsTrue());
+    connection_->Send(Connection::kBoolean, buffer);
+  } else if (value->IsNull()) {
+    connection_->Send(Connection::kNull, buffer);
+  } else if (value->IsDouble()) {
+    buffer.WriteDouble(Double::cast(value)->value());
+    connection_->Send(Connection::kDouble, buffer);
+  } else if (value->IsOneByteString()) {
+    // TODO(ager): We should send the character data as 8-bit values
+    // instead of 32-bit values.
+    OneByteString* str = OneByteString::cast(value);
+    for (int i = 0; i < str->length(); i++) {
+      buffer.WriteInt(str->get_char_code(i));
+    }
+    connection_->Send(Connection::kString, buffer);
+  } else if (value->IsClass()) {
+    buffer.WriteInt64(ClassMessage(Class::cast(value)));
+    connection_->Send(Connection::kClass, buffer);
+  } else if (value->IsTwoByteString()) {
+    // TODO(ager): We should send the character data as 16-bit values
+    // instead of 32-bit values.
+    TwoByteString* str = TwoByteString::cast(value);
+    for (int i = 0; i < str->length(); i++) {
+      buffer.WriteInt(str->get_code_unit(i));
+    }
+    connection_->Send(Connection::kString, buffer);
+  } else if (value->IsArray()) {
+    Array* array = Array::cast(value);
+    buffer.WriteInt(array->length());
+    connection_->Send(Connection::kArray, buffer);
+  } else {
+    ASSERT(value->IsInstance());
+    buffer.WriteInt64(ClassMessage(HeapObject::cast(value)->get_class()));
+    connection_->Send(Connection::kInstance, buffer);
+  }
+}
+
+void Session::SendInstanceStructure(Instance* instance) {
+  WriteBuffer buffer;
+  Class* klass = instance->get_class();
+  buffer.WriteInt64(ClassMessage(klass));
+  int fields = klass->NumberOfInstanceFields();
+  buffer.WriteInt(fields);
+  connection_->Send(Connection::kInstanceStructure, buffer);
+  for (int i = 0; i < fields; i++) {
+    SendDartValue(instance->GetInstanceField(i));
+  }
+}
+
+void Session::SendArrayStructure(Array* array, int startIndex, int endIndex) {
+  int length = array->length();
+  if (endIndex == -1 || endIndex > length) {
+    endIndex = length;
+  }
+  // This is not strictly necessary, but makes the resulting ArrayStructure
+  // neater.
+  if (endIndex == startIndex) {
+    endIndex = startIndex = 0;
+  }
+  if (startIndex < 0 || startIndex > endIndex) {
+    SendError(Connection::kInvalidInstanceAccess);
+    return;
+  }
+  WriteBuffer buffer;
+  buffer.WriteInt(length);
+  buffer.WriteInt(startIndex);
+  buffer.WriteInt(endIndex);
+  connection_->Send(Connection::kArrayStructure, buffer);
+  for (int i = startIndex; i < endIndex; i++) {
+    SendDartValue(array->get(i));
+  }
+}
+
+void Session::SendStructure(Object* object, int startIndex, int endIndex) {
+  if (object->IsArray()) {
+    SendArrayStructure(Array::cast(object), startIndex, endIndex);
+  } else if (object->IsInstance()) {
+    SendInstanceStructure(Instance::cast(object));
+  } else {
+    SendDartValue(object);
+  }
+}
+
+void Session::SendProgramInfo(ClassOffsetsType* class_offsets,
+    FunctionOffsetsType* function_offsets) {
+  ASSERT(maps_[class_map_id_] != NULL);
+  ASSERT(maps_[method_map_id_] != NULL);
+
+  WriteBuffer buffer;
+
+  // Write the hashtag for the program.
+  buffer.WriteInt(program()->snapshot_hash());
+
+  // Class offset table
+  buffer.WriteInt(5 * class_offsets->size());
+  for (auto& pair : *class_offsets) {
+    Class* klass = pair.first;
+    const PortableSize& offset = pair.second;
+
+    int id = MapLookupByObject(class_map_id_, klass);
+    ASSERT(id != -1 || IsBuiltin(klass, program()));
+    buffer.WriteInt(id);
+    buffer.WriteInt(offset.ComputeSizeInBytes(kBigPointerBigFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kBigPointerSmallFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kSmallPointerBigFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kSmallPointerSmallFloat));
+  }
+
+  // Function offset table
+  buffer.WriteInt(5 * function_offsets->size());
+  for (auto& pair : *function_offsets) {
+    Function* function = pair.first;
+    const PortableSize& offset = pair.second;
+
+    int id = MapLookupByObject(method_map_id_, function);
+    ASSERT(id != -1);
+    buffer.WriteInt(id);
+    buffer.WriteInt(offset.ComputeSizeInBytes(kBigPointerBigFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kBigPointerSmallFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kSmallPointerBigFloat));
+    buffer.WriteInt(offset.ComputeSizeInBytes(kSmallPointerSmallFloat));
+  }
+
+  connection_->Send(Connection::kProgramInfo, buffer);
+}
+
+// Caller thread must have a lock on main_thread_monitor_, ie,
+// this should only be called from within ProcessMessage's main loop.
+void Session::PauseExecution() {
+  ASSERT(state_->IsScheduled() && !state_->IsPaused());
+  Scheduler* scheduler = program()->scheduler();
+  scheduler->StopProgram(program(), ProgramState::kSession);
+}
+
+// Caller thread must have a lock on main_thread_monitor_, ie,
+// this should only be called from within ProcessMessage's main loop.
+void Session::ResumeExecution() {
+  Scheduler* scheduler = program()->scheduler();
+  scheduler->ResumeProgram(program(), ProgramState::kSession);
+}
+
+void Session::SendStackTrace(Stack* stack) {
+  int frames = PushStackFrames(stack);
+  WriteBuffer buffer;
+  buffer.WriteInt(frames);
+  for (int i = 0; i < frames; i++) {
+    // Lookup method in method map and send id.
+    buffer.WriteInt64(FunctionMessage(Function::cast(Pop())));
+    // Pop bytecode index from session stack and send it.
+    buffer.WriteInt64(PopInteger());
+  }
+  connection_->Send(Connection::kProcessBacktrace, buffer);
+}
+
+void Session::StartSession() {
+  if (!wait_for_connection_) {
+    // TODO(sigurdm): Should we allow passing arguments from the api?
+    List<List<uint8_t>> empty_arguments = List<List<uint8_t>>::New(0);
+    ChangeState(ProcessSpawnForMain(empty_arguments));
+    SignalMainThread(Session::kProcessRun);
+  }
+  connection_ = connection_listener_callback_(listener_data_);
+#ifdef DARTINO_ENABLE_PRINT_INTERCEPTORS
+  ConnectionPrintInterceptor* interceptor =
+      new ConnectionPrintInterceptor(connection_);
+  Print::RegisterPrintInterceptor(interceptor);
+#endif  // DARTINO_ENABLE_PRINT_INTERCEPTORS
+  ProcessMessages();
+}
+
+void Session::ProcessMessages() {
+  while (true) {
+    Connection::Opcode opcode = connection_->Receive();
+    ScopedMonitorLock scoped_lock(main_thread_monitor_);
+    SessionState* next_state = state_->ProcessMessage(opcode);
+    if (next_state == NULL) return;
+    ChangeState(next_state);
+    if (next_state->IsTerminating()) return;
+  }
 }
 
 #ifdef DARTINO_ENABLE_LIVE_CODING
@@ -1164,7 +1248,7 @@ SessionState* ModifyingState::ProcessMessage(Connection::Opcode opcode) {
     }
 
     default: {
-      return ConnectedState::ProcessMessage(opcode);
+      return SessionState::ProcessMessage(opcode);
     }
   }
 
@@ -1211,7 +1295,7 @@ SessionState* SpawnedState::ProcessMessage(Connection::Opcode opcode) {
     // End of debugging commands that are valid on unscheduled programs.
 
     default: {
-      return ConnectedState::ProcessMessage(opcode);
+      return SessionState::ProcessMessage(opcode);
     }
   }
   return this;
@@ -1310,29 +1394,54 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
 
     case Connection::kProcessUncaughtExceptionRequest: {
       Object* exception = process()->exception();
-      if (exception->IsInstance()) {
-        session()->SendInstanceStructure(Instance::cast(exception));
-      } else {
-        session()->SendDartValue(exception);
-      }
+      session()->SendStructure(exception, 0, -1);
       break;
     }
 
-    case Connection::kProcessLocal:
-    case Connection::kProcessLocalStructure: {
+    case Connection::kProcessInstance:
+    case Connection::kProcessInstanceStructure: {
       int frame_index = connection()->ReadInt();
       int slot = connection()->ReadInt();
+      int fieldAccessCount = connection()->ReadInt();
       Stack* stack = process()->stack();
       Frame frame(stack);
       for (int i = 0; i <= frame_index; i++) frame.MovePrevious();
       word index = frame.FirstLocalIndex() - slot;
-      if (index < frame.LastLocalIndex()) FATAL("Illegal slot offset");
-      Object* local = stack->get(index);
-      if (opcode == Connection::kProcessLocalStructure &&
-          local->IsInstance()) {
-        session()->SendInstanceStructure(Instance::cast(local));
+      if (index < frame.LastLocalIndex()) {
+        session()->SendError(Connection::kInvalidInstanceAccess);
+        break;
+      }
+      Object* object = stack->get(index);
+      for (int i = 0; i < fieldAccessCount; i++) {
+        if (object->IsArray()) {
+          Array* array = Array::cast(object);
+          int index = connection()->ReadInt();
+          if (index < 0 || index >= array->length()) {
+            session()->SendError(Connection::kInvalidInstanceAccess);
+            break;
+          }
+          object = array->get(index);
+        } else if (object->IsInstance()) {
+          Instance* instance = Instance::cast(object);
+          Class* klass = instance->get_class();
+          int fieldAccess = connection()->ReadInt();
+          if (fieldAccess < 0 ||
+             fieldAccess >= klass->NumberOfInstanceFields()) {
+            session()->SendError(Connection::kInvalidInstanceAccess);
+            break;
+          }
+          object = instance->GetInstanceField(fieldAccess);
+        } else {
+          session()->SendError(Connection::kInvalidInstanceAccess);
+          break;
+        }
+      }
+      if (opcode == Connection::kProcessInstanceStructure) {
+        int startIndex = connection()->ReadInt();
+        int endIndex = connection()->ReadInt();
+        session()->SendStructure(object, startIndex, endIndex);
       } else {
-        session()->SendDartValue(local);
+        session()->SendDartValue(object);
       }
       break;
     }
@@ -1365,23 +1474,6 @@ SessionState* PausedState::ProcessMessage(Connection::Opcode opcode) {
       WriteBuffer buffer;
       buffer.WriteInt(number_of_stacks);
       connection()->Send(Connection::kProcessNumberOfStacks, buffer);
-      break;
-    }
-
-    case Connection::kProcessGetProcessIds: {
-      int count = 0;
-      auto processes = program()->process_list();
-      for (auto process : *processes) {
-        USE(process);
-        ++count;
-      }
-      WriteBuffer buffer;
-      buffer.WriteInt(count);
-      for (auto process : *processes) {
-        process->EnsureDebuggerAttached();
-        buffer.WriteInt(process->debug_info()->process_id());
-      }
-      connection()->Send(Connection::kProcessGetProcessIdsResult, buffer);
       break;
     }
 
@@ -1418,6 +1510,13 @@ void Session::IteratePointers(PointerVisitor* visitor) {
       map->IteratePointers(visitor);
     }
   }
+}
+
+SessionState* Session::ProcessSpawnForMain(List<List<uint8_t>> arguments) {
+  if (!program()->was_loaded_from_snapshot()) {
+    ProgramFolder::FoldProgramByDefault(program());
+  }
+  return new SpawnedState(program()->ProcessSpawnForMain(arguments));
 }
 
 int Session::ProcessRun() {
@@ -1500,6 +1599,8 @@ bool Session::CreateSnapshot(
     program_folder.Fold();
   }
 
+  program()->VerifyObjectPlacements();
+
   SnapshotWriter writer(function_offsets, class_offsets);
   List<uint8> snapshot = writer.WriteProgram(program());
   bool success = writeToDisk
@@ -1553,7 +1654,7 @@ void Session::PopToMap(int map_index, int64 id) {
 }
 
 void Session::AddToMap(int map_index, int64 id, Object* value) {
-  ASSERT(!program()->was_loaded_from_snapshot());
+  ASSERT(maps_[map_index] != NULL);
   maps_[map_index]->Add(id, value);
 }
 
@@ -1988,10 +2089,7 @@ void Session::PostponeChange(Change change, int count) {
 }
 
 bool Session::CanHandleEvents() const {
-  // TODO(sigurdm): Allow for running with a session without a connected vm.
-  // When that is the case, this should only return true when there is an
-  // established connection.
-  return true;
+  return got_handshake();
 }
 
 Scheduler::ProcessInterruptionEvent Session::CheckForPauseEventResult(
@@ -2080,6 +2178,7 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
     // be updated even if it points to a transformed class. If we
     // updated the pointer, the new class would have the wrong
     // instance format for the non-transformed, old instance.
+    current_object_address_ = reinterpret_cast<uword>(p);
   }
 
   virtual void VisitBlock(Object** start, Object** end) {
@@ -2101,6 +2200,9 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
           clone = instance->CloneTransformed(heap_);
           instance->set_forwarding_address(clone);
           *p = clone;
+          if (GCMetadata::GetPageType(clone->address()) == kNewSpacePage) {
+            GCMetadata::InsertIntoRememberedSet(current_object_address_);
+          }
         }
       } else if (heap_object->IsClass()) {
         Class* clazz = Class::cast(heap_object);
@@ -2113,6 +2215,7 @@ class TransformInstancesPointerVisitor : public PointerVisitor {
 
  private:
   Heap* const heap_;
+  uword current_object_address_;
 };
 
 void Session::TransformInstances() {
@@ -2213,6 +2316,14 @@ int64 Session::FunctionMessage(Function *function) {
     return program()->OffsetOf(HeapObject::cast(function));
   } else {
     return MapLookupByObject(method_map_id_, function);
+  }
+}
+
+int64 Session::ClassMessage(Class *klass) {
+  if (program()->was_loaded_from_snapshot()) {
+    return program()->OffsetOf(HeapObject::cast(klass));
+  } else {
+    return MapLookupByObject(class_map_id_, klass);
   }
 }
 

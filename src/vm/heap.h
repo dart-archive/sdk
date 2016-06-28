@@ -29,6 +29,8 @@ class Heap {
 
   // Allocate heap object.
   Object* CreateInstance(Class* the_class, Object* init_value, bool immutable);
+  Object* CreateBooleanObject(uword address, Class* the_class,
+                              Object* init_value);
 
   // Allocate array.
   Object* CreateArray(Class* the_class, int length, Object* init_value);
@@ -91,6 +93,10 @@ class Heap {
   // Returns the number of bytes allocated in the space and via foreign memory.
   uword UsedTotal() { return Used() + foreign_memory_; }
 
+  // Max memory that can be added by adding new chunks.  Accounts for whole
+  // chunks, not just the used memory in them.
+  virtual uword MaxExpansion() { return kUnlimitedExpansion; }
+
   SemiSpace* space() { return space_; }
 
   void ReplaceSpace(SemiSpace* space);
@@ -122,6 +128,8 @@ class Heap {
   explicit Heap(SemiSpace* existing_space);
   explicit Heap(RandomXorShift* random);
   virtual ~Heap();
+
+  static const uword kUnlimitedExpansion = 0x80000000u - Platform::kPageSize;
 
   Object* CreateOneByteStringInternal(Class* the_class, int length, bool clear);
   Object* CreateTwoByteStringInternal(Class* the_class, int length, bool clear);
@@ -167,8 +175,6 @@ class TwoSpaceHeap : public Heap {
   explicit TwoSpaceHeap(RandomXorShift* random);
   virtual ~TwoSpaceHeap();
 
-  static const uword kFixedSemiSpaceSize = 16 * KB;
-
   OldSpace* old_space() { return old_space_; }
   SemiSpace* unused_space() { return unused_semispace_; }
 
@@ -199,7 +205,7 @@ class TwoSpaceHeap : public Heap {
   }
 
   virtual Object* HandleAllocationFailure(uword size) {
-    if (size >= (kFixedSemiSpaceSize >> 1)) {
+    if (size >= (semispace_size_ >> 1)) {
       uword result = old_space_->Allocate(size);
       if (result != 0) {
         // The code that populates newly allocated objects assumes that they
@@ -236,6 +242,8 @@ class TwoSpaceHeap : public Heap {
 
   void FreedForeignMemory(uword size);
 
+  virtual uword MaxExpansion();
+
  private:
   friend class GenerationalScavengeVisitor;
 
@@ -245,6 +253,8 @@ class TwoSpaceHeap : public Heap {
   OldSpace* old_space_;
   SemiSpace* unused_semispace_;
   uword water_mark_;
+  uword max_size_;
+  uword semispace_size_;
 };
 
 // Helper class for copying HeapObjects.

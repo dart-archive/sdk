@@ -51,39 +51,7 @@ class OldSpace;
 class Process;
 class Program;
 class SemiSpace;
-class SnapshotReader;
-class SnapshotWriter;
 class Space;
-
-// Used for representing the size of a [HeapObject] in a portable way.
-//
-// It counts the number of pointer-sized values, double/float values and fixed
-// (byte) values.
-//
-// Converting a [PortableSize] to the actual size can be done via the
-// [ComputeSizeInBytes] by passing in the size of pointers/doubles.
-class PortableSize {
- public:
-  PortableSize(uword pointers, uword fixed_size, uword doubles)
-      : num_pointers_(pointers),
-        fixed_size_(fixed_size),
-        num_doubles_(doubles) {}
-
-  uword ComputeSizeInBytes(uword pointer_size, uword double_size) const {
-    ASSERT(pointer_size == 4 || pointer_size == 8);
-    ASSERT(double_size == 8 || double_size == 4 || num_doubles_ == 0);
-
-    uword byte_size =
-        num_pointers_ * pointer_size + num_doubles_ * double_size + fixed_size_;
-
-    return Utils::RoundUp(byte_size, pointer_size);
-  }
-
- private:
-  uword num_pointers_;
-  uword fixed_size_;
-  uword num_doubles_;
-};
 
 // Abstract super class for all objects in Dart.
 class Object {
@@ -355,6 +323,7 @@ class HeapObject : public Object {
   void set_forwarding_word(word value);
 
   InstanceFormat IteratePointers(PointerVisitor* visitor);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Returns the clone allocated in to space.
   // Uses a forwarding_address to ensure only one clone.
@@ -384,6 +353,7 @@ class HeapObject : public Object {
   inline void at_put(int offset, Object* value);
   inline void at_put_bypass_write_barrier(int offset, Object* value);
   inline Object* at(int offset);
+  inline Object** address_at(int offset);
   void RawPrint(const char* title);
   // Returns the class field without checks.
   inline Class* raw_class();
@@ -391,7 +361,6 @@ class HeapObject : public Object {
   friend class FlashifyVisitor;
   friend class Heap;
   friend class Program;
-  friend class SnapshotWriter;
   friend class Object;
 
  private:
@@ -409,8 +378,7 @@ class LargeInteger : public HeapObject {
   static inline LargeInteger* cast(Object* object);
 
   // Snapshotting.
-  void LargeIntegerWriteTo(SnapshotWriter* writer, Class* klass);
-  void LargeIntegerReadFrom(SnapshotReader* reader);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Printing.
   void LargeIntegerPrint();
@@ -419,14 +387,6 @@ class LargeInteger : public HeapObject {
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
   int LargeIntegerSize() { return AllocationSize(); }
-
-  // As opposed to the other [CalculatePortableSize] functions, this is static
-  // since the [SnapshotWriter] may need to be able to calculate the
-  // [PortableSize] of a [LargeInteger] when serializing a non-portable [Smi]
-  // (i.e. a 64-bit smi which is not a 32-bit smi).
-  static PortableSize CalculatePortableSize() {
-    return PortableSize(HeapObject::kSize / kPointerSize, sizeof(int64), 0);
-  }
 
   static const int kValueOffset = HeapObject::kSize;
   static const int kSize = kValueOffset + sizeof(int64);
@@ -450,17 +410,12 @@ class Double : public HeapObject {
   void DoubleShortPrint();
 
   // Snapshotting.
-  void DoubleWriteTo(SnapshotWriter* writer, Class* klass);
-  void DoubleReadFrom(SnapshotReader* reader);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Sizing.
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
   int DoubleSize() { return AllocationSize(); }
-
-  PortableSize CalculatePortableSize() {
-    return PortableSize(HeapObject::kSize / kPointerSize, 0, 1);
-  }
 
   static const int kValueOffset = HeapObject::kSize;
   static const int kSize = kValueOffset + sizeof(dartino_double);
@@ -481,6 +436,9 @@ class Boxed : public HeapObject {
   // Printing.
   void BoxedPrint();
   void BoxedShortPrint();
+
+  // Snapshotting.
+  void IterateEverything(PointerVisitor* visitor);
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
@@ -507,14 +465,9 @@ class Initializer : public HeapObject {
   void InitializerShortPrint();
 
   // Snapshotting.
-  void InitializerWriteTo(SnapshotWriter* writer, Class* klass);
-  void InitializerReadFrom(SnapshotReader* reader);
+  void IterateEverything(PointerVisitor* visitor);
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
-
-  PortableSize CalculatePortableSize() {
-    return PortableSize(kSize / kPointerSize, 0, 0);
-  }
 
   static const int kFunctionOffset = HeapObject::kSize;
   static const int kSize = kFunctionOffset + kPointerSize;
@@ -542,16 +495,11 @@ class DispatchTableEntry : public HeapObject {
   static inline DispatchTableEntry* cast(Object* object);
 
   // Snapshotting.
-  void DispatchTableEntryWriteTo(SnapshotWriter* writer, Class* klass);
-  void DispatchTableEntryReadFrom(SnapshotReader* reader);
+  void IterateEverything(PointerVisitor* visitor);
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
   int DispatchTableEntrySize() { return AllocationSize(); }
-
-  PortableSize CalculatePortableSize() {
-    return PortableSize(kSize / kPointerSize, 0, 0);
-  }
 
   static const int kTargetOffset = HeapObject::kSize;
   static const int kCodeOffset = kTargetOffset + kWordSize;
@@ -655,10 +603,6 @@ class Array : public BaseArray {
     return Utils::RoundUp(kSize + (length * kPointerSize), kPointerSize);
   }
 
-  PortableSize CalculatePortableSize() {
-    return PortableSize(kSize / kPointerSize + length(), 0, 0);
-  }
-
   // Casting.
   static inline Array* cast(Object* obj);
 
@@ -667,8 +611,7 @@ class Array : public BaseArray {
   void ArrayShortPrint();
 
   // Snapshotting.
-  void ArrayWriteTo(SnapshotWriter* writer, Class* klass);
-  void ArrayReadFrom(SnapshotReader* reader, int length);
+  void IterateEverything(PointerVisitor* visitor);
 
  private:
   // Only Heap should initialize objects.
@@ -693,13 +636,8 @@ class ByteArray : public BaseArray {
     return Utils::RoundUp(kSize + length, kPointerSize);
   }
 
-  PortableSize CalculatePortableSize() {
-    return PortableSize(kSize / kPointerSize, length(), 0);
-  }
-
   // Snapshotting.
-  void ByteArrayWriteTo(SnapshotWriter* writer, Class* klass);
-  void ByteArrayReadFrom(SnapshotReader* reader, int length);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Casting.
   static inline ByteArray* cast(Object* obj);
@@ -744,14 +682,11 @@ class Instance : public HeapObject {
     return (size - kSize) / kPointerSize;
   }
 
-  inline PortableSize CalculatePortableSize(Class* klass);
-
   // Schema change support.
   Instance* CloneTransformed(Heap* heap);
 
   // Snapshotting.
-  void InstanceWriteTo(SnapshotWriter* writer, Class* klass);
-  void InstanceReadFrom(SnapshotReader* reader, int nof);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Printing.
   void InstancePrint();
@@ -777,7 +712,6 @@ class Instance : public HeapObject {
   friend class Heap;
   friend class TwoSpaceHeap;
   friend class Program;
-  friend class SnapshotWriter;
 
  private:
   DISALLOW_IMPLICIT_CONSTRUCTORS(Instance);
@@ -812,10 +746,6 @@ class OneByteString : public BaseArray {
     return Utils::RoundUp(kSize + bytes, kPointerSize);
   }
 
-  PortableSize CalculatePortableSize() {
-    return PortableSize(kSize / kPointerSize, length(), 0);
-  }
-
   void FillFrom(OneByteString* x, int offset);
 
   // Hashing.
@@ -834,8 +764,7 @@ class OneByteString : public BaseArray {
   char* ToCString();
 
   // Snapshotting.
-  void OneByteStringWriteTo(SnapshotWriter* writer, Class* klass);
-  void OneByteStringReadFrom(SnapshotReader* reader, int length);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Layout descriptor.
   static const int kHashValueOffset = BaseArray::kSize;
@@ -894,10 +823,6 @@ class TwoByteString : public BaseArray {
     return Utils::RoundUp(kSize + bytes, kPointerSize);
   }
 
-  PortableSize CalculatePortableSize() {
-    return PortableSize(kSize / kPointerSize, length() * sizeof(uint16_t), 0);
-  }
-
   void FillFrom(OneByteString* x, int offset);
   void FillFrom(TwoByteString* x, int offset);
 
@@ -917,8 +842,7 @@ class TwoByteString : public BaseArray {
   char* ToCString();
 
   // Snapshotting.
-  void TwoByteStringWriteTo(SnapshotWriter* writer, Class* klass);
-  void TwoByteStringReadFrom(SnapshotReader* reader, int length);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Layout descriptor.
   static const int kHashValueOffset = BaseArray::kSize;
@@ -982,11 +906,6 @@ class Function : public HeapObject {
     return AllocationSize(variable_size);
   }
 
-  PortableSize CalculatePortableSize() {
-    return PortableSize(kSize / kPointerSize + literals_size(), bytecode_size(),
-                        0);
-  }
-
   static int BytecodeAllocationSize(int bytecode_size_in_bytes) {
     return Utils::RoundUp(bytecode_size_in_bytes, kPointerSize);
   }
@@ -1001,10 +920,7 @@ class Function : public HeapObject {
   static inline Object* ConstantForBytecode(uint8* bcp);
 
   // Snapshotting.
-  void FunctionWriteTo(SnapshotWriter* writer, Class* klass);
-  void WriteByteCodes(SnapshotWriter* writer);
-  void FunctionReadFrom(SnapshotReader* reader, int length);
-  void ReadByteCodes(SnapshotReader* reader);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Printing.
   void FunctionPrint();
@@ -1068,10 +984,6 @@ class Class : public HeapObject {
 
   static int AllocationSize() { return Utils::RoundUp(kSize, kPointerSize); }
 
-  PortableSize CalculatePortableSize() {
-    return PortableSize(kSize / kPointerSize, 0, 0);
-  }
-
   // Is this class a subclass of the given class?
   bool IsSubclassOf(Class* klass);
 
@@ -1080,8 +992,7 @@ class Class : public HeapObject {
   inline void SetStaticField(int index, Object* object);
 
   // Snapshotting.
-  void ClassWriteTo(SnapshotWriter* writer, Class* klass);
-  void ClassReadFrom(SnapshotReader* reader);
+  void IterateEverything(PointerVisitor* visitor);
 
   // Printing.
   void ClassPrint();
@@ -1190,7 +1101,15 @@ class FreeListChunk : public HeapObject {
         reinterpret_cast<FreeListChunk*>(HeapObject::FromAddress(free_start));
     chunk->set_class(StaticClassStructures::free_list_chunk_class());
     chunk->set_size(free_size);
+    chunk->Zap();
     return chunk;
+  }
+
+  void Zap() {
+#ifdef DEBUG
+    void* start = reinterpret_cast<void*>(address() + kSize);
+    memset(start, 0x55, Size() - kSize);
+#endif
   }
 
   // Sizing.
@@ -1230,14 +1149,11 @@ class Stack : public BaseArray {
   static inline Stack* cast(Object* obj);
 
   void UpdateFramePointers(Stack* old_stack);
+  void UpdateFramePointers(word diff);
 
   // Printing.
   void StackPrint();
   void StackShortPrint();
-
-  // Snapshotting.
-  void StackWriteTo(SnapshotWriter* writer, Class* klass);
-  void StackReadFrom(SnapshotReader* reader, int length);
 
   // Layout descriptor.
   static const int kTopOffset = BaseArray::kSize;
@@ -1291,6 +1207,16 @@ class PointerVisitor {
 
   // Handy shorthand for visiting a class field in an object.
   virtual void VisitClass(Object** p) { VisitBlock(p, p + 1); }
+
+  // These six are only used by the snapshot writer.
+  virtual void VisitInteger(uword slot) {}
+  virtual void VisitLiteralInteger(int32 i) {}
+  virtual void VisitCode(uword slot) {}
+  virtual void VisitRaw(uint8* start, uword size) {}
+  virtual void VisitByteCodes(uint8* start, uword size) {}
+  virtual void VisitFloat(dartino_double x) {}
+
+  virtual void AboutToVisitStack(Stack* stack) {}
 };
 
 // Abstract base class for visiting all objects in a space.
@@ -1728,6 +1654,10 @@ Object* HeapObject::at(int offset) {
   return *reinterpret_cast<Object**>(address() + offset);
 }
 
+Object** HeapObject::address_at(int offset) {
+  return reinterpret_cast<Object**>(address() + offset);
+}
+
 bool HeapObject::HasForwardingAddress() { return at(kClassOffset)->IsSmi(); }
 
 HeapObject* HeapObject::forwarding_address() {
@@ -2093,11 +2023,6 @@ uword Instance::GetConsecutiveSmis(int index) {
   uword answer2 = Smi::cast(GetInstanceField(index + 1))->value();
   ASSERT(answer2 < 4);
   return answer + answer2;
-}
-
-PortableSize Instance::CalculatePortableSize(Class* klass) {
-  int fields = klass->NumberOfInstanceFields();
-  return PortableSize(kSize / kPointerSize + fields, 0, 0);
 }
 
 // Inlined Function functions.

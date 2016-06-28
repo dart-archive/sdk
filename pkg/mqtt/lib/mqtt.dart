@@ -53,19 +53,22 @@
 /// ------------
 ///
 /// This Dart library depends on the [Paho C
-/// library](http://git.eclipse.org/c/paho/org.eclipse.paho.mqtt.c.git/about/).
+/// library](https://github.com/eclipse/paho.mqtt.c).
 /// It will load the Paho shared object file (.so file) dynamically at runtime.
 /// Therefore the Paho shared object file needs to be copied into the Dartino
 /// SDK. Follow these instructions to compile and copy the library:
 ///
 /// 1. Get the Paho source code
 /// ```
-/// $ git clone https://git.eclipse.org/r/paho/org.eclipse.paho.mqtt.c
+/// $ git clone git@github.com:eclipse/paho.mqtt.c.git
 /// ```
 ///
 /// 1. Compile the source code
+///
+/// *Note*: See the [Paho readme](https://github.com/eclipse/paho.mqtt.c/blob/master/README.md) for details.
+///
 /// ```
-/// $ cd org.eclipse.paho.mqtt.c/
+/// $ cd paho.mqtt.c/
 /// $ make
 /// ```
 ///
@@ -74,7 +77,7 @@
 /// ~/dartino-sdk/)
 ///
 /// ```
-/// $ cd org.eclipse.paho.mqtt.c/
+/// $ cd paho.mqtt.c/
 /// $ cp build/output/libpaho-mqtt3c.so <Dartino SDK location>/lib/
 ///
 /// ```

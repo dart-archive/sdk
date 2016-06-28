@@ -31,6 +31,9 @@ import 'debug_verb.dart' show
 import 'disable_verb.dart' show
     disableAction;
 
+import 'emulate_verb.dart' show
+    emulateAction;
+
 import 'enable_verb.dart' show
     enableAction;
 
@@ -49,14 +52,14 @@ import 'run_verb.dart' show
 import 'x_end_verb.dart' show
     endAction;
 
-import 'x_servicec_verb.dart' show
-    servicecAction;
-
 import 'x_upgrade_verb.dart' show
     upgradeAction;
 
 import 'x_download_tools_verb.dart' show
     downloadToolsAction;
+
+import 'x_should_prompt_analytics_verb.dart' show
+    shouldPromptAnalyticsAction;
 
 import 'quit_verb.dart' show
     quitAction;
@@ -163,7 +166,8 @@ const Map<String, Action> uncommonActions = const <String, Action>{
   "export": exportAction,
   "flash": flashAction,
   "x-download-tools": downloadToolsAction,
+  "x-emulate": emulateAction,
   "x-end": endAction,
-  "x-servicec": servicecAction,
+  "x-should-prompt-analytics": shouldPromptAnalyticsAction,
   "x-upgrade": upgradeAction,
 };

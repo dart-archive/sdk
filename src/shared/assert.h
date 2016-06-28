@@ -101,7 +101,17 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
 }  // namespace DynamicAssertionHelper
 }  // namespace dartino
 
-#define FATAL(error)                    \
+#if defined(DARTINO_SMALL)
+
+#define FATAL(error) while (true || (error));
+
+#define FATAL1(format, p1) while (true || (format) || (p1));
+
+#define FATALV(format, ...) while (true || (format));
+
+#else  // if defined(DARTINO_SMALL)
+
+#define FATAL(error)                     \
   dartino::DynamicAssertionHelper::Fail< \
       dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, "%s", error)
 
@@ -114,6 +124,8 @@ void GreaterEqual(const char* file, int line, const E& left, const A& right) {
   dartino::DynamicAssertionHelper::Fail<                           \
       dartino::DynamicAssertionHelper::ASSERT>(__FILE__, __LINE__, \
                                                format, __VA_ARGS__)
+
+#endif  // if defined(DARTINO_SMALL)
 
 #define UNIMPLEMENTED() FATAL("unimplemented code")
 
