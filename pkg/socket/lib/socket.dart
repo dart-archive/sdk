@@ -2,7 +2,11 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE.md file.
 
-/// Socket access. Only supported when Dartino is running on a Posix platform.
+/// Dartino implementation of TCP and UDP sockets.
+///
+/// The implementation in this library uses the [System]'s primitive operations,
+/// but there is a special implementation based directly on FreeRTOS' IP stack,
+/// which will be instantiated instead, if the library is used on FreeRTOS.
 ///
 /// Reporting issues
 /// ----------------
