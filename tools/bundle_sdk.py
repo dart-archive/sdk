@@ -91,11 +91,14 @@ def CopyBinaries(bundle_dir, build_dir):
   CopyFile(join(build_dir, 'natives.json'), join(internal, 'natives.json'))
   CopySharedLibraries(bin_dir, build_dir)
 
-def CopyDartSdk(bundle_dir):
+def ThirdPartyDartSdkDir():
   os_name = utils.GuessOS()
   if os_name == "macos":
     os_name = "mac"
-  source = join('third_party', 'dart-sdk', os_name, 'dart-sdk')
+  return join('third_party', 'dart-sdk', os_name, 'dart-sdk')
+
+def CopyDartSdk(bundle_dir):
+  source = ThirdPartyDartSdkDir()
   target = join(bundle_dir, 'internal', 'dart-sdk')
   print 'copying %s to %s' % (source, target)
   copytree(source, target)
@@ -279,11 +282,14 @@ def CopySamples(bundle_dir):
 
 def CreateDocumentation():
   # Ensure all the dependencies of dartinodoc are available.
-  subprocess.call(['pub', 'get'], cwd='pkg/dartinodoc')
+  subprocess.call(
+    [join('..', '..',ThirdPartyDartSdkDir(), 'bin', 'pub'), 'get'],
+      cwd='pkg/dartinodoc')
   sdk_dst = join('out', 'dartdoc-dart-sdk')
   EnsureDeleted(sdk_dst)
   subprocess.call(
-      ['dart', '-c', 'pkg/dartinodoc/bin/dartinodoc.dart',
+      [join(ThirdPartyDartSdkDir(), 'bin', 'dart'),
+       '-c', 'pkg/dartinodoc/bin/dartinodoc.dart',
        '--output', sdk_dst,
        '--sdk-packages', ",".join(SDK_PACKAGES),
        '--third-party-packages', ",".join(THIRD_PARTY_PACKAGES),
