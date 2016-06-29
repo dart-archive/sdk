@@ -301,6 +301,13 @@ class GSUtil(object):
     (stdout, _, _) = self.execute(args)
     return stdout
 
+  def ls(self, remote_path):
+    assert remote_path.startswith('gs://')
+
+    args = ['ls', remote_path]
+    (stdout, _, _) = self.execute(args)
+    return stdout
+
   def setGroupReadACL(self, remote_path, group):
     args = ['acl', 'ch', '-g', '%s:R' % group, remote_path]
     self.execute(args)
