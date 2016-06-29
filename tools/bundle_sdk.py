@@ -286,8 +286,8 @@ def CreateDocumentation():
       cwd='pkg/dartinodoc')
   if exit_code != 0:
     raise OSError(exit_code)
-  sdk_dst = join('out', 'dartdoc-dart-sdk')
-  EnsureDeleted(sdk_dst)
+  doc_dest = join('out', 'doc')
+  EnsureDeleted(doc_dest)
 
   # Determine the sdk and third_party packages
   sdk_packages = Set()
@@ -305,7 +305,7 @@ def CreateDocumentation():
   exit_code = subprocess.call(
       [join(ThirdPartyDartSdkDir(), 'bin', 'dart'),
        '-c', 'pkg/dartinodoc/bin/dartinodoc.dart',
-       '--output', sdk_dst,
+       '--output', doc_dest,
        '--sdk-packages', ",".join(sdk_packages),
        '--third-party-packages', ",".join(third_party_packages),
        '--version', utils.GetSemanticSDKVersion()])
