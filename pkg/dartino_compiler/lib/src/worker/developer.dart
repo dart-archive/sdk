@@ -877,7 +877,7 @@ Future<int> compileAndAttachToVmThen(
       print(trace);
     }
   } finally {
-    if (waitForVmExit && !state.explicitAttach) {
+    if (waitForVmExit && !state.explicitAttach && state.dartinoVm != null) {
       exitCode = await state.dartinoVm.exitCode;
     }
     state.detachCommandSender();
