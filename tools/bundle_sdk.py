@@ -286,7 +286,7 @@ def CreateDocumentation():
       cwd='pkg/dartinodoc')
   if exit_code != 0:
     raise OSError(exit_code)
-  doc_dest = join('out', 'doc')
+  doc_dest = join('out', 'docs')
   EnsureDeleted(doc_dest)
 
   # Determine the sdk and third_party packages
