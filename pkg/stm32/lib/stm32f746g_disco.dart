@@ -6,6 +6,7 @@ library stm32.stm32f746g_discovery;
 
 import 'package:gpio/gpio.dart';
 import 'package:i2c/i2c.dart';
+import 'package:stm32/adc.dart';
 import 'package:stm32/gpio.dart';
 import 'package:stm32/i2c.dart';
 import 'package:stm32/lcd.dart';
@@ -29,6 +30,9 @@ class STM32F746GDiscovery {
   STM32Gpio _gpio;
   Uart _uart;
   I2CBus _i2c1;
+  STM32Adc _adc1;
+  STM32Adc _adc2;
+  STM32Adc _adc3;
 
   FrameBuffer _frameBuffer;
   TouchScreen _touchScreen;
@@ -69,5 +73,26 @@ class STM32F746GDiscovery {
         new TouchScreen.init(frameBuffer.width, frameBuffer.height);
     }
     return _touchScreen;
+  }
+
+  STM32Adc get adc1 {
+    if (_adc1 == null) {
+      _adc1 = new STM32Adc(STM32AdcConstants.ADC1, gpio);
+    }
+    return _adc1;
+  }
+
+  STM32Adc get adc2 {
+    if (_adc2 == null) {
+      _adc2 = new STM32Adc(STM32AdcConstants.ADC2, gpio);
+    }
+    return _adc2;
+  }
+
+  STM32Adc get adc3 {
+    if (_adc3 == null) {
+      _adc3 = new STM32Adc(STM32AdcConstants.ADC3, gpio);
+    }
+    return _adc3;
   }
 }

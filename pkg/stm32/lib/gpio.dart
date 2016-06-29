@@ -274,6 +274,13 @@ class STM32Gpio extends Gpio {
     return new _STM32GpioInputPin._(pin);
   }
 
+  /// Initializes a STM32 pin for analog mode. Disables output buffer, Schmitt
+  /// trigger, and pull-up/pull-down resistors. This mode enables the pin to
+  /// be sampled by the ADC.
+  void initSTM32Analog(Pin pin) {
+    _init(pin, GPIO_MODE_ANALOG, GPIO_NOPULL, GPIO_SPEED_FREQ_HIGH);
+  }
+
   void _init(STM32Pin pin, int mode, int pull, int speed) {
     if (pin is! STM32Pin) {
       throw new ArgumentError('Illegal pin type');
