@@ -25,11 +25,6 @@ from fnmatch import fnmatch
 
 TOOLS_DIR = abspath(dirname(__file__))
 
-SDK_PACKAGES = ['ffi', 'file', 'dartino', 'gpio', 'http', 'i2c', 'os',
-                'raspberry_pi', 'stm32', 'socket', 'mqtt',
-                'mbedtls']
-THIRD_PARTY_PACKAGES = ['charcode']
-
 SAMPLES = ['general', 'raspberry-pi2', 'stm32f746g-discovery',
            'stm32f411re-nucleo']
 
@@ -183,15 +178,19 @@ def CopyPackagesAndSettingsTemplate(bundle_dir):
   makedirs(target_dir)
   copyfile(join('pkg', 'dartino_sdk_dartino_settings'),
            join(bundle_dir, 'internal', '.dartino-settings'))
-  with open(join(bundle_dir, 'internal', 'dartino-sdk.packages'), 'w') as p:
-    for package in SDK_PACKAGES:
-      copytree(join('pkg', package), join(target_dir, package))
-      p.write('%s:../pkg/%s/lib\n' % (package, package))
-    for package in THIRD_PARTY_PACKAGES:
-      copytree(join('third_party', package),
-               join(target_dir, package),
-               ignore = ignore_patterns('.git'))
-      p.write('%s:../pkg/%s/lib\n' % (package, package))
+
+  # Read the pkg/dartino-sdk.packages file
+  # and generate internal/dartino-sdk.packages
+  with open(join('pkg', 'dartino-sdk.packages')) as f:
+    lines = f.read().splitlines()
+  with open(join(bundle_dir, 'internal', 'dartino-sdk.packages'), 'w') as f:
+    for line in lines:
+      parts = line.split(':')
+      name, path = parts
+      copytree(join('pkg', path, '..'), join(target_dir, name))
+      line = "%s:../pkg/%s/lib" % (name, name)
+      f.write('%s\n' % line)
+
   # Update the dartino_lib/dartino/lib/_embedder.yaml file
   # based upon the SDK structure
   embedderPath = join(target_dir, 'dartino', 'lib', '_embedder.yaml')
@@ -282,18 +281,36 @@ def CopySamples(bundle_dir):
 
 def CreateDocumentation():
   # Ensure all the dependencies of dartinodoc are available.
-  subprocess.call(
+  exit_code = subprocess.call(
     [join('..', '..',ThirdPartyDartSdkDir(), 'bin', 'pub'), 'get'],
       cwd='pkg/dartinodoc')
+  if exit_code != 0:
+    raise OSError(exit_code)
   sdk_dst = join('out', 'dartdoc-dart-sdk')
   EnsureDeleted(sdk_dst)
-  subprocess.call(
+
+  # Determine the sdk and third_party packages
+  sdk_packages = Set()
+  third_party_packages = Set()
+  with open(join('pkg', 'dartino-sdk.packages')) as f:
+    lines = f.read().splitlines()
+  for line in lines:
+    parts = line.split(':')
+    name, path = parts
+    if path.startswith('../third_party/'):
+      third_party_packages.add(name)
+    else:
+      sdk_packages.add(name)
+
+  exit_code = subprocess.call(
       [join(ThirdPartyDartSdkDir(), 'bin', 'dart'),
        '-c', 'pkg/dartinodoc/bin/dartinodoc.dart',
        '--output', sdk_dst,
-       '--sdk-packages', ",".join(SDK_PACKAGES),
-       '--third-party-packages', ",".join(THIRD_PARTY_PACKAGES),
+       '--sdk-packages', ",".join(sdk_packages),
+       '--third-party-packages', ",".join(third_party_packages),
        '--version', utils.GetSemanticSDKVersion()])
+  if exit_code != 0:
+    raise OSError(exit_code)
 
 def CopyTools(bundle_dir):
   tools_dir = join(bundle_dir, 'tools')

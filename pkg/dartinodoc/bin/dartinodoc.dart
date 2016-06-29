@@ -299,7 +299,7 @@ Future<Null> main(List<String> arguments) async {
     return new Library(x.toFilePath(), null, true, null);
   });
 
-  String outputPath = arguments.length > 0 ? arguments[0] : './dartinodoc';
+  String outputPath = args['output'] ?? './dartinodoc';
 
   Directory outputDir = new Directory(outputPath);
 
