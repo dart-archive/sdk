@@ -10,4 +10,5 @@ stm32:../pkg/stm32/lib
 socket:../pkg/socket/lib
 mqtt:../pkg/mqtt/lib
 mbedtls:../pkg/mbedtls/lib
+nucleo_iks01a1:../pkg/nucleo_iks01a1/lib
 charcode:../third_party/charcode/lib
