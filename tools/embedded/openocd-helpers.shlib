@@ -52,15 +52,29 @@ while [ $# -gt ${EXPECTED_ARGS} ]; do
       GDB=$2
       shift 2
       ;;
+    --reset)
+      GDB_COMMAND="mon reset halt"
+      shift 1
+      ;;
+    --attach)
+      GDB_COMMAND=
+      shift 1
+      ;;
     --help | -h)
       echo "Options: --disco or -d    Use discovery f7 board configuration"
       echo "         --nucleo or -n   Use nucleo F4 board configuration"
       echo "         --board or -b    Manually set board name"
       echo "         --link or -l     Manually set debug link type"
       echo "         --openocd or -o  Set openocd home directory"
+      echo "         --attach         Attach gdb to running binary"
+      echo "         --reset          Attach gdb and reset the running binary"
       echo "         --gdb-embedded   Use gdb from third_party/gcc-arm-embedded"
       echo "         --gdb            Set gdb executable"
       echo "         --help or -h     Print this message"
+      echo "         --help or -h     Print this message"
+      echo ""
+      echo "The options --attach, --reset, --gdb-embedded and --gdb are "
+      echo "only relevant for debugging."
       exit 0
       ;;
     *)
