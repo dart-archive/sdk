@@ -375,20 +375,25 @@ HeapObject *Program::ObjectAtOffset(uword offset) {
 }
 
 void Program::ValidateGlobalHeapsAreConsistent() {
+#ifdef SUPPORT_HEAP_VALIDATION
   ProgramHeapPointerValidator validator(heap());
   HeapObjectPointerVisitor visitor(&validator);
   IterateRoots(&validator);
   heap()->IterateObjects(&visitor);
+#endif
 }
 
 void Program::ValidateHeapsAreConsistent() {
+#ifdef SUPPORT_HEAP_VALIDATION
   // Program heap.
   ValidateGlobalHeapsAreConsistent();
   // Processes and their shared heap.
   ValidateSharedHeap();
+#endif
 }
 
 void Program::ValidateSharedHeap() {
+#ifdef SUPPORT_HEAP_VALIDATION
   ProcessRootValidatorVisitor process_validator(heap());
   VisitProcesses(&process_validator);
 
@@ -397,6 +402,7 @@ void Program::ValidateSharedHeap() {
 
   process_heap()->IterateObjects(&pointer_visitor);
   process_heap()->VisitWeakObjectPointers(&validator);
+#endif
 }
 
 // Visits all pointers to doubles, so we can move them to the start.
