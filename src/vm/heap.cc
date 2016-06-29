@@ -22,8 +22,8 @@ OneSpaceHeap::OneSpaceHeap(RandomXorShift* random, int maximum_initial_size)
   AdjustAllocationBudget();
 }
 
-TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
-    : Heap(random),
+TwoSpaceHeap::TwoSpaceHeap()
+    : Heap(reinterpret_cast<RandomXorShift*>(NULL)),
       old_space_(new OldSpace(this)),
       unused_semispace_(new SemiSpace(Space::kCannotResize, kNewSpacePage, 0)) {
   space_ = new SemiSpace(Space::kCannotResize, kNewSpacePage, 0);
@@ -31,16 +31,25 @@ TwoSpaceHeap::TwoSpaceHeap(RandomXorShift* random)
   size = Utils::Minimum(1ul << 24,
                         Utils::Maximum(size, 0ul + Platform::kPageSize));
   semispace_size_ = size;
-  Chunk* chunk = ObjectMemory::AllocateChunk(space_, size);
-  ASSERT(chunk != NULL);  // TODO(erikcorry): Cope with out-of-memory.
+  max_size_ = Utils::RoundUp(Flags::max_heap_size * 1024, Platform::kPageSize);
+}
+
+bool TwoSpaceHeap::Initialize() {
+  Chunk* chunk = ObjectMemory::AllocateChunk(space_, semispace_size_);
+  if (chunk == NULL) return false;
+  Chunk* unused_chunk =
+      ObjectMemory::AllocateChunk(unused_semispace_, semispace_size_);
+  if (unused_chunk == NULL) {
+    ObjectMemory::FreeChunk(chunk);
+    return false;
+  }
   space_->Append(chunk);
   space_->UpdateBaseAndLimit(chunk, chunk->start());
-  Chunk* unused_chunk = ObjectMemory::AllocateChunk(unused_semispace_, size);
   unused_semispace_->Append(unused_chunk);
   AdjustAllocationBudget();
   AdjustOldAllocationBudget();
   water_mark_ = chunk->start();
-  max_size_ = Utils::RoundUp(Flags::max_heap_size * 1024, Platform::kPageSize);
+  return true;
 }
 
 uword TwoSpaceHeap::MaxExpansion() {

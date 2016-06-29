@@ -172,8 +172,11 @@ class OneSpaceHeap : public Heap {
 
 class TwoSpaceHeap : public Heap {
  public:
-  explicit TwoSpaceHeap(RandomXorShift* random);
+  TwoSpaceHeap();
   virtual ~TwoSpaceHeap();
+
+  // Returns false for allocation failure.
+  bool Initialize();
 
   OldSpace* old_space() { return old_space_; }
   SemiSpace* unused_space() { return unused_semispace_; }
