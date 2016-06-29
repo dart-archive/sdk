@@ -18,6 +18,8 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+# Default gdb command will just attach to the target.
+GDB_COMMAND=
 EXPECTED_ARGS=1
 
 source $(dirname $(follow_links $0))/openocd-helpers.shlib
@@ -65,6 +67,6 @@ fi
 # see the SIGINT commonly used in gdb to interrupt program execution.
 # openocd terminates on SIGINT :(
 sh -ic "$GDB $1 --eval-command='tar remote :3333' \
-    --eval-command='mon reset halt'"
+    --eval-command='$GDB_COMMAND'"
 
 cleanup

@@ -84,12 +84,15 @@ class MonitorImpl {
   bool Wait(uint64 microseconds) {
     DWORD miliseconds = microseconds / 1000;
     SleepConditionVariableSRW(&cond_, &srwlock_, miliseconds, 0);
-    return 0;
+    // TODO(erikcorry): Should return true on successful wait, false if the wait
+    // was interrupted.
+    return false;
   }
 
   bool WaitUntil(uint64 microseconds_since_epoch) {
-    uint64 now = Platform::GetMicroseconds();
-    return Wait(microseconds_since_epoch - now);
+    int64 us = microseconds_since_epoch - Platform::GetMicroseconds();
+    if (us < 0) us == 0;
+    return Wait(us);
   }
 
   int Notify() {

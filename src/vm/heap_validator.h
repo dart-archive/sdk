@@ -10,6 +10,12 @@
 
 namespace dartino {
 
+#ifdef DEBUG
+// We don't normally include the heap validation code in release builds, but
+// you can edit these lines if you need it.
+#define SUPPORT_HEAP_VALIDATION
+#endif
+
 class SharedHeap;
 
 // Validates that all pointers it gets called with lie inside certain spaces -

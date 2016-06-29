@@ -5,6 +5,7 @@
 library stm32.stm32f411re_nucleo;
 
 import 'package:gpio/gpio.dart';
+import 'package:stm32/adc.dart';
 import 'package:stm32/gpio.dart';
 import 'package:stm32/uart.dart';
 import 'package:stm32/src/constants.dart';
@@ -25,6 +26,7 @@ class STM32F411RENucleo {
 
   STM32Gpio _gpio;
   Uart _uart;
+  STM32Adc _adc;
 
   STM32F411RENucleo();
 
@@ -40,5 +42,12 @@ class STM32F411RENucleo {
       _uart = new Uart();
     }
     return _uart;
+  }
+
+  STM32Adc get adc {
+    if (_adc == null) {
+      _adc = new STM32Adc(STM32AdcConstants.ADC1, gpio);
+    }
+    return _adc;
   }
 }

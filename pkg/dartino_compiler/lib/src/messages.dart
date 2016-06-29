@@ -90,9 +90,6 @@ enum DiagnosticKind {
   verbRequiresTarget,
   versionMismatch,
 
-  // TODO(ahe): Remove when debug attach implicitly.
-  attachToVmBeforeRun,
-
   // TODO(ahe): Remove when debug compile implicitly.
   compileBeforeRun,
 }
@@ -230,10 +227,6 @@ String getMessage(DiagnosticKind kind) {
 
     case DiagnosticKind.socketVmReplyError:
       return "Received invalid reply from Dartino VM on $address: $message.";
-
-    case DiagnosticKind.attachToVmBeforeRun:
-      return "Unable to run program without being attached to a VM. "
-          "Try running 'dartino attach'.";
 
     case DiagnosticKind.compileBeforeRun:
       return "No program to run. Try running 'dartino compile'";

@@ -37,9 +37,14 @@ const int DMA2_BASE = AHB1PERIPH_BASE + 0x6400;
 const int ETH_BASE = AHB1PERIPH_BASE + 0x8000;
 const int DMA2D_BASE = AHB1PERIPH_BASE + 0xB000;
 
+const int ADC1_BASE = APB2PERIPH_BASE + 0x2000;
+const int ADC2_BASE = APB2PERIPH_BASE + 0x2100;
+const int ADC3_BASE = APB2PERIPH_BASE + 0x2200;
+const int ADC_COMMON_BASE = APB2PERIPH_BASE + 0x2300;
+
 // Reset and Clock Control (RCC) registers.
 //
-// These are offsets into the peripheral refisters from offset RCC_BASE.
+// These are offsets into the peripheral registers from offset RCC_BASE.
 class RCC {
   static const int CR = 0x00; // RCC clock control register.
   static const int PLLCFGR = 0x04; // RCC PLL configuration register.
@@ -108,6 +113,27 @@ const int RCC_AHB1ENR_ETHMACRXEN = 0x08000000;
 const int RCC_AHB1ENR_ETHMACPTPEN = 0x10000000;
 const int RCC_AHB1ENR_OTGHSEN = 0x20000000;
 const int RCC_AHB1ENR_OTGHSULPIEN = 0x40000000;
+
+// Bit definition for RCC_APB2ENR register
+const int RCC_APB2ENR_TIM1EN = 0x00000001;
+const int RCC_APB2ENR_TIM8EN = 0x00000002;
+const int RCC_APB2ENR_USART1EN = 0x00000010;
+const int RCC_APB2ENR_USART6EN = 0x00000020;
+const int RCC_APB2ENR_ADC1EN = 0x00000100;
+const int RCC_APB2ENR_ADC2EN = 0x00000200;
+const int RCC_APB2ENR_ADC3EN = 0x00000400;
+const int RCC_APB2ENR_SDMMC1EN = 0x00000800;
+const int RCC_APB2ENR_SPI1EN = 0x00001000;
+const int RCC_APB2ENR_SPI4EN = 0x00002000;
+const int RCC_APB2ENR_SYSCFGEN = 0x00004000;
+const int RCC_APB2ENR_TIM9EN = 0x00010000;
+const int RCC_APB2ENR_TIM10EN = 0x00020000;
+const int RCC_APB2ENR_TIM11EN = 0x00040000;
+const int RCC_APB2ENR_SPI5EN = 0x00100000;
+const int RCC_APB2ENR_SPI6EN = 0x00200000;
+const int RCC_APB2ENR_SAI1EN = 0x00400000;
+const int RCC_APB2ENR_SAI2EN = 0x00800000;
+const int RCC_APB2ENR_LTDCEN = 0x04000000;
 
 // Offset to GPIO registers for each GPIO port.
 //
@@ -182,3 +208,251 @@ const int GPIO_MODE_EVT = 0x00020000;
 const int RISING_EDGE = 0x00100000;
 const int FALLING_EDGE = 0x00200000;
 const int GPIO_OUTPUT_TYPE = 0x00000010;
+
+// Analog-to-digital converter (ADC) registers.
+class ADC {
+  // Offset to ADC registers for each ADC port, relative to port base.
+  static const int SR = 0x00; // ADC status register.
+  static const int CR1 = 0x04; // ADC control register 1.
+  static const int CR2 = 0x08; // ADC control register 2.
+  static const int SMPR1 = 0x0C; // ADC sample time register 1.
+  static const int SMPR2 = 0x10; // ADC sample time register 2.
+  static const int JOFR1 = 0x14; // ADC injected channel data offset register 1.
+  static const int JOFR2 = 0x18; // ADC injected channel data offset register 2.
+  static const int JOFR3 = 0x1C; // ADC injected channel data offset register 3.
+  static const int JOFR4 = 0x20; // ADC injected channel data offset register 4.
+  static const int HTR = 0x24; // ADC watchdog higher threshold register.
+  static const int LTR = 0x28; // ADC watchdog lower threshold register.
+  static const int SQR1 = 0x2C; // ADC regular sequence register 1.
+  static const int SQR2 = 0x30; // ADC regular sequence register 2.
+  static const int SQR3 = 0x34; // ADC regular sequence register 3.
+  static const int JSQR = 0x38; // ADC injected sequence register.
+  static const int JDR1 = 0x3C; // ADC injected data register 1.
+  static const int JDR2 = 0x40; // ADC injected data register 2.
+  static const int JDR3 = 0x44; // ADC injected data register 3.
+  static const int JDR4 = 0x48; // ADC injected data register 4.
+  static const int DR = 0x4C; // ADC regular data register.
+
+  // Common register offsets, relative to ADC_COMMON_BASE.
+  static const int CSR = 0x00; // ADC common status register.
+  static const int CCR = 0x04; // ADC common control register.
+  // ADC common regular data register for dual and triple modes.
+  static const int CDR = 0x08;
+}
+
+// Analog to Digital Converter (ADC).
+
+// Bit definition for ADC_SR register.
+const int ADC_SR_AWD = 0x00000001; // Analog watchdog flag.
+const int ADC_SR_EOC = 0x00000002; // End of conversion.
+const int ADC_SR_JEOC = 0x00000004; // Injected channel end of conversion.
+const int ADC_SR_JSTRT = 0x00000008; // Injected channel Start flag.
+const int ADC_SR_STRT = 0x00000010; // Regular channel Start flag.
+const int ADC_SR_OVR = 0x00000020; // Overrun flag.
+
+// Bit definition for ADC_CR1 register.
+
+// AWDCH[4:0] bits (Analog watchdog channel select bits).
+const int ADC_CR1_AWDCH_MASK = 0x0000001F;
+// Interrupt enable for EOC.
+const int ADC_CR1_EOCIE = 0x00000020;
+// Analog Watchdog interrupt enable.
+const int ADC_CR1_AWDIE = 0x00000040;
+// Interrupt enable for injected channels.
+const int ADC_CR1_JEOCIE = 0x00000080;
+// Scan mode.
+const int ADC_CR1_SCAN = 0x00000100;
+// Enable the watchdog on a single channel in scan mode.
+const int ADC_CR1_AWDSGL = 0x00000200;
+// Automatic injected group conversion.
+const int ADC_CR1_JAUTO = 0x00000400;
+// Discontinuous mode on regular channels.
+const int ADC_CR1_DISCEN = 0x00000800;
+// Discontinuous mode on injected channels.
+const int ADC_CR1_JDISCEN = 0x00001000;
+// DISCNUM[2:0] bits (Discontinuous mode channel count).
+const int ADC_CR1_DISCNUM_MASK = 0x0000E000;
+// Analog watchdog enable on injected channels.
+const int ADC_CR1_JAWDEN = 0x00400000;
+// Analog watchdog enable on regular channels.
+const int ADC_CR1_AWDEN = 0x00800000;
+// RES[2:0] bits (Resolution).
+const int ADC_CR1_RES_MASK = 0x03000000;
+const int ADC_CR1_RES_12BIT = 0x00000000;
+const int ADC_CR1_RES_10BIT = 0x01000000;
+const int ADC_CR1_RES_8BIT = 0x02000000;
+const int ADC_CR1_RES_6BIT = 0x03000000;
+// Overrun interrupt enable.
+const int ADC_CR1_OVRIE = 0x04000000;
+
+// Bit definition for ADC_CR2 register.
+
+// A/D Converter ON / OFF.
+const int ADC_CR2_ADON = 0x00000001;
+// Continuous Conversion.
+const int ADC_CR2_CONT = 0x00000002;
+// Direct Memory access mode.
+const int ADC_CR2_DMA = 0x00000100;
+// DMA disable selection (Single ADC).
+const int ADC_CR2_DDS = 0x00000200;
+// End of conversion selection.
+const int ADC_CR2_EOCS = 0x00000400;
+// Data Alignment.
+const int ADC_CR2_ALIGN_MASK = 0x00000800;
+const int ADC_CR2_ALIGN_RIGHT = 0x00000000;
+const int ADC_CR2_ALIGN_LEFT = 0x00000800;
+// JEXTSEL[3:0] bits (External event select for injected group).
+const int ADC_CR2_JEXTSEL_MASK = 0x000F0000;
+// JEXTEN[1:0] bits (External Trigger Conversion mode for injected channelsp).
+const int ADC_CR2_JEXTEN_MASK = 0x00300000;
+// Start Conversion of injected channels.
+const int ADC_CR2_JSWSTART = 0x00400000;
+// EXTSEL[3:0] bits (External Event Select for regular group).
+const int ADC_CR2_EXTSEL_MASK = 0x0F000000;
+// EXTEN[1:0] bits (External Trigger Conversion mode for regular channelsp).
+const int ADC_CR2_EXTEN_MASK = 0x30000000;
+// Start Conversion of regular channels.
+const int ADC_CR2_SWSTART = 0x40000000;
+
+// Bit definition for ADC_SMPRx registers.
+
+// Channel x Sample time mask.
+const int ADC_SMPR_MASK = 0x00000007;
+// Sampling time selections (ADCCLK cycles).
+const int ADC_SMPR_CYCLES_3 = 0x00000000;
+const int ADC_SMPR_CYCLES_15 = 0x00000001;
+const int ADC_SMPR_CYCLES_28 = 0x00000002;
+const int ADC_SMPR_CYCLES_56 = 0x00000003;
+const int ADC_SMPR_CYCLES_84 = 0x00000004;
+const int ADC_SMPR_CYCLES_112 = 0x00000005;
+const int ADC_SMPR_CYCLES_144 = 0x00000006;
+const int ADC_SMPR_CYCLES_480 = 0x00000007;
+
+// Bit definition for ADC_JOFR1 register.
+
+// Data offset for injected channel 1.
+const int ADC_JOFR1_JOFFSET1_MASK = 0x0FFF;
+
+// Bit definition for ADC_JOFR2 register.
+
+// Data offset for injected channel 2.
+const int ADC_JOFR2_JOFFSET2_MASK = 0x0FFF;
+
+// Bit definition for ADC_JOFR3 register.
+
+// Data offset for injected channel 3.
+const int ADC_JOFR3_JOFFSET3_MASK = 0x0FFF;
+
+// Bit definition for ADC_JOFR4 register.
+
+// Data offset for injected channel 4.
+const int ADC_JOFR4_JOFFSET4_MASK = 0x0FFF;
+
+// Bit definition for ADC_HTR register.
+const int ADC_HTR_HT_MASK = 0x0FFF; // Analog watchdog high threshold.
+
+// Bit definition for ADC_LTR register.
+const int ADC_LTR_LT_MASK = 0x0FFF; // Analog watchdog low threshold.
+
+// Bit definition for ADC_SQRx registers.
+
+// Regular sequence channel mask.
+const int ADC_SQR_MASK = 0x0000001F;
+// L[3:0] bits (Regular channel sequence length).
+const int ADC_SQR1_L_MASK = 0x00F00000;
+
+// Bit definition for ADC_JSQR register.
+
+// JSQ1[4:0] bits (1st conversion in injected sequence).
+const int ADC_JSQR_JSQ1_MASK = 0x0000001F;
+// JSQ2[4:0] bits (2nd conversion in injected sequence).
+const int ADC_JSQR_JSQ2_MASK = 0x000003E0;
+// JSQ3[4:0] bits (3rd conversion in injected sequence).
+const int ADC_JSQR_JSQ3_MASK = 0x00007C00;
+// JSQ4[4:0] bits (4th conversion in injected sequence).
+const int ADC_JSQR_JSQ4_MASK = 0x000F8000;
+// JL[1:0] bits (Injected Sequence length).
+const int ADC_JSQR_JL_MASK = 0x00300000;
+
+// Bit definition for ADC_JDR1 register.
+const int ADC_JDR1_JDATA_MASK = 0xFFFF; // Injected data.
+
+// Bit definition for ADC_JDR2 register.
+const int ADC_JDR2_JDATA_MASK = 0xFFFF; // Injected data.
+
+// Bit definition for ADC_JDR3 register.
+const int ADC_JDR3_JDATA_MASK = 0xFFFF; // Injected data.
+
+// Bit definition for ADC_JDR4 register.
+const int ADC_JDR4_JDATA_MASK = 0xFFFF; // Injected data.
+
+// Bit definition for ADC_DR register.
+const int ADC_DR_DATA_MASK = 0x0000FFFF; // Regular data.
+const int ADC_DR_ADC2DATA_MASK = 0xFFFF0000; // ADC2 data.
+
+// Bit definition for ADC_CSR register.
+
+// ADC1 Analog watchdog flag.
+const int ADC_CSR_AWD1 = 0x00000001;
+// ADC1 End of conversion.
+const int ADC_CSR_EOC1 = 0x00000002;
+// ADC1 Injected channel end of conversion.
+const int ADC_CSR_JEOC1 = 0x00000004;
+// ADC1 Injected channel Start flag.
+const int ADC_CSR_JSTRT1 = 0x00000008;
+// ADC1 Regular channel Start flag.
+const int ADC_CSR_STRT1 = 0x00000010;
+// ADC1 Overrun flag.
+const int ADC_CSR_OVR1 = 0x00000020;
+// ADC2 Analog watchdog flag.
+const int ADC_CSR_AWD2 = 0x00000100;
+// ADC2 End of conversion.
+const int ADC_CSR_EOC2 = 0x00000200;
+// ADC2 Injected channel end of conversion.
+const int ADC_CSR_JEOC2 = 0x00000400;
+// ADC2 Injected channel Start flag.
+const int ADC_CSR_JSTRT2 = 0x00000800;
+// ADC2 Regular channel Start flag.
+const int ADC_CSR_STRT2 = 0x00001000;
+// ADC2 Overrun flag.
+const int ADC_CSR_OVR2 = 0x00002000;
+// ADC3 Analog watchdog flag.
+const int ADC_CSR_AWD3 = 0x00010000;
+// ADC3 End of conversion.
+const int ADC_CSR_EOC3 = 0x00020000;
+// ADC3 Injected channel end of conversion.
+const int ADC_CSR_JEOC3 = 0x00040000;
+// ADC3 Injected channel Start flag.
+const int ADC_CSR_JSTRT3 = 0x00080000;
+// ADC3 Regular channel Start flag.
+const int ADC_CSR_STRT3 = 0x00100000;
+// ADC3 Overrun flag.
+const int ADC_CSR_OVR3 = 0x00200000;
+
+// Bit definition for ADC_CCR register.
+
+// MULTI[4:0] bits (Multi-ADC mode selection).
+const int ADC_CCR_MULTI_MASK = 0x0000001F;
+// DELAY[3:0] bits (Delay between 2 sampling phases).
+const int ADC_CCR_DELAY_MASK = 0x00000F00;
+// DMA disable selection (Multi-ADC mode).
+const int ADC_CCR_DDS = 0x00002000;
+// DMA[1:0] bits (Direct Memory Access mode for multimode).
+const int ADC_CCR_DMA_MASK = 0x0000C000;
+// ADCPRE[1:0] bits (ADC clock prescaler).
+const int ADC_CCR_ADCPRE_MASK = 0x00030000;
+const int ADC_CCR_ADCPRE_PCLK2_DIV_2 = 0x00000000;
+const int ADC_CCR_ADCPRE_PCLK2_DIV_4 = 0x00010000;
+const int ADC_CCR_ADCPRE_PCLK2_DIV_6 = 0x00020000;
+const int ADC_CCR_ADCPRE_PCLK2_DIV_8 = 0x00030000;
+// VBAT Enable.
+const int ADC_CCR_VBATE = 0x00400000;
+// Temperature Sensor and VREFINT Enable.
+const int ADC_CCR_TSVREFE = 0x00800000;
+
+// Bit definition for ADC_CDR register.
+
+// 1st data of a pair of regular conversions.
+const int ADC_CDR_DATA1_MASK = 0x0000FFFF;
+// 2nd data of a pair of regular conversions.
+const int ADC_CDR_DATA2_MASK = 0xFFFF0000;

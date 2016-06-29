@@ -43,7 +43,7 @@ Program::Program(ProgramSource source, int snapshot_hash)
           process_list_mutex_(Platform::CreateMutex()),
       random_(0),
       heap_(&random_),
-      process_heap_(NULL),
+      process_heap_(),
       scheduler_(NULL),
       session_(NULL),
       entry_(NULL),
@@ -65,6 +65,11 @@ Program::Program(ProgramSource source, int snapshot_hash)
   ROOTS_DO(ASSERT_OFFSET)
 #undef ASSERT_OFFSET
   ASSERT(loaded_from_snapshot_ || snapshot_hash_ == 0);
+  if (!process_heap_.Initialize()) {
+    // TODO(erikcorry): We need to trigger a GC in the other programs (if any)
+    // and make sure they return extra memory to the OS.
+    FATAL("Out of memory");
+  }
 }
 
 Program::~Program() {
@@ -370,20 +375,25 @@ HeapObject *Program::ObjectAtOffset(uword offset) {
 }
 
 void Program::ValidateGlobalHeapsAreConsistent() {
+#ifdef SUPPORT_HEAP_VALIDATION
   ProgramHeapPointerValidator validator(heap());
   HeapObjectPointerVisitor visitor(&validator);
   IterateRoots(&validator);
   heap()->IterateObjects(&visitor);
+#endif
 }
 
 void Program::ValidateHeapsAreConsistent() {
+#ifdef SUPPORT_HEAP_VALIDATION
   // Program heap.
   ValidateGlobalHeapsAreConsistent();
   // Processes and their shared heap.
   ValidateSharedHeap();
+#endif
 }
 
 void Program::ValidateSharedHeap() {
+#ifdef SUPPORT_HEAP_VALIDATION
   ProcessRootValidatorVisitor process_validator(heap());
   VisitProcesses(&process_validator);
 
@@ -392,6 +402,7 @@ void Program::ValidateSharedHeap() {
 
   process_heap()->IterateObjects(&pointer_visitor);
   process_heap()->VisitWeakObjectPointers(&validator);
+#endif
 }
 
 // Visits all pointers to doubles, so we can move them to the start.

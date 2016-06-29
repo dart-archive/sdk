@@ -40,8 +40,14 @@ main() {
   }
 
   print('Network interface is up.');
+
   try {
     Socket s = new Socket.connect("192.168.0.2", 5001);
+    print('Socket connected.');
+    s.close();
+    print('Socket closed.');
+
+    s = new Socket.connect("192.168.0.2", 5001);
     print('Socket connected.');
     ByteBuffer buffer = createBuffer(5);
     s.write(buffer);
@@ -54,6 +60,7 @@ main() {
       print('Socket closed by peer.');
     }
     s.close();
+    print('Socket closed.');
   } on SocketException catch (e) {
     print('Caught exception: $e.');
   }

@@ -158,6 +158,7 @@ namespace dartino {
                                                                                \
   N(ForeignDoubleToSignedBits, "ForeignFunction", "doubleToSignedBits", true) \
   N(ForeignSignedBitsToDouble, "ForeignFunction", "signedBitsToDouble", true) \
+  N(ForeignListCall, "ForeignFunction", "_callv", false)                       \
   N(ForeignICall0, "ForeignFunction", "_icall$0", false)                       \
   N(ForeignICall1, "ForeignFunction", "_icall$1", false)                       \
   N(ForeignICall2, "ForeignFunction", "_icall$2", false)                       \

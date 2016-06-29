@@ -9,6 +9,8 @@
 #ifndef SRC_VM_FFI_TEST_LIBRARY_H_
 #define SRC_VM_FFI_TEST_LIBRARY_H_
 
+#include <stdint.h>
+
 #ifdef _MSC_VER
 // TODO(herhut): Do we need a __declspec here for Windows?
 #define EXPORT
@@ -57,6 +59,20 @@ EXPORT int ifun5EINTR(int a, int b, int c, int d, int e);
 EXPORT int ifun6EINTR(int a, int b, int c, int d, int e, int f);
 
 EXPORT int ifun7EINTR(int a, int b, int c, int d, int e, int f, int g);
+
+EXPORT int64_t i64fun1(int a);
+
+EXPORT int64_t i64fun2(int a, int b);
+
+EXPORT int64_t i64fun3(int a, int b, int c);
+
+EXPORT int64_t i64fun4(int a, int b, int c, int d);
+
+EXPORT int64_t i64fun5(int a, int b, int c, int d, int e);
+
+EXPORT int64_t i64fun6(int a, int b, int c, int d, int e, int f);
+
+EXPORT int64_t i64fun7(int a, int b, int c, int d, int e, int f, int g);
 
 EXPORT void vfun0();
 

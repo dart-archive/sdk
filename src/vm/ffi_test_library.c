@@ -14,25 +14,6 @@
 
 #include "ffi_test_library.h"
 
-// Copied from globals.h to have consistent values
-// TODO(ricow): we could split globals into a c only part and a c++ part.
-typedef signed char int8;
-typedef short int16;  // NOLINT
-typedef int int32;
-
-typedef unsigned char uint8;
-typedef unsigned short uint16;  // NOLINT
-typedef unsigned int uint32;
-
-#ifdef DARTINO64
-typedef long int64;  // NOLINT
-typedef unsigned long uint64;  // NOLINT
-typedef char foobar;
-#else
-typedef long long int int64;  // NOLINT
-typedef long long unsigned uint64;
-typedef int foobar;
-#endif
 
 void setup() {
   count = 0;
@@ -155,6 +136,34 @@ int ifun7EINTR(int a, int b, int c, int d, int e, int f, int g) {
   return a + b + c + d + e + f + g;
 }
 
+int64_t i64fun1(int a) {
+  return a;
+}
+
+int64_t i64fun2(int a, int b) {
+  return a + b;
+}
+
+int64_t i64fun3(int a, int b, int c) {
+  return a + b + c;
+}
+
+int64_t i64fun4(int a, int b, int c, int d) {
+  return a + b + c + d;
+}
+
+int64_t i64fun5(int a, int b, int c, int d, int e) {
+  return a + b + c + d + e;
+}
+
+int64_t i64fun6(int a, int b, int c, int d, int e, int f) {
+  return a + b + c + d + e + f;
+}
+
+int64_t i64fun7(int a, int b, int c, int d, int e, int f, int g) {
+  return a + b + c + d + e + f + g;
+}
+
 void vfun0() {
   count = 0;
 }
@@ -190,7 +199,7 @@ void vfun7(int a, int b, int c, int d, int e, int f, int g) {
 // We assume int are 32 bits, short is 16 bits, char is 8 bits,
 // float is 32 bits, double is 64 bits.
 void* pfun0() {
-  int32* data = malloc(sizeof(int32) * 4);
+  int32_t* data = malloc(sizeof(int32_t) * 4);
   *data = 1;
   *(data + 1) = 2;
   *(data + 2) = 3;
@@ -199,7 +208,7 @@ void* pfun0() {
 }
 
 void* pfun1(int value) {
-  int32* data = malloc(sizeof(int32) * 4);
+  int32_t* data = malloc(sizeof(int32_t) * 4);
   *data = value;
   *(data + 1) = value;
   *(data + 2) = value;
@@ -208,7 +217,7 @@ void* pfun1(int value) {
 }
 
 void* pfun2(int value, int value2) {
-  int32* data = malloc(sizeof(int32) * 4);
+  int32_t* data = malloc(sizeof(int32_t) * 4);
   *data = value;
   *(data + 1) = value2;
   *(data + 2) = value;
@@ -217,7 +226,7 @@ void* pfun2(int value, int value2) {
 }
 
 void* pfun3(int value, int value2, int value3) {
-  int32* data = malloc(sizeof(int32) * 4);
+  int32_t* data = malloc(sizeof(int32_t) * 4);
   *data = value;
   *(data + 1) = value2;
   *(data + 2) = value3;
@@ -226,7 +235,7 @@ void* pfun3(int value, int value2, int value3) {
 }
 
 void* pfun4(int value, int value2, int value3, int value4) {
-  int32* data = malloc(sizeof(int32) * 4);
+  int32_t* data = malloc(sizeof(int32_t) * 4);
   *data = value;
   *(data + 1) = value2;
   *(data + 2) = value3;
@@ -235,7 +244,7 @@ void* pfun4(int value, int value2, int value3, int value4) {
 }
 
 void* pfun5(int value, int value2, int value3, int value4, int value5) {
-  int32* data = malloc(sizeof(int32) * 4);
+  int32_t* data = malloc(sizeof(int32_t) * 4);
   *data = value;
   *(data + 1) = value2;
   *(data + 2) = value3;
@@ -245,7 +254,7 @@ void* pfun5(int value, int value2, int value3, int value4, int value5) {
 
 void* pfun6(int value, int value2, int value3, int value4, int value5,
             int value6) {
-  int32* data = malloc(sizeof(int32) * 4);
+  int32_t* data = malloc(sizeof(int32_t) * 4);
   *data = value;
   *(data + 1) = value2;
   *(data + 2) = value3;
@@ -255,7 +264,7 @@ void* pfun6(int value, int value2, int value3, int value4, int value5,
 
 
 void* memint8() {
-  int8* data = malloc(sizeof(int8) * 4);
+  int8_t* data = malloc(sizeof(int8_t) * 4);
   *data = -1;
   *(data + 1) = -128;
   *(data + 2) = 'c';
@@ -264,7 +273,7 @@ void* memint8() {
 }
 
 void* memint16() {
-  int16* data = malloc(sizeof(int16) * 4);
+  int16_t* data = malloc(sizeof(int16_t) * 4);
   *data = 32767;
   *(data + 1) = -32768;
   *(data + 2) = 0;
@@ -273,7 +282,7 @@ void* memint16() {
 }
 
 void* memuint16() {
-  uint16* data = malloc(sizeof(uint16) * 4);
+  uint16_t* data = malloc(sizeof(uint16_t) * 4);
   *data = 0;
   *(data + 1) = 32767;
   *(data + 2) = 32768;
@@ -282,7 +291,7 @@ void* memuint16() {
 }
 
 void* memuint32() {
-  uint32* data = malloc(sizeof(uint32) * 4);
+  uint32_t* data = malloc(sizeof(uint32_t) * 4);
   *data = 0;
   *(data + 1) = 1;
   *(data + 2) = 65536;
@@ -291,7 +300,7 @@ void* memuint32() {
 }
 
 void* memint64() {
-  int64* data = malloc(sizeof(int64) * 4);
+  int64_t* data = malloc(sizeof(int64_t) * 4);
   *data = 0;
   *(data + 1) = -1;
   *(data + 2) = 9223372036854775807u;
@@ -300,7 +309,7 @@ void* memint64() {
 }
 
 void* memuint64() {
-  uint64* data = malloc(sizeof(uint64) * 4);
+  uint64_t* data = malloc(sizeof(uint64_t) * 4);
   *data = 0;
   *(data + 1) = 1;
   *(data + 2) = 2;

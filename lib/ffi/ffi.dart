@@ -186,6 +186,10 @@ class ForeignFunction extends Foreign {
         _convert(a3), _convert(a4), _convert(a5), _convert(a6));
   }
 
+  int callv(int returnType, int len, args) {
+    return _callv(address, returnType, len, args);
+  }
+
   // Support for calling foreign functions that return
   // integers. The functions with the suffix `Retry` can be used for calling
   // functions that follow functions that follow the POSIX-convention
@@ -282,6 +286,10 @@ class ForeignFunction extends Foreign {
   }
 
   int Lcall$wLwRetry(a0, a1, a2) => retry(() => Lcall$wLw(a0, a1, a2));
+
+  @dartino.native static int _callv(int address, int returnType, int len, args) {
+    throw new ArgumentError();
+  }
 
   @dartino.native static int _icall$0(int address) {
     throw new ArgumentError();
@@ -489,6 +497,112 @@ class ForeignLibrary extends ForeignPointer {
   @dartino.native static int _lookupFunction(int address, String name) {
     var error = dartino.nativeError;
     throw (error != dartino.indexOutOfBounds) ? error : new ArgumentError();
+  }
+}
+
+/// Foreign Function return types definition, prefer to use shorthands in Ffi.
+// The order of members here has to match the C++ version inside of the VM.
+enum ForeignFunctionReturnType {
+  pointer,
+  int32,
+  int64,
+  float32,
+  void_
+}
+
+/// Foreign Function argument types defintion, prefer to use shorthands in Ffi.
+// The order of members here has to match the C++ version inside of the VM.
+enum ForeignFunctionArgumentType {
+  pointer,
+  int32,
+  int64,
+  float32
+}
+
+/// A wrapper for type-safe invocation of Foreign Function.
+class Ffi {
+  ForeignFunction func;
+  ForeignFunctionReturnType returnType;
+  List<ForeignFunctionArgumentType> argTypes;
+  
+  /// Shorthand for pointer return type enum
+  static const returnsPointer = ForeignFunctionReturnType.pointer;
+  /// Shorthand for int32 return type enum
+  static const returnsInt32 = ForeignFunctionReturnType.int32;
+  /// Shorthand for int64 return type enum
+  static const returnsInt64 = ForeignFunctionReturnType.int64;
+  /// Shorthand for float32 return type enum
+  static const returnsFloat32 = ForeignFunctionReturnType.float32;
+  /// Shorthand for void return type enum
+  static const returnsVoid = ForeignFunctionReturnType.void_;
+
+  /// Shorthand for pointer argument type enum
+  static const pointer = ForeignFunctionArgumentType.pointer;
+  /// Shorthand for int32 argument type enum
+  static const int32 = ForeignFunctionArgumentType.int32;
+  /// Shorthand for int64 argument type enum
+  static const int64 = ForeignFunctionArgumentType.int64;
+  /// Shorthand for float32 argument type enum
+  static const float32 = ForeignFunctionArgumentType.float32;
+
+  Ffi(String name, this.returnType, this.argTypes, [ForeignLibrary lib]) {
+    func = lib == null ? ForeignLibrary.main.lookup(name) : lib.lookup(name);
+  }
+
+  _doCall(int len, dartino.FixedList args) {
+    var converted = new List(args.length); // is a FixedList
+    if (len != argTypes.length) {
+      throw new ArgumentError("Ffi wrong number of arguments");
+    }
+    for (var i = 0; i < len; i++) {
+      switch (argTypes[i]) {
+        case Ffi.pointer:
+          if (!(args[i] is Foreign)) {
+            throw new ArgumentError("Ffi expected pointer");
+          }
+          converted[i] = args[i].address;
+          break;
+        case Ffi.int32:
+        case Ffi.int64:
+          if (args[i] is double) {
+            converted[i] = args[i].toInt();
+          } else if (args[i] is int) {
+            converted[i] = args[i];
+          } else {
+            throw new ArgumentError("Ffi expected int");
+          }
+          break;
+        case Ffi.float32:
+          if (args[i] is int) {
+            converted[i] = args[i].toDouble();
+          } else if (args[i] is double) {
+            converted[i] = args[i];
+          } else {
+            throw new ArgumentError("Ffi expected double");
+          }
+          break;
+      }
+    }
+    switch (returnType) {
+      case Ffi.returnsVoid:
+        func.callv(returnType.index, len, converted);
+        break;
+      case Ffi.returnsInt32:
+      case Ffi.returnsInt64:
+        return func.callv(returnType.index, len, converted);
+      case Ffi.returnsPointer:
+        return new ForeignPointer(func.callv(returnType.index, len, converted));
+      default:
+        throw new ArgumentError();
+    }
+  }
+
+  call(args) {
+    if (args is dartino.FixedListBase || args is dartino.GrowableList) {
+      return _doCall(args.length, args);
+    } else {
+      throw new ArgumentError("Ffi expects List");
+    }
   }
 }
 

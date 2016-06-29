@@ -24,6 +24,9 @@ dartino::DeviceManager* GetDeviceManager() {
 
 uint32_t RegisterSocket(Socket_t socket) {
   dartino::ScopedLock locker(&mutex_);
+  if (socketSet_ == NULL) {
+    socketSet_ = FreeRTOS_CreateSocketSet();
+  }
   uint32_t handle = GetDeviceManager()->CreateSocket();
   sockets_[socket] = handle;
   return handle;
@@ -32,7 +35,6 @@ uint32_t RegisterSocket(Socket_t socket) {
 void ListenForSocketEvent(Socket_t socket, uint32_t mask) {
   dartino::ScopedLock locker(&mutex_);
   if (socketHandlerTask_ == NULL) {
-    socketSet_ = FreeRTOS_CreateSocketSet();
     xTaskCreate(SocketHandlerTask, "SOCKETS", 128, NULL, osPriorityHigh,
                 &socketHandlerTask_);
   }

@@ -61,9 +61,6 @@ void Setup();
 // Tear down the platform services.
 void TearDown();
 
-// Set thread in thread local storage.
-void SetCurrentThread(Thread* thread);
-
 // Get thread from thread local storage.
 Thread* GetCurrentThread();
 
@@ -244,6 +241,8 @@ class Monitor {
   int Lock() { return impl_.Lock(); }
   int Unlock() { return impl_.Unlock(); }
   int Wait() { return impl_.Wait(); }
+  // Wait() and WaitUtil() return true if we waited until the timeout, or false
+  // if we were notified before the timeout.
   bool Wait(uint64 microseconds) { return impl_.Wait(microseconds); }
   bool WaitUntil(uint64 microseconds_since_epoch) {
     return impl_.WaitUntil(microseconds_since_epoch);

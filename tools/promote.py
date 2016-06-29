@@ -39,25 +39,39 @@ def Main():
     else:
       gsutil.execute(cmd)
 
+  def gsutil_rm(target):
+    if dryrun:
+      print 'DRY: gsutil rm %s' % target
+    else:
+      gsutil.remove(target)
+
   def Run(cmd, shell=False):
     print "Running: %s" % ' '.join(cmd)
-    if shell:
-      subprocess.check_call(' '.join(cmd), shell=shell)
+    if dryrun:
+      print 'DRY: %s' % ' '.join(cmd)
     else:
-      subprocess.check_call(cmd, shell=shell)
+      if shell:
+        subprocess.check_call(' '.join(cmd), shell=shell)
+      else:
+        subprocess.check_call(cmd, shell=shell)
 
   # Currently we only release on dev
   raw_namer = gcs_namer.DartinoGCSNamer(channel=bot_utils.Channel.DEV)
   release_namer = gcs_namer.DartinoGCSNamer(
       channel=bot_utils.Channel.DEV,
       release_type=bot_utils.ReleaseType.RELEASE)
+  delete_from_latest = gsutil.ls(
+      release_namer.dartino_sdk_directory('latest')).split('\n')
   for target_version in [version, 'latest']:
     for system in ['linux', 'mac']:
       for arch in ['x64']:
-        src = raw_namer.dartino_sdk_zipfilepath(version, system, arch, 'release')
         target = release_namer.dartino_sdk_zipfilepath(target_version, system,
-                                                      arch, 'release')
+                                                       arch, 'release')
+        src = raw_namer.dartino_sdk_zipfilepath(version, system,
+                                                arch, 'release')
         gsutil_cp(src, target)
+        if target_version == 'latest' and target in delete_from_latest:
+          delete_from_latest.remove(target)
 
   with utils.TempDir('version') as temp_dir:
     version_file = os.path.join(temp_dir, 'version')
@@ -65,6 +79,16 @@ def Main():
     with open(version_file, 'w') as f:
       f.write(version)
     gsutil_cp(version_file, target)
+    if target in delete_from_latest:
+      delete_from_latest.remove(target)
+
+  for name in delete_from_latest:
+    if name:
+      print
+      print "-----WARNING - Deleting %s which is no longer used -----" % name
+      print "-----If this file us used please fix your the script ---"
+      print
+      gsutil_rm(name)
 
   with utils.TempDir('docs') as temp_dir:
     docs = raw_namer.docs_filepath(version)
@@ -74,7 +98,8 @@ def Main():
     with utils.ChangedWorkingDirectory(temp_dir):
       print 'Cloning the dartino-api repo'
       Run(['git', 'clone', 'git@github.com:dartino/api.git'])
-      with utils.ChangedWorkingDirectory(os.path.join(temp_dir, 'api')):
+      apidir = '.' if dryrun else os.path.join(temp_dir, 'api')
+      with utils.ChangedWorkingDirectory(apidir):
         print 'Checking out gh-pages which serves our documentation'
         Run(['git', 'checkout', 'gh-pages'])
         print 'Cleaning out old version of docs locally'

@@ -55,6 +55,7 @@
           'dartino_base', 'dartino_release',
           'dartino_cortex_m_base', 'dartino_cortex_m7',
           'dartino_use_single_precision', 'dartino_stm',
+          'dartino_disable_live_coding',
           'dartino_disable_native_processes',
         ],
         'target_conditions': [
@@ -75,6 +76,7 @@
           'dartino_base', 'dartino_debug',
           'dartino_cortex_m_base', 'dartino_cortex_m7',
           'dartino_use_single_precision',
+          'dartino_disable_live_coding',
           'dartino_stm',
           'dartino_disable_native_processes',
         ],

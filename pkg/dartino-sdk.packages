@@ -1,0 +1,14 @@
+ffi:../pkg/ffi/lib
+file:../pkg/file/lib
+dartino:../pkg/dartino/lib
+gpio:../pkg/gpio/lib
+http:../pkg/http/lib
+i2c:../pkg/i2c/lib
+os:../pkg/os/lib
+raspberry_pi:../pkg/raspberry_pi/lib
+stm32:../pkg/stm32/lib
+socket:../pkg/socket/lib
+mqtt:../pkg/mqtt/lib
+mbedtls:../pkg/mbedtls/lib
+nucleo_iks01a1:../pkg/nucleo_iks01a1/lib
+charcode:../third_party/charcode/lib

@@ -296,8 +296,6 @@ void I2CDriverImpl::InterruptHandler() {
     } else {
       SignalSuccess();
     }
-  } else {
-    UNREACHABLE();
   }
 }
 
