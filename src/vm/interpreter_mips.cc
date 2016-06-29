@@ -92,13 +92,12 @@ class InterpreterGeneratorMIPS: public InterpreterGenerator {
 
   // Registers
   // ---------
-  // s0: current process
-  // s1: bytecode pointer
-  // s2: stack pointer
-  // s4: null
-  // s6: true
-  // s7: false
-
+  // S0: current process
+  // S1: bytecode pointer
+  // S2: stack pointer (top)
+  // S4: null
+  // S6: program
+  // S7: dispatch table
   virtual void GeneratePrologue();
   virtual void GenerateEpilogue();
 
@@ -245,6 +244,8 @@ class InterpreterGeneratorMIPS: public InterpreterGenerator {
   int spill_size_;
   // Used in GeneratePrologue/Epilogue, S0-S7 + RA + FP.
   static const int kSaveFrameSize = 10;
+  static const int kFalseOffset = 8;
+  static const int kTrueOffset = 16;
 
   void LoadLocal(Register reg, int index);
   void StoreLocal(Register reg, int index);
@@ -297,8 +298,11 @@ class InterpreterGeneratorMIPS: public InterpreterGenerator {
   void InvokeNative(bool yield, bool safepoint);
   void InvokeStatic();
 
-  void ConditionalStore(Register cmp, Register reg_if_eq, Register reg_if_ne,
-                        const Address& address);
+  void AddIf(Register reg1, Register reg2, Condition cond,
+             Register reg, int immediate);
+  void ToBoolean(Register reg1, Register reg2, Condition cond, Register reg);
+  void LoadFalse(Register reg);
+  void LoadTrue(Register reg);
 
   void CheckStackOverflow(int size);
 
@@ -427,8 +431,7 @@ void InterpreterGeneratorMIPS::GenerateEpilogue() {
   __ Bind(&overflow);
   Label throw_resume;
   SaveState(&throw_resume);
-  __ lw(S3, Address(S0, Process::kProgramOffset));
-  __ lw(S3, Address(S3, Program::kStackOverflowErrorOffset));
+  __ lw(S3, Address(S6, Program::kStackOverflowErrorOffset));
   DoThrowAfterSaveState(&throw_resume);
 
   // Intrinsic failure: Just invoke the method.
@@ -492,6 +495,9 @@ void InterpreterGeneratorMIPS::DoLoadLocal1() {
 }
 
 void InterpreterGeneratorMIPS::DoLoadLocal2() {
+  LoadLocal(A0, 2);
+  Push(A0);
+  Dispatch(kLoadLocal2Length);
 }
 
 void InterpreterGeneratorMIPS::DoLoadLocal3() {
@@ -507,15 +513,27 @@ void InterpreterGeneratorMIPS::DoLoadLocal4() {
 }
 
 void InterpreterGeneratorMIPS::DoLoadLocal5() {
+  LoadLocal(A0, 5);
+  Push(A0);
+  Dispatch(kLoadLocal5Length);
 }
 
 void InterpreterGeneratorMIPS::DoLoadLocal() {
+  __ lbu(A0, Address(S1, 1));
+  ShiftAddLoad(A0, S2, A0, TIMES_WORD_SIZE);
+  Push(A0);
+  Dispatch(kLoadLocalLength);
 }
 
 void InterpreterGeneratorMIPS::DoLoadLocalWide() {
 }
 
 void InterpreterGeneratorMIPS::DoLoadBoxed() {
+  __ lbu(A0, Address(S1, 1));
+  ShiftAddLoad(A1, S2, A0, TIMES_WORD_SIZE);
+  __ lw(A0, Address(A1, Boxed::kValueOffset - HeapObject::kTag));
+  Push(A0);
+  Dispatch(kLoadBoxedLength);
 }
 
 void InterpreterGeneratorMIPS::DoLoadStatic() {
@@ -560,6 +578,12 @@ void InterpreterGeneratorMIPS::DoLoadStaticInit() {
 }
 
 void InterpreterGeneratorMIPS::DoLoadField() {
+  __ lbu(A1, Address(S1, 1));
+  LoadLocal(A0, 0);
+  __ addiu(A0, A0, Immediate(Instance::kSize - HeapObject::kTag));
+  ShiftAddLoad(A0, A0, A1, TIMES_WORD_SIZE);
+  StoreLocal(A0, 0);
+  Dispatch(kLoadFieldLength);
 }
 
 void InterpreterGeneratorMIPS::DoLoadFieldWide() {
@@ -580,6 +604,14 @@ void InterpreterGeneratorMIPS::DoStoreLocal() {
 }
 
 void InterpreterGeneratorMIPS::DoStoreBoxed() {
+  LoadLocal(A2, 0);
+  __ lbu(A0, Address(S1, 1));
+  ShiftAddLoad(A1, S2, A0, TIMES_WORD_SIZE);
+  __ sw(A2, Address(A1, Boxed::kValueOffset - HeapObject::kTag));
+
+  AddToRememberedSet(A1, A2, A3);
+
+  Dispatch(kStoreBoxedLength);
 }
 
 void InterpreterGeneratorMIPS::DoStoreStatic() {
@@ -606,9 +638,15 @@ void InterpreterGeneratorMIPS::DoLoadLiteralNull() {
 }
 
 void InterpreterGeneratorMIPS::DoLoadLiteralTrue() {
+  LoadTrue(A2);
+  Push(A2);
+  Dispatch(kLoadLiteralTrueLength);
 }
 
 void InterpreterGeneratorMIPS::DoLoadLiteralFalse() {
+  LoadFalse(A2);
+  Push(A2);
+  Dispatch(kLoadLiteralFalseLength);
 }
 
 void InterpreterGeneratorMIPS::DoLoadLiteral0() {
@@ -618,6 +656,9 @@ void InterpreterGeneratorMIPS::DoLoadLiteral0() {
 }
 
 void InterpreterGeneratorMIPS::DoLoadLiteral1() {
+  __ li(A0, Immediate(reinterpret_cast<int32_t>(Smi::FromWord(1))));
+  Push(A0);
+  Dispatch(kLoadLiteral1Length);
 }
 
 void InterpreterGeneratorMIPS::DoLoadLiteral() {
@@ -629,6 +670,11 @@ void InterpreterGeneratorMIPS::DoLoadLiteral() {
 }
 
 void InterpreterGeneratorMIPS::DoLoadLiteralWide() {
+  ASSERT(Smi::kTag == 0);
+  __ lw(A0, Address(S1, 1));
+  __ sll(A0, A0, Immediate(Smi::kTagSize));
+  Push(A0);
+  Dispatch(kLoadLiteralWideLength);
 }
 
 void InterpreterGeneratorMIPS::DoInvokeMethodUnfold() {
@@ -648,6 +694,7 @@ void InterpreterGeneratorMIPS::DoInvokeTestUnfold() {
 }
 
 void InterpreterGeneratorMIPS::DoInvokeTest() {
+  InvokeMethod(true);
 }
 
 void InterpreterGeneratorMIPS::DoInvokeStatic() {
@@ -655,6 +702,7 @@ void InterpreterGeneratorMIPS::DoInvokeStatic() {
 }
 
 void InterpreterGeneratorMIPS::DoInvokeFactory() {
+  InvokeStatic();
 }
 
 void InterpreterGeneratorMIPS::DoInvokeLeafNative() {
@@ -662,6 +710,7 @@ void InterpreterGeneratorMIPS::DoInvokeLeafNative() {
 }
 
 void InterpreterGeneratorMIPS::DoInvokeNative() {
+  InvokeNative(false, true);
 }
 
 void InterpreterGeneratorMIPS::DoInvokeNativeYield() {
@@ -705,15 +754,19 @@ void InterpreterGeneratorMIPS::InvokeEq(const char* fallback) {
 }
 
 void InterpreterGeneratorMIPS::InvokeLt(const char* fallback) {
+  InvokeCompare(fallback, LT);
 }
 
 void InterpreterGeneratorMIPS::InvokeLe(const char* fallback) {
+  InvokeCompare(fallback, LE);
 }
 
 void InterpreterGeneratorMIPS::InvokeGt(const char* fallback) {
+  InvokeCompare(fallback, GT);
 }
 
 void InterpreterGeneratorMIPS::InvokeGe(const char* fallback) {
+  InvokeCompare(fallback, GE);
 }
 
 void InterpreterGeneratorMIPS::InvokeAdd(const char* fallback) {
@@ -729,8 +782,7 @@ void InterpreterGeneratorMIPS::InvokeAdd(const char* fallback) {
   __ b(LT, T1, ZR, &no_overflow);
   __ addu(T0, A0, A1);  // Delay-slot.
   __ xor_(T1, T0, A0);
-  __ slt(T1, T1, ZR);
-  __ b(NEQ, T1, ZR, fallback);
+  __ b(LT, T1, ZR, fallback);
   __ Bind(&no_overflow);
   __ move(A0, T0);  // Delay-slot.
   DropNAndSetTop(1, A0);
@@ -738,12 +790,47 @@ void InterpreterGeneratorMIPS::InvokeAdd(const char* fallback) {
 }
 
 void InterpreterGeneratorMIPS::InvokeSub(const char* fallback) {
+  Label no_overflow;
+  LoadLocal(A0, 1);
+  __ andi(T0, A0, Immediate(Smi::kTagMask));
+  __ B(NEQ, T0, ZR, fallback);
+  LoadLocal(A1, 0);
+  __ andi(T0, A1, Immediate(Smi::kTagMask));
+  __ B(NEQ, T0, ZR, fallback);
+
+  __ xor_(T1, A0, A1);
+  __ srl(T1, T1, Immediate(31));
+  __ b(EQ, T1, ZR, &no_overflow);
+  __ subu(T0, A0, A1);  // Delay-slot.
+  __ xor_(T1, T0, A0);
+  __ b(LT, T1, ZR, fallback);
+  __ Bind(&no_overflow);
+  __ move(A0, T0);  // Delay-slot.
+  DropNAndSetTop(1, A0);
+  Dispatch(kInvokeSubLength);
 }
 
 void InterpreterGeneratorMIPS::InvokeMod(const char* fallback) {
 }
 
 void InterpreterGeneratorMIPS::InvokeMul(const char* fallback) {
+  LoadLocal(A0, 1);
+  __ andi(T0, A0, Immediate(Smi::kTagMask));
+  __ B(NEQ, T0, ZR, fallback);
+  LoadLocal(A1, 0);
+  __ andi(T1, A1, Immediate(Smi::kTagMask));
+  __ B(NEQ, T1, ZR, fallback);
+
+  __ sra(A0, A0, Immediate(1));
+  __ mult(A0, A1);
+  __ mfhi(T1);
+  __ mflo(T0);
+  __ move(A0, T0);
+  __ sra(T0, T0, Immediate(31));
+  __ B(NEQ, T1, T0, fallback);
+
+  DropNAndSetTop(1, A0);
+  Dispatch(kInvokeMulLength);
 }
 
 void InterpreterGeneratorMIPS::InvokeTruncDiv(const char* fallback) {
@@ -753,6 +840,16 @@ void InterpreterGeneratorMIPS::InvokeBitNot(const char* fallback) {
 }
 
 void InterpreterGeneratorMIPS::InvokeBitAnd(const char* fallback) {
+  LoadLocal(A0, 1);
+  __ andi(T0, A0, Immediate(Smi::kTagMask));
+  __ B(NEQ, T0, ZR, fallback);
+  LoadLocal(A1, 0);
+  __ andi(T0, A1, Immediate(Smi::kTagMask));
+  __ B(NEQ, T0, ZR, fallback);
+
+  __ and_(A0, A0, A1);
+  DropNAndSetTop(1, A0);
+  Dispatch(kInvokeBitAndLength);
 }
 
 void InterpreterGeneratorMIPS::InvokeBitOr(const char* fallback) {
@@ -762,9 +859,53 @@ void InterpreterGeneratorMIPS::InvokeBitXor(const char* fallback) {
 }
 
 void InterpreterGeneratorMIPS::InvokeBitShr(const char* fallback) {
+  LoadLocal(A0, 1);
+  __ andi(T0, A0, Immediate(Smi::kTagMask));
+  __ B(NEQ, T0, ZR, fallback);
+  LoadLocal(A1, 0);
+  __ andi(T0, A1, Immediate(Smi::kTagMask));
+  __ B(NEQ, T0, ZR, fallback);
+
+  // Untag and shift.
+  __ sra(A0, A0, Immediate(1));
+  __ sra(A1, A1, Immediate(1));
+
+  Label shift;
+  __ li(T0, Immediate(32));
+  __ B(LT, A1, T0, &shift);
+  __ li(A1, Immediate(31));
+  __ Bind(&shift);
+  __ srav(A0, A0, A1);
+
+  // Retag and store.
+  __ addu(A0, A0, A0);
+  DropNAndSetTop(1, A0);
+  Dispatch(kInvokeBitAndLength);
 }
 
 void InterpreterGeneratorMIPS::InvokeBitShl(const char* fallback) {
+  LoadLocal(A0, 1);
+  __ andi(T0, A0, Immediate(Smi::kTagMask));
+  __ B(NEQ, T0, ZR, fallback);
+  LoadLocal(A1, 0);
+  __ andi(T0, A1, Immediate(Smi::kTagSize));
+  __ B(NEQ, T0, ZR, fallback);
+
+  // Untag the shift count, but not the value. If the shift
+  // count is greater than 31 (or negative), the shift is going
+  // to misbehave so we have to guard against that.
+  __ sra(A1, A1, Immediate(1));
+  __ sra(T0, A1, Immediate(5));
+  __ B(NEQ, T0, ZR, fallback);
+
+  // Only allow to shift out "sign bits". If we shift
+  // out any other bit, it's an overflow.
+  __ sllv(A2, A0, A1);
+  __ srav(A3, A2, A1);
+  __ B(NEQ, A3, A0, fallback);
+
+  DropNAndSetTop(1, A2);
+  Dispatch(kInvokeBitShlLength);
 }
 
 void InterpreterGeneratorMIPS::DoPop() {
@@ -773,6 +914,9 @@ void InterpreterGeneratorMIPS::DoPop() {
 }
 
 void InterpreterGeneratorMIPS::DoDrop() {
+  __ lbu(A0, Address(S1, 1));
+  Drop(A0);
+  Dispatch(kDropLength);
 }
 
 void InterpreterGeneratorMIPS::DoReturn() {
@@ -792,7 +936,8 @@ void InterpreterGeneratorMIPS::DoBranchWide() {
 void InterpreterGeneratorMIPS::DoBranchIfTrueWide() {
   Label branch;
   Pop(S3);
-  __ B(EQ, S3, S6, &branch);
+  LoadTrue(A2);
+  __ B(EQ, S3, A2, &branch);
   Dispatch(kBranchIfTrueWideLength);
 
   __ Bind(&branch);
@@ -804,7 +949,8 @@ void InterpreterGeneratorMIPS::DoBranchIfTrueWide() {
 void InterpreterGeneratorMIPS::DoBranchIfFalseWide() {
   Label branch;
   Pop(S3);
-  __ B(NEQ, S3, S6, &branch);
+  LoadTrue(A2);
+  __ B(NEQ, S3, A2, &branch);
   Dispatch(kBranchIfFalseWideLength);
 
   __ Bind(&branch);
@@ -814,6 +960,10 @@ void InterpreterGeneratorMIPS::DoBranchIfFalseWide() {
 }
 
 void InterpreterGeneratorMIPS::DoBranchBack() {
+  CheckStackOverflow(0);
+  __ lbu(A0, Address(S1, 1));
+  __ subu(S1, S1, A0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorMIPS::DoBranchBackIfTrue() {
@@ -832,6 +982,12 @@ void InterpreterGeneratorMIPS::DoBranchBackIfFalseWide() {
 }
 
 void InterpreterGeneratorMIPS::DoPopAndBranchWide() {
+  __ lbu(A0, Address(S1, 1));
+  ShiftAdd(S2, S2, A0, TIMES_WORD_SIZE);
+
+  __ lw(A0, Address(S1, 2));
+  __ addu(S1, S1, A0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorMIPS::DoPopAndBranchBackWide() {
@@ -842,9 +998,22 @@ void InterpreterGeneratorMIPS::DoAllocate() {
 }
 
 void InterpreterGeneratorMIPS::DoAllocateImmutable() {
+  Allocate(true);
 }
 
 void InterpreterGeneratorMIPS::DoAllocateBoxed() {
+  LoadLocal(A1, 0);
+  PrepareStack();
+  __ la(T9, "HandleAllocateBoxed");
+  __ jalr(T9);
+  __ move(A0, S0);  // Delay-slot.
+  RestoreStack();
+  __ move(A0, V0);
+  __ andi(A1, A0, Immediate(Failure::kTagMask | Failure::kTypeMask));
+  __ li(T0, Immediate(Failure::kTag));
+  __ B(EQ, A1, T0, &gc_);
+  StoreLocal(A0, 0);
+  Dispatch(kAllocateBoxedLength);
 }
 
 void InterpreterGeneratorMIPS::DoNegate() {
@@ -894,9 +1063,23 @@ void InterpreterGeneratorMIPS::DoThrow() {
 }
 
 void InterpreterGeneratorMIPS::DoSubroutineCall() {
+  __ lw(A0, Address(S1, 1));
+  __ lw(A1, Address(S1, 5));
+
+  // Push the return delta as a tagged smi.
+  ASSERT(Smi::kTag == 0);
+  __ sll(A1, A1, Immediate(Smi::kTagSize));
+  Push(A1);
+
+  __ addu(S1, S1, A0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorMIPS::DoSubroutineReturn() {
+  Pop(A0);
+  __ srl(A0, A0, Immediate(Smi::kTagSize));
+  __ subu(S1, S1, A0);
+  Dispatch(0);
 }
 
 void InterpreterGeneratorMIPS::DoProcessYield() {
@@ -935,8 +1118,9 @@ void InterpreterGeneratorMIPS::DoIdentical() {
 void InterpreterGeneratorMIPS::DoIdenticalNonNumeric() {
   LoadLocal(A0, 0);
   LoadLocal(A1, 1);
-  __ subu(T0, A0, A1);
-  ConditionalStore(T0, S6, S7, Address(S2, kWordSize));
+  ToBoolean(A0, A1, EQ, A2);
+  StoreLocal(A2, 1);
+
   Drop(1);
   Dispatch(kIdenticalNonNumericLength);
 }
@@ -963,6 +1147,18 @@ void InterpreterGeneratorMIPS::DoIntrinsicGetField() {
 }
 
 void InterpreterGeneratorMIPS::DoIntrinsicSetField() {
+  __ lbu(A1, Address(A0, 3 + Function::kSize - HeapObject::kTag));
+  LoadLocal(S3, 0);
+  LoadLocal(A2, 1);
+  __ addiu(A3, A2, Immediate(Instance::kSize - HeapObject::kTag));
+  ShiftAddStore(S3, A3, A1, TIMES_WORD_SIZE);
+
+  // S3 is not trashed.
+  AddToRememberedSet(A2, S3, A3);
+
+  __ move(T9, RA);
+  __ jr(T9);
+  __ move(A0, S3);  // Delay-slot.
 }
 
 void InterpreterGeneratorMIPS::DoIntrinsicListIndexGet() {
@@ -1055,9 +1251,7 @@ void InterpreterGeneratorMIPS::InvokeMethod(bool test) {
   // Get the selector from the bytecodes.
   __ lw(S3, Address(S1, 1));
 
-  // Fetch the virtual table from the program.
-  __ lw(A1, Address(S0, Process::kProgramOffset));
-  __ lw(A1, Address(A1, Program::kDispatchTableOffset));
+  __ lw(A1, Address(S6, Program::kDispatchTableOffset));
 
   if (!test) {
     // Compute the arity from the selector.
@@ -1076,6 +1270,7 @@ void InterpreterGeneratorMIPS::InvokeMethod(bool test) {
   } else {
     ShiftAddLoad(A2, S2, A2, TIMES_WORD_SIZE);
   }
+
   // Compute the receiver class.
   Label smi, dispatch;
   ASSERT(Smi::kTag == 0);
@@ -1105,7 +1300,8 @@ void InterpreterGeneratorMIPS::InvokeMethod(bool test) {
   Label validated, intrinsified;
   if (test) {
     // Valid entry: The answer is true.
-    StoreLocal(S6, 0);
+    LoadTrue(A2);
+    StoreLocal(A2, 0);
     Dispatch(kInvokeTestLength);
   } else {
     __ Bind(&validated);
@@ -1131,14 +1327,14 @@ void InterpreterGeneratorMIPS::InvokeMethod(bool test) {
   }
 
   __ Bind(&smi);
-  __ lw(A2, Address(S0, Process::kProgramOffset));
   __ b(&dispatch);
-  __ lw(A2, Address(A2, Program::kSmiClassOffset));  // Delay-slot.
+  __ lw(A2, Address(S6, Program::kSmiClassOffset));  // Delay-slot.
 
   if (test) {
     // Invalid entry: The answer is false.
     __ Bind(&invalid);
-    StoreLocal(S7, 0);
+    LoadFalse(A2);
+    StoreLocal(A2, 0);
     Dispatch(kInvokeTestLength);
   } else {
     __ Bind(&intrinsified);
@@ -1148,8 +1344,7 @@ void InterpreterGeneratorMIPS::InvokeMethod(bool test) {
     // Invalid entry: Use the noSuchMethod entry from entry zero of
     // the virtual table.
     __ Bind(&invalid);
-    __ lw(A1, Address(S0, Process::kProgramOffset));
-    __ lw(A1, Address(A1, Program::kDispatchTableOffset));
+    __ lw(A1, Address(S6, Program::kDispatchTableOffset));
     __ b(&validated);
     __ lw(A1, Address(A1, Array::kSize - HeapObject::kTag));  // Delay-slot.
   }
@@ -1398,28 +1593,39 @@ void InterpreterGeneratorMIPS::InvokeCompare(const char* fallback,
   __ andi(T0, A1, Immediate(Smi::kTagMask));
   __ B(NEQ, T0, ZR, fallback);
 
-  Label true_case;
-  __ B(cond, A1, A0, &true_case);
-
-  DropNAndSetTop(1, S7);
+  ToBoolean(A1, A0, cond, A2);
+  DropNAndSetTop(1, A2);
   Dispatch(5);
 
-  __ Bind(&true_case);
   DropNAndSetTop(1, S6);
   Dispatch(5);
 }
 
-void InterpreterGeneratorMIPS::ConditionalStore(Register cmp,
-                                                Register reg_if_eq,
-                                                Register reg_if_ne,
-                                                const Address& address) {
-  Label if_ne, done;
-  __ B(NEQ, cmp, ZR, &if_ne);
-  __ b(&done);
-  __ sw(reg_if_eq, address);  // Delay-slot.
-  __ Bind(&if_ne);
-  __ sw(reg_if_ne, address);
+void InterpreterGeneratorMIPS::AddIf(Register reg1, Register reg2,
+                                     Condition cond, Register dest,
+                                     int add_if_eq) {
+  Label done, add;
+  __ B(cond, reg1, reg2, &add);
+  __ B(&done);
+  __ Bind(&add);
+  __ addiu(dest, dest, Immediate(add_if_eq));
   __ Bind(&done);
+}
+
+void InterpreterGeneratorMIPS::LoadTrue(Register reg) {
+  __ addiu(reg, S4, Immediate(kTrueOffset));
+}
+
+void InterpreterGeneratorMIPS::LoadFalse(Register reg) {
+  __ addiu(reg, S4, Immediate(kFalseOffset));
+}
+
+void InterpreterGeneratorMIPS::ToBoolean(Register reg1,
+                                         Register reg2,
+                                         Condition cond,
+                                         Register reg) {
+  LoadFalse(reg);
+  AddIf(reg1, reg2, cond, reg, kTrueOffset - kFalseOffset);
 }
 
 void InterpreterGeneratorMIPS::CheckStackOverflow(int size) {
@@ -1441,8 +1647,7 @@ void InterpreterGeneratorMIPS::Dispatch(int size) {
   if (size > 0) {
     __ addiu(S1, S1, Immediate(size));
   }
-  __ la(S5, "Interpret_DispatchTable");
-  ShiftAddJump(S5, S3, TIMES_WORD_SIZE);
+  ShiftAddJump(S7, S3, TIMES_WORD_SIZE);
 }
 
 void InterpreterGeneratorMIPS::SaveState(Label* resume) {
@@ -1477,9 +1682,8 @@ void InterpreterGeneratorMIPS::RestoreState() {
 
   // Load constants into registers.
   __ lw(S6, Address(S0, Process::kProgramOffset));
-  __ lw(S7, Address(S6, Program::kFalseObjectOffset));
   __ lw(S4, Address(S6, Program::kNullObjectOffset));
-  __ lw(S6, Address(S6, Program::kTrueObjectOffset));
+  __ la(S7, "Interpret_DispatchTable");
 
   // Pop and store frame pointer.
   Pop(S1);
