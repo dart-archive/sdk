@@ -7,6 +7,7 @@
 #include "src/shared/platform.h"
 #include "src/vm/hash_map.h"
 #include "src/freertos/device_manager.h"
+#include "FreeRTOS_IP.h"
 
 // TODO(karlklose): count number of sockets in the socket set and disable
 // SocketHandlerTask when no sockets wait for events.
@@ -20,6 +21,10 @@ TaskHandle_t socketHandlerTask_ = NULL;
 
 dartino::DeviceManager* GetDeviceManager() {
   return dartino::DeviceManager::GetDeviceManager();
+}
+
+size_t SockAddrSize() {
+  return sizeof(freertos_sockaddr);
 }
 
 uint32_t RegisterSocket(Socket_t socket) {
@@ -55,6 +60,13 @@ uint32_t SocketConnect(Socket_t socket, uint32_t address, uint32_t port) {
   sockaddr.sin_addr = address;
   sockaddr.sin_port = port;
   return FreeRTOS_connect(socket, &sockaddr, sizeof(sockaddr));
+}
+
+uint32_t SocketBind(Socket_t socket, uint32_t address, uint32_t port) {
+  struct freertos_sockaddr sockaddr;
+  sockaddr.sin_addr = address;
+  sockaddr.sin_port = port;
+  return FreeRTOS_bind(socket, &sockaddr, sizeof(sockaddr));
 }
 
 void ResetSocketFlags(uint32_t handle) {

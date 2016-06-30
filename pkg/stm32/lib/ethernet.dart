@@ -5,6 +5,7 @@
 library stm32.ethernet;
 
 import 'dart:dartino.ffi';
+import 'package:os/os.dart' as os show InternetAddress;
 
 final _initializeNetwork =
   ForeignLibrary.main.lookup("InitializeNetworkStack");
@@ -13,19 +14,21 @@ final _getEthernetAdapterStatus =
   ForeignLibrary.main.lookup("GetEthernetAdapterStatus");
 final _getNetworkAddressConfiguration =
   ForeignLibrary.main.lookup("GetNetworkAddressConfiguration");
-final _lookupHost = ForeignLibrary.main.lookup("LookupHost");
+final _lookupHost = ForeignLibrary.main.lookup("network_lookup_host");
 final _networkAddressMayHaveChanged = ForeignLibrary.main.lookup(
     "NetworkAddressMayHaveChanged");
 
 Ethernet ethernet = new Ethernet._internal();
 
 // TODO(karlklose): use the one in os.dart?
-class InternetAddress {
+class InternetAddress implements os.InternetAddress {
   final List<int> bytes;
 
   const InternetAddress(this.bytes);
 
   toString() => bytes.join('.');
+
+  bool get isIP4 => bytes.length == 4;
 
   static final InternetAddress localhost =
     const InternetAddress(const <int>[127, 0, 0, 1]);
@@ -170,7 +173,7 @@ class _NetworkInterface implements NetworkInterface {
       case ETH_INTERFACE_INDEX:
         return (_getEthernetAdapterStatus.icall$0() & BMSR_LS_MASK) != 0;
       default:
-        throw new StateError('illegal adapted index: $index');
+        throw new StateError('illegal adapter index: $index');
     }
   }
 }

@@ -149,12 +149,14 @@ DARTINO_EXPORT_STATIC(GetEthernetAdapterStatus)
 DARTINO_EXPORT_STATIC(GetNetworkAddressConfiguration)
 DARTINO_EXPORT_STATIC(NetworkAddressMayHaveChanged)
 
-
 // FreeRTOS-Plus-TCP bindings
+// TODO(karlklose): use the name of the C bindings in socket.cc
+DARTINO_EXPORT_STATIC(SockAddrSize)
 DARTINO_EXPORT_STATIC_RENAME(create_socket,
                              FreeRTOS_socket)
 DARTINO_EXPORT_STATIC_RENAME(socket_connect,
                              SocketConnect)
+DARTINO_EXPORT_STATIC_RENAME(socket_bind, SocketBind)
 DARTINO_EXPORT_STATIC_RENAME(network_register_socket,
                              RegisterSocket)
 DARTINO_EXPORT_STATIC_RENAME(network_close_socket,
@@ -165,6 +167,10 @@ DARTINO_EXPORT_STATIC_RENAME(socket_send,
                              FreeRTOS_send)
 DARTINO_EXPORT_STATIC_RENAME(socket_recv,
                              FreeRTOS_recv)
+DARTINO_EXPORT_STATIC_RENAME(socket_sendto,
+                             FreeRTOS_sendto)
+DARTINO_EXPORT_STATIC_RENAME(socket_recvfrom,
+                             FreeRTOS_recvfrom)
 DARTINO_EXPORT_STATIC_RENAME(socket_available,
                              FreeRTOS_recvcount)
 DARTINO_EXPORT_STATIC_RENAME(socket_close,

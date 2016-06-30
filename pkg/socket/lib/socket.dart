@@ -82,7 +82,6 @@ class Socket extends _SocketBase {
   }
 
   Socket._connect(String host, int port) {
-
     var address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
     _fd = sys.socket(sys.AF_INET, sys.SOCK_STREAM, 0);
@@ -272,7 +271,15 @@ class Datagram {
 
 // TODO(karlklose): support IPv6 datagram sockets.
 class DatagramSocket extends _SocketBase {
-  DatagramSocket.bind(String host, int port) {
+  factory DatagramSocket.bind(String host, int port) {
+    if (Foreign.platform == Foreign.FREERTOS) {
+      return new stm32.DatagramSocket.bind(host, port);
+    } else {
+      return new DatagramSocket._bind(host, port);
+    }
+  }
+
+  DatagramSocket._bind(String host, int port) {
     InternetAddress address = sys.lookup(host);
     if (address == null) _error("Failed to lookup address '$host'");
     _fd = sys.socket(sys.AF_INET, sys.SOCK_DGRAM, 0);
