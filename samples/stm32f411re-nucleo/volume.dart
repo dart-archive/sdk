@@ -10,7 +10,6 @@
 // value on the console every 100ms.
 
 import 'dart:dartino';
-import 'dart:typed_data';
 
 import 'package:gpio/gpio.dart';
 import 'package:stm32/stm32f411re_nucleo.dart';
