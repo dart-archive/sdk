@@ -19,6 +19,8 @@ void ResetSocketFlags(uint32_t handle);
 void SocketHandlerTask(void *parameters);
 void ListenForSocketEvent(Socket_t socket, uint32_t mask);
 void UnregisterAndCloseSocket(Socket_t socket);
+size_t SockAddrSize();
+uint32_t SocketBind(Socket_t socket, uint32_t address, uint32_t port);
 
 #ifdef __cplusplus
 }  // extern "C"
