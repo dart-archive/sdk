@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE.md file.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dartino_compiler/src/hub/hub_main.dart';
 import 'package:dartino_compiler/src/hub/session_manager.dart';
@@ -16,6 +17,8 @@ bool _debug = false;
 
 /// This program exercises the `dartino analyze` functionality
 Future<Null> main() async {
+  print('>>> executable = ${Platform.resolvedExecutable}');
+
   MockClientConnection client;
 
   // Analyze clean file
