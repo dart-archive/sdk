@@ -17,8 +17,6 @@ bool _debug = false;
 
 /// This program exercises the `dartino analyze` functionality
 Future<Null> main() async {
-  print('>>> executable = ${Platform.resolvedExecutable}');
-
   MockClientConnection client;
 
   // Analyze clean file
