@@ -145,6 +145,7 @@ mdns_tests/*: Skip # The native extension is not compiled for ARM.
 power_management_tests/*: Skip # The native extension is not compiled for ARM.
 flash_sd_card_tests/*: Skip # The native extension is not compiled for ARM.
 sdk_service_tests/*: Skip # The native extension is not compiled for ARM.
+analyze_samples/*: Skip # https://github.com/dartino/sdk/issues/556
 
 incremental/experimental/program_gc_with_processes: Pass, Fail # Issue 389.
 
