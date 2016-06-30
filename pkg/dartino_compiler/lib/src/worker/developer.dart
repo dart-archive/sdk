@@ -261,11 +261,21 @@ Future<int> analyze(
     Uri base) async {
   Directory dartSdkDir = await locateDartSdkDirectory();
   String analyzerPath = join(dartSdkDir.path, 'bin', 'dartanalyzer');
+  Uri pkgsUri = state.settings.packages;
+
+  // If running within the repo, then use a different packages file
+  String relPath = 'pkg/dartino_compiler/lib/dartino_compiler.dart';
+  if (await new File.fromUri(pkgsUri.resolve(relPath)).exists()) {
+    pkgsUri = pkgsUri.resolve('pkg/dartino-sdk.packages');
+    if (!await new File.fromUri(pkgsUri).exists()) {
+      throwInternalError("Failed to find dartino-sdk.packages file");
+    }
+  }
 
   List<String> arguments = <String>[];
   arguments.add('--strong');
   arguments.add('--packages');
-  arguments.add(new File.fromUri(state.settings.packages).path);
+  arguments.add(new File.fromUri(pkgsUri).path);
   arguments.add(new File.fromUri(fileUri).path);
 
   state.log('Analyze: $analyzerPath ${arguments.join(' ')}');
@@ -1377,24 +1387,21 @@ Future<Device> readDevice(String deviceId) async {
     return parseDevice(jsonLikeData, uri, libraryDirectoryUri);
   } else {
     throw uri;
-    return null;
   }
 }
 
 Future<Directory> locateDartSdkDirectory() async {
   // In the SDK, the dart-sdk directory is in the internal directory.
-  Directory dartSdkDirectory =
-      new Directory.fromUri(executable.resolve(
-          '../internal/dart-sdk'));
-  if (!await dartSdkDirectory.exists()) {
-    // When running in a Git checkout...
-    dartSdkDirectory =
-        new Directory.fromUri(executable.resolve(
-                'dartino-sdk/internal/dart-sdk'));
-    assert(await dartSdkDirectory.exists());
-  }
+  Uri dartSdkUri = executable.resolve('../internal/dart-sdk');
+  Directory dartSdkDir = new Directory.fromUri(dartSdkUri);
+  if (await dartSdkDir.exists()) return dartSdkDir;
 
-  return dartSdkDirectory;
+  // In a Git checkout, the the dart-sdk directory is in third_party
+  String os = Platform.isMacOS ? 'mac' : Platform.operatingSystem;
+  dartSdkUri = executable.resolve('../../third_party/dart-sdk/$os/dart-sdk');
+  dartSdkDir = new Directory.fromUri(dartSdkUri);
+  assert(await dartSdkDir.exists());
+  return dartSdkDir;
 }
 
 // Creates a c-file containing the options options in an array.
