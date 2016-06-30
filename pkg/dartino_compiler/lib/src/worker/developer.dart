@@ -1511,7 +1511,9 @@ Future<int> buildImage(
     // Copy the .bin file from the tmp directory.
     String tmpBinFile = join(tmpDir.path, "${baseName}.bin");
     String binFile = "${withoutExtension(snapshot.path)}.bin";
-    await new File(tmpBinFile).copy(binFile);
+    // Use cp rather than File.copy() so that sparse files are not turned into
+    // non-sparse files, which costs 400Mbytes of disk use.
+    await Process.run("/bin/cp", [tmpBinFile, binFile]);
     // Copy the .elf file from the tmp directory.
     String tmpElfFile = join(tmpDir.path, "${baseName}.elf");
     String elfFile = "${withoutExtension(snapshot.path)}.elf";
