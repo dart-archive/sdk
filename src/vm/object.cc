@@ -514,7 +514,7 @@ void Class::ClassPrint() {
   Print::Out("\n");
 }
 
-void Class::ClassShortPrint() { Print::Out("class"); }
+void Class::ClassShortPrint() { Print::Out("class id=%d", id()); }
 
 void ByteArray::IterateEverything(PointerVisitor* visitor) {
   visitor->VisitInteger(address() + BaseArray::kLengthOffset);
