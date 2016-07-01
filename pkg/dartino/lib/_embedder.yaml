@@ -14,6 +14,5 @@ embedded_libs:
   'dart:dartino._ffi': '../../../internal/dartino_lib/ffi/ffi_private.dart'
   'dart:dartino.os': '../../../lib/os/os.dart'
   'dart:dartino.service': '../../../lib/service/service.dart'
-  'dart:developer': '../../../third_party/dart/sdk/lib/developer/developer.dart'
   'dart:math': '../../../third_party/dart/sdk/lib/math/math.dart'
   'dart:typed_data': '../../../third_party/dart/sdk/lib/typed_data/typed_data.dart'
