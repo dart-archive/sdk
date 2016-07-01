@@ -22,7 +22,8 @@ import 'package:expect/expect.dart' show
 import '../dartino_compiler/run.dart' show
     export;
 
-import 'package:dartino_compiler/program_info.dart' as program_info;
+import 'package:dartino_compiler/src/decode_stacktraces.dart' show
+    decodeProgramMain;
 
 import 'utils.dart' show
     withTempDirectory;
@@ -75,12 +76,8 @@ Future runTest(String testName, bool write_golden_files) {
     var stdout = new StreamController();
     Future<List> stdoutBytes =
         stdout.stream.fold([], (buffer, data) => buffer..addAll(data));
-    var arguments = [
-        buildArch.toLowerCase() == 'x64' ? '64' : '32',
-        buildSystem.toLowerCase() == 'lk' ? 'float' : 'double',
-        '${snapshotFilename}.info.json',
-    ];
-    await program_info.decodeProgramMain(arguments, stdin, stdout);
+    await decodeProgramMain([testFilename(testName), snapshotFilename],
+        stdin, stdout);
 
     // Part 4: Build expectation string
     String stdoutString = UTF8.decode(await stdoutBytes);

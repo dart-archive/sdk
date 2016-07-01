@@ -4,10 +4,10 @@ a Instance:
   - class = class
   - @0 = normal exception
 
-   0: foo
-   1: main
-   2: callMain
-   3: entry
+   0: foo tests/snapshot_stacktrace_tests/uncaught_exception_test.dart:9:10
+   1: main tests/snapshot_stacktrace_tests/uncaught_exception_test.dart:7:11
+   2: callMain lib/system/system.dart:72:24
+   3: entry lib/system/system.dart:97:14
 
 <STDERR>:
 

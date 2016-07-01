@@ -562,6 +562,12 @@ void Process::PrintStackTrace() const {
   bool using_snapshots = program_->was_loaded_from_snapshot();
   bool is_optimized = program_->is_optimized();
 
+  if (using_snapshots && is_optimized) {
+    Print::Out("VM Configuration %d %d\n",
+        kBitsPerPointer,
+        kBitsPerDartinoDouble);
+  }
+
   if (using_snapshots && is_optimized && exception_->IsInstance() &&
       Instance::cast(exception_)->get_class() == nsm_class) {
     Instance* nsm_exception = Instance::cast(exception_);
@@ -593,8 +599,12 @@ void Process::PrintStackTrace() const {
         Function* function = frame.FunctionFromByteCodePointer();
         if (function == NULL) continue;
 
-        Print::Out("Frame % 2d: Function(%ld)\n", index,
-                   program_->OffsetOf(function));
+        uint8* start_bcp = function->bytecode_address_for(0);
+        uint8* bcp = frame.ByteCodePointer();
+        int bytecode_offset = bcp - start_bcp;
+
+        Print::Out("Frame % 2d: Function(%ld) Bytecode(%d)\n", index,
+                   program_->OffsetOf(function), bytecode_offset);
         index++;
       }
 

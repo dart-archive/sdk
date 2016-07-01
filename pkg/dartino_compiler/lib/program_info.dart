@@ -313,102 +313,6 @@ NameOffsetMapping buildNameOffsetMapping(
       selectors, programObjectNames, result.snapshotHash);
 }
 
-final RegExp _FrameRegexp =
-    new RegExp(r'^Frame +([0-9]+): Function\(([0-9]+)\)$');
-
-final RegExp _NSMRegexp =
-    new RegExp(r'^NoSuchMethodError\(([0-9]+), ([0-9]+)\)$');
-
-Stream<String> decodeStackFrames(Configuration conf,
-                                 NameOffsetMapping info,
-                                 Stream<String> input) async* {
-  await for (String line in input) {
-    Match frameMatch = _FrameRegexp.firstMatch(line);
-    Match nsmMatch = _NSMRegexp.firstMatch(line);
-    if (frameMatch != null) {
-      String frameNr = frameMatch.group(1);
-      int functionOffset = int.parse(frameMatch.group(2));
-
-      String functionName = info.functionName(conf, functionOffset);
-      if (functionName == null) {
-        yield '   $frameNr: <unknown function (offset $functionOffset)>\n';
-      } else {
-        yield '   $frameNr: ${shortName(functionName)}\n';
-      }
-    } else if (nsmMatch != null) {
-      int classOffset = int.parse(nsmMatch.group(1));
-      DartinoSelector selector =
-          new DartinoSelector(int.parse(nsmMatch.group(2)));
-      String selectorName = info.selectorName(selector);
-      String className = info.className(conf, classOffset);
-
-      if (className != null && selectorName != null) {
-        yield 'NoSuchMethodError: ${shortName(className)}.$selectorName\n';
-      } else if (selectorName != null) {
-        yield 'NoSuchMethodError: $selectorName\n';
-      } else {
-        yield 'NoSuchMethodError: <unknown method>\n';
-      }
-    } else {
-      yield '$line\n';
-    }
-  }
-}
-
-Future<int> decodeProgramMain(
-    List<String> arguments,
-    Stream<List<int>> input,
-    StreamSink<List<int>> output) async {
-
-  usage(message) {
-    print("Invalid arguments: $message");
-    print("Usage: ${io.Platform.script} "
-          "<32/64> <float/double> <snapshot.info.json>");
-  }
-
-  if (arguments.length != 3) {
-    usage("Exactly 3 arguments must be supplied");
-    return 1;
-  }
-
-  String bits = arguments[0];
-  if (!['32', '64'].contains(bits)) {
-    usage("Bit width must be 32 or 64.");
-    return 1;
-  }
-
-  String floatOrDouble = arguments[1];
-  if (!['float', 'double'].contains(floatOrDouble)) {
-    usage("Floating point argument must be 'float' or 'double'.");
-    return 1;
-  }
-
-  String filename = arguments[2];
-  if (!filename.endsWith('.json')) {
-    usage("The program info file must end in '.json' "
-          "(was: '$filename').");
-    return 1;
-  }
-
-  io.File file = new io.File(filename);
-  if (!await file.exists()) {
-    usage("The file '$filename' does not exist.");
-    return 1;
-  }
-
-  NameOffsetMapping info = ProgramInfoJson.decode(await file.readAsString());
-
-  Stream<String> inputLines =
-      input.transform(UTF8.decoder).transform(new LineSplitter());
-
-  Configuration conf = _getConfiguration(bits, floatOrDouble);
-  Stream<String> decodedFrames = decodeStackFrames(conf, info, inputLines);
-  await decodedFrames.transform(UTF8.encoder).pipe(output);
-
-  return 0;
-}
-
-
 // We are only interested in two kind of lines in the dartino.ticks file.
 final RegExp tickRegexp =
     new RegExp(r'^0x([0-9a-f]+),0x([0-9a-f]+),0x([0-9a-f]+)');
@@ -605,12 +509,6 @@ Future<Profile> decodeTickSamples(
   profile.histogram = histogram;
 
   return profile;
-}
-
-Configuration _getConfiguration(String bits, String floatOrDouble) {
-  int wordSize = const {'32': 32, '64': 64}[bits];
-  int dartinoDoubleSize = const {'float': 32, 'double': 64}[floatOrDouble];
-  return getConfiguration(wordSize, dartinoDoubleSize);
 }
 
 Configuration getConfiguration(int wordSize, int dartinoDoubleSize) {

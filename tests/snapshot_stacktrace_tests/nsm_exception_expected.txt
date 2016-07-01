@@ -1,12 +1,12 @@
 <STDOUT>:
 NoSuchMethodError: Foo.bar
-   0: Object.noSuchMethod
-   1: Object._noSuchMethod
-   2: Object._noSuchMethodTrampoline
-   3: foo
-   4: main
-   5: callMain
-   6: entry
+   0: Object.noSuchMethod lib/core/core_patch.dart:34:7
+   1: Object._noSuchMethod lib/core/core_patch.dart:47:12
+   2: Object._noSuchMethodTrampoline 
+   3: foo tests/snapshot_stacktrace_tests/nsm_exception_test.dart:9:10
+   4: main tests/snapshot_stacktrace_tests/nsm_exception_test.dart:7:11
+   5: callMain lib/system/system.dart:72:24
+   6: entry lib/system/system.dart:97:14
 
 <STDERR>:
 
