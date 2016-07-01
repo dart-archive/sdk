@@ -159,7 +159,7 @@ Future<int> serveDebuggerTask(
     SessionState state,
     Uri script,
     Uri base,
-    {Uri snapshotLocation}) {
+    {Uri snapshotLocation}) async {
   DartinoVmContext vmContext = state.vmContext;
   if (vmContext == null) {
     throwInternalError("Not connected to a dartino vm.");
@@ -169,11 +169,13 @@ Future<int> serveDebuggerTask(
     throwFatalError(DiagnosticKind.compileBeforeRun);
   }
 
+  int result = await new DebugServer()
+      .serveSingleShot(state, snapshotLocation: snapshotLocation);
+
   // Make sure current state's vmContext is not reused if invoked again.
   state.vmContext = null;
 
-  return new DebugServer()
-      .serveSingleShot(state, snapshotLocation: snapshotLocation);
+  return result;
 }
 
 Future<int> interactiveDebuggerTask(
