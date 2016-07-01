@@ -104,6 +104,7 @@ type_variable_field_initializer_closure2_test: RuntimeError
 abstract_runtime_error_test/01: RuntimeError
 abstract_runtime_error_test/02: RuntimeError
 arithmetic_test: RuntimeError
+arg_param_trailing_comma_test/none: CompileTimeError # https://github.com/dart-lang/sdk/issues/26644
 assertion_test: RuntimeError
 assign_to_type_test/01: RuntimeError
 assign_to_type_test/02: RuntimeError
@@ -503,6 +504,7 @@ initializing_formal_final_test: CompileTimeError # Initializing formal access no
 initializing_formal_capture_test: CompileTimeError # Initializing formal access not implemented
 initializing_formal_type_test: CompileTimeError # Initializing formal access not implemented
 initializing_formal_promotion_test: CompileTimeError # Initializing formal access not implemented
+initializing_formal_scope_test: CompileTimeError # Initializing formal access not implemented
 incr_op_test: RuntimeError
 instance_creation_in_function_annotation_test: CompileTimeError
 instanceof2_test: RuntimeError
@@ -635,6 +637,7 @@ regress_13462_1_test: CompileTimeError
 regress_13494_test: RuntimeError
 regress_17382_test: RuntimeError
 regress_18535_test: CompileTimeError
+regress_18713_test: RuntimeError # https://github.com/dart-lang/sdk/issues/26743
 regress_20935_test: Fail
 regress_21795_test: RuntimeError
 regress_22438_test: RuntimeError
@@ -642,6 +645,7 @@ regress_22443_test: RuntimeError
 regress_22445_test: RuntimeError
 regress_22579_test: RuntimeError
 regress_22700_test: RuntimeError
+regress_26530_test: RuntimeError # https://github.com/dartino/sdk/issues/561
 regress_22777_test: RuntimeError
 regress_22936_test/01: RuntimeError
 regress_22976_test/01: CompileTimeError

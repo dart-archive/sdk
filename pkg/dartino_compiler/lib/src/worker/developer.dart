@@ -698,8 +698,8 @@ SessionState createSessionState(
       environment: settings.constants);
 
   if (const bool.fromEnvironment("dartino_compiler-verbose")) {
-    compilerOptions =
-        DartinoCompilerOptions.copy(compilerOptions, verbose: true);
+    compilerOptions = DartinoCompilerOptions.copyDartinoOptions(
+        compilerOptions, verbose: true);
   }
 
   DartinoCompiler compilerHelper = new DartinoCompiler(

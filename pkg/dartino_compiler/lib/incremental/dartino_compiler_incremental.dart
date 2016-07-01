@@ -178,7 +178,7 @@ class IncrementalCompiler {
     if (newOptions == null) {
       newOptions = DartinoCompilerOptions.parse(const <String>[], base);
     }
-    newOptions = DartinoCompilerOptions.copy(
+    newOptions = DartinoCompilerOptions.copyDartinoOptions(
         newOptions,
         analyzeOnly: analyzeOnly);
     return reuseCompiler(

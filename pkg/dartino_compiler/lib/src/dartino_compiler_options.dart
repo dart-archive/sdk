@@ -174,7 +174,7 @@ class DartinoCompilerOptions implements CompilerOptions {
 
   @override bool get enableInitializingFormalAccess => false;
 
-  static DartinoCompilerOptions copy(
+  static DartinoCompilerOptions copyDartinoOptions(
       CompilerOptions options,
       {Uri libraryRoot,
        Uri packageConfig,
@@ -270,9 +270,71 @@ Try adding command-line option '-Ddart-sdk=<location of the Dart sdk>'.""");
         environment: environment,
         options: arguments);
 
-    return copy(
+    return copyDartinoOptions(
         options, platformConfigUri: platformConfigUri,
         incrementalMode: incrementalMode);
+  }
+
+  @override
+  CompilerOptions copy(
+      {entryPoint,
+      libraryRoot,
+      packageRoot,
+      packageConfig,
+      packagesDiscoveryProvider,
+      environment,
+      allowMockCompilation,
+      allowNativeExtensions,
+      analyzeAll,
+      analyzeMain,
+      analyzeOnly,
+      analyzeSignaturesOnly,
+      buildId,
+      dart2dartMultiFile,
+      deferredMapUri,
+      fatalWarnings,
+      terseDiagnostics,
+      suppressWarnings,
+      suppressHints,
+      List<String> shownPackageWarnings,
+      disableInlining,
+      disableTypeInference,
+      dumpInfo,
+      emitJavaScript,
+      enableAssertMessage,
+      enableGenericMethodSyntax,
+      enableInitializingFormalAccess,
+      enableExperimentalMirrors,
+      enableMinification,
+      enableNativeLiveTypeAnalysis,
+      enableTypeAssertions,
+      enableUserAssertions,
+      generateCodeWithCompileTimeErrors,
+      generateSourceMap,
+      hasIncrementalSupport,
+      outputUri,
+      platformConfigUri,
+      preserveComments,
+      preserveUris,
+      resolutionInputs,
+      resolutionOutput,
+      resolveOnly,
+      sourceMapUri,
+      strips,
+      testMode,
+      trustJSInteropTypeAnnotations,
+      trustPrimitives,
+      trustTypeAnnotations,
+      useContentSecurityPolicy,
+      useCpsIr,
+      useFrequencyNamer,
+      useNewSourceInfo,
+      useStartupEmitter,
+      verbose}) {
+    // TODO(karlklose): setting most of these options to arbitrary values is not
+    // supported in the Dartino compiler. Remove this when the method on the
+    // Dart CompilerOptions is made static.
+    throw 'Unimplemented';
   }
 }
 

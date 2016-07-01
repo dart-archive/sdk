@@ -196,7 +196,7 @@ Try adding command-line option '-Ddartino-natives-json=<path to natives.json>.
         nativesJson: _compiler.nativesJson,
         inputProvider: _compiler.provider,
         diagnosticHandler: _compiler.handler,
-        options: DartinoCompilerOptions.copy(
+        options: DartinoCompilerOptions.copyDartinoOptions(
             _compiler.options, incrementalMode: support),
         outputProvider: _compiler.userOutputProvider);
   }
