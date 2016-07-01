@@ -23,7 +23,6 @@ async: ../third_party/dart/sdk/lib/async/async.dart
 collection: ../third_party/dart/sdk/lib/collection/collection.dart
 convert: ../third_party/dart/sdk/lib/convert/convert.dart
 core: ../third_party/dart/sdk/lib/core/core.dart
-developer: ../third_party/dart/sdk/lib/developer/developer.dart
 math: ../third_party/dart/sdk/lib/math/math.dart
 typed_data: ../third_party/dart/sdk/lib/typed_data/typed_data.dart
 
