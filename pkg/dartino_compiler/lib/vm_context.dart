@@ -918,7 +918,9 @@ class DartinoVmContext {
          current != ScopeInfo.sentinel;
          current = current.previous) {
       variables.add(await processLocal(
-          debugState.currentFrame, current.local.slot, name: current.name));
+          debugState.actualCurrentFrameNumber,
+          current.local.slot,
+          name: current.name));
     }
     return variables;
   }
