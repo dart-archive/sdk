@@ -148,10 +148,9 @@ class CommandLineDebugger {
           writeStdoutLine('### invalid bytecode index: $bci');
           break;
         }
-        List<Breakpoint> breakpoints =
-            await vmContext.setBreakpoint(
-                methodName: method, bytecodeIndex: bci);
-        if (breakpoints != null) {
+        List<Breakpoint> breakpoints = await vmContext.setBreakpoint(
+            methodName: method, bytecodeIndex: bci);
+        if (breakpoints.isNotEmpty) {
           for (Breakpoint breakpoint in breakpoints) {
             printSetBreakpoint(breakpoint);
           }
