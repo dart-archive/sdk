@@ -1,7 +1,7 @@
 <STDOUT>:
 Uncaught exception:
 a Instance: 
-  - class = class
+  - class = class id=46
   - @0 = normal exception
 
    0: foo tests/snapshot_stacktrace_tests/uncaught_exception_test.dart:9:10
