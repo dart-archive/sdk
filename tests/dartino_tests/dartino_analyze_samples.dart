@@ -6,7 +6,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dartino_compiler/src/guess_configuration.dart';
 import 'package:dartino_compiler/src/worker/developer.dart';
 import 'package:expect/expect.dart';
 import 'package:path/path.dart';
@@ -42,11 +41,12 @@ Future<Map<String, NoArgFuture>> listTests() async {
 Future<Null> analyzeSample(String samplePath) async {
   Directory dartSdkDir = await locateDartSdkDirectory();
   String analyzerPath = join(dartSdkDir.path, 'bin', 'dartanalyzer');
-  String packagesFile = 'dartino-sdk/internal/dartino-sdk.packages';
+  String pkgsPath = 'pkg/dartino-sdk.packages';
+  Uri pkgsUri = Directory.current.uri.resolve(pkgsPath);
 
   List<String> arguments = <String>['--strong'];
   arguments.add('--packages');
-  arguments.add(new File.fromUri(executable.resolve(packagesFile)).path);
+  arguments.add(new File.fromUri(pkgsUri).path);
   arguments.add(samplePath);
 
   if (_debug) print('Analyzing ${samplePath}');
@@ -77,4 +77,3 @@ Future<Null> analyzeSample(String samplePath) async {
   if (!success || _debug) print(out.toString());
   Expect.equals(true, success);
 }
-
