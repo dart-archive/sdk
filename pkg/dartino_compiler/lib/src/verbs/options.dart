@@ -39,7 +39,7 @@ const List<Option> supportedOptions = const <Option>[
   const Option(
       OptionKind.debuggingMode, null, 'debugging-mode'),
   const Option(
-      OptionKind.debuggingMode, null, 'no-wait'),
+      OptionKind.noWait, null, 'no-wait'),
 ];
 
 final Map<String, Option> shortOptions = computeShortOptions();
