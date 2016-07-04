@@ -847,18 +847,12 @@ BEGIN_LEAF_NATIVE(DoubleParse) {
 }
 END_NATIVE()
 
-#ifdef DARTINO_USE_SINGLE_PRECISION
-#define ADD_SUFFIX(x) x##f
-#else
-#define ADD_SUFFIX(x) x
-#endif
-
 #define DOUBLE_MATH_NATIVE(name, method)                       \
-  BEGIN_LEAF_NATIVE(name) {                                    \
+  BEGIN_LEAF_NATIVE(name) {                                         \
     Object* x = arguments[0];                                  \
     if (!x->IsDouble()) return Failure::wrong_argument_type(); \
-    dartino_double d = Double::cast(x)->value();               \
-    return process->NewDouble(ADD_SUFFIX(method)(d));          \
+    dartino_double d = Double::cast(x)->value();                \
+    return process->NewDouble(method(d));                      \
   }                                                            \
   END_NATIVE()
 
@@ -879,7 +873,7 @@ BEGIN_LEAF_NATIVE(DoubleAtan2) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double x_value = Double::cast(x)->value();
   dartino_double y_value = Double::cast(y)->value();
-  return process->NewDouble(ADD_SUFFIX(atan2)(x_value, y_value));
+  return process->NewDouble(atan2(x_value, y_value));
 }
 END_NATIVE()
 
@@ -890,7 +884,7 @@ BEGIN_LEAF_NATIVE(DoublePow) {
   if (!y->IsDouble()) return Failure::wrong_argument_type();
   dartino_double x_value = Double::cast(x)->value();
   dartino_double y_value = Double::cast(y)->value();
-  return process->NewDouble(ADD_SUFFIX(pow)(x_value, y_value));
+  return process->NewDouble(pow(x_value, y_value));
 }
 END_NATIVE()
 
