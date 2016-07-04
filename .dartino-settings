@@ -23,7 +23,12 @@
   //   const int.fromEnvironment("<name>")
   //   const String.fromEnvironment("<name>")
   //
+  // Names starting with "dartino." are reserved for use by the Dartino
+  // compiler.
   "constants": {
+    // By default Dartino have bigint support. Uncomment this line to turn
+    // it off. This will make the Dartino program smaller.
+    // "dartino.enable-bigint": "false"
   },
 
   // A list of strings that are passed to the Dartino embedder.
@@ -52,7 +57,10 @@
   // devices are supported:
   //   stm32f746g-discovery (STM32F746G Discovery)
   //   stm32f411re-nucleo (STM32F411RE Nucleo)
-  "device": "stm32f746g-discovery",
+  //
+  // stm32f746g-discovery is the default. Uncomment this to use
+  // stm32f411re-nucleo.
+  // "device": "stm32f411re-nucleo",
 
   // Support for incremental compilation, one of "none", "production", or
   // "experimental".
