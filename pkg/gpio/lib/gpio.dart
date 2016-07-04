@@ -4,13 +4,55 @@
 
 /// GPIO support providing access to controlling GPIO pins.
 ///
-/// Currently this has only been tested with a Raspberry Pi 2 and the
-/// STM32F746G-Discovery board.
+/// Currently this has been tested with the STM32F746G Discovery and
+/// STM32411RE Nucleo boards and on a Raspberry Pi 2.
 ///
-/// Access types
-/// ------------
-/// There are two ways of accessing the GPIO pins: direct access or
-/// access through a Sysfs driver.
+/// Usage on STM32F746G Discovery board
+/// -----------------------------------
+/// ```dart
+/// import 'dart:dartino';
+///
+/// import 'package:gpio/gpio.dart';
+/// import 'package:stm32/stm32f746g_disco.dart';
+///
+/// main() {
+///   // Initialize STM32F746G Discovery board and configure the pin.
+///   STM32F746GDiscovery board = new STM32F746GDiscovery();
+///   GpioOutputPin pin = board.gpio.initOutput(STM32F746GDiscovery.LED1);
+///
+///   // Toggle the pin every half second.
+///   while (true) {
+///     pin.toggle();
+///     sleep(500);
+///   }
+/// }
+/// ```
+///
+/// Usage on STM32411RE Nucleo board
+/// --------------------------------
+/// ```dart
+/// import 'dart:dartino';
+///
+/// import 'package:gpio/gpio.dart';
+/// import 'package:stm32/stm32f411re_nucleo.dart';
+///
+/// main() {
+///   // Initialize STM32411RE Nucleo board and configure the pin.
+///   STM32F411RENucleo board = new STM32F411RENucleo();
+///   GpioOutputPin pin = board.gpio.initOutput(STM32F411RENucleo.LED2);
+///
+///   // Toggle the pin every half second.
+///   while (true) {
+///     pin.toggle();
+///     sleep(500);
+///   }
+/// }
+/// ```
+///
+/// Usage on Raspberry Pi 2
+/// -----------------------
+/// On the Raspberry Pi 2 there are two ways of accessing the GPIO
+/// pins: direct access or access through a Sysfs driver.
 ///
 /// When direct access is used, the physical memory addresses, where the
 /// SoC registers for the GPIO pins are mapped, are accessed directly. If this
@@ -21,39 +63,27 @@
 /// by default. However this can be changed through udev rules, e.g. by
 /// adding a file to ` /etc/udev/rules.d`. In addition the Sysfs driver
 /// supports state change notifications.
-///
-/// Usage on Raspberry Pi 2
-/// -----------------------
 /// ```dart
+/// import 'dart:dartino';
+///
 /// import 'package:gpio/gpio.dart';
 /// import 'package:raspberry_pi/raspberry_pi.dart';
 ///
 /// main() {
-///   // Initialize Raspberry Pi and configure the pins.
+///   // Initialize Raspberry Pi and configure the pin.
 ///   RaspberryPi pi = new RaspberryPi();
 ///   Gpio gpio = pi.memoryMappedGPIO;
 ///   GpioOutputPin pin = gpio.initOutput(RaspberryPiPin.GPIO6);
 ///
-///   // Access pin.
-///   pin.state =  true;
+///   // Toggle the pin every half second.
+///   while (true) {
+///     pin.toggle();
+///     sleep(500);
+///   }
+/// }
 /// ```
 ///
-/// Usage on STM32F746G Discovery board
-/// -----------------------------------
-/// ```dart
-/// import 'package:gpio/gpio.dart';
-/// import 'package:stm32/stm32f746g_disco.dart';
-///
-/// main() {
-///   // Initialize STM32F746G Discovery board and configure the pins.
-///   STM32F746GDiscovery board = new STM32F746GDiscovery();
-///   GpioOutputPin pin = board.gpio.initOutput(STM32F746GDiscovery.LED1);
-///
-///   // Access pin.
-///   pin.state =  true;
-/// ```
-///
-/// See `samples/raspberry_pi/` and `samples/stm32f746g-discovery` for
+/// See `samples/raspberry_pi/` and `samples/stm32f746g-discovery`  and `samples/stm32f746g-discovery` for
 /// additional details.
 ///
 /// Reporting issues

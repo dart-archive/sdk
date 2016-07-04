@@ -9,6 +9,9 @@
 /// following example uses a STM32F764G Discovery board where the I2C
 /// bus on Arduino connector is I2C bus `1`, available as `i2c1`.
 ///
+/// Usage with STM32F746G Discovery board
+/// -------------------------------------
+/// ```dart
 /// import 'package:stm32/stm32f746g_disco.dart';
 /// import 'package:nucleo_iks01a1/nucleo_iks01a1.dart';
 ///
@@ -21,6 +24,7 @@
 ///   hts221.powerOn();
 ///   print('Temperature: ${hts221.readTemperature()}');
 /// }
+/// ```
 ///
 /// The library also contains the default I2C addresses of the sensors
 /// on the expansion board.
