@@ -769,6 +769,14 @@ generic_creation_test: RuntimeError
 mixin_regress_13688_test: RuntimeError
 null2_test: RuntimeError
 
+# These tests are written expecting dart:developer to always be present.
+# We want to support at least parts of dart:developer - issue #562.
+library_env_test/none: RuntimeError
+library_env_test/has_io_support: RuntimeError
+library_env_test/has_no_mirror_support: RuntimeError
+library_env_test/has_no_html_support: RuntimeError
+library_env_test/has_html_support: RuntimeError
+
 [ $compiler == dartino_compiler ]
 
 async_test/constructor2: MissingCompileTimeError
@@ -840,14 +848,6 @@ no_main_test/01: CompileTimeError
 not_enough_positional_arguments_test/01: CompileTimeError
 not_enough_positional_arguments_test/05: CompileTimeError
 not_enough_positional_arguments_test/02: CompileTimeError
-
-# These tests are written expecting dart:developer to always be present.
-# We want to support at least parts of dart:developer - issue #562.
-library_env_test/none: RuntimeError
-library_env_test/has_io_support: RuntimeError
-library_env_test/has_no_mirror_support: RuntimeError
-library_env_test/has_no_html_support: RuntimeError
-library_env_test/has_html_support: RuntimeError
 
 [ $system == lk ]
 await_for_test: Crash
