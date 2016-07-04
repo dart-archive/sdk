@@ -1473,7 +1473,7 @@ Future<int> buildImage(
                 "wait_for_connection"].contains(x);
       });
       embedderOptions.add("enable_debugger");
-      if (noWait) {
+      if (!noWait) {
         embedderOptions.add("wait_for_connection");
       }
     }

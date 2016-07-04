@@ -607,7 +607,8 @@ class DartinoVmContext {
   // TODO(ager): Let setBreakpoint return a stream instead and deal with
   // error situations such as bytecode indices that are out of bounds for
   // some of the methods with the given name.
-  Future setBreakpoint({String methodName, int bytecodeIndex}) async {
+  Future<List<Breakpoint>> setBreakpoint(
+      {String methodName, int bytecodeIndex}) async {
     Iterable<DartinoFunction> functions =
         dartinoSystem.functionsWhere((f) => f.name == methodName);
     List<Breakpoint> breakpoints = [];
@@ -918,7 +919,9 @@ class DartinoVmContext {
          current != ScopeInfo.sentinel;
          current = current.previous) {
       variables.add(await processLocal(
-          debugState.currentFrame, current.local.slot, name: current.name));
+          debugState.actualCurrentFrameNumber,
+          current.local.slot,
+          name: current.name));
     }
     return variables;
   }
