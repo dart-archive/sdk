@@ -722,7 +722,7 @@ Future<RemoteObject> _processVariable(
   assert(vmContext.isSpawned);
   assert(accesses.isNotEmpty);
   LocalAccess localAccess = accesses.first;
-  int frame = vmContext.debugState.currentFrame;
+  int frame = vmContext.debugState.actualCurrentFrameNumber;
   LocalValue local = await lookupValue(localAccess.localName, vmContext);
   if (local == null) {
     return new RemoteErrorObject(
