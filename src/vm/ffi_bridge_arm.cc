@@ -22,11 +22,8 @@ static RegisterList RegisterRange(Register first, Register last) {
 }
 
 GENERATE(, FfiBridge) {
-  Label noargs, noVfp, fitsInOne, fitsInTwo, fitsInThree, fitsInFour,
+  Label noargs, fitsInOne, fitsInTwo, fitsInThree, fitsInFour,
     skipRestoreStack, noStack, copyArgs;
-  // VFP labels - for handling Vectorized Floating Point coprocessor registers.
-  Label vfp1, vfp2, vfp3, vfp4, vfp5, vfp6, vfp7, vfp8, vfp9, vfp10,
-    vfp11, vfp12, vfp13, vfp14, vfp15, vfp16;
   const int kCalleeSaved = 8;
   // Keep stack 8-byte aligned at all times, to follow the ABI requirements.
   ASSERT(kCalleeSaved % 2 == 0);
@@ -37,6 +34,10 @@ GENERATE(, FfiBridge) {
   // [SP+8] - function to call.
   __ push(RegisterRange(R4, R10) | RegisterRange(LR, LR));
 
+#ifdef DARTINO_TARGET_ARM_HARDFLOAT
+  // VFP labels - for handling Vectorized Floating Point coprocessor registers.
+  Label noVfp, vfp1, vfp2, vfp3, vfp4, vfp5, vfp6, vfp7, vfp8, vfp9, vfp10,
+    vfp11, vfp12, vfp13, vfp14, vfp15, vfp16;
   // Deal with VFP arguments first.
   __ ldr(R6, SP, Immediate((kCalleeSaved + 1) * kWordSize));
   __ cmp(R6, Immediate(0));
@@ -108,6 +109,7 @@ GENERATE(, FfiBridge) {
   __ Bind(&vfp1);
   __ vldr(S0,  R5, Immediate(0));
   __ Bind(&noVfp);
+#endif
 
   // R5 - function pointer.
   __ ldr(R5, SP, Immediate((kCalleeSaved + 2) * kWordSize));

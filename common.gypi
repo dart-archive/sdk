@@ -679,6 +679,10 @@
       'dartino_cortex_m7': {
         'abstract': 1,
 
+        'defines': [
+          'DARTINO_TARGET_ARM_HARDFLOAT'
+        ],
+
         'variables': {
           'common_cflags_ldflags': [
             '-mcpu=cortex-m7',
@@ -719,6 +723,10 @@
       'dartino_cortex_m4f': {
         'abstract': 1,
 
+        'defines': [
+          'DARTINO_TARGET_ARM_HARDFLOAT'
+        ],
+
         'variables': {
           'common_cflags_ldflags': [
             '-mcpu=cortex-m4',
@@ -758,6 +766,10 @@
 
       'dartino_cortex_m3': {
         'abstract': 1,
+
+        'defines': [
+          'DARTINO_TARGET_ARM_SOFTFLOAT'
+        ],
 
         'variables': {
           'common_cflags_ldflags': [
