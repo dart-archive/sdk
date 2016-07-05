@@ -1283,7 +1283,7 @@ Future<int> downloadTools(
   Version version = parseVersion(dartinoVersion);
   if (version.isEdgeVersion) {
     // For edge versions download use a well known version for now.
-    var knownVersion = "0.3.0-dev.5.2";
+    var knownVersion = "0.5.0-dev.0.0";
     print("WARNING: For bleeding edge tools from version "
           "$knownVersion is used.");
     gcsPath = "channels/dev/raw/$knownVersion/sdk";
@@ -1315,14 +1315,9 @@ Future<int> downloadTools(
 
   // TODO(karlklose): add MacOS version
   if (Platform.isLinux) {
-    String emul8 = "emul8-${osName}.zip";
-    // TODO(karlklose): remove this and the helper when we have a dev version
-    // archived that we can point to.
-    Uri temporaryPath = Uri.parse(
-        "https://storage.googleapis.com/dartino-temporary/channels/be/raw/"
-        "0.4.0-edge.8fa0e09687e17b163825f757a9a7e89e6dd8e97d/sdk/"
-        "emul8-linux.zip");
-    result = await downloadToolFromUri(temporaryPath, emul8, "Emul8");
+    String gccArmEmbedded = "emul8-${osName}.zip";
+    var result =
+        await downloadTool(gcsPath, gccArmEmbedded, "Emul8");
     if (result != 0) return result;
   }
 
@@ -1511,7 +1506,9 @@ Future<int> buildImage(
     // Copy the .bin file from the tmp directory.
     String tmpBinFile = join(tmpDir.path, "${baseName}.bin");
     String binFile = "${withoutExtension(snapshot.path)}.bin";
-    await new File(tmpBinFile).copy(binFile);
+    // Use cp rather than File.copy() so that sparse files are not turned into
+    // non-sparse files, which costs 400Mbytes of disk use.
+    await Process.run("/bin/cp", [tmpBinFile, binFile]);
     // Copy the .elf file from the tmp directory.
     String tmpElfFile = join(tmpDir.path, "${baseName}.elf");
     String elfFile = "${withoutExtension(snapshot.path)}.elf";

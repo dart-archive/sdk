@@ -11,7 +11,7 @@
 // Disable view of internal frames.
 // DartinoDebuggerCommands=toggle internal
 // Now we should get the stack view of the top current non-internal frame(main).
-// DartinoDebuggerCommands=bt,p
+// DartinoDebuggerCommands=bt,p,p rnd
 // DartinoDebuggerCommands=q
 
 import 'dart:math';
