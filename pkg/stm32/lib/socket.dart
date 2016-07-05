@@ -28,6 +28,8 @@ final _sendTo = ForeignLibrary.main.lookup("socket_sendto");
 final _shutdown = ForeignLibrary.main.lookup("socket_shutdown");
 final _unregisterAndClose = ForeignLibrary.main.lookup("socket_unregister");
 final _sockAddrSize = ForeignLibrary.main.lookup("SockAddrSize");
+final _listen = ForeignLibrary.main.lookup("socket_listen");
+final _accept = ForeignLibrary.main.lookup("socket_accept");
 
 int sockAddrSize = _sockAddrSize.icall$0();
 
@@ -121,6 +123,13 @@ class Socket extends _SocketBase implements system.Socket {
     _port = new Port(_channel);
   }
 
+  Socket._fromHandle(int socketHandle) {
+    _socket = socketHandle;
+    _handle = _registerSocket.icall$1(_socket);
+    _channel = new Channel();
+    _port = new Port(_channel);
+  }
+
   void write(ByteBuffer buffer) {
     if ((_waitForEvent(SOCKET_WRITE | SOCKET_CLOSED) & SOCKET_CLOSED) != 0) {
       return null;
@@ -169,10 +178,12 @@ class Socket extends _SocketBase implements system.Socket {
 
 class DatagramSocket extends _SocketBase implements system.DatagramSocket {
   ForeignMemory _sockaddr;
+  final int port;
 
-  DatagramSocket.bind(String host, int port) {
+  DatagramSocket.bind(String host, this.port) {
     if (Foreign.platform != Foreign.FREERTOS) {
-      throw new SocketException("Library only supported for FreeRTOS embedding");
+      throw new SocketException(
+          "Library only supported for FreeRTOS embedding");
     }
     if (!ethernet.isInitialized) {
       throw new SocketException("network stack not initialized");
@@ -206,8 +217,6 @@ class DatagramSocket extends _SocketBase implements system.DatagramSocket {
     _sockaddr.setUint32(0, 0);
     _sockaddr.setUint32(4, 0);
   }
-
-  int get port => throw new UnimplementedError();
 
   int send(InternetAddress address, int port, ByteBuffer buffer) {
     int targetPort = _htons(port);
@@ -250,5 +259,72 @@ class DatagramSocket extends _SocketBase implements system.DatagramSocket {
       int port = _htons(_sockaddr.getUint16(0));
       return new system.Datagram(address, port, buffer);
     }
+  }
+}
+
+class ServerSocket extends _SocketBase implements system.ServerSocket {
+  ForeignMemory _sockaddr;
+  final int port;
+
+  ServerSocket(String host, this.port, {int backlog: 64}) {
+    if (Foreign.platform != Foreign.FREERTOS) {
+      throw new SocketException(
+          "Library only supported for FreeRTOS embedding");
+    }
+    if (!ethernet.isInitialized) {
+      throw new SocketException("Network stack not initialized");
+    }
+    ForeignMemory string = new ForeignMemory.fromStringAsUTF8(host);
+    int address;
+    try {
+      address = _lookupHost.icall$1(string.address);
+    } finally {
+      string.free();
+    }
+    if (address == 0) {
+      throw new SocketException("Unable to find $host");
+    }
+    _socket = _createSocket.icall$3(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (_socket == -1) {
+      throw const SocketException("Failed to create socket");
+    }
+    // TODO(karlklose): save result as errno.
+    int result = _bind.icall$3(_socket, address, _htons(port));
+    if (result != 0) {
+      _close.vcall$1(_socket);
+      throw new SocketException(
+          "Failed to bind socket to ${host}:${port} ($result)");
+    }
+    if (_listen.icall$2(_socket, backlog) != 0) {
+      _close.vcall$1(_socket);
+      throw new SocketException("Failed to place socket into listening state");
+    }
+
+    _handle = _registerSocket.icall$1(_socket);
+    _channel = new Channel();
+    _port = new Port(_channel);
+
+    // Allocate and zero out a `freertos_sockaddr` structure to be used when
+    // accepting incoming connections.
+    _sockaddr = new ForeignMemory.allocatedFinalized(sockAddrSize);
+    _sockaddr.setUint32(0, 0);
+    _sockaddr.setUint32(4, 0);
+  }
+
+  spawnAccept(Function f) {
+    throw new UnimplementedError(
+        "spawnAccept is not supported on FreeRTOS; use accept instead");
+  }
+
+  Socket accept() {
+    if ((_waitForEvent(SOCKET_READ | SOCKET_CLOSED) & SOCKET_CLOSED) != 0) {
+      return null;
+    }
+    int childSocket =_accept.icall$3(_socket, _sockaddr.address, 0);
+    if (childSocket == -1 || childSocket == 0) {
+      throw new SocketException(
+          "Accept did not return a valid socket handle ($childSocket)");
+    }
+    return new Socket._fromHandle(childSocket);
   }
 }

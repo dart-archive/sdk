@@ -183,6 +183,10 @@ DARTINO_EXPORT_STATIC_RENAME(socket_reset_flags,
                              ResetSocketFlags)
 DARTINO_EXPORT_STATIC_RENAME(socket_listen_for_event,
                              ListenForSocketEvent)
+DARTINO_EXPORT_STATIC_RENAME(socket_listen,
+                             FreeRTOS_listen)
+DARTINO_EXPORT_STATIC_RENAME(socket_accept,
+                             FreeRTOS_accept)
 
 // The functions used from bindings.c
 int entropy_context_sizeof();
