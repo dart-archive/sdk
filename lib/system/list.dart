@@ -4,6 +4,20 @@
 
 part of dart.dartino._system;
 
+extractFixedList(List list) {
+  if (list is GrowableList) {
+    return list._list;
+  } else if(list is FixedListBase) {
+    return list;
+  } else {
+    var copy = new FixedList(list.length);
+    for(var i = 0; i < list.length; i++) {
+      copy[i] = list[i];
+    }
+    return copy;
+  }
+}
+
 abstract class FixedListBase<E>
     extends Object with ListMixin<E>
     implements List<E> {

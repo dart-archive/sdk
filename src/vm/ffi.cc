@@ -9,6 +9,7 @@
 #include "src/vm/object.h"
 #include "src/vm/port.h"
 #include "src/vm/process.h"
+#include "src/vm/vector.h"
 
 namespace dartino {
 
@@ -425,7 +426,7 @@ typedef int (*I64F5)(word, word, word, word, word);
 typedef int (*I64F6)(word, word, word, word, word, word);
 typedef int (*I64F7)(word, word, word, word, word, word, word);
 
-// This enum should match the one in ffi.dart
+// This enum should match ForeignFunctionReturnType in ffi.dart.
 enum {
   FFI_RET_POINTER = 0,
   FFI_RET_INT32,
@@ -433,6 +434,157 @@ enum {
   FFI_RET_FLOAT32,
   FFI_RET_VOID
 };
+
+// This enum should match ForeignFunctionArgumentType in ffi.dart.
+enum {
+  FFI_POINTER = 0,
+  FFI_INT32,
+  FFI_INT64,
+  FFI_FLOAT32
+};
+
+#if defined(DARTINO_TARGET_ARM)
+
+extern "C" {
+  void FfiBridge(word* regular, int regularSize, word* stack, int stackSize,
+    float* vfp, int vfpSize, word foreign);
+}
+
+typedef word (*P_BRIDGE)(word*, int, word*, int, float*, int, word);
+typedef int32 (*I32_BRIDGE)(word*, int, word*, int, float*, int, word);
+typedef int64 (*I64_BRIDGE)(word*, int, word*, int, float*, int, word);
+typedef float (*F32_BRIDGE)(word*, int, word*, int, float*, int, word);
+typedef void (*V_BRIDGE)(word*, int, word*, int, float*, int, word);
+
+class FFIFrameBuilder {
+ public:
+  void WordArgument(word v) {
+    if (nextCoreRegister < kLastCoreRegister) {
+      registerArgs.PushBack(v);
+      nextCoreRegister += 1;
+    } else {
+      stackArgs.PushBack(v);
+    }
+  }
+
+  void Int64Argument(int64 v) {
+    if (nextCoreRegister & 1) {
+      // Skip register for alignment.
+      registerArgs.PushBack(0);
+      nextCoreRegister += 1;
+    }
+    if (nextCoreRegister + 2 <= kLastCoreRegister) {
+      registerArgs.PushBack(v & 0xffffffff);
+      registerArgs.PushBack(v >> 32);
+      nextCoreRegister += 2;
+    } else {
+      // Once we touch the stack, no registers are used.
+      nextCoreRegister = kLastCoreRegister;
+      stackArgs.PushBack(v & 0xffffffff);
+      stackArgs.PushBack(v >> 32);
+    }
+  }
+
+  void Float32Argument(float v) {
+    if (floatingPointArgs.size() < kLastFloatingPointRegister) {
+      floatingPointArgs.PushBack(v);
+    } else {
+      stackArgs.PushBack(*reinterpret_cast<word*>(&v));
+    }
+  }
+
+  word PointerCall(word address) {
+    return reinterpret_cast<P_BRIDGE>(FfiBridge)(registerArgs.Data(),
+      registerArgs.size(), stackArgs.Data(), stackArgs.size(),
+      floatingPointArgs.Data(), floatingPointArgs.size(), address);
+  }
+
+  void VoidCall(word address) {
+    reinterpret_cast<V_BRIDGE>(FfiBridge)(registerArgs.Data(),
+      registerArgs.size(), stackArgs.Data(), stackArgs.size(),
+      floatingPointArgs.Data(), floatingPointArgs.size(), address);
+  }
+
+  int IntCall(word address) {
+    return reinterpret_cast<I32_BRIDGE>(FfiBridge)(registerArgs.Data(),
+      registerArgs.size(), stackArgs.Data(), stackArgs.size(),
+      floatingPointArgs.Data(), floatingPointArgs.size(), address);
+  }
+
+  int64 Int64Call(word address) {
+    return reinterpret_cast<I64_BRIDGE>(FfiBridge)(registerArgs.Data(),
+      registerArgs.size(), stackArgs.Data(), stackArgs.size(),
+      floatingPointArgs.Data(), floatingPointArgs.size(), address);
+  }
+
+  float Float32Call(word address) {
+    return reinterpret_cast<F32_BRIDGE>(FfiBridge)(registerArgs.Data(),
+      registerArgs.size(), stackArgs.Data(), stackArgs.size(),
+      floatingPointArgs.Data(), floatingPointArgs.size(), address);
+  }
+
+ private:
+  const size_t kLastCoreRegister = 4;
+  const size_t kLastFloatingPointRegister = 16;
+  Vector<word> registerArgs, stackArgs;
+  Vector<float> floatingPointArgs;
+  size_t nextCoreRegister = 0;
+};
+
+BEGIN_NATIVE(ForeignListCall) {
+  word address = AsForeignWord(arguments[0]);
+  int returnType = AsForeignWord(arguments[1]);
+  int size = AsForeignWord(arguments[2]);
+  Object* obj = Instance::cast(arguments[3])->GetInstanceField(0);
+  Array* args = Array::cast(obj);
+  obj = Instance::cast(arguments[4])->GetInstanceField(0);
+  Array* types = Array::cast(obj);
+  FFIFrameBuilder builder;
+  for (int i = 0; i < size; i++) {
+    Object* argType = Instance::cast(types->get(i))->GetInstanceField(0);
+    word type = AsForeignWord(argType);
+    switch (type) {
+      case FFI_POINTER:
+      case FFI_INT32:
+        builder.WordArgument(AsForeignWord(args->get(i)));
+        break;
+      case FFI_INT64:
+        builder.Int64Argument(AsForeignInt64(args->get(i)));
+        break;
+      case FFI_FLOAT32:
+        builder.Float32Argument(Double::cast(args->get(i))->value());
+        break;
+      default:
+        return Failure::wrong_argument_type();
+    }
+  }
+  int64 tmp;
+  switch (returnType) {
+    case FFI_RET_POINTER:
+      tmp = builder.PointerCall(address);
+      if (Smi::IsValid(tmp)) return Smi::FromWord(tmp);
+      return process->NewIntegerWithGC(tmp);
+    case FFI_RET_INT32:
+      tmp = builder.IntCall(address);
+      if (Smi::IsValid(tmp)) return Smi::FromWord(tmp);
+      return process->NewIntegerWithGC(tmp);
+    case FFI_RET_INT64:
+      tmp = builder.Int64Call(address);
+      if (Smi::IsValid(tmp)) return Smi::FromWord(tmp);
+      return process->NewIntegerWithGC(tmp);
+    case FFI_RET_FLOAT32:
+      return process->NewDoubleWithGC(builder.Float32Call(address));
+    case FFI_RET_VOID:
+      builder.VoidCall(address);
+      return Smi::FromWord(0);
+    default:
+      return Failure::wrong_argument_type();
+  }
+}
+
+END_NATIVE()
+
+#else
 
 BEGIN_NATIVE(ForeignListCall) {
   word address = AsForeignWord(arguments[0]);
@@ -582,6 +734,8 @@ BEGIN_NATIVE(ForeignListCall) {
   }
 }
 END_NATIVE()
+
+#endif  // DARTINO_TARGET_ARM
 
 typedef int64 (*LwLw)(word, int64, word);
 

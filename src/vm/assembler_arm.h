@@ -36,6 +36,38 @@ enum Register {
   SP = 13,
   LR = 14,
   PC = 15,
+  S0 = 16,
+  S1 = 17,
+  S2 = 18,
+  S3 = 19,
+  S4 = 20,
+  S5 = 21,
+  S6 = 22,
+  S7 = 23,
+  S8 = 24,
+  S9 = 25,
+  S10 = 26,
+  S11 = 27,
+  S12 = 28,
+  S13 = 29,
+  S14 = 30,
+  S15 = 31,
+  S16 = 32,
+  S17 = 33,
+  S18 = 34,
+  S19 = 35,
+  S20 = 36,
+  S21 = 37,
+  S22 = 38,
+  S23 = 39,
+  S24 = 40,
+  S25 = 41,
+  S26 = 42,
+  S27 = 43,
+  S28 = 44,
+  S29 = 45,
+  S30 = 46,
+  S31 = 47,
 };
 
 enum ScaleFactor {
@@ -198,10 +230,18 @@ class Assembler {
 
   INSTRUCTION_1(it, "it %c", Condition);
 
+  INSTRUCTION_2(vldr, "vldr %r, %a", Register, const Address&);
+  INSTRUCTION_2(vldr, "vldr %r, =%s", Register, const char*);
+  INSTRUCTION_2(vldr, "vldr %r, =%l", Register, Label*);
+  INSTRUCTION_3(vldr, "vldr %r, [%r, %i]", Register, Register,
+    const Immediate&);
+
   INSTRUCTION_2(ldr, "ldr %r, %a", Register, const Address&);
   INSTRUCTION_2(ldr, "ldr %r, =%s", Register, const char*);
   INSTRUCTION_2(ldr, "ldr %r, =%l", Register, Label*);
-  INSTRUCTION_3(ldr, "ldr %r, [%r], %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(ldr, "ldr %r, [%r, %i]", Register, Register, const Immediate&);
+  INSTRUCTION_3(ldr_postinc, "ldr %r, [%r], %i", Register, Register,
+    const Immediate&);
   INSTRUCTION_2(ldrb, "ldrb %r, %a", Register, const Address&);
   INSTRUCTION_3(ldrb, "ldrb %r, %a%W", Register, const Address&, WriteBack);
 
@@ -234,10 +274,13 @@ class Assembler {
 
   INSTRUCTION_2(str, "str %r, %a", Register, const Address&);
   INSTRUCTION_3(str, "str %r, %a%W", Register, const Address&, WriteBack);
-  INSTRUCTION_3(str, "str %r, [%r], %i", Register, Register, const Immediate&);
+  INSTRUCTION_3(str, "str %r, [%r,%i]", Register, Register, const Immediate&);
+  INSTRUCTION_3(str_postinc, "str %r, [%r], %i", Register, Register,
+    const Immediate&);
   INSTRUCTION_3(str, "str%c %r, %a", Condition, Register, const Address&);
 
   INSTRUCTION_2(strb, "strb %r, %a", Register, const Address&);
+
 
   INSTRUCTION_3(sub, "sub %r, %r, %i", Register, Register, const Immediate&);
   INSTRUCTION_3(sub, "sub %r, %r, %r", Register, Register, Register);

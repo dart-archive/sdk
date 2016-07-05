@@ -68,9 +68,11 @@ const int kPointerSize = sizeof(void*);  // NOLINT
 const int kDartinoDoubleSize = sizeof(dartino_double);
 
 #ifdef DARTINO64
+const int kWordSizeLog2 = 3;
 const int kPointerSizeLog2 = 3;
 const int kAlternativePointerSize = 4;
 #else
+const int kWordSizeLog2 = 2;
 const int kPointerSizeLog2 = 2;
 const int kAlternativePointerSize = 8;
 #endif

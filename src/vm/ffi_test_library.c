@@ -262,6 +262,127 @@ void* pfun6(int value, int value2, int value3, int value4, int value5,
   return data;
 }
 
+int64_t mix32_64_64(int a, int64_t b, int64_t c) {
+  return a + b + c;
+}
+
+int64_t mix32_64_32(int a, int64_t b, int c) {
+  return  a + b + c;
+}
+
+int64_t mix64_32_64(int64_t a, int b, int64_t c) {
+  return  a + b + c;
+}
+
+float ffun0() {
+  return 0.0;
+}
+
+float ffun1(float a0) {
+  return a0;
+}
+
+float ffun2(float a0, float a1) {
+  return a0 + a1;
+}
+
+float ffun3(float a0, float a1, float a2) {
+  return a0 + a1 + a2;
+}
+
+float ffun4(float a0, float a1, float a2, float a3) {
+  return a0 + a1 + a2 + a3;
+}
+
+float ffun5(float a0, float a1, float a2, float a3, float a4) {
+  return a0 + a1 + a2 + a3 + a4;
+}
+
+float ffun6(float a0, float a1, float a2, float a3, float a4, float a5) {
+  return a0 + a1 + a2 + a3 + a4 + a5;
+}
+
+float ffun7(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6;
+}
+
+float ffun8(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7;
+}
+
+float ffun9(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8;
+}
+
+float ffun10(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9;
+}
+
+float ffun11(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10;
+}
+
+float ffun12(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11;
+}
+
+float ffun13(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + 
+    a10 + a11 + a12;
+}
+
+float ffun14(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + 
+    a10 + a11 + a12 + a13;
+}
+
+float ffun15(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + 
+    a10 + a11 + a12 + a13 + a14;
+}
+
+float ffun16(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14, float a15) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + 
+    a10 + a11 + a12 + a13 + a14 + a15;
+}
+
+float ffun17(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14, float a15, float a16) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + 
+    a10 + a11 + a12 + a13 + a14 + a15 + a16;
+}
+
+
+float i5f17(int i0, int i1, int i2, int i3, int i4, 
+  float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14, float a15, float a16) {
+  return i0 + i1 + i2 + i3 + i4 + a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 +
+   a8 + a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16;
+}
+
+float f17i5(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14, float a15, float a16, 
+  int i0, int i1, int i2, int i3, int i4) {
+  return i0 + i1 + i2 + i3 + i4 + a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 +
+   a8 + a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16;
+}
+
 
 void* memint8() {
   int8_t* data = malloc(sizeof(int8_t) * 4);

@@ -147,6 +147,10 @@ class Process : public ProcessList::Entry, public ProcessQueueList::Entry {
   //
   // If there is not enough free memory runs the GC.
   LargeInteger* NewIntegerWithGC(int64 value);
+  // Allocates a double
+  //
+  // If there is not enough free memory runs the GC
+  Double* NewDoubleWithGC(dartino_double value);
 
   // NewString allocates a string of the given length and fills the payload
   // with zeroes.

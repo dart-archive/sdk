@@ -305,12 +305,17 @@ LIBRARY_GENERATOR_SRCS := \
 	$(DARTINO_SRC_VM)/assembler_x86_linux.cc \
 	$(DARTINO_SRC_VM)/assembler_x86_macos.cc \
 	$(DARTINO_SRC_VM)/assembler_x86_win.cc \
+	$(DARTINO_SRC_VM)/ffi_bridge_arm.cc \
+	$(DARTINO_SRC_VM)/ffi_bridge_mips.cc \
+	$(DARTINO_SRC_VM)/ffi_bridge_x64.cc \
+	$(DARTINO_SRC_VM)/ffi_bridge_x86.cc \
 	$(DARTINO_SRC_VM)/generator.h \
 	$(DARTINO_SRC_VM)/generator.cc \
 	$(DARTINO_SRC_VM)/interpreter_arm.cc \
 	$(DARTINO_SRC_VM)/interpreter_mips.cc \
 	$(DARTINO_SRC_VM)/interpreter_x86.cc \
 	$(DARTINO_SRC_VM)/interpreter_x64.cc
+
 
 # Sources for the flashtool host-tool.
 FLASHTOOL_SRCS := \

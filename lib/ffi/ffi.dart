@@ -186,8 +186,8 @@ class ForeignFunction extends Foreign {
         _convert(a3), _convert(a4), _convert(a5), _convert(a6));
   }
 
-  int callv(int returnType, int len, args) {
-    return _callv(address, returnType, len, args);
+  int callv(int returnType, int len, args, types) {
+    return _callv(address, returnType, len, args, types);
   }
 
   // Support for calling foreign functions that return
@@ -287,7 +287,8 @@ class ForeignFunction extends Foreign {
 
   int Lcall$wLwRetry(a0, a1, a2) => retry(() => Lcall$wLw(a0, a1, a2));
 
-  @dartino.native static int _callv(int address, int returnType, int len, args) {
+  @dartino.native static int _callv(int address, int returnType, int len,
+  args, types) {
     throw new ArgumentError();
   }
 
@@ -524,7 +525,7 @@ class Ffi {
   ForeignFunction func;
   ForeignFunctionReturnType returnType;
   List<ForeignFunctionArgumentType> argTypes;
-  
+
   /// Shorthand for pointer return type enum
   static const returnsPointer = ForeignFunctionReturnType.pointer;
   /// Shorthand for int32 return type enum
@@ -583,17 +584,20 @@ class Ffi {
           break;
       }
     }
+    var argTypesFixed = dartino.extractFixedList(argTypes);
     switch (returnType) {
       case Ffi.returnsVoid:
-        func.callv(returnType.index, len, converted);
+        func.callv(returnType.index, len, converted, argTypesFixed);
         break;
       case Ffi.returnsInt32:
       case Ffi.returnsInt64:
-        return func.callv(returnType.index, len, converted);
+      case Ffi.returnsFloat32:
+        return func.callv(returnType.index, len, converted, argTypesFixed);
       case Ffi.returnsPointer:
-        return new ForeignPointer(func.callv(returnType.index, len, converted));
+        return new ForeignPointer(func.callv(returnType.index, len,
+          converted, argTypesFixed));
       default:
-        throw new ArgumentError();
+        throw new ArgumentError("Unsupported return type");
     }
   }
 

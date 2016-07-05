@@ -239,6 +239,19 @@ Object* Process::NewInteger(int64 value) {
   return result;
 }
 
+Double* Process::NewDoubleWithGC(dartino_double value) {
+  Object* result = NewDouble(value);
+  if (result->IsRetryAfterGCFailure()) {
+    program()->CollectGarbage();
+    result = NewDouble(value);
+    if (result->IsRetryAfterGCFailure()) {
+      program()->CollectGarbage();
+      result = NewDouble(value);
+    }
+  }
+  return Double::cast(result);
+}
+
 LargeInteger* Process::NewIntegerWithGC(int64 value) {
   Object* result = NewInteger(value);
   if (result->IsRetryAfterGCFailure()) {
