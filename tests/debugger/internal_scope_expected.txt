@@ -33,4 +33,6 @@ this: Instance of '_Random'
 * 0: main            @rnd.nextInt(255)
 > p
 rnd: Instance of '_Random'
+> p rnd
+Instance of '_Random'
 > q
