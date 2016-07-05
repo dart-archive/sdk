@@ -12,4 +12,4 @@ regress_252_test: RuntimeError # We don't copy the ffi testing lib to the sdk
 
 # Flexible FFI only supported on ARM so far
 [ $arch != arm ]
-ffi_extended_test.dart: Skip, OK
+ffi_extended_test: Skip, OK
