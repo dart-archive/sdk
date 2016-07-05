@@ -160,12 +160,22 @@ class CommandLineDebugger {
         }
         break;
       case 'bf':
-        var file =
-            (commandComponents.length > 1) ? commandComponents[1] : '';
-        var line =
-            (commandComponents.length > 2) ? commandComponents[2] : '1';
-        var columnOrPattern =
+        String file;
+        String lineString;
+        String columnOrPattern;
+        if (commandComponents.length == 2) {
+          List<String> parts = commandComponents[1].split(":");
+          file = parts[0];
+          lineString = (parts.length > 1) ? parts[1] : '1';
+          columnOrPattern = (parts.length > 2) ? parts[2] : '1';
+        } else {
+          file = (commandComponents.length > 1) ? commandComponents[1] : '';
+          lineString = (commandComponents.length > 2)
+                ? commandComponents[2]
+                : '1';
+          columnOrPattern =
             (commandComponents.length > 3) ? commandComponents[3] : '1';
+        }
 
         List<Uri> files = <Uri>[];
 
@@ -178,7 +188,7 @@ class CommandLineDebugger {
               (a, b) => a.toString().compareTo(b.toString()));
           Iterable<int> selection = await select(
               stream,
-              "Multiple matches for file pattern $file",
+              "Multiple matches for file pattern '$file'",
               matches.map((uri) =>
                 uri.toString().replaceFirst(base.toString(), '')));
           for (int selected in selection) {
@@ -191,7 +201,7 @@ class CommandLineDebugger {
           break;
         }
 
-        line = int.parse(line, onError: (_) => null);
+        int line = int.parse(lineString, onError: (_) => null);
         if (line == null || line < 1) {
           writeStdoutLine('### invalid line number: $line');
           break;

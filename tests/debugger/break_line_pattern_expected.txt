@@ -1,11 +1,32 @@
 Starting session. Type 'help' for a list of commands.
 
-> bf tests/debugger/break_line_pattern_test.dart 10 x
-### set breakpoint id: '0' method: 'main' bytecode index: '6'
+> bf tests/debugger/break_line_pattern_test.dart 17 x
+### set breakpoint id: '0' method: 'main' bytecode index: '0'
+> bf tests/debugger/break_line_pattern_test.dart:18:y
+### set breakpoint id: '1' method: 'main' bytecode index: '2'
+> bf tests/debugger/break_line_pattern_test.dart:19:3
+### set breakpoint id: '2' method: 'main' bytecode index: '4'
+> bf tests/debugger/break_line_pattern_test.dart:20
+### set breakpoint id: '3' method: 'main' bytecode index: '33'
 > r
-tests/debugger/break_line_pattern_test.dart:10:17
-10     var z = 30 + (x + 10) + (y + 20);
+tests/debugger/break_line_pattern_test.dart:17:11
+17     var x = 10;
 > bt
-* 0: main        @x
+* 0: main        @10
+> c
+tests/debugger/break_line_pattern_test.dart:18:11
+18     var y = 20;
+> bt
+* 0: main        @20
+> c
+tests/debugger/break_line_pattern_test.dart:19:11
+19     var z = 30 + (x + 10) + (y + 20);
+> bt
+* 0: main        @30
+> c
+tests/debugger/break_line_pattern_test.dart:20:3
+20     return 0;
+> bt
+* 0: main        @return 0;
 > c
 ### process terminated

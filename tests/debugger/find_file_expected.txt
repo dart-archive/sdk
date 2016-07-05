@@ -6,7 +6,7 @@ Starting session. Type 'help' for a list of commands.
 tests/debugger/find_file_test/a/a.dart:5:9
 5    int a() => 10;
 > bf b.dart 5
-Multiple matches for file pattern b.dart. Please select from the following choices:
+Multiple matches for file pattern 'b.dart'. Please select from the following choices:
   1: tests/debugger/find_file_test/a/b.dart
   2: tests/debugger/find_file_test/b/b.dart
   a: all of the above
