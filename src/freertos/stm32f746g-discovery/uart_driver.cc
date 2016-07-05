@@ -122,8 +122,8 @@ void UartDriverImpl::EnsureTransmission() {
 
     if (tx_length_ > 0) {
       tx_progress_ = 0;
-      __HAL_UART_ENABLE_IT(uart_, UART_IT_TXE);
       tx_pending_ = true;
+      __HAL_UART_ENABLE_IT(uart_, UART_IT_TXE);
     }
   } else {
     if (write_buffer_->IsFull()) {
