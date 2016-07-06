@@ -1530,33 +1530,42 @@ Future<int> emulateImage(
     Uri image) async {
   assert(image.scheme == 'file');
 
-  // TODO(karlklose): add a map from the board name in dartino.settings to the
-  // name of the emulator start script and the name of the board used in the
-  // emulator.
+  // TODO(karlklose): can we make these scripts constant by suplying the name of
+  // the ELF file directly to emul8?
+  Map emul8BoardScript = {
+      'stm32f411re-nucleo': '''
+createPlatform STM32F4_Discovery
+showAnalyzer sysbus.uart2
+sysbus LoadELF @${image.path}
+start
+''',
+      'stm32f746g-discovery': '''
+createPlatform STM32F746
+showAnalyzer sysbus.usart1
+plugins EnablePlugin "XwtProvider"
+showAnalyzer sysbus.LTDC
+sysbus LoadELF @${image.path}
+start
+''',
+  };
 
   Device device = await readDeviceFromSettings(state);
-  String board = device.openOcdBoard;
-  if (board != 'stm32f7discovery') {
+  String board = device.id;
+
+  String emulatorScriptName = 'emul8.sh';
+  String emulatorScript = emul8BoardScript[board];
+
+  if (emulatorScript == null) {
     print("Unable to find emulator for board '$board'");
     return 1;
   }
-
-  String emulatorScriptName = 'emul8.sh';
-  String boardName = 'STM32F746';
 
   // Create the emul8 script file.  TODO(karlklose): remove this when we know
   // how to construct the command line call.
   Directory tmp = Directory.systemTemp.createTempSync('dartino_emulate');
   File startScript = new File.fromUri(tmp.uri.resolve('emul8.script'));
   IOSink sink = startScript.openWrite();
-  sink.write('''
-createPlatform $boardName
-showAnalyzer sysbus.usart1
-plugins EnablePlugin "XwtProvider"
-showAnalyzer sysbus.LTDC
-sysbus LoadELF @${image.path}
-start
-''');
+  sink.write(emulatorScript);
   await sink.close();
 
   Directory binDirectory = await locateBinDirectory();
@@ -1565,7 +1574,7 @@ start
   File emulateScript = new File(join(binDirectory.path, emulatorScriptName));
   // TODO(karlklose): add MacOs support
   if (Platform.isLinux) {
-    state.log("Starting emulator for image: '${emulateScript.path} ${boardName}"
+    state.log("Starting emulator for image: '${emulateScript.path} ${board}"
               " ${image}'");
     print("Starting emulator for image: ${image.path}.");
     print("Enter 'q' into the Emul8 console window to quit Emul8.");
@@ -2214,7 +2223,6 @@ Device parseDevice(
         break;
 
       case "linker_script":
-        id = stringValue(value, key);
         if (value != null) {
           if (value is! String) {
             throwFatalError(
