@@ -456,3 +456,89 @@ const int ADC_CCR_TSVREFE = 0x00800000;
 const int ADC_CDR_DATA1_MASK = 0x0000FFFF;
 // 2nd data of a pair of regular conversions.
 const int ADC_CDR_DATA2_MASK = 0xFFFF0000;
+
+// DMA controller registers.
+class DMA {
+  // Interrupt status registers, relative to DMA controller base.
+  static const int LISR = 0x00; // Low Interrupt Status Register.
+  static const int HISR = 0x04; // High Interrupt Status Register.
+  static const int LIFCR = 0x08; // Low Interrupt Flag Clear Register.
+  static const int HIFCR = 0x0C; // High Interrupt Flag Clear Register.
+
+  static const int STREAM_OFFSET = 0x18; // Stream register offset multiplier.
+
+  // Stream registers.
+  // Relative to DMA controller base + STREAM_OFFSET * stream number.
+  static const int SxCR = 0x10; // Stream Configuration Register.
+  static const int SxNDTR = 0x14; // Stream Number of Data Register.
+  static const int SxPAR = 0x18; // Stream Peripheral Address Register.
+  static const int SxM0AR = 0x1C; // Stream Memory 0 Address Register.
+  static const int SxM1AR = 0x20; // Stream Memory 1 Address Register.
+  static const int SxFCR = 0x24; // Stream FIFO Control Register.
+}
+
+// DMA Controller.
+
+// Bit definitions for DMA_SxCR register.
+const int DMA_SxCR_CHSEL_MASK = 0x0E000000;
+const int DMA_SxCR_CHSEL_SHIFT = 25;
+const int DMA_SxCR_MBURST_MASK = 0x01800000;
+const int DMA_SxCR_PBURST_MASK = 0x00600000;
+const int DMA_SxCR_CT = 0x00080000;
+const int DMA_SxCR_DBM = 0x00040000;
+const int DMA_SxCR_PL_MASK = 0x00030000;
+const int DMA_SxCR_PL_LOW = 0x00000000;
+const int DMA_SxCR_PL_MEDIUM = 0x00010000;
+const int DMA_SxCR_PL_HIGH = 0x00020000;
+const int DMA_SxCR_PL_VERY_HIGH = 0x00030000;
+const int DMA_SxCR_PINCOS = 0x00008000;
+const int DMA_SxCR_MSIZE_MASK = 0x00006000;
+const int DMA_SxCR_MSIZE_BYTE = 0x00000000;
+const int DMA_SxCR_MSIZE_HALF_WORD = 0x00002000;
+const int DMA_SxCR_MSIZE_WORD = 0x00004000;
+const int DMA_SxCR_PSIZE_MASK = 0x00001800;
+const int DMA_SxCR_PSIZE_BYTE = 0x00000000;
+const int DMA_SxCR_PSIZE_HALF_WORD = 0x00000800;
+const int DMA_SxCR_PSIZE_WORD = 0x00001000;
+const int DMA_SxCR_MINC = 0x00000400;
+const int DMA_SxCR_PINC = 0x00000200;
+const int DMA_SxCR_CIRC = 0x00000100;
+const int DMA_SxCR_DIR_MASK = 0x000000C0;
+const int DMA_SxCR_DIR_PERIPHERAL_TO_MEMORY = 0x00000000;
+const int DMA_SxCR_DIR_MEMORY_TO_PERIPHERAL = 0x00000040;
+const int DMA_SxCR_DIR_MEMORY_TO_MEMORY = 0x00000080;
+const int DMA_SxCR_PFCTRL = 0x00000020;
+const int DMA_SxCR_TCIE = 0x00000010;
+const int DMA_SxCR_HTIE = 0x00000008;
+const int DMA_SxCR_TEIE = 0x00000004;
+const int DMA_SxCR_DMEIE = 0x00000002;
+const int DMA_SxCR_EN = 0x00000001;
+
+// Bit definitions for DMA_SxNDTR register.
+const int DMA_SxNDTR_MASK = 0x0000FFFF;
+
+// Bit definitions for DMA_SxFCR register.
+const int DMA_SxFCR_FEIE = 0x00000080;
+const int DMA_SxFCR_FS_MASK = 0x00000038;
+const int DMA_SxFCR_DMDIS = 0x00000004;
+const int DMA_SxFCR_FTH_MASK = 0x00000003;
+const int DMA_SxFCR_FTH_1_4 = 0x00000000;
+const int DMA_SxFCR_FTH_HALF = 0x00000001;
+const int DMA_SxFCR_FTH_3_4 = 0x00000002;
+const int DMA_SxFCR_FTH_FULL = 0x00000003;
+
+// Bit definitions for DMA_(H/L)ISR register.
+const int DMA_ISR_MASK = 0x0000003D;
+const int DMA_ISR_TCIF = 0x00000020;
+const int DMA_ISR_HTIF = 0x00000010;
+const int DMA_ISR_TEIF = 0x00000008;
+const int DMA_ISR_DMEIF = 0x00000004;
+const int DMA_ISR_FEIF = 0x00000001;
+
+// Bits definition for DMA_(H/L)IFCR register.
+const int DMA_IFCR_MASK = 0x0000003D;
+const int DMA_IFCR_CTCIF = 0x00000020;
+const int DMA_IFCR_CHTIF = 0x00000010;
+const int DMA_IFCR_CTEIF = 0x00000008;
+const int DMA_IFCR_CDMEIF = 0x00000004;
+const int DMA_IFCR_CFEIF = 0x00000001;

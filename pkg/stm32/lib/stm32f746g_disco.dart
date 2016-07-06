@@ -7,11 +7,13 @@ library stm32.stm32f746g_discovery;
 import 'package:gpio/gpio.dart';
 import 'package:i2c/i2c.dart';
 import 'package:stm32/adc.dart';
+import 'package:stm32/dma.dart';
 import 'package:stm32/gpio.dart';
 import 'package:stm32/i2c.dart';
 import 'package:stm32/lcd.dart';
 import 'package:stm32/ts.dart';
 import 'package:stm32/uart.dart';
+import 'package:stm32/src/constants.dart';
 
 class STM32F746GDiscovery {
   /// GPIO pin for on-board green LED.
@@ -33,6 +35,8 @@ class STM32F746GDiscovery {
   STM32Adc _adc1;
   STM32Adc _adc2;
   STM32Adc _adc3;
+  STM32Dma _dma1;
+  STM32Dma _dma2;
 
   FrameBuffer _frameBuffer;
   TouchScreen _touchScreen;
@@ -77,22 +81,43 @@ class STM32F746GDiscovery {
 
   STM32Adc get adc1 {
     if (_adc1 == null) {
-      _adc1 = new STM32Adc(STM32AdcConstants.ADC1, gpio);
+      _adc1 = new STM32Adc(STM32AdcConstants.ADC1, gpio, dma2.stream0);
     }
     return _adc1;
   }
 
   STM32Adc get adc2 {
     if (_adc2 == null) {
-      _adc2 = new STM32Adc(STM32AdcConstants.ADC2, gpio);
+      _adc2 = new STM32Adc(STM32AdcConstants.ADC2, gpio, dma2.stream2);
     }
     return _adc2;
   }
 
   STM32Adc get adc3 {
     if (_adc3 == null) {
-      _adc3 = new STM32Adc(STM32AdcConstants.ADC3, gpio);
+      _adc3 = new STM32Adc(STM32AdcConstants.ADC3, gpio, dma2.stream1);
     }
     return _adc3;
   }
+
+  STM32Dma get dma1 {
+    if (_dma1 == null) {
+      _dma1 = new STM32Dma('DMA1', DMA1_BASE, RCC_AHB1ENR_DMA1EN);
+      // Enable DMA clock - assuming no-one asks for the DMA unless they want to
+      // use it.
+      _dma1.enableClock();
+    }
+    return _dma1;
+  }
+
+  STM32Dma get dma2 {
+    if (_dma2 == null) {
+      _dma2 = new STM32Dma('DMA2', DMA2_BASE, RCC_AHB1ENR_DMA2EN);
+      // Enable DMA clock - assuming no-one asks for the DMA unless they want to
+      // use it.
+      _dma2.enableClock();
+    }
+    return _dma2;
+  }
+
 }

@@ -6,6 +6,7 @@ library stm32.stm32f411re_nucleo;
 
 import 'package:gpio/gpio.dart';
 import 'package:stm32/adc.dart';
+import 'package:stm32/dma.dart';
 import 'package:stm32/gpio.dart';
 import 'package:stm32/uart.dart';
 import 'package:stm32/src/constants.dart';
@@ -27,6 +28,8 @@ class STM32F411RENucleo {
   STM32Gpio _gpio;
   Uart _uart;
   STM32Adc _adc;
+  STM32Dma _dma1;
+  STM32Dma _dma2;
 
   STM32F411RENucleo();
 
@@ -46,8 +49,28 @@ class STM32F411RENucleo {
 
   STM32Adc get adc {
     if (_adc == null) {
-      _adc = new STM32Adc(STM32AdcConstants.ADC1, gpio);
+      _adc = new STM32Adc(STM32AdcConstants.ADC1, gpio, dma2.stream0);
     }
     return _adc;
+  }
+
+  STM32Dma get dma1 {
+    if (_dma1 == null) {
+      _dma1 = new STM32Dma('DMA1', DMA1_BASE, RCC_AHB1ENR_DMA1EN);
+      // Enable DMA clock - assuming no-one asks for the DMA unless they want to
+      // use it.
+      _dma1.enableClock();
+    }
+    return _dma1;
+  }
+
+  STM32Dma get dma2 {
+    if (_dma2 == null) {
+      _dma2 = new STM32Dma('DMA2', DMA2_BASE, RCC_AHB1ENR_DMA2EN);
+      // Enable DMA clock - assuming no-one asks for the DMA unless they want to
+      // use it.
+      _dma2.enableClock();
+    }
+    return _dma2;
   }
 }

@@ -6,25 +6,26 @@ library stm32.adc;
 
 import 'dart:dartino.ffi';
 
+import 'package:stm32/dma.dart';
 import 'package:stm32/gpio.dart';
 import 'package:stm32/src/constants.dart';
 import 'package:stm32/src/peripherals.dart';
 
 class STM32AdcConstants {
   static const ADC1 = const STM32AdcConstants(
-      "ADC1", ADC1_BASE - PERIPH_BASE, RCC_APB2ENR_ADC1EN,
+      "ADC1", ADC1_BASE - PERIPH_BASE, RCC_APB2ENR_ADC1EN, 0,
       const [STM32Pin.PA0, STM32Pin.PA1, STM32Pin.PA2, STM32Pin.PA3,
              STM32Pin.PA4, STM32Pin.PA5, STM32Pin.PA6, STM32Pin.PA7,
              STM32Pin.PB0, STM32Pin.PB1, STM32Pin.PC0, STM32Pin.PC1,
              STM32Pin.PC2, STM32Pin.PC3, STM32Pin.PC4, STM32Pin.PC5]);
   static const ADC2 = const STM32AdcConstants(
-      "ADC2", ADC2_BASE - PERIPH_BASE, RCC_APB2ENR_ADC2EN,
+      "ADC2", ADC2_BASE - PERIPH_BASE, RCC_APB2ENR_ADC2EN, 1,
       const [STM32Pin.PA0, STM32Pin.PA1, STM32Pin.PA2, STM32Pin.PA3,
              STM32Pin.PA4, STM32Pin.PA5, STM32Pin.PA6, STM32Pin.PA7,
              STM32Pin.PB0, STM32Pin.PB1, STM32Pin.PC0, STM32Pin.PC1,
              STM32Pin.PC2, STM32Pin.PC3, STM32Pin.PC4, STM32Pin.PC5]);
   static const ADC3 = const STM32AdcConstants(
-      "ADC3", ADC3_BASE - PERIPH_BASE, RCC_APB2ENR_ADC3EN,
+      "ADC3", ADC3_BASE - PERIPH_BASE, RCC_APB2ENR_ADC3EN, 2,
       const [STM32Pin.PA0, STM32Pin.PA1, STM32Pin.PA2, STM32Pin.PA3,
              STM32Pin.PF6, STM32Pin.PF7, STM32Pin.PF8, STM32Pin.PF9,
              STM32Pin.PF10, STM32Pin.PF3, STM32Pin.PC0, STM32Pin.PC1,
@@ -33,48 +34,33 @@ class STM32AdcConstants {
   final String interfaceName;
   final int base; // Peripheral base.
   final int apb2enr; // Clock enable bit in RCC->APB2ENR.
+  final int dmaChannel; // DMA channel to use for transfers.
   final List<STM32Pin> pinForChannel; // GPIO pin for ADC channel
 
   const STM32AdcConstants(this.interfaceName, this.base, this.apb2enr,
-                          this.pinForChannel);
+      this.dmaChannel, this.pinForChannel);
 }
 
 /// Access to STM32 ADC interfaces.
 /// Note: Not all models have all interfaces, and the channels on different
 /// interfaces may share pins.
 class STM32Adc {
-  static const ADC1 = const STM32Adc(
-      "ADC1", ADC1_BASE - PERIPH_BASE, RCC_APB2ENR_ADC1EN,
-      const [STM32Pin.PA0, STM32Pin.PA1, STM32Pin.PA2, STM32Pin.PA3,
-             STM32Pin.PA4, STM32Pin.PA5, STM32Pin.PA6, STM32Pin.PA7,
-             STM32Pin.PB0, STM32Pin.PB1, STM32Pin.PC0, STM32Pin.PC1,
-             STM32Pin.PC2, STM32Pin.PC3, STM32Pin.PC4, STM32Pin.PC5]);
-  static const ADC2 = const STM32Adc(
-      "ADC2", ADC2_BASE - PERIPH_BASE, RCC_APB2ENR_ADC2EN,
-      const [STM32Pin.PA0, STM32Pin.PA1, STM32Pin.PA2, STM32Pin.PA3,
-             STM32Pin.PA4, STM32Pin.PA5, STM32Pin.PA6, STM32Pin.PA7,
-             STM32Pin.PB0, STM32Pin.PB1, STM32Pin.PC0, STM32Pin.PC1,
-             STM32Pin.PC2, STM32Pin.PC3, STM32Pin.PC4, STM32Pin.PC5]);
-  static const ADC3 = const STM32Adc(
-      "ADC3", ADC3_BASE - PERIPH_BASE, RCC_APB2ENR_ADC3EN,
-      const [STM32Pin.PA0, STM32Pin.PA1, STM32Pin.PA2, STM32Pin.PA3,
-             STM32Pin.PF6, STM32Pin.PF7, STM32Pin.PF8, STM32Pin.PF9,
-             STM32Pin.PF10, STM32Pin.PF3, STM32Pin.PC0, STM32Pin.PC1,
-             STM32Pin.PC2, STM32Pin.PC3, STM32Pin.PF4, STM32Pin.PF5]);
-
   static const _ADC_COMMON_BASE = ADC_COMMON_BASE - PERIPH_BASE;
 
   final String interfaceName;
   final int _base; // Peripheral base.
   final int _apb2enr; // Clock enable bit in RCC->APB2ENR.
-  final List<STM32Pin> _pinForChannel; // GPIO pin for ADC channel
   final STM32Gpio _gpio;
+  final List<STM32Pin> _pinForChannel; // GPIO pin for ADC channel
+  final STM32DmaStream _dmaStream;
+  final int _dmaChannel;
 
-  const STM32Adc(STM32AdcConstants cfg, this._gpio) :
-            this.interfaceName = cfg.interfaceName,
-            this._base = cfg.base,
-            this._apb2enr = cfg.apb2enr,
-            this._pinForChannel = cfg.pinForChannel;
+  STM32Adc(STM32AdcConstants cfg, this._gpio, this._dmaStream)
+      : this.interfaceName = cfg.interfaceName,
+        this._base = cfg.base,
+        this._apb2enr = cfg.apb2enr,
+        this._dmaChannel = cfg.dmaChannel,
+        this._pinForChannel = cfg.pinForChannel;
 
   String toString() => interfaceName;
 
@@ -110,15 +96,16 @@ class STM32Adc {
   }
 
   /// Set ADC clock (PCLK2 clock divided by the configured prescaler).
-  static void setClock(int prescaler) =>
-    _setMaskedValue(_ADC_COMMON_BASE, ADC.CCR, ADC_CCR_ADCPRE_MASK, prescaler);
+  static void setClock(int prescaler) => _setMaskedValue(
+      _ADC_COMMON_BASE, ADC.CCR, ADC_CCR_ADCPRE_MASK, prescaler);
 
   /// Enable or disable the VBat channel.
   static void setVBatEnabled(bool enabled) =>
-    _setMaskEnabled(_ADC_COMMON_BASE, ADC.CCR, ADC_CCR_VBATE, enabled);
+      _setMaskEnabled(_ADC_COMMON_BASE, ADC.CCR, ADC_CCR_VBATE, enabled);
+
   /// Enable or disable the temperature and VRef channel.
   static void setTemperatureAndVRefEnabled(bool enabled) =>
-    _setMaskEnabled(_ADC_COMMON_BASE, ADC.CCR, ADC_CCR_TSVREFE, enabled);
+      _setMaskEnabled(_ADC_COMMON_BASE, ADC.CCR, ADC_CCR_TSVREFE, enabled);
 
   /// Initialize this ADC.
   void init() {
@@ -143,33 +130,52 @@ class STM32Adc {
   }
 
   /// Enable ADC clock in RCC.
-  void enableClock() =>
-    _setMask(RCC_BASE - PERIPH_BASE, RCC.APB2ENR, _apb2enr);
+  void enableClock() => _setMask(RCC_BASE - PERIPH_BASE, RCC.APB2ENR, _apb2enr);
+
   /// Disable ADC clock in RCC.
   void disableClock() =>
-    _clearMask(RCC_BASE - PERIPH_BASE, RCC.APB2ENR, _apb2enr);
+      _resetMask(RCC_BASE - PERIPH_BASE, RCC.APB2ENR, _apb2enr);
 
   /// Power on the ADC.
   void powerOn() => _setMask(_base, ADC.CR2, ADC_CR2_ADON);
+
   /// Power off the ADC.
   void powerOff() => _resetMask(_base, ADC.CR2, ADC_CR2_ADON);
 
   /// Start conversion.
   void start() => _setMask(_base, ADC.CR2, ADC_CR2_SWSTART);
+
   /// Wait for the EOC bit to be set, signalling end of current conversion.
   /// This is a blocking call.
   void waitForConversionEnd() {
     while (!_isSet(_base, ADC.SR, ADC_SR_EOC));
   }
+
   /// Read the current sample value. Clears the EOC flag.
   int readData() => peripherals.getUint32(_base + ADC.DR) & ADC_DR_DATA_MASK;
-  /// Stop conversion.
-  void stop() => _resetMask(_base, ADC.CR2, ADC_CR2_SWSTART);
 
   /// Configures the ADC to sample a single channel.
   void configureSingleChannelSequence(int channel) {
     channelSequenceLength = 1;
     setChannelRank(channel, 1);
+  }
+
+  /// Configures the ADC to transfer samples to memory using DMA.
+  ///
+  /// [count] words will be sampled and transferred to [destinationMemory].
+  /// Sampling will start once [start] is called.
+  void configureDmaMode(ForeignMemory destinationMemory, int count) {
+    _dmaStream.disableAndWait();
+
+    // Reset DMA mode and DDS (in case it was set for a previous transfer).
+    _resetMask(_base, ADC.CR2, ADC_CR2_DMA | ADC_CR2_DDS);
+    // Clear any status from previous transfer.
+    peripherals.setUint32(_base + ADC.SR, 0);
+    // Configure DMA stream.
+    _dmaStream.startReadFromPeripheral(
+        _dmaChannel, PERIPH_BASE + _base + ADC.DR, destinationMemory, count);
+    // Enable DMA mode.
+    _setMask(_base, ADC.CR2, ADC_CR2_DMA);
   }
 
   /// Returns a single sample value. The ADC is configured for a single channel
@@ -180,16 +186,16 @@ class STM32Adc {
     start();
     waitForConversionEnd();
     int value = readData();
-    stop();
     return value;
   }
 
   /// Set sample value alignment (right or left).
   void set _alignment(int alignment) =>
-    _setMaskedValue(_base, ADC.CR2, ADC_CR2_ALIGN_MASK, alignment);
+      _setMaskedValue(_base, ADC.CR2, ADC_CR2_ALIGN_MASK, alignment);
+
   /// Set continuous mode.
   void set continuousMode(bool continuous) =>
-    _setMaskEnabled(_base, ADC.CR2, ADC_CR2_CONT, continuous);
+      _setMaskEnabled(_base, ADC.CR2, ADC_CR2_CONT, continuous);
 
   /// Set channel sequence length. The ADC will sample the configured channel
   /// ranks.
@@ -216,7 +222,7 @@ class STM32Adc {
       position = channel;
     }
     int shift = position * 3;
-    int mask = ADC_SMPRX_MASK << shift;
+    int mask = ADC_SMPR_MASK << shift;
     int value = smprSelection << shift;
     _setMaskedValue(_base, register, mask, value);
   }
