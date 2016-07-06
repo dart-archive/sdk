@@ -224,7 +224,7 @@
             'dummy',
           ],
           'action': [
-            '<(DEPTH)/tools/lk/flash-image.sh',
+            '<(DEPTH)/tools/embedded/flash-image.sh',
             '--disco',
             '<(PRODUCT_DIR)/disco_dartino.bin',
           ],

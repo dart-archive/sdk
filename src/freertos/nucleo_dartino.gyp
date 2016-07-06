@@ -246,7 +246,7 @@
             'dummy',
           ],
           'action': [
-            '<(DEPTH)/tools/lk/flash-image.sh',
+            '<(DEPTH)/tools/embedded/flash-image.sh',
             '--nucleo',
             '<(PRODUCT_DIR)/nucleo_dartino.bin',
           ],
