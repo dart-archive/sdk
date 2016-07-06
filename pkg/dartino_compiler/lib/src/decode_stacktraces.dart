@@ -14,14 +14,16 @@ import 'worker/developer.dart';
 import 'debug_info.dart';
 import 'diagnostic.dart';
 
-final RegExp _ConfigurationRegExp =
-new RegExp(r'^VM Configuration (32|64) (32|64)$');
+final RegExp configurationRegExp =
+    new RegExp(r'^VM Configuration (32|64) (32|64)$');
 
-final RegExp _FrameRegExp =
-new RegExp(r'^Frame +([0-9]+): Function\(([0-9]+)\) Bytecode\(([0-9]+)\)$');
+final RegExp frameRegExp =
+    new RegExp(r'^Frame +([0-9]+): Function\(([0-9]+)\) Bytecode\(([0-9]+)\)$');
 
-final RegExp _NSMRegExp =
-new RegExp(r'^NoSuchMethodError\(([0-9]+), ([0-9]+)\)$');
+final RegExp nSMRegExp =
+    new RegExp(r'^NoSuchMethodError\(([0-9]+), ([0-9]+)\)$');
+
+final RegExp classOffsetRegExp = new RegExp(r'Class\(([0-9]+)\)');
 
 Stream<String> decodeStackFrames(
     DartinoSystem system,
@@ -30,9 +32,10 @@ Stream<String> decodeStackFrames(
     SessionState state) async* {
   Configuration conf;
   await for (String line in input) {
-    Match configurationMatch = _ConfigurationRegExp.firstMatch(line);
-    Match frameMatch = _FrameRegExp.firstMatch(line);
-    Match nsmMatch = _NSMRegExp.firstMatch(line);
+    Match configurationMatch = configurationRegExp.firstMatch(line);
+    Match frameMatch = frameRegExp.firstMatch(line);
+    Match nsmMatch = nSMRegExp.firstMatch(line);
+    Match classOffsetMatch = classOffsetRegExp.firstMatch(line);
     if (configurationMatch != null) {
       conf = _getConfiguration(
           configurationMatch.group(1), configurationMatch.group(2));
@@ -68,6 +71,12 @@ Stream<String> decodeStackFrames(
       } else {
         yield 'NoSuchMethodError: <unknown method>\n';
       }
+    } else if (classOffsetMatch != null) {
+      yield line.replaceAllMapped(classOffsetRegExp, (Match match) {
+        int classOffset = int.parse(match.group(1));
+        int classId = info.classIdFromOffset(conf, classOffset);
+        return system.classesById[classId]?.element?.name ?? "Unknown class";
+      }) + '\n';
     } else {
       yield '$line\n';
     }

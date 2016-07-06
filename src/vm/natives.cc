@@ -51,7 +51,7 @@ NativeVerifier::~NativeVerifier() {
 #endif
 
 BEGIN_LEAF_NATIVE(PrintToConsole) {
-  arguments[0]->ShortPrint();
+  arguments[0]->ShortPrint(process->program());
   Print::Out("\n");
   return process->program()->null_object();
 }

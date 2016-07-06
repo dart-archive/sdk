@@ -187,20 +187,20 @@ void* Function::ComputeIntrinsic(IntrinsicsTable* table) {
   return result;
 }
 
-void Object::Print() {
+void Object::Print(Program* program) {
   if (IsSmi()) {
     Smi::cast(this)->SmiPrint();
   } else {
-    HeapObject::cast(this)->HeapObjectPrint();
+    HeapObject::cast(this)->HeapObjectPrint(program);
   }
   Print::Out("\n");
 }
 
-void Object::ShortPrint() {
+void Object::ShortPrint(Program* program) {
   if (IsSmi()) {
     Smi::cast(this)->SmiPrint();
   } else {
-    HeapObject::cast(this)->HeapObjectShortPrint();
+    HeapObject::cast(this)->HeapObjectShortPrint(program);
   }
 }
 
@@ -212,8 +212,8 @@ void OneByteString::FillFrom(OneByteString* x, int offset) {
   memcpy(byte_address_for(offset), x->byte_address_for(0), xlen);
 }
 
-void OneByteString::OneByteStringPrint() {
-  RawPrint("OneByteString");
+void OneByteString::OneByteStringPrint(Program* program) {
+  RawPrint("OneByteString", program);
   Print::Out("\"");
   OneByteStringShortPrint();
   Print::Out("\"");
@@ -254,8 +254,8 @@ void TwoByteString::FillFrom(TwoByteString* x, int offset) {
          xlen * sizeof(uint16));
 }
 
-void TwoByteString::TwoByteStringPrint() {
-  RawPrint("TwoByteString");
+void TwoByteString::TwoByteStringPrint(Program* program) {
+  RawPrint("TwoByteString", program);
   Print::Out("\"");
   TwoByteStringShortPrint();
   Print::Out("\"");
@@ -340,54 +340,54 @@ Instance* Instance::CloneTransformed(Heap* heap) {
   return target;
 }
 
-void Instance::InstancePrint() {
-  RawPrint("Instance");
+void Instance::InstancePrint(Program* program) {
+  RawPrint("Instance", program);
   Print::Out("\n");
   Print::Out("  - class = ");
-  get_class()->ShortPrint();
+  get_class()->ShortPrint(program);
   Print::Out("\n");
   int fields = get_class()->NumberOfInstanceFields();
   for (int i = 0; i < fields; i++) {
     Print::Out("  - @%d = ", i);
-    GetInstanceField(i)->ShortPrint();
+    GetInstanceField(i)->ShortPrint(program);
     Print::Out("\n");
   }
 }
 
-void Instance::InstanceShortPrint() {
+void Instance::InstanceShortPrint(Program* program) {
   if (IsNull()) {
     Print::Out("null");
   } else {
     Class* clazz = get_class();
     Print::Out("instance of ");
-    clazz->ShortPrint();
+    clazz->ShortPrint(program);
   }
 }
 
-void Array::ArrayPrint() {
-  RawPrint("Array");
+void Array::ArrayPrint(Program* program) {
+  RawPrint("Array", program);
   Print::Out("\n");
   Print::Out("  - length = %d\n", length());
   int len = length();
   for (int i = 0; i < len; i++) {
     Print::Out("  - [%d] = ", i);
-    get(i)->ShortPrint();
+    get(i)->ShortPrint(program);
     Print::Out("\n");
   }
 }
 
-void Array::ArrayShortPrint() {
+void Array::ArrayShortPrint(Program* program) {
   Print::Out("[");
   int len = length();
   for (int i = 0; i < len; i++) {
-    get(i)->ShortPrint();
+    get(i)->ShortPrint(program);
     if (i + 1 < len) Print::Out(", ");
   }
   Print::Out("]");
 }
 
-void ByteArray::ByteArrayPrint() {
-  RawPrint("ByteArray");
+void ByteArray::ByteArrayPrint(Program* program) {
+  RawPrint("ByteArray", program);
   Print::Out("\n");
   Print::Out("  - length = %d\n", length());
   int len = length();
@@ -406,8 +406,8 @@ void ByteArray::ByteArrayShortPrint() {
   Print::Out("]");
 }
 
-void Function::FunctionPrint() {
-  RawPrint("Function");
+void Function::FunctionPrint(Program* program) {
+  RawPrint("Function", program);
   Print::Out("\n");
   Print::Out("  - bytecode_size = %d\n", bytecode_size());
 }
@@ -434,24 +434,24 @@ void Double::DoublePrint() {
 
 void Double::DoubleShortPrint() { Print::Out("%f", value()); }
 
-void Boxed::BoxedPrint() {
+void Boxed::BoxedPrint(Program* program) {
   Print::Out("- boxed: ");
-  BoxedShortPrint();
+  BoxedShortPrint(program);
   Print::Out("\n");
 }
 
-void Boxed::BoxedShortPrint() { value()->ShortPrint(); }
+void Boxed::BoxedShortPrint(Program* program) { value()->ShortPrint(program); }
 
-void Initializer::InitializerPrint() {
+void Initializer::InitializerPrint(Program* program) {
   Print::Out("- initializer: ");
   Print::Out("initializer: ");
-  function()->Print();
+  function()->FunctionPrint(program);
   Print::Out("\n");
 }
 
 void Initializer::InitializerShortPrint() {
   Print::Out("initializer ");
-  function()->ShortPrint();
+  function()->FunctionShortPrint();
   Print::Out("\n");
 }
 
@@ -499,8 +499,9 @@ bool Class::IsSubclassOf(Class* klass) {
   return true;
 }
 
-void Class::ClassPrint() {
-  RawPrint("Class");
+void Class::ClassPrint(Program* program) {
+  RawPrint("Class", program);
+  Print::Out("Class(%d)", program->OffsetOf(this));
   Print::Out("\n");
   Print::Out("\n");
   if (instance_format().type() == InstanceFormat::INSTANCE_TYPE) {
@@ -510,11 +511,13 @@ void Class::ClassPrint() {
   uword size = instance_format().fixed_size();
   Print::Out("  - instance object size = %d\n", size);
   Print::Out("  - methods = ");
-  methods()->ShortPrint();
+  methods()->ShortPrint(program);
   Print::Out("\n");
 }
 
-void Class::ClassShortPrint() { Print::Out("class id=%d", id()); }
+void Class::ClassShortPrint(Program* program) {
+  Print::Out("Class(%d)", program->OffsetOf(this));
+}
 
 void ByteArray::IterateEverything(PointerVisitor* visitor) {
   visitor->VisitInteger(address() + BaseArray::kLengthOffset);
@@ -772,6 +775,8 @@ HeapObject* HeapObject::CloneInToSpace(SomeSpace* to) {
 // Helper class for printing HeapObjects
 class PrintVisitor : public PointerVisitor {
  public:
+  explicit PrintVisitor(Program* program) : program_(program) {}
+
   void VisitBlock(Object** start, Object** end) {
     for (Object** p = start; p < end; p++) PrintPointer(p);
   }
@@ -781,66 +786,67 @@ class PrintVisitor : public PointerVisitor {
  private:
   void PrintPointer(Object** p) {
     Print::Out(" [0x%lx] = ", reinterpret_cast<uword>(p));
-    (*p)->ShortPrint();
+    (*p)->ShortPrint(program_);
     Print::Out("\n");
   }
+  Program* program_;
 };
 
-void HeapObject::RawPrint(const char* title) {
+void HeapObject::RawPrint(const char* title, Program* program) {
   if (!Flags::verbose) {
     Print::Out("a %s: ", title);
   } else {
     Print::Out("0x%lx: [%s] (%d): ", address(), title,
                static_cast<int>(Size()));
-    PrintVisitor v;
+    PrintVisitor v(program);
     IteratePointers(&v);
   }
 }
 
-void HeapObject::HeapObjectPrint() {
+void HeapObject::HeapObjectPrint(Program* program) {
   switch (get_class()->instance_format().type()) {
     case InstanceFormat::CLASS_TYPE:
-      Class::cast(this)->ClassPrint();
+      Class::cast(this)->ClassPrint(program);
       break;
     case InstanceFormat::INSTANCE_TYPE:
-      Instance::cast(this)->InstancePrint();
+      Instance::cast(this)->InstancePrint(program);
       break;
     case InstanceFormat::ONE_BYTE_STRING_TYPE:
-      OneByteString::cast(this)->OneByteStringPrint();
+      OneByteString::cast(this)->OneByteStringPrint(program);
       break;
     case InstanceFormat::TWO_BYTE_STRING_TYPE:
-      TwoByteString::cast(this)->TwoByteStringPrint();
+      TwoByteString::cast(this)->TwoByteStringPrint(program);
       break;
     case InstanceFormat::ARRAY_TYPE:
-      Array::cast(this)->ArrayPrint();
+      Array::cast(this)->ArrayPrint(program);
       break;
     case InstanceFormat::FUNCTION_TYPE:
-      Function::cast(this)->FunctionPrint();
+      Function::cast(this)->FunctionPrint(program);
       break;
     case InstanceFormat::LARGE_INTEGER_TYPE:
       LargeInteger::cast(this)->LargeIntegerPrint();
       break;
     case InstanceFormat::BYTE_ARRAY_TYPE:
-      ByteArray::cast(this)->ByteArrayPrint();
+      ByteArray::cast(this)->ByteArrayPrint(program);
       break;
     case InstanceFormat::DOUBLE_TYPE:
       Double::cast(this)->DoublePrint();
       break;
     case InstanceFormat::INITIALIZER_TYPE:
-      Initializer::cast(this)->InitializerPrint();
+      Initializer::cast(this)->InitializerPrint(program);
       break;
     default:
       UNREACHABLE();
   }
 }
 
-void HeapObject::HeapObjectShortPrint() {
+void HeapObject::HeapObjectShortPrint(Program* program) {
   switch (get_class()->instance_format().type()) {
     case InstanceFormat::CLASS_TYPE:
-      Class::cast(this)->ClassShortPrint();
+      Class::cast(this)->ClassShortPrint(program);
       break;
     case InstanceFormat::INSTANCE_TYPE:
-      Instance::cast(this)->InstanceShortPrint();
+      Instance::cast(this)->InstanceShortPrint(program);
       break;
     case InstanceFormat::ONE_BYTE_STRING_TYPE:
       OneByteString::cast(this)->OneByteStringShortPrint();
@@ -849,7 +855,7 @@ void HeapObject::HeapObjectShortPrint() {
       TwoByteString::cast(this)->TwoByteStringShortPrint();
       break;
     case InstanceFormat::ARRAY_TYPE:
-      Array::cast(this)->ArrayShortPrint();
+      Array::cast(this)->ArrayShortPrint(program);
       break;
     case InstanceFormat::FUNCTION_TYPE:
       Function::cast(this)->FunctionShortPrint();

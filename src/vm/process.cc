@@ -598,7 +598,7 @@ void Process::PrintStackTrace() const {
     Print::Out("NoSuchMethodError(%ld, %d)\n", class_offset, selector);
   } else {
     Print::Out("Uncaught exception:\n");
-    exception_->Print();
+    exception_->Print(program_);
   }
 
   if (using_snapshots && is_optimized) {

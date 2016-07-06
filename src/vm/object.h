@@ -98,8 +98,8 @@ class Object {
   inline bool IsImmutable();
 
   // Print object on stdout.
-  void Print();
-  void ShortPrint();
+  void Print(Program* program);
+  void ShortPrint(Program* program);
 
   // Tag information
   static const int kAlignmentBits = 2;
@@ -335,8 +335,8 @@ class HeapObject : public Object {
   uword Size();
 
   // Printing.
-  void HeapObjectPrint();
-  void HeapObjectShortPrint();
+  void HeapObjectPrint(Program* program);
+  void HeapObjectShortPrint(Program* program);
 
   // Sizing.
   static const word kClassOffset = 0;
@@ -354,7 +354,7 @@ class HeapObject : public Object {
   inline void at_put_bypass_write_barrier(int offset, Object* value);
   inline Object* at(int offset);
   inline Object** address_at(int offset);
-  void RawPrint(const char* title);
+  void RawPrint(const char* title, Program* program);
   // Returns the class field without checks.
   inline Class* raw_class();
 
@@ -434,8 +434,8 @@ class Boxed : public HeapObject {
   static inline Boxed* cast(Object* object);
 
   // Printing.
-  void BoxedPrint();
-  void BoxedShortPrint();
+  void BoxedPrint(Program* program);
+  void BoxedShortPrint(Program* program);
 
   // Snapshotting.
   void IterateEverything(PointerVisitor* visitor);
@@ -461,7 +461,7 @@ class Initializer : public HeapObject {
   static inline Initializer* cast(Object* object);
 
   // Printing.
-  void InitializerPrint();
+  void InitializerPrint(Program* program);
   void InitializerShortPrint();
 
   // Snapshotting.
@@ -607,8 +607,8 @@ class Array : public BaseArray {
   static inline Array* cast(Object* obj);
 
   // Printing.
-  void ArrayPrint();
-  void ArrayShortPrint();
+  void ArrayPrint(Program* program);
+  void ArrayShortPrint(Program* program);
 
   // Snapshotting.
   void IterateEverything(PointerVisitor* visitor);
@@ -643,7 +643,7 @@ class ByteArray : public BaseArray {
   static inline ByteArray* cast(Object* obj);
 
   // Printing.
-  void ByteArrayPrint();
+  void ByteArrayPrint(Program* program);
   void ByteArrayShortPrint();
 
  private:
@@ -689,8 +689,8 @@ class Instance : public HeapObject {
   void IterateEverything(PointerVisitor* visitor);
 
   // Printing.
-  void InstancePrint();
-  void InstanceShortPrint();
+  void InstancePrint(Program* program);
+  void InstanceShortPrint(Program* program);
 
   // Sizing.
   static const int kFlagsOffset = HeapObject::kSize;
@@ -756,7 +756,7 @@ class OneByteString : public BaseArray {
   }
 
   // Printing.
-  void OneByteStringPrint();
+  void OneByteStringPrint(Program* program);
   void OneByteStringShortPrint();
 
   // Conversion to C string. The result is allocated with malloc and
@@ -834,7 +834,7 @@ class TwoByteString : public BaseArray {
   }
 
   // Printing.
-  void TwoByteStringPrint();
+  void TwoByteStringPrint(Program* program);
   void TwoByteStringShortPrint();
 
   // Conversion to C string. The result is allocated with malloc and
@@ -923,7 +923,7 @@ class Function : public HeapObject {
   void IterateEverything(PointerVisitor* visitor);
 
   // Printing.
-  void FunctionPrint();
+  void FunctionPrint(Program* program);
   void FunctionShortPrint();
 
   // Layout descriptor.
@@ -995,8 +995,8 @@ class Class : public HeapObject {
   void IterateEverything(PointerVisitor* visitor);
 
   // Printing.
-  void ClassPrint();
-  void ClassShortPrint();
+  void ClassPrint(Program* program);
+  void ClassShortPrint(Program* program);
 
   // Lookup a method for the given selector in the super class chain
   // of this class. Returns NULL if no matching method could be found.
