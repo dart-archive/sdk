@@ -495,18 +495,9 @@ class DartinoVmContext {
   // This method handles the various responses a command can return to indicate
   // the process has stopped running.
   // The session's state is updated to match the current state of the vm.
-  Future<VmCommand> handleProcessStop(VmCommand response) async {
-    interactiveExitCode = exit_codes.COMPILER_EXITCODE_CRASH;
-    debugState.reset();
+  Future<VmCommand> notifyListenersOfProcessStop(VmCommand response) async {
     switch (response.code) {
       case VmCommandCode.UncaughtException:
-        interactiveExitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
-        vmState = VmState.terminating;
-        UncaughtException command = response;
-        debugState.currentProcess = command.processId;
-        var function = dartinoSystem.lookupFunctionById(command.functionId);
-        debugState.topFrame = new BackTraceFrame(
-            function, command.bytecodeIndex, compiler, debugState);
         RemoteObject thrown = await uncaughtException();
         notifyListeners((DebugListener listener) {
           listener.pauseException(
@@ -519,13 +510,9 @@ class DartinoVmContext {
           // TODO(sigurdm): Add processId and exception data.
           listener.pauseException(0, null, null);
         });
-        interactiveExitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
-        vmState = VmState.terminating;
         break;
 
       case VmCommandCode.ProcessTerminated:
-        interactiveExitCode = 0;
-        vmState = VmState.terminating;
         notifyListeners((DebugListener listener) {
           // TODO(sigurdm): Communicate process id.
           listener.processExit(0);
@@ -533,22 +520,13 @@ class DartinoVmContext {
         break;
 
       case VmCommandCode.ConnectionError:
-        interactiveExitCode = exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
-        vmState = VmState.terminating;
-        await shutdown();
         notifyListeners((DebugListener listener) {
           listener.lostConnection();
         });
         break;
 
       case VmCommandCode.ProcessBreakpoint:
-        interactiveExitCode = 0;
         ProcessBreakpoint command = response;
-        debugState.currentProcess = command.processId;
-        var function = dartinoSystem.lookupFunctionById(command.functionId);
-        debugState.topFrame = new BackTraceFrame(
-            function, command.bytecodeIndex, compiler, debugState);
-        vmState = VmState.paused;
         Breakpoint bp = debugState.breakpoints[command.breakpointId];
         if (bp == null) {
           notifyListeners((DebugListener listener) {
@@ -574,6 +552,57 @@ class DartinoVmContext {
     return response;
   }
 
+  // This method handles the various responses a command can return to indicate
+  // the process has stopped running.
+  // The session's state is updated to match the current state of the vm.
+  Future<VmCommand> handleProcessStop(VmCommand response) async {
+    interactiveExitCode = exit_codes.COMPILER_EXITCODE_CRASH;
+    debugState.reset();
+    switch (response.code) {
+      case VmCommandCode.UncaughtException:
+        interactiveExitCode = exit_codes.DART_VM_EXITCODE_UNCAUGHT_EXCEPTION;
+        vmState = VmState.terminating;
+        UncaughtException command = response;
+        debugState.currentProcess = command.processId;
+        var function = dartinoSystem.lookupFunctionById(command.functionId);
+        debugState.topFrame = new BackTraceFrame(
+            function, command.bytecodeIndex, compiler, debugState);
+        break;
+
+      case VmCommandCode.ProcessCompileTimeError:
+        interactiveExitCode = exit_codes.DART_VM_EXITCODE_COMPILE_TIME_ERROR;
+        vmState = VmState.terminating;
+        break;
+
+      case VmCommandCode.ProcessTerminated:
+        interactiveExitCode = 0;
+        vmState = VmState.terminating;
+        break;
+
+      case VmCommandCode.ConnectionError:
+        interactiveExitCode = exit_codes.COMPILER_EXITCODE_CONNECTION_ERROR;
+        vmState = VmState.terminating;
+        await shutdown();
+        break;
+
+      case VmCommandCode.ProcessBreakpoint:
+        interactiveExitCode = 0;
+        ProcessBreakpoint command = response;
+        debugState.currentProcess = command.processId;
+        var function = dartinoSystem.lookupFunctionById(command.functionId);
+        debugState.topFrame = new BackTraceFrame(
+            function, command.bytecodeIndex, compiler, debugState);
+        vmState = VmState.paused;
+        break;
+
+      default:
+        throw new StateError(
+            "Unhandled response from Dartino VM connection: ${response.code}");
+
+    }
+    return response;
+  }
+
   Future<VmCommand> startRunning() async {
     await sendCommand(const ProcessRun());
     vmState = VmState.running;
@@ -586,7 +615,8 @@ class DartinoVmContext {
     notifyListeners((DebugListener listener) {
       listener.resume(0);
     });
-    return handleProcessStop(await readNextCommand());
+    return notifyListenersOfProcessStop(
+        await handleProcessStop(await readNextCommand()));
   }
 
   Future<Breakpoint> setBreakpointHelper(DartinoFunction function,
@@ -692,7 +722,7 @@ class DartinoVmContext {
         frame.bytecodePointer != debugState.topFrame.bytecodePointer;
   }
 
-  Future<VmCommand> stepTo(int functionId, int bcp) async {
+  Future<VmCommand> _stepTo(int functionId, int bcp) async {
     assert(isPaused);
     VmCommand response = await runCommands([
       new PushFromMap(MapId.methods, functionId),
@@ -708,14 +738,14 @@ class DartinoVmContext {
     do {
       int bcp = debugState.topFrame.stepBytecodePointer(previous);
       if (bcp != -1) {
-        response = await stepTo(debugState.topFrame.functionId, bcp);
+        response = await _stepTo(debugState.topFrame.functionId, bcp);
       } else {
-        response = await stepBytecode();
+        response = await _stepBytecode();
       }
     } while (isPaused &&
              debugState.atLocation(previous) &&
              stepMadeProgress(initialFrame));
-    return response;
+    return notifyListenersOfProcessStop(response);
   }
 
   Future<VmCommand> stepOver() async {
@@ -724,11 +754,11 @@ class DartinoVmContext {
     final SourceLocation previous = debugState.currentLocation;
     final BackTraceFrame initialFrame = debugState.topFrame;
     do {
-      response = await stepOverBytecode();
+      response = await _stepOverBytecode();
     } while (isPaused &&
              debugState.atLocation(previous) &&
              stepMadeProgress(initialFrame));
-    return response;
+    return notifyListenersOfProcessStop(response);
   }
 
   Future<VmCommand> stepOut() async {
@@ -764,7 +794,7 @@ class DartinoVmContext {
     if (isPaused && debugState.atLocation(return_location)) {
       response = await step();
     }
-    return response;
+    return notifyListenersOfProcessStop(response);
   }
 
   Future<VmCommand> restart() async {
@@ -772,15 +802,24 @@ class DartinoVmContext {
     assert(debugState.currentBackTrace != null);
     assert(debugState.currentBackTrace.length > 1);
     int frame = debugState.actualCurrentFrameNumber;
-    return handleProcessStop(await runCommand(new ProcessRestartFrame(frame)));
+    return notifyListenersOfProcessStop(
+        await handleProcessStop(await runCommand(new ProcessRestartFrame(frame))));
   }
 
   Future<VmCommand> stepBytecode() async {
+    return notifyListenersOfProcessStop(await _stepBytecode());
+  }
+
+  Future<VmCommand> _stepBytecode() async {
     assert(isPaused);
     return handleProcessStop(await runCommand(const ProcessStep()));
   }
 
   Future<VmCommand> stepOverBytecode() async {
+    return notifyListenersOfProcessStop(await _stepOverBytecode());
+  }
+
+  Future<VmCommand> _stepOverBytecode() async {
     assert(isPaused);
     int processId = debugState.currentProcess;
     await sendCommand(const ProcessStepOver());
@@ -801,7 +840,8 @@ class DartinoVmContext {
     notifyListeners((DebugListener listener) {
       listener.resume(0);
     });
-    return handleProcessStop(await runCommand(const ProcessContinue()));
+    return notifyListenersOfProcessStop(
+        await handleProcessStop(await runCommand(const ProcessContinue())));
   }
 
   bool selectFrame(int frame) {
