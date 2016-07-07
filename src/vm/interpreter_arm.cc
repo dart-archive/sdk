@@ -1440,7 +1440,7 @@ void InterpreterGeneratorARM::Pop(Register reg) {
     Drop(1);
   }
 #else
-  __ ldr(reg, R6, Immediate(kWordSize));
+  __ ldr_postinc(reg, R6, Immediate(kWordSize));
 #endif
 }
 
