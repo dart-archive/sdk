@@ -21,6 +21,18 @@ static RegisterList RegisterRange(Register first, Register last) {
   return value;
 }
 
+#ifdef DARTINO_TARGET_ARM_HARDFLOAT
+
+// Generate code to load a pair of floating point registers
+// num is 0-7 corresponding to one of d0-d7 or two of s0-s15
+// base is a pointer to an array of floating point arguments
+static void FloatingPointPair(Assembler* assembler, Register base, int num) {
+  __ vldr(Register(S1 + num * 2), base, Immediate(kWordSize * (num * 2 + 1)));
+  __ vldr(Register(S0 + num * 2), base, Immediate(kWordSize * num * 2));
+}
+
+#endif  // DARTINO_TARGET_ARM_HARDFLOAT
+
 GENERATE(, FfiBridge) {
   Label noargs, fitsInOne, fitsInTwo, fitsInThree, fitsInFour,
     skipRestoreStack, noStack, copyArgs;
@@ -36,80 +48,47 @@ GENERATE(, FfiBridge) {
 
 #ifdef DARTINO_TARGET_ARM_HARDFLOAT
   // VFP labels - for handling Vectorized Floating Point coprocessor registers.
-  Label noVfp, vfp1, vfp2, vfp3, vfp4, vfp5, vfp6, vfp7, vfp8, vfp9, vfp10,
-    vfp11, vfp12, vfp13, vfp14, vfp15, vfp16;
+  Label noVfp, vfp2, vfp4, vfp6, vfp8, vfp10, vfp12, vfp14,
+  double7, double6, double5, double4, double3, double2, double1, double0;
   // Deal with VFP arguments first.
   __ ldr(R6, SP, Immediate((kCalleeSaved + 1) * kWordSize));
   __ cmp(R6, Immediate(0));
   __ b(EQ, &noVfp);
   __ ldr(R5, SP, Immediate(kCalleeSaved * kWordSize));
   // TODO(dmitryolsh): should be possible to construct jump table.
-  __ cmp(R6, Immediate(1));
-  __ b(EQ, &vfp1);
   __ cmp(R6, Immediate(2));
   __ b(EQ, &vfp2);
-  __ cmp(R6, Immediate(3));
-  __ b(EQ, &vfp3);
   __ cmp(R6, Immediate(4));
   __ b(EQ, &vfp4);
-  __ cmp(R6, Immediate(5));
-  __ b(EQ, &vfp5);
   __ cmp(R6, Immediate(6));
   __ b(EQ, &vfp6);
-  __ cmp(R6, Immediate(7));
-  __ b(EQ, &vfp7);
   __ cmp(R6, Immediate(8));
   __ b(EQ, &vfp8);
-  __ cmp(R6, Immediate(9));
-  __ b(EQ, &vfp9);
   __ cmp(R6, Immediate(10));
   __ b(EQ, &vfp10);
-  __ cmp(R6, Immediate(11));
-  __ b(EQ, &vfp11);
   __ cmp(R6, Immediate(12));
   __ b(EQ, &vfp12);
-  __ cmp(R6, Immediate(13));
-  __ b(EQ, &vfp13);
   __ cmp(R6, Immediate(14));
   __ b(EQ, &vfp14);
-  __ cmp(R6, Immediate(15));
-  __ b(EQ, &vfp15);
   // Fall-through on 16.
 
-  __ Bind(&vfp16);
-  __ vldr(S15, R5, Immediate(kWordSize * 15));
-  __ Bind(&vfp15);
-  __ vldr(S14, R5, Immediate(kWordSize * 14));
+  FloatingPointPair(assembler, R5, 7);
   __ Bind(&vfp14);
-  __ vldr(S13, R5, Immediate(kWordSize * 13));
-  __ Bind(&vfp13);
-  __ vldr(S12, R5, Immediate(kWordSize * 12));
+  FloatingPointPair(assembler, R5, 6);
   __ Bind(&vfp12);
-  __ vldr(S11, R5, Immediate(kWordSize * 11));
-  __ Bind(&vfp11);
-  __ vldr(S10, R5, Immediate(kWordSize * 10));
+  FloatingPointPair(assembler, R5, 5);
   __ Bind(&vfp10);
-  __ vldr(S9,  R5, Immediate(kWordSize * 9));
-  __ Bind(&vfp9);
-  __ vldr(S8,  R5, Immediate(kWordSize * 8));
+  FloatingPointPair(assembler, R5, 4);
   __ Bind(&vfp8);
-  __ vldr(S7,  R5, Immediate(kWordSize * 7));
-  __ Bind(&vfp7);
-  __ vldr(S6,  R5, Immediate(kWordSize * 6));
+  FloatingPointPair(assembler, R5, 3);
   __ Bind(&vfp6);
-  __ vldr(S5,  R5, Immediate(kWordSize * 5));
-  __ Bind(&vfp5);
-  __ vldr(S4,  R5, Immediate(kWordSize * 4));
+  FloatingPointPair(assembler, R5, 2);
   __ Bind(&vfp4);
-  __ vldr(S3,  R5, Immediate(kWordSize * 3));
-  __ Bind(&vfp3);
-  __ vldr(S2,  R5, Immediate(kWordSize * 2));
+  FloatingPointPair(assembler, R5, 1);
   __ Bind(&vfp2);
-  __ vldr(S1,  R5, Immediate(kWordSize));
-  __ Bind(&vfp1);
-  __ vldr(S0,  R5, Immediate(0));
+  FloatingPointPair(assembler, R5, 0);
   __ Bind(&noVfp);
-#endif
+#endif  // DARTINO_TARGET_ARM_HARDFLOAT
 
   // R5 - function pointer.
   __ ldr(R5, SP, Immediate((kCalleeSaved + 2) * kWordSize));

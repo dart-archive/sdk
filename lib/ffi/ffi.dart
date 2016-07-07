@@ -508,6 +508,7 @@ enum ForeignFunctionReturnType {
   int32,
   int64,
   float32,
+  float64,
   void_
 }
 
@@ -517,7 +518,8 @@ enum ForeignFunctionArgumentType {
   pointer,
   int32,
   int64,
-  float32
+  float32,
+  float64
 }
 
 /// A wrapper for type-safe invocation of Foreign Function.
@@ -534,6 +536,8 @@ class Ffi {
   static const returnsInt64 = ForeignFunctionReturnType.int64;
   /// Shorthand for float32 return type enum
   static const returnsFloat32 = ForeignFunctionReturnType.float32;
+  /// Shorthand for float64 return type enum
+  static const returnsFloat64 = ForeignFunctionReturnType.float64;
   /// Shorthand for void return type enum
   static const returnsVoid = ForeignFunctionReturnType.void_;
 
@@ -545,6 +549,8 @@ class Ffi {
   static const int64 = ForeignFunctionArgumentType.int64;
   /// Shorthand for float32 argument type enum
   static const float32 = ForeignFunctionArgumentType.float32;
+  /// Shorthand for float64 argument type enum
+  static const float64 = ForeignFunctionArgumentType.float64;
 
   Ffi(String name, this.returnType, this.argTypes, [ForeignLibrary lib]) {
     func = lib == null ? ForeignLibrary.main.lookup(name) : lib.lookup(name);
@@ -574,6 +580,7 @@ class Ffi {
           }
           break;
         case Ffi.float32:
+        case Ffi.float64:
           if (args[i] is int) {
             converted[i] = args[i].toDouble();
           } else if (args[i] is double) {
@@ -592,6 +599,7 @@ class Ffi {
       case Ffi.returnsInt32:
       case Ffi.returnsInt64:
       case Ffi.returnsFloat32:
+      case Ffi.returnsFloat64:
         return func.callv(returnType.index, len, converted, argTypesFixed);
       case Ffi.returnsPointer:
         return new ForeignPointer(func.callv(returnType.index, len,

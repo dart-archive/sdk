@@ -432,6 +432,7 @@ enum {
   FFI_RET_INT32,
   FFI_RET_INT64,
   FFI_RET_FLOAT32,
+  FFI_RET_FLOAT64,
   FFI_RET_VOID
 };
 
@@ -440,24 +441,39 @@ enum {
   FFI_POINTER = 0,
   FFI_INT32,
   FFI_INT64,
-  FFI_FLOAT32
+  FFI_FLOAT32,
+  FFI_FLOAT64
 };
 
 #if defined(DARTINO_TARGET_ARM)
 
-extern "C" {
-  void FfiBridge(word* regular, int regularSize, word* stack, int stackSize,
-    float* vfp, int vfpSize, word foreign);
+static void PushFloat(Vector<word>* v, float f) {
+  v->PushBack(*reinterpret_cast<word*>(&f));
 }
 
-typedef word (*P_BRIDGE)(word*, int, word*, int, float*, int, word);
-typedef int32 (*I32_BRIDGE)(word*, int, word*, int, float*, int, word);
-typedef int64 (*I64_BRIDGE)(word*, int, word*, int, float*, int, word);
-typedef float (*F32_BRIDGE)(word*, int, word*, int, float*, int, word);
-typedef void (*V_BRIDGE)(word*, int, word*, int, float*, int, word);
+static void PushDouble(Vector<word>* v, double d) {
+  word* src = reinterpret_cast<word*>(&d);
+  v->PushBack(src[0]);
+  v->PushBack(src[1]);
+}
+
+extern "C" {
+  void FfiBridge(word* regular, int regularSize, word* stack, int stackSize,
+    word* vfp, int vfpSize, word foreign);
+}
+
+typedef word (*P_BRIDGE)(word*, int, word*, int, word*, int, word);
+typedef int32 (*I32_BRIDGE)(word*, int, word*, int, word*, int, word);
+typedef int64 (*I64_BRIDGE)(word*, int, word*, int, word*, int, word);
+typedef float (*F32_BRIDGE)(word*, int, word*, int, word*, int, word);
+typedef double (*F64_BRIDGE)(word*, int, word*, int, word*, int, word);
+typedef void (*V_BRIDGE)(word*, int, word*, int, word*, int, word);
 
 class FFIFrameBuilder {
  public:
+  FFIFrameBuilder():
+    nextCoreRegister(0), floatingPointGap(-1) {}
+
   void WordArgument(word v) {
     if (nextCoreRegister < kLastCoreRegister) {
       registerArgs.PushBack(v);
@@ -486,10 +502,41 @@ class FFIFrameBuilder {
   }
 
   void Float32Argument(float v) {
-    if (floatingPointArgs.size() < kLastFloatingPointRegister) {
-      floatingPointArgs.PushBack(v);
+    word w = *reinterpret_cast<word*>(&v);
+    // First try to fill in the gap that might be left behind.
+    if (floatingPointGap >= 0) {
+      floatingPointArgs[floatingPointGap] = w;
+      floatingPointGap = -1;
+    // Failing that - any registers still available.
+    } else if (floatingPointArgs.size() < kLastFloatingPointRegister) {
+      floatingPointArgs.PushBack(w);
+    // Lastly go to the stack.
     } else {
-      stackArgs.PushBack(*reinterpret_cast<word*>(&v));
+      stackArgs.PushBack(w);
+    }
+  }
+
+  void Float64Argument(double v) {
+    if (floatingPointArgs.size() & 1) {
+      // Padding creates a gap in register allocation.
+      floatingPointGap = floatingPointArgs.size();
+      PushFloat(&floatingPointArgs, 0.0);
+    }
+    if (floatingPointArgs.size() + 2 <= kLastFloatingPointRegister) {
+      PushDouble(&floatingPointArgs, v);
+    } else {
+      // Pad for alignment.
+      if (stackArgs.size() & 1) {
+        stackArgs.PushBack(0);
+      }
+      PushDouble(&stackArgs, v);
+    }
+  }
+
+  void Build() {
+    // Round floating point args to pairs.
+    if (floatingPointArgs.size() & 1) {
+      PushFloat(&floatingPointArgs, 0.0);
     }
   }
 
@@ -523,12 +570,19 @@ class FFIFrameBuilder {
       floatingPointArgs.Data(), floatingPointArgs.size(), address);
   }
 
+  double Float64Call(word address) {
+    return reinterpret_cast<F64_BRIDGE>(FfiBridge)(registerArgs.Data(),
+      registerArgs.size(), stackArgs.Data(), stackArgs.size(),
+      floatingPointArgs.Data(), floatingPointArgs.size(), address);
+  }
+
  private:
   const size_t kLastCoreRegister = 4;
   const size_t kLastFloatingPointRegister = 16;
   Vector<word> registerArgs, stackArgs;
-  Vector<float> floatingPointArgs;
-  size_t nextCoreRegister = 0;
+  Vector<word> floatingPointArgs;
+  size_t nextCoreRegister;
+  int floatingPointGap;  // A vacant place in floatingPointArgs due to padding.
 };
 
 BEGIN_NATIVE(ForeignListCall) {
@@ -554,10 +608,14 @@ BEGIN_NATIVE(ForeignListCall) {
       case FFI_FLOAT32:
         builder.Float32Argument(Double::cast(args->get(i))->value());
         break;
+      case FFI_FLOAT64:
+        builder.Float64Argument(Double::cast(args->get(i))->value());
+        break;
       default:
         return Failure::wrong_argument_type();
     }
   }
+  builder.Build();
   int64 tmp;
   switch (returnType) {
     case FFI_RET_POINTER:
@@ -574,6 +632,8 @@ BEGIN_NATIVE(ForeignListCall) {
       return process->NewIntegerWithGC(tmp);
     case FFI_RET_FLOAT32:
       return process->NewDoubleWithGC(builder.Float32Call(address));
+    case FFI_RET_FLOAT64:
+      return process->NewDoubleWithGC(builder.Float64Call(address));
     case FFI_RET_VOID:
       builder.VoidCall(address);
       return Smi::FromWord(0);

@@ -366,6 +366,103 @@ float ffun17(float a0, float a1, float a2, float a3, float a4, float a5,
     a10 + a11 + a12 + a13 + a14 + a15 + a16;
 }
 
+double dfun0() {
+  return 0.0;
+}
+
+double dfun1(double a0) {
+  return a0;
+}
+
+double dfun2(double a0, double a1) {
+  return a0 + a1;
+}
+
+double dfun3(double a0, double a1, double a2) {
+  return a0 + a1 + a2;
+}
+
+double dfun4(double a0, double a1, double a2, double a3) {
+  return a0 + a1 + a2 + a3;
+}
+
+double dfun5(double a0, double a1, double a2, double a3, double a4) {
+  return a0 + a1 + a2 + a3 + a4;
+}
+
+double dfun6(double a0, double a1, double a2, double a3, double a4, double a5) {
+  return a0 + a1 + a2 + a3 + a4 + a5;
+}
+
+double dfun7(double a0, double a1, double a2, double a3, double a4, double a5,
+  double a6) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6;
+}
+
+double dfun8(double a0, double a1, double a2, double a3, double a4, double a5,
+  double a6, double a7) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7;
+}
+
+double dfun9(double a0, double a1, double a2, double a3, double a4, double a5,
+  double a6, double a7, double a8) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8;
+}
+
+double mixfp2(float a0, double a1) {
+  return a0 + a1;
+}
+
+double mixfp3(float a0, double a1, float a2) {
+  return a0 + a1 + a2;
+}
+
+double mixfp4(float a0, double a1, float a2, double a3) {
+  return a0 + a1 + a2 + a3;
+}
+
+double mixfp5(float a0, double a1, float a2, double a3, float a4) {
+  return a0 + a1 + a2 + a3 + a4;
+}
+
+double mixfp6(float a0, double a1, float a2, double a3, float a4, double a5) {
+  return a0 + a1 + a2 + a3 + a4 + a5;
+}
+
+double mixfp7(float a0, double a1, float a2, double a3, float a4, double a5,
+  float a6) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6;
+}
+
+double mixfp8(float a0, double a1, float a2, double a3, float a4, double a5,
+  float a6, double a7) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7;
+}
+
+double mixfp9(float a0, double a1, float a2, double a3, float a4, double a5,
+  float a6, double a7, float a8) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8;
+}
+
+double mixfp10(float a0, double a1, float a2, double a3, float a4, double a5,
+  float a6, double a7, float a8, double a9) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9;
+}
+
+double mixfp11(float a0, double a1, float a2, double a3, float a4, double a5,
+  float a6, double a7, float a8, double a9, float a10) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10;
+}
+
+double mixfp12(float a0, double a1, float a2, double a3, float a4, double a5,
+  float a6, double a7, float a8, double a9, float a10, double a11) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11;
+}
+
+double mixfp13(float a0, double a1, float a2, double a3, float a4, double a5,
+  float a6, double a7, float a8, double a9, float a10, double a11, float a12) {
+  return a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12;
+}
 
 float i5f17(int i0, int i1, int i2, int i3, int i4, 
   float a0, float a1, float a2, float a3, float a4, float a5,
