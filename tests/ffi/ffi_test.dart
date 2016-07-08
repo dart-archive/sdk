@@ -480,18 +480,19 @@ testVariadicFfiCall() {
   Expect.equals(1, icall1([1024 * 4294967296 + 1]));
 
   // Test all int64 returning versions.
-  var i64call0 = new Ffi('ifun0', Ffi.returnsInt64, [], fl);
-  var i64call1 = new Ffi('ifun1', Ffi.returnsInt64, [Ffi.int32], fl);
-  var i64call2 = new Ffi('ifun2', Ffi.returnsInt64, [Ffi.int32, Ffi.int32], fl);
-  var i64call3 = new Ffi('ifun3', Ffi.returnsInt64, 
+  var i64call0 = new Ffi('i64fun0', Ffi.returnsInt64, [], fl);
+  var i64call1 = new Ffi('i64fun1', Ffi.returnsInt64, [Ffi.int32], fl);
+  var i64call2 = new Ffi('i64fun2', Ffi.returnsInt64, 
+    [Ffi.int32, Ffi.int32], fl);
+  var i64call3 = new Ffi('i64fun3', Ffi.returnsInt64,
     new List.filled(3, Ffi.int32), fl);
-  var i64call4 = new Ffi('ifun4', Ffi.returnsInt64,
+  var i64call4 = new Ffi('i64fun4', Ffi.returnsInt64,
     new List.filled(4, Ffi.int32), fl);
-  var i64call5 = new Ffi('ifun5', Ffi.returnsInt64,
+  var i64call5 = new Ffi('i64fun5', Ffi.returnsInt64,
     new List.filled(5, Ffi.int32), fl);
-  var i64call6 = new Ffi('ifun6', Ffi.returnsInt64,
+  var i64call6 = new Ffi('i64fun6', Ffi.returnsInt64,
     new List.filled(6, Ffi.int32), fl);
-  var i64call7 = new Ffi('ifun7', Ffi.returnsInt64,
+  var i64call7 = new Ffi('i64fun7', Ffi.returnsInt64,
     new List.filled(7, Ffi.int32), fl);
   Expect.equals(0, i64call0([]));
   Expect.equals(1, i64call1([1]));
