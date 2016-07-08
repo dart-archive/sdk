@@ -1943,7 +1943,7 @@ void InterpreterGeneratorARM::Allocate(bool immutable) {
   __ str(R1, Address(R7, 0));
   __ sub(R7, R7, Immediate(1 * kWordSize));
 #else
-  __ str(R1, R7, Immediate(-1 * kWordSize));
+  __ str_postinc(R1, R7, Immediate(-1 * kWordSize));
 #endif
   __ b(&loop);
 
