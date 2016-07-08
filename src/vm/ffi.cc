@@ -496,10 +496,16 @@ class FFIFrameBuilder {
     } else {
       // Once we touch the stack, no registers are used.
       nextCoreRegister = kLastCoreRegister;
+      // Pad for alignment.
+      if (stackArgs.size() & 1) {
+        stackArgs.PushBack(0);
+      }
       stackArgs.PushBack(v & 0xffffffff);
       stackArgs.PushBack(v >> 32);
     }
   }
+
+#if defined(DARTINO_TARGET_ARM_HARDFLOAT)
 
   void Float32Argument(float v) {
     word w = *reinterpret_cast<word*>(&v);
@@ -532,7 +538,36 @@ class FFIFrameBuilder {
       PushDouble(&stackArgs, v);
     }
   }
+#elif defined(DARTINO_TARGET_ARM_SOFTFLOAT)
 
+  void Float32Argument(float v) {
+    word w = *reinterpret_cast<word*>(&v);
+    if (nextCoreRegister < kLastCoreRegister) {
+      registerArgs.PushBack(w);
+      nextCoreRegister += 1;
+    } else {
+      stackArgs.PushBack(w);
+    }
+  }
+
+  void Float64Argument(double v) {
+    if (nextCoreRegister & 1) {
+      // Skip register for alignment.
+      registerArgs.PushBack(0);
+      nextCoreRegister += 1;
+    }
+    if (nextCoreRegister + 2 <= kLastCoreRegister) {
+      PushDouble(&registerArgs, v);
+      nextCoreRegister += 2;
+    } else {
+      // Pad for alignment.
+      if (stackArgs.size() & 1) {
+        stackArgs.PushBack(0);
+      }
+      PushDouble(&stackArgs, v);
+    }
+  }
+#endif  // DARTINO_TARGET_ARM_HARDFLOAT
   void Build() {
     // Round floating point args to pairs.
     if (floatingPointArgs.size() & 1) {
