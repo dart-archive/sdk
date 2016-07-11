@@ -136,6 +136,10 @@ int ifun7EINTR(int a, int b, int c, int d, int e, int f, int g) {
   return a + b + c + d + e + f + g;
 }
 
+int64_t i64fun0() {
+  return 0;
+}
+
 int64_t i64fun1(int a) {
   return a;
 }

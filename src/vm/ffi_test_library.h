@@ -60,6 +60,9 @@ EXPORT int ifun6EINTR(int a, int b, int c, int d, int e, int f);
 
 EXPORT int ifun7EINTR(int a, int b, int c, int d, int e, int f, int g);
 
+
+EXPORT int64_t i64fun0();
+
 EXPORT int64_t i64fun1(int a);
 
 EXPORT int64_t i64fun2(int a, int b);
@@ -73,6 +76,130 @@ EXPORT int64_t i64fun5(int a, int b, int c, int d, int e);
 EXPORT int64_t i64fun6(int a, int b, int c, int d, int e, int f);
 
 EXPORT int64_t i64fun7(int a, int b, int c, int d, int e, int f, int g);
+
+EXPORT int64_t mix32_64_64(int a, int64_t b, int64_t c);
+
+EXPORT int64_t mix32_64_32(int a, int64_t b, int c);
+
+EXPORT int64_t mix64_32_64(int64_t a, int b, int64_t c);
+
+EXPORT float ffun0();
+
+EXPORT float ffun1(float a0);
+
+EXPORT float ffun2(float a0, float a1);
+
+EXPORT float ffun3(float a0, float a1, float a2);
+
+EXPORT float ffun4(float a0, float a1, float a2, float a3);
+
+EXPORT float ffun5(float a0, float a1, float a2, float a3, float a4);
+
+EXPORT float ffun6(float a0, float a1, float a2, float a3, float a4, float a5);
+
+EXPORT float ffun7(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6);
+
+EXPORT float ffun8(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7);
+
+EXPORT float ffun9(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8);
+
+EXPORT float ffun10(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9);
+
+EXPORT float ffun11(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10);
+
+EXPORT float ffun12(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11);
+
+EXPORT float ffun13(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12);
+
+EXPORT float ffun14(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13);
+
+EXPORT float ffun15(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14);
+
+EXPORT float ffun16(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14, float a15);
+
+EXPORT float ffun17(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14, float a15, float a16);
+
+EXPORT double dfun0();
+
+EXPORT double dfun1(double a0);
+
+EXPORT double dfun2(double a0, double a1);
+
+EXPORT double dfun3(double a0, double a1, double a2);
+
+EXPORT double dfun4(double a0, double a1, double a2, double a3);
+
+EXPORT double dfun5(double a0, double a1, double a2, double a3, double a4);
+
+EXPORT double dfun6(double a0, double a1, double a2, double a3, double a4,
+  double a5);
+
+EXPORT double dfun7(double a0, double a1, double a2, double a3, double a4,
+  double a5, double a6);
+
+EXPORT double dfun8(double a0, double a1, double a2, double a3, double a4,
+  double a5, double a6, double a7);
+
+EXPORT double dfun9(double a0, double a1, double a2, double a3, double a4,
+  double a5, double a6, double a7, double a8);
+
+EXPORT double mixfp2(float a0, double a1);
+
+EXPORT double mixfp3(float a0, double a1, float a2);
+
+EXPORT double mixfp4(float a0, double a1, float a2, double a3);
+
+EXPORT double mixfp5(float a0, double a1, float a2, double a3, float a4);
+
+EXPORT double mixfp6(float a0, double a1, float a2, double a3, float a4,
+  double a5);
+
+EXPORT double mixfp7(float a0, double a1, float a2, double a3, float a4,
+  double a5, float a6);
+
+EXPORT double mixfp8(float a0, double a1, float a2, double a3, float a4,
+  double a5, float a6, double a7);
+
+EXPORT double mixfp9(float a0, double a1, float a2, double a3, float a4,
+  double a5, float a6, double a7, float a8);
+
+EXPORT double mixfp10(float a0, double a1, float a2, double a3, float a4,
+  double a5, float a6, double a7, float a8, double a9);
+
+EXPORT double mixfp11(float a0, double a1, float a2, double a3, float a4,
+  double a5, float a6, double a7, float a8, double a9, float a10);
+
+EXPORT double mixfp12(float a0, double a1, float a2, double a3, float a4,
+  double a5, float a6, double a7, float a8, double a9, float a10, double a11);
+
+EXPORT double mixfp13(float a0, double a1, float a2, double a3, float a4,
+  double a5, float a6, double a7, float a8, double a9, float a10, double a11,
+  float a12);
+
+EXPORT float i5f17(int i0, int i1, int i2, int i3, int i4,
+  float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14, float a15, float a16);
+
+EXPORT float f17i5(float a0, float a1, float a2, float a3, float a4, float a5,
+  float a6, float a7, float a8, float a9, float a10, float a11, float a12,
+  float a13, float a14, float a15, float a16,
+  int i0, int i1, int i2, int i3, int i4);
 
 EXPORT void vfun0();
 

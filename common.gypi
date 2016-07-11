@@ -378,7 +378,7 @@
         'defines': [
           'DARTINO32',
           'DARTINO_TARGET_ARM',
-          'DARTINO_TARGET_HARDFLOAT'
+          'DARTINO_TARGET_ARM_HARDFLOAT'
         ],
 
         'xcode_settings': { # And ninja.
@@ -392,7 +392,7 @@
         'defines': [
           'DARTINO32',
           'DARTINO_TARGET_ARM',
-          'DARTINO_TARGET_HARDFLOAT'
+          'DARTINO_TARGET_ARM_HARDFLOAT'
         ],
 
         'target_conditions': [
@@ -449,7 +449,7 @@
         'defines': [
           'DARTINO64',
           'DARTINO_TARGET_ARM64',
-          'DARTINO_TARGET_HARDFLOAT'
+          'DARTINO_TARGET_ARM_HARDFLOAT'
         ],
 
         'target_conditions': [
@@ -507,7 +507,7 @@
           'DARTINO32',
           'DARTINO_TARGET_ARM',
           'DARTINO_THUMB_ONLY',
-          'DARTINO_TARGET_HARDFLOAT'
+          'DARTINO_TARGET_ARM_HARDFLOAT'
         ],
 
         'target_conditions': [
