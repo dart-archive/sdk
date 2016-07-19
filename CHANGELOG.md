@@ -1,4 +1,50 @@
-## 0.3.0
+## 0.5.0 (5 July 2016)
+
+### Tool changes
+
+* Almost complete command line debugger (`dartino debug <source file>`).
+
+* Analyzer support from the dartino command (`dartino analyze <source file>`).
+
+* New snapshot format (no user-facing changes).
+
+* Analytics for both command line and Atom.
+
+### Runtime changes
+
+* Out-of-memory / no-progress-on-GC detection.
+
+* Preemptive scheduling of Dartino processes on FreeRTOS.
+
+### Library changes
+
+* TLS & UDP integrated into the network stack for the STM32F746G Discovery
+ board.
+
+* I2C support for the STM32F746G Discovery board.
+
+* I2C drivers for sensors on the X-NUCLEO-IKS01A1 expansion board for STM32
+ Nucleo.
+
+* Initial support for STM32F411RE Nucleo board (GPIO and UART).
+
+* Polling mode ADC support on both STM32F746G Discovery and STM32F411RE Nucleo
+ boards.
+
+* Improved API documentation for both core libraries and support packages.
+
+## 0.4.0 (19 May 2016)
+
+### General changes
+
+* Support for call-backs from C back into Dartino. For an example, see:
+ `/dartino-sdk/samples/general/native-interop/`
+
+
+* Networking support on the STM F746 board. For examples, see:
+`/dartino-sdk/samples/stm32f746g-discovery/weather-service.dart` and `/dartino-sdk/samples/stm32f746g-discovery/http_json_sample.dart`
+
+## 0.3.0 (23 February 2016)
 
 ### General changes
 
@@ -27,10 +73,10 @@
  implementations for Raspberry Pi 2. Added an implementation for the STM32
  board.
 
-## 0.2.0
+## 0.2.0 (16 November 2015)
 
-* Added a getting started script that automates the creation of the Raspberry Pi 2
- SD card.
+* Added a getting started script that automates the creation of the Raspberry Pi
+ 2 SD card.
 
 * Added network discovery support making it easier to run Dartino programs on
  Raspberry Pi 2 devices connected over the network.
@@ -40,7 +86,7 @@
 
 * Many smaller fixes.
 
-## 0.1.0
+## 0.1.0 (7 October 2015)
 
 * First SDK release, includes the core runtime, compiler, and a few select
  libraries.
