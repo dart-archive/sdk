@@ -45,8 +45,8 @@ main() {
   // operating system will have initialized the network. On the Discovery board
   // we have to initialize the hardware and network stack before we can use
   // sockets.
-  print('Initializing network...');
   if (Foreign.platform == Foreign.FREERTOS) {
+    print('Initializing network...');
     initializeNetwork();
   }
 
