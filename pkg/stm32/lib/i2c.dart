@@ -11,13 +11,13 @@ import 'dart:typed_data';
 
 import 'package:i2c/i2c.dart';
 
-final _i2c_open = ForeignLibrary.main.lookup('i2c_open');
-final _i2c_request_read_register =
-    ForeignLibrary.main.lookup('i2c_request_read_register');
-final _i2c_request_write_register =
-    ForeignLibrary.main.lookup('i2c_request_write_register');
-final _i2c_acknowledge_result =
-    ForeignLibrary.main.lookup('i2c_acknowledge_result');
+final _i2c_open = new Ffi('i2c_open', Ffi.returnsInt32, [Ffi.pointer]);
+final _i2c_request_read_register = new Ffi('i2c_request_read_register',
+  Ffi.returnsInt32, [Ffi.int32, Ffi.int32, Ffi.int32, Ffi.pointer, Ffi.int32]);
+final _i2c_request_write_register = new Ffi('i2c_request_write_register',
+  Ffi.returnsInt32, [Ffi.int32, Ffi.int32, Ffi.int32, Ffi.pointer, Ffi.int32]);
+final _i2c_acknowledge_result = new Ffi('i2c_acknowledge_result', 
+  Ffi.returnsInt32, [Ffi.int32]);
 
 /// I2C bus on ST device.
 class I2CBusSTM implements I2CBus {
@@ -40,7 +40,7 @@ class I2CBusSTM implements I2CBus {
     int handle;
     var foreignDeviceName = new ForeignMemory.fromStringAsUTF8(deviceName);
     try {
-      handle = _i2c_open.icall$1(foreignDeviceName);
+      handle = _i2c_open([foreignDeviceName]);
       if (handle == -1) {
         throw new I2CException("Cannot open I2C bus");
       }
@@ -73,14 +73,14 @@ class I2CBusSTM implements I2CBus {
   /// [slave]. Returns the number of bytes read. Returns -1 on error.
   int _readBytes(int slave, int register, Uint8List buffer) {
     var foreignBuffer = _getForeign(buffer.buffer);
-    var rc = _i2c_request_read_register.icall$5(
-        _handle, slave, register, foreignBuffer, buffer.length);
+    var rc = _i2c_request_read_register([
+        _handle, slave, register, foreignBuffer, buffer.length]);
     if (rc != 0) return rc;
 
     eventHandler.registerPortForNextEvent(
         _handle, _port, _RESULT_READY_FLAG | _RESULT_ERROR_FLAG);
     _channel.receive();
-    rc = _i2c_acknowledge_result.icall$1(_handle);
+    rc = _i2c_acknowledge_result([_handle]);
     return rc == 0 ? buffer.length : rc;
   }
 
@@ -88,14 +88,14 @@ class I2CBusSTM implements I2CBus {
   /// [slave]. Returns the number of bytes written. Returns -1 on error.
   int _writeBytes(int slave, int register, Uint8List buffer) {
     var foreignBuffer = _getForeign(buffer.buffer);
-    var rc = _i2c_request_write_register.icall$5(
-        _handle, slave, register, foreignBuffer, buffer.length);
+    var rc = _i2c_request_write_register([
+        _handle, slave, register, foreignBuffer, buffer.length]);
     if (rc != 0) return rc;
 
     eventHandler.registerPortForNextEvent(
         _handle, _port, _RESULT_READY_FLAG | _RESULT_ERROR_FLAG);
     _channel.receive();
-    rc = _i2c_acknowledge_result.icall$1(_handle);
+    rc = _i2c_acknowledge_result([_handle]);
     return rc == 0 ? buffer.length : rc;
   }
 
