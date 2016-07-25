@@ -6,19 +6,23 @@ library stm32.lcd;
 
 import 'dart:dartino.ffi';
 
-final _lcdHeight = ForeignLibrary.main.lookup('lcd_height');
-final _lcdWidth = ForeignLibrary.main.lookup('lcd_width');
-final _lcdClear = ForeignLibrary.main.lookup('lcd_clear');
-final _lcdReadPixel = ForeignLibrary.main.lookup('lcd_read_pixel');
-final _lcdDrawPixel = ForeignLibrary.main.lookup('lcd_draw_pixel');
-final _lcdDrawLine = ForeignLibrary.main.lookup('lcd_draw_line');
-final _lcdDrawCircle = ForeignLibrary.main.lookup('lcd_draw_circle');
-final _lcdSetForegroundColor =
-    ForeignLibrary.main.lookup('lcd_set_foreground_color');
-final _lcdSetBackgroundColor =
-    ForeignLibrary.main.lookup('lcd_set_background_color');
-final _lcdDisplayString =
-    ForeignLibrary.main.lookup('lcd_display_string');
+final _lcdHeight = new Ffi('lcd_height', Ffi.returnsInt32, []);
+final _lcdWidth = new Ffi('lcd_width', Ffi.returnsInt32, []);
+final _lcdClear = new Ffi('lcd_clear', Ffi.returnsVoid, [Ffi.int32]);
+final _lcdReadPixel = new Ffi('lcd_read_pixel', Ffi.returnsInt32, 
+  [Ffi.int32, Ffi.int32]);
+final _lcdDrawPixel = new Ffi('lcd_draw_pixel', Ffi.returnsVoid,
+  [Ffi.int32, Ffi.int32, Ffi.int32]);
+final _lcdDrawLine = new Ffi('lcd_draw_line', Ffi.returnsVoid,
+  [Ffi.int32, Ffi.int32, Ffi.int32, Ffi.int32]);
+final _lcdDrawCircle = new Ffi('lcd_draw_circle', Ffi.returnsVoid,
+  [Ffi.int32, Ffi.int32, Ffi.int32]);
+final _lcdSetForegroundColor = new Ffi('lcd_set_foreground_color', 
+  Ffi.returnsVoid, [Ffi.int32]);
+final _lcdSetBackgroundColor = new Ffi('lcd_set_background_color',
+  Ffi.returnsVoid, [Ffi.int32]);
+final _lcdDisplayString = new Ffi('lcd_display_string',
+  Ffi.returnsVoid, [Ffi.int32, Ffi.int32, Ffi.pointer, Ffi.int32]);
 
 /// Color.
 class Color {
@@ -78,41 +82,41 @@ enum TextAlign {
 }
 
 class FrameBuffer {
-  int get height => _lcdHeight.icall$0();
-  int get width => _lcdWidth.icall$0();
+  int get height => _lcdHeight([]);
+  int get width => _lcdWidth([]);
 
   Color _backgroundColor = Color.white;
 
   clear([Color color]) {
     color ??= _backgroundColor;
-    _lcdClear.icall$1(color.rgb8888);
+    _lcdClear([color.rgb8888]);
   }
 
   set backgroundColor(Color color) {
     _backgroundColor = color;
-    _lcdSetBackgroundColor.icall$1(color.rgb8888);
+    _lcdSetBackgroundColor([color.rgb8888]);
   }
 
   set foregroundColor(Color color) {
-    _lcdSetForegroundColor.icall$1(color.rgb8888);
+    _lcdSetForegroundColor([color.rgb8888]);
   }
 
   Color readPixel(int x, int y) {
-    return new Color.fromRgb8888(_lcdReadPixel.icall$2(x, y));
+    return new Color.fromRgb8888(_lcdReadPixel([x, y]));
   }
 
   void drawPixel(int x, int y, [Color color = Color.white]) {
-    _lcdDrawPixel.icall$3(x, y, color.rgb8888);
+    _lcdDrawPixel([x, y, color.rgb8888]);
   }
 
   void drawLine(int x1, int y1, int x2, int y2, [Color color = Color.white]) {
-    _lcdSetForegroundColor.icall$1(color.rgb8888);
-    _lcdDrawLine.icall$4(x1, y1, x2, y2);
+    _lcdSetForegroundColor([color.rgb8888]);
+    _lcdDrawLine([x1, y1, x2, y2]);
   }
 
   void drawCircle(int x, int y, int radius, [Color color = Color.white]) {
-    _lcdSetForegroundColor.icall$1(color.rgb8888);
-    _lcdDrawCircle.icall$3(x, y, radius);
+    _lcdSetForegroundColor([color.rgb8888]);
+    _lcdDrawCircle([x, y, radius]);
   }
 
   void writeText(int x, int y, String text, {TextAlign align: TextAlign.left}) {
@@ -123,7 +127,7 @@ class FrameBuffer {
       case TextAlign.center: alignMode = 1; break;
       case TextAlign.right: alignMode = 2; break;
     }
-    _lcdDisplayString.icall$4(x, y, m, alignMode);
+    _lcdDisplayString([x, y, m, alignMode]);
     m.free();
   }
 }

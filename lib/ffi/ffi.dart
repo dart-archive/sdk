@@ -524,9 +524,9 @@ enum ForeignFunctionArgumentType {
 
 /// A wrapper for type-safe invocation of Foreign Function.
 class Ffi {
-  ForeignFunction func;
-  ForeignFunctionReturnType returnType;
-  List<ForeignFunctionArgumentType> argTypes;
+  final ForeignFunction func;
+  final ForeignFunctionReturnType returnType;
+  final List<ForeignFunctionArgumentType> argTypes;
 
   /// Shorthand for pointer return type enum
   static const returnsPointer = ForeignFunctionReturnType.pointer;
@@ -552,9 +552,9 @@ class Ffi {
   /// Shorthand for float64 argument type enum
   static const float64 = ForeignFunctionArgumentType.float64;
 
-  Ffi(String name, this.returnType, this.argTypes, [ForeignLibrary lib]) {
-    func = lib == null ? ForeignLibrary.main.lookup(name) : lib.lookup(name);
-  }
+  Ffi(String name, this.returnType, this.argTypes, [ForeignLibrary lib])
+      :
+      func = lib == null ? ForeignLibrary.main.lookup(name) : lib.lookup(name);
 
   _doCall(int len, dartino.FixedList args) {
     var converted = new List(args.length); // is a FixedList
