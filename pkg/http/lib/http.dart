@@ -11,6 +11,12 @@ import 'dart:typed_data';
 import 'package:charcode/ascii.dart';
 import 'package:socket/socket.dart';
 
+class HttpException implements Exception {
+  final String message;
+  HttpException(this.message);
+  String toString() => "HttpException: $message";
+}
+
 ByteBuffer stringToByteBuffer(String str) {
   Uint8List list = new Uint8List(str.length);
   for (int i = 0; i < list.length; i++) {
@@ -228,7 +234,7 @@ class _HttpParser {
     int statusCode = 0;
     for (int i = 0; i < 3; i++) {
       int char = _peek();
-      if (!_isDigit(char)) throw "Expected status code";
+      if (!_isDigit(char)) _fail("Expected status code");
       statusCode *= 10;
       statusCode += char - $0;
       _consume();
@@ -287,7 +293,7 @@ class _HttpParser {
       if (contentLength >= 0) {
         int bufferRemaining = _buffer.length - _offset;
         int missingLength = contentLength - bufferRemaining;
-        Uint8List remaining = new Uint8List.view(socket.read(missingLength));
+        Uint8List remaining = new Uint8List.view(_read(missingLength));
 
         body = new Uint8List(contentLength);
         body.setRange(0, bufferRemaining, _buffer, _offset);
@@ -326,7 +332,7 @@ class _HttpParser {
           chunks.add(new Uint8List.view(_buffer.buffer, _offset,
                   bufferRemaining));
           chunkRemaining -= bufferRemaining;
-          _buffer = new Uint8List.view(socket.readNext());
+          _buffer = new Uint8List.view(_read());
           _offset = 0;
           bufferRemaining = _buffer.length;
         }
@@ -355,7 +361,9 @@ class _HttpParser {
       }
     }
 
-    if (body == null) throw "Failed to read body";
+    if (body == null) {
+      _fail("Failed to read body");
+    }
     return new HttpResponse._(statusCode,
                               new String.fromCharCodes(reasonPhrase),
                               headers,
@@ -370,19 +378,31 @@ class _HttpParser {
       list.add(char);
       _consume();
     }
-    if (list.isEmpty) throw "Bad token";
+    if (list.isEmpty) {
+      _fail("Bad token");
+    }
     return new String.fromCharCodes(list);
   }
 
 
   void _expect(int char) {
-    if (_peek() != char) throw "Expected $char but got ${_peek()}";
+    if (_peek() != char) {
+      _fail("Expected $char but got ${_peek()}");
+    }
     _consume();
+  }
+
+  ByteBuffer _read([int length = -1]) {
+    ByteBuffer buffer = length >= 0 ? socket.read(length) : socket.readNext();
+    if (buffer == null) {
+      _fail("Connection reset by server");
+    }
+    return buffer;
   }
 
   int _peek() {
     if (_offset == _buffer.length) {
-      _buffer = new Uint8List.view(socket.readNext());
+      _buffer = new Uint8List.view(_read());
       _offset = 0;
     }
     return _buffer[_offset];
@@ -402,4 +422,6 @@ class _HttpParser {
     // "\" | <"> | "/" | "[" | "]" | "?" | "=" | "{" | "}" | SP | HT
     return char == $space || char == $slash || char == $colon;
   }
+
+  _fail(String message) => throw new HttpException(message);
 }
