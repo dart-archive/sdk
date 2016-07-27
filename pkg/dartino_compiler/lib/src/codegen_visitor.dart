@@ -2281,7 +2281,12 @@ abstract class CodegenVisitor
       _) {
     // TODO(johnniwinther): We should not end up here with an bad constructor.
     if (!checkCompileError(elements[node.send])) {
-      doConstConstructorInvoke(constant);
+      if (context.getConstantValue(constant) == null) {
+        doCompileError(context.compiler.reporter.createMessage(
+                node, MessageKind.NOT_A_COMPILE_TIME_CONSTANT));
+      } else {
+        doConstConstructorInvoke(constant);
+      }
     }
     applyVisitState();
   }

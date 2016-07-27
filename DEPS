@@ -24,7 +24,7 @@ vars = {
 
   "instrumentation_client_rev": "@f06dca45223695f7828b9f045ef4317833fb2dba",
 
-  "dart_rev": "@f56e4f957f08f3ac80ed2da33e7520de747ba73d",
+  "dart_rev": "@9fff9a162914b97dd4bc48f5c2386f01a1232bad",
 
   # Please copy these package revisions from third_party/dart/DEPS when
   # updating dart_rev:
