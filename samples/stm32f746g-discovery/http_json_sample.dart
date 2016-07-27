@@ -17,9 +17,9 @@
 // and HTTPS port of the server.
 //
 // There is a sample Dart server in
-// http_json_sample_server/http_json_sample_server.dart that can be
-// used as a starting point. To run this Dart server use the Dart VM
-// which is in internal/dart-sdk/bin/dart of the Dartino SDK.
+// http_json_sample_server/http_json_sample_server.dart that can be used as a
+// starting point. To run this Dart server use the Dart VM which can be found in
+// third_party/dart-sdk/<OS>/dart-sdk/bin/dart of the Dartino SDK.
 
 import 'dart:convert';
 import 'dart:dartino';
