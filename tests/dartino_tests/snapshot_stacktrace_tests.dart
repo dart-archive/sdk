@@ -52,7 +52,7 @@ Future<Map<String, NoArgFuture>> listTests(
 
   String suffix = "_test.dart";
 
-  Iterable<File> testFiles = directory.listSync().where((FileSystemEntity e) {
+  Iterable<FileSystemEntity> testFiles = directory.listSync().where((FileSystemEntity e) {
     return e is File && e.path.endsWith(suffix);
   });
 

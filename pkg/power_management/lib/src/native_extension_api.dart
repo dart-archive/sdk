@@ -4,7 +4,7 @@
 
 library power_management.src.native_extension_api;
 
-import "dart-ext:../native/power_management_extension_lib";
+import "dart-ext:power_management_extension_lib";
 
 /// Disables sleep.
 ///

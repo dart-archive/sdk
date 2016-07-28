@@ -198,7 +198,7 @@ hooks = [
       '--bucket',
       'dartino-dependencies',
       '-d',
-      'sdk/pkg/mdns/lib/native',
+      'sdk/pkg/mdns/lib/src',
     ],
   },
   {
@@ -212,7 +212,7 @@ hooks = [
       '--bucket',
       'dartino-dependencies',
       '-d',
-      'sdk/pkg/power_management/lib/native',
+      'sdk/pkg/power_management/lib/src',
     ],
   },
   {
